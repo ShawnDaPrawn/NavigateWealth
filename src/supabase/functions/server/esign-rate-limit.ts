@@ -31,7 +31,7 @@ export const ESIGN_RATE_LIMITS = {
   /** Signer requests an OTP (we send an email/SMS). */
   OTP_SEND: {
     maxAttempts: 3,
-    windowMs: 5 * 60 * 1000,        // 5 minutes
+    windowMs: 5 * 60 * 1000, // 5 minutes
     blockDurationMs: 15 * 60 * 1000, // 15 minute block
   },
   /** Signer submits an OTP code for verification. */
@@ -71,12 +71,13 @@ export type EsignRateLimitAction = keyof typeof ESIGN_RATE_LIMITS;
 /** Pulls a usable client identifier from the request — preferring the most
  *  specific identifier available so two callers can't share a bucket.
  *  Order: explicit signer-token > IP > 'unknown'. */
-function defaultIdentifier(c: { req: { header: (n: string) => string | undefined; param: (n: string) => string | undefined } }): string {
+function defaultIdentifier(c: {
+  req: { header: (n: string) => string | undefined; param: (n: string) => string | undefined };
+}): string {
   const token = c.req.param('token') || c.req.header('x-signer-token');
   if (token) return `tkn:${token.slice(0, 32)}`;
-  const ip = c.req.header('x-forwarded-for')?.split(',')[0].trim()
-    || c.req.header('x-real-ip')
-    || 'noip';
+  const ip =
+    c.req.header('x-forwarded-for')?.split(',')[0].trim() || c.req.header('x-real-ip') || 'noip';
   return `ip:${ip}`;
 }
 

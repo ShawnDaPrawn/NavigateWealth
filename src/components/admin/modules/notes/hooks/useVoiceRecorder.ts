@@ -108,7 +108,11 @@ export function useVoiceRecorder(): UseVoiceRecorderReturn {
     return () => {
       cleanupStream();
       if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
-        try { mediaRecorderRef.current.stop(); } catch { /* already stopped */ }
+        try {
+          mediaRecorderRef.current.stop();
+        } catch {
+          /* already stopped */
+        }
       }
     };
   }, [cleanupStream]);
@@ -118,7 +122,9 @@ export function useVoiceRecorder(): UseVoiceRecorderReturn {
     // Check browser support
     if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
       setStatus('error');
-      setErrorMessage('Your browser does not support audio recording. Please use a modern browser.');
+      setErrorMessage(
+        'Your browser does not support audio recording. Please use a modern browser.',
+      );
       return;
     }
 
@@ -185,7 +191,7 @@ export function useVoiceRecorder(): UseVoiceRecorderReturn {
       if (err instanceof DOMException) {
         if (err.name === 'NotAllowedError') {
           setErrorMessage(
-            'Microphone access was denied. Please allow microphone access in your browser settings and try again.'
+            'Microphone access was denied. Please allow microphone access in your browser settings and try again.',
           );
         } else if (err.name === 'NotFoundError') {
           setErrorMessage('No microphone detected. Please connect a microphone and try again.');
@@ -209,7 +215,11 @@ export function useVoiceRecorder(): UseVoiceRecorderReturn {
   const reset = useCallback(() => {
     cleanupStream();
     if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
-      try { mediaRecorderRef.current.stop(); } catch { /* already stopped */ }
+      try {
+        mediaRecorderRef.current.stop();
+      } catch {
+        /* already stopped */
+      }
     }
     mediaRecorderRef.current = null;
     chunksRef.current = [];

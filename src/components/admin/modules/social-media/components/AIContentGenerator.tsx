@@ -43,17 +43,20 @@ import {
   Clock,
 } from 'lucide-react';
 import { useSocialMediaAI } from '../hooks/useSocialMediaAI';
-import type { SocialAIPlatform, ContentTone, ContentGoal, GeneratedPlatformPost, GeneratePostTextInput } from '../types';
+import type {
+  SocialAIPlatform,
+  ContentTone,
+  ContentGoal,
+  GeneratedPlatformPost,
+  GeneratePostTextInput,
+} from '../types';
 import { BRAND } from '../constants';
 
 // ============================================================================
 // Constants
 // ============================================================================
 
-const PLATFORM_CONFIG: Record<
-  SocialAIPlatform,
-  { label: string; icon: React.ReactNode }
-> = {
+const PLATFORM_CONFIG: Record<SocialAIPlatform, { label: string; icon: React.ReactNode }> = {
   linkedin: {
     label: 'LinkedIn',
     icon: <Linkedin className="h-4 w-4" />,
@@ -85,7 +88,11 @@ const GOAL_OPTIONS: { value: ContentGoal; label: string; icon: React.ReactNode }
   { value: 'awareness', label: 'Brand Awareness', icon: <Target className="h-4 w-4" /> },
   { value: 'education', label: 'Education', icon: <Hash className="h-4 w-4" /> },
   { value: 'promotion', label: 'Promotion', icon: <ArrowRight className="h-4 w-4" /> },
-  { value: 'thought_leadership', label: 'Thought Leadership', icon: <Sparkles className="h-4 w-4" /> },
+  {
+    value: 'thought_leadership',
+    label: 'Thought Leadership',
+    icon: <Sparkles className="h-4 w-4" />,
+  },
 ];
 
 // ============================================================================
@@ -121,12 +128,7 @@ export function AIContentGenerator({ onUseContent }: AIContentGeneratorProps) {
   const [generatedPosts, setGeneratedPosts] = useState<GeneratedPlatformPost[]>([]);
 
   // Hook
-  const {
-    generatePostText,
-    isGenerating,
-    isConfigured,
-    statusLoading,
-  } = useSocialMediaAI();
+  const { generatePostText, isGenerating, isConfigured, statusLoading } = useSocialMediaAI();
 
   // ============================================================================
   // Handlers
@@ -134,9 +136,7 @@ export function AIContentGenerator({ onUseContent }: AIContentGeneratorProps) {
 
   const togglePlatform = useCallback((platform: SocialAIPlatform) => {
     setSelectedPlatforms((prev) =>
-      prev.includes(platform)
-        ? prev.filter((p) => p !== platform)
-        : [...prev, platform],
+      prev.includes(platform) ? prev.filter((p) => p !== platform) : [...prev, platform],
     );
   }, []);
 
@@ -183,26 +183,37 @@ export function AIContentGenerator({ onUseContent }: AIContentGeneratorProps) {
       // Error is handled by the hook's onError
     }
   }, [
-    topic, selectedPlatforms, tone, goal, includeHashtags, includeCTA,
-    keyPoints, articleContent, articleTitle, additionalInstructions, generatePostText,
+    topic,
+    selectedPlatforms,
+    tone,
+    goal,
+    includeHashtags,
+    includeCTA,
+    keyPoints,
+    articleContent,
+    articleTitle,
+    additionalInstructions,
+    generatePostText,
   ]);
 
   const handleCopy = useCallback(async (platform: string, content: string, hashtags: string[]) => {
-    const fullContent = hashtags.length > 0
-      ? `${content}\n\n${hashtags.map((h) => `#${h}`).join(' ')}`
-      : content;
-    
+    const fullContent =
+      hashtags.length > 0 ? `${content}\n\n${hashtags.map((h) => `#${h}`).join(' ')}` : content;
+
     await navigator.clipboard.writeText(fullContent);
     setCopiedPlatform(platform);
     toast.success('Copied to clipboard');
     setTimeout(() => setCopiedPlatform(null), 2000);
   }, []);
 
-  const handleUseInPost = useCallback((post: GeneratedPlatformPost) => {
-    if (onUseContent) {
-      onUseContent(post.platform, post.content, post.hashtags);
-    }
-  }, [onUseContent]);
+  const handleUseInPost = useCallback(
+    (post: GeneratedPlatformPost) => {
+      if (onUseContent) {
+        onUseContent(post.platform, post.content, post.hashtags);
+      }
+    },
+    [onUseContent],
+  );
 
   // ============================================================================
   // Render — Loading / Not Configured
@@ -226,8 +237,8 @@ export function AIContentGenerator({ onUseContent }: AIContentGeneratorProps) {
           <AlertCircle className="h-12 w-12 text-amber-500 mb-4" />
           <h3 className="text-lg font-semibold mb-2">AI Service Not Configured</h3>
           <p className="text-muted-foreground max-w-md">
-            The OpenAI API key is not configured. Please contact your administrator
-            to enable AI content generation.
+            The OpenAI API key is not configured. Please contact your administrator to enable AI
+            content generation.
           </p>
         </CardContent>
       </Card>
@@ -244,7 +255,10 @@ export function AIContentGenerator({ onUseContent }: AIContentGeneratorProps) {
       <Card>
         <CardHeader className="pb-4">
           <CardTitle className="flex items-center gap-2 text-lg">
-            <div className="flex items-center justify-center h-8 w-8 rounded-lg" style={{ backgroundColor: BRAND.navyLight }}>
+            <div
+              className="flex items-center justify-center h-8 w-8 rounded-lg"
+              style={{ backgroundColor: BRAND.navyLight }}
+            >
               <Sparkles className="h-4 w-4" style={{ color: BRAND.navy }} />
             </div>
             AI Content Generator
@@ -258,30 +272,34 @@ export function AIContentGenerator({ onUseContent }: AIContentGeneratorProps) {
           <div className="space-y-2">
             <Label className="text-sm font-medium">Target Platforms</Label>
             <div className="flex flex-wrap gap-2">
-              {(Object.entries(PLATFORM_CONFIG) as [SocialAIPlatform, typeof PLATFORM_CONFIG[SocialAIPlatform]][]).map(
-                ([platform, config]) => {
-                  const isSelected = selectedPlatforms.includes(platform);
-                  return (
-                    <button
-                      key={platform}
-                      type="button"
-                      onClick={() => togglePlatform(platform)}
-                      className={`
+              {(
+                Object.entries(PLATFORM_CONFIG) as [
+                  SocialAIPlatform,
+                  (typeof PLATFORM_CONFIG)[SocialAIPlatform],
+                ][]
+              ).map(([platform, config]) => {
+                const isSelected = selectedPlatforms.includes(platform);
+                return (
+                  <button
+                    key={platform}
+                    type="button"
+                    onClick={() => togglePlatform(platform)}
+                    className={`
                         flex items-center gap-2 px-3 py-2 rounded-lg border text-sm font-medium
                         transition-all duration-150
-                        ${isSelected
-                          ? 'bg-white text-gray-900 border-gray-400 shadow-sm'
-                          : 'bg-white text-gray-500 border-gray-200 hover:border-gray-300'
+                        ${
+                          isSelected
+                            ? 'bg-white text-gray-900 border-gray-400 shadow-sm'
+                            : 'bg-white text-gray-500 border-gray-200 hover:border-gray-300'
                         }
                       `}
-                    >
-                      {config.icon}
-                      {config.label}
-                      {isSelected && <Check className="h-3 w-3" />}
-                    </button>
-                  );
-                },
-              )}
+                  >
+                    {config.icon}
+                    {config.label}
+                    {isSelected && <Check className="h-3 w-3" />}
+                  </button>
+                );
+              })}
             </div>
           </div>
 
@@ -425,9 +443,7 @@ export function AIContentGenerator({ onUseContent }: AIContentGeneratorProps) {
             <div className="space-y-4 border-t pt-4">
               {/* Article Repurposing */}
               <div className="space-y-2">
-                <Label className="text-sm font-medium">
-                  Repurpose Article Content (optional)
-                </Label>
+                <Label className="text-sm font-medium">Repurpose Article Content (optional)</Label>
                 <Input
                   placeholder="Article title"
                   value={articleTitle}
@@ -445,9 +461,7 @@ export function AIContentGenerator({ onUseContent }: AIContentGeneratorProps) {
 
               {/* Additional Instructions */}
               <div className="space-y-2">
-                <Label className="text-sm font-medium">
-                  Additional Instructions (optional)
-                </Label>
+                <Label className="text-sm font-medium">Additional Instructions (optional)</Label>
                 <Textarea
                   placeholder="Any specific requirements or instructions for the AI..."
                   value={additionalInstructions}
@@ -542,10 +556,7 @@ function PlatformPostPreview({
   onCopy,
   onUseInPost,
 }: PlatformPostPreviewProps) {
-  const charPercent = Math.min(
-    (post.characterCount / post.characterLimit) * 100,
-    100,
-  );
+  const charPercent = Math.min((post.characterCount / post.characterLimit) * 100, 100);
   const isOverLimit = !post.withinLimit;
 
   return (
@@ -627,11 +638,7 @@ function PlatformPostPreview({
             )}
           </Button>
           {onUseInPost && (
-            <Button
-              size="sm"
-              onClick={onUseInPost}
-              className="flex items-center gap-1.5 text-xs"
-            >
+            <Button size="sm" onClick={onUseInPost} className="flex items-center gap-1.5 text-xs">
               <ArrowRight className="h-3 w-3" />
               Use in Post
             </Button>

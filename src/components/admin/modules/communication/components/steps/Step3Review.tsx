@@ -1,6 +1,13 @@
 import React, { useState } from 'react';
-import { 
-  Users, Mail, FileText, Calendar, CheckCircle2, AlertTriangle, ArrowLeft, Loader2 
+import {
+  Users,
+  Mail,
+  FileText,
+  Calendar,
+  CheckCircle2,
+  AlertTriangle,
+  ArrowLeft,
+  Loader2,
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '../../../../../ui/card';
 import { Button } from '../../../../../ui/button';
@@ -35,7 +42,7 @@ export function Step3Review({ draft, updateDraft, onBack, onReset, canSend = tru
         bodyHtml: draft.bodyHtml,
         channel: draft.channel || 'email',
         recipientType: draft.recipientType,
-        selectedRecipients: draft.selectedRecipients.map(r => ({
+        selectedRecipients: draft.selectedRecipients.map((r) => ({
           id: r.id,
           email: r.email,
           firstName: r.firstName || '',
@@ -43,21 +50,25 @@ export function Step3Review({ draft, updateDraft, onBack, onReset, canSend = tru
           name: r.firstName ? `${r.firstName} ${r.surname || r.lastName || ''}`.trim() : r.email,
           phone: r.phone || '',
         })),
-        selectedGroup: draft.selectedGroup ? {
-          id: draft.selectedGroup.id,
-          name: draft.selectedGroup.name,
-          type: draft.selectedGroup.type,
-          clientCount: draft.selectedGroup.clientCount,
-        } : undefined,
+        selectedGroup: draft.selectedGroup
+          ? {
+              id: draft.selectedGroup.id,
+              name: draft.selectedGroup.name,
+              type: draft.selectedGroup.type,
+              clientCount: draft.selectedGroup.clientCount,
+            }
+          : undefined,
         scheduling: {
           type: draft.scheduling.type,
-          startDate: draft.scheduling.startDate ? draft.scheduling.startDate.toISOString() : undefined,
+          startDate: draft.scheduling.startDate
+            ? draft.scheduling.startDate.toISOString()
+            : undefined,
         },
       };
 
       // 1. Create/Persist Campaign
       const campaign = await communicationApi.createCampaign(campaignPayload);
-      
+
       // 2. If Send Now, trigger send
       if (draft.scheduling.type === 'immediate') {
         await communicationApi.sendCampaign(campaign.id);
@@ -66,7 +77,7 @@ export function Step3Review({ draft, updateDraft, onBack, onReset, canSend = tru
         // Scheduled campaigns are picked up by the backend scheduler based on the persisted data
         toast.success('Campaign scheduled successfully!');
       }
-      
+
       setIsConfirmed(true);
     } catch (error) {
       console.error(error);
@@ -90,8 +101,8 @@ export function Step3Review({ draft, updateDraft, onBack, onReset, canSend = tru
         <div className="text-center space-y-2">
           <h2 className="text-3xl font-bold text-gray-900">Success!</h2>
           <p className="text-muted-foreground text-lg">
-            {draft.scheduling.type === 'immediate' 
-              ? 'Your emails have been queued for delivery.' 
+            {draft.scheduling.type === 'immediate'
+              ? 'Your emails have been queued for delivery.'
               : `Your campaign has been scheduled for ${draft.scheduling.startDate?.toLocaleDateString()}.`}
           </p>
         </div>
@@ -124,27 +135,36 @@ export function Step3Review({ draft, updateDraft, onBack, onReset, canSend = tru
                         <span className="font-medium text-lg">{draft.selectedGroup.name}</span>
                         <Badge>{draft.selectedGroup.type}</Badge>
                       </div>
-                      <p className="text-sm text-muted-foreground">{draft.selectedGroup.description}</p>
-                      
+                      <p className="text-sm text-muted-foreground">
+                        {draft.selectedGroup.description}
+                      </p>
+
                       {draft.selectedGroup.type === 'custom' && (
                         <Alert className="bg-blue-50 border-blue-200 mt-2">
                           <AlertTriangle className="h-4 w-4 text-blue-600" />
                           <AlertDescription className="text-blue-700 text-xs">
-                            This is a custom group with {draft.selectedGroup.clientCount} recipients. 
-                            Any changes to this group before the send date will automatically update the recipient list.
+                            This is a custom group with {draft.selectedGroup.clientCount}{' '}
+                            recipients. Any changes to this group before the send date will
+                            automatically update the recipient list.
                           </AlertDescription>
                         </Alert>
                       )}
                     </div>
                   ) : (
                     <div>
-                      <p className="font-medium text-lg">{draft.selectedRecipients.length} Client(s) Selected</p>
+                      <p className="font-medium text-lg">
+                        {draft.selectedRecipients.length} Client(s) Selected
+                      </p>
                       <div className="flex flex-wrap gap-2 mt-2">
-                        {draft.selectedRecipients.slice(0, 5).map(c => (
-                          <Badge key={c.id} variant="outline">{c.firstName} {c.surname}</Badge>
+                        {draft.selectedRecipients.slice(0, 5).map((c) => (
+                          <Badge key={c.id} variant="outline">
+                            {c.firstName} {c.surname}
+                          </Badge>
                         ))}
                         {draft.selectedRecipients.length > 5 && (
-                          <Badge variant="outline">+{draft.selectedRecipients.length - 5} more</Badge>
+                          <Badge variant="outline">
+                            +{draft.selectedRecipients.length - 5} more
+                          </Badge>
                         )}
                       </div>
                     </div>
@@ -161,15 +181,19 @@ export function Step3Review({ draft, updateDraft, onBack, onReset, canSend = tru
                 </h3>
                 <div className="bg-muted/30 p-4 rounded-lg border space-y-3">
                   <div>
-                    <span className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Subject</span>
+                    <span className="text-xs font-bold text-muted-foreground uppercase tracking-wider">
+                      Subject
+                    </span>
                     <p className="font-medium">{draft.subject}</p>
                   </div>
-                  
+
                   <div>
-                    <span className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Attachments</span>
+                    <span className="text-xs font-bold text-muted-foreground uppercase tracking-wider">
+                      Attachments
+                    </span>
                     {draft.attachments.length > 0 ? (
                       <div className="flex flex-wrap gap-2 mt-1">
-                        {draft.attachments.map(f => (
+                        {draft.attachments.map((f) => (
                           <Badge key={f.id} variant="secondary" className="flex items-center gap-1">
                             <FileText className="h-3 w-3" /> {f.name}
                           </Badge>
@@ -181,43 +205,85 @@ export function Step3Review({ draft, updateDraft, onBack, onReset, canSend = tru
                   </div>
 
                   <div>
-                    <span className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Email Preview</span>
+                    <span className="text-xs font-bold text-muted-foreground uppercase tracking-wider">
+                      Email Preview
+                    </span>
                     {/* Mini WYSIWYG preview matching the actual email template */}
-                    <div className="mt-2 rounded-lg overflow-hidden border shadow-sm" style={{ backgroundColor: '#f3f4f6' }}>
+                    <div
+                      className="mt-2 rounded-lg overflow-hidden border shadow-sm"
+                      style={{ backgroundColor: '#f3f4f6' }}
+                    >
                       <div style={{ padding: '16px 8px' }}>
-                        <div style={{
-                          maxWidth: '100%',
-                          margin: '0 auto',
-                          backgroundColor: '#ffffff',
-                          borderRadius: '8px',
-                          border: '1px solid #e5e7eb',
-                          overflow: 'hidden',
-                          fontFamily: 'Arial, sans-serif',
-                        }}>
+                        <div
+                          style={{
+                            maxWidth: '100%',
+                            margin: '0 auto',
+                            backgroundColor: '#ffffff',
+                            borderRadius: '8px',
+                            border: '1px solid #e5e7eb',
+                            overflow: 'hidden',
+                            fontFamily: 'Arial, sans-serif',
+                          }}
+                        >
                           {/* Purple gradient accent */}
-                          <div style={{ height: '3px', background: 'linear-gradient(90deg, #6d28d9, #a855f7, #6d28d9)' }} />
+                          <div
+                            style={{
+                              height: '3px',
+                              background: 'linear-gradient(90deg, #6d28d9, #a855f7, #6d28d9)',
+                            }}
+                          />
                           <div style={{ padding: '16px 20px', textAlign: 'center' }}>
                             <div style={{ marginBottom: '12px' }}>
-                              <span style={{ fontSize: '16px', fontWeight: 'bold', color: '#000' }}>Navigate</span>
-                              <span style={{ fontSize: '16px', fontWeight: 'bold', color: '#6d28d9' }}>Wealth</span>
+                              <span style={{ fontSize: '16px', fontWeight: 'bold', color: '#000' }}>
+                                Navigate
+                              </span>
+                              <span
+                                style={{ fontSize: '16px', fontWeight: 'bold', color: '#6d28d9' }}
+                              >
+                                Wealth
+                              </span>
                             </div>
-                            <div style={{ fontSize: '13px', fontWeight: 'bold', color: '#111827', marginBottom: '12px' }}>
+                            <div
+                              style={{
+                                fontSize: '13px',
+                                fontWeight: 'bold',
+                                color: '#111827',
+                                marginBottom: '12px',
+                              }}
+                            >
                               {draft.subject || 'Navigate Wealth'}
                             </div>
-                            <div style={{ fontSize: '12px', color: '#374151', lineHeight: '1.5', textAlign: 'left' }}>
+                            <div
+                              style={{
+                                fontSize: '12px',
+                                color: '#374151',
+                                lineHeight: '1.5',
+                                textAlign: 'left',
+                              }}
+                            >
                               {draft.bodyHtml ? (
                                 <div
                                   className="line-clamp-4"
                                   dangerouslySetInnerHTML={{
-                                    __html: DOMPurify.sanitize(draft.bodyHtml)
+                                    __html: DOMPurify.sanitize(draft.bodyHtml),
                                   }}
                                 />
                               ) : (
-                                <p style={{ color: '#9ca3af', fontStyle: 'italic' }}>No content...</p>
+                                <p style={{ color: '#9ca3af', fontStyle: 'italic' }}>
+                                  No content...
+                                </p>
                               )}
                             </div>
                           </div>
-                          <div style={{ padding: '8px 20px 12px', fontSize: '10px', color: '#9ca3af', textAlign: 'center', borderTop: '1px solid #e5e7eb' }}>
+                          <div
+                            style={{
+                              padding: '8px 20px 12px',
+                              fontSize: '10px',
+                              color: '#9ca3af',
+                              textAlign: 'center',
+                              borderTop: '1px solid #e5e7eb',
+                            }}
+                          >
                             Navigate Wealth &middot; Independent Financial Advisory Services
                           </div>
                         </div>
@@ -237,10 +303,7 @@ export function Step3Review({ draft, updateDraft, onBack, onReset, canSend = tru
               <CardTitle>Sending Options</CardTitle>
             </CardHeader>
             <CardContent className="space-y-6">
-              <SchedulingOptions 
-                config={draft.scheduling} 
-                onChange={handleSchedulingChange} 
-              />
+              <SchedulingOptions config={draft.scheduling} onChange={handleSchedulingChange} />
 
               <Separator />
 
@@ -248,17 +311,21 @@ export function Step3Review({ draft, updateDraft, onBack, onReset, canSend = tru
                 <div className="flex justify-between text-sm">
                   <span className="text-muted-foreground">Estimated Recipients</span>
                   <span className="font-medium">
-                    {draft.recipientType === 'group' 
-                      ? draft.selectedGroup?.clientCount 
+                    {draft.recipientType === 'group'
+                      ? draft.selectedGroup?.clientCount
                       : draft.selectedRecipients.length}
                   </span>
                 </div>
-                
-                <Button 
-                  className="w-full h-12 text-lg font-semibold" 
+
+                <Button
+                  className="w-full h-12 text-lg font-semibold"
                   size="lg"
                   onClick={handleSend}
-                  disabled={isSending || (draft.scheduling.type === 'scheduled' && !draft.scheduling.startDate) || !canSend}
+                  disabled={
+                    isSending ||
+                    (draft.scheduling.type === 'scheduled' && !draft.scheduling.startDate) ||
+                    !canSend
+                  }
                 >
                   {isSending ? (
                     <div className="contents">
@@ -271,7 +338,7 @@ export function Step3Review({ draft, updateDraft, onBack, onReset, canSend = tru
                     </span>
                   )}
                 </Button>
-                
+
                 <Button variant="ghost" className="w-full" onClick={onBack}>
                   <ArrowLeft className="h-4 w-4 mr-2" /> Back to Edit
                 </Button>

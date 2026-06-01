@@ -81,17 +81,40 @@ const TAX_DOCUMENT_TYPES = [
   { value: 'other', label: 'Other Tax Document', icon: File },
 ] as const;
 
-type TaxDocumentType = typeof TAX_DOCUMENT_TYPES[number]['value'];
+type TaxDocumentType = (typeof TAX_DOCUMENT_TYPES)[number]['value'];
 
-const DOCUMENT_TYPE_CONFIG: Record<string, { label: string; badgeClass: string; icon: React.ElementType }> = {
+const DOCUMENT_TYPE_CONFIG: Record<
+  string,
+  { label: string; badgeClass: string; icon: React.ElementType }
+> = {
   tax_return: { label: 'Tax Return', badgeClass: 'bg-blue-100 text-blue-800', icon: Receipt },
   irp5: { label: 'IRP5', badgeClass: 'bg-green-100 text-green-800', icon: FileSpreadsheet },
   it3: { label: 'IT3', badgeClass: 'bg-teal-100 text-teal-800', icon: FileSpreadsheet },
-  sars_assessment: { label: 'SARS Assessment', badgeClass: 'bg-purple-100 text-purple-800', icon: FileCheck },
-  tax_clearance: { label: 'Tax Clearance', badgeClass: 'bg-emerald-100 text-emerald-800', icon: ShieldCheck },
-  provisional_tax: { label: 'Provisional Tax', badgeClass: 'bg-amber-100 text-amber-800', icon: ClipboardCheck },
-  supporting_schedule: { label: 'Schedule', badgeClass: 'bg-indigo-100 text-indigo-800', icon: FileText },
-  correspondence: { label: 'SARS Correspondence', badgeClass: 'bg-orange-100 text-orange-800', icon: FileText },
+  sars_assessment: {
+    label: 'SARS Assessment',
+    badgeClass: 'bg-purple-100 text-purple-800',
+    icon: FileCheck,
+  },
+  tax_clearance: {
+    label: 'Tax Clearance',
+    badgeClass: 'bg-emerald-100 text-emerald-800',
+    icon: ShieldCheck,
+  },
+  provisional_tax: {
+    label: 'Provisional Tax',
+    badgeClass: 'bg-amber-100 text-amber-800',
+    icon: ClipboardCheck,
+  },
+  supporting_schedule: {
+    label: 'Schedule',
+    badgeClass: 'bg-indigo-100 text-indigo-800',
+    icon: FileText,
+  },
+  correspondence: {
+    label: 'SARS Correspondence',
+    badgeClass: 'bg-orange-100 text-orange-800',
+    icon: FileText,
+  },
   other: { label: 'Other', badgeClass: 'bg-gray-100 text-gray-800', icon: File },
 };
 
@@ -189,7 +212,7 @@ export function TaxDocumentsSection({ clientId, clientName }: TaxDocumentsSectio
       );
       if (result.success) {
         toast.success('Tax document uploaded successfully');
-        setDocuments(prev => [result.data, ...prev]);
+        setDocuments((prev) => [result.data, ...prev]);
         resetForm();
         setUploadDialogOpen(false);
       }
@@ -226,7 +249,7 @@ export function TaxDocumentsSection({ clientId, clientName }: TaxDocumentsSectio
       await api.delete(`/tax-planning-fna/tax-docs/${clientId}/${deleteTarget.id}`);
 
       toast.success('Tax document deleted');
-      setDocuments(prev => prev.filter(d => d.id !== deleteTarget.id));
+      setDocuments((prev) => prev.filter((d) => d.id !== deleteTarget.id));
       setDeleteTarget(null);
     } catch (error) {
       console.error('Error deleting tax document:', error);
@@ -269,10 +292,7 @@ export function TaxDocumentsSection({ clientId, clientName }: TaxDocumentsSectio
     <div className="space-y-0">
       {/* Collapsible Header */}
       <Card>
-        <CardHeader
-          className="cursor-pointer py-4"
-          onClick={() => setIsExpanded(!isExpanded)}
-        >
+        <CardHeader className="cursor-pointer py-4" onClick={() => setIsExpanded(!isExpanded)}>
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
               <div className="h-9 w-9 rounded-lg bg-blue-50 flex items-center justify-center">
@@ -328,11 +348,7 @@ export function TaxDocumentsSection({ clientId, clientName }: TaxDocumentsSectio
                 <p className="text-sm text-gray-500 mb-4">
                   Upload tax returns, IRP5 certificates, or other tax documents for {clientName}
                 </p>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={() => setUploadDialogOpen(true)}
-                >
+                <Button size="sm" variant="outline" onClick={() => setUploadDialogOpen(true)}>
                   <Upload className="h-4 w-4 mr-2" />
                   Upload First Document
                 </Button>
@@ -422,15 +438,15 @@ export function TaxDocumentsSection({ clientId, clientName }: TaxDocumentsSectio
         <DialogContent className="sm:max-w-lg">
           <DialogHeader>
             <DialogTitle>Upload Tax Document</DialogTitle>
-            <DialogDescription>
-              Upload a tax document for {clientName}
-            </DialogDescription>
+            <DialogDescription>Upload a tax document for {clientName}</DialogDescription>
           </DialogHeader>
 
           <div className="space-y-4 py-2">
             {/* Document Type */}
             <div className="space-y-2">
-              <Label>Document Type <span className="text-red-500">*</span></Label>
+              <Label>
+                Document Type <span className="text-red-500">*</span>
+              </Label>
               <Select
                 value={documentType}
                 onValueChange={(v) => setDocumentType(v as TaxDocumentType)}
@@ -450,7 +466,9 @@ export function TaxDocumentsSection({ clientId, clientName }: TaxDocumentsSectio
 
             {/* Title */}
             <div className="space-y-2">
-              <Label>Title <span className="text-red-500">*</span></Label>
+              <Label>
+                Title <span className="text-red-500">*</span>
+              </Label>
               <Input
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
@@ -460,7 +478,9 @@ export function TaxDocumentsSection({ clientId, clientName }: TaxDocumentsSectio
 
             {/* File Upload */}
             <div className="space-y-2">
-              <Label>File <span className="text-red-500">*</span></Label>
+              <Label>
+                File <span className="text-red-500">*</span>
+              </Label>
               <div className="border-2 border-dashed rounded-lg p-4 text-center relative">
                 {selectedFile ? (
                   <div className="flex items-center justify-between">
@@ -490,9 +510,7 @@ export function TaxDocumentsSection({ clientId, clientName }: TaxDocumentsSectio
                     <p className="text-sm text-muted-foreground mb-2">
                       Click to select or drag and drop
                     </p>
-                    <p className="text-xs text-muted-foreground">
-                      PDF, JPEG, or PNG (max 50MB)
-                    </p>
+                    <p className="text-xs text-muted-foreground">PDF, JPEG, or PNG (max 50MB)</p>
                     <input
                       ref={fileInputRef}
                       type="file"
@@ -510,11 +528,10 @@ export function TaxDocumentsSection({ clientId, clientName }: TaxDocumentsSectio
 
             {/* Tax Year (optional) */}
             <div className="space-y-2">
-              <Label>Tax Year <span className="text-muted-foreground text-xs">(optional)</span></Label>
-              <Select
-                value={taxYear}
-                onValueChange={(v) => setTaxYear(v)}
-              >
+              <Label>
+                Tax Year <span className="text-muted-foreground text-xs">(optional)</span>
+              </Label>
+              <Select value={taxYear} onValueChange={(v) => setTaxYear(v)}>
                 <SelectTrigger>
                   <SelectValue placeholder="Select tax year" />
                 </SelectTrigger>
@@ -530,7 +547,9 @@ export function TaxDocumentsSection({ clientId, clientName }: TaxDocumentsSectio
 
             {/* Notes (optional) */}
             <div className="space-y-2">
-              <Label>Notes <span className="text-muted-foreground text-xs">(optional)</span></Label>
+              <Label>
+                Notes <span className="text-muted-foreground text-xs">(optional)</span>
+              </Label>
               <Textarea
                 value={notes}
                 onChange={(e) => setNotes(e.target.value)}
@@ -541,10 +560,19 @@ export function TaxDocumentsSection({ clientId, clientName }: TaxDocumentsSectio
           </div>
 
           <DialogFooter>
-            <Button variant="outline" onClick={() => { resetForm(); setUploadDialogOpen(false); }}>
+            <Button
+              variant="outline"
+              onClick={() => {
+                resetForm();
+                setUploadDialogOpen(false);
+              }}
+            >
               Cancel
             </Button>
-            <Button onClick={handleUpload} disabled={isUploading || !selectedFile || !title || !documentType}>
+            <Button
+              onClick={handleUpload}
+              disabled={isUploading || !selectedFile || !title || !documentType}
+            >
               {isUploading ? (
                 <div className="contents">
                   <Loader2 className="h-4 w-4 mr-2 animate-spin" />
@@ -562,12 +590,18 @@ export function TaxDocumentsSection({ clientId, clientName }: TaxDocumentsSectio
       </Dialog>
 
       {/* Delete Confirmation */}
-      <AlertDialog open={!!deleteTarget} onOpenChange={(open) => { if (!open) setDeleteTarget(null); }}>
+      <AlertDialog
+        open={!!deleteTarget}
+        onOpenChange={(open) => {
+          if (!open) setDeleteTarget(null);
+        }}
+      >
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Delete Tax Document?</AlertDialogTitle>
             <AlertDialogDescription>
-              This will permanently delete &ldquo;{deleteTarget?.title}&rdquo;. This action cannot be undone.
+              This will permanently delete &ldquo;{deleteTarget?.title}&rdquo;. This action cannot
+              be undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

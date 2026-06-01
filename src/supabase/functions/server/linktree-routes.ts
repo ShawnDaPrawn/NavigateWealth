@@ -24,7 +24,7 @@ interface LinktreeLink {
   id: string;
   title: string;
   url: string;
-  icon?: string;       // Lucide icon slug
+  icon?: string; // Lucide icon slug
   description?: string;
   enabled: boolean;
   order: number;
@@ -103,9 +103,7 @@ async function saveSettings(settings: LinktreeSettings): Promise<void> {
 app.get('/public', async (c) => {
   try {
     const [links, settings] = await Promise.all([getLinks(), getSettings()]);
-    const enabledLinks = links
-      .filter((l) => l.enabled)
-      .sort((a, b) => a.order - b.order);
+    const enabledLinks = links.filter((l) => l.enabled).sort((a, b) => a.order - b.order);
     return c.json({ success: true, data: { links: enabledLinks, settings } });
   } catch (error: unknown) {
     console.error('[linktree] Error fetching public data:', error);

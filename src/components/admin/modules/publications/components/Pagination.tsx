@@ -1,6 +1,6 @@
 /**
  * Publications Feature - Pagination Component
- * 
+ *
  * Reusable pagination controls.
  */
 
@@ -15,12 +15,7 @@ interface PaginationProps {
   className?: string;
 }
 
-export function Pagination({
-  currentPage,
-  totalPages,
-  onPageChange,
-  className
-}: PaginationProps) {
+export function Pagination({ currentPage, totalPages, onPageChange, className }: PaginationProps) {
   const getPageNumbers = () => {
     const pages: (number | string)[] = [];
     const showEllipsis = totalPages > 7;
@@ -118,7 +113,7 @@ export function PaginationInfo({
   totalPages,
   totalItems,
   itemsPerPage,
-  className
+  className,
 }: {
   currentPage: number;
   totalPages: number;

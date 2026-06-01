@@ -14,11 +14,11 @@ interface ProgressIndicatorProps {
   size?: 'sm' | 'md' | 'lg';
 }
 
-export function ProgressIndicator({ 
-  envelope, 
+export function ProgressIndicator({
+  envelope,
   showLabel = true,
   showPercentage = true,
-  size = 'md'
+  size = 'md',
 }: ProgressIndicatorProps) {
   const progress = calculateSigningProgress(envelope);
   const message = getProgressMessage(envelope);
@@ -41,12 +41,10 @@ export function ProgressIndicator({
       {showLabel && (
         <div className="flex items-center justify-between text-sm">
           <span className="text-muted-foreground">{message}</span>
-          {showPercentage && (
-            <span className="font-medium">{progress.percentComplete}%</span>
-          )}
+          {showPercentage && <span className="font-medium">{progress.percentComplete}%</span>}
         </div>
       )}
-      
+
       <div className={`w-full bg-gray-200 rounded-full ${sizeClasses[size]} overflow-hidden`}>
         <div
           className={`${sizeClasses[size]} rounded-full transition-all duration-300 ${getProgressColor()}`}
@@ -56,10 +54,10 @@ export function ProgressIndicator({
 
       {showLabel && (
         <div className="flex items-center gap-2 text-xs text-muted-foreground">
-          <span>{progress.signedCount} of {progress.totalSigners} signed</span>
-          {progress.pendingCount > 0 && (
-            <span>• {progress.pendingCount} pending</span>
-          )}
+          <span>
+            {progress.signedCount} of {progress.totalSigners} signed
+          </span>
+          {progress.pendingCount > 0 && <span>• {progress.pendingCount} pending</span>}
         </div>
       )}
     </div>

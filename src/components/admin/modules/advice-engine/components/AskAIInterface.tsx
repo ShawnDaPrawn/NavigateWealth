@@ -9,22 +9,17 @@ import { ConfirmDialog } from '../../publications/components/ConfirmDialog';
 import { useAIChat, useClientSearch } from '../hooks';
 
 // Components
-import {
-  ChatHistory,
-  ChatInput,
-  ClientSelector,
-  ApiKeyWarning,
-} from './';
+import { ChatHistory, ChatInput, ClientSelector, ApiKeyWarning } from './';
 
 // Utils
 import { copyToClipboard } from '../utils';
 
 /**
  * Ask Vasco Interface Component
- * 
+ *
  * Main interface for AI-powered advisory assistance.
  * Uses modular hooks and components for clean architecture.
- * 
+ *
  * @example
  * <AskAIInterface />
  */
@@ -52,14 +47,8 @@ export function AskAIInterface() {
   });
 
   // Client search hook
-  const {
-    searchTerm,
-    setSearchTerm,
-    results,
-    isSearching,
-    selectedClient,
-    selectClient,
-  } = useClientSearch();
+  const { searchTerm, setSearchTerm, results, isSearching, selectedClient, selectClient } =
+    useClientSearch();
 
   // ============================================================================
   // Event Handlers
@@ -159,7 +148,7 @@ export function AskAIInterface() {
               <ApiKeyWarning status={apiKeyStatus} />
             </div>
           </div>
-          
+
           {/* Chat History Area */}
           <div className="flex-1 overflow-hidden flex flex-col relative p-4">
             <ChatHistory
@@ -173,19 +162,17 @@ export function AskAIInterface() {
 
           {/* Input Area */}
           <div className="flex-none p-4 bg-white border-t">
-              <ChatInput
-                value={input}
-                onChange={setInput}
-                onSubmit={handleSubmit}
-                isLoading={isLoading}
-                disabled={!isConfigured}
-                placeholder={
-                  isConfigured
-                    ? 'Type your message...'
-                    : 'API key required to send messages'
-                }
-                maxLength={4000}
-              />
+            <ChatInput
+              value={input}
+              onChange={setInput}
+              onSubmit={handleSubmit}
+              isLoading={isLoading}
+              disabled={!isConfigured}
+              placeholder={
+                isConfigured ? 'Type your message...' : 'API key required to send messages'
+              }
+              maxLength={4000}
+            />
           </div>
         </CardContent>
       </Card>

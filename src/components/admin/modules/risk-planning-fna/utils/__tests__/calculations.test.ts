@@ -17,8 +17,19 @@ import {
   calculateIncomeProtection,
   calculateRiskAnalysis,
 } from '../calculations';
-import type { InformationGatheringInput, Dependant, ExistingCover, IncomeProtectionSettings } from '../../types';
-import { LIFE_COVER, DISABILITY_COVER, SEVERE_ILLNESS_COVER, INCOME_PROTECTION, SYSTEM_VERSION } from '../../constants';
+import type {
+  InformationGatheringInput,
+  Dependant,
+  ExistingCover,
+  IncomeProtectionSettings,
+} from '../../types';
+import {
+  LIFE_COVER,
+  DISABILITY_COVER,
+  SEVERE_ILLNESS_COVER,
+  INCOME_PROTECTION,
+  SYSTEM_VERSION,
+} from '../../constants';
 
 // ============================================================================
 // TEST FIXTURES
@@ -98,7 +109,9 @@ describe('calculateLifeCover', () => {
     });
     const result = calculateLifeCover(input);
 
-    expect(result.incomeReplacementCapital.incomeMultiple).toBe(LIFE_COVER.MULTIPLES.MARRIED_YOUNG_CHILDREN_BASE);
+    expect(result.incomeReplacementCapital.incomeMultiple).toBe(
+      LIFE_COVER.MULTIPLES.MARRIED_YOUNG_CHILDREN_BASE,
+    );
   });
 
   it('applies 14x base multiple for single-income household with 1 dependant', () => {
@@ -109,7 +122,9 @@ describe('calculateLifeCover', () => {
     });
     const result = calculateLifeCover(input);
 
-    expect(result.incomeReplacementCapital.incomeMultiple).toBe(LIFE_COVER.MULTIPLES.SINGLE_INCOME_HOUSEHOLD_BASE);
+    expect(result.incomeReplacementCapital.incomeMultiple).toBe(
+      LIFE_COVER.MULTIPLES.SINGLE_INCOME_HOUSEHOLD_BASE,
+    );
   });
 
   it('adds +1x per additional dependant (Mandatory Fix #1)', () => {
@@ -133,9 +148,13 @@ describe('calculateLifeCover', () => {
 
     expect(result.immediateCapital.outstandingDebt).toBe(2_000_000);
     expect(result.immediateCapital.funeralFinalExpenses).toBe(LIFE_COVER.FUNERAL_FINAL_EXPENSES);
-    expect(result.immediateCapital.estateCosts).toBe(5_000_000 * LIFE_COVER.ESTATE_COSTS_PERCENTAGE);
+    expect(result.immediateCapital.estateCosts).toBe(
+      5_000_000 * LIFE_COVER.ESTATE_COSTS_PERCENTAGE,
+    );
     expect(result.immediateCapital.total).toBe(
-      2_000_000 + LIFE_COVER.FUNERAL_FINAL_EXPENSES + (5_000_000 * LIFE_COVER.ESTATE_COSTS_PERCENTAGE)
+      2_000_000 +
+        LIFE_COVER.FUNERAL_FINAL_EXPENSES +
+        5_000_000 * LIFE_COVER.ESTATE_COSTS_PERCENTAGE,
     );
   });
 
@@ -146,7 +165,7 @@ describe('calculateLifeCover', () => {
     const result = calculateLifeCover(input);
 
     const expectedDep1 = 5_000 * 12 * 10; // 600,000
-    const expectedDep2 = 8_000 * 12 * 5;  // 480,000
+    const expectedDep2 = 8_000 * 12 * 5; // 480,000
     expect(result.educationCapital.total).toBe(expectedDep1 + expectedDep2);
     expect(result.educationCapital.perDependant).toHaveLength(2);
     expect(result.educationCapital.perDependant[0].total).toBe(expectedDep1);
@@ -193,7 +212,9 @@ describe('calculateDisabilityCover', () => {
     const input = createInput({ dependants: [] });
     const result = calculateDisabilityCover(input);
 
-    expect(result.capitalisedIncomeLoss.disabilityMultiple).toBe(DISABILITY_COVER.MULTIPLES.ONE_DEPENDANT);
+    expect(result.capitalisedIncomeLoss.disabilityMultiple).toBe(
+      DISABILITY_COVER.MULTIPLES.ONE_DEPENDANT,
+    );
   });
 
   it('applies 10x multiple for 2-4 dependants', () => {
@@ -202,7 +223,9 @@ describe('calculateDisabilityCover', () => {
     });
     const result = calculateDisabilityCover(input);
 
-    expect(result.capitalisedIncomeLoss.disabilityMultiple).toBe(DISABILITY_COVER.MULTIPLES.TWO_TO_FOUR_DEPENDANTS);
+    expect(result.capitalisedIncomeLoss.disabilityMultiple).toBe(
+      DISABILITY_COVER.MULTIPLES.TWO_TO_FOUR_DEPENDANTS,
+    );
   });
 
   it('applies 15x multiple for 5+ dependants', () => {
@@ -210,21 +233,29 @@ describe('calculateDisabilityCover', () => {
     const input = createInput({ dependants: deps });
     const result = calculateDisabilityCover(input);
 
-    expect(result.capitalisedIncomeLoss.disabilityMultiple).toBe(DISABILITY_COVER.MULTIPLES.FIVE_PLUS_DEPENDANTS);
+    expect(result.capitalisedIncomeLoss.disabilityMultiple).toBe(
+      DISABILITY_COVER.MULTIPLES.FIVE_PLUS_DEPENDANTS,
+    );
   });
 
   it('adds fixed additional disability costs', () => {
     const input = createInput();
     const result = calculateDisabilityCover(input);
 
-    expect(result.additionalDisabilityCosts.vehicleAdaptation).toBe(DISABILITY_COVER.VEHICLE_ADAPTATION);
-    expect(result.additionalDisabilityCosts.medicalEquipment).toBe(DISABILITY_COVER.MEDICAL_EQUIPMENT);
-    expect(result.additionalDisabilityCosts.onceOffCareCosts).toBe(DISABILITY_COVER.ONCE_OFF_CARE_COSTS);
+    expect(result.additionalDisabilityCosts.vehicleAdaptation).toBe(
+      DISABILITY_COVER.VEHICLE_ADAPTATION,
+    );
+    expect(result.additionalDisabilityCosts.medicalEquipment).toBe(
+      DISABILITY_COVER.MEDICAL_EQUIPMENT,
+    );
+    expect(result.additionalDisabilityCosts.onceOffCareCosts).toBe(
+      DISABILITY_COVER.ONCE_OFF_CARE_COSTS,
+    );
     expect(result.additionalDisabilityCosts.total).toBe(
       DISABILITY_COVER.HOME_MODIFICATIONS +
-      DISABILITY_COVER.VEHICLE_ADAPTATION +
-      DISABILITY_COVER.MEDICAL_EQUIPMENT +
-      DISABILITY_COVER.ONCE_OFF_CARE_COSTS
+        DISABILITY_COVER.VEHICLE_ADAPTATION +
+        DISABILITY_COVER.MEDICAL_EQUIPMENT +
+        DISABILITY_COVER.ONCE_OFF_CARE_COSTS,
     );
   });
 

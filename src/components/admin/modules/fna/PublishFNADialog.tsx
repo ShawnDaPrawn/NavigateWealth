@@ -93,11 +93,7 @@ export function PublishFNADialog({
             <span className="text-sm text-gray-700">Current Status</span>
             <Badge
               variant={currentStatus === 'published' ? 'default' : 'secondary'}
-              className={
-                currentStatus === 'published'
-                  ? 'bg-green-600 hover:bg-green-700'
-                  : ''
-              }
+              className={currentStatus === 'published' ? 'bg-green-600 hover:bg-green-700' : ''}
             >
               {currentStatus === 'published' ? (
                 <div className="contents">
@@ -134,9 +130,7 @@ export function PublishFNADialog({
           {/* Action Description */}
           <div
             className={`p-4 rounded-lg border-2 ${
-              isPublished
-                ? 'bg-orange-50 border-orange-200'
-                : 'bg-green-50 border-green-200'
+              isPublished ? 'bg-orange-50 border-orange-200' : 'bg-green-50 border-green-200'
             }`}
           >
             <div className="flex items-start gap-3">
@@ -146,14 +140,8 @@ export function PublishFNADialog({
                 <Eye className="h-5 w-5 text-green-600 flex-shrink-0 mt-0.5" />
               )}
               <div>
-                <p
-                  className={`text-sm mb-2 ${
-                    isPublished ? 'text-orange-900' : 'text-green-900'
-                  }`}
-                >
-                  <strong>
-                    {isPublished ? 'Unpublishing will:' : 'Publishing will:'}
-                  </strong>
+                <p className={`text-sm mb-2 ${isPublished ? 'text-orange-900' : 'text-green-900'}`}>
+                  <strong>{isPublished ? 'Unpublishing will:' : 'Publishing will:'}</strong>
                 </p>
                 <ul
                   className={`text-xs space-y-1 ${
@@ -182,20 +170,14 @@ export function PublishFNADialog({
         </div>
 
         <DialogFooter>
-          <Button
-            variant="outline"
-            onClick={() => onOpenChange(false)}
-            disabled={isPublishing}
-          >
+          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={isPublishing}>
             Cancel
           </Button>
           <Button
             onClick={handlePublish}
             disabled={isPublishing}
             className={
-              isPublished
-                ? 'bg-orange-600 hover:bg-orange-700'
-                : 'bg-green-600 hover:bg-green-700'
+              isPublished ? 'bg-orange-600 hover:bg-orange-700' : 'bg-green-600 hover:bg-green-700'
             }
           >
             {isPublishing ? (

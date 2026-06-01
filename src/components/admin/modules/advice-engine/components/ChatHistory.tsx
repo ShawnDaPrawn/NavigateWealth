@@ -1,9 +1,9 @@
 /**
  * ChatHistory Component
- * 
+ *
  * Container for displaying chat message history.
  * Supports auto-scroll, loading states, and empty states.
- * 
+ *
  * @module advice-engine/components/ChatHistory
  */
 
@@ -16,7 +16,7 @@ import type { ChatHistoryProps } from '../types';
 
 /**
  * Chat history container with auto-scroll
- * 
+ *
  * @example
  * <ChatHistory
  *   messages={messages}
@@ -39,7 +39,7 @@ export function ChatHistory({
   useEffect(() => {
     if (autoScroll && containerRef.current && messages.length > 0) {
       const container = containerRef.current;
-      
+
       // Smooth scroll to bottom
       container.scrollTo({
         top: container.scrollHeight,
@@ -72,7 +72,7 @@ export function ChatHistory({
       {/* Empty State */}
       {!isLoading && messages.length === 0 && (
         <div className="w-full">
-           <WelcomeMessage />
+          <WelcomeMessage />
         </div>
       )}
 
@@ -93,9 +93,18 @@ export function ChatHistory({
             <Bot className="h-5 w-5 text-white animate-pulse" />
           </div>
           <div className="bg-white border border-gray-100 rounded-2xl rounded-tl-sm px-5 py-4 shadow-sm flex items-center gap-1.5">
-            <span className="w-2 h-2 bg-violet-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
-            <span className="w-2 h-2 bg-violet-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
-            <span className="w-2 h-2 bg-violet-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+            <span
+              className="w-2 h-2 bg-violet-400 rounded-full animate-bounce"
+              style={{ animationDelay: '0ms' }}
+            />
+            <span
+              className="w-2 h-2 bg-violet-400 rounded-full animate-bounce"
+              style={{ animationDelay: '150ms' }}
+            />
+            <span
+              className="w-2 h-2 bg-violet-400 rounded-full animate-bounce"
+              style={{ animationDelay: '300ms' }}
+            />
           </div>
         </div>
       )}

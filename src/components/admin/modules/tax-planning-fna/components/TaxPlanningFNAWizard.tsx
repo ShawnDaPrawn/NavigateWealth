@@ -11,8 +11,8 @@ import { Step3ManualAdjustment } from './Step3ManualAdjustment';
 import { Step4Finalise } from './Step4Finalise';
 
 // Logic
-import { 
-  TaxPlanningInputs, 
+import {
+  TaxPlanningInputs,
   TaxCalculationResults,
   AdjustmentLog,
   TaxRecommendation,
@@ -43,7 +43,6 @@ export function TaxPlanningFNAWizard({
   startAtStep,
   intakePrefill,
 }: TaxPlanningFNAWizardProps) {
-  
   // ================= STATE =================
   const [currentStep, setCurrentStep] = useState<WizardStep>(() => {
     if (startAtStep === 2 && intakePrefill) return 2;
@@ -62,7 +61,7 @@ export function TaxPlanningFNAWizard({
     }
     return null;
   });
-  
+
   // Scenario Store
   const [adjustedInputs, setAdjustedInputs] = useState<TaxPlanningInputs | null>(() => {
     if (startAtStep === 2 && intakePrefill) return intakePrefill as unknown as TaxPlanningInputs;
@@ -76,7 +75,7 @@ export function TaxPlanningFNAWizard({
   const handleStep1Submit = (inputs: TaxPlanningInputs) => {
     // 1. Lock Baseline Inputs
     setBaselineInputs(inputs);
-    
+
     // 2. Run Deterministic Engine
     const results = TaxPlanningCalculationService.calculate(inputs);
     setBaselineResults(results);
@@ -94,7 +93,10 @@ export function TaxPlanningFNAWizard({
   };
 
   // STEP 3 -> 4
-  const handleStep3Submit = (newAdjustedInputs: TaxPlanningInputs, newAdjustments: AdjustmentLog[]) => {
+  const handleStep3Submit = (
+    newAdjustedInputs: TaxPlanningInputs,
+    newAdjustments: AdjustmentLog[],
+  ) => {
     setAdjustedInputs(newAdjustedInputs);
     setAdjustments(newAdjustments);
     setCurrentStep(4);
@@ -108,12 +110,12 @@ export function TaxPlanningFNAWizard({
   // STEP 4 PUBLISH
   const handlePublish = async (recommendations: TaxRecommendation[], adviserNotes: string) => {
     if (!clientId || !baselineInputs || !adjustedInputs) {
-      toast.error("Missing required data to publish");
+      toast.error('Missing required data to publish');
       return;
     }
 
     setIsPublishing(true);
-    
+
     try {
       // Recalculate final results to ensure consistency
       const finalResults = TaxPlanningCalculationService.calculate(adjustedInputs);
@@ -124,18 +126,17 @@ export function TaxPlanningFNAWizard({
         adjustments,
         recommendations,
         adviserNotes,
-        status: 'published'
+        status: 'published',
       });
-      
-      toast.success("Tax Planning Record published successfully");
-      
+
+      toast.success('Tax Planning Record published successfully');
+
       if (onFNAComplete) onFNAComplete();
       if (onComplete) onComplete();
       if (onClose) onClose();
-      
     } catch (error) {
-      console.error("Failed to publish tax plan", error);
-      toast.error("Failed to publish tax plan. Please try again.");
+      console.error('Failed to publish tax plan', error);
+      toast.error('Failed to publish tax plan. Please try again.');
     } finally {
       setIsPublishing(false);
     }
@@ -147,7 +148,7 @@ export function TaxPlanningFNAWizard({
     switch (currentStep) {
       case 1:
         return (
-          <Step1InputForm 
+          <Step1InputForm
             clientId={clientId}
             initialData={baselineInputs || {}}
             onNext={handleStep1Submit}
@@ -176,10 +177,10 @@ export function TaxPlanningFNAWizard({
         );
       case 4:
         if (!adjustedInputs || !baselineInputs) return null;
-        // We calculate final results on the fly or use a cached one. 
+        // We calculate final results on the fly or use a cached one.
         // Let's re-calculate to be safe, ensuring consistency.
         const finalResults = TaxPlanningCalculationService.calculate(adjustedInputs);
-        
+
         return (
           <Step4Finalise
             finalInputs={adjustedInputs}
@@ -205,14 +206,13 @@ export function TaxPlanningFNAWizard({
           </DialogHeader>
 
           <div className="space-y-6">
-              
             {/* Stepper - Standardized to match Risk/Retirement FNA */}
             <div className="flex justify-between items-center relative">
               <div className="absolute top-1/2 left-0 w-full h-0.5 bg-muted -z-10" />
               {WIZARD_STEPS.map((step) => {
                 const isActive = currentStep === step.step;
                 const isCompleted = currentStep > step.step;
-                
+
                 return (
                   <div key={step.step} className="flex flex-col items-center bg-background px-2">
                     <div
@@ -221,8 +221,8 @@ export function TaxPlanningFNAWizard({
                           isActive
                             ? 'border-primary bg-primary text-primary-foreground'
                             : isCompleted
-                            ? 'border-primary bg-primary text-primary-foreground'
-                            : 'border-muted-foreground text-muted-foreground bg-background'
+                              ? 'border-primary bg-primary text-primary-foreground'
+                              : 'border-muted-foreground text-muted-foreground bg-background'
                         }`}
                     >
                       {isCompleted ? (
@@ -239,9 +239,7 @@ export function TaxPlanningFNAWizard({
                       >
                         {step.title}
                       </p>
-                      <p className="text-xs text-muted-foreground mt-1">
-                        {step.description}
-                      </p>
+                      <p className="text-xs text-muted-foreground mt-1">{step.description}</p>
                     </div>
                   </div>
                 );
@@ -249,9 +247,7 @@ export function TaxPlanningFNAWizard({
             </div>
 
             {/* Step Content */}
-            <div className="min-h-[500px]">
-              {renderStep()}
-            </div>
+            <div className="min-h-[500px]">{renderStep()}</div>
           </div>
         </div>
 

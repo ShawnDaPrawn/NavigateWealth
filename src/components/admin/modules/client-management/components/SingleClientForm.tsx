@@ -2,7 +2,13 @@ import React, { useState, useMemo, useCallback, useRef } from 'react';
 import { Button } from '../../../../ui/button';
 import { Input } from '../../../../ui/input';
 import { Label } from '../../../../ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../../../ui/select';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '../../../../ui/select';
 import { Checkbox } from '../../../../ui/checkbox';
 import { Badge } from '../../../../ui/badge';
 import { toast } from 'sonner';
@@ -32,8 +38,15 @@ const MARITAL_REGIMES = [
   'Out of Community of Property (without accrual)',
 ];
 const PROVINCES = [
-  'Eastern Cape', 'Free State', 'Gauteng', 'KwaZulu-Natal', 'Limpopo',
-  'Mpumalanga', 'Northern Cape', 'North West', 'Western Cape',
+  'Eastern Cape',
+  'Free State',
+  'Gauteng',
+  'KwaZulu-Natal',
+  'Limpopo',
+  'Mpumalanga',
+  'Northern Cape',
+  'North West',
+  'Western Cape',
 ];
 const EMPLOYMENT_STATUSES = [
   { value: 'employed', label: 'Employed' },
@@ -53,7 +66,12 @@ const SA_POSTAL_REGEX = /^\d{4}$/;
 // ---------------------------------------------------------------------------
 // SA ID Validation — Luhn checksum + structure
 // ---------------------------------------------------------------------------
-function validateSaIdNumber(id: string): { valid: boolean; error?: string; dob?: string; gender?: string } {
+function validateSaIdNumber(id: string): {
+  valid: boolean;
+  error?: string;
+  dob?: string;
+  gender?: string;
+} {
   const clean = id.replace(/\s/g, '');
   if (clean.length !== 13) return { valid: false, error: 'SA ID must be exactly 13 digits' };
   if (!/^\d{13}$/.test(clean)) return { valid: false, error: 'SA ID must contain only digits' };
@@ -140,11 +158,13 @@ function validateField(
       return undefined;
 
     case 'middleName':
-      if (v && !NAME_REGEX.test(v)) return 'Name should contain only letters, hyphens, or apostrophes';
+      if (v && !NAME_REGEX.test(v))
+        return 'Name should contain only letters, hyphens, or apostrophes';
       return undefined;
 
     case 'preferredName':
-      if (v && !NAME_REGEX.test(v)) return 'Name should contain only letters, hyphens, or apostrophes';
+      if (v && !NAME_REGEX.test(v))
+        return 'Name should contain only letters, hyphens, or apostrophes';
       return undefined;
 
     // ── Email ──
@@ -195,7 +215,12 @@ function validateField(
             return 'ID number date of birth does not match the Date of Birth field';
         }
         // Cross-check gender
-        if (result.gender && formData.gender && formData.gender !== 'Other' && formData.gender !== 'Prefer not to say') {
+        if (
+          result.gender &&
+          formData.gender &&
+          formData.gender !== 'Other' &&
+          formData.gender !== 'Prefer not to say'
+        ) {
           if (result.gender !== formData.gender)
             return `ID number indicates ${result.gender}, but Gender is set to ${formData.gender}`;
         }
@@ -214,8 +239,10 @@ function validateField(
 
     // ── Marital regime (conditionally required) ──
     case 'maritalRegime': {
-      const needsRegime = formData.maritalStatus === 'Married' || formData.maritalStatus === 'Life Partner';
-      if (needsRegime && !v) return 'Marital regime is required when married or in a life partnership';
+      const needsRegime =
+        formData.maritalStatus === 'Married' || formData.maritalStatus === 'Life Partner';
+      if (needsRegime && !v)
+        return 'Marital regime is required when married or in a life partnership';
       return undefined;
     }
 
@@ -257,9 +284,7 @@ function FormSection({
           </div>
           <div>
             <h3 className="text-[13px] font-semibold text-gray-900">{title}</h3>
-            {description && (
-              <p className="text-[11px] text-gray-400 mt-0.5">{description}</p>
-            )}
+            {description && <p className="text-[11px] text-gray-400 mt-0.5">{description}</p>}
           </div>
         </div>
         {badge}
@@ -282,7 +307,11 @@ function FieldLabel({ children, required }: { children: React.ReactNode; require
 function FieldError({ message, id }: { message?: string; id?: string }) {
   if (!message) return null;
   return (
-    <p id={id} role="alert" className="flex items-center gap-1 mt-1 text-[11px] text-red-600 leading-tight">
+    <p
+      id={id}
+      role="alert"
+      className="flex items-center gap-1 mt-1 text-[11px] text-red-600 leading-tight"
+    >
       <AlertCircle className="h-3 w-3 shrink-0" />
       {message}
     </p>
@@ -339,12 +368,15 @@ export function SingleClientForm({ onSuccess, onClose }: SingleClientFormProps) 
   const formDataRef = useRef(formData);
   formDataRef.current = formData;
 
-  const runValidation = useCallback((field: string, value: string, data?: Record<string, string>) => {
-    return validateField(field, value, data ?? formDataRef.current);
-  }, []);
+  const runValidation = useCallback(
+    (field: string, value: string, data?: Record<string, string>) => {
+      return validateField(field, value, data ?? formDataRef.current);
+    },
+    [],
+  );
 
   const update = useCallback((field: string, value: string) => {
-    setFormData(prev => {
+    setFormData((prev) => {
       const next = { ...prev, [field]: value };
 
       // Auto-populate DOB + Gender from SA ID when user types a valid ID
@@ -357,7 +389,7 @@ export function SingleClientForm({ onSuccess, onClose }: SingleClientFormProps) 
               next.dateOfBirth = result.dob;
               setIdAutofilled(true);
               // Clear any DOB error that may have existed
-              setErrors(e => ({ ...e, dateOfBirth: undefined }));
+              setErrors((e) => ({ ...e, dateOfBirth: undefined }));
             }
             if (result.gender && !prev.gender) {
               next.gender = result.gender;
@@ -367,7 +399,7 @@ export function SingleClientForm({ onSuccess, onClose }: SingleClientFormProps) 
       }
 
       // Clear error for the changed field on input
-      setErrors(e => {
+      setErrors((e) => {
         const err = validateField(field, value, next);
         return { ...e, [field]: err };
       });
@@ -376,29 +408,51 @@ export function SingleClientForm({ onSuccess, onClose }: SingleClientFormProps) 
     });
   }, []);
 
-  const handleBlur = useCallback((field: string) => {
-    setTouched(prev => ({ ...prev, [field]: true }));
-    setErrors(prev => ({
-      ...prev,
-      [field]: runValidation(field, formDataRef.current[field as keyof typeof formDataRef.current] || ''),
-    }));
-  }, [runValidation]);
+  const handleBlur = useCallback(
+    (field: string) => {
+      setTouched((prev) => ({ ...prev, [field]: true }));
+      setErrors((prev) => ({
+        ...prev,
+        [field]: runValidation(
+          field,
+          formDataRef.current[field as keyof typeof formDataRef.current] || '',
+        ),
+      }));
+    },
+    [runValidation],
+  );
 
-  const showError = (field: string) => (touched[field] || submitAttempted) ? errors[field] : undefined;
+  const showError = (field: string) =>
+    touched[field] || submitAttempted ? errors[field] : undefined;
 
-  const showSpouseFields = formData.maritalStatus === 'Married' || formData.maritalStatus === 'Life Partner';
+  const showSpouseFields =
+    formData.maritalStatus === 'Married' || formData.maritalStatus === 'Life Partner';
 
   // Completion tracker
   const completionPct = useMemo(() => {
-    const required = [formData.firstName, formData.lastName, formData.emailAddress, formData.cellphoneNumber];
-    const optional = [
-      formData.title, formData.dateOfBirth, formData.gender, formData.idType,
-      formData.idNumber, formData.maritalStatus, formData.employmentStatus,
-      formData.residentialCity, formData.residentialProvince, formData.financialGoals,
+    const required = [
+      formData.firstName,
+      formData.lastName,
+      formData.emailAddress,
+      formData.cellphoneNumber,
     ];
-    const requiredFilled = required.filter(v => v.trim()).length;
-    const optionalFilled = optional.filter(v => v.trim()).length;
-    return Math.round((requiredFilled / required.length) * 60 + (optionalFilled / optional.length) * 40);
+    const optional = [
+      formData.title,
+      formData.dateOfBirth,
+      formData.gender,
+      formData.idType,
+      formData.idNumber,
+      formData.maritalStatus,
+      formData.employmentStatus,
+      formData.residentialCity,
+      formData.residentialProvince,
+      formData.financialGoals,
+    ];
+    const requiredFilled = required.filter((v) => v.trim()).length;
+    const optionalFilled = optional.filter((v) => v.trim()).length;
+    return Math.round(
+      (requiredFilled / required.length) * 60 + (optionalFilled / optional.length) * 40,
+    );
   }, [formData]);
 
   // Error count for the submit button area
@@ -409,9 +463,19 @@ export function SingleClientForm({ onSuccess, onClose }: SingleClientFormProps) 
   // --- full-form validation on submit ---
   const validateAll = (): boolean => {
     const fieldsToValidate: string[] = [
-      'firstName', 'lastName', 'emailAddress', 'cellphoneNumber',
-      'middleName', 'preferredName', 'alternativeEmail', 'whatsappNumber',
-      'dateOfBirth', 'idNumber', 'taxNumber', 'maritalRegime', 'residentialPostalCode',
+      'firstName',
+      'lastName',
+      'emailAddress',
+      'cellphoneNumber',
+      'middleName',
+      'preferredName',
+      'alternativeEmail',
+      'whatsappNumber',
+      'dateOfBirth',
+      'idNumber',
+      'taxNumber',
+      'maritalRegime',
+      'residentialPostalCode',
     ];
 
     const newErrors: FieldErrors = {};
@@ -427,7 +491,7 @@ export function SingleClientForm({ onSuccess, onClose }: SingleClientFormProps) 
     // Mark all validated fields as touched
     const newTouched: Record<string, boolean> = {};
     for (const f of fieldsToValidate) newTouched[f] = true;
-    setTouched(prev => ({ ...prev, ...newTouched }));
+    setTouched((prev) => ({ ...prev, ...newTouched }));
 
     return !hasError;
   };
@@ -444,10 +508,11 @@ export function SingleClientForm({ onSuccess, onClose }: SingleClientFormProps) 
 
     setIsSubmitting(true);
     try {
-      const result = await api.post<{ success: boolean; applicationNumber?: string; error?: string }>(
-        '/admin/onboarding/add',
-        { ...formData, adminConsentConfirmed: consentConfirmed },
-      );
+      const result = await api.post<{
+        success: boolean;
+        applicationNumber?: string;
+        error?: string;
+      }>('/admin/onboarding/add', { ...formData, adminConsentConfirmed: consentConfirmed });
 
       if (result.success) {
         toast.success(`Client added successfully. Application: ${result.applicationNumber}`);
@@ -471,7 +536,8 @@ export function SingleClientForm({ onSuccess, onClose }: SingleClientFormProps) 
   const selectError = 'border-red-400 bg-red-50/40';
 
   const inputCls = (field: string) => `${inputBase} ${showError(field) ? inputError : ''}`;
-  const selectTriggerCls = (field: string) => `${selectBase} ${showError(field) ? selectError : ''}`;
+  const selectTriggerCls = (field: string) =>
+    `${selectBase} ${showError(field) ? selectError : ''}`;
 
   return (
     <div className="space-y-5">
@@ -496,8 +562,14 @@ export function SingleClientForm({ onSuccess, onClose }: SingleClientFormProps) 
         title="Personal Information"
         description="Legal name as it appears on official documents"
         badge={
-          formData.firstName && formData.lastName && !showError('firstName') && !showError('lastName') ? (
-            <Badge variant="outline" className="text-[10px] bg-green-50 text-green-700 border-green-200">
+          formData.firstName &&
+          formData.lastName &&
+          !showError('firstName') &&
+          !showError('lastName') ? (
+            <Badge
+              variant="outline"
+              className="text-[10px] bg-green-50 text-green-700 border-green-200"
+            >
               <CheckCircle2 className="h-3 w-3 mr-1" />
               Name provided
             </Badge>
@@ -509,10 +581,16 @@ export function SingleClientForm({ onSuccess, onClose }: SingleClientFormProps) 
           <div className="grid grid-cols-4 gap-3">
             <div>
               <FieldLabel>Title</FieldLabel>
-              <Select value={formData.title} onValueChange={v => update('title', v)}>
-                <SelectTrigger className={selectBase}><SelectValue placeholder="Select" /></SelectTrigger>
+              <Select value={formData.title} onValueChange={(v) => update('title', v)}>
+                <SelectTrigger className={selectBase}>
+                  <SelectValue placeholder="Select" />
+                </SelectTrigger>
                 <SelectContent>
-                  {TITLES.map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}
+                  {TITLES.map((t) => (
+                    <SelectItem key={t} value={t}>
+                      {t}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
@@ -521,7 +599,7 @@ export function SingleClientForm({ onSuccess, onClose }: SingleClientFormProps) 
               <Input
                 className={inputCls('firstName')}
                 value={formData.firstName}
-                onChange={e => update('firstName', e.target.value)}
+                onChange={(e) => update('firstName', e.target.value)}
                 onBlur={() => handleBlur('firstName')}
                 placeholder="e.g. John"
               />
@@ -532,7 +610,7 @@ export function SingleClientForm({ onSuccess, onClose }: SingleClientFormProps) 
               <Input
                 className={inputCls('middleName')}
                 value={formData.middleName}
-                onChange={e => update('middleName', e.target.value)}
+                onChange={(e) => update('middleName', e.target.value)}
                 onBlur={() => handleBlur('middleName')}
               />
               <FieldError message={showError('middleName')} />
@@ -542,7 +620,7 @@ export function SingleClientForm({ onSuccess, onClose }: SingleClientFormProps) 
               <Input
                 className={inputCls('lastName')}
                 value={formData.lastName}
-                onChange={e => update('lastName', e.target.value)}
+                onChange={(e) => update('lastName', e.target.value)}
                 onBlur={() => handleBlur('lastName')}
                 placeholder="e.g. Smith"
               />
@@ -558,23 +636,39 @@ export function SingleClientForm({ onSuccess, onClose }: SingleClientFormProps) 
                 className={inputCls('dateOfBirth')}
                 type="date"
                 value={formData.dateOfBirth}
-                onChange={e => update('dateOfBirth', e.target.value)}
+                onChange={(e) => update('dateOfBirth', e.target.value)}
                 onBlur={() => handleBlur('dateOfBirth')}
               />
               <FieldError message={showError('dateOfBirth')} />
             </div>
             <div>
               <FieldLabel>Gender</FieldLabel>
-              <Select value={formData.gender} onValueChange={v => { update('gender', v); setTouched(p => ({ ...p, gender: true })); }}>
-                <SelectTrigger className={selectBase}><SelectValue placeholder="Select" /></SelectTrigger>
+              <Select
+                value={formData.gender}
+                onValueChange={(v) => {
+                  update('gender', v);
+                  setTouched((p) => ({ ...p, gender: true }));
+                }}
+              >
+                <SelectTrigger className={selectBase}>
+                  <SelectValue placeholder="Select" />
+                </SelectTrigger>
                 <SelectContent>
-                  {GENDERS.map(g => <SelectItem key={g} value={g}>{g}</SelectItem>)}
+                  {GENDERS.map((g) => (
+                    <SelectItem key={g} value={g}>
+                      {g}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
             <div className="col-span-2">
               <FieldLabel>Nationality</FieldLabel>
-              <Input className={inputBase} value={formData.nationality} onChange={e => update('nationality', e.target.value)} />
+              <Input
+                className={inputBase}
+                value={formData.nationality}
+                onChange={(e) => update('nationality', e.target.value)}
+              />
             </div>
           </div>
 
@@ -594,18 +688,23 @@ export function SingleClientForm({ onSuccess, onClose }: SingleClientFormProps) 
               <FieldLabel>ID Type</FieldLabel>
               <Select
                 value={formData.idType}
-                onValueChange={v => {
+                onValueChange={(v) => {
                   update('idType', v);
                   // Re-validate idNumber when type changes
                   setTimeout(() => {
-                    setErrors(prev => ({
+                    setErrors((prev) => ({
                       ...prev,
-                      idNumber: validateField('idNumber', formDataRef.current.idNumber, { ...formDataRef.current, idType: v }),
+                      idNumber: validateField('idNumber', formDataRef.current.idNumber, {
+                        ...formDataRef.current,
+                        idType: v,
+                      }),
                     }));
                   }, 0);
                 }}
               >
-                <SelectTrigger className={selectBase}><SelectValue placeholder="Select" /></SelectTrigger>
+                <SelectTrigger className={selectBase}>
+                  <SelectValue placeholder="Select" />
+                </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="sa_id">SA ID Number</SelectItem>
                   <SelectItem value="passport">Passport</SelectItem>
@@ -617,9 +716,15 @@ export function SingleClientForm({ onSuccess, onClose }: SingleClientFormProps) 
               <Input
                 className={inputCls('idNumber')}
                 value={formData.idNumber}
-                onChange={e => update('idNumber', e.target.value)}
+                onChange={(e) => update('idNumber', e.target.value)}
                 onBlur={() => handleBlur('idNumber')}
-                placeholder={formData.idType === 'sa_id' ? '13-digit SA ID' : formData.idType === 'passport' ? 'Passport number' : 'Select ID type first'}
+                placeholder={
+                  formData.idType === 'sa_id'
+                    ? '13-digit SA ID'
+                    : formData.idType === 'passport'
+                      ? 'Passport number'
+                      : 'Select ID type first'
+                }
               />
               <FieldError message={showError('idNumber')} />
             </div>
@@ -628,7 +733,7 @@ export function SingleClientForm({ onSuccess, onClose }: SingleClientFormProps) 
               <Input
                 className={inputCls('taxNumber')}
                 value={formData.taxNumber}
-                onChange={e => update('taxNumber', e.target.value)}
+                onChange={(e) => update('taxNumber', e.target.value)}
                 onBlur={() => handleBlur('taxNumber')}
                 placeholder="10-digit SARS number"
               />
@@ -642,17 +747,23 @@ export function SingleClientForm({ onSuccess, onClose }: SingleClientFormProps) 
               <FieldLabel>Marital Status</FieldLabel>
               <Select
                 value={formData.maritalStatus}
-                onValueChange={v => {
+                onValueChange={(v) => {
                   update('maritalStatus', v);
                   // Clear regime error if no longer required
                   if (v !== 'Married' && v !== 'Life Partner') {
-                    setErrors(e => ({ ...e, maritalRegime: undefined }));
+                    setErrors((e) => ({ ...e, maritalRegime: undefined }));
                   }
                 }}
               >
-                <SelectTrigger className={selectBase}><SelectValue placeholder="Select" /></SelectTrigger>
+                <SelectTrigger className={selectBase}>
+                  <SelectValue placeholder="Select" />
+                </SelectTrigger>
                 <SelectContent>
-                  {MARITAL_STATUSES.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
+                  {MARITAL_STATUSES.map((s) => (
+                    <SelectItem key={s} value={s}>
+                      {s}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
@@ -661,14 +772,20 @@ export function SingleClientForm({ onSuccess, onClose }: SingleClientFormProps) 
                 <FieldLabel required>Marital Regime</FieldLabel>
                 <Select
                   value={formData.maritalRegime}
-                  onValueChange={v => {
+                  onValueChange={(v) => {
                     update('maritalRegime', v);
-                    setTouched(p => ({ ...p, maritalRegime: true }));
+                    setTouched((p) => ({ ...p, maritalRegime: true }));
                   }}
                 >
-                  <SelectTrigger className={selectTriggerCls('maritalRegime')}><SelectValue placeholder="Select regime" /></SelectTrigger>
+                  <SelectTrigger className={selectTriggerCls('maritalRegime')}>
+                    <SelectValue placeholder="Select regime" />
+                  </SelectTrigger>
                   <SelectContent>
-                    {MARITAL_REGIMES.map(r => <SelectItem key={r} value={r}>{r}</SelectItem>)}
+                    {MARITAL_REGIMES.map((r) => (
+                      <SelectItem key={r} value={r}>
+                        {r}
+                      </SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
                 <FieldError message={showError('maritalRegime')} />
@@ -686,8 +803,14 @@ export function SingleClientForm({ onSuccess, onClose }: SingleClientFormProps) 
         title="Contact Details"
         description="Primary email and phone are used for account creation"
         badge={
-          formData.emailAddress && formData.cellphoneNumber && !showError('emailAddress') && !showError('cellphoneNumber') ? (
-            <Badge variant="outline" className="text-[10px] bg-green-50 text-green-700 border-green-200">
+          formData.emailAddress &&
+          formData.cellphoneNumber &&
+          !showError('emailAddress') &&
+          !showError('cellphoneNumber') ? (
+            <Badge
+              variant="outline"
+              className="text-[10px] bg-green-50 text-green-700 border-green-200"
+            >
               <CheckCircle2 className="h-3 w-3 mr-1" />
               Contact provided
             </Badge>
@@ -702,7 +825,7 @@ export function SingleClientForm({ onSuccess, onClose }: SingleClientFormProps) 
                 className={inputCls('emailAddress')}
                 type="email"
                 value={formData.emailAddress}
-                onChange={e => update('emailAddress', e.target.value)}
+                onChange={(e) => update('emailAddress', e.target.value)}
                 onBlur={() => handleBlur('emailAddress')}
                 placeholder="client@example.com"
               />
@@ -713,7 +836,7 @@ export function SingleClientForm({ onSuccess, onClose }: SingleClientFormProps) 
               <Input
                 className={inputCls('cellphoneNumber')}
                 value={formData.cellphoneNumber}
-                onChange={e => update('cellphoneNumber', e.target.value)}
+                onChange={(e) => update('cellphoneNumber', e.target.value)}
                 onBlur={() => handleBlur('cellphoneNumber')}
                 placeholder="+27 82 123 4567"
               />
@@ -727,7 +850,7 @@ export function SingleClientForm({ onSuccess, onClose }: SingleClientFormProps) 
                 className={inputCls('alternativeEmail')}
                 type="email"
                 value={formData.alternativeEmail}
-                onChange={e => update('alternativeEmail', e.target.value)}
+                onChange={(e) => update('alternativeEmail', e.target.value)}
                 onBlur={() => handleBlur('alternativeEmail')}
               />
               <FieldError message={showError('alternativeEmail')} />
@@ -737,7 +860,7 @@ export function SingleClientForm({ onSuccess, onClose }: SingleClientFormProps) 
               <Input
                 className={inputCls('whatsappNumber')}
                 value={formData.whatsappNumber}
-                onChange={e => update('whatsappNumber', e.target.value)}
+                onChange={(e) => update('whatsappNumber', e.target.value)}
                 onBlur={() => handleBlur('whatsappNumber')}
               />
               <FieldError message={showError('whatsappNumber')} />
@@ -749,24 +872,47 @@ export function SingleClientForm({ onSuccess, onClose }: SingleClientFormProps) 
           <div className="grid grid-cols-2 gap-3">
             <div>
               <FieldLabel>Address Line 1</FieldLabel>
-              <Input className={inputBase} value={formData.residentialAddressLine1} onChange={e => update('residentialAddressLine1', e.target.value)} placeholder="Street address" />
+              <Input
+                className={inputBase}
+                value={formData.residentialAddressLine1}
+                onChange={(e) => update('residentialAddressLine1', e.target.value)}
+                placeholder="Street address"
+              />
             </div>
             <div>
               <FieldLabel>Address Line 2</FieldLabel>
-              <Input className={inputBase} value={formData.residentialAddressLine2} onChange={e => update('residentialAddressLine2', e.target.value)} placeholder="Apartment, suite, etc." />
+              <Input
+                className={inputBase}
+                value={formData.residentialAddressLine2}
+                onChange={(e) => update('residentialAddressLine2', e.target.value)}
+                placeholder="Apartment, suite, etc."
+              />
             </div>
           </div>
           <div className="grid grid-cols-4 gap-3">
             <div>
               <FieldLabel>City</FieldLabel>
-              <Input className={inputBase} value={formData.residentialCity} onChange={e => update('residentialCity', e.target.value)} />
+              <Input
+                className={inputBase}
+                value={formData.residentialCity}
+                onChange={(e) => update('residentialCity', e.target.value)}
+              />
             </div>
             <div>
               <FieldLabel>Province</FieldLabel>
-              <Select value={formData.residentialProvince} onValueChange={v => update('residentialProvince', v)}>
-                <SelectTrigger className={selectBase}><SelectValue placeholder="Select" /></SelectTrigger>
+              <Select
+                value={formData.residentialProvince}
+                onValueChange={(v) => update('residentialProvince', v)}
+              >
+                <SelectTrigger className={selectBase}>
+                  <SelectValue placeholder="Select" />
+                </SelectTrigger>
                 <SelectContent>
-                  {PROVINCES.map(p => <SelectItem key={p} value={p}>{p}</SelectItem>)}
+                  {PROVINCES.map((p) => (
+                    <SelectItem key={p} value={p}>
+                      {p}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
@@ -775,14 +921,18 @@ export function SingleClientForm({ onSuccess, onClose }: SingleClientFormProps) 
               <Input
                 className={inputCls('residentialPostalCode')}
                 value={formData.residentialPostalCode}
-                onChange={e => update('residentialPostalCode', e.target.value)}
+                onChange={(e) => update('residentialPostalCode', e.target.value)}
                 onBlur={() => handleBlur('residentialPostalCode')}
               />
               <FieldError message={showError('residentialPostalCode')} />
             </div>
             <div>
               <FieldLabel>Country</FieldLabel>
-              <Input className={inputBase} value={formData.residentialCountry} onChange={e => update('residentialCountry', e.target.value)} />
+              <Input
+                className={inputBase}
+                value={formData.residentialCountry}
+                onChange={(e) => update('residentialCountry', e.target.value)}
+              />
             </div>
           </div>
         </div>
@@ -795,20 +945,38 @@ export function SingleClientForm({ onSuccess, onClose }: SingleClientFormProps) 
         <div className="grid grid-cols-3 gap-3">
           <div>
             <FieldLabel>Employment Status</FieldLabel>
-            <Select value={formData.employmentStatus} onValueChange={v => update('employmentStatus', v)}>
-              <SelectTrigger className={selectBase}><SelectValue placeholder="Select" /></SelectTrigger>
+            <Select
+              value={formData.employmentStatus}
+              onValueChange={(v) => update('employmentStatus', v)}
+            >
+              <SelectTrigger className={selectBase}>
+                <SelectValue placeholder="Select" />
+              </SelectTrigger>
               <SelectContent>
-                {EMPLOYMENT_STATUSES.map(s => <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>)}
+                {EMPLOYMENT_STATUSES.map((s) => (
+                  <SelectItem key={s.value} value={s.value}>
+                    {s.label}
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </div>
           <div>
             <FieldLabel>Job Title</FieldLabel>
-            <Input className={inputBase} value={formData.jobTitle} onChange={e => update('jobTitle', e.target.value)} placeholder="e.g. Financial Manager" />
+            <Input
+              className={inputBase}
+              value={formData.jobTitle}
+              onChange={(e) => update('jobTitle', e.target.value)}
+              placeholder="e.g. Financial Manager"
+            />
           </div>
           <div>
             <FieldLabel>Employer Name</FieldLabel>
-            <Input className={inputBase} value={formData.employerName} onChange={e => update('employerName', e.target.value)} />
+            <Input
+              className={inputBase}
+              value={formData.employerName}
+              onChange={(e) => update('employerName', e.target.value)}
+            />
           </div>
         </div>
       </FormSection>
@@ -816,28 +984,45 @@ export function SingleClientForm({ onSuccess, onClose }: SingleClientFormProps) 
       {/* ================================================================ */}
       {/* SERVICES & GOALS                                                 */}
       {/* ================================================================ */}
-      <FormSection icon={Target} title="Services & Goals" description="Financial planning objectives">
+      <FormSection
+        icon={Target}
+        title="Services & Goals"
+        description="Financial planning objectives"
+      >
         <div>
           <FieldLabel>Financial Goals</FieldLabel>
-          <Input className={inputBase} value={formData.financialGoals} onChange={e => update('financialGoals', e.target.value)} placeholder="e.g. Retirement planning, investment growth, estate planning" />
+          <Input
+            className={inputBase}
+            value={formData.financialGoals}
+            onChange={(e) => update('financialGoals', e.target.value)}
+            placeholder="e.g. Retirement planning, investment growth, estate planning"
+          />
         </div>
       </FormSection>
 
       {/* ================================================================ */}
       {/* POPIA CONSENT                                                    */}
       {/* ================================================================ */}
-      <div className={`rounded-xl border-2 overflow-hidden transition-colors ${
-        submitAttempted && !consentConfirmed
-          ? 'border-red-300 bg-red-50/30'
-          : 'border-amber-200 bg-amber-50/50'
-      }`}>
+      <div
+        className={`rounded-xl border-2 overflow-hidden transition-colors ${
+          submitAttempted && !consentConfirmed
+            ? 'border-red-300 bg-red-50/30'
+            : 'border-amber-200 bg-amber-50/50'
+        }`}
+      >
         <div className="flex items-center gap-2.5 px-5 pt-4 pb-2">
-          <div className={`h-7 w-7 rounded-lg flex items-center justify-center shrink-0 ${
-            submitAttempted && !consentConfirmed ? 'bg-red-100' : 'bg-amber-100'
-          }`}>
-            <ShieldCheck className={`h-3.5 w-3.5 ${submitAttempted && !consentConfirmed ? 'text-red-700' : 'text-amber-700'}`} />
+          <div
+            className={`h-7 w-7 rounded-lg flex items-center justify-center shrink-0 ${
+              submitAttempted && !consentConfirmed ? 'bg-red-100' : 'bg-amber-100'
+            }`}
+          >
+            <ShieldCheck
+              className={`h-3.5 w-3.5 ${submitAttempted && !consentConfirmed ? 'text-red-700' : 'text-amber-700'}`}
+            />
           </div>
-          <h3 className={`text-[13px] font-semibold ${submitAttempted && !consentConfirmed ? 'text-red-900' : 'text-amber-900'}`}>
+          <h3
+            className={`text-[13px] font-semibold ${submitAttempted && !consentConfirmed ? 'text-red-900' : 'text-amber-900'}`}
+          >
             POPIA Consent Confirmation
           </h3>
           {submitAttempted && !consentConfirmed && (
@@ -853,20 +1038,27 @@ export function SingleClientForm({ onSuccess, onClose }: SingleClientFormProps) 
               checked={consentConfirmed}
               onCheckedChange={(checked) => setConsentConfirmed(checked === true)}
               className={`mt-0.5 ${
-                submitAttempted && !consentConfirmed
-                  ? 'border-red-400'
-                  : 'border-amber-400'
+                submitAttempted && !consentConfirmed ? 'border-red-400' : 'border-amber-400'
               } data-[state=checked]:bg-[#6d28d9] data-[state=checked]:border-[#6d28d9]`}
             />
-            <label htmlFor="admin-consent" className={`text-[13px] leading-relaxed cursor-pointer ${
-              submitAttempted && !consentConfirmed ? 'text-red-900' : 'text-amber-900'
-            }`}>
-              I confirm that I have obtained consent from this client to create their account on Navigate Wealth in accordance with <strong>POPIA regulations</strong>. The client will receive a welcome email to set their password and accept Terms &amp; Conditions upon application approval.
+            <label
+              htmlFor="admin-consent"
+              className={`text-[13px] leading-relaxed cursor-pointer ${
+                submitAttempted && !consentConfirmed ? 'text-red-900' : 'text-amber-900'
+              }`}
+            >
+              I confirm that I have obtained consent from this client to create their account on
+              Navigate Wealth in accordance with <strong>POPIA regulations</strong>. The client will
+              receive a welcome email to set their password and accept Terms &amp; Conditions upon
+              application approval.
             </label>
           </div>
           <div className="flex items-start gap-2 mt-3 ml-9 text-[11px] text-amber-700/80">
             <Info className="h-3.5 w-3.5 shrink-0 mt-0.5" />
-            <span>A Supabase Auth user will be created with a temporary password. The client must set their own password via the recovery link sent upon approval.</span>
+            <span>
+              A Supabase Auth user will be created with a temporary password. The client must set
+              their own password via the recovery link sent upon approval.
+            </span>
           </div>
         </div>
       </div>

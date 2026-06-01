@@ -17,7 +17,8 @@ export const LEGAL_DOCUMENTS_REGISTRY: LegalDocumentRegistryEntry[] = [
     slug: 'legal-conditions',
     name: 'Legal Conditions & Disclosures',
     section: 'legal-notices',
-    description: 'Terms, conditions, and disclosures governing the use of Navigate Wealth services.',
+    description:
+      'Terms, conditions, and disclosures governing the use of Navigate Wealth services.',
   },
   {
     slug: 'terms-of-use',
@@ -49,7 +50,8 @@ export const LEGAL_DOCUMENTS_REGISTRY: LegalDocumentRegistryEntry[] = [
     slug: 'popia-paia-manual',
     name: 'POPIA and PAIA Manual',
     section: 'privacy-data-protection',
-    description: 'Manual in terms of the Protection of Personal Information Act and Promotion of Access to Information Act.',
+    description:
+      'Manual in terms of the Protection of Personal Information Act and Promotion of Access to Information Act.',
     migrationPriority: 'high',
   },
   {
@@ -69,7 +71,8 @@ export const LEGAL_DOCUMENTS_REGISTRY: LegalDocumentRegistryEntry[] = [
     slug: 'data-processing-agreement',
     name: 'Data Processing Agreement',
     section: 'privacy-data-protection',
-    description: 'Agreement governing the processing of personal data by third-party service providers.',
+    description:
+      'Agreement governing the processing of personal data by third-party service providers.',
   },
   {
     slug: 'conflict-of-interest',
@@ -107,7 +110,7 @@ export const LEGAL_DOCUMENTS_REGISTRY: LegalDocumentRegistryEntry[] = [
     slug: 'compliance-report',
     name: 'Regulatory Compliance Report',
     section: 'regulatory-disclosures',
-    description: 'Summary of Navigate Wealth\'s regulatory compliance status and reporting.',
+    description: "Summary of Navigate Wealth's regulatory compliance status and reporting.",
   },
   {
     slug: 'paia-manual',
@@ -147,15 +150,14 @@ export const LEGAL_DOCUMENTS_REGISTRY: LegalDocumentRegistryEntry[] = [
   },
 ];
 
-export const LEGAL_DOCUMENTS_BY_SLUG: Record<string, LegalDocumentRegistryEntry> = Object.fromEntries(
-  LEGAL_DOCUMENTS_REGISTRY.map((doc) => [doc.slug, doc]),
-);
+export const LEGAL_DOCUMENTS_BY_SLUG: Record<string, LegalDocumentRegistryEntry> =
+  Object.fromEntries(LEGAL_DOCUMENTS_REGISTRY.map((doc) => [doc.slug, doc]));
 
 export const LEGAL_SLUGS = LEGAL_DOCUMENTS_REGISTRY.map((doc) => doc.slug);
 
-export const LEGAL_MIGRATION_PRIORITY_SLUGS = LEGAL_DOCUMENTS_REGISTRY
-  .filter((doc) => doc.migrationPriority === 'high')
-  .map((doc) => doc.slug);
+export const LEGAL_MIGRATION_PRIORITY_SLUGS = LEGAL_DOCUMENTS_REGISTRY.filter(
+  (doc) => doc.migrationPriority === 'high',
+).map((doc) => doc.slug);
 
 export const LEGAL_SECTION_LABELS: Record<LegalDocumentSection, string> = {
   'legal-notices': 'Legal Notices',

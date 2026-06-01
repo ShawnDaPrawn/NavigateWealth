@@ -117,10 +117,10 @@ async function listTrackingRecordsByPrefix(prefix: string): Promise<ArticleEmail
   let startAfter: string | undefined;
 
   while (true) {
-    const rows = await kv.listByPrefix(prefix, {
+    const rows = (await kv.listByPrefix(prefix, {
       startAfter,
       limit: TRACKING_RECORD_LIST_PAGE_SIZE,
-    }) as Array<{ key: string; value: ArticleEmailTrackingRecord | null | undefined }>;
+    })) as Array<{ key: string; value: ArticleEmailTrackingRecord | null | undefined }>;
 
     if (rows.length === 0) {
       return records;
@@ -149,7 +149,9 @@ async function persistTrackingRecord(record: ArticleEmailTrackingRecord): Promis
   const values = [normalizedRecord, normalizedRecord];
 
   if (normalizedRecord.source === 'publish') {
-    keys.push(publishRecipientTrackingKey(normalizedRecord.articleId, normalizedRecord.recipientEmail));
+    keys.push(
+      publishRecipientTrackingKey(normalizedRecord.articleId, normalizedRecord.recipientEmail),
+    );
     values.push(normalizedRecord);
   }
 
@@ -172,7 +174,9 @@ async function persistTrackingRecords(records: ArticleEmailTrackingRecord[]): Pr
       values.push(normalizedRecord);
 
       if (normalizedRecord.source === 'publish') {
-        keys.push(publishRecipientTrackingKey(normalizedRecord.articleId, normalizedRecord.recipientEmail));
+        keys.push(
+          publishRecipientTrackingKey(normalizedRecord.articleId, normalizedRecord.recipientEmail),
+        );
         values.push(normalizedRecord);
       }
     }
@@ -197,7 +201,9 @@ function latestDate(values: Array<string | null | undefined>): string | null {
   return filtered.sort((a, b) => new Date(b).getTime() - new Date(a).getTime())[0] ?? null;
 }
 
-function normalizeDeliveryStatus(status: ArticleEmailDeliveryStatus | null | undefined): ArticleEmailDeliveryStatus {
+function normalizeDeliveryStatus(
+  status: ArticleEmailDeliveryStatus | null | undefined,
+): ArticleEmailDeliveryStatus {
   switch (status) {
     case 'pending':
     case 'sending':
@@ -215,9 +221,10 @@ function withTrackingDefaults(record: ArticleEmailTrackingRecord): ArticleEmailT
   return {
     ...record,
     deliveryStatus: normalizeDeliveryStatus(record.deliveryStatus),
-    attemptCount: typeof record.attemptCount === 'number' && Number.isFinite(record.attemptCount)
-      ? record.attemptCount
-      : 0,
+    attemptCount:
+      typeof record.attemptCount === 'number' && Number.isFinite(record.attemptCount)
+        ? record.attemptCount
+        : 0,
     lastAttemptedAt: record.lastAttemptedAt ?? null,
     providerMessageId: record.providerMessageId ?? null,
   };
@@ -248,9 +255,9 @@ export async function createArticleEmailTrackingRecord(
   const recipientEmail = input.recipient.email.trim().toLowerCase();
 
   if (source === 'publish') {
-    const existing = await kv.get(
+    const existing = (await kv.get(
       publishRecipientTrackingKey(input.article.id, recipientEmail),
-    ) as ArticleEmailTrackingRecord | null;
+    )) as ArticleEmailTrackingRecord | null;
 
     if (existing) {
       const updatedExisting: ArticleEmailTrackingRecord = {
@@ -303,7 +310,9 @@ export async function createArticleEmailTrackingRecords(
 ): Promise<ArticleEmailTrackingRecord[]> {
   if (inputs.length === 0) return [];
 
-  const existingPublishRecords = new Array<ArticleEmailTrackingRecord | null>(inputs.length).fill(null);
+  const existingPublishRecords = new Array<ArticleEmailTrackingRecord | null>(inputs.length).fill(
+    null,
+  );
   const publishLookups = inputs
     .map((input, index) => {
       const source = input.source ?? 'publish';
@@ -311,13 +320,18 @@ export async function createArticleEmailTrackingRecords(
 
       return {
         index,
-        key: publishRecipientTrackingKey(input.article.id, input.recipient.email.trim().toLowerCase()),
+        key: publishRecipientTrackingKey(
+          input.article.id,
+          input.recipient.email.trim().toLowerCase(),
+        ),
       };
     })
     .filter((lookup): lookup is { index: number; key: string } => Boolean(lookup));
 
   for (const batch of chunkArray(publishLookups, TRACKING_RECORD_LOOKUP_BATCH_SIZE)) {
-    const batchResults = await kv.mget(batch.map((lookup) => lookup.key)) as Array<ArticleEmailTrackingRecord | null | undefined>;
+    const batchResults = (await kv.mget(batch.map((lookup) => lookup.key))) as Array<
+      ArticleEmailTrackingRecord | null | undefined
+    >;
     batch.forEach((lookup, batchIndex) => {
       existingPublishRecords[lookup.index] = batchResults[batchIndex] ?? null;
     });
@@ -434,7 +448,9 @@ export async function markArticleEmailDeliveryFailed(
   });
 }
 
-export async function markArticleEmailOpened(token: string): Promise<ArticleEmailTrackingRecord | null> {
+export async function markArticleEmailOpened(
+  token: string,
+): Promise<ArticleEmailTrackingRecord | null> {
   const existing = await getArticleEmailTrackingRecordByToken(token);
   if (!existing) return null;
 
@@ -450,7 +466,9 @@ export async function markArticleEmailOpened(token: string): Promise<ArticleEmai
   return updated;
 }
 
-export async function markArticleEmailRead(token: string): Promise<ArticleEmailTrackingRecord | null> {
+export async function markArticleEmailRead(
+  token: string,
+): Promise<ArticleEmailTrackingRecord | null> {
   const existing = await getArticleEmailTrackingRecordByToken(token);
   if (!existing) return null;
 
@@ -469,8 +487,12 @@ export async function markArticleEmailRead(token: string): Promise<ArticleEmailT
   return updated;
 }
 
-export async function listArticleEmailTrackingRecords(articleId: string): Promise<ArticleEmailTrackingRecord[]> {
-  const records = await listTrackingRecordsByPrefix(`${ARTICLE_EMAIL_TRACKING_PREFIX}${articleId}:`);
+export async function listArticleEmailTrackingRecords(
+  articleId: string,
+): Promise<ArticleEmailTrackingRecord[]> {
+  const records = await listTrackingRecordsByPrefix(
+    `${ARTICLE_EMAIL_TRACKING_PREFIX}${articleId}:`,
+  );
   return records.sort((a, b) => {
     const aTime = new Date(a.lastReadAt || a.lastOpenedAt || a.sentAt || a.createdAt).getTime();
     const bTime = new Date(b.lastReadAt || b.lastOpenedAt || b.sentAt || b.createdAt).getTime();
@@ -534,11 +556,21 @@ export function summarizeTrackedRecipientDeliveries(
   source?: ArticleEmailTrackingSource,
 ) {
   const filtered = source ? records.filter((record) => record.source === source) : records;
-  const pendingOnly = filtered.filter((record) => normalizeDeliveryStatus(record.deliveryStatus) === 'pending').length;
-  const sending = filtered.filter((record) => normalizeDeliveryStatus(record.deliveryStatus) === 'sending').length;
-  const sent = filtered.filter((record) => normalizeDeliveryStatus(record.deliveryStatus) === 'sent').length;
-  const failedRetryable = filtered.filter((record) => normalizeDeliveryStatus(record.deliveryStatus) === 'failed_retryable').length;
-  const failedTerminal = filtered.filter((record) => normalizeDeliveryStatus(record.deliveryStatus) === 'failed_terminal').length;
+  const pendingOnly = filtered.filter(
+    (record) => normalizeDeliveryStatus(record.deliveryStatus) === 'pending',
+  ).length;
+  const sending = filtered.filter(
+    (record) => normalizeDeliveryStatus(record.deliveryStatus) === 'sending',
+  ).length;
+  const sent = filtered.filter(
+    (record) => normalizeDeliveryStatus(record.deliveryStatus) === 'sent',
+  ).length;
+  const failedRetryable = filtered.filter(
+    (record) => normalizeDeliveryStatus(record.deliveryStatus) === 'failed_retryable',
+  ).length;
+  const failedTerminal = filtered.filter(
+    (record) => normalizeDeliveryStatus(record.deliveryStatus) === 'failed_terminal',
+  ).length;
   const pending = pendingOnly + sending + failedRetryable;
 
   return {
@@ -587,6 +619,9 @@ export function summarizeArticleEmailEngagement(
   };
 }
 
-export async function logArticleEmailEngagementError(message: string, error: unknown): Promise<void> {
+export async function logArticleEmailEngagementError(
+  message: string,
+  error: unknown,
+): Promise<void> {
   log.error(message, error);
 }

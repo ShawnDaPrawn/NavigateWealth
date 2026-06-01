@@ -15,14 +15,7 @@ import {
 import { Button } from '../../../ui/button';
 import { Badge } from '../../../ui/badge';
 import { Checkbox } from '../../../ui/checkbox';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '../../../ui/table';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../../ui/table';
 import { Alert, AlertDescription } from '../../../ui/alert';
 import { ExternalLink, Loader2, RefreshCw, Sparkles } from 'lucide-react';
 import type { PrefillMatch, PrefillResolveResponse } from '../../../../shared/form-prefill/types';
@@ -72,10 +65,7 @@ export function PrefillReviewModal({
   const [overwriteConflicts, setOverwriteConflicts] = useState(false);
 
   const safeMatches = result?.matches ?? [];
-  const conflictMatches = useMemo(
-    () => safeMatches.filter((m) => m.conflict),
-    [safeMatches],
-  );
+  const conflictMatches = useMemo(() => safeMatches.filter((m) => m.conflict), [safeMatches]);
 
   const profileCompletenessHints = useMemo(() => {
     if (!result) return [];
@@ -87,9 +77,7 @@ export function PrefillReviewModal({
 
   useEffect(() => {
     if (!result) return;
-    const defaults = new Set(
-      result.matches.filter((m) => !m.conflict).map((m) => m.formField),
-    );
+    const defaults = new Set(result.matches.filter((m) => !m.conflict).map((m) => m.formField));
     setSelected(defaults);
     setOverwriteConflicts(false);
   }, [result]);
@@ -112,7 +100,9 @@ export function PrefillReviewModal({
     onOpenChange(false);
   };
 
-  const profileEditUrl = clientId ? `/admin?module=clients&clientId=${encodeURIComponent(clientId)}` : '/admin?module=clients';
+  const profileEditUrl = clientId
+    ? `/admin?module=clients&clientId=${encodeURIComponent(clientId)}`
+    : '/admin?module=clients';
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -123,7 +113,8 @@ export function PrefillReviewModal({
             Review client data matches
           </DialogTitle>
           <DialogDescription>
-            Select which fields to prefill from the client record. Conflicting values are unchecked by default.
+            Select which fields to prefill from the client record. Conflicting values are unchecked
+            by default.
           </DialogDescription>
         </DialogHeader>
 
@@ -167,7 +158,10 @@ export function PrefillReviewModal({
             {result.matches.length === 0 ? (
               <Alert>
                 <AlertDescription className="space-y-2">
-                  <p>No mappable client data was found for this form. You can continue entering details manually.</p>
+                  <p>
+                    No mappable client data was found for this form. You can continue entering
+                    details manually.
+                  </p>
                   <Link
                     to={profileEditUrl}
                     className="inline-flex items-center gap-1 text-sm font-medium text-primary hover:underline"
@@ -184,7 +178,12 @@ export function PrefillReviewModal({
                     Select all safe
                   </Button>
                   {onRefresh && (
-                    <Button type="button" size="sm" variant="ghost" onClick={() => void onRefresh()}>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => void onRefresh()}
+                    >
                       <RefreshCw className="mr-1 h-4 w-4" />
                       Refresh
                     </Button>
@@ -202,7 +201,10 @@ export function PrefillReviewModal({
                   </TableHeader>
                   <TableBody>
                     {result.matches.map((match: PrefillMatch) => (
-                      <TableRow key={match.formField} className={match.conflict ? 'bg-amber-50/60' : undefined}>
+                      <TableRow
+                        key={match.formField}
+                        className={match.conflict ? 'bg-amber-50/60' : undefined}
+                      >
                         <TableCell>
                           <Checkbox
                             checked={selected.has(match.formField)}
@@ -218,12 +220,16 @@ export function PrefillReviewModal({
                             </div>
                           )}
                           {match.sourceDetail && (
-                            <div className="text-xs text-muted-foreground mt-1">{match.sourceDetail}</div>
+                            <div className="text-xs text-muted-foreground mt-1">
+                              {match.sourceDetail}
+                            </div>
                           )}
                         </TableCell>
                         <TableCell>{formatValue(match.proposedValue)}</TableCell>
                         <TableCell>
-                          <Badge variant="outline">{SOURCE_LABELS[match.source] ?? match.source}</Badge>
+                          <Badge variant="outline">
+                            {SOURCE_LABELS[match.source] ?? match.source}
+                          </Badge>
                         </TableCell>
                       </TableRow>
                     ))}
@@ -260,7 +266,14 @@ export function PrefillReviewModal({
         )}
 
         <DialogFooter className="gap-2 sm:gap-0">
-          <Button type="button" variant="ghost" onClick={() => { onSkip?.(); onOpenChange(false); }}>
+          <Button
+            type="button"
+            variant="ghost"
+            onClick={() => {
+              onSkip?.();
+              onOpenChange(false);
+            }}
+          >
             {previewOnly ? 'Close' : 'Skip prefill'}
           </Button>
           {!previewOnly && (

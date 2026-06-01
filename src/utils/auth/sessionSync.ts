@@ -1,6 +1,6 @@
 /**
  * Cross-Tab Session Synchronization
- * 
+ *
  * Ensures that logout actions in one tab are propagated to all other tabs.
  * Uses BroadcastChannel API with localStorage fallback for compatibility.
  */
@@ -97,7 +97,7 @@ export class SessionSync {
       // which is perfect for cross-tab communication
       localStorage.setItem(STORAGE_KEY, JSON.stringify(message));
       console.log('📤 SessionSync broadcast (localStorage):', message);
-      
+
       // Clean up immediately (we only need the event, not persistent storage)
       setTimeout(() => {
         localStorage.removeItem(STORAGE_KEY);
@@ -112,7 +112,7 @@ export class SessionSync {
     if (!this.listeners.has(event)) {
       this.listeners.set(event, new Set());
     }
-    
+
     this.listeners.get(event)!.add(callback);
     console.log(`👂 SessionSync listener added for: ${event}`);
 
@@ -133,7 +133,7 @@ export class SessionSync {
     const eventListeners = this.listeners.get(event);
     if (eventListeners) {
       console.log(`🔔 SessionSync notifying ${eventListeners.size} listeners for: ${event}`);
-      eventListeners.forEach(callback => {
+      eventListeners.forEach((callback) => {
         try {
           callback();
         } catch (error) {

@@ -77,7 +77,7 @@ export class AdviceEngineRoAContractService {
   }
 
   async getContract(moduleId: string): Promise<RoAModuleContract> {
-    const saved = await kv.get(contractKey(moduleId)) as RoAModuleContract | null;
+    const saved = (await kv.get(contractKey(moduleId))) as RoAModuleContract | null;
     if (saved) return saved;
 
     const seeded = DEFAULT_ROA_MODULE_CONTRACTS.find((contract) => contract.id === moduleId);
@@ -90,11 +90,13 @@ export class AdviceEngineRoAContractService {
     try {
       incoming = validateRoAModuleContract(input);
     } catch (error) {
-      throw new ValidationError(error instanceof Error ? error.message : 'Invalid RoA module contract');
+      throw new ValidationError(
+        error instanceof Error ? error.message : 'Invalid RoA module contract',
+      );
     }
 
     const now = new Date().toISOString();
-    const existing = await kv.get(contractKey(incoming.id)) as RoAModuleContract | null;
+    const existing = (await kv.get(contractKey(incoming.id))) as RoAModuleContract | null;
     const seeded = DEFAULT_ROA_MODULE_CONTRACTS.find((contract) => contract.id === incoming.id);
     const base = existing || seeded;
     const userId = getUserId(user);
@@ -106,7 +108,10 @@ export class AdviceEngineRoAContractService {
       createdBy: base?.createdBy || userId,
       updatedAt: now,
       updatedBy: userId,
-      publishedAt: incoming.status === 'active' ? incoming.publishedAt || base?.publishedAt || now : incoming.publishedAt,
+      publishedAt:
+        incoming.status === 'active'
+          ? incoming.publishedAt || base?.publishedAt || now
+          : incoming.publishedAt,
     });
 
     await kv.set(contractKey(contract.id), contract);
@@ -124,18 +129,24 @@ export class AdviceEngineRoAContractService {
 
   async publishContract(moduleId: string, user: AuthUserLike): Promise<RoAModuleContract> {
     const existing = await this.getContract(moduleId);
-    return this.saveContract({
-      ...existing,
-      status: 'active',
-      publishedAt: new Date().toISOString(),
-    }, user);
+    return this.saveContract(
+      {
+        ...existing,
+        status: 'active',
+        publishedAt: new Date().toISOString(),
+      },
+      user,
+    );
   }
 
   async archiveContract(moduleId: string, user: AuthUserLike): Promise<RoAModuleContract> {
     const existing = await this.getContract(moduleId);
-    return this.saveContract({
-      ...existing,
-      status: 'archived',
-    }, user);
+    return this.saveContract(
+      {
+        ...existing,
+        status: 'archived',
+      },
+      user,
+    );
   }
 }

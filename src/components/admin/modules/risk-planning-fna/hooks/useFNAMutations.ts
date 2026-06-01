@@ -12,11 +12,16 @@ import { riskFnaKeys } from './queryKeys';
 
 export function useFNAMutations() {
   const queryClient = useQueryClient();
-  
+
   // Create FNA
   const createMutation = useMutation({
-    mutationFn: ({ clientId, inputData }: { clientId: string; inputData: Partial<InformationGatheringInput> }) =>
-      RiskPlanningFnaAPI.create(clientId, inputData),
+    mutationFn: ({
+      clientId,
+      inputData,
+    }: {
+      clientId: string;
+      inputData: Partial<InformationGatheringInput>;
+    }) => RiskPlanningFnaAPI.create(clientId, inputData),
     onSuccess: (data) => {
       if (data) {
         queryClient.invalidateQueries({ queryKey: riskFnaKeys.list(data.clientId) });
@@ -30,7 +35,7 @@ export function useFNAMutations() {
       toast.error('An error occurred while creating the FNA');
     },
   });
-  
+
   // Update FNA
   const updateMutation = useMutation({
     mutationFn: ({ fnaId, ...updates }: { fnaId: string } & Partial<PublishedFNA>) =>
@@ -49,7 +54,7 @@ export function useFNAMutations() {
       toast.error('An error occurred while updating the FNA');
     },
   });
-  
+
   // Publish FNA
   const publishMutation = useMutation({
     mutationFn: (fnaId: string) => RiskPlanningFnaAPI.publish(fnaId),
@@ -67,7 +72,7 @@ export function useFNAMutations() {
       toast.error('An error occurred while publishing the FNA');
     },
   });
-  
+
   // Archive FNA
   const archiveMutation = useMutation({
     mutationFn: (fnaId: string) => RiskPlanningFnaAPI.archive(fnaId),
@@ -80,7 +85,7 @@ export function useFNAMutations() {
       toast.error('An error occurred while archiving the FNA');
     },
   });
-  
+
   return {
     createFNA: createMutation.mutateAsync,
     updateFNA: updateMutation.mutateAsync,

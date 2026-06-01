@@ -130,7 +130,12 @@ function getEstimatedTokens(value: unknown): number {
     : 0;
 }
 
-async function setCount(store: VascoGuardrailStore, key: string, count: number, now: number): Promise<void> {
+async function setCount(
+  store: VascoGuardrailStore,
+  key: string,
+  count: number,
+  now: number,
+): Promise<void> {
   await store.set(key, {
     count,
     updatedAt: new Date(now).toISOString(),
@@ -138,7 +143,12 @@ async function setCount(store: VascoGuardrailStore, key: string, count: number, 
 }
 
 function latestUserMessage(messages: VascoPublicGuardrailMessage[]): string {
-  return [...messages].reverse().find((msg) => msg.role === 'user')?.content?.trim() || '';
+  return (
+    [...messages]
+      .reverse()
+      .find((msg) => msg.role === 'user')
+      ?.content?.trim() || ''
+  );
 }
 
 export function estimateVascoPublicTokens(
@@ -159,12 +169,16 @@ export function isVascoPublicTopicAllowed(message: string): boolean {
   const hasFinanceSignal = FINANCE_ALLOW_PATTERNS.some((pattern) => pattern.test(normalized));
   if (hasFinanceSignal) return true;
 
-  const hasExplicitOffTopicSignal = OFF_TOPIC_BLOCK_PATTERNS.some((pattern) => pattern.test(normalized));
+  const hasExplicitOffTopicSignal = OFF_TOPIC_BLOCK_PATTERNS.some((pattern) =>
+    pattern.test(normalized),
+  );
   if (hasExplicitOffTopicSignal) return false;
 
   const looksLikeGeneralKnowledge =
     /^(who|what|when|where|why|how|can you|please)\b/i.test(normalized) &&
-    !/\b(cover|tax|estate|retire|invest|medical|risk|wealth|fna|adviser|advisor)\b/i.test(normalized);
+    !/\b(cover|tax|estate|retire|invest|medical|risk|wealth|fna|adviser|advisor)\b/i.test(
+      normalized,
+    );
 
   return !looksLikeGeneralKnowledge;
 }
@@ -219,14 +233,19 @@ export async function evaluateVascoPublicGuardrails({
       return denied({
         status: 400,
         code: 'too_many_messages',
-        reason: 'This public chat has reached its conversation limit. Please start a new question or sign up for personalised guidance.',
+        reason:
+          'This public chat has reached its conversation limit. Please start a new question or sign up for personalised guidance.',
         estimatedTokens,
         safetyIdentifier,
       });
     }
 
     for (const message of messages) {
-      if (!message || !['user', 'assistant'].includes(message.role) || typeof message.content !== 'string') {
+      if (
+        !message ||
+        !['user', 'assistant'].includes(message.role) ||
+        typeof message.content !== 'string'
+      ) {
         return denied({
           status: 400,
           code: 'invalid_request',
@@ -236,7 +255,10 @@ export async function evaluateVascoPublicGuardrails({
         });
       }
 
-      if (message.role === 'user' && message.content.length > VASCO_PUBLIC_LIMITS.maxUserMessageChars) {
+      if (
+        message.role === 'user' &&
+        message.content.length > VASCO_PUBLIC_LIMITS.maxUserMessageChars
+      ) {
         return denied({
           status: 400,
           code: 'message_too_long',
@@ -253,7 +275,8 @@ export async function evaluateVascoPublicGuardrails({
         status: 400,
         code: 'topic_blocked',
         analyticsEvent: 'topic_blocked',
-        reason: 'Vasco can help with South African financial planning, tax, retirement, risk cover, estate planning, medical aid, investments, and Navigate Wealth services.',
+        reason:
+          'Vasco can help with South African financial planning, tax, retirement, risk cover, estate planning, medical aid, investments, and Navigate Wealth services.',
         estimatedTokens,
         safetyIdentifier,
       });
@@ -314,7 +337,8 @@ export async function evaluateVascoPublicGuardrails({
         status: 429,
         code: 'rate_limited',
         analyticsEvent: 'rate_limited',
-        reason: 'You have reached the free Ask Vasco limit for now. You can sign up for personalised guidance or ask an adviser to contact you.',
+        reason:
+          'You have reached the free Ask Vasco limit for now. You can sign up for personalised guidance or ask an adviser to contact you.',
         estimatedTokens,
         safetyIdentifier,
       });
@@ -352,7 +376,8 @@ export async function evaluateVascoPublicGuardrails({
       status: 503,
       code: 'guardrail_unavailable',
       analyticsEvent: 'guardrail_error',
-      reason: 'Vasco is temporarily unavailable. Please try again shortly or contact Navigate Wealth for help.',
+      reason:
+        'Vasco is temporarily unavailable. Please try again shortly or contact Navigate Wealth for help.',
       estimatedTokens,
       safetyIdentifier,
     });

@@ -1,7 +1,7 @@
 /**
  * Personnel Module Index
  * Navigate Wealth Admin Dashboard
- * 
+ *
  * Barrel export for the Personnel module's public API.
  */
 
@@ -41,14 +41,14 @@ export {
   usePersonnelClients,
   useSuperAdmin,
   personnelKeys,
-  
+
   // Mutation hooks
   useInvitePersonnel,
   useUpdatePersonnel,
   useDeletePersonnel,
   useAddPersonnelDocument,
   useUpdateSuperAdmin,
-  
+
   // Permission hooks
   usePermissions,
   useAllPermissions,
@@ -56,7 +56,7 @@ export {
   useUpdatePermissions,
   useCurrentUserPermissions,
   permissionKeys,
-  
+
   // Utility hooks
   usePersonnelFilters,
 } from './hooks';
@@ -90,8 +90,4 @@ export {
 export type { CapabilityMeta } from './constants';
 
 // Schemas
-export {
-  inviteUserSchema,
-  updateProfileSchema,
-  commissionSchema,
-} from './schema';
+export { inviteUserSchema, updateProfileSchema, commissionSchema } from './schema';

@@ -12,9 +12,7 @@ describe('fna-intake consent compliance', () => {
       resolve(process.cwd(), 'src/services/fna-intake-api.ts'),
       'utf8',
     );
-    const match = clientSource.match(
-      /export const FNA_INTAKE_CONSENT_TEXT =\s*\n?\s*'([^']+)'/,
-    );
+    const match = clientSource.match(/export const FNA_INTAKE_CONSENT_TEXT =\s*\n?\s*'([^']+)'/);
     expect(match?.[1]).toBe(serverConsentText);
   });
 

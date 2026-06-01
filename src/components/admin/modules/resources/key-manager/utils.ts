@@ -47,37 +47,32 @@ export function isIndividualKey(key: ProductKey): boolean {
  * Filter keys by category
  */
 export function filterKeysByCategory(
-  keys: ProductKey[], 
-  category: ProductKeyCategory | 'all'
+  keys: ProductKey[],
+  category: ProductKeyCategory | 'all',
 ): ProductKey[] {
   if (category === 'all') return keys;
-  return keys.filter(key => key.category === category);
+  return keys.filter((key) => key.category === category);
 }
 
 /**
  * Filter keys by data type
  */
-export function filterKeysByDataType(
-  keys: ProductKey[], 
-  dataType: string | 'all'
-): ProductKey[] {
+export function filterKeysByDataType(keys: ProductKey[], dataType: string | 'all'): ProductKey[] {
   if (dataType === 'all') return keys;
-  return keys.filter(key => key.dataType === dataType);
+  return keys.filter((key) => key.dataType === dataType);
 }
 
 /**
  * Filter keys by search term (searches name, description, and ID)
  */
-export function filterKeysBySearch(
-  keys: ProductKey[], 
-  searchTerm: string
-): ProductKey[] {
+export function filterKeysBySearch(keys: ProductKey[], searchTerm: string): ProductKey[] {
   if (!searchTerm) return keys;
   const term = searchTerm.toLowerCase();
-  return keys.filter(key => 
-    key.name.toLowerCase().includes(term) ||
-    key.description.toLowerCase().includes(term) ||
-    key.id.toLowerCase().includes(term)
+  return keys.filter(
+    (key) =>
+      key.name.toLowerCase().includes(term) ||
+      key.description.toLowerCase().includes(term) ||
+      key.id.toLowerCase().includes(term),
   );
 }
 
@@ -117,16 +112,14 @@ export function getIndividualKeys(keys: ProductKey[] = ALL_PRODUCT_KEYS): Produc
  * Find a key by its ID
  */
 export function getKeyById(keyId: string): ProductKey | undefined {
-  return ALL_PRODUCT_KEYS.find(key => key.id === keyId);
+  return ALL_PRODUCT_KEYS.find((key) => key.id === keyId);
 }
 
 /**
  * Find multiple keys by their IDs
  */
 export function getKeysByIds(keyIds: string[]): ProductKey[] {
-  return keyIds
-    .map(id => getKeyById(id))
-    .filter((key): key is ProductKey => key !== undefined);
+  return keyIds.map((id) => getKeyById(id)).filter((key): key is ProductKey => key !== undefined);
 }
 
 /**
@@ -162,7 +155,7 @@ export function getKeysByModule(moduleName: string): ProductKey[] {
   const keyIds = Object.entries(KEY_USAGE_MAP)
     .filter(([, modules]) => (modules as readonly string[]).includes(moduleName))
     .map(([keyId]) => keyId);
-  
+
   return getKeysByIds(keyIds);
 }
 
@@ -179,7 +172,7 @@ export function getKeyDependencies(keyId: string): string[] {
  */
 export function getKeyDependencyNames(keyId: string): string[] {
   const dependencies = getKeyDependencies(keyId);
-  return dependencies.map(depId => getKeyName(depId));
+  return dependencies.map((depId) => getKeyName(depId));
 }
 
 // ----------------------------------------------------------------------------
@@ -191,7 +184,7 @@ export function getKeyDependencyNames(keyId: string): string[] {
  */
 export function getDataTypes(keys: ProductKey[] = ALL_PRODUCT_KEYS): string[] {
   const types = new Set<string>();
-  keys.forEach(key => types.add(key.dataType));
+  keys.forEach((key) => types.add(key.dataType));
   return Array.from(types).sort();
 }
 
@@ -199,29 +192,27 @@ export function getDataTypes(keys: ProductKey[] = ALL_PRODUCT_KEYS): string[] {
  * Count keys by category
  */
 export function countKeysByCategory(
-  keys: ProductKey[] = ALL_PRODUCT_KEYS
+  keys: ProductKey[] = ALL_PRODUCT_KEYS,
 ): Record<ProductKeyCategory, number> {
   const counts = {} as Record<ProductKeyCategory, number>;
-  
-  keys.forEach(key => {
+
+  keys.forEach((key) => {
     counts[key.category] = (counts[key.category] || 0) + 1;
   });
-  
+
   return counts;
 }
 
 /**
  * Count keys by data type
  */
-export function countKeysByDataType(
-  keys: ProductKey[] = ALL_PRODUCT_KEYS
-): Record<string, number> {
+export function countKeysByDataType(keys: ProductKey[] = ALL_PRODUCT_KEYS): Record<string, number> {
   const counts: Record<string, number> = {};
-  
-  keys.forEach(key => {
+
+  keys.forEach((key) => {
     counts[key.dataType] = (counts[key.dataType] || 0) + 1;
   });
-  
+
   return counts;
 }
 
@@ -232,7 +223,7 @@ export function getKeyMetadata(): KeyMetadata {
   const clientKeys = getClientProfileKeys();
   const productKeys = getProductKeys();
   const calculatedKeys = getCalculatedKeys();
-  
+
   return {
     totalKeys: ALL_PRODUCT_KEYS.length,
     clientKeys: clientKeys.length,
@@ -247,11 +238,11 @@ export function getKeyMetadata(): KeyMetadata {
  * Get metadata for a specific category
  */
 export function getCategoryMetadata(category: ProductKeyCategory): CategoryMetadata | undefined {
-  const categoryInfo = KEY_CATEGORIES.find(cat => cat.id === category);
+  const categoryInfo = KEY_CATEGORIES.find((cat) => cat.id === category);
   if (!categoryInfo) return undefined;
-  
-  const keys = ALL_PRODUCT_KEYS.filter(key => key.category === category);
-  
+
+  const keys = ALL_PRODUCT_KEYS.filter((key) => key.category === category);
+
   return {
     id: category,
     name: categoryInfo.name,
@@ -281,19 +272,16 @@ export function validateKeyIds(keyIds: string[]): boolean {
 /**
  * Check if a key can be assigned to a specific product category
  */
-export function isValidKeyAssignment(
-  keyId: string, 
-  productCategory: ProductKeyCategory
-): boolean {
+export function isValidKeyAssignment(keyId: string, productCategory: ProductKeyCategory): boolean {
   const key = getKeyById(keyId);
   if (!key) return false;
-  
+
   // Profile keys cannot be assigned to product fields
   if (isClientProfileKey(key)) return false;
-  
+
   // Calculated keys cannot be directly assigned
   if (isCalculatedKey(key)) return false;
-  
+
   // Key must match the product category
   return key.category === productCategory;
 }
@@ -307,7 +295,7 @@ export function isValidKeyAssignment(
  */
 export function formatKeyValue(key: ProductKey, value: unknown): string {
   if (value === null || value === undefined) return '-';
-  
+
   switch (key.dataType) {
     case 'currency':
       if (typeof value === 'number') {
@@ -318,7 +306,7 @@ export function formatKeyValue(key: ProductKey, value: unknown): string {
         return `${isNeg ? '-' : ''}R${withCommas}.${decPart}`;
       }
       return String(value);
-      
+
     case 'number':
       if (typeof value === 'number') {
         const isNegN = value < 0;
@@ -327,7 +315,7 @@ export function formatKeyValue(key: ProductKey, value: unknown): string {
         return `${isNegN ? '-' : ''}${intPartN}${parts.length > 1 ? '.' + parts[1] : ''}`;
       }
       return String(value);
-      
+
     case 'date':
       if (value instanceof Date) {
         return value.toLocaleDateString('en-ZA');
@@ -336,10 +324,10 @@ export function formatKeyValue(key: ProductKey, value: unknown): string {
         return new Date(value).toLocaleDateString('en-ZA');
       }
       return String(value);
-      
+
     case 'boolean':
       return value ? 'Yes' : 'No';
-      
+
     default:
       return String(value);
   }
@@ -351,10 +339,10 @@ export function formatKeyValue(key: ProductKey, value: unknown): string {
 export function getKeyPurpose(keyId: string): string {
   const usage = getKeyUsage(keyId);
   if (usage.length === 0) return 'Not currently used';
-  
+
   if (usage.length === 1) return `Used in ${usage[0]}`;
   if (usage.length === 2) return `Used in ${usage[0]} and ${usage[1]}`;
-  
+
   return `Used in ${usage.length} modules`;
 }
 

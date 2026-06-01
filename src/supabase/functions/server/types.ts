@@ -10,23 +10,23 @@
 /**
  * Backend database status values (stored in Postgres)
  */
-export type BackendApplicationStatus = 
-  | 'draft'         // Newly registered - not yet started application
-  | 'in_progress' 
-  | 'pending'      // New signup - waiting for admin review
-  | 'submitted' 
-  | 'approved' 
+export type BackendApplicationStatus =
+  | 'draft' // Newly registered - not yet started application
+  | 'in_progress'
+  | 'pending' // New signup - waiting for admin review
+  | 'submitted'
+  | 'approved'
   | 'declined'
-  | 'invited';      // Admin-invited, awaiting client action
+  | 'invited'; // Admin-invited, awaiting client action
 
 /**
  * Frontend display status values (used in UI)
  */
-export type FrontendApplicationStatus = 
+export type FrontendApplicationStatus =
   | 'no_application'
-  | 'application_in_progress' 
-  | 'submitted_for_review' 
-  | 'approved' 
+  | 'application_in_progress'
+  | 'submitted_for_review'
+  | 'approved'
   | 'declined'
   | 'invited';
 

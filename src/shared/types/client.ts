@@ -15,12 +15,7 @@
 export type AccountStatus = 'active' | 'approved' | 'suspended' | 'closed';
 
 /** Application processing status */
-export type ApplicationStatus =
-  | 'none'
-  | 'incomplete'
-  | 'pending'
-  | 'approved'
-  | 'declined';
+export type ApplicationStatus = 'none' | 'incomplete' | 'pending' | 'approved' | 'declined';
 
 /** Account type */
 export type AccountType = 'personal' | 'business';

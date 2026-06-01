@@ -58,11 +58,13 @@ describe('buildIntegrationBindingsForFields', () => {
 
 describe('buildLegacyFieldMappingFromBindings', () => {
   it('serialises canonical column mappings from bindings', () => {
-    expect(buildLegacyFieldMappingFromBindings([
-      { targetFieldId: 'policyNumber', columnName: 'Policy Number' },
-      { targetFieldId: 'fundValue', columnName: 'Fund Value' },
-      { targetFieldId: '', columnName: 'Ignored' },
-    ])).toEqual({
+    expect(
+      buildLegacyFieldMappingFromBindings([
+        { targetFieldId: 'policyNumber', columnName: 'Policy Number' },
+        { targetFieldId: 'fundValue', columnName: 'Fund Value' },
+        { targetFieldId: '', columnName: 'Ignored' },
+      ]),
+    ).toEqual({
       'Policy Number': 'policyNumber',
       'Fund Value': 'fundValue',
     });

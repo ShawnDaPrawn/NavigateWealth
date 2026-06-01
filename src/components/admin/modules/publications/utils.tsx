@@ -1,7 +1,7 @@
 /**
  * Publications Module - Utility Functions
  * Navigate Wealth Admin Dashboard
- * 
+ *
  * Reusable utility functions for:
  * - Slug generation and validation
  * - Status transitions and helpers
@@ -9,7 +9,7 @@
  * - Validation
  * - Formatting
  * - Performance
- * 
+ *
  * @module publications/utils
  */
 
@@ -36,10 +36,10 @@ const MAX_SUBSCRIBER_IMPORT_BYTES = 1024 * 1024;
 
 /**
  * Generate URL-friendly slug from title
- * 
+ *
  * @param title - Title to slugify
  * @returns URL-friendly slug
- * 
+ *
  * @example
  * ```typescript
  * generateSlug('My Article Title!'); // 'my-article-title'
@@ -57,12 +57,12 @@ export function generateSlug(title: string): string {
 
 /**
  * Check if slug is available
- * 
+ *
  * @param slug - Slug to check
  * @param articles - Existing articles
  * @param excludeId - Article ID to exclude (for updates)
  * @returns True if available
- * 
+ *
  * @example
  * ```typescript
  * if (isSlugAvailable('my-article', articles)) {
@@ -70,25 +70,19 @@ export function generateSlug(title: string): string {
  * }
  * ```
  */
-export function isSlugAvailable(
-  slug: string,
-  articles: Article[],
-  excludeId?: string
-): boolean {
-  return !articles.some(
-    (article) => article.slug === slug && article.id !== excludeId
-  );
+export function isSlugAvailable(slug: string, articles: Article[], excludeId?: string): boolean {
+  return !articles.some((article) => article.slug === slug && article.id !== excludeId);
 }
 
 /**
  * Generate unique slug
  * Adds numeric suffix if slug exists
- * 
+ *
  * @param baseSlug - Base slug
  * @param articles - Existing articles
  * @param excludeId - Article ID to exclude
  * @returns Unique slug
- * 
+ *
  * @example
  * ```typescript
  * const slug = generateUniqueSlug('my-article', articles);
@@ -98,7 +92,7 @@ export function isSlugAvailable(
 export function generateUniqueSlug(
   baseSlug: string,
   articles: Article[],
-  excludeId?: string
+  excludeId?: string,
 ): string {
   let slug = baseSlug;
   let counter = 2;
@@ -117,11 +111,11 @@ export function generateUniqueSlug(
 
 /**
  * Check if status transition is allowed
- * 
+ *
  * @param from - Current status
  * @param to - Target status
  * @returns True if transition is allowed
- * 
+ *
  * @example
  * ```typescript
  * canTransitionStatus('draft', 'published'); // true
@@ -143,10 +137,10 @@ export function canTransitionStatus(from: ArticleStatus, to: ArticleStatus): boo
 
 /**
  * Get status color class
- * 
+ *
  * @param status - Article status
  * @returns Tailwind color classes
- * 
+ *
  * @example
  * ```typescript
  * const className = getStatusColor('published'); // 'bg-green-100 text-green-700'
@@ -166,10 +160,10 @@ export function getStatusColor(status: ArticleStatus): string {
 
 /**
  * Get status label
- * 
+ *
  * @param status - Article status
  * @returns Human-readable label
- * 
+ *
  * @example
  * ```typescript
  * getStatusLabel('in_review'); // 'In Review'
@@ -189,10 +183,10 @@ export function getStatusLabel(status: ArticleStatus): string {
 
 /**
  * Check if article is published
- * 
+ *
  * @param article - Article to check
  * @returns True if published
- * 
+ *
  * @example
  * ```typescript
  * if (isPublished(article)) {
@@ -206,10 +200,10 @@ export function isPublished(article: Article): boolean {
 
 /**
  * Check if article is scheduled for future
- * 
+ *
  * @param article - Article to check
  * @returns True if scheduled
- * 
+ *
  * @example
  * ```typescript
  * if (isScheduledForFuture(article)) {
@@ -230,10 +224,10 @@ export function isScheduledForFuture(article: Article): boolean {
 
 /**
  * Check if article should auto-publish
- * 
+ *
  * @param article - Article to check
  * @returns True if should auto-publish now
- * 
+ *
  * @example
  * ```typescript
  * if (shouldAutoPublish(article)) {
@@ -279,60 +273,51 @@ export function getArticleImageUrl(
 
 /**
  * Filter articles by status
- * 
+ *
  * @param articles - Articles to filter
  * @param status - Status filter ('all' or specific status)
  * @returns Filtered articles
- * 
+ *
  * @example
  * ```typescript
  * const published = filterByStatus(articles, 'published');
  * ```
  */
-export function filterByStatus(
-  articles: Article[],
-  status: ArticleStatus | 'all'
-): Article[] {
+export function filterByStatus(articles: Article[], status: ArticleStatus | 'all'): Article[] {
   if (status === 'all') return articles;
   return articles.filter((article) => article.status === status);
 }
 
 /**
  * Filter articles by category
- * 
+ *
  * @param articles - Articles to filter
  * @param categoryId - Category ID ('all' or specific)
  * @returns Filtered articles
- * 
+ *
  * @example
  * ```typescript
  * const filtered = filterByCategory(articles, 'cat-123');
  * ```
  */
-export function filterByCategory(
-  articles: Article[],
-  categoryId: string | 'all'
-): Article[] {
+export function filterByCategory(articles: Article[], categoryId: string | 'all'): Article[] {
   if (categoryId === 'all') return articles;
   return articles.filter((article) => article.category_id === categoryId);
 }
 
 /**
  * Filter articles by content type
- * 
+ *
  * @param articles - Articles to filter
  * @param typeId - Type ID ('all' or specific)
  * @returns Filtered articles
- * 
+ *
  * @example
  * ```typescript
  * const filtered = filterByType(articles, 'type-456');
  * ```
  */
-export function filterByType(
-  articles: Article[],
-  typeId: string | 'all'
-): Article[] {
+export function filterByType(articles: Article[], typeId: string | 'all'): Article[] {
   if (typeId === 'all') return articles;
   return articles.filter((article) => article.type_id === typeId);
 }
@@ -340,11 +325,11 @@ export function filterByType(
 /**
  * Search articles by query
  * Searches title, excerpt, and content
- * 
+ *
  * @param articles - Articles to search
  * @param query - Search query
  * @returns Matching articles
- * 
+ *
  * @example
  * ```typescript
  * const results = searchArticles(articles, 'financial planning');
@@ -360,16 +345,16 @@ export function searchArticles(articles: Article[], query: string): Article[] {
       article.title.toLowerCase().includes(queryLower) ||
       article.excerpt.toLowerCase().includes(queryLower) ||
       article.content?.toLowerCase().includes(queryLower) ||
-      article.subtitle?.toLowerCase().includes(queryLower)
+      article.subtitle?.toLowerCase().includes(queryLower),
   );
 }
 
 /**
  * Filter featured articles
- * 
+ *
  * @param articles - Articles to filter
  * @returns Featured articles only
- * 
+ *
  * @example
  * ```typescript
  * const featured = getFeaturedArticles(articles);
@@ -385,12 +370,12 @@ export function getFeaturedArticles(articles: Article[]): Article[] {
 
 /**
  * Sort articles by date
- * 
+ *
  * @param articles - Articles to sort
  * @param field - Date field to sort by
  * @param order - Sort order ('asc' or 'desc')
  * @returns Sorted articles
- * 
+ *
  * @example
  * ```typescript
  * const sorted = sortByDate(articles, 'published_at', 'desc');
@@ -399,7 +384,7 @@ export function getFeaturedArticles(articles: Article[]): Article[] {
 export function sortByDate(
   articles: Article[],
   field: 'created_at' | 'updated_at' | 'published_at',
-  order: 'asc' | 'desc' = 'desc'
+  order: 'asc' | 'desc' = 'desc',
 ): Article[] {
   return [...articles].sort((a, b) => {
     const dateA = a[field] ? new Date(a[field]!).getTime() : 0;
@@ -411,20 +396,17 @@ export function sortByDate(
 
 /**
  * Sort articles by title (alphabetically)
- * 
+ *
  * @param articles - Articles to sort
  * @param order - Sort order
  * @returns Sorted articles
- * 
+ *
  * @example
  * ```typescript
  * const sorted = sortByTitle(articles, 'asc');
  * ```
  */
-export function sortByTitle(
-  articles: Article[],
-  order: 'asc' | 'desc' = 'asc'
-): Article[] {
+export function sortByTitle(articles: Article[], order: 'asc' | 'desc' = 'asc'): Article[] {
   return [...articles].sort((a, b) => {
     const comparison = a.title.localeCompare(b.title);
     return order === 'desc' ? -comparison : comparison;
@@ -433,10 +415,10 @@ export function sortByTitle(
 
 /**
  * Sort with featured articles first
- * 
+ *
  * @param articles - Articles to sort
  * @returns Sorted articles (featured first)
- * 
+ *
  * @example
  * ```typescript
  * const sorted = sortByFeatured(articles);
@@ -456,10 +438,10 @@ export function sortByFeatured(articles: Article[]): Article[] {
 
 /**
  * Validate article input
- * 
+ *
  * @param input - Article data to validate
  * @returns Validation result
- * 
+ *
  * @example
  * ```typescript
  * const result = validateArticle(input);
@@ -508,10 +490,10 @@ export function validateArticle(input: CreateArticleInput): ValidationResult {
 
 /**
  * Validate category input
- * 
+ *
  * @param input - Category data to validate
  * @returns Validation result
- * 
+ *
  * @example
  * ```typescript
  * const result = validateCategory(input);
@@ -538,10 +520,10 @@ export function validateCategory(input: CreateCategoryInput): ValidationResult {
 
 /**
  * Validate content type input
- * 
+ *
  * @param input - Content type data to validate
  * @returns Validation result
- * 
+ *
  * @example
  * ```typescript
  * const result = validateContentType(input);
@@ -572,10 +554,10 @@ export function validateContentType(input: CreateContentTypeInput): ValidationRe
 
 /**
  * Format published date
- * 
+ *
  * @param date - Date string
  * @returns Formatted date
- * 
+ *
  * @example
  * ```typescript
  * formatPublishDate('2026-01-05'); // 'Jan 5, 2026'
@@ -591,10 +573,10 @@ export function formatPublishDate(date: string): string {
 
 /**
  * Format date (alias for formatPublishDate for backward compatibility)
- * 
+ *
  * @param date - Date string or Date object
  * @returns Formatted date
- * 
+ *
  * @example
  * ```typescript
  * formatDate('2026-01-05'); // 'Jan 5, 2026'
@@ -612,10 +594,10 @@ export function formatDate(date: string | Date): string {
 
 /**
  * Format date and time
- * 
+ *
  * @param date - Date string or Date object
  * @returns Formatted date and time
- * 
+ *
  * @example
  * ```typescript
  * formatDateTime('2026-01-05T14:30:00'); // 'Jan 5, 2026 at 2:30 PM'
@@ -634,10 +616,10 @@ export function formatDateTime(date: string | Date): string {
 
 /**
  * Format relative time
- * 
+ *
  * @param date - Date string
  * @returns Relative time string
- * 
+ *
  * @example
  * ```typescript
  * formatRelativeTime(yesterday); // '1 day ago'
@@ -656,16 +638,16 @@ export function formatRelativeTime(date: string): string {
   if (diffMins < 60) return `${diffMins} min${diffMins !== 1 ? 's' : ''} ago`;
   if (diffHours < 24) return `${diffHours} hour${diffHours !== 1 ? 's' : ''} ago`;
   if (diffDays < 7) return `${diffDays} day${diffDays !== 1 ? 's' : ''} ago`;
-  
+
   return formatPublishDate(date);
 }
 
 /**
  * Get relative time (alias for formatRelativeTime for backward compatibility)
- * 
+ *
  * @param date - Date string or Date object
  * @returns Relative time string
- * 
+ *
  * @example
  * ```typescript
  * getRelativeTime(yesterday); // '1 day ago'
@@ -678,11 +660,11 @@ export function getRelativeTime(date: string | Date): string {
 
 /**
  * Truncate text
- * 
+ *
  * @param text - Text to truncate
  * @param maxLength - Maximum length
  * @returns Truncated text
- * 
+ *
  * @example
  * ```typescript
  * truncateText('Long text...', 50); // 'Long text...'
@@ -699,10 +681,10 @@ export function truncateText(text: string, maxLength: number = 100): string {
 
 /**
  * Group articles by status
- * 
+ *
  * @param articles - Articles to group
  * @returns Articles grouped by status
- * 
+ *
  * @example
  * ```typescript
  * const grouped = groupByStatus(articles);
@@ -729,10 +711,10 @@ export function groupByStatus(articles: Article[]): Record<ArticleStatus, Articl
 
 /**
  * Group articles by category
- * 
+ *
  * @param articles - Articles to group
  * @returns Articles grouped by category ID
- * 
+ *
  * @example
  * ```typescript
  * const grouped = groupByCategory(articles);
@@ -758,11 +740,11 @@ export function groupByCategory(articles: Article[]): Record<string, Article[]> 
 
 /**
  * Debounce function to limit how often a function is called
- * 
+ *
  * @param func - Function to debounce
  * @param wait - Milliseconds to wait
  * @returns Debounced function
- * 
+ *
  * @example
  * ```typescript
  * const debouncedSearch = debounce((query: string) => {
@@ -772,7 +754,7 @@ export function groupByCategory(articles: Article[]): Record<string, Article[]> 
  */
 export function debounce<T extends (...args: unknown[]) => unknown>(
   func: T,
-  wait: number
+  wait: number,
 ): (...args: Parameters<T>) => void {
   let timeout: NodeJS.Timeout | null = null;
 
@@ -795,7 +777,7 @@ export function debounce<T extends (...args: unknown[]) => unknown>(
 
 /**
  * Calculate reading time based on word count
- * 
+ *
  * @param text - Text content to calculate reading time for
  * @returns Estimated reading time in minutes (minimum 1)
  */
@@ -808,7 +790,7 @@ export function calculateReadingTime(text: string): number {
 
 /**
  * Validate article form data
- * 
+ *
  * @param data - Partial article form data to validate
  * @returns Array of validation error messages (empty if valid)
  */
@@ -842,7 +824,10 @@ export function validateArticleForm(data: Partial<ArticleFormData>): string[] {
   if (!data.type_id) {
     errors.push('Please select a type');
   }
-  if (data.reading_time_minutes && (data.reading_time_minutes < 1 || data.reading_time_minutes > 120)) {
+  if (
+    data.reading_time_minutes &&
+    (data.reading_time_minutes < 1 || data.reading_time_minutes > 120)
+  ) {
     errors.push('Reading time must be between 1 and 120 minutes');
   }
 
@@ -858,7 +843,7 @@ export const publicationsUtils = {
   generateSlug,
   isSlugAvailable,
   generateUniqueSlug,
-  
+
   // Status
   canTransitionStatus,
   getStatusColor,
@@ -866,24 +851,24 @@ export const publicationsUtils = {
   isPublished,
   isScheduledForFuture,
   shouldAutoPublish,
-  
+
   // Filtering
   filterByStatus,
   filterByCategory,
   filterByType,
   searchArticles,
   getFeaturedArticles,
-  
+
   // Sorting
   sortByDate,
   sortByTitle,
   sortByFeatured,
-  
+
   // Validation
   validateArticle,
   validateCategory,
   validateContentType,
-  
+
   // Formatting
   formatPublishDate,
   formatDate,
@@ -891,11 +876,11 @@ export const publicationsUtils = {
   formatRelativeTime,
   getRelativeTime,
   truncateText,
-  
+
   // Grouping
   groupByStatus,
   groupByCategory,
-  
+
   // Performance
   debounce,
 
@@ -949,17 +934,12 @@ export function formatDateZA(d: string | null | undefined): string {
 /**
  * Filter subscribers by time range (unsubscribed view).
  */
-export function filterByTimeRange(
-  subscribers: Subscriber[],
-  range: UnsubTimeRange,
-): Subscriber[] {
+export function filterByTimeRange(subscribers: Subscriber[], range: UnsubTimeRange): Subscriber[] {
   if (range === 'all') return subscribers;
   const days = UNSUB_TIME_RANGE_DAYS[range];
   if (!days) return subscribers;
   const cutoff = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
-  return subscribers.filter(
-    (s) => s.unsubscribedAt && new Date(s.unsubscribedAt) >= cutoff,
-  );
+  return subscribers.filter((s) => s.unsubscribedAt && new Date(s.unsubscribedAt) >= cutoff);
 }
 
 /**
@@ -978,9 +958,7 @@ export function exportUnsubscribedToExcel(
       Surname: s.surname || '',
       Source: s.source || '',
       Reason: s.removedBy === 'admin' ? 'Admin Removed' : 'Self-Unsubscribed',
-      'Subscribed Date': s.subscribedAt
-        ? new Date(s.subscribedAt).toLocaleDateString('en-ZA')
-        : '',
+      'Subscribed Date': s.subscribedAt ? new Date(s.subscribedAt).toLocaleDateString('en-ZA') : '',
       'Unsubscribed Date': s.unsubscribedAt
         ? new Date(s.unsubscribedAt).toLocaleDateString('en-ZA')
         : '',
@@ -1053,7 +1031,11 @@ export function parseSubscriberFile(
           return;
         }
 
-        const normalise = (key: string) => key.trim().toLowerCase().replace(/[^a-z]/g, '');
+        const normalise = (key: string) =>
+          key
+            .trim()
+            .toLowerCase()
+            .replace(/[^a-z]/g, '');
         const headers = rawRows[0].map((key) => normalise(String(key || '')));
 
         const results: { email: string; firstName: string; surname: string }[] = [];

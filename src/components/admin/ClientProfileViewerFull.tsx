@@ -1,7 +1,7 @@
 /**
  * FULL CLIENT PROFILE VIEWER FOR ADMIN
  * Complete feature parity with client ProfilePage
- * 
+ *
  * This component replicates ALL functionality from /components/pages/ProfilePage.tsx
  * including CRUD operations, validations, file uploads, risk assessment, and more.
  */
@@ -16,10 +16,32 @@ import { Separator } from '../ui/separator';
 import { Alert, AlertDescription, AlertTitle } from '../ui/alert';
 import { EmptyState } from '../pages/profile/EmptyState';
 import { toast } from 'sonner';
-import { formatCurrency, formatCurrencyInput, cleanCurrencyInput, formatCurrencyDisplay } from '../../utils/currencyFormatter';
-import { 
-  User, Mail, Phone, MapPin, Briefcase, Heart, Users, CreditCard, Shield, Target,
-  Save, PieChart, Check, Wallet, Loader2, Copy, MoreHorizontal, AlertCircle, Banknote
+import {
+  formatCurrency,
+  formatCurrencyInput,
+  cleanCurrencyInput,
+  formatCurrencyDisplay,
+} from '../../utils/currencyFormatter';
+import {
+  User,
+  Mail,
+  Phone,
+  MapPin,
+  Briefcase,
+  Heart,
+  Users,
+  CreditCard,
+  Shield,
+  Target,
+  Save,
+  PieChart,
+  Check,
+  Wallet,
+  Loader2,
+  Copy,
+  MoreHorizontal,
+  AlertCircle,
+  Banknote,
 } from 'lucide-react';
 import { AddressSection } from './profile-sections/AddressSection';
 import { EmploymentSection } from './profile-sections/EmploymentSection';
@@ -32,10 +54,7 @@ import { BudgetingPage } from '../pages/BudgetingPage';
 import { IdentitySection } from './profile-sections/IdentitySection';
 import { FieldWithCopy } from './FieldWithCopy';
 import { CountrySelect } from '../pages/profile/CountrySelect';
-import { 
-  Client, 
-  ProfileData, 
-} from './modules/client-management/types';
+import { Client, ProfileData } from './modules/client-management/types';
 import { useClientProfile } from './modules/client-management/hooks/useClientProfile';
 import { copyToClipboard } from '../../utils/clipboard';
 import { api } from '../../utils/api';
@@ -51,7 +70,7 @@ import {
 } from '../../utils/derivedPolicyAssets';
 
 // Wrapper component for input with copy button using the reusable FieldWithCopy
-const InputWithCopy = ({ 
+const InputWithCopy = ({
   label,
   value,
   fieldName,
@@ -67,27 +86,22 @@ const InputWithCopy = ({
   return (
     <div>
       <Label htmlFor={id}>{label}</Label>
-      <FieldWithCopy
-        id={id ?? fieldName}
-        {...inputProps}
-        value={value}
-        className="mt-1.5"
-      />
+      <FieldWithCopy id={id ?? fieldName} {...inputProps} value={value} className="mt-1.5" />
     </div>
   );
 };
 
 // Wrapper component for select with copy button
-const SelectWithCopy = ({ 
-  label, 
-  value, 
+const SelectWithCopy = ({
+  label,
+  value,
   onValueChange,
   placeholder,
   children,
-  id
-}: { 
-  label: string; 
-  value: string; 
+  id,
+}: {
+  label: string;
+  value: string;
   onValueChange: (value: string) => void;
   placeholder: string;
   children: React.ReactNode;
@@ -99,10 +113,10 @@ const SelectWithCopy = ({
     // Don't prevent default/propagation as it might interfere with clipboard operations
     // e.preventDefault();
     // e.stopPropagation();
-    
+
     try {
       const textToCopy = String(value || '');
-      
+
       if (!textToCopy) {
         toast.error('Nothing to copy');
         return;
@@ -125,9 +139,7 @@ const SelectWithCopy = ({
           <SelectTrigger id={id} className="pr-10">
             <SelectValue placeholder={placeholder} />
           </SelectTrigger>
-          <SelectContent>
-            {children}
-          </SelectContent>
+          <SelectContent>{children}</SelectContent>
         </Select>
         {value && (
           <Button
@@ -256,7 +268,7 @@ export function ClientProfileViewerFull({ clientData, onSave }: ClientProfileVie
     { id: 'banking', label: 'Banking', icon: CreditCard },
     { id: 'risk', label: 'Risk Profile', icon: Target },
     { id: 'assets', label: 'Assets & Liabilities', icon: PieChart },
-    { id: 'budgeting', label: 'Budgeting', icon: Wallet }
+    { id: 'budgeting', label: 'Budgeting', icon: Wallet },
   ];
 
   // Show loading state while fetching data
@@ -300,9 +312,7 @@ export function ClientProfileViewerFull({ clientData, onSave }: ClientProfileVie
         <Alert variant="destructive" className="mb-4">
           <AlertCircle className="h-4 w-4" />
           <AlertTitle>Error</AlertTitle>
-          <AlertDescription>
-            {state.error}
-          </AlertDescription>
+          <AlertDescription>{state.error}</AlertDescription>
         </Alert>
       )}
 
@@ -312,8 +322,22 @@ export function ClientProfileViewerFull({ clientData, onSave }: ClientProfileVie
             <div className="h-2 w-2 rounded-full bg-yellow-500 animate-pulse"></div>
             <span className="text-sm font-medium text-yellow-900">You have unsaved changes</span>
           </div>
-          <Button onClick={actions.handleSave} disabled={state.saving} className="bg-green-600 hover:bg-green-700">
-            {state.saving ? <div className="contents"><Loader2 className="h-4 w-4 mr-2 animate-spin" />Saving...</div> : <div className="contents"><Save className="h-4 w-4 mr-2" />Save Changes</div>}
+          <Button
+            onClick={actions.handleSave}
+            disabled={state.saving}
+            className="bg-green-600 hover:bg-green-700"
+          >
+            {state.saving ? (
+              <div className="contents">
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                Saving...
+              </div>
+            ) : (
+              <div className="contents">
+                <Save className="h-4 w-4 mr-2" />
+                Save Changes
+              </div>
+            )}
           </Button>
         </div>
       )}
@@ -336,61 +360,74 @@ export function ClientProfileViewerFull({ clientData, onSave }: ClientProfileVie
             <CardContent className="space-y-6">
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <InputWithCopy 
-                    label="Title" 
-                    value={state.profileData.title} 
+                  <InputWithCopy
+                    label="Title"
+                    value={state.profileData.title}
                     id="title"
                     fieldName="title"
-                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => actions.handleInputChange('title', e.target.value)} 
+                    onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                      actions.handleInputChange('title', e.target.value)
+                    }
                   />
                 </div>
                 <div className="space-y-2">
-                  <InputWithCopy 
-                    label="First Name" 
-                    value={state.profileData.firstName} 
+                  <InputWithCopy
+                    label="First Name"
+                    value={state.profileData.firstName}
                     id="firstName"
                     fieldName="firstName"
-                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => actions.handleInputChange('firstName', e.target.value)} 
+                    onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                      actions.handleInputChange('firstName', e.target.value)
+                    }
                   />
                 </div>
                 <div className="space-y-2">
-                  <InputWithCopy 
-                    label="Middle Name" 
-                    value={state.profileData.middleName} 
+                  <InputWithCopy
+                    label="Middle Name"
+                    value={state.profileData.middleName}
                     id="middleName"
                     fieldName="middleName"
-                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => actions.handleInputChange('middleName', e.target.value)} 
+                    onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                      actions.handleInputChange('middleName', e.target.value)
+                    }
                   />
                 </div>
                 <div className="space-y-2">
-                  <InputWithCopy 
-                    label="Last Name" 
-                    value={state.profileData.lastName} 
+                  <InputWithCopy
+                    label="Last Name"
+                    value={state.profileData.lastName}
                     id="lastName"
                     fieldName="lastName"
-                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => actions.handleInputChange('lastName', e.target.value)} 
+                    onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                      actions.handleInputChange('lastName', e.target.value)
+                    }
                   />
                 </div>
                 <div className="space-y-2">
-                  <InputWithCopy 
-                    label="Date of Birth" 
-                    value={state.profileData.dateOfBirth} 
+                  <InputWithCopy
+                    label="Date of Birth"
+                    value={state.profileData.dateOfBirth}
                     id="dateOfBirth"
                     fieldName="dateOfBirth"
                     type="date"
-                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => actions.handleInputChange('dateOfBirth', e.target.value)} 
+                    onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                      actions.handleInputChange('dateOfBirth', e.target.value)
+                    }
                   />
                 </div>
                 <div className="space-y-2">
-                  <InputWithCopy 
-                    label="Age" 
+                  <InputWithCopy
+                    label="Age"
                     value={(() => {
                       if (!state.profileData.dateOfBirth) return '';
                       const birthDate = new Date(state.profileData.dateOfBirth);
                       const today = new Date();
                       let age = today.getFullYear() - birthDate.getFullYear();
                       const monthDiff = today.getMonth() - birthDate.getMonth();
-                      if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+                      if (
+                        monthDiff < 0 ||
+                        (monthDiff === 0 && today.getDate() < birthDate.getDate())
+                      ) {
                         age--;
                       }
                       return age >= 0 ? age : '';
@@ -402,9 +439,9 @@ export function ClientProfileViewerFull({ clientData, onSave }: ClientProfileVie
                   />
                 </div>
                 <div className="space-y-2">
-                  <SelectWithCopy 
-                    label="Gender" 
-                    value={state.profileData.gender} 
+                  <SelectWithCopy
+                    label="Gender"
+                    value={state.profileData.gender}
                     onValueChange={(value) => actions.handleInputChange('gender', value)}
                     placeholder="Select gender"
                     id="gender"
@@ -414,27 +451,31 @@ export function ClientProfileViewerFull({ clientData, onSave }: ClientProfileVie
                   </SelectWithCopy>
                 </div>
                 <div className="space-y-2">
-                  <InputWithCopy 
-                    label="Nationality" 
-                    value={state.profileData.nationality} 
+                  <InputWithCopy
+                    label="Nationality"
+                    value={state.profileData.nationality}
                     id="nationality"
                     fieldName="nationality"
-                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => actions.handleInputChange('nationality', e.target.value)} 
+                    onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                      actions.handleInputChange('nationality', e.target.value)
+                    }
                   />
                 </div>
                 <div className="space-y-2">
-                  <InputWithCopy 
-                    label="Tax Number" 
-                    value={state.profileData.taxNumber} 
+                  <InputWithCopy
+                    label="Tax Number"
+                    value={state.profileData.taxNumber}
                     id="taxNumber"
                     fieldName="taxNumber"
-                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => actions.handleInputChange('taxNumber', e.target.value)} 
+                    onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                      actions.handleInputChange('taxNumber', e.target.value)
+                    }
                   />
                 </div>
                 <div className="space-y-2">
-                  <SelectWithCopy 
-                    label="Marital Status" 
-                    value={state.profileData.maritalStatus} 
+                  <SelectWithCopy
+                    label="Marital Status"
+                    value={state.profileData.maritalStatus}
                     onValueChange={(value) => actions.handleInputChange('maritalStatus', value)}
                     placeholder="Select status"
                     id="maritalStatus"
@@ -447,16 +488,20 @@ export function ClientProfileViewerFull({ clientData, onSave }: ClientProfileVie
                 </div>
                 {state.profileData.maritalStatus === 'married' && (
                   <div className="space-y-2">
-                    <SelectWithCopy 
-                      label="Marital Regime" 
-                      value={state.profileData.maritalRegime} 
+                    <SelectWithCopy
+                      label="Marital Regime"
+                      value={state.profileData.maritalRegime}
                       onValueChange={(value) => actions.handleInputChange('maritalRegime', value)}
                       placeholder="Select regime"
                       id="maritalRegime"
                     >
                       <SelectItem value="in_community">In Community of Property</SelectItem>
-                      <SelectItem value="out_community_accrual">Out of Community with Accrual</SelectItem>
-                      <SelectItem value="out_community_no_accrual">Out of Community without Accrual</SelectItem>
+                      <SelectItem value="out_community_accrual">
+                        Out of Community with Accrual
+                      </SelectItem>
+                      <SelectItem value="out_community_no_accrual">
+                        Out of Community without Accrual
+                      </SelectItem>
                     </SelectWithCopy>
                   </div>
                 )}
@@ -471,9 +516,13 @@ export function ClientProfileViewerFull({ clientData, onSave }: ClientProfileVie
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <InputWithCopy 
-                    label="Gross Monthly Income (R)" 
-                    value={grossIncomeDisplay !== null ? grossIncomeDisplay : formatCurrencyDisplay(state.profileData.grossMonthlyIncome)} 
+                  <InputWithCopy
+                    label="Gross Monthly Income (R)"
+                    value={
+                      grossIncomeDisplay !== null
+                        ? grossIncomeDisplay
+                        : formatCurrencyDisplay(state.profileData.grossMonthlyIncome)
+                    }
                     id="grossMonthlyIncome"
                     fieldName="grossMonthlyIncome"
                     type="text"
@@ -500,9 +549,13 @@ export function ClientProfileViewerFull({ clientData, onSave }: ClientProfileVie
                   />
                 </div>
                 <div className="space-y-2">
-                  <InputWithCopy 
-                    label="Net Monthly Income (R)" 
-                    value={netIncomeDisplay !== null ? netIncomeDisplay : formatCurrencyDisplay(state.profileData.netMonthlyIncome)} 
+                  <InputWithCopy
+                    label="Net Monthly Income (R)"
+                    value={
+                      netIncomeDisplay !== null
+                        ? netIncomeDisplay
+                        : formatCurrencyDisplay(state.profileData.netMonthlyIncome)
+                    }
                     id="netMonthlyIncome"
                     fieldName="netMonthlyIncome"
                     type="text"
@@ -527,9 +580,13 @@ export function ClientProfileViewerFull({ clientData, onSave }: ClientProfileVie
                   />
                 </div>
                 <div className="space-y-2">
-                  <InputWithCopy 
-                    label="Gross Annual Income (R)" 
-                    value={grossAnnualIncomeDisplay !== null ? grossAnnualIncomeDisplay : formatCurrencyDisplay(state.profileData.grossAnnualIncome)} 
+                  <InputWithCopy
+                    label="Gross Annual Income (R)"
+                    value={
+                      grossAnnualIncomeDisplay !== null
+                        ? grossAnnualIncomeDisplay
+                        : formatCurrencyDisplay(state.profileData.grossAnnualIncome)
+                    }
                     id="grossAnnualIncome"
                     fieldName="grossAnnualIncome"
                     type="text"
@@ -554,9 +611,13 @@ export function ClientProfileViewerFull({ clientData, onSave }: ClientProfileVie
                   />
                 </div>
                 <div className="space-y-2">
-                  <InputWithCopy 
-                    label="Net Annual Income (R)" 
-                    value={netAnnualIncomeDisplay !== null ? netAnnualIncomeDisplay : formatCurrencyDisplay(state.profileData.netAnnualIncome)} 
+                  <InputWithCopy
+                    label="Net Annual Income (R)"
+                    value={
+                      netAnnualIncomeDisplay !== null
+                        ? netAnnualIncomeDisplay
+                        : formatCurrencyDisplay(state.profileData.netAnnualIncome)
+                    }
                     id="netAnnualIncome"
                     fieldName="netAnnualIncome"
                     type="text"
@@ -606,7 +667,9 @@ export function ClientProfileViewerFull({ clientData, onSave }: ClientProfileVie
                     value={state.profileData.idNumber}
                     id="idNumber"
                     fieldName="idNumber"
-                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => actions.handleInputChange('idNumber', e.target.value)}
+                    onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                      actions.handleInputChange('idNumber', e.target.value)
+                    }
                   />
                 </div>
                 <div className="space-y-2">
@@ -625,7 +688,9 @@ export function ClientProfileViewerFull({ clientData, onSave }: ClientProfileVie
                     value={state.profileData.passportNumber}
                     id="passportNumber"
                     fieldName="passportNumber"
-                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => actions.handleInputChange('passportNumber', e.target.value)}
+                    onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                      actions.handleInputChange('passportNumber', e.target.value)
+                    }
                   />
                 </div>
                 <div className="space-y-2">
@@ -634,7 +699,9 @@ export function ClientProfileViewerFull({ clientData, onSave }: ClientProfileVie
                     <CountrySelect
                       id="employmentCountry"
                       value={state.profileData.employmentCountry}
-                      onValueChange={(value) => actions.handleInputChange('employmentCountry', value)}
+                      onValueChange={(value) =>
+                        actions.handleInputChange('employmentCountry', value)
+                      }
                     />
                   </div>
                 </div>
@@ -644,7 +711,9 @@ export function ClientProfileViewerFull({ clientData, onSave }: ClientProfileVie
                     value={state.profileData.workPermitNumber}
                     id="workPermitNumber"
                     fieldName="workPermitNumber"
-                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => actions.handleInputChange('workPermitNumber', e.target.value)}
+                    onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                      actions.handleInputChange('workPermitNumber', e.target.value)
+                    }
                   />
                 </div>
               </div>
@@ -669,50 +738,60 @@ export function ClientProfileViewerFull({ clientData, onSave }: ClientProfileVie
             <CardContent className="space-y-6">
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <InputWithCopy 
-                    label="Email" 
-                    value={state.profileData.email} 
+                  <InputWithCopy
+                    label="Email"
+                    value={state.profileData.email}
                     id="email"
                     fieldName="email"
                     type="email"
-                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => actions.handleInputChange('email', e.target.value)} 
+                    onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                      actions.handleInputChange('email', e.target.value)
+                    }
                   />
                 </div>
                 <div className="space-y-2">
-                  <InputWithCopy 
-                    label="Secondary Email" 
-                    value={state.profileData.secondaryEmail} 
+                  <InputWithCopy
+                    label="Secondary Email"
+                    value={state.profileData.secondaryEmail}
                     id="secondaryEmail"
                     fieldName="secondaryEmail"
                     type="email"
-                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => actions.handleInputChange('secondaryEmail', e.target.value)} 
+                    onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                      actions.handleInputChange('secondaryEmail', e.target.value)
+                    }
                   />
                 </div>
                 <div className="space-y-2">
-                  <InputWithCopy 
-                    label="Phone Number" 
-                    value={state.profileData.phoneNumber} 
+                  <InputWithCopy
+                    label="Phone Number"
+                    value={state.profileData.phoneNumber}
                     id="phoneNumber"
                     fieldName="phoneNumber"
                     type="tel"
-                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => actions.handleInputChange('phoneNumber', e.target.value)} 
+                    onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                      actions.handleInputChange('phoneNumber', e.target.value)
+                    }
                   />
                 </div>
                 <div className="space-y-2">
-                  <InputWithCopy 
-                    label="Alternative Phone" 
-                    value={state.profileData.alternativePhone} 
+                  <InputWithCopy
+                    label="Alternative Phone"
+                    value={state.profileData.alternativePhone}
                     id="alternativePhone"
                     fieldName="alternativePhone"
                     type="tel"
-                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => actions.handleInputChange('alternativePhone', e.target.value)} 
+                    onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                      actions.handleInputChange('alternativePhone', e.target.value)
+                    }
                   />
                 </div>
                 <div className="space-y-2">
-                  <SelectWithCopy 
-                    label="Preferred Contact Method" 
-                    value={state.profileData.preferredContactMethod} 
-                    onValueChange={(value) => actions.handleInputChange('preferredContactMethod', value)}
+                  <SelectWithCopy
+                    label="Preferred Contact Method"
+                    value={state.profileData.preferredContactMethod}
+                    onValueChange={(value) =>
+                      actions.handleInputChange('preferredContactMethod', value)
+                    }
                     placeholder="Select method"
                     id="preferredContactMethod"
                   >
@@ -727,41 +806,49 @@ export function ClientProfileViewerFull({ clientData, onSave }: ClientProfileVie
               <h3 className="text-lg font-medium mb-4">Emergency Contact</h3>
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <InputWithCopy 
-                    label="Contact Name" 
-                    value={state.profileData.emergencyContactName} 
+                  <InputWithCopy
+                    label="Contact Name"
+                    value={state.profileData.emergencyContactName}
                     id="emergencyContactName"
                     fieldName="emergencyContactName"
-                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => actions.handleInputChange('emergencyContactName', e.target.value)} 
+                    onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                      actions.handleInputChange('emergencyContactName', e.target.value)
+                    }
                   />
                 </div>
                 <div className="space-y-2">
-                  <InputWithCopy 
-                    label="Relationship" 
-                    value={state.profileData.emergencyContactRelationship} 
+                  <InputWithCopy
+                    label="Relationship"
+                    value={state.profileData.emergencyContactRelationship}
                     id="emergencyContactRelationship"
                     fieldName="emergencyContactRelationship"
-                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => actions.handleInputChange('emergencyContactRelationship', e.target.value)} 
+                    onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                      actions.handleInputChange('emergencyContactRelationship', e.target.value)
+                    }
                   />
                 </div>
                 <div className="space-y-2">
-                  <InputWithCopy 
-                    label="Phone Number" 
-                    value={state.profileData.emergencyContactPhone} 
+                  <InputWithCopy
+                    label="Phone Number"
+                    value={state.profileData.emergencyContactPhone}
                     id="emergencyContactPhone"
                     fieldName="emergencyContactPhone"
                     type="tel"
-                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => actions.handleInputChange('emergencyContactPhone', e.target.value)} 
+                    onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                      actions.handleInputChange('emergencyContactPhone', e.target.value)
+                    }
                   />
                 </div>
                 <div className="space-y-2">
-                  <InputWithCopy 
-                    label="Email" 
-                    value={state.profileData.emergencyContactEmail} 
+                  <InputWithCopy
+                    label="Email"
+                    value={state.profileData.emergencyContactEmail}
                     id="emergencyContactEmail"
                     fieldName="emergencyContactEmail"
                     type="email"
-                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => actions.handleInputChange('emergencyContactEmail', e.target.value)} 
+                    onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                      actions.handleInputChange('emergencyContactEmail', e.target.value)
+                    }
                   />
                 </div>
               </div>
@@ -946,7 +1033,9 @@ export function ClientProfileViewerFull({ clientData, onSave }: ClientProfileVie
               userId={clientData.id}
               embedded={true}
               incomeValidationError={state.incomeValidationError}
-              setIncomeValidationError={actions.setIncomeValidationError as (error: string | null) => void}
+              setIncomeValidationError={
+                actions.setIncomeValidationError as (error: string | null) => void
+              }
               grossIncomeDisplay={state.grossIncomeDisplay ?? undefined}
               setGrossIncomeDisplay={actions.setGrossIncomeDisplay}
               netIncomeDisplay={state.netIncomeDisplay ?? undefined}
@@ -956,8 +1045,6 @@ export function ClientProfileViewerFull({ clientData, onSave }: ClientProfileVie
             />
           </div>
         )}
-
-
       </div>
       <UnsavedChangesDialog {...unsavedChangesGuard.dialogProps} />
     </div>

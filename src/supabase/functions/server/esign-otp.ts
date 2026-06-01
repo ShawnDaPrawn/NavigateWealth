@@ -3,8 +3,8 @@
  * Handles OTP generation, storage, verification, and expiration
  */
 
-import * as kv from "./kv_store.tsx";
-import { createModuleLogger } from "./stderr-logger.ts";
+import * as kv from './kv_store.tsx';
+import { createModuleLogger } from './stderr-logger.ts';
 
 const log = createModuleLogger('esign-otp');
 
@@ -40,7 +40,7 @@ export async function hashOTP(otp: string): Promise<string> {
     const data = encoder.encode(otp);
     const hashBuffer = await crypto.subtle.digest('SHA-256', data);
     const hashArray = Array.from(new Uint8Array(hashBuffer));
-    const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+    const hashHex = hashArray.map((b) => b.toString(16).padStart(2, '0')).join('');
     return hashHex;
   } catch (error) {
     log.error('OTP hashing error:', error);
@@ -51,7 +51,10 @@ export async function hashOTP(otp: string): Promise<string> {
 /**
  * Store OTP for a signer
  */
-export async function storeOTP(signerId: string, otp: string): Promise<{ success: boolean; error?: string }> {
+export async function storeOTP(
+  signerId: string,
+  otp: string,
+): Promise<{ success: boolean; error?: string }> {
   try {
     const otpHash = await hashOTP(otp);
     const expiresAt = new Date(Date.now() + OTP_EXPIRY_MINUTES * 60 * 1000).toISOString();
@@ -77,7 +80,7 @@ export async function storeOTP(signerId: string, otp: string): Promise<{ success
  */
 export async function verifyOTP(
   signerId: string,
-  otp: string
+  otp: string,
 ): Promise<{ valid: boolean; error?: string }> {
   try {
     // Fetch OTP data
@@ -118,7 +121,7 @@ export async function verifyOTP(
  */
 export async function verifyAccessCode(
   signerId: string,
-  accessCode: string
+  accessCode: string,
 ): Promise<{ valid: boolean; error?: string }> {
   try {
     const signer = await kv.get(`esign:signer:${signerId}`);
@@ -149,10 +152,12 @@ export async function verifyAccessCode(
 /**
  * Update signer status after successful OTP verification
  */
-export async function markOTPVerified(signerId: string): Promise<{ success: boolean; error?: string }> {
+export async function markOTPVerified(
+  signerId: string,
+): Promise<{ success: boolean; error?: string }> {
   try {
     const signer = await kv.get(`esign:signer:${signerId}`);
-    
+
     if (!signer) {
       return { success: false, error: 'Signer not found' };
     }
@@ -208,7 +213,9 @@ export async function isOTPRequired(signerId: string): Promise<boolean> {
 /**
  * Generate and send OTP (returns the OTP for email sending)
  */
-export async function generateAndStoreOTP(signerId: string): Promise<{ otp: string | null; error?: string }> {
+export async function generateAndStoreOTP(
+  signerId: string,
+): Promise<{ otp: string | null; error?: string }> {
   try {
     // Generate OTP
     const otp = generateOTP();

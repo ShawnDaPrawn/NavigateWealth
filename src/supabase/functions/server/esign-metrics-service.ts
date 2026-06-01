@@ -90,12 +90,14 @@ export interface EsignMetrics {
 }
 
 function isEnvelopeRecord(item: unknown): item is EsignEnvelope {
-  return !!item
-    && typeof item === 'object'
-    && !Array.isArray(item)
-    && typeof (item as { id?: unknown }).id === 'string'
-    && typeof (item as { status?: unknown }).status === 'string'
-    && typeof (item as { document_id?: unknown }).document_id === 'string';
+  return (
+    !!item &&
+    typeof item === 'object' &&
+    !Array.isArray(item) &&
+    typeof (item as { id?: unknown }).id === 'string' &&
+    typeof (item as { status?: unknown }).status === 'string' &&
+    typeof (item as { document_id?: unknown }).document_id === 'string'
+  );
 }
 
 /**
@@ -129,9 +131,16 @@ export async function getEsignMetrics(firmId: string): Promise<EsignMetrics> {
 
   // ── Status counts ────────────────────────────────────────────────
   const status: StatusCounts = {
-    draft: 0, sent: 0, viewed: 0, partially_signed: 0,
-    completing: 0, completed: 0, declined: 0, expired: 0,
-    voided: 0, total: envelopes.length,
+    draft: 0,
+    sent: 0,
+    viewed: 0,
+    partially_signed: 0,
+    completing: 0,
+    completed: 0,
+    declined: 0,
+    expired: 0,
+    voided: 0,
+    total: envelopes.length,
   };
   for (const e of envelopes) {
     const s = e.status as keyof StatusCounts;
@@ -215,12 +224,13 @@ export async function getEsignMetrics(firmId: string): Promise<EsignMetrics> {
 
   const avgMs = completedSigningDurationsMs.length
     ? Math.round(
-        completedSigningDurationsMs.reduce((a, b) => a + b, 0) /
-          completedSigningDurationsMs.length,
+        completedSigningDurationsMs.reduce((a, b) => a + b, 0) / completedSigningDurationsMs.length,
       )
     : null;
   const medianMs = completedSigningDurationsMs.length
-    ? completedSigningDurationsMs.slice().sort((a, b) => a - b)[Math.floor(completedSigningDurationsMs.length / 2)]
+    ? completedSigningDurationsMs.slice().sort((a, b) => a - b)[
+        Math.floor(completedSigningDurationsMs.length / 2)
+      ]
     : null;
 
   const byTemplate = Array.from(timeByTemplate.entries())
@@ -234,7 +244,9 @@ export async function getEsignMetrics(firmId: string): Promise<EsignMetrics> {
   const stuckEnvelopes: StuckEnvelope[] = stuckCandidates
     .map(({ envelope, signers }) => {
       const sentAt = (envelope as { sent_at?: string }).sent_at;
-      const days = sentAt ? Math.floor((now.getTime() - new Date(sentAt).getTime()) / (24 * 60 * 60 * 1000)) : 0;
+      const days = sentAt
+        ? Math.floor((now.getTime() - new Date(sentAt).getTime()) / (24 * 60 * 60 * 1000))
+        : 0;
       return {
         id: envelope.id,
         title: envelope.title,
@@ -285,7 +297,9 @@ export async function getEsignMetrics(firmId: string): Promise<EsignMetrics> {
  * for a firm (used by P7.2 alerts). Keeps the threshold consistent
  * with the metrics view.
  */
-export async function findStuckEnvelopes(firmId: string): Promise<Array<{ envelope: EsignEnvelope; days: number }>> {
+export async function findStuckEnvelopes(
+  firmId: string,
+): Promise<Array<{ envelope: EsignEnvelope; days: number }>> {
   const envelopes = await listFirmEnvelopes(firmId);
   const now = Date.now();
   const stuckThresholdMs = STUCK_THRESHOLD_DAYS * 24 * 60 * 60 * 1000;
@@ -303,7 +317,10 @@ export async function findStuckEnvelopes(firmId: string): Promise<Array<{ envelo
     let opened = false;
     for (const id of signerIds) {
       const signer = await kv.get(EsignKeys.PREFIX_SIGNER + id);
-      if (signer?.viewed_at) { opened = true; break; }
+      if (signer?.viewed_at) {
+        opened = true;
+        break;
+      }
     }
     if (!opened) out.push({ envelope, days: Math.floor(ageMs / (24 * 60 * 60 * 1000)) });
   }

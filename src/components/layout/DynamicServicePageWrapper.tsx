@@ -166,7 +166,9 @@ export function DynamicServicePageWrapper({
       case 'date_inception':
         try {
           return new Date(String(value)).toLocaleDateString('en-ZA', {
-            day: '2-digit', month: 'short', year: 'numeric',
+            day: '2-digit',
+            month: 'short',
+            year: 'numeric',
           });
         } catch {
           return String(value);
@@ -200,9 +202,15 @@ export function DynamicServicePageWrapper({
           <div className="flex items-center gap-2.5">
             <div
               className="h-7 w-7 rounded-md flex items-center justify-center border text-[10px] font-bold"
-              style={{ borderColor: style.color + '30', backgroundColor: style.bg, color: style.color }}
+              style={{
+                borderColor: style.color + '30',
+                backgroundColor: style.bg,
+                color: style.color,
+              }}
             >
-              {(String(item.providerName || '??')).substring(0, 2).toUpperCase()}
+              {String(item.providerName || '??')
+                .substring(0, 2)
+                .toUpperCase()}
             </div>
             <span className="font-medium text-gray-900 text-sm">
               {String(item.providerName || 'Unknown Provider')}

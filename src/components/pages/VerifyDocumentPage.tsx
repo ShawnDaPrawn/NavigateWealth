@@ -151,10 +151,7 @@ export function VerifyDocumentPage() {
               <p className="text-xs text-gray-500">Document Verification</p>
             </div>
           </div>
-          <a
-            href="/"
-            className="text-sm text-gray-500 hover:text-gray-700 flex items-center gap-1"
-          >
+          <a href="/" className="text-sm text-gray-500 hover:text-gray-700 flex items-center gap-1">
             <ArrowLeft className="h-4 w-4" />
             Back to site
           </a>
@@ -168,8 +165,8 @@ export function VerifyDocumentPage() {
             Verify Document Integrity
           </h2>
           <p className="text-gray-600 max-w-lg mx-auto text-sm sm:text-base">
-            Upload a PDF document signed through Navigate Wealth to confirm it has not been
-            tampered with since signing.
+            Upload a PDF document signed through Navigate Wealth to confirm it has not been tampered
+            with since signing.
           </p>
         </div>
 
@@ -247,10 +244,13 @@ export function VerifyDocumentPage() {
                     <div className="flex items-center gap-2 mb-1">
                       <p className="font-semibold text-green-800">Document Verified</p>
                       {result.matchType && (
-                        <Badge className={result.matchType === 'signed'
-                          ? 'bg-green-100 text-green-800 text-xs'
-                          : 'bg-blue-100 text-blue-800 text-xs'
-                        }>
+                        <Badge
+                          className={
+                            result.matchType === 'signed'
+                              ? 'bg-green-100 text-green-800 text-xs'
+                              : 'bg-blue-100 text-blue-800 text-xs'
+                          }
+                        >
                           {result.matchType === 'signed' ? 'Signed Copy' : 'Original'}
                         </Badge>
                       )}

@@ -1,8 +1,8 @@
 /**
  * usePersonnel Hook
- * 
+ *
  * Fetches personnel list (advisors).
- * 
+ *
  * @module advice-engine/hooks/usePersonnel
  */
 

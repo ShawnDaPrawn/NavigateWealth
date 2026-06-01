@@ -236,7 +236,9 @@ const seoPages: Record<string, SEOPageData> = {
 export function getQuoteServiceContactSEO(serviceId: QuoteServiceId): SEOPageData {
   const cfg = getServiceConfig(serviceId)!;
   const description =
-    cfg.heroDescription.length > 155 ? `${cfg.heroDescription.slice(0, 152)}…` : cfg.heroDescription;
+    cfg.heroDescription.length > 155
+      ? `${cfg.heroDescription.slice(0, 152)}…`
+      : cfg.heroDescription;
   return {
     title: `Request a ${cfg.label} Quote | Navigate Wealth`,
     description,
@@ -313,7 +315,7 @@ export const riskManagementFAQs: Array<{ question: string; answer: string }> = [
   {
     question: 'Do I need business insurance if I am a business owner in South Africa?',
     answer:
-      'Yes. Business owners face unique risks that personal insurance does not address. Key person insurance protects the business against the financial impact of losing a critical employee or director. Buy-and-sell agreements fund the transfer of a deceased partner\'s shares to surviving partners. Contingent liability cover settles guaranteed business debts. Navigate Wealth can structure a comprehensive business risk plan tailored to your specific business structure.',
+      "Yes. Business owners face unique risks that personal insurance does not address. Key person insurance protects the business against the financial impact of losing a critical employee or director. Buy-and-sell agreements fund the transfer of a deceased partner's shares to surviving partners. Contingent liability cover settles guaranteed business debts. Navigate Wealth can structure a comprehensive business risk plan tailored to your specific business structure.",
   },
   {
     question: 'Which insurers does Navigate Wealth work with?',
@@ -380,7 +382,7 @@ export const investmentManagementFAQs: Array<{ question: string; answer: string 
   {
     question: 'How does Navigate Wealth select investment providers?',
     answer:
-      'Navigate Wealth follows a research-driven approach, evaluating providers including Allan Gray, Sygnia, Discovery, Liberty, Stanlib, INN8, Old Mutual, Sanlam, Momentum, and JUST. We assess fund performance, fees, risk management, and service quality to recommend the optimal combination for each client\'s goals.',
+      "Navigate Wealth follows a research-driven approach, evaluating providers including Allan Gray, Sygnia, Discovery, Liberty, Stanlib, INN8, Old Mutual, Sanlam, Momentum, and JUST. We assess fund performance, fees, risk management, and service quality to recommend the optimal combination for each client's goals.",
   },
 ];
 
@@ -458,7 +460,7 @@ export const estatePlanningFAQs: Array<{ question: string; answer: string }> = [
   {
     question: 'What is a testamentary trust and when should I use one?',
     answer:
-      'A testamentary trust is created in your will and comes into effect on your death. It is commonly used to protect assets for minor children, provide for dependants with special needs, manage assets for beneficiaries who may not be financially responsible, and potentially reduce estate duty on the surviving spouse\'s estate.',
+      "A testamentary trust is created in your will and comes into effect on your death. It is commonly used to protect assets for minor children, provide for dependants with special needs, manage assets for beneficiaries who may not be financially responsible, and potentially reduce estate duty on the surviving spouse's estate.",
   },
   {
     question: 'What happens to my estate when I die in South Africa?',
@@ -468,7 +470,7 @@ export const estatePlanningFAQs: Array<{ question: string; answer: string }> = [
   {
     question: 'How can I plan for business succession?',
     answer:
-      'Business succession planning involves buy-and-sell agreements (funded by life insurance), shareholder agreements, key person insurance, and potentially establishing a business trust. The goal is to ensure continuity of the business, fair treatment of the deceased owner\'s heirs, and smooth transfer of ownership without disrupting operations.',
+      "Business succession planning involves buy-and-sell agreements (funded by life insurance), shareholder agreements, key person insurance, and potentially establishing a business trust. The goal is to ensure continuity of the business, fair treatment of the deceased owner's heirs, and smooth transfer of ownership without disrupting operations.",
   },
   {
     question: 'How often should I review my estate plan?',

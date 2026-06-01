@@ -41,7 +41,10 @@ function processInline(text: string): string {
   let result = escapeHtml(text);
 
   // Inline code (must be before bold/italic to avoid conflicts)
-  result = result.replace(/`([^`]+)`/g, '<code class="px-1.5 py-0.5 rounded bg-gray-100 text-pink-600 text-[0.85em] font-mono">$1</code>');
+  result = result.replace(
+    /`([^`]+)`/g,
+    '<code class="px-1.5 py-0.5 rounded bg-gray-100 text-pink-600 text-[0.85em] font-mono">$1</code>',
+  );
 
   // Bold + italic
   result = result.replace(/\*\*\*(.+?)\*\*\*/g, '<strong><em>$1</em></strong>');
@@ -55,17 +58,17 @@ function processInline(text: string): string {
   // Links [text](url)
   result = result.replace(
     /\[([^\]]+)\]\(([^)]+)\)/g,
-    '<a href="$2" target="_blank" rel="noopener noreferrer" class="text-purple-600 underline hover:text-purple-700">$1</a>'
+    '<a href="$2" target="_blank" rel="noopener noreferrer" class="text-purple-600 underline hover:text-purple-700">$1</a>',
   );
 
   // Checklist items
   result = result.replace(
     /^- \[x\] (.+)/gm,
-    '<span class="flex items-center gap-2"><span class="inline-flex items-center justify-center w-4 h-4 rounded border border-green-400 bg-green-100 text-green-600 text-[10px]">✓</span><span class="line-through text-gray-400">$1</span></span>'
+    '<span class="flex items-center gap-2"><span class="inline-flex items-center justify-center w-4 h-4 rounded border border-green-400 bg-green-100 text-green-600 text-[10px]">✓</span><span class="line-through text-gray-400">$1</span></span>',
   );
   result = result.replace(
     /^- \[ \] (.+)/gm,
-    '<span class="flex items-center gap-2"><span class="inline-flex items-center justify-center w-4 h-4 rounded border border-gray-300 bg-white"></span><span>$1</span></span>'
+    '<span class="flex items-center gap-2"><span class="inline-flex items-center justify-center w-4 h-4 rounded border border-gray-300 bg-white"></span><span>$1</span></span>',
   );
 
   return result;
@@ -98,7 +101,7 @@ function parseMarkdown(content: string): string {
     if (line.trim().startsWith('```')) {
       if (inCodeBlock) {
         htmlParts.push(
-          `<pre class="bg-gray-900 text-gray-100 rounded-lg p-4 overflow-x-auto text-sm font-mono my-2"><code>${escapeHtml(codeBlockContent.join('\n'))}</code></pre>`
+          `<pre class="bg-gray-900 text-gray-100 rounded-lg p-4 overflow-x-auto text-sm font-mono my-2"><code>${escapeHtml(codeBlockContent.join('\n'))}</code></pre>`,
         );
         codeBlockContent = [];
         inCodeBlock = false;
@@ -147,7 +150,7 @@ function parseMarkdown(content: string): string {
     if (quoteMatch) {
       closeList();
       htmlParts.push(
-        `<blockquote class="border-l-3 border-purple-300 pl-4 py-1 text-gray-600 italic my-2">${processInline(quoteMatch[1])}</blockquote>`
+        `<blockquote class="border-l-3 border-purple-300 pl-4 py-1 text-gray-600 italic my-2">${processInline(quoteMatch[1])}</blockquote>`,
       );
       continue;
     }
@@ -195,7 +198,7 @@ function parseMarkdown(content: string): string {
   // Close unclosed code block
   if (inCodeBlock && codeBlockContent.length > 0) {
     htmlParts.push(
-      `<pre class="bg-gray-900 text-gray-100 rounded-lg p-4 overflow-x-auto text-sm font-mono my-2"><code>${escapeHtml(codeBlockContent.join('\n'))}</code></pre>`
+      `<pre class="bg-gray-900 text-gray-100 rounded-lg p-4 overflow-x-auto text-sm font-mono my-2"><code>${escapeHtml(codeBlockContent.join('\n'))}</code></pre>`,
     );
   }
 
@@ -206,9 +209,6 @@ export function MarkdownPreview({ content, className = '' }: MarkdownPreviewProp
   const html = parseMarkdown(content);
 
   return (
-    <div
-      className={`markdown-preview ${className}`}
-      dangerouslySetInnerHTML={{ __html: html }}
-    />
+    <div className={`markdown-preview ${className}`} dangerouslySetInnerHTML={{ __html: html }} />
   );
 }

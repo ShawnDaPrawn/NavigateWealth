@@ -16,8 +16,14 @@ import {
   type FnaIntakeSession,
 } from '../../../../../services/fna-intake-api';
 import { normalizeIntakeInputs } from '../../../../../services/form-prefill-api';
-import type { FormPrefillId, PrefillResolveResponse } from '../../../../../shared/form-prefill/types';
-import { mergePrefillValues, normalizeIntakeToWizard } from '../../../../../shared/form-prefill/intake-field-mapping';
+import type {
+  FormPrefillId,
+  PrefillResolveResponse,
+} from '../../../../../shared/form-prefill/types';
+import {
+  mergePrefillValues,
+  normalizeIntakeToWizard,
+} from '../../../../../shared/form-prefill/intake-field-mapping';
 import { FNAIntakeStatusBadge } from '@/shared/fna-intake/components/FNAIntakeStatusBadge';
 import { PrefillReviewModal } from '../../form-prefill/PrefillReviewModal';
 import { clientApi } from '../api';
@@ -81,7 +87,13 @@ export function FNAIntakeQueue({ onAccept, onOpenClient }: FNAIntakeQueueProps) 
         const response = await clientApi.getClients({ perPage: 500 });
         const map: Record<string, string> = {};
         for (const entry of response.clients ?? []) {
-          const e = entry as { id: string; email?: string; fullName?: string; firstName?: string; lastName?: string };
+          const e = entry as {
+            id: string;
+            email?: string;
+            fullName?: string;
+            firstName?: string;
+            lastName?: string;
+          };
           const name =
             e.fullName ||
             [e.firstName, e.lastName].filter(Boolean).join(' ').trim() ||
@@ -187,7 +199,10 @@ export function FNAIntakeQueue({ onAccept, onOpenClient }: FNAIntakeQueueProps) 
 
   if (loading) {
     return (
-      <BrandSectionLoader title="Loading intake queue" message="Fetching submitted client intakes." />
+      <BrandSectionLoader
+        title="Loading intake queue"
+        message="Fetching submitted client intakes."
+      />
     );
   }
 
@@ -266,7 +281,10 @@ export function FNAIntakeQueue({ onAccept, onOpenClient }: FNAIntakeQueueProps) 
           if (pendingSession) {
             void finalizeAccept(
               pendingSession,
-              normalizeIntakeToWizard(pendingSession.domain as FnaIntakeDomain, pendingSession.inputs),
+              normalizeIntakeToWizard(
+                pendingSession.domain as FnaIntakeDomain,
+                pendingSession.inputs,
+              ),
             );
           }
         }}

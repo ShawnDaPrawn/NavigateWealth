@@ -183,15 +183,26 @@ function DraggableNoteWrapper({
         <button
           type="button"
           className="absolute top-2 left-2 z-10"
-          onClick={(e) => { e.stopPropagation(); onToggleSelect(note.id); }}
+          onClick={(e) => {
+            e.stopPropagation();
+            onToggleSelect(note.id);
+          }}
         >
-          <div className={`w-5 h-5 rounded border-2 flex items-center justify-center transition-all ${
-            isSelected
-              ? 'bg-purple-600 border-purple-600 text-white'
-              : 'bg-white/90 border-gray-300 hover:border-purple-400'
-          }`}>
+          <div
+            className={`w-5 h-5 rounded border-2 flex items-center justify-center transition-all ${
+              isSelected
+                ? 'bg-purple-600 border-purple-600 text-white'
+                : 'bg-white/90 border-gray-300 hover:border-purple-400'
+            }`}
+          >
             {isSelected && (
-              <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+              <svg
+                className="h-3 w-3"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+                strokeWidth={3}
+              >
                 <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
               </svg>
             )}
@@ -233,20 +244,27 @@ export function DraggablePinnedGrid({
     setOrderedNotes(applyCustomOrder(notes, savedOrder));
   }, [notes, personnelId]);
 
-  const moveNote = useCallback((dragIndex: number, hoverIndex: number) => {
-    setOrderedNotes((prev) => {
-      const updated = [...prev];
-      const [removed] = updated.splice(dragIndex, 1);
-      updated.splice(hoverIndex, 0, removed);
-      // Persist new order
-      savePinOrder(personnelId, updated.map((n) => n.id));
-      return updated;
-    });
-  }, [personnelId]);
+  const moveNote = useCallback(
+    (dragIndex: number, hoverIndex: number) => {
+      setOrderedNotes((prev) => {
+        const updated = [...prev];
+        const [removed] = updated.splice(dragIndex, 1);
+        updated.splice(hoverIndex, 0, removed);
+        // Persist new order
+        savePinOrder(
+          personnelId,
+          updated.map((n) => n.id),
+        );
+        return updated;
+      });
+    },
+    [personnelId],
+  );
 
-  const containerClass = viewMode === 'list'
-    ? 'space-y-2'
-    : 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4';
+  const containerClass =
+    viewMode === 'list'
+      ? 'space-y-2'
+      : 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4';
 
   return (
     <DndProvider backend={HTML5Backend}>

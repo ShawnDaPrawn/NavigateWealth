@@ -19,7 +19,9 @@ interface Step1Props {
 }
 
 export function Step1Recipients({ draft, updateDraft, onNext }: Step1Props) {
-  const searchInputGuard = useSearchInputAutofillGuard({ id: 'communication-step1-recipients-search' });
+  const searchInputGuard = useSearchInputAutofillGuard({
+    id: 'communication-step1-recipients-search',
+  });
   const [activeTab, setActiveTab] = useState<RecipientType>(draft.recipientType || 'single');
   const [searchTerm, setSearchTerm] = useState('');
   const [clients, setClients] = useState<Client[]>([]);
@@ -36,13 +38,13 @@ export function Step1Recipients({ draft, updateDraft, onNext }: Step1Props) {
       try {
         const [fetchedClients, fetchedGroups] = await Promise.all([
           communicationApi.getClients(),
-          communicationApi.getGroups()
+          communicationApi.getGroups(),
         ]);
         setClients(fetchedClients);
         setGroups(fetchedGroups);
         setFilteredClients(fetchedClients);
       } catch (err) {
-        console.error("Failed to fetch data", err);
+        console.error('Failed to fetch data', err);
         // Fallback to empty arrays
         setClients([]);
         setGroups([]);
@@ -61,33 +63,35 @@ export function Step1Recipients({ draft, updateDraft, onNext }: Step1Props) {
       return;
     }
     const lower = searchTerm.toLowerCase();
-    setFilteredClients(clients.filter(c => {
-      const firstName = c.firstName || '';
-      const lastName = c.surname || c.lastName || '';
-      const email = c.email || '';
-      
-      return (
-        firstName.toLowerCase().includes(lower) || 
-        lastName.toLowerCase().includes(lower) || 
-        email.toLowerCase().includes(lower)
-      );
-    }));
+    setFilteredClients(
+      clients.filter((c) => {
+        const firstName = c.firstName || '';
+        const lastName = c.surname || c.lastName || '';
+        const email = c.email || '';
+
+        return (
+          firstName.toLowerCase().includes(lower) ||
+          lastName.toLowerCase().includes(lower) ||
+          email.toLowerCase().includes(lower)
+        );
+      }),
+    );
   }, [searchTerm, clients]);
 
   // Handlers
   const handleClientSelect = (client: Client) => {
     if (activeTab === 'single') {
-      updateDraft({ 
-        selectedRecipients: [client], 
+      updateDraft({
+        selectedRecipients: [client],
         recipientType: 'single',
-        selectedGroup: undefined 
+        selectedGroup: undefined,
       });
     } else {
       const current = draft.selectedRecipients;
-      const exists = current.find(c => c.id === client.id);
+      const exists = current.find((c) => c.id === client.id);
       let newSelection;
       if (exists) {
-        newSelection = current.filter(c => c.id !== client.id);
+        newSelection = current.filter((c) => c.id !== client.id);
       } else {
         newSelection = [...current, client];
       }
@@ -99,30 +103,31 @@ export function Step1Recipients({ draft, updateDraft, onNext }: Step1Props) {
     setSelectedGroup(group);
     // For the system "All Clients" group, use every fetched client
     // For custom groups, filter by clientIds
-    const groupClients = group.id === 'sys_all'
-      ? clients
-      : (group.clientIds 
-          ? clients.filter(c => group.clientIds.includes(c.id))
-          : []);
-    
-    updateDraft({ 
-      selectedGroup: group, 
+    const groupClients =
+      group.id === 'sys_all'
+        ? clients
+        : group.clientIds
+          ? clients.filter((c) => group.clientIds.includes(c.id))
+          : [];
+
+    updateDraft({
+      selectedGroup: group,
       selectedRecipients: groupClients,
-      recipientType: 'group'
+      recipientType: 'group',
     });
   };
 
   const handleTabChange = (val: string) => {
     const type = val as RecipientType;
     setActiveTab(type);
-    
-    // Reset selection logic when switching tabs might be desired, 
+
+    // Reset selection logic when switching tabs might be desired,
     // but for now let's keep draft state unless explicitly cleared by user actions
     // updateDraft({ recipientType: type });
   };
 
   // Render Helpers
-  const isSelected = (clientId: string) => draft.selectedRecipients.some(c => c.id === clientId);
+  const isSelected = (clientId: string) => draft.selectedRecipients.some((c) => c.id === clientId);
 
   const ROW_HEIGHT = 48;
   const { parentRef, virtualItems, totalSize, isVirtualized } = useVirtualizedRows({
@@ -138,10 +143,15 @@ export function Step1Recipients({ draft, updateDraft, onNext }: Step1Props) {
   };
 
   if (showGroupManager) {
-    return <CustomGroupManager onClose={() => setShowGroupManager(false)} onSelectGroup={(g) => {
-      handleGroupSelect(g);
-      setShowGroupManager(false);
-    }} />;
+    return (
+      <CustomGroupManager
+        onClose={() => setShowGroupManager(false)}
+        onSelectGroup={(g) => {
+          handleGroupSelect(g);
+          setShowGroupManager(false);
+        }}
+      />
+    );
   }
 
   return (
@@ -172,7 +182,7 @@ export function Step1Recipients({ draft, updateDraft, onNext }: Step1Props) {
                   <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
                   <Input
                     {...searchInputGuard}
-                    placeholder="Search by name, email, or phone..." 
+                    placeholder="Search by name, email, or phone..."
                     className="pl-10"
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
@@ -202,7 +212,7 @@ export function Step1Recipients({ draft, updateDraft, onNext }: Step1Props) {
                           position: isVirtualized ? 'relative' : undefined,
                         }}
                       >
-                        {virtualItems.map(vRow => {
+                        {virtualItems.map((vRow) => {
                           const client = filteredClients[vRow.index];
                           return (
                             <div
@@ -211,37 +221,61 @@ export function Step1Recipients({ draft, updateDraft, onNext }: Step1Props) {
                               tabIndex={0}
                               className={`grid grid-cols-[50px_1fr_1fr_100px_100px] border-b border-muted/30 cursor-pointer hover:bg-muted/50 items-center ${isSelected(client.id) ? 'bg-primary/5' : ''}`}
                               onClick={() => handleClientSelect(client)}
-                              onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handleClientSelect(client); } }}
-                              style={isVirtualized ? {
-                                position: 'absolute',
-                                top: 0,
-                                left: 0,
-                                width: '100%',
-                                height: vRow.size,
-                                transform: `translateY(${vRow.start}px)`,
-                              } : { height: ROW_HEIGHT }}
+                              onKeyDown={(e) => {
+                                if (e.key === 'Enter' || e.key === ' ') {
+                                  e.preventDefault();
+                                  handleClientSelect(client);
+                                }
+                              }}
+                              style={
+                                isVirtualized
+                                  ? {
+                                      position: 'absolute',
+                                      top: 0,
+                                      left: 0,
+                                      width: '100%',
+                                      height: vRow.size,
+                                      transform: `translateY(${vRow.start}px)`,
+                                    }
+                                  : { height: ROW_HEIGHT }
+                              }
                             >
                               <div className="px-4 flex items-center justify-center">
                                 {activeTab === 'single' ? (
-                                  <div className={`h-4 w-4 rounded-full border ${isSelected(client.id) ? 'bg-primary border-primary' : 'border-muted-foreground'}`}>
-                                    {isSelected(client.id) && <div className="h-2 w-2 bg-white rounded-full m-auto mt-0.5" />}
+                                  <div
+                                    className={`h-4 w-4 rounded-full border ${isSelected(client.id) ? 'bg-primary border-primary' : 'border-muted-foreground'}`}
+                                  >
+                                    {isSelected(client.id) && (
+                                      <div className="h-2 w-2 bg-white rounded-full m-auto mt-0.5" />
+                                    )}
                                   </div>
                                 ) : (
                                   <Checkbox checked={isSelected(client.id)} />
                                 )}
                               </div>
-                              <div className="px-4 font-medium text-sm truncate">{client.firstName} {client.surname || client.lastName}</div>
-                              <div className="px-4 text-sm text-muted-foreground truncate">{client.email}</div>
+                              <div className="px-4 font-medium text-sm truncate">
+                                {client.firstName} {client.surname || client.lastName}
+                              </div>
+                              <div className="px-4 text-sm text-muted-foreground truncate">
+                                {client.email}
+                              </div>
                               <div className="px-4">
-                                <Badge variant="outline" className={
-                                  client.status?.toLowerCase() === 'active' ? 'text-green-600 border-green-200 bg-green-50' :
-                                  client.status?.toLowerCase() === 'suspended' ? 'text-amber-600 border-amber-200 bg-amber-50' :
-                                  'text-gray-600'
-                                }>
+                                <Badge
+                                  variant="outline"
+                                  className={
+                                    client.status?.toLowerCase() === 'active'
+                                      ? 'text-green-600 border-green-200 bg-green-50'
+                                      : client.status?.toLowerCase() === 'suspended'
+                                        ? 'text-amber-600 border-amber-200 bg-amber-50'
+                                        : 'text-gray-600'
+                                  }
+                                >
                                   {client.status || 'Active'}
                                 </Badge>
                               </div>
-                              <div className="px-4 text-sm text-muted-foreground truncate">{client.category}</div>
+                              <div className="px-4 text-sm text-muted-foreground truncate">
+                                {client.category}
+                              </div>
                             </div>
                           );
                         })}
@@ -252,7 +286,9 @@ export function Step1Recipients({ draft, updateDraft, onNext }: Step1Props) {
                 <div className="flex justify-between items-center text-sm text-muted-foreground px-2">
                   <span>{filteredClients.length} clients found</span>
                   {activeTab === 'multiple' && (
-                    <span className="font-medium text-primary">{draft.selectedRecipients.length} selected</span>
+                    <span className="font-medium text-primary">
+                      {draft.selectedRecipients.length} selected
+                    </span>
                   )}
                 </div>
               </div>
@@ -269,23 +305,29 @@ export function Step1Recipients({ draft, updateDraft, onNext }: Step1Props) {
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {groups.map(group => (
-                    <div 
+                  {groups.map((group) => (
+                    <div
                       key={group.id}
                       onClick={() => handleGroupSelect(group)}
                       className={`
                         p-4 rounded-lg border cursor-pointer transition-all
-                        ${selectedGroup?.id === group.id 
-                          ? 'border-primary ring-1 ring-primary bg-primary/5' 
-                          : 'border-gray-200 hover:border-primary/50 hover:shadow-sm'
+                        ${
+                          selectedGroup?.id === group.id
+                            ? 'border-primary ring-1 ring-primary bg-primary/5'
+                            : 'border-gray-200 hover:border-primary/50 hover:shadow-sm'
                         }
                       `}
                     >
                       <div className="flex items-start justify-between mb-2">
-                        <Badge variant={group.type === 'system' ? 'secondary' : 'default'} className="capitalize">
+                        <Badge
+                          variant={group.type === 'system' ? 'secondary' : 'default'}
+                          className="capitalize"
+                        >
                           {group.type}
                         </Badge>
-                        {selectedGroup?.id === group.id && <CheckCircle2 className="h-5 w-5 text-primary" />}
+                        {selectedGroup?.id === group.id && (
+                          <CheckCircle2 className="h-5 w-5 text-primary" />
+                        )}
                       </div>
                       <h4 className="font-semibold text-gray-900">{group.name}</h4>
                       <p className="text-sm text-gray-500 mt-1 line-clamp-2">{group.description}</p>
@@ -304,11 +346,11 @@ export function Step1Recipients({ draft, updateDraft, onNext }: Step1Props) {
 
       {/* Footer Actions */}
       <div className="flex justify-end pt-4">
-        <Button 
+        <Button
           onClick={() => {
             updateDraft({ recipientType: activeTab });
             onNext();
-          }} 
+          }}
           disabled={!canProceed()}
           className="w-full sm:w-auto gap-2"
         >

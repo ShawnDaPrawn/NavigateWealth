@@ -14,12 +14,7 @@
 
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router';
-import {
-  Dialog,
-  DialogContent,
-  DialogTitle,
-  DialogDescription,
-} from '../ui/dialog';
+import { Dialog, DialogContent, DialogTitle, DialogDescription } from '../ui/dialog';
 import { Button } from '../ui/button';
 import { ShieldCheck, Mail, Clock, CheckCircle2 } from 'lucide-react';
 import { useAuth } from '../auth/AuthContext';
@@ -101,14 +96,16 @@ export function TwoFactorPromptModal() {
   };
 
   return (
-    <Dialog open={open} onOpenChange={(v) => { if (!v) dismiss(); }}>
+    <Dialog
+      open={open}
+      onOpenChange={(v) => {
+        if (!v) dismiss();
+      }}
+    >
       <DialogContent className="max-w-lg w-full mx-auto bg-white border border-gray-200 rounded-2xl shadow-2xl p-0 overflow-hidden">
-        <DialogTitle className="sr-only">
-          Enable Two-Factor Authentication
-        </DialogTitle>
+        <DialogTitle className="sr-only">Enable Two-Factor Authentication</DialogTitle>
         <DialogDescription className="sr-only">
-          Two-factor authentication adds an extra layer of security to your
-          Navigate Wealth account.
+          Two-factor authentication adds an extra layer of security to your Navigate Wealth account.
         </DialogDescription>
 
         {/* Accent bar */}
@@ -125,8 +122,8 @@ export function TwoFactorPromptModal() {
                 Protect your account with 2FA
               </h3>
               <p className="text-sm text-gray-500 mt-1">
-                Two-factor authentication (2FA) is a recommended security
-                feature that helps keep your financial information safe.
+                Two-factor authentication (2FA) is a recommended security feature that helps keep
+                your financial information safe.
               </p>
             </div>
           </div>
@@ -143,12 +140,8 @@ export function TwoFactorPromptModal() {
                     <b.icon className="h-4 w-4 text-purple-600" />
                   </div>
                   <div>
-                    <p className="text-sm font-medium text-gray-900">
-                      {b.title}
-                    </p>
-                    <p className="text-xs text-gray-500 leading-relaxed">
-                      {b.description}
-                    </p>
+                    <p className="text-sm font-medium text-gray-900">{b.title}</p>
+                    <p className="text-xs text-gray-500 leading-relaxed">{b.description}</p>
                   </div>
                 </li>
               ))}
@@ -160,8 +153,8 @@ export function TwoFactorPromptModal() {
             <CheckCircle2 className="h-4 w-4 text-green-500 mt-0.5 flex-shrink-0" />
             <p className="text-xs text-gray-500 leading-relaxed">
               You can enable or disable 2FA at any time from your{' '}
-              <span className="font-medium text-gray-700">Security Settings</span>.
-              We strongly recommend keeping it enabled to safeguard your account.
+              <span className="font-medium text-gray-700">Security Settings</span>. We strongly
+              recommend keeping it enabled to safeguard your account.
             </p>
           </div>
 

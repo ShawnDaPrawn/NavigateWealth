@@ -17,20 +17,8 @@ export const GeneratePostTextSchema = z.object({
     .string()
     .min(3, 'Topic must be at least 3 characters')
     .max(500, 'Topic must not exceed 500 characters'),
-  tone: z.enum([
-    'professional',
-    'conversational',
-    'authoritative',
-    'friendly',
-    'educational',
-  ]),
-  goal: z.enum([
-    'engagement',
-    'awareness',
-    'education',
-    'promotion',
-    'thought_leadership',
-  ]),
+  tone: z.enum(['professional', 'conversational', 'authoritative', 'friendly', 'educational']),
+  goal: z.enum(['engagement', 'awareness', 'education', 'promotion', 'thought_leadership']),
   articleContent: z.string().max(10000).optional(),
   articleTitle: z.string().max(300).optional(),
   keyPoints: z.array(z.string().max(200)).max(5).optional(),
@@ -76,8 +64,20 @@ export const GenerateBundleSchema = z.object({
 // ============================================================================
 
 const platformEnumVal = z.enum(['linkedin', 'instagram', 'facebook', 'x']);
-const toneEnumVal = z.enum(['professional', 'conversational', 'authoritative', 'friendly', 'educational']);
-const goalEnumVal = z.enum(['engagement', 'awareness', 'education', 'promotion', 'thought_leadership']);
+const toneEnumVal = z.enum([
+  'professional',
+  'conversational',
+  'authoritative',
+  'friendly',
+  'educational',
+]);
+const goalEnumVal = z.enum([
+  'engagement',
+  'awareness',
+  'education',
+  'promotion',
+  'thought_leadership',
+]);
 
 export const CreateCustomTemplateSchema = z.object({
   name: z.string().min(2, 'Name must be at least 2 characters').max(100),

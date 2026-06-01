@@ -40,7 +40,10 @@ export interface PrefillAuditRecord {
   clientId?: string;
 }
 
-export async function fetchPrefillAudit(clientId: string, limit = 50): Promise<PrefillAuditRecord[]> {
+export async function fetchPrefillAudit(
+  clientId: string,
+  limit = 50,
+): Promise<PrefillAuditRecord[]> {
   const response = await api.get<{ success: boolean; data: PrefillAuditRecord[] }>(
     `/prefill/audit/${encodeURIComponent(clientId)}?limit=${limit}`,
   );
@@ -60,7 +63,9 @@ export async function normalizeIntakeInputs(
 }
 
 export async function listFormTemplates(): Promise<FormTemplateRecord[]> {
-  const response = await api.get<{ success: boolean; data: FormTemplateRecord[] }>('/form-templates');
+  const response = await api.get<{ success: boolean; data: FormTemplateRecord[] }>(
+    '/form-templates',
+  );
   return response.data;
 }
 
@@ -110,7 +115,10 @@ export async function fillFormTemplate(
       fileName: string;
       attachedDocument?: { documentId: string; filePath: string };
     };
-  }>(`/form-templates/${templateId}/fill`, { clientId, attachToDocuments: options?.attachToDocuments ?? false });
+  }>(`/form-templates/${templateId}/fill`, {
+    clientId,
+    attachToDocuments: options?.attachToDocuments ?? false,
+  });
   return response.data;
 }
 

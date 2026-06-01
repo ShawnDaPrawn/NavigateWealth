@@ -8,18 +8,18 @@
 
 ## Current state (honest)
 
-| Area | Status |
-|------|--------|
-| Shared resolver + review UI | Landed — all 6 FNA Step 1 entry points |
-| Auth + rate limits | Landed — adviser/admin JWT, `/prefill/*` rate limits |
-| Registry | Partial — high-value fields only (~8–12 per domain) |
-| Legacy `autoPopulateFromProfile()` routes | Still exist — duplicate data path |
-| Audit | KV-only — no query UI or retention |
-| Deploy + UAT | **Not done** — blocking production label |
-| E2E | Minimal smoke spec — not full wizard apply path |
-| PDF templates | Partial — picker, template preview, document attach; templates still in KV |
-| E-sign tokens (Tier B) | Not launched |
-| Client drawer prefill entry | Not built |
+| Area                                      | Status                                                                     |
+| ----------------------------------------- | -------------------------------------------------------------------------- |
+| Shared resolver + review UI               | Landed — all 6 FNA Step 1 entry points                                     |
+| Auth + rate limits                        | Landed — adviser/admin JWT, `/prefill/*` rate limits                       |
+| Registry                                  | Partial — high-value fields only (~8–12 per domain)                        |
+| Legacy `autoPopulateFromProfile()` routes | Still exist — duplicate data path                                          |
+| Audit                                     | KV-only — no query UI or retention                                         |
+| Deploy + UAT                              | **Not done** — blocking production label                                   |
+| E2E                                       | Minimal smoke spec — not full wizard apply path                            |
+| PDF templates                             | Partial — picker, template preview, document attach; templates still in KV |
+| E-sign tokens (Tier B)                    | Not launched                                                               |
+| Client drawer prefill entry               | Not built                                                                  |
 
 ---
 
@@ -53,14 +53,17 @@ flowchart TD
 ### Tasks
 
 1. **Deploy Edge Function**
+
    ```bash
    npx supabase functions deploy make-server-91ed8379 --project-ref vpjmdsltwrnpefzcgdmz --use-api --workdir .
    ```
 
 2. **Run API smoke (production)**
+
    ```bash
    npm run form-prefill:smoke
    ```
+
    Requires `e2e/.env.local` with `E2E_FNA_ADVISER_*` and `E2E_FNA_CLIENT_ID`.
 
 3. **Complete UAT matrix** — `docs/form-prefill-uat-signoff.md`
@@ -225,14 +228,14 @@ flowchart TD
 
 ## Priority summary
 
-| Priority | Phase | Block production label? |
-|----------|-------|-------------------------|
-| **P0** | Phase 0 — Deploy + UAT | **Yes** |
-| **P1** | Phase 1 — Resolver consolidation | Recommended before wide rollout |
-| **P2** | Phase 2 — Audit + access | Recommended for compliance |
-| **P3** | Phase 3 — E2E + UX | Recommended |
-| **P4** | Phase 4 — E-sign | Optional quick win |
-| **P5** | Phase 5 — PDF Tier C | Separate product launch |
+| Priority | Phase                            | Block production label?         |
+| -------- | -------------------------------- | ------------------------------- |
+| **P0**   | Phase 0 — Deploy + UAT           | **Yes**                         |
+| **P1**   | Phase 1 — Resolver consolidation | Recommended before wide rollout |
+| **P2**   | Phase 2 — Audit + access         | Recommended for compliance      |
+| **P3**   | Phase 3 — E2E + UX               | Recommended                     |
+| **P4**   | Phase 4 — E-sign                 | Optional quick win              |
+| **P5**   | Phase 5 — PDF Tier C             | Separate product launch         |
 
 ---
 
@@ -252,10 +255,10 @@ Mirror FNA Intake launch gates:
 
 ## Suggested execution order (next 2 weeks)
 
-| Week | Focus |
-|------|-------|
+| Week       | Focus                                                                                          |
+| ---------- | ---------------------------------------------------------------------------------------------- |
 | **Week 1** | Phase 0 (deploy, smoke, UAT) → Phase 1 (route consolidation + registry gaps from UAT feedback) |
-| **Week 2** | Phase 2 (audit + access decision) → Phase 3 (E2E + one UX entry point) |
+| **Week 2** | Phase 2 (audit + access decision) → Phase 3 (E2E + one UX entry point)                         |
 
 Phase 4 can run in parallel with Phase 3 if e-sign is a priority. Phase 5 is a dedicated sprint after Tier A launch.
 
@@ -263,19 +266,19 @@ Phase 4 can run in parallel with Phase 3 if e-sign is a priority. Phase 5 is a d
 
 ## Related files
 
-| Doc / code | Role |
-|------------|------|
-| `docs/PRODUCTION-READINESS.md` §10a | Status ledger |
-| `docs/form-prefill-uat-signoff.md` | UAT checklist |
-| `scripts/form-prefill-api-smoke.mjs` | Deploy verification |
-| `src/shared/form-prefill/` | Registry + types |
+| Doc / code                                        | Role                     |
+| ------------------------------------------------- | ------------------------ |
+| `docs/PRODUCTION-READINESS.md` §10a               | Status ledger            |
+| `docs/form-prefill-uat-signoff.md`                | UAT checklist            |
+| `scripts/form-prefill-api-smoke.mjs`              | Deploy verification      |
+| `src/shared/form-prefill/`                        | Registry + types         |
 | `src/supabase/functions/server/form-prefill-*.ts` | Resolver + routes + auth |
-| `src/components/admin/modules/form-prefill/` | Review UI |
+| `src/components/admin/modules/form-prefill/`      | Review UI                |
 
 ---
 
 ## Changelog
 
-| Date | Change |
-|------|--------|
+| Date       | Change                                         |
+| ---------- | ---------------------------------------------- |
 | 2026-05-23 | Initial launch plan — post Tier A code landing |

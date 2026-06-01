@@ -1,9 +1,9 @@
 /**
  * ChatInput Component
- * 
+ *
  * Multi-line input for chat messages with auto-resize.
  * Supports keyboard shortcuts and character count.
- * 
+ *
  * @module advice-engine/components/ChatInput
  */
 
@@ -15,7 +15,7 @@ import type { ChatInputProps } from '../types';
 
 /**
  * Chat input component with auto-resize
- * 
+ *
  * @example
  * <ChatInput
  *   value={input}
@@ -83,34 +83,36 @@ export function ChatInput({
           size="sm"
           className="absolute right-3 bottom-3 h-8 w-8 p-0 rounded-full"
         >
-          {isLoading ? (
-            <Loader2 className="h-4 w-4 animate-spin" />
-          ) : (
-            <Send className="h-4 w-4" />
-          )}
+          {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
         </Button>
 
         {/* Character Count */}
         {showCount && (
-            <div
-              className={`absolute bottom-3 right-14 text-[10px] mr-2 ${
-                isOverLimit ? 'text-red-600 font-bold' : 'text-muted-foreground'
-              }`}
-            >
-              {characterCount}/{maxLength}
-            </div>
-          )}
+          <div
+            className={`absolute bottom-3 right-14 text-[10px] mr-2 ${
+              isOverLimit ? 'text-red-600 font-bold' : 'text-muted-foreground'
+            }`}
+          >
+            {characterCount}/{maxLength}
+          </div>
+        )}
       </div>
 
       {/* Footer / Help Text */}
       <div className="flex justify-between items-center text-xs text-muted-foreground px-1">
         <div className="flex items-center gap-2">
-           <span className="flex items-center gap-1">
-             <kbd className="px-1.5 py-0.5 rounded bg-gray-100 border border-gray-200 font-sans text-[10px]">Enter</kbd> to send
-           </span>
-           <span className="flex items-center gap-1">
-             <kbd className="px-1.5 py-0.5 rounded bg-gray-100 border border-gray-200 font-sans text-[10px]">Shift + Enter</kbd> for new line
-           </span>
+          <span className="flex items-center gap-1">
+            <kbd className="px-1.5 py-0.5 rounded bg-gray-100 border border-gray-200 font-sans text-[10px]">
+              Enter
+            </kbd>{' '}
+            to send
+          </span>
+          <span className="flex items-center gap-1">
+            <kbd className="px-1.5 py-0.5 rounded bg-gray-100 border border-gray-200 font-sans text-[10px]">
+              Shift + Enter
+            </kbd>{' '}
+            for new line
+          </span>
         </div>
       </div>
     </div>

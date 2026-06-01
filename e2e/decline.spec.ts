@@ -30,11 +30,14 @@ test.describe('signer — decline document', () => {
     const reasonField = page.getByRole('textbox', { name: /reason/i }).first();
     await reasonField.fill('Automated E2E rejection — please ignore.');
 
-    await page.getByRole('button', { name: /confirm|submit|send/i }).first().click();
+    await page
+      .getByRole('button', { name: /confirm|submit|send/i })
+      .first()
+      .click();
 
     // Final terminal screen.
-    await expect(
-      page.getByRole('main').getByText(/declined|rejected|not signed/i),
-    ).toBeVisible({ timeout: 30_000 });
+    await expect(page.getByRole('main').getByText(/declined|rejected|not signed/i)).toBeVisible({
+      timeout: 30_000,
+    });
   });
 });

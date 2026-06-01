@@ -90,68 +90,71 @@ export function ReportingModule() {
    */
   const runReport = async (report: Report) => {
     // Mark report as running
-    setRunningReports(prev => new Set(prev).add(report.id));
-    
+    setRunningReports((prev) => new Set(prev).add(report.id));
+
     // Create new report run
     const newRun = createReportRun(report);
-    setReportRuns(prev => [newRun, ...prev]);
+    setReportRuns((prev) => [newRun, ...prev]);
 
     try {
       await executeReport(report, newRun.id, {
         // Update progress
         onProgress: (runId, progress) => {
-          setReportRuns(prev => prev.map(run => 
-            run.id === runId ? { ...run, progress } : run
-          ));
+          setReportRuns((prev) =>
+            prev.map((run) => (run.id === runId ? { ...run, progress } : run)),
+          );
         },
-        
+
         // Handle completion
         onComplete: (runId, outputFile) => {
-          setReportRuns(prev => prev.map(run => 
-            run.id === runId 
-              ? {
-                  ...run,
-                  status: 'Completed' as const,
-                  progress: 100,
-                  completedAt: new Date().toISOString(),
-                  outputFile
-                }
-              : run
-          ));
-          
+          setReportRuns((prev) =>
+            prev.map((run) =>
+              run.id === runId
+                ? {
+                    ...run,
+                    status: 'Completed' as const,
+                    progress: 100,
+                    completedAt: new Date().toISOString(),
+                    outputFile,
+                  }
+                : run,
+            ),
+          );
+
           // Update last run time
-          setReports(prev => prev.map(r => 
-            r.id === report.id 
-              ? { ...r, lastRunAt: new Date().toISOString() }
-              : r
-          ));
+          setReports((prev) =>
+            prev.map((r) =>
+              r.id === report.id ? { ...r, lastRunAt: new Date().toISOString() } : r,
+            ),
+          );
 
           toast.success('Report generated successfully');
         },
-        
+
         // Handle errors
         onError: (runId, error) => {
-          setReportRuns(prev => prev.map(run => 
-            run.id === runId 
-              ? {
-                  ...run,
-                  status: 'Failed' as const,
-                  progress: 0,
-                  completedAt: new Date().toISOString(),
-                  error
-                }
-              : run
-          ));
-          
-          toast.error('Failed to generate report');
-        }
-      });
+          setReportRuns((prev) =>
+            prev.map((run) =>
+              run.id === runId
+                ? {
+                    ...run,
+                    status: 'Failed' as const,
+                    progress: 0,
+                    completedAt: new Date().toISOString(),
+                    error,
+                  }
+                : run,
+            ),
+          );
 
+          toast.error('Failed to generate report');
+        },
+      });
     } catch (error) {
       console.error('Report generation failed:', error);
     } finally {
       // Remove from running reports
-      setRunningReports(prev => {
+      setRunningReports((prev) => {
         const newSet = new Set(prev);
         newSet.delete(report.id);
         return newSet;

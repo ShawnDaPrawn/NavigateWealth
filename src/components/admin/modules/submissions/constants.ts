@@ -182,7 +182,8 @@ export const SUBMISSION_INVITE_TYPES: SubmissionInviteType[] = [
     iconName: 'MessageSquare',
     path: '/get-quote',
     emailSubject: 'Get Your Personalised Quote — Navigate Wealth',
-    emailBody: '<p>We\'d love to help you find the right financial solution. Click the button below to request a personalised quote — it only takes a few minutes.</p><p>Our independent advisers will compare options from South Africa\'s leading providers to find the best fit for your needs and budget.</p>',
+    emailBody:
+      "<p>We'd love to help you find the right financial solution. Click the button below to request a personalised quote — it only takes a few minutes.</p><p>Our independent advisers will compare options from South Africa's leading providers to find the best fit for your needs and budget.</p>",
     emailButtonLabel: 'Get My Quote',
     accentClass: 'border-purple-200 hover:border-purple-300',
     iconBgClass: 'bg-purple-50',
@@ -196,7 +197,8 @@ export const SUBMISSION_INVITE_TYPES: SubmissionInviteType[] = [
     iconName: 'Calendar',
     path: '/schedule-consultation',
     emailSubject: 'Schedule Your Consultation — Navigate Wealth',
-    emailBody: '<p>We\'d like to invite you to schedule a consultation with one of our qualified financial advisers.</p><p>Whether you have questions about your existing portfolio, want to explore new options, or need guidance on a specific financial matter — we\'re here to help.</p>',
+    emailBody:
+      "<p>We'd like to invite you to schedule a consultation with one of our qualified financial advisers.</p><p>Whether you have questions about your existing portfolio, want to explore new options, or need guidance on a specific financial matter — we're here to help.</p>",
     emailButtonLabel: 'Book My Consultation',
     accentClass: 'border-blue-200 hover:border-blue-300',
     iconBgClass: 'bg-blue-50',
@@ -210,7 +212,8 @@ export const SUBMISSION_INVITE_TYPES: SubmissionInviteType[] = [
     iconName: 'Landmark',
     path: '/get-quote/estate-planning/contact',
     emailSubject: 'Estate Planning Consultation — Navigate Wealth',
-    emailBody: '<p>Proper estate planning protects your family and ensures your wishes are honoured. Our qualified advisers can guide you through trusts, succession planning, estate duty, and more.</p><p>Click below to request an estate planning consultation — there\'s no obligation.</p>',
+    emailBody:
+      "<p>Proper estate planning protects your family and ensures your wishes are honoured. Our qualified advisers can guide you through trusts, succession planning, estate duty, and more.</p><p>Click below to request an estate planning consultation — there's no obligation.</p>",
     emailButtonLabel: 'Get My Estate Planning Quote',
     accentClass: 'border-emerald-200 hover:border-emerald-300',
     iconBgClass: 'bg-emerald-50',
@@ -224,7 +227,8 @@ export const SUBMISSION_INVITE_TYPES: SubmissionInviteType[] = [
     iconName: 'FileText',
     path: '/get-quote/estate-planning/contact?will=true',
     emailSubject: 'Draft Your Will — Navigate Wealth AI Assistant',
-    emailBody: '<p>Protecting your loved ones starts with a properly drafted will. Our AI-powered Will Drafting Agent guides you through the entire process — step by step, in plain language.</p><p>Click the button below to get started. It\'s quick, secure, and you can save your progress at any time.</p>',
+    emailBody:
+      "<p>Protecting your loved ones starts with a properly drafted will. Our AI-powered Will Drafting Agent guides you through the entire process — step by step, in plain language.</p><p>Click the button below to get started. It's quick, secure, and you can save your progress at any time.</p>",
     emailButtonLabel: 'Start My Will',
     accentClass: 'border-cyan-200 hover:border-cyan-300',
     iconBgClass: 'bg-cyan-50',
@@ -237,8 +241,9 @@ export const SUBMISSION_INVITE_TYPES: SubmissionInviteType[] = [
     description: 'Send a general enquiry or request a callback',
     iconName: 'Mail',
     path: '/contact',
-    emailSubject: 'We\'d Love to Hear From You — Navigate Wealth',
-    emailBody: '<p>Have a question or want to know more about how Navigate Wealth can help you? We\'re here for you.</p><p>Click the button below to send us a message and one of our team members will get back to you promptly.</p>',
+    emailSubject: "We'd Love to Hear From You — Navigate Wealth",
+    emailBody:
+      "<p>Have a question or want to know more about how Navigate Wealth can help you? We're here for you.</p><p>Click the button below to send us a message and one of our team members will get back to you promptly.</p>",
     emailButtonLabel: 'Contact Us',
     accentClass: 'border-amber-200 hover:border-amber-300',
     iconBgClass: 'bg-amber-50',
@@ -255,7 +260,8 @@ export const SUBMISSION_INVITE_TYPES: SubmissionInviteType[] = [
     iconName: 'Calculator',
     path: '/get-quote/tax-planning/contact',
     emailSubject: 'Tax Planning Consultation — Navigate Wealth',
-    emailBody: '<p>Are you making the most of your tax-efficient investment opportunities? Our team can help you develop strategies to optimise your tax position — legally and sustainably.</p><p>Click below to request a tax planning consultation.</p>',
+    emailBody:
+      '<p>Are you making the most of your tax-efficient investment opportunities? Our team can help you develop strategies to optimise your tax position — legally and sustainably.</p><p>Click below to request a tax planning consultation.</p>',
     emailButtonLabel: 'Plan My Tax Strategy',
     accentClass: 'border-teal-200 hover:border-teal-300',
     iconBgClass: 'bg-teal-50',
@@ -269,7 +275,8 @@ export const SUBMISSION_INVITE_TYPES: SubmissionInviteType[] = [
     iconName: 'TrendingUp',
     path: '/get-quote/retirement-planning/contact',
     emailSubject: 'Retirement Planning — Navigate Wealth',
-    emailBody: '<p>It\'s never too early — or too late — to start planning for retirement. Our advisers will help you build a strategy that ensures financial security in your golden years.</p><p>Click below to begin your retirement planning journey.</p>',
+    emailBody:
+      "<p>It's never too early — or too late — to start planning for retirement. Our advisers will help you build a strategy that ensures financial security in your golden years.</p><p>Click below to begin your retirement planning journey.</p>",
     emailButtonLabel: 'Plan My Retirement',
     accentClass: 'border-orange-200 hover:border-orange-300',
     iconBgClass: 'bg-orange-50',

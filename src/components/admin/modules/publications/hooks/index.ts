@@ -1,6 +1,6 @@
 /**
  * Publications Feature - Hooks Index
- * 
+ *
  * Central export for all custom hooks.
  */
 

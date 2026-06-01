@@ -445,7 +445,13 @@ export interface InvestmentINA extends FNABase {
 
 // ==================== UNION TYPE ====================
 
-export type AnyFNA = RiskPlanningFNA | MedicalFNA | RetirementFNA | InvestmentINA | TaxPlanningFNA | EstatePlanningFNA;
+export type AnyFNA =
+  | RiskPlanningFNA
+  | MedicalFNA
+  | RetirementFNA
+  | InvestmentINA
+  | TaxPlanningFNA
+  | EstatePlanningFNA;
 
 // ==================== API FUNCTIONS ====================
 
@@ -458,7 +464,7 @@ export async function getRiskPlanningFNA(clientId: string): Promise<RiskPlanning
   logger.debug('[FNA-API] Fetching Risk Planning FNA', { clientId });
   try {
     const response = await api.get<{ success: boolean; data: RiskPlanningFNA | null }>(
-      `/risk-planning-fna/client/${clientId}/latest`
+      `/risk-planning-fna/client/${clientId}/latest`,
     );
     return response.data || null;
   } catch (error) {
@@ -485,7 +491,7 @@ export async function getMedicalFNA(clientId: string): Promise<MedicalFNA | null
   logger.debug('[FNA-API] Fetching Medical FNA', { clientId });
   try {
     const response = await api.get<{ success: boolean; data: MedicalFNA | null }>(
-      `/medical-fna/client/${clientId}/latest-published`
+      `/medical-fna/client/${clientId}/latest-published`,
     );
     return response.data || null;
   } catch (error) {
@@ -493,8 +499,7 @@ export async function getMedicalFNA(clientId: string): Promise<MedicalFNA | null
       (error instanceof APIError && error.statusCode === 404) ||
       (error instanceof Error && error.message?.includes('404'));
 
-    const isForbidden =
-      (error instanceof APIError && error.statusCode === 403);
+    const isForbidden = error instanceof APIError && error.statusCode === 403;
 
     if (isNotFound || isForbidden) {
       logger.debug('No published Medical FNA found (or access denied)', { clientId });
@@ -515,7 +520,7 @@ export async function getRetirementFNA(clientId: string): Promise<RetirementFNA 
   logger.debug('[FNA-API] Fetching Retirement FNA', { clientId });
   try {
     const response = await api.get<{ success: boolean; data: RetirementFNA | null }>(
-      `/retirement-fna/client/${clientId}/latest-published`
+      `/retirement-fna/client/${clientId}/latest-published`,
     );
     return response.data || null;
   } catch (error) {
@@ -542,7 +547,7 @@ export async function getInvestmentINA(clientId: string): Promise<InvestmentINA 
   logger.debug('[FNA-API] Fetching Investment INA', { clientId });
   try {
     const response = await api.get<{ success: boolean; data: InvestmentINA | null }>(
-      `/ina/investment/client/${clientId}/latest-published`
+      `/ina/investment/client/${clientId}/latest-published`,
     );
     return response.data || null;
   } catch (error) {
@@ -569,7 +574,7 @@ export async function getTaxPlanningFNA(clientId: string): Promise<TaxPlanningFN
   logger.debug('[FNA-API] Fetching Tax Planning FNA', { clientId });
   try {
     const response = await api.get<{ success: boolean; data: TaxPlanningFNA | null }>(
-      `/tax-planning-fna/client/${clientId}/latest-published`
+      `/tax-planning-fna/client/${clientId}/latest-published`,
     );
     return response.data || null;
   } catch (error) {
@@ -596,7 +601,7 @@ export async function getEstatePlanningFNA(clientId: string): Promise<EstatePlan
   logger.debug('[FNA-API] Fetching Estate Planning FNA', { clientId });
   try {
     const response = await api.get<{ success: boolean; data: EstatePlanningFNA | null }>(
-      `/estate-planning-fna/client/${clientId}/latest-published`
+      `/estate-planning-fna/client/${clientId}/latest-published`,
     );
     return response.data || null;
   } catch (error) {
@@ -619,7 +624,7 @@ export async function getEstatePlanningFNA(clientId: string): Promise<EstatePlan
  */
 export async function getFNA(
   clientId: string,
-  fnaType: 'risk' | 'medical' | 'retirement' | 'investment' | 'tax' | 'estate'
+  fnaType: 'risk' | 'medical' | 'retirement' | 'investment' | 'tax' | 'estate',
 ): Promise<AnyFNA | null> {
   switch (fnaType) {
     case 'risk':

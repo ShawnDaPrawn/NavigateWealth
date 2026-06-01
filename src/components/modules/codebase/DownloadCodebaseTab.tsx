@@ -19,7 +19,8 @@ const DOWNLOAD_SECTIONS = [
   {
     id: 'design-tokens',
     title: 'Design Tokens',
-    description: 'CSS custom properties, colour palette, spacing scale, and typography definitions.',
+    description:
+      'CSS custom properties, colour palette, spacing scale, and typography definitions.',
     icon: 'palette',
     format: 'CSS / JSON',
     version: '1.0.0',
@@ -27,7 +28,8 @@ const DOWNLOAD_SECTIONS = [
   {
     id: 'ui-components',
     title: 'UI Components',
-    description: 'Reusable React component library built with Radix UI primitives and Tailwind CSS.',
+    description:
+      'Reusable React component library built with Radix UI primitives and Tailwind CSS.',
     icon: 'package',
     format: 'TSX',
     version: '1.0.0',
@@ -35,7 +37,8 @@ const DOWNLOAD_SECTIONS = [
   {
     id: 'page-templates',
     title: 'Page Templates',
-    description: 'Pre-built page layouts for common admin panel views (lists, detail, forms, dashboards).',
+    description:
+      'Pre-built page layouts for common admin panel views (lists, detail, forms, dashboards).',
     icon: 'filecode',
     format: 'TSX',
     version: '1.0.0',
@@ -43,7 +46,8 @@ const DOWNLOAD_SECTIONS = [
   {
     id: 'full-codebase',
     title: 'Full Codebase',
-    description: 'Complete Navigate Wealth admin panel source code including all modules and configuration.',
+    description:
+      'Complete Navigate Wealth admin panel source code including all modules and configuration.',
     icon: 'folder',
     format: 'ZIP',
     version: '1.0.0',
@@ -78,7 +82,8 @@ export const DownloadCodebaseTab: React.FC = () => {
       <div>
         <h3 className="text-lg font-semibold text-gray-900">Download Resources</h3>
         <p className="text-sm text-gray-500 mt-1">
-          Download design system assets, component libraries, and project templates for local development.
+          Download design system assets, component libraries, and project templates for local
+          development.
         </p>
       </div>
 
@@ -87,7 +92,10 @@ export const DownloadCodebaseTab: React.FC = () => {
         {DOWNLOAD_SECTIONS.map((section) => {
           const IconComponent = ICON_MAP[section.icon] || Package;
           return (
-            <Card key={section.id} className="border border-gray-200 hover:border-gray-300 transition-colors">
+            <Card
+              key={section.id}
+              className="border border-gray-200 hover:border-gray-300 transition-colors"
+            >
               <CardHeader className="pb-3">
                 <div className="flex items-start justify-between">
                   <div className="flex items-center gap-3">
@@ -144,8 +152,9 @@ export const DownloadCodebaseTab: React.FC = () => {
       {/* Info Note */}
       <div className="rounded-lg border border-amber-200 bg-amber-50 p-4">
         <p className="text-xs text-amber-800">
-          <strong className="font-semibold">Note:</strong> Direct downloads are not yet available in this environment.
-          Use the CLI commands or contact the development team for access to the full design system package.
+          <strong className="font-semibold">Note:</strong> Direct downloads are not yet available in
+          this environment. Use the CLI commands or contact the development team for access to the
+          full design system package.
         </p>
       </div>
     </div>

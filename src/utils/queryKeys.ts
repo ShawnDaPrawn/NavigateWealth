@@ -121,7 +121,8 @@ export const requestKeys = {
   list: (filters?: Record<string, unknown>) => [...requestKeys.lists(), filters ?? {}] as const,
   detail: (id: string) => [...requestKeys.all, 'detail', id] as const,
   templates: () => [...requestKeys.all, 'templates'] as const,
-  templateList: (filters?: Record<string, unknown>) => [...requestKeys.templates(), filters ?? {}] as const,
+  templateList: (filters?: Record<string, unknown>) =>
+    [...requestKeys.templates(), filters ?? {}] as const,
   template: (id: string) => [...requestKeys.templates(), id] as const,
 } as const;
 
@@ -132,7 +133,8 @@ export const requestKeys = {
 export const communicationKeys = {
   all: ['communications'] as const,
   byUser: (userId: string | undefined) => [...communicationKeys.all, userId] as const,
-  preferences: (userId: string | undefined) => [...communicationKeys.all, 'preferences', userId] as const,
+  preferences: (userId: string | undefined) =>
+    [...communicationKeys.all, 'preferences', userId] as const,
 } as const;
 
 // ============================================================================
@@ -185,10 +187,13 @@ export const adviceEngineKeys = {
     drafts: () => [...adviceEngineKeys.roa.all, 'drafts'] as const,
     draft: (id: string) => [...adviceEngineKeys.roa.all, 'draft', id] as const,
     modules: () => [...adviceEngineKeys.roa.all, 'modules'] as const,
-    moduleContracts: (filters?: Record<string, unknown>) => [...adviceEngineKeys.roa.all, 'module-contracts', filters ?? {}] as const,
-    moduleContract: (moduleId: string) => [...adviceEngineKeys.roa.all, 'module-contract', moduleId] as const,
+    moduleContracts: (filters?: Record<string, unknown>) =>
+      [...adviceEngineKeys.roa.all, 'module-contracts', filters ?? {}] as const,
+    moduleContract: (moduleId: string) =>
+      [...adviceEngineKeys.roa.all, 'module-contract', moduleId] as const,
     moduleContractSchema: () => [...adviceEngineKeys.roa.all, 'module-contract-schema'] as const,
-    clientContext: (clientId: string) => [...adviceEngineKeys.roa.all, 'client-context', clientId] as const,
+    clientContext: (clientId: string) =>
+      [...adviceEngineKeys.roa.all, 'client-context', clientId] as const,
   },
   client: (clientId: string) => ['client', clientId] as const,
   personnel: () => ['personnel'] as const,
@@ -222,16 +227,14 @@ export const integrationsKeys = {
     [...integrationsKeys.all, 'portal-brain-memory', providerId, categoryId] as const,
   portalCredentialStatus: (providerId: string | null, profileId: string | null) =>
     [...integrationsKeys.all, 'portal-credential-status', providerId, profileId] as const,
-  portalJob: (jobId: string | null) =>
-    [...integrationsKeys.all, 'portal-job', jobId] as const,
+  portalJob: (jobId: string | null) => [...integrationsKeys.all, 'portal-job', jobId] as const,
   portalJobItems: (jobId: string | null) =>
     [...integrationsKeys.all, 'portal-job-items', jobId] as const,
   latestPortalJob: (providerId: string | null, categoryId: string | null) =>
     [...integrationsKeys.all, 'portal-job-latest', providerId, categoryId] as const,
   portalDiscoveryReport: (jobId: string | null) =>
     [...integrationsKeys.all, 'portal-discovery-report', jobId] as const,
-  syncRun: (runId: string | null) =>
-    [...integrationsKeys.all, 'sync-run', runId] as const,
+  syncRun: (runId: string | null) => [...integrationsKeys.all, 'sync-run', runId] as const,
 } as const;
 
 // ============================================================================
@@ -258,7 +261,8 @@ export const publicationsKeys = {
 export const publicationKeys = {
   all: ['publications'] as const,
   articles: () => [...publicationKeys.all, 'articles'] as const,
-  articleList: (filters?: Record<string, unknown>) => [...publicationKeys.articles(), filters ?? {}] as const,
+  articleList: (filters?: Record<string, unknown>) =>
+    [...publicationKeys.articles(), filters ?? {}] as const,
   article: (id: string) => [...publicationKeys.articles(), id] as const,
   categories: () => [...publicationKeys.all, 'categories'] as const,
   types: () => [...publicationKeys.all, 'types'] as const,
@@ -287,7 +291,8 @@ export const applicationKeys = {
   list: (filters?: Record<string, unknown>) => [...applicationKeys.lists(), filters] as const,
   detail: (id: string) => [...applicationKeys.all, 'detail', id] as const,
   steps: (applicationId: string) => [...applicationKeys.all, 'steps', applicationId] as const,
-  step: (applicationId: string, step: number) => [...applicationKeys.all, 'step', applicationId, step] as const,
+  step: (applicationId: string, step: number) =>
+    [...applicationKeys.all, 'step', applicationId, step] as const,
   byUser: (userId: string) => [...applicationKeys.all, 'user', userId] as const,
 } as const;
 
@@ -304,7 +309,8 @@ export const socialMediaKeys = {
   posts: {
     all: ['social-media', 'posts'] as const,
     lists: () => [...socialMediaKeys.posts.all, 'list'] as const,
-    list: (filters?: Record<string, unknown>) => [...socialMediaKeys.posts.lists(), filters ?? {}] as const,
+    list: (filters?: Record<string, unknown>) =>
+      [...socialMediaKeys.posts.lists(), filters ?? {}] as const,
     detail: (id: string) => [...socialMediaKeys.posts.all, 'detail', id] as const,
     analytics: (id: string) => [...socialMediaKeys.posts.all, 'analytics', id] as const,
     dateRange: (start: string, end: string) =>
@@ -320,7 +326,8 @@ export const socialMediaKeys = {
   analytics: {
     all: ['social-media', 'analytics'] as const,
     overview: () => [...socialMediaKeys.analytics.all, 'overview'] as const,
-    topPosts: (limit?: number) => [...socialMediaKeys.analytics.all, 'top-posts', limit ?? 10] as const,
+    topPosts: (limit?: number) =>
+      [...socialMediaKeys.analytics.all, 'top-posts', limit ?? 10] as const,
   },
   ai: {
     all: ['social-media', 'ai'] as const,
@@ -345,7 +352,8 @@ export const calendarKeys = {
   renewals: (year: number) => ['policy-renewals', year] as const,
   events: {
     all: ['calendar', 'events'] as const,
-    list: (filters?: Record<string, unknown>) => [...calendarKeys.events.all, 'list', filters ?? {}] as const,
+    list: (filters?: Record<string, unknown>) =>
+      [...calendarKeys.events.all, 'list', filters ?? {}] as const,
     detail: (id: string) => [...calendarKeys.events.all, 'detail', id] as const,
   },
 } as const;
@@ -380,7 +388,8 @@ export const resourceKeys = {
   detail: (id: string) => [...resourceKeys.all, 'detail', id] as const,
   legalDocuments: () => [...resourceKeys.all, 'legal-documents'] as const,
   legalDocument: (slug: string) => [...resourceKeys.legalDocuments(), slug] as const,
-  legalDocumentVersions: (slug: string) => [...resourceKeys.legalDocument(slug), 'versions'] as const,
+  legalDocumentVersions: (slug: string) =>
+    [...resourceKeys.legalDocument(slug), 'versions'] as const,
 } as const;
 
 // ============================================================================

@@ -49,8 +49,15 @@ export function deriveDTIStatus(dti: number | null): KPIStatus {
  * Liquid assets are identified by type keyword matching.
  */
 const LIQUID_ASSET_TYPES = new Set([
-  'savings', 'money_market', 'cash', 'bank', 'deposit',
-  'emergency', 'money market', 'savings account', 'call deposit',
+  'savings',
+  'money_market',
+  'cash',
+  'bank',
+  'deposit',
+  'emergency',
+  'money market',
+  'savings account',
+  'call deposit',
 ]);
 
 export function calcEmergencyFundMonths(
@@ -60,8 +67,8 @@ export function calcEmergencyFundMonths(
   if (monthlyExpenses <= 0) return null;
   const liquidTotal = assets.reduce((sum, a) => {
     const typeLower = (a.type || '').toLowerCase();
-    const isLiquid = [...LIQUID_ASSET_TYPES].some(kw => typeLower.includes(kw));
-    return sum + (isLiquid ? (Number(a.value) || 0) : 0);
+    const isLiquid = [...LIQUID_ASSET_TYPES].some((kw) => typeLower.includes(kw));
+    return sum + (isLiquid ? Number(a.value) || 0 : 0);
   }, 0);
   if (liquidTotal === 0) return 0;
   return liquidTotal / monthlyExpenses;
@@ -199,11 +206,11 @@ export interface HealthSubScores {
 export function deriveHealthSubScores(inputs: HealthSubScoreInputs): HealthSubScores {
   // ── Risk (from gap analysis) ────────────────────────────────────────
   let riskScore = 0;
-  const riskGaps = inputs.gapStatuses.filter(g => g.status !== 'none');
+  const riskGaps = inputs.gapStatuses.filter((g) => g.status !== 'none');
   const hasRiskData = riskGaps.length > 0 || inputs.hasRiskPolicies;
   if (riskGaps.length > 0) {
     const pointsPer = 100 / riskGaps.length;
-    riskGaps.forEach(gap => {
+    riskGaps.forEach((gap) => {
       if (gap.status === 'good') riskScore += pointsPer;
       else if (gap.status === 'caution') riskScore += pointsPer * 0.5;
     });
@@ -230,10 +237,17 @@ export function deriveHealthSubScores(inputs: HealthSubScoreInputs): HealthSubSc
       retirementScore = 100;
     } else {
       switch (inputs.retirementShortfallSeverity) {
-        case 'minor': retirementScore = 67; break;
-        case 'moderate': retirementScore = 33; break;
-        case 'severe': retirementScore = 10; break;
-        default: retirementScore = 33;
+        case 'minor':
+          retirementScore = 67;
+          break;
+        case 'moderate':
+          retirementScore = 33;
+          break;
+        case 'severe':
+          retirementScore = 10;
+          break;
+        default:
+          retirementScore = 33;
       }
     }
   } else if (inputs.hasRetirementPolicies) {
@@ -268,9 +282,10 @@ export function deriveHealthSubScores(inputs: HealthSubScoreInputs): HealthSubSc
   if (hasInvestmentData) activePillars.push(investmentsScore);
   if (hasEstateData) activePillars.push(estateScore);
 
-  const overall = activePillars.length > 0
-    ? Math.round(activePillars.reduce((a, b) => a + b, 0) / activePillars.length)
-    : 0;
+  const overall =
+    activePillars.length > 0
+      ? Math.round(activePillars.reduce((a, b) => a + b, 0) / activePillars.length)
+      : 0;
 
   return {
     risk: riskScore,
@@ -292,22 +307,20 @@ export function deriveHealthSubScores(inputs: HealthSubScoreInputs): HealthSubSc
 export const calculateGrowthStats = (clientList: Client[]) => {
   const now = new Date();
   const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
-  
+
   // Clients added this month
-  const newThisMonth = clientList.filter(c => new Date(c.createdAt) >= startOfMonth).length;
-  
+  const newThisMonth = clientList.filter((c) => new Date(c.createdAt) >= startOfMonth).length;
+
   // Total clients at start of this month
   const totalPrior = clientList.length - newThisMonth;
-  
+
   // Percentage growth
-  const growthRate = totalPrior > 0 
-    ? ((newThisMonth / totalPrior) * 100)
-    : 100; // If started with 0, growth is 100% (or technically undefined, but 100 indicates "all new")
+  const growthRate = totalPrior > 0 ? (newThisMonth / totalPrior) * 100 : 100; // If started with 0, growth is 100% (or technically undefined, but 100 indicates "all new")
 
   return {
     total: clientList.length,
     growthRate: growthRate.toFixed(1),
-    newCount: newThisMonth
+    newCount: newThisMonth,
   };
 };
 
@@ -339,7 +352,7 @@ export function countByStatus(clients: Client[]) {
 
 export const filterClients = (clients: Client[], filters: ClientFilters): Client[] => {
   // 1. Filter out personnel (staff) accounts — defence-in-depth for server-side filter
-  const baseClients = clients.filter(client => {
+  const baseClients = clients.filter((client) => {
     const profile = client.profile;
     const role = profile?.role;
 
@@ -363,13 +376,13 @@ export const filterClients = (clients: Client[], filters: ClientFilters): Client
   // 2. Apply account status filter
   let statusFiltered = baseClients;
   if (filters.accountStatus && filters.accountStatus !== 'all') {
-    statusFiltered = baseClients.filter(client => {
+    statusFiltered = baseClients.filter((client) => {
       return deriveAccountStatus(client) === filters.accountStatus;
     });
   }
 
   // 3. Apply search filters
-  return statusFiltered.filter(client => {
+  return statusFiltered.filter((client) => {
     if (filters.search) {
       const searchTerm = filters.search.toLowerCase();
       return (
@@ -384,25 +397,33 @@ export const filterClients = (clients: Client[], filters: ClientFilters): Client
 };
 
 export const generateClientCSV = (clients: Client[]) => {
-  const csvHeader = ['Name', 'Email', 'ID/Passport', 'Date Joined', 'Application Status', 'Account Status'].join(',');
-  const csvRows = clients.map(client => {
+  const csvHeader = [
+    'Name',
+    'Email',
+    'ID/Passport',
+    'Date Joined',
+    'Application Status',
+    'Account Status',
+  ].join(',');
+  const csvRows = clients.map((client) => {
     const name = `${client.firstName} ${client.lastName}`;
     const email = client.email || '';
     const id = client.idNumber || '';
     const date = new Date(client.createdAt).toLocaleDateString('en-ZA');
     const appStatus = client.applicationStatus === 'approved' ? 'Active' : 'Application';
     const acctStatus = deriveAccountStatus(client);
-    const acctLabel = acctStatus === 'active' ? 'Active' : acctStatus === 'suspended' ? 'Suspended' : 'Closed';
-    
+    const acctLabel =
+      acctStatus === 'active' ? 'Active' : acctStatus === 'suspended' ? 'Suspended' : 'Closed';
+
     // Escape quotes and wrap in quotes
-    const row = [name, email, id, date, appStatus, acctLabel].map(val => {
+    const row = [name, email, id, date, appStatus, acctLabel].map((val) => {
       const stringVal = String(val);
       return stringVal.includes(',') ? `"${stringVal}"` : stringVal;
     });
-    
+
     return row.join(',');
   });
-  
+
   const csvContent = [csvHeader, ...csvRows].join('\n');
   const blob = new Blob([csvContent], { type: 'text/csv' });
   const url = window.URL.createObjectURL(blob);

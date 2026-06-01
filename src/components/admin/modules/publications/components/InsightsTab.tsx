@@ -3,7 +3,22 @@ import { Link } from 'react-router';
 import { Card, CardContent } from '../../../../ui/card';
 import { Button } from '../../../../ui/button';
 import { Badge } from '../../../../ui/badge';
-import { User, ArrowRight, BookOpen, FileText, TrendingUp, PiggyBank, Target, Shield, GraduationCap, Globe, Users, LayoutGrid, ChevronLeft, ChevronRight } from 'lucide-react';
+import {
+  User,
+  ArrowRight,
+  BookOpen,
+  FileText,
+  TrendingUp,
+  PiggyBank,
+  Target,
+  Shield,
+  GraduationCap,
+  Globe,
+  Users,
+  LayoutGrid,
+  ChevronLeft,
+  ChevronRight,
+} from 'lucide-react';
 import { cn } from '../../../../ui/utils';
 
 // ---------------------------------------------------------------------------
@@ -44,7 +59,15 @@ interface InsightArticle {
 
 // Map string icon names to actual Lucide components for resilient rendering
 const ICON_RESOLVER: Record<string, React.ComponentType<{ className?: string }>> = {
-  TrendingUp, PiggyBank, Target, Shield, FileText, GraduationCap, Globe, Users, LayoutGrid,
+  TrendingUp,
+  PiggyBank,
+  Target,
+  Shield,
+  FileText,
+  GraduationCap,
+  Globe,
+  Users,
+  LayoutGrid,
 };
 
 function resolveIcon(icon: unknown): React.ComponentType<{ className?: string }> | undefined {
@@ -73,13 +96,13 @@ interface InsightsTabProps {
   articles: Record<string, InsightArticle[]>;
 }
 
-export const InsightsTab = memo(function InsightsTab({ 
-  categories, 
-  activeCategory, 
-  onCategoryChange, 
-  articles 
+export const InsightsTab = memo(function InsightsTab({
+  categories,
+  activeCategory,
+  onCategoryChange,
+  articles,
 }: InsightsTabProps) {
-  const currentCategory = categories.find(cat => cat.id === activeCategory);
+  const currentCategory = categories.find((cat) => cat.id === activeCategory);
   const isAllCategory = activeCategory === ALL_CATEGORY_ID;
 
   // ── Pagination state (per-category) ──────────────────────────────────────
@@ -148,28 +171,26 @@ export const InsightsTab = memo(function InsightsTab({
                   key={category.id}
                   onClick={() => handleCategoryChange(category.id)}
                   className={cn(
-                    "flex items-center gap-2 px-4 py-2.5 text-sm font-medium rounded-full whitespace-nowrap transition-all duration-200 flex-shrink-0",
+                    'flex items-center gap-2 px-4 py-2.5 text-sm font-medium rounded-full whitespace-nowrap transition-all duration-200 flex-shrink-0',
                     isActive
-                      ? "bg-purple-600 text-white shadow-md"
-                      : "bg-white text-gray-600 border border-gray-200 hover:bg-gray-50 hover:text-gray-900"
+                      ? 'bg-purple-600 text-white shadow-md'
+                      : 'bg-white text-gray-600 border border-gray-200 hover:bg-gray-50 hover:text-gray-900',
                   )}
                   aria-pressed={isActive}
                   aria-label={`View ${category.name}`}
                 >
                   <Icon
                     className={cn(
-                      "h-4 w-4 flex-shrink-0",
-                      isActive ? "text-white" : "text-gray-400"
+                      'h-4 w-4 flex-shrink-0',
+                      isActive ? 'text-white' : 'text-gray-400',
                     )}
                   />
                   <span>{category.name}</span>
                   {!isAll && count > 0 && (
                     <span
                       className={cn(
-                        "ml-0.5 inline-flex items-center justify-center min-w-[20px] h-5 px-1.5 text-[11px] font-semibold rounded-full",
-                        isActive
-                          ? "bg-white/20 text-white"
-                          : "bg-gray-100 text-gray-500"
+                        'ml-0.5 inline-flex items-center justify-center min-w-[20px] h-5 px-1.5 text-[11px] font-semibold rounded-full',
+                        isActive ? 'bg-white/20 text-white' : 'bg-gray-100 text-gray-500',
                       )}
                     >
                       {count}
@@ -190,34 +211,32 @@ export const InsightsTab = memo(function InsightsTab({
               const isActive = activeCategory === category.id;
               const isAll = category.id === ALL_CATEGORY_ID;
               const count = (articles[category.id] || []).length;
-              
+
               return (
                 <button
                   key={category.id}
                   onClick={() => handleCategoryChange(category.id)}
                   className={cn(
-                    "w-full flex items-center space-x-3 px-3 py-2.5 text-sm font-medium rounded-lg transition-all duration-200",
+                    'w-full flex items-center space-x-3 px-3 py-2.5 text-sm font-medium rounded-lg transition-all duration-200',
                     isActive
-                      ? "bg-purple-50 text-purple-700 shadow-sm ring-1 ring-purple-200"
-                      : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
+                      ? 'bg-purple-50 text-purple-700 shadow-sm ring-1 ring-purple-200'
+                      : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900',
                   )}
                   aria-pressed={isActive}
                   aria-label={`View ${category.name}`}
                 >
-                  <Icon 
+                  <Icon
                     className={cn(
-                      "h-4 w-4 flex-shrink-0",
-                      isActive ? "text-purple-600" : "text-gray-400"
-                    )} 
+                      'h-4 w-4 flex-shrink-0',
+                      isActive ? 'text-purple-600' : 'text-gray-400',
+                    )}
                   />
                   <span className="truncate text-left flex-1">{category.name}</span>
                   {!isAll && count > 0 && (
                     <span
                       className={cn(
-                        "inline-flex items-center justify-center min-w-[22px] h-5 px-1.5 text-[11px] font-semibold rounded-full flex-shrink-0",
-                        isActive
-                          ? "bg-purple-100 text-purple-700"
-                          : "bg-gray-100 text-gray-500"
+                        'inline-flex items-center justify-center min-w-[22px] h-5 px-1.5 text-[11px] font-semibold rounded-full flex-shrink-0',
+                        isActive ? 'bg-purple-100 text-purple-700' : 'bg-gray-100 text-gray-500',
                       )}
                     >
                       {count}
@@ -239,8 +258,8 @@ export const InsightsTab = memo(function InsightsTab({
               <div className="p-3 bg-purple-100 rounded-lg">
                 {/* Render resolved Icon for category hero */}
                 {(() => {
-                   const Icon = resolveIcon(currentCategory.icon) || FileText;
-                   return <Icon className="h-6 w-6 text-purple-600" />;
+                  const Icon = resolveIcon(currentCategory.icon) || FileText;
+                  return <Icon className="h-6 w-6 text-purple-600" />;
                 })()}
               </div>
               <div className="flex-1">
@@ -261,24 +280,29 @@ export const InsightsTab = memo(function InsightsTab({
           <div className="contents">
             <div id="articles-grid" className="grid md:grid-cols-2 gap-6">
               {paginatedArticles.map((article, index) => (
-                <Card 
-                  key={article.id || `${article.title}-${startIdx + index}`} 
+                <Card
+                  key={article.id || `${article.title}-${startIdx + index}`}
                   className="group hover:shadow-lg transition-all duration-300 border-gray-200 hover:border-purple-200 flex flex-col"
                 >
                   <CardContent className="p-6 flex flex-col flex-1">
                     <div className="flex items-center justify-between mb-4">
-                      <Badge variant="secondary" className="bg-purple-50 text-purple-700 hover:bg-purple-100">
+                      <Badge
+                        variant="secondary"
+                        className="bg-purple-50 text-purple-700 hover:bg-purple-100"
+                      >
                         {article.category_name || 'Uncategorized'}
                       </Badge>
                       {article.reading_time_minutes && (
-                        <span className="text-xs text-gray-500 font-medium">{article.reading_time_minutes} min read</span>
+                        <span className="text-xs text-gray-500 font-medium">
+                          {article.reading_time_minutes} min read
+                        </span>
                       )}
                     </div>
-                    
+
                     <h3 className="text-xl font-bold text-gray-900 mb-3 group-hover:text-purple-700 transition-colors line-clamp-2">
                       {article.title}
                     </h3>
-                    
+
                     <p className="text-gray-600 text-sm mb-6 line-clamp-2 flex-1">
                       {article.excerpt || article.subtitle}
                     </p>
@@ -290,9 +314,9 @@ export const InsightsTab = memo(function InsightsTab({
                       </div>
                       {article.slug || article.id ? (
                         <Link to={`/resources/article/${article.slug || article.id}`}>
-                          <Button 
-                            variant="ghost" 
-                            size="sm" 
+                          <Button
+                            variant="ghost"
+                            size="sm"
                             className="text-purple-600 hover:text-purple-700 hover:bg-purple-50 -mr-2 flex-shrink-0"
                             aria-label={`Read ${article.title}`}
                           >
@@ -301,9 +325,9 @@ export const InsightsTab = memo(function InsightsTab({
                           </Button>
                         </Link>
                       ) : (
-                        <Button 
-                          variant="ghost" 
-                          size="sm" 
+                        <Button
+                          variant="ghost"
+                          size="sm"
                           className="text-purple-600 hover:text-purple-700 hover:bg-purple-50 -mr-2 flex-shrink-0"
                           aria-label={`Read ${article.title}`}
                           disabled
@@ -336,7 +360,8 @@ export const InsightsTab = memo(function InsightsTab({
             </div>
             <h3 className="text-lg font-semibold text-gray-900 mb-2">No Articles Yet</h3>
             <p className="text-gray-500 max-w-md mx-auto mb-6">
-              We're currently curating expert content for this category. Check back soon for detailed guides and analysis.
+              We're currently curating expert content for this category. Check back soon for
+              detailed guides and analysis.
             </p>
             <Button variant="outline">Browse All Articles</Button>
           </div>
@@ -358,7 +383,13 @@ interface PaginationBarProps {
   onPageChange: (page: number) => void;
 }
 
-function PaginationBar({ currentPage, totalPages, totalItems, pageSize, onPageChange }: PaginationBarProps) {
+function PaginationBar({
+  currentPage,
+  totalPages,
+  totalItems,
+  pageSize,
+  onPageChange,
+}: PaginationBarProps) {
   const startItem = (currentPage - 1) * pageSize + 1;
   const endItem = Math.min(currentPage * pageSize, totalItems);
 
@@ -399,7 +430,8 @@ function PaginationBar({ currentPage, totalPages, totalItems, pageSize, onPageCh
     <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-6 pb-2">
       {/* Item range indicator */}
       <p className="text-sm text-gray-500 order-2 sm:order-1">
-        Showing <span className="font-medium text-gray-700">{startItem}</span>–<span className="font-medium text-gray-700">{endItem}</span> of{' '}
+        Showing <span className="font-medium text-gray-700">{startItem}</span>–
+        <span className="font-medium text-gray-700">{endItem}</span> of{' '}
         <span className="font-medium text-gray-700">{totalItems}</span> articles
       </p>
 
@@ -421,7 +453,11 @@ function PaginationBar({ currentPage, totalPages, totalItems, pageSize, onPageCh
         {pageNumbers.map((page) => {
           if (typeof page === 'string') {
             return (
-              <span key={page} className="px-1 text-gray-400 text-sm select-none" aria-hidden="true">
+              <span
+                key={page}
+                className="px-1 text-gray-400 text-sm select-none"
+                aria-hidden="true"
+              >
                 ...
               </span>
             );
@@ -438,7 +474,7 @@ function PaginationBar({ currentPage, totalPages, totalItems, pageSize, onPageCh
                 'h-9 w-9 p-0 text-sm font-medium',
                 isActive
                   ? 'bg-purple-600 hover:bg-purple-700 text-white border-purple-600'
-                  : 'border-gray-200 text-gray-700 hover:bg-gray-50'
+                  : 'border-gray-200 text-gray-700 hover:bg-gray-50',
               )}
               aria-label={`Page ${page}`}
               aria-current={isActive ? 'page' : undefined}

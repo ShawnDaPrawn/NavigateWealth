@@ -10,14 +10,7 @@ import React from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '../ui/dialog';
 import { OptimizedImage } from '../shared/OptimizedImage';
 import { Badge } from '../ui/badge';
-import {
-  Shield,
-  CheckCircle,
-  Stethoscope,
-  Users,
-  FileText,
-  TrendingUp,
-} from 'lucide-react';
+import { Shield, CheckCircle, Stethoscope, Users, FileText, TrendingUp } from 'lucide-react';
 
 import {
   allanGrayLogo,
@@ -180,17 +173,9 @@ export function ProvidersModal({ isOpen, onClose }: ProvidersModalProps) {
 
         {/* Scrollable content */}
         <div className="flex-1 overflow-y-auto px-6 py-6 space-y-8">
-          <CategorySection
-            icon={Shield}
-            title="Risk Management"
-            providers={riskProviders}
-          />
+          <CategorySection icon={Shield} title="Risk Management" providers={riskProviders} />
 
-          <CategorySection
-            icon={Stethoscope}
-            title="Medical Aid"
-            providers={medicalAidProviders}
-          />
+          <CategorySection icon={Stethoscope} title="Medical Aid" providers={medicalAidProviders} />
 
           <CategorySection
             icon={TrendingUp}
@@ -198,11 +183,7 @@ export function ProvidersModal({ isOpen, onClose }: ProvidersModalProps) {
             providers={investmentProviders}
           />
 
-          <CategorySection
-            icon={Users}
-            title="Group Benefits"
-            providers={groupBenefitsProviders}
-          />
+          <CategorySection icon={Users} title="Group Benefits" providers={groupBenefitsProviders} />
 
           <CategorySection
             icon={FileText}
@@ -218,9 +199,12 @@ export function ProvidersModal({ isOpen, onClose }: ProvidersModalProps) {
               <Shield className="h-4.5 w-4.5 text-primary" />
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-sm font-semibold text-gray-900">Independent. Unbiased. Best-in-Class.</p>
+              <p className="text-sm font-semibold text-gray-900">
+                Independent. Unbiased. Best-in-Class.
+              </p>
               <p className="text-xs text-gray-500 leading-relaxed mt-0.5">
-                Our independence means we evaluate solutions from all partners to recommend what's truly best for you.
+                Our independence means we evaluate solutions from all partners to recommend what's
+                truly best for you.
               </p>
             </div>
             <div className="hidden sm:flex items-center gap-2 flex-shrink-0">

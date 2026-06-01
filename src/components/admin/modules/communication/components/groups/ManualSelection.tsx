@@ -17,19 +17,22 @@ interface ManualSelectionProps {
 
 const ROW_HEIGHT = 48;
 
-export function ManualSelection({ 
-  clients, 
-  selectedIds, 
-  onToggle, 
-  searchTerm, 
-  onSearchChange 
+export function ManualSelection({
+  clients,
+  selectedIds,
+  onToggle,
+  searchTerm,
+  onSearchChange,
 }: ManualSelectionProps) {
-  const searchInputGuard = useSearchInputAutofillGuard({ id: 'communication-group-manual-selection-search' });
-  
-  const filteredClients = clients.filter(c => 
-    (c.firstName?.toLowerCase().includes(searchTerm.toLowerCase()) || 
-     c.surname?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-     c.email?.toLowerCase().includes(searchTerm.toLowerCase()))
+  const searchInputGuard = useSearchInputAutofillGuard({
+    id: 'communication-group-manual-selection-search',
+  });
+
+  const filteredClients = clients.filter(
+    (c) =>
+      c.firstName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      c.surname?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      c.email?.toLowerCase().includes(searchTerm.toLowerCase()),
   );
 
   const { parentRef, virtualItems, totalSize, isVirtualized } = useVirtualizedRows({
@@ -43,12 +46,14 @@ export function ManualSelection({
     <Card>
       <CardHeader>
         <CardTitle>Manual Selection</CardTitle>
-        <CardDescription>Explicitly include specific clients regardless of filters.</CardDescription>
+        <CardDescription>
+          Explicitly include specific clients regardless of filters.
+        </CardDescription>
         <div className="relative mt-2">
           <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
           <Input
             {...searchInputGuard}
-            placeholder="Search clients..." 
+            placeholder="Search clients..."
             className="pl-9"
             value={searchTerm}
             onChange={(e) => onSearchChange(e.target.value)}
@@ -75,7 +80,7 @@ export function ManualSelection({
                   position: isVirtualized ? 'relative' : undefined,
                 }}
               >
-                {virtualItems.map(vRow => {
+                {virtualItems.map((vRow) => {
                   const client = filteredClients[vRow.index];
                   return (
                     <div
@@ -83,22 +88,35 @@ export function ManualSelection({
                       role="row"
                       tabIndex={0}
                       onClick={() => onToggle(client.id)}
-                      onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onToggle(client.id); } }}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' || e.key === ' ') {
+                          e.preventDefault();
+                          onToggle(client.id);
+                        }
+                      }}
                       className="grid grid-cols-[50px_1fr_1fr] border-b border-muted/30 cursor-pointer hover:bg-muted/50 items-center"
-                      style={isVirtualized ? {
-                        position: 'absolute',
-                        top: 0,
-                        left: 0,
-                        width: '100%',
-                        height: vRow.size,
-                        transform: `translateY(${vRow.start}px)`,
-                      } : { height: ROW_HEIGHT }}
+                      style={
+                        isVirtualized
+                          ? {
+                              position: 'absolute',
+                              top: 0,
+                              left: 0,
+                              width: '100%',
+                              height: vRow.size,
+                              transform: `translateY(${vRow.start}px)`,
+                            }
+                          : { height: ROW_HEIGHT }
+                      }
                     >
                       <div className="px-4 flex items-center justify-center">
                         <Checkbox checked={selectedIds.includes(client.id)} />
                       </div>
-                      <div className="px-4 font-medium text-sm truncate">{client.firstName} {client.surname}</div>
-                      <div className="px-4 text-sm text-muted-foreground truncate">{client.email}</div>
+                      <div className="px-4 font-medium text-sm truncate">
+                        {client.firstName} {client.surname}
+                      </div>
+                      <div className="px-4 text-sm text-muted-foreground truncate">
+                        {client.email}
+                      </div>
                     </div>
                   );
                 })}

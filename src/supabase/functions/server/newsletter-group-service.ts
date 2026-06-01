@@ -76,7 +76,7 @@ async function ensureNewsletterGroup(): Promise<Group> {
 }
 
 export async function getNewsletterGroupBackfillState(): Promise<NewsletterGroupBackfillState | null> {
-  return await kv.get(LEGACY_BACKFILL_STATE_KEY) as NewsletterGroupBackfillState | null;
+  return (await kv.get(LEGACY_BACKFILL_STATE_KEY)) as NewsletterGroupBackfillState | null;
 }
 
 // ── Public API ───────────────────────────────────────────────────────────────
@@ -89,10 +89,7 @@ export async function getNewsletterGroupBackfillState(): Promise<NewsletterGroup
  * - Otherwise they are added as an `externalContact`.
  * - Duplicate emails are silently ignored.
  */
-export async function addNewsletterSubscriber(
-  email: string,
-  name?: string,
-): Promise<void> {
+export async function addNewsletterSubscriber(email: string, name?: string): Promise<void> {
   try {
     const group = await ensureNewsletterGroup();
 
@@ -110,9 +107,7 @@ export async function addNewsletterSubscriber(
       const profiles = await kv.getByPrefix('user_profile:');
       for (const profile of profiles) {
         const profileEmail =
-          profile?.email ||
-          profile?.personalInformation?.email ||
-          profile?.contactDetails?.email;
+          profile?.email || profile?.personalInformation?.email || profile?.contactDetails?.email;
         if (profileEmail && profileEmail.toLowerCase() === email.toLowerCase()) {
           // Extract userId from key pattern  user_profile:{userId}:personal_info
           // The profile itself should have an id or userId field
@@ -275,9 +270,7 @@ export async function removeNewsletterSubscriber(email: string): Promise<void> {
       const profiles = await kv.getByPrefix('user_profile:');
       for (const profile of profiles) {
         const profileEmail =
-          profile?.email ||
-          profile?.personalInformation?.email ||
-          profile?.contactDetails?.email;
+          profile?.email || profile?.personalInformation?.email || profile?.contactDetails?.email;
         if (profileEmail && profileEmail.toLowerCase() === email.toLowerCase()) {
           const cid = profile.userId || profile.id;
           if (cid) {

@@ -19,7 +19,7 @@ export function PerformanceOptimizer() {
     // DNS prefetch for external resources
     addResourceHint('dns-prefetch', '//images.unsplash.com');
     addResourceHint('dns-prefetch', '//via.placeholder.com');
-    
+
     // Preconnect to critical domains (includes crossorigin for CORS resources)
     addResourceHint('preconnect', 'https://images.unsplash.com');
     addResourceHint('preconnect', 'https://fonts.googleapis.com');
@@ -45,11 +45,11 @@ export function PerformanceOptimizer() {
 
     // Image optimization hints
     addMeta('image-rendering', 'optimizeSpeed');
-    
+
     // Critical resource loading strategy - with error handling for CORS
     try {
       const stylesheets = document.querySelectorAll('link[rel="stylesheet"]');
-      stylesheets.forEach(stylesheet => {
+      stylesheets.forEach((stylesheet) => {
         try {
           const href = stylesheet.getAttribute('href');
           // Only modify stylesheets from the same origin to avoid CORS errors
@@ -68,7 +68,7 @@ export function PerformanceOptimizer() {
 
     // Add global error handler for CSS-related security errors
     const originalConsoleError = console.error;
-    console.error = function(...args) {
+    console.error = function (...args) {
       // Filter out CSS security errors to reduce console noise
       const message = args[0]?.toString() || '';
       if (message.includes('cssRules') || message.includes('SecurityError')) {
@@ -77,14 +77,13 @@ export function PerformanceOptimizer() {
       }
       originalConsoleError.apply(console, args);
     };
-
   }, []);
 
   // Add intersection observer for progressive image loading
   useEffect(() => {
     const imageObserver = new IntersectionObserver(
       (entries) => {
-        entries.forEach(entry => {
+        entries.forEach((entry) => {
           if (entry.isIntersecting) {
             const img = entry.target as HTMLImageElement;
             if (img.dataset.src) {
@@ -97,12 +96,12 @@ export function PerformanceOptimizer() {
       },
       {
         rootMargin: '50px 0px', // Start loading 50px before entering viewport
-        threshold: 0.01
-      }
+        threshold: 0.01,
+      },
     );
 
     // Observe all images with data-src attribute
-    document.querySelectorAll('img[data-src]').forEach(img => {
+    document.querySelectorAll('img[data-src]').forEach((img) => {
       imageObserver.observe(img);
     });
 

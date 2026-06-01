@@ -112,9 +112,7 @@ function htmlToTextRuns(html: string, baseSizePt: number): TextRun[] {
 
   walk(div);
 
-  return runs.length > 0
-    ? runs
-    : [new TextRun({ text: ' ', size: baseSizePt * 2 })];
+  return runs.length > 0 ? runs : [new TextRun({ text: ' ', size: baseSizePt * 2 })];
 }
 
 /**
@@ -133,9 +131,7 @@ function htmlToParagraphs(html: string, baseSizePt: number, lineSpacing?: number
 
   // Spacing in twips (1pt = 20 twips)
   const spacingAfter = 100; // ~5pt after each paragraph
-  const lineRule = lineSpacing
-    ? Math.round(lineSpacing * 240)
-    : Math.round(1.65 * 240);
+  const lineRule = lineSpacing ? Math.round(lineSpacing * 240) : Math.round(1.65 * 240);
 
   function processNode(node: Node) {
     if (node.nodeType === Node.ELEMENT_NODE) {
@@ -158,7 +154,12 @@ function htmlToParagraphs(html: string, baseSizePt: number, lineSpacing?: number
           paragraphs.push(
             new Paragraph({
               children: [
-                new TextRun({ text: bullet, size: baseSizePt * 2, font: 'Calibri', color: TEXT_DARK }),
+                new TextRun({
+                  text: bullet,
+                  size: baseSizePt * 2,
+                  font: 'Calibri',
+                  color: TEXT_DARK,
+                }),
                 ...runs,
               ],
               spacing: { after: 60, line: lineRule },
@@ -167,7 +168,12 @@ function htmlToParagraphs(html: string, baseSizePt: number, lineSpacing?: number
           );
         });
       } else if (tag === 'h1' || tag === 'h2' || tag === 'h3') {
-        const level = tag === 'h1' ? HeadingLevel.HEADING_1 : tag === 'h2' ? HeadingLevel.HEADING_2 : HeadingLevel.HEADING_3;
+        const level =
+          tag === 'h1'
+            ? HeadingLevel.HEADING_1
+            : tag === 'h2'
+              ? HeadingLevel.HEADING_2
+              : HeadingLevel.HEADING_3;
         paragraphs.push(
           new Paragraph({
             heading: level,
@@ -186,7 +192,9 @@ function htmlToParagraphs(html: string, baseSizePt: number, lineSpacing?: number
       if (text) {
         paragraphs.push(
           new Paragraph({
-            children: [new TextRun({ text, size: baseSizePt * 2, font: 'Calibri', color: TEXT_DARK })],
+            children: [
+              new TextRun({ text, size: baseSizePt * 2, font: 'Calibri', color: TEXT_DARK }),
+            ],
             spacing: { after: spacingAfter, line: lineRule },
           }),
         );
@@ -207,7 +215,11 @@ function htmlToParagraphs(html: string, baseSizePt: number, lineSpacing?: number
 // BLOCK CONVERTERS — Turn FormBlocks into docx Paragraphs/Tables
 // ============================================================================
 
-function convertBlock(block: FormBlock, fontSize: number, lineHeight?: number): (Paragraph | Table)[] {
+function convertBlock(
+  block: FormBlock,
+  fontSize: number,
+  lineHeight?: number,
+): (Paragraph | Table)[] {
   const elements: (Paragraph | Table)[] = [];
   const lineRule = lineHeight ? Math.round(lineHeight * 240) : Math.round(1.65 * 240);
 
@@ -218,9 +230,23 @@ function convertBlock(block: FormBlock, fontSize: number, lineHeight?: number): 
         new Paragraph({
           children: [
             ...(number
-              ? [new TextRun({ text: `${number} `, bold: true, size: (fontSize + 2) * 2, color: NW_PURPLE, font: 'Calibri' })]
+              ? [
+                  new TextRun({
+                    text: `${number} `,
+                    bold: true,
+                    size: (fontSize + 2) * 2,
+                    color: NW_PURPLE,
+                    font: 'Calibri',
+                  }),
+                ]
               : []),
-            new TextRun({ text: (title || '').toUpperCase(), bold: true, size: (fontSize + 2) * 2, color: TEXT_DARK, font: 'Calibri' }),
+            new TextRun({
+              text: (title || '').toUpperCase(),
+              bold: true,
+              size: (fontSize + 2) * 2,
+              color: TEXT_DARK,
+              font: 'Calibri',
+            }),
           ],
           spacing: { before: 300, after: 150 },
           border: {
@@ -502,8 +528,20 @@ function buildLetterheadHeader(): Header {
             children: [
               new Paragraph({
                 children: [
-                  new TextRun({ text: 'Navigate ', bold: true, size: 44, font: 'Calibri', color: TEXT_DARK }),
-                  new TextRun({ text: 'Wealth', bold: true, size: 44, font: 'Calibri', color: NW_PURPLE }),
+                  new TextRun({
+                    text: 'Navigate ',
+                    bold: true,
+                    size: 44,
+                    font: 'Calibri',
+                    color: TEXT_DARK,
+                  }),
+                  new TextRun({
+                    text: 'Wealth',
+                    bold: true,
+                    size: 44,
+                    font: 'Calibri',
+                    color: NW_PURPLE,
+                  }),
                 ],
                 spacing: { after: 40 },
               }),
@@ -540,49 +578,85 @@ function buildLetterheadHeader(): Header {
               new Paragraph({
                 alignment: AlignmentType.RIGHT,
                 children: [
-                  new TextRun({ text: 'Wealthfront (Pty) Ltd', bold: true, size: 17, font: 'Calibri', color: TEXT_DARK }),
+                  new TextRun({
+                    text: 'Wealthfront (Pty) Ltd',
+                    bold: true,
+                    size: 17,
+                    font: 'Calibri',
+                    color: TEXT_DARK,
+                  }),
                 ],
                 spacing: { after: 20 },
               }),
               new Paragraph({
                 alignment: AlignmentType.RIGHT,
                 children: [
-                  new TextRun({ text: 't/a Navigate Wealth', size: 17, font: 'Calibri', color: '4B5563' }),
+                  new TextRun({
+                    text: 't/a Navigate Wealth',
+                    size: 17,
+                    font: 'Calibri',
+                    color: '4B5563',
+                  }),
                 ],
                 spacing: { after: 20 },
               }),
               new Paragraph({
                 alignment: AlignmentType.RIGHT,
                 children: [
-                  new TextRun({ text: 'Route 21 Corporate Park', size: 17, font: 'Calibri', color: '4B5563' }),
+                  new TextRun({
+                    text: 'Route 21 Corporate Park',
+                    size: 17,
+                    font: 'Calibri',
+                    color: '4B5563',
+                  }),
                 ],
                 spacing: { after: 10 },
               }),
               new Paragraph({
                 alignment: AlignmentType.RIGHT,
                 children: [
-                  new TextRun({ text: '25 Sovereign Drive, Milestone Place A', size: 17, font: 'Calibri', color: '4B5563' }),
+                  new TextRun({
+                    text: '25 Sovereign Drive, Milestone Place A',
+                    size: 17,
+                    font: 'Calibri',
+                    color: '4B5563',
+                  }),
                 ],
                 spacing: { after: 10 },
               }),
               new Paragraph({
                 alignment: AlignmentType.RIGHT,
                 children: [
-                  new TextRun({ text: 'Centurion, 0178', size: 17, font: 'Calibri', color: '4B5563' }),
+                  new TextRun({
+                    text: 'Centurion, 0178',
+                    size: 17,
+                    font: 'Calibri',
+                    color: '4B5563',
+                  }),
                 ],
                 spacing: { after: 30 },
               }),
               new Paragraph({
                 alignment: AlignmentType.RIGHT,
                 children: [
-                  new TextRun({ text: 'Tel: (012) 667 2505', size: 17, font: 'Calibri', color: '4B5563' }),
+                  new TextRun({
+                    text: 'Tel: (012) 667 2505',
+                    size: 17,
+                    font: 'Calibri',
+                    color: '4B5563',
+                  }),
                 ],
                 spacing: { after: 10 },
               }),
               new Paragraph({
                 alignment: AlignmentType.RIGHT,
                 children: [
-                  new TextRun({ text: 'Email: info@navigatewealth.co', size: 17, font: 'Calibri', color: '4B5563' }),
+                  new TextRun({
+                    text: 'Email: info@navigatewealth.co',
+                    size: 17,
+                    font: 'Calibri',
+                    color: '4B5563',
+                  }),
                 ],
               }),
             ],

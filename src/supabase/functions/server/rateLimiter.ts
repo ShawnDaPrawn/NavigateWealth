@@ -2,7 +2,7 @@
 // Protects against brute force attacks and abuse
 
 import * as kv from './kv_store.tsx';
-import { createModuleLogger } from "./stderr-logger.ts";
+import { createModuleLogger } from './stderr-logger.ts';
 
 const log = createModuleLogger('rate-limiter');
 
@@ -51,7 +51,7 @@ export const RATE_LIMITS = {
 export async function checkRateLimit(
   identifier: string,
   action: string,
-  config: RateLimitConfig
+  config: RateLimitConfig,
 ): Promise<RateLimitResult> {
   const key = `ratelimit:${action}:${identifier}`;
   const blockKey = `ratelimit:block:${action}:${identifier}`;
@@ -72,7 +72,7 @@ export async function checkRateLimit(
 
     // Get current attempt data
     const attemptData = await kv.get(key);
-    
+
     if (!attemptData) {
       // First attempt - initialize
       await kv.set(key, {
@@ -80,7 +80,7 @@ export async function checkRateLimit(
         firstAttempt: now,
         lastAttempt: now,
       });
-      
+
       return {
         allowed: true,
         remaining: config.maxAttempts - 1,
@@ -91,7 +91,7 @@ export async function checkRateLimit(
 
     // Check if window has expired
     const windowExpired = now - attemptData.firstAttempt > config.windowMs;
-    
+
     if (windowExpired) {
       // Reset counter - window has expired
       await kv.set(key, {
@@ -99,7 +99,7 @@ export async function checkRateLimit(
         firstAttempt: now,
         lastAttempt: now,
       });
-      
+
       return {
         allowed: true,
         remaining: config.maxAttempts - 1,
@@ -125,7 +125,7 @@ export async function checkRateLimit(
         blockedUntil,
         attempts: newAttempts,
       });
-      
+
       return {
         allowed: false,
         remaining: 0,
@@ -161,7 +161,7 @@ export async function checkRateLimit(
 export async function clearRateLimit(identifier: string, action: string): Promise<void> {
   const key = `ratelimit:${action}:${identifier}`;
   const blockKey = `ratelimit:block:${action}:${identifier}`;
-  
+
   try {
     await kv.del(key);
     await kv.del(blockKey);
@@ -176,7 +176,7 @@ export async function clearRateLimit(identifier: string, action: string): Promis
 export async function getRateLimitStatus(
   identifier: string,
   action: string,
-  config: RateLimitConfig
+  config: RateLimitConfig,
 ): Promise<RateLimitResult> {
   const key = `ratelimit:${action}:${identifier}`;
   const blockKey = `ratelimit:block:${action}:${identifier}`;
@@ -197,7 +197,7 @@ export async function getRateLimitStatus(
 
     // Get attempt data
     const attemptData = await kv.get(key);
-    
+
     if (!attemptData) {
       return {
         allowed: true,
@@ -208,7 +208,7 @@ export async function getRateLimitStatus(
     }
 
     const windowExpired = now - attemptData.firstAttempt > config.windowMs;
-    
+
     if (windowExpired) {
       return {
         allowed: true,

@@ -1,13 +1,13 @@
 /**
  * Advice Engine Module - Utility Functions
- * 
+ *
  * Reusable utility functions for:
  * - Message formatting and manipulation
  * - Client data formatting
  * - Conversation history management
  * - RoA form validation
  * - Date/time formatting
- * 
+ *
  * @module advice-engine/utils
  */
 
@@ -28,10 +28,10 @@ import type {
 
 /**
  * Format timestamp for display
- * 
+ *
  * @param date - Date to format
  * @returns Formatted time string (e.g., "2:30 PM")
- * 
+ *
  * @example
  * formatTimestamp(new Date()); // "2:30 PM"
  */
@@ -45,11 +45,11 @@ export function formatTimestamp(date: Date): string {
 
 /**
  * Truncate message content
- * 
+ *
  * @param content - Message content
  * @param maxLength - Maximum length
  * @returns Truncated content
- * 
+ *
  * @example
  * truncateMessage('Long message...', 50); // "Long message..."
  */
@@ -62,10 +62,10 @@ export function truncateMessage(content: string, maxLength: number = 100): strin
 
 /**
  * Count total characters in conversation
- * 
+ *
  * @param messages - Array of messages
  * @returns Total character count
- * 
+ *
  * @example
  * countConversationCharacters(messages); // 1234
  */
@@ -75,17 +75,17 @@ export function countConversationCharacters(messages: Message[]): number {
 
 /**
  * Extract code blocks from message content
- * 
+ *
  * @param content - Message content
  * @returns Array of code blocks
- * 
+ *
  * @example
  * extractCodeBlocks('Some text ```code``` more text'); // ['code']
  */
 export function extractCodeBlocks(content: string): string[] {
   const codeBlockRegex = /```[\s\S]*?```/g;
   const matches = content.match(codeBlockRegex) || [];
-  return matches.map(block => block.replace(/```/g, '').trim());
+  return matches.map((block) => block.replace(/```/g, '').trim());
 }
 
 // ============================================================================
@@ -94,25 +94,25 @@ export function extractCodeBlocks(content: string): string[] {
 
 /**
  * Build conversation history from messages
- * 
+ *
  * @param messages - Array of messages
  * @param maxMessages - Maximum messages to include (default: 10)
  * @returns Conversation history object
- * 
+ *
  * @example
  * const history = buildConversationHistory(messages, 5);
  */
 export function buildConversationHistory(
   messages: Message[],
-  maxMessages: number = 10
+  maxMessages: number = 10,
 ): ConversationHistory {
   // Filter out system messages and take last N messages
   const relevantMessages = messages
-    .filter(m => m.role === 'user' || m.role === 'assistant')
+    .filter((m) => m.role === 'user' || m.role === 'assistant')
     .slice(-maxMessages);
 
   return {
-    messages: relevantMessages.map(m => ({
+    messages: relevantMessages.map((m) => ({
       role: m.role,
       content: m.content,
     })),
@@ -121,11 +121,11 @@ export function buildConversationHistory(
 
 /**
  * Get last N messages
- * 
+ *
  * @param messages - Array of messages
  * @param n - Number of messages to return
  * @returns Last N messages
- * 
+ *
  * @example
  * const recent = getLastNMessages(messages, 5);
  */
@@ -135,16 +135,16 @@ export function getLastNMessages(messages: Message[], n: number): Message[] {
 
 /**
  * Get messages for specific client
- * 
+ *
  * @param messages - Array of messages
  * @param clientId - Client ID to filter by
  * @returns Messages for that client
- * 
+ *
  * @example
  * const clientMessages = getClientMessages(messages, 'client-123');
  */
 export function getClientMessages(messages: Message[], clientId: string): Message[] {
-  return messages.filter(m => m.clientId === clientId);
+  return messages.filter((m) => m.clientId === clientId);
 }
 
 // ============================================================================
@@ -153,10 +153,10 @@ export function getClientMessages(messages: Message[], clientId: string): Messag
 
 /**
  * Format client full name
- * 
+ *
  * @param client - Client object
  * @returns Formatted full name
- * 
+ *
  * @example
  * formatClientName({ first_name: 'John', last_name: 'Smith' }); // "John Smith"
  */
@@ -167,10 +167,10 @@ export function formatClientName(client: Client | null): string {
 
 /**
  * Format client display (name + email)
- * 
+ *
  * @param client - Client object
  * @returns Formatted display string
- * 
+ *
  * @example
  * formatClientDisplay(client); // "John Smith (john@example.com)"
  */
@@ -184,10 +184,10 @@ export function formatClientDisplay(client: Client): string {
 
 /**
  * Get client initials
- * 
+ *
  * @param client - Client object
  * @returns Initials (e.g., "JS")
- * 
+ *
  * @example
  * getClientInitials({ first_name: 'John', last_name: 'Smith' }); // "JS"
  */
@@ -203,10 +203,10 @@ export function getClientInitials(client: Client): string {
 
 /**
  * Validate chat input
- * 
+ *
  * @param input - Input string
  * @returns Whether input is valid
- * 
+ *
  * @example
  * validateChatInput('Hello'); // true
  * validateChatInput(''); // false
@@ -219,24 +219,21 @@ export function validateChatInput(input: string): boolean {
 
 /**
  * Validate RoA form data
- * 
+ *
  * @param data - Form data
  * @param fields - Field definitions
  * @returns Validation result
- * 
+ *
  * @example
  * const result = validateRoAForm(formData, fields);
  * if (!result.valid) {
  *   console.log(result.errors);
  * }
  */
-export function validateRoAForm(
-  data: RoAFormData,
-  fields: RoAField[]
-): RoAFormValidationResult {
+export function validateRoAForm(data: RoAFormData, fields: RoAField[]): RoAFormValidationResult {
   const errors: Record<string, string> = {};
 
-  fields.forEach(field => {
+  fields.forEach((field) => {
     const value = data[field.key] as unknown;
 
     // Required field validation
@@ -253,15 +250,17 @@ export function validateRoAForm(
     // Type-specific validation
     if (field.type === 'text' || field.type === 'textarea') {
       const strValue = String(value);
-      
+
       if (field.validation?.minLength && strValue.length < field.validation.minLength) {
-        errors[field.key] = `${field.label} must be at least ${field.validation.minLength} characters`;
+        errors[field.key] =
+          `${field.label} must be at least ${field.validation.minLength} characters`;
       }
-      
+
       if (field.validation?.maxLength && strValue.length > field.validation.maxLength) {
-        errors[field.key] = `${field.label} must be at most ${field.validation.maxLength} characters`;
+        errors[field.key] =
+          `${field.label} must be at most ${field.validation.maxLength} characters`;
       }
-      
+
       if (field.validation?.pattern && !field.validation.pattern.test(strValue)) {
         errors[field.key] = `${field.label} format is invalid`;
       }
@@ -269,16 +268,16 @@ export function validateRoAForm(
 
     if (field.type === 'number') {
       const numValue = Number(value);
-      
+
       if (isNaN(numValue)) {
         errors[field.key] = `${field.label} must be a number`;
         return;
       }
-      
+
       if (field.validation?.min !== undefined && numValue < field.validation.min) {
         errors[field.key] = `${field.label} must be at least ${field.validation.min}`;
       }
-      
+
       if (field.validation?.max !== undefined && numValue > field.validation.max) {
         errors[field.key] = `${field.label} must be at most ${field.validation.max}`;
       }
@@ -294,9 +293,10 @@ export function validateRoAForm(
   return {
     valid: Object.keys(errors).length === 0,
     errors,
-    message: Object.keys(errors).length > 0 
-      ? `Please fix ${Object.keys(errors).length} validation error(s)` 
-      : undefined,
+    message:
+      Object.keys(errors).length > 0
+        ? `Please fix ${Object.keys(errors).length} validation error(s)`
+        : undefined,
   };
 }
 
@@ -306,31 +306,34 @@ export function validateRoAForm(
 
 /**
  * Calculate RoA draft completion percentage
- * 
+ *
  * @param draft - RoA draft
  * @param totalFields - Total number of fields
  * @returns Completion percentage (0-100)
- * 
+ *
  * @example
  * const completion = calculateDraftCompletion(draft, 20); // 75
  */
 export function calculateDraftCompletion(draft: RoADraft, totalFields: number): number {
   if (totalFields === 0) return 0;
-  
+
   const filledFields = Object.keys(draft.moduleData).filter(
-    key => draft.moduleData[key] !== undefined && draft.moduleData[key] !== null && (draft.moduleData[key] as unknown) !== ''
+    (key) =>
+      draft.moduleData[key] !== undefined &&
+      draft.moduleData[key] !== null &&
+      (draft.moduleData[key] as unknown) !== '',
   ).length;
-  
+
   return Math.round((filledFields / totalFields) * 100);
 }
 
 /**
  * Check if draft can be submitted
- * 
+ *
  * @param draft - RoA draft
  * @param requiredFields - Required field keys
  * @returns Whether draft can be submitted
- * 
+ *
  * @example
  * const canSubmit = canSubmitDraft(draft, requiredFields);
  */
@@ -339,17 +342,18 @@ export function canSubmitDraft(draft: RoADraft, requiredFields: string[]): boole
   if (draft.selectedModules.length === 0) {
     return false;
   }
-  
+
   // Must have client ID or client data
   if (!draft.clientId && !draft.clientData) {
     return false;
   }
-  
+
   // All required fields must be filled
   return requiredFields.every(
-    key => draft.moduleData[key] !== undefined && 
-           draft.moduleData[key] !== null && 
-           (draft.moduleData[key] as unknown) !== ''
+    (key) =>
+      draft.moduleData[key] !== undefined &&
+      draft.moduleData[key] !== null &&
+      (draft.moduleData[key] as unknown) !== '',
   );
 }
 
@@ -359,10 +363,10 @@ export function canSubmitDraft(draft: RoADraft, requiredFields: string[]): boole
 
 /**
  * Format date for display
- * 
+ *
  * @param date - Date to format
  * @returns Formatted date string
- * 
+ *
  * @example
  * formatDate(new Date()); // "Jan 4, 2026"
  */
@@ -376,10 +380,10 @@ export function formatDate(date: Date): string {
 
 /**
  * Format date and time
- * 
+ *
  * @param date - Date to format
  * @returns Formatted date/time string
- * 
+ *
  * @example
  * formatDateTime(new Date()); // "Jan 4, 2026 at 2:30 PM"
  */
@@ -391,10 +395,10 @@ export function formatDateTime(date: Date): string {
 
 /**
  * Get relative time string
- * 
+ *
  * @param date - Date to format
  * @returns Relative time (e.g., "2 hours ago")
- * 
+ *
  * @example
  * getRelativeTime(new Date(Date.now() - 3600000)); // "1 hour ago"
  */
@@ -419,28 +423,28 @@ export function getRelativeTime(date: Date): string {
 
 /**
  * Highlight search term in text
- * 
+ *
  * @param text - Text to search in
  * @param searchTerm - Term to highlight
  * @returns Text with <mark> tags
- * 
+ *
  * @example
  * highlightText('John Smith', 'john'); // "<mark>John</mark> Smith"
  */
 export function highlightText(text: string, searchTerm: string): string {
   if (!searchTerm) return text;
-  
+
   const regex = new RegExp(`(${searchTerm})`, 'gi');
   return text.replace(regex, '<mark>$1</mark>');
 }
 
 /**
  * Extract keywords from text
- * 
+ *
  * @param text - Text to analyze
  * @param minLength - Minimum keyword length
  * @returns Array of keywords
- * 
+ *
  * @example
  * extractKeywords('Life insurance policy for retirement'); // ['life', 'insurance', 'policy', 'retirement']
  */
@@ -448,9 +452,7 @@ export function extractKeywords(text: string, minLength: number = 3): string[] {
   // Remove common words and extract unique keywords
   const commonWords = ['the', 'and', 'or', 'but', 'for', 'with', 'from', 'to', 'in', 'on', 'at'];
   const words = text.toLowerCase().split(/\s+/);
-  const keywords = words.filter(
-    word => word.length >= minLength && !commonWords.includes(word)
-  );
+  const keywords = words.filter((word) => word.length >= minLength && !commonWords.includes(word));
   return Array.from(new Set(keywords));
 }
 
@@ -460,10 +462,10 @@ export function extractKeywords(text: string, minLength: number = 3): string[] {
 
 /**
  * Copy text to clipboard
- * 
+ *
  * @param text - Text to copy
  * @returns Promise resolving to success boolean
- * 
+ *
  * @example
  * await copyToClipboard('Text to copy');
  */

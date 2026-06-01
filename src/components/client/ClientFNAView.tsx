@@ -22,7 +22,18 @@ import {
   Download,
   Phone,
 } from 'lucide-react';
-import { getFNA, AnyFNA, formatDate, timeAgo, RiskPlanningFNA, MedicalFNA, RetirementFNA, InvestmentINA, TaxPlanningFNA, EstatePlanningFNA } from '../../services/fna-api';
+import {
+  getFNA,
+  AnyFNA,
+  formatDate,
+  timeAgo,
+  RiskPlanningFNA,
+  MedicalFNA,
+  RetirementFNA,
+  InvestmentINA,
+  TaxPlanningFNA,
+  EstatePlanningFNA,
+} from '../../services/fna-api';
 import { RiskPlanningResults } from './fna-results/RiskPlanningResults';
 import { MedicalResults } from './fna-results/MedicalResults';
 import { RetirementResults } from './fna-results/RetirementResults';
@@ -50,9 +61,9 @@ export function ClientFNAView({ clientId, fnaType }: ClientFNAViewProps) {
       try {
         setLoading(true);
         setError(null);
-        
+
         const data = await getFNA(clientId, fnaType);
-        
+
         setFnaData(data);
       } catch (err) {
         console.error('Error fetching FNA:', err);
@@ -116,7 +127,7 @@ export function ClientFNAView({ clientId, fnaType }: ClientFNAViewProps) {
         description: 'Estate planning and death estate modeling',
       },
     };
-    
+
     return configs[fnaType];
   };
 
@@ -144,18 +155,12 @@ export function ClientFNAView({ clientId, fnaType }: ClientFNAViewProps) {
               </div>
               <div className="flex-1">
                 <h3 className="text-gray-900 mb-2">{config.title}</h3>
-                <p className="text-sm text-gray-700 mb-4">
-                  {config.description}
-                </p>
+                <p className="text-sm text-gray-700 mb-4">{config.description}</p>
                 <div className="flex items-start gap-3 p-3 bg-white rounded-lg border border-gray-200">
                   <AlertCircle className="h-5 w-5 text-amber-600 flex-shrink-0 mt-0.5" />
                   <div>
-                    <p className="text-sm text-gray-900 mb-1">
-                      Error loading analysis
-                    </p>
-                    <p className="text-xs text-gray-600">
-                      {error}
-                    </p>
+                    <p className="text-sm text-gray-900 mb-1">Error loading analysis</p>
+                    <p className="text-xs text-gray-600">{error}</p>
                   </div>
                 </div>
               </div>
@@ -170,16 +175,14 @@ export function ClientFNAView({ clientId, fnaType }: ClientFNAViewProps) {
               <div className="h-12 w-12 rounded-full bg-purple-100 flex items-center justify-center mx-auto mb-4">
                 <Phone className="h-6 w-6 text-[#6d28d9]" />
               </div>
-              <h4 className="text-gray-900 mb-2">
-                Schedule Your Financial Needs Analysis
-              </h4>
+              <h4 className="text-gray-900 mb-2">Schedule Your Financial Needs Analysis</h4>
               <p className="text-sm text-gray-600 mb-6 max-w-md mx-auto">
-                Get personalized insights and recommendations from your dedicated financial adviser. 
+                Get personalized insights and recommendations from your dedicated financial adviser.
                 A comprehensive {config.title.toLowerCase()} typically takes 30-45 minutes.
               </p>
               <div className="flex flex-col sm:flex-row gap-3 justify-center">
-                <Button 
-                  variant="outline" 
+                <Button
+                  variant="outline"
                   className="border-[#6d28d9] text-[#6d28d9] hover:bg-purple-50"
                 >
                   <Phone className="h-4 w-4 mr-2" />
@@ -234,8 +237,9 @@ export function ClientFNAView({ clientId, fnaType }: ClientFNAViewProps) {
                   <div>
                     <p className="text-sm text-gray-900 mb-1">Start your needs analysis</p>
                     <p className="text-xs text-gray-600">
-                      Share your financial facts through our discovery intake. Your adviser will review,
-                      calculate, and publish your formal {config.title.toLowerCase()} when ready.
+                      Share your financial facts through our discovery intake. Your adviser will
+                      review, calculate, and publish your formal {config.title.toLowerCase()} when
+                      ready.
                     </p>
                     <p className="text-xs text-purple-700 mt-2 font-medium">
                       You prepare. We analyse. Together we plan.
@@ -264,9 +268,8 @@ export function ClientFNAView({ clientId, fnaType }: ClientFNAViewProps) {
               <div>
                 <h4 className="text-gray-900">Published Analysis</h4>
                 <p className="text-xs text-gray-600">
-                  Published {fnaData.publishedAt && timeAgo(fnaData.publishedAt)} • 
-                  Last updated {formatDate(fnaData.updatedAt)} • 
-                  Version {fnaData.version}
+                  Published {fnaData.publishedAt && timeAgo(fnaData.publishedAt)} • Last updated{' '}
+                  {formatDate(fnaData.updatedAt)} • Version {fnaData.version}
                 </p>
               </div>
             </div>
@@ -280,15 +283,15 @@ export function ClientFNAView({ clientId, fnaType }: ClientFNAViewProps) {
 
       {/* Render FNA Type-Specific Results */}
       {fnaType === 'risk' && <RiskPlanningResults fna={fnaData as RiskPlanningFNA} />}
-      
+
       {fnaType === 'medical' && <MedicalResults fna={fnaData as MedicalFNA} />}
-      
+
       {fnaType === 'retirement' && <RetirementResults fna={fnaData as RetirementFNA} />}
-      
+
       {fnaType === 'investment' && <InvestmentResults fna={fnaData as InvestmentINA} />}
-      
+
       {fnaType === 'tax' && <TaxPlanningResults fna={fnaData as TaxPlanningFNA} />}
-      
+
       {fnaType === 'estate' && <EstatePlanningResults fna={fnaData as EstatePlanningFNA} />}
 
       {/* Contact Adviser Card */}
@@ -301,21 +304,19 @@ export function ClientFNAView({ clientId, fnaType }: ClientFNAViewProps) {
                 <strong>Questions about your analysis?</strong>
               </p>
               <p className="text-xs text-purple-800 mb-4">
-                Your financial adviser is available to discuss these recommendations and answer any questions you may have.
+                Your financial adviser is available to discuss these recommendations and answer any
+                questions you may have.
               </p>
               <div className="flex gap-2">
-                <Button 
+                <Button
                   size="sm"
-                  variant="outline" 
+                  variant="outline"
                   className="border-purple-600 text-purple-600 hover:bg-purple-100"
                 >
                   <Phone className="h-3 w-3 mr-2" />
                   Call Adviser
                 </Button>
-                <Button 
-                  size="sm"
-                  className="bg-purple-600 hover:bg-purple-700 text-white"
-                >
+                <Button size="sm" className="bg-purple-600 hover:bg-purple-700 text-white">
                   <Calendar className="h-3 w-3 mr-2" />
                   Book Meeting
                 </Button>

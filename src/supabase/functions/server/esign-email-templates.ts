@@ -42,18 +42,27 @@ interface SigningInviteParams {
   message?: string;
 }
 
-export function createSigningInviteEmail(
-  params: SigningInviteParams
-): { html: string; text: string } {
+export function createSigningInviteEmail(params: SigningInviteParams): {
+  html: string;
+  text: string;
+} {
   const { signerName, envelopeTitle, senderName, signingLink, message } = params;
 
   const messageBlock = message
-    ? '<p style="margin:16px 0;padding:12px 16px;background:#f9fafb;border-left:4px solid #6d28d9;border-radius:4px;">' + message + '</p>'
+    ? '<p style="margin:16px 0;padding:12px 16px;background:#f9fafb;border-left:4px solid #6d28d9;border-radius:4px;">' +
+      message +
+      '</p>'
     : '';
 
   const bodyHtml =
-    '<p>Hello ' + signerName + ',</p>' +
-    '<p><strong>' + senderName + '</strong> has sent you a document to sign: <strong>' + envelopeTitle + '</strong></p>' +
+    '<p>Hello ' +
+    signerName +
+    ',</p>' +
+    '<p><strong>' +
+    senderName +
+    '</strong> has sent you a document to sign: <strong>' +
+    envelopeTitle +
+    '</strong></p>' +
     messageBlock +
     '<p>Please click the button below to review and sign the document.</p>';
 
@@ -62,7 +71,8 @@ export function createSigningInviteEmail(
     subtitle: 'Your signature is required',
     buttonUrl: signingLink,
     buttonLabel: 'Review & Sign Document',
-    footerNote: "This signature request was sent via Navigate Wealth's secure e-signature platform.",
+    footerNote:
+      "This signature request was sent via Navigate Wealth's secure e-signature platform.",
   });
 
   const textParts: string[] = [
@@ -93,30 +103,45 @@ interface OTPEmailParams {
   expiresInMinutes: number;
 }
 
-export function createOTPEmail(
-  params: OTPEmailParams
-): { html: string; text: string } {
+export function createOTPEmail(params: OTPEmailParams): { html: string; text: string } {
   const { signerName, otp, envelopeTitle, expiresInMinutes } = params;
 
   const bodyHtml =
-    '<p>Hello ' + signerName + ',</p>' +
-    '<p>Your verification code for signing <strong>' + envelopeTitle + '</strong> is:</p>' +
+    '<p>Hello ' +
+    signerName +
+    ',</p>' +
+    '<p>Your verification code for signing <strong>' +
+    envelopeTitle +
+    '</strong> is:</p>' +
     '<div style="text-align:center;margin:24px 0;">' +
-    '<span style="display:inline-block;font-size:32px;font-weight:700;letter-spacing:8px;padding:16px 32px;background:#f3f4f6;border-radius:8px;color:#111827;">' + otp + '</span>' +
+    '<span style="display:inline-block;font-size:32px;font-weight:700;letter-spacing:8px;padding:16px 32px;background:#f3f4f6;border-radius:8px;color:#111827;">' +
+    otp +
+    '</span>' +
     '</div>' +
-    '<p>This code expires in <strong>' + expiresInMinutes + ' minutes</strong>. If you did not request this code, please ignore this email.</p>';
+    '<p>This code expires in <strong>' +
+    expiresInMinutes +
+    ' minutes</strong>. If you did not request this code, please ignore this email.</p>';
 
   const html = createEmailTemplate(bodyHtml, {
     title: 'Verification Code',
     subtitle: envelopeTitle,
-    footerNote: "This verification code was sent via Navigate Wealth's secure e-signature platform.",
+    footerNote:
+      "This verification code was sent via Navigate Wealth's secure e-signature platform.",
   });
 
   const text = createPlainTextEmail(
-    'Hello ' + signerName + ',\n\n' +
-    'Your verification code for signing "' + envelopeTitle + '" is: ' + otp + '\n\n' +
-    'This code expires in ' + expiresInMinutes + ' minutes.\n' +
-    'If you did not request this code, please ignore this email.'
+    'Hello ' +
+      signerName +
+      ',\n\n' +
+      'Your verification code for signing "' +
+      envelopeTitle +
+      '" is: ' +
+      otp +
+      '\n\n' +
+      'This code expires in ' +
+      expiresInMinutes +
+      ' minutes.\n' +
+      'If you did not request this code, please ignore this email.',
   );
 
   return { html, text };
@@ -134,9 +159,10 @@ interface EnvelopeCompleteParams {
   downloadLink: string;
 }
 
-export function createEnvelopeCompleteEmail(
-  params: EnvelopeCompleteParams
-): { html: string; text: string } {
+export function createEnvelopeCompleteEmail(params: EnvelopeCompleteParams): {
+  html: string;
+  text: string;
+} {
   const { senderName, envelopeTitle, completedAt, signers, downloadLink } = params;
 
   let signerRows = '';
@@ -144,20 +170,32 @@ export function createEnvelopeCompleteEmail(
     const s = signers[i];
     signerRows +=
       '<tr>' +
-      '<td style="padding:8px 12px;border-bottom:1px solid #e5e7eb;">' + s.name + '</td>' +
-      '<td style="padding:8px 12px;border-bottom:1px solid #e5e7eb;">' + formatDate(s.signedAt) + '</td>' +
+      '<td style="padding:8px 12px;border-bottom:1px solid #e5e7eb;">' +
+      s.name +
+      '</td>' +
+      '<td style="padding:8px 12px;border-bottom:1px solid #e5e7eb;">' +
+      formatDate(s.signedAt) +
+      '</td>' +
       '</tr>';
   }
 
   const bodyHtml =
-    '<p>Hello ' + senderName + ',</p>' +
-    '<p>All signatures have been collected for <strong>' + envelopeTitle + '</strong>. The document was completed on <strong>' + formatDate(completedAt) + '</strong>.</p>' +
+    '<p>Hello ' +
+    senderName +
+    ',</p>' +
+    '<p>All signatures have been collected for <strong>' +
+    envelopeTitle +
+    '</strong>. The document was completed on <strong>' +
+    formatDate(completedAt) +
+    '</strong>.</p>' +
     '<table style="width:100%;border-collapse:collapse;margin:16px 0;">' +
     '<thead><tr style="background:#f9fafb;">' +
     '<th style="text-align:left;padding:8px 12px;border-bottom:2px solid #e5e7eb;">Signer</th>' +
     '<th style="text-align:left;padding:8px 12px;border-bottom:2px solid #e5e7eb;">Signed At</th>' +
     '</tr></thead>' +
-    '<tbody>' + signerRows + '</tbody>' +
+    '<tbody>' +
+    signerRows +
+    '</tbody>' +
     '</table>' +
     '<p>A copy of the fully executed document with a completion certificate is attached to this email. You can also access it from your portal.</p>' +
     '<div style="margin-top:20px;padding:12px 16px;background:#f3f4f6;border-radius:8px;border-left:3px solid #7c3aed;">' +
@@ -172,7 +210,8 @@ export function createEnvelopeCompleteEmail(
     subtitle: envelopeTitle,
     buttonUrl: downloadLink,
     buttonLabel: 'View in Portal',
-    footerNote: "This notification was sent via Navigate Wealth's secure e-signature platform. Verify document integrity at navigatewealth.co/verify",
+    footerNote:
+      "This notification was sent via Navigate Wealth's secure e-signature platform. Verify document integrity at navigatewealth.co/verify",
   });
 
   const signerLines: string[] = [];
@@ -182,12 +221,22 @@ export function createEnvelopeCompleteEmail(
   }
 
   const text = createPlainTextEmail(
-    'Hello ' + senderName + ',\n\n' +
-    'All signatures have been collected for "' + envelopeTitle + '".\n' +
-    'Completed: ' + formatDate(completedAt) + '\n\n' +
-    'Signers:\n' + signerLines.join('\n') + '\n\n' +
-    'View in portal: ' + downloadLink + '\n\n' +
-    'Verify document integrity: https://www.navigatewealth.co/verify'
+    'Hello ' +
+      senderName +
+      ',\n\n' +
+      'All signatures have been collected for "' +
+      envelopeTitle +
+      '".\n' +
+      'Completed: ' +
+      formatDate(completedAt) +
+      '\n\n' +
+      'Signers:\n' +
+      signerLines.join('\n') +
+      '\n\n' +
+      'View in portal: ' +
+      downloadLink +
+      '\n\n' +
+      'Verify document integrity: https://www.navigatewealth.co/verify',
   );
 
   return { html, text };
@@ -204,9 +253,10 @@ interface SigningCompleteParams {
   certificateAvailable: boolean;
 }
 
-export function createSigningCompleteEmail(
-  params: SigningCompleteParams
-): { html: string; text: string } {
+export function createSigningCompleteEmail(params: SigningCompleteParams): {
+  html: string;
+  text: string;
+} {
   const { signerName, envelopeTitle, signedAt, certificateAvailable } = params;
 
   const certNote = certificateAvailable
@@ -214,9 +264,15 @@ export function createSigningCompleteEmail(
     : '';
 
   const bodyHtml =
-    '<p>Hello ' + signerName + ',</p>' +
-    '<p>The document <strong>' + envelopeTitle + '</strong> has been fully executed. All required signatures were collected.</p>' +
-    '<p>Your signature was recorded on <strong>' + formatDate(signedAt) + '</strong>.</p>' +
+    '<p>Hello ' +
+    signerName +
+    ',</p>' +
+    '<p>The document <strong>' +
+    envelopeTitle +
+    '</strong> has been fully executed. All required signatures were collected.</p>' +
+    '<p>Your signature was recorded on <strong>' +
+    formatDate(signedAt) +
+    '</strong>.</p>' +
     certNote +
     '<p>A copy of the completed document is attached to this email for your records.</p>' +
     '<div style="margin-top:20px;padding:12px 16px;background:#f3f4f6;border-radius:8px;border-left:3px solid #7c3aed;">' +
@@ -231,7 +287,8 @@ export function createSigningCompleteEmail(
     subtitle: envelopeTitle,
     buttonUrl: 'https://www.navigatewealth.co/portal',
     buttonLabel: 'View in Portal',
-    footerNote: "This notification was sent via Navigate Wealth's secure e-signature platform. Verify document integrity at navigatewealth.co/verify",
+    footerNote:
+      "This notification was sent via Navigate Wealth's secure e-signature platform. Verify document integrity at navigatewealth.co/verify",
   });
 
   const certLine = certificateAvailable
@@ -239,13 +296,20 @@ export function createSigningCompleteEmail(
     : '';
 
   const text = createPlainTextEmail(
-    'Hello ' + signerName + ',\n\n' +
-    'The document "' + envelopeTitle + '" has been fully executed.\n' +
-    'Your signature was recorded on ' + formatDate(signedAt) + '.\n' +
-    certLine + '\n' +
-    'A copy of the completed document is attached to this email.\n\n' +
-    'View in portal: https://www.navigatewealth.co/portal\n\n' +
-    'Verify document integrity: https://www.navigatewealth.co/verify'
+    'Hello ' +
+      signerName +
+      ',\n\n' +
+      'The document "' +
+      envelopeTitle +
+      '" has been fully executed.\n' +
+      'Your signature was recorded on ' +
+      formatDate(signedAt) +
+      '.\n' +
+      certLine +
+      '\n' +
+      'A copy of the completed document is attached to this email.\n\n' +
+      'View in portal: https://www.navigatewealth.co/portal\n\n' +
+      'Verify document integrity: https://www.navigatewealth.co/verify',
   );
 
   return { html, text };

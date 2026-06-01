@@ -78,3 +78,65 @@ describe('ClientOverviewTab client mode', () => {
     });
   });
 });
+
+describe('ClientOverviewTab dashboard structure', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('renders the five financial pillar cards', async () => {
+    renderOverview('adviser');
+
+    // Pillar titles come from derivePillars and render regardless of (empty) data.
+    await waitFor(() => {
+      expect(screen.getAllByText('Medical Aid').length).toBeGreaterThan(0);
+    });
+    expect(screen.getAllByText('Retirement').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('Investments').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('Estate').length).toBeGreaterThan(0);
+  });
+
+  it('renders the financial health score', async () => {
+    renderOverview('adviser');
+
+    await waitFor(() => {
+      expect(screen.getAllByText(/health score/i).length).toBeGreaterThan(0);
+    });
+  });
+
+  it('greets the client by name in client mode', async () => {
+    renderOverview('client');
+
+    await waitFor(() => {
+      expect(screen.getAllByText(/welcome back/i).length).toBeGreaterThan(0);
+    });
+  });
+
+  it('does not show the welcome-back greeting in adviser mode', async () => {
+    renderOverview('adviser');
+
+    await waitFor(() => {
+      expect(screen.getAllByText('Financial Reviews').length).toBeGreaterThan(0);
+    });
+    expect(screen.queryAllByText(/welcome back/i).length).toBe(0);
+  });
+
+  it('uses client-friendly accordion headers in client mode', async () => {
+    renderOverview('client');
+
+    await waitFor(() => {
+      expect(screen.getAllByText('My Policies').length).toBeGreaterThan(0);
+    });
+    expect(screen.getAllByText('My Net Worth').length).toBeGreaterThan(0);
+  });
+
+  it('uses adviser accordion headers in adviser mode', async () => {
+    renderOverview('adviser');
+
+    await waitFor(() => {
+      expect(screen.getAllByText('Portfolio Summary').length).toBeGreaterThan(0);
+    });
+    // The client-mode label must not leak into adviser mode.
+    expect(screen.queryAllByText('My Policies').length).toBe(0);
+  });
+});

@@ -1,14 +1,14 @@
 import React, { useState, useEffect } from 'react';
-import { 
-  ArrowLeft, 
-  Settings, 
-  Mail, 
-  ToggleLeft, 
-  ToggleRight, 
-  Edit, 
+import {
+  ArrowLeft,
+  Settings,
+  Mail,
+  ToggleLeft,
+  ToggleRight,
+  Edit,
   Loader2,
   Bell,
-  Megaphone
+  Megaphone,
 } from 'lucide-react';
 import { Button } from '../../../../ui/button';
 import { Switch } from '../../../../ui/switch';
@@ -51,20 +51,22 @@ export function TransactionalEmailsManager({ onBack }: TransactionalEmailsManage
   const handleToggle = async (id: string, currentEnabled: boolean) => {
     const newEnabled = !currentEnabled;
     // Optimistic update
-    setTemplates(prev => prev.map(t => t.id === id ? { ...t, enabled: newEnabled } : t));
-    
+    setTemplates((prev) => prev.map((t) => (t.id === id ? { ...t, enabled: newEnabled } : t)));
+
     try {
       await communicationApi.toggleTemplate(id, newEnabled);
       toast.success(`Email type ${newEnabled ? 'enabled' : 'disabled'}`);
     } catch (error) {
       // Revert on error
-      setTemplates(prev => prev.map(t => t.id === id ? { ...t, enabled: currentEnabled } : t));
+      setTemplates((prev) =>
+        prev.map((t) => (t.id === id ? { ...t, enabled: currentEnabled } : t)),
+      );
       toast.error('Failed to update setting');
     }
   };
 
-  const generalTemplate = templates.find(t => t.id === 'general_campaign');
-  const systemTemplates = templates.filter(t => t.id !== 'general_campaign');
+  const generalTemplate = templates.find((t) => t.id === 'general_campaign');
+  const systemTemplates = templates.filter((t) => t.id !== 'general_campaign');
 
   if (isEditingFooter) {
     return (
@@ -77,12 +79,12 @@ export function TransactionalEmailsManager({ onBack }: TransactionalEmailsManage
   if (editingTemplateId) {
     return (
       <div className="p-6 max-w-[1600px] mx-auto">
-        <EmailTemplateEditor 
-          templateId={editingTemplateId} 
+        <EmailTemplateEditor
+          templateId={editingTemplateId}
           onBack={() => {
             setEditingTemplateId(null);
             loadTemplates(); // Reload to get updates
-          }} 
+          }}
         />
       </div>
     );
@@ -92,7 +94,12 @@ export function TransactionalEmailsManager({ onBack }: TransactionalEmailsManage
     <div className="p-6 max-w-[1600px] mx-auto space-y-8">
       <div className="flex flex-col gap-2">
         <div>
-          <Button variant="ghost" size="sm" onClick={onBack} className="-ml-2 text-muted-foreground hover:text-foreground">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={onBack}
+            className="-ml-2 text-muted-foreground hover:text-foreground"
+          >
             <ArrowLeft className="h-4 w-4 mr-2" />
             Back to Communication
           </Button>
@@ -118,7 +125,6 @@ export function TransactionalEmailsManager({ onBack }: TransactionalEmailsManage
         </div>
       ) : (
         <div className="space-y-10">
-          
           {/* General Communication Section */}
           <section>
             <div className="flex items-center gap-2 mb-4">
@@ -134,11 +140,17 @@ export function TransactionalEmailsManager({ onBack }: TransactionalEmailsManage
                     </div>
                     <div>
                       <h4 className="font-medium text-gray-900">{generalTemplate.name}</h4>
-                      <p className="text-sm text-muted-foreground">Base template for marketing campaigns and bulk emails</p>
+                      <p className="text-sm text-muted-foreground">
+                        Base template for marketing campaigns and bulk emails
+                      </p>
                     </div>
                   </div>
                   <div className="flex items-center gap-4">
-                     <Button variant="outline" size="sm" onClick={() => setEditingTemplateId(generalTemplate.id)}>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setEditingTemplateId(generalTemplate.id)}
+                    >
                       <Edit className="h-3.5 w-3.5 mr-2" />
                       Manage Template
                     </Button>
@@ -156,40 +168,54 @@ export function TransactionalEmailsManager({ onBack }: TransactionalEmailsManage
             </div>
             <div className="grid grid-cols-1 gap-3">
               {systemTemplates.map((template) => (
-                <div key={template.id} className="flex items-center justify-between p-4 border rounded-lg bg-white hover:border-primary/50 transition-colors shadow-sm group">
+                <div
+                  key={template.id}
+                  className="flex items-center justify-between p-4 border rounded-lg bg-white hover:border-primary/50 transition-colors shadow-sm group"
+                >
                   <div className="flex items-center gap-4 min-w-0 flex-1 mr-4">
-                    <div className={`h-10 w-10 rounded-lg flex items-center justify-center shrink-0 ${
-                      template.enabled ? 'bg-primary/10 text-primary' : 'bg-gray-100 text-gray-400'
-                    }`}>
+                    <div
+                      className={`h-10 w-10 rounded-lg flex items-center justify-center shrink-0 ${
+                        template.enabled
+                          ? 'bg-primary/10 text-primary'
+                          : 'bg-gray-100 text-gray-400'
+                      }`}
+                    >
                       <Mail className="h-5 w-5" />
                     </div>
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center gap-2">
-                        <h4 className={`font-medium truncate ${template.enabled ? 'text-gray-900' : 'text-gray-500'}`}>
-                            {template.name}
+                        <h4
+                          className={`font-medium truncate ${template.enabled ? 'text-gray-900' : 'text-gray-500'}`}
+                        >
+                          {template.name}
                         </h4>
-                         {!template.enabled && (
-                            <Badge variant="secondary" className="text-[10px] h-5 px-1.5 bg-gray-100 text-gray-500">Disabled</Badge>
-                         )}
+                        {!template.enabled && (
+                          <Badge
+                            variant="secondary"
+                            className="text-[10px] h-5 px-1.5 bg-gray-100 text-gray-500"
+                          >
+                            Disabled
+                          </Badge>
+                        )}
                       </div>
                       <p className="text-sm text-muted-foreground truncate">{template.subject}</p>
                     </div>
                   </div>
-                  
+
                   <div className="flex items-center gap-6 shrink-0">
                     <div className="flex items-center gap-2">
-                      <Switch 
-                        checked={!!template.enabled} 
+                      <Switch
+                        checked={!!template.enabled}
                         onCheckedChange={() => handleToggle(template.id, template.enabled)}
                         id={`toggle-${template.id}`}
                       />
                     </div>
                     <Separator orientation="vertical" className="h-6" />
-                    <Button 
-                        variant="ghost" 
-                        size="sm" 
-                        onClick={() => setEditingTemplateId(template.id)}
-                        className="text-muted-foreground hover:text-primary"
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setEditingTemplateId(template.id)}
+                      className="text-muted-foreground hover:text-primary"
                     >
                       <Edit className="h-4 w-4" />
                       <span className="sr-only">Edit</span>
@@ -199,7 +225,6 @@ export function TransactionalEmailsManager({ onBack }: TransactionalEmailsManage
               ))}
             </div>
           </section>
-
         </div>
       )}
     </div>

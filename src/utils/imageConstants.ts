@@ -11,15 +11,15 @@ import { applyImagePreset } from './imageOptimization';
 export const TEAM_IMAGES = {
   michael: applyImagePreset(
     'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=400&h=400&fit=crop&crop=face',
-    'avatar'
+    'avatar',
   ),
   sarah: applyImagePreset(
     'https://images.unsplash.com/photo-1494790108755-2616b2e8b8c8?w=400&h=400&fit=crop&crop=face',
-    'avatar'
+    'avatar',
   ),
   david: applyImagePreset(
     'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400&h=400&fit=crop&crop=face',
-    'avatar'
+    'avatar',
   ),
 } as const;
 
@@ -29,31 +29,31 @@ export const TEAM_IMAGES = {
 export const SERVICE_IMAGES = {
   riskManagement: applyImagePreset(
     'https://images.unsplash.com/photo-1454165804606-c3d57bc86b40?w=400&h=250&fit=crop',
-    'card'
+    'card',
   ),
   retirementPlanning: applyImagePreset(
     'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400&h=250&fit=crop',
-    'card'
+    'card',
   ),
   investmentManagement: applyImagePreset(
     'https://images.unsplash.com/photo-1611974789855-9c2a0a7236a3?w=400&h=250&fit=crop',
-    'card'
+    'card',
   ),
   employeeBenefits: applyImagePreset(
     'https://images.unsplash.com/photo-1521737604893-d14cc237f11d?w=400&h=250&fit=crop',
-    'card'
+    'card',
   ),
   taxPlanning: applyImagePreset(
     'https://images.unsplash.com/photo-1554224155-6726b3ff858f?w=400&h=250&fit=crop',
-    'card'
+    'card',
   ),
   financialPlanning: applyImagePreset(
     'https://images.unsplash.com/photo-1460925895917-afdab827c52f?w=400&h=250&fit=crop',
-    'card'
+    'card',
   ),
   estatePlanning: applyImagePreset(
     'https://images.unsplash.com/photo-1450101499163-c8848c66ca85?w=400&h=250&fit=crop',
-    'card'
+    'card',
   ),
 } as const;
 

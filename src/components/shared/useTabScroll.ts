@@ -18,7 +18,7 @@ export function useTabScroll(scrollRef: RefObject<HTMLDivElement>, activeId: str
     if (!activeBtn) return;
     const cRect = container.getBoundingClientRect();
     const bRect = activeBtn.getBoundingClientRect();
-    const delta = (bRect.left + bRect.width / 2) - (cRect.left + cRect.width / 2);
+    const delta = bRect.left + bRect.width / 2 - (cRect.left + cRect.width / 2);
     container.scrollTo({ left: Math.max(0, container.scrollLeft + delta), behavior: 'smooth' });
   }, [activeId, scrollRef]);
 }

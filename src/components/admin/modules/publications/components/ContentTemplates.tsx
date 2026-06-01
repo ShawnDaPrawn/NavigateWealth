@@ -108,7 +108,9 @@ function TemplateForm({ template, onSave, onCancel, isSaving }: TemplateFormProp
 
       {/* Tags */}
       <div>
-        <label className="text-xs font-medium text-gray-700 block mb-1">Tags (comma-separated)</label>
+        <label className="text-xs font-medium text-gray-700 block mb-1">
+          Tags (comma-separated)
+        </label>
         <input
           type="text"
           value={tags}
@@ -197,7 +199,7 @@ export function ContentTemplates() {
         setIsSaving(false);
       }
     },
-    [loadTemplates]
+    [loadTemplates],
   );
 
   const handleUpdate = useCallback(
@@ -205,7 +207,10 @@ export function ContentTemplates() {
       if (!editingTemplate) return;
       setIsSaving(true);
       try {
-        await PublicationsAPI.Templates.updateTemplate(editingTemplate.id, input as UpdateTemplateInput);
+        await PublicationsAPI.Templates.updateTemplate(
+          editingTemplate.id,
+          input as UpdateTemplateInput,
+        );
         toast.success('Template updated successfully');
         setEditingTemplate(null);
         await loadTemplates();
@@ -215,7 +220,7 @@ export function ContentTemplates() {
         setIsSaving(false);
       }
     },
-    [editingTemplate, loadTemplates]
+    [editingTemplate, loadTemplates],
   );
 
   const handleDelete = useCallback(
@@ -229,7 +234,7 @@ export function ContentTemplates() {
         toast.error('Failed to delete template');
       }
     },
-    [loadTemplates]
+    [loadTemplates],
   );
 
   const handleSeedDefaults = useCallback(async () => {
@@ -348,14 +353,18 @@ export function ContentTemplates() {
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2">
-                    <h3 className="text-sm font-semibold text-gray-900 truncate">{template.name}</h3>
+                    <h3 className="text-sm font-semibold text-gray-900 truncate">
+                      {template.name}
+                    </h3>
                     {template.is_system && (
                       <Badge variant="secondary" className="text-[9px] px-1.5 py-0 h-4">
                         System
                       </Badge>
                     )}
                   </div>
-                  <p className="text-xs text-gray-500 mt-0.5 line-clamp-2">{template.description}</p>
+                  <p className="text-xs text-gray-500 mt-0.5 line-clamp-2">
+                    {template.description}
+                  </p>
                 </div>
               </div>
 

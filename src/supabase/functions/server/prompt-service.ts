@@ -54,16 +54,19 @@ function metaKey(agentId: string, context: PromptContext) {
 }
 
 async function getIndex(agentId: string, context: PromptContext): Promise<PromptIndex> {
-  const existing = await kv.get(indexKey(agentId, context)) as PromptIndex | null;
+  const existing = (await kv.get(indexKey(agentId, context))) as PromptIndex | null;
   return existing ?? { versionIds: [], updatedAt: new Date().toISOString() };
 }
 
 async function saveIndex(agentId: string, context: PromptContext, index: PromptIndex) {
-  await kv.set(indexKey(agentId, context), { ...index, updatedAt: new Date().toISOString() } satisfies PromptIndex);
+  await kv.set(indexKey(agentId, context), {
+    ...index,
+    updatedAt: new Date().toISOString(),
+  } satisfies PromptIndex);
 }
 
 async function getMeta(agentId: string, context: PromptContext): Promise<PromptMeta> {
-  const existing = await kv.get(metaKey(agentId, context)) as PromptMeta | null;
+  const existing = (await kv.get(metaKey(agentId, context))) as PromptMeta | null;
   return (
     existing ?? {
       agentId,
@@ -75,22 +78,39 @@ async function getMeta(agentId: string, context: PromptContext): Promise<PromptM
 }
 
 async function saveMeta(agentId: string, context: PromptContext, meta: PromptMeta) {
-  await kv.set(metaKey(agentId, context), { ...meta, updatedAt: new Date().toISOString() } satisfies PromptMeta);
+  await kv.set(metaKey(agentId, context), {
+    ...meta,
+    updatedAt: new Date().toISOString(),
+  } satisfies PromptMeta);
 }
 
-export async function getActivePrompt(agentId: string, context: PromptContext): Promise<string | null> {
+export async function getActivePrompt(
+  agentId: string,
+  context: PromptContext,
+): Promise<string | null> {
   return (await kv.get(activeKey(agentId, context))) as string | null;
 }
 
-export async function getDraftPrompt(agentId: string, context: PromptContext): Promise<string | null> {
+export async function getDraftPrompt(
+  agentId: string,
+  context: PromptContext,
+): Promise<string | null> {
   return (await kv.get(draftKey(agentId, context))) as string | null;
 }
 
-export async function setDraftPrompt(agentId: string, context: PromptContext, prompt: string): Promise<void> {
+export async function setDraftPrompt(
+  agentId: string,
+  context: PromptContext,
+  prompt: string,
+): Promise<void> {
   await kv.set(draftKey(agentId, context), prompt);
 }
 
-export async function ensureSeeded(agentId: string, context: PromptContext, seedPrompt: string): Promise<void> {
+export async function ensureSeeded(
+  agentId: string,
+  context: PromptContext,
+  seedPrompt: string,
+): Promise<void> {
   const existingActive = await getActivePrompt(agentId, context);
   if (!existingActive) {
     await kv.set(activeKey(agentId, context), seedPrompt);
@@ -106,7 +126,11 @@ export async function ensureSeeded(agentId: string, context: PromptContext, seed
   }
 }
 
-export async function publishDraft(agentId: string, context: PromptContext, publishedBy: string): Promise<PromptVersion> {
+export async function publishDraft(
+  agentId: string,
+  context: PromptContext,
+  publishedBy: string,
+): Promise<PromptVersion> {
   const draft = await getDraftPrompt(agentId, context);
   if (!draft) {
     throw new Error('No draft prompt exists to publish');
@@ -148,7 +172,10 @@ export async function publishDraft(agentId: string, context: PromptContext, publ
   return version;
 }
 
-export async function listVersions(agentId: string, context: PromptContext): Promise<PromptVersion[]> {
+export async function listVersions(
+  agentId: string,
+  context: PromptContext,
+): Promise<PromptVersion[]> {
   const index = await getIndex(agentId, context);
   if (index.versionIds.length === 0) return [];
 
@@ -157,7 +184,12 @@ export async function listVersions(agentId: string, context: PromptContext): Pro
   return versions.filter((v): v is PromptVersion => v !== null);
 }
 
-export async function rollbackToVersion(agentId: string, context: PromptContext, versionId: string, rolledBackBy: string) {
+export async function rollbackToVersion(
+  agentId: string,
+  context: PromptContext,
+  versionId: string,
+  rolledBackBy: string,
+) {
   const version = (await kv.get(versionKey(agentId, context, versionId))) as PromptVersion | null;
   if (!version) return null;
 
@@ -170,4 +202,3 @@ export async function rollbackToVersion(agentId: string, context: PromptContext,
   // Record rollback as a new published version for audit trail
   return await publishDraft(agentId, context, rolledBackBy);
 }
-

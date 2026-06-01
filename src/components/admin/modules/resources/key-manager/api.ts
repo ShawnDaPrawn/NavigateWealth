@@ -4,10 +4,10 @@
  * This is the public interface that other modules should use
  */
 
-import { 
-  ALL_PRODUCT_KEYS, 
-  KEY_CATEGORIES, 
-  getKeysByCategory as getKeysByCategoryInternal 
+import {
+  ALL_PRODUCT_KEYS,
+  KEY_CATEGORIES,
+  getKeysByCategory as getKeysByCategoryInternal,
 } from '../../product-management';
 import {
   ProductKey,
@@ -64,7 +64,7 @@ export const KeyAPI = {
   // ----------------------------------------------------------------------------
   // Constants (re-exported for convenience)
   // ----------------------------------------------------------------------------
-  
+
   /**
    * All product keys
    */
@@ -122,7 +122,7 @@ export const KeyAPI = {
    * Get keys by data type
    */
   getKeysByDataType(dataType: string): ProductKey[] {
-    return ALL_PRODUCT_KEYS.filter(key => key.dataType === dataType);
+    return ALL_PRODUCT_KEYS.filter((key) => key.dataType === dataType);
   },
 
   /**
@@ -373,24 +373,24 @@ export const KeyAPI = {
    */
   getKeySelectorOptions(
     category?: ProductKeyCategory,
-    includeCalculated: boolean = false
+    includeCalculated: boolean = false,
   ): KeySelectorOption[] {
     let keys = ALL_PRODUCT_KEYS;
 
     // Filter by category if specified
     if (category) {
-      keys = keys.filter(key => key.category === category);
+      keys = keys.filter((key) => key.category === category);
     }
 
     // Exclude calculated keys unless explicitly requested
     if (!includeCalculated) {
-      keys = keys.filter(key => !key.isCalculated);
+      keys = keys.filter((key) => !key.isCalculated);
     }
 
     // Exclude profile keys (they can't be assigned to product fields)
-    keys = keys.filter(key => !isClientProfileKey(key));
+    keys = keys.filter((key) => !isClientProfileKey(key));
 
-    return keys.map(key => ({
+    return keys.map((key) => ({
       value: key.id,
       label: key.name,
       description: key.description,
@@ -405,10 +405,8 @@ export const KeyAPI = {
    * Returns only individual (non-calculated) keys that match the category
    */
   getAssignableKeys(category: ProductKeyCategory): ProductKey[] {
-    return ALL_PRODUCT_KEYS.filter(key => 
-      key.category === category && 
-      !key.isCalculated &&
-      !isClientProfileKey(key)
+    return ALL_PRODUCT_KEYS.filter(
+      (key) => key.category === category && !key.isCalculated && !isClientProfileKey(key),
     );
   },
 
@@ -416,10 +414,7 @@ export const KeyAPI = {
    * Get calculated keys for a category (for reference/display only)
    */
   getCalculatedKeysForCategory(category: ProductKeyCategory): ProductKey[] {
-    return ALL_PRODUCT_KEYS.filter(key => 
-      key.category === category && 
-      key.isCalculated
-    );
+    return ALL_PRODUCT_KEYS.filter((key) => key.category === category && key.isCalculated);
   },
 };
 

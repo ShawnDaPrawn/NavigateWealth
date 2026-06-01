@@ -89,7 +89,7 @@ export function VirtualizedClientList({
           position: isVirtualized ? 'relative' : undefined,
         }}
       >
-        {virtualItems.map(vRow => {
+        {virtualItems.map((vRow) => {
           const client = clients[vRow.index];
           const status = getStatus(client);
           const displayName = getDisplayName(client);
@@ -108,36 +108,41 @@ export function VirtualizedClientList({
               tabIndex={0}
               className={`group flex items-center gap-3 p-3 border rounded-lg cursor-pointer transition-all duration-200 ${rowClass}`}
               onClick={() => onClientClick(client)}
-              onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onClientClick(client); } }}
-              style={isVirtualized ? {
-                position: 'absolute',
-                top: 0,
-                left: 0,
-                width: '100%',
-                height: vRow.size - 8, // account for gap
-                transform: `translateY(${vRow.start}px)`,
-                marginBottom: 8,
-              } : { marginBottom: 8 }}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault();
+                  onClientClick(client);
+                }
+              }}
+              style={
+                isVirtualized
+                  ? {
+                      position: 'absolute',
+                      top: 0,
+                      left: 0,
+                      width: '100%',
+                      height: vRow.size - 8, // account for gap
+                      transform: `translateY(${vRow.start}px)`,
+                      marginBottom: 8,
+                    }
+                  : { marginBottom: 8 }
+              }
             >
-              {showCheckbox && (
-                <Checkbox
-                  checked={false}
-                  className="pointer-events-none"
-                />
-              )}
+              {showCheckbox && <Checkbox checked={false} className="pointer-events-none" />}
 
               <Avatar className="h-8 w-8 flex-shrink-0">
                 <AvatarFallback className="text-xs">
-                  {displayName.split(' ').map((n: string) => n[0]).join('')}
+                  {displayName
+                    .split(' ')
+                    .map((n: string) => n[0])
+                    .join('')}
                 </AvatarFallback>
               </Avatar>
 
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2">
                   <span className="text-sm font-medium truncate">{displayName}</span>
-                  <span className={status.color}>
-                    {status.icon}
-                  </span>
+                  <span className={status.color}>{status.icon}</span>
                 </div>
                 {contactDetail && (
                   <div className="text-xs text-muted-foreground truncate">
@@ -145,9 +150,7 @@ export function VirtualizedClientList({
                   </div>
                 )}
                 {status.reason && (
-                  <div className="text-xs text-orange-600 mt-0.5">
-                    {status.reason}
-                  </div>
+                  <div className="text-xs text-orange-600 mt-0.5">{status.reason}</div>
                 )}
               </div>
 

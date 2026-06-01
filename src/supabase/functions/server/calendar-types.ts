@@ -1,7 +1,7 @@
 /**
  * Calendar Module - Type Definitions
  * Backend
- * 
+ *
  * Uses shared types for entities and DTOs.
  */
 
@@ -24,7 +24,10 @@ export interface ReminderFilters {
   clientId?: string;
 }
 
-export interface EventCreate extends Omit<import('./shared-calendar-types.ts').CreateEventInput, 'start_at' | 'end_at'> {
+export interface EventCreate extends Omit<
+  import('./shared-calendar-types.ts').CreateEventInput,
+  'start_at' | 'end_at'
+> {
   start_at: string;
   end_at: string;
 }
@@ -32,4 +35,3 @@ export interface EventCreate extends Omit<import('./shared-calendar-types.ts').C
 export type EventUpdate = import('./shared-calendar-types.ts').UpdateEventInput;
 export type ReminderCreate = import('./shared-calendar-types.ts').CreateReminderInput;
 export type ReminderUpdate = import('./shared-calendar-types.ts').UpdateReminderInput;
-

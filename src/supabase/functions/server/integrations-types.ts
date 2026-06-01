@@ -7,7 +7,11 @@
  * @module integrations-types
  */
 
-import type { ExtractionResult, ExtractionHistoryEntry, FieldMappingSnapshot } from './policy-extraction-types.ts';
+import type {
+  ExtractionResult,
+  ExtractionHistoryEntry,
+  FieldMappingSnapshot,
+} from './policy-extraction-types.ts';
 
 // ---------------------------------------------------------------------------
 // Policy Entity (stored in KV as `policies:client:{clientId}` — array)

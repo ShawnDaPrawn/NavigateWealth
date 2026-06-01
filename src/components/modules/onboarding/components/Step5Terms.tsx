@@ -9,10 +9,33 @@ import {
   SECTION_CONTAINER_CLASS,
   SECTION_CONTAINER_SPACED_CLASS,
 } from '../form-styles';
-import { FileText, Lock, ShieldCheck, Scale, Wifi, PenLine, ChevronDown, ChevronUp, User, MapPin, Briefcase, Target, ExternalLink, Loader2 } from 'lucide-react';
+import {
+  FileText,
+  Lock,
+  ShieldCheck,
+  Scale,
+  Wifi,
+  PenLine,
+  ChevronDown,
+  ChevronUp,
+  User,
+  MapPin,
+  Briefcase,
+  Target,
+  ExternalLink,
+  Loader2,
+} from 'lucide-react';
 import { useLegalDocumentViewer, LegalDocumentDialog } from '../../../shared/LegalDocumentViewer';
 
-function SectionHeader({ icon: Icon, title, description }: { icon: React.ElementType; title: string; description?: string }) {
+function SectionHeader({
+  icon: Icon,
+  title,
+  description,
+}: {
+  icon: React.ElementType;
+  title: string;
+  description?: string;
+}) {
   return (
     <div className="flex items-center gap-3 mb-5">
       <div className="h-9 w-9 rounded-lg bg-[#6d28d9]/10 flex items-center justify-center flex-shrink-0">
@@ -36,7 +59,17 @@ function SummaryRow({ label, value }: { label: string; value: string | undefined
   );
 }
 
-function SummarySection({ icon: Icon, title, children, defaultOpen = false }: { icon: React.ElementType; title: string; children: React.ReactNode; defaultOpen?: boolean }) {
+function SummarySection({
+  icon: Icon,
+  title,
+  children,
+  defaultOpen = false,
+}: {
+  icon: React.ElementType;
+  title: string;
+  children: React.ReactNode;
+  defaultOpen?: boolean;
+}) {
   const [isOpen, setIsOpen] = useState(defaultOpen);
 
   return (
@@ -50,13 +83,15 @@ function SummarySection({ icon: Icon, title, children, defaultOpen = false }: { 
           <Icon className="h-4 w-4 text-[#6d28d9]" />
           <span className="text-sm font-semibold text-gray-800">{title}</span>
         </div>
-        {isOpen ? <ChevronUp className="h-4 w-4 text-gray-400" /> : <ChevronDown className="h-4 w-4 text-gray-400" />}
+        {isOpen ? (
+          <ChevronUp className="h-4 w-4 text-gray-400" />
+        ) : (
+          <ChevronDown className="h-4 w-4 text-gray-400" />
+        )}
       </button>
       {isOpen && (
         <div className="px-4 pb-4 pt-0 border-t border-gray-100 bg-gray-50/70 animate-in fade-in duration-200">
-          <div className="divide-y divide-gray-100">
-            {children}
-          </div>
+          <div className="divide-y divide-gray-100">{children}</div>
         </div>
       )}
     </div>
@@ -105,63 +140,135 @@ export function Step5Terms({ data, updateData }: StepProps) {
     <div className="space-y-10">
       {/* Application Summary */}
       <div>
-        <SectionHeader icon={FileText} title="Application Summary" description="Review the information you've provided" />
+        <SectionHeader
+          icon={FileText}
+          title="Application Summary"
+          description="Review the information you've provided"
+        />
         <div className={`${SECTION_CONTAINER_CLASS} space-y-3`}>
           <SummarySection icon={User} title="Personal Information" defaultOpen>
             <SummaryRow label="Full Name" value={fullName} />
             {data.preferredName && <SummaryRow label="Known As" value={data.preferredName} />}
-            <SummaryRow label="Date of Birth" value={data.dateOfBirth ? new Date(data.dateOfBirth).toLocaleDateString('en-ZA', { day: 'numeric', month: 'long', year: 'numeric' }) : undefined} />
+            <SummaryRow
+              label="Date of Birth"
+              value={
+                data.dateOfBirth
+                  ? new Date(data.dateOfBirth).toLocaleDateString('en-ZA', {
+                      day: 'numeric',
+                      month: 'long',
+                      year: 'numeric',
+                    })
+                  : undefined
+              }
+            />
             <SummaryRow label="Gender" value={data.gender} />
             <SummaryRow label="Nationality" value={data.nationality} />
-            <SummaryRow label="ID Type" value={data.idType === 'sa_id' ? 'SA ID Number' : data.idType === 'passport' ? 'Passport' : undefined} />
-            <SummaryRow label="ID Number" value={data.idNumber ? `${data.idNumber.slice(0, 4)}...${data.idNumber.slice(-3)}` : undefined} />
-            <SummaryRow label="Tax Resident" value={data.isSATaxResident === true ? 'Yes' : data.isSATaxResident === false ? 'No' : undefined} />
+            <SummaryRow
+              label="ID Type"
+              value={
+                data.idType === 'sa_id'
+                  ? 'SA ID Number'
+                  : data.idType === 'passport'
+                    ? 'Passport'
+                    : undefined
+              }
+            />
+            <SummaryRow
+              label="ID Number"
+              value={
+                data.idNumber
+                  ? `${data.idNumber.slice(0, 4)}...${data.idNumber.slice(-3)}`
+                  : undefined
+              }
+            />
+            <SummaryRow
+              label="Tax Resident"
+              value={
+                data.isSATaxResident === true
+                  ? 'Yes'
+                  : data.isSATaxResident === false
+                    ? 'No'
+                    : undefined
+              }
+            />
             <SummaryRow label="Marital Status" value={data.maritalStatus} />
             {data.maritalRegime && <SummaryRow label="Marital Regime" value={data.maritalRegime} />}
             <SummaryRow label="Dependants" value={data.numberOfDependants} />
-            {data.spouseFirstName && <SummaryRow label="Spouse" value={`${data.spouseFirstName} ${data.spouseLastName}`} />}
+            {data.spouseFirstName && (
+              <SummaryRow label="Spouse" value={`${data.spouseFirstName} ${data.spouseLastName}`} />
+            )}
           </SummarySection>
 
           <SummarySection icon={MapPin} title="Contact Information">
             <SummaryRow label="Email" value={data.emailAddress} />
             <SummaryRow label="Cellphone" value={data.cellphoneNumber} />
-            {data.preferredContactMethod && <SummaryRow label="Preferred Method" value={data.preferredContactMethod} />}
-            {data.bestTimeToContact && <SummaryRow label="Best Time" value={data.bestTimeToContact} />}
+            {data.preferredContactMethod && (
+              <SummaryRow label="Preferred Method" value={data.preferredContactMethod} />
+            )}
+            {data.bestTimeToContact && (
+              <SummaryRow label="Best Time" value={data.bestTimeToContact} />
+            )}
             <SummaryRow label="City" value={data.residentialCity} />
             <SummaryRow label="Province" value={data.residentialProvince} />
             <SummaryRow label="Country" value={data.residentialCountry} />
           </SummarySection>
 
           <SummarySection icon={Briefcase} title="Employment & Financial">
-            <SummaryRow label="Status" value={data.employmentStatus ? data.employmentStatus.charAt(0).toUpperCase() + data.employmentStatus.slice(1).replace('-', ' ') : undefined} />
+            <SummaryRow
+              label="Status"
+              value={
+                data.employmentStatus
+                  ? data.employmentStatus.charAt(0).toUpperCase() +
+                    data.employmentStatus.slice(1).replace('-', ' ')
+                  : undefined
+              }
+            />
             {data.jobTitle && <SummaryRow label="Job Title" value={data.jobTitle} />}
             {data.employerName && <SummaryRow label="Employer" value={data.employerName} />}
-            <SummaryRow label="Industry" value={data.industry || data.selfEmployedIndustry || undefined} />
-            {data.grossMonthlyIncome && <SummaryRow label="Income Range" value={data.grossMonthlyIncome} />}
-            {data.monthlyExpensesEstimate && <SummaryRow label="Expenses Range" value={data.monthlyExpensesEstimate} />}
+            <SummaryRow
+              label="Industry"
+              value={data.industry || data.selfEmployedIndustry || undefined}
+            />
+            {data.grossMonthlyIncome && (
+              <SummaryRow label="Income Range" value={data.grossMonthlyIncome} />
+            )}
+            {data.monthlyExpensesEstimate && (
+              <SummaryRow label="Expenses Range" value={data.monthlyExpensesEstimate} />
+            )}
           </SummarySection>
 
           <SummarySection icon={Target} title="Services & Interests">
-            {data.accountReasons.length > 0 && <SummaryRow label="Interested In" value={data.accountReasons.join(', ')} />}
+            {data.accountReasons.length > 0 && (
+              <SummaryRow label="Interested In" value={data.accountReasons.join(', ')} />
+            )}
             {data.urgency && (
               <SummaryRow
                 label="Timeline"
                 value={
-                  data.urgency === 'immediately' ? 'Immediately' :
-                  data.urgency === 'within_1_month' ? 'Within 1 month' :
-                  data.urgency === 'within_3_months' ? 'Within 3 months' :
-                  'Just exploring'
+                  data.urgency === 'immediately'
+                    ? 'Immediately'
+                    : data.urgency === 'within_1_month'
+                      ? 'Within 1 month'
+                      : data.urgency === 'within_3_months'
+                        ? 'Within 3 months'
+                        : 'Just exploring'
                 }
               />
             )}
-            {data.existingProducts.length > 0 && <SummaryRow label="Existing Products" value={data.existingProducts.join(', ')} />}
+            {data.existingProducts.length > 0 && (
+              <SummaryRow label="Existing Products" value={data.existingProducts.join(', ')} />
+            )}
           </SummarySection>
         </div>
       </div>
 
       {/* Legal Agreements */}
       <div>
-        <SectionHeader icon={Scale} title="Legal Agreements" description="Please read and accept the following" />
+        <SectionHeader
+          icon={Scale}
+          title="Legal Agreements"
+          description="Please read and accept the following"
+        />
         <div className={SECTION_CONTAINER_SPACED_CLASS}>
           {/* Terms & Conditions */}
           <div className="flex items-start gap-4 p-4 bg-gray-50 rounded-lg border border-gray-200">
@@ -175,15 +282,29 @@ export function Step5Terms({ data, updateData }: StepProps) {
                   checked={data.termsAccepted}
                   onCheckedChange={(checked) => updateData('termsAccepted', checked === true)}
                 />
-                <Label htmlFor="termsAccepted" className="font-semibold cursor-pointer text-sm text-gray-800">
+                <Label
+                  htmlFor="termsAccepted"
+                  className="font-semibold cursor-pointer text-sm text-gray-800"
+                >
                   I accept the Terms and Conditions <span className="text-red-500">*</span>
                 </Label>
               </div>
               <p className="text-xs text-gray-500 pl-6">
                 By creating an account, you agree to Navigate Wealth&apos;s{' '}
-                <LegalLink slug="terms-of-use" label="Terms of Service" onView={legalViewer.openDocument} loadingSlug={legalViewer.loadingSlug} />
-                {' '}and{' '}
-                <LegalLink slug="privacy-notice" label="Privacy Policy" onView={legalViewer.openDocument} loadingSlug={legalViewer.loadingSlug} />.
+                <LegalLink
+                  slug="terms-of-use"
+                  label="Terms of Service"
+                  onView={legalViewer.openDocument}
+                  loadingSlug={legalViewer.loadingSlug}
+                />{' '}
+                and{' '}
+                <LegalLink
+                  slug="privacy-notice"
+                  label="Privacy Policy"
+                  onView={legalViewer.openDocument}
+                  loadingSlug={legalViewer.loadingSlug}
+                />
+                .
               </p>
             </div>
           </div>
@@ -200,15 +321,29 @@ export function Step5Terms({ data, updateData }: StepProps) {
                   checked={data.popiaConsent}
                   onCheckedChange={(checked) => updateData('popiaConsent', checked === true)}
                 />
-                <Label htmlFor="popiaConsent" className="font-semibold cursor-pointer text-sm text-gray-800">
+                <Label
+                  htmlFor="popiaConsent"
+                  className="font-semibold cursor-pointer text-sm text-gray-800"
+                >
                   POPIA Consent <span className="text-red-500">*</span>
                 </Label>
               </div>
               <p className="text-xs text-gray-500 pl-6">
                 I consent to the processing of my personal information in accordance with the{' '}
-                <LegalLink slug="popia-paia-manual" label="Protection of Personal Information Act (POPIA)" onView={legalViewer.openDocument} loadingSlug={legalViewer.loadingSlug} />.
-                {' '}View our{' '}
-                <LegalLink slug="data-protection-policy" label="Data Protection Policy" onView={legalViewer.openDocument} loadingSlug={legalViewer.loadingSlug} />.
+                <LegalLink
+                  slug="popia-paia-manual"
+                  label="Protection of Personal Information Act (POPIA)"
+                  onView={legalViewer.openDocument}
+                  loadingSlug={legalViewer.loadingSlug}
+                />
+                . View our{' '}
+                <LegalLink
+                  slug="data-protection-policy"
+                  label="Data Protection Policy"
+                  onView={legalViewer.openDocument}
+                  loadingSlug={legalViewer.loadingSlug}
+                />
+                .
               </p>
             </div>
           </div>
@@ -223,17 +358,33 @@ export function Step5Terms({ data, updateData }: StepProps) {
                 <Checkbox
                   id="disclosureAcknowledged"
                   checked={data.disclosureAcknowledged}
-                  onCheckedChange={(checked) => updateData('disclosureAcknowledged', checked === true)}
+                  onCheckedChange={(checked) =>
+                    updateData('disclosureAcknowledged', checked === true)
+                  }
                 />
-                <Label htmlFor="disclosureAcknowledged" className="font-semibold cursor-pointer text-sm text-gray-800">
+                <Label
+                  htmlFor="disclosureAcknowledged"
+                  className="font-semibold cursor-pointer text-sm text-gray-800"
+                >
                   Disclosure Acknowledgment <span className="text-red-500">*</span>
                 </Label>
               </div>
               <p className="text-xs text-gray-500 pl-6">
                 I acknowledge that I have read and understood the{' '}
-                <LegalLink slug="legal-conditions" label="Legal Conditions & Disclosures" onView={legalViewer.openDocument} loadingSlug={legalViewer.loadingSlug} />
-                {' '}and{' '}
-                <LegalLink slug="conflict-of-interest" label="Conflict of Interest Policy" onView={legalViewer.openDocument} loadingSlug={legalViewer.loadingSlug} />.
+                <LegalLink
+                  slug="legal-conditions"
+                  label="Legal Conditions & Disclosures"
+                  onView={legalViewer.openDocument}
+                  loadingSlug={legalViewer.loadingSlug}
+                />{' '}
+                and{' '}
+                <LegalLink
+                  slug="conflict-of-interest"
+                  label="Conflict of Interest Policy"
+                  onView={legalViewer.openDocument}
+                  loadingSlug={legalViewer.loadingSlug}
+                />
+                .
               </p>
             </div>
           </div>
@@ -250,13 +401,23 @@ export function Step5Terms({ data, updateData }: StepProps) {
                   checked={data.faisAcknowledged}
                   onCheckedChange={(checked) => updateData('faisAcknowledged', checked === true)}
                 />
-                <Label htmlFor="faisAcknowledged" className="font-semibold cursor-pointer text-sm text-gray-800">
+                <Label
+                  htmlFor="faisAcknowledged"
+                  className="font-semibold cursor-pointer text-sm text-gray-800"
+                >
                   FAIS Disclosure <span className="text-red-500">*</span>
                 </Label>
               </div>
               <p className="text-xs text-gray-500 pl-6">
-                I acknowledge that Navigate Wealth is an authorised financial services provider and that I have been informed of my rights under the{' '}
-                <LegalLink slug="fais-disclosure" label="Financial Advisory and Intermediary Services (FAIS) Act" onView={legalViewer.openDocument} loadingSlug={legalViewer.loadingSlug} />.
+                I acknowledge that Navigate Wealth is an authorised financial services provider and
+                that I have been informed of my rights under the{' '}
+                <LegalLink
+                  slug="fais-disclosure"
+                  label="Financial Advisory and Intermediary Services (FAIS) Act"
+                  onView={legalViewer.openDocument}
+                  loadingSlug={legalViewer.loadingSlug}
+                />
+                .
               </p>
             </div>
           </div>
@@ -271,14 +432,20 @@ export function Step5Terms({ data, updateData }: StepProps) {
                 <Checkbox
                   id="electronicCommunicationConsent"
                   checked={data.electronicCommunicationConsent}
-                  onCheckedChange={(checked) => updateData('electronicCommunicationConsent', checked === true)}
+                  onCheckedChange={(checked) =>
+                    updateData('electronicCommunicationConsent', checked === true)
+                  }
                 />
-                <Label htmlFor="electronicCommunicationConsent" className="font-semibold cursor-pointer text-sm text-gray-800">
+                <Label
+                  htmlFor="electronicCommunicationConsent"
+                  className="font-semibold cursor-pointer text-sm text-gray-800"
+                >
                   Electronic Communication Consent
                 </Label>
               </div>
               <p className="text-xs text-gray-500 pl-6">
-                I consent to receiving documents, statements, and official correspondence electronically rather than by post.
+                I consent to receiving documents, statements, and official correspondence
+                electronically rather than by post.
               </p>
             </div>
           </div>
@@ -293,18 +460,26 @@ export function Step5Terms({ data, updateData }: StepProps) {
             checked={data.communicationConsent}
             onCheckedChange={(checked) => updateData('communicationConsent', checked === true)}
           />
-          <Label htmlFor="communicationConsent" className="font-semibold cursor-pointer text-sm text-gray-800">
+          <Label
+            htmlFor="communicationConsent"
+            className="font-semibold cursor-pointer text-sm text-gray-800"
+          >
             I would like to receive marketing communications, newsletters, and market updates
           </Label>
         </div>
         <p className="text-xs text-gray-400 mt-2 pl-7">
-          You can unsubscribe at any time. This is separate from transactional communications about your account.
+          You can unsubscribe at any time. This is separate from transactional communications about
+          your account.
         </p>
       </div>
 
       {/* Digital Signature */}
       <div>
-        <SectionHeader icon={PenLine} title="Digital Signature" description="Type your full legal name exactly as shown above to confirm this application" />
+        <SectionHeader
+          icon={PenLine}
+          title="Digital Signature"
+          description="Type your full legal name exactly as shown above to confirm this application"
+        />
         <div className={SECTION_CONTAINER_CLASS}>
           <Label htmlFor="signatureFullName" className={LABEL_CLASS}>
             Full Legal Name <span className="text-red-500">*</span>
@@ -322,11 +497,13 @@ export function Step5Terms({ data, updateData }: StepProps) {
           />
           {data.signatureFullName.trim() && !signatureMatches ? (
             <p className="text-xs text-red-500 mt-2">
-              Your signature must match your full name: <span className="font-semibold">{fullName}</span>
+              Your signature must match your full name:{' '}
+              <span className="font-semibold">{fullName}</span>
             </p>
           ) : (
             <p className="text-xs text-gray-400 mt-3">
-              By typing your name above and submitting this application, you confirm that all information provided is true and accurate to the best of your knowledge.
+              By typing your name above and submitting this application, you confirm that all
+              information provided is true and accurate to the best of your knowledge.
             </p>
           )}
         </div>

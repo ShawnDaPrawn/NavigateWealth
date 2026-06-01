@@ -1,12 +1,5 @@
 import React from 'react';
-import { 
-  Table, 
-  TableBody, 
-  TableCell, 
-  TableHead, 
-  TableHeader, 
-  TableRow 
-} from '../ui/table';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../ui/table';
 import { Badge } from '../ui/badge';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../ui/card';
 import { Clock, Shield, Monitor, MapPin, AlertTriangle, CheckCircle, XCircle } from 'lucide-react';
@@ -20,30 +13,32 @@ interface ActivityLogTableProps {
   description?: string;
 }
 
-export function ActivityLogTable({ 
-  logs, 
-  isLoading = false, 
-  title = "Activity Log",
-  description = "Recent security events and account activity"
+export function ActivityLogTable({
+  logs,
+  isLoading = false,
+  title = 'Activity Log',
+  description = 'Recent security events and account activity',
 }: ActivityLogTableProps) {
-
   const formatEventType = (type: string) => {
-    return type.split('_').map(word => {
-      // Preserve well-known acronyms
-      if (word.toLowerCase() === '2fa') return '2FA';
-      if (word.toLowerCase() === 'ip') return 'IP';
-      return word.charAt(0).toUpperCase() + word.slice(1);
-    }).join(' ');
+    return type
+      .split('_')
+      .map((word) => {
+        // Preserve well-known acronyms
+        if (word.toLowerCase() === '2fa') return '2FA';
+        if (word.toLowerCase() === 'ip') return 'IP';
+        return word.charAt(0).toUpperCase() + word.slice(1);
+      })
+      .join(' ');
   };
 
   const getEventIcon = (type: string, success: boolean) => {
     if (!success) return <XCircle className="h-4 w-4 text-red-500" />;
-    
+
     if (type.includes('login')) return <Monitor className="h-4 w-4 text-blue-500" />;
     if (type.includes('password')) return <Shield className="h-4 w-4 text-purple-500" />;
     if (type.includes('signup')) return <CheckCircle className="h-4 w-4 text-green-500" />;
     if (type.includes('locked')) return <AlertTriangle className="h-4 w-4 text-orange-500" />;
-    
+
     return <Clock className="h-4 w-4 text-gray-500" />;
   };
 
@@ -92,22 +87,19 @@ export function ActivityLogTable({
                     <TableCell>
                       <div className="flex items-center gap-2">
                         {getEventIcon(log.type, log.success)}
-                        <span className="font-medium text-sm">
-                          {formatEventType(log.type)}
-                        </span>
+                        <span className="font-medium text-sm">{formatEventType(log.type)}</span>
                       </div>
                       {log.errorMessage && !log.success && (
-                        <p className="text-xs text-red-500 mt-1 pl-6">
-                          {log.errorMessage}
-                        </p>
+                        <p className="text-xs text-red-500 mt-1 pl-6">{log.errorMessage}</p>
                       )}
                     </TableCell>
                     <TableCell>
-                      <Badge 
+                      <Badge
                         variant={log.success ? 'outline' : 'destructive'}
-                        className={log.success 
-                          ? 'bg-green-50 text-green-700 border-green-200' 
-                          : 'bg-red-50 text-red-700 border-red-200'
+                        className={
+                          log.success
+                            ? 'bg-green-50 text-green-700 border-green-200'
+                            : 'bg-red-50 text-red-700 border-red-200'
                         }
                       >
                         {log.success ? 'Success' : 'Failed'}
@@ -116,8 +108,8 @@ export function ActivityLogTable({
                     <TableCell className="hidden md:table-cell">
                       <div className="text-sm text-gray-600">
                         <div className="flex items-center gap-1">
-                           <Monitor className="h-3 w-3" />
-                           {getDeviceName(log.userAgent)}
+                          <Monitor className="h-3 w-3" />
+                          {getDeviceName(log.userAgent)}
                         </div>
                         {log.ip && (
                           <div className="flex items-center gap-1 text-xs text-gray-400 mt-0.5">

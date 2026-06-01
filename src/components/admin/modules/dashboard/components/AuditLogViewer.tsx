@@ -62,7 +62,10 @@ import type { AdminAuditEntry, AuditActionCategory, AuditSeverity } from '../typ
 
 // ── Config-Driven Display (§5.3) ─────────────────────────────────────────
 
-const CATEGORY_CONFIG: Record<AuditActionCategory, { icon: React.ElementType; label: string; color: string }> = {
+const CATEGORY_CONFIG: Record<
+  AuditActionCategory,
+  { icon: React.ElementType; label: string; color: string }
+> = {
   client_lifecycle: { icon: Users, label: 'Client Lifecycle', color: 'text-blue-600' },
   kv_cleanup: { icon: Trash2, label: 'KV Cleanup', color: 'text-purple-600' },
   configuration: { icon: Settings, label: 'Configuration', color: 'text-gray-600' },
@@ -73,7 +76,10 @@ const CATEGORY_CONFIG: Record<AuditActionCategory, { icon: React.ElementType; la
   system: { icon: Server, label: 'System', color: 'text-gray-500' },
 };
 
-const SEVERITY_CONFIG: Record<AuditSeverity, { badgeClass: string; icon: React.ElementType; label: string }> = {
+const SEVERITY_CONFIG: Record<
+  AuditSeverity,
+  { badgeClass: string; icon: React.ElementType; label: string }
+> = {
   info: {
     badgeClass: 'text-blue-700 border-blue-300 bg-blue-50',
     icon: Info,
@@ -92,23 +98,33 @@ const SEVERITY_CONFIG: Record<AuditSeverity, { badgeClass: string; icon: React.E
 };
 
 const ALL_CATEGORIES: AuditActionCategory[] = [
-  'client_lifecycle', 'kv_cleanup', 'configuration', 'bulk_operation',
-  'security', 'permissions', 'communication', 'system',
+  'client_lifecycle',
+  'kv_cleanup',
+  'configuration',
+  'bulk_operation',
+  'security',
+  'permissions',
+  'communication',
+  'system',
 ];
 
 const ALL_SEVERITIES: AuditSeverity[] = ['info', 'warning', 'critical'];
 
 function formatTimestamp(ts: string): string {
   const d = new Date(ts);
-  return d.toLocaleDateString('en-ZA', {
-    day: 'numeric',
-    month: 'short',
-    year: 'numeric',
-  }) + ' ' + d.toLocaleTimeString('en-ZA', {
-    hour: '2-digit',
-    minute: '2-digit',
-    second: '2-digit',
-  });
+  return (
+    d.toLocaleDateString('en-ZA', {
+      day: 'numeric',
+      month: 'short',
+      year: 'numeric',
+    }) +
+    ' ' +
+    d.toLocaleTimeString('en-ZA', {
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+    })
+  );
 }
 
 function formatRelativeTimestamp(ts: string): string {
@@ -167,13 +183,22 @@ export function AuditLogViewer({ open, onOpenChange }: AuditLogViewerProps) {
         e.summary.toLowerCase().includes(q) ||
         e.action.toLowerCase().includes(q) ||
         e.entityType?.toLowerCase().includes(q) ||
-        e.entityId?.toLowerCase().includes(q)
+        e.entityId?.toLowerCase().includes(q),
     );
   }, [entries, searchQuery]);
 
   // CSV export for compliance reporting
   const handleExportCSV = useCallback(() => {
-    const headers = ['Timestamp', 'Category', 'Severity', 'Action', 'Summary', 'Entity Type', 'Entity ID', 'Actor Role'];
+    const headers = [
+      'Timestamp',
+      'Category',
+      'Severity',
+      'Action',
+      'Summary',
+      'Entity Type',
+      'Entity ID',
+      'Actor Role',
+    ];
     const rows = filteredEntries.map((e) => [
       e.timestamp,
       e.category,
@@ -203,7 +228,8 @@ export function AuditLogViewer({ open, onOpenChange }: AuditLogViewerProps) {
     setSearchQuery('');
   }, []);
 
-  const hasActiveFilters = categoryFilter !== 'all' || severityFilter !== 'all' || searchQuery.trim() !== '';
+  const hasActiveFilters =
+    categoryFilter !== 'all' || severityFilter !== 'all' || searchQuery.trim() !== '';
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -214,7 +240,8 @@ export function AuditLogViewer({ open, onOpenChange }: AuditLogViewerProps) {
             Admin Audit Log
           </DialogTitle>
           <DialogDescription>
-            Complete audit trail of admin actions across the platform. All entries are append-only and retained for compliance.
+            Complete audit trail of admin actions across the platform. All entries are append-only
+            and retained for compliance.
           </DialogDescription>
         </DialogHeader>
 
@@ -275,7 +302,13 @@ export function AuditLogViewer({ open, onOpenChange }: AuditLogViewerProps) {
               Clear
             </Button>
           )}
-          <Button variant="ghost" size="sm" onClick={fetchEntries} disabled={loading} className="text-xs gap-1">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={fetchEntries}
+            disabled={loading}
+            className="text-xs gap-1"
+          >
             <RefreshCw className={`h-3.5 w-3.5 ${loading ? 'animate-spin' : ''}`} />
           </Button>
           <Button
@@ -294,7 +327,9 @@ export function AuditLogViewer({ open, onOpenChange }: AuditLogViewerProps) {
         <div className="flex items-center justify-between text-xs text-muted-foreground py-1">
           <span>
             {loading ? 'Loading...' : `${filteredEntries.length} entries`}
-            {hasActiveFilters && entries.length !== filteredEntries.length && ` (filtered from ${entries.length})`}
+            {hasActiveFilters &&
+              entries.length !== filteredEntries.length &&
+              ` (filtered from ${entries.length})`}
           </span>
         </div>
 
@@ -335,7 +370,10 @@ export function AuditLogViewer({ open, onOpenChange }: AuditLogViewerProps) {
 
                   return (
                     <TableRow key={entry.id}>
-                      <TableCell className="text-xs text-muted-foreground whitespace-nowrap" title={formatTimestamp(entry.timestamp)}>
+                      <TableCell
+                        className="text-xs text-muted-foreground whitespace-nowrap"
+                        title={formatTimestamp(entry.timestamp)}
+                      >
                         {formatRelativeTimestamp(entry.timestamp)}
                       </TableCell>
                       <TableCell>
@@ -354,14 +392,19 @@ export function AuditLogViewer({ open, onOpenChange }: AuditLogViewerProps) {
                       </TableCell>
                       <TableCell>
                         <p className="text-sm leading-snug">{entry.summary}</p>
-                        <p className="text-[10px] text-muted-foreground mt-0.5 font-mono">{entry.action}</p>
+                        <p className="text-[10px] text-muted-foreground mt-0.5 font-mono">
+                          {entry.action}
+                        </p>
                       </TableCell>
                       <TableCell className="text-xs">
                         {entry.entityType && (
                           <div className="contents">
                             <span className="text-muted-foreground">{entry.entityType}</span>
                             {entry.entityId && (
-                              <p className="font-mono text-[10px] text-muted-foreground truncate max-w-[80px]" title={entry.entityId}>
+                              <p
+                                className="font-mono text-[10px] text-muted-foreground truncate max-w-[80px]"
+                                title={entry.entityId}
+                              >
                                 {entry.entityId.substring(0, 8)}...
                               </p>
                             )}

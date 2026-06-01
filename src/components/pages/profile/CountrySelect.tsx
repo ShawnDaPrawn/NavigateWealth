@@ -227,11 +227,7 @@ export function CountrySelect({ value, onValueChange, id, className = '' }: Coun
         {countries.map((country, idx) => (
           <SelectItem key={country} value={country}>
             {/* Visual separator after pinned South Africa */}
-            {idx === 0 ? (
-              <span className="font-medium">{country}</span>
-            ) : (
-              country
-            )}
+            {idx === 0 ? <span className="font-medium">{country}</span> : country}
           </SelectItem>
         ))}
       </SelectContent>

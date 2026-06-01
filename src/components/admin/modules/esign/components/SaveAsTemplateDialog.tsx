@@ -24,12 +24,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '../../../../ui/select';
-import {
-  Bookmark,
-  Loader2,
-  AlertCircle,
-  CheckCircle2,
-} from 'lucide-react';
+import { Bookmark, Loader2, AlertCircle, CheckCircle2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { esignApi } from '../api';
 import { TEMPLATE_CATEGORIES } from '../types';
@@ -136,7 +131,7 @@ export function SaveAsTemplateDialog({
                 <Input
                   id="save-tpl-name"
                   value={name}
-                  onChange={e => {
+                  onChange={(e) => {
                     setName(e.target.value);
                     setError(null);
                   }}
@@ -151,7 +146,7 @@ export function SaveAsTemplateDialog({
                 <Textarea
                   id="save-tpl-desc"
                   value={description}
-                  onChange={e => setDescription(e.target.value)}
+                  onChange={(e) => setDescription(e.target.value)}
                   placeholder="Brief description of when to use this template..."
                   rows={2}
                   maxLength={300}
@@ -161,13 +156,16 @@ export function SaveAsTemplateDialog({
               {/* Category */}
               <div className="space-y-1.5">
                 <Label>Category (Optional)</Label>
-                <Select value={category || '__none'} onValueChange={val => setCategory(val === '__none' ? '' : val)}>
+                <Select
+                  value={category || '__none'}
+                  onValueChange={(val) => setCategory(val === '__none' ? '' : val)}
+                >
                   <SelectTrigger>
                     <SelectValue placeholder="Select category" />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="__none">No Category</SelectItem>
-                    {TEMPLATE_CATEGORIES.map(cat => (
+                    {TEMPLATE_CATEGORIES.map((cat) => (
                       <SelectItem key={cat} value={cat}>
                         {cat}
                       </SelectItem>
@@ -179,9 +177,9 @@ export function SaveAsTemplateDialog({
               {/* Info */}
               <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
                 <p className="text-xs text-blue-800">
-                  The template will capture this envelope's recipients, signing order, source document,
-                  placed fields, message, and expiry settings so you can reuse it later without uploading
-                  and configuring the PDF again.
+                  The template will capture this envelope's recipients, signing order, source
+                  document, placed fields, message, and expiry settings so you can reuse it later
+                  without uploading and configuring the PDF again.
                 </p>
               </div>
 
@@ -202,7 +200,11 @@ export function SaveAsTemplateDialog({
                 disabled={saving || !name.trim()}
                 className="bg-purple-600 hover:bg-purple-700"
               >
-                {saving ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <Bookmark className="h-4 w-4 mr-1" />}
+                {saving ? (
+                  <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+                ) : (
+                  <Bookmark className="h-4 w-4 mr-1" />
+                )}
                 Save Template
               </Button>
             </DialogFooter>

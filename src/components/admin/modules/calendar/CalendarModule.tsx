@@ -6,7 +6,13 @@ import { EventsCalendar } from './components/EventsCalendar';
 import { EventFormModal } from './components/EventFormModal';
 import { FiltersDrawer } from './components/FiltersDrawer';
 import { CalendarPDFExportModal } from './components/CalendarPDFExportModal';
-import { useEvents, useCreateEvent, useUpdateEvent, useDeleteEvent, useClientBirthdays } from './hooks';
+import {
+  useEvents,
+  useCreateEvent,
+  useUpdateEvent,
+  useDeleteEvent,
+  useClientBirthdays,
+} from './hooks';
 import { usePolicyRenewals } from './hooks/usePolicyRenewals';
 import { useTasks } from '../tasks/hooks/useTaskQueries';
 import type { CalendarEvent, CalendarFilters, CreateEventInput } from './types';
@@ -21,7 +27,7 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from "../../../ui/dropdown-menu";
+} from '../../../ui/dropdown-menu';
 import { useCurrentUserPermissions } from '../personnel/hooks/usePermissions';
 
 export function CalendarModule() {
@@ -38,7 +44,7 @@ export function CalendarModule() {
   const [showPDFModal, setShowPDFModal] = useState(false);
   const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | null>(null);
   const [searchDebounce, setSearchDebounce] = useState<number | null>(null);
-  
+
   // Lifted state for date navigation
   const [currentDate, setCurrentDate] = useState(new Date());
   const { canDo } = useCurrentUserPermissions();
@@ -64,17 +70,19 @@ export function CalendarModule() {
     if (tasks && tasks.length > 0) {
       tasks.forEach((task: Task) => {
         if (!task.due_date) return;
-        
+
         // Skip if task doesn't match filters
         if (filters.search) {
           const searchLower = filters.search.toLowerCase();
-          if (!task.title.toLowerCase().includes(searchLower) && 
-              !(task.description || '').toLowerCase().includes(searchLower)) {
+          if (
+            !task.title.toLowerCase().includes(searchLower) &&
+            !(task.description || '').toLowerCase().includes(searchLower)
+          ) {
             return;
           }
         }
 
-        // Skip if filtering by client (tasks don't explicitly link to clients in the same way events do, 
+        // Skip if filtering by client (tasks don't explicitly link to clients in the same way events do,
         // but we could check category if it's 'client' or if description mentions client)
         if (filters.clientId) {
           // For now, exclude tasks when filtering by client unless we can link them
@@ -88,7 +96,7 @@ export function CalendarModule() {
 
         // Filter by status if needed
         if (filters.eventStatuses && filters.eventStatuses.length > 0) {
-           if (!filters.eventStatuses.includes(eventStatus)) return;
+          if (!filters.eventStatuses.includes(eventStatus)) return;
         }
 
         taskEvents.push({
@@ -114,38 +122,40 @@ export function CalendarModule() {
 
     // Apply filters to birthdays
     if (filters.clientId) {
-      filteredBirthdays = filteredBirthdays.filter(e => e.client_id === filters.clientId);
-      filteredRenewals = filteredRenewals.filter(e => e.client_id === filters.clientId);
+      filteredBirthdays = filteredBirthdays.filter((e) => e.client_id === filters.clientId);
+      filteredRenewals = filteredRenewals.filter((e) => e.client_id === filters.clientId);
     }
-    
+
     if (filters.eventTypes && filters.eventTypes.length > 0) {
       // Keep birthdays if 'birthday' type is selected
       if (!filters.eventTypes.includes('birthday')) {
         filteredBirthdays = [];
       }
-      
+
       // Keep renewals if 'renewal' type is selected
       if (!filters.eventTypes.includes('renewal')) {
         filteredRenewals = [];
       }
-      
+
       // Filter tasks if 'deadline' is not selected
       if (!filters.eventTypes.includes('deadline')) {
-         if (taskEvents.length > 0) {
-             taskEvents.length = 0;
-         }
+        if (taskEvents.length > 0) {
+          taskEvents.length = 0;
+        }
       }
     }
-    
+
     if (filters.search) {
       const searchLower = filters.search.toLowerCase();
-      filteredBirthdays = filteredBirthdays.filter(e => 
-        e.title.toLowerCase().includes(searchLower) || 
-        (e.description && e.description.toLowerCase().includes(searchLower))
+      filteredBirthdays = filteredBirthdays.filter(
+        (e) =>
+          e.title.toLowerCase().includes(searchLower) ||
+          (e.description && e.description.toLowerCase().includes(searchLower)),
       );
-      filteredRenewals = filteredRenewals.filter(e =>
-        e.title.toLowerCase().includes(searchLower) ||
-        (e.description && e.description.toLowerCase().includes(searchLower))
+      filteredRenewals = filteredRenewals.filter(
+        (e) =>
+          e.title.toLowerCase().includes(searchLower) ||
+          (e.description && e.description.toLowerCase().includes(searchLower)),
       );
     }
 
@@ -158,21 +168,21 @@ export function CalendarModule() {
   const deleteEventMutation = useDeleteEvent();
 
   const handleSearch = (value: string) => {
-    setFilters(prev => ({ ...prev, search: value }));
+    setFilters((prev) => ({ ...prev, search: value }));
   };
 
   const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
-    
+
     // Debounce search
     if (searchDebounce) {
       clearTimeout(searchDebounce);
     }
-    
+
     const timeout = setTimeout(() => {
       handleSearch(value);
     }, 300);
-    
+
     setSearchDebounce(timeout as unknown as number);
   };
 
@@ -191,10 +201,10 @@ export function CalendarModule() {
 
   const handleUpdateEvent = async (data: CreateEventInput) => {
     if (!selectedEvent) return;
-    
+
     try {
       const { create_reminder, ...updateData } = data;
-      
+
       await updateEventMutation.mutateAsync({
         id: selectedEvent.id,
         ...updateData,
@@ -220,7 +230,7 @@ export function CalendarModule() {
       return false;
     }
     if (!confirm('Are you sure you want to delete this event?')) return false;
-    
+
     try {
       await deleteEventMutation.mutateAsync(id);
       return true;
@@ -244,8 +254,8 @@ export function CalendarModule() {
     try {
       const csvRows = [];
       csvRows.push(['Type', 'Title', 'Date/Time', 'Status', 'Client', 'Description'].join(','));
-      
-      allEvents.forEach(event => {
+
+      allEvents.forEach((event) => {
         const row = [
           'Event',
           `"${event.title}"`,
@@ -256,7 +266,7 @@ export function CalendarModule() {
         ].join(',');
         csvRows.push(row);
       });
-      
+
       const csv = csvRows.join('\n');
       const blob = new Blob([csv], { type: 'text/csv' });
       const url = URL.createObjectURL(blob);
@@ -265,7 +275,7 @@ export function CalendarModule() {
       link.download = `calendar-events_${format(new Date(), 'yyyyMMdd')}.csv`;
       link.click();
       URL.revokeObjectURL(url);
-      
+
       toast.success('Calendar events exported successfully');
     } catch (error) {
       console.error('Failed to export:', error);
@@ -286,7 +296,6 @@ export function CalendarModule() {
   return (
     <div className="min-h-screen bg-gray-50/30">
       <div className="max-w-[1600px] mx-auto p-6 space-y-6">
-        
         {/* Simplified Header with Search */}
         <div className="flex flex-col gap-6">
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
@@ -296,7 +305,7 @@ export function CalendarModule() {
                 Your schedule for events and meetings
               </p>
             </div>
-            
+
             <div className="flex items-center gap-3">
               <Button
                 className="h-10 px-4 bg-purple-600 hover:bg-purple-700 shadow-sm transition-all hover:shadow-md"
@@ -324,8 +333,10 @@ export function CalendarModule() {
               {filters.search && (
                 <button
                   onClick={() => {
-                    setFilters(prev => ({ ...prev, search: '' }));
-                    const input = document.querySelector('input[placeholder="Search events..."]') as HTMLInputElement;
+                    setFilters((prev) => ({ ...prev, search: '' }));
+                    const input = document.querySelector(
+                      'input[placeholder="Search events..."]',
+                    ) as HTMLInputElement;
                     if (input) input.value = '';
                   }}
                   className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground p-1 rounded-full hover:bg-gray-100"
@@ -334,16 +345,16 @@ export function CalendarModule() {
                 </button>
               )}
             </div>
-            
+
             <div className="h-8 w-px bg-gray-200 hidden md:block"></div>
-            
+
             <div className="flex gap-2 w-full md:w-auto px-2">
               <Button
                 variant="ghost"
                 onClick={() => setShowFilters(true)}
                 className={`flex-1 md:flex-none h-10 px-4 ${
-                  activeFiltersCount > 0 
-                    ? 'bg-purple-50 text-purple-700 hover:bg-purple-100' 
+                  activeFiltersCount > 0
+                    ? 'bg-purple-50 text-purple-700 hover:bg-purple-100'
                     : 'text-gray-600 hover:bg-gray-50'
                 }`}
               >
@@ -432,13 +443,17 @@ export function CalendarModule() {
           setSelectedEvent(null);
         }}
         onSubmit={selectedEvent ? handleUpdateEvent : handleCreateEvent}
-        onDelete={canDeleteEvent ? async (id) => {
-          const success = await handleDeleteEvent(id);
-          if (success) {
-            setShowEventModal(false);
-            setSelectedEvent(null);
-          }
-        } : undefined}
+        onDelete={
+          canDeleteEvent
+            ? async (id) => {
+                const success = await handleDeleteEvent(id);
+                if (success) {
+                  setShowEventModal(false);
+                  setSelectedEvent(null);
+                }
+              }
+            : undefined
+        }
         event={selectedEvent}
         events={events}
         isSubmitting={createEventMutation.isPending || updateEventMutation.isPending}

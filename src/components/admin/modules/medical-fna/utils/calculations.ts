@@ -10,8 +10,8 @@ export function calculateMedicalNeeds(inputs: MedicalFNAInputs): MedicalFNAResul
   // D = 1 + spouse_partner + children_count + adult_dependants_count
   const spouseCount = inputs.spousePartner ? 1 : 0;
   const totalDependents = 1 + spouseCount + inputs.childrenCount + inputs.adultDependantsCount;
-  
-  const recommendedDependents = totalDependents >= 6 ? "6+" : totalDependents.toString();
+
+  const recommendedDependents = totalDependents >= 6 ? '6+' : totalDependents.toString();
 
   // 2. Recommended In-Hospital Cover (100% vs 200%)
   // H-Score Calculation
@@ -40,35 +40,32 @@ export function calculateMedicalNeeds(inputs: MedicalFNAInputs): MedicalFNAResul
   // If H >= 5  → Recommend 200% in-hospital cover
   // Else       → Recommend 100% in-hospital cover
   const recommendedCover = hScore >= 5 ? '200%' : '100%';
-  
-  const hospitalRationale = recommendedCover === '200%'
-    ? "Based on expected specialist/procedure usage and preference for provider choice, 200% reduces the likelihood of co-payments when providers charge above scheme rates."
-    : "Based on lower expected utilisation and willingness to use networks, 100% is typically adequate, noting PMBs remain covered subject to scheme rules/DSP.";
+
+  const hospitalRationale =
+    recommendedCover === '200%'
+      ? 'Based on expected specialist/procedure usage and preference for provider choice, 200% reduces the likelihood of co-payments when providers charge above scheme rates.'
+      : 'Based on lower expected utilisation and willingness to use networks, 100% is typically adequate, noting PMBs remain covered subject to scheme rules/DSP.';
 
   // 3. Is an MSA recommended (Yes/No)
   // Threshold T = annual_day_to_day_estimate
   const T = inputs.annualDayToDayEstimate;
-  
+
   let msaRecommended = false;
-  
-  if (
-    T >= 6000 || 
-    inputs.cashflowSensitivity === 'High' || 
-    inputs.childrenCount >= 2
-  ) {
+
+  if (T >= 6000 || inputs.cashflowSensitivity === 'High' || inputs.childrenCount >= 2) {
     msaRecommended = true;
   }
 
   const msaRationale = msaRecommended
-    ? "Day-to-day estimate exceeds threshold and/or cashflow sensitivity suggests MSA structure for predictability."
-    : "Day-to-day spend is low; a core plan with self-funded day-to-day expenses is likely more cost-effective.";
+    ? 'Day-to-day estimate exceeds threshold and/or cashflow sensitivity suggests MSA structure for predictability.'
+    : 'Day-to-day spend is low; a core plan with self-funded day-to-day expenses is likely more cost-effective.';
 
   // 4. LJP Band (5%, 25%, 50%, 75%)
   // Simplified calculation: directly use years without cover after age 35
-  
+
   let ljpBand = '0%';
   const uncoveredYears = inputs.yearsWithoutCoverAfter35;
-  
+
   // Only apply LJP if person is 35 or older
   if (inputs.currentAge >= 35) {
     // Map uncovered years to penalty bands
@@ -85,11 +82,12 @@ export function calculateMedicalNeeds(inputs: MedicalFNAInputs): MedicalFNAResul
     }
   }
 
-  const ljpRationale = ljpBand === '0%'
-    ? inputs.currentAge < 35 
-      ? "Client is under 35 years old - Late Joiner Penalty does not apply."
-      : "No Late Joiner Penalty applicable - client has continuous medical scheme coverage."
-    : `${uncoveredYears} year${uncoveredYears > 1 ? 's' : ''} without coverage after age 35 results in a ${ljpBand} Late Joiner Penalty.`;
+  const ljpRationale =
+    ljpBand === '0%'
+      ? inputs.currentAge < 35
+        ? 'Client is under 35 years old - Late Joiner Penalty does not apply.'
+        : 'No Late Joiner Penalty applicable - client has continuous medical scheme coverage.'
+      : `${uncoveredYears} year${uncoveredYears > 1 ? 's' : ''} without coverage after age 35 results in a ${ljpBand} Late Joiner Penalty.`;
 
   return {
     recommendedDependents,
@@ -100,7 +98,7 @@ export function calculateMedicalNeeds(inputs: MedicalFNAInputs): MedicalFNAResul
       hospital: hospitalRationale,
       msa: msaRationale,
       ljp: ljpRationale,
-      dependents: `Family composition indicates ${recommendedDependents} members to be covered.`
-    }
+      dependents: `Family composition indicates ${recommendedDependents} members to be covered.`,
+    },
   };
 }

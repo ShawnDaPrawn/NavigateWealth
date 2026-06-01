@@ -11,24 +11,50 @@
 
 import { useState } from 'react';
 import {
-  MessageSquare, FileText, Calculator, Calendar, Mail,
-  ArrowLeft, Search, Eye, Trash2, RotateCcw,
-  UserPlus, MoreHorizontal, ClipboardList,
+  MessageSquare,
+  FileText,
+  Calculator,
+  Calendar,
+  Mail,
+  ArrowLeft,
+  Search,
+  Eye,
+  Trash2,
+  RotateCcw,
+  UserPlus,
+  MoreHorizontal,
+  ClipboardList,
 } from 'lucide-react';
 import { Button } from '../../../../ui/button';
 import { Input } from '../../../../ui/input';
 import {
-  Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
 } from '../../../../ui/table';
 import {
-  DropdownMenu, DropdownMenuContent, DropdownMenuItem,
-  DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger,
-  DropdownMenuSub, DropdownMenuSubTrigger, DropdownMenuSubContent,
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+  DropdownMenuSub,
+  DropdownMenuSubTrigger,
+  DropdownMenuSubContent,
 } from '../../../../ui/dropdown-menu';
 import {
-  AlertDialog, AlertDialogAction, AlertDialogCancel,
-  AlertDialogContent, AlertDialogDescription, AlertDialogFooter,
-  AlertDialogHeader, AlertDialogTitle,
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
 } from '../../../../ui/alert-dialog';
 import { cn } from '../../../../ui/utils';
 import type { Submission, SubmissionStatus, SubmissionType } from '../types';
@@ -49,14 +75,21 @@ interface ArchivedSubmissionsViewProps {
 function TypeIcon({ type, className }: { type: SubmissionType; className?: string }) {
   const c = className || 'h-4 w-4';
   switch (type) {
-    case 'will_draft':   return <FileText className={c} />;
-    case 'tax_planning': return <Calculator className={c} />;
-    case 'consultation': return <Calendar className={c} />;
-    case 'contact':      return <Mail className={c} />;
-    case 'client_signup': return <UserPlus className={c} />;
-    case 'change_request': return <ClipboardList className={c} />;
+    case 'will_draft':
+      return <FileText className={c} />;
+    case 'tax_planning':
+      return <Calculator className={c} />;
+    case 'consultation':
+      return <Calendar className={c} />;
+    case 'contact':
+      return <Mail className={c} />;
+    case 'client_signup':
+      return <UserPlus className={c} />;
+    case 'change_request':
+      return <ClipboardList className={c} />;
     case 'quote':
-    default:             return <MessageSquare className={c} />;
+    default:
+      return <MessageSquare className={c} />;
   }
 }
 
@@ -73,7 +106,9 @@ const TYPE_ICON_BG: Record<SubmissionType, string> = {
 function formatDate(dateStr: string): string {
   try {
     return new Date(dateStr).toLocaleDateString('en-ZA', {
-      day: '2-digit', month: 'short', year: 'numeric',
+      day: '2-digit',
+      month: 'short',
+      year: 'numeric',
     });
   } catch {
     return dateStr;
@@ -83,7 +118,10 @@ function formatDate(dateStr: string): string {
 function getServiceName(submission: Submission): string | null {
   const p = submission.payload;
   if (p.productName) return String(p.productName);
-  if (p.service) return String(p.service).replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+  if (p.service)
+    return String(p.service)
+      .replace(/-/g, ' ')
+      .replace(/\b\w/g, (c) => c.toUpperCase());
   return null;
 }
 
@@ -107,7 +145,7 @@ export function ArchivedSubmissionsView({
       s.submitterEmail?.toLowerCase().includes(q) ||
       s.id.toLowerCase().includes(q) ||
       SUBMISSION_TYPE_CONFIG[s.type].label.toLowerCase().includes(q) ||
-      Object.values(s.payload).some(v => String(v).toLowerCase().includes(q))
+      Object.values(s.payload).some((v) => String(v).toLowerCase().includes(q))
     );
   });
 
@@ -142,7 +180,8 @@ export function ArchivedSubmissionsView({
         </div>
 
         <div className="text-sm text-gray-500 font-medium">
-          {filteredSubmissions.length} archived submission{filteredSubmissions.length !== 1 ? 's' : ''}
+          {filteredSubmissions.length} archived submission
+          {filteredSubmissions.length !== 1 ? 's' : ''}
         </div>
       </div>
 
@@ -174,11 +213,7 @@ export function ArchivedSubmissionsView({
                 : 'Submissions that you archive will appear here for safe keeping.'}
             </p>
             {searchTerm && (
-              <Button
-                variant="outline"
-                className="mt-4"
-                onClick={() => setSearchTerm('')}
-              >
+              <Button variant="outline" className="mt-4" onClick={() => setSearchTerm('')}>
                 Clear Search
               </Button>
             )}
@@ -209,10 +244,12 @@ export function ArchivedSubmissionsView({
                     {/* Submission info */}
                     <TableCell>
                       <div className="flex items-center gap-3">
-                        <div className={cn(
-                          'w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0',
-                          TYPE_ICON_BG[submission.type]
-                        )}>
+                        <div
+                          className={cn(
+                            'w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0',
+                            TYPE_ICON_BG[submission.type],
+                          )}
+                        >
                           <TypeIcon type={submission.type} className="h-4 w-4" />
                         </div>
                         <div className="min-w-0">
@@ -231,13 +268,9 @@ export function ArchivedSubmissionsView({
                     {/* Type */}
                     <TableCell>
                       <div className="flex flex-col gap-0.5">
-                        <span className="text-sm font-medium text-gray-700">
-                          {typeCfg.label}
-                        </span>
+                        <span className="text-sm font-medium text-gray-700">{typeCfg.label}</span>
                         {serviceName && (
-                          <span className="text-xs text-gray-400">
-                            {serviceName}
-                          </span>
+                          <span className="text-xs text-gray-400">{serviceName}</span>
                         )}
                       </div>
                     </TableCell>
@@ -245,7 +278,8 @@ export function ArchivedSubmissionsView({
                     {/* Source */}
                     <TableCell>
                       <span className="text-sm text-gray-600">
-                        {SOURCE_CHANNEL_LABELS[submission.sourceChannel] ?? submission.sourceChannel}
+                        {SOURCE_CHANNEL_LABELS[submission.sourceChannel] ??
+                          submission.sourceChannel}
                       </span>
                     </TableCell>
 
@@ -276,10 +310,12 @@ export function ArchivedSubmissionsView({
                           <DropdownMenuLabel>Actions</DropdownMenuLabel>
                           <DropdownMenuSeparator />
 
-                          <DropdownMenuItem onClick={(e) => {
-                            e.stopPropagation();
-                            onView(submission);
-                          }}>
+                          <DropdownMenuItem
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              onView(submission);
+                            }}
+                          >
                             <Eye className="mr-2 h-4 w-4" />
                             View Details
                           </DropdownMenuItem>
@@ -290,22 +326,28 @@ export function ArchivedSubmissionsView({
                               Restore
                             </DropdownMenuSubTrigger>
                             <DropdownMenuSubContent>
-                              <DropdownMenuItem onClick={(e) => {
-                                e.stopPropagation();
-                                onStatusChange(submission.id, 'new');
-                              }}>
+                              <DropdownMenuItem
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  onStatusChange(submission.id, 'new');
+                                }}
+                              >
                                 To New
                               </DropdownMenuItem>
-                              <DropdownMenuItem onClick={(e) => {
-                                e.stopPropagation();
-                                onStatusChange(submission.id, 'pending');
-                              }}>
+                              <DropdownMenuItem
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  onStatusChange(submission.id, 'pending');
+                                }}
+                              >
                                 To Pending
                               </DropdownMenuItem>
-                              <DropdownMenuItem onClick={(e) => {
-                                e.stopPropagation();
-                                onStatusChange(submission.id, 'completed');
-                              }}>
+                              <DropdownMenuItem
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  onStatusChange(submission.id, 'completed');
+                                }}
+                              >
                                 To Completed
                               </DropdownMenuItem>
                             </DropdownMenuSubContent>
@@ -339,8 +381,8 @@ export function ArchivedSubmissionsView({
           <AlertDialogHeader>
             <AlertDialogTitle>Delete Permanently?</AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure you want to permanently delete this submission?
-              This action cannot be undone and the record will be removed entirely.
+              Are you sure you want to permanently delete this submission? This action cannot be
+              undone and the record will be removed entirely.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

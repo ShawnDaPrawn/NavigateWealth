@@ -20,11 +20,11 @@ export function InitializePublications({ onInitialized }: InitializePublications
     try {
       await initialize({
         create_default_categories: true,
-        create_default_types: true
+        create_default_types: true,
       });
 
       setSuccess(true);
-      
+
       // Call the callback if provided, otherwise reload the page
       if (onInitialized) {
         setTimeout(() => {
@@ -74,9 +74,7 @@ export function InitializePublications({ onInitialized }: InitializePublications
             </div>
 
             <div className="space-y-2">
-              <p className="text-sm text-gray-600">
-                And these article types:
-              </p>
+              <p className="text-sm text-gray-600">And these article types:</p>
               <ul className="text-sm text-gray-600 space-y-1 ml-6 list-disc">
                 <li>Insights & Education</li>
                 <li>Market Watch</li>
@@ -84,11 +82,7 @@ export function InitializePublications({ onInitialized }: InitializePublications
               </ul>
             </div>
 
-            <Button
-              onClick={handleInitialize}
-              disabled={isInitializing}
-              className="w-full"
-            >
+            <Button onClick={handleInitialize} disabled={isInitializing} className="w-full">
               {isInitializing ? (
                 <div className="contents">
                   <Loader2 className="h-4 w-4 mr-2 animate-spin" />
@@ -110,18 +104,14 @@ export function InitializePublications({ onInitialized }: InitializePublications
             <p className="text-green-600 font-medium">
               Publications system initialized successfully!
             </p>
-            <p className="text-sm text-gray-600 mt-2">
-              Reloading page...
-            </p>
+            <p className="text-sm text-gray-600 mt-2">Reloading page...</p>
           </div>
         )}
 
         {error && (
           <div className="text-center py-6">
             <AlertCircle className="h-12 w-12 mx-auto mb-3 text-red-600" />
-            <p className="text-red-600 font-medium mb-2">
-              {error}
-            </p>
+            <p className="text-red-600 font-medium mb-2">{error}</p>
             <Button variant="outline" onClick={handleInitialize}>
               Try Again
             </Button>

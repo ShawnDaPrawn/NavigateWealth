@@ -80,7 +80,7 @@ export function ResourcesSkeleton() {
 
         {/* Forms list */}
         <div className="border rounded-lg divide-y bg-white">
-          {[1, 2, 3, 4, 5, 6, 7, 8].map(i => (
+          {[1, 2, 3, 4, 5, 6, 7, 8].map((i) => (
             <FormRowSkeleton key={i} />
           ))}
         </div>

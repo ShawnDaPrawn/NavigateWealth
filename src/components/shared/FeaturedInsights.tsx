@@ -58,12 +58,7 @@ function formatDate(dateStr?: string): string {
 }
 
 function resolveImage(article: FeaturedArticle): string {
-  return (
-    article.hero_image_url ||
-    article.thumbnail_image_url ||
-    article.featured_image_url ||
-    ''
-  );
+  return article.hero_image_url || article.thumbnail_image_url || article.featured_image_url || '';
 }
 
 function articlePath(slug: string): string {
@@ -186,9 +181,7 @@ function HeroArticleCard({ article }: { article: FeaturedArticle }) {
               {article.reading_time_minutes} min read
             </span>
           )}
-          {article.author_name && (
-            <span className="text-gray-400">{article.author_name}</span>
-          )}
+          {article.author_name && <span className="text-gray-400">{article.author_name}</span>}
         </div>
 
         <div className="mt-2">
@@ -304,7 +297,9 @@ export function FeaturedInsights() {
         if (!cancelled) setLoading(false);
       });
 
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   // Silently hide if no articles and not loading (nothing to show)
@@ -318,11 +313,10 @@ export function FeaturedInsights() {
         {/* Section header */}
         <div className="flex items-end justify-between mb-10 gap-4">
           <div>
-            <h2 className="text-black mb-2 font-bold text-[20px]">
-              Featured Insights
-            </h2>
+            <h2 className="text-black mb-2 font-bold text-[20px]">Featured Insights</h2>
             <p className="text-gray-600 max-w-xl text-[15px]">
-              Expert perspectives on wealth management, tax planning, and financial strategy from our advisers.
+              Expert perspectives on wealth management, tax planning, and financial strategy from
+              our advisers.
             </p>
           </div>
           <Link
@@ -354,13 +348,15 @@ export function FeaturedInsights() {
 
             {/* Secondary articles grid */}
             {secondary.length > 0 && (
-              <div className={`grid gap-6 ${
-                secondary.length === 1
-                  ? 'sm:grid-cols-1 max-w-sm'
-                  : secondary.length === 2
-                  ? 'sm:grid-cols-2 lg:max-w-2xl'
-                  : 'sm:grid-cols-2 lg:grid-cols-3'
-              }`}>
+              <div
+                className={`grid gap-6 ${
+                  secondary.length === 1
+                    ? 'sm:grid-cols-1 max-w-sm'
+                    : secondary.length === 2
+                      ? 'sm:grid-cols-2 lg:max-w-2xl'
+                      : 'sm:grid-cols-2 lg:grid-cols-3'
+                }`}
+              >
                 {secondary.map((article) => (
                   <ArticleCard key={article.id} article={article} />
                 ))}

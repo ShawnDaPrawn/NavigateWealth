@@ -207,7 +207,18 @@ const ICON_DATA: IconEntry[] = [
   { name: 'Sparkles', component: Sparkles, category: 'Misc' },
 ];
 
-const CATEGORIES = ['All', 'Navigation', 'Actions', 'Users & Auth', 'Communication', 'Business', 'Files', 'Status', 'Layout', 'Misc'];
+const CATEGORIES = [
+  'All',
+  'Navigation',
+  'Actions',
+  'Users & Auth',
+  'Communication',
+  'Business',
+  'Files',
+  'Status',
+  'Layout',
+  'Misc',
+];
 
 export function IconsTab() {
   const [search, setSearch] = useState('');
@@ -252,16 +263,29 @@ export function IconsTab() {
           <div className="flex-1">
             <h3 className="text-xl md:text-2xl font-bold text-black mb-2 md:mb-3">Icon Library</h3>
             <p className="text-sm md:text-base text-gray-600 leading-relaxed mb-4">
-              Navigate Wealth uses <strong>Lucide React</strong> as its icon library. Icons are used at consistent sizes
-              across the platform: <code className="text-xs bg-gray-100 px-1.5 py-0.5 rounded text-primary">h-4 w-4</code> for
-              inline, <code className="text-xs bg-gray-100 px-1.5 py-0.5 rounded text-primary">h-5 w-5</code> for
-              standard, and <code className="text-xs bg-gray-100 px-1.5 py-0.5 rounded text-primary">h-6 w-6</code> for
-              prominent placement. Click any icon to copy its import statement.
+              Navigate Wealth uses <strong>Lucide React</strong> as its icon library. Icons are used
+              at consistent sizes across the platform:{' '}
+              <code className="text-xs bg-gray-100 px-1.5 py-0.5 rounded text-primary">
+                h-4 w-4
+              </code>{' '}
+              for inline,{' '}
+              <code className="text-xs bg-gray-100 px-1.5 py-0.5 rounded text-primary">
+                h-5 w-5
+              </code>{' '}
+              for standard, and{' '}
+              <code className="text-xs bg-gray-100 px-1.5 py-0.5 rounded text-primary">
+                h-6 w-6
+              </code>{' '}
+              for prominent placement. Click any icon to copy its import statement.
             </p>
             <div className="flex flex-wrap gap-2">
-              <Badge className="bg-primary/10 text-primary border-primary/20">{ICON_DATA.length} Icons</Badge>
+              <Badge className="bg-primary/10 text-primary border-primary/20">
+                {ICON_DATA.length} Icons
+              </Badge>
               <Badge className="bg-primary/10 text-primary border-primary/20">Lucide React</Badge>
-              <Badge className="bg-primary/10 text-primary border-primary/20">{CATEGORIES.length - 1} Categories</Badge>
+              <Badge className="bg-primary/10 text-primary border-primary/20">
+                {CATEGORIES.length - 1} Categories
+              </Badge>
             </div>
           </div>
         </div>
@@ -354,9 +378,13 @@ export function IconsTab() {
                   ) : (
                     <Icon className="h-5 w-5 text-gray-700 group-hover:text-primary transition-colors" />
                   )}
-                  <span className={`text-xs truncate w-full text-center ${
-                    isCopied ? 'text-green-600 font-medium' : 'text-gray-600 group-hover:text-primary'
-                  }`}>
+                  <span
+                    className={`text-xs truncate w-full text-center ${
+                      isCopied
+                        ? 'text-green-600 font-medium'
+                        : 'text-gray-600 group-hover:text-primary'
+                    }`}
+                  >
                     {isCopied ? 'Copied!' : icon.name}
                   </span>
                 </button>
@@ -374,7 +402,10 @@ export function IconsTab() {
             </p>
             <Button
               variant="outline"
-              onClick={() => { setSearch(''); setSelectedCategory('All'); }}
+              onClick={() => {
+                setSearch('');
+                setSelectedCategory('All');
+              }}
               className="border-primary text-primary hover:bg-primary/10"
             >
               Clear Filters
@@ -401,9 +432,15 @@ export function IconsTab() {
           <Shield className="h-4 w-4 text-primary" />
           <AlertTitle className="text-black">Colour Convention</AlertTitle>
           <AlertDescription className="text-gray-600 text-sm">
-            Use <code className="text-xs bg-primary/10 text-primary px-1 py-0.5 rounded">text-primary</code> for
-            brand icons, <code className="text-xs bg-primary/10 text-primary px-1 py-0.5 rounded">text-gray-500</code> for
-            muted, and semantic colours for status (green/amber/red).
+            Use{' '}
+            <code className="text-xs bg-primary/10 text-primary px-1 py-0.5 rounded">
+              text-primary
+            </code>{' '}
+            for brand icons,{' '}
+            <code className="text-xs bg-primary/10 text-primary px-1 py-0.5 rounded">
+              text-gray-500
+            </code>{' '}
+            for muted, and semantic colours for status (green/amber/red).
           </AlertDescription>
         </Alert>
       </div>

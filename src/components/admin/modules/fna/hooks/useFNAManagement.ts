@@ -66,7 +66,7 @@ export function useFNAManagement({ config, clientId, enabled = true }: UseFNAMan
       loadFNA();
       toast.success(`${config.name} completed successfully`);
     },
-    [config, loadFNA]
+    [config, loadFNA],
   );
 
   /**
@@ -92,7 +92,8 @@ export function useFNAManagement({ config, clientId, enabled = true }: UseFNAMan
       setFna(null);
       await loadFNA(); // Reload to confirm deletion
     } catch (error: unknown) {
-      const errorMessage = error instanceof Error ? error.message : `Failed to delete ${config.name}`;
+      const errorMessage =
+        error instanceof Error ? error.message : `Failed to delete ${config.name}`;
       console.error(`Error deleting ${config.name}:`, error);
       toast.error(errorMessage, { id: toastId });
     } finally {
@@ -109,7 +110,7 @@ export function useFNAManagement({ config, clientId, enabled = true }: UseFNAMan
       await config.publishFNA(fnaId);
       loadFNA();
     },
-    [config, loadFNA]
+    [config, loadFNA],
   );
 
   /**
@@ -121,7 +122,7 @@ export function useFNAManagement({ config, clientId, enabled = true }: UseFNAMan
       await config.unpublishFNA(fnaId);
       loadFNA();
     },
-    [config, loadFNA]
+    [config, loadFNA],
   );
 
   return {

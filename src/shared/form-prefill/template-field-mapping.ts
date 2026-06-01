@@ -30,7 +30,17 @@ export const TEMPLATE_MAPPING_OPTIONS: TemplateMappingOption[] = [
   {
     canonicalKey: 'profile_phone_number',
     label: 'Phone',
-    aliases: ['phone', 'phone number', 'mobile', 'mobile number', 'cellphone', 'cell phone', 'cell number', 'telephone', 'tel'],
+    aliases: [
+      'phone',
+      'phone number',
+      'mobile',
+      'mobile number',
+      'cellphone',
+      'cell phone',
+      'cell number',
+      'telephone',
+      'tel',
+    ],
   },
   {
     canonicalKey: 'profile_id_number',
@@ -85,12 +95,21 @@ export const TEMPLATE_MAPPING_OPTIONS: TemplateMappingOption[] = [
   {
     canonicalKey: 'retirement_monthly_contribution',
     label: 'Retirement monthly contribution',
-    aliases: ['retirement contribution', 'monthly retirement contribution', 'retirement monthly contribution'],
+    aliases: [
+      'retirement contribution',
+      'monthly retirement contribution',
+      'retirement monthly contribution',
+    ],
   },
   {
     canonicalKey: 'retirement_fund_value_total',
     label: 'Retirement fund value',
-    aliases: ['retirement capital', 'current retirement capital', 'retirement fund value', 'current retirement savings'],
+    aliases: [
+      'retirement capital',
+      'current retirement capital',
+      'retirement fund value',
+      'current retirement savings',
+    ],
   },
   {
     canonicalKey: 'risk_life_cover_total',
@@ -132,7 +151,8 @@ function scoreAlias(
   if (compactText.includes(compactAlias) && compactAlias.length >= 4) return 88;
 
   const aliasTokens = normalizedAlias.split(' ').filter(Boolean);
-  if (aliasTokens.length === 1 && aliasTokens[0].length >= 3 && tokenSet.has(aliasTokens[0])) return 86;
+  if (aliasTokens.length === 1 && aliasTokens[0].length >= 3 && tokenSet.has(aliasTokens[0]))
+    return 86;
   if (aliasTokens.length > 1 && aliasTokens.every((token) => tokenSet.has(token))) return 82;
 
   return 0;
@@ -154,7 +174,8 @@ export function suggestTemplateFieldMapping(
 
   for (const option of TEMPLATE_MAPPING_OPTIONS) {
     const score = [option.label, ...option.aliases].reduce(
-      (currentBest, alias) => Math.max(currentBest, scoreAlias(normalizedText, compactText, tokenSet, alias)),
+      (currentBest, alias) =>
+        Math.max(currentBest, scoreAlias(normalizedText, compactText, tokenSet, alias)),
       0,
     );
 
@@ -172,7 +193,9 @@ export function suggestTemplateFieldMapping(
   return best.canonicalKey;
 }
 
-export function autoMapTemplateFields<T extends Pick<FormTemplateField, 'name' | 'label' | 'canonicalKey'>>(
+export function autoMapTemplateFields<
+  T extends Pick<FormTemplateField, 'name' | 'label' | 'canonicalKey'>,
+>(
   fields: T[],
   options: { onlyUnmapped?: boolean } = {},
 ): { fields: Array<T & { canonicalKey?: string }>; assignedCount: number } {

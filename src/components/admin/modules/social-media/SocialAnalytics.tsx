@@ -2,26 +2,13 @@ import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '../../../ui/card';
 import { Button } from '../../../ui/button';
 import { Badge } from '../../../ui/badge';
-import { 
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '../../../ui/select';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../../ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../../ui/tabs';
-import { 
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '../../../ui/table';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../../ui/table';
 import { SVGLineChart, SVGBarChart, SVGPieChart } from '../../../ui/svg-charts';
-import { 
-  Download, 
-  TrendingUp, 
+import {
+  Download,
+  TrendingUp,
   TrendingDown,
   Eye,
   MousePointer,
@@ -33,7 +20,7 @@ import {
   Filter,
   BarChart3,
   FileText,
-  Mail
+  Mail,
 } from 'lucide-react';
 import { SocialPost, SocialPlatform, Campaign } from './types';
 
@@ -56,10 +43,38 @@ const MOCK_PLATFORM_SHARE = [
 ];
 
 const MOCK_TOP_POSTS = [
-  { id: '1', platform: 'linkedin' as SocialPlatform, content: 'Navigate Wealth quarterly market update…', impressions: 4820, engagement: 312, clicks: 89 },
-  { id: '2', platform: 'instagram' as SocialPlatform, content: 'Financial planning tips for the new year…', impressions: 3910, engagement: 278, clicks: 54 },
-  { id: '3', platform: 'facebook' as SocialPlatform, content: 'Understanding estate duty in South Africa…', impressions: 2640, engagement: 196, clicks: 67 },
-  { id: '4', platform: 'x' as SocialPlatform, content: 'Market volatility: what it means for your…', impressions: 1890, engagement: 143, clicks: 41 },
+  {
+    id: '1',
+    platform: 'linkedin' as SocialPlatform,
+    content: 'Navigate Wealth quarterly market update…',
+    impressions: 4820,
+    engagement: 312,
+    clicks: 89,
+  },
+  {
+    id: '2',
+    platform: 'instagram' as SocialPlatform,
+    content: 'Financial planning tips for the new year…',
+    impressions: 3910,
+    engagement: 278,
+    clicks: 54,
+  },
+  {
+    id: '3',
+    platform: 'facebook' as SocialPlatform,
+    content: 'Understanding estate duty in South Africa…',
+    impressions: 2640,
+    engagement: 196,
+    clicks: 67,
+  },
+  {
+    id: '4',
+    platform: 'x' as SocialPlatform,
+    content: 'Market volatility: what it means for your…',
+    impressions: 1890,
+    engagement: 143,
+    clicks: 41,
+  },
 ];
 
 export function SocialAnalytics() {
@@ -77,7 +92,9 @@ export function SocialAnalytics() {
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-lg font-semibold text-gray-900">Social Analytics</h2>
-          <p className="text-sm text-muted-foreground">Performance across all connected platforms</p>
+          <p className="text-sm text-muted-foreground">
+            Performance across all connected platforms
+          </p>
         </div>
         <div className="flex items-center gap-2">
           <Select value={period} onValueChange={setPeriod}>
@@ -101,10 +118,34 @@ export function SocialAnalytics() {
       {/* Summary stat cards */}
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
         {[
-          { label: 'Total Impressions', value: totalImpressions.toLocaleString(), icon: Eye, trend: '+12%', up: true },
-          { label: 'Engagements', value: totalEngagement.toLocaleString(), icon: Heart, trend: '+8%', up: true },
-          { label: 'Link Clicks', value: totalClicks.toLocaleString(), icon: MousePointer, trend: '-3%', up: false },
-          { label: 'Total Followers', value: totalFollowers.toLocaleString(), icon: Users, trend: '+5%', up: true },
+          {
+            label: 'Total Impressions',
+            value: totalImpressions.toLocaleString(),
+            icon: Eye,
+            trend: '+12%',
+            up: true,
+          },
+          {
+            label: 'Engagements',
+            value: totalEngagement.toLocaleString(),
+            icon: Heart,
+            trend: '+8%',
+            up: true,
+          },
+          {
+            label: 'Link Clicks',
+            value: totalClicks.toLocaleString(),
+            icon: MousePointer,
+            trend: '-3%',
+            up: false,
+          },
+          {
+            label: 'Total Followers',
+            value: totalFollowers.toLocaleString(),
+            icon: Users,
+            trend: '+5%',
+            up: true,
+          },
         ].map((stat) => (
           <Card key={stat.label}>
             <CardContent className="pt-4 pb-4">
@@ -118,10 +159,16 @@ export function SocialAnalytics() {
                 </div>
               </div>
               <div className="flex items-center gap-1 mt-2">
-                {stat.up
-                  ? <TrendingUp className="h-3 w-3 text-green-600" />
-                  : <TrendingDown className="h-3 w-3 text-red-500" />}
-                <span className={`text-xs font-medium ${stat.up ? 'text-green-600' : 'text-red-500'}`}>{stat.trend}</span>
+                {stat.up ? (
+                  <TrendingUp className="h-3 w-3 text-green-600" />
+                ) : (
+                  <TrendingDown className="h-3 w-3 text-red-500" />
+                )}
+                <span
+                  className={`text-xs font-medium ${stat.up ? 'text-green-600' : 'text-red-500'}`}
+                >
+                  {stat.trend}
+                </span>
                 <span className="text-xs text-muted-foreground">vs prev period</span>
               </div>
             </CardContent>
@@ -189,12 +236,22 @@ export function SocialAnalytics() {
                   {MOCK_TOP_POSTS.map((post) => (
                     <TableRow key={post.id}>
                       <TableCell>
-                        <Badge variant="outline" className="capitalize">{post.platform}</Badge>
+                        <Badge variant="outline" className="capitalize">
+                          {post.platform}
+                        </Badge>
                       </TableCell>
-                      <TableCell className="max-w-xs truncate text-sm text-gray-700">{post.content}</TableCell>
-                      <TableCell className="text-right text-sm">{post.impressions.toLocaleString()}</TableCell>
-                      <TableCell className="text-right text-sm">{post.engagement.toLocaleString()}</TableCell>
-                      <TableCell className="text-right text-sm">{post.clicks.toLocaleString()}</TableCell>
+                      <TableCell className="max-w-xs truncate text-sm text-gray-700">
+                        {post.content}
+                      </TableCell>
+                      <TableCell className="text-right text-sm">
+                        {post.impressions.toLocaleString()}
+                      </TableCell>
+                      <TableCell className="text-right text-sm">
+                        {post.engagement.toLocaleString()}
+                      </TableCell>
+                      <TableCell className="text-right text-sm">
+                        {post.clicks.toLocaleString()}
+                      </TableCell>
                     </TableRow>
                   ))}
                 </TableBody>

@@ -6,15 +6,15 @@
  * and applied in route handlers.
  */
 
-import { z } from "npm:zod";
+import { z } from 'npm:zod';
 
 // ============================================================================
 // SHARED FIELD SCHEMAS
 // ============================================================================
 
-const clientIdField = z.string().min(1, "clientId is required");
-const firstNameField = z.string().min(1, "firstName is required");
-const lastNameField = z.string().min(1, "lastName is required");
+const clientIdField = z.string().min(1, 'clientId is required');
+const firstNameField = z.string().min(1, 'firstName is required');
+const lastNameField = z.string().min(1, 'lastName is required');
 
 /**
  * ID number — optional but must be a real value if provided.
@@ -52,7 +52,7 @@ export const IdvNoPhotoSchema = z.object({
 export type IdvNoPhotoInput = z.infer<typeof IdvNoPhotoSchema>;
 
 export const IdvWithPhotoSchema = IdvNoPhotoSchema.extend({
-  photo: z.string().min(1, "Base64 photo data is required"),
+  photo: z.string().min(1, 'Base64 photo data is required'),
 });
 export type IdvWithPhotoInput = z.infer<typeof IdvWithPhotoSchema>;
 
@@ -66,10 +66,10 @@ export const BankVerificationSchema = z.object({
   lastName: lastNameField,
   idNumber: idNumberField,
   passport: passportField,
-  bankName: z.string().min(1, "Bank name is required"),
-  accountNumber: z.string().min(1, "Account number is required"),
-  branchCode: z.string().min(1, "Branch code is required"),
-  accountType: z.string().default("savings"),
+  bankName: z.string().min(1, 'Bank name is required'),
+  accountNumber: z.string().min(1, 'Account number is required'),
+  branchCode: z.string().min(1, 'Branch code is required'),
+  accountType: z.string().default('savings'),
 });
 export type BankVerificationInput = z.infer<typeof BankVerificationSchema>;
 
@@ -83,8 +83,8 @@ export const ConsumerCreditSchema = z.object({
   lastName: lastNameField,
   idNumber: idNumberField,
   passport: passportField,
-  consentGiven: z.boolean().refine(val => val === true, {
-    message: "Client consent is required before running a credit check",
+  consentGiven: z.boolean().refine((val) => val === true, {
+    message: 'Client consent is required before running a credit check',
   }),
 });
 export type ConsumerCreditInput = z.infer<typeof ConsumerCreditSchema>;
@@ -215,7 +215,9 @@ export type CustomScreeningInput = z.infer<typeof CustomScreeningSchema>;
 
 export const AssessmentRunSchema = z.object({
   clientId: clientIdField,
-  assessmentId: z.number({ required_error: "assessmentId (dueDiligenceAssessmentsId) is required" }),
+  assessmentId: z.number({
+    required_error: 'assessmentId (dueDiligenceAssessmentsId) is required',
+  }),
   assessmentName: z.string().optional(),
   firstName: firstNameField,
   lastName: lastNameField,
@@ -243,8 +245,8 @@ export type NaturalPersonCheckInput = z.infer<typeof NaturalPersonCheckSchema>;
 // ============================================================================
 
 export const ProxySchema = z.object({
-  method: z.enum(["GET", "POST", "PUT", "PATCH", "DELETE"]).default("GET"),
-  path: z.string().min(1, "API path is required"),
+  method: z.enum(['GET', 'POST', 'PUT', 'PATCH', 'DELETE']).default('GET'),
+  path: z.string().min(1, 'API path is required'),
   body: z.unknown().optional(),
 });
 export type ProxyInput = z.infer<typeof ProxySchema>;
@@ -254,13 +256,16 @@ export type ProxyInput = z.infer<typeof ProxySchema>;
 // ============================================================================
 
 export const BulkIdvPersonSchema = z.object({
-  firstName: z.string().min(1, "firstName is required"),
-  lastName: z.string().min(1, "lastName is required"),
-  idNumber: z.string().min(1, "SA ID number is required"),
+  firstName: z.string().min(1, 'firstName is required'),
+  lastName: z.string().min(1, 'lastName is required'),
+  idNumber: z.string().min(1, 'SA ID number is required'),
 });
 
 export const BulkIdvSchema = z.object({
   clientId: clientIdField,
-  persons: z.array(BulkIdvPersonSchema).min(1, "At least one person is required").max(50, "Maximum 50 persons per batch"),
+  persons: z
+    .array(BulkIdvPersonSchema)
+    .min(1, 'At least one person is required')
+    .max(50, 'Maximum 50 persons per batch'),
 });
 export type BulkIdvInput = z.infer<typeof BulkIdvSchema>;

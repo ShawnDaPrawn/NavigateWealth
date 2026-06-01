@@ -224,12 +224,7 @@ export function RichTextEditor({
 
       // Get the text from the start of the current block to the cursor
       const $from = state.doc.resolve(from);
-      const textBefore = $from.parent.textBetween(
-        0,
-        $from.parentOffset,
-        undefined,
-        '\ufffc'
-      );
+      const textBefore = $from.parent.textBetween(0, $from.parentOffset, undefined, '\ufffc');
 
       const slashMatch = textBefore.match(/\/([a-zA-Z0-9 ]*)$/);
 
@@ -269,9 +264,7 @@ export function RichTextEditor({
         setShowAIPanel(true);
         // Dispatch after panel opens so the panel can pick it up
         setTimeout(() => {
-          window.dispatchEvent(
-            new CustomEvent('tiptap:ai-execute', { detail })
-          );
+          window.dispatchEvent(new CustomEvent('tiptap:ai-execute', { detail }));
         }, 100);
       }
     };
@@ -293,7 +286,7 @@ export function RichTextEditor({
       editor.chain().focus().setImage({ src: url, alt }).run();
       setShowImageDialog(false);
     },
-    [editor]
+    [editor],
   );
 
   if (!editor) return null;
@@ -313,10 +306,12 @@ export function RichTextEditor({
       <div className="flex">
         {/* Main editor area */}
         <div className="flex-1 min-w-0">
-          <div className={cn(
-            'border border-gray-200 border-t-0 bg-white overflow-auto relative',
-            enableAI && showAIPanel ? 'rounded-bl-xl' : 'rounded-b-xl'
-          )}>
+          <div
+            className={cn(
+              'border border-gray-200 border-t-0 bg-white overflow-auto relative',
+              enableAI && showAIPanel ? 'rounded-bl-xl' : 'rounded-b-xl',
+            )}
+          >
             <EditorContent editor={editor} />
 
             {/* Slash command menu */}
@@ -334,10 +329,12 @@ export function RichTextEditor({
 
         {/* AI Writing Panel */}
         {enableAI && showAIPanel && (
-          <div className={cn(
-            'border border-gray-200 border-t-0 border-l-0 rounded-br-xl overflow-hidden',
-            'transition-all duration-200'
-          )}>
+          <div
+            className={cn(
+              'border border-gray-200 border-t-0 border-l-0 rounded-br-xl overflow-hidden',
+              'transition-all duration-200',
+            )}
+          >
             <AIWritingPanel
               editor={editor}
               isOpen={showAIPanel}
@@ -363,9 +360,12 @@ export function RichTextEditor({
         </div>
         {enableSlashMenu ? (
           <div className="text-gray-400">
-            Type <kbd className="px-1.5 py-0.5 bg-gray-100 rounded text-[10px] font-mono">/</kbd> for commands
+            Type <kbd className="px-1.5 py-0.5 bg-gray-100 rounded text-[10px] font-mono">/</kbd>{' '}
+            for commands
           </div>
-        ) : <div />}
+        ) : (
+          <div />
+        )}
       </div>
 
       {/* Image insert dialog */}

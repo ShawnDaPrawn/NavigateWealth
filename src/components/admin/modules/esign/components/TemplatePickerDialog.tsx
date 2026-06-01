@@ -61,20 +61,20 @@ export function TemplatePickerDialog({
       setSelectedId(null);
       esignApi
         .listTemplates()
-        .then(result => setTemplates(result.templates || []))
+        .then((result) => setTemplates(result.templates || []))
         .catch(() => setTemplates([]))
         .finally(() => setLoading(false));
     }
   }, [open]);
 
   const filtered = templates.filter(
-    t =>
+    (t) =>
       t.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       (t.description || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
-      (t.category || '').toLowerCase().includes(searchQuery.toLowerCase())
+      (t.category || '').toLowerCase().includes(searchQuery.toLowerCase()),
   );
 
-  const selectedTemplate = templates.find(t => t.id === selectedId) || null;
+  const selectedTemplate = templates.find((t) => t.id === selectedId) || null;
 
   const handleConfirmTemplate = () => {
     if (selectedTemplate) {
@@ -138,7 +138,7 @@ export function TemplatePickerDialog({
               <Input
                 placeholder="Search templates..."
                 value={searchQuery}
-                onChange={e => setSearchQuery(e.target.value)}
+                onChange={(e) => setSearchQuery(e.target.value)}
                 className="pl-9 h-9"
               />
             </div>
@@ -161,7 +161,7 @@ export function TemplatePickerDialog({
             </div>
           ) : (
             <div className="space-y-2 pb-2">
-              {filtered.map(template => (
+              {filtered.map((template) => (
                 <button
                   key={template.id}
                   type="button"
@@ -170,22 +170,20 @@ export function TemplatePickerDialog({
                     'w-full flex items-start gap-3 p-3 rounded-lg border text-left transition-all',
                     selectedId === template.id
                       ? 'border-purple-400 bg-purple-50 ring-1 ring-purple-200'
-                      : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50/50'
+                      : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50/50',
                   )}
                 >
                   {/* Icon */}
                   <div
                     className={cn(
                       'h-9 w-9 rounded-lg flex items-center justify-center shrink-0 transition-colors',
-                      selectedId === template.id
-                        ? 'bg-purple-100'
-                        : 'bg-gray-100'
+                      selectedId === template.id ? 'bg-purple-100' : 'bg-gray-100',
                     )}
                   >
                     <Bookmark
                       className={cn(
                         'h-4 w-4 transition-colors',
-                        selectedId === template.id ? 'text-purple-600' : 'text-gray-500'
+                        selectedId === template.id ? 'text-purple-600' : 'text-gray-500',
                       )}
                     />
                   </div>
@@ -193,9 +191,14 @@ export function TemplatePickerDialog({
                   {/* Info */}
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 mb-0.5">
-                      <h4 className="font-medium text-sm text-gray-900 truncate">{template.name}</h4>
+                      <h4 className="font-medium text-sm text-gray-900 truncate">
+                        {template.name}
+                      </h4>
                       {template.category && (
-                        <Badge variant="outline" className="text-[10px] h-4 px-1 font-normal shrink-0">
+                        <Badge
+                          variant="outline"
+                          className="text-[10px] h-4 px-1 font-normal shrink-0"
+                        >
                           {template.category}
                         </Badge>
                       )}

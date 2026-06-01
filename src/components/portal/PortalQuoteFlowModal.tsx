@@ -2,12 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { CheckCircle2, Mail, Phone, User, X } from 'lucide-react';
 import { Badge } from '../ui/badge';
 import { Button } from '../ui/button';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogTitle,
-} from '../ui/dialog';
+import { Dialog, DialogContent, DialogDescription, DialogTitle } from '../ui/dialog';
 import { Input } from '../ui/input';
 import { Label } from '../ui/label';
 import { ProviderStrip } from '../pages/quote/components/ProviderStrip';
@@ -44,13 +39,18 @@ function QuoteSuccessState({
       <div className="flex h-16 w-16 items-center justify-center rounded-full bg-emerald-100">
         <CheckCircle2 className="h-8 w-8 text-emerald-600" />
       </div>
-      <h3 className="mt-6 text-xl font-semibold text-gray-900 sm:text-2xl">Quote request received</h3>
+      <h3 className="mt-6 text-xl font-semibold text-gray-900 sm:text-2xl">
+        Quote request received
+      </h3>
       <p className="mt-3 max-w-xl text-sm leading-6 text-gray-600 sm:text-sm">
-        Your {serviceLabel.toLowerCase()} request is now with the Navigate Wealth team.
-        An adviser will review it and come back to you with the next steps.
+        Your {serviceLabel.toLowerCase()} request is now with the Navigate Wealth team. An adviser
+        will review it and come back to you with the next steps.
       </p>
       <div className="mt-8 flex w-full flex-wrap items-center justify-center gap-3">
-        <Button onClick={onClose} className="w-full bg-[#6d28d9] text-white hover:bg-[#5b21b6] sm:w-auto">
+        <Button
+          onClick={onClose}
+          className="w-full bg-[#6d28d9] text-white hover:bg-[#5b21b6] sm:w-auto"
+        >
           Close
         </Button>
       </div>
@@ -119,9 +119,7 @@ export function PortalQuoteFlowModal({
     setIsSuccess(false);
   }, [isOpen, serviceId, user?.email, user?.firstName, user?.lastName]);
 
-  const contactValid = Boolean(
-    firstName.trim() && lastName.trim() && email.trim() && phone.trim(),
-  );
+  const contactValid = Boolean(firstName.trim() && lastName.trim() && email.trim() && phone.trim());
 
   if (!serviceConfig) {
     return null;
@@ -318,7 +316,8 @@ export function PortalQuoteFlowModal({
                           </h3>
                           <p className="mt-3 text-sm leading-6 text-gray-500">
                             Fill in your name, email address, and phone number on the left, then the
-                            full {serviceConfig.shortLabel.toLowerCase()} quote wizard will open here.
+                            full {serviceConfig.shortLabel.toLowerCase()} quote wizard will open
+                            here.
                           </p>
                         </div>
                       </div>

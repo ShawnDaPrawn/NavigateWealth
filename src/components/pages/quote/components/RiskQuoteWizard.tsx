@@ -22,13 +22,7 @@ import { Input } from '../../../ui/input';
 import { Label } from '../../../ui/label';
 import { Badge } from '../../../ui/badge';
 import { Checkbox } from '../../../ui/checkbox';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '../../../ui/select';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../../ui/select';
 import {
   ArrowRight,
   ArrowLeft,
@@ -69,19 +63,22 @@ const COVER_OPTIONS: CoverOption[] = [
   {
     id: 'lump_sum_disability',
     label: 'Lump Sum Disability',
-    infoBlip: 'Pays a lump sum if a permanent disability prevents you from working or living independently.',
+    infoBlip:
+      'Pays a lump sum if a permanent disability prevents you from working or living independently.',
     isMonthly: false,
   },
   {
     id: 'severe_illness',
     label: 'Severe Illness',
-    infoBlip: 'Pays a lump sum on diagnosis of qualifying serious illnesses (e.g., cancer, heart attack, stroke).',
+    infoBlip:
+      'Pays a lump sum on diagnosis of qualifying serious illnesses (e.g., cancer, heart attack, stroke).',
     isMonthly: false,
   },
   {
     id: 'income_protection',
     label: 'Income Protection',
-    infoBlip: 'Pays a monthly income if illness/injury stops you from earning -- designed to replace part of your income.',
+    infoBlip:
+      'Pays a monthly income if illness/injury stops you from earning -- designed to replace part of your income.',
     isMonthly: true,
   },
 ];
@@ -217,13 +214,17 @@ function loadDraft(): WizardDraft | null {
 function saveDraft(draft: WizardDraft) {
   try {
     sessionStorage.setItem(DRAFT_KEY, JSON.stringify(draft));
-  } catch { /* non-critical */ }
+  } catch {
+    /* non-critical */
+  }
 }
 
 function clearDraft() {
   try {
     sessionStorage.removeItem(DRAFT_KEY);
-  } catch { /* non-critical */ }
+  } catch {
+    /* non-critical */
+  }
 }
 
 function needsSpouseIncome(status: string) {
@@ -249,7 +250,9 @@ function StepIndicator({ currentStep }: { currentStep: number }) {
         return (
           <React.Fragment key={step.num}>
             {idx > 0 && (
-              <div className={`flex-1 h-0.5 mx-1 sm:mx-2 transition-colors ${isCompleted ? 'bg-green-500' : 'bg-gray-200'}`} />
+              <div
+                className={`flex-1 h-0.5 mx-1 sm:mx-2 transition-colors ${isCompleted ? 'bg-green-500' : 'bg-gray-200'}`}
+              />
             )}
             <div className="flex flex-col items-center gap-1">
               <div
@@ -261,9 +264,15 @@ function StepIndicator({ currentStep }: { currentStep: number }) {
                       : 'bg-gray-100 text-gray-400 border border-gray-200'
                 }`}
               >
-                {isCompleted ? <CheckCircle className="h-4 w-4" /> : <IconComp className="h-4 w-4" />}
+                {isCompleted ? (
+                  <CheckCircle className="h-4 w-4" />
+                ) : (
+                  <IconComp className="h-4 w-4" />
+                )}
               </div>
-              <span className={`text-[10px] sm:text-xs font-medium ${isActive ? 'text-gray-900' : 'text-gray-400'}`}>
+              <span
+                className={`text-[10px] sm:text-xs font-medium ${isActive ? 'text-gray-900' : 'text-gray-400'}`}
+              >
                 {step.label}
               </span>
             </div>
@@ -308,7 +317,9 @@ function Step1Covers({
     <div className="space-y-4">
       <div>
         <h2 className="text-lg font-bold text-gray-900 mb-1">What cover do you want to quote?</h2>
-        <p className="text-sm text-gray-500">Select one or more covers and enter amounts, or request adviser assistance.</p>
+        <p className="text-sm text-gray-500">
+          Select one or more covers and enter amounts, or request adviser assistance.
+        </p>
       </div>
 
       <div className="space-y-3">
@@ -350,10 +361,14 @@ function Step1Covers({
                 <div className="px-4 pb-4 space-y-3 border-t border-gray-100 pt-3">
                   <div className="space-y-1.5">
                     <Label className="text-xs font-medium text-gray-600">
-                      {cover.isMonthly ? 'Monthly amount (ZAR / month, real value)' : 'Cover amount (ZAR)'}
+                      {cover.isMonthly
+                        ? 'Monthly amount (ZAR / month, real value)'
+                        : 'Cover amount (ZAR)'}
                     </Label>
                     <div className="relative">
-                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm">R</span>
+                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm">
+                        R
+                      </span>
                       <Input
                         type="text"
                         inputMode="numeric"
@@ -437,7 +452,9 @@ function Step2Personal({
             Gross monthly income <span className="text-red-500">*</span>
           </Label>
           <div className="relative">
-            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm">R</span>
+            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm">
+              R
+            </span>
             <Input
               type="text"
               inputMode="numeric"
@@ -455,7 +472,9 @@ function Step2Personal({
             Net monthly income <span className="text-red-500">*</span>
           </Label>
           <div className="relative">
-            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm">R</span>
+            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm">
+              R
+            </span>
             <Input
               type="text"
               inputMode="numeric"
@@ -484,7 +503,9 @@ function Step2Personal({
             </SelectTrigger>
             <SelectContent>
               {SMOKER_OPTIONS.map((o) => (
-                <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
+                <SelectItem key={o.value} value={o.value}>
+                  {o.label}
+                </SelectItem>
               ))}
             </SelectContent>
           </Select>
@@ -493,13 +514,18 @@ function Step2Personal({
         {/* Qualification */}
         <div className="space-y-1.5">
           <Label className="text-sm font-medium text-gray-700">Highest qualification</Label>
-          <Select value={details.highest_qualification} onValueChange={(v) => update('highest_qualification', v)}>
+          <Select
+            value={details.highest_qualification}
+            onValueChange={(v) => update('highest_qualification', v)}
+          >
             <SelectTrigger className="h-11 bg-white border-gray-300">
               <SelectValue placeholder="Select..." />
             </SelectTrigger>
             <SelectContent>
               {QUALIFICATION_OPTIONS.map((o) => (
-                <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
+                <SelectItem key={o.value} value={o.value}>
+                  {o.label}
+                </SelectItem>
               ))}
             </SelectContent>
           </Select>
@@ -516,7 +542,9 @@ function Step2Personal({
             </SelectTrigger>
             <SelectContent>
               {MARITAL_OPTIONS.map((o) => (
-                <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
+                <SelectItem key={o.value} value={o.value}>
+                  {o.label}
+                </SelectItem>
               ))}
             </SelectContent>
           </Select>
@@ -529,7 +557,9 @@ function Step2Personal({
               Spouse / partner monthly income <span className="text-red-500">*</span>
             </Label>
             <div className="relative">
-              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm">R</span>
+              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm">
+                R
+              </span>
               <Input
                 type="text"
                 inputMode="numeric"
@@ -560,7 +590,14 @@ function Step3Health({
     const updated = current.includes(condition)
       ? current.filter((c) => c !== condition)
       : [...current, condition];
-    onChange({ ...disclosures, has_conditions: updated.length > 0 || disclosures.free_text.trim().length > 0 ? true : disclosures.has_conditions, selected_conditions: updated });
+    onChange({
+      ...disclosures,
+      has_conditions:
+        updated.length > 0 || disclosures.free_text.trim().length > 0
+          ? true
+          : disclosures.has_conditions,
+      selected_conditions: updated,
+    });
   };
 
   const setNone = () => {
@@ -576,7 +613,8 @@ function Step3Health({
       <div>
         <h2 className="text-lg font-bold text-gray-900 mb-1">Any ongoing or chronic conditions?</h2>
         <p className="text-sm text-gray-500">
-          This helps us pre-screen underwriting options. It's not a medical form -- just a light-touch disclosure.
+          This helps us pre-screen underwriting options. It's not a medical form -- just a
+          light-touch disclosure.
         </p>
       </div>
 
@@ -591,7 +629,9 @@ function Step3Health({
               : 'border-gray-200 bg-white text-gray-600 hover:border-gray-300'
           }`}
         >
-          <CheckCircle className={`h-4 w-4 mx-auto mb-1 ${disclosures.has_conditions === false ? 'text-green-500' : 'text-gray-300'}`} />
+          <CheckCircle
+            className={`h-4 w-4 mx-auto mb-1 ${disclosures.has_conditions === false ? 'text-green-500' : 'text-gray-300'}`}
+          />
           None
         </button>
         <button
@@ -603,7 +643,9 @@ function Step3Health({
               : 'border-gray-200 bg-white text-gray-600 hover:border-gray-300'
           }`}
         >
-          <Stethoscope className={`h-4 w-4 mx-auto mb-1 ${disclosures.has_conditions === true ? 'text-primary' : 'text-gray-300'}`} />
+          <Stethoscope
+            className={`h-4 w-4 mx-auto mb-1 ${disclosures.has_conditions === true ? 'text-primary' : 'text-gray-300'}`}
+          />
           Yes, I have conditions
         </button>
       </div>
@@ -612,7 +654,9 @@ function Step3Health({
       {disclosures.has_conditions === true && (
         <div className="space-y-4 animate-in fade-in duration-200">
           <div>
-            <Label className="text-xs font-medium text-gray-600 mb-2 block">Quick select (optional)</Label>
+            <Label className="text-xs font-medium text-gray-600 mb-2 block">
+              Quick select (optional)
+            </Label>
             <div className="flex flex-wrap gap-2">
               {CHRONIC_PRESETS.map((condition) => {
                 const isSelected = disclosures.selected_conditions.includes(condition);
@@ -674,9 +718,16 @@ function Step4Review({
   onEdit: (step: number) => void;
 }) {
   const selectedCovers = COVER_OPTIONS.filter((c) => riskNeeds[c.id].selected);
-  const maritalLabel = MARITAL_OPTIONS.find((o) => o.value === personalDetails.marital_status)?.label || personalDetails.marital_status;
-  const smokerLabel = SMOKER_OPTIONS.find((o) => o.value === personalDetails.smoker_status)?.label || personalDetails.smoker_status;
-  const qualLabel = QUALIFICATION_OPTIONS.find((o) => o.value === personalDetails.highest_qualification)?.label || personalDetails.highest_qualification || 'Not specified';
+  const maritalLabel =
+    MARITAL_OPTIONS.find((o) => o.value === personalDetails.marital_status)?.label ||
+    personalDetails.marital_status;
+  const smokerLabel =
+    SMOKER_OPTIONS.find((o) => o.value === personalDetails.smoker_status)?.label ||
+    personalDetails.smoker_status;
+  const qualLabel =
+    QUALIFICATION_OPTIONS.find((o) => o.value === personalDetails.highest_qualification)?.label ||
+    personalDetails.highest_qualification ||
+    'Not specified';
 
   return (
     <div className="space-y-4">
@@ -719,15 +770,33 @@ function Step4Review({
       {/* Personal */}
       <ReviewSection title="Personal & Financial Details" onEdit={() => onEdit(2)}>
         <ReviewField label="Occupation" value={personalDetails.occupation || 'Not specified'} />
-        <ReviewField label="Gross monthly income" value={personalDetails.income_gross_monthly ? `R ${personalDetails.income_gross_monthly}` : 'Not specified'} />
-        <ReviewField label="Net monthly income" value={personalDetails.income_net_monthly ? `R ${personalDetails.income_net_monthly}` : 'Not specified'} />
+        <ReviewField
+          label="Gross monthly income"
+          value={
+            personalDetails.income_gross_monthly
+              ? `R ${personalDetails.income_gross_monthly}`
+              : 'Not specified'
+          }
+        />
+        <ReviewField
+          label="Net monthly income"
+          value={
+            personalDetails.income_net_monthly
+              ? `R ${personalDetails.income_net_monthly}`
+              : 'Not specified'
+          }
+        />
         <ReviewField label="Smoker status" value={smokerLabel || 'Not specified'} />
         <ReviewField label="Qualification" value={qualLabel} />
         <ReviewField label="Marital status" value={maritalLabel || 'Not specified'} />
         {needsSpouseIncome(personalDetails.marital_status) && (
           <ReviewField
             label="Spouse income"
-            value={personalDetails.spouse_income_monthly ? `R ${personalDetails.spouse_income_monthly} /month` : 'Not specified'}
+            value={
+              personalDetails.spouse_income_monthly
+                ? `R ${personalDetails.spouse_income_monthly} /month`
+                : 'Not specified'
+            }
           />
         )}
       </ReviewSection>
@@ -741,7 +810,9 @@ function Step4Review({
             {healthDisclosures.selected_conditions.length > 0 && (
               <div className="flex flex-wrap gap-1.5">
                 {healthDisclosures.selected_conditions.map((c) => (
-                  <Badge key={c} variant="outline" className="text-xs">{c}</Badge>
+                  <Badge key={c} variant="outline" className="text-xs">
+                    {c}
+                  </Badge>
                 ))}
               </div>
             )}
@@ -749,7 +820,9 @@ function Step4Review({
               <p className="text-sm text-gray-600 italic">"{healthDisclosures.free_text}"</p>
             )}
             {healthDisclosures.selected_conditions.length === 0 && !healthDisclosures.free_text && (
-              <p className="text-sm text-gray-400 italic">Conditions indicated but none specified</p>
+              <p className="text-sm text-gray-400 italic">
+                Conditions indicated but none specified
+              </p>
             )}
           </div>
         ) : (
@@ -760,13 +833,25 @@ function Step4Review({
   );
 }
 
-function ReviewSection({ title, onEdit, children }: { title: string; onEdit: () => void; children: React.ReactNode }) {
+function ReviewSection({
+  title,
+  onEdit,
+  children,
+}: {
+  title: string;
+  onEdit: () => void;
+  children: React.ReactNode;
+}) {
   return (
     <div className="rounded-xl border border-gray-200 overflow-hidden">
       <div className="flex items-center justify-between bg-gray-50 px-4 py-2.5">
         <span className="text-sm font-semibold text-gray-800">{title}</span>
         {onEdit && (
-          <button type="button" onClick={onEdit} className="text-xs text-primary font-medium hover:underline flex items-center gap-1">
+          <button
+            type="button"
+            onClick={onEdit}
+            className="text-xs text-primary font-medium hover:underline flex items-center gap-1"
+          >
             <Pencil className="h-3 w-3" /> Edit
           </button>
         )}
@@ -802,13 +887,22 @@ export function RiskQuoteWizard({
   const draft = loadDraft();
   const [currentStep, setCurrentStep] = useState(draft?.currentStep ?? 1);
   const [riskNeeds, setRiskNeeds] = useState<RiskNeeds>(draft?.risk_needs ?? getInitialRiskNeeds());
-  const [personalDetails, setPersonalDetails] = useState<PersonalDetails>(draft?.personal_details ?? getInitialPersonalDetails());
-  const [healthDisclosures, setHealthDisclosures] = useState<HealthDisclosures>(draft?.health_disclosures ?? getInitialHealthDisclosures());
+  const [personalDetails, setPersonalDetails] = useState<PersonalDetails>(
+    draft?.personal_details ?? getInitialPersonalDetails(),
+  );
+  const [healthDisclosures, setHealthDisclosures] = useState<HealthDisclosures>(
+    draft?.health_disclosures ?? getInitialHealthDisclosures(),
+  );
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Persist draft on changes
   useEffect(() => {
-    saveDraft({ risk_needs: riskNeeds, personal_details: personalDetails, health_disclosures: healthDisclosures, currentStep });
+    saveDraft({
+      risk_needs: riskNeeds,
+      personal_details: personalDetails,
+      health_disclosures: healthDisclosures,
+      currentStep,
+    });
   }, [riskNeeds, personalDetails, healthDisclosures, currentStep]);
 
   // ---- Validation per step ----
@@ -837,7 +931,14 @@ export function RiskQuoteWizard({
     return healthDisclosures.has_conditions !== null;
   }, [healthDisclosures]);
 
-  const canProceed = currentStep === 1 ? step1Valid : currentStep === 2 ? step2Valid : currentStep === 3 ? step3Valid : true;
+  const canProceed =
+    currentStep === 1
+      ? step1Valid
+      : currentStep === 2
+        ? step2Valid
+        : currentStep === 3
+          ? step3Valid
+          : true;
 
   // ---- Navigation ----
 
@@ -884,7 +985,9 @@ export function RiskQuoteWizard({
         marital_status: personalDetails.marital_status,
       };
       if (needsSpouseIncome(personalDetails.marital_status)) {
-        personalPayload.spouse_income_monthly = parseCurrencyToNumber(personalDetails.spouse_income_monthly);
+        personalPayload.spouse_income_monthly = parseCurrencyToNumber(
+          personalDetails.spouse_income_monthly,
+        );
       }
 
       const healthPayload = {
@@ -939,7 +1042,17 @@ export function RiskQuoteWizard({
     } finally {
       setIsSubmitting(false);
     }
-  }, [firstName, lastName, email, phone, parentSubmissionId, riskNeeds, personalDetails, healthDisclosures, onSuccess]);
+  }, [
+    firstName,
+    lastName,
+    email,
+    phone,
+    parentSubmissionId,
+    riskNeeds,
+    personalDetails,
+    healthDisclosures,
+    onSuccess,
+  ]);
 
   // ---- Render ----
 
@@ -950,8 +1063,12 @@ export function RiskQuoteWizard({
       <div className="bg-white rounded-2xl shadow-lg border border-gray-100 overflow-hidden">
         <div className="p-5 sm:p-6">
           {currentStep === 1 && <Step1Covers riskNeeds={riskNeeds} onChange={setRiskNeeds} />}
-          {currentStep === 2 && <Step2Personal details={personalDetails} onChange={setPersonalDetails} />}
-          {currentStep === 3 && <Step3Health disclosures={healthDisclosures} onChange={setHealthDisclosures} />}
+          {currentStep === 2 && (
+            <Step2Personal details={personalDetails} onChange={setPersonalDetails} />
+          )}
+          {currentStep === 3 && (
+            <Step3Health disclosures={healthDisclosures} onChange={setHealthDisclosures} />
+          )}
           {currentStep === 4 && (
             <Step4Review
               riskNeeds={riskNeeds}
@@ -971,7 +1088,11 @@ export function RiskQuoteWizard({
           <Button
             type="button"
             variant="outline"
-            onClick={currentStep === 1 ? (onExit ?? (() => navigate('/get-quote/risk-management/contact'))) : goBack}
+            onClick={
+              currentStep === 1
+                ? (onExit ?? (() => navigate('/get-quote/risk-management/contact')))
+                : goBack
+            }
             className="h-11 px-5 border-gray-300 text-gray-700 hover:bg-gray-50 font-medium"
           >
             <ArrowLeft className="h-4 w-4 mr-2" />

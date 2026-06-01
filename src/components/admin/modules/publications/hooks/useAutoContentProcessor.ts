@@ -48,7 +48,9 @@ export function useAutoContentProcessor(options?: {
     try {
       // Verify we have an active session before making server calls
       const supabase = createClient();
-      const { data: { session } } = await supabase.auth.getSession();
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
       if (!session?.access_token) {
         // No session yet — skip this tick and wait for the next interval
         return;
@@ -60,7 +62,7 @@ export function useAutoContentProcessor(options?: {
           .filter((p) => p.articlesGenerated > 0)
           .map((p) => p.pipelineId);
         console.error(
-          `[AutoContentProcessor] Generated ${result.totalArticlesGenerated} article(s) from ${pipelineNames.length} pipeline(s)`
+          `[AutoContentProcessor] Generated ${result.totalArticlesGenerated} article(s) from ${pipelineNames.length} pipeline(s)`,
         );
         onArticlesGenerated?.(result.totalArticlesGenerated, pipelineNames);
       }

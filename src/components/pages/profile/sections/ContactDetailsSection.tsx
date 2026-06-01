@@ -12,7 +12,10 @@ interface ContactDetailsSectionProps {
   handleInputChange: HandleInputChange;
 }
 
-export function ContactDetailsSection({ profileData, handleInputChange }: ContactDetailsSectionProps) {
+export function ContactDetailsSection({
+  profileData,
+  handleInputChange,
+}: ContactDetailsSectionProps) {
   return (
     <Card>
       <CardHeader>
@@ -39,7 +42,8 @@ export function ContactDetailsSection({ profileData, handleInputChange }: Contac
               className="mt-1.5 bg-gray-50 text-gray-600"
             />
             <p className="mt-1 text-xs text-gray-500">
-              Your sign-in email is managed from Security Settings so authentication and notifications stay protected.
+              Your sign-in email is managed from Security Settings so authentication and
+              notifications stay protected.
             </p>
           </div>
 

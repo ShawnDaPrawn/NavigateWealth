@@ -11,7 +11,13 @@ import { useState, useMemo, useCallback } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { resourcesApi } from '../api';
-import { FormDefinition, FormFilters, ResourceResponse, type CreateResourceRequest, type UpdateResourceRequest } from '../types';
+import {
+  FormDefinition,
+  FormFilters,
+  ResourceResponse,
+  type CreateResourceRequest,
+  type UpdateResourceRequest,
+} from '../types';
 import { resourceKeys } from './queryKeys';
 
 /** Transform API response into application-level FormDefinition */
@@ -39,7 +45,11 @@ export function useResources() {
   const queryClient = useQueryClient();
 
   // ── Server state via React Query ──
-  const { data: forms = [], isLoading: loading, error: queryError } = useQuery({
+  const {
+    data: forms = [],
+    isLoading: loading,
+    error: queryError,
+  } = useQuery({
     queryKey: resourceKeys.lists(),
     queryFn: async () => {
       const response = await resourcesApi.getAll({});
@@ -49,7 +59,9 @@ export function useResources() {
   });
 
   const error = queryError
-    ? (queryError instanceof Error ? queryError.message : 'Failed to fetch resources')
+    ? queryError instanceof Error
+      ? queryError.message
+      : 'Failed to fetch resources'
     : null;
 
   // ── Local UI state: filters (§11.1) ──
@@ -80,9 +92,7 @@ export function useResources() {
     }
 
     if (filters.clientType !== 'all') {
-      filtered = filtered.filter((form) =>
-        form.clientTypes.includes(filters.clientType),
-      );
+      filtered = filtered.filter((form) => form.clientTypes.includes(filters.clientType));
     }
 
     // Phase 1: Status filter
@@ -130,74 +140,127 @@ export function useResources() {
   );
 
   const createMut = useMutation({
-    mutationFn: (data: { title: string; category: string; description?: string; blocks?: unknown[]; clientTypes?: string[] }) =>
-      resourcesApi.create(data as CreateResourceRequest),
-    onSuccess: () => { invalidate(); },
+    mutationFn: (data: {
+      title: string;
+      category: string;
+      description?: string;
+      blocks?: unknown[];
+      clientTypes?: string[];
+    }) => resourcesApi.create(data as CreateResourceRequest),
+    onSuccess: () => {
+      invalidate();
+    },
   });
 
   const updateMut = useMutation({
-    mutationFn: ({ id, updates }: { id: string; updates: { title?: string; category?: string; description?: string; blocks?: unknown[]; clientTypes?: string[]; status?: string } }) =>
-      resourcesApi.update(id, updates as Partial<UpdateResourceRequest>),
-    onSuccess: () => { invalidate(); },
+    mutationFn: ({
+      id,
+      updates,
+    }: {
+      id: string;
+      updates: {
+        title?: string;
+        category?: string;
+        description?: string;
+        blocks?: unknown[];
+        clientTypes?: string[];
+        status?: string;
+      };
+    }) => resourcesApi.update(id, updates as Partial<UpdateResourceRequest>),
+    onSuccess: () => {
+      invalidate();
+    },
   });
 
   const deleteMut = useMutation({
     mutationFn: (id: string) => resourcesApi.delete(id),
-    onSuccess: () => { invalidate(); },
+    onSuccess: () => {
+      invalidate();
+    },
   });
 
   const duplicateMut = useMutation({
     mutationFn: (id: string) => resourcesApi.duplicate(id),
-    onSuccess: () => { invalidate(); },
+    onSuccess: () => {
+      invalidate();
+    },
   });
 
   // Backward-compatible wrappers
-  const createResource = useCallback(async (data: { title: string; category: string; description?: string; blocks?: unknown[]; clientTypes?: string[] }) => {
-    try {
-      const result = await createMut.mutateAsync(data);
-      toast.success('Resource created successfully');
-      return result;
-    } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : 'Failed to create resource';
-      toast.error('Failed to create resource', { description: msg });
-      throw err;
-    }
-  }, [createMut]);
+  const createResource = useCallback(
+    async (data: {
+      title: string;
+      category: string;
+      description?: string;
+      blocks?: unknown[];
+      clientTypes?: string[];
+    }) => {
+      try {
+        const result = await createMut.mutateAsync(data);
+        toast.success('Resource created successfully');
+        return result;
+      } catch (err: unknown) {
+        const msg = err instanceof Error ? err.message : 'Failed to create resource';
+        toast.error('Failed to create resource', { description: msg });
+        throw err;
+      }
+    },
+    [createMut],
+  );
 
-  const updateResource = useCallback(async (id: string, updates: { title?: string; category?: string; description?: string; blocks?: unknown[]; clientTypes?: string[]; status?: string }) => {
-    try {
-      const result = await updateMut.mutateAsync({ id, updates });
-      toast.success('Resource updated successfully');
-      return result;
-    } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : 'Failed to update resource';
-      toast.error('Failed to update resource', { description: msg });
-      throw err;
-    }
-  }, [updateMut]);
+  const updateResource = useCallback(
+    async (
+      id: string,
+      updates: {
+        title?: string;
+        category?: string;
+        description?: string;
+        blocks?: unknown[];
+        clientTypes?: string[];
+        status?: string;
+      },
+    ) => {
+      try {
+        const result = await updateMut.mutateAsync({ id, updates });
+        toast.success('Resource updated successfully');
+        return result;
+      } catch (err: unknown) {
+        const msg = err instanceof Error ? err.message : 'Failed to update resource';
+        toast.error('Failed to update resource', { description: msg });
+        throw err;
+      }
+    },
+    [updateMut],
+  );
 
-  const deleteResource = useCallback(async (id: string) => {
-    try {
-      await deleteMut.mutateAsync(id);
-      toast.success('Resource deleted successfully');
-    } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : 'Failed to delete resource';
-      toast.error('Failed to delete resource', { description: msg });
-      throw err;
-    }
-  }, [deleteMut]);
+  const deleteResource = useCallback(
+    async (id: string) => {
+      try {
+        await deleteMut.mutateAsync(id);
+        toast.success('Resource deleted successfully');
+      } catch (err: unknown) {
+        const msg = err instanceof Error ? err.message : 'Failed to delete resource';
+        toast.error('Failed to delete resource', { description: msg });
+        throw err;
+      }
+    },
+    [deleteMut],
+  );
 
-  const duplicateResource = useCallback(async (id: string) => {
-    try {
-      const result = await duplicateMut.mutateAsync(id);
-      toast.success('Resource duplicated successfully');
-      return result;
-    } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : 'Failed to duplicate resource';
-      toast.error('Failed to duplicate resource', { description: msg });
-      throw err;
-    }
-  }, [duplicateMut]);
+  const duplicateResource = useCallback(
+    async (id: string) => {
+      try {
+        const result = await duplicateMut.mutateAsync(id);
+        toast.success('Resource duplicated successfully');
+        return result;
+      } catch (err: unknown) {
+        const msg = err instanceof Error ? err.message : 'Failed to duplicate resource';
+        toast.error('Failed to duplicate resource', { description: msg });
+        throw err;
+      }
+    },
+    [duplicateMut],
+  );
 
   const updateFilters = useCallback((newFilters: Partial<FormFilters>) => {
     setFilters((prev) => ({ ...prev, ...newFilters }));

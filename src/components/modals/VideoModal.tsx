@@ -14,17 +14,15 @@ interface VideoModalProps {
 export function VideoModal({
   isOpen,
   onClose,
-  videoUrl = "https://www.youtube.com/embed/dQw4w9WgXcQ?autoplay=1&rel=0&modestbranding=1",
-  title = "Navigate Wealth Explainer",
-  description = "Learn about our comprehensive financial planning services and how we can help you achieve your financial goals."
+  videoUrl = 'https://www.youtube.com/embed/dQw4w9WgXcQ?autoplay=1&rel=0&modestbranding=1',
+  title = 'Navigate Wealth Explainer',
+  description = 'Learn about our comprehensive financial planning services and how we can help you achieve your financial goals.',
 }: VideoModalProps) {
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-4xl w-full mx-auto p-0 bg-gradient-to-br from-gray-900 via-black to-gray-900 border-0 overflow-hidden rounded-2xl shadow-2xl">
         <DialogTitle className="sr-only">{title}</DialogTitle>
-        <DialogDescription className="sr-only">
-          {description}
-        </DialogDescription>
+        <DialogDescription className="sr-only">{description}</DialogDescription>
 
         {/* Close Button */}
         <Button
@@ -55,11 +53,10 @@ export function VideoModal({
         {/* Video Info Section */}
         <div className="bg-gradient-to-r from-gray-900 via-black to-gray-900 text-white p-8">
           <div className="max-w-3xl mx-auto text-center">
-            <h3 className="text-2xl font-bold mb-4">
-              Discover Navigate Wealth
-            </h3>
+            <h3 className="text-2xl font-bold mb-4">Discover Navigate Wealth</h3>
             <p className="text-gray-300 text-lg leading-relaxed mb-6">
-              Learn how Navigate Wealth can help you build, protect, and grow your wealth through personalized financial planning and expert guidance.
+              Learn how Navigate Wealth can help you build, protect, and grow your wealth through
+              personalized financial planning and expert guidance.
             </p>
           </div>
         </div>

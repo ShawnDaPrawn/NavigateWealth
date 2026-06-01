@@ -50,10 +50,7 @@ interface UseUndoRedoReturn<T> {
   futureSize: number;
 }
 
-export function useUndoRedo<T>(
-  initialState: T,
-  maxHistory: number = 50
-): UseUndoRedoReturn<T> {
+export function useUndoRedo<T>(initialState: T, maxHistory: number = 50): UseUndoRedoReturn<T> {
   const [history, setHistory] = useState<UndoRedoState<T>>({
     past: [],
     present: initialState,
@@ -81,7 +78,7 @@ export function useUndoRedo<T>(
         };
       });
     },
-    [maxHistory]
+    [maxHistory],
   );
 
   // -- setWithMerge: debounced updates for rapid edits (e.g. typing) --
@@ -117,7 +114,7 @@ export function useUndoRedo<T>(
         });
       }
     },
-    [maxHistory]
+    [maxHistory],
   );
 
   // -- undo --

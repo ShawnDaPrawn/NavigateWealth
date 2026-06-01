@@ -87,7 +87,7 @@ export function EmailTemplateEditor({ templateId, onBack }: EmailTemplateEditorP
     try {
       const [templateData, footerData] = await Promise.all([
         communicationApi.getTemplate(templateId),
-        communicationApi.getFooterSettings()
+        communicationApi.getFooterSettings(),
       ]);
       setTemplate(templateData);
       setFooterSettings(footerData);
@@ -115,9 +115,8 @@ export function EmailTemplateEditor({ templateId, onBack }: EmailTemplateEditorP
 
   const generatePreview = () => {
     if (!template) return '';
-    
-    let html = BASE_TEMPLATE
-      .replace('{{ .Title }}', template.title || '') // Header title
+
+    let html = BASE_TEMPLATE.replace('{{ .Title }}', template.title || '') // Header title
       .replace('{{ .Title }}', template.title || '') // Meta title
       .replace('{{ .Subtitle }}', template.subtitle || '')
       .replace('{{ .Greeting }}', template.greeting || '')
@@ -129,43 +128,46 @@ export function EmailTemplateEditor({ templateId, onBack }: EmailTemplateEditorP
 
     // Handle conditional rendering for button
     if (!template.buttonUrl) {
-        // Remove button block if no URL
-        html = html.replace(/{{ if .ButtonURL }}[\s\S]*?{{ end }}/, '');
+      // Remove button block if no URL
+      html = html.replace(/{{ if .ButtonURL }}[\s\S]*?{{ end }}/, '');
     } else {
-        html = html.replace('{{ if .ButtonURL }}', '').replace('{{ end }}', '');
+      html = html.replace('{{ if .ButtonURL }}', '').replace('{{ end }}', '');
     }
 
     // Handle conditional rendering for footer note
     if (!template.footerNote) {
-        html = html.replace(/{{ if .FooterNote }}[\s\S]*?{{ end }}/, '');
+      html = html.replace(/{{ if .FooterNote }}[\s\S]*?{{ end }}/, '');
     } else {
-        html = html.replace('{{ if .FooterNote }}', '').replace('{{ end }}', '');
+      html = html.replace('{{ if .FooterNote }}', '').replace('{{ end }}', '');
     }
 
     // Build footer content from settings
     let footerHtml = '';
     if (footerSettings) {
-        const socialLinksHtml = footerSettings.socialLinks
-            ? Object.entries(footerSettings.socialLinks)
-                .filter(([_, url]) => url)
-                .map(([platform, url]) => {
-                    const label = platform.charAt(0).toUpperCase() + platform.slice(1);
-                    return `<a href="${url}" class="email-link" style="color:#6d28d9; text-decoration:none; margin: 0 5px;">${label}</a>`;
-                })
-                .join(' | ')
-            : '';
+      const socialLinksHtml = footerSettings.socialLinks
+        ? Object.entries(footerSettings.socialLinks)
+            .filter(([_, url]) => url)
+            .map(([platform, url]) => {
+              const label = platform.charAt(0).toUpperCase() + platform.slice(1);
+              return `<a href="${url}" class="email-link" style="color:#6d28d9; text-decoration:none; margin: 0 5px;">${label}</a>`;
+            })
+            .join(' | ')
+        : '';
 
-        const socialSection = socialLinksHtml 
-            ? `<p style="margin:12px 0 0;"><strong>Follow us:</strong><br />${socialLinksHtml}</p>`
-            : '';
+      const socialSection = socialLinksHtml
+        ? `<p style="margin:12px 0 0;"><strong>Follow us:</strong><br />${socialLinksHtml}</p>`
+        : '';
 
-        const copyright = footerSettings.copyrightText.replace('{{Year}}', new Date().getFullYear().toString());
-        
-        const emailLink = footerSettings.contactEmail 
-            ? `<p style="margin:8px 0 0;">Email: <a href="mailto:${footerSettings.contactEmail}" class="email-link" style="color:#6d28d9; text-decoration:none;">${footerSettings.contactEmail}</a></p>`
-            : '';
+      const copyright = footerSettings.copyrightText.replace(
+        '{{Year}}',
+        new Date().getFullYear().toString(),
+      );
 
-        footerHtml = `
+      const emailLink = footerSettings.contactEmail
+        ? `<p style="margin:8px 0 0;">Email: <a href="mailto:${footerSettings.contactEmail}" class="email-link" style="color:#6d28d9; text-decoration:none;">${footerSettings.contactEmail}</a></p>`
+        : '';
+
+      footerHtml = `
           <p style="margin:0;"><strong>${footerSettings.companyName}</strong><br />Independent Financial Advisory Services</p>
           <p style="margin:8px 0 0;">${footerSettings.address}</p>
           ${emailLink}
@@ -201,7 +203,12 @@ export function EmailTemplateEditor({ templateId, onBack }: EmailTemplateEditorP
     <div className="space-y-6">
       <div className="flex flex-col gap-2">
         <div>
-          <Button variant="ghost" size="sm" onClick={onBack} className="-ml-2 text-muted-foreground hover:text-foreground">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={onBack}
+            className="-ml-2 text-muted-foreground hover:text-foreground"
+          >
             <ArrowLeft className="h-4 w-4 mr-2" />
             Back to Templates
           </Button>
@@ -215,9 +222,9 @@ export function EmailTemplateEditor({ templateId, onBack }: EmailTemplateEditorP
           </div>
           <div className="flex items-center gap-3 pb-1">
             <div className="flex items-center gap-2 mr-4 bg-muted/50 px-3 py-1.5 rounded-lg border">
-              <Switch 
-                checked={!!template.enabled} 
-                onCheckedChange={(checked) => setTemplate({ ...template, enabled: checked })} 
+              <Switch
+                checked={!!template.enabled}
+                onCheckedChange={(checked) => setTemplate({ ...template, enabled: checked })}
                 id="enabled-mode"
               />
               <Label htmlFor="enabled-mode" className="text-sm cursor-pointer font-medium">
@@ -225,7 +232,11 @@ export function EmailTemplateEditor({ templateId, onBack }: EmailTemplateEditorP
               </Label>
             </div>
             <Button onClick={handleSave} disabled={saving}>
-              {saving ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Save className="h-4 w-4 mr-2" />}
+              {saving ? (
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              ) : (
+                <Save className="h-4 w-4 mr-2" />
+              )}
               Save Changes
             </Button>
           </div>
@@ -239,34 +250,39 @@ export function EmailTemplateEditor({ templateId, onBack }: EmailTemplateEditorP
               <TabsTrigger value="edit">Edit Content</TabsTrigger>
               <TabsTrigger value="settings">Settings & Meta</TabsTrigger>
             </TabsList>
-            
-            <TabsContent value="edit" className="flex-1 flex flex-col mt-4 min-h-0 space-y-4 overflow-y-auto pr-2">
+
+            <TabsContent
+              value="edit"
+              className="flex-1 flex flex-col mt-4 min-h-0 space-y-4 overflow-y-auto pr-2"
+            >
               <Card>
                 <CardContent className="pt-6 space-y-4">
                   <div className="space-y-2">
                     <Label>Greeting</Label>
-                    <Input 
-                      value={template.greeting} 
+                    <Input
+                      value={template.greeting}
                       onChange={(e) => setTemplate({ ...template, greeting: e.target.value })}
                       placeholder="e.g. Hi {{ .Name }},"
                     />
-                    <p className="text-xs text-muted-foreground">Available variables: <code>{'{{ .Name }}'}</code></p>
+                    <p className="text-xs text-muted-foreground">
+                      Available variables: <code>{'{{ .Name }}'}</code>
+                    </p>
                   </div>
 
                   <div className="space-y-2 flex-1 flex flex-col">
                     <Label>Email Body (Rich Text)</Label>
                     <div className="editor-container h-[400px]">
-                      <ReactQuill 
+                      <ReactQuill
                         theme="snow"
                         value={template.bodyHtml}
                         onChange={(value) => setTemplate({ ...template, bodyHtml: value })}
                         className="h-[350px]"
                         modules={{
                           toolbar: [
-                            [{ 'header': [1, 2, 3, false] }],
+                            [{ header: [1, 2, 3, false] }],
                             ['bold', 'italic', 'underline', 'strike'],
-                            [{ 'list': 'ordered'}, { 'list': 'bullet' }],
-                            ['link', 'clean']
+                            [{ list: 'ordered' }, { list: 'bullet' }],
+                            ['link', 'clean'],
                           ],
                         }}
                       />
@@ -277,19 +293,19 @@ export function EmailTemplateEditor({ templateId, onBack }: EmailTemplateEditorP
 
               <Card>
                 <CardContent className="pt-6 space-y-4">
-                   <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
                       <Label>Button Label</Label>
-                      <Input 
-                        value={template.buttonLabel} 
+                      <Input
+                        value={template.buttonLabel}
                         onChange={(e) => setTemplate({ ...template, buttonLabel: e.target.value })}
                         placeholder="e.g. Get Started"
                       />
                     </div>
                     <div className="space-y-2">
                       <Label>Button URL</Label>
-                      <Input 
-                        value={template.buttonUrl} 
+                      <Input
+                        value={template.buttonUrl}
                         onChange={(e) => setTemplate({ ...template, buttonUrl: e.target.value })}
                         placeholder="e.g. {{ .Link }}"
                       />
@@ -297,8 +313,8 @@ export function EmailTemplateEditor({ templateId, onBack }: EmailTemplateEditorP
                   </div>
                   <div className="space-y-2">
                     <Label>Footer Note</Label>
-                    <Input 
-                      value={template.footerNote} 
+                    <Input
+                      value={template.footerNote}
                       onChange={(e) => setTemplate({ ...template, footerNote: e.target.value })}
                       placeholder="Small text under the button"
                     />
@@ -312,23 +328,23 @@ export function EmailTemplateEditor({ templateId, onBack }: EmailTemplateEditorP
                 <CardContent className="pt-6 space-y-4">
                   <div className="space-y-2">
                     <Label>Email Subject Line</Label>
-                    <Input 
-                      value={template.subject} 
+                    <Input
+                      value={template.subject}
                       onChange={(e) => setTemplate({ ...template, subject: e.target.value })}
                     />
                   </div>
                   <div className="space-y-2">
                     <Label>Header Title</Label>
-                    <Input 
-                      value={template.title} 
+                    <Input
+                      value={template.title}
                       onChange={(e) => setTemplate({ ...template, title: e.target.value })}
                       placeholder="e.g. Welcome to Navigate Wealth"
                     />
                   </div>
                   <div className="space-y-2">
                     <Label>Subtitle</Label>
-                    <Input 
-                      value={template.subtitle} 
+                    <Input
+                      value={template.subtitle}
                       onChange={(e) => setTemplate({ ...template, subtitle: e.target.value })}
                       placeholder="e.g. We are glad to have you"
                     />
@@ -347,54 +363,61 @@ export function EmailTemplateEditor({ templateId, onBack }: EmailTemplateEditorP
               Live Preview
             </span>
             <div className="flex items-center gap-1">
-              <Button 
-                variant="ghost" 
-                size="icon" 
-                onClick={() => setScale(s => Math.max(0.5, s - 0.1))}
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => setScale((s) => Math.max(0.5, s - 0.1))}
                 disabled={scale <= 0.5}
                 aria-label="Zoom out"
               >
                 <ZoomOut className="h-4 w-4" />
               </Button>
-              <span className="text-xs text-muted-foreground w-12 text-center">{Math.round(scale * 100)}%</span>
-              <Button 
-                variant="ghost" 
-                size="icon" 
-                onClick={() => setScale(s => Math.min(1.5, s + 0.1))}
+              <span className="text-xs text-muted-foreground w-12 text-center">
+                {Math.round(scale * 100)}%
+              </span>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => setScale((s) => Math.min(1.5, s + 0.1))}
                 disabled={scale >= 1.5}
                 aria-label="Zoom in"
               >
                 <ZoomIn className="h-4 w-4" />
               </Button>
               <div className="w-px h-4 bg-border mx-1" aria-hidden="true" />
-              <Button variant="ghost" size="icon" onClick={() => setTemplate({...template})} aria-label="Refresh preview">
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => setTemplate({ ...template })}
+                aria-label="Refresh preview"
+              >
                 <RefreshCw className="h-4 w-4" />
               </Button>
             </div>
           </div>
           <div className="flex-1 overflow-auto p-4 flex items-start justify-center bg-gray-50/50">
-             <div 
-               style={{ 
-                 width: `${600 * scale}px`,
-                 height: `${1000 * scale}px`,
-                 transition: 'width 0.2s, height 0.2s'
-               }}
-               className="relative shrink-0"
-             >
-               <div 
-                 className="absolute top-0 left-0 w-[600px] h-[1000px] bg-white shadow-xl rounded-xl overflow-hidden transition-transform duration-200"
-                 style={{ 
-                   transform: `scale(${scale})`,
-                   transformOrigin: 'top left'
-                 }}
-               >
-                  <iframe 
-                    srcDoc={generatePreview()}
-                    className="w-full h-full border-none"
-                    title="Email Preview"
-                  />
-               </div>
-             </div>
+            <div
+              style={{
+                width: `${600 * scale}px`,
+                height: `${1000 * scale}px`,
+                transition: 'width 0.2s, height 0.2s',
+              }}
+              className="relative shrink-0"
+            >
+              <div
+                className="absolute top-0 left-0 w-[600px] h-[1000px] bg-white shadow-xl rounded-xl overflow-hidden transition-transform duration-200"
+                style={{
+                  transform: `scale(${scale})`,
+                  transformOrigin: 'top left',
+                }}
+              >
+                <iframe
+                  srcDoc={generatePreview()}
+                  className="w-full h-full border-none"
+                  title="Email Preview"
+                />
+              </div>
+            </div>
           </div>
         </div>
       </div>

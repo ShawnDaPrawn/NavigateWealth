@@ -7,7 +7,13 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { Plus, Trash2 } from 'lucide-react';
 import { RISK_PROFILE_LABELS } from '@/components/admin/modules/investment-ina/constants';
@@ -66,7 +72,10 @@ export function InvestmentIntakeStep1({
     (initialInputs.clientRiskProfile as RiskProfile) ?? 'balanced',
   );
   const [horizonYears, setHorizonYears] = useState(
-    String((initialInputs.economicAssumptions as { investmentHorizonYears?: number })?.investmentHorizonYears ?? 10),
+    String(
+      (initialInputs.economicAssumptions as { investmentHorizonYears?: number })
+        ?.investmentHorizonYears ?? 10,
+    ),
   );
   const [notes, setNotes] = useState(String(initialInputs.planningNotes ?? ''));
 
@@ -132,7 +141,9 @@ export function InvestmentIntakeStep1({
                     type="number"
                     disabled={readOnly}
                     value={goal.targetAmount || ''}
-                    onChange={(e) => updateGoal(index, { targetAmount: Number(e.target.value) || 0 })}
+                    onChange={(e) =>
+                      updateGoal(index, { targetAmount: Number(e.target.value) || 0 })
+                    }
                   />
                 </div>
                 <div className="space-y-1.5">
@@ -141,7 +152,9 @@ export function InvestmentIntakeStep1({
                     type="number"
                     disabled={readOnly}
                     value={goal.monthlyContribution || ''}
-                    onChange={(e) => updateGoal(index, { monthlyContribution: Number(e.target.value) || 0 })}
+                    onChange={(e) =>
+                      updateGoal(index, { monthlyContribution: Number(e.target.value) || 0 })
+                    }
                   />
                 </div>
                 <div className="space-y-1.5">
@@ -157,7 +170,12 @@ export function InvestmentIntakeStep1({
             </div>
           ))}
           {!readOnly && (
-            <Button type="button" variant="outline" size="sm" onClick={() => setGoals((prev) => [...prev, emptyGoal()])}>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => setGoals((prev) => [...prev, emptyGoal()])}
+            >
               <Plus className="mr-2 h-4 w-4" />
               Add another goal
             </Button>
@@ -172,7 +190,11 @@ export function InvestmentIntakeStep1({
         <CardContent className="space-y-4">
           <div className="space-y-1.5">
             <Label>How would you describe your investment risk tolerance?</Label>
-            <Select disabled={readOnly} value={riskProfile} onValueChange={(v) => setRiskProfile(v as RiskProfile)}>
+            <Select
+              disabled={readOnly}
+              value={riskProfile}
+              onValueChange={(v) => setRiskProfile(v as RiskProfile)}
+            >
               <SelectTrigger>
                 <SelectValue />
               </SelectTrigger>
@@ -196,14 +218,24 @@ export function InvestmentIntakeStep1({
           </div>
           <div className="space-y-1.5">
             <Label>Anything else we should know?</Label>
-            <Textarea disabled={readOnly} value={notes} onChange={(e) => setNotes(e.target.value)} rows={3} />
+            <Textarea
+              disabled={readOnly}
+              value={notes}
+              onChange={(e) => setNotes(e.target.value)}
+              rows={3}
+            />
           </div>
         </CardContent>
       </Card>
 
       {!readOnly && (
         <div className="flex flex-wrap justify-end gap-2">
-          <Button type="button" variant="outline" disabled={isSaving} onClick={() => onSaveDraft(buildInputs())}>
+          <Button
+            type="button"
+            variant="outline"
+            disabled={isSaving}
+            onClick={() => onSaveDraft(buildInputs())}
+          >
             Save draft
           </Button>
           <Button type="button" disabled={isSaving} onClick={() => onContinue(buildInputs())}>

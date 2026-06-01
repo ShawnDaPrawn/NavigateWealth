@@ -3,7 +3,18 @@ import { Button } from '../ui/button';
 import { Input } from '../ui/input';
 import { Label } from '../ui/label';
 import { Alert, AlertDescription } from '../ui/alert';
-import { Mail, ArrowLeft, CheckCircle2, XCircle, Shield, CheckCircle, Lock, Key, Clock, AlertCircle } from 'lucide-react';
+import {
+  Mail,
+  ArrowLeft,
+  CheckCircle2,
+  XCircle,
+  Shield,
+  CheckCircle,
+  Lock,
+  Key,
+  Clock,
+  AlertCircle,
+} from 'lucide-react';
 import { getUserErrorMessage } from '../../utils/errorUtils';
 import { useNavigate, Link } from 'react-router';
 import { useState } from 'react';
@@ -11,8 +22,9 @@ import { useState } from 'react';
 const carouselSlides = [
   {
     id: 1,
-    title: "Secure password recovery",
-    subtitle: "Our advanced security measures ensure your account remains protected during the reset process.",
+    title: 'Secure password recovery',
+    subtitle:
+      'Our advanced security measures ensure your account remains protected during the reset process.',
     content: (
       <div className="bg-white/20 backdrop-blur-sm rounded-xl p-6 space-y-4">
         <div className="flex items-center space-x-3 mb-4">
@@ -43,12 +55,13 @@ const carouselSlides = [
           </div>
         </div>
       </div>
-    )
+    ),
   },
   {
     id: 2,
-    title: "Time-limited access tokens",
-    subtitle: "Reset links expire automatically to prevent unauthorized access, keeping your account secure.",
+    title: 'Time-limited access tokens',
+    subtitle:
+      'Reset links expire automatically to prevent unauthorized access, keeping your account secure.',
     content: (
       <div className="bg-white/20 backdrop-blur-sm rounded-xl p-6 space-y-4">
         <div className="flex items-center space-x-3 mb-4">
@@ -82,12 +95,13 @@ const carouselSlides = [
           </div>
         </div>
       </div>
-    )
+    ),
   },
   {
     id: 3,
-    title: "Multi-layer security protection",
-    subtitle: "Multiple security checkpoints ensure only you can access your account recovery options.",
+    title: 'Multi-layer security protection',
+    subtitle:
+      'Multiple security checkpoints ensure only you can access your account recovery options.',
     content: (
       <div className="bg-white/20 backdrop-blur-sm rounded-xl p-6 space-y-4">
         <div className="flex items-center space-x-3 mb-4">
@@ -129,8 +143,8 @@ const carouselSlides = [
           </div>
         </div>
       </div>
-    )
-  }
+    ),
+  },
 ];
 
 export function ForgotPasswordPage() {
@@ -139,24 +153,24 @@ export function ForgotPasswordPage() {
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [error, setError] = useState('');
   const [currentSlide, setCurrentSlide] = useState(0);
-  
+
   const navigate = useNavigate();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
-    
+
     if (!email) {
       setError('Please enter your email address.');
       return;
     }
-    
+
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(email)) {
       setError('Please enter a valid email address.');
       return;
     }
-    
+
     setIsLoading(true);
 
     try {
@@ -193,7 +207,7 @@ export function ForgotPasswordPage() {
               <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto">
                 <CheckCircle className="h-8 w-8 text-green-600" />
               </div>
-              
+
               <div className="space-y-2 text-center">
                 <h2 className="text-gray-900">Check Your Email</h2>
                 <p className="text-gray-600">
@@ -238,15 +252,13 @@ export function ForgotPasswordPage() {
             <div className="absolute top-20 right-20 w-72 h-72 bg-white rounded-full blur-3xl"></div>
             <div className="absolute bottom-20 left-20 w-96 h-96 bg-white rounded-full blur-3xl"></div>
           </div>
-          
+
           <div className="relative z-10 flex flex-col justify-center px-12 xl:px-20 text-white">
             <div className="space-y-6">
               <div className="w-16 h-16 bg-white/20 rounded-full flex items-center justify-center mx-auto">
                 <Mail className="h-8 w-8 text-white" />
               </div>
-              <h2 className="text-white text-center">
-                Reset link sent securely
-              </h2>
+              <h2 className="text-white text-center">Reset link sent securely</h2>
               <p className="text-purple-100 text-center">
                 Your password reset request has been processed with our highest security standards.
               </p>
@@ -262,7 +274,9 @@ export function ForgotPasswordPage() {
                   <div className="bg-white h-2 rounded-full w-full"></div>
                 </div>
                 <div className="text-center">
-                  <p className="text-purple-100 text-sm">Your account is protected with bank-level security</p>
+                  <p className="text-purple-100 text-sm">
+                    Your account is protected with bank-level security
+                  </p>
                 </div>
               </div>
             </div>
@@ -290,9 +304,7 @@ export function ForgotPasswordPage() {
             {error && (
               <Alert className="border-red-200 bg-red-50" role="alert">
                 <AlertCircle className="h-4 w-4 text-red-600" />
-                <AlertDescription className="text-red-800">
-                  {error}
-                </AlertDescription>
+                <AlertDescription className="text-red-800">{error}</AlertDescription>
               </Alert>
             )}
 
@@ -317,14 +329,17 @@ export function ForgotPasswordPage() {
             >
               {isLoading ? (
                 <span className="flex items-center justify-center gap-2">
-                  <span className="animate-spin h-4 w-4 border-2 border-white border-t-transparent rounded-full" aria-hidden="true"></span>
+                  <span
+                    className="animate-spin h-4 w-4 border-2 border-white border-t-transparent rounded-full"
+                    aria-hidden="true"
+                  ></span>
                   Sending Reset Link...
                 </span>
               ) : (
                 'Send Reset Link'
               )}
             </Button>
-            
+
             <Button
               type="button"
               variant="outline"

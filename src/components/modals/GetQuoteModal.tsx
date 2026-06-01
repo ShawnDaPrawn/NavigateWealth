@@ -18,7 +18,7 @@ import {
   Shield,
   Phone,
   Mail,
-  Loader2
+  Loader2,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { projectId, publicAnonKey } from '../../utils/supabase/info';
@@ -54,14 +54,14 @@ interface FormData {
 export function GetQuoteModal({
   isOpen,
   onClose,
-  productName = "Financial Protection",
+  productName = 'Financial Protection',
   providers = [],
   coverageMin = 250000,
   coverageMax = 10000000,
   coverageStep = 50000,
   defaultCoverage = 1000000,
-  coverageLabel = "Coverage Amount",
-  coverageUnit = "R"
+  coverageLabel = 'Coverage Amount',
+  coverageUnit = 'R',
 }: GetQuoteModalProps) {
   const [currentStep, setCurrentStep] = useState(1);
   const [formData, setFormData] = useState<FormData>({
@@ -70,7 +70,7 @@ export function GetQuoteModal({
     email: '',
     phone: '',
     coverage: defaultCoverage,
-    preferredProvider: ''
+    preferredProvider: '',
   });
   const [errors, setErrors] = useState<Partial<FormData>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -86,7 +86,9 @@ export function GetQuoteModal({
       currency: 'ZAR',
       minimumFractionDigits: 0,
       maximumFractionDigits: 0,
-    }).format(amount).replace('ZAR', coverageUnit);
+    })
+      .format(amount)
+      .replace('ZAR', coverageUnit);
   };
 
   const validateStep = (step: number): boolean => {
@@ -113,12 +115,12 @@ export function GetQuoteModal({
 
   const handleNext = () => {
     if (validateStep(currentStep)) {
-      setCurrentStep(prev => Math.min(prev + 1, totalSteps));
+      setCurrentStep((prev) => Math.min(prev + 1, totalSteps));
     }
   };
 
   const handlePrevious = () => {
-    setCurrentStep(prev => Math.max(prev - 1, 1));
+    setCurrentStep((prev) => Math.max(prev - 1, 1));
   };
 
   const handleSubmit = async () => {
@@ -127,7 +129,8 @@ export function GetQuoteModal({
       const providerName =
         formData.preferredProvider === 'no-preference'
           ? 'No Preference'
-          : providers.find((p) => p.id === formData.preferredProvider)?.name || formData.preferredProvider;
+          : providers.find((p) => p.id === formData.preferredProvider)?.name ||
+            formData.preferredProvider;
 
       const response = await fetch(
         `https://${projectId}.supabase.co/functions/v1/make-server-91ed8379/quote-request/submit`,
@@ -135,7 +138,7 @@ export function GetQuoteModal({
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${publicAnonKey}`,
+            Authorization: `Bearer ${publicAnonKey}`,
           },
           body: JSON.stringify({
             firstName: formData.firstName.trim(),
@@ -175,7 +178,7 @@ export function GetQuoteModal({
       email: '',
       phone: '',
       coverage: defaultCoverage,
-      preferredProvider: ''
+      preferredProvider: '',
     });
     setErrors({});
     onClose();
@@ -204,26 +207,22 @@ export function GetQuoteModal({
                 <Input
                   id="firstName"
                   value={formData.firstName}
-                  onChange={(e) => setFormData(prev => ({ ...prev, firstName: e.target.value }))}
+                  onChange={(e) => setFormData((prev) => ({ ...prev, firstName: e.target.value }))}
                   className={errors.firstName ? 'border-red-500' : ''}
                   placeholder="Enter your first name"
                 />
-                {errors.firstName && (
-                  <p className="text-red-500 text-sm">{errors.firstName}</p>
-                )}
+                {errors.firstName && <p className="text-red-500 text-sm">{errors.firstName}</p>}
               </div>
               <div className="space-y-2">
                 <Label htmlFor="lastName">Last Name</Label>
                 <Input
                   id="lastName"
                   value={formData.lastName}
-                  onChange={(e) => setFormData(prev => ({ ...prev, lastName: e.target.value }))}
+                  onChange={(e) => setFormData((prev) => ({ ...prev, lastName: e.target.value }))}
                   className={errors.lastName ? 'border-red-500' : ''}
                   placeholder="Enter your last name"
                 />
-                {errors.lastName && (
-                  <p className="text-red-500 text-sm">{errors.lastName}</p>
-                )}
+                {errors.lastName && <p className="text-red-500 text-sm">{errors.lastName}</p>}
               </div>
             </div>
 
@@ -233,13 +232,11 @@ export function GetQuoteModal({
                 id="email"
                 type="email"
                 value={formData.email}
-                onChange={(e) => setFormData(prev => ({ ...prev, email: e.target.value }))}
+                onChange={(e) => setFormData((prev) => ({ ...prev, email: e.target.value }))}
                 className={errors.email ? 'border-red-500' : ''}
                 placeholder="Enter your email address"
               />
-              {errors.email && (
-                <p className="text-red-500 text-sm">{errors.email}</p>
-              )}
+              {errors.email && <p className="text-red-500 text-sm">{errors.email}</p>}
             </div>
 
             <div className="space-y-2">
@@ -248,17 +245,19 @@ export function GetQuoteModal({
                 id="phone"
                 type="tel"
                 value={formData.phone}
-                onChange={(e) => setFormData(prev => ({ ...prev, phone: e.target.value }))}
+                onChange={(e) => setFormData((prev) => ({ ...prev, phone: e.target.value }))}
                 className={errors.phone ? 'border-red-500' : ''}
                 placeholder="Enter your phone number"
               />
-              {errors.phone && (
-                <p className="text-red-500 text-sm">{errors.phone}</p>
-              )}
+              {errors.phone && <p className="text-red-500 text-sm">{errors.phone}</p>}
             </div>
 
             {/* Honeypot — hidden from real users, traps bots */}
-            <div className="absolute opacity-0 h-0 overflow-hidden" aria-hidden="true" tabIndex={-1}>
+            <div
+              className="absolute opacity-0 h-0 overflow-hidden"
+              aria-hidden="true"
+              tabIndex={-1}
+            >
               <label htmlFor="modal-website">Website</label>
               <input
                 id="modal-website"
@@ -281,7 +280,9 @@ export function GetQuoteModal({
                 <Shield className="h-6 w-6 text-purple-600" />
               </div>
               <h3 className="text-xl font-semibold text-black mb-2">Choose Coverage</h3>
-              <p className="text-gray-600">Select the coverage amount that best suits your needs.</p>
+              <p className="text-gray-600">
+                Select the coverage amount that best suits your needs.
+              </p>
             </div>
 
             <div className="space-y-6">
@@ -295,7 +296,9 @@ export function GetQuoteModal({
               <div className="px-4">
                 <Slider
                   value={[formData.coverage]}
-                  onValueChange={(value) => setFormData(prev => ({ ...prev, coverage: value[0] }))}
+                  onValueChange={(value) =>
+                    setFormData((prev) => ({ ...prev, coverage: value[0] }))
+                  }
                   max={coverageMax}
                   min={coverageMin}
                   step={coverageStep}
@@ -312,7 +315,8 @@ export function GetQuoteModal({
                   <Info className="h-5 w-5 text-blue-500 mt-0.5 flex-shrink-0" />
                   <div>
                     <p className="text-blue-800 text-sm">
-                      We'll recommend the most suitable amount based on your needs and circumstances during your consultation.
+                      We'll recommend the most suitable amount based on your needs and circumstances
+                      during your consultation.
                     </p>
                   </div>
                 </div>
@@ -329,26 +333,38 @@ export function GetQuoteModal({
                 <Shield className="h-6 w-6 text-purple-600" />
               </div>
               <h3 className="text-xl font-semibold text-black mb-2">Preferred Provider</h3>
-              <p className="text-gray-600">Choose your preferred insurance provider or let us recommend one.</p>
+              <p className="text-gray-600">
+                Choose your preferred insurance provider or let us recommend one.
+              </p>
             </div>
 
             <RadioGroup
               value={formData.preferredProvider}
-              onValueChange={(value) => setFormData(prev => ({ ...prev, preferredProvider: value }))}
+              onValueChange={(value) =>
+                setFormData((prev) => ({ ...prev, preferredProvider: value }))
+              }
               className="space-y-4"
             >
               <div className="flex items-center space-x-3 p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors">
                 <RadioGroupItem value="no-preference" id="no-preference" />
                 <Label htmlFor="no-preference" className="flex-1 cursor-pointer">
                   <div className="font-medium">No Preference</div>
-                  <div className="text-sm text-gray-600">Let our advisers recommend the best option for you</div>
+                  <div className="text-sm text-gray-600">
+                    Let our advisers recommend the best option for you
+                  </div>
                 </Label>
               </div>
 
               {providers.map((provider) => (
-                <div key={provider.id} className="flex items-center space-x-3 p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors">
+                <div
+                  key={provider.id}
+                  className="flex items-center space-x-3 p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
+                >
                   <RadioGroupItem value={provider.id} id={provider.id} />
-                  <Label htmlFor={provider.id} className="flex-1 cursor-pointer flex items-center space-x-3">
+                  <Label
+                    htmlFor={provider.id}
+                    className="flex-1 cursor-pointer flex items-center space-x-3"
+                  >
                     <ImageWithFallback
                       src={provider.logo}
                       alt={provider.name}
@@ -372,8 +388,8 @@ export function GetQuoteModal({
             <div className="space-y-4">
               <h3 className="text-2xl font-semibold text-black">Thank You!</h3>
               <p className="text-gray-600 leading-relaxed">
-                Thank you for requesting a quote for {productName}. One of our licensed advisers will review 
-                your request and contact you shortly with options and pricing.
+                Thank you for requesting a quote for {productName}. One of our licensed advisers
+                will review your request and contact you shortly with options and pricing.
               </p>
             </div>
 
@@ -381,33 +397,35 @@ export function GetQuoteModal({
               <h4 className="font-semibold text-black">What happens next?</h4>
               <div className="space-y-3 text-sm text-gray-600">
                 <div className="flex items-center space-x-3">
-                  <div className="w-6 h-6 bg-purple-100 rounded-full flex items-center justify-center text-xs font-medium text-purple-600">1</div>
+                  <div className="w-6 h-6 bg-purple-100 rounded-full flex items-center justify-center text-xs font-medium text-purple-600">
+                    1
+                  </div>
                   <span>Our team reviews your quote request within 24 hours</span>
                 </div>
                 <div className="flex items-center space-x-3">
-                  <div className="w-6 h-6 bg-purple-100 rounded-full flex items-center justify-center text-xs font-medium text-purple-600">2</div>
+                  <div className="w-6 h-6 bg-purple-100 rounded-full flex items-center justify-center text-xs font-medium text-purple-600">
+                    2
+                  </div>
                   <span>A licensed adviser will contact you to discuss options</span>
                 </div>
                 <div className="flex items-center space-x-3">
-                  <div className="w-6 h-6 bg-purple-100 rounded-full flex items-center justify-center text-xs font-medium text-purple-600">3</div>
+                  <div className="w-6 h-6 bg-purple-100 rounded-full flex items-center justify-center text-xs font-medium text-purple-600">
+                    3
+                  </div>
                   <span>Receive personalized quotes and recommendations</span>
                 </div>
               </div>
             </div>
 
             <div className="flex flex-col sm:flex-row gap-3 justify-center">
-              <Button 
-                size="lg" 
+              <Button
+                size="lg"
                 className="bg-purple-600 hover:bg-purple-700 text-white"
                 onClick={handleFinish}
               >
                 Create Account to Fast-Track
               </Button>
-              <Button 
-                size="lg" 
-                variant="outline"
-                onClick={handleFinish}
-              >
+              <Button size="lg" variant="outline" onClick={handleFinish}>
                 Finish
               </Button>
             </div>
@@ -432,33 +450,27 @@ export function GetQuoteModal({
             <X className="h-4 w-4" />
             <span className="sr-only">Close</span>
           </Button>
-          <DialogTitle className="text-left pr-8">
-            Get a Quote - {productName}
-          </DialogTitle>
+          <DialogTitle className="text-left pr-8">Get a Quote - {productName}</DialogTitle>
           <DialogDescription className="text-left pr-8 text-gray-600">
             Complete this quick form to get a personalized quote from our licensed advisers.
           </DialogDescription>
         </DialogHeader>
-        
+
         <div className="space-y-2 px-6">
           <div className="flex items-center justify-between text-sm text-gray-600">
-            <span>Step {currentStep} of {totalSteps}</span>
+            <span>
+              Step {currentStep} of {totalSteps}
+            </span>
             <span>{Math.round(progress)}% Complete</span>
           </div>
           <Progress value={progress} className="w-full" />
         </div>
 
-        <div className="py-4">
-          {renderStep()}
-        </div>
+        <div className="py-4">{renderStep()}</div>
 
         {currentStep < totalSteps && (
           <div className="flex justify-between pt-4 border-t border-gray-200">
-            <Button
-              variant="outline"
-              onClick={handlePrevious}
-              disabled={currentStep === 1}
-            >
+            <Button variant="outline" onClick={handlePrevious} disabled={currentStep === 1}>
               <ArrowLeft className="mr-2 h-4 w-4" />
               Previous
             </Button>

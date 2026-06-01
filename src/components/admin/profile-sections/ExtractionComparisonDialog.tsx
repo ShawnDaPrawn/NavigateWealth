@@ -12,12 +12,7 @@
  */
 
 import React, { useState, useCallback, useEffect } from 'react';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from '../../ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../../ui/dialog';
 import { Badge } from '../../ui/badge';
 import { Button } from '../../ui/button';
 import {
@@ -131,8 +126,8 @@ export function ExtractionComparisonDialog({
   /** Build comparison from client-side snapshot data */
   const buildFromSnapshots = useCallback(
     (leftSnaps: FieldMappingSnapshot[], rightSnaps: FieldMappingSnapshot[]) => {
-      const leftMap = new Map(leftSnaps.map(s => [s.f, s]));
-      const rightMap = new Map(rightSnaps.map(s => [s.f, s]));
+      const leftMap = new Map(leftSnaps.map((s) => [s.f, s]));
+      const rightMap = new Map(rightSnaps.map((s) => [s.f, s]));
       const allFieldIds = new Set([...leftMap.keys(), ...rightMap.keys()]);
       const fields: ComparisonField[] = [];
 
@@ -174,7 +169,9 @@ export function ExtractionComparisonDialog({
     setIsLoading(true);
     try {
       const supabase = createClient();
-      const { data: { session } } = await supabase.auth.getSession();
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
       const token = session?.access_token || publicAnonKey;
 
       const res = await fetch(
@@ -227,20 +224,24 @@ export function ExtractionComparisonDialog({
   }, [isOpen, fetchComparisonData]);
 
   // Filter fields
-  const filteredFields = comparisonFields.filter(field => {
+  const filteredFields = comparisonFields.filter((field) => {
     switch (filterMode) {
-      case 'changed': return field.changed;
-      case 'improved': return field.confidenceDelta > 0.05;
-      case 'degraded': return field.confidenceDelta < -0.05;
-      default: return true;
+      case 'changed':
+        return field.changed;
+      case 'improved':
+        return field.confidenceDelta > 0.05;
+      case 'degraded':
+        return field.confidenceDelta < -0.05;
+      default:
+        return true;
     }
   });
 
   // Stats
-  const changedCount = comparisonFields.filter(f => f.changed).length;
-  const improvedCount = comparisonFields.filter(f => f.confidenceDelta > 0.05).length;
-  const degradedCount = comparisonFields.filter(f => f.confidenceDelta < -0.05).length;
-  const unchangedCount = comparisonFields.filter(f => !f.changed).length;
+  const changedCount = comparisonFields.filter((f) => f.changed).length;
+  const improvedCount = comparisonFields.filter((f) => f.confidenceDelta > 0.05).length;
+  const degradedCount = comparisonFields.filter((f) => f.confidenceDelta < -0.05).length;
+  const unchangedCount = comparisonFields.filter((f) => !f.changed).length;
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
@@ -269,14 +270,16 @@ export function ExtractionComparisonDialog({
             </div>
             {leftEntry && (
               <div className="space-y-0.5">
-                <p className="text-xs font-medium text-gray-700">{formatDate(leftEntry.extractedAt)}</p>
+                <p className="text-xs font-medium text-gray-700">
+                  {formatDate(leftEntry.extractedAt)}
+                </p>
                 <div className="flex items-center gap-2">
-                  <span className={`text-[10px] font-medium ${getConfidenceColor(leftEntry.confidence)}`}>
+                  <span
+                    className={`text-[10px] font-medium ${getConfidenceColor(leftEntry.confidence)}`}
+                  >
                     {Math.round(leftEntry.confidence * 100)}% confidence
                   </span>
-                  <span className="text-[10px] text-gray-400">
-                    {leftEntry.fieldsMapped} fields
-                  </span>
+                  <span className="text-[10px] text-gray-400">{leftEntry.fieldsMapped} fields</span>
                   {leftEntry.model && (
                     <span className="text-[9px] text-gray-400">{leftEntry.model}</span>
                   )}
@@ -300,9 +303,13 @@ export function ExtractionComparisonDialog({
             </div>
             {rightEntry && (
               <div className="space-y-0.5">
-                <p className="text-xs font-medium text-gray-700">{formatDate(rightEntry.extractedAt)}</p>
+                <p className="text-xs font-medium text-gray-700">
+                  {formatDate(rightEntry.extractedAt)}
+                </p>
                 <div className="flex items-center gap-2">
-                  <span className={`text-[10px] font-medium ${getConfidenceColor(rightEntry.confidence)}`}>
+                  <span
+                    className={`text-[10px] font-medium ${getConfidenceColor(rightEntry.confidence)}`}
+                  >
                     {Math.round(rightEntry.confidence * 100)}% confidence
                   </span>
                   <span className="text-[10px] text-gray-400">
@@ -322,9 +329,9 @@ export function ExtractionComparisonDialog({
           <div className="flex items-center gap-2 text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-md px-3 py-2 mt-2">
             <AlertCircle className="h-4 w-4 flex-shrink-0" />
             <span>
-              Field-level comparison data is unavailable for these extraction entries.
-              Extractions performed before snapshot storage was enabled do not have field-level data.
-              Future extractions will include full comparison support.
+              Field-level comparison data is unavailable for these extraction entries. Extractions
+              performed before snapshot storage was enabled do not have field-level data. Future
+              extractions will include full comparison support.
             </span>
           </div>
         )}
@@ -351,7 +358,7 @@ export function ExtractionComparisonDialog({
             {/* Filter buttons */}
             <div className="flex items-center gap-1">
               <Filter className="h-3 w-3 text-gray-400 mr-1" />
-              {(['all', 'changed', 'improved', 'degraded'] as const).map(mode => (
+              {(['all', 'changed', 'improved', 'degraded'] as const).map((mode) => (
                 <Button
                   key={mode}
                   variant="ghost"
@@ -382,8 +389,7 @@ export function ExtractionComparisonDialog({
               <p className="text-sm">
                 {comparisonFields.length === 0
                   ? 'No field data available for comparison.'
-                  : `No fields match the "${filterMode}" filter.`
-                }
+                  : `No fields match the "${filterMode}" filter.`}
               </p>
             </div>
           ) : filteredFields.length > 0 ? (
@@ -398,7 +404,7 @@ export function ExtractionComparisonDialog({
                 <span className="w-10 text-center">Conf</span>
               </div>
 
-              {filteredFields.map(field => (
+              {filteredFields.map((field) => (
                 <div
                   key={field.schemaFieldId}
                   className={`grid grid-cols-[1fr_auto_1fr_auto_1fr_auto] gap-2 px-3 py-2 items-center ${
@@ -420,16 +426,20 @@ export function ExtractionComparisonDialog({
                   {/* Left Confidence */}
                   <div className="w-10 text-center">
                     {field.leftConfidence > 0 && (
-                      <span className={`text-[10px] font-medium ${getConfidenceColor(field.leftConfidence)}`}>
+                      <span
+                        className={`text-[10px] font-medium ${getConfidenceColor(field.leftConfidence)}`}
+                      >
                         {Math.round(field.leftConfidence * 100)}%
                       </span>
                     )}
                   </div>
 
                   {/* Left Value */}
-                  <span className={`text-xs text-right truncate ${
-                    field.changed ? 'text-red-500 line-through' : 'text-gray-600'
-                  }`}>
+                  <span
+                    className={`text-xs text-right truncate ${
+                      field.changed ? 'text-red-500 line-through' : 'text-gray-600'
+                    }`}
+                  >
                     {formatValue(field.leftValue)}
                   </span>
 
@@ -443,26 +453,29 @@ export function ExtractionComparisonDialog({
                   </div>
 
                   {/* Right Value */}
-                  <span className={`text-xs truncate ${
-                    field.changed ? 'text-green-700 font-medium' : 'text-gray-600'
-                  }`}>
+                  <span
+                    className={`text-xs truncate ${
+                      field.changed ? 'text-green-700 font-medium' : 'text-gray-600'
+                    }`}
+                  >
                     {formatValue(field.rightValue)}
                   </span>
 
                   {/* Right Confidence + Delta */}
                   <div className="w-10 flex items-center justify-center gap-0.5">
                     {field.rightConfidence > 0 && (
-                      <span className={`text-[10px] font-medium ${getConfidenceColor(field.rightConfidence)}`}>
+                      <span
+                        className={`text-[10px] font-medium ${getConfidenceColor(field.rightConfidence)}`}
+                      >
                         {Math.round(field.rightConfidence * 100)}%
                       </span>
                     )}
-                    {Math.abs(field.confidenceDelta) > 0.05 && (
-                      field.confidenceDelta > 0 ? (
+                    {Math.abs(field.confidenceDelta) > 0.05 &&
+                      (field.confidenceDelta > 0 ? (
                         <TrendingUp className="h-2.5 w-2.5 text-green-600" />
                       ) : (
                         <TrendingDown className="h-2.5 w-2.5 text-red-500" />
-                      )
-                    )}
+                      ))}
                   </div>
                 </div>
               ))}
@@ -483,11 +496,13 @@ export function ExtractionComparisonDialog({
                 {Math.round(rightEntry.confidence * 100)}%
               </span>
               {rightEntry.confidence - leftEntry.confidence !== 0 && (
-                <Badge className={`text-[9px] px-1.5 py-0 ${
-                  rightEntry.confidence > leftEntry.confidence
-                    ? 'bg-green-100 text-green-700 hover:bg-green-100'
-                    : 'bg-red-100 text-red-700 hover:bg-red-100'
-                }`}>
+                <Badge
+                  className={`text-[9px] px-1.5 py-0 ${
+                    rightEntry.confidence > leftEntry.confidence
+                      ? 'bg-green-100 text-green-700 hover:bg-green-100'
+                      : 'bg-red-100 text-red-700 hover:bg-red-100'
+                  }`}
+                >
                   {rightEntry.confidence > leftEntry.confidence ? '+' : ''}
                   {Math.round((rightEntry.confidence - leftEntry.confidence) * 100)}%
                 </Badge>

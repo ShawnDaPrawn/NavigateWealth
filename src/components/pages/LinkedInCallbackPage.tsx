@@ -46,7 +46,8 @@ export function LinkedInCallbackPage() {
     // Exchange the code for tokens
     const redirectUri = `${window.location.origin}/auth/linkedin/callback`;
 
-    linkedinApi.handleCallback(code, oauthState, redirectUri)
+    linkedinApi
+      .handleCallback(code, oauthState, redirectUri)
       .then((res) => {
         if (res.success && res.data) {
           setState('success');
@@ -98,12 +99,9 @@ export function LinkedInCallbackPage() {
             <p className="text-sm text-muted-foreground">
               {profileName
                 ? `Successfully connected as ${profileName}.`
-                : 'Successfully connected your LinkedIn account.'
-              }
+                : 'Successfully connected your LinkedIn account.'}
             </p>
-            <p className="text-xs text-muted-foreground">
-              Redirecting to the admin panel...
-            </p>
+            <p className="text-xs text-muted-foreground">Redirecting to the admin panel...</p>
           </div>
         )}
 

@@ -3,7 +3,7 @@ import copy from 'copy-to-clipboard';
 /**
  * Copy text to clipboard using copy-to-clipboard (execCommand) first,
  * falling back to navigator.clipboard.writeText if needed.
- * 
+ *
  * We prioritize the synchronous 'copy-to-clipboard' library (execCommand)
  * because it preserves the "user activation" state required by browsers.
  * The async navigator.clipboard API can lose this state if we await it first.

@@ -10,21 +10,22 @@ export function usePersonnelFilters(personnel: Personnel[]) {
     let filtered = personnel;
 
     if (activeCategory !== 'all') {
-      filtered = filtered.filter(p => p.role === activeCategory);
+      filtered = filtered.filter((p) => p.role === activeCategory);
     }
 
     if (statusFilter !== 'all') {
-      filtered = filtered.filter(p => p.status === statusFilter);
+      filtered = filtered.filter((p) => p.status === statusFilter);
     }
 
     if (searchTerm) {
       const searchLower = searchTerm.toLowerCase();
-      filtered = filtered.filter(p => 
-        (p.name || '').toLowerCase().includes(searchLower) ||
-        (p.firstName || '').toLowerCase().includes(searchLower) ||
-        (p.lastName || '').toLowerCase().includes(searchLower) ||
-        (p.email || '').toLowerCase().includes(searchLower) ||
-        (p.jobTitle || '').toLowerCase().includes(searchLower)
+      filtered = filtered.filter(
+        (p) =>
+          (p.name || '').toLowerCase().includes(searchLower) ||
+          (p.firstName || '').toLowerCase().includes(searchLower) ||
+          (p.lastName || '').toLowerCase().includes(searchLower) ||
+          (p.email || '').toLowerCase().includes(searchLower) ||
+          (p.jobTitle || '').toLowerCase().includes(searchLower),
       );
     }
 

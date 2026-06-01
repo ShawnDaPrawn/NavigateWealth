@@ -151,7 +151,8 @@ COMPLIANCE:
 - Always recommend professional advice for individual circumstances`;
 
 function getActionPrompt(request: AIWritingRequest): string {
-  const { action, content, context, tone, prompt, articleTitle, articleExcerpt, articleCategory } = request;
+  const { action, content, context, tone, prompt, articleTitle, articleExcerpt, articleCategory } =
+    request;
 
   const articleContext = [
     articleTitle && `Article title: "${articleTitle}"`,
@@ -181,7 +182,8 @@ function getActionPrompt(request: AIWritingRequest): string {
         conversational: 'warm, approachable, and easy to read while remaining professional',
         authoritative: 'confident, data-driven, and expert-level without being condescending',
         friendly: 'welcoming, supportive, and encouraging while maintaining credibility',
-        educational: 'explanatory, patient, and structured for learning, with clear definitions of terms',
+        educational:
+          'explanatory, patient, and structured for learning, with clear definitions of terms',
       };
       const toneDesc = toneMap[tone || 'professional'] || toneMap.professional;
       return `Rewrite the following text in a ${tone || 'professional'} tone (${toneDesc}). Preserve the factual content but adjust the voice and style. Return clean HTML.\n\n${articleContext}\n\nText to rewrite:\n${content}`;
@@ -241,7 +243,7 @@ Return a JSON object with:
 async function callOpenAI(
   systemPrompt: string,
   userPrompt: string,
-  options: { temperature?: number; maxTokens?: number } = {}
+  options: { temperature?: number; maxTokens?: number } = {},
 ): Promise<{ text: string; tokensUsed: number }> {
   const apiKey = Deno.env.get('OPENAI_API_KEY');
   if (!apiKey) {
@@ -253,7 +255,7 @@ async function callOpenAI(
   const response = await fetch('https://api.openai.com/v1/chat/completions', {
     method: 'POST',
     headers: {
-      'Authorization': `Bearer ${apiKey}`,
+      Authorization: `Bearer ${apiKey}`,
       'Content-Type': 'application/json',
     },
     body: JSON.stringify({
@@ -286,9 +288,7 @@ async function callOpenAI(
 
 const ARTICLE_WORKFLOW_ID = 'wf_699c7dc864988190b8897ab9552fe1bc0c5d0a63afa541d1';
 
-async function callOpenAIWorkflow(
-  prompt: string,
-): Promise<{ text: string; tokensUsed: number }> {
+async function callOpenAIWorkflow(prompt: string): Promise<{ text: string; tokensUsed: number }> {
   const apiKey = Deno.env.get('OPENAI_API_KEY');
   if (!apiKey) {
     throw new Error('OPENAI_API_KEY is not configured');
@@ -300,7 +300,7 @@ async function callOpenAIWorkflow(
     const response = await fetch('https://api.openai.com/v1/responses', {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${apiKey}`,
+        Authorization: `Bearer ${apiKey}`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
@@ -354,7 +354,9 @@ async function callOpenAIWorkflow(
   } catch (err) {
     // Network errors, timeouts, JSON parse failures — all fall back to Chat Completions
     const errMsg = err instanceof Error ? err.message : String(err);
-    log.error('OpenAI Responses API failed with exception — falling back to Chat Completions', { error: errMsg });
+    log.error('OpenAI Responses API failed with exception — falling back to Chat Completions', {
+      error: errMsg,
+    });
     return callOpenAI(BASE_SYSTEM_PROMPT, prompt, { temperature: 0.7, maxTokens: 4000 });
   }
 }
@@ -390,13 +392,21 @@ export async function searchUnsplashImage(
 ): Promise<UnsplashImageResult | undefined> {
   const accessKey = Deno.env.get('UNSPLASH_ACCESS_KEY')?.trim();
   if (!accessKey) {
-    log.error('UNSPLASH_ACCESS_KEY not configured — skipping image search. Set this secret for Unsplash images to work.');
+    log.error(
+      'UNSPLASH_ACCESS_KEY not configured — skipping image search. Set this secret for Unsplash images to work.',
+    );
     return undefined;
   }
 
   // Reject obviously invalid keys (placeholder values the user may not have replaced)
-  if (accessKey.length < 10 || accessKey === 'your-unsplash-access-key' || accessKey.startsWith('sk-')) {
-    log.error('UNSPLASH_ACCESS_KEY appears invalid (too short or placeholder value)', { keyLength: accessKey.length });
+  if (
+    accessKey.length < 10 ||
+    accessKey === 'your-unsplash-access-key' ||
+    accessKey.startsWith('sk-')
+  ) {
+    log.error('UNSPLASH_ACCESS_KEY appears invalid (too short or placeholder value)', {
+      keyLength: accessKey.length,
+    });
     return undefined;
   }
 
@@ -408,7 +418,7 @@ export async function searchUnsplashImage(
       query,
       per_page: perPage,
       orientation: 'landscape',
-      content_filter: 'high',   // Safe content only
+      content_filter: 'high', // Safe content only
     });
 
     const url = `https://api.unsplash.com/search/photos?${params.toString()}`;
@@ -416,7 +426,7 @@ export async function searchUnsplashImage(
 
     const response = await fetch(url, {
       headers: {
-        'Authorization': `Client-ID ${accessKey}`,
+        Authorization: `Client-ID ${accessKey}`,
         'Accept-Version': 'v1',
       },
       signal: AbortSignal.timeout(10000),
@@ -429,13 +439,14 @@ export async function searchUnsplashImage(
         statusText: response.statusText,
         query,
         errorBody: errorBody.slice(0, 500),
-        hint: response.status === 401
-          ? 'Invalid UNSPLASH_ACCESS_KEY — check the key value in your Supabase secrets'
-          : response.status === 403
-          ? 'Unsplash access forbidden — the API key may lack permissions or the app may need approval'
-          : response.status === 429
-          ? 'Unsplash rate limit exceeded — try again later'
-          : 'Unexpected error from Unsplash API',
+        hint:
+          response.status === 401
+            ? 'Invalid UNSPLASH_ACCESS_KEY — check the key value in your Supabase secrets'
+            : response.status === 403
+              ? 'Unsplash access forbidden — the API key may lack permissions or the app may need approval'
+              : response.status === 429
+                ? 'Unsplash rate limit exceeded — try again later'
+                : 'Unexpected error from Unsplash API',
       });
       return undefined;
     }
@@ -453,7 +464,10 @@ export async function searchUnsplashImage(
       const fresh = results.find((p: { id: string }) => !excludeIds.has(p.id));
       if (fresh) {
         photo = fresh;
-        log.info('Skipped excluded images, using fresh result', { photoId: photo.id, skipped: excludeIds.size });
+        log.info('Skipped excluded images, using fresh result', {
+          photoId: photo.id,
+          skipped: excludeIds.size,
+        });
       } else {
         log.info('All results were in exclusion set — using first result anyway', { query });
       }
@@ -463,7 +477,10 @@ export async function searchUnsplashImage(
     // raw URL allows appending sizing params: &w=1200&fit=crop&q=80
     const rawUrl: string = photo.urls?.raw || photo.urls?.full || '';
     if (!rawUrl) {
-      log.error('Unsplash photo found but has no raw/full URL', { photoId: photo.id, urls: JSON.stringify(photo.urls) });
+      log.error('Unsplash photo found but has no raw/full URL', {
+        photoId: photo.id,
+        urls: JSON.stringify(photo.urls),
+      });
       return undefined;
     }
 
@@ -478,7 +495,10 @@ export async function searchUnsplashImage(
       photoId: photo.id,
     };
   } catch (err) {
-    log.error('Unsplash image search failed with exception', { query, error: err instanceof Error ? err.message : String(err) });
+    log.error('Unsplash image search failed with exception', {
+      query,
+      error: err instanceof Error ? err.message : String(err),
+    });
     return undefined;
   }
 }
@@ -509,11 +529,12 @@ function buildArticleGenerationPrompt(brief: GenerateArticleBrief): string {
   };
 
   // Build category auto-detection instruction
-  const categoryInstruction = brief.availableCategories && brief.availableCategories.length > 0
-    ? `\nCATEGORY AUTO-DETECTION: No category was manually selected. Based on the topic and content, choose the single most appropriate category from this list: [${brief.availableCategories.join(', ')}]. Return your choice as "suggestedCategory" in the JSON output.`
-    : '';
+  const categoryInstruction =
+    brief.availableCategories && brief.availableCategories.length > 0
+      ? `\nCATEGORY AUTO-DETECTION: No category was manually selected. Based on the topic and content, choose the single most appropriate category from this list: [${brief.availableCategories.join(', ')}]. Return your choice as "suggestedCategory" in the JSON output.`
+      : '';
 
-  let prompt = `You are an expert South African financial content writer for Navigate Wealth, a wealth management platform.
+  const prompt = `You are an expert South African financial content writer for Navigate Wealth, a wealth management platform.
 
 Generate a complete, publication-ready article with the following specifications:
 
@@ -621,20 +642,31 @@ export async function generateFullArticle(
       title: brief.topic,
       excerpt: '',
       body: cleanHTML(text),
-      suggestedSlug: brief.topic.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, ''),
+      suggestedSlug: brief.topic
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, '-')
+        .replace(/^-|-$/g, ''),
       suggestedMetaDescription: '',
     };
   }
 
   const body = typeof parsed.body === 'string' ? cleanHTML(parsed.body) : '';
-  const wordCount = body.replace(/<[^>]+>/g, '').split(/\s+/).filter(Boolean).length;
+  const wordCount = body
+    .replace(/<[^>]+>/g, '')
+    .split(/\s+/)
+    .filter(Boolean).length;
   const readingTime = Math.max(1, Math.ceil(wordCount / 200));
 
   const result: GenerateArticleResult = {
     title: (parsed.title as string) || brief.topic,
     excerpt: (parsed.excerpt as string) || '',
     body,
-    suggestedSlug: (parsed.suggestedSlug as string) || brief.topic.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, ''),
+    suggestedSlug:
+      (parsed.suggestedSlug as string) ||
+      brief.topic
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, '-')
+        .replace(/^-|-$/g, ''),
     readingTimeMinutes: readingTime,
     suggestedMetaDescription: (parsed.suggestedMetaDescription as string) || '',
     tokensUsed,
@@ -643,8 +675,8 @@ export async function generateFullArticle(
 
   // Search Unsplash for a hero/thumbnail image using the AI-suggested query
   // Fallback: derive a search query from the article title if the AI didn't provide one
-  const imageSearchQuery = (parsed.imageSearchQuery as string)
-    || deriveImageSearchQuery(result.title, brief.topic);
+  const imageSearchQuery =
+    (parsed.imageSearchQuery as string) || deriveImageSearchQuery(result.title, brief.topic);
   log.info('Searching Unsplash for article image', {
     query: imageSearchQuery,
     source: parsed.imageSearchQuery ? 'ai' : 'fallback',
@@ -696,7 +728,12 @@ function postProcess(action: AIAction, rawText: string, tokensUsed: number): AIW
         // If JSON parse fails, split by newlines
         const lines = rawText
           .split('\n')
-          .map((l: string) => l.replace(/^\d+\.\s*/, '').replace(/^["']|["']$/g, '').trim())
+          .map((l: string) =>
+            l
+              .replace(/^\d+\.\s*/, '')
+              .replace(/^["']|["']$/g, '')
+              .trim(),
+          )
           .filter(Boolean);
         return {
           result: lines[0] || rawText,
@@ -714,9 +751,11 @@ function postProcess(action: AIAction, rawText: string, tokensUsed: number): AIW
           result: parsed.summary || 'Compliance review complete.',
           warnings: parsed.issues?.map(
             (i: { text: string; issue: string; severity: string; suggestion: string }) =>
-              `[${i.severity?.toUpperCase()}] ${i.issue}: "${i.text}" — ${i.suggestion}`
+              `[${i.severity?.toUpperCase()}] ${i.issue}: "${i.text}" — ${i.suggestion}`,
           ),
-          suggestions: [parsed.overallRisk ? `Overall risk: ${parsed.overallRisk}` : 'Review complete'],
+          suggestions: [
+            parsed.overallRisk ? `Overall risk: ${parsed.overallRisk}` : 'Review complete',
+          ],
           action,
           tokensUsed,
         };
@@ -808,18 +847,107 @@ function cleanHTML(text: string): string {
  */
 function deriveImageSearchQuery(title: string, topic: string): string {
   const stopWords = new Set([
-    'the', 'a', 'an', 'and', 'or', 'but', 'in', 'on', 'at', 'to', 'for',
-    'of', 'with', 'by', 'from', 'is', 'are', 'was', 'were', 'be', 'been',
-    'being', 'have', 'has', 'had', 'do', 'does', 'did', 'will', 'would',
-    'could', 'should', 'may', 'might', 'shall', 'can', 'this', 'that',
-    'these', 'those', 'it', 'its', 'not', 'no', 'your', 'our', 'their',
-    'how', 'what', 'when', 'where', 'why', 'which', 'who', 'whom',
-    'about', 'into', 'through', 'during', 'before', 'after', 'above',
-    'below', 'between', 'up', 'down', 'out', 'off', 'over', 'under',
-    'again', 'further', 'then', 'once', 'here', 'there', 'all', 'each',
-    'every', 'both', 'few', 'more', 'most', 'other', 'some', 'such',
-    'only', 'own', 'same', 'so', 'than', 'too', 'very', 'just', 'also',
-    'weekly', 'monthly', 'insights', 'investors', 'guide', 'overview',
+    'the',
+    'a',
+    'an',
+    'and',
+    'or',
+    'but',
+    'in',
+    'on',
+    'at',
+    'to',
+    'for',
+    'of',
+    'with',
+    'by',
+    'from',
+    'is',
+    'are',
+    'was',
+    'were',
+    'be',
+    'been',
+    'being',
+    'have',
+    'has',
+    'had',
+    'do',
+    'does',
+    'did',
+    'will',
+    'would',
+    'could',
+    'should',
+    'may',
+    'might',
+    'shall',
+    'can',
+    'this',
+    'that',
+    'these',
+    'those',
+    'it',
+    'its',
+    'not',
+    'no',
+    'your',
+    'our',
+    'their',
+    'how',
+    'what',
+    'when',
+    'where',
+    'why',
+    'which',
+    'who',
+    'whom',
+    'about',
+    'into',
+    'through',
+    'during',
+    'before',
+    'after',
+    'above',
+    'below',
+    'between',
+    'up',
+    'down',
+    'out',
+    'off',
+    'over',
+    'under',
+    'again',
+    'further',
+    'then',
+    'once',
+    'here',
+    'there',
+    'all',
+    'each',
+    'every',
+    'both',
+    'few',
+    'more',
+    'most',
+    'other',
+    'some',
+    'such',
+    'only',
+    'own',
+    'same',
+    'so',
+    'than',
+    'too',
+    'very',
+    'just',
+    'also',
+    'weekly',
+    'monthly',
+    'insights',
+    'investors',
+    'guide',
+    'overview',
   ]);
 
   // Prefer topic if it's concise (short topics are often more descriptive)
@@ -828,7 +956,7 @@ function deriveImageSearchQuery(title: string, topic: string): string {
     .toLowerCase()
     .replace(/[^a-z0-9\s]+/g, '')
     .split(/\s+/)
-    .filter(w => w.length > 2 && !stopWords.has(w));
+    .filter((w) => w.length > 2 && !stopWords.has(w));
 
   // Take 3-4 meaningful keywords, append 'professional' for better stock photo quality
   const selected = keywords.slice(0, 3).join(' ');
@@ -845,7 +973,9 @@ function deriveImageSearchQuery(title: string, topic: string): string {
  * @param request - The AI writing request with action, content, and context
  * @returns Processed AI writing response
  */
-export async function processAIWritingRequest(request: AIWritingRequest): Promise<AIWritingResponse> {
+export async function processAIWritingRequest(
+  request: AIWritingRequest,
+): Promise<AIWritingResponse> {
   const { action } = request;
 
   log.info('Processing AI writing request', { action });

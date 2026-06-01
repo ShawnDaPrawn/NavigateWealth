@@ -6,16 +6,16 @@ import { usePOPIAConsents, usePAIARequests } from '../hooks';
 const columns = [
   { key: 'title', label: 'Record Description', type: 'text' as const },
   { key: 'recordType', label: 'Type', type: 'text' as const },
-  { 
-    key: 'clientsAffected', 
-    label: 'Clients Affected', 
+  {
+    key: 'clientsAffected',
+    label: 'Clients Affected',
     type: 'custom' as const,
-    render: (value: number) => value ? value.toLocaleString() : '—'
+    render: (value: number) => (value ? value.toLocaleString() : '—'),
   },
   { key: 'dataCategories', label: 'Data Categories', type: 'text' as const },
-  { 
-    key: 'compliance', 
-    label: 'Compliance Status', 
+  {
+    key: 'compliance',
+    label: 'Compliance Status',
     type: 'custom' as const,
     render: (_: unknown, record: ComplianceRecord) => {
       if (record.consentStatus) return record.consentStatus;
@@ -24,12 +24,12 @@ const columns = [
       if (record.publicationStatus) return record.publicationStatus;
       if (record.complianceStatus) return record.complianceStatus;
       return '—';
-    }
+    },
   },
   { key: 'version', label: 'Version', type: 'text' as const },
   { key: 'lastAudit', label: 'Last Audit', type: 'date' as const },
   { key: 'due', label: 'Review Due', type: 'date' as const },
-  { key: 'status', label: 'Status', type: 'badge' as const }
+  { key: 'status', label: 'Status', type: 'badge' as const },
 ];
 
 const filters = [
@@ -42,8 +42,8 @@ const filters = [
       { value: 'Data Breach', label: 'Data Breach' },
       { value: 'PAIA Manual', label: 'PAIA Manual' },
       { value: 'POPIA Manual', label: 'POPIA Manual' },
-      { value: 'Data Retention Policy', label: 'Retention Policy' }
-    ]
+      { value: 'Data Retention Policy', label: 'Retention Policy' },
+    ],
   },
   {
     key: 'dataCategories',
@@ -51,9 +51,9 @@ const filters = [
     options: [
       { value: 'Personal & Financial', label: 'Personal & Financial' },
       { value: 'Personal & Transaction', label: 'Personal & Transaction' },
-      { value: 'Email Addresses', label: 'Email Addresses' }
-    ]
-  }
+      { value: 'Email Addresses', label: 'Email Addresses' },
+    ],
+  },
 ];
 
 export function POPIAPAIATab() {
@@ -61,7 +61,10 @@ export function POPIAPAIATab() {
   const { data: paiaRequests = [], isLoading: paiaLoading } = usePAIARequests();
 
   // Merge both data sources into a single list for the combined register view
-  const records = [...(consents as unknown as ComplianceRecord[]), ...(paiaRequests as unknown as ComplianceRecord[])];
+  const records = [
+    ...(consents as unknown as ComplianceRecord[]),
+    ...(paiaRequests as unknown as ComplianceRecord[]),
+  ];
   const isLoading = consentsLoading || paiaLoading;
 
   const handleAdd = () => {

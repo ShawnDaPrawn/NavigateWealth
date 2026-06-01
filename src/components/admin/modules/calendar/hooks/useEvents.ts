@@ -1,7 +1,7 @@
 /**
  * Calendar Events Hooks
  * Navigate Wealth Admin Dashboard
- * 
+ *
  * React Query hooks for managing calendar events.
  * Uses the calendar API layer for all data operations.
  */
@@ -10,12 +10,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { projectId, publicAnonKey } from '../../../../../utils/supabase/info';
 import { calendarApi } from '../api';
-import type {
-  CalendarEvent,
-  CreateEventInput,
-  UpdateEventInput,
-  CalendarFilters,
-} from '../types';
+import type { CalendarEvent, CreateEventInput, UpdateEventInput, CalendarFilters } from '../types';
 import { QUERY_STALE_TIME, QUERY_GC_TIME } from '../constants';
 
 // ============================================================================
@@ -65,7 +60,7 @@ export function useEvent(id: string | null) {
     queryFn: async () => {
       if (!id) return null;
       const events = await calendarApi.fetchEvents();
-      return events.find(e => e.id === id) || null;
+      return events.find((e) => e.id === id) || null;
     },
     enabled: !!id,
     staleTime: QUERY_STALE_TIME,
@@ -88,7 +83,7 @@ export function useCreateEvent() {
     mutationFn: async (input: CreateEventInput): Promise<CalendarEvent> => {
       // Remove create_reminder before sending to database (frontend-only flag)
       const { create_reminder, ...eventData } = input;
-      
+
       const event = await calendarApi.createEvent(eventData);
 
       // Handle Reminders (if enabled)
@@ -100,14 +95,14 @@ export function useCreateEvent() {
               method: 'POST',
               headers: {
                 'Content-Type': 'application/json',
-                'Authorization': `Bearer ${publicAnonKey}`,
+                Authorization: `Bearer ${publicAnonKey}`,
               },
               body: JSON.stringify({
                 eventId: event.id,
                 clientId: input.client_id,
                 eventData: event,
               }),
-            }
+            },
           );
         } catch (reminderError) {
           console.error('Failed to schedule reminders:', reminderError);

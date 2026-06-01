@@ -33,8 +33,7 @@ export function useSocialMediaAI() {
   // ---------------------------------------------------------------------------
 
   const generateTextMutation = useMutation({
-    mutationFn: (input: GeneratePostTextInput) =>
-      socialMediaAIApi.generatePostText(input),
+    mutationFn: (input: GeneratePostTextInput) => socialMediaAIApi.generatePostText(input),
     onSuccess: (response) => {
       if (response.success) {
         toast.success('AI content generated successfully');
@@ -55,8 +54,7 @@ export function useSocialMediaAI() {
   // ---------------------------------------------------------------------------
 
   const generateImageMutation = useMutation({
-    mutationFn: (input: GenerateImageInput) =>
-      socialMediaAIApi.generateImage(input),
+    mutationFn: (input: GenerateImageInput) => socialMediaAIApi.generateImage(input),
     onSuccess: (response) => {
       if (response.success) {
         toast.success('AI image generated successfully');
@@ -77,8 +75,7 @@ export function useSocialMediaAI() {
   // ---------------------------------------------------------------------------
 
   const generateBundleMutation = useMutation({
-    mutationFn: (input: GenerateBundleInput) =>
-      socialMediaAIApi.generateBundle(input),
+    mutationFn: (input: GenerateBundleInput) => socialMediaAIApi.generateBundle(input),
     onSuccess: (response) => {
       if (response.success) {
         toast.success('Content bundle generated successfully (text + image)');

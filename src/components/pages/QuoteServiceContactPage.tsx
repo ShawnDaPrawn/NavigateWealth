@@ -63,8 +63,9 @@ export function QuoteServiceContactPage() {
 
   const selectedConfig = selectedService ? getServiceConfig(selectedService) : null;
 
-  const isFormValid =
-    Boolean(firstName.trim() && lastName.trim() && email.trim() && phone.trim() && selectedService);
+  const isFormValid = Boolean(
+    firstName.trim() && lastName.trim() && email.trim() && phone.trim() && selectedService,
+  );
 
   const handleSubmit = useCallback(
     async (e: React.FormEvent) => {
@@ -129,7 +130,18 @@ export function QuoteServiceContactPage() {
         setIsSubmitting(false);
       }
     },
-    [firstName, lastName, email, phone, selectedService, estateChoice, selectedConfig, navigate, isFormValid, website],
+    [
+      firstName,
+      lastName,
+      email,
+      phone,
+      selectedService,
+      estateChoice,
+      selectedConfig,
+      navigate,
+      isFormValid,
+      website,
+    ],
   );
 
   if (!selectedService || !selectedConfig) {
@@ -196,7 +208,8 @@ export function QuoteServiceContactPage() {
             {selectedConfig.label} quote
           </h1>
           <p className="text-white/70 max-w-xl text-sm sm:text-base leading-relaxed">
-            Tell us who you are so we can prepare your personalised quote. Next step: your specific needs.
+            Tell us who you are so we can prepare your personalised quote. Next step: your specific
+            needs.
           </p>
         </div>
       </div>
@@ -231,7 +244,8 @@ export function QuoteServiceContactPage() {
               <div className="bg-gradient-to-r from-primary/5 to-transparent px-6 py-4 border-b border-gray-100">
                 <h2 className="text-lg font-bold text-gray-900">Your Details</h2>
                 <p className="text-sm text-gray-600 mt-0.5">
-                  Tell us who you are so we can prepare your personalised {selectedConfig.label.toLowerCase()} quote.
+                  Tell us who you are so we can prepare your personalised{' '}
+                  {selectedConfig.label.toLowerCase()} quote.
                 </p>
               </div>
 
@@ -295,7 +309,11 @@ export function QuoteServiceContactPage() {
                   </div>
                 </div>
 
-                <div className="absolute opacity-0 h-0 overflow-hidden" aria-hidden="true" tabIndex={-1}>
+                <div
+                  className="absolute opacity-0 h-0 overflow-hidden"
+                  aria-hidden="true"
+                  tabIndex={-1}
+                >
                   <label htmlFor="qsc-website">Website</label>
                   <input
                     id="qsc-website"
@@ -310,7 +328,9 @@ export function QuoteServiceContactPage() {
 
                 {selectedService === 'estate-planning' && (
                   <div className="space-y-2">
-                    <Label className="text-sm font-medium text-gray-700">What would you like to do?</Label>
+                    <Label className="text-sm font-medium text-gray-700">
+                      What would you like to do?
+                    </Label>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                       <button
                         type="button"
@@ -321,8 +341,12 @@ export function QuoteServiceContactPage() {
                             : 'border-gray-200 hover:border-primary/30'
                         }`}
                       >
-                        <span className="text-sm font-semibold text-gray-900 block">Estate Planning Consultation</span>
-                        <span className="text-xs text-gray-500 mt-0.5 block">Trusts, succession, estate duty</span>
+                        <span className="text-sm font-semibold text-gray-900 block">
+                          Estate Planning Consultation
+                        </span>
+                        <span className="text-xs text-gray-500 mt-0.5 block">
+                          Trusts, succession, estate duty
+                        </span>
                       </button>
                       <button
                         type="button"
@@ -335,9 +359,13 @@ export function QuoteServiceContactPage() {
                       >
                         <div className="flex items-center gap-2">
                           <span className="text-sm font-semibold text-gray-900">Draft My Will</span>
-                          <Badge className="bg-primary/10 text-primary text-[10px] px-1.5 py-0 h-4">AI-Assisted</Badge>
+                          <Badge className="bg-primary/10 text-primary text-[10px] px-1.5 py-0 h-4">
+                            AI-Assisted
+                          </Badge>
                         </div>
-                        <span className="text-xs text-gray-500 mt-0.5 block">Start your will drafting now</span>
+                        <span className="text-xs text-gray-500 mt-0.5 block">
+                          Start your will drafting now
+                        </span>
                       </button>
                     </div>
                   </div>
@@ -383,7 +411,10 @@ export function QuoteServiceContactPage() {
 
                 <p className="text-xs text-gray-400 leading-relaxed text-center">
                   By submitting, you agree to our{' '}
-                  <a href="/legal?tab=privacy" className="text-primary/70 hover:text-primary underline">
+                  <a
+                    href="/legal?tab=privacy"
+                    className="text-primary/70 hover:text-primary underline"
+                  >
                     Privacy Policy
                   </a>
                   . Your information is secure and will only be used to prepare your quote.
@@ -395,7 +426,9 @@ export function QuoteServiceContactPage() {
           <div className="lg:col-span-2 space-y-5">
             <div className="bg-white rounded-2xl shadow-lg border border-gray-100 p-6">
               <h3 className="text-base font-bold text-gray-900 mb-2">{selectedConfig.label}</h3>
-              <p className="text-sm text-gray-600 leading-relaxed mb-4">{selectedConfig.heroDescription}</p>
+              <p className="text-sm text-gray-600 leading-relaxed mb-4">
+                {selectedConfig.heroDescription}
+              </p>
               <div className="space-y-2.5">
                 {[
                   'Independent, unbiased advice',
@@ -416,7 +449,7 @@ export function QuoteServiceContactPage() {
               <div className="space-y-3">
                 {[
                   { step: '1', text: 'Choose your service' },
-                  { step: '2', text: 'Share your details (you\'re here!)' },
+                  { step: '2', text: "Share your details (you're here!)" },
                   { step: '3', text: 'Tell us your needs and receive your quote' },
                 ].map(({ step, text }) => (
                   <div key={step} className="flex items-start gap-3">

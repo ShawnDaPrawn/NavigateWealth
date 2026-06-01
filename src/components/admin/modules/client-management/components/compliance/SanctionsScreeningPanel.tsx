@@ -15,7 +15,14 @@ import { Badge } from '../../../../../ui/badge';
 import { Button } from '../../../../../ui/button';
 import { Label } from '../../../../../ui/label';
 import { Input } from '../../../../../ui/input';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../../../../ui/table';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '../../../../../ui/table';
 import {
   Shield,
   Loader2,
@@ -205,8 +212,8 @@ export function SanctionsScreeningPanel({
             Sanctions & PEP Screening
           </CardTitle>
           <CardDescription>
-            Search international sanctions lists (OFAC, UN, EU, UK HMT) and South African
-            regulatory lists (SARS, FIC) for potential matches against the client.
+            Search international sanctions lists (OFAC, UN, EU, UK HMT) and South African regulatory
+            lists (SARS, FIC) for potential matches against the client.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-3">
@@ -247,7 +254,9 @@ export function SanctionsScreeningPanel({
                 className="flex h-8 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm"
               >
                 {SANCTIONS_SOURCES.map((src) => (
-                  <option key={src.value} value={src.value}>{src.label}</option>
+                  <option key={src.value} value={src.value}>
+                    {src.label}
+                  </option>
                 ))}
               </select>
             </div>
@@ -268,13 +277,15 @@ export function SanctionsScreeningPanel({
 
           {/* Result summary */}
           {result && (
-            <div className={`rounded-lg p-3 text-sm ${
-              result.success
-                ? isClear
-                  ? 'bg-green-50 border border-green-200'
+            <div
+              className={`rounded-lg p-3 text-sm ${
+                result.success
+                  ? isClear
+                    ? 'bg-green-50 border border-green-200'
+                    : 'bg-red-50 border border-red-200'
                   : 'bg-red-50 border border-red-200'
-                : 'bg-red-50 border border-red-200'
-            }`}>
+              }`}
+            >
               {!result.success && (
                 <div className="flex items-center gap-2">
                   <XCircle className="h-4 w-4 text-red-600" />
@@ -289,7 +300,8 @@ export function SanctionsScreeningPanel({
                   <div>
                     <span className="text-green-800 font-medium">No Matches Found</span>
                     <p className="text-green-700 text-xs mt-0.5">
-                      Client is clear across {result.data?.searchedLists?.join(', ') || 'all'} sanctions lists.
+                      Client is clear across {result.data?.searchedLists?.join(', ') || 'all'}{' '}
+                      sanctions lists.
                     </p>
                   </div>
                 </div>
@@ -304,8 +316,8 @@ export function SanctionsScreeningPanel({
                     </span>
                   </div>
                   <p className="text-red-700 text-xs mt-1 mb-3">
-                    Review the matches below. These require manual assessment to determine
-                    if they are true positive matches or false positives.
+                    Review the matches below. These require manual assessment to determine if they
+                    are true positive matches or false positives.
                   </p>
 
                   {/* Matches table */}
@@ -355,7 +367,11 @@ export function SanctionsScreeningPanel({
                     onClick={() => setShowDetails(!showDetails)}
                     className="flex items-center gap-1 text-xs text-gray-500 hover:text-gray-700 transition-colors"
                   >
-                    {showDetails ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
+                    {showDetails ? (
+                      <ChevronUp className="h-3 w-3" />
+                    ) : (
+                      <ChevronDown className="h-3 w-3" />
+                    )}
                     {showDetails ? 'Hide' : 'Show'} raw response
                   </button>
 

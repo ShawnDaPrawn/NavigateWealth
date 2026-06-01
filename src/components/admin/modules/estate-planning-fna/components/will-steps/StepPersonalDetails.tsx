@@ -73,7 +73,9 @@ export function StepPersonalDetails({ personalDetails: pd, onUpdate }: StepPerso
       {pd.maritalStatus.startsWith('married') && (
         <div className="contents">
           <Separator className="my-1" />
-          <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Spouse Information</p>
+          <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+            Spouse Information
+          </p>
           <FieldRow>
             <FormField label="Spouse Full Name">
               <Input

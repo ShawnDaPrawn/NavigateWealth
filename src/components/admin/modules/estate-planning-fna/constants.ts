@@ -4,7 +4,7 @@
 
 export const ESTATE_PLANNING_CONSTANTS = {
   // Current SA Estate Duty (2024/2025)
-  ESTATE_DUTY_RATE: 0.20, // 20% on dutiable estate
+  ESTATE_DUTY_RATE: 0.2, // 20% on dutiable estate
   ESTATE_DUTY_ABATEMENT: 3500000, // R3.5 million
 
   // Default assumptions
@@ -14,7 +14,7 @@ export const ESTATE_PLANNING_CONSTANTS = {
   DEFAULT_FUNERAL_COSTS: 50000,
 
   // CGT on death
-  CGT_INCLUSION_RATE_INDIVIDUAL: 0.40,
+  CGT_INCLUSION_RATE_INDIVIDUAL: 0.4,
 
   // Liquidity risk thresholds
   LIQUIDITY_SHORTFALL_MODERATE_THRESHOLD: 100000,

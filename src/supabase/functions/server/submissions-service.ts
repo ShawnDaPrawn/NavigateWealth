@@ -86,7 +86,6 @@ function generateId(): string {
 // ── Service ───────────────────────────────────────────────────────────────────
 
 export const submissionsService = {
-
   /**
    * List all submissions, optionally filtered by type or status.
    * Uses getByPrefix to scan all submission: keys.
@@ -99,15 +98,15 @@ export const submissionsService = {
     let submissions = (entries as Submission[]).filter(Boolean);
 
     if (filters?.type) {
-      submissions = submissions.filter(s => s.type === filters.type);
+      submissions = submissions.filter((s) => s.type === filters.type);
     }
     if (filters?.status) {
-      submissions = submissions.filter(s => s.status === filters.status);
+      submissions = submissions.filter((s) => s.status === filters.status);
     }
 
     // Most recent first
     return submissions.sort(
-      (a, b) => new Date(b.submittedAt).getTime() - new Date(a.submittedAt).getTime()
+      (a, b) => new Date(b.submittedAt).getTime() - new Date(a.submittedAt).getTime(),
     );
   },
 
@@ -148,7 +147,7 @@ export const submissionsService = {
    * is a single KV entry.
    */
   async update(id: string, input: UpdateSubmissionInput, updatedBy?: string): Promise<Submission> {
-    const existing = await kv.get(submissionKey(id)) as Submission | null;
+    const existing = (await kv.get(submissionKey(id))) as Submission | null;
     if (!existing) {
       throw new Error(`Submission not found: ${id}`);
     }

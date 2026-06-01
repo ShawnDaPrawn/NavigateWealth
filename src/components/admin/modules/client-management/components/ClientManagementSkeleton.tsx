@@ -106,7 +106,7 @@ export function ClientManagementSkeleton() {
             <Skeleton className="h-4 w-20" />
           </div>
           {/* Table rows */}
-          {[1, 2, 3, 4, 5, 6, 7, 8].map(i => (
+          {[1, 2, 3, 4, 5, 6, 7, 8].map((i) => (
             <TableRowSkeleton key={i} />
           ))}
         </div>

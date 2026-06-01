@@ -34,10 +34,7 @@ import { createModuleLogger } from './stderr-logger.ts';
 const log = createModuleLogger('kv-cleanup');
 
 function createServiceClient() {
-  return createClient(
-    Deno.env.get('SUPABASE_URL')!,
-    Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,
-  );
+  return createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!);
 }
 
 // ============================================================================
@@ -84,9 +81,7 @@ export interface KvCleanupResult {
  * Fetch all KV rows whose key matches a given prefix.
  * Returns both key and value (unlike kv.getByPrefix which strips keys).
  */
-async function fetchKeyValuesByPrefix(
-  prefix: string,
-): Promise<{ key: string; value: unknown }[]> {
+async function fetchKeyValuesByPrefix(prefix: string): Promise<{ key: string; value: unknown }[]> {
   const supabase = createServiceClient();
   const { data, error } = await supabase
     .from('kv_store_91ed8379')
@@ -216,11 +211,12 @@ async function cleanOldContactForms(
 
   for (const row of rows) {
     const val = row.value as Record<string, unknown> | null;
-    if (!val) { staleKeys.push(row.key); continue; }
+    if (!val) {
+      staleKeys.push(row.key);
+      continue;
+    }
 
-    const submittedAt = val.submittedAt
-      ? new Date(val.submittedAt as string).getTime()
-      : 0;
+    const submittedAt = val.submittedAt ? new Date(val.submittedAt as string).getTime() : 0;
     if (submittedAt > 0 && submittedAt < cutoff) {
       staleKeys.push(row.key);
     }
@@ -251,11 +247,12 @@ async function cleanOldQuoteRequests(
 
   for (const row of rows) {
     const val = row.value as Record<string, unknown> | null;
-    if (!val) { staleKeys.push(row.key); continue; }
+    if (!val) {
+      staleKeys.push(row.key);
+      continue;
+    }
 
-    const submittedAt = val.submittedAt
-      ? new Date(val.submittedAt as string).getTime()
-      : 0;
+    const submittedAt = val.submittedAt ? new Date(val.submittedAt as string).getTime() : 0;
     if (submittedAt > 0 && submittedAt < cutoff) {
       staleKeys.push(row.key);
     }
@@ -286,7 +283,10 @@ async function cleanStaleAuditEntries(
 
   for (const row of rows) {
     const val = row.value as Record<string, unknown> | null;
-    if (!val) { staleKeys.push(row.key); continue; }
+    if (!val) {
+      staleKeys.push(row.key);
+      continue;
+    }
 
     // Audit entries may use `timestamp` or `createdAt`
     const ts = (val.timestamp || val.createdAt) as string | undefined;
@@ -318,15 +318,15 @@ async function cleanStaleAuditEntries(
  * @param options.retentionDays       Days to retain form submissions (default: 90).
  * @param options.auditRetentionDays  Days to retain audit trail entries (default: 365).
  */
-export async function runKvCleanup(
-  options: KvCleanupOptions = {},
-): Promise<KvCleanupResult> {
+export async function runKvCleanup(options: KvCleanupOptions = {}): Promise<KvCleanupResult> {
   const dryRun = options.dryRun ?? true;
   const retentionDays = options.retentionDays ?? 90;
   const auditRetentionDays = options.auditRetentionDays ?? 365;
   const startTime = Date.now();
 
-  log.info(`Starting KV cleanup (dryRun=${dryRun}, retentionDays=${retentionDays}, auditRetentionDays=${auditRetentionDays})`);
+  log.info(
+    `Starting KV cleanup (dryRun=${dryRun}, retentionDays=${retentionDays}, auditRetentionDays=${auditRetentionDays})`,
+  );
 
   const [
     rateLimits,

@@ -10,7 +10,7 @@ import {
 import { Button } from '../../../../ui/button';
 import { Label } from '../../../../ui/label';
 import { Input } from '../../../../ui/input';
-import { 
+import {
   Select,
   SelectContent,
   SelectItem,
@@ -97,11 +97,9 @@ export function ReportDialog({ open, onOpenChange, report, onRun }: ReportDialog
       <DialogContent className="sm:max-w-[520px]">
         <DialogHeader>
           <DialogTitle>{report.name}</DialogTitle>
-          <DialogDescription>
-            {report.description}
-          </DialogDescription>
+          <DialogDescription>{report.description}</DialogDescription>
         </DialogHeader>
-        
+
         <div className="space-y-5">
           {/* Export Format */}
           <div>
@@ -161,7 +159,9 @@ export function ReportDialog({ open, onOpenChange, report, onRun }: ReportDialog
                 <Input
                   type="date"
                   value={startDate}
-                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => setStartDate(e.target.value)}
+                  onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                    setStartDate(e.target.value)
+                  }
                   max={endDate || undefined}
                   className="text-sm"
                 />

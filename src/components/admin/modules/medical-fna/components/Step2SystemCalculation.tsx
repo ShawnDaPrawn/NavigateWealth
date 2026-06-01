@@ -1,6 +1,6 @@
 /**
  * Step 2: System Auto-Calculation
- * 
+ *
  * Behaviour Rules:
  * - NO MANUAL EDITING IN THIS STEP
  * - Display all calculated values from Step 1 input
@@ -24,14 +24,13 @@ interface Step2Props {
 }
 
 export function Step2SystemCalculation({ inputs, calculations, onNext, onBack }: Step2Props) {
-  
   return (
     <div className="space-y-8">
       <Alert>
         <Info className="h-4 w-4" />
         <AlertDescription className="text-sm">
-          All calculations below are system-generated and cannot be edited in this step. 
-          You will have the opportunity to apply manual overrides in Step 3.
+          All calculations below are system-generated and cannot be edited in this step. You will
+          have the opportunity to apply manual overrides in Step 3.
         </AlertDescription>
       </Alert>
 
@@ -48,13 +47,19 @@ export function Step2SystemCalculation({ inputs, calculations, onNext, onBack }:
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {inputs.existingHospitalCover && (
               <div className="p-3 bg-muted/30 rounded-lg border">
-                <p className="text-xs text-muted-foreground uppercase font-semibold tracking-wider mb-1">Current Cover</p>
+                <p className="text-xs text-muted-foreground uppercase font-semibold tracking-wider mb-1">
+                  Current Cover
+                </p>
                 <p className="text-lg font-medium">{inputs.existingHospitalCover}</p>
               </div>
             )}
             <div className="p-3 bg-muted/50 rounded-lg">
-              <p className="text-xs text-muted-foreground uppercase font-semibold tracking-wider mb-1">System Recommendation</p>
-              <p className="text-lg font-bold text-primary">{calculations.recommendedInHospitalCover}</p>
+              <p className="text-xs text-muted-foreground uppercase font-semibold tracking-wider mb-1">
+                System Recommendation
+              </p>
+              <p className="text-lg font-bold text-primary">
+                {calculations.recommendedInHospitalCover}
+              </p>
             </div>
           </div>
           <div className="text-sm text-muted-foreground bg-muted/30 p-3 rounded border italic">
@@ -76,13 +81,19 @@ export function Step2SystemCalculation({ inputs, calculations, onNext, onBack }:
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {inputs.existingMSA !== undefined && (
               <div className="p-3 bg-muted/30 rounded-lg border">
-                <p className="text-xs text-muted-foreground uppercase font-semibold tracking-wider mb-1">Current MSA</p>
+                <p className="text-xs text-muted-foreground uppercase font-semibold tracking-wider mb-1">
+                  Current MSA
+                </p>
                 <p className="text-lg font-medium">R {inputs.existingMSA.toLocaleString()}</p>
               </div>
             )}
             <div className="p-3 bg-muted/50 rounded-lg">
-              <p className="text-xs text-muted-foreground uppercase font-semibold tracking-wider mb-1">System Recommendation</p>
-              <p className="text-lg font-bold text-primary">{calculations.msaRecommended ? "Recommended" : "Not Recommended"}</p>
+              <p className="text-xs text-muted-foreground uppercase font-semibold tracking-wider mb-1">
+                System Recommendation
+              </p>
+              <p className="text-lg font-bold text-primary">
+                {calculations.msaRecommended ? 'Recommended' : 'Not Recommended'}
+              </p>
             </div>
           </div>
           <div className="text-sm text-muted-foreground bg-muted/30 p-3 rounded border italic">
@@ -104,12 +115,16 @@ export function Step2SystemCalculation({ inputs, calculations, onNext, onBack }:
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {inputs.existingDependents !== undefined && (
               <div className="p-3 bg-muted/30 rounded-lg border">
-                <p className="text-xs text-muted-foreground uppercase font-semibold tracking-wider mb-1">Current Dependents</p>
+                <p className="text-xs text-muted-foreground uppercase font-semibold tracking-wider mb-1">
+                  Current Dependents
+                </p>
                 <p className="text-lg font-medium">{inputs.existingDependents}</p>
               </div>
             )}
             <div className="p-3 bg-muted/50 rounded-lg">
-              <p className="text-xs text-muted-foreground uppercase font-semibold tracking-wider mb-1">System Recommendation</p>
+              <p className="text-xs text-muted-foreground uppercase font-semibold tracking-wider mb-1">
+                System Recommendation
+              </p>
               <p className="text-lg font-bold text-primary">{calculations.recommendedDependents}</p>
             </div>
           </div>
@@ -132,13 +147,19 @@ export function Step2SystemCalculation({ inputs, calculations, onNext, onBack }:
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {inputs.existingLJP !== undefined && (
               <div className="p-3 bg-muted/30 rounded-lg border">
-                <p className="text-xs text-muted-foreground uppercase font-semibold tracking-wider mb-1">Current Penalty</p>
+                <p className="text-xs text-muted-foreground uppercase font-semibold tracking-wider mb-1">
+                  Current Penalty
+                </p>
                 <p className="text-lg font-medium">R {inputs.existingLJP.toLocaleString()}</p>
               </div>
             )}
             <div className="p-3 bg-muted/50 rounded-lg">
-              <p className="text-xs text-muted-foreground uppercase font-semibold tracking-wider mb-1">Applicable Penalty Band</p>
-              <p className={`text-2xl font-bold ${calculations.ljpBand !== '0%' ? 'text-destructive' : 'text-primary'}`}>
+              <p className="text-xs text-muted-foreground uppercase font-semibold tracking-wider mb-1">
+                Applicable Penalty Band
+              </p>
+              <p
+                className={`text-2xl font-bold ${calculations.ljpBand !== '0%' ? 'text-destructive' : 'text-primary'}`}
+              >
                 {calculations.ljpBand}
               </p>
               {calculations.ljpBand !== '0%' && (
@@ -158,8 +179,8 @@ export function Step2SystemCalculation({ inputs, calculations, onNext, onBack }:
       <Alert className="border-primary/20 bg-primary/5">
         <Info className="h-4 w-4 text-primary" />
         <AlertDescription className="text-sm">
-          <strong>Next Step:</strong> You can apply manual overrides to any calculated values in Step 3. 
-          All overrides must include a reason for compliance purposes.
+          <strong>Next Step:</strong> You can apply manual overrides to any calculated values in
+          Step 3. All overrides must include a reason for compliance purposes.
         </AlertDescription>
       </Alert>
 

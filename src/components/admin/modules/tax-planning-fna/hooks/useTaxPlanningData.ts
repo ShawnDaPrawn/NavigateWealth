@@ -10,7 +10,8 @@ import type { FinalTaxPlan, TaxPlanningInputs } from '../types';
 const QUERY_KEYS = {
   all: ['tax-planning-fna'] as const,
   sessions: (clientId: string) => ['tax-planning-fna', 'sessions', clientId] as const,
-  latestPublished: (clientId: string) => ['tax-planning-fna', 'latest-published', clientId] as const,
+  latestPublished: (clientId: string) =>
+    ['tax-planning-fna', 'latest-published', clientId] as const,
   autoPopulate: (clientId: string) => ['tax-planning-fna', 'auto-populate', clientId] as const,
 };
 

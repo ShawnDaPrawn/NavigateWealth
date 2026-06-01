@@ -28,12 +28,7 @@ interface FiltersDrawerProps {
   onApplyFilters: (filters: Partial<CalendarFilters>) => void;
 }
 
-export function FiltersDrawer({
-  open,
-  onClose,
-  filters,
-  onApplyFilters,
-}: FiltersDrawerProps) {
+export function FiltersDrawer({ open, onClose, filters, onApplyFilters }: FiltersDrawerProps) {
   const { data: clients = [] } = useClients();
 
   const [localFilters, setLocalFilters] = useState<Partial<CalendarFilters>>(filters);
@@ -60,10 +55,10 @@ export function FiltersDrawer({
   };
 
   const toggleEventType = (type: EventType) => {
-    setLocalFilters(prev => {
+    setLocalFilters((prev) => {
       const types = prev.eventTypes || [];
       if (types.includes(type)) {
-        return { ...prev, eventTypes: types.filter(t => t !== type) };
+        return { ...prev, eventTypes: types.filter((t) => t !== type) };
       } else {
         return { ...prev, eventTypes: [...types, type] };
       }
@@ -71,10 +66,10 @@ export function FiltersDrawer({
   };
 
   const toggleEventStatus = (status: EventStatus) => {
-    setLocalFilters(prev => {
+    setLocalFilters((prev) => {
       const statuses = prev.eventStatuses || [];
       if (statuses.includes(status)) {
-        return { ...prev, eventStatuses: statuses.filter(s => s !== status) };
+        return { ...prev, eventStatuses: statuses.filter((s) => s !== status) };
       } else {
         return { ...prev, eventStatuses: [...statuses, status] };
       }
@@ -94,27 +89,43 @@ export function FiltersDrawer({
             <Label className="text-base font-medium mb-3 block">Date Range</Label>
             <div className="space-y-3">
               <div>
-                <Label htmlFor="start_date" className="text-sm">From</Label>
+                <Label htmlFor="start_date" className="text-sm">
+                  From
+                </Label>
                 <Input
                   id="start_date"
                   type="date"
                   value={localFilters.dateRange?.start || ''}
-                  onChange={(e) => setLocalFilters(prev => ({
-                    ...prev,
-                    dateRange: { ...prev.dateRange, start: e.target.value || null, end: prev.dateRange?.end || null }
-                  }))}
+                  onChange={(e) =>
+                    setLocalFilters((prev) => ({
+                      ...prev,
+                      dateRange: {
+                        ...prev.dateRange,
+                        start: e.target.value || null,
+                        end: prev.dateRange?.end || null,
+                      },
+                    }))
+                  }
                 />
               </div>
               <div>
-                <Label htmlFor="end_date" className="text-sm">To</Label>
+                <Label htmlFor="end_date" className="text-sm">
+                  To
+                </Label>
                 <Input
                   id="end_date"
                   type="date"
                   value={localFilters.dateRange?.end || ''}
-                  onChange={(e) => setLocalFilters(prev => ({
-                    ...prev,
-                    dateRange: { start: prev.dateRange?.start || null, ...prev.dateRange, end: e.target.value || null }
-                  }))}
+                  onChange={(e) =>
+                    setLocalFilters((prev) => ({
+                      ...prev,
+                      dateRange: {
+                        start: prev.dateRange?.start || null,
+                        ...prev.dateRange,
+                        end: e.target.value || null,
+                      },
+                    }))
+                  }
                 />
               </div>
             </div>
@@ -160,10 +171,14 @@ export function FiltersDrawer({
 
           {/* Client Filter */}
           <div>
-            <Label htmlFor="client_filter" className="text-base font-medium mb-3 block">Client</Label>
+            <Label htmlFor="client_filter" className="text-base font-medium mb-3 block">
+              Client
+            </Label>
             <Select
               value={localFilters.clientId || 'all'}
-              onValueChange={(value) => setLocalFilters(prev => ({ ...prev, clientId: value === 'all' ? null : value }))}
+              onValueChange={(value) =>
+                setLocalFilters((prev) => ({ ...prev, clientId: value === 'all' ? null : value }))
+              }
             >
               <SelectTrigger>
                 <SelectValue placeholder="All clients" />

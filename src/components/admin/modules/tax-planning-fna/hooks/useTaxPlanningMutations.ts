@@ -31,8 +31,12 @@ export function useTaxPlanningMutations() {
     mutationFn: ({ clientId, ...data }: SaveSessionParams) =>
       TaxPlanningFnaAPI.saveSession(clientId, data),
     onSuccess: (_data, variables) => {
-      queryClient.invalidateQueries({ queryKey: TAX_PLANNING_QUERY_KEYS.sessions(variables.clientId) });
-      queryClient.invalidateQueries({ queryKey: TAX_PLANNING_QUERY_KEYS.latestPublished(variables.clientId) });
+      queryClient.invalidateQueries({
+        queryKey: TAX_PLANNING_QUERY_KEYS.sessions(variables.clientId),
+      });
+      queryClient.invalidateQueries({
+        queryKey: TAX_PLANNING_QUERY_KEYS.latestPublished(variables.clientId),
+      });
       const action = variables.status === 'published' ? 'published' : 'saved as draft';
       toast.success(`Tax Planning FNA ${action} successfully`);
     },

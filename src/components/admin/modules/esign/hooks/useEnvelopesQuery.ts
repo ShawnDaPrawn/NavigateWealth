@@ -1,7 +1,7 @@
 /**
  * E-Signature Query Hooks
  * Navigate Wealth Admin Dashboard
- * 
+ *
  * React Query hooks for fetching envelope data with caching and automatic refetching.
  */
 
@@ -29,11 +29,11 @@ export const esignKeys = {
 
 /**
  * Hook to fetch all envelopes (admin only)
- * 
+ *
  * @param status - Optional status filter
  * @param enabled - Whether the query should run (default: true)
  * @returns React Query result with envelopes data
- * 
+ *
  * @example
  * ```tsx
  * const { data: envelopes = [], isLoading } = useAllEnvelopes();
@@ -59,18 +59,22 @@ export function useAllEnvelopes(status?: string, enabled: boolean = true) {
 /**
  * Hook to fetch envelopes for a specific client.
  * Passes clientEmail so the server can merge client_id + signer-email indexes.
- * 
+ *
  * @param clientId - Client ID
  * @param enabled - Whether the query should run (default: true)
  * @param clientEmail - Optional client email for cross-origin envelope discovery
  * @returns React Query result with client envelopes
- * 
+ *
  * @example
  * ```tsx
  * const { data: envelopes = [], isLoading } = useClientEnvelopes('client-123', true, 'client@example.com');
  * ```
  */
-export function useClientEnvelopes(clientId: string, enabled: boolean = true, clientEmail?: string) {
+export function useClientEnvelopes(
+  clientId: string,
+  enabled: boolean = true,
+  clientEmail?: string,
+) {
   return useQuery({
     queryKey: esignKeys.clientEnvelopes(clientId),
     queryFn: async () => {
@@ -88,11 +92,11 @@ export function useClientEnvelopes(clientId: string, enabled: boolean = true, cl
 
 /**
  * Hook to fetch a single envelope by ID
- * 
+ *
  * @param envelopeId - Envelope ID
  * @param enabled - Whether the query should run (default: true)
  * @returns React Query result with envelope data
- * 
+ *
  * @example
  * ```tsx
  * const { data: envelope, isLoading } = useEnvelope('envelope-123');
@@ -116,11 +120,11 @@ export function useEnvelope(envelopeId: string, enabled: boolean = true) {
 
 /**
  * Hook to fetch audit trail for an envelope
- * 
+ *
  * @param envelopeId - Envelope ID
  * @param enabled - Whether the query should run (default: false)
  * @returns React Query result with audit events
- * 
+ *
  * @example
  * ```tsx
  * const { data: auditEvents = [], isLoading } = useAuditTrail('envelope-123', true);
@@ -144,30 +148,32 @@ export function useAuditTrail(envelopeId: string, enabled: boolean = false) {
 
 /**
  * Hook to fetch and automatically refetch all envelopes
- * 
+ *
  * Unified hook that works for both admin (all envelopes) and client-specific views.
- * 
+ *
  * @param options - Configuration options
  * @returns React Query result with envelopes data
- * 
+ *
  * @example
  * ```tsx
  * // Admin view - all envelopes
  * const { data: envelopes = [], isLoading } = useEnvelopes({ autoLoad: true });
- * 
+ *
  * // Client-specific view
- * const { data: envelopes = [], isLoading } = useEnvelopes({ 
+ * const { data: envelopes = [], isLoading } = useEnvelopes({
  *   clientId: 'client-123',
- *   autoLoad: true 
+ *   autoLoad: true
  * });
  * ```
  */
-export function useEnvelopes(options: {
-  clientId?: string;
-  clientEmail?: string;
-  status?: string;
-  autoLoad?: boolean;
-} = {}) {
+export function useEnvelopes(
+  options: {
+    clientId?: string;
+    clientEmail?: string;
+    status?: string;
+    autoLoad?: boolean;
+  } = {},
+) {
   const { clientId, clientEmail, status, autoLoad = true } = options;
 
   // Use appropriate query based on whether clientId is provided

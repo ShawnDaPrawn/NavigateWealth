@@ -26,7 +26,7 @@ interface State {
 
 /**
  * ErrorBoundary - Global Error Handler
- * 
+ *
  * Catches render-phase errors and displays a user-friendly fallback.
  * Logs errors to the unified logging system.
  */
@@ -58,7 +58,7 @@ export class ErrorBoundary extends Component<Props, State> {
       componentStack: errorInfo.componentStack ?? undefined,
       filePath: window.location.pathname,
     });
-    
+
     this.setState({
       error,
       errorInfo,
@@ -67,7 +67,7 @@ export class ErrorBoundary extends Component<Props, State> {
 
   handleReset = () => {
     const { onReset } = this.props;
-    
+
     this.setState({
       hasError: false,
       error: null,
@@ -89,7 +89,9 @@ export class ErrorBoundary extends Component<Props, State> {
 
   private isDynamicImportError(error: Error | null): boolean {
     const message = `${error?.name || ''} ${error?.message || ''}`;
-    return /failed to fetch dynamically imported module|loading chunk|chunkloaderror/i.test(message);
+    return /failed to fetch dynamically imported module|loading chunk|chunkloaderror/i.test(
+      message,
+    );
   }
 
   private isDevelopment(): boolean {
@@ -116,7 +118,9 @@ export class ErrorBoundary extends Component<Props, State> {
               <CardHeader className="space-y-1">
                 <div className="flex items-center gap-2 text-red-600 mb-2">
                   <ShieldAlert className="h-5 w-5" />
-                  <span className="font-semibold uppercase tracking-wider text-xs">Section Error</span>
+                  <span className="font-semibold uppercase tracking-wider text-xs">
+                    Section Error
+                  </span>
                 </div>
                 <CardTitle className="text-lg">
                   {fallbackTitle || 'Unable to load this section'}
@@ -127,22 +131,26 @@ export class ErrorBoundary extends Component<Props, State> {
                 <Alert variant="destructive" className="bg-red-50 border-red-200 text-red-900">
                   <AlertCircle className="h-4 w-4" />
                   <AlertTitle>Error Detected</AlertTitle>
-                  <AlertDescription>
-                    {message}
-                  </AlertDescription>
+                  <AlertDescription>{message}</AlertDescription>
                 </Alert>
 
                 {showTechDetails && error && (
                   <div className="space-y-2">
                     <div className="text-xs font-mono bg-slate-950 text-slate-50 p-3 rounded-md overflow-auto max-h-[200px]">
-                      <div className="mb-2 font-bold text-red-400">{error.name}: {error.message}</div>
+                      <div className="mb-2 font-bold text-red-400">
+                        {error.name}: {error.message}
+                      </div>
                       <div className="opacity-70 whitespace-pre-wrap">{error.stack}</div>
                     </div>
                   </div>
                 )}
 
                 <div className="text-sm text-muted-foreground">
-                  <p>{isDynamicImportError ? 'Your session is still intact.' : 'You can try refreshing this section. The rest of the site remains available.'}</p>
+                  <p>
+                    {isDynamicImportError
+                      ? 'Your session is still intact.'
+                      : 'You can try refreshing this section. The rest of the site remains available.'}
+                  </p>
                 </div>
               </CardContent>
 
@@ -151,7 +159,12 @@ export class ErrorBoundary extends Component<Props, State> {
                   <Home className="h-4 w-4" />
                   Return Home
                 </Button>
-                <Button onClick={isDynamicImportError ? this.handleReload : this.handleReset} variant="default" size="sm" className="gap-2">
+                <Button
+                  onClick={isDynamicImportError ? this.handleReload : this.handleReset}
+                  variant="default"
+                  size="sm"
+                  className="gap-2"
+                >
                   <RefreshCw className="h-4 w-4" />
                   {isDynamicImportError ? 'Refresh Page' : 'Try Again'}
                 </Button>
@@ -163,7 +176,10 @@ export class ErrorBoundary extends Component<Props, State> {
 
       // Full-page variant (default): replaces entire viewport
       return (
-        <div className="min-h-screen flex items-center justify-center p-4 bg-gray-50/50" role="alert">
+        <div
+          className="min-h-screen flex items-center justify-center p-4 bg-gray-50/50"
+          role="alert"
+        >
           <Card className="max-w-xl w-full border-red-100 shadow-lg">
             <CardHeader className="space-y-1">
               <div className="flex items-center gap-2 text-red-600 mb-2">
@@ -180,19 +196,27 @@ export class ErrorBoundary extends Component<Props, State> {
                 <AlertCircle className="h-4 w-4" />
                 <AlertTitle>Error Detected</AlertTitle>
                 <AlertDescription>
-                  {isDynamicImportError ? message : fallbackMessage || error?.message || 'An unexpected error occurred. Our team has been notified.'}
+                  {isDynamicImportError
+                    ? message
+                    : fallbackMessage ||
+                      error?.message ||
+                      'An unexpected error occurred. Our team has been notified.'}
                 </AlertDescription>
               </Alert>
 
               {showTechDetails && error && (
                 <div className="space-y-2">
                   <div className="text-xs font-mono bg-slate-950 text-slate-50 p-4 rounded-md overflow-auto max-h-[300px]">
-                    <div className="mb-2 font-bold text-red-400">{error.name}: {error.message}</div>
+                    <div className="mb-2 font-bold text-red-400">
+                      {error.name}: {error.message}
+                    </div>
                     <div className="opacity-70 whitespace-pre-wrap">{error.stack}</div>
                     {errorInfo && (
                       <div className="contents">
                         <div className="mt-4 font-bold text-yellow-400">Component Stack:</div>
-                        <div className="opacity-70 whitespace-pre-wrap">{errorInfo.componentStack}</div>
+                        <div className="opacity-70 whitespace-pre-wrap">
+                          {errorInfo.componentStack}
+                        </div>
                       </div>
                     )}
                   </div>
@@ -200,7 +224,11 @@ export class ErrorBoundary extends Component<Props, State> {
               )}
 
               <div className="text-sm text-muted-foreground">
-                <p>{isDynamicImportError ? 'Your browser may have an older application shell after a deployment.' : 'Please try refreshing the page. If the problem persists, contact support.'}</p>
+                <p>
+                  {isDynamicImportError
+                    ? 'Your browser may have an older application shell after a deployment.'
+                    : 'Please try refreshing the page. If the problem persists, contact support.'}
+                </p>
               </div>
             </CardContent>
 
@@ -209,7 +237,11 @@ export class ErrorBoundary extends Component<Props, State> {
                 <Home className="h-4 w-4" />
                 Return Home
               </Button>
-              <Button onClick={isDynamicImportError ? this.handleReload : this.handleReset} variant="default" className="gap-2">
+              <Button
+                onClick={isDynamicImportError ? this.handleReload : this.handleReset}
+                variant="default"
+                className="gap-2"
+              >
                 <RefreshCw className="h-4 w-4" />
                 {isDynamicImportError ? 'Refresh Page' : 'Try Again'}
               </Button>
@@ -228,7 +260,7 @@ export class ErrorBoundary extends Component<Props, State> {
  */
 export function withErrorBoundary<P extends object>(
   Component: React.ComponentType<P>,
-  errorBoundaryProps?: Omit<Props, 'children'>
+  errorBoundaryProps?: Omit<Props, 'children'>,
 ) {
   return function WithErrorBoundaryComponent(props: P) {
     return (

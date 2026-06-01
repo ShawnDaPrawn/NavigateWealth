@@ -28,10 +28,30 @@ function CompassCardinalMarks({ compact = false }: { compact?: boolean }) {
 
   return (
     <>
-      <span className={cn('absolute left-1/2 top-1 -translate-x-1/2 rounded-full bg-[#6d28d9]/70', tickClass)} />
-      <span className={cn('absolute bottom-1 left-1/2 -translate-x-1/2 rounded-full bg-[#1a1e36]/25', tickClass)} />
-      <span className={cn('absolute left-1 top-1/2 -translate-y-1/2 rounded-full bg-[#1a1e36]/25', compact ? 'h-0.5 w-2' : 'h-0.5 w-2.5')} />
-      <span className={cn('absolute right-1 top-1/2 -translate-y-1/2 rounded-full bg-[#1a1e36]/25', compact ? 'h-0.5 w-2' : 'h-0.5 w-2.5')} />
+      <span
+        className={cn(
+          'absolute left-1/2 top-1 -translate-x-1/2 rounded-full bg-[#6d28d9]/70',
+          tickClass,
+        )}
+      />
+      <span
+        className={cn(
+          'absolute bottom-1 left-1/2 -translate-x-1/2 rounded-full bg-[#1a1e36]/25',
+          tickClass,
+        )}
+      />
+      <span
+        className={cn(
+          'absolute left-1 top-1/2 -translate-y-1/2 rounded-full bg-[#1a1e36]/25',
+          compact ? 'h-0.5 w-2' : 'h-0.5 w-2.5',
+        )}
+      />
+      <span
+        className={cn(
+          'absolute right-1 top-1/2 -translate-y-1/2 rounded-full bg-[#1a1e36]/25',
+          compact ? 'h-0.5 w-2' : 'h-0.5 w-2.5',
+        )}
+      />
       <span className="absolute left-1/2 top-0.5 -translate-x-1/2 text-[8px] font-bold tracking-[0.08em] text-[#6d28d9]">
         N
       </span>
@@ -47,7 +67,10 @@ function NavigationCompassLoader({ compact = false }: { compact?: boolean }) {
   const iconSize = compact ? 'h-4 w-4' : 'h-5 w-5';
 
   return (
-    <div className={cn('relative flex items-center justify-center', sizeClasses)} aria-hidden="true">
+    <div
+      className={cn('relative flex items-center justify-center', sizeClasses)}
+      aria-hidden="true"
+    >
       <div className="absolute inset-0 rounded-full bg-[#6d28d9]/12 blur-xl animate-pulse" />
 
       <div
@@ -125,10 +148,20 @@ export function BrandLoaderPanel({
         </div>
         <div className="flex flex-col items-center">
           <NavigationCompassLoader compact={compact} />
-          <h2 className={cn('mt-5 font-semibold tracking-tight text-[#1a1e36]', compact ? 'text-lg' : 'text-xl')}>
+          <h2
+            className={cn(
+              'mt-5 font-semibold tracking-tight text-[#1a1e36]',
+              compact ? 'text-lg' : 'text-xl',
+            )}
+          >
             {title}
           </h2>
-          <p className={cn('mt-2 max-w-sm text-balance text-slate-600', compact ? 'text-sm' : 'text-sm leading-6')}>
+          <p
+            className={cn(
+              'mt-2 max-w-sm text-balance text-slate-600',
+              compact ? 'text-sm' : 'text-sm leading-6',
+            )}
+          >
             {message}
           </p>
         </div>
@@ -137,10 +170,7 @@ export function BrandLoaderPanel({
   );
 }
 
-export function BrandPageLoader({
-  containerClassName,
-  ...panelProps
-}: BrandPageLoaderProps) {
+export function BrandPageLoader({ containerClassName, ...panelProps }: BrandPageLoaderProps) {
   return (
     <div
       className={cn(

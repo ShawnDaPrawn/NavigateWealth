@@ -52,11 +52,7 @@ function formatDate(date: string): string {
   }
 }
 
-export function RelatedArticles({
-  currentArticleId,
-  categoryId,
-  limit = 3,
-}: RelatedArticlesProps) {
+export function RelatedArticles({ currentArticleId, categoryId, limit = 3 }: RelatedArticlesProps) {
   const [articles, setArticles] = useState<RelatedArticle[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -73,16 +69,14 @@ export function RelatedArticles({
           `${baseUrl}/articles?status=published&category_id=${categoryId}&limit=${limit + 1}`,
           {
             headers: { Authorization: `Bearer ${publicAnonKey}` },
-          }
+          },
         );
 
         if (!response.ok) return;
 
         const data = await response.json();
         const all = (data.data || []) as RelatedArticle[];
-        const filtered = all
-          .filter((a) => a.id !== currentArticleId)
-          .slice(0, limit);
+        const filtered = all.filter((a) => a.id !== currentArticleId).slice(0, limit);
         setArticles(filtered);
       } catch (err) {
         console.error('RelatedArticles fetch error:', err);
@@ -137,8 +131,7 @@ export function RelatedArticles({
             article.featured_image_url ||
             article.feature_image_url ||
             '';
-          const catName =
-            article.category_name || article.category?.name || '';
+          const catName = article.category_name || article.category?.name || '';
 
           return (
             <Link
@@ -183,9 +176,7 @@ export function RelatedArticles({
 
                   {/* Excerpt */}
                   {article.excerpt && (
-                    <p className="text-sm text-gray-600 line-clamp-2 mb-4">
-                      {article.excerpt}
-                    </p>
+                    <p className="text-sm text-gray-600 line-clamp-2 mb-4">{article.excerpt}</p>
                   )}
 
                   {/* Meta */}

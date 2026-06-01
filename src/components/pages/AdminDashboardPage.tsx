@@ -45,24 +45,64 @@ import { IssuesSkeleton } from '../admin/modules/issues/components/IssuesSkeleto
 // initial bundle lean. The skeletons above provide structural continuity.
 // ============================================================================
 
-const DashboardModule = React.lazy(() => import('../admin/modules/dashboard').then(m => ({ default: m.DashboardModule })));
-const ClientManagementModule = React.lazy(() => import('../admin/modules/client-management').then(m => ({ default: m.ClientManagementModule })));
-const PersonnelModule = React.lazy(() => import('../admin/modules/personnel').then(m => ({ default: m.PersonnelModule })));
-const TaskManagementModule = React.lazy(() => import('../admin/modules/tasks').then(m => ({ default: m.TaskManagementModule })));
-const ApplicationsModule = React.lazy(() => import('../admin/modules/applications').then(m => ({ default: m.ApplicationsModule })));
-const ReportingModule = React.lazy(() => import('../admin/modules/reporting').then(m => ({ default: m.ReportingModule })));
-const CalendarModule = React.lazy(() => import('../admin/modules/calendar').then(m => ({ default: m.CalendarModule })));
-const AdviceEngineModule = React.lazy(() => import('../admin/modules/advice-engine').then(m => ({ default: m.AdviceEngineModule })));
-const ComplianceModule = React.lazy(() => import('../admin/modules/compliance').then(m => ({ default: m.ComplianceModule })));
-const CommunicationModule = React.lazy(() => import('../admin/modules/communication').then(m => ({ default: m.CommunicationModule })));
-const SocialMediaModule = React.lazy(() => import('../admin/modules/social-media/SocialMediaModule').then(m => ({ default: m.SocialMediaModule })));
-const ProductManagementModule = React.lazy(() => import('../admin/modules/product-management').then(m => ({ default: m.ProductManagementModule })));
-const ResourcesModule = React.lazy(() => import('../admin/modules/resources').then(m => ({ default: m.ResourcesModule })));
-const PublicationsModule = React.lazy(() => import('../admin/modules/publications').then(m => ({ default: m.PublicationsModule })));
-const EsignModule = React.lazy(() => import('../admin/modules/esign').then(m => ({ default: m.EsignModule })));
-const SubmissionsModule = React.lazy(() => import('../admin/modules/submissions').then(m => ({ default: m.SubmissionsModule })));
-const NotesModule = React.lazy(() => import('../admin/modules/notes').then(m => ({ default: m.NotesModule })));
-const AIManagementModule = React.lazy(() => import('../admin/modules/ai-management').then(m => ({ default: m.AIManagementModule })));
+const DashboardModule = React.lazy(() =>
+  import('../admin/modules/dashboard').then((m) => ({ default: m.DashboardModule })),
+);
+const ClientManagementModule = React.lazy(() =>
+  import('../admin/modules/client-management').then((m) => ({ default: m.ClientManagementModule })),
+);
+const PersonnelModule = React.lazy(() =>
+  import('../admin/modules/personnel').then((m) => ({ default: m.PersonnelModule })),
+);
+const TaskManagementModule = React.lazy(() =>
+  import('../admin/modules/tasks').then((m) => ({ default: m.TaskManagementModule })),
+);
+const ApplicationsModule = React.lazy(() =>
+  import('../admin/modules/applications').then((m) => ({ default: m.ApplicationsModule })),
+);
+const ReportingModule = React.lazy(() =>
+  import('../admin/modules/reporting').then((m) => ({ default: m.ReportingModule })),
+);
+const CalendarModule = React.lazy(() =>
+  import('../admin/modules/calendar').then((m) => ({ default: m.CalendarModule })),
+);
+const AdviceEngineModule = React.lazy(() =>
+  import('../admin/modules/advice-engine').then((m) => ({ default: m.AdviceEngineModule })),
+);
+const ComplianceModule = React.lazy(() =>
+  import('../admin/modules/compliance').then((m) => ({ default: m.ComplianceModule })),
+);
+const CommunicationModule = React.lazy(() =>
+  import('../admin/modules/communication').then((m) => ({ default: m.CommunicationModule })),
+);
+const SocialMediaModule = React.lazy(() =>
+  import('../admin/modules/social-media/SocialMediaModule').then((m) => ({
+    default: m.SocialMediaModule,
+  })),
+);
+const ProductManagementModule = React.lazy(() =>
+  import('../admin/modules/product-management').then((m) => ({
+    default: m.ProductManagementModule,
+  })),
+);
+const ResourcesModule = React.lazy(() =>
+  import('../admin/modules/resources').then((m) => ({ default: m.ResourcesModule })),
+);
+const PublicationsModule = React.lazy(() =>
+  import('../admin/modules/publications').then((m) => ({ default: m.PublicationsModule })),
+);
+const EsignModule = React.lazy(() =>
+  import('../admin/modules/esign').then((m) => ({ default: m.EsignModule })),
+);
+const SubmissionsModule = React.lazy(() =>
+  import('../admin/modules/submissions').then((m) => ({ default: m.SubmissionsModule })),
+);
+const NotesModule = React.lazy(() =>
+  import('../admin/modules/notes').then((m) => ({ default: m.NotesModule })),
+);
+const AIManagementModule = React.lazy(() =>
+  import('../admin/modules/ai-management').then((m) => ({ default: m.AIManagementModule })),
+);
 const IssuesModule = React.lazy(() => import('../admin/modules/issues/IssuesModule'));
 
 export function AdminDashboardPage() {
@@ -91,34 +131,37 @@ export function AdminDashboardPage() {
   }, []);
 
   // Clear deep-link when navigating away from tasks
-  const handleModuleChange = useCallback((module: string) => {
-    const applyModuleChange = () => {
-      setSearchParams(
-        (prev) => {
-          const next = new URLSearchParams(prev);
-          if (module === 'dashboard') {
-            next.delete('module');
-          } else {
-            next.set('module', module);
-          }
-          return next;
-        },
-        { replace: true },
-      );
+  const handleModuleChange = useCallback(
+    (module: string) => {
+      const applyModuleChange = () => {
+        setSearchParams(
+          (prev) => {
+            const next = new URLSearchParams(prev);
+            if (module === 'dashboard') {
+              next.delete('module');
+            } else {
+              next.set('module', module);
+            }
+            return next;
+          },
+          { replace: true },
+        );
 
-      if (module !== 'tasks') {
-        setDeepLinkTaskId(null);
+        if (module !== 'tasks') {
+          setDeepLinkTaskId(null);
+        }
+        setActiveModule(module as AdminModule);
+      };
+
+      if (unsavedChangesRegistry?.getDirtyEntries().length) {
+        unsavedChangesRegistry.tryLeaveAny(applyModuleChange);
+        return;
       }
-      setActiveModule(module as AdminModule);
-    };
 
-    if (unsavedChangesRegistry?.getDirtyEntries().length) {
-      unsavedChangesRegistry.tryLeaveAny(applyModuleChange);
-      return;
-    }
-
-    applyModuleChange();
-  }, [setSearchParams, unsavedChangesRegistry]);
+      applyModuleChange();
+    },
+    [setSearchParams, unsavedChangesRegistry],
+  );
 
   // ── Background Processors ──
   // These run at the AdminDashboardPage level (not inside PublicationsModule)
@@ -137,7 +180,9 @@ export function AdminDashboardPage() {
   // Trigger due auto-content pipelines every 15 minutes
   useAutoContentProcessor({
     onArticlesGenerated: (count, pipelineNames) => {
-      toast.success(`${count} article${count === 1 ? '' : 's'} auto-generated by content pipelines`);
+      toast.success(
+        `${count} article${count === 1 ? '' : 's'} auto-generated by content pipelines`,
+      );
     },
   });
 
@@ -167,7 +212,10 @@ export function AdminDashboardPage() {
         return (
           <Suspense fallback={<DashboardSkeleton />}>
             <ErrorBoundary fallbackTitle="Dashboard Module Error">
-              <DashboardModule onModuleChange={handleModuleChange} onViewTask={handleViewTaskFromDashboard} />
+              <DashboardModule
+                onModuleChange={handleModuleChange}
+                onViewTask={handleViewTaskFromDashboard}
+              />
             </ErrorBoundary>
           </Suspense>
         );
@@ -329,10 +377,7 @@ export function AdminDashboardPage() {
   return (
     <ErrorBoundary fallbackTitle="Admin Dashboard Error">
       <AdminNavigationProvider onModuleChange={handleModuleChange}>
-        <AdminLayout 
-          activeModule={activeModule} 
-          onModuleChange={handleModuleChange}
-        >
+        <AdminLayout activeModule={activeModule} onModuleChange={handleModuleChange}>
           {renderModule()}
         </AdminLayout>
       </AdminNavigationProvider>

@@ -160,9 +160,10 @@ export const AdminAuditService = {
 
       for (const row of raw) {
         try {
-          const val = typeof row === 'string'
-            ? JSON.parse(row)
-            : (row as Record<string, unknown>)?.value ?? row;
+          const val =
+            typeof row === 'string'
+              ? JSON.parse(row)
+              : ((row as Record<string, unknown>)?.value ?? row);
 
           const entry = (typeof val === 'string' ? JSON.parse(val) : val) as AdminAuditEntry;
           if (!entry || !entry.timestamp) continue;

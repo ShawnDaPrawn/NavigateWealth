@@ -1,9 +1,9 @@
-import { Hono } from "npm:hono";
-import { PersonnelService } from "./client-management-personnel-service.ts";
-import { PermissionsService } from "./personnel-permissions-service.ts";
-import { PermissionAuditService } from "./permission-audit-service.ts";
-import { getAuthContext, requireRole, handleError } from "./auth-mw.ts";
-import { createModuleLogger } from "./stderr-logger.ts";
+import { Hono } from 'npm:hono';
+import { PersonnelService } from './client-management-personnel-service.ts';
+import { PermissionsService } from './personnel-permissions-service.ts';
+import { PermissionAuditService } from './permission-audit-service.ts';
+import { getAuthContext, requireRole, handleError } from './auth-mw.ts';
+import { createModuleLogger } from './stderr-logger.ts';
 import {
   CreatePersonnelSchema,
   UpdatePersonnelSchema,
@@ -27,7 +27,7 @@ const log = createModuleLogger('personnel');
 async function requireCapability(
   ctx: { userId: string; user: { email?: string } },
   module: string,
-  capability: string
+  capability: string,
 ): Promise<void> {
   // Super admin bypass
   if (ctx.user.email && PermissionsService.isSuperAdmin(ctx.user.email)) {
@@ -36,9 +36,7 @@ async function requireCapability(
 
   const hasAccess = await PermissionsService.hasCapability(ctx.userId, module, capability);
   if (!hasAccess) {
-    const err = new Error(
-      `Forbidden: Missing '${capability}' capability on '${module}' module`
-    );
+    const err = new Error(`Forbidden: Missing '${capability}' capability on '${module}' module`);
     (err as Error & { status: number }).status = 403;
     throw err;
   }
@@ -59,11 +57,7 @@ app.get('/list', async (c) => {
   try {
     const ctx = await getAuthContext(c);
     log.info('Listing personnel', { userId: ctx.userId, role: ctx.role });
-    const list = await PersonnelService.listPersonnel(
-      ctx.userId,
-      ctx.role,
-      ctx.user.email
-    );
+    const list = await PersonnelService.listPersonnel(ctx.userId, ctx.role, ctx.user.email);
     return c.json({ data: list });
   } catch (e) {
     return handleError(c, e);
@@ -84,7 +78,8 @@ app.post('/invite', async (c) => {
       return c.json({ error: 'Validation failed', ...formatZodError(parsed.error) }, 400);
     }
     // Extract the frontend origin so the invite email links back correctly
-    const siteUrl = c.req.header('origin') || c.req.header('referer')?.replace(/\/+$/, '') || undefined;
+    const siteUrl =
+      c.req.header('origin') || c.req.header('referer')?.replace(/\/+$/, '') || undefined;
     log.info('Inviting personnel', { userId: ctx.userId, inviteRole: parsed.data.role, siteUrl });
     const result = await PersonnelService.inviteUser(ctx.role, parsed.data, siteUrl);
     return c.json({ data: result });
@@ -101,7 +96,8 @@ app.post('/resend-invite/:id', async (c) => {
     await requireCapability(ctx, 'personnel', 'create');
 
     const personnelId = c.req.param('id');
-    const siteUrl = c.req.header('origin') || c.req.header('referer')?.replace(/\/+$/, '') || undefined;
+    const siteUrl =
+      c.req.header('origin') || c.req.header('referer')?.replace(/\/+$/, '') || undefined;
     log.info('Resending invite', { userId: ctx.userId, personnelId, siteUrl });
     const result = await PersonnelService.resendInvite(ctx.role, personnelId, siteUrl);
     return c.json({ data: result });
@@ -138,7 +134,8 @@ app.post('/create-account', async (c) => {
     if (!parsed.success) {
       return c.json({ error: 'Validation failed', ...formatZodError(parsed.error) }, 400);
     }
-    const siteUrl = c.req.header('origin') || c.req.header('referer')?.replace(/\/+$/, '') || undefined;
+    const siteUrl =
+      c.req.header('origin') || c.req.header('referer')?.replace(/\/+$/, '') || undefined;
     log.info('Creating personnel account directly', {
       userId: ctx.userId,
       accountRole: parsed.data.role,
@@ -214,12 +211,12 @@ app.get('/:id/clients', async (c) => {
   try {
     const ctx = await getAuthContext(c);
     const targetId = c.req.param('id');
-    
+
     // Security: can only view own clients unless Admin/Compliance
     if (ctx.role === 'adviser' && ctx.userId !== targetId) {
-        throw new Error('Forbidden: Unauthorized to view other adviser clients');
+      throw new Error('Forbidden: Unauthorized to view other adviser clients');
     }
-    
+
     log.info('Fetching assigned clients', { userId: ctx.userId, targetId });
     const clients = await PersonnelService.getAssignedClients(ctx.role, targetId);
     return c.json({ data: clients });
@@ -234,11 +231,11 @@ app.post('/:id/documents', async (c) => {
     requireRole(ctx, ['super_admin', 'admin', 'compliance']);
     // Capability: editing personnel records
     await requireCapability(ctx, 'personnel', 'edit');
-    
+
     const targetId = c.req.param('id');
     const body = await c.req.json();
     log.info('Adding personnel document', { userId: ctx.userId, targetId });
-    
+
     const result = await PersonnelService.addDocument(ctx.role, targetId, body);
     return c.json({ data: result });
   } catch (e) {
@@ -269,16 +266,21 @@ app.get('/permissions/me', async (c) => {
           modules: {},
           updatedAt: null,
           updatedBy: null,
-        }
+        },
       });
     }
 
     const permissions = await PermissionsService.getPermissions(ctx.userId);
     return c.json({
       data: {
-        ...(permissions || { personnelId: ctx.userId, modules: {}, updatedAt: null, updatedBy: null }),
+        ...(permissions || {
+          personnelId: ctx.userId,
+          modules: {},
+          updatedAt: null,
+          updatedBy: null,
+        }),
         isSuperAdmin: false,
-      }
+      },
     });
   } catch (e) {
     return handleError(c, e);
@@ -318,7 +320,9 @@ app.get('/permissions/:personnelId', async (c) => {
     log.info('Fetching permissions', { userId: ctx.userId, personnelId });
 
     const permissions = await PermissionsService.getPermissions(personnelId);
-    return c.json({ data: permissions || { personnelId, modules: {}, updatedAt: null, updatedBy: null } });
+    return c.json({
+      data: permissions || { personnelId, modules: {}, updatedAt: null, updatedBy: null },
+    });
   } catch (e) {
     return handleError(c, e);
   }
@@ -342,7 +346,10 @@ app.put('/permissions/:personnelId', async (c) => {
     const body = await c.req.json();
     const parsed = PermissionUpdateSchema.safeParse(body);
     if (!parsed.success) {
-      return c.json({ error: 'Invalid request: modules object is required', ...formatZodError(parsed.error) }, 400);
+      return c.json(
+        { error: 'Invalid request: modules object is required', ...formatZodError(parsed.error) },
+        400,
+      );
     }
 
     log.info('Updating permissions', { userId: ctx.userId, personnelId });
@@ -354,7 +361,7 @@ app.put('/permissions/:personnelId', async (c) => {
     const result = await PermissionsService.setPermissions(
       personnelId,
       parsed.data.modules,
-      ctx.userId
+      ctx.userId,
     );
 
     // Record audit trail (fire-and-forget — don't block the response)
@@ -362,7 +369,7 @@ app.put('/permissions/:personnelId', async (c) => {
       personnelId,
       ctx.userId,
       oldModules,
-      parsed.data.modules
+      parsed.data.modules,
     ).catch((err) => log.error('Failed to record permission audit', err));
 
     return c.json({ data: result });

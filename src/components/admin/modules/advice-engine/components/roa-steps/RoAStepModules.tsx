@@ -4,15 +4,21 @@ import { Checkbox } from '../../../../../ui/checkbox';
 import { Badge } from '../../../../../ui/badge';
 import { Input } from '../../../../../ui/input';
 import { Label } from '../../../../../ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../../../../ui/select';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '../../../../../ui/select';
 import { RoADraft, RoAModule } from '../DraftRoAInterface';
 import { getFallbackRuntimeModules, getModuleRuntimeStatus } from '../../roaModuleRuntime';
-import { 
-  Heart, 
-  Shield, 
-  Banknote, 
-  TrendingUp, 
-  FileText, 
+import {
+  Heart,
+  Shield,
+  Banknote,
+  TrendingUp,
+  FileText,
   Briefcase,
   Activity,
   CheckCircle,
@@ -90,32 +96,35 @@ export function RoAStepModules({ draft, onUpdate, modules }: RoAStepModulesProps
       });
   }, [allModules, search, categoryFilter]);
 
-  const moduleCategories = filteredModules.reduce<Record<string, string[]>>((categories, module) => {
-    const category = module.category || 'Other';
-    categories[category] = [...(categories[category] || []), module.id];
-    return categories;
-  }, {});
+  const moduleCategories = filteredModules.reduce<Record<string, string[]>>(
+    (categories, module) => {
+      const category = module.category || 'Other';
+      categories[category] = [...(categories[category] || []), module.id];
+      return categories;
+    },
+    {},
+  );
 
   const handleModuleToggle = (moduleId: string, checked: boolean) => {
     if (!draft) return;
 
     let updatedModules: string[];
-    let updatedModuleData = { ...draft.moduleData };
-    let updatedModuleEvidence = { ...(draft.moduleEvidence || {}) };
-    let updatedModuleOutputs = { ...(draft.moduleOutputs || {}) };
+    const updatedModuleData = { ...draft.moduleData };
+    const updatedModuleEvidence = { ...(draft.moduleEvidence || {}) };
+    const updatedModuleOutputs = { ...(draft.moduleOutputs || {}) };
 
     if (checked) {
       // Add module
       updatedModules = [...selectedModules, moduleId];
     } else {
       // Remove module and its data
-      updatedModules = selectedModules.filter(id => id !== moduleId);
+      updatedModules = selectedModules.filter((id) => id !== moduleId);
       delete updatedModuleData[moduleId];
       delete updatedModuleEvidence[moduleId];
       delete updatedModuleOutputs[moduleId];
     }
 
-    onUpdate({ 
+    onUpdate({
       selectedModules: updatedModules,
       moduleData: updatedModuleData,
       moduleEvidence: updatedModuleEvidence,
@@ -125,12 +134,16 @@ export function RoAStepModules({ draft, onUpdate, modules }: RoAStepModulesProps
 
   const getModuleCompletionStatus = (moduleId: string) => {
     if (!draft?.moduleData[moduleId]) return 'not-started';
-    
+
     const moduleData = draft.moduleData[moduleId];
-    const module = allModules.find(m => m.id === moduleId);
+    const module = allModules.find((m) => m.id === moduleId);
     if (!module) return 'not-started';
 
-    const runtimeStatus = getModuleRuntimeStatus(module, moduleData, draft.moduleEvidence?.[moduleId] || {});
+    const runtimeStatus = getModuleRuntimeStatus(
+      module,
+      moduleData,
+      draft.moduleEvidence?.[moduleId] || {},
+    );
 
     if (runtimeStatus.percentage === 0) return 'not-started';
     if (runtimeStatus.complete) return 'complete';
@@ -139,7 +152,7 @@ export function RoAStepModules({ draft, onUpdate, modules }: RoAStepModulesProps
 
   const getCompletionBadge = (moduleId: string) => {
     const status = getModuleCompletionStatus(moduleId);
-    
+
     switch (status) {
       case 'complete':
         return (
@@ -165,7 +178,8 @@ export function RoAStepModules({ draft, onUpdate, modules }: RoAStepModulesProps
       <div>
         <h2 className="text-xl font-semibold mb-2">Select Advice Modules</h2>
         <p className="text-muted-foreground">
-          Choose the areas of advice that will be included in this Record of Advice. Each module has specific regulatory requirements and disclosures.
+          Choose the areas of advice that will be included in this Record of Advice. Each module has
+          specific regulatory requirements and disclosures.
         </p>
       </div>
 
@@ -176,7 +190,8 @@ export function RoAStepModules({ draft, onUpdate, modules }: RoAStepModulesProps
             <div>
               <p className="font-medium text-blue-900">Selected Modules</p>
               <p className="text-sm text-blue-700">
-                {selectedModules.length} module{selectedModules.length !== 1 ? 's' : ''} selected · {filteredModules.length} shown in library
+                {selectedModules.length} module{selectedModules.length !== 1 ? 's' : ''} selected ·{' '}
+                {filteredModules.length} shown in library
               </p>
             </div>
             <p className="text-sm text-blue-700 sm:text-right">
@@ -232,17 +247,17 @@ export function RoAStepModules({ draft, onUpdate, modules }: RoAStepModulesProps
         {Object.entries(moduleCategories).map(([categoryName, moduleIds]) => (
           <div key={categoryName} className="space-y-4">
             <h3 className="font-semibold text-lg border-b pb-2">{categoryName}</h3>
-            
+
             <div className="grid gap-4 md:grid-cols-2">
               {moduleIds.map((moduleId) => {
-                const module = allModules.find(m => m.id === moduleId);
+                const module = allModules.find((m) => m.id === moduleId);
                 if (!module) return null;
 
                 const isSelected = selectedModules.includes(moduleId);
                 const completionStatus = getModuleCompletionStatus(moduleId);
 
                 return (
-                  <Card 
+                  <Card
                     key={moduleId}
                     className={`cursor-pointer transition-all hover:shadow-md ${
                       isSelected ? 'ring-2 ring-primary bg-primary/5' : ''
@@ -254,14 +269,19 @@ export function RoAStepModules({ draft, onUpdate, modules }: RoAStepModulesProps
                         <div className="flex items-center space-x-3">
                           <Checkbox
                             checked={isSelected}
-                            onCheckedChange={(checked) => handleModuleToggle(moduleId, checked === true)}
+                            onCheckedChange={(checked) =>
+                              handleModuleToggle(moduleId, checked === true)
+                            }
                             onClick={(e) => e.stopPropagation()}
                           />
                           <div className="flex flex-wrap items-center gap-2">
                             {getModuleIcon(moduleId)}
                             <CardTitle className="text-base">{module.title}</CardTitle>
                             {isFlagshipModule(module) && (
-                              <Badge variant="secondary" className="gap-1 border-amber-200 bg-amber-50 text-amber-900">
+                              <Badge
+                                variant="secondary"
+                                className="gap-1 border-amber-200 bg-amber-50 text-amber-900"
+                              >
                                 <Star className="h-3 w-3" />
                                 Flagship
                               </Badge>
@@ -272,17 +292,17 @@ export function RoAStepModules({ draft, onUpdate, modules }: RoAStepModulesProps
                       </div>
                     </CardHeader>
                     <CardContent>
-                      <p className="text-sm text-muted-foreground mb-3">
-                        {module.description}
-                      </p>
-                      
+                      <p className="text-sm text-muted-foreground mb-3">{module.description}</p>
+
                       {/* Module Details */}
                       <div className="space-y-2 text-xs">
                         {(module.contractVersion !== undefined || module.schemaVersion) && (
                           <div className="flex justify-between">
                             <span className="text-muted-foreground">Contract:</span>
                             <span className="font-mono font-medium text-[11px]">
-                              {module.contractVersion !== undefined ? `v${module.contractVersion}` : '—'}
+                              {module.contractVersion !== undefined
+                                ? `v${module.contractVersion}`
+                                : '—'}
                               {module.schemaVersion ? ` · ${module.schemaVersion}` : ''}
                             </span>
                           </div>
@@ -290,7 +310,7 @@ export function RoAStepModules({ draft, onUpdate, modules }: RoAStepModulesProps
                         <div className="flex justify-between">
                           <span className="text-muted-foreground">Required fields:</span>
                           <span className="font-medium">
-                            {module.fields.filter(f => f.required).length}
+                            {module.fields.filter((f) => f.required).length}
                           </span>
                         </div>
                         <div className="flex justify-between">
@@ -304,9 +324,7 @@ export function RoAStepModules({ draft, onUpdate, modules }: RoAStepModulesProps
                         </div>
                         <div className="flex justify-between">
                           <span className="text-muted-foreground">Disclosures:</span>
-                          <span className="font-medium">
-                            {module.disclosures.length}
-                          </span>
+                          <span className="font-medium">{module.disclosures.length}</span>
                         </div>
                       </div>
 
@@ -315,22 +333,30 @@ export function RoAStepModules({ draft, onUpdate, modules }: RoAStepModulesProps
                         <div className="mt-3 pt-3 border-t">
                           <div className="flex justify-between text-xs mb-1">
                             <span className="text-muted-foreground">Completion</span>
-                          <span className="font-medium">
-                            {(() => {
+                            <span className="font-medium">
+                              {(() => {
                                 const moduleData = draft?.moduleData[moduleId] || {};
-                                const status = getModuleRuntimeStatus(module, moduleData, draft?.moduleEvidence?.[moduleId] || {});
+                                const status = getModuleRuntimeStatus(
+                                  module,
+                                  moduleData,
+                                  draft?.moduleEvidence?.[moduleId] || {},
+                                );
                                 return `${status.percentage}%`;
                               })()}
-                          </span>
+                            </span>
                           </div>
                           <div className="w-full bg-muted rounded-full h-1.5">
-                            <div 
+                            <div
                               className="bg-primary h-1.5 rounded-full transition-all duration-300"
-                              style={{ 
+                              style={{
                                 width: `${(() => {
                                   const moduleData = draft?.moduleData[moduleId] || {};
-                                  return getModuleRuntimeStatus(module, moduleData, draft?.moduleEvidence?.[moduleId] || {}).percentage;
-                                })()}%`
+                                  return getModuleRuntimeStatus(
+                                    module,
+                                    moduleData,
+                                    draft?.moduleEvidence?.[moduleId] || {},
+                                  ).percentage;
+                                })()}%`,
                               }}
                             />
                           </div>
@@ -350,7 +376,8 @@ export function RoAStepModules({ draft, onUpdate, modules }: RoAStepModulesProps
         <Card className="border-orange-200 bg-orange-50">
           <CardContent className="p-4">
             <p className="text-orange-700 text-sm">
-              Please select at least one module to proceed. Each module represents a specific area of financial advice that will be documented in your Record of Advice.
+              Please select at least one module to proceed. Each module represents a specific area
+              of financial advice that will be documented in your Record of Advice.
             </p>
           </CardContent>
         </Card>

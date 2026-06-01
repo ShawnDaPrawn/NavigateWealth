@@ -58,7 +58,10 @@ interface PDFViewerProps {
    * studio can implement shift-click multi-select without re-binding events
    * here.
    */
-  onFieldClick?: (field: EsignField | null, modifiers?: { shiftKey: boolean; metaOrCtrl: boolean }) => void;
+  onFieldClick?: (
+    field: EsignField | null,
+    modifiers?: { shiftKey: boolean; metaOrCtrl: boolean },
+  ) => void;
   selectedSignerId?: string;
   /** Single-selection (back-compat). Treated as the "primary" selection. */
   selectedFieldId?: string;
@@ -83,7 +86,10 @@ interface PDFViewerProps {
    * The studio replaces its selection with the returned set (or unions with
    * shift held during the drag).
    */
-  onMarqueeSelect?: (fieldIds: string[], modifiers: { shiftKey: boolean; metaOrCtrl: boolean }) => void;
+  onMarqueeSelect?: (
+    fieldIds: string[],
+    modifiers: { shiftKey: boolean; metaOrCtrl: boolean },
+  ) => void;
   readOnly?: boolean;
   showFields?: boolean;
   isFullScreen?: boolean;
@@ -106,8 +112,8 @@ const DEFAULT_PAGE_HEIGHT = 842;
 /** Per-page dimension info resolved from the actual PDF */
 interface PageInfo {
   pageNumber: number;
-  width: number;   // in PDF points
-  height: number;  // in PDF points
+  width: number; // in PDF points
+  height: number; // in PDF points
 }
 
 // ── Component ────────────────────────────────────────────────────────────
@@ -158,7 +164,9 @@ export function PDFViewer({
    *
    * Values are in PERCENT (matching `EsignField.x/y`).
    */
-  const [guides, setGuides] = useState<{ pageNumber: number; xs: number[]; ys: number[] } | null>(null);
+  const [guides, setGuides] = useState<{ pageNumber: number; xs: number[]; ys: number[] } | null>(
+    null,
+  );
 
   /** Marquee state — page-relative percent rectangle. */
   const [marquee, setMarquee] = useState<{
@@ -261,7 +269,13 @@ export function PDFViewer({
     return () => {
       cancelled = true;
       // Cancel any in-flight render tasks
-      renderTasksRef.current.forEach((task) => { try { task.cancel(); } catch { /* noop */ } });
+      renderTasksRef.current.forEach((task) => {
+        try {
+          task.cancel();
+        } catch {
+          /* noop */
+        }
+      });
       renderTasksRef.current.clear();
       // Destroy the PDF document
       if (pdfDocRef.current) {
@@ -280,7 +294,13 @@ export function PDFViewer({
     const scale = zoom / 100;
 
     // Cancel previous render tasks
-    renderTasksRef.current.forEach((task) => { try { task.cancel(); } catch { /* noop */ } });
+    renderTasksRef.current.forEach((task) => {
+      try {
+        task.cancel();
+      } catch {
+        /* noop */
+      }
+    });
     renderTasksRef.current.clear();
 
     pages.forEach(async (info) => {
@@ -442,7 +462,7 @@ export function PDFViewer({
       });
       const ownWPct = widthPctOf(field);
       const ownHPct = heightPctOf(field);
-      const SNAP_TOLERANCE_PCT = ((gridSize / 2) / pageWidthPts) * 100;
+      const SNAP_TOLERANCE_PCT = (gridSize / 2 / pageWidthPts) * 100;
 
       setDraggingField(field.id);
       setGuides(null);
@@ -551,7 +571,7 @@ export function PDFViewer({
       // Ignore right-click and modifier-clicks that aren't meant for marquee.
       if (e.button !== 0) return;
 
-      const containerEl = (e.currentTarget as HTMLDivElement);
+      const containerEl = e.currentTarget as HTMLDivElement;
       const rect = containerEl.getBoundingClientRect();
       const startXPct = ((e.clientX - rect.left) / rect.width) * 100;
       const startYPct = ((e.clientY - rect.top) / rect.height) * 100;
@@ -559,7 +579,15 @@ export function PDFViewer({
       const shiftKey = e.shiftKey;
       const metaOrCtrl = e.metaKey || e.ctrlKey;
 
-      setMarquee({ pageNumber, startXPct, startYPct, endXPct: startXPct, endYPct: startYPct, shiftKey, metaOrCtrl });
+      setMarquee({
+        pageNumber,
+        startXPct,
+        startYPct,
+        endXPct: startXPct,
+        endYPct: startYPct,
+        shiftKey,
+        metaOrCtrl,
+      });
 
       const handleMove = (mv: MouseEvent) => {
         const r = containerEl.getBoundingClientRect();
@@ -829,11 +857,20 @@ export function PDFViewer({
         let dx = 0;
         let dy = 0;
         switch (e.key) {
-          case 'ArrowLeft':  dx = -step; break;
-          case 'ArrowRight': dx = step; break;
-          case 'ArrowUp':    dy = -step; break;
-          case 'ArrowDown':  dy = step; break;
-          default: return;
+          case 'ArrowLeft':
+            dx = -step;
+            break;
+          case 'ArrowRight':
+            dx = step;
+            break;
+          case 'ArrowUp':
+            dy = -step;
+            break;
+          case 'ArrowDown':
+            dy = step;
+            break;
+          default:
+            return;
         }
 
         e.preventDefault();
@@ -937,20 +974,24 @@ export function PDFViewer({
                     {/* Smart-guide lines — appear during drag when an edge or
                         center aligns with a neighbour. Pure visual; the snap
                         is already applied to the field positions. */}
-                    {activeGuides && activeGuides.xs.length > 0 && activeGuides.xs.map((x, i) => (
-                      <div
-                        key={`gx-${i}`}
-                        className="absolute top-0 bottom-0 pointer-events-none z-40"
-                        style={{ left: `${x}%`, width: '1px', backgroundColor: '#a855f7' }}
-                      />
-                    ))}
-                    {activeGuides && activeGuides.ys.length > 0 && activeGuides.ys.map((y, i) => (
-                      <div
-                        key={`gy-${i}`}
-                        className="absolute left-0 right-0 pointer-events-none z-40"
-                        style={{ top: `${y}%`, height: '1px', backgroundColor: '#a855f7' }}
-                      />
-                    ))}
+                    {activeGuides &&
+                      activeGuides.xs.length > 0 &&
+                      activeGuides.xs.map((x, i) => (
+                        <div
+                          key={`gx-${i}`}
+                          className="absolute top-0 bottom-0 pointer-events-none z-40"
+                          style={{ left: `${x}%`, width: '1px', backgroundColor: '#a855f7' }}
+                        />
+                      ))}
+                    {activeGuides &&
+                      activeGuides.ys.length > 0 &&
+                      activeGuides.ys.map((y, i) => (
+                        <div
+                          key={`gy-${i}`}
+                          className="absolute left-0 right-0 pointer-events-none z-40"
+                          style={{ top: `${y}%`, height: '1px', backgroundColor: '#a855f7' }}
+                        />
+                      ))}
 
                     {/* Marquee selection rectangle */}
                     {activeMarquee && (

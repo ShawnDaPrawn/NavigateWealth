@@ -31,11 +31,7 @@ interface ImageInsertDialogProps {
   onInsert: (url: string, alt: string) => void;
 }
 
-export function ImageInsertDialog({
-  isOpen,
-  onClose,
-  onInsert,
-}: ImageInsertDialogProps) {
+export function ImageInsertDialog({ isOpen, onClose, onInsert }: ImageInsertDialogProps) {
   const [mode, setMode] = useState<'url' | 'upload'>('url');
   const [url, setUrl] = useState('');
   const [altText, setAltText] = useState('');
@@ -97,9 +93,7 @@ export function ImageInsertDialog({
       setPreview(uploadedUrl);
     } catch (err) {
       console.error('Image upload error:', err);
-      setError(
-        err instanceof Error ? err.message : 'Failed to upload image'
-      );
+      setError(err instanceof Error ? err.message : 'Failed to upload image');
     } finally {
       setUploading(false);
     }
@@ -125,12 +119,7 @@ export function ImageInsertDialog({
             <ImageIcon className="h-5 w-5 text-purple-600" />
             <h3 className="font-semibold text-gray-900">Insert Image</h3>
           </div>
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={resetAndClose}
-            className="h-8 w-8 p-0"
-          >
+          <Button variant="ghost" size="sm" onClick={resetAndClose} className="h-8 w-8 p-0">
             <X className="h-4 w-4" />
           </Button>
         </div>
@@ -143,7 +132,7 @@ export function ImageInsertDialog({
               'flex-1 px-4 py-3 text-sm font-medium transition-colors border-b-2',
               mode === 'url'
                 ? 'border-purple-600 text-purple-600'
-                : 'border-transparent text-gray-500 hover:text-gray-700'
+                : 'border-transparent text-gray-500 hover:text-gray-700',
             )}
           >
             <LinkIcon className="h-4 w-4 inline mr-2" />
@@ -155,7 +144,7 @@ export function ImageInsertDialog({
               'flex-1 px-4 py-3 text-sm font-medium transition-colors border-b-2',
               mode === 'upload'
                 ? 'border-purple-600 text-purple-600'
-                : 'border-transparent text-gray-500 hover:text-gray-700'
+                : 'border-transparent text-gray-500 hover:text-gray-700',
             )}
           >
             <Upload className="h-4 w-4 inline mr-2" />
@@ -200,7 +189,7 @@ export function ImageInsertDialog({
                   'border-2 border-dashed rounded-xl p-8 text-center cursor-pointer transition-colors',
                   uploading
                     ? 'border-purple-300 bg-purple-50'
-                    : 'border-gray-300 hover:border-purple-400 hover:bg-purple-50/50'
+                    : 'border-gray-300 hover:border-purple-400 hover:bg-purple-50/50',
                 )}
               >
                 {uploading ? (
@@ -211,12 +200,8 @@ export function ImageInsertDialog({
                 ) : (
                   <div className="flex flex-col items-center gap-2">
                     <Upload className="h-8 w-8 text-gray-400" />
-                    <span className="text-sm text-gray-600">
-                      Click to select or drag an image
-                    </span>
-                    <span className="text-xs text-gray-400">
-                      PNG, JPG, WebP up to 5MB
-                    </span>
+                    <span className="text-sm text-gray-600">Click to select or drag an image</span>
+                    <span className="text-xs text-gray-400">PNG, JPG, WebP up to 5MB</span>
                   </div>
                 )}
               </div>
@@ -243,9 +228,7 @@ export function ImageInsertDialog({
               placeholder="Describe the image for accessibility"
               className="mt-1"
             />
-            <p className="text-xs text-gray-400 mt-1">
-              Required for accessibility (WCAG 2.1 AA)
-            </p>
+            <p className="text-xs text-gray-400 mt-1">Required for accessibility (WCAG 2.1 AA)</p>
           </div>
 
           {/* Preview */}

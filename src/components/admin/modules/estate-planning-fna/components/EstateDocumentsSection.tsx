@@ -2,7 +2,7 @@
  * Estate Documents Section
  * Manages ad-hoc legal documents not tied to a specific will record.
  * E.g., trust deeds, power of attorney, codicils, pre-existing wills.
- * 
+ *
  * Follows the collapsible card pattern used in other estate planning sections.
  */
 
@@ -80,15 +80,34 @@ const ESTATE_DOCUMENT_TYPES = [
   { value: 'other', label: 'Other Estate Document', icon: File },
 ] as const;
 
-type EstateDocumentType = typeof ESTATE_DOCUMENT_TYPES[number]['value'];
+type EstateDocumentType = (typeof ESTATE_DOCUMENT_TYPES)[number]['value'];
 
-const DOCUMENT_TYPE_CONFIG: Record<string, { label: string; badgeClass: string; icon: React.ElementType }> = {
-  last_will_scanned: { label: 'Last Will (Scanned)', badgeClass: 'bg-purple-100 text-purple-800', icon: Scroll },
-  living_will_scanned: { label: 'Living Will (Scanned)', badgeClass: 'bg-blue-100 text-blue-800', icon: Heart },
+const DOCUMENT_TYPE_CONFIG: Record<
+  string,
+  { label: string; badgeClass: string; icon: React.ElementType }
+> = {
+  last_will_scanned: {
+    label: 'Last Will (Scanned)',
+    badgeClass: 'bg-purple-100 text-purple-800',
+    icon: Scroll,
+  },
+  living_will_scanned: {
+    label: 'Living Will (Scanned)',
+    badgeClass: 'bg-blue-100 text-blue-800',
+    icon: Heart,
+  },
   codicil: { label: 'Codicil', badgeClass: 'bg-amber-100 text-amber-800', icon: FileText },
   trust_deed: { label: 'Trust Deed', badgeClass: 'bg-green-100 text-green-800', icon: Scale },
-  power_of_attorney: { label: 'Power of Attorney', badgeClass: 'bg-red-100 text-red-800', icon: Shield },
-  letter_of_wishes: { label: 'Letter of Wishes', badgeClass: 'bg-indigo-100 text-indigo-800', icon: BookOpen },
+  power_of_attorney: {
+    label: 'Power of Attorney',
+    badgeClass: 'bg-red-100 text-red-800',
+    icon: Shield,
+  },
+  letter_of_wishes: {
+    label: 'Letter of Wishes',
+    badgeClass: 'bg-indigo-100 text-indigo-800',
+    icon: BookOpen,
+  },
   other: { label: 'Other', badgeClass: 'bg-gray-100 text-gray-800', icon: File },
 };
 
@@ -137,7 +156,9 @@ export function EstateDocumentsSection({
   // Upload form state
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [title, setTitle] = useState('');
-  const [documentType, setDocumentType] = useState<EstateDocumentType | ''>(defaultDocumentType || '');
+  const [documentType, setDocumentType] = useState<EstateDocumentType | ''>(
+    defaultDocumentType || '',
+  );
   const [notes, setNotes] = useState('');
   const [signingDate, setSigningDate] = useState('');
   const [isUploading, setIsUploading] = useState(false);
@@ -204,7 +225,7 @@ export function EstateDocumentsSection({
       const result = await response.json();
       if (result.success) {
         toast.success('Estate document uploaded successfully');
-        setDocuments(prev => [result.data, ...prev]);
+        setDocuments((prev) => [result.data, ...prev]);
         resetForm();
         setUploadDialogOpen(false);
       }
@@ -252,7 +273,7 @@ export function EstateDocumentsSection({
       if (!response.ok) throw new Error('Failed to delete document');
 
       toast.success('Estate document deleted');
-      setDocuments(prev => prev.filter(d => d.id !== deleteTarget.id));
+      setDocuments((prev) => prev.filter((d) => d.id !== deleteTarget.id));
       setDeleteTarget(null);
     } catch (error) {
       console.error('Error deleting estate document:', error);
@@ -295,10 +316,7 @@ export function EstateDocumentsSection({
     <div className="space-y-0">
       {/* Collapsible Header */}
       <Card>
-        <CardHeader
-          className="cursor-pointer py-4"
-          onClick={() => setIsExpanded(!isExpanded)}
-        >
+        <CardHeader className="cursor-pointer py-4" onClick={() => setIsExpanded(!isExpanded)}>
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
               <div className="h-9 w-9 rounded-lg bg-amber-50 flex items-center justify-center">
@@ -354,11 +372,7 @@ export function EstateDocumentsSection({
                 <p className="text-sm text-gray-500 mb-4">
                   Upload scanned wills, trust deeds, or other legal documents for {clientName}
                 </p>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={() => setUploadDialogOpen(true)}
-                >
+                <Button size="sm" variant="outline" onClick={() => setUploadDialogOpen(true)}>
                   <Upload className="h-4 w-4 mr-2" />
                   Upload First Document
                 </Button>
@@ -448,15 +462,15 @@ export function EstateDocumentsSection({
         <DialogContent className="sm:max-w-lg">
           <DialogHeader>
             <DialogTitle>Upload Estate Document</DialogTitle>
-            <DialogDescription>
-              Upload a scanned legal document for {clientName}
-            </DialogDescription>
+            <DialogDescription>Upload a scanned legal document for {clientName}</DialogDescription>
           </DialogHeader>
 
           <div className="space-y-4 py-2">
             {/* Document Type */}
             <div className="space-y-2">
-              <Label>Document Type <span className="text-red-500">*</span></Label>
+              <Label>
+                Document Type <span className="text-red-500">*</span>
+              </Label>
               <Select
                 value={documentType}
                 onValueChange={(v) => setDocumentType(v as EstateDocumentType)}
@@ -476,7 +490,9 @@ export function EstateDocumentsSection({
 
             {/* Title */}
             <div className="space-y-2">
-              <Label>Title <span className="text-red-500">*</span></Label>
+              <Label>
+                Title <span className="text-red-500">*</span>
+              </Label>
               <Input
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
@@ -486,7 +502,9 @@ export function EstateDocumentsSection({
 
             {/* File Upload */}
             <div className="space-y-2">
-              <Label>File <span className="text-red-500">*</span></Label>
+              <Label>
+                File <span className="text-red-500">*</span>
+              </Label>
               <div className="border-2 border-dashed rounded-lg p-4 text-center relative">
                 {selectedFile ? (
                   <div className="flex items-center justify-between">
@@ -516,9 +534,7 @@ export function EstateDocumentsSection({
                     <p className="text-sm text-muted-foreground mb-2">
                       Click to select or drag and drop
                     </p>
-                    <p className="text-xs text-muted-foreground">
-                      PDF, JPEG, or PNG (max 50MB)
-                    </p>
+                    <p className="text-xs text-muted-foreground">PDF, JPEG, or PNG (max 50MB)</p>
                     <input
                       ref={fileInputRef}
                       type="file"
@@ -536,7 +552,9 @@ export function EstateDocumentsSection({
 
             {/* Signing Date (optional) */}
             <div className="space-y-2">
-              <Label>Date of Signing <span className="text-muted-foreground text-xs">(optional)</span></Label>
+              <Label>
+                Date of Signing <span className="text-muted-foreground text-xs">(optional)</span>
+              </Label>
               <Input
                 type="date"
                 value={signingDate}
@@ -546,7 +564,9 @@ export function EstateDocumentsSection({
 
             {/* Notes (optional) */}
             <div className="space-y-2">
-              <Label>Notes <span className="text-muted-foreground text-xs">(optional)</span></Label>
+              <Label>
+                Notes <span className="text-muted-foreground text-xs">(optional)</span>
+              </Label>
               <Textarea
                 value={notes}
                 onChange={(e) => setNotes(e.target.value)}
@@ -557,10 +577,19 @@ export function EstateDocumentsSection({
           </div>
 
           <DialogFooter>
-            <Button variant="outline" onClick={() => { resetForm(); setUploadDialogOpen(false); }}>
+            <Button
+              variant="outline"
+              onClick={() => {
+                resetForm();
+                setUploadDialogOpen(false);
+              }}
+            >
               Cancel
             </Button>
-            <Button onClick={handleUpload} disabled={isUploading || !selectedFile || !title || !documentType}>
+            <Button
+              onClick={handleUpload}
+              disabled={isUploading || !selectedFile || !title || !documentType}
+            >
               {isUploading ? (
                 <div className="contents">
                   <Loader2 className="h-4 w-4 mr-2 animate-spin" />
@@ -578,12 +607,18 @@ export function EstateDocumentsSection({
       </Dialog>
 
       {/* Delete Confirmation */}
-      <AlertDialog open={!!deleteTarget} onOpenChange={(open) => { if (!open) setDeleteTarget(null); }}>
+      <AlertDialog
+        open={!!deleteTarget}
+        onOpenChange={(open) => {
+          if (!open) setDeleteTarget(null);
+        }}
+      >
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Delete Estate Document?</AlertDialogTitle>
             <AlertDialogDescription>
-              This will permanently delete &ldquo;{deleteTarget?.title}&rdquo;. This action cannot be undone.
+              This will permanently delete &ldquo;{deleteTarget?.title}&rdquo;. This action cannot
+              be undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

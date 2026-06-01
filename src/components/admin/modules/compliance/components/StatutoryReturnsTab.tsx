@@ -9,9 +9,9 @@ const columns = [
   { key: 'submissionDate', label: 'Submitted', type: 'date' as const },
   { key: 'due', label: 'Due Date', type: 'date' as const },
   { key: 'receiptNumber', label: 'Receipt Number', type: 'text' as const },
-  { 
-    key: 'ratios', 
-    label: 'Key Ratios', 
+  {
+    key: 'ratios',
+    label: 'Key Ratios',
     type: 'custom' as const,
     render: (_: unknown, record: ComplianceRecord) => {
       const statRecord = record as StatutoryRecord;
@@ -32,12 +32,12 @@ const columns = [
         );
       }
       return '—';
-    }
+    },
   },
   { key: 'auditFirm', label: 'Audit Firm', type: 'text' as const },
   { key: 'auditOpinion', label: 'Opinion', type: 'text' as const },
   { key: 'filingStatus', label: 'Filing Status', type: 'badge' as const },
-  { key: 'status', label: 'Status', type: 'badge' as const }
+  { key: 'status', label: 'Status', type: 'badge' as const },
 ];
 
 const filters = [
@@ -48,8 +48,8 @@ const filters = [
       { value: 'Annual Financial Statements', label: 'AFS' },
       { value: 'Section 19(3) Liquidity', label: 'Liquidity' },
       { value: 'Capital Adequacy', label: 'Capital' },
-      { value: 'Independent Audit Report', label: 'Audit' }
-    ]
+      { value: 'Independent Audit Report', label: 'Audit' },
+    ],
   },
   {
     key: 'filingStatus',
@@ -57,9 +57,9 @@ const filters = [
     options: [
       { value: 'Submitted & Accepted', label: 'Accepted' },
       { value: 'In Preparation', label: 'In Preparation' },
-      { value: 'Overdue', label: 'Overdue' }
-    ]
-  }
+      { value: 'Overdue', label: 'Overdue' },
+    ],
+  },
 ];
 
 export function StatutoryReturnsTab() {

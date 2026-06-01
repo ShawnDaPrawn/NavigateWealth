@@ -49,44 +49,44 @@ interface FieldMapping {
 
 export const FIELD_MAP: FieldMapping[] = [
   // Personal
-  { profileKey: 'title',             appKey: 'title' },
-  { profileKey: 'firstName',         appKey: 'firstName' },
-  { profileKey: 'middleName',        appKey: 'middleName' },
-  { profileKey: 'preferredName',     appKey: 'preferredName' },
-  { profileKey: 'lastName',          appKey: 'lastName' },
-  { profileKey: 'dateOfBirth',       appKey: 'dateOfBirth' },
-  { profileKey: 'gender',            appKey: 'gender' },
-  { profileKey: 'nationality',       appKey: 'nationality' },
-  { profileKey: 'taxNumber',         appKey: 'taxNumber' },
-  { profileKey: 'maritalStatus',     appKey: 'maritalStatus' },
-  { profileKey: 'maritalRegime',     appKey: 'maritalRegime' },
+  { profileKey: 'title', appKey: 'title' },
+  { profileKey: 'firstName', appKey: 'firstName' },
+  { profileKey: 'middleName', appKey: 'middleName' },
+  { profileKey: 'preferredName', appKey: 'preferredName' },
+  { profileKey: 'lastName', appKey: 'lastName' },
+  { profileKey: 'dateOfBirth', appKey: 'dateOfBirth' },
+  { profileKey: 'gender', appKey: 'gender' },
+  { profileKey: 'nationality', appKey: 'nationality' },
+  { profileKey: 'taxNumber', appKey: 'taxNumber' },
+  { profileKey: 'maritalStatus', appKey: 'maritalStatus' },
+  { profileKey: 'maritalRegime', appKey: 'maritalRegime' },
 
   // Contact
-  { profileKey: 'email',             appKey: 'emailAddress' },
-  { profileKey: 'secondaryEmail',    appKey: 'alternativeEmail' },
-  { profileKey: 'phoneNumber',       appKey: 'cellphoneNumber' },
-  { profileKey: 'alternativePhone',  appKey: 'alternativeCellphone' },
+  { profileKey: 'email', appKey: 'emailAddress' },
+  { profileKey: 'secondaryEmail', appKey: 'alternativeEmail' },
+  { profileKey: 'phoneNumber', appKey: 'cellphoneNumber' },
+  { profileKey: 'alternativePhone', appKey: 'alternativeCellphone' },
   { profileKey: 'preferredContactMethod', appKey: 'preferredContactMethod' },
 
   // Address
   { profileKey: 'residentialAddressLine1', appKey: 'residentialAddressLine1' },
   { profileKey: 'residentialAddressLine2', appKey: 'residentialAddressLine2' },
-  { profileKey: 'residentialSuburb',       appKey: 'residentialSuburb' },
-  { profileKey: 'residentialCity',         appKey: 'residentialCity' },
-  { profileKey: 'residentialProvince',     appKey: 'residentialProvince' },
-  { profileKey: 'residentialPostalCode',   appKey: 'residentialPostalCode' },
-  { profileKey: 'residentialCountry',      appKey: 'residentialCountry' },
+  { profileKey: 'residentialSuburb', appKey: 'residentialSuburb' },
+  { profileKey: 'residentialCity', appKey: 'residentialCity' },
+  { profileKey: 'residentialProvince', appKey: 'residentialProvince' },
+  { profileKey: 'residentialPostalCode', appKey: 'residentialPostalCode' },
+  { profileKey: 'residentialCountry', appKey: 'residentialCountry' },
 
   // Employment (scalar fields only — employers array is NOT sync'd)
-  { profileKey: 'employmentStatus',          appKey: 'employmentStatus' },
-  { profileKey: 'selfEmployedCompanyName',   appKey: 'selfEmployedCompanyName' },
-  { profileKey: 'selfEmployedIndustry',      appKey: 'selfEmployedIndustry' },
-  { profileKey: 'selfEmployedDescription',   appKey: 'selfEmployedDescription' },
+  { profileKey: 'employmentStatus', appKey: 'employmentStatus' },
+  { profileKey: 'selfEmployedCompanyName', appKey: 'selfEmployedCompanyName' },
+  { profileKey: 'selfEmployedIndustry', appKey: 'selfEmployedIndustry' },
+  { profileKey: 'selfEmployedDescription', appKey: 'selfEmployedDescription' },
 ];
 
 // Pre-built lookup maps for O(1) access
-const PROFILE_TO_APP = new Map(FIELD_MAP.map(m => [m.profileKey, m.appKey]));
-const APP_TO_PROFILE = new Map(FIELD_MAP.map(m => [m.appKey, m.profileKey]));
+const PROFILE_TO_APP = new Map(FIELD_MAP.map((m) => [m.profileKey, m.appKey]));
+const APP_TO_PROFILE = new Map(FIELD_MAP.map((m) => [m.appKey, m.profileKey]));
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -104,7 +104,10 @@ async function findSyncableApplication(
   const applicationId = (profile as Record<string, unknown>)?.applicationId as string | undefined;
 
   if (applicationId) {
-    const application = await kv.get(`application:${applicationId}`) as Record<string, unknown> | null;
+    const application = (await kv.get(`application:${applicationId}`)) as Record<
+      string,
+      unknown
+    > | null;
     if (application && SYNCABLE_STATUSES.has(application.status as string)) {
       return { key: `application:${applicationId}`, application };
     }
@@ -114,13 +117,13 @@ async function findSyncableApplication(
   // Fallback: scan applications by prefix (slower, but covers edge cases)
   // This is acceptable because it only runs when applicationId is missing
   // from the profile — a rare case for non-admin-onboarded clients.
-  const allApps = await kv.getByPrefix('application:') as Array<{ key: string; value: Record<string, unknown> }>;
+  const allApps = (await kv.getByPrefix('application:')) as Array<{
+    key: string;
+    value: Record<string, unknown>;
+  }>;
   for (const entry of allApps) {
     const app = entry.value;
-    if (
-      app?.user_id === userId &&
-      SYNCABLE_STATUSES.has(app.status as string)
-    ) {
+    if (app?.user_id === userId && SYNCABLE_STATUSES.has(app.status as string)) {
       return { key: entry.key, application: app };
     }
   }
@@ -269,7 +272,10 @@ export async function syncApplicationToProfile(
   adminUserId?: string,
 ): Promise<{ synced: boolean; fieldsUpdated: string[] }> {
   try {
-    const application = await kv.get(`application:${applicationId}`) as Record<string, unknown> | null;
+    const application = (await kv.get(`application:${applicationId}`)) as Record<
+      string,
+      unknown
+    > | null;
     if (!application) {
       return { synced: false, fieldsUpdated: [] };
     }
@@ -285,7 +291,7 @@ export async function syncApplicationToProfile(
     }
 
     const profileKey = `user_profile:${userId}:personal_info`;
-    const profile = (await kv.get(profileKey) || {}) as Record<string, unknown>;
+    const profile = ((await kv.get(profileKey)) || {}) as Record<string, unknown>;
 
     // Determine which mapped fields changed
     const profileUpdates: Record<string, unknown> = {};
@@ -383,13 +389,16 @@ export function mergeProfileOnApproval(
 
   // Fields from the application that should ALWAYS overwrite the profile
   // (these are the fields the admin would have edited via the application form)
-  const alwaysOverwriteKeys = FIELD_MAP.map(m => m.profileKey);
+  const alwaysOverwriteKeys = FIELD_MAP.map((m) => m.profileKey);
 
   // Additional non-mapped fields from buildClientProfileFromApplication
   // that should also be applied
   const additionalOverwriteKeys = [
-    'idNumber', 'idCountry', 'passportNumber', 'passportCountry',
-    'identityDocuments',  // Rebuilt from application ID data
+    'idNumber',
+    'idCountry',
+    'passportNumber',
+    'passportCountry',
+    'identityDocuments', // Rebuilt from application ID data
   ];
 
   const allOverwriteKeys = new Set([...alwaysOverwriteKeys, ...additionalOverwriteKeys]);

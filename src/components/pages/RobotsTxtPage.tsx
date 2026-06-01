@@ -6,7 +6,7 @@ export function RobotsTxtPage() {
     // Remove all React app styling
     document.documentElement.style.cssText = '';
     document.body.style.cssText = '';
-    
+
     const robotsContent = `User-agent: *
 Allow: /
 Disallow: /admin
@@ -48,8 +48,9 @@ Sitemap: ${SITE_ORIGIN}/sitemap.xml
 
     // Clear all existing content and styles
     document.body.innerHTML = '';
-    document.body.style.cssText = 'font-family: monospace; margin: 0; padding: 0; background: white; color: black;';
-    
+    document.body.style.cssText =
+      'font-family: monospace; margin: 0; padding: 0; background: white; color: black;';
+
     // Create a text node to preserve exact formatting
     const pre = document.createElement('pre');
     pre.textContent = robotsContent;

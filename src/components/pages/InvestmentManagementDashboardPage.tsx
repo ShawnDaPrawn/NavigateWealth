@@ -11,7 +11,10 @@ import React, { useState, useMemo } from 'react';
 import { useAuth } from '../auth/AuthContext';
 import { TrendingUp, Calculator, FileText, PieChart } from 'lucide-react';
 import type { ServicePageAction, ServicePageInsight } from '../layout/ServicePageLayout';
-import { DynamicServicePageWrapper, type SubCategoryConfig } from '../layout/DynamicServicePageWrapper';
+import {
+  DynamicServicePageWrapper,
+  type SubCategoryConfig,
+} from '../layout/DynamicServicePageWrapper';
 import { usePortfolioSummary } from './portfolio/hooks';
 import { formatCurrency } from '../../utils/currencyFormatter';
 import { ServiceRequestModal, SERVICE_REQUEST_CONFIGS } from '../modals/ServiceRequestModal';
@@ -23,7 +26,8 @@ const SUB_CATEGORIES: SubCategoryConfig[] = [
     categoryId: 'investments_voluntary',
     title: 'Discretionary Investments',
     subtitle: 'Unit trusts, tax-free savings, offshore investments, and direct shares',
-    emptyMessage: 'No discretionary investments on record. Explore investment options with your adviser.',
+    emptyMessage:
+      'No discretionary investments on record. Explore investment options with your adviser.',
   },
   {
     categoryId: 'investments_guaranteed',
@@ -55,7 +59,8 @@ export function InvestmentManagementDashboardPage() {
       result.push({
         id: 'inv-no-fna',
         title: 'Complete Your Investment Assessment',
-        description: 'An investment needs analysis will help align your portfolio with your risk profile and financial goals.',
+        description:
+          'An investment needs analysis will help align your portfolio with your risk profile and financial goals.',
         severity: 'high',
         onClick: scrollToPanel,
       });
@@ -87,7 +92,8 @@ export function InvestmentManagementDashboardPage() {
       result.push({
         id: 'inv-no-goals',
         title: 'Link Investments to Goals',
-        description: 'Your investments aren\'t linked to specific financial goals. Goal-based investing improves discipline and outcomes.',
+        description:
+          "Your investments aren't linked to specific financial goals. Goal-based investing improves discipline and outcomes.",
         severity: 'medium',
       });
     }
@@ -96,7 +102,8 @@ export function InvestmentManagementDashboardPage() {
       result.push({
         id: 'inv-no-contribution',
         title: 'No Regular Contributions',
-        description: 'You\'re not making monthly contributions. Regular investing through rand-cost averaging can improve long-term returns.',
+        description:
+          "You're not making monthly contributions. Regular investing through rand-cost averaging can improve long-term returns.",
         severity: 'low',
       });
     }

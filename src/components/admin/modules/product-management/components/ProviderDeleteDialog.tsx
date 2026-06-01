@@ -22,12 +22,12 @@ interface ProviderDeleteDialogProps {
   isDeleting: boolean;
 }
 
-export function ProviderDeleteDialog({ 
-  isOpen, 
-  onClose, 
-  provider, 
-  onConfirm, 
-  isDeleting 
+export function ProviderDeleteDialog({
+  isOpen,
+  onClose,
+  provider,
+  onConfirm,
+  isDeleting,
 }: ProviderDeleteDialogProps) {
   return (
     <AlertDialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
@@ -70,8 +70,8 @@ export function ProviderDeleteDialog({
                   )}
                   {provider.categoryIds.length > 0 && (
                     <div className="flex flex-wrap gap-1 mt-2">
-                      {provider.categoryIds.map(catId => {
-                        const category = PRODUCT_CATEGORIES.find(c => c.id === catId);
+                      {provider.categoryIds.map((catId) => {
+                        const category = PRODUCT_CATEGORIES.find((c) => c.id === catId);
                         return category ? (
                           <Badge key={catId} variant="secondary" className="text-xs">
                             {category.name}
@@ -86,7 +86,9 @@ export function ProviderDeleteDialog({
 
             <div className="bg-amber-50 border border-amber-200 rounded-lg p-3">
               <p className="text-sm text-amber-800">
-                <strong className="font-semibold">Warning:</strong> Deleting this provider will remove it from all associated product categories and integrations. This action is permanent and cannot be undone.
+                <strong className="font-semibold">Warning:</strong> Deleting this provider will
+                remove it from all associated product categories and integrations. This action is
+                permanent and cannot be undone.
               </p>
             </div>
           </div>

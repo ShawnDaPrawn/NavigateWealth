@@ -1,5 +1,16 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, ArrowLeft, Loader2, Users, Search, Filter, Edit2, Trash2, AlertTriangle, RefreshCw } from 'lucide-react';
+import {
+  Plus,
+  ArrowLeft,
+  Loader2,
+  Users,
+  Search,
+  Filter,
+  Edit2,
+  Trash2,
+  AlertTriangle,
+  RefreshCw,
+} from 'lucide-react';
 import { Button } from '../../../../ui/button';
 import { Input } from '../../../../ui/input';
 import { Badge } from '../../../../ui/badge';
@@ -46,17 +57,17 @@ export function CustomGroupManager({ onClose, onSelectGroup }: CustomGroupManage
   const [loading, setLoading] = useState(true);
   const [clients, setClients] = useState<Client[]>([]);
   const [providers, setProviders] = useState<Provider[]>([]);
-  
+
   // Search and Filter State
   const [searchTerm, setSearchTerm] = useState('');
   const [filterType, setFilterType] = useState<'all' | 'with-filters' | 'manual-only'>('all');
   const [sortBy, setSortBy] = useState<'name' | 'members' | 'updated'>('updated');
-  
+
   // Delete Confirmation State
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [groupToDelete, setGroupToDelete] = useState<ClientGroup | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
-  
+
   // Editor State
   const [editingGroup, setEditingGroup] = useState<ClientGroup | null>(null);
   const [isSaving, setIsSaving] = useState(false);
@@ -68,26 +79,34 @@ export function CustomGroupManager({ onClose, onSelectGroup }: CustomGroupManage
   // Apply search and filters
   useEffect(() => {
     let result = [...groups];
-    
+
     // Search filter
     if (searchTerm) {
       const lower = searchTerm.toLowerCase();
-      result = result.filter(g => 
-        g.name.toLowerCase().includes(lower) || 
-        g.description?.toLowerCase().includes(lower)
+      result = result.filter(
+        (g) => g.name.toLowerCase().includes(lower) || g.description?.toLowerCase().includes(lower),
       );
     }
-    
+
     // Type filter
     if (filterType === 'with-filters') {
-      result = result.filter(g => g.filterConfig && Object.keys(g.filterConfig).some(key => {
-        const value = g.filterConfig?.[key as keyof typeof g.filterConfig];
-        return Array.isArray(value) && value.length > 0;
-      }));
+      result = result.filter(
+        (g) =>
+          g.filterConfig &&
+          Object.keys(g.filterConfig).some((key) => {
+            const value = g.filterConfig?.[key as keyof typeof g.filterConfig];
+            return Array.isArray(value) && value.length > 0;
+          }),
+      );
     } else if (filterType === 'manual-only') {
-      result = result.filter(g => g.clientIds && g.clientIds.length > 0 && (!g.filterConfig || Object.keys(g.filterConfig).length === 0));
+      result = result.filter(
+        (g) =>
+          g.clientIds &&
+          g.clientIds.length > 0 &&
+          (!g.filterConfig || Object.keys(g.filterConfig).length === 0),
+      );
     }
-    
+
     // Sort
     result.sort((a, b) => {
       if (sortBy === 'name') {
@@ -100,7 +119,7 @@ export function CustomGroupManager({ onClose, onSelectGroup }: CustomGroupManage
         return bDate.getTime() - aDate.getTime();
       }
     });
-    
+
     setFilteredGroups(result);
   }, [groups, searchTerm, filterType, sortBy]);
 
@@ -110,7 +129,7 @@ export function CustomGroupManager({ onClose, onSelectGroup }: CustomGroupManage
       const [fetchedGroups, fetchedClients, fetchedProviders] = await Promise.all([
         communicationApi.getGroups(),
         communicationApi.getClients(),
-        communicationApi.getProviders()
+        communicationApi.getProviders(),
       ]);
       // Include custom groups + newsletter system group (editable external contacts)
       setGroups(
@@ -154,7 +173,7 @@ export function CustomGroupManager({ onClose, onSelectGroup }: CustomGroupManage
         await communicationApi.createGroup(groupData);
         toast.success('Group created successfully');
       }
-      
+
       await loadData(); // Reload to get updated counts
       setView('list');
     } catch (error) {
@@ -175,7 +194,7 @@ export function CustomGroupManager({ onClose, onSelectGroup }: CustomGroupManage
     try {
       setIsDeleting(true);
       await communicationApi.deleteGroup(id);
-      setGroups(groups.filter(g => g.id !== id));
+      setGroups(groups.filter((g) => g.id !== id));
       toast.success('Group deleted successfully');
     } catch (error) {
       console.error('Failed to delete group:', error);
@@ -186,7 +205,7 @@ export function CustomGroupManager({ onClose, onSelectGroup }: CustomGroupManage
       setGroupToDelete(null);
     }
   };
-  
+
   const handleRecalculate = async () => {
     try {
       setLoading(true);
@@ -201,7 +220,7 @@ export function CustomGroupManager({ onClose, onSelectGroup }: CustomGroupManage
       setLoading(false);
     }
   };
-  
+
   const handleDebug = async () => {
     try {
       const debugData = await communicationApi.debugGroups();
@@ -219,10 +238,10 @@ export function CustomGroupManager({ onClose, onSelectGroup }: CustomGroupManage
 
   const getActiveFilters = (group: ClientGroup): string[] => {
     if (!group.filterConfig) return [];
-    
+
     const filters: string[] = [];
     const config = group.filterConfig;
-    
+
     if (config.productFilters?.length) filters.push('Products');
     if (config.netWorthFilters?.length) filters.push('Net Worth');
     if (config.ageFilters?.length) filters.push('Age');
@@ -234,7 +253,7 @@ export function CustomGroupManager({ onClose, onSelectGroup }: CustomGroupManage
     if (config.occupationFilters?.length) filters.push('Occupation');
     if (config.dependantCountFilters?.length) filters.push('Dependants');
     if (config.retirementAgeFilters?.length) filters.push('Retirement Age');
-    
+
     return filters;
   };
 
@@ -271,7 +290,12 @@ export function CustomGroupManager({ onClose, onSelectGroup }: CustomGroupManage
           <Button variant="ghost" size="sm" onClick={handleDebug} className="gap-2 hidden">
             🐛 Debug
           </Button>
-          <Button variant="outline" onClick={handleRecalculate} disabled={loading} className="gap-2">
+          <Button
+            variant="outline"
+            onClick={handleRecalculate}
+            disabled={loading}
+            className="gap-2"
+          >
             <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
             Recalculate
           </Button>
@@ -292,8 +316,11 @@ export function CustomGroupManager({ onClose, onSelectGroup }: CustomGroupManage
             className="pl-10"
           />
         </div>
-        
-        <Select value={filterType} onValueChange={(v: string) => setFilterType(v as typeof filterType)}>
+
+        <Select
+          value={filterType}
+          onValueChange={(v: string) => setFilterType(v as typeof filterType)}
+        >
           <SelectTrigger className="w-[200px]">
             <Filter className="h-4 w-4 mr-2" />
             <SelectValue />
@@ -326,7 +353,9 @@ export function CustomGroupManager({ onClose, onSelectGroup }: CustomGroupManage
         <div className="col-span-full text-center py-12 border-2 border-dashed rounded-lg bg-muted/20">
           <Users className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
           <h3 className="text-lg font-semibold">No Groups</h3>
-          <p className="text-muted-foreground mb-6">Create your first custom group to start organizing clients.</p>
+          <p className="text-muted-foreground mb-6">
+            Create your first custom group to start organizing clients.
+          </p>
           <Button onClick={handleCreateNew}>Create Group</Button>
         </div>
       ) : filteredGroups.length === 0 ? (
@@ -352,13 +381,16 @@ export function CustomGroupManager({ onClose, onSelectGroup }: CustomGroupManage
               {filteredGroups.map((group) => {
                 const activeFilters = getActiveFilters(group);
                 const isSystemGroup = group.type === 'system';
-                
+
                 return (
                   <TableRow key={group.id} className="cursor-pointer hover:bg-muted/50">
                     <TableCell className="font-medium">
                       <div className="flex items-center gap-2">
                         <span>{group.name}</span>
-                        <Badge variant={isSystemGroup ? 'secondary' : 'outline'} className="text-[10px] capitalize">
+                        <Badge
+                          variant={isSystemGroup ? 'secondary' : 'outline'}
+                          className="text-[10px] capitalize"
+                        >
                           {isSystemGroup ? 'system' : 'custom'}
                         </Badge>
                       </div>
@@ -373,7 +405,10 @@ export function CustomGroupManager({ onClose, onSelectGroup }: CustomGroupManage
                           {group.clientCount || 0}
                         </Badge>
                         {group.externalContacts && group.externalContacts.length > 0 && (
-                          <Badge variant="outline" className="gap-1 text-[10px] text-purple-600 border-purple-200">
+                          <Badge
+                            variant="outline"
+                            className="gap-1 text-[10px] text-purple-600 border-purple-200"
+                          >
                             {group.externalContacts.length} external
                           </Badge>
                         )}
@@ -383,7 +418,11 @@ export function CustomGroupManager({ onClose, onSelectGroup }: CustomGroupManage
                       {activeFilters.length > 0 ? (
                         <div className="flex flex-wrap gap-1">
                           {activeFilters.slice(0, 3).map((filter) => (
-                            <Badge key={filter} variant="outline" className="text-[10px] px-1.5 py-0">
+                            <Badge
+                              key={filter}
+                              variant="outline"
+                              className="text-[10px] px-1.5 py-0"
+                            >
                               {filter}
                             </Badge>
                           ))}
@@ -394,26 +433,26 @@ export function CustomGroupManager({ onClose, onSelectGroup }: CustomGroupManage
                           )}
                         </div>
                       ) : group.id === 'sys_newsletter_contacts' ? (
-                        <span className="text-muted-foreground text-sm">Newsletter audience group</span>
+                        <span className="text-muted-foreground text-sm">
+                          Newsletter audience group
+                        </span>
                       ) : (
                         <span className="text-muted-foreground text-sm">Manual selection</span>
                       )}
                     </TableCell>
                     <TableCell className="text-muted-foreground text-sm">
-                      {new Date(group.updatedAt || group.createdAt || Date.now()).toLocaleDateString('en-GB', {
+                      {new Date(
+                        group.updatedAt || group.createdAt || Date.now(),
+                      ).toLocaleDateString('en-GB', {
                         day: '2-digit',
                         month: 'short',
-                        year: 'numeric'
+                        year: 'numeric',
                       })}
                     </TableCell>
                     <TableCell className="text-right">
                       <div className="flex justify-end gap-2">
                         {onSelectGroup && (
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => onSelectGroup(group)}
-                          >
+                          <Button variant="outline" size="sm" onClick={() => onSelectGroup(group)}>
                             Select
                           </Button>
                         )}
@@ -451,7 +490,7 @@ export function CustomGroupManager({ onClose, onSelectGroup }: CustomGroupManage
           </Table>
         </div>
       )}
-      
+
       {/* Summary */}
       {!loading && groups.length > 0 && (
         <div className="text-sm text-muted-foreground text-center">
@@ -469,19 +508,17 @@ export function CustomGroupManager({ onClose, onSelectGroup }: CustomGroupManage
               </div>
               <div>
                 <AlertDialogTitle className="text-xl">Delete Group</AlertDialogTitle>
-                <p className="text-sm text-muted-foreground mt-1">
-                  This action cannot be undone
-                </p>
+                <p className="text-sm text-muted-foreground mt-1">This action cannot be undone</p>
               </div>
             </div>
           </AlertDialogHeader>
-          
+
           {groupToDelete && (
             <div className="space-y-4">
               <AlertDialogDescription className="text-base">
                 You are about to permanently delete the following group:
               </AlertDialogDescription>
-              
+
               <div className="rounded-lg border bg-muted/50 p-4 space-y-2">
                 <div className="flex items-start justify-between">
                   <div className="space-y-1">
@@ -495,7 +532,7 @@ export function CustomGroupManager({ onClose, onSelectGroup }: CustomGroupManage
                     {groupToDelete.clientCount || 0}
                   </Badge>
                 </div>
-                
+
                 {(() => {
                   const activeFilters = getActiveFilters(groupToDelete);
                   return activeFilters.length > 0 ? (
@@ -510,13 +547,14 @@ export function CustomGroupManager({ onClose, onSelectGroup }: CustomGroupManage
                   ) : null;
                 })()}
               </div>
-              
+
               <AlertDialogDescription className="text-sm">
-                All client associations will be removed, but the clients themselves will not be affected.
+                All client associations will be removed, but the clients themselves will not be
+                affected.
               </AlertDialogDescription>
             </div>
           )}
-          
+
           <AlertDialogFooter className="gap-2 sm:gap-2">
             <AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
             <AlertDialogAction

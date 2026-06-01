@@ -8,7 +8,13 @@ export interface AdHocContribution {
   date: string;
 }
 
-export type GoalType = 'Wealth Accumulation' | 'Capital Growth' | 'Offshore Exposure' | 'Education Funding' | 'Medium-term Lifestyle' | 'Other';
+export type GoalType =
+  | 'Wealth Accumulation'
+  | 'Capital Growth'
+  | 'Offshore Exposure'
+  | 'Education Funding'
+  | 'Medium-term Lifestyle'
+  | 'Other';
 
 export interface Goal {
   id: string;
@@ -17,7 +23,7 @@ export interface Goal {
   type: GoalType;
   targetAmount: number;
   targetDate: string; // ISO Date String
-  
+
   // Financial Inputs
   initialLumpSum: number;
   monthlyContribution: number;
@@ -29,9 +35,9 @@ export interface Goal {
   notes?: string;
   createdAt: string;
   updatedAt: string;
-  
+
   // Linkage: Array of Policy IDs from Voluntary Investments
-  linkedInvestmentIds: string[]; 
+  linkedInvestmentIds: string[];
 }
 
 export interface GoalCalculationResult {

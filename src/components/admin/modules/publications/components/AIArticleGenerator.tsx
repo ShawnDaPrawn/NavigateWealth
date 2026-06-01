@@ -57,10 +57,30 @@ type TargetLength = 'short' | 'medium' | 'long';
 // Config
 // ---------------------------------------------------------------------------
 
-const AUDIENCE_OPTIONS: { value: Audience; label: string; description: string; icon: React.ReactNode }[] = [
-  { value: 'advisors', label: 'Financial Advisors', description: 'Technical, regulation-aware', icon: <Briefcase className="h-4 w-4" /> },
-  { value: 'clients', label: 'Clients', description: 'Accessible, educational', icon: <Users className="h-4 w-4" /> },
-  { value: 'both', label: 'Both', description: 'Professional yet approachable', icon: <BookOpen className="h-4 w-4" /> },
+const AUDIENCE_OPTIONS: {
+  value: Audience;
+  label: string;
+  description: string;
+  icon: React.ReactNode;
+}[] = [
+  {
+    value: 'advisors',
+    label: 'Financial Advisors',
+    description: 'Technical, regulation-aware',
+    icon: <Briefcase className="h-4 w-4" />,
+  },
+  {
+    value: 'clients',
+    label: 'Clients',
+    description: 'Accessible, educational',
+    icon: <Users className="h-4 w-4" />,
+  },
+  {
+    value: 'both',
+    label: 'Both',
+    description: 'Professional yet approachable',
+    icon: <BookOpen className="h-4 w-4" />,
+  },
 ];
 
 const TONE_OPTIONS: { value: Tone; label: string; emoji: string }[] = [
@@ -125,7 +145,9 @@ export function AIArticleGenerator({
     }
 
     load();
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+    };
   }, [isOpen]);
 
   // Reset state on close
@@ -147,12 +169,12 @@ export function AIArticleGenerator({
 
   const selectedCategory = useMemo(
     () => categories.find((c) => c.id === categoryId),
-    [categories, categoryId]
+    [categories, categoryId],
   );
 
   const selectedTemplate = useMemo(
     () => templates.find((t) => t.id === selectedTemplateId),
-    [templates, selectedTemplateId]
+    [templates, selectedTemplateId],
   );
 
   const addKeyPoint = useCallback(() => {
@@ -174,7 +196,7 @@ export function AIArticleGenerator({
         addKeyPoint();
       }
     },
-    [addKeyPoint]
+    [addKeyPoint],
   );
 
   const canGenerate = topic.trim().length >= 3;
@@ -210,7 +232,7 @@ export function AIArticleGenerator({
       let resolvedCategoryId = categoryId || undefined;
       if (!resolvedCategoryId && result.suggestedCategoryName) {
         const match = categories.find(
-          (c) => c.name.toLowerCase() === result.suggestedCategoryName!.toLowerCase()
+          (c) => c.name.toLowerCase() === result.suggestedCategoryName!.toLowerCase(),
         );
         if (match) {
           resolvedCategoryId = match.id;
@@ -228,9 +250,17 @@ export function AIArticleGenerator({
       setProgress(null);
     }
   }, [
-    canGenerate, topic, audience, tone, targetLength,
-    selectedCategory, keyPoints, selectedTemplate,
-    additionalInstructions, categoryId, onGenerated,
+    canGenerate,
+    topic,
+    audience,
+    tone,
+    targetLength,
+    selectedCategory,
+    keyPoints,
+    selectedTemplate,
+    additionalInstructions,
+    categoryId,
+    onGenerated,
     categories,
   ]);
 
@@ -294,11 +324,14 @@ export function AIArticleGenerator({
                 disabled={isGenerating}
               >
                 <option value="">Auto-detect from topic</option>
-                {categories.filter((c) => c.is_active).map((cat) => (
-                  <option key={cat.id} value={cat.id}>
-                    {cat.icon ? `${cat.icon} ` : ''}{cat.name}
-                  </option>
-                ))}
+                {categories
+                  .filter((c) => c.is_active)
+                  .map((cat) => (
+                    <option key={cat.id} value={cat.id}>
+                      {cat.icon ? `${cat.icon} ` : ''}
+                      {cat.name}
+                    </option>
+                  ))}
               </select>
               <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
             </div>
@@ -306,7 +339,9 @@ export function AIArticleGenerator({
 
           {/* Audience */}
           <div>
-            <label className="text-sm font-medium text-gray-700 block mb-1.5">Target Audience</label>
+            <label className="text-sm font-medium text-gray-700 block mb-1.5">
+              Target Audience
+            </label>
             <div className="grid grid-cols-3 gap-2">
               {AUDIENCE_OPTIONS.map((opt) => (
                 <button
@@ -318,7 +353,7 @@ export function AIArticleGenerator({
                     'flex flex-col items-center gap-1 px-3 py-2.5 rounded-lg border-2 text-center transition-all',
                     audience === opt.value
                       ? 'border-purple-500 bg-purple-50 text-purple-700'
-                      : 'border-gray-200 hover:border-gray-300 text-gray-600'
+                      : 'border-gray-200 hover:border-gray-300 text-gray-600',
                   )}
                 >
                   {opt.icon}
@@ -345,7 +380,7 @@ export function AIArticleGenerator({
                       'w-full flex items-center gap-2 px-3 py-1.5 rounded-lg text-left text-sm transition-all',
                       tone === opt.value
                         ? 'bg-purple-50 text-purple-700 font-medium'
-                        : 'hover:bg-gray-50 text-gray-600'
+                        : 'hover:bg-gray-50 text-gray-600',
                     )}
                   >
                     <span className="text-sm">{opt.emoji}</span>
@@ -357,7 +392,9 @@ export function AIArticleGenerator({
 
             {/* Length */}
             <div>
-              <label className="text-sm font-medium text-gray-700 block mb-1.5">Article Length</label>
+              <label className="text-sm font-medium text-gray-700 block mb-1.5">
+                Article Length
+              </label>
               <div className="space-y-1.5">
                 {LENGTH_OPTIONS.map((opt) => (
                   <button
@@ -369,7 +406,7 @@ export function AIArticleGenerator({
                       'w-full flex items-center justify-between px-3 py-2 rounded-lg border-2 text-sm transition-all',
                       targetLength === opt.value
                         ? 'border-purple-500 bg-purple-50 text-purple-700'
-                        : 'border-gray-200 hover:border-gray-300 text-gray-600'
+                        : 'border-gray-200 hover:border-gray-300 text-gray-600',
                     )}
                   >
                     <span className="font-medium">{opt.label}</span>
@@ -394,7 +431,8 @@ export function AIArticleGenerator({
                     <option value="">No template</option>
                     {templates.map((t) => (
                       <option key={t.id} value={t.id}>
-                        {t.icon ? `${t.icon} ` : ''}{t.name}
+                        {t.icon ? `${t.icon} ` : ''}
+                        {t.name}
                       </option>
                     ))}
                   </select>
@@ -502,12 +540,7 @@ export function AIArticleGenerator({
             )}
           </div>
           <div className="flex items-center gap-2">
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={onClose}
-              disabled={isGenerating}
-            >
+            <Button variant="ghost" size="sm" onClick={onClose} disabled={isGenerating}>
               Cancel
             </Button>
             <Button

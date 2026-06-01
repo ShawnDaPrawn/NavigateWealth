@@ -27,12 +27,7 @@ import {
   TableHeader,
   TableRow,
 } from '../../../../ui/table';
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from '../../../../ui/tooltip';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '../../../../ui/tooltip';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -78,7 +73,10 @@ interface ApplicationsTableProps {
 }
 
 /** Tab-specific empty state configuration */
-const EMPTY_STATE_CONFIG: Record<TabStatus, { icon: React.ElementType; title: string; description: string }> = {
+const EMPTY_STATE_CONFIG: Record<
+  TabStatus,
+  { icon: React.ElementType; title: string; description: string }
+> = {
   incomplete: {
     icon: Inbox,
     title: 'No incomplete applications',
@@ -153,7 +151,13 @@ export function ApplicationsTable({
     const id = (data.idNumber || '').toLowerCase();
     const appNumber = (app.application_number || '').toLowerCase();
 
-    return fullName.includes(q) || email.includes(q) || phone.includes(q) || id.includes(q) || appNumber.includes(q);
+    return (
+      fullName.includes(q) ||
+      email.includes(q) ||
+      phone.includes(q) ||
+      id.includes(q) ||
+      appNumber.includes(q)
+    );
   });
 
   const getInitials = (app: Application) => {
@@ -186,10 +190,13 @@ export function ApplicationsTable({
   };
 
   const getExistingProductsCount = (app: Application) => {
-    return (normalizeApplicationData(app.application_data).existingProducts ?? []).filter((p) => p !== 'None of the above').length;
+    return (normalizeApplicationData(app.application_data).existingProducts ?? []).filter(
+      (p) => p !== 'None of the above',
+    ).length;
   };
 
-  const isPendingLike = activeTab === 'pending' || activeTab === 'invited' || activeTab === 'incomplete';
+  const isPendingLike =
+    activeTab === 'pending' || activeTab === 'invited' || activeTab === 'incomplete';
 
   if (loading) {
     return (
@@ -206,7 +213,10 @@ export function ApplicationsTable({
         <CardContent className="p-0">
           <div className="flex items-center gap-4 px-4 py-3 border-b bg-gray-50/30">
             {Array.from({ length: 7 }).map((_, i) => (
-              <Skeleton key={i} className={`h-3 ${i === 0 ? 'w-32' : i === 6 ? 'w-16 ml-auto' : 'w-20'}`} />
+              <Skeleton
+                key={i}
+                className={`h-3 ${i === 0 ? 'w-32' : i === 6 ? 'w-16 ml-auto' : 'w-20'}`}
+              />
             ))}
           </div>
           {Array.from({ length: 5 }).map((_, i) => (
@@ -258,13 +268,23 @@ export function ApplicationsTable({
           </div>
 
           <div className="flex items-center gap-2">
-            <Badge variant="secondary" className="font-medium text-xs px-2.5 py-1 bg-gray-100 text-gray-600 border border-gray-200">
-              {filteredApplications.length} {filteredApplications.length === 1 ? 'result' : 'results'}
+            <Badge
+              variant="secondary"
+              className="font-medium text-xs px-2.5 py-1 bg-gray-100 text-gray-600 border border-gray-200"
+            >
+              {filteredApplications.length}{' '}
+              {filteredApplications.length === 1 ? 'result' : 'results'}
             </Badge>
             <TooltipProvider>
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <Button onClick={onRefresh} variant="outline" size="sm" disabled={refreshing} className="h-8 w-8 p-0 border-gray-200">
+                  <Button
+                    onClick={onRefresh}
+                    variant="outline"
+                    size="sm"
+                    disabled={refreshing}
+                    className="h-8 w-8 p-0 border-gray-200"
+                  >
                     <RefreshCw className={`h-4 w-4 ${refreshing ? 'animate-spin' : ''}`} />
                   </Button>
                 </TooltipTrigger>
@@ -293,7 +313,11 @@ export function ApplicationsTable({
                 Status
               </TableHead>
               <TableHead className="font-semibold text-[11px] uppercase tracking-wider text-gray-500 py-3">
-                {activeTab === 'invited' ? 'Invited' : activeTab === 'incomplete' ? 'Signed Up' : 'Submitted'}
+                {activeTab === 'invited'
+                  ? 'Invited'
+                  : activeTab === 'incomplete'
+                    ? 'Signed Up'
+                    : 'Submitted'}
               </TableHead>
               <TableHead className="font-semibold text-[11px] uppercase tracking-wider text-gray-500 py-3">
                 Origin
@@ -346,7 +370,9 @@ export function ApplicationsTable({
                           </AvatarFallback>
                         </Avatar>
                         <div className="min-w-0">
-                          <p className="font-medium text-sm text-gray-900 truncate">{getFullName(app)}</p>
+                          <p className="font-medium text-sm text-gray-900 truncate">
+                            {getFullName(app)}
+                          </p>
                           <div className="flex items-center gap-2 mt-0.5">
                             {app.application_number && (
                               <span className="text-[11px] text-gray-400 flex items-center gap-0.5 font-mono">
@@ -363,7 +389,10 @@ export function ApplicationsTable({
                                       {servicesCount}
                                     </span>
                                   </TooltipTrigger>
-                                  <TooltipContent className="text-xs">{servicesCount} service{servicesCount !== 1 ? 's' : ''} requested</TooltipContent>
+                                  <TooltipContent className="text-xs">
+                                    {servicesCount} service{servicesCount !== 1 ? 's' : ''}{' '}
+                                    requested
+                                  </TooltipContent>
                                 </Tooltip>
                               </TooltipProvider>
                             )}
@@ -376,7 +405,9 @@ export function ApplicationsTable({
                                       {productsCount}
                                     </span>
                                   </TooltipTrigger>
-                                  <TooltipContent className="text-xs">{productsCount} existing product{productsCount !== 1 ? 's' : ''}</TooltipContent>
+                                  <TooltipContent className="text-xs">
+                                    {productsCount} existing product{productsCount !== 1 ? 's' : ''}
+                                  </TooltipContent>
                                 </Tooltip>
                               </TooltipProvider>
                             )}
@@ -441,13 +472,19 @@ export function ApplicationsTable({
 
                     {/* Origin */}
                     <TableCell className="py-3">
-                      <Badge variant="outline" className={`text-[10px] font-medium border ${originBadge.className}`}>
+                      <Badge
+                        variant="outline"
+                        className={`text-[10px] font-medium border ${originBadge.className}`}
+                      >
                         {originBadge.label}
                       </Badge>
                     </TableCell>
 
                     {/* Actions */}
-                    <TableCell className="text-right pr-4 py-3" onClick={(e) => e.stopPropagation()}>
+                    <TableCell
+                      className="text-right pr-4 py-3"
+                      onClick={(e) => e.stopPropagation()}
+                    >
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
                           <Button
@@ -502,18 +539,19 @@ export function ApplicationsTable({
                             </div>
                           )}
 
-                          {(activeTab === 'pending' || activeTab === 'incomplete') && onCompleteOnBehalf && (
-                            <div className="contents">
-                              <DropdownMenuSeparator />
-                              <DropdownMenuItem
-                                onClick={() => onCompleteOnBehalf(app)}
-                                className="text-xs"
-                              >
-                                <ClipboardEdit className="h-3.5 w-3.5 mr-2" />
-                                Complete on Behalf
-                              </DropdownMenuItem>
-                            </div>
-                          )}
+                          {(activeTab === 'pending' || activeTab === 'incomplete') &&
+                            onCompleteOnBehalf && (
+                              <div className="contents">
+                                <DropdownMenuSeparator />
+                                <DropdownMenuItem
+                                  onClick={() => onCompleteOnBehalf(app)}
+                                  className="text-xs"
+                                >
+                                  <ClipboardEdit className="h-3.5 w-3.5 mr-2" />
+                                  Complete on Behalf
+                                </DropdownMenuItem>
+                              </div>
+                            )}
                         </DropdownMenuContent>
                       </DropdownMenu>
                     </TableCell>

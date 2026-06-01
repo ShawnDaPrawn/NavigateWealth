@@ -176,30 +176,54 @@ function getInitialNotSure(): NotSureState {
 }
 
 function getInitialTimeline(): TimelineState {
-  return { planned_retirement_age: '', current_age: '', member_of_retirement_fund: null, fund_details: '' };
+  return {
+    planned_retirement_age: '',
+    current_age: '',
+    member_of_retirement_fund: null,
+    fund_details: '',
+  };
 }
 
 function getInitialFinancial(): FinancialState {
-  return { income_gross_monthly: '', income_net_monthly: '', current_retirement_savings: '', tax_bracket: '' };
+  return {
+    income_gross_monthly: '',
+    income_net_monthly: '',
+    current_retirement_savings: '',
+    tax_bracket: '',
+  };
 }
 
 function loadDraft(): WizardDraft | null {
   try {
     const raw = sessionStorage.getItem(DRAFT_KEY);
     return raw ? JSON.parse(raw) : null;
-  } catch { return null; }
+  } catch {
+    return null;
+  }
 }
 
 function saveDraft(draft: WizardDraft) {
-  try { sessionStorage.setItem(DRAFT_KEY, JSON.stringify(draft)); } catch { /* non-critical */ }
+  try {
+    sessionStorage.setItem(DRAFT_KEY, JSON.stringify(draft));
+  } catch {
+    /* non-critical */
+  }
 }
 
 function clearDraft() {
-  try { sessionStorage.removeItem(DRAFT_KEY); } catch { /* non-critical */ }
+  try {
+    sessionStorage.removeItem(DRAFT_KEY);
+  } catch {
+    /* non-critical */
+  }
 }
 
-function needsMonthly(ct: string) { return ct === 'monthly' || ct === 'both'; }
-function needsLumpSum(ct: string) { return ct === 'lump_sum' || ct === 'both'; }
+function needsMonthly(ct: string) {
+  return ct === 'monthly' || ct === 'both';
+}
+function needsLumpSum(ct: string) {
+  return ct === 'lump_sum' || ct === 'both';
+}
 
 // ── Step Indicator ──────────────────────────────────────────────────────────────
 
@@ -221,7 +245,9 @@ function StepIndicator({ currentStep }: { currentStep: number }) {
         return (
           <React.Fragment key={step.num}>
             {idx > 0 && (
-              <div className={`flex-1 h-0.5 mx-1 sm:mx-2 transition-colors ${isCompleted ? 'bg-green-500' : 'bg-gray-200'}`} />
+              <div
+                className={`flex-1 h-0.5 mx-1 sm:mx-2 transition-colors ${isCompleted ? 'bg-green-500' : 'bg-gray-200'}`}
+              />
             )}
             <div className="flex flex-col items-center gap-1">
               <div
@@ -233,9 +259,15 @@ function StepIndicator({ currentStep }: { currentStep: number }) {
                       : 'bg-gray-100 text-gray-400 border border-gray-200'
                 }`}
               >
-                {isCompleted ? <CheckCircle className="h-4 w-4" /> : <IconComp className="h-4 w-4" />}
+                {isCompleted ? (
+                  <CheckCircle className="h-4 w-4" />
+                ) : (
+                  <IconComp className="h-4 w-4" />
+                )}
               </div>
-              <span className={`text-[10px] sm:text-xs font-medium ${isActive ? 'text-gray-900' : 'text-gray-400'}`}>
+              <span
+                className={`text-[10px] sm:text-xs font-medium ${isActive ? 'text-gray-900' : 'text-gray-400'}`}
+              >
                 {step.label}
               </span>
             </div>
@@ -258,8 +290,12 @@ function Step1Product({
   return (
     <div className="space-y-4">
       <div>
-        <h2 className="text-lg font-bold text-gray-900 mb-1">What retirement product are you looking for?</h2>
-        <p className="text-sm text-gray-500">Select the retirement product that best fits your needs.</p>
+        <h2 className="text-lg font-bold text-gray-900 mb-1">
+          What retirement product are you looking for?
+        </h2>
+        <p className="text-sm text-gray-500">
+          Select the retirement product that best fits your needs.
+        </p>
       </div>
 
       <div className="space-y-2">
@@ -276,9 +312,11 @@ function Step1Product({
                   : 'border-gray-200 bg-white hover:border-gray-300'
               }`}
             >
-              <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center mt-0.5 flex-shrink-0 ${
-                isSelected ? 'border-primary' : 'border-gray-300'
-              }`}>
+              <div
+                className={`w-4 h-4 rounded-full border-2 flex items-center justify-center mt-0.5 flex-shrink-0 ${
+                  isSelected ? 'border-primary' : 'border-gray-300'
+                }`}
+              >
                 {isSelected && <div className="w-2 h-2 rounded-full bg-primary" />}
               </div>
               <div className="min-w-0">
@@ -307,8 +345,14 @@ function Step2RAContribution({
 }) {
   const setCT = (ct: string) => {
     const next = { ...state, contribution_type: ct };
-    if (!needsMonthly(ct)) { next.monthly_amount = ''; next.monthly_adviser_assist = false; }
-    if (!needsLumpSum(ct)) { next.lump_sum_amount = ''; next.lump_sum_adviser_assist = false; }
+    if (!needsMonthly(ct)) {
+      next.monthly_amount = '';
+      next.monthly_adviser_assist = false;
+    }
+    if (!needsLumpSum(ct)) {
+      next.lump_sum_amount = '';
+      next.lump_sum_adviser_assist = false;
+    }
     onChange(next);
   };
 
@@ -342,27 +386,35 @@ function Step2RAContribution({
 
       {showMonthly && !isAdviser && (
         <div className="space-y-1.5">
-          <Label className="text-xs font-medium text-gray-600">Monthly contribution amount (ZAR)</Label>
+          <Label className="text-xs font-medium text-gray-600">
+            Monthly contribution amount (ZAR)
+          </Label>
           <div className="flex items-center gap-3">
             <div className="relative flex-1">
-              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-gray-400">R</span>
+              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-gray-400">
+                R
+              </span>
               <Input
                 type="text"
                 inputMode="numeric"
                 placeholder="e.g. 3,000"
                 value={state.monthly_amount}
-                onChange={(e) => onChange({ ...state, monthly_amount: formatCurrency(e.target.value) })}
+                onChange={(e) =>
+                  onChange({ ...state, monthly_amount: formatCurrency(e.target.value) })
+                }
                 disabled={state.monthly_adviser_assist}
                 className="bg-white border-gray-300 h-10 pl-7"
               />
             </div>
             <button
               type="button"
-              onClick={() => onChange({
-                ...state,
-                monthly_adviser_assist: !state.monthly_adviser_assist,
-                monthly_amount: !state.monthly_adviser_assist ? '' : state.monthly_amount,
-              })}
+              onClick={() =>
+                onChange({
+                  ...state,
+                  monthly_adviser_assist: !state.monthly_adviser_assist,
+                  monthly_amount: !state.monthly_adviser_assist ? '' : state.monthly_amount,
+                })
+              }
               className={`text-xs px-3 py-2 rounded-lg border font-medium whitespace-nowrap transition-all ${
                 state.monthly_adviser_assist
                   ? 'border-primary bg-primary/10 text-primary'
@@ -378,27 +430,35 @@ function Step2RAContribution({
 
       {showLump && !isAdviser && (
         <div className="space-y-1.5">
-          <Label className="text-xs font-medium text-gray-600">Lump sum contribution amount (ZAR)</Label>
+          <Label className="text-xs font-medium text-gray-600">
+            Lump sum contribution amount (ZAR)
+          </Label>
           <div className="flex items-center gap-3">
             <div className="relative flex-1">
-              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-gray-400">R</span>
+              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-gray-400">
+                R
+              </span>
               <Input
                 type="text"
                 inputMode="numeric"
                 placeholder="e.g. 100,000"
                 value={state.lump_sum_amount}
-                onChange={(e) => onChange({ ...state, lump_sum_amount: formatCurrency(e.target.value) })}
+                onChange={(e) =>
+                  onChange({ ...state, lump_sum_amount: formatCurrency(e.target.value) })
+                }
                 disabled={state.lump_sum_adviser_assist}
                 className="bg-white border-gray-300 h-10 pl-7"
               />
             </div>
             <button
               type="button"
-              onClick={() => onChange({
-                ...state,
-                lump_sum_adviser_assist: !state.lump_sum_adviser_assist,
-                lump_sum_amount: !state.lump_sum_adviser_assist ? '' : state.lump_sum_amount,
-              })}
+              onClick={() =>
+                onChange({
+                  ...state,
+                  lump_sum_adviser_assist: !state.lump_sum_adviser_assist,
+                  lump_sum_amount: !state.lump_sum_adviser_assist ? '' : state.lump_sum_amount,
+                })
+              }
               className={`text-xs px-3 py-2 rounded-lg border font-medium whitespace-nowrap transition-all ${
                 state.lump_sum_adviser_assist
                   ? 'border-primary bg-primary/10 text-primary'
@@ -438,7 +498,8 @@ function Step2Preservation({
       {/* Transferring? */}
       <div className="space-y-2">
         <Label className="text-sm font-medium text-gray-700">
-          Are you transferring from a previous employer's {fundLabel} fund? <span className="text-red-500">*</span>
+          Are you transferring from a previous employer's {fundLabel} fund?{' '}
+          <span className="text-red-500">*</span>
         </Label>
         <div className="grid grid-cols-2 gap-2">
           {[
@@ -466,24 +527,30 @@ function Step2Preservation({
         <Label className="text-sm font-medium text-gray-700">Estimated transfer amount</Label>
         <div className="flex items-center gap-3">
           <div className="relative flex-1">
-            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-gray-400">R</span>
+            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-gray-400">
+              R
+            </span>
             <Input
               type="text"
               inputMode="numeric"
               placeholder="e.g. 250,000"
               value={state.transfer_amount}
-              onChange={(e) => onChange({ ...state, transfer_amount: formatCurrency(e.target.value) })}
+              onChange={(e) =>
+                onChange({ ...state, transfer_amount: formatCurrency(e.target.value) })
+              }
               disabled={state.transfer_not_sure}
               className="bg-white border-gray-300 h-10 pl-7"
             />
           </div>
           <button
             type="button"
-            onClick={() => onChange({
-              ...state,
-              transfer_not_sure: !state.transfer_not_sure,
-              transfer_amount: !state.transfer_not_sure ? '' : state.transfer_amount,
-            })}
+            onClick={() =>
+              onChange({
+                ...state,
+                transfer_not_sure: !state.transfer_not_sure,
+                transfer_amount: !state.transfer_not_sure ? '' : state.transfer_amount,
+              })
+            }
             className={`text-xs px-3 py-2 rounded-lg border font-medium whitespace-nowrap transition-all ${
               state.transfer_not_sure
                 ? 'border-primary bg-primary/10 text-primary'
@@ -493,7 +560,9 @@ function Step2Preservation({
             Not sure
           </button>
         </div>
-        <p className="text-xs text-gray-400">No new contributions are allowed on preservation funds.</p>
+        <p className="text-xs text-gray-400">
+          No new contributions are allowed on preservation funds.
+        </p>
       </div>
     </div>
   );
@@ -608,7 +677,8 @@ function Step2Funding({
         <p className="text-sm text-gray-500">
           {selectedProduct === 'ra'
             ? 'Tell us about your planned contributions.'
-            : selectedProduct === 'provident_preservation' || selectedProduct === 'pension_preservation'
+            : selectedProduct === 'provident_preservation' ||
+                selectedProduct === 'pension_preservation'
               ? 'Tell us about the transfer from your previous employer fund.'
               : 'A few questions to help your adviser recommend the right approach.'}
         </p>
@@ -618,10 +688,18 @@ function Step2Funding({
         <Step2RAContribution state={raContribution} onChange={onChangeRA} />
       )}
       {selectedProduct === 'provident_preservation' && (
-        <Step2Preservation fundType="provident" state={preservation} onChange={onChangePreservation} />
+        <Step2Preservation
+          fundType="provident"
+          state={preservation}
+          onChange={onChangePreservation}
+        />
       )}
       {selectedProduct === 'pension_preservation' && (
-        <Step2Preservation fundType="pension" state={preservation} onChange={onChangePreservation} />
+        <Step2Preservation
+          fundType="pension"
+          state={preservation}
+          onChange={onChangePreservation}
+        />
       )}
       {selectedProduct === 'not_sure' && (
         <Step2NotSure state={notSureContext} onChange={onChangeNotSure} />
@@ -643,7 +721,9 @@ function Step3Timeline({
     <div className="space-y-5">
       <div>
         <h2 className="text-lg font-bold text-gray-900 mb-1">When do you plan to retire?</h2>
-        <p className="text-sm text-gray-500">This helps your adviser assess time horizon and product suitability.</p>
+        <p className="text-sm text-gray-500">
+          This helps your adviser assess time horizon and product suitability.
+        </p>
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -690,11 +770,13 @@ function Step3Timeline({
             <button
               key={String(opt.value)}
               type="button"
-              onClick={() => onChange({
-                ...timeline,
-                member_of_retirement_fund: opt.value,
-                fund_details: opt.value ? timeline.fund_details : '',
-              })}
+              onClick={() =>
+                onChange({
+                  ...timeline,
+                  member_of_retirement_fund: opt.value,
+                  fund_details: opt.value ? timeline.fund_details : '',
+                })
+              }
               className={`flex items-center justify-center p-3 rounded-xl border-2 text-sm font-medium transition-all ${
                 timeline.member_of_retirement_fund === opt.value
                   ? 'border-primary/50 bg-primary/[0.03] text-gray-900'
@@ -736,7 +818,9 @@ function Step4Financial({
     <div className="space-y-5">
       <div>
         <h2 className="text-lg font-bold text-gray-900 mb-1">A few quick details</h2>
-        <p className="text-sm text-gray-500">Basic financial context to help your adviser prepare a suitable recommendation.</p>
+        <p className="text-sm text-gray-500">
+          Basic financial context to help your adviser prepare a suitable recommendation.
+        </p>
       </div>
 
       <div className="space-y-1.5">
@@ -750,7 +834,9 @@ function Step4Financial({
             inputMode="numeric"
             placeholder="e.g. 45,000"
             value={financial.income_gross_monthly}
-            onChange={(e) => onChange({ ...financial, income_gross_monthly: formatCurrency(e.target.value) })}
+            onChange={(e) =>
+              onChange({ ...financial, income_gross_monthly: formatCurrency(e.target.value) })
+            }
             className="bg-white border-gray-300 h-11 pl-7"
           />
         </div>
@@ -767,7 +853,9 @@ function Step4Financial({
             inputMode="numeric"
             placeholder="e.g. 32,000"
             value={financial.income_net_monthly}
-            onChange={(e) => onChange({ ...financial, income_net_monthly: formatCurrency(e.target.value) })}
+            onChange={(e) =>
+              onChange({ ...financial, income_net_monthly: formatCurrency(e.target.value) })
+            }
             className="bg-white border-gray-300 h-11 pl-7"
           />
         </div>
@@ -784,7 +872,9 @@ function Step4Financial({
             inputMode="numeric"
             placeholder="e.g. 500,000"
             value={financial.current_retirement_savings}
-            onChange={(e) => onChange({ ...financial, current_retirement_savings: formatCurrency(e.target.value) })}
+            onChange={(e) =>
+              onChange({ ...financial, current_retirement_savings: formatCurrency(e.target.value) })
+            }
             className="bg-white border-gray-300 h-11 pl-7"
           />
         </div>
@@ -832,7 +922,8 @@ function Step5Review({
   financial: FinancialState;
   onEditStep: (step: number) => void;
 }) {
-  const productLabel = PRODUCT_OPTIONS.find((p) => p.id === selectedProduct)?.label ?? selectedProduct;
+  const productLabel =
+    PRODUCT_OPTIONS.find((p) => p.id === selectedProduct)?.label ?? selectedProduct;
   const taxLabel = TAX_BRACKET_OPTIONS.find((o) => o.value === financial.tax_bracket)?.label ?? '';
 
   function SectionHeader({ title, step }: { title: string; step: number }) {
@@ -863,7 +954,9 @@ function Step5Review({
     <div className="space-y-5">
       <div>
         <h2 className="text-lg font-bold text-gray-900 mb-1">Review & submit</h2>
-        <p className="text-sm text-gray-500">Please review your details before submitting your retirement planning quote request.</p>
+        <p className="text-sm text-gray-500">
+          Please review your details before submitting your retirement planning quote request.
+        </p>
       </div>
 
       {/* Product */}
@@ -877,39 +970,98 @@ function Step5Review({
         <SectionHeader title="Funding" step={2} />
         {selectedProduct === 'ra' && (
           <div className="contents">
-            <Row label="Contribution type" value={RA_CONTRIBUTION_TYPES.find((c) => c.value === raContribution.contribution_type)?.label ?? '—'} />
+            <Row
+              label="Contribution type"
+              value={
+                RA_CONTRIBUTION_TYPES.find((c) => c.value === raContribution.contribution_type)
+                  ?.label ?? '—'
+              }
+            />
             {needsMonthly(raContribution.contribution_type) && (
               <Row
                 label="Monthly amount"
-                value={raContribution.monthly_adviser_assist ? 'Adviser assist' : raContribution.monthly_amount ? `R ${raContribution.monthly_amount}` : '—'}
+                value={
+                  raContribution.monthly_adviser_assist
+                    ? 'Adviser assist'
+                    : raContribution.monthly_amount
+                      ? `R ${raContribution.monthly_amount}`
+                      : '—'
+                }
               />
             )}
             {needsLumpSum(raContribution.contribution_type) && (
               <Row
                 label="Lump sum amount"
-                value={raContribution.lump_sum_adviser_assist ? 'Adviser assist' : raContribution.lump_sum_amount ? `R ${raContribution.lump_sum_amount}` : '—'}
+                value={
+                  raContribution.lump_sum_adviser_assist
+                    ? 'Adviser assist'
+                    : raContribution.lump_sum_amount
+                      ? `R ${raContribution.lump_sum_amount}`
+                      : '—'
+                }
               />
             )}
           </div>
         )}
-        {(selectedProduct === 'provident_preservation' || selectedProduct === 'pension_preservation') && (
+        {(selectedProduct === 'provident_preservation' ||
+          selectedProduct === 'pension_preservation') && (
           <div className="contents">
-            <Row label="Transferring from employer fund" value={preservation.is_transferring === null ? '—' : preservation.is_transferring ? 'Yes' : 'No'} />
+            <Row
+              label="Transferring from employer fund"
+              value={
+                preservation.is_transferring === null
+                  ? '—'
+                  : preservation.is_transferring
+                    ? 'Yes'
+                    : 'No'
+              }
+            />
             <Row
               label="Estimated transfer amount"
-              value={preservation.transfer_not_sure ? 'Not sure' : preservation.transfer_amount ? `R ${preservation.transfer_amount}` : '—'}
+              value={
+                preservation.transfer_not_sure
+                  ? 'Not sure'
+                  : preservation.transfer_amount
+                    ? `R ${preservation.transfer_amount}`
+                    : '—'
+              }
             />
           </div>
         )}
         {selectedProduct === 'not_sure' && (
           <div className="contents">
-            <Row label="Currently employed" value={notSureContext.currently_employed === null ? '—' : notSureContext.currently_employed ? 'Yes' : 'No'} />
-            <Row label="Leaving employer fund" value={notSureContext.leaving_employer_fund === null ? '—' : notSureContext.leaving_employer_fund ? 'Yes' : 'No'} />
-            <Row label="Want monthly contributions" value={
-              notSureContext.want_monthly_contributions === 'yes' ? 'Yes'
-              : notSureContext.want_monthly_contributions === 'no' ? 'No'
-              : notSureContext.want_monthly_contributions === 'not_sure' ? 'Not sure' : '—'
-            } />
+            <Row
+              label="Currently employed"
+              value={
+                notSureContext.currently_employed === null
+                  ? '—'
+                  : notSureContext.currently_employed
+                    ? 'Yes'
+                    : 'No'
+              }
+            />
+            <Row
+              label="Leaving employer fund"
+              value={
+                notSureContext.leaving_employer_fund === null
+                  ? '—'
+                  : notSureContext.leaving_employer_fund
+                    ? 'Yes'
+                    : 'No'
+              }
+            />
+            <Row
+              label="Want monthly contributions"
+              value={
+                notSureContext.want_monthly_contributions === 'yes'
+                  ? 'Yes'
+                  : notSureContext.want_monthly_contributions === 'no'
+                    ? 'No'
+                    : notSureContext.want_monthly_contributions === 'not_sure'
+                      ? 'Not sure'
+                      : '—'
+              }
+            />
           </div>
         )}
       </div>
@@ -917,9 +1069,24 @@ function Step5Review({
       {/* Timeline */}
       <div className="p-4 rounded-xl bg-gray-50 border border-gray-100">
         <SectionHeader title="Retirement Timeline" step={3} />
-        <Row label="Current age" value={timeline.current_age ? `${timeline.current_age} years` : '—'} />
-        <Row label="Planned retirement age" value={timeline.planned_retirement_age ? `${timeline.planned_retirement_age} years` : '—'} />
-        <Row label="Current retirement fund member" value={timeline.member_of_retirement_fund === null ? '—' : timeline.member_of_retirement_fund ? 'Yes' : 'No'} />
+        <Row
+          label="Current age"
+          value={timeline.current_age ? `${timeline.current_age} years` : '—'}
+        />
+        <Row
+          label="Planned retirement age"
+          value={timeline.planned_retirement_age ? `${timeline.planned_retirement_age} years` : '—'}
+        />
+        <Row
+          label="Current retirement fund member"
+          value={
+            timeline.member_of_retirement_fund === null
+              ? '—'
+              : timeline.member_of_retirement_fund
+                ? 'Yes'
+                : 'No'
+          }
+        />
         {timeline.member_of_retirement_fund && timeline.fund_details && (
           <Row label="Fund(s)" value={timeline.fund_details} />
         )}
@@ -928,9 +1095,20 @@ function Step5Review({
       {/* Financial */}
       <div className="p-4 rounded-xl bg-gray-50 border border-gray-100">
         <SectionHeader title="Financial Snapshot" step={4} />
-        <Row label="Gross monthly income" value={financial.income_gross_monthly ? `R ${financial.income_gross_monthly}` : '—'} />
-        <Row label="Net monthly income" value={financial.income_net_monthly ? `R ${financial.income_net_monthly}` : '—'} />
-        <Row label="Current retirement savings" value={financial.current_retirement_savings ? `R ${financial.current_retirement_savings}` : '—'} />
+        <Row
+          label="Gross monthly income"
+          value={financial.income_gross_monthly ? `R ${financial.income_gross_monthly}` : '—'}
+        />
+        <Row
+          label="Net monthly income"
+          value={financial.income_net_monthly ? `R ${financial.income_net_monthly}` : '—'}
+        />
+        <Row
+          label="Current retirement savings"
+          value={
+            financial.current_retirement_savings ? `R ${financial.current_retirement_savings}` : '—'
+          }
+        />
         {taxLabel && <Row label="Tax bracket" value={taxLabel} />}
       </div>
     </div>
@@ -950,11 +1128,19 @@ export function RetirementQuoteWizard({
   const draft = loadDraft();
   const [currentStep, setCurrentStep] = useState(draft?.currentStep ?? 1);
   const [selectedProduct, setSelectedProduct] = useState(draft?.selected_product ?? '');
-  const [raContribution, setRAContribution] = useState<RAContributionState>(draft?.ra_contribution ?? getInitialRA());
-  const [preservation, setPreservation] = useState<PreservationState>(draft?.preservation ?? getInitialPreservation());
-  const [notSureContext, setNotSureContext] = useState<NotSureState>(draft?.not_sure_context ?? getInitialNotSure());
+  const [raContribution, setRAContribution] = useState<RAContributionState>(
+    draft?.ra_contribution ?? getInitialRA(),
+  );
+  const [preservation, setPreservation] = useState<PreservationState>(
+    draft?.preservation ?? getInitialPreservation(),
+  );
+  const [notSureContext, setNotSureContext] = useState<NotSureState>(
+    draft?.not_sure_context ?? getInitialNotSure(),
+  );
   const [timeline, setTimeline] = useState<TimelineState>(draft?.timeline ?? getInitialTimeline());
-  const [financial, setFinancial] = useState<FinancialState>(draft?.financial ?? getInitialFinancial());
+  const [financial, setFinancial] = useState<FinancialState>(
+    draft?.financial ?? getInitialFinancial(),
+  );
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Persist draft
@@ -968,7 +1154,15 @@ export function RetirementQuoteWizard({
       financial,
       currentStep,
     });
-  }, [selectedProduct, raContribution, preservation, notSureContext, timeline, financial, currentStep]);
+  }, [
+    selectedProduct,
+    raContribution,
+    preservation,
+    notSureContext,
+    timeline,
+    financial,
+    currentStep,
+  ]);
 
   // ── Validation ──
 
@@ -982,11 +1176,15 @@ export function RetirementQuoteWizard({
         if (!raContribution.monthly_amount && !raContribution.monthly_adviser_assist) return false;
       }
       if (needsLumpSum(raContribution.contribution_type)) {
-        if (!raContribution.lump_sum_amount && !raContribution.lump_sum_adviser_assist) return false;
+        if (!raContribution.lump_sum_amount && !raContribution.lump_sum_adviser_assist)
+          return false;
       }
       return true;
     }
-    if (selectedProduct === 'provident_preservation' || selectedProduct === 'pension_preservation') {
+    if (
+      selectedProduct === 'provident_preservation' ||
+      selectedProduct === 'pension_preservation'
+    ) {
       if (preservation.is_transferring === null) return false;
       // Transfer amount is optional but encouraged — allow proceed
       return true;
@@ -1011,30 +1209,45 @@ export function RetirementQuoteWizard({
 
   const canProceed = useMemo(() => {
     switch (currentStep) {
-      case 1: return step1Valid;
-      case 2: return step2Valid;
-      case 3: return step3Valid;
-      case 4: return step4Valid;
-      case 5: return true;
-      default: return false;
+      case 1:
+        return step1Valid;
+      case 2:
+        return step2Valid;
+      case 3:
+        return step3Valid;
+      case 4:
+        return step4Valid;
+      case 5:
+        return true;
+      default:
+        return false;
     }
   }, [currentStep, step1Valid, step2Valid, step3Valid, step4Valid]);
 
-  const goNext = useCallback(() => { if (currentStep < 5) setCurrentStep((s) => s + 1); }, [currentStep]);
-  const goBack = useCallback(() => { if (currentStep > 1) setCurrentStep((s) => s - 1); }, [currentStep]);
-  const goToStep = useCallback((step: number) => { setCurrentStep(step); }, []);
+  const goNext = useCallback(() => {
+    if (currentStep < 5) setCurrentStep((s) => s + 1);
+  }, [currentStep]);
+  const goBack = useCallback(() => {
+    if (currentStep > 1) setCurrentStep((s) => s - 1);
+  }, [currentStep]);
+  const goToStep = useCallback((step: number) => {
+    setCurrentStep(step);
+  }, []);
 
   // ── Submit ──
 
   const handleSubmit = useCallback(async () => {
     setIsSubmitting(true);
     try {
-      const productLabel = PRODUCT_OPTIONS.find((p) => p.id === selectedProduct)?.label ?? selectedProduct;
+      const productLabel =
+        PRODUCT_OPTIONS.find((p) => p.id === selectedProduct)?.label ?? selectedProduct;
 
       // Build funding payload based on product
       let fundingPayload: Record<string, unknown> = {};
       if (selectedProduct === 'ra') {
-        const ctLabel = RA_CONTRIBUTION_TYPES.find((c) => c.value === raContribution.contribution_type)?.label ?? raContribution.contribution_type;
+        const ctLabel =
+          RA_CONTRIBUTION_TYPES.find((c) => c.value === raContribution.contribution_type)?.label ??
+          raContribution.contribution_type;
         fundingPayload = {
           contribution_type: ctLabel,
           adviser_assist: raContribution.contribution_type === 'not_sure',
@@ -1049,10 +1262,15 @@ export function RetirementQuoteWizard({
             ? { adviser_assist: true }
             : { amount: parseCurrencyToNumber(raContribution.lump_sum_amount) };
         }
-      } else if (selectedProduct === 'provident_preservation' || selectedProduct === 'pension_preservation') {
+      } else if (
+        selectedProduct === 'provident_preservation' ||
+        selectedProduct === 'pension_preservation'
+      ) {
         fundingPayload = {
           is_transferring: preservation.is_transferring,
-          transfer_amount: preservation.transfer_not_sure ? null : parseCurrencyToNumber(preservation.transfer_amount) || null,
+          transfer_amount: preservation.transfer_not_sure
+            ? null
+            : parseCurrencyToNumber(preservation.transfer_amount) || null,
           transfer_not_sure: preservation.transfer_not_sure,
         };
       } else if (selectedProduct === 'not_sure') {
@@ -1078,8 +1296,10 @@ export function RetirementQuoteWizard({
         financial_snapshot: {
           income_gross_monthly: parseCurrencyToNumber(financial.income_gross_monthly),
           income_net_monthly: parseCurrencyToNumber(financial.income_net_monthly),
-          current_retirement_savings: parseCurrencyToNumber(financial.current_retirement_savings) || null,
-          tax_bracket: TAX_BRACKET_OPTIONS.find((o) => o.value === financial.tax_bracket)?.label ?? null,
+          current_retirement_savings:
+            parseCurrencyToNumber(financial.current_retirement_savings) || null,
+          tax_bracket:
+            TAX_BRACKET_OPTIONS.find((o) => o.value === financial.tax_bracket)?.label ?? null,
         },
         metadata: {
           source: 'NavigateWealthApp',
@@ -1126,7 +1346,20 @@ export function RetirementQuoteWizard({
     } finally {
       setIsSubmitting(false);
     }
-  }, [firstName, lastName, email, phone, parentSubmissionId, selectedProduct, raContribution, preservation, notSureContext, timeline, financial, onSuccess]);
+  }, [
+    firstName,
+    lastName,
+    email,
+    phone,
+    parentSubmissionId,
+    selectedProduct,
+    raContribution,
+    preservation,
+    notSureContext,
+    timeline,
+    financial,
+    onSuccess,
+  ]);
 
   // ── Render ──
 
@@ -1136,7 +1369,9 @@ export function RetirementQuoteWizard({
 
       <div className="bg-white rounded-2xl shadow-lg border border-gray-100 overflow-hidden">
         <div className="p-5 sm:p-6">
-          {currentStep === 1 && <Step1Product selected={selectedProduct} onChange={setSelectedProduct} />}
+          {currentStep === 1 && (
+            <Step1Product selected={selectedProduct} onChange={setSelectedProduct} />
+          )}
           {currentStep === 2 && (
             <Step2Funding
               selectedProduct={selectedProduct}

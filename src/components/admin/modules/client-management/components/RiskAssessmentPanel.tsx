@@ -80,7 +80,16 @@ interface BulkScreeningResponse {
 interface FormField {
   id: string;
   label: string;
-  type: 'text' | 'number' | 'select' | 'radio' | 'checkbox' | 'textarea' | 'section' | 'rating' | 'yesno';
+  type:
+    | 'text'
+    | 'number'
+    | 'select'
+    | 'radio'
+    | 'checkbox'
+    | 'textarea'
+    | 'section'
+    | 'rating'
+    | 'yesno';
   options?: { label: string; value: string; weight?: number }[];
   required?: boolean;
   description?: string;
@@ -97,7 +106,7 @@ type PanelView = 'list' | 'form' | 'result';
 const API_BASE = `https://${projectId}.supabase.co/functions/v1/make-server-91ed8379/integrations/honeycomb`;
 
 const authHeaders = () => ({
-  'Authorization': `Bearer ${publicAnonKey}`,
+  Authorization: `Bearer ${publicAnonKey}`,
   'Content-Type': 'application/json',
 });
 
@@ -166,9 +175,22 @@ function parseFormJson(raw: string): FormField[] {
 function normaliseFormItem(item: Record<string, unknown>): FormField[] {
   if (!item || typeof item !== 'object') return [];
 
-  const id = String(item.id || item.name || item.key || item.questionId || `q_${Math.random().toString(36).substring(2, 8)}`);
-  const label = (item.label || item.question || item.text || item.title || item.name || id) as string;
-  const description = (item.description || item.hint || item.helpText || undefined) as string | undefined;
+  const id = String(
+    item.id ||
+      item.name ||
+      item.key ||
+      item.questionId ||
+      `q_${Math.random().toString(36).substring(2, 8)}`,
+  );
+  const label = (item.label ||
+    item.question ||
+    item.text ||
+    item.title ||
+    item.name ||
+    id) as string;
+  const description = (item.description || item.hint || item.helpText || undefined) as
+    | string
+    | undefined;
   const required = (item.required ?? item.isRequired ?? false) as boolean;
   const category = (item.category || item.section || item.group || undefined) as string | undefined;
 
@@ -180,7 +202,11 @@ function normaliseFormItem(item: Record<string, unknown>): FormField[] {
 
   if (rawType.includes('select') || rawType.includes('dropdown')) {
     type = 'select';
-  } else if (rawType.includes('radio') || rawType.includes('choice') || rawType.includes('single')) {
+  } else if (
+    rawType.includes('radio') ||
+    rawType.includes('choice') ||
+    rawType.includes('single')
+  ) {
     type = 'radio';
   } else if (rawType.includes('check') || rawType.includes('multi')) {
     type = 'checkbox';
@@ -190,14 +216,24 @@ function normaliseFormItem(item: Record<string, unknown>): FormField[] {
     type = 'number';
   } else if (rawType.includes('rating') || rawType.includes('scale') || rawType.includes('score')) {
     type = 'rating';
-  } else if (rawType.includes('bool') || rawType.includes('yesno') || rawType.includes('yes_no') || rawType.includes('toggle')) {
+  } else if (
+    rawType.includes('bool') ||
+    rawType.includes('yesno') ||
+    rawType.includes('yes_no') ||
+    rawType.includes('toggle')
+  ) {
     type = 'yesno';
-  } else if (rawType.includes('section') || rawType.includes('header') || rawType.includes('heading')) {
+  } else if (
+    rawType.includes('section') ||
+    rawType.includes('header') ||
+    rawType.includes('heading')
+  ) {
     return [{ id, label, type: 'section', description }];
   }
 
   // If item has options/choices/answers, force to select/radio
-  const rawOptions = item.options || item.choices || item.answers || item.values || item.possibleValues;
+  const rawOptions =
+    item.options || item.choices || item.answers || item.values || item.possibleValues;
   if (rawOptions && Array.isArray(rawOptions) && rawOptions.length > 0) {
     if (type === 'text' || type === 'number') {
       type = rawOptions.length <= 5 ? 'radio' : 'select';
@@ -222,16 +258,18 @@ function normaliseFormItem(item: Record<string, unknown>): FormField[] {
     type = 'radio';
   }
 
-  return [{
-    id,
-    label,
-    type,
-    options,
-    required,
-    description,
-    category,
-    defaultValue: item.defaultValue != null ? String(item.defaultValue) : undefined,
-  }];
+  return [
+    {
+      id,
+      label,
+      type,
+      options,
+      required,
+      description,
+      category,
+      defaultValue: item.defaultValue != null ? String(item.defaultValue) : undefined,
+    },
+  ];
 }
 
 /** Parse weightingJson into a lookup of question-id → weights */
@@ -249,38 +287,122 @@ function parseWeightingJson(raw: string): Record<string, unknown> {
 // ─── Screening result helpers ────────────────────────────────────────────────
 
 const getScreeningCategoryInfo = (key: string) => {
-  const map: Record<string, { label: string; icon: React.ReactNode; category: 'person' | 'company' }> = {
-    possiblePepsNaturalPerson: { label: 'PEPs', icon: <Users className="h-4 w-4" />, category: 'person' },
-    possibleRepsNaturalPerson: { label: 'REPs', icon: <UserCheck className="h-4 w-4" />, category: 'person' },
-    possibleGazetteItemsNaturalPerson: { label: 'Gazette Items', icon: <Newspaper className="h-4 w-4" />, category: 'person' },
-    possibleSanctionsNaturalPerson: { label: 'Sanctions', icon: <Ban className="h-4 w-4" />, category: 'person' },
-    possibleAdverseMediaNaturalPerson: { label: 'Adverse Media', icon: <AlertTriangle className="h-4 w-4" />, category: 'person' },
-    possibleLandClaimNaturalPerson: { label: 'Land Claims', icon: <Landmark className="h-4 w-4" />, category: 'person' },
-    possibleAssetForfeitureNaturalPerson: { label: 'Asset Forfeiture', icon: <Scale className="h-4 w-4" />, category: 'person' },
-    possiblePepsCompany: { label: 'PEPs', icon: <Users className="h-4 w-4" />, category: 'company' },
-    possibleRepsCompany: { label: 'REPs', icon: <UserCheck className="h-4 w-4" />, category: 'company' },
-    possibleGazetteItemsCompany: { label: 'Gazette Items', icon: <Newspaper className="h-4 w-4" />, category: 'company' },
-    possibleSanctionsCompany: { label: 'Sanctions', icon: <Ban className="h-4 w-4" />, category: 'company' },
-    possibleAdverseMediaCompany: { label: 'Adverse Media', icon: <AlertTriangle className="h-4 w-4" />, category: 'company' },
-    possibleLandClaimCompany: { label: 'Land Claims', icon: <Landmark className="h-4 w-4" />, category: 'company' },
-    possibleAssetForfeitureCompany: { label: 'Asset Forfeiture', icon: <Scale className="h-4 w-4" />, category: 'company' },
+  const map: Record<
+    string,
+    { label: string; icon: React.ReactNode; category: 'person' | 'company' }
+  > = {
+    possiblePepsNaturalPerson: {
+      label: 'PEPs',
+      icon: <Users className="h-4 w-4" />,
+      category: 'person',
+    },
+    possibleRepsNaturalPerson: {
+      label: 'REPs',
+      icon: <UserCheck className="h-4 w-4" />,
+      category: 'person',
+    },
+    possibleGazetteItemsNaturalPerson: {
+      label: 'Gazette Items',
+      icon: <Newspaper className="h-4 w-4" />,
+      category: 'person',
+    },
+    possibleSanctionsNaturalPerson: {
+      label: 'Sanctions',
+      icon: <Ban className="h-4 w-4" />,
+      category: 'person',
+    },
+    possibleAdverseMediaNaturalPerson: {
+      label: 'Adverse Media',
+      icon: <AlertTriangle className="h-4 w-4" />,
+      category: 'person',
+    },
+    possibleLandClaimNaturalPerson: {
+      label: 'Land Claims',
+      icon: <Landmark className="h-4 w-4" />,
+      category: 'person',
+    },
+    possibleAssetForfeitureNaturalPerson: {
+      label: 'Asset Forfeiture',
+      icon: <Scale className="h-4 w-4" />,
+      category: 'person',
+    },
+    possiblePepsCompany: {
+      label: 'PEPs',
+      icon: <Users className="h-4 w-4" />,
+      category: 'company',
+    },
+    possibleRepsCompany: {
+      label: 'REPs',
+      icon: <UserCheck className="h-4 w-4" />,
+      category: 'company',
+    },
+    possibleGazetteItemsCompany: {
+      label: 'Gazette Items',
+      icon: <Newspaper className="h-4 w-4" />,
+      category: 'company',
+    },
+    possibleSanctionsCompany: {
+      label: 'Sanctions',
+      icon: <Ban className="h-4 w-4" />,
+      category: 'company',
+    },
+    possibleAdverseMediaCompany: {
+      label: 'Adverse Media',
+      icon: <AlertTriangle className="h-4 w-4" />,
+      category: 'company',
+    },
+    possibleLandClaimCompany: {
+      label: 'Land Claims',
+      icon: <Landmark className="h-4 w-4" />,
+      category: 'company',
+    },
+    possibleAssetForfeitureCompany: {
+      label: 'Asset Forfeiture',
+      icon: <Scale className="h-4 w-4" />,
+      category: 'company',
+    },
   };
   return map[key] || null;
 };
 
 const getOutcomeBadge = (outcome: string | null) => {
-  if (!outcome) return <Badge variant="outline" className="bg-gray-50 text-gray-600 border-gray-200">Pending</Badge>;
+  if (!outcome)
+    return (
+      <Badge variant="outline" className="bg-gray-50 text-gray-600 border-gray-200">
+        Pending
+      </Badge>
+    );
   const lower = outcome.toLowerCase();
   if (lower.includes('clear') || lower.includes('pass') || lower.includes('low')) {
-    return <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200"><ShieldCheck className="h-3 w-3 mr-1" />{outcome}</Badge>;
+    return (
+      <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
+        <ShieldCheck className="h-3 w-3 mr-1" />
+        {outcome}
+      </Badge>
+    );
   }
   if (lower.includes('high') || lower.includes('fail') || lower.includes('reject')) {
-    return <Badge variant="outline" className="bg-red-50 text-red-700 border-red-200"><ShieldAlert className="h-3 w-3 mr-1" />{outcome}</Badge>;
+    return (
+      <Badge variant="outline" className="bg-red-50 text-red-700 border-red-200">
+        <ShieldAlert className="h-3 w-3 mr-1" />
+        {outcome}
+      </Badge>
+    );
   }
   if (lower.includes('medium') || lower.includes('review') || lower.includes('warn')) {
-    return <Badge variant="outline" className="bg-amber-50 text-amber-700 border-amber-200"><AlertTriangle className="h-3 w-3 mr-1" />{outcome}</Badge>;
+    return (
+      <Badge variant="outline" className="bg-amber-50 text-amber-700 border-amber-200">
+        <AlertTriangle className="h-3 w-3 mr-1" />
+        {outcome}
+      </Badge>
+    );
   }
-  return <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200"><BarChart3 className="h-3 w-3 mr-1" />{outcome}</Badge>;
+  return (
+    <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">
+      <BarChart3 className="h-3 w-3 mr-1" />
+      {outcome}
+    </Badge>
+  );
 };
 
 // ─── Component ───────────────────────────────────────────────────────────────
@@ -339,7 +461,9 @@ export function RiskAssessmentPanel({
   const fetchHistory = useCallback(async () => {
     setHistoryLoading(true);
     try {
-      const res = await fetch(`${API_BASE}/assessments/history/${clientId}`, { headers: authHeaders() });
+      const res = await fetch(`${API_BASE}/assessments/history/${clientId}`, {
+        headers: authHeaders(),
+      });
       if (res.ok) {
         const data = await res.json();
         setHistory(data.assessments || []);
@@ -373,7 +497,7 @@ export function RiskAssessmentPanel({
   };
 
   const updateField = (fieldId: string, value: string) => {
-    setFormValues(prev => ({ ...prev, [fieldId]: value }));
+    setFormValues((prev) => ({ ...prev, [fieldId]: value }));
   };
 
   const submitAssessment = async () => {
@@ -381,8 +505,8 @@ export function RiskAssessmentPanel({
 
     // Basic validation — check required fields
     const missingRequired = formFields
-      .filter(f => f.required && f.type !== 'section')
-      .filter(f => !formValues[f.id]?.trim());
+      .filter((f) => f.required && f.type !== 'section')
+      .filter((f) => !formValues[f.id]?.trim());
 
     if (missingRequired.length > 0) {
       toast.error(`Please complete all required fields (${missingRequired.length} remaining)`);
@@ -451,9 +575,9 @@ export function RiskAssessmentPanel({
   // ─── Computed ────────────────────────────────────────────────────────────
 
   const completionPercent = useMemo(() => {
-    const fillable = formFields.filter(f => f.type !== 'section');
+    const fillable = formFields.filter((f) => f.type !== 'section');
     if (fillable.length === 0) return 100;
-    const filled = fillable.filter(f => formValues[f.id]?.trim()).length;
+    const filled = fillable.filter((f) => formValues[f.id]?.trim()).length;
     return Math.round((filled / fillable.length) * 100);
   }, [formFields, formValues]);
 
@@ -484,7 +608,9 @@ export function RiskAssessmentPanel({
                 disabled={templatesLoading}
                 className="h-8"
               >
-                <RefreshCw className={`h-3.5 w-3.5 mr-1 ${templatesLoading ? 'animate-spin' : ''}`} />
+                <RefreshCw
+                  className={`h-3.5 w-3.5 mr-1 ${templatesLoading ? 'animate-spin' : ''}`}
+                />
                 Refresh
               </Button>
             </div>
@@ -493,15 +619,24 @@ export function RiskAssessmentPanel({
             {templatesLoading && templates.length === 0 ? (
               <div className="flex items-center justify-center py-10">
                 <Loader2 className="h-6 w-6 animate-spin text-purple-500" />
-                <span className="ml-2 text-sm text-muted-foreground">Loading templates from Honeycomb...</span>
+                <span className="ml-2 text-sm text-muted-foreground">
+                  Loading templates from Honeycomb...
+                </span>
               </div>
             ) : templatesError ? (
               <div className="bg-red-50 border border-red-200 rounded-lg p-4 flex items-start gap-3">
                 <AlertTriangle className="h-5 w-5 text-red-500 mt-0.5 flex-shrink-0" />
                 <div>
-                  <p className="text-sm font-medium text-red-800">Failed to load assessment templates</p>
+                  <p className="text-sm font-medium text-red-800">
+                    Failed to load assessment templates
+                  </p>
                   <p className="text-xs text-red-600 mt-1">{templatesError}</p>
-                  <Button variant="outline" size="sm" className="mt-2 h-7 text-xs" onClick={fetchTemplates}>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="mt-2 h-7 text-xs"
+                    onClick={fetchTemplates}
+                  >
                     <RefreshCw className="h-3 w-3 mr-1" /> Retry
                   </Button>
                 </div>
@@ -519,7 +654,9 @@ export function RiskAssessmentPanel({
             ) : (
               <div className="space-y-2">
                 {templates.map((tpl) => {
-                  const fieldCount = parseFormJson(tpl.formJson).filter(f => f.type !== 'section').length;
+                  const fieldCount = parseFormJson(tpl.formJson).filter(
+                    (f) => f.type !== 'section',
+                  ).length;
                   return (
                     <div
                       key={tpl.id}
@@ -530,9 +667,13 @@ export function RiskAssessmentPanel({
                           <FileText className="h-5 w-5 text-purple-600" />
                         </div>
                         <div className="min-w-0 flex-1">
-                          <p className="text-sm font-semibold text-gray-900">{tpl.assessmentName}</p>
+                          <p className="text-sm font-semibold text-gray-900">
+                            {tpl.assessmentName}
+                          </p>
                           {tpl.assessmentDescription && (
-                            <p className="text-xs text-gray-500 mt-0.5 line-clamp-2">{tpl.assessmentDescription}</p>
+                            <p className="text-xs text-gray-500 mt-0.5 line-clamp-2">
+                              {tpl.assessmentDescription}
+                            </p>
                           )}
                           <div className="flex flex-wrap items-center gap-2 mt-1.5">
                             <Badge variant="outline" className="text-[10px] px-1.5 py-0 bg-gray-50">
@@ -585,10 +726,18 @@ export function RiskAssessmentPanel({
                 <BarChart3 className="h-4 w-4 text-gray-500" />
                 Assessment History
                 {history.length > 0 && (
-                  <Badge variant="secondary" className="text-xs">{history.length}</Badge>
+                  <Badge variant="secondary" className="text-xs">
+                    {history.length}
+                  </Badge>
                 )}
               </CardTitle>
-              <Button variant="ghost" size="sm" onClick={fetchHistory} disabled={historyLoading} className="h-8">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={fetchHistory}
+                disabled={historyLoading}
+                className="h-8"
+              >
                 <RefreshCw className={`h-3.5 w-3.5 mr-1 ${historyLoading ? 'animate-spin' : ''}`} />
                 Refresh
               </Button>
@@ -611,7 +760,9 @@ export function RiskAssessmentPanel({
                 {history.map((result) => (
                   <div key={result.id} className="border rounded-lg overflow-hidden">
                     <button
-                      onClick={() => setExpandedResultId(expandedResultId === result.id ? null : result.id)}
+                      onClick={() =>
+                        setExpandedResultId(expandedResultId === result.id ? null : result.id)
+                      }
                       className="w-full flex items-center justify-between px-4 py-3 hover:bg-gray-50 transition-colors text-left"
                     >
                       <div className="flex items-center gap-3 min-w-0">
@@ -619,7 +770,9 @@ export function RiskAssessmentPanel({
                           <ClipboardList className="h-4 w-4 text-purple-600" />
                         </div>
                         <div className="min-w-0">
-                          <p className="text-sm font-medium text-gray-900 truncate">{result.assessmentName}</p>
+                          <p className="text-sm font-medium text-gray-900 truncate">
+                            {result.assessmentName}
+                          </p>
                           <p className="text-xs text-gray-500">
                             {new Date(result.submittedAt).toLocaleString()}
                             {result.matterId && (
@@ -632,16 +785,15 @@ export function RiskAssessmentPanel({
                       </div>
                       <div className="flex items-center gap-2 flex-shrink-0">
                         {getOutcomeBadge(result.screeningOutcome)}
-                        {expandedResultId === result.id
-                          ? <ChevronUp className="h-4 w-4 text-gray-400" />
-                          : <ChevronDown className="h-4 w-4 text-gray-400" />
-                        }
+                        {expandedResultId === result.id ? (
+                          <ChevronUp className="h-4 w-4 text-gray-400" />
+                        ) : (
+                          <ChevronDown className="h-4 w-4 text-gray-400" />
+                        )}
                       </div>
                     </button>
 
-                    {expandedResultId === result.id && (
-                      <ScreeningResultsDetail result={result} />
-                    )}
+                    {expandedResultId === result.id && <ScreeningResultsDetail result={result} />}
                   </div>
                 ))}
               </div>
@@ -663,7 +815,9 @@ export function RiskAssessmentPanel({
             <ArrowLeft className="h-4 w-4" />
           </Button>
           <div className="flex-1 min-w-0">
-            <h3 className="text-base font-semibold text-gray-900 truncate">{activeTemplate.assessmentName}</h3>
+            <h3 className="text-base font-semibold text-gray-900 truncate">
+              {activeTemplate.assessmentName}
+            </h3>
             <p className="text-xs text-muted-foreground">
               Complete the assessment below, then submit for screening.
             </p>
@@ -691,7 +845,8 @@ export function RiskAssessmentPanel({
                   This assessment template has no structured form fields.
                 </p>
                 <p className="text-xs text-muted-foreground mt-1">
-                  The assessment will be submitted directly with your client's information for bulk screening.
+                  The assessment will be submitted directly with your client's information for bulk
+                  screening.
                 </p>
               </div>
             ) : (
@@ -747,7 +902,8 @@ export function RiskAssessmentPanel({
           <div className="flex-1 min-w-0">
             <h3 className="text-base font-semibold text-gray-900 truncate">Assessment Results</h3>
             <p className="text-xs text-muted-foreground">
-              {activeResult.assessmentName} — Submitted {new Date(activeResult.submittedAt).toLocaleString()}
+              {activeResult.assessmentName} — Submitted{' '}
+              {new Date(activeResult.submittedAt).toLocaleString()}
             </p>
           </div>
           {getOutcomeBadge(activeResult.screeningOutcome)}
@@ -761,7 +917,12 @@ export function RiskAssessmentPanel({
             <p className="text-xs text-green-700 mt-0.5">
               The assessment has been submitted and screening results are below.
               {activeResult.matterId && (
-                <span className="block mt-1">Matter ID: <code className="bg-green-100 px-1 rounded text-[10px] font-mono">{activeResult.matterId}</code></span>
+                <span className="block mt-1">
+                  Matter ID:{' '}
+                  <code className="bg-green-100 px-1 rounded text-[10px] font-mono">
+                    {activeResult.matterId}
+                  </code>
+                </span>
               )}
             </p>
           </div>
@@ -811,22 +972,21 @@ function FormFieldRenderer({
     return (
       <div className="border-b border-gray-200 pb-1 pt-2">
         <h4 className="text-sm font-semibold text-gray-800">{field.label}</h4>
-        {field.description && (
-          <p className="text-xs text-gray-500 mt-0.5">{field.description}</p>
-        )}
+        {field.description && <p className="text-xs text-gray-500 mt-0.5">{field.description}</p>}
       </div>
     );
   }
 
   return (
     <div className="space-y-1.5">
-      <Label htmlFor={field.id} className="text-sm font-medium text-gray-700 flex items-center gap-1">
+      <Label
+        htmlFor={field.id}
+        className="text-sm font-medium text-gray-700 flex items-center gap-1"
+      >
         {field.label}
         {field.required && <span className="text-red-500 text-xs">*</span>}
       </Label>
-      {field.description && (
-        <p className="text-xs text-gray-400">{field.description}</p>
-      )}
+      {field.description && <p className="text-xs text-gray-400">{field.description}</p>}
 
       {/* Text Input */}
       {field.type === 'text' && (
@@ -873,7 +1033,9 @@ function FormFieldRenderer({
         >
           <option value="">Select...</option>
           {field.options.map((opt) => (
-            <option key={opt.value} value={opt.value}>{opt.label}</option>
+            <option key={opt.value} value={opt.value}>
+              {opt.label}
+            </option>
           ))}
         </select>
       )}
@@ -901,13 +1063,15 @@ function FormFieldRenderer({
       {/* Rating (1-5 or 1-10 scale) */}
       {field.type === 'rating' && (
         <div className="flex gap-1 pt-0.5">
-          {(field.options || [
-            { label: '1', value: '1' },
-            { label: '2', value: '2' },
-            { label: '3', value: '3' },
-            { label: '4', value: '4' },
-            { label: '5', value: '5' },
-          ]).map((opt) => (
+          {(
+            field.options || [
+              { label: '1', value: '1' },
+              { label: '2', value: '2' },
+              { label: '3', value: '3' },
+              { label: '4', value: '4' },
+              { label: '5', value: '5' },
+            ]
+          ).map((opt) => (
             <button
               key={opt.value}
               type="button"
@@ -936,7 +1100,7 @@ function FormFieldRenderer({
                 onClick={() => {
                   const current = value ? value.split(',') : [];
                   const next = selected
-                    ? current.filter(v => v !== opt.value)
+                    ? current.filter((v) => v !== opt.value)
                     : [...current, opt.value];
                   onChange(next.filter(Boolean).join(','));
                 }}
@@ -977,20 +1141,20 @@ function ScreeningResultsDetail({
     );
   }
 
-  const personEntries = Object.entries(screening)
-    .filter(([key]) => {
-      const info = getScreeningCategoryInfo(key);
-      return info && info.category === 'person';
-    });
+  const personEntries = Object.entries(screening).filter(([key]) => {
+    const info = getScreeningCategoryInfo(key);
+    return info && info.category === 'person';
+  });
 
-  const companyEntries = Object.entries(screening)
-    .filter(([key]) => {
-      const info = getScreeningCategoryInfo(key);
-      return info && info.category === 'company';
-    });
+  const companyEntries = Object.entries(screening).filter(([key]) => {
+    const info = getScreeningCategoryInfo(key);
+    return info && info.category === 'company';
+  });
 
-  const totalHits = [...personEntries, ...companyEntries]
-    .reduce((sum, [, val]) => sum + (Number(val) || 0), 0);
+  const totalHits = [...personEntries, ...companyEntries].reduce(
+    (sum, [, val]) => sum + (Number(val) || 0),
+    0,
+  );
 
   return (
     <div className={`${expanded ? '' : 'border-t'} bg-gray-50 px-4 py-4 space-y-4`}>
@@ -1002,7 +1166,9 @@ function ScreeningResultsDetail({
         </div>
         <div className="flex items-center gap-2">
           <span className="text-sm font-medium text-gray-700">Total Possible Hits:</span>
-          <span className={`text-sm font-bold ${totalHits > 0 ? 'text-red-600' : 'text-green-600'}`}>
+          <span
+            className={`text-sm font-bold ${totalHits > 0 ? 'text-red-600' : 'text-green-600'}`}
+          >
             {totalHits}
           </span>
         </div>
@@ -1033,7 +1199,9 @@ function ScreeningResultsDetail({
                   <div className="flex-1 min-w-0">
                     <p className="text-xs font-medium truncate">{info.label}</p>
                   </div>
-                  <span className={`text-sm font-bold ${hasHits ? 'text-red-600' : 'text-green-600'}`}>
+                  <span
+                    className={`text-sm font-bold ${hasHits ? 'text-red-600' : 'text-green-600'}`}
+                  >
                     {count}
                   </span>
                 </div>
@@ -1068,7 +1236,9 @@ function ScreeningResultsDetail({
                   <div className="flex-1 min-w-0">
                     <p className="text-xs font-medium truncate">{info.label}</p>
                   </div>
-                  <span className={`text-sm font-bold ${hasHits ? 'text-red-600' : 'text-green-600'}`}>
+                  <span
+                    className={`text-sm font-bold ${hasHits ? 'text-red-600' : 'text-green-600'}`}
+                  >
                     {count}
                   </span>
                 </div>

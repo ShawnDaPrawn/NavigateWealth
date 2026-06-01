@@ -96,9 +96,7 @@ export function RiskManagementDashboardPage() {
         const riskPillar = portfolio?.financialOverview?.risk;
         if (riskPillar?.nextReview) {
           const reviewDate = new Date(riskPillar.nextReview);
-          const daysUntil = Math.ceil(
-            (reviewDate.getTime() - Date.now()) / (1000 * 60 * 60 * 24),
-          );
+          const daysUntil = Math.ceil((reviewDate.getTime() - Date.now()) / (1000 * 60 * 60 * 24));
           if (daysUntil <= 90 && daysUntil > 0) {
             newInsights.push({
               id: 'risk-review-soon',
@@ -110,7 +108,8 @@ export function RiskManagementDashboardPage() {
             newInsights.push({
               id: 'risk-review-overdue',
               title: 'Risk Review Overdue',
-              description: 'Your annual risk review is overdue. Contact your adviser to schedule a review and update your cover.',
+              description:
+                'Your annual risk review is overdue. Contact your adviser to schedule a review and update your cover.',
               severity: 'high',
             });
           }

@@ -4,7 +4,13 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '../..
 import { Button } from '../../../../../ui/button';
 import { Input } from '../../../../../ui/input';
 import { Label } from '../../../../../ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../../../../ui/select';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '../../../../../ui/select';
 import { FormControl, FormField, FormItem, FormLabel, FormMessage } from '../../../../../ui/form';
 import { CurrencyInputField } from '../../../../../ui/currency-input';
 import { Plus, Trash2 } from 'lucide-react';
@@ -14,8 +20,12 @@ import type { InformationGatheringFormValues } from '../../schema';
 
 export function DependantsForm() {
   const form = useFormContext<InformationGatheringFormValues>();
-  
-  const { fields: dependantFields, append: appendDependant, remove: removeDependant } = useFieldArray({
+
+  const {
+    fields: dependantFields,
+    append: appendDependant,
+    remove: removeDependant,
+  } = useFieldArray({
     control: form.control,
     name: 'dependants',
   });
@@ -31,12 +41,13 @@ export function DependantsForm() {
 
   const watchGrossMonthly = form.watch('grossMonthlyIncome');
   const watchSpouseIncome = form.watch('spouseAverageMonthlyIncome');
-  
+
   const spouseIncome = watchSpouseIncome ? Number(watchSpouseIncome) : 0;
   const combinedHousehold = (watchGrossMonthly ? Number(watchGrossMonthly) : 0) + spouseIncome;
-  const clientIncomePercentage = combinedHousehold > 0 
-    ? ((watchGrossMonthly ? Number(watchGrossMonthly) : 0) / combinedHousehold) * 100 
-    : 100;
+  const clientIncomePercentage =
+    combinedHousehold > 0
+      ? ((watchGrossMonthly ? Number(watchGrossMonthly) : 0) / combinedHousehold) * 100
+      : 100;
 
   return (
     <div className="space-y-6">
@@ -87,7 +98,9 @@ export function DependantsForm() {
                           </FormControl>
                           <SelectContent>
                             {RELATIONSHIP_OPTIONS.map((rel) => (
-                              <SelectItem key={rel} value={rel}>{rel}</SelectItem>
+                              <SelectItem key={rel} value={rel}>
+                                {rel}
+                              </SelectItem>
                             ))}
                           </SelectContent>
                         </Select>
@@ -127,7 +140,7 @@ export function DependantsForm() {
           )}
         </CardContent>
       </Card>
-      
+
       <Card>
         <CardHeader>
           <CardTitle>Spouse Information</CardTitle>

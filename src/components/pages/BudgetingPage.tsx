@@ -7,19 +7,15 @@ import { Input } from '../ui/input';
 import { Label } from '../ui/label';
 import { Alert, AlertDescription } from '../ui/alert';
 import { Separator } from '../ui/separator';
-import { formatCurrency, formatCurrencyInput, cleanCurrencyInput } from '../../utils/currencyFormatter';
+import {
+  formatCurrency,
+  formatCurrencyInput,
+  cleanCurrencyInput,
+} from '../../utils/currencyFormatter';
 import { EmptyState } from './profile/EmptyState';
 import { emptyStateConfigs } from './profile/emptyStateConfigs';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '../ui/select';
-import {
-  TooltipProvider,
-} from '../ui/tooltip';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
+import { TooltipProvider } from '../ui/tooltip';
 import { SVGBarChart } from '../ui/svg-charts';
 import {
   PiggyBank,
@@ -74,8 +70,15 @@ const CATEGORY_INFO = {
   needs: {
     name: 'Needs',
     percentage: 50,
-    description: 'Essential expenses you can\'t live without',
-    examples: ['Rent/Mortgage', 'Utilities', 'Groceries', 'Transport', 'Insurance', 'Minimum Debt Payments'],
+    description: "Essential expenses you can't live without",
+    examples: [
+      'Rent/Mortgage',
+      'Utilities',
+      'Groceries',
+      'Transport',
+      'Insurance',
+      'Minimum Debt Payments',
+    ],
     icon: Home,
     color: CATEGORY_COLORS.needs,
     tip: 'These are your non-negotiables. If this exceeds 50%, consider ways to reduce fixed costs like downsizing, refinancing, or finding better deals on insurance and utilities.',
@@ -87,41 +90,49 @@ const CATEGORY_INFO = {
     examples: ['Dining Out', 'Entertainment', 'Shopping', 'Hobbies', 'Subscriptions', 'Vacations'],
     icon: Coffee,
     color: CATEGORY_COLORS.wants,
-    tip: 'This is where you have the most flexibility. If you\'re over budget, start here. Cancel unused subscriptions, reduce dining out, or find free entertainment options.',
+    tip: "This is where you have the most flexibility. If you're over budget, start here. Cancel unused subscriptions, reduce dining out, or find free entertainment options.",
   },
   savings: {
     name: 'Savings & Debt',
     percentage: 20,
     description: 'Future security and debt repayment',
-    examples: ['Emergency Fund', 'Retirement', 'Investments', 'Extra Debt Payments', 'Savings Goals'],
+    examples: [
+      'Emergency Fund',
+      'Retirement',
+      'Investments',
+      'Extra Debt Payments',
+      'Savings Goals',
+    ],
     icon: PiggyBank,
     color: CATEGORY_COLORS.savings,
-    tip: 'Pay yourself first! This should be your priority after Needs. Even if you can\'t reach 20% now, start with what you can and increase it gradually.',
+    tip: "Pay yourself first! This should be your priority after Needs. Even if you can't reach 20% now, start with what you can and increase it gradually.",
   },
 };
 
-export function BudgetingPage({ 
-  netIncome: propNetIncome, 
-  grossIncome: propGrossIncome, 
+export function BudgetingPage({
+  netIncome: propNetIncome,
+  grossIncome: propGrossIncome,
   onEmptyStateAction,
   userId,
   embedded,
   profileData,
-  handleInputChange 
+  handleInputChange,
 }: BudgetingPageProps) {
   const navigate = useNavigate();
-  
+
   // Use profileData if in embedded mode, otherwise use props
   // profileData is Record<string, unknown>, so coerce the income fields to a
   // number (Number(undefined) -> NaN -> 0) instead of letting `unknown || 0`
   // collapse to the `{}` type, which poisons all downstream arithmetic.
-  const netIncome = embedded && profileData ? (Number(profileData.netMonthlyIncome) || 0) : (propNetIncome || 0);
-  const grossIncome = embedded && profileData ? (Number(profileData.grossMonthlyIncome) || 0) : (propGrossIncome || 0);
-  
+  const netIncome =
+    embedded && profileData ? Number(profileData.netMonthlyIncome) || 0 : propNetIncome || 0;
+  const grossIncome =
+    embedded && profileData ? Number(profileData.grossMonthlyIncome) || 0 : propGrossIncome || 0;
+
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [editingExpense, setEditingExpense] = useState<Expense | null>(null);
   const [isAddingExpense, setIsAddingExpense] = useState(false);
-  
+
   // Form state for adding/editing expense
   const [expenseForm, setExpenseForm] = useState({
     description: '',
@@ -132,13 +143,13 @@ export function BudgetingPage({
   // Calculate totals
   const totals = useMemo(() => {
     const needsTotal = expenses
-      .filter(e => e.category === 'needs')
+      .filter((e) => e.category === 'needs')
       .reduce((sum, e) => sum + e.amount, 0);
     const wantsTotal = expenses
-      .filter(e => e.category === 'wants')
+      .filter((e) => e.category === 'wants')
       .reduce((sum, e) => sum + e.amount, 0);
     const savingsTotal = expenses
-      .filter(e => e.category === 'savings')
+      .filter((e) => e.category === 'savings')
       .reduce((sum, e) => sum + e.amount, 0);
     const total = needsTotal + wantsTotal + savingsTotal;
 
@@ -146,25 +157,35 @@ export function BudgetingPage({
   }, [expenses]);
 
   // Calculate budget recommendations (50-30-20 rule)
-  const recommendations = useMemo(() => ({
-    needs: (netIncome * 0.5),
-    wants: (netIncome * 0.3),
-    savings: (netIncome * 0.2),
-  }), [netIncome]);
+  const recommendations = useMemo(
+    () => ({
+      needs: netIncome * 0.5,
+      wants: netIncome * 0.3,
+      savings: netIncome * 0.2,
+    }),
+    [netIncome],
+  );
 
   // Remaining amounts
-  const remaining = useMemo(() => ({
-    needs: recommendations.needs - totals.needsTotal,
-    wants: recommendations.wants - totals.wantsTotal,
-    savings: recommendations.savings - totals.savingsTotal,
-    total: netIncome - totals.total,
-  }), [recommendations, totals, netIncome]);
+  const remaining = useMemo(
+    () => ({
+      needs: recommendations.needs - totals.needsTotal,
+      wants: recommendations.wants - totals.wantsTotal,
+      savings: recommendations.savings - totals.savingsTotal,
+      total: netIncome - totals.total,
+    }),
+    [recommendations, totals, netIncome],
+  );
 
   // Analysis and insights
   const analysis = useMemo(() => {
     if (netIncome === 0) return null;
 
-    const insights: { type: 'error' | 'warning' | 'success' | 'info'; title: string; message: string }[] = [];
+    const insights: {
+      type: 'error' | 'warning' | 'success' | 'info';
+      title: string;
+      message: string;
+    }[] = [];
 
     // Check if total exceeds income
     if (totals.total > netIncome) {
@@ -214,7 +235,7 @@ export function BudgetingPage({
         insights.push({
           type: 'success',
           title: 'Excellent Budget!',
-          message: 'You\'re following the 50-30-20 rule perfectly. Keep up the great work!',
+          message: "You're following the 50-30-20 rule perfectly. Keep up the great work!",
         });
       }
 
@@ -233,12 +254,12 @@ export function BudgetingPage({
   const handleSaveExpense = () => {
     const cleaned = cleanCurrencyInput(expenseForm.amount);
     const amount = parseFloat(cleaned);
-    
+
     if (!expenseForm.description.trim()) {
       alert('Please enter a description');
       return;
     }
-    
+
     if (isNaN(amount) || amount <= 0) {
       alert('Please enter a valid amount');
       return;
@@ -252,7 +273,7 @@ export function BudgetingPage({
     };
 
     if (editingExpense) {
-      setExpenses(expenses.map(e => e.id === editingExpense.id ? newExpense : e));
+      setExpenses(expenses.map((e) => (e.id === editingExpense.id ? newExpense : e)));
     } else {
       setExpenses([...expenses, newExpense]);
     }
@@ -283,7 +304,7 @@ export function BudgetingPage({
 
   const handleDeleteExpense = (id: string) => {
     if (window.confirm('Are you sure you want to delete this expense?')) {
-      setExpenses(expenses.filter(e => e.id !== id));
+      setExpenses(expenses.filter((e) => e.id !== id));
       if (editingExpense?.id === id) {
         handleCancelForm();
       }
@@ -370,7 +391,9 @@ export function BudgetingPage({
               </div>
               <div className="p-4 rounded-lg bg-gray-50 border border-gray-200">
                 <p className="text-sm text-gray-600 mb-1">Total Allocated</p>
-                <p className={`text-2xl ${totals.total > netIncome ? 'text-red-600' : 'text-[#6d28d9]'}`}>
+                <p
+                  className={`text-2xl ${totals.total > netIncome ? 'text-red-600' : 'text-[#6d28d9]'}`}
+                >
                   {formatCurrency(totals.total)}
                 </p>
               </div>
@@ -383,15 +406,25 @@ export function BudgetingPage({
           {(['needs', 'wants', 'savings'] as const).map((category) => {
             const info = CATEGORY_INFO[category];
             const Icon = info.icon;
-            const allocated = category === 'needs' ? totals.needsTotal : category === 'wants' ? totals.wantsTotal : totals.savingsTotal;
-            const recommended = category === 'needs' ? recommendations.needs : category === 'wants' ? recommendations.wants : recommendations.savings;
+            const allocated =
+              category === 'needs'
+                ? totals.needsTotal
+                : category === 'wants'
+                  ? totals.wantsTotal
+                  : totals.savingsTotal;
+            const recommended =
+              category === 'needs'
+                ? recommendations.needs
+                : category === 'wants'
+                  ? recommendations.wants
+                  : recommendations.savings;
             const categoryRemaining = recommended - allocated;
             const percentage = recommended > 0 ? (allocated / recommended) * 100 : 0;
 
             return (
               <Card key={category} className="relative overflow-hidden">
-                <div 
-                  className="absolute top-0 left-0 right-0 h-1" 
+                <div
+                  className="absolute top-0 left-0 right-0 h-1"
                   style={{ backgroundColor: info.color }}
                 />
                 <CardHeader className="pb-3">
@@ -462,17 +495,20 @@ export function BudgetingPage({
             <div className="flex items-center justify-between">
               <div>
                 <CardTitle>
-                  {isAddingExpense ? (editingExpense ? 'Edit Expense' : 'Add New Expense') : 'Your Expenses'}
+                  {isAddingExpense
+                    ? editingExpense
+                      ? 'Edit Expense'
+                      : 'Add New Expense'
+                    : 'Your Expenses'}
                 </CardTitle>
                 <CardDescription>
-                  {isAddingExpense 
-                    ? 'Fill in the details below to track your expense' 
-                    : `${expenses.length} ${expenses.length === 1 ? 'expense' : 'expenses'} tracked • ${formatCurrency(totals.total)} total`
-                  }
+                  {isAddingExpense
+                    ? 'Fill in the details below to track your expense'
+                    : `${expenses.length} ${expenses.length === 1 ? 'expense' : 'expenses'} tracked • ${formatCurrency(totals.total)} total`}
                 </CardDescription>
               </div>
               {!isAddingExpense && (
-                <Button 
+                <Button
                   onClick={() => setIsAddingExpense(true)}
                   className="bg-[#6d28d9] hover:bg-[#5b21b6]"
                 >
@@ -503,7 +539,10 @@ export function BudgetingPage({
                       onClick={handleSaveExpense}
                       size="sm"
                       className="bg-[#6d28d9] text-white hover:bg-[#5b21b6] disabled:opacity-50 disabled:cursor-not-allowed"
-                      disabled={!expenseForm.amount || parseFloat(cleanCurrencyInput(expenseForm.amount)) <= 0}
+                      disabled={
+                        !expenseForm.amount ||
+                        parseFloat(cleanCurrencyInput(expenseForm.amount)) <= 0
+                      }
                     >
                       <Save className="h-4 w-4 mr-1" />
                       Save
@@ -516,7 +555,7 @@ export function BudgetingPage({
                     <Label htmlFor="expenseCategory">Category *</Label>
                     <Select
                       value={expenseForm.category}
-                      onValueChange={(value: 'needs' | 'wants' | 'savings') => 
+                      onValueChange={(value: 'needs' | 'wants' | 'savings') =>
                         setExpenseForm({ ...expenseForm, category: value })
                       }
                     >
@@ -551,7 +590,9 @@ export function BudgetingPage({
                     <Input
                       id="expenseDescription"
                       value={expenseForm.description}
-                      onChange={(e) => setExpenseForm({ ...expenseForm, description: e.target.value })}
+                      onChange={(e) =>
+                        setExpenseForm({ ...expenseForm, description: e.target.value })
+                      }
                       placeholder={`e.g., ${CATEGORY_INFO[expenseForm.category].examples[0]}`}
                     />
                   </div>
@@ -559,7 +600,9 @@ export function BudgetingPage({
                   <div className="space-y-2">
                     <Label htmlFor="expenseAmount">Monthly Amount (Rands) *</Label>
                     <div className="relative">
-                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">R</span>
+                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">
+                        R
+                      </span>
                       <Input
                         id="expenseAmount"
                         type="text"
@@ -578,12 +621,19 @@ export function BudgetingPage({
                 <Alert className="bg-blue-50 border-blue-200">
                   <Info className="h-4 w-4 text-blue-600" />
                   <AlertDescription className="text-sm text-blue-800">
-                    <strong>Budget Impact:</strong> {formatCurrency(Math.max(0, 
-                      (expenseForm.category === 'needs' ? recommendations.needs - totals.needsTotal : 
-                       expenseForm.category === 'wants' ? recommendations.wants - totals.wantsTotal : 
-                       recommendations.savings - totals.savingsTotal) - 
-                      (parseFloat(cleanCurrencyInput(expenseForm.amount)) || 0)
-                    ))} remaining in {CATEGORY_INFO[expenseForm.category].name}
+                    <strong>Budget Impact:</strong>{' '}
+                    {formatCurrency(
+                      Math.max(
+                        0,
+                        (expenseForm.category === 'needs'
+                          ? recommendations.needs - totals.needsTotal
+                          : expenseForm.category === 'wants'
+                            ? recommendations.wants - totals.wantsTotal
+                            : recommendations.savings - totals.savingsTotal) -
+                          (parseFloat(cleanCurrencyInput(expenseForm.amount)) || 0),
+                      ),
+                    )}{' '}
+                    remaining in {CATEGORY_INFO[expenseForm.category].name}
                   </AlertDescription>
                 </Alert>
               </div>
@@ -597,9 +647,10 @@ export function BudgetingPage({
                 </div>
                 <h3 className="text-lg text-gray-900 mb-2">No Expenses Yet</h3>
                 <p className="text-sm text-gray-600 mb-4 max-w-md mx-auto">
-                  Start tracking your expenses to see how they align with the 50-30-20 budgeting rule.
+                  Start tracking your expenses to see how they align with the 50-30-20 budgeting
+                  rule.
                 </p>
-                <Button 
+                <Button
                   onClick={() => setIsAddingExpense(true)}
                   className="bg-[#6d28d9] hover:bg-[#5b21b6]"
                 >
@@ -607,77 +658,82 @@ export function BudgetingPage({
                   Add Your First Expense
                 </Button>
               </div>
-            ) : !isAddingExpense && (
-              <div className="space-y-6">
-                {(['needs', 'wants', 'savings'] as const).map((category) => {
-                  const categoryExpenses = expenses.filter(e => e.category === category);
-                  if (categoryExpenses.length === 0) return null;
+            ) : (
+              !isAddingExpense && (
+                <div className="space-y-6">
+                  {(['needs', 'wants', 'savings'] as const).map((category) => {
+                    const categoryExpenses = expenses.filter((e) => e.category === category);
+                    if (categoryExpenses.length === 0) return null;
 
-                  const info = CATEGORY_INFO[category];
-                  const Icon = info.icon;
-                  const allocated = categoryExpenses.reduce((sum, e) => sum + e.amount, 0);
+                    const info = CATEGORY_INFO[category];
+                    const Icon = info.icon;
+                    const allocated = categoryExpenses.reduce((sum, e) => sum + e.amount, 0);
 
-                  return (
-                    <div key={category}>
-                      <div className="flex items-center gap-2 mb-3">
-                        <div
-                          className="h-8 w-8 rounded-lg flex items-center justify-center"
-                          style={{ backgroundColor: `${info.color}15` }}
-                        >
-                          <Icon className="h-4 w-4" style={{ color: info.color }} />
-                        </div>
-                        <h3 className="text-base text-gray-900">
-                          {info.name} • {categoryExpenses.length} {categoryExpenses.length === 1 ? 'expense' : 'expenses'}
-                        </h3>
-                        <span className="text-sm text-gray-600">
-                          ({formatCurrency(allocated)})
-                        </span>
-                      </div>
-                      <div className="space-y-2">
-                        {categoryExpenses.map((expense) => (
+                    return (
+                      <div key={category}>
+                        <div className="flex items-center gap-2 mb-3">
                           <div
-                            key={expense.id}
-                            className="flex items-center justify-between p-4 rounded-lg border border-gray-200 hover:border-[#6d28d9] transition-colors group"
+                            className="h-8 w-8 rounded-lg flex items-center justify-center"
+                            style={{ backgroundColor: `${info.color}15` }}
                           >
-                            <div className="flex items-center gap-3 flex-1 min-w-0">
-                              <div
-                                className="h-10 w-10 rounded-lg flex items-center justify-center flex-shrink-0"
-                                style={{ backgroundColor: `${info.color}15` }}
-                              >
-                                <Icon className="h-5 w-5" style={{ color: info.color }} />
-                              </div>
-                              <p className="text-sm text-gray-900 truncate flex-1">{expense.description}</p>
-                            </div>
-                            <div className="flex items-center gap-3">
-                              <p className="text-base text-gray-900 mr-2">
-                                {formatCurrency(expense.amount)}
-                              </p>
-                              <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  className="h-8 w-8 p-0"
-                                  onClick={() => handleEditExpense(expense)}
-                                >
-                                  <Edit2 className="h-4 w-4 text-gray-500" />
-                                </Button>
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  className="h-8 w-8 p-0"
-                                  onClick={() => handleDeleteExpense(expense.id)}
-                                >
-                                  <Trash2 className="h-4 w-4 text-gray-500" />
-                                </Button>
-                              </div>
-                            </div>
+                            <Icon className="h-4 w-4" style={{ color: info.color }} />
                           </div>
-                        ))}
+                          <h3 className="text-base text-gray-900">
+                            {info.name} • {categoryExpenses.length}{' '}
+                            {categoryExpenses.length === 1 ? 'expense' : 'expenses'}
+                          </h3>
+                          <span className="text-sm text-gray-600">
+                            ({formatCurrency(allocated)})
+                          </span>
+                        </div>
+                        <div className="space-y-2">
+                          {categoryExpenses.map((expense) => (
+                            <div
+                              key={expense.id}
+                              className="flex items-center justify-between p-4 rounded-lg border border-gray-200 hover:border-[#6d28d9] transition-colors group"
+                            >
+                              <div className="flex items-center gap-3 flex-1 min-w-0">
+                                <div
+                                  className="h-10 w-10 rounded-lg flex items-center justify-center flex-shrink-0"
+                                  style={{ backgroundColor: `${info.color}15` }}
+                                >
+                                  <Icon className="h-5 w-5" style={{ color: info.color }} />
+                                </div>
+                                <p className="text-sm text-gray-900 truncate flex-1">
+                                  {expense.description}
+                                </p>
+                              </div>
+                              <div className="flex items-center gap-3">
+                                <p className="text-base text-gray-900 mr-2">
+                                  {formatCurrency(expense.amount)}
+                                </p>
+                                <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    className="h-8 w-8 p-0"
+                                    onClick={() => handleEditExpense(expense)}
+                                  >
+                                    <Edit2 className="h-4 w-4 text-gray-500" />
+                                  </Button>
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    className="h-8 w-8 p-0"
+                                    onClick={() => handleDeleteExpense(expense.id)}
+                                  >
+                                    <Trash2 className="h-4 w-4 text-gray-500" />
+                                  </Button>
+                                </div>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
                       </div>
-                    </div>
-                  );
-                })}
-              </div>
+                    );
+                  })}
+                </div>
+              )
             )}
           </CardContent>
         </Card>
@@ -741,8 +797,18 @@ export function BudgetingPage({
                   <div className="space-y-2">
                     {(['needs', 'wants', 'savings'] as const).map((category) => {
                       const info = CATEGORY_INFO[category];
-                      const allocated = category === 'needs' ? totals.needsTotal : category === 'wants' ? totals.wantsTotal : totals.savingsTotal;
-                      const recommended = category === 'needs' ? recommendations.needs : category === 'wants' ? recommendations.wants : recommendations.savings;
+                      const allocated =
+                        category === 'needs'
+                          ? totals.needsTotal
+                          : category === 'wants'
+                            ? totals.wantsTotal
+                            : totals.savingsTotal;
+                      const recommended =
+                        category === 'needs'
+                          ? recommendations.needs
+                          : category === 'wants'
+                            ? recommendations.wants
+                            : recommendations.savings;
                       const percentage = recommended > 0 ? (allocated / recommended) * 100 : 0;
 
                       return (
@@ -763,13 +829,15 @@ export function BudgetingPage({
                   </div>
                 </div>
 
-                <Alert className={
-                  totals.total > netIncome 
-                    ? 'bg-red-50 border-red-200' 
-                    : remaining.total > netIncome * 0.1
-                    ? 'bg-orange-50 border-orange-200'
-                    : 'bg-green-50 border-green-200'
-                }>
+                <Alert
+                  className={
+                    totals.total > netIncome
+                      ? 'bg-red-50 border-red-200'
+                      : remaining.total > netIncome * 0.1
+                        ? 'bg-orange-50 border-orange-200'
+                        : 'bg-green-50 border-green-200'
+                  }
+                >
                   {totals.total > netIncome ? (
                     <div className="contents">
                       <AlertTriangle className="h-4 w-4 text-red-600" />
@@ -781,7 +849,8 @@ export function BudgetingPage({
                     <div className="contents">
                       <Info className="h-4 w-4 text-orange-600" />
                       <AlertDescription className="text-sm text-orange-800">
-                        You have {formatCurrency(remaining.total)} unallocated. Consider allocating it to savings.
+                        You have {formatCurrency(remaining.total)} unallocated. Consider allocating
+                        it to savings.
                       </AlertDescription>
                     </div>
                   ) : (
@@ -817,25 +886,31 @@ export function BudgetingPage({
                       insight.type === 'error'
                         ? 'bg-red-50 border-red-200'
                         : insight.type === 'warning'
-                        ? 'bg-orange-50 border-orange-200'
-                        : insight.type === 'success'
-                        ? 'bg-green-50 border-green-200'
-                        : 'bg-blue-50 border-blue-200'
+                          ? 'bg-orange-50 border-orange-200'
+                          : insight.type === 'success'
+                            ? 'bg-green-50 border-green-200'
+                            : 'bg-blue-50 border-blue-200'
                     }
                   >
-                    {insight.type === 'error' && <AlertTriangle className={`h-5 w-5 text-red-600`} />}
-                    {insight.type === 'warning' && <AlertCircle className={`h-5 w-5 text-orange-600`} />}
-                    {insight.type === 'success' && <CheckCircle className={`h-5 w-5 text-green-600`} />}
+                    {insight.type === 'error' && (
+                      <AlertTriangle className={`h-5 w-5 text-red-600`} />
+                    )}
+                    {insight.type === 'warning' && (
+                      <AlertCircle className={`h-5 w-5 text-orange-600`} />
+                    )}
+                    {insight.type === 'success' && (
+                      <CheckCircle className={`h-5 w-5 text-green-600`} />
+                    )}
                     {insight.type === 'info' && <Info className={`h-5 w-5 text-blue-600`} />}
                     <AlertDescription
                       className={
                         insight.type === 'error'
                           ? 'text-red-800'
                           : insight.type === 'warning'
-                          ? 'text-orange-800'
-                          : insight.type === 'success'
-                          ? 'text-green-800'
-                          : 'text-blue-800'
+                            ? 'text-orange-800'
+                            : insight.type === 'success'
+                              ? 'text-green-800'
+                              : 'text-blue-800'
                       }
                     >
                       <strong
@@ -843,10 +918,10 @@ export function BudgetingPage({
                           insight.type === 'error'
                             ? 'text-red-900'
                             : insight.type === 'warning'
-                            ? 'text-orange-900'
-                            : insight.type === 'success'
-                            ? 'text-green-900'
-                            : 'text-blue-900'
+                              ? 'text-orange-900'
+                              : insight.type === 'success'
+                                ? 'text-green-900'
+                                : 'text-blue-900'
                         }
                       >
                         {insight.title}:

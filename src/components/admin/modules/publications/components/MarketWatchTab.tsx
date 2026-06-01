@@ -1,24 +1,36 @@
 import React, { memo, useState, useEffect, Suspense } from 'react';
 import { Card, CardContent } from '../../../../ui/card';
-import { 
-  BarChart3, 
-  TrendingUp, 
-  Building, 
-  PiggyBank, 
-  Activity, 
+import {
+  BarChart3,
+  TrendingUp,
+  Building,
+  PiggyBank,
+  Activity,
   Calendar,
-  Loader2
+  Loader2,
 } from 'lucide-react';
 import { cn } from '../../../../ui/utils';
 import { TradingViewWidgetWrapper } from '../../../../tradingview/TradingViewWidgetWrapper';
 
 // Lazy-load individual TradingView widgets — only the active one is ever rendered
-const TradingViewMarketOverviewWidget = React.lazy(() => import('../../../../tradingview/TradingViewMarketOverviewWidget'));
-const TradingViewForexWidget = React.lazy(() => import('../../../../tradingview/TradingViewForexWidget'));
-const TradingViewStockHeatmapWidget = React.lazy(() => import('../../../../tradingview/TradingViewStockHeatmapWidget'));
-const TradingViewETFHeatmapWidget = React.lazy(() => import('../../../../tradingview/TradingViewETFHeatmapWidget'));
-const TradingViewCryptoHeatmapWidget = React.lazy(() => import('../../../../tradingview/TradingViewCryptoHeatmapWidget'));
-const TradingViewEconomicCalendarWidget = React.lazy(() => import('../../../../tradingview/TradingViewEconomicCalendarWidget'));
+const TradingViewMarketOverviewWidget = React.lazy(
+  () => import('../../../../tradingview/TradingViewMarketOverviewWidget'),
+);
+const TradingViewForexWidget = React.lazy(
+  () => import('../../../../tradingview/TradingViewForexWidget'),
+);
+const TradingViewStockHeatmapWidget = React.lazy(
+  () => import('../../../../tradingview/TradingViewStockHeatmapWidget'),
+);
+const TradingViewETFHeatmapWidget = React.lazy(
+  () => import('../../../../tradingview/TradingViewETFHeatmapWidget'),
+);
+const TradingViewCryptoHeatmapWidget = React.lazy(
+  () => import('../../../../tradingview/TradingViewCryptoHeatmapWidget'),
+);
+const TradingViewEconomicCalendarWidget = React.lazy(
+  () => import('../../../../tradingview/TradingViewEconomicCalendarWidget'),
+);
 
 interface MarketWatchTabProps {
   activeSection: string;
@@ -35,39 +47,69 @@ const WidgetLoader = () => (
   </div>
 );
 
-export const MarketWatchTab = memo(function MarketWatchTab({ 
-  activeSection, 
-  onSectionChange 
+export const MarketWatchTab = memo(function MarketWatchTab({
+  activeSection,
+  onSectionChange,
 }: MarketWatchTabProps) {
   const [isTransitioning, setIsTransitioning] = useState(false);
   const [mountedSection, setMountedSection] = useState(activeSection);
   const [renderKey, setRenderKey] = useState(0);
 
   const sections = [
-    { id: 'overview', label: 'Market Overview', icon: BarChart3, description: 'Global market summary and key indices' },
-    { id: 'forex', label: 'Forex Rates', icon: TrendingUp, description: 'Real-time currency exchange rates' },
-    { id: 'stocks', label: 'Stocks Heatmap', icon: Building, description: 'S&P 500 sector performance' },
-    { id: 'etfs', label: 'ETFs Heatmap', icon: PiggyBank, description: 'US Exchange Traded Funds performance' },
-    { id: 'crypto', label: 'Crypto Heatmap', icon: Activity, description: 'Cryptocurrency market visualization' },
-    { id: 'economic-calendar', label: 'Economic Calendar', icon: Calendar, description: 'Upcoming economic events' }
+    {
+      id: 'overview',
+      label: 'Market Overview',
+      icon: BarChart3,
+      description: 'Global market summary and key indices',
+    },
+    {
+      id: 'forex',
+      label: 'Forex Rates',
+      icon: TrendingUp,
+      description: 'Real-time currency exchange rates',
+    },
+    {
+      id: 'stocks',
+      label: 'Stocks Heatmap',
+      icon: Building,
+      description: 'S&P 500 sector performance',
+    },
+    {
+      id: 'etfs',
+      label: 'ETFs Heatmap',
+      icon: PiggyBank,
+      description: 'US Exchange Traded Funds performance',
+    },
+    {
+      id: 'crypto',
+      label: 'Crypto Heatmap',
+      icon: Activity,
+      description: 'Cryptocurrency market visualization',
+    },
+    {
+      id: 'economic-calendar',
+      label: 'Economic Calendar',
+      icon: Calendar,
+      description: 'Upcoming economic events',
+    },
   ];
 
   // Handle section changes with transition to ensure proper cleanup
   useEffect(() => {
     if (activeSection !== mountedSection) {
       setIsTransitioning(true);
-      
+
       // Wait for previous widget to fully unmount
       const timer = setTimeout(() => {
         setMountedSection(activeSection);
-        setRenderKey(prev => prev + 1); // Force complete remount
-        
+        setRenderKey((prev) => prev + 1); // Force complete remount
+
         // Short delay before showing new widget
         setTimeout(() => {
           setIsTransitioning(false);
         }, 150);
       }, 350);
-      
+
       return () => clearTimeout(timer);
     }
   }, [activeSection, mountedSection]);
@@ -140,7 +182,7 @@ export const MarketWatchTab = memo(function MarketWatchTab({
     }
   };
 
-  const currentSection = sections.find(s => s.id === activeSection);
+  const currentSection = sections.find((s) => s.id === activeSection);
 
   return (
     <div className="space-y-6">
@@ -149,18 +191,18 @@ export const MarketWatchTab = memo(function MarketWatchTab({
         {sections.map((section) => {
           const Icon = section.icon;
           const isActive = activeSection === section.id;
-          
+
           return (
             <button
               key={section.id}
               onClick={() => handleSectionChange(section.id)}
               disabled={isTransitioning}
               className={cn(
-                "flex items-center space-x-2 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200",
+                'flex items-center space-x-2 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200',
                 isActive
-                  ? "bg-purple-600 text-white shadow-md transform scale-105"
-                  : "text-gray-600 hover:bg-gray-50 hover:text-gray-900",
-                isTransitioning && "opacity-50 cursor-not-allowed"
+                  ? 'bg-purple-600 text-white shadow-md transform scale-105'
+                  : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900',
+                isTransitioning && 'opacity-50 cursor-not-allowed',
               )}
               aria-pressed={isActive}
               aria-label={`View ${section.label}`}

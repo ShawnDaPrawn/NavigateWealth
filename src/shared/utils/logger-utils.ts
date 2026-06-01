@@ -6,9 +6,9 @@ import { SENSITIVE_KEYS } from '../types/logger';
  */
 export function sanitizeLogData(data: unknown, seen = new WeakSet<object>()): unknown {
   if (data === null || data === undefined) return data;
-  
+
   if (typeof data !== 'object') return data;
-  
+
   if (data instanceof Date) return data.toISOString();
   if (data instanceof Error) {
     return {
@@ -23,13 +23,13 @@ export function sanitizeLogData(data: unknown, seen = new WeakSet<object>()): un
   seen.add(data);
 
   if (Array.isArray(data)) {
-    return data.map(item => sanitizeLogData(item, seen));
+    return data.map((item) => sanitizeLogData(item, seen));
   }
 
   const sanitized: Record<string, unknown> = {};
-  
+
   for (const [key, value] of Object.entries(data as Record<string, unknown>)) {
-    if (SENSITIVE_KEYS.some(k => key.toLowerCase().includes(k))) {
+    if (SENSITIVE_KEYS.some((k) => key.toLowerCase().includes(k))) {
       sanitized[key] = '[REDACTED]';
     } else {
       sanitized[key] = sanitizeLogData(value, seen);

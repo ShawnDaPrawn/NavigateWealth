@@ -1,11 +1,11 @@
 /**
  * Vasco Service — Public AI Financial Navigator
- * 
+ *
  * Business logic for the public-facing "Ask Vasco" AI chatbot.
  * Vasco is Navigate Wealth's client-facing AI financial guide,
  * named after Vasco Da Gama — linking the "Navigate" brand to
  * the spirit of Portuguese exploration and financial discovery.
- * 
+ *
  * This service handles:
  * - Feature flag management (enable/disable from admin dashboard)
  * - Chat orchestration with OpenAI + RAG context injection
@@ -61,7 +61,12 @@ export interface VascoChatResponse {
 
 export interface VascoSessionData {
   sessionId: string;
-  messages: Array<{ role: 'user' | 'assistant'; content: string; timestamp: string; citations?: VascoCitation[] }>;
+  messages: Array<{
+    role: 'user' | 'assistant';
+    content: string;
+    timestamp: string;
+    citations?: VascoCitation[];
+  }>;
   createdAt: string;
   updatedAt: string;
 }
@@ -187,10 +192,7 @@ export async function getVascoStatus(): Promise<VascoConfig> {
 /**
  * Update the Vasco feature flag
  */
-export async function updateVascoConfig(
-  enabled: boolean,
-  updatedBy: string
-): Promise<VascoConfig> {
+export async function updateVascoConfig(enabled: boolean, updatedBy: string): Promise<VascoConfig> {
   const config: VascoConfig = {
     enabled,
     updatedAt: new Date().toISOString(),
@@ -207,13 +209,13 @@ export async function updateVascoConfig(
  * Returns { allowed, remaining, reason? }
  */
 export async function checkVascoRateLimit(
-  identifier: string
+  identifier: string,
 ): Promise<{ allowed: boolean; remaining: number; reason?: string }> {
   const key = `${RATE_LIMIT_PREFIX}:${identifier}`;
   const now = Date.now();
 
   try {
-    const entry = await kv.get(key) as VascoRateLimitEntry | null;
+    const entry = (await kv.get(key)) as VascoRateLimitEntry | null;
 
     if (!entry) {
       // First message — initialise
@@ -247,7 +249,8 @@ export async function checkVascoRateLimit(
       return {
         allowed: false,
         remaining: 0,
-        reason: "You've reached the daily message limit. Sign up for unlimited access to Vasco and your own personalised financial dashboard.",
+        reason:
+          "You've reached the daily message limit. Sign up for unlimited access to Vasco and your own personalised financial dashboard.",
       };
     }
 
@@ -256,7 +259,8 @@ export async function checkVascoRateLimit(
       return {
         allowed: false,
         remaining: 0,
-        reason: "You've had a great conversation! Sign up for unlimited access to Vasco and get personalised financial guidance.",
+        reason:
+          "You've had a great conversation! Sign up for unlimited access to Vasco and get personalised financial guidance.",
       };
     }
 
@@ -270,10 +274,7 @@ export async function checkVascoRateLimit(
 
     return {
       allowed: true,
-      remaining: Math.min(
-        SESSION_MESSAGE_LIMIT - count - 1,
-        DAILY_MESSAGE_LIMIT - dailyCount - 1
-      ),
+      remaining: Math.min(SESSION_MESSAGE_LIMIT - count - 1, DAILY_MESSAGE_LIMIT - dailyCount - 1),
     };
   } catch (error) {
     log.error('Rate limit check failed (failing closed)', error);
@@ -289,9 +290,10 @@ export async function checkVascoRateLimit(
  * Build a RAG context injection message from retrieved article chunks.
  * Returns the system message text and deduplicated citations.
  */
-function buildRagContext(
-  contexts: RetrievedContext[]
-): { contextMessage: string | null; citations: VascoCitation[] } {
+function buildRagContext(contexts: RetrievedContext[]): {
+  contextMessage: string | null;
+  citations: VascoCitation[];
+} {
   if (contexts.length === 0) {
     return { contextMessage: null, citations: [] };
   }
@@ -321,9 +323,7 @@ function buildRagContext(
  * Send a message to Vasco and get a response.
  * Integrates RAG context from indexed articles when available.
  */
-export async function chat(
-  request: VascoChatRequest
-): Promise<VascoChatResponse> {
+export async function chat(request: VascoChatRequest): Promise<VascoChatResponse> {
   const openaiKey = Deno.env.get('OPENAI_API_KEY');
   if (!openaiKey) {
     throw new Error('OpenAI API key not configured');
@@ -335,9 +335,7 @@ export async function chat(
     (await getActivePrompt(VASCO_PROMPT_AGENT_ID, VASCO_PROMPT_CONTEXT)) ?? VASCO_SYSTEM_PROMPT;
 
   // Build message history with system prompt
-  const messages: VascoChatMessage[] = [
-    { role: 'system', content: activePrompt },
-  ];
+  const messages: VascoChatMessage[] = [{ role: 'system', content: activePrompt }];
 
   // Add conversation history (limited to last N messages)
   const history = request.messages.slice(-MAX_CONTEXT_MESSAGES);
@@ -346,9 +344,7 @@ export async function chat(
   }
 
   // Extract the latest user message for RAG retrieval
-  const lastUserMessage = [...request.messages]
-    .reverse()
-    .find((m) => m.role === 'user');
+  const lastUserMessage = [...request.messages].reverse().find((m) => m.role === 'user');
 
   let citations: VascoCitation[] = [];
 
@@ -381,7 +377,7 @@ export async function chat(
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      'Authorization': `Bearer ${openaiKey}`,
+      Authorization: `Bearer ${openaiKey}`,
     },
     body: JSON.stringify({
       model: 'gpt-4o',
@@ -423,7 +419,7 @@ export async function chat(
  * The final chunk includes citations as a JSON event.
  */
 export async function chatStream(
-  request: VascoChatRequest
+  request: VascoChatRequest,
 ): Promise<{ stream: ReadableStream; sessionId: string; citations: VascoCitation[] }> {
   const openaiKey = Deno.env.get('OPENAI_API_KEY');
   if (!openaiKey) {
@@ -436,9 +432,7 @@ export async function chatStream(
     (await getActivePrompt(VASCO_PROMPT_AGENT_ID, VASCO_PROMPT_CONTEXT)) ?? VASCO_SYSTEM_PROMPT;
 
   // Build message history with system prompt
-  const messages: VascoChatMessage[] = [
-    { role: 'system', content: activePrompt },
-  ];
+  const messages: VascoChatMessage[] = [{ role: 'system', content: activePrompt }];
 
   const history = request.messages.slice(-MAX_CONTEXT_MESSAGES);
   for (const msg of history) {
@@ -446,9 +440,7 @@ export async function chatStream(
   }
 
   // RAG retrieval
-  const lastUserMessage = [...request.messages]
-    .reverse()
-    .find((m) => m.role === 'user');
+  const lastUserMessage = [...request.messages].reverse().find((m) => m.role === 'user');
 
   let citations: VascoCitation[] = [];
 
@@ -477,7 +469,7 @@ export async function chatStream(
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      'Authorization': `Bearer ${openaiKey}`,
+      Authorization: `Bearer ${openaiKey}`,
     },
     body: JSON.stringify({
       model: 'gpt-4o',
@@ -524,7 +516,9 @@ export async function chatStream(
               const parsed = JSON.parse(data);
               const content = parsed.choices?.[0]?.delta?.content;
               if (content) {
-                controller.enqueue(encoder.encode(`data: ${JSON.stringify({ type: 'chunk', content })}\n\n`));
+                controller.enqueue(
+                  encoder.encode(`data: ${JSON.stringify({ type: 'chunk', content })}\n\n`),
+                );
               }
             } catch {
               // Skip malformed chunks
@@ -534,15 +528,15 @@ export async function chatStream(
 
         // Send citations and session info as final event
         controller.enqueue(
-          encoder.encode(
-            `data: ${JSON.stringify({ type: 'done', sessionId, citations })}\n\n`
-          )
+          encoder.encode(`data: ${JSON.stringify({ type: 'done', sessionId, citations })}\n\n`),
         );
         controller.close();
       } catch (err) {
         log.error('Stream processing error', err);
         controller.enqueue(
-          encoder.encode(`data: ${JSON.stringify({ type: 'error', message: 'Stream interrupted' })}\n\n`)
+          encoder.encode(
+            `data: ${JSON.stringify({ type: 'error', message: 'Stream interrupted' })}\n\n`,
+          ),
         );
         controller.close();
       }
@@ -573,7 +567,7 @@ export async function saveSession(sessionId: string, data: VascoSessionData): Pr
  */
 export async function loadSession(sessionId: string): Promise<VascoSessionData | null> {
   const key = `${SESSION_KEY_PREFIX}:${sessionId}`;
-  const data = await kv.get(key) as VascoSessionData | null;
+  const data = (await kv.get(key)) as VascoSessionData | null;
 
   if (!data) return null;
 

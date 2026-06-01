@@ -15,12 +15,29 @@
 
 import React, { useEffect, useRef, useState } from 'react';
 import { motion } from 'motion/react';
-import { Pen, Type, Calendar, CheckSquare, Lock, Check, CalendarCheck, ChevronDown as ChevronDownIcon } from 'lucide-react';
+import {
+  Pen,
+  Type,
+  Calendar,
+  CheckSquare,
+  Lock,
+  Check,
+  CalendarCheck,
+  ChevronDown as ChevronDownIcon,
+} from 'lucide-react';
 
 interface FieldHighlightProps {
   field: {
     id: string;
-    type: 'signature' | 'initials' | 'text' | 'date' | 'checkbox' | 'auto_date' | 'dropdown' | 'attachment';
+    type:
+      | 'signature'
+      | 'initials'
+      | 'text'
+      | 'date'
+      | 'checkbox'
+      | 'auto_date'
+      | 'dropdown'
+      | 'attachment';
     page: number;
     x: number;
     y: number;
@@ -70,17 +87,20 @@ export function FieldHighlight({
   // other format that needs interactive masking/validation feedback). For
   // those cases we keep the modal flow because the input is visually too
   // small for proper feedback. For everything else, signers edit in-place.
-  const meta = (field.metadata ?? {}) as { format?: string; placeholder?: string; maxLength?: number; pattern?: string };
+  const meta = (field.metadata ?? {}) as {
+    format?: string;
+    placeholder?: string;
+    maxLength?: number;
+    pattern?: string;
+  };
   const inlineEligible =
     !inactive &&
     !locked &&
     !!onInlineCommit &&
-    (
-      // Date always uses native picker — no validation friction
-      field.type === 'date' ||
+    // Date always uses native picker — no validation friction
+    (field.type === 'date' ||
       // Text only when no format-driven masking is configured
-      (field.type === 'text' && (!meta.format || meta.format === 'plain'))
-    );
+      (field.type === 'text' && (!meta.format || meta.format === 'plain')));
 
   const [isEditing, setIsEditing] = useState(false);
   const [draft, setDraft] = useState<string>(filledValue ?? '');
@@ -187,11 +207,20 @@ export function FieldHighlight({
   const heightPercent = (field.height / 842) * 100;
 
   // Determine what kind of preview to render in the filled state.
-  const isImagePreview = isFilled && filledValue && filledValue.startsWith('data:image') &&
+  const isImagePreview =
+    isFilled &&
+    filledValue &&
+    filledValue.startsWith('data:image') &&
     (field.type === 'signature' || field.type === 'initials');
 
-  const isTextPreview = isFilled && filledValue && !filledValue.startsWith('data:image') &&
-    (field.type === 'text' || field.type === 'date' || field.type === 'auto_date' || field.type === 'dropdown');
+  const isTextPreview =
+    isFilled &&
+    filledValue &&
+    !filledValue.startsWith('data:image') &&
+    (field.type === 'text' ||
+      field.type === 'date' ||
+      field.type === 'auto_date' ||
+      field.type === 'dropdown');
 
   const isCheckboxFilled = isFilled && field.type === 'checkbox';
 
@@ -273,14 +302,16 @@ export function FieldHighlight({
       initial={false}
       animate={
         shouldPulse
-          ? { boxShadow: ['0 0 0 0 rgba(245, 158, 11, 0)', '0 0 0 6px rgba(245, 158, 11, 0.35)', '0 0 0 0 rgba(245, 158, 11, 0)'] }
+          ? {
+              boxShadow: [
+                '0 0 0 0 rgba(245, 158, 11, 0)',
+                '0 0 0 6px rgba(245, 158, 11, 0.35)',
+                '0 0 0 0 rgba(245, 158, 11, 0)',
+              ],
+            }
           : {}
       }
-      transition={
-        shouldPulse
-          ? { duration: 1.6, repeat: Infinity, ease: 'easeInOut' }
-          : {}
-      }
+      transition={shouldPulse ? { duration: 1.6, repeat: Infinity, ease: 'easeInOut' } : {}}
       className={`absolute rounded-md transition-colors pointer-events-auto z-10 ${
         locked || inactive ? 'opacity-80' : 'cursor-pointer'
       } ${getFieldClasses()}`}
@@ -297,11 +328,7 @@ export function FieldHighlight({
       {/* Filled State: Signature/Initials Image Preview */}
       {isImagePreview && (
         <div className="absolute inset-0.5 flex items-center justify-center overflow-hidden">
-          <img
-            src={filledValue}
-            alt=""
-            className="max-h-full max-w-full object-contain"
-          />
+          <img src={filledValue} alt="" className="max-h-full max-w-full object-contain" />
           <div className="absolute top-0 right-0 bg-green-500 text-white rounded-bl-md p-0.5">
             <Check className="h-2.5 w-2.5" />
           </div>
@@ -330,9 +357,11 @@ export function FieldHighlight({
       {/* Empty/Unfilled State — short label + icon, no help text */}
       {!isFilled && !locked && (
         <div className="absolute inset-0 flex items-center justify-center p-1 overflow-hidden">
-          <div className={`flex items-center gap-1 text-[11px] font-semibold leading-none ${
-            field.required ? 'text-amber-900' : 'text-gray-500'
-          }`}>
+          <div
+            className={`flex items-center gap-1 text-[11px] font-semibold leading-none ${
+              field.required ? 'text-amber-900' : 'text-gray-500'
+            }`}
+          >
             {getFieldIcon()}
             <span className="truncate">{getFieldLabel()}</span>
           </div>

@@ -21,7 +21,10 @@ import {
   type FnaIntakeSession,
 } from '../../../services/fna-intake-api';
 import { fnaKeys } from '../../../utils/queryKeys';
-import type { RetirementFNAInputs, RetirementFNAAdjustments } from '../../admin/modules/retirement-fna/types';
+import type {
+  RetirementFNAInputs,
+  RetirementFNAAdjustments,
+} from '../../admin/modules/retirement-fna/types';
 import type { MedicalFNAInputs } from '../../admin/modules/medical-fna/types';
 import type { InformationGatheringInput } from '../../admin/modules/risk-planning-fna/types';
 import type { TaxPlanningInputs } from '../../admin/modules/tax-planning-fna/types';
@@ -39,9 +42,11 @@ const LazyMedicalStep1 = React.lazy(() =>
 );
 
 const LazyRiskStep1 = React.lazy(() =>
-  import('../../admin/modules/risk-planning-fna/components/Step1InformationGathering').then((m) => ({
-    default: m.Step1InformationGathering,
-  })),
+  import('../../admin/modules/risk-planning-fna/components/Step1InformationGathering').then(
+    (m) => ({
+      default: m.Step1InformationGathering,
+    }),
+  ),
 );
 
 const LazyTaxStep1 = React.lazy(() =>
@@ -213,89 +218,97 @@ export function ClientFNAIntakeWizard({
         <IntakeReadOnlyReview domain={domain} inputs={pendingInputs} />
       ) : (
         <>
-      {domain === 'retirement' && showProjection && (
-        <RetirementIllustrativeProjection inputs={retirementInitial} />
-      )}
-
-      <Suspense
-          fallback={
-            <div className="flex items-center justify-center py-12 text-gray-500">
-              <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-              Loading form…
-            </div>
-          }
-        >
-          {domain === 'retirement' && (
-            <LazyRetirementStep1
-              clientId={clientId}
-              initialData={hasSavedInputs ? retirementInitial : {}}
-              intakeMode
-              hideAssumptionsTab
-              submitLabel="Continue to submit"
-              onSaveDraft={(data, assumptions) => void persistDraft({ ...data, ...assumptions })}
-              onNext={(data: RetirementFNAInputs, assumptions: RetirementFNAAdjustments) =>
-                void handleContinue({ ...data, assumptions })
-              }
-            />
+          {domain === 'retirement' && showProjection && (
+            <RetirementIllustrativeProjection inputs={retirementInitial} />
           )}
 
-          {domain === 'medical' && (
-            <LazyMedicalStep1
-              clientId={clientId}
-              initialData={hasSavedInputs ? medicalInitial : undefined}
-              intakeMode
-              submitLabel="Continue to submit"
-              onSaveDraft={(data: MedicalFNAInputs) => void persistDraft(data as unknown as Record<string, unknown>)}
-              onNext={(data: MedicalFNAInputs) => void handleContinue(data as unknown as Record<string, unknown>)}
-            />
-          )}
+          <Suspense
+            fallback={
+              <div className="flex items-center justify-center py-12 text-gray-500">
+                <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                Loading form…
+              </div>
+            }
+          >
+            {domain === 'retirement' && (
+              <LazyRetirementStep1
+                clientId={clientId}
+                initialData={hasSavedInputs ? retirementInitial : {}}
+                intakeMode
+                hideAssumptionsTab
+                submitLabel="Continue to submit"
+                onSaveDraft={(data, assumptions) => void persistDraft({ ...data, ...assumptions })}
+                onNext={(data: RetirementFNAInputs, assumptions: RetirementFNAAdjustments) =>
+                  void handleContinue({ ...data, assumptions })
+                }
+              />
+            )}
 
-          {domain === 'risk' && (
-            <LazyRiskStep1
-              clientId={clientId}
-              initialData={hasSavedInputs ? riskInitial : undefined}
-              intakeMode
-              submitLabel="Continue to submit"
-              onSaveDraft={(data: InformationGatheringInput) =>
-                void persistDraft(data as unknown as Record<string, unknown>)
-              }
-              onNext={(data: InformationGatheringInput) =>
-                void handleContinue(data as unknown as Record<string, unknown>)
-              }
-            />
-          )}
+            {domain === 'medical' && (
+              <LazyMedicalStep1
+                clientId={clientId}
+                initialData={hasSavedInputs ? medicalInitial : undefined}
+                intakeMode
+                submitLabel="Continue to submit"
+                onSaveDraft={(data: MedicalFNAInputs) =>
+                  void persistDraft(data as unknown as Record<string, unknown>)
+                }
+                onNext={(data: MedicalFNAInputs) =>
+                  void handleContinue(data as unknown as Record<string, unknown>)
+                }
+              />
+            )}
 
-          {domain === 'tax' && (
-            <LazyTaxStep1
-              clientId={clientId}
-              initialData={hasSavedInputs ? taxInitial : {}}
-              intakeMode
-              submitLabel="Continue to submit"
-              onSaveDraft={(data: TaxPlanningInputs) => void persistDraft(data as unknown as Record<string, unknown>)}
-              onNext={(data: TaxPlanningInputs) => void handleContinue(data as unknown as Record<string, unknown>)}
-            />
-          )}
+            {domain === 'risk' && (
+              <LazyRiskStep1
+                clientId={clientId}
+                initialData={hasSavedInputs ? riskInitial : undefined}
+                intakeMode
+                submitLabel="Continue to submit"
+                onSaveDraft={(data: InformationGatheringInput) =>
+                  void persistDraft(data as unknown as Record<string, unknown>)
+                }
+                onNext={(data: InformationGatheringInput) =>
+                  void handleContinue(data as unknown as Record<string, unknown>)
+                }
+              />
+            )}
 
-          {domain === 'investment' && (
-            <InvestmentIntakeStep1
-              initialInputs={pendingInputs}
-              isSaving={isSaving}
-              readOnly={false}
-              onSaveDraft={(inputs) => void persistDraft(inputs)}
-              onContinue={(inputs) => void handleContinue(inputs)}
-            />
-          )}
+            {domain === 'tax' && (
+              <LazyTaxStep1
+                clientId={clientId}
+                initialData={hasSavedInputs ? taxInitial : {}}
+                intakeMode
+                submitLabel="Continue to submit"
+                onSaveDraft={(data: TaxPlanningInputs) =>
+                  void persistDraft(data as unknown as Record<string, unknown>)
+                }
+                onNext={(data: TaxPlanningInputs) =>
+                  void handleContinue(data as unknown as Record<string, unknown>)
+                }
+              />
+            )}
 
-          {domain === 'estate' && (
-            <EstateIntakeStep1
-              initialInputs={pendingInputs}
-              isSaving={isSaving}
-              readOnly={false}
-              onSaveDraft={(inputs) => void persistDraft(inputs)}
-              onContinue={(inputs) => void handleContinue(inputs)}
-            />
-          )}
-        </Suspense>
+            {domain === 'investment' && (
+              <InvestmentIntakeStep1
+                initialInputs={pendingInputs}
+                isSaving={isSaving}
+                readOnly={false}
+                onSaveDraft={(inputs) => void persistDraft(inputs)}
+                onContinue={(inputs) => void handleContinue(inputs)}
+              />
+            )}
+
+            {domain === 'estate' && (
+              <EstateIntakeStep1
+                initialInputs={pendingInputs}
+                isSaving={isSaving}
+                readOnly={false}
+                onSaveDraft={(inputs) => void persistDraft(inputs)}
+                onContinue={(inputs) => void handleContinue(inputs)}
+              />
+            )}
+          </Suspense>
         </>
       )}
 

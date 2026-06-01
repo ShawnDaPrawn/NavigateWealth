@@ -1,10 +1,10 @@
 import React, { Suspense, useEffect, useState } from 'react';
-import { 
-  Sheet, 
-  SheetContent, 
-  SheetHeader, 
-  SheetTitle, 
-  SheetDescription 
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetDescription,
 } from '../../../../ui/sheet';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../../../ui/tabs';
 import { Avatar, AvatarFallback, AvatarImage } from '../../../../ui/avatar';
@@ -27,13 +27,13 @@ const loadClientProfileViewerFull = () =>
   import('../../../ClientProfileViewerFull').then((m) => ({ default: m.ClientProfileViewerFull }));
 const ClientProfileViewerFull = React.lazy(loadClientProfileViewerFull);
 const loadPolicyDetailsSection = () =>
-  import('../../../profile-sections/PolicyDetailsSection').then((m) => ({ default: m.PolicyDetailsSection }));
+  import('../../../profile-sections/PolicyDetailsSection').then((m) => ({
+    default: m.PolicyDetailsSection,
+  }));
 const PolicyDetailsSection = React.lazy(loadPolicyDetailsSection);
-const loadDocumentsTab = () =>
-  import('./DocumentsTab').then((m) => ({ default: m.DocumentsTab }));
+const loadDocumentsTab = () => import('./DocumentsTab').then((m) => ({ default: m.DocumentsTab }));
 const DocumentsTab = React.lazy(loadDocumentsTab);
-const loadSecurityTab = () =>
-  import('./SecurityTab').then((m) => ({ default: m.SecurityTab }));
+const loadSecurityTab = () => import('./SecurityTab').then((m) => ({ default: m.SecurityTab }));
 const SecurityTab = React.lazy(loadSecurityTab);
 const loadComplianceTab = () =>
   import('./ComplianceTab').then((m) => ({ default: m.ComplianceTab }));
@@ -41,8 +41,7 @@ const ComplianceTab = React.lazy(loadComplianceTab);
 const loadCommunicationTab = () =>
   import('./CommunicationTab').then((m) => ({ default: m.CommunicationTab }));
 const CommunicationTab = React.lazy(loadCommunicationTab);
-const loadEsignTab = () =>
-  import('./EsignTab').then((m) => ({ default: m.EsignTab }));
+const loadEsignTab = () => import('./EsignTab').then((m) => ({ default: m.EsignTab }));
 const EsignTab = React.lazy(loadEsignTab);
 const loadClientOverviewTab = () =>
   import('./ClientOverviewTab').then((m) => ({ default: m.ClientOverviewTab }));
@@ -61,7 +60,13 @@ interface ClientDrawerProps {
   canDelete?: boolean;
 }
 
-export function ClientDrawer({ client, open, onOpenChange, canEdit = true, canDelete = true }: ClientDrawerProps) {
+export function ClientDrawer({
+  client,
+  open,
+  onOpenChange,
+  canEdit = true,
+  canDelete = true,
+}: ClientDrawerProps) {
   if (!client) return null;
 
   return (
@@ -123,7 +128,13 @@ type DrawerTab =
  * The Sheet's visual overlay and close-on-X behaviour are unaffected because
  * SheetOverlay always renders and onOpenChange remains wired.
  */
-function ClientDrawerInner({ client, open, onOpenChange, canEdit, canDelete }: ClientDrawerInnerProps) {
+function ClientDrawerInner({
+  client,
+  open,
+  onOpenChange,
+  canEdit,
+  canDelete,
+}: ClientDrawerInnerProps) {
   const queryClient = useQueryClient();
   const unsavedChangesRegistry = useOptionalUnsavedChangesRegistry();
   const [sanctionsScreeningRunning, setSanctionsScreeningRunning] = useState(false);
@@ -179,9 +190,10 @@ function ClientDrawerInner({ client, open, onOpenChange, canEdit, canDelete }: C
     }
 
     let cancelled = false;
-    const wait = (ms: number) => new Promise<void>((resolve) => {
-      window.setTimeout(resolve, ms);
-    });
+    const wait = (ms: number) =>
+      new Promise<void>((resolve) => {
+        window.setTimeout(resolve, ms);
+      });
 
     const preloadSequence: Array<() => Promise<unknown>> = [
       () => queryClient.prefetchQuery(getClientProfileQueryOptions(client.id)),
@@ -192,17 +204,19 @@ function ClientDrawerInner({ client, open, onOpenChange, canEdit, canDelete }: C
       async () => {
         await loadDocumentsTab();
       },
-      () => queryClient.prefetchQuery({
-        queryKey: noteKeys.clientNotes(client.id),
-        queryFn: () => NotesAPI.getClientNotes(client.id),
-        staleTime: NOTES_STALE_TIME,
-      }),
+      () =>
+        queryClient.prefetchQuery({
+          queryKey: noteKeys.clientNotes(client.id),
+          queryFn: () => NotesAPI.getClientNotes(client.id),
+          staleTime: NOTES_STALE_TIME,
+        }),
       () => loadClientNotesTab(),
-      () => queryClient.prefetchQuery({
-        queryKey: clientKeys.communicationLogs(client.id),
-        queryFn: () => communicationApi.getClientLogs(client.id),
-        staleTime: 60 * 1000,
-      }),
+      () =>
+        queryClient.prefetchQuery({
+          queryKey: clientKeys.communicationLogs(client.id),
+          queryFn: () => communicationApi.getClientLogs(client.id),
+          staleTime: 60 * 1000,
+        }),
       () => loadCommunicationTab(),
       () => loadSecurityTab(),
       async () => {
@@ -255,23 +269,22 @@ function ClientDrawerInner({ client, open, onOpenChange, canEdit, canDelete }: C
               <Avatar className="h-10 w-10">
                 <AvatarImage src="/api/placeholder/40/40" />
                 <AvatarFallback>
-                  {client.firstName[0]}{client.lastName[0]}
+                  {client.firstName[0]}
+                  {client.lastName[0]}
                 </AvatarFallback>
               </Avatar>
               <div>
-                <div>{client.firstName} {client.lastName}</div>
+                <div>
+                  {client.firstName} {client.lastName}
+                </div>
                 <div className="text-sm text-muted-foreground font-normal">
-                  {client.preferredName !== client.firstName && 
-                    `"${client.preferredName}" • `
-                  }
+                  {client.preferredName !== client.firstName && `"${client.preferredName}" • `}
                   Client ID: {client.id}
                 </div>
               </div>
             </div>
           </SheetTitle>
-          <SheetDescription>
-            Complete client profile and management tools
-          </SheetDescription>
+          <SheetDescription>Complete client profile and management tools</SheetDescription>
         </SheetHeader>
 
         {/* MAIN TABS - Level 1: Primary Navigation
@@ -320,7 +333,13 @@ function ClientDrawerInner({ client, open, onOpenChange, canEdit, canDelete }: C
           {/* 2. Policy Details Section */}
           <TabsContent value="policies" className="space-y-4">
             <Suspense fallback={<TabPanelFallback />}>
-              <PolicyDetailsSection selectedClient={client as unknown as React.ComponentProps<typeof PolicyDetailsSection>['selectedClient']} />
+              <PolicyDetailsSection
+                selectedClient={
+                  client as unknown as React.ComponentProps<
+                    typeof PolicyDetailsSection
+                  >['selectedClient']
+                }
+              />
             </Suspense>
           </TabsContent>
 
@@ -353,7 +372,7 @@ function ClientDrawerInner({ client, open, onOpenChange, canEdit, canDelete }: C
           {/* 7. Compliance Section */}
           <TabsContent value="compliance" className="space-y-4">
             <Suspense fallback={<TabPanelFallback />}>
-              <ComplianceTab 
+              <ComplianceTab
                 selectedClient={client}
                 sanctionsScreeningRunning={sanctionsScreeningRunning}
                 onRunSanctionsScreening={handleSanctionsScreening}

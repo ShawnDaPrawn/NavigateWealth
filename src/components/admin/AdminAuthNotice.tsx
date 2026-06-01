@@ -19,7 +19,7 @@ export function AdminAuthNotice() {
       <AlertCircle className="h-4 w-4 text-yellow-600" />
       <AlertDescription className="ml-2 flex items-center justify-between">
         <span className="text-yellow-800">
-          {!isAuthenticated 
+          {!isAuthenticated
             ? 'Please log in as an administrator to access admin features.'
             : 'Admin privileges required. Please log in with an admin account.'}
         </span>

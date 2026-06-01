@@ -1,6 +1,6 @@
 /**
  * Publications Feature - EmptyState Component
- * 
+ *
  * Displays empty state with optional action button.
  */
 
@@ -17,13 +17,13 @@ interface EmptyStateProps {
   fullPage?: boolean;
 }
 
-export function EmptyState({ 
+export function EmptyState({
   icon,
-  title, 
+  title,
   description,
   actionLabel,
   onAction,
-  fullPage = false 
+  fullPage = false,
 }: EmptyStateProps) {
   const containerClasses = fullPage
     ? 'flex flex-col items-center justify-center min-h-[400px]'
@@ -36,13 +36,11 @@ export function EmptyState({
       <div className="flex items-center justify-center w-20 h-20 bg-gray-100 rounded-full mb-4">
         {icon || defaultIcon}
       </div>
-      
+
       <h3 className="text-lg mb-2 text-gray-900">{title}</h3>
-      
-      {description && (
-        <p className="text-gray-600 text-center mb-6 max-w-md">{description}</p>
-      )}
-      
+
+      {description && <p className="text-gray-600 text-center mb-6 max-w-md">{description}</p>}
+
       {actionLabel && onAction && (
         <Button onClick={onAction}>
           <Plus className="w-4 h-4 mr-2" />
@@ -56,10 +54,10 @@ export function EmptyState({
 /**
  * Compact empty state for tables/lists
  */
-export function EmptyList({ 
+export function EmptyList({
   message = 'No items found',
-  className
-}: { 
+  className,
+}: {
   message?: string;
   className?: string;
 }) {

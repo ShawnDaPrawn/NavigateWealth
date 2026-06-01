@@ -13,11 +13,7 @@ import type {
   FrontendApplicationStatus,
   AdminApprovalNotificationData,
 } from './types.ts';
-import {
-  STATUS_MAP,
-  COMPLETION_PERCENTAGE,
-  DEFAULT_ACCOUNT_TYPE,
-} from './constants.ts';
+import { STATUS_MAP, COMPLETION_PERCENTAGE, DEFAULT_ACCOUNT_TYPE } from './constants.ts';
 
 // ============================================================================
 // Status Mapping Functions
@@ -26,8 +22,10 @@ import {
 /**
  * Map backend status to frontend status
  */
-export function mapStatusToFrontend(backendStatus: BackendApplicationStatus): FrontendApplicationStatus {
-  return STATUS_MAP[backendStatus] || backendStatus as FrontendApplicationStatus;
+export function mapStatusToFrontend(
+  backendStatus: BackendApplicationStatus,
+): FrontendApplicationStatus {
+  return STATUS_MAP[backendStatus] || (backendStatus as FrontendApplicationStatus);
 }
 
 /**
@@ -46,13 +44,15 @@ export function getCompletionPercentage(status: BackendApplicationStatus): numbe
  */
 export async function enrichApplication(
   application: DatabaseApplication,
-  supabase: SupabaseClient
+  supabase: SupabaseClient,
 ): Promise<EnrichedApplication> {
   // Get user email from auth
-  const { data: { user } } = await supabase.auth.admin.getUserById(application.user_id);
-  
-  const appData = application.application_data || {} as ApplicationData;
-  
+  const {
+    data: { user },
+  } = await supabase.auth.admin.getUserById(application.user_id);
+
+  const appData = application.application_data || ({} as ApplicationData);
+
   return {
     id: application.id,
     userId: application.user_id,
@@ -75,11 +75,11 @@ export async function enrichApplication(
  */
 export async function enrichApplicationWithDetails(
   application: DatabaseApplication,
-  supabase: SupabaseClient
+  supabase: SupabaseClient,
 ): Promise<DetailedApplication> {
   const baseEnriched = await enrichApplication(application, supabase);
-  const appData = application.application_data || {} as ApplicationData;
-  
+  const appData = application.application_data || ({} as ApplicationData);
+
   return {
     ...baseEnriched,
     personalInfo: {
@@ -123,14 +123,26 @@ export async function enrichApplicationWithDetails(
  * Check if application can be approved (must be in submitted, pending, or invited status)
  */
 export function canApproveApplication(status: BackendApplicationStatus): boolean {
-  return status === 'submitted' || status === 'pending' || status === 'invited' || status === 'draft' || status === 'in_progress';
+  return (
+    status === 'submitted' ||
+    status === 'pending' ||
+    status === 'invited' ||
+    status === 'draft' ||
+    status === 'in_progress'
+  );
 }
 
 /**
  * Check if application can be declined (must be in submitted, pending, or invited status)
  */
 export function canDeclineApplication(status: BackendApplicationStatus): boolean {
-  return status === 'submitted' || status === 'pending' || status === 'invited' || status === 'draft' || status === 'in_progress';
+  return (
+    status === 'submitted' ||
+    status === 'pending' ||
+    status === 'invited' ||
+    status === 'draft' ||
+    status === 'in_progress'
+  );
 }
 
 /**
@@ -138,20 +150,20 @@ export function canDeclineApplication(status: BackendApplicationStatus): boolean
  */
 export function validateStatusTransition(
   currentStatus: BackendApplicationStatus,
-  newStatus: BackendApplicationStatus
+  newStatus: BackendApplicationStatus,
 ): { valid: boolean; error?: string } {
   // Define valid transitions
   const validTransitions: Record<BackendApplicationStatus, BackendApplicationStatus[]> = {
-    'draft': ['in_progress', 'submitted', 'approved', 'declined'],
-    'in_progress': ['submitted', 'approved', 'declined'],
-    'pending': ['approved', 'declined'],
-    'submitted': ['approved', 'declined'],
-    'approved': [],
-    'declined': [],
+    draft: ['in_progress', 'submitted', 'approved', 'declined'],
+    in_progress: ['submitted', 'approved', 'declined'],
+    pending: ['approved', 'declined'],
+    submitted: ['approved', 'declined'],
+    approved: [],
+    declined: [],
   };
 
   const allowedTransitions = validTransitions[currentStatus] || [];
-  
+
   if (!allowedTransitions.includes(newStatus)) {
     return {
       valid: false,
@@ -202,9 +214,12 @@ export function buildDeclineMetadata(appData: ApplicationData) {
  * is pre-populated with all data they provided during onboarding —
  * so the admin doesn't have to re-enter it.
  */
-export function buildClientProfileFromApplication(appData: ApplicationData): Record<string, unknown> {
+export function buildClientProfileFromApplication(
+  appData: ApplicationData,
+): Record<string, unknown> {
   // Build employers array from application employment data
-  const employers: Array<{ id: string; jobTitle: string; employerName: string; industry: string }> = [];
+  const employers: Array<{ id: string; jobTitle: string; employerName: string; industry: string }> =
+    [];
   if (
     (appData.employmentStatus === 'employed' || appData.employmentStatus === 'contract') &&
     (appData.jobTitle || appData.employerName)
@@ -231,7 +246,7 @@ export function buildClientProfileFromApplication(appData: ApplicationData): Rec
       id: crypto.randomUUID(),
       type: appData.idType === 'sa_id' ? 'national-id' : 'passport',
       number: appData.idNumber,
-      countryOfIssue: appData.idType === 'sa_id' ? 'South Africa' : (appData.nationality || ''),
+      countryOfIssue: appData.idType === 'sa_id' ? 'South Africa' : appData.nationality || '',
       expiryDate: '',
       isVerified: false,
     });
@@ -276,7 +291,7 @@ export function buildClientProfileFromApplication(appData: ApplicationData): Rec
     idNumber: appData.idType === 'sa_id' ? appData.idNumber : '',
     idCountry: appData.idType === 'sa_id' ? 'South Africa' : '',
     passportNumber: appData.idType === 'passport' ? appData.idNumber : '',
-    passportCountry: appData.idType === 'passport' ? (appData.nationality || '') : '',
+    passportCountry: appData.idType === 'passport' ? appData.nationality || '' : '',
     identityDocuments,
 
     // Contact
@@ -341,9 +356,20 @@ export function buildClientProfileFromApplication(appData: ApplicationData): Rec
     smokerStatus: false,
     hasChronicConditions: false,
     riskAssessment: {
-      question1: 0, question2: 0, question3: 0, question4: 0, question5: 0,
-      question6: 0, question7: 0, question8: 0, question9: 0, question10: 0,
-      totalScore: 0, riskCategory: '', dateCompleted: '', canRetake: true,
+      question1: 0,
+      question2: 0,
+      question3: 0,
+      question4: 0,
+      question5: 0,
+      question6: 0,
+      question7: 0,
+      question8: 0,
+      question9: 0,
+      question10: 0,
+      totalScore: 0,
+      riskCategory: '',
+      dateCompleted: '',
+      canRetake: true,
     },
 
     // Application metadata (useful for admin reference)
@@ -376,7 +402,7 @@ export function buildClientProfileFromApplication(appData: ApplicationData): Rec
 export function extractApprovalEmailData(
   email: string,
   appData: ApplicationData,
-  applicationId: string
+  applicationId: string,
 ) {
   return {
     to: email,
@@ -392,7 +418,7 @@ export function extractDeclineEmailData(
   email: string,
   appData: ApplicationData,
   reason: string,
-  applicationId: string
+  applicationId: string,
 ) {
   return {
     to: email,
@@ -409,7 +435,7 @@ export function extractAdminNotificationData(
   email: string,
   appData: ApplicationData,
   applicationId: string,
-  approvedBy: string
+  approvedBy: string,
 ): AdminApprovalNotificationData {
   return {
     applicationNumber: applicationId,
@@ -433,12 +459,12 @@ export function extractAdminNotificationData(
  */
 export function parseSortParams(sortBy?: string, sortOrder?: string) {
   const SORT_COLUMN_MAP: Record<string, string> = {
-    'submittedAt': 'submitted_at',
-    'createdAt': 'created_at',
-    'updatedAt': 'updated_at',
-    'submitted_at': 'submitted_at',
-    'created_at': 'created_at',
-    'updated_at': 'updated_at',
+    submittedAt: 'submitted_at',
+    createdAt: 'created_at',
+    updatedAt: 'updated_at',
+    submitted_at: 'submitted_at',
+    created_at: 'created_at',
+    updated_at: 'updated_at',
   };
 
   const column = SORT_COLUMN_MAP[sortBy || 'submitted_at'] || 'submitted_at';
@@ -454,14 +480,21 @@ export function parseStatusFilter(status?: string): BackendApplicationStatus[] |
   if (!status || status === 'all') {
     return ['pending', 'submitted', 'approved', 'declined']; // Default: show all submitted/reviewed applications
   }
-  
+
   // Validate status is a valid backend status
-  const validStatuses: BackendApplicationStatus[] = ['draft', 'in_progress', 'pending', 'submitted', 'approved', 'declined'];
-  
+  const validStatuses: BackendApplicationStatus[] = [
+    'draft',
+    'in_progress',
+    'pending',
+    'submitted',
+    'approved',
+    'declined',
+  ];
+
   if (validStatuses.includes(status as BackendApplicationStatus)) {
     return [status as BackendApplicationStatus];
   }
-  
+
   // Invalid status, return default
   return ['pending', 'submitted', 'approved', 'declined'];
 }

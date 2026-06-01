@@ -28,8 +28,7 @@ export const TEXTAREA_CLASS =
 export const LABEL_CLASS = 'text-sm font-semibold text-gray-800';
 
 /** Section container — white card with clear border and subtle shadow */
-export const SECTION_CONTAINER_CLASS =
-  'bg-white border border-gray-200 rounded-xl p-5 shadow-sm';
+export const SECTION_CONTAINER_CLASS = 'bg-white border border-gray-200 rounded-xl p-5 shadow-sm';
 
 /** Section container with internal spacing */
 export const SECTION_CONTAINER_SPACED_CLASS =

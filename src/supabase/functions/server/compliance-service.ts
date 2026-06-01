@@ -23,36 +23,36 @@ function generateId(): string {
 }
 
 export class ComplianceService {
-  
   // ========================================================================
   // FAIS COMPLIANCE
   // ========================================================================
-  
+
   /**
    * Get all FAIS records
    */
   async getFAISRecords(): Promise<FAISRecord[]> {
     const records = await kv.getByPrefix('compliance_fais:');
-    
+
     if (!records || records.length === 0) {
       return [];
     }
-    
+
     // Sort by created date (newest first)
-    records.sort((a: FAISRecord, b: FAISRecord) =>
-      new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+    records.sort(
+      (a: FAISRecord, b: FAISRecord) =>
+        new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),
     );
-    
+
     return records;
   }
-  
+
   /**
    * Create FAIS compliance record
    */
   async createFAISRecord(data: Partial<FAISRecord>): Promise<FAISRecord> {
     const recordId = generateId();
     const timestamp = new Date().toISOString();
-    
+
     const record: FAISRecord = {
       id: recordId,
       adviser_id: data.adviser_id!,
@@ -64,46 +64,47 @@ export class ComplianceService {
       created_at: timestamp,
       updated_at: timestamp,
     };
-    
+
     await kv.set(`compliance_fais:${recordId}`, record);
-    
+
     log.success('FAIS record created', { recordId });
-    
+
     return record;
   }
-  
+
   // ========================================================================
   // AML (ANTI-MONEY LAUNDERING)
   // ========================================================================
-  
+
   /**
    * Get all AML checks
    */
   async getAMLChecks(): Promise<AMLCheck[]> {
     const checks = await kv.getByPrefix('compliance_aml:');
-    
+
     if (!checks || checks.length === 0) {
       return [];
     }
-    
+
     // Sort by check date (newest first)
-    checks.sort((a: AMLCheck, b: AMLCheck) =>
-      new Date(b.checked_at).getTime() - new Date(a.checked_at).getTime()
+    checks.sort(
+      (a: AMLCheck, b: AMLCheck) =>
+        new Date(b.checked_at).getTime() - new Date(a.checked_at).getTime(),
     );
-    
+
     return checks;
   }
-  
+
   /**
    * Perform AML check
    */
   async performAMLCheck(clientId: string, performedBy: string): Promise<AMLCheck> {
     const checkId = generateId();
     const timestamp = new Date().toISOString();
-    
+
     // TODO: Integrate with actual AML service provider
     // For now, create a placeholder check
-    
+
     const check: AMLCheck = {
       id: checkId,
       client_id: clientId,
@@ -114,18 +115,18 @@ export class ComplianceService {
       checked_by: performedBy,
       notes: 'Automated AML check completed',
     };
-    
+
     await kv.set(`compliance_aml:${checkId}`, check);
-    
+
     log.success('AML check performed', { checkId, clientId });
-    
+
     return check;
   }
-  
+
   // ========================================================================
   // POPIA (PRIVACY)
   // ========================================================================
-  
+
   /**
    * Get all POPIA consents
    */
@@ -133,14 +134,14 @@ export class ComplianceService {
     const consents = await kv.getByPrefix('compliance_popia:');
     return consents || [];
   }
-  
+
   /**
    * Record POPIA consent
    */
   async recordPOPIAConsent(userId: string, data: Partial<POPIAConsent>): Promise<POPIAConsent> {
     const consentId = generateId();
     const timestamp = new Date().toISOString();
-    
+
     const consent: POPIAConsent = {
       id: consentId,
       user_id: userId,
@@ -150,14 +151,14 @@ export class ComplianceService {
       ip_address: data.ip_address,
       user_agent: data.user_agent,
     };
-    
+
     await kv.set(`compliance_popia:${consentId}`, consent);
-    
+
     log.success('POPIA consent recorded', { consentId, userId });
-    
+
     return consent;
   }
-  
+
   /**
    * Withdraw POPIA consent
    */
@@ -165,41 +166,42 @@ export class ComplianceService {
     // Find user's consents
     const consents = await kv.getByPrefix('compliance_popia:');
     const userConsents = consents?.filter((c: POPIAConsent) => c.user_id === userId) || [];
-    
+
     // Mark as withdrawn
     for (const consent of userConsents) {
       consent.consented = false;
       consent.withdrawn_date = new Date().toISOString();
       await kv.set(`compliance_popia:${consent.id}`, consent);
     }
-    
+
     log.warn('POPIA consent withdrawn', { userId });
-    
+
     return { success: true };
   }
-  
+
   // ========================================================================
   // DEBARMENT CHECKS
   // ========================================================================
-  
+
   /**
    * Get all debarment checks
    */
   async getDebarmentChecks(): Promise<DebarmentCheck[]> {
     const checks = await kv.getByPrefix('compliance_debarment:');
-    
+
     if (!checks || checks.length === 0) {
       return [];
     }
-    
+
     // Sort by check date (newest first)
-    checks.sort((a: DebarmentCheck, b: DebarmentCheck) =>
-      new Date(b.checked_at).getTime() - new Date(a.checked_at).getTime()
+    checks.sort(
+      (a: DebarmentCheck, b: DebarmentCheck) =>
+        new Date(b.checked_at).getTime() - new Date(a.checked_at).getTime(),
     );
-    
+
     return checks;
   }
-  
+
   /**
    * Perform debarment check
    */
@@ -207,14 +209,14 @@ export class ComplianceService {
     adviserId: string,
     name: string,
     idNumber: string,
-    performedBy: string
+    performedBy: string,
   ): Promise<DebarmentCheck> {
     const checkId = generateId();
     const timestamp = new Date().toISOString();
-    
+
     // TODO: Integrate with FSCA debarment list
     // For now, create a placeholder check
-    
+
     const check: DebarmentCheck = {
       id: checkId,
       adviser_id: adviserId,
@@ -225,24 +227,24 @@ export class ComplianceService {
       checked_by: performedBy,
       notes: 'No match found on FSCA debarment list',
     };
-    
+
     await kv.set(`compliance_debarment:${checkId}`, check);
-    
+
     log.success('Debarment check performed', { checkId, adviserId });
-    
+
     return check;
   }
-  
+
   // ========================================================================
   // DOCUMENTS & INSURANCE
   // ========================================================================
-  
+
   /**
    * Get all documents & insurance records
    */
   async getDocumentsInsuranceRecords(): Promise<DocumentsInsuranceRecord[]> {
     const records = await kv.getByPrefix('compliance_doc_insurance:');
-    
+
     if (!records || records.length === 0) {
       // Return mock data if empty for initial setup
       return [
@@ -257,7 +259,7 @@ export class ComplianceService {
           due: '2025-01-01',
           status: 'active',
           created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString()
+          updated_at: new Date().toISOString(),
         },
         {
           id: 'ins-1',
@@ -271,26 +273,29 @@ export class ComplianceService {
           due: '2025-03-01',
           status: 'active',
           created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString()
-        }
+          updated_at: new Date().toISOString(),
+        },
       ];
     }
-    
+
     // Sort by effective date (newest first)
-    records.sort((a: DocumentsInsuranceRecord, b: DocumentsInsuranceRecord) =>
-      new Date(b.effectiveDate).getTime() - new Date(a.effectiveDate).getTime()
+    records.sort(
+      (a: DocumentsInsuranceRecord, b: DocumentsInsuranceRecord) =>
+        new Date(b.effectiveDate).getTime() - new Date(a.effectiveDate).getTime(),
     );
-    
+
     return records;
   }
-  
+
   /**
    * Create documents & insurance record
    */
-  async createDocumentsInsuranceRecord(data: Partial<DocumentsInsuranceRecord>): Promise<DocumentsInsuranceRecord> {
+  async createDocumentsInsuranceRecord(
+    data: Partial<DocumentsInsuranceRecord>,
+  ): Promise<DocumentsInsuranceRecord> {
     const recordId = generateId();
     const timestamp = new Date().toISOString();
-    
+
     const record: DocumentsInsuranceRecord = {
       id: recordId,
       title: data.title!,
@@ -306,18 +311,18 @@ export class ComplianceService {
       created_at: timestamp,
       updated_at: timestamp,
     };
-    
+
     await kv.set(`compliance_doc_insurance:${recordId}`, record);
-    
+
     log.success('Documents & insurance record created', { recordId });
-    
+
     return record;
   }
 
   // ========================================================================
   // REPORTS
   // ========================================================================
-  
+
   /**
    * Get compliance summary
    */
@@ -326,24 +331,24 @@ export class ComplianceService {
     const amlChecks = await this.getAMLChecks();
     const popiaConsents = await this.getPOPIAConsents();
     const debarmentChecks = await this.getDebarmentChecks();
-    
+
     // Count active/valid records
-    const activeFAIS = faisRecords.filter(r => r.status === 'active').length;
-    const recentAML = amlChecks.filter(c => {
+    const activeFAIS = faisRecords.filter((r) => r.status === 'active').length;
+    const recentAML = amlChecks.filter((c) => {
       const checkDate = new Date(c.checked_at);
       const sixMonthsAgo = new Date();
       sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
       return checkDate >= sixMonthsAgo;
     }).length;
-    
-    const activeConsents = popiaConsents.filter(c => c.consented).length;
-    const recentDebarment = debarmentChecks.filter(c => {
+
+    const activeConsents = popiaConsents.filter((c) => c.consented).length;
+    const recentDebarment = debarmentChecks.filter((c) => {
       const checkDate = new Date(c.checked_at);
       const threeMonthsAgo = new Date();
       threeMonthsAgo.setMonth(threeMonthsAgo.getMonth() - 3);
       return checkDate >= threeMonthsAgo;
     }).length;
-    
+
     return {
       fais: {
         total: faisRecords.length,
@@ -353,7 +358,7 @@ export class ComplianceService {
       aml: {
         total: amlChecks.length,
         recent: recentAML,
-        clear: amlChecks.filter(c => c.status === 'clear').length,
+        clear: amlChecks.filter((c) => c.status === 'clear').length,
       },
       popia: {
         total: popiaConsents.length,
@@ -363,44 +368,51 @@ export class ComplianceService {
       debarment: {
         total: debarmentChecks.length,
         recent: recentDebarment,
-        clear: debarmentChecks.filter(c => c.status === 'clear').length,
+        clear: debarmentChecks.filter((c) => c.status === 'clear').length,
       },
       lastUpdated: new Date().toISOString(),
     };
   }
-  
+
   /**
    * Get audit trail
    */
-  async getAuditTrail(filters?: { startDate?: string; endDate?: string }): Promise<Array<Record<string, unknown> & { event_type: string; timestamp: string }>> {
+  async getAuditTrail(filters?: {
+    startDate?: string;
+    endDate?: string;
+  }): Promise<Array<Record<string, unknown> & { event_type: string; timestamp: string }>> {
     // Collect all compliance events
     const events: Array<Record<string, unknown> & { event_type: string; timestamp: string }> = [];
-    
+
     const faisRecords = await this.getFAISRecords();
     const amlChecks = await this.getAMLChecks();
     const popiaConsents = await this.getPOPIAConsents();
     const debarmentChecks = await this.getDebarmentChecks();
-    
+
     // Add all events with type
-    faisRecords.forEach(r => events.push({ ...r, event_type: 'fais', timestamp: r.created_at }));
-    amlChecks.forEach(c => events.push({ ...c, event_type: 'aml', timestamp: c.checked_at }));
-    popiaConsents.forEach(c => events.push({ ...c, event_type: 'popia', timestamp: c.consent_date }));
-    debarmentChecks.forEach(c => events.push({ ...c, event_type: 'debarment', timestamp: c.checked_at }));
-    
+    faisRecords.forEach((r) => events.push({ ...r, event_type: 'fais', timestamp: r.created_at }));
+    amlChecks.forEach((c) => events.push({ ...c, event_type: 'aml', timestamp: c.checked_at }));
+    popiaConsents.forEach((c) =>
+      events.push({ ...c, event_type: 'popia', timestamp: c.consent_date }),
+    );
+    debarmentChecks.forEach((c) =>
+      events.push({ ...c, event_type: 'debarment', timestamp: c.checked_at }),
+    );
+
     // Filter by date range
     let filtered = events;
-    
+
     if (filters?.startDate) {
-      filtered = filtered.filter(e => new Date(e.timestamp) >= new Date(filters.startDate!));
+      filtered = filtered.filter((e) => new Date(e.timestamp) >= new Date(filters.startDate!));
     }
-    
+
     if (filters?.endDate) {
-      filtered = filtered.filter(e => new Date(e.timestamp) <= new Date(filters.endDate!));
+      filtered = filtered.filter((e) => new Date(e.timestamp) <= new Date(filters.endDate!));
     }
-    
+
     // Sort by timestamp (newest first)
     filtered.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
-    
+
     return filtered;
   }
 
@@ -422,7 +434,10 @@ export class ComplianceService {
     return record;
   }
 
-  async updateAMLFICARecord(id: string, data: Record<string, unknown>): Promise<Record<string, unknown>> {
+  async updateAMLFICARecord(
+    id: string,
+    data: Record<string, unknown>,
+  ): Promise<Record<string, unknown>> {
     const existing = await kv.get(`compliance_aml_fica:${id}`);
     const updated = { ...(existing || {}), ...data, id, lastReview: new Date().toISOString() };
     await kv.set(`compliance_aml_fica:${id}`, updated);
@@ -447,7 +462,10 @@ export class ComplianceService {
     return record;
   }
 
-  async updateStatutoryRecord(id: string, data: Record<string, unknown>): Promise<Record<string, unknown>> {
+  async updateStatutoryRecord(
+    id: string,
+    data: Record<string, unknown>,
+  ): Promise<Record<string, unknown>> {
     const existing = await kv.get(`compliance_statutory:${id}`);
     const updated = { ...(existing || {}), ...data, id, lastReview: new Date().toISOString() };
     await kv.set(`compliance_statutory:${id}`, updated);
@@ -475,7 +493,12 @@ export class ComplianceService {
 
   async withdrawPOPIAConsentRecord(id: string): Promise<Record<string, unknown>> {
     const existing = await kv.get(`compliance_popia:${id}`);
-    const updated = { ...(existing || {}), id, consented: false, withdrawnDate: new Date().toISOString() };
+    const updated = {
+      ...(existing || {}),
+      id,
+      consented: false,
+      withdrawnDate: new Date().toISOString(),
+    };
     await kv.set(`compliance_popia:${id}`, updated);
     return updated;
   }
@@ -492,13 +515,22 @@ export class ComplianceService {
   async createPAIARequest(data: Record<string, unknown>): Promise<Record<string, unknown>> {
     const id = generateId();
     const timestamp = new Date().toISOString();
-    const record = { id, ...data, receivedDate: timestamp, created: timestamp, status: data.status || 'received' };
+    const record = {
+      id,
+      ...data,
+      receivedDate: timestamp,
+      created: timestamp,
+      status: data.status || 'received',
+    };
     await kv.set(`compliance_paia:${id}`, record);
     log.success('PAIA request created', { id });
     return record;
   }
 
-  async updatePAIARequest(id: string, data: Record<string, unknown>): Promise<Record<string, unknown>> {
+  async updatePAIARequest(
+    id: string,
+    data: Record<string, unknown>,
+  ): Promise<Record<string, unknown>> {
     const existing = await kv.get(`compliance_paia:${id}`);
     const updated = { ...(existing || {}), ...data, id };
     await kv.set(`compliance_paia:${id}`, updated);
@@ -525,7 +557,12 @@ export class ComplianceService {
 
   async markRecordForDisposal(id: string): Promise<Record<string, unknown>> {
     const existing = await kv.get(`compliance_record_keeping:${id}`);
-    const updated = { ...(existing || {}), id, disposalRequired: true, disposedDate: new Date().toISOString() };
+    const updated = {
+      ...(existing || {}),
+      id,
+      disposalRequired: true,
+      disposedDate: new Date().toISOString(),
+    };
     await kv.set(`compliance_record_keeping:${id}`, updated);
     return updated;
   }
@@ -542,13 +579,21 @@ export class ComplianceService {
   async createNewBusinessRecord(data: Record<string, unknown>): Promise<Record<string, unknown>> {
     const id = generateId();
     const timestamp = new Date().toISOString();
-    const record = { id, ...data, created: timestamp, applicationDate: data.applicationDate || timestamp };
+    const record = {
+      id,
+      ...data,
+      created: timestamp,
+      applicationDate: data.applicationDate || timestamp,
+    };
     await kv.set(`compliance_new_business:${id}`, record);
     log.success('New business record created', { id });
     return record;
   }
 
-  async updateNewBusinessRecord(id: string, data: Record<string, unknown>): Promise<Record<string, unknown>> {
+  async updateNewBusinessRecord(
+    id: string,
+    data: Record<string, unknown>,
+  ): Promise<Record<string, unknown>> {
     const existing = await kv.get(`compliance_new_business:${id}`);
     const updated = { ...(existing || {}), ...data, id };
     await kv.set(`compliance_new_business:${id}`, updated);
@@ -571,29 +616,56 @@ export class ComplianceService {
   async createComplaint(data: Record<string, unknown>): Promise<Record<string, unknown>> {
     const id = generateId();
     const timestamp = new Date().toISOString();
-    const record = { id, ...data, receivedDate: timestamp, created: timestamp, status: data.status || 'received' };
+    const record = {
+      id,
+      ...data,
+      receivedDate: timestamp,
+      created: timestamp,
+      status: data.status || 'received',
+    };
     await kv.set(`compliance_complaints:${id}`, record);
     log.success('Complaint created', { id });
     return record;
   }
 
-  async updateComplaint(id: string, data: Record<string, unknown>): Promise<Record<string, unknown>> {
+  async updateComplaint(
+    id: string,
+    data: Record<string, unknown>,
+  ): Promise<Record<string, unknown>> {
     const existing = await kv.get(`compliance_complaints:${id}`);
     const updated = { ...(existing || {}), ...data, id };
     await kv.set(`compliance_complaints:${id}`, updated);
     return updated;
   }
 
-  async resolveComplaint(id: string, resolution: string, outcome: string): Promise<Record<string, unknown>> {
+  async resolveComplaint(
+    id: string,
+    resolution: string,
+    outcome: string,
+  ): Promise<Record<string, unknown>> {
     const existing = await kv.get(`compliance_complaints:${id}`);
-    const updated = { ...(existing || {}), id, status: 'resolved', resolution, outcome, resolvedDate: new Date().toISOString() };
+    const updated = {
+      ...(existing || {}),
+      id,
+      status: 'resolved',
+      resolution,
+      outcome,
+      resolvedDate: new Date().toISOString(),
+    };
     await kv.set(`compliance_complaints:${id}`, updated);
     return updated;
   }
 
   async escalateComplaint(id: string, escalatedTo: string): Promise<Record<string, unknown>> {
     const existing = await kv.get(`compliance_complaints:${id}`);
-    const updated = { ...(existing || {}), id, status: 'escalated', escalated: true, escalatedTo, escalatedDate: new Date().toISOString() };
+    const updated = {
+      ...(existing || {}),
+      id,
+      status: 'escalated',
+      escalated: true,
+      escalatedTo,
+      escalatedDate: new Date().toISOString(),
+    };
     await kv.set(`compliance_complaints:${id}`, updated);
     return updated;
   }
@@ -618,7 +690,13 @@ export class ComplianceService {
 
   async approveMarketingRecord(id: string, approvedBy: string): Promise<Record<string, unknown>> {
     const existing = await kv.get(`compliance_marketing:${id}`);
-    const updated = { ...(existing || {}), id, approved: true, approvedBy, approvalDate: new Date().toISOString() };
+    const updated = {
+      ...(existing || {}),
+      id,
+      approved: true,
+      approvedBy,
+      approvalDate: new Date().toISOString(),
+    };
     await kv.set(`compliance_marketing:${id}`, updated);
     return updated;
   }
@@ -641,7 +719,10 @@ export class ComplianceService {
     return record;
   }
 
-  async updateConflictRecord(id: string, data: Record<string, unknown>): Promise<Record<string, unknown>> {
+  async updateConflictRecord(
+    id: string,
+    data: Record<string, unknown>,
+  ): Promise<Record<string, unknown>> {
     const existing = await kv.get(`compliance_conflicts:${id}`);
     const updated = { ...(existing || {}), ...data, id, lastReview: new Date().toISOString() };
     await kv.set(`compliance_conflicts:${id}`, updated);
@@ -666,7 +747,10 @@ export class ComplianceService {
     return record;
   }
 
-  async updateTCFRecord(id: string, data: Record<string, unknown>): Promise<Record<string, unknown>> {
+  async updateTCFRecord(
+    id: string,
+    data: Record<string, unknown>,
+  ): Promise<Record<string, unknown>> {
     const existing = await kv.get(`compliance_tcf:${id}`);
     const updated = { ...(existing || {}), ...data, id, lastReview: new Date().toISOString() };
     await kv.set(`compliance_tcf:${id}`, updated);
@@ -691,7 +775,10 @@ export class ComplianceService {
     return record;
   }
 
-  async updateSupervisionRecord(id: string, data: Record<string, unknown>): Promise<Record<string, unknown>> {
+  async updateSupervisionRecord(
+    id: string,
+    data: Record<string, unknown>,
+  ): Promise<Record<string, unknown>> {
     const existing = await kv.get(`compliance_supervision:${id}`);
     const updated = { ...(existing || {}), ...data, id };
     await kv.set(`compliance_supervision:${id}`, updated);

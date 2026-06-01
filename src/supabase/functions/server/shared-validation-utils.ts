@@ -1,6 +1,6 @@
 /**
  * Shared Validation Utilities
- * 
+ *
  * Common regex patterns, validation functions, and sanitization helpers.
  */
 
@@ -13,7 +13,8 @@ import { ZodError } from 'npm:zod';
 export const EMAIL_REGEX = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
 export const SA_PHONE_REGEX = /^(\+27|0)[6-8][0-9]{8}$/;
 export const INTERNATIONAL_PHONE_REGEX = /^\+[1-9]\d{1,14}$/;
-export const UUID_REGEX = /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/;
+export const UUID_REGEX =
+  /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/;
 export const ISO_DATE_REGEX = /^\d{4}-\d{2}-\d{2}$/;
 export const URL_REGEX = /^https?:\/\/.+/;
 export const NAME_REGEX = /^[a-zA-Z\s\-']+$/;
@@ -32,32 +33,32 @@ export function isValidSAIdNumber(idNumber: string): boolean {
   // Luhn algorithm
   let sum = 0;
   let isSecond = false;
-  
+
   for (let i = idNumber.length - 1; i >= 0; i--) {
     let digit = parseInt(idNumber.charAt(i));
-    
+
     if (isSecond) {
       digit = digit * 2;
       if (digit > 9) {
         digit -= 9;
       }
     }
-    
+
     sum += digit;
     isSecond = !isSecond;
   }
-  
+
   if (sum % 10 !== 0) return false;
 
   // Date validation
   const year = parseInt(idNumber.substring(0, 2));
   const month = parseInt(idNumber.substring(2, 4));
   const day = parseInt(idNumber.substring(4, 6));
-  
+
   // Basic date checks
   if (month < 1 || month > 12) return false;
   if (day < 1 || day > 31) return false;
-  
+
   return true;
 }
 
@@ -146,11 +147,11 @@ export function normalizeWhitespace(text: string): string {
  */
 export function escapeHtml(text: string): string {
   return text
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&#039;");
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
 }
 
 /**
@@ -167,9 +168,12 @@ export function stripHtml(text: string): string {
 /**
  * Format Zod validation errors into a user-friendly object
  */
-export function formatZodError(error: ZodError): { message: string; errors: Record<string, string[]> } {
+export function formatZodError(error: ZodError): {
+  message: string;
+  errors: Record<string, string[]>;
+} {
   const formattedErrors: Record<string, string[]> = {};
-  
+
   error.errors.forEach((err) => {
     const path = err.path.join('.');
     if (!formattedErrors[path]) {
@@ -177,7 +181,7 @@ export function formatZodError(error: ZodError): { message: string; errors: Reco
     }
     formattedErrors[path].push(err.message);
   });
-  
+
   return {
     message: 'Validation failed',
     errors: formattedErrors,

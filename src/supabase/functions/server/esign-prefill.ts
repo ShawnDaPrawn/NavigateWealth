@@ -52,7 +52,10 @@ function flattenProfile(raw: Record<string, unknown>): Record<string, unknown> {
 async function loadClientFields(clientId: string | undefined): Promise<Record<string, unknown>> {
   if (!clientId || clientId === 'standalone') return {};
   try {
-    const profileRaw = (await kv.get(`user_profile:${clientId}:personal_info`)) as Record<string, unknown> | null;
+    const profileRaw = (await kv.get(`user_profile:${clientId}:personal_info`)) as Record<
+      string,
+      unknown
+    > | null;
     if (profileRaw) {
       const profile = flattenProfile(profileRaw);
       const first = String(profile.firstName || profile.profile_first_name || '');
@@ -89,7 +92,9 @@ async function loadClientFields(clientId: string | undefined): Promise<Record<st
       address: get('address') ?? get('physical_address'),
     };
   } catch (err) {
-    log.warn(`Failed to load client ${clientId} for prefill: ${err instanceof Error ? err.message : String(err)}`);
+    log.warn(
+      `Failed to load client ${clientId} for prefill: ${err instanceof Error ? err.message : String(err)}`,
+    );
     return {};
   }
 }
@@ -150,7 +155,9 @@ export async function resolvePrefilledFields(
   let resolved = 0;
 
   for (const field of bound) {
-    const meta = field.metadata as { prefill?: { token: PrefillToken; locked?: boolean; resolvedAt?: string } };
+    const meta = field.metadata as {
+      prefill?: { token: PrefillToken; locked?: boolean; resolvedAt?: string };
+    };
     if (!meta.prefill) continue;
     const value = await resolveToken(meta.prefill.token, ctx, client);
     field.value = value;
@@ -158,6 +165,8 @@ export async function resolvePrefilledFields(
     if (value) resolved += 1;
   }
 
-  log.info(`Prefill resolved ${resolved}/${bound.length} bound field(s) for signer ${ctx.signer.email}`);
+  log.info(
+    `Prefill resolved ${resolved}/${bound.length} bound field(s) for signer ${ctx.signer.email}`,
+  );
   return resolved;
 }

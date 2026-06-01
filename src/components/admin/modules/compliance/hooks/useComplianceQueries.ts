@@ -1,7 +1,7 @@
 /**
  * Compliance Query Hooks
  * Navigate Wealth Admin Dashboard
- * 
+ *
  * React Query hooks for fetching compliance data with caching and automatic refetching.
  */
 
@@ -28,54 +28,54 @@ import { QUERY_STALE_TIME, QUERY_GC_TIME } from '../constants';
 
 export const complianceKeys = {
   all: ['compliance'] as const,
-  
+
   // FAIS
   fais: () => [...complianceKeys.all, 'fais'] as const,
   faisRecord: (id: string) => [...complianceKeys.fais(), id] as const,
   faisByAdviser: (id: string) => [...complianceKeys.fais(), 'adviser', id] as const,
-  
+
   // AML/FICA
   amlFica: () => [...complianceKeys.all, 'aml-fica'] as const,
   amlFicaRecord: (id: string) => [...complianceKeys.amlFica(), id] as const,
   amlFicaByClient: (id: string) => [...complianceKeys.amlFica(), 'client', id] as const,
-  
+
   // POPI/PAIA
   popiPaia: () => [...complianceKeys.all, 'popi-paia'] as const,
   popiaConsents: () => [...complianceKeys.popiPaia(), 'consents'] as const,
   popiaConsentsByUser: (id: string) => [...complianceKeys.popiaConsents(), 'user', id] as const,
   paiaRequests: () => [...complianceKeys.popiPaia(), 'paia-requests'] as const,
-  
+
   // Statutory
   statutory: () => [...complianceKeys.all, 'statutory'] as const,
   statutoryRecord: (id: string) => [...complianceKeys.statutory(), id] as const,
-  
+
   // TCF
   tcf: () => [...complianceKeys.all, 'tcf'] as const,
-  
+
   // Record Keeping
   recordKeeping: () => [...complianceKeys.all, 'record-keeping'] as const,
-  
+
   // Debarment & Supervision
   debarmentSupervision: () => [...complianceKeys.all, 'debarment-supervision'] as const,
   debarments: () => [...complianceKeys.debarmentSupervision(), 'debarments'] as const,
   supervision: () => [...complianceKeys.debarmentSupervision(), 'supervision'] as const,
-  
+
   // Conflicts & Marketing
   conflictsMarketing: () => [...complianceKeys.all, 'conflicts-marketing'] as const,
   conflicts: () => [...complianceKeys.conflictsMarketing(), 'conflicts'] as const,
   marketing: () => [...complianceKeys.conflictsMarketing(), 'marketing'] as const,
-  
+
   // Documents & Insurance
   documentsInsurance: () => [...complianceKeys.all, 'documents-insurance'] as const,
-  
+
   // New Business
   newBusiness: () => [...complianceKeys.all, 'new-business'] as const,
   newBusinessByClient: (id: string) => [...complianceKeys.newBusiness(), 'client', id] as const,
-  
+
   // Complaints
   complaints: () => [...complianceKeys.all, 'complaints'] as const,
   complaint: (id: string) => [...complianceKeys.complaints(), id] as const,
-  
+
   // Overview
   activities: () => [...complianceKeys.all, 'activities'] as const,
   deadlines: () => [...complianceKeys.all, 'deadlines'] as const,

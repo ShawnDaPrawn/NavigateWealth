@@ -25,7 +25,7 @@ function resolvePrintTitleSuffix(options: PdfExportOptions): string {
 
 export async function exportComponentToPdf(
   component: React.ReactElement,
-  options: PdfExportOptions = {}
+  options: PdfExportOptions = {},
 ): Promise<void> {
   return new Promise((resolve, reject) => {
     try {
@@ -39,7 +39,7 @@ export async function exportComponentToPdf(
       printContainer.style.zIndex = '9999';
       printContainer.style.backgroundColor = 'white';
       printContainer.style.overflow = 'visible'; // Changed from 'auto' to 'visible' to prevent scrollbars
-      
+
       document.body.appendChild(printContainer);
 
       // Render the React component

@@ -42,12 +42,8 @@ function PageHeader({ clientData }: { clientData: ClientPortfolioData }) {
   return (
     <div className="flex items-center justify-between border-b-2 border-purple-700 pb-4 mb-6">
       <div>
-        <h1 className="text-2xl font-bold text-purple-800 leading-tight">
-          Navigate Wealth
-        </h1>
-        <p className="text-sm text-gray-500 mt-0.5">
-          Comprehensive Portfolio Report
-        </p>
+        <h1 className="text-2xl font-bold text-purple-800 leading-tight">Navigate Wealth</h1>
+        <p className="text-sm text-gray-500 mt-0.5">Comprehensive Portfolio Report</p>
       </div>
       <div className="text-right text-sm text-gray-600">
         <p>Report Date: {clientData.reportDate}</p>
@@ -120,10 +116,26 @@ function PortfolioOverviewSection({ clientData }: { clientData: ClientPortfolioD
         Portfolio Overview
       </h2>
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <StatBox label="Total Portfolio Value" value={fmtCurrency(clientData.portfolioValue)} accent="purple" />
-        <StatBox label="Monthly Premiums" value={fmtPremium(clientData.monthlyPremiums)} accent="blue" />
-        <StatBox label="Cashback Earned" value={fmtCurrency(clientData.cashbackValue)} accent="green" />
-        <StatBox label="Projected Cashback" value={fmtCurrency(clientData.cashbackProjected)} accent="amber" />
+        <StatBox
+          label="Total Portfolio Value"
+          value={fmtCurrency(clientData.portfolioValue)}
+          accent="purple"
+        />
+        <StatBox
+          label="Monthly Premiums"
+          value={fmtPremium(clientData.monthlyPremiums)}
+          accent="blue"
+        />
+        <StatBox
+          label="Cashback Earned"
+          value={fmtCurrency(clientData.cashbackValue)}
+          accent="green"
+        />
+        <StatBox
+          label="Projected Cashback"
+          value={fmtCurrency(clientData.cashbackProjected)}
+          accent="amber"
+        />
       </div>
     </div>
   );
@@ -284,9 +296,10 @@ function PageFooter({ clientData }: { clientData: ClientPortfolioData }) {
         <span>Next Review: {clientData.nextReviewDate}</span>
       </div>
       <p className="text-[10px] text-gray-400 mt-2 leading-tight">
-        This report is generated for informational purposes and does not constitute financial advice.
-        Past performance is not indicative of future results. All values are as at the report date
-        and may fluctuate. Please consult your financial adviser for personalised guidance.
+        This report is generated for informational purposes and does not constitute financial
+        advice. Past performance is not indicative of future results. All values are as at the
+        report date and may fluctuate. Please consult your financial adviser for personalised
+        guidance.
       </p>
     </div>
   );

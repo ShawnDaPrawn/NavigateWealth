@@ -83,7 +83,8 @@ const categories = [
     id: 'advisory',
     title: 'Advisory',
     icon: Users,
-    description: 'Client-facing roles providing financial advice and building lasting relationships.',
+    description:
+      'Client-facing roles providing financial advice and building lasting relationships.',
   },
   {
     id: 'administration',
@@ -160,11 +161,31 @@ const HERO_STATS = [
 ] as const;
 
 const PERKS = [
-  { icon: TrendingUp, title: 'Competitive Remuneration', description: 'Market-leading salary & performance bonuses' },
-  { icon: GraduationCap, title: 'Continuous Learning', description: 'Funded CPD, certifications & study support' },
-  { icon: Coffee, title: 'Flexible Working', description: 'Hybrid model with modern Cape Town office' },
-  { icon: Shield, title: 'Comprehensive Benefits', description: 'Medical aid, retirement fund & risk cover' },
-  { icon: Lightbulb, title: 'Innovation Culture', description: 'AI tools, modern tech stack & creative freedom' },
+  {
+    icon: TrendingUp,
+    title: 'Competitive Remuneration',
+    description: 'Market-leading salary & performance bonuses',
+  },
+  {
+    icon: GraduationCap,
+    title: 'Continuous Learning',
+    description: 'Funded CPD, certifications & study support',
+  },
+  {
+    icon: Coffee,
+    title: 'Flexible Working',
+    description: 'Hybrid model with modern Cape Town office',
+  },
+  {
+    icon: Shield,
+    title: 'Comprehensive Benefits',
+    description: 'Medical aid, retirement fund & risk cover',
+  },
+  {
+    icon: Lightbulb,
+    title: 'Innovation Culture',
+    description: 'AI tools, modern tech stack & creative freedom',
+  },
   { icon: Users, title: 'Mentorship', description: 'One-on-one coaching from industry veterans' },
 ];
 
@@ -239,8 +260,7 @@ function StatItem({
 }) {
   const animatedValue = useCountUp(value, 2200, 600);
 
-  const display =
-    value % 1 !== 0 ? animatedValue.toFixed(1) : animatedValue.toLocaleString();
+  const display = value % 1 !== 0 ? animatedValue.toFixed(1) : animatedValue.toLocaleString();
 
   return (
     <div className="flex items-center gap-3 justify-center lg:justify-start group">
@@ -303,7 +323,12 @@ export function CareersPage() {
       {/* ================================================================== */}
       <section className="relative overflow-hidden bg-[#111827]" aria-label="Careers Hero">
         <div className="absolute inset-0 bg-gradient-to-b from-[#111827] via-[#161b33] to-[#111827] pointer-events-none" />
-        <div className="absolute top-0 right-0 w-[600px] h-[600px] rounded-full opacity-20 pointer-events-none" style={{ background: 'radial-gradient(circle, rgba(109,40,217,0.25) 0%, transparent 70%)' }} />
+        <div
+          className="absolute top-0 right-0 w-[600px] h-[600px] rounded-full opacity-20 pointer-events-none"
+          style={{
+            background: 'radial-gradient(circle, rgba(109,40,217,0.25) 0%, transparent 70%)',
+          }}
+        />
 
         <div className="relative z-10 max-w-screen-xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex flex-col items-center text-center py-20 lg:py-28">
@@ -326,9 +351,9 @@ export function CareersPage() {
                 </span>
               </h1>
               <p className="text-gray-400 text-base sm:text-lg max-w-2xl mx-auto leading-relaxed">
-                Join South Africa's most ambitious independent financial advisory firm. We
-                combine cutting-edge technology with personalised service to help clients
-                achieve their financial goals.
+                Join South Africa's most ambitious independent financial advisory firm. We combine
+                cutting-edge technology with personalised service to help clients achieve their
+                financial goals.
               </p>
             </div>
 
@@ -396,8 +421,8 @@ export function CareersPage() {
               Explore Career Opportunities
             </h2>
             <p className="text-gray-600 text-base sm:text-lg leading-relaxed">
-              We're always looking for talented individuals across our business. Browse by department
-              to find where you fit.
+              We're always looking for talented individuals across our business. Browse by
+              department to find where you fit.
             </p>
           </div>
 
@@ -601,8 +626,8 @@ export function CareersPage() {
                   No Current {activeCat?.title} Openings
                 </h3>
                 <p className="text-gray-500 leading-relaxed max-w-md mx-auto mb-6">
-                  {activeCat?.description} We don't have open positions here right now, but
-                  we'd love to hear from you.
+                  {activeCat?.description} We don't have open positions here right now, but we'd
+                  love to hear from you.
                 </p>
                 <Button
                   size="lg"
@@ -648,8 +673,7 @@ export function CareersPage() {
         <div
           className="absolute inset-0 opacity-[0.03]"
           style={{
-            backgroundImage:
-              'radial-gradient(circle, rgba(255,255,255,0.8) 1px, transparent 1px)',
+            backgroundImage: 'radial-gradient(circle, rgba(255,255,255,0.8) 1px, transparent 1px)',
             backgroundSize: '32px 32px',
           }}
         />
@@ -738,8 +762,7 @@ export function CareersPage() {
         <div
           className="absolute inset-0 opacity-[0.03]"
           style={{
-            backgroundImage:
-              'radial-gradient(circle, rgba(255,255,255,0.8) 1px, transparent 1px)',
+            backgroundImage: 'radial-gradient(circle, rgba(255,255,255,0.8) 1px, transparent 1px)',
             backgroundSize: '32px 32px',
           }}
         />

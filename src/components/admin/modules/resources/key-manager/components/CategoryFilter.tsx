@@ -27,11 +27,11 @@ export function CategoryFilter({
   filterType = 'all',
   label = 'FILTER BY CATEGORY',
   showIcons = true,
-  className = ''
+  className = '',
 }: CategoryFilterProps) {
   // Get categories to display based on filter type
   const categoriesToShow = React.useMemo(() => {
-    return KeyAPI.KEY_CATEGORIES.filter(category => {
+    return KeyAPI.KEY_CATEGORIES.filter((category) => {
       if (filterType === 'profile') {
         return category.id.startsWith('profile_');
       } else if (filterType === 'product') {
@@ -44,8 +44,8 @@ export function CategoryFilter({
   // Count keys per category
   const categoryCounts = React.useMemo(() => {
     const counts: Record<string, number> = {};
-    categoriesToShow.forEach(category => {
-      counts[category.id] = keys.filter(k => k.category === category.id).length;
+    categoriesToShow.forEach((category) => {
+      counts[category.id] = keys.filter((k) => k.category === category.id).length;
     });
     return counts;
   }, [keys, categoriesToShow]);
@@ -55,11 +55,7 @@ export function CategoryFilter({
 
   return (
     <div className={`space-y-2 ${className}`}>
-      {label && (
-        <Label className="text-sm font-medium text-muted-foreground">
-          {label}
-        </Label>
-      )}
+      {label && <Label className="text-sm font-medium text-muted-foreground">{label}</Label>}
       <div className="flex flex-wrap gap-2">
         {/* All Categories Badge */}
         <Badge
@@ -73,12 +69,12 @@ export function CategoryFilter({
         {/* Individual Category Badges */}
         {categoriesToShow.map((category) => {
           const count = categoryCounts[category.id] || 0;
-          
+
           // Don't show categories with 0 keys
           if (count === 0) return null;
-          
+
           const Icon = CATEGORY_ICONS[category.id];
-          
+
           return (
             <Badge
               key={category.id}

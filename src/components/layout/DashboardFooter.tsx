@@ -70,9 +70,7 @@ export function DashboardFooter() {
           <Separator className="my-4 bg-gray-700" />
 
           <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-            <div className="flex flex-wrap gap-4 text-sm">
-              {BOTTOM_LINKS.map(renderLegalLink)}
-            </div>
+            <div className="flex flex-wrap gap-4 text-sm">{BOTTOM_LINKS.map(renderLegalLink)}</div>
 
             <div className="text-sm text-white">
               &copy; {currentYear} Navigate Wealth. All rights reserved.
@@ -81,10 +79,12 @@ export function DashboardFooter() {
 
           <div className="mt-4 border-t border-gray-700 pt-4">
             <p className="text-xs leading-relaxed text-white">
-              <strong className="text-white">Regulatory Information:</strong> Wealthfront (Pty) Ltd, trading as "Navigate Wealth" is an authorized Financial Services Provider (FSP 54606)
-              regulated by the Financial Sector Conduct Authority (FSCA). All investment products are subject to investment risk,
-              including possible loss of principal amount invested. Past performance is not indicative of future performance.
-              Please refer to our full risk disclosure and terms of service for complete details.
+              <strong className="text-white">Regulatory Information:</strong> Wealthfront (Pty) Ltd,
+              trading as "Navigate Wealth" is an authorized Financial Services Provider (FSP 54606)
+              regulated by the Financial Sector Conduct Authority (FSCA). All investment products
+              are subject to investment risk, including possible loss of principal amount invested.
+              Past performance is not indicative of future performance. Please refer to our full
+              risk disclosure and terms of service for complete details.
             </p>
           </div>
         </div>

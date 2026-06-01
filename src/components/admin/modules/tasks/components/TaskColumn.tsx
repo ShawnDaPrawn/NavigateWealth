@@ -1,10 +1,10 @@
 /**
  * Task Management Module - Task Column Component
  * Navigate Wealth Admin Dashboard
- * 
+ *
  * Kanban column for displaying tasks of a specific status
  * Includes droppable area for drag-and-drop functionality
- * 
+ *
  * @module tasks/components/TaskColumn
  */
 
@@ -38,28 +38,28 @@ const STATUS_CONFIG = {
     border: 'border-blue-100',
     text: 'text-blue-700',
     badge: 'bg-blue-100 text-blue-700',
-    label: STATUS_LABELS.new
+    label: STATUS_LABELS.new,
   },
   in_progress: {
     bg: 'bg-amber-50',
     border: 'border-amber-100',
     text: 'text-amber-700',
     badge: 'bg-amber-100 text-amber-700',
-    label: STATUS_LABELS.in_progress
+    label: STATUS_LABELS.in_progress,
   },
   completed: {
     bg: 'bg-green-50',
     border: 'border-green-100',
     text: 'text-green-700',
     badge: 'bg-green-100 text-green-700',
-    label: STATUS_LABELS.completed
+    label: STATUS_LABELS.completed,
   },
   archived: {
     bg: 'bg-gray-50',
     border: 'border-gray-100',
     text: 'text-gray-700',
     badge: 'bg-gray-100 text-gray-700',
-    label: 'Archived'
+    label: 'Archived',
   },
 } as const;
 
@@ -71,7 +71,14 @@ const STATUS_CONFIG = {
  * Task column component
  * Displays tasks in a droppable Kanban column
  */
-export function TaskColumn({ status, tasks, onEditTask, onViewTask, canEdit, canDelete }: TaskColumnProps) {
+export function TaskColumn({
+  status,
+  tasks,
+  onEditTask,
+  onViewTask,
+  canEdit,
+  canDelete,
+}: TaskColumnProps) {
   const config = STATUS_CONFIG[status];
 
   return (
@@ -80,9 +87,7 @@ export function TaskColumn({ status, tasks, onEditTask, onViewTask, canEdit, can
       <div className="p-3 rounded-t-xl border-b bg-white flex items-center justify-between sticky top-0 z-10">
         <div className="flex items-center gap-2">
           <div className={`w-2 h-2 rounded-full ${config.badge.split(' ')[0]}`}></div>
-          <h3 className="font-semibold text-gray-900 text-sm">
-            {config.label}
-          </h3>
+          <h3 className="font-semibold text-gray-900 text-sm">{config.label}</h3>
         </div>
         <span className="px-2 py-0.5 rounded-md text-xs font-medium bg-gray-100 text-gray-600">
           {tasks.length}

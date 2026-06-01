@@ -766,9 +766,8 @@ export type PdfPageSize = 'A4' | 'A3';
 export type PdfOrientation = 'portrait' | 'landscape';
 
 export function getPdfDimensions(pageSize: PdfPageSize, orientation: PdfOrientation) {
-  const portrait = pageSize === 'A3'
-    ? { widthMm: 297, heightMm: 420 }
-    : { widthMm: 210, heightMm: 297 };
+  const portrait =
+    pageSize === 'A3' ? { widthMm: 297, heightMm: 420 } : { widthMm: 210, heightMm: 297 };
 
   return orientation === 'landscape'
     ? { widthMm: portrait.heightMm, heightMm: portrait.widthMm }
@@ -785,26 +784,28 @@ interface PdfPageProps {
   mastheadLabel?: string;
 }
 
-const PdfPage = ({ 
-  children, 
-  pageNum, 
-  totalPages, 
-  docTitle, 
+const PdfPage = ({
+  children,
+  pageNum,
+  totalPages,
+  docTitle,
   issueDate,
   isFirstPage = false,
-  mastheadLabel
+  mastheadLabel,
 }: PdfPageProps) => {
   return (
     <div className="pdf-page">
-      <div 
-        className={`pdf-content ${!isFirstPage ? 'pt-subsequent-page' : ''}`}
-      >
+      <div className={`pdf-content ${!isFirstPage ? 'pt-subsequent-page' : ''}`}>
         {/* MASTHEAD (Only on Page 1) */}
         {isFirstPage && (
           <div className="top-masthead">
-            <div className="masthead-left">{(mastheadLabel || docTitle || 'DOCUMENT').toUpperCase()}</div>
+            <div className="masthead-left">
+              {(mastheadLabel || docTitle || 'DOCUMENT').toUpperCase()}
+            </div>
             <div className="masthead-right">
-              <strong>Wealthfront (Pty) Ltd</strong> t/a Navigate Wealth &nbsp;|&nbsp; <strong>FSP 54606</strong><br/>
+              <strong>Wealthfront (Pty) Ltd</strong> t/a Navigate Wealth &nbsp;|&nbsp;{' '}
+              <strong>FSP 54606</strong>
+              <br />
               Email: info@navigatewealth.co
             </div>
           </div>
@@ -819,7 +820,9 @@ const PdfPage = ({
             <header className="page-header-full">
               <div className="header-row">
                 <div className="brand-block">
-                  <div className="logo">Navigate <span className="wealth">Wealth</span></div>
+                  <div className="logo">
+                    Navigate <span className="wealth">Wealth</span>
+                  </div>
                   <div className="brand-subline">Independent Financial Advisory Services</div>
                 </div>
 
@@ -832,22 +835,26 @@ const PdfPage = ({
                 </div>
               </div>
             </header>
-            <hr className="section-divider" style={{ borderTop: '2px solid #6b7280', margin: '4mm 0 6mm 0' }} />
+            <hr
+              className="section-divider"
+              style={{ borderTop: '2px solid #6b7280', margin: '4mm 0 6mm 0' }}
+            />
           </div>
         )}
 
-        <main>
-          {children}
-        </main>
+        <main>{children}</main>
 
         {/* FOOTER */}
         <footer className="pdf-footer">
           <div className="footer-row">
-            <div className="footer-page">Page {pageNum} of {totalPages}</div>
+            <div className="footer-page">
+              Page {pageNum} of {totalPages}
+            </div>
             <div className="footer-text">
-              Wealthfront (Pty) Ltd, trading as Navigate Wealth, is an Authorised Financial Services Provider – FSP 54606.
-              Registration Number: 2024/071953/07. Located at Route 21 Corporate Park, 25 Sovereign Drive, Milestone Place A, Centurion, 0178.
-              For inquiries, please contact us at Tel: (012) 667 2505.
+              Wealthfront (Pty) Ltd, trading as Navigate Wealth, is an Authorised Financial Services
+              Provider – FSP 54606. Registration Number: 2024/071953/07. Located at Route 21
+              Corporate Park, 25 Sovereign Drive, Milestone Place A, Centurion, 0178. For inquiries,
+              please contact us at Tel: (012) 667 2505.
             </div>
           </div>
         </footer>
@@ -856,31 +863,33 @@ const PdfPage = ({
   );
 };
 
-export const BasePdfLayout = ({ 
+export const BasePdfLayout = ({
   children,
   pages,
-  docTitle = "Document Title",
+  docTitle = 'Document Title',
   issueDate,
   formCode,
   version,
   pageSize = 'A4',
   orientation = 'portrait',
-}: { 
-  children?: ReactNode,
-  pages?: ReactNode[],
-  docTitle?: string,
-  issueDate?: string,
-  formCode?: string,
-  version?: string,
-  pageSize?: PdfPageSize,
-  orientation?: PdfOrientation,
+}: {
+  children?: ReactNode;
+  pages?: ReactNode[];
+  docTitle?: string;
+  issueDate?: string;
+  formCode?: string;
+  version?: string;
+  pageSize?: PdfPageSize;
+  orientation?: PdfOrientation;
 }) => {
   // Default to current date in dd/mm/yyyy format
-  const displayDate = issueDate || new Date().toLocaleDateString('en-GB', {
-    day: '2-digit',
-    month: '2-digit',
-    year: 'numeric'
-  });
+  const displayDate =
+    issueDate ||
+    new Date().toLocaleDateString('en-GB', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+    });
   const dimensions = getPdfDimensions(pageSize, orientation);
   const pageOverrides = `
     :root {
@@ -900,11 +909,10 @@ export const BasePdfLayout = ({
       <style dangerouslySetInnerHTML={{ __html: pageOverrides }} />
       <div className="pdf-preview-container">
         <div className="pdf-viewport">
-          
           {/* If 'pages' prop is provided, render multiple pages */}
           {pages && pages.length > 0 ? (
             pages.map((pageContent, index) => (
-              <PdfPage 
+              <PdfPage
                 key={index}
                 pageNum={index + 1}
                 totalPages={pages.length}
@@ -917,7 +925,7 @@ export const BasePdfLayout = ({
             ))
           ) : (
             /* Backward compatibility: Render children as a single page */
-            <PdfPage 
+            <PdfPage
               pageNum={1}
               totalPages={1}
               docTitle={docTitle}
@@ -927,7 +935,6 @@ export const BasePdfLayout = ({
               {children}
             </PdfPage>
           )}
-
         </div>
       </div>
     </div>

@@ -25,14 +25,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '../../../../ui/select';
-import {
-  ListOrdered,
-  Shuffle,
-  CheckCircle2,
-  Loader2,
-  Users,
-  FileText,
-} from 'lucide-react';
+import { ListOrdered, Shuffle, CheckCircle2, Loader2, Users, FileText } from 'lucide-react';
 import { toast } from 'sonner';
 import { esignApi } from '../api';
 import type { EsignTemplateRecord } from '../types';
@@ -47,7 +40,13 @@ interface EditTemplateDialogProps {
   onConfigureTemplate?: () => void;
 }
 
-export function EditTemplateDialog({ template, open, onOpenChange, onSave, onConfigureTemplate }: EditTemplateDialogProps) {
+export function EditTemplateDialog({
+  template,
+  open,
+  onOpenChange,
+  onSave,
+  onConfigureTemplate,
+}: EditTemplateDialogProps) {
   const [name, setName] = useState(template.name);
   const [description, setDescription] = useState(template.description || '');
   const [category, setCategory] = useState(template.category || '');
@@ -96,9 +95,7 @@ export function EditTemplateDialog({ template, open, onOpenChange, onSave, onCon
       <DialogContent className="sm:max-w-[520px] max-h-[85vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Edit Template</DialogTitle>
-          <DialogDescription>
-            Update template details and default settings.
-          </DialogDescription>
+          <DialogDescription>Update template details and default settings.</DialogDescription>
         </DialogHeader>
 
         <div className="space-y-4 py-2">
@@ -108,7 +105,7 @@ export function EditTemplateDialog({ template, open, onOpenChange, onSave, onCon
             <Input
               id="tpl-name"
               value={name}
-              onChange={e => setName(e.target.value)}
+              onChange={(e) => setName(e.target.value)}
               placeholder="e.g., Standard Client Agreement"
             />
           </div>
@@ -119,7 +116,7 @@ export function EditTemplateDialog({ template, open, onOpenChange, onSave, onCon
             <Textarea
               id="tpl-desc"
               value={description}
-              onChange={e => setDescription(e.target.value)}
+              onChange={(e) => setDescription(e.target.value)}
               placeholder="Brief description of when this template should be used..."
               rows={2}
               maxLength={300}
@@ -129,13 +126,16 @@ export function EditTemplateDialog({ template, open, onOpenChange, onSave, onCon
           {/* Category */}
           <div className="space-y-1.5">
             <Label>Category</Label>
-            <Select value={category || '__none'} onValueChange={val => setCategory(val === '__none' ? '' : val)}>
+            <Select
+              value={category || '__none'}
+              onValueChange={(val) => setCategory(val === '__none' ? '' : val)}
+            >
               <SelectTrigger>
                 <SelectValue placeholder="Select category" />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="__none">No Category</SelectItem>
-                {TEMPLATE_CATEGORIES.map(cat => (
+                {TEMPLATE_CATEGORIES.map((cat) => (
                   <SelectItem key={cat} value={cat}>
                     {cat}
                   </SelectItem>
@@ -217,7 +217,7 @@ export function EditTemplateDialog({ template, open, onOpenChange, onSave, onCon
             <Textarea
               id="tpl-msg"
               value={defaultMessage}
-              onChange={e => setDefaultMessage(e.target.value)}
+              onChange={(e) => setDefaultMessage(e.target.value)}
               placeholder="Message included in the signing invitation..."
               rows={2}
               maxLength={500}
@@ -233,7 +233,7 @@ export function EditTemplateDialog({ template, open, onOpenChange, onSave, onCon
               min={1}
               max={365}
               value={defaultExpiryDays}
-              onChange={e => setDefaultExpiryDays(parseInt(e.target.value) || 30)}
+              onChange={(e) => setDefaultExpiryDays(parseInt(e.target.value) || 30)}
             />
           </div>
 
@@ -256,7 +256,10 @@ export function EditTemplateDialog({ template, open, onOpenChange, onSave, onCon
               <div className="space-y-1 mt-2">
                 {template.recipients.map((r, i) => (
                   <div key={i} className="flex items-center gap-2 text-xs">
-                    <Badge variant="secondary" className="h-5 w-5 p-0 flex items-center justify-center text-[10px]">
+                    <Badge
+                      variant="secondary"
+                      className="h-5 w-5 p-0 flex items-center justify-center text-[10px]"
+                    >
                       {r.order}
                     </Badge>
                     <span className="font-medium">{r.name || 'Unnamed'}</span>

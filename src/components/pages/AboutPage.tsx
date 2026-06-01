@@ -12,10 +12,10 @@ import { ConsultationModal } from '../modals/ConsultationModal';
 import { ThankYouModal } from '../modals/ThankYouModal';
 import { ProvidersModal } from '../modals/ProvidersModal';
 
-import { 
-  Award, 
-  Users, 
-  TrendingUp, 
+import {
+  Award,
+  Users,
+  TrendingUp,
   Shield,
   Heart,
   Eye,
@@ -59,89 +59,92 @@ export function AboutPage() {
         {
           title: 'Our Mission',
           text: 'To empower our clients to achieve financial independence and peace of mind through personalized wealth management strategies, exceptional service, and unwavering commitment to their success.',
-          icon: Target
+          icon: Target,
         },
         {
           title: 'Our Culture',
           text: 'We foster a culture of excellence, integrity, and continuous learning. Our team is committed to staying at the forefront of financial planning while maintaining the personal touch that makes us different.',
-          icon: Users
+          icon: Users,
         },
         {
           title: 'Our Promise',
           text: 'Every client relationship is built on trust, transparency, and a deep understanding of your unique financial journey. We promise to be your trusted partner every step of the way.',
-          icon: Handshake
-        }
-      ]
+          icon: Handshake,
+        },
+      ],
     },
     partners: {
       label: 'Our Partners',
       icon: HandHeart,
       title: 'Trusted Product Providers',
-      description: 'We work with industry-leading partners to provide you with the best financial products and solutions.',
+      description:
+        'We work with industry-leading partners to provide you with the best financial products and solutions.',
       content: [
         {
           title: 'Investment Partners',
           text: 'We partner with top-tier asset managers including Allan Gray, Coronation, Ninety One, and Prudential to provide diversified investment solutions.',
-          icon: TrendingUp
+          icon: TrendingUp,
         },
         {
           title: 'Insurance Partners',
           text: 'Our insurance partnerships with Discovery, Old Mutual, Momentum, and Sanlam ensure comprehensive risk management and life cover solutions.',
-          icon: Shield
+          icon: Shield,
         },
         {
           title: 'Platform Partners',
           text: 'We utilize cutting-edge technology platforms from FNB, Nedbank, and Standard Bank to provide seamless account management and reporting.',
-          icon: Building
-        }
-      ]
+          icon: Building,
+        },
+      ],
     },
     licensing: {
       label: 'Licensing',
       icon: Scale,
       title: 'Regulatory Compliance',
-      description: 'Our comprehensive licensing ensures we can provide you with expert advice across all financial services.',
+      description:
+        'Our comprehensive licensing ensures we can provide you with expert advice across all financial services.',
       content: [
         {
           title: 'FSP License',
           text: 'Navigate Wealth is an authorized Financial Services Provider (FSP 54606) licensed by the Financial Sector Conduct Authority (FSCA).',
-          icon: Award
+          icon: Award,
         },
         {
           title: 'Professional Qualifications',
           text: 'Our advisors hold CFP®, CFA, and other relevant qualifications, ensuring the highest standards of professional competence.',
-          icon: Star
+          icon: Star,
         },
         {
           title: 'Regulatory Oversight',
           text: 'We operate under strict regulatory oversight, with regular compliance audits and adherence to all industry best practices and ethical standards.',
-          icon: CheckCircle
-        }
-      ]
+          icon: CheckCircle,
+        },
+      ],
     },
     transparency: {
       label: 'Radical Transparency',
       icon: Eye,
       title: 'Complete Transparency',
-      description: 'We believe in radical transparency - no hidden fees, no complex structures, just honest, straightforward advice.',
+      description:
+        'We believe in radical transparency - no hidden fees, no complex structures, just honest, straightforward advice.',
       content: [
         {
           title: 'Fee Transparency',
-          text: 'All fees are clearly disclosed upfront with no hidden charges. We believe you should know exactly what you\'re paying for and why.',
-          icon: FileText
+          text: "All fees are clearly disclosed upfront with no hidden charges. We believe you should know exactly what you're paying for and why.",
+          icon: FileText,
         },
         {
           title: 'Investment Transparency',
           text: 'You have full visibility into your investments with regular reporting, real-time access to your portfolio, and clear explanations of all investment decisions.',
-          icon: Lightbulb
+          icon: Lightbulb,
         },
         {
           title: 'Performance Transparency',
           text: 'We provide honest, comprehensive performance reporting that shows both successes and areas for improvement, along with clear benchmarking.',
-          icon: TrendingUp
-        }
-      ]
-    }
+          icon: TrendingUp,
+        },
+      ],
+    },
   };
 
   return (
@@ -155,20 +158,27 @@ export function AboutPage() {
         ogType={seoData.ogType}
         structuredData={aboutPageStructuredData}
       />
-      
+
       <div className="min-h-screen bg-white">
         {/* Hero Section */}
         <section className="relative overflow-hidden bg-[#111827]" aria-label="Hero">
           {/* Background — single subtle gradient */}
           <div className="absolute inset-0 bg-gradient-to-b from-[#111827] via-[#161b33] to-[#111827] pointer-events-none" />
-          <div className="absolute top-0 right-0 w-[600px] h-[600px] rounded-full opacity-20 pointer-events-none" style={{ background: 'radial-gradient(circle, rgba(109,40,217,0.25) 0%, transparent 70%)' }} />
+          <div
+            className="absolute top-0 right-0 w-[600px] h-[600px] rounded-full opacity-20 pointer-events-none"
+            style={{
+              background: 'radial-gradient(circle, rgba(109,40,217,0.25) 0%, transparent 70%)',
+            }}
+          />
 
           <div className="relative z-10 max-w-screen-xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="flex flex-col items-center text-center py-20 lg:py-28">
               {/* Pill badge */}
               <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-white/[0.06] border border-white/[0.08] mb-8">
                 <Award className="h-3.5 w-3.5 text-purple-400" />
-                <span className="text-[12px] font-medium text-gray-400 tracking-wide">55+ Years of Combined Experience</span>
+                <span className="text-[12px] font-medium text-gray-400 tracking-wide">
+                  55+ Years of Combined Experience
+                </span>
               </div>
 
               {/* Heading */}
@@ -180,7 +190,8 @@ export function AboutPage() {
                   </span>
                 </h1>
                 <p className="text-gray-400 text-base sm:text-lg max-w-2xl mx-auto leading-relaxed">
-                  Navigate Wealth helps individuals and families build, protect, and transfer wealth through comprehensive financial planning and investment management.
+                  Navigate Wealth helps individuals and families build, protect, and transfer wealth
+                  through comprehensive financial planning and investment management.
                 </p>
               </div>
 
@@ -232,7 +243,8 @@ export function AboutPage() {
                 Discover Navigate Wealth
               </h2>
               <p className="text-xl text-gray-600 max-w-2xl mx-auto">
-                Select a topic to learn more about our company, values, and commitment to excellence.
+                Select a topic to learn more about our company, values, and commitment to
+                excellence.
               </p>
             </div>
 
@@ -298,7 +310,9 @@ export function AboutPage() {
                           <div className="w-16 h-16 bg-primary/20 rounded-full flex items-center justify-center mx-auto mb-4">
                             <Icon className="h-8 w-8 text-primary" />
                           </div>
-                          <h3 className="text-2xl md:text-3xl font-bold text-gray-900">{section.title}</h3>
+                          <h3 className="text-2xl md:text-3xl font-bold text-gray-900">
+                            {section.title}
+                          </h3>
                           <p className="text-gray-600 mt-2 text-lg">{section.description}</p>
                         </div>
                       </div>
@@ -314,7 +328,9 @@ export function AboutPage() {
                                   <div className="w-12 h-12 bg-primary/20 rounded-lg flex items-center justify-center flex-shrink-0">
                                     <ItemIcon className="h-6 w-6 text-primary" />
                                   </div>
-                                  <h4 className="text-xl font-semibold text-gray-900">{item.title}</h4>
+                                  <h4 className="text-xl font-semibold text-gray-900">
+                                    {item.title}
+                                  </h4>
                                 </div>
                                 <p className="text-gray-700 leading-relaxed pl-0">{item.text}</p>
                               </div>
@@ -325,7 +341,7 @@ export function AboutPage() {
                         {/* Call to Action */}
                         <div className="flex justify-center pt-8 mt-8 border-t border-gray-100">
                           {activeSection === 'partners' ? (
-                            <Button 
+                            <Button
                               onClick={() => setProvidersModalOpen(true)}
                               size="lg"
                               className="bg-primary text-primary-foreground hover:bg-primary/90 hover:scale-105 transform transition-all duration-200 px-8 py-4 shadow-lg hover:shadow-xl rounded-lg group"
@@ -335,7 +351,7 @@ export function AboutPage() {
                               <ArrowRight className="ml-2 h-5 w-5 group-hover:translate-x-1 transition-transform duration-200" />
                             </Button>
                           ) : activeSection === 'licensing' ? (
-                            <Button 
+                            <Button
                               size="lg"
                               className="bg-primary text-primary-foreground hover:bg-primary/90 hover:scale-105 transform transition-all duration-200 px-8 py-4 shadow-lg hover:shadow-xl rounded-lg group"
                               asChild
@@ -347,7 +363,7 @@ export function AboutPage() {
                               </Link>
                             </Button>
                           ) : (
-                            <Button 
+                            <Button
                               onClick={() => setConsultationModalOpen(true)}
                               size="lg"
                               className="bg-primary text-primary-foreground hover:bg-primary/90 hover:scale-105 transform transition-all duration-200 px-8 py-4 shadow-lg hover:shadow-xl rounded-lg group"
@@ -378,7 +394,8 @@ export function AboutPage() {
                 What Our Clients Say
               </h2>
               <p className="text-xl text-gray-300 max-w-3xl mx-auto">
-                Don't just take our word for it. Here's what our valued clients have to say about their experience with Navigate Wealth.
+                Don't just take our word for it. Here's what our valued clients have to say about
+                their experience with Navigate Wealth.
               </p>
             </div>
 
@@ -392,7 +409,9 @@ export function AboutPage() {
                     ))}
                   </div>
                   <p className="text-gray-300 mb-6 leading-relaxed">
-                    "Navigate Wealth completely transformed our financial future. Their personalized approach and expert guidance helped us secure our retirement and protect our family's wealth. I couldn't be happier with their service."
+                    "Navigate Wealth completely transformed our financial future. Their personalized
+                    approach and expert guidance helped us secure our retirement and protect our
+                    family's wealth. I couldn't be happier with their service."
                   </p>
                   <div className="flex items-center space-x-3">
                     <div className="w-12 h-12 bg-primary/20 rounded-full flex items-center justify-center">
@@ -415,7 +434,9 @@ export function AboutPage() {
                     ))}
                   </div>
                   <p className="text-gray-300 mb-6 leading-relaxed">
-                    "The team at Navigate Wealth is exceptional. They took the time to understand our unique situation and created a comprehensive financial plan that exceeded our expectations. Their ongoing support is invaluable."
+                    "The team at Navigate Wealth is exceptional. They took the time to understand
+                    our unique situation and created a comprehensive financial plan that exceeded
+                    our expectations. Their ongoing support is invaluable."
                   </p>
                   <div className="flex items-center space-x-3">
                     <div className="w-12 h-12 bg-primary/20 rounded-full flex items-center justify-center">
@@ -438,7 +459,9 @@ export function AboutPage() {
                     ))}
                   </div>
                   <p className="text-gray-300 mb-6 leading-relaxed">
-                    "Professional, knowledgeable, and trustworthy. Navigate Wealth helped us navigate complex investment decisions with confidence. Their independent advice gave us peace of mind knowing we're in good hands."
+                    "Professional, knowledgeable, and trustworthy. Navigate Wealth helped us
+                    navigate complex investment decisions with confidence. Their independent advice
+                    gave us peace of mind knowing we're in good hands."
                   </p>
                   <div className="flex items-center space-x-3">
                     <div className="w-12 h-12 bg-primary/20 rounded-full flex items-center justify-center">
@@ -460,9 +483,10 @@ export function AboutPage() {
                   Ready to Join Our Success Stories?
                 </h3>
                 <p className="text-gray-300 mb-8">
-                  Experience the Navigate Wealth difference for yourself. Schedule a complimentary consultation today.
+                  Experience the Navigate Wealth difference for yourself. Schedule a complimentary
+                  consultation today.
                 </p>
-                <Button 
+                <Button
                   size="lg"
                   className="bg-primary text-primary-foreground hover:bg-primary/90 hover:scale-105 transform transition-all duration-200 px-8 py-4 shadow-lg hover:shadow-xl rounded-lg group"
                   asChild
@@ -494,11 +518,12 @@ export function AboutPage() {
                 Join Our Team or Stay Informed
               </h2>
               <p className="text-xl text-gray-600 mb-8">
-                Discover exciting career opportunities with Navigate Wealth or stay up to date with our latest news, announcements, and industry insights.
+                Discover exciting career opportunities with Navigate Wealth or stay up to date with
+                our latest news, announcements, and industry insights.
               </p>
               <div className="flex flex-col sm:flex-row gap-4 justify-center">
-                <Button 
-                  size="lg" 
+                <Button
+                  size="lg"
                   className="bg-primary text-primary-foreground hover:bg-primary/90 hover:scale-105 transform transition-all duration-200 px-8 py-4 shadow-lg hover:shadow-xl"
                   asChild
                 >
@@ -507,9 +532,9 @@ export function AboutPage() {
                     <ArrowRight className="ml-2 h-5 w-5" />
                   </Link>
                 </Button>
-                <Button 
-                  size="lg" 
-                  variant="outline" 
+                <Button
+                  size="lg"
+                  variant="outline"
                   className="border-2 border-primary/60 bg-white text-primary hover:bg-primary/10 hover:border-primary hover:text-primary hover:scale-105 transform transition-all duration-200 px-8 py-4 shadow-lg hover:shadow-xl"
                   asChild
                 >
@@ -540,23 +565,13 @@ export function AboutPage() {
         </section>
 
         {/* Consultation Modal */}
-        <ConsultationModal 
-          open={consultationModalOpen} 
-          onOpenChange={setConsultationModalOpen} 
-        />
-        
+        <ConsultationModal open={consultationModalOpen} onOpenChange={setConsultationModalOpen} />
+
         {/* Thank You Modal */}
-        <ThankYouModal 
-          open={thankYouModalOpen} 
-          onOpenChange={setThankYouModalOpen} 
-          clientName=""
-        />
+        <ThankYouModal open={thankYouModalOpen} onOpenChange={setThankYouModalOpen} clientName="" />
 
         {/* Providers Modal */}
-        <ProvidersModal 
-          isOpen={providersModalOpen} 
-          onClose={() => setProvidersModalOpen(false)} 
-        />
+        <ProvidersModal isOpen={providersModalOpen} onClose={() => setProvidersModalOpen(false)} />
 
         {/* Founder Video Modal */}
         <Dialog open={founderVideoModalOpen} onOpenChange={setFounderVideoModalOpen}>
@@ -575,11 +590,10 @@ export function AboutPage() {
                 <Play className="h-7 w-7 text-primary ml-0.5" />
               </div>
 
-              <h3 className="text-xl font-bold text-gray-900 mb-2">
-                Video Coming Soon
-              </h3>
+              <h3 className="text-xl font-bold text-gray-900 mb-2">Video Coming Soon</h3>
               <p className="text-gray-600 text-sm leading-relaxed mb-6">
-                We're currently preparing this video. Please check back soon to meet our founder and learn more about the Navigate Wealth story.
+                We're currently preparing this video. Please check back soon to meet our founder and
+                learn more about the Navigate Wealth story.
               </p>
 
               <div className="flex flex-col sm:flex-row gap-3 justify-center">

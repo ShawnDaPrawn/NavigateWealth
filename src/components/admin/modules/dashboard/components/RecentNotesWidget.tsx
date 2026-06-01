@@ -21,18 +21,13 @@ interface RecentNotesWidgetProps {
   maxNotes?: number;
 }
 
-export function RecentNotesWidget({
-  onModuleChange,
-  maxNotes = 5,
-}: RecentNotesWidgetProps) {
+export function RecentNotesWidget({ onModuleChange, maxNotes = 5 }: RecentNotesWidgetProps) {
   const { user } = useAuth();
   const personnelId = user?.id || '';
   const { data: allNotes = [], isLoading } = useNotes(personnelId);
 
   // Show only active (non-archived) notes, sorted by updatedAt descending
-  const recentNotes = allNotes
-    .filter((n) => !n.isArchived)
-    .slice(0, maxNotes);
+  const recentNotes = allNotes.filter((n) => !n.isArchived).slice(0, maxNotes);
 
   const handleViewAll = () => {
     if (onModuleChange) {
@@ -60,7 +55,10 @@ export function RecentNotesWidget({
         {isLoading ? (
           <div className="space-y-3">
             {Array.from({ length: 3 }).map((_, i) => (
-              <div key={i} className="flex items-start space-x-3 p-3 rounded-lg border border-border">
+              <div
+                key={i}
+                className="flex items-start space-x-3 p-3 rounded-lg border border-border"
+              >
                 <Skeleton className="h-2 w-2 rounded-full mt-1.5 flex-shrink-0" />
                 <div className="flex-1 space-y-1.5">
                   <Skeleton className="h-4 w-40" />
@@ -79,12 +77,7 @@ export function RecentNotesWidget({
             <p className="text-xs text-gray-500 mt-0.5 max-w-[240px]">
               Create your first note to capture ideas and meeting information.
             </p>
-            <Button
-              size="sm"
-              variant="outline"
-              className="mt-3"
-              onClick={handleViewAll}
-            >
+            <Button size="sm" variant="outline" className="mt-3" onClick={handleViewAll}>
               <Plus className="h-4 w-4 mr-1" /> Create Note
             </Button>
           </div>
@@ -123,12 +116,13 @@ function NoteRow({ note, onClick }: { note: Note; onClick: () => void }) {
           {note.isPinned && <Pin className="h-3 w-3 text-amber-500 fill-amber-500 shrink-0" />}
           <p className="text-sm font-medium text-gray-900 truncate">{note.title}</p>
         </div>
-        {snippet && (
-          <p className="text-xs text-gray-500 mt-0.5 line-clamp-1">{snippet}</p>
-        )}
+        {snippet && <p className="text-xs text-gray-500 mt-0.5 line-clamp-1">{snippet}</p>}
         <div className="flex items-center gap-2 mt-1">
           {note.clientName && (
-            <Badge variant="secondary" className="text-[10px] px-1.5 py-0 bg-purple-50 text-purple-600 border-purple-200">
+            <Badge
+              variant="secondary"
+              className="text-[10px] px-1.5 py-0 bg-purple-50 text-purple-600 border-purple-200"
+            >
               <User className="h-2.5 w-2.5 mr-0.5" /> {note.clientName}
             </Badge>
           )}

@@ -67,7 +67,7 @@ export interface MedicalFNAAdjustments {
   hospitalCoverOverride?: string;
   msaOverride?: boolean;
   ljpBandOverride?: string;
-  
+
   // Justification
   notes: string;
 }

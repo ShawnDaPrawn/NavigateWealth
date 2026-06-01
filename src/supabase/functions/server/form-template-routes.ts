@@ -16,7 +16,11 @@ import {
   assertPrefillResolveRateLimit,
   assertTemplateUploadRateLimit,
 } from './form-prefill-rate-limit.ts';
-import { attachFilledPdfToClientDocuments, loadTemplatePdfBytes, storeTemplatePdfBytes } from './form-template-document.ts';
+import {
+  attachFilledPdfToClientDocuments,
+  loadTemplatePdfBytes,
+  storeTemplatePdfBytes,
+} from './form-template-document.ts';
 
 const routes = new Hono();
 const log = createModuleLogger('form-template-routes');
@@ -31,7 +35,10 @@ function templateListKey(): string {
   return `${TEMPLATE_PREFIX}list`;
 }
 
-function handleRouteError(c: { json: (body: unknown, status?: number) => Response }, error: unknown) {
+function handleRouteError(
+  c: { json: (body: unknown, status?: number) => Response },
+  error: unknown,
+) {
   if (isFnaUnauthorized(error)) {
     return c.json({ success: false, error: 'Unauthorized' }, 401);
   }
@@ -88,7 +95,10 @@ routes.post('/', async (c) => {
     const { name, description, fileName, mimeType, base64Content } = body ?? {};
 
     if (!name || !fileName || !base64Content) {
-      return c.json({ success: false, error: 'name, fileName, and base64Content are required' }, 400);
+      return c.json(
+        { success: false, error: 'name, fileName, and base64Content are required' },
+        400,
+      );
     }
 
     const id = crypto.randomUUID();
@@ -142,7 +152,13 @@ routes.put('/:id/mappings', async (c) => {
     const updated: FormTemplateRecord = {
       ...existing,
       fields: fields ?? existing.fields,
-      status: status ?? (fields ? (fields.every((f: FormTemplateField) => f.canonicalKey) ? 'ready' : 'draft') : existing.status),
+      status:
+        status ??
+        (fields
+          ? fields.every((f: FormTemplateField) => f.canonicalKey)
+            ? 'ready'
+            : 'draft'
+          : existing.status),
       updatedAt: new Date().toISOString(),
     };
 
@@ -187,7 +203,11 @@ function setPdfFieldValue(
   rawValue: unknown,
 ): boolean {
   const value = rawValue ?? '';
-  const truthy = value === true || value === 1 || String(value).toLowerCase() === 'true' || String(value).toLowerCase() === 'yes';
+  const truthy =
+    value === true ||
+    value === 1 ||
+    String(value).toLowerCase() === 'true' ||
+    String(value).toLowerCase() === 'yes';
 
   try {
     const textField = form.getTextField(fieldName);
@@ -248,7 +268,9 @@ routes.post('/:id/fill', async (c) => {
     let bytes: Uint8Array | null = await loadTemplatePdfBytes(id, template.storagePath);
     const allowKvFallback = Deno.env.get('FORM_TEMPLATE_ALLOW_KV_FALLBACK') !== 'false';
     if (!bytes && allowKvFallback) {
-      const fileRecord = (await kv.get(`${TEMPLATE_PREFIX}${id}:file`)) as { base64Content?: string } | null;
+      const fileRecord = (await kv.get(`${TEMPLATE_PREFIX}${id}:file`)) as {
+        base64Content?: string;
+      } | null;
       if (fileRecord?.base64Content) {
         bytes = Uint8Array.from(atob(fileRecord.base64Content), (ch) => ch.charCodeAt(0));
       }

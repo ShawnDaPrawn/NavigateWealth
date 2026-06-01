@@ -1,13 +1,13 @@
 /**
  * Advice Engine Module - API Layer
- * 
+ *
  * Centralized API client for all advice engine operations.
  * Provides type-safe methods for:
  * - AI chat interactions
  * - Client search
  * - Chat history management
  * - Record of Advice (RoA) drafts
- * 
+ *
  * @module advice-engine/api
  */
 
@@ -37,10 +37,15 @@ import type {
 import { moduleContractToRuntimeModule } from './roaModuleRuntime';
 
 function normaliseClient(raw: Record<string, unknown>): Client {
-  const profile = (raw.profile && typeof raw.profile === 'object' ? raw.profile : {}) as Record<string, unknown>;
-  const personal = (profile.personalInformation && typeof profile.personalInformation === 'object'
-    ? profile.personalInformation
-    : {}) as Record<string, unknown>;
+  const profile = (raw.profile && typeof raw.profile === 'object' ? raw.profile : {}) as Record<
+    string,
+    unknown
+  >;
+  const personal = (
+    profile.personalInformation && typeof profile.personalInformation === 'object'
+      ? profile.personalInformation
+      : {}
+  ) as Record<string, unknown>;
 
   return {
     user_id: String(raw.user_id || raw.id || profile.userId || ''),
@@ -49,7 +54,9 @@ function normaliseClient(raw: Record<string, unknown>): Client {
     email: String(raw.email || personal.email || ''),
     phone: (raw.phone || raw.phoneNumber || personal.cellphone) as string | undefined,
     id_number: (raw.id_number || raw.idNumber || personal.idNumber) as string | undefined,
-    date_of_birth: (raw.date_of_birth || raw.dateOfBirth || personal.dateOfBirth) as string | undefined,
+    date_of_birth: (raw.date_of_birth || raw.dateOfBirth || personal.dateOfBirth) as
+      | string
+      | undefined,
   };
 }
 
@@ -78,16 +85,14 @@ function normaliseDraft(raw: RoADraft): RoADraft {
 export const clientsApi = {
   /**
    * Get client by ID
-   * 
+   *
    * @param clientId - Client ID
    * @returns Client details
    * @throws {APIError} If request fails
    */
   async getClient(clientId: string): Promise<Client> {
     try {
-      const response = await api.get<{ client: Client }>(
-        `${ENDPOINTS.CLIENT_DETAILS}/${clientId}`
-      );
+      const response = await api.get<{ client: Client }>(`${ENDPOINTS.CLIENT_DETAILS}/${clientId}`);
       return normaliseClient(response.client as unknown as Record<string, unknown>);
     } catch (error) {
       logger.error(`Failed to get client ${clientId}`, error);
@@ -107,14 +112,12 @@ export const clientsApi = {
 export const personnelApi = {
   /**
    * Get all personnel
-   * 
+   *
    * @returns List of personnel
    */
   async getPersonnel(): Promise<Personnel[]> {
     try {
-      const response = await api.get<{ data: Personnel[] }>(
-        ENDPOINTS.PERSONNEL_LIST
-      );
+      const response = await api.get<{ data: Personnel[] }>(ENDPOINTS.PERSONNEL_LIST);
       return response.data || [];
     } catch (error) {
       logger.error('Failed to get personnel', error);
@@ -134,10 +137,10 @@ export const personnelApi = {
 export const aiIntelligenceApi = {
   /**
    * Get API key status
-   * 
+   *
    * @returns API key status
    * @throws {APIError} If request fails
-   * 
+   *
    * @example
    * const status = await aiIntelligenceApi.getStatus();
    * if (status.configured) {
@@ -161,11 +164,11 @@ export const aiIntelligenceApi = {
 
   /**
    * Send a chat message to the AI
-   * 
+   *
    * @param request - Chat request data
    * @returns AI response
    * @throws {APIError} If request fails or API key is invalid
-   * 
+   *
    * @example
    * const response = await aiIntelligenceApi.sendMessage({
    *   message: 'What are the client\'s active policies?',
@@ -185,7 +188,7 @@ export const aiIntelligenceApi = {
       return response;
     } catch (error) {
       logger.error('Failed to send chat message', error);
-      
+
       const message = getErrorMessage(error);
       // Handle specific error cases
       if (message.includes('API key') || message.includes('401')) {
@@ -194,17 +197,17 @@ export const aiIntelligenceApi = {
       if (message.includes('403')) {
         throw new Error('Access denied. Admin privileges required.');
       }
-      
+
       throw error;
     }
   },
 
   /**
    * Get chat history
-   * 
+   *
    * @returns Chat history data
    * @throws {APIError} If request fails
-   * 
+   *
    * @example
    * const history = await aiIntelligenceApi.getHistory();
    * history.messages.forEach(msg => {
@@ -224,9 +227,9 @@ export const aiIntelligenceApi = {
 
   /**
    * Clear chat history
-   * 
+   *
    * @throws {APIError} If request fails
-   * 
+   *
    * @example
    * await aiIntelligenceApi.clearHistory();
    * console.log('Chat history cleared');
@@ -242,12 +245,12 @@ export const aiIntelligenceApi = {
 
   /**
    * Search for clients
-   * 
+   *
    * @param searchTerm - Search query
    * @param limit - Maximum results (default: 10)
    * @returns Search results
    * @throws {APIError} If request fails
-   * 
+   *
    * @example
    * const results = await aiIntelligenceApi.searchClients('John Smith');
    * console.log(`Found ${results.clients.length} clients`);
@@ -264,10 +267,7 @@ export const aiIntelligenceApi = {
         limit,
       };
 
-      const response = await api.post<SearchClientResponse>(
-        ENDPOINTS.AI_SEARCH_CLIENTS,
-        request
-      );
+      const response = await api.post<SearchClientResponse>(ENDPOINTS.AI_SEARCH_CLIENTS, request);
 
       return response;
     } catch (error) {
@@ -289,10 +289,10 @@ export const aiIntelligenceApi = {
 export const roaApi = {
   /**
    * Get available RoA modules
-   * 
+   *
    * @returns Array of RoA modules
    * @throws {APIError} If request fails
-   * 
+   *
    * @example
    * const modules = await roaApi.getModules();
    * console.log(`${modules.length} modules available`);
@@ -300,7 +300,7 @@ export const roaApi = {
   async getModules(): Promise<RoAModule[]> {
     try {
       const response = await api.get<{ contracts: RoAModuleContract[] }>(
-        `${ENDPOINTS.ROA_MODULE_CONTRACTS}?status=active`
+        `${ENDPOINTS.ROA_MODULE_CONTRACTS}?status=active`,
       );
       const contractModules = (response.contracts || []).map(moduleContractToRuntimeModule);
       if (contractModules.length > 0) return contractModules;
@@ -323,7 +323,7 @@ export const roaApi = {
   async getModuleContractSchemaFormat(): Promise<RoAModuleContractSchemaFormat> {
     try {
       const response = await api.get<{ schema: RoAModuleContractSchemaFormat }>(
-        ENDPOINTS.ROA_MODULE_CONTRACT_SCHEMA
+        ENDPOINTS.ROA_MODULE_CONTRACT_SCHEMA,
       );
       return response.schema;
     } catch (error) {
@@ -335,14 +335,16 @@ export const roaApi = {
   /**
    * Get editable RoA module contracts.
    */
-  async getModuleContracts(options: { status?: string; includeArchived?: boolean } = {}): Promise<RoAModuleContract[]> {
+  async getModuleContracts(
+    options: { status?: string; includeArchived?: boolean } = {},
+  ): Promise<RoAModuleContract[]> {
     try {
       const params = new URLSearchParams();
       if (options.status) params.set('status', options.status);
       if (options.includeArchived) params.set('includeArchived', 'true');
       const query = params.toString() ? `?${params.toString()}` : '';
       const response = await api.get<{ contracts: RoAModuleContract[] }>(
-        `${ENDPOINTS.ROA_MODULE_CONTRACTS}${query}`
+        `${ENDPOINTS.ROA_MODULE_CONTRACTS}${query}`,
       );
       return response.contracts || [];
     } catch (error) {
@@ -357,7 +359,7 @@ export const roaApi = {
   async getModuleContract(moduleId: string): Promise<RoAModuleContract> {
     try {
       const response = await api.get<{ contract: RoAModuleContract }>(
-        `${ENDPOINTS.ROA_MODULE_CONTRACTS}/${moduleId}`
+        `${ENDPOINTS.ROA_MODULE_CONTRACTS}/${moduleId}`,
       );
       return response.contract;
     } catch (error) {
@@ -373,7 +375,7 @@ export const roaApi = {
     try {
       const response = await api.put<{ contract: RoAModuleContract }>(
         `${ENDPOINTS.ROA_MODULE_CONTRACTS}/${contract.id}`,
-        contract
+        contract,
       );
       return response.contract;
     } catch (error) {
@@ -389,7 +391,7 @@ export const roaApi = {
     try {
       const response = await api.post<{ contract: RoAModuleContract }>(
         `${ENDPOINTS.ROA_MODULE_CONTRACTS}/${moduleId}/publish`,
-        {}
+        {},
       );
       return response.contract;
     } catch (error) {
@@ -405,7 +407,7 @@ export const roaApi = {
     try {
       const response = await api.post<{ contract: RoAModuleContract }>(
         `${ENDPOINTS.ROA_MODULE_CONTRACTS}/${moduleId}/archive`,
-        {}
+        {},
       );
       return response.contract;
     } catch (error) {
@@ -416,20 +418,18 @@ export const roaApi = {
 
   /**
    * Get a draft by ID
-   * 
+   *
    * @param draftId - Draft ID
    * @returns RoA draft
    * @throws {APIError} If request fails or draft not found
-   * 
+   *
    * @example
    * const draft = await roaApi.getDraft('draft-123');
    * console.log(draft.selectedModules);
    */
   async getDraft(draftId: string): Promise<RoADraft> {
     try {
-      const response = await api.get<{ draft: RoADraft }>(
-        `${ENDPOINTS.ROA_DRAFT}/${draftId}`
-      );
+      const response = await api.get<{ draft: RoADraft }>(`${ENDPOINTS.ROA_DRAFT}/${draftId}`);
       return normaliseDraft(response.draft);
     } catch (error) {
       logger.error(`Failed to get draft ${draftId}`, error);
@@ -439,12 +439,12 @@ export const roaApi = {
 
   /**
    * Save a draft
-   * 
+   *
    * @param draftId - Draft ID (if updating existing)
    * @param data - Draft data to save
    * @returns Saved draft
    * @throws {APIError} If request fails
-   * 
+   *
    * @example
    * const draft = await roaApi.saveDraft('draft-123', {
    *   selectedModules: ['life-insurance', 'retirement'],
@@ -457,15 +457,12 @@ export const roaApi = {
         // Update existing draft
         const response = await api.put<{ draft: RoADraft }>(
           `${ENDPOINTS.ROA_DRAFT}/${draftId}`,
-          data
+          data,
         );
         return normaliseDraft(response.draft);
       } else {
         // Create new draft
-        const response = await api.post<{ draft: RoADraft }>(
-          ENDPOINTS.ROA_DRAFT,
-          data
-        );
+        const response = await api.post<{ draft: RoADraft }>(ENDPOINTS.ROA_DRAFT, data);
         return normaliseDraft(response.draft);
       }
     } catch (error) {
@@ -476,11 +473,11 @@ export const roaApi = {
 
   /**
    * Submit a draft (finalize)
-   * 
+   *
    * @param draftId - Draft ID
    * @returns Submitted draft
    * @throws {APIError} If request fails or validation fails
-   * 
+   *
    * @example
    * const submitted = await roaApi.submitDraft('draft-123');
    * console.log(`Draft submitted with status: ${submitted.status}`);
@@ -489,7 +486,7 @@ export const roaApi = {
     try {
       const response = await api.post<{ draft: RoADraft }>(
         `${ENDPOINTS.ROA_DRAFT}/${draftId}/submit`,
-        {}
+        {},
       );
       return normaliseDraft(response.draft);
     } catch (error) {
@@ -500,10 +497,10 @@ export const roaApi = {
 
   /**
    * Delete a draft
-   * 
+   *
    * @param draftId - Draft ID
    * @throws {APIError} If request fails
-   * 
+   *
    * @example
    * await roaApi.deleteDraft('draft-123');
    * console.log('Draft deleted');
@@ -519,11 +516,11 @@ export const roaApi = {
 
   /**
    * List all drafts
-   * 
+   *
    * @param status - Filter by status (optional)
    * @returns Array of drafts
    * @throws {APIError} If request fails
-   * 
+   *
    * @example
    * const drafts = await roaApi.listDrafts('draft');
    * console.log(`${drafts.length} draft RoAs found`);
@@ -531,9 +528,7 @@ export const roaApi = {
   async listDrafts(status?: string): Promise<RoADraft[]> {
     try {
       const params = status ? `?status=${status}` : '';
-      const response = await api.get<{ drafts: RoADraft[] }>(
-        `${ENDPOINTS.ROA_DRAFT}${params}`
-      );
+      const response = await api.get<{ drafts: RoADraft[] }>(`${ENDPOINTS.ROA_DRAFT}${params}`);
       return (response.drafts || []).map(normaliseDraft);
     } catch (error) {
       logger.error('Failed to list drafts', error);
@@ -548,7 +543,7 @@ export const roaApi = {
   async getClientContext(clientId: string): Promise<RoAClientContext> {
     try {
       const response = await api.get<{ context: RoAClientContext }>(
-        `${ENDPOINTS.ROA_CLIENT_CONTEXT}/${clientId}/context`
+        `${ENDPOINTS.ROA_CLIENT_CONTEXT}/${clientId}/context`,
       );
       return response.context;
     } catch (error) {
@@ -557,10 +552,12 @@ export const roaApi = {
     }
   },
 
-  async validateDraft(draftId: string): Promise<{ draft: RoADraft; validation?: RoAValidationResult }> {
+  async validateDraft(
+    draftId: string,
+  ): Promise<{ draft: RoADraft; validation?: RoAValidationResult }> {
     const response = await api.post<{ draft: RoADraft; validation?: RoAValidationResult }>(
       `${ENDPOINTS.ROA_DRAFT}/${draftId}/validate`,
-      {}
+      {},
     );
     return { ...response, draft: normaliseDraft(response.draft) };
   },
@@ -577,53 +574,65 @@ export const roaApi = {
       size?: number;
       source?: string;
       bytesBase64: string;
-    }
+    },
   ): Promise<{ draft: RoADraft; evidence?: RoAEvidenceItem }> {
     const response = await api.post<{ draft: RoADraft; evidence?: RoAEvidenceItem }>(
       `${ENDPOINTS.ROA_DRAFT}/${draftId}/evidence`,
-      evidence
+      evidence,
     );
     return { ...response, draft: normaliseDraft(response.draft) };
   },
 
-  async compileDraft(draftId: string): Promise<{ draft: RoADraft; compilation?: RoACompiledOutput }> {
+  async compileDraft(
+    draftId: string,
+  ): Promise<{ draft: RoADraft; compilation?: RoACompiledOutput }> {
     const response = await api.post<{ draft: RoADraft; compilation?: RoACompiledOutput }>(
       `${ENDPOINTS.ROA_DRAFT}/${draftId}/compile`,
-      {}
+      {},
     );
     return { ...response, draft: normaliseDraft(response.draft) };
   },
 
   async generateDraftDocuments(
     draftId: string,
-    formats: Array<'pdf' | 'docx'>
-  ): Promise<{ draft: RoADraft; documents?: RoAGeneratedDocument[]; compilation?: RoACompiledOutput }> {
-    const response = await api.post<{ draft: RoADraft; documents?: RoAGeneratedDocument[]; compilation?: RoACompiledOutput }>(
-      `${ENDPOINTS.ROA_DRAFT}/${draftId}/generate`,
-      { formats }
-    );
+    formats: Array<'pdf' | 'docx'>,
+  ): Promise<{
+    draft: RoADraft;
+    documents?: RoAGeneratedDocument[];
+    compilation?: RoACompiledOutput;
+  }> {
+    const response = await api.post<{
+      draft: RoADraft;
+      documents?: RoAGeneratedDocument[];
+      compilation?: RoACompiledOutput;
+    }>(`${ENDPOINTS.ROA_DRAFT}/${draftId}/generate`, { formats });
     return { ...response, draft: normaliseDraft(response.draft) };
   },
 
   async downloadGeneratedDocument(documentId: string): Promise<RoAGeneratedDocument> {
     const response = await api.get<{ document: RoAGeneratedDocument }>(
-      `/advice-engine/roa/documents/${documentId}/download`
+      `/advice-engine/roa/documents/${documentId}/download`,
     );
     return response.document;
   },
 
-  async finaliseDraft(draftId: string): Promise<{ draft: RoADraft; documents?: RoAGeneratedDocument[]; compilation?: RoACompiledOutput }> {
-    const response = await api.post<{ draft: RoADraft; documents?: RoAGeneratedDocument[]; compilation?: RoACompiledOutput }>(
-      `${ENDPOINTS.ROA_DRAFT}/${draftId}/finalise`,
-      {}
-    );
+  async finaliseDraft(draftId: string): Promise<{
+    draft: RoADraft;
+    documents?: RoAGeneratedDocument[];
+    compilation?: RoACompiledOutput;
+  }> {
+    const response = await api.post<{
+      draft: RoADraft;
+      documents?: RoAGeneratedDocument[];
+      compilation?: RoACompiledOutput;
+    }>(`${ENDPOINTS.ROA_DRAFT}/${draftId}/finalise`, {});
     return { ...response, draft: normaliseDraft(response.draft) };
   },
 
   async cloneDraftFromFinal(draftId: string): Promise<{ draft: RoADraft }> {
     const response = await api.post<{ draft: RoADraft }>(
       `${ENDPOINTS.ROA_DRAFT}/${draftId}/clone-from-final`,
-      {}
+      {},
     );
     return { draft: normaliseDraft(response.draft) };
   },
@@ -640,7 +649,7 @@ export const roaApi = {
 export const adviceEngineApi = {
   /** AI Intelligence API */
   ai: aiIntelligenceApi,
-  
+
   /** RoA API */
   roa: roaApi,
 
@@ -652,7 +661,7 @@ export const adviceEngineApi = {
 
   /**
    * Health check for advice engine services
-   * 
+   *
    * @returns Service health status
    */
   async healthCheck(): Promise<{

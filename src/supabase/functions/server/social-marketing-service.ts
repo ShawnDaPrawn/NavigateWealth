@@ -23,11 +23,10 @@ function generateId(): string {
 }
 
 export class SocialMarketingService {
-  
   // ========================================================================
   // SOCIAL PROFILES
   // ========================================================================
-  
+
   /**
    * Get all social profiles
    */
@@ -36,8 +35,9 @@ export class SocialMarketingService {
     if (!profiles || profiles.length === 0) {
       return [];
     }
-    profiles.sort((a: SocialProfile, b: SocialProfile) =>
-      new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+    profiles.sort(
+      (a: SocialProfile, b: SocialProfile) =>
+        new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),
     );
     return profiles;
   }
@@ -118,58 +118,58 @@ export class SocialMarketingService {
   // ========================================================================
   // SOCIAL MEDIA POSTS
   // ========================================================================
-  
+
   /**
    * Get all posts
    */
   async getAllPosts(filters?: Partial<PostFilters>): Promise<SocialPost[]> {
     const posts = await kv.getByPrefix('social_post:');
-    
+
     if (!posts || posts.length === 0) {
       return [];
     }
-    
+
     let filtered = posts;
-    
+
     // Apply filters
     if (filters?.platform) {
       filtered = filtered.filter((p: SocialPost) => p.platform === filters.platform);
     }
-    
+
     if (filters?.status) {
       filtered = filtered.filter((p: SocialPost) => p.status === filters.status);
     }
-    
+
     // Sort by scheduled/created date (newest first)
     filtered.sort((a: SocialPost, b: SocialPost) => {
       const dateA = new Date(a.scheduled_for || a.created_at);
       const dateB = new Date(b.scheduled_for || b.created_at);
       return dateB.getTime() - dateA.getTime();
     });
-    
+
     return filtered;
   }
-  
+
   /**
    * Get post by ID
    */
   async getPostById(postId: string): Promise<SocialPost> {
     const post = await kv.get(`social_post:${postId}`);
-    
+
     if (!post) {
       throw new NotFoundError('Social post not found');
     }
-    
+
     return post;
   }
-  
+
   /**
    * Create post
    */
   async createPost(createdBy: string, data: PostCreate): Promise<SocialPost> {
     const postId = generateId();
     const timestamp = new Date().toISOString();
-    
+
     const post: SocialPost = {
       id: postId,
       platform: data.platform,
@@ -181,119 +181,121 @@ export class SocialMarketingService {
       created_at: timestamp,
       updated_at: timestamp,
     };
-    
+
     await kv.set(`social_post:${postId}`, post);
-    
+
     log.success('Social post created', { postId, platform: post.platform });
-    
+
     return post;
   }
-  
+
   /**
    * Update post
    */
   async updatePost(postId: string, updates: PostUpdate): Promise<SocialPost> {
     const post = await this.getPostById(postId);
-    
+
     if (post.status === 'published') {
       throw new ValidationError('Cannot update published post');
     }
-    
+
     Object.assign(post, updates);
     post.updated_at = new Date().toISOString();
-    
+
     await kv.set(`social_post:${postId}`, post);
-    
+
     log.success('Social post updated', { postId });
-    
+
     return post;
   }
-  
+
   /**
    * Publish post
    */
   async publishPost(postId: string): Promise<{ success: boolean; message: string }> {
     const post = await this.getPostById(postId);
-    
+
     if (post.status === 'published') {
       throw new ValidationError('Post is already published');
     }
-    
+
     // TODO: Integrate with actual social media APIs
     // For now, just mark as published
-    
+
     post.status = 'published';
     post.published_at = new Date().toISOString();
     post.updated_at = new Date().toISOString();
-    
+
     await kv.set(`social_post:${postId}`, post);
-    
+
     log.success('Social post published', { postId, platform: post.platform });
-    
+
     return {
       success: true,
       message: 'Post published successfully',
     };
   }
-  
+
   /**
    * Schedule post
    */
   async schedulePost(postId: string, scheduledFor: string): Promise<SocialPost> {
     const post = await this.getPostById(postId);
-    
+
     post.status = 'scheduled';
     post.scheduled_for = scheduledFor;
     post.updated_at = new Date().toISOString();
-    
+
     await kv.set(`social_post:${postId}`, post);
-    
+
     log.success('Social post scheduled', { postId, scheduledFor });
-    
+
     return post;
   }
-  
+
   /**
    * Delete post
    */
   async deletePost(postId: string): Promise<void> {
     await kv.del(`social_post:${postId}`);
-    
+
     log.success('Social post deleted', { postId });
   }
-  
+
   // ========================================================================
   // SCHEDULING
   // ========================================================================
-  
+
   /**
    * Get posting schedule
    */
   async getSchedule(dateRange?: { startDate?: string; endDate?: string }): Promise<SocialPost[]> {
     const posts = await this.getAllPosts({ status: 'scheduled' });
-    
+
     let filtered = posts;
-    
+
     // Filter by date range
     if (dateRange?.startDate) {
-      filtered = filtered.filter((p: SocialPost) =>
-        p.scheduled_for && new Date(p.scheduled_for) >= new Date(dateRange.startDate!)
+      filtered = filtered.filter(
+        (p: SocialPost) =>
+          p.scheduled_for && new Date(p.scheduled_for) >= new Date(dateRange.startDate!),
       );
     }
-    
+
     if (dateRange?.endDate) {
-      filtered = filtered.filter((p: SocialPost) =>
-        p.scheduled_for && new Date(p.scheduled_for) <= new Date(dateRange.endDate!)
+      filtered = filtered.filter(
+        (p: SocialPost) =>
+          p.scheduled_for && new Date(p.scheduled_for) <= new Date(dateRange.endDate!),
       );
     }
-    
+
     return filtered;
   }
-  
+
   // ========================================================================
   // ANALYTICS
   // ========================================================================
-  
+
   /**
    * Get analytics
    */
@@ -303,38 +305,39 @@ export class SocialMarketingService {
     endDate?: string;
   }): Promise<Analytics> {
     log.info('Generating social media analytics', { filters });
-    
+
     const posts = await this.getAllPosts({ status: 'published' });
-    
+
     let filtered = posts;
-    
+
     // Apply filters
     if (filters?.platform) {
       filtered = filtered.filter((p: SocialPost) => p.platform === filters.platform);
     }
-    
+
     if (filters?.startDate) {
-      filtered = filtered.filter((p: SocialPost) =>
-        p.published_at && new Date(p.published_at) >= new Date(filters.startDate!)
+      filtered = filtered.filter(
+        (p: SocialPost) =>
+          p.published_at && new Date(p.published_at) >= new Date(filters.startDate!),
       );
     }
-    
+
     if (filters?.endDate) {
-      filtered = filtered.filter((p: SocialPost) =>
-        p.published_at && new Date(p.published_at) <= new Date(filters.endDate!)
+      filtered = filtered.filter(
+        (p: SocialPost) => p.published_at && new Date(p.published_at) <= new Date(filters.endDate!),
       );
     }
-    
+
     // Calculate metrics
     const totalPosts = filtered.length;
     const totalEngagement = filtered.reduce((sum: number, p: SocialPost) => {
       return sum + (p.metrics?.likes || 0) + (p.metrics?.comments || 0) + (p.metrics?.shares || 0);
     }, 0);
-    
+
     const totalReach = filtered.reduce((sum: number, p: SocialPost) => {
       return sum + (p.metrics?.reach || 0);
     }, 0);
-    
+
     return {
       totalPosts,
       totalEngagement,
@@ -343,62 +346,67 @@ export class SocialMarketingService {
       byPlatform: this.groupByPlatform(filtered),
     };
   }
-  
+
   /**
    * Get engagement metrics
    */
-  async getEngagementMetrics(): Promise<{ totalEngagement: number; averageEngagement: number; byPlatform: Record<string, unknown> }> {
+  async getEngagementMetrics(): Promise<{
+    totalEngagement: number;
+    averageEngagement: number;
+    byPlatform: Record<string, unknown>;
+  }> {
     const analytics = await this.getAnalytics();
-    
+
     return {
       totalEngagement: analytics.totalEngagement,
       averageEngagement: analytics.averageEngagement,
       byPlatform: analytics.byPlatform,
     };
   }
-  
+
   /**
    * Group posts by platform
    */
   private groupByPlatform(posts: SocialPost[]): Record<string, number> {
     const grouped: Record<string, number> = {};
-    
+
     posts.forEach((post) => {
       grouped[post.platform] = (grouped[post.platform] || 0) + 1;
     });
-    
+
     return grouped;
   }
-  
+
   // ========================================================================
   // CAMPAIGNS
   // ========================================================================
-  
+
   /**
    * Get all campaigns
    */
   async getAllCampaigns(): Promise<Campaign[]> {
     const campaigns = await kv.getByPrefix('marketing_campaign:');
-    
+
     if (!campaigns || campaigns.length === 0) {
       return [];
     }
-    
+
     // Sort by created date (newest first)
-    campaigns.sort((a: Campaign, b: Campaign) =>
-      new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+    campaigns.sort(
+      (a: Campaign, b: Campaign) =>
+        new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),
     );
-    
+
     return campaigns;
   }
-  
+
   /**
    * Create campaign
    */
   async createCampaign(data: Partial<Campaign>): Promise<Campaign> {
     const campaignId = generateId();
     const timestamp = new Date().toISOString();
-    
+
     const campaign: Campaign = {
       id: campaignId,
       name: data.name!,
@@ -410,40 +418,40 @@ export class SocialMarketingService {
       created_at: timestamp,
       updated_at: timestamp,
     };
-    
+
     await kv.set(`marketing_campaign:${campaignId}`, campaign);
-    
+
     log.success('Marketing campaign created', { campaignId });
-    
+
     return campaign;
   }
-  
+
   /**
    * Update campaign
    */
   async updateCampaign(campaignId: string, updates: Partial<Campaign>): Promise<Campaign> {
     const campaign = await kv.get(`marketing_campaign:${campaignId}`);
-    
+
     if (!campaign) {
       throw new NotFoundError('Campaign not found');
     }
-    
+
     Object.assign(campaign, updates);
     campaign.updated_at = new Date().toISOString();
-    
+
     await kv.set(`marketing_campaign:${campaignId}`, campaign);
-    
+
     log.success('Marketing campaign updated', { campaignId });
-    
+
     return campaign;
   }
-  
+
   /**
    * Delete campaign
    */
   async deleteCampaign(campaignId: string): Promise<void> {
     await kv.del(`marketing_campaign:${campaignId}`);
-    
+
     log.success('Marketing campaign deleted', { campaignId });
   }
 }

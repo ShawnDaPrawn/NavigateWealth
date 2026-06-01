@@ -3,13 +3,13 @@
  * Handles Goal-Based Investment Planning calculation, storage, and versioning
  */
 
-import { Hono } from "npm:hono";
-import * as kv from "./kv_store.tsx";
-import { createModuleLogger } from "./stderr-logger.ts";
-import { authenticateUser } from "./fna-auth.ts";
-import { getErrMsg } from "./shared-logger-utils.ts";
-import { SaveInvestmentSessionSchema } from "./fna-validation.ts";
-import { formatZodError } from "./shared-validation-utils.ts";
+import { Hono } from 'npm:hono';
+import * as kv from './kv_store.tsx';
+import { createModuleLogger } from './stderr-logger.ts';
+import { authenticateUser } from './fna-auth.ts';
+import { getErrMsg } from './shared-logger-utils.ts';
+import { SaveInvestmentSessionSchema } from './fna-validation.ts';
+import { formatZodError } from './shared-validation-utils.ts';
 
 const investmentInaRoutes = new Hono();
 const log = createModuleLogger('investment-ina-routes');
@@ -54,7 +54,7 @@ async function autoPopulateFromProfile(clientId: string) {
     const step1 = await investmentAutoPopulateFromResolver(clientId);
 
     const policiesKey = `policies:${clientId}`;
-    const policies = await kv.get(policiesKey) || { investments: [] };
+    const policies = (await kv.get(policiesKey)) || { investments: [] };
 
     const discretionaryInvestments = (policies.investments || [])
       .filter((inv: InvestmentEntry) => inv.isDiscretionary === true)
@@ -71,12 +71,12 @@ async function autoPopulateFromProfile(clientId: string) {
 
     const totalDiscretionaryCapitalCurrent = discretionaryInvestments.reduce(
       (sum: number, inv: DiscretionaryInvestment) => sum + inv.currentValue,
-      0
+      0,
     );
 
     const totalDiscretionaryMonthlyContributions = discretionaryInvestments.reduce(
       (sum: number, inv: DiscretionaryInvestment) => sum + inv.monthlyContribution,
-      0
+      0,
     );
 
     const economicAssumptions = getDefaultEconomicAssumptions();
@@ -119,16 +119,22 @@ function getDefaultInputs() {
  */
 function calculateInvestmentINA(inputs: INAInputs) {
   log.info('🧮 Calculating Investment INA...');
-  
+
   const currentYear = new Date().getFullYear();
   const goalResults: GoalResult[] = [];
-  const recommendations: Array<{ goalId: string; goalName: string; action: string; priority: string | undefined; impact: string }> = [];
-  
+  const recommendations: Array<{
+    goalId: string;
+    goalName: string;
+    action: string;
+    priority: string | undefined;
+    impact: string;
+  }> = [];
+
   // Process each goal
   for (const goal of inputs.goals || []) {
     const result = calculateSingleGoal(goal, inputs, currentYear);
     goalResults.push(result);
-    
+
     // Generate recommendations based on goal status
     if (result.fundingGap.hasShortfall) {
       recommendations.push({
@@ -142,10 +148,10 @@ function calculateInvestmentINA(inputs: INAInputs) {
       });
     }
   }
-  
+
   // Calculate portfolio summary
   const portfolioSummary = calculatePortfolioSummary(goalResults);
-  
+
   return {
     portfolioSummary,
     goalResults,
@@ -164,42 +170,48 @@ function calculateInvestmentINA(inputs: INAInputs) {
 function calculateSingleGoal(goal: INAGoal, inputs: INAInputs, currentYear: number) {
   const yearsToGoal = goal.targetYear - currentYear;
   const isValidTimeHorizon = yearsToGoal > 0;
-  
+
   // Determine applicable risk profile and real return
-  const applicableRiskProfile = goal.useClientRiskProfile 
-    ? inputs.clientRiskProfile 
+  const applicableRiskProfile = goal.useClientRiskProfile
+    ? inputs.clientRiskProfile
     : goal.goalSpecificRiskProfile;
   const applicableRealReturn = inputs.expectedRealReturns[applicableRiskProfile];
-  
+
   // Step 1: Calculate time horizon
   const timeHorizon = {
     targetYear: goal.targetYear,
     currentYear,
     yearsToGoal,
     isValidTimeHorizon,
-    warningMessage: !isValidTimeHorizon ? 'Goal target date is in the past or current year' : undefined,
+    warningMessage: !isValidTimeHorizon
+      ? 'Goal target date is in the past or current year'
+      : undefined,
   };
-  
+
   // Step 2: Project existing capital
   const existingCapital = calculateExistingCapital(goal, inputs, yearsToGoal, applicableRealReturn);
-  
+
   // Step 3: Project monthly contributions
   const monthlyContributions = calculateMonthlyContributions(
     goal.currentContributionToGoal || 0,
     yearsToGoal,
-    applicableRealReturn
+    applicableRealReturn,
   );
-  
+
   // Step 4: Project lump sums
-  const lumpSums = calculateLumpSums(goal.expectedLumpSums || [], goal.targetYear, applicableRealReturn);
+  const lumpSums = calculateLumpSums(
+    goal.expectedLumpSums || [],
+    goal.targetYear,
+    applicableRealReturn,
+  );
   const totalLumpSumFutureValue = lumpSums.reduce((sum, ls) => sum + ls.futureValue, 0);
-  
+
   // Step 5: Total projected capital
-  const totalProjectedCapital = 
+  const totalProjectedCapital =
     existingCapital.totalExistingFutureValue +
     monthlyContributions.futureValueOfContributions +
     totalLumpSumFutureValue;
-  
+
   const projectedCapital = {
     existingCapital,
     monthlyContributions,
@@ -207,22 +219,22 @@ function calculateSingleGoal(goal: INAGoal, inputs: INAInputs, currentYear: numb
     totalLumpSumFutureValue,
     totalProjectedCapital,
   };
-  
+
   // Step 6: Calculate funding gap
   const fundingGap = calculateFundingGap(goal.goalAmountToday, totalProjectedCapital);
-  
+
   // Step 7: Calculate required contributions
   const requiredContributions = calculateRequiredContributions(
     fundingGap,
     goal.currentContributionToGoal || 0,
     yearsToGoal,
-    applicableRealReturn
+    applicableRealReturn,
   );
-  
+
   // Determine goal status
   const goalStatus = determineGoalStatus(fundingGap.fundingPercentage);
   const statusRationale = generateStatusRationale(fundingGap, goalStatus);
-  
+
   return {
     goalId: goal.id,
     goalName: goal.goalName,
@@ -242,14 +254,21 @@ function calculateSingleGoal(goal: INAGoal, inputs: INAInputs, currentYear: numb
 /**
  * Calculate existing capital projection
  */
-function calculateExistingCapital(goal: INAGoal, inputs: INAInputs, yearsToGoal: number, realReturn: number) {
+function calculateExistingCapital(
+  goal: INAGoal,
+  inputs: INAInputs,
+  yearsToGoal: number,
+  realReturn: number,
+) {
   const linkedInvestments = (goal.linkedInvestmentIds || [])
     .map((invId: string) => {
-      const investment = inputs.discretionaryInvestments.find((inv: DiscretionaryInvestment) => inv.id === invId);
+      const investment = inputs.discretionaryInvestments.find(
+        (inv: DiscretionaryInvestment) => inv.id === invId,
+      );
       if (!investment) return null;
-      
+
       const futureValue = investment.currentValue * Math.pow(1 + realReturn, yearsToGoal);
-      
+
       return {
         investmentId: investment.id,
         investmentName: investment.productName,
@@ -260,9 +279,12 @@ function calculateExistingCapital(goal: INAGoal, inputs: INAInputs, yearsToGoal:
       };
     })
     .filter((inv: LinkedInvestmentResult | null): inv is LinkedInvestmentResult => inv !== null);
-  
-  const totalExistingFutureValue = linkedInvestments.reduce((sum: number, inv: LinkedInvestmentResult) => sum + inv.futureValue, 0);
-  
+
+  const totalExistingFutureValue = linkedInvestments.reduce(
+    (sum: number, inv: LinkedInvestmentResult) => sum + inv.futureValue,
+    0,
+  );
+
   return {
     linkedInvestments,
     totalExistingFutureValue,
@@ -272,7 +294,11 @@ function calculateExistingCapital(goal: INAGoal, inputs: INAInputs, yearsToGoal:
 /**
  * Calculate monthly contributions projection
  */
-function calculateMonthlyContributions(monthlyAmount: number, yearsToGoal: number, realReturn: number) {
+function calculateMonthlyContributions(
+  monthlyAmount: number,
+  yearsToGoal: number,
+  realReturn: number,
+) {
   if (monthlyAmount === 0 || yearsToGoal <= 0) {
     return {
       monthlyContributionReal: 0,
@@ -282,11 +308,11 @@ function calculateMonthlyContributions(monthlyAmount: number, yearsToGoal: numbe
       futureValueOfContributions: 0,
     };
   }
-  
+
   // Future value of annuity formula: PMT * 12 * [((1 + r)^n - 1) / r]
   const annuityFactor = (Math.pow(1 + realReturn, yearsToGoal) - 1) / realReturn;
   const futureValueOfContributions = monthlyAmount * 12 * annuityFactor;
-  
+
   return {
     monthlyContributionReal: monthlyAmount,
     yearsToGoal,
@@ -299,12 +325,16 @@ function calculateMonthlyContributions(monthlyAmount: number, yearsToGoal: numbe
 /**
  * Calculate lump sum projections
  */
-function calculateLumpSums(lumpSums: LumpSumEntry[], targetYear: number, realReturn: number): LumpSumResult[] {
+function calculateLumpSums(
+  lumpSums: LumpSumEntry[],
+  targetYear: number,
+  realReturn: number,
+): LumpSumResult[] {
   return lumpSums.map((ls: LumpSumEntry) => {
     const lumpSumYear = new Date(ls.expectedDate).getFullYear();
     const yearsFromLumpToGoal = targetYear - lumpSumYear;
     const futureValue = ls.amount * Math.pow(1 + realReturn, Math.max(0, yearsFromLumpToGoal));
-    
+
     return {
       lumpSumId: ls.id,
       lumpSumAmount: ls.amount,
@@ -324,7 +354,7 @@ function calculateFundingGap(goalRequired: number, projectedCapital: number) {
   const hasShortfall = gapAmount > 0;
   const fundingPercentage = (projectedCapital / goalRequired) * 100;
   const gapPercentage = (gapAmount / goalRequired) * 100;
-  
+
   return {
     goalRequiredReal: goalRequired,
     projectedCapitalAtGoal: projectedCapital,
@@ -342,7 +372,7 @@ function calculateRequiredContributions(
   fundingGap: FundingGap,
   currentMonthly: number,
   yearsToGoal: number,
-  realReturn: number
+  realReturn: number,
 ) {
   if (!fundingGap.hasShortfall) {
     return {
@@ -353,7 +383,7 @@ function calculateRequiredContributions(
       canMeetGoal: true,
     };
   }
-  
+
   if (yearsToGoal <= 0) {
     return {
       currentMonthlyContribution: currentMonthly,
@@ -363,15 +393,15 @@ function calculateRequiredContributions(
       canMeetGoal: false,
     };
   }
-  
+
   // Calculate required additional monthly contribution
   // Solve: gap = X * 12 * annuityFactor
   const annuityFactor = (Math.pow(1 + realReturn, yearsToGoal) - 1) / realReturn;
   const requiredAdditionalMonthly = fundingGap.gapAmount / (12 * annuityFactor);
-  
+
   // Calculate alternative lump sum needed today
   const alternativeLumpSumToday = fundingGap.gapAmount / Math.pow(1 + realReturn, yearsToGoal);
-  
+
   return {
     currentMonthlyContribution: currentMonthly,
     requiredAdditionalMonthly,
@@ -399,7 +429,7 @@ function generateStatusRationale(fundingGap: FundingGap, status: string): string
   if (!fundingGap.hasShortfall) {
     return `Goal is ${fundingGap.fundingPercentage > 100 ? 'overfunded' : 'fully funded'}. Current trajectory exceeds or meets requirements.`;
   }
-  
+
   return `Goal is ${Math.round(fundingGap.fundingPercentage)}% funded. Shortfall of R${formatCurrency(fundingGap.gapAmount)} needs to be addressed.`;
 }
 
@@ -408,22 +438,36 @@ function generateStatusRationale(fundingGap: FundingGap, status: string): string
  */
 function calculatePortfolioSummary(goalResults: GoalResult[]) {
   const totalGoals = goalResults.length;
-  const totalRequiredCapital = goalResults.reduce((sum, g) => sum + g.fundingGap.goalRequiredReal, 0);
-  const totalProjectedCapital = goalResults.reduce((sum, g) => sum + g.projectedCapital.totalProjectedCapital, 0);
-  const totalFundingGap = goalResults.reduce((sum, g) => sum + (g.fundingGap.hasShortfall ? g.fundingGap.gapAmount : 0), 0);
-  const totalAdditionalMonthlyRequired = goalResults.reduce((sum, g) => sum + g.requiredContributions.requiredAdditionalMonthly, 0);
-  
-  const goalsOnTrack = goalResults.filter(g => g.goalStatus === 'on-track').length;
-  const goalsUnderfunded = goalResults.filter(g => g.fundingGap.hasShortfall).length;
-  const goalsOverfunded = goalResults.filter(g => !g.fundingGap.hasShortfall && g.fundingGap.fundingPercentage > 100).length;
-  
+  const totalRequiredCapital = goalResults.reduce(
+    (sum, g) => sum + g.fundingGap.goalRequiredReal,
+    0,
+  );
+  const totalProjectedCapital = goalResults.reduce(
+    (sum, g) => sum + g.projectedCapital.totalProjectedCapital,
+    0,
+  );
+  const totalFundingGap = goalResults.reduce(
+    (sum, g) => sum + (g.fundingGap.hasShortfall ? g.fundingGap.gapAmount : 0),
+    0,
+  );
+  const totalAdditionalMonthlyRequired = goalResults.reduce(
+    (sum, g) => sum + g.requiredContributions.requiredAdditionalMonthly,
+    0,
+  );
+
+  const goalsOnTrack = goalResults.filter((g) => g.goalStatus === 'on-track').length;
+  const goalsUnderfunded = goalResults.filter((g) => g.fundingGap.hasShortfall).length;
+  const goalsOverfunded = goalResults.filter(
+    (g) => !g.fundingGap.hasShortfall && g.fundingGap.fundingPercentage > 100,
+  ).length;
+
   // Determine overall portfolio health
   let overallPortfolioHealth = 'excellent';
   const fundingRatio = totalGoals > 0 ? goalsOnTrack / totalGoals : 0;
   if (fundingRatio < 0.3) overallPortfolioHealth = 'critical';
   else if (fundingRatio < 0.6) overallPortfolioHealth = 'needs-attention';
   else if (fundingRatio < 0.9) overallPortfolioHealth = 'good';
-  
+
   return {
     totalGoals,
     totalRequiredCapital,
@@ -454,17 +498,20 @@ investmentInaRoutes.get('/client/:clientId/auto-populate', async (c) => {
   try {
     await authenticateUser(c.req.header('Authorization'));
     const clientId = c.req.param('clientId');
-    
+
     const inputs = await autoPopulateFromProfile(clientId);
-    
+
     return c.json({ success: true, data: inputs });
   } catch (error: unknown) {
     log.error('❌ Error auto-populating Investment INA:', error);
     const message = getErrMsg(error);
-    return c.json({ 
-      success: false, 
-      error: message 
-    }, message === 'Unauthorized' ? 401 : 500);
+    return c.json(
+      {
+        success: false,
+        error: message,
+      },
+      message === 'Unauthorized' ? 401 : 500,
+    );
   }
 });
 
@@ -477,19 +524,22 @@ investmentInaRoutes.post('/client/:clientId/calculate', async (c) => {
     const user = await authenticateUser(c.req.header('Authorization'));
     const clientId = c.req.param('clientId');
     const inputs = await c.req.json();
-    
+
     log.info('📊 Calculating Investment INA for client:', { clientId });
-    
+
     const results = calculateInvestmentINA(inputs);
-    
+
     return c.json({ success: true, data: results });
   } catch (error: unknown) {
     log.error('❌ Error calculating Investment INA:', error);
     const message = getErrMsg(error);
-    return c.json({ 
-      success: false, 
-      error: message 
-    }, message === 'Unauthorized' ? 401 : 500);
+    return c.json(
+      {
+        success: false,
+        error: message,
+      },
+      message === 'Unauthorized' ? 401 : 500,
+    );
   }
 });
 
@@ -512,10 +562,10 @@ investmentInaRoutes.post('/client/:clientId/save', async (c) => {
     }
 
     const { inputs, results, status } = validationResult.data;
-    
+
     const version = await getNextVersionNumber(clientId);
     const sessionId = `${clientId}-v${version}`;
-    
+
     const session = {
       id: sessionId,
       clientId,
@@ -529,20 +579,23 @@ investmentInaRoutes.post('/client/:clientId/save', async (c) => {
       publishedAt: status === 'published' ? new Date().toISOString() : undefined,
       publishedBy: status === 'published' ? user.id : undefined,
     };
-    
+
     const key = `investment-ina:client:${clientId}:${sessionId}`;
     await kv.set(key, session);
-    
+
     log.info(`✅ Investment INA saved: ${key} (${status})`);
-    
+
     return c.json({ success: true, data: session });
   } catch (error: unknown) {
     log.error('❌ Error saving Investment INA:', error);
     const message = getErrMsg(error);
-    return c.json({ 
-      success: false, 
-      error: message 
-    }, message === 'Unauthorized' ? 401 : 500);
+    return c.json(
+      {
+        success: false,
+        error: message,
+      },
+      message === 'Unauthorized' ? 401 : 500,
+    );
   }
 });
 
@@ -554,20 +607,25 @@ investmentInaRoutes.get('/client/:clientId/sessions', async (c) => {
   try {
     await authenticateUser(c.req.header('Authorization'));
     const clientId = c.req.param('clientId');
-    
+
     const sessions = await kv.getByPrefix(`investment-ina:client:${clientId}:`);
-    
+
     // Sort by version descending
-    const sorted = (sessions || []).sort((a: VersionedSession, b: VersionedSession) => b.version - a.version);
-    
+    const sorted = (sessions || []).sort(
+      (a: VersionedSession, b: VersionedSession) => b.version - a.version,
+    );
+
     return c.json({ success: true, data: sorted });
   } catch (error: unknown) {
     log.error('❌ Error fetching Investment INA sessions:', error);
     const message = getErrMsg(error);
-    return c.json({ 
-      success: false, 
-      error: message 
-    }, message === 'Unauthorized' ? 401 : 500);
+    return c.json(
+      {
+        success: false,
+        error: message,
+      },
+      message === 'Unauthorized' ? 401 : 500,
+    );
   }
 });
 
@@ -578,18 +636,24 @@ investmentInaRoutes.get('/client/:clientId/sessions', async (c) => {
 investmentInaRoutes.get('/client/:clientId/latest-published', async (c) => {
   try {
     const clientId = c.req.param('clientId');
-    
+
     // Optional authentication - allow both authenticated clients and anon key access
     const authHeader = c.req.header('Authorization');
     if (authHeader) {
       try {
         const user = await authenticateUser(authHeader);
         // Check authorization: admins can access all data, regular users only their own
-        const isAdmin = user.role === 'admin' || user.role === 'super_admin' || user.role === 'super-admin' || user.id === 'admin';
+        const isAdmin =
+          user.role === 'admin' ||
+          user.role === 'super_admin' ||
+          user.role === 'super-admin' ||
+          user.id === 'admin';
         const isOwnData = user.id === clientId;
-        
+
         if (!isAdmin && !isOwnData) {
-          log.warn(`⚠️ User ${user.id} (role: ${user.role}) attempting to access Investment INA for client ${clientId}`);
+          log.warn(
+            `⚠️ User ${user.id} (role: ${user.role}) attempting to access Investment INA for client ${clientId}`,
+          );
           return c.json({ error: 'Unauthorized access to client data' }, 403);
         }
       } catch (authError) {
@@ -598,19 +662,25 @@ investmentInaRoutes.get('/client/:clientId/latest-published', async (c) => {
         // Why chosen: Removing this would break client-facing INA display until portal auth is refactored.
         // Proper fix: Require authentication on all INA reads; update client portal to pass user session token.
         // Revisit: When client portal auth is unified (tracked in Tier B backlog).
-        log.info('Authentication failed, allowing unauthenticated access to published Investment INA');
+        log.info(
+          'Authentication failed, allowing unauthenticated access to published Investment INA',
+        );
       }
     }
-    
+
     const sessions = await kv.getByPrefix(`investment-ina:client:${clientId}:`);
-    
+
     const published = (sessions || [])
       .filter((s: VersionedSession) => s.status === 'published')
       .sort((a: VersionedSession, b: VersionedSession) => b.version - a.version);
-    
+
     const latest = published[0] || null;
-    
-    log.info(latest ? `✅ Latest published Investment INA found: ${latest.id}` : '⚠️ No published Investment INA');
+
+    log.info(
+      latest
+        ? `✅ Latest published Investment INA found: ${latest.id}`
+        : '⚠️ No published Investment INA',
+    );
     return c.json({ success: true, data: latest });
   } catch (error: unknown) {
     log.error('❌ Error fetching latest published Investment INA:', error);
@@ -627,28 +697,34 @@ investmentInaRoutes.get('/session/:sessionId', async (c) => {
   try {
     await authenticateUser(c.req.header('Authorization'));
     const sessionId = c.req.param('sessionId');
-    
+
     // Extract clientId from sessionId (format: clientId-vN)
     const clientId = sessionId.split('-v')[0];
-    
+
     const key = `investment-ina:client:${clientId}:${sessionId}`;
     const session = await kv.get(key);
-    
+
     if (!session) {
-      return c.json({ 
-        success: false, 
-        error: 'Investment INA session not found' 
-      }, 404);
+      return c.json(
+        {
+          success: false,
+          error: 'Investment INA session not found',
+        },
+        404,
+      );
     }
-    
+
     return c.json({ success: true, data: session });
   } catch (error: unknown) {
     log.error('❌ Error fetching Investment INA session:', error);
     const message = getErrMsg(error);
-    return c.json({ 
-      success: false, 
-      error: message 
-    }, message === 'Unauthorized' ? 401 : 500);
+    return c.json(
+      {
+        success: false,
+        error: message,
+      },
+      message === 'Unauthorized' ? 401 : 500,
+    );
   }
 });
 
@@ -660,37 +736,116 @@ investmentInaRoutes.delete('/session/:sessionId', async (c) => {
   try {
     log.info('📥 DELETE /investment-ina/session/:sessionId');
     await authenticateUser(c.req.header('Authorization'));
-    
+
     const sessionId = c.req.param('sessionId');
-    
+
     // Extract clientId from sessionId (format: clientId-vN)
     const clientId = sessionId.split('-v')[0];
-    
+
     const key = `investment-ina:client:${clientId}:${sessionId}`;
     await kv.del(key);
-    
+
     log.info('✅ Investment INA session deleted:', { sessionId });
     return c.json({ success: true });
   } catch (error: unknown) {
     log.error('❌ Error deleting Investment INA session:', error);
     const message = getErrMsg(error);
-    return c.json({ 
-      success: false, 
-      error: message 
-    }, message === 'Unauthorized' ? 401 : 500);
+    return c.json(
+      {
+        success: false,
+        error: message,
+      },
+      message === 'Unauthorized' ? 401 : 500,
+    );
   }
 });
 
 export default investmentInaRoutes;
 
 // --- Internal types for Investment INA calculations ---
-interface InvestmentEntry { id?: string; name?: string; productName?: string; provider?: string; currentValue?: string | number; contribution?: string | number; monthlyContribution?: string | number; expectedDrawdownDate?: string; riskCategory?: string; isDiscretionary?: boolean; [key: string]: unknown }
-interface DiscretionaryInvestment { id: string; productName: string; provider: string; currentValue: number; monthlyContribution: number; expectedDrawdownDate?: string; riskCategory: string; isDiscretionary: boolean }
-interface INAGoal { id: string; goalName: string; targetYear: number; goalAmountToday: number; useClientRiskProfile?: boolean; goalSpecificRiskProfile?: string; priorityLevel?: string; linkedInvestmentIds?: string[]; currentContributionToGoal?: number; expectedLumpSums?: LumpSumEntry[]; [key: string]: unknown }
-interface LumpSumEntry { id?: string; amount: number; expectedDate: string; [key: string]: unknown }
-interface INAInputs { goals: INAGoal[]; clientRiskProfile: string; expectedRealReturns: Record<string, number>; longTermInflationRate: number; discretionaryInvestments: DiscretionaryInvestment[]; [key: string]: unknown }
-interface FundingGap { goalRequiredReal: number; totalProjectedCapital: number; gapAmount: number; hasShortfall: boolean; fundingPercentage: number; gapPercentage: number }
-interface GoalResult { goalStatus: string; fundingGap: FundingGap; projectedCapital: { totalProjectedCapital: number; [key: string]: unknown }; requiredContributions: { requiredAdditionalMonthly: number; [key: string]: unknown }; [key: string]: unknown }
-interface LinkedInvestmentResult { investmentId: string; investmentName: string; currentValue: number; yearsToGoal: number; applicableRealReturn: number; futureValue: number }
-interface LumpSumResult { lumpSumId: string; lumpSumAmount: number; lumpSumDate: string; yearsFromLumpToGoal: number; applicableRealReturn: number; futureValue: number }
-interface VersionedSession { version: number; status?: string; [key: string]: unknown }
+interface InvestmentEntry {
+  id?: string;
+  name?: string;
+  productName?: string;
+  provider?: string;
+  currentValue?: string | number;
+  contribution?: string | number;
+  monthlyContribution?: string | number;
+  expectedDrawdownDate?: string;
+  riskCategory?: string;
+  isDiscretionary?: boolean;
+  [key: string]: unknown;
+}
+interface DiscretionaryInvestment {
+  id: string;
+  productName: string;
+  provider: string;
+  currentValue: number;
+  monthlyContribution: number;
+  expectedDrawdownDate?: string;
+  riskCategory: string;
+  isDiscretionary: boolean;
+}
+interface INAGoal {
+  id: string;
+  goalName: string;
+  targetYear: number;
+  goalAmountToday: number;
+  useClientRiskProfile?: boolean;
+  goalSpecificRiskProfile?: string;
+  priorityLevel?: string;
+  linkedInvestmentIds?: string[];
+  currentContributionToGoal?: number;
+  expectedLumpSums?: LumpSumEntry[];
+  [key: string]: unknown;
+}
+interface LumpSumEntry {
+  id?: string;
+  amount: number;
+  expectedDate: string;
+  [key: string]: unknown;
+}
+interface INAInputs {
+  goals: INAGoal[];
+  clientRiskProfile: string;
+  expectedRealReturns: Record<string, number>;
+  longTermInflationRate: number;
+  discretionaryInvestments: DiscretionaryInvestment[];
+  [key: string]: unknown;
+}
+interface FundingGap {
+  goalRequiredReal: number;
+  totalProjectedCapital: number;
+  gapAmount: number;
+  hasShortfall: boolean;
+  fundingPercentage: number;
+  gapPercentage: number;
+}
+interface GoalResult {
+  goalStatus: string;
+  fundingGap: FundingGap;
+  projectedCapital: { totalProjectedCapital: number; [key: string]: unknown };
+  requiredContributions: { requiredAdditionalMonthly: number; [key: string]: unknown };
+  [key: string]: unknown;
+}
+interface LinkedInvestmentResult {
+  investmentId: string;
+  investmentName: string;
+  currentValue: number;
+  yearsToGoal: number;
+  applicableRealReturn: number;
+  futureValue: number;
+}
+interface LumpSumResult {
+  lumpSumId: string;
+  lumpSumAmount: number;
+  lumpSumDate: string;
+  yearsFromLumpToGoal: number;
+  applicableRealReturn: number;
+  futureValue: number;
+}
+interface VersionedSession {
+  version: number;
+  status?: string;
+  [key: string]: unknown;
+}

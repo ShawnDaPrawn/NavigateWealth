@@ -9,16 +9,7 @@
  */
 
 import React, { useState, useEffect, useMemo } from 'react';
-import {
-  FileText,
-  Loader2,
-  Search,
-  Sparkles,
-  X,
-  ChevronRight,
-  Check,
-  Zap,
-} from 'lucide-react';
+import { FileText, Loader2, Search, Sparkles, X, ChevronRight, Check, Zap } from 'lucide-react';
 import { Button } from '../../../../ui/button';
 import { Badge } from '../../../../ui/badge';
 import { cn } from '../../../../ui/utils';
@@ -113,7 +104,7 @@ export function TemplatePickerDialog({
       (t) =>
         t.name.toLowerCase().includes(q) ||
         t.description.toLowerCase().includes(q) ||
-        t.tags.some((tag) => tag.toLowerCase().includes(q))
+        t.tags.some((tag) => tag.toLowerCase().includes(q)),
     );
   }, [templates, searchQuery]);
 
@@ -137,7 +128,9 @@ export function TemplatePickerDialog({
             </div>
             <div>
               <h2 className="text-lg font-semibold text-gray-900">Choose a Template</h2>
-              <p className="text-xs text-gray-500">Start with a pre-built structure or a blank canvas</p>
+              <p className="text-xs text-gray-500">
+                Start with a pre-built structure or a blank canvas
+              </p>
             </div>
           </div>
           <Button variant="ghost" size="sm" onClick={onClose} className="h-8 w-8 p-0">
@@ -201,13 +194,13 @@ export function TemplatePickerDialog({
                       'border-2',
                       isSelected
                         ? 'border-purple-500 bg-purple-50'
-                        : 'border-transparent hover:border-gray-200 hover:bg-gray-50'
+                        : 'border-transparent hover:border-gray-200 hover:bg-gray-50',
                     )}
                   >
                     <div
                       className={cn(
                         'w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 text-lg',
-                        isSelected ? 'bg-purple-100' : 'bg-gray-100'
+                        isSelected ? 'bg-purple-100' : 'bg-gray-100',
                       )}
                     >
                       {template.icon || '📄'}
@@ -216,9 +209,7 @@ export function TemplatePickerDialog({
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2">
                         <h3 className="text-sm font-semibold text-gray-900">{template.name}</h3>
-                        {isSelected && (
-                          <Check className="h-4 w-4 text-purple-600 flex-shrink-0" />
-                        )}
+                        {isSelected && <Check className="h-4 w-4 text-purple-600 flex-shrink-0" />}
                       </div>
                       <p className="text-xs text-gray-500 mt-0.5 line-clamp-2">
                         {template.description}
@@ -258,7 +249,8 @@ export function TemplatePickerDialog({
                 <div
                   className="prose prose-xs max-w-none text-gray-600 text-xs leading-relaxed max-h-[300px] overflow-y-auto"
                   dangerouslySetInnerHTML={{
-                    __html: previewTemplate.body || '<p class="text-gray-400 italic">Empty template</p>',
+                    __html:
+                      previewTemplate.body || '<p class="text-gray-400 italic">Empty template</p>',
                   }}
                 />
               </div>

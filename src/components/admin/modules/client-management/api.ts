@@ -1,6 +1,13 @@
 import { api, APIError } from '../../../../utils/api/client';
 import { logger } from '../../../../utils/logger';
-import { GetClientsResponse, UpdateClientMetadataResponse, GetClientProfileResponse, ProfileData, CleanupResult, KvCleanupResult } from './types';
+import {
+  GetClientsResponse,
+  UpdateClientMetadataResponse,
+  GetClientProfileResponse,
+  ProfileData,
+  CleanupResult,
+  KvCleanupResult,
+} from './types';
 import { ENDPOINTS } from './constants';
 import { ClientKeysResponse } from './hooks/useClientKeys';
 import { ALL_PRODUCT_KEYS } from '../product-management/keyManagerConstants';
@@ -46,7 +53,9 @@ export const clientApi = {
   fetchClientProfile: async (userId: string): Promise<GetClientProfileResponse> => {
     try {
       const profileKey = `user_profile:${userId}:personal_info`;
-      return await api.get<GetClientProfileResponse>(`${ENDPOINTS.PERSONAL_INFO}?key=${encodeURIComponent(profileKey)}`);
+      return await api.get<GetClientProfileResponse>(
+        `${ENDPOINTS.PERSONAL_INFO}?key=${encodeURIComponent(profileKey)}`,
+      );
     } catch (error) {
       // 404 is expected for clients without a profile — return empty response
       if (error instanceof APIError && error.statusCode === 404) {
@@ -73,9 +82,14 @@ export const clientApi = {
   /**
    * Update client metadata
    */
-  updateClientMetadata: async (userId: string, metadata: Record<string, unknown>): Promise<UpdateClientMetadataResponse> => {
+  updateClientMetadata: async (
+    userId: string,
+    metadata: Record<string, unknown>,
+  ): Promise<UpdateClientMetadataResponse> => {
     try {
-      return await api.put<UpdateClientMetadataResponse>(ENDPOINTS.USER_METADATA(userId), { metadata });
+      return await api.put<UpdateClientMetadataResponse>(ENDPOINTS.USER_METADATA(userId), {
+        metadata,
+      });
     } catch (error) {
       logger.error('Failed to update client metadata', error, { userId });
       throw error;
@@ -88,7 +102,7 @@ export const clientApi = {
   runSanctionsScreening: async (userId: string): Promise<boolean> => {
     logger.info('Running sanctions screening...', { userId });
     // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 3000));
+    await new Promise((resolve) => setTimeout(resolve, 3000));
     return true;
   },
 
@@ -98,11 +112,13 @@ export const clientApi = {
   getClientKeys: async (userId: string): Promise<ClientKeysResponse> => {
     try {
       const clientKeysKey = `user_profile:${userId}:client_keys`;
-      const response = await api.get<{ value: Record<string, number | string | boolean | null> }>(`/kv-store/${encodeURIComponent(clientKeysKey)}`);
-      
+      const response = await api.get<{ value: Record<string, number | string | boolean | null> }>(
+        `/kv-store/${encodeURIComponent(clientKeysKey)}`,
+      );
+
       // Transform KV response into structured key data
       const keyValues = response.value || {};
-      
+
       // TODO: Fetch contributing policies from policy management
       // This is a placeholder implementation
       const keys = Object.entries(keyValues).map(([keyId, value]) => {
@@ -117,7 +133,7 @@ export const clientApi = {
             category: keyDef.category,
             isCalculated: keyDef.isCalculated ?? false,
             lastUpdated: new Date().toISOString(),
-            contributingPolicies: []
+            contributingPolicies: [],
           };
         }
 
@@ -136,31 +152,51 @@ export const clientApi = {
         if (parts.length >= 2) {
           const twoWordPrefix = `${parts[0]}_${parts[1]}`;
           // Use the 2-word prefix if it looks like a known category pattern
-          if (['medical_aid', 'retirement_pre', 'retirement_post', 'invest_voluntary', 'invest_guaranteed',
-               'employee_benefits', 'estate_planning', 'post_retirement',
-               'profile_personal', 'profile_contact', 'profile_identity', 'profile_address',
-               'profile_employment', 'profile_health', 'profile_family', 'profile_banking',
-               'profile_risk', 'profile_financial'].includes(twoWordPrefix)) {
+          if (
+            [
+              'medical_aid',
+              'retirement_pre',
+              'retirement_post',
+              'invest_voluntary',
+              'invest_guaranteed',
+              'employee_benefits',
+              'estate_planning',
+              'post_retirement',
+              'profile_personal',
+              'profile_contact',
+              'profile_identity',
+              'profile_address',
+              'profile_employment',
+              'profile_health',
+              'profile_family',
+              'profile_banking',
+              'profile_risk',
+              'profile_financial',
+            ].includes(twoWordPrefix)
+          ) {
             category = twoWordPrefix;
           }
         }
 
         return {
           keyId,
-          name: keyId.split('_').map((word: string) => word.charAt(0).toUpperCase() + word.slice(1)).join(' '),
+          name: keyId
+            .split('_')
+            .map((word: string) => word.charAt(0).toUpperCase() + word.slice(1))
+            .join(' '),
           value,
           dataType: dataType as 'currency' | 'number' | 'percentage' | 'text' | 'date' | 'boolean',
           category,
           isCalculated: keyId.includes('_total') || keyId.includes('_recommended'),
           lastUpdated: new Date().toISOString(),
-          contributingPolicies: []
+          contributingPolicies: [],
         };
       });
 
       return {
         keys,
         lastCalculated: new Date().toISOString(),
-        totalCategories: new Set(keys.map(k => k.category)).size
+        totalCategories: new Set(keys.map((k) => k.category)).size,
       };
     } catch (error: unknown) {
       // If the key doesn't exist (404), return empty data instead of throwing
@@ -171,10 +207,10 @@ export const clientApi = {
         return {
           keys: [],
           lastCalculated: new Date().toISOString(),
-          totalCategories: 0
+          totalCategories: 0,
         };
       }
-      
+
       logger.error('Failed to fetch client keys', error, { userId });
       // Only throw if it's a real error, not just "not found"
       throw error;
@@ -186,7 +222,9 @@ export const clientApi = {
    */
   recalculateClientKeys: async (userId: string): Promise<{ success: boolean }> => {
     try {
-      const response = await api.post<{ success: boolean }>('/integrations/recalculate-totals', { clientId: userId });
+      const response = await api.post<{ success: boolean }>('/integrations/recalculate-totals', {
+        clientId: userId,
+      });
       logger.info('Client keys recalculated', { userId });
       return response;
     } catch (error) {
@@ -198,7 +236,10 @@ export const clientApi = {
   /**
    * Get key history/audit trail
    */
-  getClientKeyHistory: async (userId: string, keyId: string): Promise<{ history: Array<{ timestamp: string; value: number; changedBy: string }> }> => {
+  getClientKeyHistory: async (
+    userId: string,
+    keyId: string,
+  ): Promise<{ history: Array<{ timestamp: string; value: number; changedBy: string }> }> => {
     try {
       // TODO: Implement actual history tracking
       // For now, return mock data
@@ -208,9 +249,9 @@ export const clientApi = {
           {
             timestamp: new Date().toISOString(),
             value: 1000000,
-            changedBy: 'System (Auto-calculation)'
-          }
-        ]
+            changedBy: 'System (Auto-calculation)',
+          },
+        ],
       };
     } catch (error) {
       logger.error('Failed to fetch client key history', error, { userId, keyId });
@@ -271,5 +312,5 @@ export const {
   recalculateClientKeys,
   getClientKeyHistory,
   runCleanup,
-  runKvCleanup
+  runKvCleanup,
 } = clientApi;

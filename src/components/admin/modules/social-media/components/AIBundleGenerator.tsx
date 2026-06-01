@@ -55,10 +55,7 @@ import type {
 // Constants
 // ============================================================================
 
-const PLATFORM_CONFIG: Record<
-  SocialAIPlatform,
-  { label: string; icon: React.ReactNode }
-> = {
+const PLATFORM_CONFIG: Record<SocialAIPlatform, { label: string; icon: React.ReactNode }> = {
   linkedin: {
     label: 'LinkedIn',
     icon: <Linkedin className="h-4 w-4" />,
@@ -139,12 +136,7 @@ export function AIBundleGenerator({ onUseContent, onUseImage, onUseBoth }: AIBun
   const [generatedPosts, setGeneratedPosts] = useState<GeneratedPlatformPost[]>([]);
   const [generatedImage, setGeneratedImage] = useState<GeneratedImage | null>(null);
 
-  const {
-    generateBundle,
-    isGeneratingBundle,
-    isConfigured,
-    statusLoading,
-  } = useSocialMediaAI();
+  const { generateBundle, isGeneratingBundle, isConfigured, statusLoading } = useSocialMediaAI();
 
   // ============================================================================
   // Handlers
@@ -188,14 +180,23 @@ export function AIBundleGenerator({ onUseContent, onUseImage, onUseBoth }: AIBun
       // Error handled by hook
     }
   }, [
-    topic, platform, tone, goal, imageStyle, imageSubject,
-    includeHashtags, includeCTA, additionalInstructions, generateBundle,
+    topic,
+    platform,
+    tone,
+    goal,
+    imageStyle,
+    imageSubject,
+    includeHashtags,
+    includeCTA,
+    additionalInstructions,
+    generateBundle,
   ]);
 
   const handleCopy = useCallback(async (post: GeneratedPlatformPost) => {
-    const fullContent = post.hashtags.length > 0
-      ? `${post.content}\n\n${post.hashtags.map((h) => `#${h}`).join(' ')}`
-      : post.content;
+    const fullContent =
+      post.hashtags.length > 0
+        ? `${post.content}\n\n${post.hashtags.map((h) => `#${h}`).join(' ')}`
+        : post.content;
     await navigator.clipboard.writeText(fullContent);
     setCopiedPlatform(post.platform);
     toast.success('Copied to clipboard');
@@ -243,8 +244,8 @@ export function AIBundleGenerator({ onUseContent, onUseImage, onUseBoth }: AIBun
           <AlertCircle className="h-12 w-12 text-amber-500 mb-4" />
           <h3 className="text-lg font-semibold mb-2">AI Service Not Configured</h3>
           <p className="text-muted-foreground max-w-md">
-            The OpenAI API key is not configured. Please contact your administrator
-            to enable AI content generation.
+            The OpenAI API key is not configured. Please contact your administrator to enable AI
+            content generation.
           </p>
         </CardContent>
       </Card>
@@ -259,7 +260,10 @@ export function AIBundleGenerator({ onUseContent, onUseImage, onUseBoth }: AIBun
       <Card>
         <CardHeader className="pb-4">
           <CardTitle className="flex items-center gap-2 text-lg">
-            <div className="flex items-center justify-center h-8 w-8 rounded-lg" style={{ backgroundColor: BRAND.navyLight }}>
+            <div
+              className="flex items-center justify-center h-8 w-8 rounded-lg"
+              style={{ backgroundColor: BRAND.navyLight }}
+            >
               <Layers className="h-4 w-4" style={{ color: BRAND.navy }} />
             </div>
             Content Bundle Generator
@@ -273,30 +277,34 @@ export function AIBundleGenerator({ onUseContent, onUseImage, onUseBoth }: AIBun
           <div className="space-y-2">
             <Label className="text-sm font-medium">Platform</Label>
             <div className="flex flex-wrap gap-2">
-              {(Object.entries(PLATFORM_CONFIG) as [SocialAIPlatform, typeof PLATFORM_CONFIG[SocialAIPlatform]][]).map(
-                ([key, config]) => {
-                  const isSelected = platform === key;
-                  return (
-                    <button
-                      key={key}
-                      type="button"
-                      onClick={() => setPlatform(key)}
-                      className={`
+              {(
+                Object.entries(PLATFORM_CONFIG) as [
+                  SocialAIPlatform,
+                  (typeof PLATFORM_CONFIG)[SocialAIPlatform],
+                ][]
+              ).map(([key, config]) => {
+                const isSelected = platform === key;
+                return (
+                  <button
+                    key={key}
+                    type="button"
+                    onClick={() => setPlatform(key)}
+                    className={`
                         flex items-center gap-2 px-3 py-2 rounded-lg border text-sm font-medium
                         transition-all duration-150
-                        ${isSelected
-                          ? 'bg-white text-gray-900 border-gray-400 shadow-sm'
-                          : 'bg-white text-gray-500 border-gray-200 hover:border-gray-300'
+                        ${
+                          isSelected
+                            ? 'bg-white text-gray-900 border-gray-400 shadow-sm'
+                            : 'bg-white text-gray-500 border-gray-200 hover:border-gray-300'
                         }
                       `}
-                    >
-                      {config.icon}
-                      {config.label}
-                      {isSelected && <Check className="h-3 w-3" />}
-                    </button>
-                  );
-                },
-              )}
+                  >
+                    {config.icon}
+                    {config.label}
+                    {isSelected && <Check className="h-3 w-3" />}
+                  </button>
+                );
+              })}
             </div>
           </div>
 
@@ -446,11 +454,14 @@ export function AIBundleGenerator({ onUseContent, onUseImage, onUseBoth }: AIBun
           </div>
 
           {isGeneratingBundle && (
-            <div className="flex items-center gap-3 p-3 rounded-lg text-sm" style={{ backgroundColor: BRAND.navyLight, color: BRAND.navy }}>
+            <div
+              className="flex items-center gap-3 p-3 rounded-lg text-sm"
+              style={{ backgroundColor: BRAND.navyLight, color: BRAND.navy }}
+            >
               <Loader2 className="h-4 w-4 animate-spin flex-shrink-0" />
               <span>
-                Generating post text and branded image in parallel. This typically
-                takes 15–30 seconds...
+                Generating post text and branded image in parallel. This typically takes 15–30
+                seconds...
               </span>
             </div>
           )}
@@ -517,17 +528,19 @@ export function AIBundleGenerator({ onUseContent, onUseImage, onUseBoth }: AIBun
                           className="flex items-center gap-1.5 text-xs"
                         >
                           {isCopied ? (
-                            <><Check className="h-3 w-3 text-green-600" /> Copied</>
+                            <>
+                              <Check className="h-3 w-3 text-green-600" /> Copied
+                            </>
                           ) : (
-                            <><Copy className="h-3 w-3" /> Copy</>
+                            <>
+                              <Copy className="h-3 w-3" /> Copy
+                            </>
                           )}
                         </Button>
                         {onUseContent && (
                           <Button
                             size="sm"
-                            onClick={() =>
-                              onUseContent(post.platform, post.content, post.hashtags)
-                            }
+                            onClick={() => onUseContent(post.platform, post.content, post.hashtags)}
                             className="flex items-center gap-1.5 text-xs"
                           >
                             <ArrowRight className="h-3 w-3" />

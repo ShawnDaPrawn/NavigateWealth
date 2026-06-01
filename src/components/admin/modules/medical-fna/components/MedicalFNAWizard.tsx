@@ -1,13 +1,13 @@
 /**
  * Medical FNA Wizard
  * South African Medical Aid Financial Needs Analysis - 4 Step Process
- * 
+ *
  * Overall Tool Flow (MANDATORY):
  * 1. Information Gathering
  * 2. System Auto-Calculation (formula-driven, no edits)
  * 3. Adviser Manual Adjustment (overrides only)
  * 4. Finalise & Publish
- * 
+ *
  * Users may not skip steps.
  * All prior data flows forward and is preserved for audit.
  */
@@ -21,10 +21,10 @@ import { Step1InputForm } from './Step1InputForm';
 import { Step2SystemCalculation } from './Step2SystemCalculation';
 import { Step3ManualAdjustment } from './Step3ManualAdjustment';
 import { Step4Finalise } from './Step4Finalise';
-import { 
-  MedicalFNAInputs, 
-  MedicalFNAResults, 
-  MedicalFNAAdjustments, 
+import {
+  MedicalFNAInputs,
+  MedicalFNAResults,
+  MedicalFNAAdjustments,
   MedicalFNAFinalNeeds,
   MedicalFNAWizardState,
 } from '../types';
@@ -64,7 +64,11 @@ function buildInitialMedicalState(
   }
 
   return {
-    currentStep: (startAtStep && startAtStep >= 1 && startAtStep <= 4 ? startAtStep : 1) as 1 | 2 | 3 | 4,
+    currentStep: (startAtStep && startAtStep >= 1 && startAtStep <= 4 ? startAtStep : 1) as
+      | 1
+      | 2
+      | 3
+      | 4,
     clientId,
     clientName,
     inputs: (intakePrefill as unknown as MedicalFNAInputs) || {},
@@ -98,82 +102,84 @@ export function MedicalFNAWizard({
   // Step 1: Submit -> Calculate -> Go to Step 2
   const handleStep1Submit = (inputs: MedicalFNAInputs) => {
     const calculations = calculateMedicalNeeds(inputs);
-    
-    setState(prev => ({
+
+    setState((prev) => ({
       ...prev,
       inputs,
       calculations,
-      currentStep: 2
+      currentStep: 2,
     }));
   };
 
   // Step 2: Next -> Go to Step 3
   const handleStep2Next = () => {
-    setState(prev => ({ ...prev, currentStep: 3 }));
+    setState((prev) => ({ ...prev, currentStep: 3 }));
   };
   const handleStep2Back = () => {
-    setState(prev => ({ ...prev, currentStep: 1 }));
+    setState((prev) => ({ ...prev, currentStep: 1 }));
   };
 
   // Step 3: Submit Adjustments -> Go to Step 4
   const handleStep3Submit = (adjustments: MedicalFNAAdjustments) => {
-    setState(prev => ({
+    setState((prev) => ({
       ...prev,
       adjustments,
-      currentStep: 4
+      currentStep: 4,
     }));
   };
   const handleStep3Back = () => {
-    setState(prev => ({ ...prev, currentStep: 2 }));
+    setState((prev) => ({ ...prev, currentStep: 2 }));
   };
 
   // Step 4: Final Publish
   const handlePublish = async (finalNeeds: MedicalFNAFinalNeeds) => {
-    setState(prev => ({ ...prev, isPublishing: true }));
-    
+    setState((prev) => ({ ...prev, isPublishing: true }));
+
     try {
       if (!clientId) {
-        throw new Error("Client ID is required to publish FNA");
+        throw new Error('Client ID is required to publish FNA');
       }
 
       // 1. Create new FNA Session
       const session = await MedicalFNAApiService.createMedicalFNA(clientId);
-      
+
       // 2. Save Inputs (including existing policy details)
       // Note: We cast inputs because partial might miss required fields, but validation ensured they exist
-      await MedicalFNAApiService.updateMedicalFNAInputs(session.id, state.inputs as MedicalFNAInputs);
+      await MedicalFNAApiService.updateMedicalFNAInputs(
+        session.id,
+        state.inputs as MedicalFNAInputs,
+      );
 
       // 3. Save Results & Adjustments (from client-side calculation)
       await MedicalFNAApiService.updateMedicalFNAResults(
         session.id,
         state.calculations!,
-        state.adjustments
+        state.adjustments,
       );
 
       // 4. Publish
       await MedicalFNAApiService.publishMedicalFNA(session.id);
-      
+
       console.log('Publishing Medical FNA:', {
         id: session.id,
         clientId,
         inputs: state.inputs,
         calculations: state.calculations,
         adjustments: state.adjustments,
-        finalNeeds
+        finalNeeds,
       });
-      
-      toast.success("Medical Needs Analysis published successfully");
-      
+
+      toast.success('Medical Needs Analysis published successfully');
+
       handleComplete();
-      
     } catch (error) {
       console.error('Failed to publish FNA:', error);
-      toast.error("Failed to publish analysis");
-      setState(prev => ({ ...prev, isPublishing: false }));
+      toast.error('Failed to publish analysis');
+      setState((prev) => ({ ...prev, isPublishing: false }));
     }
   };
   const handleStep4Back = () => {
-    setState(prev => ({ ...prev, currentStep: 3 }));
+    setState((prev) => ({ ...prev, currentStep: 3 }));
   };
 
   // Render Step Content
@@ -181,7 +187,7 @@ export function MedicalFNAWizard({
     switch (state.currentStep) {
       case 1:
         return (
-          <Step1InputForm 
+          <Step1InputForm
             clientId={clientId}
             initialData={state.inputs as Partial<MedicalFNAInputs>}
             onNext={handleStep1Submit}
@@ -239,7 +245,7 @@ export function MedicalFNAWizard({
             {WIZARD_STEPS.map((step) => {
               const isActive = state.currentStep === step.step;
               const isCompleted = state.currentStep > step.step;
-              
+
               return (
                 <div key={step.step} className="flex flex-col items-center bg-background px-2">
                   <div
@@ -248,8 +254,8 @@ export function MedicalFNAWizard({
                         isActive
                           ? 'border-primary bg-primary text-primary-foreground'
                           : isCompleted
-                          ? 'border-primary bg-primary text-primary-foreground'
-                          : 'border-muted-foreground text-muted-foreground bg-background'
+                            ? 'border-primary bg-primary text-primary-foreground'
+                            : 'border-muted-foreground text-muted-foreground bg-background'
                       }`}
                   >
                     {isCompleted ? (
@@ -266,9 +272,7 @@ export function MedicalFNAWizard({
                     >
                       {step.title}
                     </p>
-                    <p className="text-xs text-muted-foreground mt-1">
-                      {step.description}
-                    </p>
+                    <p className="text-xs text-muted-foreground mt-1">{step.description}</p>
                   </div>
                 </div>
               );
@@ -276,10 +280,8 @@ export function MedicalFNAWizard({
           </div>
 
           {/* Step Content */}
-          <div className="min-h-[500px]">
-            {renderStep()}
-          </div>
-          
+          <div className="min-h-[500px]">{renderStep()}</div>
+
           {/* Publishing State Overlay */}
           {state.isPublishing && (
             <div className="fixed inset-0 bg-background/80 backdrop-blur-sm z-50 flex items-center justify-center">

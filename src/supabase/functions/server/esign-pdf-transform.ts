@@ -79,10 +79,7 @@ export interface ApplyManifestResult {
  * PDF for nothing. Returns `null` if valid, or an error string for the
  * route to return to the client.
  */
-export function validateManifest(
-  manifest: unknown,
-  sourcePageCount: number,
-): string | null {
+export function validateManifest(manifest: unknown, sourcePageCount: number): string | null {
   if (!manifest || typeof manifest !== 'object') return 'Manifest must be an object';
   const m = manifest as Partial<PageManifest>;
   if (m.version !== 1) return `Unsupported manifest version: ${m.version}`;

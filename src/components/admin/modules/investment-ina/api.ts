@@ -17,7 +17,7 @@ export const InvestmentINAFnaAPI = {
     logger.debug('[InvestmentINAFnaAPI] Auto-populating inputs', { clientId });
     try {
       const response = await api.get<{ success: boolean; data: InvestmentINAInputs }>(
-        `/ina/investment/client/${clientId}/auto-populate`
+        `/ina/investment/client/${clientId}/auto-populate`,
       );
       return response.data;
     } catch (error) {
@@ -29,15 +29,12 @@ export const InvestmentINAFnaAPI = {
   /**
    * Calculate INA results
    */
-  async calculateINA(
-    clientId: string,
-    inputs: InvestmentINAInputs
-  ): Promise<InvestmentINAResults> {
+  async calculateINA(clientId: string, inputs: InvestmentINAInputs): Promise<InvestmentINAResults> {
     logger.debug('[InvestmentINAFnaAPI] Calculating results', { clientId });
     try {
       const response = await api.post<{ success: boolean; data: InvestmentINAResults }>(
         `/ina/investment/client/${clientId}/calculate`,
-        inputs
+        inputs,
       );
       return response.data;
     } catch (error) {
@@ -53,13 +50,13 @@ export const InvestmentINAFnaAPI = {
     clientId: string,
     inputs: InvestmentINAInputs,
     results: InvestmentINAResults | null,
-    status: 'draft' | 'published'
+    status: 'draft' | 'published',
   ): Promise<InvestmentINASession> {
     logger.debug('[InvestmentINAFnaAPI] Saving session', { clientId, status });
     try {
       const response = await api.post<{ success: boolean; data: InvestmentINASession }>(
         `/ina/investment/client/${clientId}/save`,
-        { inputs, results, status }
+        { inputs, results, status },
       );
       return response.data;
     } catch (error) {
@@ -75,7 +72,7 @@ export const InvestmentINAFnaAPI = {
     logger.debug('[InvestmentINAFnaAPI] Fetching all sessions', { clientId });
     try {
       const response = await api.get<{ success: boolean; data: InvestmentINASession[] }>(
-        `/ina/investment/client/${clientId}/sessions`
+        `/ina/investment/client/${clientId}/sessions`,
       );
       return response.data;
     } catch (error) {
@@ -91,7 +88,7 @@ export const InvestmentINAFnaAPI = {
     logger.debug('[InvestmentINAFnaAPI] Fetching latest published', { clientId });
     try {
       const response = await api.get<{ success: boolean; data: InvestmentINASession | null }>(
-        `/ina/investment/client/${clientId}/latest-published`
+        `/ina/investment/client/${clientId}/latest-published`,
       );
       return response.data || null;
     } catch (error) {
@@ -116,7 +113,7 @@ export const InvestmentINAFnaAPI = {
     logger.debug('[InvestmentINAFnaAPI] Fetching session', { sessionId });
     try {
       const response = await api.get<{ success: boolean; data: InvestmentINASession }>(
-        `/ina/investment/session/${sessionId}`
+        `/ina/investment/session/${sessionId}`,
       );
       return response.data;
     } catch (error) {
@@ -145,7 +142,7 @@ export const InvestmentINAFnaAPI = {
     logger.debug('[InvestmentINAFnaAPI] Publishing session', { sessionId });
     try {
       const response = await api.put<{ success: boolean; data: InvestmentINASession }>(
-        `/ina/investment/session/${sessionId}/publish`
+        `/ina/investment/session/${sessionId}/publish`,
       );
       return response.data;
     } catch (error) {
@@ -161,7 +158,7 @@ export const InvestmentINAFnaAPI = {
     logger.debug('[InvestmentINAFnaAPI] Unpublishing session', { sessionId });
     try {
       const response = await api.put<{ success: boolean; data: InvestmentINASession }>(
-        `/ina/investment/session/${sessionId}/unpublish`
+        `/ina/investment/session/${sessionId}/unpublish`,
       );
       return response.data;
     } catch (error) {

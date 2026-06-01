@@ -12,14 +12,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { Card, CardContent } from '../../ui/card';
 import { Badge } from '../../ui/badge';
 import { Button } from '../../ui/button';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '../../ui/table';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../ui/table';
 import {
   ArrowLeftRight,
   Loader2,
@@ -102,7 +95,9 @@ export function PolicyComparisonPanel({ clientId }: PolicyComparisonPanelProps) 
     setIsLoading(true);
     try {
       const supabase = createClient();
-      const { data: { session } } = await supabase.auth.getSession();
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
       const token = session?.access_token || publicAnonKey;
 
       const res = await fetch(
@@ -142,10 +137,17 @@ export function PolicyComparisonPanel({ clientId }: PolicyComparisonPanelProps) 
     }
   }
   const labelOrder = [
-    'Policy Number', 'Plan Type', 'Premium', 'Cover Amount', 'Fund Value',
-    'Monthly Contribution', 'Inception Date', 'Expiry Date', 'Status',
+    'Policy Number',
+    'Plan Type',
+    'Premium',
+    'Cover Amount',
+    'Fund Value',
+    'Monthly Contribution',
+    'Inception Date',
+    'Expiry Date',
+    'Status',
   ];
-  const sortedLabels = labelOrder.filter(l => allLabels.has(l));
+  const sortedLabels = labelOrder.filter((l) => allLabels.has(l));
   // Add any labels not in our predefined order
   for (const l of allLabels) {
     if (!sortedLabels.includes(l)) sortedLabels.push(l);
@@ -204,12 +206,7 @@ export function PolicyComparisonPanel({ clientId }: PolicyComparisonPanelProps) 
               >
                 {groupByCategory ? 'Flat View' : 'Group by Category'}
               </Button>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={fetchComparison}
-                className="text-xs h-6"
-              >
+              <Button variant="ghost" size="sm" onClick={fetchComparison} className="text-xs h-6">
                 <RefreshCw className="h-3 w-3" />
               </Button>
             </div>
@@ -233,7 +230,9 @@ export function PolicyComparisonPanel({ clientId }: PolicyComparisonPanelProps) 
                   {Array.from(categorised.entries()).map(([catId, catPolicies]) => (
                     <div key={catId}>
                       <div className="px-4 py-2 bg-gray-50/50">
-                        <Badge className={`text-[10px] ${CATEGORY_COLORS[catId] || 'bg-gray-100 text-gray-700 hover:bg-gray-100'}`}>
+                        <Badge
+                          className={`text-[10px] ${CATEGORY_COLORS[catId] || 'bg-gray-100 text-gray-700 hover:bg-gray-100'}`}
+                        >
                           {catPolicies[0]?.categoryLabel || catId}
                         </Badge>
                         <span className="text-[10px] text-gray-400 ml-2">
@@ -244,14 +243,18 @@ export function PolicyComparisonPanel({ clientId }: PolicyComparisonPanelProps) 
                         <TableHeader>
                           <TableRow>
                             <TableHead className="text-[10px] w-[140px]">Provider</TableHead>
-                            {sortedLabels.map(label => (
-                              <TableHead key={label} className="text-[10px]">{label}</TableHead>
+                            {sortedLabels.map((label) => (
+                              <TableHead key={label} className="text-[10px]">
+                                {label}
+                              </TableHead>
                             ))}
-                            <TableHead className="text-[10px] w-[80px] text-center">Doc / AI</TableHead>
+                            <TableHead className="text-[10px] w-[80px] text-center">
+                              Doc / AI
+                            </TableHead>
                           </TableRow>
                         </TableHeader>
                         <TableBody>
-                          {catPolicies.map(p => (
+                          {catPolicies.map((p) => (
                             <TableRow key={p.id} className="hover:bg-gray-50/50">
                               <TableCell className="text-xs font-medium text-gray-800 whitespace-nowrap">
                                 <div className="flex items-center gap-1.5">
@@ -259,10 +262,11 @@ export function PolicyComparisonPanel({ clientId }: PolicyComparisonPanelProps) 
                                   {p.providerName}
                                 </div>
                               </TableCell>
-                              {sortedLabels.map(label => {
-                                const kf = p.keyFields.find(f => f.label === label);
+                              {sortedLabels.map((label) => {
+                                const kf = p.keyFields.find((f) => f.label === label);
                                 const value = kf?.value;
-                                const isEmpty = value === undefined || value === null || value === '';
+                                const isEmpty =
+                                  value === undefined || value === null || value === '';
                                 return (
                                   <TableCell
                                     key={label}
@@ -275,7 +279,10 @@ export function PolicyComparisonPanel({ clientId }: PolicyComparisonPanelProps) 
                               <TableCell className="text-center">
                                 <div className="flex items-center justify-center gap-1">
                                   {p.hasDocument && (
-                                    <FileText className="h-3 w-3 text-green-500" aria-label="Document attached" />
+                                    <FileText
+                                      className="h-3 w-3 text-green-500"
+                                      aria-label="Document attached"
+                                    />
                                   )}
                                   {p.hasExtraction && (
                                     <Sparkles
@@ -284,11 +291,16 @@ export function PolicyComparisonPanel({ clientId }: PolicyComparisonPanelProps) 
                                     />
                                   )}
                                   {p.lockedFieldCount > 0 && (
-                                    <Lock className="h-3 w-3 text-amber-500" aria-label={`${p.lockedFieldCount} locked fields`} />
+                                    <Lock
+                                      className="h-3 w-3 text-amber-500"
+                                      aria-label={`${p.lockedFieldCount} locked fields`}
+                                    />
                                   )}
-                                  {!p.hasDocument && !p.hasExtraction && p.lockedFieldCount === 0 && (
-                                    <span className="text-[10px] text-gray-300">—</span>
-                                  )}
+                                  {!p.hasDocument &&
+                                    !p.hasExtraction &&
+                                    p.lockedFieldCount === 0 && (
+                                      <span className="text-[10px] text-gray-300">—</span>
+                                    )}
                                 </div>
                               </TableCell>
                             </TableRow>
@@ -301,7 +313,9 @@ export function PolicyComparisonPanel({ clientId }: PolicyComparisonPanelProps) 
                   {/* Totals row */}
                   {totals.size > 0 && (
                     <div className="px-4 py-2.5 bg-purple-50/50 border-t border-gray-200">
-                      <p className="text-[10px] font-semibold text-gray-500 uppercase mb-1.5">Portfolio Totals</p>
+                      <p className="text-[10px] font-semibold text-gray-500 uppercase mb-1.5">
+                        Portfolio Totals
+                      </p>
                       <div className="flex flex-wrap gap-4">
                         {Array.from(totals.entries()).map(([label, total]) => (
                           <div key={label} className="text-xs">
@@ -323,14 +337,16 @@ export function PolicyComparisonPanel({ clientId }: PolicyComparisonPanelProps) 
                       <TableRow>
                         <TableHead className="text-[10px] w-[140px]">Provider</TableHead>
                         <TableHead className="text-[10px] w-[100px]">Category</TableHead>
-                        {sortedLabels.map(label => (
-                          <TableHead key={label} className="text-[10px]">{label}</TableHead>
+                        {sortedLabels.map((label) => (
+                          <TableHead key={label} className="text-[10px]">
+                            {label}
+                          </TableHead>
                         ))}
                         <TableHead className="text-[10px] w-[80px] text-center">Doc / AI</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {policies.map(p => (
+                      {policies.map((p) => (
                         <TableRow key={p.id} className="hover:bg-gray-50/50">
                           <TableCell className="text-xs font-medium text-gray-800 whitespace-nowrap">
                             <div className="flex items-center gap-1.5">
@@ -339,12 +355,14 @@ export function PolicyComparisonPanel({ clientId }: PolicyComparisonPanelProps) 
                             </div>
                           </TableCell>
                           <TableCell>
-                            <Badge className={`text-[9px] px-1.5 py-0 ${CATEGORY_COLORS[p.categoryId] || 'bg-gray-100 text-gray-700 hover:bg-gray-100'}`}>
+                            <Badge
+                              className={`text-[9px] px-1.5 py-0 ${CATEGORY_COLORS[p.categoryId] || 'bg-gray-100 text-gray-700 hover:bg-gray-100'}`}
+                            >
                               {p.categoryLabel}
                             </Badge>
                           </TableCell>
-                          {sortedLabels.map(label => {
-                            const kf = p.keyFields.find(f => f.label === label);
+                          {sortedLabels.map((label) => {
+                            const kf = p.keyFields.find((f) => f.label === label);
                             const value = kf?.value;
                             const isEmpty = value === undefined || value === null || value === '';
                             return (
@@ -360,7 +378,9 @@ export function PolicyComparisonPanel({ clientId }: PolicyComparisonPanelProps) 
                             <div className="flex items-center justify-center gap-1">
                               {p.hasDocument && <FileText className="h-3 w-3 text-green-500" />}
                               {p.hasExtraction && <Sparkles className="h-3 w-3 text-purple-500" />}
-                              {p.lockedFieldCount > 0 && <Lock className="h-3 w-3 text-amber-500" />}
+                              {p.lockedFieldCount > 0 && (
+                                <Lock className="h-3 w-3 text-amber-500" />
+                              )}
                               {!p.hasDocument && !p.hasExtraction && p.lockedFieldCount === 0 && (
                                 <span className="text-[10px] text-gray-300">—</span>
                               )}
@@ -374,12 +394,16 @@ export function PolicyComparisonPanel({ clientId }: PolicyComparisonPanelProps) 
                   {/* Totals */}
                   {totals.size > 0 && (
                     <div className="px-4 py-2.5 bg-purple-50/50 border-t border-gray-200">
-                      <p className="text-[10px] font-semibold text-gray-500 uppercase mb-1.5">Portfolio Totals</p>
+                      <p className="text-[10px] font-semibold text-gray-500 uppercase mb-1.5">
+                        Portfolio Totals
+                      </p>
                       <div className="flex flex-wrap gap-4">
                         {Array.from(totals.entries()).map(([label, total]) => (
                           <div key={label} className="text-xs">
                             <span className="text-gray-500">{label}: </span>
-                            <span className="font-semibold text-gray-800">R{total.toLocaleString('en-ZA')}</span>
+                            <span className="font-semibold text-gray-800">
+                              R{total.toLocaleString('en-ZA')}
+                            </span>
                           </div>
                         ))}
                       </div>
@@ -389,48 +413,53 @@ export function PolicyComparisonPanel({ clientId }: PolicyComparisonPanelProps) 
               )}
 
               {/* Gap Analysis */}
-              {policies.length > 0 && (() => {
-                const coveredCategories = new Set(policies.map(p => p.categoryId));
-                const allCategories = [
-                  { id: 'risk_planning', label: 'Risk Planning' },
-                  { id: 'medical_aid', label: 'Medical Aid' },
-                  { id: 'retirement_pre', label: 'Pre-Retirement' },
-                  { id: 'investments_voluntary', label: 'Voluntary Investments' },
-                ];
-                // Also match parent categories
-                const matchesCategory = (id: string) => {
-                  if (coveredCategories.has(id)) return true;
-                  // retirement_planning covers retirement_pre
-                  if (id === 'retirement_pre' && coveredCategories.has('retirement_planning')) return true;
-                  if (id === 'investments_voluntary' && coveredCategories.has('investments')) return true;
-                  return false;
-                };
-                const gaps = allCategories.filter(c => !matchesCategory(c.id));
+              {policies.length > 0 &&
+                (() => {
+                  const coveredCategories = new Set(policies.map((p) => p.categoryId));
+                  const allCategories = [
+                    { id: 'risk_planning', label: 'Risk Planning' },
+                    { id: 'medical_aid', label: 'Medical Aid' },
+                    { id: 'retirement_pre', label: 'Pre-Retirement' },
+                    { id: 'investments_voluntary', label: 'Voluntary Investments' },
+                  ];
+                  // Also match parent categories
+                  const matchesCategory = (id: string) => {
+                    if (coveredCategories.has(id)) return true;
+                    // retirement_planning covers retirement_pre
+                    if (id === 'retirement_pre' && coveredCategories.has('retirement_planning'))
+                      return true;
+                    if (id === 'investments_voluntary' && coveredCategories.has('investments'))
+                      return true;
+                    return false;
+                  };
+                  const gaps = allCategories.filter((c) => !matchesCategory(c.id));
 
-                if (gaps.length === 0) return null;
+                  if (gaps.length === 0) return null;
 
-                return (
-                  <div className="px-4 py-2.5 bg-amber-50/50 border-t border-gray-200">
-                    <div className="flex items-center gap-2 mb-1.5">
-                      <AlertCircle className="h-3.5 w-3.5 text-amber-600" />
-                      <p className="text-[10px] font-semibold text-amber-800 uppercase">Coverage Gaps</p>
+                  return (
+                    <div className="px-4 py-2.5 bg-amber-50/50 border-t border-gray-200">
+                      <div className="flex items-center gap-2 mb-1.5">
+                        <AlertCircle className="h-3.5 w-3.5 text-amber-600" />
+                        <p className="text-[10px] font-semibold text-amber-800 uppercase">
+                          Coverage Gaps
+                        </p>
+                      </div>
+                      <div className="flex flex-wrap gap-1.5">
+                        {gaps.map((g) => (
+                          <Badge
+                            key={g.id}
+                            className="bg-amber-100 text-amber-700 hover:bg-amber-100 text-[10px]"
+                          >
+                            {g.label}
+                          </Badge>
+                        ))}
+                      </div>
+                      <p className="text-[10px] text-amber-600 mt-1">
+                        Client has no active policies in these categories.
+                      </p>
                     </div>
-                    <div className="flex flex-wrap gap-1.5">
-                      {gaps.map(g => (
-                        <Badge
-                          key={g.id}
-                          className="bg-amber-100 text-amber-700 hover:bg-amber-100 text-[10px]"
-                        >
-                          {g.label}
-                        </Badge>
-                      ))}
-                    </div>
-                    <p className="text-[10px] text-amber-600 mt-1">
-                      Client has no active policies in these categories.
-                    </p>
-                  </div>
-                );
-              })()}
+                  );
+                })()}
             </div>
           )}
         </div>

@@ -29,17 +29,8 @@ import { useVoiceRecorder } from '../hooks/useVoiceRecorder';
 import { useTranscribe } from '../hooks/useTranscribe';
 import { MAX_RECORDING_DURATION_MS } from '../constants';
 import { Button } from '../../../../ui/button';
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from '../../../../ui/tooltip';
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from '../../../../ui/popover';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '../../../../ui/tooltip';
+import { Popover, PopoverContent, PopoverTrigger } from '../../../../ui/popover';
 import {
   Mic,
   Square,
@@ -139,34 +130,37 @@ export function VoiceRecorderButton({ onInsertText, disabled = false }: VoiceRec
   }, [recorder.status, recorder.audioBlob, recorder.audioFormat]);
 
   // ── File upload handler ─────────────────────────────────────────────────
-  const handleFileUpload = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
+  const handleFileUpload = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      const file = e.target.files?.[0];
+      if (!file) return;
 
-    // Validate file size
-    if (file.size > MAX_UPLOAD_SIZE_BYTES) {
-      recorder.reset();
-      transcriber.resetTranscription();
-      // We'll show a manual error via the transcriber
-      setUploadedFileName(null);
-      alert(`File is too large (${formatFileSize(file.size)}). Maximum size is 25MB.`);
-      return;
-    }
+      // Validate file size
+      if (file.size > MAX_UPLOAD_SIZE_BYTES) {
+        recorder.reset();
+        transcriber.resetTranscription();
+        // We'll show a manual error via the transcriber
+        setUploadedFileName(null);
+        alert(`File is too large (${formatFileSize(file.size)}). Maximum size is 25MB.`);
+        return;
+      }
 
-    setUploadedFileName(file.name);
-    setShowMenu(false);
+      setUploadedFileName(file.name);
+      setShowMenu(false);
 
-    const format = extractAudioFormat(file);
-    transcriber.transcribe({
-      audioBlob: file,
-      format,
-    });
+      const format = extractAudioFormat(file);
+      transcriber.transcribe({
+        audioBlob: file,
+        format,
+      });
 
-    // Reset the input so the same file can be re-selected
-    if (fileInputRef.current) {
-      fileInputRef.current.value = '';
-    }
-  }, [transcriber, recorder]);
+      // Reset the input so the same file can be re-selected
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+    },
+    [transcriber, recorder],
+  );
 
   // ── Actions ─────────────────────────────────────────────────────────────
   const handleInsert = useCallback(() => {
@@ -176,7 +170,12 @@ export function VoiceRecorderButton({ onInsertText, disabled = false }: VoiceRec
     transcriber.resetTranscription();
     recorder.reset();
     setUploadedFileName(null);
-  }, [transcriber.transcriptionResult, onInsertText, transcriber.resetTranscription, recorder.reset]);
+  }, [
+    transcriber.transcriptionResult,
+    onInsertText,
+    transcriber.resetTranscription,
+    recorder.reset,
+  ]);
 
   const handleDiscard = useCallback(() => {
     transcriber.resetTranscription();
@@ -215,12 +214,12 @@ export function VoiceRecorderButton({ onInsertText, disabled = false }: VoiceRec
   // We detect this specific case and show a helpful message with the file upload fallback.
   // Proper fix: The embedding iframe would need allow="microphone" attribute.
   // Searchable tag: // WORKAROUND: iframe-microphone-permission
-  const isMicPermissionError = recorder.status === 'error' &&
-    recorder.errorMessage?.includes('denied');
+  const isMicPermissionError =
+    recorder.status === 'error' && recorder.errorMessage?.includes('denied');
 
   const errorMsg = hasTranscriberError
-    ? (transcriber.transcriptionError?.message || 'Transcription failed.')
-    : (recorder.errorMessage || 'An unexpected error occurred.');
+    ? transcriber.transcriptionError?.message || 'Transcription failed.'
+    : recorder.errorMessage || 'An unexpected error occurred.';
 
   // ── Hidden file input (always rendered) ─────────────────────────────────
   const fileInput = (
@@ -395,8 +394,8 @@ export function VoiceRecorderButton({ onInsertText, disabled = false }: VoiceRec
 
           {isMicPermissionError && (
             <p className="text-[10px] text-gray-500 leading-relaxed">
-              Live recording requires microphone permissions which may be unavailable in embedded previews.
-              Record audio using your device's voice recorder app, then upload the file.
+              Live recording requires microphone permissions which may be unavailable in embedded
+              previews. Record audio using your device's voice recorder app, then upload the file.
             </p>
           )}
         </div>
@@ -455,9 +454,7 @@ export function VoiceRecorderButton({ onInsertText, disabled = false }: VoiceRec
             <p className="text-xs text-gray-700 leading-relaxed line-clamp-3" title={text}>
               {text}
             </p>
-            {warning && (
-              <p className="text-[10px] text-amber-600 mt-1">{warning}</p>
-            )}
+            {warning && <p className="text-[10px] text-amber-600 mt-1">{warning}</p>}
           </div>
           <div className="flex items-center gap-1 shrink-0 pt-1">
             <Button

@@ -1,8 +1,8 @@
 /**
  * Advice Engine Components - Index
- * 
+ *
  * Centralized exports for all advice engine components.
- * 
+ *
  * @module advice-engine/components
  */
 

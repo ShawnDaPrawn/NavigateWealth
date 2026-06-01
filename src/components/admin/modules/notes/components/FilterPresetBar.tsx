@@ -12,11 +12,7 @@ import type { SavedFilterPreset, NoteColor, NoteArchiveFilter, NoteSortBy } from
 import { FILTER_PRESETS_STORAGE_KEY } from '../constants';
 import { Button } from '../../../../ui/button';
 import { Input } from '../../../../ui/input';
-import {
-  Dialog,
-  DialogContent,
-  DialogTitle,
-} from '../../../../ui/dialog';
+import { Dialog, DialogContent, DialogTitle } from '../../../../ui/dialog';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -107,7 +103,8 @@ function describeFilters(f: CurrentFilterState): string {
   if (f.archiveFilter !== 'active') parts.push(f.archiveFilter);
   if (f.colorFilter !== 'all') parts.push(f.colorFilter);
   if (f.selectedTags.length > 0) parts.push(`tags: ${f.selectedTags.join(', ')}`);
-  if (f.clientFilter !== 'all') parts.push(f.clientFilter === '__unlinked__' ? 'unlinked' : 'client filter');
+  if (f.clientFilter !== 'all')
+    parts.push(f.clientFilter === '__unlinked__' ? 'unlinked' : 'client filter');
   return parts.length > 0 ? parts.join(' + ') : 'Default view';
 }
 
@@ -133,10 +130,13 @@ export function FilterPresetBar({
   }, [personnelId]);
 
   // Persist to localStorage on change
-  const persistPresets = useCallback((updated: SavedFilterPreset[]) => {
-    setPresets(updated);
-    savePresetsToStorage(personnelId, updated);
-  }, [personnelId]);
+  const persistPresets = useCallback(
+    (updated: SavedFilterPreset[]) => {
+      setPresets(updated);
+      savePresetsToStorage(personnelId, updated);
+    },
+    [personnelId],
+  );
 
   const handleSavePreset = useCallback(() => {
     const name = savePresetName.trim();
@@ -155,31 +155,45 @@ export function FilterPresetBar({
     setSavePresetName('');
   }, [savePresetName, currentFilters, presets, persistPresets]);
 
-  const handleDeletePreset = useCallback((id: string) => {
-    persistPresets(presets.filter((p) => p.id !== id));
-    if (activePresetId === id) setActivePresetId(null);
-  }, [presets, activePresetId, persistPresets]);
+  const handleDeletePreset = useCallback(
+    (id: string) => {
+      persistPresets(presets.filter((p) => p.id !== id));
+      if (activePresetId === id) setActivePresetId(null);
+    },
+    [presets, activePresetId, persistPresets],
+  );
 
-  const handleRenamePreset = useCallback((id: string) => {
-    const name = editingName.trim();
-    if (!name) return;
-    persistPresets(presets.map((p) => p.id === id ? { ...p, name } : p));
-    setEditingPresetId(null);
-    setEditingName('');
-  }, [editingName, presets, persistPresets]);
+  const handleRenamePreset = useCallback(
+    (id: string) => {
+      const name = editingName.trim();
+      if (!name) return;
+      persistPresets(presets.map((p) => (p.id === id ? { ...p, name } : p)));
+      setEditingPresetId(null);
+      setEditingName('');
+    },
+    [editingName, presets, persistPresets],
+  );
 
-  const handleApplyPreset = useCallback((preset: SavedFilterPreset) => {
-    setActivePresetId(preset.id);
-    onApplyPreset(preset.filters);
-  }, [onApplyPreset]);
+  const handleApplyPreset = useCallback(
+    (preset: SavedFilterPreset) => {
+      setActivePresetId(preset.id);
+      onApplyPreset(preset.filters);
+    },
+    [onApplyPreset],
+  );
 
-  const handleUpdatePreset = useCallback((id: string) => {
-    persistPresets(presets.map((p) =>
-      p.id === id
-        ? { ...p, filters: { ...currentFilters }, createdAt: new Date().toISOString() }
-        : p
-    ));
-  }, [presets, currentFilters, persistPresets]);
+  const handleUpdatePreset = useCallback(
+    (id: string) => {
+      persistPresets(
+        presets.map((p) =>
+          p.id === id
+            ? { ...p, filters: { ...currentFilters }, createdAt: new Date().toISOString() }
+            : p,
+        ),
+      );
+    },
+    [presets, currentFilters, persistPresets],
+  );
 
   const canSaveCurrentFilters = hasActiveFilters(currentFilters);
   const activePreset = activePresetId ? presets.find((p) => p.id === activePresetId) : null;
@@ -196,7 +210,9 @@ export function FilterPresetBar({
                 size="sm"
                 className={`h-8 text-xs gap-1.5 ${activePreset ? 'border-purple-300 bg-purple-50 text-purple-700' : ''}`}
               >
-                <Bookmark className={`h-3.5 w-3.5 ${activePreset ? 'fill-purple-500 text-purple-500' : ''}`} />
+                <Bookmark
+                  className={`h-3.5 w-3.5 ${activePreset ? 'fill-purple-500 text-purple-500' : ''}`}
+                />
                 {activePreset ? activePreset.name : 'Presets'}
                 <ChevronDown className="h-3 w-3 ml-0.5 opacity-50" />
               </Button>
@@ -225,7 +241,10 @@ export function FilterPresetBar({
                         onChange={(e) => setEditingName(e.target.value)}
                         onKeyDown={(e) => {
                           if (e.key === 'Enter') handleRenamePreset(preset.id);
-                          if (e.key === 'Escape') { setEditingPresetId(null); setEditingName(''); }
+                          if (e.key === 'Escape') {
+                            setEditingPresetId(null);
+                            setEditingName('');
+                          }
                         }}
                         className="h-7 text-xs flex-1"
                         autoFocus
@@ -242,7 +261,10 @@ export function FilterPresetBar({
                         variant="ghost"
                         size="sm"
                         className="h-7 w-7 p-0"
-                        onClick={() => { setEditingPresetId(null); setEditingName(''); }}
+                        onClick={() => {
+                          setEditingPresetId(null);
+                          setEditingName('');
+                        }}
                       >
                         <X className="h-3 w-3" />
                       </Button>
@@ -252,9 +274,13 @@ export function FilterPresetBar({
                       onClick={() => handleApplyPreset(preset)}
                       className="text-xs flex items-start gap-2 py-2"
                     >
-                      <Bookmark className={`h-3.5 w-3.5 mt-0.5 shrink-0 ${
-                        activePresetId === preset.id ? 'fill-purple-500 text-purple-500' : 'text-gray-400'
-                      }`} />
+                      <Bookmark
+                        className={`h-3.5 w-3.5 mt-0.5 shrink-0 ${
+                          activePresetId === preset.id
+                            ? 'fill-purple-500 text-purple-500'
+                            : 'text-gray-400'
+                        }`}
+                      />
                       <div className="flex-1 min-w-0">
                         <div className="font-medium truncate">{preset.name}</div>
                         <div className="text-[10px] text-gray-400 mt-0.5 truncate">
@@ -309,7 +335,10 @@ export function FilterPresetBar({
             variant="ghost"
             size="sm"
             className="h-8 text-xs gap-1.5 text-gray-500 hover:text-purple-700"
-            onClick={() => { setSavePresetName(''); setShowSaveDialog(true); }}
+            onClick={() => {
+              setSavePresetName('');
+              setShowSaveDialog(true);
+            }}
           >
             <BookmarkPlus className="h-3.5 w-3.5" />
             Save Preset
@@ -328,14 +357,14 @@ export function FilterPresetBar({
             <Input
               value={savePresetName}
               onChange={(e) => setSavePresetName(e.target.value)}
-              onKeyDown={(e) => { if (e.key === 'Enter') handleSavePreset(); }}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') handleSavePreset();
+              }}
               placeholder="e.g. Client meeting notes"
               className="h-9 text-sm"
               autoFocus
             />
-            <div className="text-xs text-gray-400">
-              Filters: {describeFilters(currentFilters)}
-            </div>
+            <div className="text-xs text-gray-400">Filters: {describeFilters(currentFilters)}</div>
             <div className="flex justify-end gap-2 pt-1">
               <Button variant="outline" size="sm" onClick={() => setShowSaveDialog(false)}>
                 Cancel

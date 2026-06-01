@@ -13,16 +13,31 @@
 import React from 'react';
 import { Draggable } from '@hello-pangea/dnd';
 import {
-  MessageSquare, FileText, Calculator, Calendar, Mail,
-  MoreHorizontal, Eye, Archive,
-  Shield, Stethoscope, TrendingUp, Target, Building2, Briefcase,
-  UserPlus, ClipboardList,
+  MessageSquare,
+  FileText,
+  Calculator,
+  Calendar,
+  Mail,
+  MoreHorizontal,
+  Eye,
+  Archive,
+  Shield,
+  Stethoscope,
+  TrendingUp,
+  Target,
+  Building2,
+  Briefcase,
+  UserPlus,
+  ClipboardList,
 } from 'lucide-react';
 import { cn } from '../../../../ui/utils';
 import { Button } from '../../../../ui/button';
 import {
-  DropdownMenu, DropdownMenuContent, DropdownMenuItem,
-  DropdownMenuSeparator, DropdownMenuTrigger,
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
 } from '../../../../ui/dropdown-menu';
 import type { Submission, SubmissionStatus, SubmissionType } from '../types';
 import { SUBMISSION_TYPE_CONFIG } from '../constants';
@@ -75,7 +90,8 @@ function formatRelativeTime(dateStr: string): string {
     const days = Math.floor(hrs / 24);
     if (days < 7) return `${days}d ago`;
     return new Date(dateStr).toLocaleDateString('en-ZA', {
-      day: '2-digit', month: 'short',
+      day: '2-digit',
+      month: 'short',
     });
   } catch {
     return '';
@@ -100,7 +116,7 @@ function extractPreview(submission: Submission): CardPreview {
   } else if (p.service) {
     serviceName = String(p.service)
       .replace(/-/g, ' ')
-      .replace(/\b\w/g, c => c.toUpperCase());
+      .replace(/\b\w/g, (c) => c.toUpperCase());
   }
 
   let stage: string | null = null;
@@ -151,18 +167,27 @@ function extractPreview(submission: Submission): CardPreview {
     // Tax Planning
     if (vertical === 'TaxPlanning') {
       const taxTypes = pd.selected_types as string[] | undefined;
-      if (taxTypes?.length) highlights.push(`${taxTypes.length} tax type${taxTypes.length > 1 ? 's' : ''}`);
+      if (taxTypes?.length)
+        highlights.push(`${taxTypes.length} tax type${taxTypes.length > 1 ? 's' : ''}`);
     }
   }
 
   // Consultation
   if (p.meetingType) {
-    highlights.push(String(p.meetingType).replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase()));
+    highlights.push(
+      String(p.meetingType)
+        .replace(/_/g, ' ')
+        .replace(/\b\w/g, (c) => c.toUpperCase()),
+    );
   }
 
   // Contact
   if (p.clientType) {
-    highlights.push(String(p.clientType).replace(/_/g, ' ').replace(/\\b\\w/g, c => c.toUpperCase()));
+    highlights.push(
+      String(p.clientType)
+        .replace(/_/g, ' ')
+        .replace(/\\b\\w/g, (c) => c.toUpperCase()),
+    );
   }
 
   // Client Signup
@@ -194,14 +219,14 @@ export function SubmissionCard({ submission, index, onView, onStatusChange }: Su
   const wasDragged = React.useRef(false);
 
   return (
-      <Draggable draggableId={submission.id} index={index}>
-        {(provided, snapshot) => {
-          // Mark as dragged whenever the snapshot shows dragging
-          if (snapshot.isDragging) {
-            wasDragged.current = true;
-          }
+    <Draggable draggableId={submission.id} index={index}>
+      {(provided, snapshot) => {
+        // Mark as dragged whenever the snapshot shows dragging
+        if (snapshot.isDragging) {
+          wasDragged.current = true;
+        }
 
-          return (
+        return (
           <div
             ref={provided.innerRef}
             {...provided.draggableProps}
@@ -217,13 +242,21 @@ export function SubmissionCard({ submission, index, onView, onStatusChange }: Su
                 wasDragged.current = false;
                 return;
               }
-              if (!(e.target as HTMLElement).closest('button') && !(e.target as HTMLElement).closest('.no-drag')) {
+              if (
+                !(e.target as HTMLElement).closest('button') &&
+                !(e.target as HTMLElement).closest('.no-drag')
+              ) {
                 onView(submission);
               }
             }}
             role="button"
             tabIndex={0}
-            onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onView(submission); } }}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                onView(submission);
+              }
+            }}
             aria-label={`View ${typeCfg.label} from ${submission.submitterName || 'unknown submitter'}`}
           >
             {/* Type Strip — like TaskCard's priority strip */}
@@ -249,35 +282,43 @@ export function SubmissionCard({ submission, index, onView, onStatusChange }: Su
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end" className="w-48">
-                    <DropdownMenuItem onClick={(e) => {
-                      e.stopPropagation();
-                      onView(submission);
-                    }}>
+                    <DropdownMenuItem
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onView(submission);
+                      }}
+                    >
                       <Eye className="mr-2 h-4 w-4" />
                       View Details
                     </DropdownMenuItem>
                     <DropdownMenuSeparator />
                     {submission.status !== 'new' && (
-                      <DropdownMenuItem onClick={(e) => {
-                        e.stopPropagation();
-                        onStatusChange(submission.id, 'new');
-                      }}>
+                      <DropdownMenuItem
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onStatusChange(submission.id, 'new');
+                        }}
+                      >
                         Move to New
                       </DropdownMenuItem>
                     )}
                     {submission.status !== 'pending' && (
-                      <DropdownMenuItem onClick={(e) => {
-                        e.stopPropagation();
-                        onStatusChange(submission.id, 'pending');
-                      }}>
+                      <DropdownMenuItem
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onStatusChange(submission.id, 'pending');
+                        }}
+                      >
                         Move to Pending
                       </DropdownMenuItem>
                     )}
                     {submission.status !== 'completed' && (
-                      <DropdownMenuItem onClick={(e) => {
-                        e.stopPropagation();
-                        onStatusChange(submission.id, 'completed');
-                      }}>
+                      <DropdownMenuItem
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onStatusChange(submission.id, 'completed');
+                        }}
+                      >
                         Move to Completed
                       </DropdownMenuItem>
                     )}
@@ -307,9 +348,7 @@ export function SubmissionCard({ submission, index, onView, onStatusChange }: Su
 
               {/* Email — subtle, single line */}
               {submission.submitterEmail && (
-                <p className="text-xs text-gray-500 truncate mb-2">
-                  {submission.submitterEmail}
-                </p>
+                <p className="text-xs text-gray-500 truncate mb-2">{submission.submitterEmail}</p>
               )}
 
               {/* Service / Stage tags — muted gray only */}
@@ -332,7 +371,7 @@ export function SubmissionCard({ submission, index, onView, onStatusChange }: Su
               {/* Highlights — muted chips */}
               {preview.highlights.length > 0 && (
                 <div className="flex flex-wrap gap-1">
-                  {preview.highlights.map(h => (
+                  {preview.highlights.map((h) => (
                     <span
                       key={h}
                       className="inline-flex items-center text-[10px] font-medium text-gray-400 bg-gray-50 px-1.5 py-0.5 rounded"
@@ -344,8 +383,8 @@ export function SubmissionCard({ submission, index, onView, onStatusChange }: Su
               )}
             </div>
           </div>
-          );
-        }}
-      </Draggable>
+        );
+      }}
+    </Draggable>
   );
 }

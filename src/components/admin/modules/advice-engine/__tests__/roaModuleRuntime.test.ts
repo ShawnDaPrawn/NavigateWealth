@@ -45,9 +45,13 @@ describe('roaModuleRuntime', () => {
   it('uses contract fallback modules instead of the old static schema IDs', () => {
     const modules = getFallbackRuntimeModules();
 
-    expect(modules.map((module) => module.id)).toEqual(FALLBACK_ROA_MODULE_CONTRACTS.map((contract) => contract.id));
+    expect(modules.map((module) => module.id)).toEqual(
+      FALLBACK_ROA_MODULE_CONTRACTS.map((contract) => contract.id),
+    );
     expect(modules.some((module) => module.id === 'life_recosting')).toBe(false);
-    expect(modules.every((module) => module.documentSections && module.documentSections.length > 0)).toBe(true);
+    expect(
+      modules.every((module) => module.documentSections && module.documentSections.length > 0),
+    ).toBe(true);
   });
 
   it('treats configured evidence requirements as blocking completion checks', () => {

@@ -7,7 +7,14 @@
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { aiManagementKeys } from './queryKeys';
-import { agentApi, vascoConfigApi, analyticsApi, feedbackApi, handoffApi, ragIndexApi } from '../api';
+import {
+  agentApi,
+  vascoConfigApi,
+  analyticsApi,
+  feedbackApi,
+  handoffApi,
+  ragIndexApi,
+} from '../api';
 import { QUERY_STALE_TIME, ANALYTICS_STALE_TIME } from '../constants';
 import type { HandoffStatus } from '../types';
 import { toast } from 'sonner';
@@ -132,7 +139,7 @@ export function useTriggerReindex() {
     onSuccess: (result) => {
       queryClient.invalidateQueries({ queryKey: aiManagementKeys.ragIndex() });
       toast.success(
-        `Indexed ${result.articlesIndexed} articles (${result.totalChunks} chunks) in ${(result.durationMs / 1000).toFixed(1)}s`
+        `Indexed ${result.articlesIndexed} articles (${result.totalChunks} chunks) in ${(result.durationMs / 1000).toFixed(1)}s`,
       );
     },
     onError: () => {

@@ -76,15 +76,29 @@ interface ScanResult {
 
 function UrgencyBadge({ daysUntil }: { daysUntil: number }) {
   if (daysUntil <= 7) {
-    return <Badge className="bg-red-100 text-red-700 hover:bg-red-100 text-[10px] px-1.5 py-0">Urgent</Badge>;
+    return (
+      <Badge className="bg-red-100 text-red-700 hover:bg-red-100 text-[10px] px-1.5 py-0">
+        Urgent
+      </Badge>
+    );
   }
   if (daysUntil <= 14) {
-    return <Badge className="bg-red-50 text-red-600 hover:bg-red-50 text-[10px] px-1.5 py-0">High</Badge>;
+    return (
+      <Badge className="bg-red-50 text-red-600 hover:bg-red-50 text-[10px] px-1.5 py-0">High</Badge>
+    );
   }
   if (daysUntil <= 30) {
-    return <Badge className="bg-amber-100 text-amber-700 hover:bg-amber-100 text-[10px] px-1.5 py-0">Medium</Badge>;
+    return (
+      <Badge className="bg-amber-100 text-amber-700 hover:bg-amber-100 text-[10px] px-1.5 py-0">
+        Medium
+      </Badge>
+    );
   }
-  return <Badge className="bg-green-100 text-green-700 hover:bg-green-100 text-[10px] px-1.5 py-0">Low</Badge>;
+  return (
+    <Badge className="bg-green-100 text-green-700 hover:bg-green-100 text-[10px] px-1.5 py-0">
+      Low
+    </Badge>
+  );
 }
 
 export function RenewalAlertScanner() {
@@ -97,54 +111,61 @@ export function RenewalAlertScanner() {
 
   const getAuthToken = useCallback(async (): Promise<string> => {
     const supabase = createClient();
-    const { data: { session } } = await supabase.auth.getSession();
+    const {
+      data: { session },
+    } = await supabase.auth.getSession();
     return session?.access_token || publicAnonKey;
   }, []);
 
-  const runScan = useCallback(async (dryRun: boolean) => {
-    if (dryRun) {
-      setIsScanning(true);
-    } else {
-      setIsCreating(true);
-    }
-
-    try {
-      const token = await getAuthToken();
-      const res = await fetch(`${API_BASE}/policy-renewal-alerts/scan`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({ daysAhead, dryRun }),
-      });
-
-      if (!res.ok) {
-        const errorData = await res.json();
-        throw new Error(errorData.error || 'Scan failed');
-      }
-
-      const data: ScanResult = await res.json();
-      setScanResult(data);
-
+  const runScan = useCallback(
+    async (dryRun: boolean) => {
       if (dryRun) {
-        if (data.summary.candidatesFound === 0) {
-          toast.info('No upcoming renewals found within the scan window');
-        } else {
-          toast.success(`Found ${data.summary.candidatesFound} upcoming renewals (${data.summary.tasksToCreate} new)`);
-        }
+        setIsScanning(true);
       } else {
-        toast.success(`Created ${data.summary.tasksCreated} renewal alert tasks`);
-        setShowConfirmDialog(false);
+        setIsCreating(true);
       }
-    } catch (err: unknown) {
-      console.error('Renewal scan error:', err);
-      toast.error((err as Error)?.message || 'Failed to scan for renewals');
-    } finally {
-      setIsScanning(false);
-      setIsCreating(false);
-    }
-  }, [daysAhead, getAuthToken]);
+
+      try {
+        const token = await getAuthToken();
+        const res = await fetch(`${API_BASE}/policy-renewal-alerts/scan`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({ daysAhead, dryRun }),
+        });
+
+        if (!res.ok) {
+          const errorData = await res.json();
+          throw new Error(errorData.error || 'Scan failed');
+        }
+
+        const data: ScanResult = await res.json();
+        setScanResult(data);
+
+        if (dryRun) {
+          if (data.summary.candidatesFound === 0) {
+            toast.info('No upcoming renewals found within the scan window');
+          } else {
+            toast.success(
+              `Found ${data.summary.candidatesFound} upcoming renewals (${data.summary.tasksToCreate} new)`,
+            );
+          }
+        } else {
+          toast.success(`Created ${data.summary.tasksCreated} renewal alert tasks`);
+          setShowConfirmDialog(false);
+        }
+      } catch (err: unknown) {
+        console.error('Renewal scan error:', err);
+        toast.error((err as Error)?.message || 'Failed to scan for renewals');
+      } finally {
+        setIsScanning(false);
+        setIsCreating(false);
+      }
+    },
+    [daysAhead, getAuthToken],
+  );
 
   const handlePreview = () => runScan(true);
 
@@ -156,8 +177,8 @@ export function RenewalAlertScanner() {
     runScan(false);
   };
 
-  const newCandidates = scanResult?.candidates.filter(c => !c.alreadyHasTask) || [];
-  const existingCandidates = scanResult?.candidates.filter(c => c.alreadyHasTask) || [];
+  const newCandidates = scanResult?.candidates.filter((c) => !c.alreadyHasTask) || [];
+  const existingCandidates = scanResult?.candidates.filter((c) => c.alreadyHasTask) || [];
 
   return (
     <div className="space-y-4">
@@ -223,8 +244,8 @@ export function RenewalAlertScanner() {
             )}
           </div>
           <p className="text-[11px] text-gray-400 mt-2">
-            Scans all policies for anniversary dates within the next {daysAhead} days.
-            Tasks are deduplicated — existing renewal tasks won't be recreated.
+            Scans all policies for anniversary dates within the next {daysAhead} days. Tasks are
+            deduplicated — existing renewal tasks won't be recreated.
           </p>
         </CardContent>
       </Card>
@@ -241,7 +262,9 @@ export function RenewalAlertScanner() {
                     <FileText className="h-4 w-4 text-gray-500" />
                   </div>
                   <div>
-                    <p className="text-lg font-bold text-gray-900">{scanResult.summary.totalPoliciesScanned}</p>
+                    <p className="text-lg font-bold text-gray-900">
+                      {scanResult.summary.totalPoliciesScanned}
+                    </p>
                     <p className="text-[10px] text-gray-500">Policies Scanned</p>
                   </div>
                 </div>
@@ -254,7 +277,9 @@ export function RenewalAlertScanner() {
                     <CalendarClock className="h-4 w-4 text-amber-600" />
                   </div>
                   <div>
-                    <p className="text-lg font-bold text-gray-900">{scanResult.summary.candidatesFound}</p>
+                    <p className="text-lg font-bold text-gray-900">
+                      {scanResult.summary.candidatesFound}
+                    </p>
                     <p className="text-[10px] text-gray-500">Upcoming Renewals</p>
                   </div>
                 </div>
@@ -267,7 +292,9 @@ export function RenewalAlertScanner() {
                     <ListTodo className="h-4 w-4 text-green-600" />
                   </div>
                   <div>
-                    <p className="text-lg font-bold text-gray-900">{scanResult.summary.tasksToCreate}</p>
+                    <p className="text-lg font-bold text-gray-900">
+                      {scanResult.summary.tasksToCreate}
+                    </p>
                     <p className="text-[10px] text-gray-500">New Tasks</p>
                   </div>
                 </div>
@@ -280,7 +307,9 @@ export function RenewalAlertScanner() {
                     <CheckCircle2 className="h-4 w-4 text-blue-600" />
                   </div>
                   <div>
-                    <p className="text-lg font-bold text-gray-900">{scanResult.summary.skippedExisting}</p>
+                    <p className="text-lg font-bold text-gray-900">
+                      {scanResult.summary.skippedExisting}
+                    </p>
                     <p className="text-[10px] text-gray-500">Already Tracked</p>
                   </div>
                 </div>
@@ -295,7 +324,9 @@ export function RenewalAlertScanner() {
               <span className="text-sm text-green-800 font-medium">
                 {scanResult.summary.tasksCreated} renewal tasks created successfully
               </span>
-              <Badge className="bg-green-600 text-white hover:bg-green-600 text-[10px] ml-auto">Applied</Badge>
+              <Badge className="bg-green-600 text-white hover:bg-green-600 text-[10px] ml-auto">
+                Applied
+              </Badge>
             </div>
           )}
 
@@ -320,14 +351,16 @@ export function RenewalAlertScanner() {
                 {showCandidates && (
                   <div className="divide-y divide-gray-100 max-h-[400px] overflow-y-auto">
                     {/* New candidates first */}
-                    {newCandidates.map(candidate => (
+                    {newCandidates.map((candidate) => (
                       <div key={candidate.policyId} className="px-4 py-2.5 flex items-center gap-3">
                         <div className="flex-shrink-0">
                           <Clock className="h-4 w-4 text-amber-500" />
                         </div>
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2">
-                            <span className="text-sm font-medium text-gray-800">{candidate.providerName}</span>
+                            <span className="text-sm font-medium text-gray-800">
+                              {candidate.providerName}
+                            </span>
                             <span className="text-xs text-gray-400">—</span>
                             <span className="text-xs text-gray-600">{candidate.clientName}</span>
                           </div>
@@ -340,7 +373,14 @@ export function RenewalAlertScanner() {
                               </>
                             )}
                             <span className="text-gray-300">|</span>
-                            <span>Anniversary: {new Date(candidate.nextAnniversary).toLocaleDateString('en-ZA', { day: '2-digit', month: 'short', year: 'numeric' })}</span>
+                            <span>
+                              Anniversary:{' '}
+                              {new Date(candidate.nextAnniversary).toLocaleDateString('en-ZA', {
+                                day: '2-digit',
+                                month: 'short',
+                                year: 'numeric',
+                              })}
+                            </span>
                           </div>
                         </div>
                         <div className="flex items-center gap-2 flex-shrink-0">
@@ -356,17 +396,24 @@ export function RenewalAlertScanner() {
                     {existingCandidates.length > 0 && (
                       <>
                         <div className="px-4 py-1.5 bg-gray-50">
-                          <span className="text-[10px] font-semibold text-gray-400 uppercase">Already Tracked</span>
+                          <span className="text-[10px] font-semibold text-gray-400 uppercase">
+                            Already Tracked
+                          </span>
                         </div>
-                        {existingCandidates.map(candidate => (
-                          <div key={candidate.policyId} className="px-4 py-2 flex items-center gap-3 opacity-50">
+                        {existingCandidates.map((candidate) => (
+                          <div
+                            key={candidate.policyId}
+                            className="px-4 py-2 flex items-center gap-3 opacity-50"
+                          >
                             <CheckCircle2 className="h-4 w-4 text-green-500 flex-shrink-0" />
                             <div className="flex-1 min-w-0">
                               <span className="text-xs text-gray-600">
                                 {candidate.providerName} — {candidate.clientName}
                               </span>
                             </div>
-                            <span className="text-[10px] text-gray-400">{candidate.daysUntil}d</span>
+                            <span className="text-[10px] text-gray-400">
+                              {candidate.daysUntil}d
+                            </span>
                           </div>
                         ))}
                       </>
@@ -400,7 +447,8 @@ export function RenewalAlertScanner() {
               in the Task Management board for upcoming policy renewals.
               {scanResult?.summary.skippedExisting ? (
                 <span className="block mt-1">
-                  {scanResult.summary.skippedExisting} renewals already have tasks and will be skipped.
+                  {scanResult.summary.skippedExisting} renewals already have tasks and will be
+                  skipped.
                 </span>
               ) : null}
             </AlertDialogDescription>

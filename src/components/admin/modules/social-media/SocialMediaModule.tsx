@@ -1,11 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../../ui/tabs';
-import { 
-  FileText, 
-  Share2, 
-  Link as LinkIcon,
-  ShieldAlert
-} from 'lucide-react';
+import { FileText, Share2, Link as LinkIcon, ShieldAlert } from 'lucide-react';
 import { PublicationsTab } from './PublicationsTab';
 import { SocialMediaTab } from './SocialMediaTab';
 import { LinktreeTab } from './LinktreeTab';
@@ -22,7 +17,7 @@ export function SocialMediaModule() {
   // Determine initial active tab based on permissions
   useEffect(() => {
     if (isLoading) return;
-    
+
     if (canPublications) {
       setActiveMainTab('publications');
     } else if (canMarketing) {
@@ -59,24 +54,24 @@ export function SocialMediaModule() {
       {/* Main Tabs */}
       <Tabs value={activeMainTab} onValueChange={setActiveMainTab}>
         <TabsList className="grid w-full max-w-2xl grid-cols-3">
-          <TabsTrigger 
-            value="publications" 
+          <TabsTrigger
+            value="publications"
             className="flex items-center gap-2"
             disabled={!canPublications}
           >
             <FileText className="h-4 w-4" />
             Publications
           </TabsTrigger>
-          <TabsTrigger 
-            value="social-media" 
+          <TabsTrigger
+            value="social-media"
             className="flex items-center gap-2"
             disabled={!canMarketing}
           >
             <Share2 className="h-4 w-4" />
             Social Media
           </TabsTrigger>
-          <TabsTrigger 
-            value="linktree" 
+          <TabsTrigger
+            value="linktree"
             className="flex items-center gap-2"
             disabled={!canMarketing}
           >

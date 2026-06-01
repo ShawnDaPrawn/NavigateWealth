@@ -27,7 +27,10 @@ function hasValue(value) {
 }
 
 function hasCredentialProfile(flow) {
-  return Array.isArray(flow?.credentialProfiles) && flow.credentialProfiles.some((profile) => hasValue(profile?.id));
+  return (
+    Array.isArray(flow?.credentialProfiles) &&
+    flow.credentialProfiles.some((profile) => hasValue(profile?.id))
+  );
 }
 
 export function getPortalRuntimeConfigurationIssues(flow) {

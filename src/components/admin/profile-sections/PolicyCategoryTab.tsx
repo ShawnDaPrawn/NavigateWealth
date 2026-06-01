@@ -6,14 +6,7 @@
 import React, { useState, useEffect, Suspense } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '../../ui/card';
 import { Button } from '../../ui/button';
-import {
-  Plus,
-  Loader2,
-  FileBarChart,
-  EyeOff,
-  History,
-  Target,
-} from 'lucide-react';
+import { Plus, Loader2, FileBarChart, EyeOff, History, Target } from 'lucide-react';
 import { PolicyFormDialog } from './PolicyFormDialog';
 import { ArchivePolicyDialog } from './ArchivePolicyDialog';
 import { toast } from 'sonner';
@@ -29,12 +22,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '../../ui/alert-dialog';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from '../../ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../../ui/dialog';
 import { getFNAConfig, hasFNASupport } from './fna-config';
 import { useFNAManagement } from '../modules/fna/hooks/useFNAManagement';
 import { FNACard, PublishFNADialog, ViewPublishedFNADialog } from '../modules/fna';
@@ -43,33 +31,49 @@ import type { PolicyRecord, SchemaField, LinkedGoalStatus } from './PolicyTable'
 
 // Heavy FNA management views — lazy-loaded to reduce initial bundle
 const FNAManagementView = React.lazy(() =>
-  import('../modules/risk-planning-fna/components/FNAManagementView').then(m => ({ default: m.FNAManagementView }))
+  import('../modules/risk-planning-fna/components/FNAManagementView').then((m) => ({
+    default: m.FNAManagementView,
+  })),
 );
 const PreviousFNAsDialog = React.lazy(
   () => import('../modules/risk-planning-fna/components/PreviousFNAsDialog'),
 );
 const WillManagementView = React.lazy(() =>
-  import('../modules/estate-planning-fna/components/WillManagementView').then(m => ({ default: m.WillManagementView }))
+  import('../modules/estate-planning-fna/components/WillManagementView').then((m) => ({
+    default: m.WillManagementView,
+  })),
 );
 const WillDraftingWizard = React.lazy(() =>
-  import('../modules/estate-planning-fna/components/WillDraftingWizard').then(m => ({ default: m.WillDraftingWizard }))
+  import('../modules/estate-planning-fna/components/WillDraftingWizard').then((m) => ({
+    default: m.WillDraftingWizard,
+  })),
 );
 const WillPdfView = React.lazy(() =>
-  import('../modules/estate-planning-fna/components/WillPdfView').then(m => ({ default: m.WillPdfView }))
+  import('../modules/estate-planning-fna/components/WillPdfView').then((m) => ({
+    default: m.WillPdfView,
+  })),
 );
 const WillChatInterface = React.lazy(() =>
-  import('../modules/estate-planning-fna/components/WillChatInterface').then(m => ({ default: m.WillChatInterface }))
+  import('../modules/estate-planning-fna/components/WillChatInterface').then((m) => ({
+    default: m.WillChatInterface,
+  })),
 );
 const GoalDashboard = React.lazy(() =>
-  import('../modules/client-management/components/goals/GoalDashboard').then(m => ({ default: m.GoalDashboard }))
+  import('../modules/client-management/components/goals/GoalDashboard').then((m) => ({
+    default: m.GoalDashboard,
+  })),
 );
 
 const EstateDocumentsSection = React.lazy(() =>
-  import('../modules/estate-planning-fna/components/EstateDocumentsSection').then(m => ({ default: m.EstateDocumentsSection }))
+  import('../modules/estate-planning-fna/components/EstateDocumentsSection').then((m) => ({
+    default: m.EstateDocumentsSection,
+  })),
 );
 
 const TaxDocumentsSection = React.lazy(() =>
-  import('../modules/tax-planning-fna/components/TaxDocumentsSection').then(m => ({ default: m.TaxDocumentsSection }))
+  import('../modules/tax-planning-fna/components/TaxDocumentsSection').then((m) => ({
+    default: m.TaxDocumentsSection,
+  })),
 );
 
 import { Goal } from '../modules/client-management/components/goals/types';
@@ -106,7 +110,7 @@ export function PolicyCategoryTab({
   const [isDeleting, setIsDeleting] = useState(false);
   const [tableStructure, setTableStructure] = useState<SchemaField[]>([]);
   const [subCategorySchemas, setSubCategorySchemas] = useState<Record<string, SchemaField[]>>({});
-  
+
   // Goal State (for Investments category)
   const [goals, setGoals] = useState<Goal[]>([]);
   const [linkedGoalsMap, setLinkedGoalsMap] = useState<Record<string, LinkedGoalStatus>>({});
@@ -115,11 +119,13 @@ export function PolicyCategoryTab({
   const [archivingPolicy, setArchivingPolicy] = useState<PolicyRecord | null>(null);
   const [isArchiving, setIsArchiving] = useState(false);
   const [showArchived, setShowArchived] = useState(false);
-  
+
   // View FNA Dialog State
   const [viewFNADialogOpen, setViewFNADialogOpen] = useState(false);
   const [previousFNAsDialogOpen, setPreviousFNAsDialogOpen] = useState(false);
-  const [selectedHistoricalFnaId, setSelectedHistoricalFnaId] = useState<string | undefined>(undefined);
+  const [selectedHistoricalFnaId, setSelectedHistoricalFnaId] = useState<string | undefined>(
+    undefined,
+  );
   const [showFNAManagement, setShowFNAManagement] = useState(false);
   const [refreshFNAManagementTrigger, setRefreshFNAManagementTrigger] = useState(0);
 
@@ -132,14 +138,16 @@ export function PolicyCategoryTab({
   const [willChatInterfaceOpen, setWillChatInterfaceOpen] = useState(false);
   // Resume Draft state
   const [resumeDraftWillId, setResumeDraftWillId] = useState<string | undefined>(undefined);
-  const [resumeDraftWillType, setResumeDraftWillType] = useState<'last_will' | 'living_will'>('last_will');
+  const [resumeDraftWillType, setResumeDraftWillType] = useState<'last_will' | 'living_will'>(
+    'last_will',
+  );
 
   const [isGoalDashboardOpen, setIsGoalDashboardOpen] = useState(false);
 
   // FNA Configuration and Management
   const fnaConfig = getFNAConfig(categorySubtabId);
   const hasFNA = hasFNASupport(categorySubtabId);
-  
+
   const fnaManagement = useFNAManagement({
     config: fnaConfig,
     clientId,
@@ -150,8 +158,8 @@ export function PolicyCategoryTab({
   const categoryIdMap: Record<string, string> = {
     'risk-planning': 'risk_planning',
     'medical-aid': 'medical_aid',
-    'retirement': 'retirement_planning',
-    'investments': 'investments',
+    retirement: 'retirement_planning',
+    investments: 'investments',
     'employee-benefits': 'employee_benefits',
     'tax-planning': 'tax_planning',
     'estate-planning': 'estate_planning',
@@ -162,7 +170,7 @@ export function PolicyCategoryTab({
   // Helper to determine FNA API Base URL
   const getFnaApiBaseUrl = () => {
     const SERVER_BASE = `https://${projectId}.supabase.co/functions/v1/make-server-91ed8379`;
-    
+
     switch (categorySubtabId) {
       case 'medical-aid':
         return `${SERVER_BASE}/medical-fna`;
@@ -203,27 +211,27 @@ export function PolicyCategoryTab({
   // Update Linked Goals Map when policies or goals change
   useEffect(() => {
     if (categorySubtabId === 'investments' && goals.length > 0 && policies.length > 0) {
-       const map: Record<string, LinkedGoalStatus> = {};
-       
-       policies.forEach(policy => {
-           // Find if policy is linked to any goal
-           const linkedGoal = goals.find(g => g.linkedInvestmentIds?.includes(policy.id));
-           
-           if (linkedGoal) {
-               const calc = calculateGoalStatus(linkedGoal, policies);
-               map[policy.id] = {
-                   name: linkedGoal.name,
-                   status: calc.status,
-                   targetAmount: linkedGoal.targetAmount,
-                   requiredMonthly: calc.requiredMonthlyContribution,
-                   targetDate: linkedGoal.targetDate
-               };
-           }
-       });
-       
-       setLinkedGoalsMap(map);
+      const map: Record<string, LinkedGoalStatus> = {};
+
+      policies.forEach((policy) => {
+        // Find if policy is linked to any goal
+        const linkedGoal = goals.find((g) => g.linkedInvestmentIds?.includes(policy.id));
+
+        if (linkedGoal) {
+          const calc = calculateGoalStatus(linkedGoal, policies);
+          map[policy.id] = {
+            name: linkedGoal.name,
+            status: calc.status,
+            targetAmount: linkedGoal.targetAmount,
+            requiredMonthly: calc.requiredMonthlyContribution,
+            targetDate: linkedGoal.targetDate,
+          };
+        }
+      });
+
+      setLinkedGoalsMap(map);
     } else {
-        setLinkedGoalsMap({});
+      setLinkedGoalsMap({});
     }
   }, [goals, policies, categorySubtabId]);
 
@@ -241,13 +249,13 @@ export function PolicyCategoryTab({
             if (data && data.fields) return data.fields;
             if (Array.isArray(data)) return data;
           }
-          
+
           // Non-ok response — fallback without retry
           break;
         } catch (err) {
           // Retry on transient network errors (cold-start / Failed to fetch)
           if (attempt < retries) {
-            await new Promise(r => setTimeout(r, 800 * (attempt + 1)));
+            await new Promise((r) => setTimeout(r, 800 * (attempt + 1)));
             continue;
           }
           console.warn(`Error loading schema for ${catId} after ${retries + 1} attempts:`, err);
@@ -269,7 +277,7 @@ export function PolicyCategoryTab({
       ]);
       setSubCategorySchemas({
         retirement_pre: preFields,
-        retirement_post: postFields
+        retirement_post: postFields,
       });
     } else if (categoryId === 'investments') {
       const [volFields, guaFields] = await Promise.all([
@@ -278,7 +286,7 @@ export function PolicyCategoryTab({
       ]);
       setSubCategorySchemas({
         investments_voluntary: volFields,
-        investments_guaranteed: guaFields
+        investments_guaranteed: guaFields,
       });
     } else if (categoryId === 'employee_benefits') {
       const [riskFields, retFields] = await Promise.all([
@@ -287,10 +295,10 @@ export function PolicyCategoryTab({
       ]);
       setSubCategorySchemas({
         employee_benefits_risk: riskFields,
-        employee_benefits_retirement: retFields
+        employee_benefits_retirement: retFields,
       });
     } else {
-        setSubCategorySchemas({});
+      setSubCategorySchemas({});
     }
   };
 
@@ -301,7 +309,7 @@ export function PolicyCategoryTab({
         `${API_BASE}/policies?clientId=${clientId}&categoryId=${categoryId}&includeArchived=${showArchived}`,
         {
           headers: { Authorization: `Bearer ${publicAnonKey}` },
-        }
+        },
       );
 
       if (!res.ok) throw new Error('Failed to load policies');
@@ -334,13 +342,10 @@ export function PolicyCategoryTab({
     const toastId = toast.loading('Deleting policy...');
 
     try {
-      const res = await fetch(
-        `${API_BASE}/policies?id=${deletingPolicy.id}&clientId=${clientId}`,
-        {
-          method: 'DELETE',
-          headers: { Authorization: `Bearer ${publicAnonKey}` },
-        }
-      );
+      const res = await fetch(`${API_BASE}/policies?id=${deletingPolicy.id}&clientId=${clientId}`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${publicAnonKey}` },
+      });
 
       if (!res.ok) throw new Error('Failed to delete policy');
 
@@ -364,15 +369,15 @@ export function PolicyCategoryTab({
     try {
       const res = await fetch(`${API_BASE}/policies/archive`, {
         method: 'POST',
-        headers: { 
+        headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${publicAnonKey}` 
+          Authorization: `Bearer ${publicAnonKey}`,
         },
         body: JSON.stringify({
           id: archivingPolicy.id,
           clientId,
-          reason
-        })
+          reason,
+        }),
       });
 
       if (!res.ok) throw new Error('Failed to archive policy');
@@ -391,29 +396,32 @@ export function PolicyCategoryTab({
   const handleReinstatePolicy = async (policy: Record<string, unknown>) => {
     const toastId = toast.loading('Reinstating policy...');
     try {
-       const res = await fetch(`${API_BASE}/policies/reinstate`, {
-           method: 'POST',
-           headers: {
-               'Content-Type': 'application/json',
-               Authorization: `Bearer ${publicAnonKey}`
-           },
-           body: JSON.stringify({
-               id: policy.id,
-               clientId
-           })
-       });
+      const res = await fetch(`${API_BASE}/policies/reinstate`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${publicAnonKey}`,
+        },
+        body: JSON.stringify({
+          id: policy.id,
+          clientId,
+        }),
+      });
 
-       if (!res.ok) throw new Error('Failed to reinstate policy');
-       
-       toast.success('Policy reinstated successfully', { id: toastId });
-       loadPolicies();
+      if (!res.ok) throw new Error('Failed to reinstate policy');
+
+      toast.success('Policy reinstated successfully', { id: toastId });
+      loadPolicies();
     } catch (err: unknown) {
-        console.error('Error reinstating policy:', err);
-        toast.error(err instanceof Error ? err.message : 'Failed to reinstate policy');
+      console.error('Error reinstating policy:', err);
+      toast.error(err instanceof Error ? err.message : 'Failed to reinstate policy');
     }
   };
 
-  const formatFieldValue = (field: { type?: string; options?: string[]; [key: string]: unknown }, value: unknown): React.ReactNode => {
+  const formatFieldValue = (
+    field: { type?: string; options?: string[]; [key: string]: unknown },
+    value: unknown,
+  ): React.ReactNode => {
     if (!value && value !== 0) return '-';
 
     switch (field.type) {
@@ -451,9 +459,11 @@ export function PolicyCategoryTab({
   // Helper to determine if we should split tables
   const renderPolicyTables = () => {
     if (categoryId === 'retirement_planning') {
-      const prePolicies = policies.filter(p => p.categoryId === 'retirement_pre' || p.categoryId === 'retirement_planning');
-      const postPolicies = policies.filter(p => p.categoryId === 'retirement_post');
-      
+      const prePolicies = policies.filter(
+        (p) => p.categoryId === 'retirement_pre' || p.categoryId === 'retirement_planning',
+      );
+      const postPolicies = policies.filter((p) => p.categoryId === 'retirement_post');
+
       const hasPre = prePolicies.length > 0;
       const hasPost = postPolicies.length > 0;
 
@@ -477,7 +487,7 @@ export function PolicyCategoryTab({
               colorTheme="purple"
             />
           )}
-          
+
           {hasPost && (
             <PolicyTable
               title="Post-Retirement"
@@ -493,395 +503,414 @@ export function PolicyCategoryTab({
             />
           )}
 
-          {!hasPre && !hasPost && (
-             // Fallback if no specific categories found but we have policies
-             policies.length > 0 && (
-                <PolicyTable
-                    title="Retirement Policies"
-                    policies={policies}
-                    structure={tableStructure}
-                    clientId={clientId}
-                    onEdit={handleEditPolicy}
-                    onArchive={setArchivingPolicy}
-                    onReinstate={handleReinstatePolicy}
-                    onDelete={setDeletingPolicy}
-                    formatFieldValue={formatFieldValue}
-                    colorTheme="purple"
-                />
-             )
+          {!hasPre &&
+            !hasPost &&
+            // Fallback if no specific categories found but we have policies
+            policies.length > 0 && (
+              <PolicyTable
+                title="Retirement Policies"
+                policies={policies}
+                structure={tableStructure}
+                clientId={clientId}
+                onEdit={handleEditPolicy}
+                onArchive={setArchivingPolicy}
+                onReinstate={handleReinstatePolicy}
+                onDelete={setDeletingPolicy}
+                formatFieldValue={formatFieldValue}
+                colorTheme="purple"
+              />
+            )}
+        </div>
+      );
+    }
+
+    if (categoryId === 'investments') {
+      const volPolicies = policies.filter(
+        (p) => p.categoryId === 'investments_voluntary' || p.categoryId === 'investments',
+      );
+      const guaPolicies = policies.filter((p) => p.categoryId === 'investments_guaranteed');
+
+      const hasVol = volPolicies.length > 0;
+      const hasGua = guaPolicies.length > 0;
+
+      const volSchema = subCategorySchemas.investments_voluntary || tableStructure;
+      const guaSchema = subCategorySchemas.investments_guaranteed || [];
+
+      return (
+        <div className="space-y-6">
+          {hasVol && (
+            <PolicyTable
+              title="Voluntary Investments"
+              policies={volPolicies}
+              structure={volSchema}
+              clientId={clientId}
+              onEdit={handleEditPolicy}
+              onArchive={setArchivingPolicy}
+              onReinstate={handleReinstatePolicy}
+              onDelete={setDeletingPolicy}
+              formatFieldValue={formatFieldValue}
+              colorTheme="blue"
+              linkedGoals={linkedGoalsMap}
+            />
+          )}
+
+          {hasGua && (
+            <PolicyTable
+              title="Guaranteed Investments"
+              policies={guaPolicies}
+              structure={guaSchema}
+              clientId={clientId}
+              onEdit={handleEditPolicy}
+              onArchive={setArchivingPolicy}
+              onReinstate={handleReinstatePolicy}
+              onDelete={setDeletingPolicy}
+              formatFieldValue={formatFieldValue}
+              colorTheme="indigo"
+              linkedGoals={linkedGoalsMap}
+            />
+          )}
+
+          {!hasVol && !hasGua && policies.length > 0 && (
+            <PolicyTable
+              title="Investments"
+              policies={policies}
+              structure={tableStructure}
+              clientId={clientId}
+              onEdit={handleEditPolicy}
+              onArchive={setArchivingPolicy}
+              onReinstate={handleReinstatePolicy}
+              onDelete={setDeletingPolicy}
+              formatFieldValue={formatFieldValue}
+              colorTheme="blue"
+              linkedGoals={linkedGoalsMap}
+            />
           )}
         </div>
       );
-    } 
-    
-    if (categoryId === 'investments') {
-        const volPolicies = policies.filter(p => p.categoryId === 'investments_voluntary' || p.categoryId === 'investments');
-        const guaPolicies = policies.filter(p => p.categoryId === 'investments_guaranteed');
-        
-        const hasVol = volPolicies.length > 0;
-        const hasGua = guaPolicies.length > 0;
-  
-        const volSchema = subCategorySchemas.investments_voluntary || tableStructure;
-        const guaSchema = subCategorySchemas.investments_guaranteed || [];
-  
-        return (
-          <div className="space-y-6">
-            {hasVol && (
-              <PolicyTable
-                title="Voluntary Investments"
-                policies={volPolicies}
-                structure={volSchema}
-                clientId={clientId}
-                onEdit={handleEditPolicy}
-                onArchive={setArchivingPolicy}
-                onReinstate={handleReinstatePolicy}
-                onDelete={setDeletingPolicy}
-                formatFieldValue={formatFieldValue}
-                colorTheme="blue"
-                linkedGoals={linkedGoalsMap}
-              />
-            )}
-            
-            {hasGua && (
-              <PolicyTable
-                title="Guaranteed Investments"
-                policies={guaPolicies}
-                structure={guaSchema}
-                clientId={clientId}
-                onEdit={handleEditPolicy}
-                onArchive={setArchivingPolicy}
-                onReinstate={handleReinstatePolicy}
-                onDelete={setDeletingPolicy}
-                formatFieldValue={formatFieldValue}
-                colorTheme="indigo"
-                linkedGoals={linkedGoalsMap}
-              />
-            )}
-
-            {!hasVol && !hasGua && policies.length > 0 && (
-                 <PolicyTable
-                    title="Investments"
-                    policies={policies}
-                    structure={tableStructure}
-                    clientId={clientId}
-                    onEdit={handleEditPolicy}
-                    onArchive={setArchivingPolicy}
-                    onReinstate={handleReinstatePolicy}
-                    onDelete={setDeletingPolicy}
-                    formatFieldValue={formatFieldValue}
-                    colorTheme="blue"
-                    linkedGoals={linkedGoalsMap}
-                />
-            )}
-          </div>
-        );
-      }
+    }
 
     if (categoryId === 'employee_benefits') {
-        const riskPolicies = policies.filter(p => p.categoryId === 'employee_benefits_risk' || p.categoryId === 'employee_benefits'); // Include legacy as risk
-        const riskPoliciesOnly = policies.filter(p => p.categoryId === 'employee_benefits_risk');
-        const retPoliciesOnly = policies.filter(p => p.categoryId === 'employee_benefits_retirement');
-        const genericPolicies = policies.filter(p => p.categoryId === 'employee_benefits');
-        
-        const finalRiskPolicies = [...riskPoliciesOnly, ...genericPolicies]; // Defaulting legacy to Risk table
-        const finalRetPolicies = retPoliciesOnly;
+      const riskPolicies = policies.filter(
+        (p) => p.categoryId === 'employee_benefits_risk' || p.categoryId === 'employee_benefits',
+      ); // Include legacy as risk
+      const riskPoliciesOnly = policies.filter((p) => p.categoryId === 'employee_benefits_risk');
+      const retPoliciesOnly = policies.filter(
+        (p) => p.categoryId === 'employee_benefits_retirement',
+      );
+      const genericPolicies = policies.filter((p) => p.categoryId === 'employee_benefits');
 
-        const hasRisk = finalRiskPolicies.length > 0;
-        const hasRet = finalRetPolicies.length > 0;
-  
-        const riskSchema = subCategorySchemas.employee_benefits_risk || tableStructure;
-        const retSchema = subCategorySchemas.employee_benefits_retirement || [];
-  
-        return (
-          <div className="space-y-6">
-            {hasRisk && (
-              <PolicyTable
-                title="Risk Benefits"
-                policies={finalRiskPolicies}
-                structure={riskSchema}
-                clientId={clientId}
-                onEdit={handleEditPolicy}
-                onArchive={setArchivingPolicy}
-                onReinstate={handleReinstatePolicy}
-                onDelete={setDeletingPolicy}
-                formatFieldValue={formatFieldValue}
-                colorTheme="amber"
-              />
-            )}
-            
-            {hasRet && (
-              <PolicyTable
-                title="Retirement Funds"
-                policies={finalRetPolicies}
-                structure={retSchema}
-                clientId={clientId}
-                onEdit={handleEditPolicy}
-                onArchive={setArchivingPolicy}
-                onReinstate={handleReinstatePolicy}
-                onDelete={setDeletingPolicy}
-                formatFieldValue={formatFieldValue}
-                colorTheme="orange"
-              />
-            )}
+      const finalRiskPolicies = [...riskPoliciesOnly, ...genericPolicies]; // Defaulting legacy to Risk table
+      const finalRetPolicies = retPoliciesOnly;
 
-            {!hasRisk && !hasRet && policies.length > 0 && (
-                 <PolicyTable
-                    title="Employee Benefits"
-                    policies={policies}
-                    structure={tableStructure}
-                    clientId={clientId}
-                    onEdit={handleEditPolicy}
-                    onArchive={setArchivingPolicy}
-                    onReinstate={handleReinstatePolicy}
-                    onDelete={setDeletingPolicy}
-                    formatFieldValue={formatFieldValue}
-                    colorTheme="amber"
-                />
-            )}
-          </div>
-        );
-      }
+      const hasRisk = finalRiskPolicies.length > 0;
+      const hasRet = finalRetPolicies.length > 0;
+
+      const riskSchema = subCategorySchemas.employee_benefits_risk || tableStructure;
+      const retSchema = subCategorySchemas.employee_benefits_retirement || [];
+
+      return (
+        <div className="space-y-6">
+          {hasRisk && (
+            <PolicyTable
+              title="Risk Benefits"
+              policies={finalRiskPolicies}
+              structure={riskSchema}
+              clientId={clientId}
+              onEdit={handleEditPolicy}
+              onArchive={setArchivingPolicy}
+              onReinstate={handleReinstatePolicy}
+              onDelete={setDeletingPolicy}
+              formatFieldValue={formatFieldValue}
+              colorTheme="amber"
+            />
+          )}
+
+          {hasRet && (
+            <PolicyTable
+              title="Retirement Funds"
+              policies={finalRetPolicies}
+              structure={retSchema}
+              clientId={clientId}
+              onEdit={handleEditPolicy}
+              onArchive={setArchivingPolicy}
+              onReinstate={handleReinstatePolicy}
+              onDelete={setDeletingPolicy}
+              formatFieldValue={formatFieldValue}
+              colorTheme="orange"
+            />
+          )}
+
+          {!hasRisk && !hasRet && policies.length > 0 && (
+            <PolicyTable
+              title="Employee Benefits"
+              policies={policies}
+              structure={tableStructure}
+              clientId={clientId}
+              onEdit={handleEditPolicy}
+              onArchive={setArchivingPolicy}
+              onReinstate={handleReinstatePolicy}
+              onDelete={setDeletingPolicy}
+              formatFieldValue={formatFieldValue}
+              colorTheme="amber"
+            />
+          )}
+        </div>
+      );
+    }
 
     // Default single table for other categories
     return (
-        <PolicyTable
-            title={`${categoryName} Policies`}
-            policies={policies}
-            structure={tableStructure}
-            clientId={clientId}
-            onEdit={handleEditPolicy}
-            onArchive={setArchivingPolicy}
-            onReinstate={handleReinstatePolicy}
-            onDelete={setDeletingPolicy}
-            formatFieldValue={formatFieldValue}
-        />
+      <PolicyTable
+        title={`${categoryName} Policies`}
+        policies={policies}
+        structure={tableStructure}
+        clientId={clientId}
+        onEdit={handleEditPolicy}
+        onArchive={setArchivingPolicy}
+        onReinstate={handleReinstatePolicy}
+        onDelete={setDeletingPolicy}
+        formatFieldValue={formatFieldValue}
+      />
     );
   };
 
   return (
     <div className="space-y-4">
-      <Suspense fallback={<div className="flex items-center justify-center py-12"><Loader2 className="h-8 w-8 animate-spin text-[#6d28d9]" /></div>}>
-      {/* Show Will Management View for Estate Planning */}
-      {categorySubtabId === 'estate-planning' && willChatInterfaceOpen ? (
-        <WillChatInterface
-          clientId={clientId}
-          clientName={clientDisplayName || categoryName}
-          onClose={() => setWillChatInterfaceOpen(false)}
-          onWillSaved={() => {
-            // Refresh will management after saving
-            setShowWillManagement(false);
-            setTimeout(() => setShowWillManagement(true), 100);
-          }}
-        />
-      ) : categorySubtabId === 'estate-planning' && showWillManagement ? (
-        <WillManagementView
-          clientId={clientId}
-          clientName={clientDisplayName || categoryName}
-          onDraftLastWill={() => {
-            setWillDraftingWizardOpen(true);
-          }}
-          onDraftLivingWill={() => {
-            setLivingWillDraftingWizardOpen(true);
-          }}
-          onViewWill={(willId: string) => {
-            setSelectedWillId(willId);
-            setWillPdfViewOpen(true);
-          }}
-          onResumeDraft={(willId: string, willType: 'last_will' | 'living_will') => {
-            setResumeDraftWillId(willId);
-            setResumeDraftWillType(willType);
-            if (willType === 'living_will') {
-              setLivingWillDraftingWizardOpen(true);
-            } else {
+      <Suspense
+        fallback={
+          <div className="flex items-center justify-center py-12">
+            <Loader2 className="h-8 w-8 animate-spin text-[#6d28d9]" />
+          </div>
+        }
+      >
+        {/* Show Will Management View for Estate Planning */}
+        {categorySubtabId === 'estate-planning' && willChatInterfaceOpen ? (
+          <WillChatInterface
+            clientId={clientId}
+            clientName={clientDisplayName || categoryName}
+            onClose={() => setWillChatInterfaceOpen(false)}
+            onWillSaved={() => {
+              // Refresh will management after saving
+              setShowWillManagement(false);
+              setTimeout(() => setShowWillManagement(true), 100);
+            }}
+          />
+        ) : categorySubtabId === 'estate-planning' && showWillManagement ? (
+          <WillManagementView
+            clientId={clientId}
+            clientName={clientDisplayName || categoryName}
+            onDraftLastWill={() => {
               setWillDraftingWizardOpen(true);
-            }
-          }}
-          onClose={() => setShowWillManagement(false)}
-          onAIWillBuilder={() => setWillChatInterfaceOpen(true)}
-        />
-      ) : showFNAManagement && hasFNA && fnaConfig ? (
-        <FNAManagementView
-          key={refreshFNAManagementTrigger}
-          clientId={clientId}
-          clientName={categoryName}
-          title={fnaListTitle}
-          apiUrl={fnaListApiUrl}
-          onCreateNew={() => {
-            setShowFNAManagement(false);
-            fnaManagement.handleRunFNA();
-          }}
-          onViewFNA={(fnaId: string) => {
-            setSelectedHistoricalFnaId(fnaId);
-            setViewFNADialogOpen(true);
-          }}
-          onClose={() => setShowFNAManagement(false)}
-        />
-      ) : (
-        <div className="contents">
-          {/* Header */}
-          <div className="flex items-center justify-between">
-            <div>
-              <h3 className="text-lg font-medium flex items-center gap-2">
-                <Icon className={`h-5 w-5 ${iconColor}`} />
-                {categoryName}
-              </h3>
-              <p className="text-sm text-gray-600">{description}</p>
-            </div>
-            <div className="flex gap-2">
-              {categorySubtabId === 'investments' && (
-                  <Button 
-                    variant="outline" 
-                    size="sm" 
+            }}
+            onDraftLivingWill={() => {
+              setLivingWillDraftingWizardOpen(true);
+            }}
+            onViewWill={(willId: string) => {
+              setSelectedWillId(willId);
+              setWillPdfViewOpen(true);
+            }}
+            onResumeDraft={(willId: string, willType: 'last_will' | 'living_will') => {
+              setResumeDraftWillId(willId);
+              setResumeDraftWillType(willType);
+              if (willType === 'living_will') {
+                setLivingWillDraftingWizardOpen(true);
+              } else {
+                setWillDraftingWizardOpen(true);
+              }
+            }}
+            onClose={() => setShowWillManagement(false)}
+            onAIWillBuilder={() => setWillChatInterfaceOpen(true)}
+          />
+        ) : showFNAManagement && hasFNA && fnaConfig ? (
+          <FNAManagementView
+            key={refreshFNAManagementTrigger}
+            clientId={clientId}
+            clientName={categoryName}
+            title={fnaListTitle}
+            apiUrl={fnaListApiUrl}
+            onCreateNew={() => {
+              setShowFNAManagement(false);
+              fnaManagement.handleRunFNA();
+            }}
+            onViewFNA={(fnaId: string) => {
+              setSelectedHistoricalFnaId(fnaId);
+              setViewFNADialogOpen(true);
+            }}
+            onClose={() => setShowFNAManagement(false)}
+          />
+        ) : (
+          <div className="contents">
+            {/* Header */}
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="text-lg font-medium flex items-center gap-2">
+                  <Icon className={`h-5 w-5 ${iconColor}`} />
+                  {categoryName}
+                </h3>
+                <p className="text-sm text-gray-600">{description}</p>
+              </div>
+              <div className="flex gap-2">
+                {categorySubtabId === 'investments' && (
+                  <Button
+                    variant="outline"
+                    size="sm"
                     onClick={() => setIsGoalDashboardOpen(true)}
                     className="border-blue-200 text-blue-700 hover:bg-blue-50"
                   >
                     <Target className="h-4 w-4 mr-2" />
                     Goals
                   </Button>
-              )}
-              {/* Show Will Management button for Estate Planning instead of FNA */}
-              {categorySubtabId === 'estate-planning' ? (
-                <Button 
-                  variant="outline" 
-                  size="sm" 
-                  onClick={() => setShowWillManagement(true)}
-                >
-                  <FileBarChart className="h-4 w-4 mr-2" />
-                  Will Management
-                </Button>
-              ) : hasFNA && (
-                <Button 
-                  variant="outline" 
-                  size="sm" 
-                  onClick={() => setShowFNAManagement(true)}
-                >
-                  <FileBarChart className="h-4 w-4 mr-2" />
-                  FNA
-                </Button>
-              )}
-              <Button
-                variant={showArchived ? "secondary" : "outline"}
-                size="sm"
-                onClick={() => setShowArchived(!showArchived)}
-                className={showArchived ? "bg-amber-100 text-amber-800 border-amber-200 hover:bg-amber-200" : ""}
-              >
-                {showArchived ? (
-                  <div className="contents">
-                    <EyeOff className="h-4 w-4 mr-2" />
-                    Hide History
-                  </div>
-                ) : (
-                  <div className="contents">
-                    <History className="h-4 w-4 mr-2" />
-                    Show History
-                  </div>
                 )}
-              </Button>
-              <Button size="sm" onClick={handleAddPolicy}>
-                <Plus className="h-4 w-4 mr-2" />
-                Add Policy
-              </Button>
-            </div>
-          </div>
-
-          {/* Policies List */}
-          {/* Goal Dashboard moved to Dialog */}
-
-          {isLoading ? (
-            <Card>
-              <CardContent className="py-12 flex items-center justify-center">
-                <Loader2 className="h-8 w-8 animate-spin text-[#6d28d9]" />
-              </CardContent>
-            </Card>
-          ) : policies.length === 0 ? (
-            <Card>
-              <CardContent className="py-12 text-center">
-                <Icon className="h-12 w-12 mx-auto text-gray-400 mb-4" />
-                <h3 className="text-lg font-medium text-gray-900 mb-2">No Policies Added</h3>
-                <p className="text-sm text-gray-600 mb-4">
-                  Start by adding your first {categoryName.toLowerCase()} policy
-                </p>
-                <Button onClick={handleAddPolicy}>
+                {/* Show Will Management button for Estate Planning instead of FNA */}
+                {categorySubtabId === 'estate-planning' ? (
+                  <Button variant="outline" size="sm" onClick={() => setShowWillManagement(true)}>
+                    <FileBarChart className="h-4 w-4 mr-2" />
+                    Will Management
+                  </Button>
+                ) : (
+                  hasFNA && (
+                    <Button variant="outline" size="sm" onClick={() => setShowFNAManagement(true)}>
+                      <FileBarChart className="h-4 w-4 mr-2" />
+                      FNA
+                    </Button>
+                  )
+                )}
+                <Button
+                  variant={showArchived ? 'secondary' : 'outline'}
+                  size="sm"
+                  onClick={() => setShowArchived(!showArchived)}
+                  className={
+                    showArchived
+                      ? 'bg-amber-100 text-amber-800 border-amber-200 hover:bg-amber-200'
+                      : ''
+                  }
+                >
+                  {showArchived ? (
+                    <div className="contents">
+                      <EyeOff className="h-4 w-4 mr-2" />
+                      Hide History
+                    </div>
+                  ) : (
+                    <div className="contents">
+                      <History className="h-4 w-4 mr-2" />
+                      Show History
+                    </div>
+                  )}
+                </Button>
+                <Button size="sm" onClick={handleAddPolicy}>
                   <Plus className="h-4 w-4 mr-2" />
                   Add Policy
                 </Button>
-              </CardContent>
-            </Card>
-          ) : (
-            <div className="contents">
-              {/* Retirement Summary Cards removed as per user request */}
-              
+              </div>
+            </div>
+
+            {/* Policies List */}
+            {/* Goal Dashboard moved to Dialog */}
+
+            {isLoading ? (
               <Card>
-                <CardHeader>
-                  <CardTitle className="text-base">
-                    {showArchived ? 'Archived Policies' : 'Active Policies'} ({policies.length})
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                    {renderPolicyTables()}
+                <CardContent className="py-12 flex items-center justify-center">
+                  <Loader2 className="h-8 w-8 animate-spin text-[#6d28d9]" />
                 </CardContent>
               </Card>
-            </div>
-          )}
+            ) : policies.length === 0 ? (
+              <Card>
+                <CardContent className="py-12 text-center">
+                  <Icon className="h-12 w-12 mx-auto text-gray-400 mb-4" />
+                  <h3 className="text-lg font-medium text-gray-900 mb-2">No Policies Added</h3>
+                  <p className="text-sm text-gray-600 mb-4">
+                    Start by adding your first {categoryName.toLowerCase()} policy
+                  </p>
+                  <Button onClick={handleAddPolicy}>
+                    <Plus className="h-4 w-4 mr-2" />
+                    Add Policy
+                  </Button>
+                </CardContent>
+              </Card>
+            ) : (
+              <div className="contents">
+                {/* Retirement Summary Cards removed as per user request */}
 
-          {/* FNA Card - Only show for draft FNAs (published FNAs are in "Previous FNAs" modal) */}
-          {hasFNA && fnaManagement.fna && fnaConfig && fnaManagement.fna.status !== 'published' && (
-            <FNACard
-              fna={fnaManagement.fna}
-              config={fnaConfig}
-              onEdit={fnaManagement.handleEditFNA}
-              onDelete={() => fnaManagement.setDeleteDialogOpen(true)}
-              onPublish={() => fnaManagement.setPublishDialogOpen(true)}
-              onView={() => {
-                if (fnaManagement.fna) {
-                  setSelectedHistoricalFnaId(fnaManagement.fna.id as string);
-                  setViewFNADialogOpen(true);
-                }
-              }}
-            />
-          )}
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-base">
+                      {showArchived ? 'Archived Policies' : 'Active Policies'} ({policies.length})
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>{renderPolicyTables()}</CardContent>
+                </Card>
+              </div>
+            )}
 
-          {/* Estate Documents Section — ad-hoc legal document uploads for estate planning */}
-          {categorySubtabId === 'estate-planning' && (
-            <div className="mt-8">
-              <EstateDocumentsSection
-                clientId={clientId}
-                clientName={clientDisplayName || categoryName}
-              />
-            </div>
-          )}
+            {/* FNA Card - Only show for draft FNAs (published FNAs are in "Previous FNAs" modal) */}
+            {hasFNA &&
+              fnaManagement.fna &&
+              fnaConfig &&
+              fnaManagement.fna.status !== 'published' && (
+                <FNACard
+                  fna={fnaManagement.fna}
+                  config={fnaConfig}
+                  onEdit={fnaManagement.handleEditFNA}
+                  onDelete={() => fnaManagement.setDeleteDialogOpen(true)}
+                  onPublish={() => fnaManagement.setPublishDialogOpen(true)}
+                  onView={() => {
+                    if (fnaManagement.fna) {
+                      setSelectedHistoricalFnaId(fnaManagement.fna.id as string);
+                      setViewFNADialogOpen(true);
+                    }
+                  }}
+                />
+              )}
 
-          {/* Tax Documents Section — ad-hoc tax document uploads for tax planning */}
-          {categorySubtabId === 'tax-planning' && (
-            <div className="mt-8">
-              <TaxDocumentsSection
-                clientId={clientId}
-                clientName={clientDisplayName || categoryName}
-              />
-            </div>
-          )}
-        </div>
-      )}
+            {/* Estate Documents Section — ad-hoc legal document uploads for estate planning */}
+            {categorySubtabId === 'estate-planning' && (
+              <div className="mt-8">
+                <EstateDocumentsSection
+                  clientId={clientId}
+                  clientName={clientDisplayName || categoryName}
+                />
+              </div>
+            )}
+
+            {/* Tax Documents Section — ad-hoc tax document uploads for tax planning */}
+            {categorySubtabId === 'tax-planning' && (
+              <div className="mt-8">
+                <TaxDocumentsSection
+                  clientId={clientId}
+                  clientName={clientDisplayName || categoryName}
+                />
+              </div>
+            )}
+          </div>
+        )}
       </Suspense>
-      
+
       {/* Goal Dashboard Dialog */}
       <Dialog open={isGoalDashboardOpen} onOpenChange={setIsGoalDashboardOpen}>
         <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto bg-gray-50">
-           <DialogHeader>
-              <DialogTitle>Investment Goals</DialogTitle>
-           </DialogHeader>
-           <Suspense fallback={<div>Loading...</div>}>
-              <GoalDashboard 
-                clientId={clientId} 
-                policies={policies}
-                onGoalsUpdate={setGoals}
-                schemas={subCategorySchemas as unknown as React.ComponentProps<typeof GoalDashboard>['schemas']}
-                mainSchema={tableStructure as unknown as React.ComponentProps<typeof GoalDashboard>['mainSchema']}
-              />
-           </Suspense>
+          <DialogHeader>
+            <DialogTitle>Investment Goals</DialogTitle>
+          </DialogHeader>
+          <Suspense fallback={<div>Loading...</div>}>
+            <GoalDashboard
+              clientId={clientId}
+              policies={policies}
+              onGoalsUpdate={setGoals}
+              schemas={
+                subCategorySchemas as unknown as React.ComponentProps<
+                  typeof GoalDashboard
+                >['schemas']
+              }
+              mainSchema={
+                tableStructure as unknown as React.ComponentProps<
+                  typeof GoalDashboard
+                >['mainSchema']
+              }
+            />
+          </Suspense>
         </DialogContent>
       </Dialog>
-      
+
       {/* Policy Form Dialog */}
       <PolicyFormDialog
         isOpen={isFormOpen}
@@ -892,7 +921,9 @@ export function PolicyCategoryTab({
         categorySubtabId={categorySubtabId}
         categoryName={categoryName}
         clientId={clientId}
-        editingPolicy={editingPolicy as unknown as React.ComponentProps<typeof PolicyFormDialog>['editingPolicy']}
+        editingPolicy={
+          editingPolicy as unknown as React.ComponentProps<typeof PolicyFormDialog>['editingPolicy']
+        }
         onSave={() => {
           loadPolicies();
         }}
@@ -988,7 +1019,9 @@ export function PolicyCategoryTab({
           fnaType={fnaConfig.type}
           fnaTypeName={fnaConfig.name}
           fnaData={fnaManagement.fna}
-          currentStatus={(fnaManagement.fna.status || 'draft') as 'draft' | 'published' | 'archived'}
+          currentStatus={
+            (fnaManagement.fna.status || 'draft') as 'draft' | 'published' | 'archived'
+          }
           onPublishSuccess={() => fnaManagement.loadFNA()}
           publishFunction={fnaManagement.handlePublishFNA}
           unpublishFunction={fnaManagement.handleUnpublishFNA}
@@ -1030,7 +1063,7 @@ export function PolicyCategoryTab({
           deleteFn={fnaConfig.deleteFNA}
           onDeleted={() => {
             // Refresh the FNA management view
-            setRefreshFNAManagementTrigger(prev => prev + 1);
+            setRefreshFNAManagementTrigger((prev) => prev + 1);
             // Reload the current FNA
             fnaManagement.loadFNA();
           }}

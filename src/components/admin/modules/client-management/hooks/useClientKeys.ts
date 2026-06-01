@@ -56,12 +56,12 @@ export function useRecalculateClientKeys() {
     onSuccess: (data, clientId) => {
       queryClient.invalidateQueries({ queryKey: clientKeys.clientKeys.all(clientId) });
       toast.success('Keys recalculated successfully', {
-        description: 'All client key totals have been updated'
+        description: 'All client key totals have been updated',
       });
     },
     onError: (error: Error) => {
       toast.error('Recalculation failed', {
-        description: error.message || 'Failed to recalculate client keys. Please try again.'
+        description: error.message || 'Failed to recalculate client keys. Please try again.',
       });
     },
   });

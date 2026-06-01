@@ -87,9 +87,10 @@ function normaliseCellValue(value: unknown): SpreadsheetCellValue {
   return '';
 }
 
-export function normaliseRowsForXLSX(
-  rows: Record<string, unknown>[]
-): { rows: Record<string, SpreadsheetCellValue>[]; headers: string[] } {
+export function normaliseRowsForXLSX(rows: Record<string, unknown>[]): {
+  rows: Record<string, SpreadsheetCellValue>[];
+  headers: string[];
+} {
   const headers: string[] = [];
   const headerSet = new Set<string>();
 
@@ -136,14 +137,19 @@ function isLikelyDateHeader(header: string): boolean {
 }
 
 function isLikelyCurrencyHeader(header: string): boolean {
-  return /(amount|value|premium|revenue|aum|commission|fee|total|balance|income|salary)/i.test(header);
+  return /(amount|value|premium|revenue|aum|commission|fee|total|balance|income|salary)/i.test(
+    header,
+  );
 }
 
 function isLikelyStatusHeader(header: string): boolean {
   return /(status|state|stage|consent|active|completed|approved|outcome)/i.test(header);
 }
 
-function toExcelCellValue(header: string, value: SpreadsheetCellValue): SpreadsheetCellValue | Date {
+function toExcelCellValue(
+  header: string,
+  value: SpreadsheetCellValue,
+): SpreadsheetCellValue | Date {
   if (typeof value !== 'string' || !value) return value;
 
   if (isLikelyDateHeader(header)) {
@@ -266,7 +272,11 @@ function styleReportWorksheet(
       const cell = row.getCell(columnIndex + 1);
       const value = toExcelCellValue(header, rowData[header]);
       cell.value = value;
-      cell.alignment = { vertical: 'top', horizontal: typeof value === 'number' ? 'right' : 'left', wrapText: true };
+      cell.alignment = {
+        vertical: 'top',
+        horizontal: typeof value === 'number' ? 'right' : 'left',
+        wrapText: true,
+      };
       cell.font = { color: { argb: argb(BRAND.slateText) }, size: 10 };
       cell.fill = {
         type: 'pattern',
@@ -356,7 +366,7 @@ export function createReportRun(report: Report): ReportRun {
     parameters: { ...report.parameters },
     status: 'Running',
     progress: 0,
-    startedAt: new Date().toISOString()
+    startedAt: new Date().toISOString(),
   };
 }
 
@@ -432,7 +442,7 @@ export async function redownloadReport(runId: string): Promise<boolean> {
 export async function executeReport(
   report: Report,
   runId: string,
-  callbacks: ReportCallbacks
+  callbacks: ReportCallbacks,
 ): Promise<void> {
   try {
     callbacks.onProgress(runId, 10);
@@ -444,7 +454,7 @@ export async function executeReport(
     if (!Array.isArray(data) || data.length === 0) {
       callbacks.onError(
         runId,
-        'No client data found. Approve some applications first to populate client profiles.'
+        'No client data found. Approve some applications first to populate client profiles.',
       );
       return;
     }

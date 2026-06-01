@@ -50,8 +50,8 @@ export function RecommendationsSection({ recommendations }: RecommendationsSecti
                           recommendation.priority === 'urgent'
                             ? 'border-red-500 text-red-700'
                             : recommendation.priority === 'high'
-                            ? 'border-blue-500 text-blue-700'
-                            : 'border-yellow-500 text-yellow-700'
+                              ? 'border-blue-500 text-blue-700'
+                              : 'border-yellow-500 text-yellow-700'
                         }
                       >
                         {recommendation.priority}
@@ -59,7 +59,9 @@ export function RecommendationsSection({ recommendations }: RecommendationsSecti
                     </div>
                     <p className="text-gray-600 text-sm mb-3">{recommendation.description}</p>
                     <div className="flex items-center justify-between">
-                      <span className="text-xs text-gray-500">Due: {formatDate(recommendation.dueDate)}</span>
+                      <span className="text-xs text-gray-500">
+                        Due: {formatDate(recommendation.dueDate)}
+                      </span>
                       <Button size="sm" className="bg-blue-600 hover:bg-blue-700">
                         {recommendation.action}
                       </Button>

@@ -57,7 +57,12 @@ function pickProfile(
 function resolveCanonicalKey(
   canonicalKey: string,
   sources: ClientDataSources,
-): { value: unknown; source: PrefillDataSource; confidence: PrefillConfidence; sourceDetail?: string } | null {
+): {
+  value: unknown;
+  source: PrefillDataSource;
+  confidence: PrefillConfidence;
+  sourceDetail?: string;
+} | null {
   const { profile, clientKeys, intakeInputs } = sources;
   const merged = { ...profile, ...clientKeys };
 
@@ -145,7 +150,12 @@ function resolveCanonicalKey(
           Number(profile.grossIncome) ||
           0;
         return monthly > 0
-          ? { value: monthly * 12, source: 'profile', confidence: 'derived', sourceDetail: 'Gross monthly × 12' }
+          ? {
+              value: monthly * 12,
+              source: 'profile',
+              confidence: 'derived',
+              sourceDetail: 'Gross monthly × 12',
+            }
           : null;
       }
       case 'medical_scheme_members':
@@ -177,21 +187,60 @@ function resolveCanonicalKey(
     profile_first_name: ['firstName', 'profile_first_name'],
     profile_last_name: ['lastName', 'profile_last_name'],
     profile_email: ['email', 'emailAddress', 'profile_email'],
-    profile_phone_number: ['phone', 'phoneNumber', 'cellphone', 'cellphoneNumber', 'mobileNumber', 'profile_phone_number'],
+    profile_phone_number: [
+      'phone',
+      'phoneNumber',
+      'cellphone',
+      'cellphoneNumber',
+      'mobileNumber',
+      'profile_phone_number',
+    ],
     profile_id_number: ['idNumber', 'identityNumber', 'passportNumber', 'profile_id_number'],
     profile_date_of_birth: ['dateOfBirth', 'date_of_birth', 'profile_date_of_birth'],
-    profile_gross_monthly_income: ['grossMonthlyIncome', 'gross_monthly_income', 'grossIncome', 'profile_gross_monthly_income'],
-    profile_net_monthly_income: ['netMonthlyIncome', 'net_monthly_income', 'netIncome', 'profile_net_monthly_income'],
+    profile_gross_monthly_income: [
+      'grossMonthlyIncome',
+      'gross_monthly_income',
+      'grossIncome',
+      'profile_gross_monthly_income',
+    ],
+    profile_net_monthly_income: [
+      'netMonthlyIncome',
+      'net_monthly_income',
+      'netIncome',
+      'profile_net_monthly_income',
+    ],
     profile_tax_number: ['taxNumber', 'profile_tax_number'],
     profile_marital_status: ['maritalStatus', 'profile_marital_status'],
     profile_spouse_name: ['spouseName', 'spouseFullName', 'profile_spouse_name'],
     profile_retirement_age: ['retirementAge', 'intendedRetirementAge', 'profile_retirement_age'],
     profile_employment_type: ['employmentType', 'employmentStatus', 'profile_employment_type'],
-    profile_monthly_expenses: ['totalMonthlyExpenses', 'monthlyExpenses', 'totalHouseholdMonthlyExpenditure', 'profile_monthly_expenses'],
-    profile_risk_tolerance: ['riskTolerance', 'riskAssessment', 'profile_risk_tolerance', 'clientRiskProfile'],
-    profile_investment_horizon: ['investmentHorizonYears', 'investmentHorizon', 'profile_investment_horizon'],
-    profile_tfsa_contributions: ['tfsaContributionsLifetime', 'tfsaContributions', 'profile_tfsa_contributions'],
-    retirement_fund_value_total: ['retirement_fund_value_total', 'retirement_fund_value', 'retirement_total_value'],
+    profile_monthly_expenses: [
+      'totalMonthlyExpenses',
+      'monthlyExpenses',
+      'totalHouseholdMonthlyExpenditure',
+      'profile_monthly_expenses',
+    ],
+    profile_risk_tolerance: [
+      'riskTolerance',
+      'riskAssessment',
+      'profile_risk_tolerance',
+      'clientRiskProfile',
+    ],
+    profile_investment_horizon: [
+      'investmentHorizonYears',
+      'investmentHorizon',
+      'profile_investment_horizon',
+    ],
+    profile_tfsa_contributions: [
+      'tfsaContributionsLifetime',
+      'tfsaContributions',
+      'profile_tfsa_contributions',
+    ],
+    retirement_fund_value_total: [
+      'retirement_fund_value_total',
+      'retirement_fund_value',
+      'retirement_total_value',
+    ],
     retirement_monthly_contribution: [
       'retirement_total_contribution',
       'retirement_monthly_contribution',
@@ -207,7 +256,11 @@ function resolveCanonicalKey(
     medical_aid_msa: ['medical_aid_msa'],
     medical_aid_late_joiner_penalty: ['medical_aid_late_joiner_penalty'],
     medical_aid_dependents: ['medical_aid_dependents'],
-    medical_aid_hospital_tariff: ['medical_aid_hospital_tariff', 'existingHospitalCover', 'hospitalTariff'],
+    medical_aid_hospital_tariff: [
+      'medical_aid_hospital_tariff',
+      'existingHospitalCover',
+      'hospitalTariff',
+    ],
   };
 
   const keys = aliasMap[canonicalKey] ?? [canonicalKey];

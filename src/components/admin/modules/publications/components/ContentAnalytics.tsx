@@ -43,8 +43,14 @@ const STATUS_CHART_COLORS: Record<string, string> = {
 };
 
 const CATEGORY_COLORS = [
-  '#7c3aed', '#3b82f6', '#10b981', '#f59e0b', '#ef4444',
-  '#ec4899', '#06b6d4', '#8b5cf6',
+  '#7c3aed',
+  '#3b82f6',
+  '#10b981',
+  '#f59e0b',
+  '#ef4444',
+  '#ec4899',
+  '#06b6d4',
+  '#8b5cf6',
 ];
 
 // ── Helpers ──────────────────────────────────────────────────────────────
@@ -69,20 +75,23 @@ export function ContentAnalytics({ articles, categories }: ContentAnalyticsProps
     const thirtyDaysAgo = daysAgo(30);
     const sixtyDaysAgo = daysAgo(60);
 
-    const published = articles.filter(a => a.status === 'published');
-    const recentPublished = published.filter(a => a.published_at && new Date(a.published_at) >= thirtyDaysAgo);
-    const prevPublished = published.filter(a =>
-      a.published_at &&
-      new Date(a.published_at) >= sixtyDaysAgo &&
-      new Date(a.published_at) < thirtyDaysAgo,
+    const published = articles.filter((a) => a.status === 'published');
+    const recentPublished = published.filter(
+      (a) => a.published_at && new Date(a.published_at) >= thirtyDaysAgo,
+    );
+    const prevPublished = published.filter(
+      (a) =>
+        a.published_at &&
+        new Date(a.published_at) >= sixtyDaysAgo &&
+        new Date(a.published_at) < thirtyDaysAgo,
     );
 
     const totalViews = articles.reduce((sum, a) => sum + (a.view_count || 0), 0);
     const avgViews = published.length > 0 ? Math.round(totalViews / published.length) : 0;
 
-    const drafts = articles.filter(a => a.status === 'draft');
-    const scheduled = articles.filter(a => a.status === 'scheduled');
-    const featured = articles.filter(a => a.is_featured);
+    const drafts = articles.filter((a) => a.status === 'draft');
+    const scheduled = articles.filter((a) => a.status === 'scheduled');
+    const featured = articles.filter((a) => a.is_featured);
 
     return {
       total: articles.length,
@@ -107,12 +116,12 @@ export function ContentAnalytics({ articles, categories }: ContentAnalyticsProps
       const monthStart = new Date(now.getFullYear(), now.getMonth() - i, 1);
       const monthEnd = new Date(now.getFullYear(), now.getMonth() - i + 1, 0);
 
-      const publishedInMonth = articles.filter(a => {
+      const publishedInMonth = articles.filter((a) => {
         const d = a.published_at ? new Date(a.published_at) : null;
         return d && d >= monthStart && d <= monthEnd;
       }).length;
 
-      const createdInMonth = articles.filter(a => {
+      const createdInMonth = articles.filter((a) => {
         const d = new Date(a.created_at);
         return d >= monthStart && d <= monthEnd;
       }).length;
@@ -138,18 +147,43 @@ export function ContentAnalytics({ articles, categories }: ContentAnalyticsProps
       archived: 0,
     };
 
-    articles.forEach(a => {
+    articles.forEach((a) => {
       if (a.status in statusCounts) {
         statusCounts[a.status as keyof typeof statusCounts]++;
       }
     });
 
     return [
-      { name: 'Drafts', value: statusCounts.draft, color: STATUS_CHART_COLORS.draft, icon: PenLine },
-      { name: 'In Review', value: statusCounts.in_review, color: STATUS_CHART_COLORS.in_review, icon: Send },
-      { name: 'Scheduled', value: statusCounts.scheduled, color: STATUS_CHART_COLORS.scheduled, icon: CalendarDays },
-      { name: 'Published', value: statusCounts.published, color: STATUS_CHART_COLORS.published, icon: CheckCircle2 },
-      { name: 'Archived', value: statusCounts.archived, color: STATUS_CHART_COLORS.archived, icon: Archive },
+      {
+        name: 'Drafts',
+        value: statusCounts.draft,
+        color: STATUS_CHART_COLORS.draft,
+        icon: PenLine,
+      },
+      {
+        name: 'In Review',
+        value: statusCounts.in_review,
+        color: STATUS_CHART_COLORS.in_review,
+        icon: Send,
+      },
+      {
+        name: 'Scheduled',
+        value: statusCounts.scheduled,
+        color: STATUS_CHART_COLORS.scheduled,
+        icon: CalendarDays,
+      },
+      {
+        name: 'Published',
+        value: statusCounts.published,
+        color: STATUS_CHART_COLORS.published,
+        icon: CheckCircle2,
+      },
+      {
+        name: 'Archived',
+        value: statusCounts.archived,
+        color: STATUS_CHART_COLORS.archived,
+        icon: Archive,
+      },
     ];
   }, [articles]);
 
@@ -157,14 +191,19 @@ export function ContentAnalytics({ articles, categories }: ContentAnalyticsProps
 
   const categoryData = useMemo(() => {
     const counts: Record<string, number> = {};
-    articles.forEach(a => {
-      const cat = categories.find(c => c.id === a.category_id);
+    articles.forEach((a) => {
+      const cat = categories.find((c) => c.id === a.category_id);
       const label = cat?.name || 'Uncategorised';
       counts[label] = (counts[label] || 0) + 1;
     });
 
     return Object.entries(counts)
-      .map(([name, value], i) => ({ id: `cat-${i}`, name, value, color: CATEGORY_COLORS[i % CATEGORY_COLORS.length] }))
+      .map(([name, value], i) => ({
+        id: `cat-${i}`,
+        name,
+        value,
+        color: CATEGORY_COLORS[i % CATEGORY_COLORS.length],
+      }))
       .sort((a, b) => b.value - a.value);
   }, [articles, categories]);
 
@@ -173,7 +212,7 @@ export function ContentAnalytics({ articles, categories }: ContentAnalyticsProps
   const topArticles = useMemo(
     () =>
       [...articles]
-        .filter(a => a.status === 'published')
+        .filter((a) => a.status === 'published')
         .sort((a, b) => (b.view_count || 0) - (a.view_count || 0))
         .slice(0, 5),
     [articles],
@@ -194,12 +233,7 @@ export function ContentAnalytics({ articles, categories }: ContentAnalyticsProps
     <div className="space-y-6">
       {/* ── KPI Row ──────────────────────────────────────────────────── */}
       <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
-        <KPICard
-          label="Total Articles"
-          value={kpis.total}
-          icon={FileText}
-          accent="purple"
-        />
+        <KPICard label="Total Articles" value={kpis.total} icon={FileText} accent="purple" />
         <KPICard
           label="Published"
           value={kpis.published}
@@ -287,7 +321,8 @@ export function ContentAnalytics({ articles, categories }: ContentAnalyticsProps
           </CardHeader>
           <CardContent className="pt-0 space-y-3">
             {pipelineData.map((stage) => {
-              const pct = articles.length > 0 ? Math.round((stage.value / articles.length) * 100) : 0;
+              const pct =
+                articles.length > 0 ? Math.round((stage.value / articles.length) * 100) : 0;
               const Icon = stage.icon;
               return (
                 <div key={stage.name} className="flex items-center gap-3">
@@ -331,15 +366,19 @@ export function ContentAnalytics({ articles, categories }: ContentAnalyticsProps
             ) : (
               <div className="space-y-3">
                 {topArticles.map((article, i) => {
-                  const cat = categories.find(c => c.id === article.category_id);
+                  const cat = categories.find((c) => c.id === article.category_id);
                   return (
                     <div key={article.id} className="flex items-center gap-3 group">
-                      <div className={cn(
-                        'w-7 h-7 rounded-lg flex items-center justify-center shrink-0 text-xs font-bold',
-                        i === 0 ? 'bg-purple-100 text-purple-700'
-                          : i === 1 ? 'bg-blue-100 text-blue-700'
-                          : 'bg-gray-100 text-gray-600',
-                      )}>
+                      <div
+                        className={cn(
+                          'w-7 h-7 rounded-lg flex items-center justify-center shrink-0 text-xs font-bold',
+                          i === 0
+                            ? 'bg-purple-100 text-purple-700'
+                            : i === 1
+                              ? 'bg-blue-100 text-blue-700'
+                              : 'bg-gray-100 text-gray-600',
+                        )}
+                      >
                         {i + 1}
                       </div>
                       <div className="flex-1 min-w-0">
@@ -352,7 +391,9 @@ export function ContentAnalytics({ articles, categories }: ContentAnalyticsProps
                       </div>
                       <div className="flex items-center gap-1.5 text-sm text-gray-600 shrink-0">
                         <Eye className="w-3.5 h-3.5" />
-                        <span className="font-medium">{(article.view_count || 0).toLocaleString()}</span>
+                        <span className="font-medium">
+                          {(article.view_count || 0).toLocaleString()}
+                        </span>
                       </div>
                     </div>
                   );
@@ -380,9 +421,9 @@ interface KPICardProps {
 
 const ACCENT_MAP = {
   purple: { bg: 'bg-purple-50', text: 'text-purple-600', ring: 'ring-purple-100' },
-  green:  { bg: 'bg-green-50',  text: 'text-green-600',  ring: 'ring-green-100' },
-  blue:   { bg: 'bg-blue-50',   text: 'text-blue-600',   ring: 'ring-blue-100' },
-  amber:  { bg: 'bg-amber-50',  text: 'text-amber-600',  ring: 'ring-amber-100' },
+  green: { bg: 'bg-green-50', text: 'text-green-600', ring: 'ring-green-100' },
+  blue: { bg: 'bg-blue-50', text: 'text-blue-600', ring: 'ring-blue-100' },
+  amber: { bg: 'bg-amber-50', text: 'text-amber-600', ring: 'ring-amber-100' },
 };
 
 function KPICard({ label, value, icon: Icon, accent, trend, trendLabel, sub }: KPICardProps) {
@@ -397,7 +438,13 @@ function KPICard({ label, value, icon: Icon, accent, trend, trendLabel, sub }: K
             <p className="text-sm font-medium text-muted-foreground">{label}</p>
             <p className="text-2xl font-bold tracking-tight text-gray-900">{value}</p>
           </div>
-          <div className={cn('w-10 h-10 rounded-xl flex items-center justify-center ring-1', a.bg, a.ring)}>
+          <div
+            className={cn(
+              'w-10 h-10 rounded-xl flex items-center justify-center ring-1',
+              a.bg,
+              a.ring,
+            )}
+          >
             <Icon className={cn('w-5 h-5', a.text)} />
           </div>
         </div>
@@ -410,17 +457,14 @@ function KPICard({ label, value, icon: Icon, accent, trend, trendLabel, sub }: K
               <TrendingDown className="w-3.5 h-3.5 text-red-500" />
             )}
             <span className={cn('text-xs font-medium', isUp ? 'text-green-600' : 'text-red-500')}>
-              {isUp ? '+' : ''}{trend}%
+              {isUp ? '+' : ''}
+              {trend}%
             </span>
-            {trendLabel && (
-              <span className="text-xs text-muted-foreground">{trendLabel}</span>
-            )}
+            {trendLabel && <span className="text-xs text-muted-foreground">{trendLabel}</span>}
           </div>
         )}
 
-        {sub && !trend && (
-          <p className="text-xs text-muted-foreground mt-2">{sub}</p>
-        )}
+        {sub && !trend && <p className="text-xs text-muted-foreground mt-2">{sub}</p>}
       </CardContent>
     </Card>
   );
@@ -452,7 +496,7 @@ function VelocityLineChart({ data }: VelocityLineChartProps) {
   const chartW = dims.w - pad.left - pad.right;
   const chartH = dims.h - pad.top - pad.bottom;
 
-  const allValues = data.flatMap(d => [d.published, d.drafts]);
+  const allValues = data.flatMap((d) => [d.published, d.drafts]);
   const maxVal = Math.max(...allValues, 1);
   // Round up to nearest nice number for Y axis
   const niceMax = Math.ceil(maxVal / (maxVal > 10 ? 5 : 1)) * (maxVal > 10 ? 5 : 1);
@@ -463,7 +507,9 @@ function VelocityLineChart({ data }: VelocityLineChartProps) {
   const toY = (v: number) => pad.top + chartH - (v / niceMax) * chartH;
 
   const buildPath = (key: 'published' | 'drafts') =>
-    data.map((d, i) => `${i === 0 ? 'M' : 'L'}${toX(i).toFixed(1)},${toY(d[key]).toFixed(1)}`).join(' ');
+    data
+      .map((d, i) => `${i === 0 ? 'M' : 'L'}${toX(i).toFixed(1)},${toY(d[key]).toFixed(1)}`)
+      .join(' ');
 
   const publishedPath = buildPath('published');
   const draftsPath = buildPath('drafts');
@@ -471,15 +517,18 @@ function VelocityLineChart({ data }: VelocityLineChartProps) {
   // Gradient fill path (close to bottom)
   const fillPath = `${publishedPath} L${toX(data.length - 1).toFixed(1)},${toY(0).toFixed(1)} L${toX(0).toFixed(1)},${toY(0).toFixed(1)} Z`;
 
-  const handleMouseMove = useCallback((e: React.MouseEvent<SVGSVGElement>) => {
-    const svg = e.currentTarget;
-    const rect = svg.getBoundingClientRect();
-    const mx = e.clientX - rect.left - pad.left;
-    const idx = Math.round(mx / xStep);
-    if (idx >= 0 && idx < data.length) {
-      setTooltip({ x: toX(idx), y: e.clientY - rect.top, idx });
-    }
-  }, [data.length, xStep, pad.left]);
+  const handleMouseMove = useCallback(
+    (e: React.MouseEvent<SVGSVGElement>) => {
+      const svg = e.currentTarget;
+      const rect = svg.getBoundingClientRect();
+      const mx = e.clientX - rect.left - pad.left;
+      const idx = Math.round(mx / xStep);
+      if (idx >= 0 && idx < data.length) {
+        setTooltip({ x: toX(idx), y: e.clientY - rect.top, idx });
+      }
+    },
+    [data.length, xStep, pad.left],
+  );
 
   const handleMouseLeave = useCallback(() => setTooltip(null), []);
 
@@ -500,7 +549,7 @@ function VelocityLineChart({ data }: VelocityLineChartProps) {
         </defs>
 
         {/* Grid lines */}
-        {yTicks.map(tick => (
+        {yTicks.map((tick) => (
           <line
             key={`grid-${tick}`}
             x1={pad.left}
@@ -513,7 +562,7 @@ function VelocityLineChart({ data }: VelocityLineChartProps) {
         ))}
 
         {/* Y axis labels */}
-        {yTicks.map(tick => (
+        {yTicks.map((tick) => (
           <text
             key={`ylabel-${tick}`}
             x={pad.left - 8}
@@ -544,10 +593,23 @@ function VelocityLineChart({ data }: VelocityLineChartProps) {
         <path d={fillPath} fill="url(#ca-vel-grad)" />
 
         {/* Published line */}
-        <path d={publishedPath} fill="none" stroke="#7c3aed" strokeWidth={2.5} strokeLinejoin="round" />
+        <path
+          d={publishedPath}
+          fill="none"
+          stroke="#7c3aed"
+          strokeWidth={2.5}
+          strokeLinejoin="round"
+        />
 
         {/* Drafts line (dashed) */}
-        <path d={draftsPath} fill="none" stroke="#9ca3af" strokeWidth={1.5} strokeDasharray="4 3" strokeLinejoin="round" />
+        <path
+          d={draftsPath}
+          fill="none"
+          stroke="#9ca3af"
+          strokeWidth={1.5}
+          strokeDasharray="4 3"
+          strokeLinejoin="round"
+        />
 
         {/* Published dots */}
         {data.map((d, i) => (

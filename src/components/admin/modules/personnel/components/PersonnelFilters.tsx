@@ -45,8 +45,7 @@ export function PersonnelFilters({
   filteredCount,
 }: PersonnelFiltersProps) {
   const searchInputGuard = useSearchInputAutofillGuard({ id: 'personnel-filters-search' });
-  const hasActiveFilters =
-    searchTerm !== '' || activeCategory !== 'all' || statusFilter !== 'all';
+  const hasActiveFilters = searchTerm !== '' || activeCategory !== 'all' || statusFilter !== 'all';
   const isFiltered = filteredCount !== totalCount;
 
   return (
@@ -99,9 +98,7 @@ export function PersonnelFilters({
             {STATUS_OPTIONS.map((opt) => (
               <SelectItem key={opt.value} value={opt.value}>
                 <span className="flex items-center gap-2">
-                  {opt.dot && (
-                    <span className={cn('h-2 w-2 rounded-full', opt.dot)} />
-                  )}
+                  {opt.dot && <span className={cn('h-2 w-2 rounded-full', opt.dot)} />}
                   {opt.label}
                 </span>
               </SelectItem>

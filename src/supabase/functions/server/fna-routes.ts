@@ -1,9 +1,9 @@
 /**
  * FNA Directory Service
- * 
+ *
  * This is NOT a shared FNA service. Each FNA type is architecturally isolated
  * with its own route file, calculation logic, and data storage.
- * 
+ *
  * This service provides:
  * - Directory listing of available FNA types
  * - Health check endpoint
@@ -119,9 +119,9 @@ fnaRoutes.get('/', (c) => {
  * Health check endpoint
  */
 fnaRoutes.get('/health', (c) => {
-  const activeFnas = FNA_TYPES.filter(fna => fna.status === 'active');
-  const inDevelopmentFnas = FNA_TYPES.filter(fna => fna.status === 'in-development');
-  const plannedFnas = FNA_TYPES.filter(fna => fna.status === 'planned');
+  const activeFnas = FNA_TYPES.filter((fna) => fna.status === 'active');
+  const inDevelopmentFnas = FNA_TYPES.filter((fna) => fna.status === 'in-development');
+  const plannedFnas = FNA_TYPES.filter((fna) => fna.status === 'planned');
 
   return c.json({
     status: 'healthy',
@@ -133,7 +133,7 @@ fnaRoutes.get('/health', (c) => {
       in_development: inDevelopmentFnas.length,
       planned: plannedFnas.length,
     },
-    active_services: activeFnas.map(fna => fna.id),
+    active_services: activeFnas.map((fna) => fna.id),
   });
 });
 
@@ -143,7 +143,7 @@ fnaRoutes.get('/health', (c) => {
  */
 fnaRoutes.get('/types', (c) => {
   return c.json({
-    fna_types: FNA_TYPES.map(fna => ({
+    fna_types: FNA_TYPES.map((fna) => ({
       id: fna.id,
       name: fna.name,
       status: fna.status,
@@ -158,16 +158,16 @@ fnaRoutes.get('/types', (c) => {
  */
 fnaRoutes.get('/types/:typeId', (c) => {
   const typeId = c.req.param('typeId');
-  const fnaType = FNA_TYPES.find(fna => fna.id === typeId);
+  const fnaType = FNA_TYPES.find((fna) => fna.id === typeId);
 
   if (!fnaType) {
     return c.json(
       {
         error: 'FNA type not found',
         message: `No FNA type with id "${typeId}"`,
-        available_types: FNA_TYPES.map(fna => fna.id),
+        available_types: FNA_TYPES.map((fna) => fna.id),
       },
-      404
+      404,
     );
   }
 
@@ -201,12 +201,12 @@ fnaRoutes.post('/submit', async (c) => {
         new: 'POST /{fna-type}-fna/create',
         example: 'POST /risk-planning-fna/create',
       },
-      available_fna_types: FNA_TYPES.filter(fna => fna.status === 'active').map(fna => ({
+      available_fna_types: FNA_TYPES.filter((fna) => fna.status === 'active').map((fna) => ({
         id: fna.id,
         endpoint: fna.endpoint,
       })),
     },
-    410 // Gone - indicates the endpoint is deprecated
+    410, // Gone - indicates the endpoint is deprecated
   );
 });
 
@@ -226,7 +226,7 @@ fnaRoutes.all('*', (c) => {
         'GET /make-server-91ed8379/fna/types/:typeId',
       ],
     },
-    404
+    404,
   );
 });
 

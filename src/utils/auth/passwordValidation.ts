@@ -60,7 +60,9 @@ export function validatePassword(password: string): PasswordStrength {
 
   // Check character type diversity
   if (requirements.characterTypes < 3) {
-    feedback.push('Password must contain at least 3 of: uppercase, lowercase, numbers, special characters');
+    feedback.push(
+      'Password must contain at least 3 of: uppercase, lowercase, numbers, special characters',
+    );
   }
 
   // Check for common passwords
@@ -78,10 +80,8 @@ export function validatePassword(password: string): PasswordStrength {
   score = Math.min(score, 4); // Cap at 4
 
   // All requirements must pass
-  const isValid = 
-    requirements.minLength && 
-    requirements.characterTypes >= 3 && 
-    requirements.notCommon;
+  const isValid =
+    requirements.minLength && requirements.characterTypes >= 3 && requirements.notCommon;
 
   // Add positive feedback for strong passwords
   if (isValid) {

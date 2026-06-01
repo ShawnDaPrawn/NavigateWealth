@@ -3,16 +3,20 @@
  * Handles user profile operations including creation, retrieval, and updates
  */
 
-import { Hono } from "npm:hono";
-import { ZipWriter, Uint8ArrayWriter, Uint8ArrayReader } from "npm:@zip.js/zip.js";
+import { Hono } from 'npm:hono';
+import { ZipWriter, Uint8ArrayWriter, Uint8ArrayReader } from 'npm:@zip.js/zip.js';
 import { sendEmail } from './email-service.ts';
 import * as kv from './kv_store.tsx';
 import { SUPER_ADMIN_EMAIL } from './constants.ts';
 import { createModuleLogger } from './stderr-logger.ts';
 import { getErrMsg } from './shared-logger-utils.ts';
-import { createClient } from "jsr:@supabase/supabase-js@2.49.8";
+import { createClient } from 'jsr:@supabase/supabase-js@2.49.8';
 import { asyncHandler } from './error.middleware.ts';
-import { isPersonnelAuthUser, shouldIncludeInClientManagement, shouldLoadClientManagementProfile } from './client-management-visibility.ts';
+import {
+  isPersonnelAuthUser,
+  shouldIncludeInClientManagement,
+  shouldLoadClientManagementProfile,
+} from './client-management-visibility.ts';
 import {
   UpdateSuperAdminProfileSchema,
   PersonalInfoQuerySchema,
@@ -36,10 +40,7 @@ const log = createModuleLogger('profile-routes');
  * Create Supabase service client
  */
 function createServiceClient() {
-  return createClient(
-    Deno.env.get('SUPABASE_URL')!,
-    Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
-  );
+  return createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!);
 }
 
 /**
@@ -48,16 +49,16 @@ function createServiceClient() {
  */
 function deepSanitize(obj: unknown): unknown {
   if (obj === undefined || obj === null) return obj;
-  
+
   // Handle primitive types
   if (typeof obj !== 'object') return obj;
-  
+
   // Handle Date objects (preserve them)
   if (obj instanceof Date) return obj;
 
   // Handle Arrays
   if (Array.isArray(obj)) {
-    return obj.map(item => deepSanitize(item));
+    return obj.map((item) => deepSanitize(item));
   }
 
   // Handle Objects
@@ -69,25 +70,25 @@ function deepSanitize(obj: unknown): unknown {
       if (key === 'fileUrl' || key === 'path' || key === 'url' || key === 'href') {
         // CRITICAL SECURITY FIX: Never allow data: URIs even in these allowed fields
         if (value.startsWith('data:')) {
-           continue;
+          continue;
         }
         cleaned[key] = value;
         continue;
       }
-      
+
       // Check for Base64 or excessive length (5KB limit)
       if (value.startsWith('data:') || value.length > 5000) {
         // Skip this property (effectively deleting it)
         continue;
       }
-      
+
       cleaned[key] = value;
     } else {
       // Recursively sanitize other values
       cleaned[key] = deepSanitize(value);
     }
   }
-  
+
   return cleaned;
 }
 
@@ -95,37 +96,40 @@ function deepSanitize(obj: unknown): unknown {
  * GET /super-admin
  * Get the super admin profile
  */
-router.get("/super-admin", async (c) => {
+router.get('/super-admin', async (c) => {
   try {
     log.info('Fetching super admin profile');
-    
+
     const supabase = createServiceClient();
-    
+
     // Get all users and find super admin by email
-    const { data: { users }, error } = await supabase.auth.admin.listUsers();
-    
+    const {
+      data: { users },
+      error,
+    } = await supabase.auth.admin.listUsers();
+
     if (error) {
       log.error('Error fetching users from Supabase Auth', error);
       return c.json({ error: 'Failed to fetch users' }, 500);
     }
-    
-    const superAdminUser = users?.find(u => 
-      u.email?.toLowerCase() === SUPER_ADMIN_EMAIL.toLowerCase()
+
+    const superAdminUser = users?.find(
+      (u) => u.email?.toLowerCase() === SUPER_ADMIN_EMAIL.toLowerCase(),
     );
-    
+
     if (!superAdminUser) {
       log.warn('Super admin user not found', { email: SUPER_ADMIN_EMAIL });
       return c.json({ error: 'Super admin not found' }, 404);
     }
-    
+
     // Get profile from KV store
     const profileKey = `user_profile:${superAdminUser.id}:personal_info`;
     let profile = await kv.get(profileKey);
-    
+
     // If profile doesn't exist, create default super admin profile
     if (!profile) {
       log.info('Creating default super admin profile', { userId: superAdminUser.id });
-      
+
       const nameParts = (superAdminUser.user_metadata?.name || '').split(/\s+/);
       profile = {
         userId: superAdminUser.id,
@@ -138,9 +142,9 @@ router.get("/super-admin", async (c) => {
         accountStatus: 'approved',
         adviserAssigned: true,
         createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString()
+        updatedAt: new Date().toISOString(),
       };
-      
+
       await kv.set(profileKey, profile);
     } else {
       // Ensure role is super_admin
@@ -150,25 +154,27 @@ router.get("/super-admin", async (c) => {
         profile.adviserAssigned = true;
         await kv.set(profileKey, profile);
       }
-      
+
       // Add userId and email if missing
       profile.userId = superAdminUser.id;
       profile.email = superAdminUser.email;
     }
-    
+
     log.success('Super admin profile retrieved', { userId: superAdminUser.id });
-    
-    return c.json({ 
-      success: true, 
-      profile 
+
+    return c.json({
+      success: true,
+      profile,
     });
-    
   } catch (error) {
     log.error('Error fetching super admin profile', error);
-    return c.json({ 
-      error: 'Failed to fetch super admin profile',
-      details: getErrMsg(error)
-    }, 500);
+    return c.json(
+      {
+        error: 'Failed to fetch super admin profile',
+        details: getErrMsg(error),
+      },
+      500,
+    );
   }
 });
 
@@ -176,63 +182,69 @@ router.get("/super-admin", async (c) => {
  * PUT /super-admin
  * Update the super admin profile
  */
-router.put("/super-admin", asyncHandler(async (c) => {
-  const body = await c.req.json();
-  
-  // Validate input
-  const updates = UpdateSuperAdminProfileSchema.parse(body);
-  
-  log.info('Updating super admin profile');
-  
-  const supabase = createServiceClient();
-  
-  // Get all users and find super admin by email
-  const { data: { users }, error } = await supabase.auth.admin.listUsers();
-  
-  if (error) {
-    log.error('Error fetching users from Supabase Auth', error);
-    return c.json({ error: 'Failed to fetch users' }, 500);
-  }
-  
-  const superAdminUser = users?.find(u => 
-    u.email?.toLowerCase() === SUPER_ADMIN_EMAIL.toLowerCase()
-  );
-  
-  if (!superAdminUser) {
-    log.warn('Super admin user not found', { email: SUPER_ADMIN_EMAIL });
-    return c.json({ error: 'Super admin not found' }, 404);
-  }
-  
-  // Update profile in KV store
-  const profileKey = `user_profile:${superAdminUser.id}:personal_info`;
-  const existingProfile = await kv.get(profileKey) || {};
-  
-  let updatedProfile = {
-    ...existingProfile,
-    ...updates,
-    userId: superAdminUser.id,
-    email: superAdminUser.email,
-    role: 'super_admin', // Always enforce super admin role
-    updatedAt: new Date().toISOString()
-  };
-  
-  // Sanitize potentially large fields
-  try {
-    const sanitized = deepSanitize(updatedProfile);
-    if (sanitized) updatedProfile = sanitized;
-  } catch (e) {
-    log.error('Sanitization failed for super admin update', e);
-  }
+router.put(
+  '/super-admin',
+  asyncHandler(async (c) => {
+    const body = await c.req.json();
 
-  await kv.set(profileKey, updatedProfile);
-  
-  log.success('Super admin profile updated', { userId: superAdminUser.id });
-  
-  return c.json({ 
-    success: true, 
-    profile: updatedProfile 
-  });
-}));
+    // Validate input
+    const updates = UpdateSuperAdminProfileSchema.parse(body);
+
+    log.info('Updating super admin profile');
+
+    const supabase = createServiceClient();
+
+    // Get all users and find super admin by email
+    const {
+      data: { users },
+      error,
+    } = await supabase.auth.admin.listUsers();
+
+    if (error) {
+      log.error('Error fetching users from Supabase Auth', error);
+      return c.json({ error: 'Failed to fetch users' }, 500);
+    }
+
+    const superAdminUser = users?.find(
+      (u) => u.email?.toLowerCase() === SUPER_ADMIN_EMAIL.toLowerCase(),
+    );
+
+    if (!superAdminUser) {
+      log.warn('Super admin user not found', { email: SUPER_ADMIN_EMAIL });
+      return c.json({ error: 'Super admin not found' }, 404);
+    }
+
+    // Update profile in KV store
+    const profileKey = `user_profile:${superAdminUser.id}:personal_info`;
+    const existingProfile = (await kv.get(profileKey)) || {};
+
+    let updatedProfile = {
+      ...existingProfile,
+      ...updates,
+      userId: superAdminUser.id,
+      email: superAdminUser.email,
+      role: 'super_admin', // Always enforce super admin role
+      updatedAt: new Date().toISOString(),
+    };
+
+    // Sanitize potentially large fields
+    try {
+      const sanitized = deepSanitize(updatedProfile);
+      if (sanitized) updatedProfile = sanitized;
+    } catch (e) {
+      log.error('Sanitization failed for super admin update', e);
+    }
+
+    await kv.set(profileKey, updatedProfile);
+
+    log.success('Super admin profile updated', { userId: superAdminUser.id });
+
+    return c.json({
+      success: true,
+      profile: updatedProfile,
+    });
+  }),
+);
 
 /**
  * POST /super-admin/enable-personal-client
@@ -247,11 +259,17 @@ router.post(
     const callerEmail = authUser?.email?.toLowerCase();
 
     if (callerEmail !== SUPER_ADMIN_EMAIL.toLowerCase()) {
-      return c.json({ error: 'Forbidden: only the super admin account can enable personal client testing' }, 403);
+      return c.json(
+        { error: 'Forbidden: only the super admin account can enable personal client testing' },
+        403,
+      );
     }
 
     const supabase = createServiceClient();
-    const { data: { users }, error } = await supabase.auth.admin.listUsers();
+    const {
+      data: { users },
+      error,
+    } = await supabase.auth.admin.listUsers();
 
     if (error) {
       log.error('Error fetching users from Supabase Auth', error);
@@ -284,7 +302,9 @@ router.post(
 
     if (existingApp?.id) {
       applicationId = String(existingApp.id);
-      applicationNumber = String(existingApp.application_number || existingProfile?.applicationNumber || '');
+      applicationNumber = String(
+        existingApp.application_number || existingProfile?.applicationNumber || '',
+      );
       existingApp = {
         ...existingApp,
         user_id: userId,
@@ -376,17 +396,19 @@ router.post(
  * Get all users with their profiles (for admin use)
  * Includes deleted, suspended, and accountStatus fields for admin filtering.
  */
-router.get("/all-users", async (c) => {
+router.get('/all-users', async (c) => {
   try {
     log.info('Fetching all users');
-    
+
     const supabase = createServiceClient();
-    
+
     // Pagination query params (optional — omit for full list)
     const pageParam = c.req.query('page');
     const perPageParam = c.req.query('perPage');
     const page = pageParam ? Math.max(1, parseInt(pageParam, 10) || 1) : null;
-    const perPage = perPageParam ? Math.min(100, Math.max(1, parseInt(perPageParam, 10) || 50)) : null;
+    const perPage = perPageParam
+      ? Math.min(100, Math.max(1, parseInt(perPageParam, 10) || 50))
+      : null;
 
     let users: Awaited<ReturnType<typeof listAllAuthUsers>>;
     try {
@@ -400,14 +422,14 @@ router.get("/all-users", async (c) => {
       log.info('No users found');
       return c.json({ success: true, users: [] });
     }
-    
+
     // ── Personnel exclusion ────────────────────────────────────────────
     // Batch-fetch all personnel profile IDs so we can cross-reference.
     // This covers cases where user_metadata may not yet have a role
     // (e.g. a personnel record bootstrapped by the super admin auto-create).
     const personnelProfiles = await kv.getByPrefix('personnel:profile:');
     const personnelIds = new Set<string>(
-      personnelProfiles.map((p: Record<string, unknown>) => p.id as string).filter(Boolean)
+      personnelProfiles.map((p: Record<string, unknown>) => p.id as string).filter(Boolean),
     );
 
     /** Narrow listAllAuthUsers() results for visibility + profile enrichment */
@@ -417,18 +439,18 @@ router.get("/all-users", async (c) => {
       created_at?: string;
       user_metadata?: Record<string, unknown>;
     };
-    
+
     // Get profiles AND security entries for all users from KV store
     const usersWithProfiles = await Promise.all(
       (users as AuthUserBrief[])
-        .filter(user => shouldLoadClientManagementProfile(user, personnelIds))
+        .filter((user) => shouldLoadClientManagementProfile(user, personnelIds))
         .map(async (user) => {
           const profileKey = `user_profile:${user.id}:personal_info`;
           const [profile, security] = await Promise.all([
             kv.get(profileKey),
-            kv.get(`security:${user.id}`)
+            kv.get(`security:${user.id}`),
           ]);
-          
+
           const response = {
             id: user.id,
             email: user.email,
@@ -436,10 +458,11 @@ router.get("/all-users", async (c) => {
             user_metadata: user.user_metadata,
             profile: profile || null,
             // Add derived fields for compatibility
-            name: user.user_metadata?.name || 
-                  (profile?.firstName && profile?.lastName 
-                    ? `${profile.firstName} ${profile.lastName}` 
-                    : ''),
+            name:
+              user.user_metadata?.name ||
+              (profile?.firstName && profile?.lastName
+                ? `${profile.firstName} ${profile.lastName}`
+                : ''),
             application_number: profile?.applicationNumber || null,
             application_status: profile?.applicationStatus || 'not_started',
             account_type: profile?.accountType || null,
@@ -450,8 +473,8 @@ router.get("/all-users", async (c) => {
           };
 
           return { response, user };
-        })
-      );
+        }),
+    );
 
     const visibleUsers = usersWithProfiles
       .filter(({ response, user }) =>
@@ -460,7 +483,7 @@ router.get("/all-users", async (c) => {
           personnelIds,
           profile: response.profile,
           applicationStatus: response.application_status,
-        })
+        }),
       )
       .map(({ response }) => response);
 
@@ -488,17 +511,19 @@ router.get("/all-users", async (c) => {
     }
 
     // Unpaginated (backward compat)
-    return c.json({ 
-      success: true, 
-      users: visibleUsers 
+    return c.json({
+      success: true,
+      users: visibleUsers,
     });
-    
   } catch (error) {
     log.error('Error fetching all users', error);
-    return c.json({ 
-      error: 'Failed to fetch users',
-      details: getErrMsg(error)
-    }, 500);
+    return c.json(
+      {
+        error: 'Failed to fetch users',
+        details: getErrMsg(error),
+      },
+      500,
+    );
   }
 });
 
@@ -512,418 +537,450 @@ router.get("/all-users", async (c) => {
  * Body: { metadata: Record<string, unknown> }
  * Merges the provided fields into the user's existing user_metadata.
  */
-router.put("/users/:userId/metadata", asyncHandler(async (c) => {
-  const { userId } = c.req.param();
-  if (!userId) {
-    return c.json({ error: 'Missing userId parameter' }, 400);
-  }
+router.put(
+  '/users/:userId/metadata',
+  asyncHandler(async (c) => {
+    const { userId } = c.req.param();
+    if (!userId) {
+      return c.json({ error: 'Missing userId parameter' }, 400);
+    }
 
-  const body = await c.req.json();
-  const metadata = body?.metadata;
-  if (!metadata || typeof metadata !== 'object') {
-    return c.json({ error: 'Request body must include a `metadata` object' }, 400);
-  }
+    const body = await c.req.json();
+    const metadata = body?.metadata;
+    if (!metadata || typeof metadata !== 'object') {
+      return c.json({ error: 'Request body must include a `metadata` object' }, 400);
+    }
 
-  log.info('Updating user metadata', { userId, fields: Object.keys(metadata) });
+    log.info('Updating user metadata', { userId, fields: Object.keys(metadata) });
 
-  const supabase = createServiceClient();
+    const supabase = createServiceClient();
 
-  const { data, error } = await supabase.auth.admin.updateUserById(userId, {
-    user_metadata: metadata,
-  });
+    const { data, error } = await supabase.auth.admin.updateUserById(userId, {
+      user_metadata: metadata,
+    });
 
-  if (error) {
-    log.error('Failed to update user metadata', error, { userId });
+    if (error) {
+      log.error('Failed to update user metadata', error, { userId });
+      return c.json(
+        {
+          error: 'Failed to update user metadata',
+          details: getErrMsg(error),
+        },
+        500,
+      );
+    }
+
+    log.success('User metadata updated', { userId });
+
     return c.json({
-      error: 'Failed to update user metadata',
-      details: getErrMsg(error),
-    }, 500);
-  }
-
-  log.success('User metadata updated', { userId });
-
-  return c.json({ success: true, user: { id: data.user.id, user_metadata: data.user.user_metadata } });
-}));
+      success: true,
+      user: { id: data.user.id, user_metadata: data.user.user_metadata },
+    });
+  }),
+);
 
 /**
  * GET /personal-info
  * Retrieve user profile from KV store
  */
-router.get("/personal-info", asyncHandler(async (c) => {
-  const query = c.req.query();
-  
-  // Validate query parameters
-  const { key, email } = PersonalInfoQuerySchema.parse(query);
+router.get(
+  '/personal-info',
+  asyncHandler(async (c) => {
+    const query = c.req.query();
 
-  log.info('Fetching profile', { key, email });
-  
-  // Get profile from KV store
-  let profile = await kv.get(key);
-  
-  // Check if super admin by email
-  const isSuperAdmin = email && email.toLowerCase() === SUPER_ADMIN_EMAIL.toLowerCase();
-  
-  // If profile exists, ensure super admin has correct role
-  if (profile) {
-    if (isSuperAdmin && profile.role !== 'super_admin') {
-      log.info('Upgrading super admin role', { email });
-      profile.role = 'super_admin';
-      profile.accountStatus = 'approved';
-      profile.adviserAssigned = true;
-      await kv.set(key, profile);
+    // Validate query parameters
+    const { key, email } = PersonalInfoQuerySchema.parse(query);
+
+    log.info('Fetching profile', { key, email });
+
+    // Get profile from KV store
+    const profile = await kv.get(key);
+
+    // Check if super admin by email
+    const isSuperAdmin = email && email.toLowerCase() === SUPER_ADMIN_EMAIL.toLowerCase();
+
+    // If profile exists, ensure super admin has correct role
+    if (profile) {
+      if (isSuperAdmin && profile.role !== 'super_admin') {
+        log.info('Upgrading super admin role', { email });
+        profile.role = 'super_admin';
+        profile.accountStatus = 'approved';
+        profile.adviserAssigned = true;
+        await kv.set(key, profile);
+      }
+
+      log.success('Profile retrieved', {
+        role: profile.role,
+        email,
+        isSuperAdmin,
+      });
+
+      return c.json({
+        success: true,
+        data: profile,
+      });
     }
-    
-    log.success('Profile retrieved', { 
-      role: profile.role, 
-      email,
-      isSuperAdmin 
-    });
-    
-    return c.json({ 
-      success: true, 
-      data: profile 
-    });
-  }
-  
-  // Profile not found
-  log.warn('Profile not found', { key });
-  return c.json({ error: 'Profile not found' }, 404);
-}));
+
+    // Profile not found
+    log.warn('Profile not found', { key });
+    return c.json({ error: 'Profile not found' }, 404);
+  }),
+);
 
 /**
  * POST /personal-info
  * Update user profile in KV store
  */
-router.post("/personal-info", asyncHandler(async (c) => {
-  let body;
-  try {
-    log.info('=== POST /personal-info START ===');
-    
-    // Safety: Catch body parsing errors
+router.post(
+  '/personal-info',
+  asyncHandler(async (c) => {
+    let body;
     try {
-      body = await c.req.json();
-    } catch (parseError) {
-      log.error('Failed to parse request body', parseError);
-      return c.json({
-        error: 'Request Payload Too Large',
-        message: 'The data being saved is too large for the server to process.',
-        code: 'PAYLOAD_TOO_LARGE'
-      }, 413);
-    }
-    
-    // Validate input
-    let validated;
-    try {
-      validated = PersonalInfoUpdateSchema.parse(body);
-    } catch (zodError: unknown) {
-      const ze = zodError as { errors?: Array<{ message?: string }> };
-      log.error('Validation Error', zodError);
-      return c.json({
-        error: `VALIDATION_ERROR: ${ze.errors?.[0]?.message || 'Invalid Request Data'}`,
-        details: ze.errors
-      }, 400);
-    }
-    const { key, data } = validated;
+      log.info('=== POST /personal-info START ===');
 
-    if (!key || !key.includes('user_profile')) {
-      log.warn('Suspicious Key Format', { key });
-    }
-
-    const incomingData = data as Record<string, unknown>;
-    const keys = Object.keys(incomingData);
-    
-    // Heuristic: Is this a full replacement?
-    const hasCoreFields = keys.includes('firstName') && keys.includes('lastName') && keys.includes('email');
-    const isBigPayload = keys.length > 5;
-    const isFullProfileReplacement = hasCoreFields || isBigPayload;
-
-    log.info('Analyzing update type', { 
-      isFullProfileReplacement, 
-      keyCount: keys.length
-    });
-    
-    let finalProfile = {};
-
-    if (isFullProfileReplacement) {
-      log.info('Full profile replacement detected. Deleting existing record first.', { key });
-      
-      // Delete the old record first (clean slate)
+      // Safety: Catch body parsing errors
       try {
-        await kv.del(key);
-      } catch (delError) {
-        log.error('Failed to delete existing record (non-fatal)', delError);
+        body = await c.req.json();
+      } catch (parseError) {
+        log.error('Failed to parse request body', parseError);
+        return c.json(
+          {
+            error: 'Request Payload Too Large',
+            message: 'The data being saved is too large for the server to process.',
+            code: 'PAYLOAD_TOO_LARGE',
+          },
+          413,
+        );
       }
-      
-      finalProfile = {
-        ...data,
-        updatedAt: new Date().toISOString()
-      };
-      
-    } else {
-      // Partial Patch Logic
-      log.info('Partial patch detected. Merging...');
+
+      // Validate input
+      let validated;
       try {
-        const existing = await kv.get(key) || {};
-        finalProfile = { ...existing, ...data, updatedAt: new Date().toISOString() };
-      } catch (readError) {
-        log.error('Failed to read profile for PATCH.', readError);
-        throw new Error('Database error. Please refresh the page.');
+        validated = PersonalInfoUpdateSchema.parse(body);
+      } catch (zodError: unknown) {
+        const ze = zodError as { errors?: Array<{ message?: string }> };
+        log.error('Validation Error', zodError);
+        return c.json(
+          {
+            error: `VALIDATION_ERROR: ${ze.errors?.[0]?.message || 'Invalid Request Data'}`,
+            details: ze.errors,
+          },
+          400,
+        );
       }
-    }
-    
-    // Sanitize
-    try {
-      const sanitized = deepSanitize(finalProfile);
-      if (sanitized) {
-        finalProfile = sanitized;
+      const { key, data } = validated;
+
+      if (!key || !key.includes('user_profile')) {
+        log.warn('Suspicious Key Format', { key });
       }
-    } catch (sanitizationError) {
-      log.error('Deep sanitize failed on server', sanitizationError);
-      throw new Error('Sanitization failed');
-    }
-    
-    // Save to KV store
-    try {
-      await kv.set(key, finalProfile);
-    } catch (setError) {
-      log.error('KV Write Failed', setError);
-      throw new Error(`KV Write Failed: ${setError instanceof Error ? setError.message : String(setError)}`);
-    }
-    
-    log.success('Profile updated successfully', { key });
-    
-    // ── Phase 1: Profile → Application sync ──────────────────────────────
-    // If this client has a syncable (pre-approval) application, push changed
-    // fields into application_data so both records stay consistent.
-    // Non-blocking — sync failure must not break the profile save response.
-    const userId = extractUserIdFromProfileKey(key);
-    if (userId) {
-      syncProfileToApplication(
-        userId,
-        finalProfile as Record<string, unknown>,
-      ).then(result => {
-        if (result.synced) {
-          log.info('Profile → Application sync triggered', {
-            userId,
-            fieldsUpdated: result.fieldsUpdated,
-          });
-        }
-      }).catch(syncErr => {
-        log.error('Profile → Application background sync error', syncErr);
+
+      const incomingData = data as Record<string, unknown>;
+      const keys = Object.keys(incomingData);
+
+      // Heuristic: Is this a full replacement?
+      const hasCoreFields =
+        keys.includes('firstName') && keys.includes('lastName') && keys.includes('email');
+      const isBigPayload = keys.length > 5;
+      const isFullProfileReplacement = hasCoreFields || isBigPayload;
+
+      log.info('Analyzing update type', {
+        isFullProfileReplacement,
+        keyCount: keys.length,
       });
-    }
 
-    return c.json({ 
-      success: true, 
-      data: finalProfile 
-    });
-  } catch (error) {
-    log.error('Error in POST /personal-info', error);
-    
-    return c.json({ 
-      error: 'Server Error',
-      message: `BACKEND_ERROR: ${getErrMsg(error)}`,
-      code: 'INTERNAL_ERROR',
-      details: error instanceof Error ? error.stack : undefined
-    }, 500);
-  }
-}));
+      let finalProfile = {};
+
+      if (isFullProfileReplacement) {
+        log.info('Full profile replacement detected. Deleting existing record first.', { key });
+
+        // Delete the old record first (clean slate)
+        try {
+          await kv.del(key);
+        } catch (delError) {
+          log.error('Failed to delete existing record (non-fatal)', delError);
+        }
+
+        finalProfile = {
+          ...data,
+          updatedAt: new Date().toISOString(),
+        };
+      } else {
+        // Partial Patch Logic
+        log.info('Partial patch detected. Merging...');
+        try {
+          const existing = (await kv.get(key)) || {};
+          finalProfile = { ...existing, ...data, updatedAt: new Date().toISOString() };
+        } catch (readError) {
+          log.error('Failed to read profile for PATCH.', readError);
+          throw new Error('Database error. Please refresh the page.');
+        }
+      }
+
+      // Sanitize
+      try {
+        const sanitized = deepSanitize(finalProfile);
+        if (sanitized) {
+          finalProfile = sanitized;
+        }
+      } catch (sanitizationError) {
+        log.error('Deep sanitize failed on server', sanitizationError);
+        throw new Error('Sanitization failed');
+      }
+
+      // Save to KV store
+      try {
+        await kv.set(key, finalProfile);
+      } catch (setError) {
+        log.error('KV Write Failed', setError);
+        throw new Error(
+          `KV Write Failed: ${setError instanceof Error ? setError.message : String(setError)}`,
+        );
+      }
+
+      log.success('Profile updated successfully', { key });
+
+      // ── Phase 1: Profile → Application sync ──────────────────────────────
+      // If this client has a syncable (pre-approval) application, push changed
+      // fields into application_data so both records stay consistent.
+      // Non-blocking — sync failure must not break the profile save response.
+      const userId = extractUserIdFromProfileKey(key);
+      if (userId) {
+        syncProfileToApplication(userId, finalProfile as Record<string, unknown>)
+          .then((result) => {
+            if (result.synced) {
+              log.info('Profile → Application sync triggered', {
+                userId,
+                fieldsUpdated: result.fieldsUpdated,
+              });
+            }
+          })
+          .catch((syncErr) => {
+            log.error('Profile → Application background sync error', syncErr);
+          });
+      }
+
+      return c.json({
+        success: true,
+        data: finalProfile,
+      });
+    } catch (error) {
+      log.error('Error in POST /personal-info', error);
+
+      return c.json(
+        {
+          error: 'Server Error',
+          message: `BACKEND_ERROR: ${getErrMsg(error)}`,
+          code: 'INTERNAL_ERROR',
+          details: error instanceof Error ? error.stack : undefined,
+        },
+        500,
+      );
+    }
+  }),
+);
 
 /**
  * PUT /
  * Alternative update endpoint (for backward compatibility)
  */
-router.put("/", asyncHandler(async (c) => {
-  const body = await c.req.json();
-  
-  // Validate input
-  const validated = AlternativeProfileUpdateSchema.parse(body);
-  const { userId, ...updates } = validated;
+router.put(
+  '/',
+  asyncHandler(async (c) => {
+    const body = await c.req.json();
 
-  const key = `user_profile:${userId}:personal_info`;
-  
-  log.info('Updating profile (PUT)', { key });
-  
-  // Get existing profile
-  const existingProfile = await kv.get(key) || {};
-  
-  // Merge updates (handle legacy 'surname' field)
-  let updatedProfile = {
-    ...existingProfile,
-    ...updates,
-    lastName: updates.lastName || (updates as Record<string, unknown>).surname || existingProfile.lastName,
-    updatedAt: new Date().toISOString()
-  };
-  
-  // Sanitize potentially large fields
-  try {
-     const sanitized = deepSanitize(updatedProfile);
-     if (sanitized) updatedProfile = sanitized;
-  } catch (e) {
-     log.error('Sanitization failed for legacy update', e);
-  }
+    // Validate input
+    const validated = AlternativeProfileUpdateSchema.parse(body);
+    const { userId, ...updates } = validated;
 
-  await kv.set(key, updatedProfile);
-  
-  log.success('Profile updated (PUT)', { key });
-  
-  return c.json({ 
-    success: true, 
-    data: updatedProfile 
-  });
-}));
+    const key = `user_profile:${userId}:personal_info`;
+
+    log.info('Updating profile (PUT)', { key });
+
+    // Get existing profile
+    const existingProfile = (await kv.get(key)) || {};
+
+    // Merge updates (handle legacy 'surname' field)
+    let updatedProfile = {
+      ...existingProfile,
+      ...updates,
+      lastName:
+        updates.lastName ||
+        (updates as Record<string, unknown>).surname ||
+        existingProfile.lastName,
+      updatedAt: new Date().toISOString(),
+    };
+
+    // Sanitize potentially large fields
+    try {
+      const sanitized = deepSanitize(updatedProfile);
+      if (sanitized) updatedProfile = sanitized;
+    } catch (e) {
+      log.error('Sanitization failed for legacy update', e);
+    }
+
+    await kv.set(key, updatedProfile);
+
+    log.success('Profile updated (PUT)', { key });
+
+    return c.json({
+      success: true,
+      data: updatedProfile,
+    });
+  }),
+);
 
 /**
  * POST /create-default
  * Create a default profile for a new user
  */
-router.post("/create-default", asyncHandler(async (c) => {
-  const body = await c.req.json();
-  
-  // Validate input
-  const { userId, email, displayName } = CreateDefaultProfileSchema.parse(body);
+router.post(
+  '/create-default',
+  asyncHandler(async (c) => {
+    const body = await c.req.json();
 
-  const key = `user_profile:${userId}:personal_info`;
-  
-  log.info('Creating default profile', { userId, email });
-  
-  // Check if profile already exists
-  const existingProfile = await kv.get(key);
-  
-  if (existingProfile) {
-    log.info('Profile already exists', { userId });
-    return c.json({ 
-      success: true, 
-      message: 'Profile already exists',
-      data: existingProfile 
+    // Validate input
+    const { userId, email, displayName } = CreateDefaultProfileSchema.parse(body);
+
+    const key = `user_profile:${userId}:personal_info`;
+
+    log.info('Creating default profile', { userId, email });
+
+    // Check if profile already exists
+    const existingProfile = await kv.get(key);
+
+    if (existingProfile) {
+      log.info('Profile already exists', { userId });
+      return c.json({
+        success: true,
+        message: 'Profile already exists',
+        data: existingProfile,
+      });
+    }
+
+    // ── Personnel guard (Change B) ──────────────────────────────────────
+    // If this user already has a personnel:profile: entry, they are staff.
+    // Do NOT create a client-type user_profile entry — return a minimal
+    // response instead so the frontend doesn't break.
+    const isSuperAdmin = email.toLowerCase() === SUPER_ADMIN_EMAIL.toLowerCase();
+    const personnelProfile = await kv.get(`personnel:profile:${userId}`);
+    if (personnelProfile && !isSuperAdmin) {
+      log.info('User is personnel — skipping client profile creation', { userId });
+      return c.json({
+        success: true,
+        message: 'Personnel account — no client profile created',
+        data: {
+          userId,
+          email,
+          role: personnelProfile.role || 'admin',
+          accountStatus: 'approved',
+          isPersonnel: true,
+        },
+      });
+    }
+
+    const role = isSuperAdmin ? 'super_admin' : 'client';
+
+    // Parse display name
+    const nameParts = displayName.trim().split(/\s+/);
+    const firstName = nameParts[0] || '';
+    const surname = nameParts.slice(1).join(' ') || '';
+
+    // Create default profile
+    const defaultProfile = {
+      profileType: 'personal',
+      userId,
+      email,
+      role,
+      accountStatus: isSuperAdmin ? 'approved' : 'no_application',
+      accountType: undefined,
+      applicationStatus: 'incomplete',
+      adviserAssigned: isSuperAdmin,
+      personalInformation: {
+        firstName,
+        lastName: surname,
+      },
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
+
+    // Save to KV store
+    await kv.set(key, defaultProfile);
+
+    log.success('Default profile created', {
+      userId,
+      role,
+      isSuperAdmin,
     });
-  }
-  
-  // ── Personnel guard (Change B) ──────────────────────────────────────
-  // If this user already has a personnel:profile: entry, they are staff.
-  // Do NOT create a client-type user_profile entry — return a minimal
-  // response instead so the frontend doesn't break.
-  const isSuperAdmin = email.toLowerCase() === SUPER_ADMIN_EMAIL.toLowerCase();
-  const personnelProfile = await kv.get(`personnel:profile:${userId}`);
-  if (personnelProfile && !isSuperAdmin) {
-    log.info('User is personnel — skipping client profile creation', { userId });
+
     return c.json({
       success: true,
-      message: 'Personnel account — no client profile created',
-      data: {
-        userId,
-        email,
-        role: personnelProfile.role || 'admin',
-        accountStatus: 'approved',
-        isPersonnel: true,
-      },
+      message: 'Profile created',
+      data: defaultProfile,
     });
-  }
-
-  const role = isSuperAdmin ? 'super_admin' : 'client';
-  
-  // Parse display name
-  const nameParts = displayName.trim().split(/\s+/);
-  const firstName = nameParts[0] || '';
-  const surname = nameParts.slice(1).join(' ') || '';
-  
-  // Create default profile
-  const defaultProfile = {
-    profileType: 'personal',
-    userId,
-    email,
-    role,
-    accountStatus: isSuperAdmin ? 'approved' : 'no_application',
-    accountType: undefined,
-    applicationStatus: 'incomplete',
-    adviserAssigned: isSuperAdmin,
-    personalInformation: {
-      firstName,
-      lastName: surname,
-    },
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString()
-  };
-  
-  // Save to KV store
-  await kv.set(key, defaultProfile);
-  
-  log.success('Default profile created', { 
-    userId, 
-    role,
-    isSuperAdmin 
-  });
-  
-  return c.json({ 
-    success: true, 
-    message: 'Profile created',
-    data: defaultProfile 
-  });
-}));
+  }),
+);
 
 /**
  * POST /upload
  * Upload a document to Supabase Storage
  */
-router.post("/upload", async (c) => {
+router.post('/upload', async (c) => {
   try {
     const body = await c.req.parseBody();
     const file = body['file'];
     const userId = body['userId']; // Optional, for folder structure
-    
+
     if (!file || !(file instanceof File)) {
       return c.json({ error: 'No file uploaded' }, 400);
     }
-    
+
     // Create Supabase client
     const supabase = createServiceClient();
     const bucketName = 'make-91ed8379-client-documents';
-    
+
     // Ensure bucket exists
     const { data: buckets } = await supabase.storage.listBuckets();
-    const bucketExists = buckets?.some(b => b.name === bucketName);
-    
+    const bucketExists = buckets?.some((b) => b.name === bucketName);
+
     if (!bucketExists) {
       await supabase.storage.createBucket(bucketName, {
         public: false,
         fileSizeLimit: 6 * 1024 * 1024, // 6MB
-        allowedMimeTypes: ['application/pdf', 'image/jpeg', 'image/png', 'image/jpg']
+        allowedMimeTypes: ['application/pdf', 'image/jpeg', 'image/png', 'image/jpg'],
       });
     }
-    
+
     // Generate safe filename
     const timestamp = Date.now();
     const safeName = file.name.replace(/[^a-zA-Z0-9.-]/g, '_');
-    const path = userId 
-      ? `${userId}/${timestamp}_${safeName}`
-      : `temp/${timestamp}_${safeName}`;
-      
+    const path = userId ? `${userId}/${timestamp}_${safeName}` : `temp/${timestamp}_${safeName}`;
+
     // Upload file
-    const { data, error } = await supabase.storage
-      .from(bucketName)
-      .upload(path, file, {
-        contentType: file.type,
-        upsert: false
-      });
-      
+    const { data, error } = await supabase.storage.from(bucketName).upload(path, file, {
+      contentType: file.type,
+      upsert: false,
+    });
+
     if (error) {
       log.error('Upload failed', error);
       return c.json({ error: error.message }, 500);
     }
-    
+
     // Return the path (not Signed URL yet, frontend requests it when needed)
     return c.json({
       success: true,
       path: data.path,
-      fileName: file.name
+      fileName: file.name,
     });
-    
   } catch (error) {
     log.error('Error in POST /upload', error);
-    return c.json({ 
-      error: 'Upload failed',
-      details: getErrMsg(error)
-    }, 500);
+    return c.json(
+      {
+        error: 'Upload failed',
+        details: getErrMsg(error),
+      },
+      500,
+    );
   }
 });
 
@@ -931,73 +988,75 @@ router.post("/upload", async (c) => {
  * POST /send-documents
  * Send encrypted documents to client via email
  */
-router.post("/send-documents", async (c) => {
+router.post('/send-documents', async (c) => {
   try {
     const body = await c.req.json();
     const { userId } = body;
-    
+
     if (!userId) {
       return c.json({ error: 'User ID is required' }, 400);
     }
-    
+
     log.info('Sending documents for user', { userId });
-    
+
     const supabase = createServiceClient();
-    
+
     // Fetch profile to get ID number (password) and email
     const profileKey = `user_profile:${userId}:personal_info`;
     const profile = await kv.get(profileKey);
-    
+
     if (!profile) {
       return c.json({ error: 'Profile not found' }, 404);
     }
-    
+
     // Validate requirements
     const idNumber = profile.idNumber;
     const email = profile.email;
     const documents = profile.identityDocuments || [];
-    
+
     if (!idNumber) {
       return c.json({ error: 'Client ID number is missing (required for password)' }, 400);
     }
-    
+
     if (!email) {
       return c.json({ error: 'Client email is missing' }, 400);
     }
-    
-    const uploadedDocs = documents.filter((d: Record<string, unknown>) => d.fileName && (d.fileUrl || d.path));
-    
+
+    const uploadedDocs = documents.filter(
+      (d: Record<string, unknown>) => d.fileName && (d.fileUrl || d.path),
+    );
+
     if (uploadedDocs.length === 0) {
       return c.json({ error: 'No uploaded documents found' }, 400);
     }
-    
+
     // Create ZIP
     const zipWriter = new ZipWriter(new Uint8ArrayWriter());
     const bucketName = 'make-91ed8379-client-documents';
-    
+
     for (const doc of uploadedDocs) {
       const filePath = doc.fileUrl || doc.path; // Frontend saves path in fileUrl often
-      
+
       // Download file from Storage
       const { data: fileData, error: downloadError } = await supabase.storage
         .from(bucketName)
         .download(filePath);
-        
+
       if (downloadError) {
         log.error(`Failed to download file ${doc.fileName}`, downloadError);
         continue;
       }
-      
+
       // Add to ZIP with password
       const fileBuffer = await fileData.arrayBuffer();
       await zipWriter.add(doc.fileName, new Uint8ArrayReader(new Uint8Array(fileBuffer)), {
         password: idNumber,
-        level: 9 // Max compression
+        level: 9, // Max compression
       });
     }
-    
+
     const zipBlob = await zipWriter.close();
-    
+
     // Convert to Base64
     // Using a chunk-safe approach for large files if needed, but for now simple conversion
     let binary = '';
@@ -1007,7 +1066,7 @@ router.post("/send-documents", async (c) => {
       binary += String.fromCharCode(bytes[i]);
     }
     const base64Zip = btoa(binary);
-    
+
     // Send Email
     const emailHtml = `
       <div style="font-family: sans-serif; padding: 20px;">
@@ -1021,7 +1080,7 @@ router.post("/send-documents", async (c) => {
         <p>Navigate Wealth Team</p>
       </div>
     `;
-    
+
     const success = await sendEmail({
       to: email,
       subject: 'Secure Document Upload Notification',
@@ -1029,23 +1088,25 @@ router.post("/send-documents", async (c) => {
       attachments: [
         {
           content: base64Zip,
-          filename: 'identity_documents.zip'
-        }
-      ]
+          filename: 'identity_documents.zip',
+        },
+      ],
     });
-    
+
     if (!success) {
       return c.json({ error: 'Failed to send email' }, 500);
     }
-    
+
     return c.json({ success: true, message: 'Documents sent successfully' });
-    
   } catch (error) {
     log.error('Error in /send-documents', error);
-    return c.json({ 
-      error: 'Failed to send documents', 
-      details: getErrMsg(error) 
-    }, 500);
+    return c.json(
+      {
+        error: 'Failed to send documents',
+        details: getErrMsg(error),
+      },
+      500,
+    );
   }
 });
 
@@ -1064,7 +1125,7 @@ router.post('/update-status', async (c) => {
     }
 
     const profileKey = `user_profile:${userId}:personal_info`;
-    const profile = await kv.get(profileKey) as Record<string, unknown> | null;
+    const profile = (await kv.get(profileKey)) as Record<string, unknown> | null;
 
     if (!profile) {
       log.warn('No profile found for update-status', { userId });
@@ -1077,7 +1138,7 @@ router.post('/update-status', async (c) => {
       accountStatus,
       ...(accountType ? { accountType } : {}),
       metadata: {
-        ...(profile.metadata as Record<string, unknown> || {}),
+        ...((profile.metadata as Record<string, unknown>) || {}),
         updatedAt: now,
       },
     });
@@ -1086,9 +1147,12 @@ router.post('/update-status', async (c) => {
     return c.json({ success: true });
   } catch (error: unknown) {
     log.error('update-status error:', error);
-    return c.json({
-      error: error instanceof Error ? error.message : 'Failed to update status',
-    }, 500);
+    return c.json(
+      {
+        error: error instanceof Error ? error.message : 'Failed to update status',
+      },
+      500,
+    );
   }
 });
 
@@ -1096,11 +1160,11 @@ router.post('/update-status', async (c) => {
  * GET /
  * Health check endpoint
  */
-router.get("/", async (c) => {
-  return c.json({ 
+router.get('/', async (c) => {
+  return c.json({
     status: 'ok',
     service: 'Profile Routes',
-    timestamp: new Date().toISOString()
+    timestamp: new Date().toISOString(),
   });
 });
 

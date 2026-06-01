@@ -17,14 +17,7 @@ import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '../../../../../ui/card';
 import { Button } from '../../../../../ui/button';
 import { Badge } from '../../../../../ui/badge';
-import {
-  TrendingUp,
-  Camera,
-  Loader2,
-  History,
-  Trash2,
-  Info,
-} from 'lucide-react';
+import { TrendingUp, Camera, Loader2, History, Trash2, Info } from 'lucide-react';
 import { SVGLineChart } from '../../../../../ui/svg-charts';
 import { projectId, publicAnonKey } from '../../../../../../utils/supabase/info';
 import { createClient as createSupabaseClient } from '../../../../../../utils/supabase/client';
@@ -99,10 +92,18 @@ function getDateRangeStart(range: DateRange): Date | null {
   if (range === 'all') return null;
   const now = new Date();
   switch (range) {
-    case '3m': now.setMonth(now.getMonth() - 3); break;
-    case '6m': now.setMonth(now.getMonth() - 6); break;
-    case '1y': now.setFullYear(now.getFullYear() - 1); break;
-    case '2y': now.setFullYear(now.getFullYear() - 2); break;
+    case '3m':
+      now.setMonth(now.getMonth() - 3);
+      break;
+    case '6m':
+      now.setMonth(now.getMonth() - 6);
+      break;
+    case '1y':
+      now.setFullYear(now.getFullYear() - 1);
+      break;
+    case '2y':
+      now.setFullYear(now.getFullYear() - 2);
+      break;
   }
   return now;
 }
@@ -136,7 +137,9 @@ export function NetWorthHistory({
   const getAuthToken = useCallback(async (): Promise<string> => {
     try {
       const supabase = createSupabaseClient();
-      const { data: { session } } = await supabase.auth.getSession();
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
       return session?.access_token || publicAnonKey;
     } catch {
       return publicAnonKey;
@@ -150,10 +153,9 @@ export function NetWorthHistory({
     setError(null);
     try {
       const token = await getAuthToken();
-      const res = await fetch(
-        `${API_BASE}/net-worth-snapshots/${clientId}`,
-        { headers: { Authorization: `Bearer ${token}` } },
-      );
+      const res = await fetch(`${API_BASE}/net-worth-snapshots/${clientId}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
       if (!res.ok) {
         const errData = await res.json().catch(() => null);
         throw new Error(errData?.error || `Server returned ${res.status}`);
@@ -171,7 +173,9 @@ export function NetWorthHistory({
   }, [clientId, getAuthToken]);
 
   useEffect(() => {
-    fetchSnapshots().catch(() => { /* handled internally */ });
+    fetchSnapshots().catch(() => {
+      /* handled internally */
+    });
   }, [fetchSnapshots]);
 
   // ── Create snapshot ───────────────────────────────────────────────
@@ -182,27 +186,24 @@ export function NetWorthHistory({
     setSuccessMsg(null);
     try {
       const token = await getAuthToken();
-      const res = await fetch(
-        `${API_BASE}/net-worth-snapshots/${clientId}`,
-        {
-          method: 'POST',
-          headers: {
-            Authorization: `Bearer ${token}`,
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            totalAssets: currentTotalAssets,
-            totalLiabilities: currentTotalLiabilities,
-            netWorth: currentNetWorth,
-            policyCount: currentPolicyCount,
-            monthlyPremiums: currentMonthlyPremiums,
-            retirementValue: currentRetirementValue,
-            investmentValue: currentInvestmentValue,
-            assetBreakdown,
-            liabilityBreakdown,
-          }),
+      const res = await fetch(`${API_BASE}/net-worth-snapshots/${clientId}`, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
         },
-      );
+        body: JSON.stringify({
+          totalAssets: currentTotalAssets,
+          totalLiabilities: currentTotalLiabilities,
+          netWorth: currentNetWorth,
+          policyCount: currentPolicyCount,
+          monthlyPremiums: currentMonthlyPremiums,
+          retirementValue: currentRetirementValue,
+          investmentValue: currentInvestmentValue,
+          assetBreakdown,
+          liabilityBreakdown,
+        }),
+      });
       if (!res.ok) {
         const errData = await res.json().catch(() => null);
         throw new Error(errData?.error || `Server returned ${res.status}`);
@@ -218,10 +219,18 @@ export function NetWorthHistory({
       setSnapshotting(false);
     }
   }, [
-    clientId, currentTotalAssets, currentTotalLiabilities, currentNetWorth,
-    currentPolicyCount, currentMonthlyPremiums, currentRetirementValue,
-    currentInvestmentValue, assetBreakdown, liabilityBreakdown,
-    getAuthToken, fetchSnapshots,
+    clientId,
+    currentTotalAssets,
+    currentTotalLiabilities,
+    currentNetWorth,
+    currentPolicyCount,
+    currentMonthlyPremiums,
+    currentRetirementValue,
+    currentInvestmentValue,
+    assetBreakdown,
+    liabilityBreakdown,
+    getAuthToken,
+    fetchSnapshots,
   ]);
 
   // ── Chart data ────────────────────────────────────────────────────
@@ -230,12 +239,12 @@ export function NetWorthHistory({
     const rangeStart = getDateRangeStart(dateRange);
     if (!rangeStart) return snapshots;
     const startStr = rangeStart.toISOString().slice(0, 10);
-    return snapshots.filter(s => s.date >= startStr);
+    return snapshots.filter((s) => s.date >= startStr);
   }, [snapshots, dateRange]);
 
   const chartData = useMemo(() => {
     if (filteredSnapshots.length === 0) return [];
-    return filteredSnapshots.map(s => ({
+    return filteredSnapshots.map((s) => ({
       date: fmtDate(s.date),
       rawDate: s.date,
       totalAssets: s.totalAssets,
@@ -244,11 +253,14 @@ export function NetWorthHistory({
     }));
   }, [filteredSnapshots]);
 
-  const chartSeries = useMemo(() => [
-    { key: 'netWorth', label: 'Net Worth', color: '#6d28d9', strokeWidth: 2.5 },
-    { key: 'totalAssets', label: 'Assets', color: '#16a34a', strokeWidth: 1.5 },
-    { key: 'totalLiabilities', label: 'Liabilities', color: '#dc2626', strokeWidth: 1.5 },
-  ], []);
+  const chartSeries = useMemo(
+    () => [
+      { key: 'netWorth', label: 'Net Worth', color: '#6d28d9', strokeWidth: 2.5 },
+      { key: 'totalAssets', label: 'Assets', color: '#16a34a', strokeWidth: 1.5 },
+      { key: 'totalLiabilities', label: 'Liabilities', color: '#dc2626', strokeWidth: 1.5 },
+    ],
+    [],
+  );
 
   // ── Trend calculation ─────────────────────────────────────────────
 
@@ -257,9 +269,8 @@ export function NetWorthHistory({
     const first = filteredSnapshots[0];
     const last = filteredSnapshots[filteredSnapshots.length - 1];
     const change = last.netWorth - first.netWorth;
-    const changePct = first.netWorth !== 0
-      ? ((change / Math.abs(first.netWorth)) * 100).toFixed(1)
-      : '—';
+    const changePct =
+      first.netWorth !== 0 ? ((change / Math.abs(first.netWorth)) * 100).toFixed(1) : '—';
     return {
       change,
       changePct,
@@ -272,7 +283,7 @@ export function NetWorthHistory({
   // ── Today already captured? ───────────────────────────────────────
 
   const todayKey = new Date().toISOString().slice(0, 10);
-  const hasTodaySnapshot = snapshots.some(s => s.date === todayKey);
+  const hasTodaySnapshot = snapshots.some((s) => s.date === todayKey);
 
   // ── Render ────────────────────────────────────────────────────────
 
@@ -287,7 +298,10 @@ export function NetWorthHistory({
             {isClient ? 'My Net Worth Trend' : 'Net Worth History'}
           </CardTitle>
           {snapshots.length > 0 && (
-            <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-4 border-gray-200 text-gray-500">
+            <Badge
+              variant="outline"
+              className="text-[10px] px-1.5 py-0 h-4 border-gray-200 text-gray-500"
+            >
               {snapshots.length} snapshot{snapshots.length !== 1 ? 's' : ''}
             </Badge>
           )}
@@ -295,12 +309,11 @@ export function NetWorthHistory({
             <Badge
               variant="outline"
               className={`text-[10px] px-1.5 py-0 h-4 ml-auto mr-2 ${
-                trend.isPositive
-                  ? 'border-green-200 text-green-700'
-                  : 'border-red-200 text-red-600'
+                trend.isPositive ? 'border-green-200 text-green-700' : 'border-red-200 text-red-600'
               }`}
             >
-              {trend.isPositive ? '+' : ''}{fmtCompact(trend.change)} ({trend.changePct}%)
+              {trend.isPositive ? '+' : ''}
+              {fmtCompact(trend.change)} ({trend.changePct}%)
             </Badge>
           )}
           {!isClient && (
@@ -310,7 +323,11 @@ export function NetWorthHistory({
               className="h-7 text-xs gap-1.5 ml-auto print:hidden"
               onClick={handleSnapshot}
               disabled={snapshotting}
-              title={hasTodaySnapshot ? "Update today's snapshot" : 'Take a snapshot of current net worth'}
+              title={
+                hasTodaySnapshot
+                  ? "Update today's snapshot"
+                  : 'Take a snapshot of current net worth'
+              }
             >
               {snapshotting ? (
                 <Loader2 className="h-3 w-3 animate-spin" />
@@ -353,7 +370,7 @@ export function NetWorthHistory({
             <p className="text-xs text-gray-400 max-w-xs mx-auto mb-4">
               {isClient
                 ? 'Your adviser will periodically record your net worth to track changes over time.'
-                : 'Take your first snapshot to begin tracking this client\'s net worth over time. Snapshots capture assets, liabilities, and portfolio values.'}
+                : "Take your first snapshot to begin tracking this client's net worth over time. Snapshots capture assets, liabilities, and portfolio values."}
             </p>
             {!isClient && (
               <Button
@@ -381,7 +398,7 @@ export function NetWorthHistory({
                 {snapshots.length > 3 && (
                   <div className="flex items-center gap-1 mb-3 print:hidden">
                     <span className="text-[10px] text-gray-400 mr-1.5">Period:</span>
-                    {DATE_RANGE_PRESETS.map(preset => (
+                    {DATE_RANGE_PRESETS.map((preset) => (
                       <button
                         key={preset.value}
                         onClick={() => setDateRange(preset.value)}
@@ -420,7 +437,12 @@ export function NetWorthHistory({
                     : 'At least 2 snapshots needed for trend chart'}
                 </p>
                 <p className="text-[11px] text-gray-400">
-                  Current: <span className={`font-medium ${currentNetWorth >= 0 ? 'text-green-600' : 'text-red-500'}`}>{fmt(currentNetWorth)}</span>
+                  Current:{' '}
+                  <span
+                    className={`font-medium ${currentNetWorth >= 0 ? 'text-green-600' : 'text-red-500'}`}
+                  >
+                    {fmt(currentNetWorth)}
+                  </span>
                   {' · '}First snapshot: {fmtDate(snapshots[0].date)}
                 </p>
               </div>
@@ -460,15 +482,13 @@ function SnapshotRow({ snapshot }: { snapshot: NetWorthSnapshotData }) {
         {fmtDate(snapshot.date)}
       </span>
       <div className="flex items-center gap-3 flex-1 min-w-0">
-        <span className="text-[10px] text-green-600">
-          A: {fmtCompact(snapshot.totalAssets)}
-        </span>
-        <span className="text-[10px] text-red-500">
-          L: {fmtCompact(snapshot.totalLiabilities)}
-        </span>
-        <span className={`text-[11px] font-semibold ${
-          snapshot.netWorth >= 0 ? 'text-[#6d28d9]' : 'text-orange-600'
-        }`}>
+        <span className="text-[10px] text-green-600">A: {fmtCompact(snapshot.totalAssets)}</span>
+        <span className="text-[10px] text-red-500">L: {fmtCompact(snapshot.totalLiabilities)}</span>
+        <span
+          className={`text-[11px] font-semibold ${
+            snapshot.netWorth >= 0 ? 'text-[#6d28d9]' : 'text-orange-600'
+          }`}
+        >
           NW: {fmtCompact(snapshot.netWorth)}
         </span>
       </div>

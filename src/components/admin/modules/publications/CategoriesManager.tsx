@@ -1,6 +1,6 @@
 /**
  * Publications Feature - CategoriesManager Component (REFACTORED)
- * 
+ *
  * Manage article categories with CRUD operations and drag-to-reorder.
  * Now uses the new hooks, services, and shared components.
  */
@@ -17,24 +17,17 @@ import {
   Save,
   X,
   AlertCircle,
-  GripVertical
+  GripVertical,
 } from 'lucide-react';
 import { cn } from '../../../ui/utils';
 import { DndProvider, useDrag, useDrop } from 'react-dnd';
 import { HTML5Backend } from 'react-dnd-html5-backend';
 
 // Import from refactored modules
-import {
-  useCategories,
-  useCategoryActions
-} from './hooks';
+import { useCategories, useCategoryActions } from './hooks';
 
 import { LoadingState } from './components/LoadingState';
-import {
-  TextField,
-  TextareaField,
-  CheckboxField
-} from './components/FormField';
+import { TextField, TextareaField, CheckboxField } from './components/FormField';
 import { ConfirmDialog, useConfirmDialog } from './components/ConfirmDialog';
 
 import { generateSlug } from './utils';
@@ -52,18 +45,22 @@ interface DraggableCategoryRowProps {
   isProcessing: boolean;
 }
 
-function DraggableCategoryRow({ 
-  category, 
-  index, 
-  moveCategory, 
-  onEdit, 
-  onDelete, 
+function DraggableCategoryRow({
+  category,
+  index,
+  moveCategory,
+  onEdit,
+  onDelete,
   onToggleActive,
-  isProcessing
+  isProcessing,
 }: DraggableCategoryRowProps) {
   const ref = useRef<HTMLTableRowElement>(null);
 
-  const [{ handlerId }, drop] = useDrop<{ index: number }, unknown, { handlerId: string | symbol | null }>({
+  const [{ handlerId }, drop] = useDrop<
+    { index: number },
+    unknown,
+    { handlerId: string | symbol | null }
+  >({
     accept: DRAG_TYPE,
     collect(monitor) {
       return {
@@ -115,10 +112,7 @@ function DraggableCategoryRow({
     <tr
       ref={ref}
       data-handler-id={handlerId}
-      className={cn(
-        'hover:bg-gray-50',
-        isDragging && 'opacity-50'
-      )}
+      className={cn('hover:bg-gray-50', isDragging && 'opacity-50')}
     >
       <td className="px-4 py-4 cursor-move">
         <div ref={preview}>
@@ -129,14 +123,10 @@ function DraggableCategoryRow({
         <p className="font-medium text-gray-900">{category.name}</p>
       </td>
       <td className="px-4 py-4">
-        <code className="text-sm text-gray-600 bg-gray-100 px-2 py-1 rounded">
-          {category.slug}
-        </code>
+        <code className="text-sm text-gray-600 bg-gray-100 px-2 py-1 rounded">{category.slug}</code>
       </td>
       <td className="px-4 py-4">
-        <p className="text-sm text-gray-600 max-w-xs truncate">
-          {category.description || '-'}
-        </p>
+        <p className="text-sm text-gray-600 max-w-xs truncate">{category.description || '-'}</p>
       </td>
       <td className="px-4 py-4">
         <button
@@ -149,7 +139,7 @@ function DraggableCategoryRow({
               'cursor-pointer',
               category.is_active
                 ? 'bg-green-100 text-green-800 border-green-200'
-                : 'bg-gray-100 text-gray-800 border-gray-200'
+                : 'bg-gray-100 text-gray-800 border-gray-200',
             )}
           >
             {category.is_active ? 'Active' : 'Inactive'}
@@ -185,23 +175,28 @@ function DraggableCategoryRow({
 
 export function CategoriesManager() {
   // Data fetching with hooks
-  const { categories: initialCategories, isLoading, error, refetch } = useCategories({ autoSort: true });
-  
+  const {
+    categories: initialCategories,
+    isLoading,
+    error,
+    refetch,
+  } = useCategories({ autoSort: true });
+
   // Local state for drag reordering
   const [categories, setCategories] = useState<Category[]>([]);
 
   useEffect(() => {
     setCategories(initialCategories);
   }, [initialCategories]);
-  
+
   // Actions hook
-  const { 
-    handleCreate, 
-    handleUpdate, 
-    handleDelete, 
+  const {
+    handleCreate,
+    handleUpdate,
+    handleDelete,
     handleToggleActive,
     handleReorder,
-    isProcessing 
+    isProcessing,
   } = useCategoryActions({
     onSuccess: (message) => {
       refetch();
@@ -211,7 +206,7 @@ export function CategoriesManager() {
     },
     onDelete: () => {
       refetch();
-    }
+    },
   });
 
   // Form state
@@ -282,7 +277,7 @@ export function CategoriesManager() {
       name: name.trim(),
       slug: slug.trim(),
       description: description.trim() || undefined,
-      is_active: isActive
+      is_active: isActive,
     };
 
     let success = false;
@@ -304,7 +299,7 @@ export function CategoriesManager() {
     confirmDialog.open({
       title: 'Delete Category',
       description: `Are you sure you want to delete "${category.name}"? This action cannot be undone.`,
-      onConfirm: () => handleDelete(category.id)
+      onConfirm: () => handleDelete(category.id),
     });
   };
 
@@ -324,9 +319,9 @@ export function CategoriesManager() {
     // Update sort_order for all categories based on their position
     const updatedCategories = categories.map((cat, index) => ({
       ...cat,
-      sort_order: index
+      sort_order: index,
     }));
-    
+
     await handleReorder(updatedCategories);
   };
 
@@ -340,9 +335,7 @@ export function CategoriesManager() {
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-2xl font-bold">Article Categories</h2>
-          <p className="text-sm text-gray-500">
-            Manage article categories and their display order
-          </p>
+          <p className="text-sm text-gray-500">Manage article categories and their display order</p>
         </div>
         {!showForm && (
           <Button onClick={handleCreateClick} className="flex items-center gap-2">
@@ -356,9 +349,7 @@ export function CategoriesManager() {
       {showForm && (
         <Card>
           <CardHeader>
-            <CardTitle>
-              {editingCategory ? 'Edit Category' : 'New Category'}
-            </CardTitle>
+            <CardTitle>{editingCategory ? 'Edit Category' : 'New Category'}</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             {formError && (

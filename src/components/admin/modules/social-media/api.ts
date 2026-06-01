@@ -1,6 +1,6 @@
 /**
  * Social Media API Client
- * 
+ *
  * Centralized API layer for all social media operations including:
  * - Social profile management (connect/disconnect platforms)
  * - Post management (create, schedule, publish)
@@ -8,7 +8,7 @@
  * - Analytics and reporting
  * - Media uploads
  * - AI content generation
- * 
+ *
  * @module social-media/api
  */
 
@@ -158,7 +158,7 @@ const BASE_URL = `https://${projectId}.supabase.co/functions/v1/make-server-91ed
 const SOCIAL_MEDIA_BASE = `${BASE_URL}/social-marketing`;
 
 const defaultHeaders = {
-  'Authorization': `Bearer ${publicAnonKey}`,
+  Authorization: `Bearer ${publicAnonKey}`,
   'Content-Type': 'application/json',
 };
 
@@ -175,7 +175,7 @@ async function getAuthHeaders(): Promise<Record<string, string>> {
     const token = data?.session?.access_token;
     if (token) {
       return {
-        'Authorization': `Bearer ${token}`,
+        Authorization: `Bearer ${token}`,
         'Content-Type': 'application/json',
       };
     }
@@ -336,25 +336,25 @@ export const postsApi = {
    */
   async getAll(filters?: PostFilters): Promise<APIResponse<SocialPost[]>> {
     const params = new URLSearchParams();
-    
+
     if (filters) {
       if (filters.status) {
         const statuses = Array.isArray(filters.status) ? filters.status : [filters.status];
-        statuses.forEach(s => params.append('status', s));
+        statuses.forEach((s) => params.append('status', s));
       }
       if (filters.profiles) {
-        filters.profiles.forEach(p => params.append('profile', p));
+        filters.profiles.forEach((p) => params.append('profile', p));
       }
       if (filters.campaign) params.append('campaign', filters.campaign);
       if (filters.startDate) params.append('startDate', filters.startDate.toISOString());
       if (filters.endDate) params.append('endDate', filters.endDate.toISOString());
       if (filters.tags) {
-        filters.tags.forEach(t => params.append('tag', t));
+        filters.tags.forEach((t) => params.append('tag', t));
       }
     }
 
     const queryString = params.toString();
-    const url = queryString 
+    const url = queryString
       ? `${SOCIAL_MEDIA_BASE}/posts?${queryString}`
       : `${SOCIAL_MEDIA_BASE}/posts`;
 
@@ -497,7 +497,9 @@ export const campaignsApi = {
    * Remove posts from a campaign
    */
   async removePosts(campaignId: string, postIds: string[]): Promise<APIResponse<Campaign>> {
-    return del<Campaign>(`${SOCIAL_MEDIA_BASE}/campaigns/${campaignId}/posts?ids=${postIds.join(',')}`);
+    return del<Campaign>(
+      `${SOCIAL_MEDIA_BASE}/campaigns/${campaignId}/posts?ids=${postIds.join(',')}`,
+    );
   },
 };
 
@@ -511,10 +513,10 @@ export const analyticsApi = {
    */
   async getOverview(filters?: AnalyticsFilters): Promise<APIResponse<AnalyticsResponse>> {
     const params = new URLSearchParams();
-    
+
     if (filters) {
       if (filters.profiles) {
-        filters.profiles.forEach(p => params.append('profile', p));
+        filters.profiles.forEach((p) => params.append('profile', p));
       }
       if (filters.startDate) params.append('startDate', filters.startDate.toISOString());
       if (filters.endDate) params.append('endDate', filters.endDate.toISOString());
@@ -522,7 +524,7 @@ export const analyticsApi = {
     }
 
     const queryString = params.toString();
-    const url = queryString 
+    const url = queryString
       ? `${SOCIAL_MEDIA_BASE}/analytics?${queryString}`
       : `${SOCIAL_MEDIA_BASE}/analytics`;
 
@@ -532,10 +534,13 @@ export const analyticsApi = {
   /**
    * Get analytics by platform
    */
-  async getByPlatform(platform: SocialPlatform, filters?: AnalyticsFilters): Promise<APIResponse<AnalyticsResponse>> {
+  async getByPlatform(
+    platform: SocialPlatform,
+    filters?: AnalyticsFilters,
+  ): Promise<APIResponse<AnalyticsResponse>> {
     const params = new URLSearchParams();
     params.append('platform', platform);
-    
+
     if (filters) {
       if (filters.startDate) params.append('startDate', filters.startDate.toISOString());
       if (filters.endDate) params.append('endDate', filters.endDate.toISOString());
@@ -555,13 +560,16 @@ export const analyticsApi = {
   /**
    * Export analytics data
    */
-  async export(filters?: AnalyticsFilters, format: 'csv' | 'json' = 'csv'): Promise<APIResponse<Blob>> {
+  async export(
+    filters?: AnalyticsFilters,
+    format: 'csv' | 'json' = 'csv',
+  ): Promise<APIResponse<Blob>> {
     const params = new URLSearchParams();
     params.append('format', format);
-    
+
     if (filters) {
       if (filters.profiles) {
-        filters.profiles.forEach(p => params.append('profile', p));
+        filters.profiles.forEach((p) => params.append('profile', p));
       }
       if (filters.startDate) params.append('startDate', filters.startDate.toISOString());
       if (filters.endDate) params.append('endDate', filters.endDate.toISOString());
@@ -654,7 +662,9 @@ export const socialMediaAIApi = {
   /**
    * Generate platform-specific post text using AI
    */
-  async generatePostText(input: GeneratePostTextInput): Promise<APIResponse<GeneratePostTextResult>> {
+  async generatePostText(
+    input: GeneratePostTextInput,
+  ): Promise<APIResponse<GeneratePostTextResult>> {
     try {
       const headers = await getAuthHeaders();
       const response = await fetch(`${SOCIAL_MEDIA_AI_BASE}/generate-post`, {
@@ -817,7 +827,9 @@ export const socialMediaAIApi = {
   /**
    * Create a custom brand template
    */
-  async createCustomTemplate(input: CreateCustomTemplateInput): Promise<APIResponse<CustomBrandTemplate>> {
+  async createCustomTemplate(
+    input: CreateCustomTemplateInput,
+  ): Promise<APIResponse<CustomBrandTemplate>> {
     try {
       const headers = await getAuthHeaders();
       const response = await fetch(`${SOCIAL_MEDIA_AI_BASE}/templates`, {
@@ -838,7 +850,10 @@ export const socialMediaAIApi = {
   /**
    * Update a custom brand template
    */
-  async updateCustomTemplate(templateId: string, input: UpdateCustomTemplateInput): Promise<APIResponse<CustomBrandTemplate>> {
+  async updateCustomTemplate(
+    templateId: string,
+    input: UpdateCustomTemplateInput,
+  ): Promise<APIResponse<CustomBrandTemplate>> {
     try {
       const headers = await getAuthHeaders();
       const response = await fetch(`${SOCIAL_MEDIA_AI_BASE}/templates/${templateId}`, {
@@ -982,7 +997,11 @@ export const linkedinApi = {
   /**
    * Exchange the OAuth callback code for tokens.
    */
-  async handleCallback(code: string, state: string, redirectUri: string): Promise<APIResponse<LinkedInConnectionStatus>> {
+  async handleCallback(
+    code: string,
+    state: string,
+    redirectUri: string,
+  ): Promise<APIResponse<LinkedInConnectionStatus>> {
     try {
       const headers = await getAuthHeaders();
       const response = await fetch(`${LINKEDIN_BASE}/callback`, {
@@ -1043,7 +1062,10 @@ export const linkedinApi = {
   /**
    * Share a text-only post on LinkedIn.
    */
-  async shareText(text: string, visibility: 'PUBLIC' | 'CONNECTIONS' = 'PUBLIC'): Promise<APIResponse<LinkedInShareResult>> {
+  async shareText(
+    text: string,
+    visibility: 'PUBLIC' | 'CONNECTIONS' = 'PUBLIC',
+  ): Promise<APIResponse<LinkedInShareResult>> {
     try {
       const headers = await getAuthHeaders();
       const response = await fetch(`${LINKEDIN_BASE}/share/text`, {

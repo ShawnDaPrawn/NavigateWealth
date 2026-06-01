@@ -44,7 +44,13 @@ vi.mock('motion/react', () => ({
 type SessionResult = {
   step: 'loading' | 'expired' | 'rejected' | 'waiting';
   envelopeTitle?: string;
-  signers?: Array<{ order: number; name: string; role?: string; status: string; is_current: boolean }>;
+  signers?: Array<{
+    order: number;
+    name: string;
+    role?: string;
+    status: string;
+    is_current: boolean;
+  }>;
 };
 
 let scenario: SessionResult = { step: 'loading' };

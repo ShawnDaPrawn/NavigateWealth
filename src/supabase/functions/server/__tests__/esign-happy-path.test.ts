@@ -163,10 +163,7 @@ describe('E-Sign happy path: create → add signers → place fields → fill �
     expect(pgMock.upsertSigner).toHaveBeenCalledTimes(2);
 
     const signers = await getEnvelopeSigners(envId);
-    expect(signers.map((s) => s.email)).toEqual([
-      'jane@example.com',
-      'witness@nw.co',
-    ]);
+    expect(signers.map((s) => s.email)).toEqual(['jane@example.com', 'witness@nw.co']);
     expect(signers.every((s) => !!s.access_token)).toBe(true);
     expect(signers[0].order).toBe(1);
     expect(signers[1].order).toBe(2);
@@ -199,12 +196,14 @@ describe('E-Sign happy path: create → add signers → place fields → fill �
 
     const detailsAfterFields = await getEnvelopeDetails(envId);
     expect(detailsAfterFields).toBeTruthy();
-    const fields = (detailsAfterFields as Record<string, unknown>).fields as Array<Record<string, unknown>>;
+    const fields = (detailsAfterFields as Record<string, unknown>).fields as Array<
+      Record<string, unknown>
+    >;
     expect(fields.length).toBe(2);
 
     // 4) MOVE TO 'sent'
     await updateEnvelopeStatus(envId, 'sent');
-    const sentDetails = await getEnvelopeDetails(envId) as Record<string, unknown>;
+    const sentDetails = (await getEnvelopeDetails(envId)) as Record<string, unknown>;
     expect(sentDetails.status).toBe('sent');
 
     // 5) SIGNER LOOKUP BY TOKEN — must round-trip identity
@@ -216,7 +215,7 @@ describe('E-Sign happy path: create → add signers → place fields → fill �
     // 6) FILL THE TEXT FIELD AS THE SIGNER
     const textField = fields.find((f) => f.type === 'text') as Record<string, unknown>;
     await updateFieldValue(textField.id as string, 'Jane Smith');
-    const refreshed = await getEnvelopeDetails(envId) as Record<string, unknown>;
+    const refreshed = (await getEnvelopeDetails(envId)) as Record<string, unknown>;
     const refreshedFields = refreshed.fields as Array<Record<string, unknown>>;
     expect(refreshedFields.find((f) => f.id === textField.id)?.value).toBe('Jane Smith');
 

@@ -13,7 +13,13 @@
  */
 
 import { useEffect, useState } from 'react';
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '../../../../ui/dialog';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from '../../../../ui/dialog';
 import { Label } from '../../../../ui/label';
 import { Input } from '../../../../ui/input';
 import { Button } from '../../../../ui/button';
@@ -64,7 +70,9 @@ export function RetentionPolicyDialog({ open, onOpenChange }: Props) {
           setDeleteArtifacts(!!policy.delete_artifacts);
           setUpdatedAt(policy.updated_at);
         } else {
-          setCompleted(''); setTerminated(''); setDraft('');
+          setCompleted('');
+          setTerminated('');
+          setDraft('');
           setDeleteArtifacts(false);
           setUpdatedAt(null);
         }
@@ -75,7 +83,9 @@ export function RetentionPolicyDialog({ open, onOpenChange }: Props) {
         if (!cancelled) setLoading(false);
       }
     })();
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+    };
   }, [open]);
 
   const handleSave = async () => {
@@ -103,7 +113,9 @@ export function RetentionPolicyDialog({ open, onOpenChange }: Props) {
     setSaving(true);
     try {
       await esignApi.deleteRetentionPolicy();
-      setCompleted(''); setTerminated(''); setDraft('');
+      setCompleted('');
+      setTerminated('');
+      setDraft('');
       setDeleteArtifacts(false);
       setUpdatedAt(null);
       toast.success('Retention reverted to default');
@@ -122,8 +134,8 @@ export function RetentionPolicyDialog({ open, onOpenChange }: Props) {
         <DialogHeader>
           <DialogTitle>Retention policy</DialogTitle>
           <DialogDescription>
-            Configure how long envelopes are kept before the daily sweep purges them.
-            Leave a field blank to keep that category indefinitely.
+            Configure how long envelopes are kept before the daily sweep purges them. Leave a field
+            blank to keep that category indefinitely.
           </DialogDescription>
         </DialogHeader>
 
@@ -190,9 +202,9 @@ export function RetentionPolicyDialog({ open, onOpenChange }: Props) {
                   />
                 </div>
                 <p className="text-[11px] text-amber-900 mt-1">
-                  When on, the sweep removes the signed PDF, certificate, and attachments
-                  from Storage. When off, envelopes are moved to the recovery bin where
-                  they remain restorable for 90 days.
+                  When on, the sweep removes the signed PDF, certificate, and attachments from
+                  Storage. When off, envelopes are moved to the recovery bin where they remain
+                  restorable for 90 days.
                 </p>
               </div>
             </div>

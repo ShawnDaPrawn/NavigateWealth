@@ -2,14 +2,14 @@ import { useEffect } from 'react';
 
 /**
  * Custom hook to preload images for better tab switching performance
- * 
+ *
  * This hook preloads images by creating invisible Image objects in the browser,
  * which triggers the browser to download and cache them. When users switch tabs,
  * the images are already cached and display instantly.
- * 
+ *
  * @param imageUrls - Array of image URLs to preload
  * @param priority - Whether to preload images immediately (default: true)
- * 
+ *
  * @example
  * ```tsx
  * useImagePreload([
@@ -27,7 +27,7 @@ export function useImagePreload(imageUrls: string[], priority: boolean = true) {
 
     imageUrls.forEach((url) => {
       if (!url) return;
-      
+
       const img = new Image();
       // Preload images with high priority for better performance
       img.fetchPriority = 'high';
@@ -47,7 +47,7 @@ export function useImagePreload(imageUrls: string[], priority: boolean = true) {
 /**
  * Alternative approach using link preload tags in the document head
  * This method is more aggressive and can be better for critical images
- * 
+ *
  * @param imageUrls - Array of image URLs to preload
  * @param priority - Whether to preload images immediately (default: true)
  */

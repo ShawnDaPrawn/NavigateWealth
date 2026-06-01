@@ -91,18 +91,18 @@ const MARITAL_STATUS_OPTIONS = [
 // ── State types ─────────────────────────────────────────────────────────────────
 
 interface ExistingDocsState {
-  has_valid_will: string;          // 'yes' | 'no' | 'not_sure' | ''
-  replace_existing_will: string;   // 'yes' | 'no' | 'not_sure' | ''
-  has_living_will: string;         // 'yes' | 'no' | 'not_sure' | ''
+  has_valid_will: string; // 'yes' | 'no' | 'not_sure' | ''
+  replace_existing_will: string; // 'yes' | 'no' | 'not_sure' | ''
+  has_living_will: string; // 'yes' | 'no' | 'not_sure' | ''
   replace_existing_living_will: string; // 'yes' | 'no' | 'not_sure' | ''
 }
 
 interface ContextState {
   marital_status: string;
-  married_in_community: string;    // 'yes' | 'no' | 'not_sure' | ''
-  has_minor_children: string;      // 'yes' | 'no' | ''
-  has_trusts: string;              // 'yes' | 'no' | ''
-  has_offshore_assets: string;     // 'yes' | 'no' | ''
+  married_in_community: string; // 'yes' | 'no' | 'not_sure' | ''
+  has_minor_children: string; // 'yes' | 'no' | ''
+  has_trusts: string; // 'yes' | 'no' | ''
+  has_offshore_assets: string; // 'yes' | 'no' | ''
 }
 
 interface WizardDraft {
@@ -126,26 +126,47 @@ interface EstatePlanningQuoteWizardProps {
 // ── Helpers ─────────────────────────────────────────────────────────────────────
 
 function getInitialExistingDocs(): ExistingDocsState {
-  return { has_valid_will: '', replace_existing_will: '', has_living_will: '', replace_existing_living_will: '' };
+  return {
+    has_valid_will: '',
+    replace_existing_will: '',
+    has_living_will: '',
+    replace_existing_living_will: '',
+  };
 }
 
 function getInitialContext(): ContextState {
-  return { marital_status: '', married_in_community: '', has_minor_children: '', has_trusts: '', has_offshore_assets: '' };
+  return {
+    marital_status: '',
+    married_in_community: '',
+    has_minor_children: '',
+    has_trusts: '',
+    has_offshore_assets: '',
+  };
 }
 
 function loadDraft(): WizardDraft | null {
   try {
     const raw = sessionStorage.getItem(DRAFT_KEY);
     return raw ? JSON.parse(raw) : null;
-  } catch { return null; }
+  } catch {
+    return null;
+  }
 }
 
 function saveDraft(draft: WizardDraft) {
-  try { sessionStorage.setItem(DRAFT_KEY, JSON.stringify(draft)); } catch { /* non-critical */ }
+  try {
+    sessionStorage.setItem(DRAFT_KEY, JSON.stringify(draft));
+  } catch {
+    /* non-critical */
+  }
 }
 
 function clearDraft() {
-  try { sessionStorage.removeItem(DRAFT_KEY); } catch { /* non-critical */ }
+  try {
+    sessionStorage.removeItem(DRAFT_KEY);
+  } catch {
+    /* non-critical */
+  }
 }
 
 function ynsLabel(val: string): string {
@@ -174,7 +195,9 @@ function StepIndicator({ currentStep }: { currentStep: number }) {
         return (
           <React.Fragment key={step.num}>
             {idx > 0 && (
-              <div className={`flex-1 h-0.5 mx-1 sm:mx-2 transition-colors ${isCompleted ? 'bg-green-500' : 'bg-gray-200'}`} />
+              <div
+                className={`flex-1 h-0.5 mx-1 sm:mx-2 transition-colors ${isCompleted ? 'bg-green-500' : 'bg-gray-200'}`}
+              />
             )}
             <div className="flex flex-col items-center gap-1">
               <div
@@ -186,9 +209,15 @@ function StepIndicator({ currentStep }: { currentStep: number }) {
                       : 'bg-gray-100 text-gray-400 border border-gray-200'
                 }`}
               >
-                {isCompleted ? <CheckCircle className="h-4 w-4" /> : <IconComp className="h-4 w-4" />}
+                {isCompleted ? (
+                  <CheckCircle className="h-4 w-4" />
+                ) : (
+                  <IconComp className="h-4 w-4" />
+                )}
               </div>
-              <span className={`text-[10px] sm:text-xs font-medium ${isActive ? 'text-gray-900' : 'text-gray-400'}`}>
+              <span
+                className={`text-[10px] sm:text-xs font-medium ${isActive ? 'text-gray-900' : 'text-gray-400'}`}
+              >
                 {step.label}
               </span>
             </div>
@@ -211,7 +240,9 @@ function Step1DocumentType({
   return (
     <div className="space-y-4">
       <div>
-        <h2 className="text-lg font-bold text-gray-900 mb-1">What estate planning assistance do you need?</h2>
+        <h2 className="text-lg font-bold text-gray-900 mb-1">
+          What estate planning assistance do you need?
+        </h2>
         <p className="text-sm text-gray-500">Select the document(s) you'd like help with.</p>
       </div>
 
@@ -229,9 +260,11 @@ function Step1DocumentType({
                   : 'border-gray-200 bg-white hover:border-gray-300'
               }`}
             >
-              <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center mt-0.5 flex-shrink-0 ${
-                isSelected ? 'border-primary' : 'border-gray-300'
-              }`}>
+              <div
+                className={`w-4 h-4 rounded-full border-2 flex items-center justify-center mt-0.5 flex-shrink-0 ${
+                  isSelected ? 'border-primary' : 'border-gray-300'
+                }`}
+              >
                 {isSelected && <div className="w-2 h-2 rounded-full bg-primary" />}
               </div>
               <div className="min-w-0">
@@ -262,32 +295,47 @@ function Step2ExistingDocs({
   existingDocs: ExistingDocsState;
   onChange: (d: ExistingDocsState) => void;
 }) {
-  const showWillQuestions = selectedDocument === 'last_will' || selectedDocument === 'both' || selectedDocument === 'not_sure';
-  const showLivingWillQuestions = selectedDocument === 'living_will' || selectedDocument === 'both' || selectedDocument === 'not_sure';
+  const showWillQuestions =
+    selectedDocument === 'last_will' ||
+    selectedDocument === 'both' ||
+    selectedDocument === 'not_sure';
+  const showLivingWillQuestions =
+    selectedDocument === 'living_will' ||
+    selectedDocument === 'both' ||
+    selectedDocument === 'not_sure';
 
   return (
     <div className="space-y-5">
       <div>
-        <h2 className="text-lg font-bold text-gray-900 mb-1">Do you already have estate documents in place?</h2>
-        <p className="text-sm text-gray-500">This helps your adviser understand whether we're creating new documents or replacing existing ones.</p>
+        <h2 className="text-lg font-bold text-gray-900 mb-1">
+          Do you already have estate documents in place?
+        </h2>
+        <p className="text-sm text-gray-500">
+          This helps your adviser understand whether we're creating new documents or replacing
+          existing ones.
+        </p>
       </div>
 
       {/* Last Will */}
       {showWillQuestions && (
         <div className="space-y-3">
           <Label className="text-sm font-medium text-gray-700">
-            Do you currently have a valid Last Will & Testament? <span className="text-red-500">*</span>
+            Do you currently have a valid Last Will & Testament?{' '}
+            <span className="text-red-500">*</span>
           </Label>
           <div className="flex flex-wrap gap-2">
             {YES_NO_NOTSURE.map((opt) => (
               <button
                 key={opt.value}
                 type="button"
-                onClick={() => onChange({
-                  ...existingDocs,
-                  has_valid_will: opt.value,
-                  replace_existing_will: opt.value !== 'yes' ? '' : existingDocs.replace_existing_will,
-                })}
+                onClick={() =>
+                  onChange({
+                    ...existingDocs,
+                    has_valid_will: opt.value,
+                    replace_existing_will:
+                      opt.value !== 'yes' ? '' : existingDocs.replace_existing_will,
+                  })
+                }
                 className={`px-3.5 py-2 rounded-lg border text-sm font-medium transition-all ${
                   existingDocs.has_valid_will === opt.value
                     ? 'border-primary bg-primary/10 text-primary'
@@ -336,11 +384,14 @@ function Step2ExistingDocs({
               <button
                 key={opt.value}
                 type="button"
-                onClick={() => onChange({
-                  ...existingDocs,
-                  has_living_will: opt.value,
-                  replace_existing_living_will: opt.value !== 'yes' ? '' : existingDocs.replace_existing_living_will,
-                })}
+                onClick={() =>
+                  onChange({
+                    ...existingDocs,
+                    has_living_will: opt.value,
+                    replace_existing_living_will:
+                      opt.value !== 'yes' ? '' : existingDocs.replace_existing_living_will,
+                  })
+                }
                 className={`px-3.5 py-2 rounded-lg border text-sm font-medium transition-all ${
                   existingDocs.has_living_will === opt.value
                     ? 'border-primary bg-primary/10 text-primary'
@@ -355,14 +406,17 @@ function Step2ExistingDocs({
           {existingDocs.has_living_will === 'yes' && (
             <div className="ml-4 pl-3 border-l-2 border-gray-200 space-y-2">
               <Label className="text-xs font-medium text-gray-600">
-                Do you want to replace your existing Living Will? <span className="text-red-500">*</span>
+                Do you want to replace your existing Living Will?{' '}
+                <span className="text-red-500">*</span>
               </Label>
               <div className="flex flex-wrap gap-2">
                 {YES_NO_NOTSURE.map((opt) => (
                   <button
                     key={opt.value}
                     type="button"
-                    onClick={() => onChange({ ...existingDocs, replace_existing_living_will: opt.value })}
+                    onClick={() =>
+                      onChange({ ...existingDocs, replace_existing_living_will: opt.value })
+                    }
                     className={`px-3 py-1.5 rounded-lg border text-xs font-medium transition-all ${
                       existingDocs.replace_existing_living_will === opt.value
                         ? 'border-primary bg-primary/10 text-primary'
@@ -394,7 +448,9 @@ function Step3Context({
     <div className="space-y-5">
       <div>
         <h2 className="text-lg font-bold text-gray-900 mb-1">A few quick details</h2>
-        <p className="text-sm text-gray-500">High-level context to help your adviser prepare the right recommendation.</p>
+        <p className="text-sm text-gray-500">
+          High-level context to help your adviser prepare the right recommendation.
+        </p>
       </div>
 
       {/* Marital status */}
@@ -407,11 +463,13 @@ function Step3Context({
             <button
               key={opt.value}
               type="button"
-              onClick={() => onChange({
-                ...context,
-                marital_status: opt.value,
-                married_in_community: opt.value === 'married' ? context.married_in_community : '',
-              })}
+              onClick={() =>
+                onChange({
+                  ...context,
+                  marital_status: opt.value,
+                  married_in_community: opt.value === 'married' ? context.married_in_community : '',
+                })
+              }
               className={`px-3.5 py-2 rounded-lg border text-sm font-medium transition-all ${
                 context.marital_status === opt.value
                   ? 'border-primary bg-primary/10 text-primary'
@@ -534,11 +592,19 @@ function Step4Review({
   context: ContextState;
   onEditStep: (step: number) => void;
 }) {
-  const documentLabel = DOCUMENT_OPTIONS.find((d) => d.id === selectedDocument)?.label ?? selectedDocument;
-  const maritalLabel = MARITAL_STATUS_OPTIONS.find((m) => m.value === context.marital_status)?.label ?? '';
+  const documentLabel =
+    DOCUMENT_OPTIONS.find((d) => d.id === selectedDocument)?.label ?? selectedDocument;
+  const maritalLabel =
+    MARITAL_STATUS_OPTIONS.find((m) => m.value === context.marital_status)?.label ?? '';
 
-  const showWillQuestions = selectedDocument === 'last_will' || selectedDocument === 'both' || selectedDocument === 'not_sure';
-  const showLivingWillQuestions = selectedDocument === 'living_will' || selectedDocument === 'both' || selectedDocument === 'not_sure';
+  const showWillQuestions =
+    selectedDocument === 'last_will' ||
+    selectedDocument === 'both' ||
+    selectedDocument === 'not_sure';
+  const showLivingWillQuestions =
+    selectedDocument === 'living_will' ||
+    selectedDocument === 'both' ||
+    selectedDocument === 'not_sure';
 
   function SectionHeader({ title, step }: { title: string; step: number }) {
     return (
@@ -568,7 +634,9 @@ function Step4Review({
     <div className="space-y-5">
       <div>
         <h2 className="text-lg font-bold text-gray-900 mb-1">Review & submit</h2>
-        <p className="text-sm text-gray-500">Please review your details before submitting your estate planning quote request.</p>
+        <p className="text-sm text-gray-500">
+          Please review your details before submitting your estate planning quote request.
+        </p>
       </div>
 
       {/* Document type */}
@@ -584,7 +652,10 @@ function Step4Review({
           <div className="contents">
             <Row label="Has valid Last Will" value={ynsLabel(existingDocs.has_valid_will)} />
             {existingDocs.has_valid_will === 'yes' && (
-              <Row label="Replace existing Will" value={ynsLabel(existingDocs.replace_existing_will)} />
+              <Row
+                label="Replace existing Will"
+                value={ynsLabel(existingDocs.replace_existing_will)}
+              />
             )}
           </div>
         )}
@@ -592,7 +663,10 @@ function Step4Review({
           <div className="contents">
             <Row label="Has Living Will" value={ynsLabel(existingDocs.has_living_will)} />
             {existingDocs.has_living_will === 'yes' && (
-              <Row label="Replace existing Living Will" value={ynsLabel(existingDocs.replace_existing_living_will)} />
+              <Row
+                label="Replace existing Living Will"
+                value={ynsLabel(existingDocs.replace_existing_living_will)}
+              />
             )}
           </div>
         )}
@@ -603,7 +677,10 @@ function Step4Review({
         <SectionHeader title="Personal Context" step={3} />
         <Row label="Marital status" value={maritalLabel} />
         {context.marital_status === 'married' && (
-          <Row label="Married in community of property" value={ynsLabel(context.married_in_community)} />
+          <Row
+            label="Married in community of property"
+            value={ynsLabel(context.married_in_community)}
+          />
         )}
         <Row label="Minor children" value={ynsLabel(context.has_minor_children)} />
         <Row label="Trusts in place" value={ynsLabel(context.has_trusts)} />
@@ -626,7 +703,9 @@ export function EstatePlanningQuoteWizard({
   const draft = loadDraft();
   const [currentStep, setCurrentStep] = useState(draft?.currentStep ?? 1);
   const [selectedDocument, setSelectedDocument] = useState(draft?.selected_document ?? '');
-  const [existingDocs, setExistingDocs] = useState<ExistingDocsState>(draft?.existing_docs ?? getInitialExistingDocs());
+  const [existingDocs, setExistingDocs] = useState<ExistingDocsState>(
+    draft?.existing_docs ?? getInitialExistingDocs(),
+  );
   const [context, setContext] = useState<ContextState>(draft?.context ?? getInitialContext());
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -645,16 +724,24 @@ export function EstatePlanningQuoteWizard({
   const step1Valid = useMemo(() => Boolean(selectedDocument), [selectedDocument]);
 
   const step2Valid = useMemo(() => {
-    const showWill = selectedDocument === 'last_will' || selectedDocument === 'both' || selectedDocument === 'not_sure';
-    const showLiving = selectedDocument === 'living_will' || selectedDocument === 'both' || selectedDocument === 'not_sure';
+    const showWill =
+      selectedDocument === 'last_will' ||
+      selectedDocument === 'both' ||
+      selectedDocument === 'not_sure';
+    const showLiving =
+      selectedDocument === 'living_will' ||
+      selectedDocument === 'both' ||
+      selectedDocument === 'not_sure';
 
     if (showWill) {
       if (!existingDocs.has_valid_will) return false;
-      if (existingDocs.has_valid_will === 'yes' && !existingDocs.replace_existing_will) return false;
+      if (existingDocs.has_valid_will === 'yes' && !existingDocs.replace_existing_will)
+        return false;
     }
     if (showLiving) {
       if (!existingDocs.has_living_will) return false;
-      if (existingDocs.has_living_will === 'yes' && !existingDocs.replace_existing_living_will) return false;
+      if (existingDocs.has_living_will === 'yes' && !existingDocs.replace_existing_living_will)
+        return false;
     }
     return true;
   }, [selectedDocument, existingDocs]);
@@ -667,25 +754,39 @@ export function EstatePlanningQuoteWizard({
 
   const canProceed = useMemo(() => {
     switch (currentStep) {
-      case 1: return step1Valid;
-      case 2: return step2Valid;
-      case 3: return step3Valid;
-      case 4: return true;
-      default: return false;
+      case 1:
+        return step1Valid;
+      case 2:
+        return step2Valid;
+      case 3:
+        return step3Valid;
+      case 4:
+        return true;
+      default:
+        return false;
     }
   }, [currentStep, step1Valid, step2Valid, step3Valid]);
 
-  const goNext = useCallback(() => { if (currentStep < 4) setCurrentStep((s) => s + 1); }, [currentStep]);
-  const goBack = useCallback(() => { if (currentStep > 1) setCurrentStep((s) => s - 1); }, [currentStep]);
-  const goToStep = useCallback((step: number) => { setCurrentStep(step); }, []);
+  const goNext = useCallback(() => {
+    if (currentStep < 4) setCurrentStep((s) => s + 1);
+  }, [currentStep]);
+  const goBack = useCallback(() => {
+    if (currentStep > 1) setCurrentStep((s) => s - 1);
+  }, [currentStep]);
+  const goToStep = useCallback((step: number) => {
+    setCurrentStep(step);
+  }, []);
 
   // ── Submit ──
 
   const handleSubmit = useCallback(async () => {
     setIsSubmitting(true);
     try {
-      const documentLabel = DOCUMENT_OPTIONS.find((d) => d.id === selectedDocument)?.label ?? selectedDocument;
-      const maritalLabel = MARITAL_STATUS_OPTIONS.find((m) => m.value === context.marital_status)?.label ?? context.marital_status;
+      const documentLabel =
+        DOCUMENT_OPTIONS.find((d) => d.id === selectedDocument)?.label ?? selectedDocument;
+      const maritalLabel =
+        MARITAL_STATUS_OPTIONS.find((m) => m.value === context.marital_status)?.label ??
+        context.marital_status;
 
       const productDetails = {
         vertical: 'EstatePlanning',
@@ -695,18 +796,30 @@ export function EstatePlanningQuoteWizard({
         existing_documents: {
           has_valid_will: ynsLabel(existingDocs.has_valid_will),
           has_valid_will_id: existingDocs.has_valid_will,
-          replace_existing_will: existingDocs.has_valid_will === 'yes' ? ynsLabel(existingDocs.replace_existing_will) : null,
-          replace_existing_will_id: existingDocs.has_valid_will === 'yes' ? existingDocs.replace_existing_will : null,
+          replace_existing_will:
+            existingDocs.has_valid_will === 'yes'
+              ? ynsLabel(existingDocs.replace_existing_will)
+              : null,
+          replace_existing_will_id:
+            existingDocs.has_valid_will === 'yes' ? existingDocs.replace_existing_will : null,
           has_living_will: ynsLabel(existingDocs.has_living_will),
           has_living_will_id: existingDocs.has_living_will,
-          replace_existing_living_will: existingDocs.has_living_will === 'yes' ? ynsLabel(existingDocs.replace_existing_living_will) : null,
-          replace_existing_living_will_id: existingDocs.has_living_will === 'yes' ? existingDocs.replace_existing_living_will : null,
+          replace_existing_living_will:
+            existingDocs.has_living_will === 'yes'
+              ? ynsLabel(existingDocs.replace_existing_living_will)
+              : null,
+          replace_existing_living_will_id:
+            existingDocs.has_living_will === 'yes'
+              ? existingDocs.replace_existing_living_will
+              : null,
         },
         personal_context: {
           marital_status: maritalLabel,
           marital_status_id: context.marital_status,
-          married_in_community: context.marital_status === 'married' ? ynsLabel(context.married_in_community) : null,
-          married_in_community_id: context.marital_status === 'married' ? context.married_in_community : null,
+          married_in_community:
+            context.marital_status === 'married' ? ynsLabel(context.married_in_community) : null,
+          married_in_community_id:
+            context.marital_status === 'married' ? context.married_in_community : null,
           has_minor_children: ynsLabel(context.has_minor_children),
           has_trusts: ynsLabel(context.has_trusts),
           has_offshore_assets: ynsLabel(context.has_offshore_assets),
@@ -756,7 +869,17 @@ export function EstatePlanningQuoteWizard({
     } finally {
       setIsSubmitting(false);
     }
-  }, [firstName, lastName, email, phone, parentSubmissionId, selectedDocument, existingDocs, context, onSuccess]);
+  }, [
+    firstName,
+    lastName,
+    email,
+    phone,
+    parentSubmissionId,
+    selectedDocument,
+    existingDocs,
+    context,
+    onSuccess,
+  ]);
 
   // ── Render ──
 
@@ -766,7 +889,9 @@ export function EstatePlanningQuoteWizard({
 
       <div className="bg-white rounded-2xl shadow-lg border border-gray-100 overflow-hidden">
         <div className="p-5 sm:p-6">
-          {currentStep === 1 && <Step1DocumentType selected={selectedDocument} onChange={setSelectedDocument} />}
+          {currentStep === 1 && (
+            <Step1DocumentType selected={selectedDocument} onChange={setSelectedDocument} />
+          )}
           {currentStep === 2 && (
             <Step2ExistingDocs
               selectedDocument={selectedDocument}

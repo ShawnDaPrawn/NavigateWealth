@@ -26,13 +26,18 @@ app.get('/', (c) => c.json({ service: 'admin-audit', status: 'active' }));
  * Returns a count summary of recent audit entries by category.
  * Used by the dashboard audit widget.
  */
-app.get('/summary', requireAuth, requireAdmin, asyncHandler(async (c) => {
-  const daysParam = c.req.query('days');
-  const days = daysParam ? Math.min(Math.max(parseInt(daysParam, 10) || 7, 1), 90) : 7;
+app.get(
+  '/summary',
+  requireAuth,
+  requireAdmin,
+  asyncHandler(async (c) => {
+    const daysParam = c.req.query('days');
+    const days = daysParam ? Math.min(Math.max(parseInt(daysParam, 10) || 7, 1), 90) : 7;
 
-  const summary = await AdminAuditService.getSummary(days);
-  return c.json({ success: true, days, summary });
-}));
+    const summary = await AdminAuditService.getSummary(days);
+    return c.json({ success: true, days, summary });
+  }),
+);
 
 /**
  * GET /admin-audit/log
@@ -46,23 +51,28 @@ app.get('/summary', requireAuth, requireAdmin, asyncHandler(async (c) => {
  *   limit?     - Max entries (default 50, max 200)
  *   since?     - ISO timestamp lower bound
  */
-app.get('/log', requireAuth, requireAdmin, asyncHandler(async (c) => {
-  const category = c.req.query('category') as AuditActionCategory | undefined;
-  const severity = c.req.query('severity') as AuditSeverity | undefined;
-  const entityType = c.req.query('entityType');
-  const since = c.req.query('since');
-  const limitParam = c.req.query('limit');
-  const limit = limitParam ? Math.min(Math.max(parseInt(limitParam, 10) || 50, 1), 200) : 50;
+app.get(
+  '/log',
+  requireAuth,
+  requireAdmin,
+  asyncHandler(async (c) => {
+    const category = c.req.query('category') as AuditActionCategory | undefined;
+    const severity = c.req.query('severity') as AuditSeverity | undefined;
+    const entityType = c.req.query('entityType');
+    const since = c.req.query('since');
+    const limitParam = c.req.query('limit');
+    const limit = limitParam ? Math.min(Math.max(parseInt(limitParam, 10) || 50, 1), 200) : 50;
 
-  const entries = await AdminAuditService.query({
-    category,
-    severity,
-    entityType,
-    since,
-    limit,
-  });
+    const entries = await AdminAuditService.query({
+      category,
+      severity,
+      entityType,
+      since,
+      limit,
+    });
 
-  return c.json({ success: true, count: entries.length, entries });
-}));
+    return c.json({ success: true, count: entries.length, entries });
+  }),
+);
 
 export default app;

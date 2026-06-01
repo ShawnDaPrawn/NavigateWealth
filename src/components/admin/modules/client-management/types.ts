@@ -1,6 +1,13 @@
 // Domain Types
 // Re-exports from shared types (§9.3 — single source of truth)
-export type { AccountStatus, AccountType, ApplicationStatus, ClientSecurity, Address, BaseClient } from '../../../../shared/types';
+export type {
+  AccountStatus,
+  AccountType,
+  ApplicationStatus,
+  ClientSecurity,
+  Address,
+  BaseClient,
+} from '../../../../shared/types';
 import type { BaseClient } from '../../../../shared/types';
 
 /** Dashboard display mode for ClientOverviewTab — Phase C */
@@ -187,7 +194,7 @@ export interface ProfileData {
   emergencyContactRelationship: string;
   emergencyContactPhone: string;
   emergencyContactEmail: string;
-  
+
   // Identity Fields
   idCountry: string;
   idNumber: string;
@@ -195,7 +202,7 @@ export interface ProfileData {
   passportNumber: string;
   employmentCountry: string;
   workPermitNumber: string;
-  
+
   identityDocuments: IdentityDocument[];
   residentialAddressLine1: string;
   residentialAddressLine2: string;

@@ -8,10 +8,7 @@
 import React from 'react';
 import { Badge } from '../../../../ui/badge';
 import type { EnvelopeStatus, SignerStatus } from '../types';
-import {
-  ENVELOPE_STATUS_CONFIG,
-  SIGNER_STATUS_CONFIG,
-} from '../constants';
+import { ENVELOPE_STATUS_CONFIG, SIGNER_STATUS_CONFIG } from '../constants';
 
 interface StatusBadgeProps {
   status: EnvelopeStatus | SignerStatus;
@@ -20,12 +17,7 @@ interface StatusBadgeProps {
   size?: 'sm' | 'md' | 'lg';
 }
 
-export function StatusBadge({
-  status,
-  type,
-  showIcon = false,
-  size = 'md',
-}: StatusBadgeProps) {
+export function StatusBadge({ status, type, showIcon = false, size = 'md' }: StatusBadgeProps) {
   const config =
     type === 'envelope'
       ? ENVELOPE_STATUS_CONFIG[status as EnvelopeStatus]

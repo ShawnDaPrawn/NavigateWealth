@@ -29,12 +29,7 @@ import { Button } from '../../../../ui/button';
 import { Input } from '../../../../ui/input';
 import { Badge } from '../../../../ui/badge';
 import { Skeleton } from '../../../../ui/skeleton';
-import {
-  Plus,
-  Search,
-  StickyNote,
-  Pin,
-} from 'lucide-react';
+import { Plus, Search, StickyNote, Pin } from 'lucide-react';
 
 interface ClientNotesTabProps {
   selectedClient: Client;
@@ -45,7 +40,9 @@ export function ClientNotesTab({ selectedClient }: ClientNotesTabProps) {
   const queryClient = useQueryClient();
   const personnelId = user?.id || '';
   const personnelName = [user?.firstName, user?.lastName].filter(Boolean).join(' ') || 'Admin';
-  const clientFullName = [selectedClient.firstName, selectedClient.lastName].filter(Boolean).join(' ');
+  const clientFullName = [selectedClient.firstName, selectedClient.lastName]
+    .filter(Boolean)
+    .join(' ');
 
   // ── Data ──────────────────────────────────────────────────────────────────
   const { data: notes = [], isLoading } = useClientNotes(selectedClient.id);
@@ -67,15 +64,18 @@ export function ClientNotesTab({ selectedClient }: ClientNotesTabProps) {
       (n) =>
         n.title.toLowerCase().includes(q) ||
         n.content.toLowerCase().includes(q) ||
-        n.tags.some((t) => t.toLowerCase().includes(q))
+        n.tags.some((t) => t.toLowerCase().includes(q)),
     );
   }, [notes, search]);
 
-  const stats = useMemo(() => ({
-    total: notes.length,
-    pinned: notes.filter((n) => n.isPinned).length,
-    converted: notes.filter((n) => !!n.convertedToTaskId).length,
-  }), [notes]);
+  const stats = useMemo(
+    () => ({
+      total: notes.length,
+      pinned: notes.filter((n) => n.isPinned).length,
+      converted: notes.filter((n) => !!n.convertedToTaskId).length,
+    }),
+    [notes],
+  );
 
   // ── Handlers ──────────────────────────────────────────────────────────────
   const handleOpenNote = useCallback((note: Note) => {
@@ -96,27 +96,35 @@ export function ClientNotesTab({ selectedClient }: ClientNotesTabProps) {
         await updateNote.mutateAsync(input);
       }
     },
-    [createNote, updateNote]
+    [createNote, updateNote],
   );
 
   const handlePin = useCallback(
-    (note: Note) => { updateNote.mutate({ id: note.id, isPinned: !note.isPinned }); },
-    [updateNote]
+    (note: Note) => {
+      updateNote.mutate({ id: note.id, isPinned: !note.isPinned });
+    },
+    [updateNote],
   );
 
   const handleArchive = useCallback(
-    (note: Note) => { updateNote.mutate({ id: note.id, isArchived: !note.isArchived }); },
-    [updateNote]
+    (note: Note) => {
+      updateNote.mutate({ id: note.id, isArchived: !note.isArchived });
+    },
+    [updateNote],
   );
 
   const handleDelete = useCallback(
-    (note: Note) => { deleteNote.mutate(note.id); },
-    [deleteNote]
+    (note: Note) => {
+      deleteNote.mutate(note.id);
+    },
+    [deleteNote],
   );
 
   const handleConvertToTask = useCallback(
-    (note: Note) => { convertToTask.mutate(note.id); },
-    [convertToTask]
+    (note: Note) => {
+      convertToTask.mutate(note.id);
+    },
+    [convertToTask],
   );
 
   // ── Silent auto-save handler ────────────────────────────────────────────
@@ -125,7 +133,7 @@ export function ClientNotesTab({ selectedClient }: ClientNotesTabProps) {
       await NotesAPI.updateNote(input);
       queryClient.invalidateQueries({ queryKey: noteKeys.detail(input.id) });
     },
-    [queryClient]
+    [queryClient],
   );
 
   // ── Loading ───────────────────────────────────────────────────────────────
@@ -162,13 +170,20 @@ export function ClientNotesTab({ selectedClient }: ClientNotesTabProps) {
               {stats.total} {stats.total === 1 ? 'note' : 'notes'}
             </Badge>
             {stats.pinned > 0 && (
-              <Badge variant="secondary" className="text-xs bg-amber-50 text-amber-700 border-amber-200">
+              <Badge
+                variant="secondary"
+                className="text-xs bg-amber-50 text-amber-700 border-amber-200"
+              >
                 <Pin className="h-3 w-3 mr-0.5" /> {stats.pinned}
               </Badge>
             )}
           </div>
         </div>
-        <Button onClick={handleNewNote} size="sm" className="bg-purple-600 hover:bg-purple-700 text-white">
+        <Button
+          onClick={handleNewNote}
+          size="sm"
+          className="bg-purple-600 hover:bg-purple-700 text-white"
+        >
           <Plus className="h-4 w-4 mr-1" /> Add Note
         </Button>
       </div>
@@ -229,7 +244,10 @@ export function ClientNotesTab({ selectedClient }: ClientNotesTabProps) {
       {/* Editor Modal — pre-linked to this client */}
       <NoteEditorModal
         isOpen={editorOpen}
-        onClose={() => { setEditorOpen(false); setSelectedNote(null); }}
+        onClose={() => {
+          setEditorOpen(false);
+          setSelectedNote(null);
+        }}
         note={selectedNote}
         personnelId={personnelId}
         personnelName={personnelName}
@@ -237,8 +255,12 @@ export function ClientNotesTab({ selectedClient }: ClientNotesTabProps) {
         defaultClientName={clientFullName}
         onSave={handleSave}
         onAutoSave={handleAutoSave}
-        onDelete={(id) => { deleteNote.mutate(id); }}
-        onConvertToTask={(id) => { convertToTask.mutate(id); }}
+        onDelete={(id) => {
+          deleteNote.mutate(id);
+        }}
+        onConvertToTask={(id) => {
+          convertToTask.mutate(id);
+        }}
       />
     </div>
   );

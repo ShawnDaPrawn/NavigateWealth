@@ -3,7 +3,7 @@ import { sanitizeLogData } from '../shared/utils/logger-utils';
 
 /**
  * Frontend Logger Implementation
- * 
+ *
  * - Environment aware (Dev vs Prod)
  * - Safe sanitization of PII
  * - Structured JSON logging in Production
@@ -19,7 +19,11 @@ class Logger implements ILogger {
   private detectEnvironment(): boolean {
     try {
       // @ts-ignore
-      if (typeof import.meta !== 'undefined' && import.meta.env && typeof import.meta.env.DEV !== 'undefined') {
+      if (
+        typeof import.meta !== 'undefined' &&
+        import.meta.env &&
+        typeof import.meta.env.DEV !== 'undefined'
+      ) {
         // @ts-ignore
         return !!import.meta.env.DEV;
       }
@@ -69,9 +73,15 @@ class Logger implements ILogger {
   private jsonPrint(level: LogLevel, entry: Record<string, unknown>) {
     const str = JSON.stringify(entry);
     switch (level) {
-      case 'error': console.error(str); break;
-      case 'warn': console.warn(str); break;
-      default: console.log(str); break;
+      case 'error':
+        console.error(str);
+        break;
+      case 'warn':
+        console.warn(str);
+        break;
+      default:
+        console.log(str);
+        break;
     }
   }
 

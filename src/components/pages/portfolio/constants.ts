@@ -24,10 +24,40 @@ export const DEFAULT_CLIENT_DATA: PortfolioClientData = {
 };
 
 export const DEFAULT_FINANCIAL_OVERVIEW: PortfolioFinancialOverview = {
-  retirement: { currentValue: 0, projectedValue: 0, monthlyContribution: 0, progressToGoal: 0, ...DEFAULT_PILLAR },
+  retirement: {
+    currentValue: 0,
+    projectedValue: 0,
+    monthlyContribution: 0,
+    progressToGoal: 0,
+    ...DEFAULT_PILLAR,
+  },
   risk: { deathCover: 0, disabilityCover: 0, criticalIllnessCover: 0, ...DEFAULT_PILLAR },
-  investment: { totalValue: 0, monthlyContribution: 0, goalsLinked: 0, performance: 'N/A', ...DEFAULT_PILLAR },
-  estate: { willStatus: 'not-drafted', trustStatus: 'not-established', nominationStatus: 'incomplete', lastUpdated: '', ...DEFAULT_PILLAR },
-  medicalAid: { scheme: 'Not specified', plan: 'Not specified', monthlyPremium: 0, dependants: 0, ...DEFAULT_PILLAR },
-  tax: { returnStatus: 'not-filed', estimatedRefund: 0, taxYear: new Date().getFullYear(), filingDate: '', ...DEFAULT_PILLAR },
+  investment: {
+    totalValue: 0,
+    monthlyContribution: 0,
+    goalsLinked: 0,
+    performance: 'N/A',
+    ...DEFAULT_PILLAR,
+  },
+  estate: {
+    willStatus: 'not-drafted',
+    trustStatus: 'not-established',
+    nominationStatus: 'incomplete',
+    lastUpdated: '',
+    ...DEFAULT_PILLAR,
+  },
+  medicalAid: {
+    scheme: 'Not specified',
+    plan: 'Not specified',
+    monthlyPremium: 0,
+    dependants: 0,
+    ...DEFAULT_PILLAR,
+  },
+  tax: {
+    returnStatus: 'not-filed',
+    estimatedRefund: 0,
+    taxYear: new Date().getFullYear(),
+    filingDate: '',
+    ...DEFAULT_PILLAR,
+  },
 };

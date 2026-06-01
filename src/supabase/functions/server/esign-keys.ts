@@ -24,14 +24,14 @@ export const EsignKeys = {
   // independently before being concatenated at send-time.
   envelopeDocumentManifest: (envelopeId: string, documentId: string) =>
     `esign:envelope:${envelopeId}:doc:${documentId}:manifest`,
-  
+
   // Field related keys
   field: (id: string) => `esign:field:${id}`,
-  
+
   // Signer related keys
   signerToken: (token: string) => `esign:token:${token}`, // Maps token to signer ID
   signerOtp: (id: string) => `esign:signer:${id}:otp`,
-  
+
   // Template related keys
   template: (id: string) => `esign:template:${id}`,
   templatesList: () => `esign:templates:list`,
@@ -42,8 +42,7 @@ export const EsignKeys = {
   // even after subsequent edits to the live template.
   templateVersion: (templateId: string, version: number) =>
     `esign:template:${templateId}:v:${version}`,
-  templateVersionsIndex: (templateId: string) =>
-    `esign:template:${templateId}:versions`,
+  templateVersionsIndex: (templateId: string) => `esign:template:${templateId}:versions`,
 
   // P4.7 — Bulk-send "campaigns": one template fan-out to N recipients
   // tracked as a single object so the dashboard can show progress and
@@ -60,12 +59,13 @@ export const EsignKeys = {
   packetsList: () => `esign:packets:list`,
   packetRun: (id: string) => `esign:packet:run:${id}`,
   packetRunsList: () => `esign:packet:runs:list`,
-  
+
   // Index keys
   clientEnvelopes: (clientId: string) => `esign:client:${clientId}:envelopes`,
-  signerEmailEnvelopes: (email: string) => `esign:signer-email:${email.toLowerCase().trim()}:envelopes`,
+  signerEmailEnvelopes: (email: string) =>
+    `esign:signer-email:${email.toLowerCase().trim()}:envelopes`,
   allEnvelopes: () => `esign:envelopes:all`,
-  
+
   // Storage paths
   documentStoragePath: (id: string, filename: string) => `documents/${id}/${filename}`,
   certificateStoragePath: (id: string) => `certificates/${id}/certificate.pdf`,
@@ -75,7 +75,7 @@ export const EsignKeys = {
     `attachments/${envelopeId}/${attachmentId}-${filename}`,
   // Per-envelope index of attachments so the certificate renderer can list them.
   envelopeAttachments: (envelopeId: string) => `esign:envelope:${envelopeId}:attachments`,
-  
+
   // P5.7 — In-app notifications. Lightweight per-user queue surfaced by
   // the dashboard bell UI. `notification` stores the record itself;
   // `notificationsByUser` indexes the user's most-recent ids in reverse

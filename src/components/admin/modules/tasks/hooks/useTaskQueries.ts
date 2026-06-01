@@ -1,12 +1,12 @@
 /**
  * Task Management Module - Query Hooks
  * Navigate Wealth Admin Dashboard
- * 
+ *
  * React Query hooks for data fetching operations:
  * - Task list queries
  * - Task statistics
  * - Filtered queries
- * 
+ *
  * @module tasks/hooks/useTaskQueries
  */
 
@@ -37,17 +37,17 @@ export const taskKeys = {
 
 /**
  * Fetch all tasks
- * 
+ *
  * @returns React Query result with tasks array
- * 
+ *
  * @example
  * ```tsx
  * function TaskList() {
  *   const { data: tasks, isLoading, error } = useTasks();
- *   
+ *
  *   if (isLoading) return <div>Loading...</div>;
  *   if (error) return <div>Error loading tasks</div>;
- *   
+ *
  *   return (
  *     <div>
  *       {tasks?.map(task => (
@@ -72,19 +72,19 @@ export function useTasks() {
 
 /**
  * Fetch a single task by ID
- * 
+ *
  * @param id - Task ID
  * @param enabled - Whether to run the query (default: true)
  * @returns React Query result with task
- * 
+ *
  * @example
  * ```tsx
  * function TaskDetail({ taskId }: { taskId: string }) {
  *   const { data: task, isLoading } = useTask(taskId);
- *   
+ *
  *   if (isLoading) return <div>Loading...</div>;
  *   if (!task) return <div>Task not found</div>;
- *   
+ *
  *   return <div>{task.title}</div>;
  * }
  * ```
@@ -101,14 +101,14 @@ export function useTask(id: string, enabled: boolean = true) {
 
 /**
  * Fetch task statistics
- * 
+ *
  * @returns React Query result with task stats
- * 
+ *
  * @example
  * ```tsx
  * function TaskStats() {
  *   const { data: stats } = useTaskStats();
- *   
+ *
  *   return (
  *     <div>
  *       <div>Total: {stats?.total}</div>

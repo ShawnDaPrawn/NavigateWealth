@@ -12,7 +12,16 @@ import { Button } from '../ui/button';
 import { Input } from '../ui/input';
 import { Alert, AlertDescription } from '../ui/alert';
 import { Badge } from '../ui/badge';
-import { ShieldCheck, Loader2, AlertCircle, Mail, ArrowLeft, CheckCircle2, Clock, FileText } from 'lucide-react';
+import {
+  ShieldCheck,
+  Loader2,
+  AlertCircle,
+  Mail,
+  ArrowLeft,
+  CheckCircle2,
+  Clock,
+  FileText,
+} from 'lucide-react';
 import type { SignerSessionData } from './types';
 
 interface OtpVerificationStepProps {
@@ -28,7 +37,7 @@ export function OtpVerificationStep({
   sessionData,
   onVerified,
   verifyOtp,
-  resendOtp
+  resendOtp,
 }: OtpVerificationStepProps) {
   const [otp, setOtp] = useState(['', '', '', '', '', '']);
   const [isVerifying, setIsVerifying] = useState(false);
@@ -47,7 +56,7 @@ export function OtpVerificationStep({
 
   // Auto-submit when all digits are entered
   useEffect(() => {
-    const isComplete = otp.every(digit => digit !== '');
+    const isComplete = otp.every((digit) => digit !== '');
     if (isComplete && !isVerifying) {
       handleVerify();
     }
@@ -134,9 +143,10 @@ export function OtpVerificationStep({
     ? (() => {
         const [local, domain] = sessionData.signer_email.split('@');
         if (!domain) return sessionData.signer_email;
-        const masked = local.length > 2
-          ? local[0] + '•'.repeat(Math.min(local.length - 2, 6)) + local[local.length - 1]
-          : local;
+        const masked =
+          local.length > 2
+            ? local[0] + '•'.repeat(Math.min(local.length - 2, 6)) + local[local.length - 1]
+            : local;
         return `${masked}@${domain}`;
       })()
     : 'your email';
@@ -165,9 +175,7 @@ export function OtpVerificationStep({
                 <ShieldCheck className="h-8 w-8 text-indigo-600" />
               </motion.div>
               <h1 className="text-2xl font-bold text-gray-900 mb-1.5">Verify Your Identity</h1>
-              <p className="text-sm text-gray-500">
-                We've sent a 6-digit verification code to
-              </p>
+              <p className="text-sm text-gray-500">We've sent a 6-digit verification code to</p>
               <p className="text-sm mt-1 font-medium text-gray-800">
                 <Mail className="h-3.5 w-3.5 inline mr-1 text-indigo-500 -mt-0.5" />
                 {maskedEmail}
@@ -181,8 +189,12 @@ export function OtpVerificationStep({
                   <FileText className="h-4.5 w-4.5 text-gray-400" />
                 </div>
                 <div className="min-w-0">
-                  <p className="text-[11px] text-gray-400 uppercase tracking-wide font-medium">Document</p>
-                  <p className="text-sm font-medium text-gray-800 truncate">{sessionData.envelope_title}</p>
+                  <p className="text-[11px] text-gray-400 uppercase tracking-wide font-medium">
+                    Document
+                  </p>
+                  <p className="text-sm font-medium text-gray-800 truncate">
+                    {sessionData.envelope_title}
+                  </p>
                 </div>
               </div>
             )}
@@ -196,13 +208,13 @@ export function OtpVerificationStep({
                 {otp.map((digit, index) => (
                   <Input
                     key={index}
-                    ref={el => inputRefs.current[index] = el}
+                    ref={(el) => (inputRefs.current[index] = el)}
                     type="text"
                     inputMode="numeric"
                     maxLength={1}
                     value={digit}
-                    onChange={e => handleOtpChange(index, e.target.value)}
-                    onKeyDown={e => handleKeyDown(index, e)}
+                    onChange={(e) => handleOtpChange(index, e.target.value)}
+                    onKeyDown={(e) => handleKeyDown(index, e)}
                     onPaste={handlePaste}
                     className={`w-12 h-14 text-center text-xl font-bold rounded-lg border-2 transition-all ${
                       digit
@@ -235,7 +247,7 @@ export function OtpVerificationStep({
             {/* Verify button (manual, in case auto-submit didn't fire) */}
             <Button
               onClick={handleVerify}
-              disabled={!otp.every(d => d !== '') || isVerifying}
+              disabled={!otp.every((d) => d !== '') || isVerifying}
               className="w-full mb-4 bg-indigo-600 hover:bg-indigo-700 h-11"
             >
               {isVerifying ? (
@@ -250,9 +262,7 @@ export function OtpVerificationStep({
 
             {/* Resend OTP */}
             <div className="text-center">
-              <p className="text-sm text-gray-500 mb-1.5">
-                Didn't receive the code?
-              </p>
+              <p className="text-sm text-gray-500 mb-1.5">Didn't receive the code?</p>
               {resendCooldown > 0 ? (
                 <p className="text-sm text-gray-400 flex items-center justify-center gap-1">
                   <Clock className="h-3.5 w-3.5" />
@@ -275,8 +285,8 @@ export function OtpVerificationStep({
               <div className="flex items-start gap-2.5 text-xs text-gray-400">
                 <ShieldCheck className="h-4 w-4 text-indigo-400 flex-shrink-0 mt-0.5" />
                 <p>
-                  This verification code is valid for 10 minutes. Your identity verification ensures the
-                  security and integrity of your electronic signature.
+                  This verification code is valid for 10 minutes. Your identity verification ensures
+                  the security and integrity of your electronic signature.
                 </p>
               </div>
             </div>

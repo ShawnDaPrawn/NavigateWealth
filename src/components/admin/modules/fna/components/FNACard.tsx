@@ -11,7 +11,15 @@ import { FNAStatusBadge } from './FNAStatusBadge';
 import type { FNAConfig } from '../../../profile-sections/fna-config';
 
 interface FNACardProps {
-  fna: { id?: string; status?: string; createdAt?: string; updatedAt?: string; inputs?: Record<string, unknown>; results?: Record<string, unknown>; [key: string]: unknown };
+  fna: {
+    id?: string;
+    status?: string;
+    createdAt?: string;
+    updatedAt?: string;
+    inputs?: Record<string, unknown>;
+    results?: Record<string, unknown>;
+    [key: string]: unknown;
+  };
   config: FNAConfig;
   onEdit: () => void;
   onDelete: () => void;
@@ -29,27 +37,25 @@ export function FNACard({ fna, config, onEdit, onDelete, onPublish, onView }: FN
               <CardTitle className="text-base flex items-center gap-2">
                 {config.name}
                 {!!fna.status && (
-                  <FNAStatusBadge status={fna.status as React.ComponentProps<typeof FNAStatusBadge>['status']} size="sm" />
+                  <FNAStatusBadge
+                    status={fna.status as React.ComponentProps<typeof FNAStatusBadge>['status']}
+                    size="sm"
+                  />
                 )}
               </CardTitle>
               <p className="text-xs text-muted-foreground mt-1">
                 {fna.status === 'published'
                   ? `Published on ${new Date((fna.publishedAt || fna.createdAt) as string).toLocaleDateString()}`
-                  : `Created on ${new Date(fna.createdAt as string).toLocaleDateString()}`
-                }
+                  : `Created on ${new Date(fna.createdAt as string).toLocaleDateString()}`}
                 {!!fna.version && ` • Version ${fna.version}`}
               </p>
             </div>
           </div>
-          
+
           <div className="flex gap-2">
             {/* View Details Button */}
             {onView && (
-              <Button
-                variant="default"
-                size="sm"
-                onClick={onView}
-              >
+              <Button variant="default" size="sm" onClick={onView}>
                 <Eye className="h-4 w-4 mr-2" />
                 View Details
               </Button>
@@ -70,21 +76,13 @@ export function FNACard({ fna, config, onEdit, onDelete, onPublish, onView }: FN
             </Button>
 
             {/* Edit Button */}
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={onEdit}
-            >
+            <Button variant="outline" size="sm" onClick={onEdit}>
               <Edit className="h-4 w-4 mr-2" />
               Edit
             </Button>
 
             {/* Delete Button */}
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={onDelete}
-            >
+            <Button variant="outline" size="sm" onClick={onDelete}>
               <Trash2 className="h-4 w-4 mr-2 text-red-600" />
               Delete
             </Button>

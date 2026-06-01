@@ -84,9 +84,10 @@ function toSubscriberView(entry: SubscriberEntry): SubscriberView {
     email: entry.email,
     firstName: entry.firstName || '',
     surname: entry.surname || '',
-    name: entry.firstName && entry.surname
-      ? `${entry.firstName} ${entry.surname}`.trim()
-      : entry.name || '',
+    name:
+      entry.firstName && entry.surname
+        ? `${entry.firstName} ${entry.surname}`.trim()
+        : entry.name || '',
     source: entry.source || 'unknown',
     confirmed: !!entry.confirmed,
     active: !!entry.active,
@@ -462,15 +463,13 @@ export async function reconcileClientsToSubscribers(): Promise<{
       profile.email ||
       profile.personalInformation?.email ||
       profile.contactDetails?.email
-    )?.trim().toLowerCase();
+    )
+      ?.trim()
+      .toLowerCase();
 
     if (!profileEmail) continue;
 
-    const firstName = (
-      profile.personalInformation?.firstName ||
-      profile.firstName ||
-      ''
-    ).trim();
+    const firstName = (profile.personalInformation?.firstName || profile.firstName || '').trim();
 
     const surname = (
       profile.personalInformation?.lastName ||

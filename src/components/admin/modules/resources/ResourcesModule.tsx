@@ -29,9 +29,26 @@ import {
 } from '../../../ui/dropdown-menu';
 import { Alert, AlertDescription, AlertTitle } from '../../../ui/alert';
 import {
-  FileText, Search, Settings, PenTool, Printer, AlertTriangle,
-  Database, Scale, Loader2, MoreHorizontal, Eye, Edit, Trash2,
-  CheckSquare, Square, Users, ChevronRight, X, Mail, Palette
+  FileText,
+  Search,
+  Settings,
+  PenTool,
+  Printer,
+  AlertTriangle,
+  Database,
+  Scale,
+  Loader2,
+  MoreHorizontal,
+  Eye,
+  Edit,
+  Trash2,
+  CheckSquare,
+  Square,
+  Users,
+  ChevronRight,
+  X,
+  Mail,
+  Palette,
 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -52,18 +69,38 @@ import { FORM_STATUS_CONFIG, type FormStatus } from './builder/constants';
 // Heavy sub-components — lazy-loaded to reduce initial chunk size.
 // These are only rendered on user action (edit, preview, tab switch).
 // ---------------------------------------------------------------------------
-const FormBuilder = React.lazy(() => import('./builder/FormBuilder').then(m => ({ default: m.FormBuilder })));
-const PdfTemplateViewer = React.lazy(() => import('./PdfTemplateViewer').then(m => ({ default: m.PdfTemplateViewer })));
-const CalculatorsManager = React.lazy(() => import('./calculators/CalculatorsManager').then(m => ({ default: m.CalculatorsManager })));
+const FormBuilder = React.lazy(() =>
+  import('./builder/FormBuilder').then((m) => ({ default: m.FormBuilder })),
+);
+const PdfTemplateViewer = React.lazy(() =>
+  import('./PdfTemplateViewer').then((m) => ({ default: m.PdfTemplateViewer })),
+);
+const CalculatorsManager = React.lazy(() =>
+  import('./calculators/CalculatorsManager').then((m) => ({ default: m.CalculatorsManager })),
+);
 const DynamicFormRenderer = React.lazy(() => import('./components/DynamicFormRenderer'));
-const LetterRenderer = React.lazy(() => import('./components/LetterRenderer').then(m => ({ default: m.LetterRenderer })));
+const LetterRenderer = React.lazy(() =>
+  import('./components/LetterRenderer').then((m) => ({ default: m.LetterRenderer })),
+);
 const ClientConsentForm = React.lazy(() => import('./forms/ClientConsentForm'));
-const ClientPicker = React.lazy(() => import('./components/ClientPicker').then(m => ({ default: m.ClientPicker })));
-const UniversalKeyManager = React.lazy(() => import('./UniversalKeyManager').then(m => ({ default: m.UniversalKeyManager })));
-const FormTemplateTool = React.lazy(() => import('./tools/FormTemplateTool').then(m => ({ default: m.FormTemplateTool })));
-const ZipEncryptTool = React.lazy(() => import('./tools/ZipEncryptTool').then(m => ({ default: m.ZipEncryptTool })));
-const PdfDecryptTool = React.lazy(() => import('./tools/PdfDecryptTool').then(m => ({ default: m.PdfDecryptTool })));
-const CorporateIdentityTab = React.lazy(() => import('./components/CorporateIdentityTab').then(m => ({ default: m.CorporateIdentityTab })));
+const ClientPicker = React.lazy(() =>
+  import('./components/ClientPicker').then((m) => ({ default: m.ClientPicker })),
+);
+const UniversalKeyManager = React.lazy(() =>
+  import('./UniversalKeyManager').then((m) => ({ default: m.UniversalKeyManager })),
+);
+const FormTemplateTool = React.lazy(() =>
+  import('./tools/FormTemplateTool').then((m) => ({ default: m.FormTemplateTool })),
+);
+const ZipEncryptTool = React.lazy(() =>
+  import('./tools/ZipEncryptTool').then((m) => ({ default: m.ZipEncryptTool })),
+);
+const PdfDecryptTool = React.lazy(() =>
+  import('./tools/PdfDecryptTool').then((m) => ({ default: m.PdfDecryptTool })),
+);
+const CorporateIdentityTab = React.lazy(() =>
+  import('./components/CorporateIdentityTab').then((m) => ({ default: m.CorporateIdentityTab })),
+);
 const LegalDocumentsManager = React.lazy(() => import('./legal-documents/LegalDocumentsManager'));
 
 /** Shared spinner for lazy-loaded sub-components */
@@ -191,7 +228,7 @@ export function ResourcesModule() {
         phone: '',
         title: '',
         licenseNumber: '',
-      }
+      },
     );
   }, [prefillClient]);
 
@@ -219,21 +256,23 @@ export function ResourcesModule() {
   /** Open demo consent form */
   const openDemo = useCallback(() => {
     setPrefillClient(null);
-    setPreviewingForms([{
-      id: 'demo_consent',
-      name: 'Client Consent Form (Demo)',
-      category: 'Demo',
-      description: 'Demo template',
-      version: '1.0',
-      lastUpdated: 'N/A',
-      downloads: 0,
-      size: '0',
-      isPopular: false,
-      fields: [],
-      clientTypes: [],
-      renderer: 'custom',
-      previewComponent: ClientConsentForm,
-    }]);
+    setPreviewingForms([
+      {
+        id: 'demo_consent',
+        name: 'Client Consent Form (Demo)',
+        category: 'Demo',
+        description: 'Demo template',
+        version: '1.0',
+        lastUpdated: 'N/A',
+        downloads: 0,
+        size: '0',
+        isPopular: false,
+        fields: [],
+        clientTypes: [],
+        renderer: 'custom',
+        previewComponent: ClientConsentForm,
+      },
+    ]);
     setCurrentPreviewIndex(0);
     setShowPdfTemplate(true);
   }, []);
@@ -262,13 +301,15 @@ export function ResourcesModule() {
       setDeleteConfirmation('');
     } catch (error: unknown) {
       console.error('[ResourcesModule] Delete error:', error);
-      toast.error('Delete failed', { description: error instanceof Error ? error.message : 'Unknown error' });
+      toast.error('Delete failed', {
+        description: error instanceof Error ? error.message : 'Unknown error',
+      });
     }
   };
 
   /** Toggle form selection */
   const toggleFormSelection = useCallback((formId: string) => {
-    setSelectedFormIds(prev => {
+    setSelectedFormIds((prev) => {
       const next = new Set(prev);
       if (next.has(formId)) {
         next.delete(formId);
@@ -284,13 +325,13 @@ export function ResourcesModule() {
     if (selectedFormIds.size === filteredForms.length) {
       setSelectedFormIds(new Set());
     } else {
-      setSelectedFormIds(new Set(filteredForms.map(f => f.id)));
+      setSelectedFormIds(new Set(filteredForms.map((f) => f.id)));
     }
   }, [filteredForms, selectedFormIds]);
 
   /** Pre-fill selected forms */
   const handlePrefillSelected = useCallback(() => {
-    const selected = filteredForms.filter(f => selectedFormIds.has(f.id));
+    const selected = filteredForms.filter((f) => selectedFormIds.has(f.id));
     if (selected.length === 0) {
       toast.error('No forms selected');
       return;
@@ -328,7 +369,10 @@ export function ResourcesModule() {
 
       if (seeded > 0) {
         toast.success(`${seeded} legal document${seeded !== 1 ? 's' : ''} created`, {
-          description: skipped > 0 ? `${skipped} already existed and were skipped.` : `All ${total} templates are now available.`,
+          description:
+            skipped > 0
+              ? `${skipped} already existed and were skipped.`
+              : `All ${total} templates are now available.`,
         });
         refresh();
       } else {
@@ -338,7 +382,9 @@ export function ResourcesModule() {
       }
     } catch (error: unknown) {
       console.error('[ResourcesModule] Legal seed error:', error);
-      toast.error('Failed to seed legal documents', { description: error instanceof Error ? error.message : 'Unknown error' });
+      toast.error('Failed to seed legal documents', {
+        description: error instanceof Error ? error.message : 'Unknown error',
+      });
     } finally {
       setSeedingLegal(false);
     }
@@ -354,7 +400,7 @@ export function ResourcesModule() {
   /** Category counts for filter badges */
   const categoryCounts = useMemo(() => {
     const counts: Record<string, number> = {};
-    filteredForms.forEach(f => {
+    filteredForms.forEach((f) => {
       counts[f.category] = (counts[f.category] || 0) + 1;
     });
     return counts;
@@ -407,8 +453,12 @@ export function ResourcesModule() {
               : currentPreviewForm?.name || 'Form Preview'
           }
           isLetter={currentPreviewForm?.renderer === 'letter'}
-          letterMeta={currentPreviewForm?.renderer === 'letter' ? currentPreviewForm.letterMeta : undefined}
-          letterBlocks={currentPreviewForm?.renderer === 'letter' ? currentPreviewForm.blocks : undefined}
+          letterMeta={
+            currentPreviewForm?.renderer === 'letter' ? currentPreviewForm.letterMeta : undefined
+          }
+          letterBlocks={
+            currentPreviewForm?.renderer === 'letter' ? currentPreviewForm.blocks : undefined
+          }
         >
           {/* Multi-form navigation bar */}
           {hasMultiplePreviews && (
@@ -463,19 +513,19 @@ export function ResourcesModule() {
       </div>
 
       {/* Main Tabs */}
-        <Tabs value={resourcesTab} onValueChange={handleResourcesTabChange} className="space-y-6">
-          <TabsList className="grid w-full grid-cols-6 h-12">
-            <TabsTrigger value="forms" className="flex items-center gap-2 text-base">
-              <FileText className="h-4 w-4" />
-              Forms & Documents
-            </TabsTrigger>
-            <TabsTrigger value="legal-docs" className="flex items-center gap-2 text-base">
-              <Scale className="h-4 w-4" />
-              Legal Documents
-            </TabsTrigger>
-            <TabsTrigger value="tools" className="flex items-center gap-2 text-base">
-              <Settings className="h-4 w-4" />
-              Tools
+      <Tabs value={resourcesTab} onValueChange={handleResourcesTabChange} className="space-y-6">
+        <TabsList className="grid w-full grid-cols-6 h-12">
+          <TabsTrigger value="forms" className="flex items-center gap-2 text-base">
+            <FileText className="h-4 w-4" />
+            Forms & Documents
+          </TabsTrigger>
+          <TabsTrigger value="legal-docs" className="flex items-center gap-2 text-base">
+            <Scale className="h-4 w-4" />
+            Legal Documents
+          </TabsTrigger>
+          <TabsTrigger value="tools" className="flex items-center gap-2 text-base">
+            <Settings className="h-4 w-4" />
+            Tools
           </TabsTrigger>
           <TabsTrigger value="calculators" className="flex items-center gap-2 text-base">
             <PenTool className="h-4 w-4" />
@@ -545,10 +595,7 @@ export function ResourcesModule() {
                   {canCreate && (
                     <div className="contents">
                       <DropdownMenuSeparator />
-                      <DropdownMenuItem
-                        onClick={handleSeedLegalDocuments}
-                        disabled={seedingLegal}
-                      >
+                      <DropdownMenuItem onClick={handleSeedLegalDocuments} disabled={seedingLegal}>
                         {seedingLegal ? (
                           <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                         ) : (
@@ -569,7 +616,9 @@ export function ResourcesModule() {
               <div className="flex items-end gap-4">
                 {/* Search */}
                 <div className="flex-1">
-                  <Label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Search</Label>
+                  <Label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                    Search
+                  </Label>
                   <div className="relative mt-1">
                     <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                     <Input
@@ -583,7 +632,9 @@ export function ResourcesModule() {
 
                 {/* Category */}
                 <div className="w-44">
-                  <Label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Category</Label>
+                  <Label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                    Category
+                  </Label>
                   <Select
                     value={filters.category}
                     onValueChange={(value) => updateFilters({ category: value })}
@@ -603,7 +654,9 @@ export function ResourcesModule() {
 
                 {/* Client Type */}
                 <div className="w-40">
-                  <Label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Client Type</Label>
+                  <Label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                    Client Type
+                  </Label>
                   <Select
                     value={filters.clientType}
                     onValueChange={(value) => updateFilters({ clientType: value })}
@@ -624,7 +677,9 @@ export function ResourcesModule() {
 
                 {/* Phase 1: Status Filter */}
                 <div className="w-36">
-                  <Label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Status</Label>
+                  <Label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                    Status
+                  </Label>
                   <Select
                     value={filters.status || 'all'}
                     onValueChange={(value) => updateFilters({ status: value })}
@@ -666,7 +721,11 @@ export function ResourcesModule() {
                     if (isSelectMode) setSelectedFormIds(new Set());
                   }}
                 >
-                  {isSelectMode ? <CheckSquare className="h-4 w-4 mr-1.5" /> : <Square className="h-4 w-4 mr-1.5" />}
+                  {isSelectMode ? (
+                    <CheckSquare className="h-4 w-4 mr-1.5" />
+                  ) : (
+                    <Square className="h-4 w-4 mr-1.5" />
+                  )}
                   {isSelectMode ? 'Done' : 'Select'}
                 </Button>
               </div>
@@ -676,9 +735,7 @@ export function ResourcesModule() {
           {/* Selection action bar */}
           {isSelectMode && selectedFormIds.size > 0 && (
             <div className="flex items-center gap-3 px-4 py-3 bg-primary/5 border border-primary/20 rounded-lg">
-              <Badge className="bg-primary text-white">
-                {selectedFormIds.size} selected
-              </Badge>
+              <Badge className="bg-primary text-white">{selectedFormIds.size} selected</Badge>
               <Button size="sm" variant="outline" onClick={toggleSelectAll}>
                 {selectedFormIds.size === filteredForms.length ? 'Deselect All' : 'Select All'}
               </Button>
@@ -734,10 +791,7 @@ export function ResourcesModule() {
                     >
                       {/* Selection checkbox */}
                       {isSelectMode && (
-                        <button
-                          onClick={() => toggleFormSelection(form.id)}
-                          className="shrink-0"
-                        >
+                        <button onClick={() => toggleFormSelection(form.id)} className="shrink-0">
                           {isSelected ? (
                             <CheckSquare className="h-5 w-5 text-primary" />
                           ) : (
@@ -747,9 +801,11 @@ export function ResourcesModule() {
                       )}
 
                       {/* Icon */}
-                      <div className={`w-9 h-9 rounded-lg flex items-center justify-center shrink-0 ${
-                        form.category === 'Letters' ? 'bg-violet-50' : 'bg-gray-100'
-                      }`}>
+                      <div
+                        className={`w-9 h-9 rounded-lg flex items-center justify-center shrink-0 ${
+                          form.category === 'Letters' ? 'bg-violet-50' : 'bg-gray-100'
+                        }`}
+                      >
                         {form.category === 'Letters' ? (
                           <Mail className="h-4 w-4 text-violet-500" />
                         ) : (
@@ -761,7 +817,10 @@ export function ResourcesModule() {
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2">
                           <h3 className="text-sm font-semibold truncate">{form.name}</h3>
-                          <Badge variant="secondary" className={`text-[10px] px-1.5 py-0 h-5 ${getCategoryColor(form.category)}`}>
+                          <Badge
+                            variant="secondary"
+                            className={`text-[10px] px-1.5 py-0 h-5 ${getCategoryColor(form.category)}`}
+                          >
                             {form.category}
                           </Badge>
                           {/* Phase 1: Status badge */}
@@ -770,7 +829,9 @@ export function ResourcesModule() {
                               variant="outline"
                               className={`text-[10px] px-1.5 py-0 h-5 ${FORM_STATUS_CONFIG[form.status as FormStatus].badgeClass}`}
                             >
-                              <span className={`inline-block w-1.5 h-1.5 rounded-full mr-1 ${FORM_STATUS_CONFIG[form.status as FormStatus].dotClass}`} />
+                              <span
+                                className={`inline-block w-1.5 h-1.5 rounded-full mr-1 ${FORM_STATUS_CONFIG[form.status as FormStatus].dotClass}`}
+                              />
                               {FORM_STATUS_CONFIG[form.status as FormStatus].label}
                             </Badge>
                           )}
@@ -848,7 +909,10 @@ export function ResourcesModule() {
                                 {form.status !== 'published' && (
                                   <DropdownMenuItem
                                     onClick={() =>
-                                      updateResource(form.id, { status: 'published' } as Record<string, unknown>)
+                                      updateResource(form.id, { status: 'published' } as Record<
+                                        string,
+                                        unknown
+                                      >)
                                     }
                                   >
                                     <span className="inline-block w-2 h-2 rounded-full bg-green-500 mr-2" />
@@ -858,7 +922,10 @@ export function ResourcesModule() {
                                 {form.status !== 'draft' && (
                                   <DropdownMenuItem
                                     onClick={() =>
-                                      updateResource(form.id, { status: 'draft' } as Record<string, unknown>)
+                                      updateResource(form.id, { status: 'draft' } as Record<
+                                        string,
+                                        unknown
+                                      >)
                                     }
                                   >
                                     <span className="inline-block w-2 h-2 rounded-full bg-amber-500 mr-2" />
@@ -868,7 +935,10 @@ export function ResourcesModule() {
                                 {form.status !== 'archived' && (
                                   <DropdownMenuItem
                                     onClick={() =>
-                                      updateResource(form.id, { status: 'archived' } as Record<string, unknown>)
+                                      updateResource(form.id, { status: 'archived' } as Record<
+                                        string,
+                                        unknown
+                                      >)
                                     }
                                   >
                                     <span className="inline-block w-2 h-2 rounded-full bg-gray-400 mr-2" />
@@ -911,10 +981,14 @@ export function ResourcesModule() {
             {/* Count footer */}
             {!loading && filteredForms.length > 0 && (
               <div className="flex items-center justify-between mt-3 text-xs text-muted-foreground px-1">
-                <span>{filteredForms.length} form{filteredForms.length !== 1 ? 's' : ''}</span>
+                <span>
+                  {filteredForms.length} form{filteredForms.length !== 1 ? 's' : ''}
+                </span>
                 <div className="flex gap-2">
                   {Object.entries(categoryCounts).map(([cat, count]) => (
-                    <span key={cat}>{cat}: {count}</span>
+                    <span key={cat}>
+                      {cat}: {count}
+                    </span>
                   ))}
                 </div>
               </div>
@@ -975,7 +1049,8 @@ export function ResourcesModule() {
               Select a client to populate form fields with their information.
               {previewingForms.length > 1 && (
                 <span className="font-medium text-foreground">
-                  {' '}All {previewingForms.length} selected forms will be pre-filled.
+                  {' '}
+                  All {previewingForms.length} selected forms will be pre-filled.
                 </span>
               )}
             </DialogDescription>
@@ -992,7 +1067,10 @@ export function ResourcesModule() {
                   <div key={f.id} className="flex items-center gap-2 text-sm py-1">
                     <ChevronRight className="h-3 w-3 text-muted-foreground shrink-0" />
                     <span className="truncate">{f.name}</span>
-                    <Badge variant="secondary" className={`text-[10px] px-1.5 py-0 h-5 shrink-0 ${getCategoryColor(f.category)}`}>
+                    <Badge
+                      variant="secondary"
+                      className={`text-[10px] px-1.5 py-0 h-5 shrink-0 ${getCategoryColor(f.category)}`}
+                    >
                       {f.category}
                     </Badge>
                   </div>
@@ -1006,10 +1084,7 @@ export function ResourcesModule() {
                 Select Client
               </Label>
               <Suspense fallback={<LazyFallback />}>
-                <ClientPicker
-                  selectedClient={prefillClient}
-                  onSelect={setPrefillClient}
-                />
+                <ClientPicker selectedClient={prefillClient} onSelect={setPrefillClient} />
               </Suspense>
             </div>
           </div>
@@ -1057,7 +1132,8 @@ export function ResourcesModule() {
               <AlertTriangle className="h-4 w-4" />
               <AlertTitle>Warning</AlertTitle>
               <AlertDescription>
-                Please type <span className="font-bold select-all">{formToDelete?.name}</span> below to confirm deletion.
+                Please type <span className="font-bold select-all">{formToDelete?.name}</span> below
+                to confirm deletion.
               </AlertDescription>
             </Alert>
 

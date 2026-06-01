@@ -21,7 +21,10 @@ import { ESTATE_PLANNING_CONSTANTS } from './constants';
  * Helper Functions
  */
 
-export function classifyLiquidity(assetType: string, subType: string): 'liquid' | 'semi_liquid' | 'illiquid' {
+export function classifyLiquidity(
+  assetType: string,
+  subType: string,
+): 'liquid' | 'semi_liquid' | 'illiquid' {
   if (assetType === 'financial') {
     if (['bank_account', 'cash', 'money_market'].includes(subType)) {
       return 'liquid';
@@ -107,7 +110,8 @@ function buildDeathBalanceSheet(inputs: EstatePlanningInputs): DeathBalanceSheet
       grossEstateAssets.property += assetValue;
       const propAsset = asset as unknown as Record<string, unknown>;
       if (propAsset.unrealisedGain) {
-        totalUnrealisedGains += (propAsset.unrealisedGain as number) * (asset.ownershipPercentage / 100);
+        totalUnrealisedGains +=
+          (propAsset.unrealisedGain as number) * (asset.ownershipPercentage / 100);
       }
     } else if (asset.type === 'financial') {
       grossEstateAssets.financial += assetValue;
@@ -145,7 +149,7 @@ function buildDeathBalanceSheet(inputs: EstatePlanningInputs): DeathBalanceSheet
 
   liabilities.forEach((liability) => {
     const amount = liability.outstandingBalance;
-    
+
     switch (liability.type) {
       case 'home_loan':
         liabilitiesBreakdown.homeLoan += amount;
@@ -166,13 +170,13 @@ function buildDeathBalanceSheet(inputs: EstatePlanningInputs): DeathBalanceSheet
         liabilitiesBreakdown.taxLiabilities += amount;
         break;
     }
-    
+
     liabilitiesBreakdown.total += amount;
   });
 
   // Calculate administration costs
   const propertyCount = assets.filter((a) => a.type === 'property').length;
-  
+
   const administrationCosts = {
     funeralCosts: assumptions.funeralCostsEstimate,
     executorFees: grossEstateAssets.total * (assumptions.executorFeePercentage / 100),
@@ -201,7 +205,7 @@ function buildDeathBalanceSheet(inputs: EstatePlanningInputs): DeathBalanceSheet
 
   const dutiableEstate = Math.max(
     0,
-    netEstateBeforeDuty - assumptions.estateDutyAbatement - spousalDeduction
+    netEstateBeforeDuty - assumptions.estateDutyAbatement - spousalDeduction,
   );
 
   const estimatedEstateDuty = dutiableEstate * assumptions.estateDutyRate;
@@ -248,7 +252,7 @@ function buildDeathBalanceSheet(inputs: EstatePlanningInputs): DeathBalanceSheet
  */
 function analyzeLiquidity(
   inputs: EstatePlanningInputs,
-  balanceSheet: DeathBalanceSheet
+  balanceSheet: DeathBalanceSheet,
 ): LiquidityAnalysis {
   const { assets, lifePolicies } = inputs;
 
@@ -345,20 +349,20 @@ function analyzeLiquidity(
 
   if (liquidityRisk === 'severe') {
     liquidityRecommendations.push(
-      `Critical liquidity shortfall of R${formatCurrency(liquidityShortfall)} identified`
+      `Critical liquidity shortfall of R${formatCurrency(liquidityShortfall)} identified`,
     );
     liquidityRecommendations.push(
-      'Estate may need to sell property or business interests under pressure'
+      'Estate may need to sell property or business interests under pressure',
     );
     liquidityRecommendations.push(
-      'Consider increasing life cover payable to the estate to address shortfall'
+      'Consider increasing life cover payable to the estate to address shortfall',
     );
   } else if (liquidityRisk === 'moderate') {
     liquidityRecommendations.push(
-      `Moderate liquidity shortfall of R${formatCurrency(liquidityShortfall)}`
+      `Moderate liquidity shortfall of R${formatCurrency(liquidityShortfall)}`,
     );
     liquidityRecommendations.push(
-      'Semi-liquid assets may need to be accessed - ensure executors are aware'
+      'Semi-liquid assets may need to be accessed - ensure executors are aware',
     );
   } else {
     liquidityRecommendations.push('Estate has sufficient liquidity to cover obligations');
@@ -366,7 +370,7 @@ function analyzeLiquidity(
 
   if (illiquidAssets.total > liquidAssets.total * 3) {
     liquidityRecommendations.push(
-      'Estate is heavily weighted towards illiquid assets - plan for potential forced sales'
+      'Estate is heavily weighted towards illiquid assets - plan for potential forced sales',
     );
   }
 
@@ -426,7 +430,7 @@ function checkBeneficiaryAlignment(inputs: EstatePlanningInputs): BeneficiaryAli
 
   if (estatePayouts > 0 && nominatedPayouts > 0) {
     misalignmentIssues.push(
-      'Mix of estate and nominated beneficiaries - ensure this aligns with intentions'
+      'Mix of estate and nominated beneficiaries - ensure this aligns with intentions',
     );
   }
 
@@ -434,7 +438,7 @@ function checkBeneficiaryAlignment(inputs: EstatePlanningInputs): BeneficiaryAli
   const cededPolicies = lifePolicies.filter((p) => p.cededTo);
   if (cededPolicies.length > 0) {
     misalignmentIssues.push(
-      `${cededPolicies.length} policy/policies ceded to creditors - may not be available for family`
+      `${cededPolicies.length} policy/policies ceded to creditors - may not be available for family`,
     );
   }
 
@@ -468,7 +472,7 @@ function checkBeneficiaryAlignment(inputs: EstatePlanningInputs): BeneficiaryAli
  */
 function analyzeMinorChildren(
   inputs: EstatePlanningInputs,
-  balanceSheet: DeathBalanceSheet
+  balanceSheet: DeathBalanceSheet,
 ): MinorChildrenAnalysis {
   const minorChildren = inputs.dependants.filter((d) => d.age < 18);
   const hasMinorChildren = minorChildren.length > 0;
@@ -489,8 +493,12 @@ function analyzeMinorChildren(
   const capitalForMinors = balanceSheet.netEstateForHeirs; // Simplified
 
   // Determine capital management structure
-  let capitalManagementStructure: 'guardian_fund' | 'testamentary_trust' | 'inter_vivos_trust' | 'none' = 'none';
-  
+  let capitalManagementStructure:
+    | 'guardian_fund'
+    | 'testamentary_trust'
+    | 'inter_vivos_trust'
+    | 'none' = 'none';
+
   if (inputs.hasTrusts) {
     capitalManagementStructure = 'inter_vivos_trust';
   } else if (inputs.willInfo.specialBequests.some((b) => b.toLowerCase().includes('trust'))) {
@@ -508,10 +516,10 @@ function analyzeMinorChildren(
   }
 
   if (capitalManagementStructure === 'guardian_fund') {
-    risks.push(
-      'Capital for minors may end up in Guardian\'s Fund with restricted access'
+    risks.push("Capital for minors may end up in Guardian's Fund with restricted access");
+    recommendations.push(
+      'Consider establishing a testamentary trust for flexible capital management',
     );
-    recommendations.push('Consider establishing a testamentary trust for flexible capital management');
   }
 
   if (capitalManagementStructure === 'none' && capitalForMinors > 50000) {
@@ -535,9 +543,7 @@ function analyzeMinorChildren(
  * Step 5: Analyze Business Continuity
  */
 function analyzeBusinessContinuity(inputs: EstatePlanningInputs): BusinessContinuityAnalysis {
-  const businessAssets = inputs.assets.filter(
-    (a) => a.type === 'business'
-  ) as BusinessAsset[];
+  const businessAssets = inputs.assets.filter((a) => a.type === 'business') as BusinessAsset[];
 
   const hasBusinessInterests = businessAssets.length > 0;
 
@@ -557,7 +563,7 @@ function analyzeBusinessContinuity(inputs: EstatePlanningInputs): BusinessContin
 
   const buyAndSellInPlace = businessAssets.some((b) => b.hasBuyAndSellAgreement);
   const buyAndSellFunded = businessAssets.some((b) => b.buyAndSellFunded);
-  
+
   const fundingAmount = businessAssets
     .filter((b) => b.buyAndSellFunded)
     .reduce((sum, b) => sum + b.currentValue, 0);
@@ -567,9 +573,7 @@ function analyzeBusinessContinuity(inputs: EstatePlanningInputs): BusinessContin
 
   if (!buyAndSellInPlace) {
     continuityRisks.push('No buy-and-sell agreements in place for business interests');
-    recommendations.push(
-      'Establish buy-and-sell agreements with co-owners to prevent disruption'
-    );
+    recommendations.push('Establish buy-and-sell agreements with co-owners to prevent disruption');
   }
 
   if (buyAndSellInPlace && !buyAndSellFunded) {
@@ -580,14 +584,14 @@ function analyzeBusinessContinuity(inputs: EstatePlanningInputs): BusinessContin
   businessAssets.forEach((asset) => {
     if (asset.currentValue > 500000 && !asset.hasBuyAndSellAgreement) {
       continuityRisks.push(
-        `Substantial business interest (${asset.description}) lacks succession planning`
+        `Substantial business interest (${asset.description}) lacks succession planning`,
       );
     }
   });
 
   if (businessAssets.length > 0) {
     recommendations.push(
-      'Review will provisions for business interests - consider specific bequests vs residue'
+      'Review will provisions for business interests - consider specific bequests vs residue',
     );
   }
 
@@ -612,7 +616,7 @@ function identifyStructuralRisks(
   liquidity: LiquidityAnalysis,
   beneficiaries: BeneficiaryAlignment,
   minorChildren: MinorChildrenAnalysis,
-  business: BusinessContinuityAnalysis
+  business: BusinessContinuityAnalysis,
 ): StructuralRisk[] {
   const risks: StructuralRisk[] = [];
 
@@ -622,7 +626,8 @@ function identifyStructuralRisks(
       category: 'will',
       severity: 'high',
       issue: 'No valid will in place',
-      impact: 'Estate will be distributed according to intestate succession law, which may not align with your wishes',
+      impact:
+        'Estate will be distributed according to intestate succession law, which may not align with your wishes',
       recommendation: 'Draft a comprehensive will immediately',
     });
   } else if (inputs.willInfo.willNeedsUpdate) {
@@ -630,7 +635,8 @@ function identifyStructuralRisks(
       category: 'will',
       severity: 'medium',
       issue: 'Will needs updating',
-      impact: inputs.willInfo.willUpdateReason || 'Current will may not reflect current circumstances',
+      impact:
+        inputs.willInfo.willUpdateReason || 'Current will may not reflect current circumstances',
       recommendation: 'Review and update will with legal adviser',
     });
   }
@@ -653,7 +659,8 @@ function identifyStructuralRisks(
       severity: 'high',
       issue: `Severe liquidity shortfall of R${formatCurrency(liquidity.liquidityShortfall)}`,
       impact: 'Estate may be forced to sell assets at unfavorable prices to meet obligations',
-      recommendation: 'Increase life cover payable to estate or restructure assets for better liquidity',
+      recommendation:
+        'Increase life cover payable to estate or restructure assets for better liquidity',
     });
   } else if (liquidity.liquidityRisk === 'moderate') {
     risks.push({
@@ -718,19 +725,21 @@ function identifyStructuralRisks(
 function generateExecutiveSummary(
   balanceSheet: DeathBalanceSheet,
   liquidity: LiquidityAnalysis,
-  risks: StructuralRisk[]
+  risks: StructuralRisk[],
 ) {
   const criticalRisks = risks.filter((r) => r.severity === 'high');
 
   const keyRecommendations: string[] = [];
 
   if (criticalRisks.length > 0) {
-    keyRecommendations.push(`Address ${criticalRisks.length} critical estate planning risk(s) urgently`);
+    keyRecommendations.push(
+      `Address ${criticalRisks.length} critical estate planning risk(s) urgently`,
+    );
   }
 
   if (liquidity.liquidityShortfall > 0) {
     keyRecommendations.push(
-      `Resolve liquidity shortfall of R${formatCurrency(liquidity.liquidityShortfall)}`
+      `Resolve liquidity shortfall of R${formatCurrency(liquidity.liquidityShortfall)}`,
     );
   }
 
@@ -749,10 +758,7 @@ function generateExecutiveSummary(
 /**
  * Step 8: Integration with Other FNAs
  */
-function analyzeIntegration(
-  inputs: EstatePlanningInputs,
-  balanceSheet: DeathBalanceSheet
-) {
+function analyzeIntegration(inputs: EstatePlanningInputs, balanceSheet: DeathBalanceSheet) {
   // Calculate total death benefits
   const totalDeathBenefits =
     inputs.lifePolicies.reduce((sum, p) => sum + p.sumAssured, 0) +
@@ -766,7 +772,7 @@ function analyzeIntegration(
   const notes: string[] = [];
 
   notes.push(
-    `Total death benefits (life cover + retirement + estate): R${formatCurrency(totalDeathBenefits)}`
+    `Total death benefits (life cover + retirement + estate): R${formatCurrency(totalDeathBenefits)}`,
   );
 
   if (lifeCoverAdequacy === 'shortfall') {
@@ -806,14 +812,14 @@ export const EstatePlanningCalculationService = {
       liquidityAnalysis,
       beneficiaryAlignment,
       minorChildrenAnalysis,
-      businessContinuity
+      businessContinuity,
     );
 
     // Step 7: Executive Summary
     const executiveSummary = generateExecutiveSummary(
       deathBalanceSheet,
       liquidityAnalysis,
-      structuralRisks
+      structuralRisks,
     );
 
     // Step 8: Integration with Other FNAs
@@ -829,5 +835,5 @@ export const EstatePlanningCalculationService = {
       executiveSummary,
       integrationWithOtherFNAs,
     };
-  }
+  },
 };

@@ -49,11 +49,7 @@ interface ArticleReshareDialogProps {
 
 type TargetMode = 'all' | 'selected';
 
-export function ArticleReshareDialog({
-  article,
-  open,
-  onOpenChange,
-}: ArticleReshareDialogProps) {
+export function ArticleReshareDialog({ article, open, onOpenChange }: ArticleReshareDialogProps) {
   const [targetMode, setTargetMode] = useState<TargetMode>('selected');
   const [search, setSearch] = useState('');
   const [selectedEmails, setSelectedEmails] = useState<Set<string>>(new Set());
@@ -62,10 +58,9 @@ export function ArticleReshareDialog({
   const [isSending, setIsSending] = useState(false);
   const [confirmOpen, setConfirmOpen] = useState(false);
 
-  const {
-    filtered: activeSubscribers,
-    isLoading,
-  } = useNewsletterSubscribers({ statusFilter: 'active' });
+  const { filtered: activeSubscribers, isLoading } = useNewsletterSubscribers({
+    statusFilter: 'active',
+  });
 
   useEffect(() => {
     if (!open) {
@@ -83,11 +78,12 @@ export function ArticleReshareDialog({
     const query = search.trim().toLowerCase();
     if (!query) return activeSubscribers;
 
-    return activeSubscribers.filter((subscriber) =>
-      subscriber.email.toLowerCase().includes(query) ||
-      subscriber.firstName.toLowerCase().includes(query) ||
-      subscriber.surname.toLowerCase().includes(query) ||
-      subscriber.name.toLowerCase().includes(query),
+    return activeSubscribers.filter(
+      (subscriber) =>
+        subscriber.email.toLowerCase().includes(query) ||
+        subscriber.firstName.toLowerCase().includes(query) ||
+        subscriber.surname.toLowerCase().includes(query) ||
+        subscriber.name.toLowerCase().includes(query),
     );
   }, [activeSubscribers, search]);
 
@@ -180,7 +176,8 @@ export function ArticleReshareDialog({
               Reshare Published Article
             </DialogTitle>
             <DialogDescription>
-              Send the currently published article to all active newsletter subscribers, or target a smaller selection.
+              Send the currently published article to all active newsletter subscribers, or target a
+              smaller selection.
             </DialogDescription>
           </DialogHeader>
 
@@ -191,7 +188,8 @@ export function ArticleReshareDialog({
                   <div className="min-w-0">
                     <p className="text-sm font-semibold text-gray-900">{article.title}</p>
                     <p className="text-xs text-muted-foreground mt-1 line-clamp-2">
-                      {article.excerpt || 'This article will be sent with the standard Navigate Wealth article notification template.'}
+                      {article.excerpt ||
+                        'This article will be sent with the standard Navigate Wealth article notification template.'}
                     </p>
                   </div>
                   <Badge className="bg-white text-purple-700 border border-purple-200 shrink-0">
@@ -199,7 +197,8 @@ export function ArticleReshareDialog({
                   </Badge>
                 </div>
                 <p className="text-[11px] text-purple-700">
-                  This resend uses the current published article on the website, not any unsaved editor changes.
+                  This resend uses the current published article on the website, not any unsaved
+                  editor changes.
                 </p>
               </CardContent>
             </Card>
@@ -217,7 +216,10 @@ export function ArticleReshareDialog({
                     <div className="grid grid-cols-2 gap-2">
                       <button
                         type="button"
-                        onClick={() => { setTargetMode('selected'); setPreviewResult(null); }}
+                        onClick={() => {
+                          setTargetMode('selected');
+                          setPreviewResult(null);
+                        }}
                         className={`rounded-lg border px-3 py-3 text-left transition-colors ${
                           targetMode === 'selected'
                             ? 'border-purple-300 bg-purple-50 text-purple-900'
@@ -229,13 +231,17 @@ export function ArticleReshareDialog({
                           <span className="text-sm font-medium">Selected subscribers</span>
                         </div>
                         <p className="text-xs text-muted-foreground mt-1">
-                          Best for resending an older article to one or a few newly-added subscribers.
+                          Best for resending an older article to one or a few newly-added
+                          subscribers.
                         </p>
                       </button>
 
                       <button
                         type="button"
-                        onClick={() => { setTargetMode('all'); setPreviewResult(null); }}
+                        onClick={() => {
+                          setTargetMode('all');
+                          setPreviewResult(null);
+                        }}
                         className={`rounded-lg border px-3 py-3 text-left transition-colors ${
                           targetMode === 'all'
                             ? 'border-purple-300 bg-purple-50 text-purple-900'
@@ -264,10 +270,20 @@ export function ArticleReshareDialog({
                               className="pl-9"
                             />
                           </div>
-                          <Button variant="outline" size="sm" onClick={selectAllVisible} disabled={visibleSubscribers.length === 0}>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={selectAllVisible}
+                            disabled={visibleSubscribers.length === 0}
+                          >
                             Select Visible
                           </Button>
-                          <Button variant="outline" size="sm" onClick={clearSelection} disabled={selectedCount === 0}>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={clearSelection}
+                            disabled={selectedCount === 0}
+                          >
                             Clear
                           </Button>
                         </div>
@@ -291,7 +307,10 @@ export function ArticleReshareDialog({
                             ) : (
                               visibleSubscribers.map((subscriber) => {
                                 const checked = selectedEmails.has(subscriber.email);
-                                const displayName = subscriber.name || `${subscriber.firstName} ${subscriber.surname}`.trim() || subscriber.email;
+                                const displayName =
+                                  subscriber.name ||
+                                  `${subscriber.firstName} ${subscriber.surname}`.trim() ||
+                                  subscriber.email;
 
                                 return (
                                   <label
@@ -307,8 +326,12 @@ export function ArticleReshareDialog({
                                       className="mt-0.5 h-4 w-4 rounded border-gray-300 text-purple-600 focus:ring-purple-500"
                                     />
                                     <div className="min-w-0">
-                                      <p className="text-sm font-medium text-gray-900 truncate">{displayName}</p>
-                                      <p className="text-xs text-muted-foreground truncate">{subscriber.email}</p>
+                                      <p className="text-sm font-medium text-gray-900 truncate">
+                                        {displayName}
+                                      </p>
+                                      <p className="text-xs text-muted-foreground truncate">
+                                        {subscriber.email}
+                                      </p>
                                     </div>
                                   </label>
                                 );
@@ -356,8 +379,12 @@ export function ArticleReshareDialog({
                           <div className="max-h-72 overflow-y-auto divide-y">
                             {previewResult.recipients.map((recipient) => (
                               <div key={recipient.email} className="px-3 py-2.5">
-                                <p className="text-sm text-gray-900 truncate">{recipient.name || recipient.firstName || recipient.email}</p>
-                                <p className="text-xs text-muted-foreground truncate">{recipient.email}</p>
+                                <p className="text-sm text-gray-900 truncate">
+                                  {recipient.name || recipient.firstName || recipient.email}
+                                </p>
+                                <p className="text-xs text-muted-foreground truncate">
+                                  {recipient.email}
+                                </p>
                               </div>
                             ))}
                           </div>
@@ -390,13 +417,16 @@ export function ArticleReshareDialog({
                   </CardHeader>
                   <CardContent className="space-y-2 text-xs text-muted-foreground">
                     <p>
-                      <strong className="text-foreground">Template:</strong> Recipients get the same branded article notification used at publish time.
+                      <strong className="text-foreground">Template:</strong> Recipients get the same
+                      branded article notification used at publish time.
                     </p>
                     <p>
-                      <strong className="text-foreground">Audience:</strong> Only active newsletter subscribers are eligible for resend delivery.
+                      <strong className="text-foreground">Audience:</strong> Only active newsletter
+                      subscribers are eligible for resend delivery.
                     </p>
                     <p>
-                      <strong className="text-foreground">Safety:</strong> Preview always runs first so you can confirm the exact resend list.
+                      <strong className="text-foreground">Safety:</strong> Preview always runs first
+                      so you can confirm the exact resend list.
                     </p>
                   </CardContent>
                 </Card>
@@ -405,10 +435,18 @@ export function ArticleReshareDialog({
           </div>
 
           <DialogFooter className="gap-2 sm:gap-0">
-            <Button variant="outline" onClick={() => onOpenChange(false)} disabled={isPreviewing || isSending}>
+            <Button
+              variant="outline"
+              onClick={() => onOpenChange(false)}
+              disabled={isPreviewing || isSending}
+            >
               Cancel
             </Button>
-            <Button variant="outline" onClick={handlePreview} disabled={!canPreview || isPreviewing || isSending}>
+            <Button
+              variant="outline"
+              onClick={handlePreview}
+              disabled={!canPreview || isPreviewing || isSending}
+            >
               {isPreviewing ? (
                 <Loader2 className="h-4 w-4 mr-1.5 animate-spin" />
               ) : (
@@ -447,18 +485,26 @@ export function ArticleReshareDialog({
               <div className="rounded-lg bg-muted/40 p-3">
                 <p className="text-xs">
                   <strong>Audience:</strong>{' '}
-                  {targetMode === 'all' ? 'All active newsletter subscribers' : 'Selected newsletter subscribers only'}
+                  {targetMode === 'all'
+                    ? 'All active newsletter subscribers'
+                    : 'Selected newsletter subscribers only'}
                 </p>
               </div>
-              <p className="text-xs text-amber-600">
-                This sends immediately and cannot be undone.
-              </p>
+              <p className="text-xs text-amber-600">This sends immediately and cannot be undone.</p>
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel disabled={isSending}>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={handleSend} className="bg-purple-600 hover:bg-purple-700" disabled={isSending}>
-              {isSending ? <Loader2 className="h-4 w-4 mr-1.5 animate-spin" /> : <Send className="h-4 w-4 mr-1.5" />}
+            <AlertDialogAction
+              onClick={handleSend}
+              className="bg-purple-600 hover:bg-purple-700"
+              disabled={isSending}
+            >
+              {isSending ? (
+                <Loader2 className="h-4 w-4 mr-1.5 animate-spin" />
+              ) : (
+                <Send className="h-4 w-4 mr-1.5" />
+              )}
               Confirm & Send
             </AlertDialogAction>
           </AlertDialogFooter>

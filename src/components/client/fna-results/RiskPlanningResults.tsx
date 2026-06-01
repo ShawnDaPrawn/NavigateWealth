@@ -9,12 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../..
 import { Badge } from '../../ui/badge';
 import { Separator } from '../../ui/separator';
 import { Alert, AlertDescription } from '../../ui/alert';
-import { 
-  Shield, 
-  Info,
-  AlertTriangle,
-  FileText
-} from 'lucide-react';
+import { Shield, Info, AlertTriangle, FileText } from 'lucide-react';
 
 // Import types from the admin module
 interface FinalRiskNeed {
@@ -73,14 +68,19 @@ const formatDate = (dateString: string): string => {
   return new Date(dateString).toLocaleDateString('en-ZA', {
     year: 'numeric',
     month: 'long',
-    day: 'numeric'
+    day: 'numeric',
   });
 };
 
 export function RiskPlanningResults({ fna }: RiskPlanningResultsProps) {
   const { finalNeeds, inputData, calculations, complianceDisclaimers, publishedAt } = fna;
   // inputData / calculations.metadata are loosely typed; read the fields this view uses.
-  const input = inputData as { currentAge?: number; retirementAge?: number; dependants?: unknown[]; netMonthlyIncome?: number };
+  const input = inputData as {
+    currentAge?: number;
+    retirementAge?: number;
+    dependants?: unknown[];
+    netMonthlyIncome?: number;
+  };
   const calcMeta = calculations.metadata as { calculatedAt?: string; systemVersion?: string };
 
   return (
@@ -93,9 +93,7 @@ export function RiskPlanningResults({ fna }: RiskPlanningResultsProps) {
           </div>
           <div className="flex-1">
             <h1 className="text-3xl font-bold mb-2">Risk Planning Analysis Report</h1>
-            <p className="text-blue-100 text-lg mb-4">
-              Comprehensive Financial Needs Analysis
-            </p>
+            <p className="text-blue-100 text-lg mb-4">Comprehensive Financial Needs Analysis</p>
             <div className="flex flex-wrap gap-6 text-sm">
               <div>
                 <p className="text-blue-200 mb-1">Client Name</p>
@@ -129,11 +127,12 @@ export function RiskPlanningResults({ fna }: RiskPlanningResultsProps) {
         </CardHeader>
         <CardContent className="space-y-6">
           <p className="text-gray-700 leading-relaxed">
-            This comprehensive Risk Planning Analysis has been prepared to assess your life insurance and risk 
-            protection requirements. The analysis considers your current financial situation, dependants, 
-            income, debts, and existing insurance cover to determine appropriate protection levels for you and your family.
+            This comprehensive Risk Planning Analysis has been prepared to assess your life
+            insurance and risk protection requirements. The analysis considers your current
+            financial situation, dependants, income, debts, and existing insurance cover to
+            determine appropriate protection levels for you and your family.
           </p>
-          
+
           {/* Key Client Information */}
           <div className="bg-gray-50 rounded-lg p-6">
             <h3 className="font-semibold text-gray-900 mb-4">Your Financial Profile</h3>
@@ -159,7 +158,9 @@ export function RiskPlanningResults({ fna }: RiskPlanningResultsProps) {
               {input.netMonthlyIncome && (
                 <div>
                   <p className="text-sm text-gray-600 mb-1">Monthly Income</p>
-                  <p className="text-lg font-semibold text-gray-900">{formatCurrency(input.netMonthlyIncome)}</p>
+                  <p className="text-lg font-semibold text-gray-900">
+                    {formatCurrency(input.netMonthlyIncome)}
+                  </p>
                 </div>
               )}
             </div>
@@ -181,16 +182,21 @@ export function RiskPlanningResults({ fna }: RiskPlanningResultsProps) {
               const isMonthly = need.riskType.includes('incomeProtection');
               const isOverinsured = need.isOverinsured ?? false;
               const hasOverride = !!need.advisorOverride;
-              
+
               return (
                 <div key={need.riskType}>
-                  <div className={`rounded-lg border-2 p-6 ${isOverinsured ? 'border-amber-300 bg-amber-50' : 'border-gray-200 bg-white'}`}>
+                  <div
+                    className={`rounded-lg border-2 p-6 ${isOverinsured ? 'border-amber-300 bg-amber-50' : 'border-gray-200 bg-white'}`}
+                  >
                     {/* Cover Type Header */}
                     <div className="flex items-center justify-between mb-4">
                       <h3 className="text-xl font-semibold text-gray-900">{need.label}</h3>
                       <div className="flex gap-2">
                         {isOverinsured && (
-                          <Badge variant="outline" className="bg-amber-100 text-amber-800 border-amber-400">
+                          <Badge
+                            variant="outline"
+                            className="bg-amber-100 text-amber-800 border-amber-400"
+                          >
                             Overinsured
                           </Badge>
                         )}
@@ -208,34 +214,39 @@ export function RiskPlanningResults({ fna }: RiskPlanningResultsProps) {
                       <div className="bg-gray-50 p-4 rounded-lg">
                         <p className="text-sm text-gray-600 mb-1">Calculated Need</p>
                         <p className="text-lg font-bold text-gray-900">
-                          {formatCurrency(need.grossNeed)}{isMonthly && '/mo'}
+                          {formatCurrency(need.grossNeed)}
+                          {isMonthly && '/mo'}
                         </p>
                       </div>
                       <div className="bg-gray-50 p-4 rounded-lg">
                         <p className="text-sm text-gray-600 mb-1">Existing Cover</p>
                         <p className="text-lg font-bold text-gray-900">
-                          {formatCurrency(need.existingCoverTotal)}{isMonthly && '/mo'}
+                          {formatCurrency(need.existingCoverTotal)}
+                          {isMonthly && '/mo'}
                         </p>
                       </div>
                       {isOverinsured ? (
                         <div className="bg-amber-100 p-4 rounded-lg">
                           <p className="text-sm text-amber-800 mb-1">Excess Cover</p>
                           <p className="text-lg font-bold text-amber-900">
-                            {formatCurrency(need.overinsuredAmount ?? 0)}{isMonthly && '/mo'}
+                            {formatCurrency(need.overinsuredAmount ?? 0)}
+                            {isMonthly && '/mo'}
                           </p>
                         </div>
                       ) : (
                         <div className="bg-gray-50 p-4 rounded-lg">
                           <p className="text-sm text-gray-600 mb-1">Shortfall</p>
                           <p className="text-lg font-bold text-gray-900">
-                            {formatCurrency(need.netShortfall)}{isMonthly && '/mo'}
+                            {formatCurrency(need.netShortfall)}
+                            {isMonthly && '/mo'}
                           </p>
                         </div>
                       )}
                       <div className="bg-blue-50 p-4 rounded-lg border-2 border-blue-200">
                         <p className="text-sm text-blue-700 mb-1 font-medium">Recommended Cover</p>
                         <p className="text-xl font-bold text-blue-900">
-                          {formatCurrency(need.finalRecommendedCover)}{isMonthly && '/mo'}
+                          {formatCurrency(need.finalRecommendedCover)}
+                          {isMonthly && '/mo'}
                         </p>
                       </div>
                     </div>
@@ -245,9 +256,12 @@ export function RiskPlanningResults({ fna }: RiskPlanningResultsProps) {
                       <Alert className="mb-4 border-amber-400 bg-amber-50">
                         <AlertTriangle className="h-4 w-4 text-amber-600" />
                         <AlertDescription className="text-amber-900">
-                          <strong>Overinsurance Identified:</strong> Your existing cover of {formatCurrency(need.existingCoverTotal)}{isMonthly && '/mo'} 
-                          {' '}exceeds your calculated need by {formatCurrency(need.overinsuredAmount ?? 0)}{isMonthly && '/mo'}. 
-                          You may wish to consider reducing this cover to avoid unnecessary premium expenditure.
+                          <strong>Overinsurance Identified:</strong> Your existing cover of{' '}
+                          {formatCurrency(need.existingCoverTotal)}
+                          {isMonthly && '/mo'} exceeds your calculated need by{' '}
+                          {formatCurrency(need.overinsuredAmount ?? 0)}
+                          {isMonthly && '/mo'}. You may wish to consider reducing this cover to
+                          avoid unnecessary premium expenditure.
                         </AlertDescription>
                       </Alert>
                     )}
@@ -255,24 +269,29 @@ export function RiskPlanningResults({ fna }: RiskPlanningResultsProps) {
                     {/* Existing Cover Breakdown */}
                     {(need.existingCoverPersonal > 0 || need.existingCoverGroup > 0) && (
                       <div className="bg-gray-50 p-4 rounded-lg mb-4">
-                        <p className="text-sm font-medium text-gray-700 mb-2">Existing Cover Breakdown</p>
+                        <p className="text-sm font-medium text-gray-700 mb-2">
+                          Existing Cover Breakdown
+                        </p>
                         <div className="grid grid-cols-3 gap-4 text-sm">
                           <div>
                             <p className="text-gray-600">Personal Cover</p>
                             <p className="font-semibold text-gray-900">
-                              {formatCurrency(need.existingCoverPersonal)}{isMonthly && '/mo'}
+                              {formatCurrency(need.existingCoverPersonal)}
+                              {isMonthly && '/mo'}
                             </p>
                           </div>
                           <div>
                             <p className="text-gray-600">Group Scheme Cover</p>
                             <p className="font-semibold text-gray-900">
-                              {formatCurrency(need.existingCoverGroup)}{isMonthly && '/mo'}
+                              {formatCurrency(need.existingCoverGroup)}
+                              {isMonthly && '/mo'}
                             </p>
                           </div>
                           <div>
                             <p className="text-gray-600">Total Existing</p>
                             <p className="font-semibold text-gray-900">
-                              {formatCurrency(need.existingCoverTotal)}{isMonthly && '/mo'}
+                              {formatCurrency(need.existingCoverTotal)}
+                              {isMonthly && '/mo'}
                             </p>
                           </div>
                         </div>
@@ -297,7 +316,9 @@ export function RiskPlanningResults({ fna }: RiskPlanningResultsProps) {
                     {/* Risk Notes */}
                     {need.riskNotes && need.riskNotes.length > 0 && (
                       <div>
-                        <p className="text-sm font-medium text-gray-700 mb-2">Important Considerations</p>
+                        <p className="text-sm font-medium text-gray-700 mb-2">
+                          Important Considerations
+                        </p>
                         <ul className="space-y-1">
                           {need.riskNotes.map((note, idx) => (
                             <li key={idx} className="text-sm text-gray-600 flex gap-2">
@@ -309,7 +330,7 @@ export function RiskPlanningResults({ fna }: RiskPlanningResultsProps) {
                       </div>
                     )}
                   </div>
-                  
+
                   {index < finalNeeds.length - 1 && <Separator className="my-6" />}
                 </div>
               );
@@ -379,23 +400,39 @@ export function RiskPlanningResults({ fna }: RiskPlanningResultsProps) {
               <ul className="space-y-2">
                 <li className="flex gap-2">
                   <span>•</span>
-                  <span>This analysis is based on your current financial situation and the information provided at the time of assessment.</span>
+                  <span>
+                    This analysis is based on your current financial situation and the information
+                    provided at the time of assessment.
+                  </span>
                 </li>
                 <li className="flex gap-2">
                   <span>•</span>
-                  <span>Your insurance needs may change as your circumstances evolve (marriage, children, career changes, etc.).</span>
+                  <span>
+                    Your insurance needs may change as your circumstances evolve (marriage,
+                    children, career changes, etc.).
+                  </span>
                 </li>
                 <li className="flex gap-2">
                   <span>•</span>
-                  <span>We recommend reviewing your risk protection annually or when significant life events occur.</span>
+                  <span>
+                    We recommend reviewing your risk protection annually or when significant life
+                    events occur.
+                  </span>
                 </li>
                 <li className="flex gap-2">
                   <span>•</span>
-                  <span>Please consult with your financial adviser to discuss the implementation of these recommendations and to understand all terms, conditions, and exclusions of any insurance products.</span>
+                  <span>
+                    Please consult with your financial adviser to discuss the implementation of
+                    these recommendations and to understand all terms, conditions, and exclusions of
+                    any insurance products.
+                  </span>
                 </li>
                 <li className="flex gap-2">
                   <span>•</span>
-                  <span>The final insurance cover amounts and premiums are subject to underwriting approval by the relevant insurance providers.</span>
+                  <span>
+                    The final insurance cover amounts and premiums are subject to underwriting
+                    approval by the relevant insurance providers.
+                  </span>
                 </li>
               </ul>
             </div>
@@ -407,9 +444,7 @@ export function RiskPlanningResults({ fna }: RiskPlanningResultsProps) {
       <div className="text-center text-sm text-gray-500 pb-8 border-t pt-6">
         <p>This Financial Needs Analysis report was prepared by Navigate Wealth</p>
         <p className="mt-1">Licensed Financial Services Provider</p>
-        {publishedAt && (
-          <p className="mt-2">Report generated on {formatDate(publishedAt)}</p>
-        )}
+        {publishedAt && <p className="mt-2">Report generated on {formatDate(publishedAt)}</p>}
       </div>
     </div>
   );

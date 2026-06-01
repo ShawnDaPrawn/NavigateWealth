@@ -20,11 +20,7 @@ export { VascoSessionWorkspace } from './VascoSessionWorkspace';
 export { VascoInlineChatCard } from './VascoInlineChatCard';
 export type { VascoInlineChatCardProps } from './VascoInlineChatCard';
 export { useVascoStream, VascoStreamError } from './useVascoStream';
-export type {
-  UseVascoStreamOptions,
-  UseVascoStreamReturn,
-  StreamResult,
-} from './useVascoStream';
+export type { UseVascoStreamOptions, UseVascoStreamReturn, StreamResult } from './useVascoStream';
 export type {
   VascoChatMessage as VascoChatMessageType,
   VascoCitation,

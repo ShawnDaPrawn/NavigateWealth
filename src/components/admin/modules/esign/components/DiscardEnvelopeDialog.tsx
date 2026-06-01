@@ -79,8 +79,8 @@ export function DiscardEnvelopeDialog({
             )}
             {isSent && (
               <span className="block text-amber-600">
-                All recipients will be notified that this envelope has been
-                discarded and signing links will be invalidated.
+                All recipients will be notified that this envelope has been discarded and signing
+                links will be invalidated.
               </span>
             )}
           </AlertDialogDescription>

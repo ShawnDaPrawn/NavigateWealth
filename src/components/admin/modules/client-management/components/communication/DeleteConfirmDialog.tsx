@@ -8,12 +8,7 @@
 import React from 'react';
 import { Button } from '../../../../../ui/button';
 import { Alert, AlertDescription } from '../../../../../ui/alert';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from '../../../../../ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../../../../../ui/dialog';
 import { AlertCircle, Loader2, Trash2 } from 'lucide-react';
 
 export interface DeleteConfirmDialogProps {
@@ -42,8 +37,8 @@ export function DeleteConfirmDialog({
           <Alert variant="destructive" className="bg-red-50 border-red-200">
             <AlertCircle className="h-4 w-4" />
             <AlertDescription className="text-sm text-red-900">
-              This action cannot be undone. The communication will be permanently
-              removed from both admin and client views.
+              This action cannot be undone. The communication will be permanently removed from both
+              admin and client views.
             </AlertDescription>
           </Alert>
           <p className="text-sm text-gray-600">
@@ -51,19 +46,10 @@ export function DeleteConfirmDialog({
           </p>
         </div>
         <div className="flex items-center justify-end gap-3 pt-4 border-t">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => onOpenChange(false)}
-          >
+          <Button variant="outline" size="sm" onClick={() => onOpenChange(false)}>
             Cancel
           </Button>
-          <Button
-            variant="destructive"
-            size="sm"
-            onClick={onConfirm}
-            disabled={isPending}
-          >
+          <Button variant="destructive" size="sm" onClick={onConfirm} disabled={isPending}>
             {isPending ? (
               <div className="contents">
                 <Loader2 className="h-4 w-4 mr-2 animate-spin" />

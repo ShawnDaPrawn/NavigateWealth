@@ -32,8 +32,6 @@ test.describe('signer — open + render signing page', () => {
     // public route always lands on one of these. We just want to make
     // sure no JS error escapes.
     await page.waitForTimeout(1500);
-    expect(
-      consoleErrors.filter((e) => !/ResizeObserver loop/.test(e)),
-    ).toEqual([]);
+    expect(consoleErrors.filter((e) => !/ResizeObserver loop/.test(e))).toEqual([]);
   });
 });

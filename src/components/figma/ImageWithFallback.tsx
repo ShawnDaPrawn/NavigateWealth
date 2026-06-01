@@ -1,22 +1,22 @@
-import React, { useState, useMemo } from 'react'
-import { optimizeUnsplashUrl } from '../../utils/imageOptimization'
+import React, { useState, useMemo } from 'react';
+import { optimizeUnsplashUrl } from '../../utils/imageOptimization';
 
 const ERROR_IMG_SRC =
-  'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iODgiIGhlaWdodD0iODgiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyIgc3Ryb2tlPSIjMDAwIiBzdHJva2UtbGluZWpvaW49InJvdW5kIiBvcGFjaXR5PSIuMyIgZmlsbD0ibm9uZSIgc3Ryb2tlLXdpZHRoPSIzLjciPjxyZWN0IHg9IjE2IiB5PSIxNiIgd2lkdGg9IjU2IiBoZWlnaHQ9IjU2IiByeD0iNiIvPjxwYXRoIGQ9Im0xNiA1OCAxNi0xOCAzMiAzMiIvPjxjaXJjbGUgY3g9IjUzIiBjeT0iMzUiIHI9IjciLz48L3N2Zz4KCg=='
+  'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iODgiIGhlaWdodD0iODgiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyIgc3Ryb2tlPSIjMDAwIiBzdHJva2UtbGluZWpvaW49InJvdW5kIiBvcGFjaXR5PSIuMyIgZmlsbD0ibm9uZSIgc3Ryb2tlLXdpZHRoPSIzLjciPjxyZWN0IHg9IjE2IiB5PSIxNiIgd2lkdGg9IjU2IiBoZWlnaHQ9IjU2IiByeD0iNiIvPjxwYXRoIGQ9Im0xNiA1OCAxNi0xOCAzMiAzMiIvPjxjaXJjbGUgY3g9IjUzIiBjeT0iMzUiIHI9IjciLz48L3N2Zz4KCg==';
 
 export function ImageWithFallback(props: React.ImgHTMLAttributes<HTMLImageElement>) {
-  const [didError, setDidError] = useState(false)
-  const [isLoaded, setIsLoaded] = useState(false)
+  const [didError, setDidError] = useState(false);
+  const [isLoaded, setIsLoaded] = useState(false);
 
   const handleError = () => {
-    setDidError(true)
-  }
+    setDidError(true);
+  };
 
   const handleLoad = () => {
-    setIsLoaded(true)
-  }
+    setIsLoaded(true);
+  };
 
-  const { src, alt, style, className, loading, decoding, width, height, ...rest } = props
+  const { src, alt, style, className, loading, decoding, width, height, ...rest } = props;
 
   // Optimize Unsplash URLs automatically
   const optimizedSrc = useMemo(() => {
@@ -25,7 +25,7 @@ export function ImageWithFallback(props: React.ImgHTMLAttributes<HTMLImageElemen
         width: width ? Number(width) : 800,
         height: height ? Number(height) : undefined,
         quality: 80,
-        format: 'auto'
+        format: 'auto',
       });
     }
     return src;
@@ -41,18 +41,18 @@ export function ImageWithFallback(props: React.ImgHTMLAttributes<HTMLImageElemen
       </div>
     </div>
   ) : (
-    <img 
-      src={optimizedSrc} 
-      alt={alt} 
+    <img
+      src={optimizedSrc}
+      alt={alt}
       className={`transition-opacity duration-300 ${isLoaded ? 'opacity-100' : 'opacity-0'} ${className ?? ''}`}
-      style={style} 
+      style={style}
       width={width}
       height={height}
       loading={loading || 'lazy'}
       decoding={decoding || 'async'}
-      {...rest} 
+      {...rest}
       onError={handleError}
       onLoad={handleLoad}
     />
-  )
+  );
 }

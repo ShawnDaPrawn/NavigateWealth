@@ -9,39 +9,41 @@ const columns = [
   { key: 'complaintType', label: 'Type', type: 'text' as const },
   { key: 'channel', label: 'Channel', type: 'text' as const },
   { key: 'productType', label: 'Product', type: 'text' as const },
-  { 
-    key: 'tat', 
-    label: 'TAT Progress', 
+  {
+    key: 'tat',
+    label: 'TAT Progress',
     type: 'custom' as const,
     render: (_: unknown, record: ComplianceRecord) => (
       <div className="space-y-1">
         <div className="text-sm font-medium">
-          {(record.tatDays ?? 0)}/{(record.targetTAT ?? 0)} days
+          {record.tatDays ?? 0}/{record.targetTAT ?? 0} days
         </div>
         <div className="w-full bg-gray-200 rounded-full h-1.5">
-          <div 
+          <div
             className={`h-1.5 rounded-full ${
               (record.tatDays ?? 0) <= (record.targetTAT ?? 0) * 0.7
-                ? 'bg-green-500' 
-                : (record.tatDays ?? 0) <= (record.targetTAT ?? 0) 
-                ? 'bg-yellow-500' 
-                : 'bg-red-500'
+                ? 'bg-green-500'
+                : (record.tatDays ?? 0) <= (record.targetTAT ?? 0)
+                  ? 'bg-yellow-500'
+                  : 'bg-red-500'
             }`}
-            style={{ width: `${Math.min(((record.tatDays ?? 0) / (record.targetTAT ?? 0)) * 100, 100)}%` }}
+            style={{
+              width: `${Math.min(((record.tatDays ?? 0) / (record.targetTAT ?? 0)) * 100, 100)}%`,
+            }}
           />
         </div>
       </div>
-    )
+    ),
   },
   { key: 'outcome', label: 'Outcome', type: 'badge' as const },
-  { 
-    key: 'redressAmount', 
-    label: 'Redress', 
+  {
+    key: 'redressAmount',
+    label: 'Redress',
     type: 'custom' as const,
-    render: (value: number) => value > 0 ? `R${value.toLocaleString()}` : '—'
+    render: (value: number) => (value > 0 ? `R${value.toLocaleString()}` : '—'),
   },
   { key: 'tcfOutcome', label: 'TCF Outcome', type: 'text' as const },
-  { key: 'status', label: 'Status', type: 'badge' as const }
+  { key: 'status', label: 'Status', type: 'badge' as const },
 ];
 
 const filters = [
@@ -53,8 +55,8 @@ const filters = [
       { value: 'Premium Dispute', label: 'Premium Dispute' },
       { value: 'Service Quality', label: 'Service Quality' },
       { value: 'Mis-selling', label: 'Mis-selling' },
-      { value: 'Administrative', label: 'Administrative' }
-    ]
+      { value: 'Administrative', label: 'Administrative' },
+    ],
   },
   {
     key: 'outcome',
@@ -63,9 +65,9 @@ const filters = [
       { value: 'In Progress', label: 'In Progress' },
       { value: 'Upheld - Partial', label: 'Upheld - Partial' },
       { value: 'Upheld - Resolved', label: 'Upheld - Resolved' },
-      { value: 'Under Investigation', label: 'Under Investigation' }
-    ]
-  }
+      { value: 'Under Investigation', label: 'Under Investigation' },
+    ],
+  },
 ];
 
 export function ComplaintsTCFTab() {

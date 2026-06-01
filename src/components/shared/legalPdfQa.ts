@@ -70,9 +70,11 @@ function isVisibleMetricNode(node: Element) {
 }
 
 function getMetricNodes(pageContent: HTMLElement) {
-  return Array.from(pageContent.querySelectorAll(
-    'h1, h2, h3, h4, p, ul, ol, blockquote, table, .legal-pdf-table-wrap, .legal-signatures, .legal-signature-line',
-  )).filter(isVisibleMetricNode);
+  return Array.from(
+    pageContent.querySelectorAll(
+      'h1, h2, h3, h4, p, ul, ol, blockquote, table, .legal-pdf-table-wrap, .legal-signatures, .legal-signature-line',
+    ),
+  ).filter(isVisibleMetricNode);
 }
 
 function endsPageWithHeading(metricNodes: Element[]) {
@@ -153,7 +155,9 @@ export function analyzeLegalPagedPreview(container: HTMLElement): LegalPdfQaAnal
     pageCount: metrics.length,
     maxGapMm: roundMetric(Math.max(0, ...metrics.map((metric) => metric.gapMm))),
     averageGapMm: roundMetric(
-      metrics.length > 0 ? metrics.reduce((sum, metric) => sum + metric.gapMm, 0) / metrics.length : 0,
+      metrics.length > 0
+        ? metrics.reduce((sum, metric) => sum + metric.gapMm, 0) / metrics.length
+        : 0,
     ),
     maxOverflowMm: roundMetric(Math.max(0, ...metrics.map((metric) => metric.overflowMm))),
     largeGapPages,

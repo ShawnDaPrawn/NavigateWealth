@@ -13,7 +13,7 @@ export const SectionHeaderBlock: BlockDefinition = {
   description: 'Numbered section title',
   initialData: {
     number: '1.',
-    title: 'SECTION TITLE'
+    title: 'SECTION TITLE',
   },
   render: ({ block }) => {
     const data = block.data as SectionHeaderData;
@@ -29,21 +29,21 @@ export const SectionHeaderBlock: BlockDefinition = {
       <div className="contents">
         <div className="space-y-2">
           <Label className="text-xs">Section Number</Label>
-          <Input 
-            value={(block.data as SectionHeaderData).number || ''} 
+          <Input
+            value={(block.data as SectionHeaderData).number || ''}
             onChange={(e) => onChange('number', e.target.value)}
             placeholder="e.g. 1."
           />
         </div>
         <div className="space-y-2">
           <Label className="text-xs">Title</Label>
-          <Input 
-            value={(block.data as SectionHeaderData).title || ''} 
+          <Input
+            value={(block.data as SectionHeaderData).title || ''}
             onChange={(e) => onChange('title', e.target.value)}
             placeholder="e.g. CLIENT DETAILS"
           />
         </div>
       </div>
     );
-  }
+  },
 };

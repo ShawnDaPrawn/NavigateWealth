@@ -38,14 +38,20 @@ export function FNAIntakeConsentDialog({
 
         <Alert className="border-amber-200 bg-amber-50">
           <AlertCircle className="h-4 w-4 text-amber-600" />
-          <AlertDescription className="text-sm text-amber-900">{FNA_INTAKE_CONSENT_TEXT}</AlertDescription>
+          <AlertDescription className="text-sm text-amber-900">
+            {FNA_INTAKE_CONSENT_TEXT}
+          </AlertDescription>
         </Alert>
 
         <DialogFooter className="gap-2 sm:gap-0">
           <Button variant="outline" onClick={() => onOpenChange(false)} disabled={isSubmitting}>
             Cancel
           </Button>
-          <Button onClick={onConfirm} disabled={isSubmitting} className="bg-primary text-primary-foreground">
+          <Button
+            onClick={onConfirm}
+            disabled={isSubmitting}
+            className="bg-primary text-primary-foreground"
+          >
             {isSubmitting ? 'Submitting…' : 'Submit for review'}
           </Button>
         </DialogFooter>

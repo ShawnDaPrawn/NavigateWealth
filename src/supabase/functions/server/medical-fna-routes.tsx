@@ -3,13 +3,13 @@
  * Handles Medical Aid FNA calculation, storage, and versioning
  */
 
-import { Hono } from "npm:hono";
-import * as kv from "./kv_store.tsx";
-import { createModuleLogger } from "./stderr-logger.ts";
-import { authenticateUser, fnaErrorResponse } from "./fna-auth.ts";
-import { getErrMsg } from "./shared-logger-utils.ts";
-import { CreateSessionSchema, UpdateResultsSchema } from "./fna-validation.ts";
-import { formatZodError } from "./shared-validation-utils.ts";
+import { Hono } from 'npm:hono';
+import * as kv from './kv_store.tsx';
+import { createModuleLogger } from './stderr-logger.ts';
+import { authenticateUser, fnaErrorResponse } from './fna-auth.ts';
+import { getErrMsg } from './shared-logger-utils.ts';
+import { CreateSessionSchema, UpdateResultsSchema } from './fna-validation.ts';
+import { formatZodError } from './shared-validation-utils.ts';
 import { NetWorthSnapshotService } from './net-worth-snapshot-service.ts';
 
 const medicalFnaRoutes = new Hono();
@@ -18,20 +18,44 @@ const snapshotService = new NetWorthSnapshotService();
 
 /**
  * Shared shape for KV entries with date fields used in filter/sort callbacks */
-interface FnaSession { createdAt?: string; publishedAt?: string; version?: number; status?: string; [key: string]: unknown }
-interface FamilyMember { fullName?: string; dateOfBirth?: string; relationship?: string; isFinanciallyDependent?: boolean; [key: string]: unknown }
-interface AssetEntry { type?: string; value?: number; [key: string]: unknown }
-interface RiskPolicy { name?: string; coverAmount?: number; [key: string]: unknown }
-interface MedicalFNAInputs { currentPlan: { monthlyPremium: number }; netMonthlyIncome: number; [key: string]: unknown }
+interface FnaSession {
+  createdAt?: string;
+  publishedAt?: string;
+  version?: number;
+  status?: string;
+  [key: string]: unknown;
+}
+interface FamilyMember {
+  fullName?: string;
+  dateOfBirth?: string;
+  relationship?: string;
+  isFinanciallyDependent?: boolean;
+  [key: string]: unknown;
+}
+interface AssetEntry {
+  type?: string;
+  value?: number;
+  [key: string]: unknown;
+}
+interface RiskPolicy {
+  name?: string;
+  coverAmount?: number;
+  [key: string]: unknown;
+}
+interface MedicalFNAInputs {
+  currentPlan: { monthlyPremium: number };
+  netMonthlyIncome: number;
+  [key: string]: unknown;
+}
 
 /**
  * Get next Medical FNA version number for a client
  */
 async function getNextVersionNumber(clientId: string): Promise<number> {
   // Check for both legacy (colon) and new (underscore) formats
-  const legacyFnas = await kv.getByPrefix(`medical-fna:client:${clientId}:`) || [];
-  const newFnas = await kv.getByPrefix(`medical-fna:client_${clientId}_`) || [];
-  return (legacyFnas.length + newFnas.length) + 1;
+  const legacyFnas = (await kv.getByPrefix(`medical-fna:client:${clientId}:`)) || [];
+  const newFnas = (await kv.getByPrefix(`medical-fna:client_${clientId}_`)) || [];
+  return legacyFnas.length + newFnas.length + 1;
 }
 
 /**
@@ -40,7 +64,8 @@ async function getNextVersionNumber(clientId: string): Promise<number> {
 async function autoPopulateFromProfile(clientId: string) {
   try {
     log.info('ðŸ“‹ Auto-populating Medical FNA for client:', { clientId });
-    const { medicalStep1AutoPopulateFromResolver } = await import('./form-prefill-auto-populate.ts');
+    const { medicalStep1AutoPopulateFromResolver } =
+      await import('./form-prefill-auto-populate.ts');
     const step1 = await medicalStep1AutoPopulateFromResolver(clientId);
     const defaults = getDefaultMedicalFNAInputs();
     return {
@@ -62,15 +87,17 @@ async function autoPopulateFromProfile(clientId: string) {
   }
 }
 
-
 /**
  * Determine plan type from plan name
  */
-function determinePlanType(planName: string): 'hospital-only' | 'saver' | 'comprehensive' | 'network' {
+function determinePlanType(
+  planName: string,
+): 'hospital-only' | 'saver' | 'comprehensive' | 'network' {
   const name = planName.toLowerCase();
   if (name.includes('hospital') && !name.includes('saver')) return 'hospital-only';
   if (name.includes('saver') || name.includes('smart')) return 'saver';
-  if (name.includes('comprehensive') || name.includes('executive') || name.includes('classic')) return 'comprehensive';
+  if (name.includes('comprehensive') || name.includes('executive') || name.includes('classic'))
+    return 'comprehensive';
   if (name.includes('network')) return 'network';
   return 'comprehensive'; // Default
 }
@@ -143,8 +170,8 @@ function getDefaultMedicalFNAInputs() {
  */
 medicalFnaRoutes.get('/health', async (c) => {
   log.info('ðŸ“¥ GET /medical-fna/health - Health check');
-  return c.json({ 
-    status: 'ok', 
+  return c.json({
+    status: 'ok',
     module: 'medical-fna',
     routes: [
       'GET /client/:clientId',
@@ -172,13 +199,13 @@ medicalFnaRoutes.get('/client/:clientId', async (c) => {
   try {
     log.info('ðŸ“¥ GET /medical-fna/client/:clientId');
     await authenticateUser(c.req.header('Authorization'));
-    
+
     const clientId = c.req.param('clientId');
-    
+
     // Support both legacy (colon) and new (underscore) ID formats
-    const legacyFnas = await kv.getByPrefix(`medical-fna:client:${clientId}:`) || [];
-    const newFnas = await kv.getByPrefix(`medical-fna:client_${clientId}_`) || [];
-    
+    const legacyFnas = (await kv.getByPrefix(`medical-fna:client:${clientId}:`)) || [];
+    const newFnas = (await kv.getByPrefix(`medical-fna:client_${clientId}_`)) || [];
+
     const fnas = [...legacyFnas, ...newFnas];
 
     // Sort by createdAt descending (newest first)
@@ -187,7 +214,7 @@ medicalFnaRoutes.get('/client/:clientId', async (c) => {
       const dateB = new Date(b.createdAt || 0).getTime();
       return dateB - dateA;
     });
-    
+
     log.info(`âœ… Found ${fnas.length} Medical FNA sessions`);
     return c.json({ success: true, data: fnas });
   } catch (error: unknown) {
@@ -204,7 +231,7 @@ medicalFnaRoutes.get('/client/:clientId/latest-published', async (c) => {
   try {
     log.info('ðŸ“¥ GET /medical-fna/client/:clientId/latest-published');
     const clientId = c.req.param('clientId');
-    
+
     // Optional authentication - allow both authenticated clients and anon key access
     const authHeader = c.req.header('Authorization');
     if (authHeader) {
@@ -212,11 +239,17 @@ medicalFnaRoutes.get('/client/:clientId/latest-published', async (c) => {
         const user = await authenticateUser(authHeader);
         // If authenticated as a specific user (not admin), verify they're accessing their own data
         // Check authorization: admins can access all data, regular users only their own
-        const isAdmin = user.role === 'admin' || user.role === 'super_admin' || user.role === 'super-admin' || user.id === 'admin';
+        const isAdmin =
+          user.role === 'admin' ||
+          user.role === 'super_admin' ||
+          user.role === 'super-admin' ||
+          user.id === 'admin';
         const isOwnData = user.id === clientId;
-        
+
         if (!isAdmin && !isOwnData) {
-          log.warn(`âš ï¸ User ${user.id} (role: ${user.role}) attempting to access Medical FNA for client ${clientId}`);
+          log.warn(
+            `âš ï¸ User ${user.id} (role: ${user.role}) attempting to access Medical FNA for client ${clientId}`,
+          );
           return c.json({ success: false, error: 'Unauthorized access to client data' }, 403);
         }
       } catch (authError) {
@@ -228,13 +261,13 @@ medicalFnaRoutes.get('/client/:clientId/latest-published', async (c) => {
         log.info('Authentication failed, allowing unauthenticated access to published Medical FNA');
       }
     }
-    
+
     // Support both legacy (colon) and new (underscore) ID formats
-    const legacyFnas = await kv.getByPrefix(`medical-fna:client:${clientId}:`) || [];
-    const newFnas = await kv.getByPrefix(`medical-fna:client_${clientId}_`) || [];
-    
+    const legacyFnas = (await kv.getByPrefix(`medical-fna:client:${clientId}:`)) || [];
+    const newFnas = (await kv.getByPrefix(`medical-fna:client_${clientId}_`)) || [];
+
     const fnas = [...legacyFnas, ...newFnas];
-    
+
     const publishedFnas = fnas
       .filter((fna: FnaSession) => fna.status === 'published')
       .sort((a: FnaSession, b: FnaSession) => {
@@ -242,16 +275,20 @@ medicalFnaRoutes.get('/client/:clientId/latest-published', async (c) => {
         // Fallback to version if publishedAt is missing (legacy)
         const dateA = a.publishedAt ? new Date(a.publishedAt).getTime() : 0;
         const dateB = b.publishedAt ? new Date(b.publishedAt).getTime() : 0;
-        
+
         if (dateA !== dateB) {
           return dateB - dateA;
         }
         return b.version - a.version;
       });
-    
+
     const latestPublished = publishedFnas[0] || null;
-    
-    log.info(latestPublished ? `âœ… Latest published Medical FNA found: ${latestPublished.id}` : 'âš ï¸ No published Medical FNA');
+
+    log.info(
+      latestPublished
+        ? `âœ… Latest published Medical FNA found: ${latestPublished.id}`
+        : 'âš ï¸ No published Medical FNA',
+    );
     return c.json({ success: true, data: latestPublished });
   } catch (error: unknown) {
     log.error('âŒ Error fetching latest published Medical FNA:', error);
@@ -267,10 +304,10 @@ medicalFnaRoutes.get('/client/:clientId/auto-populate', async (c) => {
   try {
     log.info('ðŸ“¥ GET /medical-fna/client/:clientId/auto-populate');
     await authenticateUser(c.req.header('Authorization'));
-    
+
     const clientId = c.req.param('clientId');
     const inputs = await autoPopulateFromProfile(clientId);
-    
+
     log.info('âœ… Auto-population data generated');
     return c.json({ success: true, data: inputs });
   } catch (error: unknown) {
@@ -287,25 +324,25 @@ medicalFnaRoutes.post('/create', async (c) => {
   try {
     log.info('ðŸ“¥ POST /medical-fna/create');
     const user = await authenticateUser(c.req.header('Authorization'));
-    
+
     const body = await c.req.json();
-    
+
     // Validate input
     const parsed = CreateSessionSchema.safeParse(body);
     if (!parsed.success) {
       return c.json({ success: false, error: formatZodError(parsed.error) }, 400);
     }
-    
+
     const { clientId } = parsed.data;
-    
+
     log.info('Creating Medical FNA for client:', { clientId });
-    
+
     // Auto-populate from profile
     const inputs = await autoPopulateFromProfile(clientId);
-    
+
     // Get next version
     const version = await getNextVersionNumber(clientId);
-    
+
     // Create FNA session with URL-safe ID format (underscore instead of colon)
     const fnaId = `client_${clientId}_v${version}`;
     const fna = {
@@ -319,10 +356,10 @@ medicalFnaRoutes.post('/create', async (c) => {
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     };
-    
+
     // Save to KV store
     await kv.set(`medical-fna:${fnaId}`, fna);
-    
+
     log.info('âœ… Medical FNA created:', { fnaId });
     return c.json({ success: true, data: fna });
   } catch (error: unknown) {
@@ -339,26 +376,26 @@ medicalFnaRoutes.put('/inputs/:fnaId', async (c) => {
   try {
     log.info('ðŸ“¥ PUT /medical-fna/inputs/:fnaId');
     await authenticateUser(c.req.header('Authorization'));
-    
+
     const fnaId = c.req.param('fnaId');
     const inputUpdates = await c.req.json();
-    
+
     const fna = await kv.get(`medical-fna:${fnaId}`);
-    
+
     if (!fna) {
       return c.json({ success: false, error: 'Medical FNA not found' }, 404);
     }
-    
+
     // Merge inputs
     fna.inputs = {
       ...fna.inputs,
       ...inputUpdates,
     };
-    
+
     fna.updatedAt = new Date().toISOString();
-    
+
     await kv.set(`medical-fna:${fnaId}`, fna);
-    
+
     log.info('âœ… Medical FNA inputs updated');
     return c.json({ success: true, data: fna });
   } catch (error: unknown) {
@@ -375,16 +412,16 @@ medicalFnaRoutes.put('/results/:fnaId', async (c) => {
   try {
     log.info('ðŸ“¥ PUT /medical-fna/results/:fnaId');
     await authenticateUser(c.req.header('Authorization'));
-    
+
     const fnaId = c.req.param('fnaId');
     const { results, adjustments } = await c.req.json();
-    
+
     const fna = await kv.get(`medical-fna:${fnaId}`);
-    
+
     if (!fna) {
       return c.json({ success: false, error: 'Medical FNA not found' }, 404);
     }
-    
+
     // Validate results update
     const validationResult = UpdateResultsSchema.safeParse({ results, adjustments });
     if (!validationResult.success) {
@@ -392,18 +429,18 @@ medicalFnaRoutes.put('/results/:fnaId', async (c) => {
       log.error('âŒ Validation error updating Medical FNA results:', errMsg);
       return c.json({ success: false, error: errMsg }, 400);
     }
-    
+
     // Update results and adjustments
     if (results) fna.results = results;
     if (adjustments) fna.adjustments = adjustments;
-    
+
     // Also support 'calculations' alias for results if provided (for backward compatibility)
     if (results) fna.calculations = results;
-    
+
     fna.updatedAt = new Date().toISOString();
-    
+
     await kv.set(`medical-fna:${fnaId}`, fna);
-    
+
     log.info('âœ… Medical FNA results updated');
     return c.json({ success: true, data: fna });
   } catch (error: unknown) {
@@ -420,26 +457,26 @@ medicalFnaRoutes.post('/calculate/:fnaId', async (c) => {
   try {
     log.info('ðŸ“¥ POST /medical-fna/calculate/:fnaId');
     await authenticateUser(c.req.header('Authorization'));
-    
+
     const fnaId = c.req.param('fnaId');
     const fna = await kv.get(`medical-fna:${fnaId}`);
-    
+
     if (!fna) {
       return c.json({ success: false, error: 'Medical FNA not found' }, 404);
     }
-    
+
     log.info('ðŸ§® Running Medical FNA calculation...');
-    
+
     // Import calculation service dynamically
     // Note: In production, this would import the actual calculation service
     // For now, we'll create a placeholder that returns the structure
     const results = calculateMedicalFNA(fna.inputs);
-    
+
     fna.results = results;
     fna.updatedAt = new Date().toISOString();
-    
+
     await kv.set(`medical-fna:${fnaId}`, fna);
-    
+
     log.info('âœ… Medical FNA calculation complete');
     return c.json({ success: true, data: fna });
   } catch (error: unknown) {
@@ -456,19 +493,19 @@ medicalFnaRoutes.put('/draft/:fnaId', async (c) => {
   try {
     log.info('ðŸ“¥ PUT /medical-fna/draft/:fnaId');
     await authenticateUser(c.req.header('Authorization'));
-    
+
     const fnaId = c.req.param('fnaId');
     const fna = await kv.get(`medical-fna:${fnaId}`);
-    
+
     if (!fna) {
       return c.json({ success: false, error: 'Medical FNA not found' }, 404);
     }
-    
+
     fna.status = 'draft';
     fna.updatedAt = new Date().toISOString();
-    
+
     await kv.set(`medical-fna:${fnaId}`, fna);
-    
+
     log.info('âœ… Medical FNA saved as draft');
     return c.json({ success: true, data: fna });
   } catch (error: unknown) {
@@ -489,38 +526,38 @@ medicalFnaRoutes.post('/publish/:fnaId', async (c) => {
       method: c.req.method,
       headers: Object.fromEntries(c.req.raw.headers.entries()),
     });
-    
+
     const user = await authenticateUser(c.req.header('Authorization'));
     log.info('âœ… User authenticated:', { userId: user.id });
-    
+
     const fnaId = c.req.param('fnaId');
     log.info('ðŸ“Œ FNA ID from params:', { fnaId });
-    
+
     const fna = await kv.get(`medical-fna:${fnaId}`);
-    log.info('ðŸ” KV lookup result:', { 
+    log.info('ðŸ” KV lookup result:', {
       found: !!fna,
       key: `medical-fna:${fnaId}`,
       status: fna?.status,
     });
-    
+
     if (!fna) {
       log.error('âŒ Medical FNA not found in KV store:', { fnaId });
       return c.json({ success: false, error: 'Medical FNA not found' }, 404);
     }
-    
+
     fna.status = 'published';
     fna.publishedAt = new Date().toISOString();
     fna.publishedBy = user.id;
     fna.updatedAt = new Date().toISOString();
-    
+
     await kv.set(`medical-fna:${fnaId}`, fna);
-    
-    log.info('âœ… Medical FNA published successfully:', { 
-      fnaId, 
+
+    log.info('âœ… Medical FNA published successfully:', {
+      fnaId,
       clientId: fna.clientId,
       publishedBy: user.id,
     });
-    
+
     // Phase 4: Auto-snapshot net worth on FNA publish (fire-and-forget, Â§13)
     if (fna.clientId) {
       snapshotService.autoSnapshotFromKV(fna.clientId, 'medical-fna-publish').catch(() => {});
@@ -545,19 +582,19 @@ medicalFnaRoutes.post('/unpublish/:fnaId', async (c) => {
   try {
     log.info('ðŸ“¥ POST /medical-fna/unpublish/:fnaId');
     const user = await authenticateUser(c.req.header('Authorization'));
-    
+
     const fnaId = c.req.param('fnaId');
     const fna = await kv.get(`medical-fna:${fnaId}`);
-    
+
     if (!fna) {
       return c.json({ success: false, error: 'Medical FNA not found' }, 404);
     }
-    
+
     fna.status = 'draft';
     fna.updatedAt = new Date().toISOString();
-    
+
     await kv.set(`medical-fna:${fnaId}`, fna);
-    
+
     log.info('âœ… Medical FNA unpublished');
     return c.json({ success: true, data: fna });
   } catch (error: unknown) {
@@ -574,19 +611,19 @@ medicalFnaRoutes.put('/archive/:fnaId', async (c) => {
   try {
     log.info('ðŸ“¥ PUT /medical-fna/archive/:fnaId');
     await authenticateUser(c.req.header('Authorization'));
-    
+
     const fnaId = c.req.param('fnaId');
     const fna = await kv.get(`medical-fna:${fnaId}`);
-    
+
     if (!fna) {
       return c.json({ success: false, error: 'Medical FNA not found' }, 404);
     }
-    
+
     fna.status = 'archived';
     fna.updatedAt = new Date().toISOString();
-    
+
     await kv.set(`medical-fna:${fnaId}`, fna);
-    
+
     log.info('âœ… Medical FNA archived');
     return c.json({ success: true, data: fna });
   } catch (error: unknown) {
@@ -603,11 +640,11 @@ medicalFnaRoutes.delete('/delete/:fnaId', async (c) => {
   try {
     log.info('ðŸ“¥ DELETE /medical-fna/delete/:fnaId');
     await authenticateUser(c.req.header('Authorization'));
-    
+
     const fnaId = c.req.param('fnaId');
-    
+
     await kv.del(`medical-fna:${fnaId}`);
-    
+
     log.info('âœ… Medical FNA deleted');
     return c.json({ success: true, data: null });
   } catch (error: unknown) {
@@ -625,14 +662,14 @@ medicalFnaRoutes.get('/:fnaId', async (c) => {
   try {
     log.info('ðŸ“¥ GET /medical-fna/:fnaId');
     await authenticateUser(c.req.header('Authorization'));
-    
+
     const fnaId = c.req.param('fnaId');
     const fna = await kv.get(`medical-fna:${fnaId}`);
-    
+
     if (!fna) {
       return c.json({ success: false, error: 'Medical FNA not found' }, 404);
     }
-    
+
     log.info('âœ… Medical FNA retrieved');
     return c.json({ success: true, data: fna });
   } catch (error: unknown) {
@@ -650,7 +687,7 @@ medicalFnaRoutes.get('/:fnaId', async (c) => {
 function calculateMedicalFNA(inputs: MedicalFNAInputs) {
   // TODO: Implement full calculation logic here
   // For now, return placeholder structure
-  
+
   return {
     hospitalCover: {
       requiredTier: 3,
@@ -710,7 +747,10 @@ function calculateMedicalFNA(inputs: MedicalFNAInputs) {
         },
       ],
       overallScore: 75,
-      strengthsIdentified: ['Strong hospital cover protection', 'Premium is sustainable and affordable'],
+      strengthsIdentified: [
+        'Strong hospital cover protection',
+        'Premium is sustainable and affordable',
+      ],
       weaknessesIdentified: [],
     },
   };

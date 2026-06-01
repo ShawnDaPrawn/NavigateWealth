@@ -16,13 +16,7 @@ import {
 import { Button } from '../../../ui/button';
 import { Input } from '../../../ui/input';
 import { Label } from '../../../ui/label';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '../../../ui/select';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../../ui/select';
 import { Upload, Loader2, CheckCircle, FileText, X } from 'lucide-react';
 import { toast } from 'sonner';
 import { useAuth } from '../../../auth/AuthContext';
@@ -67,24 +61,27 @@ export function DocumentUploadModal({ open, onOpenChange }: DocumentUploadModalP
 
   const canSubmit = file !== null && title.trim() !== '' && category !== '';
 
-  const handleFileSelect = useCallback((selectedFile: File) => {
-    if (!ACCEPTED_TYPES.includes(selectedFile.type)) {
-      toast.error('Unsupported file type', {
-        description: 'Please upload a PDF, JPG, or PNG file.',
-      });
-      return;
-    }
-    if (selectedFile.size > MAX_FILE_SIZE) {
-      toast.error('File too large', {
-        description: 'Maximum file size is 10MB.',
-      });
-      return;
-    }
-    setFile(selectedFile);
-    if (!title) {
-      setTitle(selectedFile.name.replace(/\.[^/.]+$/, ''));
-    }
-  }, [title]);
+  const handleFileSelect = useCallback(
+    (selectedFile: File) => {
+      if (!ACCEPTED_TYPES.includes(selectedFile.type)) {
+        toast.error('Unsupported file type', {
+          description: 'Please upload a PDF, JPG, or PNG file.',
+        });
+        return;
+      }
+      if (selectedFile.size > MAX_FILE_SIZE) {
+        toast.error('File too large', {
+          description: 'Maximum file size is 10MB.',
+        });
+        return;
+      }
+      setFile(selectedFile);
+      if (!title) {
+        setTitle(selectedFile.name.replace(/\.[^/.]+$/, ''));
+      }
+    },
+    [title],
+  );
 
   const handleDrop = useCallback(
     (e: React.DragEvent) => {
@@ -152,20 +149,19 @@ export function DocumentUploadModal({ open, onOpenChange }: DocumentUploadModalP
             <Upload className="h-6 w-6 text-green-600" />
             <span>Upload Document</span>
           </DialogTitle>
-          <DialogDescription>
-            Add documents to your secure document vault
-          </DialogDescription>
+          <DialogDescription>Add documents to your secure document vault</DialogDescription>
         </DialogHeader>
 
         {submitted ? (
           <div className="flex flex-col items-center py-10 text-center">
             <CheckCircle className="h-14 w-14 text-green-500 mb-4" />
-            <h3 className="text-lg font-semibold text-black mb-2">
-              Upload Complete
-            </h3>
+            <h3 className="text-lg font-semibold text-black mb-2">Upload Complete</h3>
             <p className="text-sm text-gray-600 max-w-md">
-              <strong>{title}</strong> has been securely uploaded to your document vault
-              under <strong>{DOCUMENT_CATEGORIES.find((c) => c.value === category)?.label || category}</strong>.
+              <strong>{title}</strong> has been securely uploaded to your document vault under{' '}
+              <strong>
+                {DOCUMENT_CATEGORIES.find((c) => c.value === category)?.label || category}
+              </strong>
+              .
             </p>
             <Button className="mt-6" onClick={handleClose}>
               Done

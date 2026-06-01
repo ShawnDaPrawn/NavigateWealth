@@ -23,7 +23,7 @@ export const TaxPlanningFnaAPI = {
     logger.debug('[TaxPlanningFnaAPI] Auto-populating inputs', { clientId });
     try {
       const response = await api.post<{ success: boolean; data: Partial<TaxPlanningInputs> }>(
-        `/tax-planning-fna/client/${clientId}/auto-populate`
+        `/tax-planning-fna/client/${clientId}/auto-populate`,
       );
       return response.data;
     } catch (error) {
@@ -44,13 +44,13 @@ export const TaxPlanningFnaAPI = {
       recommendations: TaxRecommendation[];
       adviserNotes: string;
       status: 'draft' | 'published';
-    }
+    },
   ): Promise<FinalTaxPlan> {
     logger.debug('[TaxPlanningFnaAPI] Saving session', { clientId, status: data.status });
     try {
       const response = await api.post<{ success: boolean; data: FinalTaxPlan }>(
         '/tax-planning-fna/save',
-        { clientId, ...data }
+        { clientId, ...data },
       );
       return response.data;
     } catch (error) {
@@ -66,7 +66,7 @@ export const TaxPlanningFnaAPI = {
     logger.debug('[TaxPlanningFnaAPI] Fetching all sessions', { clientId });
     try {
       const response = await api.get<{ success: boolean; data: FinalTaxPlan[] }>(
-        `/tax-planning-fna/client/${clientId}`
+        `/tax-planning-fna/client/${clientId}`,
       );
       return response.data;
     } catch (error) {
@@ -82,7 +82,7 @@ export const TaxPlanningFnaAPI = {
     logger.debug('[TaxPlanningFnaAPI] Fetching latest published', { clientId });
     try {
       const response = await api.get<{ success: boolean; data: FinalTaxPlan | null }>(
-        `/tax-planning-fna/client/${clientId}/latest-published`
+        `/tax-planning-fna/client/${clientId}/latest-published`,
       );
       return response.data || null;
     } catch (error) {
@@ -105,7 +105,9 @@ export const TaxPlanningFnaAPI = {
    * Note: Not yet implemented on the backend — stubbed to prevent breaking consumers
    */
   async deleteSession(sessionId: string): Promise<void> {
-    logger.warn('[TaxPlanningFnaAPI] Delete not implemented for Tax Planning sessions', { sessionId });
+    logger.warn('[TaxPlanningFnaAPI] Delete not implemented for Tax Planning sessions', {
+      sessionId,
+    });
   },
 
   /**
@@ -113,7 +115,9 @@ export const TaxPlanningFnaAPI = {
    * Legacy support — use saveSession with status='published' for new code
    */
   async publishSession(sessionId: string): Promise<void> {
-    logger.warn('[TaxPlanningFnaAPI] Use saveSession with status="published" instead', { sessionId });
+    logger.warn('[TaxPlanningFnaAPI] Use saveSession with status="published" instead', {
+      sessionId,
+    });
   },
 
   /**

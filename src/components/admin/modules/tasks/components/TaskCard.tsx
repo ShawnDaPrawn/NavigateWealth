@@ -1,15 +1,23 @@
 /**
  * Task Management Module - Task Card Component
  * Navigate Wealth Admin Dashboard
- * 
+ *
  * Individual task card displayed in Kanban columns
  * Supports drag-and-drop, quick actions, and detailed view
- * 
+ *
  * @module tasks/components/TaskCard
  */
 
 import { Draggable } from '@hello-pangea/dnd';
-import { MoreHorizontal, AlertCircle, Calendar, Tag, ArrowRight, CheckCircle2, RotateCw } from 'lucide-react';
+import {
+  MoreHorizontal,
+  AlertCircle,
+  Calendar,
+  Tag,
+  ArrowRight,
+  CheckCircle2,
+  RotateCw,
+} from 'lucide-react';
 import { format } from 'date-fns';
 import { useState } from 'react';
 import type { Task, TaskStatus } from '../types';
@@ -58,7 +66,14 @@ interface TaskCardProps {
  * Task card component
  * Displays task information with drag-and-drop and quick actions
  */
-export function TaskCard({ task, index, onEdit, onViewDetails, canEdit = true, canDelete = true }: TaskCardProps) {
+export function TaskCard({
+  task,
+  index,
+  onEdit,
+  onViewDetails,
+  canEdit = true,
+  canDelete = true,
+}: TaskCardProps) {
   const updateTask = useUpdateTask();
   const deleteTask = useDeleteTask();
   const duplicateTask = useDuplicateTask();
@@ -123,28 +138,41 @@ export function TaskCard({ task, index, onEdit, onViewDetails, canEdit = true, c
               ${task.status === 'completed' ? 'bg-gray-50/50' : ''}
             `}
             onClick={(e) => {
-              if (!(e.target as HTMLElement).closest('button') && !(e.target as HTMLElement).closest('.no-drag')) {
+              if (
+                !(e.target as HTMLElement).closest('button') &&
+                !(e.target as HTMLElement).closest('.no-drag')
+              ) {
                 onViewDetails(task);
               }
             }}
             onDoubleClick={(e) => {
-              if (!(e.target as HTMLElement).closest('button') && !(e.target as HTMLElement).closest('.no-drag')) {
+              if (
+                !(e.target as HTMLElement).closest('button') &&
+                !(e.target as HTMLElement).closest('.no-drag')
+              ) {
                 onEdit(task);
               }
             }}
           >
             {/* Priority Strip */}
-            <div className={`absolute left-0 top-4 bottom-4 w-1 rounded-r-full ${
-              task.priority === 'high' ? 'bg-red-500' : 
-              task.priority === 'medium' ? 'bg-amber-500' : 'bg-blue-500'
-            }`} />
+            <div
+              className={`absolute left-0 top-4 bottom-4 w-1 rounded-r-full ${
+                task.priority === 'high'
+                  ? 'bg-red-500'
+                  : task.priority === 'medium'
+                    ? 'bg-amber-500'
+                    : 'bg-blue-500'
+              }`}
+            />
 
             <div className="pl-3">
               {/* Header Row */}
               <div className="flex items-start justify-between mb-2 gap-2">
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 mb-1">
-                    <span className={`text-[10px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded ${PRIORITY_COLORS[task.priority]} bg-opacity-10`}>
+                    <span
+                      className={`text-[10px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded ${PRIORITY_COLORS[task.priority]} bg-opacity-10`}
+                    >
                       {PRIORITY_LABELS[task.priority]}
                     </span>
                     {issueManagerTask && (
@@ -158,44 +186,47 @@ export function TaskCard({ task, index, onEdit, onViewDetails, canEdit = true, c
                       </span>
                     )}
                   </div>
-                  <h3 className={`font-semibold text-sm text-gray-900 leading-snug line-clamp-2 ${
-                    task.status === 'completed' ? 'line-through text-gray-500' : ''
-                  }`}>
+                  <h3
+                    className={`font-semibold text-sm text-gray-900 leading-snug line-clamp-2 ${
+                      task.status === 'completed' ? 'line-through text-gray-500' : ''
+                    }`}
+                  >
                     {task.title}
                   </h3>
                 </div>
 
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
-                    <Button 
-                      variant="ghost" 
-                      size="sm" 
+                    <Button
+                      variant="ghost"
+                      size="sm"
                       className="h-6 w-6 p-0 -mr-2 text-gray-400 hover:text-gray-600 no-drag opacity-0 group-hover:opacity-100 transition-opacity"
                     >
                       <MoreHorizontal className="w-4 h-4" />
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end" className="w-48">
-                    <DropdownMenuItem onClick={(e) => {
-                      e.stopPropagation();
-                      onViewDetails(task);
-                    }}>
+                    <DropdownMenuItem
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onViewDetails(task);
+                      }}
+                    >
                       View
                     </DropdownMenuItem>
                     {canEdit && (
-                      <DropdownMenuItem onClick={handleDuplicate}>
-                        Duplicate
-                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={handleDuplicate}>Duplicate</DropdownMenuItem>
                     )}
                     {canEdit && (
-                      <DropdownMenuItem onClick={handleArchive}>
-                        Archive
-                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={handleArchive}>Archive</DropdownMenuItem>
                     )}
                     {canDelete && (
                       <div className="contents">
                         <DropdownMenuSeparator />
-                        <DropdownMenuItem onClick={handleDelete} className="text-red-600 focus:text-red-700 focus:bg-red-50">
+                        <DropdownMenuItem
+                          onClick={handleDelete}
+                          className="text-red-600 focus:text-red-700 focus:bg-red-50"
+                        >
                           Delete
                         </DropdownMenuItem>
                       </div>
@@ -214,21 +245,29 @@ export function TaskCard({ task, index, onEdit, onViewDetails, canEdit = true, c
               {/* Meta Info */}
               <div className="flex flex-wrap items-center gap-2 mb-3">
                 {task.due_date && (
-                  <div className={`flex items-center gap-1 text-xs ${
-                    overdueDays > 0 ? 'text-red-600 font-medium' : 'text-gray-500'
-                  }`}>
-                    {overdueDays > 0 ? <AlertCircle className="w-3 h-3" /> : <Calendar className="w-3 h-3" />}
+                  <div
+                    className={`flex items-center gap-1 text-xs ${
+                      overdueDays > 0 ? 'text-red-600 font-medium' : 'text-gray-500'
+                    }`}
+                  >
+                    {overdueDays > 0 ? (
+                      <AlertCircle className="w-3 h-3" />
+                    ) : (
+                      <Calendar className="w-3 h-3" />
+                    )}
                     <span>
                       {format(new Date(task.due_date), 'MMM d')}
                       {overdueDays > 0 && ` (+${overdueDays}d)`}
                     </span>
                   </div>
                 )}
-                
+
                 {task.tags && task.tags.length > 0 && (
                   <div className="flex items-center gap-1 text-xs text-gray-500">
                     <Tag className="w-3 h-3" />
-                    <span>{task.tags.length} tag{task.tags.length !== 1 ? 's' : ''}</span>
+                    <span>
+                      {task.tags.length} tag{task.tags.length !== 1 ? 's' : ''}
+                    </span>
                   </div>
                 )}
 
@@ -256,7 +295,7 @@ export function TaskCard({ task, index, onEdit, onViewDetails, canEdit = true, c
                       Complete
                     </Button>
                   )}
-                  
+
                   {task.status === 'new' && (
                     <Button
                       variant="ghost"

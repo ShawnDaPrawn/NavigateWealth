@@ -1,6 +1,6 @@
 /**
  * API Response Types
- * 
+ *
  * TypeScript types for API responses
  * - Ensures type safety across frontend
  * - Easy to maintain and update

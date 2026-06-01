@@ -53,24 +53,15 @@ export function ValidationConfig({ rules, onChange }: ValidationConfigProps) {
   const [showPresets, setShowPresets] = useState(false);
 
   const handleAddRule = () => {
-    onChange([
-      ...rules,
-      { type: 'required', message: 'This field is required' },
-    ]);
+    onChange([...rules, { type: 'required', message: 'This field is required' }]);
   };
 
   const handleRemoveRule = (index: number) => {
     onChange(rules.filter((_, i) => i !== index));
   };
 
-  const handleUpdateRule = (
-    index: number,
-    key: keyof ValidationRule,
-    value: string | number,
-  ) => {
-    const updated = rules.map((rule, i) =>
-      i === index ? { ...rule, [key]: value } : rule,
-    );
+  const handleUpdateRule = (index: number, key: keyof ValidationRule, value: string | number) => {
+    const updated = rules.map((rule, i) => (i === index ? { ...rule, [key]: value } : rule));
     onChange(updated);
   };
 
@@ -145,9 +136,7 @@ export function ValidationConfig({ rules, onChange }: ValidationConfigProps) {
               <div className="flex items-center justify-between gap-2">
                 <Select
                   value={rule.type}
-                  onValueChange={(val: ValidationRuleType) =>
-                    handleUpdateRule(index, 'type', val)
-                  }
+                  onValueChange={(val: ValidationRuleType) => handleUpdateRule(index, 'type', val)}
                 >
                   <SelectTrigger className="h-7 text-[11px] flex-1 bg-white border-gray-200">
                     <SelectValue />
@@ -178,16 +167,10 @@ export function ValidationConfig({ rules, onChange }: ValidationConfigProps) {
                     handleUpdateRule(
                       index,
                       'value',
-                      rule.type.includes('value')
-                        ? Number(e.target.value) || 0
-                        : e.target.value,
+                      rule.type.includes('value') ? Number(e.target.value) || 0 : e.target.value,
                     )
                   }
-                  placeholder={
-                    rule.type === 'pattern'
-                      ? 'Regex pattern (e.g. ^\\d{13}$)'
-                      : 'Value'
-                  }
+                  placeholder={rule.type === 'pattern' ? 'Regex pattern (e.g. ^\\d{13}$)' : 'Value'}
                   className="h-7 text-[11px] bg-white border-gray-200"
                 />
               )}

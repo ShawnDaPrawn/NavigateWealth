@@ -1,14 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import {
-  AlertCircle,
-  Bot,
-  Eraser,
-  Maximize2,
-  Minimize2,
-  Plus,
-  Trash2,
-} from 'lucide-react';
+import { AlertCircle, Bot, Eraser, Maximize2, Minimize2, Plus, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Alert, AlertDescription } from '../../../../ui/alert';
 import { Button } from '../../../../ui/button';
@@ -216,10 +208,7 @@ function InlineChatCard({
 
       {apiKeyWarning && <div className="border-b border-gray-100 px-4 py-3">{apiKeyWarning}</div>}
 
-      <div
-        ref={messagesContainerRef}
-        className="flex-1 overflow-y-auto bg-gray-50/50 px-4 py-4"
-      >
+      <div ref={messagesContainerRef} className="flex-1 overflow-y-auto bg-gray-50/50 px-4 py-4">
         <div className="space-y-4">
           {messages.map((message, index) => (
             <VascoChatMessage
@@ -485,20 +474,11 @@ export function AskVascoPortalTab({ selectedClient }: AskVascoPortalTabProps) {
         toast.error(errorMessage);
       }
     },
-    [
-      input,
-      isStreaming,
-      ensureActiveSession,
-      messages,
-      sendStream,
-      queryClient,
-      selectedClient.id,
-    ],
+    [input, isStreaming, ensureActiveSession, messages, sendStream, queryClient, selectedClient.id],
   );
 
   const showApiKeyWarning =
-    apiKeyStatus &&
-    (!apiKeyStatus.configured || apiKeyStatus.keySuffix === 'oBEA');
+    apiKeyStatus && (!apiKeyStatus.configured || apiKeyStatus.keySuffix === 'oBEA');
 
   const apiKeyWarningBanner = showApiKeyWarning ? (
     <Alert className="border-amber-200 bg-amber-50">

@@ -9,12 +9,12 @@ import { Session, User as SupabaseUser } from '@supabase/supabase-js';
 export type UserRole = 'client' | 'admin' | 'super_admin' | 'super-admin';
 
 // Account status for application workflow
-export type AccountStatus = 
-  | 'no_application'           // New user, hasn't started onboarding
-  | 'application_in_progress'  // User selected account type, filling application
-  | 'submitted_for_review'     // Application submitted, pending admin review
-  | 'approved'                 // Application approved, full access granted
-  | 'declined';                // Application declined
+export type AccountStatus =
+  | 'no_application' // New user, hasn't started onboarding
+  | 'application_in_progress' // User selected account type, filling application
+  | 'submitted_for_review' // Application submitted, pending admin review
+  | 'approved' // Application approved, full access granted
+  | 'declined'; // Application declined
 
 export interface UserSuspensionStatus {
   suspended: boolean;

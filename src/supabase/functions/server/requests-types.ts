@@ -1,6 +1,6 @@
 /**
  * Requests Module - Types
- * 
+ *
  * Type definitions for the Requests management system:
  * - Request templates and configurations
  * - Request instances and workflows
@@ -224,7 +224,13 @@ export interface FinalisationConfig {
 }
 
 export interface CommunicationTrigger {
-  event: 'request_created' | 'missing_docs' | 'lifecycle_moved' | 'sla_overdue' | 'quote_ready' | 'finalised';
+  event:
+    | 'request_created'
+    | 'missing_docs'
+    | 'lifecycle_moved'
+    | 'sla_overdue'
+    | 'quote_ready'
+    | 'finalised';
   enabled: boolean;
   emailTemplate?: string;
   notificationMessage?: string;

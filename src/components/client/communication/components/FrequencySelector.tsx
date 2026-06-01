@@ -49,9 +49,7 @@ export function FrequencySelector({ value, onChange }: FrequencySelectorProps) {
                     value === opt.value ? 'border-[#6d28d9]' : 'border-gray-300'
                   }`}
                 >
-                  {value === opt.value && (
-                    <div className="h-2.5 w-2.5 rounded-full bg-[#6d28d9]" />
-                  )}
+                  {value === opt.value && <div className="h-2.5 w-2.5 rounded-full bg-[#6d28d9]" />}
                 </div>
                 <div className="flex-1">
                   <p className="text-gray-900 mb-1">{opt.label}</p>

@@ -1,7 +1,7 @@
 /**
  * Medical Aid FNA Module
  * South African Medical Aid Financial Needs Analysis - Gap Analysis Tool
- * 
+ *
  * Implements deterministic, auditable calculations for:
  * - Recommended Dependents Coverage
  * - In-Hospital Cover Level (100% vs 200%)

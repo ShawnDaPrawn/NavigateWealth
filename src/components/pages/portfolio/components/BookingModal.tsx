@@ -16,13 +16,7 @@ import {
 import { Button } from '../../../ui/button';
 import { Label } from '../../../ui/label';
 import { Textarea } from '../../../ui/textarea';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '../../../ui/select';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../../ui/select';
 import { Calendar, Loader2, CheckCircle } from 'lucide-react';
 import { toast } from 'sonner';
 import { useAuth } from '../../../auth/AuthContext';
@@ -110,20 +104,16 @@ export function BookingModal({ open, onOpenChange }: BookingModalProps) {
             <Calendar className="h-6 w-6 text-blue-600" />
             <span>Book a Meeting</span>
           </DialogTitle>
-          <DialogDescription>
-            Schedule a consultation with your financial adviser
-          </DialogDescription>
+          <DialogDescription>Schedule a consultation with your financial adviser</DialogDescription>
         </DialogHeader>
 
         {submitted ? (
           <div className="flex flex-col items-center py-10 text-center">
             <CheckCircle className="h-14 w-14 text-green-500 mb-4" />
-            <h3 className="text-lg font-semibold text-black mb-2">
-              Meeting Request Submitted
-            </h3>
+            <h3 className="text-lg font-semibold text-black mb-2">Meeting Request Submitted</h3>
             <p className="text-sm text-gray-600 max-w-md">
-              Your request for a <strong>{meetingType}</strong> has been received.
-              Your adviser will confirm the date and time shortly.
+              Your request for a <strong>{meetingType}</strong> has been received. Your adviser will
+              confirm the date and time shortly.
             </p>
             <Button className="mt-6" onClick={handleClose}>
               Done

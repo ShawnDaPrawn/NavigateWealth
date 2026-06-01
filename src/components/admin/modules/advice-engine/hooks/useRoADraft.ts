@@ -1,9 +1,9 @@
 /**
  * useRoADraft Hook
- * 
+ *
  * Hook for Record of Advice (RoA) draft management.
  * Handles CRUD operations, auto-save, and module management.
- * 
+ *
  * @module advice-engine/hooks/useRoADraft
  */
 
@@ -12,12 +12,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { roaApi } from '../api';
 import { adviceEngineKeys } from './queryKeys';
 import { getFallbackRuntimeModules, moduleContractToRuntimeModule } from '../roaModuleRuntime';
-import type {
-  RoADraft,
-  RoAModule,
-  UseRoADraftOptions,
-  UseRoADraftReturn,
-} from '../types';
+import type { RoADraft, RoAModule, UseRoADraftOptions, UseRoADraftReturn } from '../types';
 
 /**
  * Default auto-save delay (ms)
@@ -26,10 +21,10 @@ const DEFAULT_AUTO_SAVE_DELAY = 2000;
 
 /**
  * Hook for RoA draft management
- * 
+ *
  * @param options - Configuration options
  * @returns Draft state and actions
- * 
+ *
  * @example
  * const {
  *   draft,
@@ -44,22 +39,18 @@ const DEFAULT_AUTO_SAVE_DELAY = 2000;
  *   autoSave: true,
  *   autoSaveDelay: 2000
  * });
- * 
+ *
  * // Update draft
  * updateDraft({ selectedModules: ['life-insurance'] });
- * 
+ *
  * // Manual save
  * await saveDraft({ moduleData: {...} });
- * 
+ *
  * // Submit
  * await submitDraft();
  */
 export function useRoADraft(options: UseRoADraftOptions = {}): UseRoADraftReturn {
-  const {
-    draftId,
-    autoSave = true,
-    autoSaveDelay = DEFAULT_AUTO_SAVE_DELAY,
-  } = options;
+  const { draftId, autoSave = true, autoSaveDelay = DEFAULT_AUTO_SAVE_DELAY } = options;
 
   // State
   const [localDraft, setLocalDraft] = useState<RoADraft | null>(null);
@@ -125,7 +116,7 @@ export function useRoADraft(options: UseRoADraftOptions = {}): UseRoADraftReturn
     onSuccess: (savedDraft) => {
       setLocalDraft(savedDraft);
       setError(null);
-      
+
       // Update cache
       queryClient.setQueryData(adviceEngineKeys.roa.draft(savedDraft.id), savedDraft);
     },
@@ -149,10 +140,10 @@ export function useRoADraft(options: UseRoADraftOptions = {}): UseRoADraftReturn
     onSuccess: (submittedDraft) => {
       setLocalDraft(submittedDraft);
       setError(null);
-      
+
       // Update cache
       queryClient.setQueryData(adviceEngineKeys.roa.draft(submittedDraft.id), submittedDraft);
-      
+
       // Invalidate drafts list
       queryClient.invalidateQueries({ queryKey: adviceEngineKeys.roa.drafts() });
     },
@@ -219,7 +210,7 @@ export function useRoADraft(options: UseRoADraftOptions = {}): UseRoADraftReturn
     async (data: Partial<RoADraft>): Promise<void> => {
       await saveDraftMutation.mutateAsync(data);
     },
-    [saveDraftMutation]
+    [saveDraftMutation],
   );
 
   /**

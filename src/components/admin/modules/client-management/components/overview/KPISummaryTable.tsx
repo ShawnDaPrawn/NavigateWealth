@@ -57,12 +57,12 @@ interface KPISummaryTableProps {
 // ── Icon resolver ────────────────────────────────────────────────────────
 
 const ICON_MAP: Record<string, React.ElementType> = {
-  'scale': Scale,
+  scale: Scale,
   'trending-down': TrendingDown,
   'piggy-bank': PiggyBank,
-  'shield': Shield,
+  shield: Shield,
   'shield-check': ShieldCheck,
-  'target': Target,
+  target: Target,
 };
 
 function resolveIcon(slug: string): React.ElementType {
@@ -136,9 +136,7 @@ export function KPISummaryTable({ kpis, mode = 'adviser' }: KPISummaryTableProps
                 <TableHead className="text-xs font-semibold text-gray-600 pl-5 w-[200px]">
                   Indicator
                 </TableHead>
-                <TableHead className="text-xs font-semibold text-gray-600">
-                  Where You Are
-                </TableHead>
+                <TableHead className="text-xs font-semibold text-gray-600">Where You Are</TableHead>
                 <TableHead className="text-xs font-semibold text-gray-600">
                   Where You Should Be
                 </TableHead>
@@ -153,10 +151,7 @@ export function KPISummaryTable({ kpis, mode = 'adviser' }: KPISummaryTableProps
                 const Icon = resolveIcon(def.iconSlug);
 
                 return (
-                  <TableRow
-                    key={def.id}
-                    className="hover:bg-gray-50/50 transition-colors"
-                  >
+                  <TableRow key={def.id} className="hover:bg-gray-50/50 transition-colors">
                     {/* Metric */}
                     <TableCell className="pl-5">
                       <div className="flex items-center gap-2.5">
@@ -182,10 +177,10 @@ export function KPISummaryTable({ kpis, mode = 'adviser' }: KPISummaryTableProps
                             value.status === 'good'
                               ? 'text-gray-900'
                               : value.status === 'caution'
-                              ? 'text-amber-700'
-                              : value.status === 'gap'
-                              ? 'text-red-700'
-                              : 'text-gray-400'
+                                ? 'text-amber-700'
+                                : value.status === 'gap'
+                                  ? 'text-red-700'
+                                  : 'text-gray-400'
                           }`}
                         >
                           {value.displayValue}
@@ -200,9 +195,7 @@ export function KPISummaryTable({ kpis, mode = 'adviser' }: KPISummaryTableProps
 
                     {/* Target */}
                     <TableCell>
-                      <span className="text-xs text-gray-500">
-                        {def.targetText}
-                      </span>
+                      <span className="text-xs text-gray-500">{def.targetText}</span>
                     </TableCell>
 
                     {/* Status Badge */}
@@ -211,9 +204,7 @@ export function KPISummaryTable({ kpis, mode = 'adviser' }: KPISummaryTableProps
                         variant="outline"
                         className={`text-xs px-2 py-0.5 border ${statusCfg.badgeClass}`}
                       >
-                        <div
-                          className={`h-1.5 w-1.5 rounded-full ${statusCfg.dotClass} mr-1.5`}
-                        />
+                        <div className={`h-1.5 w-1.5 rounded-full ${statusCfg.dotClass} mr-1.5`} />
                         {statusCfg.label}
                       </Badge>
                     </TableCell>

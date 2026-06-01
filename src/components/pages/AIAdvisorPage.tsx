@@ -30,11 +30,7 @@ import { PortalPageHeader } from '../portal/PortalPageHeader';
 import { ACTIVE_THEME } from '../portal/portal-theme';
 import { toast } from 'sonner';
 import { ConfirmDialog } from '../admin/modules/publications/components/ConfirmDialog';
-import {
-  VascoInlineChatCard,
-  VascoSessionWorkspace,
-  useVascoStream,
-} from '../shared/vasco-chat';
+import { VascoInlineChatCard, VascoSessionWorkspace, useVascoStream } from '../shared/vasco-chat';
 import type {
   VascoChatMessageType as ChatMessage,
   VascoChatSessionSummary,
@@ -82,13 +78,15 @@ function formatTimestamp(value: string) {
 }
 
 function mapMessages(
-  rawMessages: Array<{
-    role: string;
-    content: string;
-    timestamp: string;
-    citations?: Array<{ title: string; slug: string; url: string }>;
-    artifacts?: ChatMessage['artifacts'];
-  }> | undefined,
+  rawMessages:
+    | Array<{
+        role: string;
+        content: string;
+        timestamp: string;
+        citations?: Array<{ title: string; slug: string; url: string }>;
+        artifacts?: ChatMessage['artifacts'];
+      }>
+    | undefined,
 ): ChatMessage[] {
   if (!rawMessages || rawMessages.length === 0) return [WELCOME_MESSAGE];
 
@@ -140,14 +138,14 @@ export function AIAdvisorPage() {
 
   const { data: apiKeyStatus } = useQuery({
     queryKey: advisorKeys.status(),
-    queryFn: async () => api.get<{ configured: boolean; model?: string; keySuffix?: string }>('/ai-advisor/status'),
+    queryFn: async () =>
+      api.get<{ configured: boolean; model?: string; keySuffix?: string }>('/ai-advisor/status'),
   });
 
   const sessionsQuery = useQuery({
     queryKey: advisorKeys.sessions(user?.id),
     enabled: !!user,
-    queryFn: async () =>
-      api.get<{ sessions: VascoChatSessionSummary[] }>('/ai-advisor/sessions'),
+    queryFn: async () => api.get<{ sessions: VascoChatSessionSummary[] }>('/ai-advisor/sessions'),
     staleTime: 60 * 1000,
   });
 
@@ -203,7 +201,8 @@ export function AIAdvisorPage() {
   }, []);
 
   const createSessionMutation = useMutation({
-    mutationFn: async () => api.post<{ session: VascoChatSessionSummary }>('/ai-advisor/sessions', {}),
+    mutationFn: async () =>
+      api.post<{ session: VascoChatSessionSummary }>('/ai-advisor/sessions', {}),
     onSuccess: ({ session }) => {
       queryClient.invalidateQueries({ queryKey: advisorKeys.sessions(user?.id) });
       setActiveSessionId(session.id);
@@ -218,7 +217,9 @@ export function AIAdvisorPage() {
 
   const clearChatMutation = useMutation({
     mutationFn: async (sessionId: string) =>
-      api.delete<{ success: boolean }>(`/ai-advisor/history?sessionId=${encodeURIComponent(sessionId)}`),
+      api.delete<{ success: boolean }>(
+        `/ai-advisor/history?sessionId=${encodeURIComponent(sessionId)}`,
+      ),
     onSuccess: () => {
       setMessages([WELCOME_MESSAGE]);
       queryClient.invalidateQueries({ queryKey: advisorKeys.sessions(user?.id) });
@@ -290,7 +291,9 @@ export function AIAdvisorPage() {
         setMessages((prev) => [...prev, assistantMessage]);
         setActiveSessionId(result.sessionId || sessionId);
         queryClient.invalidateQueries({ queryKey: advisorKeys.sessions(user?.id) });
-        queryClient.invalidateQueries({ queryKey: advisorKeys.session(user?.id, result.sessionId || sessionId) });
+        queryClient.invalidateQueries({
+          queryKey: advisorKeys.session(user?.id, result.sessionId || sessionId),
+        });
       } catch (err: unknown) {
         const errorMessage =
           err instanceof Error
@@ -304,8 +307,7 @@ export function AIAdvisorPage() {
   );
 
   const showApiKeyWarning =
-    apiKeyStatus &&
-    (!apiKeyStatus.configured || apiKeyStatus.keySuffix === 'oBEA');
+    apiKeyStatus && (!apiKeyStatus.configured || apiKeyStatus.keySuffix === 'oBEA');
 
   const apiKeyWarningBanner = showApiKeyWarning ? (
     <Alert className="border-amber-200 bg-amber-50">
@@ -397,7 +399,10 @@ export function AIAdvisorPage() {
                   { name: 'Tax Efficiency', icon: FileText },
                   { name: 'Risk Management', icon: Shield },
                 ].map((capability) => (
-                  <div key={capability.name} className="flex items-center gap-3 text-sm text-gray-600">
+                  <div
+                    key={capability.name}
+                    className="flex items-center gap-3 text-sm text-gray-600"
+                  >
                     <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg bg-gray-50">
                       <capability.icon className="h-4 w-4 text-gray-500" />
                     </div>

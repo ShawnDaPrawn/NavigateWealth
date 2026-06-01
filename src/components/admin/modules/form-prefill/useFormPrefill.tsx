@@ -123,11 +123,18 @@ export function useFormPrefill({
 
   const handleApply = async (selectedFields: string[], overwriteConflicts: boolean) => {
     if (!result || !clientId) return;
-    const merged = applyMatchesToValues(currentValues, result.matches, selectedFields, overwriteConflicts);
+    const merged = applyMatchesToValues(
+      currentValues,
+      result.matches,
+      selectedFields,
+      overwriteConflicts,
+    );
     onApplyValues(merged);
     setAppliedCount(selectedFields.length);
     setReviewOpen(false);
-    toast.success(`Applied ${selectedFields.length} field${selectedFields.length === 1 ? '' : 's'} from client record`);
+    toast.success(
+      `Applied ${selectedFields.length} field${selectedFields.length === 1 ? '' : 's'} from client record`,
+    );
     await logPrefillAudit({
       clientId,
       formId,

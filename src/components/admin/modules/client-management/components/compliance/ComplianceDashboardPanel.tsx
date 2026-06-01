@@ -81,20 +81,72 @@ const API_BASE = `https://${projectId}.supabase.co/functions/v1/make-server-91ed
 // ─── Colour mappings ────────────────────────────────────────────────────────
 
 const CATEGORY_COLOURS: Record<string, { bg: string; fill: string; text: string; icon: string }> = {
-  blue:    { bg: 'bg-blue-100',    fill: 'bg-blue-600',    text: 'text-blue-700',    icon: 'text-blue-500' },
-  green:   { bg: 'bg-green-100',   fill: 'bg-green-600',   text: 'text-green-700',   icon: 'text-green-500' },
-  purple:  { bg: 'bg-purple-100',  fill: 'bg-purple-600',  text: 'text-purple-700',  icon: 'text-purple-500' },
-  indigo:  { bg: 'bg-indigo-100',  fill: 'bg-indigo-600',  text: 'text-indigo-700',  icon: 'text-indigo-500' },
-  emerald: { bg: 'bg-emerald-100', fill: 'bg-emerald-600', text: 'text-emerald-700', icon: 'text-emerald-500' },
-  teal:    { bg: 'bg-teal-100',    fill: 'bg-teal-600',    text: 'text-teal-700',    icon: 'text-teal-500' },
-  amber:   { bg: 'bg-amber-100',   fill: 'bg-amber-600',   text: 'text-amber-700',   icon: 'text-amber-500' },
+  blue: { bg: 'bg-blue-100', fill: 'bg-blue-600', text: 'text-blue-700', icon: 'text-blue-500' },
+  green: {
+    bg: 'bg-green-100',
+    fill: 'bg-green-600',
+    text: 'text-green-700',
+    icon: 'text-green-500',
+  },
+  purple: {
+    bg: 'bg-purple-100',
+    fill: 'bg-purple-600',
+    text: 'text-purple-700',
+    icon: 'text-purple-500',
+  },
+  indigo: {
+    bg: 'bg-indigo-100',
+    fill: 'bg-indigo-600',
+    text: 'text-indigo-700',
+    icon: 'text-indigo-500',
+  },
+  emerald: {
+    bg: 'bg-emerald-100',
+    fill: 'bg-emerald-600',
+    text: 'text-emerald-700',
+    icon: 'text-emerald-500',
+  },
+  teal: { bg: 'bg-teal-100', fill: 'bg-teal-600', text: 'text-teal-700', icon: 'text-teal-500' },
+  amber: {
+    bg: 'bg-amber-100',
+    fill: 'bg-amber-600',
+    text: 'text-amber-700',
+    icon: 'text-amber-500',
+  },
 };
 
-const SEVERITY_CONFIG: Record<string, { bg: string; text: string; border: string; icon: React.ReactNode; label: string }> = {
-  high:   { bg: 'bg-red-50',    text: 'text-red-800',    border: 'border-red-200',    icon: <AlertOctagon className="h-4 w-4 text-red-600" />,    label: 'High' },
-  medium: { bg: 'bg-amber-50',  text: 'text-amber-800',  border: 'border-amber-200',  icon: <AlertTriangle className="h-4 w-4 text-amber-600" />, label: 'Medium' },
-  low:    { bg: 'bg-blue-50',   text: 'text-blue-800',   border: 'border-blue-200',   icon: <Info className="h-4 w-4 text-blue-600" />,           label: 'Low' },
-  info:   { bg: 'bg-gray-50',   text: 'text-gray-800',   border: 'border-gray-200',   icon: <Info className="h-4 w-4 text-gray-500" />,           label: 'Info' },
+const SEVERITY_CONFIG: Record<
+  string,
+  { bg: string; text: string; border: string; icon: React.ReactNode; label: string }
+> = {
+  high: {
+    bg: 'bg-red-50',
+    text: 'text-red-800',
+    border: 'border-red-200',
+    icon: <AlertOctagon className="h-4 w-4 text-red-600" />,
+    label: 'High',
+  },
+  medium: {
+    bg: 'bg-amber-50',
+    text: 'text-amber-800',
+    border: 'border-amber-200',
+    icon: <AlertTriangle className="h-4 w-4 text-amber-600" />,
+    label: 'Medium',
+  },
+  low: {
+    bg: 'bg-blue-50',
+    text: 'text-blue-800',
+    border: 'border-blue-200',
+    icon: <Info className="h-4 w-4 text-blue-600" />,
+    label: 'Low',
+  },
+  info: {
+    bg: 'bg-gray-50',
+    text: 'text-gray-800',
+    border: 'border-gray-200',
+    icon: <Info className="h-4 w-4 text-gray-500" />,
+    label: 'Info',
+  },
 };
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
@@ -108,14 +160,14 @@ function getScoreColour(score: number): string {
 function getScoreLabel(score: number): string {
   if (score >= 80) return 'Good';
   if (score >= 50) return 'Partial';
-  if (score > 0)   return 'Low';
+  if (score > 0) return 'Low';
   return 'Not Started';
 }
 
 function getScoreBg(score: number): string {
   if (score >= 80) return 'bg-green-600';
   if (score >= 50) return 'bg-amber-500';
-  if (score > 0)   return 'bg-red-500';
+  if (score > 0) return 'bg-red-500';
   return 'bg-gray-300';
 }
 
@@ -208,10 +260,7 @@ export function ComplianceDashboardPanel({ clientId, onNavigate }: ComplianceDas
             <div className={`text-4xl font-bold ${getScoreColour(readinessScore)}`}>
               {readinessScore}%
             </div>
-            <Badge
-              variant="outline"
-              className={`mt-1 text-xs ${getScoreColour(readinessScore)}`}
-            >
+            <Badge variant="outline" className={`mt-1 text-xs ${getScoreColour(readinessScore)}`}>
               {getScoreLabel(readinessScore)}
             </Badge>
             <span className="text-xs text-muted-foreground mt-1">Compliance Readiness</span>
@@ -225,7 +274,9 @@ export function ComplianceDashboardPanel({ clientId, onNavigate }: ComplianceDas
               <BarChart3 className="h-4 w-4 text-purple-500" />
             </div>
             <div>
-              <div className="text-xl font-bold">{completedCheckTypes}/{totalCheckTypes}</div>
+              <div className="text-xl font-bold">
+                {completedCheckTypes}/{totalCheckTypes}
+              </div>
               <div className="text-xs text-muted-foreground">Check Types Completed</div>
             </div>
           </CardContent>
@@ -249,7 +300,9 @@ export function ComplianceDashboardPanel({ clientId, onNavigate }: ComplianceDas
               <Clock className="h-4 w-4 text-blue-500" />
             </div>
             <div>
-              <div className="text-sm font-bold">{lastCheckDate ? formatDate(lastCheckDate) : '—'}</div>
+              <div className="text-sm font-bold">
+                {lastCheckDate ? formatDate(lastCheckDate) : '—'}
+              </div>
               <div className="text-xs text-muted-foreground">Last Check Run</div>
             </div>
           </CardContent>
@@ -264,7 +317,8 @@ export function ComplianceDashboardPanel({ clientId, onNavigate }: ComplianceDas
             Category Completion
           </CardTitle>
           <CardDescription>
-            Progress across the {totalCheckTypes} compliance check types, weighted by category importance.
+            Progress across the {totalCheckTypes} compliance check types, weighted by category
+            importance.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-3">
@@ -272,7 +326,9 @@ export function ComplianceDashboardPanel({ clientId, onNavigate }: ComplianceDas
           <div className="space-y-1">
             <div className="flex items-center justify-between text-xs">
               <span className="font-medium text-gray-700">Overall Readiness</span>
-              <span className={`font-bold ${getScoreColour(readinessScore)}`}>{readinessScore}%</span>
+              <span className={`font-bold ${getScoreColour(readinessScore)}`}>
+                {readinessScore}%
+              </span>
             </div>
             <div className="w-full bg-gray-200 rounded-full h-2.5">
               <div
@@ -313,7 +369,9 @@ export function ComplianceDashboardPanel({ clientId, onNavigate }: ComplianceDas
             <CardTitle className="text-md font-medium flex items-center gap-2">
               <AlertTriangle className="h-5 w-5 text-red-600" />
               Risk Flags
-              <Badge variant="destructive" className="text-xs">{riskFlags.length}</Badge>
+              <Badge variant="destructive" className="text-xs">
+                {riskFlags.length}
+              </Badge>
             </CardTitle>
             <CardDescription>
               Issues detected from completed compliance checks that require attention.
@@ -323,12 +381,17 @@ export function ComplianceDashboardPanel({ clientId, onNavigate }: ComplianceDas
             {riskFlags.map((flag, idx) => {
               const cfg = SEVERITY_CONFIG[flag.severity] || SEVERITY_CONFIG.info;
               return (
-                <div key={idx} className={`flex items-start gap-3 p-3 rounded-lg border ${cfg.bg} ${cfg.border}`}>
+                <div
+                  key={idx}
+                  className={`flex items-start gap-3 p-3 rounded-lg border ${cfg.bg} ${cfg.border}`}
+                >
                   <div className="flex-shrink-0 mt-0.5">{cfg.icon}</div>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2">
                       <span className={`font-medium text-sm ${cfg.text}`}>{flag.source}</span>
-                      <Badge variant="outline" className="text-xs">{cfg.label}</Badge>
+                      <Badge variant="outline" className="text-xs">
+                        {cfg.label}
+                      </Badge>
                     </div>
                     <p className={`text-xs mt-0.5 ${cfg.text}`}>{flag.message}</p>
                     <span className="text-xs text-gray-400">{formatDate(flag.detectedAt)}</span>

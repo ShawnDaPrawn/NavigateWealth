@@ -11,19 +11,18 @@ interface AccountSuspendedPageProps {
   onLogout?: () => void;
 }
 
-export function AccountSuspendedPage({ 
+export function AccountSuspendedPage({
   reason = 'Account activity review',
   suspendedAt,
-  onLogout 
+  onLogout,
 }: AccountSuspendedPageProps) {
-  
   const formatDate = (dateString?: string) => {
     if (!dateString) return 'recently';
     try {
       return new Date(dateString).toLocaleDateString('en-GB', {
         day: 'numeric',
         month: 'long',
-        year: 'numeric'
+        year: 'numeric',
       });
     } catch {
       return 'recently';
@@ -44,13 +43,12 @@ export function AccountSuspendedPage({
             </div>
 
             {/* Title */}
-            <h1 className="text-3xl text-center text-gray-900 mb-3">
-              Account Suspended
-            </h1>
+            <h1 className="text-3xl text-center text-gray-900 mb-3">Account Suspended</h1>
 
             {/* Subtitle */}
             <p className="text-center text-gray-600 mb-8">
-              Your account has been temporarily suspended and you cannot access the platform at this time.
+              Your account has been temporarily suspended and you cannot access the platform at this
+              time.
             </p>
 
             {/* Reason Alert */}
@@ -71,7 +69,7 @@ export function AccountSuspendedPage({
             <div className="space-y-4 mb-8">
               <div className="bg-gray-50 rounded-lg p-6 space-y-3">
                 <h3 className="font-medium text-gray-900 mb-3">What you can do:</h3>
-                
+
                 <div className="space-y-3 text-sm text-gray-700">
                   <div className="flex items-start gap-3">
                     <div className="h-6 w-6 rounded-full bg-[#6d28d9]/10 flex items-center justify-center flex-shrink-0 mt-0.5">
@@ -80,7 +78,14 @@ export function AccountSuspendedPage({
                     <div>
                       <p className="font-medium text-gray-900">Contact Support</p>
                       <p className="text-gray-600">
-                        Email us at <a href={`mailto:${CONTACT_INFO.SUPPORT_EMAIL}`} className="text-[#6d28d9] hover:underline">{CONTACT_INFO.SUPPORT_EMAIL}</a> for assistance
+                        Email us at{' '}
+                        <a
+                          href={`mailto:${CONTACT_INFO.SUPPORT_EMAIL}`}
+                          className="text-[#6d28d9] hover:underline"
+                        >
+                          {CONTACT_INFO.SUPPORT_EMAIL}
+                        </a>{' '}
+                        for assistance
                       </p>
                     </div>
                   </div>
@@ -92,7 +97,14 @@ export function AccountSuspendedPage({
                     <div>
                       <p className="font-medium text-gray-900">Call Our Team</p>
                       <p className="text-gray-600">
-                        Reach us at <a href={CONTACT_INFO.PHONE_HREF} className="text-[#6d28d9] hover:underline">{CONTACT_INFO.PHONE}</a> during business hours
+                        Reach us at{' '}
+                        <a
+                          href={CONTACT_INFO.PHONE_HREF}
+                          className="text-[#6d28d9] hover:underline"
+                        >
+                          {CONTACT_INFO.PHONE}
+                        </a>{' '}
+                        during business hours
                       </p>
                     </div>
                   </div>
@@ -101,22 +113,21 @@ export function AccountSuspendedPage({
 
               <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
                 <p className="text-sm text-blue-800">
-                  <strong>Note:</strong> Account suspensions are typically temporary and resolved within 1-3 business days after reviewing your case.
+                  <strong>Note:</strong> Account suspensions are typically temporary and resolved
+                  within 1-3 business days after reviewing your case.
                 </p>
               </div>
             </div>
 
             {/* Actions */}
             <div className="flex flex-col sm:flex-row gap-3 justify-center">
-              <Button
-                variant="outline"
-                onClick={onLogout}
-                className="w-full sm:w-auto"
-              >
+              <Button variant="outline" onClick={onLogout} className="w-full sm:w-auto">
                 Sign Out
               </Button>
               <Button
-                onClick={() => window.location.href = `mailto:${CONTACT_INFO.SUPPORT_EMAIL}?subject=Account%20Suspension%20Inquiry`}
+                onClick={() =>
+                  (window.location.href = `mailto:${CONTACT_INFO.SUPPORT_EMAIL}?subject=Account%20Suspension%20Inquiry`)
+                }
                 className="bg-[#6d28d9] hover:bg-[#5b21b6] text-white w-full sm:w-auto"
               >
                 <Mail className="h-4 w-4 mr-2" />
@@ -128,9 +139,7 @@ export function AccountSuspendedPage({
 
         {/* Footer */}
         <div className="mt-6 text-center">
-          <p className="text-sm text-gray-500">
-            Navigate Wealth | {CONTACT_INFO.ADDRESS}
-          </p>
+          <p className="text-sm text-gray-500">Navigate Wealth | {CONTACT_INFO.ADDRESS}</p>
         </div>
       </div>
     </div>

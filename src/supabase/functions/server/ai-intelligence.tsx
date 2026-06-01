@@ -1,22 +1,22 @@
 /**
  * AI Intelligence Agent Routes
  * Backend for the Navigate Wealth Intelligence Agent on the admin Advice Engine page
- * 
+ *
  * This agent provides advisers and admin users with:
  * - Client-specific insights and queries
  * - Platform operational intelligence
  * - Compliance and FICA status checks
  * - Policy and product details
  * - Financial analysis and recommendations
- * 
+ *
  * Architecture mirrors the client-facing AI Advisor but adapted for internal use
  */
 
-import { Hono } from "npm:hono";
-import { createClient } from "jsr:@supabase/supabase-js@2.49.8";
-import * as kv from "./kv_store.tsx";
-import { createModuleLogger } from "./stderr-logger.ts";
-import { getErrMsg } from "./shared-logger-utils.ts";
+import { Hono } from 'npm:hono';
+import { createClient } from 'jsr:@supabase/supabase-js@2.49.8';
+import * as kv from './kv_store.tsx';
+import { createModuleLogger } from './stderr-logger.ts';
+import { getErrMsg } from './shared-logger-utils.ts';
 
 const app = new Hono();
 const log = createModuleLogger('ai-intelligence');
@@ -26,10 +26,8 @@ app.get('/', (c) => c.json({ service: 'ai-intelligence', status: 'active' }));
 app.get('', (c) => c.json({ service: 'ai-intelligence', status: 'active' }));
 
 // Lazy Supabase client — must NOT be top-level to avoid deployment crashes in edge functions.
-const getSupabase = () => createClient(
-  Deno.env.get('SUPABASE_URL')!,
-  Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
-);
+const getSupabase = () =>
+  createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!);
 
 // Workflow configuration
 const WORKFLOW_ID = 'wf_692b6eb221fc8190a671198e7251755c0af51c5b55ce7f96';
@@ -46,7 +44,10 @@ async function requireAdmin(c: Context, next: Next) {
     }
 
     const token = authHeader.split(' ')[1];
-    const { data: { user }, error } = await getSupabase().auth.getUser(token);
+    const {
+      data: { user },
+      error,
+    } = await getSupabase().auth.getUser(token);
 
     if (error || !user) {
       return c.json({ error: 'Unauthorized: Invalid user session' }, 401);
@@ -56,11 +57,11 @@ async function requireAdmin(c: Context, next: Next) {
     const profileKey = `user_profile:${user.id}:personal_info`;
     const profile = await kv.get(profileKey);
 
-    log.info('🔐 AI Intelligence auth check:', { 
-      userId: user.id, 
-      email: user.email, 
+    log.info('🔐 AI Intelligence auth check:', {
+      userId: user.id,
+      email: user.email,
       profileExists: !!profile,
-      role: profile?.role 
+      role: profile?.role,
     });
 
     // Allow admin, super_admin, and adviser roles
@@ -111,33 +112,33 @@ async function getClientContext(clientId: string, userId: string) {
       estatePlanningFNAs,
       esignDocuments,
       tasks,
-      calendarEvents
+      calendarEvents,
     ] = await Promise.all([
       // Policies and products
       getSupabase()
         .from('kv_store_91ed8379')
         .select('*')
         .like('key', `client:${clientId}:policy:%`),
-      
+
       // Compliance and FICA status
       getSupabase()
         .from('kv_store_91ed8379')
         .select('*')
         .like('key', `client:${clientId}:compliance:%`),
-      
+
       // Risk profile
       getSupabase()
         .from('kv_store_91ed8379')
         .select('*')
         .eq('key', `client:${clientId}:risk_profile`)
         .single(),
-      
+
       // Beneficiaries
       getSupabase()
         .from('kv_store_91ed8379')
         .select('*')
         .like('key', `client:${clientId}:beneficiary:%`),
-      
+
       // Notes
       getSupabase()
         .from('kv_store_91ed8379')
@@ -145,14 +146,18 @@ async function getClientContext(clientId: string, userId: string) {
         .like('key', `client:${clientId}:note:%`)
         .order('key', { ascending: false })
         .limit(10),
-      
+
       // Communication logs (from KV)
       (async () => {
         const logs = await kv.getByPrefix(`communication_log:${clientId}:`);
         return {
           data: logs
-            .sort((a: Record<string, unknown>, b: Record<string, unknown>) => new Date((b.created_at as string) || 0).getTime() - new Date((a.created_at as string) || 0).getTime())
-            .slice(0, 10)
+            .sort(
+              (a: Record<string, unknown>, b: Record<string, unknown>) =>
+                new Date((b.created_at as string) || 0).getTime() -
+                new Date((a.created_at as string) || 0).getTime(),
+            )
+            .slice(0, 10),
         };
       })(),
 
@@ -178,22 +183,16 @@ async function getClientContext(clientId: string, userId: string) {
       kv.getByPrefix(`estate-planning-fna:client:${clientId}:`),
 
       // E-sign documents
-      getSupabase()
-        .from('kv_store_91ed8379')
-        .select('*')
-        .like('key', `esign:client:${clientId}:%`),
+      getSupabase().from('kv_store_91ed8379').select('*').like('key', `esign:client:${clientId}:%`),
 
       // Client tasks
-      getSupabase()
-        .from('kv_store_91ed8379')
-        .select('*')
-        .like('key', `task:client:${clientId}:%`),
+      getSupabase().from('kv_store_91ed8379').select('*').like('key', `task:client:${clientId}:%`),
 
       // Calendar events
       getSupabase()
         .from('kv_store_91ed8379')
         .select('*')
-        .like('key', `calendar:client:${clientId}:%`)
+        .like('key', `calendar:client:${clientId}:%`),
     ]);
 
     return {
@@ -205,7 +204,7 @@ async function getClientContext(clientId: string, userId: string) {
       notes: notes.data || [],
       communications: communications.data || [],
       clientKeys: clientKeys || null,
-      
+
       // FNAs and INAs
       fnas: {
         riskPlanning: riskPlanningFNAs || [],
@@ -213,13 +212,13 @@ async function getClientContext(clientId: string, userId: string) {
         retirement: retirementFNAs || [],
         investment: investmentINAs || [],
         taxPlanning: taxPlanningFNAs || [],
-        estatePlanning: estatePlanningFNAs || []
+        estatePlanning: estatePlanningFNAs || [],
       },
 
       // Other client data
       esignDocuments: esignDocuments.data || [],
       tasks: tasks.data || [],
-      calendarEvents: calendarEvents.data || []
+      calendarEvents: calendarEvents.data || [],
     };
   } catch (error) {
     log.error('Error fetching client context:', error);
@@ -237,7 +236,7 @@ async function getPlatformContext(userId: string) {
       pendingRequests,
       upcomingReminders,
       pendingTasks,
-      recentActivities
+      recentActivities,
     ] = await Promise.all([
       // Pending applications
       getSupabase()
@@ -245,14 +244,14 @@ async function getPlatformContext(userId: string) {
         .select('*')
         .like('key', 'application:%')
         .filter('value->>status', 'in', '("pending","in_progress")'),
-      
+
       // Pending client requests
       getSupabase()
         .from('kv_store_91ed8379')
         .select('*')
         .like('key', 'request:%')
         .filter('value->>status', 'eq', 'pending'),
-      
+
       // Upcoming reminders (from reminders table)
       getSupabase()
         .from('reminders')
@@ -261,7 +260,7 @@ async function getPlatformContext(userId: string) {
         .in('status', ['pending', 'in_progress'])
         .order('due_at', { ascending: true })
         .limit(20),
-      
+
       // Pending tasks/to-dos (from tasks table)
       getSupabase()
         .from('tasks')
@@ -269,14 +268,14 @@ async function getPlatformContext(userId: string) {
         .in('status', ['new', 'in_progress'])
         .order('priority', { ascending: false })
         .limit(20),
-      
+
       // Recent platform activities (if stored in KV)
       getSupabase()
         .from('kv_store_91ed8379')
         .select('*')
         .like('key', 'activity:%')
         .order('key', { ascending: false })
-        .limit(20)
+        .limit(20),
     ]);
 
     return {
@@ -284,7 +283,7 @@ async function getPlatformContext(userId: string) {
       pendingRequests: pendingRequests.data || [],
       upcomingReminders: upcomingReminders.data || [],
       pendingTasks: pendingTasks.data || [],
-      recentActivities: recentActivities.data || []
+      recentActivities: recentActivities.data || [],
     };
   } catch (error) {
     log.error('Error fetching platform context:', error);
@@ -306,12 +305,14 @@ async function searchClients(searchTerm: string) {
 
     if (error) throw error;
 
-    log.info(`🔍 Searching clients for term: "${searchTerm}", found ${data?.length || 0} total profiles`);
+    log.info(
+      `🔍 Searching clients for term: "${searchTerm}", found ${data?.length || 0} total profiles`,
+    );
 
     // Filter profiles by search term
     const searchLower = searchTerm.toLowerCase();
     const textMatches = (data || [])
-      .filter(item => {
+      .filter((item) => {
         const profile = item.value;
         if (!profile) return false;
 
@@ -329,7 +330,7 @@ async function searchClients(searchTerm: string) {
         // Only include approved clients and those in application stages
         // If no applicationStatus is set, include by default (for backwards compatibility)
         const excludedStatuses = ['archived', 'rejected', 'withdrawn', 'cancelled', 'suspended'];
-        
+
         if (profile.applicationStatus) {
           // If status exists and is explicitly excluded, filter out
           if (excludedStatuses.includes(profile.applicationStatus)) {
@@ -338,8 +339,10 @@ async function searchClients(searchTerm: string) {
         }
 
         // Get name fields (handle different field name variations)
-        const firstName = profile.firstName || profile.first_name || profile.personalInformation?.firstName || '';
-        const lastName = profile.surname || profile.last_name || profile.personalInformation?.lastName || '';
+        const firstName =
+          profile.firstName || profile.first_name || profile.personalInformation?.firstName || '';
+        const lastName =
+          profile.surname || profile.last_name || profile.personalInformation?.lastName || '';
         const email = profile.email || profile.personalInformation?.email || '';
         const fullName = `${firstName} ${lastName}`.toLowerCase();
 
@@ -352,22 +355,25 @@ async function searchClients(searchTerm: string) {
         );
       })
       .slice(0, 20) // Take extra to account for security-filtered removals
-      .map(item => {
+      .map((item) => {
         // Extract user_id from key pattern: user_profile:{userId}:personal_info
         const userIdMatch = item.key.match(/user_profile:([^:]+):/);
         const userId = userIdMatch ? userIdMatch[1] : null;
 
         const profile = item.value;
-        
+
         return {
           user_id: userId,
-          first_name: profile.firstName || profile.first_name || profile.personalInformation?.firstName || '',
-          last_name: profile.surname || profile.last_name || profile.personalInformation?.lastName || '',
+          first_name:
+            profile.firstName || profile.first_name || profile.personalInformation?.firstName || '',
+          last_name:
+            profile.surname || profile.last_name || profile.personalInformation?.lastName || '',
           email: profile.email || profile.personalInformation?.email || '',
-          phone: profile.phone || profile.phoneNumber || profile.personalInformation?.cellphone || ''
+          phone:
+            profile.phone || profile.phoneNumber || profile.personalInformation?.cellphone || '',
         };
       })
-      .filter(profile => profile.user_id && profile.first_name); // Only return profiles with valid user_id and name
+      .filter((profile) => profile.user_id && profile.first_name); // Only return profiles with valid user_id and name
 
     // Cross-reference security entries to exclude soft-deleted and suspended accounts
     const validProfiles: typeof textMatches = [];
@@ -395,8 +401,10 @@ async function searchClients(searchTerm: string) {
     // marks them accountStatus:'closed'. This avoids expensive per-request
     // auth.admin.getUserById() calls during search.
 
-    log.info(`✅ Found ${validProfiles.length} matching active client profiles (from ${textMatches.length} text matches)`);
-    
+    log.info(
+      `✅ Found ${validProfiles.length} matching active client profiles (from ${textMatches.length} text matches)`,
+    );
+
     return validProfiles;
   } catch (error) {
     log.error('Error searching clients:', error);
@@ -411,8 +419,16 @@ function buildSystemPrompt(clientContext: ClientContext, platformContext: Platfo
   // Extract client name for the prompt
   let clientName = 'Client';
   if (clientContext?.profile) {
-    const firstName = clientContext.profile.firstName || clientContext.profile.first_name || clientContext.profile.personalInformation?.firstName || '';
-    const lastName = clientContext.profile.surname || clientContext.profile.last_name || clientContext.profile.personalInformation?.lastName || '';
+    const firstName =
+      clientContext.profile.firstName ||
+      clientContext.profile.first_name ||
+      clientContext.profile.personalInformation?.firstName ||
+      '';
+    const lastName =
+      clientContext.profile.surname ||
+      clientContext.profile.last_name ||
+      clientContext.profile.personalInformation?.lastName ||
+      '';
     clientName = `${firstName} ${lastName}`.trim() || 'Client';
   }
 
@@ -429,7 +445,9 @@ You help advisers and admin users by:
 
 ## Data Access
 You have access to:
-${clientContext ? `
+${
+  clientContext
+    ? `
 ### Client-Specific Data (${clientName})
 
 #### Profile & Basic Information
@@ -487,8 +505,12 @@ ${clientContext.communications.length > 0 ? `\nRecent Communications:\n${clientC
 
 #### Full Profile Details:
 ${JSON.stringify(clientContext.profile, null, 2)}
-` : ''}
-${platformContext ? `
+`
+    : ''
+}
+${
+  platformContext
+    ? `
 ### Platform Operational Data
 - Pending Applications: ${platformContext.pendingApplications.length}
 - Pending Requests: ${platformContext.pendingRequests.length}
@@ -496,20 +518,34 @@ ${platformContext ? `
 - Pending Tasks/To-Dos: ${platformContext.pendingTasks.length}
 - Recent Activities: ${platformContext.recentActivities.length}
 
-${platformContext.pendingTasks.length > 0 ? `
+${
+  platformContext.pendingTasks.length > 0
+    ? `
 #### Pending Tasks Details:
-${platformContext.pendingTasks.map((item: TaskEntry) => {
-  return `- **${item.title}** (${item.status}, ${item.priority} priority)${item.due_date ? ` - Due: ${new Date(item.due_date).toLocaleDateString()}` : ''}${item.description ? `\n  ${item.description}` : ''}`;
-}).join('\n')}
-` : ''}
+${platformContext.pendingTasks
+  .map((item: TaskEntry) => {
+    return `- **${item.title}** (${item.status}, ${item.priority} priority)${item.due_date ? ` - Due: ${new Date(item.due_date).toLocaleDateString()}` : ''}${item.description ? `\n  ${item.description}` : ''}`;
+  })
+  .join('\n')}
+`
+    : ''
+}
 
-${platformContext.upcomingReminders.length > 0 ? `
+${
+  platformContext.upcomingReminders.length > 0
+    ? `
 #### Upcoming Reminders Details:
-${platformContext.upcomingReminders.map((item: ReminderEntry) => {
-  return `- **${item.title}** (${item.type}) - Due: ${new Date(item.due_at!).toLocaleDateString()}${item.description ? `\n  ${item.description}` : ''}`;
-}).join('\n')}
-` : ''}
-` : ''}
+${platformContext.upcomingReminders
+  .map((item: ReminderEntry) => {
+    return `- **${item.title}** (${item.type}) - Due: ${new Date(item.due_at!).toLocaleDateString()}${item.description ? `\n  ${item.description}` : ''}`;
+  })
+  .join('\n')}
+`
+    : ''
+}
+`
+    : ''
+}
 
 ## Response Guidelines
 1. **Always structure responses properly**:
@@ -575,33 +611,34 @@ async function callOpenAIWorkflow(messages: ChatMessage[], systemPrompt: string)
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${OPENAI_API_KEY}`
+        Authorization: `Bearer ${OPENAI_API_KEY}`,
       },
       body: JSON.stringify({
         model: 'gpt-4o',
-        messages: [
-          { role: 'system', content: systemPrompt },
-          ...messages
-        ],
+        messages: [{ role: 'system', content: systemPrompt }, ...messages],
         temperature: 0.7,
-        max_tokens: 2000
-      })
+        max_tokens: 2000,
+      }),
     });
 
     if (!response.ok) {
       const error = await response.json();
       log.error('OpenAI API error:', error);
-      
+
       // Handle specific error codes
       if (response.status === 429) {
-        throw new Error('OpenAI API rate limit exceeded. Please wait a moment and try again, or check your API quota at https://platform.openai.com/usage');
+        throw new Error(
+          'OpenAI API rate limit exceeded. Please wait a moment and try again, or check your API quota at https://platform.openai.com/usage',
+        );
       }
-      
+
       if (response.status === 401) {
         throw new Error('OpenAI API authentication failed. Please check your API key.');
       }
-      
-      throw new Error(`OpenAI API error: ${response.status} - ${error.error?.message || 'Unknown error'}`);
+
+      throw new Error(
+        `OpenAI API error: ${response.status} - ${error.error?.message || 'Unknown error'}`,
+      );
     }
 
     const data = await response.json();
@@ -612,9 +649,9 @@ async function callOpenAIWorkflow(messages: ChatMessage[], systemPrompt: string)
       name: error instanceof Error ? error.name : undefined,
       message: getErrMsg(error),
       stack: error instanceof Error ? error.stack : undefined,
-      error: error
+      error: error,
     });
-    
+
     // Extract error message safely
     const errorMessage = getErrMsg(error);
   }
@@ -627,9 +664,9 @@ app.get('/status', requireAdmin, async (c) => {
   try {
     const configured = !!getOpenAIKey();
     // Don't expose any part of the API key to frontend for security
-    
+
     return c.json({
-      configured
+      configured,
     });
   } catch (error) {
     log.error('Error checking status:', error);
@@ -657,14 +694,18 @@ app.post('/chat', requireAdmin, async (c) => {
     // If clientId provided, fetch client-specific data
     if (clientId && clientId !== 'no-client') {
       clientContext = await getClientContext(clientId, user.id);
-      
+
       if (!clientContext) {
         return c.json({ error: 'Client not found or access denied' }, 404);
       }
     }
 
     // Check if query is about platform operations (not client-specific)
-    const isPlatformQuery = message.toLowerCase().match(/pending|application|todo|task|reminder|event|review|report|status|dashboard|due|coming up/);
+    const isPlatformQuery = message
+      .toLowerCase()
+      .match(
+        /pending|application|todo|task|reminder|event|review|report|status|dashboard|due|coming up/,
+      );
     if (isPlatformQuery || !clientId) {
       platformContext = await getPlatformContext(user.id);
     }
@@ -674,20 +715,20 @@ app.post('/chat', requireAdmin, async (c) => {
     if (mentionsClient && !clientId) {
       const searchTerm = mentionsClient[1] || mentionsClient[2] || mentionsClient[3];
       const matchingClients = await searchClients(searchTerm.trim());
-      
+
       if (matchingClients.length > 1) {
         // Ambiguous - ask for clarification
-        const clientList = matchingClients.map((c, i) => 
-          `${i + 1}. ${c.first_name} ${c.last_name} (${c.email})`
-        ).join('\n');
-        
+        const clientList = matchingClients
+          .map((c, i) => `${i + 1}. ${c.first_name} ${c.last_name} (${c.email})`)
+          .join('\n');
+
         return c.json({
           reply: `I found ${matchingClients.length} clients matching "${searchTerm}":\n\n${clientList}\n\nPlease select a specific client from the dropdown to continue with your query.`,
           ambiguous: true,
-          matches: matchingClients
+          matches: matchingClients,
         });
       }
-      
+
       if (matchingClients.length === 1) {
         // Single match - fetch context for this client
         clientContext = await getClientContext(matchingClients[0].user_id, user.id);
@@ -698,10 +739,7 @@ app.post('/chat', requireAdmin, async (c) => {
     const systemPrompt = buildSystemPrompt(clientContext, platformContext);
 
     // Prepare messages for OpenAI
-    const messages = [
-      ...(conversationHistory || []),
-      { role: 'user', content: message }
-    ];
+    const messages = [...(conversationHistory || []), { role: 'user', content: message }];
 
     // Call OpenAI workflow
     const reply = await callOpenAIWorkflow(messages, systemPrompt);
@@ -717,38 +755,43 @@ app.post('/chat', requireAdmin, async (c) => {
           reply,
           clientId: clientId || null,
           timestamp: new Date().toISOString(),
-          userId: user.id
-        }
+          userId: user.id,
+        },
       });
 
     return c.json({
       reply,
-      conversationId: conversationKey
+      conversationId: conversationKey,
     });
-
   } catch (error: unknown) {
     // Log full error for debugging — outer /chat endpoint catch
     log.error('Error in /chat endpoint (outer):', {
       name: error instanceof Error ? error.name : undefined,
       message: getErrMsg(error),
       stack: error instanceof Error ? error.stack : undefined,
-      error: error
+      error: error,
     });
-    
+
     // Extract error message safely
     const errorMessage = getErrMsg(error);
-    
+
     if (errorMessage.includes('OPENAI_API_KEY')) {
-      return c.json({
-        error: 'OpenAI API key not configured. Please add OPENAI_API_KEY to Supabase secrets.',
-        details: errorMessage
-      }, 401);
+      return c.json(
+        {
+          error: 'OpenAI API key not configured. Please add OPENAI_API_KEY to Supabase secrets.',
+          details: errorMessage,
+        },
+        401,
+      );
     }
-    
-    return c.json({
-      error: 'Failed to process request',
-      details: errorMessage
-    }, 500);
+
+    return c.json(
+      {
+        error: 'Failed to process request',
+        details: errorMessage,
+      },
+      500,
+    );
   }
 });
 
@@ -758,7 +801,7 @@ app.post('/chat', requireAdmin, async (c) => {
 app.get('/history', requireAdmin, async (c) => {
   try {
     const user = c.get('user');
-    
+
     const { data, error } = await getSupabase()
       .from('kv_store_91ed8379')
       .select('*')
@@ -768,11 +811,11 @@ app.get('/history', requireAdmin, async (c) => {
 
     if (error) throw error;
 
-    const messages = (data || []).map(item => ({
+    const messages = (data || []).map((item) => ({
       query: item.value.query,
       reply: item.value.reply,
       timestamp: item.value.timestamp,
-      clientId: item.value.clientId
+      clientId: item.value.clientId,
     }));
 
     return c.json({ messages });
@@ -788,7 +831,7 @@ app.get('/history', requireAdmin, async (c) => {
 app.delete('/history', requireAdmin, async (c) => {
   try {
     const user = c.get('user');
-    
+
     // Delete all conversation history for this user
     const { error } = await getSupabase()
       .from('kv_store_91ed8379')

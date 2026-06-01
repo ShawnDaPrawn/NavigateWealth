@@ -115,11 +115,11 @@ full operator access for that gateway instance.
 After the tunnel is up, configure Cursor’s OpenAI-compatible integration (exact
 UI labels vary by version):
 
-| Setting | Value |
-| --- | --- |
-| Base URL / API URL | `http://127.0.0.1:18789/v1` |
-| API key | Your **gateway** bearer token (`gateway.auth.token` / `OPENCLAW_GATEWAY_TOKEN`), not a raw provider key |
-| Model | `openclaw/default` (stable alias for the default agent) or `openclaw/<agent-name>` |
+| Setting            | Value                                                                                                   |
+| ------------------ | ------------------------------------------------------------------------------------------------------- |
+| Base URL / API URL | `http://127.0.0.1:18789/v1`                                                                             |
+| API key            | Your **gateway** bearer token (`gateway.auth.token` / `OPENCLAW_GATEWAY_TOKEN`), not a raw provider key |
+| Model              | `openclaw/default` (stable alias for the default agent) or `openclaw/<agent-name>`                      |
 
 OpenClaw routes the OpenAI `model` field to **agents**, not raw provider ids.
 To pin a **backend** provider/model for a request, use the HTTP header

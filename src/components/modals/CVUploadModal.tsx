@@ -5,17 +5,17 @@ import { Input } from '../ui/input';
 import { Label } from '../ui/label';
 import { Textarea } from '../ui/textarea';
 import { toast } from 'sonner';
-import { 
-  Upload, 
-  FileText, 
-  Image, 
-  X, 
-  CheckCircle, 
+import {
+  Upload,
+  FileText,
+  Image,
+  X,
+  CheckCircle,
   AlertCircle,
   User,
   Mail,
   Phone,
-  MessageSquare
+  MessageSquare,
 } from 'lucide-react';
 
 interface CVUploadModalProps {
@@ -28,7 +28,7 @@ export function CVUploadModal({ isOpen, onClose }: CVUploadModalProps) {
     name: '',
     email: '',
     phone: '',
-    message: ''
+    message: '',
   });
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
   const [dragActive, setDragActive] = useState(false);
@@ -43,7 +43,7 @@ export function CVUploadModal({ isOpen, onClose }: CVUploadModalProps) {
     'image/jpeg',
     'image/jpg',
     'image/png',
-    'image/gif'
+    'image/gif',
   ];
 
   const getFileIcon = (file: File) => {
@@ -73,7 +73,7 @@ export function CVUploadModal({ isOpen, onClose }: CVUploadModalProps) {
 
   const handleFileSelect = (files: FileList | null) => {
     if (!files || files.length === 0) return;
-    
+
     const file = files[0];
     if (validateFile(file)) {
       setUploadedFile(file);
@@ -106,12 +106,12 @@ export function CVUploadModal({ isOpen, onClose }: CVUploadModalProps) {
   };
 
   const handleInputChange = (field: string, value: string) => {
-    setFormData(prev => ({ ...prev, [field]: value }));
+    setFormData((prev) => ({ ...prev, [field]: value }));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!uploadedFile) {
       toast.error('Please upload your CV before submitting.');
       return;
@@ -123,13 +123,13 @@ export function CVUploadModal({ isOpen, onClose }: CVUploadModalProps) {
     }
 
     setIsUploading(true);
-    
+
     try {
       // Simulate API call - replace with actual implementation
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      
-      toast.success('Your CV has been submitted successfully! We\'ll be in touch soon.');
-      
+      await new Promise((resolve) => setTimeout(resolve, 2000));
+
+      toast.success("Your CV has been submitted successfully! We'll be in touch soon.");
+
       // Reset form
       setFormData({ name: '', email: '', phone: '', message: '' });
       setUploadedFile(null);
@@ -148,9 +148,7 @@ export function CVUploadModal({ isOpen, onClose }: CVUploadModalProps) {
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-lg sm:max-w-2xl md:max-w-4xl lg:max-w-5xl xl:max-w-6xl max-h-[90vh] overflow-y-auto w-[95vw] sm:w-full">
         <DialogHeader>
-          <DialogTitle className="text-2xl text-center mb-2">
-            Submit Your CV
-          </DialogTitle>
+          <DialogTitle className="text-2xl text-center mb-2">Submit Your CV</DialogTitle>
           <DialogDescription className="text-center text-lg">
             We'd love to hear from you! Upload your CV and tell us about yourself.
           </DialogDescription>
@@ -160,7 +158,7 @@ export function CVUploadModal({ isOpen, onClose }: CVUploadModalProps) {
           {/* Personal Information */}
           <div className="space-y-4 lg:space-y-6">
             <h3 className="text-lg lg:text-xl font-semibold text-gray-900">Contact Information</h3>
-            
+
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               <div className="space-y-2">
                 <Label htmlFor="name" className="text-gray-700">
@@ -220,12 +218,12 @@ export function CVUploadModal({ isOpen, onClose }: CVUploadModalProps) {
           {/* File Upload Section */}
           <div className="space-y-4 lg:space-y-6">
             <h3 className="text-lg lg:text-xl font-semibold text-gray-900">Upload Your CV *</h3>
-            
+
             {!uploadedFile ? (
               <div
                 className={`relative border-2 border-dashed rounded-lg p-8 lg:p-12 text-center transition-colors ${
-                  dragActive 
-                    ? 'border-purple-500 bg-purple-50' 
+                  dragActive
+                    ? 'border-purple-500 bg-purple-50'
                     : 'border-gray-300 hover:border-purple-400 hover:bg-gray-50'
                 }`}
                 onDrop={handleDrop}
@@ -247,9 +245,7 @@ export function CVUploadModal({ isOpen, onClose }: CVUploadModalProps) {
                 <p className="text-sm lg:text-base text-gray-600 mb-4 lg:mb-6">
                   Supported formats: PDF, Word, Images (JPEG, PNG, GIF)
                 </p>
-                <p className="text-xs lg:text-sm text-gray-500">
-                  Maximum file size: 5MB
-                </p>
+                <p className="text-xs lg:text-sm text-gray-500">Maximum file size: 5MB</p>
                 <Button type="button" variant="outline" className="mt-4">
                   Choose File
                 </Button>
@@ -259,8 +255,8 @@ export function CVUploadModal({ isOpen, onClose }: CVUploadModalProps) {
                 <div className="flex items-center justify-between">
                   <div className="flex items-center space-x-3">
                     <div className="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center">
-                      {React.createElement(getFileIcon(uploadedFile), { 
-                        className: "h-5 w-5 text-green-600" 
+                      {React.createElement(getFileIcon(uploadedFile), {
+                        className: 'h-5 w-5 text-green-600',
                       })}
                     </div>
                     <div>

@@ -30,7 +30,10 @@ function isFormPrefillId(value: string): value is FormPrefillId {
   return listFormPrefillIds().includes(value as FormPrefillId);
 }
 
-function handleRouteError(c: { json: (body: unknown, status?: number) => Response }, error: unknown) {
+function handleRouteError(
+  c: { json: (body: unknown, status?: number) => Response },
+  error: unknown,
+) {
   if (isFnaUnauthorized(error)) {
     return c.json({ success: false, error: 'Unauthorized' }, 401);
   }

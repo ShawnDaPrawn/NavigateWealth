@@ -3,14 +3,14 @@ import { Card, CardContent, CardHeader, CardTitle } from '../../../../ui/card';
 import { Badge } from '../../../../ui/badge';
 import { Button } from '../../../../ui/button';
 import { Separator } from '../../../../ui/separator';
-import { 
-  AlertTriangle, 
-  CheckCircle, 
-  X, 
-  Mail, 
+import {
+  AlertTriangle,
+  CheckCircle,
+  X,
+  Mail,
   MessageSquare,
   Users,
-  AlertCircle
+  AlertCircle,
 } from 'lucide-react';
 import { ValidationResult, CommunicationChannel } from '../types';
 
@@ -32,9 +32,9 @@ export function CommunicationValidation({
   if (!validation) return null;
 
   const { isValid, errors, warnings, eligibleRecipients, ineligibleRecipients } = validation;
-  
+
   const hasIssues = errors.length > 0 || warnings.length > 0 || ineligibleRecipients.length > 0;
-  
+
   if (!hasIssues && isValid) {
     return (
       <Card className="border-green-200 bg-green-50">
@@ -99,7 +99,7 @@ export function CommunicationValidation({
         {/* Recipients Summary */}
         <div className="space-y-3">
           <h4 className="font-medium text-orange-900">Recipients Summary</h4>
-          
+
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             {/* Eligible Recipients */}
             {eligibleRecipients.length > 0 && (
@@ -142,7 +142,9 @@ export function CommunicationValidation({
                 <div className="space-y-1 max-h-32 overflow-y-auto">
                   {ineligibleRecipients.slice(0, 5).map(({ client, reason }, index) => (
                     <div key={index} className="text-sm text-red-700">
-                      <div className="font-medium">{client.firstName} {client.surname}</div>
+                      <div className="font-medium">
+                        {client.firstName} {client.surname}
+                      </div>
                       <div className="text-xs text-red-600">{reason}</div>
                     </div>
                   ))}
@@ -164,7 +166,9 @@ export function CommunicationValidation({
             <span className="font-medium text-blue-900">Compliance Notice</span>
           </div>
           <div className="text-sm text-blue-700 space-y-1">
-            <p>• Only clients who have opted in to {channel} communications will receive this message</p>
+            <p>
+              • Only clients who have opted in to {channel} communications will receive this message
+            </p>
             <p>• This communication will be logged in each recipient's activity timeline</p>
             <p>• All communications are subject to FAIS and POPI Act compliance requirements</p>
           </div>
@@ -177,23 +181,30 @@ export function CommunicationValidation({
           <div className="text-sm text-muted-foreground">
             {eligibleRecipients.length > 0 ? (
               <div className="contents">
-                Proceeding will send to <strong>{eligibleRecipients.length}</strong> eligible recipient{eligibleRecipients.length > 1 ? 's' : ''}
+                Proceeding will send to <strong>{eligibleRecipients.length}</strong> eligible
+                recipient{eligibleRecipients.length > 1 ? 's' : ''}
                 {ineligibleRecipients.length > 0 && (
-                  <span> and exclude <strong>{ineligibleRecipients.length}</strong> ineligible recipient{ineligibleRecipients.length > 1 ? 's' : ''}</span>
+                  <span>
+                    {' '}
+                    and exclude <strong>{ineligibleRecipients.length}</strong> ineligible recipient
+                    {ineligibleRecipients.length > 1 ? 's' : ''}
+                  </span>
                 )}
               </div>
             ) : (
               'No eligible recipients found'
             )}
           </div>
-          
+
           <div className="flex gap-2">
             <Button variant="outline" onClick={onCancel} disabled={isLoading}>
               Cancel
             </Button>
             <Button
               onClick={onProceed}
-              disabled={!isValid || errors.length > 0 || eligibleRecipients.length === 0 || isLoading}
+              disabled={
+                !isValid || errors.length > 0 || eligibleRecipients.length === 0 || isLoading
+              }
               className="flex items-center gap-2"
             >
               {isLoading ? (

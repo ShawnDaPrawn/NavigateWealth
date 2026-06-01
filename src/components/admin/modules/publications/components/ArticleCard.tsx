@@ -1,9 +1,9 @@
 /**
  * Publications Feature - ArticleCard Component
- * 
+ *
  * Reusable card for displaying article previews with metadata.
  * Supports various display modes and responsive layouts.
- * 
+ *
  * @example
  * ```tsx
  * <ArticleCard
@@ -47,7 +47,7 @@ export function ArticleCard({
   showStatus = false,
   showImage = true,
   showMetadata = true,
-  className
+  className,
 }: ArticleCardProps) {
   const {
     title,
@@ -76,11 +76,7 @@ export function ArticleCard({
       {/* Featured Image */}
       {showImage && imageUrl && (
         <div className="relative h-48 overflow-hidden bg-gray-100">
-          <ImageWithFallback
-            src={imageUrl}
-            alt={title}
-            className="w-full h-full object-cover"
-          />
+          <ImageWithFallback src={imageUrl} alt={title} className="w-full h-full object-cover" />
           {is_featured && (
             <div className="absolute top-3 right-3">
               <Badge className="bg-yellow-500 text-white">
@@ -102,24 +98,16 @@ export function ArticleCard({
             </Badge>
           )}
           {press_category && (
-            <Badge className="bg-purple-100 text-purple-700 border-purple-200 text-xs">
-              Press
-            </Badge>
+            <Badge className="bg-purple-100 text-purple-700 border-purple-200 text-xs">Press</Badge>
           )}
           {showStatus && status && <StatusBadge status={status} />}
         </div>
 
         {/* Title */}
-        <h3 className="text-lg mb-2 text-gray-900 line-clamp-2">
-          {title}
-        </h3>
+        <h3 className="text-lg mb-2 text-gray-900 line-clamp-2">{title}</h3>
 
         {/* Excerpt */}
-        {excerpt && (
-          <p className="text-gray-600 text-sm mb-4 line-clamp-3">
-            {excerpt}
-          </p>
-        )}
+        {excerpt && <p className="text-gray-600 text-sm mb-4 line-clamp-3">{excerpt}</p>}
 
         {/* Metadata */}
         {showMetadata && (
@@ -130,14 +118,14 @@ export function ArticleCard({
                 <span>{author_name}</span>
               </div>
             )}
-            
+
             {reading_time_minutes && (
               <div className="flex items-center gap-1">
                 <Clock className="w-4 h-4" />
                 <span>{reading_time_minutes} min read</span>
               </div>
             )}
-            
+
             <div className="flex items-center gap-1">
               <Calendar className="w-4 h-4" />
               <span>{formatDate(displayDate)}</span>
@@ -163,22 +151,15 @@ export function ArticleCardCompact({
   article,
   onClick,
   showStatus = true,
-  className
+  className,
 }: {
   article: Partial<Article> & { id: string; title: string };
   onClick?: () => void;
   showStatus?: boolean;
   className?: string;
 }) {
-  const {
-    title,
-    category_name,
-    author_name,
-    published_at,
-    created_at,
-    status,
-    view_count
-  } = article;
+  const { title, category_name, author_name, published_at, created_at, status, view_count } =
+    article;
 
   const displayDate = published_at || created_at || new Date().toISOString();
 

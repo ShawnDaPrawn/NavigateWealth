@@ -123,34 +123,16 @@ export const CATEGORY_ICON_COLORS: Record<TaskCategory, string> = {
 // ============================================================================
 
 /** Available category options */
-export const CATEGORY_OPTIONS: TaskCategory[] = [
-  'client',
-  'compliance',
-  'application',
-  'internal',
-];
+export const CATEGORY_OPTIONS: TaskCategory[] = ['client', 'compliance', 'application', 'internal'];
 
 /** Available priority options */
-export const PRIORITY_OPTIONS: TaskPriority[] = [
-  'low',
-  'medium',
-  'high',
-  'critical',
-];
+export const PRIORITY_OPTIONS: TaskPriority[] = ['low', 'medium', 'high', 'critical'];
 
 /** Available status options (for forms — excludes archived) */
-export const STATUS_OPTIONS: TaskStatus[] = [
-  'new',
-  'in_progress',
-  'completed',
-];
+export const STATUS_OPTIONS: TaskStatus[] = ['new', 'in_progress', 'completed'];
 
 /** Board columns (excludes archived) */
-export const BOARD_COLUMNS: TaskStatus[] = [
-  'new',
-  'in_progress',
-  'completed',
-];
+export const BOARD_COLUMNS: TaskStatus[] = ['new', 'in_progress', 'completed'];
 
 // ============================================================================
 // API ENDPOINTS (module-local)

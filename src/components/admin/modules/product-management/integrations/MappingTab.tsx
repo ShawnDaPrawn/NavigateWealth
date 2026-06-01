@@ -3,15 +3,34 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '../..
 import { Button } from '../../../../ui/button';
 import { Label } from '../../../../ui/label';
 import { Switch } from '../../../../ui/switch';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../../../ui/table';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '../../../../ui/table';
 import { Input } from '../../../../ui/input';
 import { Separator } from '../../../../ui/separator';
 import { Badge } from '../../../../ui/badge';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '../../../../ui/tooltip';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../../../ui/select';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '../../../../ui/select';
 import { Textarea } from '../../../../ui/textarea';
 import { Info, Save, AlertCircle, Loader2, Download } from 'lucide-react';
-import { IntegrationProvider, PRODUCT_CATEGORIES, IntegrationFieldBinding, IntegrationMappingConfig, ProductField } from '../types';
+import {
+  IntegrationProvider,
+  PRODUCT_CATEGORIES,
+  IntegrationFieldBinding,
+  IntegrationMappingConfig,
+  ProductField,
+} from '../types';
 import { normaliseIntegrationLabelList } from '@/shared/integrations/binding-utils';
 
 interface MappingTabProps {
@@ -28,10 +47,26 @@ interface MappingTabProps {
   isLoadingFields: boolean;
 }
 
-const blankBehaviorOptions: Array<{ value: NonNullable<IntegrationFieldBinding['blankBehavior']>; label: string; help: string }> = [
-  { value: 'ignore', label: 'Ignore blank', help: 'Blank values do nothing. Only populated changes stage updates.' },
-  { value: 'clear', label: 'Clear on blank', help: 'A blank value stages a DB clear when the admin approves it.' },
-  { value: 'error', label: 'Error on blank', help: 'A blank value is held as invalid for this field.' },
+const blankBehaviorOptions: Array<{
+  value: NonNullable<IntegrationFieldBinding['blankBehavior']>;
+  label: string;
+  help: string;
+}> = [
+  {
+    value: 'ignore',
+    label: 'Ignore blank',
+    help: 'Blank values do nothing. Only populated changes stage updates.',
+  },
+  {
+    value: 'clear',
+    label: 'Clear on blank',
+    help: 'A blank value stages a DB clear when the admin approves it.',
+  },
+  {
+    value: 'error',
+    label: 'Error on blank',
+    help: 'A blank value is held as invalid for this field.',
+  },
 ];
 
 export function MappingTab({
@@ -47,20 +82,22 @@ export function MappingTab({
   isDownloadingTemplate,
   isLoadingFields,
 }: MappingTabProps) {
-  const categoryName = PRODUCT_CATEGORIES.find(c => c.id === selectedCategoryId)?.name;
+  const categoryName = PRODUCT_CATEGORIES.find((c) => c.id === selectedCategoryId)?.name;
 
   const getBindingForField = (field: ProductField): IntegrationFieldBinding => {
     const existing = configBindings.find((binding) => binding.targetFieldId === field.id);
-    return existing || {
-      targetFieldId: field.id,
-      targetFieldName: field.name,
-      columnName: field.name,
-      required: field.required,
-      fieldType: field.type,
-      portalLabels: [],
-      blankBehavior: 'ignore',
-      transform: 'trim',
-    };
+    return (
+      existing || {
+        targetFieldId: field.id,
+        targetFieldName: field.name,
+        columnName: field.name,
+        required: field.required,
+        fieldType: field.type,
+        portalLabels: [],
+        blankBehavior: 'ignore',
+        transform: 'trim',
+      }
+    );
   };
 
   if (isLoadingFields) {
@@ -91,8 +128,9 @@ export function MappingTab({
             <div>
               <CardTitle>Mapping Configuration</CardTitle>
               <CardDescription className="mt-2">
-                Configure the canonical integration contract for <strong>{provider.name}</strong> / <strong>{categoryName}</strong>.
-                The Integration Template, spreadsheet upload, and portal automation all stage through these same field bindings.
+                Configure the canonical integration contract for <strong>{provider.name}</strong> /{' '}
+                <strong>{categoryName}</strong>. The Integration Template, spreadsheet upload, and
+                portal automation all stage through these same field bindings.
               </CardDescription>
             </div>
             <Button variant="outline" onClick={onDownloadTemplate} disabled={isDownloadingTemplate}>
@@ -109,14 +147,19 @@ export function MappingTab({
           <div className="grid grid-cols-1 gap-6 p-4 bg-gray-50 rounded-lg border border-gray-100 sm:grid-cols-2 xl:grid-cols-4">
             <div className="flex flex-col space-y-2">
               <div className="flex items-center gap-2">
-                <Label className="font-medium text-gray-700 cursor-pointer" htmlFor="auto-map">Auto-Map Future Uploads</Label>
+                <Label className="font-medium text-gray-700 cursor-pointer" htmlFor="auto-map">
+                  Auto-Map Future Uploads
+                </Label>
                 <TooltipProvider>
                   <Tooltip>
                     <TooltipTrigger>
                       <Info className="w-4 h-4 text-gray-400 hover:text-gray-600" />
                     </TooltipTrigger>
                     <TooltipContent>
-                      <p className="max-w-xs">Automatically apply these bindings to future spreadsheet uploads from this provider.</p>
+                      <p className="max-w-xs">
+                        Automatically apply these bindings to future spreadsheet uploads from this
+                        provider.
+                      </p>
                     </TooltipContent>
                   </Tooltip>
                 </TooltipProvider>
@@ -127,20 +170,30 @@ export function MappingTab({
                   checked={!!configSettings.autoMap}
                   onCheckedChange={(c) => onUpdateSetting('autoMap', c)}
                 />
-                <span className="text-xs text-gray-500">{configSettings.autoMap ? 'Enabled' : 'Disabled'}</span>
+                <span className="text-xs text-gray-500">
+                  {configSettings.autoMap ? 'Enabled' : 'Disabled'}
+                </span>
               </div>
             </div>
 
             <div className="flex flex-col space-y-2">
               <div className="flex items-center gap-2">
-                <Label className="font-medium text-gray-700 cursor-pointer" htmlFor="ignore-unmatched">Ignore Unmatched</Label>
+                <Label
+                  className="font-medium text-gray-700 cursor-pointer"
+                  htmlFor="ignore-unmatched"
+                >
+                  Ignore Unmatched
+                </Label>
                 <TooltipProvider>
                   <Tooltip>
                     <TooltipTrigger>
                       <Info className="w-4 h-4 text-gray-400 hover:text-gray-600" />
                     </TooltipTrigger>
                     <TooltipContent>
-                      <p className="max-w-xs">Columns that are not part of the canonical template contract will be skipped instead of causing an error.</p>
+                      <p className="max-w-xs">
+                        Columns that are not part of the canonical template contract will be skipped
+                        instead of causing an error.
+                      </p>
                     </TooltipContent>
                   </Tooltip>
                 </TooltipProvider>
@@ -151,20 +204,27 @@ export function MappingTab({
                   checked={!!configSettings.ignoreUnmatched}
                   onCheckedChange={(c) => onUpdateSetting('ignoreUnmatched', c)}
                 />
-                <span className="text-xs text-gray-500">{configSettings.ignoreUnmatched ? 'Enabled' : 'Disabled'}</span>
+                <span className="text-xs text-gray-500">
+                  {configSettings.ignoreUnmatched ? 'Enabled' : 'Disabled'}
+                </span>
               </div>
             </div>
 
             <div className="flex flex-col space-y-2">
               <div className="flex items-center gap-2">
-                <Label className="font-medium text-gray-700 cursor-pointer" htmlFor="strict-mode">Strict Mode</Label>
+                <Label className="font-medium text-gray-700 cursor-pointer" htmlFor="strict-mode">
+                  Strict Mode
+                </Label>
                 <TooltipProvider>
                   <Tooltip>
                     <TooltipTrigger>
                       <Info className="w-4 h-4 text-gray-400 hover:text-gray-600" />
                     </TooltipTrigger>
                     <TooltipContent>
-                      <p className="max-w-xs">Reject the upload if any row contains invalid values or required contract issues.</p>
+                      <p className="max-w-xs">
+                        Reject the upload if any row contains invalid values or required contract
+                        issues.
+                      </p>
                     </TooltipContent>
                   </Tooltip>
                 </TooltipProvider>
@@ -175,20 +235,27 @@ export function MappingTab({
                   checked={!!configSettings.strictMode}
                   onCheckedChange={(c) => onUpdateSetting('strictMode', c)}
                 />
-                <span className="text-xs text-gray-500">{configSettings.strictMode ? 'Enabled' : 'Disabled'}</span>
+                <span className="text-xs text-gray-500">
+                  {configSettings.strictMode ? 'Enabled' : 'Disabled'}
+                </span>
               </div>
             </div>
 
             <div className="flex flex-col space-y-2">
               <div className="flex items-center gap-2">
-                <Label className="font-medium text-gray-700 cursor-pointer" htmlFor="auto-publish">Auto-Publish Safe Rows</Label>
+                <Label className="font-medium text-gray-700 cursor-pointer" htmlFor="auto-publish">
+                  Auto-Publish Safe Rows
+                </Label>
                 <TooltipProvider>
                   <Tooltip>
                     <TooltipTrigger>
                       <Info className="w-4 h-4 text-gray-400 hover:text-gray-600" />
                     </TooltipTrigger>
                     <TooltipContent>
-                      <p className="max-w-xs">Automatically publish clean matched portal fields. Document-extraction locks do not block provider portal updates.</p>
+                      <p className="max-w-xs">
+                        Automatically publish clean matched portal fields. Document-extraction locks
+                        do not block provider portal updates.
+                      </p>
                     </TooltipContent>
                   </Tooltip>
                 </TooltipProvider>
@@ -199,7 +266,9 @@ export function MappingTab({
                   checked={!!configSettings.autoPublish}
                   onCheckedChange={(c) => onUpdateSetting('autoPublish', c)}
                 />
-                <span className="text-xs text-gray-500">{configSettings.autoPublish ? 'Enabled' : 'Disabled'}</span>
+                <span className="text-xs text-gray-500">
+                  {configSettings.autoPublish ? 'Enabled' : 'Disabled'}
+                </span>
               </div>
             </div>
           </div>
@@ -207,7 +276,9 @@ export function MappingTab({
           <Separator />
 
           <div className="rounded-md border border-blue-100 bg-blue-50/70 p-4 text-sm text-blue-900">
-            The spreadsheet column name is the canonical upload contract. Portal labels tell the Playwright worker what wording to look for on the provider site. Selector overrides are optional and only needed when the label-based extraction is ambiguous.
+            The spreadsheet column name is the canonical upload contract. Portal labels tell the
+            Playwright worker what wording to look for on the provider site. Selector overrides are
+            optional and only needed when the label-based extraction is ambiguous.
           </div>
 
           <div className="space-y-4">
@@ -237,11 +308,17 @@ export function MappingTab({
                           <div className="flex items-center gap-2 flex-wrap">
                             <span className="font-medium text-gray-700">{field.name}</span>
                             {field.required && (
-                              <Badge variant="outline" className="text-[10px] h-5 px-1 text-red-600 border-red-200 bg-red-50">
+                              <Badge
+                                variant="outline"
+                                className="text-[10px] h-5 px-1 text-red-600 border-red-200 bg-red-50"
+                              >
                                 Required
                               </Badge>
                             )}
-                            <Badge variant="secondary" className="text-[10px] h-5 px-1 text-gray-500">
+                            <Badge
+                              variant="secondary"
+                              className="text-[10px] h-5 px-1 text-gray-500"
+                            >
                               {field.type}
                             </Badge>
                           </div>
@@ -250,44 +327,58 @@ export function MappingTab({
                         <TableCell className="align-top">
                           <Input
                             value={binding.columnName || ''}
-                            onChange={(event) => onUpdateBinding(field.id, {
-                              targetFieldName: field.name,
-                              required: field.required,
-                              fieldType: field.type,
-                              columnName: event.target.value,
-                            })}
+                            onChange={(event) =>
+                              onUpdateBinding(field.id, {
+                                targetFieldName: field.name,
+                                required: field.required,
+                                fieldType: field.type,
+                                columnName: event.target.value,
+                              })
+                            }
                             placeholder={`Column name for ${field.name}`}
-                            className={field.required && !binding.columnName ? 'border-red-300 bg-red-50/50' : ''}
+                            className={
+                              field.required && !binding.columnName
+                                ? 'border-red-300 bg-red-50/50'
+                                : ''
+                            }
                           />
                           <p className="mt-2 text-xs text-gray-500">
-                            This is the header used by the Integration Template and spreadsheet upload.
+                            This is the header used by the Integration Template and spreadsheet
+                            upload.
                           </p>
                         </TableCell>
                         <TableCell className="align-top">
                           <Textarea
                             value={normaliseIntegrationLabelList(binding.portalLabels).join('\n')}
-                            onChange={(event) => onUpdateBinding(field.id, {
-                              targetFieldName: field.name,
-                              required: field.required,
-                              fieldType: field.type,
-                              portalLabels: normaliseIntegrationLabelList(event.target.value),
-                            })}
+                            onChange={(event) =>
+                              onUpdateBinding(field.id, {
+                                targetFieldName: field.name,
+                                required: field.required,
+                                fieldType: field.type,
+                                portalLabels: normaliseIntegrationLabelList(event.target.value),
+                              })
+                            }
                             className="min-h-24 bg-white"
                             placeholder={`Provider wording for ${field.name}`}
                           />
                           <p className="mt-2 text-xs text-gray-500">
-                            One phrase per line. Leave blank if you only want selector-based extraction or provider-level fallback labels from Portal Automation.
+                            One phrase per line. Leave blank if you only want selector-based
+                            extraction or provider-level fallback labels from Portal Automation.
                           </p>
                         </TableCell>
                         <TableCell className="align-top">
                           <Select
                             value={blankBehavior}
-                            onValueChange={(value) => onUpdateBinding(field.id, {
-                              targetFieldName: field.name,
-                              required: field.required,
-                              fieldType: field.type,
-                              blankBehavior: value as NonNullable<IntegrationFieldBinding['blankBehavior']>,
-                            })}
+                            onValueChange={(value) =>
+                              onUpdateBinding(field.id, {
+                                targetFieldName: field.name,
+                                required: field.required,
+                                fieldType: field.type,
+                                blankBehavior: value as NonNullable<
+                                  IntegrationFieldBinding['blankBehavior']
+                                >,
+                              })
+                            }
                           >
                             <SelectTrigger className="bg-white">
                               <SelectValue />
@@ -301,22 +392,28 @@ export function MappingTab({
                             </SelectContent>
                           </Select>
                           <p className="mt-2 text-xs text-gray-500">
-                            {blankBehaviorOptions.find((option) => option.value === blankBehavior)?.help}
+                            {
+                              blankBehaviorOptions.find((option) => option.value === blankBehavior)
+                                ?.help
+                            }
                           </p>
                         </TableCell>
                         <TableCell className="align-top">
                           <Input
                             value={binding.portalSelector || ''}
-                            onChange={(event) => onUpdateBinding(field.id, {
-                              targetFieldName: field.name,
-                              required: field.required,
-                              fieldType: field.type,
-                              portalSelector: event.target.value,
-                            })}
+                            onChange={(event) =>
+                              onUpdateBinding(field.id, {
+                                targetFieldName: field.name,
+                                required: field.required,
+                                fieldType: field.type,
+                                portalSelector: event.target.value,
+                              })
+                            }
                             placeholder="Optional CSS selector override"
                           />
                           <p className="mt-2 text-xs text-gray-500">
-                            Optional category-specific fallback. Use this only when label-based extraction is not stable enough.
+                            Optional category-specific fallback. Use this only when label-based
+                            extraction is not stable enough.
                           </p>
                         </TableCell>
                       </TableRow>

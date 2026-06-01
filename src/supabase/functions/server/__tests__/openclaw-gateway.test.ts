@@ -15,10 +15,9 @@ describe('OpenClaw gateway guardrails', () => {
   });
 
   it('ignores unknown capability names from env configuration', () => {
-    expect(normaliseOpenClawCapabilityList('system.heartbeat,unknown,provider.otp.submit')).toEqual([
-      'system.heartbeat',
-      'provider.otp.submit',
-    ]);
+    expect(normaliseOpenClawCapabilityList('system.heartbeat,unknown,provider.otp.submit')).toEqual(
+      ['system.heartbeat', 'provider.otp.submit'],
+    );
   });
 
   it('rejects capabilities that are known but not currently enabled', () => {

@@ -1,25 +1,20 @@
 /**
  * Task Management Module - Utility Functions
  * Navigate Wealth Admin Dashboard
- * 
+ *
  * Reusable utility functions for:
  * - Date/time calculations and formatting
  * - Task filtering and sorting
  * - Priority and status helpers
  * - Validation
- * 
+ *
  * @module tasks/utils
  */
 
-import type {
-  Task,
-  TaskStatus,
-  TaskPriority,
-  TaskCategory,
-  TaskFilters,
-} from './types';
+import type { Task, TaskStatus, TaskPriority, TaskCategory, TaskFilters } from './types';
 
-const ISSUE_MANAGER_TASK_HEADING_PATTERN = /^(Security Issue|Issue Manager Task|Affected Dependency|Why This Matters|Required Remediation|References|Context|Required Response)$/i;
+const ISSUE_MANAGER_TASK_HEADING_PATTERN =
+  /^(Security Issue|Issue Manager Task|Affected Dependency|Why This Matters|Required Remediation|References|Context|Required Response)$/i;
 
 function cleanPreviewLine(value: string): string {
   return value
@@ -32,7 +27,9 @@ export function isIssueManagerTask(task: Pick<Task, 'title' | 'tags'>): boolean 
   return task.title.startsWith('[Issue Manager]') || task.tags?.includes('issue-manager') || false;
 }
 
-export function getTaskDescriptionPreview(task: Pick<Task, 'title' | 'description' | 'tags'>): string | null {
+export function getTaskDescriptionPreview(
+  task: Pick<Task, 'title' | 'description' | 'tags'>,
+): string | null {
   const description = String(task.description || '').trim();
   if (!description) return null;
 
@@ -58,10 +55,7 @@ export function getTaskDescriptionPreview(task: Pick<Task, 'title' | 'descriptio
   ].filter((line): line is string => Boolean(line));
 
   if (highlightedLines.length > 0) {
-    return highlightedLines
-      .slice(0, 3)
-      .map(cleanPreviewLine)
-      .join(' | ');
+    return highlightedLines.slice(0, 3).map(cleanPreviewLine).join(' | ');
   }
 
   const fallbackLine = lines.find((line) => !ISSUE_MANAGER_TASK_HEADING_PATTERN.test(line));
@@ -74,10 +68,10 @@ export function getTaskDescriptionPreview(task: Pick<Task, 'title' | 'descriptio
 
 /**
  * Check if a task is overdue
- * 
+ *
  * @param task - Task to check
  * @returns True if task is overdue
- * 
+ *
  * @example
  * isTaskOverdue(task); // true
  */
@@ -88,7 +82,7 @@ export function isTaskOverdue(task: Task): boolean {
 
   const today = new Date();
   today.setHours(0, 0, 0, 0);
-  
+
   const dueDate = new Date(task.due_date);
   dueDate.setHours(0, 0, 0, 0);
 
@@ -97,10 +91,10 @@ export function isTaskOverdue(task: Task): boolean {
 
 /**
  * Calculate number of days a task is overdue
- * 
+ *
  * @param task - Task to check
  * @returns Number of days overdue (0 if not overdue)
- * 
+ *
  * @example
  * getOverdueDays(task); // 3
  */
@@ -111,7 +105,7 @@ export function getOverdueDays(task: Task): number {
 
   const today = new Date();
   today.setHours(0, 0, 0, 0);
-  
+
   const dueDate = new Date(task.due_date);
   dueDate.setHours(0, 0, 0, 0);
 
@@ -123,10 +117,10 @@ export function getOverdueDays(task: Task): number {
 
 /**
  * Check if task is due today
- * 
+ *
  * @param task - Task to check
  * @returns True if due today
- * 
+ *
  * @example
  * isDueToday(task); // true
  */
@@ -135,7 +129,7 @@ export function isDueToday(task: Task): boolean {
 
   const today = new Date();
   today.setHours(0, 0, 0, 0);
-  
+
   const dueDate = new Date(task.due_date);
   dueDate.setHours(0, 0, 0, 0);
 
@@ -144,10 +138,10 @@ export function isDueToday(task: Task): boolean {
 
 /**
  * Check if task is due this week
- * 
+ *
  * @param task - Task to check
  * @returns True if due this week
- * 
+ *
  * @example
  * isDueThisWeek(task); // true
  */
@@ -156,7 +150,7 @@ export function isDueThisWeek(task: Task): boolean {
 
   const today = new Date();
   today.setHours(0, 0, 0, 0);
-  
+
   const dueDate = new Date(task.due_date);
   dueDate.setHours(0, 0, 0, 0);
 
@@ -173,11 +167,11 @@ export function isDueThisWeek(task: Task): boolean {
 /**
  * Filter tasks by search query
  * Searches title, description, tags, and category
- * 
+ *
  * @param tasks - Tasks to filter
  * @param query - Search query
  * @returns Filtered tasks
- * 
+ *
  * @example
  * filterBySearch(tasks, 'urgent'); // [...matching tasks]
  */
@@ -191,17 +185,17 @@ export function filterBySearch(tasks: Task[], query: string): Task[] {
       task.title.toLowerCase().includes(queryLower) ||
       task.description?.toLowerCase().includes(queryLower) ||
       task.tags?.some((tag) => tag.toLowerCase().includes(queryLower)) ||
-      task.category?.toLowerCase().includes(queryLower)
+      task.category?.toLowerCase().includes(queryLower),
   );
 }
 
 /**
  * Filter tasks by status
- * 
+ *
  * @param tasks - Tasks to filter
  * @param status - Status to filter by ('all' or specific status)
  * @returns Filtered tasks
- * 
+ *
  * @example
  * filterByStatus(tasks, 'in_progress'); // [...in progress tasks]
  */
@@ -212,11 +206,11 @@ export function filterByStatus(tasks: Task[], status: 'all' | TaskStatus): Task[
 
 /**
  * Filter tasks by priority
- * 
+ *
  * @param tasks - Tasks to filter
  * @param priority - Priority to filter by ('all' or specific priority)
  * @returns Filtered tasks
- * 
+ *
  * @example
  * filterByPriority(tasks, 'high'); // [...high priority tasks]
  */
@@ -227,11 +221,11 @@ export function filterByPriority(tasks: Task[], priority: 'all' | TaskPriority):
 
 /**
  * Filter tasks by assignee
- * 
+ *
  * @param tasks - Tasks to filter
  * @param assigneeId - Assignee ID ('all' or specific user ID)
  * @returns Filtered tasks
- * 
+ *
  * @example
  * filterByAssignee(tasks, 'user-123'); // [...assigned tasks]
  */
@@ -242,11 +236,11 @@ export function filterByAssignee(tasks: Task[], assigneeId: 'all' | string): Tas
 
 /**
  * Filter tasks by category
- * 
+ *
  * @param tasks - Tasks to filter
  * @param category - Category ('all' or specific category)
  * @returns Filtered tasks
- * 
+ *
  * @example
  * filterByCategory(tasks, 'client'); // [...client tasks]
  */
@@ -257,11 +251,11 @@ export function filterByCategory(tasks: Task[], category: 'all' | TaskCategory):
 
 /**
  * Filter tasks by due date
- * 
+ *
  * @param tasks - Tasks to filter
  * @param filter - Due date filter
  * @returns Filtered tasks
- * 
+ *
  * @example
  * filterByDueDate(tasks, 'overdue'); // [...overdue tasks]
  */
@@ -281,11 +275,11 @@ export function filterByDueDate(tasks: Task[], filter: string): Task[] {
 
 /**
  * Apply multiple filters to tasks
- * 
+ *
  * @param tasks - Tasks to filter
  * @param filters - Filter object
  * @returns Filtered tasks
- * 
+ *
  * @example
  * const filtered = applyFilters(tasks, {
  *   search: 'urgent',
@@ -341,10 +335,10 @@ export function applyFilters(tasks: Task[], filters: TaskFilters): Task[] {
 /**
  * Sort tasks by due date (earliest first)
  * Tasks without due dates are sorted last
- * 
+ *
  * @param tasks - Tasks to sort
  * @returns Sorted tasks
- * 
+ *
  * @example
  * sortByDueDate(tasks); // [...sorted by due date]
  */
@@ -361,10 +355,10 @@ export function sortByDueDate(tasks: Task[]): Task[] {
 
 /**
  * Sort tasks by priority (highest first)
- * 
+ *
  * @param tasks - Tasks to sort
  * @returns Sorted tasks
- * 
+ *
  * @example
  * sortByPriority(tasks); // [...critical, high, medium, low]
  */
@@ -383,10 +377,10 @@ export function sortByPriority(tasks: Task[]): Task[] {
 
 /**
  * Sort tasks by created date (newest first)
- * 
+ *
  * @param tasks - Tasks to sort
  * @returns Sorted tasks
- * 
+ *
  * @example
  * sortByCreatedDate(tasks); // [...newest to oldest]
  */
@@ -398,10 +392,10 @@ export function sortByCreatedDate(tasks: Task[]): Task[] {
 
 /**
  * Sort tasks by title (alphabetical)
- * 
+ *
  * @param tasks - Tasks to sort
  * @returns Sorted tasks
- * 
+ *
  * @example
  * sortByTitle(tasks); // [...A to Z]
  */
@@ -417,10 +411,10 @@ export function sortByTitle(tasks: Task[]): Task[] {
 
 /**
  * Group tasks by status
- * 
+ *
  * @param tasks - Tasks to group
  * @returns Tasks grouped by status
- * 
+ *
  * @example
  * const grouped = groupByStatus(tasks);
  * // { new: [...], in_progress: [...], completed: [...], archived: [...] }
@@ -449,10 +443,10 @@ export function groupByStatus(tasks: Task[]): Record<TaskStatus, Task[]> {
 
 /**
  * Group tasks by priority
- * 
+ *
  * @param tasks - Tasks to group
  * @returns Tasks grouped by priority
- * 
+ *
  * @example
  * const grouped = groupByPriority(tasks);
  * // { critical: [...], high: [...], medium: [...], low: [...] }
@@ -476,10 +470,10 @@ export function groupByPriority(tasks: Task[]): Record<TaskPriority, Task[]> {
 
 /**
  * Group tasks by category
- * 
+ *
  * @param tasks - Tasks to group
  * @returns Tasks grouped by category
- * 
+ *
  * @example
  * const grouped = groupByCategory(tasks);
  * // { client: [...], compliance: [...], application: [...], internal: [...] }
@@ -510,10 +504,10 @@ export function groupByCategory(tasks: Task[]): Record<TaskCategory | 'none', Ta
 
 /**
  * Validate task title
- * 
+ *
  * @param title - Title to validate
  * @returns Error message or null if valid
- * 
+ *
  * @example
  * validateTitle(''); // 'Title is required'
  * validateTitle('Valid title'); // null
@@ -530,10 +524,10 @@ export function validateTitle(title: string): string | null {
 
 /**
  * Validate task description
- * 
+ *
  * @param description - Description to validate
  * @returns Error message or null if valid
- * 
+ *
  * @example
  * validateDescription('Very long...'); // 'Description must be less than 2000 characters'
  * validateDescription('Valid'); // null
@@ -548,10 +542,10 @@ export function validateDescription(description: string | null): string | null {
 
 /**
  * Validate due date
- * 
+ *
  * @param dueDate - Due date to validate
  * @returns Error message or null if valid
- * 
+ *
  * @example
  * validateDueDate('invalid'); // 'Invalid date format'
  * validateDueDate('2026-01-10'); // null
@@ -569,21 +563,21 @@ export function validateDueDate(dueDate: string | null): string | null {
 
 /**
  * Validate assignee initials
- * 
+ *
  * @param initials - Initials to validate
  * @returns Error message or null if valid
- * 
+ *
  * @example
  * validateAssigneeInitials('ABCD'); // 'Initials must be 1-3 characters'
  * validateAssigneeInitials('AB'); // null
  */
 export function validateAssigneeInitials(initials: string | null): string | null {
   if (!initials) return null;
-  
+
   if (initials.length > 3) {
     return 'Initials must be 1-3 characters';
   }
-  
+
   if (!/^[A-Za-z]+$/.test(initials)) {
     return 'Initials must contain only letters';
   }
@@ -605,7 +599,7 @@ export const taskUtils = {
   getOverdueDays,
   isDueToday,
   isDueThisWeek,
-  
+
   // Filtering
   filterBySearch,
   filterByStatus,
@@ -614,18 +608,18 @@ export const taskUtils = {
   filterByCategory,
   filterByDueDate,
   applyFilters,
-  
+
   // Sorting
   sortByDueDate,
   sortByPriority,
   sortByCreatedDate,
   sortByTitle,
-  
+
   // Grouping
   groupByStatus,
   groupByPriority,
   groupByCategory,
-  
+
   // Validation
   validateTitle,
   validateDescription,

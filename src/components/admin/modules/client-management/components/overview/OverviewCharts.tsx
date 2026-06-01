@@ -18,10 +18,7 @@
 import React, { useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '../../../../../ui/card';
 import { Badge } from '../../../../../ui/badge';
-import {
-  SVGPieChart,
-  SVGBarChart,
-} from '../../../../../ui/svg-charts';
+import { SVGPieChart, SVGBarChart } from '../../../../../ui/svg-charts';
 import type { PieSlice, BarChartSeries } from '../../../../../ui/svg-charts';
 import {
   PieChart as PieChartIcon,
@@ -58,26 +55,54 @@ function fmtCompact(v: number): string {
 
 /** Colour palette for asset categories — consistent with Design System */
 const ASSET_COLORS: Record<string, string> = {
-  property: '#6d28d9',      // brand purple
-  retirement: '#16a34a',    // green-600
-  investment: '#2563eb',    // blue-600
-  savings: '#0891b2',       // cyan-600
-  vehicle: '#d97706',       // amber-600
-  business: '#7c3aed',      // violet-600
-  personal: '#64748b',      // slate-500
-  other: '#94a3b8',         // slate-400
+  property: '#6d28d9', // brand purple
+  retirement: '#16a34a', // green-600
+  investment: '#2563eb', // blue-600
+  savings: '#0891b2', // cyan-600
+  vehicle: '#d97706', // amber-600
+  business: '#7c3aed', // violet-600
+  personal: '#64748b', // slate-500
+  other: '#94a3b8', // slate-400
 };
 
 /** Map raw asset type strings to a normalised category */
 function normaliseAssetCategory(type: string): string {
   const t = (type || '').toLowerCase();
-  if (t.includes('property') || t.includes('house') || t.includes('home') || t.includes('real estate')) return 'property';
-  if (t.includes('retirement') || t.includes('pension') || t.includes('provident') || t.includes('ra')) return 'retirement';
-  if (t.includes('invest') || t.includes('unit trust') || t.includes('shares') || t.includes('equity') || t.includes('etf')) return 'investment';
-  if (t.includes('saving') || t.includes('cash') || t.includes('money market') || t.includes('deposit') || t.includes('bank')) return 'savings';
+  if (
+    t.includes('property') ||
+    t.includes('house') ||
+    t.includes('home') ||
+    t.includes('real estate')
+  )
+    return 'property';
+  if (
+    t.includes('retirement') ||
+    t.includes('pension') ||
+    t.includes('provident') ||
+    t.includes('ra')
+  )
+    return 'retirement';
+  if (
+    t.includes('invest') ||
+    t.includes('unit trust') ||
+    t.includes('shares') ||
+    t.includes('equity') ||
+    t.includes('etf')
+  )
+    return 'investment';
+  if (
+    t.includes('saving') ||
+    t.includes('cash') ||
+    t.includes('money market') ||
+    t.includes('deposit') ||
+    t.includes('bank')
+  )
+    return 'savings';
   if (t.includes('vehicle') || t.includes('car') || t.includes('motor')) return 'vehicle';
-  if (t.includes('business') || t.includes('company') || t.includes('partnership')) return 'business';
-  if (t.includes('personal') || t.includes('household') || t.includes('jewel') || t.includes('art')) return 'personal';
+  if (t.includes('business') || t.includes('company') || t.includes('partnership'))
+    return 'business';
+  if (t.includes('personal') || t.includes('household') || t.includes('jewel') || t.includes('art'))
+    return 'personal';
   return 'other';
 }
 
@@ -156,7 +181,9 @@ export function AssetAllocationChart({
           <div className="text-center">
             <p className="text-xs text-gray-400">No asset data available</p>
             <p className="text-[10px] text-gray-300 mt-1">
-              {isClient ? 'Asset information will appear once your profile is updated' : 'Add balance sheet data to view allocation'}
+              {isClient
+                ? 'Asset information will appear once your profile is updated'
+                : 'Add balance sheet data to view allocation'}
             </p>
           </div>
         </CardContent>
@@ -174,7 +201,10 @@ export function AssetAllocationChart({
           <CardTitle className="text-sm font-semibold text-gray-800 !leading-none">
             {isClient ? 'My Asset Allocation' : 'Asset Allocation'}
           </CardTitle>
-          <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-4 border-gray-200 text-gray-500 ml-auto">
+          <Badge
+            variant="outline"
+            className="text-[10px] px-1.5 py-0 h-4 border-gray-200 text-gray-500 ml-auto"
+          >
             Total: {fmtCompact(totalValue)}
           </Badge>
         </div>
@@ -184,13 +214,18 @@ export function AssetAllocationChart({
           data={slices}
           height={200}
           innerRadius={40}
-          tooltipFormatter={(value, name) => `${name}: ${fmtCurrency(value)} (${((value / totalValue) * 100).toFixed(1)}%)`}
+          tooltipFormatter={(value, name) =>
+            `${name}: ${fmtCurrency(value)} (${((value / totalValue) * 100).toFixed(1)}%)`
+          }
         />
         {/* Legend */}
         <div className="flex flex-wrap gap-x-4 gap-y-1.5 mt-3 justify-center">
           {slices.map((s) => (
             <div key={s.name} className="flex items-center gap-1.5">
-              <div className="h-2.5 w-2.5 rounded-sm flex-shrink-0" style={{ backgroundColor: s.color }} />
+              <div
+                className="h-2.5 w-2.5 rounded-sm flex-shrink-0"
+                style={{ backgroundColor: s.color }}
+              />
               <span className="text-[10px] text-gray-500">{s.name}</span>
               <span className="text-[10px] font-medium text-gray-700">
                 {((s.value / totalValue) * 100).toFixed(0)}%
@@ -202,7 +237,6 @@ export function AssetAllocationChart({
     </Card>
   );
 }
-
 
 // ═══════════════════════════════════════════════════════════════════════
 // 2. INSURANCE COVERAGE BAR CHART
@@ -257,7 +291,9 @@ export function InsuranceCoverageChart({
           <div className="text-center">
             <p className="text-xs text-gray-400">No coverage data available</p>
             <p className="text-[10px] text-gray-300 mt-1">
-              {isClient ? 'Coverage analysis requires a completed Risk FNA' : 'Publish a Risk FNA to view coverage analysis'}
+              {isClient
+                ? 'Coverage analysis requires a completed Risk FNA'
+                : 'Publish a Risk FNA to view coverage analysis'}
             </p>
           </div>
         </CardContent>
@@ -279,12 +315,18 @@ export function InsuranceCoverageChart({
             {isClient ? 'My Insurance Coverage' : 'Insurance Coverage Analysis'}
           </CardTitle>
           {shortfalls > 0 && (
-            <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-4 border-red-200 text-red-600 ml-auto">
+            <Badge
+              variant="outline"
+              className="text-[10px] px-1.5 py-0 h-4 border-red-200 text-red-600 ml-auto"
+            >
               {shortfalls} {shortfalls === 1 ? 'shortfall' : 'shortfalls'}
             </Badge>
           )}
           {shortfalls === 0 && barData.length > 0 && (
-            <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-4 border-green-200 text-green-700 ml-auto">
+            <Badge
+              variant="outline"
+              className="text-[10px] px-1.5 py-0 h-4 border-green-200 text-green-700 ml-auto"
+            >
               Fully covered
             </Badge>
           )}
@@ -305,7 +347,6 @@ export function InsuranceCoverageChart({
     </Card>
   );
 }
-
 
 // ═══════════════════════════════════════════════════════════════════════
 // 3. CASHFLOW WATERFALL CHART
@@ -341,20 +382,59 @@ export function CashflowWaterfallChart({
 
   const segments = useMemo(() => {
     const taxDeductions = data.grossIncome - data.netIncome;
-    const totalPremiums = data.riskPremiums + data.medicalPremiums +
-      data.retirementPremiums + data.investmentPremiums + data.employeePremiums;
+    const totalPremiums =
+      data.riskPremiums +
+      data.medicalPremiums +
+      data.retirementPremiums +
+      data.investmentPremiums +
+      data.employeePremiums;
     const disposable = Math.max(0, data.netIncome - totalPremiums - data.debtPayments);
 
     const items = [
-      { label: 'Tax & Deductions', value: taxDeductions, color: '#ef4444', type: 'outflow' as const },
-      { label: 'Risk Premiums', value: data.riskPremiums, color: '#6d28d9', type: 'outflow' as const },
-      { label: 'Medical Aid', value: data.medicalPremiums, color: '#f97316', type: 'outflow' as const },
-      { label: 'Retirement', value: data.retirementPremiums, color: '#16a34a', type: 'outflow' as const },
-      { label: 'Investments', value: data.investmentPremiums, color: '#2563eb', type: 'outflow' as const },
-      { label: 'Employee Benefits', value: data.employeePremiums, color: '#7c3aed', type: 'outflow' as const },
-      { label: 'Debt Payments', value: data.debtPayments, color: '#dc2626', type: 'outflow' as const },
+      {
+        label: 'Tax & Deductions',
+        value: taxDeductions,
+        color: '#ef4444',
+        type: 'outflow' as const,
+      },
+      {
+        label: 'Risk Premiums',
+        value: data.riskPremiums,
+        color: '#6d28d9',
+        type: 'outflow' as const,
+      },
+      {
+        label: 'Medical Aid',
+        value: data.medicalPremiums,
+        color: '#f97316',
+        type: 'outflow' as const,
+      },
+      {
+        label: 'Retirement',
+        value: data.retirementPremiums,
+        color: '#16a34a',
+        type: 'outflow' as const,
+      },
+      {
+        label: 'Investments',
+        value: data.investmentPremiums,
+        color: '#2563eb',
+        type: 'outflow' as const,
+      },
+      {
+        label: 'Employee Benefits',
+        value: data.employeePremiums,
+        color: '#7c3aed',
+        type: 'outflow' as const,
+      },
+      {
+        label: 'Debt Payments',
+        value: data.debtPayments,
+        color: '#dc2626',
+        type: 'outflow' as const,
+      },
       { label: 'Disposable', value: disposable, color: '#0ea5e9', type: 'remainder' as const },
-    ].filter(s => s.value > 0);
+    ].filter((s) => s.value > 0);
 
     return items;
   }, [data]);
@@ -378,7 +458,9 @@ export function CashflowWaterfallChart({
           <div className="text-center">
             <p className="text-xs text-gray-400">No income data available</p>
             <p className="text-[10px] text-gray-300 mt-1">
-              {isClient ? 'Income details will appear once your profile is updated' : 'Add income information to view cashflow'}
+              {isClient
+                ? 'Income details will appear once your profile is updated'
+                : 'Add income information to view cashflow'}
             </p>
           </div>
         </CardContent>
@@ -388,14 +470,23 @@ export function CashflowWaterfallChart({
 
   // Compute disposable as percentage of gross
   const taxDeductions = data.grossIncome - data.netIncome;
-  const totalPremiums = data.riskPremiums + data.medicalPremiums +
-    data.retirementPremiums + data.investmentPremiums + data.employeePremiums;
+  const totalPremiums =
+    data.riskPremiums +
+    data.medicalPremiums +
+    data.retirementPremiums +
+    data.investmentPremiums +
+    data.employeePremiums;
   const disposable = Math.max(0, data.netIncome - totalPremiums - data.debtPayments);
   const disposableRatio = data.grossIncome > 0 ? (disposable / data.grossIncome) * 100 : 0;
 
   // Determine trend indicator
   const TrendIcon = disposableRatio > 30 ? TrendingUp : disposableRatio > 15 ? Minus : TrendingDown;
-  const trendColor = disposableRatio > 30 ? 'text-green-600' : disposableRatio > 15 ? 'text-amber-500' : 'text-red-500';
+  const trendColor =
+    disposableRatio > 30
+      ? 'text-green-600'
+      : disposableRatio > 15
+        ? 'text-amber-500'
+        : 'text-red-500';
 
   return (
     <Card className="border border-gray-200 rounded-lg bg-white shadow-sm">
@@ -436,7 +527,8 @@ export function CashflowWaterfallChart({
                 style={{
                   width: `${widthPct}%`,
                   backgroundColor: seg.color,
-                  borderRight: i < segments.length - 1 ? '1px solid rgba(255,255,255,0.3)' : undefined,
+                  borderRight:
+                    i < segments.length - 1 ? '1px solid rgba(255,255,255,0.3)' : undefined,
                 }}
                 title={`${seg.label}: ${fmtCurrency(seg.value)} (${widthPct.toFixed(1)}%)`}
               />
@@ -448,7 +540,10 @@ export function CashflowWaterfallChart({
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-x-4 gap-y-2 mt-4">
           {segments.map((seg) => (
             <div key={seg.label} className="flex items-center gap-2">
-              <div className="h-2.5 w-2.5 rounded-sm flex-shrink-0" style={{ backgroundColor: seg.color }} />
+              <div
+                className="h-2.5 w-2.5 rounded-sm flex-shrink-0"
+                style={{ backgroundColor: seg.color }}
+              />
               <div className="min-w-0">
                 <p className="text-[10px] text-gray-500 truncate">{seg.label}</p>
                 <p className="text-xs font-semibold text-gray-800">{fmtCompact(seg.value)}</p>
@@ -470,7 +565,6 @@ export function CashflowWaterfallChart({
     </Card>
   );
 }
-
 
 // ═══════════════════════════════════════════════════════════════════════
 // 4. ACTION PRIORITY DISTRIBUTION BAR
@@ -494,17 +588,25 @@ export function ActionPriorityBar({
   distribution: ActionDistribution;
   mode?: DashboardMode;
 }) {
-  const total = distribution.urgent + distribution.attention +
-    distribution.recommended + distribution.monitoring;
+  const total =
+    distribution.urgent +
+    distribution.attention +
+    distribution.recommended +
+    distribution.monitoring;
 
   if (total === 0) return null;
 
   const segments = [
     { key: 'urgent', count: distribution.urgent, color: '#ef4444', label: 'Act Now' },
     { key: 'attention', count: distribution.attention, color: '#f59e0b', label: 'Worth a Look' },
-    { key: 'recommended', count: distribution.recommended, color: '#2563eb', label: 'Nice to Have' },
+    {
+      key: 'recommended',
+      count: distribution.recommended,
+      color: '#2563eb',
+      label: 'Nice to Have',
+    },
     { key: 'monitoring', count: distribution.monitoring, color: '#64748b', label: 'Monitoring' },
-  ].filter(s => s.count > 0);
+  ].filter((s) => s.count > 0);
 
   return (
     <div className="flex items-center gap-3">
@@ -526,9 +628,7 @@ export function ActionPriorityBar({
         {segments.map((seg) => (
           <div key={seg.key} className="flex items-center gap-1">
             <div className="h-1.5 w-1.5 rounded-full" style={{ backgroundColor: seg.color }} />
-            <span className="text-[10px] text-gray-500">
-              {seg.count}
-            </span>
+            <span className="text-[10px] text-gray-500">{seg.count}</span>
           </div>
         ))}
       </div>

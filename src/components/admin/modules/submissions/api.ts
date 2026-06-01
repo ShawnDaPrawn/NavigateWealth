@@ -24,7 +24,7 @@ export const submissionsApi = {
     if (filters?.status) params.append('status', filters.status);
     const query = params.toString() ? `?${params.toString()}` : '';
     const response = await api.get<{ success: boolean; data: Submission[] }>(
-      `/submissions${query}`
+      `/submissions${query}`,
     );
     return response.data || [];
   },
@@ -33,9 +33,7 @@ export const submissionsApi = {
    * Fetch a single submission by ID.
    */
   async getById(id: string): Promise<Submission> {
-    const response = await api.get<{ success: boolean; data: Submission }>(
-      `/submissions/${id}`
-    );
+    const response = await api.get<{ success: boolean; data: Submission }>(`/submissions/${id}`);
     return response.data;
   },
 
@@ -44,10 +42,7 @@ export const submissionsApi = {
    * Called by website form components once they are complete.
    */
   async create(input: CreateSubmissionInput): Promise<Submission> {
-    const response = await api.post<{ success: boolean; data: Submission }>(
-      '/submissions',
-      input
-    );
+    const response = await api.post<{ success: boolean; data: Submission }>('/submissions', input);
     return response.data;
   },
 
@@ -57,7 +52,7 @@ export const submissionsApi = {
   async update(id: string, input: UpdateSubmissionInput): Promise<Submission> {
     const response = await api.patch<{ success: boolean; data: Submission }>(
       `/submissions/${id}`,
-      input
+      input,
     );
     return response.data;
   },
@@ -66,9 +61,7 @@ export const submissionsApi = {
    * Fetch the count of 'new' submissions for the nav badge.
    */
   async countNew(): Promise<number> {
-    const response = await api.get<{ success: boolean; count: number }>(
-      '/submissions/count/new'
-    );
+    const response = await api.get<{ success: boolean; count: number }>('/submissions/count/new');
     return response.count ?? 0;
   },
 
@@ -95,7 +88,7 @@ export const submissionsApi = {
   }): Promise<{ success: boolean; message?: string; error?: string }> {
     const response = await api.post<{ success: boolean; message?: string; error?: string }>(
       '/submissions/invite',
-      params
+      params,
     );
     return response;
   },

@@ -88,7 +88,7 @@ function matchesRangeFilter(
   // If client has no value for this field, they don't match range filters
   if (value === undefined || value === null) return false;
 
-  return ranges.some(range => {
+  return ranges.some((range) => {
     const min = range.min ?? -Infinity;
     const max = range.max ?? Infinity;
     return value >= min && value <= max;
@@ -100,7 +100,10 @@ function matchesRangeFilter(
  * All active filter categories must pass (AND logic between categories).
  * Within a category, multiple values use OR logic.
  */
-export function clientMatchesFilters(client: MatcherClient, filterConfig: GroupFilterConfig): boolean {
+export function clientMatchesFilters(
+  client: MatcherClient,
+  filterConfig: GroupFilterConfig,
+): boolean {
   if (!filterConfig || !hasActiveFilters(filterConfig)) {
     return false; // No active filters = manual group, don't auto-assign
   }
@@ -109,7 +112,7 @@ export function clientMatchesFilters(client: MatcherClient, filterConfig: GroupF
   if (filterConfig.genderFilters?.length) {
     if (!client.gender) return false;
     const matches = filterConfig.genderFilters.some(
-      f => f.toLowerCase() === client.gender!.toLowerCase()
+      (f) => f.toLowerCase() === client.gender!.toLowerCase(),
     );
     if (!matches) return false;
   }
@@ -118,7 +121,7 @@ export function clientMatchesFilters(client: MatcherClient, filterConfig: GroupF
   if (filterConfig.countryFilters?.length) {
     if (!client.country) return false;
     const matches = filterConfig.countryFilters.some(
-      f => f.toLowerCase() === client.country!.toLowerCase()
+      (f) => f.toLowerCase() === client.country!.toLowerCase(),
     );
     if (!matches) return false;
   }
@@ -127,7 +130,7 @@ export function clientMatchesFilters(client: MatcherClient, filterConfig: GroupF
   if (filterConfig.maritalStatusFilters?.length) {
     if (!client.maritalStatus) return false;
     const matches = filterConfig.maritalStatusFilters.some(
-      f => f.toLowerCase() === client.maritalStatus!.toLowerCase()
+      (f) => f.toLowerCase() === client.maritalStatus!.toLowerCase(),
     );
     if (!matches) return false;
   }
@@ -136,7 +139,7 @@ export function clientMatchesFilters(client: MatcherClient, filterConfig: GroupF
   if (filterConfig.employmentStatusFilters?.length) {
     if (!client.employmentStatus) return false;
     const matches = filterConfig.employmentStatusFilters.some(
-      f => f.toLowerCase() === client.employmentStatus!.toLowerCase()
+      (f) => f.toLowerCase() === client.employmentStatus!.toLowerCase(),
     );
     if (!matches) return false;
   }
@@ -145,7 +148,7 @@ export function clientMatchesFilters(client: MatcherClient, filterConfig: GroupF
   if (filterConfig.occupationFilters?.length) {
     if (!client.occupation) return false;
     const matches = filterConfig.occupationFilters.some(
-      f => f.toLowerCase() === client.occupation!.toLowerCase()
+      (f) => f.toLowerCase() === client.occupation!.toLowerCase(),
     );
     if (!matches) return false;
   }
@@ -190,8 +193,8 @@ export function clientMatchesFilters(client: MatcherClient, filterConfig: GroupF
   if (filterConfig.productFilters?.length) {
     if (!client.products || client.products.length === 0) return false;
 
-    const matchesAnyProductRule = filterConfig.productFilters.some(rule => {
-      return client.products!.some(product => {
+    const matchesAnyProductRule = filterConfig.productFilters.some((rule) => {
+      return client.products!.some((product) => {
         // If a provider is specified in the rule, the product must match it
         if (rule.provider && product.provider) {
           if (rule.provider.toLowerCase() !== product.provider.toLowerCase()) return false;
@@ -223,9 +226,9 @@ export function clientMatchesFilters(client: MatcherClient, filterConfig: GroupF
  */
 export function recalculateGroupMembership(
   groups: MatcherGroup[],
-  clients: MatcherClient[]
+  clients: MatcherClient[],
 ): MatcherGroup[] {
-  return groups.map(group => {
+  return groups.map((group) => {
     // Skip manual groups (no filters or no active filters)
     if (!group.filterConfig || !hasActiveFilters(group.filterConfig)) {
       return group; // Keep existing clientIds for manual groups
@@ -233,14 +236,14 @@ export function recalculateGroupMembership(
 
     // For dynamic groups, recalculate members based on filters
     const matchingClientIds = clients
-      .filter(client => clientMatchesFilters(client, group.filterConfig!))
-      .map(client => client.id);
+      .filter((client) => clientMatchesFilters(client, group.filterConfig!))
+      .map((client) => client.id);
 
     return {
       ...group,
       clientIds: matchingClientIds,
       clientCount: matchingClientIds.length,
-      updatedAt: new Date().toISOString()
+      updatedAt: new Date().toISOString(),
     };
   });
 }
@@ -250,21 +253,21 @@ export function recalculateGroupMembership(
  */
 export function recalculateSingleGroupMembership(
   group: MatcherGroup,
-  clients: MatcherClient[]
+  clients: MatcherClient[],
 ): MatcherGroup {
   if (!group.filterConfig || !hasActiveFilters(group.filterConfig)) {
     return group;
   }
 
   const matchingClientIds = clients
-    .filter(client => clientMatchesFilters(client, group.filterConfig!))
-    .map(client => client.id);
+    .filter((client) => clientMatchesFilters(client, group.filterConfig!))
+    .map((client) => client.id);
 
   return {
     ...group,
     clientIds: matchingClientIds,
     clientCount: matchingClientIds.length,
-    updatedAt: new Date().toISOString()
+    updatedAt: new Date().toISOString(),
   };
 }
 
@@ -273,9 +276,9 @@ export function recalculateSingleGroupMembership(
  */
 export function getGroupsForClient(client: MatcherClient, groups: MatcherGroup[]): string[] {
   return groups
-    .filter(group => {
+    .filter((group) => {
       if (!group.filterConfig || !hasActiveFilters(group.filterConfig)) return false;
       return clientMatchesFilters(client, group.filterConfig);
     })
-    .map(group => group.id);
+    .map((group) => group.id);
 }

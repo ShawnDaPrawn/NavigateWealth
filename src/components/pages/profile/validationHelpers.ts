@@ -69,7 +69,11 @@ export const validateContactDetails = (data: ProfileData): boolean => {
   // Emergency contact validation
   if (data.emergencyContactName || data.emergencyContactPhone || data.emergencyContactEmail) {
     // If any emergency contact field is filled, require all
-    if (!data.emergencyContactName || !data.emergencyContactPhone || !data.emergencyContactRelationship) {
+    if (
+      !data.emergencyContactName ||
+      !data.emergencyContactPhone ||
+      !data.emergencyContactRelationship
+    ) {
       return false;
     }
     if (data.emergencyContactEmail && !isValidEmail(data.emergencyContactEmail)) {
@@ -91,7 +95,7 @@ export const validateIdentity = (data: ProfileData): boolean => {
   }
 
   // All documents must have required fields
-  return data.identityDocuments.every(doc => {
+  return data.identityDocuments.every((doc) => {
     // Must have document number
     if (!doc.number) return false;
 
@@ -118,12 +122,14 @@ export const validateIdentity = (data: ProfileData): boolean => {
 // Address Tab Validation
 export const validateAddress = (data: ProfileData): boolean => {
   // Residential address is required
-  if (!data.residentialAddressLine1 || 
-      !data.residentialSuburb || 
-      !data.residentialCity || 
-      !data.residentialProvince || 
-      !data.residentialPostalCode || 
-      !data.residentialCountry) {
+  if (
+    !data.residentialAddressLine1 ||
+    !data.residentialSuburb ||
+    !data.residentialCity ||
+    !data.residentialProvince ||
+    !data.residentialPostalCode ||
+    !data.residentialCountry
+  ) {
     return false;
   }
 
@@ -157,10 +163,8 @@ export const validateEmployment = (data: ProfileData): boolean => {
     }
 
     // Validate each employer — must have employerName, jobTitle, and industry
-    return data.employers.every(employer => {
-      return employer.employerName && 
-             employer.jobTitle && 
-             employer.industry;
+    return data.employers.every((employer) => {
+      return employer.employerName && employer.jobTitle && employer.industry;
     });
   }
 
@@ -198,7 +202,7 @@ export const validateFamily = (data: ProfileData): boolean => {
     return true; // No family members is valid
   }
 
-  return data.familyMembers.every(member => {
+  return data.familyMembers.every((member) => {
     // Required fields
     if (!member.fullName || !member.relationship || !member.dateOfBirth || !member.gender) {
       return false;
@@ -231,18 +235,20 @@ export const validateBanking = (data: ProfileData): boolean => {
   }
 
   // Exactly one primary account required
-  const primaryAccounts = data.bankAccounts.filter(acc => acc.isPrimary);
+  const primaryAccounts = data.bankAccounts.filter((acc) => acc.isPrimary);
   if (primaryAccounts.length !== 1) {
     return false;
   }
 
   // Validate each account
-  return data.bankAccounts.every(account => {
+  return data.bankAccounts.every((account) => {
     // Required fields
-    if (!account.accountHolderName || 
-        !account.bankName || 
-        !account.accountNumber || 
-        !account.accountType) {
+    if (
+      !account.accountHolderName ||
+      !account.bankName ||
+      !account.accountNumber ||
+      !account.accountType
+    ) {
       return false;
     }
 
@@ -277,9 +283,9 @@ export const validateBanking = (data: ProfileData): boolean => {
 // Assets & Liabilities Tab Validation
 export const validateAssetsLiabilities = (data: ProfileData): boolean => {
   // Assets and liabilities are optional, but if added must be valid
-  
+
   // Validate assets
-  const assetsValid = data.assets.every(asset => {
+  const assetsValid = data.assets.every((asset) => {
     if (!asset.type || !asset.name || !asset.value || !asset.ownershipType) {
       return false;
     }
@@ -298,8 +304,13 @@ export const validateAssetsLiabilities = (data: ProfileData): boolean => {
   });
 
   // Validate liabilities
-  const liabilitiesValid = data.liabilities.every(liability => {
-    if (!liability.type || !liability.name || !liability.outstandingBalance || !liability.monthlyPayment) {
+  const liabilitiesValid = data.liabilities.every((liability) => {
+    if (
+      !liability.type ||
+      !liability.name ||
+      !liability.outstandingBalance ||
+      !liability.monthlyPayment
+    ) {
       return false;
     }
 
@@ -327,7 +338,7 @@ export const validateAssetsLiabilities = (data: ProfileData): boolean => {
 // Risk Profile Tab Validation
 export const validateRiskProfile = (data: ProfileData): boolean => {
   const assessment = data.riskAssessment;
-  
+
   // All 10 questions must be answered
   return (
     assessment.question1 > 0 &&

@@ -14,11 +14,7 @@ import { NOTE_COLOR_CONFIG, NOTE_COLORS } from '../constants';
 import { Button } from '../../../../ui/button';
 import { Input } from '../../../../ui/input';
 import { Label } from '../../../../ui/label';
-import {
-  Dialog,
-  DialogContent,
-  DialogTitle,
-} from '../../../../ui/dialog';
+import { Dialog, DialogContent, DialogTitle } from '../../../../ui/dialog';
 import { Palette, RotateCcw } from 'lucide-react';
 
 interface ColourLabelsDialogProps {
@@ -32,11 +28,7 @@ interface ColourLabelsDialogProps {
   personnelId: string;
 }
 
-export function ColourLabelsDialog({
-  isOpen,
-  onClose,
-  labels,
-}: ColourLabelsDialogProps) {
+export function ColourLabelsDialog({ isOpen, onClose, labels }: ColourLabelsDialogProps) {
   const { customLabels, setAllLabels } = labels;
   // Local draft state — only committed on Save
   const [draft, setDraft] = useState<Record<NoteColor, string>>(() => buildDraft(customLabels));
@@ -54,7 +46,9 @@ export function ColourLabelsDialog({
 
   const handleClearAll = useCallback(() => {
     const cleared: Record<NoteColor, string> = {} as Record<NoteColor, string>;
-    NOTE_COLORS.forEach((c) => { cleared[c] = ''; });
+    NOTE_COLORS.forEach((c) => {
+      cleared[c] = '';
+    });
     setDraft(cleared);
   }, []);
 
@@ -76,7 +70,12 @@ export function ColourLabelsDialog({
   if (!isOpen) return null;
 
   return (
-    <Dialog open={isOpen} onOpenChange={(open) => { if (!open) onClose(); }}>
+    <Dialog
+      open={isOpen}
+      onOpenChange={(open) => {
+        if (!open) onClose();
+      }}
+    >
       <DialogContent className="max-w-md">
         <div className="flex items-center gap-3 mb-1">
           <div className="w-9 h-9 rounded-lg bg-purple-50 flex items-center justify-center">
@@ -98,7 +97,9 @@ export function ColourLabelsDialog({
             return (
               <div key={color} className="flex items-center gap-3">
                 {/* Colour indicator */}
-                <div className={`w-8 h-8 rounded-lg ${cfg.bg} border ${cfg.border} flex items-center justify-center shrink-0`}>
+                <div
+                  className={`w-8 h-8 rounded-lg ${cfg.bg} border ${cfg.border} flex items-center justify-center shrink-0`}
+                >
                   <div className={`w-4 h-4 rounded-full ${cfg.dot}`} />
                 </div>
                 {/* Default name */}
@@ -120,7 +121,9 @@ export function ColourLabelsDialog({
         {/* Preview */}
         {hasAnyLabel && (
           <div className="mt-4 p-3 rounded-lg bg-gray-50 border border-gray-200">
-            <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider mb-2">Preview</p>
+            <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider mb-2">
+              Preview
+            </p>
             <div className="flex flex-wrap gap-2">
               {NOTE_COLORS.map((color) => {
                 const label = draft[color]?.trim();
@@ -188,13 +191,21 @@ function buildDraft(customLabels: CustomColourLabels): Record<NoteColor, string>
 /** Contextual placeholder hints per colour */
 function getPlaceholder(color: NoteColor): string {
   switch (color) {
-    case 'default': return 'General';
-    case 'yellow':  return 'In Progress';
-    case 'green':   return 'New Business';
-    case 'blue':    return 'Research';
-    case 'purple':  return 'VIP Client';
-    case 'pink':    return 'Urgent';
-    case 'orange':  return 'Follow Up';
-    default:        return 'Description';
+    case 'default':
+      return 'General';
+    case 'yellow':
+      return 'In Progress';
+    case 'green':
+      return 'New Business';
+    case 'blue':
+      return 'Research';
+    case 'purple':
+      return 'VIP Client';
+    case 'pink':
+      return 'Urgent';
+    case 'orange':
+      return 'Follow Up';
+    default:
+      return 'Description';
   }
 }

@@ -3,11 +3,11 @@ Navigate Wealth Admin Panel
 Production Engineering, Architecture & Design System Guidelines (v5)
 
 > **Companion document - read in tandem.**
-> `docs/PRODUCTION-READINESS.md` is the *status & roadmap*: what is
+> `docs/PRODUCTION-READINESS.md` is the _status & roadmap_: what is
 > actually landed on clean `main`, what is only proposed or stashed, what to
-> do next, and the incident log. **This file** is the *rules*: how code must
-> be structured. When in doubt about *what to do next*, consult
-> PRODUCTION-READINESS. When in doubt about *how to do it*, consult this
+> do next, and the incident log. **This file** is the _rules_: how code must
+> be structured. When in doubt about _what to do next_, consult
+> PRODUCTION-READINESS. When in doubt about _how to do it_, consult this
 > file. If status text and the repository disagree, verify the repository
 > first and update the status document.
 
@@ -97,19 +97,19 @@ If a file does not clearly belong in the module's structure, the module is likel
 Every module must contain:
 
 module-name/
-├── index.tsx              # Single presentation entry point (UI only)
-├── api.ts                 # Data boundary (Supabase, external services)
-├── types.ts               # Centralised type definitions
-├── constants.ts           # Labels, mappings, configuration
-├── hooks/                 # React Query hooks (only API consumers)
-│   ├── useModuleData.ts
-│   └── useModuleMutations.ts
-├── components/            # Reusable, module-scoped components
-│   ├── ModuleList.tsx
-│   ├── ModuleForm.tsx
-│   └── ModuleFilters.tsx
-├── utils.ts               # Pure utility functions (optional)
-└── README.md              # Lightweight technical documentation
+├── index.tsx # Single presentation entry point (UI only)
+├── api.ts # Data boundary (Supabase, external services)
+├── types.ts # Centralised type definitions
+├── constants.ts # Labels, mappings, configuration
+├── hooks/ # React Query hooks (only API consumers)
+│ ├── useModuleData.ts
+│ └── useModuleMutations.ts
+├── components/ # Reusable, module-scoped components
+│ ├── ModuleList.tsx
+│ ├── ModuleForm.tsx
+│ └── ModuleFilters.tsx
+├── utils.ts # Pure utility functions (optional)
+└── README.md # Lightweight technical documentation
 This structure exists for discoverability, ownership, and safe evolution.
 
 4.2 Backend Module Structure
@@ -117,10 +117,10 @@ This structure exists for discoverability, ownership, and safe evolution.
 Server-side code in /supabase/functions/server/ follows a parallel convention:
 
 server/
-├── {domain}-routes.ts         # Hono route handlers (thin — delegates to service)
-├── {domain}-service.ts        # Business logic and orchestration
-├── {domain}-validation.ts     # Zod schemas for input validation
-├── {domain}-types.ts          # Server-side type definitions (optional, if complex)
+├── {domain}-routes.ts # Hono route handlers (thin — delegates to service)
+├── {domain}-service.ts # Business logic and orchestration
+├── {domain}-validation.ts # Zod schemas for input validation
+├── {domain}-types.ts # Server-side type definitions (optional, if complex)
 Rules:
 
 Route files are thin dispatchers — they parse input, call the service, and return responses
@@ -132,14 +132,14 @@ Example:
 
 // {domain}-routes.ts — thin dispatcher
 app.post('/action', requireAuth, asyncHandler(async (c) => {
-  const input = ActionSchema.parse(await c.req.json());
-  const result = await service.performAction(input);
-  return c.json({ success: true, ...result });
+const input = ActionSchema.parse(await c.req.json());
+const result = await service.performAction(input);
+return c.json({ success: true, ...result });
 }));
 
 // {domain}-service.ts — business logic
 async performAction(input: ActionInput): Promise<ActionResult> {
-  // Validation, KV reads/writes, cross-entry consistency
+// Validation, KV reads/writes, cross-entry consistency
 }
 4.3 Barrel Export Conventions
 
@@ -248,21 +248,21 @@ Typed mappings are mandatory to prevent drift.
 Example (status indicator config):
 
 export const ACCOUNT_STATUS_CONFIG = {
-  active: {
-    label: 'Active',
-    badgeClass: 'bg-green-600 hover:bg-green-700 text-white',
-    dotClass: 'bg-green-500',
-  },
-  suspended: {
-    label: 'Suspended',
-    badgeClass: 'bg-amber-500 hover:bg-amber-600 text-white',
-    dotClass: 'bg-amber-500',
-  },
-  closed: {
-    label: 'Closed',
-    badgeClass: 'bg-red-600 hover:bg-red-700 text-white',
-    dotClass: 'bg-red-500',
-  },
+active: {
+label: 'Active',
+badgeClass: 'bg-green-600 hover:bg-green-700 text-white',
+dotClass: 'bg-green-500',
+},
+suspended: {
+label: 'Suspended',
+badgeClass: 'bg-amber-500 hover:bg-amber-600 text-white',
+dotClass: 'bg-amber-500',
+},
+closed: {
+label: 'Closed',
+badgeClass: 'bg-red-600 hover:bg-red-700 text-white',
+dotClass: 'bg-red-500',
+},
 } as const;
 
 5.4 KV Store Conventions
@@ -274,11 +274,11 @@ Key Naming Convention:
 {entity_type}:{entity_id}:{facet}
 Examples:
 
-user_profile:{userId}:personal_info     # Client profile data
-security:{userId}                        # Auth/security flags (suspended, deleted)
-application:{applicationId}              # Application data
-policy:{policyId}                        # Policy data
-user_profile:{userId}:client_keys        # Aggregated financial keys
+user_profile:{userId}:personal_info # Client profile data
+security:{userId} # Auth/security flags (suspended, deleted)
+application:{applicationId} # Application data
+policy:{policyId} # Policy data
+user_profile:{userId}:client_keys # Aggregated financial keys
 Rules:
 
 Keys must be deterministic and reconstructable from entity identifiers
@@ -287,12 +287,12 @@ Never store large binary data in KV — use Supabase Storage for files
 KV values should be JSON-serialisable objects, not raw strings
 Multi-Entry Consistency (Non-Negotiable):
 
-When a single logical entity spans multiple KV entries (e.g., a client has both a user_profile:*:personal_info entry and a security:* entry), all related entries must be updated together when the entity's state changes.
+When a single logical entity spans multiple KV entries (e.g., a client has both a user*profile:*:personal*info entry and a security:* entry), all related entries must be updated together when the entity's state changes.
 
 // ✅ Good: Both entries updated in the same operation
 await Promise.all([
-  kv.set(`security:${userId}`, { ...security, deleted: true, suspended: true }),
-  kv.set(profileKey, { ...profile, accountStatus: 'closed' }),
+kv.set(`security:${userId}`, { ...security, deleted: true, suspended: true }),
+kv.set(profileKey, { ...profile, accountStatus: 'closed' }),
 ]);
 
 // ❌ Bad: Only one entry updated, creating inconsistency
@@ -314,11 +314,11 @@ Hooks may orchestrate data flow but must not contain business rules
 Example:
 
 export function useClientList(filters: ClientFilters) {
-  return useQuery({
-    queryKey: ['clients', 'list', filters],
-    queryFn: () => api.getClients(filters),
-    staleTime: 5 * 60 * 1000, // 5 minutes
-  });
+return useQuery({
+queryKey: ['clients', 'list', filters],
+queryFn: () => api.getClients(filters),
+staleTime: 5 _ 60 _ 1000, // 5 minutes
+});
 }
 Presentation Layer (UI)
 UI components:
@@ -336,26 +336,26 @@ Component Responsibilities:
 
 // ✅ Good: Clear separation
 function ClientList() {
-  const { data, isLoading } = useClientList(filters);
-  
-  if (isLoading) return <LoadingSpinner />;
-  if (!data?.length) return <EmptyState />;
-  
-  return <Table data={data} columns={columns} />;
+const { data, isLoading } = useClientList(filters);
+
+if (isLoading) return <LoadingSpinner />;
+if (!data?.length) return <EmptyState />;
+
+return <Table data={data} columns={columns} />;
 }
 
 // ❌ Bad: Business logic in UI
 function ClientList() {
-  const [data, setData] = useState([]);
-  
-  useEffect(() => {
-    fetch('/api/clients').then(res => {
-      const filtered = res.filter(c => c.status === 'active'); // Business logic
-      setData(filtered);
-    });
-  }, []);
-  
-  return <div>{/* ... */}</div>;
+const [data, setData] = useState([]);
+
+useEffect(() => {
+fetch('/api/clients').then(res => {
+const filtered = res.filter(c => c.status === 'active'); // Business logic
+setData(filtered);
+});
+}, []);
+
+return <div>{/_ ... _/}</div>;
 }
 
 7.1 Derived Display State
@@ -364,9 +364,9 @@ When the display status of an entity depends on multiple source fields, derive i
 
 // ✅ Good: Pure utility in utils.ts
 export function deriveAccountStatus(client: Client): 'active' | 'suspended' | 'closed' {
-  if (client.deleted || client.accountStatus === 'closed') return 'closed';
-  if (client.suspended || client.accountStatus === 'suspended') return 'suspended';
-  return 'active';
+if (client.deleted || client.accountStatus === 'closed') return 'closed';
+if (client.suspended || client.accountStatus === 'suspended') return 'suspended';
+return 'active';
 }
 
 // Then use in UI:
@@ -376,7 +376,7 @@ return <Badge className={cfg.badgeClass}>{cfg.label}</Badge>;
 
 // ❌ Bad: Inline derivation scattered across components
 <Badge className={client.deleted ? 'bg-red-600' : client.suspended ? 'bg-amber-500' : 'bg-green-600'}>
-  {client.deleted ? 'Closed' : client.suspended ? 'Suspended' : 'Active'}
+{client.deleted ? 'Closed' : client.suspended ? 'Suspended' : 'Active'}
 </Badge>
 Design System Integration (Non-Negotiable for Shared UI)
 A central Design System exists and is the authoritative source for:
@@ -436,12 +436,12 @@ Status Indicator Standards:
 
 All status indicators across the admin panel must follow a consistent colour vocabulary:
 
-Colour	Meaning	Usage
-Green	Active / Success	Active accounts, approved applications
-Amber	Warning / Suspended	Suspended accounts, pending actions
-Red	Closed / Error	Closed accounts, failed operations
-Blue	Informational	Preview modes, neutral indicators
-Purple	Brand / System	Platform actions, system operations
+Colour Meaning Usage
+Green Active / Success Active accounts, approved applications
+Amber Warning / Suspended Suspended accounts, pending actions
+Red Closed / Error Closed accounts, failed operations
+Blue Informational Preview modes, neutral indicators
+Purple Brand / System Platform actions, system operations
 Status indicators should be config-driven (see §5.3) rather than hard-coded in JSX. This ensures a single source of truth for status presentation.
 
 Stat Card Standards:
@@ -501,7 +501,7 @@ Prefer reusing shared client-context aggregators and maintain backwards-compatib
 Platform-Specific Constraints (Figma Make):
 
 Use react-router — never react-router-dom (not available in this environment)
-Use <div className="contents"> instead of React.Fragment (<>) when wrapping elements that need to avoid layout interference — this prevents data-fg-* attribute warnings
+Use <div className="contents"> instead of React.Fragment (<>) when wrapping elements that need to avoid layout interference — this prevents data-fg-\* attribute warnings
 Use import { toast } from 'sonner' — bare package imports only (the legacy version-suffixed specifiers like 'sonner@2.0.3' were removed in the Phase 2 dependency-hardening; do not reintroduce them)
 Use import { useForm } from 'react-hook-form' — bare package imports only
 Icon resolution helpers (resolveIconComponent() / resolveIcon()) convert slug strings from config maps to Lucide components with FileText as the fallback — use these instead of hard-coding icon imports in config-driven UI
@@ -533,48 +533,48 @@ Module-Level Types:
 
 // Database types
 export interface ClientRow {
-  id: string;
-  name: string;
-  email: string;
-  status: ClientStatus;
-  created_at: string;
+id: string;
+name: string;
+email: string;
+status: ClientStatus;
+created_at: string;
 }
 
 // Application types (may diverge from DB)
 export interface Client {
-  id: string;
-  name: string;
-  email: string;
-  status: ClientStatus;
-  createdAt: Date; // Transformed
-  deleted: boolean;
-  suspended: boolean;
-  accountStatus?: string;
+id: string;
+name: string;
+email: string;
+status: ClientStatus;
+createdAt: Date; // Transformed
+deleted: boolean;
+suspended: boolean;
+accountStatus?: string;
 }
 
 // Input types
 export interface CreateClientInput {
-  name: string;
-  email: string;
+name: string;
+email: string;
 }
 
 export interface UpdateClientInput {
-  name?: string;
-  email?: string;
-  status?: ClientStatus;
+name?: string;
+email?: string;
+status?: ClientStatus;
 }
 
 // Filter types
 export interface ClientFilters {
-  status?: ClientStatus[];
-  search?: string;
-  dateRange?: [Date, Date];
-  accountStatus?: 'all' | 'active' | 'suspended' | 'closed';
+status?: ClientStatus[];
+search?: string;
+dateRange?: [Date, Date];
+accountStatus?: 'all' | 'active' | 'suspended' | 'closed';
 }
 
 // UI types (internal, not exported)
 interface ClientListItem extends Client {
-  // Additional derived properties for display
+// Additional derived properties for display
 }
 
 9.3 API Response Type Synchronisation
@@ -598,10 +598,10 @@ Every module must be protected by an error boundary to prevent cascading failure
 Error Shape:
 
 interface AppError {
-  message: string;        // User-facing message
-  code?: string;          // Machine-readable error code
-  context?: unknown;      // Contextual information (no PII)
-  timestamp: Date;
+message: string; // User-facing message
+code?: string; // Machine-readable error code
+context?: unknown; // Contextual information (no PII)
+timestamp: Date;
 }
 User-Facing Error Messages:
 
@@ -774,9 +774,9 @@ Return a full audit summary regardless of mode
 Require explicit confirmation before live execution
 // Server route example
 app.post('/maintenance/cleanup', requireAuth, requireAdmin, asyncHandler(async (c) => {
-  const { dryRun = true } = await c.req.json();
-  const result = await runCleanup(dryRun);
-  return c.json({ success: true, dryRun, ...result });
+const { dryRun = true } = await c.req.json();
+const result = await runCleanup(dryRun);
+return c.json({ success: true, dryRun, ...result });
 }));
 Frontend patterns for destructive admin operations:
 
@@ -859,18 +859,18 @@ Documented exceptions with rationale and revisit dates
 Design System compliance checks
 Pull Request Checklist:
 
- Structure and boundaries respected
- Types are stricter or equal (no regression)
- No new circular dependencies
- Errors and logs comply with standards
- Existing behaviour preserved
- Critical flows remain covered
- Design System rules followed
- UI patterns match existing standards
- No PII in logs
- Security considerations addressed
- Multi-entry KV consistency verified (if lifecycle operations)
- API response types synchronised between server and frontend
+Structure and boundaries respected
+Types are stricter or equal (no regression)
+No new circular dependencies
+Errors and logs comply with standards
+Existing behaviour preserved
+Critical flows remain covered
+Design System rules followed
+UI patterns match existing standards
+No PII in logs
+Security considerations addressed
+Multi-entry KV consistency verified (if lifecycle operations)
+API response types synchronised between server and frontend
 Definition of Done (Authoritative)
 A change is complete only when:
 
@@ -904,29 +904,29 @@ The goal is shared understanding and long-term safety, not blind compliance.
 
 Changelog: v4 → v5
 
-Section	Change
+Section Change
 
-§2 Tier 1	Added multi-entry KV consistency and stdout corruption prevention
-§2 Tier 2	Added KV key naming and backend file conventions
-§3.2	New. Three-tier server architecture
-§4.2	New. Backend module structure (-routes, -service, -validation)
-§4.3	New. Barrel export conventions (single entry point, no dual-file barrels)
-§4.4	New. Code filenames, storage, and repository organisation (naming, KV vs Storage, repo layout, ignored artefacts)
-§5.1	Expanded logging: console-override.ts, createModuleLogger, stderr convention
-§5.3	Added API endpoint paths and status indicator config pattern with example
-§5.4	New. KV store conventions: key naming, multi-entry consistency with examples
-§7.1	New. Derived display state: pure utility pattern for multi-field status derivation
-§8.3	Added status colour vocabulary table and stat card standards
-§8.4	Added Figma Make platform-specific constraints for AI builders
-§9.2	Updated Client example to include deleted, suspended, accountStatus fields
-§9.3	New. API response type synchronisation
-§12.3	New. Client lifecycle management: suspend/unsuspend/soft-delete patterns with downstream guards
-§13	Added lazy-router architecture, KV batch read patterns, Deno import conventions
-§14	New. Admin operations: dry-run-first pattern, maintenance endpoint ordering
-§15	Added multi-entry KV consistency to test priorities
-§16	New. Known workarounds register (// WORKAROUND: tag)
-§17	Added KV consistency and API contract checklist items
-§18	Added data consistency and API contract items to Definition of Done
+§2 Tier 1 Added multi-entry KV consistency and stdout corruption prevention
+§2 Tier 2 Added KV key naming and backend file conventions
+§3.2 New. Three-tier server architecture
+§4.2 New. Backend module structure (-routes, -service, -validation)
+§4.3 New. Barrel export conventions (single entry point, no dual-file barrels)
+§4.4 New. Code filenames, storage, and repository organisation (naming, KV vs Storage, repo layout, ignored artefacts)
+§5.1 Expanded logging: console-override.ts, createModuleLogger, stderr convention
+§5.3 Added API endpoint paths and status indicator config pattern with example
+§5.4 New. KV store conventions: key naming, multi-entry consistency with examples
+§7.1 New. Derived display state: pure utility pattern for multi-field status derivation
+§8.3 Added status colour vocabulary table and stat card standards
+§8.4 Added Figma Make platform-specific constraints for AI builders
+§9.2 Updated Client example to include deleted, suspended, accountStatus fields
+§9.3 New. API response type synchronisation
+§12.3 New. Client lifecycle management: suspend/unsuspend/soft-delete patterns with downstream guards
+§13 Added lazy-router architecture, KV batch read patterns, Deno import conventions
+§14 New. Admin operations: dry-run-first pattern, maintenance endpoint ordering
+§15 Added multi-entry KV consistency to test priorities
+§16 New. Known workarounds register (// WORKAROUND: tag)
+§17 Added KV consistency and API contract checklist items
+§18 Added data consistency and API contract items to Definition of Done
 §19 — Centralised Key Registries (Non-Negotiable)
 
 The platform maintains two complementary key registries. Both are single-source-of-truth and must not be duplicated.
@@ -936,16 +936,17 @@ The platform maintains two complementary key registries. Both are single-source-
 All React Query keys MUST be defined in `/utils/queryKeys.ts`.
 
 Convention:
-  domainKeys.all            -> root prefix (invalidates everything in the domain)
-  domainKeys.lists()        -> all list variants
-  domainKeys.list(filters)  -> specific filtered list
-  domainKeys.details()      -> all detail variants
-  domainKeys.detail(id)     -> specific entity
+domainKeys.all -> root prefix (invalidates everything in the domain)
+domainKeys.lists() -> all list variants
+domainKeys.list(filters) -> specific filtered list
+domainKeys.details() -> all detail variants
+domainKeys.detail(id) -> specific entity
 
 Rules:
+
 - New domains add their key factory object to `/utils/queryKeys.ts` — never in module code
 - Module-level `hooks/queryKeys.ts` files are re-export shims only:
-    export { fooKeys } from '../../../../../utils/queryKeys';
+  export { fooKeys } from '../../../../../utils/queryKeys';
   They exist for backward-compatible local imports and must never define keys
 - Inline query key arrays (`queryKey: ['foo', id]`) are forbidden — always reference the factory
 - Keys must be deterministic and reconstructable from entity identifiers
@@ -954,11 +955,12 @@ Rules:
   for one-off queries, but recurring patterns must be promoted to the factory
 
 Adding a new module:
+
 1. Add the key factory to `/utils/queryKeys.ts` under a new section header
 2. Create the module's `hooks/queryKeys.ts` as a one-line re-export
 3. Import from `./queryKeys` in all hook files within the module
 
-19.2 Universal Key Manager (Product / Financial Data Keys)
+   19.2 Universal Key Manager (Product / Financial Data Keys)
 
 All financial data point identifiers MUST be registered in the Universal Key Manager
 (`/components/admin/modules/resources/key-manager/`).
@@ -966,10 +968,10 @@ All financial data point identifiers MUST be registered in the Universal Key Man
 The canonical key definitions live in `/components/admin/modules/product-management/keyManagerConstants.ts`.
 
 Key ID Convention:
-  {category}_{metric}                # Individual field (e.g., risk_life_cover)
-  {category}_{metric}_total          # Calculated aggregate (e.g., risk_life_cover_total)
-  {category}_{metric}_recommended    # FNA recommendation (e.g., risk_life_cover_recommended)
-  profile_{section}_{field}          # Client profile field (e.g., profile_personal_first_name)
+{category}_{metric} # Individual field (e.g., risk_life_cover)
+{category}_{metric}_total # Calculated aggregate (e.g., risk_life_cover_total)
+{category}_{metric}_recommended # FNA recommendation (e.g., risk_life_cover_recommended)
+profile_{section}\_{field} # Client profile field (e.g., profile_personal_first_name)
 
 Rules:
 
@@ -980,13 +982,14 @@ Rules:
 - Keys used across modules must be `isCalculated: false` (assignable) or `isCalculated: true` (derived) — never ambiguous
 - Key IDs are immutable once deployed; renaming requires a data migration
 
-19.3 BaseClient Type (`/shared/types/client.ts`)
+  19.3 BaseClient Type (`/shared/types/client.ts`)
 
 All module-level Client interfaces MUST extend `BaseClient` from `/shared/types/client.ts`.
 
 BaseClient provides: id, firstName, lastName, email, phone?, idNumber?, accountStatus?
 
 Rules:
+
 - Module-specific fields are added to the extending interface, not to BaseClient
 - BaseClient must remain minimal — only fields needed by cross-module utilities belong here
 - If a module's API returns a different field shape (e.g., snake_case), the api.ts layer normalises
@@ -994,10 +997,9 @@ Rules:
 - New shared fields require updating BaseClient AND all extending interfaces in the same change
 
 Pull Request Checklist additions:
-  [ ] No new query key arrays defined outside `/utils/queryKeys.ts`
-  [ ] New financial data points registered in Universal Key Manager
-  [ ] Module Client types extend BaseClient
+[ ] No new query key arrays defined outside `/utils/queryKeys.ts`
+[ ] New financial data points registered in Universal Key Manager
+[ ] Module Client types extend BaseClient
 
-
-Principles	Added multi-entry consistency principle
+Principles Added multi-entry consistency principle
 home

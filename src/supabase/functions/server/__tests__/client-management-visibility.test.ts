@@ -22,27 +22,39 @@ describe('client-management visibility rules', () => {
     };
 
     expect(isPersonnelAuthUser(user, personnelIds)).toBe(false);
-    expect(shouldIncludeInClientManagement({
-      user,
-      personnelIds,
-      profile: {
-        role: 'client',
-        accountStatus: 'invited',
-      },
-      applicationStatus: 'invited',
-    })).toBe(true);
+    expect(
+      shouldIncludeInClientManagement({
+        user,
+        personnelIds,
+        profile: {
+          role: 'client',
+          accountStatus: 'invited',
+        },
+        applicationStatus: 'invited',
+      }),
+    ).toBe(true);
   });
 
   it('excludes personnel accounts by role or personnel profile id', () => {
-    expect(isPersonnelAuthUser({
-      id: 'staff-1',
-      user_metadata: { role: 'admin' },
-    }, new Set())).toBe(true);
+    expect(
+      isPersonnelAuthUser(
+        {
+          id: 'staff-1',
+          user_metadata: { role: 'admin' },
+        },
+        new Set(),
+      ),
+    ).toBe(true);
 
-    expect(isPersonnelAuthUser({
-      id: 'staff-2',
-      user_metadata: {},
-    }, new Set(['staff-2']))).toBe(true);
+    expect(
+      isPersonnelAuthUser(
+        {
+          id: 'staff-2',
+          user_metadata: {},
+        },
+        new Set(['staff-2']),
+      ),
+    ).toBe(true);
   });
 
   it('includes super admin when personal client testing is enabled', () => {
@@ -53,16 +65,18 @@ describe('client-management visibility rules', () => {
       user_metadata: { role: 'super_admin' },
     };
 
-    expect(shouldIncludeInClientManagement({
-      user,
-      personnelIds,
-      profile: {
-        role: 'super_admin',
-        personalClientEnabled: true,
-        accountStatus: 'approved',
-      },
-      applicationStatus: 'approved',
-    })).toBe(true);
+    expect(
+      shouldIncludeInClientManagement({
+        user,
+        personnelIds,
+        profile: {
+          role: 'super_admin',
+          personalClientEnabled: true,
+          accountStatus: 'approved',
+        },
+        applicationStatus: 'approved',
+      }),
+    ).toBe(true);
   });
 
   it('still excludes super admin without personalClientEnabled flag', () => {
@@ -73,15 +87,17 @@ describe('client-management visibility rules', () => {
       user_metadata: { role: 'super_admin' },
     };
 
-    expect(shouldIncludeInClientManagement({
-      user,
-      personnelIds,
-      profile: {
-        role: 'super_admin',
-        accountStatus: 'approved',
-      },
-      applicationStatus: 'approved',
-    })).toBe(false);
+    expect(
+      shouldIncludeInClientManagement({
+        user,
+        personnelIds,
+        profile: {
+          role: 'super_admin',
+          accountStatus: 'approved',
+        },
+        applicationStatus: 'approved',
+      }),
+    ).toBe(false);
   });
 
   it('loads super admin profile KV even when marked personnel', () => {
@@ -93,11 +109,16 @@ describe('client-management visibility rules', () => {
     };
 
     expect(shouldLoadClientManagementProfile(user, personnelIds)).toBe(true);
-    expect(shouldLoadClientManagementProfile({
-      id: 'staff-1',
-      email: 'adviser@test.com',
-      user_metadata: { role: 'adviser' },
-    }, personnelIds)).toBe(false);
+    expect(
+      shouldLoadClientManagementProfile(
+        {
+          id: 'staff-1',
+          email: 'adviser@test.com',
+          user_metadata: { role: 'adviser' },
+        },
+        personnelIds,
+      ),
+    ).toBe(false);
   });
 
   it('treats declined and rejected statuses as ineligible for client management', () => {
@@ -111,14 +132,16 @@ describe('client-management visibility rules', () => {
 
     expect(isRejectedClientStatus('declined')).toBe(true);
     expect(isRejectedClientStatus('rejected')).toBe(true);
-    expect(shouldIncludeInClientManagement({
-      user,
-      personnelIds,
-      profile: {
-        role: 'client',
-        accountStatus: 'declined',
-      },
-      applicationStatus: 'declined',
-    })).toBe(false);
+    expect(
+      shouldIncludeInClientManagement({
+        user,
+        personnelIds,
+        profile: {
+          role: 'client',
+          accountStatus: 'declined',
+        },
+        applicationStatus: 'declined',
+      }),
+    ).toBe(false);
   });
 });

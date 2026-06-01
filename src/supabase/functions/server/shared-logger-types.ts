@@ -1,6 +1,6 @@
 /**
  * Shared Logging & Error Types
- * 
+ *
  * Ensures consistent observability across Frontend and Backend.
  */
 
@@ -15,11 +15,11 @@ export interface LogContext {
 }
 
 export interface AppError {
-  message: string;        // User-facing message
-  code?: string;          // Machine-readable error code
-  context?: unknown;      // Contextual information (no PII)
-  timestamp: string;      // ISO Date string
-  statusCode?: number;    // HTTP status code (optional, mainly for backend)
+  message: string; // User-facing message
+  code?: string; // Machine-readable error code
+  context?: unknown; // Contextual information (no PII)
+  timestamp: string; // ISO Date string
+  statusCode?: number; // HTTP status code (optional, mainly for backend)
 }
 
 export interface ILogger {
@@ -42,5 +42,5 @@ export const SENSITIVE_KEYS = [
   'cvv',
   'ssn',
   'id_number',
-  'account_number'
+  'account_number',
 ];

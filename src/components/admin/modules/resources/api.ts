@@ -29,7 +29,7 @@ export const resourcesApi = {
    */
   async getAll(filters?: ListResourcesFilters): Promise<ResourceResponse[]> {
     const params = new URLSearchParams();
-    
+
     if (filters?.category) {
       params.append('category', filters.category.join(','));
     }
@@ -94,8 +94,13 @@ export const resourcesApi = {
    * Update resource status (draft/published/archived)
    * Phase 1 — Form lifecycle management
    */
-  async updateStatus(id: string, status: 'draft' | 'published' | 'archived'): Promise<ResourceResponse> {
-    const response = await api.patch<{ resource: ResourceResponse }>(`/resources/${id}/status`, { status });
+  async updateStatus(
+    id: string,
+    status: 'draft' | 'published' | 'archived',
+  ): Promise<ResourceResponse> {
+    const response = await api.patch<{ resource: ResourceResponse }>(`/resources/${id}/status`, {
+      status,
+    });
     return response.resource;
   },
 
@@ -111,7 +116,9 @@ export const resourcesApi = {
   },
 
   async getLegalDocuments(): Promise<LegalDocumentDefinitionResponse[]> {
-    const response = await api.get<{ documents: LegalDocumentDefinitionResponse[] }>('/resources/admin/legal-documents');
+    const response = await api.get<{ documents: LegalDocumentDefinitionResponse[] }>(
+      '/resources/admin/legal-documents',
+    );
     return response.documents || [];
   },
 
@@ -127,23 +134,32 @@ export const resourcesApi = {
   },
 
   async getLegalDocumentAudit(slug: string): Promise<LegalDocumentAuditEntry[]> {
-    const response = await api.get<{ entries: LegalDocumentAuditEntry[] }>(`/resources/admin/legal-documents/${slug}/audit`);
+    const response = await api.get<{ entries: LegalDocumentAuditEntry[] }>(
+      `/resources/admin/legal-documents/${slug}/audit`,
+    );
     return response.entries || [];
   },
 
   async migrateLegalDocument(slug: string): Promise<LegalDocumentDetailResponse> {
-    return api.post<LegalDocumentDetailResponse>(`/resources/admin/legal-documents/${slug}/migrate`);
+    return api.post<LegalDocumentDetailResponse>(
+      `/resources/admin/legal-documents/${slug}/migrate`,
+    );
   },
 
   async migratePriorityLegalDocuments(): Promise<LegalDocumentMigrationBatchResponse> {
-    return api.post<LegalDocumentMigrationBatchResponse>('/resources/admin/legal-documents/migrate-priority');
+    return api.post<LegalDocumentMigrationBatchResponse>(
+      '/resources/admin/legal-documents/migrate-priority',
+    );
   },
 
   async createLegalDocumentDraft(
     slug: string,
     payload: UpsertLegalDocumentDraftRequest,
   ): Promise<LegalDocumentDetailResponse> {
-    return api.post<LegalDocumentDetailResponse>(`/resources/admin/legal-documents/${slug}/drafts`, payload);
+    return api.post<LegalDocumentDetailResponse>(
+      `/resources/admin/legal-documents/${slug}/drafts`,
+      payload,
+    );
   },
 
   async updateLegalDocumentDraft(
@@ -200,7 +216,7 @@ export const trainingApi = {
     search?: string;
   }): Promise<TrainingResource[]> {
     const params = new URLSearchParams();
-    
+
     if (filters?.type) params.append('type', filters.type);
     if (filters?.category) params.append('category', filters.category);
     if (filters?.difficulty) params.append('difficulty', filters.difficulty);
@@ -246,7 +262,7 @@ export const knowledgeApi = {
     search?: string;
   }): Promise<KnowledgeArticle[]> {
     const params = new URLSearchParams();
-    
+
     if (filters?.category) params.append('category', filters.category);
     if (filters?.tags) params.append('tags', filters.tags.join(','));
     if (filters?.search) params.append('search', filters.search);
@@ -280,7 +296,9 @@ export const knowledgeApi = {
    * Search knowledge base
    */
   async search(query: string): Promise<KnowledgeArticle[]> {
-    return api.get<KnowledgeArticle[]>(`/resources/knowledge/search?q=${encodeURIComponent(query)}`);
+    return api.get<KnowledgeArticle[]>(
+      `/resources/knowledge/search?q=${encodeURIComponent(query)}`,
+    );
   },
 };
 

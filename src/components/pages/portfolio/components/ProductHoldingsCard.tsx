@@ -7,28 +7,17 @@
 import React from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../../ui/card';
 import { Badge } from '../../../ui/badge';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '../../../ui/table';
-import {
-  Briefcase,
-  Shield,
-  Target,
-  TrendingUp,
-  Heart,
-  FileText,
-} from 'lucide-react';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../../ui/table';
+import { Briefcase, Shield, Target, TrendingUp, Heart, FileText } from 'lucide-react';
 import type { ProductHolding } from '../api';
 import { formatCurrency } from '../utils';
 
 // ── Category display config (Guidelines §5.3) ──
 
-const CATEGORY_CONFIG: Record<string, { label: string; icon: React.ElementType; iconClass: string }> = {
+const CATEGORY_CONFIG: Record<
+  string,
+  { label: string; icon: React.ElementType; iconClass: string }
+> = {
   life: { label: 'Life Insurance', icon: Shield, iconClass: 'text-red-600' },
   employeeBenefits: { label: 'Employee Benefits', icon: Briefcase, iconClass: 'text-indigo-600' },
   retirement: { label: 'Retirement Savings', icon: Target, iconClass: 'text-blue-600' },
@@ -119,12 +108,22 @@ export function ProductHoldingsCard({ holdings }: ProductHoldingsCardProps) {
                   <Table>
                     <TableHeader>
                       <TableRow className="bg-gray-50">
-                        <TableHead className="text-xs font-medium text-gray-600">Provider</TableHead>
+                        <TableHead className="text-xs font-medium text-gray-600">
+                          Provider
+                        </TableHead>
                         <TableHead className="text-xs font-medium text-gray-600">Product</TableHead>
-                        <TableHead className="text-xs font-medium text-gray-600">Policy No.</TableHead>
-                        <TableHead className="text-xs font-medium text-gray-600 text-right">Value</TableHead>
-                        <TableHead className="text-xs font-medium text-gray-600 text-right">Premium</TableHead>
-                        <TableHead className="text-xs font-medium text-gray-600 text-center">Status</TableHead>
+                        <TableHead className="text-xs font-medium text-gray-600">
+                          Policy No.
+                        </TableHead>
+                        <TableHead className="text-xs font-medium text-gray-600 text-right">
+                          Value
+                        </TableHead>
+                        <TableHead className="text-xs font-medium text-gray-600 text-right">
+                          Premium
+                        </TableHead>
+                        <TableHead className="text-xs font-medium text-gray-600 text-center">
+                          Status
+                        </TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -132,9 +131,15 @@ export function ProductHoldingsCard({ holdings }: ProductHoldingsCardProps) {
                         <TableRow key={h.id}>
                           <TableCell className="text-sm text-black">{h.provider}</TableCell>
                           <TableCell className="text-sm text-black">{h.product}</TableCell>
-                          <TableCell className="text-sm text-gray-500 font-mono text-xs">{h.policyNumber}</TableCell>
-                          <TableCell className="text-sm text-black text-right">{formatCurrency(h.value)}</TableCell>
-                          <TableCell className="text-sm text-black text-right">{formatCurrency(h.premium)}</TableCell>
+                          <TableCell className="text-sm text-gray-500 font-mono text-xs">
+                            {h.policyNumber}
+                          </TableCell>
+                          <TableCell className="text-sm text-black text-right">
+                            {formatCurrency(h.value)}
+                          </TableCell>
+                          <TableCell className="text-sm text-black text-right">
+                            {formatCurrency(h.premium)}
+                          </TableCell>
                           <TableCell className="text-center">
                             <Badge className={`text-xs ${holdingStatusClass(h.status)}`}>
                               {h.status}

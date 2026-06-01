@@ -17,11 +17,7 @@
 
 import * as kv from './kv_store.tsx';
 import { createModuleLogger } from './stderr-logger.ts';
-import type {
-  WillChatSession,
-  WillChatSessionStatus,
-  WillOutputPack,
-} from './will-chat-types.ts';
+import type { WillChatSession, WillChatSessionStatus, WillOutputPack } from './will-chat-types.ts';
 
 const log = createModuleLogger('will-chat-service');
 
@@ -103,9 +99,7 @@ export async function getSession(
   return kv.get(sessionKey(clientId, sessionId));
 }
 
-export async function getClientSessions(
-  clientId: string,
-): Promise<WillChatSession[]> {
+export async function getClientSessions(clientId: string): Promise<WillChatSession[]> {
   const sessions = await kv.getByPrefix(sessionPrefix(clientId));
   return (sessions || []).sort(
     (a: WillChatSession, b: WillChatSession) =>
@@ -113,10 +107,7 @@ export async function getClientSessions(
   );
 }
 
-export async function deleteSession(
-  clientId: string,
-  sessionId: string,
-): Promise<void> {
+export async function deleteSession(clientId: string, sessionId: string): Promise<void> {
   await kv.del(sessionKey(clientId, sessionId));
   log.info('Will chat session deleted', { sessionId });
 }
@@ -166,15 +157,15 @@ export async function sendToAgent(
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${OPENAI_API_KEY}`,
+        Authorization: `Bearer ${OPENAI_API_KEY}`,
       },
       body: JSON.stringify(responsesBody),
     });
 
     if (res.ok) {
-      const data = await res.json() as Record<string, unknown>;
+      const data = (await res.json()) as Record<string, unknown>;
       const text = extractResponsesText(data);
-      const responseId = (typeof data.id === 'string') ? data.id : null;
+      const responseId = typeof data.id === 'string' ? data.id : null;
       log.info('Responses API succeeded', { responseId, textLen: text.length });
       return { text, responseId, strategy: 'responses_api' };
     }
@@ -195,7 +186,7 @@ export async function sendToAgent(
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      'Authorization': `Bearer ${OPENAI_API_KEY}`,
+      Authorization: `Bearer ${OPENAI_API_KEY}`,
     },
     body: JSON.stringify({
       model: 'gpt-4o',
@@ -208,11 +199,11 @@ export async function sendToAgent(
     const errBody = await chatRes.text();
     throw new Error(
       `Agent call failed via both Responses API and Chat Completions. ` +
-      `Chat Completions (${chatRes.status}): ${errBody.slice(0, 300)}`
+        `Chat Completions (${chatRes.status}): ${errBody.slice(0, 300)}`,
     );
   }
 
-  const chatData = await chatRes.json() as Record<string, unknown>;
+  const chatData = (await chatRes.json()) as Record<string, unknown>;
   const text = extractChatCompletionText(chatData);
   log.info('Chat Completions API succeeded (fallback)', { textLen: text.length });
   return { text, responseId: null, strategy: 'chat_completions' };
@@ -260,10 +251,11 @@ export async function sendAndPersist(
   }
 
   // Call the agent
-  const { text: assistantReply, responseId, strategy } = await sendToAgent(
-    conversationMessages,
-    previousResponseId,
-  );
+  const {
+    text: assistantReply,
+    responseId,
+    strategy,
+  } = await sendToAgent(conversationMessages, previousResponseId);
 
   // Persist the exchange
   const now = new Date().toISOString();
@@ -430,26 +422,14 @@ function buildProfileSummary(
   ];
 
   if (profile) {
-    const firstName =
-      (profile.firstName as string) ||
-      (profile.first_name as string) ||
-      '';
-    const lastName =
-      (profile.surname as string) ||
-      (profile.last_name as string) ||
-      '';
+    const firstName = (profile.firstName as string) || (profile.first_name as string) || '';
+    const lastName = (profile.surname as string) || (profile.last_name as string) || '';
     const email = (profile.email as string) || '';
-    const phone =
-      (profile.phone as string) ||
-      (profile.phoneNumber as string) ||
-      '';
+    const phone = (profile.phone as string) || (profile.phoneNumber as string) || '';
     const idNumber = (profile.idNumber as string) || '';
     const dob = (profile.dateOfBirth as string) || '';
     const maritalStatus = (profile.maritalStatus as string) || '';
-    const address =
-      (profile.physicalAddress as string) ||
-      (profile.address as string) ||
-      '';
+    const address = (profile.physicalAddress as string) || (profile.address as string) || '';
     const spouseName = (profile.spouseName as string) || '';
 
     parts.push(`**Client Profile:**`);
@@ -497,8 +477,7 @@ function detectWillCompletion(reply: string): {
     reply.includes('Issue & Risk Register');
 
   const hasChecklist =
-    reply.includes('EXECUTION CHECKLIST') ||
-    reply.includes('Execution Checklist');
+    reply.includes('EXECUTION CHECKLIST') || reply.includes('Execution Checklist');
 
   if (hasWillDraft && (hasIssueRegister || hasChecklist)) {
     return { willReady: true, outputPack: parseOutputPack(reply) };
@@ -515,14 +494,15 @@ function parseOutputPack(fullText: string): WillOutputPack {
     confirmationSummary: '',
   };
 
-  const issueStart =
-    fullText.search(/(?:#{1,3}\s*)?(?:ISSUE(?:\s*&\s*RISK)?\s*REGISTER|Issue(?:\s*&\s*Risk)?\s*Register)/i);
-  const checklistStart =
-    fullText.search(/(?:#{1,3}\s*)?(?:EXECUTION\s*CHECKLIST|Execution\s*Checklist)/i);
-  const confirmStart =
-    fullText.search(
-      /(?:#{1,3}\s*)?(?:CLIENT\s*CONFIRMATION\s*SUMMARY|Confirmation\s*Summary|CONFIRMATION\s*SUMMARY)/i,
-    );
+  const issueStart = fullText.search(
+    /(?:#{1,3}\s*)?(?:ISSUE(?:\s*&\s*RISK)?\s*REGISTER|Issue(?:\s*&\s*Risk)?\s*Register)/i,
+  );
+  const checklistStart = fullText.search(
+    /(?:#{1,3}\s*)?(?:EXECUTION\s*CHECKLIST|Execution\s*Checklist)/i,
+  );
+  const confirmStart = fullText.search(
+    /(?:#{1,3}\s*)?(?:CLIENT\s*CONFIRMATION\s*SUMMARY|Confirmation\s*Summary|CONFIRMATION\s*SUMMARY)/i,
+  );
 
   const positions = [
     { key: 'issueRegister' as const, pos: issueStart },

@@ -56,7 +56,10 @@ const verifyAdmin = async (c: Context, next: Next) => {
     await next();
   } catch (error) {
     log.error('Admin auth middleware error', error as Error);
-    return c.json({ error: ERROR_MESSAGES.GENERIC.INTERNAL_ERROR }, HTTP_STATUS.INTERNAL_SERVER_ERROR);
+    return c.json(
+      { error: ERROR_MESSAGES.GENERIC.INTERNAL_ERROR },
+      HTTP_STATUS.INTERNAL_SERVER_ERROR,
+    );
   }
 };
 

@@ -4,7 +4,11 @@
  */
 
 import * as kv from './kv_store.tsx';
-import { FNA_INTAKE_DOMAINS, type FnaIntakeDomain, type FnaIntakeSession } from './fna-intake-types.ts';
+import {
+  FNA_INTAKE_DOMAINS,
+  type FnaIntakeDomain,
+  type FnaIntakeSession,
+} from './fna-intake-types.ts';
 
 export interface IntakeDraftCreator {
   id: string;
@@ -33,7 +37,10 @@ export async function createFnaDraftFromIntake(
   }
 }
 
-async function createRetirementDraftFromIntake(session: FnaIntakeSession, admin: IntakeDraftCreator) {
+async function createRetirementDraftFromIntake(
+  session: FnaIntakeSession,
+  admin: IntakeDraftCreator,
+) {
   const fnaId = crypto.randomUUID();
   const now = new Date().toISOString();
   const record = {

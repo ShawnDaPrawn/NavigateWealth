@@ -1,7 +1,7 @@
 /**
  * Personnel Mutation Hooks
  * Navigate Wealth Admin Dashboard
- * 
+ *
  * React Query mutation hooks for personnel create, update, and delete operations.
  */
 
@@ -25,11 +25,11 @@ import type { AdminModule } from '../../../layout/types';
 
 /**
  * Hook to invite a new personnel member
- * 
+ *
  * Invalidates all personnel list queries on success.
  * When `initialModuleAccess` is provided, sets initial permissions
  * for the new user after creation.
- * 
+ *
  * @returns React Query mutation result
  */
 export function useInvitePersonnel() {
@@ -86,7 +86,7 @@ export function useCreatePersonnelAccount() {
 
   return useMutation({
     mutationFn: async (
-      input: InvitePersonnelInput & { initialModuleAccess?: AdminModule[] }
+      input: InvitePersonnelInput & { initialModuleAccess?: AdminModule[] },
     ): Promise<{ profile: Personnel; recoveryLink: string | null }> => {
       const { initialModuleAccess, ...createInput } = input;
       const result = await personnelApi.createAccount(createInput);
@@ -104,7 +104,10 @@ export function useCreatePersonnelAccount() {
           });
         } catch (permError) {
           // Log but don't fail — permissions can be set later
-          console.error('Failed to set initial permissions for created account (non-fatal):', permError);
+          console.error(
+            'Failed to set initial permissions for created account (non-fatal):',
+            permError,
+          );
         }
       }
 
@@ -123,15 +126,15 @@ export function useCreatePersonnelAccount() {
 
 /**
  * Hook to update personnel information
- * 
+ *
  * Invalidates all personnel queries on success.
- * 
+ *
  * @returns React Query mutation result
- * 
+ *
  * @example
  * ```tsx
  * const { mutate: updatePersonnel, isPending } = useUpdatePersonnel();
- * 
+ *
  * updatePersonnel({
  *   id: '123',
  *   phone: '+27123456789',
@@ -150,10 +153,10 @@ export function useUpdatePersonnel() {
     onSuccess: (data, variables) => {
       // Invalidate all lists
       queryClient.invalidateQueries({ queryKey: personnelKeys.lists() });
-      
+
       // Invalidate specific detail
       queryClient.invalidateQueries({ queryKey: personnelKeys.detail(variables.id) });
-      
+
       toast.success('Personnel updated successfully');
     },
     onError: (error: Error) => {
@@ -165,15 +168,15 @@ export function useUpdatePersonnel() {
 
 /**
  * Hook to delete a personnel member
- * 
+ *
  * Invalidates all personnel queries on success.
- * 
+ *
  * @returns React Query mutation result
- * 
+ *
  * @example
  * ```tsx
  * const { mutate: deletePersonnel, isPending } = useDeletePersonnel();
- * 
+ *
  * deletePersonnel('123');
  * ```
  */
@@ -198,15 +201,15 @@ export function useDeletePersonnel() {
 
 /**
  * Hook to add a document to a personnel member
- * 
+ *
  * Invalidates personnel detail query on success.
- * 
+ *
  * @returns React Query mutation result
- * 
+ *
  * @example
  * ```tsx
  * const { mutate: addDocument, isPending } = useAddPersonnelDocument();
- * 
+ *
  * addDocument({
  *   personnelId: '123',
  *   name: 'RE5 Certificate.pdf',
@@ -223,8 +226,8 @@ export function useAddPersonnelDocument() {
       return personnelApi.addDocument(input);
     },
     onSuccess: (_, variables) => {
-      queryClient.invalidateQueries({ 
-        queryKey: personnelKeys.detail(variables.personnelId) 
+      queryClient.invalidateQueries({
+        queryKey: personnelKeys.detail(variables.personnelId),
       });
       toast.success('Document uploaded successfully');
     },
@@ -237,9 +240,9 @@ export function useAddPersonnelDocument() {
 
 /**
  * Hook to resend an invitation to a pending personnel member
- * 
+ *
  * Invalidates all personnel list queries on success.
- * 
+ *
  * @returns React Query mutation result
  */
 export function useResendPersonnelInvite() {
@@ -262,10 +265,10 @@ export function useResendPersonnelInvite() {
 
 /**
  * Hook to cancel a pending personnel invitation
- * 
+ *
  * Removes the auth user and KV profile.
  * Invalidates all personnel list queries on success.
- * 
+ *
  * @returns React Query mutation result
  */
 export function useCancelPersonnelInvite() {
@@ -288,15 +291,15 @@ export function useCancelPersonnelInvite() {
 
 /**
  * Hook to update super admin profile
- * 
+ *
  * Invalidates super admin query on success.
- * 
+ *
  * @returns React Query mutation result
- * 
+ *
  * @example
  * ```tsx
  * const { mutate: updateSuperAdmin, isPending } = useUpdateSuperAdmin();
- * 
+ *
  * updateSuperAdmin({
  *   phone: '+27123456789',
  *   company: 'Navigate Wealth',
@@ -332,18 +335,22 @@ export function useUpdateSuperAdmin() {
  * @returns React Query mutation result with `BackfillRolesResult`
  */
 export function useBackfillAuthRoles() {
-  return useMutation<Awaited<ReturnType<typeof personnelApi.backfillAuthRoles>>, Error, boolean | void>({
+  return useMutation<
+    Awaited<ReturnType<typeof personnelApi.backfillAuthRoles>>,
+    Error,
+    boolean | void
+  >({
     mutationFn: async (dryRun = true) => {
       return personnelApi.backfillAuthRoles(dryRun as boolean);
     },
     onSuccess: (data) => {
       if (data.dryRun) {
         toast.info(
-          `Dry run complete: ${data.updated} would be updated, ${data.skipped} already correct, ${data.errors} errors`
+          `Dry run complete: ${data.updated} would be updated, ${data.skipped} already correct, ${data.errors} errors`,
         );
       } else {
         toast.success(
-          `Backfill complete: ${data.updated} updated, ${data.skipped} skipped, ${data.errors} errors`
+          `Backfill complete: ${data.updated} updated, ${data.skipped} skipped, ${data.errors} errors`,
         );
       }
     },

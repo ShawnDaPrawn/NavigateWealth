@@ -3,14 +3,12 @@
  * Handles Supabase Storage operations for documents, signatures, and certificates
  */
 
-import { createClient } from "jsr:@supabase/supabase-js@2.49.8";
-import { createModuleLogger } from "./stderr-logger.ts";
+import { createClient } from 'jsr:@supabase/supabase-js@2.49.8';
+import { createModuleLogger } from './stderr-logger.ts';
 
 // Initialize Supabase client lazily
-const getSupabase = () => createClient(
-  Deno.env.get('SUPABASE_URL')!,
-  Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
-);
+const getSupabase = () =>
+  createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!);
 
 const log = createModuleLogger('esign-storage');
 
@@ -32,14 +30,14 @@ export async function initializeStorageBuckets(): Promise<void> {
   const supabase = getSupabase();
 
   const bucketConfigs = [
-    { 
-      name: BUCKETS.DOCUMENTS, 
-      public: false, 
+    {
+      name: BUCKETS.DOCUMENTS,
+      public: false,
       allowedMimeTypes: [
         'application/pdf',
         'application/msword',
-        'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
-      ] 
+        'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      ],
     },
     { name: BUCKETS.SIGNATURES, public: false, allowedMimeTypes: ['image/png', 'image/jpeg'] },
     { name: BUCKETS.CERTIFICATES, public: false, allowedMimeTypes: ['application/pdf'] },
@@ -61,12 +59,12 @@ export async function initializeStorageBuckets(): Promise<void> {
     try {
       // Check if bucket exists
       const { data: buckets, error: listError } = await supabase.storage.listBuckets();
-      
+
       if (listError) {
         log.warn(`Failed to list buckets: ${listError.message}`);
       }
 
-      const bucketExists = buckets?.some(bucket => bucket.name === config.name);
+      const bucketExists = buckets?.some((bucket) => bucket.name === config.name);
 
       if (!bucketExists) {
         // Create bucket
@@ -78,7 +76,10 @@ export async function initializeStorageBuckets(): Promise<void> {
 
         if (error) {
           // Ignore "already exists" error
-          if (error.message.includes('already exists') || error.message.includes('The resource already exists')) {
+          if (
+            error.message.includes('already exists') ||
+            error.message.includes('The resource already exists')
+          ) {
             log.info(`Bucket already exists (caught creation error): ${config.name}`);
           } else {
             log.error(`Failed to create bucket ${config.name}:`, error);
@@ -103,19 +104,17 @@ export async function uploadDocument(
   documentId: string,
   fileBuffer: Uint8Array,
   fileName: string,
-  mimeType: string = 'application/pdf'
+  mimeType: string = 'application/pdf',
 ): Promise<{ path: string; error: string | null }> {
   try {
     const supabase = getSupabase();
     const extension = fileName.split('.').pop()?.toLowerCase() || 'pdf';
     const path = `${firmId}/${documentId}.${extension}`;
 
-    const { error } = await supabase.storage
-      .from(BUCKETS.DOCUMENTS)
-      .upload(path, fileBuffer, {
-        contentType: mimeType,
-        upsert: false,
-      });
+    const { error } = await supabase.storage.from(BUCKETS.DOCUMENTS).upload(path, fileBuffer, {
+      contentType: mimeType,
+      upsert: false,
+    });
 
     if (error) {
       log.error('Document upload error:', error);
@@ -136,18 +135,16 @@ export async function uploadDocument(
 export async function uploadSignature(
   envelopeId: string,
   signerId: string,
-  imageBuffer: Uint8Array
+  imageBuffer: Uint8Array,
 ): Promise<{ path: string; error: string | null }> {
   try {
     const supabase = getSupabase();
     const path = `${envelopeId}/${signerId}_signature.png`;
 
-    const { error } = await supabase.storage
-      .from(BUCKETS.SIGNATURES)
-      .upload(path, imageBuffer, {
-        contentType: 'image/png',
-        upsert: true,
-      });
+    const { error } = await supabase.storage.from(BUCKETS.SIGNATURES).upload(path, imageBuffer, {
+      contentType: 'image/png',
+      upsert: true,
+    });
 
     if (error) {
       log.error('Signature upload error:', error);
@@ -167,18 +164,16 @@ export async function uploadSignature(
  */
 export async function uploadCertificate(
   envelopeId: string,
-  pdfBuffer: Uint8Array
+  pdfBuffer: Uint8Array,
 ): Promise<{ path: string; error: string | null }> {
   try {
     const supabase = getSupabase();
     const path = `${envelopeId}/certificate.pdf`;
 
-    const { error } = await supabase.storage
-      .from(BUCKETS.CERTIFICATES)
-      .upload(path, pdfBuffer, {
-        contentType: 'application/pdf',
-        upsert: true,
-      });
+    const { error } = await supabase.storage.from(BUCKETS.CERTIFICATES).upload(path, pdfBuffer, {
+      contentType: 'application/pdf',
+      upsert: true,
+    });
 
     if (error) {
       log.error('Certificate upload error:', error);
@@ -198,19 +193,19 @@ export async function uploadCertificate(
  */
 export async function uploadSignedDocument(
   envelopeId: string,
-  pdfBuffer: Uint8Array
+  pdfBuffer: Uint8Array,
 ): Promise<{ path: string; error: string | null }> {
   try {
     const supabase = getSupabase();
     const path = `${envelopeId}/signed_document.pdf`;
 
     const { error } = await supabase.storage
-      .from(BUCKETS.DOCUMENTS) // Storing in documents bucket, but maybe could be separate. 
-                               // Using BUCKETS.DOCUMENTS but path is different "completed/..."
-                               // Wait, storage logic below uses BUCKETS.DOCUMENTS. 
-                               // Let's stick to the convention in esign-keys which suggested `completed/${id}/...`
-                               // But the buckets definition only has DOCUMENTS, SIGNATURES, CERTIFICATES.
-                               // I'll put it in DOCUMENTS bucket for now.
+      .from(BUCKETS.DOCUMENTS) // Storing in documents bucket, but maybe could be separate.
+      // Using BUCKETS.DOCUMENTS but path is different "completed/..."
+      // Wait, storage logic below uses BUCKETS.DOCUMENTS.
+      // Let's stick to the convention in esign-keys which suggested `completed/${id}/...`
+      // But the buckets definition only has DOCUMENTS, SIGNATURES, CERTIFICATES.
+      // I'll put it in DOCUMENTS bucket for now.
       .upload(`completed/${path}`, pdfBuffer, {
         contentType: 'application/pdf',
         upsert: true,
@@ -236,9 +231,7 @@ export async function uploadSignedDocument(
 export async function downloadDocument(path: string): Promise<Uint8Array | null> {
   try {
     const supabase = getSupabase();
-    const { data, error } = await supabase.storage
-      .from(BUCKETS.DOCUMENTS)
-      .download(path);
+    const { data, error } = await supabase.storage.from(BUCKETS.DOCUMENTS).download(path);
 
     if (error || !data) {
       log.error('Document download error:', error);
@@ -327,7 +320,10 @@ export async function uploadAttachment(
       return { path: '', error: `Unsupported attachment type: ${mimeType}` };
     }
     if (fileBuffer.length > ATTACHMENT_MAX_BYTES) {
-      return { path: '', error: `Attachment exceeds ${Math.floor(ATTACHMENT_MAX_BYTES / 1024 / 1024)}MB limit` };
+      return {
+        path: '',
+        error: `Attachment exceeds ${Math.floor(ATTACHMENT_MAX_BYTES / 1024 / 1024)}MB limit`,
+      };
     }
     const supabase = getSupabase();
     // Sanitise filename so we never write `..` / slashes into the storage path.
@@ -425,9 +421,7 @@ export async function downloadAttachment(path: string): Promise<Uint8Array | nul
 export async function deleteDocument(path: string): Promise<boolean> {
   try {
     const supabase = getSupabase();
-    const { error } = await supabase.storage
-      .from(BUCKETS.DOCUMENTS)
-      .remove([path]);
+    const { error } = await supabase.storage.from(BUCKETS.DOCUMENTS).remove([path]);
 
     if (error) {
       log.error('Document deletion error:', error);
@@ -449,7 +443,7 @@ export async function calculateHash(buffer: Uint8Array): Promise<string> {
   try {
     const hashBuffer = await crypto.subtle.digest('SHA-256', buffer);
     const hashArray = Array.from(new Uint8Array(hashBuffer));
-    const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+    const hashHex = hashArray.map((b) => b.toString(16).padStart(2, '0')).join('');
     return hashHex;
   } catch (error) {
     log.error('Hash calculation error:', error);
@@ -464,15 +458,15 @@ export function extractPageCount(buffer: Uint8Array): number {
   try {
     // Convert buffer to string to search for /Type /Page occurrences
     const text = new TextDecoder('latin1').decode(buffer);
-    
+
     // Count /Type /Page or /Type/Page patterns
     const pageMatches = text.match(/\/Type\s*\/Page[^s]/g);
-    
+
     if (!pageMatches) {
       log.warn('Could not determine page count, defaulting to 1');
       return 1;
     }
-    
+
     return pageMatches.length;
   } catch (error) {
     log.error('Page count extraction error:', error);
@@ -483,7 +477,10 @@ export function extractPageCount(buffer: Uint8Array): number {
 /**
  * Validate Document (PDF, DOC, DOCX)
  */
-export function validateDocument(buffer: Uint8Array, fileName: string): { valid: boolean; error?: string } {
+export function validateDocument(
+  buffer: Uint8Array,
+  fileName: string,
+): { valid: boolean; error?: string } {
   try {
     // Check minimum size (at least 1KB)
     if (buffer.length < 1024) {
@@ -491,7 +488,7 @@ export function validateDocument(buffer: Uint8Array, fileName: string): { valid:
     }
 
     const ext = fileName.split('.').pop()?.toLowerCase();
-    
+
     // PDF Validation
     if (ext === 'pdf') {
       const header = new TextDecoder('latin1').decode(buffer.slice(0, 5));
@@ -499,15 +496,18 @@ export function validateDocument(buffer: Uint8Array, fileName: string): { valid:
         return { valid: false, error: 'Invalid PDF file: Missing PDF header' };
       }
     }
-    
+
     // Word Validation (Basic check)
     // We trust the extension and size for now as deeper validation is complex without libraries
     if (['doc', 'docx'].includes(ext || '')) {
-       return { valid: true };
+      return { valid: true };
     }
-    
+
     if (!['pdf', 'doc', 'docx'].includes(ext || '')) {
-        return { valid: false, error: 'Unsupported file type. Only PDF and Word documents are allowed.' };
+      return {
+        valid: false,
+        error: 'Unsupported file type. Only PDF and Word documents are allowed.',
+      };
     }
 
     return { valid: true };

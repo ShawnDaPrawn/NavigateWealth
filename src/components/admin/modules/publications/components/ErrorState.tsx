@@ -1,6 +1,6 @@
 /**
  * Publications Feature - ErrorState Component
- * 
+ *
  * Displays error messages with optional retry action.
  */
 
@@ -15,11 +15,11 @@ interface ErrorStateProps {
   fullPage?: boolean;
 }
 
-export function ErrorState({ 
+export function ErrorState({
   title = 'Something went wrong',
-  message, 
+  message,
   onRetry,
-  fullPage = false 
+  fullPage = false,
 }: ErrorStateProps) {
   const containerClasses = fullPage
     ? 'flex flex-col items-center justify-center min-h-[400px]'
@@ -30,10 +30,10 @@ export function ErrorState({
       <div className="flex items-center justify-center w-16 h-16 bg-red-100 rounded-full mb-4">
         <AlertCircle className="w-8 h-8 text-red-600" />
       </div>
-      
+
       <h3 className="text-lg mb-2 text-gray-900">{title}</h3>
       <p className="text-gray-600 text-center mb-6 max-w-md">{message}</p>
-      
+
       {onRetry && (
         <Button onClick={onRetry} variant="outline">
           <RefreshCw className="w-4 h-4 mr-2" />

@@ -1,6 +1,7 @@
 import { existsSync, readFileSync } from 'node:fs';
 
-const DEFAULT_INGEST_URL = 'https://vpjmdsltwrnpefzcgdmz.supabase.co/functions/v1/make-server-91ed8379/quality-issues/ingest-security-report';
+const DEFAULT_INGEST_URL =
+  'https://vpjmdsltwrnpefzcgdmz.supabase.co/functions/v1/make-server-91ed8379/quality-issues/ingest-security-report';
 const token = process.env.QUALITY_ISSUES_INGEST_TOKEN;
 const inputPath = process.argv[2] || process.env.QUALITY_SECURITY_REPORT_PATH;
 
@@ -20,7 +21,9 @@ function normalizeIngestUrl(value) {
 
 function readPayload(path) {
   if (!path) {
-    throw new Error('Provide a security report path as the first argument or QUALITY_SECURITY_REPORT_PATH.');
+    throw new Error(
+      'Provide a security report path as the first argument or QUALITY_SECURITY_REPORT_PATH.',
+    );
   }
 
   if (!existsSync(path)) {
@@ -43,7 +46,7 @@ const response = await fetch(endpoint, {
   method: 'POST',
   headers: {
     'Content-Type': 'application/json',
-    'Authorization': `Bearer ${token}`,
+    Authorization: `Bearer ${token}`,
   },
   body: JSON.stringify(payload),
 });
@@ -56,4 +59,6 @@ if (!response.ok) {
 }
 
 const result = await response.json();
-console.log(`Published ${Array.isArray(result.issues) ? result.issues.length : 0} security issue(s).`);
+console.log(
+  `Published ${Array.isArray(result.issues) ? result.issues.length : 0} security issue(s).`,
+);

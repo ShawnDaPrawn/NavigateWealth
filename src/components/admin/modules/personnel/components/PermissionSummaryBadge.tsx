@@ -9,12 +9,7 @@
 
 import React from 'react';
 import { Badge } from '../../../../ui/badge';
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from '../../../../ui/tooltip';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '../../../../ui/tooltip';
 import { Shield, ShieldCheck, ShieldAlert, ShieldOff } from 'lucide-react';
 import { cn } from '../../../../ui/utils';
 import type { PermissionSet } from '../types';
@@ -40,8 +35,7 @@ export function PermissionSummaryBadge({
   isLoading,
 }: PermissionSummaryBadgeProps) {
   const isSuperAdmin =
-    email?.toLowerCase() === SUPER_ADMIN_EMAIL.toLowerCase() ||
-    role === 'super_admin';
+    email?.toLowerCase() === SUPER_ADMIN_EMAIL.toLowerCase() || role === 'super_admin';
 
   // ── Super admin ────────────────────────────────────────────────
   if (isSuperAdmin) {
@@ -62,8 +56,8 @@ export function PermissionSummaryBadge({
           <TooltipContent side="top" className="max-w-xs">
             <p className="text-xs font-medium">Super Admin — Full Access</p>
             <p className="text-xs text-muted-foreground mt-0.5">
-              All {PERMISSIONED_MODULES.length} modules and all capabilities
-              are accessible. This cannot be modified.
+              All {PERMISSIONED_MODULES.length} modules and all capabilities are accessible. This
+              cannot be modified.
             </p>
           </TooltipContent>
         </Tooltip>
@@ -101,8 +95,7 @@ export function PermissionSummaryBadge({
           </TooltipTrigger>
           <TooltipContent side="top">
             <p className="text-xs">
-              No module permissions have been configured yet.
-              Click to open the Permissions tab.
+              No module permissions have been configured yet. Click to open the Permissions tab.
             </p>
           </TooltipContent>
         </Tooltip>
@@ -112,14 +105,9 @@ export function PermissionSummaryBadge({
 
   // ── Count enabled modules and capabilities ─────────────────────
   const modules = permissionSet.modules;
-  const enabledModules = Object.entries(modules).filter(
-    ([_, v]) => v?.access === true
-  );
+  const enabledModules = Object.entries(modules).filter(([_, v]) => v?.access === true);
   const enabledCount = enabledModules.length;
-  const totalCaps = enabledModules.reduce(
-    (sum, [_, v]) => sum + (v?.capabilities?.length || 0),
-    0
-  );
+  const totalCaps = enabledModules.reduce((sum, [_, v]) => sum + (v?.capabilities?.length || 0), 0);
 
   // Build tooltip content — list accessible modules
   const accessibleModuleNames = enabledModules
@@ -146,8 +134,7 @@ export function PermissionSummaryBadge({
           </TooltipTrigger>
           <TooltipContent side="top">
             <p className="text-xs">
-              All module access switches are off. The user can only view the
-              Dashboard.
+              All module access switches are off. The user can only view the Dashboard.
             </p>
           </TooltipContent>
         </Tooltip>
@@ -161,8 +148,8 @@ export function PermissionSummaryBadge({
     coverage >= 0.8
       ? 'bg-green-50 text-green-700 border-green-200'
       : coverage >= 0.4
-      ? 'bg-blue-50 text-blue-700 border-blue-200'
-      : 'bg-amber-50 text-amber-700 border-amber-200';
+        ? 'bg-blue-50 text-blue-700 border-blue-200'
+        : 'bg-amber-50 text-amber-700 border-amber-200';
 
   return (
     <TooltipProvider>
@@ -171,15 +158,14 @@ export function PermissionSummaryBadge({
           <span className="inline-flex">
             <Badge
               variant="outline"
-              className={cn(
-                'text-[10px] px-1.5 py-0.5 h-5 gap-1 cursor-default',
-                badgeStyle
-              )}
+              className={cn('text-[10px] px-1.5 py-0.5 h-5 gap-1 cursor-default', badgeStyle)}
             >
               <Shield className="h-3 w-3" />
               {enabledCount} module{enabledCount !== 1 ? 's' : ''}
               {totalCaps > 0 && (
-                <span className="opacity-60">· {totalCaps} cap{totalCaps !== 1 ? 's' : ''}</span>
+                <span className="opacity-60">
+                  · {totalCaps} cap{totalCaps !== 1 ? 's' : ''}
+                </span>
               )}
             </Badge>
           </span>
@@ -191,11 +177,7 @@ export function PermissionSummaryBadge({
           </p>
           <div className="flex flex-wrap gap-1 mt-1">
             {accessibleModuleNames.map((name) => (
-              <Badge
-                key={name}
-                variant="secondary"
-                className="text-[9px] px-1 py-0 h-3.5"
-              >
+              <Badge key={name} variant="secondary" className="text-[9px] px-1 py-0 h-3.5">
                 {name}
               </Badge>
             ))}

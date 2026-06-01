@@ -9,20 +9,8 @@ import React from 'react';
 import DOMPurify from 'dompurify';
 import { Button } from '../../../../../ui/button';
 import { Badge } from '../../../../../ui/badge';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from '../../../../../ui/dialog';
-import {
-  User,
-  Clock,
-  Paperclip,
-  FileText,
-  Send,
-  Trash2,
-} from 'lucide-react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../../../../../ui/dialog';
+import { User, Clock, Paperclip, FileText, Send, Trash2 } from 'lucide-react';
 import type { CommunicationLog, AttachmentFile } from '../../../communication/types';
 
 export interface CommunicationDetailDialogProps {

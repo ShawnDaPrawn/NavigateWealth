@@ -10,7 +10,16 @@
 
 import { useState } from 'react';
 import { format } from 'date-fns';
-import { ArrowLeft, Search, Trash2, RotateCcw, MoreHorizontal, Eye, Calendar, Tag } from 'lucide-react';
+import {
+  ArrowLeft,
+  Search,
+  Trash2,
+  RotateCcw,
+  MoreHorizontal,
+  Eye,
+  Calendar,
+  Tag,
+} from 'lucide-react';
 import type { Task, TaskStatus } from '../types';
 import { useUpdateTask, useDeleteTask } from '../hooks';
 import { PRIORITY_LABELS, PRIORITY_COLORS } from '../constants';
@@ -92,9 +101,7 @@ export function ArchivedTasksView({ tasks, onBack, onViewTask }: ArchivedTasksVi
           </Button>
           <div>
             <h1 className="text-2xl font-bold tracking-tight text-gray-900">Archived Tasks</h1>
-            <p className="mt-1 text-sm text-gray-500">
-              View and restore previously archived tasks
-            </p>
+            <p className="mt-1 text-sm text-gray-500">View and restore previously archived tasks</p>
           </div>
         </div>
 
@@ -129,11 +136,7 @@ export function ArchivedTasksView({ tasks, onBack, onViewTask }: ArchivedTasksVi
                 : 'Tasks that you archive will appear here for safe keeping.'}
             </p>
             {searchTerm && (
-              <Button
-                variant="outline"
-                className="mt-4"
-                onClick={() => setSearchTerm('')}
-              >
+              <Button variant="outline" className="mt-4" onClick={() => setSearchTerm('')}>
                 Clear Search
               </Button>
             )}
@@ -164,7 +167,9 @@ export function ArchivedTasksView({ tasks, onBack, onViewTask }: ArchivedTasksVi
                     <div className="flex items-start justify-between gap-3">
                       <div className="min-w-0 flex-1">
                         <div className="mb-2 flex flex-wrap items-center gap-2">
-                          <span className={`inline-flex items-center rounded px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wider ${PRIORITY_COLORS[task.priority]} bg-opacity-10`}>
+                          <span
+                            className={`inline-flex items-center rounded px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wider ${PRIORITY_COLORS[task.priority]} bg-opacity-10`}
+                          >
                             {PRIORITY_LABELS[task.priority]}
                           </span>
                           {issueManagerTask && (
@@ -198,7 +203,9 @@ export function ArchivedTasksView({ tasks, onBack, onViewTask }: ArchivedTasksVi
                           {task.tags?.length ? (
                             <div className="flex items-center gap-1">
                               <Tag className="h-3 w-3" />
-                              <span>{task.tags.length} tag{task.tags.length === 1 ? '' : 's'}</span>
+                              <span>
+                                {task.tags.length} tag{task.tags.length === 1 ? '' : 's'}
+                              </span>
                             </div>
                           ) : null}
 
@@ -226,10 +233,12 @@ export function ArchivedTasksView({ tasks, onBack, onViewTask }: ArchivedTasksVi
                         <DropdownMenuContent align="end" className="w-48">
                           <DropdownMenuLabel>Actions</DropdownMenuLabel>
                           <DropdownMenuSeparator />
-                          <DropdownMenuItem onClick={(e) => {
-                            e.stopPropagation();
-                            onViewTask(task);
-                          }}>
+                          <DropdownMenuItem
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              onViewTask(task);
+                            }}
+                          >
                             <Eye className="mr-2 h-4 w-4" />
                             View Details
                           </DropdownMenuItem>
@@ -240,22 +249,28 @@ export function ArchivedTasksView({ tasks, onBack, onViewTask }: ArchivedTasksVi
                               Restore
                             </DropdownMenuSubTrigger>
                             <DropdownMenuSubContent>
-                              <DropdownMenuItem onClick={(e) => {
-                                e.stopPropagation();
-                                handleRestore(task, 'new');
-                              }}>
+                              <DropdownMenuItem
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleRestore(task, 'new');
+                                }}
+                              >
                                 To New
                               </DropdownMenuItem>
-                              <DropdownMenuItem onClick={(e) => {
-                                e.stopPropagation();
-                                handleRestore(task, 'in_progress');
-                              }}>
+                              <DropdownMenuItem
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleRestore(task, 'in_progress');
+                                }}
+                              >
                                 To In Progress
                               </DropdownMenuItem>
-                              <DropdownMenuItem onClick={(e) => {
-                                e.stopPropagation();
-                                handleRestore(task, 'completed');
-                              }}>
+                              <DropdownMenuItem
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleRestore(task, 'completed');
+                                }}
+                              >
                                 To Completed
                               </DropdownMenuItem>
                             </DropdownMenuSubContent>
@@ -288,12 +303,16 @@ export function ArchivedTasksView({ tasks, onBack, onViewTask }: ArchivedTasksVi
           <AlertDialogHeader>
             <AlertDialogTitle>Delete Permanently?</AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure you want to permanently delete this task? This action cannot be undone and the task will be removed from the archive.
+              Are you sure you want to permanently delete this task? This action cannot be undone
+              and the task will be removed from the archive.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={confirmDelete} className="bg-red-600 hover:bg-red-700 focus:ring-red-600">
+            <AlertDialogAction
+              onClick={confirmDelete}
+              className="bg-red-600 hover:bg-red-700 focus:ring-red-600"
+            >
               Delete Permanently
             </AlertDialogAction>
           </AlertDialogFooter>

@@ -25,11 +25,7 @@ function domainLabel(domain: FnaIntakeDomain): string {
   return DOMAIN_LABELS[domain] ?? domain;
 }
 
-async function notifyInbox(
-  recipientId: string,
-  subject: string,
-  content: string,
-): Promise<void> {
+async function notifyInbox(recipientId: string, subject: string, content: string): Promise<void> {
   try {
     await comms.sendMessage(SYSTEM_ACTOR, {
       subject,

@@ -13,7 +13,9 @@ import { publicAnonKey } from '../../../../../../utils/supabase/info';
 export async function getAuthToken(): Promise<string> {
   try {
     const supabase = createSupabaseClient();
-    const { data: { session } } = await supabase.auth.getSession();
+    const {
+      data: { session },
+    } = await supabase.auth.getSession();
     return session?.access_token || publicAnonKey;
   } catch {
     return publicAnonKey;

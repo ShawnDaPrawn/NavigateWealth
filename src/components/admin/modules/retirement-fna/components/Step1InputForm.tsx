@@ -1,6 +1,6 @@
 /**
  * Step 1: Information Gathering
- * 
+ *
  * Behaviour Rules:
  * - Auto-populate from client profile if data exists
  * - All inputs validated before proceeding to Step 2
@@ -44,13 +44,17 @@ interface AutoPopulateResponse {
   [key: string]: unknown;
 }
 
-function mapPrefillToRetirementInputs(values: Record<string, unknown>): Partial<RetirementFNAInputs> {
+function mapPrefillToRetirementInputs(
+  values: Record<string, unknown>,
+): Partial<RetirementFNAInputs> {
   const autoData = values as AutoPopulateResponse;
   return {
     currentAge: Number(autoData.currentAge) || undefined,
     retirementAge: Number(autoData.retirementAge ?? autoData.intendedRetirementAge) || 65,
     currentMonthlyIncome:
-      Number(autoData.currentMonthlyIncome ?? autoData.netMonthlyIncome ?? autoData.grossMonthlyIncome) || 0,
+      Number(
+        autoData.currentMonthlyIncome ?? autoData.netMonthlyIncome ?? autoData.grossMonthlyIncome,
+      ) || 0,
     currentMonthlyContribution:
       Number(autoData.currentMonthlyContribution ?? autoData.totalMonthlyContribution) || 0,
     currentRetirementSavings:
@@ -69,17 +73,25 @@ export function Step1InputForm({
   onSaveDraft,
 }: Step1InputFormProps) {
   const [data, setData] = useState<Partial<RetirementFNAInputs>>(initialData);
-  
+
   // Initialize assumptions with passed values or system defaults
   const [assumptions, setAssumptions] = useState<RetirementFNAAdjustments>({
-    inflationRate: initialAssumptions?.inflationRate ?? DEFAULT_RETIREMENT_ASSUMPTIONS.inflationRate,
-    preRetirementReturn: initialAssumptions?.preRetirementReturn ?? DEFAULT_RETIREMENT_ASSUMPTIONS.preRetirementReturn,
-    postRetirementReturn: initialAssumptions?.postRetirementReturn ?? DEFAULT_RETIREMENT_ASSUMPTIONS.postRetirementReturn,
-    salaryEscalation: initialAssumptions?.salaryEscalation ?? DEFAULT_RETIREMENT_ASSUMPTIONS.salaryEscalation,
-    premiumEscalation: initialAssumptions?.premiumEscalation ?? DEFAULT_RETIREMENT_ASSUMPTIONS.premiumEscalation,
-    yearsInRetirement: initialAssumptions?.yearsInRetirement ?? DEFAULT_RETIREMENT_ASSUMPTIONS.yearsInRetirement,
-    replacementRatio: initialAssumptions?.replacementRatio ?? DEFAULT_RETIREMENT_ASSUMPTIONS.replacementRatio,
-    ...initialAssumptions // Spread any others
+    inflationRate:
+      initialAssumptions?.inflationRate ?? DEFAULT_RETIREMENT_ASSUMPTIONS.inflationRate,
+    preRetirementReturn:
+      initialAssumptions?.preRetirementReturn ?? DEFAULT_RETIREMENT_ASSUMPTIONS.preRetirementReturn,
+    postRetirementReturn:
+      initialAssumptions?.postRetirementReturn ??
+      DEFAULT_RETIREMENT_ASSUMPTIONS.postRetirementReturn,
+    salaryEscalation:
+      initialAssumptions?.salaryEscalation ?? DEFAULT_RETIREMENT_ASSUMPTIONS.salaryEscalation,
+    premiumEscalation:
+      initialAssumptions?.premiumEscalation ?? DEFAULT_RETIREMENT_ASSUMPTIONS.premiumEscalation,
+    yearsInRetirement:
+      initialAssumptions?.yearsInRetirement ?? DEFAULT_RETIREMENT_ASSUMPTIONS.yearsInRetirement,
+    replacementRatio:
+      initialAssumptions?.replacementRatio ?? DEFAULT_RETIREMENT_ASSUMPTIONS.replacementRatio,
+    ...initialAssumptions, // Spread any others
   });
 
   const [loading, setLoading] = useState(false);
@@ -105,7 +117,7 @@ export function Step1InputForm({
   }, [clientId, intakeMode, prefillStarted, initialData, startPrefill]);
 
   const handleChange = (field: keyof RetirementFNAInputs, value: string | number | boolean) => {
-    setData(prev => ({ ...prev, [field]: value }));
+    setData((prev) => ({ ...prev, [field]: value }));
   };
 
   const handleCurrencyChange = (field: keyof RetirementFNAInputs, value: string) => {
@@ -114,9 +126,12 @@ export function Step1InputForm({
     const numericValue = cleanValue ? parseFloat(cleanValue) : 0;
     handleChange(field, numericValue);
   };
-  
-  const handleAssumptionChange = (field: keyof RetirementFNAAdjustments, value: string | number | boolean) => {
-    setAssumptions(prev => ({ ...prev, [field]: value }));
+
+  const handleAssumptionChange = (
+    field: keyof RetirementFNAAdjustments,
+    value: string | number | boolean,
+  ) => {
+    setAssumptions((prev) => ({ ...prev, [field]: value }));
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -159,7 +174,8 @@ export function Step1InputForm({
       <Alert>
         <Info className="h-4 w-4" />
         <AlertDescription className="text-sm">
-          Review client information below. Use &quot;Review matches&quot; to prefill from the client record where available.
+          Review client information below. Use &quot;Review matches&quot; to prefill from the client
+          record where available.
         </AlertDescription>
       </Alert>
 
@@ -199,9 +215,7 @@ export function Step1InputForm({
                       min="18"
                       max="100"
                     />
-                    <p className="text-xs text-muted-foreground">
-                      Client's current age in years
-                    </p>
+                    <p className="text-xs text-muted-foreground">Client's current age in years</p>
                   </div>
 
                   <div className="space-y-2">
@@ -217,9 +231,7 @@ export function Step1InputForm({
                       min={data.currentAge ? data.currentAge + 1 : 18}
                       max="100"
                     />
-                    <p className="text-xs text-muted-foreground">
-                      Target age for retirement
-                    </p>
+                    <p className="text-xs text-muted-foreground">Target age for retirement</p>
                   </div>
                 </div>
 
@@ -227,7 +239,8 @@ export function Step1InputForm({
                   <Alert className="bg-primary/10 border-primary/20">
                     <Info className="h-4 w-4 text-primary" />
                     <AlertDescription className="text-sm">
-                      Years until retirement: <strong>{data.retirementAge - data.currentAge} years</strong>
+                      Years until retirement:{' '}
+                      <strong>{data.retirementAge - data.currentAge} years</strong>
                     </AlertDescription>
                   </Alert>
                 )}
@@ -266,7 +279,9 @@ export function Step1InputForm({
                   <Input
                     id="currentRetirementSavings"
                     value={formatCurrencyInput(data.currentRetirementSavings || 0)}
-                    onChange={(e) => handleCurrencyChange('currentRetirementSavings', e.target.value)}
+                    onChange={(e) =>
+                      handleCurrencyChange('currentRetirementSavings', e.target.value)
+                    }
                     placeholder="R 0.00"
                   />
                   <p className="text-xs text-muted-foreground">
@@ -281,7 +296,9 @@ export function Step1InputForm({
                   <Input
                     id="currentMonthlyContribution"
                     value={formatCurrencyInput(data.currentMonthlyContribution || 0)}
-                    onChange={(e) => handleCurrencyChange('currentMonthlyContribution', e.target.value)}
+                    onChange={(e) =>
+                      handleCurrencyChange('currentMonthlyContribution', e.target.value)
+                    }
                     placeholder="R 0.00"
                   />
                   <p className="text-xs text-muted-foreground">
@@ -292,112 +309,150 @@ export function Step1InputForm({
             </Card>
 
             {!hideAssumptionsTab && (
-            <>
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <TrendingUp className="h-5 w-5" />
-                  Assumptions
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-6">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  {/* Inflation */}
-                  <div className="space-y-2">
-                    <Label htmlFor="inflationRate">Inflation Rate (CPI)</Label>
-                    <div className="relative">
-                      <Input
-                        id="inflationRate"
-                        type="number"
-                        step="0.1"
-                        value={((assumptions.inflationRate || 0) * 100).toFixed(1)}
-                        onChange={(e) => handleAssumptionChange('inflationRate', parseFloat(e.target.value) / 100)}
-                      />
-                      <span className="absolute right-3 top-2.5 text-sm text-muted-foreground">%</span>
+              <>
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <TrendingUp className="h-5 w-5" />
+                      Assumptions
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-6">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      {/* Inflation */}
+                      <div className="space-y-2">
+                        <Label htmlFor="inflationRate">Inflation Rate (CPI)</Label>
+                        <div className="relative">
+                          <Input
+                            id="inflationRate"
+                            type="number"
+                            step="0.1"
+                            value={((assumptions.inflationRate || 0) * 100).toFixed(1)}
+                            onChange={(e) =>
+                              handleAssumptionChange(
+                                'inflationRate',
+                                parseFloat(e.target.value) / 100,
+                              )
+                            }
+                          />
+                          <span className="absolute right-3 top-2.5 text-sm text-muted-foreground">
+                            %
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Salary Escalation */}
+                      <div className="space-y-2">
+                        <Label htmlFor="salaryEscalation">Salary Escalation</Label>
+                        <div className="relative">
+                          <Input
+                            id="salaryEscalation"
+                            type="number"
+                            step="0.1"
+                            value={((assumptions.salaryEscalation || 0) * 100).toFixed(1)}
+                            onChange={(e) =>
+                              handleAssumptionChange(
+                                'salaryEscalation',
+                                parseFloat(e.target.value) / 100,
+                              )
+                            }
+                          />
+                          <span className="absolute right-3 top-2.5 text-sm text-muted-foreground">
+                            %
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Pre-Retirement Return */}
+                      <div className="space-y-2">
+                        <Label htmlFor="preRetirementReturn">Pre-Retirement Return</Label>
+                        <div className="relative">
+                          <Input
+                            id="preRetirementReturn"
+                            type="number"
+                            step="0.1"
+                            value={((assumptions.preRetirementReturn || 0) * 100).toFixed(1)}
+                            onChange={(e) =>
+                              handleAssumptionChange(
+                                'preRetirementReturn',
+                                parseFloat(e.target.value) / 100,
+                              )
+                            }
+                          />
+                          <span className="absolute right-3 top-2.5 text-sm text-muted-foreground">
+                            %
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Post-Retirement Return */}
+                      <div className="space-y-2">
+                        <Label htmlFor="postRetirementReturn">Post-Retirement Return</Label>
+                        <div className="relative">
+                          <Input
+                            id="postRetirementReturn"
+                            type="number"
+                            step="0.1"
+                            value={((assumptions.postRetirementReturn || 0) * 100).toFixed(1)}
+                            onChange={(e) =>
+                              handleAssumptionChange(
+                                'postRetirementReturn',
+                                parseFloat(e.target.value) / 100,
+                              )
+                            }
+                          />
+                          <span className="absolute right-3 top-2.5 text-sm text-muted-foreground">
+                            %
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Years in Retirement */}
+                      <div className="space-y-2">
+                        <Label htmlFor="yearsInRetirement">Years in Retirement</Label>
+                        <Input
+                          id="yearsInRetirement"
+                          type="number"
+                          value={assumptions.yearsInRetirement}
+                          onChange={(e) =>
+                            handleAssumptionChange('yearsInRetirement', parseInt(e.target.value))
+                          }
+                        />
+                      </div>
+
+                      {/* Replacement Ratio */}
+                      <div className="space-y-2">
+                        <Label htmlFor="replacementRatio">Target Income Ratio</Label>
+                        <div className="relative">
+                          <Input
+                            id="replacementRatio"
+                            type="number"
+                            step="1"
+                            value={((assumptions.replacementRatio || 0) * 100).toFixed(0)}
+                            onChange={(e) =>
+                              handleAssumptionChange(
+                                'replacementRatio',
+                                parseFloat(e.target.value) / 100,
+                              )
+                            }
+                          />
+                          <span className="absolute right-3 top-2.5 text-sm text-muted-foreground">
+                            %
+                          </span>
+                        </div>
+                      </div>
                     </div>
-                  </div>
+                  </CardContent>
+                </Card>
 
-                  {/* Salary Escalation */}
-                  <div className="space-y-2">
-                    <Label htmlFor="salaryEscalation">Salary Escalation</Label>
-                    <div className="relative">
-                      <Input
-                        id="salaryEscalation"
-                        type="number"
-                        step="0.1"
-                        value={((assumptions.salaryEscalation || 0) * 100).toFixed(1)}
-                        onChange={(e) => handleAssumptionChange('salaryEscalation', parseFloat(e.target.value) / 100)}
-                      />
-                      <span className="absolute right-3 top-2.5 text-sm text-muted-foreground">%</span>
-                    </div>
-                  </div>
-
-                  {/* Pre-Retirement Return */}
-                  <div className="space-y-2">
-                    <Label htmlFor="preRetirementReturn">Pre-Retirement Return</Label>
-                    <div className="relative">
-                      <Input
-                        id="preRetirementReturn"
-                        type="number"
-                        step="0.1"
-                        value={((assumptions.preRetirementReturn || 0) * 100).toFixed(1)}
-                        onChange={(e) => handleAssumptionChange('preRetirementReturn', parseFloat(e.target.value) / 100)}
-                      />
-                      <span className="absolute right-3 top-2.5 text-sm text-muted-foreground">%</span>
-                    </div>
-                  </div>
-
-                  {/* Post-Retirement Return */}
-                  <div className="space-y-2">
-                    <Label htmlFor="postRetirementReturn">Post-Retirement Return</Label>
-                    <div className="relative">
-                      <Input
-                        id="postRetirementReturn"
-                        type="number"
-                        step="0.1"
-                        value={((assumptions.postRetirementReturn || 0) * 100).toFixed(1)}
-                        onChange={(e) => handleAssumptionChange('postRetirementReturn', parseFloat(e.target.value) / 100)}
-                      />
-                      <span className="absolute right-3 top-2.5 text-sm text-muted-foreground">%</span>
-                    </div>
-                  </div>
-
-                  {/* Years in Retirement */}
-                  <div className="space-y-2">
-                    <Label htmlFor="yearsInRetirement">Years in Retirement</Label>
-                    <Input
-                      id="yearsInRetirement"
-                      type="number"
-                      value={assumptions.yearsInRetirement}
-                      onChange={(e) => handleAssumptionChange('yearsInRetirement', parseInt(e.target.value))}
-                    />
-                  </div>
-
-                  {/* Replacement Ratio */}
-                  <div className="space-y-2">
-                    <Label htmlFor="replacementRatio">Target Income Ratio</Label>
-                    <div className="relative">
-                      <Input
-                        id="replacementRatio"
-                        type="number"
-                        step="1"
-                        value={((assumptions.replacementRatio || 0) * 100).toFixed(0)}
-                        onChange={(e) => handleAssumptionChange('replacementRatio', parseFloat(e.target.value) / 100)}
-                      />
-                      <span className="absolute right-3 top-2.5 text-sm text-muted-foreground">%</span>
-                    </div>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Alert>
-              <Info className="h-4 w-4" />
-              <AlertDescription className="text-sm">
-                These assumptions will be used for the initial calculation. You can refine them further in Step 3.
-              </AlertDescription>
-            </Alert>
-            </>
+                <Alert>
+                  <Info className="h-4 w-4" />
+                  <AlertDescription className="text-sm">
+                    These assumptions will be used for the initial calculation. You can refine them
+                    further in Step 3.
+                  </AlertDescription>
+                </Alert>
+              </>
             )}
           </TabsContent>
         </Tabs>

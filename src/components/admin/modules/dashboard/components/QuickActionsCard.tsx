@@ -1,22 +1,21 @@
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../../../../ui/card';
 import { Button } from '../../../../ui/button';
-import { 
-  Users, 
-  FilePlus, 
-  Search, 
-  MessageSquare, 
-  FileText, 
+import {
+  Users,
+  FilePlus,
+  Search,
+  MessageSquare,
+  FileText,
   Calendar,
   Settings,
   Shield,
   Plus,
-  ClipboardCheck
+  ClipboardCheck,
 } from 'lucide-react';
 import type { QuickActionsCardProps, QuickAction } from '../types';
 
 export function QuickActionsCard({ onModuleChange, customActions }: QuickActionsCardProps) {
-  
   const defaultActions: QuickAction[] = [
     {
       id: 'new-client',
@@ -73,7 +72,7 @@ export function QuickActionsCard({ onModuleChange, customActions }: QuickActions
       icon: FileText,
       module: 'reporting',
       variant: 'outline',
-    }
+    },
   ];
 
   const actions = customActions || defaultActions;
@@ -93,9 +92,7 @@ export function QuickActionsCard({ onModuleChange, customActions }: QuickActions
           <Settings className="h-5 w-5 mr-2 text-primary" />
           Quick Actions
         </CardTitle>
-        <CardDescription>
-          Frequently used admin tools
-        </CardDescription>
+        <CardDescription>Frequently used admin tools</CardDescription>
       </CardHeader>
       <CardContent>
         <div className="grid grid-cols-2 gap-3">

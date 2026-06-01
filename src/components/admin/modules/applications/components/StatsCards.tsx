@@ -83,7 +83,7 @@ export function StatsCards({ stats, activeTab, setActiveTab }: StatsCardsProps) 
         const count =
           card.tab === 'incomplete'
             ? getIncompleteCount(stats)
-            : ((stats?.[card.statKey] as number) || 0);
+            : (stats?.[card.statKey] as number) || 0;
         const Icon = card.icon;
 
         return (
@@ -95,14 +95,17 @@ export function StatsCards({ stats, activeTab, setActiveTab }: StatsCardsProps) 
             className={`
               bg-white p-5 rounded-xl border text-left transition-all duration-200 cursor-pointer
               focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#6d28d9]/40 focus-visible:ring-offset-2
-              ${isActive
-                ? 'border-[#6d28d9]/30 shadow-sm ring-1 ring-[#6d28d9]/20'
-                : 'border-gray-200 hover:border-gray-300 hover:shadow-sm'
+              ${
+                isActive
+                  ? 'border-[#6d28d9]/30 shadow-sm ring-1 ring-[#6d28d9]/20'
+                  : 'border-gray-200 hover:border-gray-300 hover:shadow-sm'
               }
             `}
           >
             <div className="flex items-center justify-between mb-3">
-              <span className={`text-sm font-medium ${isActive ? 'text-gray-900' : 'text-gray-500'}`}>
+              <span
+                className={`text-sm font-medium ${isActive ? 'text-gray-900' : 'text-gray-500'}`}
+              >
                 {card.label}
               </span>
               <div className={`p-2 rounded-lg ${isActive ? card.activeIconBg : 'bg-gray-50'}`}>

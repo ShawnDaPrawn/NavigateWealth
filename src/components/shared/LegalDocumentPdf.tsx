@@ -1,6 +1,12 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { BasePdfLayout, getPdfDimensions } from '../admin/modules/resources/templates/BasePdfLayout';
-import { PdfTemplateViewer, exportPdfFromPreview } from '../admin/modules/resources/PdfTemplateViewer';
+import {
+  BasePdfLayout,
+  getPdfDimensions,
+} from '../admin/modules/resources/templates/BasePdfLayout';
+import {
+  PdfTemplateViewer,
+  exportPdfFromPreview,
+} from '../admin/modules/resources/PdfTemplateViewer';
 import {
   resolveLegalPdfRendererVersion,
   type LegalPdfRendererResolution,
@@ -85,18 +91,24 @@ function tableBodyRows(table: HTMLTableElement): HTMLTableRowElement[] {
   return Array.from(table.querySelectorAll('tr'));
 }
 
-function createTableChunks(table: HTMLTableElement, keyPrefix: string, config: LegalPdfConfig): PdfChunk[] {
+function createTableChunks(
+  table: HTMLTableElement,
+  keyPrefix: string,
+  config: LegalPdfConfig,
+): PdfChunk[] {
   const rows = tableBodyRows(table);
   const headerHtml = table.tHead ? table.tHead.outerHTML : '';
   const rowsPerChunk = config.pageSize === 'A3' ? 12 : 8;
 
   if (rows.length <= rowsPerChunk) {
     const text = table.textContent || '';
-    return [{
-      key: `${keyPrefix}-table-0`,
-      html: `<div class="legal-pdf-table-wrap">${table.outerHTML}</div>`,
-      units: Math.min(32, 8 + Math.ceil(text.length / 200) + rows.length * 2),
-    }];
+    return [
+      {
+        key: `${keyPrefix}-table-0`,
+        html: `<div class="legal-pdf-table-wrap">${table.outerHTML}</div>`,
+        units: Math.min(32, 8 + Math.ceil(text.length / 200) + rows.length * 2),
+      },
+    ];
   }
 
   const chunks: PdfChunk[] = [];
@@ -121,7 +133,10 @@ function createTableChunks(table: HTMLTableElement, keyPrefix: string, config: L
     chunks.push({
       key: `${keyPrefix}-table-${index}`,
       html: segmentHtml,
-      units: Math.min(30, 8 + Math.ceil(segmentText.length / 180) + (Math.min(rowsPerChunk, rows.length - index) * 2)),
+      units: Math.min(
+        30,
+        8 + Math.ceil(segmentText.length / 180) + Math.min(rowsPerChunk, rows.length - index) * 2,
+      ),
     });
   }
 
@@ -130,11 +145,13 @@ function createTableChunks(table: HTMLTableElement, keyPrefix: string, config: L
 
 function buildContentChunks(html: string, config: LegalPdfConfig): PdfChunk[] {
   if (typeof window === 'undefined') {
-    return [{
-      key: 'content-fallback',
-      html,
-      units: 40,
-    }];
+    return [
+      {
+        key: 'content-fallback',
+        html,
+        units: 40,
+      },
+    ];
   }
 
   const parser = new window.DOMParser();
@@ -236,11 +253,13 @@ function buildContentChunks(html: string, config: LegalPdfConfig): PdfChunk[] {
 
   return chunks.length > 0
     ? chunks
-    : [{
-        key: 'empty-document',
-        html: '<p></p>',
-        units: 3,
-      }];
+    : [
+        {
+          key: 'empty-document',
+          html: '<p></p>',
+          units: 3,
+        },
+      ];
 }
 
 function deriveTocFromHtml(html: string): LegalPdfTocItem[] {
@@ -253,14 +272,18 @@ function deriveTocFromHtml(html: string): LegalPdfTocItem[] {
     .map((heading, index) => ({
       id: heading.id || `section-${index + 1}`,
       title: heading.textContent?.trim() || `Section ${index + 1}`,
-      level: heading.tagName.toLowerCase() === 'h1' ? 1 : heading.tagName.toLowerCase() === 'h2' ? 2 : 3,
+      level:
+        heading.tagName.toLowerCase() === 'h1' ? 1 : heading.tagName.toLowerCase() === 'h2' ? 2 : 3,
     }))
     .filter((item) => item.title);
 }
 
 function textFromHtml(html: string): string {
   if (typeof window === 'undefined') {
-    return html.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
+    return html
+      .replace(/<[^>]+>/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim();
   }
 
   const container = window.document.createElement('div');
@@ -310,8 +333,9 @@ function splitParagraphNode(node: HTMLElement): string[] {
 
   lineHtmlSegments.forEach((lineHtml) => {
     const lineChars = textFromHtml(lineHtml).length;
-    const wouldOverflow = currentGroup.length > 0
-      && (currentGroup.length >= maxLinesPerChunk || currentChars + lineChars > maxCharsPerChunk);
+    const wouldOverflow =
+      currentGroup.length > 0 &&
+      (currentGroup.length >= maxLinesPerChunk || currentChars + lineChars > maxCharsPerChunk);
 
     if (wouldOverflow) {
       groupedSegments.push(currentGroup);
@@ -356,7 +380,9 @@ function getListMarkerText(list: HTMLElement, item: HTMLElement, index: number):
 
 function applyPagedListMarkers(root: HTMLElement) {
   root
-    .querySelectorAll<HTMLElement>('.pagedjs_page .legal-pdf-body ul, .pagedjs_page .legal-pdf-body ol')
+    .querySelectorAll<HTMLElement>(
+      '.pagedjs_page .legal-pdf-body ul, .pagedjs_page .legal-pdf-body ol',
+    )
     .forEach((list) => {
       list.style.setProperty('list-style', 'none', 'important');
       list.style.setProperty('padding-left', '0', 'important');
@@ -423,13 +449,19 @@ function applyPagedLegalTypography(root: HTMLElement) {
   };
 
   root
-    .querySelectorAll<HTMLElement>('.pagedjs_page .legal-pdf-body h1, .pagedjs_page .legal-pdf-body h2, .pagedjs_page .legal-pdf-body h3, .pagedjs_page .legal-pdf-body h4')
+    .querySelectorAll<HTMLElement>(
+      '.pagedjs_page .legal-pdf-body h1, .pagedjs_page .legal-pdf-body h2, .pagedjs_page .legal-pdf-body h3, .pagedjs_page .legal-pdf-body h4',
+    )
     .forEach((heading) => {
       const styles = headingStyles[heading.tagName];
       if (!styles) return;
 
       Object.entries(styles).forEach(([property, value]) => {
-        heading.style.setProperty(property.replace(/[A-Z]/g, (letter) => `-${letter.toLowerCase()}`), value, 'important');
+        heading.style.setProperty(
+          property.replace(/[A-Z]/g, (letter) => `-${letter.toLowerCase()}`),
+          value,
+          'important',
+        );
       });
       heading.style.setProperty('color', '#111827', 'important');
       heading.style.setProperty('letter-spacing', '0', 'important');
@@ -490,7 +522,8 @@ function measureChunkHeights(chunks: PdfChunk[], config: LegalPdfConfig): number
   try {
     return chunks.map((chunk) => {
       const section = window.document.createElement('section');
-      section.className = `legal-pdf-block ${chunk.html.includes('<table') ? '' : 'allow-split'}`.trim();
+      section.className =
+        `legal-pdf-block ${chunk.html.includes('<table') ? '' : 'allow-split'}`.trim();
       section.innerHTML = chunk.html;
       body.appendChild(section);
       const measured = Math.ceil(section.getBoundingClientRect().height);
@@ -535,11 +568,17 @@ function paginateChunks(chunks: PdfChunk[], config: LegalPdfConfig): PdfChunk[][
 
     pushPage();
 
-    return pages.length > 0 ? pages : [[{
-      key: 'blank-page',
-      html: '<p></p>',
-      units: 1,
-    }]];
+    return pages.length > 0
+      ? pages
+      : [
+          [
+            {
+              key: 'blank-page',
+              html: '<p></p>',
+              units: 1,
+            },
+          ],
+        ];
   }
 
   const pages: PdfChunk[][] = [];
@@ -558,8 +597,8 @@ function paginateChunks(chunks: PdfChunk[], config: LegalPdfConfig): PdfChunk[][
     const minimumFollowUnits = Math.max(1, Math.ceil((PDF_MIN_LINES_ABOVE_FOOTER * 3) / 2));
 
     if (
-      currentPage.length > 0
-      && currentUnits + Math.max(chunk.units, minimumFollowUnits) > capacity
+      currentPage.length > 0 &&
+      currentUnits + Math.max(chunk.units, minimumFollowUnits) > capacity
     ) {
       pushPage();
     }
@@ -574,11 +613,17 @@ function paginateChunks(chunks: PdfChunk[], config: LegalPdfConfig): PdfChunk[][
 
   pushPage();
 
-  return pages.length > 0 ? pages : [[{
-    key: 'blank-page',
-    html: '<p></p>',
-    units: 1,
-  }]];
+  return pages.length > 0
+    ? pages
+    : [
+        [
+          {
+            key: 'blank-page',
+            html: '<p></p>',
+            units: 1,
+          },
+        ],
+      ];
 }
 
 function renderPage(chunks: PdfChunk[], pageIndex: number) {
@@ -598,10 +643,14 @@ function renderPage(chunks: PdfChunk[], pageIndex: number) {
 export function LegacyLegalDocumentPdfLayout({ document }: { document: LegalPdfDocumentData }) {
   const pdfConfig = document.pdfConfig || DEFAULT_LEGAL_PDF_CONFIG;
   const normalizedDocument = useMemo(
-    () => getNormalizedLegalPdfDocument({
-      ...document,
-      toc: document.toc && document.toc.length > 0 ? document.toc : deriveTocFromHtml(document.html || '<p></p>'),
-    }),
+    () =>
+      getNormalizedLegalPdfDocument({
+        ...document,
+        toc:
+          document.toc && document.toc.length > 0
+            ? document.toc
+            : deriveTocFromHtml(document.html || '<p></p>'),
+      }),
     [document],
   );
 
@@ -613,7 +662,9 @@ export function LegacyLegalDocumentPdfLayout({ document }: { document: LegalPdfD
       }),
       ...buildContentChunks(normalizedDocument.html, pdfConfig),
     ];
-    return paginateChunks(chunks, pdfConfig).map((pageChunks, pageIndex) => renderPage(pageChunks, pageIndex));
+    return paginateChunks(chunks, pdfConfig).map((pageChunks, pageIndex) =>
+      renderPage(pageChunks, pageIndex),
+    );
   }, [document, normalizedDocument, pdfConfig]);
 
   return (
@@ -645,10 +696,7 @@ function PagedLegalDocumentPdfLayout({
   const [status, setStatus] = useState<'loading' | 'ready' | 'error'>('loading');
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
-  const pagedSource = useMemo(
-    () => buildLegalPagedPrintSource(document),
-    [document],
-  );
+  const pagedSource = useMemo(() => buildLegalPagedPrintSource(document), [document]);
 
   useEffect(() => {
     let cancelled = false;
@@ -693,7 +741,8 @@ function PagedLegalDocumentPdfLayout({
           return;
         }
 
-        const message = error instanceof Error ? error.message : 'Paged preview could not be prepared';
+        const message =
+          error instanceof Error ? error.message : 'Paged preview could not be prepared';
         setStatus('error');
         setErrorMessage(message);
         onRenderStateChange?.({ ready: true, error: message, activeRenderer: 'legacy' });
@@ -814,7 +863,8 @@ export function LegalDocumentPdfDialog({
   if (!document) return null;
 
   const pdfConfig = document.pdfConfig || DEFAULT_LEGAL_PDF_CONFIG;
-  const activePageSelector = pagedRenderState.activeRenderer === 'paged' ? '.pagedjs_page' : '.pdf-page';
+  const activePageSelector =
+    pagedRenderState.activeRenderer === 'paged' ? '.pagedjs_page' : '.pdf-page';
 
   return (
     <PdfTemplateViewer
@@ -825,8 +875,12 @@ export function LegalDocumentPdfDialog({
       orientation={pdfConfig.orientation}
       primaryActionLabel="Print / Save PDF"
       pageSelector={activePageSelector}
-      pdfExportReady={rendererResolution.effectiveVersion === 'paged' ? pagedRenderState.ready : true}
-      pdfPreparingLabel={pagedRenderState.error ? 'Falling back to legacy preview...' : 'Preparing paged preview...'}
+      pdfExportReady={
+        rendererResolution.effectiveVersion === 'paged' ? pagedRenderState.ready : true
+      }
+      pdfPreparingLabel={
+        pagedRenderState.error ? 'Falling back to legacy preview...' : 'Preparing paged preview...'
+      }
     >
       <LegalDocumentPdfLayout
         document={document}
@@ -873,8 +927,10 @@ export function LegalDocumentPdfDownloadSurface({
     }
 
     const pdfConfig = document.pdfConfig || DEFAULT_LEGAL_PDF_CONFIG;
-    const activePageSelector = rendererResolution.effectiveVersion === 'paged' ? '.pagedjs_page' : '.pdf-page';
-    const previewReady = rendererResolution.effectiveVersion === 'paged' ? pagedRenderState.ready : true;
+    const activePageSelector =
+      rendererResolution.effectiveVersion === 'paged' ? '.pagedjs_page' : '.pdf-page';
+    const previewReady =
+      rendererResolution.effectiveVersion === 'paged' ? pagedRenderState.ready : true;
 
     if (!previewReady || !previewRootRef.current) {
       return;

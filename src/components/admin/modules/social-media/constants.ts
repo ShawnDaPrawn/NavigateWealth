@@ -35,12 +35,10 @@ export const BRAND = {
 // ============================================================================
 
 /** Utility classes for the brand icon container pattern (§8.3 stat card standards). */
-export const BRAND_ICON_CONTAINER =
-  'flex items-center justify-center h-8 w-8 rounded-lg';
+export const BRAND_ICON_CONTAINER = 'flex items-center justify-center h-8 w-8 rounded-lg';
 
 /** Consistent selected-state ring for platform / option buttons */
-export const BRAND_SELECTED_RING =
-  'ring-1 ring-[#1B2A4A]/30 border-[#1B2A4A]/40';
+export const BRAND_SELECTED_RING = 'ring-1 ring-[#1B2A4A]/30 border-[#1B2A4A]/40';
 
 // ============================================================================
 // Platform Display Config
@@ -57,9 +55,18 @@ export interface PlatformDisplayInfo {
 
 /** Minimal platform display lookup — used by DraftPosts, History, etc. */
 export const PLATFORM_DISPLAY: Record<SocialPlatform, PlatformDisplayInfo> = {
-  linkedin: { label: 'LinkedIn', icon: React.createElement(Linkedin, { className: 'h-3.5 w-3.5' }) },
-  instagram: { label: 'Instagram', icon: React.createElement(Instagram, { className: 'h-3.5 w-3.5' }) },
-  facebook: { label: 'Facebook', icon: React.createElement(Facebook, { className: 'h-3.5 w-3.5' }) },
+  linkedin: {
+    label: 'LinkedIn',
+    icon: React.createElement(Linkedin, { className: 'h-3.5 w-3.5' }),
+  },
+  instagram: {
+    label: 'Instagram',
+    icon: React.createElement(Instagram, { className: 'h-3.5 w-3.5' }),
+  },
+  facebook: {
+    label: 'Facebook',
+    icon: React.createElement(Facebook, { className: 'h-3.5 w-3.5' }),
+  },
   x: { label: 'X', icon: React.createElement(Twitter, { className: 'h-3.5 w-3.5' }) },
 };
 

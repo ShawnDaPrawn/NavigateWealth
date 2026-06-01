@@ -1,6 +1,6 @@
 /**
  * Centralized API Client
- * 
+ *
  * Single source of truth for all API calls
  * - Consistent error handling
  * - Automatic token management
@@ -40,7 +40,7 @@ export class APIError extends Error {
     message: string,
     public statusCode: number,
     public code?: string,
-    public details?: unknown
+    public details?: unknown,
   ) {
     super(message);
     this.name = 'APIError';
@@ -60,7 +60,7 @@ class APIClient {
   // Used to distinguish "user was never logged in" (don't dispatch session-expired)
   // from "user was logged in but session died" (dispatch session-expired).
   private hadAuthenticatedSession = false;
-  
+
   /**
    * Get authorization token from Supabase session.
    * Proactively refreshes expired tokens before returning them, and deduplicates
@@ -69,7 +69,9 @@ class APIClient {
   private async getAuthToken(): Promise<string> {
     try {
       const supabase = createClient();
-      const { data: { session } } = await supabase.auth.getSession();
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
 
       if (!session) {
         // No session from getSession() — this can happen when:
@@ -129,7 +131,10 @@ class APIClient {
 
     this.refreshPromise = (async () => {
       try {
-        const { data: { session }, error } = await supabase.auth.refreshSession();
+        const {
+          data: { session },
+          error,
+        } = await supabase.auth.refreshSession();
         if (error || !session) {
           // "Auth session missing!" is expected when the user was never logged in
           // (no refresh_token in storage). Only log as an error for genuine failures.
@@ -149,13 +154,15 @@ class APIClient {
         // Clear the mutex after a short delay so back-to-back calls within the
         // same tick still coalesce, but subsequent calls after the refresh
         // completes will re-evaluate freshness.
-        setTimeout(() => { this.refreshPromise = null; }, 500);
+        setTimeout(() => {
+          this.refreshPromise = null;
+        }, 500);
       }
     })();
 
     return this.refreshPromise;
   }
-  
+
   /**
    * Make HTTP request
    */
@@ -164,46 +171,51 @@ class APIClient {
     endpoint: string,
     data?: unknown,
     options?: RequestInit,
-    isRetry = false
+    isRetry = false,
   ): Promise<T> {
     // Ensure endpoint starts with a slash
     const normalizedEndpoint = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
     const url = `${this.baseURL}${normalizedEndpoint}`;
     const token = await this.getAuthToken();
-    
+
     const headers: HeadersInit = {
       'Content-Type': 'application/json',
-      'Authorization': `Bearer ${token}`,
+      Authorization: `Bearer ${token}`,
       ...options?.headers,
     };
-    
+
     const config: RequestInit = {
       method,
       headers,
       ...options,
     };
-    
+
     if (data && (method === 'POST' || method === 'PUT' || method === 'PATCH')) {
       if (data instanceof FormData) {
         config.body = data;
         // Remove Content-Type to let browser set boundary
         // We cast to any/Record to manipulate the headers object
-        if (headers && typeof headers === 'object' && !Array.isArray(headers) && !(headers instanceof Headers)) {
-            delete (headers as Record<string, string>)['Content-Type'];
+        if (
+          headers &&
+          typeof headers === 'object' &&
+          !Array.isArray(headers) &&
+          !(headers instanceof Headers)
+        ) {
+          delete (headers as Record<string, string>)['Content-Type'];
         }
       } else {
         config.body = JSON.stringify(data);
       }
     }
-    
+
     // Retry logic for network errors
     const maxRetries = 3;
     const baseDelay = 1000;
-    
+
     for (let attempt = 0; attempt <= maxRetries; attempt++) {
       try {
         const response = await fetch(url, config);
-        
+
         // Handle 204 No Content
         if (response.status === 204) {
           return {} as T;
@@ -213,23 +225,24 @@ class APIClient {
         if (response.status === 401 && !isRetry && attempt === 0) {
           const supabase = createClient();
           const freshToken = await this.refreshToken(supabase);
-          
+
           if (freshToken) {
             return this.request<T>(method, endpoint, data, options, true);
           }
           // Refresh failed on a 401 — session is confirmed dead
           dispatchSessionExpired();
         }
-        
+
         // Handle non-JSON responses (like file downloads)
         const contentType = response.headers.get('content-type');
         const isJson = contentType?.includes('application/json');
-        
+
         if (!isJson) {
           if (!response.ok) {
             const textResponse = await response.text();
             // Extract a clean error message instead of dumping raw HTML
-            const isCloudflareError = textResponse.includes('cloudflare') || textResponse.includes('cf-error');
+            const isCloudflareError =
+              textResponse.includes('cloudflare') || textResponse.includes('cf-error');
             const cleanMessage = isCloudflareError
               ? `Server temporarily unavailable (Cloudflare ${response.status}). Please try again.`
               : `Server returned ${response.status}: ${response.statusText}`;
@@ -237,12 +250,12 @@ class APIClient {
               cleanMessage,
               response.status,
               isCloudflareError ? 'CLOUDFLARE_ERROR' : 'NON_JSON_ERROR',
-              { responseText: textResponse.substring(0, 200) }
+              { responseText: textResponse.substring(0, 200) },
             );
           }
           return response as unknown as T; // Return raw Response for file downloads
         }
-        
+
         // Try to parse JSON response
         let responseData;
         try {
@@ -253,12 +266,15 @@ class APIClient {
             `Failed to parse server response as JSON`,
             response.status,
             'JSON_PARSE_ERROR',
-            { originalError: jsonError }
+            { originalError: jsonError },
           );
         }
-        
+
         if (!response.ok) {
-          const errorMessage = responseData?.error || responseData?.message || `${response.status} ${response.statusText}`;
+          const errorMessage =
+            responseData?.error ||
+            responseData?.message ||
+            `${response.status} ${response.statusText}`;
           // Truncate details if they contain HTML (e.g. Cloudflare error pages forwarded by server)
           let details = responseData?.details;
           if (typeof details === 'string' && details.includes('<!DOCTYPE')) {
@@ -267,26 +283,25 @@ class APIClient {
           const fullMessage = details
             ? `${errorMessage}\n\nDetails: ${typeof details === 'string' ? details.substring(0, 200) : JSON.stringify(details).substring(0, 200)}`
             : errorMessage;
-          
-          throw new APIError(
-            fullMessage,
-            response.status,
-            responseData?.code,
-            responseData
-          );
-        }
-        
-        return responseData as T;
 
+          throw new APIError(fullMessage, response.status, responseData?.code, responseData);
+        }
+
+        return responseData as T;
       } catch (error) {
         // If it's a network error (TypeError) and we haven't exhausted retries, wait and retry
         // Don't retry if it's an APIError (already processed response) unless it's a transient server error
         const isNetworkError = error instanceof TypeError && error.message === 'Failed to fetch';
-        const isServerBusy = error instanceof APIError && (error.statusCode === 500 || error.statusCode === 502 || error.statusCode === 503 || error.statusCode === 504);
-        
+        const isServerBusy =
+          error instanceof APIError &&
+          (error.statusCode === 500 ||
+            error.statusCode === 502 ||
+            error.statusCode === 503 ||
+            error.statusCode === 504);
+
         if ((isNetworkError || isServerBusy) && attempt < maxRetries) {
           const delay = baseDelay * Math.pow(2, attempt); // Exponential backoff
-          await new Promise(resolve => setTimeout(resolve, delay));
+          await new Promise((resolve) => setTimeout(resolve, delay));
           continue;
         }
 
@@ -294,21 +309,21 @@ class APIClient {
         if (error instanceof APIError) {
           throw error;
         }
-        
+
         // Network error or other unexpected error
         throw new APIError(
           'Network error. Please check your connection.',
           0,
           'NETWORK_ERROR',
-          error // Pass original error as details
+          error, // Pass original error as details
         );
       }
     }
-    
+
     // Should be unreachable
     throw new Error('Request failed after retries');
   }
-  
+
   /**
    * Bearer token for authenticated Edge Function calls (session JWT when logged in).
    */
@@ -322,28 +337,28 @@ class APIClient {
   async get<T>(endpoint: string, options?: RequestInit): Promise<T> {
     return this.request<T>('GET', endpoint, undefined, options);
   }
-  
+
   /**
    * POST request
    */
   async post<T>(endpoint: string, data?: unknown, options?: RequestInit): Promise<T> {
     return this.request<T>('POST', endpoint, data, options);
   }
-  
+
   /**
    * PUT request
    */
   async put<T>(endpoint: string, data?: unknown, options?: RequestInit): Promise<T> {
     return this.request<T>('PUT', endpoint, data, options);
   }
-  
+
   /**
    * PATCH request
    */
   async patch<T>(endpoint: string, data?: unknown, options?: RequestInit): Promise<T> {
     return this.request<T>('PATCH', endpoint, data, options);
   }
-  
+
   /**
    * DELETE request
    */

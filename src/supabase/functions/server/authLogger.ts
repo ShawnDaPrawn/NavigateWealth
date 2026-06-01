@@ -49,7 +49,7 @@ export async function logAuthEvent(
     userAgent?: string;
     errorMessage?: string;
     metadata?: Record<string, unknown>;
-  } = {}
+  } = {},
 ): Promise<void> {
   const eventId = crypto.randomUUID();
   const timestamp = new Date().toISOString();
@@ -93,7 +93,6 @@ export async function logAuthEvent(
         metadata: context.metadata,
       });
     }
-
   } catch (error) {
     log.error('Failed to log auth event', error);
   }
@@ -104,14 +103,14 @@ export async function logAuthEvent(
  */
 export async function getAuthEventsForUser(
   email: string,
-  limit: number = 20
+  limit: number = 20,
 ): Promise<AuthEvent[]> {
   try {
     const allEvents = await kv.getByPrefix('auth_log:');
-    
+
     // Filter events for this user and sort by timestamp (newest first)
     const userEvents = allEvents
-      .filter(event => event.email && unmaskEmail(event.email) === email)
+      .filter((event) => event.email && unmaskEmail(event.email) === email)
       .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
       .slice(0, limit);
 
@@ -126,21 +125,19 @@ export async function getAuthEventsForUser(
  */
 export async function getFailedLoginAttempts(
   email: string,
-  sinceTimestamp?: string
+  sinceTimestamp?: string,
 ): Promise<AuthEvent[]> {
   try {
     const failureEvents = await kv.getByPrefix(`auth_failure:${email}:`);
-    
+
     let filtered = failureEvents;
     if (sinceTimestamp) {
       const sinceDate = new Date(sinceTimestamp).getTime();
-      filtered = failureEvents.filter(
-        event => new Date(event.timestamp).getTime() > sinceDate
-      );
+      filtered = failureEvents.filter((event) => new Date(event.timestamp).getTime() > sinceDate);
     }
 
     return filtered.sort(
-      (a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
+      (a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime(),
     );
   } catch (error) {
     return [];
@@ -161,24 +158,15 @@ export async function getSecurityStats(): Promise<{
     const allEvents = await kv.getByPrefix('auth_log:');
     const last24h = Date.now() - 24 * 60 * 60 * 1000;
 
-    const recentEvents = allEvents.filter(
-      event => new Date(event.timestamp).getTime() > last24h
-    );
+    const recentEvents = allEvents.filter((event) => new Date(event.timestamp).getTime() > last24h);
 
     return {
       totalEvents: allEvents.length,
-      failedLogins24h: recentEvents.filter(
-        e => e.type === 'login_failure' && !e.success
-      ).length,
-      successfulLogins24h: recentEvents.filter(
-        e => e.type === 'login_success' && e.success
-      ).length,
-      accountLocks24h: recentEvents.filter(
-        e => e.type === 'account_locked'
-      ).length,
-      suspiciousActivity24h: recentEvents.filter(
-        e => e.type === 'suspicious_activity'
-      ).length,
+      failedLogins24h: recentEvents.filter((e) => e.type === 'login_failure' && !e.success).length,
+      successfulLogins24h: recentEvents.filter((e) => e.type === 'login_success' && e.success)
+        .length,
+      accountLocks24h: recentEvents.filter((e) => e.type === 'account_locked').length,
+      suspiciousActivity24h: recentEvents.filter((e) => e.type === 'suspicious_activity').length,
     };
   } catch (error) {
     return {
@@ -200,11 +188,9 @@ export async function getSecurityStats(): Promise<{
 function maskEmail(email: string): string {
   const [localPart, domain] = email.split('@');
   if (!domain) return email;
-  
-  const maskedLocal = localPart.length <= 2 
-    ? localPart 
-    : localPart.substring(0, 2) + '***';
-  
+
+  const maskedLocal = localPart.length <= 2 ? localPart : localPart.substring(0, 2) + '***';
+
   return `${maskedLocal}@${domain}`;
 }
 
@@ -226,7 +212,7 @@ function maskIP(ip: string): string {
   if (parts.length === 4) {
     return `${parts[0]}.${parts[1]}.*.*`;
   }
-  
+
   // IPv6 or other format
   return ip.substring(0, 10) + '***';
 }

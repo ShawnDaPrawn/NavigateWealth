@@ -17,9 +17,7 @@ function createMemoryStore(seed: Record<string, unknown> = {}): VascoGuardrailSt
 }
 
 const now = Date.UTC(2026, 4, 23, 9, 0, 0);
-const financeMessages = [
-  { role: 'user', content: 'How does estate duty work in South Africa?' },
-];
+const financeMessages = [{ role: 'user', content: 'How does estate duty work in South Africa?' }];
 
 describe('Vasco public guardrails', () => {
   it('allows valid financial questions within quota', async () => {

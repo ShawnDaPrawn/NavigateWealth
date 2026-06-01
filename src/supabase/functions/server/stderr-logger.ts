@@ -1,6 +1,6 @@
 /**
  * Stderr Logger Utility
- * 
+ *
  * CRITICAL: Supabase Edge Functions parse stdout as JSON response.
  * ALL logging MUST go to stderr to avoid "Unexpected token" errors.
  */
@@ -25,16 +25,21 @@ class StderrLogger implements ILogger {
     }
   }
 
-  private formatMessage(level: LogLevel | 'success', message: string, context?: LogContext, error?: unknown): string {
+  private formatMessage(
+    level: LogLevel | 'success',
+    message: string,
+    context?: LogContext,
+    error?: unknown,
+  ): string {
     const timestamp = new Date().toISOString();
     const emoji = this.getEmoji(level);
-    
+
     // Sanitize context and error
     const safeContext = context ? sanitizeLogData(context) : undefined;
     const safeError = error ? sanitizeLogData(error) : undefined;
 
     let formattedMsg = `${emoji} [${timestamp}] [${level.toUpperCase()}] ${message}`;
-    
+
     if (safeContext) {
       try {
         formattedMsg += ` | ${JSON.stringify(safeContext)}`;
@@ -50,18 +55,24 @@ class StderrLogger implements ILogger {
         formattedMsg += ` | [Error Serialization Failed]`;
       }
     }
-    
+
     return formattedMsg;
   }
 
   private getEmoji(level: LogLevel | 'success'): string {
     switch (level) {
-      case 'info': return 'ℹ️';
-      case 'warn': return '⚠️';
-      case 'error': return '❌';
-      case 'debug': return '🔍';
-      case 'success': return '✅';
-      default: return '📝';
+      case 'info':
+        return 'ℹ️';
+      case 'warn':
+        return '⚠️';
+      case 'error':
+        return '❌';
+      case 'debug':
+        return '🔍';
+      case 'success':
+        return '✅';
+      default:
+        return '📝';
     }
   }
 
@@ -90,15 +101,15 @@ class StderrLogger implements ILogger {
    */
   module(moduleName: string) {
     return {
-      info: (message: string, context?: LogContext) => 
+      info: (message: string, context?: LogContext) =>
         this.info(message, { ...context, module: moduleName }),
-      warn: (message: string, context?: LogContext) => 
+      warn: (message: string, context?: LogContext) =>
         this.warn(message, { ...context, module: moduleName }),
-      error: (message: string, error?: unknown, context?: LogContext) => 
+      error: (message: string, error?: unknown, context?: LogContext) =>
         this.error(message, error, { ...context, module: moduleName }),
-      debug: (message: string, context?: LogContext) => 
+      debug: (message: string, context?: LogContext) =>
         this.debug(message, { ...context, module: moduleName }),
-      success: (message: string, context?: LogContext) => 
+      success: (message: string, context?: LogContext) =>
         this.success(message, { ...context, module: moduleName }),
     };
   }

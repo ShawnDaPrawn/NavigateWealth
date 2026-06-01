@@ -1,9 +1,9 @@
 /**
  * Publications Feature - Form Field Components
- * 
+ *
  * Reusable form field components with consistent styling, validation,
  * and full accessibility support (ARIA labels, keyboard navigation).
- * 
+ *
  * @example
  * ```tsx
  * <TextField
@@ -21,7 +21,13 @@ import React from 'react';
 import { Label } from '../../../../ui/label';
 import { Input } from '../../../../ui/input';
 import { Textarea } from '../../../../ui/textarea';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../../../ui/select';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '../../../../ui/select';
 import { Checkbox } from '../../../../ui/checkbox';
 import { Minus, Plus } from 'lucide-react';
 
@@ -47,7 +53,7 @@ function FormField({
   error,
   helpText,
   className,
-  children
+  children,
 }: FormFieldProps) {
   return (
     <div className={className}>
@@ -56,12 +62,8 @@ function FormField({
         {required && <span className="text-red-500 ml-1">*</span>}
       </Label>
       {children}
-      {helpText && !error && (
-        <p className="text-sm text-gray-500 mt-1">{helpText}</p>
-      )}
-      {error && (
-        <p className="text-sm text-red-600 mt-1">{error}</p>
-      )}
+      {helpText && !error && <p className="text-sm text-gray-500 mt-1">{helpText}</p>}
+      {error && <p className="text-sm text-red-600 mt-1">{error}</p>}
     </div>
   );
 }
@@ -102,7 +104,7 @@ export function TextField({
   helpText,
   disabled = false,
   className,
-  maxLength
+  maxLength,
 }: TextFieldProps) {
   return (
     <FormField
@@ -198,7 +200,8 @@ export function NumberStepperField({
             error ? 'border-red-300' : ''
           }`}
         >
-          {value}{suffix ? ` ${suffix}` : ''}
+          {value}
+          {suffix ? ` ${suffix}` : ''}
         </div>
         <button
           type="button"
@@ -250,7 +253,7 @@ export function TextareaField({
   disabled = false,
   className,
   rows = 3,
-  maxLength
+  maxLength,
 }: TextareaFieldProps) {
   return (
     <FormField
@@ -306,7 +309,7 @@ export function SelectField({
   error,
   helpText,
   disabled = false,
-  className
+  className,
 }: SelectFieldProps) {
   return (
     <FormField
@@ -322,11 +325,13 @@ export function SelectField({
           <SelectValue placeholder={placeholder} />
         </SelectTrigger>
         <SelectContent>
-          {options.filter((option) => option.value !== '').map((option) => (
-            <SelectItem key={option.value} value={option.value}>
-              {option.label}
-            </SelectItem>
-          ))}
+          {options
+            .filter((option) => option.value !== '')
+            .map((option) => (
+              <SelectItem key={option.value} value={option.value}>
+                {option.label}
+              </SelectItem>
+            ))}
         </SelectContent>
       </Select>
     </FormField>
@@ -357,7 +362,7 @@ export function CheckboxField({
   description,
   error,
   disabled = false,
-  className
+  className,
 }: CheckboxFieldProps) {
   return (
     <div className={className}>
@@ -370,18 +375,11 @@ export function CheckboxField({
           className={error ? 'border-red-300' : ''}
         />
         <div className="flex-1">
-          <Label 
-            htmlFor={name} 
-            className="cursor-pointer font-medium"
-          >
+          <Label htmlFor={name} className="cursor-pointer font-medium">
             {label}
           </Label>
-          {description && (
-            <p className="text-sm text-gray-500 mt-1">{description}</p>
-          )}
-          {error && (
-            <p className="text-sm text-red-600 mt-1">{error}</p>
-          )}
+          {description && <p className="text-sm text-gray-500 mt-1">{description}</p>}
+          {error && <p className="text-sm text-red-600 mt-1">{error}</p>}
         </div>
       </div>
     </div>
@@ -420,7 +418,7 @@ export function DateTimeField({
   disabled = false,
   min,
   max,
-  className
+  className,
 }: DateTimeFieldProps) {
   return (
     <FormField
@@ -471,7 +469,11 @@ export function ErrorList({ errors, className }: ErrorListProps) {
       <div className="flex items-start gap-3">
         <div className="flex-shrink-0">
           <svg className="h-5 w-5 text-red-600" viewBox="0 0 20 20" fill="currentColor">
-            <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+            <path
+              fillRule="evenodd"
+              d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
+              clipRule="evenodd"
+            />
           </svg>
         </div>
         <div className="flex-1">

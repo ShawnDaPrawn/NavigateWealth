@@ -1,6 +1,6 @@
-import * as React from "react";
-import { Input } from "./input";
-import { cn } from "./utils";
+import * as React from 'react';
+import { Input } from './input';
+import { cn } from './utils';
 
 /**
  * CurrencyInputField - Currency input with thousand separators
@@ -11,13 +11,13 @@ export const CurrencyInputField = React.forwardRef<
   HTMLInputElement,
   React.ComponentProps<typeof Input>
 >(({ className, value, onChange, onBlur, onFocus, ...props }, ref) => {
-  const [displayValue, setDisplayValue] = React.useState<string>("");
+  const [displayValue, setDisplayValue] = React.useState<string>('');
   const [isFocused, setIsFocused] = React.useState(false);
 
   // Sync display value when external value changes and not focused
   React.useEffect(() => {
     if (!isFocused) {
-      const formatted = formatWithSeparators(String(value || ""));
+      const formatted = formatWithSeparators(String(value || ''));
       setDisplayValue(formatted);
     }
   }, [value, isFocused]);
@@ -25,18 +25,18 @@ export const CurrencyInputField = React.forwardRef<
   const formatWithSeparators = (input: string): string => {
     // Remove all non-numeric characters except decimal point
     const cleaned = input.replace(/[^\d.]/g, '');
-    
+
     // Return empty string for empty/zero values
-    if (!cleaned || cleaned === "0" || cleaned === "0.") return "";
-    
+    if (!cleaned || cleaned === '0' || cleaned === '0.') return '';
+
     // Ensure only one decimal point
     const parts = cleaned.split('.');
     const integerPart = parts[0];
-    const decimalPart = parts.length > 1 ? parts[1] : "";
-    
+    const decimalPart = parts.length > 1 ? parts[1] : '';
+
     // Add thousand separators (commas for South African format)
     const formatted = integerPart.replace(/\B(?=(\d{3})+(?!\d))/g, ',');
-    
+
     // Return with decimal part if it exists
     return decimalPart ? `${formatted}.${decimalPart}` : formatted;
   };
@@ -48,10 +48,10 @@ export const CurrencyInputField = React.forwardRef<
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const inputValue = e.target.value;
     const cleaned = cleanValue(inputValue);
-    
+
     // Update display with unformatted value while typing
     setDisplayValue(isFocused ? cleaned : formatWithSeparators(cleaned));
-    
+
     // Create a new event with cleaned value for react-hook-form
     const syntheticEvent = {
       ...e,
@@ -60,7 +60,7 @@ export const CurrencyInputField = React.forwardRef<
         value: cleaned,
       },
     } as React.ChangeEvent<HTMLInputElement>;
-    
+
     if (onChange) {
       onChange(syntheticEvent);
     }
@@ -71,7 +71,7 @@ export const CurrencyInputField = React.forwardRef<
     // Show unformatted value when focused for easier editing
     const cleaned = cleanValue(displayValue);
     setDisplayValue(cleaned);
-    
+
     if (onFocus) {
       onFocus(e);
     }
@@ -83,7 +83,7 @@ export const CurrencyInputField = React.forwardRef<
     const cleaned = cleanValue(displayValue);
     const formatted = formatWithSeparators(cleaned);
     setDisplayValue(formatted);
-    
+
     // Create a new event with cleaned value for react-hook-form
     const syntheticEvent = {
       ...e,
@@ -92,7 +92,7 @@ export const CurrencyInputField = React.forwardRef<
         value: cleaned,
       },
     } as React.FocusEvent<HTMLInputElement>;
-    
+
     if (onBlur) {
       onBlur(syntheticEvent);
     }
@@ -110,11 +110,11 @@ export const CurrencyInputField = React.forwardRef<
         onChange={handleChange}
         onFocus={handleFocus}
         onBlur={handleBlur}
-        className={cn("pl-8", className)}
+        className={cn('pl-8', className)}
         {...props}
       />
     </div>
   );
 });
 
-CurrencyInputField.displayName = "CurrencyInputField";
+CurrencyInputField.displayName = 'CurrencyInputField';

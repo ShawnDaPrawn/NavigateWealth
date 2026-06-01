@@ -65,7 +65,7 @@ export function ReportingSkeleton() {
           <Skeleton className="h-4 w-20" />
           <Skeleton className="h-4 w-8" />
         </div>
-        {[1, 2, 3, 4].map(i => (
+        {[1, 2, 3, 4].map((i) => (
           <TableRowSkeleton key={i} />
         ))}
       </div>

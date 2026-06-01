@@ -8,7 +8,7 @@ import React, { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../../../ui/card';
 import { Badge } from '../../../../ui/badge';
 import { Button } from '../../../../ui/button';
-import { 
+import {
   RefreshCw,
   AlertCircle,
   CheckCircle2,
@@ -16,18 +16,10 @@ import {
   ChevronUp,
   ExternalLink,
   Database,
-  Clock
+  Clock,
 } from 'lucide-react';
-import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-} from '../../../../ui/collapsible';
-import {
-  Alert,
-  AlertDescription,
-  AlertTitle,
-} from '../../../../ui/alert';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '../../../../ui/collapsible';
+import { Alert, AlertDescription, AlertTitle } from '../../../../ui/alert';
 import { toast } from 'sonner';
 import { Client } from '../types';
 import { KEY_CATEGORIES } from '../../product-management/keyManagerConstants';
@@ -63,14 +55,14 @@ export function KeyInspectorTab({ selectedClient }: KeyInspectorTabProps) {
 
   // Fetch client keys using the hook
   const { data: clientKeysData, isLoading, error } = useClientKeys(selectedClient.id);
-  
+
   // Recalculation mutation
   const { mutate: recalculate, isPending: isRecalculating } = useRecalculateClientKeys();
 
   // Extract data from the response
   const clientKeys = clientKeysData?.keys || [];
-  const lastCalculation = clientKeysData?.lastCalculated 
-    ? new Date(clientKeysData.lastCalculated).toLocaleString() 
+  const lastCalculation = clientKeysData?.lastCalculated
+    ? new Date(clientKeysData.lastCalculated).toLocaleString()
     : 'Never';
 
   const handleRecalculate = () => {
@@ -115,19 +107,25 @@ export function KeyInspectorTab({ selectedClient }: KeyInspectorTabProps) {
     return 'default';
   };
 
-  const groupedKeys = KEY_CATEGORIES.reduce((acc, category) => {
-    const categoryKeys = clientKeys.filter(key => key.category === category.id);
-    if (categoryKeys.length > 0) {
-      acc[category.id] = {
-        category,
-        keys: categoryKeys as ClientKeyValue[]
-      };
-    }
-    return acc;
-  }, {} as Record<ProductKeyCategory, { category: typeof KEY_CATEGORIES[0], keys: ClientKeyValue[] }>);
+  const groupedKeys = KEY_CATEGORIES.reduce(
+    (acc, category) => {
+      const categoryKeys = clientKeys.filter((key) => key.category === category.id);
+      if (categoryKeys.length > 0) {
+        acc[category.id] = {
+          category,
+          keys: categoryKeys as ClientKeyValue[],
+        };
+      }
+      return acc;
+    },
+    {} as Record<
+      ProductKeyCategory,
+      { category: (typeof KEY_CATEGORIES)[0]; keys: ClientKeyValue[] }
+    >,
+  );
 
-  const hasNonZeroValues = clientKeys.some(key => 
-    key.value !== null && key.value !== 0 && key.value !== ''
+  const hasNonZeroValues = clientKeys.some(
+    (key) => key.value !== null && key.value !== 0 && key.value !== '',
   );
 
   return (
@@ -143,7 +141,8 @@ export function KeyInspectorTab({ selectedClient }: KeyInspectorTabProps) {
               <div className="flex-1">
                 <CardTitle className="text-xl">Client Key Inspector</CardTitle>
                 <CardDescription className="mt-1">
-                  View all calculated totals and key values for {selectedClient.firstName} {selectedClient.lastName}
+                  View all calculated totals and key values for {selectedClient.firstName}{' '}
+                  {selectedClient.lastName}
                 </CardDescription>
               </div>
             </div>
@@ -155,7 +154,7 @@ export function KeyInspectorTab({ selectedClient }: KeyInspectorTabProps) {
                   {lastCalculation}
                 </div>
               </div>
-              <Button 
+              <Button
                 onClick={handleRecalculate}
                 disabled={isRecalculating}
                 className="bg-purple-600 hover:bg-purple-700"
@@ -174,7 +173,8 @@ export function KeyInspectorTab({ selectedClient }: KeyInspectorTabProps) {
           <AlertCircle className="h-4 w-4" />
           <AlertTitle>No Key Data Available</AlertTitle>
           <AlertDescription>
-            This client doesn't have any policies with mapped key values yet. Add policies in the Policy Details tab to populate key data.
+            This client doesn't have any policies with mapped key values yet. Add policies in the
+            Policy Details tab to populate key data.
           </AlertDescription>
         </Alert>
       )}
@@ -205,17 +205,16 @@ export function KeyInspectorTab({ selectedClient }: KeyInspectorTabProps) {
                   </div>
                   <div className="text-right">
                     <div className="text-sm text-muted-foreground">Category Total</div>
-                    <div className="text-xl font-bold">
-                      {formatValue(totalValue, 'currency')}
-                    </div>
+                    <div className="text-xl font-bold">{formatValue(totalValue, 'currency')}</div>
                   </div>
                 </div>
               </CardHeader>
               <CardContent>
                 <div className="space-y-2">
-                  {keys.map(key => {
+                  {keys.map((key) => {
                     const isExpanded = expandedKeys.has(key.keyId);
-                    const hasContributingPolicies = key.contributingPolicies && key.contributingPolicies.length > 0;
+                    const hasContributingPolicies =
+                      key.contributingPolicies && key.contributingPolicies.length > 0;
 
                     return (
                       <Collapsible
@@ -223,17 +222,22 @@ export function KeyInspectorTab({ selectedClient }: KeyInspectorTabProps) {
                         open={isExpanded}
                         onOpenChange={() => toggleKeyExpansion(key.keyId)}
                       >
-                        <div className={`p-4 border rounded-lg ${
-                          key.value === 0 || key.value === null 
-                            ? 'bg-gray-50/50 border-gray-200' 
-                            : 'bg-white border-gray-300'
-                        }`}>
+                        <div
+                          className={`p-4 border rounded-lg ${
+                            key.value === 0 || key.value === null
+                              ? 'bg-gray-50/50 border-gray-200'
+                              : 'bg-white border-gray-300'
+                          }`}
+                        >
                           <div className="flex items-center justify-between">
                             <div className="flex-1">
                               <div className="flex items-center gap-3 mb-1">
                                 <h4 className="font-medium text-gray-900">{key.name}</h4>
                                 {key.isCalculated && (
-                                  <Badge variant="outline" className="text-xs bg-amber-50 text-amber-700 border-amber-300">
+                                  <Badge
+                                    variant="outline"
+                                    className="text-xs bg-amber-50 text-amber-700 border-amber-300"
+                                  >
                                     Calculated
                                   </Badge>
                                 )}
@@ -249,9 +253,13 @@ export function KeyInspectorTab({ selectedClient }: KeyInspectorTabProps) {
                             </div>
                             <div className="flex items-center gap-3">
                               <div className="text-right">
-                                <div className={`text-2xl font-bold ${
-                                  key.value === 0 || key.value === null ? 'text-gray-400' : 'text-gray-900'
-                                }`}>
+                                <div
+                                  className={`text-2xl font-bold ${
+                                    key.value === 0 || key.value === null
+                                      ? 'text-gray-400'
+                                      : 'text-gray-900'
+                                  }`}
+                                >
                                   {formatValue(key.value, key.dataType)}
                                 </div>
                               </div>
@@ -275,8 +283,8 @@ export function KeyInspectorTab({ selectedClient }: KeyInspectorTabProps) {
                                 <div className="text-sm font-medium text-gray-700 mb-2">
                                   Contributing Policies ({key.contributingPolicies?.length})
                                 </div>
-                                {key.contributingPolicies?.map(policy => (
-                                  <div 
+                                {key.contributingPolicies?.map((policy) => (
+                                  <div
                                     key={policy.policyId}
                                     className="p-3 bg-purple-50/50 rounded-lg border border-purple-100"
                                   >
@@ -293,14 +301,14 @@ export function KeyInspectorTab({ selectedClient }: KeyInspectorTabProps) {
                                         <div className="font-semibold text-sm">
                                           {formatValue(policy.value, key.dataType)}
                                         </div>
-                                        <Button 
-                                          variant="ghost" 
+                                        <Button
+                                          variant="ghost"
                                           size="sm"
                                           className="h-6 mt-1 text-xs"
                                           onClick={() => {
                                             // TODO: Navigate to policy details
                                             toast.info('View Policy', {
-                                              description: 'Navigate to policy details'
+                                              description: 'Navigate to policy details',
                                             });
                                           }}
                                         >
@@ -334,8 +342,8 @@ export function KeyInspectorTab({ selectedClient }: KeyInspectorTabProps) {
               <div>
                 <CardTitle className="text-lg">Summary</CardTitle>
                 <CardDescription>
-                  This client has {clientKeys.filter(k => k.value && k.value !== 0).length} active keys 
-                  across {Object.keys(groupedKeys).length} categories
+                  This client has {clientKeys.filter((k) => k.value && k.value !== 0).length} active
+                  keys across {Object.keys(groupedKeys).length} categories
                 </CardDescription>
               </div>
             </div>

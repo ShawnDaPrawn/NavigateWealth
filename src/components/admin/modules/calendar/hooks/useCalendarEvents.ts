@@ -1,7 +1,7 @@
 /**
  * Calendar Events Utility Hook
  * Navigate Wealth Admin Dashboard
- * 
+ *
  * Provides utility functions for working with calendar events,
  * including grouping by date and filtering.
  */
@@ -18,14 +18,14 @@ import type { CalendarEvent } from '../types';
 export function useCalendarEvents(events: CalendarEvent[]) {
   const eventsByDate = useMemo(() => {
     const map: Record<string, CalendarEvent[]> = {};
-    
+
     // Sort all active events by start time
     const sortedEvents = [...events]
-      .filter(e => e.status !== 'cancelled')
+      .filter((e) => e.status !== 'cancelled')
       .sort((a, b) => new Date(a.start_at).getTime() - new Date(b.start_at).getTime());
 
     // Group by 'yyyy-MM-dd'
-    sortedEvents.forEach(event => {
+    sortedEvents.forEach((event) => {
       const dateKey = format(new Date(event.start_at), 'yyyy-MM-dd');
       if (!map[dateKey]) {
         map[dateKey] = [];

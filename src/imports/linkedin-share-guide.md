@@ -14,7 +14,7 @@ Share Content: Details on structuring the share content, including visibility op
 Image/Video Upload: Steps for registering and uploading media, followed by creating a share that includes the uploaded content.
 Rate Limits: Information on daily request limits for members and applications.
 AI-generated content may be incorrect. Read our AI transparency notes for more information.
- 
+
 Overview
 LinkedIn is a powerful platform to share content with your social network. Ensure your content receives the professional audience it deserves using Share on LinkedIn.
 
@@ -27,8 +27,8 @@ Getting Started
 Authenticating Members
 New members Sharing on LinkedIn from your application for the first time will need to follow the Authenticating with OAuth 2.0 Guide. When requesting an authorization code in Step 2 of the OAuth 2.0 Guide, make sure to request the w_member_social scope!
 
-Permission Name	Description
-w_member_social	Required to create a LinkedIn post on behalf of the authenticated member.
+Permission Name Description
+w_member_social Required to create a LinkedIn post on behalf of the authenticated member.
 After successful authentication, you will acquire an access token that can be used in the next step of the share process.
 
 If your application does not have this permission, you can add it through the Developer Portal. Select your app from My Apps, navigate to the Products tab, and add the Share on LinkedIn product which will grant you w_member_social.
@@ -39,54 +39,54 @@ There are multiple ways to share content with your LinkedIn network. In this gui
 API Request
 HTTP
 POST https://api.linkedin.com/v2/ugcPosts
- Note
+Note
 
 All requests require the following header: X-Restli-Protocol-Version: 2.0.0
 
 Request Body Schema
-Field Name	Description	Format	Required
-author	The author of a share contains Person URN of the Member creating the share. See Sign In with LinkedIn using OpenID Connect to see how to retrieve the Person URN.	Person URN	Yes
-lifecycleState	Defines the state of the share. For the purposes of creating a share, the lifecycleState will always be PUBLISHED.	string	Yes
-specificContent	Provides additional options while defining the content of the share.	ShareContent	Yes
-visibility	Defines any visibility restrictions for the share. Possible values include:
+Field Name Description Format Required
+author The author of a share contains Person URN of the Member creating the share. See Sign In with LinkedIn using OpenID Connect to see how to retrieve the Person URN. Person URN Yes
+lifecycleState Defines the state of the share. For the purposes of creating a share, the lifecycleState will always be PUBLISHED. string Yes
+specificContent Provides additional options while defining the content of the share. ShareContent Yes
+visibility Defines any visibility restrictions for the share. Possible values include:
 CONNECTIONS - The share will be viewable by 1st-degree connections only.
 PUBLIC - The share will be viewable by anyone on LinkedIn.
-MemberNetworkVisibility	Yes
+MemberNetworkVisibility Yes
 Share Content
-Field Name	Description	Format	Required
-shareCommentary	Provides the primary content for the share.	string	Yes
-shareMediaCategory	Represents the media assets attached to the share. Possible values include:
+Field Name Description Format Required
+shareCommentary Provides the primary content for the share. string Yes
+shareMediaCategory Represents the media assets attached to the share. Possible values include:
 NONE - The share does not contain any media, and will only consist of text.
 ARTICLE - The share contains a URL.
 IMAGE - The Share contains an image.
-string	Yes
-media	If the shareMediaCategory is ARTICLE or IMAGE, define those media assets here.	ShareMedia[]	No
+string Yes
+media If the shareMediaCategory is ARTICLE or IMAGE, define those media assets here. ShareMedia[] No
 Share Media
-Field Name	Description	Format	Required
-status	Must be configured to READY.	string	Yes
-description	Provide a short description for your image or article.	string	No
-media	ID of the uploaded image asset. If you are uploading an article, this field is not required.	DigitalMediaAsset URN	No
-originalUrl	Provide the URL of the article you would like to share here.	string	No
-title	Customize the title of your image or article.	string	No
+Field Name Description Format Required
+status Must be configured to READY. string Yes
+description Provide a short description for your image or article. string No
+media ID of the uploaded image asset. If you are uploading an article, this field is not required. DigitalMediaAsset URN No
+originalUrl Provide the URL of the article you would like to share here. string No
+title Customize the title of your image or article. string No
 Create a Text Share
 The example below creates a simple text Share on LinkedIn. Notice the visibility is set to PUBLIC, where anyone on the LinkedIn Platform can view this share.
 
 Sample Request Body
 JSON
 {
-    "author": "urn:li:person:8675309",
-    "lifecycleState": "PUBLISHED",
-    "specificContent": {
-        "com.linkedin.ugc.ShareContent": {
-            "shareCommentary": {
-                "text": "Hello World! This is my first Share on LinkedIn!"
-            },
-            "shareMediaCategory": "NONE"
-        }
-    },
-    "visibility": {
-        "com.linkedin.ugc.MemberNetworkVisibility": "PUBLIC"
-    }
+"author": "urn:li:person:8675309",
+"lifecycleState": "PUBLISHED",
+"specificContent": {
+"com.linkedin.ugc.ShareContent": {
+"shareCommentary": {
+"text": "Hello World! This is my first Share on LinkedIn!"
+},
+"shareMediaCategory": "NONE"
+}
+},
+"visibility": {
+"com.linkedin.ugc.MemberNetworkVisibility": "PUBLIC"
+}
 }
 Response
 A successful response will return 201 Created, and the newly created post will be identified by the X-RestLi-Id response header.
@@ -97,31 +97,31 @@ The example below illustrates various options when Sharing an Article or URL. Th
 Sample Request Body
 JSON
 {
-    "author": "urn:li:person:8675309",
-    "lifecycleState": "PUBLISHED",
-    "specificContent": {
-        "com.linkedin.ugc.ShareContent": {
-            "shareCommentary": {
-                "text": "Learning more about LinkedIn by reading the LinkedIn Blog!"
-            },
-            "shareMediaCategory": "ARTICLE",
-            "media": [
-                {
-                    "status": "READY",
-                    "description": {
-                        "text": "Official LinkedIn Blog - Your source for insights and information about LinkedIn."
-                    },
-                    "originalUrl": "https://blog.linkedin.com/",
-                    "title": {
-                        "text": "Official LinkedIn Blog"
-                    }
-                }
-            ]
-        }
-    },
-    "visibility": {
-        "com.linkedin.ugc.MemberNetworkVisibility": "PUBLIC"
-    }
+"author": "urn:li:person:8675309",
+"lifecycleState": "PUBLISHED",
+"specificContent": {
+"com.linkedin.ugc.ShareContent": {
+"shareCommentary": {
+"text": "Learning more about LinkedIn by reading the LinkedIn Blog!"
+},
+"shareMediaCategory": "ARTICLE",
+"media": [
+{
+"status": "READY",
+"description": {
+"text": "Official LinkedIn Blog - Your source for insights and information about LinkedIn."
+},
+"originalUrl": "https://blog.linkedin.com/",
+"title": {
+"text": "Official LinkedIn Blog"
+}
+}
+]
+}
+},
+"visibility": {
+"com.linkedin.ugc.MemberNetworkVisibility": "PUBLIC"
+}
 }
 Response
 A successful response will return 201 Created, and the newly created post will be identified by the X-RestLi-Id response header.
@@ -141,33 +141,33 @@ Similar to the author parameter we've used with the ugcPosts API, we will need t
 
 JSON
 {
-    "registerUploadRequest": {
-        "recipes": [
-            "urn:li:digitalmediaRecipe:feedshare-image"
-        ],
-        "owner": "urn:li:person:8675309",
-        "serviceRelationships": [
-            {
-                "relationshipType": "OWNER",
-                "identifier": "urn:li:userGeneratedContent"
-            }
-        ]
-    }
+"registerUploadRequest": {
+"recipes": [
+"urn:li:digitalmediaRecipe:feedshare-image"
+],
+"owner": "urn:li:person:8675309",
+"serviceRelationships": [
+{
+"relationshipType": "OWNER",
+"identifier": "urn:li:userGeneratedContent"
+}
+]
+}
 }
 A successful response will contain an uploadUrl and asset that you will need to save for the next steps.
 
 JSON
 {
-    "value": {
-        "uploadMechanism": {
-            "com.linkedin.digitalmedia.uploading.MediaUploadHttpRequest": {
-                "headers": {},
-                "uploadUrl": "https://api.linkedin.com/mediaUpload/C5522AQGTYER3k3ByHQ/feedshare-uploadedImage/0?ca=vector_feedshare&cn=uploads&m=AQJbrN86Zm265gAAAWemyz2pxPSgONtBiZdchrgG872QltnfYjnMdb2j3A&app=1953784&sync=0&v=beta&ut=2H-IhpbfXrRow1"
-            }
-        },
-        "mediaArtifact": "urn:li:digitalmediaMediaArtifact:(urn:li:digitalmediaAsset:C5522AQGTYER3k3ByHQ,urn:li:digitalmediaMediaArtifactClass:feedshare-uploadedImage)",
-        "asset": "urn:li:digitalmediaAsset:C5522AQGTYER3k3ByHQ"
-    }
+"value": {
+"uploadMechanism": {
+"com.linkedin.digitalmedia.uploading.MediaUploadHttpRequest": {
+"headers": {},
+"uploadUrl": "https://api.linkedin.com/mediaUpload/C5522AQGTYER3k3ByHQ/feedshare-uploadedImage/0?ca=vector_feedshare&cn=uploads&m=AQJbrN86Zm265gAAAWemyz2pxPSgONtBiZdchrgG872QltnfYjnMdb2j3A&app=1953784&sync=0&v=beta&ut=2H-IhpbfXrRow1"
+}
+},
+"mediaArtifact": "urn:li:digitalmediaMediaArtifact:(urn:li:digitalmediaAsset:C5522AQGTYER3k3ByHQ,urn:li:digitalmediaMediaArtifactClass:feedshare-uploadedImage)",
+"asset": "urn:li:digitalmediaAsset:C5522AQGTYER3k3ByHQ"
+}
 }
 Upload Image or Video Binary File
 Using the uploadUrl returned from Step 1, upload your image or video to LinkedIn. To upload your image or video, send a POST request to the uploadUrl with your image or video included as a binary file. The example below uses cURL to upload an image file.
@@ -181,36 +181,36 @@ After the image or video file has successfully uploaded from Step 2, we will use
 Sample Request Body
 JSON
 {
-    "author": "urn:li:person:8675309",
-    "lifecycleState": "PUBLISHED",
-    "specificContent": {
-        "com.linkedin.ugc.ShareContent": {
-            "shareCommentary": {
-                "text": "Feeling inspired after meeting so many talented individuals at this year's conference. #talentconnect"
-            },
-            "shareMediaCategory": "IMAGE",
-            "media": [
-                {
-                    "status": "READY",
-                    "description": {
-                        "text": "Center stage!"
-                    },
-                    "media": "urn:li:digitalmediaAsset:C5422AQEbc381YmIuvg",
-                    "title": {
-                        "text": "LinkedIn Talent Connect 2021"
-                    }
-                }
-            ]
-        }
-    },
-    "visibility": {
-        "com.linkedin.ugc.MemberNetworkVisibility": "PUBLIC"
-    }
+"author": "urn:li:person:8675309",
+"lifecycleState": "PUBLISHED",
+"specificContent": {
+"com.linkedin.ugc.ShareContent": {
+"shareCommentary": {
+"text": "Feeling inspired after meeting so many talented individuals at this year's conference. #talentconnect"
+},
+"shareMediaCategory": "IMAGE",
+"media": [
+{
+"status": "READY",
+"description": {
+"text": "Center stage!"
+},
+"media": "urn:li:digitalmediaAsset:C5422AQEbc381YmIuvg",
+"title": {
+"text": "LinkedIn Talent Connect 2021"
+}
+}
+]
+}
+},
+"visibility": {
+"com.linkedin.ugc.MemberNetworkVisibility": "PUBLIC"
+}
 }
 Response
 A successful response will return 201 Created, and the newly created post will be identified by the X-RestLi-Id response header.
 
 Rate Limits
-Throttle Type	Daily Request Limit (UTC)
-Member	150 Requests
-Application	100,000 Requests
+Throttle Type Daily Request Limit (UTC)
+Member 150 Requests
+Application 100,000 Requests

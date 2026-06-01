@@ -9,10 +9,7 @@ import { Button } from '../../../ui/button';
 import { toast } from 'sonner';
 import { AdminAuthNotice } from '../../AdminAuthNotice';
 import { useAuth } from '../../../auth/AuthContext';
-import {
-  Eye,
-  Send,
-} from 'lucide-react';
+import { Eye, Send } from 'lucide-react';
 
 import { Application, TabStatus, ApplicationStats } from './types';
 import { applicationsApi } from './api';
@@ -112,40 +109,49 @@ export function ApplicationsModule() {
     }
   }, []);
 
-  const handleApplicationUpdated = useCallback(async (updatedApp: Application) => {
-    // Optimistic update first for immediate UI feedback
-    setSelectedApplication(updatedApp);
-    loadApplications();
+  const handleApplicationUpdated = useCallback(
+    async (updatedApp: Application) => {
+      // Optimistic update first for immediate UI feedback
+      setSelectedApplication(updatedApp);
+      loadApplications();
 
-    // Refetch detail from server to confirm persistence and ensure
-    // all fields (including arrays like externalProviders) are reflected
-    try {
-      const detail = await applicationsApi.getApplicationDetail(updatedApp.id);
-      setSelectedApplication(detail);
-    } catch (error) {
-      console.error('Failed to refetch application detail after amendment:', error);
-      // Keep optimistic update on failure — user still sees their changes
-    }
-  }, [loadApplications]);
+      // Refetch detail from server to confirm persistence and ensure
+      // all fields (including arrays like externalProviders) are reflected
+      try {
+        const detail = await applicationsApi.getApplicationDetail(updatedApp.id);
+        setSelectedApplication(detail);
+      } catch (error) {
+        console.error('Failed to refetch application detail after amendment:', error);
+        // Keep optimistic update on failure — user still sees their changes
+      }
+    },
+    [loadApplications],
+  );
 
-  const handleApproveClick = useCallback((application: Application) => {
-    if (!canApprove) {
-      toast.error('You do not have permission to approve applications');
-      return;
-    }
-    setSelectedApplication(application);
-    setApproveDialogOpen(true);
-  }, [canApprove]);
+  const handleApproveClick = useCallback(
+    (application: Application) => {
+      if (!canApprove) {
+        toast.error('You do not have permission to approve applications');
+        return;
+      }
+      setSelectedApplication(application);
+      setApproveDialogOpen(true);
+    },
+    [canApprove],
+  );
 
-  const handleDeclineClick = useCallback((application: Application) => {
-    if (!canApprove) {
-      toast.error('You do not have permission to decline applications');
-      return;
-    }
-    setSelectedApplication(application);
-    setDeclineReason('');
-    setDeclineDialogOpen(true);
-  }, [canApprove]);
+  const handleDeclineClick = useCallback(
+    (application: Application) => {
+      if (!canApprove) {
+        toast.error('You do not have permission to decline applications');
+        return;
+      }
+      setSelectedApplication(application);
+      setDeclineReason('');
+      setDeclineDialogOpen(true);
+    },
+    [canApprove],
+  );
 
   const confirmApprove = useCallback(async () => {
     if (!selectedApplication?.id) return;
@@ -205,7 +211,9 @@ export function ApplicationsModule() {
       }
     } catch (error: unknown) {
       console.error('Resend invite error:', error);
-      toast.error(error instanceof Error ? error.message : 'Failed to resend invitation. Please try again.');
+      toast.error(
+        error instanceof Error ? error.message : 'Failed to resend invitation. Please try again.',
+      );
     } finally {
       setResendingInviteId(null);
     }
@@ -292,10 +300,7 @@ export function ApplicationsModule() {
         setReason={setDeclineReason}
       />
 
-      <ApplicationPreviewDialog
-        open={previewOpen}
-        onOpenChange={setPreviewOpen}
-      />
+      <ApplicationPreviewDialog open={previewOpen} onOpenChange={setPreviewOpen} />
 
       <InviteDialog
         open={inviteDialogOpen}

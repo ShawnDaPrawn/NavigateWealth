@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link, useLocation, useNavigate } from 'react-router';
-import { 
+import {
   Home,
   Package,
   Bot,
@@ -27,42 +27,42 @@ export function DashboardNavigation() {
   const { data: communications = [] } = useCommunications();
   const unreadCount = deriveInboxStats(communications).unread;
   const [isLoggingOut, setIsLoggingOut] = React.useState(false);
-  
+
   const navItems = [
-    { 
-      path: '/dashboard', 
-      label: 'Home', 
-      icon: Home 
+    {
+      path: '/dashboard',
+      label: 'Home',
+      icon: Home,
     },
-    { 
-      path: '/products-services-dashboard', 
-      label: 'Products & Services', 
-      icon: Package 
+    {
+      path: '/products-services-dashboard',
+      label: 'Products & Services',
+      icon: Package,
     },
-    { 
-      path: '/ai-advisor', 
-      label: 'Ask Vasco', 
-      icon: Bot 
+    {
+      path: '/ai-advisor',
+      label: 'Ask Vasco',
+      icon: Bot,
     },
-    { 
-      path: '/communication', 
-      label: 'Communication', 
-      icon: MessageSquare 
+    {
+      path: '/communication',
+      label: 'Communication',
+      icon: MessageSquare,
     },
-    { 
-      path: '/e-signatures', 
-      label: 'E‑Signatures', 
-      icon: PenLine 
+    {
+      path: '/e-signatures',
+      label: 'E‑Signatures',
+      icon: PenLine,
     },
-    { 
-      path: '/history', 
-      label: 'History', 
-      icon: History 
+    {
+      path: '/history',
+      label: 'History',
+      icon: History,
     },
-    { 
-      path: '/profile', 
-      label: 'Profile', 
-      icon: User 
+    {
+      path: '/profile',
+      label: 'Profile',
+      icon: User,
     },
   ];
 
@@ -105,9 +105,7 @@ export function DashboardNavigation() {
                 key={item.path}
                 to={item.path}
                 className={`${styles.linkBase} ${
-                  isActive(item.path)
-                    ? styles.linkActive
-                    : styles.linkInactive
+                  isActive(item.path) ? styles.linkActive : styles.linkInactive
                 }`}
                 aria-current={isActive(item.path) ? 'page' : undefined}
               >

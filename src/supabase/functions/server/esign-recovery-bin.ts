@@ -30,22 +30,29 @@ const log = createModuleLogger('esign-recovery-bin');
 /** Retention window: how long soft-deleted envelopes stay recoverable. */
 export const RECOVERY_RETENTION_DAYS = 90;
 
-function isSoftDeleted(envelope: Record<string, unknown>): envelope is EsignEnvelope & { deleted_at: string } {
+function isSoftDeleted(
+  envelope: Record<string, unknown>,
+): envelope is EsignEnvelope & { deleted_at: string } {
   return typeof envelope?.deleted_at === 'string' && envelope.deleted_at.length > 0;
 }
 
 /** List soft-deleted envelopes for a firm (most recently binned first). */
-export async function listRecoveryBin(firmId: string): Promise<Array<EsignEnvelope & { deleted_at: string }>> {
+export async function listRecoveryBin(
+  firmId: string,
+): Promise<Array<EsignEnvelope & { deleted_at: string }>> {
   const all = await kv.getByPrefix(EsignKeys.PREFIX_ENVELOPE);
-  const records = (all as Array<Record<string, unknown>>).filter((item) =>
-    item &&
-    typeof item === 'object' &&
-    !Array.isArray(item) &&
-    typeof item.id === 'string' &&
-    typeof item.status === 'string' &&
-    isSoftDeleted(item),
+  const records = (all as Array<Record<string, unknown>>).filter(
+    (item) =>
+      item &&
+      typeof item === 'object' &&
+      !Array.isArray(item) &&
+      typeof item.id === 'string' &&
+      typeof item.status === 'string' &&
+      isSoftDeleted(item),
   ) as Array<EsignEnvelope & { deleted_at: string }>;
-  const scoped = records.filter((e) => (e.firm_id || 'standalone') === (firmId || 'standalone') || firmId === '__all__');
+  const scoped = records.filter(
+    (e) => (e.firm_id || 'standalone') === (firmId || 'standalone') || firmId === '__all__',
+  );
   return scoped.sort((a, b) => (a.deleted_at > b.deleted_at ? -1 : 1));
 }
 
@@ -53,8 +60,11 @@ export async function listRecoveryBin(firmId: string): Promise<Array<EsignEnvelo
  * Restore an envelope by clearing the soft-delete stamp. Returns the
  * updated envelope, or `null` if nothing matched.
  */
-export async function restoreEnvelope(envelopeId: string, actorId: string): Promise<EsignEnvelope | null> {
-  const record = await kv.get(EsignKeys.envelope(envelopeId)) as Record<string, unknown> | null;
+export async function restoreEnvelope(
+  envelopeId: string,
+  actorId: string,
+): Promise<EsignEnvelope | null> {
+  const record = (await kv.get(EsignKeys.envelope(envelopeId))) as Record<string, unknown> | null;
   if (!record || !isSoftDeleted(record)) return null;
 
   const updated = { ...record } as Record<string, unknown>;
@@ -76,7 +86,10 @@ export async function restoreEnvelope(envelopeId: string, actorId: string): Prom
  */
 export async function hardDeleteEnvelope(envelopeId: string): Promise<void> {
   try {
-    const envelope = (await kv.get(EsignKeys.envelope(envelopeId))) as Record<string, unknown> | null;
+    const envelope = (await kv.get(EsignKeys.envelope(envelopeId))) as Record<
+      string,
+      unknown
+    > | null;
     if (!envelope) return;
 
     const signerIds = (await kv.get(EsignKeys.envelopeSigners(envelopeId))) as string[] | null;
@@ -84,44 +97,88 @@ export async function hardDeleteEnvelope(envelopeId: string): Promise<void> {
       for (const id of signerIds) {
         const signer = await kv.get(EsignKeys.PREFIX_SIGNER + id);
         if (signer?.access_token) {
-          try { await kv.del(EsignKeys.signerToken(signer.access_token)); } catch { /* ignore */ }
+          try {
+            await kv.del(EsignKeys.signerToken(signer.access_token));
+          } catch {
+            /* ignore */
+          }
         }
-        try { await kv.del(EsignKeys.PREFIX_SIGNER + id); } catch { /* ignore */ }
+        try {
+          await kv.del(EsignKeys.PREFIX_SIGNER + id);
+        } catch {
+          /* ignore */
+        }
       }
     }
-    try { await kv.del(EsignKeys.envelopeSigners(envelopeId)); } catch { /* ignore */ }
+    try {
+      await kv.del(EsignKeys.envelopeSigners(envelopeId));
+    } catch {
+      /* ignore */
+    }
 
     const fieldIds = (await kv.get(EsignKeys.envelopeFields(envelopeId))) as unknown;
     if (Array.isArray(fieldIds)) {
       for (const item of fieldIds) {
         if (typeof item === 'string') {
-          try { await kv.del(EsignKeys.field(item)); } catch { /* ignore */ }
+          try {
+            await kv.del(EsignKeys.field(item));
+          } catch {
+            /* ignore */
+          }
         }
       }
     }
-    try { await kv.del(EsignKeys.envelopeFields(envelopeId)); } catch { /* ignore */ }
+    try {
+      await kv.del(EsignKeys.envelopeFields(envelopeId));
+    } catch {
+      /* ignore */
+    }
 
     const auditIds = (await kv.get(EsignKeys.envelopeAudit(envelopeId))) as string[] | null;
     if (Array.isArray(auditIds)) {
       for (const id of auditIds) {
-        try { await kv.del(EsignKeys.PREFIX_AUDIT + id); } catch { /* ignore */ }
+        try {
+          await kv.del(EsignKeys.PREFIX_AUDIT + id);
+        } catch {
+          /* ignore */
+        }
       }
     }
-    try { await kv.del(EsignKeys.envelopeAudit(envelopeId)); } catch { /* ignore */ }
+    try {
+      await kv.del(EsignKeys.envelopeAudit(envelopeId));
+    } catch {
+      /* ignore */
+    }
 
-    try { await kv.del(EsignKeys.envelopeManifest(envelopeId)); } catch { /* ignore */ }
-    try { await kv.del(EsignKeys.envelopeAttachments(envelopeId)); } catch { /* ignore */ }
+    try {
+      await kv.del(EsignKeys.envelopeManifest(envelopeId));
+    } catch {
+      /* ignore */
+    }
+    try {
+      await kv.del(EsignKeys.envelopeAttachments(envelopeId));
+    } catch {
+      /* ignore */
+    }
 
     const clientId = (envelope as { client_id?: string }).client_id;
     if (clientId) {
       const list = (await kv.get(EsignKeys.clientEnvelopes(clientId))) as string[] | null;
       if (Array.isArray(list)) {
         const updated = list.filter((id) => id !== envelopeId);
-        try { await kv.set(EsignKeys.clientEnvelopes(clientId), updated); } catch { /* ignore */ }
+        try {
+          await kv.set(EsignKeys.clientEnvelopes(clientId), updated);
+        } catch {
+          /* ignore */
+        }
       }
     }
 
-    try { await kv.del(EsignKeys.envelope(envelopeId)); } catch { /* ignore */ }
+    try {
+      await kv.del(EsignKeys.envelope(envelopeId));
+    } catch {
+      /* ignore */
+    }
     log.info(`Hard-deleted envelope ${envelopeId}`);
   } catch (err) {
     log.warn(`Failed to hard-delete envelope ${envelopeId}:`, err);
@@ -162,6 +219,8 @@ export async function purgeExpiredDeletedEnvelopes(
   }
 
   const durationMs = Date.now() - startedAt;
-  log.info(`Recovery bin sweep: scanned=${records.length}, purged=${purged}, duration=${durationMs}ms`);
+  log.info(
+    `Recovery bin sweep: scanned=${records.length}, purged=${purged}, duration=${durationMs}ms`,
+  );
   return { scannedCount: records.length, purgedCount: purged, durationMs };
 }

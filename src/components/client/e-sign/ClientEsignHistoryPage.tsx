@@ -11,20 +11,8 @@ import { Button } from '../../ui/button';
 import { BrandSectionLoader } from '../../ui/brand-loader';
 import { Card, CardContent } from '../../ui/card';
 import { Input } from '../../ui/input';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '../../ui/select';
-import {
-  Table,
-  TableBody,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '../../ui/table';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../ui/select';
+import { Table, TableBody, TableHead, TableHeader, TableRow } from '../../ui/table';
 
 import { useClientEnvelopes } from '../../admin/modules/esign/hooks/useEnvelopesQuery';
 import { esignApi } from '../../admin/modules/esign/api';
@@ -66,11 +54,12 @@ export function ClientEsignHistoryPage() {
 
   const cid = user?.id ?? '';
   const loadEnvelopes = Boolean(user?.id);
-  const { data: envelopes = [], isLoading: loading, error: envelopeQueryErr, refetch } = useClientEnvelopes(
-    cid,
-    loadEnvelopes,
-    user?.email || undefined,
-  );
+  const {
+    data: envelopes = [],
+    isLoading: loading,
+    error: envelopeQueryErr,
+    refetch,
+  } = useClientEnvelopes(cid, loadEnvelopes, user?.email || undefined);
   const error = envelopeQueryErr?.message ?? null;
 
   const filteredEnvelopes = useMemo(() => {
@@ -104,7 +93,9 @@ export function ClientEsignHistoryPage() {
 
   if (!user?.id) {
     return (
-      <div className={`min-h-screen ${ACTIVE_THEME === 'branded' ? 'bg-[#f8f9fb]' : 'bg-[rgb(249,249,249)]'}`}>
+      <div
+        className={`min-h-screen ${ACTIVE_THEME === 'branded' ? 'bg-[#f8f9fb]' : 'bg-[rgb(249,249,249)]'}`}
+      >
         <PortalPageHeader
           title="E‑Signatures"
           subtitle="Documents sent to you for electronic signature"
@@ -120,7 +111,9 @@ export function ClientEsignHistoryPage() {
 
   if (loading) {
     return (
-      <div className={`min-h-screen ${ACTIVE_THEME === 'branded' ? 'bg-[#f8f9fb]' : 'bg-[rgb(249,249,249)]'}`}>
+      <div
+        className={`min-h-screen ${ACTIVE_THEME === 'branded' ? 'bg-[#f8f9fb]' : 'bg-[rgb(249,249,249)]'}`}
+      >
         <PortalPageHeader
           title="E‑Signatures"
           subtitle="Documents sent to you for electronic signature"
@@ -140,7 +133,9 @@ export function ClientEsignHistoryPage() {
 
   if (error) {
     return (
-      <div className={`min-h-screen ${ACTIVE_THEME === 'branded' ? 'bg-[#f8f9fb]' : 'bg-[rgb(249,249,249)]'}`}>
+      <div
+        className={`min-h-screen ${ACTIVE_THEME === 'branded' ? 'bg-[#f8f9fb]' : 'bg-[rgb(249,249,249)]'}`}
+      >
         <PortalPageHeader
           title="E‑Signatures"
           subtitle="Documents sent to you for electronic signature"
@@ -165,12 +160,15 @@ export function ClientEsignHistoryPage() {
 
   const stats = {
     total: envelopes.length,
-    pending: envelopes.filter((e) => ['sent', 'viewed', 'partially_signed'].includes(e.status)).length,
+    pending: envelopes.filter((e) => ['sent', 'viewed', 'partially_signed'].includes(e.status))
+      .length,
     completed: envelopes.filter((e) => e.status === 'completed').length,
   };
 
   return (
-    <div className={`min-h-screen ${ACTIVE_THEME === 'branded' ? 'bg-[#f8f9fb]' : 'bg-[rgb(249,249,249)]'}`}>
+    <div
+      className={`min-h-screen ${ACTIVE_THEME === 'branded' ? 'bg-[#f8f9fb]' : 'bg-[rgb(249,249,249)]'}`}
+    >
       <PortalPageHeader
         title="E‑Signatures"
         subtitle="Documents your adviser sends for electronic signature appear here."
@@ -223,7 +221,9 @@ export function ClientEsignHistoryPage() {
         </div>
 
         <div className="flex flex-wrap items-center justify-between gap-3">
-          <p className="text-sm text-gray-600">Showing filtered results from your signer history.</p>
+          <p className="text-sm text-gray-600">
+            Showing filtered results from your signer history.
+          </p>
           <Button
             variant="ghost"
             size="sm"
@@ -283,8 +283,8 @@ export function ClientEsignHistoryPage() {
               <PenLine className="h-14 w-14 text-purple-600/40 mx-auto mb-4" />
               <h2 className="text-lg font-semibold text-gray-900">Nothing to sign yet</h2>
               <p className="text-sm text-muted-foreground mt-2">
-                When your adviser sends PDFs for electronic signature, they will appear in this list. You’ll also receive
-                email links when it’s your turn to sign.
+                When your adviser sends PDFs for electronic signature, they will appear in this
+                list. You’ll also receive email links when it’s your turn to sign.
               </p>
             </CardContent>
           </Card>

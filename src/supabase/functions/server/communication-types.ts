@@ -1,6 +1,6 @@
 /**
  * Communication Module - Unified Type Definitions
- * 
+ *
  * Consolidated from:
  * - campaign-types.ts (advanced campaign & group types)
  * - types.ts (message & template types)
@@ -51,8 +51,8 @@ export interface GroupFilterConfig {
 export interface ExternalContact {
   email: string;
   name?: string;
-  source: string;        // e.g. 'newsletter', 'contact_form'
-  subscribedAt: string;  // ISO timestamp
+  source: string; // e.g. 'newsletter', 'contact_form'
+  subscribedAt: string; // ISO timestamp
 }
 
 export interface Group {
@@ -127,7 +127,13 @@ export interface CampaignCreate {
   channel?: 'email' | 'whatsapp';
   recipientType: 'single' | 'multiple' | 'group';
   selectedRecipients?: { id: string; email?: string; name?: string; [key: string]: unknown }[];
-  selectedGroup?: { id: string; name?: string; type?: string; clientCount?: number; [key: string]: unknown };
+  selectedGroup?: {
+    id: string;
+    name?: string;
+    type?: string;
+    clientCount?: number;
+    [key: string]: unknown;
+  };
   scheduling?: {
     type: 'immediate' | 'scheduled';
     startDate?: string;
@@ -149,7 +155,7 @@ export interface CachedRecipient {
 
 export type MessagePriority = 'low' | 'normal' | 'high' | 'urgent';
 
-export type MessageCategory = 
+export type MessageCategory =
   | 'General'
   | 'Account'
   | 'Document'
@@ -185,7 +191,13 @@ export interface MessageCreate {
   recipientFirstName?: string;
   recipientLastName?: string;
   recipientPhone?: string;
-  attachments?: Array<{ name: string; content?: string; url?: string; type?: string; [key: string]: unknown }>;
+  attachments?: Array<{
+    name: string;
+    content?: string;
+    url?: string;
+    type?: string;
+    [key: string]: unknown;
+  }>;
 }
 
 // ============================================================================
@@ -246,7 +258,17 @@ export interface CommunicationClient {
 export interface SupabaseAdminClient {
   auth: {
     admin: {
-      listUsers: () => Promise<{ data: { users: Array<{ id: string; email: string; phone?: string; user_metadata?: Record<string, unknown> }> }; error: unknown }>;
+      listUsers: () => Promise<{
+        data: {
+          users: Array<{
+            id: string;
+            email: string;
+            phone?: string;
+            user_metadata?: Record<string, unknown>;
+          }>;
+        };
+        error: unknown;
+      }>;
     };
   };
   storage: {

@@ -8,7 +8,11 @@ interface IdentityDocumentActionsProps {
   onCancel: () => void;
 }
 
-export function IdentityDocumentActions({ isValid, onSave, onCancel }: IdentityDocumentActionsProps) {
+export function IdentityDocumentActions({
+  isValid,
+  onSave,
+  onCancel,
+}: IdentityDocumentActionsProps) {
   return (
     <div className="contents">
       <Button

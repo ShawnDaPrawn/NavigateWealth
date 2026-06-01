@@ -27,11 +27,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '../../../../ui/dialog';
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from '../../../../ui/tooltip';
+import { Tooltip, TooltipContent, TooltipTrigger } from '../../../../ui/tooltip';
 import {
   Users,
   UserPlus,
@@ -71,9 +67,7 @@ import {
   downloadSubscriberExcelTemplate,
   parseSubscriberFile,
 } from '../utils';
-import {
-  useNewsletterSubscribers,
-} from '../hooks/useNewsletterSubscribers';
+import { useNewsletterSubscribers } from '../hooks/useNewsletterSubscribers';
 import {
   useAddSubscriber,
   useBulkUpload,
@@ -94,8 +88,11 @@ export function NewsletterSubscribers() {
   const [statusFilter, setStatusFilter] = useState<SubscriberStatusFilter>('all');
   const [unsubTimeRange, setUnsubTimeRange] = useState<UnsubTimeRange>('all');
 
-  const { subscribers, filtered, stats, isLoading, refetch } =
-    useNewsletterSubscribers({ statusFilter, search, unsubTimeRange });
+  const { subscribers, filtered, stats, isLoading, refetch } = useNewsletterSubscribers({
+    statusFilter,
+    search,
+    unsubTimeRange,
+  });
 
   const addMutation = useAddSubscriber();
   const bulkMutation = useBulkUpload();
@@ -111,8 +108,14 @@ export function NewsletterSubscribers() {
 
   const [bulkOpen, setBulkOpen] = useState(false);
   const [bulkFile, setBulkFile] = useState<File | null>(null);
-  const [bulkParsed, setBulkParsed] = useState<{ email: string; firstName: string; surname: string }[]>([]);
-  const [bulkResult, setBulkResult] = useState<{ added: number; skipped: number; errors: string[] } | null>(null);
+  const [bulkParsed, setBulkParsed] = useState<
+    { email: string; firstName: string; surname: string }[]
+  >([]);
+  const [bulkResult, setBulkResult] = useState<{
+    added: number;
+    skipped: number;
+    errors: string[];
+  } | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [removeTarget, setRemoveTarget] = useState<string | null>(null);
@@ -218,7 +221,8 @@ export function NewsletterSubscribers() {
         <div>
           <h3 className="text-base font-semibold">Newsletter Subscribers</h3>
           <p className="text-sm text-muted-foreground">
-            Manually add subscribers who have opted in offline. Records must be kept separately for POPIA compliance.
+            Manually add subscribers who have opted in offline. Records must be kept separately for
+            POPIA compliance.
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -230,7 +234,11 @@ export function NewsletterSubscribers() {
             <Upload className="h-3.5 w-3.5 mr-1.5" />
             Bulk Import
           </Button>
-          <Button size="sm" className="bg-purple-600 hover:bg-purple-700" onClick={() => setAddOpen(true)}>
+          <Button
+            size="sm"
+            className="bg-purple-600 hover:bg-purple-700"
+            onClick={() => setAddOpen(true)}
+          >
             <UserPlus className="h-3.5 w-3.5 mr-1.5" />
             Add Subscriber
           </Button>
@@ -247,9 +255,10 @@ export function NewsletterSubscribers() {
             <div>
               <p className="text-sm font-medium text-amber-900">Offline Opt-In Records</p>
               <p className="text-xs text-amber-700 mt-0.5">
-                Subscribers added here are assumed to have opted in offline. You are responsible for maintaining
-                proof of consent (signed forms, recorded verbal agreement, etc.) in accordance with POPIA.
-                These subscribers bypass double opt-in and are immediately active.
+                Subscribers added here are assumed to have opted in offline. You are responsible for
+                maintaining proof of consent (signed forms, recorded verbal agreement, etc.) in
+                accordance with POPIA. These subscribers bypass double opt-in and are immediately
+                active.
               </p>
             </div>
           </div>
@@ -275,12 +284,38 @@ export function NewsletterSubscribers() {
         </div>
       ) : (
         <div className="grid grid-cols-4 gap-4">
-          {([
-            { key: 'total', label: 'Total', icon: Users, color: 'text-purple-600', bg: 'bg-purple-50' },
-            { key: 'active', label: 'Active', icon: CheckCircle, color: 'text-green-600', bg: 'bg-green-50' },
-            { key: 'pending', label: 'Pending', icon: Clock, color: 'text-amber-600', bg: 'bg-amber-50' },
-            { key: 'unsubscribed', label: 'Unsubscribed', icon: XCircle, color: 'text-red-600', bg: 'bg-red-50' },
-          ] as const).map((s) => {
+          {(
+            [
+              {
+                key: 'total',
+                label: 'Total',
+                icon: Users,
+                color: 'text-purple-600',
+                bg: 'bg-purple-50',
+              },
+              {
+                key: 'active',
+                label: 'Active',
+                icon: CheckCircle,
+                color: 'text-green-600',
+                bg: 'bg-green-50',
+              },
+              {
+                key: 'pending',
+                label: 'Pending',
+                icon: Clock,
+                color: 'text-amber-600',
+                bg: 'bg-amber-50',
+              },
+              {
+                key: 'unsubscribed',
+                label: 'Unsubscribed',
+                icon: XCircle,
+                color: 'text-red-600',
+                bg: 'bg-red-50',
+              },
+            ] as const
+          ).map((s) => {
             const Icon = s.icon;
             return (
               <Card key={s.key}>
@@ -401,7 +436,11 @@ export function NewsletterSubscribers() {
                   <Upload className="h-3.5 w-3.5 mr-1.5" />
                   Bulk Import
                 </Button>
-                <Button size="sm" className="bg-purple-600 hover:bg-purple-700" onClick={() => setAddOpen(true)}>
+                <Button
+                  size="sm"
+                  className="bg-purple-600 hover:bg-purple-700"
+                  onClick={() => setAddOpen(true)}
+                >
                   <UserPlus className="h-3.5 w-3.5 mr-1.5" />
                   Add Subscriber
                 </Button>
@@ -415,10 +454,18 @@ export function NewsletterSubscribers() {
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b bg-muted/40">
-                  <th className="text-left py-2.5 px-4 font-medium text-xs text-muted-foreground uppercase tracking-wider">First Name</th>
-                  <th className="text-left py-2.5 px-4 font-medium text-xs text-muted-foreground uppercase tracking-wider">Surname</th>
-                  <th className="text-left py-2.5 px-4 font-medium text-xs text-muted-foreground uppercase tracking-wider">Email</th>
-                  <th className="text-left py-2.5 px-4 font-medium text-xs text-muted-foreground uppercase tracking-wider">Status</th>
+                  <th className="text-left py-2.5 px-4 font-medium text-xs text-muted-foreground uppercase tracking-wider">
+                    First Name
+                  </th>
+                  <th className="text-left py-2.5 px-4 font-medium text-xs text-muted-foreground uppercase tracking-wider">
+                    Surname
+                  </th>
+                  <th className="text-left py-2.5 px-4 font-medium text-xs text-muted-foreground uppercase tracking-wider">
+                    Email
+                  </th>
+                  <th className="text-left py-2.5 px-4 font-medium text-xs text-muted-foreground uppercase tracking-wider">
+                    Status
+                  </th>
                   <th className="text-left py-2.5 px-4 font-medium text-xs text-muted-foreground uppercase tracking-wider">
                     {statusFilter === 'unsubscribed' ? 'Reason' : 'Source'}
                   </th>
@@ -457,12 +504,15 @@ export function NewsletterSubscribers() {
               Add Newsletter Subscriber
             </DialogTitle>
             <DialogDescription>
-              Add a subscriber who has provided offline opt-in consent. This bypasses double opt-in and immediately activates them.
+              Add a subscriber who has provided offline opt-in consent. This bypasses double opt-in
+              and immediately activates them.
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-2">
             <div className="space-y-2">
-              <Label>Email Address <span className="text-red-500">*</span></Label>
+              <Label>
+                Email Address <span className="text-red-500">*</span>
+              </Label>
               <Input
                 type="email"
                 value={addEmail}
@@ -472,7 +522,9 @@ export function NewsletterSubscribers() {
               />
             </div>
             <div className="space-y-2">
-              <Label>First Name <span className="text-muted-foreground text-xs">(optional)</span></Label>
+              <Label>
+                First Name <span className="text-muted-foreground text-xs">(optional)</span>
+              </Label>
               <Input
                 value={addFirstName}
                 onChange={(e) => setAddFirstName(e.target.value)}
@@ -481,7 +533,9 @@ export function NewsletterSubscribers() {
               />
             </div>
             <div className="space-y-2">
-              <Label>Surname <span className="text-muted-foreground text-xs">(optional)</span></Label>
+              <Label>
+                Surname <span className="text-muted-foreground text-xs">(optional)</span>
+              </Label>
               <Input
                 value={addSurname}
                 onChange={(e) => setAddSurname(e.target.value)}
@@ -491,13 +545,19 @@ export function NewsletterSubscribers() {
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setAddOpen(false)}>Cancel</Button>
+            <Button variant="outline" onClick={() => setAddOpen(false)}>
+              Cancel
+            </Button>
             <Button
               className="bg-purple-600 hover:bg-purple-700"
               onClick={handleAddSingle}
               disabled={!addEmail.trim().includes('@') || addMutation.isPending}
             >
-              {addMutation.isPending ? <Loader2 className="h-4 w-4 mr-1.5 animate-spin" /> : <UserPlus className="h-4 w-4 mr-1.5" />}
+              {addMutation.isPending ? (
+                <Loader2 className="h-4 w-4 mr-1.5 animate-spin" />
+              ) : (
+                <UserPlus className="h-4 w-4 mr-1.5" />
+              )}
               Add Subscriber
             </Button>
           </DialogFooter>
@@ -505,7 +565,12 @@ export function NewsletterSubscribers() {
       </Dialog>
 
       {/* ═══════ Edit Subscriber Dialog ═══════ */}
-      <Dialog open={!!editTarget} onOpenChange={(open) => { if (!open) setEditTarget(null); }}>
+      <Dialog
+        open={!!editTarget}
+        onOpenChange={(open) => {
+          if (!open) setEditTarget(null);
+        }}
+      >
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
@@ -513,12 +578,15 @@ export function NewsletterSubscribers() {
               Edit Subscriber Details
             </DialogTitle>
             <DialogDescription>
-              Update the subscriber name and email address. The newsletter audience will use the new details immediately.
+              Update the subscriber name and email address. The newsletter audience will use the new
+              details immediately.
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-3 py-2">
             <div className="space-y-2">
-              <Label>Email Address <span className="text-red-500">*</span></Label>
+              <Label>
+                Email Address <span className="text-red-500">*</span>
+              </Label>
               <Input
                 type="email"
                 value={editEmail}
@@ -544,13 +612,19 @@ export function NewsletterSubscribers() {
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setEditTarget(null)}>Cancel</Button>
+            <Button variant="outline" onClick={() => setEditTarget(null)}>
+              Cancel
+            </Button>
             <Button
               className="bg-purple-600 hover:bg-purple-700"
               onClick={handleUpdateSubscriber}
               disabled={!editEmail.trim().includes('@') || updateMutation.isPending}
             >
-              {updateMutation.isPending ? <Loader2 className="h-4 w-4 mr-1.5 animate-spin" /> : <Pencil className="h-4 w-4 mr-1.5" />}
+              {updateMutation.isPending ? (
+                <Loader2 className="h-4 w-4 mr-1.5 animate-spin" />
+              ) : (
+                <Pencil className="h-4 w-4 mr-1.5" />
+              )}
               Save Changes
             </Button>
           </DialogFooter>
@@ -558,7 +632,13 @@ export function NewsletterSubscribers() {
       </Dialog>
 
       {/* ═══════ Bulk Import Dialog ═══════ */}
-      <Dialog open={bulkOpen} onOpenChange={(open) => { setBulkOpen(open); if (!open) resetBulk(); }}>
+      <Dialog
+        open={bulkOpen}
+        onOpenChange={(open) => {
+          setBulkOpen(open);
+          if (!open) resetBulk();
+        }}
+      >
         <DialogContent className="sm:max-w-lg">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
@@ -566,7 +646,8 @@ export function NewsletterSubscribers() {
               Bulk Import Subscribers
             </DialogTitle>
             <DialogDescription>
-              Upload an Excel spreadsheet with subscriber details. All imported subscribers are assumed to have opted in offline.
+              Upload an Excel spreadsheet with subscriber details. All imported subscribers are
+              assumed to have opted in offline.
             </DialogDescription>
           </DialogHeader>
 
@@ -577,7 +658,9 @@ export function NewsletterSubscribers() {
                 <FileSpreadsheet className="h-4 w-4 text-muted-foreground" />
                 <div>
                   <p className="text-sm font-medium">Download Template</p>
-                  <p className="text-[11px] text-muted-foreground">Excel template with Email, First Name/s, and Surname columns</p>
+                  <p className="text-[11px] text-muted-foreground">
+                    Excel template with Email, First Name/s, and Surname columns
+                  </p>
                 </div>
               </div>
               <Button size="sm" variant="outline" onClick={handleDownloadTemplate}>
@@ -592,8 +675,13 @@ export function NewsletterSubscribers() {
               <div
                 className="border-2 border-dashed rounded-lg p-6 text-center hover:border-purple-300 hover:bg-purple-50/30 transition-colors cursor-pointer"
                 onClick={() => fileInputRef.current?.click()}
-                onDragOver={(e) => { e.preventDefault(); e.currentTarget.classList.add('border-purple-400', 'bg-purple-50/50'); }}
-                onDragLeave={(e) => { e.currentTarget.classList.remove('border-purple-400', 'bg-purple-50/50'); }}
+                onDragOver={(e) => {
+                  e.preventDefault();
+                  e.currentTarget.classList.add('border-purple-400', 'bg-purple-50/50');
+                }}
+                onDragLeave={(e) => {
+                  e.currentTarget.classList.remove('border-purple-400', 'bg-purple-50/50');
+                }}
                 onDrop={(e) => {
                   e.preventDefault();
                   e.currentTarget.classList.remove('border-purple-400', 'bg-purple-50/50');
@@ -603,7 +691,9 @@ export function NewsletterSubscribers() {
                     setBulkResult(null);
                     parseSubscriberFile(file, (rows) => {
                       if (rows.length === 0) {
-                        toast.error('No valid email addresses found. Ensure your file has an "Email" column.');
+                        toast.error(
+                          'No valid email addresses found. Ensure your file has an "Email" column.',
+                        );
                       }
                       setBulkParsed(rows);
                     });
@@ -631,7 +721,9 @@ export function NewsletterSubscribers() {
             {bulkParsed.length > 0 && !bulkResult && (
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
-                  <p className="text-sm font-medium">Preview ({bulkParsed.length} subscribers found)</p>
+                  <p className="text-sm font-medium">
+                    Preview ({bulkParsed.length} subscribers found)
+                  </p>
                   <Button size="sm" variant="ghost" className="text-xs h-7" onClick={resetBulk}>
                     Clear
                   </Button>
@@ -640,18 +732,30 @@ export function NewsletterSubscribers() {
                   <table className="w-full text-xs">
                     <thead>
                       <tr className="bg-muted/40 border-b">
-                        <th className="text-left py-1.5 px-3 font-medium text-muted-foreground">#</th>
-                        <th className="text-left py-1.5 px-3 font-medium text-muted-foreground">First Name</th>
-                        <th className="text-left py-1.5 px-3 font-medium text-muted-foreground">Surname</th>
-                        <th className="text-left py-1.5 px-3 font-medium text-muted-foreground">Email</th>
+                        <th className="text-left py-1.5 px-3 font-medium text-muted-foreground">
+                          #
+                        </th>
+                        <th className="text-left py-1.5 px-3 font-medium text-muted-foreground">
+                          First Name
+                        </th>
+                        <th className="text-left py-1.5 px-3 font-medium text-muted-foreground">
+                          Surname
+                        </th>
+                        <th className="text-left py-1.5 px-3 font-medium text-muted-foreground">
+                          Email
+                        </th>
                       </tr>
                     </thead>
                     <tbody>
                       {bulkParsed.slice(0, 10).map((row, i) => (
                         <tr key={row.email} className="border-b last:border-0">
                           <td className="py-1.5 px-3 text-muted-foreground">{i + 1}</td>
-                          <td className="py-1.5 px-3 text-foreground">{row.firstName || <span className="text-muted-foreground/40">—</span>}</td>
-                          <td className="py-1.5 px-3 text-foreground">{row.surname || <span className="text-muted-foreground/40">—</span>}</td>
+                          <td className="py-1.5 px-3 text-foreground">
+                            {row.firstName || <span className="text-muted-foreground/40">—</span>}
+                          </td>
+                          <td className="py-1.5 px-3 text-foreground">
+                            {row.surname || <span className="text-muted-foreground/40">—</span>}
+                          </td>
                           <td className="py-1.5 px-3 font-mono">{row.email}</td>
                         </tr>
                       ))}
@@ -698,7 +802,9 @@ export function NewsletterSubscribers() {
                 {bulkResult.errors.length > 0 && (
                   <div className="bg-red-50 border border-red-200 rounded-lg p-3 max-h-24 overflow-y-auto">
                     {bulkResult.errors.map((err, i) => (
-                      <p key={i} className="text-[11px] text-red-700">{err}</p>
+                      <p key={i} className="text-[11px] text-red-700">
+                        {err}
+                      </p>
                     ))}
                   </div>
                 )}
@@ -707,7 +813,13 @@ export function NewsletterSubscribers() {
           </div>
 
           <DialogFooter>
-            <Button variant="outline" onClick={() => { setBulkOpen(false); resetBulk(); }}>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setBulkOpen(false);
+                resetBulk();
+              }}
+            >
               {bulkResult ? 'Done' : 'Cancel'}
             </Button>
             {!bulkResult && (
@@ -716,7 +828,11 @@ export function NewsletterSubscribers() {
                 onClick={handleBulkUpload}
                 disabled={bulkParsed.length === 0 || bulkMutation.isPending}
               >
-                {bulkMutation.isPending ? <Loader2 className="h-4 w-4 mr-1.5 animate-spin" /> : <Upload className="h-4 w-4 mr-1.5" />}
+                {bulkMutation.isPending ? (
+                  <Loader2 className="h-4 w-4 mr-1.5 animate-spin" />
+                ) : (
+                  <Upload className="h-4 w-4 mr-1.5" />
+                )}
                 Import {bulkParsed.length} Subscriber{bulkParsed.length !== 1 ? 's' : ''}
               </Button>
             )}
@@ -725,7 +841,12 @@ export function NewsletterSubscribers() {
       </Dialog>
 
       {/* ═══════ Remove Confirmation Dialog ═══════ */}
-      <Dialog open={!!removeTarget} onOpenChange={(open) => { if (!open) setRemoveTarget(null); }}>
+      <Dialog
+        open={!!removeTarget}
+        onOpenChange={(open) => {
+          if (!open) setRemoveTarget(null);
+        }}
+      >
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-red-600">
@@ -733,17 +854,24 @@ export function NewsletterSubscribers() {
               Remove Subscriber
             </DialogTitle>
             <DialogDescription>
-              Are you sure you want to remove <strong>{removeTarget}</strong> from the newsletter? They will no longer receive future communications.
+              Are you sure you want to remove <strong>{removeTarget}</strong> from the newsletter?
+              They will no longer receive future communications.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setRemoveTarget(null)}>Cancel</Button>
+            <Button variant="outline" onClick={() => setRemoveTarget(null)}>
+              Cancel
+            </Button>
             <Button
               variant="destructive"
               onClick={handleRemove}
               disabled={removeMutation.isPending}
             >
-              {removeMutation.isPending ? <Loader2 className="h-4 w-4 mr-1.5 animate-spin" /> : <Trash2 className="h-4 w-4 mr-1.5" />}
+              {removeMutation.isPending ? (
+                <Loader2 className="h-4 w-4 mr-1.5 animate-spin" />
+              ) : (
+                <Trash2 className="h-4 w-4 mr-1.5" />
+              )}
               Remove
             </Button>
           </DialogFooter>
@@ -751,7 +879,12 @@ export function NewsletterSubscribers() {
       </Dialog>
 
       {/* ═══════ Re-subscribe Confirmation Dialog ═══════ */}
-      <Dialog open={!!resubscribeTarget} onOpenChange={(open) => { if (!open) setResubscribeTarget(null); }}>
+      <Dialog
+        open={!!resubscribeTarget}
+        onOpenChange={(open) => {
+          if (!open) setResubscribeTarget(null);
+        }}
+      >
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-green-600">
@@ -759,17 +892,24 @@ export function NewsletterSubscribers() {
               Re-subscribe Subscriber
             </DialogTitle>
             <DialogDescription>
-              Are you sure you want to re-subscribe <strong>{resubscribeTarget}</strong> to the newsletter? They will receive future communications.
+              Are you sure you want to re-subscribe <strong>{resubscribeTarget}</strong> to the
+              newsletter? They will receive future communications.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setResubscribeTarget(null)}>Cancel</Button>
+            <Button variant="outline" onClick={() => setResubscribeTarget(null)}>
+              Cancel
+            </Button>
             <Button
               className="bg-green-600 hover:bg-green-700 text-white"
               onClick={handleResubscribe}
               disabled={resubscribeMutation.isPending}
             >
-              {resubscribeMutation.isPending ? <Loader2 className="h-4 w-4 mr-1.5 animate-spin" /> : <RotateCcw className="h-4 w-4 mr-1.5" />}
+              {resubscribeMutation.isPending ? (
+                <Loader2 className="h-4 w-4 mr-1.5 animate-spin" />
+              ) : (
+                <RotateCcw className="h-4 w-4 mr-1.5" />
+              )}
               Re-subscribe
             </Button>
           </DialogFooter>

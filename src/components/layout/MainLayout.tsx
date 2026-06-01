@@ -21,7 +21,11 @@ interface MainLayoutProps {
   forcePublicLayout?: boolean;
 }
 
-export function MainLayout({ children, showNavAndFooter = true, forcePublicLayout = false }: MainLayoutProps) {
+export function MainLayout({
+  children,
+  showNavAndFooter = true,
+  forcePublicLayout = false,
+}: MainLayoutProps) {
   const { isAuthenticated, user, logout } = useAuth();
   const [isScrolled, setIsScrolled] = useState(false);
 
@@ -30,7 +34,8 @@ export function MainLayout({ children, showNavAndFooter = true, forcePublicLayou
   // Use accountStatus (primary) with applicationStatus fallback for backward compat
   const userStatus = user?.accountStatus || user?.applicationStatus;
   const isDashboardPage = effectivelyAuthenticated && userStatus === 'approved';
-  const isApplicationInProgress = effectivelyAuthenticated && userStatus === 'application_in_progress';
+  const isApplicationInProgress =
+    effectivelyAuthenticated && userStatus === 'application_in_progress';
   const isPendingReview = effectivelyAuthenticated && userStatus === 'submitted_for_review';
   const isDeclined = effectivelyAuthenticated && userStatus === 'declined';
   const isAccountTypeSelection = window.location.pathname === '/account-type';
@@ -39,11 +44,11 @@ export function MainLayout({ children, showNavAndFooter = true, forcePublicLayou
 
   // Focused experience: hide footer for application-in-progress, pending review, and declined
   const isFocusedExperience = isApplicationInProgress || isPendingReview || isDeclined;
-  
+
   // Scroll detection with debouncing to prevent flickering
   useEffect(() => {
     let ticking = false;
-    
+
     const handleScroll = () => {
       if (!ticking) {
         window.requestAnimationFrame(() => {
@@ -89,7 +94,7 @@ export function MainLayout({ children, showNavAndFooter = true, forcePublicLayou
       </div>
     );
   }
-  
+
   return (
     <div className="min-h-screen bg-white flex flex-col">
       {/* TopBar - only show for logged out users (or forcePublicLayout), smoothly collapses on scroll */}
@@ -102,12 +107,12 @@ export function MainLayout({ children, showNavAndFooter = true, forcePublicLayou
           <TopBar />
         </div>
       )}
-      
+
       {/* Navigation - sticky positioned */}
       <div className={`sticky top-0 z-50 ${isScrolled ? 'shadow-lg' : ''}`}>
         <Navigation forcePublic={forcePublicLayout} />
       </div>
-      
+
       {isDashboardPage && !isAdminDashboard && <DashboardNavigation />}
       {isApplicationInProgress && !isApplicationPage && <ResumeApplicationBanner />}
       <main id="main-content" className="flex-1">
@@ -115,9 +120,9 @@ export function MainLayout({ children, showNavAndFooter = true, forcePublicLayou
           {children}
         </ErrorBoundary>
       </main>
-      {(!isFocusedExperience || isAccountTypeSelection) && !isAdminDashboard && (
-        effectivelyAuthenticated ? <DashboardFooter /> : <Footer />
-      )}
+      {(!isFocusedExperience || isAccountTypeSelection) &&
+        !isAdminDashboard &&
+        (effectivelyAuthenticated ? <DashboardFooter /> : <Footer />)}
     </div>
   );
 }

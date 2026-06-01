@@ -211,22 +211,17 @@ function ChatCard({
         )}
 
         {/* Messages area */}
-        <div
-          ref={chatContainerRef}
-          className="flex-1 overflow-y-auto p-4 space-y-4 scroll-smooth"
-        >
+        <div ref={chatContainerRef} className="flex-1 overflow-y-auto p-4 space-y-4 scroll-smooth">
           {messages.length === 0 && !isLoading && (
             <div className="flex flex-col items-center justify-center h-full text-center px-8">
               <div className="h-16 w-16 rounded-full bg-purple-100 flex items-center justify-center mb-4">
                 <Scroll className="h-8 w-8 text-purple-600" />
               </div>
-              <h3 className="text-lg font-semibold text-gray-900 mb-2">
-                Will Interview Starting
-              </h3>
+              <h3 className="text-lg font-semibold text-gray-900 mb-2">Will Interview Starting</h3>
               <p className="text-sm text-muted-foreground max-w-md">
-                The AI Will Builder is preparing the interview for {clientName}.
-                The agent will guide you through identity confirmation, marriage
-                regime, family details, executor appointment, and more.
+                The AI Will Builder is preparing the interview for {clientName}. The agent will
+                guide you through identity confirmation, marriage regime, family details, executor
+                appointment, and more.
               </p>
             </div>
           )}
@@ -257,9 +252,7 @@ function ChatCard({
                       <MessageRenderer content={msg.content} role="assistant" />
                     </div>
                   ) : (
-                    <div className="whitespace-pre-wrap leading-relaxed">
-                      {msg.content}
-                    </div>
+                    <div className="whitespace-pre-wrap leading-relaxed">{msg.content}</div>
                   )}
                 </div>
 
@@ -294,9 +287,18 @@ function ChatCard({
                 <Bot className="h-4 w-4 text-white animate-pulse" />
               </div>
               <div className="bg-white border border-gray-100 rounded-2xl rounded-bl-none px-4 py-3 shadow-sm flex items-center gap-1.5">
-                <span className="w-2 h-2 bg-purple-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
-                <span className="w-2 h-2 bg-purple-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
-                <span className="w-2 h-2 bg-purple-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+                <span
+                  className="w-2 h-2 bg-purple-400 rounded-full animate-bounce"
+                  style={{ animationDelay: '0ms' }}
+                />
+                <span
+                  className="w-2 h-2 bg-purple-400 rounded-full animate-bounce"
+                  style={{ animationDelay: '150ms' }}
+                />
+                <span
+                  className="w-2 h-2 bg-purple-400 rounded-full animate-bounce"
+                  style={{ animationDelay: '300ms' }}
+                />
               </div>
             </div>
           )}
@@ -315,8 +317,8 @@ function ChatCard({
                   willReady
                     ? 'Will is complete - you can still ask follow-up questions...'
                     : isConfigured
-                    ? 'Type your response... (Shift+Enter for new line)'
-                    : 'API key required to send messages'
+                      ? 'Type your response... (Shift+Enter for new line)'
+                      : 'API key required to send messages'
                 }
                 disabled={!isConfigured || isLoading}
                 className="min-h-[60px] max-h-[200px] resize-none pr-12"
@@ -324,17 +326,25 @@ function ChatCard({
               />
               <Button
                 onClick={onSubmit}
-                disabled={!isConfigured || isLoading || !input.trim() || input.length > MAX_MESSAGE_LENGTH}
+                disabled={
+                  !isConfigured || isLoading || !input.trim() || input.length > MAX_MESSAGE_LENGTH
+                }
                 size="sm"
                 className="absolute right-3 bottom-3 h-8 w-8 p-0 rounded-full"
               >
-                {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+                {isLoading ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Send className="h-4 w-4" />
+                )}
               </Button>
 
               {input.length > MAX_MESSAGE_LENGTH * 0.8 && (
                 <div
                   className={`absolute bottom-3 right-14 text-[10px] mr-2 ${
-                    input.length > MAX_MESSAGE_LENGTH ? 'text-red-600 font-bold' : 'text-muted-foreground'
+                    input.length > MAX_MESSAGE_LENGTH
+                      ? 'text-red-600 font-bold'
+                      : 'text-muted-foreground'
                   }`}
                 >
                   {input.length}/{MAX_MESSAGE_LENGTH}
@@ -463,10 +473,7 @@ export function WillChatInterface({
    * (handleSubmit does this; createSession intentionally does not, so the
    * initial hidden prompt never appears in the chat).
    */
-  const sendMessageViaServer = async (
-    sid: string,
-    messageText: string,
-  ) => {
+  const sendMessageViaServer = async (sid: string, messageText: string) => {
     const result = await api.post<{
       success: boolean;
       data: {
@@ -487,7 +494,13 @@ export function WillChatInterface({
       throw new Error(result.error || 'Failed to get agent response');
     }
 
-    const { assistantReply, responseId, strategy, willReady: isWillReady, outputPack: pack } = result.data;
+    const {
+      assistantReply,
+      responseId,
+      strategy,
+      willReady: isWillReady,
+      outputPack: pack,
+    } = result.data;
 
     // Track the response ID for conversation chaining
     if (responseId) {
@@ -560,7 +573,6 @@ export function WillChatInterface({
       // Since we don't call handleSubmit here, the initial user prompt
       // is never shown in the chat — the first visible message is the agent's introduction.
       await sendMessageViaServer(newSessionId, initialMessage);
-
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Failed to create session';
       setError(msg);
@@ -597,10 +609,14 @@ export function WillChatInterface({
       // The first user message contains the profile context + intro question
       // that was sent in the background — it should never be visible.
       const allMessages = result.data.messages;
-      const visibleMessages = allMessages.length > 0 && allMessages[0].role === 'user'
-        && allMessages[0].content.includes('Are you ready to start helping me with my Last Will & Testament drafting?')
-        ? allMessages.slice(1)
-        : allMessages;
+      const visibleMessages =
+        allMessages.length > 0 &&
+        allMessages[0].role === 'user' &&
+        allMessages[0].content.includes(
+          'Are you ready to start helping me with my Last Will & Testament drafting?',
+        )
+          ? allMessages.slice(1)
+          : allMessages;
 
       setMessages(
         visibleMessages.map((m) => ({
@@ -767,14 +783,18 @@ export function WillChatInterface({
                 <p className="text-sm text-muted-foreground mt-1">
                   The AI Will Builder will guide {clientName} through a structured interview
                   covering identity, marriage regime, family, executor appointment, assets,
-                  beneficiaries, and advanced modules — then generate a complete South African
-                  Last Will &amp; Testament.
+                  beneficiaries, and advanced modules — then generate a complete South African Last
+                  Will &amp; Testament.
                 </p>
                 <p className="text-xs text-muted-foreground mt-2 italic">
                   AI-powered interview — agent instructions are managed centrally and updates
                   propagate automatically with no code changes required.
                 </p>
-                <Button onClick={createSession} className="mt-4" disabled={!isConfigured || isLoading}>
+                <Button
+                  onClick={createSession}
+                  className="mt-4"
+                  disabled={!isConfigured || isLoading}
+                >
                   {isLoading ? (
                     <div className="contents">
                       <Loader2 className="h-4 w-4 mr-2 animate-spin" />
@@ -804,13 +824,18 @@ export function WillChatInterface({
             <CardContent className="p-0">
               <div className="divide-y">
                 {sessions.map((s) => (
-                  <div key={s.id} className="flex items-center justify-between px-6 py-3 hover:bg-gray-50 transition-colors">
+                  <div
+                    key={s.id}
+                    className="flex items-center justify-between px-6 py-3 hover:bg-gray-50 transition-colors"
+                  >
                     <div className="flex items-center gap-3 min-w-0">
                       <div className="h-8 w-8 rounded-full bg-gray-100 flex items-center justify-center flex-shrink-0">
                         <FileText className="h-4 w-4 text-gray-500" />
                       </div>
                       <div className="min-w-0">
-                        <p className="text-sm font-medium truncate">Session {formatDate(s.createdAt)}</p>
+                        <p className="text-sm font-medium truncate">
+                          Session {formatDate(s.createdAt)}
+                        </p>
                         <p className="text-xs text-muted-foreground">{s.messageCount} messages</p>
                       </div>
                     </div>
@@ -819,13 +844,26 @@ export function WillChatInterface({
                         variant={s.willReady ? 'default' : 'secondary'}
                         className={s.willReady ? 'bg-green-600 hover:bg-green-700 text-white' : ''}
                       >
-                        {s.willReady ? 'Complete' : s.status === 'active' ? 'In Progress' : s.status}
+                        {s.willReady
+                          ? 'Complete'
+                          : s.status === 'active'
+                            ? 'In Progress'
+                            : s.status}
                       </Badge>
                       <Button variant="outline" size="sm" onClick={() => resumeSession(s.id)}>
                         {s.willReady ? 'View' : 'Resume'}
                       </Button>
-                      <Button variant="outline" size="sm" onClick={() => setDeleteTarget(s)} disabled={isDeleting}>
-                        {isDeleting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setDeleteTarget(s)}
+                        disabled={isDeleting}
+                      >
+                        {isDeleting ? (
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                        ) : (
+                          <Trash2 className="h-4 w-4" />
+                        )}
                       </Button>
                     </div>
                   </div>
@@ -835,7 +873,12 @@ export function WillChatInterface({
           </Card>
         ) : null}
 
-        <AlertDialog open={!!deleteTarget} onOpenChange={(open) => { if (!open) setDeleteTarget(null); }}>
+        <AlertDialog
+          open={!!deleteTarget}
+          onOpenChange={(open) => {
+            if (!open) setDeleteTarget(null);
+          }}
+        >
           <AlertDialogContent>
             <AlertDialogHeader>
               <AlertDialogTitle>Delete Session</AlertDialogTitle>
@@ -928,17 +971,35 @@ export function WillChatInterface({
                 <CheckCircle2 className="h-3 w-3 mr-1" />
                 Will Ready
               </Badge>
-              <Button variant="outline" size="sm" onClick={handleDownloadPdf} disabled={!outputPack}>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleDownloadPdf}
+                disabled={!outputPack}
+              >
                 <Download className="h-4 w-4 mr-1" />
                 PDF
               </Button>
-              <Button size="sm" onClick={() => setShowSaveConfirm(true)} disabled={isSaving || willSaved}>
+              <Button
+                size="sm"
+                onClick={() => setShowSaveConfirm(true)}
+                disabled={isSaving || willSaved}
+              >
                 {willSaved ? (
-                  <div className="contents"><Check className="h-4 w-4 mr-1" />Saved</div>
+                  <div className="contents">
+                    <Check className="h-4 w-4 mr-1" />
+                    Saved
+                  </div>
                 ) : isSaving ? (
-                  <div className="contents"><Loader2 className="h-4 w-4 mr-1 animate-spin" />Saving...</div>
+                  <div className="contents">
+                    <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+                    Saving...
+                  </div>
                 ) : (
-                  <div className="contents"><Save className="h-4 w-4 mr-1" />Save Will</div>
+                  <div className="contents">
+                    <Save className="h-4 w-4 mr-1" />
+                    Save Will
+                  </div>
                 )}
               </Button>
             </div>
@@ -951,16 +1012,20 @@ export function WillChatInterface({
         <Tabs defaultValue="chat" className="space-y-4">
           <TabsList className="grid w-full grid-cols-4">
             <TabsTrigger value="chat" className="flex items-center gap-1.5">
-              <Bot className="h-3.5 w-3.5" />Chat
+              <Bot className="h-3.5 w-3.5" />
+              Chat
             </TabsTrigger>
             <TabsTrigger value="will" className="flex items-center gap-1.5">
-              <Scroll className="h-3.5 w-3.5" />Will
+              <Scroll className="h-3.5 w-3.5" />
+              Will
             </TabsTrigger>
             <TabsTrigger value="issues" className="flex items-center gap-1.5">
-              <Shield className="h-3.5 w-3.5" />Issues
+              <Shield className="h-3.5 w-3.5" />
+              Issues
             </TabsTrigger>
             <TabsTrigger value="checklist" className="flex items-center gap-1.5">
-              <ClipboardList className="h-3.5 w-3.5" />Checklist
+              <ClipboardList className="h-3.5 w-3.5" />
+              Checklist
             </TabsTrigger>
           </TabsList>
 
@@ -1017,7 +1082,9 @@ export function WillChatInterface({
                       <MessageRenderer content={outputPack.executionChecklist} role="assistant" />
                     </div>
                   ) : (
-                    <p className="text-sm text-muted-foreground">Execution checklist will be generated.</p>
+                    <p className="text-sm text-muted-foreground">
+                      Execution checklist will be generated.
+                    </p>
                   )}
                 </CardContent>
               </Card>
@@ -1049,16 +1116,19 @@ export function WillChatInterface({
           <AlertDialogHeader>
             <AlertDialogTitle>Save Will to Client Record</AlertDialogTitle>
             <AlertDialogDescription>
-              This will save the generated Last Will &amp; Testament to {clientName}'s record.
-              The will can still be edited and will need to be finalized separately once the
-              signed original is collected.
+              This will save the generated Last Will &amp; Testament to {clientName}'s record. The
+              will can still be edited and will need to be finalized separately once the signed
+              original is collected.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
             <AlertDialogAction onClick={saveWill}>
               {isSaving ? (
-                <div className="contents"><Loader2 className="h-4 w-4 mr-1 animate-spin" />Saving...</div>
+                <div className="contents">
+                  <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+                  Saving...
+                </div>
               ) : (
                 'Save Will'
               )}
@@ -1161,7 +1231,14 @@ function generateTextPdf(willText: string, clientName: string): void {
 }
 
 function addFooter(
-  doc: { setFontSize: Function; setTextColor: Function; text: Function; setDrawColor: Function; setLineWidth: Function; line: Function },
+  doc: {
+    setFontSize: Function;
+    setTextColor: Function;
+    text: Function;
+    setDrawColor: Function;
+    setLineWidth: Function;
+    line: Function;
+  },
   pageNum: number,
   title: string,
 ): void {

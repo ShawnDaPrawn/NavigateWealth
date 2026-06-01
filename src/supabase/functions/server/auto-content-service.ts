@@ -33,7 +33,11 @@ const log = createModuleLogger('auto-content');
 // Types
 // ---------------------------------------------------------------------------
 
-export type PipelineId = 'market_commentary' | 'regulatory_monitor' | 'news_commentary' | 'calendar_content';
+export type PipelineId =
+  | 'market_commentary'
+  | 'regulatory_monitor'
+  | 'news_commentary'
+  | 'calendar_content';
 
 export interface PipelineConfig {
   id: PipelineId;
@@ -160,7 +164,18 @@ export interface ContentSource {
   updated_at: string;
 }
 
-export type CreateContentSourceInput = Omit<ContentSource, 'id' | 'lastCheckedAt' | 'articlesGeneratedToday' | 'articlesGeneratedThisWeek' | 'dailyResetDate' | 'weeklyResetDate' | 'totalGenerated' | 'created_at' | 'updated_at'>;
+export type CreateContentSourceInput = Omit<
+  ContentSource,
+  | 'id'
+  | 'lastCheckedAt'
+  | 'articlesGeneratedToday'
+  | 'articlesGeneratedThisWeek'
+  | 'dailyResetDate'
+  | 'weeklyResetDate'
+  | 'totalGenerated'
+  | 'created_at'
+  | 'updated_at'
+>;
 
 // ---------------------------------------------------------------------------
 // KV Key Helpers
@@ -172,11 +187,21 @@ const CALENDAR_PREFIX = 'auto_content:calendar_event:';
 const PROCESSED_PREFIX = 'auto_content:processed:';
 const SOURCE_PREFIX = 'auto_content:source:';
 
-function configKey(id: PipelineId): string { return `${CONFIG_PREFIX}${id}`; }
-function runKey(id: PipelineId, ts: string): string { return `${RUN_PREFIX}${id}:${ts}`; }
-function calendarKey(id: string): string { return `${CALENDAR_PREFIX}${id}`; }
-function processedKey(pipeline: PipelineId, hash: string): string { return `${PROCESSED_PREFIX}${pipeline}:${hash}`; }
-function sourceKey(id: string): string { return `${SOURCE_PREFIX}${id}`; }
+function configKey(id: PipelineId): string {
+  return `${CONFIG_PREFIX}${id}`;
+}
+function runKey(id: PipelineId, ts: string): string {
+  return `${RUN_PREFIX}${id}:${ts}`;
+}
+function calendarKey(id: string): string {
+  return `${CALENDAR_PREFIX}${id}`;
+}
+function processedKey(pipeline: PipelineId, hash: string): string {
+  return `${PROCESSED_PREFIX}${pipeline}:${hash}`;
+}
+function sourceKey(id: string): string {
+  return `${SOURCE_PREFIX}${id}`;
+}
 
 // Cross-pipeline dedup prefix — prevents multiple pipelines covering the same topic
 const GLOBAL_TOPIC_PREFIX = 'auto_content:global_topic:';
@@ -188,7 +213,7 @@ function simpleHash(text: string): string {
   let hash = 0;
   for (let i = 0; i < text.length; i++) {
     const char = text.charCodeAt(i);
-    hash = ((hash << 5) - hash) + char;
+    hash = (hash << 5) - hash + char;
     hash = hash & hash; // 32bit int
   }
   return Math.abs(hash).toString(36);
@@ -201,12 +226,19 @@ function simpleHash(text: string): string {
 // ── Feature 1: Auto-Category Resolution ──────────────────────────────────
 
 /** Fetch all active article categories from KV and return their names */
-async function getAvailableCategoryNames(): Promise<{ names: string[]; categories: Array<{ id: string; name: string }> }> {
-  const cats = await kv.getByPrefix('article_category:') as Array<{ id: string; name: string; is_active?: boolean }>;
-  const active = cats.filter(c => c.is_active !== false);
+async function getAvailableCategoryNames(): Promise<{
+  names: string[];
+  categories: Array<{ id: string; name: string }>;
+}> {
+  const cats = (await kv.getByPrefix('article_category:')) as Array<{
+    id: string;
+    name: string;
+    is_active?: boolean;
+  }>;
+  const active = cats.filter((c) => c.is_active !== false);
   return {
-    names: active.map(c => c.name),
-    categories: active.map(c => ({ id: c.id, name: c.name })),
+    names: active.map((c) => c.name),
+    categories: active.map((c) => ({ id: c.id, name: c.name })),
   };
 }
 
@@ -217,12 +249,13 @@ function resolveCategoryId(
 ): string {
   if (!suggestedName) return '';
   // Exact match first
-  const exact = categories.find(c => c.name.toLowerCase() === suggestedName.toLowerCase());
+  const exact = categories.find((c) => c.name.toLowerCase() === suggestedName.toLowerCase());
   if (exact) return exact.id;
   // Partial / includes match
-  const partial = categories.find(c =>
-    c.name.toLowerCase().includes(suggestedName.toLowerCase()) ||
-    suggestedName.toLowerCase().includes(c.name.toLowerCase())
+  const partial = categories.find(
+    (c) =>
+      c.name.toLowerCase().includes(suggestedName.toLowerCase()) ||
+      suggestedName.toLowerCase().includes(c.name.toLowerCase()),
   );
   if (partial) {
     log.info('Category fuzzy-matched', { suggested: suggestedName, matched: partial.name });
@@ -240,7 +273,10 @@ function resolveCategoryId(
  */
 function normaliseTopicForDedup(topic: string): string {
   return topic
-    .replace(/^(regulatory update|navigate wealth perspective|weekly market commentary|financial news round-up)[:\s—–-]*/i, '')
+    .replace(
+      /^(regulatory update|navigate wealth perspective|weekly market commentary|financial news round-up)[:\s—–-]*/i,
+      '',
+    )
     .toLowerCase()
     .replace(/[^a-z0-9\s]/g, '')
     .replace(/\s+/g, ' ')
@@ -256,7 +292,11 @@ async function isTopicDuplicate(topic: string, currentPipeline: PipelineId): Pro
   if (!normalised || normalised.length < 10) return false; // Too short to be meaningful
 
   const hash = simpleHash(normalised);
-  const existing = await kv.get(`${GLOBAL_TOPIC_PREFIX}${hash}`) as { pipeline: string; articleId: string; createdAt: string } | null;
+  const existing = (await kv.get(`${GLOBAL_TOPIC_PREFIX}${hash}`)) as {
+    pipeline: string;
+    articleId: string;
+    createdAt: string;
+  } | null;
 
   if (existing && existing.pipeline !== currentPipeline) {
     log.info('Cross-pipeline duplicate detected', {
@@ -270,7 +310,11 @@ async function isTopicDuplicate(topic: string, currentPipeline: PipelineId): Pro
 }
 
 /** Record a topic hash after successful article creation (for cross-pipeline dedup) */
-async function recordTopicHash(topic: string, pipelineId: PipelineId, articleId: string): Promise<void> {
+async function recordTopicHash(
+  topic: string,
+  pipelineId: PipelineId,
+  articleId: string,
+): Promise<void> {
   const normalised = normaliseTopicForDedup(topic);
   if (!normalised || normalised.length < 10) return;
 
@@ -286,7 +330,10 @@ async function recordTopicHash(topic: string, pipelineId: PipelineId, articleId:
 
 /** Load recently used Unsplash photo IDs from KV */
 async function getRecentlyUsedImageIds(): Promise<Set<string>> {
-  const entries = await kv.getByPrefix(USED_IMAGE_PREFIX) as Array<{ photoId: string; usedAt: string }>;
+  const entries = (await kv.getByPrefix(USED_IMAGE_PREFIX)) as Array<{
+    photoId: string;
+    usedAt: string;
+  }>;
   // Only exclude images used in the last 30 days
   const thirtyDaysAgo = Date.now() - 30 * 24 * 60 * 60 * 1000;
   const recentIds = new Set<string>();
@@ -340,7 +387,12 @@ async function createDraftArticle(
     id,
     title: result.title,
     subtitle: '',
-    slug: result.suggestedSlug || result.title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, ''),
+    slug:
+      result.suggestedSlug ||
+      result.title
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, '-')
+        .replace(/^-|-$/g, ''),
     excerpt: result.excerpt,
     body: result.body,
     category_id: resolvedCategoryId,
@@ -350,7 +402,7 @@ async function createDraftArticle(
     hero_image_url: result.suggestedHeroImageUrl || '',
     thumbnail_image_url: result.suggestedThumbnailUrl || '',
     reading_time_minutes: result.readingTimeMinutes,
-    status: shouldAutoPublish ? 'published' as const : 'draft' as const,
+    status: shouldAutoPublish ? ('published' as const) : ('draft' as const),
     is_featured: false,
     published_at: shouldAutoPublish ? now : null,
     scheduled_for: null,
@@ -368,9 +420,15 @@ async function createDraftArticle(
   // ── Record topic hash for cross-pipeline dedup ──
   await recordTopicHash(result.title, pipelineId, id);
 
-  log.info(shouldAutoPublish ? 'Published article created (auto-publish)' : 'Draft article created', {
-    id, title: result.title, pipeline: pipelineId, categoryId: resolvedCategoryId,
-  });
+  log.info(
+    shouldAutoPublish ? 'Published article created (auto-publish)' : 'Draft article created',
+    {
+      id,
+      title: result.title,
+      pipeline: pipelineId,
+      categoryId: resolvedCategoryId,
+    },
+  );
   return id;
 }
 
@@ -378,7 +436,7 @@ async function createDraftArticle(
 async function getDefaultTypeId(): Promise<string> {
   const types = await kv.getByPrefix('article_type:');
   const insightsType = (types as Array<{ id: string; name: string }>).find(
-    (t) => t.name === 'Insights & Education'
+    (t) => t.name === 'Insights & Education',
   );
   return insightsType?.id || '';
 }
@@ -399,7 +457,7 @@ async function fetchRSSItems(url: string): Promise<RSSItem[]> {
     const response = await fetch(url, {
       headers: {
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
-        'Accept': 'application/rss+xml, application/xml, text/xml, */*',
+        Accept: 'application/rss+xml, application/xml, text/xml, */*',
       },
       signal: AbortSignal.timeout(15000),
     });
@@ -431,7 +489,10 @@ async function fetchRSSItems(url: string): Promise<RSSItem[]> {
 }
 
 function extractTag(xml: string, tagName: string): string {
-  const cdataRegex = new RegExp(`<${tagName}[^>]*><!\\[CDATA\\[([\\s\\S]*?)\\]\\]><\\/${tagName}>`, 'i');
+  const cdataRegex = new RegExp(
+    `<${tagName}[^>]*><!\\[CDATA\\[([\\s\\S]*?)\\]\\]><\\/${tagName}>`,
+    'i',
+  );
   const cdataMatch = xml.match(cdataRegex);
   if (cdataMatch) return cdataMatch[1].trim();
 
@@ -475,7 +536,9 @@ function weekStartStr(): string {
  * respecting checkIntervalHours, maxArticlesPerDay, maxArticlesPerWeek.
  * Also resets daily/weekly counters when the date rolls over.
  */
-async function checkSourceCapacity(src: ContentSource): Promise<{ allowed: boolean; reason?: string; source: ContentSource }> {
+async function checkSourceCapacity(
+  src: ContentSource,
+): Promise<{ allowed: boolean; reason?: string; source: ContentSource }> {
   const now = new Date();
   let mutated = false;
 
@@ -504,18 +567,30 @@ async function checkSourceCapacity(src: ContentSource): Promise<{ allowed: boole
     const lastChecked = new Date(src.lastCheckedAt);
     const hoursSince = (now.getTime() - lastChecked.getTime()) / (1000 * 60 * 60);
     if (hoursSince < src.checkIntervalHours) {
-      return { allowed: false, reason: `Checked ${Math.round(hoursSince)}h ago (interval: ${src.checkIntervalHours}h)`, source: src };
+      return {
+        allowed: false,
+        reason: `Checked ${Math.round(hoursSince)}h ago (interval: ${src.checkIntervalHours}h)`,
+        source: src,
+      };
     }
   }
 
   // Check daily cap
   if (src.maxArticlesPerDay > 0 && src.articlesGeneratedToday >= src.maxArticlesPerDay) {
-    return { allowed: false, reason: `Daily cap reached (${src.articlesGeneratedToday}/${src.maxArticlesPerDay})`, source: src };
+    return {
+      allowed: false,
+      reason: `Daily cap reached (${src.articlesGeneratedToday}/${src.maxArticlesPerDay})`,
+      source: src,
+    };
   }
 
   // Check weekly cap
   if (src.maxArticlesPerWeek > 0 && src.articlesGeneratedThisWeek >= src.maxArticlesPerWeek) {
-    return { allowed: false, reason: `Weekly cap reached (${src.articlesGeneratedThisWeek}/${src.maxArticlesPerWeek})`, source: src };
+    return {
+      allowed: false,
+      reason: `Weekly cap reached (${src.articlesGeneratedThisWeek}/${src.maxArticlesPerWeek})`,
+      source: src,
+    };
   }
 
   return { allowed: true, source: src };
@@ -539,11 +614,11 @@ async function markSourceChecked(src: ContentSource): Promise<void> {
 }
 
 /** Resolve active sources for a pipeline, falling back to hardcoded defaults */
-async function getSourcesForPipeline(pipelineId: PipelineId): Promise<{ urls: string[]; sources: ContentSource[]; filterKeywords: string[] }> {
-  const allSources = await kv.getByPrefix(SOURCE_PREFIX) as ContentSource[];
-  const pipelineSources = allSources.filter(
-    (s) => s.isActive && s.pipelines.includes(pipelineId)
-  );
+async function getSourcesForPipeline(
+  pipelineId: PipelineId,
+): Promise<{ urls: string[]; sources: ContentSource[]; filterKeywords: string[] }> {
+  const allSources = (await kv.getByPrefix(SOURCE_PREFIX)) as ContentSource[];
+  const pipelineSources = allSources.filter((s) => s.isActive && s.pipelines.includes(pipelineId));
 
   if (pipelineSources.length === 0) {
     // Fall back to hardcoded defaults
@@ -582,8 +657,8 @@ async function getSourcesForPipeline(pipelineId: PipelineId): Promise<{ urls: st
 // ---------------------------------------------------------------------------
 
 const MARKET_RSS_FEEDS = [
-  'https://www.investing.com/rss/news_14.rss',  // Economic news
-  'https://www.investing.com/rss/news_25.rss',  // Stock market
+  'https://www.investing.com/rss/news_14.rss', // Economic news
+  'https://www.investing.com/rss/news_25.rss', // Stock market
 ];
 
 async function runMarketCommentary(config: PipelineConfig): Promise<PipelineTriggerResult> {
@@ -607,13 +682,20 @@ async function runMarketCommentary(config: PipelineConfig): Promise<PipelineTrig
     }
 
     const today = new Date();
-    const dateStr = today.toLocaleDateString('en-ZA', { day: 'numeric', month: 'long', year: 'numeric' });
+    const dateStr = today.toLocaleDateString('en-ZA', {
+      day: 'numeric',
+      month: 'long',
+      year: 'numeric',
+    });
 
     // Build headlines context — may be empty if RSS feeds are unreachable
     let headlinesContext = '';
     if (allItems.length > 0) {
       // Dedup — check if we've recently generated from similar headlines
-      const headlinesSummary = allItems.slice(0, 5).map(i => i.title).join(' | ');
+      const headlinesSummary = allItems
+        .slice(0, 5)
+        .map((i) => i.title)
+        .join(' | ');
       const hash = simpleHash(headlinesSummary);
       const alreadyProcessed = await kv.get(processedKey('market_commentary', hash));
       if (alreadyProcessed) {
@@ -628,12 +710,19 @@ async function runMarketCommentary(config: PipelineConfig): Promise<PipelineTrig
         };
       }
 
-      headlinesContext = allItems.slice(0, 8).map((item, i) =>
-        `${i + 1}. ${item.title} (${new Date(item.pubDate).toLocaleDateString('en-ZA')})`
-      ).join('\n');
+      headlinesContext = allItems
+        .slice(0, 8)
+        .map(
+          (item, i) =>
+            `${i + 1}. ${item.title} (${new Date(item.pubDate).toLocaleDateString('en-ZA')})`,
+        )
+        .join('\n');
     } else {
       // No RSS items — check weekly dedup using date-based hash instead
-      const weekNum = Math.ceil((today.getTime() - new Date(today.getFullYear(), 0, 1).getTime()) / (7 * 24 * 60 * 60 * 1000));
+      const weekNum = Math.ceil(
+        (today.getTime() - new Date(today.getFullYear(), 0, 1).getTime()) /
+          (7 * 24 * 60 * 60 * 1000),
+      );
       const weekHash = simpleHash(`market_commentary_weekly_${today.getFullYear()}_${weekNum}`);
       const alreadyProcessed = await kv.get(processedKey('market_commentary', weekHash));
       if (alreadyProcessed) {
@@ -652,7 +741,9 @@ async function runMarketCommentary(config: PipelineConfig): Promise<PipelineTrig
     }
 
     // Auto-category: pass available categories when no explicit category configured
-    const categoryContext = !config.categoryId ? await getAvailableCategoryNames() : { names: [], categories: [] };
+    const categoryContext = !config.categoryId
+      ? await getAvailableCategoryNames()
+      : { names: [], categories: [] };
 
     const brief: GenerateArticleBrief = {
       topic: `Weekly Market Commentary — ${dateStr}`,
@@ -682,14 +773,30 @@ async function runMarketCommentary(config: PipelineConfig): Promise<PipelineTrig
     if (result.unsplashPhotoId) await recordUsedImage(result.unsplashPhotoId);
 
     const typeId = await getDefaultTypeId();
-    const articleId = await createDraftArticle(result, config.categoryId || '', typeId, 'market_commentary');
+    const articleId = await createDraftArticle(
+      result,
+      config.categoryId || '',
+      typeId,
+      'market_commentary',
+    );
     articleIds.push(articleId);
 
     // Mark as processed — use headline hash if available, otherwise week-based hash
-    const dedupHash = allItems.length > 0
-      ? simpleHash(allItems.slice(0, 5).map(i => i.title).join(' | '))
-      : simpleHash(`market_commentary_weekly_${today.getFullYear()}_${Math.ceil((today.getTime() - new Date(today.getFullYear(), 0, 1).getTime()) / (7 * 24 * 60 * 60 * 1000))}`);
-    await kv.set(processedKey('market_commentary', dedupHash), { processedAt: new Date().toISOString(), articleId });
+    const dedupHash =
+      allItems.length > 0
+        ? simpleHash(
+            allItems
+              .slice(0, 5)
+              .map((i) => i.title)
+              .join(' | '),
+          )
+        : simpleHash(
+            `market_commentary_weekly_${today.getFullYear()}_${Math.ceil((today.getTime() - new Date(today.getFullYear(), 0, 1).getTime()) / (7 * 24 * 60 * 60 * 1000))}`,
+          );
+    await kv.set(processedKey('market_commentary', dedupHash), {
+      processedAt: new Date().toISOString(),
+      articleId,
+    });
 
     // Update source counters
     for (const src of sources) {
@@ -737,11 +844,26 @@ const REGULATORY_RSS_FEEDS = [
 
 // SA regulatory bodies to watch for in headlines
 const REGULATORY_KEYWORDS = [
-  'FSCA', 'SARB', 'National Treasury', 'FAIS', 'FICA', 'POPIA',
-  'Reserve Bank', 'Financial Sector', 'regulation', 'regulatory',
-  'compliance', 'pension fund', 'retirement', 'tax amendment',
-  'exchange control', 'crypto regulation', 'insurance act',
-  'financial advisory', 'conduct authority', 'prudential',
+  'FSCA',
+  'SARB',
+  'National Treasury',
+  'FAIS',
+  'FICA',
+  'POPIA',
+  'Reserve Bank',
+  'Financial Sector',
+  'regulation',
+  'regulatory',
+  'compliance',
+  'pension fund',
+  'retirement',
+  'tax amendment',
+  'exchange control',
+  'crypto regulation',
+  'insurance act',
+  'financial advisory',
+  'conduct authority',
+  'prudential',
 ];
 
 async function runRegulatoryMonitor(config: PipelineConfig): Promise<PipelineTriggerResult> {
@@ -752,7 +874,11 @@ async function runRegulatoryMonitor(config: PipelineConfig): Promise<PipelineTri
 
   try {
     // Resolve sources for this pipeline
-    const { urls: feedUrls, sources, filterKeywords: sourceKeywords } = await getSourcesForPipeline('regulatory_monitor');
+    const {
+      urls: feedUrls,
+      sources,
+      filterKeywords: sourceKeywords,
+    } = await getSourcesForPipeline('regulatory_monitor');
 
     // Merge source-level keywords with the global defaults
     const effectiveKeywords = sourceKeywords.length > 0 ? sourceKeywords : REGULATORY_KEYWORDS;
@@ -783,7 +909,9 @@ async function runRegulatoryMonitor(config: PipelineConfig): Promise<PipelineTri
     }
 
     // Auto-category + stale image prevention
-    const categoryContext = !config.categoryId ? await getAvailableCategoryNames() : { names: [], categories: [] };
+    const categoryContext = !config.categoryId
+      ? await getAvailableCategoryNames()
+      : { names: [], categories: [] };
     const excludeImageIds = await getRecentlyUsedImageIds();
 
     // Dedup
@@ -794,7 +922,9 @@ async function runRegulatoryMonitor(config: PipelineConfig): Promise<PipelineTri
 
       // Cross-pipeline dedup: skip if another pipeline already covered this topic
       if (await isTopicDuplicate(item.title, 'regulatory_monitor')) {
-        log.info('Skipping regulatory item — already covered by another pipeline', { title: item.title });
+        log.info('Skipping regulatory item — already covered by another pipeline', {
+          title: item.title,
+        });
         continue;
       }
 
@@ -813,7 +943,9 @@ async function runRegulatoryMonitor(config: PipelineConfig): Promise<PipelineTri
             'Practical next steps and recommendations',
           ],
           additionalInstructions: `Transform the following regulatory news into an entirely original Navigate Wealth article. Never mention, cite, or attribute the original source publication in any way. Preserve ALL numerical data — exact percentages, rand amounts, thresholds, effective dates, and limits — with absolutely no omissions or generalisations.\n\nSource context:\nTitle: ${item.title}\nSummary: ${item.description}\nDate: ${item.pubDate}\n\nWrite an original explanatory article that translates this regulatory development into clear, actionable guidance for Navigate Wealth clients. Reference the relevant legislation (FAIS Act, FICA, POPIA, etc.) where applicable. Explain the long-term wealth implications and conclude with a decisive strategic advisory takeaway that positions Navigate Wealth as the trusted adviser for navigating regulatory complexity.`,
-          ...(categoryContext.names.length > 0 ? { availableCategories: categoryContext.names } : {}),
+          ...(categoryContext.names.length > 0
+            ? { availableCategories: categoryContext.names }
+            : {}),
         };
 
         const result = await generateFullArticle(brief, { excludeImageIds });
@@ -825,7 +957,12 @@ async function runRegulatoryMonitor(config: PipelineConfig): Promise<PipelineTri
         }
 
         const typeId = await getDefaultTypeId();
-        const articleId = await createDraftArticle(result, config.categoryId || '', typeId, 'regulatory_monitor');
+        const articleId = await createDraftArticle(
+          result,
+          config.categoryId || '',
+          typeId,
+          'regulatory_monitor',
+        );
         articleIds.push(articleId);
 
         await kv.set(processedKey('regulatory_monitor', hash), {
@@ -850,9 +987,10 @@ async function runRegulatoryMonitor(config: PipelineConfig): Promise<PipelineTri
       status: articleIds.length > 0 ? (errors.length > 0 ? 'partial' : 'success') : 'error',
       articlesGenerated: articleIds.length,
       articleIds,
-      summary: articleIds.length > 0
-        ? `Generated ${articleIds.length} regulatory update article(s)`
-        : 'No articles generated — all items were previously processed or failed',
+      summary:
+        articleIds.length > 0
+          ? `Generated ${articleIds.length} regulatory update article(s)`
+          : 'No articles generated — all items were previously processed or failed',
       errors,
       durationMs: Date.now() - start,
     };
@@ -877,9 +1015,9 @@ async function runRegulatoryMonitor(config: PipelineConfig): Promise<PipelineTri
 // ---------------------------------------------------------------------------
 
 const DEFAULT_NEWS_FEEDS = [
-  'https://www.investing.com/rss/news_14.rss',   // Economic
-  'https://www.investing.com/rss/news_25.rss',    // Stock market
-  'https://www.investing.com/rss/news_1.rss',     // Forex
+  'https://www.investing.com/rss/news_14.rss', // Economic
+  'https://www.investing.com/rss/news_25.rss', // Stock market
+  'https://www.investing.com/rss/news_1.rss', // Forex
 ];
 
 async function runNewsCommentary(config: PipelineConfig): Promise<PipelineTriggerResult> {
@@ -893,7 +1031,12 @@ async function runNewsCommentary(config: PipelineConfig): Promise<PipelineTrigge
     const { urls: feedUrls, sources } = await getSourcesForPipeline('news_commentary');
 
     // If no managed sources returned URLs, also check the legacy config.rssFeeds
-    const effectiveFeeds = feedUrls.length > 0 ? feedUrls : (config.rssFeeds?.length ? config.rssFeeds : DEFAULT_NEWS_FEEDS);
+    const effectiveFeeds =
+      feedUrls.length > 0
+        ? feedUrls
+        : config.rssFeeds?.length
+          ? config.rssFeeds
+          : DEFAULT_NEWS_FEEDS;
 
     const allItems: RSSItem[] = [];
     for (const feedUrl of effectiveFeeds) {
@@ -921,9 +1064,15 @@ async function runNewsCommentary(config: PipelineConfig): Promise<PipelineTrigge
 
       log.info('News RSS feeds returned no items — generating general financial commentary');
 
-      const categoryContext = !config.categoryId ? await getAvailableCategoryNames() : { names: [], categories: [] };
+      const categoryContext = !config.categoryId
+        ? await getAvailableCategoryNames()
+        : { names: [], categories: [] };
       const excludeImageIds = await getRecentlyUsedImageIds();
-      const dateStr = today.toLocaleDateString('en-ZA', { day: 'numeric', month: 'long', year: 'numeric' });
+      const dateStr = today.toLocaleDateString('en-ZA', {
+        day: 'numeric',
+        month: 'long',
+        year: 'numeric',
+      });
 
       const brief: GenerateArticleBrief = {
         topic: `Navigate Wealth Perspective: Financial Markets Update — ${dateStr}`,
@@ -947,9 +1096,17 @@ async function runNewsCommentary(config: PipelineConfig): Promise<PipelineTrigge
       if (result.unsplashPhotoId) await recordUsedImage(result.unsplashPhotoId);
 
       const typeId = await getDefaultTypeId();
-      const articleId = await createDraftArticle(result, config.categoryId || '', typeId, 'news_commentary');
+      const articleId = await createDraftArticle(
+        result,
+        config.categoryId || '',
+        typeId,
+        'news_commentary',
+      );
 
-      await kv.set(processedKey('news_commentary', dayHash), { processedAt: new Date().toISOString(), articleId });
+      await kv.set(processedKey('news_commentary', dayHash), {
+        processedAt: new Date().toISOString(),
+        articleId,
+      });
 
       for (const src of sources) {
         await incrementSourceCounters(src, 1);
@@ -1004,18 +1161,24 @@ async function runNewsCommentary(config: PipelineConfig): Promise<PipelineTrigge
     }
 
     // Generate one consolidated commentary from the top items
-    const newsContext = unprocessed.map((item, i) =>
-      `${i + 1}. ${item.title}\n   ${item.description?.slice(0, 200) || ''}\n   Published: ${new Date(item.pubDate).toLocaleDateString('en-ZA')}`
-    ).join('\n\n');
+    const newsContext = unprocessed
+      .map(
+        (item, i) =>
+          `${i + 1}. ${item.title}\n   ${item.description?.slice(0, 200) || ''}\n   Published: ${new Date(item.pubDate).toLocaleDateString('en-ZA')}`,
+      )
+      .join('\n\n');
 
     // Auto-category + stale image prevention
-    const categoryContext = !config.categoryId ? await getAvailableCategoryNames() : { names: [], categories: [] };
+    const categoryContext = !config.categoryId
+      ? await getAvailableCategoryNames()
+      : { names: [], categories: [] };
     const excludeImageIds = await getRecentlyUsedImageIds();
 
     const brief: GenerateArticleBrief = {
-      topic: unprocessed.length === 1
-        ? `Navigate Wealth Perspective: ${unprocessed[0].title}`
-        : 'Financial News Round-Up: Navigate Wealth Perspective',
+      topic:
+        unprocessed.length === 1
+          ? `Navigate Wealth Perspective: ${unprocessed[0].title}`
+          : 'Financial News Round-Up: Navigate Wealth Perspective',
       audience: config.audience,
       tone: config.tone || 'professional',
       targetLength: config.targetLength || 'medium',
@@ -1037,7 +1200,12 @@ async function runNewsCommentary(config: PipelineConfig): Promise<PipelineTrigge
     if (result.unsplashPhotoId) await recordUsedImage(result.unsplashPhotoId);
 
     const typeId = await getDefaultTypeId();
-    const articleId = await createDraftArticle(result, config.categoryId || '', typeId, 'news_commentary');
+    const articleId = await createDraftArticle(
+      result,
+      config.categoryId || '',
+      typeId,
+      'news_commentary',
+    );
     articleIds.push(articleId);
 
     // Mark all processed items
@@ -1113,7 +1281,8 @@ const DEFAULT_CALENDAR_EVENTS: Omit<CalendarEvent, 'id'>[] = [
     day: 19,
     recurring: true,
     leadTimeDays: 7,
-    articleTopic: 'What to Expect from the National Budget Speech: Key Areas for Financial Advisors',
+    articleTopic:
+      'What to Expect from the National Budget Speech: Key Areas for Financial Advisors',
     keyPoints: [
       'Expected changes to personal income tax brackets',
       'Potential adjustments to retirement fund contribution limits',
@@ -1354,7 +1523,9 @@ async function runCalendarContent(config: PipelineConfig): Promise<PipelineTrigg
     }
 
     // Auto-category + stale image prevention
-    const categoryContext = !config.categoryId ? await getAvailableCategoryNames() : { names: [], categories: [] };
+    const categoryContext = !config.categoryId
+      ? await getAvailableCategoryNames()
+      : { names: [], categories: [] };
     const excludeImageIds = await getRecentlyUsedImageIds();
 
     // Generate an article for each upcoming event
@@ -1367,7 +1538,11 @@ async function runCalendarContent(config: PipelineConfig): Promise<PipelineTrigg
         }
 
         const eventDate = new Date(event.year || currentYear, event.month - 1, event.day);
-        const eventDateStr = eventDate.toLocaleDateString('en-ZA', { day: 'numeric', month: 'long', year: 'numeric' });
+        const eventDateStr = eventDate.toLocaleDateString('en-ZA', {
+          day: 'numeric',
+          month: 'long',
+          year: 'numeric',
+        });
 
         const brief: GenerateArticleBrief = {
           topic: event.articleTopic,
@@ -1377,7 +1552,9 @@ async function runCalendarContent(config: PipelineConfig): Promise<PipelineTrigg
           categoryName: config.categoryName || 'Financial Planning',
           keyPoints: event.keyPoints,
           additionalInstructions: `This article is being generated ahead of "${event.name}" on ${eventDateStr}.\n\n${event.description}\n\nWrite a timely, forward-looking article that helps Navigate Wealth clients prepare for this event. Include ALL relevant numerical data — exact percentages, rand amounts, thresholds, contribution limits, tax brackets, and effective dates — with absolutely no omissions or generalisations. Interpret through a South African financial planning lens, incorporating SARS implications, Regulation 28, RAs, TFSAs, and relevant tax legislation. Conclude with a decisive strategic advisory takeaway that positions Navigate Wealth as the trusted partner for proactive financial planning.`,
-          ...(categoryContext.names.length > 0 ? { availableCategories: categoryContext.names } : {}),
+          ...(categoryContext.names.length > 0
+            ? { availableCategories: categoryContext.names }
+            : {}),
         };
 
         const result = await generateFullArticle(brief, { excludeImageIds });
@@ -1389,7 +1566,12 @@ async function runCalendarContent(config: PipelineConfig): Promise<PipelineTrigg
         }
 
         const typeId = await getDefaultTypeId();
-        const articleId = await createDraftArticle(result, config.categoryId || '', typeId, 'calendar_content');
+        const articleId = await createDraftArticle(
+          result,
+          config.categoryId || '',
+          typeId,
+          'calendar_content',
+        );
         articleIds.push(articleId);
 
         // Mark event as generated for this year
@@ -1407,9 +1589,13 @@ async function runCalendarContent(config: PipelineConfig): Promise<PipelineTrigg
       status: articleIds.length > 0 ? (errors.length > 0 ? 'partial' : 'success') : 'error',
       articlesGenerated: articleIds.length,
       articleIds,
-      summary: articleIds.length > 0
-        ? `Generated ${articleIds.length} calendar-driven article(s) for: ${upcomingEvents.filter((_, i) => articleIds[i]).map(e => e.name).join(', ')}`
-        : 'No articles generated',
+      summary:
+        articleIds.length > 0
+          ? `Generated ${articleIds.length} calendar-driven article(s) for: ${upcomingEvents
+              .filter((_, i) => articleIds[i])
+              .map((e) => e.name)
+              .join(', ')}`
+          : 'No articles generated',
       errors,
       durationMs: Date.now() - start,
     };
@@ -1433,7 +1619,10 @@ async function runCalendarContent(config: PipelineConfig): Promise<PipelineTrigg
 // Pipeline Orchestrator
 // ---------------------------------------------------------------------------
 
-const PIPELINE_RUNNERS: Record<PipelineId, (config: PipelineConfig) => Promise<PipelineTriggerResult>> = {
+const PIPELINE_RUNNERS: Record<
+  PipelineId,
+  (config: PipelineConfig) => Promise<PipelineTriggerResult>
+> = {
   market_commentary: runMarketCommentary,
   regulatory_monitor: runRegulatoryMonitor,
   news_commentary: runNewsCommentary,
@@ -1546,7 +1735,12 @@ export const AutoContentService = {
     const existing = await kv.getByPrefix(CONFIG_PREFIX);
     const existingIds = new Set((existing as PipelineConfig[]).map((c) => c.id));
 
-    const pipelineIds: PipelineId[] = ['market_commentary', 'regulatory_monitor', 'news_commentary', 'calendar_content'];
+    const pipelineIds: PipelineId[] = [
+      'market_commentary',
+      'regulatory_monitor',
+      'news_commentary',
+      'calendar_content',
+    ];
     const configs: PipelineConfig[] = existing as PipelineConfig[];
 
     // Backfill scheduleIntervalHours for existing configs that pre-date the field
@@ -1688,7 +1882,10 @@ export const AutoContentService = {
     }
 
     if (dueConfigs.length === 0) {
-      log.info('processDuePipelines: No pipelines due', { enabledCount: enabledConfigs.length, skippedCount });
+      log.info('processDuePipelines: No pipelines due', {
+        enabledCount: enabledConfigs.length,
+        skippedCount,
+      });
       return { processed: [], skippedCount, totalArticlesGenerated: 0 };
     }
 
@@ -1744,7 +1941,10 @@ export const AutoContentService = {
     });
   },
 
-  async updateCalendarEvent(id: string, updates: Partial<CalendarEvent>): Promise<CalendarEvent | null> {
+  async updateCalendarEvent(
+    id: string,
+    updates: Partial<CalendarEvent>,
+  ): Promise<CalendarEvent | null> {
     const existing = (await kv.get(calendarKey(id))) as CalendarEvent | null;
     if (!existing) return null;
 
@@ -1780,7 +1980,10 @@ export const AutoContentService = {
     return (await kv.get(sourceKey(id))) as ContentSource | null;
   },
 
-  async updateContentSource(id: string, updates: Partial<ContentSource>): Promise<ContentSource | null> {
+  async updateContentSource(
+    id: string,
+    updates: Partial<ContentSource>,
+  ): Promise<ContentSource | null> {
     const existing = (await kv.get(sourceKey(id))) as ContentSource | null;
     if (!existing) return null;
 
@@ -1823,13 +2026,19 @@ export const AutoContentService = {
    * Fetches the source's RSS feed, deduplicates, and generates articles
    * using the first pipeline associated with the source.
    */
-  async triggerSource(sourceId: string): Promise<{ results: PipelineTriggerResult[]; totalGenerated: number; sourceName: string }> {
+  async triggerSource(
+    sourceId: string,
+  ): Promise<{ results: PipelineTriggerResult[]; totalGenerated: number; sourceName: string }> {
     const source = (await kv.get(sourceKey(sourceId))) as ContentSource | null;
     if (!source) {
       throw new Error(`Content source not found: ${sourceId}`);
     }
 
-    log.info(`Triggering source: ${source.name}`, { sourceId, url: source.url, pipelines: source.pipelines });
+    log.info(`Triggering source: ${source.name}`, {
+      sourceId,
+      url: source.url,
+      pipelines: source.pipelines,
+    });
 
     const start = Date.now();
     const results: PipelineTriggerResult[] = [];
@@ -1891,10 +2100,10 @@ export const AutoContentService = {
     // Apply keyword filtering if configured
     let filtered = unprocessed;
     if (source.filterKeywords?.length) {
-      const keywords = source.filterKeywords.map(k => k.toLowerCase());
-      filtered = unprocessed.filter(item => {
+      const keywords = source.filterKeywords.map((k) => k.toLowerCase());
+      filtered = unprocessed.filter((item) => {
         const text = `${item.title} ${item.description || ''}`.toLowerCase();
-        return keywords.some(kw => text.includes(kw));
+        return keywords.some((kw) => text.includes(kw));
       });
 
       if (filtered.length === 0) {
@@ -1931,17 +2140,23 @@ export const AutoContentService = {
     }
 
     // Build the article brief
-    const newsContext = filtered.map((item, i) =>
-      `${i + 1}. ${item.title}\n   ${item.description?.slice(0, 200) || ''}\n   Published: ${new Date(item.pubDate).toLocaleDateString('en-ZA')}`
-    ).join('\n\n');
+    const newsContext = filtered
+      .map(
+        (item, i) =>
+          `${i + 1}. ${item.title}\n   ${item.description?.slice(0, 200) || ''}\n   Published: ${new Date(item.pubDate).toLocaleDateString('en-ZA')}`,
+      )
+      .join('\n\n');
 
-    const categoryContext = !config.categoryId ? await getAvailableCategoryNames() : { names: [], categories: [] };
+    const categoryContext = !config.categoryId
+      ? await getAvailableCategoryNames()
+      : { names: [], categories: [] };
     const excludeImageIds = await getRecentlyUsedImageIds();
 
     const brief: GenerateArticleBrief = {
-      topic: filtered.length === 1
-        ? `Navigate Wealth Perspective: ${filtered[0].title}`
-        : `${source.name}: Navigate Wealth Perspective`,
+      topic:
+        filtered.length === 1
+          ? `Navigate Wealth Perspective: ${filtered[0].title}`
+          : `${source.name}: Navigate Wealth Perspective`,
       audience: config.audience,
       tone: config.tone || 'professional',
       targetLength: config.targetLength || 'medium',
@@ -1965,7 +2180,12 @@ export const AutoContentService = {
       if (result.unsplashPhotoId) await recordUsedImage(result.unsplashPhotoId);
 
       const typeId = await getDefaultTypeId();
-      const articleId = await createDraftArticle(result, config.categoryId || '', typeId, pipelineId);
+      const articleId = await createDraftArticle(
+        result,
+        config.categoryId || '',
+        typeId,
+        pipelineId,
+      );
       articleIds.push(articleId);
       totalGenerated = 1;
 
@@ -2002,9 +2222,10 @@ export const AutoContentService = {
       status: errors.length > 0 ? 'error' : 'success',
       articlesGenerated: totalGenerated,
       articleIds,
-      summary: totalGenerated > 0
-        ? `Generated ${totalGenerated} article(s) from "${source.name}"`
-        : `Failed to generate articles from "${source.name}"`,
+      summary:
+        totalGenerated > 0
+          ? `Generated ${totalGenerated} article(s) from "${source.name}"`
+          : `Failed to generate articles from "${source.name}"`,
       errors,
       durationMs: Date.now() - start,
     };
@@ -2026,7 +2247,10 @@ export const AutoContentService = {
     };
     await kv.set(runKey(pipelineId, runLog.completedAt), runLog);
 
-    log.info(`Source trigger completed: ${source.name}`, { totalGenerated, durationMs: pipelineResult.durationMs });
+    log.info(`Source trigger completed: ${source.name}`, {
+      totalGenerated,
+      durationMs: pipelineResult.durationMs,
+    });
 
     return { results, totalGenerated, sourceName: source.name };
   },
@@ -2049,8 +2273,10 @@ export const AutoContentService = {
     try {
       const response = await fetch(url, {
         headers: {
-          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-          'Accept': 'text/html, application/rss+xml, application/atom+xml, application/xml, text/xml, */*',
+          'User-Agent':
+            'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+          Accept:
+            'text/html, application/rss+xml, application/atom+xml, application/xml, text/xml, */*',
         },
         signal: AbortSignal.timeout(15000),
       });
@@ -2064,19 +2290,23 @@ export const AutoContentService = {
       const body = await response.text();
 
       // ── Check if this IS an RSS/Atom feed already ──────────────────
-      const isXmlContent = contentType.includes('xml') || contentType.includes('rss') || contentType.includes('atom');
-      const looksLikeRSS = body.trimStart().startsWith('<?xml') || /<rss[\s>]/i.test(body) || /<feed[\s>]/i.test(body);
+      const isXmlContent =
+        contentType.includes('xml') || contentType.includes('rss') || contentType.includes('atom');
+      const looksLikeRSS =
+        body.trimStart().startsWith('<?xml') || /<rss[\s>]/i.test(body) || /<feed[\s>]/i.test(body);
 
       if (isXmlContent || looksLikeRSS) {
         const hasItems = /<item[\s>]/i.test(body) || /<entry[\s>]/i.test(body);
         if (hasItems) {
           const title = extractFeedTitleFromXml(body) || new URL(url).hostname;
           log.info('URL is already a valid feed', { url, title });
-          return [{
-            url,
-            title,
-            type: /<feed[\s>]/i.test(body) ? 'atom' : 'rss',
-          }];
+          return [
+            {
+              url,
+              title,
+              type: /<feed[\s>]/i.test(body) ? 'atom' : 'rss',
+            },
+          ];
         }
       }
 
@@ -2111,7 +2341,9 @@ export const AutoContentService = {
         }
 
         const titleMatch = tag.match(/title\s*=\s*["']([^"']+)["']/i);
-        const feedTitle = titleMatch ? decodeHtmlEntitiesSimple(titleMatch[1]) : new URL(feedUrl).hostname;
+        const feedTitle = titleMatch
+          ? decodeHtmlEntitiesSimple(titleMatch[1])
+          : new URL(feedUrl).hostname;
 
         feeds.push({
           url: feedUrl,
@@ -2122,7 +2354,14 @@ export const AutoContentService = {
 
       // ── Probe common feed URL patterns as a fallback ───────────────
       if (feeds.length === 0) {
-        const commonPaths = ['/feed', '/rss', '/rss.xml', '/feed.xml', '/atom.xml', '/feeds/posts/default'];
+        const commonPaths = [
+          '/feed',
+          '/rss',
+          '/rss.xml',
+          '/feed.xml',
+          '/atom.xml',
+          '/feeds/posts/default',
+        ];
         const base = new URL(url);
 
         const probes = commonPaths.map(async (path) => {
@@ -2130,7 +2369,9 @@ export const AutoContentService = {
             const probeUrl = `${base.protocol}//${base.host}${path}`;
             const probeResp = await fetch(probeUrl, {
               method: 'HEAD',
-              headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36' },
+              headers: {
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+              },
               signal: AbortSignal.timeout(5000),
             });
             if (probeResp.ok) {
@@ -2139,7 +2380,9 @@ export const AutoContentService = {
                 return { url: probeUrl, title: `${base.hostname} (${path})`, type: 'rss' as const };
               }
             }
-          } catch { /* ignore probe failures */ }
+          } catch {
+            /* ignore probe failures */
+          }
           return null;
         });
 
@@ -2152,7 +2395,10 @@ export const AutoContentService = {
       log.info(`Feed discovery complete: found ${feeds.length} feed(s)`, { url });
       return feeds;
     } catch (error) {
-      log.error('Feed discovery failed', { url, error: error instanceof Error ? error.message : String(error) });
+      log.error('Feed discovery failed', {
+        url,
+        error: error instanceof Error ? error.message : String(error),
+      });
       return [];
     }
   },
@@ -2169,10 +2415,14 @@ export interface DiscoveredFeed {
 }
 
 function extractFeedTitleFromXml(xml: string): string {
-  const channelMatch = xml.match(/<channel[\s>][\s\S]*?<title[^>]*>(?:<!\[CDATA\[)?([\s\S]*?)(?:\]\]>)?<\/title>/i);
+  const channelMatch = xml.match(
+    /<channel[\s>][\s\S]*?<title[^>]*>(?:<!\[CDATA\[)?([\s\S]*?)(?:\]\]>)?<\/title>/i,
+  );
   if (channelMatch) return decodeHtmlEntitiesSimple(channelMatch[1].trim());
 
-  const feedMatch = xml.match(/<feed[\s>][\s\S]*?<title[^>]*>(?:<!\[CDATA\[)?([\s\S]*?)(?:\]\]>)?<\/title>/i);
+  const feedMatch = xml.match(
+    /<feed[\s>][\s\S]*?<title[^>]*>(?:<!\[CDATA\[)?([\s\S]*?)(?:\]\]>)?<\/title>/i,
+  );
   if (feedMatch) return decodeHtmlEntitiesSimple(feedMatch[1].trim());
 
   return '';

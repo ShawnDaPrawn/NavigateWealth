@@ -19,7 +19,12 @@ interface RiskProfileSectionProps {
 
 /** Single risk question component to reduce repetition */
 function RiskQuestion({
-  questionNumber, title, subtitle, options, value, onSelect,
+  questionNumber,
+  title,
+  subtitle,
+  options,
+  value,
+  onSelect,
 }: {
   questionNumber: number;
   title: string;
@@ -31,7 +36,9 @@ function RiskQuestion({
   return (
     <div className="p-6 border-2 border-gray-200 rounded-lg bg-white space-y-4">
       <div>
-        <h4 className="text-base text-gray-900 mb-1">{questionNumber}. {title}</h4>
+        <h4 className="text-base text-gray-900 mb-1">
+          {questionNumber}. {title}
+        </h4>
         <p className="text-xs text-gray-500">{subtitle}</p>
       </div>
       <RadioGroup
@@ -44,8 +51,13 @@ function RiskQuestion({
             onClick={() => onSelect(questionNumber, opt.score)}
             className="flex items-center space-x-3 p-3 rounded-lg hover:bg-gray-50 cursor-pointer border border-transparent hover:border-gray-200"
           >
-            <RadioGroupItem value={opt.score.toString()} id={`q${questionNumber}-opt${opt.score}`} />
-            <Label htmlFor={`q${questionNumber}-opt${opt.score}`} className="cursor-pointer flex-1">{opt.label}</Label>
+            <RadioGroupItem
+              value={opt.score.toString()}
+              id={`q${questionNumber}-opt${opt.score}`}
+            />
+            <Label htmlFor={`q${questionNumber}-opt${opt.score}`} className="cursor-pointer flex-1">
+              {opt.label}
+            </Label>
           </div>
         ))}
       </RadioGroup>
@@ -175,7 +187,9 @@ export function RiskProfileSection({
           </div>
           <div>
             <CardTitle>Risk Profile Assessment</CardTitle>
-            <CardDescription>Complete the questionnaire to determine your risk tolerance</CardDescription>
+            <CardDescription>
+              Complete the questionnaire to determine your risk tolerance
+            </CardDescription>
           </div>
         </div>
       </CardHeader>
@@ -188,10 +202,15 @@ export function RiskProfileSection({
             </div>
             <h3 className="text-lg text-gray-900 mb-2">No risk assessment completed</h3>
             <p className="text-sm text-gray-600 text-center mb-6 max-w-md">
-              Complete the <span className="text-[#6d28d9]">questionnaire</span> to determine your investor profile
+              Complete the <span className="text-[#6d28d9]">questionnaire</span> to determine your
+              investor profile
             </p>
-            <Button onClick={() => setAssessmentStarted(true)} className="bg-[#6d28d9] hover:bg-[#5b21b6] text-white px-6">
-              <Sparkles className="h-4 w-4 mr-2" />Start Assessment
+            <Button
+              onClick={() => setAssessmentStarted(true)}
+              className="bg-[#6d28d9] hover:bg-[#5b21b6] text-white px-6"
+            >
+              <Sparkles className="h-4 w-4 mr-2" />
+              Start Assessment
             </Button>
           </div>
         )}
@@ -202,7 +221,8 @@ export function RiskProfileSection({
             <Alert className="bg-[#6d28d9]/5 border-[#6d28d9]/20">
               <Info className="h-4 w-4 text-[#6d28d9]" />
               <AlertDescription>
-                Answer all 10 questions below to receive your personalized investor risk profile. Your responses will help us recommend suitable investment strategies.
+                Answer all 10 questions below to receive your personalized investor risk profile.
+                Your responses will help us recommend suitable investment strategies.
               </AlertDescription>
             </Alert>
 
@@ -213,7 +233,11 @@ export function RiskProfileSection({
                 title={q.title}
                 subtitle={q.subtitle}
                 options={[...q.options]}
-                value={(riskAssessment as unknown as Record<string, number>)[`question${q.questionNumber}`] || 0}
+                value={
+                  (riskAssessment as unknown as Record<string, number>)[
+                    `question${q.questionNumber}`
+                  ] || 0
+                }
                 onSelect={updateRiskQuestion}
               />
             ))}
@@ -229,7 +253,12 @@ export function RiskProfileSection({
                   <h3 className="text-lg text-gray-900 mb-1">Your Risk Profile Results</h3>
                   <p className="text-sm text-gray-600">Based on your responses</p>
                 </div>
-                <Button onClick={resetRiskAssessment} variant="outline" size="sm" className="border-[#6d28d9] text-[#6d28d9] hover:bg-[#6d28d9] hover:text-white">
+                <Button
+                  onClick={resetRiskAssessment}
+                  variant="outline"
+                  size="sm"
+                  className="border-[#6d28d9] text-[#6d28d9] hover:bg-[#6d28d9] hover:text-white"
+                >
                   Retake Assessment
                 </Button>
               </div>
@@ -247,8 +276,8 @@ export function RiskProfileSection({
                         riskAssessment.riskCategory === 'Conservative'
                           ? 'bg-blue-100 text-blue-800 hover:bg-blue-100'
                           : riskAssessment.riskCategory === 'Moderate'
-                          ? 'bg-amber-100 text-amber-800 hover:bg-amber-100'
-                          : 'bg-red-100 text-red-800 hover:bg-red-100'
+                            ? 'bg-amber-100 text-amber-800 hover:bg-amber-100'
+                            : 'bg-red-100 text-red-800 hover:bg-red-100'
                       }`}
                     >
                       {riskAssessment.riskCategory}
@@ -262,17 +291,26 @@ export function RiskProfileSection({
                 <h4 className="text-sm text-gray-900 mb-2">What This Means</h4>
                 {riskAssessment.riskCategory === 'Conservative' && (
                   <p className="text-sm text-gray-700">
-                    <strong>Conservative Investor:</strong> You focus on capital protection and steady, reliable returns. You prefer low-risk assets such as fixed income, money markets, or capital-protected funds. You prioritise stability over growth and avoid volatility.
+                    <strong>Conservative Investor:</strong> You focus on capital protection and
+                    steady, reliable returns. You prefer low-risk assets such as fixed income, money
+                    markets, or capital-protected funds. You prioritise stability over growth and
+                    avoid volatility.
                   </p>
                 )}
                 {riskAssessment.riskCategory === 'Moderate' && (
                   <p className="text-sm text-gray-700">
-                    <strong>Moderate Investor:</strong> You seek a balanced mix of growth and security, blending equities and bonds. You accept some short-term fluctuations for better medium-term returns, aiming to outpace inflation while managing downside risk.
+                    <strong>Moderate Investor:</strong> You seek a balanced mix of growth and
+                    security, blending equities and bonds. You accept some short-term fluctuations
+                    for better medium-term returns, aiming to outpace inflation while managing
+                    downside risk.
                   </p>
                 )}
                 {riskAssessment.riskCategory === 'Aggressive' && (
                   <p className="text-sm text-gray-700">
-                    <strong>Aggressive Investor:</strong> You are comfortable with high volatility and long-term investment horizons. You prioritise capital growth through equities, offshore exposure, and higher-risk instruments. You understand that higher risk can yield higher potential returns.
+                    <strong>Aggressive Investor:</strong> You are comfortable with high volatility
+                    and long-term investment horizons. You prioritise capital growth through
+                    equities, offshore exposure, and higher-risk instruments. You understand that
+                    higher risk can yield higher potential returns.
                   </p>
                 )}
               </div>
@@ -280,7 +318,9 @@ export function RiskProfileSection({
               {riskAssessment.dateCompleted && (
                 <div className="mt-4 flex items-center gap-2 text-xs text-gray-500">
                   <Calendar className="h-3 w-3" />
-                  <span>Completed on {new Date(riskAssessment.dateCompleted).toLocaleDateString()}</span>
+                  <span>
+                    Completed on {new Date(riskAssessment.dateCompleted).toLocaleDateString()}
+                  </span>
                 </div>
               )}
             </div>

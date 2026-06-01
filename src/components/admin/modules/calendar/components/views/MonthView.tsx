@@ -1,8 +1,8 @@
 import React, { useMemo, useRef, useEffect } from 'react';
-import { 
-  format, 
-  isToday, 
-  startOfDay, 
+import {
+  format,
+  isToday,
+  startOfDay,
   endOfDay,
   startOfWeek,
   endOfWeek,
@@ -27,9 +27,8 @@ export function MonthView({
   currentDate,
   onDateChange,
   onViewChange,
-  onViewEvent
+  onViewEvent,
 }: MonthViewProps) {
-  
   const scrollContainerRef = useRef<HTMLDivElement>(null);
 
   // Use cached lookup for better performance
@@ -59,47 +58,54 @@ export function MonthView({
     <div className="h-full flex flex-col bg-white rounded-lg border shadow-sm overflow-hidden">
       {/* Days Header */}
       <div className="grid grid-cols-7 border-b bg-gray-50 flex-none">
-        {['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map(day => (
-          <div key={day} className="py-3 text-center text-xs font-semibold text-gray-500 uppercase tracking-wider">
+        {['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map((day) => (
+          <div
+            key={day}
+            className="py-3 text-center text-xs font-semibold text-gray-500 uppercase tracking-wider"
+          >
             {day}
           </div>
         ))}
       </div>
 
       {/* Calendar Grid - Using gap-px for perfect borders */}
-      <div 
+      <div
         ref={scrollContainerRef}
         className="grid grid-cols-7 gap-px bg-gray-200 flex-1 overflow-y-auto"
       >
         {days.map((day, idx) => {
           const isCurrentMonth = day.getMonth() === currentDate.getMonth();
           const isTodayDate = isToday(day);
-          
+
           // O(1) lookup instead of O(N) filter
           const dayItems = getEventsOnDate(day);
-          
+
           // Limit visible items
           const maxVisible = 4;
           const visibleItems = dayItems.slice(0, maxVisible);
           const hiddenCount = dayItems.length - maxVisible;
 
           return (
-            <div 
-              key={day.toISOString()} 
+            <div
+              key={day.toISOString()}
               className={`min-h-[120px] p-2 bg-white transition-colors relative group hover:bg-gray-50 cursor-pointer ${
                 !isCurrentMonth ? 'bg-gray-50/50' : ''
               }`}
               onClick={() => {
-                 onDateChange(day);
-                 onViewChange('agenda');
+                onDateChange(day);
+                onViewChange('agenda');
               }}
             >
               <div className="flex items-center justify-between mb-2">
-                <span className={`h-7 w-7 flex items-center justify-center rounded-full text-sm font-medium ${
-                  isTodayDate 
-                    ? 'bg-purple-600 text-white shadow-sm' 
-                    : !isCurrentMonth ? 'text-gray-400' : 'text-gray-700'
-                }`}>
+                <span
+                  className={`h-7 w-7 flex items-center justify-center rounded-full text-sm font-medium ${
+                    isTodayDate
+                      ? 'bg-purple-600 text-white shadow-sm'
+                      : !isCurrentMonth
+                        ? 'text-gray-400'
+                        : 'text-gray-700'
+                  }`}
+                >
                   {format(day, 'd')}
                 </span>
                 {dayItems.length > 0 && (
@@ -112,11 +118,16 @@ export function MonthView({
               <div className="space-y-1">
                 {visibleItems.map((event, i) => {
                   return (
-                    <div 
+                    <div
                       key={`evt-${event.id}`}
-                      onClick={(e) => { e.stopPropagation(); onViewEvent(event); }}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onViewEvent(event);
+                      }}
                       className={`text-[10px] px-1.5 py-0.5 rounded truncate cursor-pointer transition-colors border-l-2 hover:brightness-95 ${
-                        EVENT_TYPE_COLORS[event.event_type]?.replace('bg-', 'bg-opacity-20 bg-').replace('text-', 'border-') || 'bg-blue-50 border-blue-500 text-blue-700'
+                        EVENT_TYPE_COLORS[event.event_type]
+                          ?.replace('bg-', 'bg-opacity-20 bg-')
+                          .replace('text-', 'border-') || 'bg-blue-50 border-blue-500 text-blue-700'
                       }`}
                     >
                       {format(new Date(event.start_at), 'HH:mm')} {event.title}

@@ -15,11 +15,7 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Bell, Check, CheckCheck } from 'lucide-react';
 import { Button } from '../../../../ui/button';
 import { Badge } from '../../../../ui/badge';
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from '../../../../ui/popover';
+import { Popover, PopoverContent, PopoverTrigger } from '../../../../ui/popover';
 import { ScrollArea } from '../../../../ui/scroll-area';
 import { esignApi } from '../api';
 
@@ -53,7 +49,9 @@ export function NotificationBell({ onOpenEnvelope }: NotificationBellProps) {
 
   useEffect(() => {
     void load();
-    pollTimer.current = setInterval(() => { void load(); }, POLL_INTERVAL_MS);
+    pollTimer.current = setInterval(() => {
+      void load();
+    }, POLL_INTERVAL_MS);
     return () => {
       if (pollTimer.current) clearInterval(pollTimer.current);
     };
@@ -62,47 +60,62 @@ export function NotificationBell({ onOpenEnvelope }: NotificationBellProps) {
   const markOne = useCallback(async (id: string) => {
     try {
       await esignApi.markInAppNotificationRead(id);
-      setItems((prev) => prev.map((n) => n.id === id ? { ...n, read_at: new Date().toISOString() } : n));
+      setItems((prev) =>
+        prev.map((n) => (n.id === id ? { ...n, read_at: new Date().toISOString() } : n)),
+      );
       setUnread((prev) => Math.max(0, prev - 1));
-    } catch { /* best-effort */ }
+    } catch {
+      /* best-effort */
+    }
   }, []);
 
   const markAll = useCallback(async () => {
     try {
       await esignApi.markAllInAppNotificationsRead();
       const now = new Date().toISOString();
-      setItems((prev) => prev.map((n) => n.read_at ? n : { ...n, read_at: now }));
+      setItems((prev) => prev.map((n) => (n.read_at ? n : { ...n, read_at: now })));
       setUnread(0);
-    } catch { /* best-effort */ }
+    } catch {
+      /* best-effort */
+    }
   }, []);
 
-  const handleClick = useCallback((item: InAppItem) => {
-    if (!item.read_at) void markOne(item.id);
-    if (item.envelope_id && onOpenEnvelope) {
-      onOpenEnvelope(item.envelope_id);
-      setOpen(false);
-    }
-  }, [markOne, onOpenEnvelope]);
+  const handleClick = useCallback(
+    (item: InAppItem) => {
+      if (!item.read_at) void markOne(item.id);
+      if (item.envelope_id && onOpenEnvelope) {
+        onOpenEnvelope(item.envelope_id);
+        setOpen(false);
+      }
+    },
+    [markOne, onOpenEnvelope],
+  );
 
   const relative = useMemo(() => new Intl.RelativeTimeFormat('en', { numeric: 'auto' }), []);
-  const formatWhen = useCallback((iso: string): string => {
-    const diffMs = Date.now() - new Date(iso).getTime();
-    const mins = Math.round(diffMs / 60000);
-    if (mins < 1) return 'just now';
-    if (mins < 60) return relative.format(-mins, 'minute');
-    const hrs = Math.round(mins / 60);
-    if (hrs < 24) return relative.format(-hrs, 'hour');
-    const days = Math.round(hrs / 24);
-    return relative.format(-days, 'day');
-  }, [relative]);
+  const formatWhen = useCallback(
+    (iso: string): string => {
+      const diffMs = Date.now() - new Date(iso).getTime();
+      const mins = Math.round(diffMs / 60000);
+      if (mins < 1) return 'just now';
+      if (mins < 60) return relative.format(-mins, 'minute');
+      const hrs = Math.round(mins / 60);
+      if (hrs < 24) return relative.format(-hrs, 'hour');
+      const days = Math.round(hrs / 24);
+      return relative.format(-days, 'day');
+    },
+    [relative],
+  );
 
   const unreadLabel = unread > 99 ? '99+' : String(unread);
 
   return (
-    <Popover open={open} onOpenChange={(o) => {
-      setOpen(o);
-      if (o) void load();
-    }}>
+    <Popover
+      open={open}
+      onOpenChange={(o) => {
+        setOpen(o);
+        if (o) void load();
+      }}
+    >
       <PopoverTrigger asChild>
         <Button
           variant="ghost"
@@ -163,13 +176,18 @@ export function NotificationBell({ onOpenEnvelope }: NotificationBellProps) {
                         <div className="flex-1 min-w-0">
                           <p className="text-sm font-medium text-gray-900 truncate">{item.title}</p>
                           <p className="text-xs text-gray-600 mt-0.5 line-clamp-2">{item.body}</p>
-                          <p className="text-[11px] text-gray-400 mt-1">{formatWhen(item.created_at)}</p>
+                          <p className="text-[11px] text-gray-400 mt-1">
+                            {formatWhen(item.created_at)}
+                          </p>
                         </div>
                         {!isRead && (
                           <span
                             role="button"
                             tabIndex={0}
-                            onClick={(e) => { e.stopPropagation(); void markOne(item.id); }}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              void markOne(item.id);
+                            }}
                             onKeyDown={(e) => {
                               if (e.key === 'Enter' || e.key === ' ') {
                                 e.preventDefault();

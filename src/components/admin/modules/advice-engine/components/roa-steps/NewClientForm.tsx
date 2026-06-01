@@ -2,7 +2,13 @@ import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '../../../../../ui/card';
 import { Label } from '../../../../../ui/label';
 import { Input } from '../../../../../ui/input';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../../../../ui/select';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '../../../../../ui/select';
 import { usePersonnel } from '../../hooks/usePersonnel';
 
 interface ClientData {
@@ -21,8 +27,8 @@ interface NewClientFormProps {
 
 export function NewClientForm({ onDataChange, initialData }: NewClientFormProps) {
   const { data: personnel = [] } = usePersonnel();
-  
-  const advisors = personnel.filter(p => p.role?.toLowerCase() === 'adviser');
+
+  const advisors = personnel.filter((p) => p.role?.toLowerCase() === 'adviser');
 
   const [formData, setFormData] = useState<ClientData>({
     firstName: initialData?.firstName || '',
@@ -30,7 +36,7 @@ export function NewClientForm({ onDataChange, initialData }: NewClientFormProps)
     email: initialData?.email || '',
     mobile: initialData?.mobile || '',
     idOrDob: initialData?.idOrDob || '',
-    advisorId: initialData?.advisorId || ''
+    advisorId: initialData?.advisorId || '',
   });
 
   const handleChange = (field: keyof ClientData, value: string) => {
@@ -40,12 +46,14 @@ export function NewClientForm({ onDataChange, initialData }: NewClientFormProps)
   };
 
   const isValid = () => {
-    return formData.firstName && 
-           formData.lastName && 
-           formData.email && 
-           formData.mobile && 
-           formData.idOrDob && 
-           formData.advisorId;
+    return (
+      formData.firstName &&
+      formData.lastName &&
+      formData.email &&
+      formData.mobile &&
+      formData.idOrDob &&
+      formData.advisorId
+    );
   };
 
   return (
@@ -53,7 +61,8 @@ export function NewClientForm({ onDataChange, initialData }: NewClientFormProps)
       <CardHeader>
         <CardTitle>Create New Client Profile</CardTitle>
         <p className="text-sm text-muted-foreground">
-          Create a lightweight client profile for this RoA. Full client onboarding can be completed later.
+          Create a lightweight client profile for this RoA. Full client onboarding can be completed
+          later.
         </p>
       </CardHeader>
       <CardContent className="space-y-4">
@@ -119,8 +128,8 @@ export function NewClientForm({ onDataChange, initialData }: NewClientFormProps)
         {/* Advisor Assignment */}
         <div className="space-y-2">
           <Label htmlFor="advisor">Assigned Advisor *</Label>
-          <Select 
-            value={formData.advisorId} 
+          <Select
+            value={formData.advisorId}
             onValueChange={(value) => handleChange('advisorId', value)}
           >
             <SelectTrigger>

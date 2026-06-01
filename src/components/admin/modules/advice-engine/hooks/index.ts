@@ -1,8 +1,8 @@
 /**
  * Advice Engine Hooks - Index
- * 
+ *
  * Centralized exports for all advice engine hooks.
- * 
+ *
  * @module advice-engine/hooks
  */
 

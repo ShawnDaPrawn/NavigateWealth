@@ -19,10 +19,7 @@ function normalizeStatus(value: unknown): string | undefined {
   return normalized || undefined;
 }
 
-export function isPersonnelAuthUser(
-  user: AuthUserLike,
-  personnelIds: Set<string>,
-): boolean {
+export function isPersonnelAuthUser(user: AuthUserLike, personnelIds: Set<string>): boolean {
   const metaRole = user.user_metadata?.role as string | undefined;
   if (metaRole && (PERSONNEL_ROLES as readonly string[]).includes(metaRole)) {
     return true;

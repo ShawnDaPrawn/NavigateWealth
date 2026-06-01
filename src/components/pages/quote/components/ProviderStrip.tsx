@@ -14,12 +14,18 @@ interface ProviderStripProps {
   className?: string;
 }
 
-export function ProviderStrip({ providers, variant = 'light', className = '' }: ProviderStripProps) {
+export function ProviderStrip({
+  providers,
+  variant = 'light',
+  className = '',
+}: ProviderStripProps) {
   if (providers.length === 0) return null;
 
   return (
     <div className={className}>
-      <p className={`text-xs font-medium mb-3 ${variant === 'dark' ? 'text-white/60' : 'text-gray-500'}`}>
+      <p
+        className={`text-xs font-medium mb-3 ${variant === 'dark' ? 'text-white/60' : 'text-gray-500'}`}
+      >
         Compare quotes from {providers.length} trusted partner{providers.length !== 1 ? 's' : ''}
       </p>
       <div className="flex flex-wrap items-center gap-3 sm:gap-4">
@@ -28,9 +34,10 @@ export function ProviderStrip({ providers, variant = 'light', className = '' }: 
             key={provider.id}
             className={`
               flex items-center justify-center rounded-lg px-3 py-2 transition-all duration-200
-              ${variant === 'dark'
-                ? 'bg-white shadow-sm'
-                : 'bg-white hover:bg-gray-50 border border-gray-200 shadow-sm'
+              ${
+                variant === 'dark'
+                  ? 'bg-white shadow-sm'
+                  : 'bg-white hover:bg-gray-50 border border-gray-200 shadow-sm'
               }
             `}
             title={provider.name}
@@ -45,9 +52,7 @@ export function ProviderStrip({ providers, variant = 'light', className = '' }: 
                 loading="lazy"
               />
             ) : (
-              <span className="text-xs font-semibold text-gray-600">
-                {provider.name}
-              </span>
+              <span className="text-xs font-semibold text-gray-600">{provider.name}</span>
             )}
           </div>
         ))}

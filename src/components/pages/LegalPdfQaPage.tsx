@@ -2,7 +2,12 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Link } from 'react-router';
 import { ArrowLeft, CheckCircle2, Clock3, Loader2, TriangleAlert, XCircle } from 'lucide-react';
 import { projectId, publicAnonKey } from '../../utils/supabase/info';
-import { LEGAL_PDF_QA_FIXTURES, analyzeLegalPagedPreview, type LegalPdfQaAnalysis, type LegalPdfQaFixture } from '../shared/legalPdfQa';
+import {
+  LEGAL_PDF_QA_FIXTURES,
+  analyzeLegalPagedPreview,
+  type LegalPdfQaAnalysis,
+  type LegalPdfQaFixture,
+} from '../shared/legalPdfQa';
 import { LegalDocumentPdfLayout, type LegalPdfDocumentData } from '../shared/LegalDocumentPdf';
 import { normalizeLegalDocumentAnchors, sanitizeLegalDocumentHtml } from '../../utils/legalHtml';
 import {
@@ -71,7 +76,9 @@ function statusLabel(status: FixtureStatus) {
   }
 }
 
-function normalizeResponseToPdfDocument(payload: PublicLegalDocumentResponse['document']): LegalPdfDocumentData | null {
+function normalizeResponseToPdfDocument(
+  payload: PublicLegalDocumentResponse['document'],
+): LegalPdfDocumentData | null {
   if (!payload) return null;
   const html = sanitizeLegalDocumentHtml(payload.contentHtml || '<p></p>');
   const normalized = normalizeLegalDocumentAnchors(html, payload.toc || []);
@@ -100,7 +107,7 @@ async function fetchLegalPdfFixture(slug: string): Promise<LegalPdfDocumentData>
     throw new Error(`Fixture fetch failed (${res.status})`);
   }
 
-  const payload = await res.json() as PublicLegalDocumentResponse;
+  const payload = (await res.json()) as PublicLegalDocumentResponse;
   if (!payload.available || !payload.document) {
     throw new Error('Fixture is not publicly available');
   }
@@ -114,15 +121,17 @@ async function fetchLegalPdfFixture(slug: string): Promise<LegalPdfDocumentData>
 }
 
 export function LegalPdfQaPage() {
-  const [results, setResults] = useState<Record<string, FixtureResult>>(() => Object.fromEntries(
-    LEGAL_PDF_QA_FIXTURES.map((fixture) => [
-      fixture.slug,
-      {
-        fixture,
-        status: 'idle' as const,
-      },
-    ]),
-  ));
+  const [results, setResults] = useState<Record<string, FixtureResult>>(() =>
+    Object.fromEntries(
+      LEGAL_PDF_QA_FIXTURES.map((fixture) => [
+        fixture.slug,
+        {
+          fixture,
+          status: 'idle' as const,
+        },
+      ]),
+    ),
+  );
   const [activeSlug, setActiveSlug] = useState<string>(LEGAL_PDF_QA_FIXTURES[0]?.slug || '');
   const [activeDocument, setActiveDocument] = useState<LegalPdfDocumentData | null>(null);
   const [documentCache, setDocumentCache] = useState<Record<string, LegalPdfDocumentData>>({});
@@ -136,7 +145,9 @@ export function LegalPdfQaPage() {
     error: null,
     activeRenderer: 'paged',
   });
-  const [rendererResolution, setRendererResolution] = useState(() => resolveLegalPdfRendererVersion({ pagedAvailable: true }));
+  const [rendererResolution, setRendererResolution] = useState(() =>
+    resolveLegalPdfRendererVersion({ pagedAvailable: true }),
+  );
 
   const previewRef = useRef<HTMLDivElement | null>(null);
   const runTokenRef = useRef(0);
@@ -201,22 +212,33 @@ export function LegalPdfQaPage() {
     void startFixtureRun(queue[0]);
   }, [startFixtureRun]);
 
-  const runSingleFixture = useCallback((slug: string) => {
-    setRunningQueue([slug]);
-    void startFixtureRun(slug);
-  }, [startFixtureRun]);
+  const runSingleFixture = useCallback(
+    (slug: string) => {
+      setRunningQueue([slug]);
+      void startFixtureRun(slug);
+    },
+    [startFixtureRun],
+  );
 
-  const applyRendererOverride = useCallback((version: LegalPdfRendererVersion | null) => {
-    if (version) {
-      setStoredLegalPdfRendererOverride(version);
-    } else {
-      clearStoredLegalPdfRendererOverride();
-    }
-    refreshRendererResolution();
-  }, [refreshRendererResolution]);
+  const applyRendererOverride = useCallback(
+    (version: LegalPdfRendererVersion | null) => {
+      if (version) {
+        setStoredLegalPdfRendererOverride(version);
+      } else {
+        clearStoredLegalPdfRendererOverride();
+      }
+      refreshRendererResolution();
+    },
+    [refreshRendererResolution],
+  );
 
   useEffect(() => {
-    if (!activeDocument || !activeSlug || !renderState.ready || renderState.activeRenderer !== 'paged') {
+    if (
+      !activeDocument ||
+      !activeSlug ||
+      !renderState.ready ||
+      renderState.activeRenderer !== 'paged'
+    ) {
       return;
     }
 
@@ -231,7 +253,9 @@ export function LegalPdfQaPage() {
     setResults((current) => ({
       ...current,
       [activeSlug]: {
-        fixture: current[activeSlug]?.fixture || LEGAL_PDF_QA_FIXTURES.find((item) => item.slug === activeSlug)!,
+        fixture:
+          current[activeSlug]?.fixture ||
+          LEGAL_PDF_QA_FIXTURES.find((item) => item.slug === activeSlug)!,
         status,
         analysis,
       },
@@ -273,14 +297,20 @@ export function LegalPdfQaPage() {
       <div className="mx-auto flex max-w-7xl flex-col gap-6">
         <div className="flex flex-wrap items-center justify-between gap-4">
           <div className="space-y-2">
-            <Link to="/admin" className="inline-flex items-center gap-2 text-sm text-slate-600 hover:text-slate-900">
+            <Link
+              to="/admin"
+              className="inline-flex items-center gap-2 text-sm text-slate-600 hover:text-slate-900"
+            >
               <ArrowLeft className="h-4 w-4" />
               Back to admin
             </Link>
             <div>
-              <h1 className="text-3xl font-semibold tracking-tight text-slate-950">Legal PDF QA Pack</h1>
+              <h1 className="text-3xl font-semibold tracking-tight text-slate-950">
+                Legal PDF QA Pack
+              </h1>
               <p className="text-sm text-slate-600">
-                Representative paged-render validation for legal disclosures, privacy docs, manuals, and long-form policies.
+                Representative paged-render validation for legal disclosures, privacy docs, manuals,
+                and long-form policies.
               </p>
             </div>
           </div>
@@ -300,23 +330,34 @@ export function LegalPdfQaPage() {
             <Card>
               <CardHeader>
                 <CardTitle>Suite Summary</CardTitle>
-                <CardDescription>Track rollout readiness and keep rollback one click away if the paged renderer misbehaves.</CardDescription>
+                <CardDescription>
+                  Track rollout readiness and keep rollback one click away if the paged renderer
+                  misbehaves.
+                </CardDescription>
               </CardHeader>
               <CardContent className="grid grid-cols-2 gap-3">
                 <div className="rounded-xl border bg-white px-4 py-3">
-                  <div className="text-xs font-medium uppercase tracking-wide text-slate-500">Pass</div>
+                  <div className="text-xs font-medium uppercase tracking-wide text-slate-500">
+                    Pass
+                  </div>
                   <div className="mt-2 text-2xl font-semibold text-emerald-700">{summary.pass}</div>
                 </div>
                 <div className="rounded-xl border bg-white px-4 py-3">
-                  <div className="text-xs font-medium uppercase tracking-wide text-slate-500">Warn</div>
+                  <div className="text-xs font-medium uppercase tracking-wide text-slate-500">
+                    Warn
+                  </div>
                   <div className="mt-2 text-2xl font-semibold text-amber-700">{summary.warn}</div>
                 </div>
                 <div className="rounded-xl border bg-white px-4 py-3">
-                  <div className="text-xs font-medium uppercase tracking-wide text-slate-500">Fail</div>
+                  <div className="text-xs font-medium uppercase tracking-wide text-slate-500">
+                    Fail
+                  </div>
                   <div className="mt-2 text-2xl font-semibold text-rose-700">{summary.fail}</div>
                 </div>
                 <div className="rounded-xl border bg-white px-4 py-3">
-                  <div className="text-xs font-medium uppercase tracking-wide text-slate-500">Pending</div>
+                  <div className="text-xs font-medium uppercase tracking-wide text-slate-500">
+                    Pending
+                  </div>
                   <div className="mt-2 text-2xl font-semibold text-slate-700">{summary.idle}</div>
                 </div>
               </CardContent>
@@ -326,27 +367,46 @@ export function LegalPdfQaPage() {
               <CardHeader>
                 <CardTitle>Renderer Rollout Control</CardTitle>
                 <CardDescription>
-                  Global default is <strong>{DEFAULT_LEGAL_PDF_RENDERER_VERSION}</strong>. Use these local overrides for testing or instant rollback on this browser.
+                  Global default is <strong>{DEFAULT_LEGAL_PDF_RENDERER_VERSION}</strong>. Use these
+                  local overrides for testing or instant rollback on this browser.
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="rounded-xl border bg-white px-4 py-3 text-sm text-slate-700">
-                  <div><strong>Effective renderer:</strong> {rendererResolution.effectiveVersion}</div>
-                  <div><strong>Resolution source:</strong> {rendererResolution.source}</div>
-                  <div><strong>Stored override:</strong> {getStoredLegalPdfRendererOverride() || 'none'}</div>
+                  <div>
+                    <strong>Effective renderer:</strong> {rendererResolution.effectiveVersion}
+                  </div>
+                  <div>
+                    <strong>Resolution source:</strong> {rendererResolution.source}
+                  </div>
+                  <div>
+                    <strong>Stored override:</strong>{' '}
+                    {getStoredLegalPdfRendererOverride() || 'none'}
+                  </div>
                   <div className="mt-2 text-xs text-slate-500">
-                    Emergency rollback also remains available via <code>?legalPdfRenderer=legacy</code>.
+                    Emergency rollback also remains available via{' '}
+                    <code>?legalPdfRenderer=legacy</code>.
                   </div>
                 </div>
                 <div className="flex flex-wrap gap-2">
                   <Button
-                    variant={rendererResolution.source === 'storage' && rendererResolution.requestedVersion === 'legacy' ? 'default' : 'outline'}
+                    variant={
+                      rendererResolution.source === 'storage' &&
+                      rendererResolution.requestedVersion === 'legacy'
+                        ? 'default'
+                        : 'outline'
+                    }
                     onClick={() => applyRendererOverride('legacy')}
                   >
                     Force legacy locally
                   </Button>
                   <Button
-                    variant={rendererResolution.source === 'storage' && rendererResolution.requestedVersion === 'paged' ? 'default' : 'outline'}
+                    variant={
+                      rendererResolution.source === 'storage' &&
+                      rendererResolution.requestedVersion === 'paged'
+                        ? 'default'
+                        : 'outline'
+                    }
                     onClick={() => applyRendererOverride('paged')}
                   >
                     Force paged locally
@@ -361,7 +421,9 @@ export function LegalPdfQaPage() {
             <Card>
               <CardHeader>
                 <CardTitle>Representative Fixtures</CardTitle>
-                <CardDescription>These documents cover the main legal layouts we need to support before rollout.</CardDescription>
+                <CardDescription>
+                  These documents cover the main legal layouts we need to support before rollout.
+                </CardDescription>
               </CardHeader>
               <CardContent className="space-y-3">
                 {LEGAL_PDF_QA_FIXTURES.map((fixture) => {
@@ -395,7 +457,9 @@ export function LegalPdfQaPage() {
                           <div className="font-medium text-slate-950">{fixture.label}</div>
                           <div className="mt-1 text-sm text-slate-600">{fixture.scenario}</div>
                         </div>
-                        <Badge variant={statusVariant(result?.status || 'idle')}>{statusLabel(result?.status || 'idle')}</Badge>
+                        <Badge variant={statusVariant(result?.status || 'idle')}>
+                          {statusLabel(result?.status || 'idle')}
+                        </Badge>
                       </div>
                     </button>
                   );
@@ -409,20 +473,28 @@ export function LegalPdfQaPage() {
               <CardHeader>
                 <CardTitle>{activeResult?.fixture.label || 'Renderer preview'}</CardTitle>
                 <CardDescription>
-                  {activeResult?.fixture.scenario || 'Select a representative fixture to inspect the paged renderer.'}
+                  {activeResult?.fixture.scenario ||
+                    'Select a representative fixture to inspect the paged renderer.'}
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="flex flex-wrap items-center gap-2">
-                  {activeResult?.status === 'ready' && <CheckCircle2 className="h-4 w-4 text-emerald-600" />}
-                  {activeResult?.status === 'warn' && <TriangleAlert className="h-4 w-4 text-amber-600" />}
+                  {activeResult?.status === 'ready' && (
+                    <CheckCircle2 className="h-4 w-4 text-emerald-600" />
+                  )}
+                  {activeResult?.status === 'warn' && (
+                    <TriangleAlert className="h-4 w-4 text-amber-600" />
+                  )}
                   {activeResult?.status === 'fail' && <XCircle className="h-4 w-4 text-rose-600" />}
-                  {activeResult?.status === 'loading' && <Loader2 className="h-4 w-4 animate-spin text-blue-600" />}
+                  {activeResult?.status === 'loading' && (
+                    <Loader2 className="h-4 w-4 animate-spin text-blue-600" />
+                  )}
                   {activeResult?.status === 'idle' && <Clock3 className="h-4 w-4 text-slate-500" />}
                   <span className="text-sm text-slate-700">
                     {activeResult?.status === 'loading'
                       ? 'Rendering paged preview and measuring page quality...'
-                      : activeResult?.error || 'Use the suite runner or select a fixture to inspect it.'}
+                      : activeResult?.error ||
+                        'Use the suite runner or select a fixture to inspect it.'}
                   </span>
                 </div>
 
@@ -431,19 +503,33 @@ export function LegalPdfQaPage() {
                     <div className="grid gap-3 md:grid-cols-4">
                       <div className="rounded-xl border bg-white px-4 py-3">
                         <div className="text-xs uppercase tracking-wide text-slate-500">Pages</div>
-                        <div className="mt-2 text-2xl font-semibold text-slate-950">{activeResult.analysis.pageCount}</div>
+                        <div className="mt-2 text-2xl font-semibold text-slate-950">
+                          {activeResult.analysis.pageCount}
+                        </div>
                       </div>
                       <div className="rounded-xl border bg-white px-4 py-3">
-                        <div className="text-xs uppercase tracking-wide text-slate-500">Max gap</div>
-                        <div className="mt-2 text-2xl font-semibold text-slate-950">{activeResult.analysis.maxGapMm} mm</div>
+                        <div className="text-xs uppercase tracking-wide text-slate-500">
+                          Max gap
+                        </div>
+                        <div className="mt-2 text-2xl font-semibold text-slate-950">
+                          {activeResult.analysis.maxGapMm} mm
+                        </div>
                       </div>
                       <div className="rounded-xl border bg-white px-4 py-3">
-                        <div className="text-xs uppercase tracking-wide text-slate-500">Average gap</div>
-                        <div className="mt-2 text-2xl font-semibold text-slate-950">{activeResult.analysis.averageGapMm} mm</div>
+                        <div className="text-xs uppercase tracking-wide text-slate-500">
+                          Average gap
+                        </div>
+                        <div className="mt-2 text-2xl font-semibold text-slate-950">
+                          {activeResult.analysis.averageGapMm} mm
+                        </div>
                       </div>
                       <div className="rounded-xl border bg-white px-4 py-3">
-                        <div className="text-xs uppercase tracking-wide text-slate-500">Max overflow</div>
-                        <div className="mt-2 text-2xl font-semibold text-slate-950">{activeResult.analysis.maxOverflowMm} mm</div>
+                        <div className="text-xs uppercase tracking-wide text-slate-500">
+                          Max overflow
+                        </div>
+                        <div className="mt-2 text-2xl font-semibold text-slate-950">
+                          {activeResult.analysis.maxOverflowMm} mm
+                        </div>
                       </div>
                     </div>
 
@@ -460,7 +546,9 @@ export function LegalPdfQaPage() {
                           ))}
                         </ul>
                       ) : (
-                        <div className="text-sm text-emerald-700">No QA warnings on this fixture run.</div>
+                        <div className="text-sm text-emerald-700">
+                          No QA warnings on this fixture run.
+                        </div>
                       )}
                     </div>
                   </>
@@ -480,7 +568,9 @@ export function LegalPdfQaPage() {
                       />
                     ) : (
                       <div className="flex min-h-[320px] items-center justify-center text-sm text-slate-500">
-                        {activeResult?.status === 'loading' ? 'Fetching fixture...' : 'No fixture loaded yet.'}
+                        {activeResult?.status === 'loading'
+                          ? 'Fetching fixture...'
+                          : 'No fixture loaded yet.'}
                       </div>
                     )}
                   </div>

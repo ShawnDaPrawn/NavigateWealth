@@ -21,11 +21,7 @@ import {
   SelectValue,
 } from '../../../../../ui/select';
 import { Plus, Trash2, Eye, EyeOff } from 'lucide-react';
-import type {
-  BlockVisibilityRule,
-  VisibilityCondition,
-  ConditionOperator,
-} from '../constants';
+import type { BlockVisibilityRule, VisibilityCondition, ConditionOperator } from '../constants';
 
 interface ConditionalLogicEditorProps {
   rule: BlockVisibilityRule | undefined;
@@ -47,10 +43,7 @@ function operatorNeedsValue(op: ConditionOperator): boolean {
   return !['not_empty', 'is_empty'].includes(op);
 }
 
-export function ConditionalLogicEditor({
-  rule,
-  onChange,
-}: ConditionalLogicEditorProps) {
+export function ConditionalLogicEditor({ rule, onChange }: ConditionalLogicEditorProps) {
   const isEnabled = !!rule;
   const conditions = rule?.conditions ?? [];
 
@@ -65,14 +58,9 @@ export function ConditionalLogicEditor({
     }
   };
 
-  const handleUpdateCondition = (
-    index: number,
-    updates: Partial<VisibilityCondition>,
-  ) => {
+  const handleUpdateCondition = (index: number, updates: Partial<VisibilityCondition>) => {
     if (!rule) return;
-    const updated = rule.conditions.map((c, i) =>
-      i === index ? { ...c, ...updates } : c,
-    );
+    const updated = rule.conditions.map((c, i) => (i === index ? { ...c, ...updates } : c));
     onChange({ ...rule, conditions: updated });
   };
 
@@ -80,10 +68,7 @@ export function ConditionalLogicEditor({
     if (!rule) return;
     onChange({
       ...rule,
-      conditions: [
-        ...rule.conditions,
-        { fieldKey: '', operator: 'not_empty' },
-      ],
+      conditions: [...rule.conditions, { fieldKey: '', operator: 'not_empty' }],
     });
   };
 
@@ -106,9 +91,7 @@ export function ConditionalLogicEditor({
           ) : (
             <EyeOff className="h-3.5 w-3.5 text-gray-400" />
           )}
-          <Label className="text-xs font-semibold text-gray-700">
-            Conditional Visibility
-          </Label>
+          <Label className="text-xs font-semibold text-gray-700">Conditional Visibility</Label>
         </div>
         <Switch
           checked={isEnabled}
@@ -142,9 +125,7 @@ export function ConditionalLogicEditor({
               <div className="flex items-center gap-1.5">
                 <Input
                   value={condition.fieldKey}
-                  onChange={(e) =>
-                    handleUpdateCondition(index, { fieldKey: e.target.value })
-                  }
+                  onChange={(e) => handleUpdateCondition(index, { fieldKey: e.target.value })}
                   placeholder="Field key (e.g. smoker)"
                   className="h-7 text-[11px] flex-1 bg-white border-gray-200"
                 />
@@ -165,9 +146,7 @@ export function ConditionalLogicEditor({
                     handleUpdateCondition(index, {
                       operator: val,
                       // Clear value if switching to operator that doesn't need it
-                      ...(operatorNeedsValue(val)
-                        ? {}
-                        : { value: undefined }),
+                      ...(operatorNeedsValue(val) ? {} : { value: undefined }),
                     })
                   }
                 >
@@ -186,9 +165,7 @@ export function ConditionalLogicEditor({
                 {operatorNeedsValue(condition.operator) && (
                   <Input
                     value={condition.value ?? ''}
-                    onChange={(e) =>
-                      handleUpdateCondition(index, { value: e.target.value })
-                    }
+                    onChange={(e) => handleUpdateCondition(index, { value: e.target.value })}
                     placeholder="Value"
                     className="h-7 text-[11px] flex-1 bg-white border-gray-200"
                   />

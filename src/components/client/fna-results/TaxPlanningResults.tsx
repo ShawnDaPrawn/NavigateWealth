@@ -1,7 +1,7 @@
 /**
  * Client-Side Tax Planning FNA Results Display
  * Read-only view of published Tax Planning Analysis
- * 
+ *
  * Data source: /supabase/functions/server/tax-planning-fna-routes.tsx
  * Uses "finalResults" (not "results") and typed TaxPlanningInputs
  */
@@ -10,8 +10,8 @@ import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '../../ui/card';
 import { Badge } from '../../ui/badge';
 import { Separator } from '../../ui/separator';
-import { 
-  FileText, 
+import {
+  FileText,
   TrendingDown,
   DollarSign,
   CheckCircle,
@@ -19,7 +19,7 @@ import {
   Info,
   PieChart,
   Lightbulb,
-  Calculator
+  Calculator,
 } from 'lucide-react';
 import { TaxPlanningFNA, formatCurrency } from '../../../services/fna-api';
 
@@ -37,7 +37,9 @@ export function TaxPlanningResults({ fna }: TaxPlanningResultsProps) {
         <CardContent className="py-6">
           <div className="flex items-center gap-3">
             <AlertCircle className="h-5 w-5 text-amber-600" />
-            <p className="text-sm text-amber-900">Tax calculation results are not yet available for this analysis.</p>
+            <p className="text-sm text-amber-900">
+              Tax calculation results are not yet available for this analysis.
+            </p>
           </div>
         </CardContent>
       </Card>
@@ -56,8 +58,8 @@ export function TaxPlanningResults({ fna }: TaxPlanningResultsProps) {
             <div className="flex-1">
               <h3 className="text-gray-900 mb-2">Tax Planning Analysis Summary</h3>
               <p className="text-sm text-gray-700 mb-4">
-                Comprehensive tax exposure analysis with optimization strategies 
-                based on {inputs.age >= 65 ? 'senior' : 'standard'} tax tables for South African residents.
+                Comprehensive tax exposure analysis with optimization strategies based on{' '}
+                {inputs.age >= 65 ? 'senior' : 'standard'} tax tables for South African residents.
               </p>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 <div className="bg-white p-3 rounded-lg border border-orange-100">
@@ -110,9 +112,7 @@ export function TaxPlanningResults({ fna }: TaxPlanningResultsProps) {
             </div>
             <div className="p-4 bg-amber-50 rounded-lg border border-amber-100">
               <p className="text-xs text-gray-600 mb-1">Net Income Tax</p>
-              <p className="text-xl text-gray-900">
-                {formatCurrency(finalResults.netIncomeTax)}
-              </p>
+              <p className="text-xl text-gray-900">{formatCurrency(finalResults.netIncomeTax)}</p>
             </div>
           </div>
 
@@ -131,13 +131,17 @@ export function TaxPlanningResults({ fna }: TaxPlanningResultsProps) {
               {finalResults.actualRADeduction > 0 && (
                 <div className="flex justify-between text-xs">
                   <span className="text-gray-600">Less: RA Deduction</span>
-                  <span className="text-green-700">({formatCurrency(finalResults.actualRADeduction)})</span>
+                  <span className="text-green-700">
+                    ({formatCurrency(finalResults.actualRADeduction)})
+                  </span>
                 </div>
               )}
               {finalResults.taxableInterest > 0 && (
                 <div className="flex justify-between text-xs">
                   <span className="text-gray-600">Add: Taxable Interest (above exemption)</span>
-                  <span className="text-gray-900">{formatCurrency(finalResults.taxableInterest)}</span>
+                  <span className="text-gray-900">
+                    {formatCurrency(finalResults.taxableInterest)}
+                  </span>
                 </div>
               )}
               <Separator />
@@ -147,30 +151,40 @@ export function TaxPlanningResults({ fna }: TaxPlanningResultsProps) {
               </div>
               <div className="flex justify-between text-xs">
                 <span className="text-gray-600">Income Tax Before Rebates</span>
-                <span className="text-gray-900">{formatCurrency(finalResults.incomeTaxBeforeRebates)}</span>
+                <span className="text-gray-900">
+                  {formatCurrency(finalResults.incomeTaxBeforeRebates)}
+                </span>
               </div>
               {finalResults.primaryRebate > 0 && (
                 <div className="flex justify-between text-xs">
                   <span className="text-gray-600">Less: Primary Rebate</span>
-                  <span className="text-green-700">({formatCurrency(finalResults.primaryRebate)})</span>
+                  <span className="text-green-700">
+                    ({formatCurrency(finalResults.primaryRebate)})
+                  </span>
                 </div>
               )}
               {finalResults.secondaryRebate > 0 && (
                 <div className="flex justify-between text-xs">
                   <span className="text-gray-600">Less: Secondary Rebate (age 65+)</span>
-                  <span className="text-green-700">({formatCurrency(finalResults.secondaryRebate)})</span>
+                  <span className="text-green-700">
+                    ({formatCurrency(finalResults.secondaryRebate)})
+                  </span>
                 </div>
               )}
               {finalResults.tertiaryRebate > 0 && (
                 <div className="flex justify-between text-xs">
                   <span className="text-gray-600">Less: Tertiary Rebate (age 75+)</span>
-                  <span className="text-green-700">({formatCurrency(finalResults.tertiaryRebate)})</span>
+                  <span className="text-green-700">
+                    ({formatCurrency(finalResults.tertiaryRebate)})
+                  </span>
                 </div>
               )}
               {(finalResults.medicalTaxCredits ?? 0) > 0 && (
                 <div className="flex justify-between text-xs">
                   <span className="text-gray-600">Less: Medical Tax Credits (Section 6A)</span>
-                  <span className="text-green-700">({formatCurrency(finalResults.medicalTaxCredits)})</span>
+                  <span className="text-green-700">
+                    ({formatCurrency(finalResults.medicalTaxCredits)})
+                  </span>
                 </div>
               )}
               <Separator />
@@ -193,7 +207,9 @@ export function TaxPlanningResults({ fna }: TaxPlanningResultsProps) {
               <Separator />
               <div className="flex justify-between text-sm font-bold">
                 <span className="text-gray-900">Total Tax Liability</span>
-                <span className="text-red-700">{formatCurrency(finalResults.totalTaxLiability)}</span>
+                <span className="text-red-700">
+                  {formatCurrency(finalResults.totalTaxLiability)}
+                </span>
               </div>
             </div>
           </div>
@@ -282,13 +298,11 @@ export function TaxPlanningResults({ fna }: TaxPlanningResultsProps) {
                   <div>
                     <p className="text-sm text-gray-900">RA Contributions</p>
                     <p className="text-xs text-gray-600">
-                      Max deductible: {formatCurrency(finalResults.maxAllowedRADeduction)} | 
-                      Actual deduction: {formatCurrency(finalResults.actualRADeduction)}
+                      Max deductible: {formatCurrency(finalResults.maxAllowedRADeduction)} | Actual
+                      deduction: {formatCurrency(finalResults.actualRADeduction)}
                     </p>
                   </div>
-                  <p className="text-sm text-gray-900">
-                    {formatCurrency(inputs.raContributions)}
-                  </p>
+                  <p className="text-sm text-gray-900">{formatCurrency(inputs.raContributions)}</p>
                 </div>
               </div>
 
@@ -299,8 +313,9 @@ export function TaxPlanningResults({ fna }: TaxPlanningResultsProps) {
                     <div>
                       <p className="text-sm text-gray-900">Unused RA Deduction Capacity</p>
                       <p className="text-xs text-gray-600">
-                        You have {formatCurrency(finalResults.raGap)} in unused RA deduction capacity. 
-                        Maximizing this could save you approximately {formatCurrency(finalResults.raTaxSavingPotential)} in tax.
+                        You have {formatCurrency(finalResults.raGap)} in unused RA deduction
+                        capacity. Maximizing this could save you approximately{' '}
+                        {formatCurrency(finalResults.raTaxSavingPotential)} in tax.
                       </p>
                     </div>
                   </div>
@@ -314,8 +329,10 @@ export function TaxPlanningResults({ fna }: TaxPlanningResultsProps) {
                     <div>
                       <p className="text-sm text-gray-900">Interest Tax Leakage</p>
                       <p className="text-xs text-gray-600">
-                        You are paying {formatCurrency(finalResults.interestTaxLeakage)} in tax on interest above exemption. 
-                        Consider redirecting to a TFSA ({formatCurrency(finalResults.tfsaRemainingLifetime)} lifetime capacity remaining).
+                        You are paying {formatCurrency(finalResults.interestTaxLeakage)} in tax on
+                        interest above exemption. Consider redirecting to a TFSA (
+                        {formatCurrency(finalResults.tfsaRemainingLifetime)} lifetime capacity
+                        remaining).
                       </p>
                     </div>
                   </div>
@@ -360,7 +377,7 @@ export function TaxPlanningResults({ fna }: TaxPlanningResultsProps) {
                           Impact: {formatCurrency(rec.impactValue)}
                         </Badge>
                       )}
-                      <Badge 
+                      <Badge
                         variant={rec.status === 'accepted' ? 'default' : 'outline'}
                         className="capitalize"
                       >
@@ -382,7 +399,9 @@ export function TaxPlanningResults({ fna }: TaxPlanningResultsProps) {
             <div className="flex items-start gap-3">
               <Info className="h-5 w-5 text-blue-600 flex-shrink-0 mt-0.5" />
               <div>
-                <p className="text-sm text-blue-900 mb-2"><strong>Adviser Notes:</strong></p>
+                <p className="text-sm text-blue-900 mb-2">
+                  <strong>Adviser Notes:</strong>
+                </p>
                 <p className="text-xs text-blue-800 whitespace-pre-wrap">{adviserNotes}</p>
               </div>
             </div>
@@ -400,12 +419,28 @@ export function TaxPlanningResults({ fna }: TaxPlanningResultsProps) {
                 <strong>Important Notes:</strong>
               </p>
               <ul className="space-y-1 text-xs">
-                <li>- This analysis is based on current South African tax legislation and your disclosed income.</li>
-                <li>- Tax laws are subject to change. Annual reviews are essential to maintain tax efficiency.</li>
-                <li>- Always maintain proper documentation for all tax deductions and credits claimed.</li>
-                <li>- Some optimization strategies require advance planning (e.g., retirement contributions).</li>
-                <li>- Consult with a registered tax practitioner before implementing tax strategies.</li>
-                <li>- This analysis is for planning purposes and does not constitute tax advice or SARS submissions.</li>
+                <li>
+                  - This analysis is based on current South African tax legislation and your
+                  disclosed income.
+                </li>
+                <li>
+                  - Tax laws are subject to change. Annual reviews are essential to maintain tax
+                  efficiency.
+                </li>
+                <li>
+                  - Always maintain proper documentation for all tax deductions and credits claimed.
+                </li>
+                <li>
+                  - Some optimization strategies require advance planning (e.g., retirement
+                  contributions).
+                </li>
+                <li>
+                  - Consult with a registered tax practitioner before implementing tax strategies.
+                </li>
+                <li>
+                  - This analysis is for planning purposes and does not constitute tax advice or
+                  SARS submissions.
+                </li>
               </ul>
             </div>
           </div>

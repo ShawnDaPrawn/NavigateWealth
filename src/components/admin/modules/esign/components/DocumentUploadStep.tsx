@@ -9,13 +9,7 @@ import { Card, CardContent } from '../../../../ui/card';
 import { Input } from '../../../../ui/input';
 import { Label } from '../../../../ui/label';
 import { Button } from '../../../../ui/button';
-import { 
-  Upload, 
-  FileText, 
-  XCircle, 
-  ArrowRight,
-  AlertCircle
-} from 'lucide-react';
+import { Upload, FileText, XCircle, ArrowRight, AlertCircle } from 'lucide-react';
 
 interface DocumentUploadStepProps {
   onNext: (files: File[], title: string, message: string, expiryDays: number) => void;
@@ -34,7 +28,14 @@ interface DocumentUploadStepProps {
   hideFooter?: boolean;
 }
 
-export function DocumentUploadStep({ onNext, onCancel, initialData, containerClassName, hideHeader, hideFooter }: DocumentUploadStepProps) {
+export function DocumentUploadStep({
+  onNext,
+  onCancel,
+  initialData,
+  containerClassName,
+  hideHeader,
+  hideFooter,
+}: DocumentUploadStepProps) {
   const [files, setFiles] = useState<File[]>(initialData?.files || []);
   const [title, setTitle] = useState(initialData?.title || '');
   const [message, setMessage] = useState(initialData?.message || '');
@@ -69,7 +70,7 @@ export function DocumentUploadStep({ onNext, onCancel, initialData, containerCla
   };
 
   const processFiles = (newFiles: File[]) => {
-    const validFiles = newFiles.filter(file => {
+    const validFiles = newFiles.filter((file) => {
       const isPdf = file.type === 'application/pdf';
       return isPdf;
     });
@@ -81,7 +82,7 @@ export function DocumentUploadStep({ onNext, onCancel, initialData, containerCla
     }
 
     if (validFiles.length > 0) {
-      setFiles(prev => [...prev, ...validFiles]);
+      setFiles((prev) => [...prev, ...validFiles]);
       // Auto-set title if empty
       if (!title && validFiles[0]) {
         setTitle(validFiles[0].name.replace(/\.pdf$/i, ''));
@@ -90,7 +91,7 @@ export function DocumentUploadStep({ onNext, onCancel, initialData, containerCla
   };
 
   const removeFile = (index: number) => {
-    setFiles(prev => prev.filter((_, i) => i !== index));
+    setFiles((prev) => prev.filter((_, i) => i !== index));
   };
 
   const handleContinue = () => {
@@ -108,10 +109,10 @@ export function DocumentUploadStep({ onNext, onCancel, initialData, containerCla
   return (
     <div className={containerClassName ?? 'max-w-4xl mx-auto space-y-6'}>
       {!hideHeader && (
-      <div className="space-y-2">
-        <h2 className="text-xl font-semibold text-gray-900">Add Documents</h2>
-        <p className="text-sm text-gray-500">Upload the files you want to send for signature.</p>
-      </div>
+        <div className="space-y-2">
+          <h2 className="text-xl font-semibold text-gray-900">Add Documents</h2>
+          <p className="text-sm text-gray-500">Upload the files you want to send for signature.</p>
+        </div>
       )}
 
       <Card>
@@ -142,7 +143,7 @@ export function DocumentUploadStep({ onNext, onCancel, initialData, containerCla
                   <Upload className="h-8 w-8" />
                 </div>
                 <div>
-                   <p className="font-medium text-gray-900 text-lg">
+                  <p className="font-medium text-gray-900 text-lg">
                     Drop files here or click to upload
                   </p>
                   <p className="text-sm text-gray-500 mt-1">PDF files only</p>
@@ -156,19 +157,26 @@ export function DocumentUploadStep({ onNext, onCancel, initialData, containerCla
             <div className="space-y-3">
               <div className="flex items-center justify-between">
                 <Label>Uploaded Documents</Label>
-                <span className="text-xs text-muted-foreground">{files.length} file{files.length !== 1 ? 's' : ''}</span>
+                <span className="text-xs text-muted-foreground">
+                  {files.length} file{files.length !== 1 ? 's' : ''}
+                </span>
               </div>
               <div className="max-h-[30vh] overflow-y-auto overscroll-contain rounded-lg border border-gray-200 bg-white">
                 <div className="grid gap-0 divide-y divide-gray-100">
                   {files.map((file, index) => (
-                    <div key={index} className="flex items-center justify-between p-3 hover:bg-gray-50/50 transition-colors">
+                    <div
+                      key={index}
+                      className="flex items-center justify-between p-3 hover:bg-gray-50/50 transition-colors"
+                    >
                       <div className="flex items-center gap-3 overflow-hidden">
                         <div className="h-10 w-10 bg-white border rounded flex items-center justify-center flex-shrink-0 text-red-500 font-bold text-xs">
                           PDF
                         </div>
                         <div className="min-w-0">
                           <p className="font-medium text-sm truncate">{file.name}</p>
-                          <p className="text-xs text-gray-500">{(file.size / 1024 / 1024).toFixed(2)} MB</p>
+                          <p className="text-xs text-gray-500">
+                            {(file.size / 1024 / 1024).toFixed(2)} MB
+                          </p>
                         </div>
                       </div>
                       <Button
@@ -188,7 +196,7 @@ export function DocumentUploadStep({ onNext, onCancel, initialData, containerCla
 
           {/* Details Form */}
           <div className="grid gap-6 md:grid-cols-2 pt-4 border-t">
-             <div className="space-y-2 md:col-span-2">
+            <div className="space-y-2 md:col-span-2">
               <Label htmlFor="title">Envelope Title *</Label>
               <Input
                 id="title"
@@ -209,18 +217,18 @@ export function DocumentUploadStep({ onNext, onCancel, initialData, containerCla
             </div>
 
             <div className="space-y-2">
-               <Label htmlFor="expiry">Days to expire</Label>
-               <Input
-                 id="expiry"
-                 type="number"
-                 min="1"
-                 max="365"
-                 value={expiryDays}
-                 onChange={(e) => setExpiryDays(parseInt(e.target.value) || 30)}
-               />
+              <Label htmlFor="expiry">Days to expire</Label>
+              <Input
+                id="expiry"
+                type="number"
+                min="1"
+                max="365"
+                value={expiryDays}
+                onChange={(e) => setExpiryDays(parseInt(e.target.value) || 30)}
+              />
             </div>
           </div>
-          
+
           {error && (
             <div className="bg-red-50 text-red-600 p-3 rounded-md flex items-center gap-2 text-sm">
               <AlertCircle className="h-4 w-4" />
@@ -231,17 +239,19 @@ export function DocumentUploadStep({ onNext, onCancel, initialData, containerCla
       </Card>
 
       {!hideFooter && (
-      <div className="flex justify-between">
-        <Button variant="ghost" onClick={onCancel}>Cancel</Button>
-        <Button 
-          onClick={handleContinue}
-          disabled={files.length === 0 || !title}
-          className="bg-purple-600 hover:bg-purple-700"
-        >
-          Next: Add Recipients
-          <ArrowRight className="h-4 w-4 ml-2" />
-        </Button>
-      </div>
+        <div className="flex justify-between">
+          <Button variant="ghost" onClick={onCancel}>
+            Cancel
+          </Button>
+          <Button
+            onClick={handleContinue}
+            disabled={files.length === 0 || !title}
+            className="bg-purple-600 hover:bg-purple-700"
+          >
+            Next: Add Recipients
+            <ArrowRight className="h-4 w-4 ml-2" />
+          </Button>
+        </div>
       )}
     </div>
   );

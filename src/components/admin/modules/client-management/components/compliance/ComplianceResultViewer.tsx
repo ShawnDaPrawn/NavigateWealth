@@ -49,7 +49,10 @@ import {
 import { projectId } from '../../../../../../utils/supabase/info';
 import { getAuthToken } from './compliance-auth';
 import { BASE_PDF_CSS } from '../../../resources/templates/BasePdfLayout';
-import { escapeHtmlText, navigateWealthPdfDocumentTitle } from '../../../../../../utils/pdfPrintTitle';
+import {
+  escapeHtmlText,
+  navigateWealthPdfDocumentTitle,
+} from '../../../../../../utils/pdfPrintTitle';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -232,7 +235,9 @@ export function ComplianceResultViewer({
         const activityTime = new Date(activity.date).getTime();
         matched = history.reduce<CheckResult | undefined>((best, r) => {
           const diff = Math.abs(new Date(r.submittedAt).getTime() - activityTime);
-          const bestDiff = best ? Math.abs(new Date(best.submittedAt).getTime() - activityTime) : Infinity;
+          const bestDiff = best
+            ? Math.abs(new Date(best.submittedAt).getTime() - activityTime)
+            : Infinity;
           return diff < bestDiff ? r : best;
         }, undefined);
       }
@@ -273,7 +278,12 @@ export function ComplianceResultViewer({
   if (!activity) return null;
 
   return (
-    <Dialog open={open} onOpenChange={(v) => { if (!v) onClose(); }}>
+    <Dialog
+      open={open}
+      onOpenChange={(v) => {
+        if (!v) onClose();
+      }}
+    >
       <DialogContent className="sm:max-w-2xl max-h-[90vh] flex flex-col p-0">
         {/* Header */}
         <DialogHeader className="p-6 pb-4">
@@ -306,8 +316,8 @@ export function ComplianceResultViewer({
             <ExternalLink className="h-3.5 w-3.5 text-slate-500" />
             <span className="text-xs text-slate-600">
               Independent verification by{' '}
-              <strong className="text-slate-800">Honeycomb Information Services</strong>{' '}
-              via Beeswax platform
+              <strong className="text-slate-800">Honeycomb Information Services</strong> via Beeswax
+              platform
             </span>
           </div>
           <Badge variant="outline" className="text-xs border-slate-300 text-slate-500">
@@ -318,7 +328,10 @@ export function ComplianceResultViewer({
         <Separator />
 
         {/* Content */}
-        <ScrollArea className="flex-1 px-6 py-4 overflow-y-auto" style={{ maxHeight: 'calc(90vh - 280px)' }}>
+        <ScrollArea
+          className="flex-1 px-6 py-4 overflow-y-auto"
+          style={{ maxHeight: 'calc(90vh - 280px)' }}
+        >
           {isLoading ? (
             <div className="flex flex-col items-center justify-center py-12 gap-2">
               <Loader2 className="h-6 w-6 animate-spin text-purple-600" />
@@ -405,8 +418,8 @@ function MetaSection({ result, clientName }: { result: CheckResult; clientName: 
               result.status === 'completed'
                 ? 'bg-green-50 text-green-700 border-green-200'
                 : result.status === 'failed'
-                ? 'bg-red-50 text-red-700 border-red-200'
-                : 'bg-amber-50 text-amber-700 border-amber-200'
+                  ? 'bg-red-50 text-red-700 border-red-200'
+                  : 'bg-amber-50 text-amber-700 border-amber-200'
             }
           >
             {result.status}
@@ -505,9 +518,19 @@ function SectionHeader({ children }: { children: React.ReactNode }) {
   return <h4 className="text-sm font-semibold text-gray-800 mb-2">{children}</h4>;
 }
 
-function DataRow({ label, value, className }: { label: string; value: unknown; className?: string }) {
+function DataRow({
+  label,
+  value,
+  className,
+}: {
+  label: string;
+  value: unknown;
+  className?: string;
+}) {
   return (
-    <div className={`flex items-start justify-between py-1.5 border-b border-gray-100 last:border-0 ${className || ''}`}>
+    <div
+      className={`flex items-start justify-between py-1.5 border-b border-gray-100 last:border-0 ${className || ''}`}
+    >
       <span className="text-xs text-muted-foreground">{label}</span>
       <span className="text-xs font-medium text-right max-w-[60%]">{toNode(value) ?? '—'}</span>
     </div>
@@ -579,8 +602,13 @@ function BulkIdvResultView({ data }: { data: ComplianceCheckData }) {
       {results.length > 0 && (
         <div className="space-y-1 mt-2">
           {results.map((r: Record<string, unknown>, i: number) => (
-            <div key={i} className="flex items-center justify-between p-2 bg-gray-50 rounded text-xs">
-              <span className="font-medium">{String(r.firstName || '')} {String(r.surname || '')}</span>
+            <div
+              key={i}
+              className="flex items-center justify-between p-2 bg-gray-50 rounded text-xs"
+            >
+              <span className="font-medium">
+                {String(r.firstName || '')} {String(r.surname || '')}
+              </span>
               <Badge
                 variant="outline"
                 className={
@@ -631,7 +659,10 @@ function CreditCheckResultView({ data }: { data: ComplianceCheckData }) {
       <DataRow label="Active Accounts" value={accounts.length} />
       <DataRow label="Judgments" value={judgments.length} />
       <DataRow label="Defaults" value={defaults.length} />
-      <DataRow label="Enquiries" value={Array.isArray(data.enquiries) ? data.enquiries.length : 0} />
+      <DataRow
+        label="Enquiries"
+        value={Array.isArray(data.enquiries) ? data.enquiries.length : 0}
+      />
       {judgments.length > 0 && (
         <div className="bg-amber-50 border border-amber-200 rounded-lg p-2.5">
           <div className="flex items-center gap-1.5 text-xs text-amber-700 font-medium">
@@ -687,12 +718,20 @@ function DebtReviewResultView({ data }: { data: ComplianceCheckData }) {
       ) : data.isUnderDebtReview === false ? (
         <div className="bg-green-50 border border-green-200 rounded-lg p-3 flex items-center gap-2">
           <CheckCircle className="h-4 w-4 text-green-600" />
-          <span className="text-sm font-medium text-green-700">Client is NOT under debt review</span>
+          <span className="text-sm font-medium text-green-700">
+            Client is NOT under debt review
+          </span>
         </div>
       ) : null}
       <DataRow label="Debt Counsellor" value={data.debtCounsellor} />
-      <DataRow label="Application Date" value={data.applicationDate ? formatShortDate(str(data.applicationDate)) : null} />
-      <DataRow label="Status Date" value={data.statusDate ? formatShortDate(str(data.statusDate)) : null} />
+      <DataRow
+        label="Application Date"
+        value={data.applicationDate ? formatShortDate(str(data.applicationDate)) : null}
+      />
+      <DataRow
+        label="Status Date"
+        value={data.statusDate ? formatShortDate(str(data.statusDate)) : null}
+      />
       {Array.isArray(data.accounts) && data.accounts.length > 0 && (
         <DataRow label="Accounts Under Review" value={data.accounts.length} />
       )}
@@ -710,7 +749,9 @@ function SanctionsResultView({ data }: { data: ComplianceCheckData }) {
       {totalMatches === 0 ? (
         <div className="bg-green-50 border border-green-200 rounded-lg p-3 flex items-center gap-2">
           <CheckCircle className="h-4 w-4 text-green-600" />
-          <span className="text-sm font-medium text-green-700">No sanctions matches found — Clear</span>
+          <span className="text-sm font-medium text-green-700">
+            No sanctions matches found — Clear
+          </span>
         </div>
       ) : (
         <div className="bg-red-50 border border-red-200 rounded-lg p-3 flex items-center gap-2">
@@ -720,7 +761,10 @@ function SanctionsResultView({ data }: { data: ComplianceCheckData }) {
           </span>
         </div>
       )}
-      <DataRow label="Lists Searched" value={Array.isArray(data.searchedLists) ? data.searchedLists.join(', ') : 'All'} />
+      <DataRow
+        label="Lists Searched"
+        value={Array.isArray(data.searchedLists) ? data.searchedLists.join(', ') : 'All'}
+      />
       {results.length > 0 && (
         <div className="space-y-1 mt-2">
           {results.map((match: Record<string, unknown>, i: number) => (
@@ -728,11 +772,16 @@ function SanctionsResultView({ data }: { data: ComplianceCheckData }) {
               <div className="flex items-center justify-between">
                 <span className="font-medium text-red-800">{toNode(match.name || 'Unknown')}</span>
                 {match.matchScore != null && (
-                  <Badge variant="outline" className="text-xs">{toNode(match.matchScore)}% match</Badge>
+                  <Badge variant="outline" className="text-xs">
+                    {toNode(match.matchScore)}% match
+                  </Badge>
                 )}
               </div>
               <DataRow label="Source" value={match.source} />
-              <DataRow label="Listing Date" value={match.listingDate ? formatShortDate(match.listingDate) : null} />
+              <DataRow
+                label="Listing Date"
+                value={match.listingDate ? formatShortDate(match.listingDate) : null}
+              />
             </div>
           ))}
         </div>
@@ -756,11 +805,17 @@ function EnforcementResultView({ data }: { data: ComplianceCheckData }) {
         </div>
       )}
       {results.map((entry: Record<string, unknown>, i: number) => (
-        <div key={i} className="p-2 bg-amber-50 border border-amber-100 rounded text-xs space-y-0.5">
+        <div
+          key={i}
+          className="p-2 bg-amber-50 border border-amber-100 rounded text-xs space-y-0.5"
+        >
           <DataRow label="Name" value={entry.name} />
           <DataRow label="Source" value={entry.source} />
           <DataRow label="Action Type" value={entry.actionType} />
-          <DataRow label="Action Date" value={entry.actionDate ? formatShortDate(entry.actionDate) : null} />
+          <DataRow
+            label="Action Date"
+            value={entry.actionDate ? formatShortDate(entry.actionDate) : null}
+          />
         </div>
       ))}
       <RawDataToggle data={data} />
@@ -782,11 +837,20 @@ function LegalAListingResultView({ data }: { data: ComplianceCheckData }) {
         </div>
       )}
       {results.map((entry: Record<string, unknown>, i: number) => (
-        <div key={i} className="p-2 bg-amber-50 border border-amber-100 rounded text-xs space-y-0.5">
+        <div
+          key={i}
+          className="p-2 bg-amber-50 border border-amber-100 rounded text-xs space-y-0.5"
+        >
           <DataRow label="Case Number" value={entry.caseNumber} />
           <DataRow label="Court" value={entry.court} />
-          <DataRow label="Judgment Date" value={entry.judgmentDate ? formatShortDate(entry.judgmentDate) : null} />
-          <DataRow label="Amount" value={entry.amount != null ? formatCurrency(entry.amount) : null} />
+          <DataRow
+            label="Judgment Date"
+            value={entry.judgmentDate ? formatShortDate(entry.judgmentDate) : null}
+          />
+          <DataRow
+            label="Amount"
+            value={entry.amount != null ? formatCurrency(entry.amount) : null}
+          />
           <DataRow label="Status" value={entry.status} />
         </div>
       ))}
@@ -796,7 +860,11 @@ function LegalAListingResultView({ data }: { data: ComplianceCheckData }) {
 }
 
 function CipcResultView({ data }: { data: ComplianceCheckData }) {
-  const companies = Array.isArray(data.companies) ? data.companies : (Array.isArray(data) ? data : []);
+  const companies = Array.isArray(data.companies)
+    ? data.companies
+    : Array.isArray(data)
+      ? data
+      : [];
   return (
     <div className="space-y-3">
       <SectionHeader>CIPC Company Search</SectionHeader>
@@ -807,7 +875,10 @@ function CipcResultView({ data }: { data: ComplianceCheckData }) {
           <DataRow label="Registration No." value={c.registrationNumber} />
           <DataRow label="Status" value={c.status} />
           <DataRow label="Type" value={c.type} />
-          <DataRow label="Reg. Date" value={c.registrationDate ? formatShortDate(c.registrationDate) : null} />
+          <DataRow
+            label="Reg. Date"
+            value={c.registrationDate ? formatShortDate(c.registrationDate) : null}
+          />
         </div>
       ))}
       <RawDataToggle data={data} />
@@ -816,7 +887,11 @@ function CipcResultView({ data }: { data: ComplianceCheckData }) {
 }
 
 function DirectorResultView({ data }: { data: ComplianceCheckData }) {
-  const directorships = Array.isArray(data.directorships) ? data.directorships : (Array.isArray(data) ? data : []);
+  const directorships = Array.isArray(data.directorships)
+    ? data.directorships
+    : Array.isArray(data)
+      ? data
+      : [];
   return (
     <div className="space-y-3">
       <SectionHeader>Director Enquiry</SectionHeader>
@@ -826,8 +901,14 @@ function DirectorResultView({ data }: { data: ComplianceCheckData }) {
           <DataRow label="Company" value={d.companyName} />
           <DataRow label="Registration No." value={d.registrationNumber} />
           <DataRow label="Role" value={d.role} />
-          <DataRow label="Appointed" value={d.appointmentDate ? formatShortDate(d.appointmentDate) : null} />
-          <DataRow label="Resigned" value={d.resignationDate ? formatShortDate(d.resignationDate) : null} />
+          <DataRow
+            label="Appointed"
+            value={d.appointmentDate ? formatShortDate(d.appointmentDate) : null}
+          />
+          <DataRow
+            label="Resigned"
+            value={d.resignationDate ? formatShortDate(d.resignationDate) : null}
+          />
           <DataRow label="Status" value={d.status} />
         </div>
       ))}
@@ -851,7 +932,9 @@ function AddressResultView({ data }: { data: ComplianceCheckData }) {
               .join(', ')}
           </span>
           {best.lastReported && (
-            <span className="text-blue-500 block mt-0.5">Last reported: {formatShortDate(best.lastReported)}</span>
+            <span className="text-blue-500 block mt-0.5">
+              Last reported: {formatShortDate(best.lastReported)}
+            </span>
           )}
         </div>
       )}
@@ -895,17 +978,25 @@ function LifestyleAuditResultView({ data }: { data: ComplianceCheckData }) {
           <div className="text-xs text-purple-600">Lifestyle Score</div>
         </div>
       )}
-      <DataRow label="Estimated Income" value={data.estimatedIncome != null ? formatCurrency(data.estimatedIncome) : null} />
+      <DataRow
+        label="Estimated Income"
+        value={data.estimatedIncome != null ? formatCurrency(data.estimatedIncome) : null}
+      />
       <DataRow label="Properties" value={properties.length} />
       <DataRow label="Vehicles" value={vehicles.length} />
-      {!!data.spendingProfile && Object.keys(data.spendingProfile as Record<string, unknown>).length > 0 && (
-        <div className="mt-1">
-          <span className="text-xs font-medium text-gray-700 block mb-1">Spending Profile</span>
-          {Object.entries(data.spendingProfile).map(([key, val]) => (
-            <DataRow key={key} label={key.replace(/([A-Z])/g, ' $1').trim()} value={String(val)} />
-          ))}
-        </div>
-      )}
+      {!!data.spendingProfile &&
+        Object.keys(data.spendingProfile as Record<string, unknown>).length > 0 && (
+          <div className="mt-1">
+            <span className="text-xs font-medium text-gray-700 block mb-1">Spending Profile</span>
+            {Object.entries(data.spendingProfile).map(([key, val]) => (
+              <DataRow
+                key={key}
+                label={key.replace(/([A-Z])/g, ' $1').trim()}
+                value={String(val)}
+              />
+            ))}
+          </div>
+        )}
       <RawDataToggle data={data} />
     </div>
   );
@@ -917,7 +1008,9 @@ function IncomePredictorResultView({ data }: { data: ComplianceCheckData }) {
       <SectionHeader>Income Predictor</SectionHeader>
       {data.estimatedIncome != null && (
         <div className="flex items-center gap-3 bg-green-50 border border-green-200 rounded-lg p-3">
-          <div className="text-2xl font-bold text-green-700">{formatCurrency(data.estimatedIncome)}</div>
+          <div className="text-2xl font-bold text-green-700">
+            {formatCurrency(data.estimatedIncome)}
+          </div>
           <div className="text-xs text-green-600">Estimated Monthly Income</div>
         </div>
       )}
@@ -938,7 +1031,7 @@ function IncomePredictorResultView({ data }: { data: ComplianceCheckData }) {
 }
 
 function TendersBlueResultView({ data }: { data: ComplianceCheckData }) {
-  const tenders = Array.isArray(data.tenders) ? data.tenders : (Array.isArray(data) ? data : []);
+  const tenders = Array.isArray(data.tenders) ? data.tenders : Array.isArray(data) ? data : [];
   return (
     <div className="space-y-3">
       <SectionHeader>Tenders Blue List</SectionHeader>
@@ -980,8 +1073,8 @@ function RiskAssessmentResultView({ data }: { data: ComplianceCheckData }) {
                 data.riskLevel === 'Low'
                   ? 'bg-green-50 text-green-700 border-green-200'
                   : data.riskLevel === 'Medium'
-                  ? 'bg-amber-50 text-amber-700 border-amber-200'
-                  : 'bg-red-50 text-red-700 border-red-200'
+                    ? 'bg-amber-50 text-amber-700 border-amber-200'
+                    : 'bg-red-50 text-red-700 border-red-200'
               }
             >
               {toNode(data.riskLevel)}
@@ -999,7 +1092,10 @@ function RegistrationResultView({ data }: { data: ComplianceCheckData }) {
     <div className="space-y-3">
       <SectionHeader>Client Registration</SectionHeader>
       <DataRow label="Honeycomb ID" value={data.honeycombId || data.uniqueId} />
-      <DataRow label="Registered At" value={data.registeredAt ? formatDate(str(data.registeredAt)) : null} />
+      <DataRow
+        label="Registered At"
+        value={data.registeredAt ? formatDate(str(data.registeredAt)) : null}
+      />
       <RawDataToggle data={data} />
     </div>
   );
@@ -1030,7 +1126,13 @@ function StatBox({ label, value, colour }: { label: string; value: unknown; colo
   );
 }
 
-function RawDataToggle({ data, defaultOpen = false }: { data: ComplianceCheckData; defaultOpen?: boolean }) {
+function RawDataToggle({
+  data,
+  defaultOpen = false,
+}: {
+  data: ComplianceCheckData;
+  defaultOpen?: boolean;
+}) {
   const [show, setShow] = React.useState(defaultOpen);
   return (
     <div className="mt-2 pt-2 border-t border-gray-100">
@@ -1058,13 +1160,22 @@ function RawDataToggle({ data, defaultOpen = false }: { data: ComplianceCheckDat
  * footer). Content uses CSS page-break rules so it flows across pages without
  * bleeding over the footer.
  */
-function generateReportHtml(activity: ComplianceActivity, result: CheckResult, clientName: string): string {
+function generateReportHtml(
+  activity: ComplianceActivity,
+  result: CheckResult,
+  clientName: string,
+): string {
   const now = new Date().toLocaleString('en-ZA', {
-    day: '2-digit', month: 'long', year: 'numeric',
-    hour: '2-digit', minute: '2-digit',
+    day: '2-digit',
+    month: 'long',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
   });
   const issueDate = new Date().toLocaleDateString('en-GB', {
-    day: '2-digit', month: '2-digit', year: 'numeric',
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
   });
   const performedAt = formatDate(result.submittedAt);
   const raw = result.rawResponse;

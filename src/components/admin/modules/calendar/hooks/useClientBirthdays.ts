@@ -11,15 +11,15 @@ export function useClientBirthdays(currentDate: Date) {
       const response = await clientApi.getClients();
       const events: CalendarEvent[] = [];
       const currentYear = currentDate.getFullYear();
-      
+
       // Generate birthdays for current year, previous year, and next year
       // to ensure smooth navigation when switching years
       const yearsToGenerate = [currentYear - 1, currentYear, currentYear + 1];
 
-      (response.users ?? []).forEach(client => {
+      (response.users ?? []).forEach((client) => {
         // Try to find date of birth in various locations based on the structure
-        const dobString = 
-          client.profile?.personalInformation?.dateOfBirth || 
+        const dobString =
+          client.profile?.personalInformation?.dateOfBirth ||
           client.user_metadata?.dateOfBirth ||
           (client.profile as Record<string, unknown>)?.dateOfBirth;
 
@@ -28,12 +28,12 @@ export function useClientBirthdays(currentDate: Date) {
         const dob = parseISO(dobString as string);
         if (!isValid(dob)) return;
 
-        const clientName = 
-          client.name || 
-          `${client.user_metadata?.firstName || ''} ${client.user_metadata?.surname || ''}`.trim() || 
+        const clientName =
+          client.name ||
+          `${client.user_metadata?.firstName || ''} ${client.user_metadata?.surname || ''}`.trim() ||
           client.email;
 
-        yearsToGenerate.forEach(year => {
+        yearsToGenerate.forEach((year) => {
           // Create birthday date for this year
           const birthdayDate = setYear(dob, year);
           const startAt = new Date(birthdayDate);
@@ -61,8 +61,8 @@ export function useClientBirthdays(currentDate: Date) {
             client: {
               id: client.id,
               full_name: clientName,
-              email: client.email
-            }
+              email: client.email,
+            },
           });
         });
       });

@@ -15,5 +15,10 @@ export type { FormDefinition, ResourceCategory } from './types';
 export { useResources } from './hooks/useResources';
 
 // Legal Documents Registry (consumed by public-facing pages)
-export { LEGAL_DOCUMENTS, LEGAL_DOCUMENTS_BY_SLUG, LEGAL_SLUGS, LEGAL_SECTION_LABELS } from './legal-constants';
+export {
+  LEGAL_DOCUMENTS,
+  LEGAL_DOCUMENTS_BY_SLUG,
+  LEGAL_SLUGS,
+  LEGAL_SECTION_LABELS,
+} from './legal-constants';
 export type { LegalDocumentEntry } from './legal-constants';

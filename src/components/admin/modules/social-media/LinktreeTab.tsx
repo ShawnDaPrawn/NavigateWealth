@@ -22,20 +22,8 @@ import { Input } from '../../../ui/input';
 import { Label } from '../../../ui/label';
 import { Textarea } from '../../../ui/textarea';
 import { Switch } from '../../../ui/switch';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-} from '../../../ui/dialog';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '../../../ui/select';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '../../../ui/dialog';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../../ui/select';
 import { toast } from 'sonner';
 import {
   Link as LinkIcon,
@@ -191,12 +179,42 @@ const QUICK_ADD_TEMPLATES: QuickAddTemplate[] = [
 
 // Social profile platform definitions
 const SOCIAL_PLATFORMS = [
-  { key: 'instagram', label: 'Instagram', icon: <Instagram className="h-4 w-4" />, placeholder: 'https://instagram.com/navigatewealth' },
-  { key: 'linkedin', label: 'LinkedIn', icon: <Linkedin className="h-4 w-4" />, placeholder: 'https://linkedin.com/company/navigate-wealth' },
-  { key: 'facebook', label: 'Facebook', icon: <Facebook className="h-4 w-4" />, placeholder: 'https://facebook.com/navigatewealth' },
-  { key: 'youtube', label: 'YouTube', icon: <Youtube className="h-4 w-4" />, placeholder: 'https://youtube.com/@navigatewealth' },
-  { key: 'twitter', label: 'X (Twitter)', icon: <Twitter className="h-4 w-4" />, placeholder: 'https://x.com/navigatewealth' },
-  { key: 'email', label: 'Email', icon: <Mail className="h-4 w-4" />, placeholder: 'mailto:info@navigatewealth.co.za' },
+  {
+    key: 'instagram',
+    label: 'Instagram',
+    icon: <Instagram className="h-4 w-4" />,
+    placeholder: 'https://instagram.com/navigatewealth',
+  },
+  {
+    key: 'linkedin',
+    label: 'LinkedIn',
+    icon: <Linkedin className="h-4 w-4" />,
+    placeholder: 'https://linkedin.com/company/navigate-wealth',
+  },
+  {
+    key: 'facebook',
+    label: 'Facebook',
+    icon: <Facebook className="h-4 w-4" />,
+    placeholder: 'https://facebook.com/navigatewealth',
+  },
+  {
+    key: 'youtube',
+    label: 'YouTube',
+    icon: <Youtube className="h-4 w-4" />,
+    placeholder: 'https://youtube.com/@navigatewealth',
+  },
+  {
+    key: 'twitter',
+    label: 'X (Twitter)',
+    icon: <Twitter className="h-4 w-4" />,
+    placeholder: 'https://x.com/navigatewealth',
+  },
+  {
+    key: 'email',
+    label: 'Email',
+    icon: <Mail className="h-4 w-4" />,
+    placeholder: 'mailto:info@navigatewealth.co.za',
+  },
 ] as const;
 
 const CATEGORY_LABELS: Record<string, string> = {
@@ -278,7 +296,9 @@ export function LinktreeTab() {
     }
   }, []);
 
-  useEffect(() => { fetchData(); }, [fetchData]);
+  useEffect(() => {
+    fetchData();
+  }, [fetchData]);
 
   // --------------------------------------------------------------------------
   // CRUD
@@ -325,70 +345,82 @@ export function LinktreeTab() {
     }
   }, [formTitle, formUrl, formDescription, formEnabled, editingLink, fetchData]);
 
-  const handleQuickAdd = useCallback(async (template: QuickAddTemplate) => {
-    const templateKey = `${template.title}-${template.url}`;
-    setAddingTemplateId(templateKey);
-    try {
-      await fetchJson(`${BASE}/links`, {
-        method: 'POST',
-        body: JSON.stringify({
-          title: template.title,
-          url: template.url,
-          description: template.description,
-          enabled: true,
-        }),
-      });
-      toast.success(`Added "${template.title}"`);
-      await fetchData();
-    } catch (err) {
-      console.error('[LinktreeTab] Quick add error:', err);
-      toast.error('Failed to add link');
-    } finally {
-      setAddingTemplateId(null);
-    }
-  }, [fetchData]);
+  const handleQuickAdd = useCallback(
+    async (template: QuickAddTemplate) => {
+      const templateKey = `${template.title}-${template.url}`;
+      setAddingTemplateId(templateKey);
+      try {
+        await fetchJson(`${BASE}/links`, {
+          method: 'POST',
+          body: JSON.stringify({
+            title: template.title,
+            url: template.url,
+            description: template.description,
+            enabled: true,
+          }),
+        });
+        toast.success(`Added "${template.title}"`);
+        await fetchData();
+      } catch (err) {
+        console.error('[LinktreeTab] Quick add error:', err);
+        toast.error('Failed to add link');
+      } finally {
+        setAddingTemplateId(null);
+      }
+    },
+    [fetchData],
+  );
 
-  const handleDelete = useCallback(async (id: string) => {
-    try {
-      await fetchJson(`${BASE}/links/${id}`, { method: 'DELETE' });
-      setDeleteConfirmId(null);
-      toast.success('Link deleted');
-      await fetchData();
-    } catch {
-      toast.error('Failed to delete link');
-    }
-  }, [fetchData]);
+  const handleDelete = useCallback(
+    async (id: string) => {
+      try {
+        await fetchJson(`${BASE}/links/${id}`, { method: 'DELETE' });
+        setDeleteConfirmId(null);
+        toast.success('Link deleted');
+        await fetchData();
+      } catch {
+        toast.error('Failed to delete link');
+      }
+    },
+    [fetchData],
+  );
 
-  const handleToggleEnabled = useCallback(async (link: LinktreeLink) => {
-    try {
-      await fetchJson(`${BASE}/links/${link.id}`, {
-        method: 'PUT',
-        body: JSON.stringify({ enabled: !link.enabled }),
-      });
-      await fetchData();
-    } catch {
-      toast.error('Failed to toggle link');
-    }
-  }, [fetchData]);
+  const handleToggleEnabled = useCallback(
+    async (link: LinktreeLink) => {
+      try {
+        await fetchJson(`${BASE}/links/${link.id}`, {
+          method: 'PUT',
+          body: JSON.stringify({ enabled: !link.enabled }),
+        });
+        await fetchData();
+      } catch {
+        toast.error('Failed to toggle link');
+      }
+    },
+    [fetchData],
+  );
 
-  const handleMove = useCallback(async (index: number, direction: 'up' | 'down') => {
-    const sorted = [...links].sort((a, b) => a.order - b.order);
-    const swapIndex = direction === 'up' ? index - 1 : index + 1;
-    if (swapIndex < 0 || swapIndex >= sorted.length) return;
+  const handleMove = useCallback(
+    async (index: number, direction: 'up' | 'down') => {
+      const sorted = [...links].sort((a, b) => a.order - b.order);
+      const swapIndex = direction === 'up' ? index - 1 : index + 1;
+      if (swapIndex < 0 || swapIndex >= sorted.length) return;
 
-    const ids = sorted.map((l) => l.id);
-    [ids[index], ids[swapIndex]] = [ids[swapIndex], ids[index]];
+      const ids = sorted.map((l) => l.id);
+      [ids[index], ids[swapIndex]] = [ids[swapIndex], ids[index]];
 
-    try {
-      await fetchJson(`${BASE}/reorder`, {
-        method: 'PUT',
-        body: JSON.stringify({ orderedIds: ids }),
-      });
-      await fetchData();
-    } catch {
-      toast.error('Failed to reorder');
-    }
-  }, [links, fetchData]);
+      try {
+        await fetchJson(`${BASE}/reorder`, {
+          method: 'PUT',
+          body: JSON.stringify({ orderedIds: ids }),
+        });
+        await fetchData();
+      } catch {
+        toast.error('Failed to reorder');
+      }
+    },
+    [links, fetchData],
+  );
 
   const handleSaveSettings = useCallback(async () => {
     setSaving(true);
@@ -464,9 +496,10 @@ export function LinktreeTab() {
   const isTemplateAdded = (template: QuickAddTemplate) =>
     existingUrls.has(template.url.toLowerCase().replace(/\/$/, ''));
 
-  const filteredTemplates = quickAddCategory === 'all'
-    ? QUICK_ADD_TEMPLATES
-    : QUICK_ADD_TEMPLATES.filter((t) => t.category === quickAddCategory);
+  const filteredTemplates =
+    quickAddCategory === 'all'
+      ? QUICK_ADD_TEMPLATES
+      : QUICK_ADD_TEMPLATES.filter((t) => t.category === quickAddCategory);
 
   // Social profiles configured count
   const socialProfileCount = Object.values(settings?.socialProfiles || {}).filter(Boolean).length;
@@ -516,7 +549,11 @@ export function LinktreeTab() {
             Settings
           </Button>
           <Button variant="outline" size="sm" onClick={handleCopyUrl} className="gap-1.5">
-            {copied ? <Check className="h-3.5 w-3.5 text-green-600" /> : <Copy className="h-3.5 w-3.5" />}
+            {copied ? (
+              <Check className="h-3.5 w-3.5 text-green-600" />
+            ) : (
+              <Copy className="h-3.5 w-3.5" />
+            )}
             Copy URL
           </Button>
           <Button
@@ -580,7 +617,10 @@ export function LinktreeTab() {
         <Card>
           <CardContent className="pt-4 pb-4">
             <div className="flex items-center gap-3">
-              <div className="flex items-center justify-center h-9 w-9 rounded-lg" style={{ backgroundColor: BRAND.goldLight }}>
+              <div
+                className="flex items-center justify-center h-9 w-9 rounded-lg"
+                style={{ backgroundColor: BRAND.goldLight }}
+              >
                 <MousePointer className="h-4 w-4" style={{ color: BRAND.gold }} />
               </div>
               <div>
@@ -622,7 +662,11 @@ export function LinktreeTab() {
             </a>
           </div>
           <Button variant="ghost" size="sm" onClick={handleCopyUrl} className="h-7 px-2">
-            {copied ? <Check className="h-3.5 w-3.5 text-green-600" /> : <Copy className="h-3.5 w-3.5" />}
+            {copied ? (
+              <Check className="h-3.5 w-3.5 text-green-600" />
+            ) : (
+              <Copy className="h-3.5 w-3.5" />
+            )}
           </Button>
         </CardContent>
       </Card>
@@ -633,7 +677,9 @@ export function LinktreeTab() {
           <CardContent className="py-3 px-4">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <span className="text-sm text-muted-foreground">Social profiles on public page:</span>
+                <span className="text-sm text-muted-foreground">
+                  Social profiles on public page:
+                </span>
                 <div className="flex items-center gap-1.5">
                   {SOCIAL_PLATFORMS.filter((p) => settings?.socialProfiles?.[p.key]).map((p) => (
                     <a
@@ -649,7 +695,12 @@ export function LinktreeTab() {
                   ))}
                 </div>
               </div>
-              <Button variant="ghost" size="sm" onClick={openSettings} className="h-7 text-xs text-muted-foreground">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={openSettings}
+                className="h-7 text-xs text-muted-foreground"
+              >
                 Edit
               </Button>
             </div>
@@ -674,15 +725,15 @@ export function LinktreeTab() {
               Add your company website, booking page, social profiles, and any other relevant links.
             </p>
             <div className="flex items-center gap-2">
-              <Button
-                variant="outline"
-                onClick={() => setQuickAddOpen(true)}
-                className="gap-1.5"
-              >
+              <Button variant="outline" onClick={() => setQuickAddOpen(true)} className="gap-1.5">
                 <Zap className="h-4 w-4" style={{ color: BRAND.gold }} />
                 Quick Add Templates
               </Button>
-              <Button onClick={() => openEdit()} className="text-white" style={{ backgroundColor: BRAND.navy }}>
+              <Button
+                onClick={() => openEdit()}
+                className="text-white"
+                style={{ backgroundColor: BRAND.navy }}
+              >
                 <Plus className="h-4 w-4 mr-1.5" />
                 Add Custom Link
               </Button>
@@ -692,7 +743,10 @@ export function LinktreeTab() {
       ) : (
         <div className="space-y-2">
           {sortedLinks.map((link, index) => (
-            <Card key={link.id} className={`transition-shadow hover:shadow-sm ${!link.enabled ? 'opacity-50' : ''}`}>
+            <Card
+              key={link.id}
+              className={`transition-shadow hover:shadow-sm ${!link.enabled ? 'opacity-50' : ''}`}
+            >
               <CardContent className="py-3 px-4">
                 <div className="flex items-center gap-3">
                   {/* Reorder */}
@@ -718,7 +772,9 @@ export function LinktreeTab() {
                     <div className="flex items-center gap-2">
                       <p className="text-sm font-medium truncate">{link.title}</p>
                       {!link.enabled && (
-                        <Badge variant="outline" className="text-[10px] px-1.5 py-0">Hidden</Badge>
+                        <Badge variant="outline" className="text-[10px] px-1.5 py-0">
+                          Hidden
+                        </Badge>
                       )}
                     </div>
                     <a
@@ -811,7 +867,9 @@ export function LinktreeTab() {
                 <div
                   key={templateKey}
                   className={`flex items-center gap-3 p-3 rounded-lg border transition-colors ${
-                    added ? 'bg-green-50/50 border-green-200/50' : 'bg-white border-gray-200 hover:border-gray-300'
+                    added
+                      ? 'bg-green-50/50 border-green-200/50'
+                      : 'bg-white border-gray-200 hover:border-gray-300'
                   }`}
                 >
                   <div
@@ -827,7 +885,10 @@ export function LinktreeTab() {
                     <p className="text-xs text-muted-foreground truncate">{template.description}</p>
                   </div>
                   {added ? (
-                    <Badge variant="outline" className="text-[10px] text-green-700 border-green-300 bg-green-50">
+                    <Badge
+                      variant="outline"
+                      className="text-[10px] text-green-700 border-green-300 bg-green-50"
+                    >
                       Added
                     </Badge>
                   ) : (
@@ -852,7 +913,9 @@ export function LinktreeTab() {
           </div>
 
           <DialogFooter>
-            <Button variant="outline" onClick={() => setQuickAddOpen(false)}>Done</Button>
+            <Button variant="outline" onClick={() => setQuickAddOpen(false)}>
+              Done
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -900,7 +963,9 @@ export function LinktreeTab() {
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setEditDialog(false)}>Cancel</Button>
+            <Button variant="outline" onClick={() => setEditDialog(false)}>
+              Cancel
+            </Button>
             <Button
               onClick={handleSaveLink}
               disabled={saving || !formTitle.trim() || !formUrl.trim()}
@@ -925,19 +990,31 @@ export function LinktreeTab() {
           <div className="space-y-5 py-2">
             {/* General */}
             <div className="space-y-4">
-              <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">General</h3>
+              <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
+                General
+              </h3>
               <div className="space-y-1.5">
                 <Label className="text-sm font-medium">Page Title</Label>
                 <Input value={sTitle} onChange={(e) => setSTitle(e.target.value)} maxLength={100} />
               </div>
               <div className="space-y-1.5">
                 <Label className="text-sm font-medium">Bio / Tagline</Label>
-                <Textarea value={sBio} onChange={(e) => setSBio(e.target.value)} rows={2} maxLength={200} />
+                <Textarea
+                  value={sBio}
+                  onChange={(e) => setSBio(e.target.value)}
+                  rows={2}
+                  maxLength={200}
+                />
               </div>
               <div className="space-y-1.5">
                 <Label className="text-sm font-medium">Theme</Label>
-                <Select value={sTheme} onValueChange={(v) => setSTheme(v as LinktreeSettings['theme'])}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
+                <Select
+                  value={sTheme}
+                  onValueChange={(v) => setSTheme(v as LinktreeSettings['theme'])}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="navy">Navy (Brand Default)</SelectItem>
                     <SelectItem value="gold">Gold Accent</SelectItem>
@@ -951,7 +1028,9 @@ export function LinktreeTab() {
             {/* Social Profiles */}
             <div className="space-y-3">
               <div>
-                <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">Social Profiles</h3>
+                <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
+                  Social Profiles
+                </h3>
                 <p className="text-xs text-muted-foreground mt-0.5">
                   Displayed as icon buttons below your bio on the public page
                 </p>
@@ -996,7 +1075,9 @@ export function LinktreeTab() {
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setSettingsDialog(false)}>Cancel</Button>
+            <Button variant="outline" onClick={() => setSettingsDialog(false)}>
+              Cancel
+            </Button>
             <Button
               onClick={handleSaveSettings}
               disabled={saving}
@@ -1015,13 +1096,22 @@ export function LinktreeTab() {
       {/* ================================================================== */}
       <Dialog open={!!deleteConfirmId} onOpenChange={() => setDeleteConfirmId(null)}>
         <DialogContent className="max-w-sm">
-          <DialogHeader><DialogTitle>Delete Link</DialogTitle></DialogHeader>
+          <DialogHeader>
+            <DialogTitle>Delete Link</DialogTitle>
+          </DialogHeader>
           <p className="text-sm text-muted-foreground">
             Are you sure you want to delete this link? This cannot be undone.
           </p>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setDeleteConfirmId(null)}>Cancel</Button>
-            <Button variant="destructive" onClick={() => deleteConfirmId && handleDelete(deleteConfirmId)}>Delete</Button>
+            <Button variant="outline" onClick={() => setDeleteConfirmId(null)}>
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={() => deleteConfirmId && handleDelete(deleteConfirmId)}
+            >
+              Delete
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

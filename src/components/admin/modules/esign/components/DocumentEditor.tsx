@@ -8,15 +8,7 @@ import React, { useState, useCallback } from 'react';
 import { Button } from '../../../../ui/button';
 import { Badge } from '../../../../ui/badge';
 import { Card } from '../../../../ui/card';
-import {
-  ArrowLeft,
-  Send,
-  Save,
-  Users,
-  FileText,
-  AlertCircle,
-  CheckCircle2,
-} from 'lucide-react';
+import { ArrowLeft, Send, Save, Users, FileText, AlertCircle, CheckCircle2 } from 'lucide-react';
 import { PDFViewer } from './PDFViewer';
 import { FieldPalette } from './FieldPalette';
 import { SignerManager } from './SignerManager';
@@ -26,10 +18,7 @@ import type { Client } from '../../client-management/types';
 interface DocumentEditorProps {
   envelope: EsignEnvelope;
   client: Client;
-  onSave?: (updates: {
-    signers: SignerFormData[];
-    fields: EsignField[];
-  }) => Promise<void>;
+  onSave?: (updates: { signers: SignerFormData[]; fields: EsignField[] }) => Promise<void>;
   onSend?: () => Promise<void>;
   onBack?: () => void;
   saving?: boolean;
@@ -53,13 +42,11 @@ export function DocumentEditor({
       order: s.order,
       otpRequired: s.otp_required || false,
       accessCode: s.access_code || '',
-    })) || []
+    })) || [],
   );
 
   const [fields, setFields] = useState<EsignField[]>(envelope.fields || []);
-  const [selectedSignerId, setSelectedSignerId] = useState<string | undefined>(
-    signers[0]?.email
-  );
+  const [selectedSignerId, setSelectedSignerId] = useState<string | undefined>(signers[0]?.email);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [showValidationErrors, setShowValidationErrors] = useState(false);
 
@@ -93,30 +80,22 @@ export function DocumentEditor({
 
   // ==================== FIELD MANAGEMENT ====================
 
-  const handleFieldPlace = useCallback(
-    (newField: Omit<EsignField, 'id'>) => {
-      const fieldWithId: EsignField = {
-        ...newField,
-        id: `field-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-      };
+  const handleFieldPlace = useCallback((newField: Omit<EsignField, 'id'>) => {
+    const fieldWithId: EsignField = {
+      ...newField,
+      id: `field-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+    };
 
-      setFields((prev) => [...prev, fieldWithId]);
-      setHasUnsavedChanges(true);
-    },
-    []
-  );
+    setFields((prev) => [...prev, fieldWithId]);
+    setHasUnsavedChanges(true);
+  }, []);
 
-  const handleFieldUpdate = useCallback(
-    (fieldId: string, updates: Partial<EsignField>) => {
-      setFields((prev) =>
-        prev.map((field) =>
-          field.id === fieldId ? { ...field, ...updates } : field
-        )
-      );
-      setHasUnsavedChanges(true);
-    },
-    []
-  );
+  const handleFieldUpdate = useCallback((fieldId: string, updates: Partial<EsignField>) => {
+    setFields((prev) =>
+      prev.map((field) => (field.id === fieldId ? { ...field, ...updates } : field)),
+    );
+    setHasUnsavedChanges(true);
+  }, []);
 
   const handleFieldDelete = useCallback((fieldId: string) => {
     setFields((prev) => prev.filter((field) => field.id !== fieldId));
@@ -187,21 +166,14 @@ export function DocumentEditor({
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
             {onBack && (
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={onBack}
-                className="h-8"
-              >
+              <Button variant="ghost" size="sm" onClick={onBack} className="h-8">
                 <ArrowLeft className="h-4 w-4 mr-1" />
                 Back
               </Button>
             )}
             <div>
               <h2 className="font-semibold text-lg">{envelope.title}</h2>
-              <p className="text-sm text-muted-foreground">
-                Prepare document for signing
-              </p>
+              <p className="text-sm text-muted-foreground">Prepare document for signing</p>
             </div>
           </div>
 
@@ -212,11 +184,7 @@ export function DocumentEditor({
               </Badge>
             )}
 
-            <Button
-              variant="outline"
-              onClick={handleSave}
-              disabled={saving || !hasUnsavedChanges}
-            >
+            <Button variant="outline" onClick={handleSave} disabled={saving || !hasUnsavedChanges}>
               {saving ? (
                 <span>Saving...</span>
               ) : (
@@ -251,9 +219,7 @@ export function DocumentEditor({
           <div className="flex items-start gap-2">
             <AlertCircle className="h-5 w-5 text-red-600 mt-0.5 flex-shrink-0" />
             <div className="flex-1">
-              <h3 className="font-semibold text-red-900 mb-1">
-                Cannot send document
-              </h3>
+              <h3 className="font-semibold text-red-900 mb-1">Cannot send document</h3>
               <ul className="text-sm text-red-700 space-y-1">
                 {validationErrors.map((error, idx) => (
                   <li key={idx}>• {error}</li>
@@ -333,22 +299,16 @@ export function DocumentEditor({
                     <div
                       className="w-3 h-3 rounded-full flex-shrink-0"
                       style={{
-                        backgroundColor: [
-                          '#6d28d9',
-                          '#0891b2',
-                          '#059669',
-                          '#ea580c',
-                          '#dc2626',
-                        ][idx % 5],
+                        backgroundColor: ['#6d28d9', '#0891b2', '#059669', '#ea580c', '#dc2626'][
+                          idx % 5
+                        ],
                       }}
                     />
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-medium truncate">{signer.name}</p>
                       <p className="text-xs text-muted-foreground truncate">
                         {fields.filter((f) => f.signer_id === signer.email).length} field
-                        {fields.filter((f) => f.signer_id === signer.email).length !== 1
-                          ? 's'
-                          : ''}
+                        {fields.filter((f) => f.signer_id === signer.email).length !== 1 ? 's' : ''}
                       </p>
                     </div>
                   </div>

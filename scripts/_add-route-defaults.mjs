@@ -34,7 +34,10 @@ const pairs = [
   ['src/components/pages/RiskManagementDashboardPage.tsx', 'RiskManagementDashboardPage'],
   ['src/components/pages/MedicalAidDashboardPage.tsx', 'MedicalAidDashboardPage'],
   ['src/components/pages/RetirementPlanningDashboardPage.tsx', 'RetirementPlanningDashboardPage'],
-  ['src/components/pages/InvestmentManagementDashboardPage.tsx', 'InvestmentManagementDashboardPage'],
+  [
+    'src/components/pages/InvestmentManagementDashboardPage.tsx',
+    'InvestmentManagementDashboardPage',
+  ],
   ['src/components/pages/EmployeeBenefitsDashboardPage.tsx', 'EmployeeBenefitsDashboardPage'],
   ['src/components/pages/TaxPlanningDashboardPage.tsx', 'TaxPlanningDashboardPage'],
   ['src/components/pages/EstatePlanningDashboardPage.tsx', 'EstatePlanningDashboardPage'],
@@ -74,7 +77,7 @@ const pairs = [
 
 for (const [rel, name] of pairs) {
   const full = path.join(root, rel);
-  let code = fs.readFileSync(full, 'utf8');
+  const code = fs.readFileSync(full, 'utf8');
   if (/\bexport\s+default\b/.test(code)) {
     console.log('skip:', rel);
     continue;

@@ -33,10 +33,7 @@ describe('mergeTaskReorderIntoList', () => {
       task('progress-1', 'in_progress', 0),
     ];
 
-    const reorderedTasks = [
-      task('progress-1', 'in_progress', 0),
-      task('new-1', 'in_progress', 1),
-    ];
+    const reorderedTasks = [task('progress-1', 'in_progress', 0), task('new-1', 'in_progress', 1)];
 
     const merged = mergeTaskReorderIntoList(previousTasks, reorderedTasks);
 

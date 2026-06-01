@@ -368,17 +368,19 @@ function inferPrepareCursorFromItems(
 function withArticleNotificationJobDefaults(job: ArticleNotificationJob): ArticleNotificationJob {
   const items = Array.isArray(job.items)
     ? job.items.map((item) => ({
-      email: item.email,
-      firstName: item.firstName,
-      name: item.name,
-      trackingToken: item.trackingToken ?? null,
-    }))
+        email: item.email,
+        firstName: item.firstName,
+        name: item.name,
+        trackingToken: item.trackingToken ?? null,
+      }))
     : [];
-  const recipientCount = typeof job.recipientCount === 'number' && Number.isFinite(job.recipientCount)
-    ? job.recipientCount
-    : items.length;
+  const recipientCount =
+    typeof job.recipientCount === 'number' && Number.isFinite(job.recipientCount)
+      ? job.recipientCount
+      : items.length;
   const prepareCursor = clampInteger(
-    (job as Partial<ArticleNotificationJob>).prepareCursor ?? inferPrepareCursorFromItems(job.kind, items),
+    (job as Partial<ArticleNotificationJob>).prepareCursor ??
+      inferPrepareCursorFromItems(job.kind, items),
     0,
     items.length,
   );
@@ -389,7 +391,11 @@ function withArticleNotificationJobDefaults(job: ArticleNotificationJob): Articl
     currentIndex: clampInteger(job.currentIndex, 0, recipientCount),
     prepareCursor,
     items,
-    lastProgressAt: (job as Partial<ArticleNotificationJob>).lastProgressAt ?? job.updatedAt ?? job.createdAt ?? null,
+    lastProgressAt:
+      (job as Partial<ArticleNotificationJob>).lastProgressAt ??
+      job.updatedAt ??
+      job.createdAt ??
+      null,
     lastPreparedAt: (job as Partial<ArticleNotificationJob>).lastPreparedAt ?? null,
     lastDeliveredAt: (job as Partial<ArticleNotificationJob>).lastDeliveredAt ?? null,
     lastError: job.lastError ?? null,
@@ -398,7 +404,9 @@ function withArticleNotificationJobDefaults(job: ArticleNotificationJob): Articl
   };
 }
 
-function getJobLastProgressTimestamp(job: Pick<ArticleNotificationJob, 'lastProgressAt' | 'updatedAt' | 'createdAt'>): number | null {
+function getJobLastProgressTimestamp(
+  job: Pick<ArticleNotificationJob, 'lastProgressAt' | 'updatedAt' | 'createdAt'>,
+): number | null {
   const candidate = job.lastProgressAt || job.updatedAt || job.createdAt;
   const timestamp = candidate ? new Date(candidate).getTime() : Number.NaN;
   return Number.isFinite(timestamp) ? timestamp : null;
@@ -437,7 +445,9 @@ function isArticleNotificationJobStuck(
   return Date.now() - lastProgressTs >= STUCK_JOB_THRESHOLD_MS;
 }
 
-async function getArticleNotificationJobRecord(jobId: string): Promise<ArticleNotificationJob | null> {
+async function getArticleNotificationJobRecord(
+  jobId: string,
+): Promise<ArticleNotificationJob | null> {
   if (!jobId) return null;
   const job = (await kv.get(notificationJobKey(jobId))) as ArticleNotificationJob | null;
   return job ? withArticleNotificationJobDefaults(job) : null;
@@ -461,7 +471,9 @@ async function persistArticleNotificationCampaign(
 }
 
 async function getArticleNotificationProcessorStateRecord(): Promise<ArticleNotificationProcessorState | null> {
-  return (await kv.get(ARTICLE_NOTIFICATION_PROCESSOR_STATE_KEY)) as ArticleNotificationProcessorState | null;
+  return (await kv.get(
+    ARTICLE_NOTIFICATION_PROCESSOR_STATE_KEY,
+  )) as ArticleNotificationProcessorState | null;
 }
 
 async function persistArticleNotificationProcessorState(
@@ -471,17 +483,32 @@ async function persistArticleNotificationProcessorState(
 }
 
 async function buildArticleNotificationProcessorState(
-  input: Omit<ArticleNotificationProcessorState, 'activeJobCount' | 'queuedJobCount' | 'processingJobCount' | 'stuckJobCount' | 'staleJobThresholdMs' | 'stuckJobs'>,
+  input: Omit<
+    ArticleNotificationProcessorState,
+    | 'activeJobCount'
+    | 'queuedJobCount'
+    | 'processingJobCount'
+    | 'stuckJobCount'
+    | 'staleJobThresholdMs'
+    | 'stuckJobs'
+  >,
 ): Promise<ArticleNotificationProcessorState> {
-  const allJobs = (await kv.getByPrefix(ARTICLE_NOTIFICATION_JOB_PREFIX) as ArticleNotificationJob[])
-    .map(withArticleNotificationJobDefaults);
-  const activeJobs = allJobs.filter((job) => job.status === 'queued' || job.status === 'processing');
+  const allJobs = (
+    (await kv.getByPrefix(ARTICLE_NOTIFICATION_JOB_PREFIX)) as ArticleNotificationJob[]
+  ).map(withArticleNotificationJobDefaults);
+  const activeJobs = allJobs.filter(
+    (job) => job.status === 'queued' || job.status === 'processing',
+  );
   const queuedJobCount = activeJobs.filter((job) => job.status === 'queued').length;
   const processingJobCount = activeJobs.filter((job) => job.status === 'processing').length;
   const stuckJobs = activeJobs
     .map((job) => {
-      const pendingCountEstimate = Math.max(job.recipientCount - Math.min(job.currentIndex, job.recipientCount), 0);
-      const unpreparedCount = job.kind === 'publish' ? Math.max(job.recipientCount - job.prepareCursor, 0) : 0;
+      const pendingCountEstimate = Math.max(
+        job.recipientCount - Math.min(job.currentIndex, job.recipientCount),
+        0,
+      );
+      const unpreparedCount =
+        job.kind === 'publish' ? Math.max(job.recipientCount - job.prepareCursor, 0) : 0;
       const phase = getJobPhase(job, unpreparedCount, pendingCountEstimate);
       if (!isArticleNotificationJobStuck(job, phase)) return null;
 
@@ -602,26 +629,35 @@ function mapJobTrackingRecords(
 ): ArticleEmailTrackingRecord[] {
   const recordByToken = new Map(records.map((record) => [record.token, record]));
   return job.items
-    .map((item) => item.trackingToken ? recordByToken.get(item.trackingToken) ?? null : null)
+    .map((item) => (item.trackingToken ? (recordByToken.get(item.trackingToken) ?? null) : null))
     .filter((record): record is ArticleEmailTrackingRecord => Boolean(record));
 }
 
-async function hydrateArticleNotificationJob(job: ArticleNotificationJob): Promise<ArticleNotificationJobSnapshot> {
+async function hydrateArticleNotificationJob(
+  job: ArticleNotificationJob,
+): Promise<ArticleNotificationJobSnapshot> {
   const normalizedJob = withArticleNotificationJobDefaults(job);
   const articleRecords = await listArticleEmailTrackingRecords(normalizedJob.articleId);
   const recordByToken = new Map(articleRecords.map((record) => [record.token, record]));
   const trackingRecords = mapJobTrackingRecords(normalizedJob, articleRecords);
-  const preparedCount = normalizedJob.items.filter((item) => item.trackingToken && recordByToken.has(item.trackingToken)).length;
+  const preparedCount = normalizedJob.items.filter(
+    (item) => item.trackingToken && recordByToken.has(item.trackingToken),
+  ).length;
   const unpreparedCount = Math.max(normalizedJob.recipientCount - preparedCount, 0);
 
   const totals = summarizeTrackedRecipientDeliveries(trackingRecords);
   const failedTerminalCount = totals.failedTerminal;
   const processedCount = totals.sent + failedTerminalCount;
   const pendingCount = totals.pending + unpreparedCount;
-  const phase = getJobPhase(normalizedJob, unpreparedCount, totals.pending + totals.sending + totals.failedRetryable);
-  const progressPercent = normalizedJob.recipientCount > 0
-    ? Math.round((processedCount / normalizedJob.recipientCount) * 1000) / 10
-    : 100;
+  const phase = getJobPhase(
+    normalizedJob,
+    unpreparedCount,
+    totals.pending + totals.sending + totals.failedRetryable,
+  );
+  const progressPercent =
+    normalizedJob.recipientCount > 0
+      ? Math.round((processedCount / normalizedJob.recipientCount) * 1000) / 10
+      : 100;
   const stuck = isArticleNotificationJobStuck(normalizedJob, phase);
 
   return {
@@ -662,7 +698,10 @@ async function preparePublishJobTrackingBatch(
   const indexesToPrepare: number[] = [];
   let nextPrepareCursor = Math.min(normalizedJob.prepareCursor, normalizedJob.items.length);
 
-  while (nextPrepareCursor < normalizedJob.items.length && indexesToPrepare.length < TRACKING_PREPARE_BATCH_SIZE) {
+  while (
+    nextPrepareCursor < normalizedJob.items.length &&
+    indexesToPrepare.length < TRACKING_PREPARE_BATCH_SIZE
+  ) {
     const item = normalizedJob.items[nextPrepareCursor];
     if (!item?.trackingToken) {
       indexesToPrepare.push(nextPrepareCursor);
@@ -756,7 +795,7 @@ async function getActiveArticleNotificationJob(
   source: ArticleEmailTrackingSource,
   kind: ArticleNotificationJobKind,
 ): Promise<ArticleNotificationJob | null> {
-  const jobId = await kv.get(activeNotificationJobKey(articleId, source, kind)) as string | null;
+  const jobId = (await kv.get(activeNotificationJobKey(articleId, source, kind))) as string | null;
   if (!jobId) return null;
 
   const job = await getArticleNotificationJobRecord(jobId);
@@ -804,7 +843,9 @@ async function syncRetryJobRecipients(
 ): Promise<ArticleNotificationJobSnapshot> {
   const desiredItems = records.map(jobItemFromTrackingRecord);
   const nextItems = desiredItems;
-  const resolvedCount = records.filter((record) => isArticleEmailDeliveryTerminalStatus(record.deliveryStatus)).length;
+  const resolvedCount = records.filter((record) =>
+    isArticleEmailDeliveryTerminalStatus(record.deliveryStatus),
+  ).length;
 
   if (
     nextItems.length === job.items.length &&
@@ -866,7 +907,7 @@ async function resumeArticleNotificationJob(
 async function resolvePublishedArticleForDelivery(
   article: PublishedArticle,
 ): Promise<PublishedArticle> {
-  const stored = await kv.get(`article:${article.id}`) as {
+  const stored = (await kv.get(`article:${article.id}`)) as {
     status?: string;
     slug?: string;
     title?: string;
@@ -911,17 +952,13 @@ async function deliverTrackedNotificationRecord(
       const { html, text } = await createArticleNotificationEmail({
         firstName: record.recipientFirstName,
         articleTitle: publishedArticle.title,
-        articleExcerpt: publishedArticle.excerpt || 'A new article has been published on Navigate Wealth.',
+        articleExcerpt:
+          publishedArticle.excerpt || 'A new article has been published on Navigate Wealth.',
         articleUrl,
         unsubscribeUrl,
       });
 
-      await sendEmail(
-        record.recipientEmail,
-        `New article: ${publishedArticle.title}`,
-        html,
-        text,
-      );
+      await sendEmail(record.recipientEmail, `New article: ${publishedArticle.title}`, html, text);
 
       await markArticleEmailDeliverySent(record.token);
       return;
@@ -945,7 +982,8 @@ async function deliverTrackedNotificationRecord(
     }
   }
 
-  const failureStatus = lastFailure.disposition === 'terminal' ? 'failed_terminal' : 'failed_retryable';
+  const failureStatus =
+    lastFailure.disposition === 'terminal' ? 'failed_terminal' : 'failed_retryable';
   await markArticleEmailDeliveryFailed(record.token, lastFailure.message, failureStatus);
   throw new Error(lastFailure.message);
 }
@@ -974,7 +1012,10 @@ function getProfileEmail(profile: Record<string, unknown> | null | undefined): s
   return typeof email === 'string' && email.trim() ? email.trim().toLowerCase() : null;
 }
 
-function getProfileFirstName(profile: Record<string, unknown> | null | undefined, fallbackEmail: string): string {
+function getProfileFirstName(
+  profile: Record<string, unknown> | null | undefined,
+  fallbackEmail: string,
+): string {
   if (!profile) return extractFirstName(fallbackEmail);
 
   const personalInformation = (profile.personalInformation || {}) as Record<string, unknown>;
@@ -1008,7 +1049,7 @@ async function collectRecipientsFromNewsletterGroup(
   recipientMap: Map<string, ArticleNotificationRecipient>,
   requestedEmails: Set<string> | null,
 ): Promise<number> {
-  const group = await kv.get(NEWSLETTER_GROUP_KEY) as NewsletterGroup | null;
+  const group = (await kv.get(NEWSLETTER_GROUP_KEY)) as NewsletterGroup | null;
 
   if (!group) {
     log.warn('Newsletter Contacts group not found while resolving article notification recipients');
@@ -1039,7 +1080,7 @@ async function collectRecipientsFromNewsletterGroup(
 
   const profileKeys = clientIds.map((clientId) => `user_profile:${clientId}:personal_info`);
   for (const batch of chunkArray(profileKeys, PROFILE_LOOKUP_BATCH_SIZE)) {
-    const profiles = await kv.mget(batch) as Array<Record<string, unknown> | null | undefined>;
+    const profiles = (await kv.mget(batch)) as Array<Record<string, unknown> | null | undefined>;
 
     for (const profile of profiles) {
       const email = getProfileEmail(profile);
@@ -1071,7 +1112,9 @@ async function collectRecipientsFromRequestedLegacySubscriptions(
 
   for (const email of unresolvedEmails) {
     try {
-      const subscription = await kv.get(`${NEWSLETTER_PREFIX}${email}`) as NewsletterSubscription | null;
+      const subscription = (await kv.get(
+        `${NEWSLETTER_PREFIX}${email}`,
+      )) as NewsletterSubscription | null;
       if (!subscription || !subscription.confirmed || subscription.active === false) continue;
 
       const firstName = subscription.name || extractFirstName(email);
@@ -1095,10 +1138,10 @@ async function collectRecipientsFromRequestedLegacySubscriptions(
 async function listLegacyNewsletterSubscriptionPage(
   options?: LegacySubscriptionPageOptions,
 ): Promise<Array<{ key: string; value: NewsletterSubscription | null }>> {
-  return await kv.listByPrefix(NEWSLETTER_PREFIX, {
+  return (await kv.listByPrefix(NEWSLETTER_PREFIX, {
     startAfter: options?.startAfter,
     limit: options?.limit ?? LEGACY_SUBSCRIPTION_PAGE_SIZE,
-  }) as Array<{ key: string; value: NewsletterSubscription | null }>;
+  })) as Array<{ key: string; value: NewsletterSubscription | null }>;
 }
 
 async function collectRecipientsFromAllLegacySubscriptions(
@@ -1152,12 +1195,18 @@ async function collectArticleNotificationRecipients(
     try {
       await backfillLegacyNewsletterSubscribersToGroup();
     } catch (err) {
-      log.error('Legacy newsletter subscriber backfill failed before recipient collection (non-blocking)', err);
+      log.error(
+        'Legacy newsletter subscriber backfill failed before recipient collection (non-blocking)',
+        err,
+      );
     }
   }
 
   try {
-    const addedFromGroup = await collectRecipientsFromNewsletterGroup(recipientMap, requestedEmails);
+    const addedFromGroup = await collectRecipientsFromNewsletterGroup(
+      recipientMap,
+      requestedEmails,
+    );
     log.info('Collected article notification recipients from Newsletter Contacts group', {
       requestedRecipientCount: requestedEmails?.size ?? null,
       addedFromGroup,
@@ -1168,7 +1217,10 @@ async function collectArticleNotificationRecipients(
   }
 
   if (requestedEmails) {
-    const addedFromLegacyRequested = await collectRecipientsFromRequestedLegacySubscriptions(recipientMap, requestedEmails);
+    const addedFromLegacyRequested = await collectRecipientsFromRequestedLegacySubscriptions(
+      recipientMap,
+      requestedEmails,
+    );
     log.info('Resolved requested legacy newsletter recipients', {
       requestedRecipientCount: requestedEmails.size,
       addedFromLegacyRequested,
@@ -1189,12 +1241,16 @@ async function collectArticleNotificationRecipients(
   return [...recipientMap.values()].sort((a, b) => a.email.localeCompare(b.email));
 }
 
-async function listJobTrackingRecords(job: ArticleNotificationJob): Promise<ArticleEmailTrackingRecord[]> {
+async function listJobTrackingRecords(
+  job: ArticleNotificationJob,
+): Promise<ArticleEmailTrackingRecord[]> {
   const articleRecords = await listArticleEmailTrackingRecords(job.articleId);
   return mapJobTrackingRecords(job, articleRecords);
 }
 
-async function listReadyJobTrackingRecords(job: ArticleNotificationJob): Promise<ArticleEmailTrackingRecord[]> {
+async function listReadyJobTrackingRecords(
+  job: ArticleNotificationJob,
+): Promise<ArticleEmailTrackingRecord[]> {
   const records = await listJobTrackingRecords(job);
   return records.filter((record) => isReadyToAttemptTrackingRecord(record));
 }
@@ -1278,7 +1334,9 @@ async function queueArticleNotificationJob(
  * Completes any in-flight publish/retry jobs for an article so a new blast or
  * retry queue can be created without colliding with active job pointers.
  */
-export async function finalizeActiveArticleNotificationJobsForPublish(articleId: string): Promise<void> {
+export async function finalizeActiveArticleNotificationJobsForPublish(
+  articleId: string,
+): Promise<void> {
   for (const kind of ['publish', 'retry_undelivered'] as const) {
     const job = await getActiveArticleNotificationJob(articleId, 'publish', kind);
     if (!job) continue;
@@ -1358,8 +1416,9 @@ export async function runArticleNotificationDelivery(
     const batch = recipients.slice(start, start + DELIVERY_BATCH_SIZE);
     const results = await Promise.allSettled(
       batch.map((recipient) =>
-        createAndDeliverTrackingRecord(article, recipient, options?.source ?? 'publish')
-          .then(() => ({ email: recipient.email })),
+        createAndDeliverTrackingRecord(article, recipient, options?.source ?? 'publish').then(
+          () => ({ email: recipient.email }),
+        ),
       ),
     );
 
@@ -1399,7 +1458,10 @@ export async function runArticleNotificationDelivery(
 export async function sendArticlePublishedNotifications(
   article: PublishedArticle,
 ): Promise<ArticleNotificationJobSnapshot> {
-  log.info('Queueing article publish notifications', { articleId: article.id, title: article.title });
+  log.info('Queueing article publish notifications', {
+    articleId: article.id,
+    title: article.title,
+  });
   const recipients = await collectArticleNotificationRecipients();
   return queueArticleNotificationJob(article, recipients, {
     kind: 'publish',
@@ -1419,10 +1481,7 @@ async function syncPublishNotificationCampaignFromTrackingState(
 ): Promise<ArticleNotificationCampaign | null> {
   const blast = options?.blast;
   const blastFullyDelivered = Boolean(
-    blast
-    && blast.recipientCount > 0
-    && blast.failed === 0
-    && blast.sent === blast.recipientCount,
+    blast && blast.recipientCount > 0 && blast.failed === 0 && blast.sent === blast.recipientCount,
   );
 
   let totals: ReturnType<typeof summarizeTrackedRecipientDeliveries>;
@@ -1490,7 +1549,7 @@ async function syncPublishNotificationCampaignFromTrackingState(
     createdAt: existing?.createdAt ?? now,
     updatedAt: now,
     startedAt: existing?.startedAt ?? now,
-    completedAt: !workRemaining ? now : existing?.completedAt ?? null,
+    completedAt: !workRemaining ? now : (existing?.completedAt ?? null),
     lastActivityAt: now,
     lastError: null,
     // Keep null so getArticleNotificationCampaign() does not merge processor state
@@ -1520,9 +1579,8 @@ export async function sendArticlePublishedNotificationsBlastThenRetryQueue(
   let publishCampaign: ArticleNotificationCampaign | null = null;
 
   try {
-    const blastFullyDelivered = blast.recipientCount > 0
-      && blast.failed === 0
-      && blast.sent === blast.recipientCount;
+    const blastFullyDelivered =
+      blast.recipientCount > 0 && blast.failed === 0 && blast.sent === blast.recipientCount;
 
     if (blast.recipientCount > 0 && !blastFullyDelivered) {
       const undelivered = await listUndeliveredArticleEmailTrackingRecords(article.id, 'publish');
@@ -1589,7 +1647,11 @@ export async function resumeArticleNotificationDelivery(
 ): Promise<ArticleNotificationJobSnapshot> {
   const source = options?.source ?? 'publish';
 
-  const activeRetryJob = await getActiveArticleNotificationJob(article.id, source, 'retry_undelivered');
+  const activeRetryJob = await getActiveArticleNotificationJob(
+    article.id,
+    source,
+    'retry_undelivered',
+  );
   if (activeRetryJob) {
     log.info('Resuming active article notification retry job', {
       articleId: article.id,
@@ -1628,13 +1690,13 @@ export async function getArticleNotificationCampaign(
   return liveCampaign;
 }
 
-export async function listArticleNotificationCampaigns(
-  options?: {
-    articleId?: string;
-    source?: ArticleEmailTrackingSource;
-  },
-): Promise<ArticleNotificationCampaign[]> {
-  const campaigns = await kv.getByPrefix(ARTICLE_NOTIFICATION_CAMPAIGN_PREFIX) as ArticleNotificationCampaign[];
+export async function listArticleNotificationCampaigns(options?: {
+  articleId?: string;
+  source?: ArticleEmailTrackingSource;
+}): Promise<ArticleNotificationCampaign[]> {
+  const campaigns = (await kv.getByPrefix(
+    ARTICLE_NOTIFICATION_CAMPAIGN_PREFIX,
+  )) as ArticleNotificationCampaign[];
 
   return campaigns
     .filter((campaign) => {
@@ -1642,7 +1704,11 @@ export async function listArticleNotificationCampaigns(
       if (options?.source && campaign.source !== options.source) return false;
       return true;
     })
-    .sort((a, b) => new Date(b.updatedAt || b.createdAt).getTime() - new Date(a.updatedAt || a.createdAt).getTime());
+    .sort(
+      (a, b) =>
+        new Date(b.updatedAt || b.createdAt).getTime() -
+        new Date(a.updatedAt || a.createdAt).getTime(),
+    );
 }
 
 export async function getLatestArticleNotificationCampaign(
@@ -1653,11 +1719,15 @@ export async function getLatestArticleNotificationCampaign(
   if (campaigns.length === 0) return null;
 
   const trackingCampaignId = PUBLISH_TRACKING_CAMPAIGN_ID(articleId);
-  const preferred = campaigns.find((campaign) => (
-    campaign.id === trackingCampaignId && campaign.sentCount > 0
-  )) ?? campaigns.find((campaign) => (
-    campaign.status !== 'queue_failed' || campaign.sentCount > 0 || campaign.intendedRecipientCount > 0
-  )) ?? campaigns[0];
+  const preferred =
+    campaigns.find((campaign) => campaign.id === trackingCampaignId && campaign.sentCount > 0) ??
+    campaigns.find(
+      (campaign) =>
+        campaign.status !== 'queue_failed' ||
+        campaign.sentCount > 0 ||
+        campaign.intendedRecipientCount > 0,
+    ) ??
+    campaigns[0];
 
   return getArticleNotificationCampaign(preferred.id);
 }
@@ -1700,9 +1770,10 @@ export async function createArticleNotificationQueueFailedCampaign(
   const failedTerminal = blast?.failed ?? 0;
   const processedCount = sent + failedTerminal;
   const progressPercent = intended > 0 ? Math.round((processedCount / intended) * 1000) / 10 : 0;
-  const existing = blast && source === 'publish'
-    ? await getArticleNotificationCampaignRecord(PUBLISH_TRACKING_CAMPAIGN_ID(article.id))
-    : null;
+  const existing =
+    blast && source === 'publish'
+      ? await getArticleNotificationCampaignRecord(PUBLISH_TRACKING_CAMPAIGN_ID(article.id))
+      : null;
 
   let status: ArticleNotificationCampaignStatus;
   if (sent <= 0) {
@@ -1714,9 +1785,10 @@ export async function createArticleNotificationQueueFailedCampaign(
   }
 
   const campaign: ArticleNotificationCampaign = {
-    id: blast && source === 'publish'
-      ? PUBLISH_TRACKING_CAMPAIGN_ID(article.id)
-      : crypto.randomUUID(),
+    id:
+      blast && source === 'publish'
+        ? PUBLISH_TRACKING_CAMPAIGN_ID(article.id)
+        : crypto.randomUUID(),
     articleId: article.id,
     articleTitle: article.title,
     articleSlug: article.slug,
@@ -1791,20 +1863,18 @@ export async function processArticleNotificationJobs(
 ): Promise<ArticleNotificationProcessorResult> {
   const mode = options?.mode ?? 'manual';
   const defaultMaxJobs = mode === 'manual' ? DEFAULT_MANUAL_MAX_JOBS : DEFAULT_AUTOMATED_MAX_JOBS;
-  const defaultMaxBatchesPerJob = mode === 'manual'
-    ? DEFAULT_MANUAL_MAX_BATCHES_PER_JOB
-    : DEFAULT_AUTOMATED_MAX_BATCHES_PER_JOB;
+  const defaultMaxBatchesPerJob =
+    mode === 'manual' ? DEFAULT_MANUAL_MAX_BATCHES_PER_JOB : DEFAULT_AUTOMATED_MAX_BATCHES_PER_JOB;
   const requestedMaxJobs = Math.max(1, Math.min(options?.maxJobs ?? defaultMaxJobs, 5));
-  const requestedMaxBatchesPerJob = Math.max(1, Math.min(
-    options?.maxBatchesPerJob ?? defaultMaxBatchesPerJob,
-    5,
-  ));
-  const maxJobs = mode === 'manual'
-    ? requestedMaxJobs
-    : Math.max(defaultMaxJobs, requestedMaxJobs);
-  const maxBatchesPerJob = mode === 'manual'
-    ? requestedMaxBatchesPerJob
-    : Math.max(defaultMaxBatchesPerJob, requestedMaxBatchesPerJob);
+  const requestedMaxBatchesPerJob = Math.max(
+    1,
+    Math.min(options?.maxBatchesPerJob ?? defaultMaxBatchesPerJob, 5),
+  );
+  const maxJobs = mode === 'manual' ? requestedMaxJobs : Math.max(defaultMaxJobs, requestedMaxJobs);
+  const maxBatchesPerJob =
+    mode === 'manual'
+      ? requestedMaxBatchesPerJob
+      : Math.max(defaultMaxBatchesPerJob, requestedMaxBatchesPerJob);
   const previousProcessorState = await getArticleNotificationProcessorStateRecord();
 
   try {
@@ -1816,7 +1886,9 @@ export async function processArticleNotificationJobs(
         jobsToProcess.push(job);
       }
     } else {
-      const allJobs = await kv.getByPrefix(ARTICLE_NOTIFICATION_JOB_PREFIX) as ArticleNotificationJob[];
+      const allJobs = (await kv.getByPrefix(
+        ARTICLE_NOTIFICATION_JOB_PREFIX,
+      )) as ArticleNotificationJob[];
       const queuedJobs = allJobs
         .filter((job) => job.status === 'queued' || job.status === 'processing')
         .sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
@@ -1930,17 +2002,22 @@ export async function processArticleNotificationJobs(
         }
 
         const refreshedSnapshot = await hydrateArticleNotificationJob(workingJob);
-        const snapshot = refreshedSnapshot.pendingCount === 0 && refreshedSnapshot.sendingCount === 0
-          ? await finalizeArticleNotificationJob(workingJob)
-          : await (async () => {
-            const releasableJob = await releaseArticleNotificationJobLease(workingJob, {
-              currentIndex: refreshedSnapshot.currentIndex,
-            });
-            return hydrateArticleNotificationJob(releasableJob);
-          })();
+        const snapshot =
+          refreshedSnapshot.pendingCount === 0 && refreshedSnapshot.sendingCount === 0
+            ? await finalizeArticleNotificationJob(workingJob)
+            : await (async () => {
+                const releasableJob = await releaseArticleNotificationJobLease(workingJob, {
+                  currentIndex: refreshedSnapshot.currentIndex,
+                });
+                return hydrateArticleNotificationJob(releasableJob);
+              })();
 
         snapshots.push(snapshot);
-        if (didAdvanceJob || snapshot.status === 'completed' || snapshot.status === 'completed_with_failures') {
+        if (
+          didAdvanceJob ||
+          snapshot.status === 'completed' ||
+          snapshot.status === 'completed_with_failures'
+        ) {
           advancedJobs++;
         }
 
@@ -2000,44 +2077,45 @@ export async function processArticleNotificationJobs(
       jobs: snapshots,
     };
 
-    await persistArticleNotificationProcessorState(await buildArticleNotificationProcessorState({
-      mode,
-      lastHeartbeatAt: nowIso(),
-      lastRunAt: nowIso(),
-      lastSuccessAt: nowIso(),
-      lastError: null,
-      maxJobs,
-      maxBatchesPerJob,
-      processedJobs: result.processedJobs,
-      advancedJobs: result.advancedJobs,
-      completedJobs: result.completedJobs,
-    }));
+    await persistArticleNotificationProcessorState(
+      await buildArticleNotificationProcessorState({
+        mode,
+        lastHeartbeatAt: nowIso(),
+        lastRunAt: nowIso(),
+        lastSuccessAt: nowIso(),
+        lastError: null,
+        maxJobs,
+        maxBatchesPerJob,
+        processedJobs: result.processedJobs,
+        advancedJobs: result.advancedJobs,
+        completedJobs: result.completedJobs,
+      }),
+    );
 
     return result;
   } catch (error) {
     const errorMessage = normalizeSendError(error);
-    await persistArticleNotificationProcessorState(await buildArticleNotificationProcessorState({
-      mode,
-      lastHeartbeatAt: nowIso(),
-      lastRunAt: nowIso(),
-      lastSuccessAt: previousProcessorState?.lastSuccessAt ?? null,
-      lastError: errorMessage,
-      maxJobs,
-      maxBatchesPerJob,
-      processedJobs: 0,
-      advancedJobs: 0,
-      completedJobs: 0,
-    }));
+    await persistArticleNotificationProcessorState(
+      await buildArticleNotificationProcessorState({
+        mode,
+        lastHeartbeatAt: nowIso(),
+        lastRunAt: nowIso(),
+        lastSuccessAt: previousProcessorState?.lastSuccessAt ?? null,
+        lastError: errorMessage,
+        maxJobs,
+        maxBatchesPerJob,
+        processedJobs: 0,
+        advancedJobs: 0,
+        completedJobs: 0,
+      }),
+    );
     throw error;
   }
 }
 
 function extractFirstName(email: string): string {
   const local = email.split('@')[0] || 'Subscriber';
-  const cleaned = local
-    .replace(/[._-]/g, ' ')
-    .replace(/\d+/g, '')
-    .trim();
+  const cleaned = local.replace(/[._-]/g, ' ').replace(/\d+/g, '').trim();
 
   if (!cleaned) return 'Subscriber';
   return cleaned.charAt(0).toUpperCase() + cleaned.slice(1).split(' ')[0];

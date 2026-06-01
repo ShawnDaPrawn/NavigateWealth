@@ -52,7 +52,7 @@ describe('fna-intake lifecycle', () => {
 
     vi.mocked(kv.set).mockImplementation(async (key: string, value: unknown) => {
       if (key.startsWith('fna-intake:session:')) sessions.set(key, value);
-      if (key.startsWith('fna-intake:client:')) pointers.set(key, (value as string));
+      if (key.startsWith('fna-intake:client:')) pointers.set(key, value as string);
       return undefined;
     });
 

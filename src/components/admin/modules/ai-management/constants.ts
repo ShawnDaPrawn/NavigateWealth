@@ -5,7 +5,14 @@
  * Guidelines: §5.3
  */
 
-import type { AIAgentConfig, AgentStatus, HandoffStatus, FeedbackRating, KBEntryType, KBEntryStatus } from './types';
+import type {
+  AIAgentConfig,
+  AgentStatus,
+  HandoffStatus,
+  FeedbackRating,
+  KBEntryType,
+  KBEntryStatus,
+} from './types';
 
 // ============================================================================
 // API ENDPOINTS (§5.3)
@@ -31,23 +38,32 @@ export const ENDPOINTS = {
   KB_DETAIL: (id: string) => `/ai-management/kb/${id}`,
   KB_STATS: '/ai-management/kb/stats',
   // Prompt Studio (Phase 3)
-  PROMPT_BUNDLE: (agentId: string, context: string) => `/ai-management/prompts/${agentId}/${context}`,
-  PROMPT_DRAFT: (agentId: string, context: string) => `/ai-management/prompts/${agentId}/${context}/draft`,
-  PROMPT_PUBLISH: (agentId: string, context: string) => `/ai-management/prompts/${agentId}/${context}/publish`,
-  PROMPT_VERSIONS: (agentId: string, context: string) => `/ai-management/prompts/${agentId}/${context}/versions`,
-  PROMPT_ROLLBACK: (agentId: string, context: string) => `/ai-management/prompts/${agentId}/${context}/rollback`,
-  PROMPT_SEED: (agentId: string, context: string) => `/ai-management/prompts/${agentId}/${context}/seed`,
+  PROMPT_BUNDLE: (agentId: string, context: string) =>
+    `/ai-management/prompts/${agentId}/${context}`,
+  PROMPT_DRAFT: (agentId: string, context: string) =>
+    `/ai-management/prompts/${agentId}/${context}/draft`,
+  PROMPT_PUBLISH: (agentId: string, context: string) =>
+    `/ai-management/prompts/${agentId}/${context}/publish`,
+  PROMPT_VERSIONS: (agentId: string, context: string) =>
+    `/ai-management/prompts/${agentId}/${context}/versions`,
+  PROMPT_ROLLBACK: (agentId: string, context: string) =>
+    `/ai-management/prompts/${agentId}/${context}/rollback`,
+  PROMPT_SEED: (agentId: string, context: string) =>
+    `/ai-management/prompts/${agentId}/${context}/seed`,
 } as const;
 
 // ============================================================================
 // AGENT STATUS CONFIG (§8.3 — Status colour vocabulary)
 // ============================================================================
 
-export const AGENT_STATUS_CONFIG: Record<AgentStatus, {
-  label: string;
-  badgeClass: string;
-  dotClass: string;
-}> = {
+export const AGENT_STATUS_CONFIG: Record<
+  AgentStatus,
+  {
+    label: string;
+    badgeClass: string;
+    dotClass: string;
+  }
+> = {
   active: {
     label: 'Active',
     badgeClass: 'bg-green-600 hover:bg-green-700 text-white',
@@ -69,11 +85,14 @@ export const AGENT_STATUS_CONFIG: Record<AgentStatus, {
 // HANDOFF STATUS CONFIG (§8.3)
 // ============================================================================
 
-export const HANDOFF_STATUS_CONFIG: Record<HandoffStatus, {
-  label: string;
-  badgeClass: string;
-  dotClass: string;
-}> = {
+export const HANDOFF_STATUS_CONFIG: Record<
+  HandoffStatus,
+  {
+    label: string;
+    badgeClass: string;
+    dotClass: string;
+  }
+> = {
   new: {
     label: 'New',
     badgeClass: 'bg-blue-600 hover:bg-blue-700 text-white',
@@ -100,11 +119,14 @@ export const HANDOFF_STATUS_CONFIG: Record<HandoffStatus, {
 // FEEDBACK RATING CONFIG
 // ============================================================================
 
-export const FEEDBACK_RATING_CONFIG: Record<FeedbackRating, {
-  label: string;
-  badgeClass: string;
-  icon: string;
-}> = {
+export const FEEDBACK_RATING_CONFIG: Record<
+  FeedbackRating,
+  {
+    label: string;
+    badgeClass: string;
+    icon: string;
+  }
+> = {
   positive: {
     label: 'Positive',
     badgeClass: 'bg-green-100 text-green-700',
@@ -125,7 +147,8 @@ export const DEFAULT_AGENTS: AIAgentConfig[] = [
   {
     id: 'vasco-public',
     name: 'Vasco (Public)',
-    description: 'Public-facing AI financial navigator on the Navigate Wealth website. Provides general financial education, product info, and lead qualification.',
+    description:
+      'Public-facing AI financial navigator on the Navigate Wealth website. Provides general financial education, product info, and lead qualification.',
     icon: 'Compass',
     status: 'active',
     model: 'gpt-4o',
@@ -152,7 +175,8 @@ export const DEFAULT_AGENTS: AIAgentConfig[] = [
   {
     id: 'vasco-authenticated',
     name: 'Vasco (Portal)',
-    description: 'Authenticated AI advisor in the client portal. Has access to user portfolio context, risk profiles, and personalised financial guidance.',
+    description:
+      'Authenticated AI advisor in the client portal. Has access to user portfolio context, risk profiles, and personalised financial guidance.',
     icon: 'Compass',
     status: 'active',
     model: 'gpt-4o',
@@ -175,7 +199,8 @@ export const DEFAULT_AGENTS: AIAgentConfig[] = [
   {
     id: 'advice-engine',
     name: 'AI Intelligence',
-    description: 'Admin-side AI assistant for the Advice Engine. Helps advisers draft Records of Advice and analyse client data.',
+    description:
+      'Admin-side AI assistant for the Advice Engine. Helps advisers draft Records of Advice and analyse client data.',
     icon: 'Brain',
     status: 'active',
     model: 'gpt-4o',
@@ -198,7 +223,8 @@ export const DEFAULT_AGENTS: AIAgentConfig[] = [
   {
     id: 'will-planner',
     name: 'Will Planner',
-    description: 'Estate planning assistant that guides users through will creation and estate duty considerations.',
+    description:
+      'Estate planning assistant that guides users through will creation and estate duty considerations.',
     icon: 'ScrollText',
     status: 'active',
     model: 'gpt-4o',
@@ -221,7 +247,8 @@ export const DEFAULT_AGENTS: AIAgentConfig[] = [
   {
     id: 'tax-advisor',
     name: 'Tax Advisor',
-    description: 'Tax planning assistant specialising in South African tax legislation, deductions, and optimisation strategies.',
+    description:
+      'Tax planning assistant specialising in South African tax legislation, deductions, and optimisation strategies.',
     icon: 'Calculator',
     status: 'active',
     model: 'gpt-4o',
@@ -267,12 +294,15 @@ export const TAB_CONFIG = [
 // KNOWLEDGE BASE CONFIG (Phase 2)
 // ============================================================================
 
-export const KB_ENTRY_TYPE_CONFIG: Record<KBEntryType, {
-  label: string;
-  icon: string;
-  badgeClass: string;
-  description: string;
-}> = {
+export const KB_ENTRY_TYPE_CONFIG: Record<
+  KBEntryType,
+  {
+    label: string;
+    icon: string;
+    badgeClass: string;
+    description: string;
+  }
+> = {
   qa: {
     label: 'Q&A',
     icon: 'HelpCircle',
@@ -305,11 +335,14 @@ export const KB_ENTRY_TYPE_CONFIG: Record<KBEntryType, {
   },
 } as const;
 
-export const KB_STATUS_CONFIG: Record<KBEntryStatus, {
-  label: string;
-  badgeClass: string;
-  dotClass: string;
-}> = {
+export const KB_STATUS_CONFIG: Record<
+  KBEntryStatus,
+  {
+    label: string;
+    badgeClass: string;
+    dotClass: string;
+  }
+> = {
   draft: {
     label: 'Draft',
     badgeClass: 'bg-gray-500 hover:bg-gray-600 text-white',

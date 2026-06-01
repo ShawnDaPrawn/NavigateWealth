@@ -63,15 +63,8 @@ export function DashboardModule({ onModuleChange, onViewTask }: DashboardModuleP
           TASKS + RECENT NOTES
           ======================================================================== */}
       <div className="grid gap-6 lg:grid-cols-2">
-        <TasksWidget
-          onModuleChange={onModuleChange}
-          onViewTask={onViewTask}
-          maxTasks={5}
-        />
-        <RecentNotesWidget
-          onModuleChange={onModuleChange}
-          maxNotes={5}
-        />
+        <TasksWidget onModuleChange={onModuleChange} onViewTask={onViewTask} maxTasks={5} />
+        <RecentNotesWidget onModuleChange={onModuleChange} maxNotes={5} />
       </div>
 
       {/* ========================================================================

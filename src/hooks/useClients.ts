@@ -22,7 +22,7 @@ export function useClients(search?: string) {
     queryKey: clientKeys.list(search),
     queryFn: async (): Promise<Client[]> => {
       console.log('🔍 Fetching clients from API (profile/all-users)...');
-      
+
       try {
         /** Shape of a user record from the profile/all-users API */
         interface ApiUserRecord {
@@ -34,8 +34,8 @@ export function useClients(search?: string) {
           [key: string]: unknown;
         }
 
-        const data = await api.get<{ count: number, users: ApiUserRecord[] }>('profile/all-users');
-        
+        const data = await api.get<{ count: number; users: ApiUserRecord[] }>('profile/all-users');
+
         if (!data || !data.users) {
           console.warn('⚠️ No users returned from API');
           return [];
@@ -43,8 +43,16 @@ export function useClients(search?: string) {
 
         // Transform API users to Calendar Client type
         const clients: Client[] = data.users.map((user: ApiUserRecord) => {
-          const firstName = user.user_metadata?.firstName || user.profile?.personalInformation?.firstName || user.name?.split(' ')[0] || 'Unknown';
-          const lastName = user.user_metadata?.surname || user.profile?.personalInformation?.lastName || user.name?.split(' ').slice(1).join(' ') || '';
+          const firstName =
+            user.user_metadata?.firstName ||
+            user.profile?.personalInformation?.firstName ||
+            user.name?.split(' ')[0] ||
+            'Unknown';
+          const lastName =
+            user.user_metadata?.surname ||
+            user.profile?.personalInformation?.lastName ||
+            user.name?.split(' ').slice(1).join(' ') ||
+            '';
           const fullName = `${firstName} ${lastName}`.trim();
 
           return {
@@ -54,7 +62,7 @@ export function useClients(search?: string) {
             email: user.email || '',
             phone: user.profile?.contactDetails?.mobileNumber || null,
             date_of_birth: user.profile?.personalInformation?.dateOfBirth || null,
-            created_by: 'system', 
+            created_by: 'system',
             created_at: String(user.created_at || new Date().toISOString()),
             updated_at: String(user.updated_at || new Date().toISOString()),
           } as Client;
@@ -62,27 +70,27 @@ export function useClients(search?: string) {
 
         // Client-side filtering if search is provided
         let result = clients;
-        
+
         if (search) {
           const lowerSearch = search.toLowerCase();
-          result = result.filter(c => 
-            c.full_name.toLowerCase().includes(lowerSearch) || 
-            c.email.toLowerCase().includes(lowerSearch)
+          result = result.filter(
+            (c) =>
+              c.full_name.toLowerCase().includes(lowerSearch) ||
+              c.email.toLowerCase().includes(lowerSearch),
           );
         }
 
         // Filter out admin users if possible (optional, but good for consistency)
         // Similar logic to ClientManagementModule
-        result = result.filter(client => {
-           // We can't easily check role here without the raw user object or profile role
-           // But assuming the API returns what we need.
-           // For now, let's just return all users so we don't accidentally hide someone.
-           return true;
+        result = result.filter((client) => {
+          // We can't easily check role here without the raw user object or profile role
+          // But assuming the API returns what we need.
+          // For now, let's just return all users so we don't accidentally hide someone.
+          return true;
         });
 
         // Sort by name
         return result.sort((a, b) => a.full_name.localeCompare(b.full_name));
-        
       } catch (error) {
         console.error('❌ Error fetching clients:', error);
         // Return empty array instead of throwing to prevent UI crash

@@ -133,16 +133,17 @@ export function validateClientInput(input: AdminAddClientInput): string[] {
   if (!input.firstName?.trim()) errors.push('First name is required');
   if (!input.lastName?.trim()) errors.push('Last name is required');
   if (!input.emailAddress?.trim()) errors.push('Email address is required');
-  if (
-    input.emailAddress?.trim() &&
-    !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(input.emailAddress.trim())
-  ) {
+  if (input.emailAddress?.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(input.emailAddress.trim())) {
     errors.push('Invalid email address format');
   }
   if (!input.cellphoneNumber?.trim()) errors.push('Cellphone number is required');
 
   // SA ID validation if provided
-  if (input.idType === 'sa_id' && input.idNumber?.trim() && !/^\d{13}$/.test(input.idNumber.trim())) {
+  if (
+    input.idType === 'sa_id' &&
+    input.idNumber?.trim() &&
+    !/^\d{13}$/.test(input.idNumber.trim())
+  ) {
     errors.push('SA ID number must be exactly 13 digits');
   }
 
@@ -374,13 +375,15 @@ export class AdminClientOnboardingService {
         total: clients.length,
         succeeded: 0,
         failed: clients.length,
-        results: [{
-          row: 0,
-          email: '',
-          name: '',
-          status: 'failed',
-          error: `Batch size exceeds maximum of ${MAX_BATCH_SIZE}. Please split your upload.`,
-        }],
+        results: [
+          {
+            row: 0,
+            email: '',
+            name: '',
+            status: 'failed',
+            error: `Batch size exceeds maximum of ${MAX_BATCH_SIZE}. Please split your upload.`,
+          },
+        ],
       };
     }
 
@@ -423,7 +426,8 @@ export class AdminClientOnboardingService {
           });
         } else {
           // Duplicate email → mark as skipped rather than failed
-          const status = result.errorCode === 'EMAIL_EXISTS' ? 'skipped' as const : 'failed' as const;
+          const status =
+            result.errorCode === 'EMAIL_EXISTS' ? ('skipped' as const) : ('failed' as const);
           if (status === 'skipped') {
             // Don't count skips as failures
           } else {

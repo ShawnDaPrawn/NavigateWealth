@@ -23,10 +23,7 @@ export function SkipToContent({
   label = 'Skip to main content',
 }: SkipToContentProps) {
   return (
-    <a
-      href={`#${targetId}`}
-      className="skip-to-content"
-    >
+    <a href={`#${targetId}`} className="skip-to-content">
       {label}
     </a>
   );
@@ -59,12 +56,7 @@ export function LiveRegion({
   }, [message, clearAfterMs]);
 
   return (
-    <div
-      role="status"
-      aria-live={politeness}
-      aria-atomic="true"
-      className="sr-only"
-    >
+    <div role="status" aria-live={politeness} aria-atomic="true" className="sr-only">
       {currentMessage}
     </div>
   );
@@ -81,9 +73,7 @@ export function useAnnounce() {
     requestAnimationFrame(() => setAnnouncement(msg));
   };
 
-  const Announcer = () => (
-    <LiveRegion message={announcement} politeness="polite" />
-  );
+  const Announcer = () => <LiveRegion message={announcement} politeness="polite" />;
 
   return { announce, Announcer };
 }
@@ -94,12 +84,7 @@ export function ErrorAnnouncer({ message }: { message: string }) {
   if (!message) return null;
 
   return (
-    <div
-      role="alert"
-      aria-live="assertive"
-      aria-atomic="true"
-      className="sr-only"
-    >
+    <div role="alert" aria-live="assertive" aria-atomic="true" className="sr-only">
       {message}
     </div>
   );

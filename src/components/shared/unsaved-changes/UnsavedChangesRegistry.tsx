@@ -1,7 +1,9 @@
 import React, { createContext, useCallback, useContext, useMemo, useRef } from 'react';
 import type { UnsavedChangesRegistryContextValue, UnsavedChangesRegistryEntry } from './types';
 
-const UnsavedChangesRegistryContext = createContext<UnsavedChangesRegistryContextValue | null>(null);
+const UnsavedChangesRegistryContext = createContext<UnsavedChangesRegistryContextValue | null>(
+  null,
+);
 
 export function UnsavedChangesRegistryProvider({ children }: { children: React.ReactNode }) {
   const entriesRef = useRef<Map<string, UnsavedChangesRegistryEntry>>(new Map());

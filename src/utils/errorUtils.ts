@@ -21,7 +21,7 @@ export class APIError extends Error {
   constructor(
     message: string,
     public statusCode: number = 500,
-    public code: string = 'API_ERROR'
+    public code: string = 'API_ERROR',
   ) {
     super(message);
     this.name = 'APIError';
@@ -71,10 +71,7 @@ export function isWebLockStealAbort(reason: unknown): boolean {
   const r = reason as { name?: unknown; message?: unknown };
   if (r.name !== 'AbortError') return false;
   const msg = typeof r.message === 'string' ? r.message : '';
-  return (
-    msg.includes('Lock broken by another request') &&
-    msg.includes('steal')
-  );
+  return msg.includes('Lock broken by another request') && msg.includes('steal');
 }
 
 /**
@@ -110,32 +107,35 @@ export function getErrorCode(error: unknown): string | undefined {
  */
 export function getUserErrorMessage(error: unknown): string {
   const message = getErrorMessage(error);
-  
+
   // Map technical errors to user-friendly messages
   if (message.toLowerCase().includes('network')) {
     return 'Network connection issue. Please check your internet connection and try again.';
   }
-  
-  if (message.toLowerCase().includes('unauthorized') || message.toLowerCase().includes('forbidden')) {
+
+  if (
+    message.toLowerCase().includes('unauthorized') ||
+    message.toLowerCase().includes('forbidden')
+  ) {
     return 'Your session has expired. Please sign in again.';
   }
-  
+
   if (message.toLowerCase().includes('not found')) {
     return 'The requested information could not be found.';
   }
-  
+
   if (message.toLowerCase().includes('timeout')) {
     return 'The request took too long. Please try again.';
   }
-  
+
   // Return the original message if it's already user-friendly (doesn't contain technical jargon)
   const technicalTerms = ['stack', 'trace', 'undefined', 'null', 'function', 'object'];
-  const hasTechnicalTerms = technicalTerms.some(term => message.toLowerCase().includes(term));
-  
+  const hasTechnicalTerms = technicalTerms.some((term) => message.toLowerCase().includes(term));
+
   if (hasTechnicalTerms) {
     return 'An unexpected error occurred. Please try again or contact support if the issue persists.';
   }
-  
+
   return message;
 }
 
@@ -150,7 +150,7 @@ export function logError(error: unknown, context?: string): void {
     const message = getErrorMessage(error);
     const code = getErrorCode(error);
     const contextStr = context ? `[${context}] ` : '';
-    
+
     // Log to stderr (not stdout) to avoid polluting response streams
     if (typeof console !== 'undefined' && console.error) {
       if (code) {
@@ -158,7 +158,7 @@ export function logError(error: unknown, context?: string): void {
       } else {
         console.error(`${contextStr}Error:`, message);
       }
-      
+
       // Include stack trace for debugging in development
       if (isError(error) && error.stack) {
         console.error('Stack:', error.stack);

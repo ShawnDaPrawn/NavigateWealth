@@ -30,9 +30,7 @@ export function VascoStreamingBubble({ content }: VascoStreamingBubbleProps) {
           </div>
           <div className="flex items-center gap-1.5 mt-2">
             <Loader2 className="h-3 w-3 animate-spin text-primary/50" />
-            <span className="text-[10px] text-gray-400">
-              Vasco is responding...
-            </span>
+            <span className="text-[10px] text-gray-400">Vasco is responding...</span>
           </div>
         </div>
       </div>

@@ -7,23 +7,12 @@ import { Hono } from 'npm:hono';
 import type { Context, Next } from 'npm:hono';
 import { createClient } from 'jsr:@supabase/supabase-js@2.49.8';
 import { AdminApplicationsService } from './applications-service.ts';
-import type {
-  ErrorResponse,
-  SuccessResponse,
-} from './types.ts';
-import {
-  SUPER_ADMIN_EMAIL,
-  HTTP_STATUS,
-  ERROR_MESSAGES,
-  SUCCESS_MESSAGES,
-} from './constants.ts';
+import type { ErrorResponse, SuccessResponse } from './types.ts';
+import { SUPER_ADMIN_EMAIL, HTTP_STATUS, ERROR_MESSAGES, SUCCESS_MESSAGES } from './constants.ts';
 import { createModuleLogger } from './stderr-logger.ts';
 import { getErrMsg } from './shared-logger-utils.ts';
 import type { KvApplication } from './applications-types.ts';
-import {
-  InviteClientSchema,
-  ResendInviteSchema,
-} from './applications-validation.ts';
+import { InviteClientSchema, ResendInviteSchema } from './applications-validation.ts';
 import { formatZodError } from './shared-validation-utils.ts';
 
 const adminApp = new Hono();
@@ -39,32 +28,35 @@ const log = createModuleLogger('admin-applications');
 const verifyAdmin = async (c: Context, next: Next) => {
   try {
     const authHeader = c.req.header('Authorization');
-    
+
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
       return c.json({ error: ERROR_MESSAGES.AUTH.NO_TOKEN }, HTTP_STATUS.UNAUTHORIZED);
     }
 
     const token = authHeader.split(' ')[1];
-    
+
     const supabase = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
     );
 
     // Get user from token
-    const { data: { user }, error: authError } = await supabase.auth.getUser(token);
-    
+    const {
+      data: { user },
+      error: authError,
+    } = await supabase.auth.getUser(token);
+
     if (authError || !user) {
       return c.json({ error: ERROR_MESSAGES.AUTH.INVALID_TOKEN }, HTTP_STATUS.UNAUTHORIZED);
     }
 
     // Check if user is super admin by email
     const isSuperAdmin = user.email?.toLowerCase() === SUPER_ADMIN_EMAIL.toLowerCase();
-    
+
     if (!isSuperAdmin) {
       // Also check role from user metadata
       const userRole = user.user_metadata?.role;
-      
+
       if (userRole !== 'admin' && userRole !== 'super_admin' && userRole !== 'super-admin') {
         return c.json({ error: ERROR_MESSAGES.AUTH.NOT_ADMIN }, HTTP_STATUS.FORBIDDEN);
       }
@@ -73,12 +65,12 @@ const verifyAdmin = async (c: Context, next: Next) => {
     // Store user info in context
     c.set('userId', user.id);
     c.set('userEmail', user.email);
-    
+
     await next();
   } catch (error) {
     return c.json(
       { error: ERROR_MESSAGES.GENERIC.INTERNAL_ERROR },
-      HTTP_STATUS.INTERNAL_SERVER_ERROR
+      HTTP_STATUS.INTERNAL_SERVER_ERROR,
     );
   }
 };
@@ -97,11 +89,15 @@ adminApp.post('/applications/invite', async (c) => {
     const body = await c.req.json();
     const parsed = InviteClientSchema.safeParse(body);
     if (!parsed.success) {
-      return c.json({ error: 'Validation failed', ...formatZodError(parsed.error) }, HTTP_STATUS.BAD_REQUEST);
+      return c.json(
+        { error: 'Validation failed', ...formatZodError(parsed.error) },
+        HTTP_STATUS.BAD_REQUEST,
+      );
     }
     const { email, firstName, lastName } = parsed.data;
     const cellphoneNumber = (body as Record<string, unknown>).cellphoneNumber as string | undefined;
-    const origin = c.req.header('origin') || c.req.header('referer')?.replace(/\/[^/]*$/, '') || undefined;
+    const origin =
+      c.req.header('origin') || c.req.header('referer')?.replace(/\/[^/]*$/, '') || undefined;
 
     const result = await AdminApplicationsService.inviteApplicant(
       { email, firstName, lastName, cellphoneNumber },
@@ -134,10 +130,14 @@ adminApp.post('/applications/invite/resend', async (c) => {
     const body = await c.req.json();
     const parsed = ResendInviteSchema.safeParse(body);
     if (!parsed.success) {
-      return c.json({ error: 'Validation failed', ...formatZodError(parsed.error) }, HTTP_STATUS.BAD_REQUEST);
+      return c.json(
+        { error: 'Validation failed', ...formatZodError(parsed.error) },
+        HTTP_STATUS.BAD_REQUEST,
+      );
     }
     const { applicationId } = parsed.data;
-    const origin = c.req.header('origin') || c.req.header('referer')?.replace(/\/[^/]*$/, '') || undefined;
+    const origin =
+      c.req.header('origin') || c.req.header('referer')?.replace(/\/[^/]*$/, '') || undefined;
 
     const result = await AdminApplicationsService.resendInvite(applicationId, adminUserId, origin);
 
@@ -174,7 +174,7 @@ adminApp.get('/applications', async (c) => {
         error: ERROR_MESSAGES.GENERIC.INTERNAL_ERROR,
         details: getErrMsg(error),
       } as ErrorResponse,
-      HTTP_STATUS.INTERNAL_SERVER_ERROR
+      HTTP_STATUS.INTERNAL_SERVER_ERROR,
     );
   }
 });
@@ -197,7 +197,7 @@ adminApp.get('/applications/:applicationId', async (c) => {
         error: ERROR_MESSAGES.GENERIC.INTERNAL_ERROR,
         details: errMsg,
       } as ErrorResponse,
-      HTTP_STATUS.INTERNAL_SERVER_ERROR
+      HTTP_STATUS.INTERNAL_SERVER_ERROR,
     );
   }
 });
@@ -213,7 +213,7 @@ adminApp.patch('/applications/:applicationId', async (c) => {
     if (!application_data || typeof application_data !== 'object') {
       return c.json(
         { error: 'application_data object is required' } as ErrorResponse,
-        HTTP_STATUS.BAD_REQUEST
+        HTTP_STATUS.BAD_REQUEST,
       );
     }
 
@@ -221,7 +221,7 @@ adminApp.patch('/applications/:applicationId', async (c) => {
       applicationId,
       application_data,
       adminUserId,
-      amendment_notes
+      amendment_notes,
     );
 
     return c.json({
@@ -241,7 +241,7 @@ adminApp.patch('/applications/:applicationId', async (c) => {
         error: ERROR_MESSAGES.GENERIC.INTERNAL_ERROR,
         details: errMsg,
       } as ErrorResponse,
-      HTTP_STATUS.INTERNAL_SERVER_ERROR
+      HTTP_STATUS.INTERNAL_SERVER_ERROR,
     );
   }
 });
@@ -277,7 +277,7 @@ adminApp.post('/applications/:applicationId/approve', async (c) => {
         error: ERROR_MESSAGES.GENERIC.INTERNAL_ERROR,
         details: errMsg,
       } as ErrorResponse,
-      HTTP_STATUS.INTERNAL_SERVER_ERROR
+      HTTP_STATUS.INTERNAL_SERVER_ERROR,
     );
   }
 });
@@ -315,7 +315,7 @@ adminApp.post('/applications/:applicationId/decline', async (c) => {
         error: ERROR_MESSAGES.GENERIC.INTERNAL_ERROR,
         details: errMsg,
       } as ErrorResponse,
-      HTTP_STATUS.INTERNAL_SERVER_ERROR
+      HTTP_STATUS.INTERNAL_SERVER_ERROR,
     );
   }
 });
@@ -332,7 +332,7 @@ adminApp.get('/stats', async (c) => {
         error: ERROR_MESSAGES.GENERIC.INTERNAL_ERROR,
         details: getErrMsg(error),
       } as ErrorResponse,
-      HTTP_STATUS.INTERNAL_SERVER_ERROR
+      HTTP_STATUS.INTERNAL_SERVER_ERROR,
     );
   }
 });
@@ -343,7 +343,8 @@ adminApp.delete('/applications/clear', async (c) => {
     const deletedCount = await AdminApplicationsService.clearApplications();
     return c.json({
       success: true,
-      message: deletedCount === 0 ? 'No applications found' : `Deleted ${deletedCount} applications`,
+      message:
+        deletedCount === 0 ? 'No applications found' : `Deleted ${deletedCount} applications`,
       deleted: deletedCount,
     });
   } catch (error) {
@@ -353,7 +354,7 @@ adminApp.delete('/applications/clear', async (c) => {
         error: ERROR_MESSAGES.GENERIC.INTERNAL_ERROR,
         details: getErrMsg(error),
       } as ErrorResponse,
-      HTTP_STATUS.INTERNAL_SERVER_ERROR
+      HTTP_STATUS.INTERNAL_SERVER_ERROR,
     );
   }
 });
@@ -379,7 +380,7 @@ adminApp.delete('/applications/delete', async (c) => {
         error: ERROR_MESSAGES.GENERIC.INTERNAL_ERROR,
         details: getErrMsg(error),
       } as ErrorResponse,
-      HTTP_STATUS.INTERNAL_SERVER_ERROR
+      HTTP_STATUS.INTERNAL_SERVER_ERROR,
     );
   }
 });
@@ -390,7 +391,10 @@ adminApp.post('/applications/migrate', async (c) => {
     const result = await AdminApplicationsService.migrateApplications();
     return c.json({
       success: true,
-      message: result.migrated === 0 ? 'No applications found to migrate' : `Migrated ${result.migrated} applications`,
+      message:
+        result.migrated === 0
+          ? 'No applications found to migrate'
+          : `Migrated ${result.migrated} applications`,
       ...result,
     });
   } catch (error) {
@@ -400,7 +404,7 @@ adminApp.post('/applications/migrate', async (c) => {
         error: ERROR_MESSAGES.GENERIC.INTERNAL_ERROR,
         details: getErrMsg(error),
       } as ErrorResponse,
-      HTTP_STATUS.INTERNAL_SERVER_ERROR
+      HTTP_STATUS.INTERNAL_SERVER_ERROR,
     );
   }
 });
@@ -411,7 +415,10 @@ adminApp.post('/applications/deprecate', async (c) => {
     const { applicationIds } = await c.req.json();
 
     if (!applicationIds || !Array.isArray(applicationIds)) {
-      return c.json({ error: 'applicationIds array is required' } as ErrorResponse, HTTP_STATUS.BAD_REQUEST);
+      return c.json(
+        { error: 'applicationIds array is required' } as ErrorResponse,
+        HTTP_STATUS.BAD_REQUEST,
+      );
     }
 
     const count = await AdminApplicationsService.deprecateApplications(applicationIds);
@@ -427,7 +434,7 @@ adminApp.post('/applications/deprecate', async (c) => {
         error: ERROR_MESSAGES.GENERIC.INTERNAL_ERROR,
         details: getErrMsg(error),
       } as ErrorResponse,
-      HTTP_STATUS.INTERNAL_SERVER_ERROR
+      HTTP_STATUS.INTERNAL_SERVER_ERROR,
     );
   }
 });
@@ -447,7 +454,7 @@ adminApp.get('/applications/deprecated', async (c) => {
         error: ERROR_MESSAGES.GENERIC.INTERNAL_ERROR,
         details: getErrMsg(error),
       } as ErrorResponse,
-      HTTP_STATUS.INTERNAL_SERVER_ERROR
+      HTTP_STATUS.INTERNAL_SERVER_ERROR,
     );
   }
 });
@@ -458,7 +465,10 @@ adminApp.post('/applications/undeprecate', async (c) => {
     const { applicationIds } = await c.req.json();
 
     if (!applicationIds || !Array.isArray(applicationIds)) {
-      return c.json({ error: 'applicationIds array is required' } as ErrorResponse, HTTP_STATUS.BAD_REQUEST);
+      return c.json(
+        { error: 'applicationIds array is required' } as ErrorResponse,
+        HTTP_STATUS.BAD_REQUEST,
+      );
     }
 
     const count = await AdminApplicationsService.undeprecateApplications(applicationIds);
@@ -474,7 +484,7 @@ adminApp.post('/applications/undeprecate', async (c) => {
         error: ERROR_MESSAGES.GENERIC.INTERNAL_ERROR,
         details: getErrMsg(error),
       } as ErrorResponse,
-      HTTP_STATUS.INTERNAL_SERVER_ERROR
+      HTTP_STATUS.INTERNAL_SERVER_ERROR,
     );
   }
 });
@@ -488,17 +498,18 @@ adminApp.get('/debug/kv', async (c) => {
     const applications = await AdminApplicationsService.getAllKeys('application:');
     return c.json({
       total: applications?.length || 0,
-      applications: applications?.map((app: unknown) => {
-        const a = app as KvApplication;
-        return {
-          id: a.id,
-          user_id: a.user_id,
-          status: a.status,
-          created_at: a.created_at,
-          updated_at: a.updated_at,
-          key: `application:${a.id}`,
-        };
-      }) || []
+      applications:
+        applications?.map((app: unknown) => {
+          const a = app as KvApplication;
+          return {
+            id: a.id,
+            user_id: a.user_id,
+            status: a.status,
+            created_at: a.created_at,
+            updated_at: a.updated_at,
+            key: `application:${a.id}`,
+          };
+        }) || [],
     });
   } catch (error) {
     log.error('Debug KV error', error);
@@ -509,7 +520,7 @@ adminApp.get('/debug/kv', async (c) => {
 adminApp.get('/debug/all-keys', async (c) => {
   try {
     const allKeys = await AdminApplicationsService.getAllKeys('');
-    
+
     const groupedKeys: Record<string, unknown[]> = {};
     if (allKeys && allKeys.length > 0) {
       for (const item of allKeys) {
@@ -519,7 +530,7 @@ adminApp.get('/debug/all-keys', async (c) => {
         else if (keyStr.includes('user')) prefix = 'user*';
         else if (keyStr.includes('profile')) prefix = 'profile*';
         else if (keyStr.includes('policy')) prefix = 'policy*';
-        
+
         if (!groupedKeys[prefix]) groupedKeys[prefix] = [];
         groupedKeys[prefix].push(item);
       }
@@ -540,7 +551,7 @@ adminApp.delete('/debug/delete-key', async (c) => {
   try {
     const { key } = await c.req.json();
     if (!key) return c.json({ error: 'Key is required' }, HTTP_STATUS.BAD_REQUEST);
-    
+
     await AdminApplicationsService.deleteKey(key);
     return c.json({ success: true, message: `Deleted key: ${key}` });
   } catch (error) {

@@ -1,6 +1,6 @@
 /**
  * Social Media Utilities
- * 
+ *
  * Helper functions for the Social Media module including:
  * - Formatting (dates, numbers, text)
  * - Platform-specific validations
@@ -8,17 +8,11 @@
  * - Character counting
  * - Media validation
  * - Scheduling helpers
- * 
+ *
  * @module social-media/utils
  */
 
-import type { 
-  SocialPlatform, 
-  SocialPost, 
-  MediaFile, 
-  UTMParameters,
-  PlatformLimits 
-} from './types';
+import type { SocialPlatform, SocialPost, MediaFile, UTMParameters, PlatformLimits } from './types';
 import { PLATFORM_LIMITS } from './types';
 
 // ============================================================================
@@ -63,11 +57,11 @@ export function formatCTR(ctr: number): string {
  */
 export function formatFileSize(bytes: number): string {
   if (bytes === 0) return '0 Bytes';
-  
+
   const k = 1024;
   const sizes = ['Bytes', 'KB', 'MB', 'GB'];
   const i = Math.floor(Math.log(bytes) / Math.log(k));
-  
+
   return `${(bytes / Math.pow(k, i)).toFixed(2)} ${sizes[i]}`;
 }
 
@@ -88,11 +82,11 @@ export function formatPostDate(date: Date): string {
   if (diffMins < 60) return `${diffMins} min${diffMins !== 1 ? 's' : ''} ago`;
   if (diffHours < 24) return `${diffHours} hour${diffHours !== 1 ? 's' : ''} ago`;
   if (diffDays < 7) return `${diffDays} day${diffDays !== 1 ? 's' : ''} ago`;
-  
-  return date.toLocaleDateString('en-US', { 
-    month: 'short', 
-    day: 'numeric', 
-    year: date.getFullYear() !== now.getFullYear() ? 'numeric' : undefined 
+
+  return date.toLocaleDateString('en-US', {
+    month: 'short',
+    day: 'numeric',
+    year: date.getFullYear() !== now.getFullYear() ? 'numeric' : undefined,
   });
 }
 
@@ -104,25 +98,25 @@ export function formatScheduledTime(date: Date): string {
   const now = new Date();
   const tomorrow = new Date(now);
   tomorrow.setDate(tomorrow.getDate() + 1);
-  
+
   const isToday = date.toDateString() === now.toDateString();
   const isTomorrow = date.toDateString() === tomorrow.toDateString();
-  
-  const time = date.toLocaleTimeString('en-US', { 
-    hour: 'numeric', 
+
+  const time = date.toLocaleTimeString('en-US', {
+    hour: 'numeric',
     minute: '2-digit',
-    hour12: true 
+    hour12: true,
   });
-  
+
   if (isToday) return `Today at ${time}`;
   if (isTomorrow) return `Tomorrow at ${time}`;
-  
-  const dateStr = date.toLocaleDateString('en-US', { 
-    month: 'short', 
+
+  const dateStr = date.toLocaleDateString('en-US', {
+    month: 'short',
     day: 'numeric',
-    year: date.getFullYear() !== now.getFullYear() ? 'numeric' : undefined
+    year: date.getFullYear() !== now.getFullYear() ? 'numeric' : undefined,
   });
-  
+
   return `${dateStr} at ${time}`;
 }
 
@@ -148,19 +142,19 @@ export function getPlatformLimits(platform: SocialPlatform): PlatformLimits {
  * Validate post content against platform limits
  */
 export function validatePostContent(
-  platform: SocialPlatform, 
-  content: string
+  platform: SocialPlatform,
+  content: string,
 ): { valid: boolean; error?: string } {
   const limits = getPlatformLimits(platform);
   const charCount = countCharacters(content, platform);
-  
+
   if (charCount > limits.maxCharacters) {
     return {
       valid: false,
       error: `Content exceeds ${limits.maxCharacters} character limit (${charCount} characters)`,
     };
   }
-  
+
   return { valid: true };
 }
 
@@ -168,12 +162,12 @@ export function validatePostContent(
  * Check if more media can be added to a post
  */
 export function canAddMedia(
-  platform: SocialPlatform, 
+  platform: SocialPlatform,
   currentCount: number,
-  mediaType: 'image' | 'video'
+  mediaType: 'image' | 'video',
 ): boolean {
   const limits = getPlatformLimits(platform);
-  
+
   if (mediaType === 'image') {
     return currentCount < limits.maxImages;
   } else {
@@ -187,27 +181,28 @@ export function canAddMedia(
 export function validateMediaFile(
   platform: SocialPlatform,
   file: File | MediaFile,
-  existingMedia: MediaFile[] = []
+  existingMedia: MediaFile[] = [],
 ): { valid: boolean; error?: string } {
   const limits = getPlatformLimits(platform);
   const fileSize = 'size' in file ? file.size : 0;
-  const fileType = file.type?.startsWith('video/') || ('type' in file && file.type === 'video') 
-    ? 'video' 
-    : 'image';
-  
+  const fileType =
+    file.type?.startsWith('video/') || ('type' in file && file.type === 'video')
+      ? 'video'
+      : 'image';
+
   // Check file size
   const maxSize = fileType === 'video' ? limits.videoMaxSize : limits.imageMaxSize;
   const fileSizeMB = fileSize / (1024 * 1024);
-  
+
   if (fileSizeMB > maxSize) {
     return {
       valid: false,
       error: `File size (${fileSizeMB.toFixed(2)} MB) exceeds ${maxSize} MB limit`,
     };
   }
-  
+
   // Check media count
-  const existingCount = existingMedia.filter(m => m.type === fileType).length;
+  const existingCount = existingMedia.filter((m) => m.type === fileType).length;
   if (!canAddMedia(platform, existingCount, fileType)) {
     const maxCount = fileType === 'video' ? limits.maxVideos : limits.maxImages;
     return {
@@ -215,7 +210,7 @@ export function validateMediaFile(
       error: `Maximum ${maxCount} ${fileType}${maxCount !== 1 ? 's' : ''} allowed`,
     };
   }
-  
+
   return { valid: true };
 }
 
@@ -224,7 +219,7 @@ export function validateMediaFile(
  */
 export function supportsFeature(
   platform: SocialPlatform,
-  feature: keyof PlatformLimits['features']
+  feature: keyof PlatformLimits['features'],
 ): boolean {
   return PLATFORM_LIMITS[platform].features[feature];
 }
@@ -243,14 +238,14 @@ export function countCharacters(text: string, platform: SocialPlatform): number 
     let count = text.length;
     const urlRegex = /https?:\/\/[^\s]+/g;
     const urls = text.match(urlRegex) || [];
-    
-    urls.forEach(url => {
+
+    urls.forEach((url) => {
       count = count - url.length + 23;
     });
-    
+
     return count;
   }
-  
+
   // For other platforms, simple character count
   return text.length;
 }
@@ -281,14 +276,14 @@ export function isWithinCharacterLimit(text: string, platform: SocialPlatform): 
 export function buildUTMUrl(url: string, params: UTMParameters): string {
   try {
     const urlObj = new URL(url);
-    
+
     urlObj.searchParams.set('utm_source', params.source);
     urlObj.searchParams.set('utm_medium', params.medium);
     urlObj.searchParams.set('utm_campaign', params.campaign);
-    
+
     if (params.term) urlObj.searchParams.set('utm_term', params.term);
     if (params.content) urlObj.searchParams.set('utm_content', params.content);
-    
+
     return urlObj.toString();
   } catch (error) {
     // If URL is invalid, return original
@@ -305,9 +300,9 @@ export function parseUTMParams(url: string): UTMParameters | null {
     const source = urlObj.searchParams.get('utm_source');
     const medium = urlObj.searchParams.get('utm_medium');
     const campaign = urlObj.searchParams.get('utm_campaign');
-    
+
     if (!source || !medium || !campaign) return null;
-    
+
     return {
       source,
       medium,
@@ -347,7 +342,7 @@ export function getOptimalPostTimes(platform: SocialPlatform): Date[] {
   const now = new Date();
   const tomorrow = new Date(now);
   tomorrow.setDate(tomorrow.getDate() + 1);
-  
+
   // Platform-specific optimal times (simplified)
   const optimalHours: Record<SocialPlatform, number[]> = {
     linkedin: [9, 12, 17], // Business hours
@@ -355,9 +350,9 @@ export function getOptimalPostTimes(platform: SocialPlatform): Date[] {
     facebook: [13, 15, 19], // Afternoon and evening
     x: [9, 12, 15, 18], // Throughout the day
   };
-  
+
   const hours = optimalHours[platform];
-  return hours.map(hour => {
+  return hours.map((hour) => {
     const date = new Date(tomorrow);
     date.setHours(hour, 0, 0, 0);
     return date;
@@ -371,21 +366,21 @@ export function isValidScheduleTime(date: Date): { valid: boolean; error?: strin
   const now = new Date();
   const maxFuture = new Date();
   maxFuture.setFullYear(maxFuture.getFullYear() + 1); // Max 1 year in future
-  
+
   if (date <= now) {
     return {
       valid: false,
       error: 'Schedule time must be in the future',
     };
   }
-  
+
   if (date > maxFuture) {
     return {
       valid: false,
       error: 'Schedule time cannot be more than 1 year in the future',
     };
   }
-  
+
   return { valid: true };
 }
 
@@ -457,10 +452,7 @@ export function getPlatformDisplayName(platform: SocialPlatform): string {
 /**
  * Calculate engagement rate from analytics
  */
-export function calculateEngagementRate(
-  engagements: number,
-  impressions: number
-): number {
+export function calculateEngagementRate(engagements: number, impressions: number): number {
   if (impressions === 0) return 0;
   return (engagements / impressions) * 100;
 }
@@ -480,7 +472,7 @@ export function sortPostsByDate(posts: SocialPost[], ascending = false): SocialP
   return [...posts].sort((a, b) => {
     const dateA = a.scheduledAt || a.publishedAt || a.createdAt;
     const dateB = b.scheduledAt || b.publishedAt || b.createdAt;
-    
+
     const diff = dateA.getTime() - dateB.getTime();
     return ascending ? diff : -diff;
   });
@@ -492,9 +484,9 @@ export function sortPostsByDate(posts: SocialPost[], ascending = false): SocialP
 export function filterPostsByDateRange(
   posts: SocialPost[],
   startDate: Date,
-  endDate: Date
+  endDate: Date,
 ): SocialPost[] {
-  return posts.filter(post => {
+  return posts.filter((post) => {
     const postDate = post.scheduledAt || post.publishedAt || post.createdAt;
     return postDate >= startDate && postDate <= endDate;
   });
@@ -505,17 +497,17 @@ export function filterPostsByDateRange(
  */
 export function groupPostsByDate(posts: SocialPost[]): Record<string, SocialPost[]> {
   const grouped: Record<string, SocialPost[]> = {};
-  
-  posts.forEach(post => {
+
+  posts.forEach((post) => {
     const date = post.scheduledAt || post.publishedAt || post.createdAt;
     const dateKey = date.toISOString().split('T')[0]; // YYYY-MM-DD
-    
+
     if (!grouped[dateKey]) {
       grouped[dateKey] = [];
     }
     grouped[dateKey].push(post);
   });
-  
+
   return grouped;
 }
 
@@ -557,17 +549,17 @@ export function getImageDimensions(file: File): Promise<{ width: number; height:
   return new Promise((resolve, reject) => {
     const img = new Image();
     const url = URL.createObjectURL(file);
-    
+
     img.onload = () => {
       URL.revokeObjectURL(url);
       resolve({ width: img.width, height: img.height });
     };
-    
+
     img.onerror = () => {
       URL.revokeObjectURL(url);
       reject(new Error('Failed to load image'));
     };
-    
+
     img.src = url;
   });
 }
@@ -584,10 +576,7 @@ export function calculateAspectRatio(width: number, height: number): string {
 /**
  * Check if aspect ratio is supported
  */
-export function isSupportedAspectRatio(
-  platform: SocialPlatform,
-  aspectRatio: string
-): boolean {
+export function isSupportedAspectRatio(platform: SocialPlatform, aspectRatio: string): boolean {
   const limits = getPlatformLimits(platform);
   return limits.aspectRatios.supported.includes(aspectRatio);
 }
@@ -605,31 +594,31 @@ export const socialMediaUtils = {
   formatPostDate,
   formatScheduledTime,
   formatTimeAgo,
-  
+
   // Platform limits
   getPlatformLimits,
   validatePostContent,
   canAddMedia,
   validateMediaFile,
   supportsFeature,
-  
+
   // Character counting
   countCharacters,
   getRemainingCharacters,
   isWithinCharacterLimit,
-  
+
   // URLs & UTM
   buildUTMUrl,
   parseUTMParams,
   extractLinks,
   shortenUrl,
-  
+
   // Scheduling
   getOptimalPostTimes,
   isValidScheduleTime,
   convertToTimezone,
   roundToNearest15Minutes,
-  
+
   // Post utilities
   getPostStatusColor,
   getPlatformColor,
@@ -639,12 +628,12 @@ export const socialMediaUtils = {
   sortPostsByDate,
   filterPostsByDateRange,
   groupPostsByDate,
-  
+
   // Hashtags & mentions
   extractHashtags,
   extractMentions,
   formatHashtagsForInstagram,
-  
+
   // Media
   getImageDimensions,
   calculateAspectRatio,

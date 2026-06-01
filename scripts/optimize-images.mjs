@@ -48,7 +48,7 @@ async function discoverFigmaAssetPngHashes() {
   for (const filePath of pageFiles) {
     const content = await fs.readFile(filePath, 'utf8');
     let m;
-    // eslint-disable-next-line no-cond-assign
+
     while ((m = re.exec(content))) {
       hashes.add(m[1]);
     }
@@ -137,20 +137,17 @@ async function main() {
     if (seenKeys.has(outKey)) continue;
     seenKeys.add(outKey);
 
-    // eslint-disable-next-line no-console
     console.log(`Optimizing ${t.label} (${t.hash})...`);
     manifests.push(await buildOne(t));
   }
 
   const manifestPath = path.join(OUT_DIR, 'manifest.json');
   await fs.writeFile(manifestPath, JSON.stringify({ widths: WIDTHS, images: manifests }, null, 2));
-  // eslint-disable-next-line no-console
+
   console.log(`Wrote ${path.relative(PROJECT_ROOT, manifestPath)}`);
 }
 
 main().catch((err) => {
-  // eslint-disable-next-line no-console
   console.error(err);
   process.exitCode = 1;
 });
-

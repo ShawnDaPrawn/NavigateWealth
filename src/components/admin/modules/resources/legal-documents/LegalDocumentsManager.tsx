@@ -7,12 +7,24 @@ import { Input } from '../../../../ui/input';
 import { Label } from '../../../../ui/label';
 import { ScrollArea } from '../../../../ui/scroll-area';
 import { Separator } from '../../../../ui/separator';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../../../ui/select';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '../../../../ui/select';
 import { Skeleton } from '../../../../ui/skeleton';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../../../ui/tabs';
 import { Textarea } from '../../../../ui/textarea';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '../../../../ui/collapsible';
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '../../../../ui/dialog';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from '../../../../ui/dialog';
 import {
   AlertTriangle,
   Archive,
@@ -79,7 +91,10 @@ function escapeHtml(value: string): string {
     .replace(/'/g, '&#39;');
 }
 
-function buildLegacyHtml(version: LegalDocumentVersionResponse | null | undefined, fallbackTitle: string): string {
+function buildLegacyHtml(
+  version: LegalDocumentVersionResponse | null | undefined,
+  fallbackTitle: string,
+): string {
   const blockHtml = (version?.blocks || [])
     .map((block) => {
       if (block.type === 'text') {
@@ -89,9 +104,10 @@ function buildLegacyHtml(version: LegalDocumentVersionResponse | null | undefine
 
       if (block.type === 'section_header') {
         const title = typeof block.data?.title === 'string' ? block.data.title : fallbackTitle;
-        const number = typeof block.data?.number === 'string' && block.data.number.trim()
-          ? `${block.data.number.trim()} `
-          : '';
+        const number =
+          typeof block.data?.number === 'string' && block.data.number.trim()
+            ? `${block.data.number.trim()} `
+            : '';
         return `<h2>${escapeHtml(`${number}${title}`.trim())}</h2>`;
       }
 
@@ -108,17 +124,19 @@ function buildDraftSeed(detail: LegalDocumentDetailResponse) {
   const currentPublished = detail.currentPublishedVersion;
 
   return {
-    versionNumber: currentDraft?.versionNumber || incrementVersion(currentPublished?.versionNumber || '1.0'),
+    versionNumber:
+      currentDraft?.versionNumber || incrementVersion(currentPublished?.versionNumber || '1.0'),
     effectiveDate: toDateInputValue(currentDraft?.effectiveDate),
     changeSummary: currentDraft?.changeSummary || '',
     sourceHtml:
-      currentDraft?.sourceHtml
-      || currentPublished?.sourceHtml
-      || buildLegacyHtml(currentPublished, detail.definition.title),
-    pdfConfig: currentDraft?.pdfConfig || currentPublished?.pdfConfig || {
-      pageSize: 'A4' as const,
-      orientation: 'portrait' as const,
-    },
+      currentDraft?.sourceHtml ||
+      currentPublished?.sourceHtml ||
+      buildLegacyHtml(currentPublished, detail.definition.title),
+    pdfConfig: currentDraft?.pdfConfig ||
+      currentPublished?.pdfConfig || {
+        pageSize: 'A4' as const,
+        orientation: 'portrait' as const,
+      },
   };
 }
 
@@ -137,9 +155,21 @@ function getHtmlStats(sourceHtml: string) {
   };
 }
 
-function getDraftGovernance(sourceHtml: string, effectiveDate: string, changeSummary: string, pageSize: 'A4' | 'A3', orientation: 'portrait' | 'landscape') {
+function getDraftGovernance(
+  sourceHtml: string,
+  effectiveDate: string,
+  changeSummary: string,
+  pageSize: 'A4' | 'A3',
+  orientation: 'portrait' | 'landscape',
+) {
   if (typeof window === 'undefined') {
-    return { blockers: [] as string[], warnings: [] as string[], tables: 0, longParagraphs: 0, manualBreaks: 0 };
+    return {
+      blockers: [] as string[],
+      warnings: [] as string[],
+      tables: 0,
+      longParagraphs: 0,
+      manualBreaks: 0,
+    };
   }
 
   const parser = new window.DOMParser();
@@ -147,9 +177,9 @@ function getDraftGovernance(sourceHtml: string, effectiveDate: string, changeSum
   const headings = doc.querySelectorAll('h1, h2, h3').length;
   const tables = doc.querySelectorAll('table').length;
   const manualBreaks = doc.querySelectorAll('.legal-page-break').length;
-  const longParagraphs = Array.from(doc.querySelectorAll('p'))
-    .filter((paragraph) => (paragraph.textContent || '').replace(/\s+/g, ' ').trim().length > 900)
-    .length;
+  const longParagraphs = Array.from(doc.querySelectorAll('p')).filter(
+    (paragraph) => (paragraph.textContent || '').replace(/\s+/g, ' ').trim().length > 900,
+  ).length;
 
   const blockers: string[] = [];
   const warnings: string[] = [];
@@ -163,38 +193,51 @@ function getDraftGovernance(sourceHtml: string, effectiveDate: string, changeSum
   }
 
   if (headings === 0) {
-    warnings.push('No headings detected. The document can still publish, but the web TOC and PDF structure will be weaker.');
+    warnings.push(
+      'No headings detected. The document can still publish, but the web TOC and PDF structure will be weaker.',
+    );
   }
 
   if (tables > 0) {
-    warnings.push(`${tables} table${tables === 1 ? '' : 's'} detected. Check the PDF preview for clean breaks and repeated headers.`);
+    warnings.push(
+      `${tables} table${tables === 1 ? '' : 's'} detected. Check the PDF preview for clean breaks and repeated headers.`,
+    );
   }
 
   if (longParagraphs > 0) {
-    warnings.push(`${longParagraphs} very long paragraph${longParagraphs === 1 ? '' : 's'} detected. Splitting clauses can improve readability and page breaks.`);
+    warnings.push(
+      `${longParagraphs} very long paragraph${longParagraphs === 1 ? '' : 's'} detected. Splitting clauses can improve readability and page breaks.`,
+    );
   }
 
   if (manualBreaks === 0 && (doc.body.textContent || '').trim().split(/\s+/).length > 2200) {
-    warnings.push('This is a long document with no manual page breaks. Review the PDF preview closely before publishing.');
+    warnings.push(
+      'This is a long document with no manual page breaks. Review the PDF preview closely before publishing.',
+    );
   }
 
   if (pageSize === 'A3') {
-    warnings.push('A3 is unusual for legal documents. Use it only when the layout genuinely needs the extra width.');
+    warnings.push(
+      'A3 is unusual for legal documents. Use it only when the layout genuinely needs the extra width.',
+    );
   }
 
   if (orientation === 'landscape') {
-    warnings.push('Landscape layout is harder to read for most legal documents. Confirm it is intentional.');
+    warnings.push(
+      'Landscape layout is harder to read for most legal documents. Confirm it is intentional.',
+    );
   }
 
   return { blockers, warnings, tables, longParagraphs, manualBreaks };
 }
 
 function StatusBadge({ value }: { value: string }) {
-  const palette = value === 'published'
-    ? 'bg-green-50 text-green-700 border-green-200'
-    : value === 'draft'
-      ? 'bg-amber-50 text-amber-700 border-amber-200'
-      : 'bg-gray-100 text-gray-700 border-gray-200';
+  const palette =
+    value === 'published'
+      ? 'bg-green-50 text-green-700 border-green-200'
+      : value === 'draft'
+        ? 'bg-amber-50 text-amber-700 border-amber-200'
+        : 'bg-gray-100 text-gray-700 border-gray-200';
   return (
     <Badge variant="outline" className={palette}>
       {value}
@@ -203,9 +246,10 @@ function StatusBadge({ value }: { value: string }) {
 }
 
 function RenderModeBadge({ value }: { value: string }) {
-  const palette = value === 'legacy_resource'
-    ? 'bg-blue-50 text-blue-700 border-blue-200'
-    : 'bg-violet-50 text-violet-700 border-violet-200';
+  const palette =
+    value === 'legacy_resource'
+      ? 'bg-blue-50 text-blue-700 border-blue-200'
+      : 'bg-violet-50 text-violet-700 border-violet-200';
   return (
     <Badge variant="outline" className={palette}>
       {value === 'legacy_resource' ? 'Legacy-backed' : 'Versioned'}
@@ -230,14 +274,17 @@ function syncLegalDocumentCache(
   detail: LegalDocumentDetailResponse,
 ) {
   queryClient.setQueryData(resourceKeys.legalDocument(detail.definition.slug), detail);
-  queryClient.setQueryData(resourceKeys.legalDocumentVersions(detail.definition.slug), detail.versions);
+  queryClient.setQueryData(
+    resourceKeys.legalDocumentVersions(detail.definition.slug),
+    detail.versions,
+  );
   queryClient.setQueryData<LegalDocumentDefinitionResponse[] | undefined>(
     resourceKeys.legalDocuments(),
     (existing) => {
       if (!existing) return [detail.definition];
-      const next = existing.map((item) => (
-        item.slug === detail.definition.slug ? detail.definition : item
-      ));
+      const next = existing.map((item) =>
+        item.slug === detail.definition.slug ? detail.definition : item,
+      );
       return next.some((item) => item.slug === detail.definition.slug)
         ? next
         : [...next, detail.definition];
@@ -246,17 +293,15 @@ function syncLegalDocumentCache(
 }
 
 function MigrationBadge({ state }: { state: 'legacy-only' | 'draft-ready' | 'migrated' }) {
-  const palette = state === 'migrated'
-    ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
-    : state === 'draft-ready'
-      ? 'bg-amber-50 text-amber-700 border-amber-200'
-      : 'bg-slate-100 text-slate-700 border-slate-200';
+  const palette =
+    state === 'migrated'
+      ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+      : state === 'draft-ready'
+        ? 'bg-amber-50 text-amber-700 border-amber-200'
+        : 'bg-slate-100 text-slate-700 border-slate-200';
 
-  const label = state === 'migrated'
-    ? 'Migrated'
-    : state === 'draft-ready'
-      ? 'Draft Ready'
-      : 'Legacy Only';
+  const label =
+    state === 'migrated' ? 'Migrated' : state === 'draft-ready' ? 'Draft Ready' : 'Legacy Only';
 
   return (
     <Badge variant="outline" className={palette}>
@@ -297,12 +342,18 @@ function VersionList({
               <div className="flex items-center gap-2">
                 <span className="font-medium text-gray-900">v{version.versionNumber}</span>
                 <StatusBadge value={version.status} />
-                <Badge variant="outline">{version.contentFormat === 'legacy_blocks' ? 'Legacy snapshot' : 'Normalized'}</Badge>
+                <Badge variant="outline">
+                  {version.contentFormat === 'legacy_blocks' ? 'Legacy snapshot' : 'Normalized'}
+                </Badge>
                 {definition.currentPublishedVersionId === version.id && (
-                  <Badge variant="outline" className="border-green-200 bg-green-50 text-green-700">Live</Badge>
+                  <Badge variant="outline" className="border-green-200 bg-green-50 text-green-700">
+                    Live
+                  </Badge>
                 )}
                 {definition.currentDraftVersionId === version.id && (
-                  <Badge variant="outline" className="border-amber-200 bg-amber-50 text-amber-700">Active draft</Badge>
+                  <Badge variant="outline" className="border-amber-200 bg-amber-50 text-amber-700">
+                    Active draft
+                  </Badge>
                 )}
               </div>
               <p className="mt-1 text-sm text-muted-foreground">
@@ -345,18 +396,20 @@ function VersionList({
               </Button>
             )}
 
-            {definition.currentPublishedVersionId !== version.id && definition.currentDraftVersionId !== version.id && version.status !== 'archived' && (
-              <Button
-                type="button"
-                size="sm"
-                variant="ghost"
-                onClick={() => onArchive(version.id)}
-                disabled={actionVersionId === version.id}
-              >
-                <Archive className="mr-2 h-4 w-4" />
-                {actionVersionId === version.id ? 'Archiving…' : 'Archive'}
-              </Button>
-            )}
+            {definition.currentPublishedVersionId !== version.id &&
+              definition.currentDraftVersionId !== version.id &&
+              version.status !== 'archived' && (
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="ghost"
+                  onClick={() => onArchive(version.id)}
+                  disabled={actionVersionId === version.id}
+                >
+                  <Archive className="mr-2 h-4 w-4" />
+                  {actionVersionId === version.id ? 'Archiving…' : 'Archive'}
+                </Button>
+              )}
           </div>
         </div>
       ))}
@@ -364,7 +417,13 @@ function VersionList({
   );
 }
 
-function AuditList({ entries, isLoading }: { entries: LegalDocumentAuditEntry[]; isLoading: boolean }) {
+function AuditList({
+  entries,
+  isLoading,
+}: {
+  entries: LegalDocumentAuditEntry[];
+  isLoading: boolean;
+}) {
   if (isLoading) {
     return (
       <div className="space-y-3">
@@ -386,25 +445,32 @@ function AuditList({ entries, isLoading }: { entries: LegalDocumentAuditEntry[];
   return (
     <div className="space-y-3">
       {entries.map((entry) => {
-        const severityClass = entry.severity === 'critical'
-          ? 'border-red-200 bg-red-50 text-red-700'
-          : entry.severity === 'warning'
-            ? 'border-amber-200 bg-amber-50 text-amber-700'
-            : 'border-slate-200 bg-slate-50 text-slate-700';
+        const severityClass =
+          entry.severity === 'critical'
+            ? 'border-red-200 bg-red-50 text-red-700'
+            : entry.severity === 'warning'
+              ? 'border-amber-200 bg-amber-50 text-amber-700'
+              : 'border-slate-200 bg-slate-50 text-slate-700';
 
         return (
           <div key={entry.id} className="rounded-lg border border-gray-200 p-4">
             <div className="flex items-center justify-between gap-3">
               <div className="flex items-center gap-2">
-                <Badge variant="outline" className={severityClass}>{entry.severity}</Badge>
+                <Badge variant="outline" className={severityClass}>
+                  {entry.severity}
+                </Badge>
                 <Badge variant="outline">{entry.action}</Badge>
               </div>
               <div className="text-xs text-muted-foreground">{formatDate(entry.timestamp)}</div>
             </div>
             <p className="mt-3 text-sm font-medium text-gray-900">{entry.summary}</p>
             <div className="mt-2 grid gap-2 text-sm text-muted-foreground md:grid-cols-2">
-              <div>Actor role: <span className="font-medium text-gray-900">{entry.actorRole}</span></div>
-              <div>Entity: <span className="font-medium text-gray-900">{entry.entityId || 'n/a'}</span></div>
+              <div>
+                Actor role: <span className="font-medium text-gray-900">{entry.actorRole}</span>
+              </div>
+              <div>
+                Entity: <span className="font-medium text-gray-900">{entry.entityId || 'n/a'}</span>
+              </div>
             </div>
           </div>
         );
@@ -443,19 +509,21 @@ function DraftEditor({ detail }: { detail: LegalDocumentDetailResponse }) {
     () => getDraftGovernance(sourceHtml, effectiveDate, changeSummary, pageSize, orientation),
     [changeSummary, effectiveDate, orientation, pageSize, sourceHtml],
   );
-  const sanitizedPreview = useMemo(() => sanitizeLegalDocumentHtml(sourceHtml || '<p></p>'), [sourceHtml]);
+  const sanitizedPreview = useMemo(
+    () => sanitizeLegalDocumentHtml(sourceHtml || '<p></p>'),
+    [sourceHtml],
+  );
   const hasDraft = Boolean(detail.currentDraftVersion);
   const liveVersionLabel = detail.currentPublishedVersion?.versionNumber
     ? `v${detail.currentPublishedVersion.versionNumber}`
     : 'legacy version';
-  const isDirty = (
-    versionNumber !== initialDraft.versionNumber
-    || effectiveDate !== initialDraft.effectiveDate
-    || changeSummary !== initialDraft.changeSummary
-    || sourceHtml !== initialDraft.sourceHtml
-    || pageSize !== initialDraft.pdfConfig.pageSize
-    || orientation !== initialDraft.pdfConfig.orientation
-  );
+  const isDirty =
+    versionNumber !== initialDraft.versionNumber ||
+    effectiveDate !== initialDraft.effectiveDate ||
+    changeSummary !== initialDraft.changeSummary ||
+    sourceHtml !== initialDraft.sourceHtml ||
+    pageSize !== initialDraft.pdfConfig.pageSize ||
+    orientation !== initialDraft.pdfConfig.orientation;
 
   const saveMutation = useMutation({
     mutationFn: async () => {
@@ -484,9 +552,18 @@ function DraftEditor({ detail }: { detail: LegalDocumentDetailResponse }) {
       syncLegalDocumentCache(queryClient, result);
       setDraftVersionId(result.currentDraftVersion?.id || null);
       await Promise.all([
-        queryClient.invalidateQueries({ queryKey: resourceKeys.legalDocuments(), refetchType: 'none' }),
-        queryClient.invalidateQueries({ queryKey: resourceKeys.legalDocument(detail.definition.slug), refetchType: 'active' }),
-        queryClient.invalidateQueries({ queryKey: resourceKeys.legalDocumentVersions(detail.definition.slug), refetchType: 'none' }),
+        queryClient.invalidateQueries({
+          queryKey: resourceKeys.legalDocuments(),
+          refetchType: 'none',
+        }),
+        queryClient.invalidateQueries({
+          queryKey: resourceKeys.legalDocument(detail.definition.slug),
+          refetchType: 'active',
+        }),
+        queryClient.invalidateQueries({
+          queryKey: resourceKeys.legalDocumentVersions(detail.definition.slug),
+          refetchType: 'none',
+        }),
       ]);
       toast.success(hasDraft ? 'Legal draft updated' : 'Legal draft created');
     },
@@ -509,12 +586,22 @@ function DraftEditor({ detail }: { detail: LegalDocumentDetailResponse }) {
       syncLegalDocumentCache(queryClient, result);
       setDraftVersionId(result.currentDraftVersion?.id || null);
       await Promise.all([
-        queryClient.invalidateQueries({ queryKey: resourceKeys.legalDocuments(), refetchType: 'none' }),
-        queryClient.invalidateQueries({ queryKey: resourceKeys.legalDocument(detail.definition.slug), refetchType: 'active' }),
-        queryClient.invalidateQueries({ queryKey: resourceKeys.legalDocumentVersions(detail.definition.slug), refetchType: 'none' }),
+        queryClient.invalidateQueries({
+          queryKey: resourceKeys.legalDocuments(),
+          refetchType: 'none',
+        }),
+        queryClient.invalidateQueries({
+          queryKey: resourceKeys.legalDocument(detail.definition.slug),
+          refetchType: 'active',
+        }),
+        queryClient.invalidateQueries({
+          queryKey: resourceKeys.legalDocumentVersions(detail.definition.slug),
+          refetchType: 'none',
+        }),
       ]);
       toast.success('Legal document published', {
-        description: 'The live legal page now uses this versioned document instead of the legacy source.',
+        description:
+          'The live legal page now uses this versioned document instead of the legacy source.',
       });
     },
     onError: (error: unknown) => {
@@ -523,34 +610,44 @@ function DraftEditor({ detail }: { detail: LegalDocumentDetailResponse }) {
     },
   });
 
-  const pdfDocument = useMemo(() => ({
-    title: detail.definition.title,
-    description: detail.definition.description || '',
-    version: versionNumber || detail.currentDraftVersion?.versionNumber || detail.currentPublishedVersion?.versionNumber || '1.0',
-    effectiveDate: effectiveDate || null,
-    updatedAt: detail.currentDraftVersion?.updatedAt || detail.currentPublishedVersion?.updatedAt || new Date().toISOString(),
-    sectionLabel: LEGAL_SECTION_LABELS[detail.definition.section],
-    html: sourceHtml || '<p></p>',
-    toc: detail.currentDraftVersion?.toc || detail.currentPublishedVersion?.toc || [],
-    pdfConfig: {
-      pageSize,
+  const pdfDocument = useMemo(
+    () => ({
+      title: detail.definition.title,
+      description: detail.definition.description || '',
+      version:
+        versionNumber ||
+        detail.currentDraftVersion?.versionNumber ||
+        detail.currentPublishedVersion?.versionNumber ||
+        '1.0',
+      effectiveDate: effectiveDate || null,
+      updatedAt:
+        detail.currentDraftVersion?.updatedAt ||
+        detail.currentPublishedVersion?.updatedAt ||
+        new Date().toISOString(),
+      sectionLabel: LEGAL_SECTION_LABELS[detail.definition.section],
+      html: sourceHtml || '<p></p>',
+      toc: detail.currentDraftVersion?.toc || detail.currentPublishedVersion?.toc || [],
+      pdfConfig: {
+        pageSize,
+        orientation,
+      },
+    }),
+    [
+      detail.currentDraftVersion?.toc,
+      detail.currentDraftVersion?.updatedAt,
+      detail.currentPublishedVersion?.toc,
+      detail.currentPublishedVersion?.updatedAt,
+      detail.currentPublishedVersion?.versionNumber,
+      detail.definition.description,
+      detail.definition.section,
+      detail.definition.title,
+      effectiveDate,
       orientation,
-    },
-  }), [
-    detail.currentDraftVersion?.toc,
-    detail.currentDraftVersion?.updatedAt,
-    detail.currentPublishedVersion?.toc,
-    detail.currentPublishedVersion?.updatedAt,
-    detail.currentPublishedVersion?.versionNumber,
-    detail.definition.description,
-    detail.definition.section,
-    detail.definition.title,
-    effectiveDate,
-    orientation,
-    pageSize,
-    sourceHtml,
-    versionNumber,
-  ]);
+      pageSize,
+      sourceHtml,
+      versionNumber,
+    ],
+  );
 
   const handlePasteFromClipboard = async () => {
     if (typeof window === 'undefined' || !navigator?.clipboard) {
@@ -577,7 +674,7 @@ function DraftEditor({ detail }: { detail: LegalDocumentDetailResponse }) {
       }
 
       if (!html) {
-        text = text || await navigator.clipboard.readText();
+        text = text || (await navigator.clipboard.readText());
       }
 
       const fallbackHtml = text
@@ -611,11 +708,15 @@ function DraftEditor({ detail }: { detail: LegalDocumentDetailResponse }) {
               <h3 className="font-semibold">Legal document draft</h3>
             </div>
             <p className="mt-2 text-sm text-emerald-900/80">
-              Edit the document, save the draft, then publish when you want this version to replace the live legal page.
+              Edit the document, save the draft, then publish when you want this version to replace
+              the live legal page.
             </p>
             <div className="mt-3 flex flex-wrap items-center gap-2 text-xs text-emerald-900/80">
               <Badge variant="outline" className="border-emerald-200 bg-white text-emerald-700">
-                Live now: {detail.definition.renderMode === 'legacy_resource' ? 'Legacy document' : `Versioned ${liveVersionLabel}`}
+                Live now:{' '}
+                {detail.definition.renderMode === 'legacy_resource'
+                  ? 'Legacy document'
+                  : `Versioned ${liveVersionLabel}`}
               </Badge>
               <Badge variant="outline" className="border-emerald-200 bg-white text-emerald-700">
                 After publish: this draft becomes the live document
@@ -623,11 +724,7 @@ function DraftEditor({ detail }: { detail: LegalDocumentDetailResponse }) {
             </div>
           </div>
           <div className="flex flex-wrap gap-2">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => void handlePasteFromClipboard()}
-            >
+            <Button type="button" variant="outline" onClick={() => void handlePasteFromClipboard()}>
               <Copy className="mr-2 h-4 w-4" />
               Paste document
             </Button>
@@ -667,7 +764,13 @@ function DraftEditor({ detail }: { detail: LegalDocumentDetailResponse }) {
               type="button"
               variant="secondary"
               onClick={() => void publishMutation.mutateAsync()}
-              disabled={publishMutation.isPending || saveMutation.isPending || isDirty || !draftVersionId || governance.blockers.length > 0}
+              disabled={
+                publishMutation.isPending ||
+                saveMutation.isPending ||
+                isDirty ||
+                !draftVersionId ||
+                governance.blockers.length > 0
+              }
             >
               <FileText className="mr-2 h-4 w-4" />
               {publishMutation.isPending ? 'Publishing…' : 'Publish live'}
@@ -689,7 +792,9 @@ function DraftEditor({ detail }: { detail: LegalDocumentDetailResponse }) {
                   <CollapsibleTrigger asChild>
                     <Button type="button" variant="ghost" size="sm">
                       {showSetup ? 'Hide PDF settings' : 'Show PDF settings'}
-                      <ChevronDown className={`ml-2 h-4 w-4 transition-transform ${showSetup ? 'rotate-180' : ''}`} />
+                      <ChevronDown
+                        className={`ml-2 h-4 w-4 transition-transform ${showSetup ? 'rotate-180' : ''}`}
+                      />
                     </Button>
                   </CollapsibleTrigger>
                 </Collapsible>
@@ -715,7 +820,9 @@ function DraftEditor({ detail }: { detail: LegalDocumentDetailResponse }) {
                 />
               </div>
               <div className="rounded-lg border border-slate-200 bg-slate-50 p-3 text-sm text-slate-700 md:col-span-2">
-                Start with `Paste document` for the cleanest carry-over from Word or Google Docs. If formatting is sensitive, switch to `HTML/source` and publish from there without over-editing in the visual editor.
+                Start with `Paste document` for the cleanest carry-over from Word or Google Docs. If
+                formatting is sensitive, switch to `HTML/source` and publish from there without
+                over-editing in the visual editor.
               </div>
               <div className="space-y-2 md:col-span-2">
                 <Label htmlFor="legal-change-summary">Change summary</Label>
@@ -731,7 +838,10 @@ function DraftEditor({ detail }: { detail: LegalDocumentDetailResponse }) {
                 <CollapsibleContent className="grid gap-4 md:grid-cols-2">
                   <div className="space-y-2">
                     <Label>PDF page size</Label>
-                    <Select value={pageSize} onValueChange={(value) => setPageSize(value as 'A4' | 'A3')}>
+                    <Select
+                      value={pageSize}
+                      onValueChange={(value) => setPageSize(value as 'A4' | 'A3')}
+                    >
                       <SelectTrigger>
                         <SelectValue placeholder="Select page size" />
                       </SelectTrigger>
@@ -743,7 +853,10 @@ function DraftEditor({ detail }: { detail: LegalDocumentDetailResponse }) {
                   </div>
                   <div className="space-y-2">
                     <Label>PDF orientation</Label>
-                    <Select value={orientation} onValueChange={(value) => setOrientation(value as 'portrait' | 'landscape')}>
+                    <Select
+                      value={orientation}
+                      onValueChange={(value) => setOrientation(value as 'portrait' | 'landscape')}
+                    >
                       <SelectTrigger>
                         <SelectValue placeholder="Select orientation" />
                       </SelectTrigger>
@@ -758,7 +871,11 @@ function DraftEditor({ detail }: { detail: LegalDocumentDetailResponse }) {
             </CardContent>
           </Card>
 
-          <Tabs value={editorTab} onValueChange={(value) => setEditorTab(value as 'editor' | 'source')} className="space-y-4">
+          <Tabs
+            value={editorTab}
+            onValueChange={(value) => setEditorTab(value as 'editor' | 'source')}
+            className="space-y-4"
+          >
             <TabsList className="grid w-full grid-cols-2">
               <TabsTrigger value="editor" className="gap-2">
                 <BookOpenText className="h-4 w-4" />
@@ -774,7 +891,9 @@ function DraftEditor({ detail }: { detail: LegalDocumentDetailResponse }) {
               <Card>
                 <CardHeader className="pb-3">
                   <CardTitle className="text-base">Editor</CardTitle>
-                  <CardDescription>Use this for cleanup, headings, lists, links, and tables after import.</CardDescription>
+                  <CardDescription>
+                    Use this for cleanup, headings, lists, links, and tables after import.
+                  </CardDescription>
                 </CardHeader>
                 <CardContent className="p-0">
                   <RichTextEditor
@@ -803,7 +922,11 @@ function DraftEditor({ detail }: { detail: LegalDocumentDetailResponse }) {
                         Best when pasted legal formatting is sensitive and you want maximum control.
                       </CardDescription>
                     </div>
-                    <Button type="button" variant="outline" onClick={() => void handlePasteFromClipboard()}>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => void handlePasteFromClipboard()}
+                    >
                       <Copy className="mr-2 h-4 w-4" />
                       Paste again
                     </Button>
@@ -835,14 +958,38 @@ function DraftEditor({ detail }: { detail: LegalDocumentDetailResponse }) {
                   <AlertTriangle className="h-4 w-4 text-amber-600" />
                 )}
                 <span className="font-medium text-gray-900">
-                  {governance.blockers.length === 0 ? 'Ready once the draft is saved' : 'Fix these before publishing'}
+                  {governance.blockers.length === 0
+                    ? 'Ready once the draft is saved'
+                    : 'Fix these before publishing'}
                 </span>
               </div>
-              <div>Draft: <span className="font-medium text-gray-900">{hasDraft ? `v${detail.currentDraftVersion?.versionNumber}` : 'Not saved yet'}</span></div>
-              <div>Live: <span className="font-medium text-gray-900">{detail.definition.renderMode === 'legacy_resource' ? 'Legacy document' : liveVersionLabel}</span></div>
-              <div>Target: <span className="font-medium text-gray-900">/legal/{detail.definition.slug}</span></div>
-              <div>Words: <span className="font-medium text-gray-900">{htmlStats.wordCount}</span></div>
-              <div>Section: <span className="font-medium text-gray-900">{LEGAL_SECTION_LABELS[detail.definition.section]}</span></div>
+              <div>
+                Draft:{' '}
+                <span className="font-medium text-gray-900">
+                  {hasDraft ? `v${detail.currentDraftVersion?.versionNumber}` : 'Not saved yet'}
+                </span>
+              </div>
+              <div>
+                Live:{' '}
+                <span className="font-medium text-gray-900">
+                  {detail.definition.renderMode === 'legacy_resource'
+                    ? 'Legacy document'
+                    : liveVersionLabel}
+                </span>
+              </div>
+              <div>
+                Target:{' '}
+                <span className="font-medium text-gray-900">/legal/{detail.definition.slug}</span>
+              </div>
+              <div>
+                Words: <span className="font-medium text-gray-900">{htmlStats.wordCount}</span>
+              </div>
+              <div>
+                Section:{' '}
+                <span className="font-medium text-gray-900">
+                  {LEGAL_SECTION_LABELS[detail.definition.section]}
+                </span>
+              </div>
               {governance.blockers.length > 0 && (
                 <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-amber-900">
                   <div className="mb-2 font-medium">Blockers</div>
@@ -911,8 +1058,12 @@ function DetailShell({ detail }: { detail: LegalDocumentDetailResponse }) {
     await Promise.all([
       queryClient.invalidateQueries({ queryKey: resourceKeys.legalDocuments() }),
       queryClient.invalidateQueries({ queryKey: resourceKeys.legalDocument(definition.slug) }),
-      queryClient.invalidateQueries({ queryKey: resourceKeys.legalDocumentVersions(definition.slug) }),
-      queryClient.invalidateQueries({ queryKey: [...resourceKeys.legalDocument(definition.slug), 'audit'] }),
+      queryClient.invalidateQueries({
+        queryKey: resourceKeys.legalDocumentVersions(definition.slug),
+      }),
+      queryClient.invalidateQueries({
+        queryKey: [...resourceKeys.legalDocument(definition.slug), 'audit'],
+      }),
     ]);
   };
 
@@ -946,7 +1097,8 @@ function DetailShell({ detail }: { detail: LegalDocumentDetailResponse }) {
       toast.success('Legal document version archived');
     },
     onError: (error: unknown) => {
-      const message = error instanceof Error ? error.message : 'Failed to archive legal document version';
+      const message =
+        error instanceof Error ? error.message : 'Failed to archive legal document version';
       toast.error('Could not archive legal document version', { description: message });
     },
     onSettled: () => {
@@ -965,7 +1117,8 @@ function DetailShell({ detail }: { detail: LegalDocumentDetailResponse }) {
       toast.success('Draft created from selected version');
     },
     onError: (error: unknown) => {
-      const message = error instanceof Error ? error.message : 'Failed to create draft from version';
+      const message =
+        error instanceof Error ? error.message : 'Failed to create draft from version';
       toast.error('Could not create draft copy', { description: message });
     },
     onSettled: () => {
@@ -1008,7 +1161,11 @@ function DetailShell({ detail }: { detail: LegalDocumentDetailResponse }) {
         </div>
       </CardHeader>
       <CardContent>
-        <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as 'draft' | 'published' | 'history')} className="space-y-6">
+        <Tabs
+          value={activeTab}
+          onValueChange={(value) => setActiveTab(value as 'draft' | 'published' | 'history')}
+          className="space-y-6"
+        >
           <TabsList className="grid w-full grid-cols-3">
             <TabsTrigger value="draft" className="gap-2">
               <FileClock className="h-4 w-4" />
@@ -1035,10 +1192,34 @@ function DetailShell({ detail }: { detail: LegalDocumentDetailResponse }) {
                   <CardTitle className="text-base">Live website source</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-2 text-sm text-muted-foreground">
-                  <div>Live renderer: <span className="font-medium text-gray-900">{definition.renderMode === 'legacy_resource' ? 'Legacy legal resource' : 'Versioned legal document'}</span></div>
-                  <div>Live version: <span className="font-medium text-gray-900">{currentPublishedVersion ? `v${currentPublishedVersion.versionNumber}` : 'Legacy resource only'}</span></div>
-                  <div>Legacy resource link: <span className="font-medium text-gray-900">{definition.legacyResourceId || 'Not linked'}</span></div>
-                  <div>Updated: <span className="font-medium text-gray-900">{formatDate(definition.updatedAt)}</span></div>
+                  <div>
+                    Live renderer:{' '}
+                    <span className="font-medium text-gray-900">
+                      {definition.renderMode === 'legacy_resource'
+                        ? 'Legacy legal resource'
+                        : 'Versioned legal document'}
+                    </span>
+                  </div>
+                  <div>
+                    Live version:{' '}
+                    <span className="font-medium text-gray-900">
+                      {currentPublishedVersion
+                        ? `v${currentPublishedVersion.versionNumber}`
+                        : 'Legacy resource only'}
+                    </span>
+                  </div>
+                  <div>
+                    Legacy resource link:{' '}
+                    <span className="font-medium text-gray-900">
+                      {definition.legacyResourceId || 'Not linked'}
+                    </span>
+                  </div>
+                  <div>
+                    Updated:{' '}
+                    <span className="font-medium text-gray-900">
+                      {formatDate(definition.updatedAt)}
+                    </span>
+                  </div>
                 </CardContent>
               </Card>
               <Card>
@@ -1056,19 +1237,34 @@ function DetailShell({ detail }: { detail: LegalDocumentDetailResponse }) {
                         disabled={migrateMutation.isPending || migrationState === 'draft-ready'}
                       >
                         <Sparkles className="mr-2 h-4 w-4" />
-                        {migrateMutation.isPending ? 'Preparing draft…' : migrationState === 'draft-ready' ? 'Migration draft ready' : 'Create migration draft'}
+                        {migrateMutation.isPending
+                          ? 'Preparing draft…'
+                          : migrationState === 'draft-ready'
+                            ? 'Migration draft ready'
+                            : 'Create migration draft'}
                       </Button>
                     )}
                   </div>
                 </CardHeader>
                 <CardContent className="space-y-2 text-sm text-muted-foreground">
                   <p>
-                    Migration creates a normalized draft from the existing legacy legal document without changing the live public slug.
+                    Migration creates a normalized draft from the existing legacy legal document
+                    without changing the live public slug.
                   </p>
                   <p>
-                    Review the draft, adjust wording or formatting if needed, then publish when you are happy to switch this legal document to the versioned renderer.
+                    Review the draft, adjust wording or formatting if needed, then publish when you
+                    are happy to switch this legal document to the versioned renderer.
                   </p>
-                  <div>State: <span className="font-medium text-gray-900">{migrationState === 'migrated' ? 'Already versioned' : migrationState === 'draft-ready' ? 'Migration draft ready for review' : 'Still using legacy resource'}</span></div>
+                  <div>
+                    State:{' '}
+                    <span className="font-medium text-gray-900">
+                      {migrationState === 'migrated'
+                        ? 'Already versioned'
+                        : migrationState === 'draft-ready'
+                          ? 'Migration draft ready for review'
+                          : 'Still using legacy resource'}
+                    </span>
+                  </div>
                 </CardContent>
               </Card>
             </div>
@@ -1078,7 +1274,9 @@ function DetailShell({ detail }: { detail: LegalDocumentDetailResponse }) {
                 <div className="flex items-center justify-between gap-3">
                   <div>
                     <div className="flex items-center gap-2">
-                      <span className="font-semibold text-gray-900">v{currentPublishedVersion.versionNumber}</span>
+                      <span className="font-semibold text-gray-900">
+                        v{currentPublishedVersion.versionNumber}
+                      </span>
                       <StatusBadge value={currentPublishedVersion.status} />
                     </div>
                     <p className="mt-1 text-sm text-muted-foreground">
@@ -1086,7 +1284,9 @@ function DetailShell({ detail }: { detail: LegalDocumentDetailResponse }) {
                     </p>
                   </div>
                   <Badge variant="outline">
-                    {currentPublishedVersion.contentFormat === 'legacy_blocks' ? 'Legacy snapshot' : 'Normalized content'}
+                    {currentPublishedVersion.contentFormat === 'legacy_blocks'
+                      ? 'Legacy snapshot'
+                      : 'Normalized content'}
                   </Badge>
                 </div>
                 <Separator className="my-3" />
@@ -1115,7 +1315,8 @@ function DetailShell({ detail }: { detail: LegalDocumentDetailResponse }) {
               <CardHeader className="pb-3">
                 <CardTitle className="text-base">Audit trail</CardTitle>
                 <CardDescription>
-                  Recent create, update, migration, publish, archive, and rollback actions for this legal document.
+                  Recent create, update, migration, publish, archive, and rollback actions for this
+                  legal document.
                 </CardDescription>
               </CardHeader>
               <CardContent>
@@ -1146,7 +1347,9 @@ export default function LegalDocumentsManager() {
   }, [selectedSlug, listQuery.data]);
 
   const detailQuery = useQuery({
-    queryKey: selectedSlug ? resourceKeys.legalDocument(selectedSlug) : resourceKeys.legalDocument('unselected'),
+    queryKey: selectedSlug
+      ? resourceKeys.legalDocument(selectedSlug)
+      : resourceKeys.legalDocument('unselected'),
     queryFn: () => resourcesApi.getLegalDocument(selectedSlug!),
     enabled: Boolean(selectedSlug),
     staleTime: 5 * 60 * 1000,
@@ -1166,10 +1369,19 @@ export default function LegalDocumentsManager() {
     const docs = listQuery.data || [];
     const total = docs.length;
     const migrated = docs.filter((doc) => doc.renderMode === 'versioned_document').length;
-    const draftReady = docs.filter((doc) => doc.renderMode === 'legacy_resource' && doc.currentDraftVersionId).length;
+    const draftReady = docs.filter(
+      (doc) => doc.renderMode === 'legacy_resource' && doc.currentDraftVersionId,
+    ).length;
     const legacyOnly = total - migrated - draftReady;
-    const priorityTotal = docs.filter((doc) => LEGAL_MIGRATION_PRIORITY_SLUGS.includes(doc.slug)).length;
-    const priorityOutstanding = docs.filter((doc) => LEGAL_MIGRATION_PRIORITY_SLUGS.includes(doc.slug) && doc.renderMode === 'legacy_resource' && !doc.currentDraftVersionId).length;
+    const priorityTotal = docs.filter((doc) =>
+      LEGAL_MIGRATION_PRIORITY_SLUGS.includes(doc.slug),
+    ).length;
+    const priorityOutstanding = docs.filter(
+      (doc) =>
+        LEGAL_MIGRATION_PRIORITY_SLUGS.includes(doc.slug) &&
+        doc.renderMode === 'legacy_resource' &&
+        !doc.currentDraftVersionId,
+    ).length;
 
     return {
       total,
@@ -1182,7 +1394,8 @@ export default function LegalDocumentsManager() {
   }, [listQuery.data]);
 
   const migratePriorityMutation = useMutation({
-    mutationFn: async (): Promise<LegalDocumentMigrationBatchResponse> => resourcesApi.migratePriorityLegalDocuments(),
+    mutationFn: async (): Promise<LegalDocumentMigrationBatchResponse> =>
+      resourcesApi.migratePriorityLegalDocuments(),
     onSuccess: async (result) => {
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: resourceKeys.legalDocuments() }),
@@ -1203,7 +1416,8 @@ export default function LegalDocumentsManager() {
       });
     },
     onError: (error: unknown) => {
-      const message = error instanceof Error ? error.message : 'Failed to prepare priority migration drafts';
+      const message =
+        error instanceof Error ? error.message : 'Failed to prepare priority migration drafts';
       toast.error('Could not run priority migration', { description: message });
     },
   });
@@ -1216,7 +1430,8 @@ export default function LegalDocumentsManager() {
             <div>
               <CardTitle className="text-xl">Legal Documents</CardTitle>
               <CardDescription>
-                Migration workspace for moving legacy legal documents into the versioned legal-document system.
+                Migration workspace for moving legacy legal documents into the versioned
+                legal-document system.
               </CardDescription>
             </div>
             <Button
@@ -1224,7 +1439,9 @@ export default function LegalDocumentsManager() {
               size="sm"
               variant="outline"
               onClick={() => void migratePriorityMutation.mutateAsync()}
-              disabled={migratePriorityMutation.isPending || migrationSummary.priorityOutstanding === 0}
+              disabled={
+                migratePriorityMutation.isPending || migrationSummary.priorityOutstanding === 0
+              }
             >
               <Sparkles className="mr-2 h-4 w-4" />
               {migratePriorityMutation.isPending ? 'Preparing…' : 'Priority Drafts'}
@@ -1233,10 +1450,24 @@ export default function LegalDocumentsManager() {
         </CardHeader>
         <CardContent>
           <div className="mb-4 grid gap-2 rounded-xl border border-slate-200 bg-slate-50 p-3 text-sm text-muted-foreground">
-            <div>Versioned: <span className="font-medium text-gray-900">{migrationSummary.migrated}</span></div>
-            <div>Draft ready: <span className="font-medium text-gray-900">{migrationSummary.draftReady}</span></div>
-            <div>Legacy only: <span className="font-medium text-gray-900">{migrationSummary.legacyOnly}</span></div>
-            <div>Priority remaining: <span className="font-medium text-gray-900">{migrationSummary.priorityOutstanding} / {migrationSummary.priorityTotal}</span></div>
+            <div>
+              Versioned:{' '}
+              <span className="font-medium text-gray-900">{migrationSummary.migrated}</span>
+            </div>
+            <div>
+              Draft ready:{' '}
+              <span className="font-medium text-gray-900">{migrationSummary.draftReady}</span>
+            </div>
+            <div>
+              Legacy only:{' '}
+              <span className="font-medium text-gray-900">{migrationSummary.legacyOnly}</span>
+            </div>
+            <div>
+              Priority remaining:{' '}
+              <span className="font-medium text-gray-900">
+                {migrationSummary.priorityOutstanding} / {migrationSummary.priorityTotal}
+              </span>
+            </div>
           </div>
           {listQuery.isLoading ? (
             <div className="space-y-3">
@@ -1269,11 +1500,13 @@ export default function LegalDocumentsManager() {
                                 <StatusBadge value={doc.status} />
                                 <RenderModeBadge value={doc.renderMode} />
                                 <MigrationBadge
-                                  state={doc.renderMode === 'versioned_document'
-                                    ? 'migrated'
-                                    : doc.currentDraftVersionId
-                                      ? 'draft-ready'
-                                      : 'legacy-only'}
+                                  state={
+                                    doc.renderMode === 'versioned_document'
+                                      ? 'migrated'
+                                      : doc.currentDraftVersionId
+                                        ? 'draft-ready'
+                                        : 'legacy-only'
+                                  }
                                 />
                               </div>
                             </div>
@@ -1310,7 +1543,8 @@ export default function LegalDocumentsManager() {
               <FileStack className="mx-auto mb-4 h-10 w-10 opacity-50" />
               <p className="text-lg font-medium">Select a legal document</p>
               <p className="mt-2 text-sm">
-                The draft workspace will open here with version metadata, rich editing, and live preview.
+                The draft workspace will open here with version metadata, rich editing, and live
+                preview.
               </p>
             </div>
           </CardContent>

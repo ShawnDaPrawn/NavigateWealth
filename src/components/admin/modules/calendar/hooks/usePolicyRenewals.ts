@@ -98,9 +98,10 @@ export function usePolicyRenewals(currentDate: Date) {
 
           // Build a descriptive title and description
           const ordinalSuffix = getOrdinalSuffix(anniversaryYear);
-          const title = anniversaryYear > 0
-            ? `Renewal: ${policyLabel} - ${clientName} (${anniversaryYear}${ordinalSuffix} year)`
-            : `Renewal: ${policyLabel} - ${clientName} (Inception)`;
+          const title =
+            anniversaryYear > 0
+              ? `Renewal: ${policyLabel} - ${clientName} (${anniversaryYear}${ordinalSuffix} year)`
+              : `Renewal: ${policyLabel} - ${clientName} (Inception)`;
 
           const description = [
             `Policy Anniversary for ${clientName}`,
@@ -108,7 +109,9 @@ export function usePolicyRenewals(currentDate: Date) {
             renewal.policyNumber ? `Policy No: ${renewal.policyNumber}` : null,
             `Category: ${renewal.categoryLabel}`,
             `Inception Date: ${inception.toLocaleDateString('en-ZA')}`,
-            anniversaryYear > 0 ? `Anniversary: ${anniversaryYear} year${anniversaryYear > 1 ? 's' : ''}` : 'Original inception date',
+            anniversaryYear > 0
+              ? `Anniversary: ${anniversaryYear} year${anniversaryYear > 1 ? 's' : ''}`
+              : 'Original inception date',
           ]
             .filter(Boolean)
             .join('\n');

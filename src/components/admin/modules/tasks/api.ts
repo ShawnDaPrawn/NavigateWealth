@@ -1,10 +1,10 @@
 /**
  * Task Management Module - API Layer
  * Navigate Wealth Admin Dashboard
- * 
+ *
  * Centralized API abstraction for all task-related operations.
  * Uses KV-backed server routes for persistence (no direct Supabase table access).
- * 
+ *
  * @module tasks/api
  */
 
@@ -35,7 +35,7 @@ export class TaskApiError extends Error {
   constructor(
     message: string,
     public code?: string,
-    public details?: unknown
+    public details?: unknown,
   ) {
     super(message);
     this.name = 'TaskApiError';
@@ -109,7 +109,10 @@ export const TasksAPI = {
   /**
    * Replace the checklist for a task.
    */
-  async saveChecklist(taskId: string, checklist: TaskChecklistItem[]): Promise<TaskChecklistItem[]> {
+  async saveChecklist(
+    taskId: string,
+    checklist: TaskChecklistItem[],
+  ): Promise<TaskChecklistItem[]> {
     logger.debug(`[TasksAPI] Saving checklist for task ${taskId}...`);
 
     try {
@@ -156,11 +159,7 @@ export const TasksAPI = {
   /**
    * Move task to different status and update sort order
    */
-  async moveTask(
-    id: string,
-    newStatus: TaskStatus,
-    newSortOrder: number
-  ): Promise<Task> {
+  async moveTask(id: string, newStatus: TaskStatus, newSortOrder: number): Promise<Task> {
     logger.debug(`[TasksAPI] Moving task ${id} to ${newStatus} at position ${newSortOrder}...`);
 
     try {
@@ -265,7 +264,10 @@ export const TaskStatsAPI = {
     try {
       const tasks = await TasksAPI.getTasks();
       const stats: Record<TaskStatus, number> = {
-        new: 0, in_progress: 0, completed: 0, archived: 0,
+        new: 0,
+        in_progress: 0,
+        completed: 0,
+        archived: 0,
       };
       tasks.forEach((task) => {
         if (stats[task.status] !== undefined) stats[task.status]++;
@@ -285,7 +287,10 @@ export const TaskStatsAPI = {
     try {
       const tasks = await TasksAPI.getTasks();
       const stats: Record<TaskPriority, number> = {
-        low: 0, medium: 0, high: 0, critical: 0,
+        low: 0,
+        medium: 0,
+        high: 0,
+        critical: 0,
       };
       tasks
         .filter((t) => t.status !== 'archived')
@@ -397,12 +402,11 @@ export const TaskFilterAPI = {
     const tomorrow = new Date(today);
     tomorrow.setDate(tomorrow.getDate() + 1);
 
-    return tasks
-      .filter((t) => {
-        if (!t.due_date || t.status === 'completed' || t.status === 'archived') return false;
-        const d = new Date(t.due_date);
-        return d >= today && d < tomorrow;
-      });
+    return tasks.filter((t) => {
+      if (!t.due_date || t.status === 'completed' || t.status === 'archived') return false;
+      const d = new Date(t.due_date);
+      return d >= today && d < tomorrow;
+    });
   },
 
   /**
@@ -435,11 +439,12 @@ export const TaskFilterAPI = {
 
     return tasks
       .filter((t) => t.status !== 'archived')
-      .filter((t) =>
-        t.title.toLowerCase().includes(q) ||
-        t.description?.toLowerCase().includes(q) ||
-        t.tags?.some((tag) => tag.toLowerCase().includes(q)) ||
-        t.category?.toLowerCase().includes(q)
+      .filter(
+        (t) =>
+          t.title.toLowerCase().includes(q) ||
+          t.description?.toLowerCase().includes(q) ||
+          t.tags?.some((tag) => tag.toLowerCase().includes(q)) ||
+          t.category?.toLowerCase().includes(q),
       );
   },
 
@@ -480,10 +485,11 @@ export const TaskFilterAPI = {
     // Search filter
     if (filters.search?.trim()) {
       const q = filters.search.trim().toLowerCase();
-      tasks = tasks.filter((t) =>
-        t.title.toLowerCase().includes(q) ||
-        t.description?.toLowerCase().includes(q) ||
-        t.tags?.some((tag) => tag.toLowerCase().includes(q))
+      tasks = tasks.filter(
+        (t) =>
+          t.title.toLowerCase().includes(q) ||
+          t.description?.toLowerCase().includes(q) ||
+          t.tags?.some((tag) => tag.toLowerCase().includes(q)),
       );
     }
 

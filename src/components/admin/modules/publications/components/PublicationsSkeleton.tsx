@@ -41,12 +41,14 @@ export function PublicationsSkeleton() {
       {/* Tabs */}
       <div className="px-6 pt-4">
         <div className="bg-gray-100/80 p-1 rounded-md flex gap-1">
-          {['Analytics', 'Articles', 'Pipeline', 'Categories', 'Types', 'Settings'].map((tab, i) => (
-            <Skeleton
-              key={tab}
-              className={`h-8 flex-1 rounded-sm ${i === 0 ? '' : 'bg-transparent'}`}
-            />
-          ))}
+          {['Analytics', 'Articles', 'Pipeline', 'Categories', 'Types', 'Settings'].map(
+            (tab, i) => (
+              <Skeleton
+                key={tab}
+                className={`h-8 flex-1 rounded-sm ${i === 0 ? '' : 'bg-transparent'}`}
+              />
+            ),
+          )}
         </div>
 
         {/* Analytics content area */}

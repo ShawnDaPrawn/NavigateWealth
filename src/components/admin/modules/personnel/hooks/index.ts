@@ -1,7 +1,7 @@
 /**
  * Personnel Hooks Index
  * Navigate Wealth Admin Dashboard
- * 
+ *
  * Barrel export for all personnel-related React hooks.
  */
 

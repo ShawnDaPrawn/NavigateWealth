@@ -31,7 +31,7 @@ import {
   BarChart3,
   LineChart,
   Loader2,
-  Trash2
+  Trash2,
 } from 'lucide-react';
 import { PolicyFormDialog } from './PolicyFormDialog';
 import { PolicyCategoryTab } from './PolicyCategoryTab';
@@ -45,8 +45,8 @@ const API_BASE = `https://${projectId}.supabase.co/functions/v1/make-server-91ed
 const CATEGORY_NAMES: Record<string, string> = {
   'risk-planning': 'Risk Planning',
   'medical-aid': 'Medical Aid',
-  'retirement': 'Retirement Planning',
-  'investments': 'Investments',
+  retirement: 'Retirement Planning',
+  investments: 'Investments',
   'employee-benefits': 'Employee Benefits',
   'tax-planning': 'Tax Planning',
   'estate-planning': 'Estate Planning',
@@ -60,9 +60,8 @@ export function PolicyDetailsSection({ selectedClient }: PolicyDetailsSectionPro
   const [activePolicyTab, setActivePolicyTab] = useState('overview');
 
   // Derive the actual client display name
-  const clientDisplayName = [selectedClient?.firstName, selectedClient?.lastName]
-    .filter(Boolean)
-    .join(' ') || 'Client';
+  const clientDisplayName =
+    [selectedClient?.firstName, selectedClient?.lastName].filter(Boolean).join(' ') || 'Client';
 
   // Subtab configuration
   const policySubtabs = [
@@ -105,7 +104,7 @@ export function PolicyDetailsSection({ selectedClient }: PolicyDetailsSectionPro
 
       {/* Overview Tab Content */}
       {activePolicyTab === 'overview' && (
-        <PolicyOverviewTab 
+        <PolicyOverviewTab
           clientId={selectedClient?.id || 'client_1'}
           clientDisplayName={clientDisplayName}
           onRunFNA={(categoryId) => setActivePolicyTab(categoryId)}

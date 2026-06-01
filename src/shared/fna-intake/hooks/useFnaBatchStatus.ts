@@ -18,10 +18,7 @@ interface BatchFNAStatusResponse {
   data: BatchFNAStatusItem[];
 }
 
-export function useFnaBatchStatus(
-  clientId: string | undefined,
-  options?: { enabled?: boolean },
-) {
+export function useFnaBatchStatus(clientId: string | undefined, options?: { enabled?: boolean }) {
   return useQuery<BatchFNAStatusItem[], Error>({
     queryKey: fnaKeys.batchStatus(clientId ?? ''),
     queryFn: async () => {

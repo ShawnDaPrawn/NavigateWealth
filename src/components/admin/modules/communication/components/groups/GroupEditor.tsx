@@ -19,20 +19,22 @@ interface GroupEditorProps {
   isSaving: boolean;
 }
 
-export function GroupEditor({ 
-  group, 
-  clients, 
-  providers, 
-  onSave, 
-  onCancel, 
-  isSaving 
+export function GroupEditor({
+  group,
+  clients,
+  providers,
+  onSave,
+  onCancel,
+  isSaving,
 }: GroupEditorProps) {
   const isNewsletterSystemGroup = group?.id === 'sys_newsletter_contacts';
   const [name, setName] = useState(group?.name || '');
   const [description, setDescription] = useState(group?.description || '');
   const [selectedClientIds, setSelectedClientIds] = useState<string[]>(group?.clientIds || []);
   const [filterConfig, setFilterConfig] = useState<GroupFilterConfig>(group?.filterConfig || {});
-  const [externalContacts, setExternalContacts] = useState<ExternalContact[]>(group?.externalContacts || []);
+  const [externalContacts, setExternalContacts] = useState<ExternalContact[]>(
+    group?.externalContacts || [],
+  );
   const [searchTerm, setSearchTerm] = useState('');
 
   const handleSave = () => {
@@ -74,9 +76,9 @@ export function GroupEditor({
 
   const toggleClient = (id: string) => {
     if (selectedClientIds.includes(id)) {
-      setSelectedClientIds(prev => prev.filter(cid => cid !== id));
+      setSelectedClientIds((prev) => prev.filter((cid) => cid !== id));
     } else {
-      setSelectedClientIds(prev => [...prev, id]);
+      setSelectedClientIds((prev) => [...prev, id]);
     }
   };
 
@@ -92,11 +94,7 @@ export function GroupEditor({
     ]);
   };
 
-  const updateExternalContact = (
-    index: number,
-    key: keyof ExternalContact,
-    value: string,
-  ) => {
+  const updateExternalContact = (index: number, key: keyof ExternalContact, value: string) => {
     setExternalContacts((prev) =>
       prev.map((contact, idx) => {
         if (idx !== index) return contact;
@@ -134,18 +132,18 @@ export function GroupEditor({
           <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <label className="text-sm font-medium mb-1 block">Group Name</label>
-              <Input 
-                value={name} 
-                onChange={(e) => setName(e.target.value)} 
+              <Input
+                value={name}
+                onChange={(e) => setName(e.target.value)}
                 readOnly={isNewsletterSystemGroup}
                 placeholder="e.g. Gold Tier Clients"
               />
             </div>
             <div>
               <label className="text-sm font-medium mb-1 block">Description</label>
-              <Input 
-                value={description} 
-                onChange={(e) => setDescription(e.target.value)} 
+              <Input
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
                 readOnly={isNewsletterSystemGroup}
                 placeholder="Optional description..."
               />
@@ -157,19 +155,21 @@ export function GroupEditor({
           <Tabs defaultValue="filters">
             <TabsList>
               <TabsTrigger value="filters">Dynamic Filters</TabsTrigger>
-              <TabsTrigger value="manual">Manual Selection ({selectedClientIds.length})</TabsTrigger>
+              <TabsTrigger value="manual">
+                Manual Selection ({selectedClientIds.length})
+              </TabsTrigger>
             </TabsList>
 
             <TabsContent value="filters" className="space-y-4">
-              <FilterBuilder 
-                filterConfig={filterConfig} 
-                onChange={setFilterConfig} 
+              <FilterBuilder
+                filterConfig={filterConfig}
+                onChange={setFilterConfig}
                 providers={providers}
               />
             </TabsContent>
 
             <TabsContent value="manual">
-              <ManualSelection 
+              <ManualSelection
                 clients={clients}
                 selectedIds={selectedClientIds}
                 onToggle={toggleClient}
@@ -183,7 +183,9 @@ export function GroupEditor({
         <Card>
           <CardHeader className="pb-3">
             <div className="flex items-center justify-between">
-              <CardTitle className="text-base">External Contacts ({externalContacts.length})</CardTitle>
+              <CardTitle className="text-base">
+                External Contacts ({externalContacts.length})
+              </CardTitle>
               <Button size="sm" variant="outline" onClick={addExternalContact} className="gap-1.5">
                 <Plus className="h-3.5 w-3.5" />
                 Add Contact
@@ -191,16 +193,22 @@ export function GroupEditor({
             </div>
             {isNewsletterSystemGroup && (
               <p className="text-xs text-muted-foreground">
-                Edit newsletter contact names and emails here. Changes update the newsletter audience details.
+                Edit newsletter contact names and emails here. Changes update the newsletter
+                audience details.
               </p>
             )}
           </CardHeader>
           <CardContent className="space-y-3">
             {externalContacts.length === 0 ? (
-              <p className="text-sm text-muted-foreground">No external contacts in this group yet.</p>
+              <p className="text-sm text-muted-foreground">
+                No external contacts in this group yet.
+              </p>
             ) : (
               externalContacts.map((contact, index) => (
-                <div key={`${contact.email}-${index}`} className="grid grid-cols-[1fr_1fr_auto] gap-2 items-center">
+                <div
+                  key={`${contact.email}-${index}`}
+                  className="grid grid-cols-[1fr_1fr_auto] gap-2 items-center"
+                >
                   <Input
                     value={contact.name || ''}
                     onChange={(e) => updateExternalContact(index, 'name', e.target.value)}

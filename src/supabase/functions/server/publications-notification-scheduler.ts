@@ -41,7 +41,7 @@ export function startArticleNotificationScheduler(): void {
 
   log.info(
     `Article notification scheduler registered: initial run in ${INITIAL_DELAY_MS / 1000}s, ` +
-    `then every ${PROCESS_INTERVAL_MS / 1000}s`,
+      `then every ${PROCESS_INTERVAL_MS / 1000}s`,
   );
 
   setTimeout(() => {

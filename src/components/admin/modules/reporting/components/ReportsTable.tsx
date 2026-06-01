@@ -109,7 +109,7 @@ export function ReportsTable({
           r.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
           (CATEGORY_CONFIG[r.category]?.label || '')
             .toLowerCase()
-            .includes(searchQuery.toLowerCase())
+            .includes(searchQuery.toLowerCase()),
       )
     : reports;
 
@@ -175,8 +175,7 @@ export function ReportsTable({
               </TableRow>
             ) : (
               filteredReports.map((report) => {
-                const cfg =
-                  CATEGORY_CONFIG[report.category] || CATEGORY_CONFIG.custom;
+                const cfg = CATEGORY_CONFIG[report.category] || CATEGORY_CONFIG.custom;
                 const IconComponent = cfg.icon;
                 const isRunning = runningReports.has(report.id);
                 const ext = report.outputs[0]?.split('.').pop()?.toUpperCase() || 'XLSX';
@@ -187,9 +186,7 @@ export function ReportsTable({
                     <TableCell>
                       <div className="flex items-center gap-3">
                         <div className={`${cfg.bgClass} p-2 rounded-lg flex-shrink-0`}>
-                          <IconComponent
-                            className={`h-5 w-5 ${cfg.iconClass}`}
-                          />
+                          <IconComponent className={`h-5 w-5 ${cfg.iconClass}`} />
                         </div>
                         <div className="min-w-0">
                           <div className="font-medium">{report.name}</div>
@@ -202,10 +199,7 @@ export function ReportsTable({
 
                     {/* Category Badge */}
                     <TableCell>
-                      <Badge
-                        variant="secondary"
-                        className={`text-xs ${cfg.badgeClass}`}
-                      >
+                      <Badge variant="secondary" className={`text-xs ${cfg.badgeClass}`}>
                         {cfg.label}
                       </Badge>
                     </TableCell>
@@ -214,17 +208,13 @@ export function ReportsTable({
                     <TableCell>
                       {report.lastRunAt ? (
                         <div className="text-sm">
-                          <div>
-                            {new Date(report.lastRunAt).toLocaleDateString()}
-                          </div>
+                          <div>{new Date(report.lastRunAt).toLocaleDateString()}</div>
                           <div className="text-muted-foreground">
                             {new Date(report.lastRunAt).toLocaleTimeString()}
                           </div>
                         </div>
                       ) : (
-                        <span className="text-muted-foreground text-sm">
-                          Never
-                        </span>
+                        <span className="text-muted-foreground text-sm">Never</span>
                       )}
                     </TableCell>
 

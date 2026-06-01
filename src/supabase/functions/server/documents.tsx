@@ -8,13 +8,15 @@ import { createClient } from 'jsr:@supabase/supabase-js@2.49.8';
 import * as kv from './kv_store.tsx';
 import { createModuleLogger } from './stderr-logger.ts';
 import { getErrMsg } from './shared-logger-utils.ts';
-import { ZipWriter, Uint8ArrayWriter, Uint8ArrayReader } from "npm:@zip.js/zip.js";
-import { sendEmail, createEmailTemplate, getFooterSettings, getEmailTemplate } from './email-service.ts';
-import { encodeBase64 } from "jsr:@std/encoding/base64";
+import { ZipWriter, Uint8ArrayWriter, Uint8ArrayReader } from 'npm:@zip.js/zip.js';
 import {
-  CreateDocumentLinkSchema,
-  UpdateDocumentSchema,
-} from './documents-validation.ts';
+  sendEmail,
+  createEmailTemplate,
+  getFooterSettings,
+  getEmailTemplate,
+} from './email-service.ts';
+import { encodeBase64 } from 'jsr:@std/encoding/base64';
+import { CreateDocumentLinkSchema, UpdateDocumentSchema } from './documents-validation.ts';
 import { formatZodError } from './shared-validation-utils.ts';
 
 const app = new Hono();
@@ -25,10 +27,8 @@ app.get('/', (c) => c.json({ service: 'documents', status: 'active' }));
 app.get('', (c) => c.json({ service: 'documents', status: 'active' }));
 
 // Lazy Supabase client — must NOT be top-level to avoid deployment crashes in edge functions.
-const getSupabase = () => createClient(
-  Deno.env.get('SUPABASE_URL')!,
-  Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
-);
+const getSupabase = () =>
+  createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!);
 
 const BUCKET_NAME = 'make-91ed8379-documents';
 
@@ -39,8 +39,8 @@ async function ensureBucket() {
   try {
     const supabase = getSupabase();
     const { data: buckets } = await supabase.storage.listBuckets();
-    const bucketExists = buckets?.some(bucket => bucket.name === BUCKET_NAME);
-    
+    const bucketExists = buckets?.some((bucket) => bucket.name === BUCKET_NAME);
+
     if (!bucketExists) {
       log.info(`📁 Creating storage bucket: ${BUCKET_NAME}`);
       const { error } = await supabase.storage.createBucket(BUCKET_NAME, {
@@ -54,10 +54,10 @@ async function ensureBucket() {
           'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
           'image/jpeg',
           'image/png',
-          'image/gif'
-        ]
+          'image/gif',
+        ],
       });
-      
+
       if (error) {
         if (error.message && error.message.includes('already exists')) {
           log.info('✅ Storage bucket already exists');
@@ -88,7 +88,14 @@ interface DocumentMetadata {
   type: 'document' | 'link';
   title: string;
   uploadDate: string;
-  productCategory: 'Life' | 'Short-Term' | 'Investment' | 'Medical Aid' | 'Retirement' | 'Estate' | 'General';
+  productCategory:
+    | 'Life'
+    | 'Short-Term'
+    | 'Investment'
+    | 'Medical Aid'
+    | 'Retirement'
+    | 'Estate'
+    | 'General';
   policyNumber: string;
   status: 'new' | 'viewed';
   isFavourite: boolean;
@@ -119,20 +126,20 @@ app.get('/:userId', async (c) => {
 
     // Get document metadata from KV store
     const documents = await kv.getByPrefix(`document:${userId}:`);
-    
+
     // Filter out null/undefined values and ensure all documents have valid data
     // Note: getByPrefix returns an array of values directly, not {key, value} objects
     const validDocuments = documents
-      .filter(doc => doc && doc.id)
-      .filter(doc => doc !== null && doc !== undefined)
-      .filter(doc => !doc.isHidden); // Filter out hidden documents (e.g. from communication tab)
-    
+      .filter((doc) => doc && doc.id)
+      .filter((doc) => doc !== null && doc !== undefined)
+      .filter((doc) => !doc.isHidden); // Filter out hidden documents (e.g. from communication tab)
+
     log.info(`✅ Found ${validDocuments.length} documents for user ${userId}`);
-    
+
     return c.json({
       success: true,
       count: validDocuments.length,
-      documents: validDocuments
+      documents: validDocuments,
     });
   } catch (error) {
     log.error('❌ Error fetching documents:', error);
@@ -148,7 +155,7 @@ app.get('/:userId', async (c) => {
 app.post('/:userId/upload', async (c) => {
   try {
     const userId = c.req.param('userId');
-    
+
     // Wrap formData() in try/catch — the native parser uses forEach()
     // internally, which throws if the body is not valid multipart/form-data
     // (e.g. missing/malformed Content-Type boundary, already-consumed stream).
@@ -157,12 +164,15 @@ app.post('/:userId/upload', async (c) => {
       formData = await c.req.formData();
     } catch (parseErr: unknown) {
       log.error('Failed to parse multipart form data:', parseErr);
-      return c.json({
-        success: false,
-        error: 'Invalid form data. Ensure the request uses multipart/form-data encoding.',
-      }, 400);
+      return c.json(
+        {
+          success: false,
+          error: 'Invalid form data. Ensure the request uses multipart/form-data encoding.',
+        },
+        400,
+      );
     }
-    
+
     const file = formData.get('file') as File;
     const title = formData.get('title') as string;
     const productCategory = formData.get('productCategory') as string;
@@ -186,11 +196,11 @@ app.post('/:userId/upload', async (c) => {
 
     // Upload file to Supabase Storage
     const fileBuffer = await file.arrayBuffer();
-    const { data: uploadData, error: uploadError } = await getSupabase().storage
-      .from(BUCKET_NAME)
+    const { data: uploadData, error: uploadError } = await getSupabase()
+      .storage.from(BUCKET_NAME)
       .upload(filePath, fileBuffer, {
         contentType: file.type,
-        upsert: false
+        upsert: false,
       });
 
     if (uploadError) {
@@ -219,7 +229,7 @@ app.post('/:userId/upload', async (c) => {
       packId: packId || undefined,
       packTitle: packTitle || undefined,
       subcategory: subcategory || undefined,
-      isHidden
+      isHidden,
     };
 
     // Store metadata in KV
@@ -229,11 +239,17 @@ app.post('/:userId/upload', async (c) => {
 
     return c.json({
       success: true,
-      document: metadata
+      document: metadata,
     });
   } catch (error: unknown) {
     log.error('❌ Error uploading document:', error);
-    return c.json({ success: false, error: error instanceof Error ? error.message : 'Failed to upload document' }, 500);
+    return c.json(
+      {
+        success: false,
+        error: error instanceof Error ? error.message : 'Failed to upload document',
+      },
+      500,
+    );
   }
 });
 
@@ -245,10 +261,13 @@ app.post('/:userId/link', async (c) => {
   try {
     const userId = c.req.param('userId');
     const body = await c.req.json();
-    
+
     const parsed = CreateDocumentLinkSchema.safeParse(body);
     if (!parsed.success) {
-      return c.json({ success: false, error: 'Validation failed', ...formatZodError(parsed.error) }, 400);
+      return c.json(
+        { success: false, error: 'Validation failed', ...formatZodError(parsed.error) },
+        400,
+      );
     }
     const { title, url, description, productCategory, policyNumber, uploadedBy } = parsed.data;
 
@@ -256,7 +275,7 @@ app.post('/:userId/link', async (c) => {
 
     const timestamp = Date.now();
     const linkId = `link_${timestamp}`;
-    
+
     const metadata: DocumentMetadata = {
       id: linkId,
       userId,
@@ -269,7 +288,7 @@ app.post('/:userId/link', async (c) => {
       policyNumber: policyNumber || '',
       status: 'new',
       isFavourite: false,
-      uploadedBy
+      uploadedBy,
     };
 
     // Store metadata in KV
@@ -279,11 +298,14 @@ app.post('/:userId/link', async (c) => {
 
     return c.json({
       success: true,
-      document: metadata
+      document: metadata,
     });
   } catch (error: unknown) {
     log.error('❌ Error creating link:', error);
-    return c.json({ success: false, error: error instanceof Error ? error.message : 'Failed to create link' }, 500);
+    return c.json(
+      { success: false, error: error instanceof Error ? error.message : 'Failed to create link' },
+      500,
+    );
   }
 });
 
@@ -300,20 +322,22 @@ app.get('/:userId/:documentId/download', async (c) => {
 
     // Get document metadata
     const docData = await kv.get(`document:${userId}:${documentId}`);
-    
+
     if (!docData || !docData.filePath) {
       return c.json({ success: false, error: 'Document not found' }, 404);
     }
 
     if (docData.sourceSystem === 'record-of-advice') {
-      const storedRoAFile = await kv.get(docData.filePath) as Record<string, unknown> | null;
+      const storedRoAFile = (await kv.get(docData.filePath)) as Record<string, unknown> | null;
 
       const blobStoragePath =
-        typeof storedRoAFile?.blobStoragePath === 'string' ? storedRoAFile.blobStoragePath.trim() : '';
+        typeof storedRoAFile?.blobStoragePath === 'string'
+          ? storedRoAFile.blobStoragePath.trim()
+          : '';
       if (blobStoragePath) {
         await ensureBucket();
-        const { data: blobSigned, error: blobSignedErr } = await getSupabase().storage
-          .from(BUCKET_NAME)
+        const { data: blobSigned, error: blobSignedErr } = await getSupabase()
+          .storage.from(BUCKET_NAME)
           .createSignedUrl(blobStoragePath, 3600);
 
         if (!blobSignedErr && blobSigned?.signedUrl) {
@@ -322,13 +346,14 @@ app.get('/:userId/:documentId/download', async (c) => {
             success: true,
             url: blobSigned.signedUrl,
             fileName: docData.fileName,
-            contentType: typeof docData.contentType === 'string'
-              ? docData.contentType
-              : typeof storedRoAFile?.contentType === 'string'
-                ? storedRoAFile.contentType
-                : typeof storedRoAFile?.mimeType === 'string'
-                  ? storedRoAFile.mimeType
-                  : 'application/octet-stream',
+            contentType:
+              typeof docData.contentType === 'string'
+                ? docData.contentType
+                : typeof storedRoAFile?.contentType === 'string'
+                  ? storedRoAFile.contentType
+                  : typeof storedRoAFile?.mimeType === 'string'
+                    ? storedRoAFile.mimeType
+                    : 'application/octet-stream',
             sha256: typeof docData.sha256 === 'string' ? docData.sha256 : storedRoAFile?.sha256,
           });
         }
@@ -337,24 +362,26 @@ app.get('/:userId/:documentId/download', async (c) => {
         });
       }
 
-      const bytesBase64 = typeof storedRoAFile?.bytesBase64 === 'string'
-        ? storedRoAFile.bytesBase64
-        : typeof storedRoAFile?.downloadBase64 === 'string'
-          ? storedRoAFile.downloadBase64
-          : '';
-      const contentType = typeof docData.contentType === 'string'
-        ? docData.contentType
-        : typeof storedRoAFile?.contentType === 'string'
-          ? storedRoAFile.contentType
-          : typeof storedRoAFile?.mimeType === 'string'
-            ? storedRoAFile.mimeType
-            : 'application/octet-stream';
+      const bytesBase64 =
+        typeof storedRoAFile?.bytesBase64 === 'string'
+          ? storedRoAFile.bytesBase64
+          : typeof storedRoAFile?.downloadBase64 === 'string'
+            ? storedRoAFile.downloadBase64
+            : '';
+      const contentType =
+        typeof docData.contentType === 'string'
+          ? docData.contentType
+          : typeof storedRoAFile?.contentType === 'string'
+            ? storedRoAFile.contentType
+            : typeof storedRoAFile?.mimeType === 'string'
+              ? storedRoAFile.mimeType
+              : 'application/octet-stream';
 
       if (!bytesBase64) {
         return c.json({ success: false, error: 'RoA document content not found' }, 404);
       }
 
-        log.info('RoA document URL generated (embedded payload)');
+      log.info('RoA document URL generated (embedded payload)');
       return c.json({
         success: true,
         url: `data:${contentType};base64,${bytesBase64}`,
@@ -365,8 +392,8 @@ app.get('/:userId/:documentId/download', async (c) => {
     }
 
     // Generate signed URL (valid for 1 hour)
-    const { data: signedUrlData, error: signedUrlError } = await getSupabase().storage
-      .from(BUCKET_NAME)
+    const { data: signedUrlData, error: signedUrlError } = await getSupabase()
+      .storage.from(BUCKET_NAME)
       .createSignedUrl(docData.filePath, 3600);
 
     if (signedUrlError) {
@@ -379,11 +406,17 @@ app.get('/:userId/:documentId/download', async (c) => {
     return c.json({
       success: true,
       url: signedUrlData.signedUrl,
-      fileName: docData.fileName
+      fileName: docData.fileName,
     });
   } catch (error: unknown) {
     log.error('❌ Error generating download URL:', error);
-    return c.json({ success: false, error: error instanceof Error ? error.message : 'Failed to generate download URL' }, 500);
+    return c.json(
+      {
+        success: false,
+        error: error instanceof Error ? error.message : 'Failed to generate download URL',
+      },
+      500,
+    );
   }
 });
 
@@ -398,7 +431,10 @@ app.patch('/:userId/:documentId', async (c) => {
     const body = await c.req.json();
     const parsed = UpdateDocumentSchema.safeParse(body);
     if (!parsed.success) {
-      return c.json({ success: false, error: 'Validation failed', ...formatZodError(parsed.error) }, 400);
+      return c.json(
+        { success: false, error: 'Validation failed', ...formatZodError(parsed.error) },
+        400,
+      );
     }
     const updates = parsed.data;
 
@@ -406,7 +442,7 @@ app.patch('/:userId/:documentId', async (c) => {
 
     // Get existing document
     const existingDoc = await kv.get(`document:${userId}:${documentId}`);
-    
+
     if (!existingDoc) {
       return c.json({ success: false, error: 'Document not found' }, 404);
     }
@@ -414,7 +450,7 @@ app.patch('/:userId/:documentId', async (c) => {
     // Merge updates
     const updatedDoc = {
       ...existingDoc,
-      ...updates
+      ...updates,
     };
 
     // Save updated document
@@ -424,11 +460,17 @@ app.patch('/:userId/:documentId', async (c) => {
 
     return c.json({
       success: true,
-      document: updatedDoc
+      document: updatedDoc,
     });
   } catch (error: unknown) {
     log.error('❌ Error updating document:', error);
-    return c.json({ success: false, error: error instanceof Error ? error.message : 'Failed to update document' }, 500);
+    return c.json(
+      {
+        success: false,
+        error: error instanceof Error ? error.message : 'Failed to update document',
+      },
+      500,
+    );
   }
 });
 
@@ -439,7 +481,18 @@ app.patch('/:userId/:documentId', async (c) => {
 app.post('/:userId/email', async (c) => {
   try {
     const userId = c.req.param('userId');
-    const { documentIds, email: providedEmail, idNumber: providedIdNumber, emailType, customMessage, isHtml, ccAdmin, subject: providedSubject, source, cc: providedCc } = await c.req.json();
+    const {
+      documentIds,
+      email: providedEmail,
+      idNumber: providedIdNumber,
+      emailType,
+      customMessage,
+      isHtml,
+      ccAdmin,
+      subject: providedSubject,
+      source,
+      cc: providedCc,
+    } = await c.req.json();
 
     if (!documentIds || !Array.isArray(documentIds) || documentIds.length === 0) {
       return c.json({ success: false, error: 'No documents selected' }, 400);
@@ -463,11 +516,13 @@ app.post('/:userId/email', async (c) => {
           email = profile.email;
           log.info(`📧 Using email from profile: ${email}`);
         }
-        
+
         // Always override ID number with DB value to ensure encryption password is correct
         if (profile.idNumber) {
           idNumber = profile.idNumber;
-          log.info(`🔑 Using ID number from profile for encryption: ${idNumber.substring(0, 4)}...`);
+          log.info(
+            `🔑 Using ID number from profile for encryption: ${idNumber.substring(0, 4)}...`,
+          );
         }
         firstName = profile.firstName || 'Client';
       }
@@ -489,7 +544,10 @@ app.post('/:userId/email', async (c) => {
     }
 
     if (!idNumber) {
-      return c.json({ success: false, error: 'Client ID number missing (required for password)' }, 400);
+      return c.json(
+        { success: false, error: 'Client ID number missing (required for password)' },
+        400,
+      );
     }
 
     // --------------------------------------------------------------------------------
@@ -501,22 +559,23 @@ app.post('/:userId/email', async (c) => {
     // --------------------------------------------------------------------------------
 
     const docsBySubcategory: Record<string, DocumentMetadata[]> = {};
-    const attachments: { content: string; filename: string; type: string; disposition: string }[] = [];
+    const attachments: { content: string; filename: string; type: string; disposition: string }[] =
+      [];
 
     // 1. Fetch and Group Documents
     for (const docId of documentIds) {
       const docData = await kv.get(`document:${userId}:${docId}`);
-      
+
       if (!docData || docData.type !== 'document' || !docData.filePath) {
         continue;
       }
-      
+
       // Use subcategory if available, otherwise fallback to "Documents" (or packTitle if present?)
       // We want to avoid generic "Documents" if possible, but for loose files it's fine.
       // Sanitize key to be safe for filenames
       const rawKey = docData.subcategory || 'Documents';
       // Basic sanitization for map key (display name handled later)
-      const key = rawKey; 
+      const key = rawKey;
 
       if (!docsBySubcategory[key]) {
         docsBySubcategory[key] = [];
@@ -530,12 +589,12 @@ app.post('/:userId/email', async (c) => {
 
     // 2. Generate ZIPs
     for (const [subcatName, docs] of Object.entries(docsBySubcategory)) {
-      const zipWriter = new ZipWriter(new Uint8ArrayWriter(), { 
+      const zipWriter = new ZipWriter(new Uint8ArrayWriter(), {
         bufferedWrite: true,
         useWebWorkers: false,
-        zip64: false
+        zip64: false,
       });
-      
+
       // Create a friendly folder name inside the zip
       // e.g. "Compliance" -> "Compliance/"
       const safeSubcatName = subcatName.replace(/[^a-zA-Z0-9\s-_]/g, '').trim() || 'Documents';
@@ -545,8 +604,8 @@ app.post('/:userId/email', async (c) => {
 
       for (const docData of docs) {
         // Download file
-        const { data: fileData, error: downloadError } = await getSupabase().storage
-          .from(BUCKET_NAME)
+        const { data: fileData, error: downloadError } = await getSupabase()
+          .storage.from(BUCKET_NAME)
           .download(docData.filePath!);
 
         if (downloadError) {
@@ -555,24 +614,24 @@ app.post('/:userId/email', async (c) => {
         }
 
         const fileBuffer = await fileData.arrayBuffer();
-        
+
         // Sanitize filename
         const originalName = docData.fileName || `document_${docData.id}.pdf`;
         const lastDotIndex = originalName.lastIndexOf('.');
         let namePart = lastDotIndex !== -1 ? originalName.substring(0, lastDotIndex) : originalName;
         const extPart = lastDotIndex !== -1 ? originalName.substring(lastDotIndex) : '';
-        
+
         namePart = namePart.replace(/[^a-zA-Z0-9_-]/g, '_');
         if (/^[^a-zA-Z0-9]/.test(namePart)) namePart = 'doc_' + namePart;
         if (namePart.length > 50) namePart = namePart.substring(0, 50);
-        
+
         // Path inside zip: Subcategory/Filename.ext
         const safeFileName = `${folderName}${namePart}${extPart}`;
-        
+
         await zipWriter.add(safeFileName, new Uint8ArrayReader(new Uint8Array(fileBuffer)), {
           level: 0, // No compression needed
           password: String(idNumber), // Encrypt this file
-          zipCrypto: true // Standard ZipCrypto for compatibility
+          zipCrypto: true, // Standard ZipCrypto for compatibility
         });
         filesAdded++;
       }
@@ -580,17 +639,17 @@ app.post('/:userId/email', async (c) => {
       if (filesAdded > 0) {
         const finalZipBlob = await zipWriter.close();
         const base64Zip = encodeBase64(finalZipBlob);
-        
+
         // Zip filename: Compliance.zip
         const zipFilename = `${safeSubcatName.replace(/\s+/g, '_')}.zip`;
-        
+
         attachments.push({
           content: base64Zip,
           filename: zipFilename,
           type: 'application/zip',
-          disposition: 'attachment'
+          disposition: 'attachment',
         });
-        
+
         log.info(`📦 Generated ZIP: ${zipFilename} (${base64Zip.length} chars)`);
       }
     }
@@ -601,7 +660,8 @@ app.post('/:userId/email', async (c) => {
 
     // Get email template and settings
     const footerSettings = await getFooterSettings();
-    const templateId = emailType === 'resend' ? 'resend_documents_notification' : 'new_documents_notification';
+    const templateId =
+      emailType === 'resend' ? 'resend_documents_notification' : 'new_documents_notification';
     const template = await getEmailTemplate(templateId);
 
     // Resolve variables
@@ -612,16 +672,16 @@ app.post('/:userId/email', async (c) => {
       // Resolve CustomMessage with appropriate defaults
       let defaultMsg = '';
       if (emailType === 'resend') {
-         defaultMsg = '<p>Please find attached the documents you requested.</p>';
+        defaultMsg = '<p>Please find attached the documents you requested.</p>';
       } else {
-         defaultMsg = '<p>New documents have been uploaded to your profile.</p>';
+        defaultMsg = '<p>New documents have been uploaded to your profile.</p>';
       }
 
       let msg = defaultMsg;
       if (customMessage) {
         if (isHtml) {
           msg = customMessage;
-          
+
           // Fix line spacing for Communication Tab
           if (source === 'communication_tab') {
             // 1. Force tight margins on paragraphs
@@ -635,7 +695,7 @@ app.post('/:userId/email', async (c) => {
       }
 
       resolved = resolved.replace(/\{\{ \.CustomMessage \}\}/g, msg);
-      
+
       return resolved;
     };
 
@@ -653,17 +713,22 @@ app.post('/:userId/email', async (c) => {
       if (providedSubject) {
         subject = providedSubject;
       }
-      
+
       // 2. Remove automatic greeting (user provides it in body)
       greeting = '';
     }
-    
+
     // Construct plain text version to avoid spam filters
-    const customMessageText = customMessage 
-      ? (isHtml ? customMessage.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim() : customMessage)
-      : (emailType === 'resend' 
-          ? 'Please find attached the documents you requested.' 
-          : 'New documents have been uploaded to your profile.');
+    const customMessageText = customMessage
+      ? isHtml
+        ? customMessage
+            .replace(/<[^>]+>/g, ' ')
+            .replace(/\s+/g, ' ')
+            .trim()
+        : customMessage
+      : emailType === 'resend'
+        ? 'Please find attached the documents you requested.'
+        : 'New documents have been uploaded to your profile.';
 
     const textBody = `
 ${title}
@@ -682,25 +747,22 @@ ${buttonLabel}: ${buttonUrl}
 
 ${template.footerNote || ''}
     `.trim();
-    
-    const emailHtml = createEmailTemplate(
-      bodyContent,
-      {
-        title,
-        subtitle,
-        greeting,
-        buttonUrl,
-        buttonLabel,
-        footerSettings
-      }
-    );
+
+    const emailHtml = createEmailTemplate(bodyContent, {
+      title,
+      subtitle,
+      greeting,
+      buttonUrl,
+      buttonLabel,
+      footerSettings,
+    });
 
     // Prepare CC list
     const finalCc: string[] = [];
     if (ccAdmin) finalCc.push('info@navigatewealth.co');
     if (providedCc && Array.isArray(providedCc)) {
       // Filter out duplicates and the To address
-      const uniqueCc = providedCc.filter(c => c && c !== email && !finalCc.includes(c));
+      const uniqueCc = providedCc.filter((c) => c && c !== email && !finalCc.includes(c));
       finalCc.push(...uniqueCc);
     }
 
@@ -710,7 +772,7 @@ ${template.footerNote || ''}
       subject,
       html: emailHtml,
       text: textBody,
-      attachments: attachments
+      attachments: attachments,
     });
 
     if (!success) {
@@ -718,10 +780,12 @@ ${template.footerNote || ''}
     }
 
     return c.json({ success: true, message: 'Documents sent successfully' });
-
   } catch (error: unknown) {
     log.error('❌ Error sending documents email:', error);
-    return c.json({ success: false, error: error instanceof Error ? error.message : 'Failed to send email' }, 500);
+    return c.json(
+      { success: false, error: error instanceof Error ? error.message : 'Failed to send email' },
+      500,
+    );
   }
 });
 
@@ -738,20 +802,20 @@ app.delete('/:userId/:documentId', async (c) => {
 
     // Get document metadata
     const docData = await kv.get(`document:${userId}:${documentId}`);
-    
+
     if (!docData) {
       // Idempotent: If document is already gone, return success
       log.info('⚠️ Document not found, assuming already deleted');
       return c.json({
         success: true,
-        message: 'Document deleted successfully'
+        message: 'Document deleted successfully',
       });
     }
 
     // If it's a file document, delete from storage
     if (docData.type === 'document' && docData.filePath) {
-      const { error: deleteError } = await getSupabase().storage
-        .from(BUCKET_NAME)
+      const { error: deleteError } = await getSupabase()
+        .storage.from(BUCKET_NAME)
         .remove([docData.filePath]);
 
       if (deleteError) {
@@ -769,11 +833,17 @@ app.delete('/:userId/:documentId', async (c) => {
 
     return c.json({
       success: true,
-      message: 'Document deleted successfully'
+      message: 'Document deleted successfully',
     });
   } catch (error: unknown) {
     log.error('❌ Error deleting document:', error);
-    return c.json({ success: false, error: error instanceof Error ? error.message : 'Failed to delete document' }, 500);
+    return c.json(
+      {
+        success: false,
+        error: error instanceof Error ? error.message : 'Failed to delete document',
+      },
+      500,
+    );
   }
 });
 

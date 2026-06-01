@@ -3,15 +3,7 @@ import { Card, CardContent } from '../../ui/card';
 import { Badge } from '../../ui/badge';
 import { Button } from '../../ui/button';
 import { Alert, AlertDescription, AlertTitle } from '../../ui/alert';
-import {
-  Type,
-  Copy,
-  CheckCircle,
-  Info,
-  Eye,
-  Code,
-  ChevronDown,
-} from 'lucide-react';
+import { Type, Copy, CheckCircle, Info, Eye, Code, ChevronDown } from 'lucide-react';
 import { copyToClipboard as copyToClipboardUtil } from '../../../utils/clipboard';
 
 interface TypographyEntry {
@@ -93,7 +85,8 @@ export function TypographyTab() {
       weight: '600 (Semi-bold)',
       lineHeight: '1.3',
       tailwind: 'text-[20px] font-semibold leading-[1.3]',
-      usage: 'Card titles, subsection headers, feature names. Enforced globally via globals.css with !important',
+      usage:
+        'Card titles, subsection headers, feature names. Enforced globally via globals.css with !important',
       preview: (
         <h3 className="text-[20px] font-semibold leading-[1.3] text-black">
           Financial Planning Services
@@ -136,8 +129,8 @@ export function TypographyTab() {
       usage: 'Primary body text on public/marketing pages. This is the default <p> size.',
       preview: (
         <p className="text-[18px] font-normal leading-[1.6] text-gray-600 max-w-xl">
-          Navigate Wealth provides independent financial advisory services designed
-          to help you build, protect, and grow your wealth.
+          Navigate Wealth provides independent financial advisory services designed to help you
+          build, protect, and grow your wealth.
         </p>
       ),
       code: `<p className="text-gray-600">
@@ -156,7 +149,8 @@ export function TypographyTab() {
       weight: '400 (Normal)',
       lineHeight: '1.5',
       tailwind: 'text-sm / text-base',
-      usage: 'Admin panel text, form labels, dashboard content. Override default <p> size with Tailwind text-sm or text-base.',
+      usage:
+        'Admin panel text, form labels, dashboard content. Override default <p> size with Tailwind text-sm or text-base.',
       preview: (
         <div className="space-y-2">
           <p className="text-base font-normal text-gray-700">
@@ -199,10 +193,34 @@ export function TypographyTab() {
   ];
 
   const fontWeights = [
-    { name: 'Normal', value: '400', css: 'var(--font-weight-normal)', tailwind: 'font-normal', usage: 'Body text, descriptions' },
-    { name: 'Medium', value: '500', css: 'var(--font-weight-medium)', tailwind: 'font-medium', usage: 'Headings (h1, h2, h4), labels, buttons' },
-    { name: 'Semi-bold', value: '600', css: '600', tailwind: 'font-semibold', usage: 'h3 headings, card titles, emphasis' },
-    { name: 'Bold', value: '700', css: '700', tailwind: 'font-bold', usage: 'Hero numbers, stat values, strong emphasis' },
+    {
+      name: 'Normal',
+      value: '400',
+      css: 'var(--font-weight-normal)',
+      tailwind: 'font-normal',
+      usage: 'Body text, descriptions',
+    },
+    {
+      name: 'Medium',
+      value: '500',
+      css: 'var(--font-weight-medium)',
+      tailwind: 'font-medium',
+      usage: 'Headings (h1, h2, h4), labels, buttons',
+    },
+    {
+      name: 'Semi-bold',
+      value: '600',
+      css: '600',
+      tailwind: 'font-semibold',
+      usage: 'h3 headings, card titles, emphasis',
+    },
+    {
+      name: 'Bold',
+      value: '700',
+      css: '700',
+      tailwind: 'font-bold',
+      usage: 'Hero numbers, stat values, strong emphasis',
+    },
   ];
 
   return (
@@ -214,17 +232,31 @@ export function TypographyTab() {
             <Type className="h-6 w-6 md:h-7 md:w-7 text-primary" />
           </div>
           <div className="flex-1">
-            <h3 className="text-xl md:text-2xl font-bold text-black mb-2 md:mb-3">Typography System</h3>
+            <h3 className="text-xl md:text-2xl font-bold text-black mb-2 md:mb-3">
+              Typography System
+            </h3>
             <p className="text-sm md:text-base text-gray-600 leading-relaxed mb-4">
-              A scalable type system using the system font stack, optimised for financial content readability.
-              Base font size is 14px (<code className="text-xs bg-gray-100 px-1.5 py-0.5 rounded text-primary">--font-size</code>).
-              Heading styles are defined globally in <code className="text-xs bg-gray-100 px-1.5 py-0.5 rounded text-primary">globals.css</code> and
-              enforced across all sections. The <code className="text-xs bg-gray-100 px-1.5 py-0.5 rounded text-primary">h3</code> element
-              uses <code className="text-xs bg-gray-100 px-1.5 py-0.5 rounded text-primary">!important</code> to
-              guarantee consistency across the entire admin panel.
+              A scalable type system using the system font stack, optimised for financial content
+              readability. Base font size is 14px (
+              <code className="text-xs bg-gray-100 px-1.5 py-0.5 rounded text-primary">
+                --font-size
+              </code>
+              ). Heading styles are defined globally in{' '}
+              <code className="text-xs bg-gray-100 px-1.5 py-0.5 rounded text-primary">
+                globals.css
+              </code>{' '}
+              and enforced across all sections. The{' '}
+              <code className="text-xs bg-gray-100 px-1.5 py-0.5 rounded text-primary">h3</code>{' '}
+              element uses{' '}
+              <code className="text-xs bg-gray-100 px-1.5 py-0.5 rounded text-primary">
+                !important
+              </code>{' '}
+              to guarantee consistency across the entire admin panel.
             </p>
             <div className="flex flex-wrap gap-2">
-              <Badge className="bg-primary/10 text-primary border-primary/20">System Font Stack</Badge>
+              <Badge className="bg-primary/10 text-primary border-primary/20">
+                System Font Stack
+              </Badge>
               <Badge className="bg-primary/10 text-primary border-primary/20">14px Base</Badge>
               <Badge className="bg-primary/10 text-primary border-primary/20">7 Scale Steps</Badge>
               <Badge className="bg-primary/10 text-primary border-primary/20">WCAG AA</Badge>
@@ -244,7 +276,10 @@ export function TypographyTab() {
 
         <div className="space-y-6">
           {typeScale.map((entry) => (
-            <Card key={entry.id} className="border-gray-200 hover:border-primary/30 transition-colors overflow-hidden">
+            <Card
+              key={entry.id}
+              className="border-gray-200 hover:border-primary/30 transition-colors overflow-hidden"
+            >
               <CardContent className="p-0">
                 {/* Header Row */}
                 <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 p-4 md:p-5 border-b border-gray-100 bg-gray-50/50">
@@ -254,9 +289,15 @@ export function TypographyTab() {
                     </code>
                     <span className="text-base font-semibold text-black">{entry.name}</span>
                     <div className="flex gap-2 flex-wrap">
-                      <Badge variant="secondary" className="text-xs bg-gray-100 text-gray-700">{entry.size}</Badge>
-                      <Badge variant="secondary" className="text-xs bg-gray-100 text-gray-700">{entry.weight}</Badge>
-                      <Badge variant="secondary" className="text-xs bg-gray-100 text-gray-700">LH: {entry.lineHeight}</Badge>
+                      <Badge variant="secondary" className="text-xs bg-gray-100 text-gray-700">
+                        {entry.size}
+                      </Badge>
+                      <Badge variant="secondary" className="text-xs bg-gray-100 text-gray-700">
+                        {entry.weight}
+                      </Badge>
+                      <Badge variant="secondary" className="text-xs bg-gray-100 text-gray-700">
+                        LH: {entry.lineHeight}
+                      </Badge>
                     </div>
                   </div>
                   <Button
@@ -350,14 +391,21 @@ export function TypographyTab() {
 
         <div className="grid sm:grid-cols-2 gap-4 md:gap-6">
           {fontWeights.map((fw) => (
-            <Card key={fw.name} className="border-gray-200 hover:border-primary/30 transition-colors">
+            <Card
+              key={fw.name}
+              className="border-gray-200 hover:border-primary/30 transition-colors"
+            >
               <CardContent className="p-5 md:p-6">
                 <div className="flex items-center justify-between mb-4">
                   <div>
                     <h4 className="text-base font-semibold text-black">{fw.name}</h4>
                     <div className="flex gap-2 mt-1">
-                      <Badge variant="secondary" className="text-xs bg-gray-100 text-gray-700">{fw.value}</Badge>
-                      <Badge variant="secondary" className="text-xs bg-gray-100 text-gray-700">{fw.tailwind}</Badge>
+                      <Badge variant="secondary" className="text-xs bg-gray-100 text-gray-700">
+                        {fw.value}
+                      </Badge>
+                      <Badge variant="secondary" className="text-xs bg-gray-100 text-gray-700">
+                        {fw.tailwind}
+                      </Badge>
                     </div>
                   </div>
                   <button
@@ -419,19 +467,27 @@ export function TypographyTab() {
               <div className="space-y-3 p-4 bg-black rounded-lg">
                 <div className="flex items-center justify-between">
                   <span className="text-white font-medium">Primary text</span>
-                  <code className="text-xs bg-gray-800 text-gray-200 px-2 py-1 rounded">text-white</code>
+                  <code className="text-xs bg-gray-800 text-gray-200 px-2 py-1 rounded">
+                    text-white
+                  </code>
                 </div>
                 <div className="flex items-center justify-between">
                   <span className="text-gray-300">Secondary text</span>
-                  <code className="text-xs bg-gray-800 text-gray-200 px-2 py-1 rounded">text-gray-300</code>
+                  <code className="text-xs bg-gray-800 text-gray-200 px-2 py-1 rounded">
+                    text-gray-300
+                  </code>
                 </div>
                 <div className="flex items-center justify-between">
                   <span className="text-gray-400">Muted text</span>
-                  <code className="text-xs bg-gray-800 text-gray-200 px-2 py-1 rounded">text-gray-400</code>
+                  <code className="text-xs bg-gray-800 text-gray-200 px-2 py-1 rounded">
+                    text-gray-400
+                  </code>
                 </div>
                 <div className="flex items-center justify-between">
                   <span className="text-primary font-medium">Brand accent</span>
-                  <code className="text-xs bg-gray-800 text-gray-200 px-2 py-1 rounded">text-primary</code>
+                  <code className="text-xs bg-gray-800 text-gray-200 px-2 py-1 rounded">
+                    text-primary
+                  </code>
                 </div>
               </div>
             </CardContent>
@@ -474,7 +530,11 @@ p  { font-size: 1.125rem; font-weight: 400; line-height: 1.6; }`}</code>
                 }
                 className="absolute top-2 right-2 opacity-0 group-hover/code:opacity-100 transition-opacity bg-gray-800 hover:bg-gray-700 text-white border-gray-600"
               >
-                {copiedCode === 'css-vars' ? <CheckCircle className="h-3 w-3" /> : <Copy className="h-3 w-3" />}
+                {copiedCode === 'css-vars' ? (
+                  <CheckCircle className="h-3 w-3" />
+                ) : (
+                  <Copy className="h-3 w-3" />
+                )}
               </Button>
             </div>
           </CardContent>
@@ -487,7 +547,13 @@ p  { font-size: 1.125rem; font-weight: 400; line-height: 1.6; }`}</code>
           <Type className="h-4 w-4 text-primary" />
           <AlertTitle className="text-black">Override Default &lt;p&gt; Size</AlertTitle>
           <AlertDescription className="text-gray-600 text-sm">
-            The default &lt;p&gt; is 18px (marketing pages). In the admin panel, always add <code className="text-xs bg-primary/10 text-primary px-1 py-0.5 rounded">text-sm</code> or <code className="text-xs bg-primary/10 text-primary px-1 py-0.5 rounded">text-base</code> to override.
+            The default &lt;p&gt; is 18px (marketing pages). In the admin panel, always add{' '}
+            <code className="text-xs bg-primary/10 text-primary px-1 py-0.5 rounded">text-sm</code>{' '}
+            or{' '}
+            <code className="text-xs bg-primary/10 text-primary px-1 py-0.5 rounded">
+              text-base
+            </code>{' '}
+            to override.
           </AlertDescription>
         </Alert>
 
@@ -495,7 +561,8 @@ p  { font-size: 1.125rem; font-weight: 400; line-height: 1.6; }`}</code>
           <Info className="h-4 w-4 text-primary" />
           <AlertTitle className="text-black">Section Context Matters</AlertTitle>
           <AlertDescription className="text-gray-600 text-sm">
-            The &lt;h3&gt; element has globally enforced colours based on its parent section class. This cannot be overridden with utility classes - it is intentional for consistency.
+            The &lt;h3&gt; element has globally enforced colours based on its parent section class.
+            This cannot be overridden with utility classes - it is intentional for consistency.
           </AlertDescription>
         </Alert>
       </div>

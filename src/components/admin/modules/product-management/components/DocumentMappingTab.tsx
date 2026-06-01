@@ -131,7 +131,10 @@ export function DocumentMappingTab() {
   const [hasChanges, setHasChanges] = useState(false);
 
   // Bulk re-extract state
-  const [bulkReextractProvider, setBulkReextractProvider] = useState<{ id: string; name: string } | null>(null);
+  const [bulkReextractProvider, setBulkReextractProvider] = useState<{
+    id: string;
+    name: string;
+  } | null>(null);
   const [isBulkExtracting, setIsBulkExtracting] = useState(false);
   const [bulkPreview, setBulkPreview] = useState<{
     candidateCount: number;
@@ -155,12 +158,20 @@ export function DocumentMappingTab() {
     startedAt: number;
   } | null>(null);
   const [streamingResults, setStreamingResults] = useState<
-    Array<{ policyId: string; fileName: string; status: string; confidence?: number; error?: string }>
+    Array<{
+      policyId: string;
+      fileName: string;
+      status: string;
+      confidence?: number;
+      error?: string;
+    }>
   >([]);
 
   const getAuthToken = useCallback(async (): Promise<string> => {
     const supabase = createClient();
-    const { data: { session } } = await supabase.auth.getSession();
+    const {
+      data: { session },
+    } = await supabase.auth.getSession();
     return session?.access_token || publicAnonKey;
   }, []);
 
@@ -195,7 +206,7 @@ export function DocumentMappingTab() {
     setHasChanges(false);
 
     // Load existing mappings for this provider
-    const existing = terminologies.find(t => t.providerId === providerId);
+    const existing = terminologies.find((t) => t.providerId === providerId);
     setEditingBenefitMappings(existing?.benefitMappings || {});
     setEditingProductMappings(existing?.productMappings || {});
     setNewBenefitRow({ term: '', canonicalKey: '' });
@@ -207,7 +218,7 @@ export function DocumentMappingTab() {
       toast.error('Please enter both a provider term and a canonical key');
       return;
     }
-    setEditingBenefitMappings(prev => ({
+    setEditingBenefitMappings((prev) => ({
       ...prev,
       [newBenefitRow.term.trim()]: newBenefitRow.canonicalKey,
     }));
@@ -216,7 +227,7 @@ export function DocumentMappingTab() {
   };
 
   const handleRemoveBenefitMapping = (term: string) => {
-    setEditingBenefitMappings(prev => {
+    setEditingBenefitMappings((prev) => {
       const next = { ...prev };
       delete next[term];
       return next;
@@ -229,7 +240,7 @@ export function DocumentMappingTab() {
       toast.error('Please enter both a product name and a category');
       return;
     }
-    setEditingProductMappings(prev => ({
+    setEditingProductMappings((prev) => ({
       ...prev,
       [newProductRow.term.trim()]: newProductRow.canonicalKey,
     }));
@@ -238,7 +249,7 @@ export function DocumentMappingTab() {
   };
 
   const handleRemoveProductMapping = (term: string) => {
-    setEditingProductMappings(prev => {
+    setEditingProductMappings((prev) => {
       const next = { ...prev };
       delete next[term];
       return next;
@@ -252,7 +263,9 @@ export function DocumentMappingTab() {
     try {
       const token = await getAuthToken();
       const supabase = createClient();
-      const { data: { user } } = await supabase.auth.getUser();
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
 
       const res = await fetch(`${API_BASE}/provider-terminology`, {
         method: 'POST',
@@ -286,7 +299,7 @@ export function DocumentMappingTab() {
   };
 
   // Filter providers by search
-  const filteredProviders = providers.filter(p =>
+  const filteredProviders = providers.filter((p) =>
     p.name.toLowerCase().includes(searchQuery.toLowerCase()),
   );
 
@@ -330,7 +343,14 @@ export function DocumentMappingTab() {
     if (!bulkReextractProvider) return;
     setIsBulkExtracting(true);
     setBulkPreview(null);
-    setBulkProgress({ current: 0, total: bulkPreview?.candidateCount || 0, currentFileName: '', currentStatus: 'starting', completedTimestamps: [], startedAt: Date.now() });
+    setBulkProgress({
+      current: 0,
+      total: bulkPreview?.candidateCount || 0,
+      currentFileName: '',
+      currentStatus: 'starting',
+      completedTimestamps: [],
+      startedAt: Date.now(),
+    });
     setStreamingResults([]);
 
     try {
@@ -355,7 +375,8 @@ export function DocumentMappingTab() {
 
       const decoder = new TextDecoder();
       let buffer = '';
-      let finalResult: { totalProcessed: number; successCount: number; failCount: number } | null = null;
+      let finalResult: { totalProcessed: number; successCount: number; failCount: number } | null =
+        null;
 
       while (true) {
         const { done, value } = await reader.read();
@@ -371,35 +392,46 @@ export function DocumentMappingTab() {
             const event = JSON.parse(line);
 
             if (event.type === 'progress') {
-              setBulkProgress(prev => prev ? {
-                ...prev,
-                current: event.current,
-                total: event.total,
-                currentFileName: event.fileName || '',
-                currentStatus: 'processing',
-              } : {
-                current: event.current,
-                total: event.total,
-                currentFileName: event.fileName || '',
-                currentStatus: 'processing',
-                completedTimestamps: [],
-                startedAt: Date.now(),
-              });
+              setBulkProgress((prev) =>
+                prev
+                  ? {
+                      ...prev,
+                      current: event.current,
+                      total: event.total,
+                      currentFileName: event.fileName || '',
+                      currentStatus: 'processing',
+                    }
+                  : {
+                      current: event.current,
+                      total: event.total,
+                      currentFileName: event.fileName || '',
+                      currentStatus: 'processing',
+                      completedTimestamps: [],
+                      startedAt: Date.now(),
+                    },
+              );
             } else if (event.type === 'result') {
-              setBulkProgress(prev => prev ? {
+              setBulkProgress((prev) =>
+                prev
+                  ? {
+                      ...prev,
+                      current: event.current,
+                      currentFileName: event.fileName || '',
+                      currentStatus: event.status,
+                      completedTimestamps: [...prev.completedTimestamps, Date.now()],
+                    }
+                  : null,
+              );
+              setStreamingResults((prev) => [
                 ...prev,
-                current: event.current,
-                currentFileName: event.fileName || '',
-                currentStatus: event.status,
-                completedTimestamps: [...prev.completedTimestamps, Date.now()],
-              } : null);
-              setStreamingResults(prev => [...prev, {
-                policyId: event.policyId,
-                fileName: event.fileName || '',
-                status: event.status,
-                confidence: event.confidence,
-                error: event.error,
-              }]);
+                {
+                  policyId: event.policyId,
+                  fileName: event.fileName || '',
+                  status: event.status,
+                  confidence: event.confidence,
+                  error: event.error,
+                },
+              ]);
             } else if (event.type === 'complete') {
               finalResult = {
                 totalProcessed: event.totalProcessed,
@@ -457,7 +489,8 @@ export function DocumentMappingTab() {
               <CardTitle className="text-lg">Document AI Configuration</CardTitle>
               <CardDescription>
                 Configure provider-specific terminology mappings to improve AI extraction accuracy.
-                When a provider's benefit term is mapped, the AI will use the mapping instead of guessing.
+                When a provider's benefit term is mapped, the AI will use the mapping instead of
+                guessing.
               </CardDescription>
             </div>
           </div>
@@ -486,13 +519,19 @@ export function DocumentMappingTab() {
         {filteredProviders.length === 0 ? (
           <div className="text-center py-12 text-gray-500">
             <Building2 className="h-12 w-12 mx-auto text-gray-300 mb-4" />
-            <p className="text-sm">No providers found. Add providers in the Provider Management tab first.</p>
+            <p className="text-sm">
+              No providers found. Add providers in the Provider Management tab first.
+            </p>
           </div>
         ) : (
-          filteredProviders.map(provider => {
-            const existingMap = terminologies.find(t => t.providerId === provider.id);
-            const benefitCount = existingMap ? Object.keys(existingMap.benefitMappings || {}).length : 0;
-            const productCount = existingMap ? Object.keys(existingMap.productMappings || {}).length : 0;
+          filteredProviders.map((provider) => {
+            const existingMap = terminologies.find((t) => t.providerId === provider.id);
+            const benefitCount = existingMap
+              ? Object.keys(existingMap.benefitMappings || {}).length
+              : 0;
+            const productCount = existingMap
+              ? Object.keys(existingMap.productMappings || {}).length
+              : 0;
             const isExpanded = expandedProvider === provider.id;
 
             return (
@@ -504,7 +543,11 @@ export function DocumentMappingTab() {
                 >
                   <div className="flex items-center gap-3">
                     {provider.logo ? (
-                      <img src={provider.logo} alt={provider.name} className="h-8 w-8 object-contain" />
+                      <img
+                        src={provider.logo}
+                        alt={provider.name}
+                        className="h-8 w-8 object-contain"
+                      />
                     ) : (
                       <div className="h-8 w-8 rounded bg-gray-100 flex items-center justify-center">
                         <Building2 className="h-4 w-4 text-gray-400" />
@@ -546,15 +589,16 @@ export function DocumentMappingTab() {
                         Benefit Term Mappings
                       </Label>
                       <p className="text-xs text-gray-500 mb-3">
-                        Map provider-specific benefit names to canonical Navigate Wealth keys.
-                        These override the AI's best guess during extraction.
+                        Map provider-specific benefit names to canonical Navigate Wealth keys. These
+                        override the AI's best guess during extraction.
                       </p>
 
                       {/* Existing benefit mappings */}
                       {Object.keys(editingBenefitMappings).length > 0 && (
                         <div className="space-y-2 mb-3">
                           {Object.entries(editingBenefitMappings).map(([term, key]) => {
-                            const keyLabel = CANONICAL_BENEFIT_KEYS.find(k => k.value === key)?.label || key;
+                            const keyLabel =
+                              CANONICAL_BENEFIT_KEYS.find((k) => k.value === key)?.label || key;
                             return (
                               <div
                                 key={term}
@@ -588,7 +632,9 @@ export function DocumentMappingTab() {
                           <Input
                             placeholder="e.g. Lifestyle Protector"
                             value={newBenefitRow.term}
-                            onChange={(e) => setNewBenefitRow(prev => ({ ...prev, term: e.target.value }))}
+                            onChange={(e) =>
+                              setNewBenefitRow((prev) => ({ ...prev, term: e.target.value }))
+                            }
                             className="h-8 text-xs"
                           />
                         </div>
@@ -596,13 +642,15 @@ export function DocumentMappingTab() {
                           <Label className="text-[10px] text-gray-500">Canonical Key</Label>
                           <Select
                             value={newBenefitRow.canonicalKey}
-                            onValueChange={(v) => setNewBenefitRow(prev => ({ ...prev, canonicalKey: v }))}
+                            onValueChange={(v) =>
+                              setNewBenefitRow((prev) => ({ ...prev, canonicalKey: v }))
+                            }
                           >
                             <SelectTrigger className="h-8 text-xs">
                               <SelectValue placeholder="Select..." />
                             </SelectTrigger>
                             <SelectContent>
-                              {CANONICAL_BENEFIT_KEYS.map(k => (
+                              {CANONICAL_BENEFIT_KEYS.map((k) => (
                                 <SelectItem key={k.value} value={k.value} className="text-xs">
                                   {k.label}
                                 </SelectItem>
@@ -635,7 +683,8 @@ export function DocumentMappingTab() {
                       {Object.keys(editingProductMappings).length > 0 && (
                         <div className="space-y-2 mb-3">
                           {Object.entries(editingProductMappings).map(([term, catId]) => {
-                            const catLabel = PRODUCT_CATEGORIES.find(c => c.value === catId)?.label || catId;
+                            const catLabel =
+                              PRODUCT_CATEGORIES.find((c) => c.value === catId)?.label || catId;
                             return (
                               <div
                                 key={term}
@@ -669,7 +718,9 @@ export function DocumentMappingTab() {
                           <Input
                             placeholder="e.g. Glacier Investment"
                             value={newProductRow.term}
-                            onChange={(e) => setNewProductRow(prev => ({ ...prev, term: e.target.value }))}
+                            onChange={(e) =>
+                              setNewProductRow((prev) => ({ ...prev, term: e.target.value }))
+                            }
                             className="h-8 text-xs"
                           />
                         </div>
@@ -677,13 +728,15 @@ export function DocumentMappingTab() {
                           <Label className="text-[10px] text-gray-500">Category</Label>
                           <Select
                             value={newProductRow.canonicalKey}
-                            onValueChange={(v) => setNewProductRow(prev => ({ ...prev, canonicalKey: v }))}
+                            onValueChange={(v) =>
+                              setNewProductRow((prev) => ({ ...prev, canonicalKey: v }))
+                            }
                           >
                             <SelectTrigger className="h-8 text-xs">
                               <SelectValue placeholder="Select..." />
                             </SelectTrigger>
                             <SelectContent>
-                              {PRODUCT_CATEGORIES.map(c => (
+                              {PRODUCT_CATEGORIES.map((c) => (
                                 <SelectItem key={c.value} value={c.value} className="text-xs">
                                   {c.label}
                                 </SelectItem>
@@ -706,7 +759,8 @@ export function DocumentMappingTab() {
                     <div className="flex items-center justify-between pt-2 border-t">
                       {existingMap?.updatedAt && (
                         <span className="text-[10px] text-gray-400">
-                          Last updated: {new Date(existingMap.updatedAt).toLocaleDateString('en-ZA')}
+                          Last updated:{' '}
+                          {new Date(existingMap.updatedAt).toLocaleDateString('en-ZA')}
                         </span>
                       )}
                       <div className="flex items-center gap-2">
@@ -777,7 +831,9 @@ export function DocumentMappingTab() {
         <AlertDialogContent className="max-w-lg">
           <AlertDialogHeader>
             <AlertDialogTitle className="flex items-center gap-2">
-              <RefreshCw className={`h-5 w-5 text-amber-600 ${bulkProgress ? 'animate-spin' : ''}`} />
+              <RefreshCw
+                className={`h-5 w-5 text-amber-600 ${bulkProgress ? 'animate-spin' : ''}`}
+              />
               Bulk Re-extract — {bulkReextractProvider?.name}
             </AlertDialogTitle>
             <AlertDialogDescription asChild>
@@ -786,16 +842,21 @@ export function DocumentMappingTab() {
                 {bulkPreview && !bulkProgress && (
                   <div className="space-y-3">
                     <p className="text-sm text-gray-600">
-                      Found <strong>{bulkPreview.candidateCount}</strong> policies with attached documents.
-                      Re-extraction will use the updated terminology mappings.
+                      Found <strong>{bulkPreview.candidateCount}</strong> policies with attached
+                      documents. Re-extraction will use the updated terminology mappings.
                     </p>
                     {bulkPreview.candidateCount > 0 && (
                       <div className="max-h-[200px] overflow-y-auto border rounded-lg divide-y">
-                        {bulkPreview.candidates.map(cand => (
-                          <div key={cand.policyId} className="px-3 py-2 flex items-center justify-between">
+                        {bulkPreview.candidates.map((cand) => (
+                          <div
+                            key={cand.policyId}
+                            className="px-3 py-2 flex items-center justify-between"
+                          >
                             <div className="flex items-center gap-2 min-w-0">
                               <FileText className="h-3.5 w-3.5 text-gray-400 flex-shrink-0" />
-                              <span className="text-xs text-gray-700 truncate">{cand.fileName}</span>
+                              <span className="text-xs text-gray-700 truncate">
+                                {cand.fileName}
+                              </span>
                             </div>
                             {cand.hasExistingExtraction ? (
                               <Badge className="bg-amber-100 text-amber-700 hover:bg-amber-100 text-[9px] px-1.5 py-0">
@@ -817,143 +878,166 @@ export function DocumentMappingTab() {
                     )}
                     <div className="flex items-center gap-2 text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-md px-2.5 py-1.5">
                       <AlertCircle className="h-3.5 w-3.5 flex-shrink-0" />
-                      <span>Previous extractions will be preserved in the extraction history. Extracted data will not be automatically applied.</span>
+                      <span>
+                        Previous extractions will be preserved in the extraction history. Extracted
+                        data will not be automatically applied.
+                      </span>
                     </div>
                   </div>
                 )}
 
                 {/* Streaming Progress Mode */}
-                {bulkProgress && (() => {
-                  // Calculate ETA from completed timestamps
-                  const completed = bulkProgress.completedTimestamps;
-                  const remaining = bulkProgress.total - bulkProgress.current;
-                  let etaText = '';
+                {bulkProgress &&
+                  (() => {
+                    // Calculate ETA from completed timestamps
+                    const completed = bulkProgress.completedTimestamps;
+                    const remaining = bulkProgress.total - bulkProgress.current;
+                    let etaText = '';
 
-                  if (completed.length >= 2 && remaining > 0) {
-                    // Average time between consecutive completions
-                    const intervals: number[] = [];
-                    for (let i = 1; i < completed.length; i++) {
-                      intervals.push(completed[i] - completed[i - 1]);
+                    if (completed.length >= 2 && remaining > 0) {
+                      // Average time between consecutive completions
+                      const intervals: number[] = [];
+                      for (let i = 1; i < completed.length; i++) {
+                        intervals.push(completed[i] - completed[i - 1]);
+                      }
+                      const avgMs = intervals.reduce((a, b) => a + b, 0) / intervals.length;
+                      const etaMs = avgMs * remaining;
+                      const etaSec = Math.round(etaMs / 1000);
+
+                      if (etaSec < 60) {
+                        etaText = `~${etaSec}s remaining`;
+                      } else {
+                        const mins = Math.floor(etaSec / 60);
+                        const secs = etaSec % 60;
+                        etaText = `~${mins}m ${secs}s remaining`;
+                      }
+                    } else if (completed.length === 1 && remaining > 0) {
+                      // Only one completion — estimate from elapsed since start
+                      const elapsed = completed[0] - bulkProgress.startedAt;
+                      const etaMs = elapsed * remaining;
+                      const etaSec = Math.round(etaMs / 1000);
+                      if (etaSec < 60) {
+                        etaText = `~${etaSec}s remaining`;
+                      } else {
+                        const mins = Math.floor(etaSec / 60);
+                        const secs = etaSec % 60;
+                        etaText = `~${mins}m ${secs}s remaining`;
+                      }
                     }
-                    const avgMs = intervals.reduce((a, b) => a + b, 0) / intervals.length;
-                    const etaMs = avgMs * remaining;
-                    const etaSec = Math.round(etaMs / 1000);
 
-                    if (etaSec < 60) {
-                      etaText = `~${etaSec}s remaining`;
-                    } else {
-                      const mins = Math.floor(etaSec / 60);
-                      const secs = etaSec % 60;
-                      etaText = `~${mins}m ${secs}s remaining`;
-                    }
-                  } else if (completed.length === 1 && remaining > 0) {
-                    // Only one completion — estimate from elapsed since start
-                    const elapsed = completed[0] - bulkProgress.startedAt;
-                    const etaMs = elapsed * remaining;
-                    const etaSec = Math.round(etaMs / 1000);
-                    if (etaSec < 60) {
-                      etaText = `~${etaSec}s remaining`;
-                    } else {
-                      const mins = Math.floor(etaSec / 60);
-                      const secs = etaSec % 60;
-                      etaText = `~${mins}m ${secs}s remaining`;
-                    }
-                  }
+                    // Elapsed time
+                    const elapsedMs = Date.now() - bulkProgress.startedAt;
+                    const elapsedSec = Math.floor(elapsedMs / 1000);
+                    const elapsedMin = Math.floor(elapsedSec / 60);
+                    const elapsedDisplay =
+                      elapsedMin > 0
+                        ? `${elapsedMin}m ${elapsedSec % 60}s elapsed`
+                        : `${elapsedSec}s elapsed`;
 
-                  // Elapsed time
-                  const elapsedMs = Date.now() - bulkProgress.startedAt;
-                  const elapsedSec = Math.floor(elapsedMs / 1000);
-                  const elapsedMin = Math.floor(elapsedSec / 60);
-                  const elapsedDisplay = elapsedMin > 0
-                    ? `${elapsedMin}m ${elapsedSec % 60}s elapsed`
-                    : `${elapsedSec}s elapsed`;
+                    return (
+                      <div className="space-y-3">
+                        {/* Progress bar */}
+                        <div className="space-y-1.5">
+                          <div className="flex items-center justify-between text-xs">
+                            <span className="text-gray-600 font-medium">
+                              Processing {bulkProgress.current} of {bulkProgress.total}
+                            </span>
+                            <span className="text-gray-500">
+                              {bulkProgress.total > 0
+                                ? Math.round((bulkProgress.current / bulkProgress.total) * 100)
+                                : 0}
+                              %
+                            </span>
+                          </div>
+                          <div className="h-2 bg-gray-200 rounded-full overflow-hidden">
+                            <div
+                              className="h-full bg-amber-500 rounded-full transition-all duration-500 ease-out"
+                              style={{
+                                width: `${bulkProgress.total > 0 ? (bulkProgress.current / bulkProgress.total) * 100 : 0}%`,
+                              }}
+                            />
+                          </div>
+                          <div className="flex items-center justify-between">
+                            {bulkProgress.currentFileName && (
+                              <div className="flex items-center gap-2 text-[10px] text-gray-500">
+                                <Loader2 className="h-3 w-3 animate-spin flex-shrink-0" />
+                                <span className="truncate">{bulkProgress.currentFileName}</span>
+                              </div>
+                            )}
+                            <div className="flex items-center gap-3 text-[10px] text-gray-400 ml-auto">
+                              <span>{elapsedDisplay}</span>
+                              {etaText && (
+                                <span className="text-amber-600 font-medium">{etaText}</span>
+                              )}
+                            </div>
+                          </div>
+                        </div>
 
-                  return (
-                  <div className="space-y-3">
-                    {/* Progress bar */}
-                    <div className="space-y-1.5">
-                      <div className="flex items-center justify-between text-xs">
-                        <span className="text-gray-600 font-medium">
-                          Processing {bulkProgress.current} of {bulkProgress.total}
-                        </span>
-                        <span className="text-gray-500">
-                          {bulkProgress.total > 0
-                            ? Math.round((bulkProgress.current / bulkProgress.total) * 100)
-                            : 0}%
-                        </span>
-                      </div>
-                      <div className="h-2 bg-gray-200 rounded-full overflow-hidden">
-                        <div
-                          className="h-full bg-amber-500 rounded-full transition-all duration-500 ease-out"
-                          style={{
-                            width: `${bulkProgress.total > 0 ? (bulkProgress.current / bulkProgress.total) * 100 : 0}%`,
-                          }}
-                        />
-                      </div>
-                      <div className="flex items-center justify-between">
-                        {bulkProgress.currentFileName && (
-                          <div className="flex items-center gap-2 text-[10px] text-gray-500">
-                            <Loader2 className="h-3 w-3 animate-spin flex-shrink-0" />
-                            <span className="truncate">{bulkProgress.currentFileName}</span>
+                        {/* Live results feed */}
+                        {streamingResults.length > 0 && (
+                          <div className="max-h-[180px] overflow-y-auto border rounded-lg divide-y">
+                            {[...streamingResults].reverse().map((result, idx) => (
+                              <div
+                                key={`sr-${idx}`}
+                                className="px-3 py-1.5 flex items-center justify-between"
+                              >
+                                <div className="flex items-center gap-2 min-w-0">
+                                  <FileText className="h-3 w-3 text-gray-400 flex-shrink-0" />
+                                  <span className="text-[10px] text-gray-600 truncate">
+                                    {result.fileName}
+                                  </span>
+                                </div>
+                                <div className="flex items-center gap-1.5 flex-shrink-0">
+                                  {result.confidence !== undefined && (
+                                    <span className="text-[9px] text-gray-400">
+                                      {Math.round(result.confidence * 100)}%
+                                    </span>
+                                  )}
+                                  {result.status === 'completed' ? (
+                                    <Check className="h-3 w-3 text-green-600" />
+                                  ) : result.status === 'failed' ? (
+                                    <XCircle className="h-3 w-3 text-red-500" />
+                                  ) : (
+                                    <Loader2 className="h-3 w-3 animate-spin text-gray-400" />
+                                  )}
+                                </div>
+                              </div>
+                            ))}
                           </div>
                         )}
-                        <div className="flex items-center gap-3 text-[10px] text-gray-400 ml-auto">
-                          <span>{elapsedDisplay}</span>
-                          {etaText && (
-                            <span className="text-amber-600 font-medium">{etaText}</span>
-                          )}
-                        </div>
                       </div>
-                    </div>
-
-                    {/* Live results feed */}
-                    {streamingResults.length > 0 && (
-                      <div className="max-h-[180px] overflow-y-auto border rounded-lg divide-y">
-                        {[...streamingResults].reverse().map((result, idx) => (
-                          <div key={`sr-${idx}`} className="px-3 py-1.5 flex items-center justify-between">
-                            <div className="flex items-center gap-2 min-w-0">
-                              <FileText className="h-3 w-3 text-gray-400 flex-shrink-0" />
-                              <span className="text-[10px] text-gray-600 truncate">{result.fileName}</span>
-                            </div>
-                            <div className="flex items-center gap-1.5 flex-shrink-0">
-                              {result.confidence !== undefined && (
-                                <span className="text-[9px] text-gray-400">
-                                  {Math.round(result.confidence * 100)}%
-                                </span>
-                              )}
-                              {result.status === 'completed' ? (
-                                <Check className="h-3 w-3 text-green-600" />
-                              ) : result.status === 'failed' ? (
-                                <XCircle className="h-3 w-3 text-red-500" />
-                              ) : (
-                                <Loader2 className="h-3 w-3 animate-spin text-gray-400" />
-                              )}
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                  );
-                })()}
+                    );
+                  })()}
 
                 {/* Results Mode */}
                 {bulkResults && !bulkProgress && (
                   <div className="space-y-3">
                     <div className="grid grid-cols-3 gap-3">
                       <div className="bg-gray-50 rounded-lg p-3 text-center">
-                        <p className="text-lg font-bold text-gray-900">{bulkResults.totalProcessed}</p>
+                        <p className="text-lg font-bold text-gray-900">
+                          {bulkResults.totalProcessed}
+                        </p>
                         <p className="text-[10px] text-gray-500">Total</p>
                       </div>
                       <div className="bg-green-50 rounded-lg p-3 text-center">
-                        <p className="text-lg font-bold text-green-700">{bulkResults.successCount}</p>
+                        <p className="text-lg font-bold text-green-700">
+                          {bulkResults.successCount}
+                        </p>
                         <p className="text-[10px] text-green-600">Succeeded</p>
                       </div>
-                      <div className={`rounded-lg p-3 text-center ${bulkResults.failCount > 0 ? 'bg-red-50' : 'bg-gray-50'}`}>
-                        <p className={`text-lg font-bold ${bulkResults.failCount > 0 ? 'text-red-700' : 'text-gray-400'}`}>
+                      <div
+                        className={`rounded-lg p-3 text-center ${bulkResults.failCount > 0 ? 'bg-red-50' : 'bg-gray-50'}`}
+                      >
+                        <p
+                          className={`text-lg font-bold ${bulkResults.failCount > 0 ? 'text-red-700' : 'text-gray-400'}`}
+                        >
                           {bulkResults.failCount}
                         </p>
-                        <p className={`text-[10px] ${bulkResults.failCount > 0 ? 'text-red-600' : 'text-gray-400'}`}>Failed</p>
+                        <p
+                          className={`text-[10px] ${bulkResults.failCount > 0 ? 'text-red-600' : 'text-gray-400'}`}
+                        >
+                          Failed
+                        </p>
                       </div>
                     </div>
 
@@ -961,10 +1045,15 @@ export function DocumentMappingTab() {
                     {streamingResults.length > 0 && (
                       <div className="max-h-[200px] overflow-y-auto border rounded-lg divide-y">
                         {streamingResults.map((result, idx) => (
-                          <div key={`fr-${idx}`} className="px-3 py-2 flex items-center justify-between">
+                          <div
+                            key={`fr-${idx}`}
+                            className="px-3 py-2 flex items-center justify-between"
+                          >
                             <div className="flex items-center gap-2 min-w-0">
                               <FileText className="h-3.5 w-3.5 text-gray-400 flex-shrink-0" />
-                              <span className="text-xs text-gray-700 truncate">{result.fileName}</span>
+                              <span className="text-xs text-gray-700 truncate">
+                                {result.fileName}
+                              </span>
                             </div>
                             <div className="flex items-center gap-2">
                               {result.confidence !== undefined && (
@@ -999,9 +1088,7 @@ export function DocumentMappingTab() {
                 Processing...
               </Button>
             ) : (
-              <AlertDialogCancel>
-                {bulkResults ? 'Close' : 'Cancel'}
-              </AlertDialogCancel>
+              <AlertDialogCancel>{bulkResults ? 'Close' : 'Cancel'}</AlertDialogCancel>
             )}
             {bulkPreview && bulkPreview.candidateCount > 0 && !bulkProgress && (
               <AlertDialogAction

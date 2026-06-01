@@ -12,7 +12,7 @@ const columns = [
   { key: 'retentionPeriod', label: 'Retention', type: 'text' as const },
   { key: 'mitigationActions', label: 'Mitigation', type: 'text' as const },
   { key: 'due', label: 'Retention Until', type: 'date' as const },
-  { key: 'status', label: 'Status', type: 'badge' as const }
+  { key: 'status', label: 'Status', type: 'badge' as const },
 ];
 
 export function ConflictsMarketingTab() {

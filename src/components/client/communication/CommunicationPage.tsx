@@ -54,7 +54,9 @@ export function CommunicationPage() {
   };
 
   return (
-    <div className={`min-h-screen ${ACTIVE_THEME === 'branded' ? 'bg-[#f8f9fb]' : 'bg-[rgb(249,249,249)]'}`}>
+    <div
+      className={`min-h-screen ${ACTIVE_THEME === 'branded' ? 'bg-[#f8f9fb]' : 'bg-[rgb(249,249,249)]'}`}
+    >
       <PortalPageHeader
         title="Communications"
         subtitle="Updates and notifications from your financial adviser"
@@ -74,8 +76,9 @@ export function CommunicationPage() {
               <div className="flex items-start gap-2">
                 <Clock className="h-4 w-4 text-blue-500 mt-0.5 flex-shrink-0" />
                 <p className="text-xs text-blue-700 leading-relaxed">
-                  Messages are retained in your portal for <strong>{MESSAGE_RETENTION_DAYS} days</strong> from
-                  receipt. Older messages are automatically removed.
+                  Messages are retained in your portal for{' '}
+                  <strong>{MESSAGE_RETENTION_DAYS} days</strong> from receipt. Older messages are
+                  automatically removed.
                 </p>
               </div>
             </div>
@@ -85,9 +88,18 @@ export function CommunicationPage() {
           <div className="lg:col-span-3 space-y-6">
             <CommunicationFilters
               filters={filters}
-              onSearchChange={(v) => { setFilters((f) => ({ ...f, search: v })); setCurrentPage(1); }}
-              onCategoryChange={(v) => { setFilters((f) => ({ ...f, category: v })); setCurrentPage(1); }}
-              onDateRangeChange={(v) => { setFilters((f) => ({ ...f, dateRange: v as Filters['dateRange'] })); setCurrentPage(1); }}
+              onSearchChange={(v) => {
+                setFilters((f) => ({ ...f, search: v }));
+                setCurrentPage(1);
+              }}
+              onCategoryChange={(v) => {
+                setFilters((f) => ({ ...f, category: v }));
+                setCurrentPage(1);
+              }}
+              onDateRangeChange={(v) => {
+                setFilters((f) => ({ ...f, dateRange: v as Filters['dateRange'] }));
+                setCurrentPage(1);
+              }}
             />
 
             {/* Results bar */}

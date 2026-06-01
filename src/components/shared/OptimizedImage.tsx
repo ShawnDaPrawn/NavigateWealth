@@ -4,7 +4,7 @@ import {
   generateUnsplashSrcSet,
   generatePlaceholderUrl,
   getOptimalImageWidth,
-  IMAGE_PRESETS
+  IMAGE_PRESETS,
 } from '../../utils/imageOptimization';
 
 interface OptimizedImageProps {
@@ -38,7 +38,7 @@ export function OptimizedImage({
   onLoad,
   onError,
   preset,
-  blurup = true
+  blurup = true,
 }: OptimizedImageProps) {
   const [isLoaded, setIsLoaded] = useState(false);
   const [hasError, setHasError] = useState(false);
@@ -50,11 +50,11 @@ export function OptimizedImage({
       const presetParams = IMAGE_PRESETS[preset];
       return optimizeUnsplashUrl(src, presetParams);
     } else if (width || height) {
-      return optimizeUnsplashUrl(src, { 
+      return optimizeUnsplashUrl(src, {
         width: width || getOptimalImageWidth(width),
         height,
         quality: 80,
-        format: 'auto'
+        format: 'auto',
       });
     }
     return src;
@@ -116,7 +116,7 @@ export function OptimizedImage({
       {!isLoaded && !hasError && !placeholderLoaded && (
         <div className="absolute inset-0 bg-gray-100 animate-pulse" />
       )}
-      
+
       {/* Main image */}
       <img
         src={optimizedSrc}
@@ -137,7 +137,7 @@ export function OptimizedImage({
           ...(width && height && { aspectRatio: `${width}/${height}` }),
         }}
       />
-      
+
       {/* Error state */}
       {hasError && (
         <div className="absolute inset-0 bg-gray-100 flex items-center justify-center text-gray-400">

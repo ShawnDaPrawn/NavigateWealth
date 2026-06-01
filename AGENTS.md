@@ -57,16 +57,16 @@ boundary.
 
 Commands that exist on clean `main` as of 2026-04-20:
 
-| Task | Command |
-|---|---|
-| Install deps | `npm install` |
-| Dev server | `npm run dev` (Vite, port 3000) |
-| Build | `npm run build` |
-| Tests | `npm test` |
-| Test watch | `npm run test:watch` |
+| Task                   | Command                                                                      |
+| ---------------------- | ---------------------------------------------------------------------------- |
+| Install deps           | `npm install`                                                                |
+| Dev server             | `npm run dev` (Vite, port 3000)                                              |
+| Build                  | `npm run build`                                                              |
+| Tests                  | `npm test`                                                                   |
+| Test watch             | `npm run test:watch`                                                         |
 | Optional UI inspection | `npm run ui:inspect -- --path /your-route --output tmp/ui-inspect/check.png` |
-| Provider sync | `npm run provider:sync` |
-| Provider worker | `npm run provider:worker` |
+| Provider sync          | `npm run provider:sync`                                                      |
+| Provider worker        | `npm run provider:worker`                                                    |
 
 Commands that do **not** exist on clean `main` unless later tooling work lands:
 
@@ -93,11 +93,11 @@ Session handling in `src/components/auth/AuthContext.tsx` and
 **Invariants future changes must preserve:**
 
 - **Single pipeline:** hydrate only from `onAuthStateChange`
-   (`INITIAL_SESSION` / `SIGNED_IN`). Do **not** add another bootstrapping
-   `getSession()` path without explicit review.
+  (`INITIAL_SESSION` / `SIGNED_IN`). Do **not** add another bootstrapping
+  `getSession()` path without explicit review.
 - **Session hint:** pass `session.user` into `loadUserProfile(..., hint)` during
-   that pipeline so hydration does **not** stack a redundant `getUser()` on the
-   hot path. `refreshUser` may omit the hint.
+  that pipeline so hydration does **not** stack a redundant `getUser()` on the
+  hot path. `refreshUser` may omit the hint.
 - **Regression tests** (must stay green — run `npm test`):
   - `src/utils/auth/__tests__/loadUserProfile.sessionHint.test.ts`
   - `src/components/auth/__tests__/authContext.invariants.test.ts`

@@ -10,10 +10,20 @@ import { TREATMENT_LABELS, TREATMENT_OPTION_LABELS } from '../WillDraftingConsta
 import { StepSectionHeader, FormField } from '../WillDraftingUI';
 import type { StepLifeSustainingProps } from './types';
 
-const TREATMENT_KEYS = ['ventilator', 'cpr', 'artificialNutrition', 'dialysis', 'antibiotics'] as const;
+const TREATMENT_KEYS = [
+  'ventilator',
+  'cpr',
+  'artificialNutrition',
+  'dialysis',
+  'antibiotics',
+] as const;
 const OPTION_KEYS = ['accept', 'refuse', 'limited'] as const;
 
-export function StepLifeSustaining({ treatment, onTreatmentChange, onInstructionsChange }: StepLifeSustainingProps) {
+export function StepLifeSustaining({
+  treatment,
+  onTreatmentChange,
+  onInstructionsChange,
+}: StepLifeSustainingProps) {
   return (
     <div className="space-y-5">
       <StepSectionHeader
@@ -35,9 +45,15 @@ export function StepLifeSustaining({ treatment, onTreatmentChange, onInstruction
                 {OPTION_KEYS.map((option) => {
                   const isSelected = treatment[key] === option;
                   const colorMap = {
-                    accept: isSelected ? 'bg-green-600 text-white hover:bg-green-700 border-green-600' : 'border-gray-200 text-gray-600 hover:border-green-300 hover:bg-green-50',
-                    refuse: isSelected ? 'bg-red-600 text-white hover:bg-red-700 border-red-600' : 'border-gray-200 text-gray-600 hover:border-red-300 hover:bg-red-50',
-                    limited: isSelected ? 'bg-amber-500 text-white hover:bg-amber-600 border-amber-500' : 'border-gray-200 text-gray-600 hover:border-amber-300 hover:bg-amber-50',
+                    accept: isSelected
+                      ? 'bg-green-600 text-white hover:bg-green-700 border-green-600'
+                      : 'border-gray-200 text-gray-600 hover:border-green-300 hover:bg-green-50',
+                    refuse: isSelected
+                      ? 'bg-red-600 text-white hover:bg-red-700 border-red-600'
+                      : 'border-gray-200 text-gray-600 hover:border-red-300 hover:bg-red-50',
+                    limited: isSelected
+                      ? 'bg-amber-500 text-white hover:bg-amber-600 border-amber-500'
+                      : 'border-gray-200 text-gray-600 hover:border-amber-300 hover:bg-amber-50',
                   };
                   return (
                     <button

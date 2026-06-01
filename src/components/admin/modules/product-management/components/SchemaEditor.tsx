@@ -1,30 +1,25 @@
 import React from 'react';
-import { 
-  Plus, 
-  Trash2, 
-  GripVertical, 
-  Save, 
+import {
+  Plus,
+  Trash2,
+  GripVertical,
+  Save,
   CheckCircle2,
   LayoutGrid,
   Settings2,
-  Link2
+  Link2,
 } from 'lucide-react';
-import { 
-  Select, 
-  SelectContent, 
-  SelectItem, 
-  SelectTrigger, 
-  SelectValue 
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
 } from '../../../../ui/select';
 import { Button } from '../../../../ui/button';
 import { Input } from '../../../../ui/input';
 import { Switch } from '../../../../ui/switch';
-import { 
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from '../../../../ui/tooltip';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '../../../../ui/tooltip';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -59,9 +54,8 @@ export function SchemaEditor({
   selectedCategoryId,
   onSave,
   saveSuccess,
-  hasUnsavedChanges
+  hasUnsavedChanges,
 }: SchemaEditorProps) {
-
   // Get available keys for this category
   const availableKeys = selectedCategoryId ? getAvailableKeysForCategory(selectedCategoryId) : [];
 
@@ -71,19 +65,21 @@ export function SchemaEditor({
       name: '',
       type: 'text',
       required: false,
-      options: []
+      options: [],
     };
     updateFields([...currentFields, newField]);
   };
 
   const handleRemoveField = (id: string) => {
-    updateFields(currentFields.filter(f => f.id !== id));
+    updateFields(currentFields.filter((f) => f.id !== id));
   };
 
-  const handleUpdateField = (id: string, key: keyof ProductField, value: ProductField[keyof ProductField]) => {
-    updateFields(currentFields.map(f => 
-      f.id === id ? { ...f, [key]: value } : f
-    ));
+  const handleUpdateField = (
+    id: string,
+    key: keyof ProductField,
+    value: ProductField[keyof ProductField],
+  ) => {
+    updateFields(currentFields.map((f) => (f.id === id ? { ...f, [key]: value } : f)));
   };
 
   const handleDragEnd = (result: DropResult) => {
@@ -110,9 +106,7 @@ export function SchemaEditor({
             <h3 className="text-sm font-semibold text-gray-900">
               {selectedCategoryName} Structure Editor
             </h3>
-            <p className="text-xs text-gray-500">
-              Drag and drop to reorder fields
-            </p>
+            <p className="text-xs text-gray-500">Drag and drop to reorder fields</p>
           </div>
         </div>
         <div className="flex items-center gap-3">
@@ -122,10 +116,14 @@ export function SchemaEditor({
               Saved
             </span>
           )}
-          <Button 
+          <Button
             onClick={onSave}
             disabled={!hasUnsavedChanges}
-            className={hasUnsavedChanges ? 'bg-purple-600 hover:bg-purple-700' : 'bg-gray-100 text-gray-400 hover:bg-gray-200'}
+            className={
+              hasUnsavedChanges
+                ? 'bg-purple-600 hover:bg-purple-700'
+                : 'bg-gray-100 text-gray-400 hover:bg-gray-200'
+            }
             size="sm"
           >
             <Save className="w-4 h-4 mr-2" />
@@ -138,7 +136,7 @@ export function SchemaEditor({
       <div className="p-6 overflow-x-auto">
         <div className="min-w-[1000px]">
           {/* Grid Header */}
-          <div 
+          <div
             className="grid gap-4 px-4 py-3 bg-gray-100/80 rounded-t-lg border-x border-t border-gray-200 text-xs font-semibold text-gray-500 uppercase tracking-wider"
             style={{ gridTemplateColumns }}
           >
@@ -159,8 +157,8 @@ export function SchemaEditor({
           <DragDropContext onDragEnd={handleDragEnd}>
             <Droppable droppableId="fields">
               {(provided) => (
-                <div 
-                  {...provided.droppableProps} 
+                <div
+                  {...provided.droppableProps}
                   ref={provided.innerRef}
                   className="bg-white border-x border-b border-gray-200 rounded-b-lg divide-y divide-gray-100"
                 >
@@ -180,7 +178,7 @@ export function SchemaEditor({
                             {...provided.draggableProps}
                             style={{
                               ...provided.draggableProps.style,
-                              gridTemplateColumns
+                              gridTemplateColumns,
                             }}
                             className={`
                               grid gap-4 items-center px-4 py-2
@@ -189,15 +187,20 @@ export function SchemaEditor({
                             `}
                           >
                             {/* Drag Handle */}
-                            <div {...provided.dragHandleProps} className="flex justify-center cursor-grab active:cursor-grabbing group">
+                            <div
+                              {...provided.dragHandleProps}
+                              className="flex justify-center cursor-grab active:cursor-grabbing group"
+                            >
                               <GripVertical className="w-4 h-4 text-gray-300 group-hover:text-gray-500 transition-colors" />
                             </div>
-                            
+
                             {/* Field Name */}
                             <div>
                               <Input
                                 value={field.name}
-                                onChange={(e) => handleUpdateField(field.id, 'name', e.target.value)}
+                                onChange={(e) =>
+                                  handleUpdateField(field.id, 'name', e.target.value)
+                                }
                                 placeholder="e.g. Cover Amount"
                                 className="h-8 text-sm border-gray-200 focus:border-purple-400 focus:ring-purple-100"
                               />
@@ -205,8 +208,8 @@ export function SchemaEditor({
 
                             {/* Data Type */}
                             <div>
-                              <Select 
-                                value={field.type} 
+                              <Select
+                                value={field.type}
                                 onValueChange={(val) => handleUpdateField(field.id, 'type', val)}
                               >
                                 <SelectTrigger className="h-8 text-sm border-gray-200">
@@ -215,9 +218,7 @@ export function SchemaEditor({
                                 <SelectContent>
                                   {FIELD_TYPES.map((type) => (
                                     <SelectItem key={type.value} value={type.value}>
-                                      <div className="flex items-center gap-2">
-                                        {type.label}
-                                      </div>
+                                      <div className="flex items-center gap-2">{type.label}</div>
                                     </SelectItem>
                                   ))}
                                 </SelectContent>
@@ -232,13 +233,17 @@ export function SchemaEditor({
                                     <div>
                                       <Switch
                                         checked={!!field.required}
-                                        onCheckedChange={(checked) => handleUpdateField(field.id, 'required', checked)}
+                                        onCheckedChange={(checked) =>
+                                          handleUpdateField(field.id, 'required', checked)
+                                        }
                                         className="data-[state=checked]:bg-purple-600"
                                       />
                                     </div>
                                   </TooltipTrigger>
                                   <TooltipContent>
-                                    <p>{field.required ? 'Field is mandatory' : 'Field is optional'}</p>
+                                    <p>
+                                      {field.required ? 'Field is mandatory' : 'Field is optional'}
+                                    </p>
                                   </TooltipContent>
                                 </Tooltip>
                               </TooltipProvider>
@@ -247,13 +252,17 @@ export function SchemaEditor({
                             {/* Options (Conditional) */}
                             <div>
                               {field.type === 'dropdown' ? (
-                                <OptionsManager 
-                                  options={field.options || []} 
-                                  onChange={(newOptions) => handleUpdateField(field.id, 'options', newOptions)} 
+                                <OptionsManager
+                                  options={field.options || []}
+                                  onChange={(newOptions) =>
+                                    handleUpdateField(field.id, 'options', newOptions)
+                                  }
                                 />
                               ) : (
                                 <div className="h-8 bg-gray-50 rounded border border-gray-100 flex items-center px-3">
-                                  <span className="text-xs text-gray-300 italic">Not applicable</span>
+                                  <span className="text-xs text-gray-300 italic">
+                                    Not applicable
+                                  </span>
                                 </div>
                               )}
                             </div>
@@ -261,9 +270,15 @@ export function SchemaEditor({
                             {/* Key Mapping */}
                             <div>
                               {availableKeys.length > 0 ? (
-                                <Select 
-                                  value={field.keyId || '__none__'} 
-                                  onValueChange={(val) => handleUpdateField(field.id, 'keyId', val === '__none__' ? undefined : val)}
+                                <Select
+                                  value={field.keyId || '__none__'}
+                                  onValueChange={(val) =>
+                                    handleUpdateField(
+                                      field.id,
+                                      'keyId',
+                                      val === '__none__' ? undefined : val,
+                                    )
+                                  }
                                 >
                                   <SelectTrigger className="h-8 text-sm border-gray-200">
                                     <SelectValue placeholder="Select key..." />
@@ -273,10 +288,12 @@ export function SchemaEditor({
                                       <span className="text-gray-400 italic">None</span>
                                     </SelectItem>
                                     {availableKeys.map((key) => {
-                                      const isAssigned = currentFields.some(f => f.keyId === key.id && f.id !== field.id);
+                                      const isAssigned = currentFields.some(
+                                        (f) => f.keyId === key.id && f.id !== field.id,
+                                      );
                                       return (
-                                        <SelectItem 
-                                          key={key.id} 
+                                        <SelectItem
+                                          key={key.id}
                                           value={key.id}
                                           disabled={isAssigned}
                                         >
@@ -295,7 +312,9 @@ export function SchemaEditor({
                                 </Select>
                               ) : (
                                 <div className="h-8 bg-gray-50 rounded border border-gray-100 flex items-center px-3">
-                                  <span className="text-xs text-gray-300 italic">No keys available</span>
+                                  <span className="text-xs text-gray-300 italic">
+                                    No keys available
+                                  </span>
                                 </div>
                               )}
                             </div>
@@ -316,13 +335,16 @@ export function SchemaEditor({
                                   <AlertDialogHeader>
                                     <AlertDialogTitle>Delete Field?</AlertDialogTitle>
                                     <AlertDialogDescription>
-                                      Are you sure you want to delete the field <span className="font-medium text-gray-900">"{field.name || 'Untitled'}"</span>? 
-                                      This action cannot be undone.
+                                      Are you sure you want to delete the field{' '}
+                                      <span className="font-medium text-gray-900">
+                                        "{field.name || 'Untitled'}"
+                                      </span>
+                                      ? This action cannot be undone.
                                     </AlertDialogDescription>
                                   </AlertDialogHeader>
                                   <AlertDialogFooter>
                                     <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                    <AlertDialogAction 
+                                    <AlertDialogAction
                                       onClick={() => handleRemoveField(field.id)}
                                       className="bg-red-600 hover:bg-red-700"
                                     >

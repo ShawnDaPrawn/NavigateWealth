@@ -9,15 +9,21 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../..
 import { Input } from '../../../../ui/input';
 import { Label } from '../../../../ui/label';
 import { Button } from '../../../../ui/button';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../../../ui/select';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '../../../../ui/select';
 import { Textarea } from '../../../../ui/textarea';
 import { Badge } from '../../../../ui/badge';
 import { Separator } from '../../../../ui/separator';
 import { Checkbox } from '../../../../ui/checkbox';
-import { 
-  ArrowRight, 
-  ArrowLeft, 
-  Check, 
+import {
+  ArrowRight,
+  ArrowLeft,
+  Check,
   Loader2,
   Plus,
   Trash2,
@@ -31,11 +37,11 @@ import {
   Users,
   PiggyBank,
   BarChart,
-  Calculator
+  Calculator,
 } from 'lucide-react';
-import type { 
-  InvestmentINAInputs, 
-  InvestmentGoal, 
+import type {
+  InvestmentINAInputs,
+  InvestmentGoal,
   DiscretionaryInvestment,
   LumpSumContribution,
   RiskProfile,
@@ -43,7 +49,7 @@ import type {
   PriorityLevel,
   InvestmentINAWizardStep,
   InvestmentINAResults,
-  RiskProfileReturns
+  RiskProfileReturns,
 } from '../types';
 import { DEFAULT_ECONOMIC_ASSUMPTIONS, GOAL_TYPE_LABELS, RISK_PROFILE_LABELS } from '../constants';
 import { InvestmentINAApiService } from '../api';
@@ -61,9 +67,9 @@ interface InvestmentINAWizardProps {
   startAtStep?: number;
 }
 
-export function InvestmentINAWizard({ 
-  open, 
-  onClose, 
+export function InvestmentINAWizard({
+  open,
+  onClose,
   clientId,
   onComplete,
   intakePrefill,
@@ -92,20 +98,24 @@ export function InvestmentINAWizard({
     'economic-assumptions',
     'goals-setup',
     'review',
-    'results'
+    'results',
   ];
 
   const stepConfig: Record<InvestmentINAWizardStep, FNAWizardStepConfig> = {
     'client-overview': { id: 'client-overview', label: 'Client Overview', icon: Users },
-    'discretionary-investments': { id: 'discretionary-investments', label: 'Discretionary Inv.', icon: PiggyBank },
+    'discretionary-investments': {
+      id: 'discretionary-investments',
+      label: 'Discretionary Inv.',
+      icon: PiggyBank,
+    },
     'risk-profile': { id: 'risk-profile', label: 'Risk Profile', icon: TrendingUp },
     'economic-assumptions': { id: 'economic-assumptions', label: 'Assumptions', icon: Settings },
     'goals-setup': { id: 'goals-setup', label: 'Goals', icon: Target },
-    'review': { id: 'review', label: 'Review', icon: Calculator },
-    'results': { id: 'results', label: 'Results', icon: BarChart }
+    review: { id: 'review', label: 'Review', icon: Calculator },
+    results: { id: 'results', label: 'Results', icon: BarChart },
   };
 
-  const wizardSteps = stepsList.map(step => stepConfig[step]);
+  const wizardSteps = stepsList.map((step) => stepConfig[step]);
 
   useEffect(() => {
     if (open) {
@@ -160,7 +170,7 @@ export function InvestmentINAWizard({
       setCurrentStep('results');
       return;
     }
-    
+
     // If on results step, this button acts as "Save & Publish"
     if (currentStep === 'results') {
       await handleSaveAndPublish();
@@ -221,11 +231,16 @@ export function InvestmentINAWizard({
   const calculateResults = async () => {
     try {
       setCalculating(true);
-      const calculatedResults = await InvestmentINAApiService.calculateINA(clientId, inputs as InvestmentINAInputs);
+      const calculatedResults = await InvestmentINAApiService.calculateINA(
+        clientId,
+        inputs as InvestmentINAInputs,
+      );
       setResults(calculatedResults);
     } catch (error: unknown) {
       console.error('Error calculating INA:', error);
-      toast.error('Failed to calculate results: ' + (error instanceof Error ? error.message : String(error)));
+      toast.error(
+        'Failed to calculate results: ' + (error instanceof Error ? error.message : String(error)),
+      );
       throw error;
     } finally {
       setCalculating(false);
@@ -239,14 +254,16 @@ export function InvestmentINAWizard({
         clientId,
         inputs as InvestmentINAInputs,
         results,
-        'published'
+        'published',
       );
       toast.success('Investment INA published successfully');
       onComplete?.(session.id);
       onClose();
     } catch (error: unknown) {
       console.error('Error saving INA:', error);
-      toast.error('Failed to save INA: ' + (error instanceof Error ? error.message : String(error)));
+      toast.error(
+        'Failed to save INA: ' + (error instanceof Error ? error.message : String(error)),
+      );
     } finally {
       setLoading(false);
     }
@@ -259,21 +276,23 @@ export function InvestmentINAWizard({
         clientId,
         inputs as InvestmentINAInputs,
         results,
-        'draft'
+        'draft',
       );
       toast.success('Investment INA saved as draft');
       onComplete?.(session.id);
       onClose();
     } catch (error: unknown) {
       console.error('Error saving draft:', error);
-      toast.error('Failed to save draft: ' + (error instanceof Error ? error.message : String(error)));
+      toast.error(
+        'Failed to save draft: ' + (error instanceof Error ? error.message : String(error)),
+      );
     } finally {
       setLoading(false);
     }
   };
 
   const updateInputs = (updates: Partial<InvestmentINAInputs>) => {
-    setInputs(prev => ({ ...prev, ...updates }));
+    setInputs((prev) => ({ ...prev, ...updates }));
   };
 
   const isResultsStep = currentStep === 'results';
@@ -282,7 +301,7 @@ export function InvestmentINAWizard({
   // Determine button labels and icons
   let nextLabel = 'Next';
   let NextIcon = ArrowRight;
-  
+
   if (isReviewStep) {
     nextLabel = 'Calculate';
     NextIcon = Calculator;
@@ -332,12 +351,8 @@ export function InvestmentINAWizard({
         {currentStep === 'goals-setup' && (
           <GoalsSetupStep inputs={inputs} updateInputs={updateInputs} />
         )}
-        {currentStep === 'review' && (
-          <ReviewStep inputs={inputs} />
-        )}
-        {currentStep === 'results' && (
-          <ResultsStep results={results} />
-        )}
+        {currentStep === 'review' && <ReviewStep inputs={inputs} />}
+        {currentStep === 'results' && <ResultsStep results={results} />}
       </div>
     </FNAWizardLayout>
   );
@@ -363,17 +378,17 @@ function ClientOverviewStep({ inputs, updateInputs }: INAStepProps) {
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label>Current Age</Label>
-              <Input 
-                type="number" 
-                value={inputs.currentAge || ''} 
+              <Input
+                type="number"
+                value={inputs.currentAge || ''}
                 onChange={(e) => updateInputs({ currentAge: parseInt(e.target.value) })}
               />
             </div>
             <div className="space-y-2">
               <Label>Date of Birth</Label>
-              <Input 
-                type="date" 
-                value={inputs.dateOfBirth || ''} 
+              <Input
+                type="date"
+                value={inputs.dateOfBirth || ''}
                 onChange={(e) => updateInputs({ dateOfBirth: e.target.value })}
               />
             </div>
@@ -381,17 +396,17 @@ function ClientOverviewStep({ inputs, updateInputs }: INAStepProps) {
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label>Household Dependants</Label>
-              <Input 
-                type="number" 
-                value={inputs.householdDependants || 0} 
+              <Input
+                type="number"
+                value={inputs.householdDependants || 0}
                 onChange={(e) => updateInputs({ householdDependants: parseInt(e.target.value) })}
               />
             </div>
             <div className="space-y-2">
               <Label>Gross Monthly Income</Label>
-              <Input 
-                type="number" 
-                value={inputs.grossMonthlyIncome || ''} 
+              <Input
+                type="number"
+                value={inputs.grossMonthlyIncome || ''}
                 onChange={(e) => updateInputs({ grossMonthlyIncome: parseFloat(e.target.value) })}
                 placeholder="R 0"
               />
@@ -405,7 +420,7 @@ function ClientOverviewStep({ inputs, updateInputs }: INAStepProps) {
 
 function DiscretionaryInvestmentsStep({ inputs, updateInputs }: INAStepProps) {
   const discretionaryInvs = inputs.discretionaryInvestments || [];
-  
+
   return (
     <div className="space-y-4">
       <Card>
@@ -425,15 +440,21 @@ function DiscretionaryInvestmentsStep({ inputs, updateInputs }: INAStepProps) {
           ) : (
             <div className="space-y-3">
               {discretionaryInvs.map((inv: DiscretionaryInvestment, index: number) => (
-                <div key={inv.id} className="flex items-center justify-between p-3 border rounded-lg">
+                <div
+                  key={inv.id}
+                  className="flex items-center justify-between p-3 border rounded-lg"
+                >
                   <div className="flex-1">
                     <p className="font-medium">{inv.productName}</p>
                     <p className="text-sm text-muted-foreground">{inv.provider}</p>
                   </div>
                   <div className="text-right space-y-1">
-                    <p className="text-sm">Current: {InvestmentINACalculationService.formatCurrency(inv.currentValue)}</p>
+                    <p className="text-sm">
+                      Current: {InvestmentINACalculationService.formatCurrency(inv.currentValue)}
+                    </p>
                     <p className="text-sm text-muted-foreground">
-                      Monthly: {InvestmentINACalculationService.formatCurrency(inv.monthlyContribution)}
+                      Monthly:{' '}
+                      {InvestmentINACalculationService.formatCurrency(inv.monthlyContribution)}
                     </p>
                   </div>
                 </div>
@@ -441,7 +462,11 @@ function DiscretionaryInvestmentsStep({ inputs, updateInputs }: INAStepProps) {
               <Separator />
               <div className="flex justify-between font-semibold">
                 <span>Total Discretionary Capital</span>
-                <span>{InvestmentINACalculationService.formatCurrency(inputs.totalDiscretionaryCapitalCurrent || 0)}</span>
+                <span>
+                  {InvestmentINACalculationService.formatCurrency(
+                    inputs.totalDiscretionaryCapitalCurrent || 0,
+                  )}
+                </span>
               </div>
             </div>
           )}
@@ -462,8 +487,8 @@ function RiskProfileStep({ inputs, updateInputs }: INAStepProps) {
         <CardContent className="space-y-4">
           <div className="space-y-2">
             <Label>Risk Profile</Label>
-            <Select 
-              value={inputs.clientRiskProfile || ''} 
+            <Select
+              value={inputs.clientRiskProfile || ''}
               onValueChange={(value) => updateInputs({ clientRiskProfile: value as RiskProfile })}
             >
               <SelectTrigger>
@@ -471,7 +496,9 @@ function RiskProfileStep({ inputs, updateInputs }: INAStepProps) {
               </SelectTrigger>
               <SelectContent>
                 {Object.entries(RISK_PROFILE_LABELS).map(([value, label]) => (
-                  <SelectItem key={value} value={value}>{label}</SelectItem>
+                  <SelectItem key={value} value={value}>
+                    {label}
+                  </SelectItem>
                 ))}
               </SelectContent>
             </Select>
@@ -491,11 +518,11 @@ function RiskProfileStep({ inputs, updateInputs }: INAStepProps) {
 
 function EconomicAssumptionsStep({ inputs, updateInputs }: INAStepProps) {
   const defaults = DEFAULT_ECONOMIC_ASSUMPTIONS;
-  
+
   useEffect(() => {
     // Initialize with defaults if not set
     if (!inputs.longTermInflationRate) {
-      updateInputs({ 
+      updateInputs({
         longTermInflationRate: defaults.longTermInflationRate,
         expectedRealReturns: defaults.expectedRealReturns,
       });
@@ -512,13 +539,17 @@ function EconomicAssumptionsStep({ inputs, updateInputs }: INAStepProps) {
         <CardContent className="space-y-4">
           <div className="space-y-2">
             <Label>Long-term Inflation Rate (%)</Label>
-            <Input 
-              type="number" 
+            <Input
+              type="number"
               step="0.01"
-              value={(inputs.longTermInflationRate || 0) * 100} 
-              onChange={(e) => updateInputs({ longTermInflationRate: parseFloat(e.target.value) / 100 })}
+              value={(inputs.longTermInflationRate || 0) * 100}
+              onChange={(e) =>
+                updateInputs({ longTermInflationRate: parseFloat(e.target.value) / 100 })
+              }
             />
-            <p className="text-xs text-muted-foreground">South African long-term average is approximately 6%</p>
+            <p className="text-xs text-muted-foreground">
+              South African long-term average is approximately 6%
+            </p>
           </div>
 
           <Separator />
@@ -530,16 +561,18 @@ function EconomicAssumptionsStep({ inputs, updateInputs }: INAStepProps) {
               {Object.keys(RISK_PROFILE_LABELS).map((profile) => (
                 <div key={profile} className="space-y-1">
                   <Label className="capitalize text-sm">{profile}</Label>
-                  <Input 
-                    type="number" 
+                  <Input
+                    type="number"
                     step="0.01"
-                    value={(inputs.expectedRealReturns?.[profile as RiskProfile] || 0) * 100} 
-                    onChange={(e) => updateInputs({ 
-                      expectedRealReturns: {
-                        ...inputs.expectedRealReturns,
-                        [profile]: parseFloat(e.target.value) / 100
-                      } as RiskProfileReturns
-                    })}
+                    value={(inputs.expectedRealReturns?.[profile as RiskProfile] || 0) * 100}
+                    onChange={(e) =>
+                      updateInputs({
+                        expectedRealReturns: {
+                          ...inputs.expectedRealReturns,
+                          [profile]: parseFloat(e.target.value) / 100,
+                        } as RiskProfileReturns,
+                      })
+                    }
                   />
                 </div>
               ))}
@@ -578,12 +611,12 @@ function GoalsSetupStep({ inputs, updateInputs }: INAStepProps) {
   const updateGoal = (index: number, updates: Partial<InvestmentGoal>) => {
     const updatedGoals = [...goals];
     updatedGoals[index] = { ...updatedGoals[index], ...updates };
-    
+
     // If target date changed, update target year
     if (updates.targetDate) {
       updatedGoals[index].targetYear = new Date(updates.targetDate).getFullYear();
     }
-    
+
     updateInputs({ goals: updatedGoals });
   };
 
@@ -619,7 +652,7 @@ function GoalsSetupStep({ inputs, updateInputs }: INAStepProps) {
       ) : (
         <div className="space-y-3">
           {goals.map((goal: InvestmentGoal, index: number) => (
-            <GoalEditorCard 
+            <GoalEditorCard
               key={goal.id}
               goal={goal}
               index={index}
@@ -637,7 +670,16 @@ function GoalsSetupStep({ inputs, updateInputs }: INAStepProps) {
   );
 }
 
-function GoalEditorCard({ goal, index, isEditing, onEdit, onCollapse, onUpdate, onDelete, discretionaryInvestments }: {
+function GoalEditorCard({
+  goal,
+  index,
+  isEditing,
+  onEdit,
+  onCollapse,
+  onUpdate,
+  onDelete,
+  discretionaryInvestments,
+}: {
   goal: InvestmentGoal;
   index: number;
   isEditing: boolean;
@@ -655,7 +697,8 @@ function GoalEditorCard({ goal, index, isEditing, onEdit, onCollapse, onUpdate, 
             <div className="flex-1">
               <p className="font-medium">{goal.goalName || `Goal ${index + 1}`}</p>
               <p className="text-sm text-muted-foreground">
-                Target: {InvestmentINACalculationService.formatCurrency(goal.goalAmountToday)} by {goal.targetYear}
+                Target: {InvestmentINACalculationService.formatCurrency(goal.goalAmountToday)} by{' '}
+                {goal.targetYear}
               </p>
             </div>
             <Badge>{GOAL_TYPE_LABELS[goal.goalType as GoalType]}</Badge>
@@ -671,7 +714,9 @@ function GoalEditorCard({ goal, index, isEditing, onEdit, onCollapse, onUpdate, 
         <div className="flex items-center justify-between">
           <CardTitle className="text-base">Edit Goal {index + 1}</CardTitle>
           <div className="flex gap-2">
-            <Button variant="outline" size="sm" onClick={onCollapse}>Done</Button>
+            <Button variant="outline" size="sm" onClick={onCollapse}>
+              Done
+            </Button>
             <Button variant="destructive" size="sm" onClick={onDelete}>
               <Trash2 className="h-4 w-4" />
             </Button>
@@ -683,28 +728,36 @@ function GoalEditorCard({ goal, index, isEditing, onEdit, onCollapse, onUpdate, 
         <div className="grid grid-cols-2 gap-3">
           <div className="col-span-2 space-y-2">
             <Label>Goal Name *</Label>
-            <Input 
-              value={goal.goalName} 
+            <Input
+              value={goal.goalName}
               onChange={(e) => onUpdate({ goalName: e.target.value })}
               placeholder="e.g., Children's Education, House Deposit"
             />
           </div>
           <div className="space-y-2">
             <Label>Goal Type</Label>
-            <Select value={goal.goalType} onValueChange={(value) => onUpdate({ goalType: value as GoalType })}>
+            <Select
+              value={goal.goalType}
+              onValueChange={(value) => onUpdate({ goalType: value as GoalType })}
+            >
               <SelectTrigger>
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
                 {Object.entries(GOAL_TYPE_LABELS).map(([value, label]) => (
-                  <SelectItem key={value} value={value}>{label}</SelectItem>
+                  <SelectItem key={value} value={value}>
+                    {label}
+                  </SelectItem>
                 ))}
               </SelectContent>
             </Select>
           </div>
           <div className="space-y-2">
             <Label>Priority</Label>
-            <Select value={goal.priorityLevel} onValueChange={(value) => onUpdate({ priorityLevel: value as PriorityLevel })}>
+            <Select
+              value={goal.priorityLevel}
+              onValueChange={(value) => onUpdate({ priorityLevel: value as PriorityLevel })}
+            >
               <SelectTrigger>
                 <SelectValue />
               </SelectTrigger>
@@ -721,18 +774,18 @@ function GoalEditorCard({ goal, index, isEditing, onEdit, onCollapse, onUpdate, 
         <div className="grid grid-cols-2 gap-3">
           <div className="space-y-2">
             <Label>Required Capital (Today's Rands) *</Label>
-            <Input 
+            <Input
               type="number"
-              value={goal.goalAmountToday} 
+              value={goal.goalAmountToday}
               onChange={(e) => onUpdate({ goalAmountToday: parseFloat(e.target.value) })}
               placeholder="R 0"
             />
           </div>
           <div className="space-y-2">
             <Label>Target Date *</Label>
-            <Input 
+            <Input
               type="date"
-              value={goal.targetDate} 
+              value={goal.targetDate}
               onChange={(e) => onUpdate({ targetDate: e.target.value })}
             />
           </div>
@@ -741,9 +794,9 @@ function GoalEditorCard({ goal, index, isEditing, onEdit, onCollapse, onUpdate, 
         {/* Contribution */}
         <div className="space-y-2">
           <Label>Current Monthly Contribution to Goal</Label>
-          <Input 
+          <Input
             type="number"
-            value={goal.currentContributionToGoal} 
+            value={goal.currentContributionToGoal}
             onChange={(e) => onUpdate({ currentContributionToGoal: parseFloat(e.target.value) })}
             placeholder="R 0"
           />
@@ -752,8 +805,8 @@ function GoalEditorCard({ goal, index, isEditing, onEdit, onCollapse, onUpdate, 
         {/* Description */}
         <div className="space-y-2">
           <Label>Description (Optional)</Label>
-          <Textarea 
-            value={goal.goalDescription || ''} 
+          <Textarea
+            value={goal.goalDescription || ''}
             onChange={(e) => onUpdate({ goalDescription: e.target.value })}
             placeholder="Additional notes about this goal..."
             rows={2}
@@ -766,7 +819,7 @@ function GoalEditorCard({ goal, index, isEditing, onEdit, onCollapse, onUpdate, 
 
 function ReviewStep({ inputs }: { inputs: Partial<InvestmentINAInputs> }) {
   const goals = inputs.goals || [];
-  
+
   return (
     <div className="space-y-4">
       <Card>
@@ -786,8 +839,19 @@ function ReviewStep({ inputs }: { inputs: Partial<InvestmentINAInputs> }) {
           <div>
             <p className="text-sm font-medium mb-2">Discretionary Investments</p>
             <div className="text-sm text-muted-foreground space-y-1">
-              <p>Total Capital: {InvestmentINACalculationService.formatCurrency(inputs.totalDiscretionaryCapitalCurrent || 0)}</p>
-              <p>Monthly Contributions: {InvestmentINACalculationService.formatCurrency(inputs.totalDiscretionaryMonthlyContributions || 0)}/month</p>
+              <p>
+                Total Capital:{' '}
+                {InvestmentINACalculationService.formatCurrency(
+                  inputs.totalDiscretionaryCapitalCurrent || 0,
+                )}
+              </p>
+              <p>
+                Monthly Contributions:{' '}
+                {InvestmentINACalculationService.formatCurrency(
+                  inputs.totalDiscretionaryMonthlyContributions || 0,
+                )}
+                /month
+              </p>
             </div>
           </div>
           <Separator />
@@ -798,7 +862,8 @@ function ReviewStep({ inputs }: { inputs: Partial<InvestmentINAInputs> }) {
                 <div key={goal.id} className="p-2 bg-muted rounded text-sm">
                   <p className="font-medium">{goal.goalName}</p>
                   <p className="text-muted-foreground">
-                    {InvestmentINACalculationService.formatCurrency(goal.goalAmountToday)} by {goal.targetYear}
+                    {InvestmentINACalculationService.formatCurrency(goal.goalAmountToday)} by{' '}
+                    {goal.targetYear}
                   </p>
                 </div>
               ))}
@@ -836,30 +901,40 @@ function ResultsStep({ results }: { results: InvestmentINAResults | null }) {
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-1">
               <p className="text-sm text-muted-foreground">Portfolio Health</p>
-              <p className="text-lg font-semibold capitalize">{portfolioSummary.overallPortfolioHealth}</p>
+              <p className="text-lg font-semibold capitalize">
+                {portfolioSummary.overallPortfolioHealth}
+              </p>
             </div>
             <div className="space-y-1">
               <p className="text-sm text-muted-foreground">Goals On Track</p>
-              <p className="text-lg font-semibold">{portfolioSummary.goalsOnTrack} / {portfolioSummary.totalGoals}</p>
+              <p className="text-lg font-semibold">
+                {portfolioSummary.goalsOnTrack} / {portfolioSummary.totalGoals}
+              </p>
             </div>
             <div className="space-y-1">
               <p className="text-sm text-muted-foreground">Total Funding Gap</p>
-              <p className={`text-lg font-semibold ${portfolioSummary.totalFundingGap > 0 ? 'text-red-600' : 'text-green-600'}`}>
+              <p
+                className={`text-lg font-semibold ${portfolioSummary.totalFundingGap > 0 ? 'text-red-600' : 'text-green-600'}`}
+              >
                 {InvestmentINACalculationService.formatCurrency(portfolioSummary.totalFundingGap)}
               </p>
             </div>
             <div className="space-y-1">
               <p className="text-sm text-muted-foreground">Additional Monthly Required</p>
               <p className="text-lg font-semibold">
-                {InvestmentINACalculationService.formatCurrency(portfolioSummary.totalAdditionalMonthlyRequired)}/mo
+                {InvestmentINACalculationService.formatCurrency(
+                  portfolioSummary.totalAdditionalMonthlyRequired,
+                )}
+                /mo
               </p>
             </div>
           </div>
-          
+
           <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mt-4">
             <p className="text-sm font-medium text-blue-900 mb-2">Next Steps</p>
             <p className="text-sm text-blue-700">
-              Review the detailed results after saving. You can download a PDF report and share it with your client.
+              Review the detailed results after saving. You can download a PDF report and share it
+              with your client.
             </p>
           </div>
         </CardContent>

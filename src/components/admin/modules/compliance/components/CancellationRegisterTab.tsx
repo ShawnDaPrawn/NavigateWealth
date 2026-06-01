@@ -9,7 +9,7 @@ const columns = [
   { key: 'adviser', label: 'Adviser', type: 'text' as const },
   { key: 'clawback', label: 'Clawback', type: 'currency' as const },
   { key: 'replacementStatus', label: 'Replacement Advice', type: 'badge' as const },
-  { key: 'status', label: 'Status', type: 'badge' as const }
+  { key: 'status', label: 'Status', type: 'badge' as const },
 ];
 
 export function CancellationRegisterTab() {

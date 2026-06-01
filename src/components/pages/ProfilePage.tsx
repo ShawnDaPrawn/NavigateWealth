@@ -89,9 +89,8 @@ export function ProfilePage() {
     () => derivePolicyAssetsFromProductHoldings(portfolioSummaryQuery.data?.productHoldings || []),
     [portfolioSummaryQuery.data?.productHoldings],
   );
-  const linkedPolicyAssetsError = portfolioSummaryQuery.error instanceof Error
-    ? portfolioSummaryQuery.error.message
-    : null;
+  const linkedPolicyAssetsError =
+    portfolioSummaryQuery.error instanceof Error ? portfolioSummaryQuery.error.message : null;
 
   // Handle URL parameters to open specific tab
   useEffect(() => {
@@ -131,7 +130,9 @@ export function ProfilePage() {
   }
 
   return (
-    <div className={`min-h-screen ${ACTIVE_THEME === 'branded' ? 'bg-[#f8f9fb]' : 'bg-[rgb(249,249,249)]'}`}>
+    <div
+      className={`min-h-screen ${ACTIVE_THEME === 'branded' ? 'bg-[#f8f9fb]' : 'bg-[rgb(249,249,249)]'}`}
+    >
       <PortalPageHeader
         title="My Profile"
         subtitle="Manage your personal information and preferences"
@@ -151,18 +152,27 @@ export function ProfilePage() {
                 <span className="text-sm">Saved successfully</span>
               </div>
             )}
-            <Button onClick={pm.handleSave} disabled={pm.isLoading} className="bg-[#6d28d9] hover:bg-[#5b21b6] text-white">
+            <Button
+              onClick={pm.handleSave}
+              disabled={pm.isLoading}
+              className="bg-[#6d28d9] hover:bg-[#5b21b6] text-white"
+            >
               {pm.isLoading ? (
-                <div className="contents"><Activity className="h-4 w-4 mr-2 animate-spin" />Saving...</div>
+                <div className="contents">
+                  <Activity className="h-4 w-4 mr-2 animate-spin" />
+                  Saving...
+                </div>
               ) : (
-                <div className="contents"><Save className="h-4 w-4 mr-2" />Save Changes</div>
+                <div className="contents">
+                  <Save className="h-4 w-4 mr-2" />
+                  Save Changes
+                </div>
               )}
             </Button>
           </div>
         }
       />
       <div className="mx-auto max-w-screen-2xl px-4 sm:px-6 lg:px-8 py-6 lg:py-8">
-
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
           {/* Sidebar Navigation */}
           <div className="lg:col-span-1">
@@ -196,10 +206,14 @@ export function ProfilePage() {
             {/* Mobile Navigation */}
             <div className="lg:hidden mb-4">
               <Select value={activeSection} onValueChange={handleSectionChange}>
-                <SelectTrigger className="w-full"><SelectValue placeholder="Select section" /></SelectTrigger>
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="Select section" />
+                </SelectTrigger>
                 <SelectContent>
                   {NAV_ITEMS.map((item) => (
-                    <SelectItem key={item.id} value={item.id}>{item.label}</SelectItem>
+                    <SelectItem key={item.id} value={item.id}>
+                      {item.label}
+                    </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
@@ -228,7 +242,10 @@ export function ProfilePage() {
             )}
 
             {activeSection === 'contact' && (
-              <ContactDetailsSection profileData={pm.profileData} handleInputChange={pm.handleInputChange} />
+              <ContactDetailsSection
+                profileData={pm.profileData}
+                handleInputChange={pm.handleInputChange}
+              />
             )}
 
             {activeSection === 'identity' && (
@@ -247,7 +264,11 @@ export function ProfilePage() {
                 removeIdentityDocument={pm.removeIdentityDocument}
                 handleDocumentUpload={pm.handleDocumentUpload}
                 getDocumentTypeLabel={pm.getDocumentTypeLabel}
-                getDocumentTypeIcon={pm.getDocumentTypeIcon as unknown as (type: 'passport' | 'national-id' | 'drivers-license') => { icon: React.ComponentType<{ className?: string }>; color: string }}
+                getDocumentTypeIcon={
+                  pm.getDocumentTypeIcon as unknown as (
+                    type: 'passport' | 'national-id' | 'drivers-license',
+                  ) => { icon: React.ComponentType<{ className?: string }>; color: string }
+                }
               />
             )}
 

@@ -7,7 +7,16 @@ import { Button } from '../../ui/button';
 import { Separator } from '../../ui/separator';
 import { Badge } from '../../ui/badge';
 import { Textarea } from '../../ui/textarea';
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '../../ui/alert-dialog';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '../../ui/alert-dialog';
 import { Briefcase, Plus, Edit2, Trash2, X, Check, Building2, Factory } from 'lucide-react';
 import { EmptyState } from '../../pages/profile/EmptyState';
 import { emptyStateConfigs } from '../../pages/profile/emptyStateConfigs';
@@ -112,7 +121,11 @@ export function EmploymentSection({
                     size="sm"
                     disabled={employersInEditMode.size > 0}
                     className="bg-[#6d28d9] hover:bg-[#5b21b6] disabled:opacity-50 disabled:cursor-not-allowed"
-                    title={employersInEditMode.size > 0 ? "Please save the current employer before adding a new one" : "Add a new employer"}
+                    title={
+                      employersInEditMode.size > 0
+                        ? 'Please save the current employer before adding a new one'
+                        : 'Add a new employer'
+                    }
                   >
                     <Plus className="h-4 w-4 mr-1" />
                     Add Employer
@@ -135,8 +148,9 @@ export function EmploymentSection({
                   <div className="space-y-4">
                     {employers.map((employer: Employer, index: number) => {
                       const isInEditMode = employersInEditMode.has(employer.id);
-                      const isValid = employer.employerName && employer.jobTitle && employer.industry;
-                      
+                      const isValid =
+                        employer.employerName && employer.jobTitle && employer.industry;
+
                       return (
                         <div
                           key={employer.id}
@@ -149,10 +163,14 @@ export function EmploymentSection({
                           {/* Employer Card Header */}
                           <div className="flex items-center justify-between px-5 py-4">
                             <div className="flex items-center gap-3 min-w-0">
-                              <div className={`h-10 w-10 rounded-lg flex items-center justify-center flex-shrink-0 ${
-                                isInEditMode ? 'bg-[#6d28d9]/10' : 'bg-gray-100'
-                              }`}>
-                                <Building2 className={`h-5 w-5 ${isInEditMode ? 'text-[#6d28d9]' : 'text-gray-500'}`} />
+                              <div
+                                className={`h-10 w-10 rounded-lg flex items-center justify-center flex-shrink-0 ${
+                                  isInEditMode ? 'bg-[#6d28d9]/10' : 'bg-gray-100'
+                                }`}
+                              >
+                                <Building2
+                                  className={`h-5 w-5 ${isInEditMode ? 'text-[#6d28d9]' : 'text-gray-500'}`}
+                                />
                               </div>
                               <div className="min-w-0">
                                 <div className="flex items-center gap-2">
@@ -160,13 +178,18 @@ export function EmploymentSection({
                                     {employer.employerName || 'New Employer'}
                                   </h5>
                                   {index === 0 && !isInEditMode && employer.employerName && (
-                                    <Badge variant="outline" className="text-[#6d28d9] border-[#6d28d9]/30 bg-[#6d28d9]/5 text-xs flex-shrink-0">
+                                    <Badge
+                                      variant="outline"
+                                      className="text-[#6d28d9] border-[#6d28d9]/30 bg-[#6d28d9]/5 text-xs flex-shrink-0"
+                                    >
                                       Current
                                     </Badge>
                                   )}
                                 </div>
                                 {!isInEditMode && employer.jobTitle && (
-                                  <p className="text-xs text-gray-500 mt-0.5 truncate">{employer.jobTitle}</p>
+                                  <p className="text-xs text-gray-500 mt-0.5 truncate">
+                                    {employer.jobTitle}
+                                  </p>
                                 )}
                               </div>
                             </div>
@@ -225,13 +248,18 @@ export function EmploymentSection({
                             <div className="px-5 pb-5">
                               <div className="p-4 bg-gray-50 rounded-lg border border-gray-200 space-y-4">
                                 <div>
-                                  <Label htmlFor={`employer-name-${employer.id}`} className="text-sm font-medium">
+                                  <Label
+                                    htmlFor={`employer-name-${employer.id}`}
+                                    className="text-sm font-medium"
+                                  >
                                     Employer Name <span className="text-red-500">*</span>
                                   </Label>
                                   <Input
                                     id={`employer-name-${employer.id}`}
                                     value={employer.employerName}
-                                    onChange={(e) => updateEmployer(employer.id, { employerName: e.target.value })}
+                                    onChange={(e) =>
+                                      updateEmployer(employer.id, { employerName: e.target.value })
+                                    }
                                     placeholder="e.g., Acme Corporation"
                                     className="mt-1.5 bg-white"
                                   />
@@ -239,26 +267,36 @@ export function EmploymentSection({
 
                                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                   <div>
-                                    <Label htmlFor={`job-title-${employer.id}`} className="text-sm font-medium">
+                                    <Label
+                                      htmlFor={`job-title-${employer.id}`}
+                                      className="text-sm font-medium"
+                                    >
                                       Job Title <span className="text-red-500">*</span>
                                     </Label>
                                     <Input
                                       id={`job-title-${employer.id}`}
                                       value={employer.jobTitle}
-                                      onChange={(e) => updateEmployer(employer.id, { jobTitle: e.target.value })}
+                                      onChange={(e) =>
+                                        updateEmployer(employer.id, { jobTitle: e.target.value })
+                                      }
                                       placeholder="e.g., Senior Developer"
                                       className="mt-1.5 bg-white"
                                     />
                                   </div>
 
                                   <div>
-                                    <Label htmlFor={`employer-industry-${employer.id}`} className="text-sm font-medium">
+                                    <Label
+                                      htmlFor={`employer-industry-${employer.id}`}
+                                      className="text-sm font-medium"
+                                    >
                                       Industry <span className="text-red-500">*</span>
                                     </Label>
                                     <Input
                                       id={`employer-industry-${employer.id}`}
                                       value={employer.industry}
-                                      onChange={(e) => updateEmployer(employer.id, { industry: e.target.value })}
+                                      onChange={(e) =>
+                                        updateEmployer(employer.id, { industry: e.target.value })
+                                      }
                                       placeholder="e.g., Finance, Technology"
                                       className="mt-1.5 bg-white"
                                     />
@@ -282,13 +320,17 @@ export function EmploymentSection({
                                 {employer.jobTitle && (
                                   <div>
                                     <p className="text-xs text-gray-500 font-medium">Job Title</p>
-                                    <p className="text-sm text-gray-900 mt-0.5">{employer.jobTitle}</p>
+                                    <p className="text-sm text-gray-900 mt-0.5">
+                                      {employer.jobTitle}
+                                    </p>
                                   </div>
                                 )}
                                 {employer.industry && (
                                   <div>
                                     <p className="text-xs text-gray-500 font-medium">Industry</p>
-                                    <p className="text-sm text-gray-900 mt-0.5">{employer.industry}</p>
+                                    <p className="text-sm text-gray-900 mt-0.5">
+                                      {employer.industry}
+                                    </p>
                                   </div>
                                 )}
                               </div>
@@ -308,24 +350,36 @@ export function EmploymentSection({
             <div className="contents">
               <Separator />
               <div className="space-y-4">
-                <div className={`rounded-lg border-2 transition-all ${
-                  selfEmployedInEditMode ? 'border-[#6d28d9] bg-white shadow-sm' : 'border-gray-200 bg-white'
-                }`}>
+                <div
+                  className={`rounded-lg border-2 transition-all ${
+                    selfEmployedInEditMode
+                      ? 'border-[#6d28d9] bg-white shadow-sm'
+                      : 'border-gray-200 bg-white'
+                  }`}
+                >
                   {/* Self-Employed Card Header */}
                   <div className="flex items-center justify-between px-5 py-4">
                     <div className="flex items-center gap-3 min-w-0">
-                      <div className={`h-10 w-10 rounded-lg flex items-center justify-center flex-shrink-0 ${
-                        selfEmployedInEditMode ? 'bg-[#6d28d9]/10' : 'bg-gray-100'
-                      }`}>
-                        <Factory className={`h-5 w-5 ${selfEmployedInEditMode ? 'text-[#6d28d9]' : 'text-gray-500'}`} />
+                      <div
+                        className={`h-10 w-10 rounded-lg flex items-center justify-center flex-shrink-0 ${
+                          selfEmployedInEditMode ? 'bg-[#6d28d9]/10' : 'bg-gray-100'
+                        }`}
+                      >
+                        <Factory
+                          className={`h-5 w-5 ${selfEmployedInEditMode ? 'text-[#6d28d9]' : 'text-gray-500'}`}
+                        />
                       </div>
                       <div className="min-w-0">
                         <h4 className="text-sm font-medium text-gray-900 truncate">
-                          {(profileData.selfEmployedCompanyName as string) || 'Self-Employment Details'}
+                          {(profileData.selfEmployedCompanyName as string) ||
+                            'Self-Employment Details'}
                         </h4>
-                        {(profileData.selfEmployedIndustry as string) && !selfEmployedInEditMode && (
-                          <p className="text-xs text-gray-500 mt-0.5 truncate">{profileData.selfEmployedIndustry as string}</p>
-                        )}
+                        {(profileData.selfEmployedIndustry as string) &&
+                          !selfEmployedInEditMode && (
+                            <p className="text-xs text-gray-500 mt-0.5 truncate">
+                              {profileData.selfEmployedIndustry as string}
+                            </p>
+                          )}
                       </div>
                     </div>
                     <div className="flex gap-2 flex-shrink-0 ml-3">
@@ -353,9 +407,13 @@ export function EmploymentSection({
                           <Button
                             size="sm"
                             onClick={saveSelfEmployed}
-                            disabled={!(profileData.selfEmployedIndustry as string) || !(profileData.selfEmployedDescription as string)}
+                            disabled={
+                              !(profileData.selfEmployedIndustry as string) ||
+                              !(profileData.selfEmployedDescription as string)
+                            }
                             className={`${
-                              (!(profileData.selfEmployedIndustry as string) || !(profileData.selfEmployedDescription as string))
+                              !(profileData.selfEmployedIndustry as string) ||
+                              !(profileData.selfEmployedDescription as string)
                                 ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
                                 : 'bg-[#6d28d9] text-white hover:bg-[#5b21b6]'
                             }`}
@@ -379,7 +437,9 @@ export function EmploymentSection({
                           <Input
                             id="selfEmployedCompanyName"
                             value={profileData.selfEmployedCompanyName as string}
-                            onChange={(e) => handleInputChange('selfEmployedCompanyName', e.target.value)}
+                            onChange={(e) =>
+                              handleInputChange('selfEmployedCompanyName', e.target.value)
+                            }
                             placeholder="Optional — if applicable"
                             className="mt-1.5 bg-white"
                           />
@@ -392,7 +452,9 @@ export function EmploymentSection({
                           <Input
                             id="selfEmployedIndustry"
                             value={profileData.selfEmployedIndustry as string}
-                            onChange={(e) => handleInputChange('selfEmployedIndustry', e.target.value)}
+                            onChange={(e) =>
+                              handleInputChange('selfEmployedIndustry', e.target.value)
+                            }
                             placeholder="e.g., Consulting, Retail, Construction"
                             className="mt-1.5 bg-white"
                           />
@@ -405,12 +467,16 @@ export function EmploymentSection({
                           <Textarea
                             id="selfEmployedDescription"
                             value={profileData.selfEmployedDescription as string}
-                            onChange={(e) => handleInputChange('selfEmployedDescription', e.target.value)}
+                            onChange={(e) =>
+                              handleInputChange('selfEmployedDescription', e.target.value)
+                            }
                             placeholder="Describe what your business does, services offered, or products sold..."
                             rows={4}
                             className="mt-1.5 bg-white"
                           />
-                          <p className="text-xs text-gray-500 mt-1">Provide a brief overview of business operations</p>
+                          <p className="text-xs text-gray-500 mt-1">
+                            Provide a brief overview of business operations
+                          </p>
                         </div>
                       </div>
                     </div>
@@ -422,13 +488,21 @@ export function EmploymentSection({
                       <div className="border-t border-gray-100 pt-3 space-y-3">
                         {(profileData.selfEmployedDescription as string) && (
                           <div>
-                            <p className="text-xs text-gray-500 font-medium">Business Description</p>
-                            <p className="text-sm text-gray-900 mt-0.5">{profileData.selfEmployedDescription as string}</p>
+                            <p className="text-xs text-gray-500 font-medium">
+                              Business Description
+                            </p>
+                            <p className="text-sm text-gray-900 mt-0.5">
+                              {profileData.selfEmployedDescription as string}
+                            </p>
                           </div>
                         )}
-                        {!(profileData.selfEmployedDescription as string) && !(profileData.selfEmployedIndustry as string) && (
-                          <p className="text-xs text-gray-400 italic">No details added yet — click Edit to add your self-employment information.</p>
-                        )}
+                        {!(profileData.selfEmployedDescription as string) &&
+                          !(profileData.selfEmployedIndustry as string) && (
+                            <p className="text-xs text-gray-400 italic">
+                              No details added yet — click Edit to add your self-employment
+                              information.
+                            </p>
+                          )}
                       </div>
                     </div>
                   )}
@@ -437,15 +511,18 @@ export function EmploymentSection({
             </div>
           )}
 
-          {!!profileData.additionalIncomeSources && (profileData.additionalIncomeSources as unknown[]).length > 0 && (
-            <div className="contents">
-              <Separator />
-              <div>
-                <h4 className="text-sm text-gray-700 mb-3">Additional Income Sources</h4>
-                <p className="text-xs text-gray-500">{(profileData.additionalIncomeSources as unknown[]).length} source(s) added</p>
+          {!!profileData.additionalIncomeSources &&
+            (profileData.additionalIncomeSources as unknown[]).length > 0 && (
+              <div className="contents">
+                <Separator />
+                <div>
+                  <h4 className="text-sm text-gray-700 mb-3">Additional Income Sources</h4>
+                  <p className="text-xs text-gray-500">
+                    {(profileData.additionalIncomeSources as unknown[]).length} source(s) added
+                  </p>
+                </div>
               </div>
-            </div>
-          )}
+            )}
         </CardContent>
       </Card>
 
@@ -455,15 +532,13 @@ export function EmploymentSection({
           <AlertDialogHeader>
             <AlertDialogTitle>Delete Employer</AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure you want to delete this employer? This action cannot be undone and all information about this employer will be permanently removed.
+              Are you sure you want to delete this employer? This action cannot be undone and all
+              information about this employer will be permanently removed.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={removeEmployer}
-              className="bg-red-600 hover:bg-red-700"
-            >
+            <AlertDialogAction onClick={removeEmployer} className="bg-red-600 hover:bg-red-700">
               Delete
             </AlertDialogAction>
           </AlertDialogFooter>

@@ -53,8 +53,7 @@ import {
 const getCurrentSASTTime = () =>
   new Date(new Date().toLocaleString('en-US', { timeZone: 'Africa/Johannesburg' }));
 
-const isWeekend = (date: Date): boolean =>
-  date.getDay() === 0 || date.getDay() === 6;
+const isWeekend = (date: Date): boolean => date.getDay() === 0 || date.getDay() === 6;
 
 /**
  * Returns the earliest bookable date.
@@ -140,16 +139,13 @@ interface ConsultationModalProps {
 
 // ── Component ─────────────────────────────────────────────────────────────────
 
-export function ConsultationModal({
-  isOpen,
-  onClose,
-  open,
-  onOpenChange,
-}: ConsultationModalProps) {
+export function ConsultationModal({ isOpen, onClose, open, onOpenChange }: ConsultationModalProps) {
   const modalOpen = open !== undefined ? open : isOpen || false;
 
   const [currentStep, setCurrentStep] = useState<Step>('meeting-type');
-  const [selectedMeetingType, setSelectedMeetingType] = useState<'virtual' | 'telephonic'>('virtual');
+  const [selectedMeetingType, setSelectedMeetingType] = useState<'virtual' | 'telephonic'>(
+    'virtual',
+  );
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined);
   const [selectedTime, setSelectedTime] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -164,7 +160,7 @@ export function ConsultationModal({
   const currentStepIndex = STEPS.findIndex((s) => s.id === currentStep);
   const availableTimeSlots = useMemo(
     () => (selectedDate ? generateTimeSlots() : []),
-    [selectedDate]
+    [selectedDate],
   );
 
   const handleInputChange = (field: string, value: string) =>
@@ -257,7 +253,7 @@ export function ConsultationModal({
             preferredTime3: '',
             additionalNotes: formData.additionalNotes,
           }),
-        }
+        },
       );
 
       if (!response.ok) {
@@ -276,7 +272,9 @@ export function ConsultationModal({
       setIsSuccess(true);
     } catch (error) {
       console.error('Error booking consultation:', error);
-      toast.error('Failed to book consultation. Please try again or contact us directly at (+27) 12-667-2505.');
+      toast.error(
+        'Failed to book consultation. Please try again or contact us directly at (+27) 12-667-2505.',
+      );
       setIsSubmitting(false);
     }
   };
@@ -349,7 +347,10 @@ export function ConsultationModal({
               </div>
             </motion.div>
 
-            <Button onClick={handleClose} className="bg-primary text-white hover:bg-primary/90 px-8">
+            <Button
+              onClick={handleClose}
+              className="bg-primary text-white hover:bg-primary/90 px-8"
+            >
               Done
             </Button>
           </div>
@@ -381,7 +382,11 @@ export function ConsultationModal({
                       />
                       <span
                         className={`text-[10px] font-medium tracking-wide uppercase transition-colors duration-300 ${
-                          isActive ? 'text-primary' : isComplete ? 'text-primary/60' : 'text-gray-400'
+                          isActive
+                            ? 'text-primary'
+                            : isComplete
+                              ? 'text-primary/60'
+                              : 'text-gray-400'
                         }`}
                       >
                         {step.label}
@@ -406,27 +411,33 @@ export function ConsultationModal({
                   {currentStep === 'meeting-type' && (
                     <div className="space-y-4 sm:space-y-5">
                       <div className="text-center space-y-1">
-                        <h3 className="text-base sm:text-lg font-semibold text-gray-900">How would you like to meet?</h3>
-                        <p className="text-sm text-gray-500">Choose your preferred consultation method</p>
+                        <h3 className="text-base sm:text-lg font-semibold text-gray-900">
+                          How would you like to meet?
+                        </h3>
+                        <p className="text-sm text-gray-500">
+                          Choose your preferred consultation method
+                        </p>
                       </div>
 
                       <div className="grid gap-2.5 sm:gap-3">
-                        {([
-                          {
-                            id: 'virtual' as const,
-                            icon: Video,
-                            title: 'Virtual Meeting',
-                            subtitle: 'Video call via Microsoft Teams or Zoom',
-                            detail: 'Best for screen sharing and document review',
-                          },
-                          {
-                            id: 'telephonic' as const,
-                            icon: PhoneCall,
-                            title: 'Telephonic Meeting',
-                            subtitle: 'Voice call via telephone',
-                            detail: 'Quick and convenient for initial consultations',
-                          },
-                        ] as const).map((opt) => {
+                        {(
+                          [
+                            {
+                              id: 'virtual' as const,
+                              icon: Video,
+                              title: 'Virtual Meeting',
+                              subtitle: 'Video call via Microsoft Teams or Zoom',
+                              detail: 'Best for screen sharing and document review',
+                            },
+                            {
+                              id: 'telephonic' as const,
+                              icon: PhoneCall,
+                              title: 'Telephonic Meeting',
+                              subtitle: 'Voice call via telephone',
+                              detail: 'Quick and convenient for initial consultations',
+                            },
+                          ] as const
+                        ).map((opt) => {
                           const selected = selectedMeetingType === opt.id;
                           return (
                             <button
@@ -452,14 +463,18 @@ export function ConsultationModal({
                                 </div>
                                 <div className="flex-1 min-w-0">
                                   <div className="flex items-center justify-between">
-                                    <h4 className="text-sm font-semibold text-gray-900">{opt.title}</h4>
+                                    <h4 className="text-sm font-semibold text-gray-900">
+                                      {opt.title}
+                                    </h4>
                                     <div
                                       className={`
                                         w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all
                                         ${selected ? 'border-primary bg-primary' : 'border-gray-300'}
                                       `}
                                     >
-                                      {selected && <CheckCircle className="h-3.5 w-3.5 text-white" />}
+                                      {selected && (
+                                        <CheckCircle className="h-3.5 w-3.5 text-white" />
+                                      )}
                                     </div>
                                   </div>
                                   <p className="text-sm text-gray-500 mt-0.5">{opt.subtitle}</p>
@@ -476,7 +491,8 @@ export function ConsultationModal({
                         <div>
                           <p className="text-xs font-semibold text-blue-900">Business Hours</p>
                           <p className="text-xs text-blue-700 mt-0.5">
-                            Monday – Friday, 08:00 – 16:30 (SAST). Bookings require at least one full business day's notice.
+                            Monday – Friday, 08:00 – 16:30 (SAST). Bookings require at least one
+                            full business day's notice.
                           </p>
                         </div>
                       </div>
@@ -487,8 +503,12 @@ export function ConsultationModal({
                   {currentStep === 'date' && (
                     <div className="space-y-4 sm:space-y-5">
                       <div className="text-center space-y-1 px-1">
-                        <h3 className="text-base sm:text-lg font-semibold text-gray-900">Select a date</h3>
-                        <p className="text-sm text-gray-500">Choose your preferred consultation date</p>
+                        <h3 className="text-base sm:text-lg font-semibold text-gray-900">
+                          Select a date
+                        </h3>
+                        <p className="text-sm text-gray-500">
+                          Choose your preferred consultation date
+                        </p>
                       </div>
 
                       <div className="w-full max-w-full -mx-2 px-0.5 sm:mx-0 sm:px-0">
@@ -534,13 +554,14 @@ export function ConsultationModal({
                           modifiers={{ past: isPastCalendarDay }}
                           modifiersClassNames={{ past: 'nw-cal-past' }}
                           className={cn(
-                            'nw-consultation-calendar w-full max-w-full rounded-xl border border-gray-200 bg-white p-2 shadow-sm sm:p-3'
+                            'nw-consultation-calendar w-full max-w-full rounded-xl border border-gray-200 bg-white p-2 shadow-sm sm:p-3',
                           )}
                           classNames={{
                             root: 'w-full max-w-full',
                             months: 'w-full flex flex-col gap-4 sm:flex-row sm:gap-4',
                             month: 'w-full space-y-3',
-                            month_caption: 'relative mb-1 flex h-10 items-center justify-center px-11',
+                            month_caption:
+                              'relative mb-1 flex h-10 items-center justify-center px-11',
                             caption_label: 'text-sm font-semibold text-gray-900',
                             nav: 'absolute inset-x-0 top-0 flex w-full items-center justify-between px-0.5',
                             button_previous:
@@ -557,10 +578,11 @@ export function ConsultationModal({
                             day_button: cn(
                               'rdp-day_button inline-flex h-11 min-h-[2.75rem] w-full max-w-[3rem] sm:max-w-[3.25rem]',
                               'items-center justify-center rounded-lg text-sm font-medium text-gray-900',
-                              'hover:bg-gray-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40'
+                              'hover:bg-gray-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40',
                             ),
                             outside: 'text-gray-400 opacity-60',
-                            today: 'font-semibold [&_.rdp-day_button]:ring-1 [&_.rdp-day_button]:ring-primary/35',
+                            today:
+                              'font-semibold [&_.rdp-day_button]:ring-1 [&_.rdp-day_button]:ring-primary/35',
                             disabled: 'nw-day-disabled',
                           }}
                         />
@@ -587,7 +609,9 @@ export function ConsultationModal({
                   {currentStep === 'time' && selectedDate && (
                     <div className="space-y-4 sm:space-y-5">
                       <div className="text-center space-y-1">
-                        <h3 className="text-base sm:text-lg font-semibold text-gray-900">Select a time</h3>
+                        <h3 className="text-base sm:text-lg font-semibold text-gray-900">
+                          Select a time
+                        </h3>
                         <p className="text-sm text-gray-500">
                           {format(selectedDate, 'EEEE, d MMMM yyyy')}
                         </p>
@@ -618,8 +642,12 @@ export function ConsultationModal({
                       ) : (
                         <div className="bg-gray-50 border border-gray-200 rounded-xl p-8 text-center">
                           <Clock className="h-10 w-10 text-gray-300 mx-auto mb-3" />
-                          <p className="text-sm text-gray-600 font-medium">No available time slots</p>
-                          <p className="text-xs text-gray-400 mt-1">Please select a different date.</p>
+                          <p className="text-sm text-gray-600 font-medium">
+                            No available time slots
+                          </p>
+                          <p className="text-xs text-gray-400 mt-1">
+                            Please select a different date.
+                          </p>
                         </div>
                       )}
                     </div>
@@ -629,7 +657,9 @@ export function ConsultationModal({
                   {currentStep === 'details' && (
                     <div className="space-y-4 sm:space-y-5">
                       <div className="text-center space-y-1">
-                        <h3 className="text-base sm:text-lg font-semibold text-gray-900">Your details</h3>
+                        <h3 className="text-base sm:text-lg font-semibold text-gray-900">
+                          Your details
+                        </h3>
                         <p className="text-sm text-gray-500">
                           We'll use this to confirm your appointment
                         </p>
@@ -637,7 +667,10 @@ export function ConsultationModal({
 
                       <div className="space-y-4">
                         <div className="space-y-1.5">
-                          <Label htmlFor="consultation-name" className="text-xs font-semibold text-gray-600 uppercase tracking-wide">
+                          <Label
+                            htmlFor="consultation-name"
+                            className="text-xs font-semibold text-gray-600 uppercase tracking-wide"
+                          >
                             Full Name <span className="text-red-500">*</span>
                           </Label>
                           <div className="relative">
@@ -655,7 +688,10 @@ export function ConsultationModal({
                         </div>
 
                         <div className="space-y-1.5">
-                          <Label htmlFor="consultation-email" className="text-xs font-semibold text-gray-600 uppercase tracking-wide">
+                          <Label
+                            htmlFor="consultation-email"
+                            className="text-xs font-semibold text-gray-600 uppercase tracking-wide"
+                          >
                             Email Address <span className="text-red-500">*</span>
                           </Label>
                           <div className="relative">
@@ -673,7 +709,10 @@ export function ConsultationModal({
                         </div>
 
                         <div className="space-y-1.5">
-                          <Label htmlFor="consultation-phone" className="text-xs font-semibold text-gray-600 uppercase tracking-wide">
+                          <Label
+                            htmlFor="consultation-phone"
+                            className="text-xs font-semibold text-gray-600 uppercase tracking-wide"
+                          >
                             Contact Number <span className="text-red-500">*</span>
                           </Label>
                           <div className="relative">
@@ -691,8 +730,14 @@ export function ConsultationModal({
                         </div>
 
                         <div className="space-y-1.5">
-                          <Label htmlFor="consultation-notes" className="text-xs font-semibold text-gray-600 uppercase tracking-wide">
-                            Additional Notes <span className="text-gray-400 font-normal normal-case">(optional)</span>
+                          <Label
+                            htmlFor="consultation-notes"
+                            className="text-xs font-semibold text-gray-600 uppercase tracking-wide"
+                          >
+                            Additional Notes{' '}
+                            <span className="text-gray-400 font-normal normal-case">
+                              (optional)
+                            </span>
                           </Label>
                           <div className="relative">
                             <MessageSquare className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
@@ -714,7 +759,9 @@ export function ConsultationModal({
                   {currentStep === 'confirm' && selectedDate && (
                     <div className="space-y-4 sm:space-y-5">
                       <div className="text-center space-y-1">
-                        <h3 className="text-base sm:text-lg font-semibold text-gray-900">Review your booking</h3>
+                        <h3 className="text-base sm:text-lg font-semibold text-gray-900">
+                          Review your booking
+                        </h3>
                         <p className="text-sm text-gray-500">Please confirm the details below</p>
                       </div>
 
@@ -729,9 +776,13 @@ export function ConsultationModal({
                             )}
                           </div>
                           <div>
-                            <p className="text-[11px] text-gray-400 font-medium uppercase tracking-wide">Meeting Type</p>
+                            <p className="text-[11px] text-gray-400 font-medium uppercase tracking-wide">
+                              Meeting Type
+                            </p>
                             <p className="text-sm font-medium text-gray-900">
-                              {selectedMeetingType === 'virtual' ? 'Virtual Meeting' : 'Telephonic Meeting'}
+                              {selectedMeetingType === 'virtual'
+                                ? 'Virtual Meeting'
+                                : 'Telephonic Meeting'}
                             </p>
                           </div>
                         </div>
@@ -742,7 +793,9 @@ export function ConsultationModal({
                             <CalendarIcon className="h-4 w-4 text-primary" />
                           </div>
                           <div>
-                            <p className="text-[11px] text-gray-400 font-medium uppercase tracking-wide">Date</p>
+                            <p className="text-[11px] text-gray-400 font-medium uppercase tracking-wide">
+                              Date
+                            </p>
                             <p className="text-sm font-medium text-gray-900">
                               {format(selectedDate, 'EEEE, d MMMM yyyy')}
                             </p>
@@ -755,8 +808,12 @@ export function ConsultationModal({
                             <Clock className="h-4 w-4 text-primary" />
                           </div>
                           <div>
-                            <p className="text-[11px] text-gray-400 font-medium uppercase tracking-wide">Time</p>
-                            <p className="text-sm font-medium text-gray-900">{formatTimeLabel(selectedTime)} (SAST)</p>
+                            <p className="text-[11px] text-gray-400 font-medium uppercase tracking-wide">
+                              Time
+                            </p>
+                            <p className="text-sm font-medium text-gray-900">
+                              {formatTimeLabel(selectedTime)} (SAST)
+                            </p>
                           </div>
                         </div>
 
@@ -766,9 +823,13 @@ export function ConsultationModal({
                             <User className="h-4 w-4 text-primary" />
                           </div>
                           <div>
-                            <p className="text-[11px] text-gray-400 font-medium uppercase tracking-wide">Contact</p>
+                            <p className="text-[11px] text-gray-400 font-medium uppercase tracking-wide">
+                              Contact
+                            </p>
                             <p className="text-sm font-medium text-gray-900">{formData.name}</p>
-                            <p className="text-xs text-gray-500">{formData.email} &middot; {formData.phone}</p>
+                            <p className="text-xs text-gray-500">
+                              {formData.email} &middot; {formData.phone}
+                            </p>
                           </div>
                         </div>
 
@@ -779,8 +840,12 @@ export function ConsultationModal({
                               <MessageSquare className="h-4 w-4 text-primary" />
                             </div>
                             <div>
-                              <p className="text-[11px] text-gray-400 font-medium uppercase tracking-wide">Notes</p>
-                              <p className="text-sm text-gray-700 leading-relaxed">{formData.additionalNotes}</p>
+                              <p className="text-[11px] text-gray-400 font-medium uppercase tracking-wide">
+                                Notes
+                              </p>
+                              <p className="text-sm text-gray-700 leading-relaxed">
+                                {formData.additionalNotes}
+                              </p>
                             </div>
                           </div>
                         )}

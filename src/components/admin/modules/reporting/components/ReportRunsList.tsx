@@ -3,7 +3,17 @@ import { Card, CardContent, CardHeader, CardTitle } from '../../../../ui/card';
 import { Button } from '../../../../ui/button';
 import { Badge } from '../../../../ui/badge';
 import { Progress } from '../../../../ui/progress';
-import { CheckCircle2, Download, XCircle, FileSpreadsheet, Clock, Users, ClipboardList, ShieldCheck, TrendingUp } from 'lucide-react';
+import {
+  CheckCircle2,
+  Download,
+  XCircle,
+  FileSpreadsheet,
+  Clock,
+  Users,
+  ClipboardList,
+  ShieldCheck,
+  TrendingUp,
+} from 'lucide-react';
 import { toast } from 'sonner';
 import { ReportRun, Report, ReportCategory } from '../types';
 import { redownloadReport } from '../utils';
@@ -11,12 +21,15 @@ import { redownloadReport } from '../utils';
 /**
  * Maps report category to an icon component for run list entries.
  */
-const CATEGORY_ICON_MAP: Record<ReportCategory, { icon: React.ElementType; iconClass: string; bgClass: string }> = {
-  clients:    { icon: Users,          iconClass: 'text-blue-600',   bgClass: 'bg-blue-50' },
-  activity:   { icon: ClipboardList,  iconClass: 'text-amber-600',  bgClass: 'bg-amber-50' },
-  financial:  { icon: TrendingUp,     iconClass: 'text-green-600',  bgClass: 'bg-green-50' },
-  compliance: { icon: ShieldCheck,    iconClass: 'text-purple-600', bgClass: 'bg-purple-50' },
-  custom:     { icon: FileSpreadsheet, iconClass: 'text-gray-600',  bgClass: 'bg-gray-50' },
+const CATEGORY_ICON_MAP: Record<
+  ReportCategory,
+  { icon: React.ElementType; iconClass: string; bgClass: string }
+> = {
+  clients: { icon: Users, iconClass: 'text-blue-600', bgClass: 'bg-blue-50' },
+  activity: { icon: ClipboardList, iconClass: 'text-amber-600', bgClass: 'bg-amber-50' },
+  financial: { icon: TrendingUp, iconClass: 'text-green-600', bgClass: 'bg-green-50' },
+  compliance: { icon: ShieldCheck, iconClass: 'text-purple-600', bgClass: 'bg-purple-50' },
+  custom: { icon: FileSpreadsheet, iconClass: 'text-gray-600', bgClass: 'bg-gray-50' },
 };
 
 interface ReportRunsListProps {
@@ -49,8 +62,9 @@ export function ReportRunsList({ runs, reports }: ReportRunsListProps) {
       <CardContent>
         <div className="space-y-3">
           {runs.slice(0, 10).map((run) => {
-            const report = reports.find(r => r.id === run.reportId);
-            const catCfg = CATEGORY_ICON_MAP[report?.category || 'custom'] || CATEGORY_ICON_MAP.custom;
+            const report = reports.find((r) => r.id === run.reportId);
+            const catCfg =
+              CATEGORY_ICON_MAP[report?.category || 'custom'] || CATEGORY_ICON_MAP.custom;
             const IconComponent = catCfg.icon;
             return (
               <div key={run.id} className="flex items-center gap-4 p-3 border rounded-lg">
@@ -74,12 +88,14 @@ export function ReportRunsList({ runs, reports }: ReportRunsListProps) {
                     </div>
                   )}
                 </div>
-                
+
                 <div className="w-32 flex-shrink-0">
                   {run.status === 'Running' && (
                     <div className="space-y-1">
                       <Progress value={run.progress} className="h-2" />
-                      <div className="text-xs text-center text-muted-foreground">{Math.round(run.progress)}%</div>
+                      <div className="text-xs text-center text-muted-foreground">
+                        {Math.round(run.progress)}%
+                      </div>
                     </div>
                   )}
                   {run.status === 'Completed' && (
@@ -95,10 +111,10 @@ export function ReportRunsList({ runs, reports }: ReportRunsListProps) {
                     </Badge>
                   )}
                 </div>
-                
+
                 {run.status === 'Completed' && (
-                  <Button 
-                    size="sm" 
+                  <Button
+                    size="sm"
                     variant="outline"
                     onClick={() => handleDownload(run)}
                     className="flex-shrink-0"

@@ -4,12 +4,7 @@
  */
 
 import React, { useEffect, useState } from 'react';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from '../../../../ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../../../../ui/dialog';
 import { Button } from '../../../../ui/button';
 import { Badge } from '../../../../ui/badge';
 import {
@@ -52,8 +47,8 @@ export function PreviousFNAsDialog({
   onOpenChange,
   clientId,
   onViewFNA,
-  title = "Previous Risk Planning FNAs",
-  apiUrl
+  title = 'Previous Risk Planning FNAs',
+  apiUrl,
 }: PreviousFNAsDialogProps) {
   const [fnas, setFnas] = useState<FNASummary[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -68,9 +63,7 @@ export function PreviousFNAsDialog({
     setIsLoading(true);
     try {
       // Default to Risk Planning URL if no custom API URL is provided
-      const endpoint = resolveApiEndpoint(
-        apiUrl || `/risk-planning-fna/client/${clientId}/list`,
-      );
+      const endpoint = resolveApiEndpoint(apiUrl || `/risk-planning-fna/client/${clientId}/list`);
 
       const result = await api.get<unknown>(endpoint);
       const fnaList = normalizeFnaListResponse<FNASummary>(result);
@@ -83,7 +76,7 @@ export function PreviousFNAsDialog({
           const dateB = new Date(b.publishedAt || b.updatedAt).getTime();
           return dateB - dateA;
         });
-      
+
       setFnas(publishedFnas);
     } catch (err) {
       console.error('Error loading previous FNAs:', err);
@@ -94,7 +87,10 @@ export function PreviousFNAsDialog({
   };
 
   const getStatusBadge = (status: string) => {
-    const statusConfig: Record<string, { label: string; variant: 'default' | 'secondary' | 'destructive' | 'outline' }> = {
+    const statusConfig: Record<
+      string,
+      { label: string; variant: 'default' | 'secondary' | 'destructive' | 'outline' }
+    > = {
       published: { label: 'Published', variant: 'default' },
       draft: { label: 'Draft', variant: 'secondary' },
       archived: { label: 'Archived', variant: 'outline' },
@@ -125,9 +121,7 @@ export function PreviousFNAsDialog({
           ) : fnas.length === 0 ? (
             <div className="text-center py-12">
               <FileText className="h-12 w-12 mx-auto text-gray-400 mb-4" />
-              <h3 className="text-lg font-medium text-gray-900 mb-2">
-                No Previous FNAs Found
-              </h3>
+              <h3 className="text-lg font-medium text-gray-900 mb-2">No Previous FNAs Found</h3>
               <p className="text-sm text-gray-600">
                 There are no published FNAs for this client yet.
               </p>
@@ -148,9 +142,7 @@ export function PreviousFNAsDialog({
                 <TableBody>
                   {fnas.map((fna) => (
                     <TableRow key={fna.id}>
-                      <TableCell className="font-medium">
-                        v{fna.version || 'N/A'}
-                      </TableCell>
+                      <TableCell className="font-medium">v{fna.version || 'N/A'}</TableCell>
                       <TableCell>{getStatusBadge(fna.status)}</TableCell>
                       <TableCell>
                         <div className="flex items-center gap-2 text-sm">

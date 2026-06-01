@@ -5,15 +5,8 @@
 import React, { useState } from 'react';
 import { Button } from '../../../../ui/button';
 import { Badge } from '../../../../ui/badge';
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from '../../../../ui/tooltip';
-import {
-  TableCell,
-  TableRow,
-} from '../../../../ui/table';
+import { Tooltip, TooltipContent, TooltipTrigger } from '../../../../ui/tooltip';
+import { TableCell, TableRow } from '../../../../ui/table';
 import {
   FileText,
   Eye,
@@ -72,7 +65,11 @@ export function EnvelopeManagementTableRow({
   const handleDownloadDocument = async (e: React.MouseEvent) => {
     e.stopPropagation();
     setDownloadLoading(true);
-    try { await onDownload(); } finally { setDownloadLoading(false); }
+    try {
+      await onDownload();
+    } finally {
+      setDownloadLoading(false);
+    }
   };
 
   const handleDownloadCertificate = async (e: React.MouseEvent) => {
@@ -125,7 +122,9 @@ export function EnvelopeManagementTableRow({
       </TableCell>
 
       <TableCell>
-        <Badge className={`${getEnvelopeStatusColor(envelope.status)} text-xs font-medium px-2 py-0.5`}>
+        <Badge
+          className={`${getEnvelopeStatusColor(envelope.status)} text-xs font-medium px-2 py-0.5`}
+        >
           {getEnvelopeStatusLabel(envelope.status)}
         </Badge>
       </TableCell>
@@ -141,8 +140,8 @@ export function EnvelopeManagementTableRow({
                   progress.isComplete
                     ? 'bg-green-500'
                     : progress.percentComplete > 0
-                    ? 'bg-blue-500'
-                    : 'bg-gray-300'
+                      ? 'bg-blue-500'
+                      : 'bg-gray-300'
                 }`}
                 style={{ width: `${progress.percentComplete}%` }}
               />
@@ -168,8 +167,8 @@ export function EnvelopeManagementTableRow({
               expiringSoon
                 ? 'text-amber-600 font-medium'
                 : daysUntilExpiry !== null && daysUntilExpiry <= 0
-                ? 'text-red-600 font-medium'
-                : 'text-muted-foreground'
+                  ? 'text-red-600 font-medium'
+                  : 'text-muted-foreground'
             }`}
           >
             {daysUntilExpiry !== null && daysUntilExpiry > 0 ? `${daysUntilExpiry}d` : 'Expired'}
@@ -189,7 +188,10 @@ export function EnvelopeManagementTableRow({
                     size="icon"
                     variant="ghost"
                     className="h-8 w-8"
-                    onClick={(e) => { e.stopPropagation(); onRowClick(); }}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onRowClick();
+                    }}
                     aria-label="Continue editing"
                   >
                     <Pencil className="h-3.5 w-3.5" />
@@ -203,7 +205,10 @@ export function EnvelopeManagementTableRow({
                     size="icon"
                     variant="ghost"
                     className="h-8 w-8 text-red-500 hover:text-red-600 hover:bg-red-50"
-                    onClick={(e) => { e.stopPropagation(); onDelete(); }}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onDelete();
+                    }}
                     aria-label="Delete envelope"
                   >
                     <Trash2 className="h-3.5 w-3.5" />
@@ -221,7 +226,10 @@ export function EnvelopeManagementTableRow({
                   size="icon"
                   variant="ghost"
                   className="h-8 w-8 text-amber-500 hover:text-amber-600 hover:bg-amber-50"
-                  onClick={(e) => { e.stopPropagation(); onRecall(); }}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onRecall();
+                  }}
                   aria-label="Recall envelope"
                 >
                   <Undo2 className="h-3.5 w-3.5" />
@@ -281,7 +289,10 @@ export function EnvelopeManagementTableRow({
                   size="icon"
                   variant="ghost"
                   className="h-8 w-8"
-                  onClick={(e) => { e.stopPropagation(); onView(); }}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onView();
+                  }}
                   aria-label="View details"
                 >
                   <Eye className="h-3.5 w-3.5" />

@@ -6,7 +6,16 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 import { Button } from '../../ui/button';
 import { Separator } from '../../ui/separator';
 import { Switch } from '../../ui/switch';
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '../../ui/alert-dialog';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '../../ui/alert-dialog';
 import { Heart, Plus, Edit2, Trash2, X, Check, Pill } from 'lucide-react';
 import { EmptyState } from '../../pages/profile/EmptyState';
 import { emptyStateConfigs } from '../../pages/profile/emptyStateConfigs';
@@ -47,7 +56,7 @@ export function HealthSection({
   confirmDeleteChronicCondition,
   removeChronicCondition,
   updateChronicCondition,
-  setChronicConditionToDelete
+  setChronicConditionToDelete,
 }: HealthSectionProps) {
   // profileData is a loose Record; read the health fields this section uses.
   const pd = profileData as {
@@ -196,7 +205,11 @@ export function HealthSection({
                     size="sm"
                     disabled={chronicConditionsInEditMode.size > 0}
                     className="bg-[#6d28d9] hover:bg-[#5b21b6] disabled:opacity-50 disabled:cursor-not-allowed"
-                    title={chronicConditionsInEditMode.size > 0 ? "Please save the current condition before adding a new one" : "Add a new health condition"}
+                    title={
+                      chronicConditionsInEditMode.size > 0
+                        ? 'Please save the current condition before adding a new one'
+                        : 'Add a new health condition'
+                    }
                   >
                     <Plus className="h-4 w-4 mr-1" />
                     Add Condition
@@ -220,19 +233,29 @@ export function HealthSection({
                     {(pd.chronicConditions ?? []).map((condition: ChronicCondition) => {
                       const isInEditMode = chronicConditionsInEditMode.has(condition.id);
                       const isValid = condition.conditionName;
-                      
+
                       return (
-                        <div key={condition.id} className={`p-5 rounded-lg border-2 ${isInEditMode ? 'border-[#6d28d9] bg-white' : 'border-gray-200 bg-white'}`}>
+                        <div
+                          key={condition.id}
+                          className={`p-5 rounded-lg border-2 ${isInEditMode ? 'border-[#6d28d9] bg-white' : 'border-gray-200 bg-white'}`}
+                        >
                           <div className="flex items-start justify-between mb-4">
                             <div className="flex items-center gap-2">
                               <div className="h-10 w-10 rounded-lg bg-purple-100 flex items-center justify-center">
                                 <Pill className="h-5 w-5 text-[#6d28d9]" />
                               </div>
                               <div>
-                                <h5 className="text-gray-900">{condition.conditionName || 'New Health Condition'}</h5>
-                                {condition.monthDiagnosed && condition.yearDiagnosed && !isInEditMode && (
-                                  <p className="text-xs text-gray-600">Diagnosed: {condition.monthDiagnosed} {condition.yearDiagnosed}</p>
-                                )}
+                                <h5 className="text-gray-900">
+                                  {condition.conditionName || 'New Health Condition'}
+                                </h5>
+                                {condition.monthDiagnosed &&
+                                  condition.yearDiagnosed &&
+                                  !isInEditMode && (
+                                    <p className="text-xs text-gray-600">
+                                      Diagnosed: {condition.monthDiagnosed}{' '}
+                                      {condition.yearDiagnosed}
+                                    </p>
+                                  )}
                               </div>
                             </div>
                             <div className="flex gap-2">
@@ -285,23 +308,36 @@ export function HealthSection({
                           {isInEditMode ? (
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                               <div className="sm:col-span-2">
-                                <Label htmlFor={`condition-name-${condition.id}`}>Name of Condition *</Label>
+                                <Label htmlFor={`condition-name-${condition.id}`}>
+                                  Name of Condition *
+                                </Label>
                                 <Input
                                   id={`condition-name-${condition.id}`}
                                   value={condition.conditionName}
-                                  onChange={(e) => updateChronicCondition(condition.id, { conditionName: e.target.value })}
+                                  onChange={(e) =>
+                                    updateChronicCondition(condition.id, {
+                                      conditionName: e.target.value,
+                                    })
+                                  }
                                   placeholder="e.g., Diabetes, Hypertension"
                                   className="mt-1.5"
                                 />
                               </div>
 
                               <div>
-                                <Label htmlFor={`condition-month-${condition.id}`}>Month Diagnosed</Label>
+                                <Label htmlFor={`condition-month-${condition.id}`}>
+                                  Month Diagnosed
+                                </Label>
                                 <Select
                                   value={condition.monthDiagnosed}
-                                  onValueChange={(value) => updateChronicCondition(condition.id, { monthDiagnosed: value })}
+                                  onValueChange={(value) =>
+                                    updateChronicCondition(condition.id, { monthDiagnosed: value })
+                                  }
                                 >
-                                  <SelectTrigger id={`condition-month-${condition.id}`} className="mt-1.5">
+                                  <SelectTrigger
+                                    id={`condition-month-${condition.id}`}
+                                    className="mt-1.5"
+                                  >
                                     <SelectValue placeholder="Select month" />
                                   </SelectTrigger>
                                   <SelectContent>
@@ -322,12 +358,18 @@ export function HealthSection({
                               </div>
 
                               <div>
-                                <Label htmlFor={`condition-year-${condition.id}`}>Year Diagnosed</Label>
+                                <Label htmlFor={`condition-year-${condition.id}`}>
+                                  Year Diagnosed
+                                </Label>
                                 <Input
                                   id={`condition-year-${condition.id}`}
                                   type="number"
                                   value={condition.yearDiagnosed}
-                                  onChange={(e) => updateChronicCondition(condition.id, { yearDiagnosed: e.target.value })}
+                                  onChange={(e) =>
+                                    updateChronicCondition(condition.id, {
+                                      yearDiagnosed: e.target.value,
+                                    })
+                                  }
                                   placeholder="e.g., 2020"
                                   min="1900"
                                   max={new Date().getFullYear()}
@@ -336,11 +378,17 @@ export function HealthSection({
                               </div>
 
                               <div className="sm:col-span-2">
-                                <Label htmlFor={`condition-doctor-${condition.id}`}>Treating Doctor</Label>
+                                <Label htmlFor={`condition-doctor-${condition.id}`}>
+                                  Treating Doctor
+                                </Label>
                                 <Input
                                   id={`condition-doctor-${condition.id}`}
                                   value={condition.treatingDoctor}
-                                  onChange={(e) => updateChronicCondition(condition.id, { treatingDoctor: e.target.value })}
+                                  onChange={(e) =>
+                                    updateChronicCondition(condition.id, {
+                                      treatingDoctor: e.target.value,
+                                    })
+                                  }
                                   placeholder="Dr. Name (Optional)"
                                   className="mt-1.5"
                                 />
@@ -349,15 +397,22 @@ export function HealthSection({
                               <div className="sm:col-span-2">
                                 <div className="flex items-center justify-between p-3 rounded-lg border border-gray-200 bg-gray-50">
                                   <div>
-                                    <Label htmlFor={`condition-treatment-${condition.id}`} className="text-sm text-gray-900">
+                                    <Label
+                                      htmlFor={`condition-treatment-${condition.id}`}
+                                      className="text-sm text-gray-900"
+                                    >
                                       Currently on Treatment?
                                     </Label>
-                                    <p className="text-xs text-gray-500">Is the client receiving treatment for this condition?</p>
+                                    <p className="text-xs text-gray-500">
+                                      Is the client receiving treatment for this condition?
+                                    </p>
                                   </div>
                                   <Switch
                                     id={`condition-treatment-${condition.id}`}
                                     checked={condition.onTreatment}
-                                    onCheckedChange={(checked) => updateChronicCondition(condition.id, { onTreatment: checked })}
+                                    onCheckedChange={(checked) =>
+                                      updateChronicCondition(condition.id, { onTreatment: checked })
+                                    }
                                   />
                                 </div>
                               </div>
@@ -368,12 +423,18 @@ export function HealthSection({
                                 {condition.treatingDoctor && (
                                   <div>
                                     <p className="text-gray-600 text-[12px]">Treating Doctor</p>
-                                    <p className="text-gray-900 text-[12px]">{condition.treatingDoctor}</p>
+                                    <p className="text-gray-900 text-[12px]">
+                                      {condition.treatingDoctor}
+                                    </p>
                                   </div>
                                 )}
                                 <div>
                                   <p className="text-gray-600">Treatment Status</p>
-                                  <p className="text-gray-900 text-[12px]">{condition.onTreatment ? 'Currently on treatment' : 'Not on treatment'}</p>
+                                  <p className="text-gray-900 text-[12px]">
+                                    {condition.onTreatment
+                                      ? 'Currently on treatment'
+                                      : 'Not on treatment'}
+                                  </p>
                                 </div>
                               </div>
                             </div>
@@ -390,17 +451,23 @@ export function HealthSection({
       </Card>
 
       {/* Delete Health Condition Confirmation Dialog */}
-      <AlertDialog open={chronicConditionToDelete !== null} onOpenChange={() => setChronicConditionToDelete(null)}>
+      <AlertDialog
+        open={chronicConditionToDelete !== null}
+        onOpenChange={() => setChronicConditionToDelete(null)}
+      >
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Delete Health Condition</AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure you want to delete this health condition? This action cannot be undone and all information about this condition will be permanently removed.
+              Are you sure you want to delete this health condition? This action cannot be undone
+              and all information about this condition will be permanently removed.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel onClick={() => setChronicConditionToDelete(null)}>Cancel</AlertDialogCancel>
-            <AlertDialogAction 
+            <AlertDialogCancel onClick={() => setChronicConditionToDelete(null)}>
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction
               onClick={removeChronicCondition}
               className="bg-red-600 hover:bg-red-700"
             >

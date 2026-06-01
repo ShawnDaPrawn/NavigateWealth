@@ -9,7 +9,10 @@ const log = createModuleLogger('fna-intake-adviser-resolver');
 
 export async function resolveClientAdviserUserId(clientId: string): Promise<string | null> {
   try {
-    const profile = (await kv.get(`user_profile:${clientId}:personal_info`)) as Record<string, unknown> | null;
+    const profile = (await kv.get(`user_profile:${clientId}:personal_info`)) as Record<
+      string,
+      unknown
+    > | null;
     if (!profile) return null;
 
     if (typeof profile.adviserId === 'string' && profile.adviserId) {
@@ -19,11 +22,13 @@ export async function resolveClientAdviserUserId(clientId: string): Promise<stri
     const applicationId = profile.applicationId ?? profile.application_id;
     if (!applicationId || typeof applicationId !== 'string') return null;
 
-    const application = (await kv.get(`application:${applicationId}`)) as Record<string, unknown> | null;
+    const application = (await kv.get(`application:${applicationId}`)) as Record<
+      string,
+      unknown
+    > | null;
     if (!application) return null;
 
-    const adviserId =
-      application.adviserId ?? application.reviewed_by ?? application.approvedBy;
+    const adviserId = application.adviserId ?? application.reviewed_by ?? application.approvedBy;
     return typeof adviserId === 'string' && adviserId ? adviserId : null;
   } catch (error) {
     log.warn('Failed to resolve adviser for client', { clientId, error });

@@ -1,13 +1,13 @@
 /**
  * Social Media Tab - Refactored (Phase 3)
- * 
+ *
  * Main social media management interface featuring:
  * - Calendar view for scheduled posts
  * - Post composer for creating content (with AI pre-population)
  * - AI Generator with text, image, bundle, and history sub-tabs
  * - Profile connector for managing platforms
  * - Real-time stats and analytics
- * 
+ *
  * @module social-media/SocialMediaTab
  */
 
@@ -15,8 +15,8 @@ import React, { useState, useMemo, useCallback } from 'react';
 import { Button } from '../../../ui/button';
 import { Card, CardContent } from '../../../ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../../ui/tabs';
-import { 
-  Calendar, 
+import {
+  Calendar,
   PlusCircle,
   Users,
   Eye,
@@ -71,7 +71,7 @@ export function SocialMediaTab() {
   // ============================================================================
   // State
   // ============================================================================
-  
+
   const [activeTab, setActiveTab] = useState('calendar');
   const [selectedProfiles, setSelectedProfiles] = useState<string[]>([]);
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
@@ -87,14 +87,9 @@ export function SocialMediaTab() {
   // ============================================================================
   // Hooks
   // ============================================================================
-  
-  const { 
-    profiles, 
-    connectedProfiles,
-    connectProfile,
-    disconnectProfile,
-    syncProfile 
-  } = useSocialProfiles();
+
+  const { profiles, connectedProfiles, connectProfile, disconnectProfile, syncProfile } =
+    useSocialProfiles();
 
   const {
     posts,
@@ -109,35 +104,30 @@ export function SocialMediaTab() {
   // ============================================================================
   // Computed Values
   // ============================================================================
-  
-  const totalFollowers = useMemo(() => 
-    connectedProfiles.reduce((sum, p) => sum + (p.followerCount || 0), 0),
-    [connectedProfiles]
+
+  const totalFollowers = useMemo(
+    () => connectedProfiles.reduce((sum, p) => sum + (p.followerCount || 0), 0),
+    [connectedProfiles],
   );
 
-  const scheduledPosts = useMemo(() => 
-    getPostsByStatus('scheduled'),
-    [posts, getPostsByStatus]
+  const scheduledPosts = useMemo(() => getPostsByStatus('scheduled'), [posts, getPostsByStatus]);
+
+  const publishedPosts = useMemo(() => getPostsByStatus('published'), [posts, getPostsByStatus]);
+
+  const totalEngagement = useMemo(
+    () =>
+      publishedPosts.reduce(
+        (sum, p) =>
+          sum +
+          (p.analytics?.reactions || 0) +
+          (p.analytics?.comments || 0) +
+          (p.analytics?.shares || 0),
+        0,
+      ),
+    [publishedPosts],
   );
 
-  const publishedPosts = useMemo(() => 
-    getPostsByStatus('published'),
-    [posts, getPostsByStatus]
-  );
-
-  const totalEngagement = useMemo(() => 
-    publishedPosts.reduce((sum, p) => 
-      sum + (p.analytics?.reactions || 0) + 
-            (p.analytics?.comments || 0) + 
-            (p.analytics?.shares || 0), 0
-    ),
-    [publishedPosts]
-  );
-
-  const draftPosts = useMemo(() =>
-    getPostsByStatus('draft'),
-    [posts, getPostsByStatus],
-  );
+  const draftPosts = useMemo(() => getPostsByStatus('draft'), [posts, getPostsByStatus]);
 
   /** Profile ID → { name, platform } lookup for DraftPosts display */
   const profileNameLookup = useMemo(() => {
@@ -151,7 +141,7 @@ export function SocialMediaTab() {
   // ============================================================================
   // Handlers - Profiles
   // ============================================================================
-  
+
   const handleConnect = async (platform: SocialPlatform) => {
     await connectProfile({ platform });
   };
@@ -167,7 +157,7 @@ export function SocialMediaTab() {
   // ============================================================================
   // Handlers - Posts
   // ============================================================================
-  
+
   const handleSavePost = async (postData: Record<string, unknown>) => {
     await createPost(mapComposedToRequest(postData));
     clearComposerInitials();
@@ -268,7 +258,7 @@ export function SocialMediaTab() {
   // ============================================================================
   // Render
   // ============================================================================
-  
+
   return (
     <div className="space-y-6">
       {/* Summary Stats */}
@@ -286,15 +276,13 @@ export function SocialMediaTab() {
             </div>
           </CardContent>
         </Card>
-        
+
         <Card>
           <CardContent className="pt-6">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-muted-foreground">Total Followers</p>
-                <p className="text-2xl font-bold">
-                  {formatFollowerCount(totalFollowers)}
-                </p>
+                <p className="text-2xl font-bold">{formatFollowerCount(totalFollowers)}</p>
               </div>
               <div className="flex items-center justify-center h-10 w-10 rounded-lg bg-green-50">
                 <Eye className="h-5 w-5 text-green-600" />
@@ -302,7 +290,7 @@ export function SocialMediaTab() {
             </div>
           </CardContent>
         </Card>
-        
+
         <Card>
           <CardContent className="pt-6">
             <div className="flex items-center justify-between">
@@ -316,7 +304,7 @@ export function SocialMediaTab() {
             </div>
           </CardContent>
         </Card>
-        
+
         <Card>
           <CardContent className="pt-6">
             <div className="flex items-center justify-between">
@@ -342,7 +330,7 @@ export function SocialMediaTab() {
           <Sparkles className="h-4 w-4" />
           AI Generator
         </Button>
-        <Button 
+        <Button
           onClick={() => {
             clearComposerInitials();
             setActiveTab('composer');
@@ -467,10 +455,7 @@ export function SocialMediaTab() {
               </TabsContent>
 
               <TabsContent value="history">
-                <AIGenerationHistory
-                  onUseText={handleUseTextContent}
-                  onUseImage={handleUseImage}
-                />
+                <AIGenerationHistory onUseText={handleUseTextContent} onUseImage={handleUseImage} />
               </TabsContent>
 
               <TabsContent value="ai-analytics">

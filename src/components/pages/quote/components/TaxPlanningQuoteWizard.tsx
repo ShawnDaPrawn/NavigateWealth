@@ -190,15 +190,25 @@ function loadDraft(): WizardDraft | null {
   try {
     const raw = sessionStorage.getItem(DRAFT_KEY);
     return raw ? JSON.parse(raw) : null;
-  } catch { return null; }
+  } catch {
+    return null;
+  }
 }
 
 function saveDraft(draft: WizardDraft) {
-  try { sessionStorage.setItem(DRAFT_KEY, JSON.stringify(draft)); } catch { /* non-critical */ }
+  try {
+    sessionStorage.setItem(DRAFT_KEY, JSON.stringify(draft));
+  } catch {
+    /* non-critical */
+  }
 }
 
 function clearDraft() {
-  try { sessionStorage.removeItem(DRAFT_KEY); } catch { /* non-critical */ }
+  try {
+    sessionStorage.removeItem(DRAFT_KEY);
+  } catch {
+    /* non-critical */
+  }
 }
 
 function ynsLabel(val: string): string {
@@ -208,7 +218,10 @@ function ynsLabel(val: string): string {
   return '—';
 }
 
-function lookupLabel<T extends readonly { value: string; label: string }[]>(options: T, value: string): string {
+function lookupLabel<T extends readonly { value: string; label: string }[]>(
+  options: T,
+  value: string,
+): string {
   return options.find((o) => o.value === value)?.label ?? value;
 }
 
@@ -231,7 +244,9 @@ function StepIndicator({ currentStep }: { currentStep: number }) {
         return (
           <React.Fragment key={step.num}>
             {idx > 0 && (
-              <div className={`flex-1 h-0.5 mx-1 sm:mx-2 transition-colors ${isCompleted ? 'bg-green-500' : 'bg-gray-200'}`} />
+              <div
+                className={`flex-1 h-0.5 mx-1 sm:mx-2 transition-colors ${isCompleted ? 'bg-green-500' : 'bg-gray-200'}`}
+              />
             )}
             <div className="flex flex-col items-center gap-1">
               <div
@@ -243,9 +258,15 @@ function StepIndicator({ currentStep }: { currentStep: number }) {
                       : 'bg-gray-100 text-gray-400 border border-gray-200'
                 }`}
               >
-                {isCompleted ? <CheckCircle className="h-4 w-4" /> : <IconComp className="h-4 w-4" />}
+                {isCompleted ? (
+                  <CheckCircle className="h-4 w-4" />
+                ) : (
+                  <IconComp className="h-4 w-4" />
+                )}
               </div>
-              <span className={`text-[10px] sm:text-xs font-medium ${isActive ? 'text-gray-900' : 'text-gray-400'}`}>
+              <span
+                className={`text-[10px] sm:text-xs font-medium ${isActive ? 'text-gray-900' : 'text-gray-400'}`}
+              >
                 {step.label}
               </span>
             </div>
@@ -282,8 +303,12 @@ function Step1TaxType({
   return (
     <div className="space-y-4">
       <div>
-        <h2 className="text-lg font-bold text-gray-900 mb-1">What tax submission do you need help with?</h2>
-        <p className="text-sm text-gray-500">Select all that apply. You can choose more than one.</p>
+        <h2 className="text-lg font-bold text-gray-900 mb-1">
+          What tax submission do you need help with?
+        </h2>
+        <p className="text-sm text-gray-500">
+          Select all that apply. You can choose more than one.
+        </p>
       </div>
 
       <div className="space-y-2">
@@ -300,9 +325,11 @@ function Step1TaxType({
                   : 'border-gray-200 bg-white hover:border-gray-300'
               }`}
             >
-              <div className={`w-4 h-4 rounded flex items-center justify-center mt-0.5 flex-shrink-0 border-2 transition-colors ${
-                isSelected ? 'border-primary bg-primary' : 'border-gray-300 bg-white'
-              }`}>
+              <div
+                className={`w-4 h-4 rounded flex items-center justify-center mt-0.5 flex-shrink-0 border-2 transition-colors ${
+                  isSelected ? 'border-primary bg-primary' : 'border-gray-300 bg-white'
+                }`}
+              >
                 {isSelected && <Check className="h-3 w-3 text-white" />}
               </div>
               <div className="min-w-0">
@@ -333,7 +360,9 @@ function Step2TaxpayerContext({
     <div className="space-y-5">
       <div>
         <h2 className="text-lg font-bold text-gray-900 mb-1">Tell us about the taxpayer</h2>
-        <p className="text-sm text-gray-500">Basic details to route your request to the right specialist.</p>
+        <p className="text-sm text-gray-500">
+          Basic details to route your request to the right specialist.
+        </p>
       </div>
 
       {/* Taxpayer type */}
@@ -362,7 +391,8 @@ function Step2TaxpayerContext({
       {/* SARS registered */}
       <div className="space-y-2">
         <Label className="text-sm font-medium text-gray-700">
-          Are you currently registered with SARS for this tax type? <span className="text-red-500">*</span>
+          Are you currently registered with SARS for this tax type?{' '}
+          <span className="text-red-500">*</span>
         </Label>
         <div className="flex flex-wrap gap-2">
           {YES_NO_NOTSURE.map((opt) => (
@@ -385,7 +415,8 @@ function Step2TaxpayerContext({
       {/* Submission status */}
       <div className="space-y-2">
         <Label className="text-sm font-medium text-gray-700">
-          Is this a new submission or are there outstanding returns? <span className="text-red-500">*</span>
+          Is this a new submission or are there outstanding returns?{' '}
+          <span className="text-red-500">*</span>
         </Label>
         <div className="space-y-2">
           {SUBMISSION_STATUS_OPTIONS.map((opt) => (
@@ -399,10 +430,14 @@ function Step2TaxpayerContext({
                   : 'border-gray-200 bg-white text-gray-700 hover:border-gray-300'
               }`}
             >
-              <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center flex-shrink-0 ${
-                context.submission_status === opt.value ? 'border-primary' : 'border-gray-300'
-              }`}>
-                {context.submission_status === opt.value && <div className="w-2 h-2 rounded-full bg-primary" />}
+              <div
+                className={`w-4 h-4 rounded-full border-2 flex items-center justify-center flex-shrink-0 ${
+                  context.submission_status === opt.value ? 'border-primary' : 'border-gray-300'
+                }`}
+              >
+                {context.submission_status === opt.value && (
+                  <div className="w-2 h-2 rounded-full bg-primary" />
+                )}
               </div>
               {opt.label}
             </button>
@@ -449,7 +484,9 @@ function Step3FinancialScope({
     <div className="space-y-5">
       <div>
         <h2 className="text-lg font-bold text-gray-900 mb-1">Scope overview</h2>
-        <p className="text-sm text-gray-500">High-level information to help us size your engagement.</p>
+        <p className="text-sm text-gray-500">
+          High-level information to help us size your engagement.
+        </p>
       </div>
 
       {/* Turnover band */}
@@ -501,7 +538,8 @@ function Step3FinancialScope({
       {/* Under SARS audit */}
       <div className="space-y-2">
         <Label className="text-sm font-medium text-gray-700">
-          Are you currently under SARS audit or verification? <span className="text-red-500">*</span>
+          Are you currently under SARS audit or verification?{' '}
+          <span className="text-red-500">*</span>
         </Label>
         <div className="grid grid-cols-2 gap-2 max-w-xs">
           {YES_NO.map((opt) => (
@@ -560,7 +598,9 @@ function Step4Review({
   financialScope: FinancialScopeState;
   onEditStep: (step: number) => void;
 }) {
-  const typeLabels = selectedTypes.map((id) => TAX_TYPE_OPTIONS.find((t) => t.id === id)?.label ?? id);
+  const typeLabels = selectedTypes.map(
+    (id) => TAX_TYPE_OPTIONS.find((t) => t.id === id)?.label ?? id,
+  );
 
   function SectionHeader({ title, step }: { title: string; step: number }) {
     return (
@@ -590,7 +630,9 @@ function Step4Review({
     <div className="space-y-5">
       <div>
         <h2 className="text-lg font-bold text-gray-900 mb-1">Review & submit</h2>
-        <p className="text-sm text-gray-500">Please review your details before submitting your tax planning quote request.</p>
+        <p className="text-sm text-gray-500">
+          Please review your details before submitting your tax planning quote request.
+        </p>
       </div>
 
       {/* Tax types */}
@@ -609,18 +651,33 @@ function Step4Review({
       {/* Taxpayer context */}
       <div className="p-4 rounded-xl bg-gray-50 border border-gray-100">
         <SectionHeader title="Taxpayer Details" step={2} />
-        <Row label="Taxpayer type" value={lookupLabel(TAXPAYER_TYPE_OPTIONS, taxpayerContext.taxpayer_type)} />
+        <Row
+          label="Taxpayer type"
+          value={lookupLabel(TAXPAYER_TYPE_OPTIONS, taxpayerContext.taxpayer_type)}
+        />
         <Row label="Registered with SARS" value={ynsLabel(taxpayerContext.sars_registered)} />
-        <Row label="Submission status" value={lookupLabel(SUBMISSION_STATUS_OPTIONS, taxpayerContext.submission_status)} />
+        <Row
+          label="Submission status"
+          value={lookupLabel(SUBMISSION_STATUS_OPTIONS, taxpayerContext.submission_status)}
+        />
         <Row label="Tax year(s)" value={lookupLabel(TAX_YEAR_OPTIONS, taxpayerContext.tax_years)} />
       </div>
 
       {/* Financial scope */}
       <div className="p-4 rounded-xl bg-gray-50 border border-gray-100">
         <SectionHeader title="Financial Scope" step={3} />
-        <Row label="Annual turnover / income" value={lookupLabel(TURNOVER_BAND_OPTIONS, financialScope.turnover_band)} />
-        <Row label="Foreign income / offshore assets" value={ynsLabel(financialScope.has_foreign_income)} />
-        <Row label="Under SARS audit / verification" value={ynsLabel(financialScope.under_sars_audit)} />
+        <Row
+          label="Annual turnover / income"
+          value={lookupLabel(TURNOVER_BAND_OPTIONS, financialScope.turnover_band)}
+        />
+        <Row
+          label="Foreign income / offshore assets"
+          value={ynsLabel(financialScope.has_foreign_income)}
+        />
+        <Row
+          label="Under SARS audit / verification"
+          value={ynsLabel(financialScope.under_sars_audit)}
+        />
         <Row label="Penalties or interest raised" value={ynsLabel(financialScope.has_penalties)} />
       </div>
     </div>
@@ -640,8 +697,12 @@ export function TaxPlanningQuoteWizard({
   const draft = loadDraft();
   const [currentStep, setCurrentStep] = useState(draft?.currentStep ?? 1);
   const [selectedTypes, setSelectedTypes] = useState<string[]>(draft?.selected_types ?? []);
-  const [taxpayerContext, setTaxpayerContext] = useState<TaxpayerContextState>(draft?.taxpayer_context ?? getInitialTaxpayerContext());
-  const [financialScope, setFinancialScope] = useState<FinancialScopeState>(draft?.financial_scope ?? getInitialFinancialScope());
+  const [taxpayerContext, setTaxpayerContext] = useState<TaxpayerContextState>(
+    draft?.taxpayer_context ?? getInitialTaxpayerContext(),
+  );
+  const [financialScope, setFinancialScope] = useState<FinancialScopeState>(
+    draft?.financial_scope ?? getInitialFinancialScope(),
+  );
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Persist draft
@@ -663,7 +724,7 @@ export function TaxPlanningQuoteWizard({
       taxpayerContext.taxpayer_type &&
       taxpayerContext.sars_registered &&
       taxpayerContext.submission_status &&
-      taxpayerContext.tax_years
+      taxpayerContext.tax_years,
     );
   }, [taxpayerContext]);
 
@@ -672,30 +733,43 @@ export function TaxPlanningQuoteWizard({
       financialScope.turnover_band &&
       financialScope.has_foreign_income &&
       financialScope.under_sars_audit &&
-      financialScope.has_penalties
+      financialScope.has_penalties,
     );
   }, [financialScope]);
 
   const canProceed = useMemo(() => {
     switch (currentStep) {
-      case 1: return step1Valid;
-      case 2: return step2Valid;
-      case 3: return step3Valid;
-      case 4: return true;
-      default: return false;
+      case 1:
+        return step1Valid;
+      case 2:
+        return step2Valid;
+      case 3:
+        return step3Valid;
+      case 4:
+        return true;
+      default:
+        return false;
     }
   }, [currentStep, step1Valid, step2Valid, step3Valid]);
 
-  const goNext = useCallback(() => { if (currentStep < 4) setCurrentStep((s) => s + 1); }, [currentStep]);
-  const goBack = useCallback(() => { if (currentStep > 1) setCurrentStep((s) => s - 1); }, [currentStep]);
-  const goToStep = useCallback((step: number) => { setCurrentStep(step); }, []);
+  const goNext = useCallback(() => {
+    if (currentStep < 4) setCurrentStep((s) => s + 1);
+  }, [currentStep]);
+  const goBack = useCallback(() => {
+    if (currentStep > 1) setCurrentStep((s) => s - 1);
+  }, [currentStep]);
+  const goToStep = useCallback((step: number) => {
+    setCurrentStep(step);
+  }, []);
 
   // ── Submit ──
 
   const handleSubmit = useCallback(async () => {
     setIsSubmitting(true);
     try {
-      const typeLabels = selectedTypes.map((id) => TAX_TYPE_OPTIONS.find((t) => t.id === id)?.label ?? id);
+      const typeLabels = selectedTypes.map(
+        (id) => TAX_TYPE_OPTIONS.find((t) => t.id === id)?.label ?? id,
+      );
 
       const productDetails = {
         vertical: 'TaxPlanning',
@@ -707,7 +781,10 @@ export function TaxPlanningQuoteWizard({
           taxpayer_type_id: taxpayerContext.taxpayer_type,
           sars_registered: ynsLabel(taxpayerContext.sars_registered),
           sars_registered_id: taxpayerContext.sars_registered,
-          submission_status: lookupLabel(SUBMISSION_STATUS_OPTIONS, taxpayerContext.submission_status),
+          submission_status: lookupLabel(
+            SUBMISSION_STATUS_OPTIONS,
+            taxpayerContext.submission_status,
+          ),
           submission_status_id: taxpayerContext.submission_status,
           tax_years: lookupLabel(TAX_YEAR_OPTIONS, taxpayerContext.tax_years),
           tax_years_id: taxpayerContext.tax_years,
@@ -765,7 +842,17 @@ export function TaxPlanningQuoteWizard({
     } finally {
       setIsSubmitting(false);
     }
-  }, [firstName, lastName, email, phone, parentSubmissionId, selectedTypes, taxpayerContext, financialScope, onSuccess]);
+  }, [
+    firstName,
+    lastName,
+    email,
+    phone,
+    parentSubmissionId,
+    selectedTypes,
+    taxpayerContext,
+    financialScope,
+    onSuccess,
+  ]);
 
   // ── Render ──
 
@@ -775,9 +862,15 @@ export function TaxPlanningQuoteWizard({
 
       <div className="bg-white rounded-2xl shadow-lg border border-gray-100 overflow-hidden">
         <div className="p-5 sm:p-6">
-          {currentStep === 1 && <Step1TaxType selected={selectedTypes} onChange={setSelectedTypes} />}
-          {currentStep === 2 && <Step2TaxpayerContext context={taxpayerContext} onChange={setTaxpayerContext} />}
-          {currentStep === 3 && <Step3FinancialScope scope={financialScope} onChange={setFinancialScope} />}
+          {currentStep === 1 && (
+            <Step1TaxType selected={selectedTypes} onChange={setSelectedTypes} />
+          )}
+          {currentStep === 2 && (
+            <Step2TaxpayerContext context={taxpayerContext} onChange={setTaxpayerContext} />
+          )}
+          {currentStep === 3 && (
+            <Step3FinancialScope scope={financialScope} onChange={setFinancialScope} />
+          )}
           {currentStep === 4 && (
             <Step4Review
               selectedTypes={selectedTypes}

@@ -1,12 +1,12 @@
 /**
  * Social Media Type Definitions
- * 
+ *
  * Comprehensive type system for the Social Media module including:
  * - Platform types and constants
  * - Profile, post, and campaign types
  * - Analytics and metrics types
  * - API request/response types (re-exported from api.ts)
- * 
+ *
  * @module social-media/types
  */
 

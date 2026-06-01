@@ -10,12 +10,7 @@
  */
 
 import React, { useState, useCallback, useEffect } from 'react';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from '../../ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../../ui/dialog';
 import { Button } from '../../ui/button';
 import { Badge } from '../../ui/badge';
 import {
@@ -86,7 +81,9 @@ export function PolicyDocumentViewer({
 
   const getAuthToken = useCallback(async (): Promise<string> => {
     const supabase = createClient();
-    const { data: { session } } = await supabase.auth.getSession();
+    const {
+      data: { session },
+    } = await supabase.auth.getSession();
     return session?.access_token || publicAnonKey;
   }, []);
 
@@ -144,9 +141,7 @@ export function PolicyDocumentViewer({
     if (signedUrl) window.open(signedUrl, '_blank');
   };
 
-  const titleText = providerName
-    ? `Document — ${providerName}`
-    : 'Policy Document';
+  const titleText = providerName ? `Document — ${providerName}` : 'Policy Document';
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>

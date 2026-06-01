@@ -126,7 +126,11 @@ export function BulkActionsBar({
               onClick={onArchive}
               disabled={isBusy}
             >
-              {isBusy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Archive className="h-3.5 w-3.5" />}
+              {isBusy ? (
+                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+              ) : (
+                <Archive className="h-3.5 w-3.5" />
+              )}
               Archive
             </Button>
           )}
@@ -146,7 +150,11 @@ export function BulkActionsBar({
           {/* Tag menu */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="sm" className="text-white hover:bg-gray-700 h-8 text-xs gap-1.5">
+              <Button
+                variant="ghost"
+                size="sm"
+                className="text-white hover:bg-gray-700 h-8 text-xs gap-1.5"
+              >
                 <Tag className="h-3.5 w-3.5" />
                 Tags
               </Button>
@@ -173,7 +181,12 @@ export function BulkActionsBar({
                   <Input
                     value={newTagInput}
                     onChange={(e) => setNewTagInput(e.target.value)}
-                    onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleAddNewTag(); } }}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault();
+                        handleAddNewTag();
+                      }
+                    }}
                     placeholder="New tag..."
                     className="h-7 text-xs flex-1"
                   />
@@ -198,7 +211,11 @@ export function BulkActionsBar({
                     </DropdownMenuSubTrigger>
                     <DropdownMenuSubContent>
                       {selectedNoteTags.map((tag) => (
-                        <DropdownMenuItem key={tag} onClick={() => onRemoveTag(tag)} className="text-xs text-red-600">
+                        <DropdownMenuItem
+                          key={tag}
+                          onClick={() => onRemoveTag(tag)}
+                          className="text-xs text-red-600"
+                        >
                           {tag}
                         </DropdownMenuItem>
                       ))}
@@ -212,7 +229,11 @@ export function BulkActionsBar({
           {/* Colour menu */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="sm" className="text-white hover:bg-gray-700 h-8 text-xs gap-1.5">
+              <Button
+                variant="ghost"
+                size="sm"
+                className="text-white hover:bg-gray-700 h-8 text-xs gap-1.5"
+              >
                 <Palette className="h-3.5 w-3.5" />
                 Colour
               </Button>
@@ -259,16 +280,22 @@ export function BulkActionsBar({
       <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Delete {selectedCount} {selectedCount === 1 ? 'Note' : 'Notes'}</AlertDialogTitle>
+            <AlertDialogTitle>
+              Delete {selectedCount} {selectedCount === 1 ? 'Note' : 'Notes'}
+            </AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure you want to permanently delete {selectedCount} {selectedCount === 1 ? 'note' : 'notes'}? This action cannot be undone.
+              Are you sure you want to permanently delete {selectedCount}{' '}
+              {selectedCount === 1 ? 'note' : 'notes'}? This action cannot be undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
             <AlertDialogAction
               className="bg-red-600 hover:bg-red-700"
-              onClick={() => { onDelete(); setShowDeleteDialog(false); }}
+              onClick={() => {
+                onDelete();
+                setShowDeleteDialog(false);
+              }}
             >
               Delete {selectedCount} {selectedCount === 1 ? 'Note' : 'Notes'}
             </AlertDialogAction>

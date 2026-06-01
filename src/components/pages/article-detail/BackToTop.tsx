@@ -40,7 +40,7 @@ export function BackToTop() {
         'transition-all duration-300 ease-out',
         visible
           ? 'opacity-100 translate-y-0 pointer-events-auto'
-          : 'opacity-0 translate-y-4 pointer-events-none'
+          : 'opacity-0 translate-y-4 pointer-events-none',
       )}
     >
       <ArrowUp className="h-5 w-5" />

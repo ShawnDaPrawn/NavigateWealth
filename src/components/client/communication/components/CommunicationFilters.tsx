@@ -5,13 +5,7 @@
 import { Search } from 'lucide-react';
 import { Card, CardContent } from '../../../ui/card';
 import { Input } from '../../../ui/input';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '../../../ui/select';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../../ui/select';
 import { ALL_CATEGORIES, DATE_RANGE_OPTIONS } from '../constants';
 import type { CommunicationFilters as Filters } from '../types';
 

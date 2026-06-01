@@ -1,6 +1,6 @@
 /**
  * Inactivity Manager
- * 
+ *
  * Handles two key features:
  * 1. Cross-tab navigation on logout
  * 2. Auto-logout after 10 minutes of inactivity (client users only)
@@ -41,7 +41,7 @@ export function InactivityManager() {
   const navigate = useNavigate();
   const [showWarning, setShowWarning] = useState(false);
   const [countdown, setCountdown] = useState(60);
-  
+
   const lastActivityRef = useRef<number>(Date.now());
   const checkIntervalRef = useRef<number | null>(null);
   const countdownIntervalRef = useRef<number | null>(null);
@@ -104,7 +104,7 @@ export function InactivityManager() {
     const performLogout = async () => {
       console.log('⏰ Auto-logout due to inactivity');
       setShowWarning(false);
-      
+
       try {
         await logout();
       } catch (error) {
@@ -126,7 +126,7 @@ export function InactivityManager() {
         performLogout();
       } else if (inactiveTime >= WARNING_TIME) {
         // Show warning if we are in the warning window and it's not already showing
-        setShowWarning(prevShowing => {
+        setShowWarning((prevShowing) => {
           if (!prevShowing) {
             console.log('⚠️ Showing inactivity warning');
             const secondsLeft = Math.max(1, Math.floor((INACTIVITY_TIMEOUT - inactiveTime) / 1000));
@@ -135,12 +135,12 @@ export function InactivityManager() {
             // Start precise visual countdown
             clearWarningCountdown();
             countdownIntervalRef.current = window.setInterval(() => {
-              setCountdown(prev => {
+              setCountdown((prev) => {
                 if (prev <= 1) return 0;
                 return prev - 1;
               });
             }, 1000);
-            
+
             return true;
           }
           return prevShowing;
@@ -180,7 +180,8 @@ export function InactivityManager() {
             <DialogTitle className="text-xl">Session Timeout Warning</DialogTitle>
           </div>
           <DialogDescription className="text-base pt-2">
-            You've been inactive for a while. For your security, you will be automatically logged out in:
+            You've been inactive for a while. For your security, you will be automatically logged
+            out in:
           </DialogDescription>
         </DialogHeader>
 
@@ -191,12 +192,8 @@ export function InactivityManager() {
             </div>
           </div>
           <div className="mt-4 text-center">
-            <div className="text-4xl font-bold text-purple-600">
-              {countdown}
-            </div>
-            <div className="text-sm text-muted-foreground mt-1">
-              seconds remaining
-            </div>
+            <div className="text-4xl font-bold text-purple-600">{countdown}</div>
+            <div className="text-sm text-muted-foreground mt-1">seconds remaining</div>
           </div>
         </div>
 
@@ -211,7 +208,8 @@ export function InactivityManager() {
         </DialogFooter>
 
         <p className="text-xs text-center text-muted-foreground mt-2">
-          Click "Continue Session" to stay logged in, or you'll be automatically logged out when the timer reaches zero.
+          Click "Continue Session" to stay logged in, or you'll be automatically logged out when the
+          timer reaches zero.
         </p>
       </DialogContent>
     </Dialog>

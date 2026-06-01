@@ -29,10 +29,18 @@ import {
 import { Button } from '../../../../ui/button';
 import { adminAuditApi } from '../api';
 import { AuditLogViewer } from './AuditLogViewer';
-import type { AdminAuditEntry, AuditActionCategory, AuditSeverity, AuditLogWidgetProps } from '../types';
+import type {
+  AdminAuditEntry,
+  AuditActionCategory,
+  AuditSeverity,
+  AuditLogWidgetProps,
+} from '../types';
 
 /** Category → icon + label mapping (config-driven, §5.3). */
-const CATEGORY_CONFIG: Record<AuditActionCategory, { icon: React.ElementType; label: string; color: string }> = {
+const CATEGORY_CONFIG: Record<
+  AuditActionCategory,
+  { icon: React.ElementType; label: string; color: string }
+> = {
   client_lifecycle: { icon: Users, label: 'Client', color: 'text-blue-600' },
   kv_cleanup: { icon: Trash2, label: 'Cleanup', color: 'text-purple-600' },
   configuration: { icon: Settings, label: 'Config', color: 'text-gray-600' },
@@ -72,8 +80,11 @@ function formatTimestamp(ts: string): string {
 
   // Same year — omit year
   if (d.getFullYear() === now.getFullYear()) {
-    return d.toLocaleDateString('en-ZA', { day: 'numeric', month: 'short' })
-      + ' ' + d.toLocaleTimeString('en-ZA', { hour: '2-digit', minute: '2-digit' });
+    return (
+      d.toLocaleDateString('en-ZA', { day: 'numeric', month: 'short' }) +
+      ' ' +
+      d.toLocaleTimeString('en-ZA', { hour: '2-digit', minute: '2-digit' })
+    );
   }
 
   return d.toLocaleDateString('en-ZA', { day: 'numeric', month: 'short', year: 'numeric' });
@@ -135,9 +146,7 @@ export function AuditLogWidget({ maxEntries = 8 }: AuditLogWidgetProps) {
             </Button>
           </div>
         </div>
-        <CardDescription>
-          Recent admin actions across the platform
-        </CardDescription>
+        <CardDescription>Recent admin actions across the platform</CardDescription>
       </CardHeader>
       <CardContent>
         {/* Summary Stats Row */}
@@ -149,7 +158,12 @@ export function AuditLogWidget({ maxEntries = 8 }: AuditLogWidgetProps) {
               </span>
             </div>
             <div className="flex flex-wrap gap-x-4 gap-y-1.5">
-              {(Object.entries(CATEGORY_CONFIG) as [AuditActionCategory, typeof CATEGORY_CONFIG[AuditActionCategory]][])
+              {(
+                Object.entries(CATEGORY_CONFIG) as [
+                  AuditActionCategory,
+                  (typeof CATEGORY_CONFIG)[AuditActionCategory],
+                ][]
+              )
                 .filter(([cat]) => (summary[cat] || 0) > 0)
                 .sort(([a], [b]) => (summary[b] || 0) - (summary[a] || 0))
                 .map(([cat, cfg]) => {

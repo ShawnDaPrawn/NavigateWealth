@@ -51,7 +51,7 @@ export interface UseVascoStreamReturn {
   /** Send a message and stream the response */
   sendStream: (
     chatHistory: Array<{ role: string; content: string }>,
-    sessionId: string | null
+    sessionId: string | null,
   ) => Promise<StreamResult>;
   /** Abort an in-progress stream */
   abort: () => void;
@@ -76,7 +76,7 @@ export function useVascoStream({
   const sendStream = useCallback(
     async (
       chatHistory: Array<{ role: string; content: string }>,
-      sessionId: string | null
+      sessionId: string | null,
     ): Promise<StreamResult> => {
       // Abort any in-progress stream
       abortRef.current?.abort();
@@ -112,8 +112,7 @@ export function useVascoStream({
             : undefined;
         const errorMsg = isRateLimited
           ? bodyError || "You've reached the message limit. Please try again later."
-          : bodyError ||
-            'I apologise, but I encountered a temporary issue. Please try again.';
+          : bodyError || 'I apologise, but I encountered a temporary issue. Please try again.';
         const streamError = new VascoStreamError(errorMsg);
         streamError.status = response.status;
         streamError.code =
@@ -133,9 +132,7 @@ export function useVascoStream({
 
       // Parse X-Vasco-Remaining header
       const remainingHeader = response.headers.get('X-Vasco-Remaining');
-      const remaining = remainingHeader
-        ? parseInt(remainingHeader, 10)
-        : undefined;
+      const remaining = remainingHeader ? parseInt(remainingHeader, 10) : undefined;
 
       // Process SSE stream
       const reader = response.body!.getReader();
@@ -173,11 +170,7 @@ export function useVascoStream({
                 throw new Error(data.message || 'Stream error');
               }
             } catch (parseErr) {
-              if (
-                parseErr instanceof Error &&
-                parseErr.message === 'Stream error'
-              )
-                throw parseErr;
+              if (parseErr instanceof Error && parseErr.message === 'Stream error') throw parseErr;
               // Skip malformed SSE lines
             }
           }
@@ -198,7 +191,7 @@ export function useVascoStream({
         remaining,
       };
     },
-    [endpoint, authToken, extraBody]
+    [endpoint, authToken, extraBody],
   );
 
   return { streamingContent, isStreaming, sendStream, abort };

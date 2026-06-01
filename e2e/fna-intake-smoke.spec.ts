@@ -15,8 +15,7 @@ const adviserEmail = process.env.E2E_FNA_ADVISER_EMAIL;
 const adviserPassword = process.env.E2E_FNA_ADVISER_PASSWORD;
 const domain = process.env.E2E_FNA_DOMAIN ?? 'retirement';
 
-const hasCredentials =
-  clientEmail && clientPassword && adviserEmail && adviserPassword;
+const hasCredentials = clientEmail && clientPassword && adviserEmail && adviserPassword;
 
 test.describe('FNA intake — staging smoke', () => {
   test.skip(!hasCredentials, 'Set E2E_FNA_* credentials to run intake smoke.');

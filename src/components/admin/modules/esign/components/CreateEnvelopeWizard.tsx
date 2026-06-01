@@ -258,8 +258,8 @@ export function CreateEnvelopeWizard({
               dragActive
                 ? 'border-purple-500 bg-purple-50'
                 : errors.file
-                ? 'border-red-300 bg-red-50'
-                : 'border-gray-300 hover:border-gray-400'
+                  ? 'border-red-300 bg-red-50'
+                  : 'border-gray-300 hover:border-gray-400'
             }`}
             onDragEnter={handleDrag}
             onDragLeave={handleDrag}
@@ -271,12 +271,7 @@ export function CreateEnvelopeWizard({
               <p className="text-sm font-medium">Drag and drop your PDF file here</p>
               <p className="text-xs text-muted-foreground">or</p>
               <label htmlFor="file-upload">
-                <Button
-                  type="button"
-                  variant="outline"
-                  className="cursor-pointer"
-                  asChild
-                >
+                <Button type="button" variant="outline" className="cursor-pointer" asChild>
                   <span>Browse Files</span>
                 </Button>
                 <input
@@ -287,9 +282,7 @@ export function CreateEnvelopeWizard({
                   onChange={handleFileSelect}
                 />
               </label>
-              <p className="text-xs text-muted-foreground mt-2">
-                PDF files only, max 10MB
-              </p>
+              <p className="text-xs text-muted-foreground mt-2">PDF files only, max 10MB</p>
             </div>
           </div>
         ) : (
@@ -350,9 +343,7 @@ export function CreateEnvelopeWizard({
           rows={3}
           maxLength={500}
         />
-        <p className="text-xs text-muted-foreground text-right">
-          {message.length}/500
-        </p>
+        <p className="text-xs text-muted-foreground text-right">{message.length}/500</p>
       </div>
 
       {/* Expiry */}
@@ -375,9 +366,7 @@ export function CreateEnvelopeWizard({
         )}
         <p className="text-xs text-muted-foreground">
           Document will expire on{' '}
-          {new Date(Date.now() + expiryDays * 24 * 60 * 60 * 1000).toLocaleDateString(
-            'en-ZA'
-          )}
+          {new Date(Date.now() + expiryDays * 24 * 60 * 60 * 1000).toLocaleDateString('en-ZA')}
         </p>
       </div>
 
@@ -395,8 +384,12 @@ export function CreateEnvelopeWizard({
             }`}
           >
             <div className="flex items-center gap-2 mb-1">
-              <ListOrdered className={`h-4 w-4 ${signingMode === 'sequential' ? 'text-purple-600' : 'text-gray-400'}`} />
-              <span className={`text-sm font-medium ${signingMode === 'sequential' ? 'text-purple-700' : 'text-gray-700'}`}>
+              <ListOrdered
+                className={`h-4 w-4 ${signingMode === 'sequential' ? 'text-purple-600' : 'text-gray-400'}`}
+              />
+              <span
+                className={`text-sm font-medium ${signingMode === 'sequential' ? 'text-purple-700' : 'text-gray-700'}`}
+              >
                 Sequential
               </span>
             </div>
@@ -419,8 +412,12 @@ export function CreateEnvelopeWizard({
             }`}
           >
             <div className="flex items-center gap-2 mb-1">
-              <Shuffle className={`h-4 w-4 ${signingMode === 'parallel' ? 'text-blue-600' : 'text-gray-400'}`} />
-              <span className={`text-sm font-medium ${signingMode === 'parallel' ? 'text-blue-700' : 'text-gray-700'}`}>
+              <Shuffle
+                className={`h-4 w-4 ${signingMode === 'parallel' ? 'text-blue-600' : 'text-gray-400'}`}
+              />
+              <span
+                className={`text-sm font-medium ${signingMode === 'parallel' ? 'text-blue-700' : 'text-gray-700'}`}
+              >
                 Parallel
               </span>
             </div>
@@ -507,9 +504,7 @@ export function CreateEnvelopeWizard({
                   </Badge>
                 </p>
                 {message && (
-                  <p className="mt-2 italic border-l-2 border-gray-300 pl-3">
-                    {message}
-                  </p>
+                  <p className="mt-2 italic border-l-2 border-gray-300 pl-3">{message}</p>
                 )}
               </div>
             </div>
@@ -529,10 +524,7 @@ export function CreateEnvelopeWizard({
           </div>
           <div className="space-y-2">
             {signers.map((signer, index) => (
-              <div
-                key={index}
-                className="flex items-center justify-between p-3 bg-gray-50 rounded"
-              >
+              <div key={index} className="flex items-center justify-between p-3 bg-gray-50 rounded">
                 <div>
                   <div className="flex items-center gap-2">
                     <span className="font-medium">{signer.name}</span>
@@ -639,9 +631,7 @@ export function CreateEnvelopeWizard({
             >
               <div
                 className={`h-8 w-8 rounded-full flex items-center justify-center border-2 ${
-                  currentStep === 'upload'
-                    ? 'border-purple-600 bg-purple-50'
-                    : 'border-gray-300'
+                  currentStep === 'upload' ? 'border-purple-600 bg-purple-50' : 'border-gray-300'
                 }`}
               >
                 {['signers', 'review'].includes(currentStep) ? (
@@ -663,8 +653,8 @@ export function CreateEnvelopeWizard({
                   currentStep === 'signers'
                     ? 'border-purple-600 bg-purple-50'
                     : currentStep === 'review'
-                    ? 'border-gray-300'
-                    : 'border-gray-300'
+                      ? 'border-gray-300'
+                      : 'border-gray-300'
                 }`}
               >
                 {currentStep === 'review' ? (
@@ -683,9 +673,7 @@ export function CreateEnvelopeWizard({
             >
               <div
                 className={`h-8 w-8 rounded-full flex items-center justify-center border-2 ${
-                  currentStep === 'review'
-                    ? 'border-purple-600 bg-purple-50'
-                    : 'border-gray-300'
+                  currentStep === 'review' ? 'border-purple-600 bg-purple-50' : 'border-gray-300'
                 }`}
               >
                 <span className="text-sm font-medium">3</span>

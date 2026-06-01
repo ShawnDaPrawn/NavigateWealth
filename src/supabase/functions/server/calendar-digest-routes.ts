@@ -17,30 +17,23 @@
  * ****************************************************************************
  */
 
-import { Hono } from "npm:hono";
-import { createClient } from "jsr:@supabase/supabase-js@2.49.8";
-import { createModuleLogger } from "./stderr-logger.ts";
-import { asyncHandler } from "./error.middleware.ts";
-import {
-  sendEmail,
-  createEmailTemplate,
-  getFooterSettings,
-} from "./email-service.tsx";
+import { Hono } from 'npm:hono';
+import { createClient } from 'jsr:@supabase/supabase-js@2.49.8';
+import { createModuleLogger } from './stderr-logger.ts';
+import { asyncHandler } from './error.middleware.ts';
+import { sendEmail, createEmailTemplate, getFooterSettings } from './email-service.tsx';
 
 const app = new Hono();
-const log = createModuleLogger("calendar-digest");
+const log = createModuleLogger('calendar-digest');
 
-const ADMIN_EMAIL = "info@navigatewealth.co";
+const ADMIN_EMAIL = 'info@navigatewealth.co';
 
 // ---------------------------------------------------------------------------
 // Supabase client — service role for reading across all users
 // ---------------------------------------------------------------------------
 
 const getSupabase = () =>
-  createClient(
-    Deno.env.get("SUPABASE_URL")!,
-    Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
-  );
+  createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!);
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -48,10 +41,10 @@ const getSupabase = () =>
 
 function formatTime(isoStr: string): string {
   try {
-    return new Date(isoStr).toLocaleTimeString("en-ZA", {
-      hour: "2-digit",
-      minute: "2-digit",
-      timeZone: "Africa/Johannesburg",
+    return new Date(isoStr).toLocaleTimeString('en-ZA', {
+      hour: '2-digit',
+      minute: '2-digit',
+      timeZone: 'Africa/Johannesburg',
     });
   } catch {
     return isoStr;
@@ -60,11 +53,11 @@ function formatTime(isoStr: string): string {
 
 function formatDate(isoStr: string): string {
   try {
-    return new Date(isoStr).toLocaleDateString("en-ZA", {
-      day: "2-digit",
-      month: "short",
-      year: "numeric",
-      timeZone: "Africa/Johannesburg",
+    return new Date(isoStr).toLocaleDateString('en-ZA', {
+      day: '2-digit',
+      month: 'short',
+      year: 'numeric',
+      timeZone: 'Africa/Johannesburg',
     });
   } catch {
     return isoStr;
@@ -73,26 +66,26 @@ function formatDate(isoStr: string): string {
 
 /** Map event_type to a human label. */
 const EVENT_TYPE_LABELS: Record<string, string> = {
-  meeting: "Meeting",
-  review: "Review",
-  call: "Call",
-  webinar: "Webinar",
-  internal: "Internal",
-  consultation: "Consultation",
-  deadline: "Deadline",
-  other: "Other",
+  meeting: 'Meeting',
+  review: 'Review',
+  call: 'Call',
+  webinar: 'Webinar',
+  internal: 'Internal',
+  consultation: 'Consultation',
+  deadline: 'Deadline',
+  other: 'Other',
 };
 
 /** Map event_type to badge colours for the email. */
 const EVENT_TYPE_COLOURS: Record<string, { bg: string; text: string }> = {
-  meeting: { bg: "#6d28d9", text: "#ffffff" },
-  review: { bg: "#2563eb", text: "#ffffff" },
-  call: { bg: "#059669", text: "#ffffff" },
-  webinar: { bg: "#d97706", text: "#ffffff" },
-  internal: { bg: "#6b7280", text: "#ffffff" },
-  consultation: { bg: "#7c3aed", text: "#ffffff" },
-  deadline: { bg: "#dc2626", text: "#ffffff" },
-  other: { bg: "#9ca3af", text: "#ffffff" },
+  meeting: { bg: '#6d28d9', text: '#ffffff' },
+  review: { bg: '#2563eb', text: '#ffffff' },
+  call: { bg: '#059669', text: '#ffffff' },
+  webinar: { bg: '#d97706', text: '#ffffff' },
+  internal: { bg: '#6b7280', text: '#ffffff' },
+  consultation: { bg: '#7c3aed', text: '#ffffff' },
+  deadline: { bg: '#dc2626', text: '#ffffff' },
+  other: { bg: '#9ca3af', text: '#ffffff' },
 };
 
 // ---------------------------------------------------------------------------
@@ -101,22 +94,19 @@ const EVENT_TYPE_COLOURS: Record<string, { bg: string; text: string }> = {
 
 async function requireCronAuth(
   c: { req: { header: (n: string) => string | undefined } },
-  next: () => Promise<void>
+  next: () => Promise<void>,
 ) {
-  const authHeader = c.req.header("Authorization") || "";
-  const token = authHeader.replace(/^Bearer\s+/i, "");
+  const authHeader = c.req.header('Authorization') || '';
+  const token = authHeader.replace(/^Bearer\s+/i, '');
 
-  const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "";
-  const superAdminPw = Deno.env.get("SUPER_ADMIN_PASSWORD") || "";
+  const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || '';
+  const superAdminPw = Deno.env.get('SUPER_ADMIN_PASSWORD') || '';
 
-  if (
-    (serviceRoleKey && token === serviceRoleKey) ||
-    (superAdminPw && token === superAdminPw)
-  ) {
+  if ((serviceRoleKey && token === serviceRoleKey) || (superAdminPw && token === superAdminPw)) {
     return next();
   }
 
-  return new Response("Unauthorized — cron auth required", { status: 401 });
+  return new Response('Unauthorized — cron auth required', { status: 401 });
 }
 
 // ---------------------------------------------------------------------------
@@ -124,51 +114,44 @@ async function requireCronAuth(
 // ---------------------------------------------------------------------------
 
 app.post(
-  "/send-daily",
+  '/send-daily',
   requireCronAuth,
   asyncHandler(async (c) => {
-    log.info("=== Daily Calendar Digest: Starting ===");
+    log.info('=== Daily Calendar Digest: Starting ===');
 
     // 1. Determine today's boundaries in SAST (UTC+2)
     const now = new Date();
     const sastOffset = 2 * 60 * 60 * 1000;
     const sastNow = new Date(now.getTime() + sastOffset);
     const todayStart = new Date(
-      Date.UTC(
-        sastNow.getUTCFullYear(),
-        sastNow.getUTCMonth(),
-        sastNow.getUTCDate(),
-        0, 0, 0, 0
-      )
+      Date.UTC(sastNow.getUTCFullYear(), sastNow.getUTCMonth(), sastNow.getUTCDate(), 0, 0, 0, 0),
     );
     // Convert back to UTC for the DB query
     const dayStartUtc = new Date(todayStart.getTime() - sastOffset);
     const dayEndUtc = new Date(dayStartUtc.getTime() + 24 * 60 * 60 * 1000);
 
-    log.info(
-      `Querying events between ${dayStartUtc.toISOString()} and ${dayEndUtc.toISOString()}`
-    );
+    log.info(`Querying events between ${dayStartUtc.toISOString()} and ${dayEndUtc.toISOString()}`);
 
     // 2. Query all events for today across all users
     const { data: events, error } = await getSupabase()
-      .from("events")
-      .select("*, client:clients(id, full_name, email)")
-      .gte("start_at", dayStartUtc.toISOString())
-      .lt("start_at", dayEndUtc.toISOString())
-      .neq("status", "cancelled")
-      .order("start_at", { ascending: true });
+      .from('events')
+      .select('*, client:clients(id, full_name, email)')
+      .gte('start_at', dayStartUtc.toISOString())
+      .lt('start_at', dayEndUtc.toISOString())
+      .neq('status', 'cancelled')
+      .order('start_at', { ascending: true });
 
     if (error) {
-      log.error("Failed to query calendar events", error);
+      log.error('Failed to query calendar events', error);
       return c.json({ success: false, error: `DB query failed: ${error.message}` }, 500);
     }
 
-    const todayFormatted = new Date().toLocaleDateString("en-ZA", {
-      weekday: "long",
-      day: "2-digit",
-      month: "long",
-      year: "numeric",
-      timeZone: "Africa/Johannesburg",
+    const todayFormatted = new Date().toLocaleDateString('en-ZA', {
+      weekday: 'long',
+      day: '2-digit',
+      month: 'long',
+      year: 'numeric',
+      timeZone: 'Africa/Johannesburg',
     });
 
     if (!events || events.length === 0) {
@@ -181,14 +164,14 @@ app.post(
            Enjoy the free time — or use it to catch up on pending tasks.
          </p>`,
         {
-          title: "Daily Calendar",
+          title: 'Daily Calendar',
           subtitle: todayFormatted,
-          greeting: "Good morning,",
-          buttonUrl: "https://www.navigatewealth.co/admin/calendar",
-          buttonLabel: "Open Calendar",
-          footerNote: "This is an automated daily digest from Navigate Wealth.",
+          greeting: 'Good morning,',
+          buttonUrl: 'https://www.navigatewealth.co/admin/calendar',
+          buttonLabel: 'Open Calendar',
+          footerNote: 'This is an automated daily digest from Navigate Wealth.',
           footerSettings,
-        }
+        },
       );
 
       const sent = await sendEmail({
@@ -206,13 +189,12 @@ app.post(
     // 3. Build event table rows
     const eventRows = events
       .map((evt: Record<string, unknown>) => {
-        const eventType = (evt.event_type as string) || "other";
-        const typeLabel = EVENT_TYPE_LABELS[eventType] || "Other";
+        const eventType = (evt.event_type as string) || 'other';
+        const typeLabel = EVENT_TYPE_LABELS[eventType] || 'Other';
         const typeColour = EVENT_TYPE_COLOURS[eventType] || EVENT_TYPE_COLOURS.other;
         const timeStr = `${formatTime(evt.start_at as string)} – ${formatTime(evt.end_at as string)}`;
-        const clientName =
-          (evt.client as Record<string, unknown>)?.full_name || "—";
-        const location = (evt.location as string) || (evt.video_link as string) || "—";
+        const clientName = (evt.client as Record<string, unknown>)?.full_name || '—';
+        const location = (evt.location as string) || (evt.video_link as string) || '—';
 
         return `
           <tr>
@@ -220,7 +202,7 @@ app.post(
               <div style="font-weight: 600; color: #111827; font-size: 14px; margin-bottom: 3px;">
                 ${evt.title}
               </div>
-              ${evt.description ? `<div style="font-size: 12px; color: #6b7280; margin-top: 2px;">${(evt.description as string).substring(0, 80)}${(evt.description as string).length > 80 ? '…' : ''}</div>` : ""}
+              ${evt.description ? `<div style="font-size: 12px; color: #6b7280; margin-top: 2px;">${(evt.description as string).substring(0, 80)}${(evt.description as string).length > 80 ? '…' : ''}</div>` : ''}
             </td>
             <td style="padding: 12px 10px; border-bottom: 1px solid #f3f4f6; text-align: center; vertical-align: top;">
               <span style="
@@ -244,27 +226,27 @@ app.post(
             </td>
           </tr>`;
       })
-      .join("");
+      .join('');
 
     // 4. Summary by event type
     const typeCounts: Record<string, number> = {};
     for (const evt of events) {
-      const t = (evt.event_type as string) || "other";
+      const t = (evt.event_type as string) || 'other';
       typeCounts[t] = (typeCounts[t] || 0) + 1;
     }
 
     const summaryBadges = Object.entries(typeCounts)
       .map(([type, count]) => {
         const colour = EVENT_TYPE_COLOURS[type] || EVENT_TYPE_COLOURS.other;
-        const label = EVENT_TYPE_LABELS[type] || "Other";
+        const label = EVENT_TYPE_LABELS[type] || 'Other';
         return `<span style="display:inline-block;padding:4px 12px;border-radius:999px;font-size:12px;font-weight:600;background:${colour.bg}20;color:${colour.bg};margin-right:6px;margin-bottom:4px;">${label}: ${count}</span>`;
       })
-      .join("");
+      .join('');
 
     // 5. Compose body HTML
     const bodyHtml = `
       <p style="margin-bottom: 16px;">
-        You have <strong style="color: #6d28d9;">${events.length}</strong> event${events.length !== 1 ? "s" : ""} scheduled for today.
+        You have <strong style="color: #6d28d9;">${events.length}</strong> event${events.length !== 1 ? 's' : ''} scheduled for today.
       </p>
 
       <!-- Type Summary -->
@@ -313,12 +295,12 @@ app.post(
     const footerSettings = await getFooterSettings();
 
     const html = createEmailTemplate(bodyHtml, {
-      title: "Daily Calendar",
+      title: 'Daily Calendar',
       subtitle: todayFormatted,
-      greeting: "Good morning,",
-      buttonUrl: "https://www.navigatewealth.co/admin/calendar",
-      buttonLabel: "Open Calendar",
-      footerNote: "This is an automated daily digest from Navigate Wealth.",
+      greeting: 'Good morning,',
+      buttonUrl: 'https://www.navigatewealth.co/admin/calendar',
+      buttonLabel: 'Open Calendar',
+      footerNote: 'This is an automated daily digest from Navigate Wealth.',
       footerSettings,
     });
 
@@ -326,10 +308,10 @@ app.post(
     const eventLines = events
       .map((evt: Record<string, unknown>, i: number) => {
         const timeStr = `${formatTime(evt.start_at as string)} – ${formatTime(evt.end_at as string)}`;
-        const typeLabel = EVENT_TYPE_LABELS[(evt.event_type as string) || "other"] || "Other";
+        const typeLabel = EVENT_TYPE_LABELS[(evt.event_type as string) || 'other'] || 'Other';
         return `  ${i + 1}. [${typeLabel}] ${evt.title} — ${timeStr}`;
       })
-      .join("\n");
+      .join('\n');
 
     const text = `
 Daily Calendar — ${todayFormatted}
@@ -354,7 +336,7 @@ This is an automated daily digest from Navigate Wealth.
       text,
     });
 
-    log.info(`Calendar digest email ${sent ? "sent" : "FAILED"} to ${ADMIN_EMAIL}`);
+    log.info(`Calendar digest email ${sent ? 'sent' : 'FAILED'} to ${ADMIN_EMAIL}`);
 
     return c.json({
       success: true,
@@ -362,7 +344,7 @@ This is an automated daily digest from Navigate Wealth.
       event_count: events.length,
       by_type: typeCounts,
     });
-  })
+  }),
 );
 
 export default app;

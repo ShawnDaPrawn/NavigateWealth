@@ -47,9 +47,7 @@ export function PrepareFormEditor({
 }: PrepareFormEditorProps) {
   const [signers] = useState<SignerFormData[]>(initialSigners);
   const [fields, setFields] = useState<EsignField[]>(envelope.fields || []);
-  const [selectedSignerId, setSelectedSignerId] = useState<string | undefined>(
-    signers[0]?.email
-  );
+  const [selectedSignerId, setSelectedSignerId] = useState<string | undefined>(signers[0]?.email);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [showValidationErrors, setShowValidationErrors] = useState(false);
   const [autoSaving, setAutoSaving] = useState(false);
@@ -93,18 +91,18 @@ export function PrepareFormEditor({
   const handleAutoSave = async () => {
     try {
       setAutoSaving(true);
-      
+
       // Save to backend via API
       const response = await fetch(
         `https://${projectId}.supabase.co/functions/v1/make-server-91ed8379/esign/envelopes/${envelope.id}/fields`,
         {
           method: 'PUT',
           headers: {
-            'Authorization': `Bearer ${publicAnonKey}`,
+            Authorization: `Bearer ${publicAnonKey}`,
             'Content-Type': 'application/json',
           },
           body: JSON.stringify({ fields }),
-        }
+        },
       );
 
       if (!response.ok) {
@@ -114,7 +112,7 @@ export function PrepareFormEditor({
       // Update last saved reference
       lastSavedFieldsRef.current = JSON.stringify(fields);
       setHasUnsavedChanges(false);
-      
+
       console.log('✅ Auto-saved field positions');
     } catch (error) {
       console.error('❌ Auto-save failed:', error);
@@ -176,22 +174,19 @@ export function PrepareFormEditor({
       setFields((prev) => [...prev, fieldWithDefaults]);
       setHasUnsavedChanges(true);
     },
-    [envelope.id, selectedSignerId, signers]
+    [envelope.id, selectedSignerId, signers],
   );
 
-  const handleFieldUpdate = useCallback(
-    (fieldId: string, updates: Partial<EsignField>) => {
-      setFields((prev) =>
-        prev.map((field) =>
-          field.id === fieldId 
-            ? { ...field, ...updates, updated_at: new Date().toISOString() } 
-            : field
-        )
-      );
-      setHasUnsavedChanges(true);
-    },
-    []
-  );
+  const handleFieldUpdate = useCallback((fieldId: string, updates: Partial<EsignField>) => {
+    setFields((prev) =>
+      prev.map((field) =>
+        field.id === fieldId
+          ? { ...field, ...updates, updated_at: new Date().toISOString() }
+          : field,
+      ),
+    );
+    setHasUnsavedChanges(true);
+  }, []);
 
   const handleFieldDelete = useCallback((fieldId: string) => {
     setFields((prev) => prev.filter((field) => field.id !== fieldId));
@@ -249,13 +244,13 @@ export function PrepareFormEditor({
         {/* Full Screen Header */}
         <div className="bg-white border-b border-gray-200 p-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
-             <Button variant="ghost" size="sm" onClick={() => setIsFullScreen(false)}>
-               <ArrowLeft className="h-4 w-4 mr-1" />
-               Exit Full Screen
-             </Button>
-             <h2 className="font-semibold text-lg">{envelope.title}</h2>
+            <Button variant="ghost" size="sm" onClick={() => setIsFullScreen(false)}>
+              <ArrowLeft className="h-4 w-4 mr-1" />
+              Exit Full Screen
+            </Button>
+            <h2 className="font-semibold text-lg">{envelope.title}</h2>
           </div>
-          
+
           <div className="flex items-center gap-2">
             <Button
               variant="outline"
@@ -263,7 +258,11 @@ export function PrepareFormEditor({
               disabled={saving || !hasUnsavedChanges || autoSaving}
               size="sm"
             >
-              {saving ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <Save className="h-4 w-4 mr-1" />}
+              {saving ? (
+                <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+              ) : (
+                <Save className="h-4 w-4 mr-1" />
+              )}
               Save
             </Button>
             <Button
@@ -298,7 +297,14 @@ export function PrepareFormEditor({
                     `}
                   >
                     <div className="flex items-center gap-2">
-                      <div className="w-2 h-2 rounded-full" style={{ backgroundColor: ['#6d28d9', '#0891b2', '#059669', '#ea580c', '#dc2626'][idx % 5] }} />
+                      <div
+                        className="w-2 h-2 rounded-full"
+                        style={{
+                          backgroundColor: ['#6d28d9', '#0891b2', '#059669', '#ea580c', '#dc2626'][
+                            idx % 5
+                          ],
+                        }}
+                      />
                       <span className="truncate font-medium">{signer.name}</span>
                     </div>
                   </button>
@@ -315,7 +321,9 @@ export function PrepareFormEditor({
                 onFieldPlace={handleFieldPlace}
                 onFieldUpdate={handleFieldUpdate}
                 onFieldDelete={handleFieldDelete}
-                onFieldClick={(field) => { if (field) handleFieldClick(field); }}
+                onFieldClick={(field) => {
+                  if (field) handleFieldClick(field);
+                }}
                 selectedSignerId={selectedSignerId}
                 showFields={true}
                 isFullScreen={true}
@@ -325,7 +333,7 @@ export function PrepareFormEditor({
 
             {/* Right Sidebar */}
             <div className="col-span-2 border-l border-gray-200 bg-white p-4 overflow-auto h-full">
-               <div className="flex items-center gap-2 mb-4">
+              <div className="flex items-center gap-2 mb-4">
                 <FileText className="h-4 w-4 text-purple-600" />
                 <h3 className="font-semibold">Fields</h3>
               </div>
@@ -351,12 +359,7 @@ export function PrepareFormEditor({
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
             {onBack && (
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={onBack}
-                className="h-8"
-              >
+              <Button variant="ghost" size="sm" onClick={onBack} className="h-8">
                 <ArrowLeft className="h-4 w-4 mr-1" />
                 Back
               </Button>
@@ -376,7 +379,7 @@ export function PrepareFormEditor({
                 Auto-saving...
               </Badge>
             )}
-            
+
             {hasUnsavedChanges && !autoSaving && (
               <Badge variant="secondary" className="text-orange-600">
                 Unsaved changes
@@ -435,9 +438,7 @@ export function PrepareFormEditor({
           <div className="flex items-start gap-2">
             <AlertCircle className="h-5 w-5 text-red-600 mt-0.5 flex-shrink-0" />
             <div className="flex-1">
-              <h3 className="font-semibold text-red-900 mb-1">
-                Cannot send document
-              </h3>
+              <h3 className="font-semibold text-red-900 mb-1">Cannot send document</h3>
               <ul className="text-sm text-red-700 space-y-1">
                 {validationErrors.map((error, idx) => (
                   <li key={idx}>• {error}</li>
@@ -517,25 +518,17 @@ export function PrepareFormEditor({
                     <div
                       className="w-3 h-3 rounded-full flex-shrink-0"
                       style={{
-                        backgroundColor: [
-                          '#6d28d9',
-                          '#0891b2',
-                          '#059669',
-                          '#ea580c',
-                          '#dc2626',
-                        ][idx % 5],
+                        backgroundColor: ['#6d28d9', '#0891b2', '#059669', '#ea580c', '#dc2626'][
+                          idx % 5
+                        ],
                       }}
                     />
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-medium truncate">{signer.name}</p>
-                      <p className="text-xs text-muted-foreground truncate">
-                        {signer.email}
-                      </p>
+                      <p className="text-xs text-muted-foreground truncate">{signer.email}</p>
                       <p className="text-xs text-muted-foreground">
                         {fields.filter((f) => f.signer_id === signer.email).length} field
-                        {fields.filter((f) => f.signer_id === signer.email).length !== 1
-                          ? 's'
-                          : ''}
+                        {fields.filter((f) => f.signer_id === signer.email).length !== 1 ? 's' : ''}
                       </p>
                     </div>
                   </div>
@@ -566,7 +559,9 @@ export function PrepareFormEditor({
             onFieldPlace={handleFieldPlace}
             onFieldUpdate={handleFieldUpdate}
             onFieldDelete={handleFieldDelete}
-            onFieldClick={(field) => { if (field) handleFieldClick(field); }}
+            onFieldClick={(field) => {
+              if (field) handleFieldClick(field);
+            }}
             selectedSignerId={selectedSignerId}
             showFields={true}
             isFullScreen={false}

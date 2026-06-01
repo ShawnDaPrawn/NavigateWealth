@@ -82,14 +82,30 @@ const SEVERITY_STYLES = {
 const PILLAR_CONFIG: Record<string, { icon: React.ElementType; color: string; path: string }> = {
   'Risk Management': { icon: Shield, color: 'text-purple-600', path: '/dashboard/risk-management' },
   'Medical Aid': { icon: Heart, color: 'text-rose-600', path: '/dashboard/medical-aid' },
-  'Retirement': { icon: PiggyBank, color: 'text-amber-600', path: '/dashboard/retirement-planning' },
-  'Investment': { icon: TrendingUp, color: 'text-green-600', path: '/dashboard/investment-management' },
-  'Estate Planning': { icon: Landmark, color: 'text-purple-600', path: '/dashboard/estate-planning' },
+  Retirement: { icon: PiggyBank, color: 'text-amber-600', path: '/dashboard/retirement-planning' },
+  Investment: {
+    icon: TrendingUp,
+    color: 'text-green-600',
+    path: '/dashboard/investment-management',
+  },
+  'Estate Planning': {
+    icon: Landmark,
+    color: 'text-purple-600',
+    path: '/dashboard/estate-planning',
+  },
   'Tax Planning': { icon: FileText, color: 'text-indigo-600', path: '/dashboard/tax-planning' },
-  'Employee Benefits': { icon: Briefcase, color: 'text-blue-600', path: '/dashboard/employee-benefits' },
+  'Employee Benefits': {
+    icon: Briefcase,
+    color: 'text-blue-600',
+    path: '/dashboard/employee-benefits',
+  },
 };
 
-export function InsightsSection({ overview, clientId, totalWealthValue = 0 }: InsightsSectionProps) {
+export function InsightsSection({
+  overview,
+  clientId,
+  totalWealthValue = 0,
+}: InsightsSectionProps) {
   const navigate = useNavigate();
   const [expanded, setExpanded] = useState(false);
   const [riskInsights, setRiskInsights] = useState<AggregatedInsight[]>([]);
@@ -108,7 +124,8 @@ export function InsightsSection({ overview, clientId, totalWealthValue = 0 }: In
           );
           if (gaps.length > 0) {
             const totalGap = gaps.reduce(
-              (sum: number, n: FinalRiskNeed) => sum + n.finalRecommendedCover, 0,
+              (sum: number, n: FinalRiskNeed) => sum + n.finalRecommendedCover,
+              0,
             );
             insights.push({
               id: 'agg-risk-gap',
@@ -129,7 +146,8 @@ export function InsightsSection({ overview, clientId, totalWealthValue = 0 }: In
             pillarIcon: Shield,
             pillarColor: 'text-purple-600',
             title: 'No Risk Assessment on File',
-            description: 'Complete a Financial Needs Analysis to identify coverage gaps and ensure your family is protected.',
+            description:
+              'Complete a Financial Needs Analysis to identify coverage gaps and ensure your family is protected.',
             severity: 'high',
             actionLabel: 'Start Assessment',
             actionPath: '/dashboard/risk-management',
@@ -157,7 +175,8 @@ export function InsightsSection({ overview, clientId, totalWealthValue = 0 }: In
         pillarIcon: Heart,
         pillarColor: 'text-rose-600',
         title: 'Medical Aid Not Assessed',
-        description: 'A healthcare needs analysis will identify the best scheme and plan for your family.',
+        description:
+          'A healthcare needs analysis will identify the best scheme and plan for your family.',
         severity: 'high',
         actionLabel: 'Review Medical Aid',
         actionPath: '/dashboard/medical-aid',
@@ -188,7 +207,8 @@ export function InsightsSection({ overview, clientId, totalWealthValue = 0 }: In
         pillarIcon: PiggyBank,
         pillarColor: 'text-amber-600',
         title: 'Retirement Not Assessed',
-        description: 'A retirement needs analysis will project whether your savings will meet your income needs.',
+        description:
+          'A retirement needs analysis will project whether your savings will meet your income needs.',
         severity: 'high',
         actionLabel: 'Start Assessment',
         actionPath: '/dashboard/retirement-planning',
@@ -234,7 +254,8 @@ export function InsightsSection({ overview, clientId, totalWealthValue = 0 }: In
         pillarIcon: TrendingUp,
         pillarColor: 'text-green-600',
         title: 'Investment Portfolio Not Assessed',
-        description: 'An investment analysis will align your portfolio with your risk profile and goals.',
+        description:
+          'An investment analysis will align your portfolio with your risk profile and goals.',
         severity: 'medium',
         actionLabel: 'Start Assessment',
         actionPath: '/dashboard/investment-management',
@@ -277,7 +298,8 @@ export function InsightsSection({ overview, clientId, totalWealthValue = 0 }: In
           pillarIcon: Landmark,
           pillarColor: 'text-purple-600',
           title: 'No Valid Will on Record',
-          description: 'Without a Will, your estate will be distributed per the Intestate Succession Act.',
+          description:
+            'Without a Will, your estate will be distributed per the Intestate Succession Act.',
           severity: 'high',
           actionLabel: 'Draft Will',
           actionPath: '/dashboard/estate-planning',
@@ -303,7 +325,8 @@ export function InsightsSection({ overview, clientId, totalWealthValue = 0 }: In
           pillarIcon: Landmark,
           pillarColor: 'text-purple-600',
           title: 'Estate Duty Exposure',
-          description: 'Your wealth exceeds the R3.5m abatement. Planning can reduce the tax burden on heirs.',
+          description:
+            'Your wealth exceeds the R3.5m abatement. Planning can reduce the tax burden on heirs.',
           severity: 'medium',
           actionLabel: 'View Details',
           actionPath: '/dashboard/estate-planning',
@@ -346,8 +369,8 @@ export function InsightsSection({ overview, clientId, totalWealthValue = 0 }: In
 
   if (allInsights.length === 0) return null;
 
-  const highCount = allInsights.filter(i => i.severity === 'high').length;
-  const mediumCount = allInsights.filter(i => i.severity === 'medium').length;
+  const highCount = allInsights.filter((i) => i.severity === 'high').length;
+  const mediumCount = allInsights.filter((i) => i.severity === 'medium').length;
 
   const COLLAPSED_LIMIT = 4;
   const visibleInsights = expanded ? allInsights : allInsights.slice(0, COLLAPSED_LIMIT);
@@ -374,7 +397,10 @@ export function InsightsSection({ overview, clientId, totalWealthValue = 0 }: In
             </Badge>
           )}
           {mediumCount > 0 && (
-            <Badge variant="outline" className="bg-amber-100 text-amber-700 border-transparent text-xs">
+            <Badge
+              variant="outline"
+              className="bg-amber-100 text-amber-700 border-transparent text-xs"
+            >
               {mediumCount} to review
             </Badge>
           )}

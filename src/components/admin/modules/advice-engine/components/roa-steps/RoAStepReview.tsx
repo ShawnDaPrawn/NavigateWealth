@@ -74,7 +74,8 @@ export function RoAStepReview({ draft, onUpdate, onDraftReplaced, modules }: RoA
   })();
 
   const allModulesComplete = draft.selectedModules.every((moduleId) => {
-    const module = modules?.find((item) => item.id === moduleId) || getFallbackRuntimeModule(moduleId);
+    const module =
+      modules?.find((item) => item.id === moduleId) || getFallbackRuntimeModule(moduleId);
     if (!module) return false;
     return getModuleRuntimeStatus(
       module,
@@ -116,7 +117,11 @@ export function RoAStepReview({ draft, onUpdate, onDraftReplaced, modules }: RoA
       : await roaApi.downloadGeneratedDocument(document.id);
 
     if (storedDocument.downloadBase64) {
-      downloadBase64(storedDocument.downloadBase64, storedDocument.contentType, storedDocument.fileName);
+      downloadBase64(
+        storedDocument.downloadBase64,
+        storedDocument.contentType,
+        storedDocument.fileName,
+      );
     }
   };
 
@@ -173,15 +178,21 @@ export function RoAStepReview({ draft, onUpdate, onDraftReplaced, modules }: RoA
 
   const renderContentLines = (content: string) => (
     <div className="space-y-2">
-      {content.split('\n').filter(Boolean).map((line, index) => {
-        const cleaned = line.replace(/^[-#]\s*/, '').trim();
-        if (!cleaned) return null;
-        return (
-          <p key={`${cleaned}-${index}`} className="text-sm leading-relaxed text-muted-foreground">
-            {cleaned}
-          </p>
-        );
-      })}
+      {content
+        .split('\n')
+        .filter(Boolean)
+        .map((line, index) => {
+          const cleaned = line.replace(/^[-#]\s*/, '').trim();
+          if (!cleaned) return null;
+          return (
+            <p
+              key={`${cleaned}-${index}`}
+              className="text-sm leading-relaxed text-muted-foreground"
+            >
+              {cleaned}
+            </p>
+          );
+        })}
     </div>
   );
 
@@ -225,7 +236,8 @@ export function RoAStepReview({ draft, onUpdate, onDraftReplaced, modules }: RoA
         <div>
           <h3 className="font-semibold">{module.title}</h3>
           <p className="text-xs text-muted-foreground">
-            {module.category} | Contract v{module.contractVersion} | {module.normalizedKey || module.moduleId}
+            {module.category} | Contract v{module.contractVersion} |{' '}
+            {module.normalizedKey || module.moduleId}
           </p>
         </div>
         <Badge variant="default" className="bg-green-100 text-green-700 border-green-200">
@@ -248,7 +260,10 @@ export function RoAStepReview({ draft, onUpdate, onDraftReplaced, modules }: RoA
 
       <div className="space-y-3">
         {module.sections.map((section, index) => (
-          <div key={`${module.moduleId}-${section.id}`} className="rounded-md border bg-background p-3">
+          <div
+            key={`${module.moduleId}-${section.id}`}
+            className="rounded-md border bg-background p-3"
+          >
             <div className="mb-2 flex items-center gap-2">
               <Badge variant="outline">{index + 1}</Badge>
               <p className="font-medium">{section.title}</p>
@@ -263,8 +278,13 @@ export function RoAStepReview({ draft, onUpdate, onDraftReplaced, modules }: RoA
           <p className="text-sm font-medium">Evidence</p>
           <div className="mt-2 space-y-1">
             {module.evidence.map((item) => (
-              <div key={`${module.moduleId}-${item.fileName}`} className="text-xs text-muted-foreground">
-                <p>{item.label}: {item.fileName}</p>
+              <div
+                key={`${module.moduleId}-${item.fileName}`}
+                className="text-xs text-muted-foreground"
+              >
+                <p>
+                  {item.label}: {item.fileName}
+                </p>
                 <p>
                   {item.source || 'source not recorded'}
                   {item.sha256 ? ` | SHA-256 ${item.sha256.slice(0, 12)}...` : ''}
@@ -277,9 +297,7 @@ export function RoAStepReview({ draft, onUpdate, onDraftReplaced, modules }: RoA
     </div>
   );
 
-  const renderComplianceSnapshot = (
-    compilation: NonNullable<RoADraft['compiledOutput']>,
-  ) => {
+  const renderComplianceSnapshot = (compilation: NonNullable<RoADraft['compiledOutput']>) => {
     const ctrl = compilation.documentControl;
     if (!ctrl || typeof ctrl !== 'object') return null;
     const contractVersions = (ctrl as Record<string, unknown>).moduleContractVersions;
@@ -302,7 +320,8 @@ export function RoAStepReview({ draft, onUpdate, onDraftReplaced, modules }: RoA
           <h3 className="text-sm font-semibold">Compliance snapshot (module contracts)</h3>
         </div>
         <p className="mb-3 text-xs text-muted-foreground">
-          Contract revision and schema version captured at compile time for traceability. This mirrors document control embedded in the canonical RoA.
+          Contract revision and schema version captured at compile time for traceability. This
+          mirrors document control embedded in the canonical RoA.
         </p>
         <div className="overflow-x-auto rounded-md border">
           <table className="w-full text-left text-sm">
@@ -320,7 +339,9 @@ export function RoAStepReview({ draft, onUpdate, onDraftReplaced, modules }: RoA
                   <td className="px-3 py-2">{titleById.get(moduleId) || moduleId}</td>
                   <td className="px-3 py-2 font-mono text-xs">{moduleId}</td>
                   <td className="px-3 py-2">{String(version)}</td>
-                  <td className="px-3 py-2 font-mono text-xs">{String(schemaMap[moduleId] ?? '—')}</td>
+                  <td className="px-3 py-2 font-mono text-xs">
+                    {String(schemaMap[moduleId] ?? '—')}
+                  </td>
                 </tr>
               ))}
             </tbody>
@@ -338,8 +359,8 @@ export function RoAStepReview({ draft, onUpdate, onDraftReplaced, modules }: RoA
           <Shield className="mx-auto mb-3 h-8 w-8 text-muted-foreground" />
           <p className="font-medium">Canonical RoA not compiled yet</p>
           <p className="mt-1 text-sm text-muted-foreground">
-            Run Validate & Compile to build the final RoA structure from the client snapshot, adviser snapshot,
-            completed module outputs and active module contracts.
+            Run Validate & Compile to build the final RoA structure from the client snapshot,
+            adviser snapshot, completed module outputs and active module contracts.
           </p>
         </div>
       );
@@ -355,7 +376,9 @@ export function RoAStepReview({ draft, onUpdate, onDraftReplaced, modules }: RoA
             </div>
             <div>
               <p className="text-xs text-muted-foreground">Generated</p>
-              <p className="text-sm font-medium">{new Date(compilation.generatedAt).toLocaleString()}</p>
+              <p className="text-sm font-medium">
+                {new Date(compilation.generatedAt).toLocaleString()}
+              </p>
             </div>
             <div>
               <p className="text-xs text-muted-foreground">Status</p>
@@ -403,7 +426,10 @@ export function RoAStepReview({ draft, onUpdate, onDraftReplaced, modules }: RoA
             .slice()
             .sort((a, b) => b.generatedAt.localeCompare(a.generatedAt))
             .map((document) => (
-              <div key={document.id} className="flex flex-col gap-3 rounded-lg border p-3 md:flex-row md:items-center md:justify-between">
+              <div
+                key={document.id}
+                className="flex flex-col gap-3 rounded-lg border p-3 md:flex-row md:items-center md:justify-between"
+              >
                 <div className="min-w-0">
                   <div className="flex flex-wrap items-center gap-2">
                     <p className="truncate text-sm font-medium">{document.fileName}</p>
@@ -413,7 +439,8 @@ export function RoAStepReview({ draft, onUpdate, onDraftReplaced, modules }: RoA
                     <Badge variant="outline">{document.format.toUpperCase()}</Badge>
                   </div>
                   <p className="mt-1 text-xs text-muted-foreground">
-                    Generated {new Date(document.generatedAt).toLocaleString()} | SHA-256 {document.sha256.slice(0, 12)}...
+                    Generated {new Date(document.generatedAt).toLocaleString()} | SHA-256{' '}
+                    {document.sha256.slice(0, 12)}...
                   </p>
                 </div>
                 <Button variant="outline" size="sm" onClick={() => downloadDocument(document)}>
@@ -439,25 +466,30 @@ export function RoAStepReview({ draft, onUpdate, onDraftReplaced, modules }: RoA
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-3">
-          {events.slice(-16).reverse().map((event) => (
-            <div key={event.id} className="rounded-lg border p-3">
-              <div className="flex flex-wrap items-center justify-between gap-2">
-                <p className="text-sm font-medium">{event.summary}</p>
-                <Badge variant="outline">{event.action.replace(/_/g, ' ')}</Badge>
+          {events
+            .slice(-16)
+            .reverse()
+            .map((event) => (
+              <div key={event.id} className="rounded-lg border p-3">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <p className="text-sm font-medium">{event.summary}</p>
+                  <Badge variant="outline">{event.action.replace(/_/g, ' ')}</Badge>
+                </div>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  {new Date(event.createdAt).toLocaleString()} | User {event.createdBy}
+                </p>
+                {event.details && Object.keys(event.details).length > 0 && (
+                  <details className="mt-2 text-xs">
+                    <summary className="cursor-pointer text-muted-foreground hover:text-foreground">
+                      Event details
+                    </summary>
+                    <pre className="mt-2 max-h-40 overflow-auto rounded bg-muted/50 p-2 font-mono text-[11px] leading-relaxed">
+                      {JSON.stringify(event.details, null, 2)}
+                    </pre>
+                  </details>
+                )}
               </div>
-              <p className="mt-1 text-xs text-muted-foreground">
-                {new Date(event.createdAt).toLocaleString()} | User {event.createdBy}
-              </p>
-              {event.details && Object.keys(event.details).length > 0 && (
-                <details className="mt-2 text-xs">
-                  <summary className="cursor-pointer text-muted-foreground hover:text-foreground">Event details</summary>
-                  <pre className="mt-2 max-h-40 overflow-auto rounded bg-muted/50 p-2 font-mono text-[11px] leading-relaxed">
-                    {JSON.stringify(event.details, null, 2)}
-                  </pre>
-                </details>
-              )}
-            </div>
-          ))}
+            ))}
         </CardContent>
       </Card>
     );
@@ -493,10 +525,10 @@ export function RoAStepReview({ draft, onUpdate, onDraftReplaced, modules }: RoA
   const statusLabel = isLocked
     ? 'Finalised and locked'
     : hasCompiledOutput
-    ? 'Compiled'
-    : allModulesComplete
-      ? 'Complete - compile required'
-      : 'In Progress';
+      ? 'Compiled'
+      : allModulesComplete
+        ? 'Complete - compile required'
+        : 'In Progress';
 
   return (
     <div className="space-y-6">
@@ -507,9 +539,7 @@ export function RoAStepReview({ draft, onUpdate, onDraftReplaced, modules }: RoA
             Review your Record of Advice and generate the final documents
           </p>
         </div>
-        <div className="flex items-center gap-2">
-          {renderStatusBadge()}
-        </div>
+        <div className="flex items-center gap-2">{renderStatusBadge()}</div>
       </div>
 
       <Card>
@@ -552,8 +582,8 @@ export function RoAStepReview({ draft, onUpdate, onDraftReplaced, modules }: RoA
             Document Preview
           </CardTitle>
           <p className="text-sm text-muted-foreground">
-            Review the canonical Record of Advice generated from the client snapshot, adviser details, module
-            contracts and completed module outputs.
+            Review the canonical Record of Advice generated from the client snapshot, adviser
+            details, module contracts and completed module outputs.
           </p>
         </CardHeader>
         <CardContent>
@@ -573,7 +603,8 @@ export function RoAStepReview({ draft, onUpdate, onDraftReplaced, modules }: RoA
                 <h2 className="text-xl font-semibold">Client Acknowledgment</h2>
                 <div className="bg-muted/30 p-4 rounded-lg space-y-3">
                   <p className="text-sm">
-                    I acknowledge that I have read and understood this Record of Advice and the recommendations contained herein.
+                    I acknowledge that I have read and understood this Record of Advice and the
+                    recommendations contained herein.
                   </p>
                   <div className="grid grid-cols-2 gap-4 text-sm">
                     <div>
@@ -596,24 +627,35 @@ export function RoAStepReview({ draft, onUpdate, onDraftReplaced, modules }: RoA
 
       {renderAuditTrail(draft.auditEvents)}
 
-      {draft.validationResults && (!draft.validationResults.valid || draft.validationResults.warnings.length > 0) && (
-        <Card className={draft.validationResults.valid ? 'border-yellow-200 bg-yellow-50' : 'border-red-200 bg-red-50'}>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-base">
-              <AlertTriangle className="h-4 w-4" />
-              Validation Results
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-2 text-sm">
-            {draft.validationResults.blocking.map((issue) => (
-              <p key={issue.id} className="text-red-700">{issue.message}</p>
-            ))}
-            {draft.validationResults.warnings.map((issue) => (
-              <p key={issue.id} className="text-yellow-800">{issue.message}</p>
-            ))}
-          </CardContent>
-        </Card>
-      )}
+      {draft.validationResults &&
+        (!draft.validationResults.valid || draft.validationResults.warnings.length > 0) && (
+          <Card
+            className={
+              draft.validationResults.valid
+                ? 'border-yellow-200 bg-yellow-50'
+                : 'border-red-200 bg-red-50'
+            }
+          >
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-base">
+                <AlertTriangle className="h-4 w-4" />
+                Validation Results
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-2 text-sm">
+              {draft.validationResults.blocking.map((issue) => (
+                <p key={issue.id} className="text-red-700">
+                  {issue.message}
+                </p>
+              ))}
+              {draft.validationResults.warnings.map((issue) => (
+                <p key={issue.id} className="text-yellow-800">
+                  {issue.message}
+                </p>
+              ))}
+            </CardContent>
+          </Card>
+        )}
 
       <Card>
         <CardHeader>
@@ -629,7 +671,8 @@ export function RoAStepReview({ draft, onUpdate, onDraftReplaced, modules }: RoA
                 <div className="flex items-start gap-2">
                   <Lock className="mt-0.5 h-4 w-4 text-green-700" />
                   <p className="text-sm text-green-700">
-                    This RoA is finalised and locked. Download the stored final documents above, or create a new editable version for future advice changes.
+                    This RoA is finalised and locked. Download the stored final documents above, or
+                    create a new editable version for future advice changes.
                   </p>
                 </div>
               </div>
@@ -642,7 +685,9 @@ export function RoAStepReview({ draft, onUpdate, onDraftReplaced, modules }: RoA
                   className="w-full sm:w-auto"
                 >
                   <GitBranch className="h-4 w-4 mr-2" />
-                  {isCloning ? 'Creating editable version…' : `Create editable v${draft.version + 1}`}
+                  {isCloning
+                    ? 'Creating editable version…'
+                    : `Create editable v${draft.version + 1}`}
                 </Button>
               )}
             </div>
@@ -651,7 +696,8 @@ export function RoAStepReview({ draft, onUpdate, onDraftReplaced, modules }: RoA
           {!allModulesComplete && (
             <div className="bg-orange-50 border border-orange-200 p-3 rounded-lg">
               <p className="text-sm text-orange-700">
-                Please complete all selected modules before generating documents. Incomplete modules will not be included in the final RoA.
+                Please complete all selected modules before generating documents. Incomplete modules
+                will not be included in the final RoA.
               </p>
             </div>
           )}
@@ -659,7 +705,8 @@ export function RoAStepReview({ draft, onUpdate, onDraftReplaced, modules }: RoA
           {allModulesComplete && !hasCompiledOutput && (
             <div className="bg-blue-50 border border-blue-200 p-3 rounded-lg">
               <p className="text-sm text-blue-700">
-                Run Validate & Compile before final export so the adviser can review the canonical RoA structure.
+                Run Validate & Compile before final export so the adviser can review the canonical
+                RoA structure.
               </p>
             </div>
           )}
@@ -688,11 +735,16 @@ export function RoAStepReview({ draft, onUpdate, onDraftReplaced, modules }: RoA
                 disabled={!hasCompiledOutput}
               />
               <div className="space-y-1">
-                <Label className={`text-sm font-medium ${!hasCompiledOutput ? 'text-muted-foreground' : ''}`}>
-                  I have reviewed the compiled Record of Advice, validation results, and the module contract compliance snapshot
+                <Label
+                  className={`text-sm font-medium ${!hasCompiledOutput ? 'text-muted-foreground' : ''}`}
+                >
+                  I have reviewed the compiled Record of Advice, validation results, and the module
+                  contract compliance snapshot
                 </Label>
                 <p className="text-xs text-muted-foreground">
-                  Includes compiled sections, recommendation summary, supporting evidence filenames, disclosures, and the contract versions table above after you run Validate &amp; Compile.
+                  Includes compiled sections, recommendation summary, supporting evidence filenames,
+                  disclosures, and the contract versions table above after you run Validate &amp;
+                  Compile.
                 </p>
               </div>
             </div>
@@ -711,7 +763,14 @@ export function RoAStepReview({ draft, onUpdate, onDraftReplaced, modules }: RoA
 
             <Button
               onClick={() => generateDocuments('docx')}
-              disabled={!allModulesComplete || !hasCompiledOutput || !hasConfirmedAccuracy || !hasReviewedCompilation || isGenerating || isLocked}
+              disabled={
+                !allModulesComplete ||
+                !hasCompiledOutput ||
+                !hasConfirmedAccuracy ||
+                !hasReviewedCompilation ||
+                isGenerating ||
+                isLocked
+              }
               className="flex-1"
             >
               {isGenerating ? (
@@ -730,7 +789,14 @@ export function RoAStepReview({ draft, onUpdate, onDraftReplaced, modules }: RoA
             <Button
               variant="outline"
               onClick={() => generateDocuments('pdf')}
-              disabled={!allModulesComplete || !hasCompiledOutput || !hasConfirmedAccuracy || !hasReviewedCompilation || isGenerating || isLocked}
+              disabled={
+                !allModulesComplete ||
+                !hasCompiledOutput ||
+                !hasConfirmedAccuracy ||
+                !hasReviewedCompilation ||
+                isGenerating ||
+                isLocked
+              }
               className="flex-1"
             >
               <Printer className="h-4 w-4 mr-2" />
@@ -740,7 +806,14 @@ export function RoAStepReview({ draft, onUpdate, onDraftReplaced, modules }: RoA
             <Button
               variant="secondary"
               onClick={() => generateDocuments('both')}
-              disabled={!allModulesComplete || !hasCompiledOutput || !hasConfirmedAccuracy || !hasReviewedCompilation || isGenerating || isLocked}
+              disabled={
+                !allModulesComplete ||
+                !hasCompiledOutput ||
+                !hasConfirmedAccuracy ||
+                !hasReviewedCompilation ||
+                isGenerating ||
+                isLocked
+              }
               className="flex-1"
             >
               <FileText className="h-4 w-4 mr-2" />
@@ -750,7 +823,14 @@ export function RoAStepReview({ draft, onUpdate, onDraftReplaced, modules }: RoA
             <Button
               variant="default"
               onClick={finaliseDraft}
-              disabled={!allModulesComplete || !hasCompiledOutput || !hasConfirmedAccuracy || !hasReviewedCompilation || isGenerating || isLocked}
+              disabled={
+                !allModulesComplete ||
+                !hasCompiledOutput ||
+                !hasConfirmedAccuracy ||
+                !hasReviewedCompilation ||
+                isGenerating ||
+                isLocked
+              }
               className="flex-1"
             >
               <CheckCircle className="h-4 w-4 mr-2" />
@@ -759,8 +839,9 @@ export function RoAStepReview({ draft, onUpdate, onDraftReplaced, modules }: RoA
           </div>
 
           <p className="text-xs text-muted-foreground">
-            Documents will be saved to the client file and available for download.
-            Naming convention: RoA_{clientName.replace(/\s+/g, '_')}_{new Date().toISOString().split('T')[0]}_v{draft.version}
+            Documents will be saved to the client file and available for download. Naming
+            convention: RoA_{clientName.replace(/\s+/g, '_')}_
+            {new Date().toISOString().split('T')[0]}_v{draft.version}
           </p>
         </CardContent>
       </Card>

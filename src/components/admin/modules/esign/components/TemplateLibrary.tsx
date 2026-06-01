@@ -75,11 +75,19 @@ import { SkeletonCardGrid } from './EsignSkeleton';
 
 interface TemplateLibraryProps {
   onUseTemplate: (template: EsignTemplateRecord) => void;
-  onStartTemplateBuilder?: (seed: { name: string; description?: string; category?: string }) => void;
+  onStartTemplateBuilder?: (seed: {
+    name: string;
+    description?: string;
+    category?: string;
+  }) => void;
   onConfigureTemplate?: (template: EsignTemplateRecord) => void;
 }
 
-export function TemplateLibrary({ onUseTemplate, onStartTemplateBuilder, onConfigureTemplate }: TemplateLibraryProps) {
+export function TemplateLibrary({
+  onUseTemplate,
+  onStartTemplateBuilder,
+  onConfigureTemplate,
+}: TemplateLibraryProps) {
   const [templates, setTemplates] = useState<EsignTemplateRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
@@ -118,7 +126,7 @@ export function TemplateLibrary({ onUseTemplate, onStartTemplateBuilder, onConfi
   }, [fetchTemplates]);
 
   // Filter templates
-  const filteredTemplates = templates.filter(t => {
+  const filteredTemplates = templates.filter((t) => {
     const matchesSearch =
       t.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       (t.description || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -138,17 +146,14 @@ export function TemplateLibrary({ onUseTemplate, onStartTemplateBuilder, onConfi
     acc[cat] = (acc[cat] || 0) + 1;
     return acc;
   }, {});
-  const knownCategories = new Set<string>([
-    ...TEMPLATE_CATEGORIES,
-    ...Object.keys(categoryCounts),
-  ]);
+  const knownCategories = new Set<string>([...TEMPLATE_CATEGORIES, ...Object.keys(categoryCounts)]);
 
   const handleDelete = async () => {
     if (!templateToDelete) return;
     setDeleting(true);
     try {
       await esignApi.deleteTemplate(templateToDelete.id);
-      setTemplates(prev => prev.filter(t => t.id !== templateToDelete.id));
+      setTemplates((prev) => prev.filter((t) => t.id !== templateToDelete.id));
       toast.success(`Template "${templateToDelete.name}" deleted`);
       setDeleteDialogOpen(false);
       setTemplateToDelete(null);
@@ -172,7 +177,7 @@ export function TemplateLibrary({ onUseTemplate, onStartTemplateBuilder, onConfi
         documents: template.documents,
         fields: template.fields,
       });
-      setTemplates(prev => [result.template, ...prev]);
+      setTemplates((prev) => [result.template, ...prev]);
       toast.success(`Template duplicated as "${result.template.name}"`);
     } catch (err: unknown) {
       toast.error(err instanceof Error ? err.message : 'Failed to duplicate template');
@@ -184,8 +189,8 @@ export function TemplateLibrary({ onUseTemplate, onStartTemplateBuilder, onConfi
       // Increment usage count on server
       await esignApi.useTemplate(template.id);
       // Update local state
-      setTemplates(prev =>
-        prev.map(t => (t.id === template.id ? { ...t, usageCount: (t.usageCount || 0) + 1 } : t))
+      setTemplates((prev) =>
+        prev.map((t) => (t.id === template.id ? { ...t, usageCount: (t.usageCount || 0) + 1 } : t)),
       );
     } catch {
       // Non-critical — still proceed
@@ -194,7 +199,7 @@ export function TemplateLibrary({ onUseTemplate, onStartTemplateBuilder, onConfi
   };
 
   const handleEditSave = async (updated: EsignTemplateRecord) => {
-    setTemplates(prev => prev.map(t => (t.id === updated.id ? updated : t)));
+    setTemplates((prev) => prev.map((t) => (t.id === updated.id ? updated : t)));
     setEditDialogOpen(false);
     setEditingTemplate(null);
   };
@@ -255,7 +260,7 @@ export function TemplateLibrary({ onUseTemplate, onStartTemplateBuilder, onConfi
             <Input
               placeholder="Search templates..."
               value={searchQuery}
-              onChange={e => setSearchQuery(e.target.value)}
+              onChange={(e) => setSearchQuery(e.target.value)}
               className="pl-9 h-9"
             />
           </div>
@@ -330,9 +335,14 @@ export function TemplateLibrary({ onUseTemplate, onStartTemplateBuilder, onConfi
       {/* Empty State (P8.2 — always offers exactly one obvious action) */}
       {filteredTemplates.length === 0 && (
         <div className="text-center py-16">
-          <Bookmark className="h-12 w-12 mx-auto text-muted-foreground/30 mb-4" aria-hidden="true" />
+          <Bookmark
+            className="h-12 w-12 mx-auto text-muted-foreground/30 mb-4"
+            aria-hidden="true"
+          />
           <h3 className="text-lg font-semibold text-gray-900 mb-1">
-            {searchQuery || categoryFilter !== 'all' ? 'No templates match your filters' : 'No templates yet'}
+            {searchQuery || categoryFilter !== 'all'
+              ? 'No templates match your filters'
+              : 'No templates yet'}
           </h3>
           <p className="text-sm text-muted-foreground max-w-sm mx-auto mb-4">
             {searchQuery || categoryFilter !== 'all'
@@ -353,7 +363,10 @@ export function TemplateLibrary({ onUseTemplate, onStartTemplateBuilder, onConfi
             <Button
               variant="outline"
               size="sm"
-              onClick={() => { setSearchQuery(''); setCategoryFilter('all'); }}
+              onClick={() => {
+                setSearchQuery('');
+                setCategoryFilter('all');
+              }}
             >
               Clear filters
             </Button>
@@ -364,7 +377,7 @@ export function TemplateLibrary({ onUseTemplate, onStartTemplateBuilder, onConfi
       {/* Grid View */}
       {viewMode === 'grid' && filteredTemplates.length > 0 && (
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-          {filteredTemplates.map(template => (
+          {filteredTemplates.map((template) => (
             <TemplateCard
               key={template.id}
               template={template}
@@ -387,7 +400,7 @@ export function TemplateLibrary({ onUseTemplate, onStartTemplateBuilder, onConfi
       {/* List View */}
       {viewMode === 'list' && filteredTemplates.length > 0 && (
         <div className="space-y-2">
-          {filteredTemplates.map(template => (
+          {filteredTemplates.map((template) => (
             <TemplateRow
               key={template.id}
               template={template}
@@ -418,7 +431,8 @@ export function TemplateLibrary({ onUseTemplate, onStartTemplateBuilder, onConfi
           <DialogHeader>
             <DialogTitle>Create Template</DialogTitle>
             <DialogDescription>
-              Start a reusable template from the Templates tab, then refine it for your e-sign workflow.
+              Start a reusable template from the Templates tab, then refine it for your e-sign
+              workflow.
             </DialogDescription>
           </DialogHeader>
 
@@ -467,13 +481,17 @@ export function TemplateLibrary({ onUseTemplate, onStartTemplateBuilder, onConfi
             </div>
 
             <div className="rounded-lg border border-blue-200 bg-blue-50 p-3 text-xs text-blue-800">
-              After this step, you'll upload the template PDF, define recipients, place the reusable fields,
-              and then save the finished template from the form builder.
+              After this step, you'll upload the template PDF, define recipients, place the reusable
+              fields, and then save the finished template from the form builder.
             </div>
           </div>
 
           <DialogFooter>
-            <Button variant="outline" onClick={() => setCreateDialogOpen(false)} disabled={creating}>
+            <Button
+              variant="outline"
+              onClick={() => setCreateDialogOpen(false)}
+              disabled={creating}
+            >
               Cancel
             </Button>
             <Button
@@ -481,7 +499,11 @@ export function TemplateLibrary({ onUseTemplate, onStartTemplateBuilder, onConfi
               disabled={creating || !newTemplateName.trim()}
               className="bg-purple-600 hover:bg-purple-700"
             >
-              {creating ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <Plus className="h-4 w-4 mr-1" />}
+              {creating ? (
+                <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+              ) : (
+                <Plus className="h-4 w-4 mr-1" />
+              )}
               Create Template
             </Button>
           </DialogFooter>
@@ -517,18 +539,20 @@ export function TemplateLibrary({ onUseTemplate, onStartTemplateBuilder, onConfi
         <EditTemplateDialog
           template={editingTemplate}
           open={editDialogOpen}
-          onOpenChange={open => {
+          onOpenChange={(open) => {
             setEditDialogOpen(open);
             if (!open) setEditingTemplate(null);
           }}
           onSave={handleEditSave}
-          onConfigureTemplate={onConfigureTemplate
-            ? () => {
-                onConfigureTemplate(editingTemplate);
-                setEditDialogOpen(false);
-                setEditingTemplate(null);
-              }
-            : undefined}
+          onConfigureTemplate={
+            onConfigureTemplate
+              ? () => {
+                  onConfigureTemplate(editingTemplate);
+                  setEditDialogOpen(false);
+                  setEditingTemplate(null);
+                }
+              : undefined
+          }
         />
       )}
     </div>
@@ -548,7 +572,14 @@ interface TemplateItemProps {
   onDelete: () => void;
 }
 
-function TemplateCard({ template, onUse, onConfigure, onEdit, onDuplicate, onDelete }: TemplateItemProps) {
+function TemplateCard({
+  template,
+  onUse,
+  onConfigure,
+  onEdit,
+  onDuplicate,
+  onDelete,
+}: TemplateItemProps) {
   return (
     <Card className="group hover:shadow-md transition-shadow relative">
       <CardContent className="p-5">
@@ -608,7 +639,7 @@ function TemplateCard({ template, onUse, onConfigure, onEdit, onDuplicate, onDel
               'text-[10px] h-5 px-1.5 font-normal',
               template.signingMode === 'sequential'
                 ? 'border-purple-200 bg-purple-50 text-purple-700'
-                : 'border-blue-200 bg-blue-50 text-blue-700'
+                : 'border-blue-200 bg-blue-50 text-blue-700',
             )}
           >
             {template.signingMode === 'sequential' ? (
@@ -662,7 +693,14 @@ function TemplateCard({ template, onUse, onConfigure, onEdit, onDuplicate, onDel
 // TEMPLATE ROW (List View)
 // ============================================================================
 
-function TemplateRow({ template, onUse, onConfigure, onEdit, onDuplicate, onDelete }: TemplateItemProps) {
+function TemplateRow({
+  template,
+  onUse,
+  onConfigure,
+  onEdit,
+  onDuplicate,
+  onDelete,
+}: TemplateItemProps) {
   return (
     <div className="group flex items-center gap-4 p-4 border rounded-lg hover:shadow-sm transition-shadow bg-white">
       {/* Icon */}
@@ -705,7 +743,7 @@ function TemplateRow({ template, onUse, onConfigure, onEdit, onDuplicate, onDele
             'text-[10px] h-5 px-1.5 font-normal',
             template.signingMode === 'sequential'
               ? 'border-purple-200 bg-purple-50 text-purple-700'
-              : 'border-blue-200 bg-blue-50 text-blue-700'
+              : 'border-blue-200 bg-blue-50 text-blue-700',
           )}
         >
           {template.signingMode === 'sequential' ? 'Sequential' : 'Parallel'}

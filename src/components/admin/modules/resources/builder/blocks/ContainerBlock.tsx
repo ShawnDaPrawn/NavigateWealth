@@ -22,11 +22,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '../../../../../ui/select';
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from '../../../../../ui/popover';
+import { Popover, PopoverContent, PopoverTrigger } from '../../../../../ui/popover';
 import { cn } from '../../../../../ui/utils';
 import { KeySelector } from '../components/KeySelector';
 
@@ -163,45 +159,60 @@ export const ContainerBlock: BlockDefinition = {
     const [addBlockOpen, setAddBlockOpen] = useState(false);
 
     // -- Nested block operations --
-    const addChildBlock = useCallback((type: BlockType) => {
-      const def = getBlockDefinition(type);
-      if (!def) return;
-      const newChild: FormBlock = {
-        id: generateId(),
-        type,
-        data: { ...def.initialData },
-      };
-      onChange('blocks', [...childBlocks, newChild]);
-      setExpandedChildId(newChild.id);
-      setAddBlockOpen(false);
-    }, [childBlocks, onChange]);
+    const addChildBlock = useCallback(
+      (type: BlockType) => {
+        const def = getBlockDefinition(type);
+        if (!def) return;
+        const newChild: FormBlock = {
+          id: generateId(),
+          type,
+          data: { ...def.initialData },
+        };
+        onChange('blocks', [...childBlocks, newChild]);
+        setExpandedChildId(newChild.id);
+        setAddBlockOpen(false);
+      },
+      [childBlocks, onChange],
+    );
 
-    const removeChildBlock = useCallback((childId: string) => {
-      onChange('blocks', childBlocks.filter(c => c.id !== childId));
-      if (expandedChildId === childId) setExpandedChildId(null);
-    }, [childBlocks, onChange, expandedChildId]);
+    const removeChildBlock = useCallback(
+      (childId: string) => {
+        onChange(
+          'blocks',
+          childBlocks.filter((c) => c.id !== childId),
+        );
+        if (expandedChildId === childId) setExpandedChildId(null);
+      },
+      [childBlocks, onChange, expandedChildId],
+    );
 
-    const moveChildBlock = useCallback((childId: string, direction: 'up' | 'down') => {
-      const idx = childBlocks.findIndex(c => c.id === childId);
-      if (idx === -1) return;
-      if (direction === 'up' && idx === 0) return;
-      if (direction === 'down' && idx === childBlocks.length - 1) return;
-      const updated = [...childBlocks];
-      const targetIdx = direction === 'up' ? idx - 1 : idx + 1;
-      [updated[idx], updated[targetIdx]] = [updated[targetIdx], updated[idx]];
-      onChange('blocks', updated);
-    }, [childBlocks, onChange]);
+    const moveChildBlock = useCallback(
+      (childId: string, direction: 'up' | 'down') => {
+        const idx = childBlocks.findIndex((c) => c.id === childId);
+        if (idx === -1) return;
+        if (direction === 'up' && idx === 0) return;
+        if (direction === 'down' && idx === childBlocks.length - 1) return;
+        const updated = [...childBlocks];
+        const targetIdx = direction === 'up' ? idx - 1 : idx + 1;
+        [updated[idx], updated[targetIdx]] = [updated[targetIdx], updated[idx]];
+        onChange('blocks', updated);
+      },
+      [childBlocks, onChange],
+    );
 
-    const updateChildBlock = useCallback((childId: string, key: string | Record<string, unknown>, value?: unknown) => {
-      const updated = childBlocks.map(c => {
-        if (c.id !== childId) return c;
-        if (typeof key === 'object' && key !== null) {
-          return { ...c, data: { ...c.data, ...key } };
-        }
-        return { ...c, data: { ...c.data, [key as string]: value } };
-      });
-      onChange('blocks', updated);
-    }, [childBlocks, onChange]);
+    const updateChildBlock = useCallback(
+      (childId: string, key: string | Record<string, unknown>, value?: unknown) => {
+        const updated = childBlocks.map((c) => {
+          if (c.id !== childId) return c;
+          if (typeof key === 'object' && key !== null) {
+            return { ...c, data: { ...c.data, ...key } };
+          }
+          return { ...c, data: { ...c.data, [key as string]: value } };
+        });
+        onChange('blocks', updated);
+      },
+      [childBlocks, onChange],
+    );
 
     const showValueField = operator === 'equals' || operator === 'not_equals';
 
@@ -271,7 +282,9 @@ export const ContainerBlock: BlockDefinition = {
           {childBlocks.length === 0 ? (
             <div className="py-6 text-center border-2 border-dashed border-gray-200 rounded-md bg-gray-50">
               <p className="text-xs text-gray-400">No blocks yet</p>
-              <p className="text-[10px] text-gray-400 mt-1">Add blocks that will appear when the condition is met</p>
+              <p className="text-[10px] text-gray-400 mt-1">
+                Add blocks that will appear when the condition is met
+              </p>
             </div>
           ) : (
             <div className="space-y-1">
@@ -280,19 +293,22 @@ export const ContainerBlock: BlockDefinition = {
                 const isExpanded = expandedChildId === child.id;
 
                 return (
-                  <div key={child.id} className="border border-gray-200 rounded-md overflow-hidden bg-white">
+                  <div
+                    key={child.id}
+                    className="border border-gray-200 rounded-md overflow-hidden bg-white"
+                  >
                     {/* Child block header */}
                     <div
                       className={cn(
-                        "flex items-center gap-2 px-2 py-1.5 cursor-pointer hover:bg-gray-50 transition-colors",
-                        isExpanded && "bg-blue-50 border-b border-gray-200"
+                        'flex items-center gap-2 px-2 py-1.5 cursor-pointer hover:bg-gray-50 transition-colors',
+                        isExpanded && 'bg-blue-50 border-b border-gray-200',
                       )}
                       onClick={() => setExpandedChildId(isExpanded ? null : child.id)}
                     >
                       <ChevronRight
                         className={cn(
-                          "h-3 w-3 text-gray-400 transition-transform",
-                          isExpanded && "rotate-90"
+                          'h-3 w-3 text-gray-400 transition-transform',
+                          isExpanded && 'rotate-90',
                         )}
                       />
                       {childDef && <childDef.icon className="h-3.5 w-3.5 text-gray-500" />}
@@ -301,13 +317,16 @@ export const ContainerBlock: BlockDefinition = {
                       </span>
 
                       {/* Inline actions */}
-                      <div className="flex items-center gap-0.5" onClick={(e) => e.stopPropagation()}>
+                      <div
+                        className="flex items-center gap-0.5"
+                        onClick={(e) => e.stopPropagation()}
+                      >
                         <button
                           onClick={() => moveChildBlock(child.id, 'up')}
                           disabled={idx === 0}
                           className={cn(
-                            "h-5 w-5 flex items-center justify-center rounded hover:bg-gray-100",
-                            idx === 0 ? "text-gray-300" : "text-gray-500"
+                            'h-5 w-5 flex items-center justify-center rounded hover:bg-gray-100',
+                            idx === 0 ? 'text-gray-300' : 'text-gray-500',
                           )}
                           title="Move up"
                         >
@@ -317,8 +336,8 @@ export const ContainerBlock: BlockDefinition = {
                           onClick={() => moveChildBlock(child.id, 'down')}
                           disabled={idx === childBlocks.length - 1}
                           className={cn(
-                            "h-5 w-5 flex items-center justify-center rounded hover:bg-gray-100",
-                            idx === childBlocks.length - 1 ? "text-gray-300" : "text-gray-500"
+                            'h-5 w-5 flex items-center justify-center rounded hover:bg-gray-100',
+                            idx === childBlocks.length - 1 ? 'text-gray-300' : 'text-gray-500',
                           )}
                           title="Move down"
                         >
@@ -339,7 +358,8 @@ export const ContainerBlock: BlockDefinition = {
                       <div className="p-3 bg-gray-50 border-t border-gray-100">
                         {childDef.editor({
                           block: child,
-                          onChange: (key: string | Record<string, unknown>, value?: unknown) => updateChildBlock(child.id, key, value),
+                          onChange: (key: string | Record<string, unknown>, value?: unknown) =>
+                            updateChildBlock(child.id, key, value),
                         })}
                       </div>
                     )}
@@ -352,11 +372,7 @@ export const ContainerBlock: BlockDefinition = {
           {/* Add block button */}
           <Popover open={addBlockOpen} onOpenChange={setAddBlockOpen}>
             <PopoverTrigger asChild>
-              <Button
-                variant="outline"
-                size="sm"
-                className="w-full text-xs h-8 border-dashed"
-              >
+              <Button variant="outline" size="sm" className="w-full text-xs h-8 border-dashed">
                 <Plus className="h-3 w-3 mr-1.5" />
                 Add Block
               </Button>

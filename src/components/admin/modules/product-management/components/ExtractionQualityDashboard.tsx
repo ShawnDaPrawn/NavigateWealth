@@ -94,7 +94,9 @@ function StatCard({
     <Card className="bg-white border border-gray-200 shadow-none">
       <CardContent className="p-4">
         <div className="flex items-center gap-3">
-          <div className={`h-10 w-10 rounded-lg ${iconBgClass} flex items-center justify-center flex-shrink-0`}>
+          <div
+            className={`h-10 w-10 rounded-lg ${iconBgClass} flex items-center justify-center flex-shrink-0`}
+          >
             <Icon className={`h-5 w-5 ${iconColorClass}`} />
           </div>
           <div className="min-w-0">
@@ -117,7 +119,9 @@ export function ExtractionQualityDashboard() {
     setIsLoading(true);
     try {
       const supabase = createClient();
-      const { data: { session } } = await supabase.auth.getSession();
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
       const token = session?.access_token || publicAnonKey;
 
       const res = await fetch(`${API_BASE}/policy-extraction/quality-stats`, {
@@ -169,8 +173,8 @@ export function ExtractionQualityDashboard() {
 
   // Prepare chart data
   const providerChartData = providerStats
-    .filter(p => p.completedExtractions > 0)
-    .map(p => ({
+    .filter((p) => p.completedExtractions > 0)
+    .map((p) => ({
       name: p.providerName.length > 12 ? p.providerName.slice(0, 12) + '...' : p.providerName,
       fullName: p.providerName,
       confidence: Math.round(p.avgConfidence * 100),
@@ -261,7 +265,7 @@ export function ExtractionQualityDashboard() {
               <h4 className="text-xs font-semibold text-gray-600 uppercase">Provider Breakdown</h4>
             </div>
             <div className="divide-y divide-gray-100">
-              {providerStats.map(ps => (
+              {providerStats.map((ps) => (
                 <div key={ps.providerId} className="px-4 py-2.5 flex items-center gap-4">
                   <div className="flex-1 min-w-0">
                     <span className="text-sm font-medium text-gray-800">{ps.providerName}</span>
@@ -274,13 +278,15 @@ export function ExtractionQualityDashboard() {
                       <span className="text-red-500">{ps.failedExtractions} failed</span>
                     )}
                     <span className="text-gray-300">|</span>
-                    <Badge className={`text-[10px] px-1.5 py-0 ${
-                      ps.avgConfidence >= 0.85
-                        ? 'bg-green-100 text-green-700 hover:bg-green-100'
-                        : ps.avgConfidence >= 0.5
-                        ? 'bg-amber-100 text-amber-700 hover:bg-amber-100'
-                        : 'bg-red-100 text-red-700 hover:bg-red-100'
-                    }`}>
+                    <Badge
+                      className={`text-[10px] px-1.5 py-0 ${
+                        ps.avgConfidence >= 0.85
+                          ? 'bg-green-100 text-green-700 hover:bg-green-100'
+                          : ps.avgConfidence >= 0.5
+                            ? 'bg-amber-100 text-amber-700 hover:bg-amber-100'
+                            : 'bg-red-100 text-red-700 hover:bg-red-100'
+                      }`}
+                    >
                       {Math.round(ps.avgConfidence * 100)}% avg
                     </Badge>
                     {ps.totalWarnings > 0 && (
@@ -290,7 +296,8 @@ export function ExtractionQualityDashboard() {
                     )}
                     {ps.lockedFieldCount > 0 && (
                       <span className="flex items-center gap-0.5 text-amber-600">
-                        <Lock className="h-3 w-3" />{ps.lockedFieldCount}
+                        <Lock className="h-3 w-3" />
+                        {ps.lockedFieldCount}
                       </span>
                     )}
                   </div>
@@ -323,18 +330,22 @@ export function ExtractionQualityDashboard() {
             </button>
             {showLowConfidence && (
               <div className="divide-y divide-gray-100">
-                {lowConfidenceFields.map(f => (
+                {lowConfidenceFields.map((f) => (
                   <div key={f.fieldId} className="px-4 py-2 flex items-center justify-between">
                     <div className="flex items-center gap-2 min-w-0">
                       <span className="text-xs font-medium text-gray-700">{f.fieldName}</span>
-                      <span className="text-[10px] text-gray-400">({f.occurrences} occurrences)</span>
+                      <span className="text-[10px] text-gray-400">
+                        ({f.occurrences} occurrences)
+                      </span>
                     </div>
                     <div className="flex items-center gap-2">
-                      <Badge className={`text-[10px] px-1.5 py-0 ${
-                        f.avgConfidence >= 0.5
-                          ? 'bg-amber-100 text-amber-700 hover:bg-amber-100'
-                          : 'bg-red-100 text-red-700 hover:bg-red-100'
-                      }`}>
+                      <Badge
+                        className={`text-[10px] px-1.5 py-0 ${
+                          f.avgConfidence >= 0.5
+                            ? 'bg-amber-100 text-amber-700 hover:bg-amber-100'
+                            : 'bg-red-100 text-red-700 hover:bg-red-100'
+                        }`}
+                      >
                         {Math.round(f.avgConfidence * 100)}% avg
                       </Badge>
                       <span className="text-[10px] text-red-500 font-medium">
@@ -344,7 +355,8 @@ export function ExtractionQualityDashboard() {
                   </div>
                 ))}
                 <div className="px-4 py-2 bg-gray-50 text-[10px] text-gray-500">
-                  Fields with confidence &lt; 50% may need prompt template refinement for the relevant providers.
+                  Fields with confidence &lt; 50% may need prompt template refinement for the
+                  relevant providers.
                 </div>
               </div>
             )}

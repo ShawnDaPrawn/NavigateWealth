@@ -29,7 +29,10 @@ import { useAuth } from '../../auth/AuthContext';
 
 import { TRANSACTIONAL_EXAMPLES, MARKETING_EXAMPLES, DEFAULT_PREFERENCES } from './constants';
 import { countActiveChannels } from './utils';
-import { useCommunicationPreferences, useUpdatePreferences } from './hooks/useCommunicationPreferences';
+import {
+  useCommunicationPreferences,
+  useUpdatePreferences,
+} from './hooks/useCommunicationPreferences';
 import { PreferenceToggle } from './components/PreferenceToggle';
 import { FrequencySelector } from './components/FrequencySelector';
 import { PreferencesSummary } from './components/PreferencesSummary';
@@ -140,7 +143,8 @@ export function CommunicationPreferencesPage() {
         <Alert className="mb-6 border-blue-200 bg-blue-50">
           <Info className="h-4 w-4 text-blue-600" />
           <AlertDescription className="text-sm text-blue-800">
-            <strong>Important:</strong> You can opt-out of marketing communications while continuing to receive essential account notifications for security and compliance.
+            <strong>Important:</strong> You can opt-out of marketing communications while continuing
+            to receive essential account notifications for security and compliance.
           </AlertDescription>
         </Alert>
 
@@ -156,7 +160,9 @@ export function CommunicationPreferencesPage() {
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 flex-wrap">
                       <CardTitle>Essential Communications</CardTitle>
-                      <Badge className="bg-green-100 text-green-700 border-green-200">Required</Badge>
+                      <Badge className="bg-green-100 text-green-700 border-green-200">
+                        Required
+                      </Badge>
                     </div>
                     <CardDescription className="mt-1">
                       Critical account updates and security notifications
@@ -207,7 +213,9 @@ export function CommunicationPreferencesPage() {
               <Alert className="border-amber-200 bg-amber-50">
                 <AlertCircle className="h-4 w-4 text-amber-600" />
                 <AlertDescription className="text-sm text-amber-800">
-                  <strong>Legal Requirement:</strong> Some notifications (security alerts, regulatory notices) cannot be disabled as they're required by law and essential for account protection.
+                  <strong>Legal Requirement:</strong> Some notifications (security alerts,
+                  regulatory notices) cannot be disabled as they're required by law and essential
+                  for account protection.
                 </AlertDescription>
               </Alert>
             </CardContent>
@@ -224,7 +232,9 @@ export function CommunicationPreferencesPage() {
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 flex-wrap">
                       <CardTitle>Marketing & Insights</CardTitle>
-                      <Badge variant="outline" className="border-[#6d28d9]/30 text-[#6d28d9]">Optional</Badge>
+                      <Badge variant="outline" className="border-[#6d28d9]/30 text-[#6d28d9]">
+                        Optional
+                      </Badge>
                     </div>
                     <CardDescription className="mt-1">
                       Market updates, newsletters, and educational content
@@ -238,7 +248,9 @@ export function CommunicationPreferencesPage() {
                 <PreferenceToggle
                   icon={Mail}
                   iconBgClass={preferences.marketing.email ? 'bg-[#6d28d9]/20' : 'bg-purple-100'}
-                  iconColorClass={preferences.marketing.email ? 'text-[#6d28d9]' : 'text-purple-600'}
+                  iconColorClass={
+                    preferences.marketing.email ? 'text-[#6d28d9]' : 'text-purple-600'
+                  }
                   title="Email Marketing"
                   subtitle="Newsletters and market insights"
                   checked={preferences.marketing.email}
@@ -277,7 +289,8 @@ export function CommunicationPreferencesPage() {
               <Alert className="border-[#6d28d9]/20 bg-[#6d28d9]/5">
                 <Shield className="h-4 w-4 text-[#6d28d9]" />
                 <AlertDescription className="text-sm text-gray-800">
-                  <strong>Privacy Guarantee:</strong> We respect your privacy and will never share your contact information with third parties. Unsubscribe anytime.
+                  <strong>Privacy Guarantee:</strong> We respect your privacy and will never share
+                  your contact information with third parties. Unsubscribe anytime.
                 </AlertDescription>
               </Alert>
             </CardContent>

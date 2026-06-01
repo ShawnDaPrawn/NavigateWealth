@@ -99,7 +99,7 @@ export function useAutoSave({
         }
       }, debounceMs);
     },
-    [debounceMs, doSave]
+    [debounceMs, doSave],
   );
 
   // Flush pending save immediately

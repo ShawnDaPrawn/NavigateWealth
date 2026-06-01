@@ -3,15 +3,15 @@ import { useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { clientApi, getClientProfileQueryOptions } from '../api';
 import { clientKeys } from './queryKeys';
-import { 
-  Client, 
-  ProfileData, 
-  Asset, 
-  Liability, 
-  FamilyMember, 
-  BankAccount, 
-  Employer, 
-  ChronicCondition, 
+import {
+  Client,
+  ProfileData,
+  Asset,
+  Liability,
+  FamilyMember,
+  BankAccount,
+  Employer,
+  ChronicCondition,
   IdentityDocument,
   IdentityDocumentType,
 } from '../types';
@@ -28,10 +28,12 @@ function createProfileSnapshot(data: ProfileData): string {
   return JSON.stringify(data, (_, value) => {
     if (value && typeof value === 'object' && !Array.isArray(value)) {
       // Sort keys for deterministic serialisation
-      return Object.keys(value).sort().reduce((sorted: Record<string, unknown>, key) => {
-        sorted[key] = value[key];
-        return sorted;
-      }, {});
+      return Object.keys(value)
+        .sort()
+        .reduce((sorted: Record<string, unknown>, key) => {
+          sorted[key] = value[key];
+          return sorted;
+        }, {});
     }
     return value;
   });
@@ -66,10 +68,15 @@ export function useClientProfile(clientData: Client, onSave?: (data: ProfileData
     maritalRegime: initialPersonalInfo?.maritalRegime || '',
     grossIncome: initialPersonalInfo?.grossIncome || 0,
     netIncome: initialPersonalInfo?.netIncome || 0,
-    grossMonthlyIncome: initialPersonalInfo?.grossMonthlyIncome || initialPersonalInfo?.grossIncome || 0,
+    grossMonthlyIncome:
+      initialPersonalInfo?.grossMonthlyIncome || initialPersonalInfo?.grossIncome || 0,
     netMonthlyIncome: initialPersonalInfo?.netMonthlyIncome || initialPersonalInfo?.netIncome || 0,
-    grossAnnualIncome: initialPersonalInfo?.grossAnnualIncome || (initialPersonalInfo?.grossMonthlyIncome || initialPersonalInfo?.grossIncome || 0) * 12,
-    netAnnualIncome: initialPersonalInfo?.netAnnualIncome || (initialPersonalInfo?.netMonthlyIncome || initialPersonalInfo?.netIncome || 0) * 12,
+    grossAnnualIncome:
+      initialPersonalInfo?.grossAnnualIncome ||
+      (initialPersonalInfo?.grossMonthlyIncome || initialPersonalInfo?.grossIncome || 0) * 12,
+    netAnnualIncome:
+      initialPersonalInfo?.netAnnualIncome ||
+      (initialPersonalInfo?.netMonthlyIncome || initialPersonalInfo?.netIncome || 0) * 12,
     email: initialPersonalInfo?.email || clientData.email || '',
     secondaryEmail: initialPersonalInfo?.secondaryEmail || '',
     phoneNumber: initialPersonalInfo?.phoneNumber || '',
@@ -79,7 +86,7 @@ export function useClientProfile(clientData: Client, onSave?: (data: ProfileData
     emergencyContactRelationship: initialPersonalInfo?.emergencyContactRelationship || '',
     emergencyContactPhone: initialPersonalInfo?.emergencyContactPhone || '',
     emergencyContactEmail: initialPersonalInfo?.emergencyContactEmail || '',
-    
+
     // Identity Fields - Initialize with defaults to avoid uncontrolled input warning
     idCountry: initialPersonalInfo?.idCountry || 'South Africa',
     idNumber: initialPersonalInfo?.idNumber || '',
@@ -121,12 +128,23 @@ export function useClientProfile(clientData: Client, onSave?: (data: ProfileData
     familyMembers: initialPersonalInfo?.familyMembers || [],
     bankAccounts: initialPersonalInfo?.bankAccounts || [],
     riskAssessment: initialPersonalInfo?.riskAssessment || {
-      question1: 0, question2: 0, question3: 0, question4: 0, question5: 0,
-      question6: 0, question7: 0, question8: 0, question9: 0, question10: 0,
-      totalScore: 0, riskCategory: '', dateCompleted: '', canRetake: true
+      question1: 0,
+      question2: 0,
+      question3: 0,
+      question4: 0,
+      question5: 0,
+      question6: 0,
+      question7: 0,
+      question8: 0,
+      question9: 0,
+      question10: 0,
+      totalScore: 0,
+      riskCategory: '',
+      dateCompleted: '',
+      canRetake: true,
     },
     assets: initialPersonalInfo?.assets || [],
-    liabilities: initialPersonalInfo?.liabilities || []
+    liabilities: initialPersonalInfo?.liabilities || [],
   });
 
   // Edit mode tracking states
@@ -135,7 +153,9 @@ export function useClientProfile(clientData: Client, onSave?: (data: ProfileData
   const [familyMembersInEditMode, setFamilyMembersInEditMode] = useState<Set<string>>(new Set());
   const [bankAccountsInEditMode, setBankAccountsInEditMode] = useState<Set<string>>(new Set());
   const [employersInEditMode, setEmployersInEditMode] = useState<Set<string>>(new Set());
-  const [chronicConditionsInEditMode, setChronicConditionsInEditMode] = useState<Set<string>>(new Set());
+  const [chronicConditionsInEditMode, setChronicConditionsInEditMode] = useState<Set<string>>(
+    new Set(),
+  );
   const [identityDocsInEditMode, setIdentityDocsInEditMode] = useState<Set<string>>(new Set());
   const [selfEmployedInEditMode, setSelfEmployedInEditMode] = useState(false);
 
@@ -155,8 +175,10 @@ export function useClientProfile(clientData: Client, onSave?: (data: ProfileData
   // Display states for currency
   const [grossIncomeDisplay, setGrossIncomeDisplay] = useState<string | null>(null);
   const [netIncomeDisplay, setNetIncomeDisplay] = useState<string | null>(null);
-  const [assetDisplayValues, setAssetDisplayValues] = useState<{[id: string]: string}>({});
-  const [liabilityDisplayValues, setLiabilityDisplayValues] = useState<{[id: string]: {amount?: string, monthlyPayment?: string}}>({});
+  const [assetDisplayValues, setAssetDisplayValues] = useState<{ [id: string]: string }>({});
+  const [liabilityDisplayValues, setLiabilityDisplayValues] = useState<{
+    [id: string]: { amount?: string; monthlyPayment?: string };
+  }>({});
 
   // Validation state for income fields
   const [incomeValidationError, setIncomeValidationError] = useState('');
@@ -199,10 +221,13 @@ export function useClientProfile(clientData: Client, onSave?: (data: ProfileData
       try {
         const profile = await queryClient.fetchQuery(getClientProfileQueryOptions(userId));
         if (profile) {
-          const grossAnnual = profile.grossAnnualIncome ?? ((profile.grossMonthlyIncome || profile.grossIncome || 0) * 12);
-          const netAnnual = profile.netAnnualIncome ?? ((profile.netMonthlyIncome || profile.netIncome || 0) * 12);
-          
-          setProfileData(prev => ({
+          const grossAnnual =
+            profile.grossAnnualIncome ??
+            (profile.grossMonthlyIncome || profile.grossIncome || 0) * 12;
+          const netAnnual =
+            profile.netAnnualIncome ?? (profile.netMonthlyIncome || profile.netIncome || 0) * 12;
+
+          setProfileData((prev) => ({
             ...prev,
             ...profile,
             grossAnnualIncome: grossAnnual,
@@ -230,7 +255,7 @@ export function useClientProfile(clientData: Client, onSave?: (data: ProfileData
         setError(errorMessage);
         // Fallback to clientData
         const personalInfo = clientData.profile?.personalInformation;
-        setProfileData(prev => ({
+        setProfileData((prev) => ({
           ...prev,
           ...(personalInfo || {}),
           firstName: personalInfo?.firstName || clientData.firstName || '',
@@ -243,7 +268,7 @@ export function useClientProfile(clientData: Client, onSave?: (data: ProfileData
           chronicConditions: personalInfo?.chronicConditions || [],
           employers: personalInfo?.employers || [],
           identityDocuments: personalInfo?.identityDocuments || [],
-          
+
           // Identity defaults for fallback
           idCountry: personalInfo?.idCountry || 'South Africa',
           idNumber: personalInfo?.idNumber || '',
@@ -294,9 +319,12 @@ export function useClientProfile(clientData: Client, onSave?: (data: ProfileData
     setHasChanges(isDirty);
   }, [profileData, loadedProfileSnapshot, snapshotPending, loading]);
 
-  const handleInputChange = (field: keyof ProfileData, value: string | number | boolean | unknown[]) => {
-    let updates: Partial<ProfileData> = { [field]: value };
-    
+  const handleInputChange = (
+    field: keyof ProfileData,
+    value: string | number | boolean | unknown[],
+  ) => {
+    const updates: Partial<ProfileData> = { [field]: value };
+
     // Auto-calculate annual income from monthly
     if (field === 'grossMonthlyIncome') {
       const monthly = typeof value === 'string' ? parseFloat(value) : Number(value);
@@ -312,8 +340,8 @@ export function useClientProfile(clientData: Client, onSave?: (data: ProfileData
         updates.netIncome = monthly; // Sync with legacy field
       }
     }
-    
-    setProfileData(prev => ({ ...prev, ...updates }));
+
+    setProfileData((prev) => ({ ...prev, ...updates }));
     setHasChanges(true);
   };
 
@@ -332,7 +360,10 @@ export function useClientProfile(clientData: Client, onSave?: (data: ProfileData
       const { personalInformation: _legacyNestedRemoved, ...profilePayload } = dirty;
 
       await clientApi.updateClientProfile(userId, profilePayload as ProfileData);
-      queryClient.setQueryData(getClientProfileQueryOptions(userId).queryKey, profilePayload as ProfileData);
+      queryClient.setQueryData(
+        getClientProfileQueryOptions(userId).queryKey,
+        profilePayload as ProfileData,
+      );
       setProfileData(profilePayload as ProfileData);
       await queryClient.invalidateQueries({ queryKey: clientKeys.lists() });
 
@@ -383,20 +414,22 @@ export function useClientProfile(clientData: Client, onSave?: (data: ProfileData
 
   // Identity Document Management Functions
   const hasDocumentType = (type: IdentityDocumentType) => {
-    return profileData.identityDocuments.some(doc => doc.type === type);
+    return profileData.identityDocuments.some((doc) => doc.type === type);
   };
 
   const addIdentityDocument = (type: IdentityDocumentType) => {
     if (hasDocumentType(type)) {
       const typeNames: Record<IdentityDocumentType, string> = {
         'national-id': 'National ID',
-        'passport': 'Passport',
-        'drivers-license': 'Driver\'s License',
+        passport: 'Passport',
+        'drivers-license': "Driver's License",
         'proof-of-residence': 'Proof of Residence',
         'proof-primary-bank-account': 'Proof of Primary Bank Account',
         'utility-bill': 'Utility Bill',
       };
-      toast.error(`Client already has a ${typeNames[type]}. Only one document of each type is allowed.`);
+      toast.error(
+        `Client already has a ${typeNames[type]}. Only one document of each type is allowed.`,
+      );
       return;
     }
 
@@ -406,13 +439,13 @@ export function useClientProfile(clientData: Client, onSave?: (data: ProfileData
       number: '',
       countryOfIssue: 'South Africa',
       expiryDate: '',
-      isVerified: false
+      isVerified: false,
     };
-    setProfileData(prev => ({
+    setProfileData((prev) => ({
       ...prev,
-      identityDocuments: [...prev.identityDocuments, newDoc]
+      identityDocuments: [...prev.identityDocuments, newDoc],
     }));
-    setIdentityDocsInEditMode(prev => new Set([...prev, newDoc.id]));
+    setIdentityDocsInEditMode((prev) => new Set([...prev, newDoc.id]));
     setHasChanges(true);
   };
 
@@ -433,9 +466,9 @@ export function useClientProfile(clientData: Client, onSave?: (data: ProfileData
 
     const fileUrl = URL.createObjectURL(file);
 
-    setProfileData(prev => ({
+    setProfileData((prev) => ({
       ...prev,
-      identityDocuments: prev.identityDocuments.map(doc =>
+      identityDocuments: prev.identityDocuments.map((doc) =>
         doc.id === id
           ? {
               ...doc,
@@ -443,21 +476,21 @@ export function useClientProfile(clientData: Client, onSave?: (data: ProfileData
               fileUrl: fileUrl,
               fileSize: file.size,
               uploadDate: new Date().toISOString(),
-              isVerified: false
+              isVerified: false,
             }
-          : doc
-      )
+          : doc,
+      ),
     }));
     setHasChanges(true);
     toast.success(`Document "${file.name}" uploaded successfully`);
   };
 
   const updateIdentityDocument = (id: string, updates: Partial<IdentityDocument>) => {
-    setProfileData(prev => ({
+    setProfileData((prev) => ({
       ...prev,
-      identityDocuments: prev.identityDocuments.map(doc =>
-        doc.id === id ? { ...doc, ...updates } : doc
-      )
+      identityDocuments: prev.identityDocuments.map((doc) =>
+        doc.id === id ? { ...doc, ...updates } : doc,
+      ),
     }));
     setHasChanges(true);
   };
@@ -467,11 +500,11 @@ export function useClientProfile(clientData: Client, onSave?: (data: ProfileData
   };
 
   const removeIdentityDocument = (id: string) => {
-    setProfileData(prev => ({
+    setProfileData((prev) => ({
       ...prev,
-      identityDocuments: prev.identityDocuments.filter(doc => doc.id !== id)
+      identityDocuments: prev.identityDocuments.filter((doc) => doc.id !== id),
     }));
-    setIdentityDocsInEditMode(prev => {
+    setIdentityDocsInEditMode((prev) => {
       const newSet = new Set(prev);
       newSet.delete(id);
       return newSet;
@@ -481,8 +514,8 @@ export function useClientProfile(clientData: Client, onSave?: (data: ProfileData
   };
 
   const saveIdentityDocument = (id: string) => {
-    const doc = profileData.identityDocuments.find(d => d.id === id);
-    
+    const doc = profileData.identityDocuments.find((d) => d.id === id);
+
     if (doc?.type === 'national-id') {
       if (!doc.number || !doc.fileName) {
         toast.error('Please fill in the ID number and upload the document before saving');
@@ -498,8 +531,8 @@ export function useClientProfile(clientData: Client, onSave?: (data: ProfileData
       toast.error('Please upload the document before saving');
       return;
     }
-    
-    setIdentityDocsInEditMode(prev => {
+
+    setIdentityDocsInEditMode((prev) => {
       const newSet = new Set(prev);
       newSet.delete(id);
       return newSet;
@@ -507,14 +540,14 @@ export function useClientProfile(clientData: Client, onSave?: (data: ProfileData
   };
 
   const cancelEditIdentityDocument = (id: string) => {
-    const doc = profileData.identityDocuments.find(d => d.id === id);
-    
+    const doc = profileData.identityDocuments.find((d) => d.id === id);
+
     if (doc && !doc.number && !doc.fileName) {
       removeIdentityDocument(id);
       return;
     }
-    
-    setIdentityDocsInEditMode(prev => {
+
+    setIdentityDocsInEditMode((prev) => {
       const newSet = new Set(prev);
       newSet.delete(id);
       return newSet;
@@ -522,7 +555,7 @@ export function useClientProfile(clientData: Client, onSave?: (data: ProfileData
   };
 
   const editIdentityDocument = (id: string) => {
-    setIdentityDocsInEditMode(prev => new Set([...prev, id]));
+    setIdentityDocsInEditMode((prev) => new Set([...prev, id]));
   };
 
   const getDocumentTypeLabel = (type: IdentityDocumentType) => {
@@ -532,7 +565,7 @@ export function useClientProfile(clientData: Client, onSave?: (data: ProfileData
       case 'passport':
         return 'Passport';
       case 'drivers-license':
-        return 'Driver\'s License';
+        return "Driver's License";
       case 'proof-of-residence':
         return 'Proof of Residence';
       case 'proof-primary-bank-account':
@@ -579,10 +612,10 @@ export function useClientProfile(clientData: Client, onSave?: (data: ProfileData
       return;
     }
 
-    setProfileData(prev => ({
+    setProfileData((prev) => ({
       ...prev,
       proofOfResidenceUploaded: true,
-      proofOfResidenceFileName: file.name
+      proofOfResidenceFileName: file.name,
     }));
     setProofOfResidenceInEditMode(false);
     setHasChanges(true);
@@ -601,10 +634,10 @@ export function useClientProfile(clientData: Client, onSave?: (data: ProfileData
   };
 
   const removeProofOfResidence = () => {
-    setProfileData(prev => ({
+    setProfileData((prev) => ({
       ...prev,
       proofOfResidenceUploaded: false,
-      proofOfResidenceFileName: undefined
+      proofOfResidenceFileName: undefined,
     }));
     setProofOfResidenceToDelete(false);
     setProofOfResidenceInEditMode(false);
@@ -617,13 +650,13 @@ export function useClientProfile(clientData: Client, onSave?: (data: ProfileData
       id: Date.now().toString(),
       jobTitle: '',
       employerName: '',
-      industry: ''
+      industry: '',
     };
-    setProfileData(prev => ({
+    setProfileData((prev) => ({
       ...prev,
-      employers: [...prev.employers, newEmployer]
+      employers: [...prev.employers, newEmployer],
     }));
-    setEmployersInEditMode(prev => new Set([...prev, newEmployer.id]));
+    setEmployersInEditMode((prev) => new Set([...prev, newEmployer.id]));
     setHasChanges(true);
   };
 
@@ -633,11 +666,11 @@ export function useClientProfile(clientData: Client, onSave?: (data: ProfileData
 
   const removeEmployer = () => {
     if (!employerToDelete) return;
-    setProfileData(prev => ({
+    setProfileData((prev) => ({
       ...prev,
-      employers: prev.employers.filter(employer => employer.id !== employerToDelete)
+      employers: prev.employers.filter((employer) => employer.id !== employerToDelete),
     }));
-    setEmployersInEditMode(prev => {
+    setEmployersInEditMode((prev) => {
       const newSet = new Set(prev);
       newSet.delete(employerToDelete);
       return newSet;
@@ -647,24 +680,26 @@ export function useClientProfile(clientData: Client, onSave?: (data: ProfileData
   };
 
   const updateEmployer = (id: string, updates: Partial<Employer>) => {
-    setProfileData(prev => ({
+    setProfileData((prev) => ({
       ...prev,
-      employers: prev.employers.map(employer =>
-        employer.id === id ? { ...employer, ...updates } : employer
-      )
+      employers: prev.employers.map((employer) =>
+        employer.id === id ? { ...employer, ...updates } : employer,
+      ),
     }));
     setHasChanges(true);
   };
 
   const saveEmployer = (id: string) => {
-    const employer = profileData.employers.find(e => e.id === id);
-    
+    const employer = profileData.employers.find((e) => e.id === id);
+
     if (!employer?.employerName || !employer?.jobTitle || !employer?.industry) {
-      toast.error('Please fill in all required fields (Employer Name, Job Title, and Industry) before saving');
+      toast.error(
+        'Please fill in all required fields (Employer Name, Job Title, and Industry) before saving',
+      );
       return;
     }
-    
-    setEmployersInEditMode(prev => {
+
+    setEmployersInEditMode((prev) => {
       const newSet = new Set(prev);
       newSet.delete(id);
       return newSet;
@@ -672,26 +707,26 @@ export function useClientProfile(clientData: Client, onSave?: (data: ProfileData
   };
 
   const editEmployer = (id: string) => {
-    setEmployersInEditMode(prev => new Set([...prev, id]));
+    setEmployersInEditMode((prev) => new Set([...prev, id]));
   };
 
   const cancelEditEmployer = (id: string) => {
-    const employer = profileData.employers.find(e => e.id === id);
-    
+    const employer = profileData.employers.find((e) => e.id === id);
+
     if (employer && !employer.employerName && !employer.jobTitle && !employer.industry) {
-      setProfileData(prev => ({
+      setProfileData((prev) => ({
         ...prev,
-        employers: prev.employers.filter(e => e.id !== id)
+        employers: prev.employers.filter((e) => e.id !== id),
       }));
-      setEmployersInEditMode(prev => {
+      setEmployersInEditMode((prev) => {
         const newSet = new Set(prev);
         newSet.delete(id);
         return newSet;
       });
       return;
     }
-    
-    setEmployersInEditMode(prev => {
+
+    setEmployersInEditMode((prev) => {
       const newSet = new Set(prev);
       newSet.delete(id);
       return newSet;
@@ -700,7 +735,9 @@ export function useClientProfile(clientData: Client, onSave?: (data: ProfileData
 
   const saveSelfEmployed = () => {
     if (!profileData.selfEmployedIndustry || !profileData.selfEmployedDescription) {
-      toast.error('Please fill in all required fields (Industry and Business Description) before saving');
+      toast.error(
+        'Please fill in all required fields (Industry and Business Description) before saving',
+      );
       return;
     }
     setSelfEmployedInEditMode(false);
@@ -722,13 +759,13 @@ export function useClientProfile(clientData: Client, onSave?: (data: ProfileData
       monthDiagnosed: '',
       yearDiagnosed: '',
       onTreatment: false,
-      treatingDoctor: ''
+      treatingDoctor: '',
     };
-    setProfileData(prev => ({
+    setProfileData((prev) => ({
       ...prev,
-      chronicConditions: [...prev.chronicConditions, newCondition]
+      chronicConditions: [...prev.chronicConditions, newCondition],
     }));
-    setChronicConditionsInEditMode(prev => new Set([...prev, newCondition.id]));
+    setChronicConditionsInEditMode((prev) => new Set([...prev, newCondition.id]));
     setHasChanges(true);
   };
 
@@ -738,11 +775,13 @@ export function useClientProfile(clientData: Client, onSave?: (data: ProfileData
 
   const removeChronicCondition = () => {
     if (!chronicConditionToDelete) return;
-    setProfileData(prev => ({
+    setProfileData((prev) => ({
       ...prev,
-      chronicConditions: prev.chronicConditions.filter(condition => condition.id !== chronicConditionToDelete)
+      chronicConditions: prev.chronicConditions.filter(
+        (condition) => condition.id !== chronicConditionToDelete,
+      ),
     }));
-    setChronicConditionsInEditMode(prev => {
+    setChronicConditionsInEditMode((prev) => {
       const newSet = new Set(prev);
       newSet.delete(chronicConditionToDelete);
       return newSet;
@@ -752,24 +791,24 @@ export function useClientProfile(clientData: Client, onSave?: (data: ProfileData
   };
 
   const updateChronicCondition = (id: string, updates: Partial<ChronicCondition>) => {
-    setProfileData(prev => ({
+    setProfileData((prev) => ({
       ...prev,
-      chronicConditions: prev.chronicConditions.map(condition =>
-        condition.id === id ? { ...condition, ...updates } : condition
-      )
+      chronicConditions: prev.chronicConditions.map((condition) =>
+        condition.id === id ? { ...condition, ...updates } : condition,
+      ),
     }));
     setHasChanges(true);
   };
 
   const saveChronicCondition = (id: string) => {
-    const condition = profileData.chronicConditions.find(c => c.id === id);
-    
+    const condition = profileData.chronicConditions.find((c) => c.id === id);
+
     if (!condition?.conditionName) {
       toast.error('Please enter the name of the condition before saving');
       return;
     }
-    
-    setChronicConditionsInEditMode(prev => {
+
+    setChronicConditionsInEditMode((prev) => {
       const newSet = new Set(prev);
       newSet.delete(id);
       return newSet;
@@ -777,26 +816,26 @@ export function useClientProfile(clientData: Client, onSave?: (data: ProfileData
   };
 
   const editChronicCondition = (id: string) => {
-    setChronicConditionsInEditMode(prev => new Set([...prev, id]));
+    setChronicConditionsInEditMode((prev) => new Set([...prev, id]));
   };
 
   const cancelEditChronicCondition = (id: string) => {
-    const condition = profileData.chronicConditions.find(c => c.id === id);
-    
+    const condition = profileData.chronicConditions.find((c) => c.id === id);
+
     if (condition && !condition.conditionName) {
-      setProfileData(prev => ({
+      setProfileData((prev) => ({
         ...prev,
-        chronicConditions: prev.chronicConditions.filter(c => c.id !== id)
+        chronicConditions: prev.chronicConditions.filter((c) => c.id !== id),
       }));
-      setChronicConditionsInEditMode(prev => {
+      setChronicConditionsInEditMode((prev) => {
         const newSet = new Set(prev);
         newSet.delete(id);
         return newSet;
       });
       return;
     }
-    
-    setChronicConditionsInEditMode(prev => {
+
+    setChronicConditionsInEditMode((prev) => {
       const newSet = new Set(prev);
       newSet.delete(id);
       return newSet;
@@ -816,13 +855,13 @@ export function useClientProfile(clientData: Client, onSave?: (data: ProfileData
       isIncludedInEstatePlanning: false,
       shareProfileInformation: false,
       shareEmail: '',
-      notes: ''
+      notes: '',
     };
-    setProfileData(prev => ({
+    setProfileData((prev) => ({
       ...prev,
-      familyMembers: [...prev.familyMembers, newMember]
+      familyMembers: [...prev.familyMembers, newMember],
     }));
-    setFamilyMembersInEditMode(prev => new Set([...prev, newMember.id]));
+    setFamilyMembersInEditMode((prev) => new Set([...prev, newMember.id]));
     setHasChanges(true);
   };
 
@@ -832,11 +871,11 @@ export function useClientProfile(clientData: Client, onSave?: (data: ProfileData
 
   const removeFamilyMember = () => {
     if (!familyMemberToDelete) return;
-    setProfileData(prev => ({
+    setProfileData((prev) => ({
       ...prev,
-      familyMembers: prev.familyMembers.filter(member => member.id !== familyMemberToDelete)
+      familyMembers: prev.familyMembers.filter((member) => member.id !== familyMemberToDelete),
     }));
-    setFamilyMembersInEditMode(prev => {
+    setFamilyMembersInEditMode((prev) => {
       const newSet = new Set(prev);
       newSet.delete(familyMemberToDelete);
       return newSet;
@@ -846,24 +885,24 @@ export function useClientProfile(clientData: Client, onSave?: (data: ProfileData
   };
 
   const updateFamilyMember = (id: string, updates: Partial<FamilyMember>) => {
-    setProfileData(prev => ({
+    setProfileData((prev) => ({
       ...prev,
-      familyMembers: prev.familyMembers.map(member =>
-        member.id === id ? { ...member, ...updates } : member
-      )
+      familyMembers: prev.familyMembers.map((member) =>
+        member.id === id ? { ...member, ...updates } : member,
+      ),
     }));
     setHasChanges(true);
   };
 
   const saveFamilyMember = (id: string) => {
-    const member = profileData.familyMembers.find(m => m.id === id);
-    
+    const member = profileData.familyMembers.find((m) => m.id === id);
+
     if (!member?.fullName || !member?.relationship) {
       toast.error('Please fill in all required fields (Full Name and Relationship) before saving');
       return;
     }
-    
-    setFamilyMembersInEditMode(prev => {
+
+    setFamilyMembersInEditMode((prev) => {
       const newSet = new Set(prev);
       newSet.delete(id);
       return newSet;
@@ -871,26 +910,26 @@ export function useClientProfile(clientData: Client, onSave?: (data: ProfileData
   };
 
   const editFamilyMember = (id: string) => {
-    setFamilyMembersInEditMode(prev => new Set([...prev, id]));
+    setFamilyMembersInEditMode((prev) => new Set([...prev, id]));
   };
 
   const cancelEditFamilyMember = (id: string) => {
-    const member = profileData.familyMembers.find(m => m.id === id);
-    
+    const member = profileData.familyMembers.find((m) => m.id === id);
+
     if (member && !member.fullName && !member.relationship) {
-      setProfileData(prev => ({
+      setProfileData((prev) => ({
         ...prev,
-        familyMembers: prev.familyMembers.filter(m => m.id !== id)
+        familyMembers: prev.familyMembers.filter((m) => m.id !== id),
       }));
-      setFamilyMembersInEditMode(prev => {
+      setFamilyMembersInEditMode((prev) => {
         const newSet = new Set(prev);
         newSet.delete(id);
         return newSet;
       });
       return;
     }
-    
-    setFamilyMembersInEditMode(prev => {
+
+    setFamilyMembersInEditMode((prev) => {
       const newSet = new Set(prev);
       newSet.delete(id);
       return newSet;
@@ -906,13 +945,13 @@ export function useClientProfile(clientData: Client, onSave?: (data: ProfileData
       accountNumber: '',
       accountType: 'checking',
       branchCode: '',
-      isPrimary: false
+      isPrimary: false,
     };
-    setProfileData(prev => ({
+    setProfileData((prev) => ({
       ...prev,
-      bankAccounts: [...prev.bankAccounts, newAccount]
+      bankAccounts: [...prev.bankAccounts, newAccount],
     }));
-    setBankAccountsInEditMode(prev => new Set([...prev, newAccount.id]));
+    setBankAccountsInEditMode((prev) => new Set([...prev, newAccount.id]));
     setHasChanges(true);
   };
 
@@ -922,11 +961,11 @@ export function useClientProfile(clientData: Client, onSave?: (data: ProfileData
 
   const removeBankAccount = () => {
     if (!bankAccountToDelete) return;
-    setProfileData(prev => ({
+    setProfileData((prev) => ({
       ...prev,
-      bankAccounts: prev.bankAccounts.filter(account => account.id !== bankAccountToDelete)
+      bankAccounts: prev.bankAccounts.filter((account) => account.id !== bankAccountToDelete),
     }));
-    setBankAccountsInEditMode(prev => {
+    setBankAccountsInEditMode((prev) => {
       const newSet = new Set(prev);
       newSet.delete(bankAccountToDelete);
       return newSet;
@@ -936,26 +975,35 @@ export function useClientProfile(clientData: Client, onSave?: (data: ProfileData
   };
 
   const updateBankAccount = (id: string, updates: Partial<BankAccount>) => {
-    setProfileData(prev => ({
+    setProfileData((prev) => ({
       ...prev,
-      bankAccounts: prev.bankAccounts.map(account =>
-        account.id === id ? { ...account, ...updates } : account
-      )
+      bankAccounts: prev.bankAccounts.map((account) =>
+        account.id === id ? { ...account, ...updates } : account,
+      ),
     }));
     setHasChanges(true);
   };
 
   const saveBankAccount = (id: string) => {
-    const account = profileData.bankAccounts.find(a => a.id === id);
-    
-    if (!account?.accountHolderName || !account?.bankName || !account?.accountNumber || !account?.accountType) {
-      toast.error('Please fill in all required fields (Account Holder Name, Bank Name, Account Number, and Account Type) before saving');
+    const account = profileData.bankAccounts.find((a) => a.id === id);
+
+    if (
+      !account?.accountHolderName ||
+      !account?.bankName ||
+      !account?.accountNumber ||
+      !account?.accountType
+    ) {
+      toast.error(
+        'Please fill in all required fields (Account Holder Name, Bank Name, Account Number, and Account Type) before saving',
+      );
       return;
     }
-    
+
     if (account.bankName === 'Other') {
       if (!account.customBankName || !account.customBranchCode) {
-        toast.error('For "Other" banks, please provide the Custom Bank Name and Custom Branch Code');
+        toast.error(
+          'For "Other" banks, please provide the Custom Bank Name and Custom Branch Code',
+        );
         return;
       }
     } else {
@@ -964,8 +1012,8 @@ export function useClientProfile(clientData: Client, onSave?: (data: ProfileData
         return;
       }
     }
-    
-    setBankAccountsInEditMode(prev => {
+
+    setBankAccountsInEditMode((prev) => {
       const newSet = new Set(prev);
       newSet.delete(id);
       return newSet;
@@ -973,26 +1021,32 @@ export function useClientProfile(clientData: Client, onSave?: (data: ProfileData
   };
 
   const editBankAccount = (id: string) => {
-    setBankAccountsInEditMode(prev => new Set([...prev, id]));
+    setBankAccountsInEditMode((prev) => new Set([...prev, id]));
   };
 
   const cancelEditBankAccount = (id: string) => {
-    const account = profileData.bankAccounts.find(a => a.id === id);
-    
-    if (account && !account.accountHolderName && !account.bankName && !account.accountNumber && !account.accountType) {
-      setProfileData(prev => ({
+    const account = profileData.bankAccounts.find((a) => a.id === id);
+
+    if (
+      account &&
+      !account.accountHolderName &&
+      !account.bankName &&
+      !account.accountNumber &&
+      !account.accountType
+    ) {
+      setProfileData((prev) => ({
         ...prev,
-        bankAccounts: prev.bankAccounts.filter(a => a.id !== id)
+        bankAccounts: prev.bankAccounts.filter((a) => a.id !== id),
       }));
-      setBankAccountsInEditMode(prev => {
+      setBankAccountsInEditMode((prev) => {
         const newSet = new Set(prev);
         newSet.delete(id);
         return newSet;
       });
       return;
     }
-    
-    setBankAccountsInEditMode(prev => {
+
+    setBankAccountsInEditMode((prev) => {
       const newSet = new Set(prev);
       newSet.delete(id);
       return newSet;
@@ -1004,7 +1058,7 @@ export function useClientProfile(clientData: Client, onSave?: (data: ProfileData
     reader.onloadend = () => {
       updateBankAccount(id, {
         proofOfBankDocument: reader.result as string,
-        proofOfBankFileName: file.name
+        proofOfBankFileName: file.name,
       });
     };
     reader.readAsDataURL(file);
@@ -1018,21 +1072,21 @@ export function useClientProfile(clientData: Client, onSave?: (data: ProfileData
     if (!proofOfBankToDelete) return;
     updateBankAccount(proofOfBankToDelete, {
       proofOfBankDocument: undefined,
-      proofOfBankFileName: undefined
+      proofOfBankFileName: undefined,
     });
     setProofOfBankToDelete(null);
   };
 
   // Risk Assessment Management Functions
   const updateRiskQuestion = (questionNumber: number, score: number) => {
-    setProfileData(prev => {
+    setProfileData((prev) => {
       const updatedAssessment = {
         ...prev.riskAssessment,
-        [`question${questionNumber}`]: score
+        [`question${questionNumber}`]: score,
       };
-      
+
       // Calculate total score
-      const totalScore = (
+      const totalScore =
         updatedAssessment.question1 +
         updatedAssessment.question2 +
         updatedAssessment.question3 +
@@ -1042,11 +1096,10 @@ export function useClientProfile(clientData: Client, onSave?: (data: ProfileData
         updatedAssessment.question7 +
         updatedAssessment.question8 +
         updatedAssessment.question9 +
-        updatedAssessment.question10
-      );
-      
+        updatedAssessment.question10;
+
       // Check if all questions are answered
-      const allAnswered = (
+      const allAnswered =
         updatedAssessment.question1 > 0 &&
         updatedAssessment.question2 > 0 &&
         updatedAssessment.question3 > 0 &&
@@ -1056,8 +1109,7 @@ export function useClientProfile(clientData: Client, onSave?: (data: ProfileData
         updatedAssessment.question7 > 0 &&
         updatedAssessment.question8 > 0 &&
         updatedAssessment.question9 > 0 &&
-        updatedAssessment.question10 > 0
-      );
+        updatedAssessment.question10 > 0;
 
       // Determine risk category (only if all questions answered)
       let riskCategory = '';
@@ -1070,7 +1122,7 @@ export function useClientProfile(clientData: Client, onSave?: (data: ProfileData
           riskCategory = 'Aggressive';
         }
       }
-      
+
       return {
         ...prev,
         riskAssessment: {
@@ -1078,15 +1130,15 @@ export function useClientProfile(clientData: Client, onSave?: (data: ProfileData
           totalScore,
           riskCategory,
           dateCompleted: allAnswered ? new Date().toISOString() : '',
-          canRetake: allAnswered
-        }
+          canRetake: allAnswered,
+        },
       };
     });
     setHasChanges(true);
   };
 
   const resetRiskAssessment = () => {
-    setProfileData(prev => ({
+    setProfileData((prev) => ({
       ...prev,
       riskAssessment: {
         question1: 0,
@@ -1102,8 +1154,8 @@ export function useClientProfile(clientData: Client, onSave?: (data: ProfileData
         totalScore: 0,
         riskCategory: '',
         dateCompleted: '',
-        canRetake: true
-      }
+        canRetake: true,
+      },
     }));
     setAssessmentStarted(false);
     setHasChanges(true);
@@ -1118,13 +1170,13 @@ export function useClientProfile(clientData: Client, onSave?: (data: ProfileData
       description: '',
       value: 0,
       ownershipType: '',
-      provider: ''
+      provider: '',
     };
-    setProfileData(prev => ({
+    setProfileData((prev) => ({
       ...prev,
-      assets: [...prev.assets, newAsset]
+      assets: [...prev.assets, newAsset],
     }));
-    setAssetsInEditMode(prev => new Set([...prev, newAsset.id]));
+    setAssetsInEditMode((prev) => new Set([...prev, newAsset.id]));
     setHasChanges(true);
   };
 
@@ -1134,16 +1186,16 @@ export function useClientProfile(clientData: Client, onSave?: (data: ProfileData
 
   const removeAsset = () => {
     if (!assetToDelete) return;
-    setProfileData(prev => ({
+    setProfileData((prev) => ({
       ...prev,
-      assets: prev.assets.filter(asset => asset.id !== assetToDelete)
+      assets: prev.assets.filter((asset) => asset.id !== assetToDelete),
     }));
-    setAssetsInEditMode(prev => {
+    setAssetsInEditMode((prev) => {
       const newSet = new Set(prev);
       newSet.delete(assetToDelete);
       return newSet;
     });
-    setAssetDisplayValues(prev => {
+    setAssetDisplayValues((prev) => {
       const newState = { ...prev };
       delete newState[assetToDelete];
       return newState;
@@ -1153,34 +1205,34 @@ export function useClientProfile(clientData: Client, onSave?: (data: ProfileData
   };
 
   const updateAsset = (id: string, updates: Partial<Asset>) => {
-    setProfileData(prev => ({
+    setProfileData((prev) => ({
       ...prev,
-      assets: prev.assets.map(asset =>
-        asset.id === id ? { ...asset, ...updates } : asset
-      )
+      assets: prev.assets.map((asset) => (asset.id === id ? { ...asset, ...updates } : asset)),
     }));
     setHasChanges(true);
   };
 
   const saveAsset = (id: string) => {
-    const asset = profileData.assets.find(a => a.id === id);
-    
+    const asset = profileData.assets.find((a) => a.id === id);
+
     if (!asset?.type || !asset?.name || !asset?.ownershipType) {
-      toast.error('Please fill in all required fields (Asset Type, Asset Name, and Ownership Type) before saving');
+      toast.error(
+        'Please fill in all required fields (Asset Type, Asset Name, and Ownership Type) before saving',
+      );
       return;
     }
-    
+
     if (asset.type === 'Other' && !asset.customType) {
       toast.error('For "Other" asset types, please specify the custom asset type');
       return;
     }
-    
-    setAssetsInEditMode(prev => {
+
+    setAssetsInEditMode((prev) => {
       const newSet = new Set(prev);
       newSet.delete(id);
       return newSet;
     });
-    setAssetDisplayValues(prev => {
+    setAssetDisplayValues((prev) => {
       const newState = { ...prev };
       delete newState[id];
       return newState;
@@ -1188,37 +1240,37 @@ export function useClientProfile(clientData: Client, onSave?: (data: ProfileData
   };
 
   const editAsset = (id: string) => {
-    setAssetsInEditMode(prev => new Set([...prev, id]));
+    setAssetsInEditMode((prev) => new Set([...prev, id]));
   };
 
   const cancelEditAsset = (id: string) => {
-    const asset = profileData.assets.find(a => a.id === id);
-    
+    const asset = profileData.assets.find((a) => a.id === id);
+
     if (asset && !asset.type && !asset.name && !asset.ownershipType) {
-      setProfileData(prev => ({
+      setProfileData((prev) => ({
         ...prev,
-        assets: prev.assets.filter(a => a.id !== id)
+        assets: prev.assets.filter((a) => a.id !== id),
       }));
-      setAssetsInEditMode(prev => {
+      setAssetsInEditMode((prev) => {
         const newSet = new Set(prev);
         newSet.delete(id);
         return newSet;
       });
-      setAssetDisplayValues(prev => {
+      setAssetDisplayValues((prev) => {
         const newState = { ...prev };
         delete newState[id];
         return newState;
       });
       return;
     }
-    
-    setAssetsInEditMode(prev => {
+
+    setAssetsInEditMode((prev) => {
       const newSet = new Set(prev);
       newSet.delete(id);
       return newSet;
     });
-    
-    setAssetDisplayValues(prev => {
+
+    setAssetDisplayValues((prev) => {
       const newState = { ...prev };
       delete newState[id];
       return newState;
@@ -1235,13 +1287,13 @@ export function useClientProfile(clientData: Client, onSave?: (data: ProfileData
       provider: '',
       outstandingBalance: 0,
       monthlyPayment: 0,
-      interestRate: 0
+      interestRate: 0,
     };
-    setProfileData(prev => ({
+    setProfileData((prev) => ({
       ...prev,
-      liabilities: [...prev.liabilities, newLiability]
+      liabilities: [...prev.liabilities, newLiability],
     }));
-    setLiabilitiesInEditMode(prev => new Set([...prev, newLiability.id]));
+    setLiabilitiesInEditMode((prev) => new Set([...prev, newLiability.id]));
     setHasChanges(true);
   };
 
@@ -1251,16 +1303,16 @@ export function useClientProfile(clientData: Client, onSave?: (data: ProfileData
 
   const removeLiability = () => {
     if (!liabilityToDelete) return;
-    setProfileData(prev => ({
+    setProfileData((prev) => ({
       ...prev,
-      liabilities: prev.liabilities.filter(liability => liability.id !== liabilityToDelete)
+      liabilities: prev.liabilities.filter((liability) => liability.id !== liabilityToDelete),
     }));
-    setLiabilitiesInEditMode(prev => {
+    setLiabilitiesInEditMode((prev) => {
       const newSet = new Set(prev);
       newSet.delete(liabilityToDelete);
       return newSet;
     });
-    setLiabilityDisplayValues(prev => {
+    setLiabilityDisplayValues((prev) => {
       const newState = { ...prev };
       delete newState[liabilityToDelete];
       return newState;
@@ -1270,34 +1322,36 @@ export function useClientProfile(clientData: Client, onSave?: (data: ProfileData
   };
 
   const updateLiability = (id: string, updates: Partial<Liability>) => {
-    setProfileData(prev => ({
+    setProfileData((prev) => ({
       ...prev,
-      liabilities: prev.liabilities.map(liability =>
-        liability.id === id ? { ...liability, ...updates } : liability
-      )
+      liabilities: prev.liabilities.map((liability) =>
+        liability.id === id ? { ...liability, ...updates } : liability,
+      ),
     }));
     setHasChanges(true);
   };
 
   const saveLiability = (id: string) => {
-    const liability = profileData.liabilities.find(l => l.id === id);
-    
+    const liability = profileData.liabilities.find((l) => l.id === id);
+
     if (!liability?.type || !liability?.name || !liability?.provider) {
-      toast.error('Please fill in all required fields (Liability Type, Liability Name, and Provider) before saving');
+      toast.error(
+        'Please fill in all required fields (Liability Type, Liability Name, and Provider) before saving',
+      );
       return;
     }
-    
+
     if (liability.type === 'Other' && !liability.customType) {
       toast.error('For "Other" liability types, please specify the custom liability type');
       return;
     }
-    
-    setLiabilitiesInEditMode(prev => {
+
+    setLiabilitiesInEditMode((prev) => {
       const newSet = new Set(prev);
       newSet.delete(id);
       return newSet;
     });
-    setLiabilityDisplayValues(prev => {
+    setLiabilityDisplayValues((prev) => {
       const newState = { ...prev };
       delete newState[id];
       return newState;
@@ -1305,37 +1359,37 @@ export function useClientProfile(clientData: Client, onSave?: (data: ProfileData
   };
 
   const editLiability = (id: string) => {
-    setLiabilitiesInEditMode(prev => new Set([...prev, id]));
+    setLiabilitiesInEditMode((prev) => new Set([...prev, id]));
   };
 
   const cancelEditLiability = (id: string) => {
-    const liability = profileData.liabilities.find(l => l.id === id);
-    
+    const liability = profileData.liabilities.find((l) => l.id === id);
+
     if (liability && !liability.type && !liability.name && !liability.provider) {
-      setProfileData(prev => ({
+      setProfileData((prev) => ({
         ...prev,
-        liabilities: prev.liabilities.filter(l => l.id !== id)
+        liabilities: prev.liabilities.filter((l) => l.id !== id),
       }));
-      setLiabilitiesInEditMode(prev => {
+      setLiabilitiesInEditMode((prev) => {
         const newSet = new Set(prev);
         newSet.delete(id);
         return newSet;
       });
-      setLiabilityDisplayValues(prev => {
+      setLiabilityDisplayValues((prev) => {
         const newState = { ...prev };
         delete newState[id];
         return newState;
       });
       return;
     }
-    
-    setLiabilitiesInEditMode(prev => {
+
+    setLiabilitiesInEditMode((prev) => {
       const newSet = new Set(prev);
       newSet.delete(id);
       return newSet;
     });
-    
-    setLiabilityDisplayValues(prev => {
+
+    setLiabilityDisplayValues((prev) => {
       const newState = { ...prev };
       delete newState[id];
       return newState;
@@ -1372,7 +1426,7 @@ export function useClientProfile(clientData: Client, onSave?: (data: ProfileData
       netIncomeDisplay,
       assetDisplayValues,
       liabilityDisplayValues,
-      incomeValidationError
+      incomeValidationError,
     },
     actions: {
       setProfileData,
@@ -1461,7 +1515,7 @@ export function useClientProfile(clientData: Client, onSave?: (data: ProfileData
       setEmployerToDelete,
       setChronicConditionToDelete,
       setIdentityDocToDelete,
-      setProofOfResidenceToDelete
-    }
+      setProofOfResidenceToDelete,
+    },
   };
 }

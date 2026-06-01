@@ -224,17 +224,18 @@ class WillPdfBuilder {
     this.doc.setFontSize(7.5);
     this.doc.setFont('helvetica', 'bold');
     this.doc.setTextColor(55, 65, 81);
-    this.doc.text(
-      `${this.docTitle.toUpperCase()} — ${this.status}`,
-      MARGIN_LEFT,
-      this.y + 4,
-    );
+    this.doc.text(`${this.docTitle.toUpperCase()} — ${this.status}`, MARGIN_LEFT, this.y + 4);
     this.doc.setFont('helvetica', 'normal');
     this.doc.setFontSize(7);
     this.doc.setTextColor(...COLORS.muted);
-    this.doc.text('Wealthfront (Pty) Ltd t/a Navigate Wealth | FSP 54606', PAGE_WIDTH - MARGIN_RIGHT, this.y + 4, {
-      align: 'right',
-    });
+    this.doc.text(
+      'Wealthfront (Pty) Ltd t/a Navigate Wealth | FSP 54606',
+      PAGE_WIDTH - MARGIN_RIGHT,
+      this.y + 4,
+      {
+        align: 'right',
+      },
+    );
     this.y += 8;
     this.doc.setDrawColor(...COLORS.border);
     this.doc.line(MARGIN_LEFT, this.y, PAGE_WIDTH - MARGIN_RIGHT, this.y);
@@ -304,7 +305,12 @@ class WillPdfBuilder {
     this.y += 4;
   }
 
-  private renderCallout(text: string, bgColor?: [number, number, number], borderColor?: [number, number, number], textColor?: [number, number, number]): void {
+  private renderCallout(
+    text: string,
+    bgColor?: [number, number, number],
+    borderColor?: [number, number, number],
+    textColor?: [number, number, number],
+  ): void {
     const lines = this.doc.splitTextToSize(text, CONTENT_WIDTH - 8);
     const lineHeight = 3.5;
     const boxHeight = lines.length * lineHeight + 6;
@@ -385,7 +391,8 @@ class WillPdfBuilder {
         this.doc.setFontSize(7);
         this.doc.setFont('helvetica', 'normal');
         this.doc.setTextColor(...COLORS.text);
-        const truncated = cell.length > Math.floor(w / 1.5) ? cell.substring(0, Math.floor(w / 1.5)) + '...' : cell;
+        const truncated =
+          cell.length > Math.floor(w / 1.5) ? cell.substring(0, Math.floor(w / 1.5)) + '...' : cell;
         this.doc.text(truncated, colX + 2, this.y + 4);
         colX += w;
       });
@@ -476,10 +483,20 @@ class WillPdfBuilder {
       ['Full Legal Name', data.personalDetails.fullName || '-'],
       ['Identity Number', data.personalDetails.idNumber || '-'],
       ['Date of Birth', formatDate(data.personalDetails.dateOfBirth)],
-      ['Marital Status', MARITAL_STATUS_LABELS[data.personalDetails.maritalStatus] || data.personalDetails.maritalStatus],
+      [
+        'Marital Status',
+        MARITAL_STATUS_LABELS[data.personalDetails.maritalStatus] ||
+          data.personalDetails.maritalStatus,
+      ],
     ];
-    if (data.personalDetails.maritalStatus?.startsWith('married') && data.personalDetails.spouseName) {
-      personalRows.push(['Spouse', `${data.personalDetails.spouseName}${data.personalDetails.spouseIdNumber ? ` (ID: ${data.personalDetails.spouseIdNumber})` : ''}`]);
+    if (
+      data.personalDetails.maritalStatus?.startsWith('married') &&
+      data.personalDetails.spouseName
+    ) {
+      personalRows.push([
+        'Spouse',
+        `${data.personalDetails.spouseName}${data.personalDetails.spouseIdNumber ? ` (ID: ${data.personalDetails.spouseIdNumber})` : ''}`,
+      ]);
     }
     personalRows.push(['Physical Address', data.personalDetails.physicalAddress || '-']);
     this.renderKeyValueTable(personalRows);
@@ -491,7 +508,11 @@ class WillPdfBuilder {
       this.doc.setFontSize(7.5);
       this.doc.setFont('helvetica', 'normal');
       this.doc.setTextColor(...COLORS.text);
-      this.doc.text('I hereby nominate and appoint the following person(s) as executor(s):', MARGIN_LEFT, this.y);
+      this.doc.text(
+        'I hereby nominate and appoint the following person(s) as executor(s):',
+        MARGIN_LEFT,
+        this.y,
+      );
       this.y += 4;
       this.renderDataTable(
         ['#', 'Name', 'Type', 'ID / Company', 'Contact Details'],
@@ -499,7 +520,7 @@ class WillPdfBuilder {
           String(i + 1),
           e.name,
           e.type === 'professional' ? 'Professional' : 'Individual',
-          e.type === 'professional' ? (e.company || '-') : (e.idNumber || '-'),
+          e.type === 'professional' ? e.company || '-' : e.idNumber || '-',
           e.contactDetails || '-',
         ]),
         [0.05, 0.25, 0.15, 0.2, 0.35],
@@ -513,7 +534,11 @@ class WillPdfBuilder {
       this.doc.setFontSize(7.5);
       this.doc.setFont('helvetica', 'normal');
       this.doc.setTextColor(...COLORS.text);
-      this.doc.text('The residue of my estate shall be distributed as follows:', MARGIN_LEFT, this.y);
+      this.doc.text(
+        'The residue of my estate shall be distributed as follows:',
+        MARGIN_LEFT,
+        this.y,
+      );
       this.y += 4;
       const total = data.beneficiaries.reduce((s, b) => s + b.percentage, 0);
       this.renderDataTable(
@@ -539,7 +564,11 @@ class WillPdfBuilder {
       this.doc.setFontSize(7.5);
       this.doc.setFont('helvetica', 'normal');
       this.doc.setTextColor(...COLORS.text);
-      this.doc.text('I nominate the following person(s) as guardian(s) of my minor children:', MARGIN_LEFT, this.y);
+      this.doc.text(
+        'I nominate the following person(s) as guardian(s) of my minor children:',
+        MARGIN_LEFT,
+        this.y,
+      );
       this.y += 4;
       this.renderDataTable(
         ['#', 'Name', 'ID Number', 'Relationship', 'Address'],
@@ -561,7 +590,11 @@ class WillPdfBuilder {
       this.doc.setFontSize(7.5);
       this.doc.setFont('helvetica', 'normal');
       this.doc.setTextColor(...COLORS.text);
-      this.doc.text('I bequeath the following specific items to the persons named below:', MARGIN_LEFT, this.y);
+      this.doc.text(
+        'I bequeath the following specific items to the persons named below:',
+        MARGIN_LEFT,
+        this.y,
+      );
       this.y += 4;
       this.renderDataTable(
         ['#', 'Item / Description', 'Beneficiary', 'ID Number'],
@@ -602,10 +635,10 @@ class WillPdfBuilder {
     this.renderSectionHead('8', 'Legal Notice');
     this.renderCallout(
       'Important: This document is a draft prepared by Navigate Wealth for review purposes only. ' +
-      'It does not constitute a valid Last Will and Testament until it has been printed, signed by the testator ' +
-      'in the presence of two competent witnesses (who must also sign), in compliance with the requirements ' +
-      'of the Wills Act 7 of 1953 (South Africa). Navigate Wealth recommends that the testator seek ' +
-      'independent legal advice before executing this will.',
+        'It does not constitute a valid Last Will and Testament until it has been printed, signed by the testator ' +
+        'in the presence of two competent witnesses (who must also sign), in compliance with the requirements ' +
+        'of the Wills Act 7 of 1953 (South Africa). Navigate Wealth recommends that the testator seek ' +
+        'independent legal advice before executing this will.',
       COLORS.amberBg,
       COLORS.amberBorder,
       COLORS.amberText,
@@ -691,8 +724,14 @@ class WillPdfBuilder {
 
     const treatmentRows: [string, string][] = [
       ['Mechanical Ventilation', TREATMENT_LABELS[data.lifeSustainingTreatment.ventilator] || '-'],
-      ['Cardiopulmonary Resuscitation (CPR)', TREATMENT_LABELS[data.lifeSustainingTreatment.cpr] || '-'],
-      ['Artificial Nutrition & Hydration', TREATMENT_LABELS[data.lifeSustainingTreatment.artificialNutrition] || '-'],
+      [
+        'Cardiopulmonary Resuscitation (CPR)',
+        TREATMENT_LABELS[data.lifeSustainingTreatment.cpr] || '-',
+      ],
+      [
+        'Artificial Nutrition & Hydration',
+        TREATMENT_LABELS[data.lifeSustainingTreatment.artificialNutrition] || '-',
+      ],
       ['Dialysis', TREATMENT_LABELS[data.lifeSustainingTreatment.dialysis] || '-'],
       ['Antibiotics', TREATMENT_LABELS[data.lifeSustainingTreatment.antibiotics] || '-'],
     ];
@@ -711,8 +750,14 @@ class WillPdfBuilder {
     this.checkPageBreak(25);
     this.renderSectionHead('5', 'Pain Management & Comfort Care');
     const painRows: [string, string][] = [
-      ['Comfort Care Only (no curative treatment)', data.painManagement.comfortCareOnly ? 'Yes' : 'No'],
-      ['Maximum Pain Relief (even if it hastens death)', data.painManagement.maximumPainRelief ? 'Yes' : 'No'],
+      [
+        'Comfort Care Only (no curative treatment)',
+        data.painManagement.comfortCareOnly ? 'Yes' : 'No',
+      ],
+      [
+        'Maximum Pain Relief (even if it hastens death)',
+        data.painManagement.maximumPainRelief ? 'Yes' : 'No',
+      ],
     ];
     this.renderKeyValueTable(painRows);
 
@@ -730,7 +775,14 @@ class WillPdfBuilder {
     this.renderSectionHead('6', 'Organ Donation');
     const donationRows: [string, string][] = [
       ['Organ Donor', data.organDonation.isDonor ? 'Yes' : 'No'],
-      ['Donation Type', data.organDonation.donationType === 'all' ? 'All organs and tissues' : data.organDonation.donationType === 'specific' ? 'Specific organs only' : 'None'],
+      [
+        'Donation Type',
+        data.organDonation.donationType === 'all'
+          ? 'All organs and tissues'
+          : data.organDonation.donationType === 'specific'
+            ? 'Specific organs only'
+            : 'None',
+      ],
     ];
     if (data.organDonation.donationType === 'specific' && data.organDonation.specificOrgans) {
       donationRows.push(['Specific Organs', data.organDonation.specificOrgans]);
@@ -761,9 +813,9 @@ class WillPdfBuilder {
     this.renderSectionHead(String(legalNum + 1), 'Legal Notice');
     this.renderCallout(
       'Important: This Living Will is a directive prepared by Navigate Wealth for review purposes only. ' +
-      'It does not constitute a legally binding document until signed by the declarant in the presence of ' +
-      'two competent witnesses. Navigate Wealth recommends that the declarant seek independent legal and ' +
-      'medical advice before executing this directive.',
+        'It does not constitute a legally binding document until signed by the declarant in the presence of ' +
+        'two competent witnesses. Navigate Wealth recommends that the declarant seek independent legal and ' +
+        'medical advice before executing this directive.',
       COLORS.amberBg,
       COLORS.amberBorder,
       COLORS.amberText,

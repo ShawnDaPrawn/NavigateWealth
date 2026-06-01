@@ -1,12 +1,12 @@
-import { 
-  ProfileData, 
-  BankAccount, 
-  FamilyMember, 
-  Asset, 
-  Liability, 
-  ChronicCondition, 
-  Employer, 
-  IdentityDocument 
+import {
+  ProfileData,
+  BankAccount,
+  FamilyMember,
+  Asset,
+  Liability,
+  ChronicCondition,
+  Employer,
+  IdentityDocument,
 } from './types';
 
 // Bank Account Handlers
@@ -32,7 +32,7 @@ export const createFamilyMember = (): FamilyMember => ({
   isIncludedInEstatePlanning: false,
   shareProfileInformation: false,
   shareEmail: '',
-  notes: ''
+  notes: '',
 });
 
 // Asset Handlers
@@ -65,7 +65,7 @@ export const createChronicCondition = (): ChronicCondition => ({
   monthDiagnosed: '',
   yearDiagnosed: '',
   onTreatment: false,
-  treatingDoctor: ''
+  treatingDoctor: '',
 });
 
 // Employer Handlers
@@ -73,14 +73,14 @@ export const createEmployer = (): Employer => ({
   id: Date.now().toString(),
   jobTitle: '',
   employerName: '',
-  industry: ''
+  industry: '',
 });
 
 // Identity Document Handlers
 export const createIdentityDocument = (
   type: 'national-id' | 'passport' | 'drivers-license',
   fileName?: string,
-  fileSize?: number
+  fileSize?: number,
 ): IdentityDocument => ({
   id: Date.now().toString(),
   type,
@@ -90,13 +90,13 @@ export const createIdentityDocument = (
   fileName,
   fileSize,
   uploadDate: fileName ? new Date().toISOString() : undefined,
-  isVerified: false
+  isVerified: false,
 });
 
 // Risk Assessment Calculation
 export const calculateRiskAssessment = (answers: number[]) => {
   const totalScore = answers.reduce((sum, score) => sum + score, 0);
-  const allAnswered = answers.length === 10 && answers.every(a => a > 0);
+  const allAnswered = answers.length === 10 && answers.every((a) => a > 0);
 
   let riskCategory = '';
   if (allAnswered) {
@@ -120,9 +120,12 @@ export const calculateRiskAssessment = (answers: number[]) => {
 // Calculate totals
 export const calculateTotals = (profileData: ProfileData) => {
   const totalAssets = profileData.assets.reduce((sum, asset) => sum + (asset.value || 0), 0);
-  const totalLiabilities = profileData.liabilities.reduce((sum, liability) => sum + (liability.outstandingBalance || 0), 0);
+  const totalLiabilities = profileData.liabilities.reduce(
+    (sum, liability) => sum + (liability.outstandingBalance || 0),
+    0,
+  );
   const netWorth = totalAssets - totalLiabilities;
-  
+
   return { totalAssets, totalLiabilities, netWorth };
 };
 

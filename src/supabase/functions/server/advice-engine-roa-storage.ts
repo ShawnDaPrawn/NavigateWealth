@@ -89,7 +89,11 @@ function mimeTypeToExtension(mimeType: string | undefined): string {
   return '.bin';
 }
 
-export async function uploadRoABlob(objectPath: string, bytes: Uint8Array, contentType: string): Promise<void> {
+export async function uploadRoABlob(
+  objectPath: string,
+  bytes: Uint8Array,
+  contentType: string,
+): Promise<void> {
   await ensureRoADocumentsBucket();
   const supabase = getSupabase();
   const { error } = await supabase.storage.from(ROA_DOCUMENTS_BUCKET).upload(objectPath, bytes, {

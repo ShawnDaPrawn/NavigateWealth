@@ -50,9 +50,7 @@ export const dualWriteEnabled: boolean =
   (Deno.env.get('ESIGN_DUAL_WRITE') ?? 'false').toLowerCase() === 'true';
 
 export const readSource: ReadSource =
-  ((Deno.env.get('ESIGN_READ_FROM') ?? 'kv').toLowerCase() === 'postgres')
-    ? 'postgres'
-    : 'kv';
+  (Deno.env.get('ESIGN_READ_FROM') ?? 'kv').toLowerCase() === 'postgres' ? 'postgres' : 'kv';
 
 // ── Lazy client (cold-start friendly) ───────────────────────────────────────
 
@@ -83,7 +81,9 @@ async function shadowWrite<T>(label: string, fn: () => Promise<T>): Promise<T | 
   try {
     return await fn();
   } catch (err) {
-    log.warn(`Shadow write '${label}' failed (canonical KV write succeeded — safe to ignore)`, { err });
+    log.warn(`Shadow write '${label}' failed (canonical KV write succeeded — safe to ignore)`, {
+      err,
+    });
     return null;
   }
 }
@@ -168,27 +168,21 @@ export const esignPgRepo = {
   /** Idempotent upsert of an envelope record. */
   upsertEnvelope(row: EnvelopeRow): Promise<unknown> {
     return shadowWrite('upsertEnvelope', async () => {
-      const { error } = await client()
-        .from('esign_envelopes')
-        .upsert(row, { onConflict: 'id' });
+      const { error } = await client().from('esign_envelopes').upsert(row, { onConflict: 'id' });
       if (error) throw error;
     }) as Promise<unknown>;
   },
 
   upsertSigner(row: SignerRow): Promise<unknown> {
     return shadowWrite('upsertSigner', async () => {
-      const { error } = await client()
-        .from('esign_signers')
-        .upsert(row, { onConflict: 'id' });
+      const { error } = await client().from('esign_signers').upsert(row, { onConflict: 'id' });
       if (error) throw error;
     }) as Promise<unknown>;
   },
 
   upsertField(row: FieldRow): Promise<unknown> {
     return shadowWrite('upsertField', async () => {
-      const { error } = await client()
-        .from('esign_fields')
-        .upsert(row, { onConflict: 'id' });
+      const { error } = await client().from('esign_fields').upsert(row, { onConflict: 'id' });
       if (error) throw error;
     }) as Promise<unknown>;
   },
@@ -205,9 +199,7 @@ export const esignPgRepo = {
         .eq('envelope_id', envelopeId);
       if (delErr) throw delErr;
       if (rows.length > 0) {
-        const { error: insErr } = await client()
-          .from('esign_fields')
-          .insert(rows);
+        const { error: insErr } = await client().from('esign_fields').insert(rows);
         if (insErr) throw insErr;
       }
     }) as Promise<unknown>;
@@ -215,9 +207,7 @@ export const esignPgRepo = {
 
   insertAudit(row: AuditRow): Promise<unknown> {
     return shadowWrite('insertAudit', async () => {
-      const { error } = await client()
-        .from('esign_audit_events')
-        .insert(row);
+      const { error } = await client().from('esign_audit_events').insert(row);
       if (error) throw error;
     }) as Promise<unknown>;
   },
@@ -226,10 +216,7 @@ export const esignPgRepo = {
   deleteEnvelope(envelopeId: string): Promise<unknown> {
     return shadowWrite('deleteEnvelope', async () => {
       // ON DELETE CASCADE on signers/fields/certificates handles the rest.
-      const { error } = await client()
-        .from('esign_envelopes')
-        .delete()
-        .eq('id', envelopeId);
+      const { error } = await client().from('esign_envelopes').delete().eq('id', envelopeId);
       if (error) throw error;
     }) as Promise<unknown>;
   },

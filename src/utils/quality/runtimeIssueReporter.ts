@@ -64,7 +64,9 @@ export async function reportRuntimeClientIssue(issue: RuntimeClientIssueInput): 
 
   try {
     const supabase = createClient();
-    const { data: { session } } = await supabase.auth.getSession();
+    const {
+      data: { session },
+    } = await supabase.auth.getSession();
     if (!session?.access_token) {
       return;
     }
@@ -94,7 +96,10 @@ export async function reportRuntimeClientIssue(issue: RuntimeClientIssueInput): 
   }
 }
 
-export function runtimeIssueFromUnknown(kind: RuntimeIssueKind, reason: unknown): RuntimeClientIssueInput {
+export function runtimeIssueFromUnknown(
+  kind: RuntimeIssueKind,
+  reason: unknown,
+): RuntimeClientIssueInput {
   if (reason instanceof Error) {
     return {
       kind,

@@ -72,7 +72,7 @@ export const RISK_KEYS: ProductKey[] = [
     dataType: 'date',
     isCalculated: false,
   },
-  
+
   // Calculated total keys (derived from summing individual fields, not assignable)
   {
     id: 'risk_life_cover_total',
@@ -753,8 +753,8 @@ export const EMPLOYEE_BENEFITS_KEYS: ProductKey[] = [
   },
   {
     id: 'eb_total_premium',
-    category: 'employee_benefits', // Keeping as general category for now or map to one of them? 
-    // Actually, calculated keys usually belong to a category. 
+    category: 'employee_benefits', // Keeping as general category for now or map to one of them?
+    // Actually, calculated keys usually belong to a category.
     // But if it sums from multiple, it's tricky.
     // Let's put it in 'employee_benefits_risk' as a placeholder or 'employee_benefits' if we keep the parent.
     // Ideally we should probably split the totals too.
@@ -763,7 +763,11 @@ export const EMPLOYEE_BENEFITS_KEYS: ProductKey[] = [
     description: 'Total monthly cost across all employee benefit policies',
     dataType: 'currency',
     isCalculated: true,
-    calculatedFrom: ['eb_risk_monthly_premium', 'eb_retirement_contribution_employee', 'eb_retirement_contribution_employer'],
+    calculatedFrom: [
+      'eb_risk_monthly_premium',
+      'eb_retirement_contribution_employee',
+      'eb_retirement_contribution_employer',
+    ],
   },
 ];
 
@@ -1529,25 +1533,105 @@ export function getKeysByCategory(category: ProductKeyCategory): ProductKey[] {
 
 // Key categories with display names
 export const KEY_CATEGORIES = [
-  { id: 'risk' as ProductKeyCategory, name: 'Risk', description: 'Life, disability, and income protection' },
-  { id: 'medical_aid' as ProductKeyCategory, name: 'Medical Aid', description: 'Medical aid and healthcare' },
-  { id: 'retirement_pre' as ProductKeyCategory, name: 'Pre-Retirement', description: 'Retirement accumulation (RA, Pension, Provident)' },
-  { id: 'retirement_post' as ProductKeyCategory, name: 'Post-Retirement', description: 'Retirement income (Living Annuity, etc.)' },
-  { id: 'invest_voluntary' as ProductKeyCategory, name: 'Voluntary Investments', description: 'Discretionary investments (Unit Trusts, TFSA)' },
-  { id: 'invest_guaranteed' as ProductKeyCategory, name: 'Guaranteed Investments', description: 'Fixed period/rate investments (Endowments, etc.)' },
-  { id: 'employee_benefits' as ProductKeyCategory, name: 'Employee Benefits (General)', description: 'General Group benefits and schemes' },
-  { id: 'employee_benefits_risk' as ProductKeyCategory, name: 'Employee Benefits (Risk)', description: 'Group Risk benefits (Life, Disability, etc.)' },
-  { id: 'employee_benefits_retirement' as ProductKeyCategory, name: 'Employee Benefits (Retirement)', description: 'Group Retirement benefits (Pension, Provident)' },
-  { id: 'estate_planning' as ProductKeyCategory, name: 'Estate Planning', description: 'Wills, trusts, and estate' },
+  {
+    id: 'risk' as ProductKeyCategory,
+    name: 'Risk',
+    description: 'Life, disability, and income protection',
+  },
+  {
+    id: 'medical_aid' as ProductKeyCategory,
+    name: 'Medical Aid',
+    description: 'Medical aid and healthcare',
+  },
+  {
+    id: 'retirement_pre' as ProductKeyCategory,
+    name: 'Pre-Retirement',
+    description: 'Retirement accumulation (RA, Pension, Provident)',
+  },
+  {
+    id: 'retirement_post' as ProductKeyCategory,
+    name: 'Post-Retirement',
+    description: 'Retirement income (Living Annuity, etc.)',
+  },
+  {
+    id: 'invest_voluntary' as ProductKeyCategory,
+    name: 'Voluntary Investments',
+    description: 'Discretionary investments (Unit Trusts, TFSA)',
+  },
+  {
+    id: 'invest_guaranteed' as ProductKeyCategory,
+    name: 'Guaranteed Investments',
+    description: 'Fixed period/rate investments (Endowments, etc.)',
+  },
+  {
+    id: 'employee_benefits' as ProductKeyCategory,
+    name: 'Employee Benefits (General)',
+    description: 'General Group benefits and schemes',
+  },
+  {
+    id: 'employee_benefits_risk' as ProductKeyCategory,
+    name: 'Employee Benefits (Risk)',
+    description: 'Group Risk benefits (Life, Disability, etc.)',
+  },
+  {
+    id: 'employee_benefits_retirement' as ProductKeyCategory,
+    name: 'Employee Benefits (Retirement)',
+    description: 'Group Retirement benefits (Pension, Provident)',
+  },
+  {
+    id: 'estate_planning' as ProductKeyCategory,
+    name: 'Estate Planning',
+    description: 'Wills, trusts, and estate',
+  },
   { id: 'tax' as ProductKeyCategory, name: 'Tax', description: 'Tax planning and compliance' },
-  { id: 'profile_personal' as ProductKeyCategory, name: 'Personal Information', description: 'Client personal details' },
-  { id: 'profile_contact' as ProductKeyCategory, name: 'Contact Information', description: 'Client contact details' },
-  { id: 'profile_identity' as ProductKeyCategory, name: 'Identity Information', description: 'Client identity details' },
-  { id: 'profile_address' as ProductKeyCategory, name: 'Address Information', description: 'Client address details' },
-  { id: 'profile_employment' as ProductKeyCategory, name: 'Employment Information', description: 'Client employment details' },
-  { id: 'profile_health' as ProductKeyCategory, name: 'Health Information', description: 'Client health details' },
-  { id: 'profile_family' as ProductKeyCategory, name: 'Family Information', description: 'Client family details' },
-  { id: 'profile_banking' as ProductKeyCategory, name: 'Banking Information', description: 'Client banking details' },
-  { id: 'profile_risk' as ProductKeyCategory, name: 'Risk Profile', description: 'Client risk profile' },
-  { id: 'profile_financial' as ProductKeyCategory, name: 'Financial Information', description: 'Client financial details' },
+  {
+    id: 'profile_personal' as ProductKeyCategory,
+    name: 'Personal Information',
+    description: 'Client personal details',
+  },
+  {
+    id: 'profile_contact' as ProductKeyCategory,
+    name: 'Contact Information',
+    description: 'Client contact details',
+  },
+  {
+    id: 'profile_identity' as ProductKeyCategory,
+    name: 'Identity Information',
+    description: 'Client identity details',
+  },
+  {
+    id: 'profile_address' as ProductKeyCategory,
+    name: 'Address Information',
+    description: 'Client address details',
+  },
+  {
+    id: 'profile_employment' as ProductKeyCategory,
+    name: 'Employment Information',
+    description: 'Client employment details',
+  },
+  {
+    id: 'profile_health' as ProductKeyCategory,
+    name: 'Health Information',
+    description: 'Client health details',
+  },
+  {
+    id: 'profile_family' as ProductKeyCategory,
+    name: 'Family Information',
+    description: 'Client family details',
+  },
+  {
+    id: 'profile_banking' as ProductKeyCategory,
+    name: 'Banking Information',
+    description: 'Client banking details',
+  },
+  {
+    id: 'profile_risk' as ProductKeyCategory,
+    name: 'Risk Profile',
+    description: 'Client risk profile',
+  },
+  {
+    id: 'profile_financial' as ProductKeyCategory,
+    name: 'Financial Information',
+    description: 'Client financial details',
+  },
 ];

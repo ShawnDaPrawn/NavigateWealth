@@ -42,7 +42,9 @@ export const DisplayField: React.FC<DisplayFieldProps> = ({
 
     if (type === 'badge') {
       return (
-        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs ${badgeColor}`}>
+        <span
+          className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs ${badgeColor}`}
+        >
           {String(value)}
         </span>
       );
@@ -54,9 +56,7 @@ export const DisplayField: React.FC<DisplayFieldProps> = ({
   return (
     <div className={`space-y-1 ${className}`}>
       <p className="text-xs text-gray-500">{label}</p>
-      <div className="text-sm">
-        {renderValue()}
-      </div>
+      <div className="text-sm">{renderValue()}</div>
     </div>
   );
 };
@@ -79,9 +79,5 @@ export const DisplayGrid: React.FC<DisplayGridProps> = ({
     4: 'grid-cols-1 md:grid-cols-2 lg:grid-cols-4',
   };
 
-  return (
-    <div className={`grid ${gridCols[columns]} gap-4 ${className}`}>
-      {children}
-    </div>
-  );
+  return <div className={`grid ${gridCols[columns]} gap-4 ${className}`}>{children}</div>;
 };

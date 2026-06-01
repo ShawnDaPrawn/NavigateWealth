@@ -47,8 +47,7 @@ export function EstatePlanningResultsView({ fna: session }: EstatePlanningResult
     businessContinuity,
   } = results;
 
-  const formatCurrency = (amount: number) =>
-    `R${formatCurrencyValue(amount)}`;
+  const formatCurrency = (amount: number) => `R${formatCurrencyValue(amount)}`;
 
   const getSeverityColor = (severity: string) => {
     switch (severity) {
@@ -273,17 +272,29 @@ export function EstatePlanningResultsView({ fna: session }: EstatePlanningResult
 
           <Separator />
 
-          <div className={`p-4 rounded-lg border ${getLiquidityRiskColor(liquidityAnalysis.liquidityRisk)}`}>
+          <div
+            className={`p-4 rounded-lg border ${getLiquidityRiskColor(liquidityAnalysis.liquidityRisk)}`}
+          >
             <div className="flex items-center justify-between mb-2">
               <span className="font-medium">Liquidity Status</span>
-              <Badge className={getSeverityColor(liquidityAnalysis.liquidityRisk === 'severe' ? 'high' : liquidityAnalysis.liquidityRisk === 'moderate' ? 'medium' : 'low')}>
+              <Badge
+                className={getSeverityColor(
+                  liquidityAnalysis.liquidityRisk === 'severe'
+                    ? 'high'
+                    : liquidityAnalysis.liquidityRisk === 'moderate'
+                      ? 'medium'
+                      : 'low',
+                )}
+              >
                 {liquidityAnalysis.liquidityRisk.toUpperCase()}
               </Badge>
             </div>
             <div className="grid grid-cols-2 gap-4 text-sm">
               <div>
                 <span className="text-muted-foreground">Required:</span>
-                <p className="font-bold">{formatCurrency(liquidityAnalysis.liquidityRequired.total)}</p>
+                <p className="font-bold">
+                  {formatCurrency(liquidityAnalysis.liquidityRequired.total)}
+                </p>
               </div>
               <div>
                 <span className="text-muted-foreground">Available:</span>
@@ -393,7 +404,9 @@ export function EstatePlanningResultsView({ fna: session }: EstatePlanningResult
                 <div className="pt-2 border-t">
                   <p className="font-medium mb-1">Actions:</p>
                   {minorChildrenAnalysis.recommendations.slice(0, 2).map((rec, idx) => (
-                    <p key={idx} className="text-xs text-muted-foreground">• {rec}</p>
+                    <p key={idx} className="text-xs text-muted-foreground">
+                      • {rec}
+                    </p>
                   ))}
                 </div>
               )}
@@ -435,7 +448,9 @@ export function EstatePlanningResultsView({ fna: session }: EstatePlanningResult
                 <div className="pt-2 border-t">
                   <p className="font-medium mb-1">Actions:</p>
                   {businessContinuity.recommendations.slice(0, 2).map((rec, idx) => (
-                    <p key={idx} className="text-xs text-muted-foreground">• {rec}</p>
+                    <p key={idx} className="text-xs text-muted-foreground">
+                      • {rec}
+                    </p>
                   ))}
                 </div>
               )}

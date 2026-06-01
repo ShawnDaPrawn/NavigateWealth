@@ -22,8 +22,8 @@
  * ****************************************************************************
  */
 
-import { Hono } from "npm:hono";
-import { cors } from "npm:hono/cors";
+import { Hono } from 'npm:hono';
+import { cors } from 'npm:hono/cors';
 import './console-override.ts';
 
 import { mountCoreRoutes } from './mount-core.ts';
@@ -48,36 +48,48 @@ const app = new Hono();
 //   strict allow-list as a security boundary.
 const rawAllowedOrigins = Deno.env.get('NW_ALLOWED_ORIGINS');
 const allowedOrigins: string[] | null = rawAllowedOrigins
-  ? rawAllowedOrigins.split(',').map(s => s.trim()).filter(Boolean)
+  ? rawAllowedOrigins
+      .split(',')
+      .map((s) => s.trim())
+      .filter(Boolean)
   : null;
 
 if (!allowedOrigins) {
   console.warn(
     '[CORS] NW_ALLOWED_ORIGINS is not set — falling back to permissive ' +
-    'origin reflection. Set NW_ALLOWED_ORIGINS to lock this down ' +
-    '(see Guidelines §12.4).',
+      'origin reflection. Set NW_ALLOWED_ORIGINS to lock this down ' +
+      '(see Guidelines §12.4).',
   );
 }
 
-app.use('*', cors({
-  origin: (origin) => {
-    if (!origin) return null;
-    if (!allowedOrigins) return origin; // permissive fallback (see above)
-    return allowedOrigins.includes(origin) ? origin : null;
-  },
-  allowMethods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-  allowHeaders: ['Content-Type', 'Authorization', 'x-client-info', 'apikey', 'x-request-id', 'X-OpenClaw-Secret'],
-  exposeHeaders: ['x-request-id'],
-  credentials: false,
-  maxAge: 86400,
-}));
+app.use(
+  '*',
+  cors({
+    origin: (origin) => {
+      if (!origin) return null;
+      if (!allowedOrigins) return origin; // permissive fallback (see above)
+      return allowedOrigins.includes(origin) ? origin : null;
+    },
+    allowMethods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+    allowHeaders: [
+      'Content-Type',
+      'Authorization',
+      'x-client-info',
+      'apikey',
+      'x-request-id',
+      'X-OpenClaw-Secret',
+    ],
+    exposeHeaders: ['x-request-id'],
+    credentials: false,
+    maxAge: 86400,
+  }),
+);
 
 // ── Request-ID middleware (Guidelines §22 — Observability) ────────────────
 app.use('*', async (c, next) => {
   const incoming = c.req.header('x-request-id');
-  const requestId = incoming && /^[A-Za-z0-9_\-]{8,64}$/.test(incoming)
-    ? incoming
-    : crypto.randomUUID();
+  const requestId =
+    incoming && /^[A-Za-z0-9_\-]{8,64}$/.test(incoming) ? incoming : crypto.randomUUID();
   c.set('requestId', requestId);
   await next();
   c.header('x-request-id', requestId);
@@ -85,18 +97,22 @@ app.use('*', async (c, next) => {
 
 // ── Health checks (unauthenticated) ───────────────────────────────────────
 // Only these two endpoints are reachable without a bearer token.
-app.get('/make-server-91ed8379', (c) => c.json({
-  status: 'ok',
-  version: '4.1.0',
-  requestId: c.get('requestId'),
-}));
+app.get('/make-server-91ed8379', (c) =>
+  c.json({
+    status: 'ok',
+    version: '4.1.0',
+    requestId: c.get('requestId'),
+  }),
+);
 
 // Liveness probe — static, never touches downstream services.
-app.get('/make-server-91ed8379/health', (c) => c.json({
-  status: 'healthy',
-  version: '4.1.0',
-  requestId: c.get('requestId'),
-}));
+app.get('/make-server-91ed8379/health', (c) =>
+  c.json({
+    status: 'healthy',
+    version: '4.1.0',
+    requestId: c.get('requestId'),
+  }),
+);
 
 // Readiness probe — confirms the KV store is reachable so traffic can be served
 // (Guidelines §22 — Observability / Phase 1.5).
@@ -112,32 +128,44 @@ app.get('/make-server-91ed8379/health/ready', async (c) => {
       checks: { kv: 'ok' },
     });
   } catch (error) {
-    return c.json({
-      status: 'unready',
-      version: '4.1.0',
-      requestId: c.get('requestId'),
-      checks: { kv: 'fail' },
-      error: error instanceof Error ? error.message : 'unknown',
-    }, 503);
+    return c.json(
+      {
+        status: 'unready',
+        version: '4.1.0',
+        requestId: c.get('requestId'),
+        checks: { kv: 'fail' },
+        error: error instanceof Error ? error.message : 'unknown',
+      },
+      503,
+    );
   }
 });
 
 try {
   mountCoreRoutes(app);
 } catch (error: unknown) {
-  console.error('[BOOT] Failed to register core routes:', error instanceof Error ? error.message : error);
+  console.error(
+    '[BOOT] Failed to register core routes:',
+    error instanceof Error ? error.message : error,
+  );
 }
 
 try {
   mountFnaRoutes(app);
 } catch (error: unknown) {
-  console.error('[BOOT] Failed to register FNA routes:', error instanceof Error ? error.message : error);
+  console.error(
+    '[BOOT] Failed to register FNA routes:',
+    error instanceof Error ? error.message : error,
+  );
 }
 
 try {
   mountModuleRoutes(app);
 } catch (error: unknown) {
-  console.error('[BOOT] Failed to register module routes:', error instanceof Error ? error.message : error);
+  console.error(
+    '[BOOT] Failed to register module routes:',
+    error instanceof Error ? error.message : error,
+  );
 }
 
 Deno.serve(app.fetch);

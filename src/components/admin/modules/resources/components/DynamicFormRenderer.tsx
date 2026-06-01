@@ -17,26 +17,29 @@ import { renderBlock } from './renderBlock';
  */
 export const resolveNestedKey = (obj: Record<string, unknown>, path: string): unknown => {
   if (!path) return undefined;
-  
+
   // Strip template syntax if present: {{ key }} -> key
-  const cleanPath = path.replace(/^\{\{\s*/, '').replace(/\s*\}\}$/, '').trim();
-  
+  const cleanPath = path
+    .replace(/^\{\{\s*/, '')
+    .replace(/\s*\}\}$/, '')
+    .trim();
+
   // First try direct access (flat key)
   if (obj[cleanPath] !== undefined) {
     return obj[cleanPath];
   }
-  
+
   // Then try nested path
   const keys = cleanPath.split('.');
   let current: unknown = obj;
-  
+
   for (const key of keys) {
     if (current === null || current === undefined) {
       return undefined;
     }
     current = (current as Record<string, unknown>)[key];
   }
-  
+
   return current;
 };
 
@@ -74,7 +77,7 @@ export const DynamicFormRenderer: React.FC<DynamicFormRendererProps> = ({
     const pagesList: React.ReactNode[] = [];
     if (!blocks || blocks.length === 0) return pagesList;
     let currentBlocks: FormBlock[] = [];
-    
+
     blocks.forEach((block) => {
       if (block.type === 'page_break') {
         pagesList.push(renderPageContent(currentBlocks, data));
@@ -83,12 +86,12 @@ export const DynamicFormRenderer: React.FC<DynamicFormRendererProps> = ({
         currentBlocks.push(block);
       }
     });
-    
+
     // Push final page
     if (currentBlocks.length > 0) {
       pagesList.push(renderPageContent(currentBlocks, data));
     }
-    
+
     return pagesList;
   }, [blocks, data]);
 
@@ -99,19 +102,14 @@ export const DynamicFormRenderer: React.FC<DynamicFormRendererProps> = ({
         <FileText className="h-12 w-12 text-gray-400 mb-4" />
         <h3 className="text-lg font-medium text-gray-900">Dynamic Form Preview</h3>
         <p className="text-sm text-gray-500 max-w-sm mt-2">
-          This form is generated from a JSON schema and stored in the database.
-          Add blocks in the editor to see content here.
+          This form is generated from a JSON schema and stored in the database. Add blocks in the
+          editor to see content here.
         </p>
       </div>
     );
   }
 
-  return (
-    <BasePdfLayout
-      docTitle={formName}
-      pages={pages}
-    />
-  );
+  return <BasePdfLayout docTitle={formName} pages={pages} />;
 };
 
 export default DynamicFormRenderer;

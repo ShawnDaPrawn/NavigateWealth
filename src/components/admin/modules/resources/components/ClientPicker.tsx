@@ -43,7 +43,7 @@ export function ClientPicker({ selectedClient, onSelect }: ClientPickerProps) {
 
       const res = await fetch(
         `https://${projectId}.supabase.co/functions/v1/make-server-91ed8379/profile/all-users`,
-        { headers: { Authorization: `Bearer ${token}` } }
+        { headers: { Authorization: `Bearer ${token}` } },
       );
 
       if (!res.ok) throw new Error('Failed to fetch clients');
@@ -51,14 +51,36 @@ export function ClientPicker({ selectedClient, onSelect }: ClientPickerProps) {
       const data = await res.json();
       const users = data.users || [];
 
-      const mapped: ClientOption[] = users.map((u: { id: string; email?: string; name?: string; user_metadata?: Record<string, unknown>; profile?: { personalInformation?: Record<string, unknown>; [key: string]: unknown } }) => ({
-        id: u.id,
-        firstName: String(u.user_metadata?.firstName || u.profile?.personalInformation?.firstName || u.name?.split(' ')[0] || 'Unknown'),
-        lastName: String(u.user_metadata?.surname || u.profile?.personalInformation?.lastName || u.name?.split(' ').slice(1).join(' ') || ''),
-        email: u.email || '',
-        idNumber: String(u.profile?.personalInformation?.idNumber || u.profile?.personalInformation?.passportNumber || ''),
-        profile: u.profile,
-      }));
+      const mapped: ClientOption[] = users.map(
+        (u: {
+          id: string;
+          email?: string;
+          name?: string;
+          user_metadata?: Record<string, unknown>;
+          profile?: { personalInformation?: Record<string, unknown>; [key: string]: unknown };
+        }) => ({
+          id: u.id,
+          firstName: String(
+            u.user_metadata?.firstName ||
+              u.profile?.personalInformation?.firstName ||
+              u.name?.split(' ')[0] ||
+              'Unknown',
+          ),
+          lastName: String(
+            u.user_metadata?.surname ||
+              u.profile?.personalInformation?.lastName ||
+              u.name?.split(' ').slice(1).join(' ') ||
+              '',
+          ),
+          email: u.email || '',
+          idNumber: String(
+            u.profile?.personalInformation?.idNumber ||
+              u.profile?.personalInformation?.passportNumber ||
+              '',
+          ),
+          profile: u.profile,
+        }),
+      );
 
       setClients(mapped);
     } catch (err) {
@@ -118,11 +140,7 @@ export function ClientPicker({ selectedClient, onSelect }: ClientPickerProps) {
 
   return (
     <div ref={containerRef} className="relative">
-      <form
-        autoComplete="off"
-        className="relative"
-        onSubmit={(event) => event.preventDefault()}
-      >
+      <form autoComplete="off" className="relative" onSubmit={(event) => event.preventDefault()}>
         <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground pointer-events-none z-10" />
         <Input
           placeholder="Search by name, email, or ID..."

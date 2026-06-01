@@ -20,9 +20,7 @@ export function EmptyPolicyState() {
 
         {/* Main Content */}
         <div className="space-y-3">
-          <h3 className="text-gray-900">
-            Your Account is Active
-          </h3>
+          <h3 className="text-gray-900">Your Account is Active</h3>
           <p className="text-gray-600 max-w-lg mx-auto">
             Welcome to Navigate Wealth! Your account has been approved and is ready to use.
           </p>
@@ -35,12 +33,11 @@ export function EmptyPolicyState() {
               <FileText className="w-5 h-5 text-purple-600" />
             </div>
             <div className="text-left space-y-2">
-              <p className="text-gray-900 font-semibold">
-                Building Your Portfolio
-              </p>
+              <p className="text-gray-900 font-semibold">Building Your Portfolio</p>
               <p className="text-sm text-gray-600">
-                Your dedicated financial adviser is currently preparing your personalized portfolio. 
-                Your policy details, investment strategies, and financial planning information will appear here once they've been finalized.
+                Your dedicated financial adviser is currently preparing your personalized portfolio.
+                Your policy details, investment strategies, and financial planning information will
+                appear here once they've been finalized.
               </p>
             </div>
           </div>
@@ -48,9 +45,7 @@ export function EmptyPolicyState() {
 
         {/* What's Next */}
         <div className="bg-gray-50 border border-gray-200 rounded-xl p-6 max-w-lg mx-auto text-left">
-          <h4 className="text-gray-900 font-semibold mb-3">
-            What happens next?
-          </h4>
+          <h4 className="text-gray-900 font-semibold mb-3">What happens next?</h4>
           <ul className="space-y-2 text-sm text-gray-600">
             <li className="flex items-start gap-2">
               <span className="text-purple-600 mt-1">•</span>
@@ -62,7 +57,9 @@ export function EmptyPolicyState() {
             </li>
             <li className="flex items-start gap-2">
               <span className="text-purple-600 mt-1">•</span>
-              <span>Once ready, your policy details will automatically appear in your dashboard</span>
+              <span>
+                Once ready, your policy details will automatically appear in your dashboard
+              </span>
             </li>
             <li className="flex items-start gap-2">
               <span className="text-purple-600 mt-1">•</span>

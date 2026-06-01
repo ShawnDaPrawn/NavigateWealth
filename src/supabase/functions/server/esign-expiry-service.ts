@@ -28,10 +28,8 @@ import { createClient } from 'jsr:@supabase/supabase-js@2.49.8';
 
 const log = createModuleLogger('esign-expiry');
 
-const getSupabase = () => createClient(
-  Deno.env.get('SUPABASE_URL')!,
-  Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,
-);
+const getSupabase = () =>
+  createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!);
 
 // Statuses that are eligible for automatic expiry
 const EXPIRABLE_STATUSES = ['sent', 'viewed', 'partially_signed'];
@@ -77,20 +75,21 @@ export async function runExpirySweep(dryRun = true): Promise<ExpirySweepResult> 
     const allValues = await kv.getByPrefix(EsignKeys.PREFIX_ENVELOPE);
 
     // Filter for actual envelope objects (same guard as getAllEnvelopes)
-    const envelopes = allValues.filter((item: Record<string, unknown>) =>
-      item &&
-      typeof item === 'object' &&
-      !Array.isArray(item) &&
-      item.id &&
-      item.status &&
-      item.document_id &&
-      // P6.8 — soft-deleted envelopes can't expire; they await purge.
-      !item.deleted_at
+    const envelopes = allValues.filter(
+      (item: Record<string, unknown>) =>
+        item &&
+        typeof item === 'object' &&
+        !Array.isArray(item) &&
+        item.id &&
+        item.status &&
+        item.document_id &&
+        // P6.8 — soft-deleted envelopes can't expire; they await purge.
+        !item.deleted_at,
     ) as unknown as EsignEnvelope[];
 
     // 2. Filter to expirable statuses
     const candidates = envelopes.filter(
-      (e) => EXPIRABLE_STATUSES.includes(e.status) && e.expires_at
+      (e) => EXPIRABLE_STATUSES.includes(e.status) && e.expires_at,
     );
 
     result.scannedCount = candidates.length;
@@ -155,8 +154,8 @@ export async function runExpirySweep(dryRun = true): Promise<ExpirySweepResult> 
   result.durationMs = Date.now() - start;
   log.info(
     `Expiry sweep complete: scanned=${result.scannedCount}, expired=${result.expiredCount}, ` +
-    `skipped=${result.skippedCount}, errors=${result.errors.length}, dryRun=${dryRun}, ` +
-    `duration=${result.durationMs}ms`
+      `skipped=${result.skippedCount}, errors=${result.errors.length}, dryRun=${dryRun}, ` +
+      `duration=${result.durationMs}ms`,
   );
 
   return result;
@@ -181,9 +180,7 @@ async function notifyExpiry(
     if (!senderEmail) return;
 
     const senderName =
-      userData?.user?.user_metadata?.full_name ||
-      userData?.user?.user_metadata?.name ||
-      'there';
+      userData?.user?.user_metadata?.full_name || userData?.user?.user_metadata?.name || 'there';
 
     const pendingSigners = signers
       .filter((s) => s.status !== 'signed')

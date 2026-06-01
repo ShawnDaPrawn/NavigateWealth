@@ -84,24 +84,27 @@ export function useVirtualizedRows({
   const totalSize = virtualizer.getTotalSize();
 
   // Stable result object to prevent unnecessary re-renders
-  const result = useMemo<VirtualizedRowsResult>(() => ({
-    parentRef,
-    virtualItems: shouldVirtualize
-      ? virtualItems.map(item => ({
-          key: item.key as string | number,
-          index: item.index,
-          start: item.start,
-          size: item.size,
-        }))
-      : Array.from({ length: count }, (_, i) => ({
-          key: i,
-          index: i,
-          start: i * estimateSize,
-          size: estimateSize,
-        })),
-    totalSize: shouldVirtualize ? totalSize : count * estimateSize,
-    isVirtualized: shouldVirtualize,
-  }), [shouldVirtualize, virtualItems, totalSize, count, estimateSize]);
+  const result = useMemo<VirtualizedRowsResult>(
+    () => ({
+      parentRef,
+      virtualItems: shouldVirtualize
+        ? virtualItems.map((item) => ({
+            key: item.key as string | number,
+            index: item.index,
+            start: item.start,
+            size: item.size,
+          }))
+        : Array.from({ length: count }, (_, i) => ({
+            key: i,
+            index: i,
+            start: i * estimateSize,
+            size: estimateSize,
+          })),
+      totalSize: shouldVirtualize ? totalSize : count * estimateSize,
+      isVirtualized: shouldVirtualize,
+    }),
+    [shouldVirtualize, virtualItems, totalSize, count, estimateSize],
+  );
 
   return result;
 }

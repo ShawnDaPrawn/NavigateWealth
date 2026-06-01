@@ -6,20 +6,25 @@
  * patterns without re-uploading a PDF every time.
  */
 
-import * as kv from "./kv_store.tsx";
-import { EsignKeys } from "./esign-keys.ts";
-import { createModuleLogger } from "./stderr-logger.ts";
-import { getEnvelopeDocuments } from "./esign-documents.ts";
-import { applyManifest, type PageManifest } from "./esign-pdf-transform.ts";
-import { calculateHash, downloadDocument, extractPageCount, uploadDocument } from "./esign-storage.ts";
-import { createDocument } from "./esign-services.tsx";
+import * as kv from './kv_store.tsx';
+import { EsignKeys } from './esign-keys.ts';
+import { createModuleLogger } from './stderr-logger.ts';
+import { getEnvelopeDocuments } from './esign-documents.ts';
+import { applyManifest, type PageManifest } from './esign-pdf-transform.ts';
+import {
+  calculateHash,
+  downloadDocument,
+  extractPageCount,
+  uploadDocument,
+} from './esign-storage.ts';
+import { createDocument } from './esign-services.tsx';
 import type {
   EsignDocument,
   EsignEnvelope,
   EsignEnvelopeDocumentRef,
   EsignField,
   EsignSigner,
-} from "./esign-types.ts";
+} from './esign-types.ts';
 
 const log = createModuleLogger('esign-template-service');
 
@@ -183,10 +188,7 @@ const VERSIONED_KEYS = [
   'defaultExpiryDays',
 ] as const;
 
-function shouldBumpVersion(
-  prev: EsignTemplateRecord,
-  next: Partial<EsignTemplateRecord>,
-): boolean {
+function shouldBumpVersion(prev: EsignTemplateRecord, next: Partial<EsignTemplateRecord>): boolean {
   for (const key of VERSIONED_KEYS) {
     if (next[key] === undefined) continue;
     if (JSON.stringify(prev[key]) !== JSON.stringify(next[key])) return true;
@@ -196,7 +198,9 @@ function shouldBumpVersion(
 
 export async function updateTemplate(
   templateId: string,
-  updates: Partial<Omit<EsignTemplateRecord, 'id' | 'createdAt' | 'createdBy' | 'usageCount' | 'version'>>,
+  updates: Partial<
+    Omit<EsignTemplateRecord, 'id' | 'createdAt' | 'createdBy' | 'usageCount' | 'version'>
+  >,
 ): Promise<EsignTemplateRecord | null> {
   const existing = await getTemplate(templateId);
   if (!existing) {
@@ -291,7 +295,10 @@ export async function deleteTemplate(templateId: string): Promise<boolean> {
 
     const listKey = EsignKeys.templatesList();
     const templateIds: string[] = (await kv.get(listKey)) || [];
-    await kv.set(listKey, templateIds.filter((id: string) => id !== templateId));
+    await kv.set(
+      listKey,
+      templateIds.filter((id: string) => id !== templateId),
+    );
 
     log.success(`Template deleted: "${existing.name}" (${templateId})`);
     return true;
@@ -397,15 +404,21 @@ async function cloneEnvelopeDocumentsToTemplate(params: {
   const useSingleDocManifest = sourceDocuments.length <= 1;
 
   for (const sourceDoc of sourceDocuments) {
-    const sourceRecord = (await kv.get(EsignKeys.PREFIX_DOCUMENT + sourceDoc.document_id)) as EsignDocument | null;
+    const sourceRecord = (await kv.get(
+      EsignKeys.PREFIX_DOCUMENT + sourceDoc.document_id,
+    )) as EsignDocument | null;
     const storagePath = sourceRecord?.storage_path || sourceDoc.storage_path;
     if (!storagePath) {
-      throw new Error(`Template source document ${sourceDoc.document_id} is missing its storage path.`);
+      throw new Error(
+        `Template source document ${sourceDoc.document_id} is missing its storage path.`,
+      );
     }
 
     const sourceBuffer = await downloadDocument(storagePath);
     if (!sourceBuffer) {
-      throw new Error(`Failed to download template source document ${sourceDoc.original_filename}.`);
+      throw new Error(
+        `Failed to download template source document ${sourceDoc.original_filename}.`,
+      );
     }
 
     let bufferToPersist = sourceBuffer;
@@ -426,7 +439,9 @@ async function cloneEnvelopeDocumentsToTemplate(params: {
       'application/pdf',
     );
     if (error || !path) {
-      throw new Error(error || `Failed to clone ${sourceDoc.original_filename} into the template library.`);
+      throw new Error(
+        error || `Failed to clone ${sourceDoc.original_filename} into the template library.`,
+      );
     }
 
     const createdAt = new Date().toISOString();
@@ -471,21 +486,25 @@ async function buildTemplateSnapshotFromEnvelope(envelopeId: string): Promise<{
     throw new Error(`Envelope not found: ${envelopeId}`);
   }
 
-  const signerIds: string[] = ((await kv.get(EsignKeys.envelopeSigners(envelopeId))) as string[] | null) ?? [];
+  const signerIds: string[] =
+    ((await kv.get(EsignKeys.envelopeSigners(envelopeId))) as string[] | null) ?? [];
   const signers = (
     await Promise.all(signerIds.map((id: string) => kv.get(EsignKeys.PREFIX_SIGNER + id)))
   ).filter(Boolean) as EsignSigner[];
-  const draftSigners = (((envelope as EsignEnvelope & {
-    draft_signers?: Array<{
-      name?: string;
-      email?: string;
-      role?: string;
-      order?: number;
-      otpRequired?: boolean;
-      accessCode?: string;
-      kind?: 'signer' | 'witness' | 'cc';
-    }>;
-  }).draft_signers) ?? []);
+  const draftSigners =
+    (
+      envelope as EsignEnvelope & {
+        draft_signers?: Array<{
+          name?: string;
+          email?: string;
+          role?: string;
+          order?: number;
+          otpRequired?: boolean;
+          accessCode?: string;
+          kind?: 'signer' | 'witness' | 'cc';
+        }>;
+      }
+    ).draft_signers ?? [];
 
   const { recipients, recipientKeyToIndex } = normaliseTemplateRecipients(signers, draftSigners);
   const { documents, documentIdMap } = await cloneEnvelopeDocumentsToTemplate({
@@ -504,7 +523,8 @@ async function buildTemplateSnapshotFromEnvelope(envelopeId: string): Promise<{
     height: field.height,
     required: field.required ?? true,
     recipientIndex: field.signer_id ? (recipientKeyToIndex.get(field.signer_id) ?? 0) : 0,
-    documentId: documentIdMap.get(field.document_id ?? envelope.document_id) ?? primaryTemplateDocumentId,
+    documentId:
+      documentIdMap.get(field.document_id ?? envelope.document_id) ?? primaryTemplateDocumentId,
     metadata: field.metadata,
   }));
 
@@ -573,7 +593,10 @@ export async function syncTemplateFromEnvelope(params: {
       fields: snapshot.fields,
     });
   } catch (error) {
-    log.error(`Failed to sync template ${params.templateId} from envelope ${params.envelopeId}:`, error);
+    log.error(
+      `Failed to sync template ${params.templateId} from envelope ${params.envelopeId}:`,
+      error,
+    );
     return null;
   }
 }

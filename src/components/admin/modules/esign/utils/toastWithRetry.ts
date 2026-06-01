@@ -36,14 +36,12 @@ export function toastError(
   error: unknown,
   options: ToastErrorOptions = {},
 ): string | number {
-  const reason = error instanceof Error
-    ? error.message
-    : typeof error === 'string'
-      ? error
-      : 'Unknown error';
-  const message = context.endsWith('.') || context.endsWith('!') || context.endsWith('?')
-    ? context
-    : `${context}: ${reason}`;
+  const reason =
+    error instanceof Error ? error.message : typeof error === 'string' ? error : 'Unknown error';
+  const message =
+    context.endsWith('.') || context.endsWith('!') || context.endsWith('?')
+      ? context
+      : `${context}: ${reason}`;
 
   const action = options.retry
     ? {

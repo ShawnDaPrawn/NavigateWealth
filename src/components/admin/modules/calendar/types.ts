@@ -6,61 +6,49 @@
 // ENUMS & UNIONS
 // ============================================================================
 
-export type EventType = 
-  | 'meeting' 
-  | 'review' 
-  | 'call' 
-  | 'webinar' 
-  | 'internal' 
-  | 'consultation' 
-  | 'deadline' 
+export type EventType =
+  | 'meeting'
+  | 'review'
+  | 'call'
+  | 'webinar'
+  | 'internal'
+  | 'consultation'
+  | 'deadline'
   | 'birthday'
   | 'renewal'
   | 'other';
 
-export type EventStatus = 
-  | 'scheduled' 
-  | 'completed' 
-  | 'cancelled' 
-  | 'rescheduled';
+export type EventStatus = 'scheduled' | 'completed' | 'cancelled' | 'rescheduled';
 
-export type LocationType = 
-  | 'in_person' 
-  | 'video' 
-  | 'phone' 
+export type LocationType =
+  | 'in_person'
+  | 'video'
+  | 'phone'
   | 'virtual' // Alias for video/other
   | 'other';
 
-export type ReminderType = 
-  | 'client_review' 
-  | 'section_14' 
-  | 'birthday' 
-  | 'follow_up' 
-  | 'compliance' 
-  | 'task' 
-  | 'deadline' 
-  | 'call' 
-  | 'email' 
+export type ReminderType =
+  | 'client_review'
+  | 'section_14'
+  | 'birthday'
+  | 'follow_up'
+  | 'compliance'
+  | 'task'
+  | 'deadline'
+  | 'call'
+  | 'email'
   | 'other';
 
-export type ReminderStatus = 
-  | 'pending' 
-  | 'completed' 
-  | 'overdue' 
-  | 'dismissed';
+export type ReminderStatus = 'pending' | 'completed' | 'overdue' | 'dismissed';
 
-export type ReminderPriority = 
-  | 'low' 
+export type ReminderPriority =
+  | 'low'
   | 'normal' // Alias for medium
-  | 'medium' 
-  | 'high' 
+  | 'medium'
+  | 'high'
   | 'urgent';
 
-export type CalendarView = 
-  | 'agenda' 
-  | 'day' 
-  | 'week' 
-  | 'month';
+export type CalendarView = 'agenda' | 'day' | 'week' | 'month';
 
 // ============================================================================
 // ENTITIES
@@ -88,7 +76,7 @@ export interface CalendarEvent {
   recurrence_rule: string | null;
   completed_at?: string;
   cancelled_at?: string;
-  
+
   // Relations
   client?: {
     id: string;
@@ -116,7 +104,7 @@ export interface Reminder {
   tags: string[];
   created_at: string;
   updated_at: string;
-  
+
   // Relations
   client?: {
     id: string;

@@ -45,15 +45,15 @@ export const FNAAPI = {
     } catch (error) {
       // Silently return null for 404 (not found)
       // Check for status code 404 or "404" in the error message
-      const isNotFound = 
+      const isNotFound =
         (error instanceof APIError && error.statusCode === 404) ||
         (error instanceof Error && error.message && error.message.includes('404'));
-      
+
       if (isNotFound) {
         logger.debug('No published FNA found for client', { clientId });
         return null;
       }
-      
+
       // For other errors, log warning but still return null to prevent UI crash
       logger.warn('Could not fetch latest published FNA', { error });
       return null;
@@ -176,5 +176,5 @@ export const FNAAPI = {
       logger.error('Failed to auto-populate FNA', error);
       throw error;
     }
-  }
+  },
 };

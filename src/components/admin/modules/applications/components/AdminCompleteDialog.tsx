@@ -11,19 +11,22 @@
  */
 
 import React, { useCallback } from 'react';
-import {
-  Dialog,
-  DialogContent,
-  DialogTitle,
-  DialogDescription,
-} from '../../../../ui/dialog';
+import { Dialog, DialogContent, DialogTitle, DialogDescription } from '../../../../ui/dialog';
 import { Button } from '../../../../ui/button';
 import { Badge } from '../../../../ui/badge';
 import { Progress } from '../../../../ui/progress';
 import {
-  ChevronLeft, ChevronRight, Send, Loader2,
-  User, MapPin, Briefcase, FileText, Shield,
-  CheckCircle2, AlertCircle,
+  ChevronLeft,
+  ChevronRight,
+  Send,
+  Loader2,
+  User,
+  MapPin,
+  Briefcase,
+  FileText,
+  Shield,
+  CheckCircle2,
+  AlertCircle,
 } from 'lucide-react';
 import { cn } from '../../../../ui/utils';
 import { toast } from 'sonner';
@@ -71,7 +74,6 @@ function AdminCompleteDialogInner({
   onComplete,
   adminUserId,
 }: AdminCompleteDialogInnerProps) {
-
   const {
     currentStep,
     totalSteps,
@@ -103,23 +105,38 @@ function AdminCompleteDialogInner({
   const renderStep = () => {
     const stepProps = { data, updateData, errors: validationErrors };
     switch (currentStep) {
-      case 1: return <Step1Personal {...stepProps} />;
-      case 2: return <Step2Contact {...stepProps} />;
-      case 3: return <Step3Employment {...stepProps} />;
-      case 4: return <Step4Services {...stepProps} />;
-      case 5: return <Step5Terms {...stepProps} />;
-      default: return null;
+      case 1:
+        return <Step1Personal {...stepProps} />;
+      case 2:
+        return <Step2Contact {...stepProps} />;
+      case 3:
+        return <Step3Employment {...stepProps} />;
+      case 4:
+        return <Step4Services {...stepProps} />;
+      case 5:
+        return <Step5Terms {...stepProps} />;
+      default:
+        return null;
     }
   };
 
-  const clientName = application.user_name ||
+  const clientName =
+    application.user_name ||
     `${application.application_data?.firstName || ''} ${application.application_data?.lastName || ''}`.trim() ||
     'Client';
 
   return (
     <div className="contents">
-      <Dialog open={open} onOpenChange={(v) => { if (!v) onClose(); }}>
-        <DialogContent className="max-w-4xl h-[90vh] p-0 gap-0 overflow-hidden bg-white flex flex-col" hideCloseButton>
+      <Dialog
+        open={open}
+        onOpenChange={(v) => {
+          if (!v) onClose();
+        }}
+      >
+        <DialogContent
+          className="max-w-4xl h-[90vh] p-0 gap-0 overflow-hidden bg-white flex flex-col"
+          hideCloseButton
+        >
           {/* Header */}
           <div className="px-6 py-4 border-b bg-white shrink-0">
             <div className="flex items-center justify-between gap-4">
@@ -128,13 +145,17 @@ function AdminCompleteDialogInner({
                   Complete Application
                 </DialogTitle>
                 <DialogDescription className="text-sm text-gray-500 mt-0.5">
-                  Completing on behalf of <span className="font-semibold text-gray-700">{clientName}</span>
+                  Completing on behalf of{' '}
+                  <span className="font-semibold text-gray-700">{clientName}</span>
                   {application.application_number && (
                     <span className="text-gray-400 ml-2">({application.application_number})</span>
                   )}
                 </DialogDescription>
               </div>
-              <Badge variant="outline" className="bg-violet-50 text-violet-700 border-violet-200 text-xs">
+              <Badge
+                variant="outline"
+                className="bg-violet-50 text-violet-700 border-violet-200 text-xs"
+              >
                 Admin Mode
               </Badge>
             </div>

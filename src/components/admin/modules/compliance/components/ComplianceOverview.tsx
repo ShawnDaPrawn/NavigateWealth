@@ -3,14 +3,7 @@ import { ComplianceKPIs } from './ComplianceKPIs';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../../../../ui/card';
 import { Badge } from '../../../../ui/badge';
 import { Button } from '../../../../ui/button';
-import { 
-  FileText, 
-  CheckCircle, 
-  AlertTriangle, 
-  Calendar,
-  ArrowRight,
-  Activity
-} from 'lucide-react';
+import { FileText, CheckCircle, AlertTriangle, Calendar, ArrowRight, Activity } from 'lucide-react';
 import { useComplianceOverview } from '../hooks/useComplianceOverview';
 import type { ComplianceActivity, ComplianceDeadline } from '../types';
 
@@ -22,7 +15,7 @@ export function ComplianceOverview({ onViewTab }: { onViewTab: (tab: string) => 
       <div className="space-y-6">
         <div className="h-8 w-64 bg-slate-100 animate-pulse rounded" />
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-          {[1, 2, 3, 4].map(i => (
+          {[1, 2, 3, 4].map((i) => (
             <div key={i} className="h-32 bg-slate-100 animate-pulse rounded-lg" />
           ))}
         </div>
@@ -53,16 +46,31 @@ export function ComplianceOverview({ onViewTab }: { onViewTab: (tab: string) => 
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              {(activities as Array<ComplianceActivity & { status: string; user: string; time: string }>).map((activity) => (
-                <div key={activity.id} className="flex items-start gap-4 pb-4 border-b last:border-0 last:pb-0">
-                  <div className={`mt-1 p-2 rounded-full ${
-                    activity.status === 'success' ? 'bg-green-100 text-green-600' :
-                    activity.status === 'warning' ? 'bg-amber-100 text-amber-600' :
-                    'bg-blue-100 text-blue-600'
-                  }`}>
-                    {activity.status === 'success' ? <CheckCircle className="h-4 w-4" /> :
-                     activity.status === 'warning' ? <AlertTriangle className="h-4 w-4" /> :
-                     <FileText className="h-4 w-4" />}
+              {(
+                activities as Array<
+                  ComplianceActivity & { status: string; user: string; time: string }
+                >
+              ).map((activity) => (
+                <div
+                  key={activity.id}
+                  className="flex items-start gap-4 pb-4 border-b last:border-0 last:pb-0"
+                >
+                  <div
+                    className={`mt-1 p-2 rounded-full ${
+                      activity.status === 'success'
+                        ? 'bg-green-100 text-green-600'
+                        : activity.status === 'warning'
+                          ? 'bg-amber-100 text-amber-600'
+                          : 'bg-blue-100 text-blue-600'
+                    }`}
+                  >
+                    {activity.status === 'success' ? (
+                      <CheckCircle className="h-4 w-4" />
+                    ) : activity.status === 'warning' ? (
+                      <AlertTriangle className="h-4 w-4" />
+                    ) : (
+                      <FileText className="h-4 w-4" />
+                    )}
                   </div>
                   <div className="flex-1 space-y-1">
                     <p className="text-sm font-medium leading-none">{activity.description}</p>
@@ -99,19 +107,26 @@ export function ComplianceOverview({ onViewTab }: { onViewTab: (tab: string) => 
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              {(deadlines as Array<ComplianceDeadline & { date: string; daysLeft: number }>).map((deadline) => (
-                <div key={deadline.id} className="flex items-center justify-between p-3 border rounded-lg hover:bg-muted/50 transition-colors">
-                  <div className="space-y-1">
-                    <div className="font-medium text-sm">{deadline.title}</div>
-                    <div className="text-xs text-muted-foreground">Due: {deadline.date}</div>
+              {(deadlines as Array<ComplianceDeadline & { date: string; daysLeft: number }>).map(
+                (deadline) => (
+                  <div
+                    key={deadline.id}
+                    className="flex items-center justify-between p-3 border rounded-lg hover:bg-muted/50 transition-colors"
+                  >
+                    <div className="space-y-1">
+                      <div className="font-medium text-sm">{deadline.title}</div>
+                      <div className="text-xs text-muted-foreground">Due: {deadline.date}</div>
+                    </div>
+                    <Badge variant={deadline.daysLeft <= 14 ? 'destructive' : 'secondary'}>
+                      {deadline.daysLeft} days left
+                    </Badge>
                   </div>
-                  <Badge variant={deadline.daysLeft <= 14 ? "destructive" : "secondary"}>
-                    {deadline.daysLeft} days left
-                  </Badge>
-                </div>
-              ))}
+                ),
+              )}
               {deadlines.length === 0 && (
-                <p className="text-sm text-muted-foreground text-center py-4">No upcoming deadlines</p>
+                <p className="text-sm text-muted-foreground text-center py-4">
+                  No upcoming deadlines
+                </p>
               )}
             </div>
             <div className="mt-6">

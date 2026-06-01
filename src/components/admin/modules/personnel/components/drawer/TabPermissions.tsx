@@ -1,12 +1,12 @@
 /**
  * TabPermissions — Module Access & Capability Editor
- * 
+ *
  * Two-level permission grid:
  *  1. Module access toggles (Phase 1 — switch on/off)
  *  2. Granular capability checkboxes per module (Phase 2 — expand when enabled)
- * 
+ *
  * Super admin users cannot have their permissions edited (hardcoded full access).
- * 
+ *
  * @module personnel/drawer/TabPermissions
  */
 
@@ -52,27 +52,18 @@ interface TabPermissionsProps {
 }
 
 export function TabPermissions({ selectedPersonnel }: TabPermissionsProps) {
-  const isSuperAdmin =
-    selectedPersonnel.email?.toLowerCase() === SUPER_ADMIN_EMAIL.toLowerCase();
+  const isSuperAdmin = selectedPersonnel.email?.toLowerCase() === SUPER_ADMIN_EMAIL.toLowerCase();
   const isTargetSuperAdminRole = selectedPersonnel.role === 'super_admin';
 
   // Fetch current permissions for this personnel member
-  const { data: permissionSet, isLoading } = usePermissions(
-    selectedPersonnel.id,
-    !isSuperAdmin
-  );
+  const { data: permissionSet, isLoading } = usePermissions(selectedPersonnel.id, !isSuperAdmin);
 
-  const { mutate: savePermissions, isPending: isSaving } =
-    useUpdatePermissions();
+  const { mutate: savePermissions, isPending: isSaving } = useUpdatePermissions();
 
   // Local toggle state (controlled, not persisted until save)
-  const [localModules, setLocalModules] = useState<
-    Partial<Record<AdminModule, ModuleAccess>>
-  >({});
+  const [localModules, setLocalModules] = useState<Partial<Record<AdminModule, ModuleAccess>>>({});
   const [isDirty, setIsDirty] = useState(false);
-  const [expandedModules, setExpandedModules] = useState<Set<AdminModule>>(
-    new Set()
-  );
+  const [expandedModules, setExpandedModules] = useState<Set<AdminModule>>(new Set());
 
   // Sync local state when server data arrives
   useEffect(() => {
@@ -83,27 +74,24 @@ export function TabPermissions({ selectedPersonnel }: TabPermissionsProps) {
   }, [permissionSet]);
 
   // ── Module access toggle ──────────────────────────────────────────────
-  const handleToggle = useCallback(
-    (module: AdminModule, checked: boolean) => {
-      setLocalModules((prev) => {
-        const existing = prev[module];
-        return {
-          ...prev,
-          [module]: {
-            access: checked,
-            // When toggling on, preserve existing capabilities or start empty
-            capabilities: checked ? existing?.capabilities || [] : [],
-          },
-        };
-      });
-      // Auto-expand when enabling
-      if (checked) {
-        setExpandedModules((prev) => new Set([...prev, module]));
-      }
-      setIsDirty(true);
-    },
-    []
-  );
+  const handleToggle = useCallback((module: AdminModule, checked: boolean) => {
+    setLocalModules((prev) => {
+      const existing = prev[module];
+      return {
+        ...prev,
+        [module]: {
+          access: checked,
+          // When toggling on, preserve existing capabilities or start empty
+          capabilities: checked ? existing?.capabilities || [] : [],
+        },
+      };
+    });
+    // Auto-expand when enabling
+    if (checked) {
+      setExpandedModules((prev) => new Set([...prev, module]));
+    }
+    setIsDirty(true);
+  }, []);
 
   // ── Capability toggle ────────────────────────────────────────────────
   const handleCapabilityToggle = useCallback(
@@ -127,41 +115,35 @@ export function TabPermissions({ selectedPersonnel }: TabPermissionsProps) {
       });
       setIsDirty(true);
     },
-    []
+    [],
   );
 
   // ── Bulk capability actions per module ────────────────────────────────
-  const handleSelectAllCapabilities = useCallback(
-    (module: AdminModule) => {
-      const caps = MODULE_CAPABILITIES[module];
-      if (!caps) return;
-      setLocalModules((prev) => ({
-        ...prev,
-        [module]: {
-          ...prev[module],
-          access: true,
-          capabilities: caps.map((c) => c.key),
-        },
-      }));
-      setIsDirty(true);
-    },
-    []
-  );
+  const handleSelectAllCapabilities = useCallback((module: AdminModule) => {
+    const caps = MODULE_CAPABILITIES[module];
+    if (!caps) return;
+    setLocalModules((prev) => ({
+      ...prev,
+      [module]: {
+        ...prev[module],
+        access: true,
+        capabilities: caps.map((c) => c.key),
+      },
+    }));
+    setIsDirty(true);
+  }, []);
 
-  const handleDeselectAllCapabilities = useCallback(
-    (module: AdminModule) => {
-      setLocalModules((prev) => ({
-        ...prev,
-        [module]: {
-          ...prev[module],
-          access: prev[module]?.access ?? false,
-          capabilities: [],
-        },
-      }));
-      setIsDirty(true);
-    },
-    []
-  );
+  const handleDeselectAllCapabilities = useCallback((module: AdminModule) => {
+    setLocalModules((prev) => ({
+      ...prev,
+      [module]: {
+        ...prev[module],
+        access: prev[module]?.access ?? false,
+        capabilities: [],
+      },
+    }));
+    setIsDirty(true);
+  }, []);
 
   // ── Module-level bulk actions ─────────────────────────────────────────
   const handleSelectAll = useCallback(() => {
@@ -209,9 +191,7 @@ export function TabPermissions({ selectedPersonnel }: TabPermissionsProps) {
   }, [savePermissions, selectedPersonnel.id, localModules]);
 
   // ── Derived counts ────────────────────────────────────────────────────
-  const enabledCount = PERMISSIONED_MODULES.filter(
-    (m) => localModules[m]?.access === true
-  ).length;
+  const enabledCount = PERMISSIONED_MODULES.filter((m) => localModules[m]?.access === true).length;
 
   const totalCapabilities = PERMISSIONED_MODULES.reduce((sum, m) => {
     return sum + (localModules[m]?.capabilities?.length || 0);
@@ -229,22 +209,19 @@ export function TabPermissions({ selectedPersonnel }: TabPermissionsProps) {
             <CardTitle className="text-lg">Module Access</CardTitle>
           </div>
           <CardDescription>
-            This user is the Super Admin and has unrestricted access to all
-            modules and capabilities. This cannot be changed.
+            This user is the Super Admin and has unrestricted access to all modules and
+            capabilities. This cannot be changed.
           </CardDescription>
         </CardHeader>
         <CardContent>
           <div className="bg-purple-50 border border-purple-200 rounded-lg p-4 flex items-start gap-3">
             <Shield className="h-5 w-5 text-purple-600 mt-0.5 shrink-0" />
             <div>
-              <p className="text-sm font-medium text-purple-900">
-                Full Access (Hardcoded)
-              </p>
+              <p className="text-sm font-medium text-purple-900">Full Access (Hardcoded)</p>
               <p className="text-xs text-purple-700 mt-1">
-                Super admin permissions are enforced at the system level and
-                cannot be modified through this interface. All{' '}
-                {PERMISSIONED_MODULES.length} modules and all capabilities are
-                accessible.
+                Super admin permissions are enforced at the system level and cannot be modified
+                through this interface. All {PERMISSIONED_MODULES.length} modules and all
+                capabilities are accessible.
               </p>
             </div>
           </div>
@@ -260,9 +237,7 @@ export function TabPermissions({ selectedPersonnel }: TabPermissionsProps) {
     return (
       <div className="flex items-center justify-center py-12 gap-3">
         <Loader2 className="h-5 w-5 animate-spin text-purple-600" />
-        <span className="text-sm text-muted-foreground">
-          Loading permissions...
-        </span>
+        <span className="text-sm text-muted-foreground">Loading permissions...</span>
       </div>
     );
   }
@@ -310,40 +285,26 @@ export function TabPermissions({ selectedPersonnel }: TabPermissionsProps) {
             <span className="font-medium text-gray-700">
               {selectedPersonnel.firstName} {selectedPersonnel.lastName}
             </span>{' '}
-            can perform. Toggle a module on to grant access, then configure
-            specific capabilities. Dashboard is always accessible.
+            can perform. Toggle a module on to grant access, then configure specific capabilities.
+            Dashboard is always accessible.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
           {/* Bulk actions */}
           <div className="flex items-center gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handleSelectAll}
-              className="text-xs h-7"
-            >
+            <Button variant="outline" size="sm" onClick={handleSelectAll} className="text-xs h-7">
               Grant All
             </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handleDeselectAll}
-              className="text-xs h-7"
-            >
+            <Button variant="outline" size="sm" onClick={handleDeselectAll} className="text-xs h-7">
               Revoke All
             </Button>
           </div>
 
           {/* Module groups */}
           {moduleGroups
-            .filter((group) =>
-              group.modules.some((m) => PERMISSIONED_MODULES.includes(m))
-            )
+            .filter((group) => group.modules.some((m) => PERMISSIONED_MODULES.includes(m)))
             .map((group) => {
-              const groupModules = group.modules.filter((m) =>
-                PERMISSIONED_MODULES.includes(m)
-              );
+              const groupModules = group.modules.filter((m) => PERMISSIONED_MODULES.includes(m));
               if (groupModules.length === 0) return null;
 
               return (
@@ -358,19 +319,11 @@ export function TabPermissions({ selectedPersonnel }: TabPermissionsProps) {
                       const isEnabled = localModules[module]?.access === true;
                       const capabilities = MODULE_CAPABILITIES[module] || [];
                       const hasCaps = capabilities.length > 0;
-                      const isExpanded =
-                        expandedModules.has(module) && isEnabled && hasCaps;
-                      const activeCaps =
-                        localModules[module]?.capabilities || [];
+                      const isExpanded = expandedModules.has(module) && isEnabled && hasCaps;
+                      const activeCaps = localModules[module]?.capabilities || [];
                       const allCapsGranted =
-                        hasCaps &&
-                        capabilities.every((c) =>
-                          activeCaps.includes(c.key)
-                        );
-                      const someCapsGranted =
-                        hasCaps &&
-                        activeCaps.length > 0 &&
-                        !allCapsGranted;
+                        hasCaps && capabilities.every((c) => activeCaps.includes(c.key));
+                      const someCapsGranted = hasCaps && activeCaps.length > 0 && !allCapsGranted;
 
                       return (
                         <div
@@ -379,7 +332,7 @@ export function TabPermissions({ selectedPersonnel }: TabPermissionsProps) {
                             'rounded-lg border transition-colors',
                             isEnabled
                               ? 'bg-purple-50/50 border-purple-200'
-                              : 'bg-gray-50/50 border-gray-200'
+                              : 'bg-gray-50/50 border-gray-200',
                           )}
                         >
                           {/* Module row */}
@@ -391,7 +344,9 @@ export function TabPermissions({ selectedPersonnel }: TabPermissionsProps) {
                                   type="button"
                                   onClick={() => toggleExpand(module)}
                                   className="p-0.5 rounded hover:bg-purple-100 transition-colors"
-                                  aria-label={isExpanded ? 'Collapse capabilities' : 'Expand capabilities'}
+                                  aria-label={
+                                    isExpanded ? 'Collapse capabilities' : 'Expand capabilities'
+                                  }
                                 >
                                   {isExpanded ? (
                                     <ChevronDown className="h-3.5 w-3.5 text-purple-600" />
@@ -405,18 +360,14 @@ export function TabPermissions({ selectedPersonnel }: TabPermissionsProps) {
                               <Icon
                                 className={cn(
                                   'h-4 w-4 shrink-0',
-                                  isEnabled
-                                    ? 'text-purple-600'
-                                    : 'text-gray-400'
+                                  isEnabled ? 'text-purple-600' : 'text-gray-400',
                                 )}
                               />
                               <Label
                                 htmlFor={`perm-${module}`}
                                 className={cn(
                                   'text-sm cursor-pointer',
-                                  isEnabled
-                                    ? 'text-gray-900 font-medium'
-                                    : 'text-gray-500'
+                                  isEnabled ? 'text-gray-900 font-medium' : 'text-gray-500',
                                 )}
                               >
                                 {config.label}
@@ -454,9 +405,7 @@ export function TabPermissions({ selectedPersonnel }: TabPermissionsProps) {
                             <Switch
                               id={`perm-${module}`}
                               checked={isEnabled}
-                              onCheckedChange={(checked) =>
-                                handleToggle(module, checked)
-                              }
+                              onCheckedChange={(checked) => handleToggle(module, checked)}
                             />
                           </div>
 
@@ -468,17 +417,14 @@ export function TabPermissions({ selectedPersonnel }: TabPermissionsProps) {
                                 <div className="flex items-center gap-2 py-1.5 px-2 mb-1">
                                   <Eye className="h-3.5 w-3.5 text-gray-400" />
                                   <span className="text-xs text-gray-500">
-                                    View — always granted when module is
-                                    enabled
+                                    View — always granted when module is enabled
                                   </span>
                                 </div>
 
                                 {/* Capability checkboxes */}
                                 <div className="space-y-0.5">
                                   {capabilities.map((cap) => {
-                                    const isChecked = activeCaps.includes(
-                                      cap.key
-                                    );
+                                    const isChecked = activeCaps.includes(cap.key);
                                     return (
                                       <TooltipProvider key={cap.key}>
                                         <Tooltip>
@@ -489,26 +435,24 @@ export function TabPermissions({ selectedPersonnel }: TabPermissionsProps) {
                                                 'flex items-center gap-2.5 py-1.5 px-2 rounded-md cursor-pointer transition-colors',
                                                 isChecked
                                                   ? 'bg-purple-50 hover:bg-purple-100'
-                                                  : 'hover:bg-gray-100'
+                                                  : 'hover:bg-gray-100',
                                               )}
                                             >
                                               <Checkbox
                                                 id={`cap-${module}-${cap.key}`}
                                                 checked={isChecked}
-                                                onCheckedChange={(
-                                                  checked
-                                                ) =>
+                                                onCheckedChange={(checked) =>
                                                   handleCapabilityToggle(
                                                     module,
                                                     cap.key,
-                                                    checked === true
+                                                    checked === true,
                                                   )
                                                 }
                                               />
                                               <span
                                                 className={cn(
                                                   'text-xs font-medium',
-                                                  CAPABILITY_COLORS[cap.key]
+                                                  CAPABILITY_COLORS[cap.key],
                                                 )}
                                               >
                                                 {cap.label}
@@ -518,13 +462,8 @@ export function TabPermissions({ selectedPersonnel }: TabPermissionsProps) {
                                               </span>
                                             </label>
                                           </TooltipTrigger>
-                                          <TooltipContent
-                                            side="right"
-                                            className="sm:hidden"
-                                          >
-                                            <p className="text-xs">
-                                              {cap.description}
-                                            </p>
+                                          <TooltipContent side="right" className="sm:hidden">
+                                            <p className="text-xs">{cap.description}</p>
                                           </TooltipContent>
                                         </Tooltip>
                                       </TooltipProvider>
@@ -536,9 +475,7 @@ export function TabPermissions({ selectedPersonnel }: TabPermissionsProps) {
                                 <div className="flex items-center gap-2 mt-2 pt-2 border-t border-purple-100">
                                   <button
                                     type="button"
-                                    onClick={() =>
-                                      handleSelectAllCapabilities(module)
-                                    }
+                                    onClick={() => handleSelectAllCapabilities(module)}
                                     className="text-[10px] text-purple-600 hover:text-purple-800 font-medium"
                                   >
                                     Select all
@@ -546,9 +483,7 @@ export function TabPermissions({ selectedPersonnel }: TabPermissionsProps) {
                                   <span className="text-gray-300">|</span>
                                   <button
                                     type="button"
-                                    onClick={() =>
-                                      handleDeselectAllCapabilities(module)
-                                    }
+                                    onClick={() => handleDeselectAllCapabilities(module)}
                                     className="text-[10px] text-gray-500 hover:text-gray-700 font-medium"
                                   >
                                     Clear all
@@ -574,13 +509,12 @@ export function TabPermissions({ selectedPersonnel }: TabPermissionsProps) {
             <div className="space-y-1">
               <p className="text-xs text-blue-800">
                 <strong>Module access</strong> controls sidebar visibility.{' '}
-                <strong>Capabilities</strong> control specific actions within
-                each module (e.g. create, edit, delete, publish).
+                <strong>Capabilities</strong> control specific actions within each module (e.g.
+                create, edit, delete, publish).
               </p>
               <p className="text-xs text-blue-700">
-                If no capabilities are selected, the user has{' '}
-                <strong>view-only</strong> access to that module. The Dashboard
-                is always accessible. Changes take effect after saving.
+                If no capabilities are selected, the user has <strong>view-only</strong> access to
+                that module. The Dashboard is always accessible. Changes take effect after saving.
               </p>
             </div>
           </div>

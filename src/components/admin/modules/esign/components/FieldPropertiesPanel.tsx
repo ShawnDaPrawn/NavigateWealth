@@ -65,8 +65,16 @@ const PREFILL_TOKEN_OPTIONS: Array<{ value: PrefillToken | ''; label: string; gr
   { value: 'key:profile_tax_number', label: 'Profile tax number', group: 'Key Manager' },
   { value: 'key:profile_date_of_birth', label: 'Profile date of birth', group: 'Key Manager' },
   { value: 'key:profile_marital_status', label: 'Profile marital status', group: 'Key Manager' },
-  { value: 'key:profile_gross_monthly_income', label: 'Profile gross monthly income', group: 'Key Manager' },
-  { value: 'key:profile_net_monthly_income', label: 'Profile net monthly income', group: 'Key Manager' },
+  {
+    value: 'key:profile_gross_monthly_income',
+    label: 'Profile gross monthly income',
+    group: 'Key Manager',
+  },
+  {
+    value: 'key:profile_net_monthly_income',
+    label: 'Profile net monthly income',
+    group: 'Key Manager',
+  },
   { value: 'envelope.advice_case_id', label: 'Advice case ID', group: 'Envelope context' },
   { value: 'envelope.product_id', label: 'Product ID', group: 'Envelope context' },
   { value: 'envelope.request_id', label: 'Request ID', group: 'Envelope context' },
@@ -86,7 +94,11 @@ interface FieldPropertiesPanelProps {
 
 // P4.5 — Operators surfaced in the conditional editor, with copy that
 // reads naturally next to the source-field name.
-const CONDITIONAL_OPERATORS: Array<{ value: ConditionalOperator; label: string; needsValue: boolean }> = [
+const CONDITIONAL_OPERATORS: Array<{
+  value: ConditionalOperator;
+  label: string;
+  needsValue: boolean;
+}> = [
   { value: 'equals', label: 'is exactly', needsValue: true },
   { value: 'not_equals', label: 'is not', needsValue: true },
   { value: 'is_filled', label: 'is filled in', needsValue: false },
@@ -142,14 +154,14 @@ export function FieldPropertiesPanel({
   signers,
   allFields,
   onUpdate,
-  onDelete
+  onDelete,
 }: FieldPropertiesPanelProps) {
   // Pull validation metadata from the field. We cast through `unknown` because
   // `EsignField.metadata` is intentionally typed as a free-form record so the
   // backend can carry forward future keys without breaking client builds.
   // Derived null-safely (and the hook below declared) before the early return
   // so the hook always runs in the same order every render (rules-of-hooks).
-  const validation = ((field?.metadata ?? {}) as Record<string, unknown>) as FieldValidationMetadata;
+  const validation = (field?.metadata ?? {}) as Record<string, unknown> as FieldValidationMetadata;
   const format: TextFieldFormat = (validation.format as TextFieldFormat | undefined) ?? 'free_text';
   const minLength = typeof validation.minLength === 'number' ? validation.minLength : undefined;
   const maxLength = typeof validation.maxLength === 'number' ? validation.maxLength : undefined;
@@ -171,9 +183,10 @@ export function FieldPropertiesPanel({
     );
   }
 
-  const assignedSigner = signers.find(s => s.email === field.signer_id);
-  const signerIndex = signers.findIndex(s => s.email === field.signer_id);
-  const signerColor = signerIndex >= 0 ? SIGNER_COLORS[signerIndex % SIGNER_COLORS.length].hex : '#6d28d9';
+  const assignedSigner = signers.find((s) => s.email === field.signer_id);
+  const signerIndex = signers.findIndex((s) => s.email === field.signer_id);
+  const signerColor =
+    signerIndex >= 0 ? SIGNER_COLORS[signerIndex % SIGNER_COLORS.length].hex : '#6d28d9';
 
   // Helper: merge a partial validation patch into `metadata` without losing any
   // unrelated keys the backend may have written.
@@ -189,12 +202,12 @@ export function FieldPropertiesPanel({
     <div className="h-full flex flex-col bg-white border-l border-gray-200">
       <div className="p-4 border-b border-gray-200 flex items-center justify-between bg-gray-50">
         <div className="flex items-center gap-2">
-           <Type className="h-4 w-4 text-purple-600" />
-           <span className="font-semibold text-sm capitalize">{field.type} Field</span>
+          <Type className="h-4 w-4 text-purple-600" />
+          <span className="font-semibold text-sm capitalize">{field.type} Field</span>
         </div>
-        <Button 
-          variant="ghost" 
-          size="icon" 
+        <Button
+          variant="ghost"
+          size="icon"
           className="h-8 w-8 text-red-500 hover:text-red-700 hover:bg-red-50"
           onClick={() => onDelete(field.id)}
           aria-label="Delete field"
@@ -204,17 +217,16 @@ export function FieldPropertiesPanel({
       </div>
 
       <div className="flex-1 overflow-auto p-4 space-y-6">
-        
         {/* Assigned To */}
         <div className="space-y-2">
           <Label>Assigned To</Label>
           <div className="relative">
-            <select 
+            <select
               className="w-full p-2 border rounded-md text-sm bg-white focus:ring-2 focus:ring-purple-500 outline-none appearance-none"
               value={field.signer_id ?? ''}
               onChange={(e) => onUpdate(field.id, { signer_id: e.target.value })}
             >
-              {signers.map(signer => (
+              {signers.map((signer) => (
                 <option key={signer.email} value={signer.email}>
                   {signer.name} ({signer.role || 'Signer'})
                 </option>
@@ -225,23 +237,25 @@ export function FieldPropertiesPanel({
             </div>
           </div>
           {assignedSigner && (
-             <div className="flex items-center gap-2 mt-1">
-               <div className="w-2 h-2 rounded-full" style={{ backgroundColor: signerColor }} />
-               <span className="text-xs text-muted-foreground">{assignedSigner.email}</span>
-             </div>
+            <div className="flex items-center gap-2 mt-1">
+              <div className="w-2 h-2 rounded-full" style={{ backgroundColor: signerColor }} />
+              <span className="text-xs text-muted-foreground">{assignedSigner.email}</span>
+            </div>
           )}
         </div>
 
         {/* Common Properties */}
         <div className="space-y-4 pt-4 border-t border-gray-100">
-           <div className="flex items-center justify-between">
-              <Label htmlFor="required-toggle" className="cursor-pointer">Required Field</Label>
-              <Checkbox 
-                id="required-toggle" 
-                checked={field.required}
-                onCheckedChange={(checked) => onUpdate(field.id, { required: checked === true })}
-              />
-           </div>
+          <div className="flex items-center justify-between">
+            <Label htmlFor="required-toggle" className="cursor-pointer">
+              Required Field
+            </Label>
+            <Checkbox
+              id="required-toggle"
+              checked={field.required}
+              onCheckedChange={(checked) => onUpdate(field.id, { required: checked === true })}
+            />
+          </div>
         </div>
 
         {/* Text-field validation editor (Phase 2)
@@ -253,167 +267,178 @@ export function FieldPropertiesPanel({
             The rules persist on `metadata` and are enforced both
             in the studio (warnings) and in the SigningWorkflow. */}
         {field.type === 'text' && (
-           <div className="space-y-4 pt-4 border-t border-gray-100">
-              <div className="flex items-center gap-2">
-                <ShieldCheck className="h-4 w-4 text-purple-600" />
-                <h4 className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Validation</h4>
-              </div>
+          <div className="space-y-4 pt-4 border-t border-gray-100">
+            <div className="flex items-center gap-2">
+              <ShieldCheck className="h-4 w-4 text-purple-600" />
+              <h4 className="text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                Validation
+              </h4>
+            </div>
 
-              <div className="space-y-2">
-                <Label>Format</Label>
-                <Select
-                  value={format}
-                  onValueChange={(val) => patchValidation({ format: val as TextFieldFormat })}
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {TEXT_FORMAT_OPTIONS.map((opt) => (
-                      <SelectItem key={opt.value} value={opt.value}>
-                        <span className="flex flex-col">
-                          <span className="font-medium">{opt.label}</span>
-                          <span className="text-xs text-gray-500">{opt.description}</span>
-                        </span>
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
+            <div className="space-y-2">
+              <Label>Format</Label>
+              <Select
+                value={format}
+                onValueChange={(val) => patchValidation({ format: val as TextFieldFormat })}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {TEXT_FORMAT_OPTIONS.map((opt) => (
+                    <SelectItem key={opt.value} value={opt.value}>
+                      <span className="flex flex-col">
+                        <span className="font-medium">{opt.label}</span>
+                        <span className="text-xs text-gray-500">{opt.description}</span>
+                      </span>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
 
-              {format === 'custom_regex' && (
-                <div className="space-y-1">
-                  <Label className="text-xs">Pattern (regex source, no delimiters)</Label>
-                  <Input
-                    placeholder={'^[A-Z]{3}-\\d{4}$'}
-                    value={pattern ?? ''}
-                    onChange={(e) => patchValidation({ pattern: e.target.value })}
-                    className={customRegexValid ? '' : 'border-red-300 focus:ring-red-200'}
-                  />
-                  {!customRegexValid && (
-                    <p className="text-xs text-red-600 flex items-center gap-1">
-                      <AlertCircle className="h-3 w-3" />
-                      Invalid regular expression
+            {format === 'custom_regex' && (
+              <div className="space-y-1">
+                <Label className="text-xs">Pattern (regex source, no delimiters)</Label>
+                <Input
+                  placeholder={'^[A-Z]{3}-\\d{4}$'}
+                  value={pattern ?? ''}
+                  onChange={(e) => patchValidation({ pattern: e.target.value })}
+                  className={customRegexValid ? '' : 'border-red-300 focus:ring-red-200'}
+                />
+                {!customRegexValid && (
+                  <p className="text-xs text-red-600 flex items-center gap-1">
+                    <AlertCircle className="h-3 w-3" />
+                    Invalid regular expression
+                  </p>
+                )}
+              </div>
+            )}
+
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1">
+                <Label className="text-xs">Min length</Label>
+                <Input
+                  type="number"
+                  min={0}
+                  value={minLength ?? ''}
+                  onChange={(e) => {
+                    const v = e.target.value;
+                    patchValidation({
+                      minLength: v === '' ? undefined : Math.max(0, parseInt(v, 10)),
+                    });
+                  }}
+                  className="h-8"
+                />
+              </div>
+              <div className="space-y-1">
+                <Label className="text-xs">Max length</Label>
+                <Input
+                  type="number"
+                  min={0}
+                  value={maxLength ?? ''}
+                  onChange={(e) => {
+                    const v = e.target.value;
+                    patchValidation({
+                      maxLength: v === '' ? undefined : Math.max(0, parseInt(v, 10)),
+                    });
+                  }}
+                  className="h-8"
+                />
+              </div>
+            </div>
+
+            <div className="space-y-1">
+              <Label className="text-xs">Help text (shown to signer)</Label>
+              <Textarea
+                placeholder="e.g. Enter your full SA ID number"
+                value={helpText ?? ''}
+                onChange={(e) => patchValidation({ helpText: e.target.value })}
+                className="min-h-[60px] text-sm"
+              />
+            </div>
+
+            <div className="space-y-1 pt-1">
+              <Label className="text-xs">Default value (optional)</Label>
+              <Input
+                placeholder="Pre-fill text..."
+                value={field.value || ''}
+                onChange={(e) => onUpdate(field.id, { value: e.target.value })}
+                className="h-8"
+                // Disabled when a prefill binding is active — the resolver
+                // overwrites this at send-time.
+                disabled={!!((field.metadata ?? {}) as Record<string, unknown>).prefill}
+              />
+            </div>
+
+            {/* P3.6 — CRM Prefill binding */}
+            {(() => {
+              const meta = (field.metadata ?? {}) as {
+                prefill?: { token?: PrefillToken; locked?: boolean };
+              };
+              const currentToken = meta.prefill?.token ?? '';
+              const locked = !!meta.prefill?.locked;
+              const setToken = (token: PrefillToken | '') => {
+                const nextMeta: Record<string, unknown> = { ...(field.metadata ?? {}) };
+                if (!token) {
+                  delete nextMeta.prefill;
+                } else {
+                  nextMeta.prefill = { token, locked };
+                }
+                onUpdate(field.id, { metadata: nextMeta });
+              };
+              const setLocked = (next: boolean) => {
+                if (!currentToken) return;
+                const nextMeta: Record<string, unknown> = {
+                  ...(field.metadata ?? {}),
+                  prefill: { token: currentToken, locked: next },
+                };
+                onUpdate(field.id, { metadata: nextMeta });
+              };
+              return (
+                <div className="space-y-2 pt-3 border-t border-gray-100">
+                  <div className="flex items-center gap-2">
+                    <Sparkles className="h-3.5 w-3.5 text-purple-600" />
+                    <Label className="text-xs">Auto-fill from CRM</Label>
+                  </div>
+                  <Select
+                    value={currentToken || '__none__'}
+                    onValueChange={(v) => setToken(v === '__none__' ? '' : (v as PrefillToken))}
+                  >
+                    <SelectTrigger className="h-8">
+                      <SelectValue placeholder="No pre-fill" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="__none__">No pre-fill</SelectItem>
+                      {PREFILL_TOKEN_OPTIONS.filter((o) => o.value !== '').map((opt) => (
+                        <SelectItem key={opt.value} value={opt.value as string}>
+                          <span className="flex flex-col">
+                            <span className="font-medium">{opt.label}</span>
+                            <span className="text-xs text-gray-500">{opt.group}</span>
+                          </span>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+
+                  {currentToken && (
+                    <label className="flex items-center justify-between text-xs cursor-pointer pt-1">
+                      <span className="flex items-center gap-1.5 text-gray-700">
+                        <Lock className="h-3 w-3" />
+                        Lock value (signer can't edit)
+                      </span>
+                      <Checkbox checked={locked} onCheckedChange={(v) => setLocked(v === true)} />
+                    </label>
+                  )}
+                  {currentToken && (
+                    <p className="text-xs text-gray-500">
+                      Resolved at send-time from the assigned signer's client record.
                     </p>
                   )}
                 </div>
-              )}
-
-              <div className="grid grid-cols-2 gap-3">
-                <div className="space-y-1">
-                  <Label className="text-xs">Min length</Label>
-                  <Input
-                    type="number"
-                    min={0}
-                    value={minLength ?? ''}
-                    onChange={(e) => {
-                      const v = e.target.value;
-                      patchValidation({ minLength: v === '' ? undefined : Math.max(0, parseInt(v, 10)) });
-                    }}
-                    className="h-8"
-                  />
-                </div>
-                <div className="space-y-1">
-                  <Label className="text-xs">Max length</Label>
-                  <Input
-                    type="number"
-                    min={0}
-                    value={maxLength ?? ''}
-                    onChange={(e) => {
-                      const v = e.target.value;
-                      patchValidation({ maxLength: v === '' ? undefined : Math.max(0, parseInt(v, 10)) });
-                    }}
-                    className="h-8"
-                  />
-                </div>
-              </div>
-
-              <div className="space-y-1">
-                <Label className="text-xs">Help text (shown to signer)</Label>
-                <Textarea
-                  placeholder="e.g. Enter your full SA ID number"
-                  value={helpText ?? ''}
-                  onChange={(e) => patchValidation({ helpText: e.target.value })}
-                  className="min-h-[60px] text-sm"
-                />
-              </div>
-
-              <div className="space-y-1 pt-1">
-                <Label className="text-xs">Default value (optional)</Label>
-                <Input
-                  placeholder="Pre-fill text..."
-                  value={field.value || ''}
-                  onChange={(e) => onUpdate(field.id, { value: e.target.value })}
-                  className="h-8"
-                  // Disabled when a prefill binding is active — the resolver
-                  // overwrites this at send-time.
-                  disabled={!!(((field.metadata ?? {}) as Record<string, unknown>).prefill)}
-                />
-              </div>
-
-              {/* P3.6 — CRM Prefill binding */}
-              {(() => {
-                const meta = (field.metadata ?? {}) as { prefill?: { token?: PrefillToken; locked?: boolean } };
-                const currentToken = meta.prefill?.token ?? '';
-                const locked = !!meta.prefill?.locked;
-                const setToken = (token: PrefillToken | '') => {
-                  const nextMeta: Record<string, unknown> = { ...(field.metadata ?? {}) };
-                  if (!token) {
-                    delete nextMeta.prefill;
-                  } else {
-                    nextMeta.prefill = { token, locked };
-                  }
-                  onUpdate(field.id, { metadata: nextMeta });
-                };
-                const setLocked = (next: boolean) => {
-                  if (!currentToken) return;
-                  const nextMeta: Record<string, unknown> = {
-                    ...(field.metadata ?? {}),
-                    prefill: { token: currentToken, locked: next },
-                  };
-                  onUpdate(field.id, { metadata: nextMeta });
-                };
-                return (
-                  <div className="space-y-2 pt-3 border-t border-gray-100">
-                    <div className="flex items-center gap-2">
-                      <Sparkles className="h-3.5 w-3.5 text-purple-600" />
-                      <Label className="text-xs">Auto-fill from CRM</Label>
-                    </div>
-                    <Select value={currentToken || '__none__'} onValueChange={(v) => setToken(v === '__none__' ? '' : (v as PrefillToken))}>
-                      <SelectTrigger className="h-8">
-                        <SelectValue placeholder="No pre-fill" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="__none__">No pre-fill</SelectItem>
-                        {PREFILL_TOKEN_OPTIONS.filter((o) => o.value !== '').map((opt) => (
-                          <SelectItem key={opt.value} value={opt.value as string}>
-                            <span className="flex flex-col">
-                              <span className="font-medium">{opt.label}</span>
-                              <span className="text-xs text-gray-500">{opt.group}</span>
-                            </span>
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-
-                    {currentToken && (
-                      <label className="flex items-center justify-between text-xs cursor-pointer pt-1">
-                        <span className="flex items-center gap-1.5 text-gray-700">
-                          <Lock className="h-3 w-3" />
-                          Lock value (signer can't edit)
-                        </span>
-                        <Checkbox checked={locked} onCheckedChange={(v) => setLocked(v === true)} />
-                      </label>
-                    )}
-                    {currentToken && (
-                      <p className="text-xs text-gray-500">
-                        Resolved at send-time from the assigned signer's client record.
-                      </p>
-                    )}
-                  </div>
-                );
-              })()}
-           </div>
+              );
+            })()}
+          </div>
         )}
 
         {/* P4.5 — Conditional logic editor.
@@ -423,8 +448,9 @@ export function FieldPropertiesPanel({
             visible fields, so a hidden conditional field never blocks
             submission. */}
         {(() => {
-          const otherFields = (allFields ?? []).filter(f => f.id !== field.id);
-          const cond = ((field.metadata ?? {}) as { conditional?: ConditionalMetadata }).conditional;
+          const otherFields = (allFields ?? []).filter((f) => f.id !== field.id);
+          const cond = ((field.metadata ?? {}) as { conditional?: ConditionalMetadata })
+            .conditional;
           const rules: ConditionalRule[] = cond?.rules ?? [];
           const clearOnHide = !!cond?.clearOnHide;
 
@@ -480,7 +506,7 @@ export function FieldPropertiesPanel({
                     Show this field only when <span className="font-medium">all</span> of:
                   </p>
                   {rules.map((rule, idx) => {
-                    const opMeta = CONDITIONAL_OPERATORS.find(o => o.value === rule.operator);
+                    const opMeta = CONDITIONAL_OPERATORS.find((o) => o.value === rule.operator);
                     return (
                       <div
                         key={idx}
@@ -523,7 +549,7 @@ export function FieldPropertiesPanel({
                               <SelectValue />
                             </SelectTrigger>
                             <SelectContent>
-                              {CONDITIONAL_OPERATORS.map(o => (
+                              {CONDITIONAL_OPERATORS.map((o) => (
                                 <SelectItem key={o.value} value={o.value}>
                                   {o.label}
                                 </SelectItem>
@@ -568,144 +594,144 @@ export function FieldPropertiesPanel({
             side: the value is computed from the formula and read-only,
             and never counts against required-field gating. Tokens use
             the form `{field:<id>}`. */}
-        {field.type === 'text' && (() => {
-          const otherFields = (allFields ?? []).filter(f => f.id !== field.id);
-          const calc = ((field.metadata ?? {}) as { calculated?: CalculatedMetadata }).calculated;
-          const writeCalculated = (next: CalculatedMetadata | null) => {
-            const meta: Record<string, unknown> = { ...(field.metadata ?? {}) };
-            if (!next || !next.formula.trim()) {
-              delete meta.calculated;
-            } else {
-              meta.calculated = next;
-            }
-            onUpdate(field.id, { metadata: meta });
-          };
-          return (
-            <div className="space-y-3 pt-4 border-t border-gray-100">
-              <div className="flex items-center gap-2">
-                <Calculator className="h-4 w-4 text-purple-600" />
-                <h4 className="text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                  Calculated value
-                </h4>
-              </div>
-              <div className="space-y-1">
-                <Label className="text-xs">Formula</Label>
-                <Textarea
-                  placeholder={'e.g. {field:abc} * 12 + 100'}
-                  value={calc?.formula ?? ''}
-                  onChange={(e) =>
-                    writeCalculated({
-                      formula: e.target.value,
-                      precision: calc?.precision ?? 2,
-                      prefix: calc?.prefix,
-                    })
-                  }
-                  className="min-h-[56px] text-xs font-mono"
-                />
-                <p className="text-[11px] text-muted-foreground">
-                  Reference other fields with <code className="font-mono">{'{field:<id>}'}</code>.
-                  Operators: + − × ÷ and parentheses.
-                </p>
-              </div>
-              {otherFields.length > 0 && (
-                <div className="space-y-1">
-                  <Label className="text-xs">Insert field token</Label>
-                  <Select
-                    value=""
-                    onValueChange={(id) => {
-                      if (!id) return;
-                      const insertion = `{field:${id}}`;
-                      writeCalculated({
-                        formula: `${calc?.formula ?? ''}${insertion}`,
-                        precision: calc?.precision ?? 2,
-                        prefix: calc?.prefix,
-                      });
-                    }}
-                  >
-                    <SelectTrigger className="h-8 text-xs">
-                      <SelectValue placeholder="Choose a field…" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {otherFields.map((f, i) => (
-                        <SelectItem key={f.id} value={f.id}>
-                          {fieldDisplayName(f, i)}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+        {field.type === 'text' &&
+          (() => {
+            const otherFields = (allFields ?? []).filter((f) => f.id !== field.id);
+            const calc = ((field.metadata ?? {}) as { calculated?: CalculatedMetadata }).calculated;
+            const writeCalculated = (next: CalculatedMetadata | null) => {
+              const meta: Record<string, unknown> = { ...(field.metadata ?? {}) };
+              if (!next || !next.formula.trim()) {
+                delete meta.calculated;
+              } else {
+                meta.calculated = next;
+              }
+              onUpdate(field.id, { metadata: meta });
+            };
+            return (
+              <div className="space-y-3 pt-4 border-t border-gray-100">
+                <div className="flex items-center gap-2">
+                  <Calculator className="h-4 w-4 text-purple-600" />
+                  <h4 className="text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                    Calculated value
+                  </h4>
                 </div>
-              )}
-              <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1">
-                  <Label className="text-xs">Precision</Label>
-                  <Input
-                    type="number"
-                    min={0}
-                    max={6}
-                    value={calc?.precision ?? 2}
+                  <Label className="text-xs">Formula</Label>
+                  <Textarea
+                    placeholder={'e.g. {field:abc} * 12 + 100'}
+                    value={calc?.formula ?? ''}
                     onChange={(e) =>
                       writeCalculated({
-                        formula: calc?.formula ?? '',
-                        precision: Math.max(0, Math.min(6, parseInt(e.target.value, 10) || 0)),
+                        formula: e.target.value,
+                        precision: calc?.precision ?? 2,
                         prefix: calc?.prefix,
                       })
                     }
-                    className="h-8"
-                    disabled={!calc?.formula}
+                    className="min-h-[56px] text-xs font-mono"
                   />
+                  <p className="text-[11px] text-muted-foreground">
+                    Reference other fields with <code className="font-mono">{'{field:<id>}'}</code>.
+                    Operators: + − × ÷ and parentheses.
+                  </p>
                 </div>
-                <div className="space-y-1">
-                  <Label className="text-xs">Prefix (display)</Label>
-                  <Input
-                    placeholder={'R '}
-                    value={calc?.prefix ?? ''}
-                    onChange={(e) =>
-                      writeCalculated({
-                        formula: calc?.formula ?? '',
-                        precision: calc?.precision ?? 2,
-                        prefix: e.target.value || undefined,
-                      })
-                    }
-                    className="h-8"
-                    disabled={!calc?.formula}
-                  />
+                {otherFields.length > 0 && (
+                  <div className="space-y-1">
+                    <Label className="text-xs">Insert field token</Label>
+                    <Select
+                      value=""
+                      onValueChange={(id) => {
+                        if (!id) return;
+                        const insertion = `{field:${id}}`;
+                        writeCalculated({
+                          formula: `${calc?.formula ?? ''}${insertion}`,
+                          precision: calc?.precision ?? 2,
+                          prefix: calc?.prefix,
+                        });
+                      }}
+                    >
+                      <SelectTrigger className="h-8 text-xs">
+                        <SelectValue placeholder="Choose a field…" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {otherFields.map((f, i) => (
+                          <SelectItem key={f.id} value={f.id}>
+                            {fieldDisplayName(f, i)}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1">
+                    <Label className="text-xs">Precision</Label>
+                    <Input
+                      type="number"
+                      min={0}
+                      max={6}
+                      value={calc?.precision ?? 2}
+                      onChange={(e) =>
+                        writeCalculated({
+                          formula: calc?.formula ?? '',
+                          precision: Math.max(0, Math.min(6, parseInt(e.target.value, 10) || 0)),
+                          prefix: calc?.prefix,
+                        })
+                      }
+                      className="h-8"
+                      disabled={!calc?.formula}
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-xs">Prefix (display)</Label>
+                    <Input
+                      placeholder={'R '}
+                      value={calc?.prefix ?? ''}
+                      onChange={(e) =>
+                        writeCalculated({
+                          formula: calc?.formula ?? '',
+                          precision: calc?.precision ?? 2,
+                          prefix: e.target.value || undefined,
+                        })
+                      }
+                      className="h-8"
+                      disabled={!calc?.formula}
+                    />
+                  </div>
                 </div>
+                {calc?.formula && (
+                  <Badge variant="outline" className="text-[10px] gap-1">
+                    <Calculator className="h-3 w-3" />
+                    Read-only on signer side
+                  </Badge>
+                )}
               </div>
-              {calc?.formula && (
-                <Badge variant="outline" className="text-[10px] gap-1">
-                  <Calculator className="h-3 w-3" />
-                  Read-only on signer side
-                </Badge>
-              )}
-            </div>
-          );
-        })()}
+            );
+          })()}
 
         {/* Position & Size (Advanced) */}
         <div className="space-y-4 pt-4 border-t border-gray-100">
-           <h4 className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Layout</h4>
-           <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-1">
-                 <Label className="text-xs text-muted-foreground">X Position (%)</Label>
-                 <Input 
-                   type="number" 
-                   value={Math.round(field.x)} 
-                   onChange={(e) => onUpdate(field.id, { x: parseFloat(e.target.value) })}
-                   className="h-8"
-                 />
-              </div>
-              <div className="space-y-1">
-                 <Label className="text-xs text-muted-foreground">Y Position (%)</Label>
-                 <Input 
-                   type="number" 
-                   value={Math.round(field.y)} 
-                   onChange={(e) => onUpdate(field.id, { y: parseFloat(e.target.value) })}
-                   className="h-8"
-                 />
-              </div>
-           </div>
+          <h4 className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Layout</h4>
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-1">
+              <Label className="text-xs text-muted-foreground">X Position (%)</Label>
+              <Input
+                type="number"
+                value={Math.round(field.x)}
+                onChange={(e) => onUpdate(field.id, { x: parseFloat(e.target.value) })}
+                className="h-8"
+              />
+            </div>
+            <div className="space-y-1">
+              <Label className="text-xs text-muted-foreground">Y Position (%)</Label>
+              <Input
+                type="number"
+                value={Math.round(field.y)}
+                onChange={(e) => onUpdate(field.id, { y: parseFloat(e.target.value) })}
+                className="h-8"
+              />
+            </div>
+          </div>
         </div>
-
       </div>
     </div>
   );

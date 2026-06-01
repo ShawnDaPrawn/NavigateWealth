@@ -6,13 +6,7 @@ import { Label } from '../../../ui/label';
 import { Textarea } from '../../../ui/textarea';
 import { Badge } from '../../../ui/badge';
 import { Checkbox } from '../../../ui/checkbox';
-import { 
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '../../../ui/select';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../../ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../../ui/tabs';
 import {
   Dialog,
@@ -24,12 +18,12 @@ import {
 } from '../../../ui/dialog';
 import { Calendar } from '../../../ui/calendar';
 import { toast } from 'sonner';
-import { 
-  Upload, 
-  X, 
-  Image, 
-  Video, 
-  Link, 
+import {
+  Upload,
+  X,
+  Image,
+  Video,
+  Link,
   Calendar as CalendarIcon,
   Clock,
   Send,
@@ -41,9 +35,16 @@ import {
   Zap,
   Globe,
   Target,
-  AlertCircle
+  AlertCircle,
 } from 'lucide-react';
-import { SocialProfile, SocialPlatform, MediaFile, PostLink, UTMParameters, PLATFORM_LIMITS } from './types';
+import {
+  SocialProfile,
+  SocialPlatform,
+  MediaFile,
+  PostLink,
+  UTMParameters,
+  PLATFORM_LIMITS,
+} from './types';
 import { campaignsApi } from './api';
 
 /** Data shape for composing a new post */
@@ -92,7 +93,7 @@ export function PostComposer({
       try {
         const response = await campaignsApi.getAll();
         if (response.success && response.data) {
-          setCampaigns(response.data.map(c => ({ id: c.id, name: c.name })));
+          setCampaigns(response.data.map((c) => ({ id: c.id, name: c.name })));
         }
       } catch (err) {
         console.error('PostComposer: Failed to fetch campaigns', err);
@@ -116,15 +117,16 @@ export function PostComposer({
     medium: 'organic',
     campaign: '',
   });
-  
+
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Apply initial values from AI generator when they change
   useEffect(() => {
     if (initialContent) {
-      const hashtagText = initialHashtags && initialHashtags.length > 0
-        ? '\n\n' + initialHashtags.map((h) => `#${h}`).join(' ')
-        : '';
+      const hashtagText =
+        initialHashtags && initialHashtags.length > 0
+          ? '\n\n' + initialHashtags.map((h) => `#${h}`).join(' ')
+          : '';
       setPostContent(initialContent + hashtagText);
     }
   }, [initialContent, initialHashtags]);
@@ -142,19 +144,20 @@ export function PostComposer({
 
   // Get selected platform types
   const selectedPlatformTypes = profiles
-    .filter(p => selectedProfiles.includes(p.id) && p.isConnected)
-    .map(p => p.platform);
+    .filter((p) => selectedProfiles.includes(p.id) && p.isConnected)
+    .map((p) => p.platform);
 
   // Calculate character limits
-  const minCharLimit = selectedPlatformTypes.length > 0 
-    ? Math.min(...selectedPlatformTypes.map(p => PLATFORM_LIMITS[p].maxCharacters))
-    : 280;
+  const minCharLimit =
+    selectedPlatformTypes.length > 0
+      ? Math.min(...selectedPlatformTypes.map((p) => PLATFORM_LIMITS[p].maxCharacters))
+      : 280;
 
   const hasInstagram = selectedPlatformTypes.includes('instagram');
 
   useEffect(() => {
     if (campaign && !utmParams.campaign) {
-      setUtmParams(prev => ({ ...prev, campaign }));
+      setUtmParams((prev) => ({ ...prev, campaign }));
     }
   }, [campaign, utmParams.campaign]);
 
@@ -162,11 +165,11 @@ export function PostComposer({
     const files = event.target.files;
     if (!files) return;
 
-    Array.from(files).forEach(file => {
+    Array.from(files).forEach((file) => {
       // Validate file type
       const isImage = file.type.startsWith('image/');
       const isVideo = file.type.startsWith('video/');
-      
+
       if (!isImage && !isVideo) {
         toast.error(`${file.name}: Only images and videos are supported`);
         return;
@@ -181,7 +184,7 @@ export function PostComposer({
         size: file.size,
       };
 
-      setMedia(prev => [...prev, mediaFile]);
+      setMedia((prev) => [...prev, mediaFile]);
     });
 
     // Reset input
@@ -191,7 +194,7 @@ export function PostComposer({
   };
 
   const removeMedia = (mediaId: string) => {
-    setMedia(prev => prev.filter(m => m.id !== mediaId));
+    setMedia((prev) => prev.filter((m) => m.id !== mediaId));
   };
 
   const handleLinkAdd = () => {
@@ -273,9 +276,7 @@ export function PostComposer({
   const isOverLimit = () => getCharacterCount() > minCharLimit;
 
   const canPost = () => {
-    return selectedProfiles.length > 0 && 
-           postContent.trim().length > 0 && 
-           !isOverLimit();
+    return selectedProfiles.length > 0 && postContent.trim().length > 0 && !isOverLimit();
   };
 
   return (
@@ -287,26 +288,28 @@ export function PostComposer({
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-            {profiles.filter(p => p.isConnected).map((profile) => (
-              <div key={profile.id} className="flex items-center space-x-2">
-                <Checkbox
-                  id={profile.id}
-                  checked={selectedProfiles.includes(profile.id)}
-                  onCheckedChange={(checked) => {
-                    if (checked) {
-                      onProfilesChange([...selectedProfiles, profile.id]);
-                    } else {
-                      onProfilesChange(selectedProfiles.filter(id => id !== profile.id));
-                    }
-                  }}
-                />
-                <Label htmlFor={profile.id} className="text-sm font-medium">
-                  {profile.name}
-                </Label>
-              </div>
-            ))}
+            {profiles
+              .filter((p) => p.isConnected)
+              .map((profile) => (
+                <div key={profile.id} className="flex items-center space-x-2">
+                  <Checkbox
+                    id={profile.id}
+                    checked={selectedProfiles.includes(profile.id)}
+                    onCheckedChange={(checked) => {
+                      if (checked) {
+                        onProfilesChange([...selectedProfiles, profile.id]);
+                      } else {
+                        onProfilesChange(selectedProfiles.filter((id) => id !== profile.id));
+                      }
+                    }}
+                  />
+                  <Label htmlFor={profile.id} className="text-sm font-medium">
+                    {profile.name}
+                  </Label>
+                </div>
+              ))}
           </div>
-          
+
           {selectedProfiles.length > 0 && (
             <div className="mt-3 text-sm text-muted-foreground">
               Character limit: {minCharLimit} characters (lowest among selected platforms)
@@ -321,7 +324,7 @@ export function PostComposer({
           <CardTitle className="flex items-center justify-between">
             <span>Post Content</span>
             <div className="flex items-center gap-2">
-              <Badge variant={isOverLimit() ? "destructive" : "secondary"}>
+              <Badge variant={isOverLimit() ? 'destructive' : 'secondary'}>
                 {getCharacterCount()}/{minCharLimit}
               </Badge>
               <Button variant="ghost" size="sm">
@@ -433,9 +436,7 @@ export function PostComposer({
                   >
                     <X className="h-3 w-3" />
                   </Button>
-                  <div className="mt-1 text-xs text-muted-foreground truncate">
-                    {item.filename}
-                  </div>
+                  <div className="mt-1 text-xs text-muted-foreground truncate">{item.filename}</div>
                 </div>
               ))}
             </div>
@@ -461,17 +462,17 @@ export function PostComposer({
               <Input
                 placeholder="UTM Source"
                 value={utmParams.source}
-                onChange={(e) => setUtmParams(prev => ({ ...prev, source: e.target.value }))}
+                onChange={(e) => setUtmParams((prev) => ({ ...prev, source: e.target.value }))}
               />
               <Input
                 placeholder="UTM Medium"
                 value={utmParams.medium}
-                onChange={(e) => setUtmParams(prev => ({ ...prev, medium: e.target.value }))}
+                onChange={(e) => setUtmParams((prev) => ({ ...prev, medium: e.target.value }))}
               />
               <Input
                 placeholder="UTM Campaign"
                 value={utmParams.campaign}
-                onChange={(e) => setUtmParams(prev => ({ ...prev, campaign: e.target.value }))}
+                onChange={(e) => setUtmParams((prev) => ({ ...prev, campaign: e.target.value }))}
               />
             </div>
 
@@ -482,11 +483,7 @@ export function PostComposer({
                     <div className="text-sm font-medium">Link Preview</div>
                     <div className="text-xs text-muted-foreground">{link.url}</div>
                   </div>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => setLink(null)}
-                  >
+                  <Button variant="ghost" size="sm" onClick={() => setLink(null)}>
                     <X className="h-4 w-4" />
                   </Button>
                 </div>
@@ -539,7 +536,7 @@ export function PostComposer({
                     {tag}
                     <X
                       className="h-3 w-3 ml-1 cursor-pointer"
-                      onClick={() => setTags(tags.filter(t => t !== tag))}
+                      onClick={() => setTags(tags.filter((t) => t !== tag))}
                     />
                   </Badge>
                 ))}
@@ -558,7 +555,7 @@ export function PostComposer({
                 <Save className="h-4 w-4 mr-2" />
                 Save Draft
               </Button>
-              
+
               <Button variant="outline" onClick={() => setShowPreview(true)}>
                 <Eye className="h-4 w-4 mr-2" />
                 Preview
@@ -580,7 +577,7 @@ export function PostComposer({
                       Choose when you want this post to be published
                     </DialogDescription>
                   </DialogHeader>
-                  
+
                   <div className="space-y-4">
                     <div>
                       <Label>Date</Label>
@@ -592,7 +589,7 @@ export function PostComposer({
                         className="rounded-md border"
                       />
                     </div>
-                    
+
                     <div>
                       <Label htmlFor="time">Time</Label>
                       <Input
@@ -628,7 +625,7 @@ export function PostComposer({
               See how your post will appear on selected platforms
             </DialogDescription>
           </DialogHeader>
-          
+
           <Tabs defaultValue={selectedPlatformTypes[0]} className="mt-4">
             <TabsList>
               {selectedPlatformTypes.map((platform) => (
@@ -637,20 +634,20 @@ export function PostComposer({
                 </TabsTrigger>
               ))}
             </TabsList>
-            
+
             {selectedPlatformTypes.map((platform) => (
               <TabsContent key={platform} value={platform} className="mt-4">
                 <div className="border rounded-lg p-4 bg-white">
                   <div className="font-medium mb-2 capitalize">{platform} Preview</div>
                   <div className="whitespace-pre-wrap">{postContent}</div>
-                  
+
                   {platform === 'instagram' && firstComment && (
                     <div className="mt-3 pt-3 border-t">
                       <div className="text-sm text-muted-foreground mb-1">First Comment:</div>
                       <div className="text-sm">{firstComment}</div>
                     </div>
                   )}
-                  
+
                   {media.length > 0 && (
                     <div className="mt-3 grid grid-cols-2 gap-2">
                       {media.slice(0, 4).map((item) => (
@@ -670,7 +667,7 @@ export function PostComposer({
                       ))}
                     </div>
                   )}
-                  
+
                   {link && (
                     <div className="mt-3 p-2 border rounded bg-muted/20">
                       <div className="text-xs text-muted-foreground">Link:</div>

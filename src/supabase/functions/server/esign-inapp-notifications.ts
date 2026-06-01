@@ -115,7 +115,11 @@ export async function enqueue(params: {
 
     // Best-effort cleanup of rolled-off notifications.
     for (const staleId of dropped) {
-      try { await kv.del(EsignKeys.notification(staleId)); } catch { /* ignore */ }
+      try {
+        await kv.del(EsignKeys.notification(staleId));
+      } catch {
+        /* ignore */
+      }
     }
 
     const unread = await readUnread(params.userId);
@@ -138,9 +142,7 @@ export async function list(
   const unread = await readUnread(userId);
 
   const ids = index.slice(0, options.unreadOnly ? MAX_PER_USER : limit);
-  const records = await Promise.all(
-    ids.map((id) => kv.get(EsignKeys.notification(id))),
-  );
+  const records = await Promise.all(ids.map((id) => kv.get(EsignKeys.notification(id))));
 
   let items = records.filter((r): r is InAppNotification => !!r && typeof r === 'object');
   if (options.unreadOnly) {

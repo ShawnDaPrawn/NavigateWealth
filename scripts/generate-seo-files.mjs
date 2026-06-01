@@ -12,7 +12,9 @@ import {
   resolveImageUrl,
 } from './seo-static-data.mjs';
 
-const siteUrl = normalizeSiteUrl(process.env.SITE_URL || process.env.VITE_SITE_URL || DEFAULT_SITE_URL);
+const siteUrl = normalizeSiteUrl(
+  process.env.SITE_URL || process.env.VITE_SITE_URL || DEFAULT_SITE_URL,
+);
 const buildDate = new Intl.DateTimeFormat('en-CA', {
   timeZone: process.env.SITEMAP_TIMEZONE || DEFAULT_TIMEZONE,
 }).format(new Date());
@@ -21,7 +23,11 @@ const buildDate = new Intl.DateTimeFormat('en-CA', {
 // canonical, indexable public pages only.
 const sitemapEntries = publicSeoRoutes
   .filter((entry) => entry.sitemap !== false)
-  .map(({ path: routePath, lastmod, ogImage }) => ({ path: routePath, lastmod, image: resolveImageUrl(siteUrl, ogImage) }));
+  .map(({ path: routePath, lastmod, ogImage }) => ({
+    path: routePath,
+    lastmod,
+    image: resolveImageUrl(siteUrl, ogImage),
+  }));
 
 const publicDir = path.resolve('public');
 fs.mkdirSync(publicDir, { recursive: true });
@@ -37,7 +43,7 @@ function generateSitemapXml() {
     <image:image>
       <image:loc>${escapeXml(image || resolveImageUrl(siteUrl))}</image:loc>
     </image:image>
-  </url>`
+  </url>`,
     )
     .join('\n');
 
@@ -72,7 +78,9 @@ function main() {
         const strict = requireArticles();
         console.error('============================================================');
         console.error('[sitemap] WARNING: could not fetch published articles.');
-        console.error(`[sitemap] Reusing ${cached.length} article URL(s) from the existing sitemap.`);
+        console.error(
+          `[sitemap] Reusing ${cached.length} article URL(s) from the existing sitemap.`,
+        );
         console.error('[sitemap] These URLs may be stale until the next successful build.');
         console.error('============================================================');
         if (strict) {
@@ -227,7 +235,7 @@ function articleImageUrl(article) {
       article.featured_image_url ||
       article.feature_image_url ||
       article.featured_image ||
-      article.thumbnail_image_url
+      article.thumbnail_image_url,
   );
 }
 

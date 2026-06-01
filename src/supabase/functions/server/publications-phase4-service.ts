@@ -118,8 +118,9 @@ export const TemplateService = {
 
   async listAll(): Promise<ContentTemplate[]> {
     const templates = await kv.getByPrefix(TEMPLATE_PREFIX);
-    return (templates as ContentTemplate[])
-      .sort((a, b) => (a.sort_order || 0) - (b.sort_order || 0));
+    return (templates as ContentTemplate[]).sort(
+      (a, b) => (a.sort_order || 0) - (b.sort_order || 0),
+    );
   },
 
   async get(id: string): Promise<ContentTemplate | null> {
@@ -153,7 +154,7 @@ export const TemplateService = {
   },
 
   async update(id: string, input: UpdateTemplateInput): Promise<ContentTemplate | null> {
-    const existing = await kv.get(templateKey(id)) as ContentTemplate | null;
+    const existing = (await kv.get(templateKey(id))) as ContentTemplate | null;
     if (!existing) return null;
 
     const updated: ContentTemplate = {
@@ -352,7 +353,7 @@ export const VersionService = {
   async createVersion(
     articleId: string,
     articleData: Record<string, unknown>,
-    editedBy: string
+    editedBy: string,
   ): Promise<ArticleVersion> {
     const now = new Date().toISOString();
     const id = crypto.randomUUID();
@@ -370,17 +371,16 @@ export const VersionService = {
     if (versionNumber === 1) {
       changeSummary = 'Initial version';
     } else {
-      const prevVersions = (existing as ArticleVersion[])
-        .sort((a, b) => b.version_number - a.version_number);
+      const prevVersions = (existing as ArticleVersion[]).sort(
+        (a, b) => b.version_number - a.version_number,
+      );
       const prev = prevVersions[0];
       if (prev) {
         const changes: string[] = [];
         if (prev.title !== articleData.title) changes.push('title');
         if (prev.body !== body) changes.push('content');
         if (prev.excerpt !== articleData.excerpt) changes.push('excerpt');
-        changeSummary = changes.length > 0
-          ? `Updated ${changes.join(', ')}`
-          : 'Minor changes';
+        changeSummary = changes.length > 0 ? `Updated ${changes.join(', ')}` : 'Minor changes';
       }
     }
 
@@ -420,8 +420,9 @@ export const VersionService = {
 
     // Keep only last 50 versions to avoid KV bloat
     if ((existing as ArticleVersion[]).length >= 50) {
-      const sorted = (existing as ArticleVersion[])
-        .sort((a, b) => a.version_number - b.version_number);
+      const sorted = (existing as ArticleVersion[]).sort(
+        (a, b) => a.version_number - b.version_number,
+      );
       const toDelete = sorted.slice(0, sorted.length - 49);
       for (const old of toDelete) {
         await kv.del(versionKey(articleId, old.created_at));
@@ -437,8 +438,7 @@ export const VersionService = {
    */
   async listVersions(articleId: string): Promise<ArticleVersion[]> {
     const versions = await kv.getByPrefix(versionPrefix(articleId));
-    return (versions as ArticleVersion[])
-      .sort((a, b) => b.version_number - a.version_number);
+    return (versions as ArticleVersion[]).sort((a, b) => b.version_number - a.version_number);
   },
 
   /**

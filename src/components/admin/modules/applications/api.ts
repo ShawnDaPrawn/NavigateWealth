@@ -9,14 +9,20 @@ export const applicationsApi = {
     if (activeTab === 'incomplete') {
       try {
         const [draftData, inProgressData] = await Promise.all([
-          api.get<ApplicationsResponse>(`/${ENDPOINTS.APPLICATIONS}?status=draft&sortBy=created_at&sortOrder=desc`),
-          api.get<ApplicationsResponse>(`/${ENDPOINTS.APPLICATIONS}?status=in_progress&sortBy=created_at&sortOrder=desc`),
+          api.get<ApplicationsResponse>(
+            `/${ENDPOINTS.APPLICATIONS}?status=draft&sortBy=created_at&sortOrder=desc`,
+          ),
+          api.get<ApplicationsResponse>(
+            `/${ENDPOINTS.APPLICATIONS}?status=in_progress&sortBy=created_at&sortOrder=desc`,
+          ),
         ]);
         const combined = [
           ...(draftData.applications || []),
           ...(inProgressData.applications || []),
         ].map(normalizeApplication);
-        combined.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+        combined.sort(
+          (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),
+        );
         return combined;
       } catch (error) {
         logger.error('Failed to fetch incomplete applications', error);
@@ -28,7 +34,7 @@ export const applicationsApi = {
     if (!backendStatus) return [];
 
     const url = `/${ENDPOINTS.APPLICATIONS}?status=${backendStatus}&sortBy=submitted_at&sortOrder=desc`;
-    
+
     try {
       const data = await api.get<ApplicationsResponse>(url);
       return (data.applications || []).map(normalizeApplication);
@@ -50,7 +56,9 @@ export const applicationsApi = {
 
   getApplicationDetail: async (applicationId: string): Promise<Application> => {
     try {
-      const data = await api.get<{ application: Application }>(`/${ENDPOINTS.APPLICATION_DETAIL(applicationId)}`);
+      const data = await api.get<{ application: Application }>(
+        `/${ENDPOINTS.APPLICATION_DETAIL(applicationId)}`,
+      );
       return normalizeApplication(data.application);
     } catch (error) {
       logger.error('Failed to fetch application detail', error, { applicationId });

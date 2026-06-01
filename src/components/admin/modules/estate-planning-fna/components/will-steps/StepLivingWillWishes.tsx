@@ -7,7 +7,11 @@ import { Textarea } from '../../../../../ui/textarea';
 import { StepSectionHeader, FormField } from '../WillDraftingUI';
 import type { StepLivingWillWishesProps } from './types';
 
-export function StepLivingWillWishes({ funeralWishes, additionalDirectives, onUpdate }: StepLivingWillWishesProps) {
+export function StepLivingWillWishes({
+  funeralWishes,
+  additionalDirectives,
+  onUpdate,
+}: StepLivingWillWishesProps) {
   return (
     <div className="space-y-5">
       <StepSectionHeader

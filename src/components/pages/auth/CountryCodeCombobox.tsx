@@ -27,10 +27,7 @@ export function CountryCodeCombobox({ value, onValueChange, disabled }: CountryC
   const matchesSearch = (c: CountryCode) => {
     if (!search) return true;
     const q = search.toLowerCase();
-    return (
-      c.name.toLowerCase().includes(q) ||
-      c.code.includes(q)
-    );
+    return c.name.toLowerCase().includes(q) || c.code.includes(q);
   };
 
   const filteredPriority = priorityCodes.filter(matchesSearch);
@@ -96,9 +93,7 @@ export function CountryCodeCombobox({ value, onValueChange, disabled }: CountryC
                   <span className="text-base leading-none">{c.flag}</span>
                   <span className="flex-1 text-left truncate">{c.name}</span>
                   <span className="text-gray-500 text-xs tabular-nums">{c.code}</span>
-                  {value === c.code && (
-                    <Check className="h-3.5 w-3.5 text-purple-700 shrink-0" />
-                  )}
+                  {value === c.code && <Check className="h-3.5 w-3.5 text-purple-700 shrink-0" />}
                 </button>
               ))}
             </div>
@@ -126,9 +121,7 @@ export function CountryCodeCombobox({ value, onValueChange, disabled }: CountryC
                   <span className="text-base leading-none">{c.flag}</span>
                   <span className="flex-1 text-left truncate">{c.name}</span>
                   <span className="text-gray-500 text-xs tabular-nums">{c.code}</span>
-                  {value === c.code && (
-                    <Check className="h-3.5 w-3.5 text-purple-700 shrink-0" />
-                  )}
+                  {value === c.code && <Check className="h-3.5 w-3.5 text-purple-700 shrink-0" />}
                 </button>
               ))}
             </div>

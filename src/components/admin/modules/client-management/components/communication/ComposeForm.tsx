@@ -90,14 +90,17 @@ export function ComposeForm({
   const [additionalCc, setAdditionalCc] = useState('');
 
   // Editor config
-  const modules = useMemo(() => ({
-    toolbar: [
-      ['bold', 'italic', 'underline'],
-      [{ 'list': 'ordered' }, { 'list': 'bullet' }],
-      ['link'],
-      ['clean'],
-    ],
-  }), []);
+  const modules = useMemo(
+    () => ({
+      toolbar: [
+        ['bold', 'italic', 'underline'],
+        [{ list: 'ordered' }, { list: 'bullet' }],
+        ['link'],
+        ['clean'],
+      ],
+    }),
+    [],
+  );
 
   const formats = ['bold', 'italic', 'underline', 'list', 'link'];
 
@@ -109,13 +112,13 @@ export function ComposeForm({
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (files && files.length > 0) {
-      setAttachments(prev => [...prev, ...Array.from(files)]);
+      setAttachments((prev) => [...prev, ...Array.from(files)]);
       if (fileInputRef.current) fileInputRef.current.value = '';
     }
   };
 
   const handleRemoveAttachment = (index: number) => {
-    setAttachments(prev => prev.filter((_, i) => i !== index));
+    setAttachments((prev) => prev.filter((_, i) => i !== index));
   };
 
   const handleSend = () => {
@@ -213,8 +216,10 @@ export function ComposeForm({
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                {CATEGORIES.map(cat => (
-                  <SelectItem key={cat} value={cat}>{cat}</SelectItem>
+                {CATEGORIES.map((cat) => (
+                  <SelectItem key={cat} value={cat}>
+                    {cat}
+                  </SelectItem>
                 ))}
               </SelectContent>
             </Select>
@@ -227,8 +232,10 @@ export function ComposeForm({
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                {PRIORITIES.map(p => (
-                  <SelectItem key={p.value} value={p.value}>{p.label}</SelectItem>
+                {PRIORITIES.map((p) => (
+                  <SelectItem key={p.value} value={p.value}>
+                    {p.label}
+                  </SelectItem>
                 ))}
               </SelectContent>
             </Select>
@@ -246,18 +253,20 @@ export function ComposeForm({
                   checked={sendEmail}
                   onCheckedChange={(checked) => setSendEmail(checked as boolean)}
                 />
-                <label htmlFor="sendEmail" className="text-sm flex items-center gap-2 cursor-pointer">
+                <label
+                  htmlFor="sendEmail"
+                  className="text-sm flex items-center gap-2 cursor-pointer"
+                >
                   <Mail className="h-4 w-4 text-gray-500" />
                   Send Email
                 </label>
               </div>
               <div className="flex items-center space-x-2">
-                <Checkbox
-                  id="sendToPortal"
-                  checked={true}
-                  disabled
-                />
-                <label htmlFor="sendToPortal" className="text-sm flex items-center gap-2 cursor-pointer text-gray-500">
+                <Checkbox id="sendToPortal" checked={true} disabled />
+                <label
+                  htmlFor="sendToPortal"
+                  className="text-sm flex items-center gap-2 cursor-pointer text-gray-500"
+                >
                   <MessageSquare className="h-4 w-4" />
                   Publish to Portal (Required)
                 </label>
@@ -303,7 +312,10 @@ export function ComposeForm({
                 checked={encryptAttachments}
                 onCheckedChange={(checked) => setEncryptAttachments(checked as boolean)}
               />
-              <label htmlFor="encrypt" className="text-sm flex items-center gap-2 cursor-pointer text-slate-700 font-medium">
+              <label
+                htmlFor="encrypt"
+                className="text-sm flex items-center gap-2 cursor-pointer text-slate-700 font-medium"
+              >
                 {encryptAttachments ? (
                   <Lock className="h-3.5 w-3.5 text-blue-600" />
                 ) : (

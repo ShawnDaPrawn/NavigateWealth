@@ -7,8 +7,14 @@
 
 import React, { useState, useMemo } from 'react';
 import {
-  ThumbsUp, ThumbsDown, Search, Loader2, MessageSquare,
-  Clock, Filter, Inbox,
+  ThumbsUp,
+  ThumbsDown,
+  Search,
+  Loader2,
+  MessageSquare,
+  Clock,
+  Filter,
+  Inbox,
 } from 'lucide-react';
 import { Input } from '../../../../ui/input';
 import { Badge } from '../../../../ui/badge';
@@ -27,7 +33,7 @@ export function FeedbackReview() {
 
   const filtered = useMemo(() => {
     if (!feedback) return [];
-    return feedback.filter(entry => {
+    return feedback.filter((entry) => {
       if (ratingFilter !== 'all' && entry.rating !== ratingFilter) return false;
       if (searchTerm) {
         const lower = searchTerm.toLowerCase();
@@ -43,8 +49,8 @@ export function FeedbackReview() {
   const stats = useMemo(() => {
     if (!feedback) return { positive: 0, negative: 0, total: 0 };
     return {
-      positive: feedback.filter(f => f.rating === 'positive').length,
-      negative: feedback.filter(f => f.rating === 'negative').length,
+      positive: feedback.filter((f) => f.rating === 'positive').length,
+      negative: feedback.filter((f) => f.rating === 'negative').length,
       total: feedback.length,
     };
   }, [feedback]);
@@ -87,7 +93,7 @@ export function FeedbackReview() {
           />
         </div>
         <div className="flex gap-1.5">
-          {(['all', 'positive', 'negative'] as FilterRating[]).map(rating => (
+          {(['all', 'positive', 'negative'] as FilterRating[]).map((rating) => (
             <Button
               key={rating}
               variant={ratingFilter === rating ? 'default' : 'outline'}
@@ -95,7 +101,7 @@ export function FeedbackReview() {
               onClick={() => setRatingFilter(rating)}
               className={cn(
                 'gap-1.5 capitalize',
-                ratingFilter === rating && 'bg-purple-600 hover:bg-purple-700'
+                ratingFilter === rating && 'bg-purple-600 hover:bg-purple-700',
               )}
             >
               {rating === 'positive' && <ThumbsUp className="h-3.5 w-3.5" />}
@@ -112,12 +118,14 @@ export function FeedbackReview() {
         <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-12 text-center">
           <Inbox className="h-8 w-8 text-gray-300 mx-auto mb-3" />
           <p className="text-sm text-gray-500">
-            {feedback?.length === 0 ? 'No feedback received yet' : 'No feedback matches your filters'}
+            {feedback?.length === 0
+              ? 'No feedback received yet'
+              : 'No feedback matches your filters'}
           </p>
         </div>
       ) : (
         <div className="space-y-3">
-          {filtered.map(entry => (
+          {filtered.map((entry) => (
             <FeedbackCard key={entry.id} entry={entry} />
           ))}
         </div>
@@ -133,24 +141,30 @@ function FeedbackCard({ entry }: { entry: FeedbackEntry }) {
   return (
     <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-4">
       <div className="flex items-start gap-3">
-        <div className={cn(
-          'p-2 rounded-lg shrink-0',
-          entry.rating === 'positive' ? 'bg-green-50' : 'bg-red-50'
-        )}>
-          <Icon className={cn(
-            'h-4 w-4',
-            entry.rating === 'positive' ? 'text-green-600' : 'text-red-600'
-          )} />
+        <div
+          className={cn(
+            'p-2 rounded-lg shrink-0',
+            entry.rating === 'positive' ? 'bg-green-50' : 'bg-red-50',
+          )}
+        >
+          <Icon
+            className={cn(
+              'h-4 w-4',
+              entry.rating === 'positive' ? 'text-green-600' : 'text-red-600',
+            )}
+          />
         </div>
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 mb-1">
-            <Badge className={cn('text-xs', config.badgeClass)}>
-              {config.label}
-            </Badge>
+            <Badge className={cn('text-xs', config.badgeClass)}>{config.label}</Badge>
             <span className="text-xs text-gray-400 flex items-center gap-1">
               <Clock className="h-3 w-3" />
               {new Date(entry.createdAt).toLocaleDateString('en-ZA', {
-                day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit',
+                day: '2-digit',
+                month: 'short',
+                year: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit',
               })}
             </span>
           </div>
@@ -164,9 +178,7 @@ function FeedbackCard({ entry }: { entry: FeedbackEntry }) {
               {entry.comment}
             </p>
           )}
-          <p className="text-xs text-gray-400 mt-2">
-            Session: {entry.sessionId.slice(0, 8)}...
-          </p>
+          <p className="text-xs text-gray-400 mt-2">Session: {entry.sessionId.slice(0, 8)}...</p>
         </div>
       </div>
     </div>

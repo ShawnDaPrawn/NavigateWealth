@@ -50,10 +50,7 @@ export function SkeletonStack({ rows = 4, height = 'h-4' }: { rows?: number; hei
     <div className="space-y-2.5" role="status" aria-label="Loading">
       <span className="sr-only">Loading…</span>
       {Array.from({ length: rows }).map((_, i) => (
-        <Skeleton
-          key={i}
-          className={`${height} ${i === rows - 1 ? 'w-3/4' : 'w-full'}`}
-        />
+        <Skeleton key={i} className={`${height} ${i === rows - 1 ? 'w-3/4' : 'w-full'}`} />
       ))}
     </div>
   );
@@ -61,7 +58,11 @@ export function SkeletonStack({ rows = 4, height = 'h-4' }: { rows?: number; hei
 
 export function SkeletonCardGrid({ cards = 3 }: { cards?: number }) {
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4" role="status" aria-label="Loading">
+    <div
+      className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"
+      role="status"
+      aria-label="Loading"
+    >
       <span className="sr-only">Loading…</span>
       {Array.from({ length: cards }).map((_, i) => (
         <Card key={i}>
@@ -82,7 +83,11 @@ export function SkeletonCardGrid({ cards = 3 }: { cards?: number }) {
 
 export function SkeletonList({ items = 6 }: { items?: number }) {
   return (
-    <div className="divide-y divide-border rounded-md border bg-white" role="status" aria-label="Loading">
+    <div
+      className="divide-y divide-border rounded-md border bg-white"
+      role="status"
+      aria-label="Loading"
+    >
       <span className="sr-only">Loading…</span>
       {Array.from({ length: items }).map((_, i) => (
         <div key={i} className="flex items-center gap-3 px-4 py-3">
@@ -100,7 +105,11 @@ export function SkeletonList({ items = 6 }: { items?: number }) {
 
 export function EsignSkeleton() {
   return (
-    <div className="h-full flex flex-col bg-gray-50 overflow-hidden" role="status" aria-label="Loading e-sign">
+    <div
+      className="h-full flex flex-col bg-gray-50 overflow-hidden"
+      role="status"
+      aria-label="Loading e-sign"
+    >
       <span className="sr-only">Loading e-sign module, please wait…</span>
       <div className="flex-1 overflow-auto p-6">
         <div className="space-y-6">
@@ -137,7 +146,7 @@ export function EsignSkeleton() {
                 <Skeleton className="h-4 w-20" />
                 <Skeleton className="h-4 w-16" />
               </div>
-              {[1, 2, 3, 4, 5].map(i => (
+              {[1, 2, 3, 4, 5].map((i) => (
                 <TableRowSkeleton key={i} />
               ))}
             </div>

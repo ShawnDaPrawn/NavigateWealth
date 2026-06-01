@@ -28,10 +28,10 @@ export function usePdfDecryption(): UsePdfDecryptionResult {
 
     try {
       const arrayBuffer = await file.arrayBuffer();
-      
-      // pdf-lib can be very noisy with console.warn/error when it encounters 
+
+      // pdf-lib can be very noisy with console.warn/error when it encounters
       // encrypted files it doesn't support (AES-256) or corrupt xref tables.
-      // We temporarily suppress these logs to keep the console clean, 
+      // We temporarily suppress these logs to keep the console clean,
       // as we handle the failure gracefully in the catch block.
       console.warn = () => {};
       console.error = () => {};
@@ -43,17 +43,17 @@ export function usePdfDecryption(): UsePdfDecryptionResult {
       // graceful "unsupported encryption" message otherwise (see catch below).
       void password;
       const pdfDoc = await PDFDocument.load(arrayBuffer);
-      
+
       // Restore console methods before saving, in case save() has useful warnings
       console.warn = originalWarn;
       console.error = originalError;
 
       // Save the PDF without encryption.
       const decryptedBytes = await pdfDoc.save();
-      
+
       const blob = new Blob([decryptedBytes], { type: 'application/pdf' });
       const url = URL.createObjectURL(blob);
-      
+
       setDecryptedUrl(url);
       toast.success('PDF decrypted successfully');
     } catch (error: unknown) {
@@ -65,19 +65,24 @@ export function usePdfDecryption(): UsePdfDecryptionResult {
 
       // Log the actual error for debugging (controlled)
       console.warn('PDF Decryption failed (Handled):', errorMessage);
-      
+
       // Handle specific pdf-lib error messages
       if (errorMessage.includes('Input document to `PDFDocument.load` is encrypted')) {
         toast.error('Decryption Failed: Unsupported Encryption', {
-          description: 'This PDF uses an advanced encryption standard (likely AES-256) that cannot be decrypted in the browser. Please use Adobe Acrobat or a server-side tool.',
-          duration: 8000
+          description:
+            'This PDF uses an advanced encryption standard (likely AES-256) that cannot be decrypted in the browser. Please use Adobe Acrobat or a server-side tool.',
+          duration: 8000,
         });
       } else if (errorMessage.toLowerCase().includes('password')) {
         toast.error('Incorrect password. Please try again.');
-      } else if (errorMessage.includes('Invalid object ref') || errorMessage.includes('Trying to parse invalid object')) {
+      } else if (
+        errorMessage.includes('Invalid object ref') ||
+        errorMessage.includes('Trying to parse invalid object')
+      ) {
         toast.error('Decryption Failed: File Structure Issue', {
-           description: 'The PDF structure appears to be corrupt or uses a compression method incompatible with the decryptor.',
-           duration: 6000
+          description:
+            'The PDF structure appears to be corrupt or uses a compression method incompatible with the decryptor.',
+          duration: 6000,
         });
       } else {
         toast.error('Failed to decrypt PDF', {
@@ -88,7 +93,7 @@ export function usePdfDecryption(): UsePdfDecryptionResult {
       // Safety net: ensure console is restored even if something catastrophic happens
       if (console.warn !== originalWarn) console.warn = originalWarn;
       if (console.error !== originalError) console.error = originalError;
-      
+
       setProcessing(false);
     }
   };
@@ -105,6 +110,6 @@ export function usePdfDecryption(): UsePdfDecryptionResult {
     processing,
     decryptedUrl,
     decryptPdf,
-    reset
+    reset,
   };
 }

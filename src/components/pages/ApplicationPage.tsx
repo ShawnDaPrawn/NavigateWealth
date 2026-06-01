@@ -68,7 +68,9 @@ export function ApplicationPage() {
   } = useOnboarding();
 
   // Track whether user is resuming from a saved step
-  const [resumeInfo, setResumeInfo] = React.useState<{ step: number; stepTitle: string } | null>(null);
+  const [resumeInfo, setResumeInfo] = React.useState<{ step: number; stepTitle: string } | null>(
+    null,
+  );
   const [showResumeBanner, setShowResumeBanner] = React.useState(false);
   const resumeTracked = React.useRef(false);
 
@@ -184,19 +186,17 @@ export function ApplicationPage() {
                   <AlertCircle className="h-3.5 w-3.5 text-red-400" />
                 ) : (
                   <Save
-                    className={`h-3.5 w-3.5 ${
-                      lastSavedAt ? 'text-green-400' : 'text-gray-500'
-                    }`}
+                    className={`h-3.5 w-3.5 ${lastSavedAt ? 'text-green-400' : 'text-gray-500'}`}
                   />
                 )}
                 <span>
                   {saveStatus === 'saving'
                     ? 'Saving...'
                     : saveStatus === 'error'
-                    ? 'Save failed — retrying'
-                    : lastSavedAt
-                    ? `Saved ${lastSavedAt.toLocaleTimeString('en-ZA', { hour: '2-digit', minute: '2-digit' })}`
-                    : 'Auto-save enabled'}
+                      ? 'Save failed — retrying'
+                      : lastSavedAt
+                        ? `Saved ${lastSavedAt.toLocaleTimeString('en-ZA', { hour: '2-digit', minute: '2-digit' })}`
+                        : 'Auto-save enabled'}
                 </span>
               </div>
               <Badge className="bg-white/10 border border-white/10 text-white text-xs hover:bg-white/10">
@@ -218,7 +218,10 @@ export function ApplicationPage() {
           {/* Trust bar */}
           <div className="flex flex-wrap items-center gap-5 mt-4 pt-3 border-t border-white/5">
             {TRUST_POINTS.map((point) => (
-              <div key={point.label} className="flex items-center gap-1.5 text-[11px] text-gray-500">
+              <div
+                key={point.label}
+                className="flex items-center gap-1.5 text-[11px] text-gray-500"
+              >
                 <point.icon className="h-3 w-3 text-purple-400/70" />
                 <span>{point.label}</span>
               </div>
@@ -241,7 +244,9 @@ export function ApplicationPage() {
                     Welcome back — resuming from Step {resumeInfo.step} of {totalSteps}
                   </p>
                   <p className="text-xs text-gray-500 hidden sm:block">
-                    Your progress on <span className="font-medium text-gray-700">{resumeInfo.stepTitle}</span> has been restored.
+                    Your progress on{' '}
+                    <span className="font-medium text-gray-700">{resumeInfo.stepTitle}</span> has
+                    been restored.
                     {resumeInfo.step > 1 && (
                       <span> Steps 1–{resumeInfo.step - 1} are complete.</span>
                     )}
@@ -263,13 +268,14 @@ export function ApplicationPage() {
       {/* ── Main Content ───────────────────────────────────────────── */}
       <div className="max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8 xl:px-12 py-8 lg:py-10">
         <div className="flex flex-col lg:flex-row gap-8">
-
           {/* ── Left Sidebar: Steps Navigation (Desktop) ─────────── */}
           <div className="hidden lg:block lg:w-72 flex-shrink-0">
             <div className="sticky top-8 space-y-4">
               <Card className="overflow-hidden shadow-sm border-gray-200/80">
                 <div className="p-4 border-b border-gray-100 bg-gray-50/50">
-                  <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Application Steps</h3>
+                  <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                    Application Steps
+                  </h3>
                 </div>
                 <div className="p-2 space-y-0.5">
                   {STEPS.map((step) => {
@@ -278,7 +284,10 @@ export function ApplicationPage() {
                     const isCurrent = currentStep === step.number;
                     const completionCount = getStepCompletionCount(step.number);
                     const totalRequired = requiredCounts[step.number] || 1;
-                    const stepProgress = Math.min(100, Math.round((completionCount / totalRequired) * 100));
+                    const stepProgress = Math.min(
+                      100,
+                      Math.round((completionCount / totalRequired) * 100),
+                    );
 
                     return (
                       <div
@@ -287,27 +296,27 @@ export function ApplicationPage() {
                           isCurrent
                             ? 'bg-gradient-to-r from-[#6d28d9] to-[#7c3aed] text-white shadow-md shadow-purple-200/50'
                             : isCompleted
-                            ? 'bg-green-50/80 text-green-700'
-                            : 'text-gray-400 hover:bg-gray-50'
+                              ? 'bg-green-50/80 text-green-700'
+                              : 'text-gray-400 hover:bg-gray-50'
                         }`}
                       >
                         <div
                           className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 transition-all ${
-                            isCurrent
-                              ? 'bg-white/20'
-                              : isCompleted
-                              ? 'bg-green-100'
-                              : 'bg-gray-100'
+                            isCurrent ? 'bg-white/20' : isCompleted ? 'bg-green-100' : 'bg-gray-100'
                           }`}
                         >
                           {isCompleted ? (
                             <Check className="h-4 w-4 text-green-600" />
                           ) : (
-                            <Icon className={`h-4 w-4 ${isCurrent ? 'text-white' : 'text-gray-400'}`} />
+                            <Icon
+                              className={`h-4 w-4 ${isCurrent ? 'text-white' : 'text-gray-400'}`}
+                            />
                           )}
                         </div>
                         <div className="flex-1 min-w-0">
-                          <div className={`text-sm font-medium leading-tight ${isCurrent ? 'text-white' : ''}`}>
+                          <div
+                            className={`text-sm font-medium leading-tight ${isCurrent ? 'text-white' : ''}`}
+                          >
                             {step.title}
                           </div>
                           {isCurrent && (
@@ -327,7 +336,9 @@ export function ApplicationPage() {
                             <div className="text-xs text-gray-400 mt-0.5">Step {step.number}</div>
                           )}
                         </div>
-                        {isCurrent && <ChevronRight className="h-4 w-4 text-white/60 flex-shrink-0" />}
+                        {isCurrent && (
+                          <ChevronRight className="h-4 w-4 text-white/60 flex-shrink-0" />
+                        )}
                       </div>
                     );
                   })}
@@ -337,7 +348,9 @@ export function ApplicationPage() {
                 <div className="p-4 pt-3 border-t border-gray-100">
                   <div className="flex items-center justify-between mb-2">
                     <span className="text-xs font-medium text-gray-600">Overall Progress</span>
-                    <span className="text-xs font-bold text-[#6d28d9]">{Math.round(progress)}%</span>
+                    <span className="text-xs font-bold text-[#6d28d9]">
+                      {Math.round(progress)}%
+                    </span>
                   </div>
                   <Progress value={progress} className="h-2" />
                 </div>
@@ -346,8 +359,9 @@ export function ApplicationPage() {
               {/* Help Card */}
               <Card className="p-4 shadow-sm border-gray-200/80 bg-gradient-to-br from-purple-50/50 to-white">
                 <p className="text-xs text-gray-500 leading-relaxed">
-                  <span className="font-semibold text-gray-700">Need help?</span>
-                  {' '}Your progress is automatically saved. You can close this page and return at any time to continue where you left off.
+                  <span className="font-semibold text-gray-700">Need help?</span> Your progress is
+                  automatically saved. You can close this page and return at any time to continue
+                  where you left off.
                 </p>
               </Card>
             </div>
@@ -358,10 +372,14 @@ export function ApplicationPage() {
             <Card className="p-4 shadow-sm mb-6 border-gray-200/80">
               <div className="flex items-center justify-between mb-3">
                 <div>
-                  <div className="text-sm font-semibold text-gray-900">Step {currentStep} of {totalSteps}</div>
+                  <div className="text-sm font-semibold text-gray-900">
+                    Step {currentStep} of {totalSteps}
+                  </div>
                   <div className="text-xs text-gray-500">{STEPS[currentStep - 1].title}</div>
                 </div>
-                <Badge className="bg-[#6d28d9] hover:bg-[#6d28d9] text-xs px-2.5">{Math.round(progress)}%</Badge>
+                <Badge className="bg-[#6d28d9] hover:bg-[#6d28d9] text-xs px-2.5">
+                  {Math.round(progress)}%
+                </Badge>
               </div>
               <Progress value={progress} className="h-1.5" />
               <div className="flex justify-between mt-3">
@@ -375,13 +393,15 @@ export function ApplicationPage() {
                         isCurrent
                           ? 'text-[#6d28d9]'
                           : isCompleted
-                          ? 'text-green-600'
-                          : 'text-gray-300'
+                            ? 'text-green-600'
+                            : 'text-gray-300'
                       }`}
                     >
-                      <div className={`w-7 h-7 rounded-full flex items-center justify-center ${
-                        isCurrent ? 'bg-[#6d28d9]/10' : isCompleted ? 'bg-green-50' : 'bg-gray-50'
-                      }`}>
+                      <div
+                        className={`w-7 h-7 rounded-full flex items-center justify-center ${
+                          isCurrent ? 'bg-[#6d28d9]/10' : isCompleted ? 'bg-green-50' : 'bg-gray-50'
+                        }`}
+                      >
                         {isCompleted ? (
                           <Check className="h-3.5 w-3.5" />
                         ) : (
@@ -418,11 +438,17 @@ export function ApplicationPage() {
               <div className="border-b border-gray-100 bg-gradient-to-r from-white via-white to-purple-50/30 p-6 lg:p-8">
                 <div className="flex items-center gap-4">
                   <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-[#6d28d9] to-[#7c3aed] flex items-center justify-center shadow-lg shadow-purple-200/40">
-                    {React.createElement(STEPS[currentStep - 1].icon, { className: 'h-6 w-6 text-white' })}
+                    {React.createElement(STEPS[currentStep - 1].icon, {
+                      className: 'h-6 w-6 text-white',
+                    })}
                   </div>
                   <div>
-                    <h2 className="text-lg font-bold text-gray-900">{STEPS[currentStep - 1].title} Information</h2>
-                    <p className="text-sm text-gray-500 mt-0.5">{STEPS[currentStep - 1].subtitle}</p>
+                    <h2 className="text-lg font-bold text-gray-900">
+                      {STEPS[currentStep - 1].title} Information
+                    </h2>
+                    <p className="text-sm text-gray-500 mt-0.5">
+                      {STEPS[currentStep - 1].subtitle}
+                    </p>
                   </div>
                 </div>
               </div>
@@ -430,11 +456,25 @@ export function ApplicationPage() {
               {/* Form Content */}
               <div className="p-6 lg:p-8">
                 <div className="animate-in fade-in duration-300">
-                  {currentStep === 1 && <Step1Personal data={data} updateData={updateData} errors={validationErrors} />}
-                  {currentStep === 2 && <Step2Contact data={data} updateData={updateData} errors={validationErrors} />}
-                  {currentStep === 3 && <Step3Employment data={data} updateData={updateData} errors={validationErrors} />}
-                  {currentStep === 4 && <Step4Services data={data} updateData={updateData} errors={validationErrors} />}
-                  {currentStep === 5 && <Step5Terms data={data} updateData={updateData} errors={validationErrors} />}
+                  {currentStep === 1 && (
+                    <Step1Personal data={data} updateData={updateData} errors={validationErrors} />
+                  )}
+                  {currentStep === 2 && (
+                    <Step2Contact data={data} updateData={updateData} errors={validationErrors} />
+                  )}
+                  {currentStep === 3 && (
+                    <Step3Employment
+                      data={data}
+                      updateData={updateData}
+                      errors={validationErrors}
+                    />
+                  )}
+                  {currentStep === 4 && (
+                    <Step4Services data={data} updateData={updateData} errors={validationErrors} />
+                  )}
+                  {currentStep === 5 && (
+                    <Step5Terms data={data} updateData={updateData} errors={validationErrors} />
+                  )}
                 </div>
 
                 {/* Navigation Buttons */}
@@ -451,9 +491,11 @@ export function ApplicationPage() {
 
                   <div className="flex items-center gap-3">
                     {/* Mobile auto-save indicator */}
-                    <div className={`sm:hidden flex items-center gap-1.5 text-xs ${
-                      saveStatus === 'error' ? 'text-red-400' : 'text-gray-400'
-                    }`}>
+                    <div
+                      className={`sm:hidden flex items-center gap-1.5 text-xs ${
+                        saveStatus === 'error' ? 'text-red-400' : 'text-gray-400'
+                      }`}
+                    >
                       {saveStatus === 'saving' ? (
                         <Loader2 className="h-3 w-3 animate-spin" />
                       ) : saveStatus === 'error' ? (
@@ -461,7 +503,13 @@ export function ApplicationPage() {
                       ) : (
                         <Save className="h-3 w-3" />
                       )}
-                      <span>{saveStatus === 'saving' ? 'Saving' : saveStatus === 'error' ? 'Error' : 'Saved'}</span>
+                      <span>
+                        {saveStatus === 'saving'
+                          ? 'Saving'
+                          : saveStatus === 'error'
+                            ? 'Error'
+                            : 'Saved'}
+                      </span>
                     </div>
 
                     {currentStep < totalSteps ? (

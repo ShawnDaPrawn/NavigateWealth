@@ -1,14 +1,14 @@
 /**
  * Publications Module - API Client
  * Navigate Wealth Admin Dashboard
- * 
+ *
  * Centralized API client for the Publications module with:
  * - Articles CRUD operations
  * - Categories management
  * - Content types management
  * - Initialization and settings
  * - Error handling and type safety
- * 
+ *
  * @module publications/api
  */
 
@@ -36,9 +36,23 @@ import type {
   NewsItem,
 } from './types';
 import type { AIWritingRequest, AIWritingResponse } from './types';
-import type { ContentTemplate, CreateTemplateInput, UpdateTemplateInput, ArticleVersion } from './types';
+import type {
+  ContentTemplate,
+  CreateTemplateInput,
+  UpdateTemplateInput,
+  ArticleVersion,
+} from './types';
 import type { GenerateArticleBrief, GenerateArticleResult } from './types';
-import type { PipelineId, PipelineConfig, PipelineRunLog, PipelineTriggerResult, CalendarEvent, ContentSource, CreateContentSourceInput, DiscoveredFeed } from './types';
+import type {
+  PipelineId,
+  PipelineConfig,
+  PipelineRunLog,
+  PipelineTriggerResult,
+  CalendarEvent,
+  ContentSource,
+  CreateContentSourceInput,
+  DiscoveredFeed,
+} from './types';
 import type {
   SubscriberListResponse,
   SubscriberMutationResponse,
@@ -63,7 +77,7 @@ const RSS_PROXY_URL = getModuleUrl('rss-proxy');
 const AUTO_CONTENT_URL = getModuleUrl('auto-content');
 
 const headers = {
-  'Authorization': `Bearer ${publicAnonKey}`,
+  Authorization: `Bearer ${publicAnonKey}`,
   'Content-Type': 'application/json',
 };
 
@@ -71,16 +85,22 @@ const EMAIL_ENGAGEMENT_CHANGED_EVENT = 'publications:email-engagement-changed';
 
 function notifyEmailEngagementChanged(
   articleId: string,
-  reason: 'published' | 'retry_queued' | 'notification_job_updated' | 'notification_campaign_updated',
+  reason:
+    | 'published'
+    | 'retry_queued'
+    | 'notification_job_updated'
+    | 'notification_campaign_updated',
 ): void {
   if (typeof window === 'undefined') return;
 
-  window.dispatchEvent(new CustomEvent(EMAIL_ENGAGEMENT_CHANGED_EVENT, {
-    detail: {
-      articleId,
-      reason,
-    },
-  }));
+  window.dispatchEvent(
+    new CustomEvent(EMAIL_ENGAGEMENT_CHANGED_EVENT, {
+      detail: {
+        articleId,
+        reason,
+      },
+    }),
+  );
 }
 
 /**
@@ -93,7 +113,7 @@ async function getAuthHeaders(): Promise<Record<string, string>> {
     const { data } = await supabase.auth.getSession();
     const token = data?.session?.access_token || publicAnonKey;
     return {
-      'Authorization': `Bearer ${token}`,
+      Authorization: `Bearer ${token}`,
       'Content-Type': 'application/json',
     };
   } catch {
@@ -107,11 +127,11 @@ async function getMultipartAuthHeaders(): Promise<Record<string, string>> {
     const { data } = await supabase.auth.getSession();
     const token = data?.session?.access_token || publicAnonKey;
     return {
-      'Authorization': `Bearer ${token}`,
+      Authorization: `Bearer ${token}`,
     };
   } catch {
     return {
-      'Authorization': `Bearer ${publicAnonKey}`,
+      Authorization: `Bearer ${publicAnonKey}`,
     };
   }
 }
@@ -127,7 +147,7 @@ export class PublicationsAPIError extends Error {
   constructor(
     message: string,
     public statusCode?: number,
-    public response?: unknown
+    public response?: unknown,
   ) {
     super(message);
     this.name = 'PublicationsAPIError';
@@ -143,7 +163,7 @@ async function handleResponse<T>(response: Response): Promise<T> {
     throw new PublicationsAPIError(
       errorData.error || `API request failed with status ${response.status}`,
       response.status,
-      errorData
+      errorData,
     );
   }
 
@@ -162,10 +182,10 @@ async function handleResponse<T>(response: Response): Promise<T> {
 export const ArticlesAPI = {
   /**
    * Get all articles
-   * 
+   *
    * @param filters - Optional filters
    * @returns Array of articles
-   * 
+   *
    * @example
    * ```typescript
    * const articles = await ArticlesAPI.getArticles();
@@ -174,12 +194,14 @@ export const ArticlesAPI = {
    */
   async getArticles(filters?: ArticleFilters): Promise<Article[]> {
     const params = new URLSearchParams();
-    
+
     if (filters?.search) params.append('search', filters.search);
     if (filters?.status && filters.status !== 'all') params.append('status', filters.status);
-    if (filters?.category_id && filters.category_id !== 'all') params.append('category_id', filters.category_id);
+    if (filters?.category_id && filters.category_id !== 'all')
+      params.append('category_id', filters.category_id);
     if (filters?.type_id && filters.type_id !== 'all') params.append('type_id', filters.type_id);
-    if (filters?.is_featured !== undefined) params.append('is_featured', String(filters.is_featured));
+    if (filters?.is_featured !== undefined)
+      params.append('is_featured', String(filters.is_featured));
     if (filters?.date_from) params.append('date_from', filters.date_from);
     if (filters?.date_to) params.append('date_to', filters.date_to);
 
@@ -190,10 +212,10 @@ export const ArticlesAPI = {
 
   /**
    * Get single article by ID
-   * 
+   *
    * @param id - Article ID
    * @returns Article
-   * 
+   *
    * @example
    * ```typescript
    * const article = await ArticlesAPI.getArticle('abc-123');
@@ -206,10 +228,10 @@ export const ArticlesAPI = {
 
   /**
    * Get article by slug
-   * 
+   *
    * @param slug - Article slug
    * @returns Article
-   * 
+   *
    * @example
    * ```typescript
    * const article = await ArticlesAPI.getArticleBySlug('my-article');
@@ -222,10 +244,10 @@ export const ArticlesAPI = {
 
   /**
    * Create new article
-   * 
+   *
    * @param input - Article data
    * @returns Created article
-   * 
+   *
    * @example
    * ```typescript
    * const article = await ArticlesAPI.createArticle({
@@ -247,10 +269,10 @@ export const ArticlesAPI = {
 
   /**
    * Update existing article
-   * 
+   *
    * @param input - Update data with article ID
    * @returns Updated article
-   * 
+   *
    * @example
    * ```typescript
    * const article = await ArticlesAPI.updateArticle({
@@ -271,9 +293,9 @@ export const ArticlesAPI = {
 
   /**
    * Delete article
-   * 
+   *
    * @param id - Article ID
-   * 
+   *
    * @example
    * ```typescript
    * await ArticlesAPI.deleteArticle('abc-123');
@@ -291,18 +313,21 @@ export const ArticlesAPI = {
   /**
    * Publish article
    * Sets status to 'published' and published_at to now
-   * 
+   *
    * @param id - Article ID
    * @param options - Optional publish options
    * @returns Published article
-   * 
+   *
    * @example
    * ```typescript
    * const article = await ArticlesAPI.publishArticle('abc-123');
    * const articleWithNotification = await ArticlesAPI.publishArticle('abc-123', { notify_subscribers: true });
    * ```
    */
-  async publishArticle(id: string, options?: { notify_subscribers?: boolean }): Promise<ArticlePublishResponse> {
+  async publishArticle(
+    id: string,
+    options?: { notify_subscribers?: boolean },
+  ): Promise<ArticlePublishResponse> {
     const response = await fetch(`${BASE_URL}/articles/${id}/publish`, {
       method: 'POST',
       headers: await getAuthHeaders(),
@@ -329,10 +354,10 @@ export const ArticlesAPI = {
   /**
    * Archive article
    * Sets status to 'archived'
-   * 
+   *
    * @param id - Article ID
    * @returns Archived article
-   * 
+   *
    * @example
    * ```typescript
    * const article = await ArticlesAPI.archiveArticle('abc-123');
@@ -349,10 +374,10 @@ export const ArticlesAPI = {
   /**
    * Unarchive article
    * Sets status to 'draft'
-   * 
+   *
    * @param id - Article ID
    * @returns Unarchived article
-   * 
+   *
    * @example
    * ```typescript
    * const article = await ArticlesAPI.unarchiveArticle('abc-123');
@@ -369,10 +394,10 @@ export const ArticlesAPI = {
   /**
    * Unpublish article
    * Sets status to 'draft'
-   * 
+   *
    * @param id - Article ID
    * @returns Unpublished article (now draft)
-   * 
+   *
    * @example
    * ```typescript
    * const article = await ArticlesAPI.unpublishArticle('abc-123');
@@ -404,14 +429,14 @@ export const ArticlesAPI = {
 
   /**
    * Search articles
-   * 
+   *
    * Uses the main /articles endpoint with search query parameter.
    * Note: There is no dedicated /articles/search route — that path would
    * incorrectly match the /articles/:id param route.
-   * 
+   *
    * @param query - Search query
    * @returns Matching articles
-   * 
+   *
    * @example
    * ```typescript
    * const results = await ArticlesAPI.searchArticles('financial planning');
@@ -426,14 +451,14 @@ export const ArticlesAPI = {
 
   /**
    * Get featured articles
-   * 
+   *
    * Uses the main /articles endpoint with is_featured filter.
    * Note: There is no dedicated /articles/featured route — that path would
    * incorrectly match the /articles/:id param route.
-   * 
+   *
    * @param limit - Maximum number of articles
    * @returns Featured articles
-   * 
+   *
    * @example
    * ```typescript
    * const featured = await ArticlesAPI.getFeaturedArticles(5);
@@ -467,15 +492,20 @@ export const ArticlesAPI = {
     return handleResponse<ArticleReshareResponse>(response);
   },
 
-  async getEmailEngagementSummary(options?: { includeDeleted?: boolean }): Promise<ArticleEmailEngagementSummary[]> {
+  async getEmailEngagementSummary(options?: {
+    includeDeleted?: boolean;
+  }): Promise<ArticleEmailEngagementSummary[]> {
     const authHeaders = await getAuthHeaders();
     const params = new URLSearchParams();
     if (options?.includeDeleted) {
       params.set('include_deleted', 'true');
     }
-    const response = await fetch(`${BASE_URL}/email-engagement/summary${params.toString() ? `?${params.toString()}` : ''}`, {
-      headers: authHeaders,
-    });
+    const response = await fetch(
+      `${BASE_URL}/email-engagement/summary${params.toString() ? `?${params.toString()}` : ''}`,
+      {
+        headers: authHeaders,
+      },
+    );
     return handleResponse<ArticleEmailEngagementSummary[]>(response);
   },
 
@@ -494,7 +524,12 @@ export const ArticlesAPI = {
       /** Re-send to the full newsletter list (publish only), then queue failures for retry. */
       blastAll?: boolean;
     },
-  ): Promise<ArticleNotificationJob & { blastRecipientCount?: number; mode?: 'blast_all' | 'resume_undelivered' }> {
+  ): Promise<
+    ArticleNotificationJob & {
+      blastRecipientCount?: number;
+      mode?: 'blast_all' | 'resume_undelivered';
+    }
+  > {
     const authHeaders = await getAuthHeaders();
     const response = await fetch(`${BASE_URL}/articles/${id}/retry-undelivered`, {
       method: 'POST',
@@ -505,7 +540,10 @@ export const ArticlesAPI = {
       }),
     });
     const result = await handleResponse<
-      ArticleNotificationJob & { blastRecipientCount?: number; mode?: 'blast_all' | 'resume_undelivered' }
+      ArticleNotificationJob & {
+        blastRecipientCount?: number;
+        mode?: 'blast_all' | 'resume_undelivered';
+      }
     >(response);
     notifyEmailEngagementChanged(result.articleId, 'retry_queued');
     return result;
@@ -569,9 +607,9 @@ export const ArticlesAPI = {
 export const CategoriesAPI = {
   /**
    * Get all categories
-   * 
+   *
    * @returns Array of categories
-   * 
+   *
    * @example
    * ```typescript
    * const categories = await CategoriesAPI.getCategories();
@@ -584,10 +622,10 @@ export const CategoriesAPI = {
 
   /**
    * Get single category by ID
-   * 
+   *
    * @param id - Category ID
    * @returns Category
-   * 
+   *
    * @example
    * ```typescript
    * const category = await CategoriesAPI.getCategory('cat-123');
@@ -600,10 +638,10 @@ export const CategoriesAPI = {
 
   /**
    * Create new category
-   * 
+   *
    * @param input - Category data
    * @returns Created category
-   * 
+   *
    * @example
    * ```typescript
    * const category = await CategoriesAPI.createCategory({
@@ -623,10 +661,10 @@ export const CategoriesAPI = {
 
   /**
    * Update existing category
-   * 
+   *
    * @param input - Update data with category ID
    * @returns Updated category
-   * 
+   *
    * @example
    * ```typescript
    * const category = await CategoriesAPI.updateCategory({
@@ -647,9 +685,9 @@ export const CategoriesAPI = {
 
   /**
    * Delete category
-   * 
+   *
    * @param id - Category ID
-   * 
+   *
    * @example
    * ```typescript
    * await CategoriesAPI.deleteCategory('cat-123');
@@ -666,9 +704,9 @@ export const CategoriesAPI = {
   /**
    * Reorder categories
    * Updates sort_order for multiple categories
-   * 
+   *
    * @param updates - Array of {id, sort_order}
-   * 
+   *
    * @example
    * ```typescript
    * await CategoriesAPI.reorderCategories([
@@ -698,9 +736,9 @@ export const CategoriesAPI = {
 export const ContentTypesAPI = {
   /**
    * Get all content types
-   * 
+   *
    * @returns Array of content types
-   * 
+   *
    * @example
    * ```typescript
    * const types = await ContentTypesAPI.getTypes();
@@ -713,10 +751,10 @@ export const ContentTypesAPI = {
 
   /**
    * Get single content type by ID
-   * 
+   *
    * @param id - Content type ID
    * @returns Content type
-   * 
+   *
    * @example
    * ```typescript
    * const type = await ContentTypesAPI.getType('type-123');
@@ -729,10 +767,10 @@ export const ContentTypesAPI = {
 
   /**
    * Create new content type
-   * 
+   *
    * @param input - Content type data
    * @returns Created content type
-   * 
+   *
    * @example
    * ```typescript
    * const type = await ContentTypesAPI.createType({
@@ -752,10 +790,10 @@ export const ContentTypesAPI = {
 
   /**
    * Update existing content type
-   * 
+   *
    * @param input - Update data with type ID
    * @returns Updated content type
-   * 
+   *
    * @example
    * ```typescript
    * const type = await ContentTypesAPI.updateType({
@@ -776,9 +814,9 @@ export const ContentTypesAPI = {
 
   /**
    * Delete content type
-   * 
+   *
    * @param id - Content type ID
-   * 
+   *
    * @example
    * ```typescript
    * await ContentTypesAPI.deleteType('type-123');
@@ -795,9 +833,9 @@ export const ContentTypesAPI = {
   /**
    * Reorder content types
    * Updates sort_order for multiple types
-   * 
+   *
    * @param updates - Array of {id, sort_order}
-   * 
+   *
    * @example
    * ```typescript
    * await ContentTypesAPI.reorderTypes([
@@ -827,9 +865,9 @@ export const ContentTypesAPI = {
 export const StatsAPI = {
   /**
    * Get publication statistics
-   * 
+   *
    * @returns Publication stats
-   * 
+   *
    * @example
    * ```typescript
    * const stats = await StatsAPI.getStats();
@@ -853,9 +891,9 @@ export const StatsAPI = {
 export const InitializationAPI = {
   /**
    * Check if publications is initialized
-   * 
+   *
    * @returns Initialization status
-   * 
+   *
    * @example
    * ```typescript
    * const status = await InitializationAPI.checkStatus();
@@ -868,7 +906,7 @@ export const InitializationAPI = {
     try {
       const categoriesResponse = await fetch(`${BASE_URL}/categories`, { headers });
       const categories = await handleResponse<Category[]>(categoriesResponse);
-      
+
       const typesResponse = await fetch(`${BASE_URL}/types`, { headers });
       const types = await handleResponse<ContentType[]>(typesResponse);
 
@@ -888,10 +926,10 @@ export const InitializationAPI = {
 
   /**
    * Initialize publications with default data
-   * 
+   *
    * @param input - Initialization options
    * @returns Success response
-   * 
+   *
    * @example
    * ```typescript
    * await InitializationAPI.initialize({
@@ -934,7 +972,7 @@ export const SettingsAPI = {
     const response = await fetch(`${BASE_URL}/import`, {
       method: 'POST',
       headers,
-      body: JSON.stringify(data)
+      body: JSON.stringify(data),
     });
     return handleResponse(response);
   },
@@ -945,10 +983,10 @@ export const SettingsAPI = {
   async clearDrafts(): Promise<{ message: string }> {
     const response = await fetch(`${BASE_URL}/maintenance/clear-drafts`, {
       method: 'DELETE',
-      headers
+      headers,
     });
     return handleResponse(response);
-  }
+  },
 };
 
 // ============================================================================
@@ -1125,12 +1163,18 @@ export const AutoContentAPI = {
     }>(response);
   },
 
-  async triggerSource(sourceId: string): Promise<{ results: PipelineTriggerResult[]; totalGenerated: number; sourceName: string }> {
+  async triggerSource(
+    sourceId: string,
+  ): Promise<{ results: PipelineTriggerResult[]; totalGenerated: number; sourceName: string }> {
     const response = await fetch(`${AUTO_CONTENT_URL}/trigger-source/${sourceId}`, {
       method: 'POST',
       headers,
     });
-    return handleResponse<{ results: PipelineTriggerResult[]; totalGenerated: number; sourceName: string }>(response);
+    return handleResponse<{
+      results: PipelineTriggerResult[];
+      totalGenerated: number;
+      sourceName: string;
+    }>(response);
   },
 
   async getRunHistory(id: PipelineId, limit?: number): Promise<PipelineRunLog[]> {
@@ -1249,33 +1293,33 @@ export const PublicationsAPI = {
 export async function fetchRSSFeed(url: string): Promise<NewsItem[]> {
   try {
     const proxyUrl = `${RSS_PROXY_URL}?url=${encodeURIComponent(url)}`;
-    
-    const response = await fetch(proxyUrl, { 
+
+    const response = await fetch(proxyUrl, {
       signal: AbortSignal.timeout(20000),
       headers: {
-        'Authorization': `Bearer ${publicAnonKey}`
-      }
+        Authorization: `Bearer ${publicAnonKey}`,
+      },
     });
-    
+
     if (!response.ok) {
       logger.warn(`RSS fetch failed for ${url}: ${response.status}`);
       return [];
     }
-    
+
     const data = await response.json();
-    
+
     if (data.status === 'ok' && data.items) {
       return data.items.map((item: Record<string, unknown>) => ({
         title: typeof item.title === 'string' ? item.title : 'Untitled',
         pubDate: typeof item.pubDate === 'string' ? item.pubDate : new Date().toISOString(),
-        author: typeof item.author === 'string' ? item.author : (data.feed?.title || 'Investing.com'),
+        author: typeof item.author === 'string' ? item.author : data.feed?.title || 'Investing.com',
         link: typeof item.link === 'string' ? item.link : '#',
         image: getRSSImage(item),
         description: typeof item.description === 'string' ? item.description : '',
-        source: data.feed?.title || 'News'
+        source: data.feed?.title || 'News',
       }));
     }
-    
+
     return [];
   } catch (error) {
     logger.error(`RSS feed fetch failed for ${url}`, error);
@@ -1284,7 +1328,12 @@ export async function fetchRSSFeed(url: string): Promise<NewsItem[]> {
 }
 
 function getRSSImage(item: Record<string, unknown>): string {
-  if (typeof item.enclosure === 'object' && item.enclosure && 'link' in item.enclosure && typeof item.enclosure.link === 'string') {
+  if (
+    typeof item.enclosure === 'object' &&
+    item.enclosure &&
+    'link' in item.enclosure &&
+    typeof item.enclosure.link === 'string'
+  ) {
     return item.enclosure.link;
   }
   if (typeof item.thumbnail === 'string') {
@@ -1327,11 +1376,13 @@ export const NewsletterAPI = {
   },
 
   /** POST /newsletter/admin/bulk */
-  async bulkAdd(subscribers: {
-    email: string;
-    firstName?: string;
-    surname?: string;
-  }[]): Promise<BulkUploadResponse> {
+  async bulkAdd(
+    subscribers: {
+      email: string;
+      firstName?: string;
+      surname?: string;
+    }[],
+  ): Promise<BulkUploadResponse> {
     const authHeaders = await getAuthHeaders();
     const response = await fetch(`${NEWSLETTER_URL}/admin/bulk`, {
       method: 'POST',

@@ -77,7 +77,8 @@ function mergePrefillIntoEstateInputs(
   base: EstatePlanningInputs,
   values: Record<string, unknown>,
 ): EstatePlanningInputs {
-  const next = { ...base, familyInfo: { ...base.familyInfo } } as EstatePlanningInputs & Record<string, unknown>;
+  const next = { ...base, familyInfo: { ...base.familyInfo } } as EstatePlanningInputs &
+    Record<string, unknown>;
   Object.entries(values).forEach(([key, value]) => {
     if (value === undefined || value === null) return;
     if (key.includes('.')) {
@@ -170,7 +171,9 @@ export function EstatePlanningFNAWizard({
       onClose();
     } catch (error: unknown) {
       console.error('❌ Error calculating Estate Planning FNA:', error);
-      toast.error(error instanceof Error ? error.message : 'Failed to calculate Estate Planning FNA');
+      toast.error(
+        error instanceof Error ? error.message : 'Failed to calculate Estate Planning FNA',
+      );
     } finally {
       setCalculating(false);
     }

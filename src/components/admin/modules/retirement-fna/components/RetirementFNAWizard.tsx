@@ -1,7 +1,7 @@
 /**
  * Retirement FNA Wizard
  * Retirement Planning Financial Needs Analysis - 4 Step Process
- * 
+ *
  * Overall Tool Flow (MANDATORY):
  * 1. Information Gathering
  * 2. System Auto-Calculation (formula-driven, no edits)
@@ -22,11 +22,7 @@ import { Step3ManualAdjustment } from './Step3ManualAdjustment';
 import { Step4Finalise } from './Step4Finalise';
 
 // Logic
-import { 
-  RetirementFNAInputs, 
-  RetirementFNAAdjustments, 
-  RetirementFNAWizardState, 
-} from '../types';
+import { RetirementFNAInputs, RetirementFNAAdjustments, RetirementFNAWizardState } from '../types';
 import { WIZARD_STEPS } from '../constants';
 import { calculateRetirementFNA } from '../utils/calculation-engine';
 import { RetirementFnaAPI } from '../api';
@@ -66,7 +62,11 @@ function buildInitialRetirementState(
   }
 
   return {
-    currentStep: (startAtStep && startAtStep >= 1 && startAtStep <= 4 ? startAtStep : 1) as 1 | 2 | 3 | 4,
+    currentStep: (startAtStep && startAtStep >= 1 && startAtStep <= 4 ? startAtStep : 1) as
+      | 1
+      | 2
+      | 3
+      | 4,
     clientId,
     clientName,
     inputs: (intakePrefill as unknown as RetirementFNAInputs) || {},
@@ -98,26 +98,29 @@ export function RetirementFNAWizard({
   };
 
   // Step 1: Submit -> Calculate -> Go to Step 2
-  const handleStep1Submit = (inputs: RetirementFNAInputs, initialAssumptions: RetirementFNAAdjustments) => {
+  const handleStep1Submit = (
+    inputs: RetirementFNAInputs,
+    initialAssumptions: RetirementFNAAdjustments,
+  ) => {
     // Merge new assumptions into adjustments
     const newAdjustments = { ...state.adjustments, ...initialAssumptions };
     const calculations = calculateRetirementFNA(inputs, newAdjustments);
-    
-    setState(prev => ({
+
+    setState((prev) => ({
       ...prev,
       inputs,
       adjustments: newAdjustments,
       calculations,
-      currentStep: 2
+      currentStep: 2,
     }));
   };
 
   // Step 2: Next -> Go to Step 3
   const handleStep2Next = () => {
-    setState(prev => ({ ...prev, currentStep: 3 }));
+    setState((prev) => ({ ...prev, currentStep: 3 }));
   };
   const handleStep2Back = () => {
-    setState(prev => ({ ...prev, currentStep: 1 }));
+    setState((prev) => ({ ...prev, currentStep: 1 }));
   };
 
   // Step 3: Submit Adjustments -> Recalculate -> Go to Step 4
@@ -125,36 +128,35 @@ export function RetirementFNAWizard({
     // Recalculate with new adjustments
     const calculations = calculateRetirementFNA(state.inputs, adjustments);
 
-    setState(prev => ({
+    setState((prev) => ({
       ...prev,
       adjustments,
       calculations,
-      currentStep: 4
+      currentStep: 4,
     }));
   };
   const handleStep3Back = () => {
-    setState(prev => ({ ...prev, currentStep: 2 }));
+    setState((prev) => ({ ...prev, currentStep: 2 }));
   };
 
   // Step 4: Publish
   const handlePublish = async () => {
-    setState(prev => ({ ...prev, isPublishing: true }));
-    
+    setState((prev) => ({ ...prev, isPublishing: true }));
+
     try {
       if (!clientId) {
-        throw new Error("Client ID is required to publish FNA");
+        throw new Error('Client ID is required to publish FNA');
       }
 
       // 1. Create new FNA Session
       const session = await RetirementFnaAPI.create(clientId);
-      
+
       // 2. Save Inputs & Adjustments
       const combinedInputs = {
         ...state.inputs,
-        ...state.adjustments
+        ...state.adjustments,
       };
       await RetirementFnaAPI.updateInputs(session.id, combinedInputs);
-
 
       // 3. Save Results (Trigger Backend Calculation)
       // This is critical: The backend creates the session with null results.
@@ -164,19 +166,18 @@ export function RetirementFNAWizard({
 
       // 4. Publish
       await RetirementFnaAPI.publish(session.id);
-      
-      toast.success("Retirement Plan published successfully");
+
+      toast.success('Retirement Plan published successfully');
       handleComplete();
-      
     } catch (error) {
       console.error('Failed to publish FNA:', error);
-      toast.error("Failed to publish analysis");
-      setState(prev => ({ ...prev, isPublishing: false }));
+      toast.error('Failed to publish analysis');
+      setState((prev) => ({ ...prev, isPublishing: false }));
     }
   };
-  
+
   const handleStep4Back = () => {
-    setState(prev => ({ ...prev, currentStep: 3 }));
+    setState((prev) => ({ ...prev, currentStep: 3 }));
   };
 
   // Render Step Content
@@ -184,7 +185,7 @@ export function RetirementFNAWizard({
     switch (state.currentStep) {
       case 1:
         return (
-          <Step1InputForm 
+          <Step1InputForm
             clientId={clientId}
             initialData={state.inputs}
             initialAssumptions={state.adjustments}
@@ -245,7 +246,7 @@ export function RetirementFNAWizard({
               {WIZARD_STEPS.map((step) => {
                 const isActive = state.currentStep === step.step;
                 const isCompleted = state.currentStep > step.step;
-                
+
                 return (
                   <div key={step.step} className="flex flex-col items-center bg-background px-2">
                     <div
@@ -254,8 +255,8 @@ export function RetirementFNAWizard({
                           isActive
                             ? 'border-primary bg-primary text-primary-foreground'
                             : isCompleted
-                            ? 'border-primary bg-primary text-primary-foreground'
-                            : 'border-muted-foreground text-muted-foreground bg-background'
+                              ? 'border-primary bg-primary text-primary-foreground'
+                              : 'border-muted-foreground text-muted-foreground bg-background'
                         }`}
                     >
                       {isCompleted ? (
@@ -272,9 +273,7 @@ export function RetirementFNAWizard({
                       >
                         {step.title}
                       </p>
-                      <p className="text-xs text-muted-foreground mt-1">
-                        {step.description}
-                      </p>
+                      <p className="text-xs text-muted-foreground mt-1">{step.description}</p>
                     </div>
                   </div>
                 );
@@ -282,12 +281,10 @@ export function RetirementFNAWizard({
             </div>
 
             {/* Step Content */}
-            <div className="min-h-[500px]">
-              {renderStep()}
-            </div>
+            <div className="min-h-[500px]">{renderStep()}</div>
           </div>
         </div>
-          
+
         {/* Publishing State Overlay */}
         {state.isPublishing && (
           <div className="absolute inset-0 bg-background/80 backdrop-blur-sm z-[100] flex items-center justify-center">

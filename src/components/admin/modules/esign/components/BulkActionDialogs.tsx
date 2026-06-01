@@ -28,15 +28,7 @@ import {
   TableHeader,
   TableRow,
 } from '../../../../ui/table';
-import {
-  Loader2,
-  Send,
-  Ban,
-  Eye,
-  CheckCircle2,
-  XCircle,
-  AlertTriangle,
-} from 'lucide-react';
+import { Loader2, Send, Ban, Eye, CheckCircle2, XCircle, AlertTriangle } from 'lucide-react';
 import { esignApi } from '../api';
 import { toast } from 'sonner';
 
@@ -91,7 +83,9 @@ export function BulkRemindDialog({
     setLoading(true);
     try {
       const result = await esignApi.bulkRemind(envelopeIds, false);
-      toast.success(`Sent ${result.totalRemindersSent} reminders across ${result.envelopeCount} envelopes`);
+      toast.success(
+        `Sent ${result.totalRemindersSent} reminders across ${result.envelopeCount} envelopes`,
+      );
       setPhase('done');
       onComplete();
     } catch (err) {
@@ -118,7 +112,8 @@ export function BulkRemindDialog({
             Bulk Send Reminders
           </AlertDialogTitle>
           <AlertDialogDescription>
-            {phase === 'confirm' && `Send reminders to all pending signers across ${envelopeIds.length} selected envelope(s).`}
+            {phase === 'confirm' &&
+              `Send reminders to all pending signers across ${envelopeIds.length} selected envelope(s).`}
             {phase === 'preview' && 'Review the preview below, then confirm to send.'}
             {phase === 'applying' && 'Sending reminders...'}
             {phase === 'done' && 'Reminders sent successfully.'}
@@ -197,7 +192,10 @@ export function BulkRemindDialog({
             </Button>
           )}
           {phase === 'preview' && (
-            <Button onClick={handleApply} disabled={loading || (previewData?.totalPendingSigners ?? 0) === 0}>
+            <Button
+              onClick={handleApply}
+              disabled={loading || (previewData?.totalPendingSigners ?? 0) === 0}
+            >
               {loading ? (
                 <div className="contents">
                   <Loader2 className="h-4 w-4 animate-spin mr-2" />
@@ -384,7 +382,11 @@ export function BulkVoidDialog({
             {phase === 'done' ? 'Close' : 'Cancel'}
           </Button>
           {phase === 'confirm' && (
-            <Button onClick={handlePreview} disabled={loading || !reason.trim()} variant="destructive">
+            <Button
+              onClick={handlePreview}
+              disabled={loading || !reason.trim()}
+              variant="destructive"
+            >
               {loading ? (
                 <div className="contents">
                   <Loader2 className="h-4 w-4 animate-spin mr-2" />
@@ -399,7 +401,11 @@ export function BulkVoidDialog({
             </Button>
           )}
           {phase === 'preview' && (
-            <Button onClick={handleApply} disabled={loading || previewData?.voidedCount === 0} variant="destructive">
+            <Button
+              onClick={handleApply}
+              disabled={loading || previewData?.voidedCount === 0}
+              variant="destructive"
+            >
               {loading ? (
                 <div className="contents">
                   <Loader2 className="h-4 w-4 animate-spin mr-2" />

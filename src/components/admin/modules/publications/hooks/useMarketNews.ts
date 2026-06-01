@@ -11,7 +11,7 @@ const FEEDS = {
   economicNews: 'https://www.investing.com/rss/news_14.rss',
   forexNews: 'https://www.investing.com/rss/news_1.rss',
   stockMarket: 'https://www.investing.com/rss/news_25.rss',
-  investingIdeas: 'https://www.investing.com/rss/news_1065.rss'
+  investingIdeas: 'https://www.investing.com/rss/news_1065.rss',
 };
 
 export function useMarketNews(enabled: boolean = true) {
@@ -22,7 +22,7 @@ export function useMarketNews(enabled: boolean = true) {
         economicNews: [],
         forexNews: [],
         stockMarket: [],
-        investingIdeas: []
+        investingIdeas: [],
       };
 
       const promises = Object.entries(FEEDS).map(async ([key, url]) => {
@@ -39,8 +39,8 @@ export function useMarketNews(enabled: boolean = true) {
     staleTime: 1000 * 60 * 5, // 5 minutes
     refetchOnMount: false, // Already has refetchInterval — no need to re-fetch on every mount
     refetchInterval: (query) => {
-        // Auto refresh every 5 minutes if there are subscribers
-        return enabled ? 1000 * 60 * 5 : false; 
-    }
+      // Auto refresh every 5 minutes if there are subscribers
+      return enabled ? 1000 * 60 * 5 : false;
+    },
   });
 }

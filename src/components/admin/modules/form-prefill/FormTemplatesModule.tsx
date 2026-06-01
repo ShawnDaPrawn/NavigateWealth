@@ -12,24 +12,17 @@ import { Input } from '../../../ui/input';
 import { Label } from '../../../ui/label';
 import { Badge } from '../../../ui/badge';
 import { Checkbox } from '../../../ui/checkbox';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '../../../ui/select';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '../../../ui/table';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../../ui/select';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../../ui/table';
 import { Alert, AlertDescription } from '../../../ui/alert';
-import type { FormTemplateRecord, TemplatePrefillResolveResponse } from '../../../../shared/form-prefill/types';
-import { autoMapTemplateFields, TEMPLATE_MAPPING_OPTIONS } from '../../../../shared/form-prefill/template-field-mapping';
+import type {
+  FormTemplateRecord,
+  TemplatePrefillResolveResponse,
+} from '../../../../shared/form-prefill/types';
+import {
+  autoMapTemplateFields,
+  TEMPLATE_MAPPING_OPTIONS,
+} from '../../../../shared/form-prefill/template-field-mapping';
 import {
   fillFormTemplate,
   listFormTemplates,
@@ -52,7 +45,9 @@ interface FormTemplatesModuleProps {
   selectedClientId?: string;
 }
 
-export function FormTemplatesModule({ selectedClientId: selectedClientIdProp }: FormTemplatesModuleProps) {
+export function FormTemplatesModule({
+  selectedClientId: selectedClientIdProp,
+}: FormTemplatesModuleProps) {
   const [templates, setTemplates] = useState<FormTemplateRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
@@ -129,7 +124,8 @@ export function FormTemplatesModule({ selectedClientId: selectedClientIdProp }: 
   }, [loadTemplates]);
 
   const selectedTemplate = templates.find((template) => template.id === selectedTemplateId) ?? null;
-  const mappedFieldCount = selectedTemplate?.fields.filter((field) => Boolean(field.canonicalKey)).length ?? 0;
+  const mappedFieldCount =
+    selectedTemplate?.fields.filter((field) => Boolean(field.canonicalKey)).length ?? 0;
 
   const handleUpload = async () => {
     if (!file || !name.trim()) {
@@ -146,8 +142,12 @@ export function FormTemplatesModule({ selectedClientId: selectedClientIdProp }: 
         mimeType: file.type || 'application/pdf',
         base64Content,
       });
-      const autoAssignedCount = created.fields.filter((field) => Boolean(field.canonicalKey)).length;
-      toast.success(`Template uploaded - auto-assigned ${autoAssignedCount} of ${created.fields.length} field(s)`);
+      const autoAssignedCount = created.fields.filter((field) =>
+        Boolean(field.canonicalKey),
+      ).length;
+      toast.success(
+        `Template uploaded - auto-assigned ${autoAssignedCount} of ${created.fields.length} field(s)`,
+      );
       setName('');
       setFile(null);
       setSelectedTemplateId(created.id);
@@ -175,7 +175,9 @@ export function FormTemplatesModule({ selectedClientId: selectedClientIdProp }: 
 
     try {
       const updated = await updateTemplateMappings(selectedTemplate.id, fields);
-      setTemplates((prev) => prev.map((template) => (template.id === updated.id ? updated : template)));
+      setTemplates((prev) =>
+        prev.map((template) => (template.id === updated.id ? updated : template)),
+      );
       toast.success(`Auto-assigned ${assignedCount} field(s)`);
     } catch {
       toast.error('Failed to auto-assign fields');
@@ -191,7 +193,9 @@ export function FormTemplatesModule({ selectedClientId: selectedClientIdProp }: 
 
     try {
       const updated = await updateTemplateMappings(selectedTemplate.id, fields);
-      setTemplates((prev) => prev.map((template) => (template.id === updated.id ? updated : template)));
+      setTemplates((prev) =>
+        prev.map((template) => (template.id === updated.id ? updated : template)),
+      );
       toast.success('Field mapping saved');
     } catch {
       toast.error('Failed to save mapping');
@@ -257,7 +261,8 @@ export function FormTemplatesModule({ selectedClientId: selectedClientIdProp }: 
             Form Template Library
           </CardTitle>
           <CardDescription>
-            Upload insurer or provider PDFs once, auto-assign obvious fields, then fine-tune any exceptions.
+            Upload insurer or provider PDFs once, auto-assign obvious fields, then fine-tune any
+            exceptions.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -266,10 +271,8 @@ export function FormTemplatesModule({ selectedClientId: selectedClientIdProp }: 
               <Sparkles className="h-4 w-4 text-purple-600" />
               <AlertDescription className="text-sm">
                 Filling for{' '}
-                <span className="font-medium">
-                  {linkedClientLabel ?? 'selected client'}
-                </span>{' '}
-                (from client drawer).{' '}
+                <span className="font-medium">{linkedClientLabel ?? 'selected client'}</span> (from
+                client drawer).{' '}
                 <Link
                   to={`/admin?module=clients&clientId=${encodeURIComponent(selectedClientIdProp)}`}
                   className="font-medium text-primary hover:underline"
@@ -293,7 +296,11 @@ export function FormTemplatesModule({ selectedClientId: selectedClientIdProp }: 
           <div className="grid gap-4 md:grid-cols-2">
             <div className="space-y-2">
               <Label htmlFor="template-name">Template name</Label>
-              <Input id="template-name" value={name} onChange={(event) => setName(event.target.value)} />
+              <Input
+                id="template-name"
+                value={name}
+                onChange={(event) => setName(event.target.value)}
+              />
             </div>
             <div className="space-y-2">
               <Label htmlFor="template-file">PDF file</Label>
@@ -306,7 +313,11 @@ export function FormTemplatesModule({ selectedClientId: selectedClientIdProp }: 
             </div>
           </div>
           <Button onClick={() => void handleUpload()} disabled={uploading}>
-            {uploading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <FileUp className="mr-2 h-4 w-4" />}
+            {uploading ? (
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            ) : (
+              <FileUp className="mr-2 h-4 w-4" />
+            )}
             Upload template
           </Button>
         </CardContent>
@@ -316,7 +327,8 @@ export function FormTemplatesModule({ selectedClientId: selectedClientIdProp }: 
         <CardHeader>
           <CardTitle className="text-base">Mapping studio</CardTitle>
           <CardDescription>
-            The tool now auto-assigns what it can on upload, and you can re-run it for older templates.
+            The tool now auto-assigns what it can on upload, and you can re-run it for older
+            templates.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -349,7 +361,9 @@ export function FormTemplatesModule({ selectedClientId: selectedClientIdProp }: 
                       {selectedTemplate.status}
                     </Badge>
                     <Badge variant="secondary">{selectedTemplate.fields.length} fields</Badge>
-                    <Badge variant="outline">{mappedFieldCount}/{selectedTemplate.fields.length} mapped</Badge>
+                    <Badge variant="outline">
+                      {mappedFieldCount}/{selectedTemplate.fields.length} mapped
+                    </Badge>
                     <Button size="sm" variant="outline" onClick={() => void handleAutoMap()}>
                       <Sparkles className="mr-1 h-4 w-4" />
                       Auto-assign unmapped
@@ -390,7 +404,10 @@ export function FormTemplatesModule({ selectedClientId: selectedClientIdProp }: 
                             <Select
                               value={field.canonicalKey ?? '__none__'}
                               onValueChange={(value) =>
-                                void handleMappingChange(field.id, value === '__none__' ? '' : value)
+                                void handleMappingChange(
+                                  field.id,
+                                  value === '__none__' ? '' : value,
+                                )
                               }
                             >
                               <SelectTrigger className="h-8">

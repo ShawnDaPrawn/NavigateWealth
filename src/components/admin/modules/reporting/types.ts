@@ -27,12 +27,7 @@ export interface ReportRun {
 /**
  * Report category for organizing reports
  */
-export type ReportCategory =
-  | 'clients'
-  | 'financial'
-  | 'activity'
-  | 'compliance'
-  | 'custom';
+export type ReportCategory = 'clients' | 'financial' | 'activity' | 'compliance' | 'custom';
 
 /**
  * Report format options

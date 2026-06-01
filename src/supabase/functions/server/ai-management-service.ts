@@ -69,7 +69,8 @@ const DEFAULT_AGENTS: AIAgentConfig[] = [
   {
     id: 'vasco-public',
     name: 'Vasco (Public)',
-    description: 'Public-facing AI financial navigator on the Navigate Wealth website. Provides general financial education, product info, and lead qualification.',
+    description:
+      'Public-facing AI financial navigator on the Navigate Wealth website. Provides general financial education, product info, and lead qualification.',
     icon: 'Compass',
     status: 'active',
     model: 'gpt-4o',
@@ -93,7 +94,8 @@ const DEFAULT_AGENTS: AIAgentConfig[] = [
   {
     id: 'vasco-authenticated',
     name: 'Vasco (Portal)',
-    description: 'Authenticated AI advisor in the client portal. Has access to client profile information, policy data, portfolio overview, FNA/INA context, communication history, and document history for personalised guidance.',
+    description:
+      'Authenticated AI advisor in the client portal. Has access to client profile information, policy data, portfolio overview, FNA/INA context, communication history, and document history for personalised guidance.',
     icon: 'Compass',
     status: 'active',
     model: 'gpt-4o',
@@ -116,7 +118,8 @@ const DEFAULT_AGENTS: AIAgentConfig[] = [
   {
     id: 'advice-engine',
     name: 'AI Intelligence',
-    description: 'Admin-side AI assistant for the Advice Engine. Helps advisers draft Records of Advice and analyse client data.',
+    description:
+      'Admin-side AI assistant for the Advice Engine. Helps advisers draft Records of Advice and analyse client data.',
     icon: 'Brain',
     status: 'active',
     model: 'gpt-4o',
@@ -139,7 +142,8 @@ const DEFAULT_AGENTS: AIAgentConfig[] = [
   {
     id: 'will-planner',
     name: 'Will Planner',
-    description: 'Estate planning assistant that guides users through will creation and estate duty considerations.',
+    description:
+      'Estate planning assistant that guides users through will creation and estate duty considerations.',
     icon: 'ScrollText',
     status: 'active',
     model: 'gpt-4o',
@@ -162,7 +166,8 @@ const DEFAULT_AGENTS: AIAgentConfig[] = [
   {
     id: 'tax-advisor',
     name: 'Tax Advisor',
-    description: 'Tax planning assistant specialising in South African tax legislation, deductions, and optimisation strategies.',
+    description:
+      'Tax planning assistant specialising in South African tax legislation, deductions, and optimisation strategies.',
     icon: 'Calculator',
     status: 'active',
     model: 'gpt-4o',
@@ -193,7 +198,7 @@ const DEFAULT_AGENTS: AIAgentConfig[] = [
  * Idempotent — only writes if registry doesn't exist.
  */
 async function ensureRegistry(): Promise<void> {
-  const existing = await kv.get(REGISTRY_KEY) as AgentRegistry | null;
+  const existing = (await kv.get(REGISTRY_KEY)) as AgentRegistry | null;
   if (existing) return;
 
   log.info('Seeding agent registry with defaults');
@@ -205,7 +210,7 @@ async function ensureRegistry(): Promise<void> {
 
   // Write registry index
   await kv.set(REGISTRY_KEY, {
-    agentIds: DEFAULT_AGENTS.map(a => a.id),
+    agentIds: DEFAULT_AGENTS.map((a) => a.id),
     updatedAt: new Date().toISOString(),
   } satisfies AgentRegistry);
 }
@@ -216,13 +221,13 @@ async function ensureRegistry(): Promise<void> {
 export async function getAllAgents(): Promise<AIAgentConfig[]> {
   await ensureRegistry();
 
-  const registry = await kv.get(REGISTRY_KEY) as AgentRegistry | null;
+  const registry = (await kv.get(REGISTRY_KEY)) as AgentRegistry | null;
   if (!registry || registry.agentIds.length === 0) {
     return DEFAULT_AGENTS;
   }
 
-  const keys = registry.agentIds.map(id => `${AGENT_PREFIX}${id}:config`);
-  const agents = await kv.mget(keys) as (AIAgentConfig | null)[];
+  const keys = registry.agentIds.map((id) => `${AGENT_PREFIX}${id}:config`);
+  const agents = (await kv.mget(keys)) as (AIAgentConfig | null)[];
 
   // Filter nulls and return; fall back to defaults for missing entries
   const result: AIAgentConfig[] = [];
@@ -231,7 +236,7 @@ export async function getAllAgents(): Promise<AIAgentConfig[]> {
     if (agent) {
       result.push(agent);
     } else {
-      const fallback = DEFAULT_AGENTS.find(d => d.id === registry.agentIds[i]);
+      const fallback = DEFAULT_AGENTS.find((d) => d.id === registry.agentIds[i]);
       if (fallback) result.push(fallback);
     }
   }
@@ -245,8 +250,8 @@ export async function getAllAgents(): Promise<AIAgentConfig[]> {
 export async function getAgent(id: string): Promise<AIAgentConfig | null> {
   await ensureRegistry();
 
-  const agent = await kv.get(`${AGENT_PREFIX}${id}:config`) as AIAgentConfig | null;
+  const agent = (await kv.get(`${AGENT_PREFIX}${id}:config`)) as AIAgentConfig | null;
   if (agent) return agent;
 
-  return DEFAULT_AGENTS.find(a => a.id === id) || null;
+  return DEFAULT_AGENTS.find((a) => a.id === id) || null;
 }

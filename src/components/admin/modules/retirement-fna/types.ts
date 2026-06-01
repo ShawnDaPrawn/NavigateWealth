@@ -1,7 +1,7 @@
 /**
  * Retirement FNA (Financial Needs Analysis) Type Definitions
  * Retirement Planning feature for Navigate Wealth Admin Portal
- * 
+ *
  * Design Philosophy:
  * - Clear separation between inputs, calculations, and adjustments
  * - Strict typing (no `any` types)
@@ -33,12 +33,12 @@ export interface RetirementFNAInputs {
   // Client Profile
   currentAge: number;
   retirementAge: number; // Intended retirement age
-  
+
   // Current Financial Position
-  currentMonthlyIncome: number;      // Net monthly income
+  currentMonthlyIncome: number; // Net monthly income
   currentMonthlyContribution: number; // Total monthly retirement contributions
-  currentRetirementSavings: number;   // Total current retirement capital
-  
+  currentRetirementSavings: number; // Total current retirement capital
+
   // Optional / Advanced
   existingProducts?: Record<string, unknown>[]; // For audit trail if needed
 }
@@ -53,25 +53,25 @@ export interface RetirementCalculationResults {
   // Timeline
   yearsToRetirement: number;
   yearsInRetirement: number;
-  
+
   // Real Rates (Inflation-adjusted)
-  realGrowthRate: number;       // Pre-retirement real growth
-  realSalaryGrowth: number;     // Real salary escalation
-  
+  realGrowthRate: number; // Pre-retirement real growth
+  realSalaryGrowth: number; // Real salary escalation
+
   // Capital Requirements (Real Terms)
-  targetMonthlyIncome: number;  // Required monthly income in retirement (today's value)
-  requiredCapital: number;      // Total capital required at retirement
-  projectedCapital: number;     // Projected capital at retirement with current contributions
-  
+  targetMonthlyIncome: number; // Required monthly income in retirement (today's value)
+  requiredCapital: number; // Total capital required at retirement
+  projectedCapital: number; // Projected capital at retirement with current contributions
+
   // Gap Analysis
-  capitalShortfall: number;     // Difference between required and projected
-  hasShortfall: boolean;        // True if shortfall exists
-  shortfallPercentage: number;  // Percentage shortfall
-  
+  capitalShortfall: number; // Difference between required and projected
+  hasShortfall: boolean; // True if shortfall exists
+  shortfallPercentage: number; // Percentage shortfall
+
   // Recommendations
   requiredAdditionalContribution: number; // Additional monthly contribution needed
-  totalRecommendedContribution: number;   // Total recommended monthly contribution
-  percentageOfIncome: number;             // Contribution as % of income
+  totalRecommendedContribution: number; // Total recommended monthly contribution
+  percentageOfIncome: number; // Contribution as % of income
 }
 
 // ==================== ADJUSTMENTS (Step 3) ====================
@@ -82,17 +82,17 @@ export interface RetirementCalculationResults {
  */
 export interface RetirementFNAAdjustments {
   // Planning Assumptions
-  retirementAge?: number;       // Override intended retirement age
-  yearsInRetirement?: number;   // Override life expectancy assumption (default: 25 years)
-  replacementRatio?: number;    // Override income replacement ratio (default: 0.75)
-  
+  retirementAge?: number; // Override intended retirement age
+  yearsInRetirement?: number; // Override life expectancy assumption (default: 25 years)
+  replacementRatio?: number; // Override income replacement ratio (default: 0.75)
+
   // Economic Assumptions (Nominal Rates)
-  inflationRate?: number;            // Override CPI assumption (default: 0.06)
-  preRetirementReturn?: number;      // Override pre-retirement growth (default: 0.10)
-  postRetirementReturn?: number;     // Override post-retirement growth (default: 0.08)
-  salaryEscalation?: number;         // Override salary escalation rate
-  premiumEscalation?: number;        // Override premium escalation rate (default: 0.06)
-  
+  inflationRate?: number; // Override CPI assumption (default: 0.06)
+  preRetirementReturn?: number; // Override pre-retirement growth (default: 0.10)
+  postRetirementReturn?: number; // Override post-retirement growth (default: 0.08)
+  salaryEscalation?: number; // Override salary escalation rate
+  premiumEscalation?: number; // Override premium escalation rate (default: 0.06)
+
   // Documentation
   adviserNotes?: string; // Justification for adjustments
 }

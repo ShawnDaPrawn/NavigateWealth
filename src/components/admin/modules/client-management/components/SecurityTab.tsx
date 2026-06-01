@@ -56,7 +56,13 @@ import { securityService } from '../../../../../utils/auth/securityService';
 import type { PendingEmailChangeSummary } from '../../../../../utils/auth/securityTypes';
 
 interface SecurityTabProps {
-  selectedClient: { id: string; firstName: string; lastName: string; email: string; accountStatus?: string };
+  selectedClient: {
+    id: string;
+    firstName: string;
+    lastName: string;
+    email: string;
+    accountStatus?: string;
+  };
 }
 
 interface SecurityStatus {
@@ -113,11 +119,14 @@ function formatDateTime(dateString?: string) {
 }
 
 function formatEventType(type: string) {
-  return type.split('_').map((word) => {
-    if (word.toLowerCase() === '2fa') return '2FA';
-    if (word.toLowerCase() === 'ip') return 'IP';
-    return word.charAt(0).toUpperCase() + word.slice(1);
-  }).join(' ');
+  return type
+    .split('_')
+    .map((word) => {
+      if (word.toLowerCase() === '2fa') return '2FA';
+      if (word.toLowerCase() === 'ip') return 'IP';
+      return word.charAt(0).toUpperCase() + word.slice(1);
+    })
+    .join(' ');
 }
 
 export function SecurityTab({ selectedClient }: SecurityTabProps) {
@@ -161,7 +170,7 @@ export function SecurityTab({ selectedClient }: SecurityTabProps) {
     try {
       setStatusLoading(true);
       const data = await api.get<{ success: boolean; status?: SecurityStatus }>(
-        `/security/${selectedClient.id}/status`
+        `/security/${selectedClient.id}/status`,
       );
       if (data.success && data.status) {
         setSecurityStatus(data.status);
@@ -180,7 +189,7 @@ export function SecurityTab({ selectedClient }: SecurityTabProps) {
     try {
       setActivityLoading(true);
       const data = await api.get<{ success: boolean; logs?: ActivityLogEntry[] }>(
-        `/security/${selectedClient.id}/activity?limit=50`
+        `/security/${selectedClient.id}/activity?limit=50`,
       );
       if (data.success) {
         setActivityLogs(data.logs || []);
@@ -203,7 +212,7 @@ export function SecurityTab({ selectedClient }: SecurityTabProps) {
           suspended: true,
           reason: suspensionReason,
           adminId: user.id,
-        }
+        },
       );
 
       if (!data.success || !data.status) {
@@ -233,7 +242,7 @@ export function SecurityTab({ selectedClient }: SecurityTabProps) {
         {
           suspended: false,
           adminId: user.id,
-        }
+        },
       );
 
       if (!data.success || !data.status) {
@@ -268,7 +277,7 @@ export function SecurityTab({ selectedClient }: SecurityTabProps) {
           currentPassword: 'admin-override',
           newPassword,
           emailPassword: emailPasswordToClient,
-        }
+        },
       );
 
       if (!data.success) {
@@ -299,7 +308,7 @@ export function SecurityTab({ selectedClient }: SecurityTabProps) {
         {
           enabled,
           method: 'email',
-        }
+        },
       );
 
       if (!data.success || !data.status) {
@@ -307,7 +316,9 @@ export function SecurityTab({ selectedClient }: SecurityTabProps) {
       }
 
       setSecurityStatus(data.status);
-      toast.success(`Two-factor authentication ${enabled ? 'enabled' : 'disabled'} for ${selectedClient.firstName} ${selectedClient.lastName}`);
+      toast.success(
+        `Two-factor authentication ${enabled ? 'enabled' : 'disabled'} for ${selectedClient.firstName} ${selectedClient.lastName}`,
+      );
       void fetchActivityLogs();
     } catch (error) {
       console.error('Failed to toggle 2FA:', error);
@@ -344,7 +355,9 @@ export function SecurityTab({ selectedClient }: SecurityTabProps) {
         pendingEmailChange: result.pendingEmailChange ?? null,
       }));
       setNewEmailCode('');
-      toast.success('Verification code sent to the new email address and a notice was sent to the current address');
+      toast.success(
+        'Verification code sent to the new email address and a notice was sent to the current address',
+      );
       void fetchActivityLogs();
     } catch (error) {
       console.error('Failed to start email change:', error);
@@ -420,8 +433,8 @@ export function SecurityTab({ selectedClient }: SecurityTabProps) {
     );
   }
 
-  const sortedActivityLogs = [...activityLogs].sort((a, b) =>
-    new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
+  const sortedActivityLogs = [...activityLogs].sort(
+    (a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime(),
   );
   const latestActivityLog = sortedActivityLogs[0];
   const failedActivityCount = activityLogs.filter((log) => !log.success).length;
@@ -474,7 +487,8 @@ export function SecurityTab({ selectedClient }: SecurityTabProps) {
           <AlertTriangle className="h-4 w-4" />
           <AlertTitle>Account Suspended</AlertTitle>
           <AlertDescription>
-            This account was suspended on {formatDateTime(securityStatus.suspendedAt)}. Reason: {securityStatus.suspendedReason || 'No reason provided'}.
+            This account was suspended on {formatDateTime(securityStatus.suspendedAt)}. Reason:{' '}
+            {securityStatus.suspendedReason || 'No reason provided'}.
           </AlertDescription>
         </Alert>
       )}
@@ -579,13 +593,18 @@ export function SecurityTab({ selectedClient }: SecurityTabProps) {
             <div className="space-y-1">
               <p className="text-sm font-medium">Two-factor authentication</p>
               <p className="text-sm text-muted-foreground">
-                Require a one-time verification code sent to the client&apos;s registered email address during login.
+                Require a one-time verification code sent to the client&apos;s registered email
+                address during login.
               </p>
             </div>
             <div className="flex items-center gap-3">
               <Badge
                 variant="outline"
-                className={securityStatus.twoFactorEnabled ? 'border-emerald-200 bg-emerald-50 text-emerald-700' : ''}
+                className={
+                  securityStatus.twoFactorEnabled
+                    ? 'border-emerald-200 bg-emerald-50 text-emerald-700'
+                    : ''
+                }
               >
                 {securityStatus.twoFactorEnabled ? 'Enabled' : 'Disabled'}
               </Badge>
@@ -604,12 +623,14 @@ export function SecurityTab({ selectedClient }: SecurityTabProps) {
         <CardHeader>
           <CardTitle>Sign-In Email</CardTitle>
           <CardDescription>
-            Update the client&apos;s authentication email while preserving the existing verification flow.
+            Update the client&apos;s authentication email while preserving the existing verification
+            flow.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-5">
           <div className="rounded-lg border bg-muted/20 p-4 text-sm text-muted-foreground">
-            Changes do not complete immediately. The current address receives a notice, and the client must provide the code sent to the new email before sign-in switches over.
+            Changes do not complete immediately. The current address receives a notice, and the
+            client must provide the code sent to the new email before sign-in switches over.
           </div>
 
           <div className="grid gap-4 md:grid-cols-2">
@@ -668,12 +689,18 @@ export function SecurityTab({ selectedClient }: SecurityTabProps) {
                   onClick={handleResendEmailChangeCode}
                   disabled={activeAction === 'emailResend' || activeAction === 'emailVerify'}
                 >
-                  <RefreshCw className={`mr-2 h-4 w-4 ${activeAction === 'emailResend' ? 'animate-spin' : ''}`} />
+                  <RefreshCw
+                    className={`mr-2 h-4 w-4 ${activeAction === 'emailResend' ? 'animate-spin' : ''}`}
+                  />
                   Resend Code
                 </Button>
                 <Button
                   onClick={handleVerifyEmailChange}
-                  disabled={activeAction === 'emailVerify' || activeAction === 'emailResend' || !newEmailCode}
+                  disabled={
+                    activeAction === 'emailVerify' ||
+                    activeAction === 'emailResend' ||
+                    !newEmailCode
+                  }
                 >
                   <CheckCircle2 className="mr-2 h-4 w-4" />
                   Confirm Email Change
@@ -708,14 +735,22 @@ export function SecurityTab({ selectedClient }: SecurityTabProps) {
             <div className="space-y-1">
               <p className="text-sm font-medium">Reset password</p>
               <p className="text-sm text-muted-foreground">
-                Set a new password for the client and optionally email it to them from the existing dialog flow.
+                Set a new password for the client and optionally email it to them from the existing
+                dialog flow.
               </p>
               <p className="text-xs text-muted-foreground">
-                Last changed: {securityStatus.passwordLastChanged ? formatDateTime(securityStatus.passwordLastChanged) : 'Not available'}
+                Last changed:{' '}
+                {securityStatus.passwordLastChanged
+                  ? formatDateTime(securityStatus.passwordLastChanged)
+                  : 'Not available'}
               </p>
             </div>
           </div>
-          <Button variant="outline" onClick={() => setResetPasswordDialogOpen(true)} className="shrink-0">
+          <Button
+            variant="outline"
+            onClick={() => setResetPasswordDialogOpen(true)}
+            className="shrink-0"
+          >
             Reset Password
           </Button>
         </CardContent>
@@ -725,29 +760,41 @@ export function SecurityTab({ selectedClient }: SecurityTabProps) {
         <CardHeader>
           <CardTitle>Recent Security Activity</CardTitle>
           <CardDescription>
-            A quick summary of the latest account events, with the full audit log available on demand.
+            A quick summary of the latest account events, with the full audit log available on
+            demand.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="grid gap-4 md:grid-cols-3">
             <div className="rounded-lg border bg-muted/20 p-4">
-              <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Latest event</p>
+              <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                Latest event
+              </p>
               <p className="mt-2 text-sm font-semibold">
-                {latestActivityLog ? formatEventType(latestActivityLog.type) : 'No activity recorded'}
+                {latestActivityLog
+                  ? formatEventType(latestActivityLog.type)
+                  : 'No activity recorded'}
               </p>
               <p className="mt-1 text-xs text-muted-foreground">
-                {latestActivityLog ? formatDateTime(latestActivityLog.timestamp) : 'Nothing to review yet.'}
+                {latestActivityLog
+                  ? formatDateTime(latestActivityLog.timestamp)
+                  : 'Nothing to review yet.'}
               </p>
             </div>
             <div className="rounded-lg border bg-muted/20 p-4">
-              <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Failed events</p>
+              <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                Failed events
+              </p>
               <p className="mt-2 text-sm font-semibold">{failedActivityCount}</p>
               <p className="mt-1 text-xs text-muted-foreground">
-                Within the latest {activityLogs.length} loaded event{activityLogs.length === 1 ? '' : 's'}.
+                Within the latest {activityLogs.length} loaded event
+                {activityLogs.length === 1 ? '' : 's'}.
               </p>
             </div>
             <div className="rounded-lg border bg-muted/20 p-4">
-              <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Activity refresh</p>
+              <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                Activity refresh
+              </p>
               <p className="mt-2 text-sm font-semibold">
                 {activityLoading ? 'Refreshing...' : 'Up to date'}
               </p>
@@ -784,7 +831,8 @@ export function SecurityTab({ selectedClient }: SecurityTabProps) {
         <CardHeader>
           <CardTitle>Danger Zone</CardTitle>
           <CardDescription>
-            Destructive access controls are isolated here so they are harder to trigger accidentally.
+            Destructive access controls are isolated here so they are harder to trigger
+            accidentally.
           </CardDescription>
         </CardHeader>
         <CardContent className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
@@ -810,7 +858,9 @@ export function SecurityTab({ selectedClient }: SecurityTabProps) {
           </div>
           <Button
             variant={securityStatus.suspended ? 'outline' : 'destructive'}
-            onClick={() => securityStatus.suspended ? setUnsuspendDialogOpen(true) : setSuspendDialogOpen(true)}
+            onClick={() =>
+              securityStatus.suspended ? setUnsuspendDialogOpen(true) : setSuspendDialogOpen(true)
+            }
             disabled={activeAction === 'suspend' || activeAction === 'unsuspend'}
             className="shrink-0"
           >
@@ -824,8 +874,8 @@ export function SecurityTab({ selectedClient }: SecurityTabProps) {
           <DialogHeader>
             <DialogTitle>Suspend Client Account</DialogTitle>
             <DialogDescription>
-              Are you sure you want to suspend {selectedClient.firstName} {selectedClient.lastName}&apos;s account?
-              They will not be able to log in until the account is unsuspended.
+              Are you sure you want to suspend {selectedClient.firstName} {selectedClient.lastName}
+              &apos;s account? They will not be able to log in until the account is unsuspended.
             </DialogDescription>
           </DialogHeader>
 
@@ -878,8 +928,8 @@ export function SecurityTab({ selectedClient }: SecurityTabProps) {
           <AlertDialogHeader>
             <AlertDialogTitle>Unsuspend Client Account</AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure you want to restore access for {selectedClient.firstName} {selectedClient.lastName}?
-              They will be able to log in immediately after unsuspension.
+              Are you sure you want to restore access for {selectedClient.firstName}{' '}
+              {selectedClient.lastName}? They will be able to log in immediately after unsuspension.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -910,7 +960,8 @@ export function SecurityTab({ selectedClient }: SecurityTabProps) {
           <DialogHeader>
             <DialogTitle>Reset Client Password</DialogTitle>
             <DialogDescription>
-              Set a new password for {selectedClient.firstName} {selectedClient.lastName}. Make sure to securely communicate this password to the client.
+              Set a new password for {selectedClient.firstName} {selectedClient.lastName}. Make sure
+              to securely communicate this password to the client.
             </DialogDescription>
           </DialogHeader>
 
@@ -933,11 +984,7 @@ export function SecurityTab({ selectedClient }: SecurityTabProps) {
                   tabIndex={-1}
                   aria-label={showPassword ? 'Hide password' : 'Show password'}
                 >
-                  {showPassword ? (
-                    <EyeOff className="h-4 w-4" />
-                  ) : (
-                    <Eye className="h-4 w-4" />
-                  )}
+                  {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                   <span className="sr-only">Toggle password visibility</span>
                 </button>
               </div>
@@ -952,7 +999,10 @@ export function SecurityTab({ selectedClient }: SecurityTabProps) {
                 checked={emailPasswordToClient}
                 onCheckedChange={(checked) => setEmailPasswordToClient(checked as boolean)}
               />
-              <Label htmlFor="emailPassword" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
+              <Label
+                htmlFor="emailPassword"
+                className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+              >
                 Email new password to client
               </Label>
             </div>

@@ -104,7 +104,7 @@ export function useEntityCrud<T extends { id: string }>(
   // ── Helpers ──────────────────────────────────────────────────────
 
   const removeFromEditMode = useCallback((id: string) => {
-    setInEditMode(prev => {
+    setInEditMode((prev) => {
       const next = new Set(prev);
       next.delete(id);
       return next;
@@ -112,82 +112,100 @@ export function useEntityCrud<T extends { id: string }>(
   }, []);
 
   const addToEditMode = useCallback((id: string) => {
-    setInEditMode(prev => new Set([...prev, id]));
+    setInEditMode((prev) => new Set([...prev, id]));
   }, []);
 
   // ── CRUD handlers ───────────────────────────────────────────────
 
   const add = useCallback(() => {
     const newItem = configRef.current.createItem();
-    setProfileData(prev => ({
+    setProfileData((prev) => ({
       ...prev,
-      [configRef.current.arrayKey]: [...(prev[configRef.current.arrayKey] as unknown as T[]), newItem],
+      [configRef.current.arrayKey]: [
+        ...(prev[configRef.current.arrayKey] as unknown as T[]),
+        newItem,
+      ],
     }));
     addToEditMode(newItem.id);
   }, [setProfileData, addToEditMode]);
 
-  const update = useCallback((id: string, updates: Partial<T>) => {
-    setProfileData(prev => ({
-      ...prev,
-      [configRef.current.arrayKey]: (prev[configRef.current.arrayKey] as unknown as T[]).map(
-        item => (item.id === id ? { ...item, ...updates } : item),
-      ),
-    }));
-  }, [setProfileData]);
+  const update = useCallback(
+    (id: string, updates: Partial<T>) => {
+      setProfileData((prev) => ({
+        ...prev,
+        [configRef.current.arrayKey]: (prev[configRef.current.arrayKey] as unknown as T[]).map(
+          (item) => (item.id === id ? { ...item, ...updates } : item),
+        ),
+      }));
+    },
+    [setProfileData],
+  );
 
-  const save = useCallback((id: string) => {
-    // Validate before exiting edit mode (fixes pre-existing bug where
-    // validation error toasts fired but the item still left edit mode).
-    if (configRef.current.validateItem) {
-      const item = itemsRef.current.find(x => x.id === id);
-      if (item) {
-        const error = configRef.current.validateItem(item);
-        if (error) {
-          toast.error(error);
-          return; // Stay in edit mode
+  const save = useCallback(
+    (id: string) => {
+      // Validate before exiting edit mode (fixes pre-existing bug where
+      // validation error toasts fired but the item still left edit mode).
+      if (configRef.current.validateItem) {
+        const item = itemsRef.current.find((x) => x.id === id);
+        if (item) {
+          const error = configRef.current.validateItem(item);
+          if (error) {
+            toast.error(error);
+            return; // Stay in edit mode
+          }
         }
       }
-    }
-    removeFromEditMode(id);
-    configRef.current.onCleanup?.(id);
-  }, [removeFromEditMode]);
+      removeFromEditMode(id);
+      configRef.current.onCleanup?.(id);
+    },
+    [removeFromEditMode],
+  );
 
-  const edit = useCallback((id: string) => {
-    addToEditMode(id);
-  }, [addToEditMode]);
+  const edit = useCallback(
+    (id: string) => {
+      addToEditMode(id);
+    },
+    [addToEditMode],
+  );
 
-  const cancelEdit = useCallback((id: string) => {
-    // Auto-remove blank items the user never filled in
-    if (configRef.current.isItemEmpty) {
-      const item = itemsRef.current.find(x => x.id === id);
-      if (item && configRef.current.isItemEmpty(item)) {
-        setProfileData(prev => ({
-          ...prev,
-          [configRef.current.arrayKey]: (prev[configRef.current.arrayKey] as unknown as T[]).filter(
-            x => x.id !== id,
-          ),
-        }));
+  const cancelEdit = useCallback(
+    (id: string) => {
+      // Auto-remove blank items the user never filled in
+      if (configRef.current.isItemEmpty) {
+        const item = itemsRef.current.find((x) => x.id === id);
+        if (item && configRef.current.isItemEmpty(item)) {
+          setProfileData((prev) => ({
+            ...prev,
+            [configRef.current.arrayKey]: (
+              prev[configRef.current.arrayKey] as unknown as T[]
+            ).filter((x) => x.id !== id),
+          }));
+        }
       }
-    }
-    removeFromEditMode(id);
-    configRef.current.onCleanup?.(id);
-  }, [setProfileData, removeFromEditMode]);
+      removeFromEditMode(id);
+      configRef.current.onCleanup?.(id);
+    },
+    [setProfileData, removeFromEditMode],
+  );
 
   const confirmDelete = useCallback((id: string) => {
     setItemToDelete(id);
   }, []);
 
-  const remove = useCallback((id: string) => {
-    setProfileData(prev => ({
-      ...prev,
-      [configRef.current.arrayKey]: (prev[configRef.current.arrayKey] as unknown as T[]).filter(
-        x => x.id !== id,
-      ),
-    }));
-    removeFromEditMode(id);
-    setItemToDelete(null);
-    configRef.current.onCleanup?.(id);
-  }, [setProfileData, removeFromEditMode]);
+  const remove = useCallback(
+    (id: string) => {
+      setProfileData((prev) => ({
+        ...prev,
+        [configRef.current.arrayKey]: (prev[configRef.current.arrayKey] as unknown as T[]).filter(
+          (x) => x.id !== id,
+        ),
+      }));
+      removeFromEditMode(id);
+      setItemToDelete(null);
+      configRef.current.onCleanup?.(id);
+    },
+    [setProfileData, removeFromEditMode],
+  );
 
   const resetEditMode = useCallback(() => {
     setInEditMode(new Set());

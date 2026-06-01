@@ -356,7 +356,7 @@ envelopesRoutes.post(
       // The current validateDocument allows PDF. If we merged, it's definitely PDF.
       // If it was a single file, it could be DOC/DOCX but validateDocument might catch it if it expects PDF headers?
       // Let's assume input is PDF for now as PDFService expects PDF.
-      let mimeType = 'application/pdf';
+      const mimeType = 'application/pdf';
 
       // Upload to storage
       const { path, error: uploadError } = await uploadDocument(

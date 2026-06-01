@@ -50,10 +50,7 @@ function saveLabels(personnelId: string, labels: CustomColourLabels): void {
  * - If custom label exists: "Custom Label"
  * - Otherwise: default colour name (e.g. "Green")
  */
-export function getColourDisplayLabel(
-  color: NoteColor,
-  customLabels: CustomColourLabels
-): string {
+export function getColourDisplayLabel(color: NoteColor, customLabels: CustomColourLabels): string {
   const custom = customLabels[color];
   if (custom && custom.trim()) return custom.trim();
   return NOTE_COLOR_CONFIG[color].label;
@@ -65,10 +62,7 @@ export function getColourDisplayLabel(
  * - If custom label exists: "Green — New Business"
  * - Otherwise: "Green"
  */
-export function getColourTooltipLabel(
-  color: NoteColor,
-  customLabels: CustomColourLabels
-): string {
+export function getColourTooltipLabel(color: NoteColor, customLabels: CustomColourLabels): string {
   const defaultLabel = NOTE_COLOR_CONFIG[color].label;
   const custom = customLabels[color];
   if (custom && custom.trim()) return `${defaultLabel} \u2014 ${custom.trim()}`;
@@ -100,38 +94,50 @@ export function useColourLabels(personnelId: string): UseColourLabelsReturn {
     setCustomLabels(loadLabels(personnelId));
   }, [personnelId]);
 
-  const setLabel = useCallback((color: NoteColor, label: string) => {
-    setCustomLabels((prev) => {
-      const next = { ...prev };
-      if (label.trim()) {
-        next[color] = label.trim();
-      } else {
-        delete next[color];
+  const setLabel = useCallback(
+    (color: NoteColor, label: string) => {
+      setCustomLabels((prev) => {
+        const next = { ...prev };
+        if (label.trim()) {
+          next[color] = label.trim();
+        } else {
+          delete next[color];
+        }
+        saveLabels(personnelId, next);
+        return next;
+      });
+    },
+    [personnelId],
+  );
+
+  const setAllLabels = useCallback(
+    (labels: CustomColourLabels) => {
+      // Clean out empty entries
+      const cleaned: CustomColourLabels = {};
+      for (const [k, v] of Object.entries(labels)) {
+        if (v && v.trim()) {
+          cleaned[k as NoteColor] = v.trim();
+        }
       }
-      saveLabels(personnelId, next);
-      return next;
-    });
-  }, [personnelId]);
+      setCustomLabels(cleaned);
+      saveLabels(personnelId, cleaned);
+    },
+    [personnelId],
+  );
 
-  const setAllLabels = useCallback((labels: CustomColourLabels) => {
-    // Clean out empty entries
-    const cleaned: CustomColourLabels = {};
-    for (const [k, v] of Object.entries(labels)) {
-      if (v && v.trim()) {
-        cleaned[k as NoteColor] = v.trim();
-      }
-    }
-    setCustomLabels(cleaned);
-    saveLabels(personnelId, cleaned);
-  }, [personnelId]);
+  const getLabel = useCallback(
+    (color: NoteColor) => {
+      return getColourDisplayLabel(color, customLabels);
+    },
+    [customLabels],
+  );
 
-  const getLabel = useCallback((color: NoteColor) => {
-    return getColourDisplayLabel(color, customLabels);
-  }, [customLabels]);
-
-  const getTooltip = useCallback((color: NoteColor) => {
-    return getColourTooltipLabel(color, customLabels);
-  }, [customLabels]);
+  const getTooltip = useCallback(
+    (color: NoteColor) => {
+      return getColourTooltipLabel(color, customLabels);
+    },
+    [customLabels],
+  );
 
   return {
     customLabels,

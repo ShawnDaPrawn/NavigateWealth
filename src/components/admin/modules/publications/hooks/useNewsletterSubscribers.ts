@@ -63,12 +63,15 @@ export function useNewsletterSubscribers(
   const subscribers = data ?? [];
 
   // ── Stats (derived from full list) ──────────────────────────────────
-  const stats = useMemo<SubscriberStats>(() => ({
-    total: subscribers.length,
-    active: subscribers.filter((s) => deriveSubscriberStatus(s) === 'active').length,
-    pending: subscribers.filter((s) => deriveSubscriberStatus(s) === 'pending').length,
-    unsubscribed: subscribers.filter((s) => deriveSubscriberStatus(s) === 'unsubscribed').length,
-  }), [subscribers]);
+  const stats = useMemo<SubscriberStats>(
+    () => ({
+      total: subscribers.length,
+      active: subscribers.filter((s) => deriveSubscriberStatus(s) === 'active').length,
+      pending: subscribers.filter((s) => deriveSubscriberStatus(s) === 'pending').length,
+      unsubscribed: subscribers.filter((s) => deriveSubscriberStatus(s) === 'unsubscribed').length,
+    }),
+    [subscribers],
+  );
 
   // ── Filtering ───────────────────────────────────────────────────────
   const filtered = useMemo(() => {

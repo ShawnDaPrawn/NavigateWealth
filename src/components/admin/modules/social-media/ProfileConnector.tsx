@@ -154,7 +154,7 @@ export function ProfileConnector({
 
     setConnectingPlatform(platform);
     try {
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      await new Promise((resolve) => setTimeout(resolve, 2000));
       onConnect(platform);
       toast.success(`Successfully connected to ${PLATFORM_CONFIG[platform].name}!`);
       setShowConnectDialog(false);
@@ -187,8 +187,8 @@ export function ProfileConnector({
   // Derived
   // --------------------------------------------------------------------------
 
-  const nonLinkedinProfiles = profiles.filter(p => p.platform !== 'linkedin');
-  const connectedNonLinkedin = nonLinkedinProfiles.filter(p => p.isConnected);
+  const nonLinkedinProfiles = profiles.filter((p) => p.platform !== 'linkedin');
+  const connectedNonLinkedin = nonLinkedinProfiles.filter((p) => p.isConnected);
 
   // --------------------------------------------------------------------------
   // Render
@@ -196,7 +196,6 @@ export function ProfileConnector({
 
   return (
     <div className="space-y-6">
-
       {/* Section 1: LinkedIn Integration (Real OAuth) */}
       <LinkedInConnector />
 
@@ -237,7 +236,7 @@ export function ProfileConnector({
                   .map(([platform, config]) => {
                     const Icon = config.icon;
                     const isConnected = profiles.some(
-                      p => p.platform === platform && p.isConnected,
+                      (p) => p.platform === platform && p.isConnected,
                     );
                     const isConnecting = connectingPlatform === platform;
 
@@ -248,7 +247,9 @@ export function ProfileConnector({
                         onClick={() => handleConnect(platform as SocialPlatform)}
                         disabled={isConnected || isConnecting || !config.available}
                       >
-                        <div className={`flex items-center justify-center h-9 w-9 rounded-lg ${config.iconBg} text-white shrink-0`}>
+                        <div
+                          className={`flex items-center justify-center h-9 w-9 rounded-lg ${config.iconBg} text-white shrink-0`}
+                        >
                           <Icon className="h-4 w-4" />
                         </div>
                         <div className="flex-1 min-w-0">
@@ -303,7 +304,7 @@ export function ProfileConnector({
             </div>
           ) : (
             <div className="space-y-2">
-              {nonLinkedinProfiles.map(profile => {
+              {nonLinkedinProfiles.map((profile) => {
                 const config = PLATFORM_CONFIG[profile.platform];
                 const Icon = config.icon;
 
@@ -313,7 +314,9 @@ export function ProfileConnector({
                     className="flex items-center justify-between p-3.5 border rounded-lg hover:bg-gray-50/50 transition-colors"
                   >
                     <div className="flex items-center gap-3 min-w-0">
-                      <div className={`flex items-center justify-center h-9 w-9 rounded-lg ${config.iconBg} text-white shrink-0`}>
+                      <div
+                        className={`flex items-center justify-center h-9 w-9 rounded-lg ${config.iconBg} text-white shrink-0`}
+                      >
                         <Icon className="h-4 w-4" />
                       </div>
 
@@ -331,7 +334,9 @@ export function ProfileConnector({
                           {profile.followerCount != null && profile.followerCount > 0 && (
                             <div className="contents">
                               <span>·</span>
-                              <span className="shrink-0">{formatFollowerCount(profile.followerCount)} followers</span>
+                              <span className="shrink-0">
+                                {formatFollowerCount(profile.followerCount)} followers
+                              </span>
                             </div>
                           )}
                         </div>
@@ -429,12 +434,11 @@ export function ProfileConnector({
                 const limits = PLATFORM_LIMITS[platform as SocialPlatform];
 
                 return (
-                  <div
-                    key={platform}
-                    className="p-3.5 border rounded-lg bg-gray-50/50"
-                  >
+                  <div key={platform} className="p-3.5 border rounded-lg bg-gray-50/50">
                     <div className="flex items-center gap-2.5 mb-2.5">
-                      <div className={`flex items-center justify-center h-7 w-7 rounded-md ${config.iconBg} text-white`}>
+                      <div
+                        className={`flex items-center justify-center h-7 w-7 rounded-md ${config.iconBg} text-white`}
+                      >
                         <Icon className="h-3.5 w-3.5" />
                       </div>
                       <span className="font-medium text-sm">{config.name}</span>

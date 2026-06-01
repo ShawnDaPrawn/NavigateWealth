@@ -13,7 +13,12 @@ import { Plus, Shield } from 'lucide-react';
 import { StepSectionHeader, ItemCard, EmptyState, FieldRow, FormField } from '../WillDraftingUI';
 import type { StepHealthcareAgentsProps } from './types';
 
-export function StepHealthcareAgents({ agents, onAdd, onUpdate, onRemove }: StepHealthcareAgentsProps) {
+export function StepHealthcareAgents({
+  agents,
+  onAdd,
+  onUpdate,
+  onRemove,
+}: StepHealthcareAgentsProps) {
   return (
     <div className="space-y-5">
       <StepSectionHeader
@@ -89,7 +94,10 @@ export function StepHealthcareAgents({ agents, onAdd, onUpdate, onRemove }: Step
                     checked={agent.isPrimary}
                     onCheckedChange={(checked) => onUpdate(agent.id, 'isPrimary', !!checked)}
                   />
-                  <Label htmlFor={`primary-${agent.id}`} className="text-sm font-normal cursor-pointer">
+                  <Label
+                    htmlFor={`primary-${agent.id}`}
+                    className="text-sm font-normal cursor-pointer"
+                  >
                     Designate as primary healthcare agent
                   </Label>
                 </div>

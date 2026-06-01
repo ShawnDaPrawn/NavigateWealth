@@ -9,7 +9,7 @@ const columns = [
   { key: 'expiryDate', label: 'Expiry Date', type: 'date' as const },
   { key: 'assessmentScore', label: 'Score', type: 'text' as const },
   { key: 'competencyStatus', label: 'Competency', type: 'badge' as const },
-  { key: 'status', label: 'Status', type: 'badge' as const }
+  { key: 'status', label: 'Status', type: 'badge' as const },
 ];
 
 export function ProductTrainingRegisterTab() {

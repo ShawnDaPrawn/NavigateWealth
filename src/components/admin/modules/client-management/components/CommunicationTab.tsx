@@ -39,7 +39,10 @@ export function CommunicationTab({ client }: CommunicationTabProps) {
 
   // Dialog state
   const [viewingCommunication, setViewingCommunication] = useState<CommunicationLog | null>(null);
-  const [deleteConfirmation, setDeleteConfirmation] = useState<{ isOpen: boolean; id: string | null }>({
+  const [deleteConfirmation, setDeleteConfirmation] = useState<{
+    isOpen: boolean;
+    id: string | null;
+  }>({
     isOpen: false,
     id: null,
   });
@@ -54,7 +57,11 @@ export function CommunicationTab({ client }: CommunicationTabProps) {
 
   // ── Data Fetching ─────────────────────────────────────────────────────────
 
-  const { data: communications = [], isLoading, refetch } = useQuery({
+  const {
+    data: communications = [],
+    isLoading,
+    refetch,
+  } = useQuery({
     queryKey: clientKeys.communicationLogs(client.id),
     queryFn: () => communicationApi.getClientLogs(client.id),
     enabled: !!client.id,
@@ -62,7 +69,12 @@ export function CommunicationTab({ client }: CommunicationTabProps) {
 
   // ── File Upload Helper ────────────────────────────────────────────────────
 
-  const uploadToDocuments = async (file: File, index: number, subject: string, totalFiles: number): Promise<string> => {
+  const uploadToDocuments = async (
+    file: File,
+    index: number,
+    subject: string,
+    totalFiles: number,
+  ): Promise<string> => {
     const formData = new FormData();
     formData.append('file', file);
 
@@ -87,9 +99,9 @@ export function CommunicationTab({ client }: CommunicationTabProps) {
       `https://${projectId}.supabase.co/functions/v1/make-server-91ed8379/documents/${client.id}/upload`,
       {
         method: 'POST',
-        headers: { 'Authorization': `Bearer ${publicAnonKey}` },
+        headers: { Authorization: `Bearer ${publicAnonKey}` },
         body: formData,
-      }
+      },
     );
 
     if (!response.ok) {
@@ -126,7 +138,10 @@ export function CommunicationTab({ client }: CommunicationTabProps) {
       const ccList: string[] = [];
       if (payload.ccAdmin) ccList.push('info@navigatewealth.co');
       if (payload.additionalCc) {
-        const extras = payload.additionalCc.split(',').map(e => e.trim()).filter(Boolean);
+        const extras = payload.additionalCc
+          .split(',')
+          .map((e) => e.trim())
+          .filter(Boolean);
         ccList.push(...extras);
       }
 
@@ -138,13 +153,15 @@ export function CommunicationTab({ client }: CommunicationTabProps) {
           (client as { personalInformation?: { idNumber?: string } }).personalInformation?.idNumber;
 
         if (!clientIdNumber) {
-          throw new Error('Client ID number is required for encryption. Please update client profile.');
+          throw new Error(
+            'Client ID number is required for encryption. Please update client profile.',
+          );
         }
 
         const docIds = await Promise.all(
           payload.attachments.map((file, i) =>
-            uploadToDocuments(file, i, payload.subject, payload.attachments.length)
-          )
+            uploadToDocuments(file, i, payload.subject, payload.attachments.length),
+          ),
         );
 
         const response = await fetch(
@@ -152,7 +169,7 @@ export function CommunicationTab({ client }: CommunicationTabProps) {
           {
             method: 'POST',
             headers: {
-              'Authorization': `Bearer ${publicAnonKey}`,
+              Authorization: `Bearer ${publicAnonKey}`,
               'Content-Type': 'application/json',
             },
             body: JSON.stringify({
@@ -166,7 +183,7 @@ export function CommunicationTab({ client }: CommunicationTabProps) {
               cc: ccList,
               source: 'communication_tab',
             }),
-          }
+          },
         );
 
         if (!response.ok) {
@@ -200,7 +217,7 @@ export function CommunicationTab({ client }: CommunicationTabProps) {
       refetch();
 
       // Remount ComposeForm to reset its internal state
-      setComposeKey(prev => prev + 1);
+      setComposeKey((prev) => prev + 1);
 
       setTimeout(() => setSuccess(null), 5000);
     },
@@ -245,7 +262,7 @@ export function CommunicationTab({ client }: CommunicationTabProps) {
       }
       sendMutation.mutate(payload);
     },
-    [sendMutation]
+    [sendMutation],
   );
 
   const handleDeleteRequest = useCallback((id: string) => {

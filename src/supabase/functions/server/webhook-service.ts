@@ -94,8 +94,8 @@ const KEYS = {
 } as const;
 
 const MAX_ATTEMPTS = 8;
-const BASE_BACKOFF_MS = 60 * 1000;                    // 1 minute
-const MAX_BACKOFF_MS = 24 * 60 * 60 * 1000;           // 24h cap
+const BASE_BACKOFF_MS = 60 * 1000; // 1 minute
+const MAX_BACKOFF_MS = 24 * 60 * 60 * 1000; // 24h cap
 const FLUSH_BATCH_SIZE = 25;
 const REQUEST_TIMEOUT_MS = 15_000;
 const RECENT_KEEP = 500;
@@ -431,7 +431,11 @@ async function attemptDelivery(
       return { ok: true, status: resp.status };
     }
     const errText = await resp.text().catch(() => '');
-    return { ok: false, status: resp.status, error: `HTTP ${resp.status}${errText ? `: ${errText.slice(0, 200)}` : ''}` };
+    return {
+      ok: false,
+      status: resp.status,
+      error: `HTTP ${resp.status}${errText ? `: ${errText.slice(0, 200)}` : ''}`,
+    };
   } catch (err) {
     clearTimeout(timer);
     return { ok: false, error: getErrMsg(err) };
@@ -442,7 +446,11 @@ async function attemptDelivery(
 // REPLAY / LISTING (for the admin UI)
 // ============================================================================
 
-export async function listRecentDeliveries(opts?: { limit?: number; status?: WebhookDeliveryStatus; firmId?: string }): Promise<WebhookDelivery[]> {
+export async function listRecentDeliveries(opts?: {
+  limit?: number;
+  status?: WebhookDeliveryStatus;
+  firmId?: string;
+}): Promise<WebhookDelivery[]> {
   const ids = await getIndex(KEYS.recentIndex);
   // newest first
   const ordered = [...ids].reverse().slice(0, opts?.limit ?? 100);

@@ -38,7 +38,7 @@ export function SigningCompletePage({ sessionData, onClose, token }: SigningComp
       const response = await fetch(url, {
         method: 'GET',
         headers: {
-          'Authorization': `Bearer ${publicAnonKey}`,
+          Authorization: `Bearer ${publicAnonKey}`,
         },
       });
 
@@ -94,7 +94,10 @@ export function SigningCompletePage({ sessionData, onClose, token }: SigningComp
                     <CheckCircle2 className="h-12 w-12 text-green-600" />
                   </div>
                   {/* Pulse ring */}
-                  <div className="absolute inset-0 rounded-full bg-green-200/50 animate-ping" style={{ animationDuration: '2s', animationIterationCount: 3 }} />
+                  <div
+                    className="absolute inset-0 rounded-full bg-green-200/50 animate-ping"
+                    style={{ animationDuration: '2s', animationIterationCount: 3 }}
+                  />
                 </div>
               </motion.div>
 
@@ -163,7 +166,9 @@ export function SigningCompletePage({ sessionData, onClose, token }: SigningComp
                     <Mail className="h-4.5 w-4.5 text-indigo-600" />
                   </div>
                   <div>
-                    <h3 className="text-sm font-semibold text-gray-900 mb-0.5">Email Confirmation</h3>
+                    <h3 className="text-sm font-semibold text-gray-900 mb-0.5">
+                      Email Confirmation
+                    </h3>
                     <p className="text-xs text-gray-500 leading-relaxed">
                       A confirmation with the signed document has been sent to your email.
                     </p>
@@ -227,10 +232,7 @@ export function SigningCompletePage({ sessionData, onClose, token }: SigningComp
                   )}
                   Download Copy
                 </Button>
-                <Button
-                  onClick={onClose}
-                  className="gap-2 bg-indigo-600 hover:bg-indigo-700"
-                >
+                <Button onClick={onClose} className="gap-2 bg-indigo-600 hover:bg-indigo-700">
                   <Home className="h-4 w-4" />
                   Close
                 </Button>

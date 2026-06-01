@@ -42,23 +42,19 @@ const log = createModuleLogger('esign-notify-prefs');
  *   UTC by default) as a single summary email.
  * - `off`: no sender emails at all. Use with caution.
  */
-export type SenderNotificationMode =
-  | 'every_event'
-  | 'completion_only'
-  | 'digest'
-  | 'off';
+export type SenderNotificationMode = 'every_event' | 'completion_only' | 'digest' | 'off';
 
 /**
  * Event taxonomy. Keep in lockstep with `webhook-service.ts` so a user's
  * preferences apply consistently across email and webhook channels (§P5.4).
  */
 export type SenderEvent =
-  | 'signer.signed'        // one signer completed
-  | 'signer.declined'      // one signer declined → envelope terminated
-  | 'envelope.completed'   // all signers done
-  | 'envelope.expired'     // auto-expired
-  | 'signer.viewed'        // first-view tracking
-  | 'envelope.recalled'    // sender pulled the envelope back
+  | 'signer.signed' // one signer completed
+  | 'signer.declined' // one signer declined → envelope terminated
+  | 'envelope.completed' // all signers done
+  | 'envelope.expired' // auto-expired
+  | 'signer.viewed' // first-view tracking
+  | 'envelope.recalled' // sender pulled the envelope back
   // P7.2 — sent ≥ 7 days ago, never opened; sender gets a reminder.
   | 'envelope.stuck';
 
@@ -76,8 +72,7 @@ export interface NotificationPreferences {
 
 const KEYS = {
   userPrefs: (userId: string) => `esign:notify:prefs:${userId}`,
-  digestEntry: (userId: string, entryId: string) =>
-    `esign:notify:digest:${userId}:${entryId}`,
+  digestEntry: (userId: string, entryId: string) => `esign:notify:digest:${userId}:${entryId}`,
   digestPrefix: (userId: string) => `esign:notify:digest:${userId}:`,
   allPrefsPrefix: () => `esign:notify:prefs:`,
 };
@@ -126,9 +121,9 @@ export async function setPreferences(
 // ============================================================================
 
 export interface DeliveryDecision {
-  deliver: boolean;       // true = send immediately
-  digest: boolean;        // true = queue for daily digest
-  reason: string;         // human-readable trace for the audit log
+  deliver: boolean; // true = send immediately
+  digest: boolean; // true = queue for daily digest
+  reason: string; // human-readable trace for the audit log
   mode: SenderNotificationMode;
 }
 
@@ -142,15 +137,22 @@ export async function shouldDeliverSenderEvent(
   event: SenderEvent,
 ): Promise<DeliveryDecision> {
   if (!userId) {
-    return { deliver: true, digest: false, reason: 'no userId — cannot enforce prefs', mode: DEFAULT_MODE };
+    return {
+      deliver: true,
+      digest: false,
+      reason: 'no userId — cannot enforce prefs',
+      mode: DEFAULT_MODE,
+    };
   }
   const prefs = await getPreferences(userId);
   const mode = prefs.mode;
 
   // Per-event override takes precedence.
   const override = prefs.perEvent?.[event];
-  if (override === true) return { deliver: true, digest: false, reason: 'per-event override on', mode };
-  if (override === false) return { deliver: false, digest: false, reason: 'per-event override off', mode };
+  if (override === true)
+    return { deliver: true, digest: false, reason: 'per-event override on', mode };
+  if (override === false)
+    return { deliver: false, digest: false, reason: 'per-event override off', mode };
 
   switch (mode) {
     case 'off':
@@ -158,14 +160,17 @@ export async function shouldDeliverSenderEvent(
     case 'every_event':
       return { deliver: true, digest: false, reason: 'mode=every_event', mode };
     case 'completion_only': {
-      const isTerminal = event === 'envelope.completed'
-        || event === 'envelope.declined' as SenderEvent  // widen: decline is considered terminal
-        || event === 'signer.declined'
-        || event === 'envelope.expired';
+      const isTerminal =
+        event === 'envelope.completed' ||
+        event === ('envelope.declined' as SenderEvent) || // widen: decline is considered terminal
+        event === 'signer.declined' ||
+        event === 'envelope.expired';
       return {
         deliver: isTerminal,
         digest: false,
-        reason: isTerminal ? 'mode=completion_only (terminal event)' : 'mode=completion_only (suppressed)',
+        reason: isTerminal
+          ? 'mode=completion_only (terminal event)'
+          : 'mode=completion_only (suppressed)',
         mode,
       };
     }
@@ -207,7 +212,7 @@ export async function flushDigests(): Promise<{ usersNotified: number; entriesSe
   const result = { usersNotified: 0, entriesSent: 0 };
 
   try {
-    const allEntries = await kv.getByPrefix('esign:notify:digest:') as DigestEntry[];
+    const allEntries = (await kv.getByPrefix('esign:notify:digest:')) as DigestEntry[];
     if (!allEntries.length) {
       log.info('No pending digest entries to flush');
       return result;
@@ -265,12 +270,16 @@ export async function flushDigests(): Promise<{ usersNotified: number; entriesSe
 }
 
 function renderDigestHtml(entries: DigestEntry[]): string {
-  const rows = entries.map(e => `
+  const rows = entries
+    .map(
+      (e) => `
     <tr>
       <td style="padding:8px;border-bottom:1px solid #e5e7eb;white-space:nowrap;color:#6b7280;font-size:12px;">${e.event}</td>
       <td style="padding:8px;border-bottom:1px solid #e5e7eb;">${e.envelopeTitle}</td>
       <td style="padding:8px;border-bottom:1px solid #e5e7eb;color:#6b7280;font-size:12px;">${new Date(e.queued_at).toLocaleString('en-ZA')}</td>
-    </tr>`).join('');
+    </tr>`,
+    )
+    .join('');
   return `
     <div style="font-family:Arial,sans-serif;max-width:640px;margin:0 auto;">
       <h2 style="margin:0 0 12px;color:#111827;">E-signature digest</h2>
@@ -281,6 +290,6 @@ function renderDigestHtml(entries: DigestEntry[]): string {
 }
 
 function renderDigestText(entries: DigestEntry[]): string {
-  const lines = entries.map(e => `- [${e.event}] ${e.envelopeTitle} (${e.queued_at})`);
+  const lines = entries.map((e) => `- [${e.event}] ${e.envelopeTitle} (${e.queued_at})`);
   return `E-signature digest (${entries.length} events)\n\n${lines.join('\n')}\n\nChange preferences in E-Signature → Settings → Notifications.`;
 }

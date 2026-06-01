@@ -1,10 +1,10 @@
 /**
  * Advice Engine Module - Validation Schemas
  * Fresh file moved to root to fix bundling issues
- * 
+ *
  * Comprehensive validation for Financial Needs Analysis (FNA) system.
  * Covers 6 FNA types + AI features = 40+ routes
- * 
+ *
  * Phase 3 - Increment 3.2
  * VERSION: 3.3.9 - Fix .partial() on refined schemas
  */
@@ -62,32 +62,17 @@ export const FNAStatusSchema = z.enum(['draft', 'published', 'archived']);
 /**
  * Recommendation Priority
  */
-export const RecommendationPrioritySchema = z.enum([
-  'low',
-  'medium',
-  'high',
-  'critical',
-]);
+export const RecommendationPrioritySchema = z.enum(['low', 'medium', 'high', 'critical']);
 
 /**
  * Relationship types for dependants
  */
-export const RelationshipSchema = z.enum([
-  'spouse',
-  'child',
-  'parent',
-  'sibling',
-  'other',
-]);
+export const RelationshipSchema = z.enum(['spouse', 'child', 'parent', 'sibling', 'other']);
 
 /**
  * Risk tolerance levels
  */
-export const RiskToleranceSchema = z.enum([
-  'conservative',
-  'moderate',
-  'aggressive',
-]);
+export const RiskToleranceSchema = z.enum(['conservative', 'moderate', 'aggressive']);
 
 // ============================================================================
 // NESTED OBJECT SCHEMAS
@@ -102,9 +87,10 @@ export const DependantSchema = z.object({
   age: NonNegativeIntSchema,
   relationship: RelationshipSchema,
   financiallyDependent: z.boolean(),
-  expectedSupportEndAge: PositiveIntSchema
-    .min(1, 'Support end age must be at least 1')
-    .max(99, 'Support end age cannot exceed 99'),
+  expectedSupportEndAge: PositiveIntSchema.min(1, 'Support end age must be at least 1').max(
+    99,
+    'Support end age cannot exceed 99',
+  ),
   financialDependencyPercent: PercentageSchema,
 });
 
@@ -133,15 +119,7 @@ export const LiabilitySchema = z.object({
  */
 export const AssetSchema = z.object({
   id: UuidSchema.optional(),
-  type: z.enum([
-    'property',
-    'vehicle',
-    'investment',
-    'savings',
-    'retirement',
-    'business',
-    'other',
-  ]),
+  type: z.enum(['property', 'vehicle', 'investment', 'savings', 'retirement', 'business', 'other']),
   description: NonEmptyStringSchema,
   currentValue: DecimalCurrencySchema,
 });
@@ -152,7 +130,8 @@ export const AssetSchema = z.object({
 export const RecommendationSchema = z.object({
   type: NonEmptyStringSchema,
   title: NonEmptyStringSchema,
-  description: z.string()
+  description: z
+    .string()
     .min(10, 'Description must be at least 10 characters')
     .max(2000, 'Description cannot exceed 2000 characters')
     .transform(stripHtml),
@@ -180,14 +159,15 @@ export const TaxCreditSchema = z.object({
 /**
  * Beneficiary schema (for estate planning)
  */
-export const BeneficiarySchema = z.object({
-  name: NonEmptyStringSchema,
-  relationship: RelationshipSchema,
-  percentage: PercentageSchema,
-}).refine(
-  (data) => data.percentage > 0,
-  { message: 'Beneficiary percentage must be greater than 0' }
-);
+export const BeneficiarySchema = z
+  .object({
+    name: NonEmptyStringSchema,
+    relationship: RelationshipSchema,
+    percentage: PercentageSchema,
+  })
+  .refine((data) => data.percentage > 0, {
+    message: 'Beneficiary percentage must be greater than 0',
+  });
 
 // ============================================================================
 // BASE FNA SCHEMAS
@@ -228,24 +208,25 @@ const RiskFNAInputsBaseSchema = z.object({
   hasSpouse: z.boolean(),
   spouseAge: PositiveIntSchema.min(18).max(99).optional(),
   dependants: z.array(DependantSchema).default([]),
-  
+
   // Financial information
   monthlyIncome: DecimalCurrencySchema,
   monthlyExpenses: DecimalCurrencySchema,
-  
+
   // Current cover
   currentLifeCover: DecimalCurrencySchema.default(0),
   currentDisabilityCover: DecimalCurrencySchema.default(0),
   currentDreadDiseaseCover: DecimalCurrencySchema.default(0),
-  
+
   // Assets & liabilities
   liabilities: z.array(LiabilitySchema).default([]),
   assets: z.array(AssetSchema).default([]),
-  
+
   // Planning parameters
-  emergencyFundMonths: PositiveIntSchema
-    .min(3, 'Emergency fund should be at least 3 months')
-    .max(24, 'Emergency fund cannot exceed 24 months'),
+  emergencyFundMonths: PositiveIntSchema.min(3, 'Emergency fund should be at least 3 months').max(
+    24,
+    'Emergency fund cannot exceed 24 months',
+  ),
   educationFundRequired: DecimalCurrencySchema.default(0),
   retirementAge: PositiveIntSchema.min(55).max(75),
 });
@@ -258,14 +239,11 @@ export const RiskFNAInputsSchema = RiskFNAInputsBaseSchema.refine(
   {
     message: 'Monthly expenses cannot exceed 150% of monthly income',
     path: ['monthlyExpenses'],
-  }
-).refine(
-  (data) => !data.hasSpouse || data.spouseAge !== undefined,
-  {
-    message: 'Spouse age is required when hasSpouse is true',
-    path: ['spouseAge'],
-  }
-);
+  },
+).refine((data) => !data.hasSpouse || data.spouseAge !== undefined, {
+  message: 'Spouse age is required when hasSpouse is true',
+  path: ['spouseAge'],
+});
 
 /**
  * Create Risk Planning FNA
@@ -296,12 +274,12 @@ const MedicalFNAInputsBaseSchema = z.object({
   spouseAge: PositiveIntSchema.min(18).max(99).optional(),
   dependants: z.array(DependantSchema).default([]),
   numberOfBeneficiaries: PositiveIntSchema.min(1).max(20),
-  
+
   // Current medical aid
   currentMedicalAid: OptionalStringSchema,
   currentOption: OptionalStringSchema,
   currentPremium: DecimalCurrencySchema.default(0),
-  
+
   // Medical history
   chronicConditions: z.array(NonEmptyStringSchema).default([]),
   medicalHistory: z.array(NonEmptyStringSchema).default([]),
@@ -315,7 +293,7 @@ export const MedicalFNAInputsSchema = MedicalFNAInputsBaseSchema.refine(
   {
     message: 'Spouse age is required when hasSpouse is true',
     path: ['spouseAge'],
-  }
+  },
 );
 
 /**
@@ -345,18 +323,20 @@ const RetirementFNAInputsBaseSchema = z.object({
   desiredRetirementAge: PositiveIntSchema.min(55).max(75),
   hasSpouse: z.boolean(),
   spouseAge: PositiveIntSchema.min(18).max(75).optional(),
-  
+
   // Current savings
   currentSavings: DecimalCurrencySchema.default(0),
   monthlyContribution: DecimalCurrencySchema.default(0),
-  
+
   // Assumptions
-  expectedInflationRate: PercentageSchema
-    .min(0, 'Inflation rate cannot be negative')
-    .max(20, 'Inflation rate seems unrealistic'),
-  expectedReturnRate: PercentageSchema
-    .min(0, 'Return rate cannot be negative')
-    .max(30, 'Return rate seems unrealistic'),
+  expectedInflationRate: PercentageSchema.min(0, 'Inflation rate cannot be negative').max(
+    20,
+    'Inflation rate seems unrealistic',
+  ),
+  expectedReturnRate: PercentageSchema.min(0, 'Return rate cannot be negative').max(
+    30,
+    'Return rate seems unrealistic',
+  ),
   desiredRetirementIncome: DecimalCurrencySchema,
 });
 
@@ -368,20 +348,16 @@ export const RetirementFNAInputsSchema = RetirementFNAInputsBaseSchema.refine(
   {
     message: 'Retirement age must be greater than current age',
     path: ['desiredRetirementAge'],
-  }
-).refine(
-  (data) => data.expectedReturnRate > data.expectedInflationRate,
-  {
+  },
+)
+  .refine((data) => data.expectedReturnRate > data.expectedInflationRate, {
     message: 'Expected return rate should be higher than inflation rate',
     path: ['expectedReturnRate'],
-  }
-).refine(
-  (data) => !data.hasSpouse || data.spouseAge !== undefined,
-  {
+  })
+  .refine((data) => !data.hasSpouse || data.spouseAge !== undefined, {
     message: 'Spouse age is required when hasSpouse is true',
     path: ['spouseAge'],
-  }
-);
+  });
 
 /**
  * Create Retirement FNA
@@ -414,20 +390,22 @@ const InvestmentINAInputsBaseSchema = z.object({
     'retirement',
     'other',
   ]),
-  investmentHorizon: PositiveIntSchema
-    .min(1, 'Investment horizon must be at least 1 year')
-    .max(50, 'Investment horizon cannot exceed 50 years'),
-  
+  investmentHorizon: PositiveIntSchema.min(1, 'Investment horizon must be at least 1 year').max(
+    50,
+    'Investment horizon cannot exceed 50 years',
+  ),
+
   // Investment amounts
   lumpSumAmount: DecimalCurrencySchema.default(0),
   monthlyContribution: DecimalCurrencySchema.default(0),
-  
+
   // Risk profile
   riskTolerance: RiskToleranceSchema,
-  expectedReturn: PercentageSchema
-    .min(0, 'Expected return cannot be negative')
-    .max(30, 'Expected return seems unrealistic'),
-  
+  expectedReturn: PercentageSchema.min(0, 'Expected return cannot be negative').max(
+    30,
+    'Expected return seems unrealistic',
+  ),
+
   // Current investments
   currentInvestments: z.array(AssetSchema).default([]),
 });
@@ -440,7 +418,7 @@ export const InvestmentINAInputsSchema = InvestmentINAInputsBaseSchema.refine(
   {
     message: 'Either lump sum or monthly contribution must be greater than 0',
     path: ['lumpSumAmount'],
-  }
+  },
 );
 
 /**
@@ -467,11 +445,11 @@ export const UpdateInvestmentINASchema = BaseFNAUpdateSchema.extend({
 const TaxFNAInputsBaseSchema = z.object({
   // Income
   taxableIncome: DecimalCurrencySchema,
-  
+
   // Deductions
   deductions: z.array(DeductionSchema).default([]),
   taxCredits: z.array(TaxCreditSchema).default([]),
-  
+
   // Contributions
   retirementContributions: DecimalCurrencySchema.default(0),
   medicalAidContributions: DecimalCurrencySchema.default(0),
@@ -489,7 +467,7 @@ export const TaxFNAInputsSchema = TaxFNAInputsBaseSchema.refine(
   {
     message: 'Total deductions cannot exceed taxable income',
     path: ['deductions'],
-  }
+  },
 );
 
 /**
@@ -516,19 +494,19 @@ export const UpdateTaxFNASchema = BaseFNAUpdateSchema.extend({
 const EstateFNAInputsBaseSchema = z.object({
   // Estate value
   estateValue: DecimalCurrencySchema,
-  
+
   // Will & Trust
   hasWill: z.boolean(),
   willLastUpdated: IsoDateSchema.optional(),
   hasTrust: z.boolean(),
   trustType: z.enum(['testamentary', 'inter_vivos', 'special', 'other']).optional(),
-  
+
   // Beneficiaries
   beneficiaries: z.array(BeneficiarySchema).default([]),
-  
+
   // Liabilities
   liabilities: z.array(LiabilitySchema).default([]),
-  
+
   // Estate duty
   estatedutyExemption: DecimalCurrencySchema.default(3500000), // 2026 threshold
   liquidAssets: DecimalCurrencySchema.default(0),
@@ -546,20 +524,16 @@ export const EstateFNAInputsSchema = EstateFNAInputsBaseSchema.refine(
   {
     message: 'Total beneficiary percentages must equal 100%',
     path: ['beneficiaries'],
-  }
-).refine(
-  (data) => !data.hasTrust || data.trustType !== undefined,
-  {
+  },
+)
+  .refine((data) => !data.hasTrust || data.trustType !== undefined, {
     message: 'Trust type is required when hasTrust is true',
     path: ['trustType'],
-  }
-).refine(
-  (data) => data.liquidAssets <= data.estateValue,
-  {
+  })
+  .refine((data) => data.liquidAssets <= data.estateValue, {
     message: 'Liquid assets cannot exceed total estate value',
     path: ['liquidAssets'],
-  }
-);
+  });
 
 /**
  * Create Estate Planning FNA
@@ -601,7 +575,8 @@ export const ClientIdParamSchema = z.object({
  * AI Chat Request
  */
 export const AIChatRequestSchema = z.object({
-  message: z.string()
+  message: z
+    .string()
     .min(1, 'Message cannot be empty')
     .max(2000, 'Message cannot exceed 2000 characters')
     .transform(stripHtml),

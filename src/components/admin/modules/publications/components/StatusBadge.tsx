@@ -1,6 +1,6 @@
 /**
  * Publications Feature - StatusBadge Component
- * 
+ *
  * Displays article status with appropriate styling.
  */
 
@@ -18,9 +18,5 @@ export function StatusBadge({ status, className }: StatusBadgeProps) {
   const label = STATUS_LABELS[status];
   const colorClass = STATUS_COLORS[status];
 
-  return (
-    <Badge className={`${colorClass} ${className || ''}`}>
-      {label}
-    </Badge>
-  );
+  return <Badge className={`${colorClass} ${className || ''}`}>{label}</Badge>;
 }

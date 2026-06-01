@@ -138,12 +138,8 @@ function RetirementCard({ data }: { data: PortfolioFinancialOverview['retirement
       linkTo="/retirement-planning"
     >
       <div>
-        <div className="text-2xl font-semibold text-black">
-          {formatCurrency(data.currentValue)}
-        </div>
-        <p className="text-sm text-gray-600">
-          Projected: {formatCurrency(data.projectedValue)}
-        </p>
+        <div className="text-2xl font-semibold text-black">{formatCurrency(data.currentValue)}</div>
+        <p className="text-sm text-gray-600">Projected: {formatCurrency(data.projectedValue)}</p>
       </div>
       <div>
         <div className="flex justify-between text-sm mb-1">
@@ -169,9 +165,7 @@ function RiskCard({ data }: { data: PortfolioFinancialOverview['risk'] }) {
       linkTo="/risk-management"
     >
       <div>
-        <div className="text-2xl font-semibold text-black">
-          {formatCurrency(data.deathCover)}
-        </div>
+        <div className="text-2xl font-semibold text-black">{formatCurrency(data.deathCover)}</div>
         <p className="text-sm text-gray-600">Death Cover</p>
       </div>
       <div className="grid grid-cols-2 gap-3 text-sm">
@@ -181,7 +175,9 @@ function RiskCard({ data }: { data: PortfolioFinancialOverview['risk'] }) {
         </div>
         <div>
           <span className="text-gray-600 block">Critical Illness</span>
-          <span className="text-black font-medium">{formatCurrency(data.criticalIllnessCover)}</span>
+          <span className="text-black font-medium">
+            {formatCurrency(data.criticalIllnessCover)}
+          </span>
         </div>
       </div>
     </PillarCardShell>
@@ -201,9 +197,7 @@ function InvestmentCard({ data }: { data: PortfolioFinancialOverview['investment
       linkTo="/investment-management"
     >
       <div>
-        <div className="text-2xl font-semibold text-black">
-          {formatCurrency(data.totalValue)}
-        </div>
+        <div className="text-2xl font-semibold text-black">{formatCurrency(data.totalValue)}</div>
         <p className="text-sm text-gray-600">Total Investment Value</p>
       </div>
       <div className="flex justify-between items-center">
@@ -246,7 +240,9 @@ function EstateCard({ data }: { data: PortfolioFinancialOverview['estate'] }) {
               ) : (
                 <AlertTriangle className="h-4 w-4 text-red-600" />
               )}
-              <span className="text-black">{item.label}: {displayText}</span>
+              <span className="text-black">
+                {item.label}: {displayText}
+              </span>
             </div>
           );
         })}
@@ -298,9 +294,7 @@ function TaxCard({ data }: { data: PortfolioFinancialOverview['tax'] }) {
       linkTo="/tax-planning"
     >
       <div>
-        <div className="text-lg font-semibold text-black">
-          {data.taxYear} Tax Return
-        </div>
+        <div className="text-lg font-semibold text-black">{data.taxYear} Tax Return</div>
         <p className="text-sm text-gray-600">Filed: {formatDate(data.filingDate)}</p>
       </div>
       <div className="flex justify-between text-sm">

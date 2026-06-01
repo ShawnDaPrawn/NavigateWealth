@@ -89,7 +89,7 @@ export function ArticlesListView({ onCreateNew, onEditArticle }: ArticlesListVie
 
   // ── Helpers ──────────────────────────────────────────────────────────
   const getCategoryName = useCallback(
-    (id: string) => categories.find(c => c.id === id)?.name || 'Unknown',
+    (id: string) => categories.find((c) => c.id === id)?.name || 'Unknown',
     [categories],
   );
 
@@ -101,7 +101,7 @@ export function ArticlesListView({ onCreateNew, onEditArticle }: ArticlesListVie
     if (searchQuery) {
       const q = searchQuery.toLowerCase();
       list = list.filter(
-        a =>
+        (a) =>
           a.title.toLowerCase().includes(q) ||
           a.excerpt?.toLowerCase().includes(q) ||
           a.subtitle?.toLowerCase().includes(q),
@@ -109,8 +109,8 @@ export function ArticlesListView({ onCreateNew, onEditArticle }: ArticlesListVie
     }
 
     // Filters
-    if (selectedStatus) list = list.filter(a => a.status === selectedStatus);
-    if (selectedCategory) list = list.filter(a => a.category_id === selectedCategory);
+    if (selectedStatus) list = list.filter((a) => a.status === selectedStatus);
+    if (selectedCategory) list = list.filter((a) => a.category_id === selectedCategory);
 
     // Sort
     list = [...list].sort((a, b) => {
@@ -161,12 +161,12 @@ export function ArticlesListView({ onCreateNew, onEditArticle }: ArticlesListVie
     if (allSelected) {
       setSelectedIds(new Set());
     } else {
-      setSelectedIds(new Set(filteredArticles.map(a => a.id)));
+      setSelectedIds(new Set(filteredArticles.map((a) => a.id)));
     }
   }, [allSelected, filteredArticles]);
 
   const toggleSelect = useCallback((id: string) => {
-    setSelectedIds(prev => {
+    setSelectedIds((prev) => {
       const next = new Set(prev);
       if (next.has(id)) next.delete(id);
       else next.add(id);
@@ -201,22 +201,28 @@ export function ArticlesListView({ onCreateNew, onEditArticle }: ArticlesListVie
   }, [selectedIds, handleDelete, confirmDialog]);
 
   // ── Sort toggle ──────────────────────────────────────────────────────
-  const toggleSort = useCallback((field: SortField) => {
-    if (sortField === field) {
-      setSortDir(d => (d === 'asc' ? 'desc' : 'asc'));
-    } else {
-      setSortField(field);
-      setSortDir('desc');
-    }
-  }, [sortField]);
+  const toggleSort = useCallback(
+    (field: SortField) => {
+      if (sortField === field) {
+        setSortDir((d) => (d === 'asc' ? 'desc' : 'asc'));
+      } else {
+        setSortField(field);
+        setSortDir('desc');
+      }
+    },
+    [sortField],
+  );
 
   // ── Stats ────────────────────────────────────────────────────────────
-  const stats = useMemo(() => ({
-    published: articles.filter(a => a.status === 'published').length,
-    draft: articles.filter(a => a.status === 'draft').length,
-    scheduled: articles.filter(a => a.status === 'scheduled').length,
-    featured: articles.filter(a => a.is_featured).length,
-  }), [articles]);
+  const stats = useMemo(
+    () => ({
+      published: articles.filter((a) => a.status === 'published').length,
+      draft: articles.filter((a) => a.status === 'draft').length,
+      scheduled: articles.filter((a) => a.status === 'scheduled').length,
+      featured: articles.filter((a) => a.is_featured).length,
+    }),
+    [articles],
+  );
 
   // ── Loading / error ──────────────────────────────────────────────────
   if (isLoading) return <LoadingState message="Loading articles..." />;
@@ -231,28 +237,24 @@ export function ArticlesListView({ onCreateNew, onEditArticle }: ArticlesListVie
           label="Published"
           count={stats.published}
           active={selectedStatus === 'published'}
-          onClick={() => setSelectedStatus(s => (s === 'published' ? '' : 'published'))}
+          onClick={() => setSelectedStatus((s) => (s === 'published' ? '' : 'published'))}
           color="green"
         />
         <StatPill
           label="Drafts"
           count={stats.draft}
           active={selectedStatus === 'draft'}
-          onClick={() => setSelectedStatus(s => (s === 'draft' ? '' : 'draft'))}
+          onClick={() => setSelectedStatus((s) => (s === 'draft' ? '' : 'draft'))}
           color="gray"
         />
         <StatPill
           label="Scheduled"
           count={stats.scheduled}
           active={selectedStatus === 'scheduled'}
-          onClick={() => setSelectedStatus(s => (s === 'scheduled' ? '' : 'scheduled'))}
+          onClick={() => setSelectedStatus((s) => (s === 'scheduled' ? '' : 'scheduled'))}
           color="blue"
         />
-        <StatPill
-          label="Featured"
-          count={stats.featured}
-          color="amber"
-        />
+        <StatPill label="Featured" count={stats.featured} color="amber" />
       </div>
 
       {/* ── Toolbar ───────────────────────────────────────────────── */}
@@ -265,7 +267,7 @@ export function ArticlesListView({ onCreateNew, onEditArticle }: ArticlesListVie
               <input
                 type="text"
                 value={searchQuery}
-                onChange={e => setSearchQuery(e.target.value)}
+                onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder="Search articles..."
                 className="w-full pl-9 pr-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent bg-white"
               />
@@ -285,8 +287,11 @@ export function ArticlesListView({ onCreateNew, onEditArticle }: ArticlesListVie
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() => setShowFilters(f => !f)}
-                className={cn('gap-1.5', showFilters && 'bg-purple-50 border-purple-200 text-purple-700')}
+                onClick={() => setShowFilters((f) => !f)}
+                className={cn(
+                  'gap-1.5',
+                  showFilters && 'bg-purple-50 border-purple-200 text-purple-700',
+                )}
               >
                 <Filter className="h-3.5 w-3.5" />
                 Filters
@@ -306,9 +311,17 @@ export function ArticlesListView({ onCreateNew, onEditArticle }: ArticlesListVie
               >
                 <ArrowUpDown className="h-3.5 w-3.5" />
                 <span className="hidden md:inline">
-                  {sortField === 'updated_at' ? 'Modified' : sortField === 'title' ? 'Title' : sortField === 'view_count' ? 'Views' : 'Date'}
+                  {sortField === 'updated_at'
+                    ? 'Modified'
+                    : sortField === 'title'
+                      ? 'Title'
+                      : sortField === 'view_count'
+                        ? 'Views'
+                        : 'Date'}
                 </span>
-                <span className="text-[10px] text-muted-foreground">{sortDir === 'asc' ? 'A-Z' : 'Z-A'}</span>
+                <span className="text-[10px] text-muted-foreground">
+                  {sortDir === 'asc' ? 'A-Z' : 'Z-A'}
+                </span>
               </Button>
 
               {/* View toggle */}
@@ -317,7 +330,9 @@ export function ArticlesListView({ onCreateNew, onEditArticle }: ArticlesListVie
                   onClick={() => setViewMode('table')}
                   className={cn(
                     'p-1.5 transition-colors',
-                    viewMode === 'table' ? 'bg-gray-100 text-gray-900' : 'text-gray-400 hover:text-gray-600',
+                    viewMode === 'table'
+                      ? 'bg-gray-100 text-gray-900'
+                      : 'text-gray-400 hover:text-gray-600',
                   )}
                   aria-label="Table view"
                 >
@@ -327,7 +342,9 @@ export function ArticlesListView({ onCreateNew, onEditArticle }: ArticlesListVie
                   onClick={() => setViewMode('cards')}
                   className={cn(
                     'p-1.5 transition-colors',
-                    viewMode === 'cards' ? 'bg-gray-100 text-gray-900' : 'text-gray-400 hover:text-gray-600',
+                    viewMode === 'cards'
+                      ? 'bg-gray-100 text-gray-900'
+                      : 'text-gray-400 hover:text-gray-600',
                   )}
                   aria-label="Card view"
                 >
@@ -335,7 +352,11 @@ export function ArticlesListView({ onCreateNew, onEditArticle }: ArticlesListVie
                 </button>
               </div>
 
-              <Button onClick={onCreateNew} size="sm" className="gap-1.5 bg-purple-600 hover:bg-purple-700">
+              <Button
+                onClick={onCreateNew}
+                size="sm"
+                className="gap-1.5 bg-purple-600 hover:bg-purple-700"
+              >
                 <PlusCircle className="h-3.5 w-3.5" />
                 <span className="hidden sm:inline">New</span>
               </Button>
@@ -365,7 +386,7 @@ export function ArticlesListView({ onCreateNew, onEditArticle }: ArticlesListVie
                   onChange={setSelectedCategory}
                   options={[
                     { value: '', label: 'All Categories' },
-                    ...categories.map(c => ({ value: c.id, label: c.name })),
+                    ...categories.map((c) => ({ value: c.id, label: c.name })),
                   ]}
                 />
               </div>
@@ -373,13 +394,22 @@ export function ArticlesListView({ onCreateNew, onEditArticle }: ArticlesListVie
                 <div className="flex items-center gap-2 mt-2">
                   <span className="text-xs text-muted-foreground">Active:</span>
                   {selectedStatus && (
-                    <FilterPill label={selectedStatus.replace('_', ' ')} onClear={() => setSelectedStatus('')} />
+                    <FilterPill
+                      label={selectedStatus.replace('_', ' ')}
+                      onClear={() => setSelectedStatus('')}
+                    />
                   )}
                   {selectedCategory && (
-                    <FilterPill label={getCategoryName(selectedCategory)} onClear={() => setSelectedCategory('')} />
+                    <FilterPill
+                      label={getCategoryName(selectedCategory)}
+                      onClear={() => setSelectedCategory('')}
+                    />
                   )}
                   <button
-                    onClick={() => { setSelectedStatus(''); setSelectedCategory(''); }}
+                    onClick={() => {
+                      setSelectedStatus('');
+                      setSelectedCategory('');
+                    }}
                     className="text-xs text-purple-600 hover:text-purple-800 ml-1"
                   >
                     Clear all
@@ -392,10 +422,14 @@ export function ArticlesListView({ onCreateNew, onEditArticle }: ArticlesListVie
           {/* ── Bulk action bar ───────────────────────────────────── */}
           {selectedIds.size > 0 && (
             <div className="mt-3 pt-3 border-t border-gray-100 flex items-center gap-3 flex-wrap">
-              <span className="text-sm font-medium text-gray-700">
-                {selectedIds.size} selected
-              </span>
-              <Button variant="outline" size="sm" className="gap-1.5" onClick={handleBulkArchive} disabled={isProcessing}>
+              <span className="text-sm font-medium text-gray-700">{selectedIds.size} selected</span>
+              <Button
+                variant="outline"
+                size="sm"
+                className="gap-1.5"
+                onClick={handleBulkArchive}
+                disabled={isProcessing}
+              >
                 <Archive className="h-3.5 w-3.5" />
                 Archive
               </Button>
@@ -461,19 +495,47 @@ export function ArticlesListView({ onCreateNew, onEditArticle }: ArticlesListVie
                 <tr>
                   <th className="w-10 px-4 py-3">
                     <button onClick={toggleSelectAll} className="text-gray-400 hover:text-gray-600">
-                      {allSelected ? <CheckSquare className="h-4 w-4 text-purple-600" /> : <Square className="h-4 w-4" />}
+                      {allSelected ? (
+                        <CheckSquare className="h-4 w-4 text-purple-600" />
+                      ) : (
+                        <Square className="h-4 w-4" />
+                      )}
                     </button>
                   </th>
-                  <SortableHeader label="Title" field="title" current={sortField} dir={sortDir} onSort={toggleSort} />
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Category</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-                  <SortableHeader label="Modified" field="updated_at" current={sortField} dir={sortDir} onSort={toggleSort} />
-                  <SortableHeader label="Views" field="view_count" current={sortField} dir={sortDir} onSort={toggleSort} />
-                  <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                  <SortableHeader
+                    label="Title"
+                    field="title"
+                    current={sortField}
+                    dir={sortDir}
+                    onSort={toggleSort}
+                  />
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Category
+                  </th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Status
+                  </th>
+                  <SortableHeader
+                    label="Modified"
+                    field="updated_at"
+                    current={sortField}
+                    dir={sortDir}
+                    onSort={toggleSort}
+                  />
+                  <SortableHeader
+                    label="Views"
+                    field="view_count"
+                    current={sortField}
+                    dir={sortDir}
+                    onSort={toggleSort}
+                  />
+                  <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Actions
+                  </th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
-                {filteredArticles.map(article => (
+                {filteredArticles.map((article) => (
                   <tr
                     key={article.id}
                     className={cn(
@@ -482,8 +544,11 @@ export function ArticlesListView({ onCreateNew, onEditArticle }: ArticlesListVie
                     )}
                     onClick={() => onEditArticle(article)}
                   >
-                    <td className="px-4 py-3" onClick={e => e.stopPropagation()}>
-                      <button onClick={() => toggleSelect(article.id)} className="text-gray-400 hover:text-gray-600">
+                    <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
+                      <button
+                        onClick={() => toggleSelect(article.id)}
+                        className="text-gray-400 hover:text-gray-600"
+                      >
                         {selectedIds.has(article.id) ? (
                           <CheckSquare className="h-4 w-4 text-purple-600" />
                         ) : (
@@ -493,23 +558,33 @@ export function ArticlesListView({ onCreateNew, onEditArticle }: ArticlesListVie
                     </td>
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-2 min-w-0">
-                        {article.is_featured && <Star className="h-3.5 w-3.5 text-yellow-500 fill-yellow-500 shrink-0" />}
+                        {article.is_featured && (
+                          <Star className="h-3.5 w-3.5 text-yellow-500 fill-yellow-500 shrink-0" />
+                        )}
                         <div className="min-w-0">
-                          <p className="font-medium text-gray-900 truncate max-w-[300px]">{article.title}</p>
+                          <p className="font-medium text-gray-900 truncate max-w-[300px]">
+                            {article.title}
+                          </p>
                           {article.subtitle && (
-                            <p className="text-xs text-muted-foreground truncate max-w-[300px]">{article.subtitle}</p>
+                            <p className="text-xs text-muted-foreground truncate max-w-[300px]">
+                              {article.subtitle}
+                            </p>
                           )}
                         </div>
                       </div>
                     </td>
                     <td className="px-4 py-3">
-                      <span className="text-sm text-gray-600">{getCategoryName(article.category_id)}</span>
+                      <span className="text-sm text-gray-600">
+                        {getCategoryName(article.category_id)}
+                      </span>
                     </td>
                     <td className="px-4 py-3">
                       <StatusBadge status={article.status} />
                     </td>
                     <td className="px-4 py-3">
-                      <span className="text-sm text-gray-500">{getRelativeTime(article.updated_at)}</span>
+                      <span className="text-sm text-gray-500">
+                        {getRelativeTime(article.updated_at)}
+                      </span>
                     </td>
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-1 text-sm text-gray-500">
@@ -517,17 +592,30 @@ export function ArticlesListView({ onCreateNew, onEditArticle }: ArticlesListVie
                         {(article.view_count || 0).toLocaleString()}
                       </div>
                     </td>
-                    <td className="px-4 py-3" onClick={e => e.stopPropagation()}>
+                    <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
                       <div className="flex items-center justify-end gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
-                        <ActionButton icon={Edit} label="Edit" onClick={() => onEditArticle(article)} />
-                        <ActionButton icon={Copy} label="Duplicate" onClick={() => handleDuplicate(article.id)} disabled={isProcessing} />
-                        <ActionButton icon={Archive} label="Archive" onClick={() => {
-                          confirmDialog.open({
-                            title: 'Archive Article',
-                            description: `Archive "${article.title}"?`,
-                            onConfirm: () => handleArchive(article.id),
-                          });
-                        }} />
+                        <ActionButton
+                          icon={Edit}
+                          label="Edit"
+                          onClick={() => onEditArticle(article)}
+                        />
+                        <ActionButton
+                          icon={Copy}
+                          label="Duplicate"
+                          onClick={() => handleDuplicate(article.id)}
+                          disabled={isProcessing}
+                        />
+                        <ActionButton
+                          icon={Archive}
+                          label="Archive"
+                          onClick={() => {
+                            confirmDialog.open({
+                              title: 'Archive Article',
+                              description: `Archive "${article.title}"?`,
+                              onConfirm: () => handleArchive(article.id),
+                            });
+                          }}
+                        />
                         <ActionButton
                           icon={Trash2}
                           label="Delete"
@@ -554,7 +642,7 @@ export function ArticlesListView({ onCreateNew, onEditArticle }: ArticlesListVie
       {/* ── Card view ─────────────────────────────────────────────── */}
       {filteredArticles.length > 0 && viewMode === 'cards' && (
         <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
-          {filteredArticles.map(article => (
+          {filteredArticles.map((article) => (
             <ArticleCardItem
               key={article.id}
               article={article}
@@ -637,11 +725,13 @@ function FilterSelect({
       <label className="block text-xs font-medium text-gray-500 mb-1">{label}</label>
       <select
         value={value}
-        onChange={e => onChange(e.target.value)}
+        onChange={(e) => onChange(e.target.value)}
         className="w-full px-3 py-1.5 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 bg-white"
       >
-        {options.map(o => (
-          <option key={o.value} value={o.value}>{o.label}</option>
+        {options.map((o) => (
+          <option key={o.value} value={o.value}>
+            {o.label}
+          </option>
         ))}
       </select>
     </div>
@@ -739,10 +829,17 @@ function ArticleCardItem({
     >
       {/* Selection checkbox */}
       <button
-        onClick={e => { e.stopPropagation(); onToggleSelect(); }}
+        onClick={(e) => {
+          e.stopPropagation();
+          onToggleSelect();
+        }}
         className="absolute top-3 left-3 z-10 text-gray-300 hover:text-gray-600"
       >
-        {selected ? <CheckSquare className="h-4 w-4 text-purple-600" /> : <Square className="h-4 w-4" />}
+        {selected ? (
+          <CheckSquare className="h-4 w-4 text-purple-600" />
+        ) : (
+          <Square className="h-4 w-4" />
+        )}
       </button>
 
       <CardContent className="pt-5 pb-4 px-4">
@@ -761,9 +858,7 @@ function ArticleCardItem({
         </h3>
 
         {article.excerpt && (
-          <p className="text-xs text-muted-foreground line-clamp-2 mb-3">
-            {article.excerpt}
-          </p>
+          <p className="text-xs text-muted-foreground line-clamp-2 mb-3">{article.excerpt}</p>
         )}
 
         <div className="flex items-center justify-between text-xs text-muted-foreground pt-2 border-t border-gray-100">
@@ -772,9 +867,7 @@ function ArticleCardItem({
             {getRelativeTime(article.updated_at)}
           </span>
           <div className="flex items-center gap-3">
-            {categoryName && (
-              <span className="text-purple-600 font-medium">{categoryName}</span>
-            )}
+            {categoryName && <span className="text-purple-600 font-medium">{categoryName}</span>}
             <span className="flex items-center gap-1">
               <Eye className="h-3 w-3" />
               {(article.view_count || 0).toLocaleString()}

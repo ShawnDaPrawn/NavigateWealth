@@ -1,9 +1,9 @@
 /**
  * usePermissions Hook
  * Navigate Wealth Admin Dashboard
- * 
+ *
  * React Query hooks for personnel module-level permissions.
- * 
+ *
  * Provides:
  *  - usePermissions(personnelId)    — admin use: fetch/manage a user's permissions
  *  - useUpdatePermissions()         — admin use: mutation to save permission changes
@@ -89,7 +89,9 @@ export function useUpdatePermissions() {
       // Invalidate the bulk permissions query (personnel table summary)
       queryClient.invalidateQueries({ queryKey: [...permissionKeys.all, 'all'] });
       // Invalidate audit trail for this personnel member
-      queryClient.invalidateQueries({ queryKey: [...permissionKeys.all, 'audit', variables.personnelId] });
+      queryClient.invalidateQueries({
+        queryKey: [...permissionKeys.all, 'audit', variables.personnelId],
+      });
       toast.success('Module permissions updated successfully');
     },
     onError: (error: Error) => {
@@ -112,7 +114,7 @@ interface ResolvedPermissions {
 
   /**
    * Check if the current user has a specific capability within a module.
-   * 
+   *
    * Behaviour:
    *  - Super admin: always true
    *  - Module not accessible: always false
@@ -136,20 +138,20 @@ interface ResolvedPermissions {
 
 /**
  * Hook for the current authenticated user's module permissions.
- * 
+ *
  * Super admin (shawn@navigatewealth.co) always returns true for all modules
  * and all capabilities.
- * 
+ *
  * Other users are checked against their stored permission set.
  * Dashboard is always accessible.
- * 
+ *
  * @example
  * ```tsx
  * const { can, canDo, isSuperAdmin, isLoading } = useCurrentUserPermissions();
- * 
+ *
  * // Module-level check (sidebar)
  * if (can('publications')) { ... }
- * 
+ *
  * // Capability-level check (within a module)
  * if (canDo('publications', 'publish')) { ... }
  * if (canDo('personnel', 'manage_permissions')) { ... }
@@ -206,10 +208,25 @@ export function useCurrentUserPermissions(): ResolvedPermissions {
 
   // Build accessible modules list
   const allModules: AdminModule[] = [
-    'dashboard', 'clients', 'esign', 'personnel', 'advice-engine',
-    'product-management', 'resources', 'publications', 'compliance',
-    'tasks', 'notes', 'applications', 'submissions', 'communication',
-    'marketing', 'reporting', 'calendar', 'issues', 'ai-management',
+    'dashboard',
+    'clients',
+    'esign',
+    'personnel',
+    'advice-engine',
+    'product-management',
+    'resources',
+    'publications',
+    'compliance',
+    'tasks',
+    'notes',
+    'applications',
+    'submissions',
+    'communication',
+    'marketing',
+    'reporting',
+    'calendar',
+    'issues',
+    'ai-management',
   ];
 
   const accessibleModules = allModules.filter(can);

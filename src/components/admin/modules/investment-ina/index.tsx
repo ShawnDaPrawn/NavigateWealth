@@ -1,6 +1,6 @@
 /**
  * Investment INA Module
- * 
+ *
  * Central export point for all Investment Needs Analysis functionality.
  * Goal-based investment planning for Navigate Wealth Admin Portal.
  */

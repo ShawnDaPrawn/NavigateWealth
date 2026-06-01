@@ -98,12 +98,21 @@ export function FinancialIntelligencePanel({
         const result = await clientApi.fetchClientProfile(clientId);
         if (result.success && result.data?.bankAccounts?.length > 0) {
           setBankAccounts(
-            result.data.bankAccounts.map((ba: { bankName?: string; customBankName?: string; accountNumber?: string; branchCode?: string; customBranchCode?: string; accountType?: string }) => ({
-              bankName: ba.bankName || ba.customBankName || '',
-              accountNumber: ba.accountNumber || '',
-              branchCode: ba.branchCode || ba.customBranchCode || '',
-              accountType: ba.accountType || 'savings',
-            }))
+            result.data.bankAccounts.map(
+              (ba: {
+                bankName?: string;
+                customBankName?: string;
+                accountNumber?: string;
+                branchCode?: string;
+                customBranchCode?: string;
+                accountType?: string;
+              }) => ({
+                bankName: ba.bankName || ba.customBankName || '',
+                accountNumber: ba.accountNumber || '',
+                branchCode: ba.branchCode || ba.customBranchCode || '',
+                accountType: ba.accountType || 'savings',
+              }),
+            ),
           );
         }
       } catch (err) {
@@ -159,7 +168,10 @@ export function FinancialIntelligencePanel({
       toast.success('Bank account verification completed', { id: toastId });
       onCheckComplete?.();
     } catch (err: unknown) {
-      setBankResult({ success: false, error: err instanceof Error ? err.message : 'Network error' });
+      setBankResult({
+        success: false,
+        error: err instanceof Error ? err.message : 'Network error',
+      });
       toast.error(err instanceof Error ? err.message : 'Network error', { id: toastId });
     } finally {
       setIsBankVerifying(false);
@@ -207,7 +219,10 @@ export function FinancialIntelligencePanel({
       toast.success('Consumer credit check completed', { id: toastId });
       onCheckComplete?.();
     } catch (err: unknown) {
-      setCreditResult({ success: false, error: err instanceof Error ? err.message : 'Network error' });
+      setCreditResult({
+        success: false,
+        error: err instanceof Error ? err.message : 'Network error',
+      });
       toast.error(err instanceof Error ? err.message : 'Network error', { id: toastId });
     } finally {
       setIsCreditRunning(false);
@@ -226,8 +241,8 @@ export function FinancialIntelligencePanel({
             Bank Account Verification
           </CardTitle>
           <CardDescription>
-            Real-time bank account verification via the credit bureau. Confirms the account
-            exists, is open, and the holder name matches.
+            Real-time bank account verification via the credit bureau. Confirms the account exists,
+            is open, and the holder name matches.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-3">
@@ -249,7 +264,10 @@ export function FinancialIntelligencePanel({
                       type="radio"
                       name="bankAccount"
                       checked={!useCustomBank && selectedBankIdx === idx}
-                      onChange={() => { setSelectedBankIdx(idx); setUseCustomBank(false); }}
+                      onChange={() => {
+                        setSelectedBankIdx(idx);
+                        setUseCustomBank(false);
+                      }}
                       className="rounded-full border-gray-300"
                     />
                     <div>
@@ -339,7 +357,11 @@ export function FinancialIntelligencePanel({
             className="w-full"
             variant="secondary"
             onClick={handleBankVerify}
-            disabled={isBankVerifying || !hasIdentification || (!activeBankAccount?.accountNumber && !useCustomBank)}
+            disabled={
+              isBankVerifying ||
+              !hasIdentification ||
+              (!activeBankAccount?.accountNumber && !useCustomBank)
+            }
           >
             {isBankVerifying && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
             <ShieldCheck className="mr-2 h-4 w-4" />
@@ -365,8 +387,8 @@ export function FinancialIntelligencePanel({
             Consumer Credit Check
           </CardTitle>
           <CardDescription>
-            Performs a consumer credit check via the XDS credit bureau. Returns credit score,
-            active accounts, judgments, and defaults. Requires explicit client consent.
+            Performs a consumer credit check via the XDS credit bureau. Returns credit score, active
+            accounts, judgments, and defaults. Requires explicit client consent.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-3">
@@ -382,9 +404,9 @@ export function FinancialIntelligencePanel({
               <div>
                 <p className="text-sm font-medium text-amber-800">Client Consent Required</p>
                 <p className="text-xs text-amber-700 mt-0.5">
-                  I confirm that the client ({firstName} {lastName}) has provided explicit
-                  consent for a credit bureau enquiry to be performed on their behalf.
-                  This enquiry will appear on their credit report.
+                  I confirm that the client ({firstName} {lastName}) has provided explicit consent
+                  for a credit bureau enquiry to be performed on their behalf. This enquiry will
+                  appear on their credit report.
                 </p>
               </div>
             </label>
@@ -501,11 +523,11 @@ function ResultDisplay({
   onToggleDetails: () => void;
 }) {
   return (
-    <div className={`rounded-lg p-3 text-sm ${
-      result.success
-        ? 'bg-green-50 border border-green-200'
-        : 'bg-red-50 border border-red-200'
-    }`}>
+    <div
+      className={`rounded-lg p-3 text-sm ${
+        result.success ? 'bg-green-50 border border-green-200' : 'bg-red-50 border border-red-200'
+      }`}
+    >
       <div className="flex items-center gap-2 font-medium">
         {result.success ? (
           <CheckCircle className="h-4 w-4 text-green-600" />
@@ -517,9 +539,7 @@ function ResultDisplay({
         </span>
       </div>
 
-      {result.error && (
-        <p className="mt-1 text-red-700 text-xs">{result.error}</p>
-      )}
+      {result.error && <p className="mt-1 text-red-700 text-xs">{result.error}</p>}
 
       {result.success && (
         <div className="mt-2 space-y-1">

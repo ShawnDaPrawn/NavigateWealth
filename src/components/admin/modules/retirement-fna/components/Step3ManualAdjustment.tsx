@@ -1,6 +1,6 @@
 /**
  * Step 3: Adviser Manual Adjustment
- * 
+ *
  * Behaviour Rules:
  * - Adviser may override economic assumptions
  * - Override reason/justification is recommended
@@ -15,9 +15,18 @@ import { Input } from '../../../../ui/input';
 import { Label } from '../../../../ui/label';
 import { Textarea } from '../../../../ui/textarea';
 import { Alert, AlertDescription } from '../../../../ui/alert';
-import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '../../../../ui/accordion';
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from '../../../../ui/accordion';
 import { Settings, ArrowRight, ArrowLeft, Info, AlertTriangle } from 'lucide-react';
-import { RetirementFNAInputs, RetirementFNAAdjustments, RetirementCalculationResults } from '../types';
+import {
+  RetirementFNAInputs,
+  RetirementFNAAdjustments,
+  RetirementCalculationResults,
+} from '../types';
 
 interface Step3ManualAdjustmentProps {
   inputs: Partial<RetirementFNAInputs>;
@@ -27,12 +36,12 @@ interface Step3ManualAdjustmentProps {
   onBack: () => void;
 }
 
-export function Step3ManualAdjustment({ 
+export function Step3ManualAdjustment({
   inputs,
-  calculations, 
-  initialAdjustments, 
-  onNext, 
-  onBack 
+  calculations,
+  initialAdjustments,
+  onNext,
+  onBack,
 }: Step3ManualAdjustmentProps) {
   const [adjustments, setAdjustments] = useState<RetirementFNAAdjustments>(initialAdjustments);
   const [hasChanges, setHasChanges] = useState(false);
@@ -40,7 +49,7 @@ export function Step3ManualAdjustment({
   // Standard assumptions
   const STANDARD_ASSUMPTIONS = {
     inflationRate: 0.06,
-    preRetirementReturn: 0.10,
+    preRetirementReturn: 0.1,
     postRetirementReturn: 0.08,
     replacementRatio: 0.75,
     yearsInRetirement: 25,
@@ -51,7 +60,7 @@ export function Step3ManualAdjustment({
   const handlePercentChange = (field: keyof RetirementFNAAdjustments, value: string) => {
     const num = parseFloat(value);
     if (!isNaN(num) && num >= 0 && num <= 100) {
-      setAdjustments(prev => ({ ...prev, [field]: num / 100 }));
+      setAdjustments((prev) => ({ ...prev, [field]: num / 100 }));
       setHasChanges(true);
     }
   };
@@ -59,7 +68,7 @@ export function Step3ManualAdjustment({
   const handleNumberChange = (field: keyof RetirementFNAAdjustments, value: string) => {
     const num = parseInt(value);
     if (!isNaN(num) && num > 0) {
-      setAdjustments(prev => ({ ...prev, [field]: num }));
+      setAdjustments((prev) => ({ ...prev, [field]: num }));
       setHasChanges(true);
     }
   };
@@ -70,7 +79,7 @@ export function Step3ManualAdjustment({
   };
 
   const handleNotesChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-    setAdjustments(prev => ({ ...prev, adviserNotes: e.target.value }));
+    setAdjustments((prev) => ({ ...prev, adviserNotes: e.target.value }));
     if (e.target.value.trim()) setHasChanges(true);
   };
 
@@ -85,8 +94,8 @@ export function Step3ManualAdjustment({
       <Alert>
         <Info className="h-4 w-4" />
         <AlertDescription className="text-sm">
-          You may adjust economic assumptions if standard rates don't apply to this client's situation. 
-          All adjustments should be documented with justification.
+          You may adjust economic assumptions if standard rates don't apply to this client's
+          situation. All adjustments should be documented with justification.
         </AlertDescription>
       </Alert>
 
@@ -138,7 +147,10 @@ export function Step3ManualAdjustment({
                   step="0.1"
                   min="0"
                   max="30"
-                  value={getPercent('preRetirementReturn', STANDARD_ASSUMPTIONS.preRetirementReturn)}
+                  value={getPercent(
+                    'preRetirementReturn',
+                    STANDARD_ASSUMPTIONS.preRetirementReturn,
+                  )}
                   onChange={(e) => handlePercentChange('preRetirementReturn', e.target.value)}
                   className="pr-8"
                 />
@@ -162,7 +174,10 @@ export function Step3ManualAdjustment({
                   step="0.1"
                   min="0"
                   max="30"
-                  value={getPercent('postRetirementReturn', STANDARD_ASSUMPTIONS.postRetirementReturn)}
+                  value={getPercent(
+                    'postRetirementReturn',
+                    STANDARD_ASSUMPTIONS.postRetirementReturn,
+                  )}
                   onChange={(e) => handlePercentChange('postRetirementReturn', e.target.value)}
                   className="pr-8"
                 />
@@ -259,7 +274,9 @@ export function Step3ManualAdjustment({
                       type="number"
                       min="10"
                       max="50"
-                      value={adjustments.yearsInRetirement || STANDARD_ASSUMPTIONS.yearsInRetirement}
+                      value={
+                        adjustments.yearsInRetirement || STANDARD_ASSUMPTIONS.yearsInRetirement
+                      }
                       onChange={(e) => handleNumberChange('yearsInRetirement', e.target.value)}
                     />
                     <p className="text-xs text-muted-foreground">
@@ -272,15 +289,15 @@ export function Step3ManualAdjustment({
           </Accordion>
 
           {/* Warnings for significant deviations */}
-          {(isDifferent('inflationRate') || 
-            isDifferent('preRetirementReturn') || 
+          {(isDifferent('inflationRate') ||
+            isDifferent('preRetirementReturn') ||
             isDifferent('postRetirementReturn') ||
             isDifferent('premiumEscalation')) && (
             <Alert variant="destructive">
               <AlertTriangle className="h-4 w-4" />
               <AlertDescription className="text-sm">
-                One or more assumptions differ significantly from standard rates. 
-                Please ensure this is justified and documented in the notes below.
+                One or more assumptions differ significantly from standard rates. Please ensure this
+                is justified and documented in the notes below.
               </AlertDescription>
             </Alert>
           )}
@@ -288,7 +305,8 @@ export function Step3ManualAdjustment({
           {/* Justification Notes */}
           <div className="space-y-2">
             <Label htmlFor="adviserNotes" className="font-medium">
-              Adviser Notes / Justification {hasChanges && <span className="text-destructive">*</span>}
+              Adviser Notes / Justification{' '}
+              {hasChanges && <span className="text-destructive">*</span>}
             </Label>
             <Textarea
               id="adviserNotes"
@@ -298,9 +316,9 @@ export function Step3ManualAdjustment({
               onChange={handleNotesChange}
             />
             <p className="text-xs text-muted-foreground">
-              {hasChanges 
-                ? "Recommended: Explain why non-standard assumptions were applied" 
-                : "Leave blank if using standard assumptions"}
+              {hasChanges
+                ? 'Recommended: Explain why non-standard assumptions were applied'
+                : 'Leave blank if using standard assumptions'}
             </p>
           </div>
         </CardContent>
@@ -310,8 +328,8 @@ export function Step3ManualAdjustment({
       <Alert className="border-blue-200 bg-blue-50">
         <Info className="h-4 w-4 text-blue-600" />
         <AlertDescription className="text-sm text-blue-900">
-          <strong>Next Step:</strong> Review the recalculated results with your adjustments and finalize the analysis 
-          for publication.
+          <strong>Next Step:</strong> Review the recalculated results with your adjustments and
+          finalize the analysis for publication.
         </AlertDescription>
       </Alert>
 
@@ -321,9 +339,9 @@ export function Step3ManualAdjustment({
           <ArrowLeft className="mr-2 h-4 w-4" />
           Back to Step 2
         </Button>
-        <Button 
-          type="button" 
-          onClick={() => onNext(adjustments)} 
+        <Button
+          type="button"
+          onClick={() => onNext(adjustments)}
           size="lg"
           className="bg-primary hover:bg-primary/90"
         >

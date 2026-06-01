@@ -89,7 +89,9 @@ export function ExtractionHistoryPanel({
     setIsLoading(true);
     try {
       const supabase = createClient();
-      const { data: { session } } = await supabase.auth.getSession();
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
       const token = session?.access_token || publicAnonKey;
 
       const res = await fetch(
@@ -116,7 +118,7 @@ export function ExtractionHistoryPanel({
   };
 
   const toggleCompareSelection = (entryId: string) => {
-    setSelectedForCompare(prev => {
+    setSelectedForCompare((prev) => {
       const next = new Set(prev);
       if (next.has(entryId)) {
         next.delete(entryId);
@@ -148,8 +150,8 @@ export function ExtractionHistoryPanel({
 
   // Sparkline data: only completed entries, chronological order
   const sparklineData = history
-    .filter(e => e.status === 'completed')
-    .map(e => ({
+    .filter((e) => e.status === 'completed')
+    .map((e) => ({
       confidence: e.confidence,
       date: new Date(e.extractedAt).toLocaleDateString('en-ZA', {
         day: '2-digit',
@@ -165,16 +167,24 @@ export function ExtractionHistoryPanel({
 
   // Comparison entries
   const compareIds = Array.from(selectedForCompare);
-  const leftEntry = compareIds.length >= 1 ? history.find(e => e.id === compareIds[0]) || null : null;
-  const rightEntry = compareIds.length >= 2 ? history.find(e => e.id === compareIds[1]) || null : null;
+  const leftEntry =
+    compareIds.length >= 1 ? history.find((e) => e.id === compareIds[0]) || null : null;
+  const rightEntry =
+    compareIds.length >= 2 ? history.find((e) => e.id === compareIds[1]) || null : null;
 
   // Sort comparison so older is left, newer is right
-  const sortedLeft = leftEntry && rightEntry
-    ? (new Date(leftEntry.extractedAt) <= new Date(rightEntry.extractedAt) ? leftEntry : rightEntry)
-    : leftEntry;
-  const sortedRight = leftEntry && rightEntry
-    ? (new Date(leftEntry.extractedAt) > new Date(rightEntry.extractedAt) ? leftEntry : rightEntry)
-    : rightEntry;
+  const sortedLeft =
+    leftEntry && rightEntry
+      ? new Date(leftEntry.extractedAt) <= new Date(rightEntry.extractedAt)
+        ? leftEntry
+        : rightEntry
+      : leftEntry;
+  const sortedRight =
+    leftEntry && rightEntry
+      ? new Date(leftEntry.extractedAt) > new Date(rightEntry.extractedAt)
+        ? leftEntry
+        : rightEntry
+      : rightEntry;
 
   return (
     <div className="mt-2">
@@ -185,7 +195,9 @@ export function ExtractionHistoryPanel({
         className="text-gray-500 hover:text-gray-700 text-xs h-6 px-2"
       >
         <History className="h-3 w-3 mr-1" />
-        {totalEntries > 0 ? `${totalEntries} previous extraction${totalEntries > 1 ? 's' : ''}` : 'Extraction history'}
+        {totalEntries > 0
+          ? `${totalEntries} previous extraction${totalEntries > 1 ? 's' : ''}`
+          : 'Extraction history'}
         {isOpen ? <ChevronUp className="h-3 w-3 ml-1" /> : <ChevronDown className="h-3 w-3 ml-1" />}
       </Button>
 
@@ -194,7 +206,9 @@ export function ExtractionHistoryPanel({
           {/* Header row with title + sparkline */}
           <div className="bg-gray-50 px-3 py-1.5 border-b border-gray-200 flex items-center justify-between gap-2">
             <div className="flex items-center gap-2">
-              <span className="text-[11px] font-semibold text-gray-500 uppercase">Extraction History</span>
+              <span className="text-[11px] font-semibold text-gray-500 uppercase">
+                Extraction History
+              </span>
               {isLoading && <Loader2 className="h-3 w-3 animate-spin text-gray-400" />}
             </div>
 
@@ -204,22 +218,27 @@ export function ExtractionHistoryPanel({
                 <span className="text-[9px] text-gray-400">Confidence trend</span>
                 <div className="w-[80px] h-[24px]">
                   <SVGAreaSparkline
-                    data={sparklineData.map(d => ({ value: d.confidence, label: d.date }))}
+                    data={sparklineData.map((d) => ({ value: d.confidence, label: d.date }))}
                     width={80}
                     height={24}
                     color={trendPositive ? '#22c55e' : '#ef4444'}
                     gradientId={gradientId}
                   />
                 </div>
-                <Badge className={`text-[8px] px-1 py-0 ${
-                  trendPositive
-                    ? 'bg-green-100 text-green-700 hover:bg-green-100'
-                    : 'bg-red-100 text-red-700 hover:bg-red-100'
-                }`}>
+                <Badge
+                  className={`text-[8px] px-1 py-0 ${
+                    trendPositive
+                      ? 'bg-green-100 text-green-700 hover:bg-green-100'
+                      : 'bg-red-100 text-red-700 hover:bg-red-100'
+                  }`}
+                >
                   {trendPositive ? '+' : ''}
                   {Math.round(
-                    (sparklineData[sparklineData.length - 1].confidence - sparklineData[0].confidence) * 100
-                  )}%
+                    (sparklineData[sparklineData.length - 1].confidence -
+                      sparklineData[0].confidence) *
+                      100,
+                  )}
+                  %
                 </Badge>
               </div>
             )}

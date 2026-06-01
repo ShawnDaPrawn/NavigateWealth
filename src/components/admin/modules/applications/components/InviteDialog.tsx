@@ -55,10 +55,13 @@ export function InviteDialog({ open, onOpenChange, onInviteSent }: InviteDialogP
     setErrors({});
   }, []);
 
-  const handleClose = useCallback((open: boolean) => {
-    if (!open) resetForm();
-    onOpenChange(open);
-  }, [onOpenChange, resetForm]);
+  const handleClose = useCallback(
+    (open: boolean) => {
+      if (!open) resetForm();
+      onOpenChange(open);
+    },
+    [onOpenChange, resetForm],
+  );
 
   const validate = useCallback((): boolean => {
     const newErrors: FormErrors = {};
@@ -92,10 +95,9 @@ export function InviteDialog({ open, onOpenChange, onInviteSent }: InviteDialogP
       });
 
       if (result.success) {
-        toast.success(
-          `Invitation sent to ${form.firstName} ${form.lastName}`,
-          { description: `Application ${result.applicationNumber} created` }
-        );
+        toast.success(`Invitation sent to ${form.firstName} ${form.lastName}`, {
+          description: `Application ${result.applicationNumber} created`,
+        });
         resetForm();
         onOpenChange(false);
         onInviteSent();
@@ -104,19 +106,24 @@ export function InviteDialog({ open, onOpenChange, onInviteSent }: InviteDialogP
       }
     } catch (error: unknown) {
       console.error('Invite error:', error);
-      toast.error(error instanceof Error ? error.message : 'Failed to send invitation. Please try again.');
+      toast.error(
+        error instanceof Error ? error.message : 'Failed to send invitation. Please try again.',
+      );
     } finally {
       setSending(false);
     }
   }, [form, validate, resetForm, onOpenChange, onInviteSent]);
 
-  const updateField = useCallback((field: keyof InviteFormData, value: string) => {
-    setForm(prev => ({ ...prev, [field]: value }));
-    // Clear field error on change
-    if (errors[field as keyof FormErrors]) {
-      setErrors(prev => ({ ...prev, [field]: undefined }));
-    }
-  }, [errors]);
+  const updateField = useCallback(
+    (field: keyof InviteFormData, value: string) => {
+      setForm((prev) => ({ ...prev, [field]: value }));
+      // Clear field error on change
+      if (errors[field as keyof FormErrors]) {
+        setErrors((prev) => ({ ...prev, [field]: undefined }));
+      }
+    },
+    [errors],
+  );
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
@@ -137,7 +144,10 @@ export function InviteDialog({ open, onOpenChange, onInviteSent }: InviteDialogP
         <div className="space-y-4 py-2">
           {/* First Name */}
           <div className="space-y-1.5">
-            <Label htmlFor="invite-first-name" className="text-sm font-medium flex items-center gap-1.5">
+            <Label
+              htmlFor="invite-first-name"
+              className="text-sm font-medium flex items-center gap-1.5"
+            >
               <User className="h-3.5 w-3.5 text-gray-400" />
               First Name <span className="text-red-500">*</span>
             </Label>
@@ -149,14 +159,15 @@ export function InviteDialog({ open, onOpenChange, onInviteSent }: InviteDialogP
               className={errors.firstName ? 'border-red-300 focus:border-red-500' : ''}
               autoFocus
             />
-            {errors.firstName && (
-              <p className="text-xs text-red-600">{errors.firstName}</p>
-            )}
+            {errors.firstName && <p className="text-xs text-red-600">{errors.firstName}</p>}
           </div>
 
           {/* Last Name */}
           <div className="space-y-1.5">
-            <Label htmlFor="invite-last-name" className="text-sm font-medium flex items-center gap-1.5">
+            <Label
+              htmlFor="invite-last-name"
+              className="text-sm font-medium flex items-center gap-1.5"
+            >
               <User className="h-3.5 w-3.5 text-gray-400" />
               Last Name <span className="text-red-500">*</span>
             </Label>
@@ -167,9 +178,7 @@ export function InviteDialog({ open, onOpenChange, onInviteSent }: InviteDialogP
               onChange={(e) => updateField('lastName', e.target.value)}
               className={errors.lastName ? 'border-red-300 focus:border-red-500' : ''}
             />
-            {errors.lastName && (
-              <p className="text-xs text-red-600">{errors.lastName}</p>
-            )}
+            {errors.lastName && <p className="text-xs text-red-600">{errors.lastName}</p>}
           </div>
 
           {/* Email */}
@@ -186,9 +195,7 @@ export function InviteDialog({ open, onOpenChange, onInviteSent }: InviteDialogP
               onChange={(e) => updateField('email', e.target.value)}
               className={errors.email ? 'border-red-300 focus:border-red-500' : ''}
             />
-            {errors.email && (
-              <p className="text-xs text-red-600">{errors.email}</p>
-            )}
+            {errors.email && <p className="text-xs text-red-600">{errors.email}</p>}
           </div>
 
           {/* Cellphone (optional) */}
@@ -209,31 +216,19 @@ export function InviteDialog({ open, onOpenChange, onInviteSent }: InviteDialogP
           {/* Info note */}
           <div className="rounded-lg bg-gray-50 border border-gray-200 p-3">
             <p className="text-xs text-gray-600 leading-relaxed">
-              An invitation email will be sent with a secure link to create their account.
-              The application will appear in the <strong>Invited</strong> tab until the client
-              completes their application or you approve it directly.
+              An invitation email will be sent with a secure link to create their account. The
+              application will appear in the <strong>Invited</strong> tab until the client completes
+              their application or you approve it directly.
             </p>
           </div>
         </div>
 
         <DialogFooter className="gap-2 sm:gap-0">
-          <Button
-            variant="outline"
-            onClick={() => handleClose(false)}
-            disabled={sending}
-          >
+          <Button variant="outline" onClick={() => handleClose(false)} disabled={sending}>
             Cancel
           </Button>
-          <Button
-            onClick={handleSubmit}
-            disabled={sending}
-            className="gap-2"
-          >
-            {sending ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
-            ) : (
-              <Send className="h-4 w-4" />
-            )}
+          <Button onClick={handleSubmit} disabled={sending} className="gap-2">
+            {sending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
             {sending ? 'Sending...' : 'Send Invitation'}
           </Button>
         </DialogFooter>

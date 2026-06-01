@@ -14,19 +14,17 @@ import {
   SECTION_CONTAINER_SPACED_CLASS,
 } from '../form-styles';
 import { Briefcase, DollarSign, Info, Building2 } from 'lucide-react';
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from '../../../ui/tooltip';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '../../../ui/tooltip';
 
 function FieldHint({ text }: { text: string }) {
   return (
     <TooltipProvider delayDuration={200}>
       <Tooltip>
         <TooltipTrigger asChild>
-          <button type="button" className="inline-flex ml-1 text-gray-400 hover:text-gray-600 transition-colors">
+          <button
+            type="button"
+            className="inline-flex ml-1 text-gray-400 hover:text-gray-600 transition-colors"
+          >
             <Info className="h-3.5 w-3.5" />
           </button>
         </TooltipTrigger>
@@ -38,7 +36,15 @@ function FieldHint({ text }: { text: string }) {
   );
 }
 
-function SectionHeader({ icon: Icon, title, description }: { icon: React.ElementType; title: string; description?: string }) {
+function SectionHeader({
+  icon: Icon,
+  title,
+  description,
+}: {
+  icon: React.ElementType;
+  title: string;
+  description?: string;
+}) {
   return (
     <div className="flex items-center gap-3 mb-5">
       <div className="h-9 w-9 rounded-lg bg-[#6d28d9]/10 flex items-center justify-center flex-shrink-0">
@@ -53,7 +59,8 @@ function SectionHeader({ icon: Icon, title, description }: { icon: React.Element
 }
 
 export function Step3Employment({ data, updateData }: StepProps) {
-  const showEmployerFields = data.employmentStatus === 'employed' || data.employmentStatus === 'contract';
+  const showEmployerFields =
+    data.employmentStatus === 'employed' || data.employmentStatus === 'contract';
   const showSelfEmployedFields = data.employmentStatus === 'self-employed';
   const showIncomeFields = data.employmentStatus && data.employmentStatus !== '';
 
@@ -64,8 +71,13 @@ export function Step3Employment({ data, updateData }: StepProps) {
         <SectionHeader icon={Briefcase} title="Employment Status" />
         <div className={SECTION_CONTAINER_CLASS}>
           <div>
-            <Label htmlFor="employmentStatus" className={LABEL_CLASS}>Current Status <span className="text-red-500">*</span></Label>
-            <Select value={data.employmentStatus} onValueChange={(value) => updateData('employmentStatus', value)}>
+            <Label htmlFor="employmentStatus" className={LABEL_CLASS}>
+              Current Status <span className="text-red-500">*</span>
+            </Label>
+            <Select
+              value={data.employmentStatus}
+              onValueChange={(value) => updateData('employmentStatus', value)}
+            >
               <SelectTrigger id="employmentStatus" className={`${SELECT_TRIGGER_CLASS} max-w-md`}>
                 <SelectValue placeholder="Select your employment status" />
               </SelectTrigger>
@@ -85,34 +97,65 @@ export function Step3Employment({ data, updateData }: StepProps) {
       {/* Employer Details */}
       {showEmployerFields && (
         <div className="animate-in fade-in slide-in-from-top-4 duration-300">
-          <SectionHeader icon={Building2} title="Employer Details" description="Information about your current employer" />
+          <SectionHeader
+            icon={Building2}
+            title="Employer Details"
+            description="Information about your current employer"
+          />
           <div className={SECTION_CONTAINER_SPACED_CLASS}>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
               <div>
-                <Label htmlFor="jobTitle" className={LABEL_CLASS}>Job Title <span className="text-red-500">*</span></Label>
-                <Input id="jobTitle" value={data.jobTitle} onChange={(e) => updateData('jobTitle', e.target.value)} placeholder="e.g. Financial Manager" className={INPUT_CLASS} />
+                <Label htmlFor="jobTitle" className={LABEL_CLASS}>
+                  Job Title <span className="text-red-500">*</span>
+                </Label>
+                <Input
+                  id="jobTitle"
+                  value={data.jobTitle}
+                  onChange={(e) => updateData('jobTitle', e.target.value)}
+                  placeholder="e.g. Financial Manager"
+                  className={INPUT_CLASS}
+                />
               </div>
               <div>
-                <Label htmlFor="employerName" className={LABEL_CLASS}>Employer Name <span className="text-red-500">*</span></Label>
-                <Input id="employerName" value={data.employerName} onChange={(e) => updateData('employerName', e.target.value)} placeholder="Company Name" className={INPUT_CLASS} />
+                <Label htmlFor="employerName" className={LABEL_CLASS}>
+                  Employer Name <span className="text-red-500">*</span>
+                </Label>
+                <Input
+                  id="employerName"
+                  value={data.employerName}
+                  onChange={(e) => updateData('employerName', e.target.value)}
+                  placeholder="Company Name"
+                  className={INPUT_CLASS}
+                />
               </div>
             </div>
             <div>
-              <Label htmlFor="industry" className={LABEL_CLASS}>Industry <span className="text-red-500">*</span></Label>
-              <Select value={data.industry} onValueChange={(value) => {
-                updateData('industry', value);
-                if (value !== 'Other') updateData('industryOther', '');
-              }}>
+              <Label htmlFor="industry" className={LABEL_CLASS}>
+                Industry <span className="text-red-500">*</span>
+              </Label>
+              <Select
+                value={data.industry}
+                onValueChange={(value) => {
+                  updateData('industry', value);
+                  if (value !== 'Other') updateData('industryOther', '');
+                }}
+              >
                 <SelectTrigger id="industry" className={`${SELECT_TRIGGER_CLASS} max-w-md`}>
                   <SelectValue placeholder="Select industry" />
                 </SelectTrigger>
                 <SelectContent className="max-h-[280px]">
-                  {INDUSTRIES.map(i => <SelectItem key={i} value={i}>{i}</SelectItem>)}
+                  {INDUSTRIES.map((i) => (
+                    <SelectItem key={i} value={i}>
+                      {i}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
               {data.industry === 'Other' && (
                 <div className="mt-3 animate-in fade-in slide-in-from-top-2 duration-200">
-                  <Label htmlFor="industryOther" className={LABEL_CLASS}>Please specify your industry <span className="text-red-500">*</span></Label>
+                  <Label htmlFor="industryOther" className={LABEL_CLASS}>
+                    Please specify your industry <span className="text-red-500">*</span>
+                  </Label>
                   <Input
                     id="industryOther"
                     value={data.industryOther}
@@ -130,29 +173,52 @@ export function Step3Employment({ data, updateData }: StepProps) {
       {/* Self-Employed Details */}
       {showSelfEmployedFields && (
         <div className="animate-in fade-in slide-in-from-top-4 duration-300">
-          <SectionHeader icon={Building2} title="Business Details" description="Information about your business" />
+          <SectionHeader
+            icon={Building2}
+            title="Business Details"
+            description="Information about your business"
+          />
           <div className={SECTION_CONTAINER_SPACED_CLASS}>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
               <div>
-                <Label htmlFor="selfEmployedCompanyName" className={LABEL_CLASS}>Company / Trading Name</Label>
-                <Input id="selfEmployedCompanyName" value={data.selfEmployedCompanyName} onChange={(e) => updateData('selfEmployedCompanyName', e.target.value)} placeholder="Your Business Name" className={INPUT_CLASS} />
+                <Label htmlFor="selfEmployedCompanyName" className={LABEL_CLASS}>
+                  Company / Trading Name
+                </Label>
+                <Input
+                  id="selfEmployedCompanyName"
+                  value={data.selfEmployedCompanyName}
+                  onChange={(e) => updateData('selfEmployedCompanyName', e.target.value)}
+                  placeholder="Your Business Name"
+                  className={INPUT_CLASS}
+                />
               </div>
               <div>
-                <Label htmlFor="selfEmployedIndustry" className={LABEL_CLASS}>Industry <span className="text-red-500">*</span></Label>
-                <Select value={data.selfEmployedIndustry} onValueChange={(value) => {
-                  updateData('selfEmployedIndustry', value);
-                  if (value !== 'Other') updateData('selfEmployedIndustryOther', '');
-                }}>
+                <Label htmlFor="selfEmployedIndustry" className={LABEL_CLASS}>
+                  Industry <span className="text-red-500">*</span>
+                </Label>
+                <Select
+                  value={data.selfEmployedIndustry}
+                  onValueChange={(value) => {
+                    updateData('selfEmployedIndustry', value);
+                    if (value !== 'Other') updateData('selfEmployedIndustryOther', '');
+                  }}
+                >
                   <SelectTrigger id="selfEmployedIndustry" className={SELECT_TRIGGER_CLASS}>
                     <SelectValue placeholder="Select industry" />
                   </SelectTrigger>
                   <SelectContent className="max-h-[280px]">
-                    {INDUSTRIES.map(i => <SelectItem key={i} value={i}>{i}</SelectItem>)}
+                    {INDUSTRIES.map((i) => (
+                      <SelectItem key={i} value={i}>
+                        {i}
+                      </SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
                 {data.selfEmployedIndustry === 'Other' && (
                   <div className="mt-3 animate-in fade-in slide-in-from-top-2 duration-200">
-                    <Label htmlFor="selfEmployedIndustryOther" className={LABEL_CLASS}>Please specify your industry <span className="text-red-500">*</span></Label>
+                    <Label htmlFor="selfEmployedIndustryOther" className={LABEL_CLASS}>
+                      Please specify your industry <span className="text-red-500">*</span>
+                    </Label>
                     <Input
                       id="selfEmployedIndustryOther"
                       value={data.selfEmployedIndustryOther}
@@ -165,8 +231,16 @@ export function Step3Employment({ data, updateData }: StepProps) {
               </div>
             </div>
             <div>
-              <Label htmlFor="selfEmployedDescription" className={LABEL_CLASS}>Nature of Business <span className="text-red-500">*</span></Label>
-              <Textarea id="selfEmployedDescription" value={data.selfEmployedDescription} onChange={(e) => updateData('selfEmployedDescription', e.target.value)} placeholder="Briefly describe what your business does..." className={`${TEXTAREA_CLASS} h-24`} />
+              <Label htmlFor="selfEmployedDescription" className={LABEL_CLASS}>
+                Nature of Business <span className="text-red-500">*</span>
+              </Label>
+              <Textarea
+                id="selfEmployedDescription"
+                value={data.selfEmployedDescription}
+                onChange={(e) => updateData('selfEmployedDescription', e.target.value)}
+                placeholder="Briefly describe what your business does..."
+                className={`${TEXTAREA_CLASS} h-24`}
+              />
             </div>
           </div>
         </div>
@@ -187,12 +261,19 @@ export function Step3Employment({ data, updateData }: StepProps) {
                   Gross Monthly Income
                   <FieldHint text="Your total monthly income before deductions. This helps us understand your financial position for planning purposes. Select 'Prefer not to say' if you'd rather discuss this in person." />
                 </Label>
-                <Select value={data.grossMonthlyIncome} onValueChange={(value) => updateData('grossMonthlyIncome', value)}>
+                <Select
+                  value={data.grossMonthlyIncome}
+                  onValueChange={(value) => updateData('grossMonthlyIncome', value)}
+                >
                   <SelectTrigger id="grossMonthlyIncome" className={SELECT_TRIGGER_CLASS}>
                     <SelectValue placeholder="Select range" />
                   </SelectTrigger>
                   <SelectContent>
-                    {INCOME_RANGES.map(r => <SelectItem key={r} value={r}>{r}</SelectItem>)}
+                    {INCOME_RANGES.map((r) => (
+                      <SelectItem key={r} value={r}>
+                        {r}
+                      </SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </div>
@@ -201,18 +282,26 @@ export function Step3Employment({ data, updateData }: StepProps) {
                   Estimated Monthly Expenses
                   <FieldHint text="An approximate total of your monthly expenses including bond/rent, insurance, food, transport, etc." />
                 </Label>
-                <Select value={data.monthlyExpensesEstimate} onValueChange={(value) => updateData('monthlyExpensesEstimate', value)}>
+                <Select
+                  value={data.monthlyExpensesEstimate}
+                  onValueChange={(value) => updateData('monthlyExpensesEstimate', value)}
+                >
                   <SelectTrigger id="monthlyExpensesEstimate" className={SELECT_TRIGGER_CLASS}>
                     <SelectValue placeholder="Select range" />
                   </SelectTrigger>
                   <SelectContent>
-                    {EXPENSE_RANGES.map(r => <SelectItem key={r} value={r}>{r}</SelectItem>)}
+                    {EXPENSE_RANGES.map((r) => (
+                      <SelectItem key={r} value={r}>
+                        {r}
+                      </SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </div>
             </div>
             <p className="text-xs text-gray-400 mt-4">
-              These ranges help your advisor prepare for your first meeting. You can discuss specifics in person.
+              These ranges help your advisor prepare for your first meeting. You can discuss
+              specifics in person.
             </p>
           </div>
         </div>

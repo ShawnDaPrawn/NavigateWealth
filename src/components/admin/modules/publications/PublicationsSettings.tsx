@@ -26,7 +26,7 @@ export function PublicationsSettings() {
   const [exporting, setExporting] = useState(false);
   const [importing, setImporting] = useState(false);
   const [clearing, setClearing] = useState(false);
-  const [message, setMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null);
+  const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // ── Press Stats Config ──────────────────────────────────────────────────
@@ -60,7 +60,9 @@ export function PublicationsSettings() {
     }
   }, []);
 
-  useEffect(() => { loadPressConfig(); }, [loadPressConfig]);
+  useEffect(() => {
+    loadPressConfig();
+  }, [loadPressConfig]);
 
   const handleSavePressConfig = async () => {
     setPressSaving(true);
@@ -100,8 +102,8 @@ export function PublicationsSettings() {
     setMessage(null);
 
     try {
-      const result = await PublicationsAPI.Settings.exportData() as { data?: unknown };
-      
+      const result = (await PublicationsAPI.Settings.exportData()) as { data?: unknown };
+
       // Create downloadable JSON file
       const blob = new Blob([JSON.stringify(result.data, null, 2)], { type: 'application/json' });
       const url = URL.createObjectURL(blob);
@@ -137,10 +139,12 @@ export function PublicationsSettings() {
       const text = await file.text();
       const data = JSON.parse(text);
 
-      const result = await PublicationsAPI.Settings.importData(data) as { imported: { articles: number; categories: number; types: number } };
-      setMessage({ 
-        type: 'success', 
-        text: `Imported ${result.imported.articles} articles, ${result.imported.categories} categories, ${result.imported.types} types` 
+      const result = (await PublicationsAPI.Settings.importData(data)) as {
+        imported: { articles: number; categories: number; types: number };
+      };
+      setMessage({
+        type: 'success',
+        text: `Imported ${result.imported.articles} articles, ${result.imported.categories} categories, ${result.imported.types} types`,
       });
     } catch (err) {
       console.error('Error importing data:', err);
@@ -191,27 +195,33 @@ export function PublicationsSettings() {
 
       {/* Message Alert */}
       {message && (
-        <div className={`rounded-lg p-4 flex items-start gap-3 ${
-          message.type === 'success' 
-            ? 'bg-green-50 border border-green-200' 
-            : 'bg-red-50 border border-red-200'
-        }`}>
+        <div
+          className={`rounded-lg p-4 flex items-start gap-3 ${
+            message.type === 'success'
+              ? 'bg-green-50 border border-green-200'
+              : 'bg-red-50 border border-red-200'
+          }`}
+        >
           {message.type === 'success' ? (
             <CheckCircle className="h-5 w-5 text-green-600 mt-0.5" />
           ) : (
             <AlertCircle className="h-5 w-5 text-red-600 mt-0.5" />
           )}
           <div className="flex-1">
-            <p className={`text-sm ${
-              message.type === 'success' ? 'text-green-600' : 'text-red-600'
-            }`}>
+            <p
+              className={`text-sm ${
+                message.type === 'success' ? 'text-green-600' : 'text-red-600'
+              }`}
+            >
               {message.text}
             </p>
           </div>
           <button onClick={() => setMessage(null)}>
-            <span className={`text-sm ${
-              message.type === 'success' ? 'text-green-600' : 'text-red-600'
-            }`}>
+            <span
+              className={`text-sm ${
+                message.type === 'success' ? 'text-green-600' : 'text-red-600'
+              }`}
+            >
               ✕
             </span>
           </button>
@@ -225,16 +235,12 @@ export function PublicationsSettings() {
             <Settings className="h-5 w-5" />
             General Settings
           </CardTitle>
-          <CardDescription>
-            Configure default settings for the publications system
-          </CardDescription>
+          <CardDescription>Configure default settings for the publications system</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="space-y-4">
             <div>
-              <Label>
-                Default Article Author
-              </Label>
+              <Label>Default Article Author</Label>
               <Input
                 type="text"
                 defaultValue="Navigate Wealth Editorial Team"
@@ -243,9 +249,7 @@ export function PublicationsSettings() {
             </div>
 
             <div>
-              <Label>
-                Articles per Page (Public)
-              </Label>
+              <Label>Articles per Page (Public)</Label>
               <Input
                 type="number"
                 defaultValue="12"
@@ -308,15 +312,11 @@ export function PublicationsSettings() {
       <Card>
         <CardHeader>
           <CardTitle>SEO Defaults</CardTitle>
-          <CardDescription>
-            Default SEO settings for new articles
-          </CardDescription>
+          <CardDescription>Default SEO settings for new articles</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <div>
-            <Label>
-              Default Meta Description Template
-            </Label>
+            <Label>Default Meta Description Template</Label>
             <textarea
               defaultValue="Read {title} on Navigate Wealth. {excerpt}"
               rows={2}
@@ -328,9 +328,7 @@ export function PublicationsSettings() {
           </div>
 
           <div>
-            <Label>
-              Canonical URL Base
-            </Label>
+            <Label>Canonical URL Base</Label>
             <Input
               type="text"
               defaultValue="https://www.navigatewealth.co/resources"
@@ -355,7 +353,8 @@ export function PublicationsSettings() {
             Press Page Stats
           </CardTitle>
           <CardDescription>
-            Configure the headline stats displayed on the public Press page. Active client count is derived automatically.
+            Configure the headline stats displayed on the public Press page. Active client count is
+            derived automatically.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -375,7 +374,9 @@ export function PublicationsSettings() {
                     onChange={(e) => setPressAum(e.target.value)}
                     placeholder="e.g. R500 mil+"
                   />
-                  <p className="text-[11px] text-muted-foreground">Displayed as-is on the Press page</p>
+                  <p className="text-[11px] text-muted-foreground">
+                    Displayed as-is on the Press page
+                  </p>
                 </div>
                 <div className="space-y-1.5">
                   <Label htmlFor="press-years">Years in Business</Label>
@@ -423,9 +424,7 @@ export function PublicationsSettings() {
             <Database className="h-5 w-5" />
             Data Management
           </CardTitle>
-          <CardDescription>
-            Import, export, and manage publication data
-          </CardDescription>
+          <CardDescription>Import, export, and manage publication data</CardDescription>
         </CardHeader>
         <CardContent className="space-y-3">
           <input
@@ -435,11 +434,13 @@ export function PublicationsSettings() {
             onChange={handleFileSelect}
             className="hidden"
           />
-          
+
           <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
             <div>
               <p className="font-medium text-sm">Export All Articles</p>
-              <p className="text-xs text-gray-500">Download articles, categories, and types as JSON</p>
+              <p className="text-xs text-gray-500">
+                Download articles, categories, and types as JSON
+              </p>
             </div>
             <Button variant="outline" size="sm" onClick={handleExportData} disabled={exporting}>
               {exporting ? (
@@ -456,9 +457,9 @@ export function PublicationsSettings() {
               <p className="font-medium text-sm">Import Articles</p>
               <p className="text-xs text-gray-500">Upload JSON file to import articles</p>
             </div>
-            <Button 
-              variant="outline" 
-              size="sm" 
+            <Button
+              variant="outline"
+              size="sm"
               onClick={() => fileInputRef.current?.click()}
               disabled={importing}
             >
@@ -491,9 +492,7 @@ export function PublicationsSettings() {
             <AlertCircle className="h-5 w-5" />
             Maintenance & Cleanup
           </CardTitle>
-          <CardDescription>
-            Dangerous operations - use with caution
-          </CardDescription>
+          <CardDescription>Dangerous operations - use with caution</CardDescription>
         </CardHeader>
         <CardContent className="space-y-3">
           <div className="flex items-center justify-between p-3 bg-red-50 border border-red-200 rounded-lg">
@@ -503,12 +502,16 @@ export function PublicationsSettings() {
                 Permanently delete all draft articles (published articles are not affected)
               </p>
             </div>
-            <Button 
-              variant="outline" 
-              size="sm" 
+            <Button
+              variant="outline"
+              size="sm"
               onClick={handleClearDrafts}
               disabled={clearing}
-              className={confirmClear ? 'bg-red-600 text-white border-red-600 hover:bg-red-700' : 'border-red-300 text-red-700 hover:bg-red-50'}
+              className={
+                confirmClear
+                  ? 'bg-red-600 text-white border-red-600 hover:bg-red-700'
+                  : 'border-red-300 text-red-700 hover:bg-red-50'
+              }
             >
               {clearing ? (
                 <Loader2 className="h-4 w-4 mr-2 animate-spin" />
@@ -520,9 +523,7 @@ export function PublicationsSettings() {
           </div>
 
           {confirmClear && (
-            <p className="text-sm text-red-600 font-medium">
-              ⚠️ Click again to confirm deletion
-            </p>
+            <p className="text-sm text-red-600 font-medium">⚠️ Click again to confirm deletion</p>
           )}
         </CardContent>
       </Card>

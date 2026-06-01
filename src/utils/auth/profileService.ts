@@ -2,7 +2,13 @@
 
 import { projectId, publicAnonKey } from '../supabase/info';
 import { AppUser, UserProfile, UserSuspensionStatus, AccountStatus } from './types';
-import { AUTH_ERRORS, DEFAULT_APPLICATION_STATUS, DEFAULT_ACCOUNT_STATUS, DEFAULT_ROLE, SUPER_ADMIN_EMAIL } from './constants';
+import {
+  AUTH_ERRORS,
+  DEFAULT_APPLICATION_STATUS,
+  DEFAULT_ACCOUNT_STATUS,
+  DEFAULT_ROLE,
+  SUPER_ADMIN_EMAIL,
+} from './constants';
 import { User as SupabaseAuthUser } from '@supabase/supabase-js';
 import { getCurrentUserWithMetadata, mapSupabaseUserToMetadataSnapshot } from './authService';
 
@@ -13,7 +19,12 @@ const API_BASE = `https://${projectId}.supabase.co/functions/v1/make-server-91ed
  * Users with any of these roles should NOT get a client-type profile created.
  */
 const PERSONNEL_ROLES = [
-  'super_admin', 'admin', 'adviser', 'paraplanner', 'compliance', 'viewer',
+  'super_admin',
+  'admin',
+  'adviser',
+  'paraplanner',
+  'compliance',
+  'viewer',
 ] as const;
 
 /**
@@ -42,10 +53,13 @@ function normalizeAccountStatus(status?: string | null): AccountStatus | undefin
   }
 }
 
-type SessionUserLike = {
-  user_metadata?: Record<string, unknown>;
-  app_metadata?: Record<string, unknown>;
-} | null | undefined;
+type SessionUserLike =
+  | {
+      user_metadata?: Record<string, unknown>;
+      app_metadata?: Record<string, unknown>;
+    }
+  | null
+  | undefined;
 
 /**
  * Best-effort AppUser when KV/profile loading fails or times out. Uses Supabase
@@ -58,8 +72,7 @@ export function buildAppUserFromAuthSessionFallback(
 ): AppUser {
   const metadata = sessionUser?.user_metadata || {};
   const metaRole = typeof metadata.role === 'string' ? metadata.role : undefined;
-  const invited =
-    metadata.invited === true || sessionUser?.app_metadata?.invited === true;
+  const invited = metadata.invited === true || sessionUser?.app_metadata?.invited === true;
 
   const isPersonnel =
     (!!metaRole && (PERSONNEL_ROLES as readonly string[]).includes(metaRole)) || invited;
@@ -105,18 +118,15 @@ async function fetchSecurityStatus(
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 5000);
 
-    const response = await fetch(
-      `${API_BASE}/security/${userId}/status`,
-      {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${accessToken || publicAnonKey}`,
-          'apikey': publicAnonKey,
-        },
-        signal: controller.signal,
-      }
-    );
+    const response = await fetch(`${API_BASE}/security/${userId}/status`, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${accessToken || publicAnonKey}`,
+        apikey: publicAnonKey,
+      },
+      signal: controller.signal,
+    });
     clearTimeout(timeoutId);
 
     if (!response.ok) {
@@ -133,7 +143,10 @@ async function fetchSecurityStatus(
     const data = await response.json();
     return data.status || { suspended: false };
   } catch (error) {
-    if (error instanceof Error && (error.name === 'AbortError' || error.message.includes('Failed to fetch'))) {
+    if (
+      error instanceof Error &&
+      (error.name === 'AbortError' || error.message.includes('Failed to fetch'))
+    ) {
       console.log('Security status unavailable, proceeding with default');
     } else {
       console.warn('Error fetching security status:', error);
@@ -157,25 +170,28 @@ async function fetchProfileResponse(encodedKey: string, encodedEmail: string): P
           method: 'GET',
           headers: {
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${publicAnonKey}`,
-            'apikey': publicAnonKey,
+            Authorization: `Bearer ${publicAnonKey}`,
+            apikey: publicAnonKey,
           },
           signal: controller.signal,
-        }
+        },
       );
       clearTimeout(timeoutId);
 
       return response;
     } catch (err) {
       lastError = err;
-      if (err instanceof Error && (err.name === 'AbortError' || err.message.includes('Failed to fetch'))) {
+      if (
+        err instanceof Error &&
+        (err.name === 'AbortError' || err.message.includes('Failed to fetch'))
+      ) {
         console.log(`Profile fetch timed out, retrying... (${retries} attempts left)`);
       } else {
         console.warn(`Profile fetch failed, retrying... (${retries} attempts left)`);
       }
       retries--;
       if (retries > 0) {
-        await new Promise(resolve => setTimeout(resolve, 1000));
+        await new Promise((resolve) => setTimeout(resolve, 1000));
       }
     }
   }
@@ -235,7 +251,11 @@ export async function loadUserProfile(
         suspended: securityStatus?.suspended,
       });
 
-      const preDecisionStatuses = ['submitted_for_review', 'application_in_progress', 'no_application'];
+      const preDecisionStatuses = [
+        'submitted_for_review',
+        'application_in_progress',
+        'no_application',
+      ];
       const kvStatus = profileData.accountStatus;
       const supabaseStatus = supabaseUserData?.accountStatus;
 
@@ -247,11 +267,13 @@ export async function loadUserProfile(
       ) {
         console.log(
           'KV/Supabase accountStatus mismatch detected - auto-healing.',
-          `KV: "${kvStatus}", Supabase: "${supabaseStatus}".`
+          `KV: "${kvStatus}", Supabase: "${supabaseStatus}".`,
         );
         profileData.accountStatus = supabaseStatus as AccountStatus;
         try {
-          await updateUserProfile(userId, { accountStatus: supabaseStatus } as Partial<UserProfile>);
+          await updateUserProfile(userId, {
+            accountStatus: supabaseStatus,
+          } as Partial<UserProfile>);
           console.log('KV profile auto-healed to', supabaseStatus);
         } catch (healErr) {
           console.warn('Failed to persist KV profile auto-heal:', healErr);
@@ -265,8 +287,7 @@ export async function loadUserProfile(
       const metaRole = supabaseUserData?.role;
       const isInvited = supabaseUserData?.invited === true;
       const isPersonnel =
-        (metaRole && (PERSONNEL_ROLES as readonly string[]).includes(metaRole)) ||
-        isInvited;
+        (metaRole && (PERSONNEL_ROLES as readonly string[]).includes(metaRole)) || isInvited;
 
       if (isPersonnel) {
         console.log('User is personnel - skipping client profile creation', {
@@ -289,7 +310,10 @@ export async function loadUserProfile(
         };
       }
 
-      console.log('Profile not found (or error), creating default profile. Status:', response.status);
+      console.log(
+        'Profile not found (or error), creating default profile. Status:',
+        response.status,
+      );
       await createDefaultProfile(userId, email, supabaseUserData?.firstName || '');
 
       const retryResponse = await fetchProfileResponse(encodedKey, encodedEmail);
@@ -310,7 +334,9 @@ export async function loadUserProfile(
     }
 
     const isSuperAdmin = email.toLowerCase() === SUPER_ADMIN_EMAIL.toLowerCase();
-    console.log('Login validation server unavailable (likely cold start or dev mode), proceeding with login.');
+    console.log(
+      'Login validation server unavailable (likely cold start or dev mode), proceeding with login.',
+    );
 
     return {
       id: userId,
@@ -330,7 +356,11 @@ export async function loadUserProfile(
 /**
  * Create default profile for new user.
  */
-export async function createDefaultProfile(userId: string, email: string, displayName: string = ''): Promise<void> {
+export async function createDefaultProfile(
+  userId: string,
+  email: string,
+  displayName: string = '',
+): Promise<void> {
   try {
     console.log('Creating default profile for user:', userId);
 
@@ -338,8 +368,8 @@ export async function createDefaultProfile(userId: string, email: string, displa
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${publicAnonKey}`,
-        'apikey': publicAnonKey,
+        Authorization: `Bearer ${publicAnonKey}`,
+        apikey: publicAnonKey,
       },
       body: JSON.stringify({
         userId,
@@ -370,7 +400,7 @@ export async function createDefaultProfile(userId: string, email: string, displa
  */
 export async function updateUserProfile(
   userId: string,
-  updates: Partial<UserProfile>
+  updates: Partial<UserProfile>,
 ): Promise<void> {
   try {
     const key = `user_profile:${userId}:personal_info`;
@@ -379,8 +409,8 @@ export async function updateUserProfile(
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${publicAnonKey}`,
-        'apikey': publicAnonKey,
+        Authorization: `Bearer ${publicAnonKey}`,
+        apikey: publicAnonKey,
       },
       body: JSON.stringify({ key, data: updates }),
     });
@@ -406,18 +436,16 @@ function mapProfileToAppUser(
   email: string,
   profileData: UserProfile,
   supabaseUserData: Awaited<ReturnType<typeof getCurrentUserWithMetadata>> | null,
-  securityStatus?: UserSuspensionStatus
+  securityStatus?: UserSuspensionStatus,
 ): AppUser {
   const isSuperAdmin = email.toLowerCase() === SUPER_ADMIN_EMAIL.toLowerCase();
-  const userRole = isSuperAdmin ? 'super_admin' : (profileData.role || DEFAULT_ROLE);
+  const userRole = isSuperAdmin ? 'super_admin' : profileData.role || DEFAULT_ROLE;
 
   const normalizedProfileStatus = normalizeAccountStatus(profileData.accountStatus);
   const normalizedSupabaseStatus = normalizeAccountStatus(supabaseUserData?.accountStatus);
-  const resolvedAccountStatus: AccountStatus = (
-    normalizedProfileStatus ||
+  const resolvedAccountStatus: AccountStatus = (normalizedProfileStatus ||
     normalizedSupabaseStatus ||
-    (isSuperAdmin ? 'approved' : DEFAULT_ACCOUNT_STATUS)
-  ) as AccountStatus;
+    (isSuperAdmin ? 'approved' : DEFAULT_ACCOUNT_STATUS)) as AccountStatus;
 
   const mappedUser: AppUser = {
     id: userId,
@@ -425,7 +453,8 @@ function mapProfileToAppUser(
     firstName: profileData.personalInformation?.firstName || supabaseUserData?.firstName || '',
     lastName: profileData.personalInformation?.lastName || supabaseUserData?.lastName || '',
     role: userRole,
-    applicationStatus: (profileData.applicationStatus as AppUser['applicationStatus']) || DEFAULT_APPLICATION_STATUS,
+    applicationStatus:
+      (profileData.applicationStatus as AppUser['applicationStatus']) || DEFAULT_APPLICATION_STATUS,
     accountStatus: resolvedAccountStatus,
     accountType: (profileData.accountType as AppUser['accountType']) || undefined,
     adviserAssigned: profileData.adviserAssigned || isSuperAdmin,

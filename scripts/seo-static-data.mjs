@@ -31,9 +31,7 @@ export function requireArticles() {
  */
 export function resolveSiteVerificationToken() {
   const token =
-    process.env.GOOGLE_SITE_VERIFICATION ||
-    process.env.VITE_GOOGLE_SITE_VERIFICATION ||
-    '';
+    process.env.GOOGLE_SITE_VERIFICATION || process.env.VITE_GOOGLE_SITE_VERIFICATION || '';
   return token.trim();
 }
 
@@ -319,7 +317,7 @@ export const publicSeoRoutes = [
     lastmod: '2026-03-01',
     title: 'Ask Vasco | AI Financial Navigator | Navigate Wealth',
     description:
-      'Ask Vasco, Navigate Wealth\'s AI financial navigator, for general South African guidance on retirement, tax, risk cover, investing and estate planning.',
+      "Ask Vasco, Navigate Wealth's AI financial navigator, for general South African guidance on retirement, tax, risk cover, investing and estate planning.",
     keywords:
       'AI financial navigator South Africa, financial planning chatbot, retirement questions, tax planning guidance, Navigate Wealth Vasco',
     ogType: 'website',
@@ -403,7 +401,9 @@ export const SEO_DESCRIPTION_MAX = 160;
 const TITLE_SUFFIX = ' | Navigate Wealth';
 
 function collapseWhitespace(value) {
-  return String(value ?? '').replace(/\s+/g, ' ').trim();
+  return String(value ?? '')
+    .replace(/\s+/g, ' ')
+    .trim();
 }
 
 function stripHtml(value) {
@@ -515,7 +515,12 @@ export function createWebSiteSchema(siteUrl) {
 export function createWebPageSchema(route, siteUrl) {
   const url = absoluteUrl(siteUrl, routeCanonicalPath(route));
   return {
-    '@type': route.schema === 'about' ? 'AboutPage' : route.schema === 'contact' ? 'ContactPage' : 'WebPage',
+    '@type':
+      route.schema === 'about'
+        ? 'AboutPage'
+        : route.schema === 'contact'
+          ? 'ContactPage'
+          : 'WebPage',
     '@id': `${url}#webpage`,
     name: route.title,
     description: route.description,
@@ -605,9 +610,10 @@ export function createStaticBodyHtml(route, siteUrl) {
   const serviceLine = route.serviceType
     ? `<p><strong>Service:</strong> ${escapeHtml(route.serviceType)} for clients in South Africa.</p>`
     : '';
-  const articleLine = route.schema === 'article'
-    ? '<p>This article is part of the Navigate Wealth resources and insights library.</p>'
-    : '';
+  const articleLine =
+    route.schema === 'article'
+      ? '<p>This article is part of the Navigate Wealth resources and insights library.</p>'
+      : '';
 
   return `
       <!-- static-body:start -->
@@ -619,7 +625,7 @@ export function createStaticBodyHtml(route, siteUrl) {
 ${crumbs
   .map(
     (crumb) =>
-      `                <li><a href="${escapeHtml(crumb.url)}">${escapeHtml(crumb.name)}</a></li>`
+      `                <li><a href="${escapeHtml(crumb.url)}">${escapeHtml(crumb.name)}</a></li>`,
   )
   .join('\n')}
               </ol>

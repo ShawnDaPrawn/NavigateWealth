@@ -37,21 +37,15 @@ export const EditableListItem: React.FC<EditableListItemProps> = ({
   className = '',
 }) => {
   const editBorderColor = borderColor.replace('border-', '').replace('-200', '-600');
-  
+
   return (
-    <div 
+    <div
       className={`p-5 rounded-lg border-2 transition-all ${
-        isEditing 
-          ? `border-[${editBorderColor}] bg-white shadow-sm` 
-          : `${borderColor} bg-white`
+        isEditing ? `border-[${editBorderColor}] bg-white shadow-sm` : `${borderColor} bg-white`
       } ${className}`}
     >
       <div className="flex items-start justify-between mb-4">
-        {badge && (
-          <Badge variant={badge.variant || 'default'}>
-            {badge.text}
-          </Badge>
-        )}
+        {badge && <Badge variant={badge.variant || 'default'}>{badge.text}</Badge>}
         <div className="flex gap-2 ml-auto">
           {isEditing ? (
             <div className="contents">
@@ -100,7 +94,7 @@ export const EditableListItem: React.FC<EditableListItemProps> = ({
           )}
         </div>
       </div>
-      
+
       {children}
     </div>
   );

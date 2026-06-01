@@ -78,7 +78,9 @@ export function RiskProfileSection({
             </div>
             <div>
               <CardTitle>Risk Profile Assessment</CardTitle>
-              <CardDescription>Complete the questionnaire to determine risk tolerance</CardDescription>
+              <CardDescription>
+                Complete the questionnaire to determine risk tolerance
+              </CardDescription>
             </div>
           </div>
         </CardHeader>
@@ -91,7 +93,8 @@ export function RiskProfileSection({
               </div>
               <h3 className="mb-2 text-lg text-gray-900">No risk assessment completed</h3>
               <p className="mb-6 max-w-md text-center text-sm text-gray-600">
-                Complete the <span className="text-[#6d28d9]">questionnaire</span> to determine investor profile
+                Complete the <span className="text-[#6d28d9]">questionnaire</span> to determine
+                investor profile
               </p>
               <Button
                 onClick={() => setAssessmentStarted(true)}
@@ -108,14 +111,18 @@ export function RiskProfileSection({
               <Alert className="border-[#6d28d9]/20 bg-[#6d28d9]/5">
                 <Info className="h-4 w-4 text-[#6d28d9]" />
                 <AlertDescription>
-                  Answer all 10 questions below to receive a personalized investor risk profile. The responses will help recommend suitable investment strategies.
+                  Answer all 10 questions below to receive a personalized investor risk profile. The
+                  responses will help recommend suitable investment strategies.
                 </AlertDescription>
               </Alert>
 
               {RISK_PROFILE_QUESTIONS.map((question) => {
                 const selectedValue = riskAssessment[question.key];
                 return (
-                  <div key={question.key} className="space-y-4 rounded-lg border-2 border-gray-200 bg-white p-6">
+                  <div
+                    key={question.key}
+                    className="space-y-4 rounded-lg border-2 border-gray-200 bg-white p-6"
+                  >
                     <div>
                       <h4 className="mb-1 text-base text-gray-900">
                         {question.number}. {question.prompt}
@@ -191,7 +198,9 @@ export function RiskProfileSection({
                   <div className="rounded-lg border border-gray-200 bg-white p-4">
                     <p className="mb-1 text-sm text-gray-600">Investor Type</p>
                     <div className="flex items-center gap-2">
-                      <Badge className={`px-3 py-1 text-base ${getInvestorTypeBadgeClass(riskAssessment.riskCategory)}`}>
+                      <Badge
+                        className={`px-3 py-1 text-base ${getInvestorTypeBadgeClass(riskAssessment.riskCategory)}`}
+                      >
                         {riskAssessment.riskCategory}
                       </Badge>
                     </div>
@@ -202,14 +211,17 @@ export function RiskProfileSection({
                   <h4 className="mb-2 text-sm text-gray-900">What This Means</h4>
                   <p className="text-sm text-gray-700">
                     <strong>{categorySummary?.label || 'Risk profile pending'}:</strong>{' '}
-                    {categorySummary?.body || 'The assessment must be completed before a risk profile can be interpreted.'}
+                    {categorySummary?.body ||
+                      'The assessment must be completed before a risk profile can be interpreted.'}
                   </p>
                 </div>
 
                 {riskAssessment.dateCompleted && (
                   <div className="mt-4 flex items-center gap-2 text-xs text-gray-500">
                     <Calendar className="h-3 w-3" />
-                    <span>Completed on {new Date(riskAssessment.dateCompleted).toLocaleDateString()}</span>
+                    <span>
+                      Completed on {new Date(riskAssessment.dateCompleted).toLocaleDateString()}
+                    </span>
                   </div>
                 )}
               </div>
@@ -226,10 +238,7 @@ export function RiskProfileSection({
         orientation="portrait"
         renderPdfFromPreview={true}
       >
-        <RiskProfilePdfDocument
-          clientName={clientName}
-          riskAssessment={riskAssessment}
-        />
+        <RiskProfilePdfDocument clientName={clientName} riskAssessment={riskAssessment} />
       </PdfTemplateViewer>
     </>
   );

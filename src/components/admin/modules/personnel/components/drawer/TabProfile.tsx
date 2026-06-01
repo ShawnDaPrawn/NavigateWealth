@@ -5,7 +5,13 @@ import { Button } from '../../../../../ui/button';
 import { Input } from '../../../../../ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '../../../../../ui/card';
 import { Label } from '../../../../../ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../../../../ui/select';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '../../../../../ui/select';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -42,21 +48,21 @@ export function TabProfile({ selectedPersonnel, onUpdate, onInviteCancelled }: T
   const { mutate: resendInvite, isPending: isResending } = useResendPersonnelInvite();
   const { mutate: cancelInvite, isPending: isCancelling } = useCancelPersonnelInvite();
 
-  const { 
-    register, 
-    handleSubmit, 
+  const {
+    register,
+    handleSubmit,
     setValue,
     reset,
     watch,
-    formState: { isDirty, isSubmitting } 
+    formState: { isDirty, isSubmitting },
   } = useForm<ProfileFormValues>({
     resolver: zodResolver(updateProfileSchema),
     defaultValues: {
       role: toValidRole(selectedPersonnel.role),
       phone: selectedPersonnel.phone || '',
       jobTitle: selectedPersonnel.jobTitle || '',
-      managerId: selectedPersonnel.managerId || 'none'
-    }
+      managerId: selectedPersonnel.managerId || 'none',
+    },
   });
 
   // Reset form when selected person changes
@@ -65,7 +71,7 @@ export function TabProfile({ selectedPersonnel, onUpdate, onInviteCancelled }: T
       role: toValidRole(selectedPersonnel.role),
       phone: selectedPersonnel.phone || '',
       jobTitle: selectedPersonnel.jobTitle || '',
-      managerId: selectedPersonnel.managerId || 'none'
+      managerId: selectedPersonnel.managerId || 'none',
     });
   }, [selectedPersonnel, reset]);
 
@@ -73,16 +79,16 @@ export function TabProfile({ selectedPersonnel, onUpdate, onInviteCancelled }: T
     // Clean up 'none' managerId
     const payload = {
       ...data,
-      managerId: data.managerId === 'none' ? null : data.managerId
+      managerId: data.managerId === 'none' ? null : data.managerId,
     };
-    
+
     await onUpdate(selectedPersonnel.id, payload);
     // Form remains populated with new values, isDirty becomes false
-    reset(data); 
+    reset(data);
   };
 
-  const roleValue = watch("role");
-  const managerValue = watch("managerId");
+  const roleValue = watch('role');
+  const managerValue = watch('managerId');
 
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-4 mt-4">
@@ -101,7 +107,12 @@ export function TabProfile({ selectedPersonnel, onUpdate, onInviteCancelled }: T
                   {selectedPersonnel.invitedAt && (
                     <span className="inline-flex items-center gap-1 ml-1">
                       <Clock className="h-3 w-3 inline" />
-                      Sent {new Date(selectedPersonnel.invitedAt).toLocaleDateString('en-ZA', { day: 'numeric', month: 'short', year: 'numeric' })}
+                      Sent{' '}
+                      {new Date(selectedPersonnel.invitedAt).toLocaleDateString('en-ZA', {
+                        day: 'numeric',
+                        month: 'short',
+                        year: 'numeric',
+                      })}
                     </span>
                   )}
                 </p>
@@ -146,7 +157,7 @@ export function TabProfile({ selectedPersonnel, onUpdate, onInviteCancelled }: T
       <Card>
         <CardHeader className="flex flex-row items-center justify-between">
           <CardTitle className="text-lg">Access Control</CardTitle>
-           {isDirty && (
+          {isDirty && (
             <Button size="sm" type="submit" disabled={isSubmitting}>
               <Save className="h-4 w-4 mr-2" />
               {isSubmitting ? 'Saving...' : 'Save Changes'}
@@ -157,9 +168,11 @@ export function TabProfile({ selectedPersonnel, onUpdate, onInviteCancelled }: T
           <div className="grid grid-cols-2 gap-4">
             <div>
               <Label>System Role</Label>
-              <Select 
-                value={roleValue} 
-                onValueChange={(val) => setValue("role", val as PersonnelRole, { shouldDirty: true })}
+              <Select
+                value={roleValue}
+                onValueChange={(val) =>
+                  setValue('role', val as PersonnelRole, { shouldDirty: true })
+                }
               >
                 <SelectTrigger>
                   <SelectValue />
@@ -175,9 +188,9 @@ export function TabProfile({ selectedPersonnel, onUpdate, onInviteCancelled }: T
             </div>
             <div>
               <Label>Reporting Manager</Label>
-              <Select 
+              <Select
                 value={managerValue || 'none'}
-                onValueChange={(val) => setValue("managerId", val, { shouldDirty: true })}
+                onValueChange={(val) => setValue('managerId', val, { shouldDirty: true })}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Select manager" />
@@ -198,27 +211,27 @@ export function TabProfile({ selectedPersonnel, onUpdate, onInviteCancelled }: T
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="grid grid-cols-2 gap-4">
-             <div className="space-y-2">
-               <Label>Phone</Label>
-               <Input {...register("phone")} placeholder="+27..." />
-             </div>
-             <div className="space-y-2">
-               <Label>Job Title</Label>
-               <Input {...register("jobTitle")} placeholder="Senior Adviser" />
-             </div>
+            <div className="space-y-2">
+              <Label>Phone</Label>
+              <Input {...register('phone')} placeholder="+27..." />
+            </div>
+            <div className="space-y-2">
+              <Label>Job Title</Label>
+              <Input {...register('jobTitle')} placeholder="Senior Adviser" />
+            </div>
           </div>
         </CardContent>
       </Card>
 
-       <div className="flex gap-2 pt-4">
-          <Button type="button" variant="destructive" className="w-full">
-            <Lock className="h-4 w-4 mr-2" />
-            Suspend User Access
-          </Button>
-          <Button type="button" variant="outline" className="w-full">
-            Reset Password
-          </Button>
-       </div>
+      <div className="flex gap-2 pt-4">
+        <Button type="button" variant="destructive" className="w-full">
+          <Lock className="h-4 w-4 mr-2" />
+          Suspend User Access
+        </Button>
+        <Button type="button" variant="outline" className="w-full">
+          Reset Password
+        </Button>
+      </div>
 
       {/* ── Cancel Invitation Confirmation Dialog ──────────────── */}
       <AlertDialog open={cancelDialogOpen} onOpenChange={setCancelDialogOpen}>
@@ -230,9 +243,8 @@ export function TabProfile({ selectedPersonnel, onUpdate, onInviteCancelled }: T
               <span className="font-medium text-gray-900">
                 {selectedPersonnel.firstName} {selectedPersonnel.lastName}
               </span>{' '}
-              ({selectedPersonnel.email})?
-              This will remove their account and any pre-configured permissions.
-              This action cannot be undone.
+              ({selectedPersonnel.email})? This will remove their account and any pre-configured
+              permissions. This action cannot be undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

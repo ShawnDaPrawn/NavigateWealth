@@ -11,7 +11,12 @@
 
 import { Hono } from 'npm:hono';
 import * as kv from './kv_store.tsx';
-import { createPlainTextEmail, createEmailTemplate, sendEmail, getFooterSettings } from './email-service.ts';
+import {
+  createPlainTextEmail,
+  createEmailTemplate,
+  sendEmail,
+  getFooterSettings,
+} from './email-service.ts';
 import { createModuleLogger } from './stderr-logger.ts';
 import {
   addNewsletterSubscriber,
@@ -64,72 +69,80 @@ app.get('', (c) => c.json({ service: 'newsletter', status: 'active' }));
 // ============================================================================
 
 // Newsletter subscription endpoint - Double Opt-In
-app.post("/subscribe", asyncHandler(async (c) => {
-  const ip = extractClientIp((headerName) => c.req.header(headerName)) || 'Unknown';
-  const blockedIpAddress = getBlockedIpAddress(ip);
-  if (blockedIpAddress) {
-    log.warn('Blocked newsletter subscription from abusive IP address', { blockedIpAddress });
-    return c.json({
-      error: getBlockedIpAddressWarning(blockedIpAddress),
-      warning: true,
-      blockedIpAddress,
-    }, 403);
-  }
+app.post(
+  '/subscribe',
+  asyncHandler(async (c) => {
+    const ip = extractClientIp((headerName) => c.req.header(headerName)) || 'Unknown';
+    const blockedIpAddress = getBlockedIpAddress(ip);
+    if (blockedIpAddress) {
+      log.warn('Blocked newsletter subscription from abusive IP address', { blockedIpAddress });
+      return c.json(
+        {
+          error: getBlockedIpAddressWarning(blockedIpAddress),
+          warning: true,
+          blockedIpAddress,
+        },
+        403,
+      );
+    }
 
-  const body = await c.req.json();
-  
-  // Validate email via Zod schema
-  const parsed = NewsletterSubscribeSchema.safeParse(body);
-  if (!parsed.success) {
-    return c.json({ error: 'Validation failed', ...formatZodError(parsed.error) }, 400);
-  }
-  const { email } = parsed.data;
-  
-  const timestamp = new Date().toISOString();
-  const subscriptionKey = `newsletter:${email}`;
-  
-  // Check if already confirmed
-  const existingSubscription = await kv.get(subscriptionKey);
-  if (existingSubscription && existingSubscription.confirmed) {
-    return c.json({ 
-      message: 'Already subscribed',
-      alreadySubscribed: true 
-    }, 200);
-  }
-  
-  // Generate confirmation token
-  const confirmToken = crypto.randomUUID();
-  
-  // Get user agent and IP for logging
-  const userAgent = c.req.header('User-Agent') || 'Unknown';
-  // Store pending subscription in KV store
-  await kv.set(subscriptionKey, {
-    email,
-    subscribedAt: timestamp,
-    source: 'Footer Newsletter',
-    confirmed: false,
-    confirmToken,
-    ip,
-    userAgent,
-  });
-  
-  // Send confirmation email
-  const sendgridApiKey = Deno.env.get('SENDGRID_API_KEY');
-  
-  if (sendgridApiKey) {
-    const confirmUrl = `https://www.navigatewealth.co/newsletter/confirm?token=${confirmToken}&email=${encodeURIComponent(email)}`;
-    
-    // Fetch admin-configured footer settings for template consistency
-    const footerSettings = await getFooterSettings();
+    const body = await c.req.json();
 
-    // Confirmation email content
-    const subscriberContent = `
+    // Validate email via Zod schema
+    const parsed = NewsletterSubscribeSchema.safeParse(body);
+    if (!parsed.success) {
+      return c.json({ error: 'Validation failed', ...formatZodError(parsed.error) }, 400);
+    }
+    const { email } = parsed.data;
+
+    const timestamp = new Date().toISOString();
+    const subscriptionKey = `newsletter:${email}`;
+
+    // Check if already confirmed
+    const existingSubscription = await kv.get(subscriptionKey);
+    if (existingSubscription && existingSubscription.confirmed) {
+      return c.json(
+        {
+          message: 'Already subscribed',
+          alreadySubscribed: true,
+        },
+        200,
+      );
+    }
+
+    // Generate confirmation token
+    const confirmToken = crypto.randomUUID();
+
+    // Get user agent and IP for logging
+    const userAgent = c.req.header('User-Agent') || 'Unknown';
+    // Store pending subscription in KV store
+    await kv.set(subscriptionKey, {
+      email,
+      subscribedAt: timestamp,
+      source: 'Footer Newsletter',
+      confirmed: false,
+      confirmToken,
+      ip,
+      userAgent,
+    });
+
+    // Send confirmation email
+    const sendgridApiKey = Deno.env.get('SENDGRID_API_KEY');
+
+    if (sendgridApiKey) {
+      const confirmUrl = `https://www.navigatewealth.co/newsletter/confirm?token=${confirmToken}&email=${encodeURIComponent(email)}`;
+
+      // Fetch admin-configured footer settings for template consistency
+      const footerSettings = await getFooterSettings();
+
+      // Confirmation email content
+      const subscriberContent = `
       <p>Thank you for subscribing to the Navigate Wealth newsletter!</p>
       <p>Please confirm your subscription by clicking the button below:</p>
     `;
-    
-    // Admin notification content
-    const adminContent = `
+
+      // Admin notification content
+      const adminContent = `
       <p>A new user has attempted to subscribe to the Navigate Wealth newsletter.</p>
       <div style="background-color: #f8f9fa; padding: 20px; border-radius: 8px; margin: 24px 0;">
         <p style="margin: 8px 0;"><strong>Email:</strong> ${email}</p>
@@ -140,154 +153,163 @@ app.post("/subscribe", asyncHandler(async (c) => {
       <p>The subscriber needs to confirm their email before they are added to the active mailing list.</p>
     `;
 
-    try {
-      // Send confirmation email to subscriber
-      // Uses direct SendGrid call because it needs a custom from address (newsletters@)
-      // and custom headers for email deliverability
-      const messageId = `<${crypto.randomUUID()}@navigatewealth.co>`;
-      const subscriberEmailResponse = await fetch('https://api.sendgrid.com/v3/mail/send', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${sendgridApiKey}`
-        },
-        body: JSON.stringify({
-          personalizations: [
-            {
-              to: [{ email: email }],
-              subject: 'Please Confirm Your Navigate Wealth Newsletter Subscription'
-            }
-          ],
-          from: {
-            email: 'newsletters@navigatewealth.co',
-            name: 'Navigate Wealth'
-          },
-          reply_to: {
-            email: 'info@navigatewealth.co',
-            name: 'Navigate Wealth Support'
-          },
-          content: [
-            {
-              type: 'text/plain',
-              value: createPlainTextEmail(`Please Confirm Your Subscription\n\n${subscriberContent}\n\nConfirm here: ${confirmUrl}`)
-            },
-            {
-              type: 'text/html',
-              value: createEmailTemplate(subscriberContent, {
-                title: "Please Confirm Your Subscription",
-                buttonUrl: confirmUrl,
-                buttonLabel: "Confirm My Subscription",
-                footerNote: 'If you did not subscribe to this newsletter, you can safely ignore this email.',
-                footerSettings,
-              })
-            }
-          ],
+      try {
+        // Send confirmation email to subscriber
+        // Uses direct SendGrid call because it needs a custom from address (newsletters@)
+        // and custom headers for email deliverability
+        const messageId = `<${crypto.randomUUID()}@navigatewealth.co>`;
+        const subscriberEmailResponse = await fetch('https://api.sendgrid.com/v3/mail/send', {
+          method: 'POST',
           headers: {
-            'Message-ID': messageId,
-            'X-Entity-Ref-ID': `newsletter-subscribe-${confirmToken}`
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${sendgridApiKey}`,
           },
-          custom_args: {
-            type: 'newsletter_confirmation',
-            source: 'footer_form'
-          }
-        })
-      });
-      
-      if (!subscriberEmailResponse.ok) {
-        const errorText = await subscriberEmailResponse.text();
-        log.error('Error sending confirmation email:', errorText);
-      } else {
-        log.info('Confirmation email sent successfully to:', { email });
-      }
-      
-      // Send admin notification email via shared sendEmail (no custom headers needed)
-      const adminHtml = createEmailTemplate(adminContent, {
-        title: "New Newsletter Subscription Attempt",
-        buttonUrl: "https://www.navigatewealth.co/admin",
-        buttonLabel: "View Admin Dashboard",
-        footerSettings,
-      });
+          body: JSON.stringify({
+            personalizations: [
+              {
+                to: [{ email: email }],
+                subject: 'Please Confirm Your Navigate Wealth Newsletter Subscription',
+              },
+            ],
+            from: {
+              email: 'newsletters@navigatewealth.co',
+              name: 'Navigate Wealth',
+            },
+            reply_to: {
+              email: 'info@navigatewealth.co',
+              name: 'Navigate Wealth Support',
+            },
+            content: [
+              {
+                type: 'text/plain',
+                value: createPlainTextEmail(
+                  `Please Confirm Your Subscription\n\n${subscriberContent}\n\nConfirm here: ${confirmUrl}`,
+                ),
+              },
+              {
+                type: 'text/html',
+                value: createEmailTemplate(subscriberContent, {
+                  title: 'Please Confirm Your Subscription',
+                  buttonUrl: confirmUrl,
+                  buttonLabel: 'Confirm My Subscription',
+                  footerNote:
+                    'If you did not subscribe to this newsletter, you can safely ignore this email.',
+                  footerSettings,
+                }),
+              },
+            ],
+            headers: {
+              'Message-ID': messageId,
+              'X-Entity-Ref-ID': `newsletter-subscribe-${confirmToken}`,
+            },
+            custom_args: {
+              type: 'newsletter_confirmation',
+              source: 'footer_form',
+            },
+          }),
+        });
 
-      const adminOk = await sendEmail({
-        to: 'info@navigatewealth.co',
-        subject: 'New Newsletter Subscription Attempt (Footer Form)',
-        html: adminHtml,
-      });
+        if (!subscriberEmailResponse.ok) {
+          const errorText = await subscriberEmailResponse.text();
+          log.error('Error sending confirmation email:', errorText);
+        } else {
+          log.info('Confirmation email sent successfully to:', { email });
+        }
 
-      if (!adminOk) {
-        log.error('Error sending admin notification for newsletter subscription');
-      } else {
-        log.info('Admin notification email sent successfully');
+        // Send admin notification email via shared sendEmail (no custom headers needed)
+        const adminHtml = createEmailTemplate(adminContent, {
+          title: 'New Newsletter Subscription Attempt',
+          buttonUrl: 'https://www.navigatewealth.co/admin',
+          buttonLabel: 'View Admin Dashboard',
+          footerSettings,
+        });
+
+        const adminOk = await sendEmail({
+          to: 'info@navigatewealth.co',
+          subject: 'New Newsletter Subscription Attempt (Footer Form)',
+          html: adminHtml,
+        });
+
+        if (!adminOk) {
+          log.error('Error sending admin notification for newsletter subscription');
+        } else {
+          log.info('Admin notification email sent successfully');
+        }
+      } catch (emailError) {
+        log.error('Email sending error:', emailError);
       }
-    } catch (emailError) {
-      log.error('Email sending error:', emailError);
     }
-  }
-  
-  // Return success even if emails fail (pending confirmation is saved)
-  return c.json({ 
-    message: 'Confirmation email sent. Please check your inbox to complete subscription.',
-    success: true,
-    requiresConfirmation: true
-  }, 200);
-  
-}));
+
+    // Return success even if emails fail (pending confirmation is saved)
+    return c.json(
+      {
+        message: 'Confirmation email sent. Please check your inbox to complete subscription.',
+        success: true,
+        requiresConfirmation: true,
+      },
+      200,
+    );
+  }),
+);
 
 // Newsletter confirmation endpoint (double opt-in)
-app.get("/confirm", async (c) => {
+app.get('/confirm', async (c) => {
   try {
     const token = c.req.query('token');
     const email = c.req.query('email');
-    
+
     if (!token || !email) {
       return c.json({ error: 'Missing confirmation parameters' }, 400);
     }
-    
+
     const subscriptionKey = `newsletter:${email}`;
     const subscription = await kv.get(subscriptionKey);
-    
+
     if (!subscription) {
       return c.json({ error: 'Subscription not found' }, 404);
     }
-    
+
     if (subscription.confirmed) {
-      return c.json({ 
-        message: 'Already confirmed',
-        alreadyConfirmed: true 
-      }, 200);
+      return c.json(
+        {
+          message: 'Already confirmed',
+          alreadyConfirmed: true,
+        },
+        200,
+      );
     }
-    
+
     if (subscription.confirmToken !== token) {
       return c.json({ error: 'Invalid confirmation token' }, 400);
     }
-    
+
     // Check if token is expired (48 hours)
     const subscribedAt = new Date(subscription.subscribedAt);
     const now = new Date();
     const hoursDiff = (now.getTime() - subscribedAt.getTime()) / (1000 * 60 * 60);
-    
+
     if (hoursDiff > 48) {
       return c.json({ error: 'Confirmation link expired' }, 400);
     }
-    
+
     // Update subscription to confirmed
     await kv.set(subscriptionKey, {
       ...subscription,
       confirmed: true,
       confirmedAt: new Date().toISOString(),
-      active: true
+      active: true,
     });
-    
+
     // Add subscriber to newsletter group
     await addNewsletterSubscriber(email);
-    
+
     // Send welcome email and admin notification
     const sendgridApiKey = Deno.env.get('SENDGRID_API_KEY');
-    
+
     if (sendgridApiKey) {
       try {
         const unsubscribeLink = `https://www.navigatewealth.co/newsletter/unsubscribe?email=${encodeURIComponent(email)}`;
-        
+
         // Fetch admin-configured footer settings for template consistency
         const footerSettings = await getFooterSettings();
 
@@ -304,7 +326,7 @@ app.get("/confirm", async (c) => {
           </ul>
           <p>Our team is committed to providing you with valuable information to help you make informed financial decisions.</p>
         `;
-        
+
         // Send welcome email to subscriber
         // Uses direct SendGrid call because it needs a custom from address (newsletters@)
         // and List-Unsubscribe headers for email deliverability compliance
@@ -313,54 +335,57 @@ app.get("/confirm", async (c) => {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${sendgridApiKey}`
+            Authorization: `Bearer ${sendgridApiKey}`,
           },
           body: JSON.stringify({
             personalizations: [
               {
                 to: [{ email: email }],
-                subject: "You're in — Welcome to Navigate Wealth."
-              }
+                subject: "You're in — Welcome to Navigate Wealth.",
+              },
             ],
             from: {
               email: 'newsletters@navigatewealth.co',
-              name: 'Navigate Wealth'
+              name: 'Navigate Wealth',
             },
             reply_to: {
               email: 'info@navigatewealth.co',
-              name: 'Navigate Wealth Support'
+              name: 'Navigate Wealth Support',
             },
             content: [
               {
                 type: 'text/plain',
-                value: createPlainTextEmail(`You're in — Welcome to Navigate Wealth!\n\n${welcomeContent}`, unsubscribeLink)
+                value: createPlainTextEmail(
+                  `You're in — Welcome to Navigate Wealth!\n\n${welcomeContent}`,
+                  unsubscribeLink,
+                ),
               },
               {
                 type: 'text/html',
                 value: createEmailTemplate(welcomeContent, {
                   title: "You're in — Welcome to Navigate Wealth!",
                   unsubscribeLink,
-                  buttonUrl: "https://www.navigatewealth.co/resources",
-                  buttonLabel: "Explore Our Resources",
+                  buttonUrl: 'https://www.navigatewealth.co/resources',
+                  buttonLabel: 'Explore Our Resources',
                   footerNote: `If you have any questions or need personalized advice, our team is here to help. Contact us at <a href="mailto:info@navigatewealth.co" style="color: #6d28d9;">info@navigatewealth.co</a> or call <a href="tel:+27126672505" style="color: #6d28d9;">(+27) 12-667-2505</a>.`,
                   footerSettings,
-                })
-              }
+                }),
+              },
             ],
             headers: {
               'Message-ID': welcomeMessageId,
               'List-Unsubscribe': `<mailto:unsubscribe@navigatewealth.co?subject=unsubscribe>, <${unsubscribeLink}>`,
               'List-Unsubscribe-Post': 'List-Unsubscribe=One-Click',
               'List-Id': 'Navigate Wealth Newsletter <newsletter.navigatewealth.co>',
-              'X-Entity-Ref-ID': `newsletter-welcome-${token}`
+              'X-Entity-Ref-ID': `newsletter-welcome-${token}`,
             },
             custom_args: {
               type: 'newsletter_welcome',
-              source: 'footer_form'
-            }
-          })
+              source: 'footer_form',
+            },
+          }),
         });
-        
+
         // Send confirmed admin notification via shared sendEmail (no custom headers needed)
         const adminConfirmContent = `
           <p>A subscriber has confirmed their email and joined the Navigate Wealth newsletter.</p>
@@ -373,11 +398,11 @@ app.get("/confirm", async (c) => {
           </div>
           <p>The subscriber is now added to the active mailing list and will receive future newsletters.</p>
         `;
-        
+
         const adminConfirmHtml = createEmailTemplate(adminConfirmContent, {
-          title: "Newsletter Subscription Confirmed",
-          buttonUrl: "https://www.navigatewealth.co/admin",
-          buttonLabel: "View Admin Dashboard",
+          title: 'Newsletter Subscription Confirmed',
+          buttonUrl: 'https://www.navigatewealth.co/admin',
+          buttonLabel: 'View Admin Dashboard',
           footerSettings,
         });
 
@@ -390,67 +415,80 @@ app.get("/confirm", async (c) => {
         if (!adminConfirmOk) {
           log.error('Error sending admin confirmation notification for newsletter');
         }
-        
+
         log.info('Welcome email and admin notification sent for:', { email });
       } catch (emailError) {
         log.error('Error sending welcome emails:', emailError);
       }
     }
-    
-    return c.json({ 
-      message: 'Subscription confirmed successfully',
-      success: true 
-    }, 200);
-    
+
+    return c.json(
+      {
+        message: 'Subscription confirmed successfully',
+        success: true,
+      },
+      200,
+    );
   } catch (error) {
     log.error('Newsletter confirmation error:', error);
-    return c.json({ 
-      error: 'Failed to confirm subscription',
-      details: error instanceof Error ? error.message : 'Unknown error'
-    }, 500);
+    return c.json(
+      {
+        error: 'Failed to confirm subscription',
+        details: error instanceof Error ? error.message : 'Unknown error',
+      },
+      500,
+    );
   }
 });
 
 // Newsletter unsubscribe endpoint
-app.get("/unsubscribe", async (c) => {
+app.get('/unsubscribe', async (c) => {
   try {
     const email = c.req.query('email');
-    
+
     if (!email) {
       return c.json({ error: 'Email is required' }, 400);
     }
-    
+
     const subscriptionKey = `newsletter:${email}`;
     const subscription = await kv.get(subscriptionKey);
-    
+
     if (!subscription) {
-      return c.json({ 
-        message: 'Subscription not found',
-        notFound: true 
-      }, 200);
+      return c.json(
+        {
+          message: 'Subscription not found',
+          notFound: true,
+        },
+        200,
+      );
     }
-    
+
     // Update subscription to inactive
     await kv.set(subscriptionKey, {
       ...subscription,
       active: false,
-      unsubscribedAt: new Date().toISOString()
+      unsubscribedAt: new Date().toISOString(),
     });
-    
+
     // Remove subscriber from newsletter group
     await removeNewsletterSubscriber(email);
-    
-    return c.json({ 
-      message: 'Successfully unsubscribed',
-      success: true 
-    }, 200);
-    
+
+    return c.json(
+      {
+        message: 'Successfully unsubscribed',
+        success: true,
+      },
+      200,
+    );
   } catch (error) {
     log.error('Newsletter unsubscribe error:', error);
-    return c.json({ 
-      error: 'Failed to unsubscribe',
-      details: error instanceof Error ? error.message : 'Unknown error'
-    }, 500);
+    return c.json(
+      {
+        error: 'Failed to unsubscribe',
+        details: error instanceof Error ? error.message : 'Unknown error',
+      },
+      500,
+    );
   }
 });
 
@@ -461,174 +499,208 @@ app.get("/unsubscribe", async (c) => {
 /**
  * GET /admin/subscribers — List all newsletter subscribers
  */
-app.get('/admin/subscribers', requireAuth, asyncHandler(async (c) => {
-  await backfillLegacyNewsletterSubscribersToGroup().catch((error) => {
-    log.error('Newsletter group backfill failed during subscriber listing', error);
-  });
-  const subscribers = await listSubscribers();
-  return c.json({ success: true, subscribers, total: subscribers.length });
-}));
+app.get(
+  '/admin/subscribers',
+  requireAuth,
+  asyncHandler(async (c) => {
+    await backfillLegacyNewsletterSubscribersToGroup().catch((error) => {
+      log.error('Newsletter group backfill failed during subscriber listing', error);
+    });
+    const subscribers = await listSubscribers();
+    return c.json({ success: true, subscribers, total: subscribers.length });
+  }),
+);
 
 /**
  * POST /admin/add — Manually add a single subscriber (offline opt-in)
  */
-app.post('/admin/add', requireAuth, asyncHandler(async (c) => {
-  const body = await c.req.json();
-  const parsed = AdminAddSubscriberSchema.safeParse(body);
-  if (!parsed.success) {
-    return c.json({ error: 'Validation failed', ...formatZodError(parsed.error) }, 400);
-  }
+app.post(
+  '/admin/add',
+  requireAuth,
+  asyncHandler(async (c) => {
+    const body = await c.req.json();
+    const parsed = AdminAddSubscriberSchema.safeParse(body);
+    if (!parsed.success) {
+      return c.json({ error: 'Validation failed', ...formatZodError(parsed.error) }, 400);
+    }
 
-  const result = await addSubscriber(parsed.data);
+    const result = await addSubscriber(parsed.data);
 
-  // Audit trail (non-blocking — §12.2)
-  const adminUserId = c.get('userId') || 'unknown';
-  AdminAuditService.record({
-    actorId: adminUserId,
-    actorRole: 'admin',
-    category: 'communication',
-    action: 'newsletter_subscriber_added',
-    summary: 'Newsletter subscriber added manually',
-    severity: 'info',
-    entityType: 'newsletter',
-  }).catch(() => {});
+    // Audit trail (non-blocking — §12.2)
+    const adminUserId = c.get('userId') || 'unknown';
+    AdminAuditService.record({
+      actorId: adminUserId,
+      actorRole: 'admin',
+      category: 'communication',
+      action: 'newsletter_subscriber_added',
+      summary: 'Newsletter subscriber added manually',
+      severity: 'info',
+      entityType: 'newsletter',
+    }).catch(() => {});
 
-  return c.json({ success: true, ...result });
-}));
+    return c.json({ success: true, ...result });
+  }),
+);
 
 /**
  * POST /admin/bulk — Bulk add subscribers from parsed spreadsheet data
  */
-app.post('/admin/bulk', requireAuth, asyncHandler(async (c) => {
-  const body = await c.req.json();
-  const parsed = AdminBulkSubscriberSchema.safeParse(body);
-  if (!parsed.success) {
-    return c.json({ error: 'Validation failed', ...formatZodError(parsed.error) }, 400);
-  }
+app.post(
+  '/admin/bulk',
+  requireAuth,
+  asyncHandler(async (c) => {
+    const body = await c.req.json();
+    const parsed = AdminBulkSubscriberSchema.safeParse(body);
+    if (!parsed.success) {
+      return c.json({ error: 'Validation failed', ...formatZodError(parsed.error) }, 400);
+    }
 
-  const results = await bulkAddSubscribers(parsed.data.subscribers);
+    const results = await bulkAddSubscribers(parsed.data.subscribers);
 
-  // Audit trail (non-blocking — §12.2)
-  const adminUserId = c.get('userId') || 'unknown';
-  AdminAuditService.record({
-    actorId: adminUserId,
-    actorRole: 'admin',
-    category: 'bulk_operation',
-    action: 'newsletter_bulk_upload',
-    summary: `Newsletter bulk upload: ${results.added} added, ${results.skipped} skipped`,
-    severity: 'info',
-    entityType: 'newsletter',
-    metadata: { added: results.added, skipped: results.skipped, errors: results.errors.length },
-  }).catch(() => {});
+    // Audit trail (non-blocking — §12.2)
+    const adminUserId = c.get('userId') || 'unknown';
+    AdminAuditService.record({
+      actorId: adminUserId,
+      actorRole: 'admin',
+      category: 'bulk_operation',
+      action: 'newsletter_bulk_upload',
+      summary: `Newsletter bulk upload: ${results.added} added, ${results.skipped} skipped`,
+      severity: 'info',
+      entityType: 'newsletter',
+      metadata: { added: results.added, skipped: results.skipped, errors: results.errors.length },
+    }).catch(() => {});
 
-  return c.json({
-    success: true,
-    message: `Bulk upload complete: ${results.added} added, ${results.skipped} already subscribed, ${results.errors.length} errors`,
-    ...results,
-  });
-}));
+    return c.json({
+      success: true,
+      message: `Bulk upload complete: ${results.added} added, ${results.skipped} already subscribed, ${results.errors.length} errors`,
+      ...results,
+    });
+  }),
+);
 
 /**
  * POST /admin/remove — Remove (deactivate) a subscriber
  */
-app.post('/admin/remove', requireAuth, asyncHandler(async (c) => {
-  const body = await c.req.json();
-  const parsed = AdminEmailSchema.safeParse(body);
-  if (!parsed.success) {
-    return c.json({ error: 'Validation failed', ...formatZodError(parsed.error) }, 400);
-  }
+app.post(
+  '/admin/remove',
+  requireAuth,
+  asyncHandler(async (c) => {
+    const body = await c.req.json();
+    const parsed = AdminEmailSchema.safeParse(body);
+    if (!parsed.success) {
+      return c.json({ error: 'Validation failed', ...formatZodError(parsed.error) }, 400);
+    }
 
-  await removeSubscriberByEmail(parsed.data.email);
+    await removeSubscriberByEmail(parsed.data.email);
 
-  // Audit trail (non-blocking — §12.2)
-  const adminUserId = c.get('userId') || 'unknown';
-  AdminAuditService.record({
-    actorId: adminUserId,
-    actorRole: 'admin',
-    category: 'communication',
-    action: 'newsletter_subscriber_removed',
-    summary: 'Newsletter subscriber removed',
-    severity: 'warning',
-    entityType: 'newsletter',
-  }).catch(() => {});
+    // Audit trail (non-blocking — §12.2)
+    const adminUserId = c.get('userId') || 'unknown';
+    AdminAuditService.record({
+      actorId: adminUserId,
+      actorRole: 'admin',
+      category: 'communication',
+      action: 'newsletter_subscriber_removed',
+      summary: 'Newsletter subscriber removed',
+      severity: 'warning',
+      entityType: 'newsletter',
+    }).catch(() => {});
 
-  return c.json({ success: true, message: `${parsed.data.email} removed from newsletter` });
-}));
+    return c.json({ success: true, message: `${parsed.data.email} removed from newsletter` });
+  }),
+);
 
 /**
  * POST /admin/resubscribe — Re-activate a previously unsubscribed subscriber
  */
-app.post('/admin/resubscribe', requireAuth, asyncHandler(async (c) => {
-  const body = await c.req.json();
-  const parsed = AdminEmailSchema.safeParse(body);
-  if (!parsed.success) {
-    return c.json({ error: 'Validation failed', ...formatZodError(parsed.error) }, 400);
-  }
+app.post(
+  '/admin/resubscribe',
+  requireAuth,
+  asyncHandler(async (c) => {
+    const body = await c.req.json();
+    const parsed = AdminEmailSchema.safeParse(body);
+    if (!parsed.success) {
+      return c.json({ error: 'Validation failed', ...formatZodError(parsed.error) }, 400);
+    }
 
-  const result = await resubscribeByEmail(parsed.data.email);
+    const result = await resubscribeByEmail(parsed.data.email);
 
-  // Audit trail (non-blocking — §12.2)
-  const adminUserId = c.get('userId') || 'unknown';
-  AdminAuditService.record({
-    actorId: adminUserId,
-    actorRole: 'admin',
-    category: 'communication',
-    action: 'newsletter_subscriber_resubscribed',
-    summary: 'Newsletter subscriber re-activated by admin',
-    severity: 'info',
-    entityType: 'newsletter',
-  }).catch(() => {});
+    // Audit trail (non-blocking — §12.2)
+    const adminUserId = c.get('userId') || 'unknown';
+    AdminAuditService.record({
+      actorId: adminUserId,
+      actorRole: 'admin',
+      category: 'communication',
+      action: 'newsletter_subscriber_resubscribed',
+      summary: 'Newsletter subscriber re-activated by admin',
+      severity: 'info',
+      entityType: 'newsletter',
+    }).catch(() => {});
 
-  return c.json({ success: true, ...result });
-}));
+    return c.json({ success: true, ...result });
+  }),
+);
 
 /**
  * POST /admin/update — Update subscriber details
  */
-app.post('/admin/update', requireAuth, asyncHandler(async (c) => {
-  const body = await c.req.json();
-  const parsed = AdminUpdateSubscriberSchema.safeParse(body);
-  if (!parsed.success) {
-    return c.json({ error: 'Validation failed', ...formatZodError(parsed.error) }, 400);
-  }
+app.post(
+  '/admin/update',
+  requireAuth,
+  asyncHandler(async (c) => {
+    const body = await c.req.json();
+    const parsed = AdminUpdateSubscriberSchema.safeParse(body);
+    if (!parsed.success) {
+      return c.json({ error: 'Validation failed', ...formatZodError(parsed.error) }, 400);
+    }
 
-  const result = await updateSubscriberDetails(parsed.data);
+    const result = await updateSubscriberDetails(parsed.data);
 
-  const adminUserId = c.get('userId') || 'unknown';
-  AdminAuditService.record({
-    actorId: adminUserId,
-    actorRole: 'admin',
-    category: 'communication',
-    action: 'newsletter_subscriber_updated',
-    summary: 'Newsletter subscriber details updated',
-    severity: 'info',
-    entityType: 'newsletter',
-  }).catch(() => {});
+    const adminUserId = c.get('userId') || 'unknown';
+    AdminAuditService.record({
+      actorId: adminUserId,
+      actorRole: 'admin',
+      category: 'communication',
+      action: 'newsletter_subscriber_updated',
+      summary: 'Newsletter subscriber details updated',
+      severity: 'info',
+      entityType: 'newsletter',
+    }).catch(() => {});
 
-  return c.json({ success: true, ...result });
-}));
+    return c.json({ success: true, ...result });
+  }),
+);
 
 /**
  * GET /admin/stats — Newsletter KPI summary
  */
-app.get('/admin/stats', requireAuth, asyncHandler(async (c) => {
-  await backfillLegacyNewsletterSubscribersToGroup().catch((error) => {
-    log.error('Newsletter group backfill failed during stats load', error);
-  });
-  const data = await getStats();
-  return c.json({ success: true, data });
-}));
+app.get(
+  '/admin/stats',
+  requireAuth,
+  asyncHandler(async (c) => {
+    await backfillLegacyNewsletterSubscribersToGroup().catch((error) => {
+      log.error('Newsletter group backfill failed during stats load', error);
+    });
+    const data = await getStats();
+    return c.json({ success: true, data });
+  }),
+);
 
-app.post('/admin/backfill-group', requireAuth, requireAdmin, asyncHandler(async (c) => {
-  const result = await backfillLegacyNewsletterSubscribersToGroup();
-  return c.json({
-    success: true,
-    message: result.subscriberCount > 0
-      ? `Backfilled ${result.subscriberCount} legacy subscriber(s) into Newsletter Contacts`
-      : 'Newsletter Contacts legacy backfill already completed',
-    data: result,
-  });
-}));
+app.post(
+  '/admin/backfill-group',
+  requireAuth,
+  requireAdmin,
+  asyncHandler(async (c) => {
+    const result = await backfillLegacyNewsletterSubscribersToGroup();
+    return c.json({
+      success: true,
+      message:
+        result.subscriberCount > 0
+          ? `Backfilled ${result.subscriberCount} legacy subscriber(s) into Newsletter Contacts`
+          : 'Newsletter Contacts legacy backfill already completed',
+      data: result,
+    });
+  }),
+);
 
 /**
  * POST /admin/reconcile-clients — One-time reconciliation of clients → subscribers.
@@ -638,36 +710,41 @@ app.post('/admin/backfill-group', requireAuth, requireAdmin, asyncHandler(async 
  *
  * Admin-only.  Returns an audit summary.
  */
-app.post('/admin/reconcile-clients', requireAuth, requireAdmin, asyncHandler(async (c) => {
-  log.info('Admin: Starting client-to-subscriber reconciliation');
+app.post(
+  '/admin/reconcile-clients',
+  requireAuth,
+  requireAdmin,
+  asyncHandler(async (c) => {
+    log.info('Admin: Starting client-to-subscriber reconciliation');
 
-  const result = await reconcileClientsToSubscribers();
+    const result = await reconcileClientsToSubscribers();
 
-  const adminUserId = c.get('userId') || 'unknown';
-  AdminAuditService.record({
-    actorId: adminUserId,
-    actorRole: 'admin',
-    category: 'bulk_operation',
-    action: 'newsletter_client_reconciliation',
-    summary: `Client reconciliation: ${result.added} added, ${result.skippedUnsubscribed} skipped (unsubscribed), ${result.alreadySubscribed} already subscribed`,
-    severity: 'info',
-    entityType: 'newsletter',
-    metadata: {
-      added: result.added,
-      skippedUnsubscribed: result.skippedUnsubscribed,
-      alreadySubscribed: result.alreadySubscribed,
-      errors: result.errors.length,
-      totalClients: result.totalClients,
-      totalSubscribersBefore: result.totalSubscribersBefore,
-      totalSubscribersAfter: result.totalSubscribersAfter,
-    },
-  }).catch(() => {});
+    const adminUserId = c.get('userId') || 'unknown';
+    AdminAuditService.record({
+      actorId: adminUserId,
+      actorRole: 'admin',
+      category: 'bulk_operation',
+      action: 'newsletter_client_reconciliation',
+      summary: `Client reconciliation: ${result.added} added, ${result.skippedUnsubscribed} skipped (unsubscribed), ${result.alreadySubscribed} already subscribed`,
+      severity: 'info',
+      entityType: 'newsletter',
+      metadata: {
+        added: result.added,
+        skippedUnsubscribed: result.skippedUnsubscribed,
+        alreadySubscribed: result.alreadySubscribed,
+        errors: result.errors.length,
+        totalClients: result.totalClients,
+        totalSubscribersBefore: result.totalSubscribersBefore,
+        totalSubscribersAfter: result.totalSubscribersAfter,
+      },
+    }).catch(() => {});
 
-  return c.json({
-    success: true,
-    message: `Reconciliation complete: ${result.added} added, ${result.skippedUnsubscribed} skipped (unsubscribed), ${result.alreadySubscribed} already subscribed`,
-    ...result,
-  });
-}));
+    return c.json({
+      success: true,
+      message: `Reconciliation complete: ${result.added} added, ${result.skippedUnsubscribed} skipped (unsubscribed), ${result.alreadySubscribed} already subscribed`,
+      ...result,
+    });
+  }),
+);
 
 export default app;

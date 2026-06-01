@@ -10,13 +10,7 @@
  */
 
 import React, { useState } from 'react';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-} from '../ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '../ui/dialog';
 import { Button } from '../ui/button';
 import { Label } from '../ui/label';
 import { Input } from '../ui/input';
@@ -181,7 +175,9 @@ export function ServiceRequestModal({
       <DialogContent className="max-w-lg">
         <DialogHeader>
           <div className="flex items-center gap-3 mb-1">
-            <div className={`h-10 w-10 rounded-lg ${config.iconBg} flex items-center justify-center`}>
+            <div
+              className={`h-10 w-10 rounded-lg ${config.iconBg} flex items-center justify-center`}
+            >
               <Icon className={`h-5 w-5 ${config.iconColor}`} />
             </div>
             <div>
@@ -402,7 +398,7 @@ export const SERVICE_REQUEST_CONFIGS: Record<string, ServiceRequestConfig> = {
         id: 'notes',
         label: 'Additional information',
         type: 'textarea',
-        placeholder: 'List any documents you\'ll be providing (IRP5, medical certificates, etc.)...',
+        placeholder: "List any documents you'll be providing (IRP5, medical certificates, etc.)...",
         required: false,
       },
     ],

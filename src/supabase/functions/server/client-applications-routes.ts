@@ -65,9 +65,12 @@ app.post('/save-progress', async (c) => {
     return c.json({ success: true, data: { applicationId } });
   } catch (error: unknown) {
     log.error('save-progress error:', error);
-    return c.json({
-      error: error instanceof Error ? error.message : 'Failed to save progress',
-    }, 500);
+    return c.json(
+      {
+        error: error instanceof Error ? error.message : 'Failed to save progress',
+      },
+      500,
+    );
   }
 });
 
@@ -105,9 +108,12 @@ app.post('/submit', async (c) => {
     return c.json({ success: true, data: result.application });
   } catch (error: unknown) {
     log.error('submit error:', error);
-    return c.json({
-      error: error instanceof Error ? error.message : 'Failed to submit application',
-    }, 500);
+    return c.json(
+      {
+        error: error instanceof Error ? error.message : 'Failed to submit application',
+      },
+      500,
+    );
   }
 });
 
@@ -129,22 +135,20 @@ app.post('/step/:step', async (c) => {
       return c.json({ error: 'Step must be 1-5' }, 400);
     }
 
-    const result = await clientApplicationsService.saveStep(
-      applicationId,
-      step,
-      data,
-      {
-        ...completedBy,
-        timestamp: new Date().toISOString(),
-      },
-    );
+    const result = await clientApplicationsService.saveStep(applicationId, step, data, {
+      ...completedBy,
+      timestamp: new Date().toISOString(),
+    });
 
     return c.json({ success: true, data: result });
   } catch (error: unknown) {
     log.error('save step error:', error);
-    return c.json({
-      error: error instanceof Error ? error.message : 'Failed to save step',
-    }, 500);
+    return c.json(
+      {
+        error: error instanceof Error ? error.message : 'Failed to save step',
+      },
+      500,
+    );
   }
 });
 
@@ -163,9 +167,12 @@ app.get('/step/:applicationId/:step', async (c) => {
     return c.json({ success: true, data: stepData });
   } catch (error: unknown) {
     log.error('get step error:', error);
-    return c.json({
-      error: error instanceof Error ? error.message : 'Failed to load step',
-    }, 500);
+    return c.json(
+      {
+        error: error instanceof Error ? error.message : 'Failed to load step',
+      },
+      500,
+    );
   }
 });
 
@@ -178,9 +185,12 @@ app.get('/steps/:applicationId', async (c) => {
     return c.json({ success: true, data: steps });
   } catch (error: unknown) {
     log.error('get all steps error:', error);
-    return c.json({
-      error: error instanceof Error ? error.message : 'Failed to load steps',
-    }, 500);
+    return c.json(
+      {
+        error: error instanceof Error ? error.message : 'Failed to load steps',
+      },
+      500,
+    );
   }
 });
 
@@ -198,9 +208,12 @@ app.get('/:userId', async (c) => {
     return c.json({ success: true, data: application });
   } catch (error: unknown) {
     log.error('get application error:', error);
-    return c.json({
-      error: error instanceof Error ? error.message : 'Failed to load application',
-    }, 500);
+    return c.json(
+      {
+        error: error instanceof Error ? error.message : 'Failed to load application',
+      },
+      500,
+    );
   }
 });
 

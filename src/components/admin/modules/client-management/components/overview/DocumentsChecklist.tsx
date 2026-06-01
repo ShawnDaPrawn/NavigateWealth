@@ -19,14 +19,7 @@
 import React, { useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '../../../../../ui/card';
 import { Badge } from '../../../../../ui/badge';
-import {
-  FileCheck,
-  FileX,
-  FolderOpen,
-  CheckCircle2,
-  Circle,
-  AlertCircle,
-} from 'lucide-react';
+import { FileCheck, FileX, FolderOpen, CheckCircle2, Circle, AlertCircle } from 'lucide-react';
 import type { DashboardMode } from '../ClientOverviewTab';
 
 // ── Types ───────────────────────────────────────────────────────────────
@@ -72,11 +65,14 @@ const CATEGORY_CONFIG: Record<DocumentCategory, DocumentCategoryConfig> = {
   },
 };
 
-const STATUS_CONFIG: Record<DocumentStatus, {
-  icon: React.ElementType;
-  iconClass: string;
-  label: string;
-}> = {
+const STATUS_CONFIG: Record<
+  DocumentStatus,
+  {
+    icon: React.ElementType;
+    iconClass: string;
+    label: string;
+  }
+> = {
   available: { icon: CheckCircle2, iconClass: 'text-green-500', label: 'Available' },
   missing: { icon: Circle, iconClass: 'text-gray-300', label: 'Missing' },
   'not-applicable': { icon: Circle, iconClass: 'text-gray-200', label: 'N/A' },
@@ -91,10 +87,7 @@ export interface DocumentsChecklistProps {
 
 // ── Component ───────────────────────────────────────────────────────────
 
-export function DocumentsChecklist({
-  documents,
-  mode = 'adviser',
-}: DocumentsChecklistProps) {
+export function DocumentsChecklist({ documents, mode = 'adviser' }: DocumentsChecklistProps) {
   const isClient = mode === 'client';
 
   // Group by category
@@ -114,9 +107,9 @@ export function DocumentsChecklist({
   }, [documents]);
 
   // Summary stats
-  const totalDocs = documents.filter(d => d.status !== 'not-applicable').length;
-  const availableDocs = documents.filter(d => d.status === 'available').length;
-  const missingDocs = documents.filter(d => d.status === 'missing').length;
+  const totalDocs = documents.filter((d) => d.status !== 'not-applicable').length;
+  const availableDocs = documents.filter((d) => d.status === 'available').length;
+  const missingDocs = documents.filter((d) => d.status === 'missing').length;
   const completionPct = totalDocs > 0 ? Math.round((availableDocs / totalDocs) * 100) : 0;
 
   if (documents.length === 0) {
@@ -135,7 +128,10 @@ export function DocumentsChecklist({
           </CardTitle>
           <div className="flex items-center gap-2 ml-auto">
             {missingDocs > 0 && (
-              <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-4 border-amber-200 text-amber-600">
+              <Badge
+                variant="outline"
+                className="text-[10px] px-1.5 py-0 h-4 border-amber-200 text-amber-600"
+              >
                 {missingDocs} missing
               </Badge>
             )}
@@ -157,7 +153,11 @@ export function DocumentsChecklist({
         <div className="h-1.5 w-full rounded-full bg-gray-100 mb-4 overflow-hidden">
           <div
             className={`h-full rounded-full transition-all duration-500 ${
-              completionPct === 100 ? 'bg-green-500' : completionPct >= 50 ? 'bg-amber-400' : 'bg-gray-300'
+              completionPct === 100
+                ? 'bg-green-500'
+                : completionPct >= 50
+                  ? 'bg-amber-400'
+                  : 'bg-gray-300'
             }`}
             style={{ width: `${completionPct}%` }}
           />
@@ -169,8 +169,8 @@ export function DocumentsChecklist({
             const items = grouped[cat];
             if (items.length === 0) return null;
             const config = CATEGORY_CONFIG[cat];
-            const catAvailable = items.filter(d => d.status === 'available').length;
-            const catTotal = items.filter(d => d.status !== 'not-applicable').length;
+            const catAvailable = items.filter((d) => d.status === 'available').length;
+            const catTotal = items.filter((d) => d.status !== 'not-applicable').length;
 
             return (
               <div key={cat}>
@@ -197,10 +197,14 @@ export function DocumentsChecklist({
                               : 'bg-gray-50/30'
                         }`}
                       >
-                        <StatusIcon className={`h-3.5 w-3.5 flex-shrink-0 ${statusCfg.iconClass}`} />
-                        <span className={`text-xs ${
-                          doc.status === 'available' ? 'text-gray-700' : 'text-gray-500'
-                        }`}>
+                        <StatusIcon
+                          className={`h-3.5 w-3.5 flex-shrink-0 ${statusCfg.iconClass}`}
+                        />
+                        <span
+                          className={`text-xs ${
+                            doc.status === 'available' ? 'text-gray-700' : 'text-gray-500'
+                          }`}
+                        >
                           {doc.label}
                         </span>
                         {doc.detail && (

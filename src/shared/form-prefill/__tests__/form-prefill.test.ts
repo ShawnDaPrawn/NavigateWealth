@@ -16,7 +16,9 @@ describe('form-field-registry', () => {
 
   it('maps retirement step 1 fields to canonical keys', () => {
     const mappings = getFormFieldMappings('retirement-fna-step1');
-    expect(mappings.find((m) => m.formField === 'currentAge')?.canonicalKey).toBe('derived:age_from_dob');
+    expect(mappings.find((m) => m.formField === 'currentAge')?.canonicalKey).toBe(
+      'derived:age_from_dob',
+    );
   });
 });
 

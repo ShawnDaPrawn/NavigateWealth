@@ -15,7 +15,7 @@ export function KPIGrid({ kpis, loading = false, columns = 4 }: KPIGridProps) {
     return (
       <div className={`grid gap-6 ${gridCols[columns]}`}>
         {Array.from({ length: columns }).map((_, i) => (
-          <KPICard 
+          <KPICard
             key={`skeleton-${i}`}
             title=""
             value={0}
@@ -35,11 +35,7 @@ export function KPIGrid({ kpis, loading = false, columns = 4 }: KPIGridProps) {
   return (
     <div className={`grid gap-6 ${gridCols[columns]}`}>
       {kpis.map((kpi, index) => (
-        <KPICard
-          key={kpi.title || index}
-          {...kpi}
-          loading={kpi.loading || false}
-        />
+        <KPICard key={kpi.title || index} {...kpi} loading={kpi.loading || false} />
       ))}
     </div>
   );

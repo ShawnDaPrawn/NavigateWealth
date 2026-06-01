@@ -18,9 +18,11 @@ function flattenProfile(raw: Record<string, unknown>): Record<string, unknown> {
       ? (raw.personalInformation as Record<string, unknown>)
       : {};
 
-  return { ...personal, ...raw, ...Object.fromEntries(
-    Object.entries(raw).filter(([k]) => k !== 'personalInformation'),
-  ) };
+  return {
+    ...personal,
+    ...raw,
+    ...Object.fromEntries(Object.entries(raw).filter(([k]) => k !== 'personalInformation')),
+  };
 }
 
 export function calculateAge(dob: unknown): number {
@@ -77,18 +79,22 @@ export function aggregateRetirementCapital(sources: ClientDataSources): number {
     ? sources.policiesLegacy.investments
     : [];
 
-  const aggregated = sumPolicyInvestments(investments, (inv) => {
-    const name = String(inv.name || inv.productName || '').toLowerCase();
-    const category = String(inv.category || inv.productCategory || '').toLowerCase();
-    return (
-      category.includes('retirement') ||
-      category.includes('pension') ||
-      category.includes('provident') ||
-      category.includes('ra') ||
-      name.includes('retirement') ||
-      inv.isDiscretionary === false
-    );
-  }, 'currentValue');
+  const aggregated = sumPolicyInvestments(
+    investments,
+    (inv) => {
+      const name = String(inv.name || inv.productName || '').toLowerCase();
+      const category = String(inv.category || inv.productCategory || '').toLowerCase();
+      return (
+        category.includes('retirement') ||
+        category.includes('pension') ||
+        category.includes('provident') ||
+        category.includes('ra') ||
+        name.includes('retirement') ||
+        inv.isDiscretionary === false
+      );
+    },
+    'currentValue',
+  );
 
   return (
     Number(merged.retirement_fund_value_total) ||
@@ -105,10 +111,14 @@ export function aggregateRetirementContribution(sources: ClientDataSources): num
     ? sources.policiesLegacy.investments
     : [];
 
-  const aggregated = sumPolicyInvestments(investments, (inv) => {
-    const category = String(inv.category || inv.productCategory || '').toLowerCase();
-    return category.includes('retirement') || inv.isDiscretionary === false;
-  }, 'monthlyContribution');
+  const aggregated = sumPolicyInvestments(
+    investments,
+    (inv) => {
+      const category = String(inv.category || inv.productCategory || '').toLowerCase();
+      return category.includes('retirement') || inv.isDiscretionary === false;
+    },
+    'monthlyContribution',
+  );
 
   return (
     Number(merged.retirement_total_contribution) ||
@@ -123,7 +133,11 @@ export function aggregateInvestmentContribution(sources: ClientDataSources): num
   const investments = Array.isArray(sources.policiesLegacy.investments)
     ? sources.policiesLegacy.investments
     : [];
-  return sumPolicyInvestments(investments, (inv) => inv.isDiscretionary === true, 'monthlyContribution');
+  return sumPolicyInvestments(
+    investments,
+    (inv) => inv.isDiscretionary === true,
+    'monthlyContribution',
+  );
 }
 
 export function totalFromLiabilities(profile: Record<string, unknown>): number {
@@ -174,7 +188,9 @@ export function childrenDependantCount(profile: Record<string, unknown>): number
 }
 
 export function hasSpousePartner(profile: Record<string, unknown>): boolean {
-  const marital = String(profile.maritalStatus || profile.profile_marital_status || '').toLowerCase();
+  const marital = String(
+    profile.maritalStatus || profile.profile_marital_status || '',
+  ).toLowerCase();
   if (marital.includes('married')) return true;
   return Boolean(profile.spouseFullName || profile.spouseName || profile.profile_spouse_name);
 }
@@ -197,7 +213,8 @@ export function existingCoverSummaryText(sources: ClientDataSources): string {
   const parts: string[] = [];
   if (keys.risk_life_cover_total) parts.push(`Life: R${keys.risk_life_cover_total}`);
   if (keys.risk_disability_total) parts.push(`Disability: R${keys.risk_disability_total}`);
-  if (keys.risk_severe_illness_total) parts.push(`Severe illness: R${keys.risk_severe_illness_total}`);
+  if (keys.risk_severe_illness_total)
+    parts.push(`Severe illness: R${keys.risk_severe_illness_total}`);
   return parts.join('; ');
 }
 

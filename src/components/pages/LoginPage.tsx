@@ -1,9 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router';
-import { 
-  signIn, 
-  resendVerificationEmail 
-} from '../../utils/auth/authService';
+import { signIn, resendVerificationEmail } from '../../utils/auth/authService';
 import { signOut } from '../../utils/auth/authService';
 import { AuthError } from '../../utils/auth/errorHandler';
 import { useAuth } from '../auth/AuthContext';
@@ -60,7 +57,7 @@ export function LoginPage() {
       // If a returnUrl was provided (e.g. from session-expiry redirect), use it.
       // Otherwise, use the RouteGuards helper to determine the correct redirect path.
       const redirectPath = returnUrl || getAuthenticatedRedirectPath(user);
-      
+
       // Perform a hard refresh to ensure the dashboard has the latest UI and data
       window.location.href = redirectPath;
     }
@@ -105,25 +102,24 @@ export function LoginPage() {
     }
 
     setIsSubmitting(true);
-    
+
     try {
       // Proceed with normal sign in
       const result = await signIn(email, password);
-      
+
       // Check if 2FA is enabled for this user
       if (result.user?.id) {
-        
         try {
           const securityResponse = await fetch(
             `https://${projectId}.supabase.co/functions/v1/make-server-91ed8379/security/${result.user.id}/status`,
             {
-              headers: { 'Authorization': `Bearer ${publicAnonKey}` }
-            }
+              headers: { Authorization: `Bearer ${publicAnonKey}` },
+            },
           );
 
           if (securityResponse.ok) {
             const securityData = await securityResponse.json();
-            
+
             // -- Account lifecycle gate --
             // If the account is closed (soft-deleted), sign out immediately
             // and inform the user. All data remains visible to admin.
@@ -131,7 +127,7 @@ export function LoginPage() {
               await signOut();
               setIsSubmitting(false);
               setError(
-                'Your account has been closed. If you believe this is an error, please contact Navigate Wealth support.'
+                'Your account has been closed. If you believe this is an error, please contact Navigate Wealth support.',
               );
               return;
             }
@@ -141,13 +137,12 @@ export function LoginPage() {
               await signOut();
               setIsSubmitting(false);
               setError(
-                'Your account has been suspended. Please contact Navigate Wealth support for assistance.'
+                'Your account has been suspended. Please contact Navigate Wealth support for assistance.',
               );
               return;
             }
 
             if (securityData.success && securityData.status?.twoFactorEnabled) {
-              
               // ── 3-hour grace period ────────────────────────────────
               // If the user verified 2FA within the last 3 hours, skip
               // the challenge to avoid friction on short-lived sessions.
@@ -176,11 +171,11 @@ export function LoginPage() {
                 {
                   method: 'POST',
                   headers: {
-                    'Authorization': `Bearer ${publicAnonKey}`,
-                    'Content-Type': 'application/json'
+                    Authorization: `Bearer ${publicAnonKey}`,
+                    'Content-Type': 'application/json',
                   },
-                  body: JSON.stringify({ email: email })
-                }
+                  body: JSON.stringify({ email: email }),
+                },
               );
 
               if (!sendCodeResponse.ok) {
@@ -206,21 +201,20 @@ export function LoginPage() {
           // This is intentional - 2FA check failing should not block login
         }
       }
-      
+
       // Don't redirect here - let the useEffect handle all redirects after user is loaded
-      
     } catch (error: unknown) {
       // AuthError carries a `code` property for reliable classification
       if (error instanceof AuthError) {
         switch (error.code) {
           case 'rate_limited':
             setError(
-              'Too many login attempts. Navigate Wealth has temporarily blocked further attempts for security reasons. Please wait 5-10 minutes before trying again.'
+              'Too many login attempts. Navigate Wealth has temporarily blocked further attempts for security reasons. Please wait 5-10 minutes before trying again.',
             );
             break;
           case 'email_not_verified':
             setError(
-              'Please verify your email address before signing in. Check your inbox for the verification link.'
+              'Please verify your email address before signing in. Check your inbox for the verification link.',
             );
             break;
           case 'invalid_credentials':
@@ -228,7 +222,7 @@ export function LoginPage() {
             break;
           case 'network_error':
             setError(
-              'Unable to connect to the authentication server. This may be a temporary issue — please wait a moment and try again. If the problem persists, contact support.'
+              'Unable to connect to the authentication server. This may be a temporary issue — please wait a moment and try again. If the problem persists, contact support.',
             );
             break;
           default:
@@ -263,7 +257,7 @@ export function LoginPage() {
       } catch (reAuthError: unknown) {
         console.error('Re-authentication after 2FA failed:', reAuthError);
         setError(
-          'Your identity was verified, but we could not complete sign-in. Please try logging in again.'
+          'Your identity was verified, but we could not complete sign-in. Please try logging in again.',
         );
       } finally {
         setIsSubmitting(false);
@@ -281,7 +275,7 @@ export function LoginPage() {
     setTempUserId(null);
     setTempUserEmail('');
     setTempPassword('');
-    
+
     // User was already signed out before the modal was shown,
     // so no need to sign out again — just inform them.
     setError('Login cancelled. Two-factor authentication is required.');
@@ -301,11 +295,11 @@ export function LoginPage() {
               {
                 method: 'POST',
                 headers: {
-                  'Authorization': `Bearer ${publicAnonKey}`,
+                  Authorization: `Bearer ${publicAnonKey}`,
                   'Content-Type': 'application/json',
                 },
                 body: JSON.stringify({ code }),
-              }
+              },
             );
             const data = await response.json();
             if (!response.ok || !data.success) {
@@ -316,7 +310,10 @@ export function LoginPage() {
                 setTempUserId(null);
                 setTempUserEmail('');
                 setTempPassword('');
-                setError(data.error || 'Your account has been suspended. Please contact Navigate Wealth support.');
+                setError(
+                  data.error ||
+                    'Your account has been suspended. Please contact Navigate Wealth support.',
+                );
                 return { success: false, error: '' }; // Error shown on login page, not in modal
               }
               return { success: false, error: data.error || 'Verification failed' };
@@ -329,11 +326,11 @@ export function LoginPage() {
               {
                 method: 'POST',
                 headers: {
-                  'Authorization': `Bearer ${publicAnonKey}`,
+                  Authorization: `Bearer ${publicAnonKey}`,
                   'Content-Type': 'application/json',
                 },
                 body: JSON.stringify({ email: tempUserEmail }),
-              }
+              },
             );
             const data = await response.json();
             if (!response.ok || !data.success) {
@@ -361,9 +358,7 @@ export function LoginPage() {
           {successMessage && (
             <Alert className="mb-6 border-green-200 bg-green-50">
               <CheckCircle2 className="h-4 w-4 text-green-600" />
-              <AlertDescription className="text-green-800">
-                {successMessage}
-              </AlertDescription>
+              <AlertDescription className="text-green-800">{successMessage}</AlertDescription>
             </Alert>
           )}
 
@@ -393,7 +388,11 @@ export function LoginPage() {
             </Alert>
           )}
 
-          <form onSubmit={handleSubmit} className="space-y-5" aria-describedby={error ? 'login-error' : undefined}>
+          <form
+            onSubmit={handleSubmit}
+            className="space-y-5"
+            aria-describedby={error ? 'login-error' : undefined}
+          >
             <div>
               <Label htmlFor="email">Email Address</Label>
               <div className="relative mt-1">
@@ -445,9 +444,39 @@ export function LoginPage() {
                   aria-label={showPassword ? 'Hide password' : 'Show password'}
                 >
                   {showPassword ? (
-                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-gray-400"><path d="M10.733 5.076a10.744 10.744 0 0 1 11.205 6.575 1 1 0 0 1 0 .696 10.747 10.747 0 0 1-1.444 2.49"/><path d="M14.084 14.158a3 3 0 0 1-4.242-4.242"/><path d="M17.479 17.499a10.75 10.75 0 0 1-15.417-5.151 1 1 0 0 1 0-.696 10.75 10.75 0 0 1 4.446-5.143"/><path d="m2 2 20 20"/></svg>
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      width="16"
+                      height="16"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      className="text-gray-400"
+                    >
+                      <path d="M10.733 5.076a10.744 10.744 0 0 1 11.205 6.575 1 1 0 0 1 0 .696 10.747 10.747 0 0 1-1.444 2.49" />
+                      <path d="M14.084 14.158a3 3 0 0 1-4.242-4.242" />
+                      <path d="M17.479 17.499a10.75 10.75 0 0 1-15.417-5.151 1 1 0 0 1 0-.696 10.75 10.75 0 0 1 4.446-5.143" />
+                      <path d="m2 2 20 20" />
+                    </svg>
                   ) : (
-                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-gray-400"><path d="M2.062 12.348a1 1 0 0 1 0-.696 10.75 10.75 0 0 1 19.876 0 1 1 0 0 1 0 .696 10.75 10.75 0 0 1-19.876 0"/><circle cx="12" cy="12" r="3"/></svg>
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      width="16"
+                      height="16"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      className="text-gray-400"
+                    >
+                      <path d="M2.062 12.348a1 1 0 0 1 0-.696 10.75 10.75 0 0 1 19.876 0 1 1 0 0 1 0 .696 10.75 10.75 0 0 1-19.876 0" />
+                      <circle cx="12" cy="12" r="3" />
+                    </svg>
                   )}
                 </button>
               </div>
@@ -460,7 +489,10 @@ export function LoginPage() {
                 checked={rememberMe}
                 onCheckedChange={(checked) => setRememberMe(checked === true)}
               />
-              <Label htmlFor="remember-me" className="text-sm text-gray-600 font-normal cursor-pointer">
+              <Label
+                htmlFor="remember-me"
+                className="text-sm text-gray-600 font-normal cursor-pointer"
+              >
                 Remember me
               </Label>
             </div>
@@ -472,7 +504,10 @@ export function LoginPage() {
             >
               {isSubmitting ? (
                 <span className="flex items-center justify-center gap-2">
-                  <span className="animate-spin h-4 w-4 border-2 border-white border-t-transparent rounded-full" aria-hidden="true"></span>
+                  <span
+                    className="animate-spin h-4 w-4 border-2 border-white border-t-transparent rounded-full"
+                    aria-hidden="true"
+                  ></span>
                   Signing in...
                 </span>
               ) : (

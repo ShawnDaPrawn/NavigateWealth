@@ -14,14 +14,17 @@ import type {
 /**
  * Validate INA inputs
  */
-export function validateInputs(inputs: Partial<InvestmentINAInputs>): { isValid: boolean; errors: string[] } {
+export function validateInputs(inputs: Partial<InvestmentINAInputs>): {
+  isValid: boolean;
+  errors: string[];
+} {
   const errors: string[] = [];
 
   // Personal information validation
   if (!inputs.currentAge || inputs.currentAge <= 0) {
     errors.push('Valid current age is required');
   }
-  
+
   if (!inputs.dateOfBirth) {
     errors.push('Date of birth is required');
   }
@@ -115,11 +118,7 @@ export function formatPercentage(value: number, decimals: number = 1): string {
 /**
  * Calculate future value of lump sum
  */
-export function calculateFutureValue(
-  presentValue: number,
-  rate: number,
-  years: number
-): number {
+export function calculateFutureValue(presentValue: number, rate: number, years: number): number {
   return presentValue * Math.pow(1 + rate, years);
 }
 
@@ -129,10 +128,10 @@ export function calculateFutureValue(
 export function calculateAnnuityFutureValue(
   monthlyPayment: number,
   annualRate: number,
-  years: number
+  years: number,
 ): number {
   if (monthlyPayment === 0 || years <= 0) return 0;
-  
+
   const annuityFactor = (Math.pow(1 + annualRate, years) - 1) / annualRate;
   return monthlyPayment * 12 * annuityFactor;
 }
@@ -143,10 +142,10 @@ export function calculateAnnuityFutureValue(
 export function calculateRequiredMonthlyPayment(
   futureValue: number,
   annualRate: number,
-  years: number
+  years: number,
 ): number {
   if (years <= 0) return 0;
-  
+
   const annuityFactor = (Math.pow(1 + annualRate, years) - 1) / annualRate;
   return futureValue / (12 * annuityFactor);
 }
@@ -154,11 +153,7 @@ export function calculateRequiredMonthlyPayment(
 /**
  * Calculate present value (today's value of future amount)
  */
-export function calculatePresentValue(
-  futureValue: number,
-  rate: number,
-  years: number
-): number {
+export function calculatePresentValue(futureValue: number, rate: number, years: number): number {
   return futureValue / Math.pow(1 + rate, years);
 }
 
@@ -222,11 +217,9 @@ export function getPortfolioHealthColor(health: string): string {
 /**
  * Calculate total discretionary capital from investments
  */
-export function calculateTotalDiscretionaryCapital(
-  investments: DiscretionaryInvestment[]
-): number {
+export function calculateTotalDiscretionaryCapital(investments: DiscretionaryInvestment[]): number {
   return investments
-    .filter(inv => inv.isDiscretionary)
+    .filter((inv) => inv.isDiscretionary)
     .reduce((sum, inv) => sum + inv.currentValue, 0);
 }
 
@@ -234,10 +227,10 @@ export function calculateTotalDiscretionaryCapital(
  * Calculate total discretionary monthly contributions
  */
 export function calculateTotalDiscretionaryContributions(
-  investments: DiscretionaryInvestment[]
+  investments: DiscretionaryInvestment[],
 ): number {
   return investments
-    .filter(inv => inv.isDiscretionary)
+    .filter((inv) => inv.isDiscretionary)
     .reduce((sum, inv) => sum + inv.monthlyContribution, 0);
 }
 
@@ -246,7 +239,7 @@ export function calculateTotalDiscretionaryContributions(
  */
 export function getExpectedRealReturn(
   riskProfile: RiskProfile,
-  expectedReturns: Record<RiskProfile, number>
+  expectedReturns: Record<RiskProfile, number>,
 ): number {
   return expectedReturns[riskProfile] || 0.05; // Default to 5% if not found
 }
@@ -257,18 +250,24 @@ export function getExpectedRealReturn(
 export function generateGoalSummary(result: GoalCalculationResult): string {
   const fundingPercentage = Math.round(result.fundingGap.fundingPercentage);
   const yearsToGo = result.timeHorizon.yearsToGoal;
-  
+
   if (result.fundingGap.hasShortfall) {
     const shortfall = formatCurrency(result.fundingGap.gapAmount);
-    const additionalMonthly = formatCurrency(result.requiredContributions.requiredAdditionalMonthly);
-    
-    return `Goal is ${fundingPercentage}% funded with a shortfall of ${shortfall}. ` +
-           `Increase monthly contributions by ${additionalMonthly} to stay on track over ${yearsToGo} years.`;
+    const additionalMonthly = formatCurrency(
+      result.requiredContributions.requiredAdditionalMonthly,
+    );
+
+    return (
+      `Goal is ${fundingPercentage}% funded with a shortfall of ${shortfall}. ` +
+      `Increase monthly contributions by ${additionalMonthly} to stay on track over ${yearsToGo} years.`
+    );
   } else {
     const surplus = formatCurrency(Math.abs(result.fundingGap.gapAmount));
-    
-    return `Goal is ${fundingPercentage}% funded${fundingPercentage > 100 ? ` with a surplus of ${surplus}` : ''}. ` +
-           `Current trajectory will meet or exceed this goal in ${yearsToGo} years.`;
+
+    return (
+      `Goal is ${fundingPercentage}% funded${fundingPercentage > 100 ? ` with a surplus of ${surplus}` : ''}. ` +
+      `Current trajectory will meet or exceed this goal in ${yearsToGo} years.`
+    );
   }
 }
 
@@ -277,7 +276,7 @@ export function generateGoalSummary(result: GoalCalculationResult): string {
  */
 export function calculateAffordability(
   monthlyContribution: number,
-  grossMonthlyIncome: number
+  grossMonthlyIncome: number,
 ): {
   percentage: number;
   isAffordable: boolean;
@@ -289,15 +288,16 @@ export function calculateAffordability(
       isAffordable: true,
     };
   }
-  
+
   const percentage = (monthlyContribution / grossMonthlyIncome) * 100;
-  
+
   // Generally, total savings should not exceed 20-30% of gross income
   const isAffordable = percentage <= 30;
-  const warningMessage = percentage > 30
-    ? `This represents ${percentage.toFixed(1)}% of gross income, which may be challenging to maintain`
-    : undefined;
-  
+  const warningMessage =
+    percentage > 30
+      ? `This represents ${percentage.toFixed(1)}% of gross income, which may be challenging to maintain`
+      : undefined;
+
   return {
     percentage,
     isAffordable,

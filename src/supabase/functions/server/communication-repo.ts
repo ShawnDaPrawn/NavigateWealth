@@ -6,7 +6,13 @@
  * §5.4 — KV key naming: communication:{entity}:{id}
  */
 
-import type { Group, GroupCreate, Campaign, CampaignCreate, CachedRecipient } from './communication-types.ts';
+import type {
+  Group,
+  GroupCreate,
+  Campaign,
+  CampaignCreate,
+  CachedRecipient,
+} from './communication-types.ts';
 import * as kv from './kv_store.tsx';
 import { recalculateGroupMembership, recalculateSingleGroupMembership } from './group-matcher.ts';
 import type { MatcherClient } from './group-matcher.ts';
@@ -41,7 +47,9 @@ function paginate<T>(items: T[], options?: PaginationOptions): PaginatedResult<T
 
 export async function getGroups(options?: PaginationOptions): Promise<PaginatedResult<Group>> {
   const allGroups = await kv.getByPrefix('communication:groups:');
-  allGroups.sort((a: Group, b: Group) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+  allGroups.sort(
+    (a: Group, b: Group) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
+  );
   return paginate(allGroups, options);
 }
 
@@ -71,7 +79,10 @@ export async function getGroupMembersCache(groupId: string): Promise<CachedRecip
   return await kv.get(`communication:group_members:${groupId}`);
 }
 
-export async function setGroupMembersCache(groupId: string, members: CachedRecipient[]): Promise<void> {
+export async function setGroupMembersCache(
+  groupId: string,
+  members: CachedRecipient[],
+): Promise<void> {
   await kv.set(`communication:group_members:${groupId}`, members);
 }
 
@@ -94,7 +105,9 @@ export async function fetchMatcherClients(): Promise<MatcherClient[]> {
   const allClients = await service.getAllClients();
 
   // Exclude deleted/suspended — they should not be in communication groups (§12.3)
-  const activeClients = allClients.filter((c: Record<string, unknown>) => !c.deleted && !c.suspended);
+  const activeClients = allClients.filter(
+    (c: Record<string, unknown>) => !c.deleted && !c.suspended,
+  );
 
   log.info('Fetched matcher clients', {
     totalCount: allClients.length,
@@ -105,7 +118,7 @@ export async function fetchMatcherClients(): Promise<MatcherClient[]> {
   // Policies are stored as arrays under `policies:client:{clientId}` (§5.4, integrations-types.ts).
   // The old code used `kv.getByPrefix('policy:')` which doesn't match `policies:client:*`.
   const clientIds = activeClients.map((c: Record<string, unknown>) => c.id as string);
-  const policyKeys = clientIds.map(id => `policies:client:${id}`);
+  const policyKeys = clientIds.map((id) => `policies:client:${id}`);
 
   let policyResults: unknown[] = [];
   try {
@@ -152,12 +165,15 @@ export async function fetchMatcherClients(): Promise<MatcherClient[]> {
 
   log.info('Built client products map', {
     clientsWithProducts: clientProductsMap.size,
-    sampleProducts: clientProductsMap.size > 0
-      ? Array.from(clientProductsMap.entries()).slice(0, 3).map(([id, prods]) => ({
-          clientId: id.slice(0, 8) + '…',
-          products: prods.map(p => `${p.provider || '?'}/${p.type || '?'}`),
-        }))
-      : [],
+    sampleProducts:
+      clientProductsMap.size > 0
+        ? Array.from(clientProductsMap.entries())
+            .slice(0, 3)
+            .map(([id, prods]) => ({
+              clientId: id.slice(0, 8) + '…',
+              products: prods.map((p) => `${p.provider || '?'}/${p.type || '?'}`),
+            }))
+        : [],
   });
 
   return activeClients.map((c: Record<string, unknown>) => {
@@ -174,7 +190,9 @@ export async function fetchMatcherClients(): Promise<MatcherClient[]> {
     const maritalStatus = (profile.maritalStatus || pi.maritalStatus) as string | undefined;
     const dateOfBirth = (profile.dateOfBirth || pi.dateOfBirth) as string | undefined;
     const occupation = (profile.occupation || ei.occupation) as string | undefined;
-    const employmentStatus = (profile.employmentStatus || ei.employmentStatus) as string | undefined;
+    const employmentStatus = (profile.employmentStatus || ei.employmentStatus) as
+      | string
+      | undefined;
     const grossIncome = (profile.grossIncome || pi.grossIncome) as number | undefined;
     const netIncome = (profile.netIncome || pi.netIncome) as number | undefined;
     const netWorth = (profile.netWorth || fi.netWorth) as number | undefined;
@@ -194,7 +212,9 @@ export async function fetchMatcherClients(): Promise<MatcherClient[]> {
       dependants,
       retirementAge,
       age: dateOfBirth
-        ? Math.floor((Date.now() - new Date(dateOfBirth).getTime()) / (365.25 * 24 * 60 * 60 * 1000))
+        ? Math.floor(
+            (Date.now() - new Date(dateOfBirth).getTime()) / (365.25 * 24 * 60 * 60 * 1000),
+          )
         : undefined,
       products: clientProductsMap.get(c.id as string) || [],
     };
@@ -226,14 +246,18 @@ export async function createGroup(data: GroupCreate): Promise<Group> {
   };
 
   // If the group has filter rules, auto-populate members now
-  const hasFilters = group.filterConfig &&
-    Object.values(group.filterConfig).some(v =>
-      Array.isArray(v) ? v.length > 0 : v !== undefined
+  const hasFilters =
+    group.filterConfig &&
+    Object.values(group.filterConfig).some((v) =>
+      Array.isArray(v) ? v.length > 0 : v !== undefined,
     );
 
   if (hasFilters) {
     try {
-      log.info('Group has filters — recalculating membership on create', { groupId, groupName: group.name });
+      log.info('Group has filters — recalculating membership on create', {
+        groupId,
+        groupName: group.name,
+      });
       const matcherClients = await fetchMatcherClients();
       const recalculated = recalculateSingleGroupMembership(group, matcherClients);
       group.clientIds = recalculated.clientIds || [];
@@ -255,9 +279,13 @@ export async function updateGroup(groupId: string, updates: Partial<Group>): Pro
     throw new Error('Group not found');
   }
 
-  const clientIds = updates.clientIds !== undefined ? updates.clientIds : (group.clientIds || []);
-  const externalContacts = updates.externalContacts !== undefined ? updates.externalContacts : (group.externalContacts || []);
-  const filterConfig = updates.filterConfig !== undefined ? updates.filterConfig : (group.filterConfig || {});
+  const clientIds = updates.clientIds !== undefined ? updates.clientIds : group.clientIds || [];
+  const externalContacts =
+    updates.externalContacts !== undefined
+      ? updates.externalContacts
+      : group.externalContacts || [];
+  const filterConfig =
+    updates.filterConfig !== undefined ? updates.filterConfig : group.filterConfig || {};
 
   const updatedData = {
     ...updates,
@@ -266,20 +294,22 @@ export async function updateGroup(groupId: string, updates: Partial<Group>): Pro
     externalContacts,
     filterConfig,
     clientCount: clientIds.length + externalContacts.length,
-    updatedAt: new Date().toISOString()
+    updatedAt: new Date().toISOString(),
   };
 
   Object.assign(group, updatedData);
 
   // If filters changed, recalculate membership
-  const hasFilters = filterConfig &&
-    Object.values(filterConfig).some(v =>
-      Array.isArray(v) ? v.length > 0 : v !== undefined
-    );
+  const hasFilters =
+    filterConfig &&
+    Object.values(filterConfig).some((v) => (Array.isArray(v) ? v.length > 0 : v !== undefined));
 
   if (hasFilters && updates.filterConfig !== undefined) {
     try {
-      log.info('Group filters updated — recalculating membership', { groupId, groupName: group.name });
+      log.info('Group filters updated — recalculating membership', {
+        groupId,
+        groupName: group.name,
+      });
       const matcherClients = await fetchMatcherClients();
       const recalculated = recalculateSingleGroupMembership(group, matcherClients);
       group.clientIds = recalculated.clientIds || [];
@@ -298,9 +328,13 @@ export async function updateGroup(groupId: string, updates: Partial<Group>): Pro
 // CAMPAIGNS
 // ============================================================================
 
-export async function getCampaigns(options?: PaginationOptions): Promise<PaginatedResult<Campaign>> {
+export async function getCampaigns(
+  options?: PaginationOptions,
+): Promise<PaginatedResult<Campaign>> {
   const allCampaigns = await kv.getByPrefix('communication:campaigns:');
-  allCampaigns.sort((a: Campaign, b: Campaign) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+  allCampaigns.sort(
+    (a: Campaign, b: Campaign) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
+  );
   return paginate(allCampaigns, options);
 }
 
@@ -322,7 +356,9 @@ export async function getAllCampaigns(): Promise<Campaign[]> {
  * The Campaign type requires: subject, bodyHtml, channel, recipientType,
  * selectedRecipients, selectedGroup, status, scheduling, etc.
  */
-export async function createCampaign(data: CampaignCreate & { createdBy?: string }): Promise<Campaign> {
+export async function createCampaign(
+  data: CampaignCreate & { createdBy?: string },
+): Promise<Campaign> {
   const campaignId = data.id || crypto.randomUUID();
 
   const campaign: Campaign = {
@@ -342,7 +378,11 @@ export async function createCampaign(data: CampaignCreate & { createdBy?: string
   };
 
   await saveCampaign(campaign);
-  log.success('Campaign created', { campaignId, subject: campaign.subject, recipientType: campaign.recipientType });
+  log.success('Campaign created', {
+    campaignId,
+    subject: campaign.subject,
+    recipientType: campaign.recipientType,
+  });
   return campaign;
 }
 
@@ -350,7 +390,10 @@ export async function getCampaignById(campaignId: string): Promise<Campaign | nu
   return await getCampaign(campaignId);
 }
 
-export async function updateCampaign(campaignId: string, updates: Partial<Campaign>): Promise<Campaign> {
+export async function updateCampaign(
+  campaignId: string,
+  updates: Partial<Campaign>,
+): Promise<Campaign> {
   const campaign = await getCampaign(campaignId);
   if (!campaign) {
     throw new Error('Campaign not found');
@@ -374,11 +417,11 @@ export async function recalculateAllGroupMemberships(clients?: MatcherClient[]):
   const allGroups = await getAllGroups();
   log.info('Fetched groups for recalculation', {
     groupCount: allGroups.length,
-    groupNames: allGroups.map(g => g.name)
+    groupNames: allGroups.map((g) => g.name),
   });
 
   // If clients not provided, fetch them
-  const clientList = clients || await fetchMatcherClients();
+  const clientList = clients || (await fetchMatcherClients());
 
   log.info('Starting group matching', {
     groupCount: allGroups.length,

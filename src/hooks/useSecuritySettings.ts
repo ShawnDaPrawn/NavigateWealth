@@ -1,31 +1,31 @@
 import { useState, useEffect, useCallback } from 'react';
 import { toast } from 'sonner';
 import { securityService } from '../utils/auth/securityService';
-import { 
-  ActivityLogEntry, 
+import {
+  ActivityLogEntry,
   EmailChangeRequestData,
-  SecurityStatus, 
+  SecurityStatus,
   TwoFactorMethod,
-  PasswordUpdateData 
+  PasswordUpdateData,
 } from '../utils/auth/securityTypes';
 
 export function useSecuritySettings(userId?: string, userEmail?: string) {
   const [isLoading, setIsLoading] = useState(false);
   const [activityLoading, setActivityLoading] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
-  
+
   const [passwordData, setPasswordData] = useState<PasswordUpdateData>({
     currentPassword: '',
     newPassword: '',
-    confirmPassword: ''
+    confirmPassword: '',
   });
   const [emailChangeData, setEmailChangeData] = useState<EmailChangeRequestData>({
     newEmail: '',
     currentPassword: '',
     currentEmailCode: '',
-    newEmailCode: ''
+    newEmailCode: '',
   });
-  
+
   const [securitySettings, setSecuritySettings] = useState<SecurityStatus>({
     twoFactorEnabled: false,
     twoFactorMethod: 'email',
@@ -40,7 +40,7 @@ export function useSecuritySettings(userId?: string, userEmail?: string) {
     if (!userId) return;
     const status = await securityService.getSecurityStatus(userId);
     if (status) {
-      setSecuritySettings(prev => ({ ...prev, ...status }));
+      setSecuritySettings((prev) => ({ ...prev, ...status }));
     }
   }, [userId]);
 
@@ -61,12 +61,12 @@ export function useSecuritySettings(userId?: string, userEmail?: string) {
   }, [userId, fetchSecurityStatus, fetchActivityLogs]);
 
   const handlePasswordChange = (field: keyof PasswordUpdateData, value: string) => {
-    setPasswordData(prev => ({ ...prev, [field]: value }));
+    setPasswordData((prev) => ({ ...prev, [field]: value }));
     setSaveSuccess(false);
   };
 
   const handleEmailChangeField = (field: keyof EmailChangeRequestData, value: string) => {
-    setEmailChangeData(prev => ({ ...prev, [field]: value }));
+    setEmailChangeData((prev) => ({ ...prev, [field]: value }));
     setSaveSuccess(false);
   };
 
@@ -78,7 +78,7 @@ export function useSecuritySettings(userId?: string, userEmail?: string) {
       toast.error('New passwords do not match');
       return;
     }
-    
+
     if (passwordData.newPassword.length < 8) {
       toast.error('Password must be at least 8 characters long');
       return;
@@ -91,18 +91,22 @@ export function useSecuritySettings(userId?: string, userEmail?: string) {
 
     setIsLoading(true);
     try {
-      await securityService.updatePassword(userId, passwordData.currentPassword, passwordData.newPassword);
-      
+      await securityService.updatePassword(
+        userId,
+        passwordData.currentPassword,
+        passwordData.newPassword,
+      );
+
       setPasswordData({
         currentPassword: '',
         newPassword: '',
-        confirmPassword: ''
+        confirmPassword: '',
       });
-      
+
       toast.success('Password updated successfully');
       setSaveSuccess(true);
       setTimeout(() => setSaveSuccess(false), 3000);
-      
+
       // Refresh data
       fetchActivityLogs();
       fetchSecurityStatus();
@@ -119,20 +123,20 @@ export function useSecuritySettings(userId?: string, userEmail?: string) {
     setIsLoading(true);
     try {
       await securityService.toggleTwoFactor(userId, enabled, method);
-      
-      setSecuritySettings(prev => ({
+
+      setSecuritySettings((prev) => ({
         ...prev,
         twoFactorEnabled: enabled,
-        twoFactorMethod: method
+        twoFactorMethod: method,
       }));
-      
+
       toast.success(`Two-factor authentication ${enabled ? 'enabled' : 'disabled'}`);
       fetchActivityLogs();
     } catch (error) {
       console.error('❌ Failed to toggle 2FA:', error);
       toast.error('Failed to toggle 2FA');
       // Revert state on failure if needed, but we're relying on fetch to sync
-      fetchSecurityStatus(); 
+      fetchSecurityStatus();
     } finally {
       setIsLoading(false);
     }
@@ -176,11 +180,11 @@ export function useSecuritySettings(userId?: string, userEmail?: string) {
         currentPassword: emailChangeData.currentPassword,
       });
 
-      setSecuritySettings(prev => ({
+      setSecuritySettings((prev) => ({
         ...prev,
         pendingEmailChange: result.pendingEmailChange ?? null,
       }));
-      setEmailChangeData(prev => ({
+      setEmailChangeData((prev) => ({
         ...prev,
         currentPassword: '',
         currentEmailCode: '',
@@ -212,7 +216,11 @@ export function useSecuritySettings(userId?: string, userEmail?: string) {
       return null;
     }
 
-    if (pendingEmailChange.requiresCurrentEmailCode && !pendingEmailChange.currentEmailVerified && !emailChangeData.currentEmailCode) {
+    if (
+      pendingEmailChange.requiresCurrentEmailCode &&
+      !pendingEmailChange.currentEmailVerified &&
+      !emailChangeData.currentEmailCode
+    ) {
       toast.error('Enter the code sent to your current email address');
       return null;
     }
@@ -225,7 +233,7 @@ export function useSecuritySettings(userId?: string, userEmail?: string) {
         newEmailCode: emailChangeData.newEmailCode,
       });
 
-      setSecuritySettings(prev => ({
+      setSecuritySettings((prev) => ({
         ...prev,
         pendingEmailChange: null,
       }));
@@ -262,7 +270,7 @@ export function useSecuritySettings(userId?: string, userEmail?: string) {
         target,
       });
 
-      setSecuritySettings(prev => ({
+      setSecuritySettings((prev) => ({
         ...prev,
         pendingEmailChange: result.pendingEmailChange ?? prev.pendingEmailChange ?? null,
       }));
@@ -294,6 +302,6 @@ export function useSecuritySettings(userId?: string, userEmail?: string) {
     requestEmailChange,
     verifyEmailChange,
     resendEmailChangeCodes,
-    refreshLogs: fetchActivityLogs
+    refreshLogs: fetchActivityLogs,
   };
 }

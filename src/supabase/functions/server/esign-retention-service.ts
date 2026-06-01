@@ -85,15 +85,15 @@ export async function setRetentionPolicy(
     firm_id: firmId,
     completed_retention_days:
       input.completed_retention_days === undefined
-        ? existing?.completed_retention_days ?? null
+        ? (existing?.completed_retention_days ?? null)
         : validateDays(input.completed_retention_days),
     terminated_retention_days:
       input.terminated_retention_days === undefined
-        ? existing?.terminated_retention_days ?? null
+        ? (existing?.terminated_retention_days ?? null)
         : validateDays(input.terminated_retention_days),
     draft_retention_days:
       input.draft_retention_days === undefined
-        ? existing?.draft_retention_days ?? null
+        ? (existing?.draft_retention_days ?? null)
         : validateDays(input.draft_retention_days),
     delete_artifacts: input.delete_artifacts ?? existing?.delete_artifacts ?? false,
     updated_at: new Date().toISOString(),
@@ -110,10 +110,10 @@ export async function setRetentionPolicy(
 
   log.info(
     `Retention policy updated for firm ${firmId}: ` +
-    `completed=${next.completed_retention_days}d, ` +
-    `terminated=${next.terminated_retention_days}d, ` +
-    `draft=${next.draft_retention_days}d, ` +
-    `artifacts=${next.delete_artifacts}`,
+      `completed=${next.completed_retention_days}d, ` +
+      `terminated=${next.terminated_retention_days}d, ` +
+      `draft=${next.draft_retention_days}d, ` +
+      `artifacts=${next.delete_artifacts}`,
   );
   return next;
 }
@@ -122,7 +122,10 @@ export async function deleteRetentionPolicy(firmId: string): Promise<void> {
   await kv.del(EsignKeys.retentionPolicy(firmId));
   const indexRaw = await kv.get(EsignKeys.retentionPoliciesIndex());
   const index: string[] = Array.isArray(indexRaw) ? indexRaw : [];
-  await kv.set(EsignKeys.retentionPoliciesIndex(), index.filter((id) => id !== firmId));
+  await kv.set(
+    EsignKeys.retentionPoliciesIndex(),
+    index.filter((id) => id !== firmId),
+  );
 }
 
 // ─────────────────────────────────────────────────────────────────────
@@ -130,11 +133,13 @@ export async function deleteRetentionPolicy(firmId: string): Promise<void> {
 // ─────────────────────────────────────────────────────────────────────
 
 function isEnvelopeRecord(item: unknown): item is EsignEnvelope {
-  return !!item
-    && typeof item === 'object'
-    && typeof (item as { id?: unknown }).id === 'string'
-    && typeof (item as { status?: unknown }).status === 'string'
-    && typeof (item as { document_id?: unknown }).document_id === 'string';
+  return (
+    !!item &&
+    typeof item === 'object' &&
+    typeof (item as { id?: unknown }).id === 'string' &&
+    typeof (item as { status?: unknown }).status === 'string' &&
+    typeof (item as { document_id?: unknown }).document_id === 'string'
+  );
 }
 
 function terminalTimestamp(envelope: EsignEnvelope): number | null {
@@ -145,7 +150,9 @@ function terminalTimestamp(envelope: EsignEnvelope): number | null {
     if (typeof value === 'string') candidates.push(value);
   }
   if (!candidates.length) return null;
-  return Math.max(...candidates.map((iso) => new Date(iso).getTime()).filter((t) => Number.isFinite(t)));
+  return Math.max(
+    ...candidates.map((iso) => new Date(iso).getTime()).filter((t) => Number.isFinite(t)),
+  );
 }
 
 function draftIdleTimestamp(envelope: EsignEnvelope): number | null {
@@ -172,7 +179,13 @@ async function listAllEnvelopes(): Promise<EsignEnvelope[]> {
  * policy. Returns an aggregate summary. Safe to call at any time.
  */
 export async function runRetentionSweep(): Promise<RetentionSweepResult> {
-  const result: RetentionSweepResult = { scanned: 0, purged: 0, softDeleted: 0, skipped: 0, errors: 0 };
+  const result: RetentionSweepResult = {
+    scanned: 0,
+    purged: 0,
+    softDeleted: 0,
+    skipped: 0,
+    errors: 0,
+  };
 
   const indexRaw = await kv.get(EsignKeys.retentionPoliciesIndex());
   const firmIds: string[] = Array.isArray(indexRaw) ? indexRaw : [];
@@ -192,18 +205,28 @@ export async function runRetentionSweep(): Promise<RetentionSweepResult> {
     if (envelope.deleted_at) continue;
     const firmId = envelope.firm_id || 'standalone';
     const policy = policies.get(firmId);
-    if (!policy) { result.skipped += 1; continue; }
+    if (!policy) {
+      result.skipped += 1;
+      continue;
+    }
 
     let eligible = false;
     if (envelope.status === 'completed') {
       eligible = isPastRetention(terminalTimestamp(envelope), policy.completed_retention_days);
-    } else if (envelope.status === 'declined' || envelope.status === 'voided' || envelope.status === 'expired') {
+    } else if (
+      envelope.status === 'declined' ||
+      envelope.status === 'voided' ||
+      envelope.status === 'expired'
+    ) {
       eligible = isPastRetention(terminalTimestamp(envelope), policy.terminated_retention_days);
     } else if (envelope.status === 'draft') {
       eligible = isPastRetention(draftIdleTimestamp(envelope), policy.draft_retention_days);
     }
 
-    if (!eligible) { result.skipped += 1; continue; }
+    if (!eligible) {
+      result.skipped += 1;
+      continue;
+    }
 
     try {
       await logAuditEvent({

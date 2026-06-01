@@ -5,7 +5,13 @@ export type CommunicationChannel = 'email' | 'whatsapp';
 export type RecipientType = 'single' | 'multiple' | 'group';
 export type GroupType = 'system' | 'custom';
 export type SchedulingType = 'immediate' | 'scheduled';
-export type RecurringFrequency = 'daily' | 'weekly' | 'monthly' | 'quarterly' | 'annually' | 'custom';
+export type RecurringFrequency =
+  | 'daily'
+  | 'weekly'
+  | 'monthly'
+  | 'quarterly'
+  | 'annually'
+  | 'custom';
 export type EndConditionType = 'never' | 'after_occurrences' | 'on_date';
 
 // Client Types
@@ -181,7 +187,13 @@ export interface BackendCampaign {
   channel: CommunicationChannel;
   recipientType: RecipientType;
   selectedRecipients: Array<{ id: string; email?: string; name?: string; [key: string]: unknown }>;
-  selectedGroup?: { id: string; name: string; type?: string; clientCount?: number; [key: string]: unknown };
+  selectedGroup?: {
+    id: string;
+    name: string;
+    type?: string;
+    clientCount?: number;
+    [key: string]: unknown;
+  };
   status: 'draft' | 'scheduled' | 'sending' | 'completed' | 'failed';
   attachments?: Array<{ id: string; name: string; path: string; type: string; size: number }>;
   stats?: { sent: number; failed: number; total: number };

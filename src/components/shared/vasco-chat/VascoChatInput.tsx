@@ -58,9 +58,7 @@ export function VascoChatInput({
       {error && (
         <Alert className="mb-3 border-amber-200 bg-amber-50 py-2">
           <AlertCircle className="h-4 w-4 text-amber-600" />
-          <AlertDescription className="text-amber-800 text-xs">
-            {error}
-          </AlertDescription>
+          <AlertDescription className="text-amber-800 text-xs">{error}</AlertDescription>
         </Alert>
       )}
 

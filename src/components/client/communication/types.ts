@@ -42,7 +42,7 @@ export type DateRangeFilter = 'all' | 'week' | 'month';
 
 export interface CommunicationFilters {
   search: string;
-  category: string;        // 'all' | CommunicationCategory
+  category: string; // 'all' | CommunicationCategory
   dateRange: DateRangeFilter;
 }
 

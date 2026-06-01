@@ -10,10 +10,10 @@
  * just adds aggregation, retry tracking, and a kill-switch.
  */
 
-import * as kv from "./kv_store.tsx";
-import { EsignKeys } from "./esign-keys.ts";
-import { createModuleLogger } from "./stderr-logger.ts";
-import { getTemplate } from "./esign-template-service.ts";
+import * as kv from './kv_store.tsx';
+import { EsignKeys } from './esign-keys.ts';
+import { createModuleLogger } from './stderr-logger.ts';
+import { getTemplate } from './esign-template-service.ts';
 
 const log = createModuleLogger('esign-campaign-service');
 
@@ -163,7 +163,7 @@ export async function recordCampaignRowResult(
   if (!campaign) return { error: 'Campaign not found' };
   if (campaign.status === 'cancelled') return { campaign };
 
-  const idx = campaign.results.findIndex(r => r.rowId === rowId);
+  const idx = campaign.results.findIndex((r) => r.rowId === rowId);
   if (idx < 0) return { error: 'Row not found' };
 
   const previous = campaign.results[idx];
@@ -184,7 +184,7 @@ export async function recordCampaignRowResult(
   if (patch.envelopeId) await indexEnvelope(campaign.id, patch.envelopeId);
 
   // Roll up overall status.
-  const remaining = campaign.results.filter(r => r.status === 'queued').length;
+  const remaining = campaign.results.filter((r) => r.status === 'queued').length;
   if (remaining === 0) {
     if (campaign.failedCount === 0) campaign.status = 'sent';
     else if (campaign.sentCount > 0) campaign.status = 'partial';
@@ -201,7 +201,9 @@ export async function recordCampaignRowResult(
 // individually from the dashboard.
 // ---------------------------------------------------------------------------
 
-export async function cancelCampaign(id: string): Promise<{ campaign?: CampaignRecord; error?: string }> {
+export async function cancelCampaign(
+  id: string,
+): Promise<{ campaign?: CampaignRecord; error?: string }> {
   const campaign = await getCampaign(id);
   if (!campaign) return { error: 'Campaign not found' };
   if (campaign.status === 'sent' || campaign.status === 'cancelled') {
@@ -226,7 +228,10 @@ export async function cancelCampaign(id: string): Promise<{ campaign?: CampaignR
  * multi-line quoted cells (rare in real-world recipient lists).
  */
 export function parseCsv(text: string): { headers: string[]; rows: string[][] } {
-  const lines = text.replace(/\r\n?/g, '\n').split('\n').filter(l => l.trim().length > 0);
+  const lines = text
+    .replace(/\r\n?/g, '\n')
+    .split('\n')
+    .filter((l) => l.trim().length > 0);
   if (lines.length === 0) return { headers: [], rows: [] };
   const splitLine = (line: string): string[] => {
     const out: string[] = [];
@@ -252,9 +257,9 @@ export function parseCsv(text: string): { headers: string[]; rows: string[][] } 
       }
     }
     out.push(cur);
-    return out.map(s => s.trim());
+    return out.map((s) => s.trim());
   };
-  const headers = splitLine(lines[0]).map(h => h.trim().toLowerCase());
+  const headers = splitLine(lines[0]).map((h) => h.trim().toLowerCase());
   const rows = lines.slice(1).map(splitLine);
   return { headers, rows };
 }
@@ -289,17 +294,11 @@ export function mapCsvToRows(
     for (let i = 0; i < recipientCount; i++) {
       const tplR = template.recipients[i];
       const labelKey = (tplR.name || `recipient_${i + 1}`).toLowerCase().replace(/\s+/g, '_');
-      const indexedEmail = i === 0 && recipientCount === 1
-        ? cell('email')
-        : cell(`email_${i + 1}`);
+      const indexedEmail = i === 0 && recipientCount === 1 ? cell('email') : cell(`email_${i + 1}`);
       const labelEmail = cell(`${labelKey}_email`);
-      const indexedName = i === 0 && recipientCount === 1
-        ? cell('name')
-        : cell(`name_${i + 1}`);
+      const indexedName = i === 0 && recipientCount === 1 ? cell('name') : cell(`name_${i + 1}`);
       const labelName = cell(`${labelKey}_name`);
-      const indexedRole = i === 0 && recipientCount === 1
-        ? cell('role')
-        : cell(`role_${i + 1}`);
+      const indexedRole = i === 0 && recipientCount === 1 ? cell('role') : cell(`role_${i + 1}`);
 
       const email = labelEmail || indexedEmail || '';
       const name = labelName || indexedName || tplR.name || '';

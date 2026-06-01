@@ -40,9 +40,9 @@ export function PublicationsTab() {
   const checkInitialization = async () => {
     try {
       const response = await fetch(`${baseUrl}/categories`, {
-        headers: { 'Authorization': `Bearer ${publicAnonKey}` }
+        headers: { Authorization: `Bearer ${publicAnonKey}` },
       });
-      
+
       if (response.ok) {
         const data = await response.json();
         setIsInitialized(data.data && data.data.length > 0);
@@ -107,7 +107,8 @@ export function PublicationsTab() {
             <div className="flex-1">
               <h3 className="font-medium text-purple-900 mb-1">Publications Setup Required</h3>
               <p className="text-sm text-purple-700">
-                Initialize the Publications system to start managing content for your Financial Insights & Market Intelligence resource center.
+                Initialize the Publications system to start managing content for your Financial
+                Insights & Market Intelligence resource center.
               </p>
             </div>
           </div>
@@ -123,7 +124,7 @@ export function PublicationsTab() {
   if (showEditor) {
     return (
       <div className="space-y-4">
-        <ArticleEditor 
+        <ArticleEditor
           key={selectedArticle?.id || 'new'}
           article={selectedArticle}
           onBack={handleBackToList}
@@ -145,7 +146,7 @@ export function PublicationsTab() {
           <div className="flex-1">
             <h3 className="font-medium text-purple-900 mb-1">Publications Management</h3>
             <p className="text-sm text-purple-700">
-              Manage content for the Financial Insights & Market Intelligence resource center. 
+              Manage content for the Financial Insights & Market Intelligence resource center.
               Create articles, organize categories, and publish to the public Resources page.
             </p>
           </div>
@@ -170,9 +171,11 @@ export function PublicationsTab() {
         </TabsList>
 
         <TabsContent value="articles" className="mt-6">
-          <ArticlesListView 
+          <ArticlesListView
             onCreateNew={handleCreateNew}
-            onEditArticle={handleEditArticle as React.ComponentProps<typeof ArticlesListView>['onEditArticle']}
+            onEditArticle={
+              handleEditArticle as React.ComponentProps<typeof ArticlesListView>['onEditArticle']
+            }
           />
         </TabsContent>
 

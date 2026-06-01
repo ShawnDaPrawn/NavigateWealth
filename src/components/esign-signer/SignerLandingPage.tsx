@@ -2,7 +2,7 @@
  * E-Signature Signer Landing Page
  * Standalone page for signers to view and sign documents.
  * Access via unique token link sent via email: /sign?token=...
- * 
+ *
  * Flow: loading → otp → signing → complete
  *       loading → waiting (sequential signing)
  *       loading → expired (invalid token)
@@ -12,7 +12,17 @@
 import React, { useState, useEffect } from 'react';
 import { useSearchParams, useNavigate } from 'react-router';
 import { motion } from 'motion/react';
-import { Loader2, AlertCircle, ShieldCheck, FileText, Lock, Clock, CheckCircle2, User, XCircle } from 'lucide-react';
+import {
+  Loader2,
+  AlertCircle,
+  ShieldCheck,
+  FileText,
+  Lock,
+  Clock,
+  CheckCircle2,
+  User,
+  XCircle,
+} from 'lucide-react';
 import { Card } from '../ui/card';
 import { Button } from '../ui/button';
 import { Alert, AlertDescription } from '../ui/alert';
@@ -25,7 +35,15 @@ import { useSignerBranding } from './hooks/useSignerBranding';
 import { t, normaliseLang } from './i18n';
 import type { SignerOrderSummary } from './types';
 
-type SigningStep = 'loading' | 'expired' | 'otp' | 'signing' | 'waiting' | 'complete' | 'rejected' | 'error';
+type SigningStep =
+  | 'loading'
+  | 'expired'
+  | 'otp'
+  | 'signing'
+  | 'waiting'
+  | 'complete'
+  | 'rejected'
+  | 'error';
 
 export function SignerLandingPage() {
   const [searchParams] = useSearchParams();
@@ -42,7 +60,7 @@ export function SignerLandingPage() {
     verifyOtp,
     submitSignature,
     rejectDocument,
-    resendOtp
+    resendOtp,
   } = useSignerSession();
 
   // Initial token validation
@@ -52,7 +70,7 @@ export function SignerLandingPage() {
       return;
     }
 
-    validateToken(token).then(result => {
+    validateToken(token).then((result) => {
       if (result.success && result.data) {
         // Check envelope status first
         if (result.data.envelope_status === 'voided') {
@@ -64,7 +82,10 @@ export function SignerLandingPage() {
         // Check if already signed
         if (result.data.signer_status === 'signed') {
           setCurrentStep('complete');
-        } else if (result.data.signer_status === 'rejected' || result.data.signer_status === 'declined') {
+        } else if (
+          result.data.signer_status === 'rejected' ||
+          result.data.signer_status === 'declined'
+        ) {
           setCurrentStep('rejected');
         } else if (result.data.is_turn === false) {
           // Sequential signing: not this signer's turn yet
@@ -134,11 +155,13 @@ export function SignerLandingPage() {
               </div>
               <div className="space-y-1.5">
                 <h2 className="text-xl font-bold text-gray-900">{t('loading.title', lang)}</h2>
-                <p className="text-gray-500 text-sm">
-                  {t('loading.subtitle', lang)}
-                </p>
+                <p className="text-gray-500 text-sm">{t('loading.subtitle', lang)}</p>
               </div>
-              <div className="flex items-center gap-2 text-xs text-gray-400" role="status" aria-live="polite">
+              <div
+                className="flex items-center gap-2 text-xs text-gray-400"
+                role="status"
+                aria-live="polite"
+              >
                 <ShieldCheck className="h-3.5 w-3.5" aria-hidden="true" />
                 <span>{t('loading.secure', lang)}</span>
               </div>
@@ -175,11 +198,7 @@ export function SignerLandingPage() {
                 </p>
               </div>
               <div className="w-full pt-2">
-                <Button
-                  onClick={() => navigate('/')}
-                  variant="outline"
-                  className="w-full"
-                >
+                <Button onClick={() => navigate('/')} variant="outline" className="w-full">
                   {t('expired.return', lang)}
                 </Button>
               </div>
@@ -218,11 +237,7 @@ export function SignerLandingPage() {
                 </p>
               </div>
               <div className="w-full pt-2">
-                <Button
-                  onClick={() => navigate('/')}
-                  variant="outline"
-                  className="w-full"
-                >
+                <Button onClick={() => navigate('/')} variant="outline" className="w-full">
                   {t('rejected.close', lang)}
                 </Button>
               </div>
@@ -284,15 +299,15 @@ export function SignerLandingPage() {
               </div>
               <div className="space-y-2">
                 <h2 className="text-xl font-bold text-gray-900">{t('waiting.title', lang)}</h2>
-                <p className="text-gray-500 text-sm leading-relaxed">
-                  {t('waiting.body', lang)}
-                </p>
+                <p className="text-gray-500 text-sm leading-relaxed">{t('waiting.body', lang)}</p>
               </div>
 
               {/* Signing order progress */}
               {allSigners.length > 0 && (
                 <div className="w-full bg-white border border-gray-100 rounded-xl p-4 text-left space-y-3">
-                  <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wide">{t('waiting.order', lang)}</h3>
+                  <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wide">
+                    {t('waiting.order', lang)}
+                  </h3>
                   <div className="space-y-2">
                     {allSigners.map((s) => {
                       const isSigned = s.status === 'signed';
@@ -308,28 +323,30 @@ export function SignerLandingPage() {
                                 : 'border-gray-100 bg-gray-50'
                           }`}
                         >
-                          <div className={`flex items-center justify-center w-7 h-7 rounded-full text-xs font-bold shrink-0 ${
-                            isSigned
-                              ? 'bg-green-100 text-green-700'
-                              : isCurrent
-                                ? 'bg-amber-100 text-amber-700'
-                                : 'bg-gray-200 text-gray-500'
-                          }`}>
-                            {isSigned ? (
-                              <CheckCircle2 className="h-4 w-4" />
-                            ) : (
-                              s.order
-                            )}
+                          <div
+                            className={`flex items-center justify-center w-7 h-7 rounded-full text-xs font-bold shrink-0 ${
+                              isSigned
+                                ? 'bg-green-100 text-green-700'
+                                : isCurrent
+                                  ? 'bg-amber-100 text-amber-700'
+                                  : 'bg-gray-200 text-gray-500'
+                            }`}
+                          >
+                            {isSigned ? <CheckCircle2 className="h-4 w-4" /> : s.order}
                           </div>
                           <div className="flex-1 min-w-0">
-                            <p className={`text-sm font-medium truncate ${
-                              isCurrent ? 'text-amber-900' : isSigned ? 'text-green-800' : 'text-gray-600'
-                            }`}>
+                            <p
+                              className={`text-sm font-medium truncate ${
+                                isCurrent
+                                  ? 'text-amber-900'
+                                  : isSigned
+                                    ? 'text-green-800'
+                                    : 'text-gray-600'
+                              }`}
+                            >
                               {isCurrent ? `${s.name} (You)` : s.name}
                             </p>
-                            {s.role && (
-                              <p className="text-xs text-gray-500">{s.role}</p>
-                            )}
+                            {s.role && <p className="text-xs text-gray-500">{s.role}</p>}
                           </div>
                           <Badge
                             variant="outline"
@@ -352,15 +369,12 @@ export function SignerLandingPage() {
 
               <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 w-full">
                 <p className="text-sm text-blue-800">
-                  You will be notified by email at <strong>{sessionData?.signer_email}</strong> when it is your turn to sign.
+                  You will be notified by email at <strong>{sessionData?.signer_email}</strong> when
+                  it is your turn to sign.
                 </p>
               </div>
 
-              <Button
-                onClick={() => navigate('/')}
-                variant="outline"
-                className="w-full"
-              >
+              <Button onClick={() => navigate('/')} variant="outline" className="w-full">
                 Close
               </Button>
             </div>

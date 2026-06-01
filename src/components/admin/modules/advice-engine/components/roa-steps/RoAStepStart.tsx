@@ -28,7 +28,6 @@ export function RoAStepStart({
   finalisedDrafts = [],
   isLoadingDrafts = false,
 }: RoAStepStartProps) {
-
   const getClientName = (draft: RoADraft): string => {
     if (draft.clientData) {
       return `${draft.clientData.firstName} ${draft.clientData.lastName}`;
@@ -41,8 +40,9 @@ export function RoAStepStart({
 
   const getCompletionStatus = (draft: RoADraft): { completed: number; total: number } => {
     const total = draft.selectedModules.length;
-    const completed = draft.selectedModules.filter(moduleId => 
-      draft.moduleData[moduleId] && Object.keys(draft.moduleData[moduleId]).length > 0
+    const completed = draft.selectedModules.filter(
+      (moduleId) =>
+        draft.moduleData[moduleId] && Object.keys(draft.moduleData[moduleId]).length > 0,
     ).length;
     return { completed, total };
   };
@@ -77,7 +77,8 @@ export function RoAStepStart({
           </div>
           <h3 className="font-semibold mb-2">Start New RoA</h3>
           <p className="text-sm text-muted-foreground text-center mb-6 max-w-md">
-            Begin a new Record of Advice from scratch. Our guided process ensures compliance and completeness.
+            Begin a new Record of Advice from scratch. Our guided process ensures compliance and
+            completeness.
           </p>
           <Button onClick={onCreateNew} size="lg" className="px-8">
             <Plus className="h-4 w-4 mr-2" />
@@ -89,7 +90,9 @@ export function RoAStepStart({
       {/* Existing Drafts */}
       {isLoadingDrafts && (
         <Card>
-          <CardContent className="p-6 text-sm text-muted-foreground">Loading saved RoA drafts...</CardContent>
+          <CardContent className="p-6 text-sm text-muted-foreground">
+            Loading saved RoA drafts...
+          </CardContent>
         </Card>
       )}
 
@@ -99,13 +102,14 @@ export function RoAStepStart({
             <Clock className="h-5 w-5 text-muted-foreground" />
             <h3 className="font-semibold">Resume Existing Drafts</h3>
           </div>
-          
+
           <div className="grid gap-4 md:grid-cols-2">
             {existingDrafts.map((draft) => {
               const completion = getCompletionStatus(draft);
-              const completionPercentage = completion.total > 0 
-                ? Math.round((completion.completed / completion.total) * 100)
-                : 0;
+              const completionPercentage =
+                completion.total > 0
+                  ? Math.round((completion.completed / completion.total) * 100)
+                  : 0;
 
               return (
                 <Card key={draft.id} className="hover:shadow-md transition-shadow">
@@ -132,12 +136,10 @@ export function RoAStepStart({
                           <span>Updated {formatLastUpdated(draft.updatedAt)}</span>
                         </div>
                       </div>
-                      <Badge variant="secondary">
-                        v{draft.version}
-                      </Badge>
+                      <Badge variant="secondary">v{draft.version}</Badge>
                     </div>
                   </CardHeader>
-                  
+
                   <CardContent className="space-y-4">
                     {/* Progress */}
                     <div className="space-y-2">
@@ -146,7 +148,7 @@ export function RoAStepStart({
                         <span>{completionPercentage}% complete</span>
                       </div>
                       <div className="w-full bg-muted rounded-full h-2">
-                        <div 
+                        <div
                           className="bg-primary h-2 rounded-full transition-all duration-300"
                           style={{ width: `${completionPercentage}%` }}
                         />
@@ -159,7 +161,7 @@ export function RoAStepStart({
                       <div className="flex flex-wrap gap-1">
                         {draft.selectedModules.slice(0, 3).map((moduleId) => (
                           <Badge key={moduleId} variant="outline" className="text-xs">
-                            {moduleId.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
+                            {moduleId.replace(/_/g, ' ').replace(/\b\w/g, (l) => l.toUpperCase())}
                           </Badge>
                         ))}
                         {draft.selectedModules.length > 3 && (
@@ -171,11 +173,7 @@ export function RoAStepStart({
                     </div>
 
                     {/* Resume Button */}
-                    <Button 
-                      variant="outline" 
-                      className="w-full"
-                      onClick={() => onResume(draft)}
-                    >
+                    <Button variant="outline" className="w-full" onClick={() => onResume(draft)}>
                       Resume Draft
                     </Button>
                     {onDiscardDraft && (
@@ -208,7 +206,8 @@ export function RoAStepStart({
             <h3 className="font-semibold">Finalised RoAs</h3>
           </div>
           <p className="text-sm text-muted-foreground">
-            Final records are read-only. Open one to download documents or branch a new editable version from the review step.
+            Final records are read-only. Open one to download documents or branch a new editable
+            version from the review step.
           </p>
           <div className="grid gap-4 md:grid-cols-2">
             {finalisedDrafts.map((draft) => (
@@ -227,7 +226,10 @@ export function RoAStepStart({
                         </span>
                       </div>
                     </div>
-                    <Badge variant="outline" className="shrink-0 border-green-200 bg-green-50 text-green-800">
+                    <Badge
+                      variant="outline"
+                      className="shrink-0 border-green-200 bg-green-50 text-green-800"
+                    >
                       Final v{draft.version}
                     </Badge>
                   </div>
@@ -254,7 +256,9 @@ export function RoAStepStart({
               </div>
               <div>
                 <p className="font-medium text-sm">Compliant Documentation</p>
-                <p className="text-xs text-muted-foreground">Full FAIS-compliant Record of Advice with required disclosures</p>
+                <p className="text-xs text-muted-foreground">
+                  Full FAIS-compliant Record of Advice with required disclosures
+                </p>
               </div>
             </div>
             <div className="flex items-start gap-3">
@@ -263,7 +267,9 @@ export function RoAStepStart({
               </div>
               <div>
                 <p className="font-medium text-sm">Client-Specific</p>
-                <p className="text-xs text-muted-foreground">Tailored to your client's specific circumstances and needs</p>
+                <p className="text-xs text-muted-foreground">
+                  Tailored to your client's specific circumstances and needs
+                </p>
               </div>
             </div>
           </div>

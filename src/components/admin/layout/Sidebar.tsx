@@ -1,20 +1,14 @@
 import React, { useState } from 'react';
-import { 
-  Settings,
-  LogOut,
-  ArrowLeftRight,
-  Menu,
-  X
-} from 'lucide-react';
+import { Settings, LogOut, ArrowLeftRight, Menu, X } from 'lucide-react';
 import { Button } from '../../ui/button';
 import { Badge } from '../../ui/badge';
-import { 
-  DropdownMenu, 
-  DropdownMenuContent, 
-  DropdownMenuItem, 
-  DropdownMenuLabel, 
-  DropdownMenuSeparator, 
-  DropdownMenuTrigger 
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
 } from '../../ui/dropdown-menu';
 import { Avatar, AvatarFallback, AvatarImage } from '../../ui/avatar';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '../../ui/tooltip';
@@ -40,23 +34,19 @@ interface SidebarProps {
   setMobileOpen: (open: boolean) => void;
 }
 
-export function Sidebar({ 
-  activeModule, 
-  onModuleChange, 
-  pendingCounts, 
-  collapsed, 
+export function Sidebar({
+  activeModule,
+  onModuleChange,
+  pendingCounts,
+  collapsed,
   setCollapsed,
   mobileOpen,
-  setMobileOpen 
+  setMobileOpen,
 }: SidebarProps) {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const [showInstallHelp, setShowInstallHelp] = useState(false);
-  const {
-    installApp,
-    isInstalling,
-    showInstallOption,
-  } = usePWAInstall();
+  const { installApp, isInstalling, showInstallOption } = usePWAInstall();
 
   // Check if current user is super admin
   const isSuperAdmin = user?.role === 'super_admin';
@@ -79,16 +69,16 @@ export function Sidebar({
 
   return (
     <div className="contents">
-       {/* Desktop Sidebar */}
-       <aside 
-         className={cn(
-           "hidden lg:flex lg:flex-col lg:fixed lg:inset-y-0 lg:z-50 transition-all duration-300",
-           collapsed ? "w-16" : "w-72"
-         )}
-         aria-label="Admin navigation"
-       >
+      {/* Desktop Sidebar */}
+      <aside
+        className={cn(
+          'hidden lg:flex lg:flex-col lg:fixed lg:inset-y-0 lg:z-50 transition-all duration-300',
+          collapsed ? 'w-16' : 'w-72',
+        )}
+        aria-label="Admin navigation"
+      >
         <div className="flex grow flex-col gap-y-5 overflow-y-auto sidebar-scrollbar bg-sidebar border-r border-sidebar-border">
-          <SidebarContent 
+          <SidebarContent
             activeModule={activeModule}
             onModuleChange={onModuleChange}
             pendingCounts={pendingCounts}
@@ -96,7 +86,14 @@ export function Sidebar({
             setCollapsed={setCollapsed}
             mobileOpen={mobileOpen}
             setMobileOpen={setMobileOpen}
-            user={user as unknown as { [key: string]: unknown; id?: string; email?: string; user_metadata?: Record<string, unknown> } | null}
+            user={
+              user as unknown as {
+                [key: string]: unknown;
+                id?: string;
+                email?: string;
+                user_metadata?: Record<string, unknown>;
+              } | null
+            }
             onLogout={handleLogout}
             onSwitchToPersonal={handleSwitchToPersonal}
             onInstallApp={installApp}
@@ -111,14 +108,19 @@ export function Sidebar({
 
       {/* Mobile Sidebar */}
       {mobileOpen && (
-        <div className="relative z-50 lg:hidden" role="dialog" aria-modal="true" aria-label="Navigation menu">
-          <div 
-            className="fixed inset-0 bg-black/50" 
+        <div
+          className="relative z-50 lg:hidden"
+          role="dialog"
+          aria-modal="true"
+          aria-label="Navigation menu"
+        >
+          <div
+            className="fixed inset-0 bg-black/50"
             onClick={() => setMobileOpen(false)}
             aria-hidden="true"
           />
           <div className="fixed inset-y-0 left-0 z-50 w-72 bg-sidebar border-r border-sidebar-border">
-            <SidebarContent 
+            <SidebarContent
               activeModule={activeModule}
               onModuleChange={onModuleChange}
               pendingCounts={pendingCounts}
@@ -126,7 +128,14 @@ export function Sidebar({
               setCollapsed={setCollapsed}
               mobileOpen={mobileOpen}
               setMobileOpen={setMobileOpen}
-              user={user as unknown as { [key: string]: unknown; id?: string; email?: string; user_metadata?: Record<string, unknown> } | null}
+              user={
+                user as unknown as {
+                  [key: string]: unknown;
+                  id?: string;
+                  email?: string;
+                  user_metadata?: Record<string, unknown>;
+                } | null
+              }
               onLogout={handleLogout}
               onSwitchToPersonal={handleSwitchToPersonal}
               onInstallApp={installApp}
@@ -155,7 +164,12 @@ interface SidebarContentProps {
   setCollapsed: (collapsed: boolean) => void;
   mobileOpen: boolean;
   setMobileOpen: (open: boolean) => void;
-  user: { id?: string; email?: string; user_metadata?: Record<string, unknown>; [key: string]: unknown } | null;
+  user: {
+    id?: string;
+    email?: string;
+    user_metadata?: Record<string, unknown>;
+    [key: string]: unknown;
+  } | null;
   onLogout: () => void;
   onSwitchToPersonal: () => void;
   onInstallApp: () => Promise<'accepted' | 'dismissed' | null>;
@@ -181,25 +195,29 @@ function SidebarContent({
   isInstallingApp,
   onShowInstallHelp,
   isSuperAdmin,
-  isMobile
+  isMobile,
 }: SidebarContentProps) {
   const [userDropdownOpen, setUserDropdownOpen] = useState(false);
   const { can } = useCurrentUserPermissions();
 
   const shouldShowBadge = (module: AdminModule): boolean => {
     const count = pendingCounts[module]?.count || 0;
-    return operationsModules.includes(module) && (count > 0 || alwaysShowCounterModules.includes(module));
+    return (
+      operationsModules.includes(module) && (count > 0 || alwaysShowCounterModules.includes(module))
+    );
   };
 
   return (
     <div className="flex h-full flex-col">
       {/* Logo/Header */}
-      <div className={cn(
-        "flex h-16 items-center px-4 border-b border-sidebar-border transition-all duration-200",
-        collapsed && !isMobile && "px-2 justify-center"
-      )}>
+      <div
+        className={cn(
+          'flex h-16 items-center px-4 border-b border-sidebar-border transition-all duration-200',
+          collapsed && !isMobile && 'px-2 justify-center',
+        )}
+      >
         {collapsed && !isMobile ? (
-          <button 
+          <button
             className="w-8 h-8 bg-sidebar-primary rounded-lg flex items-center justify-center cursor-pointer hover:bg-sidebar-primary/90 transition-colors"
             onClick={() => setCollapsed(false)}
             aria-label="Expand sidebar"
@@ -212,20 +230,26 @@ function SidebarContent({
               <Logo variant="admin-white" />
             </div>
             {!isMobile && (
-              <Button 
-                variant="ghost" 
-                size="icon" 
-                className="h-6 w-6 ml-auto hidden lg:flex text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground" 
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-6 w-6 ml-auto hidden lg:flex text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
                 onClick={() => setCollapsed(!collapsed)}
-                aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+                aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
               >
-                 <ArrowLeftRight className="h-3 w-3" />
+                <ArrowLeftRight className="h-3 w-3" />
               </Button>
             )}
             {isMobile && (
-               <Button variant="ghost" size="sm" className="text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground" onClick={() => setMobileOpen(false)} aria-label="Close navigation menu">
-                 <X className="h-4 w-4" />
-               </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+                onClick={() => setMobileOpen(false)}
+                aria-label="Close navigation menu"
+              >
+                <X className="h-4 w-4" />
+              </Button>
             )}
           </div>
         )}
@@ -235,11 +259,11 @@ function SidebarContent({
       <nav className="flex-1 overflow-y-auto sidebar-scrollbar py-4" aria-label="Admin modules">
         {moduleGroups.map((section, sectionIdx) => {
           // Filter modules by permission — only show modules the user can access
-          const visibleModules = section.modules.filter(m => can(m));
+          const visibleModules = section.modules.filter((m) => can(m));
           if (visibleModules.length === 0) return null;
 
           return (
-            <div key={sectionIdx} className={cn("mb-6", collapsed && !isMobile && "mb-4")}>
+            <div key={sectionIdx} className={cn('mb-6', collapsed && !isMobile && 'mb-4')}>
               {/* Section title - only show when not collapsed */}
               {(!collapsed || isMobile) && (
                 <div className="px-4 mb-2">
@@ -258,7 +282,7 @@ function SidebarContent({
 
                   const pendingData = pendingCounts[module] || { count: 0 };
                   const showBadge = shouldShowBadge(module);
-                  
+
                   const buttonContent = (
                     <Button
                       key={itemIdx}
@@ -271,16 +295,20 @@ function SidebarContent({
                       aria-label={collapsed && !isMobile ? config.label : undefined}
                       className={cn(
                         'relative transition-all duration-200',
-                        collapsed && !isMobile ? 'w-10 h-10 p-0 justify-center' : 'w-full justify-start gap-3',
-                        isActive 
-                          ? 'bg-sidebar-primary text-sidebar-primary-foreground hover:bg-sidebar-primary/90 hover:text-sidebar-primary-foreground' 
-                          : 'text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground'
+                        collapsed && !isMobile
+                          ? 'w-10 h-10 p-0 justify-center'
+                          : 'w-full justify-start gap-3',
+                        isActive
+                          ? 'bg-sidebar-primary text-sidebar-primary-foreground hover:bg-sidebar-primary/90 hover:text-sidebar-primary-foreground'
+                          : 'text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground',
                       )}
                     >
-                      <Icon className={cn('shrink-0', collapsed && !isMobile ? 'h-5 w-5' : 'h-4 w-4')} />
+                      <Icon
+                        className={cn('shrink-0', collapsed && !isMobile ? 'h-5 w-5' : 'h-4 w-4')}
+                      />
                       {(!collapsed || isMobile) && <span>{config.label}</span>}
                       {showBadge && (!collapsed || isMobile) && (
-                        <Badge 
+                        <Badge
                           variant="secondary"
                           className="ml-auto text-xs px-1.5 py-0.5 min-w-[20px] h-5 flex items-center justify-center bg-sidebar-primary text-sidebar-primary-foreground border-transparent"
                         >
@@ -300,15 +328,14 @@ function SidebarContent({
                     return (
                       <TooltipProvider key={itemIdx}>
                         <Tooltip>
-                          <TooltipTrigger asChild>
-                            {buttonContent}
-                          </TooltipTrigger>
+                          <TooltipTrigger asChild>{buttonContent}</TooltipTrigger>
                           <TooltipContent side="right">
                             <div className="flex flex-col">
                               <p className="font-medium">{config.label}</p>
                               {showBadge && (
                                 <p className="text-xs text-muted-foreground mt-1">
-                                  {pendingData.count} pending item{pendingData.count !== 1 ? 's' : ''}
+                                  {pendingData.count} pending item
+                                  {pendingData.count !== 1 ? 's' : ''}
                                 </p>
                               )}
                             </div>
@@ -327,33 +354,35 @@ function SidebarContent({
       </nav>
 
       {/* User section */}
-      <div className={cn("p-4 border-t border-sidebar-border", collapsed && !isMobile && "px-2")}>
+      <div className={cn('p-4 border-t border-sidebar-border', collapsed && !isMobile && 'px-2')}>
         <DropdownMenu open={userDropdownOpen} onOpenChange={setUserDropdownOpen}>
           <DropdownMenuTrigger asChild>
-            <Button 
-              variant="ghost" 
+            <Button
+              variant="ghost"
               className={cn(
-                "transition-all duration-200 text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
-                collapsed && !isMobile ? "w-10 h-10 px-0 justify-center" : "w-full justify-start gap-3 h-12"
+                'transition-all duration-200 text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground',
+                collapsed && !isMobile
+                  ? 'w-10 h-10 px-0 justify-center'
+                  : 'w-full justify-start gap-3 h-12',
               )}
             >
               <Avatar className="h-8 w-8 shrink-0 border border-sidebar-border">
                 <AvatarImage src="/api/placeholder/32/32" alt="" />
-                <AvatarFallback className="bg-sidebar-primary text-sidebar-primary-foreground">{(user?.name as string)?.[0] || 'A'}</AvatarFallback>
+                <AvatarFallback className="bg-sidebar-primary text-sidebar-primary-foreground">
+                  {(user?.name as string)?.[0] || 'A'}
+                </AvatarFallback>
               </Avatar>
               {(!collapsed || isMobile) && (
                 <div className="flex-1 text-left">
                   <p className="text-sm font-medium">{(user?.name as string) || 'Admin User'}</p>
-                  <p className="text-xs text-sidebar-foreground/70">{(user?.role as string) || 'Administrator'}</p>
+                  <p className="text-xs text-sidebar-foreground/70">
+                    {(user?.role as string) || 'Administrator'}
+                  </p>
                 </div>
               )}
             </Button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent 
-            align="end" 
-            className="w-56" 
-            sideOffset={8}
-          >
+          <DropdownMenuContent align="end" className="w-56" sideOffset={8}>
             <DropdownMenuLabel>Admin Account</DropdownMenuLabel>
             <DropdownMenuSeparator />
             <InstallAppMenuItem
@@ -367,22 +396,22 @@ function SidebarContent({
               Settings
             </DropdownMenuItem>
             {isSuperAdmin && (
-              <DropdownMenuItem 
+              <DropdownMenuItem
                 onClick={() => {
                   setUserDropdownOpen(false);
                   onSwitchToPersonal();
-                }} 
+                }}
                 className="text-blue-600 focus:text-blue-600 focus:bg-blue-50"
               >
                 <ArrowLeftRight className="mr-2 h-4 w-4" />
                 Switch to Personal View
               </DropdownMenuItem>
             )}
-            <DropdownMenuItem 
+            <DropdownMenuItem
               onClick={() => {
                 setUserDropdownOpen(false);
                 onLogout();
-              }} 
+              }}
               className="text-red-600 focus:text-red-600 focus:bg-red-50"
             >
               <LogOut className="mr-2 h-4 w-4" />

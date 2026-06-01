@@ -1,25 +1,25 @@
 /**
  * Client Cleanup Service
- * 
+ *
  * Periodic maintenance utility that scans for and reconciles orphaned or
  * inconsistent client data in the KV store. Designed to be triggered by
  * an admin-only route rather than a scheduled job (edge functions don't
  * support cron natively).
- * 
+ *
  * Handles three categories of stale data:
- * 
+ *
  * 1. **Orphaned KV profiles** — user_profile entries whose Supabase Auth
  *    account has been fully deleted. These are marked accountStatus:'closed'
  *    and security.deleted:true so they no longer appear in searches.
- * 
+ *
  * 2. **Security/profile drift** — profiles where security.deleted or
  *    security.suspended is true but the profile's accountStatus was never
  *    updated (legacy records from before the deleteClient/suspendClient
  *    methods were updated to propagate status).
- * 
+ *
  * 3. **Orphaned security entries** — security:* keys with no matching
  *    profile. Logged for visibility but not automatically removed.
- * 
+ *
  * All mutations are idempotent and safe to re-run.
  */
 
@@ -30,10 +30,7 @@ import { createModuleLogger } from './stderr-logger.ts';
 const log = createModuleLogger('client-cleanup');
 
 function createServiceClient() {
-  return createClient(
-    Deno.env.get('SUPABASE_URL')!,
-    Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,
-  );
+  return createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!);
 }
 
 // ============================================================================
@@ -76,7 +73,7 @@ interface AffectedRecord {
 
 /**
  * Run the full client cleanup scan.
- * 
+ *
  * @param dryRun  If true, no mutations are performed — only a report is returned.
  * @returns       Summary of the cleanup run.
  */
@@ -123,7 +120,10 @@ export async function runClientCleanup(dryRun = false): Promise<CleanupResult> {
     const batch = userIds.slice(i, i + BATCH_SIZE);
     const results = await Promise.allSettled(
       batch.map(async (uid) => {
-        const { data: { user }, error } = await supabase.auth.admin.getUserById(uid);
+        const {
+          data: { user },
+          error,
+        } = await supabase.auth.admin.getUserById(uid);
         return { uid, exists: !error && !!user };
       }),
     );

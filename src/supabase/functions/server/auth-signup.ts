@@ -22,10 +22,7 @@ const log = createModuleLogger('auth-signup');
 
 // Initialize Supabase client with service role key
 const getSupabaseClient = () => {
-  return createClient(
-    Deno.env.get('SUPABASE_URL')!,
-    Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
-  );
+  return createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!);
 };
 
 /**
@@ -36,27 +33,30 @@ app.post('/signup', async (c) => {
   const blockedIpAddress = getBlockedClientIp((headerName) => c.req.header(headerName));
   if (blockedIpAddress) {
     log.warn('Blocked auth signup from abusive IP address', { blockedIpAddress });
-    return c.json({
-      error: getBlockedIpAddressWarning(blockedIpAddress),
-      warning: true,
-      blockedIpAddress,
-    }, 403);
+    return c.json(
+      {
+        error: getBlockedIpAddressWarning(blockedIpAddress),
+        warning: true,
+        blockedIpAddress,
+      },
+      403,
+    );
   }
 
   try {
     log.info('🔐 User signup request received');
-    
+
     const body = await c.req.json();
     const { email, password, firstName, surname, countryCode, phoneNumber } = body;
-    
+
     // Validate required fields
     if (!email || !password || !firstName || !surname) {
       log.error('❌ Missing required fields');
       return c.json({ error: 'Missing required fields' }, 400);
     }
-    
+
     const supabase = getSupabaseClient();
-    
+
     // Create user in Supabase Auth with email verification required
     log.info('👤 Creating user account:', email);
     const { data: userData, error: userError } = await supabase.auth.admin.createUser({
@@ -74,23 +74,30 @@ app.post('/signup', async (c) => {
         phoneNumber: phoneNumber || '',
         accountType: 'Personal Client', // Default for public signups
         accountStatus: 'no_application', // NEW: Initial status - user hasn't selected account type yet
-      }
+      },
     });
-    
+
     if (userError || !userData.user) {
       // Check for existing user error
-      if (userError?.status === 422 && (userError as Error & { code?: string }).code === 'email_exists' || userError?.message?.includes('already been registered')) {
+      if (
+        (userError?.status === 422 &&
+          (userError as Error & { code?: string }).code === 'email_exists') ||
+        userError?.message?.includes('already been registered')
+      ) {
         log.warn('⚠️ User already exists:', email);
-        return c.json({ 
-          error: 'An account with this email already exists. Please sign in.',
-          code: 'EMAIL_EXISTS'
-        }, 409);
+        return c.json(
+          {
+            error: 'An account with this email already exists. Please sign in.',
+            code: 'EMAIL_EXISTS',
+          },
+          409,
+        );
       }
 
       log.error('❌ Failed to create user:', userError);
       return c.json({ error: userError?.message || 'Failed to create user account' }, 400);
     }
-    
+
     const userId = userData.user.id;
     log.info('✅ User created:', userId);
 
@@ -99,21 +106,21 @@ app.post('/signup', async (c) => {
     try {
       const origin = c.req.header('origin') || 'https://www.navigatewealth.co';
       const redirectTo = `${origin}/auth/callback`;
-      
+
       log.info('📧 Sending verification email to:', email);
       log.info('🔗 Redirect URL:', redirectTo);
-      
+
       const { error: resendError } = await supabase.auth.resend({
         type: 'signup',
         email: email,
         options: {
-          emailRedirectTo: redirectTo
-        }
+          emailRedirectTo: redirectTo,
+        },
       });
-      
+
       if (resendError) {
         log.warn('⚠️ Failed to send verification email:', resendError);
-        // We don't fail the request here, as the user is created. 
+        // We don't fail the request here, as the user is created.
         // They can request a new verification email from the frontend.
       } else {
         log.info('✅ Verification email sent successfully');
@@ -121,15 +128,15 @@ app.post('/signup', async (c) => {
     } catch (emailErr) {
       log.warn('⚠️ Exception sending verification email:', emailErr);
     }
-    
+
     // Generate Application Number
     const applicationNumber = await generateApplicationNumber();
     log.info('📋 Generated application number:', applicationNumber);
-    
+
     // Create application record
     const applicationId = crypto.randomUUID();
     const now = new Date().toISOString();
-    
+
     const application = {
       id: applicationId,
       application_number: applicationNumber,
@@ -151,13 +158,13 @@ app.post('/signup', async (c) => {
         cellphoneNumber: `${countryCode || '+27'}${phoneNumber || ''}`,
         accountType: 'Personal Client',
         // Other fields will be filled by user during application process
-      }
+      },
     };
-    
+
     // Save application to KV store
     await kv.set(`application:${applicationId}`, application);
     log.info('✅ Application created with status: draft');
-    
+
     // Save application number to user profile (for "Other" tab)
     // Create default user profile with proper structure
     const defaultProfile = {
@@ -193,7 +200,7 @@ app.post('/signup', async (c) => {
         deletedAt: null,
       },
     };
-    
+
     // Save to the profile key used by the system
     await kv.set(`user_profile:${userId}:personal_info`, defaultProfile);
     log.info('✅ User profile created with application number in Other tab');
@@ -202,7 +209,7 @@ app.post('/signup', async (c) => {
     autoSubscribeClient(email, firstName, surname).catch((err) => {
       log.warn('Auto-subscribe newsletter failed (non-blocking)', err);
     });
-    
+
     // Create a submission to notify admin of the new signup (appears in Submissions inbox)
     try {
       await submissionsService.create({
@@ -229,20 +236,19 @@ app.post('/signup', async (c) => {
     // Send admin notification email
     try {
       log.info('📧 Sending signup notification email to admin...');
-      
+
       const cellphone = `${countryCode || '+27'}${phoneNumber || ''}`;
-      
+
       await sendAdminSignupNotification({
         userEmail: email,
         userName: `${firstName} ${surname}`,
-        timestamp: now
+        timestamp: now,
       });
-      
     } catch (emailError) {
       log.error('❌ Error sending admin notification email:', emailError);
       // Don't fail the signup if notification fails
     }
-    
+
     // Recalculate group memberships in background
     // Fire and forget - don't wait for it
     (async () => {
@@ -254,7 +260,7 @@ app.post('/signup', async (c) => {
         // Don't fail the signup if group membership recalculation fails
       }
     })();
-    
+
     // Return success with user and application data
     return c.json({
       success: true,
@@ -266,14 +272,16 @@ app.post('/signup', async (c) => {
         id: applicationId,
         application_number: applicationNumber,
         status: 'draft',
-      }
+      },
     });
-    
   } catch (error: unknown) {
     log.error('❌ Signup error:', error);
-    return c.json({ 
-      error: error instanceof Error ? error.message : 'Internal server error during signup' 
-    }, 500);
+    return c.json(
+      {
+        error: error instanceof Error ? error.message : 'Internal server error during signup',
+      },
+      500,
+    );
   }
 });
 

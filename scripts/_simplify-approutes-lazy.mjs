@@ -9,7 +9,7 @@ let s = fs.readFileSync(file, 'utf8');
 // Single-line: const X = React.lazy(() => import('PATH').then(m => ({ default: m.X })));
 s = s.replace(
   /const (\w+) = React\.lazy\(\(\) => import\((['"])([^'"]+)\2\)\.then\(m => \(\{ default: m\.\w+ \}\)\)\);/g,
-  "const $1 = React.lazy(() => import($2$3$2));",
+  'const $1 = React.lazy(() => import($2$3$2));',
 );
 
 // Split-line QuoteServiceContactPage / ScheduleConsultationPage style (if still present)

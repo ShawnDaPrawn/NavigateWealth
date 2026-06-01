@@ -23,10 +23,10 @@
  * packets just chain those simpler envelopes.
  */
 
-import * as kv from "./kv_store.tsx";
-import { EsignKeys } from "./esign-keys.ts";
-import { createModuleLogger } from "./stderr-logger.ts";
-import { getErrMsg } from "./shared-logger-utils.ts";
+import * as kv from './kv_store.tsx';
+import { EsignKeys } from './esign-keys.ts';
+import { createModuleLogger } from './stderr-logger.ts';
+import { getErrMsg } from './shared-logger-utils.ts';
 import {
   createEnvelope,
   addSignersToEnvelope,
@@ -35,19 +35,19 @@ import {
   updateSignerStatus,
   getEnvelopeSigners,
   logAuditEvent,
-} from "./esign-services.tsx";
-import { getTemplate, getTemplateVersion } from "./esign-template-service.ts";
-import { sendEmail } from "./email-service.ts";
-import { createSigningInviteEmail } from "./esign-email-templates.ts";
+} from './esign-services.tsx';
+import { getTemplate, getTemplateVersion } from './esign-template-service.ts';
+import { sendEmail } from './email-service.ts';
+import { createSigningInviteEmail } from './esign-email-templates.ts';
 import type {
   PacketRecord,
   PacketRecipient,
   PacketRunRecord,
   PacketRunStepRecord,
   PacketStepDefinition,
-} from "./esign-types.ts";
+} from './esign-types.ts';
 
-const log = createModuleLogger("esign-packet-service");
+const log = createModuleLogger('esign-packet-service');
 
 // ============================================================================
 // Packets (definitions)
@@ -62,9 +62,9 @@ export async function createPacket(params: {
 }): Promise<{ packet?: PacketRecord; error?: string }> {
   try {
     const trimmedName = params.name.trim();
-    if (!trimmedName) return { error: "Packet name is required" };
+    if (!trimmedName) return { error: 'Packet name is required' };
     if (!params.steps || params.steps.length === 0) {
-      return { error: "Packet must contain at least one step" };
+      return { error: 'Packet must contain at least one step' };
     }
 
     // Resolve + snapshot template versions so the packet stays
@@ -101,7 +101,7 @@ export async function createPacket(params: {
     log.success(`Packet created: "${packet.name}" (${id}) with ${resolvedSteps.length} step(s)`);
     return { packet };
   } catch (error) {
-    log.error("Failed to create packet:", error);
+    log.error('Failed to create packet:', error);
     return { error: getErrMsg(error) };
   }
 }
@@ -120,11 +120,11 @@ export async function listPackets(): Promise<PacketRecord[]> {
     const ids: string[] = (await kv.get(EsignKeys.packetsList())) || [];
     if (ids.length === 0) return [];
     const records = await Promise.all(ids.map((id) => kv.get(EsignKeys.packet(id))));
-    return (records.filter(Boolean) as PacketRecord[]).sort((a, b) =>
-      new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),
+    return (records.filter(Boolean) as PacketRecord[]).sort(
+      (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),
     );
   } catch (error) {
-    log.error("Failed to list packets:", error);
+    log.error('Failed to list packets:', error);
     return [];
   }
 }
@@ -133,7 +133,10 @@ export async function deletePacket(id: string): Promise<{ ok: boolean; error?: s
   try {
     await kv.del(EsignKeys.packet(id));
     const ids: string[] = (await kv.get(EsignKeys.packetsList())) || [];
-    await kv.set(EsignKeys.packetsList(), ids.filter((x) => x !== id));
+    await kv.set(
+      EsignKeys.packetsList(),
+      ids.filter((x) => x !== id),
+    );
     return { ok: true };
   } catch (error) {
     log.error(`Failed to delete packet ${id}:`, error);
@@ -166,14 +169,14 @@ export async function startPacketRun(
 ): Promise<{ run?: PacketRunRecord; firstEnvelopeId?: string; error?: string }> {
   try {
     const packet = await getPacket(params.packetId);
-    if (!packet) return { error: "Packet not found" };
+    if (!packet) return { error: 'Packet not found' };
     if (params.documentIdsByStep.length !== packet.steps.length) {
       return {
         error: `Expected ${packet.steps.length} document id(s) (one per step), got ${params.documentIdsByStep.length}`,
       };
     }
     if (!params.recipients || params.recipients.length === 0) {
-      return { error: "At least one recipient required" };
+      return { error: 'At least one recipient required' };
     }
 
     const id = crypto.randomUUID();
@@ -183,7 +186,7 @@ export async function startPacketRun(
       step_index: idx,
       template_id: s.templateId,
       template_version: s.templateVersion,
-      status: "pending",
+      status: 'pending',
     }));
 
     const run: PacketRunRecord = {
@@ -194,7 +197,7 @@ export async function startPacketRun(
       created_by_user_id: params.createdByUserId,
       created_at: now,
       updated_at: now,
-      status: "running",
+      status: 'running',
       current_step_index: 0,
       steps,
     };
@@ -220,8 +223,8 @@ export async function startPacketRun(
     // completion workflow.
     const dispatch = await materialisePacketStep(run, 0);
     if (dispatch.error) {
-      run.status = "failed";
-      run.steps[0] = { ...run.steps[0], status: "failed", error: dispatch.error };
+      run.status = 'failed';
+      run.steps[0] = { ...run.steps[0], status: 'failed', error: dispatch.error };
       run.updated_at = new Date().toISOString();
       await kv.set(EsignKeys.packetRun(id), run);
       return { run, error: dispatch.error };
@@ -229,7 +232,7 @@ export async function startPacketRun(
 
     return { run: dispatch.run, firstEnvelopeId: dispatch.envelopeId };
   } catch (error) {
-    log.error("Failed to start packet run:", error);
+    log.error('Failed to start packet run:', error);
     return { error: getErrMsg(error) };
   }
 }
@@ -248,22 +251,24 @@ export async function listPacketRuns(): Promise<PacketRunRecord[]> {
     const ids: string[] = (await kv.get(EsignKeys.packetRunsList())) || [];
     if (ids.length === 0) return [];
     const records = await Promise.all(ids.map((id) => kv.get(EsignKeys.packetRun(id))));
-    return (records.filter(Boolean) as PacketRunRecord[]).sort((a, b) =>
-      new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),
+    return (records.filter(Boolean) as PacketRunRecord[]).sort(
+      (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),
     );
   } catch (error) {
-    log.error("Failed to list packet runs:", error);
+    log.error('Failed to list packet runs:', error);
     return [];
   }
 }
 
-export async function cancelPacketRun(id: string): Promise<{ run?: PacketRunRecord; error?: string }> {
+export async function cancelPacketRun(
+  id: string,
+): Promise<{ run?: PacketRunRecord; error?: string }> {
   try {
     const run = await getPacketRun(id);
-    if (!run) return { error: "Packet run not found" };
-    if (run.status === "completed") return { error: "Run already completed" };
-    run.status = "cancelled";
-    run.steps = run.steps.map((s) => (s.status === "pending" ? { ...s, status: "skipped" } : s));
+    if (!run) return { error: 'Packet run not found' };
+    if (run.status === 'completed') return { error: 'Run already completed' };
+    run.status = 'cancelled';
+    run.steps = run.steps.map((s) => (s.status === 'pending' ? { ...s, status: 'skipped' } : s));
     run.updated_at = new Date().toISOString();
     await kv.set(EsignKeys.packetRun(id), run);
     return { run };
@@ -293,18 +298,18 @@ export async function advancePacketRunFromCompletion(
       log.warn(`advancePacketRunFromCompletion: run ${runId} not found`);
       return;
     }
-    if (run.status === "cancelled" || run.status === "completed") return;
+    if (run.status === 'cancelled' || run.status === 'completed') return;
 
     const completedStep = run.steps.find((s) => s.step_index === stepIndex);
     if (completedStep) {
-      completedStep.status = "completed";
+      completedStep.status = 'completed';
       completedStep.envelope_id = envelopeId;
       completedStep.completed_at = new Date().toISOString();
     }
 
     const nextIndex = stepIndex + 1;
     if (nextIndex >= run.steps.length) {
-      run.status = "completed";
+      run.status = 'completed';
       run.current_step_index = stepIndex;
       run.updated_at = new Date().toISOString();
       await kv.set(EsignKeys.packetRun(runId), run);
@@ -325,16 +330,16 @@ export async function advancePacketRunFromCompletion(
       if (fresh) {
         const stepRec = fresh.steps.find((s) => s.step_index === nextIndex);
         if (stepRec) {
-          stepRec.status = "failed";
+          stepRec.status = 'failed';
           stepRec.error = dispatch.error;
         }
-        fresh.status = "failed";
+        fresh.status = 'failed';
         fresh.updated_at = new Date().toISOString();
         await kv.set(EsignKeys.packetRun(runId), fresh);
       }
     }
   } catch (error) {
-    log.error("advancePacketRunFromCompletion failed:", error);
+    log.error('advancePacketRunFromCompletion failed:', error);
   }
 }
 
@@ -393,7 +398,8 @@ async function materialisePacketStep(
       packetRunId: run.id,
       packetStepIndex: stepIndex,
     });
-    if (created.error || !created.envelopeId) return { error: created.error || "Failed to create envelope" };
+    if (created.error || !created.envelopeId)
+      return { error: created.error || 'Failed to create envelope' };
     const envelopeId = created.envelopeId;
 
     // 2. Add signers from the packet-run recipient slots. Templates
@@ -406,7 +412,7 @@ async function materialisePacketStep(
         name: r.name,
         email: r.email,
         role: r.role,
-        kind: "signer",
+        kind: 'signer',
         requiresOtp: false,
       })),
     );
@@ -432,9 +438,9 @@ async function materialisePacketStep(
     // 4. Mark envelope sent + invite the first signer (sequential mode
     //    is the only supported mode for packets in v1; sending only the
     //    first signer matches the standard sequential-flow contract).
-    await updateEnvelopeStatus(envelopeId, "sent", {
+    await updateEnvelopeStatus(envelopeId, 'sent', {
       sent_at: new Date().toISOString(),
-      signing_mode: "sequential",
+      signing_mode: 'sequential',
     });
 
     const signers = await getEnvelopeSigners(envelopeId);
@@ -445,7 +451,7 @@ async function materialisePacketStep(
       const emailContent = createSigningInviteEmail({
         signerName: first.name,
         envelopeTitle: title,
-        senderName: plan.senderEmail || "Navigate Wealth",
+        senderName: plan.senderEmail || 'Navigate Wealth',
         signingLink: signingUrl,
         message: plan.message ?? tpl.defaultMessage,
       });
@@ -456,17 +462,17 @@ async function materialisePacketStep(
         text: emailContent.text,
       });
       if (sent) {
-        await updateSignerStatus(first.id, "sent", { invite_sent_at: new Date().toISOString() });
+        await updateSignerStatus(first.id, 'sent', { invite_sent_at: new Date().toISOString() });
       }
       await logAuditEvent({
         envelopeId,
-        actorType: "system",
-        action: "invite_sent",
+        actorType: 'system',
+        action: 'invite_sent',
         email: first.email,
         metadata: {
           signerId: first.id,
           signerName: first.name,
-          via: "packet_run",
+          via: 'packet_run',
           packetRunId: run.id,
           packetStepIndex: stepIndex,
         },
@@ -479,7 +485,7 @@ async function materialisePacketStep(
       const target = updatedRun.steps.find((s) => s.step_index === stepIndex);
       if (target) {
         target.envelope_id = envelopeId;
-        target.status = "sent";
+        target.status = 'sent';
         target.started_at = new Date().toISOString();
       }
       updatedRun.current_step_index = stepIndex;

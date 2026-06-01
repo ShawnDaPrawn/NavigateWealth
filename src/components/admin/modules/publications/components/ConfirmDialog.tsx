@@ -1,14 +1,14 @@
 /**
  * Publications Feature - ConfirmDialog Component
- * 
+ *
  * Accessible confirmation dialog for destructive and important actions.
  * Includes proper ARIA attributes, keyboard navigation (Escape to close),
  * and focus management.
- * 
+ *
  * @example
  * ```tsx
  * const { isOpen, open, close, confirm } = useConfirmDialog();
- * 
+ *
  * <ConfirmDialog
  *   isOpen={isOpen}
  *   onClose={close}
@@ -45,7 +45,7 @@ export function ConfirmDialog({
   confirmLabel = 'Confirm',
   cancelLabel = 'Cancel',
   variant = 'danger',
-  isLoading = false
+  isLoading = false,
 }: ConfirmDialogProps) {
   // Handle Escape key to close dialog
   useEffect(() => {
@@ -73,23 +73,23 @@ export function ConfirmDialog({
     danger: {
       icon: <Trash2 className="w-6 h-6 text-red-600" />,
       bgColor: 'bg-red-100',
-      buttonClass: 'bg-red-600 hover:bg-red-700 text-white'
+      buttonClass: 'bg-red-600 hover:bg-red-700 text-white',
     },
     warning: {
       icon: <AlertTriangle className="w-6 h-6 text-yellow-600" />,
       bgColor: 'bg-yellow-100',
-      buttonClass: 'bg-yellow-600 hover:bg-yellow-700 text-white'
+      buttonClass: 'bg-yellow-600 hover:bg-yellow-700 text-white',
     },
     info: {
       icon: <Info className="w-6 h-6 text-blue-600" />,
       bgColor: 'bg-blue-100',
-      buttonClass: 'bg-blue-600 hover:bg-blue-700 text-white'
+      buttonClass: 'bg-blue-600 hover:bg-blue-700 text-white',
     },
     success: {
       icon: <CheckCircle className="w-6 h-6 text-green-600" />,
       bgColor: 'bg-green-100',
-      buttonClass: 'bg-green-600 hover:bg-green-700 text-white'
-    }
+      buttonClass: 'bg-green-600 hover:bg-green-700 text-white',
+    },
   };
 
   const style = variantStyles[variant] || variantStyles.danger;
@@ -101,29 +101,31 @@ export function ConfirmDialog({
   return (
     <div className="contents">
       {/* Backdrop */}
-      <div 
+      <div
         className="fixed inset-0 bg-black/50 z-50 backdrop-blur-sm"
         onClick={!isLoading ? onClose : undefined}
         aria-hidden="true"
       />
-      
+
       {/* Dialog */}
-      <div 
+      <div
         className="fixed inset-0 z-50 flex items-center justify-center p-4"
         role="dialog"
         aria-modal="true"
         aria-labelledby="dialog-title"
         aria-describedby="dialog-description"
       >
-        <div 
+        <div
           className="bg-white rounded-lg shadow-xl max-w-md w-full p-6"
           onClick={(e) => e.stopPropagation()}
         >
           {/* Icon */}
-          <div className={`flex items-center justify-center w-12 h-12 ${style.bgColor} rounded-full mb-4`}>
+          <div
+            className={`flex items-center justify-center w-12 h-12 ${style.bgColor} rounded-full mb-4`}
+          >
             {style.icon}
           </div>
-          
+
           {/* Content */}
           <h3 id="dialog-title" className="text-xl mb-2 text-gray-900">
             {title}
@@ -131,18 +133,18 @@ export function ConfirmDialog({
           <p id="dialog-description" className="text-gray-600 mb-6">
             {description}
           </p>
-          
+
           {/* Actions */}
           <div className="flex gap-3 justify-end">
-            <Button 
-              variant="outline" 
+            <Button
+              variant="outline"
               onClick={onClose}
               disabled={isLoading}
               aria-label={cancelLabel}
             >
               {cancelLabel}
             </Button>
-            <Button 
+            <Button
               className={style.buttonClass}
               onClick={handleConfirm}
               disabled={isLoading}
@@ -190,6 +192,6 @@ export function useConfirmDialog() {
     open,
     close,
     confirm,
-    config
+    config,
   };
 }

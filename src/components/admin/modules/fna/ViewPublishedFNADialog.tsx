@@ -8,12 +8,7 @@
  */
 
 import React, { useEffect, useState } from 'react';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from '../../../ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../../../ui/dialog';
 import { Button } from '../../../ui/button';
 import {
   AlertDialog,
@@ -99,9 +94,7 @@ export function ViewPublishedFNADialog({
     setIsLoading(true);
     try {
       if (!apiBaseUrl) {
-        throw new Error(
-          `Cannot fetch FNA: no apiBaseUrl provided for type "${fnaType}"`,
-        );
+        throw new Error(`Cannot fetch FNA: no apiBaseUrl provided for type "${fnaType}"`);
       }
 
       const endpoint = resolveApiEndpoint(`${apiBaseUrl}/${fnaId}`);
@@ -157,20 +150,14 @@ export function ViewPublishedFNADialog({
         <DialogContent className="!max-w-[1600px] w-[95vw] max-h-[90vh] overflow-y-auto p-8">
           <DialogHeader className="mb-6">
             <DialogTitle className="text-xl font-semibold">
-              {fnaTypeName} -{' '}
-              {(fnaData?.clientName as string) || 'Client'}
+              {fnaTypeName} - {(fnaData?.clientName as string) || 'Client'}
             </DialogTitle>
             {fnaData && (
               <div className="flex items-center gap-4 text-sm text-muted-foreground mt-2">
-                {!!fnaData.version && (
-                  <span>Version {fnaData.version as string}</span>
-                )}
+                {!!fnaData.version && <span>Version {fnaData.version as string}</span>}
                 {!!fnaData.version && <span>&bull;</span>}
                 <span>
-                  {(currentStatus || fnaData.status) === 'published'
-                    ? 'Published'
-                    : 'Draft'}{' '}
-                  on{' '}
+                  {(currentStatus || fnaData.status) === 'published' ? 'Published' : 'Draft'} on{' '}
                   {new Date(
                     (fnaData.publishedAt || fnaData.createdAt) as string,
                   ).toLocaleDateString()}
@@ -186,21 +173,14 @@ export function ViewPublishedFNADialog({
               </div>
             ) : fnaData ? (
               ResultsView ? (
-                <ResultsView
-                  fna={fnaData}
-                  results={fnaData}
-                  session={fnaData}
-                  plan={fnaData}
-                />
+                <ResultsView fna={fnaData} results={fnaData} session={fnaData} plan={fnaData} />
               ) : (
                 <div className="text-center py-12 text-muted-foreground">
                   No results view configured for {fnaTypeName}
                 </div>
               )
             ) : (
-              <div className="text-center py-12 text-muted-foreground">
-                No FNA data available
-              </div>
+              <div className="text-center py-12 text-muted-foreground">No FNA data available</div>
             )}
           </div>
 
@@ -225,9 +205,8 @@ export function ViewPublishedFNADialog({
           <AlertDialogHeader>
             <AlertDialogTitle>Delete {fnaTypeName}</AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure you want to delete this Financial Needs Analysis?
-              This action cannot be undone. The FNA will be permanently removed
-              from the system.
+              Are you sure you want to delete this Financial Needs Analysis? This action cannot be
+              undone. The FNA will be permanently removed from the system.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

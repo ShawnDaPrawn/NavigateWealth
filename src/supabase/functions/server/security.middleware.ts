@@ -1,6 +1,6 @@
 /**
  * Security Middleware
- * 
+ *
  * Centralized security checks for all protected routes:
  * - Account suspension enforcement
  * - Rate limiting (placeholder for future implementation)
@@ -13,7 +13,10 @@ import { createModuleLogger } from './stderr-logger.ts';
 const log = createModuleLogger('security-middleware');
 
 export class SecurityError extends Error {
-  constructor(message: string, public statusCode: number = 403) {
+  constructor(
+    message: string,
+    public statusCode: number = 403,
+  ) {
     super(message);
     this.name = 'SecurityError';
   }
@@ -27,11 +30,11 @@ export class SecurityError extends Error {
 export async function checkAccountSuspension(userId: string): Promise<void> {
   try {
     const securityData = await kv.get(`security:${userId}`);
-    
+
     if (securityData?.suspended === true) {
       // Log suspension attempt for audit trail
       log.warn(`Suspended user attempted access`, { userId });
-      
+
       // Record suspension access attempt
       await kv.set(`audit:suspension_attempt:${userId}:${Date.now()}`, {
         userId,
@@ -39,7 +42,7 @@ export async function checkAccountSuspension(userId: string): Promise<void> {
         action: 'access_denied',
         reason: 'account_suspended',
       });
-      
+
       throw new SecurityError('Account suspended. Please contact support.', 403);
     }
   } catch (error) {
@@ -60,16 +63,16 @@ export async function performSecurityCheck(userId: string): Promise<void> {
   if (!userId) {
     throw new SecurityError('User ID required for security check', 401);
   }
-  
+
   // Check account suspension
   await checkAccountSuspension(userId);
-  
+
   // Future: Add rate limiting
   // await checkRateLimit(userId);
-  
+
   // Future: Add IP blocking
   // await checkIPBlacklist(request);
-  
+
   // Future: Add concurrent session limits
   // await checkConcurrentSessions(userId);
 }
@@ -80,17 +83,17 @@ export async function performSecurityCheck(userId: string): Promise<void> {
 export async function logSecurityEvent(
   userId: string,
   event: string,
-  details: Record<string, unknown>
+  details: Record<string, unknown>,
 ): Promise<void> {
   const logKey = `audit:${event}:${userId}:${Date.now()}`;
-  
+
   await kv.set(logKey, {
     userId,
     event,
     timestamp: new Date().toISOString(),
     ...details,
   });
-  
+
   log.info(`Security Event: ${event}`, { userId, ...details });
 }
 
@@ -100,7 +103,7 @@ export async function logSecurityEvent(
  */
 export async function getSecurityStatus(userId: string) {
   const securityData = await kv.get(`security:${userId}`);
-  
+
   return {
     suspended: securityData?.suspended || false,
     suspensionReason: securityData?.reason || null,

@@ -1,8 +1,8 @@
 /**
  * ApiKeyWarning Component
- * 
+ *
  * Warning alert for missing or invalid API key.
- * 
+ *
  * @module advice-engine/components/ApiKeyWarning
  */
 
@@ -14,7 +14,7 @@ import type { ApiKeyWarningProps } from '../types';
 
 /**
  * API key warning component
- * 
+ *
  * @example
  * <ApiKeyWarning
  *   status={{ configured: false, valid: false }}
@@ -34,11 +34,7 @@ export function ApiKeyWarning({ status, onDismiss }: ApiKeyWarningProps) {
         <AlertCircle className="h-4 w-4 text-amber-600" />
         <AlertDescription className="text-amber-900 text-sm">
           <strong>Action Required:</strong> OpenAI API key needs to be updated.
-          {status.error && (
-            <span className="block mt-1 text-xs">
-              Error: {status.error}
-            </span>
-          )}
+          {status.error && <span className="block mt-1 text-xs">Error: {status.error}</span>}
         </AlertDescription>
       </Alert>
 

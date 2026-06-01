@@ -44,7 +44,8 @@ export function CommunicationDetail({ communication, onClose }: CommunicationDet
 
   if (!communication) return null;
 
-  const cfg = CATEGORY_CONFIG[communication.category as CommunicationCategory] ?? CATEGORY_CONFIG.General;
+  const cfg =
+    CATEGORY_CONFIG[communication.category as CommunicationCategory] ?? CATEGORY_CONFIG.General;
   const CategoryIcon = cfg.icon;
 
   return (
@@ -59,7 +60,9 @@ export function CommunicationDetail({ communication, onClose }: CommunicationDet
                 {React.createElement(CategoryIcon, { className: 'h-6 w-6' })}
               </div>
               <div className="flex-1 min-w-0">
-                <DialogTitle className="text-lg mb-2 break-words">{communication.subject}</DialogTitle>
+                <DialogTitle className="text-lg mb-2 break-words">
+                  {communication.subject}
+                </DialogTitle>
                 <div className="flex items-center gap-2 flex-wrap mb-2">
                   <Badge variant="outline" className={cfg.badgeClass}>
                     {cfg.label}
@@ -102,14 +105,18 @@ export function CommunicationDetail({ communication, onClose }: CommunicationDet
             </h4>
             <div className="flex gap-3 flex-wrap">
               <Button
-                onClick={() => { window.location.href = CONTACT.emailHref; }}
+                onClick={() => {
+                  window.location.href = CONTACT.emailHref;
+                }}
                 className="bg-[#6d28d9] hover:bg-[#5b21b6] text-white"
               >
                 <Mail className="h-4 w-4 mr-2 flex-shrink-0" />
                 Email us: {CONTACT.email}
               </Button>
               <Button
-                onClick={() => { window.location.href = CONTACT.phoneTel; }}
+                onClick={() => {
+                  window.location.href = CONTACT.phoneTel;
+                }}
                 variant="outline"
                 className="border-[#6d28d9] text-[#6d28d9] hover:bg-[#6d28d9] hover:text-white"
               >

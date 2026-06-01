@@ -42,12 +42,15 @@ export default function VerificationSuccessPage() {
   }, [navigate, isAuthenticated, user]);
 
   // Determine the call-to-action based on authentication status
-  const ctaPath = isAuthenticated && user 
-    ? (user.applicationStatus === 'incomplete' 
-        ? (!user.accountType ? '/account-type' : '/application')
-        : '/dashboard')
-    : '/login';
-  
+  const ctaPath =
+    isAuthenticated && user
+      ? user.applicationStatus === 'incomplete'
+        ? !user.accountType
+          ? '/account-type'
+          : '/application'
+        : '/dashboard'
+      : '/login';
+
   const ctaText = isAuthenticated ? 'Continue to Application' : 'Continue to Login';
 
   return (
@@ -69,11 +72,10 @@ export default function VerificationSuccessPage() {
 
           {/* Success Message */}
           <div className="mt-6 text-center">
-            <h2 className="text-gray-900">
-              Email Verified Successfully!
-            </h2>
+            <h2 className="text-gray-900">Email Verified Successfully!</h2>
             <p className="mt-3 text-gray-600">
-              Your email has been successfully verified. You can now log in to access your Navigate Wealth account.
+              Your email has been successfully verified. You can now log in to access your Navigate
+              Wealth account.
             </p>
           </div>
 
@@ -81,9 +83,7 @@ export default function VerificationSuccessPage() {
           <div className="mt-8 border-t border-gray-200 pt-8">
             {/* Login Button */}
             <Link to={ctaPath}>
-              <Button 
-                className="w-full bg-purple-700 hover:bg-purple-800 flex items-center justify-center gap-2 group"
-              >
+              <Button className="w-full bg-purple-700 hover:bg-purple-800 flex items-center justify-center gap-2 group">
                 <span>{ctaText}</span>
                 <ArrowRight className="h-4 w-4 group-hover:translate-x-1 transition-transform" />
               </Button>
@@ -98,19 +98,17 @@ export default function VerificationSuccessPage() {
           {/* Additional Help */}
           <div className="mt-8 pt-6 border-t border-gray-200">
             <div className="text-center space-y-3">
-              <p className="text-sm text-gray-600">
-                Need help getting started?
-              </p>
+              <p className="text-sm text-gray-600">Need help getting started?</p>
               <div className="flex flex-col sm:flex-row gap-3 justify-center">
-                <Link 
-                  to="/help" 
+                <Link
+                  to="/help"
                   className="text-sm text-purple-700 hover:text-purple-800 underline"
                 >
                   Visit Help Center
                 </Link>
                 <span className="hidden sm:inline text-gray-300">•</span>
-                <Link 
-                  to="/contact" 
+                <Link
+                  to="/contact"
                   className="text-sm text-purple-700 hover:text-purple-800 underline"
                 >
                   Contact Support
@@ -122,17 +120,15 @@ export default function VerificationSuccessPage() {
           {/* Security Notice */}
           <div className="mt-6 bg-purple-50 border border-purple-100 rounded-lg p-4">
             <p className="text-xs text-gray-700 text-center">
-              🔒 Your account is now active and secured. For your security, please use a strong password and enable two-factor authentication in your account settings.
+              🔒 Your account is now active and secured. For your security, please use a strong
+              password and enable two-factor authentication in your account settings.
             </p>
           </div>
         </div>
 
         {/* Back to Home Link */}
         <div className="mt-6 text-center">
-          <Link 
-            to="/" 
-            className="text-sm text-gray-600 hover:text-gray-900 underline"
-          >
+          <Link to="/" className="text-sm text-gray-600 hover:text-gray-900 underline">
             ← Back to Home
           </Link>
         </div>

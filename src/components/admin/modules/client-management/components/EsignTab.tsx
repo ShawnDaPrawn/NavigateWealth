@@ -39,11 +39,7 @@ import {
   TableHeader,
   TableRow,
 } from '../../../../ui/table';
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from '../../../../ui/tooltip';
+import { Tooltip, TooltipContent, TooltipTrigger } from '../../../../ui/tooltip';
 import {
   Dialog,
   DialogContent,
@@ -89,13 +85,19 @@ import type { EsignEnvelope, EnvelopeStatus, EsignField, SignerFormData } from '
 
 // Lazy-load heavy wizard components (same as standalone module)
 const DocumentUploadStep = React.lazy(() =>
-  import('../../esign/components/DocumentUploadStep').then(m => ({ default: m.DocumentUploadStep }))
+  import('../../esign/components/DocumentUploadStep').then((m) => ({
+    default: m.DocumentUploadStep,
+  })),
 );
 const RecipientsManager = React.lazy(() =>
-  import('../../esign/components/RecipientsManager').then(m => ({ default: m.RecipientsManager }))
+  import('../../esign/components/RecipientsManager').then((m) => ({
+    default: m.RecipientsManager,
+  })),
 );
 const PrepareFormStudio = React.lazy(() =>
-  import('../../esign/components/PrepareFormStudio').then(m => ({ default: m.PrepareFormStudio }))
+  import('../../esign/components/PrepareFormStudio').then((m) => ({
+    default: m.PrepareFormStudio,
+  })),
 );
 
 function StepFallback() {
@@ -144,7 +146,12 @@ const STATUS_FILTER_MAP: Record<StatusFilter, EnvelopeStatus[] | null> = {
 const STAT_CONFIG = {
   total: { label: 'Total', icon: FileText, iconColor: 'text-blue-600', bgColor: 'bg-blue-50' },
   pending: { label: 'Pending', icon: Clock, iconColor: 'text-amber-600', bgColor: 'bg-amber-50' },
-  completed: { label: 'Completed', icon: CheckCircle2, iconColor: 'text-green-600', bgColor: 'bg-green-50' },
+  completed: {
+    label: 'Completed',
+    icon: CheckCircle2,
+    iconColor: 'text-green-600',
+    bgColor: 'bg-green-50',
+  },
   rejected: { label: 'Rejected', icon: XCircle, iconColor: 'text-red-600', bgColor: 'bg-red-50' },
 } as const;
 
@@ -209,31 +216,35 @@ export function EsignTab({ selectedClient }: EsignTabProps) {
   // ==================== CLIENT CONTEXT ====================
   // Passed to RecipientsManager so the profile's client is auto-added as
   // the first signer (but fully removable -- no forced restriction).
-  const clientContext = useMemo(() => ({
-    id: selectedClient.id,
-    firstName: selectedClient.firstName,
-    lastName: selectedClient.lastName,
-    email: selectedClient.email,
-  }), [selectedClient.id, selectedClient.firstName, selectedClient.lastName, selectedClient.email]);
+  const clientContext = useMemo(
+    () => ({
+      id: selectedClient.id,
+      firstName: selectedClient.firstName,
+      lastName: selectedClient.lastName,
+      email: selectedClient.email,
+    }),
+    [selectedClient.id, selectedClient.firstName, selectedClient.lastName, selectedClient.email],
+  );
 
   // ==================== DERIVED STATS ====================
 
   const stats = {
     total: envelopes.length,
-    pending: envelopes.filter(e => ['sent', 'viewed', 'partially_signed'].includes(e.status)).length,
-    completed: envelopes.filter(e => e.status === 'completed').length,
-    rejected: envelopes.filter(e => ['rejected', 'declined'].includes(e.status)).length,
+    pending: envelopes.filter((e) => ['sent', 'viewed', 'partially_signed'].includes(e.status))
+      .length,
+    completed: envelopes.filter((e) => e.status === 'completed').length,
+    rejected: envelopes.filter((e) => ['rejected', 'declined'].includes(e.status)).length,
   };
 
   const filteredEnvelopes = useMemo(() => {
     let result = envelopes;
     const allowedStatuses = STATUS_FILTER_MAP[statusFilter];
     if (allowedStatuses) {
-      result = result.filter(e => allowedStatuses.includes(e.status));
+      result = result.filter((e) => allowedStatuses.includes(e.status));
     }
     const q = searchQuery.trim().toLowerCase();
     if (q) {
-      result = result.filter(e => e.title.toLowerCase().includes(q));
+      result = result.filter((e) => e.title.toLowerCase().includes(q));
     }
     return result;
   }, [envelopes, statusFilter, searchQuery]);
@@ -248,7 +259,7 @@ export function EsignTab({ selectedClient }: EsignTabProps) {
   };
 
   const handleUploadNext = (files: File[], title: string, message: string, expiryDays: number) => {
-    setWizardData(prev => ({ ...prev, files, title, message, expiryDays }));
+    setWizardData((prev) => ({ ...prev, files, title, message, expiryDays }));
     setView('wizard-recipients');
   };
 
@@ -263,7 +274,7 @@ export function EsignTab({ selectedClient }: EsignTabProps) {
     }
 
     try {
-      const primarySystemSigner = wizardData.signers.find(s => s.isSystemClient && s.clientId);
+      const primarySystemSigner = wizardData.signers.find((s) => s.isSystemClient && s.clientId);
       const clientId = primarySystemSigner?.clientId || selectedClient.id;
 
       const result = await uploadDocument({
@@ -272,7 +283,9 @@ export function EsignTab({ selectedClient }: EsignTabProps) {
           clientId,
           title: wizardData.title,
           message: wizardData.message,
-          expiresAt: new Date(Date.now() + wizardData.expiryDays * 24 * 60 * 60 * 1000).toISOString(),
+          expiresAt: new Date(
+            Date.now() + wizardData.expiryDays * 24 * 60 * 60 * 1000,
+          ).toISOString(),
         },
       });
 
@@ -287,16 +300,19 @@ export function EsignTab({ selectedClient }: EsignTabProps) {
 
       // Persist draft signers
       try {
-        await esignApi.saveDraftSigners(result.id, wizardData.signers.map((s, idx) => ({
-          name: s.name,
-          email: s.email,
-          role: s.role || 'Signer',
-          order: s.order ?? idx + 1,
-          otpRequired: s.otpRequired,
-          accessCode: s.accessCode,
-          clientId: s.clientId,
-          isSystemClient: s.isSystemClient,
-        })));
+        await esignApi.saveDraftSigners(
+          result.id,
+          wizardData.signers.map((s, idx) => ({
+            name: s.name,
+            email: s.email,
+            role: s.role || 'Signer',
+            order: s.order ?? idx + 1,
+            otpRequired: s.otpRequired,
+            accessCode: s.accessCode,
+            clientId: s.clientId,
+            isSystemClient: s.isSystemClient,
+          })),
+        );
       } catch (draftErr) {
         logger.warn('Failed to persist draft signers (non-critical):', { error: draftErr });
       }
@@ -325,13 +341,13 @@ export function EsignTab({ selectedClient }: EsignTabProps) {
     if (!activeEnvelope) return;
     const fieldsToUse = currentFields || activeEnvelope.fields || [];
     try {
-      const fieldsForInvite = fieldsToUse.map(f => {
-        const signerIndex = wizardData.signers.findIndex(s => s.email === f.signer_id);
+      const fieldsForInvite = fieldsToUse.map((f) => {
+        const signerIndex = wizardData.signers.findIndex((s) => s.email === f.signer_id);
         return { ...f, signerIndex: signerIndex >= 0 ? signerIndex : 0 };
       });
 
       await sendInvites(activeEnvelope.id, {
-        signers: wizardData.signers.map(s => ({
+        signers: wizardData.signers.map((s) => ({
           name: s.name,
           email: s.email,
           role: s.role,
@@ -389,7 +405,7 @@ export function EsignTab({ selectedClient }: EsignTabProps) {
           otpRequired: (s.otp_required ?? s.requires_otp ?? false) as boolean,
           accessCode: (s.access_code as string) || undefined,
           clientId: (s.client_id as string) || undefined,
-          isSystemClient: !!(s.client_id),
+          isSystemClient: !!s.client_id,
         }));
       } else if (draftSigners.length > 0) {
         signers = draftSigners.map((s: Record<string, unknown>) => ({
@@ -400,11 +416,11 @@ export function EsignTab({ selectedClient }: EsignTabProps) {
           otpRequired: (s.otpRequired ?? false) as boolean,
           accessCode: (s.accessCode as string) || undefined,
           clientId: (s.clientId as string) || undefined,
-          isSystemClient: (s.isSystemClient ?? !!(s.clientId)) as boolean,
+          isSystemClient: (s.isSystemClient ?? !!s.clientId) as boolean,
         }));
       }
 
-      setWizardData(prev => ({
+      setWizardData((prev) => ({
         ...prev,
         title: fullEnvelope.title,
         message: fullEnvelope.message || '',
@@ -469,7 +485,7 @@ export function EsignTab({ selectedClient }: EsignTabProps) {
   };
 
   const handleDialogDownload = (envelopeId: string) => {
-    const env = envelopes.find(e => e.id === envelopeId);
+    const env = envelopes.find((e) => e.id === envelopeId);
     downloadDocument(envelopeId, env?.title || 'document');
   };
 
@@ -486,7 +502,9 @@ export function EsignTab({ selectedClient }: EsignTabProps) {
     try {
       const result = await esignApi.sendReminder(envelopeId);
       if (result.totalReminders > 0) {
-        toast.success(`Reminder sent to ${result.totalReminders} signer${result.totalReminders > 1 ? 's' : ''}`);
+        toast.success(
+          `Reminder sent to ${result.totalReminders} signer${result.totalReminders > 1 ? 's' : ''}`,
+        );
       } else {
         toast.info('No pending signers to remind');
       }
@@ -588,7 +606,7 @@ export function EsignTab({ selectedClient }: EsignTabProps) {
             <Suspense fallback={<StepFallback />}>
               <RecipientsManager
                 signers={wizardData.signers}
-                onChange={(signers) => setWizardData(prev => ({ ...prev, signers }))}
+                onChange={(signers) => setWizardData((prev) => ({ ...prev, signers }))}
                 clientContext={clientContext}
               />
             </Suspense>
@@ -655,11 +673,7 @@ export function EsignTab({ selectedClient }: EsignTabProps) {
             All e-sign documents associated with this client
           </p>
         </div>
-        <Button
-          size="sm"
-          className="bg-purple-600 hover:bg-purple-700"
-          onClick={handleStartNew}
-        >
+        <Button size="sm" className="bg-purple-600 hover:bg-purple-700" onClick={handleStartNew}>
           <Plus className="h-4 w-4 mr-1.5" />
           New Document
         </Button>
@@ -742,7 +756,9 @@ export function EsignTab({ selectedClient }: EsignTabProps) {
           <CardContent className="py-12 text-center">
             <Search className="h-10 w-10 text-muted-foreground/30 mx-auto mb-3" />
             <p className="font-medium text-sm">No envelopes match your filters</p>
-            <p className="text-xs text-muted-foreground mt-1">Try adjusting your search or status filter</p>
+            <p className="text-xs text-muted-foreground mt-1">
+              Try adjusting your search or status filter
+            </p>
             <Button variant="outline" size="sm" className="mt-4" onClick={clearFilters}>
               Clear Filters
             </Button>
@@ -804,8 +820,8 @@ export function EsignTab({ selectedClient }: EsignTabProps) {
           <DialogHeader>
             <DialogTitle>Delete Envelope</DialogTitle>
             <DialogDescription>
-              Are you sure you want to delete &ldquo;{envelopeToDelete?.title}&rdquo;?
-              This action cannot be undone.
+              Are you sure you want to delete &ldquo;{envelopeToDelete?.title}&rdquo;? This action
+              cannot be undone.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
@@ -895,14 +911,16 @@ function WizardHeader({ currentStep, title, subtitle, onCancel }: WizardHeaderPr
                     isActive
                       ? 'border-purple-600 bg-purple-50'
                       : isCompleted
-                      ? 'border-green-500 bg-green-50'
-                      : 'border-gray-200 bg-white'
+                        ? 'border-green-500 bg-green-50'
+                        : 'border-gray-200 bg-white'
                   }`}
                 >
                   {isCompleted ? (
                     <CheckCircle2 className="h-4 w-4 text-green-600" />
                   ) : (
-                    <StepIcon className={`h-4 w-4 ${isActive ? 'text-purple-600' : 'text-gray-400'}`} />
+                    <StepIcon
+                      className={`h-4 w-4 ${isActive ? 'text-purple-600' : 'text-gray-400'}`}
+                    />
                   )}
                 </div>
                 <span
@@ -998,10 +1016,18 @@ function EsignTabSkeleton() {
                       </div>
                     </div>
                   </TableCell>
-                  <TableCell><Skeleton className="h-5 w-16 rounded-full" /></TableCell>
-                  <TableCell><Skeleton className="h-1.5 w-20 rounded-full" /></TableCell>
-                  <TableCell><Skeleton className="h-4 w-8" /></TableCell>
-                  <TableCell><Skeleton className="h-4 w-10" /></TableCell>
+                  <TableCell>
+                    <Skeleton className="h-5 w-16 rounded-full" />
+                  </TableCell>
+                  <TableCell>
+                    <Skeleton className="h-1.5 w-20 rounded-full" />
+                  </TableCell>
+                  <TableCell>
+                    <Skeleton className="h-4 w-8" />
+                  </TableCell>
+                  <TableCell>
+                    <Skeleton className="h-4 w-10" />
+                  </TableCell>
                   <TableCell className="text-right pr-4">
                     <div className="flex items-center justify-end gap-1">
                       <Skeleton className="h-8 w-8 rounded-md" />
@@ -1017,4 +1043,3 @@ function EsignTabSkeleton() {
     </div>
   );
 }
-

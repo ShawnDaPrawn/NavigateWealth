@@ -3,18 +3,18 @@
  * Core business logic for envelope operations using Key-Value store
  */
 
-import * as kv from "./kv_store.tsx";
-import { EsignKeys } from "./esign-keys.ts";
-import type { 
-  EsignDocument, 
-  EsignEnvelope, 
-  EsignSigner, 
-  EsignField, 
-  EsignAuditEvent 
-} from "./esign-types.ts";
-import { createModuleLogger } from "./stderr-logger.ts";
-import { getErrMsg } from "./shared-logger-utils.ts";
-import { esignPgRepo } from "./esign-postgres-repo.ts";
+import * as kv from './kv_store.tsx';
+import { EsignKeys } from './esign-keys.ts';
+import type {
+  EsignDocument,
+  EsignEnvelope,
+  EsignSigner,
+  EsignField,
+  EsignAuditEvent,
+} from './esign-types.ts';
+import { createModuleLogger } from './stderr-logger.ts';
+import { getErrMsg } from './shared-logger-utils.ts';
+import { esignPgRepo } from './esign-postgres-repo.ts';
 
 const log = createModuleLogger('esign-services');
 
@@ -57,7 +57,7 @@ export async function logAuditEvent(data: {
 
     // Add to envelope's audit trail
     const auditKey = EsignKeys.envelopeAudit(data.envelopeId);
-    const auditIds = await kv.get(auditKey) || [];
+    const auditIds = (await kv.get(auditKey)) || [];
     auditIds.push(auditId);
     await kv.set(auditKey, auditIds);
 
@@ -97,7 +97,15 @@ export async function createEnvelope(params: {
   adviceCaseId?: string;
   requestId?: string;
   productId?: string;
-  signers: Array<{ name: string; email: string; phone?: string; role?: string; requiresOtp?: boolean; accessCode?: string; clientId?: string }>;
+  signers: Array<{
+    name: string;
+    email: string;
+    phone?: string;
+    role?: string;
+    requiresOtp?: boolean;
+    accessCode?: string;
+    clientId?: string;
+  }>;
   message?: string;
   expiryDays?: number;
   signingMode?: 'sequential' | 'parallel';
@@ -130,7 +138,7 @@ export async function createEnvelope(params: {
   try {
     const envelopeId = crypto.randomUUID();
     const now = new Date().toISOString();
-    
+
     // Calculate expiry date (default 30 days)
     const expiryDate = new Date();
     expiryDate.setDate(expiryDate.getDate() + (params.expiryDays || 30));
@@ -189,7 +197,7 @@ export async function createEnvelope(params: {
 
     // Add to client's envelope list
     const clientListKey = EsignKeys.clientEnvelopes(params.clientId);
-    const clientEnvelopes = await kv.get(clientListKey) || [];
+    const clientEnvelopes = (await kv.get(clientListKey)) || [];
     clientEnvelopes.push(envelopeId);
     await kv.set(clientListKey, clientEnvelopes);
 
@@ -217,7 +225,9 @@ export async function createEnvelope(params: {
 /**
  * Get envelope with full details (signers, fields, document)
  */
-export async function getEnvelopeDetails(envelopeId: string): Promise<Record<string, unknown> | null> {
+export async function getEnvelopeDetails(
+  envelopeId: string,
+): Promise<Record<string, unknown> | null> {
   try {
     // Fetch envelope
     const envelope = await kv.get(EsignKeys.envelope(envelopeId));
@@ -232,24 +242,26 @@ export async function getEnvelopeDetails(envelopeId: string): Promise<Record<str
     const rawSignerIds = await kv.get(EsignKeys.envelopeSigners(envelopeId));
     const signerIds = Array.isArray(rawSignerIds) ? rawSignerIds : [];
     const signers = await Promise.all(
-      signerIds.map((id: string) => kv.get(EsignKeys.PREFIX_SIGNER + id))
+      signerIds.map((id: string) => kv.get(EsignKeys.PREFIX_SIGNER + id)),
     );
 
     // Fetch fields — guard against corrupt non-array KV values
     const rawFieldListRaw = await kv.get(EsignKeys.envelopeFields(envelopeId));
     const rawFieldList = Array.isArray(rawFieldListRaw) ? rawFieldListRaw : [];
-    
+
     // Handle legacy/corrupt data where fields might be stored directly in the list
     let validFieldIds: string[] = [];
     let legacyFields: EsignField[] = [];
-    
+
     if (Array.isArray(rawFieldList)) {
       validFieldIds = rawFieldList.filter((item: unknown) => typeof item === 'string') as string[];
-      legacyFields = rawFieldList.filter((item: unknown) => typeof item === 'object' && item !== null && (item as EsignField).id) as EsignField[];
+      legacyFields = rawFieldList.filter(
+        (item: unknown) => typeof item === 'object' && item !== null && (item as EsignField).id,
+      ) as EsignField[];
     }
 
     const fetchedFields = await Promise.all(
-      validFieldIds.map((id: string) => kv.get(EsignKeys.field(id)))
+      validFieldIds.map((id: string) => kv.get(EsignKeys.field(id))),
     );
 
     const allFields = [...fetchedFields.filter(Boolean), ...legacyFields];
@@ -275,7 +287,10 @@ export async function getEnvelopeDetails(envelopeId: string): Promise<Record<str
  *     envelopes sent from the standalone E-Sign page where the client was
  *     added as a signer without an explicit client_id link)
  */
-export async function getClientEnvelopes(clientId: string, clientEmail?: string): Promise<EsignEnvelope[]> {
+export async function getClientEnvelopes(
+  clientId: string,
+  clientEmail?: string,
+): Promise<EsignEnvelope[]> {
   try {
     // Source 1: envelopes explicitly linked to this client_id
     const rawEnvelopeIds = await kv.get(EsignKeys.clientEnvelopes(clientId));
@@ -306,17 +321,19 @@ export async function getClientEnvelopes(clientId: string, clientEmail?: string)
         const rawSignerIds = await kv.get(EsignKeys.envelopeSigners(envelopeId));
         const signerIds = Array.isArray(rawSignerIds) ? rawSignerIds : [];
         const signers = await Promise.all(
-          signerIds.map((id: string) => kv.get(EsignKeys.PREFIX_SIGNER + id))
+          signerIds.map((id: string) => kv.get(EsignKeys.PREFIX_SIGNER + id)),
         );
 
         // Get fields — guard against corrupt KV values
         const rawFieldIds = await kv.get(EsignKeys.envelopeFields(envelopeId));
         const fieldIds = Array.isArray(rawFieldIds) ? rawFieldIds : [];
-        
-        let validFieldIds: string[] = fieldIds.filter((item: unknown) => typeof item === 'string') as string[];
-        
+
+        const validFieldIds: string[] = fieldIds.filter(
+          (item: unknown) => typeof item === 'string',
+        ) as string[];
+
         const fields = await Promise.all(
-          validFieldIds.map((id: string) => kv.get(EsignKeys.field(id)))
+          validFieldIds.map((id: string) => kv.get(EsignKeys.field(id))),
         );
 
         // Calculate counts
@@ -324,10 +341,10 @@ export async function getClientEnvelopes(clientId: string, clientEmail?: string)
         const signedCount = signers.filter((s: EsignSigner) => s && s.status === 'signed').length;
 
         // Get recent audit events
-        const auditIds = await kv.get(EsignKeys.envelopeAudit(envelopeId)) || [];
+        const auditIds = (await kv.get(EsignKeys.envelopeAudit(envelopeId))) || [];
         const recentAuditIds = auditIds.slice(-5); // Last 5 events
         const auditEvents = await Promise.all(
-          recentAuditIds.map((id: string) => kv.get(EsignKeys.PREFIX_AUDIT + id))
+          recentAuditIds.map((id: string) => kv.get(EsignKeys.PREFIX_AUDIT + id)),
         );
 
         return {
@@ -339,12 +356,15 @@ export async function getClientEnvelopes(clientId: string, clientEmail?: string)
           signedCount,
           audit_events: auditEvents.filter(Boolean),
         };
-      })
+      }),
     );
 
-    return envelopes.filter(Boolean).sort((a: EsignEnvelope, b: EsignEnvelope) => 
-      new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime()
-    );
+    return envelopes
+      .filter(Boolean)
+      .sort(
+        (a: EsignEnvelope, b: EsignEnvelope) =>
+          new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime(),
+      );
   } catch (error: unknown) {
     log.error('Failed to get client envelopes:', error);
     throw error;
@@ -358,16 +378,17 @@ export async function getAllEnvelopes(status?: string): Promise<Record<string, u
   try {
     // Get all values with prefix esign:envelope:
     const allValues = await kv.getByPrefix(EsignKeys.PREFIX_ENVELOPE);
-    
+
     // Filter for actual envelope objects (not signers/fields/audits arrays)
     // Envelopes are objects with specific properties like document_id and status
-    const envelopes = allValues.filter((item: Record<string, unknown>) => 
-      item && 
-      typeof item === 'object' &&
-      !Array.isArray(item) &&
-      item.id && 
-      item.status && 
-      item.document_id
+    const envelopes = allValues.filter(
+      (item: Record<string, unknown>) =>
+        item &&
+        typeof item === 'object' &&
+        !Array.isArray(item) &&
+        item.id &&
+        item.status &&
+        item.document_id,
     );
 
     // P6.8 — exclude soft-deleted envelopes from the default listing.
@@ -376,7 +397,7 @@ export async function getAllEnvelopes(status?: string): Promise<Record<string, u
     if (status) {
       filtered = filtered.filter((e: EsignEnvelope) => e.status === status);
     }
-    
+
     // Enrich with signers/recipients and document info for display in list
     const enrichedEnvelopes = await Promise.all(
       filtered.map(async (envelope: EsignEnvelope) => {
@@ -384,13 +405,13 @@ export async function getAllEnvelopes(status?: string): Promise<Record<string, u
         const rawSIds = await kv.get(EsignKeys.envelopeSigners(envelope.id));
         const signerIds = Array.isArray(rawSIds) ? rawSIds : [];
         const signers = await Promise.all(
-          signerIds.map((id: string) => kv.get(EsignKeys.PREFIX_SIGNER + id))
+          signerIds.map((id: string) => kv.get(EsignKeys.PREFIX_SIGNER + id)),
         );
         const validSigners = signers.filter(Boolean);
 
         // Fetch document
-        const document = envelope.document_id 
-          ? await kv.get(EsignKeys.PREFIX_DOCUMENT + envelope.document_id) 
+        const document = envelope.document_id
+          ? await kv.get(EsignKeys.PREFIX_DOCUMENT + envelope.document_id)
           : null;
 
         // Fetch recent audit events (last 10 for display) — guard against corrupt KV values
@@ -398,9 +419,9 @@ export async function getAllEnvelopes(status?: string): Promise<Record<string, u
         const auditIds = Array.isArray(rawAIds) ? rawAIds : [];
         const recentAuditIds = auditIds.slice(-10);
         const auditEvents = await Promise.all(
-          recentAuditIds.map((id: string) => kv.get(EsignKeys.PREFIX_AUDIT + id))
+          recentAuditIds.map((id: string) => kv.get(EsignKeys.PREFIX_AUDIT + id)),
         );
-        
+
         return {
           ...envelope,
           document,
@@ -418,13 +439,14 @@ export async function getAllEnvelopes(status?: string): Promise<Record<string, u
           totalSigners: validSigners.length,
           signedCount: validSigners.filter((s: EsignSigner) => s.status === 'signed').length,
           createdAt: envelope.created_at,
-          updatedAt: envelope.updated_at
+          updatedAt: envelope.updated_at,
         };
-      })
+      }),
     );
 
-    return enrichedEnvelopes.sort((a: Record<string, unknown>, b: Record<string, unknown>) => 
-      new Date(String(b.created_at)).getTime() - new Date(String(a.created_at)).getTime()
+    return enrichedEnvelopes.sort(
+      (a: Record<string, unknown>, b: Record<string, unknown>) =>
+        new Date(String(b.created_at)).getTime() - new Date(String(a.created_at)).getTime(),
     );
   } catch (error: unknown) {
     log.error('Failed to get all envelopes:', error);
@@ -438,7 +460,7 @@ export async function getAllEnvelopes(status?: string): Promise<Record<string, u
 export async function updateEnvelopeStatus(
   envelopeId: string,
   status: EsignEnvelope['status'],
-  additionalFields?: Partial<EsignEnvelope>
+  additionalFields?: Partial<EsignEnvelope>,
 ): Promise<void> {
   try {
     const envelope = await kv.get(EsignKeys.envelope(envelopeId));
@@ -489,7 +511,7 @@ export async function addSignersToEnvelope(
     // P5.1 — opt-in for SMS channel (OTP + invite + reminder). Off by
     // default to honour POPIA; only respected when `phone` is also set.
     smsOptIn?: boolean;
-  }>
+  }>,
 ): Promise<{ signerIds: string[]; error?: string }> {
   try {
     const signerIds: string[] = [];
@@ -522,7 +544,7 @@ export async function addSignersToEnvelope(
 
       // Store signer (canonical write)
       await kv.set(EsignKeys.PREFIX_SIGNER + signerId, signer);
-      
+
       // Map token to signer
       await kv.set(EsignKeys.signerToken(accessToken), signerId);
 
@@ -548,7 +570,7 @@ export async function addSignersToEnvelope(
       // so it appears on their client management page
       if (signerData.clientId) {
         const clientListKey = EsignKeys.clientEnvelopes(signerData.clientId);
-        const clientEnvelopes = await kv.get(clientListKey) || [];
+        const clientEnvelopes = (await kv.get(clientListKey)) || [];
         if (!clientEnvelopes.includes(envelopeId)) {
           clientEnvelopes.push(envelopeId);
           await kv.set(clientListKey, clientEnvelopes);
@@ -561,7 +583,7 @@ export async function addSignersToEnvelope(
       // the standalone E-Sign page without an explicit client_id link.
       if (signerData.email) {
         const emailKey = EsignKeys.signerEmailEnvelopes(signerData.email);
-        const emailEnvelopes = await kv.get(emailKey) || [];
+        const emailEnvelopes = (await kv.get(emailKey)) || [];
         if (!emailEnvelopes.includes(envelopeId)) {
           emailEnvelopes.push(envelopeId);
           await kv.set(emailKey, emailEnvelopes);
@@ -590,9 +612,11 @@ export async function getEnvelopeSigners(envelopeId: string): Promise<EsignSigne
     const rawIds = await kv.get(EsignKeys.envelopeSigners(envelopeId));
     const signerIds = Array.isArray(rawIds) ? rawIds : [];
     const signers = await Promise.all(
-      signerIds.map((id: string) => kv.get(EsignKeys.PREFIX_SIGNER + id))
+      signerIds.map((id: string) => kv.get(EsignKeys.PREFIX_SIGNER + id)),
     );
-    return signers.filter(Boolean).sort((a: EsignSigner, b: EsignSigner) => (a.order || 0) - (b.order || 0));
+    return signers
+      .filter(Boolean)
+      .sort((a: EsignSigner, b: EsignSigner) => (a.order || 0) - (b.order || 0));
   } catch (error: unknown) {
     log.error('Failed to get signers:', error);
     return [];
@@ -640,7 +664,11 @@ export async function rotateSignerToken(
     const now = new Date().toISOString();
 
     if (oldToken) {
-      try { await kv.del(EsignKeys.signerToken(oldToken)); } catch { /* best-effort */ }
+      try {
+        await kv.del(EsignKeys.signerToken(oldToken));
+      } catch {
+        /* best-effort */
+      }
     }
     await kv.set(EsignKeys.signerToken(newToken), signerId);
 
@@ -674,7 +702,7 @@ export async function rotateSignerToken(
 export async function updateSignerStatus(
   signerId: string,
   status: EsignSigner['status'],
-  additionalFields?: Partial<EsignSigner>
+  additionalFields?: Partial<EsignSigner>,
 ): Promise<void> {
   try {
     const signer = await kv.get(EsignKeys.PREFIX_SIGNER + signerId);
@@ -721,7 +749,7 @@ export async function addFieldsToEnvelope(
     width: number;
     height: number;
     required: boolean;
-  }>
+  }>,
 ): Promise<{ fieldIds: string[]; error?: string }> {
   try {
     const fieldIds: string[] = [];
@@ -750,10 +778,10 @@ export async function addFieldsToEnvelope(
 
     // Update envelope's field list — guard against corrupt KV values
     const existingRawList = await kv.get(EsignKeys.envelopeFields(envelopeId));
-    const existingFieldIds = Array.isArray(existingRawList) 
-      ? existingRawList.filter((item: unknown) => typeof item === 'string') 
+    const existingFieldIds = Array.isArray(existingRawList)
+      ? existingRawList.filter((item: unknown) => typeof item === 'string')
       : [];
-      
+
     const updatedFieldIds = [...existingFieldIds, ...fieldIds];
     await kv.set(EsignKeys.envelopeFields(envelopeId), updatedFieldIds);
 
@@ -767,10 +795,7 @@ export async function addFieldsToEnvelope(
 /**
  * Update field value
  */
-export async function updateFieldValue(
-  fieldId: string,
-  value: string
-): Promise<void> {
+export async function updateFieldValue(fieldId: string, value: string): Promise<void> {
   try {
     const field = await kv.get(EsignKeys.field(fieldId));
     if (!field) {
@@ -811,15 +836,15 @@ export async function createDocument(document: EsignDocument): Promise<void> {
 export async function checkEnvelopeCompletion(envelopeId: string): Promise<boolean> {
   try {
     const signers = await getEnvelopeSigners(envelopeId);
-    
+
     if (signers.length === 0) return false;
-    
-    const allSigned = signers.every((s: EsignSigner) => 
-      s.status === 'signed' || s.status === 'declined'
+
+    const allSigned = signers.every(
+      (s: EsignSigner) => s.status === 'signed' || s.status === 'declined',
     );
-    
+
     const anySigned = signers.some((s: EsignSigner) => s.status === 'signed');
-    
+
     // Complete if all required signers have acted and at least one signed
     return allSigned && anySigned;
   } catch (error: unknown) {
@@ -838,12 +863,15 @@ export async function getAuditTrail(envelopeId: string): Promise<EsignAuditEvent
     const rawAuditIds = await kv.get(EsignKeys.envelopeAudit(envelopeId));
     const auditIds = Array.isArray(rawAuditIds) ? rawAuditIds : [];
     const auditEvents = await Promise.all(
-      auditIds.map((id: string) => kv.get(EsignKeys.PREFIX_AUDIT + id))
+      auditIds.map((id: string) => kv.get(EsignKeys.PREFIX_AUDIT + id)),
     );
-    
-    return auditEvents.filter(Boolean).sort((a: EsignAuditEvent, b: EsignAuditEvent) => 
-      new Date(b.at).getTime() - new Date(a.at).getTime()
-    );
+
+    return auditEvents
+      .filter(Boolean)
+      .sort(
+        (a: EsignAuditEvent, b: EsignAuditEvent) =>
+          new Date(b.at).getTime() - new Date(a.at).getTime(),
+      );
   } catch (error: unknown) {
     log.error('Failed to get audit trail:', error);
     return [];
@@ -862,12 +890,9 @@ export async function clearAllEsignData(): Promise<void> {
 
     // 1. Get all envelopes to identify related data
     const allEnvelopeValues = await kv.getByPrefix(EsignKeys.PREFIX_ENVELOPE);
-    const envelopes = allEnvelopeValues.filter((item: Record<string, unknown>) => 
-      item && 
-      typeof item === 'object' &&
-      !Array.isArray(item) &&
-      item.id && 
-      item.status
+    const envelopes = allEnvelopeValues.filter(
+      (item: Record<string, unknown>) =>
+        item && typeof item === 'object' && !Array.isArray(item) && item.id && item.status,
     );
 
     log.info(`Deleting ${envelopes.length} envelopes...`);
@@ -899,7 +924,7 @@ export async function clearAllEsignData(): Promise<void> {
     for (const f of fields) {
       if (f && f.id) await kv.del(EsignKeys.field(f.id));
     }
-    
+
     // 5. Delete Documents
     const documents = await kv.getByPrefix(EsignKeys.PREFIX_DOCUMENT);
     log.info(`Deleting ${documents.length} documents...`);
@@ -915,7 +940,9 @@ export async function clearAllEsignData(): Promise<void> {
     }
 
     // 7. Clear Client Lists
-    const clientIds = new Set(envelopes.map((e: Record<string, unknown>) => e.client_id as string).filter(Boolean));
+    const clientIds = new Set(
+      envelopes.map((e: Record<string, unknown>) => e.client_id as string).filter(Boolean),
+    );
     log.info(`Clearing lists for ${clientIds.size} clients...`);
     for (const clientId of clientIds) {
       await kv.del(EsignKeys.clientEnvelopes(clientId));

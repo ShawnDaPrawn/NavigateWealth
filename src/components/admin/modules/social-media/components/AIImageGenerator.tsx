@@ -162,12 +162,7 @@ export function AIImageGenerator({ onUseImage }: AIImageGeneratorProps) {
   const [copiedUrl, setCopiedUrl] = useState(false);
 
   // Hook
-  const {
-    generateImage,
-    isGeneratingImage,
-    isConfigured,
-    statusLoading,
-  } = useSocialMediaAI();
+  const { generateImage, isGeneratingImage, isConfigured, statusLoading } = useSocialMediaAI();
 
   // ============================================================================
   // Handlers
@@ -253,8 +248,8 @@ export function AIImageGenerator({ onUseImage }: AIImageGeneratorProps) {
           <AlertTriangle className="h-12 w-12 text-amber-500 mb-4" />
           <h3 className="text-lg font-semibold mb-2">AI Service Not Configured</h3>
           <p className="text-muted-foreground max-w-md">
-            The OpenAI API key is not configured. Please contact your administrator
-            to enable AI image generation.
+            The OpenAI API key is not configured. Please contact your administrator to enable AI
+            image generation.
           </p>
         </CardContent>
       </Card>
@@ -273,7 +268,10 @@ export function AIImageGenerator({ onUseImage }: AIImageGeneratorProps) {
       <Card>
         <CardHeader className="pb-4">
           <CardTitle className="flex items-center gap-2 text-lg">
-            <div className="flex items-center justify-center h-8 w-8 rounded-lg" style={{ backgroundColor: BRAND.navyLight }}>
+            <div
+              className="flex items-center justify-center h-8 w-8 rounded-lg"
+              style={{ backgroundColor: BRAND.navyLight }}
+            >
               <ImageIcon className="h-4 w-4" style={{ color: BRAND.navy }} />
             </div>
             AI Image Generator
@@ -284,14 +282,19 @@ export function AIImageGenerator({ onUseImage }: AIImageGeneratorProps) {
         </CardHeader>
         <CardContent className="space-y-6">
           {/* Brand Notice */}
-          <div className="flex items-start gap-3 p-3 rounded-lg border" style={{ backgroundColor: BRAND.navyLight, borderColor: BRAND.navy + '20' }}>
+          <div
+            className="flex items-start gap-3 p-3 rounded-lg border"
+            style={{ backgroundColor: BRAND.navyLight, borderColor: BRAND.navy + '20' }}
+          >
             <Shield className="h-5 w-5 mt-0.5 flex-shrink-0" style={{ color: BRAND.navy }} />
             <div className="text-sm">
-              <p className="font-medium" style={{ color: BRAND.navy }}>Navigate Wealth Branding Applied</p>
+              <p className="font-medium" style={{ color: BRAND.navy }}>
+                Navigate Wealth Branding Applied
+              </p>
               <p className="mt-0.5 text-gray-600">
-                All generated images follow the Navigate Wealth visual identity — navy &amp; gold colour palette,
-                premium editorial style, and South African context. If the Corporate Identity module
-                has a stored colour palette, those colours are automatically used.
+                All generated images follow the Navigate Wealth visual identity — navy &amp; gold
+                colour palette, premium editorial style, and South African context. If the Corporate
+                Identity module has a stored colour palette, those colours are automatically used.
               </p>
             </div>
           </div>
@@ -300,32 +303,36 @@ export function AIImageGenerator({ onUseImage }: AIImageGeneratorProps) {
           <div className="space-y-2">
             <Label className="text-sm font-medium">Platform &amp; Dimensions</Label>
             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2">
-              {(Object.entries(PLATFORM_CONFIG) as [ImagePlatform, typeof PLATFORM_CONFIG[ImagePlatform]][]).map(
-                ([key, config]) => {
-                  const isSelected = platform === key;
-                  return (
-                    <button
-                      key={key}
-                      type="button"
-                      onClick={() => setPlatform(key)}
-                      className={`
+              {(
+                Object.entries(PLATFORM_CONFIG) as [
+                  ImagePlatform,
+                  (typeof PLATFORM_CONFIG)[ImagePlatform],
+                ][]
+              ).map(([key, config]) => {
+                const isSelected = platform === key;
+                return (
+                  <button
+                    key={key}
+                    type="button"
+                    onClick={() => setPlatform(key)}
+                    className={`
                         flex flex-col items-center gap-1 px-3 py-3 rounded-lg border text-xs font-medium
                         transition-all duration-150
-                        ${isSelected
-                          ? 'bg-white text-gray-900 border-gray-400 shadow-sm ring-1 ring-gray-300'
-                          : 'bg-white text-gray-500 border-gray-200 hover:border-gray-300'
+                        ${
+                          isSelected
+                            ? 'bg-white text-gray-900 border-gray-400 shadow-sm ring-1 ring-gray-300'
+                            : 'bg-white text-gray-500 border-gray-200 hover:border-gray-300'
                         }
                       `}
-                    >
-                      <span className="flex items-center gap-1.5">
-                        {config.icon}
-                        {config.label}
-                      </span>
-                      <span className="text-[10px] opacity-70">{config.dimensions}</span>
-                    </button>
-                  );
-                },
-              )}
+                  >
+                    <span className="flex items-center gap-1.5">
+                      {config.icon}
+                      {config.label}
+                    </span>
+                    <span className="text-[10px] opacity-70">{config.dimensions}</span>
+                  </button>
+                );
+              })}
             </div>
             <p className="text-xs text-muted-foreground flex items-center gap-1">
               <Maximize2 className="h-3 w-3" />
@@ -363,9 +370,10 @@ export function AIImageGenerator({ onUseImage }: AIImageGeneratorProps) {
                     className={`
                       flex items-start gap-2 px-3 py-2.5 rounded-lg border text-left text-sm
                       transition-all duration-150
-                      ${isSelected
-                        ? 'bg-white text-gray-900 border-gray-400 shadow-sm ring-1 ring-gray-300'
-                        : 'bg-white text-gray-500 border-gray-200 hover:border-gray-300'
+                      ${
+                        isSelected
+                          ? 'bg-white text-gray-900 border-gray-400 shadow-sm ring-1 ring-gray-300'
+                          : 'bg-white text-gray-500 border-gray-200 hover:border-gray-300'
                       }
                     `}
                   >
@@ -477,10 +485,7 @@ export function AIImageGenerator({ onUseImage }: AIImageGeneratorProps) {
                 <Badge variant="secondary" className="text-xs">
                   {generatedImage.dimensions}
                 </Badge>
-                <Badge
-                  variant="secondary"
-                  className="text-xs"
-                >
+                <Badge variant="secondary" className="text-xs">
                   {selectedPlatformConfig.icon}
                   <span className="ml-1">{selectedPlatformConfig.label}</span>
                 </Badge>
@@ -538,11 +543,7 @@ export function AIImageGenerator({ onUseImage }: AIImageGeneratorProps) {
                 )}
               </Button>
               {onUseImage && (
-                <Button
-                  size="sm"
-                  onClick={handleUse}
-                  className="flex items-center gap-1.5 text-xs"
-                >
+                <Button size="sm" onClick={handleUse} className="flex items-center gap-1.5 text-xs">
                   <ImageIcon className="h-3 w-3" />
                   Use in Post
                 </Button>

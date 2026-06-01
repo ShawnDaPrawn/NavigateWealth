@@ -1,15 +1,23 @@
-import { Group, Campaign, CachedRecipient, CommunicationClient, SupabaseAdminClient, RecipientSelection, AttachmentRef } from "./communication-types.ts";
-import * as kv from "./kv_store.tsx";
-import { createClient } from "jsr:@supabase/supabase-js@2.49.8";
-import { sendEmail, createEmailTemplate } from "./email-service.ts";
-import * as repo from "./communication-repo.ts";
-import { logger } from "./stderr-logger.ts";
+import {
+  Group,
+  Campaign,
+  CachedRecipient,
+  CommunicationClient,
+  SupabaseAdminClient,
+  RecipientSelection,
+  AttachmentRef,
+} from './communication-types.ts';
+import * as kv from './kv_store.tsx';
+import { createClient } from 'jsr:@supabase/supabase-js@2.49.8';
+import { sendEmail, createEmailTemplate } from './email-service.ts';
+import * as repo from './communication-repo.ts';
+import { logger } from './stderr-logger.ts';
 
 // --- Client Resolution ---
 
 /**
  * Fetch all valid clients from Supabase Auth and KV Profiles
- * 
+ *
  * Excludes soft-deleted and suspended clients so they never receive
  * communications (email, SMS, WhatsApp) or appear in group membership.
  * Uses a two-layer guard:
@@ -17,10 +25,13 @@ import { logger } from "./stderr-logger.ts";
  *   2. security entry (deleted/suspended flags) — belt-and-suspenders for legacy records
  */
 export async function getAllClients(supabase: SupabaseAdminClient): Promise<CommunicationClient[]> {
-  const { data: { users }, error } = await supabase.auth.admin.listUsers();
-  
+  const {
+    data: { users },
+    error,
+  } = await supabase.auth.admin.listUsers();
+
   if (error) {
-    logger.error("Error fetching users", error);
+    logger.error('Error fetching users', error);
     throw error;
   }
 
@@ -28,7 +39,7 @@ export async function getAllClients(supabase: SupabaseAdminClient): Promise<Comm
   const profileKeys = users.map((u) => `user_profile:${u.id}:personal_info`);
   const policyKeys = users.map((u) => `policies:client:${u.id}`);
   const securityKeys = users.map((u) => `security:${u.id}`);
-  
+
   let profiles: Record<string, unknown>[] = [];
   let allPoliciesArrays: unknown[] = [];
   let securityEntries: Record<string, unknown>[] = [];
@@ -37,13 +48,13 @@ export async function getAllClients(supabase: SupabaseAdminClient): Promise<Comm
     const [profilesResult, policiesResult, securityResult] = await Promise.all([
       kv.mget(profileKeys),
       kv.mget(policyKeys),
-      kv.mget(securityKeys)
+      kv.mget(securityKeys),
     ]);
     profiles = profilesResult as Record<string, unknown>[];
     allPoliciesArrays = policiesResult as unknown[];
     securityEntries = securityResult as Record<string, unknown>[];
   } catch (e) {
-    logger.error("Error fetching profiles, policies, or security entries", e as Error);
+    logger.error('Error fetching profiles, policies, or security entries', e as Error);
     profiles = [];
     allPoliciesArrays = [];
     securityEntries = [];
@@ -52,15 +63,16 @@ export async function getAllClients(supabase: SupabaseAdminClient): Promise<Comm
   // Create Lookup Maps (because mget order is not guaranteed)
   const profileMap = new Map<string, Record<string, unknown>>();
   profiles.forEach((p) => {
-     if (p && (p as Record<string, unknown>).userId) profileMap.set((p as Record<string, unknown>).userId as string, p as Record<string, unknown>);
+    if (p && (p as Record<string, unknown>).userId)
+      profileMap.set((p as Record<string, unknown>).userId as string, p as Record<string, unknown>);
   });
 
   const policiesMap = new Map<string, Array<Record<string, unknown>>>();
   allPoliciesArrays.forEach((pArray) => {
-     if (Array.isArray(pArray) && pArray.length > 0) {
-        const clientId = (pArray[0] as Record<string, unknown>).clientId as string;
-        if (clientId) policiesMap.set(clientId, pArray as Array<Record<string, unknown>>);
-     }
+    if (Array.isArray(pArray) && pArray.length > 0) {
+      const clientId = (pArray[0] as Record<string, unknown>).clientId as string;
+      if (clientId) policiesMap.set(clientId, pArray as Array<Record<string, unknown>>);
+    }
   });
 
   // Build security lookup — entries may have a userId field or be indexed by key position
@@ -76,7 +88,7 @@ export async function getAllClients(supabase: SupabaseAdminClient): Promise<Comm
 
   const validClients = users
     .map((u, i: number) => {
-      const profile = profileMap.get(u.id) || {} as Record<string, unknown>;
+      const profile = profileMap.get(u.id) || ({} as Record<string, unknown>);
       const personalInfo = (profile.personalInformation || {}) as Record<string, unknown>;
 
       // ── Guard 1: Profile-level accountStatus ──────────────────────────
@@ -87,7 +99,8 @@ export async function getAllClients(supabase: SupabaseAdminClient): Promise<Comm
       }
 
       // ── Guard 2: Security entry flags ─────────────────────────────────
-      const security = securityMap.get(u.id) || securityEntries[i] || {} as Record<string, unknown>;
+      const security =
+        securityMap.get(u.id) || securityEntries[i] || ({} as Record<string, unknown>);
       if (security.deleted === true || security.suspended === true) {
         excludedCount++;
         return null;
@@ -95,28 +108,45 @@ export async function getAllClients(supabase: SupabaseAdminClient): Promise<Comm
 
       // Process policies for this user
       const userPolicies = policiesMap.get(u.id) || [];
-      const policyProducts = Array.isArray(userPolicies) ? userPolicies.map((p) => ({
-        provider: p.providerName as string | undefined,
-        type: p.categoryId as string | undefined,
-      })) : [];
+      const policyProducts = Array.isArray(userPolicies)
+        ? userPolicies.map((p) => ({
+            provider: p.providerName as string | undefined,
+            type: p.categoryId as string | undefined,
+          }))
+        : [];
 
       // Merge legacy/profile products with dynamic policy products
-      const finalProducts = policyProducts.length > 0 ? policyProducts : ((personalInfo.products || []) as Array<{ provider?: string; type?: string }>);
-      
+      const finalProducts =
+        policyProducts.length > 0
+          ? policyProducts
+          : ((personalInfo.products || []) as Array<{ provider?: string; type?: string }>);
+
       return {
         id: u.id,
         email: u.email,
-        firstName: (personalInfo.firstName as string) || (u.user_metadata?.firstName as string) || ((u.user_metadata?.name as string)?.split(' ')[0]) || 'Client',
-        lastName: (personalInfo.lastName as string) || (u.user_metadata?.surname as string) || ((u.user_metadata?.name as string)?.split(' ').slice(1).join(' ')) || '',
+        firstName:
+          (personalInfo.firstName as string) ||
+          (u.user_metadata?.firstName as string) ||
+          (u.user_metadata?.name as string)?.split(' ')[0] ||
+          'Client',
+        lastName:
+          (personalInfo.lastName as string) ||
+          (u.user_metadata?.surname as string) ||
+          (u.user_metadata?.name as string)?.split(' ').slice(1).join(' ') ||
+          '',
         phone: (personalInfo.cellphoneNumber as string) || u.phone || '',
         dateOfBirth: personalInfo.dateOfBirth as string | undefined,
         netWorth: (personalInfo.netWorth as number) || 0,
         products: finalProducts,
         status: (personalInfo.status as string) || (u.user_metadata?.status as string) || 'Active',
-        category: (personalInfo.category as string) || (u.user_metadata?.category as string) || 'Standard',
-        maritalStatus: (personalInfo.maritalStatus as string) || (u.user_metadata?.maritalStatus as string),
-        employmentStatus: (personalInfo.employmentStatus as string) || (u.user_metadata?.employmentStatus as string),
-        hasEmailOptIn: true, 
+        category:
+          (personalInfo.category as string) || (u.user_metadata?.category as string) || 'Standard',
+        maritalStatus:
+          (personalInfo.maritalStatus as string) || (u.user_metadata?.maritalStatus as string),
+        employmentStatus:
+          (personalInfo.employmentStatus as string) ||
+          (u.user_metadata?.employmentStatus as string),
+        hasEmailOptIn: true,
         hasWhatsAppOptIn: true,
         metadata: u.user_metadata || {},
         profile: profile,
@@ -125,7 +155,9 @@ export async function getAllClients(supabase: SupabaseAdminClient): Promise<Comm
     .filter((c): c is CommunicationClient => c !== null);
 
   if (excludedCount > 0) {
-    logger.info(`Excluded ${excludedCount} deleted/suspended clients from communication recipient pool`);
+    logger.info(
+      `Excluded ${excludedCount} deleted/suspended clients from communication recipient pool`,
+    );
   }
 
   return validClients;
@@ -136,18 +168,21 @@ export async function getAllClients(supabase: SupabaseAdminClient): Promise<Comm
 /**
  * Resolve Group Membership (Dynamic + Manual)
  */
-export async function resolveGroupMembership(group: Group, allClients: CommunicationClient[]): Promise<CommunicationClient[]> {
+export async function resolveGroupMembership(
+  group: Group,
+  allClients: CommunicationClient[],
+): Promise<CommunicationClient[]> {
   const manualMemberIds = new Set(group.clientIds || []);
   const dynamicMemberIds = new Set<string>();
 
   // If there is a filter config, apply it
   if (group.filterConfig) {
-    const { 
-      productFilters, 
-      netWorthFilters, 
-      ageFilters, 
+    const {
+      productFilters,
+      netWorthFilters,
+      ageFilters,
       maritalStatusFilters,
-      employmentStatusFilters 
+      employmentStatusFilters,
     } = group.filterConfig;
 
     for (const client of allClients) {
@@ -188,29 +223,29 @@ export async function resolveGroupMembership(group: Group, allClients: Communica
           const age = Math.abs(ageDate.getUTCFullYear() - 1970);
 
           const inRange = ageFilters.some((range) => {
-             const min = range.min ?? 0;
-             const max = range.max ?? 150;
-             return age >= min && age <= max;
+            const min = range.min ?? 0;
+            const max = range.max ?? 150;
+            return age >= min && age <= max;
           });
-          
+
           if (!inRange) matches = false;
         }
       }
 
       // 4. Marital Status Filters
       if (matches && maritalStatusFilters && maritalStatusFilters.length > 0) {
-         const status = client.maritalStatus || 'unknown';
-         if (!maritalStatusFilters.includes(status)) {
-            matches = false;
-         }
+        const status = client.maritalStatus || 'unknown';
+        if (!maritalStatusFilters.includes(status)) {
+          matches = false;
+        }
       }
 
       // 5. Employment Status Filters
       if (matches && employmentStatusFilters && employmentStatusFilters.length > 0) {
-         const status = client.employmentStatus || 'unknown';
-         if (!employmentStatusFilters.includes(status)) {
-            matches = false;
-         }
+        const status = client.employmentStatus || 'unknown';
+        if (!employmentStatusFilters.includes(status)) {
+          matches = false;
+        }
       }
 
       if (matches) {
@@ -221,98 +256,108 @@ export async function resolveGroupMembership(group: Group, allClients: Communica
 
   // Combine Manual + Dynamic
   const finalIds = new Set([...manualMemberIds, ...dynamicMemberIds]);
-  
-  return allClients.filter(c => finalIds.has(c.id));
+
+  return allClients.filter((c) => finalIds.has(c.id));
 }
 
 export async function updateGroupWithRecalculation(group: Group, supabase: SupabaseAdminClient) {
-    const allClients = await getAllClients(supabase);
-    const members = await resolveGroupMembership(group, allClients);
-    
-    group.clientCount = members.length;
+  const allClients = await getAllClients(supabase);
+  const members = await resolveGroupMembership(group, allClients);
 
-    // Update DB
-    await repo.saveGroup(group);
+  group.clientCount = members.length;
 
-    // Update Cache
-    const cachedMembers: CachedRecipient[] = members.map(m => ({
-        id: m.id,
-        email: m.email,
-        firstName: m.firstName,
-        lastName: m.lastName,
-        phone: m.phone
-    }));
-    await repo.setGroupMembersCache(group.id, cachedMembers);
-    
-    return group;
+  // Update DB
+  await repo.saveGroup(group);
+
+  // Update Cache
+  const cachedMembers: CachedRecipient[] = members.map((m) => ({
+    id: m.id,
+    email: m.email,
+    firstName: m.firstName,
+    lastName: m.lastName,
+    phone: m.phone,
+  }));
+  await repo.setGroupMembersCache(group.id, cachedMembers);
+
+  return group;
 }
 
 // --- Campaign Logic ---
 
-export function resolveMergeFields(template: string, client: CommunicationClient | CachedRecipient): string {
+export function resolveMergeFields(
+  template: string,
+  client: CommunicationClient | CachedRecipient,
+): string {
   if (!template) return '';
   let result = template;
   result = result.replace(/{{first_name}}/g, client.firstName || '');
   result = result.replace(/{{surname}}/g, client.lastName || '');
-  result = result.replace(/{{full_name}}/g, `${client.firstName || ''} ${client.lastName || ''}`.trim());
+  result = result.replace(
+    /{{full_name}}/g,
+    `${client.firstName || ''} ${client.lastName || ''}`.trim(),
+  );
   result = result.replace(/{{email}}/g, client.email || '');
   result = result.replace(/{{phone}}/g, client.phone || '');
   return result;
 }
 
-export async function resolveRecipients(selection: RecipientSelection, supabase: SupabaseAdminClient): Promise<CommunicationClient[]> {
-  
+export async function resolveRecipients(
+  selection: RecipientSelection,
+  supabase: SupabaseAdminClient,
+): Promise<CommunicationClient[]> {
   if (selection.recipientType === 'single') {
     const selectedId = selection.selectedRecipients[0]?.id;
     const allClients = await getAllClients(supabase);
     return allClients.filter((c) => c.id === selectedId);
   }
-  
+
   if (selection.recipientType === 'multiple') {
     const selectedIds = selection.selectedRecipients.map((r) => r.id);
     const allClients = await getAllClients(supabase);
     return allClients.filter((c) => selectedIds.includes(c.id));
   }
-  
+
   if (selection.recipientType === 'group') {
     const groupSelection = selection.selectedGroup;
-    
+
     if (groupSelection.type === 'custom') {
       // 1. Try Cache First
       const cachedMembers = await repo.getGroupMembersCache(groupSelection.id);
       if (cachedMembers && Array.isArray(cachedMembers) && cachedMembers.length > 0) {
-          logger.info(`Using cached members for group ${groupSelection.id}`, { count: cachedMembers.length });
-          return cachedMembers;
+        logger.info(`Using cached members for group ${groupSelection.id}`, {
+          count: cachedMembers.length,
+        });
+        return cachedMembers;
       }
 
       // 2. Fallback to fresh calculation
       logger.info(`Cache miss for group ${groupSelection.id}. Recalculating...`);
       const storedGroup = await repo.getGroup(groupSelection.id);
-      const group = storedGroup || groupSelection; 
-      
+      const group = storedGroup || groupSelection;
+
       const allClients = await getAllClients(supabase);
       const members = await resolveGroupMembership(group, allClients);
-      
+
       // Update cache for next time
-      const cached: CachedRecipient[] = members.map(m => ({
+      const cached: CachedRecipient[] = members.map((m) => ({
         id: m.id,
         email: m.email,
         firstName: m.firstName,
         lastName: m.lastName,
-        phone: m.phone
+        phone: m.phone,
       }));
       await repo.setGroupMembersCache(group.id, cached);
-      
+
       return members;
     }
-    
+
     if (groupSelection.type === 'system') {
       const allClients = await getAllClients(supabase);
       if (groupSelection.id === 'sys_all') return allClients;
       return allClients;
     }
   }
-  
+
   return [];
 }
 
@@ -326,12 +371,15 @@ export async function ensureStorageBucket(supabase: SupabaseAdminClient) {
       await supabase.storage.createBucket(bucketName, { public: false, fileSizeLimit: 10485760 });
     }
   } catch (e) {
-    logger.error("Error checking/creating bucket", e as Error);
+    logger.error('Error checking/creating bucket', e as Error);
   }
   return bucketName;
 }
 
-export async function processAttachments(attachments: AttachmentRef[], supabase: SupabaseAdminClient) {
+export async function processAttachments(
+  attachments: AttachmentRef[],
+  supabase: SupabaseAdminClient,
+) {
   if (!attachments || attachments.length === 0) return [];
   const processed = [];
   for (const att of attachments) {
@@ -344,7 +392,7 @@ export async function processAttachments(attachments: AttachmentRef[], supabase:
         content: base64,
         filename: att.name,
         type: att.type || 'application/octet-stream',
-        disposition: 'attachment'
+        disposition: 'attachment',
       });
     } catch (e) {
       logger.error(`Error processing attachment ${att.name}`, e as Error);
@@ -356,7 +404,10 @@ export async function processAttachments(attachments: AttachmentRef[], supabase:
 // --- Scheduled Task ---
 
 export async function processScheduledCampaigns() {
-  const supabase = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!);
+  const supabase = createClient(
+    Deno.env.get('SUPABASE_URL')!,
+    Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,
+  );
   try {
     const now = new Date();
     const campaignResult = await repo.getCampaigns();
@@ -371,7 +422,7 @@ export async function processScheduledCampaigns() {
     for (const campaign of dueCampaigns) {
       campaign.status = 'sending';
       await repo.saveCampaign(campaign);
-      
+
       const recipients = await resolveRecipients(campaign, supabase);
       const sendGridAttachments = await processAttachments(campaign.attachments, supabase);
       let sentCount = 0;
@@ -379,11 +430,13 @@ export async function processScheduledCampaigns() {
       for (const recipient of recipients) {
         if (!recipient.email) continue;
         const subject = resolveMergeFields(campaign.subject, recipient);
-        const htmlBody = createEmailTemplate(resolveMergeFields(campaign.bodyHtml, recipient), { title: subject });
+        const htmlBody = createEmailTemplate(resolveMergeFields(campaign.bodyHtml, recipient), {
+          title: subject,
+        });
         const textBody = stripHtml(resolveMergeFields(campaign.bodyHtml, recipient));
         try {
           await sendEmail(recipient.email, subject, htmlBody, textBody, sendGridAttachments);
-          
+
           // Log to KV Store instead of missing table
           const msgId = crypto.randomUUID();
           const logEntry = {
@@ -398,9 +451,9 @@ export async function processScheduledCampaigns() {
             created_at: new Date().toISOString(),
             read: false,
             priority: 'normal',
-            campaign_id: campaign.id
+            campaign_id: campaign.id,
           };
-          
+
           const key = `communication_log:${recipient.id}:${msgId}`;
           await kv.set(key, logEntry);
           await kv.set(`msg_lookup:${msgId}`, { fullKey: key });
@@ -412,7 +465,11 @@ export async function processScheduledCampaigns() {
       }
 
       campaign.status = 'completed';
-      campaign.stats = { sent: sentCount, failed: recipients.length - sentCount, total: recipients.length };
+      campaign.stats = {
+        sent: sentCount,
+        failed: recipients.length - sentCount,
+        total: recipients.length,
+      };
       campaign.updatedAt = new Date().toISOString();
       await repo.saveCampaign(campaign);
       results.push({ id: campaign.id, sent: sentCount });

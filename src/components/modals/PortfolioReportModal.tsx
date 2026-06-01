@@ -103,7 +103,7 @@ export function PortfolioReportModal({ isOpen, onClose, clientData }: PortfolioR
           }
         }
       `}</style>
-      
+
       <Dialog open={isOpen} onOpenChange={onClose}>
         <DialogContent className="max-w-[95vw] w-[1100px] max-h-[95vh] p-0 gap-0 overflow-hidden">
           {/* Header - no print */}
@@ -115,33 +115,25 @@ export function PortfolioReportModal({ isOpen, onClose, clientData }: PortfolioR
               </p>
             </div>
             <div className="flex items-center gap-2">
-              <Button
-                variant="outline"
-                onClick={handlePrint}
-                className="gap-2"
-              >
+              <Button variant="outline" onClick={handlePrint} className="gap-2">
                 <Printer className="h-4 w-4" />
                 Print
               </Button>
-              <Button
-                onClick={handleDownload}
-                className="bg-[#6d28d9] hover:bg-[#5b21b6] gap-2"
-              >
+              <Button onClick={handleDownload} className="bg-[#6d28d9] hover:bg-[#5b21b6] gap-2">
                 <Download className="h-4 w-4" />
                 Download PDF
               </Button>
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={onClose}
-              >
+              <Button variant="ghost" size="icon" onClick={onClose}>
                 <X className="h-5 w-5" />
               </Button>
             </div>
           </div>
 
           {/* Preview Area with Scroll - scaled down to fit */}
-          <div className="no-print overflow-y-auto bg-gray-100 pdf-preview-scroll" style={{ maxHeight: 'calc(95vh - 160px)' }}>
+          <div
+            className="no-print overflow-y-auto bg-gray-100 pdf-preview-scroll"
+            style={{ maxHeight: 'calc(95vh - 160px)' }}
+          >
             <div className="flex justify-center py-8 px-4">
               <div style={{ transform: 'scale(0.75)', transformOrigin: 'top center' }}>
                 <PDFPortfolioReport clientData={clientData} />
@@ -162,16 +154,16 @@ export function PortfolioReportModal({ isOpen, onClose, clientData }: PortfolioR
           </div>
         </DialogContent>
       </Dialog>
-      
+
       {/* Hidden print-only version at full scale - positioned outside modal */}
-      <div 
+      <div
         id="pdf-print-content"
         ref={printContentRef}
-        style={{ 
+        style={{
           position: 'fixed',
           left: '-9999px',
           top: '-9999px',
-          zIndex: -1
+          zIndex: -1,
         }}
       >
         <PDFPortfolioReport clientData={clientData} />

@@ -100,7 +100,9 @@ async function getAuthToken(): Promise<string> {
     const supabase = createClient();
     const { data } = await supabase.auth.getSession();
     if (data?.session?.access_token) return data.session.access_token;
-  } catch { /* fall through */ }
+  } catch {
+    /* fall through */
+  }
   return publicAnonKey;
 }
 
@@ -151,11 +153,13 @@ export function TeamManager() {
     }
   }, []);
 
-  useEffect(() => { loadMembers(); }, [loadMembers]);
+  useEffect(() => {
+    loadMembers();
+  }, [loadMembers]);
 
   // ── Form helpers ────────────────────────────────────────────────────
   const updateForm = (field: keyof FormData, value: unknown) => {
-    setForm(prev => ({ ...prev, [field]: value }));
+    setForm((prev) => ({ ...prev, [field]: value }));
   };
 
   const addSpecialty = () => {
@@ -167,7 +171,10 @@ export function TeamManager() {
   };
 
   const removeSpecialty = (s: string) => {
-    updateForm('specialties', form.specialties.filter(sp => sp !== s));
+    updateForm(
+      'specialties',
+      form.specialties.filter((sp) => sp !== s),
+    );
   };
 
   const handleSpecialtyKeyDown = (e: React.KeyboardEvent) => {
@@ -264,7 +271,7 @@ export function TeamManager() {
   };
 
   // ── Render ──────────────────────────────────────────────────────────
-  const activeCount = members.filter(m => m.active).length;
+  const activeCount = members.filter((m) => m.active).length;
 
   return (
     <div className="space-y-6">
@@ -276,11 +283,7 @@ export function TeamManager() {
             Manage the team displayed on the public Team page.
           </p>
         </div>
-        <Button
-          size="sm"
-          onClick={openCreate}
-          className="bg-purple-600 hover:bg-purple-700"
-        >
+        <Button size="sm" onClick={openCreate} className="bg-purple-600 hover:bg-purple-700">
           <Plus className="h-3.5 w-3.5 mr-1.5" />
           Add Member
         </Button>
@@ -353,7 +356,11 @@ export function TeamManager() {
             <p className="text-xs text-muted-foreground mt-1">
               Add team members to display on the public Team page.
             </p>
-            <Button size="sm" className="mt-4 bg-purple-600 hover:bg-purple-700" onClick={openCreate}>
+            <Button
+              size="sm"
+              className="mt-4 bg-purple-600 hover:bg-purple-700"
+              onClick={openCreate}
+            >
               <Plus className="h-3.5 w-3.5 mr-1.5" />
               Add First Member
             </Button>
@@ -387,10 +394,15 @@ export function TeamManager() {
                   <div className="flex items-center gap-2">
                     <p className="font-medium text-sm truncate">{member.name}</p>
                     {member.credentials && (
-                      <span className="text-[10px] text-muted-foreground">{member.credentials}</span>
+                      <span className="text-[10px] text-muted-foreground">
+                        {member.credentials}
+                      </span>
                     )}
                     {!member.active && (
-                      <Badge variant="outline" className="text-[10px] border-gray-300 text-gray-500">
+                      <Badge
+                        variant="outline"
+                        className="text-[10px] border-gray-300 text-gray-500"
+                      >
                         Hidden
                       </Badge>
                     )}
@@ -399,19 +411,27 @@ export function TeamManager() {
                   {member.specialties.length > 0 && (
                     <div className="flex flex-wrap gap-1 mt-1">
                       {member.specialties.slice(0, 3).map((s) => (
-                        <Badge key={s} variant="secondary" className="text-[10px] px-1.5 py-0 h-4 bg-purple-50 text-purple-600">
+                        <Badge
+                          key={s}
+                          variant="secondary"
+                          className="text-[10px] px-1.5 py-0 h-4 bg-purple-50 text-purple-600"
+                        >
                           {s}
                         </Badge>
                       ))}
                       {member.specialties.length > 3 && (
-                        <span className="text-[10px] text-muted-foreground">+{member.specialties.length - 3}</span>
+                        <span className="text-[10px] text-muted-foreground">
+                          +{member.specialties.length - 3}
+                        </span>
                       )}
                     </div>
                   )}
                 </div>
 
                 {/* Sort order */}
-                <span className="text-[10px] text-muted-foreground w-6 text-center">#{member.sortOrder}</span>
+                <span className="text-[10px] text-muted-foreground w-6 text-center">
+                  #{member.sortOrder}
+                </span>
 
                 {/* Actions */}
                 <div className="flex items-center gap-1">
@@ -463,7 +483,7 @@ export function TeamManager() {
             <DialogTitle>{editingId ? 'Edit Team Member' : 'Add Team Member'}</DialogTitle>
             <DialogDescription>
               {editingId
-                ? 'Update this team member\'s details.'
+                ? "Update this team member's details."
                 : 'Add a new member to the public Team page.'}
             </DialogDescription>
           </DialogHeader>
@@ -472,7 +492,9 @@ export function TeamManager() {
             {/* Name & Title */}
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1.5">
-                <Label htmlFor="tm-name">Name <span className="text-red-500">*</span></Label>
+                <Label htmlFor="tm-name">
+                  Name <span className="text-red-500">*</span>
+                </Label>
                 <Input
                   id="tm-name"
                   value={form.name}
@@ -481,7 +503,9 @@ export function TeamManager() {
                 />
               </div>
               <div className="space-y-1.5">
-                <Label htmlFor="tm-title">Title <span className="text-red-500">*</span></Label>
+                <Label htmlFor="tm-title">
+                  Title <span className="text-red-500">*</span>
+                </Label>
                 <Input
                   id="tm-title"
                   value={form.title}
@@ -541,14 +565,24 @@ export function TeamManager() {
                   placeholder="Type and press Enter"
                   className="flex-1"
                 />
-                <Button type="button" size="sm" variant="outline" onClick={addSpecialty} disabled={!specialtyInput.trim()}>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  onClick={addSpecialty}
+                  disabled={!specialtyInput.trim()}
+                >
                   <Plus className="h-3.5 w-3.5" />
                 </Button>
               </div>
               {form.specialties.length > 0 && (
                 <div className="flex flex-wrap gap-1.5 mt-1">
                   {form.specialties.map((s) => (
-                    <Badge key={s} variant="secondary" className="text-xs bg-purple-50 text-purple-600 pr-1">
+                    <Badge
+                      key={s}
+                      variant="secondary"
+                      className="text-xs bg-purple-50 text-purple-600 pr-1"
+                    >
                       {s}
                       <button
                         type="button"
@@ -616,7 +650,9 @@ export function TeamManager() {
           </div>
 
           <DialogFooter>
-            <Button variant="outline" onClick={() => setDialogOpen(false)}>Cancel</Button>
+            <Button variant="outline" onClick={() => setDialogOpen(false)}>
+              Cancel
+            </Button>
             <Button
               onClick={handleSave}
               disabled={saving || !form.name.trim() || !form.title.trim()}
@@ -636,21 +672,23 @@ export function TeamManager() {
       {/* ══════════════════════════════════════════════════════════════════ */}
       {/* DELETE CONFIRMATION                                              */}
       {/* ══════════════════════════════════════════════════════════════════ */}
-      <AlertDialog open={!!deleteTarget} onOpenChange={(open) => { if (!open) setDeleteTarget(null); }}>
+      <AlertDialog
+        open={!!deleteTarget}
+        onOpenChange={(open) => {
+          if (!open) setDeleteTarget(null);
+        }}
+      >
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Remove Team Member?</AlertDialogTitle>
             <AlertDialogDescription>
-              <strong>{deleteTarget?.name}</strong> will be removed from the public Team page.
-              This can be undone by re-adding them.
+              <strong>{deleteTarget?.name}</strong> will be removed from the public Team page. This
+              can be undone by re-adding them.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={handleDelete}
-              className="bg-red-600 hover:bg-red-700"
-            >
+            <AlertDialogAction onClick={handleDelete} className="bg-red-600 hover:bg-red-700">
               <Trash2 className="h-4 w-4 mr-1.5" />
               Remove
             </AlertDialogAction>

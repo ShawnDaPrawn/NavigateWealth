@@ -24,8 +24,12 @@ export function useEstatePlanningMutations() {
     mutationFn: ({ clientId, inputs, results, status, adviserNotes }: SaveSessionParams) =>
       EstatePlanningAPI.saveSession(clientId, inputs, results, status, adviserNotes),
     onSuccess: (_data, variables) => {
-      queryClient.invalidateQueries({ queryKey: ESTATE_PLANNING_QUERY_KEYS.sessions(variables.clientId) });
-      queryClient.invalidateQueries({ queryKey: ESTATE_PLANNING_QUERY_KEYS.latestPublished(variables.clientId) });
+      queryClient.invalidateQueries({
+        queryKey: ESTATE_PLANNING_QUERY_KEYS.sessions(variables.clientId),
+      });
+      queryClient.invalidateQueries({
+        queryKey: ESTATE_PLANNING_QUERY_KEYS.latestPublished(variables.clientId),
+      });
       const action = variables.status === 'published' ? 'published' : 'saved as draft';
       toast.success(`Estate Planning FNA ${action} successfully`);
     },

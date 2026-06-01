@@ -1,7 +1,7 @@
 /**
  * Calendar API Layer
  * Navigate Wealth Admin Dashboard
- * 
+ *
  * Centralized API calls for calendar events and reminders.
  * All Supabase interactions should go through this layer.
  */
@@ -27,9 +27,7 @@ import type {
  * @param filters Optional filters to apply to the query
  * @returns Promise resolving to array of calendar events
  */
-export async function fetchEvents(
-  filters?: Partial<CalendarFilters>
-): Promise<CalendarEvent[]> {
+export async function fetchEvents(filters?: Partial<CalendarFilters>): Promise<CalendarEvent[]> {
   logger.debug('[API] Fetching events...', { filters });
 
   const queryParams = new URLSearchParams();
@@ -73,9 +71,7 @@ export async function fetchEvents(
  * @param input Event data to create
  * @returns Promise resolving to the created event
  */
-export async function createEvent(
-  input: CreateEventInput
-): Promise<CalendarEvent> {
+export async function createEvent(input: CreateEventInput): Promise<CalendarEvent> {
   logger.debug('[API] Creating event', { title: input.title });
 
   try {
@@ -96,7 +92,7 @@ export async function createEvent(
  */
 export async function updateEvent(
   id: string,
-  updates: Partial<Omit<UpdateEventInput, 'id'>>
+  updates: Partial<Omit<UpdateEventInput, 'id'>>,
 ): Promise<CalendarEvent> {
   logger.debug('[API] Updating event', { id });
 
@@ -136,11 +132,9 @@ export async function deleteEvent(id: string): Promise<void> {
  * @param filters Optional filters to apply to the query
  * @returns Promise resolving to array of reminders
  */
-export async function fetchReminders(
-  filters?: Partial<CalendarFilters>
-): Promise<Reminder[]> {
+export async function fetchReminders(filters?: Partial<CalendarFilters>): Promise<Reminder[]> {
   logger.debug('[API] Fetching reminders...', { filters });
-  
+
   const queryParams = new URLSearchParams();
   if (filters?.reminderStatuses && filters.reminderStatuses.length > 0) {
     // For now backend only supports single status or no status filter in basic implementation
@@ -162,11 +156,9 @@ export async function fetchReminders(
  * @param input Reminder data to create
  * @returns Promise resolving to the created reminder
  */
-export async function createReminder(
-  input: CreateReminderInput
-): Promise<Reminder> {
+export async function createReminder(input: CreateReminderInput): Promise<Reminder> {
   logger.debug('[API] Creating reminder', { title: input.title });
-  
+
   try {
     const data = await api.post<Reminder>('/calendar/reminders', input);
     return data;
@@ -184,10 +176,10 @@ export async function createReminder(
  */
 export async function updateReminder(
   id: string,
-  updates: Partial<Omit<UpdateReminderInput, 'id'>>
+  updates: Partial<Omit<UpdateReminderInput, 'id'>>,
 ): Promise<Reminder> {
   logger.debug('[API] Updating reminder', { id });
-  
+
   try {
     const data = await api.put<Reminder>(`/calendar/reminders/${id}`, updates);
     return data;
@@ -204,7 +196,7 @@ export async function updateReminder(
  */
 export async function deleteReminder(id: string): Promise<void> {
   logger.debug('[API] Deleting reminder', { id });
-  
+
   try {
     await api.delete(`/calendar/reminders/${id}`);
   } catch (error) {
@@ -226,7 +218,7 @@ export const calendarApi = {
   createEvent,
   updateEvent,
   deleteEvent,
-  
+
   // Reminders
   fetchReminders,
   createReminder,

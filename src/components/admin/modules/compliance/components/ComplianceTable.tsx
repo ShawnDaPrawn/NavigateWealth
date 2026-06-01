@@ -3,24 +3,43 @@ import { Button } from '../../../../ui/button';
 import { Input } from '../../../../ui/input';
 import { Badge } from '../../../../ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '../../../../ui/card';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../../../ui/select';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../../../ui/table';
-import { 
-  Search, 
-  Filter, 
-  Download, 
-  Plus, 
-  Edit, 
-  Paperclip, 
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '../../../../ui/select';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '../../../../ui/table';
+import {
+  Search,
+  Filter,
+  Download,
+  Plus,
+  Edit,
+  Paperclip,
   Eye,
   MoreHorizontal,
   Calendar,
   AlertTriangle,
   CheckCircle,
   Clock,
-  FileText
+  FileText,
 } from 'lucide-react';
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '../../../../ui/dropdown-menu';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '../../../../ui/dropdown-menu';
 
 import { ComplianceRecord, ComplianceColumn, ComplianceFilter, RAGStatus } from '../types';
 
@@ -36,16 +55,16 @@ interface ComplianceTableProps {
   loading?: boolean;
 }
 
-export function ComplianceTable({ 
-  title, 
-  description, 
-  records, 
-  columns, 
-  onAdd, 
-  onEdit, 
+export function ComplianceTable({
+  title,
+  description,
+  records,
+  columns,
+  onAdd,
+  onEdit,
   onExport,
   filters = [],
-  loading = false
+  loading = false,
 }: ComplianceTableProps) {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedFilters, setSelectedFilters] = useState<Record<string, string>>({});
@@ -53,13 +72,14 @@ export function ComplianceTable({
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
 
   // Filter and search records
-  const filteredRecords = records.filter(record => {
+  const filteredRecords = records.filter((record) => {
     // Search filter
-    const matchesSearch = searchTerm === '' || 
+    const matchesSearch =
+      searchTerm === '' ||
       record.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
       record.owner.toLowerCase().includes(searchTerm.toLowerCase()) ||
       (record.notes && record.notes.toLowerCase().includes(searchTerm.toLowerCase())) ||
-      (record.tags || []).some(tag => tag.toLowerCase().includes(searchTerm.toLowerCase()));
+      (record.tags || []).some((tag) => tag.toLowerCase().includes(searchTerm.toLowerCase()));
 
     // Additional filters
     const matchesFilters = Object.entries(selectedFilters).every(([key, value]) => {
@@ -74,10 +94,10 @@ export function ComplianceTable({
   // Sort records
   const sortedRecords = [...filteredRecords].sort((a, b) => {
     if (!sortColumn) return 0;
-    
+
     const aValue = (a as unknown as Record<string, unknown>)[sortColumn] as string | number;
     const bValue = (b as unknown as Record<string, unknown>)[sortColumn] as string | number;
-    
+
     if (aValue < bValue) return sortDirection === 'asc' ? -1 : 1;
     if (aValue > bValue) return sortDirection === 'asc' ? 1 : -1;
     return 0;
@@ -86,9 +106,23 @@ export function ComplianceTable({
   const getRAGBadge = (status: RAGStatus) => {
     switch (status) {
       case 'green':
-        return <Badge variant="default" className="bg-green-100 text-green-700 border-green-200 hover:bg-green-200">Green</Badge>;
+        return (
+          <Badge
+            variant="default"
+            className="bg-green-100 text-green-700 border-green-200 hover:bg-green-200"
+          >
+            Green
+          </Badge>
+        );
       case 'amber':
-        return <Badge variant="secondary" className="bg-amber-100 text-amber-700 border-amber-200 hover:bg-amber-200">Amber</Badge>;
+        return (
+          <Badge
+            variant="secondary"
+            className="bg-amber-100 text-amber-700 border-amber-200 hover:bg-amber-200"
+          >
+            Amber
+          </Badge>
+        );
       case 'red':
         return <Badge variant="destructive">Red</Badge>;
     }
@@ -97,39 +131,64 @@ export function ComplianceTable({
   const getStatusBadge = (status: string) => {
     switch (status) {
       case 'current':
-        return <Badge variant="default"><CheckCircle className="h-3 w-3 mr-1" />Current</Badge>;
+        return (
+          <Badge variant="default">
+            <CheckCircle className="h-3 w-3 mr-1" />
+            Current
+          </Badge>
+        );
       case 'due-soon':
-        return <Badge variant="secondary"><Clock className="h-3 w-3 mr-1" />Due Soon</Badge>;
+        return (
+          <Badge variant="secondary">
+            <Clock className="h-3 w-3 mr-1" />
+            Due Soon
+          </Badge>
+        );
       case 'overdue':
-        return <Badge variant="destructive"><AlertTriangle className="h-3 w-3 mr-1" />Overdue</Badge>;
+        return (
+          <Badge variant="destructive">
+            <AlertTriangle className="h-3 w-3 mr-1" />
+            Overdue
+          </Badge>
+        );
       case 'pending':
-        return <Badge variant="outline"><Calendar className="h-3 w-3 mr-1" />Pending</Badge>;
+        return (
+          <Badge variant="outline">
+            <Calendar className="h-3 w-3 mr-1" />
+            Pending
+          </Badge>
+        );
       case 'complete':
-        return <Badge variant="default"><CheckCircle className="h-3 w-3 mr-1" />Complete</Badge>;
+        return (
+          <Badge variant="default">
+            <CheckCircle className="h-3 w-3 mr-1" />
+            Complete
+          </Badge>
+        );
       default:
         return <Badge variant="outline">{status}</Badge>;
     }
   };
 
   const formatDate = (date: Date) => {
-    return date.toLocaleDateString('en-ZA', { 
-      day: 'numeric', 
-      month: 'short', 
-      year: 'numeric' 
+    return date.toLocaleDateString('en-ZA', {
+      day: 'numeric',
+      month: 'short',
+      year: 'numeric',
     });
   };
 
   const renderCellValue = (column: ComplianceColumn, record: ComplianceRecord) => {
     // Dynamic property access on compliance records
     const value = (record as unknown as Record<string, unknown>)[column.key];
-    
+
     if (column.render) {
       return column.render(value, record);
     }
 
     switch (column.type) {
       case 'date':
-        return value instanceof Date ? formatDate(value) : (value ? String(value) : '—');
+        return value instanceof Date ? formatDate(value) : value ? String(value) : '—';
       case 'badge':
         if (column.key === 'status') return getStatusBadge(String(value));
         if (column.key === 'ragStatus') return getRAGBadge(value as RAGStatus);
@@ -212,16 +271,18 @@ export function ComplianceTable({
                 />
               </div>
             </div>
-            
+
             <div className="flex flex-wrap gap-2 sm:flex-nowrap">
               {filters.map((filter) => (
                 <Select
                   key={filter.key}
                   value={selectedFilters[filter.key] || 'all'}
-                  onValueChange={(value) => setSelectedFilters(prev => ({
-                    ...prev,
-                    [filter.key]: value === 'all' ? '' : value
-                  }))}
+                  onValueChange={(value) =>
+                    setSelectedFilters((prev) => ({
+                      ...prev,
+                      [filter.key]: value === 'all' ? '' : value,
+                    }))
+                  }
                 >
                   <SelectTrigger className="w-[180px] min-w-[180px]">
                     <SelectValue placeholder={filter.label} />
@@ -253,15 +314,15 @@ export function ComplianceTable({
           <div className="flex items-center gap-4">
             <span className="flex items-center gap-1">
               <div className="w-3 h-3 bg-red-500 rounded-full"></div>
-              Red: {records.filter(r => r.ragStatus === 'red').length}
+              Red: {records.filter((r) => r.ragStatus === 'red').length}
             </span>
             <span className="flex items-center gap-1">
               <div className="w-3 h-3 bg-yellow-500 rounded-full"></div>
-              Amber: {records.filter(r => r.ragStatus === 'amber').length}
+              Amber: {records.filter((r) => r.ragStatus === 'amber').length}
             </span>
             <span className="flex items-center gap-1">
               <div className="w-3 h-3 bg-green-500 rounded-full"></div>
-              Green: {records.filter(r => r.ragStatus === 'green').length}
+              Green: {records.filter((r) => r.ragStatus === 'green').length}
             </span>
           </div>
         </div>
@@ -272,9 +333,11 @@ export function ComplianceTable({
             <Table className="min-w-full">
               <TableHeader>
                 <TableRow>
-                  <TableHead className="w-[80px] sticky left-0 bg-background z-10 border-r min-w-[80px]">RAG</TableHead>
+                  <TableHead className="w-[80px] sticky left-0 bg-background z-10 border-r min-w-[80px]">
+                    RAG
+                  </TableHead>
                   {columns.map((column) => (
-                    <TableHead 
+                    <TableHead
                       key={column.key}
                       className="cursor-pointer hover:bg-muted/50 min-w-[140px] whitespace-nowrap px-4"
                       onClick={() => handleSort(column.key)}
@@ -282,15 +345,17 @@ export function ComplianceTable({
                       <div className="flex items-center gap-1">
                         {column.label}
                         {sortColumn === column.key && (
-                          <span className="text-xs">
-                            {sortDirection === 'asc' ? '↑' : '↓'}
-                          </span>
+                          <span className="text-xs">{sortDirection === 'asc' ? '↑' : '↓'}</span>
                         )}
                       </div>
                     </TableHead>
                   ))}
-                  <TableHead className="text-center min-w-[120px] whitespace-nowrap">Attachments</TableHead>
-                  <TableHead className="w-[80px] sticky right-0 bg-background z-10 border-l min-w-[80px]">Actions</TableHead>
+                  <TableHead className="text-center min-w-[120px] whitespace-nowrap">
+                    Attachments
+                  </TableHead>
+                  <TableHead className="w-[80px] sticky right-0 bg-background z-10 border-l min-w-[80px]">
+                    Actions
+                  </TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -330,7 +395,9 @@ export function ComplianceTable({
                               Edit Record
                             </DropdownMenuItem>
                           )}
-                          <DropdownMenuItem onClick={() => console.log('Download attachments', record.id)}>
+                          <DropdownMenuItem
+                            onClick={() => console.log('Download attachments', record.id)}
+                          >
                             <Download className="h-4 w-4 mr-2" />
                             Download Files
                           </DropdownMenuItem>

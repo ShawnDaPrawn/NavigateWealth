@@ -41,7 +41,8 @@ export function MedicalAidDashboardPage() {
       result.push({
         id: 'med-no-fna',
         title: 'Complete Your Medical Aid Assessment',
-        description: 'A healthcare needs analysis will help identify the best scheme and plan for your family\'s medical needs and budget.',
+        description:
+          "A healthcare needs analysis will help identify the best scheme and plan for your family's medical needs and budget.",
         severity: 'high',
         onClick: scrollToPanel,
       });
@@ -53,7 +54,8 @@ export function MedicalAidDashboardPage() {
       result.push({
         id: 'med-annual-review',
         title: 'Medical Aid Review Season',
-        description: 'Medical scheme benefits and contributions change annually from 1 January. Now is the time to review your plan and compare alternatives.',
+        description:
+          'Medical scheme benefits and contributions change annually from 1 January. Now is the time to review your plan and compare alternatives.',
         severity: 'medium',
       });
     }
@@ -72,7 +74,8 @@ export function MedicalAidDashboardPage() {
       result.push({
         id: 'med-dependants',
         title: `${medicalAid.dependants} Dependant${medicalAid.dependants > 1 ? 's' : ''} Covered`,
-        description: 'Ensure all dependants are correctly registered. Life events (marriage, birth, turning 21/26) may require updating your membership.',
+        description:
+          'Ensure all dependants are correctly registered. Life events (marriage, birth, turning 21/26) may require updating your membership.',
         severity: 'low',
       });
     }
@@ -80,7 +83,8 @@ export function MedicalAidDashboardPage() {
     result.push({
       id: 'med-gap-cover',
       title: 'Do You Have Gap Cover?',
-      description: 'Gap cover bridges the difference between what specialists charge and what your medical aid pays. Check with your adviser if you\'re covered.',
+      description:
+        "Gap cover bridges the difference between what specialists charge and what your medical aid pays. Check with your adviser if you're covered.",
       severity: 'low',
     });
 

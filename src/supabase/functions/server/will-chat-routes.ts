@@ -56,10 +56,7 @@ app.post('/create-session', async (c) => {
 
     // Verify OPENAI_API_KEY is available (will be needed for /send)
     if (!Deno.env.get('OPENAI_API_KEY')) {
-      return c.json(
-        { success: false, error: 'OPENAI_API_KEY not configured on server' },
-        500,
-      );
+      return c.json({ success: false, error: 'OPENAI_API_KEY not configured on server' }, 500);
     }
 
     // Create KV session (loads profile context automatically)
@@ -84,10 +81,7 @@ app.post('/create-session', async (c) => {
   } catch (error: unknown) {
     log.error('Error creating session', error);
     const message = getErrMsg(error);
-    return c.json(
-      { success: false, error: message },
-      message === 'Unauthorized' ? 401 : 500,
-    );
+    return c.json({ success: false, error: message }, message === 'Unauthorized' ? 401 : 500);
   }
 });
 
@@ -109,10 +103,7 @@ app.post('/chatkit-session', async (c) => {
     }
 
     if (!Deno.env.get('OPENAI_API_KEY')) {
-      return c.json(
-        { success: false, error: 'OPENAI_API_KEY not configured on server' },
-        500,
-      );
+      return c.json({ success: false, error: 'OPENAI_API_KEY not configured on server' }, 500);
     }
 
     const session = await service.createSession(clientId, clientName, user.id);
@@ -128,10 +119,7 @@ app.post('/chatkit-session', async (c) => {
   } catch (error: unknown) {
     log.error('Error creating session (compat)', error);
     const message = getErrMsg(error);
-    return c.json(
-      { success: false, error: message },
-      message === 'Unauthorized' ? 401 : 500,
-    );
+    return c.json({ success: false, error: message }, message === 'Unauthorized' ? 401 : 500);
   }
 });
 
@@ -174,10 +162,7 @@ app.get('/sessions/client/:clientId', async (c) => {
   } catch (error: unknown) {
     log.error('Error listing sessions', error);
     const message = getErrMsg(error);
-    return c.json(
-      { success: false, error: message },
-      message === 'Unauthorized' ? 401 : 500,
-    );
+    return c.json({ success: false, error: message }, message === 'Unauthorized' ? 401 : 500);
   }
 });
 
@@ -215,10 +200,7 @@ app.get('/sessions/:sessionId', async (c) => {
   } catch (error: unknown) {
     log.error('Error getting session', error);
     const message = getErrMsg(error);
-    return c.json(
-      { success: false, error: message },
-      message === 'Unauthorized' ? 401 : 500,
-    );
+    return c.json({ success: false, error: message }, message === 'Unauthorized' ? 401 : 500);
   }
 });
 
@@ -264,10 +246,7 @@ app.post('/sessions/:sessionId/send', async (c) => {
   } catch (error: unknown) {
     log.error('Error sending message to agent', error);
     const errMsg = getErrMsg(error);
-    return c.json(
-      { success: false, error: errMsg },
-      errMsg === 'Unauthorized' ? 401 : 500,
-    );
+    return c.json({ success: false, error: errMsg }, errMsg === 'Unauthorized' ? 401 : 500);
   }
 });
 
@@ -292,12 +271,7 @@ app.post('/sessions/:sessionId/persist', async (c) => {
       return c.json({ success: false, error: 'Missing or invalid assistantReply' }, 400);
     }
 
-    const result = await service.persistExchange(
-      clientId,
-      sessionId,
-      userMessage,
-      assistantReply,
-    );
+    const result = await service.persistExchange(clientId, sessionId, userMessage, assistantReply);
 
     return c.json({
       success: true,
@@ -311,10 +285,7 @@ app.post('/sessions/:sessionId/persist', async (c) => {
   } catch (error: unknown) {
     log.error('Error persisting exchange', error);
     const errMsg = getErrMsg(error);
-    return c.json(
-      { success: false, error: errMsg },
-      errMsg === 'Unauthorized' ? 401 : 500,
-    );
+    return c.json({ success: false, error: errMsg }, errMsg === 'Unauthorized' ? 401 : 500);
   }
 });
 
@@ -334,10 +305,7 @@ app.post('/sessions/:sessionId/save', async (c) => {
   } catch (error: unknown) {
     log.error('Error saving completed will', error);
     const message = getErrMsg(error);
-    return c.json(
-      { success: false, error: message },
-      message === 'Unauthorized' ? 401 : 500,
-    );
+    return c.json({ success: false, error: message }, message === 'Unauthorized' ? 401 : 500);
   }
 });
 
@@ -356,10 +324,7 @@ app.delete('/sessions/:sessionId', async (c) => {
   } catch (error: unknown) {
     log.error('Error deleting session', error);
     const message = getErrMsg(error);
-    return c.json(
-      { success: false, error: message },
-      message === 'Unauthorized' ? 401 : 500,
-    );
+    return c.json({ success: false, error: message }, message === 'Unauthorized' ? 401 : 500);
   }
 });
 

@@ -8,23 +8,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui
 import { Badge } from '../ui/badge';
 import { Button } from '../ui/button';
 import { Separator } from '../ui/separator';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from '../ui/dialog';
-import { 
-  FileText, 
-  Shield, 
-  Scale, 
-  Archive,
-  Mail,
-  Phone,
-  Eye,
-  Loader2,
-  Printer,
-} from 'lucide-react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../ui/dialog';
+import { FileText, Shield, Scale, Archive, Mail, Phone, Eye, Loader2, Printer } from 'lucide-react';
 import { toast } from 'sonner';
 import { projectId, publicAnonKey } from '../../utils/supabase/info';
 import { escapeHtmlText, navigateWealthPdfDocumentTitle } from '../../utils/pdfPrintTitle';
@@ -180,7 +165,10 @@ function LegalBlockRenderer({ blocks, title }: { blocks: LegalBlock[]; title: st
                       <tr className="bg-gray-100">
                         {block.data?.hasRowHeaders && <th className="border border-gray-300 p-2" />}
                         {(block.data?.columnHeaders || []).map((h: string, hi: number) => (
-                          <th key={hi} className="border border-gray-300 p-2 text-left font-semibold text-gray-700">
+                          <th
+                            key={hi}
+                            className="border border-gray-300 p-2 text-left font-semibold text-gray-700"
+                          >
                             {h}
                           </th>
                         ))}
@@ -209,7 +197,10 @@ function LegalBlockRenderer({ blocks, title }: { blocks: LegalBlock[]; title: st
 
           case 'page_break':
             return (
-              <div key={block.id || idx} className="my-6 border-t-2 border-dashed border-gray-300 print:break-before-page" />
+              <div
+                key={block.id || idx}
+                className="my-6 border-t-2 border-dashed border-gray-300 print:break-before-page"
+              />
             );
 
           default:
@@ -220,7 +211,8 @@ function LegalBlockRenderer({ blocks, title }: { blocks: LegalBlock[]; title: st
       {/* Footer */}
       <div className="mt-12 pt-4 border-t border-gray-200 text-center">
         <p className="text-xs text-gray-400">
-          Wealthfront (Pty) Ltd t/a &ldquo;Navigate Wealth&rdquo; &bull; FSP No. 51816 &bull; Reg. No. 2021/218961/07
+          Wealthfront (Pty) Ltd t/a &ldquo;Navigate Wealth&rdquo; &bull; FSP No. 51816 &bull; Reg.
+          No. 2021/218961/07
         </p>
       </div>
     </div>
@@ -241,7 +233,9 @@ export function LegalPage() {
   // Document viewer state
   const [viewerOpen, setViewerOpen] = useState(false);
   const [viewerLoading, setViewerLoading] = useState(false);
-  const [viewerDocument, setViewerDocument] = useState<LegalDocumentResponse['document'] | null>(null);
+  const [viewerDocument, setViewerDocument] = useState<LegalDocumentResponse['document'] | null>(
+    null,
+  );
   const [loadingSlug, setLoadingSlug] = useState<string | null>(null);
   const printRef = useRef<HTMLDivElement>(null);
 
@@ -327,10 +321,11 @@ export function LegalPage() {
     });
 
     // Render blocks as raw HTML for the print page
-    const blocksHtml = (viewerDocument.blocks || []).map((block: LegalBlock) => {
-      switch (block.type) {
-        case 'section_header':
-          return `
+    const blocksHtml = (viewerDocument.blocks || [])
+      .map((block: LegalBlock) => {
+        switch (block.type) {
+          case 'section_header':
+            return `
             <div class="section">
               <div class="section-head">
                 ${block.data?.number ? `<span class="num">${block.data.number}</span>` : ''}
@@ -338,67 +333,89 @@ export function LegalPage() {
               </div>
             </div>`;
 
-        case 'text':
-          return `<div style="font-size:9.5px;line-height:1.6;margin-bottom:3mm;">${block.data?.content || ''}</div>`;
+          case 'text':
+            return `<div style="font-size:9.5px;line-height:1.6;margin-bottom:3mm;">${block.data?.content || ''}</div>`;
 
-        case 'field_grid': {
-          const cols = block.data?.columns || 2;
-          const fields = (block.data?.fields || []).map((f: LegalBlockField) => `
+          case 'field_grid': {
+            const cols = block.data?.columns || 2;
+            const fields = (block.data?.fields || [])
+              .map(
+                (f: LegalBlockField) => `
             <td style="border:1px solid var(--border);padding:5px 6px;vertical-align:top;">
               <div style="font-size:8px;font-weight:700;color:#4b5563;margin-bottom:2px;">${f.label || ''}</div>
               <div class="field"></div>
-            </td>`).join('');
-          // Wrap fields into rows of `cols` columns
-          const fieldArr = block.data?.fields || [];
-          let rows = '';
-          for (let i = 0; i < fieldArr.length; i += cols) {
-            const rowCells = fieldArr.slice(i, i + cols).map((f: LegalBlockField) => `
-              <td style="border:1px solid var(--border);padding:5px 6px;vertical-align:top;width:${100/cols}%;">
+            </td>`,
+              )
+              .join('');
+            // Wrap fields into rows of `cols` columns
+            const fieldArr = block.data?.fields || [];
+            let rows = '';
+            for (let i = 0; i < fieldArr.length; i += cols) {
+              const rowCells = fieldArr
+                .slice(i, i + cols)
+                .map(
+                  (f: LegalBlockField) => `
+              <td style="border:1px solid var(--border);padding:5px 6px;vertical-align:top;width:${100 / cols}%;">
                 <div style="font-size:8px;font-weight:700;color:#4b5563;margin-bottom:2px;">${f.label || ''}</div>
                 <div class="field"></div>
-              </td>`).join('');
-            rows += `<tr>${rowCells}</tr>`;
+              </td>`,
+                )
+                .join('');
+              rows += `<tr>${rowCells}</tr>`;
+            }
+            return `<table style="width:100%;border-collapse:collapse;margin-bottom:3mm;">${rows}</table>`;
           }
-          return `<table style="width:100%;border-collapse:collapse;margin-bottom:3mm;">${rows}</table>`;
-        }
 
-        case 'signature': {
-          const sigs = (block.data?.signatories || []).map((s: LegalSignatory) => `
+          case 'signature': {
+            const sigs = (block.data?.signatories || [])
+              .map(
+                (s: LegalSignatory) => `
             <div style="flex:1;">
               <div class="signature-box" style="border:1px solid var(--border);border-radius:4px;margin-bottom:2mm;"></div>
               <div style="font-size:8.5px;font-weight:600;color:#4b5563;">${s.label || 'Signature'}</div>
               ${block.data?.showDate ? '<div style="margin-top:2mm;border-bottom:1px solid var(--border);font-size:8px;color:var(--muted);">Date: ____________________</div>' : ''}
-            </div>`).join('');
-          return `<div style="display:flex;gap:10mm;margin-top:6mm;margin-bottom:4mm;">${sigs}</div>`;
-        }
-
-        case 'table': {
-          let thead = '';
-          if (block.data?.hasColumnHeaders) {
-            const ths = (block.data?.columnHeaders || []).map((h: string) =>
-              `<th style="border:1px solid var(--border);padding:5px 6px;background:var(--soft);font-weight:700;color:#374151;text-align:left;font-size:9px;">${h}</th>`
-            ).join('');
-            thead = `<thead><tr>${block.data?.hasRowHeaders ? '<th style="border:1px solid var(--border);padding:5px 6px;background:var(--soft);"></th>' : ''}${ths}</tr></thead>`;
+            </div>`,
+              )
+              .join('');
+            return `<div style="display:flex;gap:10mm;margin-top:6mm;margin-bottom:4mm;">${sigs}</div>`;
           }
-          const tbody = (block.data?.rows || []).map((row: LegalTableRow, ri: number) => {
-            const rh = block.data?.hasRowHeaders
-              ? `<td style="border:1px solid var(--border);padding:5px 6px;background:var(--soft);font-weight:700;color:#374151;font-size:9px;">${(block.data?.rowHeaders || [])[ri] || ''}</td>`
-              : '';
-            const cells = (row.cells || []).map((c: LegalTableCell) =>
-              `<td style="border:1px solid var(--border);padding:5px 6px;font-size:9px;">${c.value || ''}</td>`
-            ).join('');
-            return `<tr>${rh}${cells}</tr>`;
-          }).join('');
-          return `<table style="width:100%;border-collapse:collapse;margin-bottom:3mm;">${thead}<tbody>${tbody}</tbody></table>`;
+
+          case 'table': {
+            let thead = '';
+            if (block.data?.hasColumnHeaders) {
+              const ths = (block.data?.columnHeaders || [])
+                .map(
+                  (h: string) =>
+                    `<th style="border:1px solid var(--border);padding:5px 6px;background:var(--soft);font-weight:700;color:#374151;text-align:left;font-size:9px;">${h}</th>`,
+                )
+                .join('');
+              thead = `<thead><tr>${block.data?.hasRowHeaders ? '<th style="border:1px solid var(--border);padding:5px 6px;background:var(--soft);"></th>' : ''}${ths}</tr></thead>`;
+            }
+            const tbody = (block.data?.rows || [])
+              .map((row: LegalTableRow, ri: number) => {
+                const rh = block.data?.hasRowHeaders
+                  ? `<td style="border:1px solid var(--border);padding:5px 6px;background:var(--soft);font-weight:700;color:#374151;font-size:9px;">${(block.data?.rowHeaders || [])[ri] || ''}</td>`
+                  : '';
+                const cells = (row.cells || [])
+                  .map(
+                    (c: LegalTableCell) =>
+                      `<td style="border:1px solid var(--border);padding:5px 6px;font-size:9px;">${c.value || ''}</td>`,
+                  )
+                  .join('');
+                return `<tr>${rh}${cells}</tr>`;
+              })
+              .join('');
+            return `<table style="width:100%;border-collapse:collapse;margin-bottom:3mm;">${thead}<tbody>${tbody}</tbody></table>`;
+          }
+
+          case 'page_break':
+            return '<div style="page-break-after:always;"></div>';
+
+          default:
+            return '';
         }
-
-        case 'page_break':
-          return '<div style="page-break-after:always;"></div>';
-
-        default:
-          return '';
-      }
-    }).join('\n');
+      })
+      .join('\n');
 
     printWindow.document.write(`<!DOCTYPE html>
 <html>
@@ -467,7 +484,7 @@ export function LegalPage() {
     <div className="divide-y divide-gray-100">
       {documents.map((doc) => {
         return (
-          <div 
+          <div
             key={doc.id}
             className="flex items-center justify-between py-4 first:pt-0 last:pb-0 group hover:bg-gray-50/50 -mx-6 px-6 rounded-lg transition-colors"
           >
@@ -493,34 +510,38 @@ export function LegalPage() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <SEO {...getSEOData('legal')} structuredData={createWebPageSchema(getSEOData('legal').title, getSEOData('legal').description, getSEOData('legal').canonicalUrl)} />
+      <SEO
+        {...getSEOData('legal')}
+        structuredData={createWebPageSchema(
+          getSEOData('legal').title,
+          getSEOData('legal').description,
+          getSEOData('legal').canonicalUrl,
+        )}
+      />
       <div className="max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
         {/* Page Header */}
         <div className="text-center mb-12">
-          <Badge className="bg-purple-100 text-purple-600 mb-6">
-            Legal Information
-          </Badge>
-          <h1 className="text-black mb-6 font-bold text-[32px]">
-            Legal & Compliance
-          </h1>
+          <Badge className="bg-purple-100 text-purple-600 mb-6">Legal Information</Badge>
+          <h1 className="text-black mb-6 font-bold text-[32px]">Legal & Compliance</h1>
           <p className="text-gray-600 max-w-3xl mx-auto text-lg">
-            We are committed to transparency and regulatory compliance. Review our legal documents, privacy policies, and regulatory disclosures to understand 
-            how we protect your interests and comply with financial services regulations.
+            We are committed to transparency and regulatory compliance. Review our legal documents,
+            privacy policies, and regulatory disclosures to understand how we protect your interests
+            and comply with financial services regulations.
           </p>
         </div>
 
         {/* Tabbed Content */}
         <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
           <TabsList className="grid w-full grid-cols-4 mb-8 bg-white border border-gray-200">
-            <TabsTrigger 
-              value="legal-notices" 
+            <TabsTrigger
+              value="legal-notices"
               className="flex items-center space-x-2 data-[state=active]:bg-purple-600 data-[state=active]:text-white"
             >
               <Scale className="h-4 w-4" />
               <span className="hidden sm:inline">Legal Notices</span>
               <span className="sm:hidden">Legal</span>
             </TabsTrigger>
-            <TabsTrigger 
+            <TabsTrigger
               value="privacy-data-protection"
               className="flex items-center space-x-2 data-[state=active]:bg-purple-600 data-[state=active]:text-white"
             >
@@ -528,7 +549,7 @@ export function LegalPage() {
               <span className="hidden sm:inline">Privacy & Data</span>
               <span className="sm:hidden">Privacy</span>
             </TabsTrigger>
-            <TabsTrigger 
+            <TabsTrigger
               value="regulatory-disclosures"
               className="flex items-center space-x-2 data-[state=active]:bg-purple-600 data-[state=active]:text-white"
             >
@@ -536,7 +557,7 @@ export function LegalPage() {
               <span className="hidden sm:inline">Regulatory</span>
               <span className="sm:hidden">Reg</span>
             </TabsTrigger>
-            <TabsTrigger 
+            <TabsTrigger
               value="other"
               className="flex items-center space-x-2 data-[state=active]:bg-purple-600 data-[state=active]:text-white"
             >
@@ -558,12 +579,14 @@ export function LegalPage() {
                 </div>
               </CardHeader>
               <CardContent>
-                <DocumentList documents={[
-                  { name: 'Legal Conditions & Disclosures', id: 'legal-conditions' },
-                  { name: 'Terms of Use', id: 'terms-of-use' },
-                  { name: 'Website Disclaimer', id: 'website-disclaimer' },
-                  { name: 'Whistleblowing Policy', id: 'whistleblowing-policy' }
-                ]} />
+                <DocumentList
+                  documents={[
+                    { name: 'Legal Conditions & Disclosures', id: 'legal-conditions' },
+                    { name: 'Terms of Use', id: 'terms-of-use' },
+                    { name: 'Website Disclaimer', id: 'website-disclaimer' },
+                    { name: 'Whistleblowing Policy', id: 'whistleblowing-policy' },
+                  ]}
+                />
               </CardContent>
             </Card>
           </TabsContent>
@@ -576,19 +599,23 @@ export function LegalPage() {
                   <Shield className="h-6 w-6 text-purple-600" />
                   <div>
                     <CardTitle className="text-black">Privacy & Data Protection</CardTitle>
-                    <CardDescription>How we collect, use, and protect your personal information</CardDescription>
+                    <CardDescription>
+                      How we collect, use, and protect your personal information
+                    </CardDescription>
                   </div>
                 </div>
               </CardHeader>
               <CardContent>
-                <DocumentList documents={[
-                  { name: 'Privacy Notice', id: 'privacy-notice' },
-                  { name: 'POPIA and PAIA Manual', id: 'popia-paia-manual' },
-                  { name: 'Data Protection Policy', id: 'data-protection-policy' },
-                  { name: 'Cookie Policy', id: 'cookie-policy' },
-                  { name: 'Data Processing Agreement', id: 'data-processing-agreement' }
-                ]} />
-                
+                <DocumentList
+                  documents={[
+                    { name: 'Privacy Notice', id: 'privacy-notice' },
+                    { name: 'POPIA and PAIA Manual', id: 'popia-paia-manual' },
+                    { name: 'Data Protection Policy', id: 'data-protection-policy' },
+                    { name: 'Cookie Policy', id: 'cookie-policy' },
+                    { name: 'Data Processing Agreement', id: 'data-processing-agreement' },
+                  ]}
+                />
+
                 <div className="bg-purple-50 p-4 rounded-lg mt-6">
                   <h4 className="text-black mb-2">Contact Our Data Protection Officer</h4>
                   <div className="space-y-2 text-sm text-gray-600">
@@ -614,20 +641,24 @@ export function LegalPage() {
                   <FileText className="h-6 w-6 text-purple-600" />
                   <div>
                     <CardTitle className="text-black">Regulatory Disclosures</CardTitle>
-                    <CardDescription>Compliance information and regulatory requirements</CardDescription>
+                    <CardDescription>
+                      Compliance information and regulatory requirements
+                    </CardDescription>
                   </div>
                 </div>
               </CardHeader>
               <CardContent>
-                <DocumentList documents={[
-                  { name: 'Conflict of Interest', id: 'conflict-of-interest' },
-                  { name: 'FAIS Disclosure', id: 'fais-disclosure' },
-                  { name: 'FSP License Information', id: 'fsp-license' },
-                  { name: 'Risk Disclosures', id: 'risk-disclosures' },
-                  { name: 'Complaints Procedure', id: 'complaints-procedure' },
-                  { name: 'Regulatory Compliance Report', id: 'compliance-report' }
-                ]} />
-                
+                <DocumentList
+                  documents={[
+                    { name: 'Conflict of Interest', id: 'conflict-of-interest' },
+                    { name: 'FAIS Disclosure', id: 'fais-disclosure' },
+                    { name: 'FSP License Information', id: 'fsp-license' },
+                    { name: 'Risk Disclosures', id: 'risk-disclosures' },
+                    { name: 'Complaints Procedure', id: 'complaints-procedure' },
+                    { name: 'Regulatory Compliance Report', id: 'compliance-report' },
+                  ]}
+                />
+
                 <div className="bg-blue-50 p-4 rounded-lg mt-6">
                   <h4 className="text-black mb-2">Compliance Officer</h4>
                   <div className="space-y-2 text-sm text-gray-600">
@@ -658,14 +689,16 @@ export function LegalPage() {
                 </div>
               </CardHeader>
               <CardContent>
-                <DocumentList documents={[
-                  { name: 'PAIA Manual', id: 'paia-manual' },
-                  { name: 'Disclaimers', id: 'disclaimers' },
-                  { name: 'CIS Disclaimer', id: 'cis-disclaimer' },
-                  { name: 'Third Party Services Policy', id: 'third-party-services' },
-                  { name: 'Intellectual Property Notice', id: 'intellectual-property' },
-                  { name: 'Anti-Money Laundering Policy', id: 'aml-policy' }
-                ]} />
+                <DocumentList
+                  documents={[
+                    { name: 'PAIA Manual', id: 'paia-manual' },
+                    { name: 'Disclaimers', id: 'disclaimers' },
+                    { name: 'CIS Disclaimer', id: 'cis-disclaimer' },
+                    { name: 'Third Party Services Policy', id: 'third-party-services' },
+                    { name: 'Intellectual Property Notice', id: 'intellectual-property' },
+                    { name: 'Anti-Money Laundering Policy', id: 'aml-policy' },
+                  ]}
+                />
               </CardContent>
             </Card>
           </TabsContent>
@@ -677,8 +710,8 @@ export function LegalPage() {
             <div className="text-center">
               <h3 className="text-black mb-4">Need Legal Assistance?</h3>
               <p className="text-gray-600 mb-6">
-                If you have questions about any of our legal documents or need clarification 
-                on our policies, please don't hesitate to contact our legal team.
+                If you have questions about any of our legal documents or need clarification on our
+                policies, please don't hesitate to contact our legal team.
               </p>
               <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
                 <div className="flex items-center text-gray-600">
@@ -716,18 +749,13 @@ export function LegalPage() {
               </div>
             </div>
             {viewerDocument?.version && (
-              <p className="text-xs text-gray-500 mt-1">
-                Version {viewerDocument.version}
-              </p>
+              <p className="text-xs text-gray-500 mt-1">Version {viewerDocument.version}</p>
             )}
           </DialogHeader>
           <div className="overflow-y-auto max-h-[calc(90vh-100px)]">
             <div ref={printRef}>
               {viewerDocument?.blocks && viewerDocument.blocks.length > 0 ? (
-                <LegalBlockRenderer
-                  blocks={viewerDocument.blocks}
-                  title={viewerDocument.title}
-                />
+                <LegalBlockRenderer blocks={viewerDocument.blocks} title={viewerDocument.title} />
               ) : (
                 <div className="p-12 text-center text-gray-500">
                   <FileText className="h-12 w-12 mx-auto mb-4 opacity-40" />

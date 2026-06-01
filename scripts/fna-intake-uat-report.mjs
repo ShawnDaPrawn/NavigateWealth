@@ -15,7 +15,10 @@ const signoffPath = resolve(__dirname, '../docs/fna-intake-uat-signoff.md');
 const consentPath = resolve(__dirname, '../src/supabase/functions/server/fna-intake-types.ts');
 
 const report = JSON.parse(readFileSync(reportPath, 'utf8'));
-const commit = execSync('git rev-parse --short HEAD', { encoding: 'utf8', cwd: resolve(__dirname, '..') }).trim();
+const commit = execSync('git rev-parse --short HEAD', {
+  encoding: 'utf8',
+  cwd: resolve(__dirname, '..'),
+}).trim();
 const date = new Date().toISOString().slice(0, 10);
 
 function mark(pass) {
@@ -31,7 +34,9 @@ function cell(domain, stepKey) {
 }
 
 const consentSource = readFileSync(consentPath, 'utf8');
-const consentMatch = consentSource.match(/export const FNA_INTAKE_CONSENT_TEXT =\s*\n?\s*'([^']+)'/);
+const consentMatch = consentSource.match(
+  /export const FNA_INTAKE_CONSENT_TEXT =\s*\n?\s*'([^']+)'/,
+);
 const consentText = consentMatch?.[1] ?? '';
 const consentHash = createHash('sha256').update(consentText).digest('hex').slice(0, 16);
 

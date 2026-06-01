@@ -1,7 +1,4 @@
-import type {
-  QualityIssue,
-  QualityIssueAlert,
-} from './qualityIssues.ts';
+import type { QualityIssue, QualityIssueAlert } from './qualityIssues.ts';
 
 export interface QualityIssueTaskPlan {
   title: string;
@@ -40,20 +37,25 @@ function issueLocation(issue: QualityIssue): string | undefined {
 
 function securityTitle(issue: QualityIssue): string {
   const packageLabel = issue.packageName || 'dependency';
-  const action = issue.fixVersion ? `Upgrade ${packageLabel} to ${issue.fixVersion}` : `Assess ${packageLabel} vulnerability`;
+  const action = issue.fixVersion
+    ? `Upgrade ${packageLabel} to ${issue.fixVersion}`
+    : `Assess ${packageLabel} vulnerability`;
   return `[Security] ${action}: ${issue.title}`;
 }
 
 function defaultTitle(issue: QualityIssue, alert?: QualityIssueAlert): string {
-  const prefix = issue.category === 'runtime'
-    ? 'Investigate'
-    : issue.category === 'configuration'
-      ? 'Fix configuration'
-      : issue.category === 'test'
-        ? 'Stabilize test'
-        : 'Resolve';
+  const prefix =
+    issue.category === 'runtime'
+      ? 'Investigate'
+      : issue.category === 'configuration'
+        ? 'Fix configuration'
+        : issue.category === 'test'
+          ? 'Stabilize test'
+          : 'Resolve';
 
-  return alert ? `[Issue Manager] ${prefix}: ${alert.title}: ${issue.title}` : `${prefix}: ${issue.title}`;
+  return alert
+    ? `[Issue Manager] ${prefix}: ${alert.title}: ${issue.title}`
+    : `${prefix}: ${issue.title}`;
 }
 
 function buildSecurityDescription(issue: QualityIssue, alert?: QualityIssueAlert): string {
@@ -105,7 +107,9 @@ function buildSecurityDescription(issue: QualityIssue, alert?: QualityIssueAlert
     references.length ? '' : undefined,
     references.length ? 'References' : undefined,
     ...references,
-  ].filter((line): line is string => line !== undefined).join('\n');
+  ]
+    .filter((line): line is string => line !== undefined)
+    .join('\n');
 }
 
 function buildDefaultDescription(issue: QualityIssue, alert?: QualityIssueAlert): string {
@@ -140,7 +144,9 @@ function buildDefaultDescription(issue: QualityIssue, alert?: QualityIssueAlert)
     '2. Apply the smallest fix or record the current mitigation.',
     '3. Rerun the originating verification path.',
     '4. Add evidence to the Issue Manager before resolving the issue.',
-  ].filter((line): line is string => line !== undefined).join('\n');
+  ]
+    .filter((line): line is string => line !== undefined)
+    .join('\n');
 }
 
 function buildSecurityChecklist(issue: QualityIssue): string[] {
@@ -168,12 +174,17 @@ function buildDefaultChecklist(): string[] {
   ];
 }
 
-export function buildQualityIssueTaskPlan(issue: QualityIssue, alert?: QualityIssueAlert): QualityIssueTaskPlan {
+export function buildQualityIssueTaskPlan(
+  issue: QualityIssue,
+  alert?: QualityIssueAlert,
+): QualityIssueTaskPlan {
   const title = issue.category === 'security' ? securityTitle(issue) : defaultTitle(issue, alert);
-  const description = issue.category === 'security'
-    ? buildSecurityDescription(issue, alert)
-    : buildDefaultDescription(issue, alert);
-  const checklist = issue.category === 'security' ? buildSecurityChecklist(issue) : buildDefaultChecklist();
+  const description =
+    issue.category === 'security'
+      ? buildSecurityDescription(issue, alert)
+      : buildDefaultDescription(issue, alert);
+  const checklist =
+    issue.category === 'security' ? buildSecurityChecklist(issue) : buildDefaultChecklist();
 
   return {
     title: truncate(title, TASK_TITLE_LIMIT),

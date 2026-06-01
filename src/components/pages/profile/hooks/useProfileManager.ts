@@ -159,7 +159,9 @@ export interface ProfileManagerState {
   liabilityToDelete: string | null;
   setLiabilityToDelete: React.Dispatch<React.SetStateAction<string | null>>;
   liabilityDisplayValues: { [id: string]: { amount?: string; monthlyPayment?: string } };
-  setLiabilityDisplayValues: React.Dispatch<React.SetStateAction<{ [id: string]: { amount?: string; monthlyPayment?: string } }>>;
+  setLiabilityDisplayValues: React.Dispatch<
+    React.SetStateAction<{ [id: string]: { amount?: string; monthlyPayment?: string } }>
+  >;
   addLiability: () => void;
   updateLiability: (id: string, updates: Partial<Liability>) => void;
   saveLiability: (id: string) => void;
@@ -246,7 +248,7 @@ export function useProfileManager({
 }: UseProfileManagerInput): ProfileManagerState {
   // ── Core state ──────────────────────────────────────────────────
   const [profileData, setProfileData] = useState<ProfileData>(
-    getInitialProfileData(userEmail, userFirstName, userLastName)
+    getInitialProfileData(userEmail, userFirstName, userLastName),
   );
   const [originalData, setOriginalData] = useState<ProfileData | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -262,7 +264,9 @@ export function useProfileManager({
 
   // ── Display states for asset and liability currency inputs ──────
   const [assetDisplayValues, setAssetDisplayValues] = useState<{ [id: string]: string }>({});
-  const [liabilityDisplayValues, setLiabilityDisplayValues] = useState<{ [id: string]: { amount?: string; monthlyPayment?: string } }>({});
+  const [liabilityDisplayValues, setLiabilityDisplayValues] = useState<{
+    [id: string]: { amount?: string; monthlyPayment?: string };
+  }>({});
 
   // ── Self-employed and proof-of-residence edit mode ──────────────
   const [selfEmployedInEditMode, setSelfEmployedInEditMode] = useState(false);
@@ -277,7 +281,7 @@ export function useProfileManager({
 
   // ── handleInputChange ───────────────────────────────────────────
   const handleInputChange: HandleInputChange = useCallback((field, value) => {
-    setProfileData(prev => ({ ...prev, [field]: value }));
+    setProfileData((prev) => ({ ...prev, [field]: value }));
     setSaveSuccess(false);
   }, []);
 
@@ -288,63 +292,47 @@ export function useProfileManager({
   // edit / cancelEdit / confirmDelete / remove handlers + state.
   // ══════════════════════════════════════════════════════════════════
 
-  const bankAccountCrud = useEntityCrud<BankAccount>(
-    profileData.bankAccounts,
-    setProfileData,
-    {
-      arrayKey: 'bankAccounts',
-      createItem: createBankAccount,
-      validateItem: validateBankAccount,
-      isItemEmpty: isBankAccountEmpty,
-    },
-  );
+  const bankAccountCrud = useEntityCrud<BankAccount>(profileData.bankAccounts, setProfileData, {
+    arrayKey: 'bankAccounts',
+    createItem: createBankAccount,
+    validateItem: validateBankAccount,
+    isItemEmpty: isBankAccountEmpty,
+  });
 
-  const familyMemberCrud = useEntityCrud<FamilyMember>(
-    profileData.familyMembers,
-    setProfileData,
-    {
-      arrayKey: 'familyMembers',
-      createItem: createFamilyMember,
-      validateItem: validateFamilyMember,
-      isItemEmpty: isFamilyMemberEmpty,
-    },
-  );
+  const familyMemberCrud = useEntityCrud<FamilyMember>(profileData.familyMembers, setProfileData, {
+    arrayKey: 'familyMembers',
+    createItem: createFamilyMember,
+    validateItem: validateFamilyMember,
+    isItemEmpty: isFamilyMemberEmpty,
+  });
 
-  const assetCrud = useEntityCrud<Asset>(
-    profileData.assets,
-    setProfileData,
-    {
-      arrayKey: 'assets',
-      createItem: createAsset,
-      validateItem: validateAsset,
-      isItemEmpty: isAssetEmpty,
-      onCleanup: (id) => {
-        setAssetDisplayValues(prev => {
-          const next = { ...prev };
-          delete next[id];
-          return next;
-        });
-      },
+  const assetCrud = useEntityCrud<Asset>(profileData.assets, setProfileData, {
+    arrayKey: 'assets',
+    createItem: createAsset,
+    validateItem: validateAsset,
+    isItemEmpty: isAssetEmpty,
+    onCleanup: (id) => {
+      setAssetDisplayValues((prev) => {
+        const next = { ...prev };
+        delete next[id];
+        return next;
+      });
     },
-  );
+  });
 
-  const liabilityCrud = useEntityCrud<Liability>(
-    profileData.liabilities,
-    setProfileData,
-    {
-      arrayKey: 'liabilities',
-      createItem: createLiability,
-      validateItem: validateLiability,
-      isItemEmpty: isLiabilityEmpty,
-      onCleanup: (id) => {
-        setLiabilityDisplayValues(prev => {
-          const next = { ...prev };
-          delete next[id];
-          return next;
-        });
-      },
+  const liabilityCrud = useEntityCrud<Liability>(profileData.liabilities, setProfileData, {
+    arrayKey: 'liabilities',
+    createItem: createLiability,
+    validateItem: validateLiability,
+    isItemEmpty: isLiabilityEmpty,
+    onCleanup: (id) => {
+      setLiabilityDisplayValues((prev) => {
+        const next = { ...prev };
+        delete next[id];
+        return next;
+      });
     },
-  );
+  });
 
   const chronicConditionCrud = useEntityCrud<ChronicCondition>(
     profileData.chronicConditions,
@@ -357,16 +345,12 @@ export function useProfileManager({
     },
   );
 
-  const employerCrud = useEntityCrud<Employer>(
-    profileData.employers,
-    setProfileData,
-    {
-      arrayKey: 'employers',
-      createItem: createEmployer,
-      validateItem: validateEmployer,
-      isItemEmpty: isEmployerEmpty,
-    },
-  );
+  const employerCrud = useEntityCrud<Employer>(profileData.employers, setProfileData, {
+    arrayKey: 'employers',
+    createItem: createEmployer,
+    validateItem: validateEmployer,
+    isItemEmpty: isEmployerEmpty,
+  });
 
   // ══════════════════════════════════════════════════════════════════
   // Data Loading
@@ -390,13 +374,14 @@ export function useProfileManager({
         const profileKey = `user_profile:${userId}:personal_info`;
 
         const result = await api.get<{ success: boolean; data: ProfileData }>(
-          `/profile/personal-info?key=${encodeURIComponent(profileKey)}`
+          `/profile/personal-info?key=${encodeURIComponent(profileKey)}`,
         );
 
         if (!signal.aborted) {
           if (result.success && result.data) {
-            const grossAnnual = result.data.grossAnnualIncome ?? ((result.data.grossIncome || 0) * 12);
-            const netAnnual = result.data.netAnnualIncome ?? ((result.data.netIncome || 0) * 12);
+            const grossAnnual =
+              result.data.grossAnnualIncome ?? (result.data.grossIncome || 0) * 12;
+            const netAnnual = result.data.netAnnualIncome ?? (result.data.netIncome || 0) * 12;
 
             const mergedData: ProfileData = {
               ...profileData,
@@ -425,7 +410,10 @@ export function useProfileManager({
       } catch (error: unknown) {
         if (isAbortError(error)) return;
         const isNotFound =
-          error && typeof error === 'object' && 'statusCode' in error && (error as Record<string, unknown>).statusCode === 404;
+          error &&
+          typeof error === 'object' &&
+          'statusCode' in error &&
+          (error as Record<string, unknown>).statusCode === 404;
 
         if (isNotFound) {
           // Profile not found, use defaults (silent)
@@ -463,7 +451,11 @@ export function useProfileManager({
     ) {
       setSelfEmployedInEditMode(true);
     }
-  }, [profileData.employmentStatus, profileData.selfEmployedIndustry, profileData.selfEmployedDescription]);
+  }, [
+    profileData.employmentStatus,
+    profileData.selfEmployedIndustry,
+    profileData.selfEmployedDescription,
+  ]);
 
   // ══════════════════════════════════════════════════════════════════
   // Save Handler
@@ -472,7 +464,7 @@ export function useProfileManager({
   const handleSave = useCallback(async (): Promise<boolean> => {
     if (profileData.netIncome > profileData.grossIncome && profileData.grossIncome > 0) {
       setIncomeValidationError(
-        `Net income (${formatCurrency(profileData.netIncome)}) cannot exceed gross income (${formatCurrency(profileData.grossIncome)}). Please correct this before saving.`
+        `Net income (${formatCurrency(profileData.netIncome)}) cannot exceed gross income (${formatCurrency(profileData.grossIncome)}). Please correct this before saving.`,
       );
       return false;
     }
@@ -491,7 +483,7 @@ export function useProfileManager({
       let patchData: Partial<ProfileData> = {};
 
       if (originalData) {
-        (Object.keys(profileData) as Array<keyof ProfileData>).forEach(key => {
+        (Object.keys(profileData) as Array<keyof ProfileData>).forEach((key) => {
           if (profileData[key] !== originalData[key]) {
             // @ts-ignore - Dynamic assignment is safe here as keys match
             patchData[key] = profileData[key];
@@ -516,7 +508,9 @@ export function useProfileManager({
       console.log(`Payload size: ${payloadSize} bytes`);
 
       if (payloadSize > 200000) {
-        console.warn('Large payload detected (>200KB). Proceeding with save, but this may impact performance.');
+        console.warn(
+          'Large payload detected (>200KB). Proceeding with save, but this may impact performance.',
+        );
       }
 
       if (Object.keys(cleanPatchData).length === 0) {
@@ -557,21 +551,30 @@ export function useProfileManager({
   const handleProofOfBankUpload = useCallback(async (id: string, file: File) => {
     try {
       const session = await getSession();
-      if (!session) { toast.error('You must be logged in to upload files'); return; }
+      if (!session) {
+        toast.error('You must be logged in to upload files');
+        return;
+      }
       toast.info('Uploading document...');
       const formData = new FormData();
       formData.append('file', file);
       formData.append('userId', session.user.id);
       const response = await fetch(
         `https://${projectId}.supabase.co/functions/v1/make-server-91ed8379/profile/upload`,
-        { method: 'POST', headers: { Authorization: `Bearer ${session.access_token}` }, body: formData }
+        {
+          method: 'POST',
+          headers: { Authorization: `Bearer ${session.access_token}` },
+          body: formData,
+        },
       );
       if (!response.ok) throw new Error('Upload failed');
       const result = await response.json();
-      setProfileData(prev => ({
+      setProfileData((prev) => ({
         ...prev,
-        bankAccounts: prev.bankAccounts.map(a =>
-          a.id === id ? { ...a, proofOfBankDocument: result.path, proofOfBankFileName: file.name } : a
+        bankAccounts: prev.bankAccounts.map((a) =>
+          a.id === id
+            ? { ...a, proofOfBankDocument: result.path, proofOfBankFileName: file.name }
+            : a,
         ),
       }));
       toast.success('Document uploaded successfully');
@@ -586,10 +589,10 @@ export function useProfileManager({
   }, []);
 
   const removeProofOfBank = useCallback((id: string) => {
-    setProfileData(prev => ({
+    setProfileData((prev) => ({
       ...prev,
-      bankAccounts: prev.bankAccounts.map(a =>
-        a.id === id ? { ...a, proofOfBankDocument: undefined, proofOfBankFileName: undefined } : a
+      bankAccounts: prev.bankAccounts.map((a) =>
+        a.id === id ? { ...a, proofOfBankDocument: undefined, proofOfBankFileName: undefined } : a,
       ),
     }));
     setProofOfBankToDelete(null);
@@ -601,26 +604,38 @@ export function useProfileManager({
 
   const saveSelfEmployed = useCallback(() => {
     if (!profileData.selfEmployedIndustry || !profileData.selfEmployedDescription) {
-      toast.error('Please fill in all required fields (Industry and Business Description) before saving');
+      toast.error(
+        'Please fill in all required fields (Industry and Business Description) before saving',
+      );
       return;
     }
     setSelfEmployedInEditMode(false);
   }, [profileData.selfEmployedIndustry, profileData.selfEmployedDescription]);
 
-  const cancelEditSelfEmployed = useCallback(() => { setSelfEmployedInEditMode(false); }, []);
-  const editSelfEmployed = useCallback(() => { setSelfEmployedInEditMode(true); }, []);
+  const cancelEditSelfEmployed = useCallback(() => {
+    setSelfEmployedInEditMode(false);
+  }, []);
+  const editSelfEmployed = useCallback(() => {
+    setSelfEmployedInEditMode(true);
+  }, []);
 
   // ══════════════════════════════════════════════════════════════════
   // Risk Assessment Management
   // ══════════════════════════════════════════════════════════════════
 
   const updateRiskQuestion = useCallback((questionNumber: number, score: number) => {
-    setProfileData(prev => {
+    setProfileData((prev) => {
       const updatedAssessment = { ...prev.riskAssessment, [`question${questionNumber}`]: score };
       const answers = [
-        updatedAssessment.question1, updatedAssessment.question2, updatedAssessment.question3,
-        updatedAssessment.question4, updatedAssessment.question5, updatedAssessment.question6,
-        updatedAssessment.question7, updatedAssessment.question8, updatedAssessment.question9,
+        updatedAssessment.question1,
+        updatedAssessment.question2,
+        updatedAssessment.question3,
+        updatedAssessment.question4,
+        updatedAssessment.question5,
+        updatedAssessment.question6,
+        updatedAssessment.question7,
+        updatedAssessment.question8,
+        updatedAssessment.question9,
         updatedAssessment.question10,
       ];
       const derived = calculateRiskAssessment(answers);
@@ -635,12 +650,23 @@ export function useProfileManager({
   }, []);
 
   const resetRiskAssessment = useCallback(() => {
-    setProfileData(prev => ({
+    setProfileData((prev) => ({
       ...prev,
       riskAssessment: {
-        question1: 0, question2: 0, question3: 0, question4: 0, question5: 0,
-        question6: 0, question7: 0, question8: 0, question9: 0, question10: 0,
-        totalScore: 0, riskCategory: '', dateCompleted: '', canRetake: true,
+        question1: 0,
+        question2: 0,
+        question3: 0,
+        question4: 0,
+        question5: 0,
+        question6: 0,
+        question7: 0,
+        question8: 0,
+        question9: 0,
+        question10: 0,
+        totalScore: 0,
+        riskCategory: '',
+        dateCompleted: '',
+        canRetake: true,
       },
     }));
     setAssessmentStarted(false);
@@ -649,8 +675,16 @@ export function useProfileManager({
   const allQuestionsAnswered = useCallback(() => {
     const a = profileData.riskAssessment;
     return (
-      a.question1 > 0 && a.question2 > 0 && a.question3 > 0 && a.question4 > 0 && a.question5 > 0 &&
-      a.question6 > 0 && a.question7 > 0 && a.question8 > 0 && a.question9 > 0 && a.question10 > 0
+      a.question1 > 0 &&
+      a.question2 > 0 &&
+      a.question3 > 0 &&
+      a.question4 > 0 &&
+      a.question5 > 0 &&
+      a.question6 > 0 &&
+      a.question7 > 0 &&
+      a.question8 > 0 &&
+      a.question9 > 0 &&
+      a.question10 > 0
     );
   }, [profileData.riskAssessment]);
 
@@ -667,115 +701,183 @@ export function useProfileManager({
   const [identityDocToDelete, setIdentityDocToDelete] = useState<string | null>(null);
 
   const hasDocumentType = useCallback(
-    (type: IdentityDocumentType) => profileData.identityDocuments.some(doc => doc.type === type),
-    [profileData.identityDocuments]
+    (type: IdentityDocumentType) => profileData.identityDocuments.some((doc) => doc.type === type),
+    [profileData.identityDocuments],
   );
 
-  const addIdentityDocument = useCallback((type: IdentityDocumentType) => {
-    if (profileData.identityDocuments.some(doc => doc.type === type)) {
-      const typeNames = { 'national-id': 'National ID', passport: 'Passport', 'drivers-license': "Driver's License" };
-      toast.error(`You have already added a ${typeNames[type]}. Only one document of each type is allowed.`);
-      return;
-    }
-    const newDoc: IdentityDocument = createIdentityDocument(type);
-    setProfileData(prev => ({ ...prev, identityDocuments: [...prev.identityDocuments, newDoc] }));
-    setIdentityDocsInEditMode(prev => new Set([...prev, newDoc.id]));
-  }, [profileData.identityDocuments]);
-
-  const handleDocumentUpload = useCallback(async (id: string, event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
-    if (file.size > 5 * 1024 * 1024) { toast.error('File size must be less than 5MB'); return; }
-    const validTypes = ['application/pdf', 'image/jpeg', 'image/jpg', 'image/png'];
-    if (!validTypes.includes(file.type)) { toast.error('Please upload a PDF, JPG, or PNG file'); return; }
-    try {
-      const session = await getSession();
-      if (!session) { toast.error('You must be logged in to upload files'); return; }
-      toast.info('Uploading document...');
-      const formData = new FormData();
-      formData.append('file', file);
-      formData.append('userId', session.user.id);
-      const response = await fetch(
-        `https://${projectId}.supabase.co/functions/v1/make-server-91ed8379/profile/upload`,
-        { method: 'POST', headers: { Authorization: `Bearer ${session.access_token}` }, body: formData }
-      );
-      if (!response.ok) throw new Error('Upload failed');
-      const result = await response.json();
-      setProfileData(prev => ({
+  const addIdentityDocument = useCallback(
+    (type: IdentityDocumentType) => {
+      if (profileData.identityDocuments.some((doc) => doc.type === type)) {
+        const typeNames = {
+          'national-id': 'National ID',
+          passport: 'Passport',
+          'drivers-license': "Driver's License",
+        };
+        toast.error(
+          `You have already added a ${typeNames[type]}. Only one document of each type is allowed.`,
+        );
+        return;
+      }
+      const newDoc: IdentityDocument = createIdentityDocument(type);
+      setProfileData((prev) => ({
         ...prev,
-        identityDocuments: prev.identityDocuments.map(doc =>
-          doc.id === id
-            ? { ...doc, fileName: file.name, fileSize: file.size, fileUrl: result.path, uploadDate: new Date().toISOString(), isVerified: false }
-            : doc
-        ),
+        identityDocuments: [...prev.identityDocuments, newDoc],
       }));
-      toast.success('Document uploaded successfully');
-    } catch (error) {
-      console.error('Upload error:', error);
-      toast.error('Failed to upload document');
-    }
-  }, []);
+      setIdentityDocsInEditMode((prev) => new Set([...prev, newDoc.id]));
+    },
+    [profileData.identityDocuments],
+  );
+
+  const handleDocumentUpload = useCallback(
+    async (id: string, event: React.ChangeEvent<HTMLInputElement>) => {
+      const file = event.target.files?.[0];
+      if (!file) return;
+      if (file.size > 5 * 1024 * 1024) {
+        toast.error('File size must be less than 5MB');
+        return;
+      }
+      const validTypes = ['application/pdf', 'image/jpeg', 'image/jpg', 'image/png'];
+      if (!validTypes.includes(file.type)) {
+        toast.error('Please upload a PDF, JPG, or PNG file');
+        return;
+      }
+      try {
+        const session = await getSession();
+        if (!session) {
+          toast.error('You must be logged in to upload files');
+          return;
+        }
+        toast.info('Uploading document...');
+        const formData = new FormData();
+        formData.append('file', file);
+        formData.append('userId', session.user.id);
+        const response = await fetch(
+          `https://${projectId}.supabase.co/functions/v1/make-server-91ed8379/profile/upload`,
+          {
+            method: 'POST',
+            headers: { Authorization: `Bearer ${session.access_token}` },
+            body: formData,
+          },
+        );
+        if (!response.ok) throw new Error('Upload failed');
+        const result = await response.json();
+        setProfileData((prev) => ({
+          ...prev,
+          identityDocuments: prev.identityDocuments.map((doc) =>
+            doc.id === id
+              ? {
+                  ...doc,
+                  fileName: file.name,
+                  fileSize: file.size,
+                  fileUrl: result.path,
+                  uploadDate: new Date().toISOString(),
+                  isVerified: false,
+                }
+              : doc,
+          ),
+        }));
+        toast.success('Document uploaded successfully');
+      } catch (error) {
+        console.error('Upload error:', error);
+        toast.error('Failed to upload document');
+      }
+    },
+    [],
+  );
 
   const updateIdentityDocument = useCallback((id: string, updates: Partial<IdentityDocument>) => {
-    setProfileData(prev => ({
+    setProfileData((prev) => ({
       ...prev,
-      identityDocuments: prev.identityDocuments.map(doc => (doc.id === id ? { ...doc, ...updates } : doc)),
+      identityDocuments: prev.identityDocuments.map((doc) =>
+        doc.id === id ? { ...doc, ...updates } : doc,
+      ),
     }));
   }, []);
 
-  const confirmDeleteIdentityDocument = useCallback((id: string) => { setIdentityDocToDelete(id); }, []);
+  const confirmDeleteIdentityDocument = useCallback((id: string) => {
+    setIdentityDocToDelete(id);
+  }, []);
 
   const removeIdentityDocument = useCallback((id: string) => {
-    setProfileData(prev => ({ ...prev, identityDocuments: prev.identityDocuments.filter(doc => doc.id !== id) }));
-    setIdentityDocsInEditMode(prev => { const s = new Set(prev); s.delete(id); return s; });
+    setProfileData((prev) => ({
+      ...prev,
+      identityDocuments: prev.identityDocuments.filter((doc) => doc.id !== id),
+    }));
+    setIdentityDocsInEditMode((prev) => {
+      const s = new Set(prev);
+      s.delete(id);
+      return s;
+    });
     setIdentityDocToDelete(null);
   }, []);
 
-  const saveIdentityDocument = useCallback((id: string) => {
-    const doc = profileData.identityDocuments.find(d => d.id === id);
-    if (doc?.type === 'national-id') {
-      if (!doc.number || !doc.fileName) {
-        toast.error('Please fill in the ID number and upload the document before saving');
-        return;
+  const saveIdentityDocument = useCallback(
+    (id: string) => {
+      const doc = profileData.identityDocuments.find((d) => d.id === id);
+      if (doc?.type === 'national-id') {
+        if (!doc.number || !doc.fileName) {
+          toast.error('Please fill in the ID number and upload the document before saving');
+          return;
+        }
       }
-    }
-    setIdentityDocsInEditMode(prev => { const s = new Set(prev); s.delete(id); return s; });
-  }, [profileData.identityDocuments]);
+      setIdentityDocsInEditMode((prev) => {
+        const s = new Set(prev);
+        s.delete(id);
+        return s;
+      });
+    },
+    [profileData.identityDocuments],
+  );
 
   const cancelEditIdentityDocument = useCallback((id: string) => {
-    setProfileData(prev => {
-      const doc = prev.identityDocuments.find(d => d.id === id);
+    setProfileData((prev) => {
+      const doc = prev.identityDocuments.find((d) => d.id === id);
       if (doc && !doc.number && !doc.fileName) {
-        return { ...prev, identityDocuments: prev.identityDocuments.filter(d => d.id !== id) };
+        return { ...prev, identityDocuments: prev.identityDocuments.filter((d) => d.id !== id) };
       }
       return prev;
     });
-    setIdentityDocsInEditMode(prev => { const s = new Set(prev); s.delete(id); return s; });
+    setIdentityDocsInEditMode((prev) => {
+      const s = new Set(prev);
+      s.delete(id);
+      return s;
+    });
   }, []);
 
   const editIdentityDocument = useCallback((id: string) => {
-    setIdentityDocsInEditMode(prev => new Set([...prev, id]));
+    setIdentityDocsInEditMode((prev) => new Set([...prev, id]));
   }, []);
 
   // ── Document type helpers ───────────────────────────────────────
 
   const getDocumentTypeLabel = useCallback((type: IdentityDocumentType): string => {
     switch (type) {
-      case 'national-id': return 'National ID Card';
-      case 'passport': return 'Passport';
-      case 'drivers-license': return "Driver's License";
-      default: return type;
+      case 'national-id':
+        return 'National ID Card';
+      case 'passport':
+        return 'Passport';
+      case 'drivers-license':
+        return "Driver's License";
+      default:
+        return type;
     }
   }, []);
 
-  const getDocumentTypeIcon = useCallback((type: IdentityDocumentType): { icon: React.ElementType; color: string } => {
-    switch (type) {
-      case 'national-id': return { icon: IdCard, color: 'purple' };
-      case 'passport': return { icon: FileText, color: 'blue' };
-      case 'drivers-license': return { icon: CreditCard, color: 'amber' };
-      default: return { icon: FileText, color: 'gray' };
-    }
-  }, []);
+  const getDocumentTypeIcon = useCallback(
+    (type: IdentityDocumentType): { icon: React.ElementType; color: string } => {
+      switch (type) {
+        case 'national-id':
+          return { icon: IdCard, color: 'purple' };
+        case 'passport':
+          return { icon: FileText, color: 'blue' };
+        case 'drivers-license':
+          return { icon: CreditCard, color: 'amber' };
+        default:
+          return { icon: FileText, color: 'gray' };
+      }
+    },
+    [],
+  );
 
   // ══════════════════════════════════════════════════════════════════
   // Proof of Residence Handlers
@@ -784,19 +886,39 @@ export function useProfileManager({
   const handleProofOfResidenceUpload = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
-    if (file.size > 5 * 1024 * 1024) { toast.error('File size must be less than 5MB'); return; }
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error('File size must be less than 5MB');
+      return;
+    }
     const allowedTypes = ['application/pdf', 'image/jpeg', 'image/jpg', 'image/png'];
-    if (!allowedTypes.includes(file.type)) { toast.error('Please upload a PDF, JPG, or PNG file'); return; }
-    setProfileData(prev => ({ ...prev, proofOfResidenceUploaded: true, proofOfResidenceFileName: file.name }));
+    if (!allowedTypes.includes(file.type)) {
+      toast.error('Please upload a PDF, JPG, or PNG file');
+      return;
+    }
+    setProfileData((prev) => ({
+      ...prev,
+      proofOfResidenceUploaded: true,
+      proofOfResidenceFileName: file.name,
+    }));
     setProofOfResidenceInEditMode(false);
   }, []);
 
-  const editProofOfResidence = useCallback(() => { setProofOfResidenceInEditMode(true); }, []);
-  const saveProofOfResidence = useCallback(() => { setProofOfResidenceInEditMode(false); }, []);
-  const confirmDeleteProofOfResidence = useCallback(() => { setProofOfResidenceToDelete(true); }, []);
+  const editProofOfResidence = useCallback(() => {
+    setProofOfResidenceInEditMode(true);
+  }, []);
+  const saveProofOfResidence = useCallback(() => {
+    setProofOfResidenceInEditMode(false);
+  }, []);
+  const confirmDeleteProofOfResidence = useCallback(() => {
+    setProofOfResidenceToDelete(true);
+  }, []);
 
   const removeProofOfResidence = useCallback(() => {
-    setProfileData(prev => ({ ...prev, proofOfResidenceUploaded: false, proofOfResidenceFileName: undefined }));
+    setProfileData((prev) => ({
+      ...prev,
+      proofOfResidenceUploaded: false,
+      proofOfResidenceFileName: undefined,
+    }));
     setProofOfResidenceToDelete(false);
     setProofOfResidenceInEditMode(false);
   }, []);

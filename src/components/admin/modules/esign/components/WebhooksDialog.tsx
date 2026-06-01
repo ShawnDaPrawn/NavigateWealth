@@ -12,7 +12,13 @@
  */
 
 import React, { useCallback, useEffect, useState } from 'react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '../../../../ui/dialog';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from '../../../../ui/dialog';
 import { Button } from '../../../../ui/button';
 import { Input } from '../../../../ui/input';
 import { Label } from '../../../../ui/label';
@@ -219,12 +225,16 @@ export function WebhooksDialog({ open, onOpenChange }: WebhooksDialogProps) {
                       >
                         {d.status}
                       </Badge>
-                      {d.response_code ? <span className="text-gray-500">HTTP {d.response_code}</span> : null}
+                      {d.response_code ? (
+                        <span className="text-gray-500">HTTP {d.response_code}</span>
+                      ) : null}
                       <span className="text-gray-400">attempts={d.attempts}</span>
                     </div>
                     <div className="text-gray-500 mt-1">
                       Created {new Date(d.created_at).toLocaleString()}
-                      {d.last_attempt_at ? ` · last attempt ${new Date(d.last_attempt_at).toLocaleString()}` : ''}
+                      {d.last_attempt_at
+                        ? ` · last attempt ${new Date(d.last_attempt_at).toLocaleString()}`
+                        : ''}
                     </div>
                     {d.envelope_id ? (
                       <div className="text-gray-500 mt-0.5">Envelope: {d.envelope_id}</div>
@@ -241,7 +251,11 @@ export function WebhooksDialog({ open, onOpenChange }: WebhooksDialogProps) {
                       variant="ghost"
                       onClick={() => setExpandedDelivery(expanded ? null : d.id)}
                     >
-                      {expanded ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
+                      {expanded ? (
+                        <ChevronUp className="h-3 w-3" />
+                      ) : (
+                        <ChevronDown className="h-3 w-3" />
+                      )}
                     </Button>
                   </div>
                 </div>
@@ -314,7 +328,9 @@ export function WebhooksDialog({ open, onOpenChange }: WebhooksDialogProps) {
                             checked={newEvents.includes(evt.value)}
                             onCheckedChange={(checked) => {
                               setNewEvents((prev) =>
-                                checked ? [...prev, evt.value] : prev.filter((v) => v !== evt.value),
+                                checked
+                                  ? [...prev, evt.value]
+                                  : prev.filter((v) => v !== evt.value),
                               );
                             }}
                           />
@@ -349,10 +365,18 @@ export function WebhooksDialog({ open, onOpenChange }: WebhooksDialogProps) {
                         <div className="flex items-start justify-between gap-2">
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center gap-2 min-w-0">
-                              <code className="text-xs text-gray-700 truncate max-w-[340px]" title={sub.url}>
+                              <code
+                                className="text-xs text-gray-700 truncate max-w-[340px]"
+                                title={sub.url}
+                              >
                                 {sub.url}
                               </code>
-                              <Badge variant={sub.active ? 'default' : 'outline'} className={sub.active ? 'bg-green-100 text-green-700 border-green-200' : ''}>
+                              <Badge
+                                variant={sub.active ? 'default' : 'outline'}
+                                className={
+                                  sub.active ? 'bg-green-100 text-green-700 border-green-200' : ''
+                                }
+                              >
                                 {sub.active ? 'active' : 'paused'}
                               </Badge>
                             </div>
@@ -373,13 +397,28 @@ export function WebhooksDialog({ open, onOpenChange }: WebhooksDialogProps) {
                             ) : null}
                           </div>
                           <div className="flex items-center gap-1">
-                            <Button size="sm" variant="ghost" onClick={() => handleToggle(sub)} title={sub.active ? 'Pause' : 'Resume'}>
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              onClick={() => handleToggle(sub)}
+                              title={sub.active ? 'Pause' : 'Resume'}
+                            >
                               {sub.active ? 'Pause' : 'Resume'}
                             </Button>
-                            <Button size="sm" variant="ghost" onClick={() => handleRotate(sub)} title="Rotate secret">
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              onClick={() => handleRotate(sub)}
+                              title="Rotate secret"
+                            >
                               <RotateCw className="h-3 w-3" />
                             </Button>
-                            <Button size="sm" variant="ghost" onClick={() => handleDelete(sub)} title="Delete">
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              onClick={() => handleDelete(sub)}
+                              title="Delete"
+                            >
                               <Trash2 className="h-3 w-3 text-red-600" />
                             </Button>
                           </div>
@@ -390,8 +429,14 @@ export function WebhooksDialog({ open, onOpenChange }: WebhooksDialogProps) {
                               Signing secret (save now — won't be shown again by default):
                             </div>
                             <div className="flex items-center gap-2">
-                              <code className="font-mono text-[11px] break-all flex-1">{sub.secret}</code>
-                              <Button size="sm" variant="outline" onClick={() => handleCopy(sub.secret, 'Secret')}>
+                              <code className="font-mono text-[11px] break-all flex-1">
+                                {sub.secret}
+                              </code>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => handleCopy(sub.secret, 'Secret')}
+                              >
                                 <Copy className="h-3 w-3 mr-1" /> Copy
                               </Button>
                             </div>

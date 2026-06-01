@@ -1,11 +1,11 @@
 /**
  * Requests Module - Service Layer
- * 
+ *
  * Business logic for request management system
  * Includes "Immune System" runtime validation using Zod
  */
 
-import { z } from "npm:zod";
+import { z } from 'npm:zod';
 import * as kv from './kv_store.tsx';
 import { createModuleLogger } from './stderr-logger.ts';
 import { APIError } from './error.middleware.ts';
@@ -77,75 +77,82 @@ const DeficiencySchema = z.object({
 });
 
 // The main Request schema that "heals" bad data
-const RequestSchema = z.object({
-  id: z.string(),
-  templateId: z.string(),
-  templateVersion: z.number().default(1),
-  
-  status: createEnumSchema(RequestStatus, RequestStatus.NEW),
-  priority: createEnumSchema(RequestPriority, RequestPriority.MEDIUM),
-  
-  clientId: z.string().optional(),
-  clientName: z.string().optional(),
-  
-  // Default to empty object if missing
-  requestDetails: z.record(z.unknown()).default({}),
-  
-  // Default to empty array if missing
-  assignees: z.array(RequestAssigneeSchema).default([]),
-  
-  // Handle complex nested objects that might be missing in old data
-  complianceApproval: z.object({
-    required: z.boolean().default(false),
-    checklistStatus: z.array(ComplianceChecklistItemStatusSchema).default([]),
-    approvedBy: z.string().optional(),
-    approvedAt: z.string().optional(),
-  }).default({
-    required: false,
-    checklistStatus: []
-  }),
-  
-  lifecycle: z.object({
-    currentStageId: z.string().optional(),
-    stageHistory: z.array(LifecycleStageStatusSchema).default([]),
-    startedAt: z.string().optional(),
-  }).default({
-    stageHistory: []
-  }),
-  
-  complianceSignOff: z.object({
-    required: z.boolean().default(false),
-    outcome: createEnumSchema(ApprovalOutcome, undefined).optional(),
-    approvedBy: z.string().optional(),
-    approvedAt: z.string().optional(),
-    deficiencies: z.array(DeficiencySchema).default([]),
-  }).default({
-    required: false,
-    deficiencies: []
-  }),
-  
-  finalised: z.boolean().default(false),
-  finalisedAt: z.string().optional(),
-  finalisedBy: z.string().optional(),
-  
-  documentIds: z.array(z.string()).default([]),
-  
-  createdBy: z.string().default('system'),
-  createdAt: z.string().default(() => new Date().toISOString()),
-  updatedBy: z.string().default('system'),
-  updatedAt: z.string().default(() => new Date().toISOString()),
-}).passthrough(); // Allow extra properties but don't validate them
+const RequestSchema = z
+  .object({
+    id: z.string(),
+    templateId: z.string(),
+    templateVersion: z.number().default(1),
+
+    status: createEnumSchema(RequestStatus, RequestStatus.NEW),
+    priority: createEnumSchema(RequestPriority, RequestPriority.MEDIUM),
+
+    clientId: z.string().optional(),
+    clientName: z.string().optional(),
+
+    // Default to empty object if missing
+    requestDetails: z.record(z.unknown()).default({}),
+
+    // Default to empty array if missing
+    assignees: z.array(RequestAssigneeSchema).default([]),
+
+    // Handle complex nested objects that might be missing in old data
+    complianceApproval: z
+      .object({
+        required: z.boolean().default(false),
+        checklistStatus: z.array(ComplianceChecklistItemStatusSchema).default([]),
+        approvedBy: z.string().optional(),
+        approvedAt: z.string().optional(),
+      })
+      .default({
+        required: false,
+        checklistStatus: [],
+      }),
+
+    lifecycle: z
+      .object({
+        currentStageId: z.string().optional(),
+        stageHistory: z.array(LifecycleStageStatusSchema).default([]),
+        startedAt: z.string().optional(),
+      })
+      .default({
+        stageHistory: [],
+      }),
+
+    complianceSignOff: z
+      .object({
+        required: z.boolean().default(false),
+        outcome: createEnumSchema(ApprovalOutcome, undefined).optional(),
+        approvedBy: z.string().optional(),
+        approvedAt: z.string().optional(),
+        deficiencies: z.array(DeficiencySchema).default([]),
+      })
+      .default({
+        required: false,
+        deficiencies: [],
+      }),
+
+    finalised: z.boolean().default(false),
+    finalisedAt: z.string().optional(),
+    finalisedBy: z.string().optional(),
+
+    documentIds: z.array(z.string()).default([]),
+
+    createdBy: z.string().default('system'),
+    createdAt: z.string().default(() => new Date().toISOString()),
+    updatedBy: z.string().default('system'),
+    updatedAt: z.string().default(() => new Date().toISOString()),
+  })
+  .passthrough(); // Allow extra properties but don't validate them
 
 // ============================================================================
 // SERVICE CLASS
 // ============================================================================
 
 export class RequestsService {
-  
   // ==========================================================================
   // TEMPLATE MANAGEMENT
   // ==========================================================================
-  
+
   /**
    * Get all templates with optional filtering
    */
@@ -156,15 +163,15 @@ export class RequestsService {
     try {
       // Remove generic type argument as kv.getByPrefix does not support it
       const allTemplates = (await kv.getByPrefix('requests:template:')) as RequestTemplate[];
-      
+
       // We accept templates as they are for now, assuming they are less prone to "zombie" issues
       // but we could add Zod validation here too if needed.
-      
+
       if (!filters) {
         return allTemplates;
       }
-      
-      return allTemplates.filter(template => {
+
+      return allTemplates.filter((template) => {
         if (filters.status && !filters.status.includes(template.status)) {
           return false;
         }
@@ -177,7 +184,7 @@ export class RequestsService {
       throw new APIError(`Failed to retrieve templates: ${error}`, 500);
     }
   }
-  
+
   /**
    * Get a single template by ID
    */
@@ -190,19 +197,19 @@ export class RequestsService {
       throw new APIError(`Failed to retrieve template: ${error}`, 500);
     }
   }
-  
+
   /**
    * Create a new template
    */
   async createTemplate(
     templateData: Partial<RequestTemplate>,
     userId: string,
-    userName: string
+    userName: string,
   ): Promise<RequestTemplate> {
     try {
       const now = new Date().toISOString();
       const templateId = `tmpl_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-      
+
       const newTemplate: RequestTemplate = {
         id: templateId,
         version: 1,
@@ -260,18 +267,18 @@ export class RequestsService {
         updatedAt: now,
         owner: userId,
       };
-      
+
       await kv.set(`requests:template:${templateId}`, newTemplate);
-      
+
       log.success('Template created', { templateId, name: newTemplate.name });
-      
+
       return newTemplate;
     } catch (error) {
       log.error('Failed to create template', error as Error);
       throw new Error(`Failed to create template: ${error}`);
     }
   }
-  
+
   /**
    * Update an existing template
    * If template is active and createNewVersion=true, creates a new version
@@ -281,21 +288,21 @@ export class RequestsService {
     updates: Partial<RequestTemplate>,
     userId: string,
     userName: string,
-    createNewVersion: boolean = false
+    createNewVersion: boolean = false,
   ): Promise<RequestTemplate> {
     try {
       const existingTemplate = await this.getTemplateById(templateId);
-      
+
       if (!existingTemplate) {
         throw new Error('Template not found');
       }
-      
+
       const now = new Date().toISOString();
-      
+
       // If template is active and we should create new version
       if (existingTemplate.status === TemplateStatus.ACTIVE && createNewVersion) {
         const newVersionId = `tmpl_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-        
+
         const newVersion: RequestTemplate = {
           ...existingTemplate,
           ...updates,
@@ -305,9 +312,9 @@ export class RequestsService {
           updatedBy: userId,
           updatedAt: now,
         };
-        
+
         await kv.set(`requests:template:${newVersionId}`, newVersion);
-        
+
         // Archive the old version
         await kv.set(`requests:template:${templateId}`, {
           ...existingTemplate,
@@ -315,13 +322,13 @@ export class RequestsService {
           updatedBy: userId,
           updatedAt: now,
         });
-        
-        log.success('Template version created', { 
-          oldId: templateId, 
-          newId: newVersionId, 
-          version: newVersion.version 
+
+        log.success('Template version created', {
+          oldId: templateId,
+          newId: newVersionId,
+          version: newVersion.version,
         });
-        
+
         return newVersion;
       } else {
         // Simple update without versioning
@@ -331,11 +338,11 @@ export class RequestsService {
           updatedBy: userId,
           updatedAt: now,
         };
-        
+
         await kv.set(`requests:template:${templateId}`, updatedTemplate);
-        
+
         log.success('Template updated', { templateId });
-        
+
         return updatedTemplate;
       }
     } catch (error) {
@@ -343,22 +350,22 @@ export class RequestsService {
       throw new Error(`Failed to update template: ${error}`);
     }
   }
-  
+
   /**
    * Duplicate a template
    */
   async duplicateTemplate(
     templateId: string,
     userId: string,
-    userName: string
+    userName: string,
   ): Promise<RequestTemplate> {
     try {
       const existingTemplate = await this.getTemplateById(templateId);
-      
+
       if (!existingTemplate) {
         throw new Error('Template not found');
       }
-      
+
       const newTemplate = await this.createTemplate(
         {
           ...existingTemplate,
@@ -366,28 +373,28 @@ export class RequestsService {
           status: TemplateStatus.DRAFT,
         },
         userId,
-        userName
+        userName,
       );
-      
-      log.success('Template duplicated', { 
-        originalId: templateId, 
-        newId: newTemplate.id 
+
+      log.success('Template duplicated', {
+        originalId: templateId,
+        newId: newTemplate.id,
       });
-      
+
       return newTemplate;
     } catch (error) {
       log.error('Failed to duplicate template', error as Error, { templateId });
       throw new Error(`Failed to duplicate template: ${error}`);
     }
   }
-  
+
   /**
    * Archive a template
    */
   async archiveTemplate(
     templateId: string,
     userId: string,
-    userName: string
+    userName: string,
   ): Promise<RequestTemplate> {
     try {
       const updatedTemplate = await this.updateTemplate(
@@ -395,73 +402,73 @@ export class RequestsService {
         { status: TemplateStatus.ARCHIVED },
         userId,
         userName,
-        false
+        false,
       );
-      
+
       log.success('Template archived', { templateId });
-      
+
       return updatedTemplate;
     } catch (error) {
       log.error('Failed to archive template', error as Error, { templateId });
       throw new Error(`Failed to archive template: ${error}`);
     }
   }
-  
+
   // ==========================================================================
   // REQUEST MANAGEMENT (WITH ZOD VALIDATION)
   // ==========================================================================
-  
+
   /**
    * Helper to validate and heal a request object
    */
   private validateAndHealRequest(data: Record<string, unknown>): Request {
     const result = RequestSchema.safeParse(data);
-    
+
     if (result.success) {
       return result.data as Request;
     } else {
-      log.warn('Found malformed request, attempting to heal', { 
-        requestId: data.id, 
-        errors: result.error.errors 
+      log.warn('Found malformed request, attempting to heal', {
+        requestId: data.id,
+        errors: result.error.errors,
       });
-      
+
       // If Zod fails, we can either return null or try to force it.
       // Since our schema uses .default() heavily, safeParse should succeed even for partial data.
       // If it fails, it means there's a type mismatch that couldn't be coerced (e.g. array vs object).
       // In that case, we might need to return a minimal valid object or the original data casted
       // (but original data causes frontend crashes).
-      
+
       // Attempt to salvage ID and TemplateID at minimum
       const salvaged: Request = {
-         id: data.id || 'unknown',
-         templateId: data.templateId || 'unknown',
-         templateVersion: data.templateVersion || 1,
-         status: data.status || RequestStatus.NEW,
-         priority: data.priority || RequestPriority.MEDIUM,
-         requestDetails: data.requestDetails || {},
-         assignees: Array.isArray(data.assignees) ? data.assignees : [],
-         complianceApproval: {
-           required: false,
-           checklistStatus: [],
-           ...data.complianceApproval
-         },
-         lifecycle: {
-           stageHistory: [],
-           ...data.lifecycle
-         },
-         complianceSignOff: {
-           required: false,
-           deficiencies: [],
-           ...data.complianceSignOff
-         },
-         finalised: !!data.finalised,
-         documentIds: Array.isArray(data.documentIds) ? data.documentIds : [],
-         createdBy: data.createdBy || 'system',
-         createdAt: data.createdAt || new Date().toISOString(),
-         updatedBy: data.updatedBy || 'system',
-         updatedAt: data.updatedAt || new Date().toISOString(),
+        id: data.id || 'unknown',
+        templateId: data.templateId || 'unknown',
+        templateVersion: data.templateVersion || 1,
+        status: data.status || RequestStatus.NEW,
+        priority: data.priority || RequestPriority.MEDIUM,
+        requestDetails: data.requestDetails || {},
+        assignees: Array.isArray(data.assignees) ? data.assignees : [],
+        complianceApproval: {
+          required: false,
+          checklistStatus: [],
+          ...data.complianceApproval,
+        },
+        lifecycle: {
+          stageHistory: [],
+          ...data.lifecycle,
+        },
+        complianceSignOff: {
+          required: false,
+          deficiencies: [],
+          ...data.complianceSignOff,
+        },
+        finalised: !!data.finalised,
+        documentIds: Array.isArray(data.documentIds) ? data.documentIds : [],
+        createdBy: data.createdBy || 'system',
+        createdAt: data.createdAt || new Date().toISOString(),
+        updatedBy: data.updatedBy || 'system',
+        updatedAt: data.updatedAt || new Date().toISOString(),
       };
-      
+
       return salvaged;
     }
   }
@@ -478,15 +485,15 @@ export class RequestsService {
     try {
       // Remove generic type argument
       const rawRequests = await kv.getByPrefix('requests:request:');
-      
+
       // Validate and heal every request
-      const validRequests = rawRequests.map(r => this.validateAndHealRequest(r));
-      
+      const validRequests = rawRequests.map((r) => this.validateAndHealRequest(r));
+
       if (!filters) {
         return validRequests;
       }
-      
-      return validRequests.filter(request => {
+
+      return validRequests.filter((request) => {
         if (filters.status && !filters.status.includes(request.status)) {
           return false;
         }
@@ -496,7 +503,7 @@ export class RequestsService {
         if (filters.clientId && request.clientId !== filters.clientId) {
           return false;
         }
-        if (filters.assigneeId && !request.assignees.some(a => a.userId === filters.assigneeId)) {
+        if (filters.assigneeId && !request.assignees.some((a) => a.userId === filters.assigneeId)) {
           return false;
         }
         return true;
@@ -506,7 +513,7 @@ export class RequestsService {
       throw new APIError(`Failed to retrieve requests: ${(error as Error).message}`, 500);
     }
   }
-  
+
   /**
    * Get a single request by ID
    */
@@ -514,15 +521,15 @@ export class RequestsService {
     try {
       // Remove generic type argument
       const rawRequest = await kv.get(`requests:request:${requestId}`);
-      
+
       if (!rawRequest) return null;
-      
+
       return this.validateAndHealRequest(rawRequest);
     } catch (error) {
       throw new APIError(`Failed to retrieve request: ${error}`, 500);
     }
   }
-  
+
   /**
    * Create a new request from a template
    */
@@ -536,29 +543,29 @@ export class RequestsService {
       priority?: RequestPriority;
     },
     userId: string,
-    userName: string
+    userName: string,
   ): Promise<Request> {
     try {
       const template = await this.getTemplateById(templateId);
-      
+
       if (!template) {
         throw new Error('Template not found');
       }
-      
+
       if (template.status !== TemplateStatus.ACTIVE) {
         throw new Error('Cannot create request from inactive template');
       }
-      
+
       const now = new Date().toISOString();
       const requestId = `req_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-      
+
       // Initialize compliance checklist status
-      const checklistStatus = template.complianceApprovalConfig.checklistItems.map(item => ({
+      const checklistStatus = template.complianceApprovalConfig.checklistItems.map((item) => ({
         itemId: item.id,
         completed: false,
         evidenceDocumentIds: [],
       }));
-      
+
       const newRequest: Request = {
         id: requestId,
         templateId: template.id,
@@ -587,24 +594,24 @@ export class RequestsService {
         updatedBy: userId,
         updatedAt: now,
       };
-      
+
       await kv.set(`requests:request:${requestId}`, newRequest);
-      
+
       // Create audit log entry
       await this.createAuditLogEntry(requestId, AuditAction.CREATED, userId, userName, {
         templateId,
         templateName: template.name,
       });
-      
+
       log.success('Request created', { requestId, templateId });
-      
+
       return newRequest;
     } catch (error) {
       log.error('Failed to create request', error as Error, { templateId });
       throw new Error(`Failed to create request: ${error}`);
     }
   }
-  
+
   /**
    * Update a request
    */
@@ -612,43 +619,43 @@ export class RequestsService {
     requestId: string,
     updates: Partial<Request>,
     userId: string,
-    userName: string
+    userName: string,
   ): Promise<Request> {
     try {
       const existingRequest = await this.getRequestById(requestId);
-      
+
       if (!existingRequest) {
         throw new Error('Request not found');
       }
-      
+
       if (existingRequest.finalised) {
         throw new Error('Cannot update finalised request');
       }
-      
+
       const now = new Date().toISOString();
-      
+
       const updatedRequest: Request = {
         ...existingRequest,
         ...updates,
         updatedBy: userId,
         updatedAt: now,
       };
-      
+
       await kv.set(`requests:request:${requestId}`, updatedRequest);
-      
+
       await this.createAuditLogEntry(requestId, AuditAction.UPDATED, userId, userName, {
         changes: updates,
       });
-      
+
       log.success('Request updated', { requestId });
-      
+
       return updatedRequest;
     } catch (error) {
       log.error('Failed to update request', error as Error, { requestId });
       throw new Error(`Failed to update request: ${error}`);
     }
   }
-  
+
   /**
    * Move request to a different lifecycle stage
    */
@@ -657,36 +664,36 @@ export class RequestsService {
     targetStageId: string,
     userId: string,
     userName: string,
-    notes?: string
+    notes?: string,
   ): Promise<Request> {
     try {
       const request = await this.getRequestById(requestId);
-      
+
       if (!request) {
         throw new Error('Request not found');
       }
-      
+
       const template = await this.getTemplateById(request.templateId);
-      
+
       if (!template) {
         throw new Error('Template not found');
       }
-      
+
       const now = new Date().toISOString();
-      
+
       // Check if this is the first stage entry
       const isFirstStage = request.lifecycle.stageHistory.length === 0;
-      
+
       // Exit current stage if exists
       if (request.lifecycle.currentStageId) {
         const currentStageIndex = request.lifecycle.stageHistory.findIndex(
-          s => s.stageId === request.lifecycle.currentStageId && !s.exitedAt
+          (s) => s.stageId === request.lifecycle.currentStageId && !s.exitedAt,
         );
         if (currentStageIndex >= 0) {
           request.lifecycle.stageHistory[currentStageIndex].exitedAt = now;
         }
       }
-      
+
       // Enter new stage
       request.lifecycle.currentStageId = targetStageId;
       request.lifecycle.stageHistory.push({
@@ -694,29 +701,29 @@ export class RequestsService {
         enteredAt: now,
         completedRequirements: [],
       });
-      
+
       // If entering lifecycle for the first time, update status
       if (isFirstStage) {
         request.status = RequestStatus.IN_LIFECYCLE;
         request.lifecycle.startedAt = now;
       }
-      
+
       const updatedRequest = await this.updateRequest(requestId, request, userId, userName);
-      
+
       await this.createAuditLogEntry(requestId, AuditAction.STAGE_MOVED_FORWARD, userId, userName, {
         targetStageId,
         notes,
       });
-      
+
       log.success('Lifecycle stage moved', { requestId, targetStageId });
-      
+
       return updatedRequest;
     } catch (error) {
       log.error('Failed to move lifecycle stage', error as Error, { requestId });
       throw new Error(`Failed to move lifecycle stage: ${error}`);
     }
   }
-  
+
   /**
    * Update compliance sign-off
    */
@@ -729,23 +736,23 @@ export class RequestsService {
       description: string;
       requiresDocument: boolean;
       requiresComment: boolean;
-    }>
+    }>,
   ): Promise<Request> {
     try {
       const request = await this.getRequestById(requestId);
-      
+
       if (!request) {
         throw new Error('Request not found');
       }
-      
+
       const now = new Date().toISOString();
-      
+
       request.complianceSignOff.outcome = outcome;
       request.complianceSignOff.approvedBy = userId;
       request.complianceSignOff.approvedAt = now;
-      
+
       if (outcome === ApprovalOutcome.DEFICIENT && deficiencies) {
-        request.complianceSignOff.deficiencies = deficiencies.map(d => ({
+        request.complianceSignOff.deficiencies = deficiencies.map((d) => ({
           id: `def_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
           ...d,
           createdBy: userId,
@@ -753,108 +760,105 @@ export class RequestsService {
           remedialDocumentIds: [],
         }));
       }
-      
+
       if (outcome === ApprovalOutcome.APPROVED) {
         request.status = RequestStatus.IN_SIGN_OFF;
       }
-      
+
       const updatedRequest = await this.updateRequest(requestId, request, userId, userName);
-      
+
       await this.createAuditLogEntry(
         requestId,
-        outcome === ApprovalOutcome.APPROVED ? AuditAction.COMPLIANCE_APPROVED : AuditAction.COMPLIANCE_REJECTED,
+        outcome === ApprovalOutcome.APPROVED
+          ? AuditAction.COMPLIANCE_APPROVED
+          : AuditAction.COMPLIANCE_REJECTED,
         userId,
         userName,
-        { outcome, deficiencies }
+        { outcome, deficiencies },
       );
-      
+
       log.success('Compliance sign-off updated', { requestId, outcome });
-      
+
       return updatedRequest;
     } catch (error) {
       log.error('Failed to update compliance sign-off', error as Error, { requestId });
       throw new Error(`Failed to update compliance sign-off: ${error}`);
     }
   }
-  
+
   /**
    * Finalise a request
    */
-  async finaliseRequest(
-    requestId: string,
-    userId: string,
-    userName: string
-  ): Promise<Request> {
+  async finaliseRequest(requestId: string, userId: string, userName: string): Promise<Request> {
     try {
       const request = await this.getRequestById(requestId);
-      
+
       if (!request) {
         throw new Error('Request not found');
       }
-      
+
       const template = await this.getTemplateById(request.templateId);
-      
+
       if (!template) {
         throw new Error('Template not found');
       }
-      
+
       // Validate all requirements are met
-      if (request.complianceSignOff.required && request.complianceSignOff.outcome !== ApprovalOutcome.APPROVED) {
+      if (
+        request.complianceSignOff.required &&
+        request.complianceSignOff.outcome !== ApprovalOutcome.APPROVED
+      ) {
         throw new Error('Compliance sign-off must be approved before finalisation');
       }
-      
+
       const now = new Date().toISOString();
-      
+
       request.finalised = true;
       request.finalisedAt = now;
       request.finalisedBy = userId;
       request.status = RequestStatus.COMPLETED;
-      
+
       const updatedRequest = await this.updateRequest(requestId, request, userId, userName);
-      
+
       await this.createAuditLogEntry(requestId, AuditAction.FINALISED, userId, userName, {
         finalisedAt: now,
       });
-      
+
       log.success('Request finalised', { requestId });
-      
+
       return updatedRequest;
     } catch (error) {
       log.error('Failed to finalise request', error as Error, { requestId });
       throw new Error(`Failed to finalise request: ${error}`);
     }
   }
-  
+
   /**
    * Delete a request
    */
-  async deleteRequest(
-    requestId: string,
-    userId: string,
-    userName: string
-  ): Promise<void> {
+  async deleteRequest(requestId: string, userId: string, userName: string): Promise<void> {
     try {
       const request = await this.getRequestById(requestId);
-      
+
       if (!request) {
         throw new Error('Request not found');
       }
-      
+
       await kv.del(`requests:request:${requestId}`);
-      
+
       await this.createAuditLogEntry(requestId, AuditAction.DELETED, userId, userName, {});
-      
+
       log.success('Request deleted', { requestId });
     } catch (error) {
       log.error('Failed to delete request', error as Error, { requestId });
       throw new Error(`Failed to delete request: ${error}`);
     }
   }
-  
+
   // ==========================================================================
   // AUDIT LOG
   // ==========================================================================
-  
+
   /**
    * Create an audit log entry
    */
@@ -865,12 +869,12 @@ export class RequestsService {
     userName: string,
     details: Record<string, unknown>,
     previousValue?: unknown,
-    newValue?: unknown
+    newValue?: unknown,
   ): Promise<void> {
     try {
       const now = new Date().toISOString();
       const auditId = `audit_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-      
+
       const entry: AuditLogEntry = {
         id: auditId,
         requestId,
@@ -882,14 +886,14 @@ export class RequestsService {
         previousValue,
         newValue,
       };
-      
+
       await kv.set(`requests:audit:${requestId}:${now}`, entry);
     } catch (error) {
       // Don't throw - audit logging should not break main operations
       log.warn('Failed to create audit log entry', { requestId, action, error });
     }
   }
-  
+
   /**
    * Get audit log for a request
    */

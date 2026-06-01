@@ -1,9 +1,9 @@
 /**
  * Task Management Module - Main Index
  * Navigate Wealth Admin Dashboard
- * 
+ *
  * Public API for the Task Management module
- * 
+ *
  * @module tasks
  */
 
@@ -52,12 +52,7 @@ export {
   BOARD_COLUMNS,
 } from './constants';
 
-export {
-  isTaskStatus,
-  isTaskPriority,
-  isTaskCategory,
-  isTask,
-} from './types';
+export { isTaskStatus, isTaskPriority, isTaskCategory, isTask } from './types';
 
 // API Layer
 export { TasksAPI, TaskStatsAPI, TaskFilterAPI } from './api';

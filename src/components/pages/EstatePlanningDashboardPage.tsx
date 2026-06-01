@@ -39,7 +39,8 @@ export function EstatePlanningDashboardPage() {
       result.push({
         id: 'est-no-fna',
         title: 'Complete Your Estate Assessment',
-        description: 'An estate planning analysis ensures your assets are protected, your family is provided for, and estate duty exposure is minimised.',
+        description:
+          'An estate planning analysis ensures your assets are protected, your family is provided for, and estate duty exposure is minimised.',
         severity: 'high',
         onClick: scrollToPanel,
       });
@@ -50,7 +51,8 @@ export function EstatePlanningDashboardPage() {
       result.push({
         id: 'est-no-will',
         title: 'Will Not Yet Drafted',
-        description: 'Dying without a valid Will means your estate will be distributed according to the Intestate Succession Act, which may not reflect your wishes.',
+        description:
+          'Dying without a valid Will means your estate will be distributed according to the Intestate Succession Act, which may not reflect your wishes.',
         severity: 'high',
       });
     } else if (estate.lastUpdated) {
@@ -70,7 +72,8 @@ export function EstatePlanningDashboardPage() {
       result.push({
         id: 'est-no-trust',
         title: 'Consider a Trust',
-        description: 'A trust can protect assets for minor children, reduce estate duty, and provide continuity. Discuss with your adviser whether a trust is appropriate.',
+        description:
+          'A trust can protect assets for minor children, reduce estate duty, and provide continuity. Discuss with your adviser whether a trust is appropriate.',
         severity: 'low',
       });
     }
@@ -79,7 +82,8 @@ export function EstatePlanningDashboardPage() {
       result.push({
         id: 'est-nominations',
         title: 'Beneficiary Nominations Incomplete',
-        description: 'Ensure all your policies (life insurance, retirement, investments) have up-to-date beneficiary nominations to avoid delays in claims.',
+        description:
+          'Ensure all your policies (life insurance, retirement, investments) have up-to-date beneficiary nominations to avoid delays in claims.',
         severity: 'medium',
       });
     }
@@ -89,7 +93,8 @@ export function EstatePlanningDashboardPage() {
       result.push({
         id: 'est-duty-exposure',
         title: 'Estate Duty Exposure',
-        description: 'Your total wealth exceeds the R3.5 million estate duty abatement. Proper planning can reduce the tax burden on your heirs.',
+        description:
+          'Your total wealth exceeds the R3.5 million estate duty abatement. Proper planning can reduce the tax burden on your heirs.',
         severity: 'medium',
       });
     }

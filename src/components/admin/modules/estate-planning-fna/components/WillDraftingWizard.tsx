@@ -17,12 +17,7 @@
  */
 
 import React, { useState, useEffect, useMemo } from 'react';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from '../../../../ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../../../../ui/dialog';
 import { Button } from '../../../../ui/button';
 import {
   ArrowLeft,
@@ -102,7 +97,9 @@ export function WillDraftingWizard({
   const isLivingWill = willType === 'living_will';
 
   const [willData, setWillData] = useState<WillData>(createDefaultWillData());
-  const [livingWillData, setLivingWillData] = useState<LivingWillData>(createDefaultLivingWillData());
+  const [livingWillData, setLivingWillData] = useState<LivingWillData>(
+    createDefaultLivingWillData(),
+  );
 
   // ── Reset state when wizard opens for a NEW draft ────────────────
   useEffect(() => {
@@ -145,7 +142,9 @@ export function WillDraftingWizard({
         } else {
           setWillData(existing.data as WillData);
         }
-        toast.success('Draft loaded', { description: 'You can continue editing where you left off.' });
+        toast.success('Draft loaded', {
+          description: 'You can continue editing where you left off.',
+        });
       } catch (err) {
         console.error('Error loading existing will draft:', err);
         toast.error('Failed to load existing draft. Starting fresh.');
@@ -165,12 +164,15 @@ export function WillDraftingWizard({
       try {
         const API_BASE = `https://${projectId}.supabase.co/functions/v1/make-server-91ed8379`;
         const token = await getEstatePlanningAuthToken();
-        const response = await fetch(`${API_BASE}/estate-planning-fna/wills/client/${clientId}/profile-prefill`, {
-          headers: {
-            Authorization: `Bearer ${token}`,
-            'Content-Type': 'application/json',
+        const response = await fetch(
+          `${API_BASE}/estate-planning-fna/wills/client/${clientId}/profile-prefill`,
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+              'Content-Type': 'application/json',
+            },
           },
-        });
+        );
 
         if (!response.ok) {
           console.error('Failed to fetch client profile for will pre-fill:', response.status);
@@ -190,7 +192,10 @@ export function WillDraftingWizard({
         // The KV profile may store personal data under a nested `personalInformation`
         // key, or directly at the top level. Check both paths (nested first, then flat).
         const pi = profile?.personalInformation || profile || {};
-        console.log('Profile pre-fill: raw profile keys', profile ? Object.keys(profile) : '(null)');
+        console.log(
+          'Profile pre-fill: raw profile keys',
+          profile ? Object.keys(profile) : '(null)',
+        );
         console.log('Profile pre-fill: pi keys', Object.keys(pi));
         console.log('Profile pre-fill: clientKeys IDs', ckRaw ? Object.keys(ckRaw) : '(null)');
 
@@ -240,7 +245,12 @@ export function WillDraftingWizard({
           if (!status) return 'single';
           const lower = status.toLowerCase();
           if (lower.includes('community')) return 'married_cop';
-          if (lower.includes('anc') || lower.includes('accrual') || lower.includes('out of community')) return 'married_anc';
+          if (
+            lower.includes('anc') ||
+            lower.includes('accrual') ||
+            lower.includes('out of community')
+          )
+            return 'married_anc';
           if (lower.includes('customary')) return 'married_customary';
           if (lower.includes('divorced')) return 'divorced';
           if (lower.includes('widowed')) return 'widowed';
@@ -261,7 +271,12 @@ export function WillDraftingWizard({
         const addressStr = addressParts.join(', ');
 
         // ── Pre-fill personal details ──────────────────────
-        const fullName = [field('title'), field('firstName'), field('middleName'), field('lastName')]
+        const fullName = [
+          field('title'),
+          field('firstName'),
+          field('middleName'),
+          field('lastName'),
+        ]
           .filter(Boolean)
           .join(' ');
 
@@ -291,13 +306,15 @@ export function WillDraftingWizard({
           // ── Pre-fill family members as potential beneficiaries (last will only) ──
           const familyMembers = pi.familyMembers || profile.familyMembers || [];
           if (familyMembers.length > 0) {
-            const preFillBeneficiaries: Beneficiary[] = familyMembers.map((fm: { fullName?: string; idPassportNumber?: string; relationship?: string }) => ({
-              id: Date.now().toString() + '-' + Math.random().toString(36).slice(2, 6),
-              name: fm.fullName || '',
-              idNumber: fm.idPassportNumber || '',
-              relationship: fm.relationship || '',
-              percentage: 0,
-            }));
+            const preFillBeneficiaries: Beneficiary[] = familyMembers.map(
+              (fm: { fullName?: string; idPassportNumber?: string; relationship?: string }) => ({
+                id: Date.now().toString() + '-' + Math.random().toString(36).slice(2, 6),
+                name: fm.fullName || '',
+                idNumber: fm.idPassportNumber || '',
+                relationship: fm.relationship || '',
+                percentage: 0,
+              }),
+            );
             setWillData((prev) => ({
               ...prev,
               beneficiaries: preFillBeneficiaries,
@@ -319,25 +336,96 @@ export function WillDraftingWizard({
   }, [open, clientId]);
 
   // ── Steps configuration ──────────────────────────────────────────
-  const steps: { id: WizardStep; label: string; icon: React.ElementType; description: string }[] = isLivingWill
-    ? [
-        { id: 'personal-details', label: 'Personal Details', icon: User, description: 'Testator identification and address' },
-        { id: 'healthcare-agents', label: 'Healthcare Agents', icon: Shield, description: 'Appoint healthcare decision-makers' },
-        { id: 'life-sustaining', label: 'Treatment', icon: Activity, description: 'Life-sustaining treatment preferences' },
-        { id: 'pain-management', label: 'Pain Management', icon: Stethoscope, description: 'Comfort care and pain relief' },
-        { id: 'organ-donation', label: 'Organ Donation', icon: HandHeart, description: 'Organ and tissue donation wishes' },
-        { id: 'living-will-wishes', label: 'Final Wishes', icon: Heart, description: 'Funeral and end-of-life directives' },
-        { id: 'review', label: 'Review', icon: CheckCircle2, description: 'Review and save the draft' },
-      ]
-    : [
-        { id: 'personal-details', label: 'Personal Details', icon: User, description: 'Testator identification and address' },
-        { id: 'executors', label: 'Executors', icon: Briefcase, description: 'Appoint estate administrators' },
-        { id: 'beneficiaries', label: 'Beneficiaries', icon: Users, description: 'Designate heirs and their shares' },
-        { id: 'guardians', label: 'Guardians', icon: Shield, description: 'Guardians for minor children' },
-        { id: 'bequests', label: 'Bequests', icon: Home, description: 'Specific items to specific people' },
-        { id: 'funeral-wishes', label: 'Final Wishes', icon: FileText, description: 'Funeral wishes and additional clauses' },
-        { id: 'review', label: 'Review', icon: CheckCircle2, description: 'Review and save the draft' },
-      ];
+  const steps: { id: WizardStep; label: string; icon: React.ElementType; description: string }[] =
+    isLivingWill
+      ? [
+          {
+            id: 'personal-details',
+            label: 'Personal Details',
+            icon: User,
+            description: 'Testator identification and address',
+          },
+          {
+            id: 'healthcare-agents',
+            label: 'Healthcare Agents',
+            icon: Shield,
+            description: 'Appoint healthcare decision-makers',
+          },
+          {
+            id: 'life-sustaining',
+            label: 'Treatment',
+            icon: Activity,
+            description: 'Life-sustaining treatment preferences',
+          },
+          {
+            id: 'pain-management',
+            label: 'Pain Management',
+            icon: Stethoscope,
+            description: 'Comfort care and pain relief',
+          },
+          {
+            id: 'organ-donation',
+            label: 'Organ Donation',
+            icon: HandHeart,
+            description: 'Organ and tissue donation wishes',
+          },
+          {
+            id: 'living-will-wishes',
+            label: 'Final Wishes',
+            icon: Heart,
+            description: 'Funeral and end-of-life directives',
+          },
+          {
+            id: 'review',
+            label: 'Review',
+            icon: CheckCircle2,
+            description: 'Review and save the draft',
+          },
+        ]
+      : [
+          {
+            id: 'personal-details',
+            label: 'Personal Details',
+            icon: User,
+            description: 'Testator identification and address',
+          },
+          {
+            id: 'executors',
+            label: 'Executors',
+            icon: Briefcase,
+            description: 'Appoint estate administrators',
+          },
+          {
+            id: 'beneficiaries',
+            label: 'Beneficiaries',
+            icon: Users,
+            description: 'Designate heirs and their shares',
+          },
+          {
+            id: 'guardians',
+            label: 'Guardians',
+            icon: Shield,
+            description: 'Guardians for minor children',
+          },
+          {
+            id: 'bequests',
+            label: 'Bequests',
+            icon: Home,
+            description: 'Specific items to specific people',
+          },
+          {
+            id: 'funeral-wishes',
+            label: 'Final Wishes',
+            icon: FileText,
+            description: 'Funeral wishes and additional clauses',
+          },
+          {
+            id: 'review',
+            label: 'Review',
+            icon: CheckCircle2,
+            description: 'Review and save the draft',
+          },
+        ];
 
   const currentStepIndex = steps.findIndex((s) => s.id === currentStep);
 
@@ -368,7 +456,13 @@ export function WillDraftingWizard({
 
       case 'life-sustaining': {
         const t = livingWillData.lifeSustainingTreatment;
-        const treatments = ['ventilator', 'cpr', 'artificialNutrition', 'dialysis', 'antibiotics'] as const;
+        const treatments = [
+          'ventilator',
+          'cpr',
+          'artificialNutrition',
+          'dialysis',
+          'antibiotics',
+        ] as const;
         treatments.forEach((key) => {
           if (!t[key]) errors.push(`Treatment preference for ${key} is required`);
         });
@@ -413,7 +507,8 @@ export function WillDraftingWizard({
     if (errors.length > 0) {
       setValidationErrors(errors);
       // Show only if there are blocking errors (not warnings)
-      const isBlocking = currentStep === 'personal-details' ||
+      const isBlocking =
+        currentStep === 'personal-details' ||
         currentStep === 'healthcare-agents' ||
         currentStep === 'life-sustaining';
       if (isBlocking) {
@@ -492,9 +587,7 @@ export function WillDraftingWizard({
           'Content-Type': 'application/json',
         },
         body: JSON.stringify(
-          isUpdate
-            ? { data: dataPayload }
-            : { clientId, type: willType, data: dataPayload }
+          isUpdate ? { data: dataPayload } : { clientId, type: willType, data: dataPayload },
         ),
       });
 
@@ -556,7 +649,7 @@ export function WillDraftingWizard({
     setLivingWillData((prev) => ({
       ...prev,
       healthcareAgents: prev.healthcareAgents.map((a) =>
-        a.id === id ? { ...a, [field]: value } : a
+        a.id === id ? { ...a, [field]: value } : a,
       ),
     }));
   };
@@ -585,7 +678,7 @@ export function WillDraftingWizard({
     setWillData((prev) => ({
       ...prev,
       executors: prev.executors.map((exec) =>
-        exec.id === id ? { ...exec, [field]: value } : exec
+        exec.id === id ? { ...exec, [field]: value } : exec,
       ),
     }));
   };
@@ -615,7 +708,7 @@ export function WillDraftingWizard({
     setWillData((prev) => ({
       ...prev,
       beneficiaries: prev.beneficiaries.map((ben) =>
-        ben.id === id ? { ...ben, [field]: value } : ben
+        ben.id === id ? { ...ben, [field]: value } : ben,
       ),
     }));
   };
@@ -645,7 +738,7 @@ export function WillDraftingWizard({
     setWillData((prev) => ({
       ...prev,
       guardians: prev.guardians.map((guard) =>
-        guard.id === id ? { ...guard, [field]: value } : guard
+        guard.id === id ? { ...guard, [field]: value } : guard,
       ),
     }));
   };
@@ -674,7 +767,7 @@ export function WillDraftingWizard({
     setWillData((prev) => ({
       ...prev,
       specificBequests: prev.specificBequests.map((beq) =>
-        beq.id === id ? { ...beq, [field]: value } : beq
+        beq.id === id ? { ...beq, [field]: value } : beq,
       ),
     }));
   };
@@ -689,7 +782,7 @@ export function WillDraftingWizard({
   // ── Derived helpers ──────────────────────────────────────────────
   const beneficiaryTotal = useMemo(
     () => willData.beneficiaries.reduce((s, b) => s + b.percentage, 0),
-    [willData.beneficiaries]
+    [willData.beneficiaries],
   );
 
   // ═══════════════════════════════════════════════════════
@@ -777,7 +870,10 @@ export function WillDraftingWizard({
             onInstructionsChange={(instructions) =>
               setLivingWillData((prev) => ({
                 ...prev,
-                lifeSustainingTreatment: { ...prev.lifeSustainingTreatment, additionalInstructions: instructions },
+                lifeSustainingTreatment: {
+                  ...prev.lifeSustainingTreatment,
+                  additionalInstructions: instructions,
+                },
               }))
             }
           />
@@ -809,7 +905,11 @@ export function WillDraftingWizard({
             onDonorChange={(isDonor) =>
               setLivingWillData((prev) => ({
                 ...prev,
-                organDonation: { ...prev.organDonation, isDonor, donationType: isDonor ? 'all' : 'none' },
+                organDonation: {
+                  ...prev.organDonation,
+                  isDonor,
+                  donationType: isDonor ? 'all' : 'none',
+                },
               }))
             }
             onTypeChange={(type) =>
@@ -870,31 +970,40 @@ export function WillDraftingWizard({
   const HeaderIcon = isLivingWill ? Heart : Scroll;
 
   return (
-    <Dialog open={open} onOpenChange={(nextOpen) => { if (!nextOpen) onClose(); }}>
+    <Dialog
+      open={open}
+      onOpenChange={(nextOpen) => {
+        if (!nextOpen) onClose();
+      }}
+    >
       <DialogContent
         hideCloseButton
         className="!max-w-5xl w-[95vw] max-h-[90vh] !p-0 !gap-0 overflow-hidden"
         style={{ display: 'flex', flexDirection: 'column' }}
       >
-
         {/* ── Header ───────────────────────────────────────── */}
         <div className="shrink-0 border-b border-gray-100">
           {/* Accent bar */}
-          <div className={`h-1 w-full ${isLivingWill ? 'bg-gradient-to-r from-blue-500 to-blue-600' : 'bg-gradient-to-r from-[#6d28d9] to-[#7c3aed]'}`} />
+          <div
+            className={`h-1 w-full ${isLivingWill ? 'bg-gradient-to-r from-blue-500 to-blue-600' : 'bg-gradient-to-r from-[#6d28d9] to-[#7c3aed]'}`}
+          />
           <DialogHeader className="px-6 py-4">
             <div className="flex items-center gap-3">
-              <div className={`h-10 w-10 rounded-lg flex items-center justify-center shrink-0 ${
-                isLivingWill ? 'bg-blue-50' : 'bg-purple-50'
-              }`}>
-                <HeaderIcon className={`h-5 w-5 ${isLivingWill ? 'text-blue-600' : 'text-[#6d28d9]'}`} />
+              <div
+                className={`h-10 w-10 rounded-lg flex items-center justify-center shrink-0 ${
+                  isLivingWill ? 'bg-blue-50' : 'bg-purple-50'
+                }`}
+              >
+                <HeaderIcon
+                  className={`h-5 w-5 ${isLivingWill ? 'text-blue-600' : 'text-[#6d28d9]'}`}
+                />
               </div>
               <div>
                 <DialogTitle className="text-lg font-semibold text-gray-900">
-                  {existingWillId ? 'Resume' : 'Draft'} {isLivingWill ? 'Living Will' : 'Last Will & Testament'}
+                  {existingWillId ? 'Resume' : 'Draft'}{' '}
+                  {isLivingWill ? 'Living Will' : 'Last Will & Testament'}
                 </DialogTitle>
-                <p className="text-sm text-muted-foreground mt-0.5">
-                  {clientName}
-                </p>
+                <p className="text-sm text-muted-foreground mt-0.5">{clientName}</p>
               </div>
             </div>
           </DialogHeader>
@@ -918,8 +1027,8 @@ export function WillDraftingWizard({
                         isActive
                           ? `ring-4 ${isLivingWill ? 'bg-blue-600 ring-blue-100' : 'bg-[#6d28d9] ring-purple-100'} text-white`
                           : isCompleted
-                          ? 'bg-green-600 text-white'
-                          : 'bg-white border-2 border-gray-200 text-gray-400'
+                            ? 'bg-green-600 text-white'
+                            : 'bg-white border-2 border-gray-200 text-gray-400'
                       }`}
                     >
                       {isCompleted ? (
@@ -929,13 +1038,17 @@ export function WillDraftingWizard({
                       )}
                     </div>
                     {/* Step label */}
-                    <span className={`text-[10px] mt-1.5 text-center leading-tight font-medium whitespace-nowrap ${
-                      isActive
-                        ? isLivingWill ? 'text-blue-700' : 'text-[#6d28d9]'
-                        : isCompleted
-                        ? 'text-green-700'
-                        : 'text-gray-400'
-                    }`}>
+                    <span
+                      className={`text-[10px] mt-1.5 text-center leading-tight font-medium whitespace-nowrap ${
+                        isActive
+                          ? isLivingWill
+                            ? 'text-blue-700'
+                            : 'text-[#6d28d9]'
+                          : isCompleted
+                            ? 'text-green-700'
+                            : 'text-gray-400'
+                      }`}
+                    >
                       {step.label}
                     </span>
                   </div>
@@ -963,7 +1076,9 @@ export function WillDraftingWizard({
               <AlertCircle className="h-4 w-4 text-red-600 mt-0.5 shrink-0" />
               <div className="space-y-0.5">
                 {validationErrors.map((err, idx) => (
-                  <p key={idx} className="text-sm text-red-700">{err}</p>
+                  <p key={idx} className="text-sm text-red-700">
+                    {err}
+                  </p>
                 ))}
               </div>
             </div>
@@ -972,9 +1087,11 @@ export function WillDraftingWizard({
 
         {/* ── Step Content ─────────────────────────────────── */}
         <div className="flex-1 overflow-y-auto px-6 py-5 min-h-0">
-          {(isLoadingProfile || isLoadingDraft) ? (
+          {isLoadingProfile || isLoadingDraft ? (
             <div className="flex flex-col items-center justify-center py-20">
-              <Loader2 className={`h-10 w-10 animate-spin mb-4 ${isLivingWill ? 'text-blue-600' : 'text-[#6d28d9]'}`} />
+              <Loader2
+                className={`h-10 w-10 animate-spin mb-4 ${isLivingWill ? 'text-blue-600' : 'text-[#6d28d9]'}`}
+              />
               <p className="text-sm font-medium text-gray-700">
                 {isLoadingDraft ? 'Loading existing draft...' : 'Loading client profile...'}
               </p>
@@ -1007,7 +1124,10 @@ export function WillDraftingWizard({
               </span>
 
               {currentStepIndex < steps.length - 1 ? (
-                <Button onClick={handleNext} className={`text-sm gap-2 ${isLivingWill ? 'bg-blue-600 hover:bg-blue-700' : ''}`}>
+                <Button
+                  onClick={handleNext}
+                  className={`text-sm gap-2 ${isLivingWill ? 'bg-blue-600 hover:bg-blue-700' : ''}`}
+                >
                   Next
                   <ArrowRight className="h-4 w-4" />
                 </Button>
@@ -1033,7 +1153,6 @@ export function WillDraftingWizard({
             </div>
           </div>
         </div>
-
       </DialogContent>
     </Dialog>
   );

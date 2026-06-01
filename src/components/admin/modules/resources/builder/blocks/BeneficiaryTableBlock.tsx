@@ -12,7 +12,7 @@ export const BeneficiaryTableBlock: BlockDefinition = {
   category: 'tables',
   description: 'Nomination table',
   initialData: {
-    rowCount: 3
+    rowCount: 3,
   },
   render: ({ block }) => {
     const data = block.data as BeneficiaryTableData;
@@ -22,10 +22,18 @@ export const BeneficiaryTableBlock: BlockDefinition = {
         <table className="w-full text-[9.5px] border-collapse">
           <thead>
             <tr className="bg-gray-100">
-              <th className="border border-gray-200 px-2 py-1 text-left font-bold text-gray-700">Surname & Initials</th>
-              <th className="border border-gray-200 px-2 py-1 text-left font-bold text-gray-700 w-32">ID Number</th>
-              <th className="border border-gray-200 px-2 py-1 text-left font-bold text-gray-700 w-24">Relationship</th>
-              <th className="border border-gray-200 px-2 py-1 text-center font-bold text-gray-700 w-16">Share %</th>
+              <th className="border border-gray-200 px-2 py-1 text-left font-bold text-gray-700">
+                Surname & Initials
+              </th>
+              <th className="border border-gray-200 px-2 py-1 text-left font-bold text-gray-700 w-32">
+                ID Number
+              </th>
+              <th className="border border-gray-200 px-2 py-1 text-left font-bold text-gray-700 w-24">
+                Relationship
+              </th>
+              <th className="border border-gray-200 px-2 py-1 text-center font-bold text-gray-700 w-16">
+                Share %
+              </th>
             </tr>
           </thead>
           <tbody>
@@ -40,7 +48,9 @@ export const BeneficiaryTableBlock: BlockDefinition = {
           </tbody>
           <tfoot>
             <tr className="bg-gray-50 font-bold">
-              <td colSpan={3} className="border border-gray-200 px-2 py-1 text-right">Total Share</td>
+              <td colSpan={3} className="border border-gray-200 px-2 py-1 text-right">
+                Total Share
+              </td>
               <td className="border border-gray-200 px-2 py-1 text-center">100%</td>
             </tr>
           </tfoot>
@@ -50,30 +60,42 @@ export const BeneficiaryTableBlock: BlockDefinition = {
   },
   editor: ({ block, onChange }) => {
     return (
-       <div className="space-y-4">
-          <div className="space-y-2">
-             <Label className="text-xs">Number of Rows</Label>
-             <div className="flex items-center gap-2">
-                <Button 
-                   variant="outline" 
-                   size="icon"
-                   className="h-8 w-8"
-                   onClick={() => onChange('rowCount', Math.max(1, ((block.data as BeneficiaryTableData).rowCount || 3) - 1))}
-                >
-                   <Minus className="h-4 w-4" />
-                </Button>
-                <span className="w-8 text-center text-sm">{ (block.data as BeneficiaryTableData).rowCount || 3 }</span>
-                <Button 
-                   variant="outline" 
-                   size="icon"
-                   className="h-8 w-8"
-                   onClick={() => onChange('rowCount', Math.min(10, ((block.data as BeneficiaryTableData).rowCount || 3) + 1))}
-                >
-                   <Plus className="h-4 w-4" />
-                </Button>
-             </div>
+      <div className="space-y-4">
+        <div className="space-y-2">
+          <Label className="text-xs">Number of Rows</Label>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="icon"
+              className="h-8 w-8"
+              onClick={() =>
+                onChange(
+                  'rowCount',
+                  Math.max(1, ((block.data as BeneficiaryTableData).rowCount || 3) - 1),
+                )
+              }
+            >
+              <Minus className="h-4 w-4" />
+            </Button>
+            <span className="w-8 text-center text-sm">
+              {(block.data as BeneficiaryTableData).rowCount || 3}
+            </span>
+            <Button
+              variant="outline"
+              size="icon"
+              className="h-8 w-8"
+              onClick={() =>
+                onChange(
+                  'rowCount',
+                  Math.min(10, ((block.data as BeneficiaryTableData).rowCount || 3) + 1),
+                )
+              }
+            >
+              <Plus className="h-4 w-4" />
+            </Button>
           </div>
-       </div>
+        </div>
+      </div>
     );
-  }
+  },
 };

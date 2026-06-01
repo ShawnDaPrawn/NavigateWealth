@@ -2,16 +2,7 @@ import React from 'react';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '../ui/dialog';
 import { Button } from '../ui/button';
 import { Badge } from '../ui/badge';
-import { 
-  CheckCircle2,
-  Phone,
-  Mail,
-  Clock,
-  Calendar,
-  ArrowRight,
-  Star,
-  Shield
-} from 'lucide-react';
+import { CheckCircle2, Phone, Mail, Clock, Calendar, ArrowRight, Star, Shield } from 'lucide-react';
 import exampleImage from 'figma:asset/dbeb61494c13e4289499d3be7c162dbc9fb1c3bb.png';
 
 interface ThankYouModalProps {
@@ -47,7 +38,8 @@ export function ThankYouModal({ open, onOpenChange, clientName }: ThankYouModalP
               Thank You{firstName && `, ${firstName}`}!
             </DialogTitle>
             <DialogDescription className="text-lg text-gray-600 leading-relaxed max-w-2xl mx-auto text-center">
-              Your request has been received and one of our qualified financial advisers will contact you shortly to discuss your risk management needs.
+              Your request has been received and one of our qualified financial advisers will
+              contact you shortly to discuss your risk management needs.
             </DialogDescription>
           </div>
         </DialogHeader>
@@ -60,7 +52,7 @@ export function ThankYouModal({ open, onOpenChange, clientName }: ThankYouModalP
               <Calendar className="h-5 w-5 text-primary mr-2" />
               What Happens Next?
             </h3>
-            
+
             <div className="space-y-4">
               <div className="flex items-start space-x-4">
                 <div className="w-8 h-8 bg-primary/10 rounded-full flex items-center justify-center flex-shrink-0 mt-1">
@@ -68,27 +60,36 @@ export function ThankYouModal({ open, onOpenChange, clientName }: ThankYouModalP
                 </div>
                 <div>
                   <h4 className="font-semibold text-gray-900 mb-1">Initial Contact</h4>
-                  <p className="text-gray-600 text-sm">Our team will call you within 24 hours to acknowledge your request and schedule a convenient consultation time.</p>
+                  <p className="text-gray-600 text-sm">
+                    Our team will call you within 24 hours to acknowledge your request and schedule
+                    a convenient consultation time.
+                  </p>
                 </div>
               </div>
-              
+
               <div className="flex items-start space-x-4">
                 <div className="w-8 h-8 bg-primary/10 rounded-full flex items-center justify-center flex-shrink-0 mt-1">
                   <span className="text-primary font-bold text-sm">2</span>
                 </div>
                 <div>
                   <h4 className="font-semibold text-gray-900 mb-1">Needs Assessment</h4>
-                  <p className="text-gray-600 text-sm">We'll conduct a comprehensive review of your financial situation and risk management requirements.</p>
+                  <p className="text-gray-600 text-sm">
+                    We'll conduct a comprehensive review of your financial situation and risk
+                    management requirements.
+                  </p>
                 </div>
               </div>
-              
+
               <div className="flex items-start space-x-4">
                 <div className="w-8 h-8 bg-primary/10 rounded-full flex items-center justify-center flex-shrink-0 mt-1">
                   <span className="text-primary font-bold text-sm">3</span>
                 </div>
                 <div>
                   <h4 className="font-semibold text-gray-900 mb-1">Tailored Solutions</h4>
-                  <p className="text-gray-600 text-sm">Receive personalized recommendations from South Africa's leading insurance providers that match your specific needs and budget.</p>
+                  <p className="text-gray-600 text-sm">
+                    Receive personalized recommendations from South Africa's leading insurance
+                    providers that match your specific needs and budget.
+                  </p>
                 </div>
               </div>
             </div>
@@ -121,7 +122,9 @@ export function ThankYouModal({ open, onOpenChange, clientName }: ThankYouModalP
                 </div>
               </div>
               <p className="text-primary font-semibold mb-2">info@navigatewealth.co</p>
-              <p className="text-xs text-gray-500">We respond within 4 hours during business days</p>
+              <p className="text-xs text-gray-500">
+                We respond within 4 hours during business days
+              </p>
             </div>
           </div>
 
@@ -137,7 +140,7 @@ export function ThankYouModal({ open, onOpenChange, clientName }: ThankYouModalP
                   <p className="text-xs text-gray-600">Free consultation & quote</p>
                 </div>
               </div>
-              
+
               <div className="flex flex-col items-center space-y-2">
                 <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
                   <Shield className="h-5 w-5 text-blue-600" />
@@ -147,7 +150,7 @@ export function ThankYouModal({ open, onOpenChange, clientName }: ThankYouModalP
                   <p className="text-xs text-gray-600">Regulated financial advisers</p>
                 </div>
               </div>
-              
+
               <div className="flex flex-col items-center space-y-2">
                 <div className="w-10 h-10 bg-yellow-100 rounded-full flex items-center justify-center">
                   <Star className="h-5 w-5 text-yellow-600" />
@@ -167,8 +170,9 @@ export function ThankYouModal({ open, onOpenChange, clientName }: ThankYouModalP
               <div>
                 <h4 className="text-sm font-semibold text-blue-900 mb-1">Expected Response Time</h4>
                 <p className="text-sm text-blue-800">
-                  Our advisers typically contact new clients within <strong>24 hours</strong> during business days. 
-                  For urgent matters, please call us directly at the number provided above.
+                  Our advisers typically contact new clients within <strong>24 hours</strong> during
+                  business days. For urgent matters, please call us directly at the number provided
+                  above.
                 </p>
               </div>
             </div>
@@ -176,16 +180,16 @@ export function ThankYouModal({ open, onOpenChange, clientName }: ThankYouModalP
 
           {/* Action Buttons */}
           <div className="flex flex-col sm:flex-row gap-4 justify-center pt-4 border-t border-gray-100">
-            <Button 
+            <Button
               onClick={() => onOpenChange(false)}
               className="bg-primary text-primary-foreground hover:bg-primary/90 hover:scale-105 transform transition-all duration-200 px-8 shadow-lg hover:shadow-xl group"
             >
               <CheckCircle2 className="mr-2 h-5 w-5 group-hover:rotate-12 transition-transform duration-200" />
               Close
             </Button>
-            
-            <Button 
-              variant="outline" 
+
+            <Button
+              variant="outline"
               onClick={() => {
                 onOpenChange(false);
                 // Scroll to top or navigate to another section if needed

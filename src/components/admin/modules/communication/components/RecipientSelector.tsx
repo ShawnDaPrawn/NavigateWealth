@@ -6,7 +6,7 @@ import { Badge } from '../../../../ui/badge';
 import { Label } from '../../../../ui/label';
 import { Avatar, AvatarFallback } from '../../../../ui/avatar';
 import { Checkbox } from '../../../../ui/checkbox';
-import { 
+import {
   Select,
   SelectContent,
   SelectItem,
@@ -14,18 +14,18 @@ import {
   SelectValue,
 } from '../../../../ui/select';
 import { Separator } from '../../../../ui/separator';
-import { 
-  User, 
-  Users, 
-  Search, 
-  AlertTriangle, 
+import {
+  User,
+  Users,
+  Search,
+  AlertTriangle,
   CheckCircle,
   X,
   Filter,
   UserCheck,
   Mail,
   MessageSquare,
-  ChevronDown
+  ChevronDown,
 } from 'lucide-react';
 import { RecipientType, Client, ClientGroup, CommunicationChannel } from '../types';
 import { communicationApi } from '../api';
@@ -64,7 +64,9 @@ export function RecipientSelector({
   channel,
 }: RecipientSelectorProps) {
   const [searchTerm, setSearchTerm] = useState('');
-  const searchInputGuard = useSearchInputAutofillGuard({ id: 'communication-recipient-selector-search' });
+  const searchInputGuard = useSearchInputAutofillGuard({
+    id: 'communication-recipient-selector-search',
+  });
   const [filteredClients, setFilteredClients] = useState<Client[]>([]);
   const [allClients, setAllClients] = useState<Client[]>([]);
   const [allGroups, setAllGroups] = useState<ClientGroup[]>([]);
@@ -98,12 +100,9 @@ export function RecipientSelector({
       return;
     }
     const lower = searchTerm.toLowerCase();
-    const filtered = allClients.filter(client => {
+    const filtered = allClients.filter((client) => {
       const name = getClientDisplayName(client).toLowerCase();
-      return (
-        name.includes(lower) ||
-        (client.email && client.email.toLowerCase().includes(lower))
-      );
+      return name.includes(lower) || (client.email && client.email.toLowerCase().includes(lower));
     });
     setFilteredClients(filtered);
   }, [searchTerm, allClients]);
@@ -116,9 +115,11 @@ export function RecipientSelector({
     }
   };
 
-  const getClientStatus = (client: Client): { icon: React.ReactNode; color: string; reason?: string } => {
+  const getClientStatus = (
+    client: Client,
+  ): { icon: React.ReactNode; color: string; reason?: string } => {
     const eligible = isClientEligible(client);
-    
+
     if (eligible) {
       return {
         icon: <CheckCircle className="h-4 w-4" />,
@@ -143,23 +144,23 @@ export function RecipientSelector({
   };
 
   const handleClientSelect = (client: Client) => {
-    const isSelected = selectedClients.some(c => c.id === client.id);
+    const isSelected = selectedClients.some((c) => c.id === client.id);
     if (isSelected) {
-      onClientsChange(selectedClients.filter(c => c.id !== client.id));
+      onClientsChange(selectedClients.filter((c) => c.id !== client.id));
     } else {
       onClientsChange([...selectedClients, client]);
     }
   };
 
   const getGroupClients = (group: ClientGroup): Client[] => {
-    return allClients.filter(client => group.clientIds.includes(client.id));
+    return allClients.filter((client) => group.clientIds.includes(client.id));
   };
 
   const getGroupStats = (group: ClientGroup) => {
     const clients = getGroupClients(group);
     const eligible = clients.filter(isClientEligible);
-    const ineligible = clients.filter(client => !isClientEligible(client));
-    
+    const ineligible = clients.filter((client) => !isClientEligible(client));
+
     return {
       total: clients.length,
       eligible: eligible.length,
@@ -169,16 +170,17 @@ export function RecipientSelector({
 
   const getCurrentStats = () => {
     let clients: Client[] = [];
-    
-    if (recipientType === 'single' || recipientType === 'multiple') { // Mapped 'client' to standard types
+
+    if (recipientType === 'single' || recipientType === 'multiple') {
+      // Mapped 'client' to standard types
       clients = selectedClients;
     } else if (selectedGroup) {
       clients = getGroupClients(selectedGroup);
     }
 
     const eligible = clients.filter(isClientEligible);
-    const ineligible = clients.filter(client => !isClientEligible(client));
-    
+    const ineligible = clients.filter((client) => !isClientEligible(client));
+
     return {
       total: clients.length,
       eligible: eligible.length,
@@ -198,13 +200,15 @@ export function RecipientSelector({
             </div>
             Audience Selection
           </CardTitle>
-          
+
           {/* Recipient Type Selection */}
           <div className="space-y-2">
             <Label className="text-sm font-medium text-muted-foreground">TARGET TYPE</Label>
             <div className="grid grid-cols-1 gap-2">
               <Button
-                variant={recipientType === 'single' || recipientType === 'multiple' ? 'default' : 'outline'}
+                variant={
+                  recipientType === 'single' || recipientType === 'multiple' ? 'default' : 'outline'
+                }
                 onClick={() => onRecipientTypeChange('multiple')}
                 className="justify-start h-11"
               >
@@ -225,7 +229,7 @@ export function RecipientSelector({
           </div>
         </div>
       </CardHeader>
-      
+
       <CardContent className="space-y-6">
         {/* Enhanced Stats Summary */}
         {stats.total > 0 && (
@@ -233,12 +237,14 @@ export function RecipientSelector({
             <CardContent className="p-4">
               <div className="space-y-3">
                 <div className="flex items-center justify-between">
-                  <span className="text-sm font-medium text-muted-foreground">Selected Recipients</span>
+                  <span className="text-sm font-medium text-muted-foreground">
+                    Selected Recipients
+                  </span>
                   <Badge variant="secondary" className="text-sm">
                     {stats.total} total
                   </Badge>
                 </div>
-                
+
                 <div className="grid grid-cols-2 gap-4">
                   <div className="text-center">
                     <div className="text-2xl font-bold text-green-600">{stats.eligible}</div>
@@ -247,7 +253,7 @@ export function RecipientSelector({
                       Eligible
                     </div>
                   </div>
-                  
+
                   {stats.ineligible > 0 && (
                     <div className="text-center">
                       <div className="text-2xl font-bold text-orange-600">{stats.ineligible}</div>
@@ -258,14 +264,14 @@ export function RecipientSelector({
                     </div>
                   )}
                 </div>
-                
+
                 {channel === 'email' && (
                   <div className="text-xs text-muted-foreground text-center flex items-center justify-center gap-1">
                     <Mail className="h-3 w-3" />
                     Email recipients with valid addresses and opt-in consent
                   </div>
                 )}
-                
+
                 {channel === 'whatsapp' && (
                   <div className="text-xs text-muted-foreground text-center flex items-center justify-center gap-1">
                     <MessageSquare className="h-3 w-3" />
@@ -281,7 +287,9 @@ export function RecipientSelector({
           <div className="contents">
             {/* Enhanced Client Search */}
             <div className="space-y-3">
-              <Label className="text-sm font-medium text-muted-foreground">SEARCH & SELECT CLIENTS</Label>
+              <Label className="text-sm font-medium text-muted-foreground">
+                SEARCH & SELECT CLIENTS
+              </Label>
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                 <Input
@@ -298,7 +306,9 @@ export function RecipientSelector({
             {selectedClients.length > 0 && (
               <div className="space-y-3">
                 <div className="flex items-center justify-between">
-                  <Label className="text-sm font-medium text-muted-foreground">SELECTED CLIENTS</Label>
+                  <Label className="text-sm font-medium text-muted-foreground">
+                    SELECTED CLIENTS
+                  </Label>
                   <Button
                     variant="ghost"
                     size="sm"
@@ -308,25 +318,29 @@ export function RecipientSelector({
                     Clear All
                   </Button>
                 </div>
-                
+
                 <div className="space-y-2 max-h-48 overflow-y-auto">
                   {selectedClients.map((client) => {
                     const status = getClientStatus(client);
                     const displayName = getClientDisplayName(client);
                     return (
-                      <div key={client.id} className="group flex items-center justify-between p-3 bg-muted/20 rounded-lg border transition-colors hover:bg-muted/40">
+                      <div
+                        key={client.id}
+                        className="group flex items-center justify-between p-3 bg-muted/20 rounded-lg border transition-colors hover:bg-muted/40"
+                      >
                         <div className="flex items-center gap-3">
                           <Avatar className="h-8 w-8">
                             <AvatarFallback className="text-xs">
-                              {displayName.split(' ').map((n: string) => n[0]).join('')}
+                              {displayName
+                                .split(' ')
+                                .map((n: string) => n[0])
+                                .join('')}
                             </AvatarFallback>
                           </Avatar>
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center gap-2">
                               <span className="text-sm font-medium">{displayName}</span>
-                              <span className={status.color}>
-                                {status.icon}
-                              </span>
+                              <span className={status.color}>{status.icon}</span>
                             </div>
                             {status.reason && (
                               <div className="text-xs text-muted-foreground mt-1">
@@ -354,15 +368,21 @@ export function RecipientSelector({
             {/* Enhanced Available Clients */}
             <div className="space-y-3">
               <div className="flex items-center justify-between">
-                <Label className="text-sm font-medium text-muted-foreground">AVAILABLE CLIENTS</Label>
+                <Label className="text-sm font-medium text-muted-foreground">
+                  AVAILABLE CLIENTS
+                </Label>
                 <Button variant="ghost" size="sm" className="text-xs">
                   <Filter className="h-3 w-3 mr-1" />
                   Filter
                 </Button>
               </div>
-              
+
               <VirtualizedClientList
-                clients={filteredClients.filter(client => !selectedClients.some(s => s.id === client.id)) as unknown as VLProps['clients']}
+                clients={
+                  filteredClients.filter(
+                    (client) => !selectedClients.some((s) => s.id === client.id),
+                  ) as unknown as VLProps['clients']
+                }
                 maxHeightClass="max-h-64"
                 rowHeight={72}
                 threshold={50}
@@ -370,7 +390,11 @@ export function RecipientSelector({
                 getStatus={getClientStatus as unknown as VLProps['getStatus']}
                 isEligible={isClientEligible as unknown as VLProps['isEligible']}
                 onClientClick={handleClientSelect as unknown as VLProps['onClientClick']}
-                contactDetail={(client) => channel === 'email' ? (client.email as string) || 'No email address' : (client.phone as string) || 'No phone number'}
+                contactDetail={(client) =>
+                  channel === 'email'
+                    ? (client.email as string) || 'No email address'
+                    : (client.phone as string) || 'No phone number'
+                }
                 showCheckbox
                 showHoverAction
                 emptyMessage="No available clients found"
@@ -381,11 +405,13 @@ export function RecipientSelector({
           <div className="contents">
             {/* Enhanced Group Selection */}
             <div className="space-y-3">
-              <Label className="text-sm font-medium text-muted-foreground">SELECT CLIENT GROUP</Label>
+              <Label className="text-sm font-medium text-muted-foreground">
+                SELECT CLIENT GROUP
+              </Label>
               <Select
                 value={selectedGroup?.id || ''}
                 onValueChange={(value) => {
-                  const group = allGroups.find(g => g.id === value) || null;
+                  const group = allGroups.find((g) => g.id === value) || null;
                   onGroupChange(group);
                 }}
               >
@@ -432,17 +458,23 @@ export function RecipientSelector({
                         </div>
                         <div>
                           <h4 className="font-semibold text-base">{selectedGroup.name}</h4>
-                          <p className="text-sm text-muted-foreground">{selectedGroup.description}</p>
+                          <p className="text-sm text-muted-foreground">
+                            {selectedGroup.description}
+                          </p>
                         </div>
                       </div>
-                      
+
                       <div className="grid grid-cols-2 gap-4">
                         <div className="text-center">
-                          <div className="text-xl font-bold text-primary">{getGroupStats(selectedGroup).total}</div>
+                          <div className="text-xl font-bold text-primary">
+                            {getGroupStats(selectedGroup).total}
+                          </div>
                           <div className="text-xs text-muted-foreground">Total Members</div>
                         </div>
                         <div className="text-center">
-                          <div className="text-xl font-bold text-green-600">{getGroupStats(selectedGroup).eligible}</div>
+                          <div className="text-xl font-bold text-green-600">
+                            {getGroupStats(selectedGroup).eligible}
+                          </div>
                           <div className="text-xs text-muted-foreground">Eligible</div>
                         </div>
                       </div>
@@ -461,9 +493,17 @@ export function RecipientSelector({
                     getStatus={getClientStatus as unknown as VLProps['getStatus']}
                     isEligible={isClientEligible as unknown as VLProps['isEligible']}
                     onClientClick={() => {}}
-                    contactDetail={(client) => channel === 'email' ? (client.email as string) || 'No email address' : (client.phone as string) || 'No phone number'}
+                    contactDetail={(client) =>
+                      channel === 'email'
+                        ? (client.email as string) || 'No email address'
+                        : (client.phone as string) || 'No phone number'
+                    }
                     emptyMessage="No group members"
-                    getRowClassName={(client) => isClientEligible(client as unknown as Client) ? 'bg-green-50/50 border-green-200/60' : 'bg-orange-50/50 border-orange-200'}
+                    getRowClassName={(client) =>
+                      isClientEligible(client as unknown as Client)
+                        ? 'bg-green-50/50 border-green-200/60'
+                        : 'bg-orange-50/50 border-orange-200'
+                    }
                   />
                 </div>
               </div>

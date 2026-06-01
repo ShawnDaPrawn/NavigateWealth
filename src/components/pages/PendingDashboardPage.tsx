@@ -52,13 +52,15 @@ const TIMELINE_STEPS = [
     status: 'active' as const,
     icon: Clock,
     title: 'Under Review',
-    description: 'Our compliance team is verifying your information. This typically takes 1–2 business days.',
+    description:
+      'Our compliance team is verifying your information. This typically takes 1–2 business days.',
   },
   {
     status: 'pending' as const,
     icon: User,
     title: 'Dashboard Access',
-    description: 'Upon approval, your full personalised dashboard and financial tools will be activated.',
+    description:
+      'Upon approval, your full personalised dashboard and financial tools will be activated.',
   },
 ];
 
@@ -124,7 +126,10 @@ export function PendingDashboardPage() {
         <div className="relative z-10 max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8 xl:px-12 py-10 lg:py-14 text-center">
           {/* Animated pulse ring */}
           <div className="relative inline-flex items-center justify-center mb-6">
-            <div className="absolute w-20 h-20 rounded-2xl bg-purple-500/20 animate-ping" style={{ animationDuration: '3s' }} />
+            <div
+              className="absolute w-20 h-20 rounded-2xl bg-purple-500/20 animate-ping"
+              style={{ animationDuration: '3s' }}
+            />
             <div className="relative w-16 h-16 rounded-2xl bg-white/10 border border-white/10 flex items-center justify-center backdrop-blur-sm">
               <Clock className="h-8 w-8 text-purple-300" />
             </div>
@@ -134,7 +139,8 @@ export function PendingDashboardPage() {
             Thank you, {firstName}
           </h1>
           <p className="text-gray-400 text-base sm:text-lg max-w-lg mx-auto leading-relaxed">
-            Your application is being reviewed by our team. We'll notify you as soon as a decision has been made.
+            Your application is being reviewed by our team. We'll notify you as soon as a decision
+            has been made.
           </p>
 
           <div className="mt-5">
@@ -147,7 +153,10 @@ export function PendingDashboardPage() {
           {/* Trust bar */}
           <div className="flex flex-wrap items-center justify-center gap-5 mt-8 pt-5 border-t border-white/5">
             {TRUST_POINTS.map((point) => (
-              <div key={point.label} className="flex items-center gap-1.5 text-[11px] text-gray-500">
+              <div
+                key={point.label}
+                className="flex items-center gap-1.5 text-[11px] text-gray-500"
+              >
                 <point.icon className="h-3 w-3 text-purple-400/70" />
                 <span>{point.label}</span>
               </div>
@@ -159,7 +168,6 @@ export function PendingDashboardPage() {
       {/* ── Main Content — single screen, no scroll ─────────────────── */}
       <div className="flex-1 flex items-start justify-center px-4 sm:px-6 lg:px-8 xl:px-12 py-8 lg:py-10">
         <div className="w-full max-w-2xl space-y-5">
-
           {/* ── Status Timeline ────────────────────────────────────── */}
           <div className="bg-white rounded-2xl border border-gray-200/80 shadow-sm overflow-hidden">
             <div className="h-1 bg-gradient-to-r from-purple-500 via-violet-500 to-purple-600" />
@@ -191,8 +199,8 @@ export function PendingDashboardPage() {
                           step.status === 'complete'
                             ? 'bg-green-100'
                             : step.status === 'active'
-                            ? 'bg-purple-100'
-                            : 'bg-gray-100'
+                              ? 'bg-purple-100'
+                              : 'bg-gray-100'
                         } ${step.status === 'active' ? 'ring-4 ring-purple-100' : ''}`}
                       >
                         <Icon
@@ -200,16 +208,22 @@ export function PendingDashboardPage() {
                             step.status === 'complete'
                               ? 'text-green-600'
                               : step.status === 'active'
-                              ? 'text-purple-600'
-                              : 'text-gray-400'
+                                ? 'text-purple-600'
+                                : 'text-gray-400'
                           } ${step.status === 'active' ? 'animate-pulse' : ''}`}
                         />
                       </div>
 
                       {/* Content */}
-                      <div className={`flex-1 pb-6 ${step.status === 'pending' ? 'opacity-40' : ''}`}>
-                        <h3 className="font-semibold text-gray-900 text-sm leading-tight">{step.title}</h3>
-                        <p className="text-sm text-gray-500 mt-0.5 leading-relaxed">{step.description}</p>
+                      <div
+                        className={`flex-1 pb-6 ${step.status === 'pending' ? 'opacity-40' : ''}`}
+                      >
+                        <h3 className="font-semibold text-gray-900 text-sm leading-tight">
+                          {step.title}
+                        </h3>
+                        <p className="text-sm text-gray-500 mt-0.5 leading-relaxed">
+                          {step.description}
+                        </p>
                       </div>
                     </div>
                   );
@@ -273,7 +287,8 @@ export function PendingDashboardPage() {
           {/* ── Footer Bar ──────────────────────────────────────────── */}
           <div className="flex items-center justify-between pt-2">
             <p className="text-xs text-gray-400">
-              Status updates sent to <span className="font-medium text-gray-500">{user?.email || '—'}</span>
+              Status updates sent to{' '}
+              <span className="font-medium text-gray-500">{user?.email || '—'}</span>
             </p>
             <button
               onClick={handleLogout}

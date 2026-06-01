@@ -24,47 +24,70 @@ import { TaxPlanningFnaAPI } from '../modules/tax-planning-fna/api';
 // results views, and their own dependencies at initial page load.
 
 const LazyRiskPlanningFNAWizard = React.lazy(() =>
-  import('../modules/risk-planning-fna/components/RiskPlanningFNAWizard').then(m => ({ default: m.RiskPlanningFNAWizard }))
+  import('../modules/risk-planning-fna/components/RiskPlanningFNAWizard').then((m) => ({
+    default: m.RiskPlanningFNAWizard,
+  })),
 );
 const LazyRiskPlanningFNAResultsView = React.lazy(() =>
-  import('../modules/risk-planning-fna/components/RiskPlanningFNAResultsView').then(m => ({ default: m.RiskPlanningFNAResultsView }))
+  import('../modules/risk-planning-fna/components/RiskPlanningFNAResultsView').then((m) => ({
+    default: m.RiskPlanningFNAResultsView,
+  })),
 );
 
 const LazyMedicalFNAWizard = React.lazy(() =>
-  import('../modules/medical-fna/components/MedicalFNAWizard').then(m => ({ default: m.MedicalFNAWizard }))
+  import('../modules/medical-fna/components/MedicalFNAWizard').then((m) => ({
+    default: m.MedicalFNAWizard,
+  })),
 );
 const LazyMedicalFNAResultsView = React.lazy(() =>
-  import('../modules/medical-fna/components/MedicalFNAResultsView').then(m => ({ default: m.MedicalFNAResultsView }))
+  import('../modules/medical-fna/components/MedicalFNAResultsView').then((m) => ({
+    default: m.MedicalFNAResultsView,
+  })),
 );
 
 const LazyRetirementFNAWizard = React.lazy(() =>
-  import('../modules/retirement-fna/components/RetirementFNAWizard').then(m => ({ default: m.RetirementFNAWizard }))
+  import('../modules/retirement-fna/components/RetirementFNAWizard').then((m) => ({
+    default: m.RetirementFNAWizard,
+  })),
 );
 const LazyRetirementFNAResultsView = React.lazy(() =>
-  import('../modules/retirement-fna/components/RetirementFNAResultsView').then(m => ({ default: m.RetirementFNAResultsView }))
+  import('../modules/retirement-fna/components/RetirementFNAResultsView').then((m) => ({
+    default: m.RetirementFNAResultsView,
+  })),
 );
 
 const LazyEstatePlanningFNAWizard = React.lazy(() =>
-  import('../modules/estate-planning-fna/components/EstatePlanningFNAWizard').then(m => ({ default: m.EstatePlanningFNAWizard }))
+  import('../modules/estate-planning-fna/components/EstatePlanningFNAWizard').then((m) => ({
+    default: m.EstatePlanningFNAWizard,
+  })),
 );
 const LazyEstatePlanningResultsView = React.lazy(() =>
-  import('../modules/estate-planning-fna/components/EstatePlanningResultsView').then(m => ({ default: m.EstatePlanningResultsView }))
+  import('../modules/estate-planning-fna/components/EstatePlanningResultsView').then((m) => ({
+    default: m.EstatePlanningResultsView,
+  })),
 );
 
 const LazyInvestmentINAWizard = React.lazy(() =>
-  import('../modules/investment-ina/components/InvestmentINAWizard').then(m => ({ default: m.InvestmentINAWizard }))
+  import('../modules/investment-ina/components/InvestmentINAWizard').then((m) => ({
+    default: m.InvestmentINAWizard,
+  })),
 );
 const LazyInvestmentINAResultsView = React.lazy(() =>
-  import('../modules/investment-ina/components/InvestmentINAResultsView').then(m => ({ default: m.InvestmentINAResultsView }))
+  import('../modules/investment-ina/components/InvestmentINAResultsView').then((m) => ({
+    default: m.InvestmentINAResultsView,
+  })),
 );
 
 const LazyTaxPlanningFNAWizard = React.lazy(() =>
-  import('../modules/tax-planning-fna/components/TaxPlanningFNAWizard').then(m => ({ default: m.TaxPlanningFNAWizard }))
+  import('../modules/tax-planning-fna/components/TaxPlanningFNAWizard').then((m) => ({
+    default: m.TaxPlanningFNAWizard,
+  })),
 );
 const LazyTaxPlanningResultsView = React.lazy(() =>
-  import('../modules/tax-planning-fna/components/TaxPlanningResultsView').then(m => ({ default: m.TaxPlanningResultsView }))
+  import('../modules/tax-planning-fna/components/TaxPlanningResultsView').then((m) => ({
+    default: m.TaxPlanningResultsView,
+  })),
 );
-
 
 // ==================== CONFIG TYPE ====================
 
@@ -73,9 +96,9 @@ const LazyTaxPlanningResultsView = React.lazy(() =>
 // shape (they spread props into the components and index into the results,
 // e.g. `fnaData.results`). These helpers coerce each module's typed API promise
 // to that generic shape at this single boundary.
-const asRecordOrNull = <T,>(p: Promise<T | null>): Promise<Record<string, unknown> | null> =>
+const asRecordOrNull = <T>(p: Promise<T | null>): Promise<Record<string, unknown> | null> =>
   p as unknown as Promise<Record<string, unknown> | null>;
-const asRecord = <T,>(p: Promise<T>): Promise<Record<string, unknown>> =>
+const asRecord = <T>(p: Promise<T>): Promise<Record<string, unknown>> =>
   p as unknown as Promise<Record<string, unknown>>;
 
 export interface FNAConfig {
@@ -107,7 +130,8 @@ export const FNA_CONFIGS: Record<string, FNAConfig> = {
     name: 'Risk Planning FNA',
     Wizard: LazyRiskPlanningFNAWizard,
     ResultsView: LazyRiskPlanningFNAResultsView,
-    getLatestPublished: (clientId) => asRecordOrNull(RiskPlanningFnaAPI.getLatestPublished(clientId)),
+    getLatestPublished: (clientId) =>
+      asRecordOrNull(RiskPlanningFnaAPI.getLatestPublished(clientId)),
     deleteFNA: (fnaId) => RiskPlanningFnaAPI.delete(fnaId),
     publishFNA: (fnaId) => asRecord(RiskPlanningFnaAPI.publish(fnaId)),
     unpublishFNA: (fnaId) => asRecord(RiskPlanningFnaAPI.unpublish(fnaId)),
@@ -116,23 +140,31 @@ export const FNA_CONFIGS: Record<string, FNAConfig> = {
     },
     resultsPropsKey: 'fna',
   },
-  
+
   'medical-aid': {
     type: 'medical',
     name: 'Medical FNA',
     Wizard: LazyMedicalFNAWizard,
     ResultsView: LazyMedicalFNAResultsView,
-    getLatestPublished: (clientId) => MedicalFNAApiService.getLatestPublished(clientId) as unknown as Promise<Record<string, unknown> | null>,
+    getLatestPublished: (clientId) =>
+      MedicalFNAApiService.getLatestPublished(clientId) as unknown as Promise<Record<
+        string,
+        unknown
+      > | null>,
     deleteFNA: (fnaId) => MedicalFNAApiService.deleteMedicalFNA(fnaId),
-    publishFNA: (fnaId) => MedicalFNAApiService.publishMedicalFNA(fnaId) as unknown as Promise<Record<string, unknown>>,
-    unpublishFNA: (fnaId) => MedicalFNAApiService.unpublishMedicalFNA(fnaId) as unknown as Promise<Record<string, unknown>>,
+    publishFNA: (fnaId) =>
+      MedicalFNAApiService.publishMedicalFNA(fnaId) as unknown as Promise<Record<string, unknown>>,
+    unpublishFNA: (fnaId) =>
+      MedicalFNAApiService.unpublishMedicalFNA(fnaId) as unknown as Promise<
+        Record<string, unknown>
+      >,
     wizardProps: {
       onCompleteKey: 'onFNAComplete',
     },
     resultsPropsKey: 'results',
   },
-  
-  'retirement': {
+
+  retirement: {
     type: 'retirement',
     name: 'Retirement FNA',
     Wizard: LazyRetirementFNAWizard,
@@ -146,13 +178,14 @@ export const FNA_CONFIGS: Record<string, FNAConfig> = {
     },
     resultsPropsKey: 'fna',
   },
-  
+
   'estate-planning': {
     type: 'estate',
     name: 'Estate Planning FNA',
     Wizard: LazyEstatePlanningFNAWizard,
     ResultsView: LazyEstatePlanningResultsView,
-    getLatestPublished: (clientId) => asRecordOrNull(EstatePlanningApiService.getLatestPublished(clientId)),
+    getLatestPublished: (clientId) =>
+      asRecordOrNull(EstatePlanningApiService.getLatestPublished(clientId)),
     deleteFNA: (sessionId) => EstatePlanningApiService.deleteSession(sessionId),
     publishFNA: (sessionId) => asRecord(EstatePlanningApiService.publishSession(sessionId)),
     unpublishFNA: (sessionId) => asRecord(EstatePlanningApiService.unpublishSession(sessionId)),
@@ -162,12 +195,13 @@ export const FNA_CONFIGS: Record<string, FNAConfig> = {
     resultsPropsKey: 'fna',
   },
 
-  'investments': {
+  investments: {
     type: 'investment',
     name: 'Investment INA',
     Wizard: LazyInvestmentINAWizard,
     ResultsView: LazyInvestmentINAResultsView,
-    getLatestPublished: (clientId) => asRecordOrNull(InvestmentINAApiService.getLatestPublished(clientId)),
+    getLatestPublished: (clientId) =>
+      asRecordOrNull(InvestmentINAApiService.getLatestPublished(clientId)),
     deleteFNA: (sessionId) => InvestmentINAApiService.deleteSession(sessionId),
     publishFNA: (sessionId) => asRecord(InvestmentINAApiService.publishSession(sessionId)),
     unpublishFNA: (sessionId) => asRecord(InvestmentINAApiService.unpublishSession(sessionId)),
@@ -182,10 +216,19 @@ export const FNA_CONFIGS: Record<string, FNAConfig> = {
     name: 'Tax Planning FNA',
     Wizard: LazyTaxPlanningFNAWizard,
     ResultsView: LazyTaxPlanningResultsView,
-    getLatestPublished: (clientId) => asRecordOrNull(TaxPlanningFnaAPI.getLatestPublished(clientId)),
-    deleteFNA: async () => { /* tax sessions managed via saveSession */ },
-    publishFNA: async (sessionId) => { await TaxPlanningFnaAPI.publishSession(sessionId); return {}; },
-    unpublishFNA: async (sessionId) => { await TaxPlanningFnaAPI.unpublishSession(sessionId); return {}; },
+    getLatestPublished: (clientId) =>
+      asRecordOrNull(TaxPlanningFnaAPI.getLatestPublished(clientId)),
+    deleteFNA: async () => {
+      /* tax sessions managed via saveSession */
+    },
+    publishFNA: async (sessionId) => {
+      await TaxPlanningFnaAPI.publishSession(sessionId);
+      return {};
+    },
+    unpublishFNA: async (sessionId) => {
+      await TaxPlanningFnaAPI.unpublishSession(sessionId);
+      return {};
+    },
     wizardProps: {
       onCompleteKey: 'onFNAComplete',
     },

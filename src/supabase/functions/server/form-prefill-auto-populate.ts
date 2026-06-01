@@ -11,7 +11,11 @@ interface VersionedSession {
   inputs?: Record<string, unknown>;
 }
 
-export function setNestedValue(target: Record<string, unknown>, path: string, value: unknown): void {
+export function setNestedValue(
+  target: Record<string, unknown>,
+  path: string,
+  value: unknown,
+): void {
   const parts = path.split('.');
   let cursor: Record<string, unknown> = target;
   for (let i = 0; i < parts.length - 1; i++) {
@@ -45,7 +49,9 @@ export async function resolveAutoPopulateValues(
   return result.proposedValues;
 }
 
-export async function retirementAutoPopulateFromResolver(clientId: string): Promise<Record<string, unknown>> {
+export async function retirementAutoPopulateFromResolver(
+  clientId: string,
+): Promise<Record<string, unknown>> {
   const proposed = await resolveAutoPopulateValues(clientId, 'retirement-fna-step1');
   return {
     currentAge: proposed.currentAge ?? 30,
@@ -57,7 +63,9 @@ export async function retirementAutoPopulateFromResolver(clientId: string): Prom
   };
 }
 
-export async function riskAutoPopulateFromResolver(clientId: string): Promise<Record<string, unknown>> {
+export async function riskAutoPopulateFromResolver(
+  clientId: string,
+): Promise<Record<string, unknown>> {
   const proposed = await resolveAutoPopulateValues(clientId, 'risk-fna-step1');
   const gross = Number(proposed.grossMonthlyIncome) || 0;
   const net = Number(proposed.netMonthlyIncome) || 0;
@@ -84,7 +92,10 @@ export async function riskAutoPopulateFromResolver(clientId: string): Promise<Re
     existingCover: {
       life: { personal: Number(proposed.existingCoverLifePersonal) || 0, group: 0 },
       disability: { personal: Number(proposed.existingCoverDisabilityPersonal) || 0, group: 0 },
-      severeIllness: { personal: Number(proposed.existingCoverSevereIllnessPersonal) || 0, group: 0 },
+      severeIllness: {
+        personal: Number(proposed.existingCoverSevereIllnessPersonal) || 0,
+        group: 0,
+      },
       incomeProtection: {
         temporary: { personal: Number(proposed.existingCoverIPTemporaryPersonal) || 0, group: 0 },
         permanent: { personal: Number(proposed.existingCoverIPPermanentPersonal) || 0, group: 0 },
@@ -97,7 +108,9 @@ export async function riskAutoPopulateFromResolver(clientId: string): Promise<Re
   };
 }
 
-export async function medicalStep1AutoPopulateFromResolver(clientId: string): Promise<Record<string, unknown>> {
+export async function medicalStep1AutoPopulateFromResolver(
+  clientId: string,
+): Promise<Record<string, unknown>> {
   const proposed = await resolveAutoPopulateValues(clientId, 'medical-fna-step1');
   return {
     currentAge: proposed.currentAge ?? 30,
@@ -172,7 +185,9 @@ export async function enrichTaxFromDomainSessions(
   return enriched;
 }
 
-export async function taxAutoPopulateFromResolver(clientId: string): Promise<Record<string, unknown>> {
+export async function taxAutoPopulateFromResolver(
+  clientId: string,
+): Promise<Record<string, unknown>> {
   const defaults: Record<string, unknown> = {
     age: 45,
     maritalStatus: 'single',
@@ -196,7 +211,9 @@ export async function taxAutoPopulateFromResolver(clientId: string): Promise<Rec
   return applyProposedValues(defaults, proposed);
 }
 
-export async function investmentAutoPopulateFromResolver(clientId: string): Promise<Record<string, unknown>> {
+export async function investmentAutoPopulateFromResolver(
+  clientId: string,
+): Promise<Record<string, unknown>> {
   const defaults: Record<string, unknown> = {
     currentAge: 0,
     dateOfBirth: '',
@@ -220,7 +237,9 @@ export async function investmentAutoPopulateFromResolver(clientId: string): Prom
   return merged;
 }
 
-export async function estateAutoPopulateFromResolver(clientId: string): Promise<Record<string, unknown>> {
+export async function estateAutoPopulateFromResolver(
+  clientId: string,
+): Promise<Record<string, unknown>> {
   const base: Record<string, unknown> = {
     familyInfo: {
       fullName: '',

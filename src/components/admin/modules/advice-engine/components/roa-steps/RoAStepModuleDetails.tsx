@@ -5,13 +5,27 @@ import { Button } from '../../../../../ui/button';
 import { Badge } from '../../../../../ui/badge';
 import { Input } from '../../../../../ui/input';
 import { Textarea } from '../../../../../ui/textarea';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../../../../ui/select';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '../../../../../ui/select';
 import { Label } from '../../../../../ui/label';
 import { Checkbox } from '../../../../../ui/checkbox';
 import { Progress } from '../../../../../ui/progress';
 import { RoADraft, RoAField, RoAModule } from '../DraftRoAInterface';
 import { roaApi } from '../../api';
-import { ChevronLeft, ChevronRight, CheckCircle, AlertCircle, FileText, Save, Upload } from 'lucide-react';
+import {
+  ChevronLeft,
+  ChevronRight,
+  CheckCircle,
+  AlertCircle,
+  FileText,
+  Save,
+  Upload,
+} from 'lucide-react';
 import {
   buildRuntimeTemplateContext,
   coerceRuntimeFieldValue,
@@ -63,13 +77,17 @@ export function RoAStepModuleDetails({ draft, onUpdate, modules }: RoAStepModule
     return (
       <div className="text-center py-12">
         <FileText className="h-12 w-12 text-muted-foreground opacity-50 mx-auto mb-4" />
-        <p className="text-muted-foreground">No modules selected. Please go back and select modules first.</p>
+        <p className="text-muted-foreground">
+          No modules selected. Please go back and select modules first.
+        </p>
       </div>
     );
   }
 
   const currentModuleId = draft.selectedModules[currentModuleIndex];
-  const currentModule = modules?.find(module => module.id === currentModuleId) || getFallbackRuntimeModule(currentModuleId);
+  const currentModule =
+    modules?.find((module) => module.id === currentModuleId) ||
+    getFallbackRuntimeModule(currentModuleId);
   const currentModuleData = draft.moduleData[currentModuleId] || {};
   const currentEvidence = draft.moduleEvidence?.[currentModuleId] || {};
 
@@ -119,7 +137,10 @@ export function RoAStepModuleDetails({ draft, onUpdate, modules }: RoAStepModule
     setTimeout(() => setIsSaving(false), 1000);
   };
 
-  const handleEvidenceFile = async (requirement: NonNullable<RoAModule['evidence']>['requirements'][number], file: File | null) => {
+  const handleEvidenceFile = async (
+    requirement: NonNullable<RoAModule['evidence']>['requirements'][number],
+    file: File | null,
+  ) => {
     if (!file) return;
     const acceptedMimeTypes = requirement.acceptedMimeTypes || [];
     if (acceptedMimeTypes.length > 0 && !acceptedMimeTypes.includes(file.type)) {
@@ -159,7 +180,11 @@ export function RoAStepModuleDetails({ draft, onUpdate, modules }: RoAStepModule
   };
 
   const renderField = (field: RoAField) => {
-    const value = coerceRuntimeFieldValue((currentModuleData as Record<string, string | string[] | boolean | number | null | undefined>)[field.key] ?? field.default);
+    const value = coerceRuntimeFieldValue(
+      (
+        currentModuleData as Record<string, string | string[] | boolean | number | null | undefined>
+      )[field.key] ?? field.default,
+    );
     const stringValue = Array.isArray(value) ? value.join(', ') : String(value ?? '');
     const isRequired = field.required;
 
@@ -230,7 +255,14 @@ export function RoAStepModuleDetails({ draft, onUpdate, modules }: RoAStepModule
           </Select>
         );
       case 'chips': {
-        const chipsValue = Array.isArray(value) ? value : (stringValue ? stringValue.split(',').map((item) => item.trim()).filter(Boolean) : []);
+        const chipsValue = Array.isArray(value)
+          ? value
+          : stringValue
+            ? stringValue
+                .split(',')
+                .map((item) => item.trim())
+                .filter(Boolean)
+            : [];
         return (
           <div className="space-y-2">
             <Input
@@ -254,7 +286,12 @@ export function RoAStepModuleDetails({ draft, onUpdate, modules }: RoAStepModule
                     key={`${item}-${index}`}
                     variant="secondary"
                     className="cursor-pointer hover:bg-red-100"
-                    onClick={() => handleFieldChange(field.key, chipsValue.filter((_, itemIndex) => itemIndex !== index))}
+                    onClick={() =>
+                      handleFieldChange(
+                        field.key,
+                        chipsValue.filter((_, itemIndex) => itemIndex !== index),
+                      )
+                    }
                   >
                     {item} x
                   </Badge>
@@ -275,7 +312,12 @@ export function RoAStepModuleDetails({ draft, onUpdate, modules }: RoAStepModule
           </div>
         );
       default:
-        return <Input value={stringValue} onChange={(e) => handleFieldChange(field.key, e.target.value)} />;
+        return (
+          <Input
+            value={stringValue}
+            onChange={(e) => handleFieldChange(field.key, e.target.value)}
+          />
+        );
     }
   };
 
@@ -315,7 +357,10 @@ export function RoAStepModuleDetails({ draft, onUpdate, modules }: RoAStepModule
               <div className="flex justify-between text-sm">
                 <span>Progress</span>
                 <span>
-                  {runtimeStatus.percentage}% complete ({runtimeStatus.completedRequiredFields}/{runtimeStatus.totalRequiredFields} fields, {runtimeStatus.completedRequiredEvidence}/{runtimeStatus.totalRequiredEvidence} evidence)
+                  {runtimeStatus.percentage}% complete ({runtimeStatus.completedRequiredFields}/
+                  {runtimeStatus.totalRequiredFields} fields,{' '}
+                  {runtimeStatus.completedRequiredEvidence}/{runtimeStatus.totalRequiredEvidence}{' '}
+                  evidence)
                 </span>
               </div>
               <Progress value={runtimeStatus.percentage} className="w-full" />
@@ -334,10 +379,16 @@ export function RoAStepModuleDetails({ draft, onUpdate, modules }: RoAStepModule
 
               <div className="flex gap-2">
                 {draft.selectedModules.map((moduleId, index) => {
-                  const module = modules?.find(item => item.id === moduleId) || getFallbackRuntimeModule(moduleId);
+                  const module =
+                    modules?.find((item) => item.id === moduleId) ||
+                    getFallbackRuntimeModule(moduleId);
                   const moduleData = draft.moduleData[moduleId] || {};
                   const isComplete = module
-                    ? getModuleRuntimeStatus(module, moduleData, draft.moduleEvidence?.[moduleId] || {}).complete
+                    ? getModuleRuntimeStatus(
+                        module,
+                        moduleData,
+                        draft.moduleEvidence?.[moduleId] || {},
+                      ).complete
                     : false;
 
                   return (
@@ -360,7 +411,11 @@ export function RoAStepModuleDetails({ draft, onUpdate, modules }: RoAStepModule
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() => setCurrentModuleIndex((index) => Math.min(draft.selectedModules.length - 1, index + 1))}
+                onClick={() =>
+                  setCurrentModuleIndex((index) =>
+                    Math.min(draft.selectedModules.length - 1, index + 1),
+                  )
+                }
                 disabled={currentModuleIndex === draft.selectedModules.length - 1}
               >
                 Next Module
@@ -385,7 +440,9 @@ export function RoAStepModuleDetails({ draft, onUpdate, modules }: RoAStepModule
                   <p className="text-xs font-medium text-muted-foreground">Gathering Methods</p>
                   <div className="mt-2 flex flex-wrap gap-2">
                     {currentModule.input.gatheringMethods.map((method) => (
-                      <Badge key={method} variant="secondary">{method}</Badge>
+                      <Badge key={method} variant="secondary">
+                        {method}
+                      </Badge>
                     ))}
                   </div>
                 </div>
@@ -395,7 +452,11 @@ export function RoAStepModuleDetails({ draft, onUpdate, modules }: RoAStepModule
                     {currentModule.input.sources.map((source) => (
                       <p key={source.id} className="text-xs">
                         <span className="font-medium">{source.label}</span>
-                        <span className="text-muted-foreground"> - {source.type}{source.required ? ' required' : ' optional'}</span>
+                        <span className="text-muted-foreground">
+                          {' '}
+                          - {source.type}
+                          {source.required ? ' required' : ' optional'}
+                        </span>
                       </p>
                     ))}
                   </div>
@@ -424,9 +485,10 @@ export function RoAStepModuleDetails({ draft, onUpdate, modules }: RoAStepModule
                     {field.helpText && (
                       <p className="text-xs text-muted-foreground">{field.helpText}</p>
                     )}
-                    {field.required && !((currentModuleData as Record<string, unknown>)[field.key]) && (
-                      <p className="text-xs text-orange-600">This field is required</p>
-                    )}
+                    {field.required &&
+                      !(currentModuleData as Record<string, unknown>)[field.key] && (
+                        <p className="text-xs text-orange-600">This field is required</p>
+                      )}
                   </div>
                 ))}
               </div>
@@ -449,18 +511,24 @@ export function RoAStepModuleDetails({ draft, onUpdate, modules }: RoAStepModule
                             {requirement.required && <Badge variant="outline">Required</Badge>}
                           </div>
                           {requirement.guidance && (
-                            <p className="mt-1 text-xs text-muted-foreground">{requirement.guidance}</p>
-                          )}
-                          {requirement.acceptedMimeTypes && requirement.acceptedMimeTypes.length > 0 && (
                             <p className="mt-1 text-xs text-muted-foreground">
-                              Accepted: {requirement.acceptedMimeTypes.join(', ')}. Max {formatEvidenceSize(MAX_EVIDENCE_BYTES)}.
+                              {requirement.guidance}
                             </p>
                           )}
+                          {requirement.acceptedMimeTypes &&
+                            requirement.acceptedMimeTypes.length > 0 && (
+                              <p className="mt-1 text-xs text-muted-foreground">
+                                Accepted: {requirement.acceptedMimeTypes.join(', ')}. Max{' '}
+                                {formatEvidenceSize(MAX_EVIDENCE_BYTES)}.
+                              </p>
+                            )}
                           {evidence && (
                             <div className="mt-2 space-y-1 text-xs text-green-700">
                               <p>Attached: {evidence.fileName}</p>
                               {evidence.sha256 && (
-                                <p className="text-muted-foreground">SHA-256: {evidence.sha256.slice(0, 12)}...</p>
+                                <p className="text-muted-foreground">
+                                  SHA-256: {evidence.sha256.slice(0, 12)}...
+                                </p>
                               )}
                               {evidence.source && (
                                 <p className="text-muted-foreground">Source: {evidence.source}</p>
@@ -476,7 +544,9 @@ export function RoAStepModuleDetails({ draft, onUpdate, modules }: RoAStepModule
                             className="hidden"
                             accept={requirement.acceptedMimeTypes?.join(',')}
                             disabled={uploadingEvidenceId === requirement.id}
-                            onChange={(event) => handleEvidenceFile(requirement, event.target.files?.[0] || null)}
+                            onChange={(event) =>
+                              handleEvidenceFile(requirement, event.target.files?.[0] || null)
+                            }
                           />
                         </label>
                       </div>
@@ -505,13 +575,18 @@ export function RoAStepModuleDetails({ draft, onUpdate, modules }: RoAStepModule
               <h4 className="font-medium">Normalized Module Output</h4>
               <div className="rounded-lg border bg-muted/20 p-4">
                 <p className="text-xs text-muted-foreground mb-3">
-                  Output key: <span className="font-medium text-foreground">{normalizedOutput.normalizedKey}</span>
+                  Output key:{' '}
+                  <span className="font-medium text-foreground">
+                    {normalizedOutput.normalizedKey}
+                  </span>
                 </p>
                 <div className="grid gap-2 md:grid-cols-2">
                   {currentModule.output.fields.map((field) => (
                     <div key={field.key} className="rounded-md bg-background p-2 text-sm">
                       <p className="text-xs text-muted-foreground">{field.label}</p>
-                      <p className="font-medium">{valueToDisplay(normalizedOutput.values[field.key])}</p>
+                      <p className="font-medium">
+                        {valueToDisplay(normalizedOutput.values[field.key])}
+                      </p>
                     </div>
                   ))}
                 </div>
@@ -526,7 +601,11 @@ export function RoAStepModuleDetails({ draft, onUpdate, modules }: RoAStepModule
                 {currentModule.documentSections
                   .slice()
                   .sort((a, b) => a.order - b.order)
-                  .filter((section) => currentModule.compileOrder.length === 0 || currentModule.compileOrder.includes(section.id))
+                  .filter(
+                    (section) =>
+                      currentModule.compileOrder.length === 0 ||
+                      currentModule.compileOrder.includes(section.id),
+                  )
                   .map((section) => (
                     <div key={section.id} className="rounded-md border p-3">
                       <div className="flex items-center justify-between gap-2">
@@ -535,7 +614,10 @@ export function RoAStepModuleDetails({ draft, onUpdate, modules }: RoAStepModule
                       </div>
                       <p className="mt-1 text-xs text-muted-foreground">{section.purpose}</p>
                       <pre className="mt-3 whitespace-pre-wrap rounded bg-muted/40 p-3 text-xs text-muted-foreground">
-                        {renderRuntimeTemplate(section.template || section.purpose, templateContext)}
+                        {renderRuntimeTemplate(
+                          section.template || section.purpose,
+                          templateContext,
+                        )}
                       </pre>
                     </div>
                   ))}
@@ -545,7 +627,9 @@ export function RoAStepModuleDetails({ draft, onUpdate, modules }: RoAStepModule
 
           {!runtimeStatus.complete && (
             <div className="bg-orange-50 border border-orange-200 p-3 rounded-lg">
-              <p className="text-sm font-medium text-orange-700">Complete the contract requirements to proceed.</p>
+              <p className="text-sm font-medium text-orange-700">
+                Complete the contract requirements to proceed.
+              </p>
               <div className="mt-2 space-y-1 text-xs text-orange-700">
                 {runtimeStatus.blocking.map((issue) => (
                   <p key={issue.id}>{issue.message}</p>

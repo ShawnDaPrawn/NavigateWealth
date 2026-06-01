@@ -1,14 +1,7 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '../../../ui/card';
 import { Button } from '../../../ui/button';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '../../../ui/table';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../../ui/table';
 import { Loader2, History, RefreshCw } from 'lucide-react';
 import { fetchPrefillAudit } from '../../../../services/form-prefill-api';
 import { isFormPrefillEnabled } from '../../../../utils/formPrefillFeature';
@@ -58,8 +51,18 @@ export function PrefillHistoryPanel({ clientId }: PrefillHistoryPanelProps) {
             <History className="h-4 w-4 text-purple-600" />
             Prefill history
           </CardTitle>
-          <Button type="button" size="sm" variant="ghost" onClick={() => void load()} disabled={loading}>
-            {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
+          <Button
+            type="button"
+            size="sm"
+            variant="ghost"
+            onClick={() => void load()}
+            disabled={loading}
+          >
+            {loading ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <RefreshCw className="h-4 w-4" />
+            )}
           </Button>
         </div>
       </CardHeader>

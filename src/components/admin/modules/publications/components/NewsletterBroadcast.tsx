@@ -103,7 +103,9 @@ async function getAuthToken(): Promise<string> {
     const supabase = createClient();
     const { data } = await supabase.auth.getSession();
     if (data?.session?.access_token) return data.session.access_token;
-  } catch { /* fall through */ }
+  } catch {
+    /* fall through */
+  }
   return publicAnonKey;
 }
 
@@ -326,10 +328,18 @@ export function NewsletterBroadcast() {
         <div className="contents">
           {/* Post-send result banner */}
           {sendResult && (
-            <Card className={sendResult.failed > 0 ? 'border-amber-200 bg-amber-50/50' : 'border-green-200 bg-green-50/50'}>
+            <Card
+              className={
+                sendResult.failed > 0
+                  ? 'border-amber-200 bg-amber-50/50'
+                  : 'border-green-200 bg-green-50/50'
+              }
+            >
               <CardContent className="pt-4 pb-4">
                 <div className="flex items-start gap-3">
-                  <div className={`p-1.5 rounded-md ${sendResult.failed > 0 ? 'bg-amber-100' : 'bg-green-100'}`}>
+                  <div
+                    className={`p-1.5 rounded-md ${sendResult.failed > 0 ? 'bg-amber-100' : 'bg-green-100'}`}
+                  >
                     {sendResult.failed > 0 ? (
                       <AlertCircle className="h-4 w-4 text-amber-600" />
                     ) : (
@@ -337,7 +347,9 @@ export function NewsletterBroadcast() {
                     )}
                   </div>
                   <div className="flex-1">
-                    <p className={`text-sm font-medium ${sendResult.failed > 0 ? 'text-amber-900' : 'text-green-900'}`}>
+                    <p
+                      className={`text-sm font-medium ${sendResult.failed > 0 ? 'text-amber-900' : 'text-green-900'}`}
+                    >
                       {sendResult.message}
                     </p>
                     <div className="flex items-center gap-4 mt-2 text-xs text-muted-foreground">
@@ -355,7 +367,9 @@ export function NewsletterBroadcast() {
                     </div>
                     {sendResult.errors && sendResult.errors.length > 0 && (
                       <div className="mt-2 p-2 bg-red-50 rounded text-xs text-red-700 space-y-0.5">
-                        {sendResult.errors.map((e, i) => <p key={i}>{e}</p>)}
+                        {sendResult.errors.map((e, i) => (
+                          <p key={i}>{e}</p>
+                        ))}
                       </div>
                     )}
                     <Button size="sm" variant="outline" className="mt-3" onClick={handleReset}>
@@ -380,7 +394,8 @@ export function NewsletterBroadcast() {
                       Compose Newsletter
                     </CardTitle>
                     <CardDescription className="text-xs">
-                      The email will be sent using the Navigate Wealth branded template with a personalised greeting for each subscriber.
+                      The email will be sent using the Navigate Wealth branded template with a
+                      personalised greeting for each subscriber.
                     </CardDescription>
                   </CardHeader>
                   <CardContent className="space-y-4">
@@ -391,7 +406,10 @@ export function NewsletterBroadcast() {
                       <Input
                         id="broadcast-subject"
                         value={subject}
-                        onChange={(e) => { setSubject(e.target.value); setPreviewResult(null); }}
+                        onChange={(e) => {
+                          setSubject(e.target.value);
+                          setPreviewResult(null);
+                        }}
                         placeholder="e.g. March 2026 Market Update"
                         disabled={isSending}
                       />
@@ -405,13 +423,19 @@ export function NewsletterBroadcast() {
                         Body Content <span className="text-red-500">*</span>
                       </Label>
                       <p className="text-[11px] text-muted-foreground -mt-1">
-                        You can use basic HTML tags for formatting: {'<p>'}, {'<strong>'}, {'<em>'}, {'<ul>'}, {'<li>'}, {'<a href="...">'}.
+                        You can use basic HTML tags for formatting: {'<p>'}, {'<strong>'}, {'<em>'},{' '}
+                        {'<ul>'}, {'<li>'}, {'<a href="...">'}.
                       </p>
                       <Textarea
                         id="broadcast-body"
                         value={body}
-                        onChange={(e) => { setBody(e.target.value); setPreviewResult(null); }}
-                        placeholder={"<p>Dear subscribers,</p>\n<p>Here's what's been happening at Navigate Wealth this month...</p>"}
+                        onChange={(e) => {
+                          setBody(e.target.value);
+                          setPreviewResult(null);
+                        }}
+                        placeholder={
+                          "<p>Dear subscribers,</p>\n<p>Here's what's been happening at Navigate Wealth this month...</p>"
+                        }
                         rows={12}
                         className="font-mono text-sm"
                         disabled={isSending}
@@ -485,7 +509,9 @@ export function NewsletterBroadcast() {
                     <CardContent className="space-y-3">
                       <div className="flex items-center gap-2">
                         <Users className="h-4 w-4 text-muted-foreground" />
-                        <span className="text-sm font-medium">{previewResult.recipientCount} recipient(s)</span>
+                        <span className="text-sm font-medium">
+                          {previewResult.recipientCount} recipient(s)
+                        </span>
                       </div>
 
                       {previewResult.recipientCount > 0 && (
@@ -494,17 +520,23 @@ export function NewsletterBroadcast() {
                             <table className="w-full text-xs">
                               <thead>
                                 <tr className="border-b bg-muted/40">
-                                  <th className="text-left py-2 px-3 font-medium text-muted-foreground">Name</th>
-                                  <th className="text-left py-2 px-3 font-medium text-muted-foreground">Email</th>
+                                  <th className="text-left py-2 px-3 font-medium text-muted-foreground">
+                                    Name
+                                  </th>
+                                  <th className="text-left py-2 px-3 font-medium text-muted-foreground">
+                                    Email
+                                  </th>
                                 </tr>
                               </thead>
                               <tbody>
                                 {previewResult.recipients.map((r) => (
                                   <tr key={r.email} className="border-b last:border-0">
                                     <td className="py-1.5 px-3 text-foreground">
-                                      {r.firstName || r.surname
-                                        ? `${r.firstName} ${r.surname}`.trim()
-                                        : <span className="text-muted-foreground/40">—</span>}
+                                      {r.firstName || r.surname ? (
+                                        `${r.firstName} ${r.surname}`.trim()
+                                      ) : (
+                                        <span className="text-muted-foreground/40">—</span>
+                                      )}
                                     </td>
                                     <td className="py-1.5 px-3 text-muted-foreground">{r.email}</td>
                                   </tr>
@@ -513,7 +545,8 @@ export function NewsletterBroadcast() {
                             </table>
                           </div>
                           <div className="border-t px-3 py-1.5 text-[10px] text-muted-foreground bg-muted/20">
-                            {previewResult.recipientCount} subscriber(s) will receive this newsletter
+                            {previewResult.recipientCount} subscriber(s) will receive this
+                            newsletter
                           </div>
                         </div>
                       )}
@@ -534,7 +567,8 @@ export function NewsletterBroadcast() {
                       <Eye className="h-8 w-8 text-muted-foreground/30 mx-auto mb-3" />
                       <p className="text-sm font-medium text-muted-foreground">No preview yet</p>
                       <p className="text-xs text-muted-foreground mt-1">
-                        Write your newsletter, then click "Preview Recipients" to see who will receive it.
+                        Write your newsletter, then click "Preview Recipients" to see who will
+                        receive it.
                       </p>
                     </CardContent>
                   </Card>
@@ -547,16 +581,20 @@ export function NewsletterBroadcast() {
                   </CardHeader>
                   <CardContent className="space-y-2 text-xs text-muted-foreground">
                     <p>
-                      <strong className="text-foreground">Personalisation:</strong> Each email includes a personalised "Hi [Name]" greeting.
+                      <strong className="text-foreground">Personalisation:</strong> Each email
+                      includes a personalised "Hi [Name]" greeting.
                     </p>
                     <p>
-                      <strong className="text-foreground">Branding:</strong> Emails use the Navigate Wealth branded template automatically.
+                      <strong className="text-foreground">Branding:</strong> Emails use the Navigate
+                      Wealth branded template automatically.
                     </p>
                     <p>
-                      <strong className="text-foreground">Unsubscribe:</strong> Each email includes a unique unsubscribe link in the footer.
+                      <strong className="text-foreground">Unsubscribe:</strong> Each email includes
+                      a unique unsubscribe link in the footer.
                     </p>
                     <p>
-                      <strong className="text-foreground">Audit:</strong> Every broadcast is logged with recipient count, success/failure stats, and timestamp.
+                      <strong className="text-foreground">Audit:</strong> Every broadcast is logged
+                      with recipient count, success/failure stats, and timestamp.
                     </p>
                   </CardContent>
                 </Card>
@@ -609,20 +647,37 @@ export function NewsletterBroadcast() {
                 <table className="w-full text-sm">
                   <thead>
                     <tr className="border-b bg-muted/40">
-                      <th className="text-left py-2.5 px-4 font-medium text-xs text-muted-foreground uppercase tracking-wider">Subject</th>
-                      <th className="text-left py-2.5 px-4 font-medium text-xs text-muted-foreground uppercase tracking-wider">Recipients</th>
-                      <th className="text-left py-2.5 px-4 font-medium text-xs text-muted-foreground uppercase tracking-wider">Sent</th>
-                      <th className="text-left py-2.5 px-4 font-medium text-xs text-muted-foreground uppercase tracking-wider">Failed</th>
-                      <th className="text-left py-2.5 px-4 font-medium text-xs text-muted-foreground uppercase tracking-wider">Date</th>
-                      <th className="text-right py-2.5 px-4 font-medium text-xs text-muted-foreground uppercase tracking-wider">Actions</th>
+                      <th className="text-left py-2.5 px-4 font-medium text-xs text-muted-foreground uppercase tracking-wider">
+                        Subject
+                      </th>
+                      <th className="text-left py-2.5 px-4 font-medium text-xs text-muted-foreground uppercase tracking-wider">
+                        Recipients
+                      </th>
+                      <th className="text-left py-2.5 px-4 font-medium text-xs text-muted-foreground uppercase tracking-wider">
+                        Sent
+                      </th>
+                      <th className="text-left py-2.5 px-4 font-medium text-xs text-muted-foreground uppercase tracking-wider">
+                        Failed
+                      </th>
+                      <th className="text-left py-2.5 px-4 font-medium text-xs text-muted-foreground uppercase tracking-wider">
+                        Date
+                      </th>
+                      <th className="text-right py-2.5 px-4 font-medium text-xs text-muted-foreground uppercase tracking-wider">
+                        Actions
+                      </th>
                     </tr>
                   </thead>
                   <tbody>
                     {broadcasts.map((b) => (
-                      <tr key={b.id} className="border-b last:border-0 hover:bg-muted/20 transition-colors">
+                      <tr
+                        key={b.id}
+                        className="border-b last:border-0 hover:bg-muted/20 transition-colors"
+                      >
                         <td className="py-2.5 px-4">
                           <div>
-                            <p className="font-medium text-foreground truncate max-w-xs">{b.subject}</p>
+                            <p className="font-medium text-foreground truncate max-w-xs">
+                              {b.subject}
+                            </p>
                             {b.bodySnippet && (
                               <p className="text-xs text-muted-foreground truncate max-w-xs mt-0.5">
                                 {b.bodySnippet.replace(/<[^>]*>/g, '').substring(0, 80)}...
@@ -689,7 +744,10 @@ export function NewsletterBroadcast() {
               Send Newsletter?
             </AlertDialogTitle>
             <AlertDialogDescription className="space-y-2">
-              <p>You are about to send this newsletter to <strong>{previewResult?.recipientCount || 0} active subscriber(s)</strong>.</p>
+              <p>
+                You are about to send this newsletter to{' '}
+                <strong>{previewResult?.recipientCount || 0} active subscriber(s)</strong>.
+              </p>
               <div className="bg-muted/50 rounded-lg p-3 mt-2 space-y-1">
                 <p className="text-xs">
                   <strong>Subject:</strong> {subject}
@@ -705,10 +763,7 @@ export function NewsletterBroadcast() {
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={handleSend}
-              className="bg-purple-600 hover:bg-purple-700"
-            >
+            <AlertDialogAction onClick={handleSend} className="bg-purple-600 hover:bg-purple-700">
               <Send className="h-4 w-4 mr-1.5" />
               Confirm & Send
             </AlertDialogAction>

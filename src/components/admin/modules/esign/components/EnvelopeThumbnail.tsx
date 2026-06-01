@@ -110,12 +110,14 @@ async function renderThumbnail(envelopeId: string, version: string): Promise<str
       await doc.cleanup();
       doc.destroy();
     }
-  })().catch((error) => {
-    logger.warn('Thumbnail render failed', { envelopeId, error });
-    return null;
-  }).finally(() => {
-    inflight.delete(key);
-  });
+  })()
+    .catch((error) => {
+      logger.warn('Thumbnail render failed', { envelopeId, error });
+      return null;
+    })
+    .finally(() => {
+      inflight.delete(key);
+    });
 
   inflight.set(key, job);
   return job;
@@ -181,20 +183,29 @@ export function EnvelopeThumbnail({
   }, [envelopeId, version]);
 
   const dimensions = `width: ${THUMB_W}px; height: ${THUMB_H}px;`;
-  const baseClass = `relative inline-flex shrink-0 items-center justify-center overflow-hidden rounded-sm border border-gray-200 bg-white ${className ?? ''}`.trim();
+  const baseClass =
+    `relative inline-flex shrink-0 items-center justify-center overflow-hidden rounded-sm border border-gray-200 bg-white ${className ?? ''}`.trim();
 
   if (status === 'error' && hideOnError) {
     return null;
   }
 
   return (
-    <div ref={hostRef} className={baseClass} style={{ width: THUMB_W, height: THUMB_H }} aria-hidden="true">
+    <div
+      ref={hostRef}
+      className={baseClass}
+      style={{ width: THUMB_W, height: THUMB_H }}
+      aria-hidden="true"
+    >
       {src && status === 'ready' ? (
         <img src={src} alt="" className="h-full w-full object-cover" loading="lazy" />
       ) : status === 'error' ? (
         <FileText className="h-5 w-5 text-muted-foreground/40" />
       ) : (
-        <div className="h-full w-full animate-pulse bg-gray-100" style={{ width: THUMB_W, height: THUMB_H }} />
+        <div
+          className="h-full w-full animate-pulse bg-gray-100"
+          style={{ width: THUMB_W, height: THUMB_H }}
+        />
       )}
       <span className="sr-only">{dimensions}</span>
     </div>

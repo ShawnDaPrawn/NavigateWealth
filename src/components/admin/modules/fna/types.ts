@@ -57,7 +57,7 @@ export interface FNAAssumptions {
   lifestyleModificationsCost: number;
   medicalAdaptationCost: number;
   annualIncomeRequiredIfDisabled: number;
-  
+
   // Severe Illness Specific
   medicalShortfallsEstimate: number;
   lifestyleAdjustmentsCost: number;
@@ -71,7 +71,7 @@ export interface FNAAssumptions {
   funeralAndFinalExpenses?: number; // Replaced by finalExpensesEstimate
   educationCapitalGoal?: number; // Replaced by educationFundingTotal
   onceOffBequests?: number; // Can be part of estate costs or kept separate
-  targetIncomeReplacementPercent?: number; 
+  targetIncomeReplacementPercent?: number;
   incomeProtectionMaxPercentOfGross?: number;
   inflationRate: number;
   expectedInvestmentReturnRate: number;
@@ -84,13 +84,13 @@ export interface FNAAssumptions {
 export interface FNAOverrides {
   lifeCoverRequiredOverride?: number;
   lifeCoverOverrideReason?: string;
-  
+
   severeIllnessRequiredOverride?: number;
   severeIllnessOverrideReason?: string;
-  
+
   disabilityCoverRequiredOverride?: number;
   disabilityCoverOverrideReason?: string;
-  
+
   incomeProtectionRequiredMonthlyOverride?: number;
   incomeProtectionOverrideReason?: string;
 }
@@ -125,10 +125,10 @@ export interface FNAInputs {
 
   // Assumptions
   assumptions: FNAAssumptions;
-  
+
   // Overrides
   overrides: FNAOverrides;
-  
+
   // Method selections
   lifeCoverMethod: 'years' | 'capitalisation';
   disabilityMethod: 'years' | 'capitalisation';
@@ -143,7 +143,7 @@ export interface LifeCoverBreakdown {
   educationFunding: number;
   estateCosts: number;
   existingLifeCover: number;
-  
+
   calculatedNeed: number;
   overrideNeed?: number;
   finalRecommendedNeed: number;
@@ -156,7 +156,7 @@ export interface SevereIllnessBreakdown {
   incomeGap: number;
   debtBuffer: number;
   existingSevereIllnessCover: number;
-  
+
   calculatedNeed: number;
   overrideNeed?: number;
   finalRecommendedNeed: number;
@@ -169,7 +169,7 @@ export interface CapitalDisabilityBreakdown {
   lifestyleModifications: number;
   medicalAdaptation: number;
   existingDisabilityCover: number;
-  
+
   calculatedNeed: number;
   overrideNeed?: number;
   finalRecommendedNeed: number;
@@ -179,7 +179,7 @@ export interface CapitalDisabilityBreakdown {
 export interface IncomeProtectionBreakdown {
   monthlyRequired: number;
   existingIP: number;
-  
+
   calculatedNeed: number;
   overrideNeed?: number;
   finalRecommendedNeed: number;
@@ -213,7 +213,7 @@ export interface FNASession {
 
 // ==================== WIZARD STEP TYPES ====================
 
-export type FNAWizardStep = 
+export type FNAWizardStep =
   | 'personal'
   | 'income'
   | 'liabilities'

@@ -55,7 +55,11 @@ function formatRelativeTime(timestamp: string): string {
   if (diffHours < 24) return `${diffHours}h ago`;
   if (diffDays === 1) return 'yesterday';
   if (diffDays < 30) return `${diffDays}d ago`;
-  return new Date(timestamp).toLocaleDateString('en-ZA', { day: 'numeric', month: 'short', year: 'numeric' });
+  return new Date(timestamp).toLocaleDateString('en-ZA', {
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+  });
 }
 
 function isStale(timestamp: string): boolean {
@@ -91,7 +95,9 @@ export function SystemHealthCard({ onModuleChange }: SystemHealthCardProps) {
         setLoading(false);
       }
     });
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   const handlePreview = useCallback(async () => {
@@ -253,7 +259,10 @@ export function SystemHealthCard({ onModuleChange }: SystemHealthCardProps) {
                     <Eye className="h-3.5 w-3.5 text-blue-600" />
                     <span className="text-xs font-semibold text-blue-900">Dry-run preview</span>
                   </div>
-                  <Badge variant="outline" className="text-[10px] px-1.5 py-0 leading-4 text-blue-700 border-blue-300 bg-blue-50">
+                  <Badge
+                    variant="outline"
+                    className="text-[10px] px-1.5 py-0 leading-4 text-blue-700 border-blue-300 bg-blue-50"
+                  >
                     Not applied
                   </Badge>
                 </div>
@@ -305,7 +314,12 @@ export function SystemHealthCard({ onModuleChange }: SystemHealthCardProps) {
                 )}
 
                 {previewResult.totalKeysFound === 0 && (
-                  <Button size="sm" variant="ghost" onClick={resetStage} className="h-7 text-xs w-full">
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={resetStage}
+                    className="h-7 text-xs w-full"
+                  >
                     Dismiss
                   </Button>
                 )}
@@ -328,7 +342,10 @@ export function SystemHealthCard({ onModuleChange }: SystemHealthCardProps) {
                     <CheckCircle2 className="h-3.5 w-3.5 text-green-600" />
                     <span className="text-xs font-semibold text-green-900">Cleanup complete</span>
                   </div>
-                  <Badge variant="outline" className="text-[10px] px-1.5 py-0 leading-4 text-green-700 border-green-300 bg-green-50">
+                  <Badge
+                    variant="outline"
+                    className="text-[10px] px-1.5 py-0 leading-4 text-green-700 border-green-300 bg-green-50"
+                  >
                     Applied
                   </Badge>
                 </div>
@@ -336,7 +353,12 @@ export function SystemHealthCard({ onModuleChange }: SystemHealthCardProps) {
                   Deleted <strong>{liveResult.totalKeysDeleted}</strong>{' '}
                   {liveResult.totalKeysDeleted !== 1 ? 'keys' : 'key'} in {liveResult.durationMs}ms.
                 </p>
-                <Button size="sm" variant="ghost" onClick={resetStage} className="h-7 text-xs w-full">
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  onClick={resetStage}
+                  className="h-7 text-xs w-full"
+                >
                   Dismiss
                 </Button>
               </div>
@@ -350,7 +372,12 @@ export function SystemHealthCard({ onModuleChange }: SystemHealthCardProps) {
                   <span className="text-xs font-semibold text-red-900">Error</span>
                 </div>
                 <p className="text-xs text-red-800">{errorMsg}</p>
-                <Button size="sm" variant="ghost" onClick={resetStage} className="h-7 text-xs w-full">
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  onClick={resetStage}
+                  className="h-7 text-xs w-full"
+                >
                   Dismiss
                 </Button>
               </div>
@@ -365,10 +392,9 @@ export function SystemHealthCard({ onModuleChange }: SystemHealthCardProps) {
           <AlertDialogHeader>
             <AlertDialogTitle>Confirm Live Cleanup</AlertDialogTitle>
             <AlertDialogDescription>
-              This will permanently delete{' '}
-              <strong>{previewResult?.totalKeysFound ?? 0}</strong> stale KV{' '}
-              {(previewResult?.totalKeysFound ?? 0) !== 1 ? 'entries' : 'entry'}.
-              This action cannot be undone.
+              This will permanently delete <strong>{previewResult?.totalKeysFound ?? 0}</strong>{' '}
+              stale KV {(previewResult?.totalKeysFound ?? 0) !== 1 ? 'entries' : 'entry'}. This
+              action cannot be undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

@@ -16,12 +16,7 @@ interface RoAStepClientProps {
 }
 
 export function RoAStepClient({ draft, onUpdate }: RoAStepClientProps) {
-  const { 
-    searchTerm, 
-    setSearchTerm, 
-    results: searchResults, 
-    isSearching 
-  } = useClientSearch();
+  const { searchTerm, setSearchTerm, results: searchResults, isSearching } = useClientSearch();
 
   // Fetch full client details for selected client
   const { data: clientDetails } = useClient(draft?.clientId);
@@ -39,17 +34,17 @@ export function RoAStepClient({ draft, onUpdate }: RoAStepClientProps) {
   }, [clientContext, draft?.clientId, draft?.contextCapturedAt, onUpdate]);
 
   const handleSelectExistingClient = (client: ClientSearchResult) => {
-    onUpdate({ 
-      clientId: client.user_id, 
-      clientData: undefined // Clear any new client data
+    onUpdate({
+      clientId: client.user_id,
+      clientData: undefined, // Clear any new client data
     });
     setSearchTerm('');
   };
 
   const handleNewClientChange = (data: NonNullable<RoADraft['clientData']>) => {
-    onUpdate({ 
+    onUpdate({
       clientData: data,
-      clientId: undefined // Clear existing client selection
+      clientId: undefined, // Clear existing client selection
     });
   };
 
@@ -59,20 +54,40 @@ export function RoAStepClient({ draft, onUpdate }: RoAStepClientProps) {
         const contact = clientContext.clientSnapshot.contactInformation;
         return {
           id: clientContext.clientSnapshot.clientId,
-          firstName: String(clientContext.clientSnapshot.personalInformation.firstName || '').trim()
-            || clientContext.clientSnapshot.displayName.split(' ')[0]
-            || '',
-          lastName: String(clientContext.clientSnapshot.personalInformation.lastName || '').trim()
-            || clientContext.clientSnapshot.displayName.split(' ').slice(1).join(' ')
-            || '',
-          email: String(clientContext.clientSnapshot.personalInformation.email || contact.email || ''),
-          mobile: String(clientContext.clientSnapshot.personalInformation.cellphone || contact.cellphone || ''),
+          firstName:
+            String(clientContext.clientSnapshot.personalInformation.firstName || '').trim() ||
+            clientContext.clientSnapshot.displayName.split(' ')[0] ||
+            '',
+          lastName:
+            String(clientContext.clientSnapshot.personalInformation.lastName || '').trim() ||
+            clientContext.clientSnapshot.displayName.split(' ').slice(1).join(' ') ||
+            '',
+          email: String(
+            clientContext.clientSnapshot.personalInformation.email || contact.email || '',
+          ),
+          mobile: String(
+            clientContext.clientSnapshot.personalInformation.cellphone || contact.cellphone || '',
+          ),
           riskProfile: String(
-            (clientContext.clientSnapshot.riskProfile as { profile?: string; riskCategory?: string } | null)?.profile
-            || (clientContext.clientSnapshot.riskProfile as { profile?: string; riskCategory?: string } | null)?.riskCategory
-            || (clientContext.clientSnapshot.profile?.riskAssessment as { riskCategory?: string } | undefined)?.riskCategory
-            || 'N/A'
-          )
+            (
+              clientContext.clientSnapshot.riskProfile as {
+                profile?: string;
+                riskCategory?: string;
+              } | null
+            )?.profile ||
+              (
+                clientContext.clientSnapshot.riskProfile as {
+                  profile?: string;
+                  riskCategory?: string;
+                } | null
+              )?.riskCategory ||
+              (
+                clientContext.clientSnapshot.profile?.riskAssessment as
+                  | { riskCategory?: string }
+                  | undefined
+              )?.riskCategory ||
+              'N/A',
+          ),
         };
       }
 
@@ -84,12 +99,12 @@ export function RoAStepClient({ draft, onUpdate }: RoAStepClientProps) {
           lastName: clientDetails.last_name,
           email: clientDetails.email,
           mobile: clientDetails.phone || '',
-          riskProfile: 'N/A'
+          riskProfile: 'N/A',
         };
       }
 
       // Check search results (Fallback)
-      const searchResult = searchResults.find(c => c.user_id === draft.clientId);
+      const searchResult = searchResults.find((c) => c.user_id === draft.clientId);
       if (searchResult) {
         return {
           id: searchResult.user_id,
@@ -97,7 +112,7 @@ export function RoAStepClient({ draft, onUpdate }: RoAStepClientProps) {
           lastName: searchResult.last_name,
           email: searchResult.email,
           mobile: searchResult.phone || '',
-          riskProfile: 'N/A'
+          riskProfile: 'N/A',
         };
       }
     }
@@ -128,18 +143,26 @@ export function RoAStepClient({ draft, onUpdate }: RoAStepClientProps) {
           <CardContent>
             {selectedClient ? (
               <div className="space-y-2">
-                <p className="font-medium">{selectedClient.firstName} {selectedClient.lastName}</p>
+                <p className="font-medium">
+                  {selectedClient.firstName} {selectedClient.lastName}
+                </p>
                 <p className="text-sm text-muted-foreground">{selectedClient.email}</p>
                 <p className="text-sm text-muted-foreground">{selectedClient.mobile}</p>
-                <p className="text-sm text-muted-foreground">Risk Profile: {selectedClient.riskProfile}</p>
+                <p className="text-sm text-muted-foreground">
+                  Risk Profile: {selectedClient.riskProfile}
+                </p>
               </div>
-            ) : draft?.clientData && (
-              <div className="space-y-2">
-                <p className="font-medium">{draft.clientData.firstName} {draft.clientData.lastName}</p>
-                <p className="text-sm text-muted-foreground">{draft.clientData.email}</p>
-                <p className="text-sm text-muted-foreground">{draft.clientData.mobile}</p>
-                <p className="text-sm text-muted-foreground">New client profile</p>
-              </div>
+            ) : (
+              draft?.clientData && (
+                <div className="space-y-2">
+                  <p className="font-medium">
+                    {draft.clientData.firstName} {draft.clientData.lastName}
+                  </p>
+                  <p className="text-sm text-muted-foreground">{draft.clientData.email}</p>
+                  <p className="text-sm text-muted-foreground">{draft.clientData.mobile}</p>
+                  <p className="text-sm text-muted-foreground">New client profile</p>
+                </div>
+              )
             )}
           </CardContent>
         </Card>
@@ -177,10 +200,7 @@ export function RoAStepClient({ draft, onUpdate }: RoAStepClientProps) {
 
         {/* New Client Tab */}
         <TabsContent value="new" className="space-y-4">
-          <NewClientForm 
-             onDataChange={handleNewClientChange}
-             initialData={draft?.clientData}
-          />
+          <NewClientForm onDataChange={handleNewClientChange} initialData={draft?.clientData} />
         </TabsContent>
       </Tabs>
     </div>

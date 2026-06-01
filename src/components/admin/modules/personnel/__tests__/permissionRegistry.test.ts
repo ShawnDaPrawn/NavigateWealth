@@ -29,7 +29,10 @@ describe('personnel permission registry', () => {
     ]);
 
     for (const module of operationsModules) {
-      expect(adminVisibleModules.has(module), `${module} is missing from admin-visible modules`).toBe(true);
+      expect(
+        adminVisibleModules.has(module),
+        `${module} is missing from admin-visible modules`,
+      ).toBe(true);
     }
   });
 

@@ -126,7 +126,7 @@ export function TableOfContents({ contentRef }: TableOfContentsProps) {
                   entry.level === 3 && 'pl-4',
                   activeId === entry.id
                     ? 'text-purple-700 font-medium'
-                    : 'text-gray-500 hover:text-gray-800'
+                    : 'text-gray-500 hover:text-gray-800',
                 )}
               >
                 {entry.text}

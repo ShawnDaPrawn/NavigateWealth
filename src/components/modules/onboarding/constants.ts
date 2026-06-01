@@ -34,7 +34,12 @@ export const PROVINCES = [
 
 export const PREFERRED_CONTACT_METHODS = ['Email', 'Phone Call', 'WhatsApp', 'SMS'];
 
-export const BEST_TIMES_TO_CONTACT = ['Morning (8am–12pm)', 'Afternoon (12pm–5pm)', 'Evening (5pm–8pm)', 'No preference'];
+export const BEST_TIMES_TO_CONTACT = [
+  'Morning (8am–12pm)',
+  'Afternoon (12pm–5pm)',
+  'Evening (5pm–8pm)',
+  'No preference',
+];
 
 export const INDUSTRIES = [
   'Accounting & Auditing',
@@ -173,8 +178,8 @@ export const ACCOUNT_REASON_OPTIONS = [
 
 export const URGENCY_OPTIONS = [
   { value: 'immediately', label: 'Immediately', description: 'I need to get started right away' },
-  { value: 'within_1_month', label: 'Within 1 month', description: 'I\'d like to begin soon' },
-  { value: 'within_3_months', label: 'Within 3 months', description: 'I\'m planning ahead' },
+  { value: 'within_1_month', label: 'Within 1 month', description: "I'd like to begin soon" },
+  { value: 'within_3_months', label: 'Within 3 months', description: "I'm planning ahead" },
   { value: 'exploring', label: 'Just exploring', description: 'I want to understand my options' },
 ];
 

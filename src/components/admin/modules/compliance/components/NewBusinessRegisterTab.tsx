@@ -8,9 +8,9 @@ const columns = [
   { key: 'provider', label: 'Provider', type: 'text' as const },
   { key: 'productType', label: 'Product Type', type: 'text' as const },
   { key: 'policyNumber', label: 'Policy Number', type: 'text' as const },
-  { 
-    key: 'businessFlags', 
-    label: 'Business Type', 
+  {
+    key: 'businessFlags',
+    label: 'Business Type',
     type: 'custom' as const,
     render: (_: unknown, record: ComplianceRecord) => (
       <div className="space-y-1">
@@ -24,28 +24,38 @@ const columns = [
             Section 14
           </span>
         )}
-        {!(record as unknown as Record<string, unknown>).replacementBusiness && !(record as unknown as Record<string, unknown>).section14Transfer && (
-          <span className="inline-flex items-center px-2 py-1 rounded text-xs bg-green-100 text-green-700">
-            New Business
-          </span>
-        )}
+        {!(record as unknown as Record<string, unknown>).replacementBusiness &&
+          !(record as unknown as Record<string, unknown>).section14Transfer && (
+            <span className="inline-flex items-center px-2 py-1 rounded text-xs bg-green-100 text-green-700">
+              New Business
+            </span>
+          )}
       </div>
-    )
+    ),
   },
-  { 
-    key: 'commission', 
-    label: 'Commission', 
+  {
+    key: 'commission',
+    label: 'Commission',
     type: 'custom' as const,
     render: (_: unknown, record: ComplianceRecord) => (
       <div className="text-sm">
-        <div>R{(record as unknown as Record<string, unknown>).commissionAmount != null ? Number((record as unknown as Record<string, unknown>).commissionAmount).toLocaleString() : ''}</div>
-        <div className="text-xs text-muted-foreground">{String((record as unknown as Record<string, unknown>).commissionType || '')}</div>
+        <div>
+          R
+          {(record as unknown as Record<string, unknown>).commissionAmount != null
+            ? Number(
+                (record as unknown as Record<string, unknown>).commissionAmount,
+              ).toLocaleString()
+            : ''}
+        </div>
+        <div className="text-xs text-muted-foreground">
+          {String((record as unknown as Record<string, unknown>).commissionType || '')}
+        </div>
       </div>
-    )
+    ),
   },
   { key: 'clawbackExpiry', label: 'Clawback Expiry', type: 'date' as const },
   { key: 'businessStatus', label: 'Business Status', type: 'badge' as const },
-  { key: 'status', label: 'Status', type: 'badge' as const }
+  { key: 'status', label: 'Status', type: 'badge' as const },
 ];
 
 const filters = [
@@ -56,8 +66,8 @@ const filters = [
       { value: 'Life Insurance', label: 'Life Insurance' },
       { value: 'Medical Aid', label: 'Medical Aid' },
       { value: 'Retirement Annuity', label: 'Retirement Annuity' },
-      { value: 'Investment', label: 'Investment' }
-    ]
+      { value: 'Investment', label: 'Investment' },
+    ],
   },
   {
     key: 'businessStatus',
@@ -65,9 +75,9 @@ const filters = [
     options: [
       { value: 'Active', label: 'Active' },
       { value: 'Pending Acceptance', label: 'Pending Acceptance' },
-      { value: 'Documentation Outstanding', label: 'Documentation Outstanding' }
-    ]
-  }
+      { value: 'Documentation Outstanding', label: 'Documentation Outstanding' },
+    ],
+  },
 ];
 
 export function NewBusinessRegisterTab() {

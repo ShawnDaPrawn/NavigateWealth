@@ -3,14 +3,14 @@
  * Backend for the Client Portal AI Financial Advisor
  */
 
-import { Hono } from "npm:hono";
-import { createClient } from "jsr:@supabase/supabase-js@2.49.8";
-import * as kv from "./kv_store.tsx";
-import { createModuleLogger } from "./stderr-logger.ts";
+import { Hono } from 'npm:hono';
+import { createClient } from 'jsr:@supabase/supabase-js@2.49.8';
+import * as kv from './kv_store.tsx';
+import { createModuleLogger } from './stderr-logger.ts';
 import { ensureSeeded, getActivePrompt } from './prompt-service.ts';
 import { getPortfolioSummary } from './client-portal-service.ts';
-import { getAuthContext, AuthError } from "./auth-mw.ts";
-import { PERSONNEL_ROLES } from "./constants.ts";
+import { getAuthContext, AuthError } from './auth-mw.ts';
+import { PERSONNEL_ROLES } from './constants.ts';
 
 const app = new Hono();
 const log = createModuleLogger('ai-advisor');
@@ -20,10 +20,8 @@ app.get('/', (c) => c.json({ service: 'ai-advisor', status: 'active' }));
 app.get('', (c) => c.json({ service: 'ai-advisor', status: 'active' }));
 
 // Lazy Supabase client — must NOT be top-level to avoid deployment crashes in edge functions.
-const getSupabase = () => createClient(
-  Deno.env.get('SUPABASE_URL')!,
-  Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
-);
+const getSupabase = () =>
+  createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!);
 
 const getOpenAIKey = () => Deno.env.get('OPENAI_API_KEY');
 
@@ -32,8 +30,14 @@ const getOpenAIKey = () => Deno.env.get('OPENAI_API_KEY');
  */
 import type { Context, Next } from 'npm:hono';
 
-interface ChatMessage { role: 'system' | 'user' | 'assistant'; content: string }
-interface KvRow { key: string; value: unknown }
+interface ChatMessage {
+  role: 'system' | 'user' | 'assistant';
+  content: string;
+}
+interface KvRow {
+  key: string;
+  value: unknown;
+}
 interface AdvisorMessageArtifact extends Record<string, unknown> {}
 interface AdvisorStoredMessage {
   role: 'user' | 'assistant';
@@ -88,7 +92,8 @@ const DOCUMENT_PREFIXES = ['document:', 'doc:', 'tax_doc:', 'estate_doc:'] as co
 const ESIGN_PREFIX = (userId: string) => `esign:client:${userId}:`;
 const LEGACY_CHAT_PREFIX = (userId: string) => `ai_advisor:${userId}:chat:`;
 const SESSION_META_PREFIX = (userId: string) => `ai_advisor:${userId}:session_meta:`;
-const SESSION_META_KEY = (userId: string, sessionId: string) => `${SESSION_META_PREFIX(userId)}${sessionId}`;
+const SESSION_META_KEY = (userId: string, sessionId: string) =>
+  `${SESSION_META_PREFIX(userId)}${sessionId}`;
 const SESSION_MESSAGE_PREFIX = (userId: string, sessionId: string) =>
   `ai_advisor:${userId}:session:${sessionId}:message:`;
 const FNA_PREFIXES = {
@@ -137,14 +142,19 @@ function normalizeAdvisorStoredMessage(value: unknown): AdvisorStoredMessage | n
   if (value.role !== 'user' && value.role !== 'assistant') return null;
   if (typeof value.content !== 'string') return null;
 
-  const citations = Array.isArray(value.citations) ? value.citations.filter(isRecord).map((citation) => ({
-    title: typeof citation.title === 'string' ? citation.title : '',
-    slug: typeof citation.slug === 'string' ? citation.slug : '',
-    url: typeof citation.url === 'string' ? citation.url : '',
-  })).filter((citation) => citation.title && citation.slug && citation.url) : undefined;
+  const citations = Array.isArray(value.citations)
+    ? value.citations
+        .filter(isRecord)
+        .map((citation) => ({
+          title: typeof citation.title === 'string' ? citation.title : '',
+          slug: typeof citation.slug === 'string' ? citation.slug : '',
+          url: typeof citation.url === 'string' ? citation.url : '',
+        }))
+        .filter((citation) => citation.title && citation.slug && citation.url)
+    : undefined;
 
   const artifacts = Array.isArray(value.artifacts)
-    ? value.artifacts.filter(isRecord) as AdvisorMessageArtifact[]
+    ? (value.artifacts.filter(isRecord) as AdvisorMessageArtifact[])
     : undefined;
 
   return {
@@ -156,34 +166,37 @@ function normalizeAdvisorStoredMessage(value: unknown): AdvisorStoredMessage | n
   };
 }
 
-function normalizeAdvisorSessionSummary(value: unknown, sessionId?: string): AdvisorSessionSummary | null {
+function normalizeAdvisorSessionSummary(
+  value: unknown,
+  sessionId?: string,
+): AdvisorSessionSummary | null {
   if (!isRecord(value)) return null;
 
-  const id = typeof value.id === 'string' && value.id.trim()
-    ? value.id.trim()
-    : (sessionId || '');
+  const id = typeof value.id === 'string' && value.id.trim() ? value.id.trim() : sessionId || '';
   if (!id) return null;
 
   const createdAt = toIsoTimestamp(value.createdAt);
   const updatedAt = toIsoTimestamp(value.updatedAt, createdAt);
-  const messageCount = typeof value.messageCount === 'number' && Number.isFinite(value.messageCount)
-    ? Math.max(0, Math.floor(value.messageCount))
-    : 0;
+  const messageCount =
+    typeof value.messageCount === 'number' && Number.isFinite(value.messageCount)
+      ? Math.max(0, Math.floor(value.messageCount))
+      : 0;
 
   return {
     id,
-    title: typeof value.title === 'string' && value.title.trim()
-      ? value.title.trim()
-      : 'New chat',
+    title: typeof value.title === 'string' && value.title.trim() ? value.title.trim() : 'New chat',
     createdAt,
     updatedAt,
-    lastMessagePreview: typeof value.lastMessagePreview === 'string' ? value.lastMessagePreview : '',
+    lastMessagePreview:
+      typeof value.lastMessagePreview === 'string' ? value.lastMessagePreview : '',
     messageCount,
     legacyImported: value.legacyImported === true,
   };
 }
 
-async function listAllKvRowsByPrefix(prefix: string): Promise<Array<{ key: string; value: unknown }>> {
+async function listAllKvRowsByPrefix(
+  prefix: string,
+): Promise<Array<{ key: string; value: unknown }>> {
   const rows: Array<{ key: string; value: unknown }> = [];
   let startAfter: string | undefined;
 
@@ -206,20 +219,33 @@ async function deleteKvKeys(keys: string[]): Promise<void> {
   }
 }
 
-async function listAdvisorSessionSummaries(subjectUserId: string): Promise<AdvisorSessionSummary[]> {
+async function listAdvisorSessionSummaries(
+  subjectUserId: string,
+): Promise<AdvisorSessionSummary[]> {
   const rows = await listAllKvRowsByPrefix(SESSION_META_PREFIX(subjectUserId));
   return rows
-    .map((row) => normalizeAdvisorSessionSummary(row.value, row.key.slice(SESSION_META_PREFIX(subjectUserId).length)))
+    .map((row) =>
+      normalizeAdvisorSessionSummary(
+        row.value,
+        row.key.slice(SESSION_META_PREFIX(subjectUserId).length),
+      ),
+    )
     .filter((summary): summary is AdvisorSessionSummary => Boolean(summary))
     .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
 }
 
-async function getAdvisorSessionSummary(subjectUserId: string, sessionId: string): Promise<AdvisorSessionSummary | null> {
+async function getAdvisorSessionSummary(
+  subjectUserId: string,
+  sessionId: string,
+): Promise<AdvisorSessionSummary | null> {
   const raw = await kv.get(SESSION_META_KEY(subjectUserId, sessionId));
   return normalizeAdvisorSessionSummary(raw, sessionId);
 }
 
-async function upsertAdvisorSessionSummary(subjectUserId: string, summary: AdvisorSessionSummary): Promise<void> {
+async function upsertAdvisorSessionSummary(
+  subjectUserId: string,
+  summary: AdvisorSessionSummary,
+): Promise<void> {
   await kv.set(SESSION_META_KEY(subjectUserId, summary.id), summary);
 }
 
@@ -228,7 +254,8 @@ async function ensureAdvisorSession(
   sessionId?: string | null,
   titleSeed?: string,
 ): Promise<AdvisorSessionSummary> {
-  const requestedId = typeof sessionId === 'string' && sessionId.trim() ? sessionId.trim() : crypto.randomUUID();
+  const requestedId =
+    typeof sessionId === 'string' && sessionId.trim() ? sessionId.trim() : crypto.randomUUID();
   const existing = await getAdvisorSessionSummary(subjectUserId, requestedId);
   if (existing) return existing;
 
@@ -254,7 +281,10 @@ function advisorSessionMessageKey(
   return `${SESSION_MESSAGE_PREFIX(subjectUserId, sessionId)}${toTimestampKey(timestamp)}:${String(sequence).padStart(4, '0')}:${crypto.randomUUID()}`;
 }
 
-async function loadAdvisorSessionMessages(subjectUserId: string, sessionId: string): Promise<AdvisorStoredMessage[]> {
+async function loadAdvisorSessionMessages(
+  subjectUserId: string,
+  sessionId: string,
+): Promise<AdvisorStoredMessage[]> {
   const rows = await listAllKvRowsByPrefix(SESSION_MESSAGE_PREFIX(subjectUserId, sessionId));
   return rows
     .map((row) => normalizeAdvisorStoredMessage(row.value))
@@ -272,7 +302,12 @@ async function appendAdvisorSessionMessages(
   if (newMessages.length === 0) return summary;
 
   const keys = newMessages.map((message, index) =>
-    advisorSessionMessageKey(subjectUserId, summary.id, message.timestamp, summary.messageCount + index),
+    advisorSessionMessageKey(
+      subjectUserId,
+      summary.id,
+      message.timestamp,
+      summary.messageCount + index,
+    ),
   );
   await kv.mset(keys, newMessages);
 
@@ -291,7 +326,10 @@ async function appendAdvisorSessionMessages(
   return updatedSummary;
 }
 
-async function clearAdvisorSessionMessages(subjectUserId: string, sessionId: string): Promise<AdvisorSessionSummary | null> {
+async function clearAdvisorSessionMessages(
+  subjectUserId: string,
+  sessionId: string,
+): Promise<AdvisorSessionSummary | null> {
   const summary = await getAdvisorSessionSummary(subjectUserId, sessionId);
   if (!summary) return null;
 
@@ -319,7 +357,9 @@ async function deleteLegacyAdvisorHistory(subjectUserId: string): Promise<void> 
   await deleteKvKeys(rows.map((row) => row.key));
 }
 
-async function migrateLegacyAdvisorHistory(subjectUserId: string): Promise<AdvisorSessionSummary[]> {
+async function migrateLegacyAdvisorHistory(
+  subjectUserId: string,
+): Promise<AdvisorSessionSummary[]> {
   const existingSummaries = await listAdvisorSessionSummaries(subjectUserId);
   if (existingSummaries.length > 0) return existingSummaries;
 
@@ -370,9 +410,7 @@ function toPrettyJson(value: unknown): string {
 function getClientName(profile: unknown): string {
   if (!isRecord(profile)) return 'the client';
 
-  const personalInfo = isRecord(profile.personalInformation)
-    ? profile.personalInformation
-    : null;
+  const personalInfo = isRecord(profile.personalInformation) ? profile.personalInformation : null;
 
   const firstName = [
     profile.firstName,
@@ -438,9 +476,8 @@ function uniqueItems(items: unknown[]): unknown[] {
         item.url,
       ].find((value) => typeof value === 'string' && value.trim());
 
-      key = typeof explicitKey === 'string' && explicitKey.trim()
-        ? explicitKey
-        : JSON.stringify(item);
+      key =
+        typeof explicitKey === 'string' && explicitKey.trim() ? explicitKey : JSON.stringify(item);
     } else {
       key = JSON.stringify(item);
     }
@@ -482,7 +519,10 @@ async function requireAuth(c: Context, next: Next) {
     }
 
     const token = authHeader.split(' ')[1];
-    const { data: { user }, error } = await getSupabase().auth.getUser(token);
+    const {
+      data: { user },
+      error,
+    } = await getSupabase().auth.getUser(token);
 
     if (error || !user) {
       return c.json({ error: 'Unauthorized: Invalid user session' }, 401);
@@ -581,7 +621,8 @@ async function buildAdvisorSseResponse(
   const decoder = new TextDecoder();
   const encoder = new TextEncoder();
 
-  const lastUserMsg = [...(clientMessages as { role: string; content: string }[])].reverse()
+  const lastUserMsg = [...(clientMessages as { role: string; content: string }[])]
+    .reverse()
     .find((m) => m.role === 'user');
   const finalSession = await ensureAdvisorSession(
     subjectUserId,
@@ -595,11 +636,13 @@ async function buildAdvisorSseResponse(
     await appendAdvisorSessionMessages(
       subjectUserId,
       finalSessionId,
-      [{
-        role: 'user',
-        content: lastUserMsg.content,
-        timestamp: userMessageTimestamp,
-      }],
+      [
+        {
+          role: 'user',
+          content: lastUserMsg.content,
+          timestamp: userMessageTimestamp,
+        },
+      ],
       lastUserMsg.content,
     );
   }
@@ -641,13 +684,15 @@ async function buildAdvisorSseResponse(
         }
 
         if (fullReply) {
-          await appendAdvisorSessionMessages(subjectUserId, finalSessionId, [{
-            role: 'assistant',
-            content: fullReply,
-            timestamp: new Date().toISOString(),
-            citations: [],
-            artifacts: [],
-          }]);
+          await appendAdvisorSessionMessages(subjectUserId, finalSessionId, [
+            {
+              role: 'assistant',
+              content: fullReply,
+              timestamp: new Date().toISOString(),
+              citations: [],
+              artifacts: [],
+            },
+          ]);
         }
 
         controller.enqueue(
@@ -659,7 +704,9 @@ async function buildAdvisorSseResponse(
       } catch (err) {
         log.error('Stream processing error', err);
         controller.enqueue(
-          encoder.encode(`data: ${JSON.stringify({ type: 'error', message: 'Stream interrupted' })}\n\n`),
+          encoder.encode(
+            `data: ${JSON.stringify({ type: 'error', message: 'Stream interrupted' })}\n\n`,
+          ),
         );
         controller.close();
       }
@@ -670,7 +717,7 @@ async function buildAdvisorSseResponse(
     headers: {
       'Content-Type': 'text/event-stream',
       'Cache-Control': 'no-cache',
-      'Connection': 'keep-alive',
+      Connection: 'keep-alive',
       'Access-Control-Allow-Origin': '*',
     },
   });
@@ -680,11 +727,7 @@ async function buildAdvisorSseResponse(
  * Fetch client data for AI context
  */
 async function getUserContext(userId: string): Promise<AdvisorUserContext | null> {
-  const profile = await safeResolve(
-    'profile',
-    () => kv.get(PROFILE_KEY(userId)),
-    {},
-  );
+  const profile = await safeResolve('profile', () => kv.get(PROFILE_KEY(userId)), {});
 
   const profileRecord = isRecord(profile) ? profile : {};
   const clientName = getClientName(profileRecord);
@@ -709,28 +752,60 @@ async function getUserContext(userId: string): Promise<AdvisorUserContext | null
   ] = await Promise.all([
     safeResolve('client keys', () => kv.get(CLIENT_KEYS_KEY(userId)), null),
     safeResolve('policy collection', () => kv.get(POLICY_COLLECTION_KEY(userId)), []),
-    safeResolve('legacy policy records', () => fetchRowsByPrefix(LEGACY_POLICY_PREFIX(userId)), [] as KvRow[]),
+    safeResolve(
+      'legacy policy records',
+      () => fetchRowsByPrefix(LEGACY_POLICY_PREFIX(userId)),
+      [] as KvRow[],
+    ),
     safeResolve('portfolio overview', () => getPortfolioSummary(userId), null),
-    safeResolve('compliance records', () => fetchRowsByPrefix(COMPLIANCE_PREFIX(userId)), [] as KvRow[]),
+    safeResolve(
+      'compliance records',
+      () => fetchRowsByPrefix(COMPLIANCE_PREFIX(userId)),
+      [] as KvRow[],
+    ),
     safeResolve('risk profile', () => kv.get(RISK_PROFILE_KEY(userId)), null),
-    safeResolve('beneficiary records', () => fetchRowsByPrefix(BENEFICIARY_PREFIX(userId)), [] as KvRow[]),
+    safeResolve(
+      'beneficiary records',
+      () => fetchRowsByPrefix(BENEFICIARY_PREFIX(userId)),
+      [] as KvRow[],
+    ),
     safeResolve('communication history', () => kv.getByPrefix(COMMUNICATION_PREFIX(userId)), []),
     Promise.all(
       DOCUMENT_PREFIXES.map((prefix) =>
-        safeResolve(
-          `${prefix} documents`,
-          () => kv.getByPrefix(`${prefix}${userId}:`),
-          [],
-        )
-      )
+        safeResolve(`${prefix} documents`, () => kv.getByPrefix(`${prefix}${userId}:`), []),
+      ),
     ),
-    safeResolve('e-sign document history', () => fetchRowsByPrefix(ESIGN_PREFIX(userId)), [] as KvRow[]),
-    safeResolve('risk planning FNAs', () => kv.getByPrefix(`${FNA_PREFIXES.riskPlanning}${userId}:`), []),
+    safeResolve(
+      'e-sign document history',
+      () => fetchRowsByPrefix(ESIGN_PREFIX(userId)),
+      [] as KvRow[],
+    ),
+    safeResolve(
+      'risk planning FNAs',
+      () => kv.getByPrefix(`${FNA_PREFIXES.riskPlanning}${userId}:`),
+      [],
+    ),
     safeResolve('medical FNAs', () => kv.getByPrefix(`${FNA_PREFIXES.medical}${userId}:`), []),
-    safeResolve('retirement FNAs', () => kv.getByPrefix(`${FNA_PREFIXES.retirement}${userId}:`), []),
-    safeResolve('investment INAs', () => kv.getByPrefix(`${FNA_PREFIXES.investment}${userId}:`), []),
-    safeResolve('tax planning FNAs', () => kv.getByPrefix(`${FNA_PREFIXES.taxPlanning}${userId}:`), []),
-    safeResolve('estate planning FNAs', () => kv.getByPrefix(`${FNA_PREFIXES.estatePlanning}${userId}:`), []),
+    safeResolve(
+      'retirement FNAs',
+      () => kv.getByPrefix(`${FNA_PREFIXES.retirement}${userId}:`),
+      [],
+    ),
+    safeResolve(
+      'investment INAs',
+      () => kv.getByPrefix(`${FNA_PREFIXES.investment}${userId}:`),
+      [],
+    ),
+    safeResolve(
+      'tax planning FNAs',
+      () => kv.getByPrefix(`${FNA_PREFIXES.taxPlanning}${userId}:`),
+      [],
+    ),
+    safeResolve(
+      'estate planning FNAs',
+      () => kv.getByPrefix(`${FNA_PREFIXES.estatePlanning}${userId}:`),
+      [],
+    ),
   ]);
 
   const policyInformation = uniqueItems([
@@ -738,10 +813,12 @@ async function getUserContext(userId: string): Promise<AdvisorUserContext | null
     ...legacyPolicyRows.map((row) => ({ key: row.key, value: row.value })),
   ]);
 
-  const documentHistory = sortByRecency(uniqueItems([
-    ...documentBuckets.flat(),
-    ...esignRows.map((row) => ({ key: row.key, value: row.value })),
-  ]));
+  const documentHistory = sortByRecency(
+    uniqueItems([
+      ...documentBuckets.flat(),
+      ...esignRows.map((row) => ({ key: row.key, value: row.value })),
+    ]),
+  );
 
   const fnaInformation = {
     riskPlanning: sortByRecency(riskPlanning),
@@ -867,17 +944,14 @@ async function callOpenAI(messages: ChatMessage[], systemPrompt: string) {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      'Authorization': `Bearer ${OPENAI_API_KEY}`
+      Authorization: `Bearer ${OPENAI_API_KEY}`,
     },
     body: JSON.stringify({
       model: 'gpt-4o',
-      messages: [
-        { role: 'system', content: systemPrompt },
-        ...messages
-      ],
+      messages: [{ role: 'system', content: systemPrompt }, ...messages],
       temperature: 0.7,
-      max_tokens: 1000
-    })
+      max_tokens: 1000,
+    }),
   });
 
   if (!response.ok) {
@@ -900,18 +974,15 @@ async function callOpenAIStream(messages: ChatMessage[], systemPrompt: string) {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      'Authorization': `Bearer ${OPENAI_API_KEY}`
+      Authorization: `Bearer ${OPENAI_API_KEY}`,
     },
     body: JSON.stringify({
       model: 'gpt-4o',
-      messages: [
-        { role: 'system', content: systemPrompt },
-        ...messages
-      ],
+      messages: [{ role: 'system', content: systemPrompt }, ...messages],
       temperature: 0.7,
       max_tokens: 1000,
       stream: true,
-    })
+    }),
   });
 
   if (!response.ok) {
@@ -1082,9 +1153,7 @@ app.post('/admin/sessions', async (c) => {
     const { userId, role } = await getAuthContext(c);
     const body = await c.req.json().catch(() => ({}));
     const clientUserId =
-      isRecord(body) && typeof body.clientUserId === 'string'
-        ? body.clientUserId.trim()
-        : '';
+      isRecord(body) && typeof body.clientUserId === 'string' ? body.clientUserId.trim() : '';
     if (!clientUserId) {
       return c.json({ error: 'clientUserId is required' }, 400);
     }
@@ -1241,25 +1310,29 @@ app.post('/chat', requireAuth, async (c) => {
 
     // Save history
     const conversationKey = `ai_advisor:${user.id}:chat:${Date.now()}`;
-    await getSupabase().from('kv_store_91ed8379').insert({
-      key: conversationKey,
-      value: {
-        role: 'user',
-        content: message,
-        timestamp: new Date().toISOString()
-      }
-    });
-    
+    await getSupabase()
+      .from('kv_store_91ed8379')
+      .insert({
+        key: conversationKey,
+        value: {
+          role: 'user',
+          content: message,
+          timestamp: new Date().toISOString(),
+        },
+      });
+
     // Save reply
     const replyKey = `ai_advisor:${user.id}:chat:${Date.now() + 1}`;
-    await getSupabase().from('kv_store_91ed8379').insert({
-      key: replyKey,
-      value: {
-        role: 'assistant',
-        content: reply,
-        timestamp: new Date().toISOString()
-      }
-    });
+    await getSupabase()
+      .from('kv_store_91ed8379')
+      .insert({
+        key: replyKey,
+        value: {
+          role: 'assistant',
+          content: reply,
+          timestamp: new Date().toISOString(),
+        },
+      });
 
     return c.json({ message: reply });
   } catch (error: unknown) {
@@ -1317,7 +1390,7 @@ app.delete('/history', requireAuth, async (c) => {
     const sessions = await listEnsuredAdvisorSessions(user.id);
     await Promise.all(sessions.map((session) => deleteAdvisorSession(user.id, session.id)));
     await deleteLegacyAdvisorHistory(user.id);
-    
+
     return c.json({ success: true });
   } catch (error) {
     return c.json({ error: 'Failed to clear history' }, 500);

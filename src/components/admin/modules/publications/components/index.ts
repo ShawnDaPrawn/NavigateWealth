@@ -1,6 +1,6 @@
 /**
  * Publications Feature - Components Index
- * 
+ *
  * Central export for all shared components.
  */
 

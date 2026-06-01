@@ -39,7 +39,10 @@ export interface SupabaseAdminClient {
         data: { user: SupabaseAuthUser | null };
         error: { message: string; status?: number; code?: string } | null;
       }>;
-      updateUserById(uid: string, attrs: Record<string, unknown>): Promise<{
+      updateUserById(
+        uid: string,
+        attrs: Record<string, unknown>,
+      ): Promise<{
         data: { user: SupabaseAuthUser | null };
         error: { message: string } | null;
       }>;

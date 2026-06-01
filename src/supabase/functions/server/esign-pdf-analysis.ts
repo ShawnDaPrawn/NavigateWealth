@@ -143,9 +143,12 @@ async function extractAcroformWidgets(buffer: Uint8Array): Promise<AcroformWidge
 
     // pdf-lib exposes acroField widgets via the low-level API. Each field
     // can have multiple widgets (the same field rendered on multiple pages).
-    const acroField = (field as unknown as { acroField: { getWidgets: () => unknown[] } }).acroField;
+    const acroField = (field as unknown as { acroField: { getWidgets: () => unknown[] } })
+      .acroField;
     const fieldWidgets = (acroField?.getWidgets?.() ?? []) as Array<{
-      Rect?: () => { asRectangle?: () => { x: number; y: number; width: number; height: number } } | undefined;
+      Rect?: () =>
+        | { asRectangle?: () => { x: number; y: number; width: number; height: number } }
+        | undefined;
       P?: () => unknown;
       getRectangle?: () => { x: number; y: number; width: number; height: number };
     }>;
@@ -156,7 +159,9 @@ async function extractAcroformWidgets(buffer: Uint8Array): Promise<AcroformWidge
       let rect: { x: number; y: number; width: number; height: number } | undefined;
       try {
         rect = widget.getRectangle?.();
-      } catch { /* swallow */ }
+      } catch {
+        /* swallow */
+      }
       if (!rect) continue;
 
       // Match this widget to a page by inspecting page annotations.
@@ -174,7 +179,9 @@ async function extractAcroformWidgets(buffer: Uint8Array): Promise<AcroformWidge
           // Best-effort match: same rect within 1pt.
           const aRect = (obj as { Rect?: () => unknown }).Rect?.();
           if (!aRect) continue;
-          const arr4 = (aRect as { asRectangle?: () => { x: number; y: number; width: number; height: number } }).asRectangle?.();
+          const arr4 = (
+            aRect as { asRectangle?: () => { x: number; y: number; width: number; height: number } }
+          ).asRectangle?.();
           if (!arr4) continue;
           if (
             Math.abs(arr4.x - rect.x) < 1 &&
@@ -260,7 +267,9 @@ export async function detectAcroformFields(buffer: Uint8Array): Promise<Analysis
       const { width, height } = page.getSize();
       return widgetToCandidate(w, width, height, i);
     });
-    log.info(`AcroForm autodetect: ${candidates.length} candidate(s) from ${pages.length}-page PDF`);
+    log.info(
+      `AcroForm autodetect: ${candidates.length} candidate(s) from ${pages.length}-page PDF`,
+    );
     return { candidates, durationMs: Date.now() - start, ok: true };
   } catch (err) {
     log.warn(`AcroForm autodetect failed (non-fatal): ${getErrMsg(err)}`);
@@ -291,7 +300,11 @@ const ANCHOR_PATTERNS: Array<{
   label: string;
 }> = [
   // Signatures
-  { pattern: /\bsign(ature)?\s*(of\s+\w+)?[:\-_]?\s*_{3,}/i, type: 'signature', label: 'Signature' },
+  {
+    pattern: /\bsign(ature)?\s*(of\s+\w+)?[:\-_]?\s*_{3,}/i,
+    type: 'signature',
+    label: 'Signature',
+  },
   { pattern: /\bsigned\s+by[:\-_]?\s*_{3,}/i, type: 'signature', label: 'Signature' },
   { pattern: /\bsign\s+here\b/i, type: 'signature', label: 'Sign here' },
   { pattern: /\bx\s*_{5,}/i, type: 'signature', label: 'Signature (X line)' },
@@ -334,7 +347,7 @@ async function loadPdfJs(): Promise<unknown> {
   // Dynamic CDN import keeps the bundle out of cold paths and avoids
   // top-level pdfjs initialisation in environments without a worker.
   // deno-lint-ignore no-explicit-any
-  return await import('npm:pdfjs-dist@4.7.76/legacy/build/pdf.mjs') as any;
+  return (await import('npm:pdfjs-dist@4.7.76/legacy/build/pdf.mjs')) as any;
 }
 
 interface PdfJsPageProxy {
@@ -352,7 +365,10 @@ interface PdfJsDocProxy {
  * 4pt tolerance). pdfjs gives us tokens individually; we need lines so
  * regexes can match phrases like `Signature: ____`.
  */
-function groupItemsIntoLines(items: TextItem[], pageHeightPt: number): Array<{
+function groupItemsIntoLines(
+  items: TextItem[],
+  pageHeightPt: number,
+): Array<{
   text: string;
   /** [x1, y1, x2, y2] in PDF-space (origin bottom-left). */
   rect: [number, number, number, number];

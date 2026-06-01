@@ -1,20 +1,20 @@
 import React, { useState, useMemo } from 'react';
-import { 
-  Table, 
-  TableBody, 
-  TableCell, 
-  TableHead, 
-  TableHeader, 
-  TableRow 
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
 } from '../../../../ui/table';
 import { Button } from '../../../../ui/button';
 import { Input } from '../../../../ui/input';
 import { Checkbox } from '../../../../ui/checkbox';
-import { 
-  Search, 
-  Filter, 
-  Eye, 
-  MoreHorizontal, 
+import {
+  Search,
+  Filter,
+  Eye,
+  MoreHorizontal,
   FileText,
   Ban,
   Trash2,
@@ -34,11 +34,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '../../../../ui/dropdown-menu';
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from '../../../../ui/popover';
+import { Popover, PopoverContent, PopoverTrigger } from '../../../../ui/popover';
 import { Calendar } from '../../../../ui/calendar';
 import { useEnvelopes } from '../hooks/useEnvelopes';
 import { useEnvelopeActions } from '../hooks/useEnvelopeActions';
@@ -65,17 +61,23 @@ interface EnvelopesListProps {
 const REMINDABLE_STATUSES = ['sent', 'viewed', 'partially_signed'];
 const VOIDABLE_STATUSES = ['sent', 'viewed', 'partially_signed'];
 
-export function EnvelopesList({ onViewEnvelope, onCreateNew, onResumePrepare, resumingEnvelopeId, refreshTrigger }: EnvelopesListProps) {
+export function EnvelopesList({
+  onViewEnvelope,
+  onCreateNew,
+  onResumePrepare,
+  resumingEnvelopeId,
+  refreshTrigger,
+}: EnvelopesListProps) {
   const { envelopes, loading, error, refetch } = useEnvelopes({ autoLoad: true, refreshTrigger });
   const { voidEnvelope, voiding, deleteEnvelope, deleting } = useEnvelopeActions();
-  
+
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined);
 
   // ==================== SELECTION STATE ====================
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
-  
+
   // Void Dialog State
   const [voidDialogOpen, setVoidDialogOpen] = useState(false);
   const [selectedForVoid, setSelectedForVoid] = useState<EsignEnvelope | null>(null);
@@ -130,29 +132,38 @@ export function EnvelopesList({ onViewEnvelope, onCreateNew, onResumePrepare, re
   };
 
   // ==================== FILTERING ====================
-  const filteredEnvelopes = useMemo(() => envelopes.filter(envelope => {
-    const matchesSearch = 
-      envelope.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      envelope.signers?.some(r => r.name.toLowerCase().includes(searchQuery.toLowerCase()) || r.email.toLowerCase().includes(searchQuery.toLowerCase()));
-    
-    const matchesStatus = statusFilter === 'all' || envelope.status === statusFilter;
+  const filteredEnvelopes = useMemo(
+    () =>
+      envelopes.filter((envelope) => {
+        const matchesSearch =
+          envelope.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          envelope.signers?.some(
+            (r) =>
+              r.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+              r.email.toLowerCase().includes(searchQuery.toLowerCase()),
+          );
 
-    let matchesDate = true;
-    if (dateRange?.from) {
-      const envelopeDate = new Date(envelope.updated_at || envelope.created_at);
-      const start = startOfDay(dateRange.from);
-      const end = dateRange.to ? endOfDay(dateRange.to) : endOfDay(dateRange.from);
-      matchesDate = isWithinInterval(envelopeDate, { start, end });
-    }
+        const matchesStatus = statusFilter === 'all' || envelope.status === statusFilter;
 
-    return matchesSearch && matchesStatus && matchesDate;
-  }), [envelopes, searchQuery, statusFilter, dateRange]);
+        let matchesDate = true;
+        if (dateRange?.from) {
+          const envelopeDate = new Date(envelope.updated_at || envelope.created_at);
+          const start = startOfDay(dateRange.from);
+          const end = dateRange.to ? endOfDay(dateRange.to) : endOfDay(dateRange.from);
+          matchesDate = isWithinInterval(envelopeDate, { start, end });
+        }
+
+        return matchesSearch && matchesStatus && matchesDate;
+      }),
+    [envelopes, searchQuery, statusFilter, dateRange],
+  );
 
   // ==================== SELECTION HELPERS ====================
   const toggleSelect = (id: string) => {
-    setSelectedIds(prev => {
+    setSelectedIds((prev) => {
       const next = new Set(prev);
-      if (next.has(id)) next.delete(id); else next.add(id);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
       return next;
     });
   };
@@ -161,16 +172,20 @@ export function EnvelopesList({ onViewEnvelope, onCreateNew, onResumePrepare, re
     if (selectedIds.size === filteredEnvelopes.length) {
       setSelectedIds(new Set());
     } else {
-      setSelectedIds(new Set(filteredEnvelopes.map(e => e.id)));
+      setSelectedIds(new Set(filteredEnvelopes.map((e) => e.id)));
     }
   };
 
   const clearSelection = () => setSelectedIds(new Set());
   const hasSelection = selectedIds.size > 0;
 
-  const selectedEnvelopes = filteredEnvelopes.filter(e => selectedIds.has(e.id));
-  const remindableIds = selectedEnvelopes.filter(e => REMINDABLE_STATUSES.includes(e.status)).map(e => e.id);
-  const voidableIds = selectedEnvelopes.filter(e => VOIDABLE_STATUSES.includes(e.status)).map(e => e.id);
+  const selectedEnvelopes = filteredEnvelopes.filter((e) => selectedIds.has(e.id));
+  const remindableIds = selectedEnvelopes
+    .filter((e) => REMINDABLE_STATUSES.includes(e.status))
+    .map((e) => e.id);
+  const voidableIds = selectedEnvelopes
+    .filter((e) => VOIDABLE_STATUSES.includes(e.status))
+    .map((e) => e.id);
   const canBulkRemind = remindableIds.length > 0;
   const canBulkVoid = voidableIds.length > 0;
 
@@ -209,20 +224,35 @@ export function EnvelopesList({ onViewEnvelope, onCreateNew, onResumePrepare, re
             <span className="text-sm font-medium text-blue-800">
               {selectedIds.size} envelope{selectedIds.size > 1 ? 's' : ''} selected
             </span>
-            <Button variant="ghost" size="sm" onClick={clearSelection} className="text-blue-600 hover:text-blue-800 h-7 px-2">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={clearSelection}
+              className="text-blue-600 hover:text-blue-800 h-7 px-2"
+            >
               <X className="h-3.5 w-3.5 mr-1" />
               Clear
             </Button>
           </div>
           <div className="flex items-center gap-2">
             {canBulkRemind && (
-              <Button size="sm" variant="outline" onClick={() => setBulkRemindOpen(true)} className="h-8 gap-1.5">
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => setBulkRemindOpen(true)}
+                className="h-8 gap-1.5"
+              >
                 <Send className="h-3.5 w-3.5" />
                 Send Reminders ({remindableIds.length})
               </Button>
             )}
             {canBulkVoid && (
-              <Button size="sm" variant="destructive" onClick={() => setBulkVoidOpen(true)} className="h-8 gap-1.5">
+              <Button
+                size="sm"
+                variant="destructive"
+                onClick={() => setBulkVoidOpen(true)}
+                className="h-8 gap-1.5"
+              >
                 <Ban className="h-3.5 w-3.5" />
                 Void Selected ({voidableIds.length})
               </Button>
@@ -244,24 +274,38 @@ export function EnvelopesList({ onViewEnvelope, onCreateNew, onResumePrepare, re
                 className="pl-9"
               />
             </div>
-            
+
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="outline" className="gap-2">
                   <Filter className="h-4 w-4" />
-                  {statusFilter === 'all' ? 'Status' : statusFilter.charAt(0).toUpperCase() + statusFilter.slice(1)}
+                  {statusFilter === 'all'
+                    ? 'Status'
+                    : statusFilter.charAt(0).toUpperCase() + statusFilter.slice(1)}
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
-                <DropdownMenuItem onClick={() => setStatusFilter('all')}>All Statuses</DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setStatusFilter('all')}>
+                  All Statuses
+                </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem onClick={() => setStatusFilter('draft')}>Draft</DropdownMenuItem>
                 <DropdownMenuItem onClick={() => setStatusFilter('sent')}>Sent</DropdownMenuItem>
-                <DropdownMenuItem onClick={() => setStatusFilter('viewed')}>Viewed</DropdownMenuItem>
-                <DropdownMenuItem onClick={() => setStatusFilter('partially_signed')}>Partially Signed</DropdownMenuItem>
-                <DropdownMenuItem onClick={() => setStatusFilter('completed')}>Completed</DropdownMenuItem>
-                <DropdownMenuItem onClick={() => setStatusFilter('expired')}>Expired</DropdownMenuItem>
-                <DropdownMenuItem onClick={() => setStatusFilter('voided')}>Voided</DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setStatusFilter('viewed')}>
+                  Viewed
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setStatusFilter('partially_signed')}>
+                  Partially Signed
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setStatusFilter('completed')}>
+                  Completed
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setStatusFilter('expired')}>
+                  Expired
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setStatusFilter('voided')}>
+                  Voided
+                </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
 
@@ -270,21 +314,21 @@ export function EnvelopesList({ onViewEnvelope, onCreateNew, onResumePrepare, re
                 <PopoverTrigger asChild>
                   <Button
                     id="date"
-                    variant={"outline"}
+                    variant={'outline'}
                     className={cn(
-                      "w-[260px] justify-start text-left font-normal",
-                      !dateRange && "text-muted-foreground"
+                      'w-[260px] justify-start text-left font-normal',
+                      !dateRange && 'text-muted-foreground',
                     )}
                   >
                     <CalendarIcon className="mr-2 h-4 w-4" />
                     {dateRange?.from ? (
                       dateRange.to ? (
                         <div className="contents">
-                          {format(dateRange.from, "LLL dd, y")} -{" "}
-                          {format(dateRange.to, "LLL dd, y")}
+                          {format(dateRange.from, 'LLL dd, y')} -{' '}
+                          {format(dateRange.to, 'LLL dd, y')}
                         </div>
                       ) : (
-                        format(dateRange.from, "LLL dd, y")
+                        format(dateRange.from, 'LLL dd, y')
                       )
                     ) : (
                       <span>Pick a date range</span>
@@ -303,9 +347,9 @@ export function EnvelopesList({ onViewEnvelope, onCreateNew, onResumePrepare, re
                 </PopoverContent>
               </Popover>
               {dateRange && (
-                <Button 
-                  variant="ghost" 
-                  size="icon" 
+                <Button
+                  variant="ghost"
+                  size="icon"
                   onClick={() => setDateRange(undefined)}
                   title="Clear date filter"
                   aria-label="Clear date filter"
@@ -316,10 +360,10 @@ export function EnvelopesList({ onViewEnvelope, onCreateNew, onResumePrepare, re
             </div>
           </div>
           <div className="flex items-center gap-2">
-            <Button 
-              variant="outline" 
-              onClick={() => refetch()} 
-              size="icon" 
+            <Button
+              variant="outline"
+              onClick={() => refetch()}
+              size="icon"
               title="Refresh"
               aria-label="Refresh envelopes"
             >
@@ -336,7 +380,9 @@ export function EnvelopesList({ onViewEnvelope, onCreateNew, onResumePrepare, re
             <TableRow>
               <TableHead className="w-10">
                 <Checkbox
-                  checked={filteredEnvelopes.length > 0 && selectedIds.size === filteredEnvelopes.length}
+                  checked={
+                    filteredEnvelopes.length > 0 && selectedIds.size === filteredEnvelopes.length
+                  }
                   onCheckedChange={toggleSelectAll}
                   aria-label="Select all envelopes"
                 />
@@ -365,7 +411,10 @@ export function EnvelopesList({ onViewEnvelope, onCreateNew, onResumePrepare, re
               </TableRow>
             ) : (
               filteredEnvelopes.map((envelope) => (
-                <TableRow key={envelope.id} className={selectedIds.has(envelope.id) ? 'bg-blue-50/50' : undefined}>
+                <TableRow
+                  key={envelope.id}
+                  className={selectedIds.has(envelope.id) ? 'bg-blue-50/50' : undefined}
+                >
                   <TableCell>
                     <Checkbox
                       checked={selectedIds.has(envelope.id)}
@@ -376,13 +425,14 @@ export function EnvelopesList({ onViewEnvelope, onCreateNew, onResumePrepare, re
                   <TableCell className="max-w-[280px] sm:max-w-[340px]">
                     <div className="flex items-center gap-3">
                       {/* P8.1 — page-1 PDF thumbnail (60x80, lazy + cached). */}
-                      <EnvelopeThumbnail
-                        envelopeId={envelope.id}
-                        version={envelope.updated_at}
-                      />
+                      <EnvelopeThumbnail envelopeId={envelope.id} version={envelope.updated_at} />
                       <div className="flex flex-col min-w-0">
-                        <span className="font-medium truncate" title={envelope.title}>{envelope.title}</span>
-                        <span className="text-xs text-muted-foreground">ID: {envelope.id.slice(0, 8)}...</span>
+                        <span className="font-medium truncate" title={envelope.title}>
+                          {envelope.title}
+                        </span>
+                        <span className="text-xs text-muted-foreground">
+                          ID: {envelope.id.slice(0, 8)}...
+                        </span>
                       </div>
                     </div>
                   </TableCell>
@@ -393,12 +443,14 @@ export function EnvelopesList({ onViewEnvelope, onCreateNew, onResumePrepare, re
                     <div className="flex flex-col gap-1">
                       {envelope.signers?.slice(0, 2).map((r) => (
                         <div key={r.id} className="text-sm flex items-center gap-1">
-                           <span className={r.status === 'signed' ? 'text-green-600 font-medium' : ''}>
-                             {r.name}
-                           </span>
-                           {r.status === 'signed' && (
-                             <CheckCircle2 className="h-3 w-3 text-green-500" />
-                           )}
+                          <span
+                            className={r.status === 'signed' ? 'text-green-600 font-medium' : ''}
+                          >
+                            {r.name}
+                          </span>
+                          {r.status === 'signed' && (
+                            <CheckCircle2 className="h-3 w-3 text-green-500" />
+                          )}
                         </div>
                       ))}
                       {(envelope.signers?.length || 0) > 2 && (
@@ -415,7 +467,10 @@ export function EnvelopesList({ onViewEnvelope, onCreateNew, onResumePrepare, re
                   </TableCell>
                   <TableCell>
                     <div className="text-sm">
-                      {format(new Date(envelope.updated_at || envelope.created_at), 'MMM d, yyyy HH:mm')}
+                      {format(
+                        new Date(envelope.updated_at || envelope.created_at),
+                        'MMM d, yyyy HH:mm',
+                      )}
                     </div>
                   </TableCell>
                   <TableCell className="text-right">
@@ -433,7 +488,7 @@ export function EnvelopesList({ onViewEnvelope, onCreateNew, onResumePrepare, re
                           View Details
                         </DropdownMenuItem>
                         {envelope.status === 'draft' && onResumePrepare && (
-                          <DropdownMenuItem 
+                          <DropdownMenuItem
                             onClick={() => onResumePrepare(envelope)}
                             disabled={resumingEnvelopeId === envelope.id}
                           >
@@ -457,7 +512,7 @@ export function EnvelopesList({ onViewEnvelope, onCreateNew, onResumePrepare, re
                           </DropdownMenuItem>
                         )}
                         {['sent', 'viewed', 'partially_signed'].includes(envelope.status) && (
-                          <DropdownMenuItem 
+                          <DropdownMenuItem
                             onClick={() => handleVoidClick(envelope)}
                             className="text-destructive focus:text-destructive"
                           >
@@ -466,7 +521,7 @@ export function EnvelopesList({ onViewEnvelope, onCreateNew, onResumePrepare, re
                           </DropdownMenuItem>
                         )}
                         {isDiscardable(envelope) && (
-                          <DropdownMenuItem 
+                          <DropdownMenuItem
                             onClick={() => handleDiscardClick(envelope)}
                             className="text-destructive focus:text-destructive"
                           >
@@ -483,23 +538,23 @@ export function EnvelopesList({ onViewEnvelope, onCreateNew, onResumePrepare, re
           </TableBody>
         </Table>
       </div>
-      
+
       <div className="text-xs text-muted-foreground text-center">
         Showing {filteredEnvelopes.length} of {envelopes.length} envelopes
         {hasSelection && ` \u00b7 ${selectedIds.size} selected`}
       </div>
 
       {/* ==================== DIALOGS ==================== */}
-      <VoidEnvelopeDialog 
-        open={voidDialogOpen} 
+      <VoidEnvelopeDialog
+        open={voidDialogOpen}
         onOpenChange={setVoidDialogOpen}
         onConfirm={handleVoidConfirm}
         loading={voiding}
         title={selectedForVoid?.title}
       />
 
-      <DiscardEnvelopeDialog 
-        open={discardDialogOpen} 
+      <DiscardEnvelopeDialog
+        open={discardDialogOpen}
         onOpenChange={setDiscardDialogOpen}
         onConfirm={handleDiscardConfirm}
         loading={deleting}

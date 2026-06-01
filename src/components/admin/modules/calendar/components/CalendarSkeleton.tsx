@@ -53,7 +53,7 @@ export function CalendarSkeleton() {
 
           {/* Day headers */}
           <div className="grid grid-cols-7 gap-px mb-2">
-            {['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map(day => (
+            {['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map((day) => (
               <div key={day} className="text-center py-2">
                 <Skeleton className="h-4 w-8 mx-auto" />
               </div>

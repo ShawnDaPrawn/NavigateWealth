@@ -11,16 +11,8 @@ const FULL_LOGO_SOURCE = path.join(
   '2_Logo_With_Icon',
   'Navigate_Wealth_Logo_With_Icon@2x.png',
 );
-const LOGO_ONLY_SOURCE = path.join(
-  SOURCE_DIR,
-  '3_Logo_Only',
-  'Navigate_Wealth_Logo_Only@2x.png',
-);
-const ICON_ONLY_SOURCE = path.join(
-  SOURCE_DIR,
-  '1_Icon_Only',
-  'Navigate_Wealth_Icon_Only@2x.png',
-);
+const LOGO_ONLY_SOURCE = path.join(SOURCE_DIR, '3_Logo_Only', 'Navigate_Wealth_Logo_Only@2x.png');
+const ICON_ONLY_SOURCE = path.join(SOURCE_DIR, '1_Icon_Only', 'Navigate_Wealth_Icon_Only@2x.png');
 
 const FULL_WIDTH = 1576;
 const FULL_HEIGHT = 892;
@@ -153,12 +145,18 @@ function buildMarchingSquaresPath(field, width, height, threshold = 0.5, toleran
     2: [['bottom', 'right']],
     3: [['left', 'right']],
     4: [['top', 'right']],
-    5: [['top', 'right'], ['left', 'bottom']],
+    5: [
+      ['top', 'right'],
+      ['left', 'bottom'],
+    ],
     6: [['top', 'bottom']],
     7: [['top', 'left']],
     8: [['top', 'left']],
     9: [['top', 'bottom']],
-    10: [['top', 'left'], ['bottom', 'right']],
+    10: [
+      ['top', 'left'],
+      ['bottom', 'right'],
+    ],
     11: [['top', 'right']],
     12: [['left', 'right']],
     13: [['bottom', 'right']],
@@ -363,14 +361,12 @@ async function traceSingleShape(sourcePath, { traceScale = 1, tolerance = 0.45 }
   const metadata = await source.metadata();
   const originalWidth = metadata.width;
   const originalHeight = metadata.height;
-  const raster = source
-    .ensureAlpha()
-    .resize({
-      width: Math.round(originalWidth * traceScale),
-      height: Math.round(originalHeight * traceScale),
-      kernel: sharp.kernel.lanczos3,
-      fit: 'fill',
-    });
+  const raster = source.ensureAlpha().resize({
+    width: Math.round(originalWidth * traceScale),
+    height: Math.round(originalHeight * traceScale),
+    kernel: sharp.kernel.lanczos3,
+    fit: 'fill',
+  });
 
   const { data: raw, info } = await raster.raw().toBuffer({ resolveWithObject: true });
   const width = info.width;
@@ -387,9 +383,8 @@ async function traceSingleShape(sourcePath, { traceScale = 1, tolerance = 0.45 }
 
   const traceBounds = boundsFromPixels(pixels, width, height);
   const tracedPath = buildMarchingSquaresPath(field, width, height, 0.5, tolerance * traceScale);
-  const pathData = traceScale === 1
-    ? tracedPath
-    : transformPath(tracedPath, { scale: 1 / traceScale });
+  const pathData =
+    traceScale === 1 ? tracedPath : transformPath(tracedPath, { scale: 1 / traceScale });
   return {
     raw,
     width,
@@ -404,8 +399,14 @@ async function traceSingleShape(sourcePath, { traceScale = 1, tolerance = 0.45 }
 }
 
 async function main() {
-  const logoOnly = await traceSingleShape(LOGO_ONLY_SOURCE, { traceScale: TRACE_SCALE, tolerance: TRACE_TOLERANCE });
-  const iconOnly = await traceSingleShape(ICON_ONLY_SOURCE, { traceScale: TRACE_SCALE, tolerance: TRACE_TOLERANCE });
+  const logoOnly = await traceSingleShape(LOGO_ONLY_SOURCE, {
+    traceScale: TRACE_SCALE,
+    tolerance: TRACE_TOLERANCE,
+  });
+  const iconOnly = await traceSingleShape(ICON_ONLY_SOURCE, {
+    traceScale: TRACE_SCALE,
+    tolerance: TRACE_TOLERANCE,
+  });
   const fullLogoMeta = await sharp(FULL_LOGO_SOURCE).metadata();
   const originalWidth = fullLogoMeta.width;
   const originalHeight = fullLogoMeta.height;
@@ -483,8 +484,13 @@ async function main() {
     }
   }
 
-  const iconComponents = components.filter((component) => component.maxX < 620 * TRACE_SCALE && component.pixels.length > 100 * TRACE_SCALE);
-  const textComponents = components.filter((component) => component.minX > 580 * TRACE_SCALE && component.pixels.length > 20 * TRACE_SCALE);
+  const iconComponents = components.filter(
+    (component) =>
+      component.maxX < 620 * TRACE_SCALE && component.pixels.length > 100 * TRACE_SCALE,
+  );
+  const textComponents = components.filter(
+    (component) => component.minX > 580 * TRACE_SCALE && component.pixels.length > 20 * TRACE_SCALE,
+  );
 
   function buildFieldFromComponents(selectedComponents) {
     const selectedLabels = new Set(selectedComponents.map((component) => component.id));
@@ -504,8 +510,20 @@ async function main() {
   const icon = buildFieldFromComponents(iconComponents);
   const text = buildFieldFromComponents(textComponents);
 
-  const tracedIconPath = buildMarchingSquaresPath(icon.field, width, height, 0.5, TRACE_TOLERANCE * TRACE_SCALE);
-  const tracedTextPath = buildMarchingSquaresPath(text.field, width, height, 0.5, TRACE_TOLERANCE * TRACE_SCALE);
+  const tracedIconPath = buildMarchingSquaresPath(
+    icon.field,
+    width,
+    height,
+    0.5,
+    TRACE_TOLERANCE * TRACE_SCALE,
+  );
+  const tracedTextPath = buildMarchingSquaresPath(
+    text.field,
+    width,
+    height,
+    0.5,
+    TRACE_TOLERANCE * TRACE_SCALE,
+  );
   const iconPathFull = transformPath(tracedIconPath, { scale: 1 / TRACE_SCALE });
   const textPathFull = transformPath(tracedTextPath, { scale: 1 / TRACE_SCALE });
 
@@ -516,7 +534,10 @@ async function main() {
   for (const pixelIndex of icon.pixels) {
     const x = pixelIndex % width;
     const y = Math.floor(pixelIndex / width);
-    if (x <= icon.traceBounds.minX + icon.traceBounds.width * 0.4 && y <= icon.traceBounds.minY + icon.traceBounds.height * 0.35) {
+    if (
+      x <= icon.traceBounds.minX + icon.traceBounds.width * 0.4 &&
+      y <= icon.traceBounds.minY + icon.traceBounds.height * 0.35
+    ) {
       gradientStartIndexes.push(pixelIndex);
     }
     if (
@@ -527,7 +548,10 @@ async function main() {
     ) {
       gradientMidIndexes.push(pixelIndex);
     }
-    if (x >= icon.traceBounds.minX + icon.traceBounds.width * 0.58 && y >= icon.traceBounds.minY + icon.traceBounds.height * 0.58) {
+    if (
+      x >= icon.traceBounds.minX + icon.traceBounds.width * 0.58 &&
+      y >= icon.traceBounds.minY + icon.traceBounds.height * 0.58
+    ) {
       gradientEndIndexes.push(pixelIndex);
     }
   }
@@ -573,7 +597,10 @@ async function main() {
       iconOnly.pixels.filter((pixelIndex) => {
         const x = pixelIndex % iconOnly.width;
         const y = Math.floor(pixelIndex / iconOnly.width);
-        return x >= iconOnly.bounds.minX + iconOnly.bounds.width * 0.58 && y >= iconOnly.bounds.minY + iconOnly.bounds.height * 0.58;
+        return (
+          x >= iconOnly.bounds.minX + iconOnly.bounds.width * 0.58 &&
+          y >= iconOnly.bounds.minY + iconOnly.bounds.height * 0.58
+        );
       }),
     ),
   };

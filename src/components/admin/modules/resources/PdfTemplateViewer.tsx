@@ -1,5 +1,10 @@
 import React, { useState, useRef } from 'react';
-import { BASE_PDF_CSS, getPdfDimensions, type PdfOrientation, type PdfPageSize } from './templates/BasePdfLayout';
+import {
+  BASE_PDF_CSS,
+  getPdfDimensions,
+  type PdfOrientation,
+  type PdfPageSize,
+} from './templates/BasePdfLayout';
 import { LETTER_CSS } from './templates/LetterheadPdfLayout';
 import type { LetterMeta } from './templates/LetterheadPdfLayout';
 import type { FormBlock } from './builder/types';
@@ -46,11 +51,7 @@ const CANVAS_COLOR_PROPS = [
 const CSS_PIXELS_PER_INCH = 96;
 const PDF_EXPORT_TARGET_DPI = 300;
 const PDF_EXPORT_CANVAS_SCALE = PDF_EXPORT_TARGET_DPI / CSS_PIXELS_PER_INCH;
-const DEFAULT_EXPORT_PAGE_SELECTORS = [
-  '.pagedjs_page',
-  '.pdf-page',
-  '.letter-page',
-];
+const DEFAULT_EXPORT_PAGE_SELECTORS = ['.pagedjs_page', '.pdf-page', '.letter-page'];
 
 function fallbackCanvasColor(property: string) {
   if (property === 'background-color') return '#ffffff';
@@ -73,10 +74,9 @@ function normalizeCanvasUnsupportedColors(root: HTMLElement) {
 }
 
 export function resolvePdfExportPages(container: ParentNode, pageSelector?: string) {
-  const selectors = [
-    pageSelector,
-    ...DEFAULT_EXPORT_PAGE_SELECTORS,
-  ].filter((value): value is string => Boolean(value));
+  const selectors = [pageSelector, ...DEFAULT_EXPORT_PAGE_SELECTORS].filter(
+    (value): value is string => Boolean(value),
+  );
 
   for (const selector of selectors) {
     const nodes = Array.from(container.querySelectorAll<HTMLElement>(selector));
@@ -201,7 +201,16 @@ export async function exportPdfFromPreview({
     if (index > 0) {
       pdf.addPage(pageSize.toLowerCase() as 'a4' | 'a3', orientation);
     }
-    pdf.addImage(imageData, 'PNG', 0, 0, pageDimensions.widthMm, pageDimensions.heightMm, undefined, 'SLOW');
+    pdf.addImage(
+      imageData,
+      'PNG',
+      0,
+      0,
+      pageDimensions.widthMm,
+      pageDimensions.heightMm,
+      undefined,
+      'SLOW',
+    );
   }
 
   const blob = pdf.output('blob');
@@ -215,10 +224,10 @@ export async function exportPdfFromPreview({
   window.setTimeout(() => window.URL.revokeObjectURL(url), 1000);
 }
 
-export const PdfTemplateViewer = ({ 
-  open, 
+export const PdfTemplateViewer = ({
+  open,
   onOpenChange,
-  title = "Client Consent Form",
+  title = 'Client Consent Form',
   children,
   pageSize = 'A4',
   orientation = 'portrait',
@@ -238,8 +247,8 @@ export const PdfTemplateViewer = ({
 
   if (!open) return null;
 
-  const handleZoomIn = () => setScale(prev => Math.min(prev + 0.1, 2));
-  const handleZoomOut = () => setScale(prev => Math.max(prev - 0.1, 0.5));
+  const handleZoomIn = () => setScale((prev) => Math.min(prev + 0.1, 2));
+  const handleZoomOut = () => setScale((prev) => Math.max(prev - 0.1, 0.5));
   const handleResetZoom = () => setScale(1);
 
   const handleDownloadAsPdf = async () => {
@@ -293,8 +302,8 @@ export const PdfTemplateViewer = ({
       .map((style) => style.textContent || '')
       .join('\n');
     const isPagedLegalPreview = Boolean(
-      previewContainer.matches('.legal-paged-preview-root, [data-legal-pdf-renderer="paged"]')
-        || previewContainer.querySelector('.pagedjs_page'),
+      previewContainer.matches('.legal-paged-preview-root, [data-legal-pdf-renderer="paged"]') ||
+      previewContainer.querySelector('.pagedjs_page'),
     );
 
     // Use LETTER_CSS for letters (which already includes BASE_PDF_CSS),
@@ -517,15 +526,14 @@ export const PdfTemplateViewer = ({
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4 animate-in fade-in-0">
       <div className="relative w-full max-w-6xl h-[90vh] bg-background rounded-lg shadow-lg flex flex-col overflow-hidden">
-        
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b bg-white z-10">
           <h2 className="text-xl font-semibold">{title}</h2>
-          
+
           <div className="flex items-center gap-4">
             {/* Zoom Controls */}
             <div className="flex items-center gap-2 bg-gray-100 rounded-md p-1">
-              <button 
+              <button
                 onClick={handleZoomOut}
                 className="p-1.5 hover:bg-white rounded-sm text-gray-700 transition-colors"
                 title="Zoom Out"
@@ -535,14 +543,14 @@ export const PdfTemplateViewer = ({
               <span className="text-xs font-medium w-12 text-center">
                 {Math.round(scale * 100)}%
               </span>
-              <button 
+              <button
                 onClick={handleZoomIn}
                 className="p-1.5 hover:bg-white rounded-sm text-gray-700 transition-colors"
                 title="Zoom In"
               >
                 <ZoomIn className="w-4 h-4" />
               </button>
-              <button 
+              <button
                 onClick={handleResetZoom}
                 className="p-1.5 hover:bg-white rounded-sm text-gray-700 transition-colors ml-1 border-l border-gray-200"
                 title="Reset Zoom"
@@ -588,11 +596,12 @@ export const PdfTemplateViewer = ({
                   ? 'Generating PDF...'
                   : !pdfExportReady
                     ? pdfPreparingLabel || 'Preparing PDF preview...'
-                  : primaryActionLabel || (renderPdfFromPreview ? 'Download PDF' : 'Print / Save as PDF')}
+                    : primaryActionLabel ||
+                      (renderPdfFromPreview ? 'Download PDF' : 'Print / Save as PDF')}
               </button>
             </div>
-            
-            <button 
+
+            <button
               onClick={() => onOpenChange(false)}
               className="p-2 text-gray-500 hover:text-gray-700 rounded-full hover:bg-gray-100 transition-colors"
             >
@@ -603,13 +612,13 @@ export const PdfTemplateViewer = ({
 
         {/* Content Preview */}
         <div className="flex-1 overflow-auto bg-gray-100/50 p-8 flex justify-center items-start">
-           <div 
-             className="transition-transform duration-200 ease-out origin-top"
-             style={{ transform: `scale(${scale})` }}
-             ref={contentRef}
-           >
-             {children}
-           </div>
+          <div
+            className="transition-transform duration-200 ease-out origin-top"
+            style={{ transform: `scale(${scale})` }}
+            ref={contentRef}
+          >
+            {children}
+          </div>
         </div>
       </div>
     </div>

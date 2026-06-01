@@ -17,15 +17,7 @@
 
 import React, { useState } from 'react';
 import { Link } from 'react-router';
-import {
-  User,
-  Copy,
-  Check,
-  ThumbsUp,
-  ThumbsDown,
-  ChevronRight,
-  Sparkles,
-} from 'lucide-react';
+import { User, Copy, Check, ThumbsUp, ThumbsDown, ChevronRight, Sparkles } from 'lucide-react';
 import { toast } from 'sonner';
 import { MessageRenderer } from '../MessageRenderer';
 import { VascoAvatar } from './VascoAvatar';
@@ -97,25 +89,20 @@ export function VascoChatMessage({
         </div>
 
         {/* Citations */}
-        {showCitations &&
-          !isUser &&
-          message.citations &&
-          message.citations.length > 0 && (
-            <div className="flex flex-wrap gap-1.5 pl-1">
-              {message.citations.map((citation, i) => (
-                <Link
-                  key={`${citation.slug}-${i}`}
-                  to={citation.url}
-                  className="inline-flex items-center gap-1 text-[11px] text-primary bg-purple-50 hover:bg-purple-100 border border-purple-100 rounded-lg px-2.5 py-1 transition-colors group"
-                >
-                  <Sparkles className="h-3 w-3 text-primary/60 group-hover:text-primary flex-shrink-0" />
-                  <span className="truncate max-w-[200px]">
-                    {citation.title}
-                  </span>
-                  <ChevronRight className="h-3 w-3 text-primary/40 flex-shrink-0" />
-                </Link>
-              ))}
-            </div>
+        {showCitations && !isUser && message.citations && message.citations.length > 0 && (
+          <div className="flex flex-wrap gap-1.5 pl-1">
+            {message.citations.map((citation, i) => (
+              <Link
+                key={`${citation.slug}-${i}`}
+                to={citation.url}
+                className="inline-flex items-center gap-1 text-[11px] text-primary bg-purple-50 hover:bg-purple-100 border border-purple-100 rounded-lg px-2.5 py-1 transition-colors group"
+              >
+                <Sparkles className="h-3 w-3 text-primary/60 group-hover:text-primary flex-shrink-0" />
+                <span className="truncate max-w-[200px]">{citation.title}</span>
+                <ChevronRight className="h-3 w-3 text-primary/40 flex-shrink-0" />
+              </Link>
+            ))}
+          </div>
         )}
 
         {!isUser && message.artifacts && message.artifacts.length > 0 && (
@@ -135,11 +122,7 @@ export function VascoChatMessage({
               }`}
               title="Copy response"
             >
-              {copied ? (
-                <Check className="h-3.5 w-3.5" />
-              ) : (
-                <Copy className="h-3.5 w-3.5" />
-              )}
+              {copied ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
             </button>
 
             {/* Feedback */}
@@ -147,15 +130,13 @@ export function VascoChatMessage({
               <>
                 <button
                   onClick={() => onFeedback('positive')}
-                  disabled={
-                    message.feedback !== undefined && message.feedback !== null
-                  }
+                  disabled={message.feedback !== undefined && message.feedback !== null}
                   className={`p-1 rounded transition-colors ${
                     message.feedback === 'positive'
                       ? 'text-green-600 bg-green-50'
                       : message.feedback === 'negative'
-                      ? 'text-gray-300 cursor-default'
-                      : 'text-gray-400 hover:text-green-600 hover:bg-green-50'
+                        ? 'text-gray-300 cursor-default'
+                        : 'text-gray-400 hover:text-green-600 hover:bg-green-50'
                   }`}
                   title="Helpful"
                 >
@@ -163,24 +144,20 @@ export function VascoChatMessage({
                 </button>
                 <button
                   onClick={() => onFeedback('negative')}
-                  disabled={
-                    message.feedback !== undefined && message.feedback !== null
-                  }
+                  disabled={message.feedback !== undefined && message.feedback !== null}
                   className={`p-1 rounded transition-colors ${
                     message.feedback === 'negative'
                       ? 'text-red-500 bg-red-50'
                       : message.feedback === 'positive'
-                      ? 'text-gray-300 cursor-default'
-                      : 'text-gray-400 hover:text-red-500 hover:bg-red-50'
+                        ? 'text-gray-300 cursor-default'
+                        : 'text-gray-400 hover:text-red-500 hover:bg-red-50'
                   }`}
                   title="Not helpful"
                 >
                   <ThumbsDown className="h-3.5 w-3.5" />
                 </button>
                 {message.feedback && (
-                  <span className="text-[10px] text-gray-400 ml-1">
-                    Thanks for the feedback
-                  </span>
+                  <span className="text-[10px] text-gray-400 ml-1">Thanks for the feedback</span>
                 )}
               </>
             )}

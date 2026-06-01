@@ -19,13 +19,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '../../../ui/card';
 import { Input } from '../../../ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../../ui/select';
 import { Separator } from '../../../ui/separator';
-import {
-  Sheet,
-  SheetContent,
-  SheetDescription,
-  SheetHeader,
-  SheetTitle,
-} from '../../../ui/sheet';
+import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '../../../ui/sheet';
 import { Skeleton } from '../../../ui/skeleton';
 import { Textarea } from '../../../ui/textarea';
 import {
@@ -145,9 +139,7 @@ function isStale(value?: string) {
 }
 
 function formatCvssScore(value?: number) {
-  return typeof value === 'number' && Number.isFinite(value)
-    ? value.toFixed(1)
-    : null;
+  return typeof value === 'number' && Number.isFinite(value) ? value.toFixed(1) : null;
 }
 
 function mergeWorkflowIntoSnapshot(
@@ -157,9 +149,7 @@ function mergeWorkflowIntoSnapshot(
   if (!snapshot) return snapshot;
 
   const issues = snapshot.issues.map((issue) =>
-    issue.fingerprint === workflow.fingerprint
-      ? applyQualityIssueWorkflow(issue, workflow)
-      : issue,
+    issue.fingerprint === workflow.fingerprint ? applyQualityIssueWorkflow(issue, workflow) : issue,
   );
 
   return {
@@ -175,11 +165,14 @@ function IssueLocation({ issue }: { issue: QualityIssue }) {
   const suffix = [
     typeof issue.line === 'number' ? issue.line : null,
     typeof issue.column === 'number' ? issue.column : null,
-  ].filter(Boolean).join(':');
+  ]
+    .filter(Boolean)
+    .join(':');
 
   return (
     <code className="text-xs text-gray-700 break-all">
-      {issue.filePath}{suffix ? `:${suffix}` : ''}
+      {issue.filePath}
+      {suffix ? `:${suffix}` : ''}
     </code>
   );
 }
@@ -231,10 +224,13 @@ function IssueDetails({ issue }: { issue: QualityIssue }) {
         {issue.component ? <span className="text-xs text-gray-500">{issue.component}</span> : null}
         {issue.packageName ? (
           <span className="text-xs text-gray-500">
-            {issue.packageName}{issue.packageVersion ? `@${issue.packageVersion}` : ''}
+            {issue.packageName}
+            {issue.packageVersion ? `@${issue.packageVersion}` : ''}
           </span>
         ) : null}
-        {issue.detectedBy ? <span className="text-xs text-gray-500">{issue.detectedBy}</span> : null}
+        {issue.detectedBy ? (
+          <span className="text-xs text-gray-500">{issue.detectedBy}</span>
+        ) : null}
         {cvssScore ? <span className="text-xs text-gray-500">CVSS {cvssScore}</span> : null}
         {issue.fixAvailable ? (
           <span className="text-xs text-emerald-700">
@@ -245,7 +241,7 @@ function IssueDetails({ issue }: { issue: QualityIssue }) {
           <span className="text-xs text-amber-700">No fix published yet</span>
         ) : null}
       </div>
-      {(issue.advisoryId || issue.cve || issue.referenceUrl || issue.vulnerableRange) ? (
+      {issue.advisoryId || issue.cve || issue.referenceUrl || issue.vulnerableRange ? (
         <div className="mt-2 flex flex-wrap items-center gap-2 text-[11px] text-gray-400">
           {issue.advisoryId ? <span>Advisory: {issue.advisoryId}</span> : null}
           {issue.cve ? <span>{issue.cve}</span> : null}
@@ -271,10 +267,13 @@ function ActionQueuePanel({ issues }: { issues: QualityIssue[] }) {
   const openIssues = issues.filter((issue) => issue.status === 'open');
   const counts = {
     needsOwner: openIssues.filter((issue) => !issue.ownerName).length,
-    readyToPatch: openIssues.filter((issue) => issue.category === 'security' && issue.fixAvailable).length,
+    readyToPatch: openIssues.filter((issue) => issue.category === 'security' && issue.fixAvailable)
+      .length,
     pastTarget: openIssues.filter((issue) => isQualityIssuePastResponseSla(issue)).length,
     reopened: openIssues.filter((issue) => issue.reopenedAt).length,
-    verifiedResolved: issues.filter((issue) => issue.status === 'resolved' && issue.resolutionEvidence).length,
+    verifiedResolved: issues.filter(
+      (issue) => issue.status === 'resolved' && issue.resolutionEvidence,
+    ).length,
   };
 
   const cards = [
@@ -367,18 +366,19 @@ function AutomationPanel({
     <Card className="rounded-xl border border-gray-100 shadow-sm">
       <CardHeader className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
         <div>
-          <CardTitle className="text-xl font-semibold text-gray-900">Automation Watchtower</CardTitle>
+          <CardTitle className="text-xl font-semibold text-gray-900">
+            Automation Watchtower
+          </CardTitle>
           <p className="mt-1 text-sm text-muted-foreground">
             Escalates critical, stale, reopened, and fixable security issues into the task workflow.
           </p>
         </div>
-        <Button
-          type="button"
-          onClick={onRun}
-          disabled={isRunning}
-          className="h-10"
-        >
-          {isRunning ? <Loader2 className="h-4 w-4 animate-spin" /> : <ShieldAlert className="h-4 w-4" />}
+        <Button type="button" onClick={onRun} disabled={isRunning} className="h-10">
+          {isRunning ? (
+            <Loader2 className="h-4 w-4 animate-spin" />
+          ) : (
+            <ShieldAlert className="h-4 w-4" />
+          )}
           Run automation
         </Button>
       </CardHeader>
@@ -394,14 +394,18 @@ function AutomationPanel({
           </div>
           <div className="rounded-lg border border-gray-100 bg-gray-50/50 p-4">
             <p className="text-xs uppercase tracking-wide text-gray-500">Tasks created</p>
-            <p className="mt-2 text-3xl font-semibold text-slate-950">{automation?.tasksCreated ?? 0}</p>
+            <p className="mt-2 text-3xl font-semibold text-slate-950">
+              {automation?.tasksCreated ?? 0}
+            </p>
           </div>
           <div className="rounded-lg border border-gray-100 bg-gray-50/50 p-4">
             <p className="text-xs uppercase tracking-wide text-gray-500">Last run</p>
             <p className="mt-2 text-sm font-medium text-gray-900">
               {automation?.runAt ? formatDate(automation.runAt) : 'Not run yet'}
             </p>
-            <p className="mt-1 text-xs text-muted-foreground">{automation?.runBy || 'Waiting for automation'}</p>
+            <p className="mt-1 text-xs text-muted-foreground">
+              {automation?.runBy || 'Waiting for automation'}
+            </p>
           </div>
         </div>
 
@@ -439,20 +443,19 @@ function FeedHealthPanel({ snapshot }: { snapshot: QualityIssueSnapshot }) {
   const bySource = snapshot.summary.bySource;
   const byCategory = snapshot.summary.byCategory;
   const byPriority = snapshot.summary.byPriority;
-  const ciFindings =
-    bySource.build + bySource.test + bySource.audit + bySource.accessibility;
+  const ciFindings = bySource.build + bySource.test + bySource.audit + bySource.accessibility;
   const securityFindings = byCategory?.security ?? bySource.audit;
   const criticalFindings = byPriority?.critical ?? 0;
-  const fixableSecurityFindings = snapshot.issues.filter((issue) =>
-    issue.category === 'security' && issue.fixAvailable
+  const fixableSecurityFindings = snapshot.issues.filter(
+    (issue) => issue.category === 'security' && issue.fixAvailable,
   ).length;
   const securityFeedCount = new Set(
     snapshot.issues
       .filter((issue) => issue.category === 'security')
-      .map((issue) => issue.detectedBy || 'unknown')
+      .map((issue) => issue.detectedBy || 'unknown'),
   ).size;
-  const runtimeIssues = snapshot.issues.filter((issue) =>
-    issue.source === 'runtime-client' || issue.source === 'runtime-server'
+  const runtimeIssues = snapshot.issues.filter(
+    (issue) => issue.source === 'runtime-client' || issue.source === 'runtime-server',
   );
   const latestRuntimeSeenAt = runtimeIssues
     .map((issue) => issue.lastSeenAt)
@@ -468,9 +471,10 @@ function FeedHealthPanel({ snapshot }: { snapshot: QualityIssueSnapshot }) {
     },
     {
       title: 'Runtime Reporting',
-      description: runtimeIssues.length > 0
-        ? `${runtimeIssues.length} client/server runtime issue${runtimeIssues.length === 1 ? '' : 's'} captured`
-        : 'Listening for authenticated client and server runtime errors',
+      description:
+        runtimeIssues.length > 0
+          ? `${runtimeIssues.length} client/server runtime issue${runtimeIssues.length === 1 ? '' : 's'} captured`
+          : 'Listening for authenticated client and server runtime errors',
       detail: latestRuntimeSeenAt ? getAgeLabel(latestRuntimeSeenAt) : 'No runtime issues captured',
       icon: Clock,
       tone: 'healthy',
@@ -478,9 +482,10 @@ function FeedHealthPanel({ snapshot }: { snapshot: QualityIssueSnapshot }) {
     {
       title: 'Security Baseline',
       description: `${securityFindings} security finding${securityFindings === 1 ? '' : 's'} across ${securityFeedCount} feed${securityFeedCount === 1 ? '' : 's'}`,
-      detail: securityFindings > 0
-        ? `${fixableSecurityFindings} fixable now, ${criticalFindings} critical priority`
-        : 'No critical security findings in latest snapshot',
+      detail:
+        securityFindings > 0
+          ? `${fixableSecurityFindings} fixable now, ${criticalFindings} critical priority`
+          : 'No critical security findings in latest snapshot',
       icon: ShieldAlert,
       tone: securityFindings > 0 ? 'warning' : 'healthy',
     },
@@ -609,13 +614,23 @@ export function IssuesModule() {
       const matchesPriority = priorityFilter === 'all' || issue.priority === priorityFilter;
       const matchesSeverity = severityFilter === 'all' || issue.severity === severityFilter;
       const matchesStatus = statusFilter === 'all' || issue.status === statusFilter;
-      return matchesSource && matchesCategory && matchesPriority && matchesSeverity && matchesStatus;
+      return (
+        matchesSource && matchesCategory && matchesPriority && matchesSeverity && matchesStatus
+      );
     });
-  }, [categoryFilter, priorityFilter, severityFilter, snapshot?.issues, sourceFilter, statusFilter]);
+  }, [
+    categoryFilter,
+    priorityFilter,
+    severityFilter,
+    snapshot?.issues,
+    sourceFilter,
+    statusFilter,
+  ]);
 
-  const selectedIssue = useMemo(() => (
-    snapshot?.issues.find((issue) => issue.fingerprint === selectedFingerprint) || null
-  ), [selectedFingerprint, snapshot?.issues]);
+  const selectedIssue = useMemo(
+    () => snapshot?.issues.find((issue) => issue.fingerprint === selectedFingerprint) || null,
+    [selectedFingerprint, snapshot?.issues],
+  );
 
   useEffect(() => {
     if (!selectedIssue) return;
@@ -631,12 +646,12 @@ export function IssuesModule() {
     selectedIssue?.statusNote,
   ]);
 
-  const workflowHasChanges = !!selectedIssue && (
-    draftStatus !== selectedIssue.status ||
-    draftOwnerName.trim() !== (selectedIssue.ownerName || '') ||
-    draftStatusNote.trim() !== (selectedIssue.statusNote || '') ||
-    draftResolutionEvidence.trim() !== (selectedIssue.resolutionEvidence || '')
-  );
+  const workflowHasChanges =
+    !!selectedIssue &&
+    (draftStatus !== selectedIssue.status ||
+      draftOwnerName.trim() !== (selectedIssue.ownerName || '') ||
+      draftStatusNote.trim() !== (selectedIssue.statusNote || '') ||
+      draftResolutionEvidence.trim() !== (selectedIssue.resolutionEvidence || ''));
 
   const responseActions = useMemo(() => {
     if (!selectedIssue) return [];
@@ -726,7 +741,8 @@ export function IssuesModule() {
             <h1 className="text-3xl font-bold text-gray-900">Issue Manager</h1>
           </div>
           <p className="mt-2 text-sm text-muted-foreground max-w-3xl">
-            Internal build, test, audit, accessibility, and runtime issue tracking with a response workflow for ownership, triage, and remediation.
+            Internal build, test, audit, accessibility, and runtime issue tracking with a response
+            workflow for ownership, triage, and remediation.
           </p>
           <p className="mt-1 text-xs text-muted-foreground">
             Latest report: {formatDate(snapshot?.generatedAt)}
@@ -752,7 +768,11 @@ export function IssuesModule() {
 
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <SummaryCard label="Open Issues" value={summary?.open ?? 0} tone="text-slate-950" />
-        <SummaryCard label="Critical Priority" value={summary?.byPriority?.critical ?? 0} tone="text-red-800" />
+        <SummaryCard
+          label="Critical Priority"
+          value={summary?.byPriority?.critical ?? 0}
+          tone="text-red-800"
+        />
         <SummaryCard label="Errors" value={summary?.errors ?? 0} tone="text-red-700" />
         <SummaryCard label="Warnings" value={summary?.warnings ?? 0} tone="text-amber-700" />
       </div>
@@ -771,40 +791,58 @@ export function IssuesModule() {
         <CardHeader className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
           <CardTitle className="text-xl font-semibold text-gray-900">Latest Findings</CardTitle>
           <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-5 gap-3">
-            <Select value={sourceFilter} onValueChange={(value) => setSourceFilter(value as 'all' | QualityIssueSource)}>
+            <Select
+              value={sourceFilter}
+              onValueChange={(value) => setSourceFilter(value as 'all' | QualityIssueSource)}
+            >
               <SelectTrigger className="w-full sm:w-48 h-10 border-gray-200">
                 <SelectValue placeholder="Source" />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All sources</SelectItem>
                 {QUALITY_ISSUE_SOURCES.map((source) => (
-                  <SelectItem key={source} value={source}>{sourceLabels[source]}</SelectItem>
+                  <SelectItem key={source} value={source}>
+                    {sourceLabels[source]}
+                  </SelectItem>
                 ))}
               </SelectContent>
             </Select>
-            <Select value={categoryFilter} onValueChange={(value) => setCategoryFilter(value as 'all' | QualityIssueCategory)}>
+            <Select
+              value={categoryFilter}
+              onValueChange={(value) => setCategoryFilter(value as 'all' | QualityIssueCategory)}
+            >
               <SelectTrigger className="w-full sm:w-48 h-10 border-gray-200">
                 <SelectValue placeholder="Category" />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All categories</SelectItem>
                 {QUALITY_ISSUE_CATEGORIES.map((category) => (
-                  <SelectItem key={category} value={category}>{categoryLabels[category]}</SelectItem>
+                  <SelectItem key={category} value={category}>
+                    {categoryLabels[category]}
+                  </SelectItem>
                 ))}
               </SelectContent>
             </Select>
-            <Select value={priorityFilter} onValueChange={(value) => setPriorityFilter(value as 'all' | QualityIssuePriority)}>
+            <Select
+              value={priorityFilter}
+              onValueChange={(value) => setPriorityFilter(value as 'all' | QualityIssuePriority)}
+            >
               <SelectTrigger className="w-full sm:w-44 h-10 border-gray-200">
                 <SelectValue placeholder="Priority" />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All priorities</SelectItem>
                 {QUALITY_ISSUE_PRIORITIES.map((priority) => (
-                  <SelectItem key={priority} value={priority}>{priorityLabels[priority]}</SelectItem>
+                  <SelectItem key={priority} value={priority}>
+                    {priorityLabels[priority]}
+                  </SelectItem>
                 ))}
               </SelectContent>
             </Select>
-            <Select value={severityFilter} onValueChange={(value) => setSeverityFilter(value as 'all' | QualityIssueSeverity)}>
+            <Select
+              value={severityFilter}
+              onValueChange={(value) => setSeverityFilter(value as 'all' | QualityIssueSeverity)}
+            >
               <SelectTrigger className="w-full sm:w-40 h-10 border-gray-200">
                 <SelectValue placeholder="Severity" />
               </SelectTrigger>
@@ -815,7 +853,10 @@ export function IssuesModule() {
                 <SelectItem value="info">Info</SelectItem>
               </SelectContent>
             </Select>
-            <Select value={statusFilter} onValueChange={(value) => setStatusFilter(value as 'all' | QualityIssueStatus)}>
+            <Select
+              value={statusFilter}
+              onValueChange={(value) => setStatusFilter(value as 'all' | QualityIssueStatus)}
+            >
               <SelectTrigger className="w-full sm:w-44 h-10 border-gray-200">
                 <SelectValue placeholder="Workflow" />
               </SelectTrigger>
@@ -834,7 +875,8 @@ export function IssuesModule() {
               <CheckCircle2 className="h-10 w-10 text-emerald-600" />
               <h2 className="mt-4 text-base font-semibold text-gray-900">No issues in this view</h2>
               <p className="mt-1 text-sm text-muted-foreground">
-                No findings match the current filters. Adjust the feed or workflow filters and refresh the queue.
+                No findings match the current filters. Adjust the feed or workflow filters and
+                refresh the queue.
               </p>
             </div>
           ) : (
@@ -888,7 +930,9 @@ export function IssuesModule() {
                             <div className="text-xs text-muted-foreground">No task linked yet</div>
                           )}
                           {issue.resolutionEvidence ? (
-                            <div className="text-xs text-emerald-700">Closure evidence attached</div>
+                            <div className="text-xs text-emerald-700">
+                              Closure evidence attached
+                            </div>
                           ) : null}
                           <Button
                             type="button"
@@ -928,18 +972,22 @@ export function IssuesModule() {
                       <Badge variant="outline" className={priorityTone[selectedIssue.priority]}>
                         {priorityLabels[selectedIssue.priority]}
                       </Badge>
-                      <Badge variant="outline" className="border-slate-200 bg-slate-50 text-slate-700">
+                      <Badge
+                        variant="outline"
+                        className="border-slate-200 bg-slate-50 text-slate-700"
+                      >
                         {sourceLabels[selectedIssue.source]}
                       </Badge>
-                      <Badge variant="outline" className="border-slate-200 bg-slate-50 text-slate-700">
+                      <Badge
+                        variant="outline"
+                        className="border-slate-200 bg-slate-50 text-slate-700"
+                      >
                         {categoryLabels[selectedIssue.category]}
                       </Badge>
                       <IssueSignalBadges issue={selectedIssue} />
                     </div>
                     <SheetTitle>{selectedIssue.title}</SheetTitle>
-                    <SheetDescription>
-                      {selectedIssue.message}
-                    </SheetDescription>
+                    <SheetDescription>{selectedIssue.message}</SheetDescription>
                   </div>
                 </div>
               </SheetHeader>
@@ -950,7 +998,8 @@ export function IssuesModule() {
                     <div>
                       <h2 className="text-base font-semibold text-gray-900">Response Workflow</h2>
                       <p className="mt-1 text-sm text-muted-foreground">
-                        Assign an owner, track triage state, and keep the issue tied to a concrete remediation path.
+                        Assign an owner, track triage state, and keep the issue tied to a concrete
+                        remediation path.
                       </p>
                     </div>
                     {selectedIssue.linkedTaskId ? (
@@ -992,7 +1041,10 @@ export function IssuesModule() {
                       />
                     </div>
                     <div className="space-y-2">
-                      <label className="text-sm font-medium text-gray-900" htmlFor="issue-status-note">
+                      <label
+                        className="text-sm font-medium text-gray-900"
+                        htmlFor="issue-status-note"
+                      >
                         Working note
                       </label>
                       <Textarea
@@ -1004,7 +1056,10 @@ export function IssuesModule() {
                       />
                     </div>
                     <div className="space-y-2">
-                      <label className="text-sm font-medium text-gray-900" htmlFor="issue-resolution-evidence">
+                      <label
+                        className="text-sm font-medium text-gray-900"
+                        htmlFor="issue-resolution-evidence"
+                      >
                         Resolution evidence
                       </label>
                       <Textarea
@@ -1015,7 +1070,8 @@ export function IssuesModule() {
                         className="min-h-28 border-gray-200"
                       />
                       <p className="text-xs text-muted-foreground">
-                        Required for a trustworthy closure and used to spot regressions when the same fingerprint reappears.
+                        Required for a trustworthy closure and used to spot regressions when the
+                        same fingerprint reappears.
                       </p>
                     </div>
                   </div>
@@ -1035,8 +1091,14 @@ export function IssuesModule() {
                       onClick={() => void handleCreateTask()}
                       disabled={isCreatingTask || !!selectedIssue.linkedTaskId}
                     >
-                      {isCreatingTask ? <Loader2 className="h-4 w-4 animate-spin" /> : <Wrench className="h-4 w-4" />}
-                      {selectedIssue.linkedTaskId ? 'Remediation task linked' : 'Create remediation task'}
+                      {isCreatingTask ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <Wrench className="h-4 w-4" />
+                      )}
+                      {selectedIssue.linkedTaskId
+                        ? 'Remediation task linked'
+                        : 'Create remediation task'}
                     </Button>
                   </div>
                 </section>
@@ -1047,12 +1109,16 @@ export function IssuesModule() {
                   <div>
                     <h2 className="text-base font-semibold text-gray-900">Suggested Response</h2>
                     <p className="mt-1 text-sm text-muted-foreground">
-                      A lightweight runbook based on the issue source, category, and current workflow state.
+                      A lightweight runbook based on the issue source, category, and current
+                      workflow state.
                     </p>
                   </div>
                   <div className="space-y-3">
                     {responseActions.map((action) => (
-                      <div key={action} className="rounded-lg border border-gray-100 bg-gray-50/70 px-4 py-3 text-sm text-gray-700">
+                      <div
+                        key={action}
+                        className="rounded-lg border border-gray-100 bg-gray-50/70 px-4 py-3 text-sm text-gray-700"
+                      >
                         {action}
                       </div>
                     ))}
@@ -1066,29 +1132,47 @@ export function IssuesModule() {
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
                     <div className="rounded-lg border border-gray-100 bg-white p-4">
                       <p className="text-xs uppercase tracking-wide text-gray-500">First seen</p>
-                      <p className="mt-2 font-medium text-gray-900">{formatDate(selectedIssue.firstSeenAt)}</p>
+                      <p className="mt-2 font-medium text-gray-900">
+                        {formatDate(selectedIssue.firstSeenAt)}
+                      </p>
                     </div>
                     <div className="rounded-lg border border-gray-100 bg-white p-4">
                       <p className="text-xs uppercase tracking-wide text-gray-500">Last seen</p>
-                      <p className="mt-2 font-medium text-gray-900">{formatDate(selectedIssue.lastSeenAt)}</p>
+                      <p className="mt-2 font-medium text-gray-900">
+                        {formatDate(selectedIssue.lastSeenAt)}
+                      </p>
                     </div>
                     <div className="rounded-lg border border-gray-100 bg-white p-4">
                       <p className="text-xs uppercase tracking-wide text-gray-500">Occurrences</p>
                       <p className="mt-2 font-medium text-gray-900">{selectedIssue.occurrences}</p>
                     </div>
                     <div className="rounded-lg border border-gray-100 bg-white p-4">
-                      <p className="text-xs uppercase tracking-wide text-gray-500">Response target</p>
+                      <p className="text-xs uppercase tracking-wide text-gray-500">
+                        Response target
+                      </p>
                       <p className="mt-2 font-medium text-gray-900">
                         {getQualityIssueResponseSlaHours(selectedIssue)} hours
                       </p>
-                      <p className={isQualityIssuePastResponseSla(selectedIssue) ? 'mt-1 text-xs text-red-600' : 'mt-1 text-xs text-muted-foreground'}>
-                        {isQualityIssuePastResponseSla(selectedIssue) ? 'Past target' : 'Within target'}
+                      <p
+                        className={
+                          isQualityIssuePastResponseSla(selectedIssue)
+                            ? 'mt-1 text-xs text-red-600'
+                            : 'mt-1 text-xs text-muted-foreground'
+                        }
+                      >
+                        {isQualityIssuePastResponseSla(selectedIssue)
+                          ? 'Past target'
+                          : 'Within target'}
                       </p>
                     </div>
                     <div className="rounded-lg border border-gray-100 bg-white p-4">
-                      <p className="text-xs uppercase tracking-wide text-gray-500">Workflow updated</p>
+                      <p className="text-xs uppercase tracking-wide text-gray-500">
+                        Workflow updated
+                      </p>
                       <p className="mt-2 font-medium text-gray-900">
-                        {selectedIssue.workflowUpdatedAt ? formatDate(selectedIssue.workflowUpdatedAt) : 'Not updated yet'}
+                        {selectedIssue.workflowUpdatedAt
+                          ? formatDate(selectedIssue.workflowUpdatedAt)
+                          : 'Not updated yet'}
                       </p>
                       <p className="mt-1 text-xs text-muted-foreground">
                         {selectedIssue.workflowUpdatedBy || 'No workflow owner yet'}
@@ -1096,12 +1180,15 @@ export function IssuesModule() {
                     </div>
                     {selectedIssue.reopenedAt ? (
                       <div className="rounded-lg border border-amber-100 bg-amber-50/60 p-4">
-                        <p className="text-xs uppercase tracking-wide text-amber-700">Regression signal</p>
+                        <p className="text-xs uppercase tracking-wide text-amber-700">
+                          Regression signal
+                        </p>
                         <p className="mt-2 font-medium text-amber-900">
                           Reopened {formatDate(selectedIssue.reopenedAt)}
                         </p>
                         <p className="mt-1 text-xs text-amber-700">
-                          {selectedIssue.regressionCount || 1} recurrence{(selectedIssue.regressionCount || 1) === 1 ? '' : 's'} after resolution
+                          {selectedIssue.regressionCount || 1} recurrence
+                          {(selectedIssue.regressionCount || 1) === 1 ? '' : 's'} after resolution
                         </p>
                       </div>
                     ) : null}
@@ -1109,19 +1196,30 @@ export function IssuesModule() {
 
                   <div className="rounded-lg border border-gray-100 bg-white p-4 text-sm">
                     <p className="text-xs uppercase tracking-wide text-gray-500">Fingerprint</p>
-                    <p className="mt-2 break-all font-mono text-xs text-gray-700">{selectedIssue.fingerprint}</p>
+                    <p className="mt-2 break-all font-mono text-xs text-gray-700">
+                      {selectedIssue.fingerprint}
+                    </p>
                   </div>
 
                   {selectedIssue.resolutionEvidence ? (
                     <div className="rounded-lg border border-emerald-100 bg-emerald-50/60 p-4 text-sm">
-                      <p className="text-xs uppercase tracking-wide text-emerald-700">Resolution evidence</p>
-                      <p className="mt-2 whitespace-pre-wrap text-emerald-900">{selectedIssue.resolutionEvidence}</p>
+                      <p className="text-xs uppercase tracking-wide text-emerald-700">
+                        Resolution evidence
+                      </p>
+                      <p className="mt-2 whitespace-pre-wrap text-emerald-900">
+                        {selectedIssue.resolutionEvidence}
+                      </p>
                     </div>
                   ) : null}
 
-                  {(selectedIssue.packageName || selectedIssue.advisoryId || selectedIssue.cve || selectedIssue.referenceUrl) ? (
+                  {selectedIssue.packageName ||
+                  selectedIssue.advisoryId ||
+                  selectedIssue.cve ||
+                  selectedIssue.referenceUrl ? (
                     <div className="rounded-lg border border-gray-100 bg-white p-4 text-sm text-gray-700">
-                      <p className="text-xs uppercase tracking-wide text-gray-500">Security metadata</p>
+                      <p className="text-xs uppercase tracking-wide text-gray-500">
+                        Security metadata
+                      </p>
                       <div className="mt-3 space-y-2">
                         {selectedIssue.packageName ? (
                           <div>
@@ -1131,19 +1229,34 @@ export function IssuesModule() {
                           </div>
                         ) : null}
                         {selectedIssue.vulnerableRange ? (
-                          <div><span className="font-medium text-gray-900">Affected range:</span> {selectedIssue.vulnerableRange}</div>
+                          <div>
+                            <span className="font-medium text-gray-900">Affected range:</span>{' '}
+                            {selectedIssue.vulnerableRange}
+                          </div>
                         ) : null}
                         {selectedIssue.fixVersion ? (
-                          <div><span className="font-medium text-gray-900">Fix version:</span> {selectedIssue.fixVersion}</div>
+                          <div>
+                            <span className="font-medium text-gray-900">Fix version:</span>{' '}
+                            {selectedIssue.fixVersion}
+                          </div>
                         ) : null}
                         {selectedIssue.advisoryId ? (
-                          <div><span className="font-medium text-gray-900">Advisory:</span> {selectedIssue.advisoryId}</div>
+                          <div>
+                            <span className="font-medium text-gray-900">Advisory:</span>{' '}
+                            {selectedIssue.advisoryId}
+                          </div>
                         ) : null}
                         {selectedIssue.cve ? (
-                          <div><span className="font-medium text-gray-900">CVE:</span> {selectedIssue.cve}</div>
+                          <div>
+                            <span className="font-medium text-gray-900">CVE:</span>{' '}
+                            {selectedIssue.cve}
+                          </div>
                         ) : null}
                         {typeof selectedIssue.cvssScore === 'number' ? (
-                          <div><span className="font-medium text-gray-900">CVSS:</span> {selectedIssue.cvssScore.toFixed(1)}</div>
+                          <div>
+                            <span className="font-medium text-gray-900">CVSS:</span>{' '}
+                            {selectedIssue.cvssScore.toFixed(1)}
+                          </div>
                         ) : null}
                         {selectedIssue.referenceUrl ? (
                           <a

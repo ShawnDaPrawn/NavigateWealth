@@ -23,15 +23,13 @@ export const formatDate = (dateString?: string) => {
     month: 'short',
     year: 'numeric',
     hour: '2-digit',
-    minute: '2-digit'
+    minute: '2-digit',
   });
 };
 
 export function normalizeApplicationStringArray(value: unknown): string[] {
   if (Array.isArray(value)) {
-    return value
-      .map((item) => String(item || '').trim())
-      .filter(Boolean);
+    return value.map((item) => String(item || '').trim()).filter(Boolean);
   }
 
   if (typeof value === 'string') {
@@ -42,9 +40,7 @@ export function normalizeApplicationStringArray(value: unknown): string[] {
       try {
         const parsed = JSON.parse(trimmed);
         if (Array.isArray(parsed)) {
-          return parsed
-            .map((item) => String(item || '').trim())
-            .filter(Boolean);
+          return parsed.map((item) => String(item || '').trim()).filter(Boolean);
         }
       } catch {
         // Fall through and treat the raw string as a single selection.
@@ -64,7 +60,9 @@ export function normalizeApplicationStringArray(value: unknown): string[] {
   return [];
 }
 
-export function normalizeApplicationData(applicationData: ApplicationData | null | undefined): ApplicationData {
+export function normalizeApplicationData(
+  applicationData: ApplicationData | null | undefined,
+): ApplicationData {
   const data = { ...(applicationData || {}) } as ApplicationData;
 
   return {

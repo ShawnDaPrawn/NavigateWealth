@@ -1,7 +1,7 @@
 /**
  * Personnel Module API Layer
  * Navigate Wealth Admin Dashboard
- * 
+ *
  * Updated to use Backend API (KV Store) instead of direct Supabase Table calls.
  * This fixes the "Could not find the table 'public.personnel'" errors.
  */
@@ -31,23 +31,24 @@ import type {
 export async function fetchPersonnel(filters?: Partial<PersonnelFilters>): Promise<Personnel[]> {
   try {
     const response = await api.get<{ data: Personnel[] }>('personnel/list');
-    const personnel = (response.data || []).map((p) => normalisePersonnel(p as Parameters<typeof normalisePersonnel>[0]));
+    const personnel = (response.data || []).map((p) =>
+      normalisePersonnel(p as Parameters<typeof normalisePersonnel>[0]),
+    );
 
     // Client-side filtering if needed (though backend handles role filtering)
     // The backend returns all personnel visible to the user.
     // We can apply further filters here if necessary.
     let filtered = personnel;
-    
+
     if (filters?.roles && filters.roles.length > 0) {
       filtered = filtered.filter((p: Personnel) => filters.roles?.includes(p.role));
     }
-    
+
     if (filters?.statuses && filters.statuses.length > 0) {
       filtered = filtered.filter((p: Personnel) => filters.statuses?.includes(p.status));
     }
 
     return filtered;
-
   } catch (error) {
     logger.error('[API] Failed to fetch personnel', error, { filters });
     return [];
@@ -60,12 +61,12 @@ export async function fetchPersonnel(filters?: Partial<PersonnelFilters>): Promi
 export async function fetchPersonnelById(id: string): Promise<Personnel | null> {
   try {
     const list = await fetchPersonnel();
-    const found = list.find(p => p.id === id);
-    
+    const found = list.find((p) => p.id === id);
+
     if (!found) {
       return null;
     }
-    
+
     return found;
   } catch (error) {
     logger.error('[API] Failed to fetch personnel', error, { id });
@@ -99,7 +100,9 @@ export async function createPersonnelAccount(input: InvitePersonnelInput): Promi
       data: { profile: Personnel; recoveryLink: string | null };
     }>('personnel/create-account', input);
     return {
-      profile: normalisePersonnel(response.data.profile as Partial<Personnel> & Record<string, unknown>),
+      profile: normalisePersonnel(
+        response.data.profile as Partial<Personnel> & Record<string, unknown>,
+      ),
       recoveryLink: response.data.recoveryLink,
     };
   } catch (error) {
@@ -111,9 +114,13 @@ export async function createPersonnelAccount(input: InvitePersonnelInput): Promi
 /**
  * Resend invitation email to a pending personnel member
  */
-export async function resendPersonnelInvite(personnelId: string): Promise<{ success: boolean; email: string }> {
+export async function resendPersonnelInvite(
+  personnelId: string,
+): Promise<{ success: boolean; email: string }> {
   try {
-    const response = await api.post<{ data: { success: boolean; email: string } }>(`personnel/resend-invite/${personnelId}`);
+    const response = await api.post<{ data: { success: boolean; email: string } }>(
+      `personnel/resend-invite/${personnelId}`,
+    );
     return response.data;
   } catch (error) {
     logger.error('[API] Failed to resend personnel invite', error, { personnelId });
@@ -124,9 +131,13 @@ export async function resendPersonnelInvite(personnelId: string): Promise<{ succ
 /**
  * Cancel (revoke) a pending personnel invitation
  */
-export async function cancelPersonnelInvite(personnelId: string): Promise<{ success: boolean; email: string }> {
+export async function cancelPersonnelInvite(
+  personnelId: string,
+): Promise<{ success: boolean; email: string }> {
   try {
-    const response = await api.delete<{ data: { success: boolean; email: string } }>(`personnel/invite/${personnelId}`);
+    const response = await api.delete<{ data: { success: boolean; email: string } }>(
+      `personnel/invite/${personnelId}`,
+    );
     return response.data;
   } catch (error) {
     logger.error('[API] Failed to cancel personnel invite', error, { personnelId });
@@ -137,7 +148,10 @@ export async function cancelPersonnelInvite(personnelId: string): Promise<{ succ
 /**
  * Update personnel information
  */
-export async function updatePersonnel(id: string, updates: Partial<UpdatePersonnelInput>): Promise<Personnel> {
+export async function updatePersonnel(
+  id: string,
+  updates: Partial<UpdatePersonnelInput>,
+): Promise<Personnel> {
   try {
     const response = await api.put<{ data: Personnel }>(`personnel/${id}`, updates);
     return response.data;
@@ -155,11 +169,10 @@ export async function deletePersonnel(id: string): Promise<void> {
     // Use update to set status to 'suspended' as we don't have a hard delete endpoint yet
     // Or check if backend supports DELETE
     // Current backend routes don't show DELETE /:id, so we'll simulate soft delete or fail.
-    // Ideally we should add DELETE to backend. 
+    // Ideally we should add DELETE to backend.
     // For now, let's assume we update status to suspended.
-    
-    await api.put(`personnel/${id}`, { status: 'suspended' });
 
+    await api.put(`personnel/${id}`, { status: 'suspended' });
   } catch (error) {
     logger.error('[API] Failed to delete personnel', error, { id });
     throw error;
@@ -190,20 +203,27 @@ export async function fetchPersonnelClients(personnelId: string): Promise<Client
 /**
  * Add a document to a personnel member
  */
-export async function addPersonnelDocument(input: AddPersonnelDocumentInput): Promise<PersonnelDocument> {
+export async function addPersonnelDocument(
+  input: AddPersonnelDocumentInput,
+): Promise<PersonnelDocument> {
   try {
-    const response = await api.post<{ data: PersonnelDocument[] }>(`personnel/${input.personnelId}/documents`, input);
-    
+    const response = await api.post<{ data: PersonnelDocument[] }>(
+      `personnel/${input.personnelId}/documents`,
+      input,
+    );
+
     // The backend returns { data: documents[] }, but we need to return the new document.
     // For now, return the last one or a mock since the backend API contract is slightly different.
     const docs = response.data || [];
-    return docs[docs.length - 1] || {
-      id: `doc-${Date.now()}`,
-      name: input.name,
-      type: input.type,
-      url: input.url,
-      uploadedAt: new Date().toISOString(),
-    };
+    return (
+      docs[docs.length - 1] || {
+        id: `doc-${Date.now()}`,
+        name: input.name,
+        type: input.type,
+        url: input.url,
+        uploadedAt: new Date().toISOString(),
+      }
+    );
   } catch (error) {
     logger.error('[API] Failed to add document', error, { input });
     throw error;
@@ -221,8 +241,8 @@ export async function fetchSuperAdminProfile(): Promise<SuperAdminProfile | null
   try {
     // Reuse fetchPersonnel list and find the super admin
     const list = await fetchPersonnel({ roles: ['super_admin'] });
-    const superAdmin = list.find(p => p.role === 'super_admin');
-    
+    const superAdmin = list.find((p) => p.role === 'super_admin');
+
     if (!superAdmin) return null;
 
     return {
@@ -244,7 +264,9 @@ export async function fetchSuperAdminProfile(): Promise<SuperAdminProfile | null
 /**
  * Update super admin profile
  */
-export async function updateSuperAdminProfile(updates: Partial<SuperAdminProfile>): Promise<SuperAdminProfile> {
+export async function updateSuperAdminProfile(
+  updates: Partial<SuperAdminProfile>,
+): Promise<SuperAdminProfile> {
   try {
     const existing = await fetchSuperAdminProfile();
     if (!existing) throw new Error('Super Admin not found');
@@ -270,7 +292,6 @@ export async function updateSuperAdminProfile(updates: Partial<SuperAdminProfile
       company: updated.branch,
       updatedAt: updated.updatedAt,
     };
-
   } catch (error) {
     logger.error('[API] Failed to update super admin', error, { updates });
     throw error;
@@ -301,7 +322,7 @@ export async function updatePermissions(input: UpdatePermissionsInput): Promise<
   try {
     const response = await api.put<{ data: PermissionSet }>(
       `personnel/permissions/${input.personnelId}`,
-      { modules: input.modules }
+      { modules: input.modules },
     );
     return response.data;
   } catch (error) {
@@ -315,7 +336,9 @@ export async function updatePermissions(input: UpdatePermissionsInput): Promise<
  */
 export async function fetchMyPermissions(): Promise<PermissionSet & { isSuperAdmin: boolean }> {
   try {
-    const response = await api.get<{ data: PermissionSet & { isSuperAdmin: boolean } }>('personnel/permissions/me');
+    const response = await api.get<{ data: PermissionSet & { isSuperAdmin: boolean } }>(
+      'personnel/permissions/me',
+    );
     return response.data;
   } catch (error) {
     logger.error('[API] Failed to fetch current user permissions', error);
@@ -354,7 +377,9 @@ interface PermissionAuditEntry {
  */
 export async function fetchPermissionAudit(personnelId: string): Promise<PermissionAuditEntry[]> {
   try {
-    const response = await api.get<{ data: PermissionAuditEntry[] }>(`personnel/audit/permissions/${personnelId}`);
+    const response = await api.get<{ data: PermissionAuditEntry[] }>(
+      `personnel/audit/permissions/${personnelId}`,
+    );
     return response.data || [];
   } catch (error) {
     logger.error('[API] Failed to fetch permission audit trail', error);
@@ -399,7 +424,7 @@ export async function backfillAuthRoles(dryRun = true): Promise<BackfillRolesRes
   try {
     const response = await api.post<{ success: boolean } & BackfillRolesResult>(
       'personnel/maintenance/backfill-roles',
-      { dryRun }
+      { dryRun },
     );
     return response as unknown as BackfillRolesResult;
   } catch (error) {
@@ -454,7 +479,11 @@ export const personnelApi = {
 function normalisePersonnel(p: Partial<Personnel> & Record<string, unknown>): Personnel {
   return {
     ...p,
-    name: (p.name as string) || `${p.firstName || ''} ${p.lastName || ''}`.trim() || (p.email as string) || 'Unknown',
+    name:
+      (p.name as string) ||
+      `${p.firstName || ''} ${p.lastName || ''}`.trim() ||
+      (p.email as string) ||
+      'Unknown',
     firstName: p.firstName || '',
     lastName: p.lastName || '',
     phone: p.phone || '',

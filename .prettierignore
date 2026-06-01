@@ -17,11 +17,29 @@ seo-route-manifest.json
 **/*.min.js
 **/*.min.css
 
-# Golden-test-pinned source — source-introspection guardrails (e.g.
-# providerPortalGolden) assert on the EXACT text of these files, and Prettier
-# reflow (quote style, line wrapping) breaks those anchors. Keep them out of
-# auto-formatting so the format-on-touch hook can't silently break the guard.
-# (Add other golden-watched files here as Phase 5/6 decomposition touches them.)
+# Golden-test-pinned source — source-introspection guardrails assert on the
+# EXACT text of these files, and Prettier reflow (quote style, line wrapping,
+# trailing commas) breaks those anchors. Keep them out of auto-formatting so the
+# format-on-touch hook can't silently break the guard. To format any of these,
+# first make the corresponding guardrail test format-robust, then remove it here.
+
+# Pinned by src/shared/integrations/__tests__/providerPortalGolden.test.ts
 src/supabase/functions/server/integrations.tsx
 src/supabase/functions/server/integrations-portal-guards.ts
 src/supabase/functions/server/integrations-portal-flow.ts
+src/supabase/functions/server/integrations-portal-routes.ts
+src/supabase/functions/server/integrations-sync-engine.ts
+src/supabase/functions/server/portal-default-flows.ts
+scripts/provider-portal-worker.mjs
+src/components/admin/modules/product-management/types.ts
+src/components/admin/modules/product-management/components/ProviderFormDialog.tsx
+src/components/admin/modules/product-management/components/ProviderList.tsx
+src/components/admin/modules/product-management/integrations/IntegrationHeader.tsx
+src/components/admin/modules/product-management/integrations/PortalAutomationTab.tsx
+.github/workflows/provider-portal-worker.yml
+
+# Pinned by src/components/auth/__tests__/authContext.invariants.test.ts
+src/components/auth/AuthContext.tsx
+
+# Pinned by src/supabase/functions/server/__tests__/vasco-routes.guardrails.test.ts
+src/supabase/functions/server/vasco-routes.ts

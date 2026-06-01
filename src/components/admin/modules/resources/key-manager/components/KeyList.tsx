@@ -23,7 +23,7 @@ export function KeyList({
   showDependencies = true,
   emptyStateTitle = 'No keys found',
   emptyStateDescription = 'Try adjusting your search filters',
-  className = ''
+  className = '',
 }: KeyListProps) {
   // Empty state
   if (keys.length === 0) {

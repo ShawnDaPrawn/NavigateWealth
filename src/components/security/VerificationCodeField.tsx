@@ -35,7 +35,11 @@ export function VerificationCodeField({
       >
         <InputOTPGroup>
           {Array.from({ length: 6 }, (_, index) => (
-            <InputOTPSlot key={index} index={index} className="h-11 w-11 rounded-md border text-base" />
+            <InputOTPSlot
+              key={index}
+              index={index}
+              className="h-11 w-11 rounded-md border text-base"
+            />
           ))}
         </InputOTPGroup>
       </InputOTP>

@@ -14,7 +14,14 @@ export const FamilyInformationSchema = z.object({
   fullName: z.string().min(1, 'Full name is required'),
   dateOfBirth: z.string().min(1, 'Date of birth is required'),
   age: z.number().min(0).max(120),
-  maritalStatus: z.enum(['single', 'married_cop', 'married_anc', 'married_customary', 'divorced', 'widowed']),
+  maritalStatus: z.enum([
+    'single',
+    'married_cop',
+    'married_anc',
+    'married_customary',
+    'divorced',
+    'widowed',
+  ]),
   spouseName: z.string().optional(),
   spouseId: z.string().optional(),
   spouseAge: z.number().min(0).max(120).optional(),
@@ -66,7 +73,15 @@ export const AssetItemSchema = z.object({
 
 export const LiabilityItemSchema = z.object({
   id: z.string().min(1),
-  type: z.enum(['home_loan', 'vehicle_finance', 'personal_loan', 'credit_card', 'business_debt', 'tax_liability', 'other']),
+  type: z.enum([
+    'home_loan',
+    'vehicle_finance',
+    'personal_loan',
+    'credit_card',
+    'business_debt',
+    'tax_liability',
+    'other',
+  ]),
   description: z.string().min(1, 'Liability description is required'),
   outstandingBalance: z.number().min(0, 'Balance cannot be negative'),
   securedAgainst: z.string().optional(),

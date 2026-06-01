@@ -3,7 +3,7 @@
  * Fresh file moved to root to fix bundling issues
  */
 
-import { createClient } from "jsr:@supabase/supabase-js@2.49.8";
+import { createClient } from 'jsr:@supabase/supabase-js@2.49.8';
 import * as kv from './kv_store.tsx';
 import { createModuleLogger } from './stderr-logger.ts';
 import type {
@@ -35,24 +35,20 @@ import type {
 const log = createModuleLogger('reporting-service');
 
 export class ReportingService {
-  
   private getSupabaseClient() {
-    return createClient(
-      Deno.env.get('SUPABASE_URL')!,
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
-    );
+    return createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!);
   }
 
   // ========================================================================
   // DASHBOARD REPORTS
   // ========================================================================
-  
+
   /**
    * Get dashboard overview
    */
   async getDashboardReport(): Promise<DashboardReport> {
     log.info('Generating dashboard report');
-    
+
     // Get all data sources
     const clients = await kv.getByPrefix('user_profile:');
     const applications = await kv.getByPrefix('application:');
@@ -63,7 +59,7 @@ export class ReportingService {
     const supabase = this.getSupabaseClient();
     const { data: tasksData } = await supabase.from('tasks_91ed8379').select('*');
     const tasks = tasksData || [];
-    
+
     // Calculate metrics
     const totalClients = clients?.length || 0;
     const totalApplications = applications?.length || 0;
@@ -73,65 +69,80 @@ export class ReportingService {
     // Calculate Task Metrics
     const today = new Date();
     const todayStr = today.toISOString().split('T')[0];
-    
+
     const lastMonthDate = new Date();
     lastMonthDate.setDate(lastMonthDate.getDate() - 30);
     const lastMonthStr = lastMonthDate.toISOString().split('T')[0];
-    
+
     const tasksDueToday = tasks.filter((t: KvReportTask) => {
       // Check if due_date matches today and task is not completed/archived
       if (!t.due_date || t.status === 'completed' || t.status === 'archived') return false;
       return t.due_date.startsWith(todayStr);
     }).length;
-    
+
     const tasksDueLastMonth = tasks.filter((t: KvReportTask) => {
       if (!t.due_date || t.status === 'completed' || t.status === 'archived') return false;
       return t.due_date.startsWith(lastMonthStr);
     }).length;
-    
-    const tasksGrowth = tasksDueLastMonth > 0 
-      ? ((tasksDueToday - tasksDueLastMonth) / tasksDueLastMonth) * 100
-      : (tasksDueToday > 0 ? 100 : 0);
-      
+
+    const tasksGrowth =
+      tasksDueLastMonth > 0
+        ? ((tasksDueToday - tasksDueLastMonth) / tasksDueLastMonth) * 100
+        : tasksDueToday > 0
+          ? 100
+          : 0;
+
     const totalTasks = tasks.filter((t: KvReportTask) => t.status !== 'archived').length;
     const completedTasks = tasks.filter((t: KvReportTask) => t.status === 'completed').length;
-    
+
     // Calculate growth (last 30 days)
     const now = new Date();
     const thirtyDaysAgo = new Date();
     thirtyDaysAgo.setDate(now.getDate() - 30);
-    
+
     const sixtyDaysAgo = new Date();
     sixtyDaysAgo.setDate(now.getDate() - 60);
-    
-    const recentClients = clients?.filter((c: KvReportClient) => 
-      new Date(c.createdAt || c.created_at || '') >= thirtyDaysAgo
-    ).length || 0;
-    
+
+    const recentClients =
+      clients?.filter(
+        (c: KvReportClient) => new Date(c.createdAt || c.created_at || '') >= thirtyDaysAgo,
+      ).length || 0;
+
     const previousClientsCount = totalClients - recentClients;
-    const clientGrowth = previousClientsCount > 0 
-      ? (recentClients / previousClientsCount) * 100 
-      : (recentClients > 0 ? 100 : 0);
-    
-    const recentApplications = applications?.filter((a: KvReportApplication) =>
-      new Date(a.created_at || a.createdAt || '') >= thirtyDaysAgo
-    ).length || 0;
+    const clientGrowth =
+      previousClientsCount > 0
+        ? (recentClients / previousClientsCount) * 100
+        : recentClients > 0
+          ? 100
+          : 0;
+
+    const recentApplications =
+      applications?.filter(
+        (a: KvReportApplication) => new Date(a.created_at || a.createdAt || '') >= thirtyDaysAgo,
+      ).length || 0;
 
     // Calculate New Applications Growth (volume comparison vs previous 30 days)
-    const previousPeriodApplications = applications?.filter((a: KvReportApplication) => {
-      const date = new Date(a.created_at || a.createdAt || '');
-      return date >= sixtyDaysAgo && date < thirtyDaysAgo;
-    }).length || 0;
+    const previousPeriodApplications =
+      applications?.filter((a: KvReportApplication) => {
+        const date = new Date(a.created_at || a.createdAt || '');
+        return date >= sixtyDaysAgo && date < thirtyDaysAgo;
+      }).length || 0;
 
-    const recentApplicationsGrowth = previousPeriodApplications > 0
-      ? ((recentApplications - previousPeriodApplications) / previousPeriodApplications) * 100
-      : (recentApplications > 0 ? 100 : 0);
-    
+    const recentApplicationsGrowth =
+      previousPeriodApplications > 0
+        ? ((recentApplications - previousPeriodApplications) / previousPeriodApplications) * 100
+        : recentApplications > 0
+          ? 100
+          : 0;
+
     const previousApplicationsCount = totalApplications - recentApplications;
-    const applicationGrowth = previousApplicationsCount > 0
-      ? (recentApplications / previousApplicationsCount) * 100
-      : (recentApplications > 0 ? 100 : 0);
-    
+    const applicationGrowth =
+      previousApplicationsCount > 0
+        ? (recentApplications / previousApplicationsCount) * 100
+        : recentApplications > 0
+          ? 100
+          : 0;
+
     return {
       clients: {
         total: totalClients,
@@ -143,8 +154,10 @@ export class ReportingService {
         recent: recentApplications,
         growth: applicationGrowth,
         recentGrowth: recentApplicationsGrowth,
-        pending: applications?.filter((a: KvReportApplication) => a.status === 'pending').length || 0,
-        approved: applications?.filter((a: KvReportApplication) => a.status === 'approved').length || 0,
+        pending:
+          applications?.filter((a: KvReportApplication) => a.status === 'pending').length || 0,
+        approved:
+          applications?.filter((a: KvReportApplication) => a.status === 'approved').length || 0,
       },
       fnas: {
         total: totalFNAs,
@@ -163,37 +176,38 @@ export class ReportingService {
       lastUpdated: new Date().toISOString(),
     };
   }
-  
+
   /**
    * Get key statistics
    */
   async getKeyStats(): Promise<KeyStats> {
     const dashboard = await this.getDashboardReport();
-    
+
     return {
       totalClients: dashboard.clients.total,
       totalApplications: dashboard.applications.total,
       totalFNAs: dashboard.fnas.total,
       clientGrowth: dashboard.clients.growth,
-      applicationApprovalRate: dashboard.applications.total > 0
-        ? (dashboard.applications.approved / dashboard.applications.total) * 100
-        : 0,
+      applicationApprovalRate:
+        dashboard.applications.total > 0
+          ? (dashboard.applications.approved / dashboard.applications.total) * 100
+          : 0,
     };
   }
-  
+
   // ========================================================================
   // FINANCIAL REPORTS
   // ========================================================================
-  
+
   /**
    * Get revenue report
    */
   async getRevenueReport(dateRange?: DateRange): Promise<RevenueReport> {
     log.info('Generating revenue report', { dateRange });
-    
+
     // TODO: Implement actual revenue tracking
     // For now, return placeholder data
-    
+
     return {
       total: 0,
       currency: 'ZAR',
@@ -205,15 +219,15 @@ export class ReportingService {
       },
     };
   }
-  
+
   /**
    * Get Assets Under Management (AUM) report
    */
   async getAUMReport(): Promise<AUMReport> {
     log.info('Generating AUM report');
-    
+
     // TODO: Calculate from client portfolios
-    
+
     return {
       total: 0,
       currency: 'ZAR',
@@ -225,13 +239,13 @@ export class ReportingService {
       },
     };
   }
-  
+
   /**
    * Get commissions report
    */
   async getCommissionsReport(dateRange?: DateRange): Promise<RevenueReport> {
     log.info('Generating commissions report', { dateRange });
-    
+
     return {
       total: 0,
       currency: 'ZAR',
@@ -240,37 +254,39 @@ export class ReportingService {
       byAdviser: [],
     };
   }
-  
+
   /**
    * Get Personal Clients report
    */
   async getPersonalClientsReport(): Promise<Record<string, unknown>[]> {
     log.info('Generating Personal Clients report');
-    
+
     // Get all profiles
     const profiles = await kv.getByPrefix('user_profile:');
-    
+
     if (!profiles || profiles.length === 0) {
       return [];
     }
-    
+
     // Filter for personal clients and map to report format
     return profiles
-      .filter((profile: KvReportClient) => !profile.accountType || profile.accountType === 'personal')
+      .filter(
+        (profile: KvReportClient) => !profile.accountType || profile.accountType === 'personal',
+      )
       .map((profile: KvReportClient) => {
         const info = (profile.personalInformation || {}) as Record<string, unknown>;
-        
+
         return {
           'Client ID': profile.userId || 'Unknown',
-          'Title': info.title || '',
+          Title: info.title || '',
           'First Name': info.firstName || '',
           'Middle Name': info.middleName || '',
-          'Surname': info.lastName || '',
+          Surname: info.lastName || '',
           'ID Number': info.idNumber || '',
           'Date of Birth': info.dateOfBirth || '',
-          'Gender': info.gender || '',
-          'Nationality': info.nationality || '',
-          'Marital Status': info.maritalStatus || ''
+          Gender: info.gender || '',
+          Nationality: info.nationality || '',
+          'Marital Status': info.maritalStatus || '',
         };
       });
   }
@@ -315,25 +331,27 @@ export class ReportingService {
       const employer = Array.isArray(p.employers) && p.employers.length > 0 ? p.employers[0] : {};
 
       // Flatten family members into spouse
-      const spouse = Array.isArray(p.familyMembers) && p.familyMembers.length > 0
-        ? p.familyMembers.find((f: Record<string, unknown>) => f.relationship === 'Spouse') || {}
-        : {};
+      const spouse =
+        Array.isArray(p.familyMembers) && p.familyMembers.length > 0
+          ? p.familyMembers.find((f: Record<string, unknown>) => f.relationship === 'Spouse') || {}
+          : {};
 
       // Flatten identity documents into first doc
-      const idDoc = Array.isArray(p.identityDocuments) && p.identityDocuments.length > 0
-        ? p.identityDocuments[0]
-        : {};
+      const idDoc =
+        Array.isArray(p.identityDocuments) && p.identityDocuments.length > 0
+          ? p.identityDocuments[0]
+          : {};
 
       return {
         'User ID': userId,
-        'Title': p.title || '',
+        Title: p.title || '',
         'First Name': p.firstName || '',
         'Middle Name': p.middleName || '',
         'Last Name': p.lastName || '',
         'Preferred Name': p.preferredName || '',
         'Date of Birth': p.dateOfBirth || '',
-        'Gender': p.gender || '',
-        'Nationality': p.nationality || '',
+        Gender: p.gender || '',
+        Nationality: p.nationality || '',
         'Marital Status': p.maritalStatus || '',
         'Marital Regime': p.maritalRegime || '',
 
@@ -347,26 +365,26 @@ export class ReportingService {
         'ID Verified': idDoc.isVerified ? 'Yes' : 'No',
 
         // Contact
-        'Email': p.email || '',
+        Email: p.email || '',
         'Secondary Email': p.secondaryEmail || '',
-        'Phone': p.phoneNumber || '',
+        Phone: p.phoneNumber || '',
         'Alternative Phone': p.alternativePhone || '',
         'Preferred Contact Method': p.preferredContactMethod || '',
 
         // Residential Address
         'Address Line 1': p.residentialAddressLine1 || '',
         'Address Line 2': p.residentialAddressLine2 || '',
-        'Suburb': p.residentialSuburb || '',
-        'City': p.residentialCity || '',
-        'Province': p.residentialProvince || '',
+        Suburb: p.residentialSuburb || '',
+        City: p.residentialCity || '',
+        Province: p.residentialProvince || '',
         'Postal Code': p.residentialPostalCode || '',
-        'Country': p.residentialCountry || '',
+        Country: p.residentialCountry || '',
 
         // Employment
         'Employment Status': p.employmentStatus || '',
         'Job Title': employer.jobTitle || '',
-        'Employer': employer.employerName || '',
-        'Industry': employer.industry || '',
+        Employer: employer.employerName || '',
+        Industry: employer.industry || '',
         'Self-Employed Company': p.selfEmployedCompanyName || '',
         'Self-Employed Industry': p.selfEmployedIndustry || '',
         'Self-Employed Description': p.selfEmployedDescription || '',
@@ -388,18 +406,23 @@ export class ReportingService {
         'Emergency Contact Phone': p.emergencyContactPhone || '',
 
         // Health
-        'Smoker': p.smokerStatus ? 'Yes' : 'No',
+        Smoker: p.smokerStatus ? 'Yes' : 'No',
         'Has Chronic Conditions': p.hasChronicConditions ? 'Yes' : 'No',
         'Blood Type': p.bloodType || '',
 
         // Application Meta
-        'SA Tax Resident': meta.isSATaxResident === true ? 'Yes' : meta.isSATaxResident === false ? 'No' : '',
+        'SA Tax Resident':
+          meta.isSATaxResident === true ? 'Yes' : meta.isSATaxResident === false ? 'No' : '',
         'Number of Dependants': meta.numberOfDependants || '',
         'Gross Income Range': meta.grossMonthlyIncomeRange || '',
         'Monthly Expenses Range': meta.monthlyExpensesRange || '',
-        'Services Requested': Array.isArray(meta.servicesRequested) ? meta.servicesRequested.join('; ') : '',
-        'Urgency': meta.urgency || '',
-        'Existing Products': Array.isArray(meta.existingProducts) ? meta.existingProducts.join('; ') : '',
+        'Services Requested': Array.isArray(meta.servicesRequested)
+          ? meta.servicesRequested.join('; ')
+          : '',
+        Urgency: meta.urgency || '',
+        'Existing Products': Array.isArray(meta.existingProducts)
+          ? meta.existingProducts.join('; ')
+          : '',
         'Financial Goals': meta.financialGoals || '',
         'Best Time to Contact': meta.bestTimeToContact || '',
         'WhatsApp Number': meta.whatsappNumber || '',
@@ -414,26 +437,26 @@ export class ReportingService {
   // ========================================================================
   // CLIENT REPORTS
   // ========================================================================
-  
+
   /**
    * Get client growth report
    */
   async getClientGrowthReport(period: ReportPeriod): Promise<ClientGrowthReport> {
     log.info('Generating client growth report', { period });
-    
+
     const clients = await kv.getByPrefix('user_profile:');
-    
+
     if (!clients || clients.length === 0) {
       return { data: [], total: 0 };
     }
-    
+
     // Group by period
     const grouped: Record<string, number> = {};
-    
+
     clients.forEach((client: KvReportClient) => {
       const date = new Date(client.createdAt || client.created_at || '');
       let key: string;
-      
+
       if (period === 'day') {
         key = date.toISOString().split('T')[0];
       } else if (period === 'week') {
@@ -445,59 +468,61 @@ export class ReportingService {
       } else {
         key = String(date.getFullYear());
       }
-      
+
       grouped[key] = (grouped[key] || 0) + 1;
     });
-    
-    const data = Object.entries(grouped).map(([period, count]) => ({
-      period,
-      count,
-    })).sort((a, b) => a.period.localeCompare(b.period));
-    
+
+    const data = Object.entries(grouped)
+      .map(([period, count]) => ({
+        period,
+        count,
+      }))
+      .sort((a, b) => a.period.localeCompare(b.period));
+
     return {
       data,
       total: clients.length,
     };
   }
-  
+
   /**
    * Get client retention report
    */
   async getClientRetentionReport(): Promise<ClientRetentionReport> {
     log.info('Generating client retention report');
-    
+
     const clients = await kv.getByPrefix('user_profile:');
-    
+
     // TODO: Calculate actual retention metrics
     // For now, return basic stats
-    
+
     return {
       totalClients: clients?.length || 0,
       activeClients: clients?.filter((c: KvReportClient) => !c.inactive).length || 0,
       retentionRate: 0,
     };
   }
-  
+
   /**
    * Get client demographics report
    */
   async getClientDemographicsReport(): Promise<ClientDemographicsReport> {
     log.info('Generating client demographics report');
-    
+
     const clients = await kv.getByPrefix('user_profile:');
-    
+
     if (!clients || clients.length === 0) {
       return { total: 0, byAge: [], byAccountType: [] };
     }
-    
+
     // Group by account type
     const byAccountType: Record<string, number> = {};
-    
+
     clients.forEach((client: KvReportClient) => {
       const type = client.accountType || 'personal';
       byAccountType[type] = (byAccountType[type] || 0) + 1;
     });
-    
+
     return {
       total: clients.length,
       byAccountType: Object.entries(byAccountType).map(([type, count]) => ({
@@ -507,46 +532,48 @@ export class ReportingService {
       })),
     };
   }
-  
+
   // ========================================================================
   // ACTIVITY REPORTS
   // ========================================================================
-  
+
   /**
    * Get applications report
    */
   async getApplicationsReport(dateRange?: DateRange): Promise<ApplicationsReport> {
     log.info('Generating applications report', { dateRange });
-    
+
     const applications = await kv.getByPrefix('application:');
-    
+
     if (!applications || applications.length === 0) {
       return { total: 0, byStatus: [] };
     }
-    
+
     // Filter by date range if provided
     let filtered = applications;
-    
+
     if (dateRange?.startDate) {
-      filtered = filtered.filter((a: KvReportApplication) =>
-        new Date(a.created_at || a.createdAt || '') >= new Date(dateRange.startDate!)
+      filtered = filtered.filter(
+        (a: KvReportApplication) =>
+          new Date(a.created_at || a.createdAt || '') >= new Date(dateRange.startDate!),
       );
     }
-    
+
     if (dateRange?.endDate) {
-      filtered = filtered.filter((a: KvReportApplication) =>
-        new Date(a.created_at || a.createdAt || '') <= new Date(dateRange.endDate!)
+      filtered = filtered.filter(
+        (a: KvReportApplication) =>
+          new Date(a.created_at || a.createdAt || '') <= new Date(dateRange.endDate!),
       );
     }
-    
+
     // Group by status
     const byStatus: Record<string, number> = {};
-    
+
     filtered.forEach((app: KvReportApplication) => {
       const status = app.status || 'unknown';
       byStatus[status] = (byStatus[status] || 0) + 1;
     });
-    
+
     return {
       total: filtered.length,
       byStatus: Object.entries(byStatus).map(([status, count]) => ({
@@ -556,38 +583,38 @@ export class ReportingService {
       })),
     };
   }
-  
+
   /**
    * Get FNA report
    */
   async getFNAReport(dateRange?: DateRange): Promise<FNAReport> {
     log.info('Generating FNA report', { dateRange });
-    
+
     const fnas = await kv.getByPrefix('fna:');
-    
+
     if (!fnas || fnas.length === 0) {
       return { total: 0, byType: [], byStatus: [] };
     }
-    
+
     // Group by type and status
     const byType: Record<string, number> = {};
     const byStatus: Record<string, number> = {};
-    
+
     fnas.forEach((fna: KvReportFna) => {
       const type = fna.type || 'unknown';
       const status = fna.status || 'unknown';
-      
+
       byType[type] = (byType[type] || 0) + 1;
       byStatus[status] = (byStatus[status] || 0) + 1;
     });
-    
+
     return {
       total: fnas.length,
       byType: Object.entries(byType).map(([type, count]) => ({ type, count })),
       byStatus: Object.entries(byStatus).map(([status, count]) => ({ status, count })),
     };
   }
-  
+
   // ========================================================================
   // CUSTOM REPORTS
   // ========================================================================
@@ -653,7 +680,9 @@ export class ReportingService {
       let daysSinceSubmission = 0;
       if (submittedDate) {
         const submitted = new Date(submittedDate);
-        daysSinceSubmission = Math.floor((now.getTime() - submitted.getTime()) / (1000 * 60 * 60 * 24));
+        daysSinceSubmission = Math.floor(
+          (now.getTime() - submitted.getTime()) / (1000 * 60 * 60 * 24),
+        );
       }
 
       const status = (a.status || 'unknown') as string;
@@ -661,16 +690,16 @@ export class ReportingService {
 
       const servicesRequested = Array.isArray(meta.servicesRequested)
         ? (meta.servicesRequested as string[]).join('; ')
-        : (meta.servicesRequested as string || '');
+        : (meta.servicesRequested as string) || '';
 
       rows.push({
         'Application ID': applicationId,
         'Applicant Name': applicantName,
-        'Email': (personal.email || a.email || '') as string,
-        'Phone': (personal.phoneNumber || personal.phone || a.phone || '') as string,
-        'Status': statusLabel,
+        Email: (personal.email || a.email || '') as string,
+        Phone: (personal.phoneNumber || personal.phone || a.phone || '') as string,
+        Status: statusLabel,
         'Services Requested': servicesRequested,
-        'Urgency': (meta.urgency || a.urgency || '') as string,
+        Urgency: (meta.urgency || a.urgency || '') as string,
         'Submitted Date': submittedDate ? new Date(submittedDate).toLocaleDateString('en-ZA') : '',
         'Last Updated': updatedDate ? new Date(updatedDate).toLocaleDateString('en-ZA') : '',
         'Days Since Submission': daysSinceSubmission,
@@ -708,17 +737,17 @@ export class ReportingService {
 
     // FNA type label mapping
     const FNA_TYPE_LABELS: Record<string, string> = {
-      'risk': 'Risk Planning',
+      risk: 'Risk Planning',
       'risk-planning': 'Risk Planning',
-      'medical': 'Medical Aid',
+      medical: 'Medical Aid',
       'medical-aid': 'Medical Aid',
-      'retirement': 'Retirement Planning',
+      retirement: 'Retirement Planning',
       'retirement-planning': 'Retirement Planning',
-      'estate': 'Estate Planning',
+      estate: 'Estate Planning',
       'estate-planning': 'Estate Planning',
-      'tax': 'Tax Planning',
+      tax: 'Tax Planning',
       'tax-planning': 'Tax Planning',
-      'investment': 'Investment Analysis',
+      investment: 'Investment Analysis',
       'investment-ina': 'Investment Analysis',
     };
 
@@ -730,7 +759,8 @@ export class ReportingService {
       const f = row.value || {};
 
       const fnaType = (f.type || f.fnaType || 'unknown') as string;
-      const typeLabel = FNA_TYPE_LABELS[fnaType] || fnaType.charAt(0).toUpperCase() + fnaType.slice(1);
+      const typeLabel =
+        FNA_TYPE_LABELS[fnaType] || fnaType.charAt(0).toUpperCase() + fnaType.slice(1);
 
       const status = (f.status || 'unknown') as string;
       const statusLabel = status.charAt(0).toUpperCase() + status.slice(1);
@@ -753,7 +783,9 @@ export class ReportingService {
         const created = new Date(createdDate);
         if (publishedDate) {
           const published = new Date(publishedDate);
-          daysToComplete = Math.floor((published.getTime() - created.getTime()) / (1000 * 60 * 60 * 24));
+          daysToComplete = Math.floor(
+            (published.getTime() - created.getTime()) / (1000 * 60 * 60 * 24),
+          );
         } else if (status !== 'published') {
           const now = new Date();
           daysToComplete = `${Math.floor((now.getTime() - created.getTime()) / (1000 * 60 * 60 * 24))} (in progress)`;
@@ -762,11 +794,11 @@ export class ReportingService {
 
       rows.push({
         'FNA ID': fnaId,
-        'Type': typeLabel,
-        'Status': statusLabel,
+        Type: typeLabel,
+        Status: statusLabel,
         'Client ID': (f.clientId || f.client_id || '') as string,
         'Client Name': (f.clientName || f.client_name || '') as string,
-        'Adviser': (f.adviserName || f.adviser_name || f.adviserId || '') as string,
+        Adviser: (f.adviserName || f.adviser_name || f.adviserId || '') as string,
         'Created Date': createdDate ? new Date(createdDate).toLocaleDateString('en-ZA') : '',
         'Last Updated': updatedDate ? new Date(updatedDate).toLocaleDateString('en-ZA') : '',
         'Published Date': publishedDate ? new Date(publishedDate).toLocaleDateString('en-ZA') : '',
@@ -793,14 +825,13 @@ export class ReportingService {
         .from('kv_store_91ed8379')
         .select('key, value')
         .like('key', 'user_profile:%:personal_info'),
-      supabase
-        .from('kv_store_91ed8379')
-        .select('key, value')
-        .like('key', 'security:%'),
+      supabase.from('kv_store_91ed8379').select('key, value').like('key', 'security:%'),
     ]);
 
     if (profileResult.error) {
-      log.error('Failed to query profiles for compliance audit', { error: profileResult.error.message });
+      log.error('Failed to query profiles for compliance audit', {
+        error: profileResult.error.message,
+      });
       throw new Error(`Failed to fetch profiles: ${profileResult.error.message}`);
     }
 
@@ -858,13 +889,13 @@ export class ReportingService {
         { name: 'Marketing Consent', value: marketingConsent },
       ];
 
-      const compliantCount = consentChecks.filter(c => c.value).length;
+      const compliantCount = consentChecks.filter((c) => c.value).length;
       const totalChecks = consentChecks.length;
       const complianceScore = `${compliantCount}/${totalChecks}`;
 
       const nonCompliantItems = consentChecks
-        .filter(c => !c.value)
-        .map(c => c.name)
+        .filter((c) => !c.value)
+        .map((c) => c.name)
         .join('; ');
 
       const createdAt = (p.createdAt || p.created_at || '') as string;
@@ -872,7 +903,7 @@ export class ReportingService {
       return {
         'User ID': userId,
         'Client Name': clientName,
-        'Email': (p.email || '') as string,
+        Email: (p.email || '') as string,
         'Account Status': accountStatus,
         'POPIA Consent': popiaConsent ? 'Yes' : 'No',
         'FAIS Acknowledged': faisAcknowledged ? 'Yes' : 'No',
@@ -907,14 +938,13 @@ export class ReportingService {
         .from('kv_store_91ed8379')
         .select('key, value')
         .like('key', 'user_profile:%:personal_info'),
-      supabase
-        .from('kv_store_91ed8379')
-        .select('key, value')
-        .like('key', 'security:%'),
+      supabase.from('kv_store_91ed8379').select('key, value').like('key', 'security:%'),
     ]);
 
     if (profileResult.error) {
-      log.error('Failed to query profiles for lifecycle audit', { error: profileResult.error.message });
+      log.error('Failed to query profiles for lifecycle audit', {
+        error: profileResult.error.message,
+      });
       throw new Error(`Failed to fetch profiles: ${profileResult.error.message}`);
     }
 
@@ -946,13 +976,13 @@ export class ReportingService {
       const profile = profileMap.get(userId);
       const security = securityMap.get(userId);
 
-      const firstName = profile ? (profile.firstName || '') as string : '';
-      const lastName = profile ? (profile.lastName || '') as string : '';
+      const firstName = profile ? ((profile.firstName || '') as string) : '';
+      const lastName = profile ? ((profile.lastName || '') as string) : '';
       const clientName = [firstName, lastName].filter(Boolean).join(' ') || 'Unknown';
-      const email = profile ? (profile.email || '') as string : '';
-      const createdAt = profile ? (profile.createdAt || profile.created_at || '') as string : '';
+      const email = profile ? ((profile.email || '') as string) : '';
+      const createdAt = profile ? ((profile.createdAt || profile.created_at || '') as string) : '';
 
-      const profileStatus = profile ? (profile.accountStatus || 'active') as string : 'N/A';
+      const profileStatus = profile ? ((profile.accountStatus || 'active') as string) : 'N/A';
       const secDeleted = security ? security.deleted === true : false;
       const secSuspended = security ? security.suspended === true : false;
 
@@ -977,12 +1007,14 @@ export class ReportingService {
         issueType = 'Orphaned Security';
         severity = 'Medium';
         details = 'Security entry exists but no corresponding profile was found';
-        recommendedAction = 'Investigate whether this user was partially deleted or never fully onboarded';
+        recommendedAction =
+          'Investigate whether this user was partially deleted or never fully onboarded';
       } else if (profile && !security) {
         // Missing security entry — profile exists without security guard
         issueType = 'Missing Security';
         severity = 'High';
-        details = 'Profile exists but no security entry found — downstream guards cannot enforce lifecycle state';
+        details =
+          'Profile exists but no security entry found — downstream guards cannot enforce lifecycle state';
         recommendedAction = 'Create a security entry for this user with appropriate flags';
       } else if (profile && security) {
         // Both exist — check for mismatches
@@ -1007,9 +1039,9 @@ export class ReportingService {
           issueType = 'Status Mismatch';
           severity = 'High';
           details = `Profile.accountStatus='closed' but security.deleted=false — client may still receive communications`;
-          recommendedAction = 'Set security.deleted=true and security.suspended=true to match profile status';
-        }
-        else if (normProfileStatus === 'suspended' && !secSuspended) {
+          recommendedAction =
+            'Set security.deleted=true and security.suspended=true to match profile status';
+        } else if (normProfileStatus === 'suspended' && !secSuspended) {
           issueType = 'Status Mismatch';
           severity = 'Medium';
           details = `Profile.accountStatus='suspended' but security.suspended=false — lifecycle state is ambiguous`;
@@ -1020,21 +1052,21 @@ export class ReportingService {
       rows.push({
         'User ID': userId,
         'Client Name': clientName,
-        'Email': email,
+        Email: email,
         'Profile Account Status': profileStatus,
         'Security Deleted': security ? (secDeleted ? 'Yes' : 'No') : 'N/A',
         'Security Suspended': security ? (secSuspended ? 'Yes' : 'No') : 'N/A',
         'Derived Status': derivedStatus,
         'Issue Type': issueType,
-        'Severity': severity,
-        'Details': details,
+        Severity: severity,
+        Details: details,
         'Recommended Action': recommendedAction,
         'Profile Created': createdAt ? new Date(createdAt).toLocaleDateString('en-ZA') : '',
       });
     }
 
     // Sort: Critical first, then High, Medium, None
-    const severityOrder: Record<string, number> = { 'Critical': 0, 'High': 1, 'Medium': 2, 'None': 3 };
+    const severityOrder: Record<string, number> = { Critical: 0, High: 1, Medium: 2, None: 3 };
     rows.sort((a, b) => (severityOrder[a['Severity']] ?? 4) - (severityOrder[b['Severity']] ?? 4));
 
     return rows;
@@ -1049,24 +1081,24 @@ export class ReportingService {
    */
   async generateCustomReport(config: CustomReportConfig): Promise<CustomReportResult> {
     log.info('Generating custom report', { config });
-    
+
     // TODO: Implement custom report generator
-    
+
     return {
       type: config.type,
       data: [],
       generatedAt: new Date().toISOString(),
     };
   }
-  
+
   /**
    * Export report
    */
   async exportReport(config: ExportConfig): Promise<ExportReportResult> {
     log.info('Exporting report', { format: config.format });
-    
+
     // TODO: Implement export to CSV, PDF, Excel
-    
+
     return {
       format: config.format,
       url: null,

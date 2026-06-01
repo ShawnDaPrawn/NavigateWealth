@@ -4,7 +4,7 @@
  * Refactored to remove global automation cycle logic.
  */
 
-import * as kv from "./kv_store.tsx";
+import * as kv from './kv_store.tsx';
 
 // ==================== TYPES ====================
 
@@ -79,7 +79,10 @@ export async function getReminderConfig(envelopeId: string): Promise<ReminderCon
 /**
  * Set reminder config for an envelope
  */
-export async function setReminderConfig(envelopeId: string, config: Partial<ReminderConfig>): Promise<void> {
+export async function setReminderConfig(
+  envelopeId: string,
+  config: Partial<ReminderConfig>,
+): Promise<void> {
   const existing = await getReminderConfig(envelopeId);
   const merged: ReminderConfig = { ...existing, ...config };
   // Keep escalation offsets sorted ascending so consumers can reason
@@ -105,7 +108,8 @@ export function computeEscalationTimestamps(
 ): string[] {
   if (!invitedAtIso) return [];
   if (config.schedule !== 'escalating') return [];
-  const offsets = config.escalation_offsets_days ?? DEFAULT_REMINDER_CONFIG.escalation_offsets_days!;
+  const offsets =
+    config.escalation_offsets_days ?? DEFAULT_REMINDER_CONFIG.escalation_offsets_days!;
   const base = new Date(invitedAtIso).getTime();
   if (!Number.isFinite(base)) return [];
   return offsets.map((d) => new Date(base + d * 24 * 60 * 60 * 1000).toISOString());

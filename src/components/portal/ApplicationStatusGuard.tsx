@@ -15,16 +15,16 @@ interface ApplicationStatusGuardProps {
 
 /**
  * ApplicationStatusGuard
- * 
+ *
  * Protects portal routes based on application status:
  * - Pending/Submitted: Shows pending message (no access to dashboard)
  * - Approved: Shows full dashboard (children) - full access granted
  * - Declined: Shows declined message with contact support
  * - Default: Shows full dashboard
  */
-export function ApplicationStatusGuard({ 
-  children, 
-  requireApproved = true 
+export function ApplicationStatusGuard({
+  children,
+  requireApproved = true,
 }: ApplicationStatusGuardProps) {
   const { user } = useAuth();
   const [loading, setLoading] = useState(true);
@@ -56,8 +56,8 @@ export function ApplicationStatusGuard({
       const profileRes = await fetch(
         `${API_BASE}/profile/personal-info?key=${encodeURIComponent(profileKey)}&email=${encodeURIComponent(user.email)}`,
         {
-          headers: { 'Authorization': `Bearer ${publicAnonKey}` }
-        }
+          headers: { Authorization: `Bearer ${publicAnonKey}` },
+        },
       );
 
       if (!profileRes.ok) {
@@ -78,21 +78,21 @@ export function ApplicationStatusGuard({
 
       // Get application status from applications endpoint
       let status = 'in_progress'; // Default status
-      
+
       // Fetch application details - use correct endpoint format
-      const appRes = await fetch(
-        `${API_BASE}/applications/${userId}`,
-        {
-          headers: { 'Authorization': `Bearer ${publicAnonKey}` }
-        }
-      );
+      const appRes = await fetch(`${API_BASE}/applications/${userId}`, {
+        headers: { Authorization: `Bearer ${publicAnonKey}` },
+      });
 
       console.log('🔍 Application API Response Status:', appRes.status);
 
       if (appRes.ok) {
         const applicationResponse = await appRes.json();
-        console.log('🔍 Application API Response Data:', JSON.stringify(applicationResponse, null, 2));
-        
+        console.log(
+          '🔍 Application API Response Data:',
+          JSON.stringify(applicationResponse, null, 2),
+        );
+
         // The endpoint returns { success: true, data: application }
         const userApp = applicationResponse.data;
         if (userApp && userApp.status) {
@@ -103,7 +103,12 @@ export function ApplicationStatusGuard({
         }
       } else {
         const errorText = await appRes.text();
-        console.log('⚠️ Failed to fetch application. Status:', appRes.status, 'Response:', errorText);
+        console.log(
+          '⚠️ Failed to fetch application. Status:',
+          appRes.status,
+          'Response:',
+          errorText,
+        );
       }
 
       setApplicationStatus(status);
@@ -111,7 +116,7 @@ export function ApplicationStatusGuard({
       // If approved, check if user has policies
       if (status === 'approved') {
         const policiesRes = await fetch(`${API_BASE}/integrations/policies?clientId=${userId}`, {
-          headers: { 'Authorization': `Bearer ${publicAnonKey}` }
+          headers: { Authorization: `Bearer ${publicAnonKey}` },
         });
 
         if (policiesRes.ok) {
@@ -121,7 +126,6 @@ export function ApplicationStatusGuard({
           setHasPolicies(allPolicies.length > 0);
         }
       }
-
     } catch (err: unknown) {
       console.error('Error fetching application status:', err);
       setError(err instanceof Error ? err.message : 'Failed to load application status');
@@ -159,8 +163,7 @@ export function ApplicationStatusGuard({
     );
   }
 
-  const isSuperAdminEmail =
-    user?.email?.toLowerCase() === SUPER_ADMIN_EMAIL.toLowerCase();
+  const isSuperAdminEmail = user?.email?.toLowerCase() === SUPER_ADMIN_EMAIL.toLowerCase();
 
   if (isSuperAdminEmail) {
     if (personalClientEnabled || applicationStatus === 'approved') {
@@ -173,8 +176,8 @@ export function ApplicationStatusGuard({
           <AlertCircle className="h-16 w-16 text-blue-600 mx-auto mb-4" />
           <h3 className="text-gray-900 mb-3">Personal Client Profile Not Enabled</h3>
           <p className="text-gray-600 mb-6 max-w-lg mx-auto">
-            Your super admin account can use personal client testing, but the client profile has
-            not been enabled yet. Run the one-time enable step from admin tooling, then try again.
+            Your super admin account can use personal client testing, but the client profile has not
+            been enabled yet. Run the one-time enable step from admin tooling, then try again.
           </p>
           <button
             onClick={fetchUserApplicationStatus}
@@ -188,17 +191,19 @@ export function ApplicationStatusGuard({
   }
 
   // Pending application - block access
-  if (requireApproved && (applicationStatus === 'in_progress' || applicationStatus === 'submitted')) {
+  if (
+    requireApproved &&
+    (applicationStatus === 'in_progress' || applicationStatus === 'submitted')
+  ) {
     return (
       <div className="flex items-center justify-center min-h-screen p-4">
         <div className="max-w-2xl w-full bg-yellow-50 border border-yellow-200 rounded-lg p-8 text-center">
           <Clock className="h-16 w-16 text-yellow-600 mx-auto mb-4" />
-          <h3 className="text-gray-900 mb-3">
-            Application Under Review
-          </h3>
+          <h3 className="text-gray-900 mb-3">Application Under Review</h3>
           <p className="text-gray-600 mb-6 max-w-lg mx-auto">
-            Thank you for submitting your application! Our team is currently reviewing your information. 
-            You'll receive an email notification once your application has been approved.
+            Thank you for submitting your application! Our team is currently reviewing your
+            information. You'll receive an email notification once your application has been
+            approved.
           </p>
           <div className="bg-white border border-yellow-200 rounded-lg p-4 max-w-md mx-auto">
             <p className="text-sm text-gray-700">
@@ -230,14 +235,12 @@ export function ApplicationStatusGuard({
       <div className="flex items-center justify-center min-h-screen p-4">
         <div className="max-w-2xl w-full bg-gray-50 border border-gray-200 rounded-lg p-8 text-center">
           <AlertCircle className="h-16 w-16 text-gray-600 mx-auto mb-4" />
-          <h3 className="text-gray-900 mb-3">
-            Application Status Update
-          </h3>
+          <h3 className="text-gray-900 mb-3">Application Status Update</h3>
           <p className="text-gray-600 mb-6 max-w-lg mx-auto">
-            We're unable to proceed with your application at this time. 
-            Please contact our team for more information.
+            We're unable to proceed with your application at this time. Please contact our team for
+            more information.
           </p>
-          <a 
+          <a
             href="mailto:info@navigatewealth.co"
             className="inline-flex items-center px-6 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700"
           >

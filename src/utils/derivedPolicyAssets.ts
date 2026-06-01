@@ -109,7 +109,9 @@ export function derivePolicyAssetsFromPolicies(
   if (!Array.isArray(policies) || policies.length === 0) return [];
 
   return policies
-    .filter((policy) => policy && !policy.archived && policy.data && typeof policy.data === 'object')
+    .filter(
+      (policy) => policy && !policy.archived && policy.data && typeof policy.data === 'object',
+    )
     .map((policy) => {
       const categoryId = String(policy.categoryId || policy.category || '').trim();
       const data = policy.data as Record<string, unknown>;
@@ -147,11 +149,7 @@ export function derivePolicyAssetsFromPolicies(
       }
 
       if (INVESTMENT_CATEGORY_IDS.has(categoryId)) {
-        const value = firstPositiveValue(data, [
-          'invest_current_value',
-          'inv_3',
-          'inv_vol_3',
-        ]);
+        const value = firstPositiveValue(data, ['invest_current_value', 'inv_3', 'inv_vol_3']);
 
         if (value <= 0) return null;
 
@@ -163,12 +161,8 @@ export function derivePolicyAssetsFromPolicies(
           assetTypeLabel: 'Investment Policy',
           providerName: policy.providerName?.trim() || 'Investment Provider',
           productType:
-            firstNonEmptyString(data, [
-              'invest_product_type',
-              'inv_2',
-              'inv_vol_2',
-              'inv_gua_2',
-            ]) || 'Investment Product',
+            firstNonEmptyString(data, ['invest_product_type', 'inv_2', 'inv_vol_2', 'inv_gua_2']) ||
+            'Investment Product',
           policyNumber:
             firstNonEmptyString(data, ['inv_1', 'inv_vol_1', 'inv_gua_1']) || 'Policy on file',
           value,
@@ -196,11 +190,15 @@ export function derivePolicyAssetsFromProductHoldings(
   return holdings
     .filter((holding) => {
       if (!holding || typeof holding !== 'object') return false;
-      const status = String(holding.status || '').trim().toLowerCase();
+      const status = String(holding.status || '')
+        .trim()
+        .toLowerCase();
       return status !== 'archived';
     })
     .map((holding) => {
-      const category = String(holding.category || '').trim().toLowerCase();
+      const category = String(holding.category || '')
+        .trim()
+        .toLowerCase();
       const value = asPositiveNumber(holding.value);
 
       if (value <= 0) return null;
@@ -212,8 +210,12 @@ export function derivePolicyAssetsFromProductHoldings(
         categoryId: category,
         bucket: category,
         assetTypeLabel: category === 'retirement' ? 'Retirement Policy' : 'Investment Policy',
-        providerName: holding.provider?.trim() || (category === 'retirement' ? 'Retirement Provider' : 'Investment Provider'),
-        productType: holding.product?.trim() || (category === 'retirement' ? 'Retirement Product' : 'Investment Product'),
+        providerName:
+          holding.provider?.trim() ||
+          (category === 'retirement' ? 'Retirement Provider' : 'Investment Provider'),
+        productType:
+          holding.product?.trim() ||
+          (category === 'retirement' ? 'Retirement Product' : 'Investment Product'),
         policyNumber: holding.policyNumber?.trim() || 'Policy on file',
         value,
       } satisfies DerivedPolicyAsset;
@@ -240,13 +242,7 @@ export function findPossiblePolicyAssetMatches(
 
   for (const asset of manualAssets) {
     const manualText = normalizeText(
-      [
-        asset.type,
-        asset.customType,
-        asset.name,
-        asset.description,
-        asset.provider,
-      ]
+      [asset.type, asset.customType, asset.name, asset.description, asset.provider]
         .filter(Boolean)
         .join(' '),
     );

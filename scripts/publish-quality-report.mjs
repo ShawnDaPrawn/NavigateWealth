@@ -1,7 +1,8 @@
 import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 
 const now = new Date().toISOString();
-const DEFAULT_INGEST_URL = 'https://vpjmdsltwrnpefzcgdmz.supabase.co/functions/v1/make-server-91ed8379/quality-issues/ingest-ci-report';
+const DEFAULT_INGEST_URL =
+  'https://vpjmdsltwrnpefzcgdmz.supabase.co/functions/v1/make-server-91ed8379/quality-issues/ingest-ci-report';
 const token = process.env.QUALITY_ISSUES_INGEST_TOKEN;
 const isCi = process.env.CI === 'true' || process.env.GITHUB_ACTIONS === 'true';
 
@@ -13,9 +14,7 @@ function normalizeIngestUrl(value) {
   try {
     parsed = new URL(rawValue);
   } catch {
-    throw new Error(
-      `QUALITY_ISSUES_INGEST_URL is not a valid URL: ${rawValue}`,
-    );
+    throw new Error(`QUALITY_ISSUES_INGEST_URL is not a valid URL: ${rawValue}`);
   }
 
   if (parsed.pathname.endsWith('/quality-issues')) {
@@ -175,17 +174,22 @@ function excerptLog(log) {
   const lines = log.split(/\r?\n/).filter(Boolean);
   const errorIndex = lines.findIndex((line) => /error|failed|✗/i.test(line));
   const start = errorIndex >= 0 ? Math.max(0, errorIndex - 2) : Math.max(0, lines.length - 8);
-  return lines.slice(start, start + 10).join('\n').slice(0, 1600);
+  return lines
+    .slice(start, start + 10)
+    .join('\n')
+    .slice(0, 1600);
 }
 
 function createIssue(input) {
   const category = input.category || inferCategory(input.source, input.ruleId);
-  const priority = input.priority || inferPriority({
-    source: input.source,
-    severity: input.severity,
-    category,
-    cvssScore: input.cvssScore,
-  });
+  const priority =
+    input.priority ||
+    inferPriority({
+      source: input.source,
+      severity: input.severity,
+      category,
+      cvssScore: input.cvssScore,
+    });
   const issue = {
     status: 'open',
     category,
@@ -193,9 +197,10 @@ function createIssue(input) {
     firstSeenAt: now,
     lastSeenAt: now,
     occurrences: 1,
-    runUrl: process.env.GITHUB_RUN_ID && process.env.GITHUB_REPOSITORY
-      ? `https://github.com/${process.env.GITHUB_REPOSITORY}/actions/runs/${process.env.GITHUB_RUN_ID}`
-      : undefined,
+    runUrl:
+      process.env.GITHUB_RUN_ID && process.env.GITHUB_REPOSITORY
+        ? `https://github.com/${process.env.GITHUB_REPOSITORY}/actions/runs/${process.env.GITHUB_RUN_ID}`
+        : undefined,
     ...input,
   };
 
@@ -234,17 +239,21 @@ function collectTestIssues() {
   for (const testResult of report?.testResults || []) {
     for (const assertion of testResult.assertionResults || []) {
       if (assertion.status !== 'failed') continue;
-      issues.push(createIssue({
-        id: issueId(['test', testResult.name, assertion.fullName || assertion.title]),
-        source: 'test',
-        severity: 'error',
-        component: 'test-suite',
-        environment: process.env.GITHUB_REF_NAME || 'local',
-        title: assertion.fullName || assertion.title || 'Test failed',
-        message: (assertion.failureMessages || []).join('\n').slice(0, 1600) || 'Vitest reported a failing assertion.',
-        filePath: testResult.name,
-        ruleId: 'vitest',
-      }));
+      issues.push(
+        createIssue({
+          id: issueId(['test', testResult.name, assertion.fullName || assertion.title]),
+          source: 'test',
+          severity: 'error',
+          component: 'test-suite',
+          environment: process.env.GITHUB_REF_NAME || 'local',
+          title: assertion.fullName || assertion.title || 'Test failed',
+          message:
+            (assertion.failureMessages || []).join('\n').slice(0, 1600) ||
+            'Vitest reported a failing assertion.',
+          filePath: testResult.name,
+          ruleId: 'vitest',
+        }),
+      );
     }
   }
 
@@ -258,7 +267,8 @@ function collectTestIssues() {
       component: 'test-suite',
       environment: process.env.GITHUB_REF_NAME || 'local',
       title: 'Test run failed',
-      message: excerptLog(readText('quality-test.log')) || 'npm test exited with a non-zero status.',
+      message:
+        excerptLog(readText('quality-test.log')) || 'npm test exited with a non-zero status.',
       ruleId: 'vitest',
     }),
   ];
@@ -272,37 +282,43 @@ function collectAuditIssues() {
   return Object.entries(vulnerabilities).flatMap(([name, vulnerability]) => {
     const packageVersion = getPackageVersion(report, name);
     const fix = normalizeFixAvailable(vulnerability.fixAvailable);
-    const advisoryEntries = toArray(vulnerability.via).filter((entry) => entry && typeof entry === 'object');
+    const advisoryEntries = toArray(vulnerability.via).filter(
+      (entry) => entry && typeof entry === 'object',
+    );
     const stringEntries = toArray(vulnerability.via).filter((entry) => typeof entry === 'string');
 
     if (advisoryEntries.length === 0) {
-      return [createIssue({
-        id: issueId(['audit', name, vulnerability.severity]),
-        source: 'audit',
-        severity: severityFromAuditSeverity(vulnerability.severity),
-        component: 'dependencies',
-        environment: process.env.GITHUB_REF_NAME || 'local',
-        detectedBy: 'npm-audit',
-        packageName: name,
-        packageVersion,
-        vulnerableRange: toOptionalString(vulnerability.range),
-        fixVersion: fix.fixVersion,
-        fixAvailable: fix.fixAvailable,
-        title: `${name} has ${vulnerability.severity} vulnerability risk`,
-        message: stringEntries.join('; ') || `npm audit reported ${vulnerability.severity} risk for ${name}.`,
-        filePath: 'package-lock.json',
-        ruleId: name,
-      })];
+      return [
+        createIssue({
+          id: issueId(['audit', name, vulnerability.severity]),
+          source: 'audit',
+          severity: severityFromAuditSeverity(vulnerability.severity),
+          component: 'dependencies',
+          environment: process.env.GITHUB_REF_NAME || 'local',
+          detectedBy: 'npm-audit',
+          packageName: name,
+          packageVersion,
+          vulnerableRange: toOptionalString(vulnerability.range),
+          fixVersion: fix.fixVersion,
+          fixAvailable: fix.fixAvailable,
+          title: `${name} has ${vulnerability.severity} vulnerability risk`,
+          message:
+            stringEntries.join('; ') ||
+            `npm audit reported ${vulnerability.severity} risk for ${name}.`,
+          filePath: 'package-lock.json',
+          ruleId: name,
+        }),
+      ];
     }
 
     return advisoryEntries.map((advisory, index) => {
-      const advisoryId = toOptionalString(advisory.source) || extractIdentifierFromUrl(advisory.url);
+      const advisoryId =
+        toOptionalString(advisory.source) || extractIdentifierFromUrl(advisory.url);
       const cve = toOptionalString(toArray(advisory.cves)[0]) || extractCveFromUrl(advisory.url);
       const cvssScore = toOptionalNumber(advisory.cvss?.score);
       const advisorySeverity = advisory.severity || vulnerability.severity;
       const range = toOptionalString(advisory.range) || toOptionalString(vulnerability.range);
-      const title = toOptionalString(advisory.title)
-        || `${name} vulnerability advisory`;
+      const title = toOptionalString(advisory.title) || `${name} vulnerability advisory`;
       const referenceUrl = toOptionalString(advisory.url);
 
       return createIssue({
@@ -322,7 +338,9 @@ function collectAuditIssues() {
         cvssScore,
         referenceUrl,
         title,
-        message: stringEntries.join('; ') || `Affected range: ${range || 'unknown'}${fix.fixVersion ? `; fix version: ${fix.fixVersion}` : ''}`,
+        message:
+          stringEntries.join('; ') ||
+          `Affected range: ${range || 'unknown'}${fix.fixVersion ? `; fix version: ${fix.fixVersion}` : ''}`,
         filePath: 'package-lock.json',
         ruleId: advisoryId || cve || name,
       });
@@ -330,18 +348,15 @@ function collectAuditIssues() {
   });
 }
 
-const issues = [
-  ...collectBuildIssues(),
-  ...collectTestIssues(),
-  ...collectAuditIssues(),
-];
+const issues = [...collectBuildIssues(), ...collectTestIssues(), ...collectAuditIssues()];
 
 const payload = {
   generatedAt: now,
   runId: process.env.GITHUB_RUN_ID,
-  runUrl: process.env.GITHUB_RUN_ID && process.env.GITHUB_REPOSITORY
-    ? `https://github.com/${process.env.GITHUB_REPOSITORY}/actions/runs/${process.env.GITHUB_RUN_ID}`
-    : undefined,
+  runUrl:
+    process.env.GITHUB_RUN_ID && process.env.GITHUB_REPOSITORY
+      ? `https://github.com/${process.env.GITHUB_REPOSITORY}/actions/runs/${process.env.GITHUB_RUN_ID}`
+      : undefined,
   branch: process.env.GITHUB_REF_NAME,
   commitSha: process.env.GITHUB_SHA,
   issues,
@@ -368,7 +383,7 @@ const response = await fetch(endpoint, {
   method: 'POST',
   headers: {
     'Content-Type': 'application/json',
-    'Authorization': `Bearer ${token}`,
+    Authorization: `Bearer ${token}`,
   },
   body: JSON.stringify(payload),
 });

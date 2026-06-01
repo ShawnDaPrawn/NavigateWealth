@@ -1,17 +1,12 @@
 /**
  * Calendar Module Constants
  * Navigate Wealth Admin Dashboard
- * 
+ *
  * Centralized constants for calendar module including labels, colors,
  * and configuration values.
  */
 
-import type {
-  EventType,
-  LocationType,
-  ReminderType,
-  ReminderPriority,
-} from './types';
+import type { EventType, LocationType, ReminderType, ReminderPriority } from './types';
 
 // ============================================================================
 // EVENT TYPE CONSTANTS

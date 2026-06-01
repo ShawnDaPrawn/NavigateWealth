@@ -19,9 +19,7 @@ const FNA_DOMAIN_TITLES: Record<FnaIntakeDomain, string> = {
   estate: 'Estate Planning FNA',
 };
 
-export function quoteServiceIdToFnaDomain(
-  serviceId: QuoteServiceId,
-): FnaIntakeDomain | undefined {
+export function quoteServiceIdToFnaDomain(serviceId: QuoteServiceId): FnaIntakeDomain | undefined {
   return SERVICE_TO_FNA_DOMAIN[serviceId];
 }
 

@@ -32,8 +32,8 @@ const log = createModuleLogger('sms-service');
 export type SmsProvider = 'noop' | 'twilio' | 'clickatell';
 
 export interface SmsMessage {
-  to: string;           // E.164 phone number (+27...)
-  body: string;         // Plain-text body. SMS is 160 chars per segment.
+  to: string; // E.164 phone number (+27...)
+  body: string; // Plain-text body. SMS is 160 chars per segment.
   kind: 'otp' | 'invite' | 'reminder'; // audit / billing classifier
 }
 
@@ -108,9 +108,14 @@ const twilioAdapter: SmsAdapter = {
       if (!res.ok) {
         const errBody = await res.text();
         log.error(`Twilio send failed (${res.status}): ${errBody}`);
-        return { success: false, provider: 'twilio', delivered: false, error: `Twilio ${res.status}` };
+        return {
+          success: false,
+          provider: 'twilio',
+          delivered: false,
+          error: `Twilio ${res.status}`,
+        };
       }
-      const json = await res.json() as { sid?: string };
+      const json = (await res.json()) as { sid?: string };
       return { success: true, provider: 'twilio', delivered: true, messageId: json.sid };
     } catch (err) {
       return { success: false, provider: 'twilio', delivered: false, error: getErrMsg(err) };
@@ -141,9 +146,14 @@ const clickatellAdapter: SmsAdapter = {
       if (!res.ok) {
         const errBody = await res.text();
         log.error(`Clickatell send failed (${res.status}): ${errBody}`);
-        return { success: false, provider: 'clickatell', delivered: false, error: `Clickatell ${res.status}` };
+        return {
+          success: false,
+          provider: 'clickatell',
+          delivered: false,
+          error: `Clickatell ${res.status}`,
+        };
       }
-      const json = await res.json() as { messages?: Array<{ apiMessageId?: string }> };
+      const json = (await res.json()) as { messages?: Array<{ apiMessageId?: string }> };
       return {
         success: true,
         provider: 'clickatell',
@@ -159,10 +169,13 @@ const clickatellAdapter: SmsAdapter = {
 function getActiveAdapter(): { adapter: SmsAdapter; provider: SmsProvider } {
   const configured = (Deno.env.get('SMS_PROVIDER') || 'noop').toLowerCase();
   switch (configured) {
-    case 'twilio': return { adapter: twilioAdapter, provider: 'twilio' };
-    case 'clickatell': return { adapter: clickatellAdapter, provider: 'clickatell' };
+    case 'twilio':
+      return { adapter: twilioAdapter, provider: 'twilio' };
+    case 'clickatell':
+      return { adapter: clickatellAdapter, provider: 'clickatell' };
     case 'noop':
-    default: return { adapter: noopAdapter, provider: 'noop' };
+    default:
+      return { adapter: noopAdapter, provider: 'noop' };
   }
 }
 
@@ -174,7 +187,11 @@ function getActiveAdapter(): { adapter: SmsAdapter; provider: SmsProvider } {
  * Send a generic SMS. Always returns a result — never throws. Caller owns
  * audit logging; this function only emits stderr logs.
  */
-export async function sendSms(msg: { to: string; body: string; kind: SmsMessage['kind'] }): Promise<SmsResult> {
+export async function sendSms(msg: {
+  to: string;
+  body: string;
+  kind: SmsMessage['kind'];
+}): Promise<SmsResult> {
   const e164 = toE164(msg.to);
   if (!e164) {
     log.warn(`SMS not sent: unparseable phone '${msg.to}'`);
@@ -188,7 +205,7 @@ export async function sendSms(msg: { to: string; body: string; kind: SmsMessage[
     const result = await adapter.send({ to: e164, body: msg.body, kind: msg.kind });
     log.info(
       `SMS ${msg.kind} → ${e164} via ${provider}: ` +
-      `delivered=${result.delivered} success=${result.success}${result.error ? ` error=${result.error}` : ''}`
+        `delivered=${result.delivered} success=${result.success}${result.error ? ` error=${result.error}` : ''}`,
     );
     return result;
   } catch (err) {
@@ -206,9 +223,7 @@ export async function sendOtpSms(params: {
   envelopeTitle?: string;
   expiresInMinutes?: number;
 }): Promise<SmsResult> {
-  const title = params.envelopeTitle
-    ? `"${params.envelopeTitle.slice(0, 40)}"`
-    : 'your document';
+  const title = params.envelopeTitle ? `"${params.envelopeTitle.slice(0, 40)}"` : 'your document';
   const expiry = params.expiresInMinutes ?? 15;
   const body = `Navigate Wealth: ${params.otp} is your code to sign ${title}. Expires in ${expiry} min. Do not share.`;
   return sendSms({ to: params.to, body, kind: 'otp' });
@@ -226,9 +241,10 @@ export async function sendInviteSms(params: {
   const firstName = params.signerName.split(/\s+/)[0] || params.signerName;
   // Trim URL to keep message short; the full URL still works.
   const url = params.signingUrl;
-  const title = params.envelopeTitle.length > 40
-    ? params.envelopeTitle.slice(0, 37) + '...'
-    : params.envelopeTitle;
+  const title =
+    params.envelopeTitle.length > 40
+      ? params.envelopeTitle.slice(0, 37) + '...'
+      : params.envelopeTitle;
   const body = `Hi ${firstName}, you have a document to sign: "${title}". Open: ${url}`;
   return sendSms({ to: params.to, body, kind: 'invite' });
 }
@@ -244,9 +260,10 @@ export async function sendReminderSms(params: {
   daysPending?: number;
 }): Promise<SmsResult> {
   const firstName = params.signerName.split(/\s+/)[0] || params.signerName;
-  const title = params.envelopeTitle.length > 40
-    ? params.envelopeTitle.slice(0, 37) + '...'
-    : params.envelopeTitle;
+  const title =
+    params.envelopeTitle.length > 40
+      ? params.envelopeTitle.slice(0, 37) + '...'
+      : params.envelopeTitle;
   const age = params.daysPending ? ` (pending ${params.daysPending}d)` : '';
   const body = `Hi ${firstName}, reminder to sign "${title}"${age}: ${params.signingUrl}`;
   return sendSms({ to: params.to, body, kind: 'reminder' });
@@ -264,9 +281,11 @@ export function getSmsProviderStatus(): {
     case 'twilio':
       return {
         provider,
-        configured: !!(Deno.env.get('TWILIO_ACCOUNT_SID') &&
+        configured: !!(
+          Deno.env.get('TWILIO_ACCOUNT_SID') &&
           Deno.env.get('TWILIO_AUTH_TOKEN') &&
-          Deno.env.get('TWILIO_FROM_NUMBER')),
+          Deno.env.get('TWILIO_FROM_NUMBER')
+        ),
       };
     case 'clickatell':
       return {

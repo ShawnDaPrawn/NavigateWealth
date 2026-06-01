@@ -5,7 +5,16 @@ import { Label } from '../../ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../ui/select';
 import { Button } from '../../ui/button';
 import { Separator } from '../../ui/separator';
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '../../ui/alert-dialog';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '../../ui/alert-dialog';
 import { MapPin, Home, Briefcase, CheckCircle, Edit2, Trash2, Upload, Check } from 'lucide-react';
 import { FieldWithCopy } from '../FieldWithCopy';
 
@@ -153,8 +162,10 @@ export function AddressSection({
             {/* Proof of Residence Upload */}
             <div className="pt-4">
               <Label>Proof of Residence</Label>
-              <p className="text-xs text-gray-500 mb-2">Upload a utility bill, bank statement, or lease agreement</p>
-              
+              <p className="text-xs text-gray-500 mb-2">
+                Upload a utility bill, bank statement, or lease agreement
+              </p>
+
               {profileData.proofOfResidenceUploaded && !proofOfResidenceInEditMode ? (
                 <div className="p-4 rounded-lg border-2 border-green-200 bg-green-50">
                   <div className="flex items-center justify-between">
@@ -163,7 +174,9 @@ export function AddressSection({
                         <CheckCircle className="h-6 w-6 text-green-600" />
                       </div>
                       <div>
-                        <p className="text-sm text-gray-900">{(profileData.proofOfResidenceFileName as string) || 'Proof of Residence'}</p>
+                        <p className="text-sm text-gray-900">
+                          {(profileData.proofOfResidenceFileName as string) || 'Proof of Residence'}
+                        </p>
                         <p className="text-xs text-gray-600">Document uploaded successfully</p>
                       </div>
                     </div>
@@ -325,12 +338,16 @@ export function AddressSection({
       </Card>
 
       {/* Delete Confirmation Dialog for Proof of Residence */}
-      <AlertDialog open={proofOfResidenceToDelete} onOpenChange={() => setProofOfResidenceToDelete(false)}>
+      <AlertDialog
+        open={proofOfResidenceToDelete}
+        onOpenChange={() => setProofOfResidenceToDelete(false)}
+      >
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Delete Proof of Residence</AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure you want to delete this proof of residence document? This action cannot be undone.
+              Are you sure you want to delete this proof of residence document? This action cannot
+              be undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

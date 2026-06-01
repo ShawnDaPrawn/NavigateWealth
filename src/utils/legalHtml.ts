@@ -127,12 +127,13 @@ export type LegalDocumentTocItem = {
 };
 
 function slugifyLegalHeading(value: string): string {
-  return value
-    .toLowerCase()
-    .replace(/[^a-z0-9\s-]/g, '')
-    .trim()
-    .replace(/\s+/g, '-')
-    || 'section';
+  return (
+    value
+      .toLowerCase()
+      .replace(/[^a-z0-9\s-]/g, '')
+      .trim()
+      .replace(/\s+/g, '-') || 'section'
+  );
 }
 
 function cleanInlineStyle(styleValue: string): string {
@@ -142,11 +143,13 @@ function cleanInlineStyle(styleValue: string): string {
     .filter(Boolean)
     .filter((rule) => {
       const property = rule.split(':')[0]?.trim().toLowerCase() || '';
-      return property.length > 0
-        && !property.startsWith('mso-')
-        && property !== 'tab-stops'
-        && property !== 'layout-grid-mode'
-        && property !== 'behavior';
+      return (
+        property.length > 0 &&
+        !property.startsWith('mso-') &&
+        property !== 'tab-stops' &&
+        property !== 'layout-grid-mode' &&
+        property !== 'behavior'
+      );
     })
     .join('; ');
 }
@@ -266,7 +269,10 @@ export function normalizeLegalListStructure(html: string, fallbackHtml = '<p></p
   }
 
   const parser = new window.DOMParser();
-  const doc = parser.parseFromString(`<div id="legal-list-normalize-root">${html || fallbackHtml}</div>`, 'text/html');
+  const doc = parser.parseFromString(
+    `<div id="legal-list-normalize-root">${html || fallbackHtml}</div>`,
+    'text/html',
+  );
   const root = doc.querySelector('#legal-list-normalize-root');
 
   if (!root) {
@@ -299,7 +305,10 @@ export function normalizeClipboardLegalHtml(rawHtml: string, fallbackHtml = '<p>
     .replace(/\s+xml:[a-z0-9_-]+='[^']*'/gi, '');
 
   const parser = new window.DOMParser();
-  const doc = parser.parseFromString(`<div id="legal-import-root">${cleanedSource || fallbackHtml}</div>`, 'text/html');
+  const doc = parser.parseFromString(
+    `<div id="legal-import-root">${cleanedSource || fallbackHtml}</div>`,
+    'text/html',
+  );
   const root = doc.querySelector('#legal-import-root');
 
   if (!root) {
@@ -340,7 +349,10 @@ export function normalizeClipboardLegalHtml(rawHtml: string, fallbackHtml = '<p>
     }
   });
 
-  const normalizedLists = normalizeLegalListStructure(root.innerHTML.trim() || fallbackHtml, fallbackHtml);
+  const normalizedLists = normalizeLegalListStructure(
+    root.innerHTML.trim() || fallbackHtml,
+    fallbackHtml,
+  );
   return sanitizeLegalDocumentHtml(normalizedLists);
 }
 

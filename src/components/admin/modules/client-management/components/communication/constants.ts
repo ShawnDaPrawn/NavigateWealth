@@ -39,8 +39,8 @@ export const PRIORITIES = [
 export const CATEGORY_CONFIG: Record<string, { icon: LucideIcon; color: string }> = {
   'Policy Update': { icon: Shield, color: 'text-blue-600' },
   'Document Required': { icon: FileText, color: 'text-amber-600' },
-  'Appointment': { icon: Calendar, color: 'text-purple-600' },
-  'Important': { icon: AlertCircle, color: 'text-red-600' },
+  Appointment: { icon: Calendar, color: 'text-purple-600' },
+  Important: { icon: AlertCircle, color: 'text-red-600' },
   'FNA Available': { icon: TrendingUp, color: 'text-green-600' },
 };
 

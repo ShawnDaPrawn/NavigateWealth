@@ -2,12 +2,12 @@
  * Utility functions for Documents/History module
  */
 
-import { 
-  URL_REGEX, 
-  FILE_CONSTRAINTS, 
-  CATEGORY_CONFIG, 
+import {
+  URL_REGEX,
+  FILE_CONSTRAINTS,
+  CATEGORY_CONFIG,
   DATE_RANGE_OPTIONS,
-  DOCUMENT_TYPES
+  DOCUMENT_TYPES,
 } from './constants';
 import { DocumentItem, DocumentFilters, DocumentStats } from './types';
 
@@ -46,7 +46,7 @@ export function validateFile(file: File): { valid: boolean; error?: string } {
  */
 export function formatFileSize(bytes: number | undefined): string {
   if (!bytes) return '';
-  
+
   if (bytes < 1024) return `${bytes} B`;
   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
   return `${(bytes / (1024 * 1024)).toFixed(2)} MB`;
@@ -76,40 +76,41 @@ export function getCategoryConfig(category: string) {
  */
 export function filterDocuments(
   documents: DocumentItem[],
-  filters: DocumentFilters
+  filters: DocumentFilters,
 ): DocumentItem[] {
   let filtered = [...documents];
 
   // Search filter
   if (filters.searchQuery) {
     const query = filters.searchQuery.toLowerCase();
-    filtered = filtered.filter(item =>
-      item.title.toLowerCase().includes(query) ||
-      (item.fileName && item.fileName.toLowerCase().includes(query)) ||
-      (item.url && item.url.toLowerCase().includes(query)) ||
-      (item.description && item.description.toLowerCase().includes(query)) ||
-      item.policyNumber.toLowerCase().includes(query)
+    filtered = filtered.filter(
+      (item) =>
+        item.title.toLowerCase().includes(query) ||
+        (item.fileName && item.fileName.toLowerCase().includes(query)) ||
+        (item.url && item.url.toLowerCase().includes(query)) ||
+        (item.description && item.description.toLowerCase().includes(query)) ||
+        item.policyNumber.toLowerCase().includes(query),
     );
   }
 
   // Category filter
   if (filters.categoryFilter !== 'all') {
-    filtered = filtered.filter(item => item.productCategory === filters.categoryFilter);
+    filtered = filtered.filter((item) => item.productCategory === filters.categoryFilter);
   }
 
   // Date range filter
   if (filters.dateRangeFilter !== 'all') {
-    const rangeOption = DATE_RANGE_OPTIONS.find(r => r.value === filters.dateRangeFilter);
+    const rangeOption = DATE_RANGE_OPTIONS.find((r) => r.value === filters.dateRangeFilter);
     if (rangeOption && 'days' in rangeOption) {
       const now = new Date();
-      const cutoffDate = new Date(now.getTime() - (rangeOption.days * 24 * 60 * 60 * 1000));
-      filtered = filtered.filter(item => new Date(item.uploadDate) >= cutoffDate);
+      const cutoffDate = new Date(now.getTime() - rangeOption.days * 24 * 60 * 60 * 1000);
+      filtered = filtered.filter((item) => new Date(item.uploadDate) >= cutoffDate);
     }
   }
 
   // Sort by upload date, newest first
-  return filtered.sort((a, b) =>
-    new Date(b.uploadDate).getTime() - new Date(a.uploadDate).getTime()
+  return filtered.sort(
+    (a, b) => new Date(b.uploadDate).getTime() - new Date(a.uploadDate).getTime(),
   );
 }
 
@@ -119,10 +120,10 @@ export function filterDocuments(
 export function calculateStats(documents: DocumentItem[]): DocumentStats {
   return {
     totalItems: documents.length,
-    totalDocs: documents.filter(d => d.type === DOCUMENT_TYPES.DOCUMENT).length,
-    totalLinks: documents.filter(d => d.type === DOCUMENT_TYPES.LINK).length,
-    newItems: documents.filter(d => d.status === 'new').length,
-    favouriteItems: documents.filter(d => d.isFavourite).length,
+    totalDocs: documents.filter((d) => d.type === DOCUMENT_TYPES.DOCUMENT).length,
+    totalLinks: documents.filter((d) => d.type === DOCUMENT_TYPES.LINK).length,
+    newItems: documents.filter((d) => d.status === 'new').length,
+    favouriteItems: documents.filter((d) => d.isFavourite).length,
   };
 }
 
@@ -132,7 +133,7 @@ export function calculateStats(documents: DocumentItem[]): DocumentStats {
 export function sortDocuments(
   documents: DocumentItem[],
   sortBy: 'date' | 'title' | 'category',
-  order: 'asc' | 'desc' = 'desc'
+  order: 'asc' | 'desc' = 'desc',
 ): DocumentItem[] {
   const sorted = [...documents];
 
@@ -164,14 +165,17 @@ export function sortDocuments(
  * Groups documents by category
  */
 export function groupByCategory(documents: DocumentItem[]): Record<string, DocumentItem[]> {
-  return documents.reduce((groups, doc) => {
-    const category = doc.productCategory;
-    if (!groups[category]) {
-      groups[category] = [];
-    }
-    groups[category].push(doc);
-    return groups;
-  }, {} as Record<string, DocumentItem[]>);
+  return documents.reduce(
+    (groups, doc) => {
+      const category = doc.productCategory;
+      if (!groups[category]) {
+        groups[category] = [];
+      }
+      groups[category].push(doc);
+      return groups;
+    },
+    {} as Record<string, DocumentItem[]>,
+  );
 }
 
 /**
@@ -239,7 +243,7 @@ export function isValidFileExtension(filename: string): boolean {
  */
 export function debounce<T extends (...args: unknown[]) => unknown>(
   func: T,
-  wait: number
+  wait: number,
 ): (...args: Parameters<T>) => void {
   let timeout: NodeJS.Timeout | null = null;
 

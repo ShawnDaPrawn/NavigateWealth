@@ -1,4 +1,4 @@
-@import "tailwindcss";
+@import 'tailwindcss';
 @custom-variant dark (&:is(.dark *));
 
 /* Schedule consultation flow: modal open = only top bars + blank canvas (hide site footer) */
@@ -45,7 +45,7 @@ body.schedule-consultation-modal-open footer.bg-black {
   --sidebar-accent-foreground: #ffffff;
   --sidebar-border: #1f2937;
   --sidebar-ring: #6d28d9;
-  
+
   /* Theme-specific section backgrounds */
   --section-black: #000000;
   --section-white: #ffffff;
@@ -131,7 +131,7 @@ body.schedule-consultation-modal-open footer.bg-black {
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-ring: var(--sidebar-ring);
-  
+
   --color-section-black: var(--section-black);
   --color-section-white: var(--section-white);
   --color-section-gray: var(--section-gray);
@@ -153,15 +153,15 @@ body.schedule-consultation-modal-open footer.bg-black {
     max-width: 100%;
     height: auto;
   }
-  
+
   /* Optimize for modern browsers */
-  img[loading="lazy"] {
+  img[loading='lazy'] {
     content-visibility: auto;
     contain-intrinsic-size: auto 300px;
   }
-  
+
   /* Critical image optimization */
-  img[fetchpriority="high"] {
+  img[fetchpriority='high'] {
     transform: translateZ(0);
     will-change: auto;
   }
@@ -251,31 +251,31 @@ body.schedule-consultation-modal-open footer.bg-black {
     background-color: var(--color-section-black);
     color: #ffffff;
   }
-  
+
   .section-white {
     background-color: var(--color-section-white);
     color: #000000;
   }
-  
+
   .section-gray {
     background-color: var(--color-section-gray);
     color: #000000;
   }
-  
+
   .section-dark-gray {
     background-color: var(--color-section-dark-gray);
     color: #ffffff;
   }
-  
+
   /* Hide scrollbar for horizontal scroll areas */
   .scrollbar-hide {
-    -ms-overflow-style: none;  /* Internet Explorer 10+ */
-    scrollbar-width: none;  /* Firefox */
+    -ms-overflow-style: none; /* Internet Explorer 10+ */
+    scrollbar-width: none; /* Firefox */
   }
-  .scrollbar-hide::-webkit-scrollbar { 
-    display: none;  /* Safari and Chrome */
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none; /* Safari and Chrome */
   }
-  
+
   /* Custom scrollbar for dark sidebar */
   .sidebar-scrollbar {
     scrollbar-width: thin;
@@ -299,67 +299,67 @@ body.schedule-consultation-modal-open footer.bg-black {
   .scroll-smooth {
     scroll-behavior: smooth;
   }
-  
+
   /* Prevent layout shift during horizontal scrolling */
   .horizontal-scroll-container {
     contain: layout style;
     will-change: scroll-position;
   }
-  
+
   /* Sticky table columns */
   .sticky-column {
     position: sticky;
     background: inherit;
     z-index: 1;
   }
-  
+
   .sticky-left {
     left: 0;
   }
-  
+
   .sticky-right {
     right: 0;
   }
-  
+
   /* Standardized H3 styling across all sections */
   h3 {
     font-size: 1.25rem !important; /* 20px */
     font-weight: 600 !important; /* Semi-bold for better prominence */
     line-height: 1.3 !important;
   }
-  
+
   /* H3 color adjustments for different section backgrounds */
   .section-white h3,
   .section-gray h3 {
     color: #000000 !important; /* Pure black for light backgrounds */
   }
-  
+
   .section-dark-gray h3,
   .section-black h3 {
     color: #ffffff !important; /* Pure white for dark backgrounds */
   }
-  
+
   /* Override any existing text color classes on H3 elements */
   h3.text-black,
   h3.text-white,
   h3.text-gray-900,
-  h3[class*="text-"] {
+  h3[class*='text-'] {
     font-size: 1.25rem !important;
     font-weight: 600 !important;
     line-height: 1.3 !important;
   }
-  
+
   /* Ensure proper contrast in section contexts */
-  .section-white h3[class*="text-"],
-  .section-gray h3[class*="text-"] {
+  .section-white h3[class*='text-'],
+  .section-gray h3[class*='text-'] {
     color: #000000 !important;
   }
-  
-  .section-dark-gray h3[class*="text-"],
-  .section-black h3[class*="text-"] {
+
+  .section-dark-gray h3[class*='text-'],
+  .section-black h3[class*='text-'] {
     color: #ffffff !important;
   }
-  
+
   /* High-quality image rendering for service cards and logos */
   .high-quality-image {
     image-rendering: auto;
@@ -369,7 +369,7 @@ body.schedule-consultation-modal-open footer.bg-black {
     will-change: transform;
     filter: contrast(1.02) saturate(1.05);
   }
-  
+
   /* Enhanced SVG rendering for authentication pages */
   .auth-svg-enhanced {
     image-rendering: auto;
@@ -380,35 +380,43 @@ body.schedule-consultation-modal-open footer.bg-black {
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
   }
-  
+
   /* Optimized image containers */
   .image-container-optimized {
     contain: layout style paint;
     content-visibility: auto;
     contain-intrinsic-size: 1px 400px;
   }
-  
+
   /* Progressive image loading states */
   .image-loading {
     background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
     background-size: 200% 100%;
     animation: loading 1.5s infinite;
   }
-  
+
   .image-loaded {
     animation: fadeIn 0.3s ease-in-out;
   }
-  
+
   @keyframes loading {
-    0% { background-position: 200% 0; }
-    100% { background-position: -200% 0; }
+    0% {
+      background-position: 200% 0;
+    }
+    100% {
+      background-position: -200% 0;
+    }
   }
-  
+
   @keyframes fadeIn {
-    from { opacity: 0; }
-    to { opacity: 1; }
+    from {
+      opacity: 0;
+    }
+    to {
+      opacity: 1;
+    }
   }
-  
+
   /* Hero carousel animations */
   @keyframes slide-up {
     from {
@@ -420,7 +428,7 @@ body.schedule-consultation-modal-open footer.bg-black {
       transform: translateY(0);
     }
   }
-  
+
   @keyframes fade-in {
     from {
       opacity: 0;
@@ -429,41 +437,43 @@ body.schedule-consultation-modal-open footer.bg-black {
       opacity: 1;
     }
   }
-  
+
   .animate-slide-up {
     animation: slide-up 0.8s ease-out;
   }
-  
+
   .animate-fade-in {
     animation: fade-in 0.6s ease-out;
   }
-  
+
   .delay-100 {
     animation-delay: 0.1s;
   }
-  
+
   .delay-200 {
     animation-delay: 0.2s;
   }
-  
+
   /* Pulse animation for enticing buttons */
   .pulse-on-hover:hover {
     animation: slow-pulse 2s ease-in-out infinite;
   }
-  
+
   @keyframes slow-pulse {
-    0%, 100% { 
+    0%,
+    100% {
       transform: scale(1);
       box-shadow: 0 0 0 0 rgba(109, 40, 217, 0.4);
     }
-    50% { 
+    50% {
       transform: scale(1.02);
       box-shadow: 0 0 0 8px rgba(109, 40, 217, 0);
     }
   }
-  
+
   @keyframes bounce-once {
-    0%, 100% {
+    0%,
+    100% {
       transform: translateY(0);
     }
     25% {
@@ -476,17 +486,21 @@ body.schedule-consultation-modal-open footer.bg-black {
       transform: translateY(-5px);
     }
   }
-  
+
   .animate-bounce-once {
     animation: bounce-once 0.6s ease-in-out;
   }
-  
+
   /* Marquee scroll animation for partner logo strips */
   @keyframes marquee-scroll {
-    0%   { transform: translateX(0); }
-    100% { transform: translateX(-50%); }
+    0% {
+      transform: translateX(0);
+    }
+    100% {
+      transform: translateX(-50%);
+    }
   }
-  
+
   /* Line clamp utilities for text truncation */
   .line-clamp-3 {
     overflow: hidden;
@@ -495,7 +509,7 @@ body.schedule-consultation-modal-open footer.bg-black {
     -webkit-line-clamp: 3;
     line-clamp: 3;
   }
-  
+
   .line-clamp-2 {
     overflow: hidden;
     display: -webkit-box;
@@ -509,7 +523,7 @@ body.schedule-consultation-modal-open footer.bg-black {
  * Base typography. This is not applied to elements which have an ancestor with a Tailwind text class.
  */
 @layer base {
-  :where(:not(:has([class*=" text-"]):not([class^="text-"]))) {
+  :where(:not(:has([class*=' text-']):not([class^='text-']))) {
     /* Hero headings - for main page titles */
     h1 {
       font-size: 3rem; /* 48px */
@@ -864,10 +878,18 @@ html {
   line-height: 1.3;
 }
 
-.markdown-content h1 { font-size: 1.125rem; }
-.markdown-content h2 { font-size: 1.05rem; }
-.markdown-content h3 { font-size: 1rem; }
-.markdown-content h4 { font-size: 0.9375rem; }
+.markdown-content h1 {
+  font-size: 1.125rem;
+}
+.markdown-content h2 {
+  font-size: 1.05rem;
+}
+.markdown-content h3 {
+  font-size: 1rem;
+}
+.markdown-content h4 {
+  font-size: 0.9375rem;
+}
 
 /* Paragraphs */
 .markdown-content p {

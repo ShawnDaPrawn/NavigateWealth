@@ -7,14 +7,26 @@
 
 import React, { useState, useMemo } from 'react';
 import {
-  PhoneForwarded, Search, Loader2, Clock, Mail, Phone, User,
-  MessageSquare, ChevronDown, Filter, Inbox, CheckCircle2,
+  PhoneForwarded,
+  Search,
+  Loader2,
+  Clock,
+  Mail,
+  Phone,
+  User,
+  MessageSquare,
+  ChevronDown,
+  Filter,
+  Inbox,
+  CheckCircle2,
 } from 'lucide-react';
 import { Input } from '../../../../ui/input';
 import { Badge } from '../../../../ui/badge';
 import { Button } from '../../../../ui/button';
 import {
-  DropdownMenu, DropdownMenuContent, DropdownMenuItem,
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
   DropdownMenuTrigger,
 } from '../../../../ui/dropdown-menu';
 import { cn } from '../../../../ui/utils';
@@ -36,7 +48,7 @@ export function HandoffQueue() {
 
   const filtered = useMemo(() => {
     if (!handoffs) return [];
-    return handoffs.filter(h => {
+    return handoffs.filter((h) => {
       if (statusFilter !== 'all' && h.status !== statusFilter) return false;
       if (searchTerm) {
         const lower = searchTerm.toLowerCase();
@@ -53,10 +65,10 @@ export function HandoffQueue() {
   const stats = useMemo(() => {
     if (!handoffs) return { new: 0, contacted: 0, converted: 0, closed: 0 };
     return {
-      new: handoffs.filter(h => h.status === 'new').length,
-      contacted: handoffs.filter(h => h.status === 'contacted').length,
-      converted: handoffs.filter(h => h.status === 'converted').length,
-      closed: handoffs.filter(h => h.status === 'closed').length,
+      new: handoffs.filter((h) => h.status === 'new').length,
+      contacted: handoffs.filter((h) => h.status === 'contacted').length,
+      converted: handoffs.filter((h) => h.status === 'converted').length,
+      closed: handoffs.filter((h) => h.status === 'closed').length,
     };
   }, [handoffs]);
 
@@ -72,7 +84,7 @@ export function HandoffQueue() {
     <div className="space-y-6">
       {/* Summary Cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        {STATUS_OPTIONS.map(status => {
+        {STATUS_OPTIONS.map((status) => {
           const cfg = HANDOFF_STATUS_CONFIG[status];
           return (
             <button
@@ -80,7 +92,9 @@ export function HandoffQueue() {
               onClick={() => setStatusFilter(statusFilter === status ? 'all' : status)}
               className={cn(
                 'bg-white p-4 rounded-xl border shadow-sm text-center transition-all',
-                statusFilter === status ? 'border-purple-300 ring-1 ring-purple-200' : 'border-gray-100'
+                statusFilter === status
+                  ? 'border-purple-300 ring-1 ring-purple-200'
+                  : 'border-gray-100',
               )}
             >
               <p className="text-2xl font-bold text-gray-900">{stats[status]}</p>
@@ -119,7 +133,7 @@ export function HandoffQueue() {
         </div>
       ) : (
         <div className="space-y-3">
-          {filtered.map(handoff => (
+          {filtered.map((handoff) => (
             <HandoffCard
               key={handoff.id}
               handoff={handoff}
@@ -133,7 +147,11 @@ export function HandoffQueue() {
   );
 }
 
-function HandoffCard({ handoff, onStatusChange, isUpdating }: {
+function HandoffCard({
+  handoff,
+  onStatusChange,
+  isUpdating,
+}: {
   handoff: HandoffRequest;
   onStatusChange: (status: HandoffStatus) => void;
   isUpdating: boolean;
@@ -147,13 +165,19 @@ function HandoffCard({ handoff, onStatusChange, isUpdating }: {
           {/* Header */}
           <div className="flex items-center gap-2 mb-2">
             <Badge className={cn('text-xs', statusCfg.badgeClass)}>
-              <span className={cn('w-1.5 h-1.5 rounded-full mr-1.5 inline-block', statusCfg.dotClass)} />
+              <span
+                className={cn('w-1.5 h-1.5 rounded-full mr-1.5 inline-block', statusCfg.dotClass)}
+              />
               {statusCfg.label}
             </Badge>
             <span className="text-xs text-gray-400 flex items-center gap-1">
               <Clock className="h-3 w-3" />
               {new Date(handoff.createdAt).toLocaleDateString('en-ZA', {
-                day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit',
+                day: '2-digit',
+                month: 'short',
+                year: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit',
               })}
             </span>
           </div>
@@ -205,7 +229,7 @@ function HandoffCard({ handoff, onStatusChange, isUpdating }: {
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
-            {STATUS_OPTIONS.filter(s => s !== handoff.status).map(status => {
+            {STATUS_OPTIONS.filter((s) => s !== handoff.status).map((status) => {
               const cfg = HANDOFF_STATUS_CONFIG[status];
               return (
                 <DropdownMenuItem

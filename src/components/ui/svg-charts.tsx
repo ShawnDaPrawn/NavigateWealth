@@ -99,7 +99,11 @@ export interface SVGBarChartProps {
   showLegend?: boolean;
   showGrid?: boolean;
   /** Override bar color per data entry (used for conditional coloring with single series) */
-  barColorFn?: (entry: Record<string, unknown>, seriesKey: string, index: number) => string | undefined;
+  barColorFn?: (
+    entry: Record<string, unknown>,
+    seriesKey: string,
+    index: number,
+  ) => string | undefined;
   margin?: { top: number; right: number; bottom: number; left: number };
 }
 
@@ -168,7 +172,7 @@ export function SVGBarChart({
       key: s.key,
       seriesLabel: s.label,
       value: Number(d[s.key]) || 0,
-      color: barColorFn ? (barColorFn(d, s.key, groupIdx) || s.color) : s.color,
+      color: barColorFn ? barColorFn(d, s.key, groupIdx) || s.color : s.color,
     }));
     setTooltip({
       x: e.clientX - rect.left,
@@ -218,7 +222,7 @@ export function SVGBarChart({
               const barH = (val / yMax) * chartHeight;
               const bx = groupX + si * (barWidth + barGap);
               const by = chartHeight - barH;
-              const fill = barColorFn ? (barColorFn(d, s.key, gi) || s.color) : s.color;
+              const fill = barColorFn ? barColorFn(d, s.key, gi) || s.color : s.color;
               return (
                 <rect
                   key={`${gi}-${si}`}
@@ -267,7 +271,10 @@ export function SVGBarChart({
           {tooltip.values.map((v) => (
             <div key={v.key} className="flex items-center justify-between gap-3">
               <div className="flex items-center gap-1.5">
-                <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: v.color }} />
+                <div
+                  className="w-2 h-2 rounded-full flex-shrink-0"
+                  style={{ backgroundColor: v.color }}
+                />
                 <span className="text-gray-600">{v.seriesLabel}</span>
               </div>
               <span className="font-medium text-gray-900">
@@ -283,7 +290,10 @@ export function SVGBarChart({
         <div className="flex items-center justify-center gap-4 mt-2">
           {series.map((s) => (
             <div key={s.key} className="flex items-center gap-1.5">
-              <div className="w-2.5 h-2.5 rounded-sm flex-shrink-0" style={{ backgroundColor: s.color }} />
+              <div
+                className="w-2.5 h-2.5 rounded-sm flex-shrink-0"
+                style={{ backgroundColor: s.color }}
+              />
               <span className="text-xs text-gray-600">{s.label}</span>
             </div>
           ))}
@@ -426,7 +436,17 @@ export function SVGLineChart({
               const val = Number(data[hoverIdx][s.key]) || 0;
               const cx = hoverIdx * pointGap;
               const cy = chartHeight - (val / yMax) * chartHeight;
-              return <circle key={s.key} cx={cx} cy={cy} r={4} fill={s.color} stroke="white" strokeWidth={2} />;
+              return (
+                <circle
+                  key={s.key}
+                  cx={cx}
+                  cy={cy}
+                  r={4}
+                  fill={s.color}
+                  stroke="white"
+                  strokeWidth={2}
+                />
+              );
             })}
 
           {/* Hover vertical line */}
@@ -476,7 +496,10 @@ export function SVGLineChart({
             return (
               <div key={s.key} className="flex items-center justify-between gap-3">
                 <div className="flex items-center gap-1.5">
-                  <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: s.color }} />
+                  <div
+                    className="w-2 h-2 rounded-full flex-shrink-0"
+                    style={{ backgroundColor: s.color }}
+                  />
                   <span className="text-gray-600">{s.label}</span>
                 </div>
                 <span className="font-medium text-gray-900">
@@ -492,7 +515,10 @@ export function SVGLineChart({
       <div className="flex items-center justify-center gap-4 mt-2">
         {series.map((s) => (
           <div key={s.key} className="flex items-center gap-1.5">
-            <div className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: s.color }} />
+            <div
+              className="w-2.5 h-2.5 rounded-full flex-shrink-0"
+              style={{ backgroundColor: s.color }}
+            />
             <span className="text-xs text-gray-600">{s.label}</span>
           </div>
         ))}
@@ -634,7 +660,10 @@ export function SVGPieChart({
       {hoverIdx !== null && data[hoverIdx] && (
         <ChartTooltip x={mousePos.x} y={mousePos.y} visible containerWidth={containerWidth}>
           <div className="flex items-center gap-1.5">
-            <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: data[hoverIdx].color }} />
+            <div
+              className="w-2 h-2 rounded-full flex-shrink-0"
+              style={{ backgroundColor: data[hoverIdx].color }}
+            />
             <span className="font-medium text-gray-900">{data[hoverIdx].name}</span>
           </div>
           <p className="text-gray-600 mt-0.5">
@@ -720,18 +749,34 @@ export function SVGAreaSparkline({
           </linearGradient>
         </defs>
         <path d={areaPath} fill={`url(#${gradientId})`} />
-        <path d={linePath} fill="none" stroke={color} strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round" />
+        <path
+          d={linePath}
+          fill="none"
+          stroke={color}
+          strokeWidth={1.5}
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
         {hoverIdx !== null && points[hoverIdx] && (
-          <circle cx={points[hoverIdx].x} cy={points[hoverIdx].y} r={2.5} fill={color} stroke="white" strokeWidth={1} />
+          <circle
+            cx={points[hoverIdx].x}
+            cy={points[hoverIdx].y}
+            r={2.5}
+            fill={color}
+            stroke="white"
+            strokeWidth={1}
+          />
         )}
       </svg>
 
       {showTooltip && hoverIdx !== null && data[hoverIdx] && (
-        <div
-          className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1 bg-white shadow-md rounded px-2 py-1 border text-[10px] whitespace-nowrap pointer-events-none z-50"
-        >
-          <span className="font-medium text-gray-700">{Math.round(data[hoverIdx].value * 100)}%</span>
-          {data[hoverIdx].label && <span className="text-gray-400 ml-1">{data[hoverIdx].label}</span>}
+        <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1 bg-white shadow-md rounded px-2 py-1 border text-[10px] whitespace-nowrap pointer-events-none z-50">
+          <span className="font-medium text-gray-700">
+            {Math.round(data[hoverIdx].value * 100)}%
+          </span>
+          {data[hoverIdx].label && (
+            <span className="text-gray-400 ml-1">{data[hoverIdx].label}</span>
+          )}
         </div>
       )}
     </div>

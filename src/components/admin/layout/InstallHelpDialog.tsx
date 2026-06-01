@@ -25,10 +25,11 @@ export function InstallHelpDialog({ open, onOpenChange }: InstallHelpDialogProps
             Install Admin App
           </DialogTitle>
           <DialogDescription>
-            The browser's automatic install prompt is not ready yet. You can install the app manually.
+            The browser's automatic install prompt is not ready yet. You can install the app
+            manually.
           </DialogDescription>
         </DialogHeader>
-        
+
         <div className="space-y-4 py-4">
           <div className="flex items-start gap-3 p-3 bg-muted/50 rounded-lg">
             <div className="mt-0.5 p-1.5 bg-background rounded-md shadow-sm">
@@ -37,21 +38,22 @@ export function InstallHelpDialog({ open, onOpenChange }: InstallHelpDialogProps
             <div className="space-y-1">
               <p className="text-sm font-medium">Desktop (Chrome / Edge)</p>
               <p className="text-xs text-muted-foreground">
-                Look for the <span className="font-semibold text-foreground">Install</span> icon 
-                on the right side of the address bar.
+                Look for the <span className="font-semibold text-foreground">Install</span> icon on
+                the right side of the address bar.
               </p>
             </div>
           </div>
 
           <div className="flex items-start gap-3 p-3 bg-muted/50 rounded-lg">
-             <div className="mt-0.5 p-1.5 bg-background rounded-md shadow-sm">
+            <div className="mt-0.5 p-1.5 bg-background rounded-md shadow-sm">
               <MoreVertical className="h-4 w-4" />
             </div>
             <div className="space-y-1">
               <p className="text-sm font-medium">Alternative Method</p>
               <p className="text-xs text-muted-foreground">
-                Click the browser menu (three dots) <span className="mx-1">→</span> 
-                <span className="font-semibold text-foreground">Save and Share</span> <span className="mx-1">→</span> 
+                Click the browser menu (three dots) <span className="mx-1">→</span>
+                <span className="font-semibold text-foreground">Save and Share</span>{' '}
+                <span className="mx-1">→</span>
                 <span className="font-semibold text-foreground">Install Navigate Wealth Admin</span>
               </p>
             </div>
@@ -59,9 +61,7 @@ export function InstallHelpDialog({ open, onOpenChange }: InstallHelpDialogProps
         </div>
 
         <DialogFooter>
-          <Button onClick={() => onOpenChange(false)}>
-            Close
-          </Button>
+          <Button onClick={() => onOpenChange(false)}>Close</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>

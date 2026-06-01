@@ -4,12 +4,12 @@
  */
 
 import { projectId, publicAnonKey } from '../../../utils/supabase/info';
-import type { 
-  SignerSessionData, 
+import type {
+  SignerSessionData,
   SignatureData,
   SignerSessionValidation,
   OtpVerificationResult,
-  SignatureSubmissionResult
+  SignatureSubmissionResult,
 } from '../types';
 
 const API_BASE = `https://${projectId}.supabase.co/functions/v1/make-server-91ed8379/esign`;
@@ -24,29 +24,29 @@ class EsignSignerService {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${publicAnonKey}`
+          Authorization: `Bearer ${publicAnonKey}`,
         },
-        body: JSON.stringify({ access_token: token })
+        body: JSON.stringify({ access_token: token }),
       });
 
       if (!response.ok) {
         const errorData = await response.json();
         return {
           success: false,
-          error: errorData.error || errorData.message || 'Failed to validate token'
+          error: errorData.error || errorData.message || 'Failed to validate token',
         };
       }
 
       const data = await response.json();
       return {
         success: true,
-        data: data as SignerSessionData
+        data: data as SignerSessionData,
       };
     } catch (error) {
       console.error('Error validating access token:', error);
       return {
         success: false,
-        error: 'Network error. Please check your connection.'
+        error: 'Network error. Please check your connection.',
       };
     }
   }
@@ -60,19 +60,19 @@ class EsignSignerService {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${publicAnonKey}`
+          Authorization: `Bearer ${publicAnonKey}`,
         },
-        body: JSON.stringify({ 
+        body: JSON.stringify({
           access_token: token,
-          otp 
-        })
+          otp,
+        }),
       });
 
       if (!response.ok) {
         const errorData = await response.json();
         return {
           success: false,
-          error: errorData.error || errorData.message || 'Invalid OTP code'
+          error: errorData.error || errorData.message || 'Invalid OTP code',
         };
       }
 
@@ -81,7 +81,7 @@ class EsignSignerService {
       console.error('Error verifying OTP:', error);
       return {
         success: false,
-        error: 'Network error. Please check your connection.'
+        error: 'Network error. Please check your connection.',
       };
     }
   }
@@ -95,16 +95,16 @@ class EsignSignerService {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${publicAnonKey}`
+          Authorization: `Bearer ${publicAnonKey}`,
         },
-        body: JSON.stringify({ access_token: token })
+        body: JSON.stringify({ access_token: token }),
       });
 
       if (!response.ok) {
         const errorData = await response.json();
         return {
           success: false,
-          error: errorData.error || errorData.message || 'Failed to resend OTP'
+          error: errorData.error || errorData.message || 'Failed to resend OTP',
         };
       }
 
@@ -113,7 +113,7 @@ class EsignSignerService {
       console.error('Error resending OTP:', error);
       return {
         success: false,
-        error: 'Network error. Please check your connection.'
+        error: 'Network error. Please check your connection.',
       };
     }
   }
@@ -122,35 +122,35 @@ class EsignSignerService {
    * Submit signature data
    */
   async submitSignature(
-    token: string, 
-    signatures: SignatureData[]
+    token: string,
+    signatures: SignatureData[],
   ): Promise<SignatureSubmissionResult> {
     try {
       const response = await fetch(`${API_BASE}/signer/submit`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${publicAnonKey}`
+          Authorization: `Bearer ${publicAnonKey}`,
         },
-        body: JSON.stringify({ 
+        body: JSON.stringify({
           access_token: token,
-          signature_data: signatures.map(s => ({
+          signature_data: signatures.map((s) => ({
             field_id: s.field_id,
             type: s.type,
             value: s.value,
           })),
-          field_values: signatures.map(s => ({
+          field_values: signatures.map((s) => ({
             field_id: s.field_id,
             value: s.value,
           })),
-        })
+        }),
       });
 
       if (!response.ok) {
         const errorData = await response.json();
         return {
           success: false,
-          error: errorData.error || errorData.message || 'Failed to submit signature'
+          error: errorData.error || errorData.message || 'Failed to submit signature',
         };
       }
 
@@ -159,7 +159,7 @@ class EsignSignerService {
       console.error('Error submitting signature:', error);
       return {
         success: false,
-        error: 'Network error. Please check your connection.'
+        error: 'Network error. Please check your connection.',
       };
     }
   }
@@ -173,19 +173,19 @@ class EsignSignerService {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${publicAnonKey}`
+          Authorization: `Bearer ${publicAnonKey}`,
         },
-        body: JSON.stringify({ 
+        body: JSON.stringify({
           access_token: token,
-          reason 
-        })
+          reason,
+        }),
       });
 
       if (!response.ok) {
         const errorData = await response.json();
         return {
           success: false,
-          error: errorData.error || errorData.message || 'Failed to reject document'
+          error: errorData.error || errorData.message || 'Failed to reject document',
         };
       }
 
@@ -194,7 +194,7 @@ class EsignSignerService {
       console.error('Error rejecting document:', error);
       return {
         success: false,
-        error: 'Network error. Please check your connection.'
+        error: 'Network error. Please check your connection.',
       };
     }
   }
@@ -206,20 +206,20 @@ class EsignSignerService {
    */
   async saveSignerSignature(
     token: string,
-    payload: { signature?: string | null; initials?: string | null }
+    payload: { signature?: string | null; initials?: string | null },
   ): Promise<{ success: boolean; error?: string }> {
     try {
       const response = await fetch(`${API_BASE}/signer/saved-signature`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${publicAnonKey}`
+          Authorization: `Bearer ${publicAnonKey}`,
         },
         body: JSON.stringify({
           access_token: token,
           signature: payload.signature ?? null,
           initials: payload.initials ?? null,
-        })
+        }),
       });
 
       if (!response.ok) {
@@ -239,20 +239,20 @@ class EsignSignerService {
    */
   async pauseSigning(
     token: string,
-    progress?: { completed: number; required: number }
+    progress?: { completed: number; required: number },
   ): Promise<{ success: boolean; error?: string }> {
     try {
       const response = await fetch(`${API_BASE}/signer/pause`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${publicAnonKey}`
+          Authorization: `Bearer ${publicAnonKey}`,
         },
         body: JSON.stringify({
           access_token: token,
           completed_count: progress?.completed,
           required_count: progress?.required,
-        })
+        }),
       });
 
       if (!response.ok) {
@@ -275,9 +275,9 @@ class EsignSignerService {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${publicAnonKey}`
+          Authorization: `Bearer ${publicAnonKey}`,
         },
-        body: JSON.stringify({ access_token: token })
+        body: JSON.stringify({ access_token: token }),
       });
 
       if (!response.ok) {
@@ -302,7 +302,13 @@ class EsignSignerService {
     token: string,
     fieldId: string,
     file: File,
-  ): Promise<{ attachmentId: string; filename: string; size: number; mimeType: string; path: string }> {
+  ): Promise<{
+    attachmentId: string;
+    filename: string;
+    size: number;
+    mimeType: string;
+    path: string;
+  }> {
     const fd = new FormData();
     fd.append('access_token', token);
     fd.append('field_id', fieldId);
@@ -338,6 +344,12 @@ export async function uploadAttachmentForSigner(
   token: string,
   fieldId: string,
   file: File,
-): Promise<{ attachmentId: string; filename: string; size: number; mimeType: string; path: string }> {
+): Promise<{
+  attachmentId: string;
+  filename: string;
+  size: number;
+  mimeType: string;
+  path: string;
+}> {
   return esignSignerService.uploadAttachment(token, fieldId, file);
 }

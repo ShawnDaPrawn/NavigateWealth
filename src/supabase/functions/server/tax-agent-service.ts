@@ -43,10 +43,7 @@ function sessionPrefix(clientId: string): string {
 
 // ── Profile Context Builder ────────────────────────────────────────
 
-function buildProfileSummary(
-  profile: Record<string, unknown> | null,
-  clientName: string,
-): string {
+function buildProfileSummary(profile: Record<string, unknown> | null, clientName: string): string {
   if (!profile) {
     return `CLIENT: ${clientName}\nNo profile information available. Please gather all necessary details during the interview.`;
   }
@@ -123,9 +120,7 @@ export async function getSession(
   return kv.get(sessionKey(clientId, sessionId));
 }
 
-export async function getClientSessions(
-  clientId: string,
-): Promise<TaxAgentSession[]> {
+export async function getClientSessions(clientId: string): Promise<TaxAgentSession[]> {
   const sessions = await kv.getByPrefix(sessionPrefix(clientId));
   return (sessions || []).sort(
     (a: TaxAgentSession, b: TaxAgentSession) =>
@@ -133,10 +128,7 @@ export async function getClientSessions(
   );
 }
 
-export async function deleteSession(
-  clientId: string,
-  sessionId: string,
-): Promise<void> {
+export async function deleteSession(clientId: string, sessionId: string): Promise<void> {
   await kv.del(sessionKey(clientId, sessionId));
   log.info('Tax agent session deleted', { sessionId });
 }
@@ -185,16 +177,19 @@ export async function sendToAgent(
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${OPENAI_API_KEY}`,
+        Authorization: `Bearer ${OPENAI_API_KEY}`,
       },
       body: JSON.stringify(responsesBody),
     });
 
     if (res.ok) {
-      const data = await res.json() as Record<string, unknown>;
+      const data = (await res.json()) as Record<string, unknown>;
       const text = extractResponsesText(data);
-      const responseId = (typeof data.id === 'string') ? data.id : null;
-      log.info('Responses API (tax agent workflow) succeeded', { responseId, textLen: text.length });
+      const responseId = typeof data.id === 'string' ? data.id : null;
+      log.info('Responses API (tax agent workflow) succeeded', {
+        responseId,
+        textLen: text.length,
+      });
       return { text, responseId, strategy: 'responses_api_workflow' };
     }
 
@@ -215,7 +210,7 @@ export async function sendToAgent(
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      'Authorization': `Bearer ${OPENAI_API_KEY}`,
+      Authorization: `Bearer ${OPENAI_API_KEY}`,
     },
     body: JSON.stringify({
       model: 'gpt-4o',
@@ -228,11 +223,11 @@ export async function sendToAgent(
     const errBody = await chatRes.text();
     throw new Error(
       `Tax agent call failed via both Responses API and Chat Completions. ` +
-      `Chat Completions (${chatRes.status}): ${errBody.slice(0, 300)}`
+        `Chat Completions (${chatRes.status}): ${errBody.slice(0, 300)}`,
     );
   }
 
-  const chatData = await chatRes.json() as Record<string, unknown>;
+  const chatData = (await chatRes.json()) as Record<string, unknown>;
   const text = extractChatCompletionText(chatData);
   log.info('Chat Completions fallback succeeded', { textLen: text.length });
   return { text, responseId: null, strategy: 'chat_completions' };
@@ -279,10 +274,11 @@ export async function sendAndPersist(
   }
 
   // Call the agent
-  const { text: assistantReply, responseId, strategy } = await sendToAgent(
-    conversationMessages,
-    previousResponseId,
-  );
+  const {
+    text: assistantReply,
+    responseId,
+    strategy,
+  } = await sendToAgent(conversationMessages, previousResponseId);
 
   // Persist the exchange
   const now = new Date().toISOString();
@@ -358,9 +354,10 @@ export async function saveSessionOutput(
  *   [NEXT_STEPS]: <steps>
  *   [CONFIRMATION_SUMMARY]: <summary>
  */
-function detectInterviewCompletion(
-  reply: string,
-): { interviewComplete: boolean; outputPack: TaxAgentOutputPack | null } {
+function detectInterviewCompletion(reply: string): {
+  interviewComplete: boolean;
+  outputPack: TaxAgentOutputPack | null;
+} {
   const completionMarker = '[TAX_INTERVIEW_COMPLETE]';
   if (!reply.includes(completionMarker)) {
     return { interviewComplete: false, outputPack: null };

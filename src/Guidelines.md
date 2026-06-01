@@ -20,7 +20,7 @@ This document is not a rewrite mandate.
 All changes must be incremental, low-risk, and reversible.
 
 2. Rule Hierarchy (Authoritative)
-Not all rules have equal weight. Enforcement and review decisions must follow this hierarchy.
+   Not all rules have equal weight. Enforcement and review decisions must follow this hierarchy.
 
 Tier 1 — Non-Negotiable (Production or Compliance Risk)
 Violations here represent real risk and must be fixed.
@@ -52,8 +52,7 @@ Component splitting heuristics
 Performance optimisations
 UI composition patterns within modules
 Animation and transition choices
-Micro-interaction details
-3. Core Architectural Principles
+Micro-interaction details 3. Core Architectural Principles
 3.1 Dependency Direction (Non-Negotiable)
 All dependencies must flow inward:
 
@@ -68,37 +67,41 @@ Circular dependencies are structural defects and must be removed
 This ensures predictable change impact and prevents hidden coupling.
 
 4. Shared Architecture (The Bridge)
-To prevent "Split Brain" between Frontend and Backend, we use a Shared Code Strategy.
+   To prevent "Split Brain" between Frontend and Backend, we use a Shared Code Strategy.
 
 **Location:** `/shared`
 **Contents:** Types, Validation Schemas (Zod), Pure Utility Functions.
 **Forbidden:** Database calls, API calls, React Components, Node.js specific APIs.
 
 **Usage Rules:**
+
 1.  **Frontend**: Import via relative paths: `import { x } from '../../shared/modules/y'`
 2.  **Backend**: Import via mapped alias: `import { x } from '@shared/modules/y'`
 3.  **Synchronization**: The `/shared` folder is synced to `/supabase/functions/server/_shared` at build time.
 
-5. Module Structure (Boundary Contract)
-Each module represents one domain responsibility and must follow a consistent internal structure.
+4.  Module Structure (Boundary Contract)
+    Each module represents one domain responsibility and must follow a consistent internal structure.
 
 Every module must be split across the three layers:
 
 **1. Shared Layer (`/shared/modules/<name>/`)**
+
 - `types.ts`: Domain interfaces
 - `validation.ts`: Zod schemas
 - `utils.ts`: Pure logic (filtering, sorting, math)
 
 **2. Frontend Layer (`/components/admin/modules/<name>/`)**
+
 - `index.tsx`: Entry point
 - `api.ts`: API client
 - `hooks/`: React Query hooks
 - `components/`: UI components
 
 **3. Backend Layer (`/supabase/functions/server/`)**
+
 - `<name>-service.ts`: Data access, KV operations, logging. Uses `@shared` validation.
 
-5.1 Code filenames, storage, and repository organisation
+  5.1 Code filenames, storage, and repository organisation
 
 These rules align with the detailed **§4.4** in `src/guidelines/Guidelines.md`. Summary:
 
@@ -107,8 +110,8 @@ These rules align with the detailed **§4.4** in `src/guidelines/Guidelines.md`.
 - **Layout**: **`src/`** for app code, **`src/shared/`** for shared pure code, **`public/`** for static assets, **`scripts/`** for build tooling; root config files remain at repository root. Do not commit ignored local logs or generated clutter listed in **`.gitignore`**.
 
 6. File Responsibility by Layer
-6.1 API Layer (Data and Integration Boundary)
-The API layer is the only layer allowed to interact with:
+   6.1 API Layer (Data and Integration Boundary)
+   The API layer is the only layer allowed to interact with:
 
 Supabase
 Databases
@@ -161,7 +164,7 @@ Navigation breadcrumbs
 Typed mappings are mandatory to prevent drift.
 
 7. Hooks (Data Access Layer)
-Hooks are the only consumers of APIs.
+   Hooks are the only consumers of APIs.
 
 Rules:
 
@@ -174,13 +177,12 @@ Hooks may orchestrate data flow but must not contain business rules
 Example:
 
 export function useClientList(filters: ClientFilters) {
-  return useQuery({
-    queryKey: ['clients', 'list', filters],
-    queryFn: () => api.getClients(filters),
-    staleTime: 5 * 60 * 1000, // 5 minutes
-  });
-}
-8. Presentation Layer (UI)
+return useQuery({
+queryKey: ['clients', 'list', filters],
+queryFn: () => api.getClients(filters),
+staleTime: 5 _ 60 _ 1000, // 5 minutes
+});
+} 8. Presentation Layer (UI)
 UI components:
 
 Handle layout, interaction, and local UI state only
@@ -196,28 +198,27 @@ Component Responsibilities:
 
 // ✅ Good: Clear separation
 function ClientList() {
-  const { data, isLoading } = useClientList(filters);
-  
-  if (isLoading) return <LoadingSpinner />;
-  if (!data?.length) return <EmptyState />;
-  
-  return <Table data={data} columns={columns} />;
+const { data, isLoading } = useClientList(filters);
+
+if (isLoading) return <LoadingSpinner />;
+if (!data?.length) return <EmptyState />;
+
+return <Table data={data} columns={columns} />;
 }
 
 // ❌ Bad: Business logic in UI
 function ClientList() {
-  const [data, setData] = useState([]);
-  
-  useEffect(() => {
-    fetch('/api/clients').then(res => {
-      const filtered = res.filter(c => c.status === 'active'); // Business logic
-      setData(filtered);
-    });
-  }, []);
-  
-  return <div>{/* ... */}</div>;
-}
-9. Design System Integration (Non-Negotiable for Shared UI)
+const [data, setData] = useState([]);
+
+useEffect(() => {
+fetch('/api/clients').then(res => {
+const filtered = res.filter(c => c.status === 'active'); // Business logic
+setData(filtered);
+});
+}, []);
+
+return <div>{/_ ... _/}</div>;
+} 9. Design System Integration (Non-Negotiable for Shared UI)
 A central Design System exists and is the authoritative source for:
 
 Typography scales and weights
@@ -310,8 +311,7 @@ Avoid introducing parallel UI abstractions
 Match the visual language of existing admin panel UI
 Document any new patterns that emerge
 When changing client-facing schema, KV key patterns, portfolio summary logic, FNA/INA storage, communication history, or document history, update the authenticated Ask Vasco context (`/ai-advisor`, agent `vasco-authenticated`) in the same logical change
-Prefer reusing shared client-context aggregators and maintain backwards-compatible reads during migrations so authenticated Ask Vasco remains informed while schemas evolve
-10. TypeScript Standards
+Prefer reusing shared client-context aggregators and maintain backwards-compatible reads during migrations so authenticated Ask Vasco remains informed while schemas evolve 10. TypeScript Standards
 10.1 Type Safety (Strict by Default)
 Strict mode is required for all new code.
 
@@ -336,34 +336,33 @@ Module-Level Types:
 
 // Database types
 export interface ClientRow {
-  id: string;
-  name: string;
-  email: string;
-  status: ClientStatus;
-  created_at: string;
+id: string;
+name: string;
+email: string;
+status: ClientStatus;
+created_at: string;
 }
 
 // Application types (may diverge from DB)
 export interface Client {
-  id: string;
-  name: string;
-  email: string;
-  status: ClientStatus;
-  createdAt: Date; // Transformed
+id: string;
+name: string;
+email: string;
+status: ClientStatus;
+createdAt: Date; // Transformed
 }
 
 // Input types
 export interface CreateClientInput {
-  name: string;
-  email: string;
-  status?: ClientStatus;
+name: string;
+email: string;
+status?: ClientStatus;
 }
 
 // UI types (internal, not exported)
 interface ClientListItem extends Client {
-  // Additional derived properties for display
-}
-11. Error Handling and Observability
+// Additional derived properties for display
+} 11. Error Handling and Observability
 Errors are part of the application contract.
 
 Rules:
@@ -377,10 +376,10 @@ Every module must be protected by an error boundary to prevent cascading failure
 Error Shape:
 
 interface AppError {
-  message: string;        // User-facing message
-  code?: string;          // Machine-readable error code
-  context?: unknown;      // Contextual information (no PII)
-  timestamp: Date;
+message: string; // User-facing message
+code?: string; // Machine-readable error code
+context?: unknown; // Contextual information (no PII)
+timestamp: Date;
 }
 User-Facing Error Messages:
 
@@ -394,8 +393,7 @@ Example:
 "Unable to load client data. Please check your connection and try again."
 
 // ❌ Bad
-"Error: ECONNREFUSED at Socket.connect (net.js:1174:16)"
-12. State Management
+"Error: ECONNREFUSED at Socket.connect (net.js:1174:16)" 12. State Management
 12.1 Client (UI) State
 Local UI concerns only:
 
@@ -420,8 +418,7 @@ Query Key Conventions:
 ['clients', 'list', filters]
 ['clients', 'detail', clientId]
 ['applications', 'list', { status, dateRange }]
-['personnel', 'detail', personnelId]
-13. Validation and Security (Financial Domain)
+['personnel', 'detail', personnelId] 13. Validation and Security (Financial Domain)
 13.1 Validation
 Client-side validation for UX:
 
@@ -464,8 +461,7 @@ Use soft deletes for compliance-relevant data:
 
 Mark as deleted, don't remove
 Maintain history for auditing
-Allow recovery when appropriate
-14. Performance and Bundling
+Allow recovery when appropriate 14. Performance and Bundling
 Performance rules are context-aware:
 
 Frontend:
@@ -486,8 +482,7 @@ General:
 Optimise only after correctness and clarity are established
 Do not micro-optimise trivial paths
 Measure before optimising
-Document performance-critical sections
-15. Testing Strategy (Risk-Based)
+Document performance-critical sections 15. Testing Strategy (Risk-Based)
 Testing focuses on what can break production, not coverage percentages.
 
 Priority areas:
@@ -509,8 +504,7 @@ Testing levels:
 
 Unit tests for utilities and business logic
 Integration tests for hooks and API layers
-End-to-end tests for critical workflows
-16. Documentation and Governance
+End-to-end tests for critical workflows 16. Documentation and Governance
 Every module must include:
 
 A short architectural overview explaining why, not what (README.md)
@@ -528,8 +522,7 @@ Avoid comments that:
 
 Duplicate what the code obviously does
 Will become stale as code changes
-Apologise for bad code (fix the code instead)
-17. Enforcement and Process
+Apologise for bad code (fix the code instead) 17. Enforcement and Process
 Standards without enforcement decay.
 
 Required:
@@ -541,17 +534,16 @@ Documented exceptions with rationale and revisit dates
 Design System compliance checks
 Pull Request Checklist:
 
- Structure and boundaries respected
- Types are stricter or equal (no regression)
- No new circular dependencies
- Errors and logs comply with standards
- Existing behaviour preserved
- Critical flows remain covered
- Design System rules followed
- UI patterns match existing standards
- No PII in logs
- Security considerations addressed
-18. Definition of Done (Authoritative)
+Structure and boundaries respected
+Types are stricter or equal (no regression)
+No new circular dependencies
+Errors and logs comply with standards
+Existing behaviour preserved
+Critical flows remain covered
+Design System rules followed
+UI patterns match existing standards
+No PII in logs
+Security considerations addressed 18. Definition of Done (Authoritative)
 A change is complete only when:
 
 Structure and boundaries are respected — module architecture maintained

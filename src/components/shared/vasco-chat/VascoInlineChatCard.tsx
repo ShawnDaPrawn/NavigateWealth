@@ -89,7 +89,12 @@ export function VascoInlineChatCard({
   return (
     <Card className={cn('overflow-hidden border-gray-200 shadow-sm', className)}>
       <div className={cn('flex h-[650px] flex-col bg-white', shellClassName)}>
-        <div className={cn('flex items-center justify-between border-b border-gray-100 px-6 py-4', headerClassName)}>
+        <div
+          className={cn(
+            'flex items-center justify-between border-b border-gray-100 px-6 py-4',
+            headerClassName,
+          )}
+        >
           <div className="flex min-w-0 items-center gap-3">
             <VascoAvatar size="md" />
             <div className="min-w-0">
@@ -148,7 +153,11 @@ export function VascoInlineChatCard({
               <VascoChatMessage
                 key={`${message.role}-${index}-${message.timestamp.getTime()}`}
                 message={message}
-                isWelcome={isWelcomeMessage ? isWelcomeMessage(message) : index === 0 && message.role === 'assistant'}
+                isWelcome={
+                  isWelcomeMessage
+                    ? isWelcomeMessage(message)
+                    : index === 0 && message.role === 'assistant'
+                }
                 onFeedback={
                   onFeedback && message.role === 'assistant'
                     ? (rating) => onFeedback(index, rating)

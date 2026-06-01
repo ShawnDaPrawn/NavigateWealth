@@ -73,8 +73,14 @@ function normalizeSummary(summary: ArticleEmailEngagementSummary): ArticleEmailE
     reshareUndelivered: asCount(summary.reshareUndelivered),
     opened: asCount(summary.opened),
     read: asCount(summary.read),
-    openRate: typeof summary.openRate === 'number' && Number.isFinite(summary.openRate) ? summary.openRate : 0,
-    readRate: typeof summary.readRate === 'number' && Number.isFinite(summary.readRate) ? summary.readRate : 0,
+    openRate:
+      typeof summary.openRate === 'number' && Number.isFinite(summary.openRate)
+        ? summary.openRate
+        : 0,
+    readRate:
+      typeof summary.readRate === 'number' && Number.isFinite(summary.readRate)
+        ? summary.readRate
+        : 0,
   };
 }
 
@@ -161,42 +167,47 @@ export function ArticleEmailEngagementPanel() {
   const [summaries, setSummaries] = useState<ArticleEmailEngagementSummary[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [processorState, setProcessorState] = useState<ArticleNotificationProcessorState | null>(null);
+  const [processorState, setProcessorState] = useState<ArticleNotificationProcessorState | null>(
+    null,
+  );
   const [includeDeleted, setIncludeDeleted] = useState(false);
   const [selectedArticleId, setSelectedArticleId] = useState<string | null>(null);
   const [detail, setDetail] = useState<ArticleEmailEngagementDetail | null>(null);
   const [isDetailLoading, setIsDetailLoading] = useState(false);
   const [retryingArticleId, setRetryingArticleId] = useState<string | null>(null);
 
-  const loadSummary = useCallback(async (options?: { silent?: boolean }) => {
-    const silent = options?.silent === true;
-    if (!silent) {
-      setIsLoading(true);
-    }
-    setError(null);
-
-    try {
-      const [summaryResult, processorResult] = await Promise.allSettled([
-        PublicationsAPI.Articles.getEmailEngagementSummary({ includeDeleted }),
-        PublicationsAPI.Articles.getNotificationProcessorStatus(),
-      ]);
-
-      if (summaryResult.status === 'rejected') {
-        throw summaryResult.reason;
-      }
-
-      setSummaries(summaryResult.value.map(normalizeSummary));
-      if (processorResult.status === 'fulfilled') {
-        setProcessorState(processorResult.value);
-      }
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load article email engagement');
-    } finally {
+  const loadSummary = useCallback(
+    async (options?: { silent?: boolean }) => {
+      const silent = options?.silent === true;
       if (!silent) {
-        setIsLoading(false);
+        setIsLoading(true);
       }
-    }
-  }, [includeDeleted]);
+      setError(null);
+
+      try {
+        const [summaryResult, processorResult] = await Promise.allSettled([
+          PublicationsAPI.Articles.getEmailEngagementSummary({ includeDeleted }),
+          PublicationsAPI.Articles.getNotificationProcessorStatus(),
+        ]);
+
+        if (summaryResult.status === 'rejected') {
+          throw summaryResult.reason;
+        }
+
+        setSummaries(summaryResult.value.map(normalizeSummary));
+        if (processorResult.status === 'fulfilled') {
+          setProcessorState(processorResult.value);
+        }
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Failed to load article email engagement');
+      } finally {
+        if (!silent) {
+          setIsLoading(false);
+        }
+      }
+    },
+    [includeDeleted],
+  );
 
   useEffect(() => {
     void loadSummary();
@@ -273,10 +284,13 @@ export function ArticleEmailEngagementPanel() {
     setRetryingArticleId(articleId);
 
     try {
-      const result = await PublicationsAPI.Articles.retryUndeliveredArticleNotifications(articleId, {
-        source: 'publish',
-        blastAll: true,
-      });
+      const result = await PublicationsAPI.Articles.retryUndeliveredArticleNotifications(
+        articleId,
+        {
+          source: 'publish',
+          blastAll: true,
+        },
+      );
 
       if (result.mode === 'blast_all') {
         const blasted = result.blastRecipientCount ?? result.recipientCount;
@@ -371,17 +385,27 @@ export function ArticleEmailEngagementPanel() {
           <CardHeader className="pb-3">
             <CardTitle className="text-base">Delivery Processor Health</CardTitle>
             <CardDescription>
-              Supabase cron should call the notification processor periodically. While this admin session is open, the dashboard also nudges the processor every 15s so queues can drain without relying on cron alone.
+              Supabase cron should call the notification processor periodically. While this admin
+              session is open, the dashboard also nudges the processor every 15s so queues can drain
+              without relying on cron alone.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
               <MetricCard
                 label="Heartbeat"
-                value={processorState?.lastHeartbeatAt ? formatMinutesAgo(processorState.lastHeartbeatAt) : '-'}
+                value={
+                  processorState?.lastHeartbeatAt
+                    ? formatMinutesAgo(processorState.lastHeartbeatAt)
+                    : '-'
+                }
                 icon={Activity}
                 accent={processorState?.stuckJobCount ? 'amber' : 'green'}
-                sub={processorState?.mode ? `Last mode: ${processorState.mode}` : 'No processor heartbeat yet'}
+                sub={
+                  processorState?.mode
+                    ? `Last mode: ${processorState.mode}`
+                    : 'No processor heartbeat yet'
+                }
               />
               <MetricCard
                 label="Active Jobs"
@@ -395,16 +419,26 @@ export function ArticleEmailEngagementPanel() {
                 value={(processorState?.stuckJobCount ?? 0).toLocaleString()}
                 icon={AlertTriangle}
                 accent={processorState?.stuckJobCount ? 'amber' : 'green'}
-                sub={processorState?.stuckJobCount
-                  ? `No progress for ${(processorState.staleJobThresholdMs / 60_000).toFixed(0)}+ min`
-                  : 'No stuck jobs detected'}
+                sub={
+                  processorState?.stuckJobCount
+                    ? `No progress for ${(processorState.staleJobThresholdMs / 60_000).toFixed(0)}+ min`
+                    : 'No stuck jobs detected'
+                }
               />
               <MetricCard
                 label="Last Success"
-                value={processorState?.lastSuccessAt ? formatMinutesAgo(processorState.lastSuccessAt) : '-'}
+                value={
+                  processorState?.lastSuccessAt
+                    ? formatMinutesAgo(processorState.lastSuccessAt)
+                    : '-'
+                }
                 icon={CheckCircle}
                 accent={processorState?.lastError ? 'amber' : 'green'}
-                sub={processorState?.lastError ? 'Last processor run hit an error' : 'Processor healthy'}
+                sub={
+                  processorState?.lastError
+                    ? 'Last processor run hit an error'
+                    : 'Processor healthy'
+                }
               />
             </div>
 
@@ -420,10 +454,14 @@ export function ArticleEmailEngagementPanel() {
                 <p className="text-sm font-medium text-red-800">Stuck delivery jobs</p>
                 <div className="mt-2 space-y-2 text-sm text-red-700">
                   {processorState.stuckJobs.slice(0, 3).map((job) => (
-                    <div key={job.id} className="rounded-md border border-red-100 bg-white/70 px-3 py-2">
+                    <div
+                      key={job.id}
+                      className="rounded-md border border-red-100 bg-white/70 px-3 py-2"
+                    >
                       <p className="font-medium">{job.articleTitle}</p>
                       <p>
-                        {job.phase} phase, {job.pendingCountEstimate} remaining, last progress {formatMinutesAgo(job.lastProgressAt)}
+                        {job.phase} phase, {job.pendingCountEstimate} remaining, last progress{' '}
+                        {formatMinutesAgo(job.lastProgressAt)}
                       </p>
                     </div>
                   ))}
@@ -439,11 +477,22 @@ export function ArticleEmailEngagementPanel() {
               <div>
                 <CardTitle className="text-base">Article Email Engagement</CardTitle>
                 <CardDescription>
-                  Same-domain links only. No tracking pixel. Opens and reads are recorded after on-page engagement signals.
+                  Same-domain links only. No tracking pixel. Opens and reads are recorded after
+                  on-page engagement signals.
                 </CardDescription>
               </div>
-              <Button variant="outline" size="sm" onClick={() => void loadSummary()} disabled={isLoading} title="Refresh engagement data">
-                {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => void loadSummary()}
+                disabled={isLoading}
+                title="Refresh engagement data"
+              >
+                {isLoading ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <RefreshCw className="h-4 w-4" />
+                )}
                 <span className="ml-1.5">Refresh</span>
               </Button>
               <Button
@@ -497,7 +546,9 @@ export function ArticleEmailEngagementPanel() {
                     <TableRow key={summary.articleId}>
                       <TableCell className="align-top">
                         <div className="min-w-0">
-                          <p className="font-medium text-gray-900 truncate max-w-[320px]">{summary.articleTitle}</p>
+                          <p className="font-medium text-gray-900 truncate max-w-[320px]">
+                            {summary.articleTitle}
+                          </p>
                           <p className="text-xs text-muted-foreground mt-1">
                             {summary.isDeleted
                               ? `Deleted ${formatDateTime(summary.deletedAt || null)}`
@@ -519,7 +570,12 @@ export function ArticleEmailEngagementPanel() {
                           )}
                         </div>
                       </TableCell>
-                      <TableCell>{(summary.intendedRecipientCount ?? summary.sent + summary.publishUndelivered + summary.publishFailed).toLocaleString()}</TableCell>
+                      <TableCell>
+                        {(
+                          summary.intendedRecipientCount ??
+                          summary.sent + summary.publishUndelivered + summary.publishFailed
+                        ).toLocaleString()}
+                      </TableCell>
                       <TableCell>{summary.sent.toLocaleString()}</TableCell>
                       <TableCell>{summary.pending.toLocaleString()}</TableCell>
                       <TableCell>{summary.failed.toLocaleString()}</TableCell>
@@ -527,7 +583,14 @@ export function ArticleEmailEngagementPanel() {
                       <TableCell>{summary.read.toLocaleString()}</TableCell>
                       <TableCell>{formatRate(summary.openRate)}</TableCell>
                       <TableCell>{formatRate(summary.readRate)}</TableCell>
-                      <TableCell>{formatDateTime(summary.lastActivityAt || summary.latestReadAt || summary.latestOpenedAt || summary.latestSentAt)}</TableCell>
+                      <TableCell>
+                        {formatDateTime(
+                          summary.lastActivityAt ||
+                            summary.latestReadAt ||
+                            summary.latestOpenedAt ||
+                            summary.latestSentAt,
+                        )}
+                      </TableCell>
                       <TableCell className="text-right">
                         <div className="flex items-center justify-end gap-2">
                           {summary.publishUndelivered > 0 && !summary.isDeleted && (
@@ -545,7 +608,11 @@ export function ArticleEmailEngagementPanel() {
                               <span className="ml-1.5">Re-send all</span>
                             </Button>
                           )}
-                          <Button variant="outline" size="sm" onClick={() => void openDetail(summary.articleId)}>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => void openDetail(summary.articleId)}
+                          >
                             View Recipients
                           </Button>
                         </div>
@@ -559,17 +626,21 @@ export function ArticleEmailEngagementPanel() {
         </Card>
       </div>
 
-      <Dialog open={Boolean(selectedArticleId)} onOpenChange={(open) => {
-        if (!open) {
-          setSelectedArticleId(null);
-          setDetail(null);
-        }
-      }}>
+      <Dialog
+        open={Boolean(selectedArticleId)}
+        onOpenChange={(open) => {
+          if (!open) {
+            setSelectedArticleId(null);
+            setDetail(null);
+          }
+        }}
+      >
         <DialogContent className="sm:max-w-6xl max-h-[90vh] overflow-hidden flex flex-col">
           <DialogHeader>
             <DialogTitle>{detail?.summary.articleTitle || 'Recipient Engagement'}</DialogTitle>
             <DialogDescription>
-              Recipient-level article email activity, including send status, opens, and read completions.
+              Recipient-level article email activity, including send status, opens, and read
+              completions.
             </DialogDescription>
           </DialogHeader>
 
@@ -596,7 +667,9 @@ export function ArticleEmailEngagementPanel() {
                       </Badge>
                     )}
                     {detail.summary.lastError && (
-                      <p className="text-xs text-red-600 max-w-[420px]">{detail.summary.lastError}</p>
+                      <p className="text-xs text-red-600 max-w-[420px]">
+                        {detail.summary.lastError}
+                      </p>
                     )}
                   </div>
                 </div>
@@ -604,7 +677,12 @@ export function ArticleEmailEngagementPanel() {
                 <div className="grid grid-cols-2 md:grid-cols-6 gap-3">
                   <DetailStat
                     label="Intended"
-                    value={detail.summary.intendedRecipientCount ?? detail.summary.sent + detail.summary.publishUndelivered + detail.summary.publishFailed}
+                    value={
+                      detail.summary.intendedRecipientCount ??
+                      detail.summary.sent +
+                        detail.summary.publishUndelivered +
+                        detail.summary.publishFailed
+                    }
                   />
                   <DetailStat label="Sent" value={detail.summary.sent} />
                   <DetailStat label="Remaining" value={detail.summary.pending} />
@@ -618,10 +696,12 @@ export function ArticleEmailEngagementPanel() {
                   <div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 flex items-center justify-between gap-3">
                     <div>
                       <p className="text-sm font-medium text-amber-900">
-                        {detail.summary.publishUndelivered} publish recipient(s) still need delivery attention
+                        {detail.summary.publishUndelivered} publish recipient(s) still need delivery
+                        attention
                       </p>
                       <p className="text-xs text-amber-700 mt-1">
-                        Re-send to all newsletter subscribers (same as publish). Failed addresses stay on the retry queue.
+                        Re-send to all newsletter subscribers (same as publish). Failed addresses
+                        stay on the retry queue.
                       </p>
                     </div>
                     <Button
@@ -655,8 +735,12 @@ export function ArticleEmailEngagementPanel() {
                       <TableRow key={recipient.token}>
                         <TableCell className="align-top">
                           <div>
-                            <p className="font-medium text-gray-900">{recipient.recipientName || recipient.recipientEmail}</p>
-                            <p className="text-xs text-muted-foreground mt-1">{recipient.recipientEmail}</p>
+                            <p className="font-medium text-gray-900">
+                              {recipient.recipientName || recipient.recipientEmail}
+                            </p>
+                            <p className="text-xs text-muted-foreground mt-1">
+                              {recipient.recipientEmail}
+                            </p>
                           </div>
                         </TableCell>
                         <TableCell>
@@ -680,7 +764,9 @@ export function ArticleEmailEngagementPanel() {
                           {recipient.openedAt ? (
                             <div>
                               <p>{formatDateTime(recipient.openedAt)}</p>
-                              <p className="text-xs text-muted-foreground mt-1">{recipient.openCount} event(s)</p>
+                              <p className="text-xs text-muted-foreground mt-1">
+                                {recipient.openCount} event(s)
+                              </p>
                             </div>
                           ) : (
                             '-'
@@ -690,13 +776,19 @@ export function ArticleEmailEngagementPanel() {
                           {recipient.readAt ? (
                             <div>
                               <p>{formatDateTime(recipient.readAt)}</p>
-                              <p className="text-xs text-muted-foreground mt-1">{recipient.readCount} event(s)</p>
+                              <p className="text-xs text-muted-foreground mt-1">
+                                {recipient.readCount} event(s)
+                              </p>
                             </div>
                           ) : (
                             '-'
                           )}
                         </TableCell>
-                        <TableCell>{formatDateTime(recipient.lastReadAt || recipient.lastOpenedAt || recipient.sentAt)}</TableCell>
+                        <TableCell>
+                          {formatDateTime(
+                            recipient.lastReadAt || recipient.lastOpenedAt || recipient.sentAt,
+                          )}
+                        </TableCell>
                       </TableRow>
                     ))}
                   </TableBody>

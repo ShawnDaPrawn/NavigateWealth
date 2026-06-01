@@ -55,11 +55,7 @@ function transformApiUserToSearchable(user: ApiUser): SearchableAccount {
   });
 
   const accountStatus = user.account_status || 'active';
-  const displayStatus = user.deleted
-    ? 'closed'
-    : user.suspended
-      ? 'suspended'
-      : accountStatus;
+  const displayStatus = user.deleted ? 'closed' : user.suspended ? 'suspended' : accountStatus;
   const statusLabel = String(displayStatus ?? 'active');
 
   return {
@@ -95,10 +91,7 @@ export function useGlobalSearchData(enabled: boolean, search: string) {
   const hasSearchQuery = normalizedSearch.length >= 2;
   const shouldFetch = enabled && hasSearchQuery;
 
-  const {
-    data: allClients = [],
-    isLoading: clientsLoading,
-  } = useQuery({
+  const { data: allClients = [], isLoading: clientsLoading } = useQuery({
     queryKey: clientKeys.lists(),
     queryFn: async () => {
       const data = await clientApi.getClients();
@@ -113,10 +106,7 @@ export function useGlobalSearchData(enabled: boolean, search: string) {
     enabled: shouldFetch,
   });
 
-  const {
-    data: allPersonnel = [],
-    isLoading: personnelLoading,
-  } = useQuery({
+  const { data: allPersonnel = [], isLoading: personnelLoading } = useQuery({
     queryKey: personnelKeys.lists(),
     queryFn: async () => {
       const list = await personnelApi.fetch();
@@ -129,7 +119,7 @@ export function useGlobalSearchData(enabled: boolean, search: string) {
           email: p.email ?? '',
           type: 'personnel',
           status: personnelStatus,
-          meta: (p.role || 'staff').replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase()),
+          meta: (p.role || 'staff').replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase()),
         };
       });
     },
@@ -138,12 +128,18 @@ export function useGlobalSearchData(enabled: boolean, search: string) {
   });
 
   const clients = useMemo(
-    () => (hasSearchQuery ? allClients.filter(account => includesSearch(account, normalizedSearch)) : []),
+    () =>
+      hasSearchQuery
+        ? allClients.filter((account) => includesSearch(account, normalizedSearch))
+        : [],
     [allClients, hasSearchQuery, normalizedSearch],
   );
 
   const personnel = useMemo(
-    () => (hasSearchQuery ? allPersonnel.filter(account => includesSearch(account, normalizedSearch)) : []),
+    () =>
+      hasSearchQuery
+        ? allPersonnel.filter((account) => includesSearch(account, normalizedSearch))
+        : [],
     [allPersonnel, hasSearchQuery, normalizedSearch],
   );
 
@@ -154,4 +150,3 @@ export function useGlobalSearchData(enabled: boolean, search: string) {
     hasSearchQuery,
   };
 }
-

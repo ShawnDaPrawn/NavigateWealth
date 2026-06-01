@@ -3,9 +3,7 @@ import { useNavigate, useLocation } from 'react-router';
 import { useAuth } from '../auth/AuthContext';
 import { usePendingCounts } from './hooks/usePendingCounts';
 import { toast } from 'sonner';
-import { 
-  Menu,
-} from 'lucide-react';
+import { Menu } from 'lucide-react';
 import { Button } from '../ui/button';
 import { cn } from '../ui/utils';
 
@@ -23,7 +21,7 @@ interface AdminLayoutProps {
 export function AdminLayout({ activeModule, onModuleChange, children }: AdminLayoutProps) {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
-  
+
   const pendingCounts = usePendingCounts();
   const navigate = useNavigate();
 
@@ -40,10 +38,8 @@ export function AdminLayout({ activeModule, onModuleChange, children }: AdminLay
   }, [sidebarCollapsed]);
 
   return (
-    <div
-      className="h-screen bg-background overflow-hidden relative"
-    >
-      <Sidebar 
+    <div className="h-screen bg-background overflow-hidden relative">
+      <Sidebar
         activeModule={activeModule}
         onModuleChange={onModuleChange}
         pendingCounts={pendingCounts}
@@ -54,7 +50,7 @@ export function AdminLayout({ activeModule, onModuleChange, children }: AdminLay
       />
 
       {/* Main Content */}
-      <div className={cn("h-full flex flex-col transition-all duration-300", mainContentMargin)}>
+      <div className={cn('h-full flex flex-col transition-all duration-300', mainContentMargin)}>
         {/* Mobile menu button - floating */}
         <Button
           variant="outline"
@@ -68,20 +64,20 @@ export function AdminLayout({ activeModule, onModuleChange, children }: AdminLay
 
         {/* Global Search — uses AdminNavigationContext, no props needed */}
         <div className="hidden lg:flex items-center justify-between px-6 py-3 border-b border-border bg-white/80 backdrop-blur-md sticky top-0 z-30 shadow-sm">
-           <div className="flex-1 max-w-xl">
-             <GlobalSearch />
-           </div>
-           <div className="flex items-center gap-4">
-             {/* Add header actions here if needed */}
-           </div>
+          <div className="flex-1 max-w-xl">
+            <GlobalSearch />
+          </div>
+          <div className="flex items-center gap-4">{/* Add header actions here if needed */}</div>
         </div>
 
         {/* Page Content */}
         <main id="main-content" className="flex-1 overflow-auto">
-          <div className={cn(
-            "min-w-0",
-            (activeModule === 'compliance' || activeModule === 'esign') && "h-full"
-          )}>
+          <div
+            className={cn(
+              'min-w-0',
+              (activeModule === 'compliance' || activeModule === 'esign') && 'h-full',
+            )}
+          >
             {children}
           </div>
         </main>

@@ -96,7 +96,10 @@ export function AddressReportsPanel({
       toast.success('Address lookup completed', { id: toastId });
       onCheckComplete?.();
     } catch (err: unknown) {
-      setAddressResult({ success: false, error: err instanceof Error ? err.message : 'Network error' });
+      setAddressResult({
+        success: false,
+        error: err instanceof Error ? err.message : 'Network error',
+      });
       toast.error(err instanceof Error ? err.message : 'Network error', { id: toastId });
     } finally {
       setIsAddressLoading(false);
@@ -132,15 +135,17 @@ export function AddressReportsPanel({
             Best Known Address
           </CardTitle>
           <CardDescription>
-            Retrieve the client's known addresses from credit bureau records.
-            This creates a matter and queries address data linked to their ID number.
+            Retrieve the client's known addresses from credit bureau records. This creates a matter
+            and queries address data linked to their ID number.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-3">
           {!hasIdentification && (
             <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 flex items-start gap-2">
               <AlertTriangle className="h-4 w-4 text-amber-600 mt-0.5 flex-shrink-0" />
-              <p className="text-xs text-amber-700">Client ID/passport required for address lookup.</p>
+              <p className="text-xs text-amber-700">
+                Client ID/passport required for address lookup.
+              </p>
             </div>
           )}
 
@@ -157,11 +162,13 @@ export function AddressReportsPanel({
 
           {/* Address results */}
           {addressResult && (
-            <div className={`rounded-lg p-3 text-sm ${
-              addressResult.success
-                ? 'bg-green-50 border border-green-200'
-                : 'bg-red-50 border border-red-200'
-            }`}>
+            <div
+              className={`rounded-lg p-3 text-sm ${
+                addressResult.success
+                  ? 'bg-green-50 border border-green-200'
+                  : 'bg-red-50 border border-red-200'
+              }`}
+            >
               {!addressResult.success && (
                 <div className="flex items-center gap-2">
                   <AlertTriangle className="h-4 w-4 text-red-600" />
@@ -180,7 +187,9 @@ export function AddressReportsPanel({
                   {addressResult.matterId && (
                     <div className="flex items-center gap-1 text-xs text-gray-600 mb-3">
                       <span>Matter ID:</span>
-                      <Badge variant="outline" className="font-mono text-xs">{addressResult.matterId}</Badge>
+                      <Badge variant="outline" className="font-mono text-xs">
+                        {addressResult.matterId}
+                      </Badge>
                     </div>
                   )}
 
@@ -200,11 +209,14 @@ export function AddressReportsPanel({
                               {addr.postalCode && <div>{addr.postalCode}</div>}
                               {addr.country && <div className="text-gray-500">{addr.country}</div>}
                               {addr.source && (
-                                <Badge variant="outline" className="mt-1 text-xs">{addr.source}</Badge>
+                                <Badge variant="outline" className="mt-1 text-xs">
+                                  {addr.source}
+                                </Badge>
                               )}
                               {addr.lastReported && (
                                 <span className="text-xs text-gray-400 ml-2">
-                                  Last reported: {new Date(addr.lastReported).toLocaleDateString('en-ZA')}
+                                  Last reported:{' '}
+                                  {new Date(addr.lastReported).toLocaleDateString('en-ZA')}
                                 </span>
                               )}
                             </div>
@@ -223,7 +235,11 @@ export function AddressReportsPanel({
                     onClick={() => setShowRawAddress(!showRawAddress)}
                     className="flex items-center gap-1 mt-2 text-xs text-gray-500 hover:text-gray-700 transition-colors"
                   >
-                    {showRawAddress ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
+                    {showRawAddress ? (
+                      <ChevronUp className="h-3 w-3" />
+                    ) : (
+                      <ChevronDown className="h-3 w-3" />
+                    )}
                     {showRawAddress ? 'Hide' : 'Show'} full response
                   </button>
 

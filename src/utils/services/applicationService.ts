@@ -26,13 +26,13 @@ export interface ApplicationSubmissionData {
     maritalStatus: string;
     maritalRegime: string;
     numberOfDependants: string;
-    
+
     // Spouse
     spouseFirstName: string;
     spouseLastName: string;
     spouseDateOfBirth: string;
     spouseEmployed: string;
-    
+
     // Contact Details
     emailAddress: string;
     alternativeEmail: string;
@@ -48,7 +48,7 @@ export interface ApplicationSubmissionData {
     residentialProvince: string;
     residentialPostalCode: string;
     residentialCountry: string;
-    
+
     // Employment Information
     employmentStatus: string;
     jobTitle: string;
@@ -59,7 +59,7 @@ export interface ApplicationSubmissionData {
     selfEmployedDescription: string;
     grossMonthlyIncome: string;
     monthlyExpensesEstimate: string;
-    
+
     // Services & Interests
     accountReasons: string[];
     otherReason: string;
@@ -67,7 +67,7 @@ export interface ApplicationSubmissionData {
     urgency: string;
     existingProducts: string[];
     existingProductProviders: Record<string, string>;
-    
+
     // Terms & Conditions
     termsAccepted: boolean;
     popiaConsent: boolean;
@@ -89,16 +89,16 @@ export interface ApplicationResponse {
  * Submit application for review
  */
 export async function submitApplication(
-  submissionData: ApplicationSubmissionData
+  submissionData: ApplicationSubmissionData,
 ): Promise<ApplicationResponse> {
   try {
     console.log('📤 Submitting application for user:', submissionData.userId);
-    
+
     const response = await fetch(`${BASE_URL}/applications/submit`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${publicAnonKey}`,
+        Authorization: `Bearer ${publicAnonKey}`,
       },
       body: JSON.stringify(submissionData),
     });
@@ -111,7 +111,7 @@ export async function submitApplication(
 
     const result = await response.json();
     console.log('✅ Application submitted successfully:', result);
-    
+
     return { success: true, data: result.data };
   } catch (error) {
     console.error('❌ Error submitting application:', error);
@@ -128,11 +128,11 @@ export async function submitApplication(
 export async function getApplication(userId: string): Promise<ApplicationResponse> {
   try {
     console.log('📥 Fetching application for user:', userId);
-    
+
     const response = await fetch(`${BASE_URL}/applications/${userId}`, {
       method: 'GET',
       headers: {
-        'Authorization': `Bearer ${publicAnonKey}`,
+        Authorization: `Bearer ${publicAnonKey}`,
       },
     });
 
@@ -144,7 +144,7 @@ export async function getApplication(userId: string): Promise<ApplicationRespons
 
     const result = await response.json();
     console.log('✅ Application fetched successfully:', result.data ? 'Found' : 'Not found');
-    
+
     return { success: true, data: result.data };
   } catch (error) {
     console.error('❌ Error fetching application:', error);
@@ -160,16 +160,16 @@ export async function getApplication(userId: string): Promise<ApplicationRespons
  */
 export async function saveApplicationProgress(
   userId: string,
-  applicationData: Partial<ApplicationSubmissionData['applicationData']>
+  applicationData: Partial<ApplicationSubmissionData['applicationData']>,
 ): Promise<ApplicationResponse> {
   try {
     console.log('💾 Saving application progress for user:', userId);
-    
+
     const response = await fetch(`${BASE_URL}/applications/save-progress`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${publicAnonKey}`,
+        Authorization: `Bearer ${publicAnonKey}`,
       },
       body: JSON.stringify({ userId, applicationData }),
     });
@@ -182,7 +182,7 @@ export async function saveApplicationProgress(
 
     const result = await response.json();
     console.log('✅ Progress saved successfully');
-    
+
     return { success: true, data: result.data };
   } catch (error) {
     console.error('❌ Error saving progress:', error);

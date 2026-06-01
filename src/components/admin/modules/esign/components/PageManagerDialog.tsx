@@ -20,7 +20,14 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { DragDropContext, Draggable, Droppable, type DropResult } from '@hello-pangea/dnd';
 import { motion, AnimatePresence } from 'motion/react';
 import { Trash2, RotateCw, Loader2, AlertTriangle, Eye } from 'lucide-react';
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '../../../../ui/dialog';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '../../../../ui/dialog';
 import { Button } from '../../../../ui/button';
 import { ScrollArea } from '../../../../ui/scroll-area';
 import { toast } from 'sonner';
@@ -93,7 +100,7 @@ export function PageManagerDialog({
         }
       } catch (err) {
         toast.error('Failed to load page manifest');
-        // eslint-disable-next-line no-console
+
         console.error(err);
       }
     })();
@@ -131,7 +138,6 @@ export function PageManagerDialog({
         }
         if (!cancelled) setThumbnails(out);
       } catch (err) {
-        // eslint-disable-next-line no-console
         console.error('Thumbnail render failed:', err);
       } finally {
         if (!cancelled) setLoadingThumbs(false);
@@ -167,7 +173,7 @@ export function PageManagerDialog({
   const rotatePage = (uid: string) => {
     setPages((prev) =>
       prev.map((p) =>
-        p.uid === uid ? { ...p, rotation: (((p.rotation + 90) % 360) as 0 | 90 | 180 | 270) } : p,
+        p.uid === uid ? { ...p, rotation: ((p.rotation + 90) % 360) as 0 | 90 | 180 | 270 } : p,
       ),
     );
   };
@@ -245,8 +251,8 @@ export function PageManagerDialog({
         <DialogHeader className="px-5 py-3 border-b">
           <DialogTitle>Manage pages</DialogTitle>
           <DialogDescription>
-            Drag to reorder · click rotate · delete pages you don't need. The original PDF stays
-            on file for audit.
+            Drag to reorder · click rotate · delete pages you don't need. The original PDF stays on
+            file for audit.
           </DialogDescription>
         </DialogHeader>
 
@@ -292,7 +298,9 @@ export function PageManagerDialog({
                             {...(prov.draggableProps as unknown as Record<string, never>)}
                             {...(prov.dragHandleProps as unknown as Record<string, never>)}
                             className={`group relative bg-white border rounded-lg overflow-hidden shadow-sm transition ${
-                              snap.isDragging ? 'ring-2 ring-purple-500 shadow-lg' : 'hover:shadow-md'
+                              snap.isDragging
+                                ? 'ring-2 ring-purple-500 shadow-lg'
+                                : 'hover:shadow-md'
                             }`}
                           >
                             <div className="aspect-[1/1.4] bg-gray-100 flex items-center justify-center overflow-hidden">
@@ -309,7 +317,8 @@ export function PageManagerDialog({
                             </div>
                             <div className="px-2 py-1.5 text-xs flex items-center justify-between border-t bg-white">
                               <span className="text-gray-600">
-                                #{index + 1} <span className="text-gray-400">(src {p.sourcePage})</span>
+                                #{index + 1}{' '}
+                                <span className="text-gray-400">(src {p.sourcePage})</span>
                               </span>
                               <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition">
                                 <button
@@ -341,9 +350,7 @@ export function PageManagerDialog({
             </Droppable>
           </DragDropContext>
 
-          {loadingThumbs && (
-            <div className="text-xs text-gray-500 mt-3">Rendering thumbnails…</div>
-          )}
+          {loadingThumbs && <div className="text-xs text-gray-500 mt-3">Rendering thumbnails…</div>}
         </ScrollArea>
 
         {/* Preview pane — shown only after the sender hits Preview. */}
@@ -377,7 +384,11 @@ export function PageManagerDialog({
             onClick={handlePreview}
             disabled={saving || previewing || !isModified}
           >
-            {previewing ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Eye className="h-4 w-4 mr-2" />}
+            {previewing ? (
+              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+            ) : (
+              <Eye className="h-4 w-4 mr-2" />
+            )}
             Preview
           </Button>
           <Button variant="outline" onClick={onClose} disabled={saving}>

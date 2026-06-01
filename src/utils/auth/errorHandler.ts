@@ -6,7 +6,7 @@ export class AuthError extends Error {
   constructor(
     message: string,
     public code?: string,
-    public originalError?: unknown
+    public originalError?: unknown,
   ) {
     super(message);
     this.name = 'AuthError';
@@ -21,10 +21,13 @@ export function parseAuthError(error: unknown): AuthError {
     return error;
   }
 
-  const message = (error instanceof Error) ? error.message : 
-                 (typeof error === 'object' && error !== null && 'message' in error) ? String((error as Record<string, unknown>).message) :
-                 '';
-  
+  const message =
+    error instanceof Error
+      ? error.message
+      : typeof error === 'object' && error !== null && 'message' in error
+        ? String((error as Record<string, unknown>).message)
+        : '';
+
   // Check for Supabase rate limiting (this comes BEFORE invalid credentials check)
   if (
     message.includes('Too many') ||
@@ -35,10 +38,10 @@ export function parseAuthError(error: unknown): AuthError {
     return new AuthError(
       'Too many login attempts. Please wait 5-10 minutes before trying again.',
       'rate_limited',
-      error
+      error,
     );
   }
-  
+
   // Check for duplicate email
   if (
     message.includes('already registered') ||
@@ -83,16 +86,12 @@ export function parseAuthError(error: unknown): AuthError {
     return new AuthError(
       'Unable to connect to the authentication server. This may be a temporary server issue — please try again in a moment.',
       'network_error',
-      error
+      error,
     );
   }
 
   // Default error
-  return new AuthError(
-    message || AUTH_ERRORS.UNKNOWN_ERROR,
-    'unknown_error',
-    error
-  );
+  return new AuthError(message || AUTH_ERRORS.UNKNOWN_ERROR, 'unknown_error', error);
 }
 
 /**
@@ -100,7 +99,7 @@ export function parseAuthError(error: unknown): AuthError {
  */
 export function getUserErrorMessage(errorMessage: string): string {
   const lowerMessage = errorMessage.toLowerCase();
-  
+
   // Invalid credentials
   if (
     lowerMessage.includes('invalid login') ||
@@ -113,7 +112,7 @@ export function getUserErrorMessage(errorMessage: string): string {
   ) {
     return 'Incorrect Password or Username';
   }
-  
+
   // Email already exists
   if (
     lowerMessage.includes('already registered') ||
@@ -122,17 +121,17 @@ export function getUserErrorMessage(errorMessage: string): string {
   ) {
     return AUTH_ERRORS.DUPLICATE_EMAIL;
   }
-  
+
   // Email not verified
   if (lowerMessage.includes('email not confirmed')) {
     return AUTH_ERRORS.EMAIL_NOT_VERIFIED;
   }
-  
+
   // Rate limiting
   if (lowerMessage.includes('rate') || lowerMessage.includes('too many')) {
     return 'Too many attempts. Please try again later.';
   }
-  
+
   // Network errors
   if (
     lowerMessage.includes('network') ||
@@ -141,7 +140,7 @@ export function getUserErrorMessage(errorMessage: string): string {
   ) {
     return AUTH_ERRORS.NETWORK_ERROR;
   }
-  
+
   // Default fallback - don't expose raw error messages
   return 'An error occurred. Please try again.';
 }

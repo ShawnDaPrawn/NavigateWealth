@@ -70,9 +70,7 @@ async function main() {
   let upserted = 0;
   for (const session of sessions) {
     const row = toRow(session);
-    const { error } = await supabase
-      .from('fna_intake_sessions')
-      .upsert(row, { onConflict: 'id' });
+    const { error } = await supabase.from('fna_intake_sessions').upsert(row, { onConflict: 'id' });
     if (error) {
       console.error(`Failed ${session.id}:`, error.message);
     } else {

@@ -187,8 +187,7 @@ export function HeroSection({
       <div
         className="absolute inset-0 opacity-[0.04]"
         style={{
-          backgroundImage:
-            'radial-gradient(circle, rgba(255,255,255,0.8) 1px, transparent 1px)',
+          backgroundImage: 'radial-gradient(circle, rgba(255,255,255,0.8) 1px, transparent 1px)',
           backgroundSize: '32px 32px',
         }}
       />
@@ -216,10 +215,7 @@ export function HeroSection({
             </div>
 
             {/* Heading — key transition on slide change */}
-            <div
-              key={`heading-${currentSlide.id}`}
-              className="space-y-4 animate-slide-up"
-            >
+            <div key={`heading-${currentSlide.id}`} className="space-y-4 animate-slide-up">
               <h1 className="!text-[clamp(2rem,5vw,3.5rem)] !font-extrabold !leading-[1.1] text-white tracking-tight">
                 {currentSlide.title}
                 <span className="bg-gradient-to-r from-purple-400 via-violet-400 to-indigo-400 bg-clip-text text-transparent">
@@ -395,10 +391,7 @@ function StatItem({
 }) {
   const animatedValue = useCountUp(value, 2200, 600);
 
-  const display =
-    value % 1 !== 0
-      ? animatedValue.toFixed(1)
-      : animatedValue.toLocaleString();
+  const display = value % 1 !== 0 ? animatedValue.toFixed(1) : animatedValue.toLocaleString();
 
   return (
     <div className="flex items-center gap-3 justify-center lg:justify-start group">

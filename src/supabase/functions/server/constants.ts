@@ -45,31 +45,34 @@ export const DATABASE_SCHEMA = 'public';
  * Frontend displays: no_application, application_in_progress, submitted_for_review, approved, declined
  */
 export const STATUS_MAP: Record<BackendApplicationStatus, FrontendApplicationStatus> = {
-  'in_progress': 'application_in_progress',
-  'pending': 'submitted_for_review', // Pending = waiting for admin review (auto-submitted from signup)
-  'submitted': 'submitted_for_review',
-  'approved': 'approved',
-  'declined': 'declined',
-  'invited': 'invited',
+  in_progress: 'application_in_progress',
+  pending: 'submitted_for_review', // Pending = waiting for admin review (auto-submitted from signup)
+  submitted: 'submitted_for_review',
+  approved: 'approved',
+  declined: 'declined',
+  invited: 'invited',
 } as const;
 
 /**
  * Reverse map: Frontend status to backend status
  */
-export const REVERSE_STATUS_MAP: Record<FrontendApplicationStatus, BackendApplicationStatus | null> = {
-  'no_application': null,
-  'application_in_progress': 'in_progress',
-  'submitted_for_review': 'submitted',
-  'approved': 'approved',
-  'declined': 'declined',
-  'invited': 'invited',
+export const REVERSE_STATUS_MAP: Record<
+  FrontendApplicationStatus,
+  BackendApplicationStatus | null
+> = {
+  no_application: null,
+  application_in_progress: 'in_progress',
+  submitted_for_review: 'submitted',
+  approved: 'approved',
+  declined: 'declined',
+  invited: 'invited',
 } as const;
 
 /**
  * Valid statuses for submitted applications (used in admin filters)
  */
 export const SUBMITTED_STATUSES: BackendApplicationStatus[] = [
-  'pending',   // New signups waiting for review
+  'pending', // New signups waiting for review
   'submitted',
   'approved',
   'declined',
@@ -83,24 +86,24 @@ export const SUBMITTED_STATUSES: BackendApplicationStatus[] = [
  * Default completion percentage by status
  */
 export const COMPLETION_PERCENTAGE: Record<BackendApplicationStatus, number> = {
-  'in_progress': 50,
-  'pending': 100, // Pending applications are auto-submitted from signup
-  'submitted': 100,
-  'approved': 100,
-  'declined': 100,
-  'invited': 10,  // Invited — minimal data only
+  in_progress: 50,
+  pending: 100, // Pending applications are auto-submitted from signup
+  submitted: 100,
+  approved: 100,
+  declined: 100,
+  invited: 10, // Invited — minimal data only
 } as const;
 
 /**
  * Default sort column mapping (camelCase to snake_case)
  */
 export const SORT_COLUMN_MAP: Record<string, string> = {
-  'submittedAt': 'submitted_at',
-  'createdAt': 'created_at',
-  'updatedAt': 'updated_at',
-  'submitted_at': 'submitted_at',
-  'created_at': 'created_at',
-  'updated_at': 'updated_at',
+  submittedAt: 'submitted_at',
+  createdAt: 'created_at',
+  updatedAt: 'updated_at',
+  submitted_at: 'submitted_at',
+  created_at: 'created_at',
+  updated_at: 'updated_at',
 } as const;
 
 /**
@@ -186,7 +189,8 @@ export const ERROR_MESSAGES = {
     INVALID_STATUS: 'Application cannot be processed in current status',
     FETCH_FAILED: 'Failed to fetch applications',
     UPDATE_FAILED: 'Failed to update application',
-    USER_NOT_FOUND: 'The user associated with this application no longer exists in the authentication system. The application cannot be processed.',
+    USER_NOT_FOUND:
+      'The user associated with this application no longer exists in the authentication system. The application cannot be processed.',
   },
   GENERIC: {
     INTERNAL_ERROR: 'Internal server error',

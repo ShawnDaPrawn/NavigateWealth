@@ -42,7 +42,11 @@ function daysLabel(days: number): string {
   return days === 1 ? '1 day' : `${days} days`;
 }
 
-export function MetricsPanel({ onOpenEnvelope }: { onOpenEnvelope?: (envelopeId: string) => void }) {
+export function MetricsPanel({
+  onOpenEnvelope,
+}: {
+  onOpenEnvelope?: (envelopeId: string) => void;
+}) {
   const [loading, setLoading] = useState(true);
   const [metrics, setMetrics] = useState<MetricsBundle | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -88,7 +92,9 @@ export function MetricsPanel({ onOpenEnvelope }: { onOpenEnvelope?: (envelopeId:
             <AlertTriangle className="h-4 w-4" />
             {error}
           </div>
-          <Button size="sm" variant="outline" onClick={refresh}>Retry</Button>
+          <Button size="sm" variant="outline" onClick={refresh}>
+            Retry
+          </Button>
         </CardContent>
       </Card>
     );
@@ -133,17 +139,19 @@ export function MetricsPanel({ onOpenEnvelope }: { onOpenEnvelope?: (envelopeId:
         </CardHeader>
         <CardContent className="pt-0">
           <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-3 text-xs">
-            {([
-              ['Draft', statusCounts.draft, 'bg-gray-100 text-gray-700'],
-              ['Sent', statusCounts.sent, 'bg-blue-50 text-blue-700'],
-              ['Viewed', statusCounts.viewed, 'bg-sky-50 text-sky-700'],
-              ['Partial', statusCounts.partially_signed, 'bg-purple-50 text-purple-700'],
-              ['Completing', statusCounts.completing ?? 0, 'bg-amber-50 text-amber-700'],
-              ['Completed', statusCounts.completed, 'bg-emerald-50 text-emerald-700'],
-              ['Declined', statusCounts.declined, 'bg-rose-50 text-rose-700'],
-              ['Expired', statusCounts.expired, 'bg-orange-50 text-orange-700'],
-              ['Voided', statusCounts.voided, 'bg-zinc-100 text-zinc-700'],
-            ] as const).map(([label, count, tone]) => (
+            {(
+              [
+                ['Draft', statusCounts.draft, 'bg-gray-100 text-gray-700'],
+                ['Sent', statusCounts.sent, 'bg-blue-50 text-blue-700'],
+                ['Viewed', statusCounts.viewed, 'bg-sky-50 text-sky-700'],
+                ['Partial', statusCounts.partially_signed, 'bg-purple-50 text-purple-700'],
+                ['Completing', statusCounts.completing ?? 0, 'bg-amber-50 text-amber-700'],
+                ['Completed', statusCounts.completed, 'bg-emerald-50 text-emerald-700'],
+                ['Declined', statusCounts.declined, 'bg-rose-50 text-rose-700'],
+                ['Expired', statusCounts.expired, 'bg-orange-50 text-orange-700'],
+                ['Voided', statusCounts.voided, 'bg-zinc-100 text-zinc-700'],
+              ] as const
+            ).map(([label, count, tone]) => (
               <div key={label} className={`rounded-md p-3 ${tone}`}>
                 <div className="text-[10px] uppercase tracking-wide opacity-70">{label}</div>
                 <div className="text-lg font-semibold">{count}</div>
@@ -165,28 +173,30 @@ export function MetricsPanel({ onOpenEnvelope }: { onOpenEnvelope?: (envelopeId:
             </CardDescription>
           </CardHeader>
           <CardContent className="pt-0 space-y-3">
-            {([
-              ['Sent', funnel.sent, null],
-              ['Opened', funnel.opened, funnel.sentToOpenedPct],
-              ['Started', funnel.started, funnel.openedToStartedPct],
-              ['Completed', funnel.completed, funnel.startedToCompletedPct],
-            ] as const).map(([label, count, conv]) => (
+            {(
+              [
+                ['Sent', funnel.sent, null],
+                ['Opened', funnel.opened, funnel.sentToOpenedPct],
+                ['Started', funnel.started, funnel.openedToStartedPct],
+                ['Completed', funnel.completed, funnel.startedToCompletedPct],
+              ] as const
+            ).map(([label, count, conv]) => (
               <div key={label} className="flex items-center gap-3">
                 <div className="w-20 text-xs text-gray-700">{label}</div>
                 <div className="flex-1">
                   <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
                     <div
                       className="h-full bg-purple-500 rounded-full transition-[width]"
-                      style={{ width: `${funnel.sent ? Math.max(2, (count / funnel.sent) * 100) : 0}%` }}
+                      style={{
+                        width: `${funnel.sent ? Math.max(2, (count / funnel.sent) * 100) : 0}%`,
+                      }}
                     />
                   </div>
                 </div>
                 <div className="w-28 text-right text-xs text-gray-600">
                   {count}
                   {conv != null && (
-                    <span className="text-[10px] text-muted-foreground ml-1">
-                      ({conv}%)
-                    </span>
+                    <span className="text-[10px] text-muted-foreground ml-1">({conv}%)</span>
                   )}
                 </div>
               </div>
@@ -262,16 +272,14 @@ export function MetricsPanel({ onOpenEnvelope }: { onOpenEnvelope?: (envelopeId:
           ) : (
             <ul className="divide-y">
               {stuckEnvelopes.map((envelope) => (
-                <li
-                  key={envelope.id}
-                  className="py-2 flex items-center justify-between gap-3"
-                >
+                <li key={envelope.id} className="py-2 flex items-center justify-between gap-3">
                   <div className="min-w-0 flex-1">
                     <div className="truncate text-sm font-medium text-gray-900">
                       {envelope.title}
                     </div>
                     <div className="text-[11px] text-muted-foreground">
-                      {envelope.signer_count} signer{envelope.signer_count === 1 ? '' : 's'} · idle {daysLabel(envelope.days_since_sent)}
+                      {envelope.signer_count} signer{envelope.signer_count === 1 ? '' : 's'} · idle{' '}
+                      {daysLabel(envelope.days_since_sent)}
                     </div>
                   </div>
                   <Badge variant="outline" className="text-[10px]">

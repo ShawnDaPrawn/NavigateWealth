@@ -69,10 +69,7 @@ app.post('/create-session', async (c) => {
     }
 
     if (!Deno.env.get('OPENAI_API_KEY')) {
-      return c.json(
-        { success: false, error: 'OPENAI_API_KEY not configured on server' },
-        500,
-      );
+      return c.json({ success: false, error: 'OPENAI_API_KEY not configured on server' }, 500);
     }
 
     const session = await service.createSession(clientId, clientName, user.id);
@@ -94,10 +91,7 @@ app.post('/create-session', async (c) => {
   } catch (error: unknown) {
     log.error('Error creating tax agent session', error);
     const message = getErrMsg(error);
-    return c.json(
-      { success: false, error: message },
-      message === 'Unauthorized' ? 401 : 500,
-    );
+    return c.json({ success: false, error: message }, message === 'Unauthorized' ? 401 : 500);
   }
 });
 
@@ -128,10 +122,7 @@ app.get('/sessions/client/:clientId', async (c) => {
   } catch (error: unknown) {
     log.error('Error listing tax agent sessions', error);
     const message = getErrMsg(error);
-    return c.json(
-      { success: false, error: message },
-      message === 'Unauthorized' ? 401 : 500,
-    );
+    return c.json({ success: false, error: message }, message === 'Unauthorized' ? 401 : 500);
   }
 });
 
@@ -170,10 +161,7 @@ app.get('/sessions/:sessionId', async (c) => {
   } catch (error: unknown) {
     log.error('Error getting tax agent session', error);
     const message = getErrMsg(error);
-    return c.json(
-      { success: false, error: message },
-      message === 'Unauthorized' ? 401 : 500,
-    );
+    return c.json({ success: false, error: message }, message === 'Unauthorized' ? 401 : 500);
   }
 });
 
@@ -215,10 +203,7 @@ app.post('/sessions/:sessionId/send', async (c) => {
   } catch (error: unknown) {
     log.error('Error sending message to tax agent', error);
     const errMsg = getErrMsg(error);
-    return c.json(
-      { success: false, error: errMsg },
-      errMsg === 'Unauthorized' ? 401 : 500,
-    );
+    return c.json({ success: false, error: errMsg }, errMsg === 'Unauthorized' ? 401 : 500);
   }
 });
 
@@ -237,10 +222,7 @@ app.post('/sessions/:sessionId/save', async (c) => {
   } catch (error: unknown) {
     log.error('Error saving tax agent session', error);
     const message = getErrMsg(error);
-    return c.json(
-      { success: false, error: message },
-      message === 'Unauthorized' ? 401 : 500,
-    );
+    return c.json({ success: false, error: message }, message === 'Unauthorized' ? 401 : 500);
   }
 });
 
@@ -259,10 +241,7 @@ app.delete('/sessions/:sessionId', async (c) => {
   } catch (error: unknown) {
     log.error('Error deleting tax agent session', error);
     const message = getErrMsg(error);
-    return c.json(
-      { success: false, error: message },
-      message === 'Unauthorized' ? 401 : 500,
-    );
+    return c.json({ success: false, error: message }, message === 'Unauthorized' ? 401 : 500);
   }
 });
 

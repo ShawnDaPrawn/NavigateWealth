@@ -40,7 +40,7 @@ export function useClientProductKeys(clientId: string | undefined): MedicalAidPr
     // Helper to get value by key ID
     const getValueFromKeys = (keyId: string) => {
       if (!clientKeys || !clientKeys.keys) return undefined;
-      const key = clientKeys.keys.find(k => k.keyId === keyId);
+      const key = clientKeys.keys.find((k) => k.keyId === keyId);
       return key ? key.value : undefined;
     };
 
@@ -78,10 +78,13 @@ export function useClientProductKeys(clientId: string | undefined): MedicalAidPr
     // Calculate total premium from all policies if not in KV
     let calculatedTotalPremium: number | undefined = undefined;
     if (policiesData?.policies) {
-      calculatedTotalPremium = policiesData.policies.reduce((sum: number, p: { data?: Record<string, unknown> }) => {
-        const premium = parseNumber(p.data?.['ma_6']); // ma_6 is Premium
-        return sum + (premium || 0);
-      }, 0);
+      calculatedTotalPremium = policiesData.policies.reduce(
+        (sum: number, p: { data?: Record<string, unknown> }) => {
+          const premium = parseNumber(p.data?.['ma_6']); // ma_6 is Premium
+          return sum + (premium || 0);
+        },
+        0,
+      );
     }
 
     // Default Schema Field IDs for Medical Aid:

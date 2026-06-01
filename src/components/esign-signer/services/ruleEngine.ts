@@ -32,13 +32,7 @@ import type { SignerField } from '../types';
 
 export interface ConditionalRule {
   sourceFieldId: string;
-  operator:
-    | 'equals'
-    | 'not_equals'
-    | 'is_checked'
-    | 'is_unchecked'
-    | 'is_filled'
-    | 'is_empty';
+  operator: 'equals' | 'not_equals' | 'is_checked' | 'is_unchecked' | 'is_filled' | 'is_empty';
   value?: string;
 }
 
@@ -145,10 +139,7 @@ function evaluateRule(
  * non-numeric resolves to 0 so a half-filled form does not crash.
  * Returns `null` on a parse error.
  */
-function evaluateFormula(
-  formula: string,
-  values: Record<string, string>,
-): number | null {
+function evaluateFormula(formula: string, values: Record<string, string>): number | null {
   // Substitute {field:<id>} tokens with their numeric value.
   const substituted = formula.replace(/\{field:([^}]+)\}/g, (_match, id: string) => {
     const raw = values[id.trim()] ?? '';
@@ -259,7 +250,7 @@ export function evaluateRuleState(
     for (const f of fields) {
       const cond = getConditional(f);
       if (!cond || cond.rules.length === 0) continue;
-      const visible = cond.rules.every(rule => evaluateRule(rule, values, visibility));
+      const visible = cond.rules.every((rule) => evaluateRule(rule, values, visibility));
       if (visibility[f.id] !== visible) {
         visibility[f.id] = visible;
         changed = true;

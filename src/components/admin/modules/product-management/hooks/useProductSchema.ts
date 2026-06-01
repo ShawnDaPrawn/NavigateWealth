@@ -31,7 +31,7 @@ export function useProductSchema(selectedCategory: ProductCategoryId | '') {
         // Fall through to default
       }
       // Fallback to default schema
-      const defaultSchema = DEFAULT_SCHEMAS.find(s => s.categoryId === selectedCategory);
+      const defaultSchema = DEFAULT_SCHEMAS.find((s) => s.categoryId === selectedCategory);
       return defaultSchema ? { fields: [...defaultSchema.fields] } : { fields: [] };
     },
     enabled: !!selectedCategory,

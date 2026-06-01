@@ -89,7 +89,9 @@ export function SignatureCanvas({
   const [isDrawing, setIsDrawing] = useState(false);
   const [hasContent, setHasContent] = useState(false);
   // Default to the SAVED tab if we have one for this field type, otherwise DRAW.
-  const [signatureMode, setSignatureMode] = useState<SignatureMode>(hasSavedAsset ? 'saved' : 'draw');
+  const [signatureMode, setSignatureMode] = useState<SignatureMode>(
+    hasSavedAsset ? 'saved' : 'draw',
+  );
 
   // For initials, seed the typed text with auto-derived initials.
   // For signatures, seed with the signer's full name.
@@ -114,7 +116,7 @@ export function SignatureCanvas({
 
   // Load Google Fonts
   useEffect(() => {
-    const fontFamilies = SIGNATURE_FONTS.map(f => f.name.replace(/ /g, '+')).join('&family=');
+    const fontFamilies = SIGNATURE_FONTS.map((f) => f.name.replace(/ /g, '+')).join('&family=');
     const link = document.createElement('link');
     link.href = `https://fonts.googleapis.com/css2?family=${fontFamilies}:wght@400;700&display=swap`;
     link.rel = 'stylesheet';
@@ -198,16 +200,20 @@ export function SignatureCanvas({
 
   // ==================== DRAWING HANDLERS ====================
 
-  const getCoords = (e: React.MouseEvent<HTMLCanvasElement> | React.TouchEvent<HTMLCanvasElement>) => {
+  const getCoords = (
+    e: React.MouseEvent<HTMLCanvasElement> | React.TouchEvent<HTMLCanvasElement>,
+  ) => {
     const canvas = drawCanvasRef.current;
     if (!canvas) return { x: 0, y: 0 };
     const rect = canvas.getBoundingClientRect();
-    const clientX = 'touches' in e ? e.touches[0]?.clientX ?? 0 : e.clientX;
-    const clientY = 'touches' in e ? e.touches[0]?.clientY ?? 0 : e.clientY;
+    const clientX = 'touches' in e ? (e.touches[0]?.clientX ?? 0) : e.clientX;
+    const clientY = 'touches' in e ? (e.touches[0]?.clientY ?? 0) : e.clientY;
     return { x: clientX - rect.left, y: clientY - rect.top };
   };
 
-  const startDrawing = (e: React.MouseEvent<HTMLCanvasElement> | React.TouchEvent<HTMLCanvasElement>) => {
+  const startDrawing = (
+    e: React.MouseEvent<HTMLCanvasElement> | React.TouchEvent<HTMLCanvasElement>,
+  ) => {
     e.preventDefault();
     setIsDrawing(true);
     setHasContent(true);
@@ -292,9 +298,9 @@ export function SignatureCanvas({
     const ctx = canvas.getContext('2d');
     if (!ctx) return true;
     const pixelBuffer = new Uint32Array(
-      ctx.getImageData(0, 0, canvas.width, canvas.height).data.buffer
+      ctx.getImageData(0, 0, canvas.width, canvas.height).data.buffer,
     );
-    return !pixelBuffer.some(color => color !== 0);
+    return !pixelBuffer.some((color) => color !== 0);
   };
 
   const handleSave = () => {
@@ -334,8 +340,7 @@ export function SignatureCanvas({
     else if (signatureMode === 'type') {
       setTypedText('');
       setHasContent(false);
-    }
-    else if (signatureMode === 'upload') clearUpload();
+    } else if (signatureMode === 'upload') clearUpload();
   };
 
   const typeLabel = type === 'signature' ? 'Signature' : type === 'initials' ? 'Initials' : 'Input';
@@ -349,7 +354,9 @@ export function SignatureCanvas({
         value={signatureMode}
         onValueChange={(v) => {
           setSignatureMode(v as SignatureMode);
-          setHasContent(v === 'saved' ? hasSavedAsset : v === 'type' ? typedText.trim().length > 0 : false);
+          setHasContent(
+            v === 'saved' ? hasSavedAsset : v === 'type' ? typedText.trim().length > 0 : false,
+          );
         }}
       >
         <TabsList className={`grid w-full ${tabColsClass} h-auto`}>
@@ -378,7 +385,9 @@ export function SignatureCanvas({
           <TabsContent value="saved" className="space-y-3 mt-4">
             <div className="border-2 border-indigo-200 rounded-lg bg-white p-4">
               <div className="flex items-center justify-between mb-3">
-                <span className="text-xs font-medium text-gray-600">Your saved {typeLabel.toLowerCase()}</span>
+                <span className="text-xs font-medium text-gray-600">
+                  Your saved {typeLabel.toLowerCase()}
+                </span>
                 <Button
                   variant="ghost"
                   size="sm"
@@ -523,10 +532,7 @@ export function SignatureCanvas({
           </div>
 
           <div className="border-2 border-dashed border-gray-300 rounded-lg bg-white overflow-hidden">
-            <canvas
-              ref={typeCanvasRef}
-              className="w-full h-32"
-            />
+            <canvas ref={typeCanvasRef} className="w-full h-32" />
           </div>
         </TabsContent>
 
@@ -544,7 +550,9 @@ export function SignatureCanvas({
                 </div>
                 <div>
                   <p className="text-sm font-medium text-gray-700">Upload a signature image</p>
-                  <p className="text-xs text-gray-500 mt-1">PNG or JPG, max 2MB. Transparent backgrounds work best.</p>
+                  <p className="text-xs text-gray-500 mt-1">
+                    PNG or JPG, max 2MB. Transparent backgrounds work best.
+                  </p>
                 </div>
               </div>
             </button>
@@ -552,7 +560,12 @@ export function SignatureCanvas({
             <div className="border-2 border-gray-200 rounded-lg p-4 bg-white">
               <div className="flex items-center justify-between mb-3">
                 <span className="text-xs text-gray-500">Uploaded signature</span>
-                <Button variant="ghost" size="sm" onClick={clearUpload} className="h-7 text-red-500 hover:text-red-600 hover:bg-red-50">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={clearUpload}
+                  className="h-7 text-red-500 hover:text-red-600 hover:bg-red-50"
+                >
                   <Trash2 className="h-3.5 w-3.5 mr-1" />
                   Remove
                 </Button>

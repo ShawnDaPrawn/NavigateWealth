@@ -12,7 +12,9 @@ export const DEFAULT_LEGAL_PDF_RENDERER_VERSION: LegalPdfRendererVersion = 'page
 export const LEGAL_PDF_RENDERER_QUERY_PARAM = 'legalPdfRenderer';
 export const LEGAL_PDF_RENDERER_STORAGE_KEY = 'nw:legal-pdf-renderer';
 
-function normalizeLegalPdfRendererVersion(value: string | null | undefined): LegalPdfRendererVersion | null {
+function normalizeLegalPdfRendererVersion(
+  value: string | null | undefined,
+): LegalPdfRendererVersion | null {
   if (!value) return null;
   const normalized = value.trim().toLowerCase();
   if (normalized === 'legacy' || normalized === 'paged') {
@@ -23,7 +25,9 @@ function normalizeLegalPdfRendererVersion(value: string | null | undefined): Leg
 
 export function getStoredLegalPdfRendererOverride(): LegalPdfRendererVersion | null {
   if (typeof window === 'undefined') return null;
-  return normalizeLegalPdfRendererVersion(window.localStorage.getItem(LEGAL_PDF_RENDERER_STORAGE_KEY));
+  return normalizeLegalPdfRendererVersion(
+    window.localStorage.getItem(LEGAL_PDF_RENDERER_STORAGE_KEY),
+  );
 }
 
 export function setStoredLegalPdfRendererOverride(version: LegalPdfRendererVersion) {
@@ -61,9 +65,8 @@ export function resolveLegalPdfRendererVersion({
     }
   }
 
-  const effectiveVersion: LegalPdfRendererVersion = requestedVersion === 'paged'
-    ? (pagedAvailable ? 'paged' : 'legacy')
-    : 'legacy';
+  const effectiveVersion: LegalPdfRendererVersion =
+    requestedVersion === 'paged' ? (pagedAvailable ? 'paged' : 'legacy') : 'legacy';
 
   return {
     defaultVersion: DEFAULT_LEGAL_PDF_RENDERER_VERSION,

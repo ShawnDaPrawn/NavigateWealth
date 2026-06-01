@@ -22,21 +22,8 @@ import {
 } from '../ui/dialog';
 import { Input } from '../ui/input';
 import { Label } from '../ui/label';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '../ui/select';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '../ui/table';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../ui/table';
 import { Textarea } from '../ui/textarea';
 import {
   Package,
@@ -235,44 +222,148 @@ const SUBMISSIONS_API = `https://${projectId}.supabase.co/functions/v1/make-serv
 
 const CHANGE_OPTIONS_BY_SERVICE: Record<ServiceModule['id'], ChangeOption[]> = {
   'risk-management': [
-    { id: 'beneficiary_change', label: 'Beneficiary change', description: 'Update or replace the nominated beneficiary on this policy.' },
-    { id: 'debit_order_date_change', label: 'Debit order date change', description: 'Request a new debit order collection date.' },
-    { id: 'bank_account_change', label: 'Bank account change', description: 'Change the bank account linked to this premium collection.' },
-    { id: 'cover_review', label: 'Cover review', description: 'Ask us to review whether this cover still matches your needs.' },
+    {
+      id: 'beneficiary_change',
+      label: 'Beneficiary change',
+      description: 'Update or replace the nominated beneficiary on this policy.',
+    },
+    {
+      id: 'debit_order_date_change',
+      label: 'Debit order date change',
+      description: 'Request a new debit order collection date.',
+    },
+    {
+      id: 'bank_account_change',
+      label: 'Bank account change',
+      description: 'Change the bank account linked to this premium collection.',
+    },
+    {
+      id: 'cover_review',
+      label: 'Cover review',
+      description: 'Ask us to review whether this cover still matches your needs.',
+    },
   ],
   'medical-aid': [
-    { id: 'plan_change', label: 'Plan option change', description: 'Request help changing the medical aid plan option.' },
-    { id: 'dependant_update', label: 'Dependant update', description: 'Add or remove a dependant on this plan.' },
-    { id: 'bank_account_change', label: 'Bank account change', description: 'Change the bank account used for monthly collections.' },
-    { id: 'membership_update', label: 'Membership detail change', description: 'Update contact or membership details linked to this plan.' },
+    {
+      id: 'plan_change',
+      label: 'Plan option change',
+      description: 'Request help changing the medical aid plan option.',
+    },
+    {
+      id: 'dependant_update',
+      label: 'Dependant update',
+      description: 'Add or remove a dependant on this plan.',
+    },
+    {
+      id: 'bank_account_change',
+      label: 'Bank account change',
+      description: 'Change the bank account used for monthly collections.',
+    },
+    {
+      id: 'membership_update',
+      label: 'Membership detail change',
+      description: 'Update contact or membership details linked to this plan.',
+    },
   ],
   'investment-management': [
-    { id: 'contribution_change', label: 'Contribution change', description: 'Increase, reduce, or pause regular contributions.' },
-    { id: 'bank_account_change', label: 'Bank account change', description: 'Update the bank account used for recurring investments.' },
-    { id: 'withdrawal_request', label: 'Withdrawal request', description: 'Ask for help with a withdrawal or access request.' },
-    { id: 'switch_instruction', label: 'Switch instruction', description: 'Request a review or switch instruction on this investment.' },
+    {
+      id: 'contribution_change',
+      label: 'Contribution change',
+      description: 'Increase, reduce, or pause regular contributions.',
+    },
+    {
+      id: 'bank_account_change',
+      label: 'Bank account change',
+      description: 'Update the bank account used for recurring investments.',
+    },
+    {
+      id: 'withdrawal_request',
+      label: 'Withdrawal request',
+      description: 'Ask for help with a withdrawal or access request.',
+    },
+    {
+      id: 'switch_instruction',
+      label: 'Switch instruction',
+      description: 'Request a review or switch instruction on this investment.',
+    },
   ],
   'retirement-planning': [
-    { id: 'contribution_change', label: 'Contribution change', description: 'Adjust the monthly contribution on this retirement plan.' },
-    { id: 'beneficiary_change', label: 'Beneficiary change', description: 'Update the beneficiary details attached to this plan.' },
-    { id: 'bank_account_change', label: 'Bank account change', description: 'Change the bank account used for contributions.' },
-    { id: 'retirement_review', label: 'Retirement review', description: 'Request a review of this retirement policy or fund.' },
+    {
+      id: 'contribution_change',
+      label: 'Contribution change',
+      description: 'Adjust the monthly contribution on this retirement plan.',
+    },
+    {
+      id: 'beneficiary_change',
+      label: 'Beneficiary change',
+      description: 'Update the beneficiary details attached to this plan.',
+    },
+    {
+      id: 'bank_account_change',
+      label: 'Bank account change',
+      description: 'Change the bank account used for contributions.',
+    },
+    {
+      id: 'retirement_review',
+      label: 'Retirement review',
+      description: 'Request a review of this retirement policy or fund.',
+    },
   ],
   'tax-planning': [
-    { id: 'document_request', label: 'Document request', description: 'Request tax documents or supporting records for this service.' },
-    { id: 'submission_support', label: 'Submission support', description: 'Ask for help with a tax filing or submission-related change.' },
-    { id: 'detail_update', label: 'Detail update', description: 'Update the information we should use for this tax service.' },
+    {
+      id: 'document_request',
+      label: 'Document request',
+      description: 'Request tax documents or supporting records for this service.',
+    },
+    {
+      id: 'submission_support',
+      label: 'Submission support',
+      description: 'Ask for help with a tax filing or submission-related change.',
+    },
+    {
+      id: 'detail_update',
+      label: 'Detail update',
+      description: 'Update the information we should use for this tax service.',
+    },
   ],
   'estate-planning': [
-    { id: 'beneficiary_change', label: 'Beneficiary change', description: 'Request a beneficiary-related update connected to this planning area.' },
-    { id: 'document_update', label: 'Document update', description: 'Ask us to update or review a will, trust, or estate document.' },
-    { id: 'planning_review', label: 'Planning review', description: 'Request an estate planning review meeting for this arrangement.' },
+    {
+      id: 'beneficiary_change',
+      label: 'Beneficiary change',
+      description: 'Request a beneficiary-related update connected to this planning area.',
+    },
+    {
+      id: 'document_update',
+      label: 'Document update',
+      description: 'Ask us to update or review a will, trust, or estate document.',
+    },
+    {
+      id: 'planning_review',
+      label: 'Planning review',
+      description: 'Request an estate planning review meeting for this arrangement.',
+    },
   ],
   'employee-benefits': [
-    { id: 'member_update', label: 'Member detail change', description: 'Update employee or membership information on this benefit plan.' },
-    { id: 'beneficiary_change', label: 'Beneficiary change', description: 'Update the nominated beneficiary for this benefit.' },
-    { id: 'bank_account_change', label: 'Bank account change', description: 'Update the banking details linked to this arrangement.' },
-    { id: 'benefit_review', label: 'Benefit review', description: 'Request a review of the benefits or cover attached to this plan.' },
+    {
+      id: 'member_update',
+      label: 'Member detail change',
+      description: 'Update employee or membership information on this benefit plan.',
+    },
+    {
+      id: 'beneficiary_change',
+      label: 'Beneficiary change',
+      description: 'Update the nominated beneficiary for this benefit.',
+    },
+    {
+      id: 'bank_account_change',
+      label: 'Bank account change',
+      description: 'Update the banking details linked to this arrangement.',
+    },
+    {
+      id: 'benefit_review',
+      label: 'Benefit review',
+      description: 'Request a review of the benefits or cover attached to this plan.',
+    },
   ],
 };
 
@@ -357,7 +448,8 @@ function holdingStatusClass(status: string): string {
   if (lower === 'active') return 'bg-emerald-50 text-emerald-700 border-emerald-200';
   if (lower === 'lapsed' || lower === 'cancelled') return 'bg-red-50 text-red-700 border-red-200';
   if (lower === 'archived') return 'bg-gray-50 text-gray-600 border-gray-200';
-  if (lower.includes('review') || lower.includes('progress')) return 'bg-amber-50 text-amber-700 border-amber-200';
+  if (lower.includes('review') || lower.includes('progress'))
+    return 'bg-amber-50 text-amber-700 border-amber-200';
   return 'bg-blue-50 text-blue-700 border-blue-200';
 }
 
@@ -372,17 +464,41 @@ function getChangeOptionsForHolding(
 
   if (service.id === 'medical-aid' && productText.includes('gap')) {
     return [
-      { id: 'bank_account_change', label: 'Bank account change', description: 'Change the bank account used for this gap cover premium.' },
-      { id: 'benefit_review', label: 'Benefit review', description: 'Request a review of the benefit structure on this gap cover plan.' },
-      { id: 'membership_update', label: 'Membership detail change', description: 'Update the member details linked to this gap cover policy.' },
+      {
+        id: 'bank_account_change',
+        label: 'Bank account change',
+        description: 'Change the bank account used for this gap cover premium.',
+      },
+      {
+        id: 'benefit_review',
+        label: 'Benefit review',
+        description: 'Request a review of the benefit structure on this gap cover plan.',
+      },
+      {
+        id: 'membership_update',
+        label: 'Membership detail change',
+        description: 'Update the member details linked to this gap cover policy.',
+      },
     ];
   }
 
   if (service.id === 'investment-management' && productText.includes('offshore')) {
     return [
-      { id: 'contribution_change', label: 'Contribution change', description: 'Adjust the ongoing contribution into this offshore investment.' },
-      { id: 'switch_instruction', label: 'Switch instruction', description: 'Request guidance on switching or rebalancing this offshore investment.' },
-      { id: 'withdrawal_request', label: 'Withdrawal request', description: 'Ask for help with a withdrawal or access request on this investment.' },
+      {
+        id: 'contribution_change',
+        label: 'Contribution change',
+        description: 'Adjust the ongoing contribution into this offshore investment.',
+      },
+      {
+        id: 'switch_instruction',
+        label: 'Switch instruction',
+        description: 'Request guidance on switching or rebalancing this offshore investment.',
+      },
+      {
+        id: 'withdrawal_request',
+        label: 'Withdrawal request',
+        description: 'Ask for help with a withdrawal or access request on this investment.',
+      },
     ];
   }
 
@@ -391,11 +507,14 @@ function getChangeOptionsForHolding(
 
 // ── Status config (Guidelines §5.3, §8.3) ────────────────────────────────
 
-const STATUS_CONFIG: Record<ServiceStatus, {
-  badgeClass: string;
-  dotClass: string;
-  icon: React.ElementType;
-}> = {
+const STATUS_CONFIG: Record<
+  ServiceStatus,
+  {
+    badgeClass: string;
+    dotClass: string;
+    icon: React.ElementType;
+  }
+> = {
   active: {
     badgeClass: 'bg-emerald-50 text-emerald-700 border-emerald-200',
     dotClass: 'bg-emerald-500',
@@ -452,8 +571,7 @@ export function ProductsServicesDashboardPage() {
       const matchesSearch =
         service.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
         service.description.toLowerCase().includes(searchQuery.toLowerCase());
-      const matchesCategory =
-        selectedCategory === 'All' || service.category === selectedCategory;
+      const matchesCategory = selectedCategory === 'All' || service.category === selectedCategory;
       return matchesSearch && matchesCategory;
     });
   }, [enrichedServices, searchQuery, selectedCategory]);
@@ -542,7 +660,9 @@ export function ProductsServicesDashboardPage() {
       return;
     }
 
-    const hasSelectedType = availableChangeOptions.some((option) => option.id === selectedChangeType);
+    const hasSelectedType = availableChangeOptions.some(
+      (option) => option.id === selectedChangeType,
+    );
     if (!hasSelectedType) {
       setSelectedChangeType(availableChangeOptions[0].id);
     }
@@ -579,7 +699,9 @@ export function ProductsServicesDashboardPage() {
       return;
     }
 
-    const selectedOption = availableChangeOptions.find((option) => option.id === selectedChangeType);
+    const selectedOption = availableChangeOptions.find(
+      (option) => option.id === selectedChangeType,
+    );
     if (!selectedOption) {
       toast.error('Choose the type of change you would like to request.');
       return;
@@ -626,14 +748,17 @@ export function ProductsServicesDashboardPage() {
       toast.success('Your change request has been sent to our team.');
       resetChangeRequestForm();
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Unable to submit your change request right now.';
+      const message =
+        error instanceof Error ? error.message : 'Unable to submit your change request right now.';
       toast.error(message);
       setSubmittingChangeRequest(false);
     }
   };
 
   return (
-    <div className={`min-h-screen ${ACTIVE_THEME === 'branded' ? 'bg-[#f8f9fb]' : 'bg-[rgb(249,249,249)]'}`}>
+    <div
+      className={`min-h-screen ${ACTIVE_THEME === 'branded' ? 'bg-[#f8f9fb]' : 'bg-[rgb(249,249,249)]'}`}
+    >
       {/* Branded Page Header */}
       <PortalPageHeader
         title="Products & Services"
@@ -659,13 +784,19 @@ export function ProductsServicesDashboardPage() {
                         : 'border-gray-200 bg-white hover:border-gray-300 hover:bg-gray-50'
                     }`}
                   >
-                    <div className={`h-9 w-9 rounded-xl flex items-center justify-center ${service.bgColor}`}>
+                    <div
+                      className={`h-9 w-9 rounded-xl flex items-center justify-center ${service.bgColor}`}
+                    >
                       <service.icon className={`h-4.5 w-4.5 ${service.iconColor}`} />
                     </div>
-                    <p className={`mt-2.5 text-sm font-semibold ${isSelected ? 'text-[#6d28d9]' : 'text-gray-900'}`}>
+                    <p
+                      className={`mt-2.5 text-sm font-semibold ${isSelected ? 'text-[#6d28d9]' : 'text-gray-900'}`}
+                    >
                       {service.shortLabel}
                     </p>
-                    <p className="mt-0.5 text-[11px] text-gray-500">{service.derived.statusLabel}</p>
+                    <p className="mt-0.5 text-[11px] text-gray-500">
+                      {service.derived.statusLabel}
+                    </p>
                   </button>
                 );
               })}
@@ -677,8 +808,12 @@ export function ProductsServicesDashboardPage() {
               <div className="px-7 py-7 border-b border-gray-100">
                 <div className="flex flex-col xl:flex-row xl:items-start xl:justify-between gap-6">
                   <div className="flex items-start gap-4 min-w-0">
-                    <div className={`h-14 w-14 rounded-2xl flex items-center justify-center flex-shrink-0 ${selectedDesktopService.bgColor}`}>
-                      <selectedDesktopService.icon className={`h-7 w-7 ${selectedDesktopService.iconColor}`} />
+                    <div
+                      className={`h-14 w-14 rounded-2xl flex items-center justify-center flex-shrink-0 ${selectedDesktopService.bgColor}`}
+                    >
+                      <selectedDesktopService.icon
+                        className={`h-7 w-7 ${selectedDesktopService.iconColor}`}
+                      />
                     </div>
                     <div className="min-w-0">
                       <div className="flex items-center gap-2.5 flex-wrap">
@@ -767,9 +902,9 @@ export function ProductsServicesDashboardPage() {
                           {selectedDesktopService.category}
                         </p>
                         <p className="mt-1 text-sm leading-6 text-gray-500">
-                          This tab focuses on {selectedDesktopService.focusAreas[0].toLowerCase()},
-                          {' '}{selectedDesktopService.focusAreas[1].toLowerCase()}, and
-                          {' '}{selectedDesktopService.focusAreas[2].toLowerCase()}.
+                          This tab focuses on {selectedDesktopService.focusAreas[0].toLowerCase()},{' '}
+                          {selectedDesktopService.focusAreas[1].toLowerCase()}, and{' '}
+                          {selectedDesktopService.focusAreas[2].toLowerCase()}.
                         </p>
                       </div>
 
@@ -789,9 +924,7 @@ export function ProductsServicesDashboardPage() {
                     <div className="rounded-2xl border border-gray-200 overflow-hidden">
                       <div className="flex items-center justify-between gap-4 border-b border-gray-100 bg-gray-50/70 px-5 py-4">
                         <div>
-                          <h3 className="text-base font-semibold text-gray-900">
-                            Policy Schedule
-                          </h3>
+                          <h3 className="text-base font-semibold text-gray-900">Policy Schedule</h3>
                           <p className="mt-1 text-sm text-gray-500">
                             Review your current plans, status, and key policy details in this area.
                           </p>
@@ -801,12 +934,24 @@ export function ProductsServicesDashboardPage() {
                       <Table>
                         <TableHeader>
                           <TableRow className="bg-white">
-                            <TableHead className="text-xs font-medium text-gray-600">Provider</TableHead>
-                            <TableHead className="text-xs font-medium text-gray-600">Plan</TableHead>
-                            <TableHead className="text-xs font-medium text-gray-600">Policy No.</TableHead>
-                            <TableHead className="text-xs font-medium text-gray-600 text-right">Cover / Value</TableHead>
-                            <TableHead className="text-xs font-medium text-gray-600 text-right">Monthly Premium</TableHead>
-                            <TableHead className="text-xs font-medium text-gray-600 text-center">Status</TableHead>
+                            <TableHead className="text-xs font-medium text-gray-600">
+                              Provider
+                            </TableHead>
+                            <TableHead className="text-xs font-medium text-gray-600">
+                              Plan
+                            </TableHead>
+                            <TableHead className="text-xs font-medium text-gray-600">
+                              Policy No.
+                            </TableHead>
+                            <TableHead className="text-xs font-medium text-gray-600 text-right">
+                              Cover / Value
+                            </TableHead>
+                            <TableHead className="text-xs font-medium text-gray-600 text-right">
+                              Monthly Premium
+                            </TableHead>
+                            <TableHead className="text-xs font-medium text-gray-600 text-center">
+                              Status
+                            </TableHead>
                           </TableRow>
                         </TableHeader>
                         <TableBody>
@@ -843,8 +988,12 @@ export function ProductsServicesDashboardPage() {
                   </>
                 ) : (
                   <div className="rounded-2xl border border-dashed border-gray-300 bg-gray-50/50 px-8 py-12 text-center">
-                    <div className={`mx-auto flex h-14 w-14 items-center justify-center rounded-2xl ${selectedDesktopService.bgColor}`}>
-                      <selectedDesktopService.icon className={`h-7 w-7 ${selectedDesktopService.iconColor}`} />
+                    <div
+                      className={`mx-auto flex h-14 w-14 items-center justify-center rounded-2xl ${selectedDesktopService.bgColor}`}
+                    >
+                      <selectedDesktopService.icon
+                        className={`h-7 w-7 ${selectedDesktopService.iconColor}`}
+                      />
                     </div>
                     <h3 className="mt-5 text-xl font-semibold text-gray-900">
                       No policies in {selectedDesktopService.shortLabel.toLowerCase()} yet
@@ -876,314 +1025,345 @@ export function ProductsServicesDashboardPage() {
         </div>
 
         <div className="lg:hidden">
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 lg:gap-8">
-
-          {/* ═══ LEFT SIDEBAR ═══ */}
-          <div className="lg:col-span-1 space-y-5">
-
-            {/* Portfolio Snapshot */}
-            <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
-              <div className="px-5 py-4 border-b border-gray-100">
-                <h2 className="text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                  Portfolio Snapshot
-                </h2>
-              </div>
-              <div className="p-5 space-y-3">
-                {isLoading ? (
-                  <div className="space-y-3">
-                    {[1, 2, 3].map((i) => (
-                      <div key={i} className="flex items-center justify-between">
-                        <div className="h-4 w-24 bg-gray-100 rounded animate-pulse" />
-                        <div className="h-5 w-10 bg-gray-100 rounded animate-pulse" />
+          <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 lg:gap-8">
+            {/* ═══ LEFT SIDEBAR ═══ */}
+            <div className="lg:col-span-1 space-y-5">
+              {/* Portfolio Snapshot */}
+              <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+                <div className="px-5 py-4 border-b border-gray-100">
+                  <h2 className="text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                    Portfolio Snapshot
+                  </h2>
+                </div>
+                <div className="p-5 space-y-3">
+                  {isLoading ? (
+                    <div className="space-y-3">
+                      {[1, 2, 3].map((i) => (
+                        <div key={i} className="flex items-center justify-between">
+                          <div className="h-4 w-24 bg-gray-100 rounded animate-pulse" />
+                          <div className="h-5 w-10 bg-gray-100 rounded animate-pulse" />
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="contents">
+                      <div className="flex items-center justify-between py-1">
+                        <span className="text-sm text-gray-600">Total Modules</span>
+                        <span className="text-sm font-semibold text-gray-900 bg-gray-100 px-2.5 py-0.5 rounded-md">
+                          {stats.total}
+                        </span>
                       </div>
-                    ))}
-                  </div>
-                ) : (
-                  <div className="contents">
-                    <div className="flex items-center justify-between py-1">
-                      <span className="text-sm text-gray-600">Total Modules</span>
-                      <span className="text-sm font-semibold text-gray-900 bg-gray-100 px-2.5 py-0.5 rounded-md">{stats.total}</span>
+                      <div className="flex items-center justify-between py-1">
+                        <span className="text-sm text-gray-600">Active Services</span>
+                        <span className="text-sm font-semibold text-emerald-700 bg-emerald-50 px-2.5 py-0.5 rounded-md">
+                          {stats.active}
+                        </span>
+                      </div>
+                      <div className="flex items-center justify-between py-1">
+                        <span className="text-sm text-gray-600">Total Policies</span>
+                        <span className="text-sm font-semibold text-blue-700 bg-blue-50 px-2.5 py-0.5 rounded-md">
+                          {stats.totalPolicies}
+                        </span>
+                      </div>
+                      <div className="flex items-center justify-between py-1">
+                        <span className="text-sm text-gray-600">Available</span>
+                        <span className="text-sm font-medium text-gray-500 bg-gray-50 px-2.5 py-0.5 rounded-md">
+                          {stats.available}
+                        </span>
+                      </div>
                     </div>
-                    <div className="flex items-center justify-between py-1">
-                      <span className="text-sm text-gray-600">Active Services</span>
-                      <span className="text-sm font-semibold text-emerald-700 bg-emerald-50 px-2.5 py-0.5 rounded-md">{stats.active}</span>
-                    </div>
-                    <div className="flex items-center justify-between py-1">
-                      <span className="text-sm text-gray-600">Total Policies</span>
-                      <span className="text-sm font-semibold text-blue-700 bg-blue-50 px-2.5 py-0.5 rounded-md">{stats.totalPolicies}</span>
-                    </div>
-                    <div className="flex items-center justify-between py-1">
-                      <span className="text-sm text-gray-600">Available</span>
-                      <span className="text-sm font-medium text-gray-500 bg-gray-50 px-2.5 py-0.5 rounded-md">{stats.available}</span>
-                    </div>
-                  </div>
-                )}
+                  )}
 
-                <div className="pt-3 mt-1 border-t border-gray-100">
-                  <button
-                    className="w-full flex items-center justify-center gap-2 bg-[#6d28d9] hover:bg-[#5b21b6] text-white text-sm font-medium py-2.5 px-4 rounded-lg transition-colors shadow-sm"
-                    onClick={() => navigate('/ai-advisor')}
-                  >
-                    <Sparkles className="h-4 w-4" />
-                    Ask Vasco
-                  </button>
+                  <div className="pt-3 mt-1 border-t border-gray-100">
+                    <button
+                      className="w-full flex items-center justify-center gap-2 bg-[#6d28d9] hover:bg-[#5b21b6] text-white text-sm font-medium py-2.5 px-4 rounded-lg transition-colors shadow-sm"
+                      onClick={() => navigate('/ai-advisor')}
+                    >
+                      <Sparkles className="h-4 w-4" />
+                      Ask Vasco
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              {/* Category Navigation */}
+              <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden hidden lg:block">
+                <div className="px-5 py-4 border-b border-gray-100">
+                  <h2 className="text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                    Categories
+                  </h2>
+                </div>
+                <div className="p-3">
+                  <div className="space-y-0.5">
+                    {CATEGORIES.map((cat) => {
+                      const isSelected = selectedCategory === cat;
+                      const count =
+                        cat === 'All'
+                          ? enrichedServices.length
+                          : enrichedServices.filter((s) => s.category === cat).length;
+
+                      return (
+                        <button
+                          key={cat}
+                          onClick={() => setSelectedCategory(cat)}
+                          className={`w-full text-left px-3 py-2.5 text-sm rounded-lg transition-all duration-150 flex items-center justify-between group ${
+                            isSelected
+                              ? 'bg-purple-50 text-[#6d28d9] font-medium'
+                              : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+                          }`}
+                        >
+                          <span>{cat}</span>
+                          <div className="flex items-center gap-1.5">
+                            <span
+                              className={`text-xs ${isSelected ? 'text-purple-400' : 'text-gray-400'}`}
+                            >
+                              {count}
+                            </span>
+                            {isSelected && <ChevronRight className="h-3.5 w-3.5" />}
+                          </div>
+                        </button>
+                      );
+                    })}
+                  </div>
                 </div>
               </div>
             </div>
 
-            {/* Category Navigation */}
-            <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden hidden lg:block">
-              <div className="px-5 py-4 border-b border-gray-100">
-                <h2 className="text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                  Categories
-                </h2>
-              </div>
-              <div className="p-3">
-                <div className="space-y-0.5">
-                  {CATEGORIES.map((cat) => {
-                    const isSelected = selectedCategory === cat;
-                    const count = cat === 'All'
-                      ? enrichedServices.length
-                      : enrichedServices.filter((s) => s.category === cat).length;
+            {/* ═══ MAIN CONTENT ═══ */}
+            <div className="lg:col-span-3 space-y-5">
+              {/* Search & View Toggle */}
+              <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-4 flex flex-col sm:flex-row gap-3 items-center">
+                <div className="relative w-full sm:max-w-md">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                  <Input
+                    placeholder="Search products & services..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="pl-9 bg-gray-50 border-gray-200 focus:bg-white transition-colors h-10"
+                  />
+                  {searchQuery && (
+                    <button
+                      onClick={() => setSearchQuery('')}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                    >
+                      <X className="h-3.5 w-3.5" />
+                    </button>
+                  )}
+                </div>
 
+                {/* Mobile categories */}
+                <div className="flex items-center gap-2 w-full sm:w-auto overflow-x-auto lg:hidden pb-1">
+                  {CATEGORIES.map((cat) => (
+                    <button
+                      key={cat}
+                      onClick={() => setSelectedCategory(cat)}
+                      className={`px-3 py-1.5 text-xs font-medium rounded-full whitespace-nowrap border transition-colors ${
+                        selectedCategory === cat
+                          ? 'bg-purple-50 text-[#6d28d9] border-purple-200'
+                          : 'bg-white text-gray-500 border-gray-200 hover:border-gray-300'
+                      }`}
+                    >
+                      {cat}
+                    </button>
+                  ))}
+                </div>
+
+                <div className="flex items-center gap-1 bg-gray-100 p-1 rounded-lg border border-gray-200 ml-auto flex-shrink-0">
+                  <button
+                    onClick={() => setViewMode('list')}
+                    className={`p-2 rounded-md transition-all ${
+                      viewMode === 'list'
+                        ? 'bg-white text-gray-900 shadow-sm'
+                        : 'text-gray-500 hover:text-gray-700'
+                    }`}
+                    title="List View"
+                  >
+                    <ListIcon className="h-4 w-4" />
+                  </button>
+                  <button
+                    onClick={() => setViewMode('grid')}
+                    className={`p-2 rounded-md transition-all ${
+                      viewMode === 'grid'
+                        ? 'bg-white text-gray-900 shadow-sm'
+                        : 'text-gray-500 hover:text-gray-700'
+                    }`}
+                    title="Grid View"
+                  >
+                    <LayoutGrid className="h-4 w-4" />
+                  </button>
+                </div>
+              </div>
+
+              {/* Loading state */}
+              {isLoading && (
+                <div
+                  className={
+                    viewMode === 'grid' ? 'grid grid-cols-1 md:grid-cols-2 gap-4' : 'space-y-3'
+                  }
+                >
+                  {[1, 2, 3, 4, 5].map((i) => (
+                    <div
+                      key={i}
+                      className="bg-white rounded-xl border border-gray-200 p-6 animate-pulse"
+                    >
+                      <div className="flex items-start gap-4">
+                        <div className="h-12 w-12 rounded-xl bg-gray-100 flex-shrink-0" />
+                        <div className="flex-1 space-y-2">
+                          <div className="h-5 w-40 bg-gray-100 rounded" />
+                          <div className="h-4 w-64 bg-gray-50 rounded" />
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* Empty state */}
+              {!isLoading && filteredServices.length === 0 && (
+                <div className="text-center py-16 bg-white rounded-xl border border-gray-200 border-dashed">
+                  <div className="inline-flex items-center justify-center w-14 h-14 rounded-full bg-gray-50 mb-4">
+                    <Search className="h-6 w-6 text-gray-400" />
+                  </div>
+                  <h3 className="text-base font-semibold text-gray-900">No services found</h3>
+                  <p className="text-sm text-gray-500 mt-1">
+                    Try adjusting your search or category filter
+                  </p>
+                  <button
+                    onClick={() => {
+                      setSearchQuery('');
+                      setSelectedCategory('All');
+                    }}
+                    className="text-sm text-[#6d28d9] hover:text-[#5b21b6] font-medium mt-3 inline-block"
+                  >
+                    Clear all filters
+                  </button>
+                </div>
+              )}
+
+              {/* Services List / Grid */}
+              {!isLoading && filteredServices.length > 0 && (
+                <div
+                  className={
+                    viewMode === 'grid' ? 'grid grid-cols-1 md:grid-cols-2 gap-4' : 'space-y-3'
+                  }
+                >
+                  {filteredServices.map((service) => {
+                    const { derived } = service;
+                    const statusCfg = STATUS_CONFIG[derived.status];
+                    const StatusIcon = statusCfg.icon;
+
+                    if (viewMode === 'grid') {
+                      return (
+                        <button
+                          key={service.id}
+                          onClick={() => navigate(service.path)}
+                          className="group bg-white rounded-xl border border-gray-200 shadow-sm hover:shadow-md hover:border-gray-300 transition-all duration-200 text-left p-5 flex flex-col"
+                        >
+                          <div className="flex items-start justify-between mb-4">
+                            <div
+                              className={`h-11 w-11 rounded-xl flex items-center justify-center ${service.bgColor}`}
+                            >
+                              <service.icon className={`h-5 w-5 ${service.iconColor}`} />
+                            </div>
+                            <Badge
+                              variant="outline"
+                              className={`text-[10px] px-2 py-0.5 h-5 font-medium border ${statusCfg.badgeClass}`}
+                            >
+                              <span
+                                className={`inline-block h-1.5 w-1.5 rounded-full mr-1 ${statusCfg.dotClass}`}
+                              />
+                              {derived.statusLabel}
+                            </Badge>
+                          </div>
+
+                          <h3 className="text-[15px] font-semibold text-gray-900 group-hover:text-[#6d28d9] transition-colors mb-1">
+                            {service.title}
+                          </h3>
+                          <p className="text-sm text-gray-500 leading-relaxed mb-4 flex-1">
+                            {service.description}
+                          </p>
+
+                          <div className="flex items-center justify-between pt-3 border-t border-gray-100">
+                            {derived.policyCount > 0 ? (
+                              <div className="flex items-center gap-1.5">
+                                <StatusIcon className="h-3.5 w-3.5 text-emerald-500" />
+                                <span className="text-xs font-medium text-gray-700">
+                                  {derived.statValue}
+                                </span>
+                              </div>
+                            ) : (
+                              <span className="text-xs text-gray-400">{derived.statValue}</span>
+                            )}
+                            <div className="h-7 w-7 rounded-full bg-gray-50 border border-gray-200 flex items-center justify-center text-gray-400 group-hover:border-[#6d28d9] group-hover:text-[#6d28d9] group-hover:bg-purple-50 transition-all">
+                              <ArrowRight className="h-3.5 w-3.5" />
+                            </div>
+                          </div>
+                        </button>
+                      );
+                    }
+
+                    // List view
                     return (
                       <button
-                        key={cat}
-                        onClick={() => setSelectedCategory(cat)}
-                        className={`w-full text-left px-3 py-2.5 text-sm rounded-lg transition-all duration-150 flex items-center justify-between group ${
-                          isSelected
-                            ? 'bg-purple-50 text-[#6d28d9] font-medium'
-                            : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
-                        }`}
+                        key={service.id}
+                        onClick={() => navigate(service.path)}
+                        className="group w-full bg-white rounded-xl border border-gray-200 shadow-sm hover:shadow-md hover:border-gray-300 transition-all duration-200 text-left"
                       >
-                        <span>{cat}</span>
-                        <div className="flex items-center gap-1.5">
-                          <span className={`text-xs ${isSelected ? 'text-purple-400' : 'text-gray-400'}`}>
-                            {count}
-                          </span>
-                          {isSelected && <ChevronRight className="h-3.5 w-3.5" />}
+                        <div className="flex items-center p-5 gap-5">
+                          {/* Icon */}
+                          <div
+                            className={`h-12 w-12 rounded-xl flex-shrink-0 flex items-center justify-center ${service.bgColor} group-hover:scale-105 transition-transform duration-200`}
+                          >
+                            <service.icon className={`h-5.5 w-5.5 ${service.iconColor}`} />
+                          </div>
+
+                          {/* Title & Description */}
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2.5 mb-0.5">
+                              <h3 className="text-[15px] font-semibold text-gray-900 group-hover:text-[#6d28d9] transition-colors">
+                                {service.title}
+                              </h3>
+                              <Badge
+                                variant="outline"
+                                className={`text-[10px] px-2 py-0.5 h-5 font-medium border ${statusCfg.badgeClass} hidden sm:inline-flex`}
+                              >
+                                <span
+                                  className={`inline-block h-1.5 w-1.5 rounded-full mr-1 ${statusCfg.dotClass}`}
+                                />
+                                {derived.statusLabel}
+                              </Badge>
+                            </div>
+                            <p className="text-sm text-gray-500 leading-relaxed truncate sm:whitespace-normal">
+                              {service.description}
+                            </p>
+                          </div>
+
+                          {/* Stats */}
+                          <div className="hidden md:flex flex-col items-end pl-4 border-l border-gray-100 min-w-[100px]">
+                            <span className="text-[10px] text-gray-400 uppercase tracking-wide font-medium">
+                              {derived.statLabel}
+                            </span>
+                            <span
+                              className={`text-sm font-semibold mt-0.5 ${
+                                derived.policyCount > 0 ? 'text-gray-900' : 'text-gray-400'
+                              }`}
+                            >
+                              {derived.statValue}
+                            </span>
+                          </div>
+
+                          {/* Arrow */}
+                          <div className="h-8 w-8 rounded-full bg-gray-50 border border-gray-200 flex-shrink-0 flex items-center justify-center text-gray-400 group-hover:border-[#6d28d9] group-hover:text-[#6d28d9] group-hover:bg-purple-50 transition-all">
+                            <ArrowRight className="h-4 w-4" />
+                          </div>
                         </div>
                       </button>
                     );
                   })}
                 </div>
-              </div>
+              )}
             </div>
           </div>
-
-          {/* ═══ MAIN CONTENT ═══ */}
-          <div className="lg:col-span-3 space-y-5">
-
-            {/* Search & View Toggle */}
-            <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-4 flex flex-col sm:flex-row gap-3 items-center">
-              <div className="relative w-full sm:max-w-md">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-                <Input
-                  placeholder="Search products & services..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pl-9 bg-gray-50 border-gray-200 focus:bg-white transition-colors h-10"
-                />
-                {searchQuery && (
-                  <button
-                    onClick={() => setSearchQuery('')}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
-                  >
-                    <X className="h-3.5 w-3.5" />
-                  </button>
-                )}
-              </div>
-
-              {/* Mobile categories */}
-              <div className="flex items-center gap-2 w-full sm:w-auto overflow-x-auto lg:hidden pb-1">
-                {CATEGORIES.map((cat) => (
-                  <button
-                    key={cat}
-                    onClick={() => setSelectedCategory(cat)}
-                    className={`px-3 py-1.5 text-xs font-medium rounded-full whitespace-nowrap border transition-colors ${
-                      selectedCategory === cat
-                        ? 'bg-purple-50 text-[#6d28d9] border-purple-200'
-                        : 'bg-white text-gray-500 border-gray-200 hover:border-gray-300'
-                    }`}
-                  >
-                    {cat}
-                  </button>
-                ))}
-              </div>
-
-              <div className="flex items-center gap-1 bg-gray-100 p-1 rounded-lg border border-gray-200 ml-auto flex-shrink-0">
-                <button
-                  onClick={() => setViewMode('list')}
-                  className={`p-2 rounded-md transition-all ${
-                    viewMode === 'list'
-                      ? 'bg-white text-gray-900 shadow-sm'
-                      : 'text-gray-500 hover:text-gray-700'
-                  }`}
-                  title="List View"
-                >
-                  <ListIcon className="h-4 w-4" />
-                </button>
-                <button
-                  onClick={() => setViewMode('grid')}
-                  className={`p-2 rounded-md transition-all ${
-                    viewMode === 'grid'
-                      ? 'bg-white text-gray-900 shadow-sm'
-                      : 'text-gray-500 hover:text-gray-700'
-                  }`}
-                  title="Grid View"
-                >
-                  <LayoutGrid className="h-4 w-4" />
-                </button>
-              </div>
-            </div>
-
-            {/* Loading state */}
-            {isLoading && (
-              <div className={viewMode === 'grid' ? 'grid grid-cols-1 md:grid-cols-2 gap-4' : 'space-y-3'}>
-                {[1, 2, 3, 4, 5].map((i) => (
-                  <div
-                    key={i}
-                    className="bg-white rounded-xl border border-gray-200 p-6 animate-pulse"
-                  >
-                    <div className="flex items-start gap-4">
-                      <div className="h-12 w-12 rounded-xl bg-gray-100 flex-shrink-0" />
-                      <div className="flex-1 space-y-2">
-                        <div className="h-5 w-40 bg-gray-100 rounded" />
-                        <div className="h-4 w-64 bg-gray-50 rounded" />
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-
-            {/* Empty state */}
-            {!isLoading && filteredServices.length === 0 && (
-              <div className="text-center py-16 bg-white rounded-xl border border-gray-200 border-dashed">
-                <div className="inline-flex items-center justify-center w-14 h-14 rounded-full bg-gray-50 mb-4">
-                  <Search className="h-6 w-6 text-gray-400" />
-                </div>
-                <h3 className="text-base font-semibold text-gray-900">No services found</h3>
-                <p className="text-sm text-gray-500 mt-1">Try adjusting your search or category filter</p>
-                <button
-                  onClick={() => { setSearchQuery(''); setSelectedCategory('All'); }}
-                  className="text-sm text-[#6d28d9] hover:text-[#5b21b6] font-medium mt-3 inline-block"
-                >
-                  Clear all filters
-                </button>
-              </div>
-            )}
-
-            {/* Services List / Grid */}
-            {!isLoading && filteredServices.length > 0 && (
-              <div className={viewMode === 'grid' ? 'grid grid-cols-1 md:grid-cols-2 gap-4' : 'space-y-3'}>
-                {filteredServices.map((service) => {
-                  const { derived } = service;
-                  const statusCfg = STATUS_CONFIG[derived.status];
-                  const StatusIcon = statusCfg.icon;
-
-                  if (viewMode === 'grid') {
-                    return (
-                      <button
-                        key={service.id}
-                        onClick={() => navigate(service.path)}
-                        className="group bg-white rounded-xl border border-gray-200 shadow-sm hover:shadow-md hover:border-gray-300 transition-all duration-200 text-left p-5 flex flex-col"
-                      >
-                        <div className="flex items-start justify-between mb-4">
-                          <div className={`h-11 w-11 rounded-xl flex items-center justify-center ${service.bgColor}`}>
-                            <service.icon className={`h-5 w-5 ${service.iconColor}`} />
-                          </div>
-                          <Badge
-                            variant="outline"
-                            className={`text-[10px] px-2 py-0.5 h-5 font-medium border ${statusCfg.badgeClass}`}
-                          >
-                            <span className={`inline-block h-1.5 w-1.5 rounded-full mr-1 ${statusCfg.dotClass}`} />
-                            {derived.statusLabel}
-                          </Badge>
-                        </div>
-
-                        <h3 className="text-[15px] font-semibold text-gray-900 group-hover:text-[#6d28d9] transition-colors mb-1">
-                          {service.title}
-                        </h3>
-                        <p className="text-sm text-gray-500 leading-relaxed mb-4 flex-1">
-                          {service.description}
-                        </p>
-
-                        <div className="flex items-center justify-between pt-3 border-t border-gray-100">
-                          {derived.policyCount > 0 ? (
-                            <div className="flex items-center gap-1.5">
-                              <StatusIcon className="h-3.5 w-3.5 text-emerald-500" />
-                              <span className="text-xs font-medium text-gray-700">
-                                {derived.statValue}
-                              </span>
-                            </div>
-                          ) : (
-                            <span className="text-xs text-gray-400">{derived.statValue}</span>
-                          )}
-                          <div className="h-7 w-7 rounded-full bg-gray-50 border border-gray-200 flex items-center justify-center text-gray-400 group-hover:border-[#6d28d9] group-hover:text-[#6d28d9] group-hover:bg-purple-50 transition-all">
-                            <ArrowRight className="h-3.5 w-3.5" />
-                          </div>
-                        </div>
-                      </button>
-                    );
-                  }
-
-                  // List view
-                  return (
-                    <button
-                      key={service.id}
-                      onClick={() => navigate(service.path)}
-                      className="group w-full bg-white rounded-xl border border-gray-200 shadow-sm hover:shadow-md hover:border-gray-300 transition-all duration-200 text-left"
-                    >
-                      <div className="flex items-center p-5 gap-5">
-                        {/* Icon */}
-                        <div className={`h-12 w-12 rounded-xl flex-shrink-0 flex items-center justify-center ${service.bgColor} group-hover:scale-105 transition-transform duration-200`}>
-                          <service.icon className={`h-5.5 w-5.5 ${service.iconColor}`} />
-                        </div>
-
-                        {/* Title & Description */}
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2.5 mb-0.5">
-                            <h3 className="text-[15px] font-semibold text-gray-900 group-hover:text-[#6d28d9] transition-colors">
-                              {service.title}
-                            </h3>
-                            <Badge
-                              variant="outline"
-                              className={`text-[10px] px-2 py-0.5 h-5 font-medium border ${statusCfg.badgeClass} hidden sm:inline-flex`}
-                            >
-                              <span className={`inline-block h-1.5 w-1.5 rounded-full mr-1 ${statusCfg.dotClass}`} />
-                              {derived.statusLabel}
-                            </Badge>
-                          </div>
-                          <p className="text-sm text-gray-500 leading-relaxed truncate sm:whitespace-normal">
-                            {service.description}
-                          </p>
-                        </div>
-
-                        {/* Stats */}
-                        <div className="hidden md:flex flex-col items-end pl-4 border-l border-gray-100 min-w-[100px]">
-                          <span className="text-[10px] text-gray-400 uppercase tracking-wide font-medium">
-                            {derived.statLabel}
-                          </span>
-                          <span className={`text-sm font-semibold mt-0.5 ${
-                            derived.policyCount > 0 ? 'text-gray-900' : 'text-gray-400'
-                          }`}>
-                            {derived.statValue}
-                          </span>
-                        </div>
-
-                        {/* Arrow */}
-                        <div className="h-8 w-8 rounded-full bg-gray-50 border border-gray-200 flex-shrink-0 flex items-center justify-center text-gray-400 group-hover:border-[#6d28d9] group-hover:text-[#6d28d9] group-hover:bg-purple-50 transition-all">
-                          <ArrowRight className="h-4 w-4" />
-                        </div>
-                      </div>
-                    </button>
-                  );
-                })}
-              </div>
-            )}
-          </div>
-        </div>
         </div>
       </div>
 
@@ -1210,7 +1390,8 @@ export function ProductsServicesDashboardPage() {
           <DialogHeader>
             <DialogTitle>Make a change</DialogTitle>
             <DialogDescription>
-              Choose the plan you want to update, then tell us what should change. We will send it straight to our submissions inbox for follow-up.
+              Choose the plan you want to update, then tell us what should change. We will send it
+              straight to our submissions inbox for follow-up.
             </DialogDescription>
           </DialogHeader>
 
@@ -1252,7 +1433,10 @@ export function ProductsServicesDashboardPage() {
               </Select>
               {selectedChangeType && (
                 <p className="text-xs text-gray-500">
-                  {availableChangeOptions.find((option) => option.id === selectedChangeType)?.description}
+                  {
+                    availableChangeOptions.find((option) => option.id === selectedChangeType)
+                      ?.description
+                  }
                 </p>
               )}
             </div>

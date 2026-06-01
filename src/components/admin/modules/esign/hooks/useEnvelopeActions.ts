@@ -20,23 +20,23 @@ interface UseEnvelopeActionsReturn {
   uploading: boolean;
   uploadError: string | null;
   uploadDocument: (request: UploadDocumentRequest) => Promise<EsignEnvelope | null>;
-  
+
   sending: boolean;
   sendError: string | null;
   sendInvites: (envelopeId: string, request: SendInvitesRequest) => Promise<boolean>;
-  
+
   signing: boolean;
   signError: string | null;
   submitSignature: (envelopeId: string, request: SubmitSignatureRequest) => Promise<boolean>;
-  
+
   rejecting: boolean;
   rejectError: string | null;
   rejectSigning: (envelopeId: string, request: RejectSigningRequest) => Promise<boolean>;
-  
+
   savingTemplate: boolean;
   templateError: string | null;
   saveAsTemplate: (envelopeId: string, request: SaveTemplateRequest) => Promise<boolean>;
-  
+
   savingFields: boolean;
   saveFieldsError: string | null;
   saveFields: (envelopeId: string, fields: EsignField[]) => Promise<boolean>;
@@ -44,7 +44,7 @@ interface UseEnvelopeActionsReturn {
   deleting: boolean;
   deleteError: string | null;
   deleteEnvelope: (envelopeId: string) => Promise<boolean>;
-  
+
   voiding: boolean;
   voidError: string | null;
   voidEnvelope: (envelopeId: string, reason?: string) => Promise<boolean>;
@@ -87,15 +87,15 @@ export function useEnvelopeActions(): UseEnvelopeActionsReturn {
 
   // ==================== UPLOAD DOCUMENT ====================
 
-  const uploadDocument = async (
-    request: UploadDocumentRequest
-  ): Promise<EsignEnvelope | null> => {
+  const uploadDocument = async (request: UploadDocumentRequest): Promise<EsignEnvelope | null> => {
     setUploading(true);
     setUploadError(null);
 
     try {
       if (request.files && request.files.length > 0) {
-        logger.debug('📤 Uploading documents:', { files: request.files.map(f => f.name).join(', ') });
+        logger.debug('📤 Uploading documents:', {
+          files: request.files.map((f) => f.name).join(', '),
+        });
       } else {
         logger.error('📤 Upload aborted: No files provided in request');
         setUploadError('No files provided. Please select at least one document.');
@@ -122,10 +122,7 @@ export function useEnvelopeActions(): UseEnvelopeActionsReturn {
 
   // ==================== SEND INVITES ====================
 
-  const sendInvites = async (
-    envelopeId: string,
-    request: SendInvitesRequest
-  ): Promise<boolean> => {
+  const sendInvites = async (envelopeId: string, request: SendInvitesRequest): Promise<boolean> => {
     setSending(true);
     setSendError(null);
 
@@ -148,7 +145,7 @@ export function useEnvelopeActions(): UseEnvelopeActionsReturn {
 
   const submitSignature = async (
     envelopeId: string,
-    request: SubmitSignatureRequest
+    request: SubmitSignatureRequest,
   ): Promise<boolean> => {
     setSigning(true);
     setSignError(null);
@@ -172,7 +169,7 @@ export function useEnvelopeActions(): UseEnvelopeActionsReturn {
 
   const rejectSigning = async (
     envelopeId: string,
-    request: RejectSigningRequest
+    request: RejectSigningRequest,
   ): Promise<boolean> => {
     setRejecting(true);
     setRejectError(null);
@@ -196,7 +193,7 @@ export function useEnvelopeActions(): UseEnvelopeActionsReturn {
 
   const saveAsTemplate = async (
     envelopeId: string,
-    request: SaveTemplateRequest
+    request: SaveTemplateRequest,
   ): Promise<boolean> => {
     setSavingTemplate(true);
     setTemplateError(null);
@@ -221,10 +218,7 @@ export function useEnvelopeActions(): UseEnvelopeActionsReturn {
   const [savingFields, setSavingFields] = useState(false);
   const [saveFieldsError, setSaveFieldsError] = useState<string | null>(null);
 
-  const saveFields = async (
-    envelopeId: string,
-    fields: EsignField[]
-  ): Promise<boolean> => {
+  const saveFields = async (envelopeId: string, fields: EsignField[]): Promise<boolean> => {
     setSavingFields(true);
     setSaveFieldsError(null);
 
@@ -266,10 +260,7 @@ export function useEnvelopeActions(): UseEnvelopeActionsReturn {
 
   // ==================== VOID ENVELOPE ====================
 
-  const voidEnvelope = async (
-    envelopeId: string,
-    reason?: string
-  ): Promise<boolean> => {
+  const voidEnvelope = async (envelopeId: string, reason?: string): Promise<boolean> => {
     setVoiding(true);
     setVoidError(null);
 
@@ -305,23 +296,23 @@ export function useEnvelopeActions(): UseEnvelopeActionsReturn {
     uploading,
     uploadError,
     uploadDocument,
-    
+
     sending,
     sendError,
     sendInvites,
-    
+
     signing,
     signError,
     submitSignature,
-    
+
     rejecting,
     rejectError,
     rejectSigning,
-    
+
     savingTemplate,
     templateError,
     saveAsTemplate,
-    
+
     savingFields,
     saveFieldsError,
     saveFields,
@@ -329,7 +320,7 @@ export function useEnvelopeActions(): UseEnvelopeActionsReturn {
     deleting,
     deleteError,
     deleteEnvelope,
-    
+
     voiding,
     voidError,
     voidEnvelope,

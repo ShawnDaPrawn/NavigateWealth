@@ -29,7 +29,11 @@ function CardSkeleton() {
 
 export function ProductManagementSkeleton() {
   return (
-    <div className="space-y-6 p-6 max-w-[1600px] mx-auto" role="status" aria-label="Loading product management">
+    <div
+      className="space-y-6 p-6 max-w-[1600px] mx-auto"
+      role="status"
+      aria-label="Loading product management"
+    >
       <span className="sr-only">Loading product management, please wait…</span>
       {/* Header */}
       <div className="flex flex-col gap-2">

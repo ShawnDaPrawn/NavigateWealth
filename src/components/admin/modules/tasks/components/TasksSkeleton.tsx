@@ -43,10 +43,7 @@ function KanbanColumnSkeleton({ cards = 3 }: { cards?: number }) {
       {/* Task cards */}
       <div className="space-y-3 px-1">
         {Array.from({ length: cards }).map((_, i) => (
-          <div
-            key={i}
-            className="bg-white p-4 rounded-xl border border-gray-100 shadow-sm"
-          >
+          <div key={i} className="bg-white p-4 rounded-xl border border-gray-100 shadow-sm">
             {/* Priority + tag row */}
             <div className="flex items-center gap-2 mb-3">
               <Skeleton className="h-4 w-14 rounded-full" />

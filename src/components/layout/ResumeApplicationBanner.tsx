@@ -11,11 +11,7 @@
 
 import React from 'react';
 import { Link } from 'react-router';
-import {
-  ArrowRight,
-  FileText,
-  Clock,
-} from 'lucide-react';
+import { ArrowRight, FileText, Clock } from 'lucide-react';
 import { Button } from '../ui/button';
 
 export function ResumeApplicationBanner() {

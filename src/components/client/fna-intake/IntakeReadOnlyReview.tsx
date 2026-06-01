@@ -18,7 +18,9 @@ function formatValue(value: unknown): string {
   if (Array.isArray(value)) {
     if (value.length === 0) return '—';
     return value
-      .map((item) => (typeof item === 'object' && item !== null ? JSON.stringify(item) : String(item)))
+      .map((item) =>
+        typeof item === 'object' && item !== null ? JSON.stringify(item) : String(item),
+      )
       .join('; ');
   }
   if (typeof value === 'object') return JSON.stringify(value, null, 2);
@@ -32,12 +34,7 @@ function flattenEntries(
   const rows: Array<{ key: string; value: unknown }> = [];
   for (const [key, value] of Object.entries(obj)) {
     const label = prefix ? `${prefix}.${key}` : key;
-    if (
-      value &&
-      typeof value === 'object' &&
-      !Array.isArray(value) &&
-      !(value instanceof Date)
-    ) {
+    if (value && typeof value === 'object' && !Array.isArray(value) && !(value instanceof Date)) {
       rows.push(...flattenEntries(value as Record<string, unknown>, label));
     } else {
       rows.push({ key: label, value });

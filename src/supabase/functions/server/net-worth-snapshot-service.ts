@@ -100,7 +100,11 @@ export class NetWorthSnapshotService {
     };
 
     await kv.set(key, snapshot);
-    log.info('Net worth snapshot created', { clientId: input.clientId, date, netWorth: input.netWorth });
+    log.info('Net worth snapshot created', {
+      clientId: input.clientId,
+      date,
+      netWorth: input.netWorth,
+    });
 
     return snapshot;
   }
@@ -150,7 +154,10 @@ export class NetWorthSnapshotService {
    *
    * This is best-effort — failures are logged but never block the caller.
    */
-  async autoSnapshotFromKV(clientId: string, triggeredBy: string): Promise<NetWorthSnapshot | null> {
+  async autoSnapshotFromKV(
+    clientId: string,
+    triggeredBy: string,
+  ): Promise<NetWorthSnapshot | null> {
     try {
       // Batch-read profile and policies (§13 — Promise.all for KV reads)
       const [profile, policiesRaw] = await Promise.all([
@@ -164,25 +171,50 @@ export class NetWorthSnapshotService {
       }
 
       // Assets
-      const assets: Array<{ type?: string; value?: number }> = Array.isArray(profile.assets) ? profile.assets : [];
-      const totalAssets = assets.reduce((s: number, a: { value?: number }) => s + (Number(a.value) || 0), 0);
+      const assets: Array<{ type?: string; value?: number }> = Array.isArray(profile.assets)
+        ? profile.assets
+        : [];
+      const totalAssets = assets.reduce(
+        (s: number, a: { value?: number }) => s + (Number(a.value) || 0),
+        0,
+      );
       const assetBreakdown = assets
         .filter((a: { value?: number }) => (Number(a.value) || 0) > 0)
-        .map((a: { type?: string; value?: number }) => ({ type: a.type || 'Other', value: Number(a.value) || 0 }));
+        .map((a: { type?: string; value?: number }) => ({
+          type: a.type || 'Other',
+          value: Number(a.value) || 0,
+        }));
 
       // Liabilities
-      const liabilities: Array<{ type?: string; outstandingBalance?: number }> = Array.isArray(profile.liabilities) ? profile.liabilities : [];
-      const totalLiabilities = liabilities.reduce((s: number, l: { outstandingBalance?: number }) => s + (Number(l.outstandingBalance) || 0), 0);
+      const liabilities: Array<{ type?: string; outstandingBalance?: number }> = Array.isArray(
+        profile.liabilities,
+      )
+        ? profile.liabilities
+        : [];
+      const totalLiabilities = liabilities.reduce(
+        (s: number, l: { outstandingBalance?: number }) => s + (Number(l.outstandingBalance) || 0),
+        0,
+      );
       const liabilityBreakdown = liabilities
         .filter((l: { outstandingBalance?: number }) => (Number(l.outstandingBalance) || 0) > 0)
-        .map((l: { type?: string; outstandingBalance?: number }) => ({ type: l.type || 'Other', balance: Number(l.outstandingBalance) || 0 }));
+        .map((l: { type?: string; outstandingBalance?: number }) => ({
+          type: l.type || 'Other',
+          balance: Number(l.outstandingBalance) || 0,
+        }));
 
       // Policies
-      const policies: Array<{ category?: string; data?: Record<string, unknown> }> = Array.isArray(policiesRaw) ? policiesRaw : [];
+      const policies: Array<{ category?: string; data?: Record<string, unknown> }> = Array.isArray(
+        policiesRaw,
+      )
+        ? policiesRaw
+        : [];
       const policyCount = policies.length;
-      const monthlyPremiums = policies.reduce((s: number, p: { data?: Record<string, unknown> }) => {
-        return s + (Number(p.data?.premium || p.data?.monthlyPremium) || 0);
-      }, 0);
+      const monthlyPremiums = policies.reduce(
+        (s: number, p: { data?: Record<string, unknown> }) => {
+          return s + (Number(p.data?.premium || p.data?.monthlyPremium) || 0);
+        },
+        0,
+      );
 
       // Retirement & investment values from policies
       let retirementValue = 0;
@@ -213,7 +245,11 @@ export class NetWorthSnapshotService {
       log.info('Auto-snapshot created', { clientId, trigger: triggeredBy, netWorth });
       return snapshot;
     } catch (err) {
-      log.error('Auto-snapshot failed (non-blocking)', { clientId, trigger: triggeredBy, error: String(err) });
+      log.error('Auto-snapshot failed (non-blocking)', {
+        clientId,
+        trigger: triggeredBy,
+        error: String(err),
+      });
       return null;
     }
   }
@@ -234,7 +270,7 @@ export class NetWorthSnapshotService {
     const securityEntries = await kv.getByPrefix('security:');
     const activeClientIds: string[] = [];
 
-    for (const entry of (securityEntries || [])) {
+    for (const entry of securityEntries || []) {
       if (entry && typeof entry === 'object' && 'id' in entry) {
         const sec = entry as { id: string; deleted?: boolean; suspended?: boolean };
         if (!sec.deleted && !sec.suspended) {
@@ -256,9 +292,16 @@ export class NetWorthSnapshotService {
           const profile = await kv.get(`user_profile:${clientId}:personal_info`);
           if (profile) {
             const assets = Array.isArray(profile.assets) ? profile.assets : [];
-            const totalAssets = assets.reduce((s: number, a: { value?: number }) => s + (Number(a.value) || 0), 0);
+            const totalAssets = assets.reduce(
+              (s: number, a: { value?: number }) => s + (Number(a.value) || 0),
+              0,
+            );
             const liabilities = Array.isArray(profile.liabilities) ? profile.liabilities : [];
-            const totalLiabilities = liabilities.reduce((s: number, l: { outstandingBalance?: number }) => s + (Number(l.outstandingBalance) || 0), 0);
+            const totalLiabilities = liabilities.reduce(
+              (s: number, l: { outstandingBalance?: number }) =>
+                s + (Number(l.outstandingBalance) || 0),
+              0,
+            );
             results.push({
               clientId,
               status: 'would-snapshot',

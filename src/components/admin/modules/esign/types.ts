@@ -1,7 +1,7 @@
 /**
  * E-Signature Type Definitions
  * Navigate Wealth Admin Dashboard
- * 
+ *
  * All TypeScript type definitions for the E-Signature module.
  * Type-safe interfaces for Navigate Wealth E-Signature functionality.
  */
@@ -20,7 +20,7 @@ export type SigningMode = 'sequential' | 'parallel';
 /**
  * Envelope status types
  */
-export type EnvelopeStatus = 
+export type EnvelopeStatus =
   | 'draft'
   | 'sent'
   | 'viewed'
@@ -38,7 +38,7 @@ export type EnvelopeStatus =
 /**
  * Signer status types
  */
-export type SignerStatus = 
+export type SignerStatus =
   | 'pending'
   | 'sent'
   | 'viewed'
@@ -55,21 +55,12 @@ export type SignerStatus =
  * file is stored under the envelope's storage prefix and surfaced on
  * the completion certificate.
  */
-export type FieldType = 
-  | 'signature'
-  | 'initials'
-  | 'text'
-  | 'date'
-  | 'checkbox'
-  | 'attachment';
+export type FieldType = 'signature' | 'initials' | 'text' | 'date' | 'checkbox' | 'attachment';
 
 /**
  * Actor type for audit trail
  */
-export type ActorType = 
-  | 'system'
-  | 'sender_user'
-  | 'signer';
+export type ActorType = 'system' | 'sender_user' | 'signer';
 
 // ============================================================================
 // DATABASE ENTITIES
@@ -162,7 +153,7 @@ export interface EsignEnvelope {
   created_by_user_id?: string;
   created_at: string;
   updated_at: string;
-  
+
   // Populated relations
   document?: {
     id: string;
@@ -216,7 +207,7 @@ export interface EsignTemplate {
   created_by_user_id: string;
   created_at: string;
   updated_at: string;
-  
+
   // Populated relations
   esign_documents?: EsignDocument;
   fields?: EsignField[];
@@ -251,7 +242,7 @@ export interface EsignCompletionCertificate {
 export interface UploadDocumentRequest {
   files: File[];
   context: {
-    clientId?: string;  // Optional for standalone envelopes
+    clientId?: string; // Optional for standalone envelopes
     title: string;
     message?: string;
     expiryDays?: number;
@@ -789,9 +780,7 @@ export function canEnvelopeBeEdited(envelope: EsignEnvelope): boolean {
 }
 
 export function canEnvelopeBeSent(envelope: EsignEnvelope): boolean {
-  return envelope.status === 'draft' &&
-         !!envelope.signers &&
-         envelope.signers.length > 0;
+  return envelope.status === 'draft' && !!envelope.signers && envelope.signers.length > 0;
 }
 
 export function isSignerPending(signer: EsignSigner): boolean {
@@ -810,10 +799,7 @@ export function hasSignerRejected(signer: EsignSigner): boolean {
 // STATUS HELPERS (§7.1 — Config-driven, delegated to constants)
 // ============================================================================
 
-import {
-  ENVELOPE_STATUS_CONFIG,
-  SIGNER_STATUS_CONFIG,
-} from './constants';
+import { ENVELOPE_STATUS_CONFIG, SIGNER_STATUS_CONFIG } from './constants';
 
 export function getEnvelopeStatusColor(status: EnvelopeStatus): string {
   return ENVELOPE_STATUS_CONFIG[status]?.badgeClass ?? 'bg-gray-100 text-gray-800';
@@ -855,12 +841,12 @@ export function formatEnvelopeDateTime(dateString: string): string {
 
 export function getDaysUntilExpiry(expiresAt: string | null): number | null {
   if (!expiresAt) return null;
-  
+
   const now = new Date();
   const expiry = new Date(expiresAt);
   const diffTime = expiry.getTime() - now.getTime();
   const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-  
+
   return diffDays;
 }
 
@@ -987,4 +973,4 @@ export const TEMPLATE_CATEGORIES = [
   'Other',
 ] as const;
 
-export type TemplateCategory = typeof TEMPLATE_CATEGORIES[number];
+export type TemplateCategory = (typeof TEMPLATE_CATEGORIES)[number];

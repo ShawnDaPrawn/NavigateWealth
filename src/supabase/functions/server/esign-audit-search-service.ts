@@ -59,12 +59,14 @@ export interface AuditSearchResult {
 }
 
 function isAuditEvent(item: unknown): item is EsignAuditEvent {
-  return !!item
-    && typeof item === 'object'
-    && typeof (item as { id?: unknown }).id === 'string'
-    && typeof (item as { envelope_id?: unknown }).envelope_id === 'string'
-    && typeof (item as { action?: unknown }).action === 'string'
-    && typeof (item as { at?: unknown }).at === 'string';
+  return (
+    !!item &&
+    typeof item === 'object' &&
+    typeof (item as { id?: unknown }).id === 'string' &&
+    typeof (item as { envelope_id?: unknown }).envelope_id === 'string' &&
+    typeof (item as { action?: unknown }).action === 'string' &&
+    typeof (item as { at?: unknown }).at === 'string'
+  );
 }
 
 export async function searchAuditEvents(filters: AuditSearchFilters): Promise<AuditSearchResult> {
@@ -81,9 +83,8 @@ export async function searchAuditEvents(filters: AuditSearchFilters): Promise<Au
   const resolveEnvelope = async (envelopeId: string): Promise<EsignEnvelope | null> => {
     if (envelopeCache.has(envelopeId)) return envelopeCache.get(envelopeId)!;
     const record = await kv.get(EsignKeys.envelope(envelopeId));
-    const envelope = (record && typeof record === 'object' && 'id' in record)
-      ? record as EsignEnvelope
-      : null;
+    const envelope =
+      record && typeof record === 'object' && 'id' in record ? (record as EsignEnvelope) : null;
     envelopeCache.set(envelopeId, envelope);
     return envelope;
   };

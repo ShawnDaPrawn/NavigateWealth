@@ -38,16 +38,22 @@ import {
 const services = [
   {
     title: 'Succession Planning',
-    description: 'Smooth practice transitions that preserve client relationships and unlock ongoing revenue streams.',
+    description:
+      'Smooth practice transitions that preserve client relationships and unlock ongoing revenue streams.',
     icon: Users,
     link: '/succession-planning',
-    features: ['Client relationship preservation', 'Revenue stream continuity', 'Transition management'],
+    features: [
+      'Client relationship preservation',
+      'Revenue stream continuity',
+      'Transition management',
+    ],
     accent: 'from-blue-500 to-indigo-600',
     accentLight: 'bg-blue-50 text-blue-600',
   },
   {
     title: 'Legacy Planning',
-    description: 'Structure your firm to honor professional standards and ensure multi-generational continuity.',
+    description:
+      'Structure your firm to honor professional standards and ensure multi-generational continuity.',
     icon: HandHeart,
     link: '/legacy-planning',
     features: ['Professional standards', 'Multi-generational solutions', 'Service continuity'],
@@ -56,7 +62,8 @@ const services = [
   },
   {
     title: 'Practice Valuation',
-    description: 'Professional practice appraisals and comprehensive assessments for informed decision-making.',
+    description:
+      'Professional practice appraisals and comprehensive assessments for informed decision-making.',
     icon: Calculator,
     link: '/practice-valuation',
     features: ['Professional valuations', 'Market assessments', 'Deal structuring'],
@@ -65,7 +72,8 @@ const services = [
   },
   {
     title: 'Practice Sales',
-    description: 'Comprehensive guidance on valuations, deal structures, and seamless client handovers.',
+    description:
+      'Comprehensive guidance on valuations, deal structures, and seamless client handovers.',
     icon: Building,
     link: '/practice-sales',
     features: ['Fair valuations', 'Transparent deals', 'Client handovers'],
@@ -107,10 +115,26 @@ const stats = [
 ];
 
 const digitalFeatures = [
-  { icon: Smartphone, title: 'Digital Tools', description: 'Track every step of your transition from any device' },
-  { icon: Monitor, title: 'Client Portal', description: 'Secure access for all parties throughout the handover' },
-  { icon: FileText, title: 'Documentation', description: 'Complete compliance records and audit trails maintained' },
-  { icon: HeadphonesIcon, title: 'Personal Service', description: 'Dedicated support team from planning through completion' },
+  {
+    icon: Smartphone,
+    title: 'Digital Tools',
+    description: 'Track every step of your transition from any device',
+  },
+  {
+    icon: Monitor,
+    title: 'Client Portal',
+    description: 'Secure access for all parties throughout the handover',
+  },
+  {
+    icon: FileText,
+    title: 'Documentation',
+    description: 'Complete compliance records and audit trails maintained',
+  },
+  {
+    icon: HeadphonesIcon,
+    title: 'Personal Service',
+    description: 'Dedicated support team from planning through completion',
+  },
 ];
 
 // ---------------------------------------------------------------------------
@@ -123,29 +147,47 @@ export function ForAdvisersPage() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <SEO {...getSEOData('for-advisers')} structuredData={createWebPageSchema(getSEOData('for-advisers').title, getSEOData('for-advisers').description, getSEOData('for-advisers').canonicalUrl)} />
+      <SEO
+        {...getSEOData('for-advisers')}
+        structuredData={createWebPageSchema(
+          getSEOData('for-advisers').title,
+          getSEOData('for-advisers').description,
+          getSEOData('for-advisers').canonicalUrl,
+        )}
+      />
 
       {/* ================================================================== */}
       {/* HERO                                                               */}
       {/* ================================================================== */}
       <section className="relative overflow-hidden bg-[#111827]" aria-label="Hero">
         <div className="absolute inset-0 bg-gradient-to-b from-[#111827] via-[#161b33] to-[#111827] pointer-events-none" />
-        <div className="absolute top-0 right-0 w-[600px] h-[600px] rounded-full opacity-20 pointer-events-none" style={{ background: 'radial-gradient(circle, rgba(109,40,217,0.25) 0%, transparent 70%)' }} />
+        <div
+          className="absolute top-0 right-0 w-[600px] h-[600px] rounded-full opacity-20 pointer-events-none"
+          style={{
+            background: 'radial-gradient(circle, rgba(109,40,217,0.25) 0%, transparent 70%)',
+          }}
+        />
 
         <div className="relative z-10 max-w-screen-xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex flex-col items-center text-center py-20 lg:py-28">
             <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-white/[0.06] border border-white/[0.08] mb-8">
               <Sparkles className="h-3.5 w-3.5 text-purple-400" />
-              <span className="text-[12px] font-medium text-gray-400 tracking-wide">Succession & Practice Management</span>
+              <span className="text-[12px] font-medium text-gray-400 tracking-wide">
+                Succession & Practice Management
+              </span>
             </div>
 
             <div className="max-w-3xl space-y-5">
               <h1 className="!text-[clamp(2rem,5vw,3.5rem)] !font-extrabold !leading-[1.1] text-white tracking-tight">
                 Succession Planning{' '}
-                <span className="bg-gradient-to-r from-purple-400 to-violet-300 bg-clip-text text-transparent">for Advisers</span>
+                <span className="bg-gradient-to-r from-purple-400 to-violet-300 bg-clip-text text-transparent">
+                  for Advisers
+                </span>
               </h1>
               <p className="text-gray-400 text-base sm:text-lg max-w-2xl mx-auto leading-relaxed">
-                We specialise in succession planning for financial advisers looking to secure the future of their practice — ensuring smooth transitions that preserve client relationships and honour the professional standards you've built.
+                We specialise in succession planning for financial advisers looking to secure the
+                future of their practice — ensuring smooth transitions that preserve client
+                relationships and honour the professional standards you've built.
               </p>
             </div>
 
@@ -205,13 +247,19 @@ export function ForAdvisersPage() {
                 Supporting Your Practice Journey at Every Stage
               </h2>
               <p className="text-base sm:text-lg text-gray-600 leading-relaxed">
-                From building your early career practice to planning your retirement legacy, every adviser faces unique challenges and opportunities. We provide expert guidance and tailored solutions that evolve with your practice, ensuring your life's work creates lasting value for you, your clients, and the next generation of advisers.
+                From building your early career practice to planning your retirement legacy, every
+                adviser faces unique challenges and opportunities. We provide expert guidance and
+                tailored solutions that evolve with your practice, ensuring your life's work creates
+                lasting value for you, your clients, and the next generation of advisers.
               </p>
             </div>
 
             <div className="flex flex-wrap gap-3">
               {practiceStages.map((stage, i) => (
-                <div key={i} className="flex items-center gap-3 bg-white border border-gray-200 rounded-full px-4 py-2.5 shadow-sm">
+                <div
+                  key={i}
+                  className="flex items-center gap-3 bg-white border border-gray-200 rounded-full px-4 py-2.5 shadow-sm"
+                >
                   <div className="w-9 h-9 rounded-full bg-purple-100 flex items-center justify-center flex-shrink-0">
                     <stage.icon className="h-4.5 w-4.5 text-purple-600" />
                   </div>
@@ -260,7 +308,9 @@ export function ForAdvisersPage() {
                     <div className={`h-1 bg-gradient-to-r ${service.accent}`} />
                     <CardContent className="p-6 space-y-4">
                       <div className="flex items-start justify-between">
-                        <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${service.accentLight}`}>
+                        <div
+                          className={`w-12 h-12 rounded-xl flex items-center justify-center ${service.accentLight}`}
+                        >
                           <Icon className="h-6 w-6" />
                         </div>
                         <ChevronRight className="h-5 w-5 text-gray-300 group-hover:text-purple-500 group-hover:translate-x-0.5 transition-all duration-300 mt-1" />
@@ -305,7 +355,8 @@ export function ForAdvisersPage() {
               Trusted Experience in Practice Transitions
             </h2>
             <p className="text-base sm:text-lg text-white/80 leading-relaxed">
-              Our expertise in succession planning and practice management means your transition is handled with the professionalism and care your practice deserves.
+              Our expertise in succession planning and practice management means your transition is
+              handled with the professionalism and care your practice deserves.
             </p>
             <div className="pt-4">
               <Button
@@ -343,10 +394,13 @@ export function ForAdvisersPage() {
                 Comprehensive Support Throughout Your Transition
               </h2>
               <p className="text-base sm:text-lg text-gray-600 leading-relaxed">
-                Navigate Wealth provides end-to-end support throughout your succession journey. From initial planning and valuation through to final client handovers, our dedicated team ensures every detail is managed professionally.
+                Navigate Wealth provides end-to-end support throughout your succession journey. From
+                initial planning and valuation through to final client handovers, our dedicated team
+                ensures every detail is managed professionally.
               </p>
               <p className="text-gray-500 leading-relaxed">
-                Focus on your next chapter with complete confidence — we handle the complexity so you don't have to.
+                Focus on your next chapter with complete confidence — we handle the complexity so
+                you don't have to.
               </p>
             </div>
 
@@ -354,13 +408,18 @@ export function ForAdvisersPage() {
               {digitalFeatures.map((feat, i) => {
                 const FIcon = feat.icon;
                 return (
-                  <div key={i} className="flex items-start gap-4 bg-gray-50 rounded-xl p-4 border border-gray-100">
+                  <div
+                    key={i}
+                    className="flex items-start gap-4 bg-gray-50 rounded-xl p-4 border border-gray-100"
+                  >
                     <div className="w-10 h-10 rounded-lg bg-purple-100 flex items-center justify-center flex-shrink-0">
                       <FIcon className="h-5 w-5 text-purple-600" />
                     </div>
                     <div>
                       <div className="font-semibold text-gray-900 text-sm">{feat.title}</div>
-                      <div className="text-gray-500 text-xs leading-relaxed mt-0.5">{feat.description}</div>
+                      <div className="text-gray-500 text-xs leading-relaxed mt-0.5">
+                        {feat.description}
+                      </div>
                     </div>
                   </div>
                 );
@@ -380,7 +439,9 @@ export function ForAdvisersPage() {
               Ready to Secure Your Practice's Future?
             </h2>
             <p className="text-base sm:text-lg text-gray-600 leading-relaxed">
-              Whether you're planning retirement, considering a practice sale, or structuring legacy solutions, our succession planning experts are here to guide you through every step of the process.
+              Whether you're planning retirement, considering a practice sale, or structuring legacy
+              solutions, our succession planning experts are here to guide you through every step of
+              the process.
             </p>
 
             <div className="flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-6">
@@ -422,10 +483,7 @@ export function ForAdvisersPage() {
       </section>
 
       {/* Modals */}
-      <GetQuoteModal
-        isOpen={showQuoteModal}
-        onClose={() => setShowQuoteModal(false)}
-      />
+      <GetQuoteModal isOpen={showQuoteModal} onClose={() => setShowQuoteModal(false)} />
       <ConsultationModal
         isOpen={showConsultationModal}
         onClose={() => setShowConsultationModal(false)}

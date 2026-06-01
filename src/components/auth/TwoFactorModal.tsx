@@ -13,7 +13,14 @@ interface TwoFactorModalProps {
   context?: 'login' | 'settings';
 }
 
-export function TwoFactorModal({ email, onVerified, onCancel, verifyCode, resendCode, context = 'login' }: TwoFactorModalProps) {
+export function TwoFactorModal({
+  email,
+  onVerified,
+  onCancel,
+  verifyCode,
+  resendCode,
+  context = 'login',
+}: TwoFactorModalProps) {
   const [code, setCode] = useState(['', '', '', '', '', '']);
   const [isVerifying, setIsVerifying] = useState(false);
   const [isResending, setIsResending] = useState(false);
@@ -49,7 +56,7 @@ export function TwoFactorModal({ email, onVerified, onCancel, verifyCode, resend
     }
 
     // Auto-submit when all digits are entered
-    if (index === 5 && value && newCode.every(digit => digit !== '')) {
+    if (index === 5 && value && newCode.every((digit) => digit !== '')) {
       handleVerify(newCode.join(''));
     }
   };
@@ -67,12 +74,12 @@ export function TwoFactorModal({ email, onVerified, onCancel, verifyCode, resend
   const handlePaste = (e: React.ClipboardEvent) => {
     e.preventDefault();
     const pastedData = e.clipboardData.getData('text').replace(/\D/g, '').slice(0, 6);
-    
+
     if (pastedData.length === 6) {
       const newCode = pastedData.split('');
       setCode(newCode);
       inputRefs.current[5]?.focus();
-      
+
       // Auto-submit pasted code
       handleVerify(pastedData);
     }
@@ -80,7 +87,7 @@ export function TwoFactorModal({ email, onVerified, onCancel, verifyCode, resend
 
   const handleVerify = async (codeToVerify?: string) => {
     const finalCode = codeToVerify || code.join('');
-    
+
     if (finalCode.length !== 6) {
       setError('Please enter all 6 digits');
       return;
@@ -155,14 +162,22 @@ export function TwoFactorModal({ email, onVerified, onCancel, verifyCode, resend
             {context === 'login' ? 'Two-Factor Authentication' : 'Verify Your Email'}
           </h2>
           <p className="text-sm text-gray-600">
-            {context === 'login'
-              ? <>We've sent a 6-digit verification code to your email to confirm your identity:<br /><span className="font-medium text-gray-900">{maskedEmail}</span></>
-              : <>To activate two-factor authentication, we've sent a 6-digit verification code to your email address:<br /><span className="font-medium text-gray-900">{maskedEmail}</span></>
-            }
+            {context === 'login' ? (
+              <>
+                We've sent a 6-digit verification code to your email to confirm your identity:
+                <br />
+                <span className="font-medium text-gray-900">{maskedEmail}</span>
+              </>
+            ) : (
+              <>
+                To activate two-factor authentication, we've sent a 6-digit verification code to
+                your email address:
+                <br />
+                <span className="font-medium text-gray-900">{maskedEmail}</span>
+              </>
+            )}
           </p>
-          <p className="text-xs text-gray-500 mt-2">
-            We currently only support 2FA via email.
-          </p>
+          <p className="text-xs text-gray-500 mt-2">We currently only support 2FA via email.</p>
         </div>
 
         {/* Error alert */}
@@ -175,14 +190,12 @@ export function TwoFactorModal({ email, onVerified, onCancel, verifyCode, resend
 
         {/* Code input */}
         <div className="mb-6">
-          <label className="block text-sm text-gray-700 mb-3 text-center">
-            Enter 6-digit code
-          </label>
+          <label className="block text-sm text-gray-700 mb-3 text-center">Enter 6-digit code</label>
           <div className="flex gap-2 justify-center" onPaste={handlePaste}>
             {code.map((digit, index) => (
               <input
                 key={index}
-                ref={el => inputRefs.current[index] = el}
+                ref={(el) => (inputRefs.current[index] = el)}
                 type="text"
                 inputMode="numeric"
                 maxLength={1}
@@ -194,10 +207,7 @@ export function TwoFactorModal({ email, onVerified, onCancel, verifyCode, resend
                   w-12 h-14 text-center text-xl font-semibold
                   border-2 rounded-lg
                   transition-all duration-200
-                  ${digit 
-                    ? 'border-purple-700 bg-purple-50' 
-                    : 'border-gray-300 bg-white'
-                  }
+                  ${digit ? 'border-purple-700 bg-purple-50' : 'border-gray-300 bg-white'}
                   ${isVerifying ? 'opacity-50 cursor-not-allowed' : 'hover:border-purple-400'}
                   focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent
                 `}
@@ -209,7 +219,7 @@ export function TwoFactorModal({ email, onVerified, onCancel, verifyCode, resend
         {/* Verify button */}
         <Button
           onClick={() => handleVerify()}
-          disabled={isVerifying || code.some(digit => !digit)}
+          disabled={isVerifying || code.some((digit) => !digit)}
           className="w-full bg-gradient-to-r from-purple-700 to-purple-800 hover:from-purple-800 hover:to-purple-900 mb-4"
         >
           {isVerifying ? (
@@ -226,9 +236,7 @@ export function TwoFactorModal({ email, onVerified, onCancel, verifyCode, resend
         <div className="text-center text-sm">
           <span className="text-gray-600">Didn't receive the code? </span>
           {resendCountdown > 0 ? (
-            <span className="text-gray-500">
-              Resend in {resendCountdown}s
-            </span>
+            <span className="text-gray-500">Resend in {resendCountdown}s</span>
           ) : (
             <button
               onClick={handleResendCode}

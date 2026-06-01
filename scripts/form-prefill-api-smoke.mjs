@@ -69,7 +69,9 @@ async function main() {
   const clientId = process.env.E2E_FNA_CLIENT_ID || env.E2E_FNA_CLIENT_ID;
 
   if (!adviserEmail || !adviserPassword || !clientId) {
-    throw new Error('Set E2E_FNA_ADVISER_* and E2E_FNA_CLIENT_ID (or run fna-intake-bootstrap-uat-actors.mjs)');
+    throw new Error(
+      'Set E2E_FNA_ADVISER_* and E2E_FNA_CLIENT_ID (or run fna-intake-bootstrap-uat-actors.mjs)',
+    );
   }
 
   const adviserToken = await signIn(adviserEmail, adviserPassword);
@@ -82,7 +84,9 @@ async function main() {
     Array.isArray(formIds) &&
     EXPECTED_FORM_IDS.every((id) => formIds.includes(id));
   if (!report.steps.listForms) {
-    throw new Error(`GET /prefill/forms failed: ${formsRes.status} ${JSON.stringify(formsRes.body)}`);
+    throw new Error(
+      `GET /prefill/forms failed: ${formsRes.status} ${JSON.stringify(formsRes.body)}`,
+    );
   }
 
   for (const formId of EXPECTED_FORM_IDS) {
@@ -107,7 +111,9 @@ async function main() {
       resolverVersion: resolveRes.body?.data?.resolverVersion,
     };
     if (!ok) {
-      throw new Error(`POST /prefill/resolve (${formId}) failed: ${resolveRes.status} ${JSON.stringify(resolveRes.body)}`);
+      throw new Error(
+        `POST /prefill/resolve (${formId}) failed: ${resolveRes.status} ${JSON.stringify(resolveRes.body)}`,
+      );
     }
   }
 

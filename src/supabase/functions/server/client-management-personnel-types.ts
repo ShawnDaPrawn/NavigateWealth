@@ -1,4 +1,10 @@
-export type UserRole = 'super_admin' | 'admin' | 'adviser' | 'paraplanner' | 'compliance' | 'viewer';
+export type UserRole =
+  | 'super_admin'
+  | 'admin'
+  | 'adviser'
+  | 'paraplanner'
+  | 'compliance'
+  | 'viewer';
 export type PersonnelStatus = 'active' | 'suspended' | 'pending';
 export type FSCAStatus = 'active' | 'debarred' | 'pending';
 
@@ -18,12 +24,12 @@ export interface PersonnelProfile {
   lastName: string;
   role: UserRole;
   status: PersonnelStatus;
-  
+
   // Professional Details
   jobTitle?: string;
   branch?: string;
   managerId?: string; // Reporting line
-  
+
   // Compliance & Regulatory
   fspReference?: string;
   fscaStatus?: FSCAStatus;
@@ -39,12 +45,12 @@ export interface PersonnelProfile {
     required: number;
   }[];
   documents?: PersonnelDocument[];
-  
+
   // Commission & Revenue
   commissionSplit: number; // e.g., 0.70 for 70%
   commissionEntity?: 'personal' | 'company';
   commissionReference?: string;
-  
+
   // Metadata
   createdAt: string;
   updatedAt: string;

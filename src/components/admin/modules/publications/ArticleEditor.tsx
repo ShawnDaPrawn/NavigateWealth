@@ -1,6 +1,6 @@
 /**
  * Publications Feature - ArticleEditor Component (REFACTORED)
- * 
+ *
  * Complete article creation and editing interface with rich text editor,
  * image upload, scheduling, and publishing controls.
  * Now uses the new hooks, services, and shared components.
@@ -11,10 +11,10 @@ import { Button } from '../../../ui/button';
 import { Badge } from '../../../ui/badge';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../../ui/card';
 import { Progress } from '../../../ui/progress';
-import { 
-  ArrowLeft, 
-  Save, 
-  Eye, 
+import {
+  ArrowLeft,
+  Save,
+  Eye,
   Calendar,
   Loader2,
   AlertCircle,
@@ -39,12 +39,7 @@ import type {
   UpdateArticleInput,
 } from './types';
 import type { ContentTemplate, GenerateArticleResult } from './types';
-import {
-  useArticleForm,
-  useCategories,
-  useTypes,
-  useArticleActions,
-} from './hooks';
+import { useArticleForm, useCategories, useTypes, useArticleActions } from './hooks';
 
 import {
   TextField,
@@ -61,21 +56,11 @@ import {
   ArticlePreview,
 } from './components';
 
-import {
-  generateSlug,
-  formatDate,
-}
- from './utils';
+import { generateSlug, formatDate } from './utils';
 
-import {
-  type Article,
-  type ArticleFormData,
-} from './types';
+import { type Article, type ArticleFormData } from './types';
 
-import {
-  VALIDATION_RULES,
-  PRESS_CATEGORY_OPTIONS,
-} from './constants';
+import { VALIDATION_RULES, PRESS_CATEGORY_OPTIONS } from './constants';
 
 import { toast } from 'sonner';
 
@@ -87,7 +72,13 @@ interface ArticleEditorProps {
   onSaved: () => void;
 }
 
-export function ArticleEditor({ article, initialTemplate, aiGeneratedResult, onBack, onSaved }: ArticleEditorProps) {
+export function ArticleEditor({
+  article,
+  initialTemplate,
+  aiGeneratedResult,
+  onBack,
+  onSaved,
+}: ArticleEditorProps) {
   const isEditMode = !!article;
 
   // Form management with auto-save
@@ -102,7 +93,7 @@ export function ArticleEditor({ article, initialTemplate, aiGeneratedResult, onB
     calculateReadingTimeFromBody,
     save,
     validate,
-    reset
+    reset,
   } = useArticleForm({
     article: article || null,
     autoSave: true,
@@ -115,13 +106,15 @@ export function ArticleEditor({ article, initialTemplate, aiGeneratedResult, onB
         setSuccessMessage('Article updated successfully. Changes are live.');
         // Do NOT call onSaved() — we intentionally stay in the editor.
       } else {
-        setSuccessMessage(isEditMode ? 'Article updated successfully' : 'Article created successfully');
+        setSuccessMessage(
+          isEditMode ? 'Article updated successfully' : 'Article created successfully',
+        );
         onSaved();
       }
     },
     onError: (error) => {
       setError(error);
-    }
+    },
   });
 
   // Data fetching
@@ -129,19 +122,14 @@ export function ArticleEditor({ article, initialTemplate, aiGeneratedResult, onB
   const { types } = useTypes({ activeOnly: true });
 
   // Article actions
-  const {
-    handleCreate,
-    handleUpdate,
-    handleSchedule,
-    isProcessing
-  } = useArticleActions({
+  const { handleCreate, handleUpdate, handleSchedule, isProcessing } = useArticleActions({
     onSuccess: (message) => {
       setSuccessMessage(message);
       onSaved();
     },
     onError: (error) => {
       setError(error);
-    }
+    },
   });
 
   // UI state
@@ -153,7 +141,9 @@ export function ArticleEditor({ article, initialTemplate, aiGeneratedResult, onB
   const [publishJob, setPublishJob] = useState<ArticleNotificationJob | null>(null);
   const [publishCampaign, setPublishCampaign] = useState<ArticleNotificationCampaign | null>(null);
   const [isPublishingNow, setIsPublishingNow] = useState(false);
-  const [publishActivityStep, setPublishActivityStep] = useState<'preparing' | 'saving' | 'publishing' | 'queueing'>('preparing');
+  const [publishActivityStep, setPublishActivityStep] = useState<
+    'preparing' | 'saving' | 'publishing' | 'queueing'
+  >('preparing');
   const [isHeroImageUploading, setIsHeroImageUploading] = useState(false);
   const [isThumbnailUploading, setIsThumbnailUploading] = useState(false);
   const [autoSlug, setAutoSlug] = useState(!isEditMode);
@@ -222,7 +212,7 @@ export function ArticleEditor({ article, initialTemplate, aiGeneratedResult, onB
   // Auto-select "Insights & Education" type for new articles
   useEffect(() => {
     if (!isEditMode && types.length > 0 && !formData.type_id) {
-      const insightsType = types.find(t => t.name === 'Insights & Education');
+      const insightsType = types.find((t) => t.name === 'Insights & Education');
       if (insightsType) {
         updateField('type_id', insightsType.id);
       }
@@ -310,10 +300,13 @@ export function ArticleEditor({ article, initialTemplate, aiGeneratedResult, onB
   };
 
   const publishCampaignInFlight = Boolean(
-    publishCampaign && (publishCampaign.status === 'queued' || publishCampaign.status === 'processing')
+    publishCampaign &&
+    (publishCampaign.status === 'queued' || publishCampaign.status === 'processing'),
   );
   const publishJobInFlight = Boolean(
-    !publishCampaign && publishJob && (publishJob.status === 'queued' || publishJob.status === 'processing')
+    !publishCampaign &&
+    publishJob &&
+    (publishJob.status === 'queued' || publishJob.status === 'processing'),
   );
   const publishInFlight = publishCampaignInFlight || publishJobInFlight;
   const publishDialogBusy = isProcessing || isPublishingNow || publishInFlight;
@@ -340,7 +333,9 @@ export function ArticleEditor({ article, initialTemplate, aiGeneratedResult, onB
 
     const pollCampaign = async () => {
       try {
-        const latestCampaign = await PublicationsAPI.Articles.getNotificationCampaign(publishCampaign.id);
+        const latestCampaign = await PublicationsAPI.Articles.getNotificationCampaign(
+          publishCampaign.id,
+        );
         if (cancelled) return;
 
         setPublishCampaign(latestCampaign);
@@ -351,7 +346,8 @@ export function ArticleEditor({ article, initialTemplate, aiGeneratedResult, onB
       } catch (err) {
         if (cancelled) return;
 
-        const message = err instanceof Error ? err.message : 'Failed to refresh publish notification progress';
+        const message =
+          err instanceof Error ? err.message : 'Failed to refresh publish notification progress';
         setError(message);
         timeoutId = setTimeout(pollCampaign, 4000);
       }
@@ -384,7 +380,8 @@ export function ArticleEditor({ article, initialTemplate, aiGeneratedResult, onB
       } catch (err) {
         if (cancelled) return;
 
-        const message = err instanceof Error ? err.message : 'Failed to refresh publish notification progress';
+        const message =
+          err instanceof Error ? err.message : 'Failed to refresh publish notification progress';
         setError(message);
         timeoutId = setTimeout(pollJob, 4000);
       }
@@ -398,17 +395,20 @@ export function ArticleEditor({ article, initialTemplate, aiGeneratedResult, onB
     };
   }, [publishCampaign?.id, publishJob?.id, publishJob?.status, showPublishDialog]);
 
-  const closePublishDialog = useCallback((navigateBack: boolean) => {
-    setShowPublishDialog(false);
-    setPublishJob(null);
-    setPublishCampaign(null);
-    setIsPublishingNow(false);
-    setPublishActivityStep('preparing');
+  const closePublishDialog = useCallback(
+    (navigateBack: boolean) => {
+      setShowPublishDialog(false);
+      setPublishJob(null);
+      setPublishCampaign(null);
+      setIsPublishingNow(false);
+      setPublishActivityStep('preparing');
 
-    if (navigateBack) {
-      onSaved();
-    }
-  }, [onSaved]);
+      if (navigateBack) {
+        onSaved();
+      }
+    },
+    [onSaved],
+  );
 
   const handlePublishConfirm = async () => {
     setError(null);
@@ -455,9 +455,15 @@ export function ArticleEditor({ article, initialTemplate, aiGeneratedResult, onB
 
             if (publishResult.notificationCampaign.status === 'queue_failed') {
               setSuccessMessage('Article published, but newsletter delivery could not be queued.');
-              setError(publishResult.notificationError || publishResult.notificationCampaign.lastError || 'Newsletter delivery could not be queued.');
+              setError(
+                publishResult.notificationError ||
+                  publishResult.notificationCampaign.lastError ||
+                  'Newsletter delivery could not be queued.',
+              );
             } else if (publishResult.notificationCampaign.status === 'no_recipients') {
-              setSuccessMessage('Article published. No newsletter recipients were eligible for this send.');
+              setSuccessMessage(
+                'Article published. No newsletter recipients were eligible for this send.',
+              );
             } else {
               setSuccessMessage('Article published. Newsletter delivery has been queued.');
             }
@@ -492,9 +498,15 @@ export function ArticleEditor({ article, initialTemplate, aiGeneratedResult, onB
 
           if (publishResult.notificationCampaign.status === 'queue_failed') {
             setSuccessMessage('Article published, but newsletter delivery could not be queued.');
-            setError(publishResult.notificationError || publishResult.notificationCampaign.lastError || 'Newsletter delivery could not be queued.');
+            setError(
+              publishResult.notificationError ||
+                publishResult.notificationCampaign.lastError ||
+                'Newsletter delivery could not be queued.',
+            );
           } else if (publishResult.notificationCampaign.status === 'no_recipients') {
-            setSuccessMessage('Article published. No newsletter recipients were eligible for this send.');
+            setSuccessMessage(
+              'Article published. No newsletter recipients were eligible for this send.',
+            );
           } else {
             setSuccessMessage('Article published. Newsletter delivery has been queued.');
           }
@@ -582,7 +594,7 @@ export function ArticleEditor({ article, initialTemplate, aiGeneratedResult, onB
       confirmDialog.open({
         title: 'Unsaved Changes',
         description: 'You have unsaved changes. Are you sure you want to leave?',
-        onConfirm: onBack
+        onConfirm: onBack,
       });
     } else {
       onBack();
@@ -590,16 +602,21 @@ export function ArticleEditor({ article, initialTemplate, aiGeneratedResult, onB
   };
 
   const activePublishStatus = publishCampaign?.status ?? publishJob?.status ?? null;
-  const activePublishRecipientCount = publishCampaign?.intendedRecipientCount ?? publishJob?.recipientCount ?? 0;
+  const activePublishRecipientCount =
+    publishCampaign?.intendedRecipientCount ?? publishJob?.recipientCount ?? 0;
   const activePublishPendingCount = publishCampaign
-    ? publishCampaign.pendingCount + publishCampaign.sendingCount + publishCampaign.failedRetryableCount
-    : publishJob?.pendingCount ?? 0;
+    ? publishCampaign.pendingCount +
+      publishCampaign.sendingCount +
+      publishCampaign.failedRetryableCount
+    : (publishJob?.pendingCount ?? 0);
   const activePublishSentCount = publishCampaign?.sentCount ?? publishJob?.sentCount ?? 0;
   const activePublishFailedCount = publishCampaign
     ? publishCampaign.failedTerminalCount
-    : publishJob?.failedCount ?? 0;
-  const activePublishProcessedCount = publishCampaign?.processedCount ?? publishJob?.processedCount ?? 0;
-  const activePublishProgressPercent = publishCampaign?.progressPercent ?? publishJob?.progressPercent ?? 0;
+    : (publishJob?.failedCount ?? 0);
+  const activePublishProcessedCount =
+    publishCampaign?.processedCount ?? publishJob?.processedCount ?? 0;
+  const activePublishProgressPercent =
+    publishCampaign?.progressPercent ?? publishJob?.progressPercent ?? 0;
   const activePublishLastError = publishCampaign?.lastError ?? publishJob?.lastError ?? null;
 
   if (categoriesLoading) {
@@ -615,9 +632,7 @@ export function ArticleEditor({ article, initialTemplate, aiGeneratedResult, onB
             <ArrowLeft className="h-4 w-4" />
           </Button>
           <div>
-            <h1 className="text-2xl font-bold">
-              {isEditMode ? 'Edit Article' : 'New Article'}
-            </h1>
+            <h1 className="text-2xl font-bold">{isEditMode ? 'Edit Article' : 'New Article'}</h1>
             {article && (
               <div className="flex items-center gap-2 mt-1">
                 <StatusBadge status={article.status} />
@@ -644,10 +659,7 @@ export function ArticleEditor({ article, initialTemplate, aiGeneratedResult, onB
             {activeTab === 'preview' ? 'Edit' : 'Preview'}
           </Button>
           {isEditMode && article?.id && (
-            <Button
-              variant="outline"
-              onClick={() => setShowVersionHistory(true)}
-            >
+            <Button variant="outline" onClick={() => setShowVersionHistory(true)}>
               <History className="h-4 w-4 mr-2" />
               History
             </Button>
@@ -675,7 +687,13 @@ export function ArticleEditor({ article, initialTemplate, aiGeneratedResult, onB
             disabled={isProcessing || isSaving || imageUploadInProgress || !isDirty}
           >
             <Save className="h-4 w-4 mr-2" />
-            {isSaving ? 'Saving...' : imageUploadInProgress ? 'Uploading image...' : article?.status === 'published' ? 'Update Article' : 'Save Draft'}
+            {isSaving
+              ? 'Saving...'
+              : imageUploadInProgress
+                ? 'Uploading image...'
+                : article?.status === 'published'
+                  ? 'Update Article'
+                  : 'Save Draft'}
           </Button>
         </div>
       </div>
@@ -707,9 +725,7 @@ export function ArticleEditor({ article, initialTemplate, aiGeneratedResult, onB
       )}
 
       {/* Validation Errors */}
-      {errors.length > 0 && (
-        <ErrorList errors={errors} title="Please fix the following errors:" />
-      )}
+      {errors.length > 0 && <ErrorList errors={errors} title="Please fix the following errors:" />}
 
       {/* Tabs */}
       <div className="border-b border-gray-200">
@@ -720,7 +736,7 @@ export function ArticleEditor({ article, initialTemplate, aiGeneratedResult, onB
               'px-4 py-2 border-b-2 font-medium transition-colors',
               activeTab === 'editor'
                 ? 'border-purple-600 text-purple-600'
-                : 'border-transparent text-gray-500 hover:text-gray-700'
+                : 'border-transparent text-gray-500 hover:text-gray-700',
             )}
           >
             Editor
@@ -731,7 +747,7 @@ export function ArticleEditor({ article, initialTemplate, aiGeneratedResult, onB
               'px-4 py-2 border-b-2 font-medium transition-colors',
               activeTab === 'preview'
                 ? 'border-purple-600 text-purple-600'
-                : 'border-transparent text-gray-500 hover:text-gray-700'
+                : 'border-transparent text-gray-500 hover:text-gray-700',
             )}
           >
             Preview
@@ -742,7 +758,7 @@ export function ArticleEditor({ article, initialTemplate, aiGeneratedResult, onB
               'px-4 py-2 border-b-2 font-medium transition-colors',
               activeTab === 'seo'
                 ? 'border-purple-600 text-purple-600'
-                : 'border-transparent text-gray-500 hover:text-gray-700'
+                : 'border-transparent text-gray-500 hover:text-gray-700',
             )}
           >
             SEO & Meta
@@ -804,9 +820,7 @@ export function ArticleEditor({ article, initialTemplate, aiGeneratedResult, onB
                       Auto
                     </Button>
                   </div>
-                  <p className="text-xs text-gray-500 mt-1">
-                    URL: /resources/{formData.slug}
-                  </p>
+                  <p className="text-xs text-gray-500 mt-1">URL: /resources/{formData.slug}</p>
                 </div>
 
                 <TextareaField
@@ -831,9 +845,7 @@ export function ArticleEditor({ article, initialTemplate, aiGeneratedResult, onB
                     placeholder='Start writing, or type "/" for commands…'
                     articleTitle={formData.title}
                     articleExcerpt={formData.excerpt}
-                    articleCategory={
-                      categories.find(c => c.id === formData.category_id)?.name
-                    }
+                    articleCategory={categories.find((c) => c.id === formData.category_id)?.name}
                   />
                 </div>
               </CardContent>
@@ -843,9 +855,7 @@ export function ArticleEditor({ article, initialTemplate, aiGeneratedResult, onB
             <Card>
               <CardHeader>
                 <CardTitle>Images</CardTitle>
-                <CardDescription>
-                  Upload images or provide URLs
-                </CardDescription>
+                <CardDescription>Upload images or provide URLs</CardDescription>
               </CardHeader>
               <CardContent className="space-y-6">
                 <ImageUploader
@@ -880,10 +890,12 @@ export function ArticleEditor({ article, initialTemplate, aiGeneratedResult, onB
                   name="category_id"
                   value={formData.category_id}
                   onChange={(value) => updateField('category_id', value)}
-                  options={categories.filter(cat => cat.id).map(cat => ({
-                    value: cat.id,
-                    label: cat.name
-                  }))}
+                  options={categories
+                    .filter((cat) => cat.id)
+                    .map((cat) => ({
+                      value: cat.id,
+                      label: cat.name,
+                    }))}
                   required
                 />
 
@@ -928,18 +940,25 @@ export function ArticleEditor({ article, initialTemplate, aiGeneratedResult, onB
                   label="Press Category"
                   name="press_category"
                   value={formData.press_category || '__none__'}
-                  onChange={(value) => updateField('press_category', (value === '__none__' ? null : value) as ArticleFormData['press_category'])}
+                  onChange={(value) =>
+                    updateField(
+                      'press_category',
+                      (value === '__none__' ? null : value) as ArticleFormData['press_category'],
+                    )
+                  }
                   options={[
                     { value: '__none__', label: 'None (not a press release)' },
-                    ...PRESS_CATEGORY_OPTIONS.map(opt => ({
+                    ...PRESS_CATEGORY_OPTIONS.map((opt) => ({
                       value: opt.value,
-                      label: opt.label
-                    }))
+                      label: opt.label,
+                    })),
                   ]}
                 />
                 {formData.press_category && (
                   <p className="text-xs text-purple-600">
-                    This article will appear on the Press page under the "{PRESS_CATEGORY_OPTIONS.find(o => o.value === formData.press_category)?.label}" tab when published.
+                    This article will appear on the Press page under the "
+                    {PRESS_CATEGORY_OPTIONS.find((o) => o.value === formData.press_category)?.label}
+                    " tab when published.
                   </p>
                 )}
               </CardContent>
@@ -982,13 +1001,15 @@ export function ArticleEditor({ article, initialTemplate, aiGeneratedResult, onB
       {/* Preview Tab */}
       {activeTab === 'preview' && (
         <ArticlePreview
-          article={{
-            ...formData,
-            id: article?.id || 'preview',
-            created_at: article?.created_at || new Date().toISOString(),
-            updated_at: article?.updated_at || new Date().toISOString(),
-            view_count: article?.view_count || 0
-          } as unknown as React.ComponentProps<typeof ArticlePreview>['article']}
+          article={
+            {
+              ...formData,
+              id: article?.id || 'preview',
+              created_at: article?.created_at || new Date().toISOString(),
+              updated_at: article?.updated_at || new Date().toISOString(),
+              view_count: article?.view_count || 0,
+            } as unknown as React.ComponentProps<typeof ArticlePreview>['article']
+          }
           categories={categories}
           types={types}
           onClose={() => setActiveTab('editor')}
@@ -1000,9 +1021,7 @@ export function ArticleEditor({ article, initialTemplate, aiGeneratedResult, onB
         <Card>
           <CardHeader>
             <CardTitle>SEO & Meta Tags</CardTitle>
-            <CardDescription>
-              Optimize your article for search engines
-            </CardDescription>
+            <CardDescription>Optimize your article for search engines</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <TextField
@@ -1045,7 +1064,11 @@ export function ArticleEditor({ article, initialTemplate, aiGeneratedResult, onB
           {/* Backdrop */}
           <div
             className="fixed inset-0 bg-black/50 z-50 backdrop-blur-sm"
-            onClick={!publishDialogBusy && !publishCampaign && !publishJob ? () => closePublishDialog(false) : undefined}
+            onClick={
+              !publishDialogBusy && !publishCampaign && !publishJob
+                ? () => closePublishDialog(false)
+                : undefined
+            }
             aria-hidden="true"
           />
           {/* Dialog */}
@@ -1070,7 +1093,8 @@ export function ArticleEditor({ article, initialTemplate, aiGeneratedResult, onB
                     Publishing Article
                   </h3>
                   <p id="publish-dialog-description" className="text-gray-600 mb-5">
-                    Please keep this window open while we prepare the article, publish it live, and queue newsletter delivery.
+                    Please keep this window open while we prepare the article, publish it live, and
+                    queue newsletter delivery.
                   </p>
 
                   <div className="rounded-xl border border-blue-100 bg-blue-50/70 p-4 space-y-4">
@@ -1084,12 +1108,19 @@ export function ArticleEditor({ article, initialTemplate, aiGeneratedResult, onB
                       <Sparkles className="h-4 w-4 text-blue-500" />
                     </div>
 
-                    <Progress value={
-                      publishActivityStep === 'preparing' ? 20 :
-                      publishActivityStep === 'saving' ? 45 :
-                      publishActivityStep === 'publishing' ? 70 :
-                      90
-                    } className="h-2.5" indicatorClassName="bg-blue-600" />
+                    <Progress
+                      value={
+                        publishActivityStep === 'preparing'
+                          ? 20
+                          : publishActivityStep === 'saving'
+                            ? 45
+                            : publishActivityStep === 'publishing'
+                              ? 70
+                              : 90
+                      }
+                      className="h-2.5"
+                      indicatorClassName="bg-blue-600"
+                    />
 
                     <div className="space-y-2">
                       <PublishActivityRow
@@ -1097,23 +1128,32 @@ export function ArticleEditor({ article, initialTemplate, aiGeneratedResult, onB
                         status={publishActivityStep === 'preparing' ? 'active' : 'done'}
                       />
                       <PublishActivityRow
-                        label={isEditMode ? 'Saving latest article changes' : 'Creating article record'}
-                        status={publishActivityStep === 'saving'
-                          ? 'active'
-                          : publishActivityStep === 'publishing' || publishActivityStep === 'queueing'
-                            ? 'done'
-                            : 'pending'}
+                        label={
+                          isEditMode ? 'Saving latest article changes' : 'Creating article record'
+                        }
+                        status={
+                          publishActivityStep === 'saving'
+                            ? 'active'
+                            : publishActivityStep === 'publishing' ||
+                                publishActivityStep === 'queueing'
+                              ? 'done'
+                              : 'pending'
+                        }
                       />
                       <PublishActivityRow
                         label="Publishing article to the website"
-                        status={publishActivityStep === 'publishing'
-                          ? 'active'
-                          : publishActivityStep === 'queueing'
-                            ? 'done'
-                            : 'pending'}
+                        status={
+                          publishActivityStep === 'publishing'
+                            ? 'active'
+                            : publishActivityStep === 'queueing'
+                              ? 'done'
+                              : 'pending'
+                        }
                       />
                       <PublishActivityRow
-                        label={notifySubscribers ? 'Queueing newsletter delivery' : 'Finalizing publish'}
+                        label={
+                          notifySubscribers ? 'Queueing newsletter delivery' : 'Finalizing publish'
+                        }
                         status={publishActivityStep === 'queueing' ? 'active' : 'pending'}
                       />
                     </div>
@@ -1129,7 +1169,8 @@ export function ArticleEditor({ article, initialTemplate, aiGeneratedResult, onB
                     Publish Article
                   </h3>
                   <p id="publish-dialog-description" className="text-gray-600 mb-4">
-                    Are you sure you want to publish this article? It will be immediately visible to all users.
+                    Are you sure you want to publish this article? It will be immediately visible to
+                    all users.
                   </p>
 
                   <div className="bg-gray-50 rounded-lg p-3 mb-6">
@@ -1146,7 +1187,8 @@ export function ArticleEditor({ article, initialTemplate, aiGeneratedResult, onB
                           Notify newsletter subscribers
                         </span>
                         <span className="text-xs text-gray-500 block mt-0.5">
-                          Send an email notification to all confirmed subscribers with a link to this article
+                          Send an email notification to all confirmed subscribers with a link to
+                          this article
                         </span>
                       </div>
                     </label>
@@ -1186,15 +1228,17 @@ export function ArticleEditor({ article, initialTemplate, aiGeneratedResult, onB
                               : 'The article is live and the queued newsletter delivery has finished its current run.'}
                       </p>
                     </div>
-                    <Badge className={cn(
-                      activePublishStatus === 'completed'
-                        ? 'bg-green-100 text-green-700'
-                        : activePublishStatus === 'completed_with_failures'
-                          ? 'bg-amber-100 text-amber-800'
-                          : activePublishStatus === 'queue_failed'
-                            ? 'bg-red-100 text-red-700'
-                          : 'bg-blue-100 text-blue-700'
-                    )}>
+                    <Badge
+                      className={cn(
+                        activePublishStatus === 'completed'
+                          ? 'bg-green-100 text-green-700'
+                          : activePublishStatus === 'completed_with_failures'
+                            ? 'bg-amber-100 text-amber-800'
+                            : activePublishStatus === 'queue_failed'
+                              ? 'bg-red-100 text-red-700'
+                              : 'bg-blue-100 text-blue-700',
+                      )}
+                    >
                       {(activePublishStatus || 'queued').replace(/_/g, ' ')}
                     </Badge>
                   </div>
@@ -1207,34 +1251,49 @@ export function ArticleEditor({ article, initialTemplate, aiGeneratedResult, onB
                           {activePublishProcessedCount} / {activePublishRecipientCount}
                         </span>
                       </div>
-                      <Progress value={activePublishProgressPercent} className="h-2.5" indicatorClassName="bg-green-600" />
+                      <Progress
+                        value={activePublishProgressPercent}
+                        className="h-2.5"
+                        indicatorClassName="bg-green-600"
+                      />
                     </div>
 
                     <div className="grid grid-cols-2 gap-3 text-sm">
                       <div className="rounded-lg bg-white border border-gray-200 px-3 py-2">
                         <p className="text-gray-500">Recipients</p>
-                        <p className="text-lg font-semibold text-gray-900">{activePublishRecipientCount}</p>
+                        <p className="text-lg font-semibold text-gray-900">
+                          {activePublishRecipientCount}
+                        </p>
                       </div>
                       <div className="rounded-lg bg-white border border-gray-200 px-3 py-2">
                         <p className="text-gray-500">Remaining</p>
-                        <p className="text-lg font-semibold text-amber-700">{activePublishPendingCount}</p>
+                        <p className="text-lg font-semibold text-amber-700">
+                          {activePublishPendingCount}
+                        </p>
                       </div>
                       <div className="rounded-lg bg-white border border-gray-200 px-3 py-2">
                         <p className="text-gray-500">Sent</p>
-                        <p className="text-lg font-semibold text-green-700">{activePublishSentCount}</p>
+                        <p className="text-lg font-semibold text-green-700">
+                          {activePublishSentCount}
+                        </p>
                       </div>
                       <div className="rounded-lg bg-white border border-gray-200 px-3 py-2">
                         <p className="text-gray-500">Failed</p>
-                        <p className="text-lg font-semibold text-red-700">{activePublishFailedCount}</p>
+                        <p className="text-lg font-semibold text-red-700">
+                          {activePublishFailedCount}
+                        </p>
                       </div>
                     </div>
 
-                    {activePublishLastError && (activePublishFailedCount > 0 || activePublishStatus === 'queue_failed') && (
-                      <div className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2">
-                        <p className="text-xs font-medium text-amber-900">Latest delivery issue</p>
-                        <p className="text-xs text-amber-800 mt-1">{activePublishLastError}</p>
-                      </div>
-                    )}
+                    {activePublishLastError &&
+                      (activePublishFailedCount > 0 || activePublishStatus === 'queue_failed') && (
+                        <div className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2">
+                          <p className="text-xs font-medium text-amber-900">
+                            Latest delivery issue
+                          </p>
+                          <p className="text-xs text-amber-800 mt-1">{activePublishLastError}</p>
+                        </div>
+                      )}
                   </div>
 
                   <div className="flex gap-3 justify-end mt-6">
@@ -1264,9 +1323,7 @@ export function ArticleEditor({ article, initialTemplate, aiGeneratedResult, onB
           <Card className="w-full max-w-md">
             <CardHeader>
               <CardTitle>Schedule Publication</CardTitle>
-              <CardDescription>
-                Choose when this article should be published
-              </CardDescription>
+              <CardDescription>Choose when this article should be published</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <DateTimeField
@@ -1293,7 +1350,8 @@ export function ArticleEditor({ article, initialTemplate, aiGeneratedResult, onB
                       Notify newsletter subscribers on publish
                     </span>
                     <span className="text-xs text-gray-500 block mt-0.5">
-                      Automatically send an email notification to all confirmed subscribers when this article is published on the scheduled date
+                      Automatically send an email notification to all confirmed subscribers when
+                      this article is published on the scheduled date
                     </span>
                   </div>
                 </label>
@@ -1304,7 +1362,11 @@ export function ArticleEditor({ article, initialTemplate, aiGeneratedResult, onB
                   <Clock className="h-4 w-4 mr-2" />
                   {isProcessing ? 'Scheduling...' : 'Schedule'}
                 </Button>
-                <Button variant="outline" onClick={() => setShowScheduleDialog(false)} disabled={isProcessing}>
+                <Button
+                  variant="outline"
+                  onClick={() => setShowScheduleDialog(false)}
+                  disabled={isProcessing}
+                >
                   Cancel
                 </Button>
               </div>
@@ -1355,10 +1417,16 @@ function PublishActivityRow({
       ) : (
         <div className="h-4 w-4 rounded-full border border-slate-300 bg-slate-100" />
       )}
-      <span className={cn(
-        'text-sm',
-        status === 'active' ? 'text-blue-950 font-medium' : status === 'done' ? 'text-slate-800' : 'text-slate-500'
-      )}>
+      <span
+        className={cn(
+          'text-sm',
+          status === 'active'
+            ? 'text-blue-950 font-medium'
+            : status === 'done'
+              ? 'text-slate-800'
+              : 'text-slate-500',
+        )}
+      >
         {label}
       </span>
     </div>

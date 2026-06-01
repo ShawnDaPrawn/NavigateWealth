@@ -96,20 +96,28 @@ export function StepBeneficiaries({
           ))}
 
           {/* Percentage total indicator */}
-          <div className={`flex items-center justify-between px-5 py-3 rounded-lg border-2 ${
-            beneficiaryTotal === 100
-              ? 'border-green-200 bg-green-50'
-              : beneficiaryTotal > 100
-              ? 'border-red-200 bg-red-50'
-              : 'border-amber-200 bg-amber-50'
-          }`}>
+          <div
+            className={`flex items-center justify-between px-5 py-3 rounded-lg border-2 ${
+              beneficiaryTotal === 100
+                ? 'border-green-200 bg-green-50'
+                : beneficiaryTotal > 100
+                  ? 'border-red-200 bg-red-50'
+                  : 'border-amber-200 bg-amber-50'
+            }`}
+          >
             <span className="text-sm font-medium text-gray-700">Total Allocation</span>
             <div className="flex items-center gap-2">
               {beneficiaryTotal === 100 && <CheckCircle2 className="h-4 w-4 text-green-600" />}
               {beneficiaryTotal > 100 && <AlertCircle className="h-4 w-4 text-red-600" />}
-              <span className={`text-lg font-bold ${
-                beneficiaryTotal === 100 ? 'text-green-600' : beneficiaryTotal > 100 ? 'text-red-600' : 'text-amber-600'
-              }`}>
+              <span
+                className={`text-lg font-bold ${
+                  beneficiaryTotal === 100
+                    ? 'text-green-600'
+                    : beneficiaryTotal > 100
+                      ? 'text-red-600'
+                      : 'text-amber-600'
+                }`}
+              >
                 {beneficiaryTotal}%
               </span>
             </div>

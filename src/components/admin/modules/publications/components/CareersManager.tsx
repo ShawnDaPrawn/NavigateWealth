@@ -102,7 +102,13 @@ const JOB_TYPES = [
 ];
 
 function getCategoryConfig(cat: string) {
-  return CATEGORIES.find(c => c.value === cat) || { value: cat, label: cat, color: 'bg-gray-100 text-gray-700' };
+  return (
+    CATEGORIES.find((c) => c.value === cat) || {
+      value: cat,
+      label: cat,
+      color: 'bg-gray-100 text-gray-700',
+    }
+  );
 }
 
 // ============================================================================
@@ -116,7 +122,9 @@ async function getAuthToken(): Promise<string> {
     const supabase = createClient();
     const { data } = await supabase.auth.getSession();
     if (data?.session?.access_token) return data.session.access_token;
-  } catch { /* fall through */ }
+  } catch {
+    /* fall through */
+  }
   return publicAnonKey;
 }
 
@@ -168,14 +176,20 @@ export function CareersManager() {
     }
   }, []);
 
-  useEffect(() => { loadListings(); }, [loadListings]);
+  useEffect(() => {
+    loadListings();
+  }, [loadListings]);
 
   // ── Form helpers ────────────────────────────────────────────────────
   const updateForm = (field: keyof FormData, value: unknown) => {
-    setForm(prev => ({ ...prev, [field]: value }));
+    setForm((prev) => ({ ...prev, [field]: value }));
   };
 
-  const addListItem = (field: 'requirements' | 'benefits', input: string, setInput: (v: string) => void) => {
+  const addListItem = (
+    field: 'requirements' | 'benefits',
+    input: string,
+    setInput: (v: string) => void,
+  ) => {
     const trimmed = input.trim();
     if (trimmed && !form[field].includes(trimmed)) {
       updateForm(field, [...form[field], trimmed]);
@@ -184,7 +198,10 @@ export function CareersManager() {
   };
 
   const removeListItem = (field: 'requirements' | 'benefits', item: string) => {
-    updateForm(field, form[field].filter(i => i !== item));
+    updateForm(
+      field,
+      form[field].filter((i) => i !== item),
+    );
   };
 
   // ── Open dialog ─────────────────────────────────────────────────────
@@ -253,7 +270,9 @@ export function CareersManager() {
         method: 'PUT',
         body: JSON.stringify({ active: !listing.active }),
       });
-      toast.success(`"${listing.title}" ${listing.active ? 'hidden from' : 'shown on'} careers page`);
+      toast.success(
+        `"${listing.title}" ${listing.active ? 'hidden from' : 'shown on'} careers page`,
+      );
       loadListings();
     } catch (err) {
       console.error('Toggle failed:', err);
@@ -276,10 +295,10 @@ export function CareersManager() {
   };
 
   // ── Render ──────────────────────────────────────────────────────────
-  const activeCount = listings.filter(l => l.active).length;
-  const categoryCounts = CATEGORIES.map(c => ({
+  const activeCount = listings.filter((l) => l.active).length;
+  const categoryCounts = CATEGORIES.map((c) => ({
     ...c,
-    count: listings.filter(l => l.category === c.value && l.active).length,
+    count: listings.filter((l) => l.category === c.value && l.active).length,
   }));
 
   return (
@@ -292,11 +311,7 @@ export function CareersManager() {
             Manage job listings displayed on the public Careers page.
           </p>
         </div>
-        <Button
-          size="sm"
-          onClick={openCreate}
-          className="bg-purple-600 hover:bg-purple-700"
-        >
+        <Button size="sm" onClick={openCreate} className="bg-purple-600 hover:bg-purple-700">
           <Plus className="h-3.5 w-3.5 mr-1.5" />
           Add Listing
         </Button>
@@ -330,7 +345,7 @@ export function CareersManager() {
             </div>
           </CardContent>
         </Card>
-        {categoryCounts.map(c => (
+        {categoryCounts.map((c) => (
           <Card key={c.value}>
             <CardContent className="pt-4 pb-4">
               <div className="text-center">
@@ -366,7 +381,11 @@ export function CareersManager() {
             <p className="text-xs text-muted-foreground mt-1">
               Add job listings to display on the public Careers page.
             </p>
-            <Button size="sm" className="mt-4 bg-purple-600 hover:bg-purple-700" onClick={openCreate}>
+            <Button
+              size="sm"
+              className="mt-4 bg-purple-600 hover:bg-purple-700"
+              onClick={openCreate}
+            >
               <Plus className="h-3.5 w-3.5 mr-1.5" />
               Add First Listing
             </Button>
@@ -395,7 +414,10 @@ export function CareersManager() {
                         {catCfg.label}
                       </Badge>
                       {!listing.active && (
-                        <Badge variant="outline" className="text-[10px] border-gray-300 text-gray-500">
+                        <Badge
+                          variant="outline"
+                          className="text-[10px] border-gray-300 text-gray-500"
+                        >
                           Hidden
                         </Badge>
                       )}
@@ -416,7 +438,9 @@ export function CareersManager() {
                   </div>
 
                   {/* Sort */}
-                  <span className="text-[10px] text-muted-foreground w-6 text-center">#{listing.sortOrder}</span>
+                  <span className="text-[10px] text-muted-foreground w-6 text-center">
+                    #{listing.sortOrder}
+                  </span>
 
                   {/* Actions */}
                   <div className="flex items-center gap-1">
@@ -433,10 +457,20 @@ export function CareersManager() {
                         <EyeOff className="h-3.5 w-3.5 text-gray-400" />
                       )}
                     </Button>
-                    <Button size="sm" variant="ghost" className="h-8 w-8 p-0" onClick={() => openEdit(listing)}>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      className="h-8 w-8 p-0"
+                      onClick={() => openEdit(listing)}
+                    >
                       <Pencil className="h-3.5 w-3.5 text-muted-foreground" />
                     </Button>
-                    <Button size="sm" variant="ghost" className="h-8 w-8 p-0" onClick={() => setDeleteTarget(listing)}>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      className="h-8 w-8 p-0"
+                      onClick={() => setDeleteTarget(listing)}
+                    >
                       <Trash2 className="h-3.5 w-3.5 text-red-500" />
                     </Button>
                   </div>
@@ -467,7 +501,9 @@ export function CareersManager() {
           <div className="space-y-4 py-2">
             {/* Title */}
             <div className="space-y-1.5">
-              <Label htmlFor="jl-title">Job Title <span className="text-red-500">*</span></Label>
+              <Label htmlFor="jl-title">
+                Job Title <span className="text-red-500">*</span>
+              </Label>
               <Input
                 id="jl-title"
                 value={form.title}
@@ -479,15 +515,19 @@ export function CareersManager() {
             {/* Category & Type */}
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1.5">
-                <Label htmlFor="jl-category">Category <span className="text-red-500">*</span></Label>
+                <Label htmlFor="jl-category">
+                  Category <span className="text-red-500">*</span>
+                </Label>
                 <select
                   id="jl-category"
                   value={form.category}
                   onChange={(e) => updateForm('category', e.target.value)}
                   className="w-full h-9 px-3 rounded-md border border-input bg-background text-sm"
                 >
-                  {CATEGORIES.map(c => (
-                    <option key={c.value} value={c.value}>{c.label}</option>
+                  {CATEGORIES.map((c) => (
+                    <option key={c.value} value={c.value}>
+                      {c.label}
+                    </option>
                   ))}
                 </select>
               </div>
@@ -499,8 +539,10 @@ export function CareersManager() {
                   onChange={(e) => updateForm('type', e.target.value)}
                   className="w-full h-9 px-3 rounded-md border border-input bg-background text-sm"
                 >
-                  {JOB_TYPES.map(t => (
-                    <option key={t.value} value={t.value}>{t.label}</option>
+                  {JOB_TYPES.map((t) => (
+                    <option key={t.value} value={t.value}>
+                      {t.label}
+                    </option>
                   ))}
                 </select>
               </div>
@@ -547,20 +589,38 @@ export function CareersManager() {
                 <Input
                   value={requirementInput}
                   onChange={(e) => setRequirementInput(e.target.value)}
-                  onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); addListItem('requirements', requirementInput, setRequirementInput); } }}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      addListItem('requirements', requirementInput, setRequirementInput);
+                    }
+                  }}
                   placeholder="Type and press Enter"
                   className="flex-1"
                 />
-                <Button type="button" size="sm" variant="outline" onClick={() => addListItem('requirements', requirementInput, setRequirementInput)} disabled={!requirementInput.trim()}>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  onClick={() => addListItem('requirements', requirementInput, setRequirementInput)}
+                  disabled={!requirementInput.trim()}
+                >
                   <Plus className="h-3.5 w-3.5" />
                 </Button>
               </div>
               {form.requirements.length > 0 && (
                 <ul className="space-y-1 mt-1">
                   {form.requirements.map((r) => (
-                    <li key={r} className="flex items-center gap-2 text-xs bg-gray-50 rounded px-2 py-1.5">
+                    <li
+                      key={r}
+                      className="flex items-center gap-2 text-xs bg-gray-50 rounded px-2 py-1.5"
+                    >
                       <span className="flex-1">{r}</span>
-                      <button type="button" onClick={() => removeListItem('requirements', r)} className="text-gray-400 hover:text-red-500">
+                      <button
+                        type="button"
+                        onClick={() => removeListItem('requirements', r)}
+                        className="text-gray-400 hover:text-red-500"
+                      >
                         <X className="h-3 w-3" />
                       </button>
                     </li>
@@ -576,20 +636,38 @@ export function CareersManager() {
                 <Input
                   value={benefitInput}
                   onChange={(e) => setBenefitInput(e.target.value)}
-                  onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); addListItem('benefits', benefitInput, setBenefitInput); } }}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      addListItem('benefits', benefitInput, setBenefitInput);
+                    }
+                  }}
                   placeholder="Type and press Enter"
                   className="flex-1"
                 />
-                <Button type="button" size="sm" variant="outline" onClick={() => addListItem('benefits', benefitInput, setBenefitInput)} disabled={!benefitInput.trim()}>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  onClick={() => addListItem('benefits', benefitInput, setBenefitInput)}
+                  disabled={!benefitInput.trim()}
+                >
                   <Plus className="h-3.5 w-3.5" />
                 </Button>
               </div>
               {form.benefits.length > 0 && (
                 <ul className="space-y-1 mt-1">
                   {form.benefits.map((b) => (
-                    <li key={b} className="flex items-center gap-2 text-xs bg-gray-50 rounded px-2 py-1.5">
+                    <li
+                      key={b}
+                      className="flex items-center gap-2 text-xs bg-gray-50 rounded px-2 py-1.5"
+                    >
                       <span className="flex-1">{b}</span>
-                      <button type="button" onClick={() => removeListItem('benefits', b)} className="text-gray-400 hover:text-red-500">
+                      <button
+                        type="button"
+                        onClick={() => removeListItem('benefits', b)}
+                        className="text-gray-400 hover:text-red-500"
+                      >
                         <X className="h-3 w-3" />
                       </button>
                     </li>
@@ -629,7 +707,9 @@ export function CareersManager() {
           </div>
 
           <DialogFooter>
-            <Button variant="outline" onClick={() => setDialogOpen(false)}>Cancel</Button>
+            <Button variant="outline" onClick={() => setDialogOpen(false)}>
+              Cancel
+            </Button>
             <Button
               onClick={handleSave}
               disabled={saving || !form.title.trim() || !form.category}
@@ -649,7 +729,12 @@ export function CareersManager() {
       {/* ══════════════════════════════════════════════════════════════════ */}
       {/* DELETE CONFIRMATION                                              */}
       {/* ══════════════════════════════════════════════════════════════════ */}
-      <AlertDialog open={!!deleteTarget} onOpenChange={(open) => { if (!open) setDeleteTarget(null); }}>
+      <AlertDialog
+        open={!!deleteTarget}
+        onOpenChange={(open) => {
+          if (!open) setDeleteTarget(null);
+        }}
+      >
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Remove Job Listing?</AlertDialogTitle>
@@ -659,10 +744,7 @@ export function CareersManager() {
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={handleDelete}
-              className="bg-red-600 hover:bg-red-700"
-            >
+            <AlertDialogAction onClick={handleDelete} className="bg-red-600 hover:bg-red-700">
               <Trash2 className="h-4 w-4 mr-1.5" />
               Remove
             </AlertDialogAction>

@@ -35,21 +35,19 @@ function getServiceRoleKey() {
   if (process.env.SUPABASE_SERVICE_ROLE_KEY) {
     return process.env.SUPABASE_SERVICE_ROLE_KEY;
   }
-  const out = execSync(
-    `npx supabase projects api-keys --project-ref ${PROJECT_REF} -o json`,
-    { encoding: 'utf8', cwd: resolve(__dirname, '..') },
-  );
+  const out = execSync(`npx supabase projects api-keys --project-ref ${PROJECT_REF} -o json`, {
+    encoding: 'utf8',
+    cwd: resolve(__dirname, '..'),
+  });
   const row = JSON.parse(out).find((r) => r.name === 'service_role');
   if (!row?.api_key) throw new Error('Could not resolve service_role key');
   return row.api_key;
 }
 
 async function clearUatRateLimits(clientId) {
-  const supabase = createClient(
-    `https://${PROJECT_REF}.supabase.co`,
-    getServiceRoleKey(),
-    { auth: { persistSession: false, autoRefreshToken: false } },
-  );
+  const supabase = createClient(`https://${PROJECT_REF}.supabase.co`, getServiceRoleKey(), {
+    auth: { persistSession: false, autoRefreshToken: false },
+  });
   for (const suffix of ['draft', 'submit']) {
     const key = `rate_limit:fna-intake:${suffix}:${clientId}`;
     await supabase.from('kv_store_91ed8379').delete().eq('key', key);
@@ -89,7 +87,12 @@ async function runDomainUat({ domain, clientToken, adviserToken, clientId }) {
   });
   steps.draftSubmit = draftRes.status === 200 && draftRes.body?.success;
   if (!steps.draftSubmit) {
-    return { domain, pass: false, steps, error: `draft failed: ${draftRes.status} ${JSON.stringify(draftRes.body)}` };
+    return {
+      domain,
+      pass: false,
+      steps,
+      error: `draft failed: ${draftRes.status} ${JSON.stringify(draftRes.body)}`,
+    };
   }
 
   const sessionId = draftRes.body.data?.id;
@@ -103,8 +106,7 @@ async function runDomainUat({ domain, clientToken, adviserToken, clientId }) {
   }
 
   steps.consentStored =
-    Boolean(submitRes.body?.data?.consentAcceptedAt) ||
-    Boolean(submitRes.body?.data?.submittedAt);
+    Boolean(submitRes.body?.data?.consentAcceptedAt) || Boolean(submitRes.body?.data?.submittedAt);
 
   const queueRes = await apiFetch(adviserToken, '/fna-intake/queue/list');
   steps.adviserQueue =

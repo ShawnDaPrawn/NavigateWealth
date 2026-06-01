@@ -6,14 +6,14 @@ import { AuthUser, SignUpResult, SignInResult, AuthCallback } from './types';
 import { AuthError, parseAuthError } from './errorHandler';
 import { AUTH_ERRORS, AUTH_ROUTES } from './constants';
 import { projectId, publicAnonKey } from '../supabase/info';
-import { 
-  validateSignupData, 
-  validateLoginAttempt, 
-  logLoginSuccess, 
+import {
+  validateSignupData,
+  validateLoginAttempt,
+  logLoginSuccess,
   logLoginFailure,
   logLogout,
   logPasswordResetRequest,
-  logPasswordChange 
+  logPasswordChange,
 } from './securityService';
 
 const API_BASE = `https://${projectId}.supabase.co/functions/v1/make-server-91ed8379`;
@@ -22,7 +22,7 @@ const API_BASE = `https://${projectId}.supabase.co/functions/v1/make-server-91ed
  * Sign up new user with email and password
  */
 export async function signUp(
-  email: string, 
+  email: string,
   password: string,
   metadata?: {
     firstName?: string;
@@ -30,11 +30,11 @@ export async function signUp(
     fullPhoneNumber?: string;
     countryCode?: string;
     phoneNumber?: string;
-  }
+  },
 ): Promise<SignUpResult> {
   try {
     console.log('🔐 Starting signup process...', { email });
-    
+
     // Server-side validation with rate limiting
     const validation = await validateSignupData({
       email,
@@ -44,23 +44,23 @@ export async function signUp(
       phoneNumber: metadata?.phoneNumber || '',
       countryCode: metadata?.countryCode || '+27',
     });
-    
+
     if (!validation.valid) {
       throw new AuthError(validation.error || 'Validation failed', 'validation_failed');
     }
-    
+
     // Use sanitized data from server
     const sanitizedFirstName = validation.sanitized?.firstName || metadata?.firstName;
     const sanitizedSurname = validation.sanitized?.surname || metadata?.surname;
-    
+
     // Call backend signup endpoint which handles user creation, application, and admin notification
     console.log('📤 Calling backend signup endpoint...');
     const response = await fetch(`${API_BASE}/auth-signup/signup`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${publicAnonKey}`,
-        'apikey': publicAnonKey,
+        Authorization: `Bearer ${publicAnonKey}`,
+        apikey: publicAnonKey,
       },
       body: JSON.stringify({
         email,
@@ -102,25 +102,25 @@ export async function signUp(
  */
 export async function signIn(email: string, password: string): Promise<SignInResult> {
   const supabase = getSupabaseClient();
-  
+
   try {
     console.log('🔐 Starting sign in process...', { email });
-    
+
     // Check rate limiting and validate on server (fails open if server unavailable)
     const validation = await validateLoginAttempt(email);
-    
+
     if (!validation.allowed) {
       const errorMsg = validation.error || 'Too many login attempts. Please try again later.';
       await logLoginFailure(email, errorMsg);
       throw new AuthError(errorMsg, 'rate_limited');
     }
-    
+
     console.log('✅ Rate limit check passed, attempting Supabase authentication...');
-    
+
     // Attempt Supabase authentication with retry for transient network errors
     let lastError: unknown = null;
     const maxRetries = 2;
-    
+
     for (let attempt = 0; attempt <= maxRetries; attempt++) {
       try {
         const { data, error } = await supabase.auth.signInWithPassword({
@@ -133,7 +133,7 @@ export async function signIn(email: string, password: string): Promise<SignInRes
           console.error('   Error name:', error.name);
           console.error('   Error message:', error.message);
           console.error('   Error status:', error.status);
-          
+
           // Check if it's a Supabase rate limit error (status 429)
           if (error.status === 429 || error.message.includes('Too many')) {
             console.error('⚠️ Supabase rate limit detected - user has been temporarily blocked');
@@ -141,10 +141,10 @@ export async function signIn(email: string, password: string): Promise<SignInRes
             throw new AuthError(
               'Too many login attempts. Please wait 5-10 minutes before trying again.',
               'rate_limited',
-              error
+              error,
             );
           }
-          
+
           // WORKAROUND: unconfirmed-email-login-fix
           // Legacy users created with email_confirm:false get "Invalid login credentials"
           // from Supabase. Attempt to auto-confirm their email server-side and retry once.
@@ -159,7 +159,7 @@ export async function signIn(email: string, password: string): Promise<SignInRes
                 method: 'POST',
                 headers: {
                   'Content-Type': 'application/json',
-                  'Authorization': `Bearer ${publicAnonKey}`,
+                  Authorization: `Bearer ${publicAnonKey}`,
                 },
                 body: JSON.stringify({ email }),
               });
@@ -172,7 +172,7 @@ export async function signIn(email: string, password: string): Promise<SignInRes
               console.warn('⚠️ Email confirmation check failed (non-blocking):', confirmErr);
             }
           }
-          
+
           await logLoginFailure(email, error.message);
           throw parseAuthError(error);
         }
@@ -182,14 +182,14 @@ export async function signIn(email: string, password: string): Promise<SignInRes
           await logLoginFailure(email, 'No user returned');
           throw new AuthError(AUTH_ERRORS.INVALID_CREDENTIALS, 'invalid_credentials');
         }
-        
+
         console.log('✅ Supabase authentication successful');
         console.log('   User ID:', data.user.id);
         console.log('   Email:', data.user.email);
         console.log('   Email verified:', data.user.email_confirmed_at ? 'Yes' : 'No');
 
         console.log('✅ Sign in successful:', data.user.id);
-        
+
         // Log successful login (non-blocking)
         logLoginSuccess(email, data.user.id).catch(() => {});
 
@@ -199,22 +199,26 @@ export async function signIn(email: string, password: string): Promise<SignInRes
         };
       } catch (retryError) {
         lastError = retryError;
-        
+
         // Only retry on network errors (TypeError: Failed to fetch), not on auth errors
-        const isNetworkError = retryError instanceof TypeError && 
-          (retryError.message.includes('Failed to fetch') || retryError.message.includes('Load failed'));
-        
+        const isNetworkError =
+          retryError instanceof TypeError &&
+          (retryError.message.includes('Failed to fetch') ||
+            retryError.message.includes('Load failed'));
+
         if (isNetworkError && attempt < maxRetries) {
-          console.log(`⚠️ Network error on auth attempt ${attempt + 1}, retrying in ${(attempt + 1) * 1000}ms...`);
-          await new Promise(resolve => setTimeout(resolve, (attempt + 1) * 1000));
+          console.log(
+            `⚠️ Network error on auth attempt ${attempt + 1}, retrying in ${(attempt + 1) * 1000}ms...`,
+          );
+          await new Promise((resolve) => setTimeout(resolve, (attempt + 1) * 1000));
           continue;
         }
-        
+
         // Not a retryable error or retries exhausted — throw
         throw retryError;
       }
     }
-    
+
     // Should not reach here, but just in case
     throw lastError || new AuthError('Authentication failed after retries', 'auth_failed');
   } catch (error) {
@@ -228,20 +232,22 @@ export async function signIn(email: string, password: string): Promise<SignInRes
  */
 export async function signOut(): Promise<void> {
   const supabase = getSupabaseClient();
-  
+
   try {
     console.log('🔐 Signing out...');
-    
+
     // Get current user before signing out
-    const { data: { user } } = await supabase.auth.getUser();
-    
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+
     const { error } = await supabase.auth.signOut();
 
     if (error) {
       console.error('❌ Sign out error:', error);
       throw parseAuthError(error);
     }
-    
+
     // Log logout event
     if (user) {
       await logLogout(user.email || '', user.id);
@@ -258,7 +264,7 @@ export async function signOut(): Promise<void> {
  */
 export async function getSession() {
   const supabase = getSupabaseClient();
-  
+
   try {
     const { data, error } = await supabase.auth.getSession();
 
@@ -279,7 +285,7 @@ export async function getSession() {
  */
 export async function getCurrentUser(): Promise<AuthUser | null> {
   const supabase = getSupabaseClient();
-  
+
   try {
     const { data, error } = await supabase.auth.getUser();
 
@@ -334,7 +340,7 @@ export function mapSupabaseUserToMetadataSnapshot(user: User): SupabaseUserMetad
  */
 export async function getCurrentUserWithMetadata(): Promise<SupabaseUserMetadataSnapshot | null> {
   const supabase = getSupabaseClient();
-  
+
   try {
     const { data, error } = await supabase.auth.getUser();
 
@@ -352,18 +358,18 @@ export async function getCurrentUserWithMetadata(): Promise<SupabaseUserMetadata
 /**
  * Get user metadata including creation time (returns null if user doesn't exist)
  */
-export async function getUserMetadata(email: string): Promise<{ 
-  userId: string; 
-  createdAt: string; 
+export async function getUserMetadata(email: string): Promise<{
+  userId: string;
+  createdAt: string;
   emailConfirmed: boolean;
 } | null> {
   const supabase = getSupabaseClient();
-  
+
   try {
-    // We can't directly query by email without admin access, 
+    // We can't directly query by email without admin access,
     // so we need to rely on the current session or sign-in attempt
     const { data, error } = await supabase.auth.getUser();
-    
+
     if (error || !data.user || data.user.email !== email) {
       return null;
     }
@@ -392,12 +398,12 @@ export async function isEmailVerified(): Promise<boolean> {
  */
 export async function sendPasswordResetEmail(email: string): Promise<void> {
   const supabase = getSupabaseClient();
-  
+
   try {
     // Build the redirect URL - ensure it matches EXACTLY what's in Supabase dashboard
     const currentOrigin = window.location.origin;
     const redirectUrl = `${currentOrigin}/reset-password`;
-    
+
     console.log('🔐 [SEND RESET] Starting password reset email process...');
     console.log('🔐 [SEND RESET] Email:', email);
     console.log('🔐 [SEND RESET] Current origin:', currentOrigin);
@@ -408,7 +414,7 @@ export async function sendPasswordResetEmail(email: string): Promise<void> {
     console.log('   Add:', redirectUrl);
     console.log('   Also add (as backup):', `${currentOrigin}/**`);
     console.log('');
-    
+
     const { data, error } = await supabase.auth.resetPasswordForEmail(email, {
       redirectTo: redirectUrl,
     });
@@ -420,15 +426,19 @@ export async function sendPasswordResetEmail(email: string): Promise<void> {
       console.error('❌ [SEND RESET] Error details:', {
         message: error.message,
         status: error.status,
-        name: error.name
+        name: error.name,
       });
       throw parseAuthError(error);
     }
 
     console.log('✅ [SEND RESET] Password reset email request completed successfully');
-    console.log('⚠️ [SEND RESET] Note: Supabase always returns success even if email does not exist (security feature)');
-    console.log('📧 [SEND RESET] If email exists in database, user should receive email from Supabase');
-    
+    console.log(
+      '⚠️ [SEND RESET] Note: Supabase always returns success even if email does not exist (security feature)',
+    );
+    console.log(
+      '📧 [SEND RESET] If email exists in database, user should receive email from Supabase',
+    );
+
     // Log password reset request
     await logPasswordResetRequest(email);
   } catch (error) {
@@ -442,10 +452,10 @@ export async function sendPasswordResetEmail(email: string): Promise<void> {
  */
 export async function resendVerificationEmail(email: string): Promise<void> {
   const supabase = getSupabaseClient();
-  
+
   try {
     console.log('📧 Resending verification email to:', email);
-    
+
     const { error } = await supabase.auth.resend({
       type: 'signup',
       email: email,
@@ -470,29 +480,35 @@ export async function resendVerificationEmail(email: string): Promise<void> {
  */
 export async function updatePassword(newPassword: string): Promise<void> {
   const supabase = getSupabaseClient();
-  
+
   try {
     console.log('🔄 Attempting to update password...');
-    
+
     const { error } = await supabase.auth.updateUser({
       password: newPassword,
     });
 
     if (error) {
       console.error('❌ Password update error:', error);
-      
+
       // Check if it's a "same password" error
       if (error.message?.includes('same') || error.message?.includes('current')) {
-        throw new AuthError('New password cannot be the same as your previous password', 'same_password', error);
+        throw new AuthError(
+          'New password cannot be the same as your previous password',
+          'same_password',
+          error,
+        );
       }
-      
+
       throw parseAuthError(error);
     }
 
     console.log('✅ Password updated successfully');
-    
+
     // Log password change
-    const { data: { user } } = await supabase.auth.getUser();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
     if (user) {
       await logPasswordChange(user.email || '', user.id);
     }
@@ -510,22 +526,22 @@ export async function updatePassword(newPassword: string): Promise<void> {
  */
 export function onAuthStateChange(callback: AuthCallback) {
   const supabase = getSupabaseClient();
-  
-  const { data: { subscription } } = supabase.auth.onAuthStateChange(
-    async (event, session) => {
-      console.log('🔐 Auth state changed:', event);
-      
-      if (session?.user) {
-        await callback(mapSupabaseUserToAuthUser(session.user), {
-          event,
-          supabaseUser: session.user,
-          accessToken: session.access_token,
-        });
-      } else {
-        await callback(null, { event });
-      }
+
+  const {
+    data: { subscription },
+  } = supabase.auth.onAuthStateChange(async (event, session) => {
+    console.log('🔐 Auth state changed:', event);
+
+    if (session?.user) {
+      await callback(mapSupabaseUserToAuthUser(session.user), {
+        event,
+        supabaseUser: session.user,
+        accessToken: session.access_token,
+      });
+    } else {
+      await callback(null, { event });
     }
-  );
+  });
 
   return subscription;
 }
@@ -544,7 +560,8 @@ function mapSupabaseUserToAuthUser(supabaseUser: User): AuthUser {
   return {
     id: supabaseUser.id,
     email: supabaseUser.email || '',
-    emailConfirmed: supabaseUser.email_confirmed_at !== null && supabaseUser.email_confirmed_at !== undefined,
+    emailConfirmed:
+      supabaseUser.email_confirmed_at !== null && supabaseUser.email_confirmed_at !== undefined,
     createdAt: supabaseUser.created_at || '',
   };
 }

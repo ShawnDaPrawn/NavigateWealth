@@ -16,7 +16,15 @@
 
 import { useState, useMemo, useCallback } from 'react';
 import { useAuth } from '../../../auth/AuthContext';
-import type { Note, NoteColor, NoteViewMode, NoteArchiveFilter, NoteSortBy, CreateNoteInput, UpdateNoteInput } from './types';
+import type {
+  Note,
+  NoteColor,
+  NoteViewMode,
+  NoteArchiveFilter,
+  NoteSortBy,
+  CreateNoteInput,
+  UpdateNoteInput,
+} from './types';
 import { NOTE_COLOR_CONFIG, NOTE_COLORS, NOTE_SORT_OPTIONS } from './constants';
 import {
   useNotes,
@@ -43,13 +51,7 @@ import { toast } from 'sonner';
 import { Button } from '../../../ui/button';
 import { Input } from '../../../ui/input';
 import { Badge } from '../../../ui/badge';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '../../../ui/select';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../../ui/select';
 import {
   Plus,
   Search,
@@ -110,7 +112,10 @@ export function NotesModule() {
   // Fetch clients for linking dropdown
   const { data: clientsResponse } = useQuery({
     queryKey: clientKeys.lists(),
-    queryFn: () => api.get<{ clients: Array<{ id: string; firstName?: string; lastName?: string }> }>('/clients'),
+    queryFn: () =>
+      api.get<{ clients: Array<{ id: string; firstName?: string; lastName?: string }> }>(
+        '/clients',
+      ),
     staleTime: 5 * 60 * 1000,
   });
 
@@ -158,7 +163,8 @@ export function NotesModule() {
         map.set(n.clientId, n.clientName);
       }
     });
-    return Array.from(map.entries()).map(([id, name]) => ({ id, name }))
+    return Array.from(map.entries())
+      .map(([id, name]) => ({ id, name }))
       .sort((a, b) => a.name.localeCompare(b.name));
   }, [notes]);
 
@@ -173,14 +179,17 @@ export function NotesModule() {
   }, [colorFilter, archiveFilter, selectedTags, clientFilter]);
 
   // ── Derived: Current filter state (for presets) ───────────────────────────
-  const currentFilters: CurrentFilterState = useMemo(() => ({
-    search,
-    archiveFilter,
-    colorFilter,
-    sortBy,
-    selectedTags,
-    clientFilter,
-  }), [search, archiveFilter, colorFilter, sortBy, selectedTags, clientFilter]);
+  const currentFilters: CurrentFilterState = useMemo(
+    () => ({
+      search,
+      archiveFilter,
+      colorFilter,
+      sortBy,
+      selectedTags,
+      clientFilter,
+    }),
+    [search, archiveFilter, colorFilter, sortBy, selectedTags, clientFilter],
+  );
 
   // ── Derived: Filtered & Sorted notes ──────────────────────────────────────
   const filteredNotes = useMemo(() => {
@@ -197,9 +206,7 @@ export function NotesModule() {
     }
 
     if (selectedTags.length > 0) {
-      result = result.filter((n) =>
-        selectedTags.every((tag) => n.tags.includes(tag))
-      );
+      result = result.filter((n) => selectedTags.every((tag) => n.tags.includes(tag)));
     }
 
     if (clientFilter !== 'all') {
@@ -217,7 +224,7 @@ export function NotesModule() {
           n.title.toLowerCase().includes(q) ||
           n.content.toLowerCase().includes(q) ||
           n.tags.some((t) => t.toLowerCase().includes(q)) ||
-          (n.clientName && n.clientName.toLowerCase().includes(q))
+          (n.clientName && n.clientName.toLowerCase().includes(q)),
       );
     }
 
@@ -226,8 +233,14 @@ export function NotesModule() {
 
   // Separate pinned and unpinned, then sort each group
   const { pinnedNotes, unpinnedNotes } = useMemo(() => {
-    const pinned = sortNotes(filteredNotes.filter((n) => n.isPinned), sortBy);
-    const unpinned = sortNotes(filteredNotes.filter((n) => !n.isPinned), sortBy);
+    const pinned = sortNotes(
+      filteredNotes.filter((n) => n.isPinned),
+      sortBy,
+    );
+    const unpinned = sortNotes(
+      filteredNotes.filter((n) => !n.isPinned),
+      sortBy,
+    );
     return { pinnedNotes: pinned, unpinnedNotes: unpinned };
   }, [filteredNotes, sortBy]);
 
@@ -243,9 +256,9 @@ export function NotesModule() {
   }, [notes]);
 
   // ── Derived: Bulk action data ─────────────────────────────────────────────
-  const selectedNotes = useMemo(() =>
-    filteredNotes.filter((n) => selectedIds.has(n.id)),
-    [filteredNotes, selectedIds]
+  const selectedNotes = useMemo(
+    () => filteredNotes.filter((n) => selectedIds.has(n.id)),
+    [filteredNotes, selectedIds],
   );
 
   const selectedNoteTags = useMemo(() => {
@@ -258,11 +271,14 @@ export function NotesModule() {
   const hasActiveSelected = selectedNotes.some((n) => !n.isArchived);
 
   // ── Handlers: Notes ───────────────────────────────────────────────────────
-  const handleOpenNote = useCallback((note: Note) => {
-    if (isSelecting) return; // In select mode, clicks toggle selection
-    setSelectedNote(note);
-    setEditorOpen(true);
-  }, [isSelecting]);
+  const handleOpenNote = useCallback(
+    (note: Note) => {
+      if (isSelecting) return; // In select mode, clicks toggle selection
+      setSelectedNote(note);
+      setEditorOpen(true);
+    },
+    [isSelecting],
+  );
 
   const handleNewNote = useCallback(() => {
     setSelectedNote(null);
@@ -277,40 +293,40 @@ export function NotesModule() {
         await updateNote.mutateAsync(input);
       }
     },
-    [createNote, updateNote]
+    [createNote, updateNote],
   );
 
   const handlePin = useCallback(
     (note: Note) => {
       updateNote.mutate({ id: note.id, isPinned: !note.isPinned });
     },
-    [updateNote]
+    [updateNote],
   );
 
   const handleArchive = useCallback(
     (note: Note) => {
       updateNote.mutate({ id: note.id, isArchived: !note.isArchived });
     },
-    [updateNote]
+    [updateNote],
   );
 
   const handleDelete = useCallback(
     (note: Note) => {
       deleteNote.mutate(note.id);
     },
-    [deleteNote]
+    [deleteNote],
   );
 
   const handleConvertToTask = useCallback(
     (note: Note) => {
       convertToTask.mutate(note.id);
     },
-    [convertToTask]
+    [convertToTask],
   );
 
   const handleToggleTag = useCallback((tag: string) => {
     setSelectedTags((prev) =>
-      prev.includes(tag) ? prev.filter((t) => t !== tag) : [...prev, tag]
+      prev.includes(tag) ? prev.filter((t) => t !== tag) : [...prev, tag],
     );
   }, []);
 
@@ -412,66 +428,79 @@ export function NotesModule() {
     }
   }, [selectedNotes, queryClient, handleClearSelection]);
 
-  const handleBulkAddTag = useCallback(async (tag: string) => {
-    // Add tag to all selected notes that don't already have it
-    const targets = selectedNotes.filter((n) => !n.tags.includes(tag));
-    if (targets.length === 0) {
-      toast.info(`All selected notes already have tag "${tag}"`);
-      return;
-    }
-    setIsBulkBusy(true);
-    try {
-      await Promise.all(targets.map((n) =>
-        NotesAPI.updateNote({ id: n.id, tags: [...n.tags, tag] })
-      ));
-      queryClient.invalidateQueries({ queryKey: noteKeys.all });
-      toast.success(`Tag "${tag}" added to ${targets.length} note${targets.length > 1 ? 's' : ''}`);
-    } catch (error: unknown) {
-      const msg = error instanceof Error ? error.message : 'Unknown error';
-      toast.error('Failed to add tag', { description: msg });
-    } finally {
-      setIsBulkBusy(false);
-    }
-  }, [selectedNotes, queryClient]);
+  const handleBulkAddTag = useCallback(
+    async (tag: string) => {
+      // Add tag to all selected notes that don't already have it
+      const targets = selectedNotes.filter((n) => !n.tags.includes(tag));
+      if (targets.length === 0) {
+        toast.info(`All selected notes already have tag "${tag}"`);
+        return;
+      }
+      setIsBulkBusy(true);
+      try {
+        await Promise.all(
+          targets.map((n) => NotesAPI.updateNote({ id: n.id, tags: [...n.tags, tag] })),
+        );
+        queryClient.invalidateQueries({ queryKey: noteKeys.all });
+        toast.success(
+          `Tag "${tag}" added to ${targets.length} note${targets.length > 1 ? 's' : ''}`,
+        );
+      } catch (error: unknown) {
+        const msg = error instanceof Error ? error.message : 'Unknown error';
+        toast.error('Failed to add tag', { description: msg });
+      } finally {
+        setIsBulkBusy(false);
+      }
+    },
+    [selectedNotes, queryClient],
+  );
 
-  const handleBulkRemoveTag = useCallback(async (tag: string) => {
-    const targets = selectedNotes.filter((n) => n.tags.includes(tag));
-    if (targets.length === 0) return;
-    setIsBulkBusy(true);
-    try {
-      await Promise.all(targets.map((n) =>
-        NotesAPI.updateNote({ id: n.id, tags: n.tags.filter((t) => t !== tag) })
-      ));
-      queryClient.invalidateQueries({ queryKey: noteKeys.all });
-      toast.success(`Tag "${tag}" removed from ${targets.length} note${targets.length > 1 ? 's' : ''}`);
-    } catch (error: unknown) {
-      const msg = error instanceof Error ? error.message : 'Unknown error';
-      toast.error('Failed to remove tag', { description: msg });
-    } finally {
-      setIsBulkBusy(false);
-    }
-  }, [selectedNotes, queryClient]);
+  const handleBulkRemoveTag = useCallback(
+    async (tag: string) => {
+      const targets = selectedNotes.filter((n) => n.tags.includes(tag));
+      if (targets.length === 0) return;
+      setIsBulkBusy(true);
+      try {
+        await Promise.all(
+          targets.map((n) =>
+            NotesAPI.updateNote({ id: n.id, tags: n.tags.filter((t) => t !== tag) }),
+          ),
+        );
+        queryClient.invalidateQueries({ queryKey: noteKeys.all });
+        toast.success(
+          `Tag "${tag}" removed from ${targets.length} note${targets.length > 1 ? 's' : ''}`,
+        );
+      } catch (error: unknown) {
+        const msg = error instanceof Error ? error.message : 'Unknown error';
+        toast.error('Failed to remove tag', { description: msg });
+      } finally {
+        setIsBulkBusy(false);
+      }
+    },
+    [selectedNotes, queryClient],
+  );
 
-  const handleBulkSetColor = useCallback(async (color: NoteColor) => {
-    const targets = selectedNotes.filter((n) => n.color !== color);
-    if (targets.length === 0) {
-      toast.info('All selected notes already have that colour');
-      return;
-    }
-    setIsBulkBusy(true);
-    try {
-      await Promise.all(targets.map((n) =>
-        NotesAPI.updateNote({ id: n.id, color })
-      ));
-      queryClient.invalidateQueries({ queryKey: noteKeys.all });
-      toast.success(`Colour updated for ${targets.length} note${targets.length > 1 ? 's' : ''}`);
-    } catch (error: unknown) {
-      const msg = error instanceof Error ? error.message : 'Unknown error';
-      toast.error('Failed to update colour', { description: msg });
-    } finally {
-      setIsBulkBusy(false);
-    }
-  }, [selectedNotes, queryClient]);
+  const handleBulkSetColor = useCallback(
+    async (color: NoteColor) => {
+      const targets = selectedNotes.filter((n) => n.color !== color);
+      if (targets.length === 0) {
+        toast.info('All selected notes already have that colour');
+        return;
+      }
+      setIsBulkBusy(true);
+      try {
+        await Promise.all(targets.map((n) => NotesAPI.updateNote({ id: n.id, color })));
+        queryClient.invalidateQueries({ queryKey: noteKeys.all });
+        toast.success(`Colour updated for ${targets.length} note${targets.length > 1 ? 's' : ''}`);
+      } catch (error: unknown) {
+        const msg = error instanceof Error ? error.message : 'Unknown error';
+        toast.error('Failed to update colour', { description: msg });
+      } finally {
+        setIsBulkBusy(false);
+      }
+    },
+    [selectedNotes, queryClient],
+  );
 
   // ── Silent auto-save handler ─────────────────────────────────────────────
   const handleAutoSave = useCallback(
@@ -479,17 +508,20 @@ export function NotesModule() {
       await NotesAPI.updateNote(input);
       queryClient.invalidateQueries({ queryKey: noteKeys.detail(input.id) });
     },
-    [queryClient]
+    [queryClient],
   );
 
   // ── Note card handlers bundle ─────────────────────────────────────────────
-  const cardHandlers = useMemo(() => ({
-    onOpen: handleOpenNote,
-    onPin: handlePin,
-    onArchive: handleArchive,
-    onDelete: handleDelete,
-    onConvertToTask: handleConvertToTask,
-  }), [handleOpenNote, handlePin, handleArchive, handleDelete, handleConvertToTask]);
+  const cardHandlers = useMemo(
+    () => ({
+      onOpen: handleOpenNote,
+      onPin: handlePin,
+      onArchive: handleArchive,
+      onDelete: handleDelete,
+      onConvertToTask: handleConvertToTask,
+    }),
+    [handleOpenNote, handlePin, handleArchive, handleDelete, handleConvertToTask],
+  );
 
   // ── Loading state ─────────────────────────────────────────────────────────
   if (isLoading) {
@@ -524,10 +556,34 @@ export function NotesModule() {
 
       {/* ── Stat Cards ─────────────────────────────────────────────────────── */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <StatCard icon={StickyNote} label="Total Notes" value={stats.total} iconBg="bg-gray-50" iconColor="text-gray-500" />
-        <StatCard icon={Pin} label="Pinned" value={stats.pinned} iconBg="bg-amber-50" iconColor="text-amber-500" />
-        <StatCard icon={User} label="Client Linked" value={stats.linked} iconBg="bg-purple-50" iconColor="text-purple-500" />
-        <StatCard icon={CheckCircle2} label="Converted" value={stats.converted} iconBg="bg-green-50" iconColor="text-green-500" />
+        <StatCard
+          icon={StickyNote}
+          label="Total Notes"
+          value={stats.total}
+          iconBg="bg-gray-50"
+          iconColor="text-gray-500"
+        />
+        <StatCard
+          icon={Pin}
+          label="Pinned"
+          value={stats.pinned}
+          iconBg="bg-amber-50"
+          iconColor="text-amber-500"
+        />
+        <StatCard
+          icon={User}
+          label="Client Linked"
+          value={stats.linked}
+          iconBg="bg-purple-50"
+          iconColor="text-purple-500"
+        />
+        <StatCard
+          icon={CheckCircle2}
+          label="Converted"
+          value={stats.converted}
+          iconBg="bg-green-50"
+          iconColor="text-green-500"
+        />
       </div>
 
       {/* ── Toolbar ────────────────────────────────────────────────────────── */}
@@ -564,13 +620,18 @@ export function NotesModule() {
             </SelectTrigger>
             <SelectContent>
               {NOTE_SORT_OPTIONS.map((opt) => (
-                <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
+                <SelectItem key={opt.value} value={opt.value}>
+                  {opt.label}
+                </SelectItem>
               ))}
             </SelectContent>
           </Select>
 
           {/* Archive filter */}
-          <Select value={archiveFilter} onValueChange={(v) => setArchiveFilter(v as NoteArchiveFilter)}>
+          <Select
+            value={archiveFilter}
+            onValueChange={(v) => setArchiveFilter(v as NoteArchiveFilter)}
+          >
             <SelectTrigger className="w-[130px] h-9 text-sm">
               <SelectValue />
             </SelectTrigger>
@@ -583,7 +644,10 @@ export function NotesModule() {
 
           {/* Colour filter */}
           <div className="flex items-center gap-1">
-            <Select value={colorFilter} onValueChange={(v) => setColorFilter(v as NoteColor | 'all')}>
+            <Select
+              value={colorFilter}
+              onValueChange={(v) => setColorFilter(v as NoteColor | 'all')}
+            >
               <SelectTrigger className="w-[160px] h-9 text-sm">
                 <SelectValue placeholder="All colours" />
               </SelectTrigger>
@@ -623,7 +687,9 @@ export function NotesModule() {
                 <SelectItem value="all">All Clients</SelectItem>
                 <SelectItem value="__unlinked__">Unlinked</SelectItem>
                 {linkedClients.map((c) => (
-                  <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+                  <SelectItem key={c.id} value={c.id}>
+                    {c.name}
+                  </SelectItem>
                 ))}
               </SelectContent>
             </Select>
@@ -716,7 +782,13 @@ export function NotesModule() {
       {/* ── Notes Content ──────────────────────────────────────────────────── */}
       {filteredNotes.length === 0 ? (
         <EmptyState
-          isSearch={!!search.trim() || colorFilter !== 'all' || archiveFilter !== 'active' || selectedTags.length > 0 || clientFilter !== 'all'}
+          isSearch={
+            !!search.trim() ||
+            colorFilter !== 'all' ||
+            archiveFilter !== 'active' ||
+            selectedTags.length > 0 ||
+            clientFilter !== 'all'
+          }
           onNewNote={handleNewNote}
         />
       ) : (
@@ -798,15 +870,22 @@ export function NotesModule() {
       {/* ── Editor Modal ───────────────────────────────────────────────────── */}
       <NoteEditorModal
         isOpen={editorOpen}
-        onClose={() => { setEditorOpen(false); setSelectedNote(null); }}
+        onClose={() => {
+          setEditorOpen(false);
+          setSelectedNote(null);
+        }}
         note={selectedNote}
         personnelId={personnelId}
         personnelName={personnelName}
         clients={clientOptions}
         onSave={handleSave}
         onAutoSave={handleAutoSave}
-        onDelete={(id) => { deleteNote.mutate(id); }}
-        onConvertToTask={(id) => { convertToTask.mutate(id); }}
+        onDelete={(id) => {
+          deleteNote.mutate(id);
+        }}
+        onConvertToTask={(id) => {
+          convertToTask.mutate(id);
+        }}
         customColourLabels={colourLabels.customLabels}
       />
 
@@ -916,13 +995,7 @@ function StatCard({
   );
 }
 
-function EmptyState({
-  isSearch,
-  onNewNote,
-}: {
-  isSearch: boolean;
-  onNewNote: () => void;
-}) {
+function EmptyState({ isSearch, onNewNote }: { isSearch: boolean; onNewNote: () => void }) {
   return (
     <div className="flex flex-col items-center justify-center py-16 text-center">
       <div className="w-16 h-16 rounded-full bg-gray-100 flex items-center justify-center mb-4">

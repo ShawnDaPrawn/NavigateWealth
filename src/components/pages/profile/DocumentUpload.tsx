@@ -45,7 +45,7 @@ export const DocumentUpload: React.FC<DocumentUploadProps> = ({
     }
 
     // Validate file type
-    const validTypes = accept.split(',').map(t => {
+    const validTypes = accept.split(',').map((t) => {
       if (t === '.pdf') return 'application/pdf';
       if (t === '.jpg' || t === '.jpeg') return 'image/jpeg';
       if (t === '.png') return 'image/png';
@@ -58,7 +58,7 @@ export const DocumentUpload: React.FC<DocumentUploadProps> = ({
     }
 
     onUpload(file);
-    
+
     // Reset input
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
@@ -87,9 +87,7 @@ export const DocumentUpload: React.FC<DocumentUploadProps> = ({
             <CheckCircle className="h-4 w-4 text-green-600" />
             <div>
               <p className="text-sm text-green-900">{fileName}</p>
-              {fileSize && (
-                <p className="text-xs text-green-700">{formatFileSize(fileSize)}</p>
-              )}
+              {fileSize && <p className="text-xs text-green-700">{formatFileSize(fileSize)}</p>}
             </div>
           </div>
           {onRemove && !disabled && (
@@ -125,9 +123,7 @@ export const DocumentUpload: React.FC<DocumentUploadProps> = ({
         </div>
       )}
 
-      {hint && !fileName && (
-        <p className="text-xs text-gray-500">{hint}</p>
-      )}
+      {hint && !fileName && <p className="text-xs text-gray-500">{hint}</p>}
     </div>
   );
 };

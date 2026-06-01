@@ -1,9 +1,9 @@
 /**
  * Advice Engine Module - Main Index
- * 
+ *
  * Centralized exports for the advice engine module.
  * Provides clean public API for consuming code.
- * 
+ *
  * @module advice-engine
  */
 
@@ -14,8 +14,14 @@ import { Brain, FileText, Loader2, Settings2 } from 'lucide-react';
 import { useAuth } from '../../../auth/AuthContext';
 
 // Heavy sub-component — lazy-loaded (only shown on tab switch)
-const DraftRoAInterface = React.lazy(() => import('./components/DraftRoAInterface').then(m => ({ default: m.DraftRoAInterface })));
-const RoAModuleContractManager = React.lazy(() => import('./components/RoAModuleContractManager').then(m => ({ default: m.RoAModuleContractManager })));
+const DraftRoAInterface = React.lazy(() =>
+  import('./components/DraftRoAInterface').then((m) => ({ default: m.DraftRoAInterface })),
+);
+const RoAModuleContractManager = React.lazy(() =>
+  import('./components/RoAModuleContractManager').then((m) => ({
+    default: m.RoAModuleContractManager,
+  })),
+);
 
 function TabFallback() {
   return (

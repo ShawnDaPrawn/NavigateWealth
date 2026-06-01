@@ -178,11 +178,11 @@ export interface FNAReport {
 export interface ApplicationsPipelineRow {
   'Application ID': string;
   'Applicant Name': string;
-  'Email': string;
-  'Phone': string;
-  'Status': string;
+  Email: string;
+  Phone: string;
+  Status: string;
   'Services Requested': string;
-  'Urgency': string;
+  Urgency: string;
   'Submitted Date': string;
   'Last Updated': string;
   'Days Since Submission': number;
@@ -192,11 +192,11 @@ export interface ApplicationsPipelineRow {
 // FNA completion export row
 export interface FNACompletionRow {
   'FNA ID': string;
-  'Type': string;
-  'Status': string;
+  Type: string;
+  Status: string;
   'Client ID': string;
   'Client Name': string;
-  'Adviser': string;
+  Adviser: string;
   'Created Date': string;
   'Last Updated': string;
   'Published Date': string;
@@ -208,7 +208,7 @@ export interface FNACompletionRow {
 export interface ComplianceAuditRow {
   'User ID': string;
   'Client Name': string;
-  'Email': string;
+  Email: string;
   'Account Status': string;
   'POPIA Consent': string;
   'FAIS Acknowledged': string;
@@ -224,14 +224,14 @@ export interface ComplianceAuditRow {
 export interface ClientLifecycleAuditRow {
   'User ID': string;
   'Client Name': string;
-  'Email': string;
+  Email: string;
   'Profile Account Status': string;
   'Security Deleted': string;
   'Security Suspended': string;
   'Derived Status': string;
   'Issue Type': string;
-  'Severity': string;
-  'Details': string;
+  Severity: string;
+  Details: string;
   'Recommended Action': string;
   'Profile Created': string;
   [key: string]: unknown;

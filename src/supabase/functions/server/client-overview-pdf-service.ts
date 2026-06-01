@@ -196,11 +196,11 @@ export interface ClientOverviewReportData {
 // ── Brand colours ───────────────────────────────────────────────────────
 
 const BRAND = {
-  primary: [109, 40, 217] as [number, number, number],   // #6d28d9 — Navigate Wealth purple
-  dark: [30, 27, 75] as [number, number, number],         // #1e1b4b
-  text: [17, 24, 39] as [number, number, number],          // gray-900
-  muted: [107, 114, 128] as [number, number, number],      // gray-500
-  lightBg: [249, 250, 251] as [number, number, number],    // gray-50
+  primary: [109, 40, 217] as [number, number, number], // #6d28d9 — Navigate Wealth purple
+  dark: [30, 27, 75] as [number, number, number], // #1e1b4b
+  text: [17, 24, 39] as [number, number, number], // gray-900
+  muted: [107, 114, 128] as [number, number, number], // gray-500
+  lightBg: [249, 250, 251] as [number, number, number], // gray-50
   white: [255, 255, 255] as [number, number, number],
   green: [22, 163, 74] as [number, number, number],
   amber: [217, 119, 6] as [number, number, number],
@@ -274,8 +274,15 @@ export async function generateClientOverviewPDF(
       doc.setPage(i);
       doc.setFontSize(7);
       doc.setTextColor(...BRAND.muted);
-      doc.text(`Navigate Wealth  |  Confidential  |  Page ${i} of ${pages}`, pageWidth / 2, pageHeight - 8, { align: 'center' });
-      doc.text(`Generated: ${fmtDate(data.generatedAt)}`, pageWidth - margin, pageHeight - 8, { align: 'right' });
+      doc.text(
+        `Navigate Wealth  |  Confidential  |  Page ${i} of ${pages}`,
+        pageWidth / 2,
+        pageHeight - 8,
+        { align: 'center' },
+      );
+      doc.text(`Generated: ${fmtDate(data.generatedAt)}`, pageWidth - margin, pageHeight - 8, {
+        align: 'right',
+      });
     }
   };
 
@@ -368,7 +375,8 @@ export async function generateClientOverviewPDF(
   doc.setFontSize(8);
   doc.setTextColor(...BRAND.muted);
   doc.setFont('helvetica', 'italic');
-  const notice = 'CONFIDENTIAL — This document is prepared for the exclusive use of the named client and their financial adviser. It contains personal financial information and must not be distributed without authorisation.';
+  const notice =
+    'CONFIDENTIAL — This document is prepared for the exclusive use of the named client and their financial adviser. It contains personal financial information and must not be distributed without authorisation.';
   const noticeLines = doc.splitTextToSize(notice, contentWidth);
   doc.text(noticeLines, margin, y);
 
@@ -397,7 +405,10 @@ export async function generateClientOverviewPDF(
     kvRow('ID Number', pr.maskedIdNumber || '-');
     kvRow('Tax Number', pr.taxNumber || '-');
     kvRow('Nationality', pr.nationality || '-');
-    kvRow('Marital Status', `${capitalize(pr.maritalStatus)}${pr.maritalRegime ? ` (${pr.maritalRegime})` : ''}`);
+    kvRow(
+      'Marital Status',
+      `${capitalize(pr.maritalStatus)}${pr.maritalRegime ? ` (${pr.maritalRegime})` : ''}`,
+    );
     kvRow('Smoker', pr.smokerStatus ? 'Yes' : 'No');
 
     y += 3;
@@ -464,9 +475,7 @@ export async function generateClientOverviewPDF(
   if (data.healthScore !== undefined) {
     sectionHeading('2b. Financial Health Score');
 
-    const healthData: string[][] = [
-      ['Overall Health Score', `${data.healthScore}/100`],
-    ];
+    const healthData: string[][] = [['Overall Health Score', `${data.healthScore}/100`]];
     if (data.healthSubScores) {
       healthData.push(
         ['Protection Score', `${data.healthSubScores.protection}/100`],
@@ -508,7 +517,7 @@ export async function generateClientOverviewPDF(
       retirement_progress: 'Retirement Progress',
     };
 
-    const kpiBody = data.kpiSummary.map(k => [
+    const kpiBody = data.kpiSummary.map((k) => [
       kpiLabels[k.id] || k.id,
       k.displayValue,
       statusLabel(k.status),
@@ -550,13 +559,18 @@ export async function generateClientOverviewPDF(
     const cf = data.cashflow;
     const taxDeductions = cf.grossIncome - cf.netIncome;
     const disposable = Math.max(0, cf.netIncome - cf.totalPremiums - cf.debtPayments);
-    const disposablePct = cf.grossIncome > 0 ? ((disposable / cf.grossIncome) * 100).toFixed(1) : '0';
+    const disposablePct =
+      cf.grossIncome > 0 ? ((disposable / cf.grossIncome) * 100).toFixed(1) : '0';
 
     const cfBody = [
       ['Gross Monthly Income', fmt(cf.grossIncome), '100%'],
       ['Tax & Deductions', `(${fmt(taxDeductions)})`, pct((taxDeductions / cf.grossIncome) * 100)],
       ['Net Monthly Income', fmt(cf.netIncome), pct((cf.netIncome / cf.grossIncome) * 100)],
-      ['Total Premiums', `(${fmt(cf.totalPremiums)})`, pct((cf.totalPremiums / cf.grossIncome) * 100)],
+      [
+        'Total Premiums',
+        `(${fmt(cf.totalPremiums)})`,
+        pct((cf.totalPremiums / cf.grossIncome) * 100),
+      ],
       ['Debt Payments', `(${fmt(cf.debtPayments)})`, pct((cf.debtPayments / cf.grossIncome) * 100)],
       ['Disposable Income', fmt(disposable), `${disposablePct}%`],
     ];
@@ -571,7 +585,10 @@ export async function generateClientOverviewPDF(
       columnStyles: { 0: { cellWidth: 60 } },
       didParseCell: (hookData: AutoTableHookData) => {
         // Bold first and last rows
-        if (hookData.section === 'body' && (hookData.row.index === 0 || hookData.row.index === cfBody.length - 1)) {
+        if (
+          hookData.section === 'body' &&
+          (hookData.row.index === 0 || hookData.row.index === cfBody.length - 1)
+        ) {
           hookData.cell.styles.fontStyle = 'bold';
         }
         // Colour disposable row
@@ -588,9 +605,10 @@ export async function generateClientOverviewPDF(
   if (data.insuranceCoverage && data.insuranceCoverage.length > 0) {
     sectionHeading('2e. Insurance Coverage Comparison');
 
-    const icBody = data.insuranceCoverage.map(ic => {
+    const icBody = data.insuranceCoverage.map((ic) => {
       const shortfall = ic.recommended - ic.existing;
-      const pctCovered = ic.recommended > 0 ? ((ic.existing / ic.recommended) * 100).toFixed(0) + '%' : '-';
+      const pctCovered =
+        ic.recommended > 0 ? ((ic.existing / ic.recommended) * 100).toFixed(0) + '%' : '-';
       return [
         ic.label,
         fmt(ic.existing),
@@ -628,7 +646,7 @@ export async function generateClientOverviewPDF(
     sectionHeading('2f. Asset Allocation');
 
     const totalAssetValue = data.assetAllocation.reduce((s, a) => s + a.value, 0);
-    const aaBody = data.assetAllocation.map(a => [
+    const aaBody = data.assetAllocation.map((a) => [
       a.type,
       fmt(a.value),
       totalAssetValue > 0 ? pct((a.value / totalAssetValue) * 100) : '-',
@@ -657,7 +675,7 @@ export async function generateClientOverviewPDF(
   if (data.categoryKPIs && data.categoryKPIs.length > 0) {
     sectionHeading('2g. Policy Summary by Category');
 
-    const catBody = data.categoryKPIs.map(c => [
+    const catBody = data.categoryKPIs.map((c) => [
       c.label,
       `${c.policyCount}`,
       fmt(c.monthlyPremium),
@@ -688,7 +706,11 @@ export async function generateClientOverviewPDF(
     doc.setFontSize(8.5);
     doc.setFont('helvetica', 'normal');
     doc.setTextColor(...BRAND.text);
-    doc.text(`${dcs.available} of ${dcs.total} documents available (${completionPct}% complete)`, margin, y);
+    doc.text(
+      `${dcs.available} of ${dcs.total} documents available (${completionPct}% complete)`,
+      margin,
+      y,
+    );
     y += 5;
 
     const docStatusLabel = (s: string): string => {
@@ -711,12 +733,8 @@ export async function generateClientOverviewPDF(
     };
 
     const docBody = dcs.items
-      .filter(d => d.status !== 'not-applicable')
-      .map(d => [
-        docCatLabel(d.category),
-        d.label,
-        docStatusLabel(d.status),
-      ]);
+      .filter((d) => d.status !== 'not-applicable')
+      .map((d) => [docCatLabel(d.category), d.label, docStatusLabel(d.status)]);
 
     autoTable(doc, {
       startY: y,
@@ -990,7 +1008,7 @@ export async function generateClientOverviewPDF(
   if (data.netWorthHistory && data.netWorthHistory.length > 0) {
     sectionHeading('Net Worth Trend');
 
-    const histBody = data.netWorthHistory.map(h => [
+    const histBody = data.netWorthHistory.map((h) => [
       fmtDate(h.date),
       fmt(h.totalAssets),
       fmt(h.totalLiabilities),
@@ -1002,9 +1020,8 @@ export async function generateClientOverviewPDF(
       const first = data.netWorthHistory[0];
       const last = data.netWorthHistory[data.netWorthHistory.length - 1];
       const change = last.netWorth - first.netWorth;
-      const changePct = first.netWorth !== 0
-        ? ((change / Math.abs(first.netWorth)) * 100).toFixed(1)
-        : '—';
+      const changePct =
+        first.netWorth !== 0 ? ((change / Math.abs(first.netWorth)) * 100).toFixed(1) : '—';
       const direction = change >= 0 ? 'Increased' : 'Decreased';
 
       doc.setFontSize(8.5);
@@ -1012,7 +1029,8 @@ export async function generateClientOverviewPDF(
       doc.setTextColor(...(change >= 0 ? BRAND.green : BRAND.red));
       doc.text(
         `Net worth ${direction.toLowerCase()} by ${fmt(Math.abs(change))} (${changePct}%) over ${data.netWorthHistory.length} snapshots.`,
-        margin, y,
+        margin,
+        y,
       );
       y += 5;
       doc.setTextColor(...BRAND.text);

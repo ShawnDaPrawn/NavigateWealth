@@ -15,7 +15,7 @@ import {
   SendMessageResponse,
   MessageCreate,
   CommunicationMessage,
-  EmailFooterSettings
+  EmailFooterSettings,
 } from './types';
 import { ProductProvider } from '../product-management/types';
 
@@ -52,7 +52,7 @@ const mapTemplateToFrontend = (data: BackendTemplate): EmailTemplate => ({
   footerNote: data.footerNote || '',
   category: data.category,
   createdAt: data.createdAt,
-  isSystem: data.isSystem
+  isSystem: data.isSystem,
 });
 
 // Helper to map frontend EmailTemplate to backend Template
@@ -129,7 +129,9 @@ function mapCampaignsToActivityLog(campaigns: BackendCampaign[]): ActivityLogEnt
     .sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime());
 }
 
-const mapTemplateToBackend = (template: EmailTemplate): Omit<BackendTemplate, 'id' | 'createdAt' | 'isSystem'> => ({
+const mapTemplateToBackend = (
+  template: EmailTemplate,
+): Omit<BackendTemplate, 'id' | 'createdAt' | 'isSystem'> => ({
   name: template.name,
   enabled: template.enabled,
   subject: template.subject,
@@ -140,7 +142,7 @@ const mapTemplateToBackend = (template: EmailTemplate): Omit<BackendTemplate, 'i
   buttonLabel: template.buttonLabel,
   buttonUrl: template.buttonUrl,
   footerNote: template.footerNote,
-  category: template.category ?? ''
+  category: template.category ?? '',
 });
 
 export const communicationApi = {
@@ -154,7 +156,9 @@ export const communicationApi = {
   },
 
   async getGroups(page = 1, limit = 100): Promise<ClientGroup[]> {
-    const response = await api.get<{ data: ClientGroup[] }>(`${ENDPOINTS.GROUPS}?page=${page}&limit=${limit}`);
+    const response = await api.get<{ data: ClientGroup[] }>(
+      `${ENDPOINTS.GROUPS}?page=${page}&limit=${limit}`,
+    );
     return response.data || [];
   },
 
@@ -176,13 +180,15 @@ export const communicationApi = {
   async deleteGroup(id: string): Promise<void> {
     return api.delete<void>(ENDPOINTS.GROUP_BY_ID(id));
   },
-  
+
   async recalculateGroupMemberships(): Promise<{ success: boolean; message: string }> {
     return api.post<{ success: boolean; message: string }>(`${ENDPOINTS.GROUPS}/recalculate`, {});
   },
-  
+
   async debugGroups(): Promise<{ groups: unknown[]; clients: unknown[]; summary: unknown }> {
-    return api.get<{ groups: unknown[]; clients: unknown[]; summary: unknown }>(`${ENDPOINTS.GROUPS}/debug`);
+    return api.get<{ groups: unknown[]; clients: unknown[]; summary: unknown }>(
+      `${ENDPOINTS.GROUPS}/debug`,
+    );
   },
 
   // Templates
@@ -200,16 +206,19 @@ export const communicationApi = {
 
   async createTemplate(template: Partial<EmailTemplate>): Promise<EmailTemplate> {
     const backendData = mapTemplateToBackend(template as EmailTemplate);
-    const response = await api.post<{ template: BackendTemplate }>(ENDPOINTS.TEMPLATES, backendData);
+    const response = await api.post<{ template: BackendTemplate }>(
+      ENDPOINTS.TEMPLATES,
+      backendData,
+    );
     return mapTemplateToFrontend(response.template);
   },
 
   async saveTemplate(template: EmailTemplate): Promise<void> {
     const backendData = mapTemplateToBackend(template);
-    
+
     if (template.id) {
-       await api.put(`${ENDPOINTS.TEMPLATES}/${template.id}`, backendData);
-       return;
+      await api.put(`${ENDPOINTS.TEMPLATES}/${template.id}`, backendData);
+      return;
     }
 
     await api.post(ENDPOINTS.TEMPLATES, backendData);
@@ -232,7 +241,7 @@ export const communicationApi = {
           contactEmail: '',
           contactPhone: '',
           socialLinks: {},
-          copyrightText: ''
+          copyrightText: '',
         };
       }
       throw error;
@@ -252,7 +261,10 @@ export const communicationApi = {
   },
 
   async createCampaign(campaign: Partial<CommunicationCampaign>): Promise<CommunicationCampaign> {
-    const response = await api.post<{ campaign: CommunicationCampaign }>(ENDPOINTS.CAMPAIGNS, campaign);
+    const response = await api.post<{ campaign: CommunicationCampaign }>(
+      ENDPOINTS.CAMPAIGNS,
+      campaign,
+    );
     return response.campaign;
   },
 
@@ -304,7 +316,9 @@ export const communicationApi = {
   },
 
   async getClientLogs(clientId: string): Promise<CommunicationLog[]> {
-    const response = await api.get<{ communications: CommunicationLog[] }>(ENDPOINTS.CLIENT_LOGS(clientId));
+    const response = await api.get<{ communications: CommunicationLog[] }>(
+      ENDPOINTS.CLIENT_LOGS(clientId),
+    );
     return response.communications || [];
   },
 
@@ -316,14 +330,14 @@ export const communicationApi = {
   async uploadFile(file: File): Promise<AttachmentFile> {
     const formData = new FormData();
     formData.append('file', file);
-    
+
     // We use raw fetch here because we need to handle FormData and specific auth headers
     const res = await fetch(`${BASE_URL}/${ENDPOINTS.UPLOAD}`, {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${publicAnonKey}`,
+        Authorization: `Bearer ${publicAnonKey}`,
       },
-      body: formData
+      body: formData,
     });
 
     if (!res.ok) {
@@ -355,42 +369,44 @@ export const communicationApi = {
       recipientEmail: data.clientEmail, // Pass client email for email sending
       senderName: 'Navigate Wealth Admin',
       attachments: data.attachments, // Pass attachments if provided
-      cc: data.cc // Pass CCs
+      cc: data.cc, // Pass CCs
     };
-    
+
     // Manual fetch to ensure consistent auth and headers for this specific endpoint
     // which might differ in behavior or strictness
     try {
-        const supabase = createClient();
-        const { data: { session } } = await supabase.auth.getSession();
-        const token = session?.access_token || publicAnonKey;
-        
-        const response = await fetch(`${BASE_URL}/${ENDPOINTS.SEND_DIRECT}`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${token}`
-            },
-            body: JSON.stringify(payload)
-        });
+      const supabase = createClient();
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+      const token = session?.access_token || publicAnonKey;
 
-        const contentType = response.headers.get('content-type');
-        if (contentType && contentType.includes('application/json')) {
-            const data = await response.json();
-            if (!response.ok) {
-                throw new Error(data.error || data.message || `Failed to send: ${response.statusText}`);
-            }
-            return data;
-        } else {
-             if (!response.ok) {
-                 const text = await response.text();
-                 throw new Error(`Failed to send: ${response.status} ${response.statusText}`);
-             }
-             return { success: true, messageId: 'unknown' };
+      const response = await fetch(`${BASE_URL}/${ENDPOINTS.SEND_DIRECT}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify(payload),
+      });
+
+      const contentType = response.headers.get('content-type');
+      if (contentType && contentType.includes('application/json')) {
+        const data = await response.json();
+        if (!response.ok) {
+          throw new Error(data.error || data.message || `Failed to send: ${response.statusText}`);
         }
+        return data;
+      } else {
+        if (!response.ok) {
+          const text = await response.text();
+          throw new Error(`Failed to send: ${response.status} ${response.statusText}`);
+        }
+        return { success: true, messageId: 'unknown' };
+      }
     } catch (error: unknown) {
-        console.error('Error sending message:', error);
-        throw error;
+      console.error('Error sending message:', error);
+      throw error;
     }
   },
 
@@ -410,33 +426,45 @@ export const communicationApi = {
   // Integrations / Providers
   async getProviders(): Promise<ProductProvider[]> {
     try {
-      const response = await api.get<{ providers: ProductProvider[] } | ProductProvider[]>('integrations/providers');
-      
-      let providers: Array<{ id: string; name: string; logoUrl?: string; categoryIds?: string[] }> = [];
+      const response = await api.get<{ providers: ProductProvider[] } | ProductProvider[]>(
+        'integrations/providers',
+      );
+
+      let providers: Array<{ id: string; name: string; logoUrl?: string; categoryIds?: string[] }> =
+        [];
       if (Array.isArray(response)) {
         providers = response;
       } else if (response && Array.isArray(response.providers)) {
-        providers = response.providers as Array<{ id: string; name: string; logoUrl?: string; categoryIds?: string[] }>;
+        providers = response.providers as Array<{
+          id: string;
+          name: string;
+          logoUrl?: string;
+          categoryIds?: string[];
+        }>;
       }
 
-      return providers.map(p => ({
+      return providers.map((p) => ({
         id: p.id,
         name: p.name,
         logo: p.logoUrl,
         brokerConsultants: [],
         supportedProducts: [],
         active: true,
-        categoryIds: p.categoryIds || []
+        categoryIds: p.categoryIds || [],
       }));
     } catch (error) {
-      console.warn('Failed to fetch providers from integrations, trying fallback product-management endpoint');
+      console.warn(
+        'Failed to fetch providers from integrations, trying fallback product-management endpoint',
+      );
       try {
-        const response = await api.get<{ providers: ProductProvider[] }>('product-management/providers');
+        const response = await api.get<{ providers: ProductProvider[] }>(
+          'product-management/providers',
+        );
         return response.providers || [];
       } catch (fallbackError) {
         console.error('Failed to fetch providers from both endpoints', fallbackError);
         return [];
       }
     }
-  }
+  },
 };

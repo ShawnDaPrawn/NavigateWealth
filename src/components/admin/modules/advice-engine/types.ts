@@ -1,6 +1,6 @@
 /**
  * Advice Engine Module - Type Definitions
- * 
+ *
  * Comprehensive type system for the AI-powered advice engine.
  * Covers:
  * - Message and conversation types
@@ -8,7 +8,7 @@
  * - AI chat interactions
  * - Record of Advice (RoA) drafting
  * - API requests and responses
- * 
+ *
  * @module advice-engine/types
  */
 
@@ -29,24 +29,24 @@ export type MessageRole = 'user' | 'assistant' | 'system';
 export interface Message {
   /** Message role (user, assistant, or system) */
   role: MessageRole;
-  
+
   /** Message content (text) */
   content: string;
-  
+
   /** When the message was sent */
   timestamp: Date;
-  
+
   /** Optional client ID if message is client-specific */
   clientId?: string;
-  
+
   /** Optional metadata */
   metadata?: {
     /** Token count for AI responses */
     tokens?: number;
-    
+
     /** Model used for AI responses */
     model?: string;
-    
+
     /** Processing time in ms */
     processingTime?: number;
   };
@@ -80,22 +80,22 @@ export interface ConversationHistory {
 export interface Client {
   /** Unique client ID */
   user_id: string;
-  
+
   /** First name */
   first_name: string;
-  
+
   /** Last name */
   last_name: string;
-  
+
   /** Email address */
   email: string;
-  
+
   /** Phone number (optional) */
   phone?: string;
-  
+
   /** ID number or date of birth (optional) */
   id_number?: string;
-  
+
   /** Date of birth (optional) */
   date_of_birth?: string;
 }
@@ -161,11 +161,7 @@ export interface RoAClientContext {
 
 export type RoAContractStatus = 'draft' | 'active' | 'archived';
 
-export type RoAContractFieldType =
-  | RoAFieldType
-  | 'currency'
-  | 'percentage'
-  | 'file';
+export type RoAContractFieldType = RoAFieldType | 'currency' | 'percentage' | 'file';
 
 export type RoAContractSourceType =
   | 'clientSnapshot'
@@ -194,7 +190,9 @@ export interface RoAModuleContract {
       sourcePath?: string;
       description?: string;
     }>;
-    gatheringMethods: Array<'typed' | 'upload' | 'clientProfile' | 'policyRegister' | 'fna' | 'calculated'>;
+    gatheringMethods: Array<
+      'typed' | 'upload' | 'clientProfile' | 'policyRegister' | 'fna' | 'calculated'
+    >;
   };
   formSchema: {
     sections: Array<{
@@ -245,7 +243,14 @@ export interface RoAModuleContract {
     requirements: Array<{
       id: string;
       label: string;
-      type: 'quote' | 'policy_schedule' | 'comparison' | 'application' | 'fna' | 'client_instruction' | 'other';
+      type:
+        | 'quote'
+        | 'policy_schedule'
+        | 'comparison'
+        | 'application'
+        | 'fna'
+        | 'client_instruction'
+        | 'other';
       required: boolean;
       acceptedMimeTypes?: string[];
       guidance?: string;
@@ -289,7 +294,7 @@ export interface RoAModuleContractSchemaFormat {
 export interface ClientSearchResult extends Client {
   /** Match score (0-1) */
   matchScore?: number;
-  
+
   /** Highlighted fields */
   highlights?: {
     field: keyof Client;
@@ -307,16 +312,16 @@ export interface ClientSearchResult extends Client {
 export interface ChatRequest {
   /** User's message */
   message: string;
-  
+
   /** Optional client ID for context */
   clientId?: string | null;
-  
+
   /** Optional conversation history for context */
   conversationHistory?: Array<{
     role: MessageRole;
     content: string;
   }>;
-  
+
   /** Optional max tokens for response */
   maxTokens?: number;
 }
@@ -327,16 +332,16 @@ export interface ChatRequest {
 export interface ChatResponse {
   /** AI assistant's reply */
   reply: string;
-  
+
   /** Tokens used in this request */
   tokensUsed?: number;
-  
+
   /** Model used for response */
   model?: string;
-  
+
   /** Processing time in ms */
   processingTime?: number;
-  
+
   /** Any warnings or notes */
   warnings?: string[];
 }
@@ -349,13 +354,13 @@ export interface HistoryData {
   messages: Array<{
     /** User's query */
     query: string;
-    
+
     /** AI's reply */
     reply: string;
-    
+
     /** Timestamp of exchange */
     timestamp: string;
-    
+
     /** Client ID if applicable */
     clientId?: string;
   }>;
@@ -367,16 +372,16 @@ export interface HistoryData {
 export interface ApiKeyStatus {
   /** Whether API key is configured */
   configured: boolean;
-  
+
   /** Whether API key is valid */
   valid?: boolean;
-  
+
   /** Provider (e.g., 'openai') */
   provider?: string;
-  
+
   /** Model being used */
   model?: string;
-  
+
   /** Any error message */
   error?: string;
 }
@@ -391,7 +396,7 @@ export interface ApiKeyStatus {
 export interface SearchClientRequest {
   /** Search term */
   searchTerm: string;
-  
+
   /** Maximum results to return */
   limit?: number;
 }
@@ -402,7 +407,7 @@ export interface SearchClientRequest {
 export interface SearchClientResponse {
   /** Array of matching clients */
   clients: ClientSearchResult[];
-  
+
   /** Total count of matches */
   totalCount?: number;
 }
@@ -456,10 +461,7 @@ export interface RoAInsuranceReviewData {
 /**
  * Union type for all possible module data
  */
-export type RoAModuleData = 
-  | RoASuperSwitchData 
-  | RoAInsuranceReviewData 
-  | Record<string, unknown>;
+export type RoAModuleData = RoASuperSwitchData | RoAInsuranceReviewData | Record<string, unknown>;
 
 /**
  * RoA draft status
@@ -514,7 +516,15 @@ export interface RoACompiledModule {
   normalizedKey?: string;
   summary: string;
   outputValues: Array<{ label: string; value: string }>;
-  evidence: Array<{ id?: string; label: string; fileName: string; type: string; source?: string; sha256?: string; uploadedAt?: string }>;
+  evidence: Array<{
+    id?: string;
+    label: string;
+    fileName: string;
+    type: string;
+    source?: string;
+    sha256?: string;
+    uploadedAt?: string;
+  }>;
   sections: RoACompiledSection[];
   disclosures: string[];
   compilerHints?: RoAModuleContract['compilerHints'];
@@ -589,10 +599,10 @@ export interface RoAAuditEvent {
 export interface RoADraft {
   /** Unique draft ID */
   id: string;
-  
+
   /** Client ID (if selected) */
   clientId?: string;
-  
+
   /** Client data (if entered manually) */
   clientData?: {
     firstName: string;
@@ -602,10 +612,10 @@ export interface RoADraft {
     idOrDob: string;
     advisorId: string;
   };
-  
+
   /** Selected module IDs */
   selectedModules: string[];
-  
+
   /** Module-specific data */
   moduleData: Record<string, RoAModuleData>;
 
@@ -626,16 +636,16 @@ export interface RoADraft {
 
   /** Auditable actions performed during the RoA lifecycle */
   auditEvents?: RoAAuditEvent[];
-  
+
   /** Draft status */
   status: RoAStatus;
-  
+
   /** Creation timestamp */
   createdAt: Date;
-  
+
   /** Last update timestamp */
   updatedAt: Date;
-  
+
   /** Version number */
   version: number;
 
@@ -671,13 +681,13 @@ export interface RoAModule {
 
   /** Module title */
   title: string;
-  
+
   /** Module description */
   description: string;
-  
+
   /** Icon component (optional) */
   icon?: LucideIcon;
-  
+
   /** Form fields for this module */
   fields: RoAField[];
 
@@ -686,10 +696,10 @@ export interface RoAModule {
 
   /** Contract-defined form sections used by the generic runtime */
   formSchema?: RoAModuleContract['formSchema'];
-  
+
   /** Disclosure text for this module */
   disclosures: string[];
-  
+
   /** Order of fields in compiled output */
   compileOrder: string[];
 
@@ -704,7 +714,7 @@ export interface RoAModule {
 
   /** Contract-driven normalized output description */
   output?: RoAModuleContract['output'];
-  
+
   /** Category (optional) */
   category?: string;
 }
@@ -712,7 +722,7 @@ export interface RoAModule {
 /**
  * Field types for RoA forms
  */
-export type RoAFieldType = 
+export type RoAFieldType =
   | 'text'
   | 'textarea'
   | 'number'
@@ -731,25 +741,25 @@ export type RoAFieldType =
 export interface RoAField {
   /** Field key/name */
   key: string;
-  
+
   /** Field label */
   label: string;
-  
+
   /** Field type */
   type: RoAFieldType;
-  
+
   /** Whether field is required */
   required?: boolean;
-  
+
   /** Options for select/radio/chips */
   options?: string[];
-  
+
   /** Default value */
   default?: string | number | boolean;
-  
+
   /** Placeholder text */
   placeholder?: string;
-  
+
   /** Help text */
   helpText?: string;
 
@@ -758,7 +768,7 @@ export interface RoAField {
 
   /** Optional source path, for example clientSnapshot.policies */
   sourcePath?: string;
-  
+
   /** Validation rules */
   validation?: {
     minLength?: number;
@@ -780,10 +790,10 @@ export type RoAFormData = Record<string, RoAModuleData>;
 export interface RoAFormValidationResult {
   /** Whether validation passed */
   valid: boolean;
-  
+
   /** Validation errors by field key */
   errors: Record<string, string>;
-  
+
   /** Overall error message */
   message?: string;
 }
@@ -803,16 +813,16 @@ export type RoAStepId = 'start' | 'client' | 'modules' | 'details' | 'review';
 export interface RoAStep {
   /** Step ID */
   id: RoAStepId;
-  
+
   /** Step title */
   title: string;
-  
+
   /** Step description */
   description: string;
-  
+
   /** Icon component (optional) */
   icon?: LucideIcon;
-  
+
   /** Whether step is completed */
   completed?: boolean;
 }
@@ -827,10 +837,10 @@ export interface RoAStep {
 export interface ChatMessageProps {
   /** Message to display */
   message: Message;
-  
+
   /** Optional onCopy callback */
   onCopy?: (content: string) => void;
-  
+
   /** Loading state */
   isLoading?: boolean;
 }
@@ -841,22 +851,22 @@ export interface ChatMessageProps {
 export interface ChatInputProps {
   /** Input value */
   value: string;
-  
+
   /** On value change */
   onChange: (value: string) => void;
-  
+
   /** On submit/send */
   onSubmit: () => void;
-  
+
   /** Loading/sending state */
   isLoading?: boolean;
-  
+
   /** Disabled state */
   disabled?: boolean;
-  
+
   /** Placeholder text */
   placeholder?: string;
-  
+
   /** Maximum character count */
   maxLength?: number;
 }
@@ -867,16 +877,16 @@ export interface ChatInputProps {
 export interface ChatHistoryProps {
   /** Messages to display */
   messages: Message[];
-  
+
   /** Loading state */
   isLoading?: boolean;
-  
+
   /** Error message */
   error?: string | null;
-  
+
   /** On message copy */
   onCopy?: (content: string) => void;
-  
+
   /** Auto-scroll behavior */
   autoScroll?: boolean;
 }
@@ -887,25 +897,25 @@ export interface ChatHistoryProps {
 export interface ClientSelectorProps {
   /** Search term */
   searchTerm: string;
-  
+
   /** On search term change */
   onSearchChange: (term: string) => void;
-  
+
   /** Search results */
   results: ClientSearchResult[];
-  
+
   /** Searching state */
   isSearching?: boolean;
-  
+
   /** Selected client */
   selectedClient: Client | null;
-  
+
   /** On client select */
   onSelectClient: (client: Client | null) => void;
-  
+
   /** Placeholder text */
   placeholder?: string;
-  
+
   /** Minimal mode for header embedding */
   minimal?: boolean;
 }
@@ -916,7 +926,7 @@ export interface ClientSelectorProps {
 export interface ApiKeyWarningProps {
   /** API key status */
   status: ApiKeyStatus | null;
-  
+
   /** On dismiss callback */
   onDismiss?: () => void;
 }
@@ -924,11 +934,13 @@ export interface ApiKeyWarningProps {
 /**
  * Welcome message feature item
  */
-export type WelcomeFeature = string | {
-  icon: string | React.ReactNode;
-  title: string;
-  items: string[];
-};
+export type WelcomeFeature =
+  | string
+  | {
+      icon: string | React.ReactNode;
+      title: string;
+      items: string[];
+    };
 
 /**
  * Welcome message component props
@@ -936,7 +948,7 @@ export type WelcomeFeature = string | {
 export interface WelcomeMessageProps {
   /** Custom content (optional) */
   content?: string;
-  
+
   /** Features list (optional) */
   features?: WelcomeFeature[];
 }
@@ -951,13 +963,13 @@ export interface WelcomeMessageProps {
 export interface UseAIChatOptions {
   /** Initial messages */
   initialMessages?: Message[];
-  
+
   /** Auto-load history */
   autoLoadHistory?: boolean;
-  
+
   /** Default client ID */
   defaultClientId?: string;
-  
+
   /** Maximum conversation history length */
   maxHistoryLength?: number;
 }
@@ -968,22 +980,22 @@ export interface UseAIChatOptions {
 export interface UseAIChatReturn {
   /** Current messages */
   messages: Message[];
-  
+
   /** Loading/sending state */
   isLoading: boolean;
-  
+
   /** Error message */
   error: string | null;
-  
+
   /** Send a message */
   sendMessage: (content: string, clientId?: string) => Promise<void>;
-  
+
   /** Clear chat history */
   clearChat: () => Promise<void>;
-  
+
   /** API key status */
   apiKeyStatus: ApiKeyStatus | null;
-  
+
   /** Whether API key is configured */
   isConfigured: boolean;
 }
@@ -994,22 +1006,22 @@ export interface UseAIChatReturn {
 export interface UseClientSearchReturn {
   /** Current search term */
   searchTerm: string;
-  
+
   /** Set search term */
   setSearchTerm: (term: string) => void;
-  
+
   /** Search results */
   results: ClientSearchResult[];
-  
+
   /** Searching state */
   isSearching: boolean;
-  
+
   /** Selected client */
   selectedClient: Client | null;
-  
+
   /** Select a client */
   selectClient: (client: Client | null) => void;
-  
+
   /** Clear selection */
   clearSelection: () => void;
 }
@@ -1020,19 +1032,19 @@ export interface UseClientSearchReturn {
 export interface UseChatHistoryReturn {
   /** Historical messages */
   history: Message[];
-  
+
   /** Loading state */
   isLoading: boolean;
-  
+
   /** Error message */
   error: string | null;
-  
+
   /** Load history from server */
   loadHistory: () => Promise<void>;
-  
+
   /** Clear history */
   clearHistory: () => Promise<void>;
-  
+
   /** Whether history has been loaded */
   hasLoaded: boolean;
 }
@@ -1043,10 +1055,10 @@ export interface UseChatHistoryReturn {
 export interface UseRoADraftOptions {
   /** Draft ID to load */
   draftId?: string;
-  
+
   /** Auto-save enabled */
   autoSave?: boolean;
-  
+
   /** Auto-save delay in ms */
   autoSaveDelay?: number;
 }
@@ -1057,28 +1069,28 @@ export interface UseRoADraftOptions {
 export interface UseRoADraftReturn {
   /** Current draft */
   draft: RoADraft | null;
-  
+
   /** Loading state */
   isLoading: boolean;
-  
+
   /** Saving state */
   isSaving: boolean;
-  
+
   /** Error message */
   error: string | null;
-  
+
   /** Save draft */
   saveDraft: (data: Partial<RoADraft>) => Promise<void>;
-  
+
   /** Submit draft */
   submitDraft: () => Promise<void>;
-  
+
   /** Available modules */
   modules: RoAModule[];
-  
+
   /** Update draft data */
   updateDraft: (updates: Partial<RoADraft>) => void;
-  
+
   /** Create new draft */
   createNewDraft: () => void;
 }
@@ -1093,13 +1105,13 @@ export interface UseRoADraftReturn {
 export interface AdviceEngineError {
   /** Error message */
   message: string;
-  
+
   /** Error code */
   code?: string;
-  
+
   /** HTTP status code */
   statusCode?: number;
-  
+
   /** Additional details */
   details?: unknown;
 }
@@ -1110,10 +1122,10 @@ export interface AdviceEngineError {
 export interface SuccessResponse<T = void> {
   /** Success flag */
   success: true;
-  
+
   /** Response data */
   data: T;
-  
+
   /** Optional message */
   message?: string;
 }
@@ -1124,10 +1136,10 @@ export interface SuccessResponse<T = void> {
 export interface ErrorResponse {
   /** Success flag */
   success: false;
-  
+
   /** Error message */
   error: string;
-  
+
   /** Error details */
   details?: unknown;
 }
@@ -1136,6 +1148,5 @@ export interface ErrorResponse {
 // Exports
 // ============================================================================
 
-export type {
-  // Re-export all types for convenience
-};
+export // Re-export all types for convenience
+ type {};

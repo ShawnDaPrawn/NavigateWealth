@@ -21,7 +21,14 @@ import { Label } from '../../../../ui/label';
 import { Checkbox } from '../../../../ui/checkbox';
 import { RadioGroup, RadioGroupItem } from '../../../../ui/radio-group';
 import { Textarea } from '../../../../ui/textarea';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../../../ui/table';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '../../../../ui/table';
 import { cn } from '../../../../ui/utils';
 import { AlertCircle, Info, Hand, Plus, Trash2 } from 'lucide-react';
 import { Button } from '../../../../ui/button';
@@ -33,20 +40,21 @@ interface InteractiveFormRendererProps {
   readOnly?: boolean;
 }
 
-export const InteractiveFormRenderer = ({ 
-  blocks, 
-  responses, 
+export const InteractiveFormRenderer = ({
+  blocks,
+  responses,
   onChange,
-  readOnly = false
+  readOnly = false,
 }: InteractiveFormRendererProps) => {
-
   const renderBlock = (block: FormBlock) => {
     switch (block.type) {
       case 'text':
         return (
-          <div 
+          <div
             className="prose max-w-none mb-4 text-sm text-gray-700"
-            dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize((block.data as TextData).content) }}
+            dangerouslySetInnerHTML={{
+              __html: DOMPurify.sanitize((block.data as TextData).content),
+            }}
           />
         );
 
@@ -54,37 +62,44 @@ export const InteractiveFormRenderer = ({
         return (
           <div className="mt-8 mb-4 pb-2 border-b border-gray-200">
             <h3 className="text-lg font-semibold text-gray-900">
-              {!!(block.data as SectionHeaderData).number && <span className="mr-2 text-gray-500">{(block.data as SectionHeaderData).number}</span>}
+              {!!(block.data as SectionHeaderData).number && (
+                <span className="mr-2 text-gray-500">
+                  {(block.data as SectionHeaderData).number}
+                </span>
+              )}
               {(block.data as SectionHeaderData).title}
             </h3>
           </div>
         );
 
       case 'field_grid':
-        const gridClass = (block.data as FieldGridData).columns === 3 ? 'grid-cols-1 md:grid-cols-3' :
-                         (block.data as FieldGridData).columns === 4 ? 'grid-cols-1 md:grid-cols-4' :
-                         'grid-cols-1 md:grid-cols-2';
-        
+        const gridClass =
+          (block.data as FieldGridData).columns === 3
+            ? 'grid-cols-1 md:grid-cols-3'
+            : (block.data as FieldGridData).columns === 4
+              ? 'grid-cols-1 md:grid-cols-4'
+              : 'grid-cols-1 md:grid-cols-2';
+
         return (
           <div className={`grid ${gridClass} gap-6 mb-6`}>
             {(block.data as FieldGridData).fields.map((field: FieldGridItem, idx: number) => {
-               const fieldKey = field.key || `field_${block.id}_${idx}`;
-               
-               return (
-                 <div key={idx} className="space-y-2">
-                   <Label className="text-sm font-medium text-gray-700">
-                     {field.label}
-                     {field.required && <span className="text-red-500 ml-1">*</span>}
-                   </Label>
-                   <Input 
-                     value={String(responses[fieldKey] ?? '')}
-                     onChange={(e) => onChange(fieldKey, e.target.value)}
-                     placeholder={field.placeholder}
-                     disabled={readOnly}
-                     required={field.required}
-                   />
-                 </div>
-               );
+              const fieldKey = field.key || `field_${block.id}_${idx}`;
+
+              return (
+                <div key={idx} className="space-y-2">
+                  <Label className="text-sm font-medium text-gray-700">
+                    {field.label}
+                    {field.required && <span className="text-red-500 ml-1">*</span>}
+                  </Label>
+                  <Input
+                    value={String(responses[fieldKey] ?? '')}
+                    onChange={(e) => onChange(fieldKey, e.target.value)}
+                    placeholder={field.placeholder}
+                    disabled={readOnly}
+                    required={field.required}
+                  />
+                </div>
+              );
             })}
           </div>
         );
@@ -92,161 +107,196 @@ export const InteractiveFormRenderer = ({
       case 'radio_options':
         const radioKey = (block.data.key as string) || `radio_${block.id}`;
         return (
-            <div className="mb-6 space-y-3">
-                <Label className="text-base font-semibold text-gray-900">{(block.data as RadioOptionsData).label}</Label>
-                <RadioGroup
-                    value={responses[radioKey] as string}
-                    onValueChange={(val) => onChange(radioKey, val)}
-                    disabled={readOnly}
-                    className={cn("gap-3", (block.data as RadioOptionsData).layout === 'horizontal' ? "flex flex-wrap" : "flex flex-col")}
-                >
-                    {(block.data as RadioOptionsData).options?.map((opt: string, idx: number) => (
-                        <div key={idx} className="flex items-center space-x-2">
-                            <RadioGroupItem value={opt} id={`${block.id}-${idx}`} />
-                            <Label htmlFor={`${block.id}-${idx}`} className="font-normal">{opt}</Label>
-                        </div>
-                    ))}
-                </RadioGroup>
-            </div>
+          <div className="mb-6 space-y-3">
+            <Label className="text-base font-semibold text-gray-900">
+              {(block.data as RadioOptionsData).label}
+            </Label>
+            <RadioGroup
+              value={responses[radioKey] as string}
+              onValueChange={(val) => onChange(radioKey, val)}
+              disabled={readOnly}
+              className={cn(
+                'gap-3',
+                (block.data as RadioOptionsData).layout === 'horizontal'
+                  ? 'flex flex-wrap'
+                  : 'flex flex-col',
+              )}
+            >
+              {(block.data as RadioOptionsData).options?.map((opt: string, idx: number) => (
+                <div key={idx} className="flex items-center space-x-2">
+                  <RadioGroupItem value={opt} id={`${block.id}-${idx}`} />
+                  <Label htmlFor={`${block.id}-${idx}`} className="font-normal">
+                    {opt}
+                  </Label>
+                </div>
+              ))}
+            </RadioGroup>
+          </div>
         );
 
       case 'checkbox_table':
         // A table where columns are options and rows are items/questions
         // e.g. Row: "Product A", Cols: ["Invest", "Divest", "Hold"]
         return (
-            <div className="mb-6 overflow-hidden rounded-md border border-gray-200">
-                <Table>
-                    <TableHeader className="bg-gray-50">
-                        <TableRow>
-                            <TableHead className="w-[40%]">Item</TableHead>
-                            {(block.data as CheckboxTableData).columns?.map((col: string, idx: number) => (
-                                <TableHead key={idx} className="text-center">{col}</TableHead>
-                            ))}
-                        </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                        {(block.data as CheckboxTableData).rows?.map((row: string, rowIdx: number) => (
-                            <TableRow key={rowIdx}>
-                                <TableCell className="font-medium">{row}</TableCell>
-                                {(block.data as CheckboxTableData).columns?.map((col: string, colIdx: number) => {
-                                    // Key strategy: table_blockId_rowIdx_colIdx or table_blockId_rowIdx (value = col)
-                                    // Let's use boolean for each cell: table_blockId_row_col
-                                    const cellKey = `chk_${block.id}_${rowIdx}_${colIdx}`;
-                                    return (
-                                        <TableCell key={colIdx} className="text-center">
-                                            <Checkbox 
-                                                checked={(responses[cellKey] as boolean) || false}
-                                                onCheckedChange={(c) => onChange(cellKey, c)}
-                                                disabled={readOnly}
-                                            />
-                                        </TableCell>
-                                    );
-                                })}
-                            </TableRow>
-                        ))}
-                    </TableBody>
-                </Table>
-            </div>
+          <div className="mb-6 overflow-hidden rounded-md border border-gray-200">
+            <Table>
+              <TableHeader className="bg-gray-50">
+                <TableRow>
+                  <TableHead className="w-[40%]">Item</TableHead>
+                  {(block.data as CheckboxTableData).columns?.map((col: string, idx: number) => (
+                    <TableHead key={idx} className="text-center">
+                      {col}
+                    </TableHead>
+                  ))}
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {(block.data as CheckboxTableData).rows?.map((row: string, rowIdx: number) => (
+                  <TableRow key={rowIdx}>
+                    <TableCell className="font-medium">{row}</TableCell>
+                    {(block.data as CheckboxTableData).columns?.map(
+                      (col: string, colIdx: number) => {
+                        // Key strategy: table_blockId_rowIdx_colIdx or table_blockId_rowIdx (value = col)
+                        // Let's use boolean for each cell: table_blockId_row_col
+                        const cellKey = `chk_${block.id}_${rowIdx}_${colIdx}`;
+                        return (
+                          <TableCell key={colIdx} className="text-center">
+                            <Checkbox
+                              checked={(responses[cellKey] as boolean) || false}
+                              onCheckedChange={(c) => onChange(cellKey, c)}
+                              disabled={readOnly}
+                            />
+                          </TableCell>
+                        );
+                      },
+                    )}
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
         );
 
       case 'compliance_question':
         const compKey = (block.data.key as string) || `comp_${block.id}`;
         const detailsKey = `${compKey}_details`;
-        
-        return (
-            <div className="mb-6 p-4 bg-slate-50 border border-slate-200 rounded-lg">
-                <div className="flex items-start gap-3">
-                    <AlertCircle className="h-5 w-5 text-indigo-600 mt-0.5" />
-                    <div className="flex-1 space-y-3">
-                        <Label className="text-base font-medium text-slate-900 block">
-                            {(block.data as ComplianceQuestionData).question}
-                        </Label>
-                        <RadioGroup
-                            value={responses[compKey] as string}
-                            onValueChange={(val) => onChange(compKey, val)}
-                            disabled={readOnly}
-                            className="flex gap-6"
-                        >
-                            <div className="flex items-center space-x-2">
-                                <RadioGroupItem value="Yes" id={`${block.id}-yes`} />
-                                <Label htmlFor={`${block.id}-yes`}>Yes</Label>
-                            </div>
-                            <div className="flex items-center space-x-2">
-                                <RadioGroupItem value="No" id={`${block.id}-no`} />
-                                <Label htmlFor={`${block.id}-no`}>No</Label>
-                            </div>
-                        </RadioGroup>
 
-                        {!!(block.data as ComplianceQuestionData).showDetails && (
-                            <div className="pt-2">
-                                <Label className="text-sm text-slate-600 mb-1 block">
-                                    {(block.data as ComplianceQuestionData).detailsLabel || "Please provide details:"}
-                                </Label>
-                                <Textarea
-                                    value={String(responses[detailsKey] ?? '')}
-                                    onChange={(e) => onChange(detailsKey, e.target.value)}
-                                    disabled={readOnly}
-                                    className="bg-white"
-                                />
-                            </div>
-                        )}
-                    </div>
-                </div>
+        return (
+          <div className="mb-6 p-4 bg-slate-50 border border-slate-200 rounded-lg">
+            <div className="flex items-start gap-3">
+              <AlertCircle className="h-5 w-5 text-indigo-600 mt-0.5" />
+              <div className="flex-1 space-y-3">
+                <Label className="text-base font-medium text-slate-900 block">
+                  {(block.data as ComplianceQuestionData).question}
+                </Label>
+                <RadioGroup
+                  value={responses[compKey] as string}
+                  onValueChange={(val) => onChange(compKey, val)}
+                  disabled={readOnly}
+                  className="flex gap-6"
+                >
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="Yes" id={`${block.id}-yes`} />
+                    <Label htmlFor={`${block.id}-yes`}>Yes</Label>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="No" id={`${block.id}-no`} />
+                    <Label htmlFor={`${block.id}-no`}>No</Label>
+                  </div>
+                </RadioGroup>
+
+                {!!(block.data as ComplianceQuestionData).showDetails && (
+                  <div className="pt-2">
+                    <Label className="text-sm text-slate-600 mb-1 block">
+                      {(block.data as ComplianceQuestionData).detailsLabel ||
+                        'Please provide details:'}
+                    </Label>
+                    <Textarea
+                      value={String(responses[detailsKey] ?? '')}
+                      onChange={(e) => onChange(detailsKey, e.target.value)}
+                      disabled={readOnly}
+                      className="bg-white"
+                    />
+                  </div>
+                )}
+              </div>
             </div>
+          </div>
         );
 
       case 'signature':
         return (
-            <div className="mb-8 space-y-6">
-                {(block.data as SignatureData).signatories?.map((sig: { label: string; key: string }, idx: number) => {
-                    const sigKey = sig.key || `sig_${block.id}_${idx}`;
-                    return (
-                        <div key={idx} className="p-4 border-2 border-dashed border-gray-300 rounded-lg bg-gray-50/50">
-                            <Label className="mb-2 block font-semibold text-gray-900">{sig.label}</Label>
-                            <div className="h-32 bg-white border border-gray-200 rounded flex items-center justify-center cursor-pointer hover:border-indigo-400 transition-colors relative">
-                                {responses[sigKey] ? (
-                                    <div className="text-center">
-                                        <p className="font-handwriting text-2xl text-indigo-900">{String(responses[sigKey] ?? '')}</p>
-                                        <p className="text-xs text-gray-400 mt-1">Digitally Signed on {new Date().toLocaleDateString()}</p>
-                                    </div>
-                                ) : (
-                                    <div className="text-center text-gray-400" onClick={() => !readOnly && onChange(sigKey, prompt("Type your full name to sign:"))}>
-                                        <Hand className="h-8 w-8 mx-auto mb-2 opacity-50" />
-                                        <span className="text-sm">Click to Sign</span>
-                                    </div>
-                                )}
-                            </div>
-                            {!!(block.data as SignatureData).showDate && (
-                                <div className="mt-2 text-xs text-gray-500 text-right">
-                                    Date: {new Date().toLocaleDateString()}
-                                </div>
-                            )}
+          <div className="mb-8 space-y-6">
+            {(block.data as SignatureData).signatories?.map(
+              (sig: { label: string; key: string }, idx: number) => {
+                const sigKey = sig.key || `sig_${block.id}_${idx}`;
+                return (
+                  <div
+                    key={idx}
+                    className="p-4 border-2 border-dashed border-gray-300 rounded-lg bg-gray-50/50"
+                  >
+                    <Label className="mb-2 block font-semibold text-gray-900">{sig.label}</Label>
+                    <div className="h-32 bg-white border border-gray-200 rounded flex items-center justify-center cursor-pointer hover:border-indigo-400 transition-colors relative">
+                      {responses[sigKey] ? (
+                        <div className="text-center">
+                          <p className="font-handwriting text-2xl text-indigo-900">
+                            {String(responses[sigKey] ?? '')}
+                          </p>
+                          <p className="text-xs text-gray-400 mt-1">
+                            Digitally Signed on {new Date().toLocaleDateString()}
+                          </p>
                         </div>
-                    );
-                })}
-            </div>
+                      ) : (
+                        <div
+                          className="text-center text-gray-400"
+                          onClick={() =>
+                            !readOnly && onChange(sigKey, prompt('Type your full name to sign:'))
+                          }
+                        >
+                          <Hand className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                          <span className="text-sm">Click to Sign</span>
+                        </div>
+                      )}
+                    </div>
+                    {!!(block.data as SignatureData).showDate && (
+                      <div className="mt-2 text-xs text-gray-500 text-right">
+                        Date: {new Date().toLocaleDateString()}
+                      </div>
+                    )}
+                  </div>
+                );
+              },
+            )}
+          </div>
         );
 
       case 'instructional_callout':
         const colors = {
-            info: "bg-blue-50 border-blue-200 text-blue-800",
-            warning: "bg-amber-50 border-amber-200 text-amber-800",
-            stop: "bg-red-50 border-red-200 text-red-800"
+          info: 'bg-blue-50 border-blue-200 text-blue-800',
+          warning: 'bg-amber-50 border-amber-200 text-amber-800',
+          stop: 'bg-red-50 border-red-200 text-red-800',
         };
         const icons = {
-            info: Info,
-            warning: AlertCircle,
-            stop: AlertCircle
+          info: Info,
+          warning: AlertCircle,
+          stop: AlertCircle,
         };
         const Icon = icons[block.data.type as keyof typeof icons] || Info;
-        
+
         return (
-            <div className={cn("mb-6 p-4 rounded-md border flex gap-3", colors[block.data.type as keyof typeof colors] || colors.info)}>
-                <Icon className="h-5 w-5 flex-shrink-0" />
-                <p className="text-sm leading-relaxed">{(block.data as InstructionalCalloutData).text}</p>
-            </div>
+          <div
+            className={cn(
+              'mb-6 p-4 rounded-md border flex gap-3',
+              colors[block.data.type as keyof typeof colors] || colors.info,
+            )}
+          >
+            <Icon className="h-5 w-5 flex-shrink-0" />
+            <p className="text-sm leading-relaxed">
+              {(block.data as InstructionalCalloutData).text}
+            </p>
+          </div>
         );
-        
+
       case 'spacer':
         return <div style={{ height: (block.data as SpacerData).height || '20px' }}></div>;
 
@@ -297,7 +347,8 @@ export const InteractiveFormRenderer = ({
       case 'repeater': {
         // Repeater — iterate over array data in responses
         const repData = block.data as RepeaterData;
-        const items: Record<string, unknown>[] = (responses[repData.variableName] as Record<string, unknown>[]) || [];
+        const items: Record<string, unknown>[] =
+          (responses[repData.variableName] as Record<string, unknown>[]) || [];
         const columns: RepeaterColumn[] = (repData.columns as RepeaterColumn[]) || [];
         const isUserPopulated = !!repData.userPopulated;
 
@@ -313,7 +364,7 @@ export const InteractiveFormRenderer = ({
 
         const updateCell = (rowIndex: number, colKey: string, value: string) => {
           const updatedItems = items.map((item: Record<string, unknown>, i: number) =>
-            i === rowIndex ? { ...item, [colKey]: value } : item
+            i === rowIndex ? { ...item, [colKey]: value } : item,
           );
           onChange(repData.variableName, updatedItems);
         };
@@ -321,7 +372,7 @@ export const InteractiveFormRenderer = ({
         const removeRow = (rowIndex: number) => {
           onChange(
             repData.variableName,
-            items.filter((_: Record<string, unknown>, i: number) => i !== rowIndex)
+            items.filter((_: Record<string, unknown>, i: number) => i !== rowIndex),
           );
         };
 
@@ -363,10 +414,7 @@ export const InteractiveFormRenderer = ({
                     {items.map((item: Record<string, unknown>, ri: number) => (
                       <tr
                         key={ri}
-                        className={cn(
-                          ri % 2 === 0 ? 'bg-white' : 'bg-gray-50/50',
-                          'group'
-                        )}
+                        className={cn(ri % 2 === 0 ? 'bg-white' : 'bg-gray-50/50', 'group')}
                       >
                         {isUserPopulated && (
                           <td className="px-2 py-1.5 text-center text-xs text-gray-400 border-b border-gray-100">
@@ -374,10 +422,7 @@ export const InteractiveFormRenderer = ({
                           </td>
                         )}
                         {columns.map((col: RepeaterColumn, ci: number) => (
-                          <td
-                            key={ci}
-                            className="px-1.5 py-1 border-b border-gray-100"
-                          >
+                          <td key={ci} className="px-1.5 py-1 border-b border-gray-100">
                             {isUserPopulated && !readOnly ? (
                               <Input
                                 value={String(item[col.key] ?? '')}

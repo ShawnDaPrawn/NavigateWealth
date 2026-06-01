@@ -13,18 +13,28 @@ export function validateStep(step: number, data: ApplicationData): string[] {
       if (!data.nationality) errors.push('Nationality is required');
       if (!data.idType) errors.push('Please select an identification type');
       if (data.idType && !data.idNumber.trim()) errors.push('ID / Passport number is required');
-      if (data.idType === 'sa_id' && data.idNumber.trim() && !/^\d{13}$/.test(data.idNumber.trim())) {
+      if (
+        data.idType === 'sa_id' &&
+        data.idNumber.trim() &&
+        !/^\d{13}$/.test(data.idNumber.trim())
+      ) {
         errors.push('SA ID number must be exactly 13 digits');
       }
       if (!data.maritalStatus) errors.push('Please select your marital status');
-      if ((data.maritalStatus === 'Married' || data.maritalStatus === 'Life Partner') && !data.maritalRegime) {
+      if (
+        (data.maritalStatus === 'Married' || data.maritalStatus === 'Life Partner') &&
+        !data.maritalRegime
+      ) {
         errors.push('Please select your marital regime');
       }
       break;
 
     case 2:
       if (!data.emailAddress.trim()) errors.push('Email address is required');
-      if (data.emailAddress.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(data.emailAddress.trim())) {
+      if (
+        data.emailAddress.trim() &&
+        !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(data.emailAddress.trim())
+      ) {
         errors.push('Please enter a valid email address');
       }
       if (!data.cellphoneNumber.trim()) errors.push('Cellphone number is required');
@@ -41,11 +51,13 @@ export function validateStep(step: number, data: ApplicationData): string[] {
         if (!data.jobTitle.trim()) errors.push('Job title is required');
         if (!data.employerName.trim()) errors.push('Employer name is required');
         if (!data.industry) errors.push('Industry is required');
-        if (data.industry === 'Other' && !data.industryOther?.trim()) errors.push('Please specify your industry');
+        if (data.industry === 'Other' && !data.industryOther?.trim())
+          errors.push('Please specify your industry');
       }
       if (data.employmentStatus === 'self-employed') {
         if (!data.selfEmployedIndustry) errors.push('Industry is required');
-        if (data.selfEmployedIndustry === 'Other' && !data.selfEmployedIndustryOther?.trim()) errors.push('Please specify your industry');
+        if (data.selfEmployedIndustry === 'Other' && !data.selfEmployedIndustryOther?.trim())
+          errors.push('Please specify your industry');
         if (!data.selfEmployedDescription.trim()) errors.push('Business description is required');
       }
       break;
@@ -65,13 +77,16 @@ export function validateStep(step: number, data: ApplicationData): string[] {
     case 5:
       if (!data.termsAccepted) errors.push('You must accept the Terms and Conditions');
       if (!data.popiaConsent) errors.push('You must provide POPIA consent');
-      if (!data.disclosureAcknowledged) errors.push('You must acknowledge the disclosure statement');
+      if (!data.disclosureAcknowledged)
+        errors.push('You must acknowledge the disclosure statement');
       if (!data.faisAcknowledged) errors.push('You must acknowledge the FAIS disclosure');
       if (!data.signatureFullName.trim()) {
         errors.push('Please type your full name as a digital signature');
       } else {
         // Signature must match the applicant's full legal name (excluding title)
-        const expectedName = [data.firstName, data.middleName, data.lastName].filter(Boolean).join(' ');
+        const expectedName = [data.firstName, data.middleName, data.lastName]
+          .filter(Boolean)
+          .join(' ');
         if (data.signatureFullName.trim().toLowerCase() !== expectedName.trim().toLowerCase()) {
           errors.push(`Your signature must exactly match your full name: ${expectedName}`);
         }

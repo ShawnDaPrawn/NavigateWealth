@@ -2,13 +2,7 @@
  * Maps simplified client intake field names to full admin wizard field paths.
  */
 
-export type IntakeDomain =
-  | 'risk'
-  | 'medical'
-  | 'retirement'
-  | 'investment'
-  | 'tax'
-  | 'estate';
+export type IntakeDomain = 'risk' | 'medical' | 'retirement' | 'investment' | 'tax' | 'estate';
 
 /** Intake key → wizard field path(s) */
 const INTAKE_TO_WIZARD: Record<IntakeDomain, Record<string, string | string[]>> = {
@@ -64,7 +58,8 @@ export function normalizeIntakeToWizard(
   inputs: Record<string, unknown>,
 ): Record<string, unknown> {
   const usesFullStep1Payload =
-    (domain === 'risk' && (Array.isArray(inputs.dependants) || inputs.existingCover !== undefined)) ||
+    (domain === 'risk' &&
+      (Array.isArray(inputs.dependants) || inputs.existingCover !== undefined)) ||
     (domain === 'tax' && (inputs.employmentIncome !== undefined || inputs.age !== undefined)) ||
     domain === 'medical' ||
     domain === 'retirement' ||

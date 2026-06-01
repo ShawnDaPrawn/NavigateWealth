@@ -22,7 +22,11 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useAuth } from '../../../auth/AuthContext';
-import { getApplication, saveApplicationProgress, submitApplication } from '../../../../utils/services/applicationService';
+import {
+  getApplication,
+  saveApplicationProgress,
+  submitApplication,
+} from '../../../../utils/services/applicationService';
 import { projectId, publicAnonKey } from '../../../../utils/supabase/info';
 import { ApplicationData } from '../types';
 import { INITIAL_DATA } from '../constants';
@@ -150,11 +154,19 @@ export function useOnboarding(options: UseOnboardingOptions = {}) {
               if (serverData.firstName && serverData.lastName) serverStep = 2;
               if (serverData.emailAddress && serverData.cellphoneNumber) serverStep = 3;
               if (serverData.employmentStatus) serverStep = 4;
-              if (serverData.accountReasons && (serverData.accountReasons as string[])?.length > 0) serverStep = 5;
+              if (serverData.accountReasons && (serverData.accountReasons as string[])?.length > 0)
+                serverStep = 5;
             }
 
             const merged = { ...INITIAL_DATA, ...serverData };
-            console.log('[useOnboarding] Restored data from server, resuming step:', serverStep, 'fields with data:', Object.entries(merged).filter(([, v]) => v && v !== '' && !(Array.isArray(v) && v.length === 0)).length);
+            console.log(
+              '[useOnboarding] Restored data from server, resuming step:',
+              serverStep,
+              'fields with data:',
+              Object.entries(merged).filter(
+                ([, v]) => v && v !== '' && !(Array.isArray(v) && v.length === 0),
+              ).length,
+            );
 
             setData(merged);
             setCurrentStep(serverStep);
@@ -180,7 +192,7 @@ export function useOnboarding(options: UseOnboardingOptions = {}) {
 
     const prefillFromUser = () => {
       if (mode !== 'client' || !user) return;
-      setData(prev => ({
+      setData((prev) => ({
         ...prev,
         firstName: user.firstName || prev.firstName,
         lastName: user.lastName || prev.lastName,
@@ -190,7 +202,9 @@ export function useOnboarding(options: UseOnboardingOptions = {}) {
 
     loadData();
 
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+    };
   }, [effectiveUserId]); // Only re-run if userId changes
 
   // ── Debounced save on data changes ────────────────────────────────────────
@@ -228,11 +242,13 @@ export function useOnboarding(options: UseOnboardingOptions = {}) {
       try {
         fetch(SAVE_URL, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${publicAnonKey}` },
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${publicAnonKey}` },
           body: JSON.stringify({ userId: uid, applicationData: dataToSave }),
           keepalive: true,
         }).catch(() => {});
-      } catch { /* best effort */ }
+      } catch {
+        /* best effort */
+      }
     };
 
     window.addEventListener('beforeunload', handleBeforeUnload);
@@ -249,10 +265,13 @@ export function useOnboarding(options: UseOnboardingOptions = {}) {
   }, []);
 
   // ── Field update ──────────────────────────────────────────────────────────
-  const updateData = useCallback((field: keyof ApplicationData, value: ApplicationData[keyof ApplicationData]) => {
-    setData(prev => ({ ...prev, [field]: value }));
-    setValidationErrors([]);
-  }, []);
+  const updateData = useCallback(
+    (field: keyof ApplicationData, value: ApplicationData[keyof ApplicationData]) => {
+      setData((prev) => ({ ...prev, [field]: value }));
+      setValidationErrors([]);
+    },
+    [],
+  );
 
   // ── Step navigation ───────────────────────────────────────────────────────
   const goToNextStep = async () => {

@@ -10,10 +10,11 @@ function TradingViewForexWidget() {
     // Clean up previous script if any
     if (el) {
       el.innerHTML = '';
-      
-      const script = document.createElement("script");
-      script.src = "https://s3.tradingview.com/external-embedding/embed-widget-forex-cross-rates.js";
-      script.type = "text/javascript";
+
+      const script = document.createElement('script');
+      script.src =
+        'https://s3.tradingview.com/external-embedding/embed-widget-forex-cross-rates.js';
+      script.type = 'text/javascript';
       script.async = true;
 
       // Graceful fallback if external script fails to load
@@ -21,46 +22,42 @@ function TradingViewForexWidget() {
         console.debug('[TradingView] Forex widget script failed to load.');
         setHasError(true);
       };
-      
+
       // Calculate responsive dimensions
       const width = window.innerWidth;
-      let dimensions = { width: "100%", height: "600" };
-      
-      if (width >= 1536) { // 2xl
-        dimensions = { width: "100%", height: "800" };
-      } else if (width >= 1280) { // xl
-        dimensions = { width: "100%", height: "700" };
-      } else if (width >= 1024) { // lg
-        dimensions = { width: "100%", height: "650" };
-      } else if (width >= 768) { // md
-        dimensions = { width: "100%", height: "600" };
-      } else { // sm and smaller
-        dimensions = { width: "100%", height: "500" };
+      let dimensions = { width: '100%', height: '600' };
+
+      if (width >= 1536) {
+        // 2xl
+        dimensions = { width: '100%', height: '800' };
+      } else if (width >= 1280) {
+        // xl
+        dimensions = { width: '100%', height: '700' };
+      } else if (width >= 1024) {
+        // lg
+        dimensions = { width: '100%', height: '650' };
+      } else if (width >= 768) {
+        // md
+        dimensions = { width: '100%', height: '600' };
+      } else {
+        // sm and smaller
+        dimensions = { width: '100%', height: '500' };
       }
 
       script.innerHTML = JSON.stringify({
-        "width": dimensions.width,
-        "height": dimensions.height,
-        "currencies": [
-          "EUR",
-          "USD",
-          "JPY",
-          "GBP",
-          "CHF",
-          "AUD",
-          "CAD",
-          "NZD"
-        ],
-        "isTransparent": false,
-        "colorTheme": "light",
-        "locale": "en",
-        "support_host": "https://www.tradingview.com"
+        width: dimensions.width,
+        height: dimensions.height,
+        currencies: ['EUR', 'USD', 'JPY', 'GBP', 'CHF', 'AUD', 'CAD', 'NZD'],
+        isTransparent: false,
+        colorTheme: 'light',
+        locale: 'en',
+        support_host: 'https://www.tradingview.com',
       });
 
       const widgetDiv = document.createElement('div');
       widgetDiv.className = 'tradingview-widget-container__widget';
       el.appendChild(widgetDiv);
-      
+
       const copyrightDiv = document.createElement('div');
       copyrightDiv.className = 'tradingview-widget-copyright';
       copyrightDiv.innerHTML = `
@@ -69,7 +66,7 @@ function TradingViewForexWidget() {
         </a>
       `;
       el.appendChild(copyrightDiv);
-      
+
       el.appendChild(script);
     }
 
@@ -90,12 +87,7 @@ function TradingViewForexWidget() {
     );
   }
 
-  return (
-    <div 
-      className="tradingview-widget-container w-full"
-      ref={container}
-    />
-  );
+  return <div className="tradingview-widget-container w-full" ref={container} />;
 }
 
 export default memo(TradingViewForexWidget);

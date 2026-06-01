@@ -41,17 +41,16 @@ export interface StuckSweepResult {
 }
 
 function getSupabase() {
-  return createClient(
-    Deno.env.get('SUPABASE_URL')!,
-    Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,
-  );
+  return createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!);
 }
 
 function isEnvelopeRecord(item: unknown): item is EsignEnvelope {
-  return !!item
-    && typeof item === 'object'
-    && typeof (item as { id?: unknown }).id === 'string'
-    && typeof (item as { status?: unknown }).status === 'string';
+  return (
+    !!item &&
+    typeof item === 'object' &&
+    typeof (item as { id?: unknown }).id === 'string' &&
+    typeof (item as { status?: unknown }).status === 'string'
+  );
 }
 
 async function alertedRecently(envelopeId: string): Promise<boolean> {
@@ -65,18 +64,21 @@ async function stampAlert(envelopeId: string): Promise<void> {
   await kv.set(EsignKeys.stuckAlert(envelopeId), new Date().toISOString());
 }
 
-async function resolveSender(userId: string | undefined): Promise<{ email: string; name: string } | null> {
+async function resolveSender(
+  userId: string | undefined,
+): Promise<{ email: string; name: string } | null> {
   if (!userId) return null;
   try {
     const { data } = await getSupabase().auth.admin.getUserById(userId);
     const email = data?.user?.email;
     if (!email) return null;
     const meta = data?.user?.user_metadata as Record<string, unknown> | undefined;
-    const name = typeof meta?.full_name === 'string'
-      ? meta.full_name as string
-      : typeof meta?.name === 'string'
-        ? meta.name as string
-        : 'there';
+    const name =
+      typeof meta?.full_name === 'string'
+        ? (meta.full_name as string)
+        : typeof meta?.name === 'string'
+          ? (meta.name as string)
+          : 'there';
     return { email, name };
   } catch (err) {
     log.warn(`Failed to resolve sender for user ${userId}: ${String(err)}`);
@@ -230,6 +232,8 @@ export async function runStuckAlertSweep(): Promise<StuckSweepResult> {
     }
   }
 
-  log.info(`Stuck-alert sweep: scanned=${scanned} alerted=${alerted} cooldown=${skippedCooldown} failed=${failed}`);
+  log.info(
+    `Stuck-alert sweep: scanned=${scanned} alerted=${alerted} cooldown=${skippedCooldown} failed=${failed}`,
+  );
   return { scanned, alerted, skippedCooldown, failed };
 }

@@ -7,8 +7,18 @@
 
 import React from 'react';
 import {
-  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend,
-  LineChart, Line, Area, AreaChart,
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+  Legend,
+  LineChart,
+  Line,
+  Area,
+  AreaChart,
 } from 'recharts';
 import { Loader2, TrendingUp, MessageSquare, Database, AlertTriangle } from 'lucide-react';
 import { Badge } from '../../../../ui/badge';
@@ -38,7 +48,7 @@ export function AnalyticsDashboard() {
   }
 
   // Prepare chart data
-  const chartData = analytics.last7Days.map(day => ({
+  const chartData = analytics.last7Days.map((day) => ({
     date: new Date(day.date).toLocaleDateString('en-ZA', { day: '2-digit', month: 'short' }),
     sessions: day.sessions,
     messages: day.messages,
@@ -112,7 +122,13 @@ export function AnalyticsDashboard() {
                 <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
                 <XAxis dataKey="date" tick={{ fontSize: 11 }} stroke="#9ca3af" />
                 <YAxis tick={{ fontSize: 11 }} stroke="#9ca3af" />
-                <Tooltip contentStyle={{ borderRadius: '8px', border: '1px solid #e5e7eb', fontSize: '12px' }} />
+                <Tooltip
+                  contentStyle={{
+                    borderRadius: '8px',
+                    border: '1px solid #e5e7eb',
+                    fontSize: '12px',
+                  }}
+                />
                 <Legend wrapperStyle={{ fontSize: '11px' }} />
                 <Bar dataKey="ragHits" name="RAG Hits" fill="#7c3aed" radius={[4, 4, 0, 0]} />
                 <Bar dataKey="positive" name="Positive" fill="#22c55e" radius={[4, 4, 0, 0]} />
@@ -138,7 +154,9 @@ export function AnalyticsDashboard() {
                     <span className="text-xs text-gray-400 w-5 text-right">{idx + 1}</span>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center justify-between mb-1">
-                        <span className="text-xs font-medium text-gray-700 truncate">{topic.topic}</span>
+                        <span className="text-xs font-medium text-gray-700 truncate">
+                          {topic.topic}
+                        </span>
                         <span className="text-xs text-gray-500 ml-2 shrink-0">{topic.count}</span>
                       </div>
                       <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">

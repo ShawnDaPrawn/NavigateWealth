@@ -4,35 +4,15 @@ import { Button } from '../../ui/button';
 import { Input } from '../../ui/input';
 import { Badge } from '../../ui/badge';
 import { Skeleton } from '../../ui/skeleton';
-import { 
-  Table, 
-  TableBody, 
-  TableCell, 
-  TableHead, 
-  TableHeader, 
-  TableRow 
-} from '../../ui/table';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../ui/table';
 import {
   DropdownMenu,
   DropdownMenuCheckboxItem,
   DropdownMenuContent,
   DropdownMenuTrigger,
 } from '../../ui/dropdown-menu';
-import { 
-  ChevronLeft, 
-  ChevronRight, 
-  Download, 
-  Filter,
-  Settings,
-  Search
-} from 'lucide-react';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '../../ui/select';
+import { ChevronLeft, ChevronRight, Download, Filter, Settings, Search } from 'lucide-react';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../ui/select';
 
 /** Numbered pagination buttons spanning up to maxButtons pages around currentPage (1-based). */
 function getPaginationButtonPages(
@@ -91,9 +71,9 @@ export function DataTable<T extends Record<string, unknown>>({
   columns,
   loading = false,
   searchable = true,
-  searchPlaceholder = "Search...",
+  searchPlaceholder = 'Search...',
   exportable = true,
-  exportFilename = "data",
+  exportFilename = 'data',
   onRowClick,
   pageSize = 10,
   rowSizeOptions,
@@ -107,9 +87,7 @@ export function DataTable<T extends Record<string, unknown>>({
   const [rowsPerPage, setRowsPerPage] = useState(pageSize);
   const [sortColumn, setSortColumn] = useState<string | null>(null);
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
-  const [visibleColumns, setVisibleColumns] = useState<string[]>(
-    columns.map(col => col.key)
-  );
+  const [visibleColumns, setVisibleColumns] = useState<string[]>(columns.map((col) => col.key));
 
   useEffect(() => {
     setRowsPerPage(pageSize);
@@ -117,10 +95,10 @@ export function DataTable<T extends Record<string, unknown>>({
 
   // Filter data based on search query
   const filteredData = searchQuery
-    ? data.filter(row =>
-        Object.values(row).some(value =>
-          String(value).toLowerCase().includes(searchQuery.toLowerCase())
-        )
+    ? data.filter((row) =>
+        Object.values(row).some((value) =>
+          String(value).toLowerCase().includes(searchQuery.toLowerCase()),
+        ),
       )
     : data;
 
@@ -129,7 +107,7 @@ export function DataTable<T extends Record<string, unknown>>({
     ? [...filteredData].sort((a, b) => {
         const aVal = a[sortColumn] as string | number;
         const bVal = b[sortColumn] as string | number;
-        
+
         if (aVal < bVal) return sortDirection === 'asc' ? -1 : 1;
         if (aVal > bVal) return sortDirection === 'asc' ? 1 : -1;
         return 0;
@@ -139,7 +117,7 @@ export function DataTable<T extends Record<string, unknown>>({
   useEffect(() => {
     if (!paginate) return;
     const totalPg = Math.max(1, Math.ceil(sortedData.length / rowsPerPage) || 1);
-    setCurrentPage(p => Math.min(p, totalPg));
+    setCurrentPage((p) => Math.min(p, totalPg));
   }, [paginate, sortedData.length, rowsPerPage]);
 
   // Paginate data (optional — Client Management prefers one long alphabetical list)
@@ -158,17 +136,17 @@ export function DataTable<T extends Record<string, unknown>>({
   };
 
   const exportToCSV = () => {
-    const visibleCols = columns.filter(col => visibleColumns.includes(col.key));
-    const csvHeader = visibleCols.map(col => col.title).join(',');
-    const csvRows = sortedData.map(row =>
-      visibleCols.map(col => {
-        const value = row[col.key];
-        return typeof value === 'string' && value.includes(',') 
-          ? `"${value}"` 
-          : String(value);
-      }).join(',')
+    const visibleCols = columns.filter((col) => visibleColumns.includes(col.key));
+    const csvHeader = visibleCols.map((col) => col.title).join(',');
+    const csvRows = sortedData.map((row) =>
+      visibleCols
+        .map((col) => {
+          const value = row[col.key];
+          return typeof value === 'string' && value.includes(',') ? `"${value}"` : String(value);
+        })
+        .join(','),
     );
-    
+
     const csvContent = [csvHeader, ...csvRows].join('\n');
     const blob = new Blob([csvContent], { type: 'text/csv' });
     const url = window.URL.createObjectURL(blob);
@@ -182,7 +160,10 @@ export function DataTable<T extends Record<string, unknown>>({
   const LoadingSkeleton = () => (
     <div className="space-y-0" role="status" aria-label="Loading table data">
       {Array.from({ length: Math.min(rowsPerPage, 12) }).map((_, i) => (
-        <div key={i} className="flex items-center gap-4 px-4 py-3 border-b border-border last:border-b-0">
+        <div
+          key={i}
+          className="flex items-center gap-4 px-4 py-3 border-b border-border last:border-b-0"
+        >
           <Skeleton className="h-8 w-8 rounded-full shrink-0" />
           <div className="flex-1 space-y-1.5">
             <Skeleton className="h-4 w-40" />
@@ -196,24 +177,28 @@ export function DataTable<T extends Record<string, unknown>>({
     </div>
   );
 
-  const EmptyState = () => emptyState || (
-    <div className="text-center py-12">
-      <div className="text-muted-foreground">
-        <Search className="h-12 w-12 mx-auto mb-4 opacity-50" />
-        <h3 className="text-lg font-medium mb-2">No data found</h3>
-        <p>No results match your current filters.</p>
+  const EmptyState = () =>
+    emptyState || (
+      <div className="text-center py-12">
+        <div className="text-muted-foreground">
+          <Search className="h-12 w-12 mx-auto mb-4 opacity-50" />
+          <h3 className="text-lg font-medium mb-2">No data found</h3>
+          <p>No results match your current filters.</p>
+        </div>
       </div>
-    </div>
-  );
+    );
 
   return (
-    <div className={cn("space-y-4", className)}>
+    <div className={cn('space-y-4', className)}>
       {/* Table Controls */}
       <div className="flex items-center justify-between gap-4 flex-wrap">
         {/* Search */}
         {searchable && (
           <div className="relative w-full max-w-md">
-            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" aria-hidden="true" />
+            <Search
+              className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground"
+              aria-hidden="true"
+            />
             <Input
               placeholder={searchPlaceholder}
               value={searchQuery}
@@ -244,14 +229,14 @@ export function DataTable<T extends Record<string, unknown>>({
           <TableHeader className="sticky top-0 bg-background z-10">
             <TableRow>
               {columns
-                .filter(col => visibleColumns.includes(col.key))
+                .filter((col) => visibleColumns.includes(col.key))
                 .map((column) => (
-                  <TableHead 
+                  <TableHead
                     key={column.key}
                     style={{ width: column.width }}
                     className={cn(
-                      column.sortable && "cursor-pointer hover:bg-muted/50",
-                      "select-none"
+                      column.sortable && 'cursor-pointer hover:bg-muted/50',
+                      'select-none',
                     )}
                     onClick={() => column.sortable && handleSort(column.key)}
                     onKeyDown={(e) => {
@@ -261,10 +246,12 @@ export function DataTable<T extends Record<string, unknown>>({
                       }
                     }}
                     tabIndex={column.sortable ? 0 : undefined}
-                    role={column.sortable ? "columnheader" : undefined}
+                    role={column.sortable ? 'columnheader' : undefined}
                     aria-sort={
                       sortColumn === column.key
-                        ? sortDirection === 'asc' ? 'ascending' : 'descending'
+                        ? sortDirection === 'asc'
+                          ? 'ascending'
+                          : 'descending'
                         : undefined
                     }
                     scope="col"
@@ -296,29 +283,30 @@ export function DataTable<T extends Record<string, unknown>>({
               </TableRow>
             ) : (
               paginatedData.map((row, index) => (
-                <TableRow 
+                <TableRow
                   key={getRowKey ? getRowKey(row) : index}
-                  className={cn(
-                    onRowClick && "cursor-pointer hover:bg-muted/50"
-                  )}
+                  className={cn(onRowClick && 'cursor-pointer hover:bg-muted/50')}
                   onClick={() => onRowClick?.(row)}
-                  onKeyDown={onRowClick ? (e) => {
-                    if (e.key === 'Enter' || e.key === ' ') {
-                      e.preventDefault();
-                      onRowClick(row);
-                    }
-                  } : undefined}
+                  onKeyDown={
+                    onRowClick
+                      ? (e) => {
+                          if (e.key === 'Enter' || e.key === ' ') {
+                            e.preventDefault();
+                            onRowClick(row);
+                          }
+                        }
+                      : undefined
+                  }
                   tabIndex={onRowClick ? 0 : undefined}
-                  role={onRowClick ? "button" : undefined}
+                  role={onRowClick ? 'button' : undefined}
                 >
                   {columns
-                    .filter(col => visibleColumns.includes(col.key))
+                    .filter((col) => visibleColumns.includes(col.key))
                     .map((column) => (
                       <TableCell key={column.key}>
-                        {column.render 
+                        {column.render
                           ? column.render(row[column.key], row)
-                          : String(row[column.key] || '')
-                        }
+                          : String(row[column.key] || '')}
                       </TableCell>
                     ))}
                 </TableRow>

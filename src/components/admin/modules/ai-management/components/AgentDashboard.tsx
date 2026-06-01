@@ -9,32 +9,61 @@
 
 import React from 'react';
 import {
-  MessageSquare, Users, ThumbsUp, PhoneForwarded,
-  Database, RefreshCw, Compass, Brain, ScrollText,
-  Calculator, Bot, Power, PowerOff, Loader2,
-  Check, X, Zap, BookOpen, AlertCircle,
+  MessageSquare,
+  Users,
+  ThumbsUp,
+  PhoneForwarded,
+  Database,
+  RefreshCw,
+  Compass,
+  Brain,
+  ScrollText,
+  Calculator,
+  Bot,
+  Power,
+  PowerOff,
+  Loader2,
+  Check,
+  X,
+  Zap,
+  BookOpen,
+  AlertCircle,
 } from 'lucide-react';
 import { Badge } from '../../../../ui/badge';
 import { Button } from '../../../../ui/button';
 import { Switch } from '../../../../ui/switch';
 import { cn } from '../../../../ui/utils';
 import {
-  useAgents, useVascoConfig, useToggleVasco,
-  useAnalyticsSummary, useRagIndexStatus, useTriggerReindex,
+  useAgents,
+  useVascoConfig,
+  useToggleVasco,
+  useAnalyticsSummary,
+  useRagIndexStatus,
+  useTriggerReindex,
 } from '../hooks';
 import { AGENT_STATUS_CONFIG } from '../constants';
 import type { AIAgentConfig } from '../types';
 
 // ── Icon resolver for agent config slugs ───────────────────────────────────
 const ICON_MAP: Record<string, React.ElementType> = {
-  Compass, Brain, ScrollText, Calculator, Bot,
+  Compass,
+  Brain,
+  ScrollText,
+  Calculator,
+  Bot,
 };
 function resolveIcon(slug: string): React.ElementType {
   return ICON_MAP[slug] || Bot;
 }
 
 // ── Stat Card (§8.3 — established pattern) ─────────────────────────────────
-function StatCard({ label, value, icon: Icon, iconBg, subtitle }: {
+function StatCard({
+  label,
+  value,
+  icon: Icon,
+  iconBg,
+  subtitle,
+}: {
   label: string;
   value: string | number;
   icon: React.ElementType;
@@ -68,17 +97,19 @@ function AgentCard({ agent }: { agent: AIAgentConfig }) {
         </div>
         <div className="flex-1 min-w-0">
           <h3 className="text-sm font-semibold text-gray-900 truncate">{agent.name}</h3>
-          <p className="text-xs text-gray-500">{agent.model} &middot; temp {agent.temperature}</p>
+          <p className="text-xs text-gray-500">
+            {agent.model} &middot; temp {agent.temperature}
+          </p>
         </div>
         <Badge className={cn('text-xs shrink-0', statusCfg.badgeClass)}>
-          <span className={cn('w-1.5 h-1.5 rounded-full mr-1.5 inline-block', statusCfg.dotClass)} />
+          <span
+            className={cn('w-1.5 h-1.5 rounded-full mr-1.5 inline-block', statusCfg.dotClass)}
+          />
           {statusCfg.label}
         </Badge>
       </div>
 
-      <p className="text-xs text-gray-600 leading-relaxed mb-3 line-clamp-2">
-        {agent.description}
-      </p>
+      <p className="text-xs text-gray-600 leading-relaxed mb-3 line-clamp-2">{agent.description}</p>
 
       {/* Feature badges */}
       <div className="flex flex-wrap gap-1.5">
@@ -111,7 +142,7 @@ function AgentCard({ agent }: { agent: AIAgentConfig }) {
 
       {/* Context tags */}
       <div className="flex gap-1.5 mt-3 pt-3 border-t border-gray-100">
-        {agent.contexts.map(ctx => (
+        {agent.contexts.map((ctx) => (
           <span
             key={ctx}
             className="text-[10px] font-medium px-2 py-0.5 rounded-full bg-gray-100 text-gray-600 capitalize"
@@ -140,7 +171,11 @@ export function AgentDashboard() {
 
   const feedbackRate = analytics
     ? analytics.totalFeedbackPositive + analytics.totalFeedbackNegative > 0
-      ? Math.round((analytics.totalFeedbackPositive / (analytics.totalFeedbackPositive + analytics.totalFeedbackNegative)) * 100)
+      ? Math.round(
+          (analytics.totalFeedbackPositive /
+            (analytics.totalFeedbackPositive + analytics.totalFeedbackNegative)) *
+            100,
+        )
       : 0
     : 0;
 
@@ -150,10 +185,12 @@ export function AgentDashboard() {
       <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-5">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className={cn(
-              'p-2.5 rounded-lg transition-colors',
-              vascoConfig?.enabled ? 'bg-green-50' : 'bg-gray-100'
-            )}>
+            <div
+              className={cn(
+                'p-2.5 rounded-lg transition-colors',
+                vascoConfig?.enabled ? 'bg-green-50' : 'bg-gray-100',
+              )}
+            >
               {vascoConfig?.enabled ? (
                 <Power className="h-5 w-5 text-green-600" />
               ) : (
@@ -165,8 +202,7 @@ export function AgentDashboard() {
               <p className="text-xs text-gray-500">
                 {vascoConfig?.enabled
                   ? 'Live on the public website'
-                  : 'Disabled — visitors cannot chat with Vasco'
-                }
+                  : 'Disabled — visitors cannot chat with Vasco'}
               </p>
             </div>
           </div>
@@ -175,7 +211,9 @@ export function AgentDashboard() {
               <span className="text-xs text-gray-400">
                 Last changed{' '}
                 {new Date(vascoConfig.updatedAt).toLocaleDateString('en-ZA', {
-                  day: '2-digit', month: 'short', year: 'numeric',
+                  day: '2-digit',
+                  month: 'short',
+                  year: 'numeric',
                 })}
               </span>
             )}
@@ -257,7 +295,11 @@ export function AgentDashboard() {
               <span className="text-gray-500">Last indexed</span>
               <p className="font-semibold text-gray-900">
                 {new Date(ragIndex.lastFullIndex).toLocaleDateString('en-ZA', {
-                  day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit',
+                  day: '2-digit',
+                  month: 'short',
+                  year: 'numeric',
+                  hour: '2-digit',
+                  minute: '2-digit',
                 })}
               </p>
             </div>
@@ -285,7 +327,7 @@ export function AgentDashboard() {
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-            {agents?.map(agent => (
+            {agents?.map((agent) => (
               <AgentCard key={agent.id} agent={agent} />
             ))}
           </div>

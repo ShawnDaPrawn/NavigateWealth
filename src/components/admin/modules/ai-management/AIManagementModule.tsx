@@ -11,7 +11,12 @@
 
 import React, { useState } from 'react';
 import {
-  LayoutDashboard, Bot, BarChart3, MessageSquare, PhoneForwarded, BookOpen,
+  LayoutDashboard,
+  Bot,
+  BarChart3,
+  MessageSquare,
+  PhoneForwarded,
+  BookOpen,
 } from 'lucide-react';
 import { Button } from '../../../ui/button';
 import { cn } from '../../../ui/utils';
@@ -55,8 +60,11 @@ export function AIManagementModule() {
         </div>
 
         {/* Tab Navigation */}
-        <nav className="flex gap-1 bg-white rounded-xl border border-gray-100 shadow-sm p-1.5" aria-label="AI Management tabs">
-          {TABS.map(tab => {
+        <nav
+          className="flex gap-1 bg-white rounded-xl border border-gray-100 shadow-sm p-1.5"
+          aria-label="AI Management tabs"
+        >
+          {TABS.map((tab) => {
             const Icon = tab.icon;
             const isActive = activeTab === tab.id;
             return (
@@ -69,7 +77,7 @@ export function AIManagementModule() {
                   'gap-2 rounded-lg transition-all',
                   isActive
                     ? 'bg-purple-600 text-white hover:bg-purple-700 hover:text-white shadow-sm'
-                    : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
+                    : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50',
                 )}
                 aria-current={isActive ? 'page' : undefined}
               >

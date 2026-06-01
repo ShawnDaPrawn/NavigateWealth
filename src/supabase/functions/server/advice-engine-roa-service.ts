@@ -159,7 +159,15 @@ export interface RoACompiledModule {
   normalizedKey?: string;
   summary: string;
   outputValues: Array<{ label: string; value: string }>;
-  evidence: Array<{ id?: string; label: string; fileName: string; type: string; source?: string; sha256?: string; uploadedAt?: string }>;
+  evidence: Array<{
+    id?: string;
+    label: string;
+    fileName: string;
+    type: string;
+    source?: string;
+    sha256?: string;
+    uploadedAt?: string;
+  }>;
   sections: RoACompiledSection[];
   disclosures: string[];
   compilerHints?: RoAModuleContract['compilerHints'];
@@ -274,9 +282,7 @@ const FNA_PREFIXES: Record<string, string> = {
 };
 
 function asRecord(value: unknown): JsonRecord {
-  return value && typeof value === 'object' && !Array.isArray(value)
-    ? value as JsonRecord
-    : {};
+  return value && typeof value === 'object' && !Array.isArray(value) ? (value as JsonRecord) : {};
 }
 
 function asArray(value: unknown): unknown[] {
@@ -326,7 +332,9 @@ function base64ToBytes(base64: string): Uint8Array {
 
 async function sha256Base64(bytes: Uint8Array): Promise<string> {
   const digest = await crypto.subtle.digest('SHA-256', bytes);
-  return Array.from(new Uint8Array(digest)).map((byte) => byte.toString(16).padStart(2, '0')).join('');
+  return Array.from(new Uint8Array(digest))
+    .map((byte) => byte.toString(16).padStart(2, '0'))
+    .join('');
 }
 
 function escapeHtml(value: unknown): string {
@@ -347,7 +355,8 @@ function valueToText(value: unknown): string {
 
 function valueToHumanText(value: unknown): string {
   if (value === undefined || value === null || value === '') return 'Not recorded';
-  if (Array.isArray(value)) return value.length > 0 ? value.map(valueToHumanText).join(', ') : 'Not recorded';
+  if (Array.isArray(value))
+    return value.length > 0 ? value.map(valueToHumanText).join(', ') : 'Not recorded';
   if (typeof value === 'object') {
     const entries = Object.entries(value as JsonRecord)
       .filter(([, entryValue]) => hasValue(entryValue))
@@ -388,22 +397,20 @@ function findDataValue(key: string, ...sources: JsonRecord[]): unknown {
 }
 
 function compactList(items: Array<string | undefined | null>): string[] {
-  return items
-    .map((item) => readString(item))
-    .filter(Boolean);
+  return items.map((item) => readString(item)).filter(Boolean);
 }
 
 function formatCurrency(value: unknown): string {
-  const numeric = typeof value === 'number'
-    ? value
-    : Number(String(value ?? '').replace(/[^0-9.-]+/g, ''));
+  const numeric =
+    typeof value === 'number' ? value : Number(String(value ?? '').replace(/[^0-9.-]+/g, ''));
   if (!Number.isFinite(numeric)) return valueToText(value);
   return new Intl.NumberFormat('en-ZA', { style: 'currency', currency: 'ZAR' }).format(numeric);
 }
 
 function formatTokenValue(value: unknown, filter?: string): string {
   if (filter === 'currency') return formatCurrency(value);
-  if (filter === 'percent' || filter === 'percentage') return hasValue(value) ? `${valueToText(value)}%` : 'Not recorded';
+  if (filter === 'percent' || filter === 'percentage')
+    return hasValue(value) ? `${valueToText(value)}%` : 'Not recorded';
   if (filter === 'date') {
     const date = new Date(String(value ?? ''));
     return Number.isNaN(date.getTime()) ? valueToText(value) : date.toLocaleDateString('en-ZA');
@@ -424,10 +431,13 @@ function resolvePath(source: unknown, path: string): unknown {
 }
 
 function renderTemplate(template: string, context: JsonRecord): string {
-  return template.replace(/{{\s*([a-zA-Z0-9_.-]+)(?:\s*\|\s*([a-zA-Z]+))?\s*}}/g, (_match, path: string, filter?: string) => {
-    const value = resolvePath(context, path);
-    return formatTokenValue(value, filter);
-  });
+  return template.replace(
+    /{{\s*([a-zA-Z0-9_.-]+)(?:\s*\|\s*([a-zA-Z]+))?\s*}}/g,
+    (_match, path: string, filter?: string) => {
+      const value = resolvePath(context, path);
+      return formatTokenValue(value, filter);
+    },
+  );
 }
 
 function markdownishToHtml(content: string): string {
@@ -442,7 +452,9 @@ function markdownishToHtml(content: string): string {
 }
 
 function flattenModuleFields(contract: RoAModuleContract): string[] {
-  return contract.formSchema.sections.flatMap((section) => section.fields.map((field) => field.key));
+  return contract.formSchema.sections.flatMap((section) =>
+    section.fields.map((field) => field.key),
+  );
 }
 
 function normalizeMimeType(value: unknown): string {
@@ -503,7 +515,8 @@ function validateEvidenceMetadata(
     }
   }
 
-  const size = typeof evidence.size === 'number' && Number.isFinite(evidence.size) ? evidence.size : undefined;
+  const size =
+    typeof evidence.size === 'number' && Number.isFinite(evidence.size) ? evidence.size : undefined;
   if (size !== undefined && size <= 0) {
     blocking.push({
       ...issueBase,
@@ -543,7 +556,13 @@ function validateEvidenceMetadata(
   return { blocking, warnings };
 }
 
-function appendAuditEvent(draft: RoADraftRecord, action: string, summary: string, user: AuthUserLike, details?: JsonRecord): RoAAuditEvent[] {
+function appendAuditEvent(
+  draft: RoADraftRecord,
+  action: string,
+  summary: string,
+  user: AuthUserLike,
+  details?: JsonRecord,
+): RoAAuditEvent[] {
   const event: RoAAuditEvent = {
     id: crypto.randomUUID(),
     action,
@@ -559,7 +578,12 @@ function getLatestUpdatedAt(items: unknown[]): string | undefined {
   let latest = '';
   for (const item of items) {
     const record = asRecord(item);
-    const candidate = readString(record.updatedAt, record.updated_at, record.createdAt, record.created_at);
+    const candidate = readString(
+      record.updatedAt,
+      record.updated_at,
+      record.createdAt,
+      record.created_at,
+    );
     if (candidate && (!latest || candidate > latest)) latest = candidate;
   }
   return latest || undefined;
@@ -581,7 +605,11 @@ function getClientDisplayName(profile: JsonRecord): string {
     personal.surname,
     personal.last_name,
   );
-  return [firstName, lastName].filter(Boolean).join(' ') || readString(profile.name, personal.fullName) || 'Unknown Client';
+  return (
+    [firstName, lastName].filter(Boolean).join(' ') ||
+    readString(profile.name, personal.fullName) ||
+    'Unknown Client'
+  );
 }
 
 function buildSourceMap(): Record<string, string> {
@@ -604,13 +632,40 @@ function buildDataQuality(snapshot: RoAClientSnapshot): RoAClientContext['dataQu
 
   const checks: Array<[string, boolean]> = [
     ['Client name', snapshot.displayName !== 'Unknown Client'],
-    ['ID or passport number', !!readString(personal.idNumber, personal.passportNumber, snapshot.profile?.idNumber)],
+    [
+      'ID or passport number',
+      !!readString(personal.idNumber, personal.passportNumber, snapshot.profile?.idNumber),
+    ],
     ['Date of birth', !!readString(personal.dateOfBirth, snapshot.profile?.dateOfBirth)],
     ['Email address', !!readString(personal.email, contact.email, snapshot.profile?.email)],
-    ['Cellphone number', !!readString(personal.cellphone, personal.phoneNumber, contact.cellphone, snapshot.profile?.phoneNumber)],
-    ['Residential address', Object.keys(asRecord(contact.residentialAddress)).length > 0 || !!readString(snapshot.profile?.residentialAddressLine1)],
-    ['Employment or occupation', !!readString(employment.status, employment.occupation, snapshot.profile?.employmentStatus, snapshot.profile?.occupation)],
-    ['Risk profile', !!snapshot.riskProfile || !!readString(asRecord(snapshot.profile?.riskAssessment).riskCategory)],
+    [
+      'Cellphone number',
+      !!readString(
+        personal.cellphone,
+        personal.phoneNumber,
+        contact.cellphone,
+        snapshot.profile?.phoneNumber,
+      ),
+    ],
+    [
+      'Residential address',
+      Object.keys(asRecord(contact.residentialAddress)).length > 0 ||
+        !!readString(snapshot.profile?.residentialAddressLine1),
+    ],
+    [
+      'Employment or occupation',
+      !!readString(
+        employment.status,
+        employment.occupation,
+        snapshot.profile?.employmentStatus,
+        snapshot.profile?.occupation,
+      ),
+    ],
+    [
+      'Risk profile',
+      !!snapshot.riskProfile ||
+        !!readString(asRecord(snapshot.profile?.riskAssessment).riskCategory),
+    ],
   ];
 
   for (const [label, present] of checks) {
@@ -638,11 +693,13 @@ function linesFromPairs(pairs: Array<[string, unknown]>): string {
 
 function buildClientProfileSummary(client: RoAClientSnapshot | undefined): RoACompiledSection[] {
   if (!client) {
-    return [{
-      id: 'client_profile_summary',
-      title: 'Client Profile Summary',
-      content: 'No client profile snapshot is attached to this RoA.',
-    }];
+    return [
+      {
+        id: 'client_profile_summary',
+        title: 'Client Profile Summary',
+        content: 'No client profile snapshot is attached to this RoA.',
+      },
+    ];
   }
 
   const personal = asRecord(client.personalInformation);
@@ -670,9 +727,21 @@ function buildClientProfileSummary(client: RoAClientSnapshot | undefined): RoACo
       id: 'client_family_employment',
       title: 'Family, Employment And Income',
       content: linesFromPairs([
-        ['Family members or dependants', client.familyMembers.length > 0 ? `${client.familyMembers.length} recorded` : 'None recorded'],
+        [
+          'Family members or dependants',
+          client.familyMembers.length > 0
+            ? `${client.familyMembers.length} recorded`
+            : 'None recorded',
+        ],
         ['Employment status', readString(employment.employmentStatus, employment.status)],
-        ['Occupation or employer', readString(employment.occupation, employment.employerName, employment.selfEmployedCompanyName)],
+        [
+          'Occupation or employer',
+          readString(
+            employment.occupation,
+            employment.employerName,
+            employment.selfEmployedCompanyName,
+          ),
+        ],
         ['Gross monthly income', readString(employment.grossMonthlyIncome, financial.grossIncome)],
         ['Net monthly income', readString(employment.netMonthlyIncome, financial.netIncome)],
         ['Monthly expenses', readString(financial.monthlyExpenses)],
@@ -685,25 +754,41 @@ function buildClientProfileSummary(client: RoAClientSnapshot | undefined): RoACo
         ['Assets recorded', client.assets.length],
         ['Liabilities recorded', client.liabilities.length],
         ['Policies recorded', client.policies.length],
-        ['Risk profile', readString(risk.riskCategory, risk.category, risk.profile, asRecord(financial.riskAssessment).riskCategory)],
+        [
+          'Risk profile',
+          readString(
+            risk.riskCategory,
+            risk.category,
+            risk.profile,
+            asRecord(financial.riskAssessment).riskCategory,
+          ),
+        ],
         ['Goals or objectives', financial.goals],
       ]),
     },
   ];
 }
 
-function buildInformationReliedUpon(draft: RoADraftRecord, contracts: RoAModuleContract[]): string[] {
+function buildInformationReliedUpon(
+  draft: RoADraftRecord,
+  contracts: RoAModuleContract[],
+): string[] {
   const sources = new Set<string>();
-  if (draft.clientSnapshot) sources.add(`Client profile snapshot captured ${draft.clientSnapshot.capturedAt}`);
-  if (draft.adviserSnapshot) sources.add(`Adviser profile snapshot captured ${draft.adviserSnapshot.capturedAt}`);
-  if (draft.clientSnapshot?.policies?.length) sources.add(`Policy register (${draft.clientSnapshot.policies.length} active policy records)`);
+  if (draft.clientSnapshot)
+    sources.add(`Client profile snapshot captured ${draft.clientSnapshot.capturedAt}`);
+  if (draft.adviserSnapshot)
+    sources.add(`Adviser profile snapshot captured ${draft.adviserSnapshot.capturedAt}`);
+  if (draft.clientSnapshot?.policies?.length)
+    sources.add(`Policy register (${draft.clientSnapshot.policies.length} active policy records)`);
   if (draft.clientSnapshot?.riskProfile) sources.add('Client risk profile');
   if (draft.clientSnapshot?.clientKeys) sources.add('Client financial key totals');
 
   for (const contract of contracts) {
     if (!draft.selectedModules.includes(contract.id)) continue;
     for (const inputSource of contract.input.sources) {
-      sources.add(`${contract.title}: ${inputSource.label}${inputSource.required ? ' (required source)' : ''}`);
+      sources.add(
+        `${contract.title}: ${inputSource.label}${inputSource.required ? ' (required source)' : ''}`,
+      );
     }
   }
 
@@ -716,16 +801,23 @@ function buildInformationReliedUpon(draft: RoADraftRecord, contracts: RoAModuleC
   return [...sources];
 }
 
-function buildModuleOutputValues(contract: RoAModuleContract, moduleData: JsonRecord, moduleOutput: JsonRecord): Array<{ label: string; value: string }> {
+function buildModuleOutputValues(
+  contract: RoAModuleContract,
+  moduleData: JsonRecord,
+  moduleOutput: JsonRecord,
+): Array<{ label: string; value: string }> {
   const outputValues = asRecord(moduleOutput.values);
-  const fields = contract.output.fields.length > 0
-    ? contract.output.fields
-    : contract.formSchema.sections.flatMap((section) => section.fields.map((field) => ({
-        key: field.key,
-        label: field.label,
-        type: 'string' as const,
-        required: Boolean(field.required),
-      })));
+  const fields =
+    contract.output.fields.length > 0
+      ? contract.output.fields
+      : contract.formSchema.sections.flatMap((section) =>
+          section.fields.map((field) => ({
+            key: field.key,
+            label: field.label,
+            type: 'string' as const,
+            required: Boolean(field.required),
+          })),
+        );
 
   return fields.map((field) => ({
     label: field.label || formatLabel(field.key),
@@ -733,7 +825,10 @@ function buildModuleOutputValues(contract: RoAModuleContract, moduleData: JsonRe
   }));
 }
 
-function buildModuleSummary(contract: RoAModuleContract, outputValues: Array<{ label: string; value: string }>): string {
+function buildModuleSummary(
+  contract: RoAModuleContract,
+  outputValues: Array<{ label: string; value: string }>,
+): string {
   const recordedValues = outputValues.filter((item) => item.value !== 'Not recorded').slice(0, 3);
   if (recordedValues.length === 0) {
     return `${contract.title} has been completed using the configured ${contract.output.normalizedKey} module contract.`;
@@ -743,23 +838,31 @@ function buildModuleSummary(contract: RoAModuleContract, outputValues: Array<{ l
 
 function buildNeedsAndObjectives(draft: RoADraftRecord, modules: RoACompiledModule[]): string[] {
   const clientGoals = asRecord(draft.clientSnapshot?.financialInformation).goals;
-  const goals = Array.isArray(clientGoals) ? clientGoals.map(valueToHumanText) : compactList([valueToHumanText(clientGoals)]);
+  const goals = Array.isArray(clientGoals)
+    ? clientGoals.map(valueToHumanText)
+    : compactList([valueToHumanText(clientGoals)]);
   return [
     ...goals.filter((goal) => goal !== 'Not recorded'),
     ...modules.map((module) => `Advice need addressed through ${module.title}.`),
   ];
 }
 
-function buildScopeAndSynopsis(draft: RoADraftRecord, modules: RoACompiledModule[]): { scopeAndPurpose: string; synopsis: string } {
+function buildScopeAndSynopsis(
+  draft: RoADraftRecord,
+  modules: RoACompiledModule[],
+): { scopeAndPurpose: string; synopsis: string } {
   const clientName = draft.clientSnapshot?.displayName || 'the client';
-  const moduleTitles = modules.map((module) => module.title).join(', ') || 'the selected advice areas';
+  const moduleTitles =
+    modules.map((module) => module.title).join(', ') || 'the selected advice areas';
   const scopeAndPurpose = `This Record of Advice records the basis of advice provided to ${clientName} in respect of ${moduleTitles}. It reflects the client and adviser snapshots, the information relied upon, the completed module contracts, evidence attached to the draft, and adviser-reviewed module narratives.`;
   const synopsis = `${clientName}'s current position was considered using the available profile, financial, policy and module information. The recommendation is limited to the modules included in this RoA and should be read with the attached evidence, disclosures and implementation steps.`;
   return { scopeAndPurpose, synopsis };
 }
 
 function buildReplacementAnalysis(modules: RoACompiledModule[]): RoACompiledSection[] {
-  const replacementModules = modules.filter((module) => module.compilerHints?.includeReplacementAnalysis === true);
+  const replacementModules = modules.filter(
+    (module) => module.compilerHints?.includeReplacementAnalysis === true,
+  );
   if (replacementModules.length === 0) return [];
   return replacementModules.map((module) => ({
     id: `replacement_${module.moduleId}`,
@@ -788,7 +891,10 @@ export function buildCanonicalRoACompilation(input: {
     const contract = contractsById.get(moduleId);
     if (!contract) throw new ValidationError(`Module contract not found: ${moduleId}`);
     const moduleData = asRecord(draft.moduleData[moduleId]);
-    const moduleEvidence = asRecord(draft.moduleEvidence?.[moduleId]) as Record<string, RoAEvidenceItem>;
+    const moduleEvidence = asRecord(draft.moduleEvidence?.[moduleId]) as Record<
+      string,
+      RoAEvidenceItem
+    >;
     const moduleOutput = asRecord(draft.moduleOutputs?.[moduleId]);
     const outputValues = buildModuleOutputValues(contract, moduleData, moduleOutput);
     const evidence = Object.values(moduleEvidence || {}).map((item) => ({
@@ -811,7 +917,10 @@ export function buildCanonicalRoACompilation(input: {
     const sections = contract.documentSections
       .slice()
       .sort((a, b) => a.order - b.order)
-      .filter((section) => contract.compileOrder.length === 0 || contract.compileOrder.includes(section.id))
+      .filter(
+        (section) =>
+          contract.compileOrder.length === 0 || contract.compileOrder.includes(section.id),
+      )
       .map((section) => ({
         id: section.id,
         title: section.title,
@@ -850,11 +959,13 @@ export function buildCanonicalRoACompilation(input: {
     'All fees, premiums, costs, commissions, platform charges and adviser remuneration disclosed in the relevant module sections and supporting evidence must be checked before finalisation.',
     'The adviser must disclose any actual or potential conflict of interest that could influence the recommendation.',
   ];
-  const risksAndDisclosures = Array.from(new Set([
-    'Recommendations are based on the information available and recorded at the time of advice.',
-    'Missing or inaccurate client information may affect the suitability of the advice.',
-    ...modules.flatMap((module) => module.disclosures),
-  ]));
+  const risksAndDisclosures = Array.from(
+    new Set([
+      'Recommendations are based on the information available and recorded at the time of advice.',
+      'Missing or inaccurate client information may affect the suitability of the advice.',
+      ...modules.flatMap((module) => module.disclosures),
+    ]),
+  );
   const implementationPlan = [
     'Confirm that the client understands the recommendation, risks, costs and alternatives.',
     'Complete provider and compliance documentation required for the selected recommendation.',
@@ -867,37 +978,84 @@ export function buildCanonicalRoACompilation(input: {
     'The adviser confirms this document records the basis of advice, the material information relied upon, and the reasons for the recommendation.',
   ];
   const appendices = [
-    ...modules.flatMap((module) => module.evidence.map((item) => `${module.title}: ${item.label} - ${item.fileName}`)),
+    ...modules.flatMap((module) =>
+      module.evidence.map((item) => `${module.title}: ${item.label} - ${item.fileName}`),
+    ),
   ];
   const documentSections: RoACompiledSection[] = [
-    { id: 'document_control', title: 'Document Control', content: linesFromPairs([
-      ['Draft ID', draft.id],
-      ['Status', status],
-      ['Version', draft.version],
-      ['Generated at', now],
-      ['Client', draft.clientSnapshot?.displayName],
-      ['Adviser', draft.adviserSnapshot?.displayName],
-    ]) },
-    { id: 'adviser_details', title: 'Adviser And FSP Details', content: linesFromPairs([
-      ['Adviser', draft.adviserSnapshot?.displayName],
-      ['Email', draft.adviserSnapshot?.email],
-      ['Role', draft.adviserSnapshot?.role],
-      ['Job title', draft.adviserSnapshot?.jobTitle],
-      ['FSP reference', draft.adviserSnapshot?.fspReference],
-      ['FSCA status', draft.adviserSnapshot?.fscaStatus],
-    ]) },
+    {
+      id: 'document_control',
+      title: 'Document Control',
+      content: linesFromPairs([
+        ['Draft ID', draft.id],
+        ['Status', status],
+        ['Version', draft.version],
+        ['Generated at', now],
+        ['Client', draft.clientSnapshot?.displayName],
+        ['Adviser', draft.adviserSnapshot?.displayName],
+      ]),
+    },
+    {
+      id: 'adviser_details',
+      title: 'Adviser And FSP Details',
+      content: linesFromPairs([
+        ['Adviser', draft.adviserSnapshot?.displayName],
+        ['Email', draft.adviserSnapshot?.email],
+        ['Role', draft.adviserSnapshot?.role],
+        ['Job title', draft.adviserSnapshot?.jobTitle],
+        ['FSP reference', draft.adviserSnapshot?.fspReference],
+        ['FSCA status', draft.adviserSnapshot?.fscaStatus],
+      ]),
+    },
     ...clientProfileSummary,
     { id: 'scope_and_purpose', title: 'Scope And Purpose Of Advice', content: scopeAndPurpose },
-    { id: 'information_relied_upon', title: 'Information Relied Upon', content: informationReliedUpon.map((item) => `- ${item}`).join('\n') },
+    {
+      id: 'information_relied_upon',
+      title: 'Information Relied Upon',
+      content: informationReliedUpon.map((item) => `- ${item}`).join('\n'),
+    },
     { id: 'synopsis', title: 'Synopsis Of Current Position', content: synopsis },
-    { id: 'needs_and_objectives', title: 'Needs And Objectives', content: needsAndObjectives.map((item) => `- ${item}`).join('\n') || 'No specific objectives were recorded beyond the selected RoA modules.' },
-    { id: 'recommendation_summary', title: 'Recommendation Summary', content: recommendationSummary.map((item) => `${item.title}: ${item.summary}`).join('\n') },
+    {
+      id: 'needs_and_objectives',
+      title: 'Needs And Objectives',
+      content:
+        needsAndObjectives.map((item) => `- ${item}`).join('\n') ||
+        'No specific objectives were recorded beyond the selected RoA modules.',
+    },
+    {
+      id: 'recommendation_summary',
+      title: 'Recommendation Summary',
+      content: recommendationSummary.map((item) => `${item.title}: ${item.summary}`).join('\n'),
+    },
     ...replacementAnalysis,
-    { id: 'fees_costs_conflicts', title: 'Fees, Costs, Commission And Conflicts', content: feesCostsConflicts.map((item) => `- ${item}`).join('\n') },
-    { id: 'risks_disclosures', title: 'Risks And Important Disclosures', content: risksAndDisclosures.map((item) => `- ${item}`).join('\n') },
-    { id: 'implementation_plan', title: 'Implementation Plan', content: implementationPlan.map((item) => `- ${item}`).join('\n') },
-    { id: 'client_acknowledgement', title: 'Client Acknowledgement', content: acknowledgements.map((item) => `- ${item}`).join('\n') },
-    { id: 'appendices', title: 'Appendices And Evidence', content: appendices.length > 0 ? appendices.map((item) => `- ${item}`).join('\n') : 'No evidence appendices were recorded.' },
+    {
+      id: 'fees_costs_conflicts',
+      title: 'Fees, Costs, Commission And Conflicts',
+      content: feesCostsConflicts.map((item) => `- ${item}`).join('\n'),
+    },
+    {
+      id: 'risks_disclosures',
+      title: 'Risks And Important Disclosures',
+      content: risksAndDisclosures.map((item) => `- ${item}`).join('\n'),
+    },
+    {
+      id: 'implementation_plan',
+      title: 'Implementation Plan',
+      content: implementationPlan.map((item) => `- ${item}`).join('\n'),
+    },
+    {
+      id: 'client_acknowledgement',
+      title: 'Client Acknowledgement',
+      content: acknowledgements.map((item) => `- ${item}`).join('\n'),
+    },
+    {
+      id: 'appendices',
+      title: 'Appendices And Evidence',
+      content:
+        appendices.length > 0
+          ? appendices.map((item) => `- ${item}`).join('\n')
+          : 'No evidence appendices were recorded.',
+    },
   ];
 
   const compilation: RoACompiledOutput = {
@@ -910,7 +1068,9 @@ export function buildCanonicalRoACompilation(input: {
       draftId: draft.id,
       status,
       version: draft.version,
-      moduleContractVersions: Object.fromEntries(modules.map((module) => [module.moduleId, module.contractVersion])),
+      moduleContractVersions: Object.fromEntries(
+        modules.map((module) => [module.moduleId, module.contractVersion]),
+      ),
       moduleContractSchemaVersions: Object.fromEntries(
         modules.map((module) => [module.moduleId, module.contractSchemaVersion ?? '']),
       ),
@@ -939,7 +1099,9 @@ export function buildCanonicalRoACompilation(input: {
 }
 
 function createDocumentHtml(compilation: RoACompiledOutput): string {
-  const staticSectionHtml = compilation.documentSections.map((section, index) => `
+  const staticSectionHtml = compilation.documentSections
+    .map(
+      (section, index) => `
     <section class="roa-section">
       <div class="section-head">
         <span class="num">${String(index + 1).padStart(2, '0')}</span>
@@ -947,41 +1109,63 @@ function createDocumentHtml(compilation: RoACompiledOutput): string {
       </div>
       <div class="text-block">${markdownishToHtml(section.content)}</div>
     </section>
-  `).join('');
+  `,
+    )
+    .join('');
 
-  const recommendationRows = compilation.recommendationSummary.map((item) => `
+  const recommendationRows = compilation.recommendationSummary
+    .map(
+      (item) => `
     <tr>
       <td>${escapeHtml(item.title)}</td>
       <td>${escapeHtml(item.category)}</td>
       <td>${escapeHtml(item.summary)}</td>
     </tr>
-  `).join('');
+  `,
+    )
+    .join('');
 
-  const moduleHtml = compilation.modules.map((module) => `
+  const moduleHtml = compilation.modules
+    .map(
+      (module) => `
     <section class="roa-section module">
       <div class="section-head">
         <span class="num">M</span>
         <h2>${escapeHtml(module.title)}</h2>
       </div>
       <p class="muted">Category: ${escapeHtml(module.category)} | Contract v${module.contractVersion} | Output: ${escapeHtml(module.normalizedKey || module.moduleId)}</p>
-      ${module.outputValues.length > 0 ? `
+      ${
+        module.outputValues.length > 0
+          ? `
         <table>
           <thead><tr><th>Output Field</th><th>Value</th></tr></thead>
           <tbody>${module.outputValues.map((item) => `<tr><td>${escapeHtml(item.label)}</td><td>${escapeHtml(item.value)}</td></tr>`).join('')}</tbody>
         </table>
-      ` : ''}
-      ${module.sections.map((section) => `
+      `
+          : ''
+      }
+      ${module.sections
+        .map(
+          (section) => `
         <article>
           <h3>${escapeHtml(section.title)}</h3>
           <div class="text-block">${markdownishToHtml(section.content)}</div>
         </article>
-      `).join('')}
-      ${module.disclosures.length > 0 ? `
+      `,
+        )
+        .join('')}
+      ${
+        module.disclosures.length > 0
+          ? `
         <h3>Module Disclosures</h3>
         <ul>${module.disclosures.map((item) => `<li>${escapeHtml(item)}</li>`).join('')}</ul>
-      ` : ''}
+      `
+          : ''
+      }
     </section>
-  `).join('');
+  `,
+    )
+    .join('');
 
   return `<!doctype html>
 <html>
@@ -1107,7 +1291,10 @@ export async function createCanonicalRoAPdf(compilation: RoACompiledOutput): Pro
 
   drawShell();
 
-  const drawLine = (text: string, options: { bold?: boolean; size?: number; color?: ReturnType<typeof rgb> } = {}) => {
+  const drawLine = (
+    text: string,
+    options: { bold?: boolean; size?: number; color?: ReturnType<typeof rgb> } = {},
+  ) => {
     const size = options.size || 10;
     const font = options.bold ? boldFont : regularFont;
     const maxChars = Math.max(40, Math.floor(92 * (10 / size)));
@@ -1167,18 +1354,25 @@ export async function createCanonicalRoAPdf(compilation: RoACompiledOutput): Pro
 export async function createCanonicalRoADocx(compilation: RoACompiledOutput): Promise<Uint8Array> {
   const children: Paragraph[] = [
     new Paragraph({ text: 'Record of Advice', heading: HeadingLevel.TITLE }),
-    new Paragraph({ children: [new TextRun(`Client: ${compilation.client?.displayName || 'Unknown Client'}`)] }),
-    new Paragraph({ children: [new TextRun(`Adviser: ${compilation.adviser?.displayName || 'Unknown Adviser'}`)] }),
+    new Paragraph({
+      children: [new TextRun(`Client: ${compilation.client?.displayName || 'Unknown Client'}`)],
+    }),
+    new Paragraph({
+      children: [new TextRun(`Adviser: ${compilation.adviser?.displayName || 'Unknown Adviser'}`)],
+    }),
     new Paragraph({ children: [new TextRun(`Version: ${compilation.version}`)] }),
     new Paragraph({ text: compilation.scopeAndPurpose }),
   ];
 
   for (const section of compilation.documentSections) {
     children.push(new Paragraph({ text: section.title, heading: HeadingLevel.HEADING_1 }));
-    section.content.split('\n').filter(Boolean).forEach((line) => {
-      const cleaned = line.replace(/^[-#]\s*/, '');
-      children.push(new Paragraph({ text: cleaned }));
-    });
+    section.content
+      .split('\n')
+      .filter(Boolean)
+      .forEach((line) => {
+        const cleaned = line.replace(/^[-#]\s*/, '');
+        children.push(new Paragraph({ text: cleaned }));
+      });
   }
 
   for (const module of compilation.modules) {
@@ -1189,13 +1383,18 @@ export async function createCanonicalRoADocx(compilation: RoACompiledOutput): Pr
     });
     for (const section of module.sections) {
       children.push(new Paragraph({ text: section.title, heading: HeadingLevel.HEADING_2 }));
-      section.content.split('\n').filter(Boolean).forEach((line) => {
-        children.push(new Paragraph({ text: line.replace(/^##\s*/, '') }));
-      });
+      section.content
+        .split('\n')
+        .filter(Boolean)
+        .forEach((line) => {
+          children.push(new Paragraph({ text: line.replace(/^##\s*/, '') }));
+        });
     }
     if (module.disclosures.length > 0) {
       children.push(new Paragraph({ text: 'Disclosures', heading: HeadingLevel.HEADING_2 }));
-      module.disclosures.forEach((item) => children.push(new Paragraph({ text: item, bullet: { level: 0 } })));
+      module.disclosures.forEach((item) =>
+        children.push(new Paragraph({ text: item, bullet: { level: 0 } })),
+      );
     }
   }
 
@@ -1264,9 +1463,10 @@ export class AdviceEngineRoAService {
     const generatedDocuments: RoAGeneratedDocument[] = [];
 
     for (const format of formats) {
-      const bytes = format === 'pdf'
-        ? await createCanonicalRoAPdf(compiledDraft.compiledOutput)
-        : await createCanonicalRoADocx(compiledDraft.compiledOutput);
+      const bytes =
+        format === 'pdf'
+          ? await createCanonicalRoAPdf(compiledDraft.compiledOutput)
+          : await createCanonicalRoADocx(compiledDraft.compiledOutput);
       const sha256 = await sha256Base64(bytes);
       const id = crypto.randomUUID();
       const fileName = `RoA_${clientName}_${now.slice(0, 10)}_v${compiledDraft.version}${statusSuffix}.${format}`;
@@ -1278,7 +1478,10 @@ export class AdviceEngineRoAService {
         format,
         documentStatus,
         fileName,
-        contentType: format === 'pdf' ? 'application/pdf' : 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+        contentType:
+          format === 'pdf'
+            ? 'application/pdf'
+            : 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
         storagePath,
         sha256,
         compilationHash: compiledDraft.compiledOutput.hash,
@@ -1296,7 +1499,12 @@ export class AdviceEngineRoAService {
       };
 
       try {
-        const objectPath = roaGeneratedBlobPath(compiledDraft.clientId, compiledDraft.id, id, format);
+        const objectPath = roaGeneratedBlobPath(
+          compiledDraft.clientId,
+          compiledDraft.id,
+          id,
+          format,
+        );
         await uploadRoABlob(objectPath, bytes, document.contentType);
         persisted = {
           ...document,
@@ -1370,21 +1578,15 @@ export class AdviceEngineRoAService {
   async buildClientContext(clientId: string, adviserUser: AuthUserLike): Promise<RoAClientContext> {
     if (!clientId) throw new ValidationError('clientId is required');
 
-    const [
-      profileRaw,
-      clientKeysRaw,
-      policiesRaw,
-      riskProfileRaw,
-      adviserSnapshot,
-      ...fnaGroups
-    ] = await Promise.all([
-      kv.get(`user_profile:${clientId}:personal_info`),
-      kv.get(`user_profile:${clientId}:client_keys`),
-      kv.get(`policies:client:${clientId}`),
-      kv.get(`client:${clientId}:risk_profile`),
-      this.buildAdviserSnapshot(adviserUser),
-      ...Object.values(FNA_PREFIXES).map((prefix) => kv.getByPrefix(`${prefix}${clientId}:`)),
-    ]);
+    const [profileRaw, clientKeysRaw, policiesRaw, riskProfileRaw, adviserSnapshot, ...fnaGroups] =
+      await Promise.all([
+        kv.get(`user_profile:${clientId}:personal_info`),
+        kv.get(`user_profile:${clientId}:client_keys`),
+        kv.get(`policies:client:${clientId}`),
+        kv.get(`client:${clientId}:risk_profile`),
+        this.buildAdviserSnapshot(adviserUser),
+        ...Object.values(FNA_PREFIXES).map((prefix) => kv.getByPrefix(`${prefix}${clientId}:`)),
+      ]);
 
     const profile = asRecord(profileRaw);
     if (!profileRaw) {
@@ -1416,7 +1618,12 @@ export class AdviceEngineRoAService {
     const contactInformation = {
       ...asRecord(profile.contactInformation),
       email: readString(asRecord(profile.personalInformation).email, profile.email) || undefined,
-      cellphone: readString(asRecord(profile.personalInformation).cellphone, profile.phoneNumber, profile.phone) || undefined,
+      cellphone:
+        readString(
+          asRecord(profile.personalInformation).cellphone,
+          profile.phoneNumber,
+          profile.phone,
+        ) || undefined,
       secondaryEmail: readString(profile.secondaryEmail) || undefined,
       residentialAddress: asRecord(profile.contactInformation).residentialAddress || {
         line1: profile.residentialAddressLine1,
@@ -1488,7 +1695,11 @@ export class AdviceEngineRoAService {
     return draft as RoADraftRecord;
   }
 
-  async listDrafts(filters: { status?: string; clientId?: string; adviserId?: string }): Promise<RoADraftRecord[]> {
+  async listDrafts(filters: {
+    status?: string;
+    clientId?: string;
+    adviserId?: string;
+  }): Promise<RoADraftRecord[]> {
     const drafts = (await kv.getByPrefix(DRAFT_PREFIX)) as RoADraftRecord[];
     return drafts
       .filter((draft) => !filters.status || draft.status === filters.status)
@@ -1499,7 +1710,9 @@ export class AdviceEngineRoAService {
 
   async saveDraft(input: Partial<RoADraftRecord>, user: AuthUserLike): Promise<RoADraftRecord> {
     const now = new Date().toISOString();
-    const existing = input.id ? await kv.get(`${DRAFT_PREFIX}${input.id}`) as RoADraftRecord | null : null;
+    const existing = input.id
+      ? ((await kv.get(`${DRAFT_PREFIX}${input.id}`)) as RoADraftRecord | null)
+      : null;
     if (existing?.lockedAt) {
       throw new ValidationError('Finalised RoA records are locked. Create a new version instead.');
     }
@@ -1548,15 +1761,35 @@ export class AdviceEngineRoAService {
     };
 
     const addedModules = selectedModules.filter((moduleId) => !previousModules.includes(moduleId));
-    const removedModules = previousModules.filter((moduleId) => !selectedModules.includes(moduleId));
+    const removedModules = previousModules.filter(
+      (moduleId) => !selectedModules.includes(moduleId),
+    );
     if (existing?.clientId !== draft.clientId && draft.clientId) {
-      draft.auditEvents = appendAuditEvent(draft, 'client_selected', 'Client selected for RoA draft', user, { clientId: draft.clientId });
+      draft.auditEvents = appendAuditEvent(
+        draft,
+        'client_selected',
+        'Client selected for RoA draft',
+        user,
+        { clientId: draft.clientId },
+      );
     }
     if (contextCapturedAt && contextCapturedAt !== existing?.contextCapturedAt) {
-      draft.auditEvents = appendAuditEvent(draft, 'snapshot_refreshed', 'Client/adviser snapshot refreshed', user, { contextCapturedAt });
+      draft.auditEvents = appendAuditEvent(
+        draft,
+        'snapshot_refreshed',
+        'Client/adviser snapshot refreshed',
+        user,
+        { contextCapturedAt },
+      );
     }
     if (addedModules.length > 0 || removedModules.length > 0) {
-      draft.auditEvents = appendAuditEvent(draft, 'modules_updated', 'RoA module selection updated', user, { addedModules, removedModules });
+      draft.auditEvents = appendAuditEvent(
+        draft,
+        'modules_updated',
+        'RoA module selection updated',
+        user,
+        { addedModules, removedModules },
+      );
     }
 
     await kv.set(`${DRAFT_PREFIX}${draft.id}`, draft);
@@ -1589,12 +1822,15 @@ export class AdviceEngineRoAService {
   async cloneDraftFromFinal(sourceDraftId: string, user: AuthUserLike): Promise<RoADraftRecord> {
     const source = await this.getDraft(sourceDraftId);
     if (!source.lockedAt || !source.finalisedAt) {
-      throw new ValidationError('Only finalised RoA drafts can be branched into a new editable version.');
+      throw new ValidationError(
+        'Only finalised RoA drafts can be branched into a new editable version.',
+      );
     }
 
     const newId = crypto.randomUUID();
     const now = new Date().toISOString();
-    const baseVersion = typeof source.version === 'number' && Number.isFinite(source.version) ? source.version : 1;
+    const baseVersion =
+      typeof source.version === 'number' && Number.isFinite(source.version) ? source.version : 1;
     const adviserSnapshot = await this.buildAdviserSnapshot(user);
 
     const newDraft: RoADraftRecord = {
@@ -1656,7 +1892,10 @@ export class AdviceEngineRoAService {
     return newDraft;
   }
 
-  validateDraftWithContracts(draft: RoADraftRecord, contracts: RoAModuleContract[]): RoAValidationResult {
+  validateDraftWithContracts(
+    draft: RoADraftRecord,
+    contracts: RoAModuleContract[],
+  ): RoAValidationResult {
     const checkedAt = new Date().toISOString();
     const blocking: RoAValidationIssue[] = [];
     const warnings: RoAValidationIssue[] = [];
@@ -1684,9 +1923,10 @@ export class AdviceEngineRoAService {
 
       const moduleData = asRecord(draft.moduleData[moduleId]);
       const evidence = asRecord(draft.moduleEvidence?.[moduleId]);
-      const requiredFields = contract.validation.requiredFields.length > 0
-        ? contract.validation.requiredFields
-        : flattenModuleFields(contract);
+      const requiredFields =
+        contract.validation.requiredFields.length > 0
+          ? contract.validation.requiredFields
+          : flattenModuleFields(contract);
 
       for (const fieldKey of requiredFields) {
         if (!hasValue(moduleData[fieldKey])) {
@@ -1715,7 +1955,11 @@ export class AdviceEngineRoAService {
         }
 
         if (hasValue(evidence[requirement.id])) {
-          const metadataResult = validateEvidenceMetadata(contract, requirement, evidence[requirement.id]);
+          const metadataResult = validateEvidenceMetadata(
+            contract,
+            requirement,
+            evidence[requirement.id],
+          );
           blocking.push(...metadataResult.blocking);
           warnings.push(...metadataResult.warnings);
         }
@@ -1723,7 +1967,9 @@ export class AdviceEngineRoAService {
 
       for (const rule of contract.validation.rules) {
         const targetedFields = rule.fieldKeys || [];
-        const targetMissing = targetedFields.length > 0 && targetedFields.some((fieldKey) => !hasValue(moduleData[fieldKey]));
+        const targetMissing =
+          targetedFields.length > 0 &&
+          targetedFields.some((fieldKey) => !hasValue(moduleData[fieldKey]));
         if (targetedFields.length === 0 && rule.severity === 'warning') {
           warnings.push({
             id: `${moduleId}:rule:${rule.id}`,
@@ -1752,7 +1998,11 @@ export class AdviceEngineRoAService {
     return { valid: blocking.length === 0, blocking, warnings, checkedAt };
   }
 
-  async validateDraft(draftId: string, contracts: RoAModuleContract[], user: AuthUserLike): Promise<RoADraftRecord> {
+  async validateDraft(
+    draftId: string,
+    contracts: RoAModuleContract[],
+    user: AuthUserLike,
+  ): Promise<RoADraftRecord> {
     const draft = await this.getDraft(draftId);
     const validationResults = this.validateDraftWithContracts(draft, contracts);
     const updated: RoADraftRecord = {
@@ -1760,10 +2010,16 @@ export class AdviceEngineRoAService {
       validationResults,
       updatedAt: new Date().toISOString(),
       updatedBy: user.id,
-      auditEvents: appendAuditEvent(draft, 'validation_run', validationResults.valid ? 'RoA validation passed' : 'RoA validation found blockers', user, {
-        blocking: validationResults.blocking.length,
-        warnings: validationResults.warnings.length,
-      }),
+      auditEvents: appendAuditEvent(
+        draft,
+        'validation_run',
+        validationResults.valid ? 'RoA validation passed' : 'RoA validation found blockers',
+        user,
+        {
+          blocking: validationResults.blocking.length,
+          warnings: validationResults.warnings.length,
+        },
+      ),
     };
     await kv.set(`${DRAFT_PREFIX}${draft.id}`, updated);
     return updated;
@@ -1785,15 +2041,22 @@ export class AdviceEngineRoAService {
 
     const contract = contracts.find((item) => item.id === input.moduleId);
     if (!contract) throw new ValidationError('The selected module contract is not active.');
-    const requirement = contract.evidence.requirements.find((item) => item.id === input.requirementId);
-    if (!requirement) throw new ValidationError('The selected evidence requirement does not exist on this module contract.');
+    const requirement = contract.evidence.requirements.find(
+      (item) => item.id === input.requirementId,
+    );
+    if (!requirement)
+      throw new ValidationError(
+        'The selected evidence requirement does not exist on this module contract.',
+      );
 
     const fileName = readString(input.fileName);
     if (!fileName) {
       throw new ValidationError('Uploaded evidence must include a file name.');
     }
 
-    const allowedMimeTypes = (requirement.acceptedMimeTypes || []).map((type) => type.toLowerCase());
+    const allowedMimeTypes = (requirement.acceptedMimeTypes || []).map((type) =>
+      type.toLowerCase(),
+    );
     const mimeType = normalizeMimeType(input.mimeType);
     if (allowedMimeTypes.length && !mimeType) {
       throw new ValidationError(`${requirement.label} must include a file type.`);
@@ -1809,8 +2072,14 @@ export class AdviceEngineRoAService {
     if (bytes.byteLength > MAX_EVIDENCE_BYTES) {
       throw new ValidationError('Uploaded evidence exceeds the maximum allowed size.');
     }
-    if (typeof input.size === 'number' && Number.isFinite(input.size) && bytes.byteLength !== input.size) {
-      throw new ValidationError('Uploaded evidence size does not match the supplied file metadata.');
+    if (
+      typeof input.size === 'number' &&
+      Number.isFinite(input.size) &&
+      bytes.byteLength !== input.size
+    ) {
+      throw new ValidationError(
+        'Uploaded evidence size does not match the supplied file metadata.',
+      );
     }
 
     const source = readString(input.source) || 'adviser-upload';
@@ -1842,7 +2111,12 @@ export class AdviceEngineRoAService {
     let kvPayload: Record<string, unknown>;
 
     try {
-      const objectPath = roaEvidenceBlobPath(draft.clientId, draftId, id, evidenceItem.mimeType || mimeType);
+      const objectPath = roaEvidenceBlobPath(
+        draft.clientId,
+        draftId,
+        id,
+        evidenceItem.mimeType || mimeType,
+      );
       await uploadRoABlob(
         objectPath,
         bytes,
@@ -1902,14 +2176,20 @@ export class AdviceEngineRoAService {
       },
       updatedAt: now,
       updatedBy: user.id,
-      auditEvents: appendAuditEvent(draft, 'evidence_uploaded', `${requirement.label} evidence uploaded`, user, {
-        moduleId: input.moduleId,
-        requirementId: requirement.id,
-        evidenceId: id,
-        fileName: input.fileName,
-        sha256,
-        source: evidenceItem.source,
-      }),
+      auditEvents: appendAuditEvent(
+        draft,
+        'evidence_uploaded',
+        `${requirement.label} evidence uploaded`,
+        user,
+        {
+          moduleId: input.moduleId,
+          requirementId: requirement.id,
+          evidenceId: id,
+          fileName: input.fileName,
+          sha256,
+          source: evidenceItem.source,
+        },
+      ),
     };
 
     await kv.set(`${DRAFT_PREFIX}${draft.id}`, updated);
@@ -1970,7 +2250,12 @@ export class AdviceEngineRoAService {
     log.info('RoA draft deleted', { draftId, deletedBy: _user.id });
   }
 
-  async compileDraft(draftId: string, contracts: RoAModuleContract[], user: AuthUserLike, status: 'draft' | 'final' = 'draft'): Promise<RoADraftRecord> {
+  async compileDraft(
+    draftId: string,
+    contracts: RoAModuleContract[],
+    user: AuthUserLike,
+    status: 'draft' | 'final' = 'draft',
+  ): Promise<RoADraftRecord> {
     const draft = await this.getDraft(draftId);
     if (draft.lockedAt) {
       throw new ValidationError('Finalised RoA records are locked. Create a new version instead.');
@@ -1983,9 +2268,15 @@ export class AdviceEngineRoAService {
         validationResults,
         updatedAt: new Date().toISOString(),
         updatedBy: user.id,
-        auditEvents: appendAuditEvent(draft, 'compilation_blocked', 'RoA compilation blocked by validation', user, {
-          blocking: validationResults.blocking.length,
-        }),
+        auditEvents: appendAuditEvent(
+          draft,
+          'compilation_blocked',
+          'RoA compilation blocked by validation',
+          user,
+          {
+            blocking: validationResults.blocking.length,
+          },
+        ),
       };
       await kv.set(`${DRAFT_PREFIX}${draft.id}`, updated);
       throw new ValidationError('RoA cannot be compiled while blocking validation issues remain');
@@ -2006,27 +2297,46 @@ export class AdviceEngineRoAService {
       compiledOutput: compilation,
       updatedAt: now,
       updatedBy: user.id,
-      auditEvents: appendAuditEvent(draft, 'document_compiled', 'RoA compiled from module contracts', user, {
-        compilationId: compilation.id,
-        modules: compilation.modules.map((module) => module.moduleId),
-        canonicalSections: compilation.documentSections.map((section) => section.id),
-      }),
+      auditEvents: appendAuditEvent(
+        draft,
+        'document_compiled',
+        'RoA compiled from module contracts',
+        user,
+        {
+          compilationId: compilation.id,
+          modules: compilation.modules.map((module) => module.moduleId),
+          canonicalSections: compilation.documentSections.map((section) => section.id),
+        },
+      ),
     };
     await kv.set(`${DRAFT_PREFIX}${draft.id}`, updated);
     return updated;
   }
 
-  async generateDocuments(draftId: string, formats: Array<'pdf' | 'docx'>, contracts: RoAModuleContract[], user: AuthUserLike): Promise<RoADraftRecord> {
+  async generateDocuments(
+    draftId: string,
+    formats: Array<'pdf' | 'docx'>,
+    contracts: RoAModuleContract[],
+    user: AuthUserLike,
+  ): Promise<RoADraftRecord> {
     const existing = await this.getDraft(draftId);
     if (existing.lockedAt) {
-      throw new ValidationError('Finalised RoA records are locked. Download the stored final documents instead.');
+      throw new ValidationError(
+        'Finalised RoA records are locked. Download the stored final documents instead.',
+      );
     }
 
     const compiledDraft = await this.compileDraft(draftId, contracts, user, 'draft');
     if (!compiledDraft.compiledOutput) throw new ValidationError('RoA compilation failed');
 
     const now = new Date().toISOString();
-    const generatedDocuments = await this.createDocumentArtifacts(compiledDraft, formats, user, 'draft', now);
+    const generatedDocuments = await this.createDocumentArtifacts(
+      compiledDraft,
+      formats,
+      user,
+      'draft',
+      now,
+    );
 
     const updated: RoADraftRecord = {
       ...compiledDraft,
@@ -2034,18 +2344,28 @@ export class AdviceEngineRoAService {
       status: 'complete',
       updatedAt: now,
       updatedBy: user.id,
-      auditEvents: appendAuditEvent(compiledDraft, 'document_generated', 'RoA document artefacts generated', user, {
-        formats,
-        documentIds: generatedDocuments.map((document) => document.id),
-        documentStatus: 'draft',
-        compilationHash: compiledDraft.compiledOutput.hash,
-      }),
+      auditEvents: appendAuditEvent(
+        compiledDraft,
+        'document_generated',
+        'RoA document artefacts generated',
+        user,
+        {
+          formats,
+          documentIds: generatedDocuments.map((document) => document.id),
+          documentStatus: 'draft',
+          compilationHash: compiledDraft.compiledOutput.hash,
+        },
+      ),
     };
     await kv.set(`${DRAFT_PREFIX}${compiledDraft.id}`, updated);
     return updated;
   }
 
-  async finaliseDraft(draftId: string, contracts: RoAModuleContract[], user: AuthUserLike): Promise<RoADraftRecord> {
+  async finaliseDraft(
+    draftId: string,
+    contracts: RoAModuleContract[],
+    user: AuthUserLike,
+  ): Promise<RoADraftRecord> {
     const existing = await this.getDraft(draftId);
     if (existing.lockedAt) {
       throw new ValidationError('This RoA has already been finalised and locked.');
@@ -2053,15 +2373,27 @@ export class AdviceEngineRoAService {
 
     const compiledDraft = await this.compileDraft(draftId, contracts, user, 'final');
     const now = new Date().toISOString();
-    const finalDocuments = await this.createDocumentArtifacts(compiledDraft, ['pdf', 'docx'], user, 'final', now);
+    const finalDocuments = await this.createDocumentArtifacts(
+      compiledDraft,
+      ['pdf', 'docx'],
+      user,
+      'final',
+      now,
+    );
     const withGeneratedAudit: RoADraftRecord = {
       ...compiledDraft,
       generatedDocuments: [...(compiledDraft.generatedDocuments || []), ...finalDocuments],
-      auditEvents: appendAuditEvent(compiledDraft, 'final_documents_generated', 'Final RoA PDF and DOCX artefacts generated', user, {
-        documentIds: finalDocuments.map((document) => document.id),
-        compilationId: compiledDraft.compiledOutput?.id,
-        compilationHash: compiledDraft.compiledOutput?.hash,
-      }),
+      auditEvents: appendAuditEvent(
+        compiledDraft,
+        'final_documents_generated',
+        'Final RoA PDF and DOCX artefacts generated',
+        user,
+        {
+          documentIds: finalDocuments.map((document) => document.id),
+          compilationId: compiledDraft.compiledOutput?.id,
+          compilationHash: compiledDraft.compiledOutput?.hash,
+        },
+      ),
     };
     const finalised: RoADraftRecord = {
       ...withGeneratedAudit,
@@ -2071,10 +2403,16 @@ export class AdviceEngineRoAService {
       lockedAt: now,
       updatedAt: now,
       updatedBy: user.id,
-      auditEvents: appendAuditEvent(withGeneratedAudit, 'finalised', 'RoA finalised and locked', user, {
-        compiledOutputId: withGeneratedAudit.compiledOutput?.id,
-        finalDocumentIds: finalDocuments.map((document) => document.id),
-      }),
+      auditEvents: appendAuditEvent(
+        withGeneratedAudit,
+        'finalised',
+        'RoA finalised and locked',
+        user,
+        {
+          compiledOutputId: withGeneratedAudit.compiledOutput?.id,
+          finalDocumentIds: finalDocuments.map((document) => document.id),
+        },
+      ),
     };
     await kv.set(`${DRAFT_PREFIX}${finalised.id}`, finalised);
     return finalised;
@@ -2125,33 +2463,48 @@ export class AdviceEngineRoAService {
     return records
       .map((record) => asRecord(record))
       .filter((record) => readString(record.id) && readString(record.fileName))
-      .map((record): RoAClientFileEntry => ({
-        id: readString(record.id),
-        clientId,
-        itemType: readString(record.itemType) === 'evidence' ? 'evidence' : 'generated-document',
-        title: readString(record.title, record.fileName),
-        fileName: readString(record.fileName),
-        contentType: readString(record.contentType) || undefined,
-        fileSize: typeof record.fileSize === 'number' ? record.fileSize : undefined,
-        draftId: readString(record.draftId) || undefined,
-        moduleId: readString(record.moduleId) || undefined,
-        requirementId: readString(record.requirementId) || undefined,
-        storagePath: readString(record.storagePath) || undefined,
-        sha256: readString(record.sha256) || undefined,
-        source: readString(record.source) || undefined,
-        createdAt: readString(record.createdAt) || new Date(0).toISOString(),
-        documentStatus: readString(record.documentStatus) === 'final' ? 'final' : readString(record.documentStatus) === 'draft' ? 'draft' : undefined,
-        format: readString(record.format) === 'docx' ? 'docx' : readString(record.format) === 'pdf' ? 'pdf' : undefined,
-      }))
+      .map(
+        (record): RoAClientFileEntry => ({
+          id: readString(record.id),
+          clientId,
+          itemType: readString(record.itemType) === 'evidence' ? 'evidence' : 'generated-document',
+          title: readString(record.title, record.fileName),
+          fileName: readString(record.fileName),
+          contentType: readString(record.contentType) || undefined,
+          fileSize: typeof record.fileSize === 'number' ? record.fileSize : undefined,
+          draftId: readString(record.draftId) || undefined,
+          moduleId: readString(record.moduleId) || undefined,
+          requirementId: readString(record.requirementId) || undefined,
+          storagePath: readString(record.storagePath) || undefined,
+          sha256: readString(record.sha256) || undefined,
+          source: readString(record.source) || undefined,
+          createdAt: readString(record.createdAt) || new Date(0).toISOString(),
+          documentStatus:
+            readString(record.documentStatus) === 'final'
+              ? 'final'
+              : readString(record.documentStatus) === 'draft'
+                ? 'draft'
+                : undefined,
+          format:
+            readString(record.format) === 'docx'
+              ? 'docx'
+              : readString(record.format) === 'pdf'
+                ? 'pdf'
+                : undefined,
+        }),
+      )
       .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
   }
 
   async submitDraft(draftId: string, user: AuthUserLike): Promise<RoADraftRecord> {
     const existing = await this.getDraft(draftId);
-    return this.saveDraft({
-      ...existing,
-      status: 'submitted',
-      version: existing.version + 1,
-    }, user);
+    return this.saveDraft(
+      {
+        ...existing,
+        status: 'submitted',
+        version: existing.version + 1,
+      },
+      user,
+    );
   }
 }

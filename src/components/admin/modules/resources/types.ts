@@ -336,15 +336,15 @@ export interface ResourcesModuleState {
   selectedForms: string[];
   formFilters: FormFilters;
   previewingForm: FormDefinition | null;
-  
+
   // Training
   trainingResources: TrainingResource[];
   trainingFilters: TrainingFilters;
-  
+
   // Knowledge Base
   knowledgeArticles: KnowledgeArticle[];
   knowledgeFilters: KnowledgeFilters;
-  
+
   // UI State
   activeTab: 'forms' | 'training' | 'knowledge' | 'tools';
   loading: boolean;

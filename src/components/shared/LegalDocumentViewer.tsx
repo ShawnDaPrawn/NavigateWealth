@@ -1,26 +1,17 @@
 import React, { useCallback, useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router';
-import {
-  ArrowUpRight,
-  CalendarDays,
-  Download,
-  FileText,
-  ShieldCheck,
-} from 'lucide-react';
+import { ArrowUpRight, CalendarDays, Download, FileText, ShieldCheck } from 'lucide-react';
 import { toast } from 'sonner';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from '../ui/dialog';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '../ui/dialog';
 import { Badge } from '../ui/badge';
 import { Button } from '../ui/button';
 import { Card, CardContent } from '../ui/card';
 import { Separator } from '../ui/separator';
 import { projectId, publicAnonKey } from '../../utils/supabase/info';
-import { LEGAL_DOCUMENTS_BY_SLUG, LEGAL_SECTION_LABELS } from '../../shared/legal-documents-registry';
+import {
+  LEGAL_DOCUMENTS_BY_SLUG,
+  LEGAL_SECTION_LABELS,
+} from '../../shared/legal-documents-registry';
 import { LegalDocumentPdfDownloadSurface } from './LegalDocumentPdf';
 import {
   LEGAL_DOCUMENT_CONTENT_CLASS,
@@ -96,73 +87,81 @@ function escapeHtml(value: string): string {
 }
 
 function blocksToHtml(blocks: FormBlock[]): string {
-  return blocks.map((block, index) => {
-    switch (block.type) {
-      case 'section_header': {
-        const title = block.data?.title || `Section ${index + 1}`;
-        const heading = `${block.data?.number ? `${block.data.number} ` : ''}${title}`.trim();
-        const id = heading
-          .toLowerCase()
-          .replace(/[^a-z0-9\s-]/g, '')
-          .trim()
-          .replace(/\s+/g, '-')
-          || `section-${index + 1}`;
+  return blocks
+    .map((block, index) => {
+      switch (block.type) {
+        case 'section_header': {
+          const title = block.data?.title || `Section ${index + 1}`;
+          const heading = `${block.data?.number ? `${block.data.number} ` : ''}${title}`.trim();
+          const id =
+            heading
+              .toLowerCase()
+              .replace(/[^a-z0-9\s-]/g, '')
+              .trim()
+              .replace(/\s+/g, '-') || `section-${index + 1}`;
 
-        return `<h2 id="${escapeHtml(id)}">${escapeHtml(heading)}</h2>`;
-      }
+          return `<h2 id="${escapeHtml(id)}">${escapeHtml(heading)}</h2>`;
+        }
 
-      case 'text':
-        return block.data?.content || '';
+        case 'text':
+          return block.data?.content || '';
 
-      case 'table': {
-        const hasRowHeaders = Boolean(block.data?.hasRowHeaders);
-        const headerCells = (block.data?.columnHeaders || [])
-          .map((header) => `<th>${escapeHtml(header)}</th>`)
-          .join('');
-        const headerRow = block.data?.hasColumnHeaders
-          ? `<thead><tr>${hasRowHeaders ? '<th></th>' : ''}${headerCells}</tr></thead>`
-          : '';
-
-        const bodyRows = (block.data?.rows || []).map((row, rowIndex) => {
-          const rowHeader = hasRowHeaders
-            ? `<th>${escapeHtml((block.data?.rowHeaders || [])[rowIndex] || '')}</th>`
-            : '';
-          const cells = (row.cells || [])
-            .map((cell) => `<td>${escapeHtml(cell.value || '')}</td>`)
+        case 'table': {
+          const hasRowHeaders = Boolean(block.data?.hasRowHeaders);
+          const headerCells = (block.data?.columnHeaders || [])
+            .map((header) => `<th>${escapeHtml(header)}</th>`)
             .join('');
-          return `<tr>${rowHeader}${cells}</tr>`;
-        }).join('');
+          const headerRow = block.data?.hasColumnHeaders
+            ? `<thead><tr>${hasRowHeaders ? '<th></th>' : ''}${headerCells}</tr></thead>`
+            : '';
 
-        return `<div class="legal-table-wrap"><table>${headerRow}<tbody>${bodyRows}</tbody></table></div>`;
+          const bodyRows = (block.data?.rows || [])
+            .map((row, rowIndex) => {
+              const rowHeader = hasRowHeaders
+                ? `<th>${escapeHtml((block.data?.rowHeaders || [])[rowIndex] || '')}</th>`
+                : '';
+              const cells = (row.cells || [])
+                .map((cell) => `<td>${escapeHtml(cell.value || '')}</td>`)
+                .join('');
+              return `<tr>${rowHeader}${cells}</tr>`;
+            })
+            .join('');
+
+          return `<div class="legal-table-wrap"><table>${headerRow}<tbody>${bodyRows}</tbody></table></div>`;
+        }
+
+        case 'signature': {
+          const signatories = (block.data?.signatories || [])
+            .map(
+              (signatory) =>
+                `<div class="legal-signature-line"><div class="line"></div><span>${escapeHtml(signatory.label || 'Signature')}</span></div>`,
+            )
+            .join('');
+          return `<div class="legal-signatures">${signatories}</div>`;
+        }
+
+        case 'page_break':
+          return '<div class="legal-page-break"></div>';
+
+        default:
+          return '';
       }
-
-      case 'signature': {
-        const signatories = (block.data?.signatories || []).map((signatory) => (
-          `<div class="legal-signature-line"><div class="line"></div><span>${escapeHtml(signatory.label || 'Signature')}</span></div>`
-        )).join('');
-        return `<div class="legal-signatures">${signatories}</div>`;
-      }
-
-      case 'page_break':
-        return '<div class="legal-page-break"></div>';
-
-      default:
-        return '';
-    }
-  }).join('');
+    })
+    .join('');
 }
 
 function deriveTocFromBlocks(blocks: FormBlock[]) {
   return blocks
     .filter((block) => block.type === 'section_header')
     .map((block, index) => {
-      const title = `${block.data?.number ? `${block.data.number} ` : ''}${block.data?.title || `Section ${index + 1}`}`.trim();
-      const id = title
-        .toLowerCase()
-        .replace(/[^a-z0-9\s-]/g, '')
-        .trim()
-        .replace(/\s+/g, '-')
-        || `section-${index + 1}`;
+      const title =
+        `${block.data?.number ? `${block.data.number} ` : ''}${block.data?.title || `Section ${index + 1}`}`.trim();
+      const id =
+        title
+          .toLowerCase()
+          .replace(/[^a-z0-9\s-]/g, '')
+          .trim()
+          .replace(/\s+/g, '-') || `section-${index + 1}`;
 
       return { id, title, level: 2 };
     });
@@ -226,31 +225,25 @@ interface LegalDocumentDialogProps {
   document: LegalDocument | null;
 }
 
-export function LegalDocumentDialog({
-  open,
-  onOpenChange,
-  document,
-}: LegalDocumentDialogProps) {
+export function LegalDocumentDialog({ open, onOpenChange, document }: LegalDocumentDialogProps) {
   const [pdfDownloadRequestId, setPdfDownloadRequestId] = useState(0);
   const [pdfDownloading, setPdfDownloading] = useState(false);
   const contentRef = useRef<HTMLDivElement | null>(null);
 
   const registryEntry = document?.slug ? LEGAL_DOCUMENTS_BY_SLUG[document.slug] : null;
-  const sectionLabel = document?.section && document.section in LEGAL_SECTION_LABELS
-    ? LEGAL_SECTION_LABELS[document.section as keyof typeof LEGAL_SECTION_LABELS]
-    : registryEntry?.section
-      ? LEGAL_SECTION_LABELS[registryEntry.section]
-      : 'Legal Document';
+  const sectionLabel =
+    document?.section && document.section in LEGAL_SECTION_LABELS
+      ? LEGAL_SECTION_LABELS[document.section as keyof typeof LEGAL_SECTION_LABELS]
+      : registryEntry?.section
+        ? LEGAL_SECTION_LABELS[registryEntry.section]
+        : 'Legal Document';
 
   const articleHtml = useMemo(() => {
     if (!document) return '<p></p>';
     return document.contentHtml || blocksToHtml(document.blocks || []);
   }, [document]);
 
-  const sanitizedArticleHtml = useMemo(
-    () => sanitizeLegalDocumentHtml(articleHtml),
-    [articleHtml],
-  );
+  const sanitizedArticleHtml = useMemo(() => sanitizeLegalDocumentHtml(articleHtml), [articleHtml]);
 
   const normalizedDocumentContent = useMemo(() => {
     if (!document) {
@@ -285,18 +278,21 @@ export function LegalDocumentDialog({
     };
   }, [document, normalizedDocumentContent.html, sectionLabel, toc]);
 
-  const handleTocNavigate = useCallback((event: React.MouseEvent<HTMLAnchorElement>, id: string) => {
-    event.preventDefault();
-    if (!contentRef.current) return;
+  const handleTocNavigate = useCallback(
+    (event: React.MouseEvent<HTMLAnchorElement>, id: string) => {
+      event.preventDefault();
+      if (!contentRef.current) return;
 
-    const target = window.document.getElementById(id);
-    if (!target || !contentRef.current.contains(target)) return;
+      const target = window.document.getElementById(id);
+      if (!target || !contentRef.current.contains(target)) return;
 
-    target.scrollIntoView({
-      behavior: 'smooth',
-      block: 'start',
-    });
-  }, []);
+      target.scrollIntoView({
+        behavior: 'smooth',
+        block: 'start',
+      });
+    },
+    [],
+  );
 
   const handlePdfDownload = useCallback(() => {
     if (!document) return;
@@ -375,21 +371,29 @@ export function LegalDocumentDialog({
 
                           <div className="mt-6 grid gap-3 sm:grid-cols-3">
                             <div className="rounded-2xl border border-white/70 bg-white/80 px-4 py-3">
-                              <div className="text-xs uppercase tracking-wide text-stone-500">Effective date</div>
+                              <div className="text-xs uppercase tracking-wide text-stone-500">
+                                Effective date
+                              </div>
                               <div className="mt-1 text-sm font-medium text-stone-900">
                                 {formatLongDate(document.effectiveDate)}
                               </div>
                             </div>
                             <div className="rounded-2xl border border-white/70 bg-white/80 px-4 py-3">
-                              <div className="text-xs uppercase tracking-wide text-stone-500">Last updated</div>
+                              <div className="text-xs uppercase tracking-wide text-stone-500">
+                                Last updated
+                              </div>
                               <div className="mt-1 text-sm font-medium text-stone-900">
                                 {formatLongDate(document.updatedAt)}
                               </div>
                             </div>
                             <div className="rounded-2xl border border-white/70 bg-white/80 px-4 py-3">
-                              <div className="text-xs uppercase tracking-wide text-stone-500">Reader mode</div>
+                              <div className="text-xs uppercase tracking-wide text-stone-500">
+                                Reader mode
+                              </div>
                               <div className="mt-1 text-sm font-medium text-stone-900">
-                                {document.renderMode === 'versioned_document' ? 'Versioned legal document' : 'Legal document'}
+                                {document.renderMode === 'versioned_document'
+                                  ? 'Versioned legal document'
+                                  : 'Legal document'}
                               </div>
                               <div className="mt-1 text-xs font-medium uppercase tracking-wide text-stone-500">
                                 Version {document.version}
@@ -448,13 +452,18 @@ export function LegalDocumentDialog({
                           </div>
                           <Separator className="my-3" />
                           <div>
-                            Section: <span className="font-medium text-stone-900">{sectionLabel}</span>
+                            Section:{' '}
+                            <span className="font-medium text-stone-900">{sectionLabel}</span>
                           </div>
                           <div className="mt-2">
-                            Version: <span className="font-medium text-stone-900">{document.version}</span>
+                            Version:{' '}
+                            <span className="font-medium text-stone-900">{document.version}</span>
                           </div>
                           <div className="mt-2">
-                            Effective: <span className="font-medium text-stone-900">{formatLongDate(document.effectiveDate)}</span>
+                            Effective:{' '}
+                            <span className="font-medium text-stone-900">
+                              {formatLongDate(document.effectiveDate)}
+                            </span>
                           </div>
                         </CardContent>
                       </Card>
@@ -477,9 +486,7 @@ export function LegalDocumentDialog({
             {document && (
               <div className="border-t border-stone-200 bg-white/90 px-5 py-3 sm:px-6">
                 <div className="flex flex-wrap items-center justify-between gap-3 text-xs text-stone-500">
-                  <div>
-                    Please review these terms carefully before continuing with your signup.
-                  </div>
+                  <div>Please review these terms carefully before continuing with your signup.</div>
                   <Link
                     to={`/legal/${document.slug}`}
                     className="inline-flex items-center gap-1 font-medium text-sky-800 hover:text-sky-600 transition-colors"

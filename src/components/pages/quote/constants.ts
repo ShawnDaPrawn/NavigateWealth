@@ -107,7 +107,8 @@ export const QUOTE_SERVICES: QuoteServiceConfig[] = [
     icon: 'Shield',
     description: 'Life cover, disability, severe illness & income protection',
     topicChips: ['Life cover', 'Disability', 'Income protection', 'Severe illness'],
-    heroDescription: 'Protect what matters most with comprehensive risk management solutions. Our independent advisers compare options from South Africa\'s leading insurers to find the best cover for your unique needs and budget.',
+    heroDescription:
+      "Protect what matters most with comprehensive risk management solutions. Our independent advisers compare options from South Africa's leading insurers to find the best cover for your unique needs and budget.",
     providers: RISK_PROVIDERS,
     accentColor: '#6d28d9',
     productFields: [
@@ -158,7 +159,8 @@ export const QUOTE_SERVICES: QuoteServiceConfig[] = [
     icon: 'Stethoscope',
     description: 'Medical schemes, gap cover & health insurance',
     topicChips: ['Medical scheme', 'Gap cover', 'Hospital plan', 'Day-to-day benefits'],
-    heroDescription: 'Find the right medical aid for you and your family. We compare plans across South Africa\'s leading medical schemes to match your healthcare needs, budget, and preferred hospital network.',
+    heroDescription:
+      "Find the right medical aid for you and your family. We compare plans across South Africa's leading medical schemes to match your healthcare needs, budget, and preferred hospital network.",
     providers: MEDICAL_PROVIDERS,
     accentColor: '#0891b2',
     productFields: [
@@ -211,7 +213,8 @@ export const QUOTE_SERVICES: QuoteServiceConfig[] = [
     icon: 'Target',
     description: 'Retirement annuities, pensions & living annuities',
     topicChips: ['Retirement annuity (RA)', 'Pension fund', 'Living annuity', 'Preservation fund'],
-    heroDescription: 'Build a secure financial future with tailored retirement planning. From retirement annuities to living annuities, we\'ll help you create a plan that ensures you can maintain your lifestyle in retirement.',
+    heroDescription:
+      "Build a secure financial future with tailored retirement planning. From retirement annuities to living annuities, we'll help you create a plan that ensures you can maintain your lifestyle in retirement.",
     providers: RETIREMENT_PROVIDERS,
     accentColor: '#059669',
     productFields: [
@@ -252,7 +255,8 @@ export const QUOTE_SERVICES: QuoteServiceConfig[] = [
     icon: 'TrendingUp',
     description: 'Unit trusts, offshore, tax-free savings & more',
     topicChips: ['Unit trusts', 'Tax-free savings', 'Lump sums', 'Offshore investing'],
-    heroDescription: 'Grow your wealth with professional investment management. Our experienced advisers create diversified strategies aligned with your risk tolerance, time horizon, and financial goals.',
+    heroDescription:
+      'Grow your wealth with professional investment management. Our experienced advisers create diversified strategies aligned with your risk tolerance, time horizon, and financial goals.',
     providers: INVESTMENT_PROVIDERS,
     accentColor: '#7c3aed',
     productFields: [
@@ -308,7 +312,8 @@ export const QUOTE_SERVICES: QuoteServiceConfig[] = [
     icon: 'Briefcase',
     description: 'Group life, retirement funds & employee wellness',
     topicChips: ['Group life', 'Group RA / pension', 'Group medical', 'Wellness programmes'],
-    heroDescription: 'Attract and retain top talent with comprehensive employee benefit solutions. From group life cover to retirement funds, we\'ll design a benefits package that meets your company\'s needs and budget.',
+    heroDescription:
+      "Attract and retain top talent with comprehensive employee benefit solutions. From group life cover to retirement funds, we'll design a benefits package that meets your company's needs and budget.",
     providers: EMPLOYEE_BENEFITS_PROVIDERS,
     accentColor: '#d97706',
     productFields: [
@@ -362,7 +367,8 @@ export const QUOTE_SERVICES: QuoteServiceConfig[] = [
     icon: 'Calculator',
     description: 'Tax optimisation, structuring & compliance',
     topicChips: ['Tax returns', 'Provisional tax', 'CGT planning', 'Estate duty & structuring'],
-    heroDescription: 'Minimise your tax liability and maximise your wealth with strategic tax planning. Our qualified professionals help you navigate complex tax regulations and identify opportunities for tax-efficient investing.',
+    heroDescription:
+      'Minimise your tax liability and maximise your wealth with strategic tax planning. Our qualified professionals help you navigate complex tax regulations and identify opportunities for tax-efficient investing.',
     providers: TAX_PROVIDERS,
     accentColor: '#0284c7',
     productFields: [
@@ -418,7 +424,8 @@ export const QUOTE_SERVICES: QuoteServiceConfig[] = [
     icon: 'FileText',
     description: 'Wills, trusts & succession planning',
     topicChips: ['Wills', 'Trusts', 'Succession planning', 'Buy-sell agreements'],
-    heroDescription: 'Protect your legacy and ensure your loved ones are taken care of. From trusts to estate duty planning, we\'ll help you create a strategy that preserves and transfers your wealth effectively.',
+    heroDescription:
+      "Protect your legacy and ensure your loved ones are taken care of. From trusts to estate duty planning, we'll help you create a strategy that preserves and transfers your wealth effectively.",
     providers: ESTATE_PROVIDERS,
     accentColor: '#9333ea',
     productFields: [

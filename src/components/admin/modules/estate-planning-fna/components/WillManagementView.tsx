@@ -6,10 +6,10 @@
  */
 
 import React, { useState, useEffect, useRef } from 'react';
-import { 
-  FileText, 
-  Eye, 
-  Download, 
+import {
+  FileText,
+  Eye,
+  Download,
   Calendar,
   Loader2,
   ArrowLeft,
@@ -60,12 +60,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '../../../../ui/dialog';
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from '../../../../ui/tooltip';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '../../../../ui/tooltip';
 import { toast } from 'sonner';
 import { projectId } from '../../../../../utils/supabase/info';
 import { getEstatePlanningAuthToken } from '../utils/auth';
@@ -108,9 +103,9 @@ interface WillManagementViewProps {
 
 const API_BASE = `https://${projectId}.supabase.co/functions/v1/make-server-91ed8379`;
 
-export function WillManagementView({ 
-  clientId, 
-  clientName, 
+export function WillManagementView({
+  clientId,
+  clientName,
   onDraftLastWill,
   onDraftLivingWill,
   onViewWill,
@@ -135,9 +130,7 @@ export function WillManagementView({
   const [isRemovingSigned, setIsRemovingSigned] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const filteredWills = typeFilter === 'all'
-    ? wills
-    : wills.filter((w) => w.type === typeFilter);
+  const filteredWills = typeFilter === 'all' ? wills : wills.filter((w) => w.type === typeFilter);
 
   useEffect(() => {
     loadWills();
@@ -148,7 +141,7 @@ export function WillManagementView({
       setIsLoading(true);
       const url = `${API_BASE}/estate-planning-fna/wills/client/${clientId}`;
       const token = await getEstatePlanningAuthToken();
-      
+
       const response = await fetch(url, {
         headers: {
           Authorization: `Bearer ${token}`,
@@ -173,16 +166,16 @@ export function WillManagementView({
         const dateB = new Date(b.updatedAt).getTime();
         return dateB - dateA;
       });
-      
+
       setWills(sortedWills);
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Unknown error occurred';
-      
+
       // Only show toast error if it's not a network connectivity issue
       if (!errorMessage.includes('Failed to fetch') && !errorMessage.includes('NetworkError')) {
         toast.error(`Failed to load wills: ${errorMessage}`);
       }
-      
+
       setWills([]);
     } finally {
       setIsLoading(false);
@@ -231,7 +224,7 @@ export function WillManagementView({
           method: 'POST',
           headers: { Authorization: `Bearer ${token}` },
           body: formData,
-        }
+        },
       );
 
       if (!resp.ok) {
@@ -247,8 +240,8 @@ export function WillManagementView({
       });
 
       // Update local state with the updated will record
-      setWills(prev =>
-        prev.map(w => (w.id === attachTarget.id ? { ...w, ...result.data } : w))
+      setWills((prev) =>
+        prev.map((w) => (w.id === attachTarget.id ? { ...w, ...result.data } : w)),
       );
 
       // Reset dialog state
@@ -268,12 +261,9 @@ export function WillManagementView({
     setDownloadingSignedId(will.id);
     try {
       const token = await getEstatePlanningAuthToken();
-      const resp = await fetch(
-        `${API_BASE}/estate-planning-fna/wills/${will.id}/signed-document`,
-        {
-          headers: { Authorization: `Bearer ${token}` },
-        }
-      );
+      const resp = await fetch(`${API_BASE}/estate-planning-fna/wills/${will.id}/signed-document`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
 
       if (!resp.ok) throw new Error('Failed to get download URL');
 
@@ -300,7 +290,7 @@ export function WillManagementView({
         {
           method: 'DELETE',
           headers: { Authorization: `Bearer ${token}` },
-        }
+        },
       );
 
       if (!resp.ok) throw new Error('Failed to remove signed document');
@@ -308,8 +298,8 @@ export function WillManagementView({
       const result = await resp.json();
       toast.success('Signed document removed');
 
-      setWills(prev =>
-        prev.map(w => (w.id === removeSignedTarget.id ? { ...w, ...result.data } : w))
+      setWills((prev) =>
+        prev.map((w) => (w.id === removeSignedTarget.id ? { ...w, ...result.data } : w)),
       );
       setRemoveSignedTarget(null);
     } catch (err) {
@@ -325,13 +315,22 @@ export function WillManagementView({
   const getStatusBadge = (status: string) => {
     const statusConfig: Record<string, { label: string; className: string }> = {
       draft: { label: 'Draft', className: 'bg-blue-100 text-blue-800 hover:bg-blue-100' },
-      published: { label: 'Published', className: 'bg-amber-100 text-amber-800 hover:bg-amber-100' },
-      finalized: { label: 'Finalized', className: 'bg-amber-100 text-amber-800 hover:bg-amber-100' },
+      published: {
+        label: 'Published',
+        className: 'bg-amber-100 text-amber-800 hover:bg-amber-100',
+      },
+      finalized: {
+        label: 'Finalized',
+        className: 'bg-amber-100 text-amber-800 hover:bg-amber-100',
+      },
       signed: { label: 'Signed', className: 'bg-green-100 text-green-800 hover:bg-green-100' },
       archived: { label: 'Archived', className: 'bg-gray-100 text-gray-600 hover:bg-gray-100' },
     };
 
-    const config = statusConfig[status] || { label: status, className: 'bg-gray-100 text-gray-600' };
+    const config = statusConfig[status] || {
+      label: status,
+      className: 'bg-gray-100 text-gray-600',
+    };
     return <Badge className={config.className}>{config.label}</Badge>;
   };
 
@@ -343,7 +342,7 @@ export function WillManagementView({
 
     const config = typeConfig[type] || { label: type, icon: FileText, color: 'text-gray-600' };
     const Icon = config.icon;
-    
+
     return (
       <div className="flex items-center gap-2">
         <Icon className={`h-4 w-4 ${config.color}`} />
@@ -385,7 +384,8 @@ export function WillManagementView({
         throw new Error(result.error || 'Failed to discard draft');
       }
 
-      const typeLabel = discardTarget.type === 'living_will' ? 'Living Will' : 'Last Will & Testament';
+      const typeLabel =
+        discardTarget.type === 'living_will' ? 'Living Will' : 'Last Will & Testament';
       toast.success(`Draft ${typeLabel} discarded`, {
         description: `Version ${discardTarget.version} has been permanently removed.`,
       });
@@ -438,12 +438,7 @@ export function WillManagementView({
       <div className="flex justify-between items-start">
         <div>
           <div className="flex items-center gap-3 mb-2">
-            <Button 
-              variant="ghost" 
-              size="sm"
-              onClick={onClose}
-              className="h-8 w-8 p-0"
-            >
+            <Button variant="ghost" size="sm" onClick={onClose} className="h-8 w-8 p-0">
               <ArrowLeft className="h-4 w-4" />
             </Button>
             <h2 className="text-2xl font-semibold">Will Management</h2>
@@ -471,14 +466,21 @@ export function WillManagementView({
       {wills.length > 0 && (
         <div className="flex items-center gap-3">
           <span className="text-sm text-muted-foreground">Filter by type:</span>
-          <Select value={typeFilter} onValueChange={(v) => setTypeFilter(v as 'all' | 'last_will' | 'living_will')}>
+          <Select
+            value={typeFilter}
+            onValueChange={(v) => setTypeFilter(v as 'all' | 'last_will' | 'living_will')}
+          >
             <SelectTrigger className="w-[220px] h-9">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">All Will Types ({wills.length})</SelectItem>
-              <SelectItem value="last_will">Last Will &amp; Testament ({wills.filter(w => w.type === 'last_will').length})</SelectItem>
-              <SelectItem value="living_will">Living Will ({wills.filter(w => w.type === 'living_will').length})</SelectItem>
+              <SelectItem value="last_will">
+                Last Will &amp; Testament ({wills.filter((w) => w.type === 'last_will').length})
+              </SelectItem>
+              <SelectItem value="living_will">
+                Living Will ({wills.filter((w) => w.type === 'living_will').length})
+              </SelectItem>
             </SelectContent>
           </Select>
         </div>
@@ -525,13 +527,10 @@ export function WillManagementView({
               </div>
               <h3 className="text-lg font-medium text-gray-900 mb-2">No Matching Wills</h3>
               <p className="text-sm text-gray-600 mb-4">
-                No {typeFilter === 'last_will' ? 'Last Will & Testament' : 'Living Will'} documents found for this client.
+                No {typeFilter === 'last_will' ? 'Last Will & Testament' : 'Living Will'} documents
+                found for this client.
               </p>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setTypeFilter('all')}
-              >
+              <Button variant="outline" size="sm" onClick={() => setTypeFilter('all')}>
                 Show All Will Types
               </Button>
             </div>
@@ -597,9 +596,7 @@ export function WillManagementView({
                     <TableCell className="text-sm text-gray-600">
                       {formatDate(will.updatedAt)}
                     </TableCell>
-                    <TableCell className="text-sm text-gray-600">
-                      {will.createdBy || '—'}
-                    </TableCell>
+                    <TableCell className="text-sm text-gray-600">{will.createdBy || '—'}</TableCell>
                     <TableCell className="text-right">
                       <div className="flex gap-1 justify-end flex-wrap">
                         {/* Resume draft */}
@@ -615,11 +612,7 @@ export function WillManagementView({
                         )}
 
                         {/* View system-generated will */}
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => onViewWill(will.id)}
-                        >
+                        <Button variant="ghost" size="sm" onClick={() => onViewWill(will.id)}>
                           <Eye className="h-4 w-4 mr-1" />
                           View
                         </Button>
@@ -644,9 +637,10 @@ export function WillManagementView({
                                   variant="ghost"
                                   size="sm"
                                   onClick={() => setAttachTarget(will)}
-                                  className={will.signedDocumentPath
-                                    ? 'text-green-600 hover:text-green-700 hover:bg-green-50'
-                                    : 'text-amber-600 hover:text-amber-700 hover:bg-amber-50'
+                                  className={
+                                    will.signedDocumentPath
+                                      ? 'text-green-600 hover:text-green-700 hover:bg-green-50'
+                                      : 'text-amber-600 hover:text-amber-700 hover:bg-amber-50'
                                   }
                                 >
                                   <Paperclip className="h-4 w-4 mr-1" />
@@ -656,8 +650,7 @@ export function WillManagementView({
                               <TooltipContent>
                                 {will.signedDocumentPath
                                   ? 'Replace the signed copy with a new scan'
-                                  : 'Attach scanned signed copy'
-                                }
+                                  : 'Attach scanned signed copy'}
                               </TooltipContent>
                             </Tooltip>
                           </TooltipProvider>
@@ -741,13 +734,13 @@ export function WillManagementView({
                 <div>
                   <p className="text-sm text-muted-foreground">Last Will & Testament</p>
                   <p className="text-2xl font-bold">
-                    {wills.filter(w => w.type === 'last_will').length}
+                    {wills.filter((w) => w.type === 'last_will').length}
                   </p>
                 </div>
               </div>
             </CardContent>
           </Card>
-          
+
           <Card>
             <CardContent className="pt-6">
               <div className="flex items-center gap-3">
@@ -757,13 +750,13 @@ export function WillManagementView({
                 <div>
                   <p className="text-sm text-muted-foreground">Living Wills</p>
                   <p className="text-2xl font-bold">
-                    {wills.filter(w => w.type === 'living_will').length}
+                    {wills.filter((w) => w.type === 'living_will').length}
                   </p>
                 </div>
               </div>
             </CardContent>
           </Card>
-          
+
           <Card>
             <CardContent className="pt-6">
               <div className="flex items-center gap-3">
@@ -773,7 +766,10 @@ export function WillManagementView({
                 <div>
                   <p className="text-sm text-muted-foreground">Finalized</p>
                   <p className="text-2xl font-bold">
-                    {wills.filter(w => ['published', 'finalized', 'signed'].includes(w.status)).length}
+                    {
+                      wills.filter((w) => ['published', 'finalized', 'signed'].includes(w.status))
+                        .length
+                    }
                   </p>
                 </div>
               </div>
@@ -789,7 +785,7 @@ export function WillManagementView({
                 <div>
                   <p className="text-sm text-muted-foreground">Signed Copies</p>
                   <p className="text-2xl font-bold">
-                    {wills.filter(w => w.signedDocumentPath).length}
+                    {wills.filter((w) => w.signedDocumentPath).length}
                   </p>
                 </div>
               </div>
@@ -826,7 +822,8 @@ export function WillManagementView({
               {attachTarget?.type === 'living_will' ? 'Living Will' : 'Last Will & Testament'}
               {attachTarget?.signedDocumentPath && (
                 <span className="block mt-1 text-amber-600">
-                  This will replace the currently attached file ({attachTarget.signedDocumentFileName}).
+                  This will replace the currently attached file (
+                  {attachTarget.signedDocumentFileName}).
                 </span>
               )}
             </DialogDescription>
@@ -862,16 +859,16 @@ export function WillManagementView({
                   <p className="text-sm text-muted-foreground mb-1">
                     Click to select or drag and drop
                   </p>
-                  <p className="text-xs text-muted-foreground">
-                    PDF, JPEG, or PNG (max 50MB)
-                  </p>
+                  <p className="text-xs text-muted-foreground">PDF, JPEG, or PNG (max 50MB)</p>
                 </div>
               )}
               <input
                 ref={fileInputRef}
                 type="file"
                 accept=".pdf,.jpg,.jpeg,.png"
-                className={attachFile ? 'hidden' : 'absolute inset-0 w-full h-full opacity-0 cursor-pointer'}
+                className={
+                  attachFile ? 'hidden' : 'absolute inset-0 w-full h-full opacity-0 cursor-pointer'
+                }
                 onChange={(e) => {
                   const file = e.target.files?.[0];
                   if (file) setAttachFile(file);
@@ -890,10 +887,7 @@ export function WillManagementView({
             >
               Cancel
             </Button>
-            <Button
-              onClick={handleAttachSignedDocument}
-              disabled={isAttaching || !attachFile}
-            >
+            <Button onClick={handleAttachSignedDocument} disabled={isAttaching || !attachFile}>
               {isAttaching ? (
                 <div className="contents">
                   <Loader2 className="h-4 w-4 mr-2 animate-spin" />
@@ -913,18 +907,21 @@ export function WillManagementView({
       {/* ── Remove Signed Document Confirmation ───────────────────── */}
       <AlertDialog
         open={!!removeSignedTarget}
-        onOpenChange={(open) => { if (!open) setRemoveSignedTarget(null); }}
+        onOpenChange={(open) => {
+          if (!open) setRemoveSignedTarget(null);
+        }}
       >
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Remove Signed Copy?</AlertDialogTitle>
             <AlertDialogDescription className="space-y-2">
               <span className="block">
-                This will remove the signed copy ({removeSignedTarget?.signedDocumentFileName}) from this{' '}
-                {removeSignedTarget ? getDiscardTypeLabel(removeSignedTarget) : ''}.
+                This will remove the signed copy ({removeSignedTarget?.signedDocumentFileName}) from
+                this {removeSignedTarget ? getDiscardTypeLabel(removeSignedTarget) : ''}.
               </span>
               <span className="block text-muted-foreground">
-                The will status will revert to &ldquo;Finalized&rdquo;. You can re-attach a signed copy later.
+                The will status will revert to &ldquo;Finalized&rdquo;. You can re-attach a signed
+                copy later.
               </span>
             </AlertDialogDescription>
           </AlertDialogHeader>
@@ -952,19 +949,24 @@ export function WillManagementView({
       </AlertDialog>
 
       {/* ── Discard Draft Confirmation Dialog ─────────────────────── */}
-      <AlertDialog open={!!discardTarget} onOpenChange={(open) => { if (!open) setDiscardTarget(null); }}>
+      <AlertDialog
+        open={!!discardTarget}
+        onOpenChange={(open) => {
+          if (!open) setDiscardTarget(null);
+        }}
+      >
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Discard Draft {discardTarget ? getDiscardTypeLabel(discardTarget) : ''}?</AlertDialogTitle>
+            <AlertDialogTitle>
+              Discard Draft {discardTarget ? getDiscardTypeLabel(discardTarget) : ''}?
+            </AlertDialogTitle>
             <AlertDialogDescription className="space-y-2">
               <span className="block">
                 This will permanently delete the draft{' '}
-                <strong>{discardTarget ? getDiscardTypeLabel(discardTarget) : ''}</strong>{' '}
-                (version {discardTarget?.version}) for {clientName}.
+                <strong>{discardTarget ? getDiscardTypeLabel(discardTarget) : ''}</strong> (version{' '}
+                {discardTarget?.version}) for {clientName}.
               </span>
-              <span className="block text-red-600 font-medium">
-                This action cannot be undone.
-              </span>
+              <span className="block text-red-600 font-medium">This action cannot be undone.</span>
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

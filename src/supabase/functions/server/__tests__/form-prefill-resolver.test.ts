@@ -37,8 +37,18 @@ const flatProfileFixture = {
   },
   policiesLegacy: {
     investments: [
-      { category: 'retirement', currentValue: 850000, monthlyContribution: 5500, isDiscretionary: false },
-      { category: 'unit trust', currentValue: 120000, monthlyContribution: 2000, isDiscretionary: true },
+      {
+        category: 'retirement',
+        currentValue: 850000,
+        monthlyContribution: 5500,
+        isDiscretionary: false,
+      },
+      {
+        category: 'unit trust',
+        currentValue: 120000,
+        monthlyContribution: 2000,
+        isDiscretionary: true,
+      },
     ],
   },
   policiesClient: [],
@@ -83,7 +93,9 @@ describe('form-prefill-resolver', () => {
 
     const result = await resolveFormPrefill(clientId, 'retirement-fna-step1');
 
-    expect(result.matches.some((m) => m.formField === 'currentAge' && Number(m.proposedValue) > 0)).toBe(true);
+    expect(
+      result.matches.some((m) => m.formField === 'currentAge' && Number(m.proposedValue) > 0),
+    ).toBe(true);
     expect(result.matches.some((m) => m.formField === 'currentRetirementSavings')).toBe(true);
     expect(result.matches.some((m) => m.formField === 'currentMonthlyContribution')).toBe(true);
     expect(result.resolverVersion).toBeTruthy();
@@ -109,7 +121,9 @@ describe('form-prefill-resolver', () => {
 
     expect(result.matches.find((m) => m.formField === 'spousePartner')?.proposedValue).toBe(true);
     expect(result.matches.find((m) => m.formField === 'childrenCount')?.proposedValue).toBe(2);
-    expect(result.matches.find((m) => m.formField === 'existingPlanType')?.proposedValue).toBe('Comprehensive');
+    expect(result.matches.find((m) => m.formField === 'existingPlanType')?.proposedValue).toBe(
+      'Comprehensive',
+    );
   });
 
   it('handles nested personalInformation profile shape', async () => {
@@ -117,7 +131,11 @@ describe('form-prefill-resolver', () => {
 
     const result = await resolveFormPrefill(clientId, 'estate-fna-step1');
 
-    expect(result.matches.some((m) => m.formField === 'familyInfo.fullName' && m.proposedValue === 'Sam Client')).toBe(true);
+    expect(
+      result.matches.some(
+        (m) => m.formField === 'familyInfo.fullName' && m.proposedValue === 'Sam Client',
+      ),
+    ).toBe(true);
     expect(result.matches.some((m) => m.formField === 'familyInfo.dateOfBirth')).toBe(true);
   });
 
@@ -136,18 +154,30 @@ describe('form-prefill-resolver', () => {
     loadClientDataSources.mockResolvedValue(flatProfileFixture);
 
     const risk = await resolveFormPrefill(clientId, 'risk-fna-step1');
-    expect(risk.matches.find((m) => m.formField === 'employmentType')?.proposedValue).toBe('employed');
-    expect(Number(risk.matches.find((m) => m.formField === 'totalHouseholdMonthlyExpenditure')?.proposedValue)).toBe(28000);
-    expect(Number(risk.matches.find((m) => m.formField === 'dependantCount')?.proposedValue)).toBe(2);
-
-    const medical = await resolveFormPrefill(clientId, 'medical-fna-step1');
-    expect(medical.matches.find((m) => m.formField === 'existingHospitalCover')?.proposedValue).toBe(
-      '200% of scheme rate',
+    expect(risk.matches.find((m) => m.formField === 'employmentType')?.proposedValue).toBe(
+      'employed',
+    );
+    expect(
+      Number(
+        risk.matches.find((m) => m.formField === 'totalHouseholdMonthlyExpenditure')?.proposedValue,
+      ),
+    ).toBe(28000);
+    expect(Number(risk.matches.find((m) => m.formField === 'dependantCount')?.proposedValue)).toBe(
+      2,
     );
 
+    const medical = await resolveFormPrefill(clientId, 'medical-fna-step1');
+    expect(
+      medical.matches.find((m) => m.formField === 'existingHospitalCover')?.proposedValue,
+    ).toBe('200% of scheme rate');
+
     const investment = await resolveFormPrefill(clientId, 'investment-ina-step1');
-    expect(investment.matches.find((m) => m.formField === 'clientRiskProfile')?.proposedValue).toBe('growth');
-    expect(investment.matches.find((m) => m.formField === 'investmentHorizonYears')?.proposedValue).toBe(15);
+    expect(investment.matches.find((m) => m.formField === 'clientRiskProfile')?.proposedValue).toBe(
+      'growth',
+    );
+    expect(
+      investment.matches.find((m) => m.formField === 'investmentHorizonYears')?.proposedValue,
+    ).toBe(15);
   });
 
   it('resolves email, phone, and ID aliases for template-prefill mappings', async () => {
@@ -159,8 +189,14 @@ describe('form-prefill-resolver', () => {
       { id: '3', name: 'IdNumber', label: 'ID Number', canonicalKey: 'profile_id_number' },
     ]);
 
-    expect(result.matches.find((m) => m.canonicalKey === 'profile_email')?.proposedValue).toBe('sam@example.com');
-    expect(result.matches.find((m) => m.canonicalKey === 'profile_phone_number')?.proposedValue).toBe('0820000000');
-    expect(result.matches.find((m) => m.canonicalKey === 'profile_id_number')?.proposedValue).toBe('9001010000000');
+    expect(result.matches.find((m) => m.canonicalKey === 'profile_email')?.proposedValue).toBe(
+      'sam@example.com',
+    );
+    expect(
+      result.matches.find((m) => m.canonicalKey === 'profile_phone_number')?.proposedValue,
+    ).toBe('0820000000');
+    expect(result.matches.find((m) => m.canonicalKey === 'profile_id_number')?.proposedValue).toBe(
+      '9001010000000',
+    );
   });
 });

@@ -15,10 +15,10 @@
  * ****************************************************************************
  */
 
-import { Hono } from "npm:hono";
-import { createModuleLogger } from "./stderr-logger.ts";
-import { asyncHandler } from "./error.middleware.ts";
-import { requireAdmin } from "./auth-mw.ts";
+import { Hono } from 'npm:hono';
+import { createModuleLogger } from './stderr-logger.ts';
+import { asyncHandler } from './error.middleware.ts';
+import { requireAdmin } from './auth-mw.ts';
 
 const app = new Hono();
 const log = createModuleLogger('transcription');
@@ -35,7 +35,7 @@ const MAX_AUDIO_SIZE_BYTES = 10 * 1024 * 1024;
 
 /** Supported audio MIME type suffixes for Whisper */
 const SUPPORTED_FORMATS = ['webm', 'wav', 'mp3', 'mp4', 'm4a', 'ogg', 'flac'] as const;
-type AudioFormat = typeof SUPPORTED_FORMATS[number];
+type AudioFormat = (typeof SUPPORTED_FORMATS)[number];
 
 /** MIME type mapping for FormData file construction */
 const FORMAT_MIME_MAP: Record<AudioFormat, string> = {
@@ -53,9 +53,9 @@ const FORMAT_MIME_MAP: Record<AudioFormat, string> = {
 // ============================================================================
 
 interface TranscribeInput {
-  audio: string;       // base64-encoded audio data
+  audio: string; // base64-encoded audio data
   format: AudioFormat; // audio format
-  language?: string;   // optional BCP-47 language hint (e.g. 'en', 'af')
+  language?: string; // optional BCP-47 language hint (e.g. 'en', 'af')
 }
 
 interface TranscribeResult {
@@ -99,7 +99,7 @@ async function transcribeAudio(input: TranscribeInput): Promise<TranscribeResult
   const response = await fetch('https://api.openai.com/v1/audio/transcriptions', {
     method: 'POST',
     headers: {
-      'Authorization': `Bearer ${apiKey}`,
+      Authorization: `Bearer ${apiKey}`,
     },
     body: formData,
   });
@@ -141,48 +141,57 @@ async function transcribeAudio(input: TranscribeInput): Promise<TranscribeResult
  * Response:
  *   { success: true, text: string, duration?: number }
  */
-app.post('/transcribe', asyncHandler(async (c) => {
-  const body = await c.req.json();
+app.post(
+  '/transcribe',
+  asyncHandler(async (c) => {
+    const body = await c.req.json();
 
-  // Validate required fields
-  if (!body.audio || typeof body.audio !== 'string') {
-    return c.json({ success: false, error: 'Missing or invalid audio data' }, 400);
-  }
+    // Validate required fields
+    if (!body.audio || typeof body.audio !== 'string') {
+      return c.json({ success: false, error: 'Missing or invalid audio data' }, 400);
+    }
 
-  if (!body.format || !SUPPORTED_FORMATS.includes(body.format)) {
-    return c.json({
-      success: false,
-      error: `Unsupported audio format. Supported: ${SUPPORTED_FORMATS.join(', ')}`,
-    }, 400);
-  }
+    if (!body.format || !SUPPORTED_FORMATS.includes(body.format)) {
+      return c.json(
+        {
+          success: false,
+          error: `Unsupported audio format. Supported: ${SUPPORTED_FORMATS.join(', ')}`,
+        },
+        400,
+      );
+    }
 
-  // Check payload size
-  if (body.audio.length > MAX_AUDIO_SIZE_BYTES) {
-    return c.json({
-      success: false,
-      error: 'Audio payload too large. Maximum size is 10MB.',
-    }, 413);
-  }
+    // Check payload size
+    if (body.audio.length > MAX_AUDIO_SIZE_BYTES) {
+      return c.json(
+        {
+          success: false,
+          error: 'Audio payload too large. Maximum size is 10MB.',
+        },
+        413,
+      );
+    }
 
-  const result = await transcribeAudio({
-    audio: body.audio,
-    format: body.format as AudioFormat,
-    language: body.language,
-  });
+    const result = await transcribeAudio({
+      audio: body.audio,
+      format: body.format as AudioFormat,
+      language: body.language,
+    });
 
-  if (!result.text.trim()) {
+    if (!result.text.trim()) {
+      return c.json({
+        success: true,
+        text: '',
+        warning: 'No speech detected in the audio. Please try again, speaking clearly.',
+      });
+    }
+
     return c.json({
       success: true,
-      text: '',
-      warning: 'No speech detected in the audio. Please try again, speaking clearly.',
+      text: result.text,
+      duration: result.duration,
     });
-  }
-
-  return c.json({
-    success: true,
-    text: result.text,
-    duration: result.duration,
-  });
-}));
+  }),
+);
 
 export default app;

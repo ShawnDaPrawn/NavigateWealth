@@ -92,7 +92,10 @@ interface SigningWorkflowProps {
   sessionData: SignerSessionData | null;
   onComplete: () => void;
   onReject: (reason: string) => void;
-  submitSignature: (token: string, signatures: SignatureData[]) => Promise<{ success: boolean; error?: string }>;
+  submitSignature: (
+    token: string,
+    signatures: SignatureData[],
+  ) => Promise<{ success: boolean; error?: string }>;
 }
 
 type WorkflowPhase = 'reading' | 'signing';
@@ -135,7 +138,7 @@ export function SigningWorkflow({
   sessionData,
   onComplete,
   onReject,
-  submitSignature
+  submitSignature,
 }: SigningWorkflowProps) {
   // ── Phase: reading vs signing ──────────────────────────────────────────
   // We always start in 'reading' so the signer sees the document first
@@ -147,7 +150,7 @@ export function SigningWorkflow({
   const [zoom, setZoom] = useState(() => {
     if (typeof window === 'undefined') return 100;
     if (window.innerWidth < 768) {
-      return Math.max(50, Math.round((window.innerWidth - 32) / 595 * 100));
+      return Math.max(50, Math.round(((window.innerWidth - 32) / 595) * 100));
     }
     return 100;
   });
@@ -189,19 +192,23 @@ export function SigningWorkflow({
   useEffect(() => {
     if (!sessionData) return;
     const autoDateFields = sessionData.fields.filter(
-      f => f.type === 'auto_date' && f.signer_id === sessionData.signer_id
+      (f) => f.type === 'auto_date' && f.signer_id === sessionData.signer_id,
     );
     if (autoDateFields.length === 0) return;
 
     const now = new Date().toLocaleDateString('en-ZA', {
-      day: '2-digit', month: 'short', year: 'numeric',
-      hour: '2-digit', minute: '2-digit', hour12: false,
+      day: '2-digit',
+      month: 'short',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: false,
     });
 
-    setSignatures(prev => {
+    setSignatures((prev) => {
       const newEntries = autoDateFields
-        .filter(f => !prev.some(s => s.field_id === f.id))
-        .map(f => ({ field_id: f.id, type: 'auto_date' as const, value: now }));
+        .filter((f) => !prev.some((s) => s.field_id === f.id))
+        .map((f) => ({ field_id: f.id, type: 'auto_date' as const, value: now }));
       return newEntries.length > 0 ? [...prev, ...newEntries] : prev;
     });
   }, [sessionData]);
@@ -215,11 +222,11 @@ export function SigningWorkflow({
       if (!raw) return;
       const parsed = JSON.parse(raw) as { signatures?: SignatureData[]; phase?: WorkflowPhase };
       if (Array.isArray(parsed.signatures) && parsed.signatures.length > 0) {
-        setSignatures(prev => {
+        setSignatures((prev) => {
           // Merge — anything already auto-filled (auto_date) wins.
-          const existingIds = new Set(prev.map(s => s.field_id));
+          const existingIds = new Set(prev.map((s) => s.field_id));
           const merged = [...prev];
-          parsed.signatures!.forEach(s => {
+          parsed.signatures!.forEach((s) => {
             if (!existingIds.has(s.field_id)) merged.push(s);
           });
           return merged;
@@ -238,10 +245,7 @@ export function SigningWorkflow({
   useEffect(() => {
     if (!token || typeof window === 'undefined') return;
     try {
-      window.localStorage.setItem(
-        inProgressKey(token),
-        JSON.stringify({ signatures, phase }),
-      );
+      window.localStorage.setItem(inProgressKey(token), JSON.stringify({ signatures, phase }));
     } catch {
       // quota / private mode — best-effort only
     }
@@ -265,11 +269,17 @@ export function SigningWorkflow({
   // P3.5 — hidden file input wired up to the active attachment field.
   const attachmentInputRef = useRef<HTMLInputElement>(null);
   const [attachmentUploading, setAttachmentUploading] = useState<string | null>(null);
-  const [attachments, setAttachments] = useState<Record<string, { id: string; filename: string; size: number }>>({});
+  const [attachments, setAttachments] = useState<
+    Record<string, { id: string; filename: string; size: number }>
+  >({});
   const [pdfLoading, setPdfLoading] = useState(true);
   const [pdfError, setPdfError] = useState<string | null>(null);
 
-  interface PageDim { pageNumber: number; width: number; height: number; }
+  interface PageDim {
+    pageNumber: number;
+    width: number;
+    height: number;
+  }
   const [pageDims, setPageDims] = useState<PageDim[]>([]);
 
   // ── Load PDF document via pdf.js ──────────────────────────────────────
@@ -294,7 +304,10 @@ export function SigningWorkflow({
         });
         const pdf = await loadingTask.promise;
 
-        if (cancelled) { pdf.destroy(); return; }
+        if (cancelled) {
+          pdf.destroy();
+          return;
+        }
 
         pdfDocRef.current = pdf as unknown as Record<string, unknown>;
 
@@ -322,7 +335,13 @@ export function SigningWorkflow({
 
     return () => {
       cancelled = true;
-      renderTasksRef.current.forEach((task) => { try { task.cancel(); } catch { /* noop */ } });
+      renderTasksRef.current.forEach((task) => {
+        try {
+          task.cancel();
+        } catch {
+          /* noop */
+        }
+      });
       renderTasksRef.current.clear();
       if (pdfDocRef.current) {
         (pdfDocRef.current as { destroy: () => void }).destroy();
@@ -332,56 +351,65 @@ export function SigningWorkflow({
   }, [sessionData?.document_url]);
 
   // ── P7.6 — render a specific page lazily when it becomes visible ──────
-  const renderPage = useCallback(async (pageNumber: number) => {
-    const pdf = pdfDocRef.current as {
-      getPage: (n: number) => Promise<{
-        getViewport: (o: { scale: number }) => { width: number; height: number };
-        render: (o: {
-          canvasContext: CanvasRenderingContext2D;
-          viewport: { width: number; height: number };
-        }) => { promise: Promise<void>; cancel: () => void };
-      }>;
-    } | null;
-    if (!pdf) return;
-    const canvas = canvasRefs.current.get(pageNumber);
-    if (!canvas) return;
-    const scale = zoom / 100;
+  const renderPage = useCallback(
+    async (pageNumber: number) => {
+      const pdf = pdfDocRef.current as {
+        getPage: (n: number) => Promise<{
+          getViewport: (o: { scale: number }) => { width: number; height: number };
+          render: (o: {
+            canvasContext: CanvasRenderingContext2D;
+            viewport: { width: number; height: number };
+          }) => { promise: Promise<void>; cancel: () => void };
+        }>;
+      } | null;
+      if (!pdf) return;
+      const canvas = canvasRefs.current.get(pageNumber);
+      if (!canvas) return;
+      const scale = zoom / 100;
 
-    // Cancel any in-flight render for this page so a rapid zoom change
-    // doesn't leave us painting stale pixels.
-    const existing = renderTasksRef.current.get(pageNumber);
-    if (existing) { try { existing.cancel(); } catch { /* noop */ } }
-
-    try {
-      const page = await pdf.getPage(pageNumber);
-      const viewport = page.getViewport({ scale });
-
-      const dpr = window.devicePixelRatio || 1;
-      canvas.width = Math.floor(viewport.width * dpr);
-      canvas.height = Math.floor(viewport.height * dpr);
-      canvas.style.width = `${viewport.width}px`;
-      canvas.style.height = `${viewport.height}px`;
-
-      const ctx = canvas.getContext('2d');
-      if (!ctx) return;
-      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-
-      const renderTask = page.render({ canvasContext: ctx, viewport });
-      renderTasksRef.current.set(pageNumber, renderTask);
-      await renderTask.promise;
-
-      setRenderedPages((prev) => {
-        if (prev.has(pageNumber)) return prev;
-        const next = new Set(prev);
-        next.add(pageNumber);
-        return next;
-      });
-    } catch (err: unknown) {
-      if ((err as { name?: string })?.name !== 'RenderingCancelledException') {
-        console.error(`Failed to render signing page ${pageNumber}:`, err);
+      // Cancel any in-flight render for this page so a rapid zoom change
+      // doesn't leave us painting stale pixels.
+      const existing = renderTasksRef.current.get(pageNumber);
+      if (existing) {
+        try {
+          existing.cancel();
+        } catch {
+          /* noop */
+        }
       }
-    }
-  }, [zoom]);
+
+      try {
+        const page = await pdf.getPage(pageNumber);
+        const viewport = page.getViewport({ scale });
+
+        const dpr = window.devicePixelRatio || 1;
+        canvas.width = Math.floor(viewport.width * dpr);
+        canvas.height = Math.floor(viewport.height * dpr);
+        canvas.style.width = `${viewport.width}px`;
+        canvas.style.height = `${viewport.height}px`;
+
+        const ctx = canvas.getContext('2d');
+        if (!ctx) return;
+        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+        const renderTask = page.render({ canvasContext: ctx, viewport });
+        renderTasksRef.current.set(pageNumber, renderTask);
+        await renderTask.promise;
+
+        setRenderedPages((prev) => {
+          if (prev.has(pageNumber)) return prev;
+          const next = new Set(prev);
+          next.add(pageNumber);
+          return next;
+        });
+      } catch (err: unknown) {
+        if ((err as { name?: string })?.name !== 'RenderingCancelledException') {
+          console.error(`Failed to render signing page ${pageNumber}:`, err);
+        }
+      }
+    },
+    [zoom],
+  );
 
   // ── P7.6 — zoom change invalidates every previously-rendered page ─────
   // but we only re-render ones that are currently visible. Pages that
@@ -389,7 +417,13 @@ export function SigningWorkflow({
   useEffect(() => {
     if (pageDims.length === 0) return;
     // Cancel all in-flight renders from the previous zoom.
-    renderTasksRef.current.forEach((task) => { try { task.cancel(); } catch { /* noop */ } });
+    renderTasksRef.current.forEach((task) => {
+      try {
+        task.cancel();
+      } catch {
+        /* noop */
+      }
+    });
     renderTasksRef.current.clear();
     setRenderedPages(new Set());
     // Re-render whatever is currently visible.
@@ -413,9 +447,7 @@ export function SigningWorkflow({
           const next = new Set(prev);
           let changed = false;
           for (const entry of entries) {
-            const pageNumber = Number(
-              (entry.target as HTMLElement).dataset.pageNumber,
-            );
+            const pageNumber = Number((entry.target as HTMLElement).dataset.pageNumber);
             if (!Number.isFinite(pageNumber)) continue;
             if (entry.isIntersecting) {
               if (!next.has(pageNumber)) {
@@ -446,8 +478,11 @@ export function SigningWorkflow({
 
   const setCanvasRef = useCallback(
     (pageNumber: number) => (el: HTMLCanvasElement | null) => {
-      if (el) { canvasRefs.current.set(pageNumber, el); }
-      else { canvasRefs.current.delete(pageNumber); }
+      if (el) {
+        canvasRefs.current.set(pageNumber, el);
+      } else {
+        canvasRefs.current.delete(pageNumber);
+      }
     },
     [],
   );
@@ -480,7 +515,9 @@ export function SigningWorkflow({
         <Card className="p-8 text-center max-w-sm">
           <AlertCircle className="h-12 w-12 text-red-500 mx-auto mb-4" />
           <h3 className="text-lg font-medium text-gray-900">Session Error</h3>
-          <p className="text-gray-500 mt-2">Session data not available. Please try refreshing the page.</p>
+          <p className="text-gray-500 mt-2">
+            Session data not available. Please try refreshing the page.
+          </p>
         </Card>
       </div>
     );
@@ -489,21 +526,21 @@ export function SigningWorkflow({
   const { envelope_title, fields = [] } = sessionData;
   const isFieldsLocked = sessionData.is_turn === false;
 
-  const usesZeroBasedIndexing = useMemo(() =>
-    fields.some(f => f.page === 0),
-    [fields]);
+  const usesZeroBasedIndexing = useMemo(() => fields.some((f) => f.page === 0), [fields]);
 
   const displayPageCount = useMemo(() => {
     const pdfPageCount = sessionData.page_count || 1;
-    const maxFieldPage = fields.length > 0
-      ? Math.max(...fields.map(f => f.page)) + (usesZeroBasedIndexing ? 1 : 0)
-      : 1;
+    const maxFieldPage =
+      fields.length > 0
+        ? Math.max(...fields.map((f) => f.page)) + (usesZeroBasedIndexing ? 1 : 0)
+        : 1;
     return Math.max(pdfPageCount, maxFieldPage);
   }, [sessionData.page_count, fields, usesZeroBasedIndexing]);
 
-  const signerFields = useMemo(() =>
-    fields.filter(f => f.signer_id === sessionData.signer_id),
-    [fields, sessionData.signer_id]);
+  const signerFields = useMemo(
+    () => fields.filter((f) => f.signer_id === sessionData.signer_id),
+    [fields, sessionData.signer_id],
+  );
 
   // P4.5 / P4.6 — Build a `valuesMap` of every field's current answer
   // (signer-entered first, prefill fallback) and feed the rule engine.
@@ -512,24 +549,24 @@ export function SigningWorkflow({
   const valuesMap = useMemo<Record<string, string>>(() => {
     const map: Record<string, string> = {};
     for (const f of signerFields) {
-      const sig = signatures.find(s => s.field_id === f.id);
+      const sig = signatures.find((s) => s.field_id === f.id);
       const raw = sig?.value ?? f.value ?? '';
       if (raw != null) map[f.id] = String(raw);
     }
     return map;
   }, [signerFields, signatures]);
 
-  const ruleState = useMemo(() => evaluateRuleState(signerFields, valuesMap), [
-    signerFields,
-    valuesMap,
-  ]);
+  const ruleState = useMemo(
+    () => evaluateRuleState(signerFields, valuesMap),
+    [signerFields, valuesMap],
+  );
 
   // Visible fields drive everything user-facing — render, gating,
   // navigation. Hidden fields stay in `signerFields` so the rule
   // engine can still resolve cross-references in their formulas if
   // they ever become visible later.
   const visibleSignerFields = useMemo(
-    () => signerFields.filter(f => ruleState[f.id]?.visible !== false),
+    () => signerFields.filter((f) => ruleState[f.id]?.visible !== false),
     [signerFields, ruleState],
   );
 
@@ -537,15 +574,17 @@ export function SigningWorkflow({
   // so a hidden conditional field never blocks completion. P4.6 —
   // Calculated fields are display-only; we exclude them from the
   // required gate (their value is auto-derived).
-  const requiredFields = useMemo(() =>
-    visibleSignerFields
-      .filter(f => {
-        const meta = (f.metadata ?? {}) as { calculated?: { formula?: string } };
-        if (meta.calculated?.formula) return false;
-        return ruleState[f.id]?.requiredEffective ?? f.required;
-      })
-      .sort((a, b) => (a.page - b.page) || (a.y - b.y)),
-    [visibleSignerFields, ruleState]);
+  const requiredFields = useMemo(
+    () =>
+      visibleSignerFields
+        .filter((f) => {
+          const meta = (f.metadata ?? {}) as { calculated?: { formula?: string } };
+          if (meta.calculated?.formula) return false;
+          return ruleState[f.id]?.requiredEffective ?? f.required;
+        })
+        .sort((a, b) => a.page - b.page || a.y - b.y),
+    [visibleSignerFields, ruleState],
+  );
 
   // P3.6 — A field is "complete" if the signer entered something OR the
   // server pre-filled it with a non-empty value. Locked prefills always
@@ -568,9 +607,8 @@ export function SigningWorkflow({
     [requiredFields, isFieldFilledByPrefillOrSig],
   );
 
-  const progress = requiredFields.length > 0
-    ? (completedFields.length / requiredFields.length) * 100
-    : 100;
+  const progress =
+    requiredFields.length > 0 ? (completedFields.length / requiredFields.length) * 100 : 100;
 
   const allRequiredFieldsCompleted = completedFields.length === requiredFields.length;
   const requiredRemaining = requiredFields.length - completedFields.length;
@@ -581,85 +619,87 @@ export function SigningWorkflow({
 
   // ==================== FIELD CLICK HANDLERS ====================
 
-  const handleFieldClick = useCallback((field: SignerField) => {
-    // Reading mode — fields are inert. The bottom-bar CTA is the only way in.
-    if (phase === 'reading') return;
+  const handleFieldClick = useCallback(
+    (field: SignerField) => {
+      // Reading mode — fields are inert. The bottom-bar CTA is the only way in.
+      if (phase === 'reading') return;
 
-    // P3.6 — Prefill: a locked, server-resolved field is read-only. We
-    // surface a tooltip elsewhere; here we just no-op the click so the
-    // dialog never opens. Unlocked prefills DO open the dialog (so the
-    // signer can edit) and pre-populate the input from `field.value`.
-    const meta = (field.metadata ?? {}) as { prefill?: { locked?: boolean } };
-    if (meta.prefill?.locked) return;
+      // P3.6 — Prefill: a locked, server-resolved field is read-only. We
+      // surface a tooltip elsewhere; here we just no-op the click so the
+      // dialog never opens. Unlocked prefills DO open the dialog (so the
+      // signer can edit) and pre-populate the input from `field.value`.
+      const meta = (field.metadata ?? {}) as { prefill?: { locked?: boolean } };
+      if (meta.prefill?.locked) return;
 
-    setCurrentField(field);
-    setError(null);
+      setCurrentField(field);
+      setError(null);
 
-    switch (field.type) {
-      case 'signature':
-      case 'initials':
-        setShowSignatureDialog(true);
-        break;
-      case 'text': {
-        const existingText =
-          signatures.find(s => s.field_id === field.id)?.value
-          ?? field.value
-          ?? '';
-        setTextInput(existingText);
-        setShowTextDialog(true);
-        break;
+      switch (field.type) {
+        case 'signature':
+        case 'initials':
+          setShowSignatureDialog(true);
+          break;
+        case 'text': {
+          const existingText =
+            signatures.find((s) => s.field_id === field.id)?.value ?? field.value ?? '';
+          setTextInput(existingText);
+          setShowTextDialog(true);
+          break;
+        }
+        case 'date': {
+          const existingDate =
+            signatures.find((s) => s.field_id === field.id)?.value ?? field.value ?? '';
+          setDateInput(existingDate);
+          setShowDateDialog(true);
+          break;
+        }
+        case 'checkbox':
+          handleCheckboxToggle(field);
+          break;
+        case 'auto_date': {
+          const now = new Date().toLocaleDateString('en-ZA', {
+            day: '2-digit',
+            month: 'short',
+            year: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit',
+            hour12: false,
+          });
+          setSignatures((prev) => {
+            const existing = prev.find((s) => s.field_id === field.id);
+            if (existing)
+              return prev.map((s) => (s.field_id === field.id ? { ...s, value: now } : s));
+            return [...prev, { field_id: field.id, type: 'auto_date', value: now }];
+          });
+          break;
+        }
+        case 'dropdown': {
+          const existingDropdown = signatures.find((s) => s.field_id === field.id)?.value || '';
+          setDropdownValue(existingDropdown);
+          setShowDropdownDialog(true);
+          break;
+        }
+        // P3.5 — open the OS file picker for attachment fields. The actual
+        // upload is triggered by the hidden <input type="file">'s onChange
+        // handler so we get the File reference without an extra dialog.
+        case 'attachment': {
+          setCurrentField(field);
+          attachmentInputRef.current?.click();
+          break;
+        }
       }
-      case 'date': {
-        const existingDate =
-          signatures.find(s => s.field_id === field.id)?.value
-          ?? field.value
-          ?? '';
-        setDateInput(existingDate);
-        setShowDateDialog(true);
-        break;
-      }
-      case 'checkbox':
-        handleCheckboxToggle(field);
-        break;
-      case 'auto_date': {
-        const now = new Date().toLocaleDateString('en-ZA', {
-          day: '2-digit', month: 'short', year: 'numeric',
-          hour: '2-digit', minute: '2-digit', hour12: false,
-        });
-        setSignatures(prev => {
-          const existing = prev.find(s => s.field_id === field.id);
-          if (existing) return prev.map(s => s.field_id === field.id ? { ...s, value: now } : s);
-          return [...prev, { field_id: field.id, type: 'auto_date', value: now }];
-        });
-        break;
-      }
-      case 'dropdown': {
-        const existingDropdown = signatures.find(s => s.field_id === field.id)?.value || '';
-        setDropdownValue(existingDropdown);
-        setShowDropdownDialog(true);
-        break;
-      }
-      // P3.5 — open the OS file picker for attachment fields. The actual
-      // upload is triggered by the hidden <input type="file">'s onChange
-      // handler so we get the File reference without an extra dialog.
-      case 'attachment': {
-        setCurrentField(field);
-        attachmentInputRef.current?.click();
-        break;
-      }
-    }
-  }, [phase, signatures]);
+    },
+    [phase, signatures],
+  );
 
   const handleCheckboxToggle = useCallback((field: SignerField) => {
-    setSignatures(prev => {
-      const existing = prev.find(s => s.field_id === field.id);
+    setSignatures((prev) => {
+      const existing = prev.find((s) => s.field_id === field.id);
       if (existing) {
         if (existing.value === 'true') {
-          return prev.filter(s => s.field_id !== field.id);
+          return prev.filter((s) => s.field_id !== field.id);
         }
-        return prev.map(s =>
-          s.field_id === field.id ? { ...s, value: 'true' } : s
-        );
+        return prev.map((s) => (s.field_id === field.id ? { ...s, value: 'true' } : s));
       }
       return [...prev, { field_id: field.id, type: 'checkbox', value: 'true' }];
     });
@@ -675,41 +715,44 @@ export function SigningWorkflow({
    *   4. Best-effort persist to the server-side profile so the next
    *      envelope sent to this email opens with it pre-loaded.
    */
-  const handleSignatureSave = useCallback((signatureData: string) => {
-    if (!currentField) return;
+  const handleSignatureSave = useCallback(
+    (signatureData: string) => {
+      if (!currentField) return;
 
-    const fieldType = currentField.type as 'signature' | 'initials';
-    const sameTypeFields = signerFields.filter(f => f.type === fieldType);
+      const fieldType = currentField.type as 'signature' | 'initials';
+      const sameTypeFields = signerFields.filter((f) => f.type === fieldType);
 
-    setSignatures(prev => {
-      const next = [...prev];
-      sameTypeFields.forEach(f => {
-        const idx = next.findIndex(s => s.field_id === f.id);
-        if (f.id === currentField.id) {
-          // Always apply to the field the signer explicitly tapped.
-          if (idx >= 0) next[idx] = { ...next[idx]!, value: signatureData };
-          else next.push({ field_id: f.id, type: fieldType, value: signatureData });
-        } else if (idx < 0) {
-          // Auto-apply to OTHER empty same-type fields owned by this signer.
-          // Already-filled fields are NOT overwritten — the signer may have
-          // intentionally given them different values.
-          next.push({ field_id: f.id, type: fieldType, value: signatureData });
-        }
+      setSignatures((prev) => {
+        const next = [...prev];
+        sameTypeFields.forEach((f) => {
+          const idx = next.findIndex((s) => s.field_id === f.id);
+          if (f.id === currentField.id) {
+            // Always apply to the field the signer explicitly tapped.
+            if (idx >= 0) next[idx] = { ...next[idx]!, value: signatureData };
+            else next.push({ field_id: f.id, type: fieldType, value: signatureData });
+          } else if (idx < 0) {
+            // Auto-apply to OTHER empty same-type fields owned by this signer.
+            // Already-filled fields are NOT overwritten — the signer may have
+            // intentionally given them different values.
+            next.push({ field_id: f.id, type: fieldType, value: signatureData });
+          }
+        });
+        return next;
       });
-      return next;
-    });
 
-    if (fieldType === 'signature') setAdoptedSignature(signatureData);
-    else setAdoptedInitials(signatureData);
+      if (fieldType === 'signature') setAdoptedSignature(signatureData);
+      else setAdoptedInitials(signatureData);
 
-    // Persist to server-side profile in the background — never block.
-    void esignSignerService.saveSignerSignature(token, {
-      [fieldType === 'signature' ? 'signature' : 'initials']: signatureData,
-    } as { signature?: string; initials?: string });
+      // Persist to server-side profile in the background — never block.
+      void esignSignerService.saveSignerSignature(token, {
+        [fieldType === 'signature' ? 'signature' : 'initials']: signatureData,
+      } as { signature?: string; initials?: string });
 
-    setShowSignatureDialog(false);
-    setCurrentField(null);
-  }, [currentField, signerFields, token]);
+      setShowSignatureDialog(false);
+      setCurrentField(null);
+    },
+    [currentField, signerFields, token],
+  );
 
   const handleTextSave = useCallback(() => {
     if (!currentField || !textInput.trim()) return;
@@ -788,13 +831,11 @@ export function SigningWorkflow({
       }
     }
 
-    setSignatures(prev => {
-      const existing = prev.find(s => s.field_id === currentField.id);
+    setSignatures((prev) => {
+      const existing = prev.find((s) => s.field_id === currentField.id);
       const value = format === 'sa_id' ? maskSaId(textInput) : trimmed;
       if (existing) {
-        return prev.map(s =>
-          s.field_id === currentField.id ? { ...s, value } : s
-        );
+        return prev.map((s) => (s.field_id === currentField.id ? { ...s, value } : s));
       }
       return [...prev, { field_id: currentField.id, type: 'text', value }];
     });
@@ -814,12 +855,10 @@ export function SigningWorkflow({
       year: 'numeric',
     });
 
-    setSignatures(prev => {
-      const existing = prev.find(s => s.field_id === currentField.id);
+    setSignatures((prev) => {
+      const existing = prev.find((s) => s.field_id === currentField.id);
       if (existing) {
-        return prev.map(s =>
-          s.field_id === currentField.id ? { ...s, value: formatted } : s
-        );
+        return prev.map((s) => (s.field_id === currentField.id ? { ...s, value: formatted } : s));
       }
       return [...prev, { field_id: currentField.id, type: 'date', value: formatted }];
     });
@@ -832,11 +871,11 @@ export function SigningWorkflow({
   const handleDropdownSave = useCallback(() => {
     if (!currentField || !dropdownValue) return;
 
-    setSignatures(prev => {
-      const existing = prev.find(s => s.field_id === currentField.id);
+    setSignatures((prev) => {
+      const existing = prev.find((s) => s.field_id === currentField.id);
       if (existing) {
-        return prev.map(s =>
-          s.field_id === currentField.id ? { ...s, value: dropdownValue } : s
+        return prev.map((s) =>
+          s.field_id === currentField.id ? { ...s, value: dropdownValue } : s,
         );
       }
       return [...prev, { field_id: currentField.id, type: 'dropdown', value: dropdownValue }];
@@ -925,7 +964,7 @@ export function SigningWorkflow({
         const calcDisplay = ruleState[f.id]?.calculatedValue;
         if (!calcDisplay) continue;
         if (ruleState[f.id]?.visible === false) continue;
-        const idx = augmented.findIndex(s => s.field_id === f.id);
+        const idx = augmented.findIndex((s) => s.field_id === f.id);
         if (idx >= 0) {
           augmented[idx] = { ...augmented[idx]!, value: calcDisplay, type: 'text' };
         } else {
@@ -935,7 +974,11 @@ export function SigningWorkflow({
       const result = await submitSignature(token, augmented);
       if (result.success) {
         // Clear in-progress local cache on success.
-        try { window.localStorage.removeItem(inProgressKey(token)); } catch { /* noop */ }
+        try {
+          window.localStorage.removeItem(inProgressKey(token));
+        } catch {
+          /* noop */
+        }
         onComplete();
       } else {
         setError(result.error || 'Failed to submit signature. Please try again.');
@@ -964,7 +1007,9 @@ export function SigningWorkflow({
         completed: completedFields.length,
         required: requiredFields.length,
       });
-    } catch { /* non-critical */ }
+    } catch {
+      /* non-critical */
+    }
     // Send the user away. The browser tab close is the cleanest UX; a
     // navigation here would feel arbitrary so we just let them close.
     if (typeof window !== 'undefined') {
@@ -979,8 +1024,8 @@ export function SigningWorkflow({
 
   // ==================== ZOOM ====================
 
-  const handleZoomIn = () => setZoom(prev => Math.min(prev + 10, 200));
-  const handleZoomOut = () => setZoom(prev => Math.max(prev - 10, 50));
+  const handleZoomIn = () => setZoom((prev) => Math.min(prev + 10, 200));
+  const handleZoomOut = () => setZoom((prev) => Math.max(prev - 10, 50));
 
   // ==================== DOWNLOAD ORIGINAL FOR READ ====================
 
@@ -1060,8 +1105,9 @@ export function SigningWorkflow({
               <Alert className="bg-amber-50 border-amber-300 text-amber-900">
                 <Lock className="h-4 w-4 text-amber-600" />
                 <AlertDescription>
-                  <span className="font-medium">Waiting for previous signers.</span>{' '}
-                  This document requires signatures in a specific order. You will be notified by email when it is your turn.
+                  <span className="font-medium">Waiting for previous signers.</span> This document
+                  requires signatures in a specific order. You will be notified by email when it is
+                  your turn.
                 </AlertDescription>
               </Alert>
             </div>
@@ -1070,22 +1116,46 @@ export function SigningWorkflow({
           <div className="flex flex-col items-center gap-8 min-h-full">
             {/* Floating zoom controls — desktop */}
             <div className="fixed bottom-24 left-6 z-30 bg-white shadow-lg border rounded-full p-1 hidden md:flex items-center gap-1">
-              <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full" onClick={handleZoomOut} disabled={zoom <= 50}>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8 rounded-full"
+                onClick={handleZoomOut}
+                disabled={zoom <= 50}
+              >
                 <ZoomOut className="h-4 w-4" />
               </Button>
               <span className="text-xs font-medium w-10 text-center">{zoom}%</span>
-              <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full" onClick={handleZoomIn} disabled={zoom >= 200}>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8 rounded-full"
+                onClick={handleZoomIn}
+                disabled={zoom >= 200}
+              >
                 <ZoomIn className="h-4 w-4" />
               </Button>
             </div>
 
             {/* Floating zoom controls — mobile (sit above the bottom action bar) */}
             <div className="fixed bottom-28 left-3 z-30 bg-white/95 shadow-lg border rounded-full p-0.5 flex md:hidden items-center gap-0.5">
-              <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full" onClick={handleZoomOut} disabled={zoom <= 50}>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8 rounded-full"
+                onClick={handleZoomOut}
+                disabled={zoom <= 50}
+              >
                 <ZoomOut className="h-3.5 w-3.5" />
               </Button>
               <span className="text-[10px] font-medium w-8 text-center">{zoom}%</span>
-              <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full" onClick={handleZoomIn} disabled={zoom >= 200}>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8 rounded-full"
+                onClick={handleZoomIn}
+                disabled={zoom >= 200}
+              >
                 <ZoomIn className="h-3.5 w-3.5" />
               </Button>
             </div>
@@ -1111,139 +1181,154 @@ export function SigningWorkflow({
               </div>
             )}
 
-            {!pdfLoading && !pdfError && Array.from({ length: displayPageCount }).map((_, index) => {
-              const pageNumber = index + 1;
+            {!pdfLoading &&
+              !pdfError &&
+              Array.from({ length: displayPageCount }).map((_, index) => {
+                const pageNumber = index + 1;
 
-              // P4.5 — Render only fields the rule engine considers
-              // visible. Hidden conditional fields disappear from the
-              // page entirely so the signer never wonders what they are.
-              const pageFields = visibleSignerFields.filter(f =>
-                usesZeroBasedIndexing
-                  ? f.page === (pageNumber - 1)
-                  : f.page === pageNumber
-              );
+                // P4.5 — Render only fields the rule engine considers
+                // visible. Hidden conditional fields disappear from the
+                // page entirely so the signer never wonders what they are.
+                const pageFields = visibleSignerFields.filter((f) =>
+                  usesZeroBasedIndexing ? f.page === pageNumber - 1 : f.page === pageNumber,
+                );
 
-              const dim = pageDims.find(d => d.pageNumber === pageNumber);
-              const scale = zoom / 100;
-              const pageW = dim ? dim.width * scale : undefined;
+                const dim = pageDims.find((d) => d.pageNumber === pageNumber);
+                const scale = zoom / 100;
+                const pageW = dim ? dim.width * scale : undefined;
 
-              return (
-                <div
-                  key={pageNumber}
-                  className="relative bg-white shadow-md transition-all duration-200 ease-in-out rounded-sm"
-                  style={pageW && dim ? {
-                    width: `${pageW}px`,
-                    maxWidth: '100%',
-                    aspectRatio: `${dim.width} / ${dim.height}`,
-                  } : {
-                    width: `${zoom}%`,
-                    maxWidth: '1000px',
-                    aspectRatio: '1 / 1.414',
-                    minHeight: '300px',
-                  }}
-                >
-                  <div className="absolute -left-12 top-0 text-xs text-gray-400 font-medium hidden xl:block">
-                    Page {pageNumber}
-                  </div>
+                return (
+                  <div
+                    key={pageNumber}
+                    className="relative bg-white shadow-md transition-all duration-200 ease-in-out rounded-sm"
+                    style={
+                      pageW && dim
+                        ? {
+                            width: `${pageW}px`,
+                            maxWidth: '100%',
+                            aspectRatio: `${dim.width} / ${dim.height}`,
+                          }
+                        : {
+                            width: `${zoom}%`,
+                            maxWidth: '1000px',
+                            aspectRatio: '1 / 1.414',
+                            minHeight: '300px',
+                          }
+                    }
+                  >
+                    <div className="absolute -left-12 top-0 text-xs text-gray-400 font-medium hidden xl:block">
+                      Page {pageNumber}
+                    </div>
 
-                  {sessionData.document_url && dim ? (
-                    <div
-                      ref={setPlaceholderRef(pageNumber)}
-                      data-page-number={pageNumber}
-                      className="absolute inset-0 overflow-hidden bg-white z-0"
-                    >
-                      <canvas
-                        ref={setCanvasRef(pageNumber)}
-                        className="absolute top-0 left-0"
-                        style={{ width: '100%', height: '100%' }}
-                      />
-                      {/* P7.6 — skeleton placeholder shown until the page
+                    {sessionData.document_url && dim ? (
+                      <div
+                        ref={setPlaceholderRef(pageNumber)}
+                        data-page-number={pageNumber}
+                        className="absolute inset-0 overflow-hidden bg-white z-0"
+                      >
+                        <canvas
+                          ref={setCanvasRef(pageNumber)}
+                          className="absolute top-0 left-0"
+                          style={{ width: '100%', height: '100%' }}
+                        />
+                        {/* P7.6 — skeleton placeholder shown until the page
                           canvas has been rendered by the observer tick. */}
-                      {!renderedPages.has(pageNumber) && (
-                        <div className="absolute inset-0 flex items-center justify-center bg-gray-50/60 animate-pulse pointer-events-none">
-                          <FileText className="h-10 w-10 text-gray-300" strokeWidth={1} />
-                        </div>
-                      )}
-                      <div className="absolute inset-0 z-[1]" />
-                    </div>
-                  ) : !sessionData.document_url ? (
-                    <div className="absolute inset-0 flex flex-col items-center justify-center text-gray-100 pointer-events-none border border-gray-100 z-0">
-                      <FileText className="h-32 w-32 mb-4" strokeWidth={1} />
-                      <p className="text-lg font-medium text-gray-300">Page {pageNumber}</p>
-                      <p className="text-sm text-gray-300">Document preview not available</p>
-                    </div>
-                  ) : null}
+                        {!renderedPages.has(pageNumber) && (
+                          <div className="absolute inset-0 flex items-center justify-center bg-gray-50/60 animate-pulse pointer-events-none">
+                            <FileText className="h-10 w-10 text-gray-300" strokeWidth={1} />
+                          </div>
+                        )}
+                        <div className="absolute inset-0 z-[1]" />
+                      </div>
+                    ) : !sessionData.document_url ? (
+                      <div className="absolute inset-0 flex flex-col items-center justify-center text-gray-100 pointer-events-none border border-gray-100 z-0">
+                        <FileText className="h-32 w-32 mb-4" strokeWidth={1} />
+                        <p className="text-lg font-medium text-gray-300">Page {pageNumber}</p>
+                        <p className="text-sm text-gray-300">Document preview not available</p>
+                      </div>
+                    ) : null}
 
-                  {/* Fields overlay */}
-                  <div className="absolute inset-0 z-10 pointer-events-none">
-                    {pageFields.map((field) => {
-                      const signature = signatures.find(s => s.field_id === field.id);
-                      // P3.6 — When a field has a server-resolved prefill
-                      // value AND the signer hasn't entered anything yet,
-                      // show the prefill as the field's display value. A
-                      // locked prefill *always* wins (signer can't override).
-                      // P4.6 — Calculated fields are read-only and their
-                      // value is the engine-computed display string. They
-                      // override prefill / signer input.
-                      const meta = (field.metadata ?? {}) as {
-                        prefill?: { locked?: boolean };
-                        calculated?: { formula?: string };
-                      };
-                      const prefillLocked = !!meta.prefill?.locked;
-                      const calculatedDisplay = ruleState[field.id]?.calculatedValue ?? null;
-                      const isCalculated = !!meta.calculated?.formula;
-                      const effectiveSignatureValue =
-                        calculatedDisplay
-                          ?? signature?.value
-                          ?? (field.value ? field.value : undefined);
-                      const isFilledEffective =
-                        !!calculatedDisplay || !!signature || !!field.value;
-                      const isNext = !!nextIncompleteField && nextIncompleteField.id === field.id;
-                      return (
-                        <div id={`field-${field.id}`} key={field.id} className="absolute inset-0 pointer-events-none">
-                          <FieldHighlight
-                            field={field}
-                            zoom={zoom}
-                            isFilled={isFilledEffective}
-                            isNextRequired={isNext}
-                            inactive={isReading}
-                            filledValue={effectiveSignatureValue}
-                            // Locked prefill becomes a real lock at render time
-                            // — FieldHighlight already supports `locked`.
-                            // P4.6 — calculated fields are always locked.
-                            locked={isFieldsLocked || prefillLocked || isCalculated}
-                            onClick={() => handleFieldClick(field)}
-                            // P2.5 1.9 — accept inline commits for plain
-                            // text & date fields. SA-ID and other masked
-                            // formats still go through the modal (handled
-                            // inside FieldHighlight via metadata.format).
-                            onInlineCommit={(fieldId, value) => {
-                              const trimmed = value.trim();
-                              if (trimmed.length === 0) {
-                                // Empty string clears the field.
-                                setSignatures((prev) => prev.filter((s) => s.field_id !== fieldId));
-                                return true;
-                              }
-                              setSignatures((prev) => {
-                                const existing = prev.find((s) => s.field_id === fieldId);
-                                const sigType = field.type === 'date' ? 'date' : 'text';
-                                if (existing) {
-                                  return prev.map((s) =>
-                                    s.field_id === fieldId ? { ...s, value: trimmed, type: sigType } : s,
+                    {/* Fields overlay */}
+                    <div className="absolute inset-0 z-10 pointer-events-none">
+                      {pageFields.map((field) => {
+                        const signature = signatures.find((s) => s.field_id === field.id);
+                        // P3.6 — When a field has a server-resolved prefill
+                        // value AND the signer hasn't entered anything yet,
+                        // show the prefill as the field's display value. A
+                        // locked prefill *always* wins (signer can't override).
+                        // P4.6 — Calculated fields are read-only and their
+                        // value is the engine-computed display string. They
+                        // override prefill / signer input.
+                        const meta = (field.metadata ?? {}) as {
+                          prefill?: { locked?: boolean };
+                          calculated?: { formula?: string };
+                        };
+                        const prefillLocked = !!meta.prefill?.locked;
+                        const calculatedDisplay = ruleState[field.id]?.calculatedValue ?? null;
+                        const isCalculated = !!meta.calculated?.formula;
+                        const effectiveSignatureValue =
+                          calculatedDisplay ??
+                          signature?.value ??
+                          (field.value ? field.value : undefined);
+                        const isFilledEffective =
+                          !!calculatedDisplay || !!signature || !!field.value;
+                        const isNext = !!nextIncompleteField && nextIncompleteField.id === field.id;
+                        return (
+                          <div
+                            id={`field-${field.id}`}
+                            key={field.id}
+                            className="absolute inset-0 pointer-events-none"
+                          >
+                            <FieldHighlight
+                              field={field}
+                              zoom={zoom}
+                              isFilled={isFilledEffective}
+                              isNextRequired={isNext}
+                              inactive={isReading}
+                              filledValue={effectiveSignatureValue}
+                              // Locked prefill becomes a real lock at render time
+                              // — FieldHighlight already supports `locked`.
+                              // P4.6 — calculated fields are always locked.
+                              locked={isFieldsLocked || prefillLocked || isCalculated}
+                              onClick={() => handleFieldClick(field)}
+                              // P2.5 1.9 — accept inline commits for plain
+                              // text & date fields. SA-ID and other masked
+                              // formats still go through the modal (handled
+                              // inside FieldHighlight via metadata.format).
+                              onInlineCommit={(fieldId, value) => {
+                                const trimmed = value.trim();
+                                if (trimmed.length === 0) {
+                                  // Empty string clears the field.
+                                  setSignatures((prev) =>
+                                    prev.filter((s) => s.field_id !== fieldId),
                                   );
+                                  return true;
                                 }
-                                return [...prev, { field_id: fieldId, type: sigType, value: trimmed }];
-                              });
-                              return true;
-                            }}
-                          />
-                        </div>
-                      );
-                    })}
+                                setSignatures((prev) => {
+                                  const existing = prev.find((s) => s.field_id === fieldId);
+                                  const sigType = field.type === 'date' ? 'date' : 'text';
+                                  if (existing) {
+                                    return prev.map((s) =>
+                                      s.field_id === fieldId
+                                        ? { ...s, value: trimmed, type: sigType }
+                                        : s,
+                                    );
+                                  }
+                                  return [
+                                    ...prev,
+                                    { field_id: fieldId, type: sigType, value: trimmed },
+                                  ];
+                                });
+                                return true;
+                              }}
+                            />
+                          </div>
+                        );
+                      })}
+                    </div>
                   </div>
-                </div>
-              );
-            })}
+                );
+              })}
           </div>
         </div>
       </div>
@@ -1407,9 +1492,11 @@ export function SigningWorkflow({
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Pen className="h-5 w-5 text-indigo-600" />
-              {currentField?.type === 'signature' ? 'Adopt your signature' :
-                currentField?.type === 'initials' ? 'Adopt your initials' :
-                  'Sign Document'}
+              {currentField?.type === 'signature'
+                ? 'Adopt your signature'
+                : currentField?.type === 'initials'
+                  ? 'Adopt your initials'
+                  : 'Sign Document'}
             </DialogTitle>
             <DialogDescription>
               {currentField?.type === 'signature'
@@ -1427,8 +1514,8 @@ export function SigningWorkflow({
                 setShowSignatureDialog(false);
                 setCurrentField(null);
               }}
-              type={(currentField?.type === 'initials' ? 'initials' : 'signature')}
-              existingValue={signatures.find(s => s.field_id === currentField?.id)?.value}
+              type={currentField?.type === 'initials' ? 'initials' : 'signature'}
+              existingValue={signatures.find((s) => s.field_id === currentField?.id)?.value}
               savedSignature={adoptedSignature}
               savedInitials={adoptedInitials}
               signerName={sessionData.signer_name}
@@ -1438,10 +1525,16 @@ export function SigningWorkflow({
       </Dialog>
 
       {/* ==================== TEXT INPUT DIALOG ==================== */}
-      <Dialog open={showTextDialog} onOpenChange={(open) => {
-        setShowTextDialog(open);
-        if (!open) { setCurrentField(null); setError(null); }
-      }}>
+      <Dialog
+        open={showTextDialog}
+        onOpenChange={(open) => {
+          setShowTextDialog(open);
+          if (!open) {
+            setCurrentField(null);
+            setError(null);
+          }
+        }}
+      >
         <DialogContent className="max-w-md">
           {(() => {
             // Pull validation hints from the field's metadata to drive the
@@ -1484,9 +1577,10 @@ export function SigningWorkflow({
                     {titleByFormat[fmt] ?? 'Enter text'}
                   </DialogTitle>
                   <DialogDescription>
-                    {customHelp || (fmt === 'sa_id'
-                      ? 'Type your 13-digit South African ID number.'
-                      : 'Type the requested information for this field.')}
+                    {customHelp ||
+                      (fmt === 'sa_id'
+                        ? 'Type your 13-digit South African ID number.'
+                        : 'Type the requested information for this field.')}
                   </DialogDescription>
                 </DialogHeader>
 
@@ -1512,9 +1606,7 @@ export function SigningWorkflow({
                         if (e.key === 'Enter' && textInput.trim()) handleTextSave();
                       }}
                     />
-                    {error && (
-                      <p className="text-xs text-red-600 mt-1">{error}</p>
-                    )}
+                    {error && <p className="text-xs text-red-600 mt-1">{error}</p>}
                   </div>
                 </div>
               </>
@@ -1522,11 +1614,15 @@ export function SigningWorkflow({
           })()}
 
           <DialogFooter className="mt-4">
-            <Button variant="outline" className="h-11" onClick={() => {
-              setShowTextDialog(false);
-              setCurrentField(null);
-              setError(null);
-            }}>
+            <Button
+              variant="outline"
+              className="h-11"
+              onClick={() => {
+                setShowTextDialog(false);
+                setCurrentField(null);
+                setError(null);
+              }}
+            >
               Cancel
             </Button>
             <Button
@@ -1542,19 +1638,20 @@ export function SigningWorkflow({
       </Dialog>
 
       {/* ==================== DATE INPUT DIALOG ==================== */}
-      <Dialog open={showDateDialog} onOpenChange={(open) => {
-        setShowDateDialog(open);
-        if (!open) setCurrentField(null);
-      }}>
+      <Dialog
+        open={showDateDialog}
+        onOpenChange={(open) => {
+          setShowDateDialog(open);
+          if (!open) setCurrentField(null);
+        }}
+      >
         <DialogContent className="max-w-md">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Calendar className="h-5 w-5 text-indigo-600" />
               Select date
             </DialogTitle>
-            <DialogDescription>
-              Choose the date for this field.
-            </DialogDescription>
+            <DialogDescription>Choose the date for this field.</DialogDescription>
           </DialogHeader>
 
           <div className="space-y-4 mt-2">
@@ -1580,10 +1677,14 @@ export function SigningWorkflow({
           </div>
 
           <DialogFooter className="mt-4">
-            <Button variant="outline" className="h-11" onClick={() => {
-              setShowDateDialog(false);
-              setCurrentField(null);
-            }}>
+            <Button
+              variant="outline"
+              className="h-11"
+              onClick={() => {
+                setShowDateDialog(false);
+                setCurrentField(null);
+              }}
+            >
               Cancel
             </Button>
             <Button
@@ -1599,10 +1700,13 @@ export function SigningWorkflow({
       </Dialog>
 
       {/* ==================== DROPDOWN SELECT DIALOG ==================== */}
-      <Dialog open={showDropdownDialog} onOpenChange={(open) => {
-        setShowDropdownDialog(open);
-        if (!open) setCurrentField(null);
-      }}>
+      <Dialog
+        open={showDropdownDialog}
+        onOpenChange={(open) => {
+          setShowDropdownDialog(open);
+          if (!open) setCurrentField(null);
+        }}
+      >
         <DialogContent className="max-w-md">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
@@ -1617,30 +1721,39 @@ export function SigningWorkflow({
           </DialogHeader>
 
           <div className="space-y-2 mt-2 max-h-60 overflow-y-auto">
-            {((currentField?.metadata?.options as string[]) || []).map((option: string, idx: number) => (
-              <button
-                key={idx}
-                type="button"
-                onClick={() => setDropdownValue(option)}
-                className={`w-full text-left p-3 rounded-lg border text-sm transition-all min-h-[44px] ${
-                  dropdownValue === option
-                    ? 'border-indigo-500 bg-indigo-50 text-indigo-900 font-medium'
-                    : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
-                }`}
-              >
-                {option}
-              </button>
-            ))}
-            {(!currentField?.metadata?.options || (currentField.metadata.options as string[]).length === 0) && (
-              <p className="text-sm text-gray-500 text-center py-4">No options configured for this field.</p>
+            {((currentField?.metadata?.options as string[]) || []).map(
+              (option: string, idx: number) => (
+                <button
+                  key={idx}
+                  type="button"
+                  onClick={() => setDropdownValue(option)}
+                  className={`w-full text-left p-3 rounded-lg border text-sm transition-all min-h-[44px] ${
+                    dropdownValue === option
+                      ? 'border-indigo-500 bg-indigo-50 text-indigo-900 font-medium'
+                      : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
+                  }`}
+                >
+                  {option}
+                </button>
+              ),
+            )}
+            {(!currentField?.metadata?.options ||
+              (currentField.metadata.options as string[]).length === 0) && (
+              <p className="text-sm text-gray-500 text-center py-4">
+                No options configured for this field.
+              </p>
             )}
           </div>
 
           <DialogFooter className="mt-4">
-            <Button variant="outline" className="h-11" onClick={() => {
-              setShowDropdownDialog(false);
-              setCurrentField(null);
-            }}>
+            <Button
+              variant="outline"
+              className="h-11"
+              onClick={() => {
+                setShowDropdownDialog(false);
+                setCurrentField(null);
+              }}
+            >
               Cancel
             </Button>
             <Button
@@ -1672,7 +1785,9 @@ export function SigningWorkflow({
             <div className="bg-gray-50 rounded-lg p-4 space-y-2">
               <div className="flex items-center justify-between text-sm">
                 <span className="text-gray-600">Document</span>
-                <span className="font-medium text-gray-900 truncate max-w-[60%] text-right">{envelope_title}</span>
+                <span className="font-medium text-gray-900 truncate max-w-[60%] text-right">
+                  {envelope_title}
+                </span>
               </div>
               <div className="flex items-center justify-between text-sm">
                 <span className="text-gray-600">Signer</span>
@@ -1680,28 +1795,46 @@ export function SigningWorkflow({
               </div>
               <div className="flex items-center justify-between text-sm">
                 <span className="text-gray-600">Fields completed</span>
-                <span className="font-medium text-green-700">{completedFields.length} of {requiredFields.length}</span>
+                <span className="font-medium text-green-700">
+                  {completedFields.length} of {requiredFields.length}
+                </span>
               </div>
               <div className="flex items-center justify-between text-sm">
                 <span className="text-gray-600">Date</span>
-                <span className="font-medium text-gray-900">{new Date().toLocaleDateString('en-ZA', { day: '2-digit', month: 'long', year: 'numeric' })}</span>
+                <span className="font-medium text-gray-900">
+                  {new Date().toLocaleDateString('en-ZA', {
+                    day: '2-digit',
+                    month: 'long',
+                    year: 'numeric',
+                  })}
+                </span>
               </div>
             </div>
 
             <div className="border rounded-lg p-4 bg-white">
-              <h4 className="text-sm font-semibold text-gray-900 mb-2">Electronic Signature Consent</h4>
+              <h4 className="text-sm font-semibold text-gray-900 mb-2">
+                Electronic Signature Consent
+              </h4>
               <div className="text-xs text-gray-600 space-y-2 max-h-32 overflow-y-auto pr-2">
                 <p>
-                  By checking the box below and clicking "Submit Signature", I confirm and agree that:
+                  By checking the box below and clicking "Submit Signature", I confirm and agree
+                  that:
                 </p>
                 <ol className="list-decimal pl-4 space-y-1">
                   <li>I have reviewed the document in its entirety and understand its contents.</li>
                   <li>
-                    I intend my electronic signature to have the same legal effect as a handwritten signature,
-                    in accordance with the Electronic Communications and Transactions Act 25 of 2002 (ECTA) of South Africa.
+                    I intend my electronic signature to have the same legal effect as a handwritten
+                    signature, in accordance with the Electronic Communications and Transactions Act
+                    25 of 2002 (ECTA) of South Africa.
                   </li>
-                  <li>I consent to conducting this transaction electronically and acknowledge that my signature is legally binding.</li>
-                  <li>I understand that a record of this signing, including timestamp, IP address, and device information, will be maintained for audit purposes.</li>
+                  <li>
+                    I consent to conducting this transaction electronically and acknowledge that my
+                    signature is legally binding.
+                  </li>
+                  <li>
+                    I understand that a record of this signing, including timestamp, IP address, and
+                    device information, will be maintained for audit purposes.
+                  </li>
                 </ol>
               </div>
             </div>
@@ -1713,17 +1846,25 @@ export function SigningWorkflow({
                 onCheckedChange={(checked) => setConsentAccepted(checked === true)}
                 className="mt-0.5 h-5 w-5"
               />
-              <Label htmlFor="ecta-consent" className="text-sm text-gray-800 cursor-pointer leading-snug">
-                I have read and agree to the above. I confirm this is my signature and I intend to electronically sign this document.
+              <Label
+                htmlFor="ecta-consent"
+                className="text-sm text-gray-800 cursor-pointer leading-snug"
+              >
+                I have read and agree to the above. I confirm this is my signature and I intend to
+                electronically sign this document.
               </Label>
             </div>
           </div>
 
           <DialogFooter className="mt-4 flex-col sm:flex-row gap-2">
-            <Button variant="outline" className="h-11" onClick={() => {
-              setShowConsentDialog(false);
-              setConsentAccepted(false);
-            }}>
+            <Button
+              variant="outline"
+              className="h-11"
+              onClick={() => {
+                setShowConsentDialog(false);
+                setConsentAccepted(false);
+              }}
+            >
               Go back
             </Button>
             <Button
@@ -1756,8 +1897,8 @@ export function SigningWorkflow({
               Decline to sign
             </DialogTitle>
             <DialogDescription>
-              Are you sure you want to decline this document? This action cannot be undone.
-              The sender will be notified of your reason.
+              Are you sure you want to decline this document? This action cannot be undone. The
+              sender will be notified of your reason.
             </DialogDescription>
           </DialogHeader>
 
@@ -1769,11 +1910,7 @@ export function SigningWorkflow({
           />
 
           <DialogFooter className="mt-6">
-            <Button
-              onClick={() => setShowRejectDialog(false)}
-              variant="outline"
-              className="h-11"
-            >
+            <Button onClick={() => setShowRejectDialog(false)} variant="outline" className="h-11">
               Cancel
             </Button>
             <Button
@@ -1797,8 +1934,8 @@ export function SigningWorkflow({
               Save & Finish later
             </DialogTitle>
             <DialogDescription>
-              Your filled fields will be saved on this device. You can return to this signing
-              link any time before the document expires.
+              Your filled fields will be saved on this device. You can return to this signing link
+              any time before the document expires.
             </DialogDescription>
           </DialogHeader>
 
@@ -1807,9 +1944,12 @@ export function SigningWorkflow({
               This document expires on{' '}
               <strong>
                 {new Date(sessionData.expires_at).toLocaleDateString('en-ZA', {
-                  day: '2-digit', month: 'long', year: 'numeric',
+                  day: '2-digit',
+                  month: 'long',
+                  year: 'numeric',
                 })}
-              </strong>.
+              </strong>
+              .
             </div>
           )}
 
@@ -1817,10 +1957,7 @@ export function SigningWorkflow({
             <Button variant="outline" className="h-11" onClick={() => setShowPauseDialog(false)}>
               Keep signing
             </Button>
-            <Button
-              onClick={handlePauseConfirm}
-              className="bg-indigo-600 hover:bg-indigo-700 h-11"
-            >
+            <Button onClick={handlePauseConfirm} className="bg-indigo-600 hover:bg-indigo-700 h-11">
               <PauseCircle className="h-4 w-4 mr-1.5" />
               Save & exit
             </Button>

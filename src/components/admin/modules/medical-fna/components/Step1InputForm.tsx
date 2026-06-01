@@ -1,6 +1,6 @@
 /**
  * Step 1: Information Gathering
- * 
+ *
  * Behaviour Rules:
  * - Auto-populate from client profile if data exists
  * - Changes may be edited and persisted back to client profile
@@ -10,15 +10,39 @@
 import React, { useEffect } from 'react';
 import { useForm, type Resolver } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { ArrowRight, Info, Users, Shield, Wallet, Clock, AlertCircle, Heart, RefreshCw, Loader2 } from 'lucide-react';
+import {
+  ArrowRight,
+  Info,
+  Users,
+  Shield,
+  Wallet,
+  Clock,
+  AlertCircle,
+  Heart,
+  RefreshCw,
+  Loader2,
+} from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '../../../../ui/card';
 import { Button } from '../../../../ui/button';
 import { Input } from '../../../../ui/input';
 import { Label } from '../../../../ui/label';
 import { Switch } from '../../../../ui/switch';
 import { RadioGroup, RadioGroupItem } from '../../../../ui/radio-group';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../../../ui/select';
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '../../../../ui/form';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '../../../../ui/select';
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from '../../../../ui/form';
 import { useClientProfile } from '../hooks/useClientProfile';
 import { useClientProductKeys } from '../hooks/useClientProductKeys';
 import { MedicalFNAInputSchema, MedicalFNAFormValues } from '../schema';
@@ -45,16 +69,16 @@ export function Step1InputForm({
   onSaveDraft,
 }: Step1Props) {
   const { data: profile } = useClientProfile(clientId);
-  const { 
-    planType, 
-    hospitalTariff, 
-    totalPremium, 
-    msa, 
-    lateJoinerPenalty, 
-    dependentsCount, 
-    isLoading: isProductKeysLoading 
+  const {
+    planType,
+    hospitalTariff,
+    totalPremium,
+    msa,
+    lateJoinerPenalty,
+    dependentsCount,
+    isLoading: isProductKeysLoading,
   } = useClientProductKeys(clientId);
-  
+
   const form = useForm<MedicalFNAFormValues>({
     // zodResolver infers its INPUT type from the schema, where every field with
     // a .default() is optional; MedicalFNAFormValues (z.infer = OUTPUT) has them
@@ -80,7 +104,7 @@ export function Step1InputForm({
       existingMSA: initialData?.existingMSA ?? 0,
       existingLJP: initialData?.existingLJP ?? 0,
       existingDependents: initialData?.existingDependents ?? 0,
-    }
+    },
   });
 
   const [prefillStarted, setPrefillStarted] = React.useState(false);
@@ -130,7 +154,9 @@ export function Step1InputForm({
         form.setValue('spousePartner', true);
       }
 
-      const childCount = ((legacy.dependants as Array<{ relationship?: string }> | undefined) || []).filter((d) => d.relationship === 'Child').length;
+      const childCount = (
+        (legacy.dependants as Array<{ relationship?: string }> | undefined) || []
+      ).filter((d) => d.relationship === 'Child').length;
       if (childCount > 0) form.setValue('childrenCount', childCount);
 
       // Calculate age from DOB if available
@@ -152,7 +178,7 @@ export function Step1InputForm({
     // 2. Product Keys (Existing Medical Aid)
     if (!isProductKeysLoading) {
       if (planType) form.setValue('existingPlanType', planType);
-      
+
       if (hospitalTariff) {
         let mappedTariff = 'Other';
         if (hospitalTariff.includes('100%')) mappedTariff = '100%';
@@ -161,13 +187,25 @@ export function Step1InputForm({
         else if (hospitalTariff.includes('200')) mappedTariff = '200%';
         form.setValue('existingHospitalCover', mappedTariff);
       }
-      
+
       if (totalPremium !== undefined) form.setValue('existingTotalPremium', totalPremium);
       if (msa !== undefined) form.setValue('existingMSA', msa);
       if (lateJoinerPenalty !== undefined) form.setValue('existingLJP', lateJoinerPenalty);
       if (dependentsCount !== undefined) form.setValue('existingDependents', dependentsCount);
     }
-  }, [profile, initialData, form, planType, hospitalTariff, totalPremium, msa, lateJoinerPenalty, dependentsCount, isProductKeysLoading, prefillEnabled]);
+  }, [
+    profile,
+    initialData,
+    form,
+    planType,
+    hospitalTariff,
+    totalPremium,
+    msa,
+    lateJoinerPenalty,
+    dependentsCount,
+    isProductKeysLoading,
+    prefillEnabled,
+  ]);
 
   const onSubmit = (data: MedicalFNAFormValues) => {
     onNext(data);
@@ -175,7 +213,7 @@ export function Step1InputForm({
 
   const handleImportExistingCover = () => {
     if (isProductKeysLoading) {
-      toast.info("Still loading client data...");
+      toast.info('Still loading client data...');
       return;
     }
 
@@ -193,7 +231,7 @@ export function Step1InputForm({
       // Also try without the percentage symbol if user just typed "100" or "200"
       else if (hospitalTariff.includes('100')) mappedTariff = '100%';
       else if (hospitalTariff.includes('200')) mappedTariff = '200%';
-      
+
       form.setValue('existingHospitalCover', mappedTariff);
       updatedCount++;
     }
@@ -217,7 +255,7 @@ export function Step1InputForm({
     if (updatedCount > 0) {
       toast.success(`Imported ${updatedCount} fields from existing policies`);
     } else {
-      toast.info("No matching policy data found to import");
+      toast.info('No matching policy data found to import');
     }
   };
 
@@ -225,7 +263,7 @@ export function Step1InputForm({
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8 pb-12">
         {prefillEnabled && !intakeMode && PrefillUI}
-        
+
         {/* Section A: Household */}
         <Card>
           <CardHeader>
@@ -245,15 +283,12 @@ export function Step1InputForm({
                     <div className="text-xs text-muted-foreground">Include spouse on policy?</div>
                   </div>
                   <FormControl>
-                    <Switch
-                      checked={field.value}
-                      onCheckedChange={field.onChange}
-                    />
+                    <Switch checked={field.value} onCheckedChange={field.onChange} />
                   </FormControl>
                 </FormItem>
               )}
             />
-            
+
             <FormField
               control={form.control}
               name="childrenCount"
@@ -261,7 +296,12 @@ export function Step1InputForm({
                 <FormItem>
                   <FormLabel>Children</FormLabel>
                   <FormControl>
-                    <Input type="number" min={0} {...field} onChange={e => field.onChange(parseInt(e.target.value) || 0)} />
+                    <Input
+                      type="number"
+                      min={0}
+                      {...field}
+                      onChange={(e) => field.onChange(parseInt(e.target.value) || 0)}
+                    />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -275,7 +315,12 @@ export function Step1InputForm({
                 <FormItem>
                   <FormLabel>Adult Dependants</FormLabel>
                   <FormControl>
-                    <Input type="number" min={0} {...field} onChange={e => field.onChange(parseInt(e.target.value) || 0)} />
+                    <Input
+                      type="number"
+                      min={0}
+                      {...field}
+                      onChange={(e) => field.onChange(parseInt(e.target.value) || 0)}
+                    />
                   </FormControl>
                   <div className="text-xs text-muted-foreground">Parents, siblings, etc.</div>
                   <FormMessage />
@@ -308,17 +353,21 @@ export function Step1InputForm({
                           onClick={() => field.onChange(val)}
                           className={`
                             cursor-pointer rounded-md border p-3 text-center transition-all hover:bg-muted/50
-                            ${field.value === val 
-                              ? 'border-primary bg-primary/10 text-primary font-medium' 
-                              : field.value >= 2 && val === 2 
+                            ${
+                              field.value === val
                                 ? 'border-primary bg-primary/10 text-primary font-medium'
-                                : 'border-input'}`}
+                                : field.value >= 2 && val === 2
+                                  ? 'border-primary bg-primary/10 text-primary font-medium'
+                                  : 'border-input'
+                            }`}
                         >
                           {val === 2 ? '2+' : val}
                         </div>
                       ))}
                     </div>
-                    <div className="text-xs text-muted-foreground mt-1">PMB conditions covered by law (e.g. Hypertension, Asthma)</div>
+                    <div className="text-xs text-muted-foreground mt-1">
+                      PMB conditions covered by law (e.g. Hypertension, Asthma)
+                    </div>
                   </FormItem>
                 )}
               />
@@ -354,13 +403,12 @@ export function Step1InputForm({
                   <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
                     <div className="space-y-0.5">
                       <FormLabel className="text-base">Planned Procedures</FormLabel>
-                      <div className="text-xs text-muted-foreground">Any surgery or scopes in next 24m?</div>
+                      <div className="text-xs text-muted-foreground">
+                        Any surgery or scopes in next 24m?
+                      </div>
                     </div>
                     <FormControl>
-                      <Switch
-                        checked={field.value}
-                        onCheckedChange={field.onChange}
-                      />
+                      <Switch checked={field.value} onCheckedChange={field.onChange} />
                     </FormControl>
                   </FormItem>
                 )}
@@ -381,17 +429,13 @@ export function Step1InputForm({
                         <FormControl>
                           <RadioGroupItem value="Network OK" />
                         </FormControl>
-                        <FormLabel className="font-normal">
-                          Network OK
-                        </FormLabel>
+                        <FormLabel className="font-normal">Network OK</FormLabel>
                       </FormItem>
                       <FormItem className="flex items-center space-x-3 space-y-0">
                         <FormControl>
                           <RadioGroupItem value="Any provider" />
                         </FormControl>
-                        <FormLabel className="font-normal">
-                          Any Provider
-                        </FormLabel>
+                        <FormLabel className="font-normal">Any Provider</FormLabel>
                       </FormItem>
                     </RadioGroup>
                   </FormItem>
@@ -417,9 +461,16 @@ export function Step1InputForm({
                 <FormItem>
                   <FormLabel>Est. Annual Day-to-Day Spend (R)</FormLabel>
                   <FormControl>
-                    <Input type="number" min={0} {...field} onChange={e => field.onChange(parseInt(e.target.value) || 0)} />
+                    <Input
+                      type="number"
+                      min={0}
+                      {...field}
+                      onChange={(e) => field.onChange(parseInt(e.target.value) || 0)}
+                    />
                   </FormControl>
-                  <div className="text-xs text-muted-foreground">GP, Meds, Optometry, Dentistry, etc.</div>
+                  <div className="text-xs text-muted-foreground">
+                    GP, Meds, Optometry, Dentistry, etc.
+                  </div>
                   <FormMessage />
                 </FormItem>
               )}
@@ -432,21 +483,25 @@ export function Step1InputForm({
                 <FormItem>
                   <FormLabel>Cashflow Sensitivity</FormLabel>
                   <div className="grid grid-cols-3 gap-2">
-                     {['Low', 'Medium', 'High'].map((opt) => (
-                       <div
-                         key={opt}
-                         onClick={() => field.onChange(opt)}
-                         className={`
+                    {['Low', 'Medium', 'High'].map((opt) => (
+                      <div
+                        key={opt}
+                        onClick={() => field.onChange(opt)}
+                        className={`
                            cursor-pointer rounded-md border p-3 text-center transition-all hover:bg-muted/50 text-sm
-                           ${field.value === opt 
-                             ? 'border-primary bg-primary/10 text-primary font-medium' 
-                             : 'border-input'}`}
-                       >
-                         {opt}
-                       </div>
-                     ))}
+                           ${
+                             field.value === opt
+                               ? 'border-primary bg-primary/10 text-primary font-medium'
+                               : 'border-input'
+                           }`}
+                      >
+                        {opt}
+                      </div>
+                    ))}
                   </div>
-                  <div className="text-xs text-muted-foreground mt-1">High = Prefers predictable monthly premiums over ad-hoc bills</div>
+                  <div className="text-xs text-muted-foreground mt-1">
+                    High = Prefers predictable monthly premiums over ad-hoc bills
+                  </div>
                 </FormItem>
               )}
             />
@@ -505,10 +560,7 @@ export function Step1InputForm({
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Current Hospital Tariff</FormLabel>
-                    <Select 
-                      onValueChange={field.onChange} 
-                      value={field.value}
-                    >
+                    <Select onValueChange={field.onChange} value={field.value}>
                       <FormControl>
                         <SelectTrigger>
                           <SelectValue placeholder="Select tariff rate" />
@@ -534,11 +586,11 @@ export function Step1InputForm({
                   <FormItem>
                     <FormLabel>Total Monthly Premium (R)</FormLabel>
                     <FormControl>
-                      <Input 
-                        type="number" 
-                        min={0} 
-                        {...field} 
-                        onChange={e => field.onChange(parseFloat(e.target.value) || 0)} 
+                      <Input
+                        type="number"
+                        min={0}
+                        {...field}
+                        onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
                       />
                     </FormControl>
                     <FormMessage />
@@ -553,14 +605,16 @@ export function Step1InputForm({
                   <FormItem>
                     <FormLabel>Medical Savings Account (MSA)</FormLabel>
                     <FormControl>
-                      <Input 
-                        type="number" 
-                        min={0} 
-                        {...field} 
-                        onChange={e => field.onChange(parseFloat(e.target.value) || 0)} 
+                      <Input
+                        type="number"
+                        min={0}
+                        {...field}
+                        onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
                       />
                     </FormControl>
-                    <div className="text-xs text-muted-foreground">Monthly allocation or balance</div>
+                    <div className="text-xs text-muted-foreground">
+                      Monthly allocation or balance
+                    </div>
                     <FormMessage />
                   </FormItem>
                 )}
@@ -575,11 +629,11 @@ export function Step1InputForm({
                   <FormItem>
                     <FormLabel>Current Late Joiner Penalty (R)</FormLabel>
                     <FormControl>
-                      <Input 
-                        type="number" 
-                        min={0} 
-                        {...field} 
-                        onChange={e => field.onChange(parseFloat(e.target.value) || 0)} 
+                      <Input
+                        type="number"
+                        min={0}
+                        {...field}
+                        onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
                       />
                     </FormControl>
                     <FormMessage />
@@ -594,11 +648,11 @@ export function Step1InputForm({
                   <FormItem>
                     <FormLabel>Number of Dependents</FormLabel>
                     <FormControl>
-                      <Input 
-                        type="number" 
-                        min={0} 
-                        {...field} 
-                        onChange={e => field.onChange(parseInt(e.target.value) || 0)} 
+                      <Input
+                        type="number"
+                        min={0}
+                        {...field}
+                        onChange={(e) => field.onChange(parseInt(e.target.value) || 0)}
                       />
                     </FormControl>
                     <FormMessage />
@@ -624,9 +678,9 @@ export function Step1InputForm({
               <div className="text-sm space-y-1">
                 <p className="font-medium text-blue-900">What is Late Joiner Penalty?</p>
                 <p className="text-blue-800">
-                  LJP is a <strong>permanent monthly premium increase</strong> for individuals who join a medical aid after age 35 
-                  with gaps in prior South African medical scheme coverage. It ranges from <strong>5% to 75%</strong> based on 
-                  years without cover.
+                  LJP is a <strong>permanent monthly premium increase</strong> for individuals who
+                  join a medical aid after age 35 with gaps in prior South African medical scheme
+                  coverage. It ranges from <strong>5% to 75%</strong> based on years without cover.
                 </p>
               </div>
             </div>
@@ -640,7 +694,13 @@ export function Step1InputForm({
                   <FormItem>
                     <FormLabel>Current Age</FormLabel>
                     <FormControl>
-                      <Input type="number" min={0} max={120} {...field} onChange={e => field.onChange(parseInt(e.target.value) || 0)} />
+                      <Input
+                        type="number"
+                        min={0}
+                        max={120}
+                        {...field}
+                        onChange={(e) => field.onChange(parseInt(e.target.value) || 0)}
+                      />
                     </FormControl>
                     <div className="text-xs text-muted-foreground">Client's current age</div>
                     <FormMessage />
@@ -655,11 +715,11 @@ export function Step1InputForm({
                   <FormItem>
                     <FormLabel>Years Without Medical Aid (After Age 35)</FormLabel>
                     <FormControl>
-                      <Input 
-                        type="number" 
-                        min={0} 
-                        {...field} 
-                        onChange={e => field.onChange(parseInt(e.target.value) || 0)}
+                      <Input
+                        type="number"
+                        min={0}
+                        {...field}
+                        onChange={(e) => field.onChange(parseInt(e.target.value) || 0)}
                         placeholder="0"
                       />
                     </FormControl>
@@ -705,7 +765,9 @@ export function Step1InputForm({
         <div className="bg-muted/50 p-4 rounded-lg flex gap-3 border">
           <Info className="w-5 h-5 text-primary flex-shrink-0" />
           <p className="text-sm text-muted-foreground">
-            This tool provides an indicative needs analysis. Final recommendations depend on scheme rules, underwriting, waiting periods, DSP/network arrangements, and client affordability.
+            This tool provides an indicative needs analysis. Final recommendations depend on scheme
+            rules, underwriting, waiting periods, DSP/network arrangements, and client
+            affordability.
           </p>
         </div>
 

@@ -25,19 +25,19 @@ export interface TaxPlanningInputs {
   numberOfDependants: number; // For medical credits if needed
 
   // B) Income Streams (Raw, Gross, Annual)
-  employmentIncome: number;    // Code 3601
-  variableIncome: number;      // Commission, bonuses (Code 3606, etc.)
-  businessIncome: number;      // Code 3605
-  rentalIncome: number;        // Code 4201
-  interestIncome: number;      // Code 4202 (Local)
-  dividendIncome: number;      // Code 4204 (Local) - taxed at 20%
-  foreignIncome: number;       // General foreign income
+  employmentIncome: number; // Code 3601
+  variableIncome: number; // Commission, bonuses (Code 3606, etc.)
+  businessIncome: number; // Code 3605
+  rentalIncome: number; // Code 4201
+  interestIncome: number; // Code 4202 (Local)
+  dividendIncome: number; // Code 4204 (Local) - taxed at 20%
+  foreignIncome: number; // General foreign income
   capitalGainsRealised: number; // Total gains for the year
 
   // C) Contributions & Allowances
-  raContributions: number;           // Current annual contribution
+  raContributions: number; // Current annual contribution
   tfsaContributionsLifetime: number; // Cumulative total
-  medicalSchemeMembers: number;      // Total members on scheme (Main + Dependant)
+  medicalSchemeMembers: number; // Total members on scheme (Main + Dependant)
 }
 
 // ==================== STEP 2: CALCULATION RESULTS ====================
@@ -45,36 +45,36 @@ export interface TaxPlanningInputs {
 export interface TaxCalculationResults {
   // 1. Income Base
   grossIncome: number; // Sum of taxable streams
-  
+
   // 2. Exemptions
   interestExemption: number;
   taxableInterest: number;
-  
+
   // 3. Deductions
   maxAllowedRADeduction: number; // The Cap
-  actualRADeduction: number;     // The lesser of Cap vs Contribution
-  taxableIncome: number;         // Gross - Deductions + Taxable Interest
-  
+  actualRADeduction: number; // The lesser of Cap vs Contribution
+  taxableIncome: number; // Gross - Deductions + Taxable Interest
+
   // 4. Tax Liability
   incomeTaxBeforeRebates: number;
   primaryRebate: number;
   secondaryRebate: number;
   tertiaryRebate: number;
-  medicalTaxCredits: number;      // Section 6A medical scheme fees credit (annual)
+  medicalTaxCredits: number; // Section 6A medical scheme fees credit (annual)
   netIncomeTax: number;
-  
+
   // 5. Special Taxes
   dividendTax: number;
   cgtPayable: number; // After exclusion and inclusion rate
-  
+
   // 6. Totals
   totalTaxLiability: number;
   effectiveTaxRate: number; // Total Tax / Gross Income
-  
+
   // 7. Gaps & Leakage (Math only)
-  raGap: number;            // Unused deduction capacity
+  raGap: number; // Unused deduction capacity
   raTaxSavingPotential: number; // If gap was filled
-  interestTaxLeakage: number;   // Tax paid on interest above exemption
+  interestTaxLeakage: number; // Tax paid on interest above exemption
   tfsaRemainingLifetime: number;
 }
 
@@ -125,15 +125,15 @@ export interface FinalTaxPlan {
 export interface TaxPlanningWizardState {
   currentStep: WizardStep;
   isPublishing: boolean;
-  
+
   // Data State
   inputs: TaxPlanningInputs;
   adjustments: AdjustmentLog[];
-  
+
   // Computed State
   baselineResults: TaxCalculationResults | null;
   adjustedResults: TaxCalculationResults | null;
-  
+
   // Output State
   recommendations: TaxRecommendation[];
 }

@@ -45,7 +45,8 @@ app.get('/portfolio/:clientId', requireAuth, async (c) => {
     // admin / super_admin roles may access any client's portfolio.
     const userId = c.get('userId') as string | undefined;
     const userRole = c.get('userRole') as string | undefined;
-    const isAdmin = userRole === 'admin' || userRole === 'super_admin' || userRole === 'super-admin';
+    const isAdmin =
+      userRole === 'admin' || userRole === 'super_admin' || userRole === 'super-admin';
 
     if (!isAdmin && userId !== clientId) {
       log.warn('Authorisation denied for portfolio access', { userId, clientId, userRole });
@@ -63,7 +64,10 @@ app.get('/portfolio/:clientId', requireAuth, async (c) => {
   } catch (error: unknown) {
     log.error('Error fetching portfolio summary:', error instanceof Error ? error.message : error);
     return c.json(
-      { success: false, error: `Failed to load portfolio summary: ${error instanceof Error ? error.message : 'Unknown error'}` },
+      {
+        success: false,
+        error: `Failed to load portfolio summary: ${error instanceof Error ? error.message : 'Unknown error'}`,
+      },
       500,
     );
   }
@@ -76,56 +80,64 @@ app.get('/portfolio/:clientId', requireAuth, async (c) => {
 /**
  * GET /comm-prefs — Load the current user's communication preferences
  */
-app.get('/comm-prefs', requireAuth, asyncHandler(async (c) => {
-  const userId = c.get('userId') as string | undefined;
-  if (!userId) return c.json({ error: 'Unauthorized' }, 401);
+app.get(
+  '/comm-prefs',
+  requireAuth,
+  asyncHandler(async (c) => {
+    const userId = c.get('userId') as string | undefined;
+    if (!userId) return c.json({ error: 'Unauthorized' }, 401);
 
-  const prefs = await kv.get(`comm_prefs:${userId}`);
-  return c.json({
-    success: true,
-    data: prefs || null,
-  });
-}));
+    const prefs = await kv.get(`comm_prefs:${userId}`);
+    return c.json({
+      success: true,
+      data: prefs || null,
+    });
+  }),
+);
 
 /**
  * PUT /comm-prefs — Save the current user's communication preferences
  */
-app.put('/comm-prefs', requireAuth, asyncHandler(async (c) => {
-  const userId = c.get('userId') as string | undefined;
-  if (!userId) return c.json({ error: 'Unauthorized' }, 401);
+app.put(
+  '/comm-prefs',
+  requireAuth,
+  asyncHandler(async (c) => {
+    const userId = c.get('userId') as string | undefined;
+    if (!userId) return c.json({ error: 'Unauthorized' }, 401);
 
-  const body = await c.req.json();
-  const { transactional, marketing, frequency } = body;
+    const body = await c.req.json();
+    const { transactional, marketing, frequency } = body;
 
-  // Validate shape
-  if (!transactional || typeof transactional !== 'object') {
-    return c.json({ error: 'transactional preferences object is required' }, 400);
-  }
-  if (!marketing || typeof marketing !== 'object') {
-    return c.json({ error: 'marketing preferences object is required' }, 400);
-  }
-  if (!['realtime', 'daily', 'weekly'].includes(frequency)) {
-    return c.json({ error: 'frequency must be realtime, daily, or weekly' }, 400);
-  }
+    // Validate shape
+    if (!transactional || typeof transactional !== 'object') {
+      return c.json({ error: 'transactional preferences object is required' }, 400);
+    }
+    if (!marketing || typeof marketing !== 'object') {
+      return c.json({ error: 'marketing preferences object is required' }, 400);
+    }
+    if (!['realtime', 'daily', 'weekly'].includes(frequency)) {
+      return c.json({ error: 'frequency must be realtime, daily, or weekly' }, 400);
+    }
 
-  const prefs = {
-    userId,
-    transactional: {
-      email: !!transactional.email,
-      sms: !!transactional.sms,
-    },
-    marketing: {
-      email: !!marketing.email,
-      sms: !!marketing.sms,
-    },
-    frequency,
-    updatedAt: new Date().toISOString(),
-  };
+    const prefs = {
+      userId,
+      transactional: {
+        email: !!transactional.email,
+        sms: !!transactional.sms,
+      },
+      marketing: {
+        email: !!marketing.email,
+        sms: !!marketing.sms,
+      },
+      frequency,
+      updatedAt: new Date().toISOString(),
+    };
 
-  await kv.set(`comm_prefs:${userId}`, prefs);
-  log.info('Communication preferences saved', { userId });
+    await kv.set(`comm_prefs:${userId}`, prefs);
+    log.info('Communication preferences saved', { userId });
 
-  return c.json({ success: true, data: prefs });
-}));
+    return c.json({ success: true, data: prefs });
+  }),
+);
 
 export default app;

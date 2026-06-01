@@ -3,15 +3,10 @@
  */
 
 // Provider type
-export type ProviderType = 
-  | 'insurance'
-  | 'investment'
-  | 'medical_aid'
-  | 'retirement'
-  | 'other';
+export type ProviderType = 'insurance' | 'investment' | 'medical_aid' | 'retirement' | 'other';
 
 // Product category
-export type ProductCategory = 
+export type ProductCategory =
   | 'life_insurance'
   | 'disability_insurance'
   | 'dread_disease'
@@ -23,11 +18,7 @@ export type ProductCategory =
   | 'other';
 
 // Integration type
-export type IntegrationType = 
-  | 'api'
-  | 'csv'
-  | 'manual'
-  | 'webhook';
+export type IntegrationType = 'api' | 'csv' | 'manual' | 'webhook';
 
 // Provider
 export interface Provider {

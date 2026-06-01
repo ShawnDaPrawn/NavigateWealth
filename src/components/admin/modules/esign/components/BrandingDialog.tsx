@@ -12,7 +12,13 @@
  */
 
 import { useEffect, useMemo, useState } from 'react';
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '../../../../ui/dialog';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from '../../../../ui/dialog';
 import { Label } from '../../../../ui/label';
 import { Input } from '../../../../ui/input';
 import { Button } from '../../../../ui/button';
@@ -69,7 +75,9 @@ export function BrandingDialog({ open, onOpenChange }: Props) {
         if (!cancelled) setLoading(false);
       }
     })();
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+    };
   }, [open]);
 
   const errors = useMemo(() => {
@@ -137,8 +145,8 @@ export function BrandingDialog({ open, onOpenChange }: Props) {
         <DialogHeader>
           <DialogTitle>Signer-page branding</DialogTitle>
           <DialogDescription>
-            Customise the logo, accent colour, and support email shown to signers receiving envelopes from your firm.
-            Leave a field blank to use the platform default.
+            Customise the logo, accent colour, and support email shown to signers receiving
+            envelopes from your firm. Leave a field blank to use the platform default.
           </DialogDescription>
         </DialogHeader>
 
@@ -157,7 +165,9 @@ export function BrandingDialog({ open, onOpenChange }: Props) {
                     src={logoUrl.trim()}
                     alt={`${previewName} logo`}
                     className="h-10 w-10 object-contain rounded"
-                    onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
+                    onError={(e) => {
+                      (e.target as HTMLImageElement).style.display = 'none';
+                    }}
                   />
                 ) : (
                   <div
@@ -255,11 +265,7 @@ export function BrandingDialog({ open, onOpenChange }: Props) {
             )}
 
             <div className="flex flex-col-reverse sm:flex-row sm:justify-between gap-2 pt-2 border-t border-border">
-              <Button
-                variant="ghost"
-                onClick={handleReset}
-                disabled={saving}
-              >
+              <Button variant="ghost" onClick={handleReset} disabled={saving}>
                 Revert to defaults
               </Button>
               <div className="flex gap-2">

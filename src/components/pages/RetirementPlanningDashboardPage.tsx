@@ -11,7 +11,10 @@ import React, { useState, useMemo } from 'react';
 import { useAuth } from '../auth/AuthContext';
 import { PiggyBank, Calculator, FileText, TrendingUp } from 'lucide-react';
 import type { ServicePageAction, ServicePageInsight } from '../layout/ServicePageLayout';
-import { DynamicServicePageWrapper, type SubCategoryConfig } from '../layout/DynamicServicePageWrapper';
+import {
+  DynamicServicePageWrapper,
+  type SubCategoryConfig,
+} from '../layout/DynamicServicePageWrapper';
 import { usePortfolioSummary } from './portfolio/hooks';
 import { formatCurrency } from '../../utils/currencyFormatter';
 import { ServiceRequestModal, SERVICE_REQUEST_CONFIGS } from '../modals/ServiceRequestModal';
@@ -23,7 +26,8 @@ const SUB_CATEGORIES: SubCategoryConfig[] = [
     categoryId: 'retirement_pre',
     title: 'Pre-Retirement Products',
     subtitle: 'Retirement annuities, pension funds, provident funds, and preservation funds',
-    emptyMessage: 'No pre-retirement products on record. Speak to your adviser about starting a retirement annuity.',
+    emptyMessage:
+      'No pre-retirement products on record. Speak to your adviser about starting a retirement annuity.',
   },
   {
     categoryId: 'retirement_post',
@@ -55,7 +59,8 @@ export function RetirementPlanningDashboardPage() {
       result.push({
         id: 'ret-no-fna',
         title: 'Complete Your Retirement Assessment',
-        description: 'A retirement needs analysis will project whether your current savings and contributions will meet your retirement income needs.',
+        description:
+          'A retirement needs analysis will project whether your current savings and contributions will meet your retirement income needs.',
         severity: 'high',
         onClick: scrollToPanel,
       });

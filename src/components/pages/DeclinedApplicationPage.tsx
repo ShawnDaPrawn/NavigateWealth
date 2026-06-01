@@ -73,7 +73,8 @@ export function DeclinedApplicationPage() {
             Application Not Approved
           </h1>
           <p className="text-gray-400 text-lg max-w-xl mx-auto leading-relaxed">
-            We're unable to proceed with your application at this time. Please review the details below.
+            We're unable to proceed with your application at this time. Please review the details
+            below.
           </p>
 
           {/* Trust bar */}
@@ -90,14 +91,13 @@ export function DeclinedApplicationPage() {
 
       {/* ── Main Content ───────────────────────────────────────────── */}
       <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 -mt-6 pb-16">
-
         {/* Status Alert */}
         <Alert className="mb-6 border-red-200 bg-red-50 shadow-sm">
           <AlertTriangle className="h-5 w-5 text-red-600" />
           <AlertDescription className="text-red-900 text-sm">
             <strong className="block mb-1">Application Status: Declined</strong>
-            Your application has been reviewed by our team and we're unable to approve it at this time.
-            Please see the details below and contact us if you have any questions.
+            Your application has been reviewed by our team and we're unable to approve it at this
+            time. Please see the details below and contact us if you have any questions.
           </AlertDescription>
         </Alert>
 

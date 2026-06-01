@@ -19,15 +19,24 @@ import { Input } from '../../ui/input';
 import { Label } from '../../ui/label';
 import { Textarea } from '../../ui/textarea';
 import { Switch } from '../../ui/switch';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '../../ui/select';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../ui/select';
 import { RadioGroup, RadioGroupItem } from '../../ui/radio-group';
-import { AlertCircle, ChevronRight, ChevronLeft, Loader2, Building2, Calculator, PiggyBank, Coins, TrendingUp, Lock, FileText, Upload, X, ExternalLink } from 'lucide-react';
+import {
+  AlertCircle,
+  ChevronRight,
+  ChevronLeft,
+  Loader2,
+  Building2,
+  Calculator,
+  PiggyBank,
+  Coins,
+  TrendingUp,
+  Lock,
+  FileText,
+  Upload,
+  X,
+  ExternalLink,
+} from 'lucide-react';
 import { toast } from 'sonner';
 import { projectId, publicAnonKey } from '../../../utils/supabase/info';
 import { createClient } from '../../../utils/supabase/client';
@@ -44,8 +53,8 @@ const PROVIDERS_API = `https://${projectId}.supabase.co/functions/v1/make-server
 const SUBTAB_TO_CATEGORY: Record<string, string> = {
   'risk-planning': 'risk_planning',
   'medical-aid': 'medical_aid',
-  'retirement': 'retirement_planning',
-  'investments': 'investments',
+  retirement: 'retirement_planning',
+  investments: 'investments',
   'employee-benefits': 'employee_benefits',
   'tax-planning': 'tax_planning',
   'estate-planning': 'estate_planning',
@@ -74,7 +83,12 @@ interface PolicyFormDialogProps {
   categorySubtabId: string; // e.g., 'risk-planning', 'medical-aid'
   categoryName: string; // e.g., 'Risk Planning', 'Medical Aid'
   clientId: string;
-  editingPolicy?: { id?: string; categoryId?: string; data?: Record<string, unknown>; [key: string]: unknown };
+  editingPolicy?: {
+    id?: string;
+    categoryId?: string;
+    data?: Record<string, unknown>;
+    [key: string]: unknown;
+  };
   onSave: () => void;
 }
 
@@ -129,9 +143,7 @@ function normalizePolicyDataForStructure(
 }
 
 function getApplyableExtractedFields(fields: Record<string, unknown>): Record<string, unknown> {
-  return Object.fromEntries(
-    Object.entries(fields).filter(([, value]) => hasPolicyValue(value)),
-  );
+  return Object.fromEntries(Object.entries(fields).filter(([, value]) => hasPolicyValue(value)));
 }
 
 export function PolicyFormDialog({
@@ -221,7 +233,9 @@ export function PolicyFormDialog({
     setIsLoading(true);
     try {
       const supabase = createClient();
-      const { data: { session } } = await supabase.auth.getSession();
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
       const token = session?.access_token || publicAnonKey;
 
       const res = await fetch(PROVIDERS_API, {
@@ -231,37 +245,50 @@ export function PolicyFormDialog({
       if (!res.ok) throw new Error('Failed to load providers');
 
       const data = await res.json();
-      
+
       // Map server response (snake_case) to component interface (camelCase)
       // Belt-and-suspenders: accept both legacy camelCase and canonical snake_case
       // fields, since KV data may predate the naming convention migration
-      const allProviders = (data.providers || []).map((p: { id: string; name: string; [key: string]: unknown }) => ({
-        id: p.id,
-        name: p.name,
-        description: p.description,
-        categoryIds: (p.category_ids as string[] | undefined) || (p.categoryIds as string[] | undefined) || [],
-        logoUrl: (p.logo_url as string | undefined) || (p.logoUrl as string | undefined),
-      }));
+      const allProviders = (data.providers || []).map(
+        (p: { id: string; name: string; [key: string]: unknown }) => ({
+          id: p.id,
+          name: p.name,
+          description: p.description,
+          categoryIds:
+            (p.category_ids as string[] | undefined) ||
+            (p.categoryIds as string[] | undefined) ||
+            [],
+          logoUrl: (p.logo_url as string | undefined) || (p.logoUrl as string | undefined),
+        }),
+      );
 
       // Filter providers that support this category
       // For retirement/investment subcategories, we also accept providers linked to the parent category
       const filteredProviders = allProviders.filter((p: Provider) => {
         if (p.categoryIds.includes(activeCategoryId)) return true;
-        
+
         // Fallback: If looking for sub-category, accept parent category providers
-        if ((activeCategoryId === 'retirement_pre' || activeCategoryId === 'retirement_post') && 
-            p.categoryIds.includes('retirement_planning')) {
+        if (
+          (activeCategoryId === 'retirement_pre' || activeCategoryId === 'retirement_post') &&
+          p.categoryIds.includes('retirement_planning')
+        ) {
           return true;
         }
-        if ((activeCategoryId === 'investments_voluntary' || activeCategoryId === 'investments_guaranteed') && 
-            p.categoryIds.includes('investments')) {
+        if (
+          (activeCategoryId === 'investments_voluntary' ||
+            activeCategoryId === 'investments_guaranteed') &&
+          p.categoryIds.includes('investments')
+        ) {
           return true;
         }
-        if ((activeCategoryId === 'employee_benefits_risk' || activeCategoryId === 'employee_benefits_retirement') && 
-            p.categoryIds.includes('employee_benefits')) {
+        if (
+          (activeCategoryId === 'employee_benefits_risk' ||
+            activeCategoryId === 'employee_benefits_retirement') &&
+          p.categoryIds.includes('employee_benefits')
+        ) {
           return true;
         }
-        
+
         return false;
       });
       setProviders(filteredProviders);
@@ -300,10 +327,15 @@ export function PolicyFormDialog({
       } else {
         setTableStructure([]);
         // Don't show error for new subcategories that might not have defaults yet
-        if (activeCategoryId !== 'retirement_pre' && activeCategoryId !== 'retirement_post' &&
-            activeCategoryId !== 'investments_voluntary' && activeCategoryId !== 'investments_guaranteed' &&
-            activeCategoryId !== 'employee_benefits_risk' && activeCategoryId !== 'employee_benefits_retirement') {
-           toast.error('Failed to load product structure');
+        if (
+          activeCategoryId !== 'retirement_pre' &&
+          activeCategoryId !== 'retirement_post' &&
+          activeCategoryId !== 'investments_voluntary' &&
+          activeCategoryId !== 'investments_guaranteed' &&
+          activeCategoryId !== 'employee_benefits_risk' &&
+          activeCategoryId !== 'employee_benefits_retirement'
+        ) {
+          toast.error('Failed to load product structure');
         }
       }
     } finally {
@@ -325,22 +357,29 @@ export function PolicyFormDialog({
     const updated: Record<string, unknown> = { ...data };
 
     const recalcForPrefix = (prefix: 'retirement' | 'invest') => {
-      const growthKey = prefix === 'invest' ? 'invest_assumptions_growth' : 'retirement_assumptions_growth';
-      const escalationKey = prefix === 'invest' ? 'invest_assumptions_escalation' : 'retirement_assumptions_escalation';
+      const growthKey =
+        prefix === 'invest' ? 'invest_assumptions_growth' : 'retirement_assumptions_growth';
+      const escalationKey =
+        prefix === 'invest' ? 'invest_assumptions_escalation' : 'retirement_assumptions_escalation';
       const maturityKey = prefix === 'invest' ? 'invest_maturity_date' : 'retirement_maturity_date';
-      const contributionKey = prefix === 'invest' ? 'invest_monthly_contribution' : 'retirement_monthly_contribution';
-      const maturityValueKey = prefix === 'invest' ? 'invest_maturity_value' : 'retirement_estimated_maturity_value';
+      const contributionKey =
+        prefix === 'invest' ? 'invest_monthly_contribution' : 'retirement_monthly_contribution';
+      const maturityValueKey =
+        prefix === 'invest' ? 'invest_maturity_value' : 'retirement_estimated_maturity_value';
 
-      const growthField = tableStructure.find(f => f.keyId === growthKey);
-      const escalationField = tableStructure.find(f => f.keyId === escalationKey);
+      const growthField = tableStructure.find((f) => f.keyId === growthKey);
+      const escalationField = tableStructure.find((f) => f.keyId === escalationKey);
       // Pre-retirement schemas often use retirement_fund_value; key manager also lists retirement_current_value.
       const currentValueField =
         prefix === 'invest'
           ? findFieldByKeyIds(tableStructure, ['invest_current_value'])
-          : findFieldByKeyIds(tableStructure, ['retirement_current_value', 'retirement_fund_value']);
-      const maturityDateField = tableStructure.find(f => f.keyId === maturityKey);
-      const contributionField = tableStructure.find(f => f.keyId === contributionKey);
-      const maturityValueField = tableStructure.find(f => f.keyId === maturityValueKey);
+          : findFieldByKeyIds(tableStructure, [
+              'retirement_current_value',
+              'retirement_fund_value',
+            ]);
+      const maturityDateField = tableStructure.find((f) => f.keyId === maturityKey);
+      const contributionField = tableStructure.find((f) => f.keyId === contributionKey);
+      const maturityValueField = tableStructure.find((f) => f.keyId === maturityValueKey);
 
       if (!maturityValueField || !maturityDateField) return;
 
@@ -376,7 +415,7 @@ export function PolicyFormDialog({
         escalationNum,
         new Date(),
         maturityDate,
-        calcOptions
+        calcOptions,
       );
 
       updated[maturityValueField.id] = result;
@@ -392,9 +431,9 @@ export function PolicyFormDialog({
     () =>
       tableStructure.some(
         (f) =>
-          f.keyId === 'retirement_estimated_maturity_value' || f.keyId === 'invest_maturity_value'
+          f.keyId === 'retirement_estimated_maturity_value' || f.keyId === 'invest_maturity_value',
       ),
-    [tableStructure]
+    [tableStructure],
   );
 
   const handleFieldChange = (fieldId: string, value: string | number | boolean) => {
@@ -458,7 +497,9 @@ export function PolicyFormDialog({
       };
 
       const supabase = createClient();
-      const { data: { session } } = await supabase.auth.getSession();
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
       const token = session?.access_token || publicAnonKey;
 
       const res = await fetch(`${API_BASE}/policies`, {
@@ -500,26 +541,30 @@ export function PolicyFormDialog({
   // Assumptions Tool Component
   const AssumptionsTool = ({ field }: { field: ProductField }) => {
     const [open, setOpen] = useState(false);
-    
+
     // Determine context (Retirement vs Investment)
     const isInvestment = field.keyId === 'invest_maturity_value';
     const prefix = isInvestment ? 'invest' : 'retirement';
 
     // Key mappings
     const growthKey = isInvestment ? 'invest_assumptions_growth' : 'retirement_assumptions_growth';
-    const escalationKey = isInvestment ? 'invest_assumptions_escalation' : 'retirement_assumptions_escalation';
+    const escalationKey = isInvestment
+      ? 'invest_assumptions_escalation'
+      : 'retirement_assumptions_escalation';
     // Note: For voluntary investments, keys are mapped to invest_voluntary category but IDs remain invest_...
     const maturityKey = isInvestment ? 'invest_maturity_date' : 'retirement_maturity_date';
-    const contributionKey = isInvestment ? 'invest_monthly_contribution' : 'retirement_monthly_contribution';
-    
+    const contributionKey = isInvestment
+      ? 'invest_monthly_contribution'
+      : 'retirement_monthly_contribution';
+
     // Find related fields by keyId
-    const growthField = tableStructure.find(f => f.keyId === growthKey);
-    const escalationField = tableStructure.find(f => f.keyId === escalationKey);
+    const growthField = tableStructure.find((f) => f.keyId === growthKey);
+    const escalationField = tableStructure.find((f) => f.keyId === escalationKey);
     const currentValueField = isInvestment
       ? findFieldByKeyIds(tableStructure, ['invest_current_value'])
       : findFieldByKeyIds(tableStructure, ['retirement_current_value', 'retirement_fund_value']);
-    const maturityDateField = tableStructure.find(f => f.keyId === maturityKey);
-    const contributionField = tableStructure.find(f => f.keyId === contributionKey);
+    const maturityDateField = tableStructure.find((f) => f.keyId === maturityKey);
+    const contributionField = tableStructure.find((f) => f.keyId === contributionKey);
     const inceptionKey = isInvestment ? 'invest_date_of_inception' : 'retirement_date_of_inception';
     const inceptionField = tableStructure.find((f) => f.keyId === inceptionKey);
 
@@ -528,9 +573,11 @@ export function PolicyFormDialog({
     const growthNum = Number.isFinite(growth) ? growth : 10;
     const escalation = escalationField ? Number(formData[escalationField.id] ?? 0) : 0;
     const escalationNum = Number.isFinite(escalation) ? escalation : 0;
-    const currentValue = currentValueField ? (Number(formData[currentValueField.id]) || 0) : 0;
-    const contribution = contributionField ? (Number(formData[contributionField.id]) || 0) : 0;
-    const maturityDate = maturityDateField ? (formData[maturityDateField.id] as string | number | Date | null) : null;
+    const currentValue = currentValueField ? Number(formData[currentValueField.id]) || 0 : 0;
+    const contribution = contributionField ? Number(formData[contributionField.id]) || 0 : 0;
+    const maturityDate = maturityDateField
+      ? (formData[maturityDateField.id] as string | number | Date | null)
+      : null;
     const inceptionRaw = inceptionField ? formData[inceptionField.id] : null;
 
     // Temporary state for the modal
@@ -570,7 +617,7 @@ export function PolicyFormDialog({
         Number(tempEscalation),
         new Date(),
         new Date(maturityDate),
-        maturityCalcOptions
+        maturityCalcOptions,
       );
 
       // Update estimated value
@@ -581,8 +628,8 @@ export function PolicyFormDialog({
     return (
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogTrigger asChild>
-          <Button 
-            variant="outline" 
+          <Button
+            variant="outline"
             size="sm"
             className="h-6 text-xs px-2 border-dashed border-purple-300 text-purple-700 hover:bg-purple-50"
           >
@@ -594,8 +641,9 @@ export function PolicyFormDialog({
           <DialogHeader>
             <DialogTitle>{isInvestment ? 'Investment' : 'Retirement'} Assumptions</DialogTitle>
             <DialogDescription>
-              Growth and premium escalation (0% = none). With a date of inception captured, escalation
-              applies on each policy anniversary; otherwise it applies every 12 months from today.
+              Growth and premium escalation (0% = none). With a date of inception captured,
+              escalation applies on each policy anniversary; otherwise it applies every 12 months
+              from today.
             </DialogDescription>
           </DialogHeader>
           <div className="grid gap-4 py-4">
@@ -608,46 +656,58 @@ export function PolicyFormDialog({
                 <span className="text-gray-500">Monthly Contribution:</span>
                 <span className="font-medium">{formatCurrency(contribution)}</span>
               </div>
-               <div className="flex justify-between">
+              <div className="flex justify-between">
                 <span className="text-gray-500">Maturity Date:</span>
-                <span className="font-medium">{maturityDate ? new Date(maturityDate).toLocaleDateString() : '-'}</span>
+                <span className="font-medium">
+                  {maturityDate ? new Date(maturityDate).toLocaleDateString() : '-'}
+                </span>
               </div>
               <div className="flex justify-between">
                 <span className="text-gray-500">Inception (anniversary):</span>
                 <span className="font-medium">
-                  {inceptionRaw ? new Date(inceptionRaw as string | number | Date).toLocaleDateString() : '—'}
+                  {inceptionRaw
+                    ? new Date(inceptionRaw as string | number | Date).toLocaleDateString()
+                    : '—'}
                 </span>
               </div>
             </div>
 
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="growth" className="text-xs">Annual Growth Rate (%)</Label>
+                <Label htmlFor="growth" className="text-xs">
+                  Annual Growth Rate (%)
+                </Label>
                 <div className="relative">
-                  <Input 
-                    id="growth" 
-                    type="number" 
+                  <Input
+                    id="growth"
+                    type="number"
                     value={tempGrowth}
                     onChange={(e) => setTempGrowth(Number(e.target.value))}
                     className="h-9 pr-8"
                   />
-                  <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 text-xs">%</span>
+                  <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 text-xs">
+                    %
+                  </span>
                 </div>
               </div>
               <div className="space-y-2">
                 <Label htmlFor="escalation" className="text-xs">
                   Annual Premium Escalation (%)
-                  <span className="block font-normal text-muted-foreground mt-0.5">Use 0 if the premium does not escalate</span>
+                  <span className="block font-normal text-muted-foreground mt-0.5">
+                    Use 0 if the premium does not escalate
+                  </span>
                 </Label>
                 <div className="relative">
-                  <Input 
-                    id="escalation" 
-                    type="number" 
+                  <Input
+                    id="escalation"
+                    type="number"
                     value={tempEscalation}
                     onChange={(e) => setTempEscalation(Number(e.target.value))}
                     className="h-9 pr-8"
                   />
-                  <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 text-xs">%</span>
+                  <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 text-xs">
+                    %
+                  </span>
                 </div>
               </div>
             </div>
@@ -717,9 +777,10 @@ export function PolicyFormDialog({
                 {field.name}
                 {field.required && <span className="text-red-500 ml-1">*</span>}
               </Label>
-              
+
               {/* Assumptions + explicit recalculate (drivers may use legacy keyIds, e.g. retirement_fund_value) */}
-              {(field.keyId === 'retirement_estimated_maturity_value' || field.keyId === 'invest_maturity_value') && (
+              {(field.keyId === 'retirement_estimated_maturity_value' ||
+                field.keyId === 'invest_maturity_value') && (
                 <div className="flex items-center gap-1.5 shrink-0">
                   <AssumptionsTool field={field} />
                   <Button
@@ -734,7 +795,7 @@ export function PolicyFormDialog({
                 </div>
               )}
             </div>
-            
+
             <CurrencyInputField
               id={field.id}
               value={value}
@@ -902,8 +963,8 @@ export function PolicyFormDialog({
             {step === 'subcategory'
               ? 'Select the retirement phase'
               : step === 'provider'
-              ? 'Select a provider from your configured providers'
-              : 'Enter the policy details based on your product structure'}
+                ? 'Select a provider from your configured providers'
+                : 'Enter the policy details based on your product structure'}
           </DialogDescription>
         </DialogHeader>
 
@@ -1081,11 +1142,7 @@ export function PolicyFormDialog({
                     </p>
                   </div>
                   {!editingPolicy && (
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => setStep('provider')}
-                    >
+                    <Button variant="ghost" size="sm" onClick={() => setStep('provider')}>
                       <ChevronLeft className="h-4 w-4 mr-1" />
                       Change
                     </Button>
@@ -1112,8 +1169,16 @@ export function PolicyFormDialog({
                       <PolicyDocumentUpload
                         policyId={editingPolicy.id}
                         clientId={clientId}
-                        existingDocument={(editingPolicy.document ?? null) as React.ComponentProps<typeof PolicyDocumentUpload>['existingDocument']}
-                        existingExtraction={(editingPolicy.extraction ?? null) as React.ComponentProps<typeof PolicyDocumentUpload>['existingExtraction']}
+                        existingDocument={
+                          (editingPolicy.document ?? null) as React.ComponentProps<
+                            typeof PolicyDocumentUpload
+                          >['existingDocument']
+                        }
+                        existingExtraction={
+                          (editingPolicy.extraction ?? null) as React.ComponentProps<
+                            typeof PolicyDocumentUpload
+                          >['existingExtraction']
+                        }
                         existingExtractionHistory={
                           Array.isArray(editingPolicy.extractionHistory)
                             ? editingPolicy.extractionHistory
@@ -1137,7 +1202,7 @@ export function PolicyFormDialog({
                                 tableStructure,
                                 (editingPolicy.data as Record<string, unknown> | undefined) || {},
                               ),
-                            )
+                            ),
                           );
                         }}
                       />

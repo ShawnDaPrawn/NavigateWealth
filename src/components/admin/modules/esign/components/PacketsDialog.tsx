@@ -52,12 +52,7 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { esignApi } from '../api';
-import type {
-  EsignTemplateRecord,
-  PacketRecord,
-  PacketRunRecord,
-  PacketStep,
-} from '../types';
+import type { EsignTemplateRecord, PacketRecord, PacketRunRecord, PacketStep } from '../types';
 import { logger } from '../../../../../utils/logger';
 
 interface PacketsDialogProps {
@@ -83,9 +78,9 @@ export function PacketsDialog({ open, onOpenChange, onCompleted }: PacketsDialog
   // run-start state
   const [startingPacket, setStartingPacket] = useState<PacketRecord | null>(null);
   const [stepFiles, setStepFiles] = useState<Array<File | null>>([]);
-  const [recipients, setRecipients] = useState<Array<{ name: string; email: string; role: string }>>([
-    { name: '', email: '', role: 'Signer' },
-  ]);
+  const [recipients, setRecipients] = useState<
+    Array<{ name: string; email: string; role: string }>
+  >([{ name: '', email: '', role: 'Signer' }]);
   const [runMessage, setRunMessage] = useState('');
   const [runExpiry, setRunExpiry] = useState(30);
   const [starting, setStarting] = useState(false);
@@ -211,7 +206,10 @@ export function PacketsDialog({ open, onOpenChange, onCompleted }: PacketsDialog
   const handleRemoveRecipient = (idx: number) =>
     setRecipients((prev) => prev.filter((_, i) => i !== idx));
 
-  const handleRecipientChange = (idx: number, patch: Partial<{ name: string; email: string; role: string }>) => {
+  const handleRecipientChange = (
+    idx: number,
+    patch: Partial<{ name: string; email: string; role: string }>,
+  ) => {
     setRecipients((prev) => prev.map((r, i) => (i === idx ? { ...r, ...patch } : r)));
   };
 
@@ -252,7 +250,9 @@ export function PacketsDialog({ open, onOpenChange, onCompleted }: PacketsDialog
       if (result.warning) {
         toast.warning(`Run started but step 1 failed: ${result.warning}`);
       } else {
-        toast.success(`Packet run started. First envelope: ${result.firstEnvelopeId?.slice(0, 8)}…`);
+        toast.success(
+          `Packet run started. First envelope: ${result.firstEnvelopeId?.slice(0, 8)}…`,
+        );
       }
 
       setStartingPacket(null);
@@ -291,8 +291,12 @@ export function PacketsDialog({ open, onOpenChange, onCompleted }: PacketsDialog
           <Label className="text-xs">Documents (one per step)</Label>
           {startingPacket.steps.map((step, idx) => (
             <div key={idx} className="flex items-center gap-2 text-xs">
-              <Badge variant="outline" className="shrink-0">Step {idx + 1}</Badge>
-              <span className="font-medium flex-1 truncate">{step.label || templateById.get(step.templateId)?.name || step.templateId}</span>
+              <Badge variant="outline" className="shrink-0">
+                Step {idx + 1}
+              </Badge>
+              <span className="font-medium flex-1 truncate">
+                {step.label || templateById.get(step.templateId)?.name || step.templateId}
+              </span>
               <Input
                 type="file"
                 accept="application/pdf"
@@ -365,7 +369,11 @@ export function PacketsDialog({ open, onOpenChange, onCompleted }: PacketsDialog
         </div>
 
         <div className="flex justify-end">
-          <Button onClick={handleStartRun} disabled={starting} className="bg-purple-600 hover:bg-purple-700">
+          <Button
+            onClick={handleStartRun}
+            disabled={starting}
+            className="bg-purple-600 hover:bg-purple-700"
+          >
             {starting ? (
               <>
                 <Loader2 className="h-3.5 w-3.5 animate-spin mr-2" /> Starting…
@@ -390,11 +398,16 @@ export function PacketsDialog({ open, onOpenChange, onCompleted }: PacketsDialog
             Packet workflows
           </DialogTitle>
           <DialogDescription>
-            Chain templates so envelope <strong>N+1</strong> auto-sends as soon as envelope <strong>N</strong> is signed.
+            Chain templates so envelope <strong>N+1</strong> auto-sends as soon as envelope{' '}
+            <strong>N</strong> is signed.
           </DialogDescription>
         </DialogHeader>
 
-        <Tabs value={tab} onValueChange={(v) => setTab(v as typeof tab)} className="flex-1 flex flex-col min-h-0">
+        <Tabs
+          value={tab}
+          onValueChange={(v) => setTab(v as typeof tab)}
+          className="flex-1 flex flex-col min-h-0"
+        >
           <TabsList className="grid grid-cols-3">
             <TabsTrigger value="library">Library</TabsTrigger>
             <TabsTrigger value="author">Author</TabsTrigger>
@@ -405,9 +418,7 @@ export function PacketsDialog({ open, onOpenChange, onCompleted }: PacketsDialog
           <TabsContent value="library" className="flex-1 min-h-0 mt-2">
             <ScrollArea className="h-full pr-2">
               <div className="space-y-2 py-2">
-                {loading && (
-                  <p className="text-xs text-muted-foreground">Loading…</p>
-                )}
+                {loading && <p className="text-xs text-muted-foreground">Loading…</p>}
                 {!loading && packets.length === 0 && (
                   <div className="border rounded-md bg-gray-50 p-3 text-sm text-muted-foreground">
                     No packets yet. Switch to the <strong>Author</strong> tab to create one.
@@ -462,11 +473,19 @@ export function PacketsDialog({ open, onOpenChange, onCompleted }: PacketsDialog
                 <div className="grid grid-cols-2 gap-2">
                   <div>
                     <Label className="text-xs">Packet name</Label>
-                    <Input value={authorName} onChange={(e) => setAuthorName(e.target.value)} placeholder="Onboarding chain" />
+                    <Input
+                      value={authorName}
+                      onChange={(e) => setAuthorName(e.target.value)}
+                      placeholder="Onboarding chain"
+                    />
                   </div>
                   <div>
                     <Label className="text-xs">Description (optional)</Label>
-                    <Input value={authorDescription} onChange={(e) => setAuthorDescription(e.target.value)} placeholder="Engagement → FNA → ROA" />
+                    <Input
+                      value={authorDescription}
+                      onChange={(e) => setAuthorDescription(e.target.value)}
+                      placeholder="Engagement → FNA → ROA"
+                    />
                   </div>
                 </div>
 
@@ -474,12 +493,19 @@ export function PacketsDialog({ open, onOpenChange, onCompleted }: PacketsDialog
                   <Label className="text-xs">Add step from template</Label>
                   <Select onValueChange={handleAddStep} value="">
                     <SelectTrigger>
-                      <SelectValue placeholder={templates.length === 0 ? 'No templates yet — create one first' : 'Pick a template to append'} />
+                      <SelectValue
+                        placeholder={
+                          templates.length === 0
+                            ? 'No templates yet — create one first'
+                            : 'Pick a template to append'
+                        }
+                      />
                     </SelectTrigger>
                     <SelectContent>
                       {templates.map((t) => (
                         <SelectItem key={t.id} value={t.id}>
-                          {t.name} <span className="text-muted-foreground ml-1">v{t.version ?? 1}</span>
+                          {t.name}{' '}
+                          <span className="text-muted-foreground ml-1">v{t.version ?? 1}</span>
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -489,20 +515,34 @@ export function PacketsDialog({ open, onOpenChange, onCompleted }: PacketsDialog
                 <div className="space-y-1">
                   {authorSteps.length === 0 ? (
                     <p className="text-xs text-muted-foreground border rounded-md bg-gray-50 p-3">
-                      Pick templates above to build your chain. Order matters — step 2 is sent the moment step 1 completes.
+                      Pick templates above to build your chain. Order matters — step 2 is sent the
+                      moment step 1 completes.
                     </p>
                   ) : (
                     authorSteps.map((s, idx) => (
-                      <div key={idx} className="flex items-center gap-2 border rounded-md p-2 text-xs">
+                      <div
+                        key={idx}
+                        className="flex items-center gap-2 border rounded-md p-2 text-xs"
+                      >
                         <Badge variant="outline">Step {idx + 1}</Badge>
                         <span className="flex-1 truncate font-medium">
                           {s.label || templateById.get(s.templateId)?.name}
                           <span className="text-muted-foreground ml-1">v{s.templateVersion}</span>
                         </span>
-                        <Button size="icon" variant="ghost" onClick={() => handleMoveStep(idx, -1)} disabled={idx === 0}>
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          onClick={() => handleMoveStep(idx, -1)}
+                          disabled={idx === 0}
+                        >
                           <ArrowUpDown className="h-3.5 w-3.5 rotate-180" />
                         </Button>
-                        <Button size="icon" variant="ghost" onClick={() => handleMoveStep(idx, 1)} disabled={idx === authorSteps.length - 1}>
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          onClick={() => handleMoveStep(idx, 1)}
+                          disabled={idx === authorSteps.length - 1}
+                        >
                           <ArrowUpDown className="h-3.5 w-3.5" />
                         </Button>
                         <Button size="icon" variant="ghost" onClick={() => handleRemoveStep(idx)}>
@@ -514,7 +554,10 @@ export function PacketsDialog({ open, onOpenChange, onCompleted }: PacketsDialog
                 </div>
 
                 <div className="flex justify-end">
-                  <Button onClick={handleCreatePacket} className="bg-purple-600 hover:bg-purple-700">
+                  <Button
+                    onClick={handleCreatePacket}
+                    className="bg-purple-600 hover:bg-purple-700"
+                  >
                     <Plus className="h-3.5 w-3.5 mr-2" /> Save packet
                   </Button>
                 </div>
@@ -526,9 +569,7 @@ export function PacketsDialog({ open, onOpenChange, onCompleted }: PacketsDialog
           <TabsContent value="runs" className="flex-1 min-h-0 mt-2">
             <ScrollArea className="h-full pr-2">
               <div className="space-y-2 py-2">
-                {loading && (
-                  <p className="text-xs text-muted-foreground">Loading…</p>
-                )}
+                {loading && <p className="text-xs text-muted-foreground">Loading…</p>}
                 {!loading && runs.length === 0 && (
                   <div className="border rounded-md bg-gray-50 p-3 text-sm text-muted-foreground">
                     No runs yet — start one from the Library tab.
@@ -545,17 +586,21 @@ export function PacketsDialog({ open, onOpenChange, onCompleted }: PacketsDialog
                         <Badge
                           variant="outline"
                           className={`capitalize text-[10px] ${
-                            run.status === 'completed' ? 'text-emerald-700 border-emerald-300' :
-                            run.status === 'failed' ? 'text-red-700 border-red-300' :
-                            run.status === 'cancelled' ? 'text-gray-500' :
-                            'text-purple-700 border-purple-300'
+                            run.status === 'completed'
+                              ? 'text-emerald-700 border-emerald-300'
+                              : run.status === 'failed'
+                                ? 'text-red-700 border-red-300'
+                                : run.status === 'cancelled'
+                                  ? 'text-gray-500'
+                                  : 'text-purple-700 border-purple-300'
                           }`}
                         >
                           {run.status}
                         </Badge>
                       </div>
                       <p className="text-[11px] text-muted-foreground">
-                        Started {new Date(run.created_at).toLocaleString()} · {run.recipients.map((r) => r.email).join(', ')}
+                        Started {new Date(run.created_at).toLocaleString()} ·{' '}
+                        {run.recipients.map((r) => r.email).join(', ')}
                       </p>
                       <div className="flex flex-wrap gap-1">
                         {run.steps.map((s) => (
@@ -563,16 +608,22 @@ export function PacketsDialog({ open, onOpenChange, onCompleted }: PacketsDialog
                             key={s.step_index}
                             variant="outline"
                             className={`text-[10px] flex items-center gap-1 ${
-                              s.status === 'completed' ? 'text-emerald-700 border-emerald-300' :
-                              s.status === 'failed' ? 'text-red-700 border-red-300' :
-                              s.status === 'sent' ? 'text-purple-700 border-purple-300' :
-                              s.status === 'skipped' ? 'text-gray-400' :
-                              'text-gray-500'
+                              s.status === 'completed'
+                                ? 'text-emerald-700 border-emerald-300'
+                                : s.status === 'failed'
+                                  ? 'text-red-700 border-red-300'
+                                  : s.status === 'sent'
+                                    ? 'text-purple-700 border-purple-300'
+                                    : s.status === 'skipped'
+                                      ? 'text-gray-400'
+                                      : 'text-gray-500'
                             }`}
                           >
                             {s.status === 'completed' && <CheckCircle2 className="h-2.5 w-2.5" />}
                             {s.status === 'failed' && <AlertCircle className="h-2.5 w-2.5" />}
-                            {s.status === 'sent' && <Loader2 className="h-2.5 w-2.5 animate-spin" />}
+                            {s.status === 'sent' && (
+                              <Loader2 className="h-2.5 w-2.5 animate-spin" />
+                            )}
                             Step {s.step_index + 1}: {s.status}
                           </Badge>
                         ))}
@@ -583,7 +634,12 @@ export function PacketsDialog({ open, onOpenChange, onCompleted }: PacketsDialog
                             variant="ghost"
                             size="sm"
                             onClick={async () => {
-                              if (!confirm('Cancel this packet run? In-flight envelopes are unaffected.')) return;
+                              if (
+                                !confirm(
+                                  'Cancel this packet run? In-flight envelopes are unaffected.',
+                                )
+                              )
+                                return;
                               try {
                                 await esignApi.cancelPacketRun(run.id);
                                 toast.success('Run cancelled.');
@@ -607,7 +663,9 @@ export function PacketsDialog({ open, onOpenChange, onCompleted }: PacketsDialog
         </Tabs>
 
         <DialogFooter className="border-t pt-3">
-          <Button variant="ghost" onClick={() => onOpenChange(false)}>Close</Button>
+          <Button variant="ghost" onClick={() => onOpenChange(false)}>
+            Close
+          </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>

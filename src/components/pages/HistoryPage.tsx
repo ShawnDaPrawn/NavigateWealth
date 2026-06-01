@@ -11,13 +11,7 @@ import { BrandSectionLoader } from '../ui/brand-loader';
 import { Input } from '../ui/input';
 import { Label } from '../ui/label';
 import { Textarea } from '../ui/textarea';
-import { 
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '../ui/select';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
 import {
   Dialog,
   DialogContent,
@@ -27,7 +21,7 @@ import {
   DialogTrigger,
 } from '../ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../ui/tabs';
-import { 
+import {
   History,
   Search,
   Eye,
@@ -94,8 +88,8 @@ export function HistoryPage() {
         const response = await fetch(
           `https://${projectId}.supabase.co/functions/v1/make-server-91ed8379/documents/${userId}`,
           {
-            headers: { 'Authorization': `Bearer ${publicAnonKey}` }
-          }
+            headers: { Authorization: `Bearer ${publicAnonKey}` },
+          },
         );
 
         if (!response.ok) {
@@ -103,23 +97,38 @@ export function HistoryPage() {
         }
 
         const data = await response.json();
-        
+
         // Transform API data to match HistoryItem interface
-        const transformedItems: HistoryItem[] = data.documents.map((doc: { id: string; type: string; title: string; uploadDate: string; productCategory: string; policyNumber?: string; status: string; isFavourite: boolean; fileName?: string; fileSize?: number; url?: string; description?: string }) => ({
-          id: doc.id,
-          type: doc.type,
-          title: doc.title,
-          uploadDate: new Date(doc.uploadDate),
-          productCategory: doc.productCategory as HistoryItem['productCategory'],
-          policyNumber: doc.policyNumber || '',
-          status: doc.status,
-          isFavourite: doc.isFavourite,
-          fileName: doc.fileName,
-          fileSize: doc.fileSize ? `${(doc.fileSize / 1024 / 1024).toFixed(2)} MB` : undefined,
-          url: doc.url,
-          description: doc.description
-        }));
-        
+        const transformedItems: HistoryItem[] = data.documents.map(
+          (doc: {
+            id: string;
+            type: string;
+            title: string;
+            uploadDate: string;
+            productCategory: string;
+            policyNumber?: string;
+            status: string;
+            isFavourite: boolean;
+            fileName?: string;
+            fileSize?: number;
+            url?: string;
+            description?: string;
+          }) => ({
+            id: doc.id,
+            type: doc.type,
+            title: doc.title,
+            uploadDate: new Date(doc.uploadDate),
+            productCategory: doc.productCategory as HistoryItem['productCategory'],
+            policyNumber: doc.policyNumber || '',
+            status: doc.status,
+            isFavourite: doc.isFavourite,
+            fileName: doc.fileName,
+            fileSize: doc.fileSize ? `${(doc.fileSize / 1024 / 1024).toFixed(2)} MB` : undefined,
+            url: doc.url,
+            description: doc.description,
+          }),
+        );
+
         setItems(transformedItems);
       } catch (error: unknown) {
         toast.error(getUserErrorMessage(error));
@@ -138,33 +147,34 @@ export function HistoryPage() {
     // Search filter
     if (searchQuery) {
       const query = searchQuery.toLowerCase();
-      filtered = filtered.filter(item => 
-        item.title.toLowerCase().includes(query) ||
-        (item.fileName && item.fileName.toLowerCase().includes(query)) ||
-        (item.url && item.url.toLowerCase().includes(query)) ||
-        (item.description && item.description.toLowerCase().includes(query)) ||
-        item.policyNumber.toLowerCase().includes(query)
+      filtered = filtered.filter(
+        (item) =>
+          item.title.toLowerCase().includes(query) ||
+          (item.fileName && item.fileName.toLowerCase().includes(query)) ||
+          (item.url && item.url.toLowerCase().includes(query)) ||
+          (item.description && item.description.toLowerCase().includes(query)) ||
+          item.policyNumber.toLowerCase().includes(query),
       );
     }
 
     // Category filter
     if (selectedCategory !== 'all') {
-      filtered = filtered.filter(item => item.productCategory === selectedCategory);
+      filtered = filtered.filter((item) => item.productCategory === selectedCategory);
     }
 
     // Date range filter
     if (dateRange !== 'all') {
       const now = new Date();
       const ranges: { [key: string]: number } = {
-        'week': 7,
-        'month': 30,
+        week: 7,
+        month: 30,
         '3months': 90,
-        'year': 365
+        year: 365,
       };
       const days = ranges[dateRange];
       if (days) {
-        const cutoffDate = new Date(now.getTime() - (days * 24 * 60 * 60 * 1000));
-        filtered = filtered.filter(item => item.uploadDate >= cutoffDate);
+        const cutoffDate = new Date(now.getTime() - days * 24 * 60 * 60 * 1000);
+        filtered = filtered.filter((item) => item.uploadDate >= cutoffDate);
       }
     }
 
@@ -175,7 +185,7 @@ export function HistoryPage() {
     if (!user?.id) return;
     const userId = user.id; // Store userId to avoid null reference issues
 
-    const item = items.find(i => i.id === id);
+    const item = items.find((i) => i.id === id);
     if (!item) return;
 
     try {
@@ -184,18 +194,16 @@ export function HistoryPage() {
         {
           method: 'PATCH',
           headers: {
-            'Authorization': `Bearer ${publicAnonKey}`,
-            'Content-Type': 'application/json'
+            Authorization: `Bearer ${publicAnonKey}`,
+            'Content-Type': 'application/json',
           },
-          body: JSON.stringify({ isFavourite: !item.isFavourite })
-        }
+          body: JSON.stringify({ isFavourite: !item.isFavourite }),
+        },
       );
 
       if (response.ok) {
-        setItems(prev => 
-          prev.map(item => 
-            item.id === id ? { ...item, isFavourite: !item.isFavourite } : item
-          )
+        setItems((prev) =>
+          prev.map((item) => (item.id === id ? { ...item, isFavourite: !item.isFavourite } : item)),
         );
       }
     } catch (error: unknown) {
@@ -217,12 +225,11 @@ export function HistoryPage() {
     const userId = user.id; // Store userId to avoid null reference issues
 
     try {
-
       const response = await fetch(
         `https://${projectId}.supabase.co/functions/v1/make-server-91ed8379/documents/${userId}/${item.id}/download`,
         {
-          headers: { 'Authorization': `Bearer ${publicAnonKey}` }
-        }
+          headers: { Authorization: `Bearer ${publicAnonKey}` },
+        },
       );
 
       if (!response.ok) {
@@ -230,10 +237,10 @@ export function HistoryPage() {
       }
 
       const data = await response.json();
-      
+
       // Open signed URL in new tab
       window.open(data.url, '_blank');
-      
+
       // Mark as viewed
       await markAsViewed(item);
     } catch (error: unknown) {
@@ -251,11 +258,11 @@ export function HistoryPage() {
         {
           method: 'PATCH',
           headers: {
-            'Authorization': `Bearer ${publicAnonKey}`,
-            'Content-Type': 'application/json'
+            Authorization: `Bearer ${publicAnonKey}`,
+            'Content-Type': 'application/json',
           },
-          body: JSON.stringify({ status: 'viewed' })
-        }
+          body: JSON.stringify({ status: 'viewed' }),
+        },
       );
 
       if (!response.ok) {
@@ -266,16 +273,14 @@ export function HistoryPage() {
 
       const data = await response.json();
       if (data.success) {
-        setItems(prev =>
-          prev.map(i => i.id === item.id ? { ...i, status: 'viewed' as const } : i)
+        setItems((prev) =>
+          prev.map((i) => (i.id === item.id ? { ...i, status: 'viewed' as const } : i)),
         );
       }
     } catch (error: unknown) {
       // Silently fail - this is not critical functionality
     }
   };
-
-
 
   const getCategoryIcon = (category: string) => {
     switch (category) {
@@ -316,22 +321,24 @@ export function HistoryPage() {
   };
 
   const formatDate = (date: Date) => {
-    return date.toLocaleDateString('en-GB', { 
-      day: 'numeric', 
-      month: 'short', 
-      year: 'numeric' 
+    return date.toLocaleDateString('en-GB', {
+      day: 'numeric',
+      month: 'short',
+      year: 'numeric',
     });
   };
 
   // Stats
   const totalItems = items.length;
-  const totalDocs = items.filter(i => i.type === 'document').length;
-  const totalLinks = items.filter(i => i.type === 'link').length;
-  const newItems = items.filter(i => i.status === 'new').length;
-  const favouriteItems = items.filter(i => i.isFavourite).length;
+  const totalDocs = items.filter((i) => i.type === 'document').length;
+  const totalLinks = items.filter((i) => i.type === 'link').length;
+  const newItems = items.filter((i) => i.status === 'new').length;
+  const favouriteItems = items.filter((i) => i.isFavourite).length;
 
   return (
-    <div className={`min-h-screen ${ACTIVE_THEME === 'branded' ? 'bg-[#f8f9fb]' : 'bg-[rgb(249,249,249)]'}`}>
+    <div
+      className={`min-h-screen ${ACTIVE_THEME === 'branded' ? 'bg-[#f8f9fb]' : 'bg-[rgb(249,249,249)]'}`}
+    >
       <PortalPageHeader
         title="Document History"
         subtitle="Access all your policy documents and links"
@@ -339,7 +346,6 @@ export function HistoryPage() {
         compact
       />
       <div className="mx-auto max-w-screen-2xl px-4 sm:px-6 lg:px-8 py-6 lg:py-8">
-
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
           {/* Stats Sidebar */}
           <div className="lg:col-span-1 space-y-6">
@@ -387,7 +393,7 @@ export function HistoryPage() {
                   { name: 'Investment', icon: TrendingUp, color: 'text-green-600' },
                   { name: 'Medical Aid', icon: Activity, color: 'text-purple-600' },
                   { name: 'Retirement', icon: Briefcase, color: 'text-orange-600' },
-                  { name: 'Estate', icon: Home, color: 'text-amber-600' }
+                  { name: 'Estate', icon: Home, color: 'text-amber-600' },
                 ].map((cat) => {
                   const Icon = cat.icon;
                   return (
@@ -495,27 +501,27 @@ export function HistoryPage() {
                       {items.length === 0 ? 'No documents yet' : 'No items found'}
                     </p>
                     <p className="text-sm text-gray-500 mt-1">
-                      {items.length === 0 
-                        ? 'Your advisor will upload documents and links for you here' 
+                      {items.length === 0
+                        ? 'Your advisor will upload documents and links for you here'
                         : 'Try adjusting your search or filters'}
                     </p>
                   </CardContent>
                 </Card>
               ) : (
                 filteredItems.map((item) => (
-                  <Card 
-                    key={item.id} 
+                  <Card
+                    key={item.id}
                     className="border-gray-200 shadow-sm hover:shadow-md transition-shadow"
                   >
                     <CardContent className="p-6">
                       <div className="flex items-start gap-4">
                         {/* Icon */}
                         <div className="flex-shrink-0">
-                          <div className={`h-12 w-12 rounded-lg flex items-center justify-center ${
-                            item.type === 'link' 
-                              ? 'bg-purple-50' 
-                              : 'bg-red-50'
-                          }`}>
+                          <div
+                            className={`h-12 w-12 rounded-lg flex items-center justify-center ${
+                              item.type === 'link' ? 'bg-purple-50' : 'bg-red-50'
+                            }`}
+                          >
                             {item.type === 'link' ? (
                               <LinkIcon className="h-6 w-6 text-purple-600" />
                             ) : (
@@ -529,36 +535,34 @@ export function HistoryPage() {
                           <div className="flex items-start justify-between gap-4">
                             <div className="flex-1 min-w-0">
                               <div className="flex items-center gap-2 mb-1">
-                                <h3 className="text-gray-900 truncate">
-                                  {item.title}
-                                </h3>
+                                <h3 className="text-gray-900 truncate">{item.title}</h3>
                                 {item.status === 'new' && (
                                   <Badge className="bg-blue-100 text-blue-800 text-xs">New</Badge>
                                 )}
-                                <Badge 
-                                  variant="outline" 
+                                <Badge
+                                  variant="outline"
                                   className={`text-xs ${
-                                    item.type === 'link' 
-                                      ? 'bg-purple-50 text-purple-700 border-purple-200' 
+                                    item.type === 'link'
+                                      ? 'bg-purple-50 text-purple-700 border-purple-200'
                                       : 'bg-gray-50 text-gray-700 border-gray-200'
                                   }`}
                                 >
                                   {item.type === 'link' ? 'Link' : 'Document'}
                                 </Badge>
                               </div>
-                              
+
                               {item.type === 'document' && item.fileName && (
                                 <p className="text-sm text-gray-600 mb-2">{item.fileName}</p>
                               )}
-                              
+
                               {item.type === 'link' && item.url && (
                                 <p className="text-sm text-purple-600 mb-2 truncate">{item.url}</p>
                               )}
-                              
+
                               {item.type === 'link' && item.description && (
                                 <p className="text-sm text-gray-600 mb-2">{item.description}</p>
                               )}
-                              
+
                               <div className="flex flex-wrap items-center gap-3 text-sm text-gray-500">
                                 <div className="flex items-center gap-1.5">
                                   <Calendar className="h-4 w-4" />
@@ -577,10 +581,10 @@ export function HistoryPage() {
                                   </div>
                                 )}
                               </div>
-                              
+
                               <div className="mt-3">
-                                <Badge 
-                                  variant="outline" 
+                                <Badge
+                                  variant="outline"
                                   className={`${getCategoryColor(item.productCategory)} gap-1.5`}
                                 >
                                   {getCategoryIcon(item.productCategory)}
@@ -597,7 +601,9 @@ export function HistoryPage() {
                                 onClick={() => toggleFavourite(item.id)}
                                 className={item.isFavourite ? 'text-yellow-600' : 'text-gray-400'}
                               >
-                                <Star className={`h-5 w-5 ${item.isFavourite ? 'fill-current' : ''}`} />
+                                <Star
+                                  className={`h-5 w-5 ${item.isFavourite ? 'fill-current' : ''}`}
+                                />
                               </Button>
                               {item.type === 'document' && (
                                 <Button

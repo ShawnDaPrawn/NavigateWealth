@@ -23,9 +23,11 @@ export const dashboardStatsApi = {
     } catch (error) {
       const message = getErrorMessage(error);
       // For auth errors, return empty stats silently
-      if (message.includes('Unauthorized') || 
-          message.includes('Forbidden') ||
-          message.includes('401')) {
+      if (
+        message.includes('Unauthorized') ||
+        message.includes('Forbidden') ||
+        message.includes('401')
+      ) {
         logger.warn('Dashboard stats unauthorized - returning empty stats', { error });
         return {
           total_clients: 0,
@@ -40,7 +42,11 @@ export const dashboardStatsApi = {
       // For server errors (500, 502, 503, 504) or Cloudflare errors, return
       // empty stats gracefully instead of crashing the dashboard
       const statusCode = (error as Record<string, unknown>)?.statusCode;
-      if (typeof statusCode === 'number' && statusCode >= 500 || message.includes('Internal server error') || message.includes('cloudflare')) {
+      if (
+        (typeof statusCode === 'number' && statusCode >= 500) ||
+        message.includes('Internal server error') ||
+        message.includes('cloudflare')
+      ) {
         logger.warn('Dashboard stats server error - returning empty stats', { error: message });
         return {
           total_clients: 0,
@@ -101,7 +107,7 @@ export const dashboardMetricsApi = {
         activePolicies: response.activePolicies || 0,
         newPoliciesCount: response.newPoliciesCount || 0,
         completedFNAs: response.publishedFnas || 0,
-        pendingFNAs: 0, 
+        pendingFNAs: 0,
       };
     } catch (error) {
       logger.error('Failed to fetch dashboard metrics', error);
@@ -148,7 +154,9 @@ export const dashboardMetricsApi = {
 export const tasksApi = {
   async getDueToday(): Promise<TaskDueToday[]> {
     try {
-      const response = await api.get<{ success: boolean; data: TaskDueToday[] }>(ENDPOINTS.TASKS_DUE_TODAY);
+      const response = await api.get<{ success: boolean; data: TaskDueToday[] }>(
+        ENDPOINTS.TASKS_DUE_TODAY,
+      );
       return response.data || [];
     } catch (error) {
       logger.error('Failed to fetch tasks due today', error);
@@ -158,9 +166,9 @@ export const tasksApi = {
 
   async getByDate(date: Date): Promise<TaskDueToday[]> {
     try {
-      const dateStr = date.toISOString().split('T')[0]; 
+      const dateStr = date.toISOString().split('T')[0];
       const response = await api.get<{ success: boolean; data: TaskDueToday[] }>(
-        `${ENDPOINTS.TASKS_BY_DATE}?date=${dateStr}`
+        `${ENDPOINTS.TASKS_BY_DATE}?date=${dateStr}`,
       );
       return response.data || [];
     } catch (error) {
@@ -182,9 +190,7 @@ export const tasksApi = {
   async getHighPriorityDueToday(): Promise<TaskDueToday[]> {
     try {
       const tasks = await this.getDueToday();
-      return tasks.filter(task => 
-        task.priority === 'high' || task.priority === 'critical'
-      );
+      return tasks.filter((task) => task.priority === 'high' || task.priority === 'critical');
     } catch (error) {
       logger.error('Failed to fetch high priority tasks', error);
       return [];
@@ -204,9 +210,12 @@ export const systemActivityApi = {
         {
           type: 'new_applications',
           count: stats.new_this_month,
-          growth: stats.new_last_month > 0 
-            ? ((stats.new_this_month - stats.new_last_month) / stats.new_last_month) * 100
-            : stats.new_this_month > 0 ? 100 : 0,
+          growth:
+            stats.new_last_month > 0
+              ? ((stats.new_this_month - stats.new_last_month) / stats.new_last_month) * 100
+              : stats.new_this_month > 0
+                ? 100
+                : 0,
           label: 'New Applications',
           description: 'Applications this month',
           color: 'purple',
@@ -214,7 +223,7 @@ export const systemActivityApi = {
         {
           type: 'new_policies',
           count: metrics.newPoliciesCount,
-          growth: 0, 
+          growth: 0,
           label: 'New Policies',
           description: 'Active policies added recently',
           color: 'green',
@@ -247,7 +256,7 @@ export const systemActivityApi = {
   async getByType(type: string): Promise<SystemActivity | null> {
     try {
       const activities = await this.getAll();
-      return activities.find(a => a.type === type) || null;
+      return activities.find((a) => a.type === type) || null;
     } catch (error) {
       logger.error(`Failed to fetch activity for type ${type}`, error);
       return null;
@@ -292,7 +301,7 @@ export const systemHealthApi = {
   async getLastCleanupRun(): Promise<LastCleanupRun | null> {
     try {
       const response = await api.get<{ success: boolean; lastRun: LastCleanupRun | null }>(
-        ENDPOINTS.KV_CLEANUP_STATUS
+        ENDPOINTS.KV_CLEANUP_STATUS,
       );
       return response.lastRun ?? null;
     } catch (error) {
@@ -305,14 +314,16 @@ export const systemHealthApi = {
    * Trigger a KV cleanup run.
    * Defaults to dry-run (dryRun: true) — caller must explicitly set false for live.
    */
-  async runCleanup(options: { dryRun?: boolean; retentionDays?: number } = {}): Promise<CleanupRunResult | null> {
+  async runCleanup(
+    options: { dryRun?: boolean; retentionDays?: number } = {},
+  ): Promise<CleanupRunResult | null> {
     try {
       const response = await api.post<CleanupRunResult & { success: boolean }>(
         ENDPOINTS.KV_CLEANUP_RUN,
         {
           dryRun: options.dryRun ?? true,
           retentionDays: options.retentionDays ?? 90,
-        }
+        },
       );
       return response;
     } catch (error) {
@@ -326,11 +337,13 @@ export const adminAuditApi = {
   /**
    * Fetch recent audit log entries.
    */
-  async getLog(filters: {
-    category?: AuditActionCategory;
-    severity?: AuditSeverity;
-    limit?: number;
-  } = {}): Promise<AdminAuditEntry[]> {
+  async getLog(
+    filters: {
+      category?: AuditActionCategory;
+      severity?: AuditSeverity;
+      limit?: number;
+    } = {},
+  ): Promise<AdminAuditEntry[]> {
     try {
       const params = new URLSearchParams();
       if (filters.category) params.set('category', filters.category);
@@ -351,9 +364,11 @@ export const adminAuditApi = {
    */
   async getSummary(days: number = 7): Promise<AuditSummary | null> {
     try {
-      const response = await api.get<{ success: boolean; days: number; summary: AuditSummary['summary'] }>(
-        `${ENDPOINTS.ADMIN_AUDIT_SUMMARY}?days=${days}`
-      );
+      const response = await api.get<{
+        success: boolean;
+        days: number;
+        summary: AuditSummary['summary'];
+      }>(`${ENDPOINTS.ADMIN_AUDIT_SUMMARY}?days=${days}`);
       return { days: response.days, summary: response.summary };
     } catch (error) {
       logger.error('Failed to fetch admin audit summary', error);

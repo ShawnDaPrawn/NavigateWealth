@@ -149,34 +149,42 @@ function camelCase(value: string): string {
 
 function getModuleSections(module: RoAModule): NonNullable<RoAModule['formSchema']>['sections'] {
   if (module.formSchema?.sections?.length) return module.formSchema.sections;
-  return [{ id: 'details', title: 'Details', fields: module.fields as NonNullable<RoAModule['formSchema']>['sections'][number]['fields'] }];
+  return [
+    {
+      id: 'details',
+      title: 'Details',
+      fields: module.fields as NonNullable<RoAModule['formSchema']>['sections'][number]['fields'],
+    },
+  ];
 }
 
 export function moduleContractToRuntimeModule(contract: RoAModuleContract): RoAModule {
-  const fields = contract.formSchema.sections.flatMap((section) => section.fields).map((field) => {
-    const runtimeType = field.type === 'file' ? 'text' : field.type;
-    return {
-      key: field.key,
-      label: field.label,
-      type: runtimeType,
-      required: field.required,
-      options: field.options,
-      default: field.default,
-      placeholder: field.placeholder,
-      helpText: field.helpText,
-      source: field.source,
-      sourcePath: field.sourcePath,
-      validation: field.validation
-        ? {
-            minLength: field.validation.minLength,
-            maxLength: field.validation.maxLength,
-            min: field.validation.min,
-            max: field.validation.max,
-            pattern: field.validation.pattern ? new RegExp(field.validation.pattern) : undefined,
-          }
-        : undefined,
-    } satisfies RoAField;
-  });
+  const fields = contract.formSchema.sections
+    .flatMap((section) => section.fields)
+    .map((field) => {
+      const runtimeType = field.type === 'file' ? 'text' : field.type;
+      return {
+        key: field.key,
+        label: field.label,
+        type: runtimeType,
+        required: field.required,
+        options: field.options,
+        default: field.default,
+        placeholder: field.placeholder,
+        helpText: field.helpText,
+        source: field.source,
+        sourcePath: field.sourcePath,
+        validation: field.validation
+          ? {
+              minLength: field.validation.minLength,
+              maxLength: field.validation.maxLength,
+              min: field.validation.min,
+              max: field.validation.max,
+              pattern: field.validation.pattern ? new RegExp(field.validation.pattern) : undefined,
+            }
+          : undefined,
+      } satisfies RoAField;
+    });
 
   return {
     id: contract.id,
@@ -190,10 +198,13 @@ export function moduleContractToRuntimeModule(contract: RoAModuleContract): RoAM
     formSchema: {
       sections: contract.formSchema.sections.map((section) => ({
         ...section,
-        fields: section.fields.map((field) => fields.find((item) => item.key === field.key) || {
-          ...field,
-          type: field.type === 'file' ? 'text' : field.type,
-        }) as NonNullable<RoAModule['formSchema']>['sections'][number]['fields'],
+        fields: section.fields.map(
+          (field) =>
+            fields.find((item) => item.key === field.key) || {
+              ...field,
+              type: field.type === 'file' ? 'text' : field.type,
+            },
+        ) as NonNullable<RoAModule['formSchema']>['sections'][number]['fields'],
       })),
     },
     disclosures: contract.disclosures,
@@ -218,7 +229,9 @@ export function getRequiredFields(module: RoAModule): RoAField[] {
   const requiredKeys = module.validation?.requiredFields || [];
   if (requiredKeys.length > 0) {
     const byKey = new Map(module.fields.map((field) => [field.key, field]));
-    return requiredKeys.map((key) => byKey.get(key)).filter((field): field is RoAField => Boolean(field));
+    return requiredKeys
+      .map((key) => byKey.get(key))
+      .filter((field): field is RoAField => Boolean(field));
   }
   return module.fields.filter((field) => field.required);
 }
@@ -229,15 +242,22 @@ export function getModuleRuntimeStatus(
   moduleEvidence: Record<string, RoAEvidenceItem> = {},
 ): RoAModuleRuntimeStatus {
   const requiredFields = getRequiredFields(module);
-  const missingFields = requiredFields.filter((field) => !hasValue((moduleData as Record<string, unknown>)[field.key]));
-  const requiredEvidence = module.evidence?.requirements.filter((requirement) => requirement.required) || [];
-  const missingEvidence = requiredEvidence.filter((requirement) => !hasValue(moduleEvidence[requirement.id]));
+  const missingFields = requiredFields.filter(
+    (field) => !hasValue((moduleData as Record<string, unknown>)[field.key]),
+  );
+  const requiredEvidence =
+    module.evidence?.requirements.filter((requirement) => requirement.required) || [];
+  const missingEvidence = requiredEvidence.filter(
+    (requirement) => !hasValue(moduleEvidence[requirement.id]),
+  );
   const warnings: RoAValidationIssue[] = [];
   const blocking: RoAValidationIssue[] = [];
 
   for (const rule of module.validation?.rules || []) {
     const fieldKeys = rule.fieldKeys || [];
-    const ruleMissing = fieldKeys.length > 0 && fieldKeys.some((fieldKey) => !hasValue((moduleData as Record<string, unknown>)[fieldKey]));
+    const ruleMissing =
+      fieldKeys.length > 0 &&
+      fieldKeys.some((fieldKey) => !hasValue((moduleData as Record<string, unknown>)[fieldKey]));
     if (fieldKeys.length === 0 || ruleMissing) {
       const issue: RoAValidationIssue = {
         id: `${module.id}:runtime:${rule.id}`,
@@ -283,8 +303,12 @@ export function getModuleRuntimeStatus(
   }
 
   const totalRequired = requiredFields.length + requiredEvidence.length;
-  const completedRequired = (requiredFields.length - missingFields.length) + (requiredEvidence.length - missingEvidence.length);
-  const percentage = totalRequired > 0 ? Math.round((completedRequired / totalRequired) * 100) : 100;
+  const completedRequired =
+    requiredFields.length -
+    missingFields.length +
+    (requiredEvidence.length - missingEvidence.length);
+  const percentage =
+    totalRequired > 0 ? Math.round((completedRequired / totalRequired) * 100) : 100;
 
   return {
     completedRequiredFields: requiredFields.length - missingFields.length,
@@ -315,12 +339,15 @@ export function normalizeModuleOutput(
 ): RoANormalizedModuleOutput {
   const data = moduleData as Record<string, unknown>;
   const values = Object.fromEntries(
-    (module.output?.fields || module.fields.map((field) => ({
-      key: field.key,
-      label: field.label,
-      type: 'string' as const,
-      required: Boolean(field.required),
-    }))).map((field) => [field.key, findOutputValue(field.key, data)]),
+    (
+      module.output?.fields ||
+      module.fields.map((field) => ({
+        key: field.key,
+        label: field.label,
+        type: 'string' as const,
+        required: Boolean(field.required),
+      }))
+    ).map((field) => [field.key, findOutputValue(field.key, data)]),
   );
 
   return {
@@ -395,9 +422,12 @@ function formatTemplateValue(value: unknown, filter?: string): string {
 }
 
 export function renderRuntimeTemplate(template: string, context: Record<string, unknown>): string {
-  return template.replace(/{{\s*([a-zA-Z0-9_.-]+)(?:\s*\|\s*([a-zA-Z]+))?\s*}}/g, (_match, path: string, filter?: string) => {
-    return formatTemplateValue(resolvePath(context, path), filter);
-  });
+  return template.replace(
+    /{{\s*([a-zA-Z0-9_.-]+)(?:\s*\|\s*([a-zA-Z]+))?\s*}}/g,
+    (_match, path: string, filter?: string) => {
+      return formatTemplateValue(resolvePath(context, path), filter);
+    },
+  );
 }
 
 export function buildRuntimeTemplateContext(
@@ -413,7 +443,9 @@ export function buildRuntimeTemplateContext(
   };
 }
 
-export function getModuleSectionsForRuntime(module: RoAModule): NonNullable<RoAModule['formSchema']>['sections'] {
+export function getModuleSectionsForRuntime(
+  module: RoAModule,
+): NonNullable<RoAModule['formSchema']>['sections'] {
   return getModuleSections(module);
 }
 

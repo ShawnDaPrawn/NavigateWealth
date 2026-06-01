@@ -20,7 +20,14 @@ import { useQueryClient } from '@tanstack/react-query';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../../../../ui/card';
 import { Badge } from '../../../../ui/badge';
 import { Button } from '../../../../ui/button';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../../../ui/table';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '../../../../ui/table';
 import { Input } from '../../../../ui/input';
 import {
   Select,
@@ -97,7 +104,11 @@ type ComplianceSubTab =
   | 'risk-assessment'
   | 'activity-log';
 
-const SUB_TABS: { id: ComplianceSubTab; label: string; icon: React.ComponentType<{ className?: string }> }[] = [
+const SUB_TABS: {
+  id: ComplianceSubTab;
+  label: string;
+  icon: React.ComponentType<{ className?: string }>;
+}[] = [
   { id: 'overview', label: 'Overview', icon: Shield },
   { id: 'identity-verification', label: 'Identity Verification', icon: UserCheck },
   { id: 'cdd', label: 'CDD', icon: FileCheck },
@@ -127,7 +138,9 @@ export function ComplianceTab({
   lastSanctionsCheck,
 }: ComplianceTabProps) {
   const queryClient = useQueryClient();
-  const [registrationStatus, setRegistrationStatus] = useState<'loading' | 'registered' | 'unregistered'>('loading');
+  const [registrationStatus, setRegistrationStatus] = useState<
+    'loading' | 'registered' | 'unregistered'
+  >('loading');
   const [isRegistering, setIsRegistering] = useState(false);
   const [honeycombId, setHoneycombId] = useState<string | null>(null);
 
@@ -148,7 +161,9 @@ export function ComplianceTab({
     const loadProfileForCompliance = async () => {
       setProfileLoading(true);
       try {
-        const profile = await queryClient.fetchQuery(getClientProfileQueryOptions(selectedClient.id));
+        const profile = await queryClient.fetchQuery(
+          getClientProfileQueryOptions(selectedClient.id),
+        );
         if (profile) {
           const idNum = profile.idNumber;
           const passport = profile.passportNumber;
@@ -172,19 +187,21 @@ export function ComplianceTab({
     }
   }, [selectedClient.id, queryClient]);
 
-  const resolvedIdNumber = [
-    kvProfileIdNumber,
-    selectedClient.profile?.personalInformation?.idNumber,
-    (selectedClient.profile as Record<string, unknown>)?.profile_id_number,
-    selectedClient.idNumber,
-    (selectedClient as unknown as Record<string, unknown>).profile_id_number,
-  ].find(isValidIdNumber) || null;
+  const resolvedIdNumber =
+    [
+      kvProfileIdNumber,
+      selectedClient.profile?.personalInformation?.idNumber,
+      (selectedClient.profile as Record<string, unknown>)?.profile_id_number,
+      selectedClient.idNumber,
+      (selectedClient as unknown as Record<string, unknown>).profile_id_number,
+    ].find(isValidIdNumber) || null;
 
-  const resolvedPassport = [
-    kvProfilePassport,
-    selectedClient.profile?.personalInformation?.passportNumber,
-    (selectedClient.profile as Record<string, unknown>)?.passportNumber,
-  ].find(isValidIdNumber) || null;
+  const resolvedPassport =
+    [
+      kvProfilePassport,
+      selectedClient.profile?.personalInformation?.passportNumber,
+      (selectedClient.profile as Record<string, unknown>)?.passportNumber,
+    ].find(isValidIdNumber) || null;
 
   const hasIdentification = !!resolvedIdNumber || !!resolvedPassport;
 
@@ -276,7 +293,9 @@ export function ComplianceTab({
       setRegistrationStatus('registered');
     } catch (error: unknown) {
       console.error('Registration error:', error);
-      toast.error(error instanceof Error ? error.message : 'Failed to register client', { id: toastId });
+      toast.error(error instanceof Error ? error.message : 'Failed to register client', {
+        id: toastId,
+      });
     } finally {
       setIsRegistering(false);
     }
@@ -313,7 +332,8 @@ export function ComplianceTab({
               <p className="text-sm font-medium text-amber-800">ID Number Required</p>
               <p className="text-sm text-amber-700 mt-1">
                 This client does not have a valid ID number or passport number on their profile.
-                Please update their profile with a South African ID number or passport number before registering with Beeswax.
+                Please update their profile with a South African ID number or passport number before
+                registering with Beeswax.
               </p>
             </div>
           </div>
@@ -327,7 +347,8 @@ export function ComplianceTab({
             <div>
               <h4 className="text-xl font-semibold mb-2">Registration Required</h4>
               <p className="text-gray-500 max-w-md mx-auto">
-                To perform compliance checks, this client must first be registered with the Beeswax/Honeycomb external compliance service.
+                To perform compliance checks, this client must first be registered with the
+                Beeswax/Honeycomb external compliance service.
               </p>
             </div>
             <div className="flex gap-4 pt-4">
@@ -350,7 +371,11 @@ export function ComplianceTab({
               </Button>
             </div>
             <p className="text-xs text-gray-400 mt-4">
-              This will create a profile using Name: <strong>{selectedClient.firstName} {selectedClient.lastName}</strong> and ID: <strong>{resolvedIdNumber || 'N/A — update client profile'}</strong>
+              This will create a profile using Name:{' '}
+              <strong>
+                {selectedClient.firstName} {selectedClient.lastName}
+              </strong>{' '}
+              and ID: <strong>{resolvedIdNumber || 'N/A — update client profile'}</strong>
             </p>
           </CardContent>
         </Card>
@@ -368,7 +393,9 @@ export function ComplianceTab({
           <h3 className="text-lg font-medium">Compliance Workspace</h3>
           <p className="text-sm text-muted-foreground flex items-center gap-2">
             Linked to Beeswax ID:{' '}
-            <span className="font-mono text-xs bg-gray-100 px-1.5 py-0.5 rounded">{honeycombId}</span>
+            <span className="font-mono text-xs bg-gray-100 px-1.5 py-0.5 rounded">
+              {honeycombId}
+            </span>
           </p>
         </div>
       </div>
@@ -626,7 +653,8 @@ function OverviewContent({
               <div className="mt-1">
                 {resolvedIdNumber ? (
                   <Badge variant="outline" className="font-mono text-xs">
-                    {resolvedIdNumber.substring(0, 6)}••••••{resolvedIdNumber.substring(resolvedIdNumber.length - 1)}
+                    {resolvedIdNumber.substring(0, 6)}••••••
+                    {resolvedIdNumber.substring(resolvedIdNumber.length - 1)}
                   </Badge>
                 ) : (
                   <span className="text-xs text-gray-400">Not set</span>
@@ -687,7 +715,10 @@ function OverviewContent({
                         year: 'numeric',
                       })}
                     </span>
-                    <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200 text-xs">
+                    <Badge
+                      variant="outline"
+                      className="bg-green-50 text-green-700 border-green-200 text-xs"
+                    >
                       {activity.status}
                     </Badge>
                     <Eye className="h-3.5 w-3.5 text-gray-400" />
@@ -802,15 +833,27 @@ function ActivityLogContent({
       const allResults = data.history || [];
 
       const now = new Date().toLocaleString('en-ZA', {
-        day: '2-digit', month: 'long', year: 'numeric',
-        hour: '2-digit', minute: '2-digit',
+        day: '2-digit',
+        month: 'long',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
       });
       const issueDate = new Date().toLocaleDateString('en-GB', {
-        day: '2-digit', month: '2-digit', year: 'numeric',
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric',
       });
 
       // Group results by checkType
-      interface ComplianceCheckResult { checkType: string; submittedAt: string; status: string; summary?: string; matterId?: string; rawResponse?: unknown }
+      interface ComplianceCheckResult {
+        checkType: string;
+        submittedAt: string;
+        status: string;
+        summary?: string;
+        matterId?: string;
+        rawResponse?: unknown;
+      }
       const grouped: Record<string, ComplianceCheckResult[]> = {};
       for (const r of allResults) {
         if (!grouped[r.checkType]) grouped[r.checkType] = [];
@@ -853,7 +896,15 @@ function ActivityLogContent({
               <span class="num">${sectionNum}</span>
               <h2>${label} <span style="font-weight:400;color:#9ca3af;font-size:9.5px">(${results.length} result${results.length !== 1 ? 's' : ''})</span></h2>
             </div>
-            ${results.map((r: { submittedAt: string; status: string; summary?: string; matterId?: string; rawResponse?: unknown }) => `
+            ${results
+              .map(
+                (r: {
+                  submittedAt: string;
+                  status: string;
+                  summary?: string;
+                  matterId?: string;
+                  rawResponse?: unknown;
+                }) => `
               <div class="dossier-result">
                 <table>
                   <tr><th>Date</th><td>${new Date(r.submittedAt).toLocaleString('en-ZA', { day: '2-digit', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' })}</td></tr>
@@ -866,7 +917,9 @@ function ActivityLogContent({
                   <pre style="background:#1f2937;color:#e5e7eb;padding:6px;border-radius:4px;font-size:8px;overflow-x:auto;max-height:200px;overflow-y:auto;margin-top:4px;white-space:pre-wrap;word-break:break-word">${JSON.stringify(r.rawResponse, null, 2)}</pre>
                 </details>
               </div>
-            `).join('')}
+            `,
+              )
+              .join('')}
           </div>
         `;
       }
@@ -886,10 +939,15 @@ function ActivityLogContent({
         win.document.close();
       }
 
-      toast.success(`Dossier generated: ${allResults.length} results across ${Object.keys(grouped).length} check types`, { id: toastId });
+      toast.success(
+        `Dossier generated: ${allResults.length} results across ${Object.keys(grouped).length} check types`,
+        { id: toastId },
+      );
     } catch (err: unknown) {
       console.error('[ActivityLog] Download All error:', err);
-      toast.error(err instanceof Error ? err.message : 'Failed to generate dossier', { id: toastId });
+      toast.error(err instanceof Error ? err.message : 'Failed to generate dossier', {
+        id: toastId,
+      });
     } finally {
       setIsDownloadingAll(false);
     }
@@ -934,7 +992,8 @@ function ActivityLogContent({
             <Shield className="h-3.5 w-3.5 text-slate-500 flex-shrink-0" />
             <span className="text-xs text-slate-600">
               All compliance checks performed by independent third party{' '}
-              <strong className="text-slate-800">Honeycomb Information Services</strong> via the Beeswax platform.
+              <strong className="text-slate-800">Honeycomb Information Services</strong> via the
+              Beeswax platform.
             </span>
           </div>
 
@@ -955,7 +1014,9 @@ function ActivityLogContent({
                   <SelectContent>
                     <SelectItem value="all">All types</SelectItem>
                     {activityTypes.map((type) => (
-                      <SelectItem key={type} value={type}>{type}</SelectItem>
+                      <SelectItem key={type} value={type}>
+                        {type}
+                      </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
@@ -1002,12 +1063,15 @@ function ActivityLogContent({
             </div>
           ) : activities.length === 0 ? (
             <div className="text-center py-8 text-muted-foreground text-sm border border-dashed rounded-lg">
-              No compliance activity recorded yet. Start by running an assessment or requesting a report.
+              No compliance activity recorded yet. Start by running an assessment or requesting a
+              report.
             </div>
           ) : filteredActivities.length === 0 ? (
             <div className="text-center py-8 text-muted-foreground text-sm border border-dashed rounded-lg">
               No activities match the current filters.{' '}
-              <button onClick={clearFilters} className="text-purple-600 hover:underline">Clear filters</button>
+              <button onClick={clearFilters} className="text-purple-600 hover:underline">
+                Clear filters
+              </button>
             </div>
           ) : (
             <div className="flex flex-col">
@@ -1043,7 +1107,10 @@ function ActivityLogContent({
                           <span className="text-xs text-muted-foreground">Honeycomb</span>
                         </TableCell>
                         <TableCell>
-                          <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
+                          <Badge
+                            variant="outline"
+                            className="bg-green-50 text-green-700 border-green-200"
+                          >
                             {activity.status}
                           </Badge>
                         </TableCell>
@@ -1070,7 +1137,12 @@ function ActivityLogContent({
               {/* Pagination footer */}
               <div className="flex items-center justify-between pt-3 mt-3 border-t border-gray-100 flex-shrink-0">
                 <span className="text-xs text-gray-500">
-                  Showing {((safePage - 1) * REPORTS_PAGE_SIZE) + 1}–{Math.min(safePage * REPORTS_PAGE_SIZE, filteredActivities.length)} of {filteredActivities.length}{filteredActivities.length !== activities.length ? ` (filtered from ${activities.length})` : ''}
+                  Showing {(safePage - 1) * REPORTS_PAGE_SIZE + 1}–
+                  {Math.min(safePage * REPORTS_PAGE_SIZE, filteredActivities.length)} of{' '}
+                  {filteredActivities.length}
+                  {filteredActivities.length !== activities.length
+                    ? ` (filtered from ${activities.length})`
+                    : ''}
                 </span>
                 <div className="flex items-center gap-1">
                   <Button
@@ -1100,7 +1172,9 @@ function ActivityLogContent({
                     }, [])
                     .map((item) =>
                       typeof item === 'string' ? (
-                        <span key={item} className="px-1 text-xs text-gray-400">...</span>
+                        <span key={item} className="px-1 text-xs text-gray-400">
+                          ...
+                        </span>
                       ) : (
                         <Button
                           key={item}
@@ -1113,7 +1187,7 @@ function ActivityLogContent({
                         >
                           {item}
                         </Button>
-                      )
+                      ),
                     )}
 
                   <Button
@@ -1486,27 +1560,38 @@ function ActivityDetailSummary({ activity }: { activity: ComplianceActivity }) {
 
     case 'Debt Review Enquiry':
       return (
-        <span className={`text-xs font-medium ${d.isUnderDebtReview ? 'text-red-600' : 'text-green-600'}`}>
-          {d.isUnderDebtReview === true ? 'Under debt review' : d.isUnderDebtReview === false ? 'Not under review' : 'Check completed'}
+        <span
+          className={`text-xs font-medium ${d.isUnderDebtReview ? 'text-red-600' : 'text-green-600'}`}
+        >
+          {d.isUnderDebtReview === true
+            ? 'Under debt review'
+            : d.isUnderDebtReview === false
+              ? 'Not under review'
+              : 'Check completed'}
         </span>
       );
 
     case 'Sanctions Search':
       return (
-        <span className={`text-xs font-medium ${
-          d.screeningOutcome === 'Clear' ? 'text-green-600' : 'text-red-600'
-        }`}>
+        <span
+          className={`text-xs font-medium ${
+            d.screeningOutcome === 'Clear' ? 'text-green-600' : 'text-red-600'
+          }`}
+        >
           {d.screeningOutcome || 'Completed'}
-          {d.totalMatches != null && ` (${d.totalMatches} match${d.totalMatches !== 1 ? 'es' : ''})`}
+          {d.totalMatches != null &&
+            ` (${d.totalMatches} match${d.totalMatches !== 1 ? 'es' : ''})`}
         </span>
       );
 
     case 'Enforcement Actions Search':
     case 'Legal A Listing Search':
       return (
-        <span className={`text-xs font-medium ${
-          d.screeningOutcome === 'Clear' ? 'text-green-600' : 'text-amber-600'
-        }`}>
+        <span
+          className={`text-xs font-medium ${
+            d.screeningOutcome === 'Clear' ? 'text-green-600' : 'text-amber-600'
+          }`}
+        >
           {d.screeningOutcome || 'Completed'}
           {d.totalMatches != null && ` (${d.totalMatches})`}
         </span>
@@ -1522,7 +1607,9 @@ function ActivityDetailSummary({ activity }: { activity: ComplianceActivity }) {
     case 'Director Enquiry':
       return (
         <span className="text-xs text-muted-foreground">
-          {d.directorshipsFound != null ? `${d.directorshipsFound} directorship(s)` : 'Enquiry completed'}
+          {d.directorshipsFound != null
+            ? `${d.directorshipsFound} directorship(s)`
+            : 'Enquiry completed'}
         </span>
       );
 
@@ -1547,7 +1634,9 @@ function ActivityDetailSummary({ activity }: { activity: ComplianceActivity }) {
       return (
         <span className="text-xs text-muted-foreground">
           {d.lifestyleScore != null ? `Score: ${d.lifestyleScore}` : ''}
-          {d.estimatedIncome != null ? ` Est. income: R${Number(d.estimatedIncome).toLocaleString()}` : ''}
+          {d.estimatedIncome != null
+            ? ` Est. income: R${Number(d.estimatedIncome).toLocaleString()}`
+            : ''}
           {!d.lifestyleScore && !d.estimatedIncome ? 'Audit completed' : ''}
         </span>
       );
@@ -1571,14 +1660,23 @@ function ActivityDetailSummary({ activity }: { activity: ComplianceActivity }) {
 
     case 'Risk Assessment':
       if (d.screeningOutcome) {
-        return <span className="text-xs"><strong>{d.screeningOutcome}</strong></span>;
+        return (
+          <span className="text-xs">
+            <strong>{d.screeningOutcome}</strong>
+          </span>
+        );
       }
       if (d.riskLevel) {
         return (
-          <span className={`font-semibold text-xs ${
-            d.riskLevel === 'Low' ? 'text-green-600' :
-            d.riskLevel === 'Medium' ? 'text-orange-600' : 'text-red-600'
-          }`}>
+          <span
+            className={`font-semibold text-xs ${
+              d.riskLevel === 'Low'
+                ? 'text-green-600'
+                : d.riskLevel === 'Medium'
+                  ? 'text-orange-600'
+                  : 'text-red-600'
+            }`}
+          >
             Risk: {d.riskLevel}
           </span>
         );
@@ -1598,21 +1696,17 @@ function ActivityDetailSummary({ activity }: { activity: ComplianceActivity }) {
       );
 
     default:
-      return <span className="text-xs text-muted-foreground">{d.matterId ? `Matter: ${String(d.matterId).substring(0, 8)}...` : '—'}</span>;
+      return (
+        <span className="text-xs text-muted-foreground">
+          {d.matterId ? `Matter: ${String(d.matterId).substring(0, 8)}...` : '—'}
+        </span>
+      );
   }
 }
 
 // ─── Shared UI Components ───────────────────────────────────────────────────
 
-function StatCard({
-  label,
-  value,
-  icon,
-}: {
-  label: string;
-  value: number;
-  icon: React.ReactNode;
-}) {
+function StatCard({ label, value, icon }: { label: string; value: number; icon: React.ReactNode }) {
   return (
     <Card>
       <CardContent className="p-4 flex items-center gap-3">
@@ -1649,7 +1743,10 @@ function QuickActionCard({
           : 'bg-white border-gray-200 hover:border-purple-300 hover:shadow-sm cursor-pointer'
       }`}
     >
-      <div className="flex items-center gap-2 mb-2">{icon}<span className="font-medium text-sm">{title}</span></div>
+      <div className="flex items-center gap-2 mb-2">
+        {icon}
+        <span className="font-medium text-sm">{title}</span>
+      </div>
       <p className="text-xs text-gray-500">{description}</p>
     </button>
   );

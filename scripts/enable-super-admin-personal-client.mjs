@@ -47,10 +47,10 @@ function getServiceRoleKey() {
   if (process.env.SUPABASE_SERVICE_ROLE_KEY) {
     return process.env.SUPABASE_SERVICE_ROLE_KEY;
   }
-  const out = execSync(
-    `npx supabase projects api-keys --project-ref ${PROJECT_REF} -o json`,
-    { encoding: 'utf8', cwd: resolve(__dirname, '..') },
-  );
+  const out = execSync(`npx supabase projects api-keys --project-ref ${PROJECT_REF} -o json`, {
+    encoding: 'utf8',
+    cwd: resolve(__dirname, '..'),
+  });
   const rows = JSON.parse(out);
   const row = rows.find((r) => r.name === 'service_role');
   if (!row?.api_key) {
@@ -73,10 +73,9 @@ async function findUserByEmail(supabase, email) {
 }
 
 async function upsertKv(supabase, key, value) {
-  const { error } = await supabase.from('kv_store_91ed8379').upsert(
-    { key, value },
-    { onConflict: 'key' },
-  );
+  const { error } = await supabase
+    .from('kv_store_91ed8379')
+    .upsert({ key, value }, { onConflict: 'key' });
   if (error) throw error;
 }
 
@@ -125,11 +124,7 @@ async function findApplicationByUserId(supabase, userId) {
   const matches = (data || [])
     .map((row) => row.value)
     .filter(
-      (app) =>
-        app &&
-        app.user_id === userId &&
-        app.deprecated !== true &&
-        !('stepNumber' in app),
+      (app) => app && app.user_id === userId && app.deprecated !== true && !('stepNumber' in app),
     )
     .sort(
       (a, b) =>
@@ -191,7 +186,9 @@ async function enableDirect() {
 
   if (existingApp?.id) {
     applicationId = String(existingApp.id);
-    applicationNumber = String(existingApp.application_number || existingProfile.applicationNumber || '');
+    applicationNumber = String(
+      existingApp.application_number || existingProfile.applicationNumber || '',
+    );
     existingApp = {
       ...existingApp,
       user_id: userId,

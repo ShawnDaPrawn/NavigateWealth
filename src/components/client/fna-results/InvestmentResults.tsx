@@ -1,7 +1,7 @@
 /**
  * Client-Side Investment INA Results Display
  * Read-only view of published Goal-Based Investment Needs Analysis
- * 
+ *
  * Data source: /supabase/functions/server/investment-ina-routes.tsx
  * Backend stores inputs with: currentAge, clientRiskProfile, discretionaryInvestments,
  * totalDiscretionaryCapitalCurrent, totalDiscretionaryMonthlyContributions, goals,
@@ -13,8 +13,8 @@ import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '../../ui/card';
 import { Badge } from '../../ui/badge';
 import { Separator } from '../../ui/separator';
-import { 
-  DollarSign, 
+import {
+  DollarSign,
   Target,
   TrendingUp,
   Briefcase,
@@ -23,7 +23,7 @@ import {
   Info,
   PieChart,
   BarChart3,
-  Calendar
+  Calendar,
 } from 'lucide-react';
 import { InvestmentINA, formatCurrency } from '../../../services/fna-api';
 
@@ -73,10 +73,10 @@ export function InvestmentResults({ fna }: InvestmentResultsProps) {
 
   const getHealthColor = (health: string) => {
     const colors: Record<string, string> = {
-      'excellent': 'bg-green-600',
-      'good': 'bg-blue-600',
+      excellent: 'bg-green-600',
+      good: 'bg-blue-600',
       'needs-attention': 'bg-orange-600',
-      'critical': 'bg-red-600',
+      critical: 'bg-red-600',
     };
     return colors[health] || 'bg-gray-600';
   };
@@ -99,8 +99,8 @@ export function InvestmentResults({ fna }: InvestmentResultsProps) {
             <div className="flex-1">
               <h3 className="text-gray-900 mb-2">Investment Needs Analysis Summary</h3>
               <p className="text-sm text-gray-700 mb-4">
-                Goal-based investment strategy analysis with portfolio recommendations tailored to your 
-                financial goals, risk tolerance, and investment time horizon.
+                Goal-based investment strategy analysis with portfolio recommendations tailored to
+                your financial goals, risk tolerance, and investment time horizon.
               </p>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 <div className="bg-white p-3 rounded-lg border border-purple-100">
@@ -109,15 +109,21 @@ export function InvestmentResults({ fna }: InvestmentResultsProps) {
                 </div>
                 <div className="bg-white p-3 rounded-lg border border-purple-100">
                   <p className="text-xs text-gray-600 mb-1">Risk Profile</p>
-                  <p className="text-gray-900 capitalize">{inputs?.clientRiskProfile || 'Not set'}</p>
+                  <p className="text-gray-900 capitalize">
+                    {inputs?.clientRiskProfile || 'Not set'}
+                  </p>
                 </div>
                 <div className="bg-white p-3 rounded-lg border border-purple-100">
                   <p className="text-xs text-gray-600 mb-1">Current Capital</p>
-                  <p className="text-gray-900">{formatCurrency(inputs?.totalDiscretionaryCapitalCurrent || 0)}</p>
+                  <p className="text-gray-900">
+                    {formatCurrency(inputs?.totalDiscretionaryCapitalCurrent || 0)}
+                  </p>
                 </div>
                 <div className="bg-white p-3 rounded-lg border border-purple-100">
                   <p className="text-xs text-gray-600 mb-1">Monthly Contributions</p>
-                  <p className="text-gray-900">{formatCurrency(inputs?.totalDiscretionaryMonthlyContributions || 0)}</p>
+                  <p className="text-gray-900">
+                    {formatCurrency(inputs?.totalDiscretionaryMonthlyContributions || 0)}
+                  </p>
                 </div>
               </div>
             </div>
@@ -136,7 +142,9 @@ export function InvestmentResults({ fna }: InvestmentResultsProps) {
                 </div>
                 <CardTitle className="text-base">Portfolio Overview</CardTitle>
               </div>
-              <Badge className={`${getHealthColor(portfolioSummary.overallPortfolioHealth)} capitalize`}>
+              <Badge
+                className={`${getHealthColor(portfolioSummary.overallPortfolioHealth)} capitalize`}
+              >
                 {portfolioSummary.overallPortfolioHealth.replace(/-/g, ' ')}
               </Badge>
             </div>
@@ -166,16 +174,22 @@ export function InvestmentResults({ fna }: InvestmentResultsProps) {
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div className="p-4 bg-blue-50 rounded-lg border border-blue-100">
                 <p className="text-xs text-gray-600 mb-1">Total Required Capital</p>
-                <p className="text-xl text-gray-900">{formatCurrency(portfolioSummary.totalRequiredCapital)}</p>
+                <p className="text-xl text-gray-900">
+                  {formatCurrency(portfolioSummary.totalRequiredCapital)}
+                </p>
               </div>
               <div className="p-4 bg-green-50 rounded-lg border border-green-100">
                 <p className="text-xs text-gray-600 mb-1">Total Projected Capital</p>
-                <p className="text-xl text-gray-900">{formatCurrency(portfolioSummary.totalProjectedCapital)}</p>
+                <p className="text-xl text-gray-900">
+                  {formatCurrency(portfolioSummary.totalProjectedCapital)}
+                </p>
               </div>
               {portfolioSummary.totalFundingGap > 0 && (
                 <div className="p-4 bg-red-50 rounded-lg border border-red-100">
                   <p className="text-xs text-gray-600 mb-1">Total Funding Gap</p>
-                  <p className="text-xl text-red-700">{formatCurrency(portfolioSummary.totalFundingGap)}</p>
+                  <p className="text-xl text-red-700">
+                    {formatCurrency(portfolioSummary.totalFundingGap)}
+                  </p>
                 </div>
               )}
             </div>
@@ -216,7 +230,10 @@ export function InvestmentResults({ fna }: InvestmentResultsProps) {
           <CardContent>
             <div className="space-y-3">
               {inputs.discretionaryInvestments.map((investment) => (
-                <div key={investment.id} className="p-3 bg-blue-50 rounded-lg border border-blue-100">
+                <div
+                  key={investment.id}
+                  className="p-3 bg-blue-50 rounded-lg border border-blue-100"
+                >
                   <div className="flex justify-between items-start mb-2">
                     <div className="flex-1">
                       <p className="text-sm text-gray-900">{investment.productName}</p>
@@ -224,19 +241,25 @@ export function InvestmentResults({ fna }: InvestmentResultsProps) {
                         <p className="text-xs text-gray-600">{investment.provider}</p>
                       )}
                     </div>
-                    <p className="text-sm text-gray-900">{formatCurrency(investment.currentValue)}</p>
+                    <p className="text-sm text-gray-900">
+                      {formatCurrency(investment.currentValue)}
+                    </p>
                   </div>
                   <div className="flex justify-between text-xs text-gray-600">
                     <span>Monthly: {formatCurrency(investment.monthlyContribution)}</span>
                     {investment.riskCategory && (
-                      <Badge variant="outline" className="capitalize text-xs">{investment.riskCategory}</Badge>
+                      <Badge variant="outline" className="capitalize text-xs">
+                        {investment.riskCategory}
+                      </Badge>
                     )}
                   </div>
                 </div>
               ))}
               <Separator />
               <div className="flex justify-between items-center pt-2">
-                <p className="text-sm text-gray-700"><strong>Total Portfolio Value</strong></p>
+                <p className="text-sm text-gray-700">
+                  <strong>Total Portfolio Value</strong>
+                </p>
                 <p className="text-lg text-gray-900">
                   {formatCurrency(inputs.totalDiscretionaryCapitalCurrent)}
                 </p>
@@ -261,20 +284,25 @@ export function InvestmentResults({ fna }: InvestmentResultsProps) {
             {goalResults.map((goal, index) => {
               const isOnTrack = goal.goalStatus === 'on-track';
               const fundingPct = goal.fundingGap?.fundingPercentage || 0;
-              
+
               return (
-                <div key={goal.goalId || index} className="p-4 bg-gray-50 rounded-lg border border-gray-200">
+                <div
+                  key={goal.goalId || index}
+                  className="p-4 bg-gray-50 rounded-lg border border-gray-200"
+                >
                   <div className="flex justify-between items-start mb-3">
                     <div className="flex-1">
                       <h4 className="text-sm text-gray-900 mb-1">
                         {goal.goalName || `Goal ${index + 1}`}
                       </h4>
                       {goal.goalType && (
-                        <p className="text-xs text-gray-600 capitalize">{goal.goalType.replace(/_/g, ' ')}</p>
+                        <p className="text-xs text-gray-600 capitalize">
+                          {goal.goalType.replace(/_/g, ' ')}
+                        </p>
                       )}
                     </div>
-                    <Badge 
-                      variant={isOnTrack ? 'default' : 'destructive'} 
+                    <Badge
+                      variant={isOnTrack ? 'default' : 'destructive'}
                       className="gap-1 capitalize"
                     >
                       {isOnTrack ? (
@@ -295,24 +323,32 @@ export function InvestmentResults({ fna }: InvestmentResultsProps) {
                     {goal.fundingGap?.goalRequiredReal !== undefined && (
                       <div>
                         <p className="text-xs text-gray-600 mb-1">Target Amount</p>
-                        <p className="text-sm text-gray-900">{formatCurrency(goal.fundingGap.goalRequiredReal)}</p>
+                        <p className="text-sm text-gray-900">
+                          {formatCurrency(goal.fundingGap.goalRequiredReal)}
+                        </p>
                       </div>
                     )}
                     {goal.projectedCapital?.totalProjectedCapital !== undefined && (
                       <div>
                         <p className="text-xs text-gray-600 mb-1">Projected Capital</p>
-                        <p className="text-sm text-gray-900">{formatCurrency(goal.projectedCapital.totalProjectedCapital)}</p>
+                        <p className="text-sm text-gray-900">
+                          {formatCurrency(goal.projectedCapital.totalProjectedCapital)}
+                        </p>
                       </div>
                     )}
                     {goal.timeHorizon?.yearsToGoal !== undefined && (
                       <div>
                         <p className="text-xs text-gray-600 mb-1">Time Horizon</p>
-                        <p className="text-sm text-gray-900">{goal.timeHorizon.yearsToGoal} years</p>
+                        <p className="text-sm text-gray-900">
+                          {goal.timeHorizon.yearsToGoal} years
+                        </p>
                       </div>
                     )}
                     <div>
                       <p className="text-xs text-gray-600 mb-1">Funding Level</p>
-                      <p className={`text-sm ${fundingPct >= 100 ? 'text-green-700' : 'text-red-700'}`}>
+                      <p
+                        className={`text-sm ${fundingPct >= 100 ? 'text-green-700' : 'text-red-700'}`}
+                      >
                         {Math.round(fundingPct)}%
                       </p>
                     </div>
@@ -330,14 +366,14 @@ export function InvestmentResults({ fna }: InvestmentResultsProps) {
                     <div className="mt-3 p-3 bg-orange-50 rounded border border-orange-200">
                       <p className="text-xs text-gray-900">
                         <strong>Action Required:</strong>{' '}
-                        {goal.requiredContributions.canMeetGoal 
+                        {goal.requiredContributions.canMeetGoal
                           ? `Increase monthly contribution by ${formatCurrency(goal.requiredContributions.requiredAdditionalMonthly)} to meet this goal`
-                          : 'Consider extending timeline or increasing initial capital'
-                        }
+                          : 'Consider extending timeline or increasing initial capital'}
                       </p>
                       {goal.requiredContributions.alternativeLumpSumToday > 0 && (
                         <p className="text-xs text-gray-600 mt-1">
-                          Alternative: Lump sum of {formatCurrency(goal.requiredContributions.alternativeLumpSumToday)} today
+                          Alternative: Lump sum of{' '}
+                          {formatCurrency(goal.requiredContributions.alternativeLumpSumToday)} today
                         </p>
                       )}
                     </div>
@@ -375,11 +411,11 @@ export function InvestmentResults({ fna }: InvestmentResultsProps) {
                     </p>
                     <p className="text-xs text-gray-700 mb-2">{rec.action}</p>
                     <div className="flex items-center gap-2">
-                      <Badge variant="outline" className="capitalize text-xs">{rec.priority} priority</Badge>
+                      <Badge variant="outline" className="capitalize text-xs">
+                        {rec.priority} priority
+                      </Badge>
                     </div>
-                    {rec.impact && (
-                      <p className="text-xs text-gray-600 mt-1">{rec.impact}</p>
-                    )}
+                    {rec.impact && <p className="text-xs text-gray-600 mt-1">{rec.impact}</p>}
                   </div>
                 </div>
               </div>
@@ -402,20 +438,31 @@ export function InvestmentResults({ fna }: InvestmentResultsProps) {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="p-3 bg-gray-50 rounded-lg">
               <p className="text-xs text-gray-600 mb-1">Risk Profile</p>
-              <p className="text-lg text-gray-900 capitalize">{inputs?.clientRiskProfile || 'N/A'}</p>
+              <p className="text-lg text-gray-900 capitalize">
+                {inputs?.clientRiskProfile || 'N/A'}
+              </p>
             </div>
             <div className="p-3 bg-gray-50 rounded-lg">
               <p className="text-xs text-gray-600 mb-1">Long-Term Inflation Rate</p>
               <p className="text-lg text-gray-900">
-                {((economicAssumptions?.inflationRate || inputs?.longTermInflationRate || 0) * 100).toFixed(1)}% p.a.
+                {(
+                  (economicAssumptions?.inflationRate || inputs?.longTermInflationRate || 0) * 100
+                ).toFixed(1)}
+                % p.a.
               </p>
             </div>
             <div className="p-3 bg-gray-50 rounded-lg">
               <p className="text-xs text-gray-600 mb-1">Expected Real Return</p>
               <p className="text-lg text-gray-900">
-                {((inputs?.expectedRealReturns?.[inputs?.clientRiskProfile || 'balanced'] || 0) * 100).toFixed(1)}% p.a.
+                {(
+                  (inputs?.expectedRealReturns?.[inputs?.clientRiskProfile || 'balanced'] || 0) *
+                  100
+                ).toFixed(1)}
+                % p.a.
               </p>
-              <p className="text-xs text-gray-600 mt-1">Based on {inputs?.clientRiskProfile} profile</p>
+              <p className="text-xs text-gray-600 mt-1">
+                Based on {inputs?.clientRiskProfile} profile
+              </p>
             </div>
           </div>
 
@@ -424,19 +471,23 @@ export function InvestmentResults({ fna }: InvestmentResultsProps) {
             <div className="contents">
               <Separator />
               <div>
-                <p className="text-xs text-gray-700 mb-2"><strong>Real Return Assumptions by Risk Profile:</strong></p>
+                <p className="text-xs text-gray-700 mb-2">
+                  <strong>Real Return Assumptions by Risk Profile:</strong>
+                </p>
                 <div className="grid grid-cols-2 md:grid-cols-5 gap-2">
                   {Object.entries(inputs.expectedRealReturns).map(([profile, rate]) => (
-                    <div 
-                      key={profile} 
+                    <div
+                      key={profile}
                       className={`p-2 rounded-lg border text-center ${
-                        profile === inputs.clientRiskProfile 
-                          ? 'bg-purple-50 border-purple-300' 
+                        profile === inputs.clientRiskProfile
+                          ? 'bg-purple-50 border-purple-300'
                           : 'bg-gray-50 border-gray-200'
                       }`}
                     >
                       <p className="text-xs text-gray-600 capitalize">{profile}</p>
-                      <p className="text-sm text-gray-900">{((rate as number) * 100).toFixed(1)}%</p>
+                      <p className="text-sm text-gray-900">
+                        {((rate as number) * 100).toFixed(1)}%
+                      </p>
                     </div>
                   ))}
                 </div>
@@ -453,8 +504,8 @@ export function InvestmentResults({ fna }: InvestmentResultsProps) {
             <div className="flex items-center gap-3">
               <AlertCircle className="h-5 w-5 text-amber-600" />
               <p className="text-sm text-amber-900">
-                Investment analysis calculations have not yet been completed. 
-                Contact your financial adviser for a detailed assessment.
+                Investment analysis calculations have not yet been completed. Contact your financial
+                adviser for a detailed assessment.
               </p>
             </div>
           </CardContent>
@@ -471,12 +522,29 @@ export function InvestmentResults({ fna }: InvestmentResultsProps) {
                 <strong>Important Notes:</strong>
               </p>
               <ul className="space-y-1 text-xs">
-                <li>- Investment returns are projections based on real (inflation-adjusted) returns and are not guaranteed.</li>
-                <li>- Goal funding analysis assumes consistent contributions and stable economic conditions.</li>
-                <li>- Diversification across asset classes helps manage risk but does not guarantee profits or prevent losses.</li>
-                <li>- Consider tax implications of different investment vehicles and account types.</li>
-                <li>- Regular reviews (at least annually) are recommended to stay on track toward your goals.</li>
-                <li>- Consult your financial adviser before implementing any investment strategy changes.</li>
+                <li>
+                  - Investment returns are projections based on real (inflation-adjusted) returns
+                  and are not guaranteed.
+                </li>
+                <li>
+                  - Goal funding analysis assumes consistent contributions and stable economic
+                  conditions.
+                </li>
+                <li>
+                  - Diversification across asset classes helps manage risk but does not guarantee
+                  profits or prevent losses.
+                </li>
+                <li>
+                  - Consider tax implications of different investment vehicles and account types.
+                </li>
+                <li>
+                  - Regular reviews (at least annually) are recommended to stay on track toward your
+                  goals.
+                </li>
+                <li>
+                  - Consult your financial adviser before implementing any investment strategy
+                  changes.
+                </li>
               </ul>
             </div>
           </div>

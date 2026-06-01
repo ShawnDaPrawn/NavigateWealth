@@ -50,12 +50,8 @@ export function AuthorCard({ name, bio, imageUrl }: AuthorCardProps) {
                 Written by
               </span>
             </div>
-            <h3 className="text-xl font-bold text-gray-900 mb-3">
-              {name}
-            </h3>
-            <p className="text-gray-600 leading-relaxed text-[15px]">
-              {bio || DEFAULT_BIO}
-            </p>
+            <h3 className="text-xl font-bold text-gray-900 mb-3">{name}</h3>
+            <p className="text-gray-600 leading-relaxed text-[15px]">{bio || DEFAULT_BIO}</p>
           </div>
         </div>
       </div>

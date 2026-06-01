@@ -2,20 +2,20 @@ import React, { useState } from 'react';
 import { Plus, Search } from 'lucide-react';
 import { Button } from '../../../ui/button';
 import { Input } from '../../../ui/input';
-import { Provider, SaveProviderRequest, getPortalAutomationCategoryOptions, getProductCategoryLabel, type ProductCategoryId } from './types';
+import {
+  Provider,
+  SaveProviderRequest,
+  getPortalAutomationCategoryOptions,
+  getProductCategoryLabel,
+  type ProductCategoryId,
+} from './types';
 import { useProviders } from './hooks/useProviders';
 import { ProviderList } from './components/ProviderList';
 import { ProviderFormDialog } from './components/ProviderFormDialog';
 import { ProviderDeleteDialog } from './components/ProviderDeleteDialog';
 
 export function ProviderManagementTab() {
-  const { 
-    providers, 
-    isLoading, 
-    addProvider, 
-    updateProvider, 
-    deleteProvider 
-  } = useProviders();
+  const { providers, isLoading, addProvider, updateProvider, deleteProvider } = useProviders();
 
   const [searchQuery, setSearchQuery] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -24,11 +24,13 @@ export function ProviderManagementTab() {
   const [isDeleting, setIsDeleting] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
 
-  const filteredProviders = providers.filter(p => 
-    p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    (p.description || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
-    getPortalAutomationCategoryOptions(p.categoryIds)
-      .some((categoryId) => getProductCategoryLabel(categoryId).toLowerCase().includes(searchQuery.toLowerCase()))
+  const filteredProviders = providers.filter(
+    (p) =>
+      p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (p.description || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+      getPortalAutomationCategoryOptions(p.categoryIds).some((categoryId) =>
+        getProductCategoryLabel(categoryId).toLowerCase().includes(searchQuery.toLowerCase()),
+      ),
   );
 
   const handleOpenModal = (provider?: Provider) => {
@@ -101,7 +103,7 @@ export function ProviderManagementTab() {
         </Button>
       </div>
 
-      <ProviderList 
+      <ProviderList
         providers={filteredProviders}
         isLoading={isLoading}
         onEdit={handleOpenModal}
@@ -111,12 +113,16 @@ export function ProviderManagementTab() {
       <ProviderFormDialog
         isOpen={isModalOpen}
         onClose={handleCloseModal}
-        initialData={editingProvider ? {
-            name: editingProvider.name,
-            description: editingProvider.description || '',
-            categoryIds: editingProvider.categoryIds as unknown as ProductCategoryId[],
-            logo: editingProvider.logo || ''
-        } : undefined}
+        initialData={
+          editingProvider
+            ? {
+                name: editingProvider.name,
+                description: editingProvider.description || '',
+                categoryIds: editingProvider.categoryIds as unknown as ProductCategoryId[],
+                logo: editingProvider.logo || '',
+              }
+            : undefined
+        }
         onSave={handleSave}
         isSaving={isSaving}
       />

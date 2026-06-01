@@ -1,12 +1,12 @@
 /**
  * Client Management Module - Validation Schemas
- * 
+ *
  * Comprehensive validation for client management:
  * - Client CRUD operations
  * - Profile updates
  * - Security operations (suspend/unsuspend)
  * - Query filters
- * 
+ *
  * Phase 3 - Increment 3.3
  * VERSION: 3.3.8 - Inlined validation utilities to avoid bundler issues
  */
@@ -135,13 +135,7 @@ export const FinancialGoalSchema = z.enum([
 /**
  * Account status
  */
-export const AccountStatusSchema = z.enum([
-  'pending',
-  'approved',
-  'active',
-  'suspended',
-  'closed',
-]);
+export const AccountStatusSchema = z.enum(['pending', 'approved', 'active', 'suspended', 'closed']);
 
 // ============================================================================
 // NESTED OBJECT SCHEMAS
@@ -150,23 +144,22 @@ export const AccountStatusSchema = z.enum([
 /**
  * Personal Information Schema
  */
-export const PersonalInformationSchema = z.object({
-  firstName: NonEmptyStringSchema,
-  lastName: NonEmptyStringSchema,
-  dateOfBirth: IsoDateSchema.optional(),
-  gender: GenderSchema.optional(),
-  nationality: NationalitySchema.optional(),
-  idNumber: OptionalSaIdNumberSchema,
-  passportNumber: OptionalStringSchema,
-  cellphone: OptionalSaPhoneSchema,
-  email: OptionalEmailSchema,
-}).refine(
-  (data) => data.idNumber || data.passportNumber,
-  {
+export const PersonalInformationSchema = z
+  .object({
+    firstName: NonEmptyStringSchema,
+    lastName: NonEmptyStringSchema,
+    dateOfBirth: IsoDateSchema.optional(),
+    gender: GenderSchema.optional(),
+    nationality: NationalitySchema.optional(),
+    idNumber: OptionalSaIdNumberSchema,
+    passportNumber: OptionalStringSchema,
+    cellphone: OptionalSaPhoneSchema,
+    email: OptionalEmailSchema,
+  })
+  .refine((data) => data.idNumber || data.passportNumber, {
     message: 'Either ID number or passport number is required',
     path: ['idNumber'],
-  }
-);
+  });
 
 /**
  * Contact Information Schema
@@ -181,26 +174,29 @@ export const ContactInformationSchema = z.object({
 /**
  * Employment Information Schema
  */
-export const EmploymentInformationSchema = z.object({
-  status: EmploymentStatusSchema.optional(),
-  occupation: OptionalStringSchema,
-  employer: OptionalStringSchema,
-  monthlyIncome: z.string()
-    .optional()
-    .transform((val) => val ? parseFloat(val) : undefined)
-    .pipe(z.number().nonnegative().optional()),
-}).refine(
-  (data) => {
-    if (data.status === 'employed' || data.status === 'self_employed') {
-      return !!data.occupation;
-    }
-    return true;
-  },
-  {
-    message: 'Occupation is required when employment status is employed or self-employed',
-    path: ['occupation'],
-  }
-);
+export const EmploymentInformationSchema = z
+  .object({
+    status: EmploymentStatusSchema.optional(),
+    occupation: OptionalStringSchema,
+    employer: OptionalStringSchema,
+    monthlyIncome: z
+      .string()
+      .optional()
+      .transform((val) => (val ? parseFloat(val) : undefined))
+      .pipe(z.number().nonnegative().optional()),
+  })
+  .refine(
+    (data) => {
+      if (data.status === 'employed' || data.status === 'self_employed') {
+        return !!data.occupation;
+      }
+      return true;
+    },
+    {
+      message: 'Occupation is required when employment status is employed or self-employed',
+      path: ['occupation'],
+    },
+  );
 
 /**
  * Financial Information Schema
@@ -250,17 +246,16 @@ export const CreateClientSchema = z.object({
 /**
  * Update Client Schema
  */
-export const UpdateClientSchema = z.object({
-  firstName: NonEmptyStringSchema.optional(),
-  lastName: NonEmptyStringSchema.optional(),
-  accountType: AccountTypeSchema.optional(),
-  profile: ClientProfileSchema.partial().optional(),
-}).refine(
-  (data) => Object.keys(data).length > 0,
-  {
+export const UpdateClientSchema = z
+  .object({
+    firstName: NonEmptyStringSchema.optional(),
+    lastName: NonEmptyStringSchema.optional(),
+    accountType: AccountTypeSchema.optional(),
+    profile: ClientProfileSchema.partial().optional(),
+  })
+  .refine((data) => Object.keys(data).length > 0, {
     message: 'At least one field must be provided for update',
-  }
-);
+  });
 
 /**
  * Update Client Profile Schema
@@ -269,7 +264,7 @@ export const UpdateClientProfileSchema = ClientProfileSchema.partial().refine(
   (data) => Object.keys(data).length > 0,
   {
     message: 'At least one field must be provided for update',
-  }
+  },
 );
 
 // ============================================================================
@@ -279,17 +274,16 @@ export const UpdateClientProfileSchema = ClientProfileSchema.partial().refine(
 /**
  * Super Admin Profile Update Schema
  */
-export const UpdateSuperAdminProfileSchema = z.object({
-  firstName: NonEmptyStringSchema.optional(),
-  lastName: NonEmptyStringSchema.optional(),
-  phone: OptionalSaPhoneSchema,
-  // Super admin fields are protected - role, accountStatus, etc. cannot be changed
-}).refine(
-  (data) => Object.keys(data).length > 0,
-  {
+export const UpdateSuperAdminProfileSchema = z
+  .object({
+    firstName: NonEmptyStringSchema.optional(),
+    lastName: NonEmptyStringSchema.optional(),
+    phone: OptionalSaPhoneSchema,
+    // Super admin fields are protected - role, accountStatus, etc. cannot be changed
+  })
+  .refine((data) => Object.keys(data).length > 0, {
     message: 'At least one field must be provided for update',
-  }
-);
+  });
 
 /**
  * Personal Info Query Schema
@@ -310,28 +304,30 @@ export const PersonalInfoUpdateSchema = z.object({
 /**
  * Alternative Profile Update Schema (PUT /)
  */
-export const AlternativeProfileUpdateSchema = z.object({
-  userId: UuidSchema,
-  firstName: NonEmptyStringSchema.optional(),
-  lastName: NonEmptyStringSchema.optional(),
-  surname: NonEmptyStringSchema.optional(), // Legacy support
-  email: EmailSchema.optional(),
-  phone: OptionalSaPhoneSchema,
-  role: ClientRoleSchema.optional(),
-  accountType: AccountTypeSchema.optional(),
-  accountStatus: AccountStatusSchema.optional(),
-  applicationStatus: ApplicationStatusSchema.optional(),
-  adviserAssigned: z.boolean().optional(),
-}).refine(
-  (data) => {
-    // Must have at least one update field besides userId
-    const { userId, ...rest } = data;
-    return Object.keys(rest).length > 0;
-  },
-  {
-    message: 'At least one field must be provided for update',
-  }
-);
+export const AlternativeProfileUpdateSchema = z
+  .object({
+    userId: UuidSchema,
+    firstName: NonEmptyStringSchema.optional(),
+    lastName: NonEmptyStringSchema.optional(),
+    surname: NonEmptyStringSchema.optional(), // Legacy support
+    email: EmailSchema.optional(),
+    phone: OptionalSaPhoneSchema,
+    role: ClientRoleSchema.optional(),
+    accountType: AccountTypeSchema.optional(),
+    accountStatus: AccountStatusSchema.optional(),
+    applicationStatus: ApplicationStatusSchema.optional(),
+    adviserAssigned: z.boolean().optional(),
+  })
+  .refine(
+    (data) => {
+      // Must have at least one update field besides userId
+      const { userId, ...rest } = data;
+      return Object.keys(rest).length > 0;
+    },
+    {
+      message: 'At least one field must be provided for update',
+    },
+  );
 
 /**
  * Create Default Profile Schema
@@ -350,10 +346,11 @@ export const CreateDefaultProfileSchema = z.object({
  * Suspend Client Schema
  */
 export const SuspendClientSchema = z.object({
-  reason: z.string()
-  .min(10, 'Suspension reason must be at least 10 characters')
-  .max(500, 'Suspension reason cannot exceed 500 characters')
-  .transform(stripHtml),
+  reason: z
+    .string()
+    .min(10, 'Suspension reason must be at least 10 characters')
+    .max(500, 'Suspension reason cannot exceed 500 characters')
+    .transform(stripHtml),
 });
 
 /**
@@ -361,7 +358,8 @@ export const SuspendClientSchema = z.object({
  * Requires a reason for compliance audit trail.
  */
 export const CloseAccountSchema = z.object({
-  reason: z.string()
+  reason: z
+    .string()
     .min(10, 'Closure reason must be at least 10 characters')
     .max(500, 'Closure reason cannot exceed 500 characters')
     .transform(stripHtml),
@@ -372,7 +370,8 @@ export const CloseAccountSchema = z.object({
  * Optional note for audit trail.
  */
 export const ReinstateAccountSchema = z.object({
-  note: z.string()
+  note: z
+    .string()
     .max(500, 'Reinstatement note cannot exceed 500 characters')
     .transform(stripHtml)
     .optional(),
@@ -399,17 +398,20 @@ export const ClientSecuritySchema = z.object({
 export const ClientListQuerySchema = z.object({
   status: z.enum(['active', 'suspended', 'pending', 'approved', 'declined']).optional(),
   accountType: AccountTypeSchema.optional(),
-  search: z.string()
-  .optional()
-  .transform((val) => val ? normalizeWhitespace(val) : val),
-  limit: z.string()
-  .optional()
-  .transform((val) => val ? parseInt(val, 10) : 50)
-  .pipe(z.number().int().min(1).max(100)),
-  offset: z.string()
-  .optional()
-  .transform((val) => val ? parseInt(val, 10) : 0)
-  .pipe(z.number().int().nonnegative()),
+  search: z
+    .string()
+    .optional()
+    .transform((val) => (val ? normalizeWhitespace(val) : val)),
+  limit: z
+    .string()
+    .optional()
+    .transform((val) => (val ? parseInt(val, 10) : 50))
+    .pipe(z.number().int().min(1).max(100)),
+  offset: z
+    .string()
+    .optional()
+    .transform((val) => (val ? parseInt(val, 10) : 0))
+    .pipe(z.number().int().nonnegative()),
 });
 
 /**
@@ -447,10 +449,11 @@ export const EnhancedPersonnelSchema = z.object({
   phone: OptionalSaPhoneSchema,
   role: z.enum(['super_admin', 'admin', 'adviser', 'paraplanner', 'compliance', 'viewer']),
   status: z.enum(['active', 'suspended', 'pending']).default('active'),
-  commissionSplit: z.number()
-  .min(0, 'Commission split cannot be negative')
-  .max(1, 'Commission split cannot exceed 1')
-  .optional(),
+  commissionSplit: z
+    .number()
+    .min(0, 'Commission split cannot be negative')
+    .max(1, 'Commission split cannot exceed 1')
+    .optional(),
   fscaNumber: OptionalStringSchema,
   fscaStatus: z.enum(['active', 'debarred', 'pending', 'suspended']).optional(),
   department: z.enum(['operations', 'compliance', 'sales', 'support', 'management']).optional(),
@@ -466,14 +469,16 @@ export const UpdatePersonnelSchema = EnhancedPersonnelSchema.partial().refine(
   (data) => Object.keys(data).length > 0,
   {
     message: 'At least one field must be provided for update',
-  }
+  },
 );
 
 /**
  * Personnel Query Schema
  */
 export const PersonnelQuerySchema = z.object({
-  role: z.enum(['super_admin', 'admin', 'adviser', 'paraplanner', 'compliance', 'viewer']).optional(),
+  role: z
+    .enum(['super_admin', 'admin', 'adviser', 'paraplanner', 'compliance', 'viewer'])
+    .optional(),
   status: z.enum(['active', 'suspended', 'pending']).optional(),
   department: z.enum(['operations', 'compliance', 'sales', 'support', 'management']).optional(),
   search: OptionalStringSchema,

@@ -4,17 +4,17 @@ Operational guide for advisers and engineering when unified form prefill misbeha
 
 ## Quick checks
 
-| Symptom | Action |
-|---------|--------|
+| Symptom                        | Action                                                                                                                                |
+| ------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------- |
 | `/prefill/resolve` returns 404 | Redeploy Edge Function: `npx supabase functions deploy make-server-91ed8379 --project-ref vpjmdsltwrnpefzcgdmz --use-api --workdir .` |
-| Empty matches in review modal | Check client profile keys listed in `PREFILL_PROFILE_HINTS`; use profile edit link in banner/modal |
-| Wrong proposed value | Compare source badge in review modal (profile vs client_keys vs policies vs derived) |
-| Rate limit 429 on resolve | Wait 1 hour or clear KV key `rate_limit:form-prefill:resolve:{userId}` (service role) |
-| Client JWT can prefill | Should return 403 — verify `requirePrefillUser` on route; client role must not pass |
-| Rollback to legacy silent fill | Set `VITE_FORM_PREFILL_ENABLED=false`, rebuild frontend; Medical Step 1 uses legacy API fill when flag off |
-| Prefill audit empty | Audit rows written only after Apply in wizard or review modal (`POST /prefill/apply-audit`) |
-| PDF template fill fails | Confirm template PDF in Storage path on record; legacy KV `:file` base64 still supported as fallback |
-| PDF attach failed | Storage bucket `make-91ed8379-documents` permissions; see `form-template-document.ts` |
+| Empty matches in review modal  | Check client profile keys listed in `PREFILL_PROFILE_HINTS`; use profile edit link in banner/modal                                    |
+| Wrong proposed value           | Compare source badge in review modal (profile vs client_keys vs policies vs derived)                                                  |
+| Rate limit 429 on resolve      | Wait 1 hour or clear KV key `rate_limit:form-prefill:resolve:{userId}` (service role)                                                 |
+| Client JWT can prefill         | Should return 403 — verify `requirePrefillUser` on route; client role must not pass                                                   |
+| Rollback to legacy silent fill | Set `VITE_FORM_PREFILL_ENABLED=false`, rebuild frontend; Medical Step 1 uses legacy API fill when flag off                            |
+| Prefill audit empty            | Audit rows written only after Apply in wizard or review modal (`POST /prefill/apply-audit`)                                           |
+| PDF template fill fails        | Confirm template PDF in Storage path on record; legacy KV `:file` base64 still supported as fallback                                  |
+| PDF attach failed              | Storage bucket `make-91ed8379-documents` permissions; see `form-template-document.ts`                                                 |
 
 ## Access model
 

@@ -101,13 +101,13 @@ export const SmartClauseBlock: BlockDefinition = {
             minHeight="160px"
           />
           <p className="text-[10px] text-gray-400 leading-relaxed">
-            Use the <code className="px-1 py-0.5 bg-gray-100 rounded text-[9px] font-mono">
-              {'{x}'}
-            </code> toolbar button to insert data variables like{' '}
+            Use the{' '}
+            <code className="px-1 py-0.5 bg-gray-100 rounded text-[9px] font-mono">{'{x}'}</code>{' '}
+            toolbar button to insert data variables like{' '}
             <code className="px-1 py-0.5 bg-gray-100 rounded text-[9px] font-mono">
               {'{{beneficiary_name}}'}
-            </code>.
-            Variables resolve to client data when the form is rendered.
+            </code>
+            . Variables resolve to client data when the form is rendered.
           </p>
         </div>
       </div>

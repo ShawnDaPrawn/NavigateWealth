@@ -5,14 +5,7 @@
  * Guidelines refs: §4.1 (module structure), §8.3 (stat card standards)
  */
 
-import {
-  Bell,
-  Mail,
-  Smartphone,
-  Activity,
-  Volume2,
-  VolumeX,
-} from 'lucide-react';
+import { Bell, Mail, Smartphone, Activity, Volume2, VolumeX } from 'lucide-react';
 import { Button } from '../../../ui/button';
 import type { CommunicationSettings } from '../types';
 

@@ -164,7 +164,9 @@ export function ContentSourcesManager({ onArticlesGenerated }: ContentSourcesMan
     }
   }, []);
 
-  useEffect(() => { loadSources(); }, [loadSources]);
+  useEffect(() => {
+    loadSources();
+  }, [loadSources]);
 
   // Open add dialog
   const handleAdd = useCallback(() => {
@@ -196,12 +198,26 @@ export function ContentSourcesManager({ onArticlesGenerated }: ContentSourcesMan
 
   // Save (create or update)
   const handleSave = useCallback(async () => {
-    if (!form.name.trim()) { toast.error('Source name is required'); return; }
-    if (!form.url.trim()) { toast.error('Feed URL is required'); return; }
-    if (form.pipelines.length === 0) { toast.error('Select at least one pipeline'); return; }
+    if (!form.name.trim()) {
+      toast.error('Source name is required');
+      return;
+    }
+    if (!form.url.trim()) {
+      toast.error('Feed URL is required');
+      return;
+    }
+    if (form.pipelines.length === 0) {
+      toast.error('Select at least one pipeline');
+      return;
+    }
 
     // Validate URL
-    try { new URL(form.url); } catch { toast.error('Invalid URL format'); return; }
+    try {
+      new URL(form.url);
+    } catch {
+      toast.error('Invalid URL format');
+      return;
+    }
 
     setSaving(true);
     try {
@@ -254,7 +270,9 @@ export function ContentSourcesManager({ onArticlesGenerated }: ContentSourcesMan
   // Toggle active
   const handleToggleActive = useCallback(async (source: ContentSource) => {
     try {
-      const updated = await PublicationsAPI.AutoContent.updateContentSource(source.id, { isActive: !source.isActive });
+      const updated = await PublicationsAPI.AutoContent.updateContentSource(source.id, {
+        isActive: !source.isActive,
+      });
       setSources((prev) => prev.map((s) => (s.id === updated.id ? updated : s)));
       toast.success(`${source.name} ${updated.isActive ? 'enabled' : 'disabled'}`);
     } catch (err) {
@@ -281,30 +299,43 @@ export function ContentSourcesManager({ onArticlesGenerated }: ContentSourcesMan
   }, [deleteTarget]);
 
   // Trigger article generation from a specific source
-  const handleTriggerSource = useCallback(async (source: ContentSource) => {
-    setTriggeringSourceId(source.id);
-    try {
-      const result = await PublicationsAPI.AutoContent.triggerSource(source.id);
-      if (result.totalGenerated > 0) {
-        toast.success(`${result.totalGenerated} article(s) generated from "${source.name}"`);
-        if (onArticlesGenerated) onArticlesGenerated();
-      } else {
-        toast.info(`No new articles generated from "${source.name}" — content may already be processed`);
+  const handleTriggerSource = useCallback(
+    async (source: ContentSource) => {
+      setTriggeringSourceId(source.id);
+      try {
+        const result = await PublicationsAPI.AutoContent.triggerSource(source.id);
+        if (result.totalGenerated > 0) {
+          toast.success(`${result.totalGenerated} article(s) generated from "${source.name}"`);
+          if (onArticlesGenerated) onArticlesGenerated();
+        } else {
+          toast.info(
+            `No new articles generated from "${source.name}" — content may already be processed`,
+          );
+        }
+        loadSources();
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : 'Failed to trigger source';
+        toast.error(msg);
+        console.error('Trigger source error:', err);
+      } finally {
+        setTriggeringSourceId(null);
       }
-      loadSources();
-    } catch (err) {
-      const msg = err instanceof Error ? err.message : 'Failed to trigger source';
-      toast.error(msg);
-      console.error('Trigger source error:', err);
-    } finally {
-      setTriggeringSourceId(null);
-    }
-  }, [loadSources, onArticlesGenerated]);
+    },
+    [loadSources, onArticlesGenerated],
+  );
 
   // Feed discovery — detect RSS feeds from a webpage URL
   const handleDiscoverFeeds = useCallback(async () => {
-    if (!form.url.trim()) { toast.error('Enter a URL first'); return; }
-    try { new URL(form.url); } catch { toast.error('Invalid URL format'); return; }
+    if (!form.url.trim()) {
+      toast.error('Enter a URL first');
+      return;
+    }
+    try {
+      new URL(form.url);
+    } catch {
+      toast.error('Invalid URL format');
+      return;
+    }
 
     setDiscovering(true);
     setDiscoveryDone(false);
@@ -395,7 +426,8 @@ export function ContentSourcesManager({ onArticlesGenerated }: ContentSourcesMan
             Content Sources
           </h3>
           <p className="text-xs text-gray-500 mt-0.5">
-            Manage RSS feeds and control how often each source is checked and how many articles it generates.
+            Manage RSS feeds and control how often each source is checked and how many articles it
+            generates.
           </p>
         </div>
         <Button size="sm" onClick={handleAdd} className="gap-1.5 bg-purple-600 hover:bg-purple-700">
@@ -410,8 +442,8 @@ export function ContentSourcesManager({ onArticlesGenerated }: ContentSourcesMan
           <Rss className="h-10 w-10 text-gray-300 mx-auto mb-3" />
           <p className="text-sm font-medium text-gray-600">No content sources configured</p>
           <p className="text-xs text-gray-400 mt-1 max-w-md mx-auto">
-            Add RSS feed URLs to control where the automated pipelines get their content.
-            Without configured sources, pipelines will use built-in defaults.
+            Add RSS feed URLs to control where the automated pipelines get their content. Without
+            configured sources, pipelines will use built-in defaults.
           </p>
           <Button size="sm" variant="outline" onClick={handleAdd} className="mt-4 gap-1.5">
             <Plus className="h-3.5 w-3.5" />
@@ -442,162 +474,221 @@ export function ContentSourcesManager({ onArticlesGenerated }: ContentSourcesMan
       )}
 
       {/* Sources List */}
-      {sources.length > 0 && (() => {
-        const query = searchQuery.toLowerCase().trim();
-        const filteredSources = query
-          ? sources.filter(s =>
-              s.name.toLowerCase().includes(query) ||
-              s.url.toLowerCase().includes(query) ||
-              s.pipelines.some(p => PIPELINE_LABELS[p].toLowerCase().includes(query))
-            )
-          : sources;
+      {sources.length > 0 &&
+        (() => {
+          const query = searchQuery.toLowerCase().trim();
+          const filteredSources = query
+            ? sources.filter(
+                (s) =>
+                  s.name.toLowerCase().includes(query) ||
+                  s.url.toLowerCase().includes(query) ||
+                  s.pipelines.some((p) => PIPELINE_LABELS[p].toLowerCase().includes(query)),
+              )
+            : sources;
 
-        if (filteredSources.length === 0 && query) {
+          if (filteredSources.length === 0 && query) {
+            return (
+              <div className="text-center py-6 text-sm text-gray-400">
+                No sources match &ldquo;{searchQuery}&rdquo;
+              </div>
+            );
+          }
+
           return (
-            <div className="text-center py-6 text-sm text-gray-400">
-              No sources match &ldquo;{searchQuery}&rdquo;
+            <div className="space-y-2">
+              {filteredSources.map((source) => (
+                <Card
+                  key={source.id}
+                  className={cn(
+                    'transition-all relative overflow-hidden',
+                    !source.isActive && 'opacity-50',
+                    triggeringSourceId === source.id && 'ring-2 ring-blue-300 ring-offset-1',
+                  )}
+                >
+                  {/* Active generation overlay banner */}
+                  {triggeringSourceId === source.id && (
+                    <div className="absolute inset-x-0 top-0 bg-blue-50 border-b border-blue-200 px-4 py-2 flex items-center gap-2.5 z-10">
+                      <Loader2 className="h-3.5 w-3.5 text-blue-600 animate-spin flex-shrink-0" />
+                      <span className="text-xs font-medium text-blue-700">
+                        Generating article from &ldquo;{source.name}&rdquo;&hellip; This may take
+                        30–60 seconds.
+                      </span>
+                    </div>
+                  )}
+                  <CardContent className={cn('p-4', triggeringSourceId === source.id && 'pt-12')}>
+                    <div className="flex items-start justify-between">
+                      <div className="flex items-start gap-3 flex-1 min-w-0">
+                        {/* Status dot + icon */}
+                        <div className="relative mt-0.5">
+                          <div
+                            className={cn(
+                              'p-2 rounded-lg',
+                              source.isActive ? 'bg-orange-50' : 'bg-gray-100',
+                            )}
+                          >
+                            <Rss
+                              className={cn(
+                                'h-4 w-4',
+                                source.isActive ? 'text-orange-500' : 'text-gray-400',
+                              )}
+                            />
+                          </div>
+                          <div
+                            className={cn(
+                              'absolute -top-0.5 -right-0.5 w-2.5 h-2.5 rounded-full border-2 border-white',
+                              source.isActive ? 'bg-green-500' : 'bg-gray-300',
+                            )}
+                          />
+                        </div>
+
+                        {/* Info */}
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <h4 className="text-sm font-medium text-gray-900 truncate">
+                              {source.name}
+                            </h4>
+                            {source.pipelines.map((p) => (
+                              <Badge
+                                key={p}
+                                variant="outline"
+                                className={cn('text-[9px] h-4 px-1.5', PIPELINE_COLORS[p])}
+                              >
+                                {PIPELINE_LABELS[p]}
+                              </Badge>
+                            ))}
+                          </div>
+
+                          <a
+                            href={source.url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-xs text-gray-400 hover:text-blue-500 truncate block mt-0.5 max-w-lg"
+                          >
+                            {source.url}
+                            <ExternalLink className="h-2.5 w-2.5 inline ml-1 -mt-0.5" />
+                          </a>
+
+                          {/* Stats row */}
+                          <div className="flex items-center gap-4 mt-2 text-[10px] text-gray-400">
+                            <span className="flex items-center gap-1">
+                              <Clock className="h-3 w-3" />
+                              Check: {intervalLabel(source.checkIntervalHours)}
+                            </span>
+                            <span className="flex items-center gap-1">
+                              <BarChart3 className="h-3 w-3" />
+                              Limits: {source.maxArticlesPerRun}/run · {source.maxArticlesPerDay}
+                              /day · {source.maxArticlesPerWeek}/week
+                            </span>
+                            {source.filterKeywords && source.filterKeywords.length > 0 && (
+                              <span className="flex items-center gap-1">
+                                <Filter className="h-3 w-3" />
+                                {source.filterKeywords.length} keywords
+                              </span>
+                            )}
+                          </div>
+
+                          {/* Usage row */}
+                          <div className="flex items-center gap-4 mt-1 text-[10px]">
+                            <span className="text-gray-400">
+                              Last checked:{' '}
+                              <span className="font-medium text-gray-500">
+                                {formatRelativeTime(source.lastCheckedAt)}
+                              </span>
+                            </span>
+                            <span className="text-gray-400">
+                              Today:{' '}
+                              <span className="font-medium text-gray-500">
+                                {source.articlesGeneratedToday}
+                              </span>
+                            </span>
+                            <span className="text-gray-400">
+                              This week:{' '}
+                              <span className="font-medium text-gray-500">
+                                {source.articlesGeneratedThisWeek}
+                              </span>
+                            </span>
+                            <span className="text-gray-400">
+                              Total:{' '}
+                              <span className="font-medium text-gray-500">
+                                {source.totalGenerated}
+                              </span>
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Actions */}
+                      <div className="flex items-center gap-1 ml-3 flex-shrink-0">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleToggleActive(source)}
+                          className={cn(
+                            'h-7 px-1.5',
+                            source.isActive
+                              ? 'text-green-600 hover:text-red-600'
+                              : 'text-gray-400 hover:text-green-600',
+                          )}
+                          title={source.isActive ? 'Disable' : 'Enable'}
+                        >
+                          <Power className="h-3.5 w-3.5" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleEdit(source)}
+                          className="h-7 px-1.5 text-gray-400 hover:text-blue-600"
+                        >
+                          <Pencil className="h-3.5 w-3.5" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => setDeleteTarget(source)}
+                          className="h-7 px-1.5 text-gray-400 hover:text-red-600"
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleTriggerSource(source)}
+                          disabled={triggeringSourceId === source.id}
+                          className={cn(
+                            'h-7 px-1.5',
+                            triggeringSourceId === source.id
+                              ? 'text-blue-600 hover:text-blue-700'
+                              : 'text-gray-400 hover:text-blue-600',
+                          )}
+                          title={
+                            triggeringSourceId === source.id
+                              ? 'Generating article…'
+                              : 'Trigger article generation'
+                          }
+                        >
+                          {triggeringSourceId === source.id ? (
+                            <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                          ) : (
+                            <Play className="h-3.5 w-3.5" />
+                          )}
+                        </Button>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
             </div>
           );
-        }
-
-        return (
-        <div className="space-y-2">
-          {filteredSources.map((source) => (
-            <Card key={source.id} className={cn(
-              'transition-all relative overflow-hidden',
-              !source.isActive && 'opacity-50',
-              triggeringSourceId === source.id && 'ring-2 ring-blue-300 ring-offset-1'
-            )}>
-              {/* Active generation overlay banner */}
-              {triggeringSourceId === source.id && (
-                <div className="absolute inset-x-0 top-0 bg-blue-50 border-b border-blue-200 px-4 py-2 flex items-center gap-2.5 z-10">
-                  <Loader2 className="h-3.5 w-3.5 text-blue-600 animate-spin flex-shrink-0" />
-                  <span className="text-xs font-medium text-blue-700">
-                    Generating article from &ldquo;{source.name}&rdquo;&hellip; This may take 30–60 seconds.
-                  </span>
-                </div>
-              )}
-              <CardContent className={cn('p-4', triggeringSourceId === source.id && 'pt-12')}>
-                <div className="flex items-start justify-between">
-                  <div className="flex items-start gap-3 flex-1 min-w-0">
-                    {/* Status dot + icon */}
-                    <div className="relative mt-0.5">
-                      <div className={cn('p-2 rounded-lg', source.isActive ? 'bg-orange-50' : 'bg-gray-100')}>
-                        <Rss className={cn('h-4 w-4', source.isActive ? 'text-orange-500' : 'text-gray-400')} />
-                      </div>
-                      <div className={cn(
-                        'absolute -top-0.5 -right-0.5 w-2.5 h-2.5 rounded-full border-2 border-white',
-                        source.isActive ? 'bg-green-500' : 'bg-gray-300'
-                      )} />
-                    </div>
-
-                    {/* Info */}
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <h4 className="text-sm font-medium text-gray-900 truncate">{source.name}</h4>
-                        {source.pipelines.map((p) => (
-                          <Badge key={p} variant="outline" className={cn('text-[9px] h-4 px-1.5', PIPELINE_COLORS[p])}>
-                            {PIPELINE_LABELS[p]}
-                          </Badge>
-                        ))}
-                      </div>
-
-                      <a
-                        href={source.url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-xs text-gray-400 hover:text-blue-500 truncate block mt-0.5 max-w-lg"
-                      >
-                        {source.url}
-                        <ExternalLink className="h-2.5 w-2.5 inline ml-1 -mt-0.5" />
-                      </a>
-
-                      {/* Stats row */}
-                      <div className="flex items-center gap-4 mt-2 text-[10px] text-gray-400">
-                        <span className="flex items-center gap-1">
-                          <Clock className="h-3 w-3" />
-                          Check: {intervalLabel(source.checkIntervalHours)}
-                        </span>
-                        <span className="flex items-center gap-1">
-                          <BarChart3 className="h-3 w-3" />
-                          Limits: {source.maxArticlesPerRun}/run · {source.maxArticlesPerDay}/day · {source.maxArticlesPerWeek}/week
-                        </span>
-                        {source.filterKeywords && source.filterKeywords.length > 0 && (
-                          <span className="flex items-center gap-1">
-                            <Filter className="h-3 w-3" />
-                            {source.filterKeywords.length} keywords
-                          </span>
-                        )}
-                      </div>
-
-                      {/* Usage row */}
-                      <div className="flex items-center gap-4 mt-1 text-[10px]">
-                        <span className="text-gray-400">
-                          Last checked: <span className="font-medium text-gray-500">{formatRelativeTime(source.lastCheckedAt)}</span>
-                        </span>
-                        <span className="text-gray-400">
-                          Today: <span className="font-medium text-gray-500">{source.articlesGeneratedToday}</span>
-                        </span>
-                        <span className="text-gray-400">
-                          This week: <span className="font-medium text-gray-500">{source.articlesGeneratedThisWeek}</span>
-                        </span>
-                        <span className="text-gray-400">
-                          Total: <span className="font-medium text-gray-500">{source.totalGenerated}</span>
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Actions */}
-                  <div className="flex items-center gap-1 ml-3 flex-shrink-0">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => handleToggleActive(source)}
-                      className={cn('h-7 px-1.5', source.isActive ? 'text-green-600 hover:text-red-600' : 'text-gray-400 hover:text-green-600')}
-                      title={source.isActive ? 'Disable' : 'Enable'}
-                    >
-                      <Power className="h-3.5 w-3.5" />
-                    </Button>
-                    <Button variant="ghost" size="sm" onClick={() => handleEdit(source)} className="h-7 px-1.5 text-gray-400 hover:text-blue-600">
-                      <Pencil className="h-3.5 w-3.5" />
-                    </Button>
-                    <Button variant="ghost" size="sm" onClick={() => setDeleteTarget(source)} className="h-7 px-1.5 text-gray-400 hover:text-red-600">
-                      <Trash2 className="h-3.5 w-3.5" />
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => handleTriggerSource(source)}
-                      disabled={triggeringSourceId === source.id}
-                      className={cn(
-                        'h-7 px-1.5',
-                        triggeringSourceId === source.id ? 'text-blue-600 hover:text-blue-700' : 'text-gray-400 hover:text-blue-600'
-                      )}
-                      title={triggeringSourceId === source.id ? 'Generating article…' : 'Trigger article generation'}
-                    >
-                      {triggeringSourceId === source.id ? (
-                        <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                      ) : (
-                        <Play className="h-3.5 w-3.5" />
-                      )}
-                    </Button>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-        );
-      })()}
+        })()}
 
       {/* Info banner */}
       {sources.length > 0 && (
         <div className="bg-amber-50 border border-amber-100 rounded-lg p-3 flex items-start gap-2.5">
           <AlertTriangle className="h-4 w-4 text-amber-500 mt-0.5 flex-shrink-0" />
           <p className="text-xs text-amber-700">
-            When sources are configured for a pipeline, they replace the built-in defaults.
-            If all sources for a pipeline are disabled or exceed their limits, the pipeline will skip that run.
+            When sources are configured for a pipeline, they replace the built-in defaults. If all
+            sources for a pipeline are disabled or exceed their limits, the pipeline will skip that
+            run.
           </p>
         </div>
       )}
@@ -606,7 +697,9 @@ export function ContentSourcesManager({ onArticlesGenerated }: ContentSourcesMan
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent className="max-w-xl">
           <DialogHeader>
-            <DialogTitle>{editingSource ? 'Edit Content Source' : 'Add Content Source'}</DialogTitle>
+            <DialogTitle>
+              {editingSource ? 'Edit Content Source' : 'Add Content Source'}
+            </DialogTitle>
             <DialogDescription>
               Configure an RSS feed source for automated article generation.
             </DialogDescription>
@@ -666,7 +759,8 @@ export function ContentSourcesManager({ onArticlesGenerated }: ContentSourcesMan
                 </Button>
               </div>
               <p className="text-[10px] text-gray-400">
-                Paste any webpage URL and click &quot;Detect Feeds&quot; to automatically find RSS feeds, or enter a direct feed URL.
+                Paste any webpage URL and click &quot;Detect Feeds&quot; to automatically find RSS
+                feeds, or enter a direct feed URL.
               </p>
 
               {/* Discovery results */}
@@ -686,7 +780,9 @@ export function ContentSourcesManager({ onArticlesGenerated }: ContentSourcesMan
                       >
                         <div className="flex items-center justify-between">
                           <div className="flex-1 min-w-0">
-                            <p className="text-sm font-medium text-gray-900 truncate">{feed.title}</p>
+                            <p className="text-sm font-medium text-gray-900 truncate">
+                              {feed.title}
+                            </p>
                             <p className="text-[10px] text-gray-400 truncate mt-0.5">{feed.url}</p>
                           </div>
                           <div className="flex items-center gap-2 ml-3 flex-shrink-0">
@@ -709,7 +805,8 @@ export function ContentSourcesManager({ onArticlesGenerated }: ContentSourcesMan
                 <div className="mt-2 border border-amber-100 bg-amber-50/50 rounded-lg p-3 flex items-start gap-2">
                   <AlertTriangle className="h-3.5 w-3.5 text-amber-500 mt-0.5 flex-shrink-0" />
                   <p className="text-xs text-amber-700">
-                    No RSS feeds detected on this page. Try a different URL, or look for an RSS icon on the website and paste that URL directly.
+                    No RSS feeds detected on this page. Try a different URL, or look for an RSS icon
+                    on the website and paste that URL directly.
                   </p>
                 </div>
               )}
@@ -719,7 +816,8 @@ export function ContentSourcesManager({ onArticlesGenerated }: ContentSourcesMan
                 <div className="mt-2 border border-green-100 bg-green-50/50 rounded-lg p-2.5 flex items-center gap-2">
                   <CheckCircle className="h-3.5 w-3.5 text-green-500 flex-shrink-0" />
                   <p className="text-xs text-green-700">
-                    RSS feed detected and selected: <span className="font-medium">{discoveredFeeds[0].title}</span>
+                    RSS feed detected and selected:{' '}
+                    <span className="font-medium">{discoveredFeeds[0].title}</span>
                   </p>
                 </div>
               )}
@@ -742,7 +840,7 @@ export function ContentSourcesManager({ onArticlesGenerated }: ContentSourcesMan
                         'px-3 py-1.5 rounded-lg border text-xs font-medium transition-colors',
                         selected
                           ? PIPELINE_COLORS[id]
-                          : 'border-gray-200 text-gray-400 hover:border-gray-300'
+                          : 'border-gray-200 text-gray-400 hover:border-gray-300',
                       )}
                     >
                       {selected && <CheckCircle className="h-3 w-3 inline mr-1 -mt-0.5" />}
@@ -759,18 +857,24 @@ export function ContentSourcesManager({ onArticlesGenerated }: ContentSourcesMan
                 <Label>Check Interval</Label>
                 <Select
                   value={String(form.checkIntervalHours)}
-                  onValueChange={(v) => setForm((p) => ({ ...p, checkIntervalHours: parseInt(v, 10) }))}
+                  onValueChange={(v) =>
+                    setForm((p) => ({ ...p, checkIntervalHours: parseInt(v, 10) }))
+                  }
                 >
                   <SelectTrigger className="h-9">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
                     {INTERVAL_OPTIONS.map((opt) => (
-                      <SelectItem key={opt.value} value={String(opt.value)}>{opt.label}</SelectItem>
+                      <SelectItem key={opt.value} value={String(opt.value)}>
+                        {opt.label}
+                      </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
-                <p className="text-[10px] text-gray-400">Minimum time between checks for this source</p>
+                <p className="text-[10px] text-gray-400">
+                  Minimum time between checks for this source
+                </p>
               </div>
 
               <div className="space-y-1.5">
@@ -780,10 +884,17 @@ export function ContentSourcesManager({ onArticlesGenerated }: ContentSourcesMan
                   min={1}
                   max={10}
                   value={form.maxArticlesPerRun}
-                  onChange={(e) => setForm((p) => ({ ...p, maxArticlesPerRun: Math.max(1, parseInt(e.target.value, 10) || 1) }))}
+                  onChange={(e) =>
+                    setForm((p) => ({
+                      ...p,
+                      maxArticlesPerRun: Math.max(1, parseInt(e.target.value, 10) || 1),
+                    }))
+                  }
                   className="h-9"
                 />
-                <p className="text-[10px] text-gray-400">Max articles per single pipeline trigger</p>
+                <p className="text-[10px] text-gray-400">
+                  Max articles per single pipeline trigger
+                </p>
               </div>
             </div>
 
@@ -796,7 +907,12 @@ export function ContentSourcesManager({ onArticlesGenerated }: ContentSourcesMan
                   min={0}
                   max={50}
                   value={form.maxArticlesPerDay}
-                  onChange={(e) => setForm((p) => ({ ...p, maxArticlesPerDay: Math.max(0, parseInt(e.target.value, 10) || 0) }))}
+                  onChange={(e) =>
+                    setForm((p) => ({
+                      ...p,
+                      maxArticlesPerDay: Math.max(0, parseInt(e.target.value, 10) || 0),
+                    }))
+                  }
                   className="h-9"
                 />
                 <p className="text-[10px] text-gray-400">0 = no daily limit</p>
@@ -809,7 +925,12 @@ export function ContentSourcesManager({ onArticlesGenerated }: ContentSourcesMan
                   min={0}
                   max={100}
                   value={form.maxArticlesPerWeek}
-                  onChange={(e) => setForm((p) => ({ ...p, maxArticlesPerWeek: Math.max(0, parseInt(e.target.value, 10) || 0) }))}
+                  onChange={(e) =>
+                    setForm((p) => ({
+                      ...p,
+                      maxArticlesPerWeek: Math.max(0, parseInt(e.target.value, 10) || 0),
+                    }))
+                  }
                   className="h-9"
                 />
                 <p className="text-[10px] text-gray-400">0 = no weekly limit</p>
@@ -830,8 +951,9 @@ export function ContentSourcesManager({ onArticlesGenerated }: ContentSourcesMan
                 className="text-sm"
               />
               <p className="text-[10px] text-gray-400">
-                Comma-separated. Items from this feed must match at least one keyword to be processed.
-                Leave empty to process all items. Especially useful for the Regulatory Monitor pipeline.
+                Comma-separated. Items from this feed must match at least one keyword to be
+                processed. Leave empty to process all items. Especially useful for the Regulatory
+                Monitor pipeline.
               </p>
             </div>
 
@@ -839,7 +961,9 @@ export function ContentSourcesManager({ onArticlesGenerated }: ContentSourcesMan
             <div className="flex items-center justify-between pt-1">
               <div>
                 <Label>Active</Label>
-                <p className="text-[10px] text-gray-400">Inactive sources are skipped during pipeline runs</p>
+                <p className="text-[10px] text-gray-400">
+                  Inactive sources are skipped during pipeline runs
+                </p>
               </div>
               <Switch
                 checked={form.isActive}
@@ -852,14 +976,20 @@ export function ContentSourcesManager({ onArticlesGenerated }: ContentSourcesMan
             <Button variant="outline" onClick={() => setDialogOpen(false)} disabled={saving}>
               Cancel
             </Button>
-            <Button onClick={handleSave} disabled={saving} className="bg-purple-600 hover:bg-purple-700">
+            <Button
+              onClick={handleSave}
+              disabled={saving}
+              className="bg-purple-600 hover:bg-purple-700"
+            >
               {saving ? (
                 <div className="contents">
                   <Loader2 className="h-4 w-4 animate-spin mr-1.5" />
                   Saving...
                 </div>
+              ) : editingSource ? (
+                'Save Changes'
               ) : (
-                editingSource ? 'Save Changes' : 'Add Source'
+                'Add Source'
               )}
             </Button>
           </DialogFooter>
@@ -872,8 +1002,9 @@ export function ContentSourcesManager({ onArticlesGenerated }: ContentSourcesMan
           <AlertDialogHeader>
             <AlertDialogTitle>Delete Content Source</AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure you want to delete &quot;{deleteTarget?.name}&quot;? This action cannot be undone.
-              The pipeline will fall back to built-in defaults if no other sources are configured.
+              Are you sure you want to delete &quot;{deleteTarget?.name}&quot;? This action cannot
+              be undone. The pipeline will fall back to built-in defaults if no other sources are
+              configured.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

@@ -92,7 +92,9 @@ export function VascoSessionWorkspace({
     <div className="flex h-full min-h-0 flex-col bg-[#f8f8f7]">
       <div className="flex items-center justify-between border-b border-gray-200 bg-white px-5 py-4">
         <div className="min-w-0">
-          <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-gray-500">{title}</p>
+          <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-gray-500">
+            {title}
+          </p>
           <p className="mt-1 truncate text-sm text-gray-600">{subtitle}</p>
         </div>
         <Button
@@ -173,9 +175,7 @@ export function VascoSessionWorkspace({
 
         <section className="flex min-h-0 flex-1 flex-col">
           {contextBanner && (
-            <div className="border-b border-gray-200 bg-white px-4 py-3">
-              {contextBanner}
-            </div>
+            <div className="border-b border-gray-200 bg-white px-4 py-3">{contextBanner}</div>
           )}
 
           <div className="flex items-center justify-between border-b border-gray-200 bg-white px-5 py-4">
@@ -222,9 +222,7 @@ export function VascoSessionWorkspace({
           </div>
 
           {apiKeyWarning && (
-            <div className="border-b border-gray-200 bg-white px-4 py-3">
-              {apiKeyWarning}
-            </div>
+            <div className="border-b border-gray-200 bg-white px-4 py-3">{apiKeyWarning}</div>
           )}
 
           <div

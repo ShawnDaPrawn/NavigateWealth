@@ -37,8 +37,12 @@ export function useInvestmentINAMutations() {
     mutationFn: ({ clientId, inputs, results, status }: SaveSessionParams) =>
       InvestmentINAFnaAPI.saveSession(clientId, inputs, results, status),
     onSuccess: (_data, variables) => {
-      queryClient.invalidateQueries({ queryKey: INVESTMENT_INA_QUERY_KEYS.sessions(variables.clientId) });
-      queryClient.invalidateQueries({ queryKey: INVESTMENT_INA_QUERY_KEYS.latestPublished(variables.clientId) });
+      queryClient.invalidateQueries({
+        queryKey: INVESTMENT_INA_QUERY_KEYS.sessions(variables.clientId),
+      });
+      queryClient.invalidateQueries({
+        queryKey: INVESTMENT_INA_QUERY_KEYS.latestPublished(variables.clientId),
+      });
       const action = variables.status === 'published' ? 'published' : 'saved as draft';
       toast.success(`Investment INA ${action} successfully`);
     },

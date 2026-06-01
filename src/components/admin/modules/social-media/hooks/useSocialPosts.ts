@@ -14,12 +14,7 @@
 
 import { useState, useCallback } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import {
-  postsApi,
-  type CreatePostRequest,
-  type UpdatePostRequest,
-  type PostFilters,
-} from '../api';
+import { postsApi, type CreatePostRequest, type UpdatePostRequest, type PostFilters } from '../api';
 import type { SocialPost, PostStatus } from '../types';
 import { toast } from 'sonner';
 import { socialMediaKeys } from './queryKeys';
@@ -81,9 +76,7 @@ const POSTS_STALE_TIME = 2 * 60 * 1000; // 2 minutes
 // Hook
 // ============================================================================
 
-export function useSocialPosts(
-  options: UseSocialPostsOptions = {},
-): UseSocialPostsReturn {
+export function useSocialPosts(options: UseSocialPostsOptions = {}): UseSocialPostsReturn {
   const { initialFilters = {}, fetchOnMount = true } = options;
   const queryClient = useQueryClient();
 
@@ -362,10 +355,7 @@ export function useSocialPosts(
 
   // ── Filter management ─────────────────────────────────────────────────
 
-  const setFilters = useCallback(
-    (newFilters: PostFilters) => setFiltersRaw(newFilters),
-    [],
-  );
+  const setFilters = useCallback((newFilters: PostFilters) => setFiltersRaw(newFilters), []);
 
   const clearFilters = useCallback(() => setFiltersRaw({}), []);
 

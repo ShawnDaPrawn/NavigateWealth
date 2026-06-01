@@ -62,9 +62,7 @@ const PROFILES_STALE_TIME = 5 * 60 * 1000; // 5 minutes
 // Hook
 // ============================================================================
 
-export function useSocialProfiles(
-  options: UseSocialProfilesOptions = {},
-): UseSocialProfilesReturn {
+export function useSocialProfiles(options: UseSocialProfilesOptions = {}): UseSocialProfilesReturn {
   const { fetchOnMount = true } = options;
   const queryClient = useQueryClient();
 
@@ -85,10 +83,7 @@ export function useSocialProfiles(
   const profiles: SocialProfile[] = profilesQuery.data ?? [];
 
   // ── Derived state ─────────────────────────────────────────────────────
-  const connectedProfiles = useMemo(
-    () => profiles.filter((p) => p.isConnected),
-    [profiles],
-  );
+  const connectedProfiles = useMemo(() => profiles.filter((p) => p.isConnected), [profiles]);
 
   // ── Mutations ─────────────────────────────────────────────────────────
 

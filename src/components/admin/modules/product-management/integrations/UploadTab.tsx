@@ -3,15 +3,38 @@ import { Card, CardContent } from '../../../../ui/card';
 import { Button } from '../../../../ui/button';
 import { Badge } from '../../../../ui/badge';
 import { Separator } from '../../../../ui/separator';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../../../ui/table';
-import { CheckCircle2, AlertCircle, FileSpreadsheet, X, RefreshCw, FileAxis3D, UploadCloud, FileText } from 'lucide-react';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '../../../../ui/table';
+import {
+  CheckCircle2,
+  AlertCircle,
+  FileSpreadsheet,
+  X,
+  RefreshCw,
+  FileAxis3D,
+  UploadCloud,
+  FileText,
+} from 'lucide-react';
 import { cn } from '../../../../ui/utils';
-import { IntegrationProvider, PRODUCT_CATEGORIES, PreviewData, IntegrationStats, IntegrationSyncRun, PortalJobPolicyItem } from '../types';
+import {
+  IntegrationProvider,
+  PRODUCT_CATEGORIES,
+  PreviewData,
+  IntegrationStats,
+  IntegrationSyncRun,
+  PortalJobPolicyItem,
+} from '../types';
 
 interface UploadTabProps {
   provider: IntegrationProvider;
   selectedCategoryId: string;
-  uploadedFile: { name: string, size: string, uploadedAt: string } | null;
+  uploadedFile: { name: string; size: string; uploadedAt: string } | null;
   isProcessing: boolean;
   showPreview: boolean;
   onDrop: (e: React.DragEvent) => void;
@@ -46,7 +69,9 @@ const formatExtractedValue = (value: unknown) => {
 const formatDisplayDateTime = (value?: string) => {
   if (!value) return '-';
   const date = new Date(value);
-  return Number.isNaN(date.getTime()) ? '-' : `${date.toLocaleDateString()} ${date.toLocaleTimeString()}`;
+  return Number.isNaN(date.getTime())
+    ? '-'
+    : `${date.toLocaleDateString()} ${date.toLocaleTimeString()}`;
 };
 
 const formatDisplayDate = (value?: string) => {
@@ -82,22 +107,25 @@ export function UploadTab({
 }: UploadTabProps) {
   const categoryName = PRODUCT_CATEGORIES.find((c) => c.id === selectedCategoryId)?.name;
 
-  const publishableRows = stagedRun?.rows.filter((row) =>
-    row.matchStatus === 'matched' &&
-    row.diffs.length > 0 &&
-    row.publishStatus !== 'published' &&
-    row.publishStatus !== 'failed' &&
-    row.publishStatus !== 'skipped'
-  ) || [];
+  const publishableRows =
+    stagedRun?.rows.filter(
+      (row) =>
+        row.matchStatus === 'matched' &&
+        row.diffs.length > 0 &&
+        row.publishStatus !== 'published' &&
+        row.publishStatus !== 'failed' &&
+        row.publishStatus !== 'skipped',
+    ) || [];
 
   const getStatusBadge = (status: string) => {
-    const className = status === 'published'
-      ? 'bg-green-50 text-green-700 border-green-200'
-      : status === 'matched' || status === 'pending' || status === 'auto_eligible'
-        ? 'bg-blue-50 text-blue-700 border-blue-200'
-        : status === 'skipped'
-          ? 'bg-gray-50 text-gray-600 border-gray-200'
-          : 'bg-amber-50 text-amber-700 border-amber-200';
+    const className =
+      status === 'published'
+        ? 'bg-green-50 text-green-700 border-green-200'
+        : status === 'matched' || status === 'pending' || status === 'auto_eligible'
+          ? 'bg-blue-50 text-blue-700 border-blue-200'
+          : status === 'skipped'
+            ? 'bg-gray-50 text-gray-600 border-gray-200'
+            : 'bg-amber-50 text-amber-700 border-amber-200';
 
     return (
       <Badge variant="outline" className={cn('text-[10px] capitalize', className)}>
@@ -122,36 +150,45 @@ export function UploadTab({
     return 'No stable match key supplied';
   };
 
-  const reviewHeading = stagedRun?.source === 'portal' ? 'Integration Review' : 'Spreadsheet Upload';
-  const reviewDescription = stagedRun?.source === 'portal'
-    ? 'Portal runs and spreadsheet uploads now stage through the same canonical integration template format.'
-    : 'Upload the downloaded Integration Template or any spreadsheet that matches its configured columns.';
+  const reviewHeading =
+    stagedRun?.source === 'portal' ? 'Integration Review' : 'Spreadsheet Upload';
+  const reviewDescription =
+    stagedRun?.source === 'portal'
+      ? 'Portal runs and spreadsheet uploads now stage through the same canonical integration template format.'
+      : 'Upload the downloaded Integration Template or any spreadsheet that matches its configured columns.';
   const displayStats = {
-    lastAttempted: stats.lastAttempted && stats.lastAttempted !== '-'
-      ? stats.lastAttempted
-      : formatDisplayDateTime(stagedRun?.createdAt),
-    lastSuccessful: stats.lastSuccessful && stats.lastSuccessful !== '-'
-      ? stats.lastSuccessful
-      : stagedRun?.summary.publishedRows
-        ? formatDisplayDate(stagedRun.updatedAt || stagedRun.createdAt)
-        : '-',
+    lastAttempted:
+      stats.lastAttempted && stats.lastAttempted !== '-'
+        ? stats.lastAttempted
+        : formatDisplayDateTime(stagedRun?.createdAt),
+    lastSuccessful:
+      stats.lastSuccessful && stats.lastSuccessful !== '-'
+        ? stats.lastSuccessful
+        : stagedRun?.summary.publishedRows
+          ? formatDisplayDate(stagedRun.updatedAt || stagedRun.createdAt)
+          : '-',
     lastStatus: stats.lastUpdateStatus
       ? stats.lastUpdateStatus
       : stagedRun?.summary.publishedRows
         ? 'success'
         : null,
-    lastStatusLabel: stats.lastUpdateStatus === 'success'
-      ? 'Successful'
-      : stats.lastUpdateStatus === 'failed'
-        ? 'Failed'
-        : stagedRun
-          ? stagedRun.summary.publishedRows > 0
-            ? 'Published'
-            : 'Staged'
-          : 'No Data',
+    lastStatusLabel:
+      stats.lastUpdateStatus === 'success'
+        ? 'Successful'
+        : stats.lastUpdateStatus === 'failed'
+          ? 'Failed'
+          : stagedRun
+            ? stagedRun.summary.publishedRows > 0
+              ? 'Published'
+              : 'Staged'
+            : 'No Data',
   };
   const attachedPortalDocuments = portalJobItems
-    .filter((item) => item.documentAttached || item.artifactStatuses?.some((status) => status.status === 'attached'))
+    .filter(
+      (item) =>
+        item.documentAttached ||
+        item.artifactStatuses?.some((status) => status.status === 'attached'),
+    )
     .map((item) => {
       const attached = item.artifactStatuses?.find((status) => status.status === 'attached');
       return {
@@ -160,22 +197,28 @@ export function UploadTab({
         label: attached?.label || 'Policy schedule',
       };
     });
-  const failedPortalDocuments = portalJobItems
-    .flatMap((item) => (item.artifactStatuses || [])
+  const failedPortalDocuments = portalJobItems.flatMap((item) =>
+    (item.artifactStatuses || [])
       .filter((status) => status.status === 'failed')
-      .map((status) => ({ item, status })));
-  const skippedPortalDocuments = portalJobItems
-    .flatMap((item) => (item.artifactStatuses || [])
+      .map((status) => ({ item, status })),
+  );
+  const skippedPortalDocuments = portalJobItems.flatMap((item) =>
+    (item.artifactStatuses || [])
       .filter((status) => status.status === 'not_requested' || status.status === 'skipped')
-      .map((status) => ({ item, status })));
-  const portalDocumentActivityCount = portalJobItems.reduce((count, item) => count + (item.artifactStatuses?.length || 0), 0);
-  const portalDocumentStatusLabel = attachedPortalDocuments.length > 0
-    ? `${attachedPortalDocuments.length} PDF${attachedPortalDocuments.length === 1 ? '' : 's'} attached`
-    : failedPortalDocuments.length > 0
-      ? `${failedPortalDocuments.length} PDF issue${failedPortalDocuments.length === 1 ? '' : 's'}`
-      : portalDocumentActivityCount > 0
-        ? 'No PDFs attached'
-        : 'PDF not requested';
+      .map((status) => ({ item, status })),
+  );
+  const portalDocumentActivityCount = portalJobItems.reduce(
+    (count, item) => count + (item.artifactStatuses?.length || 0),
+    0,
+  );
+  const portalDocumentStatusLabel =
+    attachedPortalDocuments.length > 0
+      ? `${attachedPortalDocuments.length} PDF${attachedPortalDocuments.length === 1 ? '' : 's'} attached`
+      : failedPortalDocuments.length > 0
+        ? `${failedPortalDocuments.length} PDF issue${failedPortalDocuments.length === 1 ? '' : 's'}`
+        : portalDocumentActivityCount > 0
+          ? 'No PDFs attached'
+          : 'PDF not requested';
 
   const renderStagedRun = () => (
     <Card>
@@ -205,25 +248,35 @@ export function UploadTab({
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
             <div className="rounded-lg border bg-gray-50 p-3">
               <p className="text-[10px] uppercase text-gray-500 font-medium">Rows</p>
-              <p className="text-lg font-semibold text-gray-900">{stagedRun?.summary.totalRows || 0}</p>
+              <p className="text-lg font-semibold text-gray-900">
+                {stagedRun?.summary.totalRows || 0}
+              </p>
             </div>
             <div className="rounded-lg border bg-blue-50 p-3">
               <p className="text-[10px] uppercase text-blue-700 font-medium">Matched</p>
-              <p className="text-lg font-semibold text-blue-900">{stagedRun?.summary.matchedRows || 0}</p>
+              <p className="text-lg font-semibold text-blue-900">
+                {stagedRun?.summary.matchedRows || 0}
+              </p>
             </div>
             <div className="rounded-lg border bg-amber-50 p-3">
               <p className="text-[10px] uppercase text-amber-700 font-medium">Held</p>
-              <p className="text-lg font-semibold text-amber-900">{stagedRun?.summary.heldRows || 0}</p>
+              <p className="text-lg font-semibold text-amber-900">
+                {stagedRun?.summary.heldRows || 0}
+              </p>
             </div>
             <div className="rounded-lg border bg-red-50 p-3">
               <p className="text-[10px] uppercase text-red-700 font-medium">Issues</p>
               <p className="text-lg font-semibold text-red-900">
-                {(stagedRun?.summary.invalidRows || 0) + (stagedRun?.summary.duplicateRows || 0) + (stagedRun?.summary.unmatchedRows || 0)}
+                {(stagedRun?.summary.invalidRows || 0) +
+                  (stagedRun?.summary.duplicateRows || 0) +
+                  (stagedRun?.summary.unmatchedRows || 0)}
               </p>
             </div>
             <div className="rounded-lg border bg-green-50 p-3">
               <p className="text-[10px] uppercase text-green-700 font-medium">Published</p>
-              <p className="text-lg font-semibold text-green-900">{stagedRun?.summary.publishedRows || 0}</p>
+              <p className="text-lg font-semibold text-green-900">
+                {stagedRun?.summary.publishedRows || 0}
+              </p>
             </div>
           </div>
 
@@ -245,22 +298,28 @@ export function UploadTab({
                 </div>
               </div>
               {stagedRun?.source === 'portal' && (
-                <Badge variant="outline" className={cn(
-                  'shrink-0',
-                  attachedPortalDocuments.length > 0
-                    ? 'border-green-200 bg-green-50 text-green-700'
-                    : failedPortalDocuments.length > 0
-                      ? 'border-red-200 bg-red-50 text-red-700'
-                      : 'border-gray-200 bg-gray-50 text-gray-600',
-                )}>
+                <Badge
+                  variant="outline"
+                  className={cn(
+                    'shrink-0',
+                    attachedPortalDocuments.length > 0
+                      ? 'border-green-200 bg-green-50 text-green-700'
+                      : failedPortalDocuments.length > 0
+                        ? 'border-red-200 bg-red-50 text-red-700'
+                        : 'border-gray-200 bg-gray-50 text-gray-600',
+                  )}
+                >
                   {portalDocumentStatusLabel}
                 </Badge>
               )}
             </div>
             <details className="mt-3 text-sm text-gray-500">
-              <summary className="cursor-pointer font-medium text-gray-700">Matching details</summary>
+              <summary className="cursor-pointer font-medium text-gray-700">
+                Matching details
+              </summary>
               <p className="mt-2">
-                Hidden template metadata is used when present, policy number matching is used as fallback, and only populated changed cells are publishable.
+                Hidden template metadata is used when present, policy number matching is used as
+                fallback, and only populated changed cells are publishable.
               </p>
             </details>
           </div>
@@ -276,31 +335,58 @@ export function UploadTab({
                   {portalDocumentStatusLabel}
                 </Badge>
               </div>
-              {attachedPortalDocuments.length === 0 && failedPortalDocuments.length === 0 && skippedPortalDocuments.length === 0 && (
-                <p className="text-sm text-gray-500">No PDF download or attachment activity was recorded for this run.</p>
-              )}
+              {attachedPortalDocuments.length === 0 &&
+                failedPortalDocuments.length === 0 &&
+                skippedPortalDocuments.length === 0 && (
+                  <p className="text-sm text-gray-500">
+                    No PDF download or attachment activity was recorded for this run.
+                  </p>
+                )}
               <div className="space-y-2 text-sm">
                 {attachedPortalDocuments.map(({ item, fileName, label }) => (
-                  <div key={`${item.id}-${fileName}`} className="flex flex-col gap-1 rounded-md border border-green-100 bg-green-50 px-3 py-2 sm:flex-row sm:items-center sm:justify-between">
+                  <div
+                    key={`${item.id}-${fileName}`}
+                    className="flex flex-col gap-1 rounded-md border border-green-100 bg-green-50 px-3 py-2 sm:flex-row sm:items-center sm:justify-between"
+                  >
                     <div>
                       <p className="font-medium text-green-900">{label} attached</p>
-                      <p className="text-xs text-green-700">{item.clientName} / {item.policyNumber}</p>
+                      <p className="text-xs text-green-700">
+                        {item.clientName} / {item.policyNumber}
+                      </p>
                     </div>
-                    <p className="max-w-sm truncate text-xs text-green-700" title={fileName}>{fileName}</p>
+                    <p className="max-w-sm truncate text-xs text-green-700" title={fileName}>
+                      {fileName}
+                    </p>
                   </div>
                 ))}
                 {failedPortalDocuments.map(({ item, status }) => (
-                  <div key={`${item.id}-${status.id}`} className="rounded-md border border-red-100 bg-red-50 px-3 py-2">
+                  <div
+                    key={`${item.id}-${status.id}`}
+                    className="rounded-md border border-red-100 bg-red-50 px-3 py-2"
+                  >
                     <p className="font-medium text-red-900">{status.label} failed</p>
-                    <p className="text-xs text-red-700">{item.clientName} / {item.policyNumber}: {status.error || 'No failure reason supplied'}</p>
+                    <p className="text-xs text-red-700">
+                      {item.clientName} / {item.policyNumber}:{' '}
+                      {status.error || 'No failure reason supplied'}
+                    </p>
                   </div>
                 ))}
-                {attachedPortalDocuments.length === 0 && failedPortalDocuments.length === 0 && skippedPortalDocuments.map(({ item, status }) => (
-                  <div key={`${item.id}-${status.id}`} className="rounded-md border border-gray-100 bg-gray-50 px-3 py-2">
-                    <p className="font-medium text-gray-800">{status.label} {status.status === 'not_requested' ? 'not requested' : 'skipped'}</p>
-                    <p className="text-xs text-gray-500">{item.clientName} / {item.policyNumber}</p>
-                  </div>
-                ))}
+                {attachedPortalDocuments.length === 0 &&
+                  failedPortalDocuments.length === 0 &&
+                  skippedPortalDocuments.map(({ item, status }) => (
+                    <div
+                      key={`${item.id}-${status.id}`}
+                      className="rounded-md border border-gray-100 bg-gray-50 px-3 py-2"
+                    >
+                      <p className="font-medium text-gray-800">
+                        {status.label}{' '}
+                        {status.status === 'not_requested' ? 'not requested' : 'skipped'}
+                      </p>
+                      <p className="text-xs text-gray-500">
+                        {item.clientName} / {item.policyNumber}
+                      </p>
+                    </div>
+                  ))}
               </div>
             </div>
           )}
@@ -324,7 +410,9 @@ export function UploadTab({
                   return (
                     <TableRow key={row.id}>
                       <TableCell className="text-xs">{row.rowNumber}</TableCell>
-                      <TableCell className="text-xs font-medium">{row.policyNumber || '-'}</TableCell>
+                      <TableCell className="text-xs font-medium">
+                        {row.policyNumber || '-'}
+                      </TableCell>
                       <TableCell className="text-xs">
                         <div className="space-y-1">
                           {getStatusBadge(row.matchStatus)}
@@ -336,13 +424,16 @@ export function UploadTab({
                         {extractedValues.length > 0 ? (
                           <details>
                             <summary className="cursor-pointer whitespace-nowrap font-medium text-gray-900">
-                              {extractedValues.length} value{extractedValues.length === 1 ? '' : 's'}
+                              {extractedValues.length} value
+                              {extractedValues.length === 1 ? '' : 's'}
                             </summary>
                             <div className="mt-2 max-w-sm space-y-1 text-[11px] leading-5">
                               {extractedValues.map(([key, value]) => (
                                 <div key={`${row.id}-raw-${key}`}>
                                   <span className="font-medium text-gray-900">{key}:</span>{' '}
-                                  <span className="text-gray-700">{formatExtractedValue(value)}</span>
+                                  <span className="text-gray-700">
+                                    {formatExtractedValue(value)}
+                                  </span>
                                 </div>
                               ))}
                             </div>
@@ -360,7 +451,9 @@ export function UploadTab({
                             <div className="mt-2 max-w-sm space-y-1 text-[11px] leading-5">
                               {row.diffs.map((diff) => (
                                 <div key={diff.fieldId}>
-                                  <span className="font-medium">{diff.fieldName}:</span> {String(diff.oldValue ?? '-')} {' -> '} {String(diff.newValue ?? '-')}
+                                  <span className="font-medium">{diff.fieldName}:</span>{' '}
+                                  {String(diff.oldValue ?? '-')} {' -> '}{' '}
+                                  {String(diff.newValue ?? '-')}
                                 </div>
                               ))}
                             </div>
@@ -373,7 +466,8 @@ export function UploadTab({
                         {[...row.validationErrors, ...row.warnings].length > 0 ? (
                           <details className="text-amber-700">
                             <summary className="cursor-pointer whitespace-nowrap">
-                              {[...row.validationErrors, ...row.warnings].length} warning{[...row.validationErrors, ...row.warnings].length === 1 ? '' : 's'}
+                              {[...row.validationErrors, ...row.warnings].length} warning
+                              {[...row.validationErrors, ...row.warnings].length === 1 ? '' : 's'}
                             </summary>
                             <div className="mt-2 max-w-xs space-y-1 text-[11px] leading-5 text-amber-800">
                               {[...row.validationErrors, ...row.warnings].map((message, index) => (
@@ -426,7 +520,9 @@ export function UploadTab({
             </div>
             <div>
               <h4 className="font-medium text-gray-900">{uploadedFile?.name}</h4>
-              <p className="text-sm text-gray-500">{uploadedFile?.size} • Uploaded at {uploadedFile?.uploadedAt}</p>
+              <p className="text-sm text-gray-500">
+                {uploadedFile?.size} • Uploaded at {uploadedFile?.uploadedAt}
+              </p>
             </div>
           </div>
           <Button variant="ghost" size="icon" onClick={onClear} aria-label="Clear uploaded file">
@@ -457,7 +553,9 @@ export function UploadTab({
                 <div>
                   <h5 className="font-medium text-red-900">Validation Errors Detected</h5>
                   <ul className="list-disc list-inside text-sm text-red-700 mt-1">
-                    {previewData.validationErrors.map((err, i) => <li key={i}>{err}</li>)}
+                    {previewData.validationErrors.map((err, i) => (
+                      <li key={i}>{err}</li>
+                    ))}
                   </ul>
                 </div>
               </div>
@@ -468,7 +566,9 @@ export function UploadTab({
               <div>
                 <h5 className="font-medium text-blue-900">File Processed Successfully</h5>
                 <p className="text-sm text-blue-700 mt-1">
-                  The file matched {matchedColumnsCount} configured columns for {categoryName}. The preview below shows only business columns; hidden template metadata, when present, will still be used for safe matching during staging.
+                  The file matched {matchedColumnsCount} configured columns for {categoryName}. The
+                  preview below shows only business columns; hidden template metadata, when present,
+                  will still be used for safe matching during staging.
                 </p>
               </div>
             </div>
@@ -482,7 +582,9 @@ export function UploadTab({
                         key={i}
                         className={cn(
                           'whitespace-nowrap border-b-2',
-                          isColumnMapped(col) ? 'border-green-400 bg-green-50/20 text-green-700' : 'border-red-300 bg-red-50/20 text-red-700',
+                          isColumnMapped(col)
+                            ? 'border-green-400 bg-green-50/20 text-green-700'
+                            : 'border-red-300 bg-red-50/20 text-red-700',
                         )}
                       >
                         {col}
@@ -539,20 +641,33 @@ export function UploadTab({
             <p className="text-sm font-semibold">{displayStats.lastAttempted}</p>
           </CardContent>
         </Card>
-        <Card className={cn(
-          'border-gray-200 shadow-none',
-          displayStats.lastStatus === 'success' ? 'bg-green-50/50' :
-            displayStats.lastStatus === 'failed' ? 'bg-red-50/50' : 'bg-gray-50',
-        )}>
+        <Card
+          className={cn(
+            'border-gray-200 shadow-none',
+            displayStats.lastStatus === 'success'
+              ? 'bg-green-50/50'
+              : displayStats.lastStatus === 'failed'
+                ? 'bg-red-50/50'
+                : 'bg-gray-50',
+          )}
+        >
           <CardContent className="p-4">
             <p className="text-xs font-medium text-gray-500 uppercase mb-1">Last Status</p>
             <div className="flex items-center gap-2">
               {displayStats.lastStatus === 'success' ? (
-                <div className="contents"><CheckCircle2 className="w-4 h-4 text-green-600" /><span className="text-sm font-semibold text-green-700">Successful</span></div>
+                <div className="contents">
+                  <CheckCircle2 className="w-4 h-4 text-green-600" />
+                  <span className="text-sm font-semibold text-green-700">Successful</span>
+                </div>
               ) : displayStats.lastStatus === 'failed' ? (
-                <div className="contents"><AlertCircle className="w-4 h-4 text-red-600" /><span className="text-sm font-semibold text-red-700">Failed</span></div>
+                <div className="contents">
+                  <AlertCircle className="w-4 h-4 text-red-600" />
+                  <span className="text-sm font-semibold text-red-700">Failed</span>
+                </div>
               ) : (
-                <span className="text-sm font-semibold text-gray-600">{displayStats.lastStatusLabel}</span>
+                <span className="text-sm font-semibold text-gray-600">
+                  {displayStats.lastStatusLabel}
+                </span>
               )}
             </div>
           </CardContent>
@@ -588,13 +703,10 @@ export function UploadTab({
             </div>
             <h4 className="font-medium text-gray-900 mb-1">Drag and drop your file here</h4>
             <p className="text-sm text-gray-500 mb-6">
-              Use the Integration Template or a matching spreadsheet for <span className="font-semibold text-blue-600">{categoryName}</span>
+              Use the Integration Template or a matching spreadsheet for{' '}
+              <span className="font-semibold text-blue-600">{categoryName}</span>
             </p>
-            <Button
-              onClick={onManualUpload}
-              variant="outline"
-              className="mx-auto"
-            >
+            <Button onClick={onManualUpload} variant="outline" className="mx-auto">
               Browse Files
             </Button>
           </div>

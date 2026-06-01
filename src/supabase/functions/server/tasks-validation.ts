@@ -13,26 +13,14 @@ import { z } from 'npm:zod';
 // ENUMS
 // ============================================================================
 
-export const TaskStatusSchema = z.enum([
-  'new',
-  'in_progress',
-  'completed',
-  'archived',
-]);
+export const TaskStatusSchema = z.enum(['new', 'in_progress', 'completed', 'archived']);
 
-export const TaskPrioritySchema = z.enum([
-  'low',
-  'medium',
-  'high',
-  'critical',
-]);
+export const TaskPrioritySchema = z.enum(['low', 'medium', 'high', 'critical']);
 
-export const ReminderFrequencySchema = z.enum([
-  'daily',
-  'weekly',
-  'biweekly',
-  'monthly',
-]).nullable().optional();
+export const ReminderFrequencySchema = z
+  .enum(['daily', 'weekly', 'biweekly', 'monthly'])
+  .nullable()
+  .optional();
 
 // ============================================================================
 // CREATE
@@ -58,24 +46,25 @@ export const CreateTaskSchema = z.object({
 // UPDATE
 // ============================================================================
 
-export const UpdateTaskSchema = z.object({
-  title: z.string().min(1, 'Title is required').max(500).optional(),
-  description: z.string().max(5000).nullable().optional(),
-  status: TaskStatusSchema.optional(),
-  priority: TaskPrioritySchema.optional(),
-  due_date: z.string().nullable().optional(),
-  assignee_initials: z.string().max(5).nullable().optional(),
-  assignee_id: z.string().nullable().optional(),
-  tags: z.array(z.string().max(50)).max(20).optional(),
-  category: z.string().max(100).nullable().optional(),
-  is_template: z.boolean().optional(),
-  reminder_frequency: ReminderFrequencySchema,
-  completed_at: z.string().nullable().optional(),
-  sort_order: z.number().int().nonnegative().optional(),
-}).refine(
-  (data) => Object.keys(data).length > 0,
-  { message: 'At least one field must be provided for update' }
-);
+export const UpdateTaskSchema = z
+  .object({
+    title: z.string().min(1, 'Title is required').max(500).optional(),
+    description: z.string().max(5000).nullable().optional(),
+    status: TaskStatusSchema.optional(),
+    priority: TaskPrioritySchema.optional(),
+    due_date: z.string().nullable().optional(),
+    assignee_initials: z.string().max(5).nullable().optional(),
+    assignee_id: z.string().nullable().optional(),
+    tags: z.array(z.string().max(50)).max(20).optional(),
+    category: z.string().max(100).nullable().optional(),
+    is_template: z.boolean().optional(),
+    reminder_frequency: ReminderFrequencySchema,
+    completed_at: z.string().nullable().optional(),
+    sort_order: z.number().int().nonnegative().optional(),
+  })
+  .refine((data) => Object.keys(data).length > 0, {
+    message: 'At least one field must be provided for update',
+  });
 
 // ============================================================================
 // MOVE
@@ -90,12 +79,14 @@ export const MoveTaskSchema = z.object({
 // REORDER
 // ============================================================================
 
-export const ReorderTasksSchema = z.array(
-  z.object({
-    id: z.string().min(1),
-    sort_order: z.number().int().nonnegative(),
-  })
-).min(1, 'At least one task update is required');
+export const ReorderTasksSchema = z
+  .array(
+    z.object({
+      id: z.string().min(1),
+      sort_order: z.number().int().nonnegative(),
+    }),
+  )
+  .min(1, 'At least one task update is required');
 
 // ============================================================================
 // UNARCHIVE
@@ -109,14 +100,16 @@ export const UnarchiveTaskSchema = z.object({
 // DATE RANGE QUERY
 // ============================================================================
 
-export const DateRangeQuerySchema = z.object({
-  start: z.string().min(1, 'start parameter is required'),
-  end: z.string().min(1, 'end parameter is required'),
-}).refine(
-  (data) => {
-    const s = new Date(data.start);
-    const e = new Date(data.end);
-    return !isNaN(s.getTime()) && !isNaN(e.getTime());
-  },
-  { message: 'Invalid date parameters' }
-);
+export const DateRangeQuerySchema = z
+  .object({
+    start: z.string().min(1, 'start parameter is required'),
+    end: z.string().min(1, 'end parameter is required'),
+  })
+  .refine(
+    (data) => {
+      const s = new Date(data.start);
+      const e = new Date(data.end);
+      return !isNaN(s.getTime()) && !isNaN(e.getTime());
+    },
+    { message: 'Invalid date parameters' },
+  );

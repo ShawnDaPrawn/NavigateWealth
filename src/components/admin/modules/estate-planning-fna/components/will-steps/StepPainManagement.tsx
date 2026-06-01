@@ -11,7 +11,11 @@ import { Card, CardContent } from '../../../../../ui/card';
 import { StepSectionHeader, FormField } from '../WillDraftingUI';
 import type { StepPainManagementProps } from './types';
 
-export function StepPainManagement({ painManagement, onToggle, onInstructionsChange }: StepPainManagementProps) {
+export function StepPainManagement({
+  painManagement,
+  onToggle,
+  onInstructionsChange,
+}: StepPainManagementProps) {
   return (
     <div className="space-y-5">
       <StepSectionHeader

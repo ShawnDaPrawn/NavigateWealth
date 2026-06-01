@@ -77,7 +77,12 @@ export async function enqueueCompletion(envelopeId: string): Promise<void> {
   // a race with the drain loop) we skip the transition.
   try {
     const envelope = await getEnvelopeDetails(envelopeId);
-    if (envelope && envelope.status !== 'completed' && envelope.status !== 'voided' && envelope.status !== 'declined') {
+    if (
+      envelope &&
+      envelope.status !== 'completed' &&
+      envelope.status !== 'voided' &&
+      envelope.status !== 'declined'
+    ) {
       await updateEnvelopeStatus(envelopeId, 'completing');
       await logAuditEvent({
         envelopeId,
@@ -129,7 +134,9 @@ export async function drainCompletionQueue(maxJobs = 5): Promise<DrainResult> {
       }
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
-      log.error(`Completion job failed for envelope ${job.envelopeId} (attempt ${job.attempts + 1}): ${msg}`);
+      log.error(
+        `Completion job failed for envelope ${job.envelopeId} (attempt ${job.attempts + 1}): ${msg}`,
+      );
       if (job.attempts + 1 >= MAX_ATTEMPTS) {
         deadLettered += 1;
         try {

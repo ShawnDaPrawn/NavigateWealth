@@ -6,11 +6,7 @@
  * not enforced — if policy changes, gate in assertPrefillClientAccess only.
  */
 
-import {
-  isFnaAdminRole,
-  requireRealUserForIntakeAdmin,
-  type FNAAuthUser,
-} from './fna-auth.ts';
+import { isFnaAdminRole, requireRealUserForIntakeAdmin, type FNAAuthUser } from './fna-auth.ts';
 import { intakeForbidden } from './fna-intake-errors.ts';
 
 /** Prefill is an adviser/admin workflow — block clients and synthetic admin. */

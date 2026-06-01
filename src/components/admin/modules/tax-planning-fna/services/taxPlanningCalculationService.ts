@@ -2,7 +2,7 @@ import {
   TAX_YEAR_2026_2027,
   TaxPlanningInputs,
   TaxCalculationResults,
-  TaxRecommendation
+  TaxRecommendation,
 } from '../types';
 
 /**
@@ -10,13 +10,13 @@ import {
  * Source: SARS — year of assessment 1 March 2026 to 28 February 2027
  */
 const TAX_BRACKETS = [
-  { threshold: 0,        base: 0,       rate: 0.18 },
-  { threshold: 245100,   base: 44118,   rate: 0.26 },
-  { threshold: 383100,   base: 79998,   rate: 0.31 },
-  { threshold: 530200,   base: 125599,  rate: 0.36 },
-  { threshold: 695800,   base: 185215,  rate: 0.39 },
-  { threshold: 887000,   base: 259783,  rate: 0.41 },
-  { threshold: 1878600,  base: 666339,  rate: 0.45 },
+  { threshold: 0, base: 0, rate: 0.18 },
+  { threshold: 245100, base: 44118, rate: 0.26 },
+  { threshold: 383100, base: 79998, rate: 0.31 },
+  { threshold: 530200, base: 125599, rate: 0.36 },
+  { threshold: 695800, base: 185215, rate: 0.39 },
+  { threshold: 887000, base: 259783, rate: 0.41 },
+  { threshold: 1878600, base: 666339, rate: 0.45 },
 ];
 
 /**
@@ -29,7 +29,6 @@ const REBATES = {
 };
 
 export class TaxPlanningCalculationService {
-  
   static calculate(inputs: TaxPlanningInputs): TaxCalculationResults {
     const TC = TAX_YEAR_2026_2027;
 
@@ -40,7 +39,7 @@ export class TaxPlanningCalculationService {
     // 1) Compute Gross Income (Income Base)
     // Sum of employment, variable, business, rental, foreign, and interest
     // Note: Interest is part of gross income; exemption is applied as a deduction
-    const grossIncome = 
+    const grossIncome =
       inputs.employmentIncome +
       inputs.variableIncome +
       inputs.businessIncome +
@@ -49,22 +48,18 @@ export class TaxPlanningCalculationService {
       inputs.interestIncome;
 
     // 2) Apply Interest Exemption
-    const exemptionCap = inputs.age >= 65 
-      ? TC.INTEREST_EXEMPTION_OVER_65 
-      : TC.INTEREST_EXEMPTION_UNDER_65;
-    
+    const exemptionCap =
+      inputs.age >= 65 ? TC.INTEREST_EXEMPTION_OVER_65 : TC.INTEREST_EXEMPTION_UNDER_65;
+
     const interestExemption = Math.min(inputs.interestIncome, exemptionCap);
     const taxableInterest = inputs.interestIncome - interestExemption;
 
     // 3) Compute Allowable RA Deduction Cap
     // 27.5% of (Gross Income - Interest Exemption), capped at annual maximum
-    const incomeBaseForRA = grossIncome - interestExemption; 
+    const incomeBaseForRA = grossIncome - interestExemption;
     const calculatedCap = incomeBaseForRA * TC.RA_DEDUCTION_RATE;
-    const maxAllowedRADeduction = Math.min(
-      Math.max(0, calculatedCap),
-      TC.RA_ANNUAL_CAP
-    );
-    
+    const maxAllowedRADeduction = Math.min(Math.max(0, calculatedCap), TC.RA_ANNUAL_CAP);
+
     const actualRADeduction = Math.min(maxAllowedRADeduction, inputs.raContributions);
 
     // 4) Compute CGT Inclusion
@@ -74,11 +69,9 @@ export class TaxPlanningCalculationService {
     const includedGain = taxableGain * TC.CGT_INCLUSION_RATE_INDIVIDUAL;
 
     // 5) Compute Taxable Income
-    const taxableIncome = Math.max(0,
-      grossIncome 
-      - interestExemption 
-      - actualRADeduction
-      + includedGain
+    const taxableIncome = Math.max(
+      0,
+      grossIncome - interestExemption - actualRADeduction + includedGain,
     );
 
     // 6) Apply SARS Progressive Tax Tables
@@ -104,13 +97,16 @@ export class TaxPlanningCalculationService {
     // 11) Isolate CGT component for display
     // Method: (Tax with CGT) - (Tax without CGT), using same rebates & credits
     const taxableIncomeNoCGT = Math.max(0, taxableIncome - includedGain);
-    const taxNoCGT = Math.max(0, this.lookupTaxTable(taxableIncomeNoCGT) - rebateTotal - medicalTaxCredits);
+    const taxNoCGT = Math.max(
+      0,
+      this.lookupTaxTable(taxableIncomeNoCGT) - rebateTotal - medicalTaxCredits,
+    );
     const cgtPayable = Math.max(0, netIncomeTax - taxNoCGT);
 
     // 12) Compute Totals and Effective Rate
     // CGT is already inside netIncomeTax — do not double count
     const totalTaxLiability = netIncomeTax + dividendTax;
-    
+
     // Effective Rate denominator: total economic income (gross + dividends + capital gains)
     const economicGross = grossIncome + inputs.dividendIncome + inputs.capitalGainsRealised;
     const effectiveTaxRate = economicGross > 0 ? totalTaxLiability / economicGross : 0;
@@ -123,7 +119,10 @@ export class TaxPlanningCalculationService {
     const marginalRate = this.getMarginalRate(taxableIncome);
     const raTaxSavingPotential = raGap * marginalRate;
     const interestTaxLeakage = taxableInterest * marginalRate;
-    const tfsaRemainingLifetime = Math.max(0, TC.TFSA_LIFETIME_LIMIT - inputs.tfsaContributionsLifetime);
+    const tfsaRemainingLifetime = Math.max(
+      0,
+      TC.TFSA_LIFETIME_LIMIT - inputs.tfsaContributionsLifetime,
+    );
 
     return {
       grossIncome,
@@ -145,7 +144,7 @@ export class TaxPlanningCalculationService {
       raGap,
       raTaxSavingPotential,
       interestTaxLeakage,
-      tfsaRemainingLifetime
+      tfsaRemainingLifetime,
     };
   }
 
@@ -182,26 +181,26 @@ export class TaxPlanningCalculationService {
     if (taxableIncome <= 0) return 0;
 
     const sortedBrackets = [...TAX_BRACKETS].sort((a, b) => b.threshold - a.threshold);
-    const bracket = sortedBrackets.find(b => taxableIncome >= b.threshold);
-    
+    const bracket = sortedBrackets.find((b) => taxableIncome >= b.threshold);
+
     if (!bracket) return 0;
 
     const amountAbove = taxableIncome - bracket.threshold;
-    return bracket.base + (amountAbove * bracket.rate);
+    return bracket.base + amountAbove * bracket.rate;
   }
 
   private static getMarginalRate(taxableIncome: number): number {
     if (taxableIncome <= 0) return 0.18;
 
     const sortedBrackets = [...TAX_BRACKETS].sort((a, b) => b.threshold - a.threshold);
-    const bracket = sortedBrackets.find(b => taxableIncome >= b.threshold);
+    const bracket = sortedBrackets.find((b) => taxableIncome >= b.threshold);
     return bracket ? bracket.rate : 0.18;
   }
 
   static generateRecommendations(results: TaxCalculationResults): TaxRecommendation[] {
     const recs: TaxRecommendation[] = [];
     const TC = TAX_YEAR_2026_2027;
-    
+
     // 1. RA Gap
     if (results.raGap > 0) {
       recs.push({
@@ -216,7 +215,7 @@ export class TaxPlanningCalculationService {
 
     // 2. Interest Leakage
     if (results.interestTaxLeakage > 0) {
-       recs.push({
+      recs.push({
         id: 'rec_int',
         triggerType: 'INTEREST_LEAKAGE',
         title: 'Optimize Interest-Bearing Investments',
@@ -228,7 +227,7 @@ export class TaxPlanningCalculationService {
 
     // 3. TFSA
     if (results.tfsaRemainingLifetime > 0) {
-       recs.push({
+      recs.push({
         id: 'rec_tfsa',
         triggerType: 'TFSA_CAPACITY',
         title: 'Utilize Tax-Free Savings Allowance',

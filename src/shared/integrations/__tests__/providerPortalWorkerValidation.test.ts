@@ -40,10 +40,12 @@ describe('provider portal worker runtime validation', () => {
   });
 
   it('throws a configuration error for invalid runtime flow', () => {
-    expect(() => assertPortalRuntimeConfigured({
-      ...readyFlow,
-      loginUrl: '',
-    })).toThrow(PortalConfigurationError);
+    expect(() =>
+      assertPortalRuntimeConfigured({
+        ...readyFlow,
+        loginUrl: '',
+      }),
+    ).toThrow(PortalConfigurationError);
   });
 
   it('allows a complete runtime flow', () => {

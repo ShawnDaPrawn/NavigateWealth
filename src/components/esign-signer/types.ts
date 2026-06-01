@@ -11,7 +11,14 @@ export interface SignerSessionData {
   signer_name: string;
   signer_email: string;
   signer_role?: string;
-  signer_status: 'pending' | 'sent' | 'viewed' | 'otp_verified' | 'signed' | 'rejected' | 'declined';
+  signer_status:
+    | 'pending'
+    | 'sent'
+    | 'viewed'
+    | 'otp_verified'
+    | 'signed'
+    | 'rejected'
+    | 'declined';
   signer_order?: number;
   otp_required: boolean;
   otp_verified?: boolean;
@@ -49,7 +56,15 @@ export interface SignerField {
   // P3.5 — `attachment` requires the signer to upload a file. The value
   // is stored as `attachment:{attachmentId}` so completion checks see a
   // non-empty string and the certificate can resolve the file metadata.
-  type: 'signature' | 'initials' | 'text' | 'date' | 'checkbox' | 'auto_date' | 'dropdown' | 'attachment';
+  type:
+    | 'signature'
+    | 'initials'
+    | 'text'
+    | 'date'
+    | 'checkbox'
+    | 'auto_date'
+    | 'dropdown'
+    | 'attachment';
   page: number;
   x: number;
   y: number;
@@ -63,7 +78,15 @@ export interface SignerField {
 
 export interface SignatureData {
   field_id: string;
-  type: 'signature' | 'initials' | 'text' | 'date' | 'checkbox' | 'auto_date' | 'dropdown' | 'attachment';
+  type:
+    | 'signature'
+    | 'initials'
+    | 'text'
+    | 'date'
+    | 'checkbox'
+    | 'auto_date'
+    | 'dropdown'
+    | 'attachment';
   value: string;
 }
 

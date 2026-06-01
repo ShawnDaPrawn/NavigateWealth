@@ -37,26 +37,21 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
 }) => {
   return (
     <div className="text-center py-16 px-6 bg-gradient-to-br from-gray-50 to-white rounded-xl border-2 border-dashed border-gray-300">
-      <div className={`mx-auto h-20 w-20 rounded-full ${iconBgColor} flex items-center justify-center mb-6`}>
+      <div
+        className={`mx-auto h-20 w-20 rounded-full ${iconBgColor} flex items-center justify-center mb-6`}
+      >
         <Icon className={`h-10 w-10 ${iconColor}`} />
       </div>
-      
-      <h3 className="text-xl text-gray-900 mb-3">
-        {title}
-      </h3>
-      
-      <p className="text-sm text-gray-600 max-w-md mx-auto mb-8 leading-relaxed">
-        {description}
-      </p>
-      
+
+      <h3 className="text-xl text-gray-900 mb-3">{title}</h3>
+
+      <p className="text-sm text-gray-600 max-w-md mx-auto mb-8 leading-relaxed">{description}</p>
+
       <div className="flex items-center justify-center gap-3">
-        <Button
-          onClick={onAction}
-          className={`${buttonColor} text-white ${buttonHoverColor} px-6`}
-        >
+        <Button onClick={onAction} className={`${buttonColor} text-white ${buttonHoverColor} px-6`}>
           {actionLabel}
         </Button>
-        
+
         {secondaryAction && (
           <Button
             onClick={secondaryAction.onClick}

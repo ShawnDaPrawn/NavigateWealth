@@ -18,15 +18,17 @@ export function VerifyEmailPage() {
     const checkAuthStatus = async () => {
       try {
         const supabase = getSupabaseClient();
-        const { data: { session } } = await supabase.auth.getSession();
-        
+        const {
+          data: { session },
+        } = await supabase.auth.getSession();
+
         if (session) {
           const user = await getCurrentUser();
-          
+
           if (user) {
             setEmail(user.email);
             setIsVerified(user.emailConfirmed);
-            
+
             // If already verified, redirect to dashboard
             if (user.emailConfirmed) {
               console.log('✅ Email already verified, redirecting to dashboard...');
@@ -81,14 +83,10 @@ export function VerifyEmailPage() {
               </div>
 
               {/* Title */}
-              <h2 className="text-center text-gray-900 mb-3">
-                Check Your Email
-              </h2>
+              <h2 className="text-center text-gray-900 mb-3">Check Your Email</h2>
 
               {/* Description */}
-              <p className="text-center text-gray-600 mb-2">
-                We've sent a verification link to
-              </p>
+              <p className="text-center text-gray-600 mb-2">We've sent a verification link to</p>
               <p className="text-center text-purple-700 mb-8 break-all px-4">
                 {email || 'your email address'}
               </p>
@@ -118,8 +116,8 @@ export function VerifyEmailPage() {
               <div className="mt-8 pt-6 border-t border-gray-200">
                 <p className="text-sm text-gray-600 text-center">
                   Need help?{' '}
-                  <a 
-                    href="mailto:info@navigatewealth.co" 
+                  <a
+                    href="mailto:info@navigatewealth.co"
                     className="text-purple-700 hover:text-purple-800 underline"
                   >
                     Contact support

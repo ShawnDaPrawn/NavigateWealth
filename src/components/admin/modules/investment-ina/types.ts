@@ -5,7 +5,7 @@
 
 // ==================== GOAL TYPES ====================
 
-export type GoalType = 
+export type GoalType =
   | 'education'
   | 'home-deposit'
   | 'travel'
@@ -18,7 +18,12 @@ export type GoalType =
 
 export type PriorityLevel = 'low' | 'medium' | 'high';
 
-export type GoalStatus = 'on-track' | 'slight-shortfall' | 'moderate-shortfall' | 'significant-shortfall' | 'overfunded';
+export type GoalStatus =
+  | 'on-track'
+  | 'slight-shortfall'
+  | 'moderate-shortfall'
+  | 'significant-shortfall'
+  | 'overfunded';
 
 export interface InvestmentGoal {
   id: string;
@@ -29,12 +34,12 @@ export interface InvestmentGoal {
   targetDate: string; // ISO date string
   targetYear: number;
   priorityLevel: PriorityLevel;
-  
+
   // Funding details
   linkedInvestmentIds: string[]; // IDs of discretionary investments earmarked for this goal
   currentContributionToGoal: number; // Monthly contribution towards this goal
   expectedLumpSums: LumpSumContribution[];
-  
+
   // Risk profile
   useClientRiskProfile: boolean;
   goalSpecificRiskProfile?: RiskProfile;
@@ -81,19 +86,19 @@ export interface InvestmentINAInputs {
   householdDependants: number;
   grossMonthlyIncome: number;
   netMonthlyIncome: number;
-  
+
   // Risk Profile
   clientRiskProfile: RiskProfile;
-  
+
   // Economic Assumptions
   longTermInflationRate: number; // e.g., 0.06 for 6%
   expectedRealReturns: RiskProfileReturns; // Real returns after inflation by risk profile
-  
+
   // Existing Discretionary Investments (auto-populated from Investments tab)
   discretionaryInvestments: DiscretionaryInvestment[];
   totalDiscretionaryCapitalCurrent: number;
   totalDiscretionaryMonthlyContributions: number;
-  
+
   // Investment Goals
   goals: InvestmentGoal[];
 }
@@ -168,15 +173,15 @@ export interface GoalCalculationResult {
   goalType: GoalType;
   goalStatus: GoalStatus;
   statusRationale: string;
-  
+
   timeHorizon: GoalTimeHorizon;
   projectedCapital: ProjectedCapitalBreakdown;
   fundingGap: FundingGapAnalysis;
   requiredContributions: RequiredContributions;
-  
+
   applicableRiskProfile: RiskProfile;
   applicableRealReturn: number;
-  
+
   calculatedAt: string;
 }
 
@@ -196,11 +201,11 @@ export interface PortfolioSummary {
   totalProjectedCapital: number;
   totalFundingGap: number;
   totalAdditionalMonthlyRequired: number;
-  
+
   goalsOnTrack: number;
   goalsUnderfunded: number;
   goalsOverfunded: number;
-  
+
   overallPortfolioHealth: 'excellent' | 'good' | 'needs-attention' | 'critical';
 }
 

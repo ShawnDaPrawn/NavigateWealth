@@ -48,8 +48,7 @@ import {
 import { projectId, publicAnonKey } from '../../../utils/supabase/info';
 
 /** Matches main public layout — logo through “Get Started” (see Navigation.tsx) */
-const SITE_SHELL =
-  'w-full max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8 xl:px-12';
+const SITE_SHELL = 'w-full max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8 xl:px-12';
 
 // ═══════════════════════════════════════════════════════════════════
 // TYPES
@@ -205,7 +204,14 @@ export function WillDraftingFlow({ clientDetails, onComplete, onBack }: WillDraf
 
   // ── Step 3: Beneficiaries ────────────────────────────────────────
   const [beneficiaries, setBeneficiaries] = useState<Beneficiary[]>([
-    { id: generateId(), fullName: '', idNumber: '', relationship: '', sharePercentage: 100, isAlternate: false },
+    {
+      id: generateId(),
+      fullName: '',
+      idNumber: '',
+      relationship: '',
+      sharePercentage: 100,
+      isAlternate: false,
+    },
   ]);
 
   // ── Step 4: Guardianship ─────────────────────────────────────────
@@ -225,12 +231,18 @@ export function WillDraftingFlow({ clientDetails, onComplete, onBack }: WillDraf
   const stepValid = useMemo(() => {
     switch (currentStep) {
       case 1:
-        return !!(personalInfo.firstName.trim() && personalInfo.surname.trim() && personalInfo.email.trim());
+        return !!(
+          personalInfo.firstName.trim() &&
+          personalInfo.surname.trim() &&
+          personalInfo.email.trim()
+        );
       case 2:
-        return !!(executor.fullName.trim());
+        return !!executor.fullName.trim();
       case 3:
-        return beneficiaries.filter((b) => !b.isAlternate).length > 0 &&
-          beneficiaries.filter((b) => !b.isAlternate).every((b) => b.fullName.trim());
+        return (
+          beneficiaries.filter((b) => !b.isAlternate).length > 0 &&
+          beneficiaries.filter((b) => !b.isAlternate).every((b) => b.fullName.trim())
+        );
       case 4:
         return hasMinorChildren !== null;
       case 5:
@@ -290,7 +302,8 @@ export function WillDraftingFlow({ clientDetails, onComplete, onBack }: WillDraf
       }
 
       toast.success('Will draft saved successfully', {
-        description: 'Your will draft has been securely stored. A financial adviser will review it.',
+        description:
+          'Your will draft has been securely stored. A financial adviser will review it.',
       });
 
       setIsComplete(true);
@@ -320,16 +333,16 @@ export function WillDraftingFlow({ clientDetails, onComplete, onBack }: WillDraf
               </div>
               <h2 className="text-xl font-semibold text-gray-900">Will Draft Saved</h2>
               <p className="text-sm text-gray-600 max-w-sm mx-auto">
-                Your Last Will & Testament draft has been securely saved. A Navigate Wealth
-                adviser will review the draft and contact you to discuss the next steps,
-                including any legal attestation requirements.
+                Your Last Will & Testament draft has been securely saved. A Navigate Wealth adviser
+                will review the draft and contact you to discuss the next steps, including any legal
+                attestation requirements.
               </p>
               <div className="flex items-start gap-2 px-3 py-2.5 bg-primary/5 border border-primary/20 rounded-lg text-left">
                 <AlertCircle className="h-4 w-4 text-primary mt-0.5 shrink-0" />
                 <p className="text-xs text-gray-800">
                   <strong>Important:</strong> This is a draft only. It is not legally binding until
-                  signed in the presence of two competent witnesses, as required by the
-                  Wills Act 7 of 1953 (South Africa).
+                  signed in the presence of two competent witnesses, as required by the Wills Act 7
+                  of 1953 (South Africa).
                 </p>
               </div>
               <Separator />
@@ -353,7 +366,11 @@ export function WillDraftingFlow({ clientDetails, onComplete, onBack }: WillDraf
   const updatePersonal = (field: keyof PersonalInfo, value: string) =>
     setPersonalInfo((prev) => ({ ...prev, [field]: value }));
 
-  const updateExecutor = (target: 'primary' | 'alternate', field: keyof Executor, value: string) => {
+  const updateExecutor = (
+    target: 'primary' | 'alternate',
+    field: keyof Executor,
+    value: string,
+  ) => {
     if (target === 'primary') {
       setExecutor((prev) => ({ ...prev, [field]: value }));
     } else {
@@ -364,14 +381,23 @@ export function WillDraftingFlow({ clientDetails, onComplete, onBack }: WillDraf
   const addBeneficiary = (isAlternate = false) => {
     setBeneficiaries((prev) => [
       ...prev,
-      { id: generateId(), fullName: '', idNumber: '', relationship: '', sharePercentage: 0, isAlternate },
+      {
+        id: generateId(),
+        fullName: '',
+        idNumber: '',
+        relationship: '',
+        sharePercentage: 0,
+        isAlternate,
+      },
     ]);
   };
 
-  const updateBeneficiary = (id: string, field: keyof Beneficiary, value: string | number | boolean) => {
-    setBeneficiaries((prev) =>
-      prev.map((b) => (b.id === id ? { ...b, [field]: value } : b))
-    );
+  const updateBeneficiary = (
+    id: string,
+    field: keyof Beneficiary,
+    value: string | number | boolean,
+  ) => {
+    setBeneficiaries((prev) => prev.map((b) => (b.id === id ? { ...b, [field]: value } : b)));
   };
 
   const removeBeneficiary = (id: string) => {
@@ -386,9 +412,7 @@ export function WillDraftingFlow({ clientDetails, onComplete, onBack }: WillDraf
   };
 
   const updateGuardian = (id: string, field: keyof Guardian, value: string | boolean) => {
-    setGuardians((prev) =>
-      prev.map((g) => (g.id === id ? { ...g, [field]: value } : g))
-    );
+    setGuardians((prev) => prev.map((g) => (g.id === id ? { ...g, [field]: value } : g)));
   };
 
   const removeGuardian = (id: string) => {
@@ -403,9 +427,7 @@ export function WillDraftingFlow({ clientDetails, onComplete, onBack }: WillDraf
   };
 
   const updateBequest = (id: string, field: keyof SpecialBequest, value: string) => {
-    setSpecialBequests((prev) =>
-      prev.map((b) => (b.id === id ? { ...b, [field]: value } : b))
-    );
+    setSpecialBequests((prev) => prev.map((b) => (b.id === id ? { ...b, [field]: value } : b)));
   };
 
   const removeBequest = (id: string) => {
@@ -429,9 +451,7 @@ export function WillDraftingFlow({ clientDetails, onComplete, onBack }: WillDraf
           <button
             type="button"
             onClick={currentStep === 1 ? onBack : goBack}
-            aria-label={
-              currentStep === 1 ? 'Back to Estate Planning' : 'Go to previous step'
-            }
+            aria-label={currentStep === 1 ? 'Back to Estate Planning' : 'Go to previous step'}
             className="flex items-center gap-1.5 text-sm text-gray-600 hover:text-gray-900 active:bg-gray-100 transition-colors text-left min-w-0 min-h-[44px] px-1.5 -ml-1 rounded-md touch-manipulation max-w-[min(100%,calc(100vw-5.5rem))]"
           >
             <ArrowLeft className="h-4 w-4 shrink-0" />
@@ -473,8 +493,8 @@ export function WillDraftingFlow({ clientDetails, onComplete, onBack }: WillDraf
                         isActive
                           ? 'border-primary bg-primary text-primary-foreground'
                           : isDone
-                          ? 'border-green-500 bg-green-500 text-white'
-                          : 'border-gray-300 bg-white text-gray-400'
+                            ? 'border-green-500 bg-green-500 text-white'
+                            : 'border-gray-300 bg-white text-gray-400',
                       )}
                     >
                       {isDone ? <Check className="h-4 w-4" /> : <StepIcon className="h-4 w-4" />}
@@ -482,7 +502,7 @@ export function WillDraftingFlow({ clientDetails, onComplete, onBack }: WillDraf
                     <span
                       className={cn(
                         'text-[10px] font-medium text-center leading-tight max-w-[72px]',
-                        isActive ? 'text-primary' : isDone ? 'text-green-700' : 'text-gray-400'
+                        isActive ? 'text-primary' : isDone ? 'text-green-700' : 'text-gray-400',
                       )}
                     >
                       {step.label}
@@ -492,7 +512,7 @@ export function WillDraftingFlow({ clientDetails, onComplete, onBack }: WillDraf
                     <div
                       className={cn(
                         'flex-1 h-0.5 mx-2 rounded-full',
-                        step.id < currentStep ? 'bg-green-400' : 'bg-gray-200'
+                        step.id < currentStep ? 'bg-green-400' : 'bg-gray-200',
                       )}
                     />
                   )}
@@ -609,18 +629,22 @@ export function WillDraftingFlow({ clientDetails, onComplete, onBack }: WillDraf
                       </SelectContent>
                     </Select>
                   </div>
-                  {personalInfo.maritalStatus && personalInfo.maritalStatus !== 'Single' &&
-                    personalInfo.maritalStatus !== 'Divorced' && personalInfo.maritalStatus !== 'Widowed' && (
-                    <div className="space-y-1.5">
-                      <Label className="text-xs font-medium text-gray-700">Spouse Full Name</Label>
-                      <Input
-                        value={personalInfo.spouseName}
-                        onChange={(e) => updatePersonal('spouseName', e.target.value)}
-                        placeholder="Spouse's full legal name"
-                        className="h-10 text-sm"
-                      />
-                    </div>
-                  )}
+                  {personalInfo.maritalStatus &&
+                    personalInfo.maritalStatus !== 'Single' &&
+                    personalInfo.maritalStatus !== 'Divorced' &&
+                    personalInfo.maritalStatus !== 'Widowed' && (
+                      <div className="space-y-1.5">
+                        <Label className="text-xs font-medium text-gray-700">
+                          Spouse Full Name
+                        </Label>
+                        <Input
+                          value={personalInfo.spouseName}
+                          onChange={(e) => updatePersonal('spouseName', e.target.value)}
+                          placeholder="Spouse's full legal name"
+                          className="h-10 text-sm"
+                        />
+                      </div>
+                    )}
                 </div>
 
                 <div className="space-y-1.5">
@@ -667,8 +691,8 @@ export function WillDraftingFlow({ clientDetails, onComplete, onBack }: WillDraf
                 <div className="flex items-start gap-2 px-3 py-2.5 bg-amber-50 border border-amber-200 rounded-lg">
                   <AlertCircle className="h-4 w-4 text-amber-600 mt-0.5 shrink-0" />
                   <p className="text-xs text-amber-800">
-                    Your executor is responsible for administering your estate after death.
-                    Consider appointing a trusted individual or professional estate administrator.
+                    Your executor is responsible for administering your estate after death. Consider
+                    appointing a trusted individual or professional estate administrator.
                   </p>
                 </div>
 
@@ -709,11 +733,18 @@ export function WillDraftingFlow({ clientDetails, onComplete, onBack }: WillDraf
                           <SelectValue placeholder="Select" />
                         </SelectTrigger>
                         <SelectContent>
-                          {['Spouse', 'Family Member', 'Friend', 'Attorney', 'Professional Executor', 'Other'].map(
-                            (opt) => (
-                              <SelectItem key={opt} value={opt}>{opt}</SelectItem>
-                            )
-                          )}
+                          {[
+                            'Spouse',
+                            'Family Member',
+                            'Friend',
+                            'Attorney',
+                            'Professional Executor',
+                            'Other',
+                          ].map((opt) => (
+                            <SelectItem key={opt} value={opt}>
+                              {opt}
+                            </SelectItem>
+                          ))}
                         </SelectContent>
                       </Select>
                     </div>
@@ -749,7 +780,8 @@ export function WillDraftingFlow({ clientDetails, onComplete, onBack }: WillDraf
                     <span className="text-xs font-normal text-gray-400">(Recommended)</span>
                   </h3>
                   <p className="text-xs text-gray-500">
-                    If your primary executor is unable or unwilling to act, this person will take over.
+                    If your primary executor is unable or unwilling to act, this person will take
+                    over.
                   </p>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div className="space-y-1.5">
@@ -797,8 +829,8 @@ export function WillDraftingFlow({ clientDetails, onComplete, onBack }: WillDraf
                       shareTotal === 100
                         ? 'bg-green-50 text-green-700 border-green-200'
                         : shareTotal > 100
-                        ? 'bg-red-50 text-red-700 border-red-200'
-                        : 'bg-amber-50 text-amber-700 border-amber-200'
+                          ? 'bg-red-50 text-red-700 border-red-200'
+                          : 'bg-amber-50 text-amber-700 border-amber-200',
                     )}
                   >
                     {shareTotal}% of 100%
@@ -847,13 +879,17 @@ export function WillDraftingFlow({ clientDetails, onComplete, onBack }: WillDraf
                             </Label>
                             <Input
                               value={ben.fullName}
-                              onChange={(e) => updateBeneficiary(ben.id, 'fullName', e.target.value)}
+                              onChange={(e) =>
+                                updateBeneficiary(ben.id, 'fullName', e.target.value)
+                              }
                               placeholder="Beneficiary's full name"
                               className="h-9 text-sm"
                             />
                           </div>
                           <div className="space-y-1.5">
-                            <Label className="text-xs font-medium text-gray-700">Relationship</Label>
+                            <Label className="text-xs font-medium text-gray-700">
+                              Relationship
+                            </Label>
                             <Select
                               value={ben.relationship}
                               onValueChange={(v) => updateBeneficiary(ben.id, 'relationship', v)}
@@ -863,7 +899,9 @@ export function WillDraftingFlow({ clientDetails, onComplete, onBack }: WillDraf
                               </SelectTrigger>
                               <SelectContent>
                                 {RELATIONSHIP_OPTIONS.map((opt) => (
-                                  <SelectItem key={opt} value={opt}>{opt}</SelectItem>
+                                  <SelectItem key={opt} value={opt}>
+                                    {opt}
+                                  </SelectItem>
                                 ))}
                               </SelectContent>
                             </Select>
@@ -902,7 +940,9 @@ export function WillDraftingFlow({ clientDetails, onComplete, onBack }: WillDraf
                 <div className="space-y-3">
                   <div className="flex items-center justify-between">
                     <div>
-                      <h3 className="text-sm font-semibold text-gray-900">Alternate Beneficiaries</h3>
+                      <h3 className="text-sm font-semibold text-gray-900">
+                        Alternate Beneficiaries
+                      </h3>
                       <p className="text-xs text-gray-500">
                         If a primary beneficiary predeceases you, their share goes to the alternate.
                       </p>
@@ -926,7 +966,10 @@ export function WillDraftingFlow({ clientDetails, onComplete, onBack }: WillDraf
                     beneficiaries
                       .filter((b) => b.isAlternate)
                       .map((ben, idx) => (
-                        <div key={ben.id} className="p-3 border rounded-lg space-y-3 bg-white border-dashed">
+                        <div
+                          key={ben.id}
+                          className="p-3 border rounded-lg space-y-3 bg-white border-dashed"
+                        >
                           <div className="flex items-center justify-between">
                             <span className="text-xs font-medium text-gray-500">
                               Alternate {idx + 1}
@@ -946,13 +989,17 @@ export function WillDraftingFlow({ clientDetails, onComplete, onBack }: WillDraf
                               <Label className="text-xs font-medium text-gray-700">Full Name</Label>
                               <Input
                                 value={ben.fullName}
-                                onChange={(e) => updateBeneficiary(ben.id, 'fullName', e.target.value)}
+                                onChange={(e) =>
+                                  updateBeneficiary(ben.id, 'fullName', e.target.value)
+                                }
                                 placeholder="Alternate's full name"
                                 className="h-9 text-sm"
                               />
                             </div>
                             <div className="space-y-1.5">
-                              <Label className="text-xs font-medium text-gray-700">Relationship</Label>
+                              <Label className="text-xs font-medium text-gray-700">
+                                Relationship
+                              </Label>
                               <Select
                                 value={ben.relationship}
                                 onValueChange={(v) => updateBeneficiary(ben.id, 'relationship', v)}
@@ -962,7 +1009,9 @@ export function WillDraftingFlow({ clientDetails, onComplete, onBack }: WillDraf
                                 </SelectTrigger>
                                 <SelectContent>
                                   {RELATIONSHIP_OPTIONS.map((opt) => (
-                                    <SelectItem key={opt} value={opt}>{opt}</SelectItem>
+                                    <SelectItem key={opt} value={opt}>
+                                      {opt}
+                                    </SelectItem>
                                   ))}
                                 </SelectContent>
                               </Select>
@@ -971,7 +1020,9 @@ export function WillDraftingFlow({ clientDetails, onComplete, onBack }: WillDraf
                               <Label className="text-xs font-medium text-gray-700">ID Number</Label>
                               <Input
                                 value={ben.idNumber}
-                                onChange={(e) => updateBeneficiary(ben.id, 'idNumber', e.target.value)}
+                                onChange={(e) =>
+                                  updateBeneficiary(ben.id, 'idNumber', e.target.value)
+                                }
                                 placeholder="Optional"
                                 maxLength={13}
                                 className="h-9 text-sm"
@@ -990,8 +1041,7 @@ export function WillDraftingFlow({ clientDetails, onComplete, onBack }: WillDraf
               <div className="space-y-5">
                 <div className="space-y-3">
                   <Label className="text-sm font-medium text-gray-900">
-                    Do you have minor children (under 18)?{' '}
-                    <span className="text-red-500">*</span>
+                    Do you have minor children (under 18)? <span className="text-red-500">*</span>
                   </Label>
                   <div className="flex gap-3">
                     <Button
@@ -1004,7 +1054,8 @@ export function WillDraftingFlow({ clientDetails, onComplete, onBack }: WillDraf
                       }}
                       className={cn(
                         'min-w-[80px]',
-                        hasMinorChildren === true && 'bg-primary hover:bg-primary/90 text-primary-foreground'
+                        hasMinorChildren === true &&
+                          'bg-primary hover:bg-primary/90 text-primary-foreground',
                       )}
                     >
                       Yes
@@ -1019,7 +1070,8 @@ export function WillDraftingFlow({ clientDetails, onComplete, onBack }: WillDraf
                       }}
                       className={cn(
                         'min-w-[80px]',
-                        hasMinorChildren === false && 'bg-primary hover:bg-primary/90 text-primary-foreground'
+                        hasMinorChildren === false &&
+                          'bg-primary hover:bg-primary/90 text-primary-foreground',
                       )}
                     >
                       No
@@ -1032,9 +1084,9 @@ export function WillDraftingFlow({ clientDetails, onComplete, onBack }: WillDraf
                     <div className="flex items-start gap-2 px-3 py-2.5 bg-amber-50 border border-amber-200 rounded-lg">
                       <AlertCircle className="h-4 w-4 text-amber-600 mt-0.5 shrink-0" />
                       <p className="text-xs text-amber-800">
-                        Under South African law, guardianship nominations in a will are not automatically
-                        binding. The High Court (Upper Guardian) has the final say but will give strong
-                        weight to your documented wishes.
+                        Under South African law, guardianship nominations in a will are not
+                        automatically binding. The High Court (Upper Guardian) has the final say but
+                        will give strong weight to your documented wishes.
                       </p>
                     </div>
 
@@ -1074,13 +1126,17 @@ export function WillDraftingFlow({ clientDetails, onComplete, onBack }: WillDraf
                               <Label className="text-xs font-medium text-gray-700">Full Name</Label>
                               <Input
                                 value={guard.fullName}
-                                onChange={(e) => updateGuardian(guard.id, 'fullName', e.target.value)}
+                                onChange={(e) =>
+                                  updateGuardian(guard.id, 'fullName', e.target.value)
+                                }
                                 placeholder="Guardian's full name"
                                 className="h-9 text-sm"
                               />
                             </div>
                             <div className="space-y-1.5">
-                              <Label className="text-xs font-medium text-gray-700">Relationship</Label>
+                              <Label className="text-xs font-medium text-gray-700">
+                                Relationship
+                              </Label>
                               <Select
                                 value={guard.relationship}
                                 onValueChange={(v) => updateGuardian(guard.id, 'relationship', v)}
@@ -1089,11 +1145,13 @@ export function WillDraftingFlow({ clientDetails, onComplete, onBack }: WillDraf
                                   <SelectValue placeholder="Select" />
                                 </SelectTrigger>
                                 <SelectContent>
-                                  {RELATIONSHIP_OPTIONS.filter((r) => r !== 'Charity/Organisation' && r !== 'Trust').map(
-                                    (opt) => (
-                                      <SelectItem key={opt} value={opt}>{opt}</SelectItem>
-                                    )
-                                  )}
+                                  {RELATIONSHIP_OPTIONS.filter(
+                                    (r) => r !== 'Charity/Organisation' && r !== 'Trust',
+                                  ).map((opt) => (
+                                    <SelectItem key={opt} value={opt}>
+                                      {opt}
+                                    </SelectItem>
+                                  ))}
                                 </SelectContent>
                               </Select>
                             </div>
@@ -1102,7 +1160,9 @@ export function WillDraftingFlow({ clientDetails, onComplete, onBack }: WillDraf
                               <Input
                                 type="tel"
                                 value={guard.cellphone}
-                                onChange={(e) => updateGuardian(guard.id, 'cellphone', e.target.value)}
+                                onChange={(e) =>
+                                  updateGuardian(guard.id, 'cellphone', e.target.value)
+                                }
                                 placeholder="+27 82 000 0000"
                                 className="h-9 text-sm"
                               />
@@ -1116,7 +1176,9 @@ export function WillDraftingFlow({ clientDetails, onComplete, onBack }: WillDraf
                     <div className="flex items-center justify-between">
                       <div>
                         <h3 className="text-sm font-semibold text-gray-900">Alternate Guardian</h3>
-                        <p className="text-xs text-gray-500">If your primary guardian is unable to act.</p>
+                        <p className="text-xs text-gray-500">
+                          If your primary guardian is unable to act.
+                        </p>
                       </div>
                       {guardians.filter((g) => g.isAlternate).length === 0 && (
                         <Button
@@ -1134,13 +1196,18 @@ export function WillDraftingFlow({ clientDetails, onComplete, onBack }: WillDraf
                     {guardians
                       .filter((g) => g.isAlternate)
                       .map((guard) => (
-                        <div key={guard.id} className="p-3 border border-dashed rounded-lg space-y-3 bg-white">
+                        <div
+                          key={guard.id}
+                          className="p-3 border border-dashed rounded-lg space-y-3 bg-white"
+                        >
                           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                             <div className="space-y-1.5">
                               <Label className="text-xs font-medium text-gray-700">Full Name</Label>
                               <Input
                                 value={guard.fullName}
-                                onChange={(e) => updateGuardian(guard.id, 'fullName', e.target.value)}
+                                onChange={(e) =>
+                                  updateGuardian(guard.id, 'fullName', e.target.value)
+                                }
                                 placeholder="Alternate guardian's name"
                                 className="h-9 text-sm"
                               />
@@ -1150,7 +1217,9 @@ export function WillDraftingFlow({ clientDetails, onComplete, onBack }: WillDraf
                               <Input
                                 type="tel"
                                 value={guard.cellphone}
-                                onChange={(e) => updateGuardian(guard.id, 'cellphone', e.target.value)}
+                                onChange={(e) =>
+                                  updateGuardian(guard.id, 'cellphone', e.target.value)
+                                }
                                 placeholder="+27 82 000 0000"
                                 className="h-9 text-sm"
                               />
@@ -1178,9 +1247,9 @@ export function WillDraftingFlow({ clientDetails, onComplete, onBack }: WillDraf
                 <div className="flex items-start gap-2 px-3 py-2.5 bg-primary/5 border border-primary/20 rounded-lg">
                   <AlertCircle className="h-4 w-4 text-primary mt-0.5 shrink-0" />
                   <p className="text-xs text-gray-800">
-                    Special bequests are specific items or amounts you wish to leave to
-                    specific people (e.g., a family heirloom, a cash gift, property).
-                    These are distributed before the residual estate.
+                    Special bequests are specific items or amounts you wish to leave to specific
+                    people (e.g., a family heirloom, a cash gift, property). These are distributed
+                    before the residual estate.
                   </p>
                 </div>
 
@@ -1205,9 +1274,7 @@ export function WillDraftingFlow({ clientDetails, onComplete, onBack }: WillDraf
                   specialBequests.map((bequest, idx) => (
                     <div key={bequest.id} className="p-3 border rounded-lg space-y-3 bg-white">
                       <div className="flex items-center justify-between">
-                        <span className="text-xs font-medium text-gray-500">
-                          Bequest {idx + 1}
-                        </span>
+                        <span className="text-xs font-medium text-gray-500">Bequest {idx + 1}</span>
                         <Button
                           type="button"
                           variant="ghost"
@@ -1225,13 +1292,17 @@ export function WillDraftingFlow({ clientDetails, onComplete, onBack }: WillDraf
                           </Label>
                           <Input
                             value={bequest.description}
-                            onChange={(e) => updateBequest(bequest.id, 'description', e.target.value)}
+                            onChange={(e) =>
+                              updateBequest(bequest.id, 'description', e.target.value)
+                            }
                             placeholder="e.g. My diamond ring, R50,000 cash"
                             className="h-9 text-sm"
                           />
                         </div>
                         <div className="space-y-1.5">
-                          <Label className="text-xs font-medium text-gray-700">Beneficiary Name</Label>
+                          <Label className="text-xs font-medium text-gray-700">
+                            Beneficiary Name
+                          </Label>
                           <Input
                             value={bequest.beneficiaryName}
                             onChange={(e) =>
@@ -1244,7 +1315,8 @@ export function WillDraftingFlow({ clientDetails, onComplete, onBack }: WillDraf
                       </div>
                       <div className="space-y-1.5">
                         <Label className="text-xs font-medium text-gray-700">
-                          Conditions <span className="text-xs font-normal text-gray-400">(optional)</span>
+                          Conditions{' '}
+                          <span className="text-xs font-normal text-gray-400">(optional)</span>
                         </Label>
                         <Textarea
                           value={bequest.conditions}
@@ -1261,11 +1333,13 @@ export function WillDraftingFlow({ clientDetails, onComplete, onBack }: WillDraf
                 <Separator />
 
                 <div className="space-y-3">
-                  <h3 className="text-sm font-semibold text-gray-900">Residual Estate Instructions</h3>
+                  <h3 className="text-sm font-semibold text-gray-900">
+                    Residual Estate Instructions
+                  </h3>
                   <p className="text-xs text-gray-500">
-                    Instructions for whatever remains after debts, taxes, and special bequests are settled.
-                    If left blank, the residual estate will be distributed to your beneficiaries per the
-                    percentages specified in Step 3.
+                    Instructions for whatever remains after debts, taxes, and special bequests are
+                    settled. If left blank, the residual estate will be distributed to your
+                    beneficiaries per the percentages specified in Step 3.
                   </p>
                   <Textarea
                     value={residualInstructions}
@@ -1335,7 +1409,9 @@ export function WillDraftingFlow({ clientDetails, onComplete, onBack }: WillDraf
                     Executor
                   </h3>
                   <div className="bg-gray-50 rounded-lg p-3 text-sm space-y-1">
-                    <p className="text-gray-900 font-medium">{executor.fullName || 'Not specified'}</p>
+                    <p className="text-gray-900 font-medium">
+                      {executor.fullName || 'Not specified'}
+                    </p>
                     {executor.relationship && (
                       <p className="text-gray-600 text-xs">{executor.relationship}</p>
                     )}
@@ -1437,7 +1513,9 @@ export function WillDraftingFlow({ clientDetails, onComplete, onBack }: WillDraf
                     <div className="bg-gray-50 rounded-lg p-3 space-y-2 text-sm">
                       {residualInstructions && (
                         <div>
-                          <p className="text-xs font-medium text-gray-500 mb-0.5">Residual Estate</p>
+                          <p className="text-xs font-medium text-gray-500 mb-0.5">
+                            Residual Estate
+                          </p>
                           <p className="text-gray-800">{residualInstructions}</p>
                         </div>
                       )}
@@ -1456,14 +1534,16 @@ export function WillDraftingFlow({ clientDetails, onComplete, onBack }: WillDraf
                   <FileText className="h-4 w-4 text-gray-500 mt-0.5 shrink-0" />
                   <div className="text-xs text-gray-600 space-y-1">
                     <p>
-                      By submitting this draft, I acknowledge that it is a <strong>preliminary document</strong>{' '}
-                      and does not constitute a legally binding will until:
+                      By submitting this draft, I acknowledge that it is a{' '}
+                      <strong>preliminary document</strong> and does not constitute a legally
+                      binding will until:
                     </p>
                     <ul className="list-disc pl-4 space-y-0.5">
                       <li>Reviewed and finalised by a qualified professional</li>
                       <li>Signed by the testator in the presence of two competent witnesses</li>
                       <li>
-                        All parties have signed in compliance with the Wills Act 7 of 1953 (South Africa)
+                        All parties have signed in compliance with the Wills Act 7 of 1953 (South
+                        Africa)
                       </li>
                     </ul>
                   </div>

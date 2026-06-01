@@ -14,47 +14,49 @@ export default function AuthCallbackPage() {
     const handleCallback = async () => {
       try {
         const supabase = getSupabaseClient();
-        
+
         const fullUrl = window.location.href;
         const hash = window.location.hash;
         const search = window.location.search;
-        
+
         console.log('🔍 AUTH CALLBACK - Full URL:', fullUrl);
         console.log('🔍 AUTH CALLBACK - Hash:', hash);
         console.log('🔍 AUTH CALLBACK - Search params:', search);
-        
+
         // Check for PKCE code in query params
         const searchParams = new URLSearchParams(search);
         const code = searchParams.get('code');
         const type = searchParams.get('type');
-        
+
         // Check for implicit flow tokens in hash
         const hashParams = new URLSearchParams(hash.substring(1));
         const accessToken = hashParams.get('access_token');
         const tokenHash = hashParams.get('token_hash');
         const hashType = hashParams.get('type');
-        
+
         // Detect password setup: personnel invite, recovery link, or implicit recovery in hash
         const isInvite =
           type === 'invite' ||
           type === 'recovery' ||
           hashType === 'invite' ||
           hashType === 'recovery';
-        
-        console.log('🔍 AUTH CALLBACK - Auth data:', { 
-          hasCode: !!code, 
+
+        console.log('🔍 AUTH CALLBACK - Auth data:', {
+          hasCode: !!code,
           hasAccessToken: !!accessToken,
           hasTokenHash: !!tokenHash,
           type: type || hashType,
           isInvite,
         });
-        
+
         /**
          * Determine where to send the user after a successful auth exchange.
          * Personnel invites go to /reset-password so the user can set their password.
          * Regular signups go to /application.
          */
-        const getSuccessRedirect = (session: { user: { user_metadata?: Record<string, unknown> } } | null) => {
+        const getSuccessRedirect = (
+          session: { user: { user_metadata?: Record<string, unknown> } } | null,
+        ) => {
           if (isInvite || session?.user?.user_metadata?.invited) {
             return '/reset-password';
           }
@@ -65,17 +67,20 @@ export default function AuthCallbackPage() {
           // PKCE flow - exchange code for session
           console.log('✅ AUTH CALLBACK - PKCE code found, exchanging for session...');
           const { data, error } = await supabase.auth.exchangeCodeForSession(code);
-          
+
           if (error) {
             console.error('❌ AUTH CALLBACK - Error exchanging code:', error);
             throw error;
           }
-          
+
           if (data.session) {
             console.log('✅ AUTH CALLBACK - Session created from code!');
             console.log('✅ AUTH CALLBACK - User:', data.session.user.email);
-            console.log('✅ AUTH CALLBACK - Email confirmed:', data.session.user.email_confirmed_at);
-            
+            console.log(
+              '✅ AUTH CALLBACK - Email confirmed:',
+              data.session.user.email_confirmed_at,
+            );
+
             const redirectPath = getSuccessRedirect(data.session);
 
             if (isInvite || data.session.user.user_metadata?.invited) {
@@ -98,18 +103,18 @@ export default function AuthCallbackPage() {
           // Implicit flow - tokens already in URL
           console.log('✅ AUTH CALLBACK - Access token found in hash!');
           const refreshToken = hashParams.get('refresh_token');
-          
+
           if (refreshToken) {
             const { data, error } = await supabase.auth.setSession({
               access_token: accessToken,
               refresh_token: refreshToken,
             });
-            
+
             if (error) {
               console.error('❌ AUTH CALLBACK - Error setting session:', error);
               throw error;
             }
-            
+
             if (data.session) {
               console.log('✅ AUTH CALLBACK - Session set from tokens!');
               console.log('✅ AUTH CALLBACK - User:', data.session.user.email);
@@ -136,11 +141,13 @@ export default function AuthCallbackPage() {
         } else if (tokenHash) {
           // Email verification with token_hash (newer Supabase flow)
           console.log('✅ AUTH CALLBACK - Token hash found, verifying...');
-          
+
           const verifyType = hashType || type;
           if (verifyType === 'invite') {
             // Invite flow via token_hash — check for session and redirect to password setup
-            const { data: { session } } = await supabase.auth.getSession();
+            const {
+              data: { session },
+            } = await supabase.auth.getSession();
             if (session) {
               console.log('✅ AUTH CALLBACK - Invite session found via token_hash!');
               setStatus('success');
@@ -159,13 +166,15 @@ export default function AuthCallbackPage() {
           } else if (verifyType === 'email' || verifyType === 'signup') {
             // The URL itself is the verification - Supabase will handle it
             // Just check if we now have a session
-            const { data: { session } } = await supabase.auth.getSession();
-            
+            const {
+              data: { session },
+            } = await supabase.auth.getSession();
+
             if (session) {
               console.log('✅ AUTH CALLBACK - Session found after token verification!');
               setStatus('success');
               setMessage('Email verified successfully! Redirecting...');
-              
+
               setTimeout(() => {
                 console.log('➡️ AUTH CALLBACK - Redirecting to /verification-success');
                 window.location.href = '/verification-success';
@@ -175,15 +184,15 @@ export default function AuthCallbackPage() {
               console.log('✅ AUTH CALLBACK - Email verified, no session. Redirecting to login...');
               setStatus('success');
               setMessage('Email verified successfully! Please sign in to continue.');
-              
+
               setTimeout(() => {
                 console.log('➡️ AUTH CALLBACK - Redirecting to /login');
-                navigate('/login', { 
+                navigate('/login', {
                   replace: true,
-                  state: { 
+                  state: {
                     message: 'Your email has been verified! Please sign in to continue.',
-                    verified: true
-                  } 
+                    verified: true,
+                  },
                 });
               }, 2000);
             }
@@ -191,18 +200,27 @@ export default function AuthCallbackPage() {
         } else {
           // No auth data in URL - check for errors
           console.log('⚠️ AUTH CALLBACK - No auth data in URL');
-          
+
           const errorInHash = hashParams.get('error');
           const errorInSearch = searchParams.get('error');
-          const errorDescription = hashParams.get('error_description') || searchParams.get('error_description');
-          
+          const errorDescription =
+            hashParams.get('error_description') || searchParams.get('error_description');
+
           if (errorInHash || errorInSearch) {
-            console.error('❌ AUTH CALLBACK - Error in URL:', errorInHash || errorInSearch, errorDescription);
-            throw new Error(errorDescription || errorInHash || errorInSearch || 'Authentication failed');
+            console.error(
+              '❌ AUTH CALLBACK - Error in URL:',
+              errorInHash || errorInSearch,
+              errorDescription,
+            );
+            throw new Error(
+              errorDescription || errorInHash || errorInSearch || 'Authentication failed',
+            );
           }
-          
+
           // Check if maybe there's already an active session
-          const { data: { session } } = await supabase.auth.getSession();
+          const {
+            data: { session },
+          } = await supabase.auth.getSession();
           if (session) {
             console.log('✅ AUTH CALLBACK - Active session found!');
             console.log('➡️ AUTH CALLBACK - Redirecting to /verification-success');
@@ -211,34 +229,37 @@ export default function AuthCallbackPage() {
             // Email was verified but no session was created
             // This is normal for Supabase email verification flow
             console.log('✅ AUTH CALLBACK - Email verification completed (no session needed)');
-            
+
             setStatus('success');
             setMessage('Email verified successfully! Please sign in to continue.');
-            
+
             // Redirect to login page
             setTimeout(() => {
               console.log('➡️ AUTH CALLBACK - Redirecting to /login');
-              navigate('/login', { 
+              navigate('/login', {
                 replace: true,
-                state: { 
+                state: {
                   message: 'Your email has been verified! Please sign in to continue.',
-                  verified: true
-                } 
+                  verified: true,
+                },
               });
             }, 2000);
             return;
           }
         }
-
       } catch (err) {
         console.error('❌ AUTH CALLBACK - Verification error:', err);
         setStatus('error');
-        
+
         if (err instanceof Error) {
           if (err.message.includes('expired')) {
-            setMessage('This verification link has expired. Please request a new verification email.');
+            setMessage(
+              'This verification link has expired. Please request a new verification email.',
+            );
           } else if (err.message.includes('invalid')) {
-            setMessage('This verification link is invalid. Please request a new verification email.');
+            setMessage(
+              'This verification link is invalid. Please request a new verification email.',
+            );
           } else {
             setMessage(err.message || 'Verification failed. Please try again.');
           }
@@ -282,9 +303,7 @@ export default function AuthCallbackPage() {
           {status === 'success' && (
             <Alert className="border-green-200 bg-green-50">
               <CheckCircle2 className="h-4 w-4 text-green-600" />
-              <AlertDescription className="text-green-800">
-                {message}
-              </AlertDescription>
+              <AlertDescription className="text-green-800">{message}</AlertDescription>
             </Alert>
           )}
 
@@ -292,17 +311,15 @@ export default function AuthCallbackPage() {
             <div className="contents">
               <Alert className="mb-6 border-red-200 bg-red-50">
                 <XCircle className="h-4 w-4 text-red-600" />
-                <AlertDescription className="text-red-800">
-                  {message}
-                </AlertDescription>
+                <AlertDescription className="text-red-800">{message}</AlertDescription>
               </Alert>
 
               <div className="mt-6 space-y-3 text-center">
                 <p className="text-sm text-gray-600">
                   You'll be redirected to the verification page in a moment...
                 </p>
-                <a 
-                  href="/verify-email" 
+                <a
+                  href="/verify-email"
                   className="text-sm text-purple-700 hover:text-purple-800 underline"
                 >
                   Or click here to go now

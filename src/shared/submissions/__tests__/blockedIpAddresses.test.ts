@@ -48,9 +48,9 @@ describe('getBlockedIpAddress', () => {
 
 describe('getBlockedClientIp', () => {
   it('blocks matching client IP headers', () => {
-    const blockedIpAddress = getBlockedClientIp((headerName) => (
-      headerName === 'True-Client-IP' ? '105.224.67.241' : null
-    ));
+    const blockedIpAddress = getBlockedClientIp((headerName) =>
+      headerName === 'True-Client-IP' ? '105.224.67.241' : null,
+    );
 
     expect(blockedIpAddress).toBe('105.224.67.241');
   });

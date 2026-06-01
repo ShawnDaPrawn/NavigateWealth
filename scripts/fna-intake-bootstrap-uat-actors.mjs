@@ -24,10 +24,10 @@ function getServiceRoleKey() {
   if (process.env.SUPABASE_SERVICE_ROLE_KEY) {
     return process.env.SUPABASE_SERVICE_ROLE_KEY;
   }
-  const out = execSync(
-    `npx supabase projects api-keys --project-ref ${PROJECT_REF} -o json`,
-    { encoding: 'utf8', cwd: resolve(__dirname, '..') },
-  );
+  const out = execSync(`npx supabase projects api-keys --project-ref ${PROJECT_REF} -o json`, {
+    encoding: 'utf8',
+    cwd: resolve(__dirname, '..'),
+  });
   const rows = JSON.parse(out);
   const row = rows.find((r) => r.name === 'service_role');
   if (!row?.api_key) {
@@ -72,10 +72,9 @@ async function ensureUser(supabase, { email, password, metadata }) {
 }
 
 async function upsertKv(supabase, key, value) {
-  const { error } = await supabase.from('kv_store_91ed8379').upsert(
-    { key, value },
-    { onConflict: 'key' },
-  );
+  const { error } = await supabase
+    .from('kv_store_91ed8379')
+    .upsert({ key, value }, { onConflict: 'key' });
   if (error) throw error;
 }
 

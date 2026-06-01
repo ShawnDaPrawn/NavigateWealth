@@ -24,7 +24,11 @@ export function useCommunications() {
         return await commApi.fetchInbox();
       } catch (error) {
         // Re-throw auth errors so React Query can handle retries properly.
-        if (error instanceof Error && 'statusCode' in error && (error as Record<string, unknown>).statusCode === 401) {
+        if (
+          error instanceof Error &&
+          'statusCode' in error &&
+          (error as Record<string, unknown>).statusCode === 401
+        ) {
           throw error;
         }
         console.warn('Failed to fetch communications, returning empty list:', error);
@@ -33,7 +37,11 @@ export function useCommunications() {
     },
     enabled: !!user,
     retry: (failureCount, error) => {
-      if (error instanceof Error && 'statusCode' in error && (error as Record<string, unknown>).statusCode === 401) {
+      if (
+        error instanceof Error &&
+        'statusCode' in error &&
+        (error as Record<string, unknown>).statusCode === 401
+      ) {
         return false;
       }
       return failureCount < 2;

@@ -8,17 +8,25 @@
 import { z } from 'npm:zod';
 
 export const ContactFormSubmitSchema = z.object({
-  firstName: z.string().min(1, 'First name is required').max(100)
+  firstName: z
+    .string()
+    .min(1, 'First name is required')
+    .max(100)
     .transform((v) => v.trim()),
-  lastName: z.string().min(1, 'Last name is required').max(100)
+  lastName: z
+    .string()
+    .min(1, 'Last name is required')
+    .max(100)
     .transform((v) => v.trim()),
-  email: z.string().email('Invalid email address format')
+  email: z
+    .string()
+    .email('Invalid email address format')
     .transform((v) => v.trim().toLowerCase()),
-  phone: z.string().min(1, 'Phone number is required').max(30)
-    .refine(
-      (val) => /^[\d\s\-+()]{7,}$/.test(val),
-      'Phone number must contain at least 7 digits',
-    ),
+  phone: z
+    .string()
+    .min(1, 'Phone number is required')
+    .max(30)
+    .refine((val) => /^[\d\s\-+()]{7,}$/.test(val), 'Phone number must contain at least 7 digits'),
   service: z.string().max(200).optional().default(''),
   message: z.string().max(5000).optional().default(''),
   clientType: z.string().max(50).optional().default(''),
@@ -27,17 +35,25 @@ export const ContactFormSubmitSchema = z.object({
 });
 
 export const QuoteRequestSubmitSchema = z.object({
-  firstName: z.string().min(1, 'First name is required').max(100)
+  firstName: z
+    .string()
+    .min(1, 'First name is required')
+    .max(100)
     .transform((v) => v.trim()),
-  lastName: z.string().min(1, 'Last name is required').max(100)
+  lastName: z
+    .string()
+    .min(1, 'Last name is required')
+    .max(100)
     .transform((v) => v.trim()),
-  email: z.string().email('Invalid email address format')
+  email: z
+    .string()
+    .email('Invalid email address format')
     .transform((v) => v.trim().toLowerCase()),
-  phone: z.string().min(1, 'Phone number is required').max(30)
-    .refine(
-      (val) => /^[\d\s\-+()]{7,}$/.test(val),
-      'Phone number must contain at least 7 digits',
-    ),
+  phone: z
+    .string()
+    .min(1, 'Phone number is required')
+    .max(30)
+    .refine((val) => /^[\d\s\-+()]{7,}$/.test(val), 'Phone number must contain at least 7 digits'),
   productName: z.string().max(200).optional().default(''),
   coverage: z.number().nonnegative().optional().default(0),
   preferredProvider: z.string().max(200).optional().default(''),

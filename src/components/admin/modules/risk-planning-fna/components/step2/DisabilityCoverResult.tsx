@@ -9,7 +9,14 @@ interface DisabilityCoverResultProps {
 }
 
 export function DisabilityCoverResult({ calculation }: DisabilityCoverResultProps) {
-  const { capitalisedIncomeLoss, additionalDisabilityCosts, grossNeed, existingCover, netShortfall, assumptions } = calculation;
+  const {
+    capitalisedIncomeLoss,
+    additionalDisabilityCosts,
+    grossNeed,
+    existingCover,
+    netShortfall,
+    assumptions,
+  } = calculation;
 
   return (
     <Card>
@@ -20,7 +27,9 @@ export function DisabilityCoverResult({ calculation }: DisabilityCoverResultProp
       <CardContent className="space-y-4">
         <div className="space-y-2 text-sm">
           <div className="flex justify-between">
-            <span className="text-muted-foreground">Capitalised Income Loss ({capitalisedIncomeLoss.disabilityMultiple}×)</span>
+            <span className="text-muted-foreground">
+              Capitalised Income Loss ({capitalisedIncomeLoss.disabilityMultiple}×)
+            </span>
             <span>{formatCurrency(capitalisedIncomeLoss.total)}</span>
           </div>
           <div className="flex justify-between">
@@ -44,7 +53,7 @@ export function DisabilityCoverResult({ calculation }: DisabilityCoverResultProp
             </span>
           </div>
         </div>
-        
+
         <div className="mt-4 p-3 bg-muted/50 rounded-md">
           <p className="text-xs font-medium mb-2">Assumptions:</p>
           <ul className="text-xs text-muted-foreground space-y-1">

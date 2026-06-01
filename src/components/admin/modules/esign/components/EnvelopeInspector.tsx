@@ -4,17 +4,12 @@
  */
 
 import React, { useState, useEffect, useCallback } from 'react';
-import {
-  Sheet,
-  SheetContent,
-  SheetTitle,
-  SheetDescription,
-} from "../../../../ui/sheet";
-import { Button } from "../../../../ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "../../../../ui/card";
-import { Badge } from "../../../../ui/badge";
-import { ScrollArea } from "../../../../ui/scroll-area";
-import { Separator } from "../../../../ui/separator";
+import { Sheet, SheetContent, SheetTitle, SheetDescription } from '../../../../ui/sheet';
+import { Button } from '../../../../ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '../../../../ui/card';
+import { Badge } from '../../../../ui/badge';
+import { ScrollArea } from '../../../../ui/scroll-area';
+import { Separator } from '../../../../ui/separator';
 import {
   Download,
   Send,
@@ -48,7 +43,7 @@ import {
   Loader2,
   RefreshCw,
   FileDown,
-} from "lucide-react";
+} from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -56,7 +51,7 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from "../../../../ui/dropdown-menu";
+} from '../../../../ui/dropdown-menu';
 
 import { StatusBadge } from './StatusBadge';
 import type { EsignEnvelope, EsignSigner, EsignAuditEvent } from '../types';
@@ -95,9 +90,10 @@ function getAuditDisplayInfo(action: string, metadata?: Record<string, unknown>)
       return {
         icon: <ArrowDownToLine className="h-4 w-4" />,
         label: 'Document Uploaded',
-        description: Number(metadata?.fileCount) > 1
-          ? `${metadata?.fileCount} documents merged and uploaded`
-          : `Document "${metadata?.filename || ''}" uploaded (${metadata?.pageCount || '?'} pages)`,
+        description:
+          Number(metadata?.fileCount) > 1
+            ? `${metadata?.fileCount} documents merged and uploaded`
+            : `Document "${metadata?.filename || ''}" uploaded (${metadata?.pageCount || '?'} pages)`,
         color: 'text-blue-600',
         bgColor: 'bg-blue-50 border-blue-200',
       };
@@ -169,8 +165,8 @@ function getAuditDisplayInfo(action: string, metadata?: Record<string, unknown>)
       return {
         icon: <XCircle className="h-4 w-4" />,
         label: 'Signing Declined',
-        description: metadata?.reason 
-          ? `Signer declined: "${metadata.reason}"` 
+        description: metadata?.reason
+          ? `Signer declined: "${metadata.reason}"`
           : 'Signer declined to sign',
         color: 'text-red-600',
         bgColor: 'bg-red-50 border-red-200',
@@ -227,7 +223,7 @@ function getAuditDisplayInfo(action: string, metadata?: Record<string, unknown>)
     default:
       return {
         icon: <History className="h-4 w-4" />,
-        label: action.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()),
+        label: action.replace(/_/g, ' ').replace(/\b\w/g, (l) => l.toUpperCase()),
         description: `Action: ${action}`,
         color: 'text-gray-600',
         bgColor: 'bg-gray-50 border-gray-200',
@@ -315,11 +311,14 @@ export function EnvelopeInspector({
     if (open && envelope?.id) {
       setFullEnvelope(envelope);
       // Fetch fresh envelope details to get signers
-      esignApi.getEnvelope(envelope.id).then(data => {
-        if (data) setFullEnvelope(data);
-      }).catch(() => {
-        // Fallback to what we have
-      });
+      esignApi
+        .getEnvelope(envelope.id)
+        .then((data) => {
+          if (data) setFullEnvelope(data);
+        })
+        .catch(() => {
+          // Fallback to what we have
+        });
     }
   }, [open, envelope?.id]);
 
@@ -327,13 +326,17 @@ export function EnvelopeInspector({
   useEffect(() => {
     if (activeTab === 'audit' && envelope?.id) {
       setAuditLoading(true);
-      esignApi.getAuditTrail(envelope.id).then(data => {
-        setAuditEvents(data.events || []);
-      }).catch(() => {
-        setAuditEvents([]);
-      }).finally(() => {
-        setAuditLoading(false);
-      });
+      esignApi
+        .getAuditTrail(envelope.id)
+        .then((data) => {
+          setAuditEvents(data.events || []);
+        })
+        .catch(() => {
+          setAuditEvents([]);
+        })
+        .finally(() => {
+          setAuditLoading(false);
+        });
     }
   }, [activeTab, envelope?.id]);
 
@@ -341,20 +344,22 @@ export function EnvelopeInspector({
 
   const handleCopyId = () => {
     navigator.clipboard.writeText(envelope.id);
-    toast.success("Envelope ID copied to clipboard");
+    toast.success('Envelope ID copied to clipboard');
   };
 
   const handleResend = (e: React.MouseEvent) => {
     e.stopPropagation();
     if (onSendReminder) {
       onSendReminder(envelope.id);
-      toast.success("Reminder sent to current recipient");
+      toast.success('Reminder sent to current recipient');
     }
   };
 
   // Use full envelope data if available for signers
   const envelopeData = fullEnvelope || envelope;
-  const sortedSigners = [...(envelopeData.signers || [])].sort((a, b) => (a.order || 0) - (b.order || 0));
+  const sortedSigners = [...(envelopeData.signers || [])].sort(
+    (a, b) => (a.order || 0) - (b.order || 0),
+  );
   const isActive = ['sent', 'viewed', 'partially_signed'].includes(envelope.status);
   const isCompleted = envelope.status === 'completed';
   const isDraft = envelope.status === 'draft';
@@ -371,20 +376,25 @@ export function EnvelopeInspector({
       <Sheet open={open} onOpenChange={onOpenChange}>
         <SheetContent className="w-full sm:max-w-xl md:max-w-2xl p-0 flex flex-col bg-background sm:border-l border-border shadow-xl">
           {/* Status Indicator Strip */}
-          <div className={cn(
-            "h-1 w-full shrink-0",
-            isCompleted ? "bg-green-500" :
-            envelope.status === 'voided' ? "bg-red-500" :
-            isDraft ? "bg-gray-300" :
-            "bg-blue-500"
-          )} />
-          
+          <div
+            className={cn(
+              'h-1 w-full shrink-0',
+              isCompleted
+                ? 'bg-green-500'
+                : envelope.status === 'voided'
+                  ? 'bg-red-500'
+                  : isDraft
+                    ? 'bg-gray-300'
+                    : 'bg-blue-500',
+            )}
+          />
+
           {/* Header */}
           <div className="px-6 pt-5 pb-4 border-b shrink-0">
             <div className="flex items-start justify-between gap-4">
               <div className="flex-1 min-w-0 space-y-2">
                 <div className="flex items-center gap-2">
-                  <button 
+                  <button
                     onClick={handleCopyId}
                     className="text-[11px] font-mono text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1"
                     title="Click to copy ID"
@@ -393,7 +403,10 @@ export function EnvelopeInspector({
                     <Copy className="h-3 w-3 shrink-0" />
                   </button>
                 </div>
-                <SheetTitle className="text-lg font-semibold leading-tight truncate pr-4" title={envelope.title}>
+                <SheetTitle
+                  className="text-lg font-semibold leading-tight truncate pr-4"
+                  title={envelope.title}
+                >
                   {envelope.title}
                 </SheetTitle>
                 <SheetDescription className="sr-only">
@@ -410,7 +423,8 @@ export function EnvelopeInspector({
                   {sortedSigners.length > 0 && (
                     <span className="text-xs text-muted-foreground flex items-center gap-1">
                       <Users className="h-3 w-3" />
-                      {sortedSigners.filter(s => s.status === 'signed').length}/{sortedSigners.length} signed
+                      {sortedSigners.filter((s) => s.status === 'signed').length}/
+                      {sortedSigners.length} signed
                     </span>
                   )}
                 </div>
@@ -439,12 +453,16 @@ export function EnvelopeInspector({
                   </Button>
                 )}
                 {isCompleted && (
-                  <Button size="sm" variant="outline" onClick={() => onDownloadDocument?.(envelope.id)}>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => onDownloadDocument?.(envelope.id)}
+                  >
                     <Download className="h-4 w-4 mr-1.5" />
                     Download
                   </Button>
                 )}
-                
+
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
                     <Button variant="ghost" size="icon" className="h-8 w-8">
@@ -454,7 +472,7 @@ export function EnvelopeInspector({
                   <DropdownMenuContent align="end">
                     <DropdownMenuLabel>Actions</DropdownMenuLabel>
                     {isDraft && onDeleteEnvelope && (
-                      <DropdownMenuItem 
+                      <DropdownMenuItem
                         onClick={() => setDiscardDialogOpen(true)}
                         className="text-destructive focus:text-destructive"
                       >
@@ -477,7 +495,7 @@ export function EnvelopeInspector({
                         {onVoidEnvelope && (
                           <div className="contents">
                             <DropdownMenuSeparator />
-                            <DropdownMenuItem 
+                            <DropdownMenuItem
                               onClick={() => setVoidDialogOpen(true)}
                               className="text-destructive focus:text-destructive"
                             >
@@ -497,7 +515,10 @@ export function EnvelopeInspector({
                             try {
                               await esignApi.downloadEvidencePack(envelope.id, envelope.title);
                             } catch (err) {
-                              const message = err instanceof Error ? err.message : 'Failed to export evidence pack';
+                              const message =
+                                err instanceof Error
+                                  ? err.message
+                                  : 'Failed to export evidence pack';
                               toast.error(message);
                             }
                           }}
@@ -519,15 +540,15 @@ export function EnvelopeInspector({
                 { key: 'routing' as const, label: 'Recipients', icon: Users },
                 { key: 'details' as const, label: 'Details', icon: FileText },
                 { key: 'audit' as const, label: 'Activity', icon: History },
-              ].map(tab => (
+              ].map((tab) => (
                 <button
                   key={tab.key}
                   onClick={() => setActiveTab(tab.key)}
                   className={cn(
-                    "flex items-center gap-1.5 px-4 py-3 text-sm font-medium border-b-2 transition-colors",
+                    'flex items-center gap-1.5 px-4 py-3 text-sm font-medium border-b-2 transition-colors',
                     activeTab === tab.key
-                      ? "border-primary text-foreground"
-                      : "border-transparent text-muted-foreground hover:text-foreground hover:border-muted"
+                      ? 'border-primary text-foreground'
+                      : 'border-transparent text-muted-foreground hover:text-foreground hover:border-muted',
                   )}
                 >
                   <tab.icon className="h-3.5 w-3.5" />
@@ -540,7 +561,6 @@ export function EnvelopeInspector({
           {/* Content Area */}
           <ScrollArea className="flex-1 p-6">
             <div className="max-w-3xl mx-auto space-y-6">
-              
               {/* ============ RECIPIENTS TAB ============ */}
               {activeTab === 'routing' && (
                 <div className="space-y-5">
@@ -583,47 +603,74 @@ export function EnvelopeInspector({
                       <div className="space-y-4">
                         {sortedSigners.map((signer, index) => {
                           const isSigned = signer.status === 'signed';
-                          const isCurrent = ['sent', 'viewed', 'otp_verified'].includes(signer.status);
+                          const isCurrent = ['sent', 'viewed', 'otp_verified'].includes(
+                            signer.status,
+                          );
                           const isPending = signer.status === 'pending';
-                          const isDeclined = signer.status === 'declined' || signer.status === 'rejected';
+                          const isDeclined =
+                            signer.status === 'declined' || signer.status === 'rejected';
                           const isEnvelopeVoided = envelope.status === 'voided';
-                          
+
                           return (
                             <div key={signer.id} className="relative flex gap-4">
                               {/* Step indicator */}
-                              <div className={cn(
-                                "relative z-10 flex h-10 w-10 shrink-0 items-center justify-center rounded-full border-2 bg-background transition-all",
-                                isSigned ? "border-green-500 text-green-500" :
-                                isDeclined ? "border-red-500 text-red-500" :
-                                isCurrent ? "border-blue-500 text-blue-500 shadow-[0_0_0_4px_rgba(59,130,246,0.1)]" :
-                                isEnvelopeVoided ? "border-gray-300 text-gray-400" :
-                                "border-muted text-muted-foreground"
-                              )}>
-                                {isSigned ? <CheckCircle2 className="h-5 w-5" /> :
-                                 isDeclined ? <XCircle className="h-5 w-5" /> :
-                                 isCurrent ? <span className="h-2.5 w-2.5 rounded-full bg-blue-500 animate-pulse" /> :
-                                 <span className="text-xs font-semibold">{index + 1}</span>}
+                              <div
+                                className={cn(
+                                  'relative z-10 flex h-10 w-10 shrink-0 items-center justify-center rounded-full border-2 bg-background transition-all',
+                                  isSigned
+                                    ? 'border-green-500 text-green-500'
+                                    : isDeclined
+                                      ? 'border-red-500 text-red-500'
+                                      : isCurrent
+                                        ? 'border-blue-500 text-blue-500 shadow-[0_0_0_4px_rgba(59,130,246,0.1)]'
+                                        : isEnvelopeVoided
+                                          ? 'border-gray-300 text-gray-400'
+                                          : 'border-muted text-muted-foreground',
+                                )}
+                              >
+                                {isSigned ? (
+                                  <CheckCircle2 className="h-5 w-5" />
+                                ) : isDeclined ? (
+                                  <XCircle className="h-5 w-5" />
+                                ) : isCurrent ? (
+                                  <span className="h-2.5 w-2.5 rounded-full bg-blue-500 animate-pulse" />
+                                ) : (
+                                  <span className="text-xs font-semibold">{index + 1}</span>
+                                )}
                               </div>
 
                               {/* Signer card */}
-                              <div className={cn(
-                                "flex-1 rounded-lg border p-4 transition-all",
-                                isCurrent ? "border-blue-200 bg-blue-50/50 shadow-sm" :
-                                isSigned ? "border-green-100 bg-green-50/30" :
-                                isDeclined ? "border-red-100 bg-red-50/30" :
-                                isPending ? "border-dashed opacity-60" : ""
-                              )}>
+                              <div
+                                className={cn(
+                                  'flex-1 rounded-lg border p-4 transition-all',
+                                  isCurrent
+                                    ? 'border-blue-200 bg-blue-50/50 shadow-sm'
+                                    : isSigned
+                                      ? 'border-green-100 bg-green-50/30'
+                                      : isDeclined
+                                        ? 'border-red-100 bg-red-50/30'
+                                        : isPending
+                                          ? 'border-dashed opacity-60'
+                                          : '',
+                                )}
+                              >
                                 <div className="flex items-start justify-between gap-2">
                                   <div className="min-w-0">
                                     <div className="flex items-center gap-2 flex-wrap">
                                       <h4 className="font-medium text-sm">{signer.name}</h4>
                                       {signer.role && (
-                                        <Badge variant="secondary" className="text-[10px] h-5 px-1.5 font-normal">
+                                        <Badge
+                                          variant="secondary"
+                                          className="text-[10px] h-5 px-1.5 font-normal"
+                                        >
                                           {signer.role}
                                         </Badge>
                                       )}
                                       {signer.otp_required && (
-                                        <Badge variant="outline" className="text-[10px] h-5 px-1.5 gap-0.5 border-amber-200 text-amber-700 bg-amber-50">
+                                        <Badge
+                                          variant="outline"
+                                          className="text-[10px] h-5 px-1.5 gap-0.5 border-amber-200 text-amber-700 bg-amber-50"
+                                        >
                                           <Shield className="h-3 w-3" /> OTP
                                         </Badge>
                                       )}
@@ -643,8 +690,8 @@ export function EnvelopeInspector({
                                       {isSigned && signer.signed_at
                                         ? `Signed ${formatShortDateTime(signer.signed_at)}`
                                         : isCurrent
-                                        ? 'Awaiting signature'
-                                        : ''}
+                                          ? 'Awaiting signature'
+                                          : ''}
                                     </span>
                                     {isCurrent && (
                                       <Button
@@ -660,7 +707,10 @@ export function EnvelopeInspector({
                                 )}
                                 {isDeclined && (
                                   <div className="mt-3 pt-3 border-t text-xs text-red-600">
-                                    Declined{signer.rejection_reason ? `: "${signer.rejection_reason}"` : ''}
+                                    Declined
+                                    {signer.rejection_reason
+                                      ? `: "${signer.rejection_reason}"`
+                                      : ''}
                                   </div>
                                 )}
                               </div>
@@ -694,16 +744,22 @@ export function EnvelopeInspector({
                             {envelopeData.document?.filename || 'Document.pdf'}
                           </p>
                           <p className="text-xs text-muted-foreground">
-                            {envelopeData.document?.page_count ? `${envelopeData.document.page_count} pages` : 'PDF Document'}
+                            {envelopeData.document?.page_count
+                              ? `${envelopeData.document.page_count} pages`
+                              : 'PDF Document'}
                           </p>
                         </div>
                         {isCompleted && (
-                          <Button variant="outline" size="sm" onClick={() => onDownloadDocument?.(envelope.id)}>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => onDownloadDocument?.(envelope.id)}
+                          >
                             <Download className="h-4 w-4" />
                           </Button>
                         )}
                       </div>
-                      
+
                       {isCompleted && (
                         <div className="mt-3 flex items-center gap-2 p-2.5 bg-green-50 border border-green-100 rounded-lg">
                           <FileCheck className="h-4 w-4 text-green-600 shrink-0" />
@@ -737,11 +793,25 @@ export function EnvelopeInspector({
                     {[
                       { label: 'Created', value: formatShortDateTime(envelope.created_at) },
                       { label: 'Last Updated', value: formatShortDateTime(envelope.updated_at) },
-                      { label: 'Expires', value: envelope.expires_at ? formatShortDateTime(envelope.expires_at) : 'Never' },
-                      { label: 'Completed', value: envelope.completed_at ? formatShortDateTime(envelope.completed_at) : isCompleted ? 'Yes' : '—' },
-                    ].map(item => (
+                      {
+                        label: 'Expires',
+                        value: envelope.expires_at
+                          ? formatShortDateTime(envelope.expires_at)
+                          : 'Never',
+                      },
+                      {
+                        label: 'Completed',
+                        value: envelope.completed_at
+                          ? formatShortDateTime(envelope.completed_at)
+                          : isCompleted
+                            ? 'Yes'
+                            : '—',
+                      },
+                    ].map((item) => (
                       <div key={item.label} className="p-3 border rounded-lg bg-muted/10">
-                        <p className="text-[11px] text-muted-foreground font-medium uppercase tracking-wider mb-1">{item.label}</p>
+                        <p className="text-[11px] text-muted-foreground font-medium uppercase tracking-wider mb-1">
+                          {item.label}
+                        </p>
                         <p className="text-sm font-medium">{item.value}</p>
                       </div>
                     ))}
@@ -807,13 +877,23 @@ export function EnvelopeInspector({
                           const isFirst = index === 0;
 
                           return (
-                            <div key={event.id || index} className="relative flex gap-3 pb-5 last:pb-0">
+                            <div
+                              key={event.id || index}
+                              className="relative flex gap-3 pb-5 last:pb-0"
+                            >
                               {/* Timeline dot */}
-                              <div className={cn(
-                                "relative z-10 flex h-8 w-8 shrink-0 items-center justify-center rounded-full border bg-background",
-                                isFirst ? display.bgColor : "border-muted bg-muted/30"
-                              )}>
-                                <span className={cn("flex items-center justify-center", isFirst ? display.color : "text-muted-foreground")}>
+                              <div
+                                className={cn(
+                                  'relative z-10 flex h-8 w-8 shrink-0 items-center justify-center rounded-full border bg-background',
+                                  isFirst ? display.bgColor : 'border-muted bg-muted/30',
+                                )}
+                              >
+                                <span
+                                  className={cn(
+                                    'flex items-center justify-center',
+                                    isFirst ? display.color : 'text-muted-foreground',
+                                  )}
+                                >
                                   {display.icon}
                                 </span>
                               </div>
@@ -848,7 +928,10 @@ export function EnvelopeInspector({
                                       {event.ip}
                                     </span>
                                   )}
-                                  <span className="text-[11px] text-muted-foreground" title={formatAuditDateTime(eventTime)}>
+                                  <span
+                                    className="text-[11px] text-muted-foreground"
+                                    title={formatAuditDateTime(eventTime)}
+                                  >
                                     {formatAuditDateTime(eventTime)}
                                   </span>
                                 </div>
@@ -866,8 +949,8 @@ export function EnvelopeInspector({
         </SheetContent>
       </Sheet>
 
-      <VoidEnvelopeDialog 
-        open={voidDialogOpen} 
+      <VoidEnvelopeDialog
+        open={voidDialogOpen}
         onOpenChange={setVoidDialogOpen}
         onConfirm={async (reason) => {
           if (onVoidEnvelope) {

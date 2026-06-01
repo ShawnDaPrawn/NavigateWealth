@@ -23,13 +23,7 @@ import { toast } from 'sonner';
 import { Button } from '../../../ui/button';
 import { Input } from '../../../ui/input';
 import { Label } from '../../../ui/label';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '../../../ui/select';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../../ui/select';
 import {
   ArrowRight,
   ArrowLeft,
@@ -214,19 +208,25 @@ function loadDraft(): WizardDraft | null {
   try {
     const raw = sessionStorage.getItem(DRAFT_KEY);
     return raw ? JSON.parse(raw) : null;
-  } catch { return null; }
+  } catch {
+    return null;
+  }
 }
 
 function saveDraft(draft: WizardDraft) {
   try {
     sessionStorage.setItem(DRAFT_KEY, JSON.stringify(draft));
-  } catch { /* non-critical */ }
+  } catch {
+    /* non-critical */
+  }
 }
 
 function clearDraft() {
   try {
     sessionStorage.removeItem(DRAFT_KEY);
-  } catch { /* non-critical */ }
+  } catch {
+    /* non-critical */
+  }
 }
 
 function needsLumpSum(ct: string) {
@@ -261,7 +261,9 @@ function StepIndicator({ currentStep }: { currentStep: number }) {
         return (
           <React.Fragment key={step.num}>
             {idx > 0 && (
-              <div className={`flex-1 h-0.5 mx-1 sm:mx-2 transition-colors ${isCompleted ? 'bg-green-500' : 'bg-gray-200'}`} />
+              <div
+                className={`flex-1 h-0.5 mx-1 sm:mx-2 transition-colors ${isCompleted ? 'bg-green-500' : 'bg-gray-200'}`}
+              />
             )}
             <div className="flex flex-col items-center gap-1">
               <div
@@ -273,9 +275,15 @@ function StepIndicator({ currentStep }: { currentStep: number }) {
                       : 'bg-gray-100 text-gray-400 border border-gray-200'
                 }`}
               >
-                {isCompleted ? <CheckCircle className="h-4 w-4" /> : <IconComp className="h-4 w-4" />}
+                {isCompleted ? (
+                  <CheckCircle className="h-4 w-4" />
+                ) : (
+                  <IconComp className="h-4 w-4" />
+                )}
               </div>
-              <span className={`text-[10px] sm:text-xs font-medium ${isActive ? 'text-gray-900' : 'text-gray-400'}`}>
+              <span
+                className={`text-[10px] sm:text-xs font-medium ${isActive ? 'text-gray-900' : 'text-gray-400'}`}
+              >
                 {step.label}
               </span>
             </div>
@@ -307,7 +315,9 @@ function Step1Types({
     <div className="space-y-4">
       <div>
         <h2 className="text-lg font-bold text-gray-900 mb-1">What would you like to invest in?</h2>
-        <p className="text-sm text-gray-500">Select one or more investment types. You can choose multiple.</p>
+        <p className="text-sm text-gray-500">
+          Select one or more investment types. You can choose multiple.
+        </p>
       </div>
 
       <div className="space-y-2">
@@ -384,8 +394,13 @@ function Step2Contributions({
     return (
       <div className="space-y-4">
         <div>
-          <h2 className="text-lg font-bold text-gray-900 mb-1">How would you like to contribute?</h2>
-          <p className="text-sm text-gray-500">You've selected adviser assistance for the investment type. Our adviser will recommend contribution structures based on your profile.</p>
+          <h2 className="text-lg font-bold text-gray-900 mb-1">
+            How would you like to contribute?
+          </h2>
+          <p className="text-sm text-gray-500">
+            You've selected adviser assistance for the investment type. Our adviser will recommend
+            contribution structures based on your profile.
+          </p>
         </div>
         <div className="p-4 rounded-xl bg-primary/[0.03] border border-primary/20 text-sm text-gray-700 flex items-start gap-2">
           <HelpCircle className="h-4 w-4 text-primary mt-0.5 flex-shrink-0" />
@@ -399,7 +414,9 @@ function Step2Contributions({
     <div className="space-y-5">
       <div>
         <h2 className="text-lg font-bold text-gray-900 mb-1">How would you like to contribute?</h2>
-        <p className="text-sm text-gray-500">For each selected investment, choose your contribution method and amount.</p>
+        <p className="text-sm text-gray-500">
+          For each selected investment, choose your contribution method and amount.
+        </p>
       </div>
 
       {typesToShow.map((typeId) => {
@@ -418,7 +435,9 @@ function Step2Contributions({
 
             {/* Contribution type selector */}
             <div className="space-y-1.5">
-              <Label className="text-xs font-medium text-gray-600">Contribution type <span className="text-red-500">*</span></Label>
+              <Label className="text-xs font-medium text-gray-600">
+                Contribution type <span className="text-red-500">*</span>
+              </Label>
               <div className="flex flex-wrap gap-2">
                 {CONTRIBUTION_TYPES.map((ct) => (
                   <button
@@ -443,23 +462,31 @@ function Step2Contributions({
                 <Label className="text-xs font-medium text-gray-600">Lump sum amount (ZAR)</Label>
                 <div className="flex items-center gap-3">
                   <div className="relative flex-1">
-                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-gray-400">R</span>
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-gray-400">
+                      R
+                    </span>
                     <Input
                       type="text"
                       inputMode="numeric"
                       placeholder="e.g. 50,000"
                       value={entry.lump_sum_amount}
-                      onChange={(e) => updateEntry(typeId, { lump_sum_amount: formatCurrency(e.target.value) })}
+                      onChange={(e) =>
+                        updateEntry(typeId, { lump_sum_amount: formatCurrency(e.target.value) })
+                      }
                       disabled={entry.lump_sum_adviser_assist}
                       className="bg-white border-gray-300 h-10 pl-7"
                     />
                   </div>
                   <button
                     type="button"
-                    onClick={() => updateEntry(typeId, {
-                      lump_sum_adviser_assist: !entry.lump_sum_adviser_assist,
-                      lump_sum_amount: !entry.lump_sum_adviser_assist ? '' : entry.lump_sum_amount,
-                    })}
+                    onClick={() =>
+                      updateEntry(typeId, {
+                        lump_sum_adviser_assist: !entry.lump_sum_adviser_assist,
+                        lump_sum_amount: !entry.lump_sum_adviser_assist
+                          ? ''
+                          : entry.lump_sum_amount,
+                      })
+                    }
                     className={`text-xs px-3 py-2 rounded-lg border font-medium whitespace-nowrap transition-all ${
                       entry.lump_sum_adviser_assist
                         ? 'border-primary bg-primary/10 text-primary'
@@ -476,26 +503,34 @@ function Step2Contributions({
             {/* Monthly amount */}
             {showMonthly && !isAdviser && (
               <div className="space-y-1.5">
-                <Label className="text-xs font-medium text-gray-600">Monthly amount (ZAR /month)</Label>
+                <Label className="text-xs font-medium text-gray-600">
+                  Monthly amount (ZAR /month)
+                </Label>
                 <div className="flex items-center gap-3">
                   <div className="relative flex-1">
-                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-gray-400">R</span>
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-gray-400">
+                      R
+                    </span>
                     <Input
                       type="text"
                       inputMode="numeric"
                       placeholder="e.g. 2,000"
                       value={entry.monthly_amount}
-                      onChange={(e) => updateEntry(typeId, { monthly_amount: formatCurrency(e.target.value) })}
+                      onChange={(e) =>
+                        updateEntry(typeId, { monthly_amount: formatCurrency(e.target.value) })
+                      }
                       disabled={entry.monthly_adviser_assist}
                       className="bg-white border-gray-300 h-10 pl-7"
                     />
                   </div>
                   <button
                     type="button"
-                    onClick={() => updateEntry(typeId, {
-                      monthly_adviser_assist: !entry.monthly_adviser_assist,
-                      monthly_amount: !entry.monthly_adviser_assist ? '' : entry.monthly_amount,
-                    })}
+                    onClick={() =>
+                      updateEntry(typeId, {
+                        monthly_adviser_assist: !entry.monthly_adviser_assist,
+                        monthly_amount: !entry.monthly_adviser_assist ? '' : entry.monthly_amount,
+                      })
+                    }
                     className={`text-xs px-3 py-2 rounded-lg border font-medium whitespace-nowrap transition-all ${
                       entry.monthly_adviser_assist
                         ? 'border-primary bg-primary/10 text-primary'
@@ -539,7 +574,9 @@ function Step3Objective({
     <div className="space-y-5">
       <div>
         <h2 className="text-lg font-bold text-gray-900 mb-1">What is this investment for?</h2>
-        <p className="text-sm text-gray-500">Help us understand your goals so we can recommend the right approach.</p>
+        <p className="text-sm text-gray-500">
+          Help us understand your goals so we can recommend the right approach.
+        </p>
       </div>
 
       {/* Primary objective */}
@@ -559,9 +596,11 @@ function Step3Objective({
                   : 'border-gray-200 bg-white hover:border-gray-300'
               }`}
             >
-              <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center ${
-                objective.primary_objective === opt.value ? 'border-primary' : 'border-gray-300'
-              }`}>
+              <div
+                className={`w-4 h-4 rounded-full border-2 flex items-center justify-center ${
+                  objective.primary_objective === opt.value ? 'border-primary' : 'border-gray-300'
+                }`}
+              >
                 {objective.primary_objective === opt.value && (
                   <div className="w-2 h-2 rounded-full bg-primary" />
                 )}
@@ -638,7 +677,9 @@ function Step4Financial({
     <div className="space-y-5">
       <div>
         <h2 className="text-lg font-bold text-gray-900 mb-1">A few quick financial details</h2>
-        <p className="text-sm text-gray-500">This helps us assess suitability and recommend the right investment structure.</p>
+        <p className="text-sm text-gray-500">
+          This helps us assess suitability and recommend the right investment structure.
+        </p>
       </div>
 
       {/* Gross monthly income */}
@@ -679,9 +720,7 @@ function Step4Financial({
 
       {/* Existing investments */}
       <div className="space-y-1.5">
-        <Label className="text-sm font-medium text-gray-700">
-          Existing investments (optional)
-        </Label>
+        <Label className="text-sm font-medium text-gray-700">Existing investments (optional)</Label>
         <Input
           type="text"
           placeholder="e.g. Unit trust with Allan Gray, TFSA with Sygnia"
@@ -719,9 +758,7 @@ function Step4Financial({
 
       {/* Tax bracket */}
       <div className="space-y-2">
-        <Label className="text-sm font-medium text-gray-700">
-          Tax bracket (optional)
-        </Label>
+        <Label className="text-sm font-medium text-gray-700">Tax bracket (optional)</Label>
         <div className="flex flex-wrap gap-2">
           {TAX_BRACKET_OPTIONS.map((opt) => (
             <button
@@ -782,16 +819,24 @@ function Step5Review({
     );
   }
 
-  const objectiveLabel = OBJECTIVE_OPTIONS.find((o) => o.value === objective.primary_objective)?.label ?? objective.primary_objective;
-  const horizonLabel = TIME_HORIZON_OPTIONS.find((o) => o.value === objective.time_horizon)?.label ?? objective.time_horizon;
-  const riskLabel = RISK_COMFORT_OPTIONS.find((o) => o.value === objective.risk_comfort)?.label ?? objective.risk_comfort;
+  const objectiveLabel =
+    OBJECTIVE_OPTIONS.find((o) => o.value === objective.primary_objective)?.label ??
+    objective.primary_objective;
+  const horizonLabel =
+    TIME_HORIZON_OPTIONS.find((o) => o.value === objective.time_horizon)?.label ??
+    objective.time_horizon;
+  const riskLabel =
+    RISK_COMFORT_OPTIONS.find((o) => o.value === objective.risk_comfort)?.label ??
+    objective.risk_comfort;
   const taxLabel = TAX_BRACKET_OPTIONS.find((o) => o.value === financial.tax_bracket)?.label ?? '';
 
   return (
     <div className="space-y-5">
       <div>
         <h2 className="text-lg font-bold text-gray-900 mb-1">Review & submit</h2>
-        <p className="text-sm text-gray-500">Please review your details before submitting your investment quote request.</p>
+        <p className="text-sm text-gray-500">
+          Please review your details before submitting your investment quote request.
+        </p>
       </div>
 
       {/* Investment types */}
@@ -803,28 +848,35 @@ function Step5Review({
       {/* Contributions */}
       <div className="p-4 rounded-xl bg-gray-50 border border-gray-100">
         <SectionHeader title="Contributions" step={2} />
-        {selectedTypes.filter((t) => t !== 'not_sure').map((typeId) => {
-          const entry = contributions[typeId] || getInitialContribution();
-          const ctLabel = CONTRIBUTION_TYPES.find((c) => c.value === entry.contribution_type)?.label ?? '—';
+        {selectedTypes
+          .filter((t) => t !== 'not_sure')
+          .map((typeId) => {
+            const entry = contributions[typeId] || getInitialContribution();
+            const ctLabel =
+              CONTRIBUTION_TYPES.find((c) => c.value === entry.contribution_type)?.label ?? '—';
 
-          const parts: string[] = [ctLabel];
-          if (needsLumpSum(entry.contribution_type)) {
-            parts.push(entry.lump_sum_adviser_assist
-              ? 'Lump sum: adviser assist'
-              : entry.lump_sum_amount
-                ? `Lump sum: R ${entry.lump_sum_amount}`
-                : 'Lump sum: not specified');
-          }
-          if (needsMonthly(entry.contribution_type)) {
-            parts.push(entry.monthly_adviser_assist
-              ? 'Monthly: adviser assist'
-              : entry.monthly_amount
-                ? `Monthly: R ${entry.monthly_amount}`
-                : 'Monthly: not specified');
-          }
+            const parts: string[] = [ctLabel];
+            if (needsLumpSum(entry.contribution_type)) {
+              parts.push(
+                entry.lump_sum_adviser_assist
+                  ? 'Lump sum: adviser assist'
+                  : entry.lump_sum_amount
+                    ? `Lump sum: R ${entry.lump_sum_amount}`
+                    : 'Lump sum: not specified',
+              );
+            }
+            if (needsMonthly(entry.contribution_type)) {
+              parts.push(
+                entry.monthly_adviser_assist
+                  ? 'Monthly: adviser assist'
+                  : entry.monthly_amount
+                    ? `Monthly: R ${entry.monthly_amount}`
+                    : 'Monthly: not specified',
+              );
+            }
 
-          return <Row key={typeId} label={getLabelForType(typeId)} value={parts.join(' · ')} />;
-        })}
+            return <Row key={typeId} label={getLabelForType(typeId)} value={parts.join(' · ')} />;
+          })}
         {selectedTypes.includes('not_sure') && selectedTypes.length === 1 && (
           <Row label="Adviser assistance" value="Full adviser guidance requested" />
         )}
@@ -841,10 +893,25 @@ function Step5Review({
       {/* Financial */}
       <div className="p-4 rounded-xl bg-gray-50 border border-gray-100">
         <SectionHeader title="Financial Snapshot" step={4} />
-        <Row label="Gross monthly income" value={financial.income_gross_monthly ? `R ${financial.income_gross_monthly}` : '—'} />
-        <Row label="Net monthly income" value={financial.income_net_monthly ? `R ${financial.income_net_monthly}` : '—'} />
+        <Row
+          label="Gross monthly income"
+          value={financial.income_gross_monthly ? `R ${financial.income_gross_monthly}` : '—'}
+        />
+        <Row
+          label="Net monthly income"
+          value={financial.income_net_monthly ? `R ${financial.income_net_monthly}` : '—'}
+        />
         <Row label="Existing investments" value={financial.existing_investments || '—'} />
-        <Row label="Retirement annuity" value={financial.has_retirement_annuity === null ? '—' : financial.has_retirement_annuity ? 'Yes' : 'No'} />
+        <Row
+          label="Retirement annuity"
+          value={
+            financial.has_retirement_annuity === null
+              ? '—'
+              : financial.has_retirement_annuity
+                ? 'Yes'
+                : 'No'
+          }
+        />
         {taxLabel && <Row label="Tax bracket" value={taxLabel} />}
       </div>
     </div>
@@ -864,9 +931,15 @@ export function InvestmentQuoteWizard({
   const draft = loadDraft();
   const [currentStep, setCurrentStep] = useState(draft?.currentStep ?? 1);
   const [selectedTypes, setSelectedTypes] = useState<string[]>(draft?.selected_types ?? []);
-  const [contributions, setContributions] = useState<Record<string, ContributionEntry>>(draft?.contributions ?? {});
-  const [objective, setObjective] = useState<ObjectiveState>(draft?.objective ?? getInitialObjective());
-  const [financial, setFinancial] = useState<FinancialState>(draft?.financial ?? getInitialFinancial());
+  const [contributions, setContributions] = useState<Record<string, ContributionEntry>>(
+    draft?.contributions ?? {},
+  );
+  const [objective, setObjective] = useState<ObjectiveState>(
+    draft?.objective ?? getInitialObjective(),
+  );
+  const [financial, setFinancial] = useState<FinancialState>(
+    draft?.financial ?? getInitialFinancial(),
+  );
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Persist draft
@@ -916,12 +989,18 @@ export function InvestmentQuoteWizard({
 
   const canProceed = useMemo(() => {
     switch (currentStep) {
-      case 1: return step1Valid;
-      case 2: return step2Valid;
-      case 3: return step3Valid;
-      case 4: return step4Valid;
-      case 5: return true;
-      default: return false;
+      case 1:
+        return step1Valid;
+      case 2:
+        return step2Valid;
+      case 3:
+        return step3Valid;
+      case 4:
+        return step4Valid;
+      case 5:
+        return true;
+      default:
+        return false;
     }
   }, [currentStep, step1Valid, step2Valid, step3Valid, step4Valid]);
 
@@ -947,25 +1026,29 @@ export function InvestmentQuoteWizard({
     try {
       // Build contributions payload
       const contributionsPayload: Record<string, unknown> = {};
-      selectedTypes.filter((t) => t !== 'not_sure').forEach((typeId) => {
-        const entry = contributions[typeId] || getInitialContribution();
-        const ctLabel = CONTRIBUTION_TYPES.find((c) => c.value === entry.contribution_type)?.label ?? entry.contribution_type;
-        const data: Record<string, unknown> = {
-          contribution_type: ctLabel,
-          adviser_assist: entry.contribution_type === 'not_sure',
-        };
-        if (needsLumpSum(entry.contribution_type)) {
-          data.lump_sum = entry.lump_sum_adviser_assist
-            ? { adviser_assist: true }
-            : { amount: parseCurrencyToNumber(entry.lump_sum_amount) };
-        }
-        if (needsMonthly(entry.contribution_type)) {
-          data.monthly = entry.monthly_adviser_assist
-            ? { adviser_assist: true }
-            : { amount_per_month: parseCurrencyToNumber(entry.monthly_amount) };
-        }
-        contributionsPayload[typeId] = data;
-      });
+      selectedTypes
+        .filter((t) => t !== 'not_sure')
+        .forEach((typeId) => {
+          const entry = contributions[typeId] || getInitialContribution();
+          const ctLabel =
+            CONTRIBUTION_TYPES.find((c) => c.value === entry.contribution_type)?.label ??
+            entry.contribution_type;
+          const data: Record<string, unknown> = {
+            contribution_type: ctLabel,
+            adviser_assist: entry.contribution_type === 'not_sure',
+          };
+          if (needsLumpSum(entry.contribution_type)) {
+            data.lump_sum = entry.lump_sum_adviser_assist
+              ? { adviser_assist: true }
+              : { amount: parseCurrencyToNumber(entry.lump_sum_amount) };
+          }
+          if (needsMonthly(entry.contribution_type)) {
+            data.monthly = entry.monthly_adviser_assist
+              ? { adviser_assist: true }
+              : { amount_per_month: parseCurrencyToNumber(entry.monthly_amount) };
+          }
+          contributionsPayload[typeId] = data;
+        });
 
       const productDetails = {
         vertical: 'Investment',
@@ -973,16 +1056,23 @@ export function InvestmentQuoteWizard({
         selected_types: selectedTypes.map(getLabelForType),
         contributions: contributionsPayload,
         objective: {
-          primary_objective: OBJECTIVE_OPTIONS.find((o) => o.value === objective.primary_objective)?.label ?? objective.primary_objective,
-          time_horizon: TIME_HORIZON_OPTIONS.find((o) => o.value === objective.time_horizon)?.label ?? objective.time_horizon,
-          risk_comfort: RISK_COMFORT_OPTIONS.find((o) => o.value === objective.risk_comfort)?.label ?? objective.risk_comfort,
+          primary_objective:
+            OBJECTIVE_OPTIONS.find((o) => o.value === objective.primary_objective)?.label ??
+            objective.primary_objective,
+          time_horizon:
+            TIME_HORIZON_OPTIONS.find((o) => o.value === objective.time_horizon)?.label ??
+            objective.time_horizon,
+          risk_comfort:
+            RISK_COMFORT_OPTIONS.find((o) => o.value === objective.risk_comfort)?.label ??
+            objective.risk_comfort,
         },
         financial_snapshot: {
           income_gross_monthly: parseCurrencyToNumber(financial.income_gross_monthly),
           income_net_monthly: parseCurrencyToNumber(financial.income_net_monthly),
           existing_investments: financial.existing_investments || null,
           has_retirement_annuity: financial.has_retirement_annuity,
-          tax_bracket: TAX_BRACKET_OPTIONS.find((o) => o.value === financial.tax_bracket)?.label ?? null,
+          tax_bracket:
+            TAX_BRACKET_OPTIONS.find((o) => o.value === financial.tax_bracket)?.label ?? null,
         },
         metadata: {
           source: 'NavigateWealthApp',
@@ -1030,7 +1120,18 @@ export function InvestmentQuoteWizard({
     } finally {
       setIsSubmitting(false);
     }
-  }, [firstName, lastName, email, phone, parentSubmissionId, selectedTypes, contributions, objective, financial, onSuccess]);
+  }, [
+    firstName,
+    lastName,
+    email,
+    phone,
+    parentSubmissionId,
+    selectedTypes,
+    contributions,
+    objective,
+    financial,
+    onSuccess,
+  ]);
 
   // ── Render ──
 
@@ -1040,7 +1141,9 @@ export function InvestmentQuoteWizard({
 
       <div className="bg-white rounded-2xl shadow-lg border border-gray-100 overflow-hidden">
         <div className="p-5 sm:p-6">
-          {currentStep === 1 && <Step1Types selectedTypes={selectedTypes} onChange={setSelectedTypes} />}
+          {currentStep === 1 && (
+            <Step1Types selectedTypes={selectedTypes} onChange={setSelectedTypes} />
+          )}
           {currentStep === 2 && (
             <Step2Contributions
               selectedTypes={selectedTypes}

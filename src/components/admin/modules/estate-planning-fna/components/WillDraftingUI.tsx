@@ -16,7 +16,15 @@ import { Label } from '../../../../ui/label';
 import { Card, CardContent } from '../../../../ui/card';
 
 /** Section header inside each step */
-export const StepSectionHeader = ({ title, description, action }: { title: string; description: string; action?: React.ReactNode }) => (
+export const StepSectionHeader = ({
+  title,
+  description,
+  action,
+}: {
+  title: string;
+  description: string;
+  action?: React.ReactNode;
+}) => (
   <div className="flex items-start justify-between gap-4 mb-6">
     <div className="space-y-1">
       <h3 className="text-lg font-semibold text-gray-900">{title}</h3>
@@ -27,7 +35,14 @@ export const StepSectionHeader = ({ title, description, action }: { title: strin
 );
 
 /** Numbered item card with accent border */
-export const ItemCard = ({ index, title, badge, onRemove, accentColor, children }: {
+export const ItemCard = ({
+  index,
+  title,
+  badge,
+  onRemove,
+  accentColor,
+  children,
+}: {
   index: number;
   title: string;
   badge?: React.ReactNode;
@@ -44,18 +59,29 @@ export const ItemCard = ({ index, title, badge, onRemove, accentColor, children 
         <span className="text-sm font-semibold text-gray-800">{title}</span>
         {badge}
       </div>
-      <Button variant="ghost" size="sm" onClick={onRemove} className="h-8 w-8 p-0 text-red-500 hover:text-red-700 hover:bg-red-50">
+      <Button
+        variant="ghost"
+        size="sm"
+        onClick={onRemove}
+        className="h-8 w-8 p-0 text-red-500 hover:text-red-700 hover:bg-red-50"
+      >
         <Trash2 className="h-4 w-4" />
       </Button>
     </div>
-    <CardContent className="p-5">
-      {children}
-    </CardContent>
+    <CardContent className="p-5">{children}</CardContent>
   </Card>
 );
 
 /** Empty state */
-export const EmptyState = ({ icon: Icon, title, description }: { icon: React.ElementType; title: string; description: string }) => (
+export const EmptyState = ({
+  icon: Icon,
+  title,
+  description,
+}: {
+  icon: React.ElementType;
+  title: string;
+  description: string;
+}) => (
   <div className="flex flex-col items-center justify-center py-12 px-6 border-2 border-dashed border-gray-200 rounded-xl bg-gray-50/50">
     <div className="h-14 w-14 rounded-full bg-gray-100 flex items-center justify-center mb-4">
       <Icon className="h-7 w-7 text-gray-400" />
@@ -66,7 +92,12 @@ export const EmptyState = ({ icon: Icon, title, description }: { icon: React.Ele
 );
 
 /** Review section card */
-export const ReviewSection = ({ icon: Icon, title, iconColor, children }: {
+export const ReviewSection = ({
+  icon: Icon,
+  title,
+  iconColor,
+  children,
+}: {
   icon: React.ElementType;
   title: string;
   iconColor: string;
@@ -77,9 +108,7 @@ export const ReviewSection = ({ icon: Icon, title, iconColor, children }: {
       <Icon className={`h-4 w-4 ${iconColor}`} />
       <span className="text-sm font-semibold text-gray-800">{title}</span>
     </div>
-    <CardContent className="p-5 text-sm">
-      {children}
-    </CardContent>
+    <CardContent className="p-5 text-sm">{children}</CardContent>
   </Card>
 );
 
@@ -87,7 +116,9 @@ export const ReviewSection = ({ icon: Icon, title, iconColor, children }: {
 export const ReviewRow = ({ label, value }: { label: string; value: React.ReactNode }) => (
   <div className="flex justify-between py-1.5">
     <span className="text-muted-foreground">{label}</span>
-    <span className="font-medium text-gray-900 text-right">{value || <span className="text-gray-400 italic">Not provided</span>}</span>
+    <span className="font-medium text-gray-900 text-right">
+      {value || <span className="text-gray-400 italic">Not provided</span>}
+    </span>
   </div>
 );
 
@@ -97,10 +128,19 @@ export const FieldRow = ({ children }: { children: React.ReactNode }) => (
 );
 
 /** Form field */
-export const FormField = ({ label, required, children }: { label: string; required?: boolean; children: React.ReactNode }) => (
+export const FormField = ({
+  label,
+  required,
+  children,
+}: {
+  label: string;
+  required?: boolean;
+  children: React.ReactNode;
+}) => (
   <div className="space-y-1.5">
     <Label className="text-sm font-medium text-gray-700">
-      {label}{required && <span className="text-red-500 ml-0.5">*</span>}
+      {label}
+      {required && <span className="text-red-500 ml-0.5">*</span>}
     </Label>
     {children}
   </div>

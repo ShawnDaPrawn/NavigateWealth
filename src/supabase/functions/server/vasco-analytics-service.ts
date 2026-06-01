@@ -31,11 +31,11 @@ export interface DailyMetrics {
   date: string;
   sessions: number;
   messages: number;
-  uniqueIps: string[];  // Hashed for privacy — no raw IPs stored
+  uniqueIps: string[]; // Hashed for privacy — no raw IPs stored
   feedbackPositive: number;
   feedbackNegative: number;
   handoffs: number;
-  ragHits: number;        // Messages where RAG context was injected
+  ragHits: number; // Messages where RAG context was injected
   rateLimited: number;
   topicBlocked: number;
   circuitBreakerBlocked: number;
@@ -104,7 +104,7 @@ function hashIp(ip: string): string {
   let hash = 0;
   for (let i = 0; i < ip.length; i++) {
     const char = ip.charCodeAt(i);
-    hash = ((hash << 5) - hash) + char;
+    hash = (hash << 5) - hash + char;
     hash = hash & hash; // Convert to 32-bit integer
   }
   return `h${Math.abs(hash).toString(36)}`;
@@ -126,7 +126,7 @@ export async function trackChatEvent(params: {
   try {
     const date = todayKey();
     const key = `${DAILY_PREFIX}${date}`;
-    const existing = await kv.get(key) as DailyMetrics | null;
+    const existing = (await kv.get(key)) as DailyMetrics | null;
 
     const hashedIp = hashIp(params.ip);
 
@@ -141,7 +141,8 @@ export async function trackChatEvent(params: {
         sessions: uniqueIps.length,
         uniqueIps,
         ragHits: existing.ragHits + (params.hadRagContext ? 1 : 0),
-        estimatedPublicTokens: (existing.estimatedPublicTokens ?? 0) + (params.estimatedTokens ?? 0),
+        estimatedPublicTokens:
+          (existing.estimatedPublicTokens ?? 0) + (params.estimatedTokens ?? 0),
       });
     } else {
       await kv.set(key, {
@@ -173,7 +174,7 @@ export async function trackRateLimitEvent(): Promise<void> {
   try {
     const date = todayKey();
     const key = `${DAILY_PREFIX}${date}`;
-    const existing = await kv.get(key) as DailyMetrics | null;
+    const existing = (await kv.get(key)) as DailyMetrics | null;
 
     if (existing) {
       await kv.set(key, {
@@ -196,7 +197,7 @@ export async function trackGuardrailEvent(params: {
   try {
     const date = todayKey();
     const key = `${DAILY_PREFIX}${date}`;
-    const existing = await kv.get(key) as DailyMetrics | null;
+    const existing = (await kv.get(key)) as DailyMetrics | null;
     const base: DailyMetrics = existing ?? {
       date,
       sessions: 0,
@@ -219,7 +220,8 @@ export async function trackGuardrailEvent(params: {
       topicBlocked: (base.topicBlocked ?? 0) + (params.type === 'topic_blocked' ? 1 : 0),
       circuitBreakerBlocked:
         (base.circuitBreakerBlocked ?? 0) + (params.type === 'circuit_breaker' ? 1 : 0),
-      guardrailFailures: (base.guardrailFailures ?? 0) + (params.type === 'guardrail_error' ? 1 : 0),
+      guardrailFailures:
+        (base.guardrailFailures ?? 0) + (params.type === 'guardrail_error' ? 1 : 0),
       estimatedPublicTokens: (base.estimatedPublicTokens ?? 0) + (params.estimatedTokens ?? 0),
     } satisfies DailyMetrics);
   } catch (err) {
@@ -239,7 +241,7 @@ export async function trackTopic(message: string): Promise<void> {
       'Tax Planning': ['tax', 'sars', 'section 11f', 'tax credit', 'deduction'],
       'Medical Aid': ['medical aid', 'medical scheme', 'gap cover', 'health'],
       'Estate Planning': ['estate', 'will', 'trust', 'inheritance', 'estate duty'],
-      'Investments': ['invest', 'portfolio', 'unit trust', 'etf', 'tfsa', 'savings'],
+      Investments: ['invest', 'portfolio', 'unit trust', 'etf', 'tfsa', 'savings'],
       'Disability Cover': ['disability', 'income protection', 'income protect'],
       'Navigate Wealth': ['navigate wealth', 'your services', 'fna', 'financial needs'],
       'Severe Illness': ['severe illness', 'dread disease', 'critical illness'],
@@ -257,7 +259,7 @@ export async function trackTopic(message: string): Promise<void> {
 
     if (matchedTopics.length === 0) return;
 
-    const existing = (await kv.get(TOPICS_KEY) as Record<string, number> | null) || {};
+    const existing = ((await kv.get(TOPICS_KEY)) as Record<string, number> | null) || {};
 
     for (const topic of matchedTopics) {
       existing[topic] = (existing[topic] || 0) + 1;
@@ -298,7 +300,7 @@ export async function submitFeedback(params: {
   try {
     const date = todayKey();
     const key = `${DAILY_PREFIX}${date}`;
-    const existing = await kv.get(key) as DailyMetrics | null;
+    const existing = (await kv.get(key)) as DailyMetrics | null;
 
     if (existing) {
       await kv.set(key, {
@@ -318,7 +320,7 @@ export async function submitFeedback(params: {
  * Get recent feedback entries.
  */
 export async function getRecentFeedback(limit = 20): Promise<FeedbackEntry[]> {
-  const entries = await kv.getByPrefix(FEEDBACK_PREFIX) as FeedbackEntry[];
+  const entries = (await kv.getByPrefix(FEEDBACK_PREFIX)) as FeedbackEntry[];
   return entries
     .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
     .slice(0, limit);
@@ -359,7 +361,7 @@ export async function createHandoff(params: {
   try {
     const date = todayKey();
     const key = `${DAILY_PREFIX}${date}`;
-    const existing = await kv.get(key) as DailyMetrics | null;
+    const existing = (await kv.get(key)) as DailyMetrics | null;
 
     if (existing) {
       await kv.set(key, {
@@ -437,12 +439,8 @@ export async function createHandoff(params: {
       sendContactFormAcknowledgment(contactData),
     ]);
 
-    const adminOk =
-      emailResults[0].status === 'fulfilled' &&
-      emailResults[0].value === true;
-    const clientOk =
-      emailResults[1].status === 'fulfilled' &&
-      emailResults[1].value === true;
+    const adminOk = emailResults[0].status === 'fulfilled' && emailResults[0].value === true;
+    const clientOk = emailResults[1].status === 'fulfilled' && emailResults[1].value === true;
 
     if (!adminOk) {
       log.error('Failed to send Vasco handoff admin email', {
@@ -465,14 +463,10 @@ export async function createHandoff(params: {
 /**
  * Get all handoff requests, optionally filtered by status.
  */
-export async function getHandoffs(
-  status?: HandoffRequest['status']
-): Promise<HandoffRequest[]> {
-  const all = await kv.getByPrefix(HANDOFF_PREFIX) as HandoffRequest[];
+export async function getHandoffs(status?: HandoffRequest['status']): Promise<HandoffRequest[]> {
+  const all = (await kv.getByPrefix(HANDOFF_PREFIX)) as HandoffRequest[];
   const filtered = status ? all.filter((h) => h.status === status) : all;
-  return filtered.sort(
-    (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-  );
+  return filtered.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
 }
 
 /**
@@ -480,10 +474,10 @@ export async function getHandoffs(
  */
 export async function updateHandoffStatus(
   id: string,
-  status: HandoffRequest['status']
+  status: HandoffRequest['status'],
 ): Promise<HandoffRequest | null> {
   const key = `${HANDOFF_PREFIX}${id}`;
-  const existing = await kv.get(key) as HandoffRequest | null;
+  const existing = (await kv.get(key)) as HandoffRequest | null;
 
   if (!existing) return null;
 
@@ -515,7 +509,7 @@ export async function getAnalyticsSummary(): Promise<AnalyticsSummary> {
     date.setDate(date.getDate() - i);
     const dateStr = date.toISOString().slice(0, 10);
     const key = `${DAILY_PREFIX}${dateStr}`;
-    const metrics = await kv.get(key) as DailyMetrics | null;
+    const metrics = (await kv.get(key)) as DailyMetrics | null;
 
     if (metrics) {
       days.push({
@@ -556,11 +550,9 @@ export async function getAnalyticsSummary(): Promise<AnalyticsSummary> {
       totalRagHits: acc.totalRagHits + day.ragHits,
       totalRateLimited: acc.totalRateLimited + (day.rateLimited ?? 0),
       totalTopicBlocked: acc.totalTopicBlocked + (day.topicBlocked ?? 0),
-      totalCircuitBreakerBlocked:
-        acc.totalCircuitBreakerBlocked + (day.circuitBreakerBlocked ?? 0),
+      totalCircuitBreakerBlocked: acc.totalCircuitBreakerBlocked + (day.circuitBreakerBlocked ?? 0),
       totalGuardrailFailures: acc.totalGuardrailFailures + (day.guardrailFailures ?? 0),
-      totalEstimatedPublicTokens:
-        acc.totalEstimatedPublicTokens + (day.estimatedPublicTokens ?? 0),
+      totalEstimatedPublicTokens: acc.totalEstimatedPublicTokens + (day.estimatedPublicTokens ?? 0),
     }),
     {
       totalSessions: 0,
@@ -574,11 +566,11 @@ export async function getAnalyticsSummary(): Promise<AnalyticsSummary> {
       totalCircuitBreakerBlocked: 0,
       totalGuardrailFailures: 0,
       totalEstimatedPublicTokens: 0,
-    }
+    },
   );
 
   // Get topic counts
-  const topicCounts = (await kv.get(TOPICS_KEY) as Record<string, number> | null) || {};
+  const topicCounts = ((await kv.get(TOPICS_KEY)) as Record<string, number> | null) || {};
   const topTopics = Object.entries(topicCounts)
     .map(([topic, count]) => ({ topic, count }))
     .sort((a, b) => b.count - a.count)

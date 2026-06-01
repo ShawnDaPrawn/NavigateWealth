@@ -20,7 +20,9 @@ import {
 
 const distDir = path.resolve('dist');
 const baseIndexPath = path.join(distDir, 'index.html');
-const siteUrl = normalizeSiteUrl(process.env.SITE_URL || process.env.VITE_SITE_URL || DEFAULT_SITE_URL);
+const siteUrl = normalizeSiteUrl(
+  process.env.SITE_URL || process.env.VITE_SITE_URL || DEFAULT_SITE_URL,
+);
 
 main().catch((err) => {
   console.error('Failed to apply static SEO:', err);
@@ -52,7 +54,11 @@ async function main() {
     title: route.title,
     sitemap: route.sitemap !== false,
   }));
-  fs.writeFileSync(path.join(distDir, 'seo-routes.json'), `${JSON.stringify(manifest, null, 2)}\n`, 'utf8');
+  fs.writeFileSync(
+    path.join(distDir, 'seo-routes.json'),
+    `${JSON.stringify(manifest, null, 2)}\n`,
+    'utf8',
+  );
   writeRouteManifest(routes);
   writeNotFoundHtml(baseIndexPath);
 
@@ -129,10 +135,7 @@ function dedupeRoutes(routes) {
 function outputPathForRoute(routePath) {
   if (routePath === '/') return baseIndexPath;
 
-  const safeParts = routePath
-    .replace(/^\/+/, '')
-    .split('/')
-    .filter(Boolean);
+  const safeParts = routePath.replace(/^\/+/, '').split('/').filter(Boolean);
 
   return path.join(distDir, ...safeParts, 'index.html');
 }

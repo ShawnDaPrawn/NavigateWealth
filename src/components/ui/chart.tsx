@@ -6,12 +6,7 @@
  * Kept for backward compatibility in case any future code imports from here.
  */
 
-export {
-  SVGBarChart,
-  SVGLineChart,
-  SVGPieChart,
-  SVGAreaSparkline,
-} from './svg-charts';
+export { SVGBarChart, SVGLineChart, SVGPieChart, SVGAreaSparkline } from './svg-charts';
 
 export type {
   BarChartSeries,

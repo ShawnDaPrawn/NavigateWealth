@@ -6,7 +6,16 @@
 
 import { useEffect, useRef } from 'react';
 import { DragDropContext } from '@hello-pangea/dnd';
-import { Search, Filter, Archive as ArchiveIcon, Plus, LayoutDashboard, CheckCircle2, Clock, AlertCircle } from 'lucide-react';
+import {
+  Search,
+  Filter,
+  Archive as ArchiveIcon,
+  Plus,
+  LayoutDashboard,
+  CheckCircle2,
+  Clock,
+  AlertCircle,
+} from 'lucide-react';
 import { useTasks, useTaskStats, useTaskBoard } from './hooks';
 import { TaskColumn } from './components/TaskColumn';
 import { TaskFormModal } from './components/TaskFormModal';
@@ -30,7 +39,7 @@ export function TaskManagementModule({ initialTaskId }: TaskManagementModuleProp
   const canCreate = canDo('tasks', 'create');
   const canEditTask = canDo('tasks', 'edit');
   const canDeleteTask = canDo('tasks', 'delete');
-  
+
   const {
     filters,
     setFilters,
@@ -54,7 +63,7 @@ export function TaskManagementModule({ initialTaskId }: TaskManagementModuleProp
   const deepLinkProcessed = useRef(false);
   useEffect(() => {
     if (!initialTaskId || deepLinkProcessed.current || isLoading || tasks.length === 0) return;
-    const task = tasks.find(t => t.id === initialTaskId);
+    const task = tasks.find((t) => t.id === initialTaskId);
     if (task) {
       handleViewTask(task);
       deepLinkProcessed.current = true;
@@ -75,18 +84,17 @@ export function TaskManagementModule({ initialTaskId }: TaskManagementModuleProp
   // Check if error is because table doesn't exist
   if (error) {
     const errorObj = error as unknown as Record<string, unknown>;
-    const errorMessage = String(errorObj.message || (error as Error).message || 'An unexpected error occurred');
-    
+    const errorMessage = String(
+      errorObj.message || (error as Error).message || 'An unexpected error occurred',
+    );
+
     return (
       <div className="flex flex-col items-center justify-center h-[60vh] gap-4">
         <div className="text-center max-w-md mx-auto p-8 bg-red-50 rounded-xl border border-red-100">
           <AlertCircle className="h-10 w-10 text-red-500 mx-auto mb-4" />
           <h3 className="text-red-900 font-semibold mb-2">Unable to load tasks</h3>
           <p className="text-sm text-red-600 mb-6">{errorMessage}</p>
-          <Button
-            onClick={() => window.location.reload()}
-            variant="destructive"
-          >
+          <Button onClick={() => window.location.reload()} variant="destructive">
             Reload Page
           </Button>
         </div>
@@ -104,7 +112,7 @@ export function TaskManagementModule({ initialTaskId }: TaskManagementModuleProp
             onViewTask={handleViewTask}
           />
         </div>
-        
+
         {/* Task Form Modal - Rendered here to support viewing details from archive */}
         <TaskFormModal
           key={selectedTask?.id || 'new'}
@@ -137,7 +145,11 @@ export function TaskManagementModule({ initialTaskId }: TaskManagementModuleProp
             >
               <ArchiveIcon className="h-4 w-4 mr-2 text-gray-500" />
               Archived
-              {stats?.archived ? <span className="ml-2 bg-gray-100 text-gray-600 text-xs px-1.5 py-0.5 rounded-full font-medium">{stats.archived}</span> : null}
+              {stats?.archived ? (
+                <span className="ml-2 bg-gray-100 text-gray-600 text-xs px-1.5 py-0.5 rounded-full font-medium">
+                  {stats.archived}
+                </span>
+              ) : null}
             </Button>
             {canCreate && (
               <Button
@@ -164,7 +176,7 @@ export function TaskManagementModule({ initialTaskId }: TaskManagementModuleProp
             <div className="text-3xl font-bold text-gray-900">{stats?.total || 0}</div>
             <div className="text-xs text-muted-foreground mt-1">Active tasks on board</div>
           </div>
-          
+
           <div className="bg-white p-5 rounded-xl border border-gray-100 shadow-sm hover:shadow-md transition-shadow">
             <div className="flex items-center justify-between mb-2">
               <span className="text-sm font-medium text-gray-500">To Do</span>
@@ -215,7 +227,9 @@ export function TaskManagementModule({ initialTaskId }: TaskManagementModuleProp
           <div className="w-full md:w-auto relative">
             <select
               value={filters.status}
-              onChange={(e) => setFilters({ ...filters, status: e.target.value as typeof filters.status })}
+              onChange={(e) =>
+                setFilters({ ...filters, status: e.target.value as typeof filters.status })
+              }
               className="w-full md:w-[180px] pl-3 pr-8 py-2 text-sm bg-gray-50 hover:bg-gray-100 border-none rounded-lg focus:outline-none focus:ring-0 cursor-pointer font-medium text-gray-700 appearance-none"
             >
               <option value="all">All Statuses</option>

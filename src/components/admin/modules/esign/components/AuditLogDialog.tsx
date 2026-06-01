@@ -15,7 +15,13 @@
 
 import { useCallback, useMemo, useState } from 'react';
 import { format, formatDistanceToNow } from 'date-fns';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '../../../../ui/dialog';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from '../../../../ui/dialog';
 import { Input } from '../../../../ui/input';
 import { Button } from '../../../../ui/button';
 import { Badge } from '../../../../ui/badge';
@@ -40,7 +46,9 @@ export function AuditLogDialog({ open, onOpenChange, onOpenEnvelope }: Props) {
   const [from, setFrom] = useState('');
   const [to, setTo] = useState('');
   const [loading, setLoading] = useState(false);
-  const [result, setResult] = useState<Awaited<ReturnType<typeof esignApi.searchAudit>> | null>(null);
+  const [result, setResult] = useState<Awaited<ReturnType<typeof esignApi.searchAudit>> | null>(
+    null,
+  );
   const [error, setError] = useState<string | null>(null);
 
   const runSearch = useCallback(async () => {
@@ -89,7 +97,9 @@ export function AuditLogDialog({ open, onOpenChange, onOpenEnvelope }: Props) {
 
         <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
           <div className="md:col-span-2">
-            <Label htmlFor="audit-signer-email" className="text-xs">Signer email</Label>
+            <Label htmlFor="audit-signer-email" className="text-xs">
+              Signer email
+            </Label>
             <Input
               id="audit-signer-email"
               value={signerEmail}
@@ -99,7 +109,9 @@ export function AuditLogDialog({ open, onOpenChange, onOpenEnvelope }: Props) {
             />
           </div>
           <div className="md:col-span-2">
-            <Label htmlFor="audit-action" className="text-xs">Action contains</Label>
+            <Label htmlFor="audit-action" className="text-xs">
+              Action contains
+            </Label>
             <Input
               id="audit-action"
               value={action}
@@ -108,11 +120,20 @@ export function AuditLogDialog({ open, onOpenChange, onOpenEnvelope }: Props) {
             />
           </div>
           <div>
-            <Label htmlFor="audit-from" className="text-xs">From</Label>
-            <Input id="audit-from" type="date" value={from} onChange={(e) => setFrom(e.target.value)} />
+            <Label htmlFor="audit-from" className="text-xs">
+              From
+            </Label>
+            <Input
+              id="audit-from"
+              type="date"
+              value={from}
+              onChange={(e) => setFrom(e.target.value)}
+            />
           </div>
           <div>
-            <Label htmlFor="audit-to" className="text-xs">To</Label>
+            <Label htmlFor="audit-to" className="text-xs">
+              To
+            </Label>
             <Input id="audit-to" type="date" value={to} onChange={(e) => setTo(e.target.value)} />
           </div>
           <div className="md:col-span-2 flex items-end gap-2">
@@ -169,9 +190,7 @@ export function AuditLogDialog({ open, onOpenChange, onOpenEnvelope }: Props) {
                 {result.hits.length === 0 ? (
                   // P8.2 — empty result still offers an obvious next action.
                   <div className="py-12 text-center space-y-3">
-                    <p className="text-sm text-muted-foreground">
-                      No events matched this query.
-                    </p>
+                    <p className="text-sm text-muted-foreground">No events matched this query.</p>
                     {hasQuery && (
                       <Button variant="outline" size="sm" onClick={reset}>
                         Clear filters
@@ -211,7 +230,8 @@ function AuditRow({ hit, onOpenEnvelope }: { hit: Hit; onOpenEnvelope?: (id: str
           {hit.envelope_title}
         </div>
         <div className="text-[11px] text-muted-foreground truncate" title={hit.at}>
-          {format(new Date(hit.at), 'd MMM yyyy HH:mm')} · {formatDistanceToNow(new Date(hit.at), { addSuffix: true })}
+          {format(new Date(hit.at), 'd MMM yyyy HH:mm')} ·{' '}
+          {formatDistanceToNow(new Date(hit.at), { addSuffix: true })}
           {hit.ip && ` · ${hit.ip}`}
         </div>
       </div>

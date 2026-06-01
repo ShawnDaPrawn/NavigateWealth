@@ -25,12 +25,18 @@ export const OAuthCallbackSchema = z.object({
 const VisibilityEnum = z.enum(['PUBLIC', 'CONNECTIONS']).default('PUBLIC');
 
 export const ShareTextSchema = z.object({
-  text: z.string().min(1, 'Post text is required').max(3000, 'LinkedIn text limit is 3000 characters'),
+  text: z
+    .string()
+    .min(1, 'Post text is required')
+    .max(3000, 'LinkedIn text limit is 3000 characters'),
   visibility: VisibilityEnum,
 });
 
 export const ShareArticleSchema = z.object({
-  text: z.string().min(1, 'Post text is required').max(3000, 'LinkedIn text limit is 3000 characters'),
+  text: z
+    .string()
+    .min(1, 'Post text is required')
+    .max(3000, 'LinkedIn text limit is 3000 characters'),
   url: z.string().url('A valid URL is required'),
   title: z.string().max(200).optional(),
   description: z.string().max(256).optional(),
@@ -38,7 +44,10 @@ export const ShareArticleSchema = z.object({
 });
 
 export const ShareImageSchema = z.object({
-  text: z.string().min(1, 'Post text is required').max(3000, 'LinkedIn text limit is 3000 characters'),
+  text: z
+    .string()
+    .min(1, 'Post text is required')
+    .max(3000, 'LinkedIn text limit is 3000 characters'),
   imageUrl: z.string().url('A valid image URL is required'),
   title: z.string().max(200).optional(),
   description: z.string().max(256).optional(),

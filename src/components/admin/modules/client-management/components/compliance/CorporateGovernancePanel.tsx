@@ -10,11 +10,7 @@
  */
 
 import React from 'react';
-import {
-  Building2,
-  Users,
-  FileSpreadsheet,
-} from 'lucide-react';
+import { Building2, Users, FileSpreadsheet } from 'lucide-react';
 import { HoneycombActionCard } from './HoneycombActionCard';
 
 interface CorporateGovernancePanelProps {
@@ -49,9 +45,13 @@ export function CorporateGovernancePanel({
       {/* Info banner */}
       <div className="bg-purple-50 border border-purple-200 rounded-lg p-3">
         <p className="text-xs text-purple-700">
-          These checks query the CIPC (Companies and Intellectual Property Commission) registry
-          and directorship records to identify company associations, active directorships,
-          and governance roles for <strong>{firstName} {lastName}</strong>.
+          These checks query the CIPC (Companies and Intellectual Property Commission) registry and
+          directorship records to identify company associations, active directorships, and
+          governance roles for{' '}
+          <strong>
+            {firstName} {lastName}
+          </strong>
+          .
         </p>
       </div>
 

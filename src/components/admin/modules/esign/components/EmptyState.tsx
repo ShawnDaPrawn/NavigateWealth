@@ -20,9 +20,7 @@ export function EmptyState({ onUpload, variant = 'default' }: EmptyStateProps) {
         <FileText className="h-12 w-12 text-muted-foreground/30 mx-auto" />
         <div>
           <h3 className="font-semibold">No documents yet</h3>
-          <p className="text-sm text-muted-foreground mt-1">
-            Upload a document to get started
-          </p>
+          <p className="text-sm text-muted-foreground mt-1">Upload a document to get started</p>
         </div>
         {onUpload && (
           <Button onClick={onUpload} className="bg-purple-600 hover:bg-purple-700 mt-2">
@@ -48,28 +46,22 @@ export function EmptyState({ onUpload, variant = 'default' }: EmptyStateProps) {
 
           {/* Content */}
           <div>
-            <h3 className="text-xl font-semibold mb-2">
-              No E-Signature Documents Yet
-            </h3>
+            <h3 className="text-xl font-semibold mb-2">No E-Signature Documents Yet</h3>
             <p className="text-muted-foreground">
-              Upload documents to request electronic signatures from your clients. 
-              Track signing progress and manage all documents in one place.
+              Upload documents to request electronic signatures from your clients. Track signing
+              progress and manage all documents in one place.
             </p>
           </div>
 
           {/* Features */}
           <div className="grid grid-cols-3 gap-4 text-left">
-            <FeatureItem 
-              icon={Upload}
-              title="Upload PDF"
-              description="Upload any PDF document"
-            />
-            <FeatureItem 
+            <FeatureItem icon={Upload} title="Upload PDF" description="Upload any PDF document" />
+            <FeatureItem
               icon={FileSignature}
               title="Add Signers"
               description="Invite people to sign"
             />
-            <FeatureItem 
+            <FeatureItem
               icon={FileText}
               title="Track Progress"
               description="Monitor signing status"
@@ -78,11 +70,7 @@ export function EmptyState({ onUpload, variant = 'default' }: EmptyStateProps) {
 
           {/* CTA */}
           {onUpload && (
-            <Button 
-              onClick={onUpload} 
-              className="bg-purple-600 hover:bg-purple-700"
-              size="lg"
-            >
+            <Button onClick={onUpload} className="bg-purple-600 hover:bg-purple-700" size="lg">
               <Plus className="h-5 w-5 mr-2" />
               Upload Your First Document
             </Button>

@@ -1,6 +1,6 @@
 /**
  * Publications Feature - CategoryBadge Component
- * 
+ *
  * Display category with icon and styling.
  */
 
@@ -21,21 +21,20 @@ export function CategoryBadge({
   iconKey,
   variant = 'outline',
   size = 'md',
-  className
+  className,
 }: CategoryBadgeProps) {
   // Get icon component from lucide-react
-  const IconComponent = iconKey ? (Icons as unknown as Record<string, React.ComponentType<{ className?: string }>>)[iconKey] : null;
+  const IconComponent = iconKey
+    ? (Icons as unknown as Record<string, React.ComponentType<{ className?: string }>>)[iconKey]
+    : null;
 
   const sizeClasses = {
     sm: 'text-xs px-2 py-1',
-    md: 'text-sm px-3 py-1.5'
+    md: 'text-sm px-3 py-1.5',
   };
 
   return (
-    <Badge 
-      variant={variant}
-      className={`${sizeClasses[size]} ${className || ''}`}
-    >
+    <Badge variant={variant} className={`${sizeClasses[size]} ${className || ''}`}>
       {IconComponent && <IconComponent className="w-3 h-3 mr-1" />}
       {name}
     </Badge>
@@ -50,7 +49,7 @@ export function CategoryFilterButton({
   count,
   isActive,
   onClick,
-  className
+  className,
 }: {
   name: string;
   count?: number;
@@ -62,16 +61,12 @@ export function CategoryFilterButton({
     <button
       onClick={onClick}
       className={`px-4 py-2 rounded-lg text-sm transition-colors ${
-        isActive
-          ? 'bg-blue-600 text-white'
-          : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+        isActive ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
       } ${className || ''}`}
     >
       {name}
       {count !== undefined && (
-        <span className={`ml-2 ${isActive ? 'text-blue-200' : 'text-gray-500'}`}>
-          ({count})
-        </span>
+        <span className={`ml-2 ${isActive ? 'text-blue-200' : 'text-gray-500'}`}>({count})</span>
       )}
     </button>
   );

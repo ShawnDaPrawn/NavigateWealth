@@ -24,10 +24,7 @@ const getOpenAIKey = () => Deno.env.get('OPENAI_API_KEY');
 
 /** Lazy Supabase admin client for Storage operations */
 const getSupabase = () =>
-  createClient(
-    Deno.env.get('SUPABASE_URL') || '',
-    Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || '',
-  );
+  createClient(Deno.env.get('SUPABASE_URL') || '', Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || '');
 
 const AI_IMAGES_BUCKET = 'make-91ed8379-social-ai-images';
 
@@ -73,7 +70,7 @@ const NW_BRAND_DEFAULTS = {
     'Supporting colours: crisp white (#FFFFFF), light grey (#F4F5F7), and soft slate (#64748B).',
     'Typography feel: clean sans-serif, generous whitespace, strong visual hierarchy.',
     'Imagery should evoke trust, growth, clarity, and financial confidence.',
-    'South African context: use landscapes, cityscapes, and people that reflect South Africa\'s diversity.',
+    "South African context: use landscapes, cityscapes, and people that reflect South Africa's diversity.",
     'Never include specific text, logos, or watermarks in the generated image.',
     'Avoid stock-photo clichés (e.g., piggy banks, stacked coins, generic handshakes).',
     'Prefer abstract geometric patterns, real-life lifestyle imagery, or conceptual illustrations.',
@@ -81,11 +78,11 @@ const NW_BRAND_DEFAULTS = {
 
   /** Colour hex values for prompt enrichment */
   colours: {
-    primary: '#1B2A4A',    // Deep Navy
-    accent: '#C9A84C',     // Warm Gold
+    primary: '#1B2A4A', // Deep Navy
+    accent: '#C9A84C', // Warm Gold
     background: '#FFFFFF', // White
-    surface: '#F4F5F7',    // Light Grey
-    muted: '#64748B',      // Slate
+    surface: '#F4F5F7', // Light Grey
+    muted: '#64748B', // Slate
   },
 } as const;
 
@@ -93,7 +90,10 @@ const NW_BRAND_DEFAULTS = {
  * DALL-E 3 supported sizes and their mapping to social platform formats.
  * DALL-E 3 only supports: 1024x1024, 1024x1792, 1792x1024
  */
-const DALLE_PLATFORM_DIMENSIONS: Record<string, { size: '1024x1024' | '1024x1792' | '1792x1024'; label: string }> = {
+const DALLE_PLATFORM_DIMENSIONS: Record<
+  string,
+  { size: '1024x1024' | '1024x1792' | '1792x1024'; label: string }
+> = {
   // LinkedIn: landscape feed posts (1200×627 → 1792x1024)
   linkedin: { size: '1792x1024', label: 'LinkedIn landscape' },
   // Instagram: square feed posts (1080×1080 → 1024x1024)
@@ -316,7 +316,9 @@ Include CTA: ${input.includeCTA ? 'Yes' : 'No'}`;
  * Try the OpenAI Responses API with stored prompt first.
  * Falls back to Chat Completions API if stored prompt fails.
  */
-async function callOpenAI(input: GeneratePostTextInput): Promise<{ content: string; tokensUsed: number }> {
+async function callOpenAI(
+  input: GeneratePostTextInput,
+): Promise<{ content: string; tokensUsed: number }> {
   const apiKey = getOpenAIKey();
   if (!apiKey) {
     throw new Error('OPENAI_API_KEY not configured');
@@ -412,9 +414,7 @@ async function callChatCompletionsAPI(
     log.error('OpenAI Chat Completions API error:', error);
 
     if (response.status === 429) {
-      throw new Error(
-        'OpenAI API rate limit exceeded. Please wait a moment and try again.',
-      );
+      throw new Error('OpenAI API rate limit exceeded. Please wait a moment and try again.');
     }
     if (response.status === 401) {
       throw new Error('OpenAI API authentication failed. Please check your API key.');
@@ -452,7 +452,9 @@ export async function generatePostText(
   const { content: rawContent, tokensUsed } = await callOpenAI(input);
 
   // Parse the JSON response
-  let parsed: { posts: Array<{ platform: string; content: string; hashtags?: string[]; callToAction?: string }> };
+  let parsed: {
+    posts: Array<{ platform: string; content: string; hashtags?: string[]; callToAction?: string }>;
+  };
   try {
     // Strip any markdown fences if present
     const cleaned = rawContent
@@ -465,9 +467,7 @@ export async function generatePostText(
       rawContent: rawContent.slice(0, 500),
       error: parseErr instanceof Error ? parseErr.message : String(parseErr),
     });
-    throw new Error(
-      'AI generated an invalid response format. Please try again.',
-    );
+    throw new Error('AI generated an invalid response format. Please try again.');
   }
 
   if (!parsed.posts || !Array.isArray(parsed.posts)) {
@@ -480,7 +480,10 @@ export async function generatePostText(
     const charLimit = PLATFORM_CHAR_LIMITS[platform] || 3000;
     const fullContent = post.content || '';
     const hashtags = post.hashtags || [];
-    const hashtagText = hashtags.length > 0 ? '\n\n' + hashtags.map((h) => (h.startsWith('#') ? h : `#${h}`)).join(' ') : '';
+    const hashtagText =
+      hashtags.length > 0
+        ? '\n\n' + hashtags.map((h) => (h.startsWith('#') ? h : `#${h}`)).join(' ')
+        : '';
     const totalLength = fullContent.length + hashtagText.length;
 
     return {
@@ -559,9 +562,7 @@ export async function getGenerationHistory(
 /**
  * Get a specific generation record by ID.
  */
-export async function getGenerationById(
-  generationId: string,
-): Promise<AIGenerationRecord | null> {
+export async function getGenerationById(generationId: string): Promise<AIGenerationRecord | null> {
   const record = await kv.get(`social_ai_generation:${generationId}`);
   return record || null;
 }
@@ -596,11 +597,11 @@ async function resolveBrandContext(): Promise<BrandContext> {
 
     // Enrich colours from stored palette if available
     if (palette && typeof palette === 'object' && 'swatches' in palette) {
-      const swatches = (palette as { swatches: Array<{ name: string; hex: string; group: string }> }).swatches;
+      const swatches = (
+        palette as { swatches: Array<{ name: string; hex: string; group: string }> }
+      ).swatches;
       if (swatches.length > 0) {
-        const colourLines = swatches.map(
-          (s) => `${s.name} (${s.group}): ${s.hex}`,
-        );
+        const colourLines = swatches.map((s) => `${s.name} (${s.group}): ${s.hex}`);
         colourDescription = `Brand colours from corporate identity: ${colourLines.join(', ')}.`;
         log.info('Using stored brand colour palette for image generation', {
           colourCount: swatches.length,
@@ -654,15 +655,10 @@ const IMAGE_STYLE_DIRECTIVES: Record<ImageStyle, string> = {
 /**
  * Build the DALL-E prompt with Navigate Wealth branding baked in.
  */
-function buildImagePrompt(
-  input: GenerateImageInput,
-  brand: BrandContext,
-): string {
+function buildImagePrompt(input: GenerateImageInput, brand: BrandContext): string {
   const styleDirective = IMAGE_STYLE_DIRECTIVES[input.style] || IMAGE_STYLE_DIRECTIVES.editorial;
   const platformDims = DALLE_PLATFORM_DIMENSIONS[input.platform];
-  const platformContext = platformDims
-    ? `This image is for a ${platformDims.label} post.`
-    : '';
+  const platformContext = platformDims ? `This image is for a ${platformDims.label} post.` : '';
 
   const parts: string[] = [
     // Core brand identity
@@ -682,7 +678,9 @@ function buildImagePrompt(
   ];
 
   if (input.topic) {
-    parts.push(`TOPIC CONTEXT: The post is about "${input.topic}" in the context of financial planning and wealth management.`);
+    parts.push(
+      `TOPIC CONTEXT: The post is about "${input.topic}" in the context of financial planning and wealth management.`,
+    );
   }
 
   if (input.additionalInstructions) {
@@ -870,7 +868,8 @@ export async function generateImage(
   const prompt = buildImagePrompt(input, brand);
 
   // Determine dimensions
-  const platformDims = DALLE_PLATFORM_DIMENSIONS[input.platform] || DALLE_PLATFORM_DIMENSIONS.linkedin;
+  const platformDims =
+    DALLE_PLATFORM_DIMENSIONS[input.platform] || DALLE_PLATFORM_DIMENSIONS.linkedin;
   const quality = input.quality || 'standard';
 
   // Call DALL-E
@@ -944,10 +943,7 @@ export async function refreshImageUrl(storagePath: string): Promise<string | nul
 /**
  * Get image generation history.
  */
-export async function getImageHistory(
-  userId: string,
-  limit = 20,
-): Promise<AIImageRecord[]> {
+export async function getImageHistory(userId: string, limit = 20): Promise<AIImageRecord[]> {
   const allRecords = await kv.getByPrefix('social_ai_image:');
   if (!allRecords || allRecords.length === 0) return [];
 
@@ -1069,7 +1065,13 @@ export async function createCustomTemplate(
 ): Promise<CustomBrandTemplate> {
   const id = crypto.randomUUID();
   const now = new Date().toISOString();
-  const template: CustomBrandTemplate = { ...input, id, createdBy: userId, createdAt: now, updatedAt: now };
+  const template: CustomBrandTemplate = {
+    ...input,
+    id,
+    createdBy: userId,
+    createdAt: now,
+    updatedAt: now,
+  };
   await kv.set(`social_ai_template:${id}`, template);
   log.info('Custom brand template created', { id, name: template.name });
   return template;
@@ -1080,17 +1082,21 @@ export async function updateCustomTemplate(
   updates: Partial<Omit<CustomBrandTemplate, 'id' | 'createdBy' | 'createdAt'>>,
   userId: string,
 ): Promise<CustomBrandTemplate | null> {
-  const existing = await kv.get(`social_ai_template:${id}`) as CustomBrandTemplate | null;
+  const existing = (await kv.get(`social_ai_template:${id}`)) as CustomBrandTemplate | null;
   if (!existing) return null;
   if (existing.createdBy !== userId) throw new Error('You can only edit templates you created');
-  const updated: CustomBrandTemplate = { ...existing, ...updates, updatedAt: new Date().toISOString() };
+  const updated: CustomBrandTemplate = {
+    ...existing,
+    ...updates,
+    updatedAt: new Date().toISOString(),
+  };
   await kv.set(`social_ai_template:${id}`, updated);
   log.info('Custom brand template updated', { id, name: updated.name });
   return updated;
 }
 
 export async function deleteCustomTemplate(id: string, userId: string): Promise<boolean> {
-  const existing = await kv.get(`social_ai_template:${id}`) as CustomBrandTemplate | null;
+  const existing = (await kv.get(`social_ai_template:${id}`)) as CustomBrandTemplate | null;
   if (!existing) return false;
   if (existing.createdBy !== userId) throw new Error('You can only delete templates you created');
   await kv.del(`social_ai_template:${id}`);
@@ -1117,9 +1123,15 @@ export async function getAIAnalytics(userId: string) {
     kv.getByPrefix('social_ai_bundle:'),
   ]);
 
-  const userText = ((textRecords || []) as AIGenerationRecord[]).filter((r) => r.createdBy === userId);
-  const userImages = ((imageRecords || []) as AIImageRecord[]).filter((r) => r.createdBy === userId);
-  const userBundles = ((bundleRecords || []) as AIBundleRecord[]).filter((r) => r.createdBy === userId);
+  const userText = ((textRecords || []) as AIGenerationRecord[]).filter(
+    (r) => r.createdBy === userId,
+  );
+  const userImages = ((imageRecords || []) as AIImageRecord[]).filter(
+    (r) => r.createdBy === userId,
+  );
+  const userBundles = ((bundleRecords || []) as AIBundleRecord[]).filter(
+    (r) => r.createdBy === userId,
+  );
 
   const platformBreakdown: Record<string, number> = {};
   const toneBreakdown: Record<string, number> = {};
@@ -1136,7 +1148,8 @@ export async function getAIAnalytics(userId: string) {
     styleBreakdown[rec.input.style] = (styleBreakdown[rec.input.style] || 0) + 1;
   }
   for (const rec of userBundles) {
-    for (const p of rec.input.text.platforms) platformBreakdown[p] = (platformBreakdown[p] || 0) + 1;
+    for (const p of rec.input.text.platforms)
+      platformBreakdown[p] = (platformBreakdown[p] || 0) + 1;
     toneBreakdown[rec.input.text.tone] = (toneBreakdown[rec.input.text.tone] || 0) + 1;
     goalBreakdown[rec.input.text.goal] = (goalBreakdown[rec.input.text.goal] || 0) + 1;
     styleBreakdown[rec.input.image.style] = (styleBreakdown[rec.input.image.style] || 0) + 1;
@@ -1149,19 +1162,55 @@ export async function getAIAnalytics(userId: string) {
     const date = new Date(now - d * 86400000).toISOString().slice(0, 10);
     dailyMap[date] = { text: 0, image: 0, bundle: 0 };
   }
-  for (const r of userText)   { const d = r.createdAt.slice(0, 10); if (dailyMap[d]) dailyMap[d].text++; }
-  for (const r of userImages) { const d = r.createdAt.slice(0, 10); if (dailyMap[d]) dailyMap[d].image++; }
-  for (const r of userBundles){ const d = r.createdAt.slice(0, 10); if (dailyMap[d]) dailyMap[d].bundle++; }
+  for (const r of userText) {
+    const d = r.createdAt.slice(0, 10);
+    if (dailyMap[d]) dailyMap[d].text++;
+  }
+  for (const r of userImages) {
+    const d = r.createdAt.slice(0, 10);
+    if (dailyMap[d]) dailyMap[d].image++;
+  }
+  for (const r of userBundles) {
+    const d = r.createdAt.slice(0, 10);
+    if (dailyMap[d]) dailyMap[d].bundle++;
+  }
 
   const dailyActivity = Object.entries(dailyMap)
     .map(([date, counts]) => ({ date, ...counts }))
     .sort((a, b) => a.date.localeCompare(b.date));
 
   // Recent generations (last 20)
-  const allRecent: Array<{ id: string; type: string; topic?: string; platforms?: string[]; createdAt: string }> = [];
-  for (const r of userText) allRecent.push({ id: r.id, type: 'text', topic: r.input.topic, platforms: r.input.platforms, createdAt: r.createdAt });
-  for (const r of userImages) allRecent.push({ id: r.id, type: 'image', topic: r.input.topic || r.input.subject, platforms: [r.input.platform], createdAt: r.createdAt });
-  for (const r of userBundles) allRecent.push({ id: r.id, type: 'bundle', topic: r.input.text.topic, platforms: r.input.text.platforms, createdAt: r.createdAt });
+  const allRecent: Array<{
+    id: string;
+    type: string;
+    topic?: string;
+    platforms?: string[];
+    createdAt: string;
+  }> = [];
+  for (const r of userText)
+    allRecent.push({
+      id: r.id,
+      type: 'text',
+      topic: r.input.topic,
+      platforms: r.input.platforms,
+      createdAt: r.createdAt,
+    });
+  for (const r of userImages)
+    allRecent.push({
+      id: r.id,
+      type: 'image',
+      topic: r.input.topic || r.input.subject,
+      platforms: [r.input.platform],
+      createdAt: r.createdAt,
+    });
+  for (const r of userBundles)
+    allRecent.push({
+      id: r.id,
+      type: 'bundle',
+      topic: r.input.text.topic,
+      platforms: r.input.text.platforms,
+      createdAt: r.createdAt,
+    });
   allRecent.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
 
   return {

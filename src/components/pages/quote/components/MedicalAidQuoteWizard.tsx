@@ -25,13 +25,7 @@ import { Button } from '../../../ui/button';
 import { Input } from '../../../ui/input';
 import { Label } from '../../../ui/label';
 import { Badge } from '../../../ui/badge';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '../../../ui/select';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../../ui/select';
 import {
   ArrowRight,
   ArrowLeft,
@@ -244,7 +238,12 @@ function getInitialHistory(): MedicalAidHistoryState {
 }
 
 function getInitialHealth(): HealthState {
-  return { has_chronic_conditions: null, selected_conditions: [], applies_to_members: [], notes: '' };
+  return {
+    has_chronic_conditions: null,
+    selected_conditions: [],
+    applies_to_members: [],
+    notes: '',
+  };
 }
 
 function calcAge(dob: string): number | null {
@@ -282,7 +281,11 @@ function displayAge(m: MemberEntry): string {
 function displayDob(m: MemberEntry): string {
   if (m.dob) {
     try {
-      return new Date(m.dob).toLocaleDateString('en-ZA', { day: '2-digit', month: 'short', year: 'numeric' });
+      return new Date(m.dob).toLocaleDateString('en-ZA', {
+        day: '2-digit',
+        month: 'short',
+        year: 'numeric',
+      });
     } catch {
       return m.dob;
     }
@@ -302,13 +305,17 @@ function loadDraft(): WizardDraft | null {
 function saveDraft(draft: WizardDraft) {
   try {
     sessionStorage.setItem(DRAFT_KEY, JSON.stringify(draft));
-  } catch { /* non-critical */ }
+  } catch {
+    /* non-critical */
+  }
 }
 
 function clearDraft() {
   try {
     sessionStorage.removeItem(DRAFT_KEY);
-  } catch { /* non-critical */ }
+  } catch {
+    /* non-critical */
+  }
 }
 
 /** Build list of member labels for the "applies to" multi-select in Step 4 */
@@ -343,7 +350,9 @@ function StepIndicator({ currentStep }: { currentStep: number }) {
         return (
           <React.Fragment key={step.num}>
             {idx > 0 && (
-              <div className={`flex-1 h-0.5 mx-1 sm:mx-2 transition-colors ${isCompleted ? 'bg-green-500' : 'bg-gray-200'}`} />
+              <div
+                className={`flex-1 h-0.5 mx-1 sm:mx-2 transition-colors ${isCompleted ? 'bg-green-500' : 'bg-gray-200'}`}
+              />
             )}
             <div className="flex flex-col items-center gap-1">
               <div
@@ -355,9 +364,15 @@ function StepIndicator({ currentStep }: { currentStep: number }) {
                       : 'bg-gray-100 text-gray-400 border border-gray-200'
                 }`}
               >
-                {isCompleted ? <CheckCircle className="h-4 w-4" /> : <IconComp className="h-4 w-4" />}
+                {isCompleted ? (
+                  <CheckCircle className="h-4 w-4" />
+                ) : (
+                  <IconComp className="h-4 w-4" />
+                )}
               </div>
-              <span className={`text-[10px] sm:text-xs font-medium ${isActive ? 'text-gray-900' : 'text-gray-400'}`}>
+              <span
+                className={`text-[10px] sm:text-xs font-medium ${isActive ? 'text-gray-900' : 'text-gray-400'}`}
+              >
                 {step.label}
               </span>
             </div>
@@ -414,14 +429,17 @@ function Step1Members({
     onChange({ ...members, children: updated.length > 0 ? updated : [{ dob: '', age: '' }] });
   };
 
-  const showSpouse = members.membership_type === 'main_spouse' || members.membership_type === 'family';
+  const showSpouse =
+    members.membership_type === 'main_spouse' || members.membership_type === 'family';
   const showChildren = members.membership_type === 'family';
 
   return (
     <div className="space-y-5">
       <div>
         <h2 className="text-lg font-bold text-gray-900 mb-1">Who needs cover?</h2>
-        <p className="text-sm text-gray-500">Tell us about everyone who needs to be on the medical aid.</p>
+        <p className="text-sm text-gray-500">
+          Tell us about everyone who needs to be on the medical aid.
+        </p>
       </div>
 
       {/* Membership type */}
@@ -441,9 +459,11 @@ function Step1Members({
                   : 'border-gray-200 bg-white hover:border-gray-300'
               }`}
             >
-              <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center ${
-                members.membership_type === opt.value ? 'border-primary' : 'border-gray-300'
-              }`}>
+              <div
+                className={`w-4 h-4 rounded-full border-2 flex items-center justify-center ${
+                  members.membership_type === opt.value ? 'border-primary' : 'border-gray-300'
+                }`}
+              >
                 {members.membership_type === opt.value && (
                   <div className="w-2 h-2 rounded-full bg-primary" />
                 )}
@@ -529,7 +549,13 @@ function Step1Members({
         <div className="space-y-3 p-4 rounded-xl bg-gray-50 border border-gray-100">
           <div className="flex items-center justify-between">
             <h3 className="text-sm font-semibold text-gray-900">Children</h3>
-            <Button type="button" variant="outline" size="sm" onClick={addChild} className="h-8 text-xs">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={addChild}
+              className="h-8 text-xs"
+            >
               <Plus className="h-3 w-3 mr-1" /> Add child
             </Button>
           </div>
@@ -617,9 +643,11 @@ function Step2Preferences({
                   : 'border-gray-200 bg-white hover:border-gray-300'
               }`}
             >
-              <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center mt-0.5 flex-shrink-0 ${
-                preferences.cover_type === ct.value ? 'border-primary' : 'border-gray-300'
-              }`}>
+              <div
+                className={`w-4 h-4 rounded-full border-2 flex items-center justify-center mt-0.5 flex-shrink-0 ${
+                  preferences.cover_type === ct.value ? 'border-primary' : 'border-gray-300'
+                }`}
+              >
                 {preferences.cover_type === ct.value && (
                   <div className="w-2 h-2 rounded-full bg-primary" />
                 )}
@@ -653,9 +681,11 @@ function Step2Preferences({
                   : 'border-gray-200 bg-white hover:border-gray-300'
               }`}
             >
-              <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center ${
-                preferences.network === opt.value ? 'border-primary' : 'border-gray-300'
-              }`}>
+              <div
+                className={`w-4 h-4 rounded-full border-2 flex items-center justify-center ${
+                  preferences.network === opt.value ? 'border-primary' : 'border-gray-300'
+                }`}
+              >
                 {preferences.network === opt.value && (
                   <div className="w-2 h-2 rounded-full bg-primary" />
                 )}
@@ -700,7 +730,9 @@ function Step2Preferences({
           </SelectTrigger>
           <SelectContent>
             {SA_PROVINCES.map((p) => (
-              <SelectItem key={p} value={p}>{p}</SelectItem>
+              <SelectItem key={p} value={p}>
+                {p}
+              </SelectItem>
             ))}
           </SelectContent>
         </Select>
@@ -745,7 +777,9 @@ function Step3History({
     <div className="space-y-5">
       <div>
         <h2 className="text-lg font-bold text-gray-900 mb-1">Current medical aid history</h2>
-        <p className="text-sm text-gray-500">This helps us determine the best options and any applicable waiting periods.</p>
+        <p className="text-sm text-gray-500">
+          This helps us determine the best options and any applicable waiting periods.
+        </p>
       </div>
 
       {/* Current status */}
@@ -756,7 +790,10 @@ function Step3History({
         <div className="grid gap-2">
           {[
             { value: 'currently_on', label: 'I am currently on a South African medical aid' },
-            { value: 'not_currently_on', label: 'I am not currently on a South African medical aid' },
+            {
+              value: 'not_currently_on',
+              label: 'I am not currently on a South African medical aid',
+            },
           ].map((opt) => (
             <button
               key={opt.value}
@@ -768,9 +805,11 @@ function Step3History({
                   : 'border-gray-200 bg-white hover:border-gray-300'
               }`}
             >
-              <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center ${
-                history.current_status === opt.value ? 'border-primary' : 'border-gray-300'
-              }`}>
+              <div
+                className={`w-4 h-4 rounded-full border-2 flex items-center justify-center ${
+                  history.current_status === opt.value ? 'border-primary' : 'border-gray-300'
+                }`}
+              >
                 {history.current_status === opt.value && (
                   <div className="w-2 h-2 rounded-full bg-primary" />
                 )}
@@ -788,13 +827,18 @@ function Step3History({
             <Label className="text-sm font-medium text-gray-700">
               Current scheme name <span className="text-red-500">*</span>
             </Label>
-            <Select value={history.current_scheme} onValueChange={(v) => update('current_scheme', v)}>
+            <Select
+              value={history.current_scheme}
+              onValueChange={(v) => update('current_scheme', v)}
+            >
               <SelectTrigger className="bg-white border-gray-300 h-11">
                 <SelectValue placeholder="Select your scheme" />
               </SelectTrigger>
               <SelectContent>
                 {COMMON_SCHEMES.map((s) => (
-                  <SelectItem key={s} value={s}>{s}</SelectItem>
+                  <SelectItem key={s} value={s}>
+                    {s}
+                  </SelectItem>
                 ))}
               </SelectContent>
             </Select>
@@ -841,7 +885,8 @@ function Step3History({
       {isNotCurrentlyOn && (
         <div className="space-y-3 p-4 rounded-xl bg-gray-50 border border-gray-100">
           <Label className="text-sm font-medium text-gray-700">
-            How long have you been without a South African medical aid? <span className="text-red-500">*</span>
+            How long have you been without a South African medical aid?{' '}
+            <span className="text-red-500">*</span>
           </Label>
           <div className="flex flex-wrap gap-2">
             {TENURE_OFF_OPTIONS.map((opt) => (
@@ -869,10 +914,12 @@ function Step3History({
             <Info className="h-4 w-4 text-amber-600 mt-0.5 flex-shrink-0" />
             <div>
               <Label className="text-sm font-medium text-gray-900">
-                Since turning 35, how long in total have you been without a South African medical aid? <span className="text-red-500">*</span>
+                Since turning 35, how long in total have you been without a South African medical
+                aid? <span className="text-red-500">*</span>
               </Label>
               <p className="text-xs text-amber-700 mt-1">
-                Some schemes apply late-joiner penalties if you join later in life after being without cover.
+                Some schemes apply late-joiner penalties if you join later in life after being
+                without cover.
               </p>
             </div>
           </div>
@@ -927,7 +974,9 @@ function Step4Health({
     <div className="space-y-5">
       <div>
         <h2 className="text-lg font-bold text-gray-900 mb-1">Health & chronic conditions</h2>
-        <p className="text-sm text-gray-500">This helps us identify plans that cover chronic medication benefits.</p>
+        <p className="text-sm text-gray-500">
+          This helps us identify plans that cover chronic medication benefits.
+        </p>
       </div>
 
       {/* Has chronic conditions */}
@@ -943,12 +992,16 @@ function Step4Health({
             <button
               key={String(opt.value)}
               type="button"
-              onClick={() => onChange({
-                ...health,
-                has_chronic_conditions: opt.value,
-                // Reset if switching to No
-                ...(opt.value === false ? { selected_conditions: [], applies_to_members: [], notes: '' } : {}),
-              })}
+              onClick={() =>
+                onChange({
+                  ...health,
+                  has_chronic_conditions: opt.value,
+                  // Reset if switching to No
+                  ...(opt.value === false
+                    ? { selected_conditions: [], applies_to_members: [], notes: '' }
+                    : {}),
+                })
+              }
               className={`flex items-center justify-center gap-2 p-3 rounded-xl border-2 text-sm font-medium transition-all ${
                 health.has_chronic_conditions === opt.value
                   ? 'border-primary/50 bg-primary/[0.03] text-gray-900'
@@ -1050,10 +1103,15 @@ function Step5Review({
   mainMemberAge: number | null;
   onEditStep: (step: number) => void;
 }) {
-  const coverTypeLabel = COVER_TYPES.find((c) => c.value === preferences.cover_type)?.label ?? preferences.cover_type;
-  const networkLabel = NETWORK_OPTIONS.find((n) => n.value === preferences.network)?.label ?? preferences.network;
-  const budgetLabel = BUDGET_BANDS.find((b) => b.value === preferences.budget_band)?.label ?? preferences.budget_band;
-  const membershipLabel = MEMBERSHIP_TYPES.find((m) => m.value === members.membership_type)?.label ?? members.membership_type;
+  const coverTypeLabel =
+    COVER_TYPES.find((c) => c.value === preferences.cover_type)?.label ?? preferences.cover_type;
+  const networkLabel =
+    NETWORK_OPTIONS.find((n) => n.value === preferences.network)?.label ?? preferences.network;
+  const budgetLabel =
+    BUDGET_BANDS.find((b) => b.value === preferences.budget_band)?.label ?? preferences.budget_band;
+  const membershipLabel =
+    MEMBERSHIP_TYPES.find((m) => m.value === members.membership_type)?.label ??
+    members.membership_type;
 
   const showLpj = mainMemberAge !== null && mainMemberAge >= 35;
 
@@ -1085,7 +1143,9 @@ function Step5Review({
     <div className="space-y-5">
       <div>
         <h2 className="text-lg font-bold text-gray-900 mb-1">Review & submit</h2>
-        <p className="text-sm text-gray-500">Please review your details before submitting your medical aid quote request.</p>
+        <p className="text-sm text-gray-500">
+          Please review your details before submitting your medical aid quote request.
+        </p>
       </div>
 
       {/* Members */}
@@ -1096,9 +1156,10 @@ function Step5Review({
         {(members.membership_type === 'main_spouse' || members.membership_type === 'family') && (
           <Row label="Spouse / Partner" value={displayDob(members.spouse)} />
         )}
-        {members.membership_type === 'family' && members.children.map((child, i) => (
-          <Row key={i} label={`Child ${i + 1}`} value={displayDob(child)} />
-        ))}
+        {members.membership_type === 'family' &&
+          members.children.map((child, i) => (
+            <Row key={i} label={`Child ${i + 1}`} value={displayDob(child)} />
+          ))}
       </div>
 
       {/* Preferences */}
@@ -1127,13 +1188,21 @@ function Step5Review({
           <div className="contents">
             <Row label="Scheme" value={history.current_scheme} />
             <Row label="Plan" value={history.current_plan} />
-            <Row label="Tenure" value={TENURE_ON_OPTIONS.find((o) => o.value === history.current_tenure_band)?.label ?? '—'} />
+            <Row
+              label="Tenure"
+              value={
+                TENURE_ON_OPTIONS.find((o) => o.value === history.current_tenure_band)?.label ?? '—'
+              }
+            />
           </div>
         )}
         {history.current_status === 'not_currently_on' && (
           <Row
             label="Time without medical aid"
-            value={TENURE_OFF_OPTIONS.find((o) => o.value === history.time_without_sa_medical_aid)?.label ?? '—'}
+            value={
+              TENURE_OFF_OPTIONS.find((o) => o.value === history.time_without_sa_medical_aid)
+                ?.label ?? '—'
+            }
           />
         )}
         {showLpj && (
@@ -1183,8 +1252,12 @@ export function MedicalAidQuoteWizard({
   const draft = loadDraft();
   const [currentStep, setCurrentStep] = useState(draft?.currentStep ?? 1);
   const [members, setMembers] = useState<MembersState>(draft?.members ?? getInitialMembers());
-  const [preferences, setPreferences] = useState<PreferencesState>(draft?.preferences ?? getInitialPreferences());
-  const [history, setHistory] = useState<MedicalAidHistoryState>(draft?.medical_aid_history ?? getInitialHistory());
+  const [preferences, setPreferences] = useState<PreferencesState>(
+    draft?.preferences ?? getInitialPreferences(),
+  );
+  const [history, setHistory] = useState<MedicalAidHistoryState>(
+    draft?.medical_aid_history ?? getInitialHistory(),
+  );
   const [health, setHealth] = useState<HealthState>(draft?.health ?? getInitialHealth());
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -1208,7 +1281,8 @@ export function MedicalAidQuoteWizard({
   const step1Valid = useMemo(() => {
     if (!members.membership_type) return false;
     if (!hasMemberAge(members.main)) return false;
-    const showSpouse = members.membership_type === 'main_spouse' || members.membership_type === 'family';
+    const showSpouse =
+      members.membership_type === 'main_spouse' || members.membership_type === 'family';
     if (showSpouse && !hasMemberAge(members.spouse)) return false;
     if (members.membership_type === 'family') {
       if (members.children.length === 0) return false;
@@ -1218,13 +1292,19 @@ export function MedicalAidQuoteWizard({
   }, [members]);
 
   const step2Valid = useMemo(() => {
-    return Boolean(preferences.cover_type && preferences.network && preferences.budget_band && preferences.province);
+    return Boolean(
+      preferences.cover_type &&
+      preferences.network &&
+      preferences.budget_band &&
+      preferences.province,
+    );
   }, [preferences]);
 
   const step3Valid = useMemo(() => {
     if (!history.current_status) return false;
     if (history.current_status === 'currently_on') {
-      if (!history.current_scheme || !history.current_plan || !history.current_tenure_band) return false;
+      if (!history.current_scheme || !history.current_plan || !history.current_tenure_band)
+        return false;
     }
     if (history.current_status === 'not_currently_on') {
       if (!history.time_without_sa_medical_aid) return false;
@@ -1246,12 +1326,18 @@ export function MedicalAidQuoteWizard({
 
   const canProceed = useMemo(() => {
     switch (currentStep) {
-      case 1: return step1Valid;
-      case 2: return step2Valid;
-      case 3: return step3Valid;
-      case 4: return step4Valid;
-      case 5: return true; // review — always can submit
-      default: return false;
+      case 1:
+        return step1Valid;
+      case 2:
+        return step2Valid;
+      case 3:
+        return step3Valid;
+      case 4:
+        return step4Valid;
+      case 5:
+        return true; // review — always can submit
+      default:
+        return false;
     }
   }, [currentStep, step1Valid, step2Valid, step3Valid, step4Valid]);
 
@@ -1277,12 +1363,20 @@ export function MedicalAidQuoteWizard({
     try {
       // Build structured payload matching the spec
       const membersPayload: Record<string, unknown> = {
-        membership_type: MEMBERSHIP_TYPES.find((m) => m.value === members.membership_type)?.label ?? members.membership_type,
-        main: { dob: members.main.dob || null, age: members.main.age ? parseInt(members.main.age, 10) : null },
+        membership_type:
+          MEMBERSHIP_TYPES.find((m) => m.value === members.membership_type)?.label ??
+          members.membership_type,
+        main: {
+          dob: members.main.dob || null,
+          age: members.main.age ? parseInt(members.main.age, 10) : null,
+        },
       };
 
       if (members.membership_type === 'main_spouse' || members.membership_type === 'family') {
-        membersPayload.spouse = { dob: members.spouse.dob || null, age: members.spouse.age ? parseInt(members.spouse.age, 10) : null };
+        membersPayload.spouse = {
+          dob: members.spouse.dob || null,
+          age: members.spouse.age ? parseInt(members.spouse.age, 10) : null,
+        };
       }
 
       if (members.membership_type === 'family') {
@@ -1293,24 +1387,32 @@ export function MedicalAidQuoteWizard({
       }
 
       const preferencesPayload = {
-        cover_type: COVER_TYPES.find((c) => c.value === preferences.cover_type)?.label ?? preferences.cover_type,
-        network: NETWORK_OPTIONS.find((n) => n.value === preferences.network)?.label ?? preferences.network,
-        budget_band: BUDGET_BANDS.find((b) => b.value === preferences.budget_band)?.label ?? preferences.budget_band,
+        cover_type:
+          COVER_TYPES.find((c) => c.value === preferences.cover_type)?.label ??
+          preferences.cover_type,
+        network:
+          NETWORK_OPTIONS.find((n) => n.value === preferences.network)?.label ??
+          preferences.network,
+        budget_band:
+          BUDGET_BANDS.find((b) => b.value === preferences.budget_band)?.label ??
+          preferences.budget_band,
         province: preferences.province,
       };
 
       const historyPayload: Record<string, unknown> = {
-        current_status: history.current_status === 'currently_on'
-          ? 'I am currently on a South African medical aid'
-          : history.current_status === 'not_currently_on'
-            ? 'I am not currently on a South African medical aid'
-            : '',
+        current_status:
+          history.current_status === 'currently_on'
+            ? 'I am currently on a South African medical aid'
+            : history.current_status === 'not_currently_on'
+              ? 'I am not currently on a South African medical aid'
+              : '',
       };
 
       if (history.current_status === 'currently_on') {
         historyPayload.current_scheme = history.current_scheme;
         historyPayload.current_plan = history.current_plan;
-        historyPayload.current_tenure_band = TENURE_ON_OPTIONS.find((o) => o.value === history.current_tenure_band)?.label ?? null;
+        historyPayload.current_tenure_band =
+          TENURE_ON_OPTIONS.find((o) => o.value === history.current_tenure_band)?.label ?? null;
       } else {
         historyPayload.current_scheme = null;
         historyPayload.current_plan = null;
@@ -1318,7 +1420,9 @@ export function MedicalAidQuoteWizard({
       }
 
       if (history.current_status === 'not_currently_on') {
-        historyPayload.time_without_sa_medical_aid = TENURE_OFF_OPTIONS.find((o) => o.value === history.time_without_sa_medical_aid)?.label ?? null;
+        historyPayload.time_without_sa_medical_aid =
+          TENURE_OFF_OPTIONS.find((o) => o.value === history.time_without_sa_medical_aid)?.label ??
+          null;
       } else {
         historyPayload.time_without_sa_medical_aid = null;
       }
@@ -1388,7 +1492,19 @@ export function MedicalAidQuoteWizard({
     } finally {
       setIsSubmitting(false);
     }
-  }, [firstName, lastName, email, phone, parentSubmissionId, members, preferences, history, health, mainMemberAge, onSuccess]);
+  }, [
+    firstName,
+    lastName,
+    email,
+    phone,
+    parentSubmissionId,
+    members,
+    preferences,
+    history,
+    health,
+    mainMemberAge,
+    onSuccess,
+  ]);
 
   // ── Render ──
 
@@ -1399,9 +1515,15 @@ export function MedicalAidQuoteWizard({
       <div className="bg-white rounded-2xl shadow-lg border border-gray-100 overflow-hidden">
         <div className="p-5 sm:p-6">
           {currentStep === 1 && <Step1Members members={members} onChange={setMembers} />}
-          {currentStep === 2 && <Step2Preferences preferences={preferences} onChange={setPreferences} />}
-          {currentStep === 3 && <Step3History history={history} mainMemberAge={mainMemberAge} onChange={setHistory} />}
-          {currentStep === 4 && <Step4Health health={health} memberLabels={memberLabels} onChange={setHealth} />}
+          {currentStep === 2 && (
+            <Step2Preferences preferences={preferences} onChange={setPreferences} />
+          )}
+          {currentStep === 3 && (
+            <Step3History history={history} mainMemberAge={mainMemberAge} onChange={setHistory} />
+          )}
+          {currentStep === 4 && (
+            <Step4Health health={health} memberLabels={memberLabels} onChange={setHealth} />
+          )}
           {currentStep === 5 && (
             <Step5Review
               members={members}

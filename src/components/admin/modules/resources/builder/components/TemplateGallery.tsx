@@ -13,14 +13,7 @@ import { Card, CardContent } from '../../../../../ui/card';
 import { Badge } from '../../../../../ui/badge';
 import { Button } from '../../../../../ui/button';
 import { Input } from '../../../../../ui/input';
-import {
-  Search,
-  FileText,
-  ArrowRight,
-  Layers,
-  Mail,
-  CheckCircle2,
-} from 'lucide-react';
+import { Search, FileText, ArrowRight, Layers, Mail, CheckCircle2 } from 'lucide-react';
 import { STARTER_TEMPLATES, type StarterTemplate } from '../constants';
 
 interface TemplateGalleryProps {
@@ -76,7 +69,7 @@ export function TemplateGallery({ onSelectTemplate, onCancel, mode }: TemplateGa
   }, [search, categoryFilter, mode]);
 
   const selectedTemplate = selectedId
-    ? STARTER_TEMPLATES.find((t) => t.id === selectedId) ?? null
+    ? (STARTER_TEMPLATES.find((t) => t.id === selectedId) ?? null)
     : null;
 
   return (
@@ -197,7 +190,8 @@ export function TemplateGallery({ onSelectTemplate, onCancel, mode }: TemplateGa
                             </Badge>
                             {template.id !== 'blank' && template.id !== 'blank_letter' && (
                               <span className="text-[10px] text-gray-400">
-                                ~{template.pageEstimate} page{template.pageEstimate !== 1 ? 's' : ''}
+                                ~{template.pageEstimate} page
+                                {template.pageEstimate !== 1 ? 's' : ''}
                               </span>
                             )}
                           </div>
@@ -208,18 +202,20 @@ export function TemplateGallery({ onSelectTemplate, onCancel, mode }: TemplateGa
                         {template.description}
                       </p>
 
-                      {template.tags.length > 0 && template.id !== 'blank' && template.id !== 'blank_letter' && (
-                        <div className="flex flex-wrap gap-1">
-                          {template.tags.slice(0, 4).map((tag) => (
-                            <span
-                              key={tag}
-                              className="text-[10px] px-1.5 py-0.5 bg-gray-50 text-gray-400 rounded"
-                            >
-                              {tag}
-                            </span>
-                          ))}
-                        </div>
-                      )}
+                      {template.tags.length > 0 &&
+                        template.id !== 'blank' &&
+                        template.id !== 'blank_letter' && (
+                          <div className="flex flex-wrap gap-1">
+                            {template.tags.slice(0, 4).map((tag) => (
+                              <span
+                                key={tag}
+                                className="text-[10px] px-1.5 py-0.5 bg-gray-50 text-gray-400 rounded"
+                              >
+                                {tag}
+                              </span>
+                            ))}
+                          </div>
+                        )}
                     </CardContent>
                   </Card>
                 );

@@ -1,23 +1,23 @@
-import { 
-  Home, 
-  Users, 
-  UserCheck, 
-  FileText, 
-  Package, 
-  FolderOpen, 
-  Shield, 
-  CheckSquare, 
-  ClipboardList, 
-  Mail, 
-  Share2, 
-  BarChart3, 
+import {
+  Home,
+  Users,
+  UserCheck,
+  FileText,
+  Package,
+  FolderOpen,
+  Shield,
+  CheckSquare,
+  ClipboardList,
+  Mail,
+  Share2,
+  BarChart3,
   Calendar,
   BookOpen,
   PenTool,
   Inbox,
   StickyNote,
   Bot,
-  ShieldAlert
+  ShieldAlert,
 } from 'lucide-react';
 import { AdminModule, ModuleConfigItem, ModuleGroup } from './types';
 
@@ -40,34 +40,50 @@ export const moduleConfig: Record<AdminModule, ModuleConfigItem> = {
   reporting: { label: 'Reporting', icon: BarChart3 },
   calendar: { label: 'Calendar & Reminders', icon: Calendar },
   issues: { label: 'Issue Manager', icon: ShieldAlert },
-  'ai-management': { label: 'AI Management', icon: Bot }
+  'ai-management': { label: 'AI Management', icon: Bot },
 };
 
 export const moduleGroups: ModuleGroup[] = [
   {
     label: 'Overview',
-    modules: ['dashboard']
+    modules: ['dashboard'],
   },
   {
     label: 'Operations',
-    modules: ['applications', 'submissions', 'tasks', 'notes', 'calendar']
+    modules: ['applications', 'submissions', 'tasks', 'notes', 'calendar'],
   },
   {
     label: 'Manage',
-    modules: ['clients', 'esign', 'personnel', 'advice-engine', 'product-management', 'resources', 'publications', 'ai-management']
+    modules: [
+      'clients',
+      'esign',
+      'personnel',
+      'advice-engine',
+      'product-management',
+      'resources',
+      'publications',
+      'ai-management',
+    ],
   },
   {
     label: 'Risk & Compliance',
-    modules: ['compliance', 'reporting', 'issues']
+    modules: ['compliance', 'reporting', 'issues'],
   },
   {
     label: 'Growth',
-    modules: ['communication', 'marketing']
-  }
+    modules: ['communication', 'marketing'],
+  },
 ];
 
 // Modules that display numeric sidebar counters.
-export const operationsModules: AdminModule[] = ['applications', 'submissions', 'tasks', 'notes', 'calendar', 'issues'];
+export const operationsModules: AdminModule[] = [
+  'applications',
+  'submissions',
+  'tasks',
+  'notes',
+  'calendar',
+  'issues',
+];
 
 // Modules whose counters are status indicators and should remain visible at zero.
 export const alwaysShowCounterModules: AdminModule[] = ['issues'];

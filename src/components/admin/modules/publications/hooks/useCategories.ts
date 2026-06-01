@@ -28,7 +28,13 @@ interface UseCategoriesReturn {
 export function useCategories(options?: UseCategoriesOptions): UseCategoriesReturn {
   const { activeOnly = false, autoSort = true } = options || {};
 
-  const { data: rawCategories = [], isLoading, isFetching, error, refetch: queryRefetch } = useQuery({
+  const {
+    data: rawCategories = [],
+    isLoading,
+    isFetching,
+    error,
+    refetch: queryRefetch,
+  } = useQuery({
     queryKey: publicationKeys.categories(),
     queryFn: () => PublicationsAPI.Categories.getCategories(),
     staleTime: 5 * 60 * 1000,
@@ -38,7 +44,7 @@ export function useCategories(options?: UseCategoriesOptions): UseCategoriesRetu
   const categories = useMemo(() => {
     let result = [...rawCategories];
     if (activeOnly) {
-      result = result.filter(cat => cat.is_active);
+      result = result.filter((cat) => cat.is_active);
     }
     if (autoSort) {
       result = result.sort((a, b) => a.sort_order - b.sort_order);

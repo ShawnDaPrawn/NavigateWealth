@@ -49,7 +49,7 @@ export function getCategoryIcon(category: string): string {
     'Knowledge Base': '\u{1F4DA}',
     Calculators: '\u{1F9EE}',
   };
-  
+
   return iconMap[category] || '\u{1F4C4}';
 }
 
@@ -67,7 +67,7 @@ export function getCategoryColor(category: string): string {
     'Knowledge Base': 'bg-indigo-100 text-indigo-700',
     Calculators: 'bg-pink-100 text-pink-700',
   };
-  
+
   return colorMap[category] || 'bg-gray-100 text-gray-700';
 }
 
@@ -80,7 +80,7 @@ export function getDifficultyColor(difficulty: string): string {
     Intermediate: 'bg-yellow-100 text-yellow-700',
     Advanced: 'bg-red-100 text-red-700',
   };
-  
+
   return colorMap[difficulty] || 'bg-gray-100 text-gray-700';
 }
 
@@ -91,14 +91,14 @@ export function formatDuration(minutes: number): string {
   if (minutes < 60) {
     return `${minutes} min`;
   }
-  
+
   const hours = Math.floor(minutes / 60);
   const remainingMinutes = minutes % 60;
-  
+
   if (remainingMinutes === 0) {
     return `${hours} ${hours === 1 ? 'hour' : 'hours'}`;
   }
-  
+
   return `${hours}h ${remainingMinutes}m`;
 }
 
@@ -109,12 +109,8 @@ export function getStarRating(rating: number): string {
   const fullStars = Math.floor(rating);
   const hasHalfStar = rating % 1 >= 0.5;
   const emptyStars = 5 - fullStars - (hasHalfStar ? 1 : 0);
-  
-  return (
-    '⭐'.repeat(fullStars) +
-    (hasHalfStar ? '✨' : '') +
-    '☆'.repeat(emptyStars)
-  );
+
+  return '⭐'.repeat(fullStars) + (hasHalfStar ? '✨' : '') + '☆'.repeat(emptyStars);
 }
 
 /**
@@ -124,11 +120,11 @@ export function formatViewCount(views: number): string {
   if (views < 1000) {
     return views.toString();
   }
-  
+
   if (views < 1000000) {
     return `${(views / 1000).toFixed(1)}K`;
   }
-  
+
   return `${(views / 1000000).toFixed(1)}M`;
 }
 
@@ -146,7 +142,7 @@ export function getRelativeTime(dateString: string): string {
   if (diffDays < 7) return `${diffDays} days ago`;
   if (diffDays < 30) return `${Math.floor(diffDays / 7)} weeks ago`;
   if (diffDays < 365) return `${Math.floor(diffDays / 30)} months ago`;
-  
+
   return `${Math.floor(diffDays / 365)} years ago`;
 }
 
@@ -157,15 +153,15 @@ export function validateFormName(name: string): { valid: boolean; error?: string
   if (!name || name.trim().length === 0) {
     return { valid: false, error: 'Form name is required' };
   }
-  
+
   if (name.length < 3) {
     return { valid: false, error: 'Form name must be at least 3 characters' };
   }
-  
+
   if (name.length > 100) {
     return { valid: false, error: 'Form name must be less than 100 characters' };
   }
-  
+
   return { valid: true };
 }
 
@@ -177,16 +173,16 @@ import type { FormBlock } from './builder/types';
 export function sanitizeFormData(data: Record<string, unknown>): Record<string, unknown> {
   // Remove any sensitive or unnecessary fields
   const sanitized = { ...data };
-  
+
   // Remove internal fields
   delete sanitized._internal;
   delete sanitized.__typename;
-  
+
   // Ensure nested objects exist
   if (!sanitized.client) sanitized.client = {};
   if (!sanitized.personalInformation) sanitized.personalInformation = {};
   if (!sanitized.adviser) sanitized.adviser = {};
-  
+
   return sanitized;
 }
 
@@ -194,8 +190,21 @@ export function sanitizeFormData(data: Record<string, unknown>): Record<string, 
  * Generate form preview data from client and adviser
  */
 export function generatePreviewData(
-  client?: { firstName?: string; lastName?: string; idNumber?: string; email?: string; applicationNumber?: string; profile?: Record<string, unknown> },
-  adviser?: { name?: string; email?: string; phone?: string; title?: string; licenseNumber?: string }
+  client?: {
+    firstName?: string;
+    lastName?: string;
+    idNumber?: string;
+    email?: string;
+    applicationNumber?: string;
+    profile?: Record<string, unknown>;
+  },
+  adviser?: {
+    name?: string;
+    email?: string;
+    phone?: string;
+    title?: string;
+    licenseNumber?: string;
+  },
 ): Record<string, unknown> {
   return {
     // Client data (flat keys)
@@ -204,7 +213,7 @@ export function generatePreviewData(
     'client.email': client?.email || '',
     'client.address': client?.profile?.address || '',
     'client.phone': client?.profile?.phone || '',
-    
+
     // Client data (nested)
     client: {
       name: client ? `${client.firstName} ${client.lastName}` : '',
@@ -213,7 +222,7 @@ export function generatePreviewData(
       address: client?.profile?.address || '',
       phone: client?.profile?.phone || '',
     },
-    
+
     // Personal Information (nested)
     personalInformation: {
       firstName: client?.firstName || '',
@@ -224,7 +233,7 @@ export function generatePreviewData(
       gender: client?.profile?.gender || '',
       maritalStatus: client?.profile?.maritalStatus || '',
     },
-    
+
     // Adviser data
     adviser: {
       name: adviser?.name || '',
@@ -233,7 +242,7 @@ export function generatePreviewData(
       title: adviser?.title || '',
       licenseNumber: adviser?.licenseNumber || '',
     },
-    
+
     // Additional common fields
     date: new Date().toLocaleDateString(),
     applicationNumber: client?.applicationNumber || '',
@@ -245,7 +254,7 @@ export function generatePreviewData(
  */
 export function hasRequiredFields(blocks: FormBlock[]): boolean {
   if (!blocks || blocks.length === 0) return false;
-  
+
   // Check if form has at least one data collection block
   const dataBlocks = ['field_grid', 'table', 'signature', 'client_summary'];
   return blocks.some((block) => dataBlocks.includes(block.type));
@@ -256,19 +265,21 @@ export function hasRequiredFields(blocks: FormBlock[]): boolean {
  */
 export function countFormFields(blocks: FormBlock[]): number {
   if (!blocks) return 0;
-  
+
   let count = 0;
-  
+
   blocks.forEach((block) => {
     if (block.type === 'field_grid' && block.data?.fields) {
       count += (block.data.fields as unknown[]).length;
     } else if (block.type === 'table' && block.data?.rows) {
-      count += (block.data.rows as unknown[]).length * ((block.data.columnHeaders as unknown[] | undefined)?.length || 0);
+      count +=
+        (block.data.rows as unknown[]).length *
+        ((block.data.columnHeaders as unknown[] | undefined)?.length || 0);
     } else if (block.type === 'signature' && block.data?.signatories) {
       count += (block.data.signatories as unknown[]).length;
     }
   });
-  
+
   return count;
 }
 
@@ -277,10 +288,10 @@ export function countFormFields(blocks: FormBlock[]): number {
  */
 export function estimateCompletionTime(blocks: FormBlock[]): number {
   const fieldCount = countFormFields(blocks);
-  
+
   // Rough estimate: 30 seconds per field
-  const minutes = Math.ceil((fieldCount * 0.5) + 2); // +2 for reading time
-  
+  const minutes = Math.ceil(fieldCount * 0.5 + 2); // +2 for reading time
+
   return Math.max(5, minutes); // Minimum 5 minutes
 }
 
@@ -291,12 +302,12 @@ export function exportFormAsJSON(form: { name: string; [key: string]: unknown })
   const dataStr = JSON.stringify(form, null, 2);
   const dataBlob = new Blob([dataStr], { type: 'application/json' });
   const url = URL.createObjectURL(dataBlob);
-  
+
   const link = document.createElement('a');
   link.href = url;
   link.download = `${form.name.replace(/\s+/g, '_')}.json`;
   link.click();
-  
+
   URL.revokeObjectURL(url);
 }
 
@@ -306,7 +317,7 @@ export function exportFormAsJSON(form: { name: string; [key: string]: unknown })
 export async function importFormFromJSON(file: File): Promise<Record<string, unknown>> {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
-    
+
     reader.onload = (e) => {
       try {
         const json = JSON.parse(e.target?.result as string);
@@ -315,11 +326,11 @@ export async function importFormFromJSON(file: File): Promise<Record<string, unk
         reject(new Error('Invalid JSON file'));
       }
     };
-    
+
     reader.onerror = () => {
       reject(new Error('Failed to read file'));
     };
-    
+
     reader.readAsText(file);
   });
 }

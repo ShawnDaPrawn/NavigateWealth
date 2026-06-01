@@ -1,9 +1,9 @@
 /**
  * useAIChat Hook
- * 
+ *
  * Main hook for AI chat functionality.
  * Manages messages, sending, history, and API key status.
- * 
+ *
  * @module advice-engine/hooks/useAIChat
  */
 
@@ -13,12 +13,7 @@ import { toast } from 'sonner';
 import { aiIntelligenceApi } from '../api';
 import { buildConversationHistory } from '../utils';
 import { adviceEngineKeys } from './queryKeys';
-import type {
-  Message,
-  UseAIChatOptions,
-  UseAIChatReturn,
-  ApiKeyStatus,
-} from '../types';
+import type { Message, UseAIChatOptions, UseAIChatReturn, ApiKeyStatus } from '../types';
 
 /**
  * Welcome message displayed on initial load
@@ -38,16 +33,16 @@ I can help with **Client Intelligence**, **Platform Operations**, and **Advisory
 
 /**
  * Hook for AI chat functionality
- * 
+ *
  * @param options - Configuration options
  * @returns Chat state and actions
- * 
+ *
  * @example
  * const { messages, sendMessage, clearChat, isLoading } = useAIChat({
  *   autoLoadHistory: true,
  *   maxHistoryLength: 10
  * });
- * 
+ *
  * await sendMessage('What are the client\'s active policies?', 'client-123');
  */
 export function useAIChat(options: UseAIChatOptions = {}): UseAIChatReturn {
@@ -62,7 +57,7 @@ export function useAIChat(options: UseAIChatOptions = {}): UseAIChatReturn {
   const [messages, setMessages] = useState<Message[]>([WELCOME_MESSAGE]);
   const [error, setError] = useState<string | null>(null);
   const [shouldAutoScroll, setShouldAutoScroll] = useState(true);
-  
+
   // Refs
   const hasLoadedHistory = useRef(false);
   const queryClient = useQueryClient();
@@ -133,17 +128,8 @@ export function useAIChat(options: UseAIChatOptions = {}): UseAIChatReturn {
   // ============================================================================
 
   const sendMessageMutation = useMutation({
-    mutationFn: async ({
-      content,
-      clientId,
-    }: {
-      content: string;
-      clientId?: string;
-    }) => {
-      const conversationHistory = buildConversationHistory(
-        messages,
-        maxHistoryLength
-      );
+    mutationFn: async ({ content, clientId }: { content: string; clientId?: string }) => {
+      const conversationHistory = buildConversationHistory(messages, maxHistoryLength);
 
       const response = await aiIntelligenceApi.sendMessage({
         message: content,
@@ -191,18 +177,20 @@ export function useAIChat(options: UseAIChatOptions = {}): UseAIChatReturn {
     },
     onError: (error: Error, variables, context) => {
       // Check if this is a rate limit error (429)
-      const is429RateLimit = error.message.includes('rate limit') || 
-                             error.message.includes('429') ||
-                             error.message.includes('quota');
-      
+      const is429RateLimit =
+        error.message.includes('rate limit') ||
+        error.message.includes('429') ||
+        error.message.includes('quota');
+
       if (is429RateLimit) {
         // Show a professional toast for rate limit errors
         toast.error('OpenAI Rate Limit Reached', {
-          description: 'The OpenAI API has reached its usage limit. Please inform your administrator to add more credits to continue using the AI Intelligence features.',
+          description:
+            'The OpenAI API has reached its usage limit. Please inform your administrator to add more credits to continue using the AI Intelligence features.',
           duration: 8000,
         });
       }
-      
+
       // Set error
       setError(error.message);
 
@@ -254,7 +242,7 @@ export function useAIChat(options: UseAIChatOptions = {}): UseAIChatReturn {
 
       await sendMessageMutation.mutateAsync({ content: content.trim(), clientId });
     },
-    [sendMessageMutation]
+    [sendMessageMutation],
   );
 
   /**

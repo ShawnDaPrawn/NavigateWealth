@@ -112,17 +112,19 @@ setupApp.post('/database', async (c) => {
 
     // Execute the SQL using Supabase's rpc method with a custom function
     // Since we can't execute raw DDL directly, we'll use the REST API
-    const { error } = await supabase.rpc('exec_sql', { sql: createTableSQL }).catch(() => ({ error: null }));
+    const { error } = await supabase
+      .rpc('exec_sql', { sql: createTableSQL })
+      .catch(() => ({ error: null }));
 
     // Alternative: Try using the REST API directly
     const response = await fetch(`${Deno.env.get('SUPABASE_URL')}/rest/v1/rpc/exec_sql`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'apikey': Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
-        'Authorization': `Bearer ${Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')}`,
+        apikey: Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
+        Authorization: `Bearer ${Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')}`,
       },
-      body: JSON.stringify({ query: createTableSQL })
+      body: JSON.stringify({ query: createTableSQL }),
     }).catch(() => null);
 
     // Check if table exists by trying to query it
@@ -133,44 +135,49 @@ setupApp.post('/database', async (c) => {
 
     if (checkError) {
       // Table doesn't exist - provide manual instructions
-      
-      return c.json({
-        success: false,
-        requiresManualSetup: true,
-        message: 'Database table does not exist. Please run the SQL migration manually.',
-        instructions: [
-          '1. Go to Supabase Dashboard → SQL Editor',
-          '2. Copy the contents of /database/migrations/00_create_applications_table.sql',
-          '3. Paste and run the SQL',
-          '4. Refresh this page'
-        ],
-        migrationFile: '/database/migrations/00_create_applications_table.sql',
-        documentationFile: '/FIX_DATABASE_ERROR.md'
-      }, 400);
+
+      return c.json(
+        {
+          success: false,
+          requiresManualSetup: true,
+          message: 'Database table does not exist. Please run the SQL migration manually.',
+          instructions: [
+            '1. Go to Supabase Dashboard → SQL Editor',
+            '2. Copy the contents of /database/migrations/00_create_applications_table.sql',
+            '3. Paste and run the SQL',
+            '4. Refresh this page',
+          ],
+          migrationFile: '/database/migrations/00_create_applications_table.sql',
+          documentationFile: '/FIX_DATABASE_ERROR.md',
+        },
+        400,
+      );
     }
 
     return c.json({
       success: true,
       message: 'Database is ready',
-      tableExists: true
+      tableExists: true,
     });
-
   } catch (error) {
     log.error('Failed to setup database', error);
-    return c.json({
-      success: false,
-      requiresManualSetup: true,
-      error: 'Failed to setup database',
-      details: getErrMsg(error),
-      instructions: [
-        '1. Go to Supabase Dashboard → SQL Editor',
-        '2. Copy the contents of /database/migrations/00_create_applications_table.sql',
-        '3. Paste and run the SQL',
-        '4. Refresh this page'
-      ],
-      migrationFile: '/database/migrations/00_create_applications_table.sql',
-      documentationFile: '/FIX_DATABASE_ERROR.md'
-    }, 500);
+    return c.json(
+      {
+        success: false,
+        requiresManualSetup: true,
+        error: 'Failed to setup database',
+        details: getErrMsg(error),
+        instructions: [
+          '1. Go to Supabase Dashboard → SQL Editor',
+          '2. Copy the contents of /database/migrations/00_create_applications_table.sql',
+          '3. Paste and run the SQL',
+          '4. Refresh this page',
+        ],
+        migrationFile: '/database/migrations/00_create_applications_table.sql',
+        documentationFile: '/FIX_DATABASE_ERROR.md',
+      },
+      500,
+    );
   }
 });
 
@@ -179,41 +186,42 @@ setupApp.post('/database', async (c) => {
  */
 setupApp.get('/check', async (c) => {
   try {
-
     const supabase = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
     );
 
     // Try to query the table
-    const { error } = await supabase
-      .from('personal_client_applications')
-      .select('id')
-      .limit(1);
+    const { error } = await supabase.from('personal_client_applications').select('id').limit(1);
 
     if (error) {
-      return c.json({
-        ready: false,
-        tableExists: false,
-        message: 'Database table does not exist',
-        error: error.message,
-        needsSetup: true
-      }, 400);
+      return c.json(
+        {
+          ready: false,
+          tableExists: false,
+          message: 'Database table does not exist',
+          error: error.message,
+          needsSetup: true,
+        },
+        400,
+      );
     }
 
     return c.json({
       ready: true,
       tableExists: true,
-      message: 'Database is ready'
+      message: 'Database is ready',
     });
-
   } catch (error) {
     log.error('Failed to check database', error);
-    return c.json({
-      ready: false,
-      error: 'Failed to check database',
-      details: getErrMsg(error)
-    }, 500);
+    return c.json(
+      {
+        ready: false,
+        error: 'Failed to check database',
+        details: getErrMsg(error),
+      },
+      500,
+    );
   }
 });
 
@@ -222,28 +230,24 @@ setupApp.get('/check', async (c) => {
  */
 setupApp.post('/tasks-table', async (c) => {
   try {
-
     const supabase = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
     );
 
     // Check if table already exists
-    const { error: checkError } = await supabase
-      .from('tasks')
-      .select('id')
-      .limit(1);
+    const { error: checkError } = await supabase.from('tasks').select('id').limit(1);
 
     if (!checkError) {
       return c.json({
         success: true,
         message: 'Tasks table already exists',
-        tableExists: true
+        tableExists: true,
       });
     }
 
     // Table doesn't exist - provide SQL for manual creation
-    
+
     const createTasksTableSQL = `
 -- Create tasks table for Task Management system
 CREATE TABLE IF NOT EXISTS public.tasks (
@@ -343,38 +347,43 @@ CREATE TRIGGER tasks_completed_at_trigger
   EXECUTE FUNCTION set_task_completed_at();
     `;
 
-    return c.json({
-      success: false,
-      requiresManualSetup: true,
-      message: 'Tasks table does not exist. Please run the SQL migration manually.',
-      instructions: [
-        '1. Go to Supabase Dashboard → SQL Editor',
-        '2. Create a new query',
-        '3. Copy the SQL provided below',
-        '4. Paste and run the SQL',
-        '5. Refresh the Task Management page'
-      ],
-      sql: createTasksTableSQL,
-      migrationFile: '/supabase/migrations/create_tasks_table.sql',
-      documentationFile: '/TASK_MANAGEMENT_QUICKSTART.md'
-    }, 400);
-
+    return c.json(
+      {
+        success: false,
+        requiresManualSetup: true,
+        message: 'Tasks table does not exist. Please run the SQL migration manually.',
+        instructions: [
+          '1. Go to Supabase Dashboard → SQL Editor',
+          '2. Create a new query',
+          '3. Copy the SQL provided below',
+          '4. Paste and run the SQL',
+          '5. Refresh the Task Management page',
+        ],
+        sql: createTasksTableSQL,
+        migrationFile: '/supabase/migrations/create_tasks_table.sql',
+        documentationFile: '/TASK_MANAGEMENT_QUICKSTART.md',
+      },
+      400,
+    );
   } catch (error) {
     log.error('Failed to check tasks table', error);
-    return c.json({
-      success: false,
-      requiresManualSetup: true,
-      error: 'Failed to check tasks table',
-      details: getErrMsg(error),
-      instructions: [
-        '1. Go to Supabase Dashboard → SQL Editor',
-        '2. Copy the contents of /supabase/migrations/create_tasks_table.sql',
-        '3. Paste and run the SQL',
-        '4. Refresh the Task Management page'
-      ],
-      migrationFile: '/supabase/migrations/create_tasks_table.sql',
-      documentationFile: '/TASK_MANAGEMENT_QUICKSTART.md'
-    }, 500);
+    return c.json(
+      {
+        success: false,
+        requiresManualSetup: true,
+        error: 'Failed to check tasks table',
+        details: getErrMsg(error),
+        instructions: [
+          '1. Go to Supabase Dashboard → SQL Editor',
+          '2. Copy the contents of /supabase/migrations/create_tasks_table.sql',
+          '3. Paste and run the SQL',
+          '4. Refresh the Task Management page',
+        ],
+        migrationFile: '/supabase/migrations/create_tasks_table.sql',
+        documentationFile: '/TASK_MANAGEMENT_QUICKSTART.md',
+      },
+      500,
+    );
   }
 });
 
@@ -383,41 +392,42 @@ CREATE TRIGGER tasks_completed_at_trigger
  */
 setupApp.get('/check-tasks-table', async (c) => {
   try {
-
     const supabase = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
     );
 
     // Try to query the tasks table
-    const { error } = await supabase
-      .from('tasks')
-      .select('id')
-      .limit(1);
+    const { error } = await supabase.from('tasks').select('id').limit(1);
 
     if (error) {
-      return c.json({
-        ready: false,
-        tableExists: false,
-        message: 'Tasks table does not exist',
-        error: error.message,
-        needsSetup: true
-      }, 400);
+      return c.json(
+        {
+          ready: false,
+          tableExists: false,
+          message: 'Tasks table does not exist',
+          error: error.message,
+          needsSetup: true,
+        },
+        400,
+      );
     }
 
     return c.json({
       ready: true,
       tableExists: true,
-      message: 'Tasks table is ready'
+      message: 'Tasks table is ready',
     });
-
   } catch (error) {
     log.error('Failed to check tasks table', error);
-    return c.json({
-      ready: false,
-      error: 'Failed to check tasks table',
-      details: getErrMsg(error)
-    }, 500);
+    return c.json(
+      {
+        ready: false,
+        error: 'Failed to check tasks table',
+        details: getErrMsg(error),
+      },
+      500,
+    );
   }
 });
 

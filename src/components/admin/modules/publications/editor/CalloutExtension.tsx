@@ -49,13 +49,25 @@ export const CalloutExtension = Node.create<CalloutOptions>({
       type: {
         default: 'note',
         parseHTML: (element) => {
-          if (element.classList.contains('article-callout-takeaway') || element.classList.contains('preview-callout-takeaway'))
+          if (
+            element.classList.contains('article-callout-takeaway') ||
+            element.classList.contains('preview-callout-takeaway')
+          )
             return 'takeaway';
-          if (element.classList.contains('article-callout-important') || element.classList.contains('preview-callout-important'))
+          if (
+            element.classList.contains('article-callout-important') ||
+            element.classList.contains('preview-callout-important')
+          )
             return 'important';
-          if (element.classList.contains('article-callout-tip') || element.classList.contains('preview-callout-tip'))
+          if (
+            element.classList.contains('article-callout-tip') ||
+            element.classList.contains('preview-callout-tip')
+          )
             return 'tip';
-          if (element.classList.contains('article-callout-warning') || element.classList.contains('preview-callout-warning'))
+          if (
+            element.classList.contains('article-callout-warning') ||
+            element.classList.contains('preview-callout-warning')
+          )
             return 'warning';
           return 'note';
         },

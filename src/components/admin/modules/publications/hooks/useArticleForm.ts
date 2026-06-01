@@ -1,6 +1,6 @@
 /**
  * Publications Feature - useArticleForm Hook
- * 
+ *
  * Hook for managing article form state with validation and auto-save.
  */
 
@@ -22,15 +22,15 @@ interface UseArticleFormReturn {
   isDirty: boolean;
   isSaving: boolean;
   errors: string[];
-  
+
   // Form field updates
   updateField: <K extends keyof ArticleFormData>(field: K, value: ArticleFormData[K]) => void;
   updateMultipleFields: (updates: Partial<ArticleFormData>) => void;
-  
+
   // Utilities
   generateSlugFromTitle: () => void;
   calculateReadingTimeFromBody: () => void;
-  
+
   // Actions
   save: () => Promise<Article | null>;
   validate: () => boolean;
@@ -39,7 +39,7 @@ interface UseArticleFormReturn {
 
 export function useArticleForm(options: UseArticleFormOptions = {}): UseArticleFormReturn {
   const { article, onSuccess, onError, autoSave = false } = options;
-  
+
   // Initialize form data
   const [formData, setFormData] = useState<ArticleFormData>(() => {
     if (article) {
@@ -66,11 +66,11 @@ export function useArticleForm(options: UseArticleFormOptions = {}): UseArticleF
     }
     return DEFAULT_ARTICLE;
   });
-  
+
   const [isDirty, setIsDirty] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [errors, setErrors] = useState<string[]>([]);
-  
+
   // Auto-save timer
   const autoSaveTimerRef = useRef<NodeJS.Timeout | null>(null);
   const initialFormDataRef = useRef<string>(JSON.stringify(formData));
@@ -82,16 +82,16 @@ export function useArticleForm(options: UseArticleFormOptions = {}): UseArticleF
   }, [formData]);
 
   // Update single field
-  const updateField = useCallback(<K extends keyof ArticleFormData>(
-    field: K, 
-    value: ArticleFormData[K]
-  ) => {
-    setFormData(prev => ({ ...prev, [field]: value }));
-  }, []);
+  const updateField = useCallback(
+    <K extends keyof ArticleFormData>(field: K, value: ArticleFormData[K]) => {
+      setFormData((prev) => ({ ...prev, [field]: value }));
+    },
+    [],
+  );
 
   // Update multiple fields at once
   const updateMultipleFields = useCallback((updates: Partial<ArticleFormData>) => {
-    setFormData(prev => ({ ...prev, ...updates }));
+    setFormData((prev) => ({ ...prev, ...updates }));
   }, []);
 
   // Generate slug from title
@@ -160,11 +160,13 @@ export function useArticleForm(options: UseArticleFormOptions = {}): UseArticleF
         // Update existing article
         savedArticle = await PublicationsAPI.Articles.updateArticle({
           id: article.id,
-          ...apiInput
+          ...apiInput,
         });
       } else {
         // Create new article
-        savedArticle = await PublicationsAPI.Articles.createArticle(apiInput as unknown as Parameters<typeof PublicationsAPI.Articles.createArticle>[0]);
+        savedArticle = await PublicationsAPI.Articles.createArticle(
+          apiInput as unknown as Parameters<typeof PublicationsAPI.Articles.createArticle>[0],
+        );
       }
 
       // Update initial form data to current state
@@ -179,11 +181,11 @@ export function useArticleForm(options: UseArticleFormOptions = {}): UseArticleF
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to save article';
       setErrors([errorMessage]);
-      
+
       if (onError) {
         onError(errorMessage);
       }
-      
+
       return null;
     } finally {
       setIsSaving(false);
@@ -237,7 +239,7 @@ export function useArticleForm(options: UseArticleFormOptions = {}): UseArticleF
     } else {
       setFormData(DEFAULT_ARTICLE);
     }
-    
+
     initialFormDataRef.current = JSON.stringify(formData);
     setIsDirty(false);
     setErrors([]);
@@ -254,6 +256,6 @@ export function useArticleForm(options: UseArticleFormOptions = {}): UseArticleF
     calculateReadingTimeFromBody,
     save,
     validate,
-    reset
+    reset,
   };
 }

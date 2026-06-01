@@ -116,8 +116,18 @@ const STATUS_DOT_COLORS: Record<ArticleStatus, string> = {
 };
 
 const MONTH_NAMES = [
-  'January', 'February', 'March', 'April', 'May', 'June',
-  'July', 'August', 'September', 'October', 'November', 'December',
+  'January',
+  'February',
+  'March',
+  'April',
+  'May',
+  'June',
+  'July',
+  'August',
+  'September',
+  'October',
+  'November',
+  'December',
 ];
 
 const DAY_NAMES = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
@@ -137,10 +147,7 @@ export function ContentCalendar({
   const [currentMonth, setCurrentMonth] = useState(today.getMonth());
   const [selectedDay, setSelectedDay] = useState<CalendarDay | null>(null);
 
-  const categoryMap = useMemo(
-    () => new Map(categories.map((c) => [c.id, c])),
-    [categories]
-  );
+  const categoryMap = useMemo(() => new Map(categories.map((c) => [c.id, c])), [categories]);
 
   // Build calendar days with articles assigned
   const calendarDays = useMemo(() => {
@@ -190,9 +197,7 @@ export function ContentCalendar({
 
   // Stats for the month
   const monthStats = useMemo(() => {
-    const monthArticles = calendarDays
-      .filter((d) => d.isCurrentMonth)
-      .flatMap((d) => d.articles);
+    const monthArticles = calendarDays.filter((d) => d.isCurrentMonth).flatMap((d) => d.articles);
 
     return {
       total: monthArticles.length,
@@ -298,8 +303,10 @@ export function ContentCalendar({
                 'min-h-[100px] p-1.5 border-b border-r border-gray-100 text-left transition-colors',
                 !day.isCurrentMonth && 'bg-gray-50/50',
                 day.isToday && 'bg-purple-50/50',
-                selectedDay && isSameDay(selectedDay.date, day.date) && 'ring-2 ring-purple-500 ring-inset',
-                day.articles.length > 0 && 'hover:bg-gray-50 cursor-pointer'
+                selectedDay &&
+                  isSameDay(selectedDay.date, day.date) &&
+                  'ring-2 ring-purple-500 ring-inset',
+                day.articles.length > 0 && 'hover:bg-gray-50 cursor-pointer',
               )}
             >
               <div className="flex items-center justify-between mb-1">
@@ -308,7 +315,7 @@ export function ContentCalendar({
                     'text-xs font-medium',
                     day.isCurrentMonth ? 'text-gray-900' : 'text-gray-400',
                     day.isToday &&
-                      'bg-purple-600 text-white w-6 h-6 rounded-full flex items-center justify-center'
+                      'bg-purple-600 text-white w-6 h-6 rounded-full flex items-center justify-center',
                   )}
                 >
                   {day.date.getDate()}
@@ -331,10 +338,15 @@ export function ContentCalendar({
                       article.status === 'scheduled' && 'bg-blue-100 text-blue-800',
                       article.status === 'draft' && 'bg-gray-100 text-gray-700',
                       article.status === 'in_review' && 'bg-amber-100 text-amber-800',
-                      article.status === 'archived' && 'bg-red-100 text-red-700'
+                      article.status === 'archived' && 'bg-red-100 text-red-700',
                     )}
                   >
-                    <div className={cn('w-1.5 h-1.5 rounded-full flex-shrink-0', STATUS_DOT_COLORS[article.status])} />
+                    <div
+                      className={cn(
+                        'w-1.5 h-1.5 rounded-full flex-shrink-0',
+                        STATUS_DOT_COLORS[article.status],
+                      )}
+                    />
                     <span className="truncate">{article.title}</span>
                   </div>
                 ))}
@@ -352,7 +364,12 @@ export function ContentCalendar({
               {formatDate(selectedDay.date)} — {selectedDay.articles.length} article
               {selectedDay.articles.length !== 1 ? 's' : ''}
             </h3>
-            <Button variant="ghost" size="sm" onClick={() => setSelectedDay(null)} className="text-xs">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setSelectedDay(null)}
+              className="text-xs"
+            >
               Close
             </Button>
           </div>
@@ -368,25 +385,31 @@ export function ContentCalendar({
                   <div
                     className={cn(
                       'w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5',
-                      article.status === 'published' ? 'bg-green-100' : 'bg-gray-100'
+                      article.status === 'published' ? 'bg-green-100' : 'bg-gray-100',
                     )}
                   >
-                    <FileText className={cn(
-                      'h-4 w-4',
-                      article.status === 'published' ? 'text-green-600' : 'text-gray-500'
-                    )} />
+                    <FileText
+                      className={cn(
+                        'h-4 w-4',
+                        article.status === 'published' ? 'text-green-600' : 'text-gray-500',
+                      )}
+                    />
                   </div>
 
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 mb-1">
-                      <h4 className="text-sm font-medium text-gray-900 truncate">{article.title}</h4>
+                      <h4 className="text-sm font-medium text-gray-900 truncate">
+                        {article.title}
+                      </h4>
                       {article.is_featured && (
                         <Star className="h-3 w-3 text-amber-500 flex-shrink-0" />
                       )}
                     </div>
                     <p className="text-xs text-gray-500 line-clamp-1 mb-2">{article.excerpt}</p>
                     <div className="flex items-center gap-2 flex-wrap">
-                      <Badge className={cn('text-[10px] px-1.5 py-0', STATUS_COLORS[article.status])}>
+                      <Badge
+                        className={cn('text-[10px] px-1.5 py-0', STATUS_COLORS[article.status])}
+                      >
                         {STATUS_LABELS[article.status]}
                       </Badge>
                       {category && (

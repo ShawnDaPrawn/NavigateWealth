@@ -24,13 +24,7 @@ interface ArchivePolicyDialogProps {
   policy: PolicyRecord | null;
 }
 
-const ARCHIVE_REASONS = [
-  'Cancellation',
-  'Maturity',
-  'Replacement',
-  'Lapsed',
-  'Other',
-];
+const ARCHIVE_REASONS = ['Cancellation', 'Maturity', 'Replacement', 'Lapsed', 'Other'];
 
 export function ArchivePolicyDialog({
   isOpen,
@@ -58,8 +52,8 @@ export function ArchivePolicyDialog({
             <AlertDialogTitle className="text-amber-700">Archive Policy</AlertDialogTitle>
           </div>
           <AlertDialogDescription>
-            You are about to archive <strong>{String(policy?.providerName ?? '')}</strong>.
-            This will remove it from active calculations but keep a historical record.
+            You are about to archive <strong>{String(policy?.providerName ?? '')}</strong>. This
+            will remove it from active calculations but keep a historical record.
           </AlertDialogDescription>
         </AlertDialogHeader>
 

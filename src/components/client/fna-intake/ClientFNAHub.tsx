@@ -70,7 +70,10 @@ export function ClientFNAHub({
     <div className="space-y-4">
       {statusError && (
         <div className="flex flex-col gap-3 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-900 sm:flex-row sm:items-center sm:justify-between">
-          <span>We could not load your needs analysis status. You can still start or continue your discovery.</span>
+          <span>
+            We could not load your needs analysis status. You can still start or continue your
+            discovery.
+          </span>
           {onRetryStatus && (
             <Button variant="outline" size="sm" onClick={onRetryStatus} disabled={isStatusLoading}>
               {isStatusLoading ? 'Retrying…' : 'Retry'}
@@ -80,8 +83,8 @@ export function ClientFNAHub({
       )}
       {requestInfoAt && status === 'client_draft' && (
         <div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
-          <strong>Action needed:</strong> Your adviser needs more information. Open your discovery form to
-          update and resubmit.
+          <strong>Action needed:</strong> Your adviser needs more information. Open your discovery
+          form to update and resubmit.
         </div>
       )}
 
@@ -112,7 +115,10 @@ export function ClientFNAHub({
 
             <div className="flex flex-wrap gap-2">
               {(status === 'not_started' || status === 'client_draft') && (
-                <Button onClick={() => setIntakeMode('edit')} className="bg-primary text-primary-foreground">
+                <Button
+                  onClick={() => setIntakeMode('edit')}
+                  className="bg-primary text-primary-foreground"
+                >
                   {status === 'client_draft' ? 'Continue' : 'Start your needs analysis'}
                 </Button>
               )}
@@ -136,8 +142,8 @@ export function ClientFNAHub({
       {status === 'not_started' && (
         <Card className="border-purple-100 bg-purple-50/40">
           <CardContent className="py-4 text-sm text-gray-700">
-            <strong>You prepare. We analyse. Together we plan.</strong> Share your financial facts here so
-            your adviser can review, calculate, and publish your formal needs analysis.
+            <strong>You prepare. We analyse. Together we plan.</strong> Share your financial facts
+            here so your adviser can review, calculate, and publish your formal needs analysis.
           </CardContent>
         </Card>
       )}

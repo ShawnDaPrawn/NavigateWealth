@@ -45,7 +45,9 @@ export function useImagePrefetch(urls: string[], options: PrefetchOptions = {}) 
     const run = () => prefetchImages(urls);
 
     const timeoutId = window.setTimeout(() => {
-      const ric = (window as any).requestIdleCallback as undefined | ((cb: () => void, opts?: { timeout: number }) => number);
+      const ric = (window as any).requestIdleCallback as
+        | undefined
+        | ((cb: () => void, opts?: { timeout: number }) => number);
       if (ric) {
         const id = ric(run, { timeout: idleTimeoutMs });
         return () => (window as any).cancelIdleCallback?.(id);
@@ -58,4 +60,3 @@ export function useImagePrefetch(urls: string[], options: PrefetchOptions = {}) 
     return () => window.clearTimeout(timeoutId);
   }, [enabled, delayMs, idleTimeoutMs, urls]);
 }
-

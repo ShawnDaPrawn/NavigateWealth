@@ -19,13 +19,13 @@ Client-led FNA intake lets clients complete Step 1 discovery in the portal. Advi
 
 ## Troubleshooting
 
-| Symptom | Likely cause | Action |
-|---------|--------------|--------|
-| Queue empty but client says they submitted | Adviser not assigned; client batch-status lag | Refresh queue; verify client session in admin drawer |
-| Accept fails / 403 | Non-real JWT or wrong role | Re-login as adviser/admin |
-| Step 2 prefill incomplete (investment/estate) | Bespoke client subset vs full admin Step 1 | Manually complete missing fields; log defect |
-| Accept twice creates duplicate concern | Postgres accept uses atomic claim | Second accept is idempotent — same `linkedFnaId` |
-| Client cannot see intake UI | Feature flag off | Set `VITE_FNA_INTAKE_ENABLED=true` on environment |
+| Symptom                                       | Likely cause                                  | Action                                               |
+| --------------------------------------------- | --------------------------------------------- | ---------------------------------------------------- |
+| Queue empty but client says they submitted    | Adviser not assigned; client batch-status lag | Refresh queue; verify client session in admin drawer |
+| Accept fails / 403                            | Non-real JWT or wrong role                    | Re-login as adviser/admin                            |
+| Step 2 prefill incomplete (investment/estate) | Bespoke client subset vs full admin Step 1    | Manually complete missing fields; log defect         |
+| Accept twice creates duplicate concern        | Postgres accept uses atomic claim             | Second accept is idempotent — same `linkedFnaId`     |
+| Client cannot see intake UI                   | Feature flag off                              | Set `VITE_FNA_INTAKE_ENABLED=true` on environment    |
 
 ## Escalation
 

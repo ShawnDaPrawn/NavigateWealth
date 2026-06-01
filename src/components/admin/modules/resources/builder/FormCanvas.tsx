@@ -7,13 +7,7 @@ import type { LetterMeta } from '../templates/LetterheadPdfLayout';
 import { resolveSignatories } from '../templates/LetterheadPdfLayout';
 import { resolveRecipients } from '../templates/LetterheadPdfLayout';
 import { getBlockDefinition } from './registry';
-import {
-  Trash2,
-  ChevronUp,
-  ChevronDown,
-  Copy,
-  GripVertical,
-} from 'lucide-react';
+import { Trash2, ChevronUp, ChevronDown, Copy, GripVertical } from 'lucide-react';
 
 interface FormCanvasProps {
   blocks: FormBlock[];
@@ -67,36 +61,52 @@ const BlockActionToolbar = ({
     onClick={(e) => e.stopPropagation()}
   >
     <button
-      onClick={(e) => { e.stopPropagation(); onMove?.(blockId, 'up'); }}
+      onClick={(e) => {
+        e.stopPropagation();
+        onMove?.(blockId, 'up');
+      }}
       disabled={isFirst}
       className={cn(
-        "w-6 h-6 flex items-center justify-center rounded bg-white border border-gray-200 shadow-sm transition-colors",
-        isFirst ? "text-gray-300 cursor-not-allowed" : "text-gray-500 hover:bg-blue-50 hover:text-blue-600 hover:border-blue-200"
+        'w-6 h-6 flex items-center justify-center rounded bg-white border border-gray-200 shadow-sm transition-colors',
+        isFirst
+          ? 'text-gray-300 cursor-not-allowed'
+          : 'text-gray-500 hover:bg-blue-50 hover:text-blue-600 hover:border-blue-200',
       )}
       title="Move Up (Alt+↑)"
     >
       <ChevronUp className="w-3.5 h-3.5" />
     </button>
     <button
-      onClick={(e) => { e.stopPropagation(); onMove?.(blockId, 'down'); }}
+      onClick={(e) => {
+        e.stopPropagation();
+        onMove?.(blockId, 'down');
+      }}
       disabled={isLast}
       className={cn(
-        "w-6 h-6 flex items-center justify-center rounded bg-white border border-gray-200 shadow-sm transition-colors",
-        isLast ? "text-gray-300 cursor-not-allowed" : "text-gray-500 hover:bg-blue-50 hover:text-blue-600 hover:border-blue-200"
+        'w-6 h-6 flex items-center justify-center rounded bg-white border border-gray-200 shadow-sm transition-colors',
+        isLast
+          ? 'text-gray-300 cursor-not-allowed'
+          : 'text-gray-500 hover:bg-blue-50 hover:text-blue-600 hover:border-blue-200',
       )}
       title="Move Down (Alt+↓)"
     >
       <ChevronDown className="w-3.5 h-3.5" />
     </button>
     <button
-      onClick={(e) => { e.stopPropagation(); onDuplicate?.(blockId); }}
+      onClick={(e) => {
+        e.stopPropagation();
+        onDuplicate?.(blockId);
+      }}
       className="w-6 h-6 flex items-center justify-center rounded bg-white border border-gray-200 shadow-sm text-gray-500 hover:bg-purple-50 hover:text-purple-600 hover:border-purple-200 transition-colors"
       title="Duplicate (Ctrl+D)"
     >
       <Copy className="w-3.5 h-3.5" />
     </button>
     <button
-      onClick={(e) => { e.stopPropagation(); onDelete?.(blockId); }}
+      onClick={(e) => {
+        e.stopPropagation();
+        onDelete?.(blockId);
+      }}
       className="w-6 h-6 flex items-center justify-center rounded bg-white border border-gray-200 shadow-sm text-gray-500 hover:bg-red-50 hover:text-red-500 hover:border-red-200 transition-colors"
       title="Delete (Del)"
     >
@@ -111,10 +121,8 @@ const BlockActionToolbar = ({
 const DropIndicator = ({ isActive }: { isActive: boolean }) => (
   <div
     className={cn(
-      "h-1 w-full rounded-full transition-all duration-150",
-      isActive
-        ? "bg-blue-500 shadow-[0_0_6px_rgba(59,130,246,0.5)] my-0.5"
-        : "bg-transparent my-0"
+      'h-1 w-full rounded-full transition-all duration-150',
+      isActive ? 'bg-blue-500 shadow-[0_0_6px_rgba(59,130,246,0.5)] my-0.5' : 'bg-transparent my-0',
     )}
   />
 );
@@ -182,7 +190,12 @@ const ContainerDropZone = ({
         <div className="absolute inset-0 bg-purple-100/60 border-2 border-dashed border-purple-400 rounded pointer-events-none z-10 flex items-center justify-center backdrop-blur-[1px]">
           <div className="bg-purple-600 text-white text-[10px] px-3 py-1.5 rounded-full font-medium shadow-lg flex items-center gap-1.5">
             <svg width="12" height="12" viewBox="0 0 12 12" fill="none" className="flex-shrink-0">
-              <path d="M6 2v8M2 6h8" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+              <path
+                d="M6 2v8M2 6h8"
+                stroke="currentColor"
+                strokeWidth="1.5"
+                strokeLinecap="round"
+              />
             </svg>
             Drop inside container
           </div>
@@ -239,9 +252,17 @@ const DraggableBlock = ({
 }) => {
   const isDragging = dragState?.blockId === block.id;
   // Show drop indicators for both canvas block reordering and toolbox drops
-  const isAnyDragActive = (dragState !== null) || !!isToolboxDragActive;
-  const showDropBefore = dropTargetIndex === flatIndex && isAnyDragActive && (dragState === null || (dragState.blockIndex !== flatIndex && dragState.blockIndex !== flatIndex - 1));
-  const showDropAfter = dropTargetIndex === flatIndex + 1 && isAnyDragActive && (dragState === null || (dragState.blockIndex !== flatIndex && dragState.blockIndex !== flatIndex + 1));
+  const isAnyDragActive = dragState !== null || !!isToolboxDragActive;
+  const showDropBefore =
+    dropTargetIndex === flatIndex &&
+    isAnyDragActive &&
+    (dragState === null ||
+      (dragState.blockIndex !== flatIndex && dragState.blockIndex !== flatIndex - 1));
+  const showDropAfter =
+    dropTargetIndex === flatIndex + 1 &&
+    isAnyDragActive &&
+    (dragState === null ||
+      (dragState.blockIndex !== flatIndex && dragState.blockIndex !== flatIndex + 1));
 
   return (
     <div className="contents">
@@ -286,14 +307,14 @@ const DraggableBlock = ({
           onSelect(block.id);
         }}
         className={cn(
-          "relative group cursor-pointer transition-all duration-200 rounded",
+          'relative group cursor-pointer transition-all duration-200 rounded',
           // Use ring (box-shadow) instead of border so selection/hover doesn't shift layout
           isSelected
-            ? "ring-2 ring-blue-500 ring-offset-1 bg-blue-50/10"
-            : "hover:ring-2 hover:ring-blue-200",
-          isDragging && "opacity-40 scale-[0.98]",
+            ? 'ring-2 ring-blue-500 ring-offset-1 bg-blue-50/10'
+            : 'hover:ring-2 hover:ring-blue-200',
+          isDragging && 'opacity-40 scale-[0.98]',
           // Section headers get the PDF's .section margin (except if first on page)
-          block.type === 'section_header' && !isPageFirstBlock ? 'mt-[6mm]' : ''
+          block.type === 'section_header' && !isPageFirstBlock ? 'mt-[6mm]' : '',
         )}
       >
         {/* Drag Handle — visible on hover, left side */}
@@ -336,23 +357,22 @@ const DraggableBlock = ({
 // ============================================================================
 // MAIN FORM CANVAS COMPONENT
 // ============================================================================
-export const FormCanvas = ({ 
-    blocks, 
-    selectedBlockId, 
-    onSelectBlock,
-    onDeleteBlock,
-    onMoveBlock,
-    onDuplicateBlock,
-    onReorderBlocks,
-    onMoveBlockToContainer,
-    onAddBlockToContainer,
-    onAddToolboxBlock,
-    docTitle = "Client Consent Form",
-    issueDate = new Date().toLocaleDateString('en-GB'),
-    category = "General",
-    letterMeta
+export const FormCanvas = ({
+  blocks,
+  selectedBlockId,
+  onSelectBlock,
+  onDeleteBlock,
+  onMoveBlock,
+  onDuplicateBlock,
+  onReorderBlocks,
+  onMoveBlockToContainer,
+  onAddBlockToContainer,
+  onAddToolboxBlock,
+  docTitle = 'Client Consent Form',
+  issueDate = new Date().toLocaleDateString('en-GB'),
+  category = 'General',
+  letterMeta,
 }: FormCanvasProps) => {
-
   // -- DRAG STATE --
   const [dragState, setDragState] = useState<DragState | null>(null);
   const [dropTargetIndex, setDropTargetIndex] = useState<number | null>(null);
@@ -386,31 +406,35 @@ export const FormCanvas = ({
     setDropTargetIndex(null);
     setIsToolboxDragActive(false);
   }, [dragState, dropTargetIndex, onReorderBlocks]);
-  
+
   // -- PAGE SPLITTING LOGIC --
   const pages = useMemo(() => {
-    const pagesList: { id: string, blocks: { block: FormBlock, flatIndex: number }[], breakBlockId?: string }[] = [];
-    let currentBlocks: { block: FormBlock, flatIndex: number }[] = [];
-    
+    const pagesList: {
+      id: string;
+      blocks: { block: FormBlock; flatIndex: number }[];
+      breakBlockId?: string;
+    }[] = [];
+    let currentBlocks: { block: FormBlock; flatIndex: number }[] = [];
+
     blocks.forEach((block, flatIndex) => {
       if (block.type === 'page_break') {
-        pagesList.push({ 
-          id: `page-${pagesList.length}`, 
-          blocks: [...currentBlocks], 
-          breakBlockId: block.id 
+        pagesList.push({
+          id: `page-${pagesList.length}`,
+          blocks: [...currentBlocks],
+          breakBlockId: block.id,
         });
         currentBlocks = [];
       } else {
         currentBlocks.push({ block, flatIndex });
       }
     });
-    
+
     // Push the final page
-    pagesList.push({ 
-      id: `page-${pagesList.length}`, 
-      blocks: [...currentBlocks] 
+    pagesList.push({
+      id: `page-${pagesList.length}`,
+      blocks: [...currentBlocks],
     });
-    
+
     return pagesList;
   }, [blocks]);
 
@@ -427,51 +451,62 @@ export const FormCanvas = ({
       case 'page_break':
         return null;
       default:
-        return <div className="p-2 bg-red-50 text-red-500 text-xs">Unknown Block: {block.type}</div>;
+        return (
+          <div className="p-2 bg-red-50 text-red-500 text-xs">Unknown Block: {block.type}</div>
+        );
     }
   }, []);
 
   // Wrap render for containers to include drop zone
-  const renderBlockWithDropZone = useCallback((block: FormBlock) => {
-    const content = renderBlockContent(block);
+  const renderBlockWithDropZone = useCallback(
+    (block: FormBlock) => {
+      const content = renderBlockContent(block);
 
-    if (block.type === 'container') {
-      return (
-        <ContainerDropZone
-          containerId={block.id}
-          onMoveBlockToContainer={onMoveBlockToContainer}
-          onAddBlockToContainer={onAddBlockToContainer}
-        >
-          {content}
-        </ContainerDropZone>
-      );
-    }
+      if (block.type === 'container') {
+        return (
+          <ContainerDropZone
+            containerId={block.id}
+            onMoveBlockToContainer={onMoveBlockToContainer}
+            onAddBlockToContainer={onAddBlockToContainer}
+          >
+            {content}
+          </ContainerDropZone>
+        );
+      }
 
-    return content;
-  }, [renderBlockContent, onMoveBlockToContainer, onAddBlockToContainer]);
+      return content;
+    },
+    [renderBlockContent, onMoveBlockToContainer, onAddBlockToContainer],
+  );
 
   // Handle drops on the canvas background (from toolbox)
-  const handleCanvasDrop = useCallback((e: React.DragEvent) => {
-    const blockType = e.dataTransfer.getData('application/x-block-type');
-    if (blockType && onAddToolboxBlock) {
-      e.preventDefault();
-      onAddToolboxBlock(blockType as BlockType);
-    }
-    setDropTargetIndex(null);
-    setIsToolboxDragActive(false);
-  }, [onAddToolboxBlock]);
+  const handleCanvasDrop = useCallback(
+    (e: React.DragEvent) => {
+      const blockType = e.dataTransfer.getData('application/x-block-type');
+      if (blockType && onAddToolboxBlock) {
+        e.preventDefault();
+        onAddToolboxBlock(blockType as BlockType);
+      }
+      setDropTargetIndex(null);
+      setIsToolboxDragActive(false);
+    },
+    [onAddToolboxBlock],
+  );
 
   // Wrap toolbox block drop on existing blocks to also clean up drag state
-  const handleToolboxDropOnBlock = useCallback((type: BlockType, atIndex?: number) => {
-    if (onAddToolboxBlock) {
-      onAddToolboxBlock(type, atIndex);
-    }
-    setDropTargetIndex(null);
-    setIsToolboxDragActive(false);
-  }, [onAddToolboxBlock]);
+  const handleToolboxDropOnBlock = useCallback(
+    (type: BlockType, atIndex?: number) => {
+      if (onAddToolboxBlock) {
+        onAddToolboxBlock(type, atIndex);
+      }
+      setDropTargetIndex(null);
+      setIsToolboxDragActive(false);
+    },
+    [onAddToolboxBlock],
+  );
 
   return (
-    <div 
+    <div
       className="flex-1 bg-gray-100 overflow-y-auto p-8 flex flex-col items-center gap-8"
       onDragOver={(e) => {
         e.preventDefault();
@@ -491,309 +526,384 @@ export const FormCanvas = ({
       onDrop={handleCanvasDrop}
     >
       {/* Inject PDF styles for canvas WYSIWYG matching */}
-      <style dangerouslySetInnerHTML={{ __html: category === 'Letters' ? LETTER_CSS : BASE_PDF_CSS }} />
+      <style
+        dangerouslySetInnerHTML={{ __html: category === 'Letters' ? LETTER_CSS : BASE_PDF_CSS }}
+      />
 
       {/* Keyboard shortcuts hint */}
       <div className="w-[210mm] flex justify-end">
         <div className="text-[10px] text-gray-400 flex items-center gap-3">
-          <span><kbd className="px-1 py-0.5 bg-gray-200 rounded text-[9px] font-mono">Ctrl</kbd>+<kbd className="px-1 py-0.5 bg-gray-200 rounded text-[9px] font-mono">S</kbd> Save</span>
-          <span><kbd className="px-1 py-0.5 bg-gray-200 rounded text-[9px] font-mono">Ctrl</kbd>+<kbd className="px-1 py-0.5 bg-gray-200 rounded text-[9px] font-mono">Z</kbd> Undo</span>
-          <span><kbd className="px-1 py-0.5 bg-gray-200 rounded text-[9px] font-mono">Ctrl</kbd>+<kbd className="px-1 py-0.5 bg-gray-200 rounded text-[9px] font-mono">⇧Z</kbd> Redo</span>
+          <span>
+            <kbd className="px-1 py-0.5 bg-gray-200 rounded text-[9px] font-mono">Ctrl</kbd>+
+            <kbd className="px-1 py-0.5 bg-gray-200 rounded text-[9px] font-mono">S</kbd> Save
+          </span>
+          <span>
+            <kbd className="px-1 py-0.5 bg-gray-200 rounded text-[9px] font-mono">Ctrl</kbd>+
+            <kbd className="px-1 py-0.5 bg-gray-200 rounded text-[9px] font-mono">Z</kbd> Undo
+          </span>
+          <span>
+            <kbd className="px-1 py-0.5 bg-gray-200 rounded text-[9px] font-mono">Ctrl</kbd>+
+            <kbd className="px-1 py-0.5 bg-gray-200 rounded text-[9px] font-mono">⇧Z</kbd> Redo
+          </span>
           <span className="w-px h-3 bg-gray-300"></span>
-          <span><kbd className="px-1 py-0.5 bg-gray-200 rounded text-[9px] font-mono">Alt</kbd>+<kbd className="px-1 py-0.5 bg-gray-200 rounded text-[9px] font-mono">↑↓</kbd> Move</span>
-          <span><kbd className="px-1 py-0.5 bg-gray-200 rounded text-[9px] font-mono">Ctrl</kbd>+<kbd className="px-1 py-0.5 bg-gray-200 rounded text-[9px] font-mono">D</kbd> Duplicate</span>
-          <span><kbd className="px-1 py-0.5 bg-gray-200 rounded text-[9px] font-mono">Del</kbd> Delete</span>
-          <span><kbd className="px-1 py-0.5 bg-gray-200 rounded text-[9px] font-mono">Esc</kbd> Deselect</span>
+          <span>
+            <kbd className="px-1 py-0.5 bg-gray-200 rounded text-[9px] font-mono">Alt</kbd>+
+            <kbd className="px-1 py-0.5 bg-gray-200 rounded text-[9px] font-mono">↑↓</kbd> Move
+          </span>
+          <span>
+            <kbd className="px-1 py-0.5 bg-gray-200 rounded text-[9px] font-mono">Ctrl</kbd>+
+            <kbd className="px-1 py-0.5 bg-gray-200 rounded text-[9px] font-mono">D</kbd> Duplicate
+          </span>
+          <span>
+            <kbd className="px-1 py-0.5 bg-gray-200 rounded text-[9px] font-mono">Del</kbd> Delete
+          </span>
+          <span>
+            <kbd className="px-1 py-0.5 bg-gray-200 rounded text-[9px] font-mono">Esc</kbd> Deselect
+          </span>
         </div>
       </div>
-      
+
       {pages.map((page, pageIndex) => (
         <div className="contents" key={page.id}>
-            {/* A4 Page Container — 210mm x 297mm */}
-            <div 
-                className="bg-white shadow-lg relative transition-all duration-200 pdf-preview-container"
-                style={{ 
-                    width: '210mm', 
-                    minHeight: '297mm',
-                    paddingLeft: '10mm',
-                    paddingRight: '10mm',
-                    paddingBottom: '23mm',
-                    paddingTop: pageIndex === 0 ? '5mm' : '12.5mm',
-                    fontFamily: '"Inter", "Segoe UI", Arial, sans-serif',
-                    fontSize: category === 'Letters' ? '10px' : '9.5px',
-                    color: '#111827',
+          {/* A4 Page Container — 210mm x 297mm */}
+          <div
+            className="bg-white shadow-lg relative transition-all duration-200 pdf-preview-container"
+            style={{
+              width: '210mm',
+              minHeight: '297mm',
+              paddingLeft: '10mm',
+              paddingRight: '10mm',
+              paddingBottom: '23mm',
+              paddingTop: pageIndex === 0 ? '5mm' : '12.5mm',
+              fontFamily: '"Inter", "Segoe UI", Arial, sans-serif',
+              fontSize: category === 'Letters' ? '10px' : '9.5px',
+              color: '#111827',
+            }}
+          >
+            {/* DELETE PAGE BUTTON (For pages > 0) */}
+            {pageIndex > 0 && onDeleteBlock && (
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  const prevPage = pages[pageIndex - 1];
+                  if (prevPage && prevPage.breakBlockId) {
+                    onDeleteBlock(prevPage.breakBlockId);
+                  }
                 }}
-            >
-                {/* DELETE PAGE BUTTON (For pages > 0) */}
-                {pageIndex > 0 && onDeleteBlock && (
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      const prevPage = pages[pageIndex - 1];
-                      if (prevPage && prevPage.breakBlockId) {
-                        onDeleteBlock(prevPage.breakBlockId);
-                      }
-                    }}
-                    className="absolute -top-3 -right-3 z-50 bg-white text-red-500 border border-gray-200 shadow-sm p-1.5 rounded-full hover:bg-red-50 hover:border-red-200 hover:text-red-600 transition-colors"
-                    title="Delete Page"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </button>
-                )}
+                className="absolute -top-3 -right-3 z-50 bg-white text-red-500 border border-gray-200 shadow-sm p-1.5 rounded-full hover:bg-red-50 hover:border-red-200 hover:text-red-600 transition-colors"
+                title="Delete Page"
+              >
+                <Trash2 className="w-4 h-4" />
+              </button>
+            )}
 
-                {/* ============================================================ */}
-                {/* PAGE CHROME: Letterhead vs Form layout based on category     */}
-                {/* ============================================================ */}
+            {/* ============================================================ */}
+            {/* PAGE CHROME: Letterhead vs Form layout based on category     */}
+            {/* ============================================================ */}
 
-                {/* LETTER MODE — Professional letterhead */}
-                {pageIndex === 0 && category === 'Letters' && (
-                    <div className="contents">
-                      {/* Letterhead Block */}
-                      <div className="letterhead-block">
-                        <div className="letterhead-brand">
-                          <div className="letterhead-logo">
-                            Navigate <span className="lh-accent">Wealth</span>
-                          </div>
-                          <div className="letterhead-tagline">
-                            Independent Financial Advisory Services
-                          </div>
-                          <div className="letterhead-fsp">
-                            Authorised Financial Services Provider &mdash; FSP 54606
-                          </div>
-                        </div>
-                        <div className="letterhead-contact">
-                          <strong>Wealthfront (Pty) Ltd</strong><br/>
-                          t/a Navigate Wealth<br/>
-                          Route 21 Corporate Park<br/>
-                          25 Sovereign Drive, Milestone Place A<br/>
-                          Centurion, 0178<br/><br/>
-                          Tel: (012) 667 2505<br/>
-                          Email: info@navigatewealth.co
-                        </div>
-                      </div>
-
-                      {/* Date */}
-                      <div className="letter-date">
-                        {letterMeta?.date || new Date().toLocaleDateString('en-ZA', { day: '2-digit', month: 'long', year: 'numeric' })}
-                      </div>
-
-                      {/* Recipients */}
-                      {(() => {
-                        const recipients = letterMeta ? resolveRecipients(letterMeta) : [];
-                        return (
-                          <div className="letter-recipient" style={{ opacity: recipients.length > 0 ? 1 : 0.4, fontSize: '10px', lineHeight: '1.6' }}>
-                            {recipients.length > 0 ? (
-                              <div className="contents">
-                                {recipients.map((recipient, idx) => (
-                                  <div key={idx} style={{ marginBottom: idx < recipients.length - 1 ? '3mm' : undefined }}>
-                                    {recipient.name && <div style={{ fontWeight: 600 }}>{recipient.name}</div>}
-                                    {recipient.title && <div>{recipient.title}</div>}
-                                    {recipient.company && <div>{recipient.company}</div>}
-                                    {recipient.address && <div style={{ whiteSpace: 'pre-line' }}>{recipient.address}</div>}
-                                  </div>
-                                ))}
-                              </div>
-                            ) : (
-                              <div className="contents">
-                                [Recipient Name]<br/>
-                                [Title / Company]<br/>
-                                [Address Line 1]<br/>
-                                [City, Postal Code]
-                              </div>
-                            )}
-                          </div>
-                        );
-                      })()}
-
-                      {/* Subject / Reference */}
-                      {(() => {
-                        const hasSubject = letterMeta?.subject || letterMeta?.reference;
-                        const subjectText = letterMeta?.subject || (docTitle !== 'Company Letter' ? docTitle : '');
-                        return (
-                          <div className="letter-subject" style={{ opacity: (hasSubject || subjectText) ? 1 : 0.4 }}>
-                            {letterMeta?.reference && (
-                              <span>
-                                <span className="subject-label">Ref: </span>
-                                {letterMeta.reference}
-                                {subjectText && <span>&nbsp;&mdash;&nbsp;</span>}
-                              </span>
-                            )}
-                            <span>
-                              <span className="subject-label">RE: </span>
-                              {subjectText || '[Subject of correspondence]'}
-                            </span>
-                          </div>
-                        );
-                      })()}
+            {/* LETTER MODE — Professional letterhead */}
+            {pageIndex === 0 && category === 'Letters' && (
+              <div className="contents">
+                {/* Letterhead Block */}
+                <div className="letterhead-block">
+                  <div className="letterhead-brand">
+                    <div className="letterhead-logo">
+                      Navigate <span className="lh-accent">Wealth</span>
                     </div>
-                )}
-
-                {/* Subsequent page header for letters */}
-                {pageIndex > 0 && category === 'Letters' && (
-                    <div className="letter-continuation-header">
-                      <span className="cont-brand">
-                        Navigate <span className="cont-accent">Wealth</span>
-                      </span>
-                      <span>
-                        {docTitle} &mdash; Page {pageIndex + 1}
-                      </span>
+                    <div className="letterhead-tagline">
+                      Independent Financial Advisory Services
                     </div>
-                )}
-
-                {/* FORM MODE — Standard form chrome */}
-                {pageIndex === 0 && category !== 'Letters' && (
-                  <div className="contents">
-                    {/* MASTHEAD */}
-                    <div className="top-masthead">
-                        <div className="masthead-left">{(docTitle || 'DOCUMENT').toUpperCase()}</div>
-                        <div className="masthead-right">
-                            <strong>Wealthfront (Pty) Ltd</strong> t/a Navigate Wealth &nbsp;|&nbsp; <strong>FSP 54606</strong><br/>
-                            Email: info@navigatewealth.co
-                        </div>
-                    </div>
-
-                    {/* HEADER */}
-                    <div>
-                        <header className="page-header-full">
-                            <div className="header-row">
-                                <div className="brand-block">
-                                    <div className="logo">Navigate <span className="wealth">Wealth</span></div>
-                                    <div className="brand-subline">Independent Financial Advisory Services</div>
-                                </div>
-
-                                <div className="doc-block">
-                                    <h1 className="doc-title">{docTitle}</h1>
-                                    <div className="meta-grid">
-                                        <div className="meta-k">Issue date</div>
-                                        <div className="meta-v">{issueDate}</div>
-                                    </div>
-                                </div>
-                            </div>
-                        </header>
-
-                        <hr className="section-divider" style={{ borderTop: '2px solid #6b7280', margin: '4mm 0 6mm 0' }} />
+                    <div className="letterhead-fsp">
+                      Authorised Financial Services Provider &mdash; FSP 54606
                     </div>
                   </div>
-                )}
-
-                {/* BLOCKS RENDERER — no gap; spacing is handled by individual
-                     block styles (e.g. .section margin on section_headers)
-                     to match the PDF output exactly */}
-                <div className="flex flex-col" style={
-                  category === 'Letters' && letterMeta
-                    ? { fontSize: `${letterMeta.fontSize || 10}px`, lineHeight: letterMeta.lineHeight || 1.65 }
-                    : undefined
-                }>
-                    {page.blocks.length === 0 && pageIndex === 0 && pages.length === 1 && (
-                        <div className="text-center py-20 text-gray-300 border-2 border-dashed border-gray-200 rounded-lg">
-                            Drag or click blocks from the toolbox to start building
-                        </div>
-                    )}
-
-                    {page.blocks.map(({ block, flatIndex }, indexInPage) => (
-                        <DraggableBlock
-                          key={block.id}
-                          block={block}
-                          flatIndex={flatIndex}
-                          isSelected={selectedBlockId === block.id}
-                          isFirst={flatIndex === 0}
-                          isLast={flatIndex === blocks.length - 1}
-                          onSelect={onSelectBlock}
-                          onDelete={onDeleteBlock}
-                          onMove={onMoveBlock}
-                          onDuplicate={onDuplicateBlock}
-                          dragState={dragState}
-                          dropTargetIndex={dropTargetIndex}
-                          onDragStart={handleDragStart}
-                          onDragEnd={handleDragEnd}
-                          onDragOverBlock={handleDragOverBlock}
-                          onDropOnBlock={handleDropOnBlock}
-                          renderBlockContent={renderBlockWithDropZone}
-                          isPageFirstBlock={indexInPage === 0}
-                          onAddToolboxBlock={handleToolboxDropOnBlock}
-                          isToolboxDragActive={isToolboxDragActive}
-                        />
-                    ))}
+                  <div className="letterhead-contact">
+                    <strong>Wealthfront (Pty) Ltd</strong>
+                    <br />
+                    t/a Navigate Wealth
+                    <br />
+                    Route 21 Corporate Park
+                    <br />
+                    25 Sovereign Drive, Milestone Place A<br />
+                    Centurion, 0178
+                    <br />
+                    <br />
+                    Tel: (012) 667 2505
+                    <br />
+                    Email: info@navigatewealth.co
+                  </div>
                 </div>
 
-                {/* LETTER CLOSING / SIGNATORY — rendered from letterMeta after all blocks on the last page */}
-                {category === 'Letters' && pageIndex === pages.length - 1 && (() => {
-                  const signatories = letterMeta ? resolveSignatories(letterMeta) : [];
-                  const hasClosing = letterMeta?.closing || signatories.length > 0;
-                  if (!hasClosing) return null;
+                {/* Date */}
+                <div className="letter-date">
+                  {letterMeta?.date ||
+                    new Date().toLocaleDateString('en-ZA', {
+                      day: '2-digit',
+                      month: 'long',
+                      year: 'numeric',
+                    })}
+                </div>
+
+                {/* Recipients */}
+                {(() => {
+                  const recipients = letterMeta ? resolveRecipients(letterMeta) : [];
                   return (
-                    <div className="letter-closing">
-                      {letterMeta?.closing && (
-                        <div className="closing-regards">{letterMeta.closing},</div>
-                      )}
-                      {signatories.length > 0 && (
-                        <div className="closing-signatories">
-                          {signatories.map((signatory, index) => (
-                            <div key={index} className="closing-signatory">
-                              <div className="closing-signature-line" />
-                              {signatory.name && (
-                                <div className="closing-name">{signatory.name}</div>
+                    <div
+                      className="letter-recipient"
+                      style={{
+                        opacity: recipients.length > 0 ? 1 : 0.4,
+                        fontSize: '10px',
+                        lineHeight: '1.6',
+                      }}
+                    >
+                      {recipients.length > 0 ? (
+                        <div className="contents">
+                          {recipients.map((recipient, idx) => (
+                            <div
+                              key={idx}
+                              style={{
+                                marginBottom: idx < recipients.length - 1 ? '3mm' : undefined,
+                              }}
+                            >
+                              {recipient.name && (
+                                <div style={{ fontWeight: 600 }}>{recipient.name}</div>
                               )}
-                              {signatory.title && (
-                                <div className="closing-title">{signatory.title} &mdash; Navigate Wealth</div>
+                              {recipient.title && <div>{recipient.title}</div>}
+                              {recipient.company && <div>{recipient.company}</div>}
+                              {recipient.address && (
+                                <div style={{ whiteSpace: 'pre-line' }}>{recipient.address}</div>
                               )}
                             </div>
                           ))}
+                        </div>
+                      ) : (
+                        <div className="contents">
+                          [Recipient Name]
+                          <br />
+                          [Title / Company]
+                          <br />
+                          [Address Line 1]
+                          <br />
+                          [City, Postal Code]
                         </div>
                       )}
                     </div>
                   );
                 })()}
 
-                {/* FOOTER */}
-                {category === 'Letters' ? (
-                  <footer className="letter-footer">
-                    <div className="letter-footer-cols">
-                      <div className="lf-col">
-                        <span className="footer-company">Wealthfront (Pty) Ltd</span>
-                        {' '}trading as Navigate Wealth is an Authorised Financial Services Provider &ndash; FSP 54606.
-                        Registration Number: 2024/071953/07.
+                {/* Subject / Reference */}
+                {(() => {
+                  const hasSubject = letterMeta?.subject || letterMeta?.reference;
+                  const subjectText =
+                    letterMeta?.subject || (docTitle !== 'Company Letter' ? docTitle : '');
+                  return (
+                    <div
+                      className="letter-subject"
+                      style={{ opacity: hasSubject || subjectText ? 1 : 0.4 }}
+                    >
+                      {letterMeta?.reference && (
+                        <span>
+                          <span className="subject-label">Ref: </span>
+                          {letterMeta.reference}
+                          {subjectText && <span>&nbsp;&mdash;&nbsp;</span>}
+                        </span>
+                      )}
+                      <span>
+                        <span className="subject-label">RE: </span>
+                        {subjectText || '[Subject of correspondence]'}
+                      </span>
+                    </div>
+                  );
+                })()}
+              </div>
+            )}
+
+            {/* Subsequent page header for letters */}
+            {pageIndex > 0 && category === 'Letters' && (
+              <div className="letter-continuation-header">
+                <span className="cont-brand">
+                  Navigate <span className="cont-accent">Wealth</span>
+                </span>
+                <span>
+                  {docTitle} &mdash; Page {pageIndex + 1}
+                </span>
+              </div>
+            )}
+
+            {/* FORM MODE — Standard form chrome */}
+            {pageIndex === 0 && category !== 'Letters' && (
+              <div className="contents">
+                {/* MASTHEAD */}
+                <div className="top-masthead">
+                  <div className="masthead-left">{(docTitle || 'DOCUMENT').toUpperCase()}</div>
+                  <div className="masthead-right">
+                    <strong>Wealthfront (Pty) Ltd</strong> t/a Navigate Wealth &nbsp;|&nbsp;{' '}
+                    <strong>FSP 54606</strong>
+                    <br />
+                    Email: info@navigatewealth.co
+                  </div>
+                </div>
+
+                {/* HEADER */}
+                <div>
+                  <header className="page-header-full">
+                    <div className="header-row">
+                      <div className="brand-block">
+                        <div className="logo">
+                          Navigate <span className="wealth">Wealth</span>
+                        </div>
+                        <div className="brand-subline">Independent Financial Advisory Services</div>
                       </div>
-                      <div className="lf-col">
-                        Route 21 Corporate Park, 25 Sovereign Drive, Milestone Place A, Centurion, 0178.
-                        Tel: (012) 667 2505 | Email: info@navigatewealth.co
-                      </div>
-                      <div className="lf-page">
-                        Page {pageIndex + 1}/{pages.length}
+
+                      <div className="doc-block">
+                        <h1 className="doc-title">{docTitle}</h1>
+                        <div className="meta-grid">
+                          <div className="meta-k">Issue date</div>
+                          <div className="meta-v">{issueDate}</div>
+                        </div>
                       </div>
                     </div>
-                  </footer>
-                ) : (
-                  <footer className="pdf-footer">
-                    <div className="footer-row">
-                      <div className="footer-page">Page {pageIndex + 1} of {pages.length}</div>
-                      <div className="footer-text">
-                        Wealthfront (Pty) Ltd, trading as Navigate Wealth, is an Authorised Financial Services Provider – FSP 54606. Registration Number: 2024/071953/07. Located at Route 21 Corporate Park, 25 Sovereign Drive, Milestone Place A, Centurion, 0178. For inquiries, please contact us at Tel: (012) 667 2505.
-                      </div>
-                    </div>
-                  </footer>
-                )}
+                  </header>
+
+                  <hr
+                    className="section-divider"
+                    style={{ borderTop: '2px solid #6b7280', margin: '4mm 0 6mm 0' }}
+                  />
+                </div>
+              </div>
+            )}
+
+            {/* BLOCKS RENDERER — no gap; spacing is handled by individual
+                     block styles (e.g. .section margin on section_headers)
+                     to match the PDF output exactly */}
+            <div
+              className="flex flex-col"
+              style={
+                category === 'Letters' && letterMeta
+                  ? {
+                      fontSize: `${letterMeta.fontSize || 10}px`,
+                      lineHeight: letterMeta.lineHeight || 1.65,
+                    }
+                  : undefined
+              }
+            >
+              {page.blocks.length === 0 && pageIndex === 0 && pages.length === 1 && (
+                <div className="text-center py-20 text-gray-300 border-2 border-dashed border-gray-200 rounded-lg">
+                  Drag or click blocks from the toolbox to start building
+                </div>
+              )}
+
+              {page.blocks.map(({ block, flatIndex }, indexInPage) => (
+                <DraggableBlock
+                  key={block.id}
+                  block={block}
+                  flatIndex={flatIndex}
+                  isSelected={selectedBlockId === block.id}
+                  isFirst={flatIndex === 0}
+                  isLast={flatIndex === blocks.length - 1}
+                  onSelect={onSelectBlock}
+                  onDelete={onDeleteBlock}
+                  onMove={onMoveBlock}
+                  onDuplicate={onDuplicateBlock}
+                  dragState={dragState}
+                  dropTargetIndex={dropTargetIndex}
+                  onDragStart={handleDragStart}
+                  onDragEnd={handleDragEnd}
+                  onDragOverBlock={handleDragOverBlock}
+                  onDropOnBlock={handleDropOnBlock}
+                  renderBlockContent={renderBlockWithDropZone}
+                  isPageFirstBlock={indexInPage === 0}
+                  onAddToolboxBlock={handleToolboxDropOnBlock}
+                  isToolboxDragActive={isToolboxDragActive}
+                />
+              ))}
             </div>
 
-            {/* PAGE BREAK SEPARATOR / HANDLE */}
-            {page.breakBlockId && (
-                <div 
-                    onClick={() => onSelectBlock(page.breakBlockId!)}
-                    className={cn(
-                        "w-[210mm] relative h-6 flex items-center justify-center cursor-pointer group",
-                        "opacity-40 hover:opacity-100 transition-opacity duration-200",
-                        selectedBlockId === page.breakBlockId ? "opacity-100" : ""
+            {/* LETTER CLOSING / SIGNATORY — rendered from letterMeta after all blocks on the last page */}
+            {category === 'Letters' &&
+              pageIndex === pages.length - 1 &&
+              (() => {
+                const signatories = letterMeta ? resolveSignatories(letterMeta) : [];
+                const hasClosing = letterMeta?.closing || signatories.length > 0;
+                if (!hasClosing) return null;
+                return (
+                  <div className="letter-closing">
+                    {letterMeta?.closing && (
+                      <div className="closing-regards">{letterMeta.closing},</div>
                     )}
-                >
-                    <div className="h-px w-full bg-blue-300 absolute top-1/2 -translate-y-1/2"></div>
-                    <div className="relative z-10 bg-blue-50 text-blue-600 text-[10px] font-medium px-3 py-1 rounded-full border border-blue-200 shadow-sm">
-                        Page Break (Click to Select)
-                    </div>
+                    {signatories.length > 0 && (
+                      <div className="closing-signatories">
+                        {signatories.map((signatory, index) => (
+                          <div key={index} className="closing-signatory">
+                            <div className="closing-signature-line" />
+                            {signatory.name && <div className="closing-name">{signatory.name}</div>}
+                            {signatory.title && (
+                              <div className="closing-title">
+                                {signatory.title} &mdash; Navigate Wealth
+                              </div>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                );
+              })()}
+
+            {/* FOOTER */}
+            {category === 'Letters' ? (
+              <footer className="letter-footer">
+                <div className="letter-footer-cols">
+                  <div className="lf-col">
+                    <span className="footer-company">Wealthfront (Pty) Ltd</span> trading as
+                    Navigate Wealth is an Authorised Financial Services Provider &ndash; FSP 54606.
+                    Registration Number: 2024/071953/07.
+                  </div>
+                  <div className="lf-col">
+                    Route 21 Corporate Park, 25 Sovereign Drive, Milestone Place A, Centurion, 0178.
+                    Tel: (012) 667 2505 | Email: info@navigatewealth.co
+                  </div>
+                  <div className="lf-page">
+                    Page {pageIndex + 1}/{pages.length}
+                  </div>
                 </div>
+              </footer>
+            ) : (
+              <footer className="pdf-footer">
+                <div className="footer-row">
+                  <div className="footer-page">
+                    Page {pageIndex + 1} of {pages.length}
+                  </div>
+                  <div className="footer-text">
+                    Wealthfront (Pty) Ltd, trading as Navigate Wealth, is an Authorised Financial
+                    Services Provider – FSP 54606. Registration Number: 2024/071953/07. Located at
+                    Route 21 Corporate Park, 25 Sovereign Drive, Milestone Place A, Centurion, 0178.
+                    For inquiries, please contact us at Tel: (012) 667 2505.
+                  </div>
+                </div>
+              </footer>
             )}
+          </div>
+
+          {/* PAGE BREAK SEPARATOR / HANDLE */}
+          {page.breakBlockId && (
+            <div
+              onClick={() => onSelectBlock(page.breakBlockId!)}
+              className={cn(
+                'w-[210mm] relative h-6 flex items-center justify-center cursor-pointer group',
+                'opacity-40 hover:opacity-100 transition-opacity duration-200',
+                selectedBlockId === page.breakBlockId ? 'opacity-100' : '',
+              )}
+            >
+              <div className="h-px w-full bg-blue-300 absolute top-1/2 -translate-y-1/2"></div>
+              <div className="relative z-10 bg-blue-50 text-blue-600 text-[10px] font-medium px-3 py-1 rounded-full border border-blue-200 shadow-sm">
+                Page Break (Click to Select)
+              </div>
+            </div>
+          )}
         </div>
       ))}
-      
+
       {/* Spacer for bottom scrolling */}
       <div className="h-20"></div>
     </div>

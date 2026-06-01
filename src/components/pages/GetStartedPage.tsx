@@ -6,14 +6,26 @@ import { Button } from '../ui/button';
 import { Input } from '../ui/input';
 import { Label } from '../ui/label';
 import { useAuth } from '../auth/AuthContext';
-import { ArrowRight, User, Mail, Phone, CheckCircle, ChevronLeft, ChevronRight, Shield, Target, Users, Zap } from 'lucide-react';
+import {
+  ArrowRight,
+  User,
+  Mail,
+  Phone,
+  CheckCircle,
+  ChevronLeft,
+  ChevronRight,
+  Shield,
+  Target,
+  Users,
+  Zap,
+} from 'lucide-react';
 import { Logo } from '../layout/Logo';
 
 const carouselSlides = [
   {
     id: 1,
-    title: "Personalized wealth strategies",
-    subtitle: "We create custom financial plans tailored to your unique goals and circumstances.",
+    title: 'Personalized wealth strategies',
+    subtitle: 'We create custom financial plans tailored to your unique goals and circumstances.',
     content: (
       <div className="bg-white/20 backdrop-blur-sm rounded-xl p-6 space-y-4">
         <div className="flex items-center space-x-3 mb-4">
@@ -46,12 +58,13 @@ const carouselSlides = [
           </div>
         </div>
       </div>
-    )
+    ),
   },
   {
     id: 2,
-    title: "Expert financial guidance",
-    subtitle: "Our certified advisors provide professional insights and support throughout your journey.",
+    title: 'Expert financial guidance',
+    subtitle:
+      'Our certified advisors provide professional insights and support throughout your journey.',
     content: (
       <div className="bg-white/20 backdrop-blur-sm rounded-xl p-6 space-y-4">
         <div className="flex items-center space-x-3 mb-4">
@@ -82,12 +95,13 @@ const carouselSlides = [
           </div>
         </div>
       </div>
-    )
+    ),
   },
   {
     id: 3,
-    title: "Secure, trusted platform",
-    subtitle: "Your financial data is protected with bank-level security and industry-leading encryption.",
+    title: 'Secure, trusted platform',
+    subtitle:
+      'Your financial data is protected with bank-level security and industry-leading encryption.',
     content: (
       <div className="bg-white/20 backdrop-blur-sm rounded-xl p-6 space-y-4">
         <div className="flex items-center space-x-3 mb-4">
@@ -118,8 +132,8 @@ const carouselSlides = [
           </div>
         </div>
       </div>
-    )
-  }
+    ),
+  },
 ];
 
 export function GetStartedPage() {
@@ -127,15 +141,13 @@ export function GetStartedPage() {
     firstName: '',
     lastName: '',
     email: '',
-    phone: ''
+    phone: '',
   });
   const [isLoading, setIsLoading] = useState(false);
   const [currentSlide, setCurrentSlide] = useState(0);
-  
+
   const { user, updateUser } = useAuth();
   const navigate = useNavigate();
-
-
 
   // Pre-populate form with user data if available
   useEffect(() => {
@@ -144,13 +156,13 @@ export function GetStartedPage() {
         firstName: user.firstName || '',
         lastName: user.lastName || '',
         email: user.email || '',
-        phone: ''
+        phone: '',
       });
     }
   }, [user]);
 
   const handleInputChange = (field: string, value: string) => {
-    setFormData(prev => ({ ...prev, [field]: value }));
+    setFormData((prev) => ({ ...prev, [field]: value }));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -158,13 +170,13 @@ export function GetStartedPage() {
     setIsLoading(true);
 
     // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 1000));
+    await new Promise((resolve) => setTimeout(resolve, 1000));
 
     // Update user context
     updateUser({
       firstName: formData.firstName,
       lastName: formData.lastName,
-      email: formData.email
+      email: formData.email,
     });
 
     setIsLoading(false);
@@ -199,14 +211,18 @@ export function GetStartedPage() {
               Welcome to Navigate Wealth
             </div>
             <h1 className="text-3xl font-bold text-gray-900">Complete Your Profile</h1>
-            <p className="text-gray-500">Verify and complete your information before starting your application</p>
+            <p className="text-gray-500">
+              Verify and complete your information before starting your application
+            </p>
           </div>
 
           {/* Form */}
           <form onSubmit={handleSubmit} className="space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="firstName" className="text-gray-700">First Name</Label>
+                <Label htmlFor="firstName" className="text-gray-700">
+                  First Name
+                </Label>
                 <div className="relative">
                   <User className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
                   <Input
@@ -222,7 +238,9 @@ export function GetStartedPage() {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="lastName" className="text-gray-700">Last Name</Label>
+                <Label htmlFor="lastName" className="text-gray-700">
+                  Last Name
+                </Label>
                 <div className="relative">
                   <User className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
                   <Input
@@ -239,7 +257,9 @@ export function GetStartedPage() {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="email" className="text-gray-700">Email Address</Label>
+              <Label htmlFor="email" className="text-gray-700">
+                Email Address
+              </Label>
               <div className="relative">
                 <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
                 <Input
@@ -255,7 +275,9 @@ export function GetStartedPage() {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="phone" className="text-gray-700">Contact Number</Label>
+              <Label htmlFor="phone" className="text-gray-700">
+                Contact Number
+              </Label>
               <div className="relative">
                 <Phone className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
                 <Input
@@ -301,7 +323,7 @@ export function GetStartedPage() {
       {/* Right Side - Carousel */}
       <div className="hidden lg:flex lg:flex-1 relative section-dark-gray">
         <div className="absolute inset-0 bg-black/20"></div>
-        
+
         {/* Carousel Content */}
         <div className="relative z-10 flex flex-col justify-center px-12 w-full">
           <div className="max-w-md mx-auto text-center space-y-8">
@@ -310,9 +332,7 @@ export function GetStartedPage() {
               <h2 className="text-3xl font-bold text-white">
                 {carouselSlides[currentSlide].title}
               </h2>
-              <p className="text-white/80 text-lg">
-                {carouselSlides[currentSlide].subtitle}
-              </p>
+              <p className="text-white/80 text-lg">{carouselSlides[currentSlide].subtitle}</p>
               {carouselSlides[currentSlide].content}
             </div>
 
@@ -324,7 +344,7 @@ export function GetStartedPage() {
               >
                 <ChevronLeft className="h-5 w-5" />
               </button>
-              
+
               {/* Dots */}
               <div className="flex space-x-2">
                 {carouselSlides.map((_, index) => (

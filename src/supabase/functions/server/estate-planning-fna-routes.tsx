@@ -6,20 +6,18 @@
 import { Hono } from 'npm:hono';
 import { createClient } from 'jsr:@supabase/supabase-js@2.49.8';
 import * as kv from './kv_store.tsx';
-import { createModuleLogger } from "./stderr-logger.ts";
-import { authenticateUser, fnaErrorResponse } from "./fna-auth.ts";
-import { getErrMsg } from "./shared-logger-utils.ts";
-import { SaveSessionSchema } from "./fna-validation.ts";
-import { formatZodError } from "./shared-validation-utils.ts";
+import { createModuleLogger } from './stderr-logger.ts';
+import { authenticateUser, fnaErrorResponse } from './fna-auth.ts';
+import { getErrMsg } from './shared-logger-utils.ts';
+import { SaveSessionSchema } from './fna-validation.ts';
+import { formatZodError } from './shared-validation-utils.ts';
 
 const estatePlanningRoutes = new Hono();
 const log = createModuleLogger('estate-planning-fna-routes');
 
 // Lazy Supabase client — must NOT be top-level to avoid deployment crashes in edge functions.
-const getSupabase = () => createClient(
-  Deno.env.get('SUPABASE_URL')!,
-  Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
-);
+const getSupabase = () =>
+  createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!);
 
 const LEGAL_DOCS_BUCKET = 'make-91ed8379-legal-docs';
 
@@ -30,18 +28,14 @@ async function ensureLegalDocsBucket() {
   try {
     const supabase = getSupabase();
     const { data: buckets } = await supabase.storage.listBuckets();
-    const bucketExists = buckets?.some(bucket => bucket.name === LEGAL_DOCS_BUCKET);
+    const bucketExists = buckets?.some((bucket) => bucket.name === LEGAL_DOCS_BUCKET);
 
     if (!bucketExists) {
       log.info(`Creating storage bucket: ${LEGAL_DOCS_BUCKET}`);
       const { error } = await supabase.storage.createBucket(LEGAL_DOCS_BUCKET, {
         public: false,
         fileSizeLimit: 52428800, // 50MB
-        allowedMimeTypes: [
-          'application/pdf',
-          'image/jpeg',
-          'image/png',
-        ]
+        allowedMimeTypes: ['application/pdf', 'image/jpeg', 'image/png'],
       });
 
       if (error) {
@@ -77,7 +71,7 @@ estatePlanningRoutes.get('/client/:clientId/auto-populate', async (c) => {
   try {
     log.info('📥 GET /estate-planning-fna/client/:clientId/auto-populate');
     const user = await authenticateUser(c.req.header('Authorization'));
-    
+
     const clientId = c.req.param('clientId');
 
     const { estateAutoPopulateFromResolver } = await import('./form-prefill-auto-populate.ts');
@@ -91,13 +85,13 @@ estatePlanningRoutes.get('/client/:clientId/auto-populate', async (c) => {
       specialBequests: [],
       willNeedsUpdate: false,
     };
-    
+
     // Fetch assets
     const assetRecords = await kv.getByPrefix(`asset:${clientId}:`);
     const assets = (assetRecords || []).map((asset: EstateAsset) => {
       const assetType = asset.assetType || 'personal';
       const subType = asset.subType || 'other';
-      
+
       return {
         id: asset.id || `asset-${Math.random()}`,
         type: assetType,
@@ -121,7 +115,7 @@ estatePlanningRoutes.get('/client/:clientId/auto-populate', async (c) => {
         beneficiaryDetails: asset.beneficiaryDetails || '',
       };
     });
-    
+
     // Fetch liabilities
     const liabilityRecords = await kv.getByPrefix(`liability:${clientId}:`);
     const liabilities = (liabilityRecords || []).map((liability: EstateLiability) => ({
@@ -133,17 +127,18 @@ estatePlanningRoutes.get('/client/:clientId/auto-populate', async (c) => {
       lifeCoverCeded: liability.lifeCoverCeded || false,
       creditorName: liability.creditorName || liability.institution || '',
     }));
-    
+
     // Fetch life policies
     const policyRecords = await kv.getByPrefix(`policy:${clientId}:`);
     const lifePolicies = (policyRecords || [])
-      .filter((policy: EstatePolicy) => 
-        policy.category === 'risk_planning' && 
-        ['life_cover', 'group_life', 'funeral'].includes(policy.policyType)
+      .filter(
+        (policy: EstatePolicy) =>
+          policy.category === 'risk_planning' &&
+          ['life_cover', 'group_life', 'funeral'].includes(policy.policyType),
       )
       .map((policy: EstatePolicy) => {
         const beneficiaryType = policy.beneficiaryType || 'estate';
-        
+
         return {
           id: policy.id || `policy-${Math.random()}`,
           policyType: policy.policyType || 'life_cover',
@@ -155,23 +150,23 @@ estatePlanningRoutes.get('/client/:clientId/auto-populate', async (c) => {
           payableToEstate: beneficiaryType === 'estate',
         };
       });
-    
+
     // Default assumptions
     const assumptions = {
       executorFeePercentage: 3.5,
       conveyancingFeesPerProperty: 50000,
       masterFeesEstimate: 5000,
       funeralCostsEstimate: 50000,
-      estateDutyRate: 0.20,
+      estateDutyRate: 0.2,
       estateDutyAbatement: 3500000,
       spousalBequest: String(familyInfo.maritalStatus ?? '').startsWith('married'),
-      cgtInclusionRate: 0.40,
+      cgtInclusionRate: 0.4,
     };
-    
+
     // Check for offshore assets and trusts
     const hasOffshorAssets = assets.some((a: { location?: string }) => a.location === 'offshore');
     const hasTrusts = assets.some((a: { ownership?: string }) => a.ownership === 'trust');
-    
+
     const inputs = {
       familyInfo,
       dependants,
@@ -185,9 +180,9 @@ estatePlanningRoutes.get('/client/:clientId/auto-populate', async (c) => {
       trustDetails: hasTrusts ? 'Trust structures exist - details to be confirmed' : '',
       planningNotes: '',
     };
-    
+
     log.info('✅ Auto-populated Estate Planning inputs for client:', { clientId });
-    
+
     return c.json({
       success: true,
       data: inputs,
@@ -206,23 +201,23 @@ estatePlanningRoutes.post('/save', async (c) => {
   try {
     log.info('POST /estate-planning-fna/save');
     const authUser = await authenticateUser(c.req.header('Authorization'), 'estate-planning-fna');
-    
+
     const body = await c.req.json();
-    
+
     // Validate input
     const parsed = SaveSessionSchema.safeParse(body);
     if (!parsed.success) {
       return c.json({ success: false, error: formatZodError(parsed.error) }, 400);
     }
-    
+
     const { clientId, inputs, results, status, adviserNotes } = parsed.data;
-    
+
     const sessions = await kv.getByPrefix(`estate-planning-fna:client:${clientId}:`);
     const version = (sessions?.length || 0) + 1;
-    
+
     const sessionId = `${clientId}-v${version}`;
     const timestamp = new Date().toISOString();
-    
+
     const session = {
       id: sessionId,
       clientId,
@@ -235,12 +230,12 @@ estatePlanningRoutes.post('/save', async (c) => {
       createdAt: timestamp,
       updatedAt: timestamp,
     };
-    
+
     const key = `estate-planning-fna:client:${clientId}:${sessionId}`;
     await kv.set(key, session);
-    
+
     log.info('✅ Estate Planning session saved:', { sessionId });
-    
+
     return c.json({
       success: true,
       data: session,
@@ -259,14 +254,18 @@ estatePlanningRoutes.get('/client/:clientId/sessions', async (c) => {
   try {
     log.info('📥 GET /estate-planning-fna/client/:clientId/sessions');
     await authenticateUser(c.req.header('Authorization'));
-    
+
     const clientId = c.req.param('clientId');
-    
+
     const sessions = await kv.getByPrefix(`estate-planning-fna:client:${clientId}:`);
-    const sortedSessions = (sessions || []).sort((a: VersionedSession, b: VersionedSession) => b.version - a.version);
-    
-    log.info(`✅ Retrieved ${sortedSessions.length} Estate Planning sessions for client:`, { clientId });
-    
+    const sortedSessions = (sessions || []).sort(
+      (a: VersionedSession, b: VersionedSession) => b.version - a.version,
+    );
+
+    log.info(`✅ Retrieved ${sortedSessions.length} Estate Planning sessions for client:`, {
+      clientId,
+    });
+
     return c.json({
       success: true,
       data: sortedSessions,
@@ -285,18 +284,24 @@ estatePlanningRoutes.get('/client/:clientId/latest-published', async (c) => {
   try {
     log.info('📥 GET /estate-planning-fna/client/:clientId/latest-published');
     const clientId = c.req.param('clientId');
-    
+
     // Optional authentication - allow both authenticated clients and anon key access
     const authHeader = c.req.header('Authorization');
     if (authHeader) {
       try {
         const user = await authenticateUser(authHeader);
         // Check authorization: admins can access all data, regular users only their own
-        const isAdmin = user.role === 'admin' || user.role === 'super_admin' || user.role === 'super-admin' || user.id === 'admin';
+        const isAdmin =
+          user.role === 'admin' ||
+          user.role === 'super_admin' ||
+          user.role === 'super-admin' ||
+          user.id === 'admin';
         const isOwnData = user.id === clientId;
-        
+
         if (!isAdmin && !isOwnData) {
-          log.warn(`⚠️ User ${user.id} (role: ${user.role}) attempting to access Estate Planning FNA for client ${clientId}`);
+          log.warn(
+            `⚠️ User ${user.id} (role: ${user.role}) attempting to access Estate Planning FNA for client ${clientId}`,
+          );
           return c.json({ error: 'Unauthorized access to client data' }, 403);
         }
       } catch (authError) {
@@ -305,19 +310,25 @@ estatePlanningRoutes.get('/client/:clientId/latest-published', async (c) => {
         // Why chosen: Removing this would break client-facing FNA display until portal auth is refactored.
         // Proper fix: Require authentication on all FNA reads; update client portal to pass user session token.
         // Revisit: When client portal auth is unified (tracked in Tier B backlog).
-        log.info('Authentication failed, allowing unauthenticated access to published Estate Planning FNA');
+        log.info(
+          'Authentication failed, allowing unauthenticated access to published Estate Planning FNA',
+        );
       }
     }
-    
+
     const sessions = await kv.getByPrefix(`estate-planning-fna:client:${clientId}:`);
-    
+
     const published = (sessions || [])
       .filter((s: VersionedSession) => s.status === 'published')
       .sort((a: VersionedSession, b: VersionedSession) => b.version - a.version);
-    
+
     const latest = published[0] || null;
-    
-    log.info(latest ? `✅ Latest published Estate Planning session found: ${latest.id}` : '⚠️ No published Estate Planning FNA');
+
+    log.info(
+      latest
+        ? `✅ Latest published Estate Planning session found: ${latest.id}`
+        : '⚠️ No published Estate Planning FNA',
+    );
     return c.json({ success: true, data: latest });
   } catch (error: unknown) {
     log.error('❌ Error fetching latest published Estate Planning FNA:', error);
@@ -333,22 +344,25 @@ estatePlanningRoutes.get('/session/:sessionId', async (c) => {
   try {
     log.info('📥 GET /estate-planning-fna/session/:sessionId');
     await authenticateUser(c.req.header('Authorization'));
-    
+
     const sessionId = c.req.param('sessionId');
     const clientId = sessionId.split('-v')[0];
-    
+
     const key = `estate-planning-fna:client:${clientId}:${sessionId}`;
     const session = await kv.get(key);
-    
+
     if (!session) {
-      return c.json({
-        success: false,
-        error: 'Estate Planning session not found'
-      }, 404);
+      return c.json(
+        {
+          success: false,
+          error: 'Estate Planning session not found',
+        },
+        404,
+      );
     }
-    
+
     log.info('✅ Estate Planning session retrieved:', { sessionId });
-    
+
     return c.json({
       success: true,
       data: session,
@@ -367,15 +381,15 @@ estatePlanningRoutes.delete('/session/:sessionId', async (c) => {
   try {
     log.info('📥 DELETE /estate-planning-fna/session/:sessionId');
     await authenticateUser(c.req.header('Authorization'));
-    
+
     const sessionId = c.req.param('sessionId');
     const clientId = sessionId.split('-v')[0];
-    
+
     const key = `estate-planning-fna:client:${clientId}:${sessionId}`;
     await kv.del(key);
-    
+
     log.info('✅ Estate Planning session deleted:', { sessionId });
-    
+
     return c.json({
       success: true,
     });
@@ -388,7 +402,10 @@ estatePlanningRoutes.delete('/session/:sessionId', async (c) => {
 /**
  * Helper: Determine asset liquidity
  */
-function determineAssetLiquidity(type: string, subType: string): 'liquid' | 'semi_liquid' | 'illiquid' {
+function determineAssetLiquidity(
+  type: string,
+  subType: string,
+): 'liquid' | 'semi_liquid' | 'illiquid' {
   if (type === 'financial') {
     if (['bank_account', 'cash', 'money_market'].includes(subType)) return 'liquid';
     if (['unit_trust', 'shares'].includes(subType)) return 'liquid';
@@ -466,32 +483,38 @@ estatePlanningRoutes.post('/wills/create', async (c) => {
   try {
     log.info('📥 POST /estate-planning-fna/wills/create');
     const user = await authenticateUser(c.req.header('Authorization'));
-    
+
     const body = await c.req.json();
     const { clientId, type, data } = body;
-    
+
     if (!clientId || !type || !data) {
-      return c.json({
-        success: false,
-        error: 'Missing required fields: clientId, type, data'
-      }, 400);
+      return c.json(
+        {
+          success: false,
+          error: 'Missing required fields: clientId, type, data',
+        },
+        400,
+      );
     }
-    
+
     // Validate type
     if (!['last_will', 'living_will'].includes(type)) {
-      return c.json({
-        success: false,
-        error: 'Invalid will type. Must be "last_will" or "living_will"'
-      }, 400);
+      return c.json(
+        {
+          success: false,
+          error: 'Invalid will type. Must be "last_will" or "living_will"',
+        },
+        400,
+      );
     }
-    
+
     // Get existing wills to determine version
     const existingWills = await kv.getByPrefix(`will:${clientId}:${type}:`);
     const version = (existingWills?.length || 0) + 1;
-    
+
     const willId = `${clientId}-${type}-v${version}`;
     const timestamp = new Date().toISOString();
-    
+
     const will = {
       id: willId,
       clientId,
@@ -506,12 +529,12 @@ estatePlanningRoutes.post('/wills/create', async (c) => {
       finalizedAt: null,
       finalizedBy: null,
     };
-    
+
     const key = `will:${clientId}:${type}:${willId}`;
     await kv.set(key, will);
-    
+
     log.info('✅ Will draft created:', { willId, type });
-    
+
     return c.json({
       success: true,
       data: will,
@@ -531,47 +554,56 @@ estatePlanningRoutes.put('/wills/:willId', async (c) => {
   try {
     log.info('📥 PUT /estate-planning-fna/wills/:willId');
     await authenticateUser(c.req.header('Authorization'));
-    
+
     const willId = c.req.param('willId');
     const { clientId, type } = parseWillId(willId);
-    
+
     const key = `will:${clientId}:${type}:${willId}`;
     const existingWill = await kv.get(key);
-    
+
     if (!existingWill) {
-      return c.json({
-        success: false,
-        error: 'Will not found'
-      }, 404);
+      return c.json(
+        {
+          success: false,
+          error: 'Will not found',
+        },
+        404,
+      );
     }
-    
+
     if (existingWill.status === 'finalized') {
-      return c.json({
-        success: false,
-        error: 'Cannot update a finalized will'
-      }, 400);
+      return c.json(
+        {
+          success: false,
+          error: 'Cannot update a finalized will',
+        },
+        400,
+      );
     }
-    
+
     const body = await c.req.json();
     const { data } = body;
-    
+
     if (!data) {
-      return c.json({
-        success: false,
-        error: 'Missing required field: data'
-      }, 400);
+      return c.json(
+        {
+          success: false,
+          error: 'Missing required field: data',
+        },
+        400,
+      );
     }
-    
+
     const updatedWill = {
       ...existingWill,
       data,
       updatedAt: new Date().toISOString(),
     };
-    
+
     await kv.set(key, updatedWill);
-    
+
     log.info('✅ Will draft updated:', { willId });
-    
+
     return c.json({
       success: true,
       data: updatedWill,
@@ -591,16 +623,17 @@ estatePlanningRoutes.get('/wills/client/:clientId', async (c) => {
   try {
     log.info('📥 GET /estate-planning-fna/wills/client/:clientId');
     await authenticateUser(c.req.header('Authorization'));
-    
+
     const clientId = c.req.param('clientId');
-    
+
     const wills = await kv.getByPrefix(`will:${clientId}:`);
-    const sortedWills = (wills || []).sort((a: VersionedSession, b: VersionedSession) => 
-      new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime()
+    const sortedWills = (wills || []).sort(
+      (a: VersionedSession, b: VersionedSession) =>
+        new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime(),
     );
-    
+
     log.info(`✅ Retrieved ${sortedWills.length} wills for client:`, { clientId });
-    
+
     return c.json({
       success: true,
       data: sortedWills,
@@ -620,22 +653,25 @@ estatePlanningRoutes.get('/wills/:willId', async (c) => {
   try {
     log.info('📥 GET /estate-planning-fna/wills/:willId');
     await authenticateUser(c.req.header('Authorization'));
-    
+
     const willId = c.req.param('willId');
     const { clientId, type } = parseWillId(willId);
-    
+
     const key = `will:${clientId}:${type}:${willId}`;
     const will = await kv.get(key);
-    
+
     if (!will) {
-      return c.json({
-        success: false,
-        error: 'Will not found'
-      }, 404);
+      return c.json(
+        {
+          success: false,
+          error: 'Will not found',
+        },
+        404,
+      );
     }
-    
+
     log.info('✅ Will retrieved:', { willId });
-    
+
     return c.json({
       success: true,
       data: will,
@@ -655,34 +691,43 @@ estatePlanningRoutes.put('/wills/:willId/finalize', async (c) => {
   try {
     log.info('📥 PUT /estate-planning-fna/wills/:willId/finalize');
     const user = await authenticateUser(c.req.header('Authorization'));
-    
+
     const willId = c.req.param('willId');
     const { clientId, type } = parseWillId(willId);
-    
+
     const key = `will:${clientId}:${type}:${willId}`;
     const will = await kv.get(key);
-    
+
     if (!will) {
-      return c.json({
-        success: false,
-        error: 'Will not found'
-      }, 404);
+      return c.json(
+        {
+          success: false,
+          error: 'Will not found',
+        },
+        404,
+      );
     }
-    
+
     if (will.status === 'finalized') {
-      return c.json({
-        success: false,
-        error: 'Will is already finalized'
-      }, 400);
+      return c.json(
+        {
+          success: false,
+          error: 'Will is already finalized',
+        },
+        400,
+      );
     }
 
     if (will.status === 'signed') {
-      return c.json({
-        success: false,
-        error: 'Will already has a signed copy attached'
-      }, 400);
+      return c.json(
+        {
+          success: false,
+          error: 'Will already has a signed copy attached',
+        },
+        400,
+      );
     }
-    
+
     const updatedWill = {
       ...will,
       status: 'finalized',
@@ -690,11 +735,11 @@ estatePlanningRoutes.put('/wills/:willId/finalize', async (c) => {
       finalizedAt: new Date().toISOString(),
       finalizedBy: user.id,
     };
-    
+
     await kv.set(key, updatedWill);
-    
+
     log.info('✅ Will finalized:', { willId });
-    
+
     return c.json({
       success: true,
       data: updatedWill,
@@ -715,32 +760,38 @@ estatePlanningRoutes.delete('/wills/:willId', async (c) => {
   try {
     log.info('📥 DELETE /estate-planning-fna/wills/:willId');
     await authenticateUser(c.req.header('Authorization'));
-    
+
     const willId = c.req.param('willId');
     const { clientId, type } = parseWillId(willId);
-    
+
     const key = `will:${clientId}:${type}:${willId}`;
     const existingWill = await kv.get(key);
 
     if (!existingWill) {
-      return c.json({
-        success: false,
-        error: 'Will not found',
-      }, 404);
+      return c.json(
+        {
+          success: false,
+          error: 'Will not found',
+        },
+        404,
+      );
     }
 
     // Only draft wills may be deleted — published/finalized wills are retained for compliance
     if (existingWill.status !== 'draft') {
-      return c.json({
-        success: false,
-        error: `Cannot delete a ${existingWill.status} will. Only draft wills can be discarded.`,
-      }, 400);
+      return c.json(
+        {
+          success: false,
+          error: `Cannot delete a ${existingWill.status} will. Only draft wills can be discarded.`,
+        },
+        400,
+      );
     }
 
     await kv.del(key);
-    
+
     log.info('✅ Draft will discarded:', { willId, type });
-    
+
     return c.json({
       success: true,
     });
@@ -778,10 +829,13 @@ estatePlanningRoutes.post('/wills/:willId/attach-signed', async (c) => {
 
     // Only finalized or published wills can have signed documents attached
     if (will.status === 'draft') {
-      return c.json({
-        success: false,
-        error: 'Cannot attach a signed document to a draft will. Please finalize the will first.',
-      }, 400);
+      return c.json(
+        {
+          success: false,
+          error: 'Cannot attach a signed document to a draft will. Please finalize the will first.',
+        },
+        400,
+      );
     }
 
     // Parse multipart form
@@ -795,10 +849,13 @@ estatePlanningRoutes.post('/wills/:willId/attach-signed', async (c) => {
     // Validate file type (PDF or image)
     const allowedTypes = ['application/pdf', 'image/jpeg', 'image/png'];
     if (!allowedTypes.includes(file.type)) {
-      return c.json({
-        success: false,
-        error: 'Invalid file type. Only PDF, JPEG, and PNG files are allowed.',
-      }, 400);
+      return c.json(
+        {
+          success: false,
+          error: 'Invalid file type. Only PDF, JPEG, and PNG files are allowed.',
+        },
+        400,
+      );
     }
 
     // Upload to Supabase Storage
@@ -816,10 +873,13 @@ estatePlanningRoutes.post('/wills/:willId/attach-signed', async (c) => {
 
     if (uploadError) {
       log.error('Storage upload failed for signed will document:', uploadError);
-      return c.json({
-        success: false,
-        error: `Failed to upload signed document: ${uploadError.message}`,
-      }, 500);
+      return c.json(
+        {
+          success: false,
+          error: `Failed to upload signed document: ${uploadError.message}`,
+        },
+        500,
+      );
     }
 
     // Update will KV record with signed document info
@@ -985,10 +1045,13 @@ estatePlanningRoutes.post('/estate-docs/:clientId/upload', async (c) => {
     // Validate file type
     const allowedTypes = ['application/pdf', 'image/jpeg', 'image/png'];
     if (!allowedTypes.includes(file.type)) {
-      return c.json({
-        success: false,
-        error: 'Invalid file type. Only PDF, JPEG, and PNG files are allowed.',
-      }, 400);
+      return c.json(
+        {
+          success: false,
+          error: 'Invalid file type. Only PDF, JPEG, and PNG files are allowed.',
+        },
+        400,
+      );
     }
 
     // Generate unique document ID
@@ -1007,10 +1070,13 @@ estatePlanningRoutes.post('/estate-docs/:clientId/upload', async (c) => {
 
     if (uploadError) {
       log.error('Storage upload failed for estate document:', uploadError);
-      return c.json({
-        success: false,
-        error: `Failed to upload document: ${uploadError.message}`,
-      }, 500);
+      return c.json(
+        {
+          success: false,
+          error: `Failed to upload document: ${uploadError.message}`,
+        },
+        500,
+      );
     }
 
     const timestamp = new Date().toISOString();
@@ -1057,7 +1123,7 @@ estatePlanningRoutes.get('/estate-docs/:clientId', async (c) => {
 
     const sorted = (docs || []).sort(
       (a: { uploadedAt?: string }, b: { uploadedAt?: string }) =>
-        new Date(b.uploadedAt || 0).getTime() - new Date(a.uploadedAt || 0).getTime()
+        new Date(b.uploadedAt || 0).getTime() - new Date(a.uploadedAt || 0).getTime(),
     );
 
     log.info(`Retrieved ${sorted.length} estate documents for client:`, { clientId });
@@ -1156,8 +1222,48 @@ estatePlanningRoutes.delete('/estate-docs/:clientId/:docId', async (c) => {
 export default estatePlanningRoutes;
 
 // Shared KV-derived types for estate planning
-interface EstateDep { name?: string; age?: number; relationship?: string; specialNeeds?: boolean; [key: string]: unknown }
-interface EstateAsset { type?: string; description?: string; owner?: string; ownershipPercentage?: number; estimatedValue?: number; location?: string; ownership?: string; [key: string]: unknown }
-interface EstateLiability { type?: string; description?: string; creditor?: string; amountOwing?: number; [key: string]: unknown }
-interface EstatePolicy { type?: string; category?: string; product_category?: string; productCategory?: string; provider?: string; name?: string; coverAmount?: number; currentValue?: number; beneficiaryDesignation?: string; policyNumber?: string; status?: string; [key: string]: unknown }
-interface VersionedSession { version: number; status?: string; createdAt?: string; publishedAt?: string; [key: string]: unknown }
+interface EstateDep {
+  name?: string;
+  age?: number;
+  relationship?: string;
+  specialNeeds?: boolean;
+  [key: string]: unknown;
+}
+interface EstateAsset {
+  type?: string;
+  description?: string;
+  owner?: string;
+  ownershipPercentage?: number;
+  estimatedValue?: number;
+  location?: string;
+  ownership?: string;
+  [key: string]: unknown;
+}
+interface EstateLiability {
+  type?: string;
+  description?: string;
+  creditor?: string;
+  amountOwing?: number;
+  [key: string]: unknown;
+}
+interface EstatePolicy {
+  type?: string;
+  category?: string;
+  product_category?: string;
+  productCategory?: string;
+  provider?: string;
+  name?: string;
+  coverAmount?: number;
+  currentValue?: number;
+  beneficiaryDesignation?: string;
+  policyNumber?: string;
+  status?: string;
+  [key: string]: unknown;
+}
+interface VersionedSession {
+  version: number;
+  status?: string;
+  createdAt?: string;
+  publishedAt?: string;
+  [key: string]: unknown;
+}

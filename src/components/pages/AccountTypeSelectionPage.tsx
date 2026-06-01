@@ -76,11 +76,7 @@ const ACCOUNT_TYPES: AccountTypeOption[] = [
     id: 'adviser',
     title: 'Partner Financial Adviser',
     description: 'Independent adviser seeking to join our platform',
-    features: [
-      'Access to product suite',
-      'Client management tools',
-      'Commission tracking',
-    ],
+    features: ['Access to product suite', 'Client management tools', 'Commission tracking'],
     icon: Users,
     status: 'coming-soon',
   },
@@ -127,7 +123,7 @@ export function AccountTypeSelectionPage() {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
-              'Authorization': `Bearer ${publicAnonKey}`,
+              Authorization: `Bearer ${publicAnonKey}`,
             },
             body: JSON.stringify({
               userId: user.id,
@@ -194,7 +190,6 @@ export function AccountTypeSelectionPage() {
 
       {/* ── Main Content ───────────────────────────────────────────── */}
       <div className="max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8 xl:px-12 pb-16">
-
         {/* ── Primary: Personal Client Card ──────────────────────────── */}
         <div className="max-w-3xl mx-auto mt-8 mb-12">
           <Card className="border border-purple-200/80 shadow-xl bg-white overflow-hidden hover:border-purple-300 transition-all duration-200">
@@ -223,7 +218,9 @@ export function AccountTypeSelectionPage() {
                 <div className="grid md:grid-cols-2 gap-6">
                   {/* Features */}
                   <div>
-                    <h4 className="text-xs font-semibold text-gray-500 mb-3 uppercase tracking-wider">What you'll get</h4>
+                    <h4 className="text-xs font-semibold text-gray-500 mb-3 uppercase tracking-wider">
+                      What you'll get
+                    </h4>
                     <ul className="space-y-2.5">
                       {personalAccount.features.map((feature, index) => (
                         <li key={index} className="flex items-center gap-2.5">
@@ -239,7 +236,9 @@ export function AccountTypeSelectionPage() {
                     <div className="bg-gray-50 border border-gray-200/80 p-4 rounded-xl">
                       <div className="flex items-center gap-2 mb-3">
                         <HeartHandshake className="h-4 w-4 text-purple-600" />
-                        <h5 className="font-semibold text-gray-900 text-xs uppercase tracking-wider">5-Step Application</h5>
+                        <h5 className="font-semibold text-gray-900 text-xs uppercase tracking-wider">
+                          5-Step Application
+                        </h5>
                       </div>
                       <div className="flex items-center gap-1.5">
                         {PROCESS_STEPS.map((step, i) => (
@@ -248,7 +247,9 @@ export function AccountTypeSelectionPage() {
                               <div className="w-6 h-6 rounded-full bg-purple-100 border border-purple-200 flex items-center justify-center text-[10px] font-bold text-purple-700">
                                 {step.number}
                               </div>
-                              <span className="text-[9px] text-gray-500 mt-1 text-center leading-tight truncate w-full">{step.label}</span>
+                              <span className="text-[9px] text-gray-500 mt-1 text-center leading-tight truncate w-full">
+                                {step.label}
+                              </span>
                             </div>
                             {i < PROCESS_STEPS.length - 1 && (
                               <div className="w-3 h-px bg-purple-200 flex-shrink-0 mt-[-10px]" />
@@ -317,8 +318,12 @@ export function AccountTypeSelectionPage() {
                           <Icon className="h-5 w-5 text-gray-400" />
                         </div>
                         <div>
-                          <h4 className="font-semibold text-gray-900 text-sm">{accountType.title}</h4>
-                          <p className="text-xs text-gray-500 mt-0.5 leading-relaxed">{accountType.description}</p>
+                          <h4 className="font-semibold text-gray-900 text-sm">
+                            {accountType.title}
+                          </h4>
+                          <p className="text-xs text-gray-500 mt-0.5 leading-relaxed">
+                            {accountType.description}
+                          </p>
                         </div>
                       </div>
                       <Badge

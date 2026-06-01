@@ -18,15 +18,7 @@
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '../../../../../ui/card';
 import { Badge } from '../../../../../ui/badge';
-import {
-  Shield,
-  Heart,
-  PiggyBank,
-  TrendingUp,
-  Briefcase,
-  Landmark,
-  BarChart3,
-} from 'lucide-react';
+import { Shield, Heart, PiggyBank, TrendingUp, Briefcase, Landmark, BarChart3 } from 'lucide-react';
 import type { DashboardMode } from '../ClientOverviewTab';
 
 // ── Types ───────────────────────────────────────────────────────────────
@@ -63,7 +55,10 @@ function fmtCompact(v: number): string {
   return fmtCurrency(v);
 }
 
-const CATEGORY_ICON_MAP: Record<string, { icon: React.ElementType; colorClass: string; bgClass: string }> = {
+const CATEGORY_ICON_MAP: Record<
+  string,
+  { icon: React.ElementType; colorClass: string; bgClass: string }
+> = {
   risk: { icon: Shield, colorClass: 'text-[#6d28d9]', bgClass: 'bg-[#6d28d9]/10' },
   medical: { icon: Heart, colorClass: 'text-red-500', bgClass: 'bg-red-50' },
   retirement: { icon: PiggyBank, colorClass: 'text-green-600', bgClass: 'bg-green-50' },
@@ -79,14 +74,11 @@ interface CategoryPolicyKPIsProps {
   mode?: DashboardMode;
 }
 
-export function CategoryPolicyKPIs({
-  categories,
-  mode = 'adviser',
-}: CategoryPolicyKPIsProps) {
+export function CategoryPolicyKPIs({ categories, mode = 'adviser' }: CategoryPolicyKPIsProps) {
   const isClient = mode === 'client';
 
   // Filter to only categories with policies or meaningful data
-  const activeCats = categories.filter(c => c.policyCount > 0 || c.monthlyPremium > 0);
+  const activeCats = categories.filter((c) => c.policyCount > 0 || c.monthlyPremium > 0);
 
   if (activeCats.length === 0) {
     return null;
@@ -106,10 +98,16 @@ export function CategoryPolicyKPIs({
             {isClient ? 'My Coverage by Category' : 'Policy KPIs by Category'}
           </CardTitle>
           <div className="flex items-center gap-2 ml-auto">
-            <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-4 border-gray-200 text-gray-500">
+            <Badge
+              variant="outline"
+              className="text-[10px] px-1.5 py-0 h-4 border-gray-200 text-gray-500"
+            >
               {totalPolicies} {totalPolicies === 1 ? 'policy' : 'policies'}
             </Badge>
-            <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-4 border-gray-200 text-gray-500">
+            <Badge
+              variant="outline"
+              className="text-[10px] px-1.5 py-0 h-4 border-gray-200 text-gray-500"
+            >
               {fmtCompact(totalPremium)}/m
             </Badge>
           </div>
@@ -146,7 +144,9 @@ function CategoryKPICard({
     <div className="border border-gray-200 rounded-lg p-3.5 hover:shadow-sm transition-shadow">
       {/* Header */}
       <div className="flex items-center gap-2.5 mb-3">
-        <div className={`flex items-center justify-center h-8 w-8 rounded-lg ${iconCfg.bgClass} flex-shrink-0`}>
+        <div
+          className={`flex items-center justify-center h-8 w-8 rounded-lg ${iconCfg.bgClass} flex-shrink-0`}
+        >
           <CatIcon className={`h-4 w-4 ${iconCfg.colorClass}`} />
         </div>
         <div className="flex-1 min-w-0">
@@ -170,9 +170,11 @@ function CategoryKPICard({
           {category.metrics.map((metric) => (
             <div key={metric.label} className="flex items-center justify-between">
               <span className="text-[10px] text-gray-500">{metric.label}</span>
-              <span className={`text-[10px] font-medium ${
-                metric.highlight ? 'text-amber-600' : 'text-gray-700'
-              }`}>
+              <span
+                className={`text-[10px] font-medium ${
+                  metric.highlight ? 'text-amber-600' : 'text-gray-700'
+                }`}
+              >
                 {metric.value}
               </span>
             </div>
@@ -230,8 +232,16 @@ export function deriveCategoryKPIs({
       headlineValue: fmt(totalLifeCover),
       headlineLabel: 'Total Life Cover',
       metrics: [
-        { label: 'Disability Cover', value: totalDisability > 0 ? fmt(totalDisability) : 'None', highlight: totalDisability === 0 },
-        { label: 'Severe Illness', value: totalSevereIllness > 0 ? fmt(totalSevereIllness) : 'None', highlight: totalSevereIllness === 0 },
+        {
+          label: 'Disability Cover',
+          value: totalDisability > 0 ? fmt(totalDisability) : 'None',
+          highlight: totalDisability === 0,
+        },
+        {
+          label: 'Severe Illness',
+          value: totalSevereIllness > 0 ? fmt(totalSevereIllness) : 'None',
+          highlight: totalSevereIllness === 0,
+        },
       ],
     });
   }
@@ -333,9 +343,7 @@ export function deriveCategoryKPIs({
       monthlyPremium: 0,
       headlineValue: 'In Place',
       headlineLabel: 'Estate Plan Status',
-      metrics: [
-        { label: 'Documents', value: `${estatePolicies.length}` },
-      ],
+      metrics: [{ label: 'Documents', value: `${estatePolicies.length}` }],
     });
   }
 

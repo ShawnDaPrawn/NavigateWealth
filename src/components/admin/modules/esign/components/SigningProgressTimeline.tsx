@@ -24,13 +24,16 @@ interface SigningProgressTimelineProps {
   compact?: boolean;
 }
 
-const SIGNER_STATUS_CONFIG: Record<string, {
-  icon: React.ReactNode;
-  color: string;
-  bgColor: string;
-  lineColor: string;
-  label: string;
-}> = {
+const SIGNER_STATUS_CONFIG: Record<
+  string,
+  {
+    icon: React.ReactNode;
+    color: string;
+    bgColor: string;
+    lineColor: string;
+    label: string;
+  }
+> = {
   signed: {
     icon: <CheckCircle2 className="h-5 w-5" />,
     color: 'text-green-600',
@@ -96,10 +99,13 @@ function formatTime(dateString?: string | null): string {
   }
 }
 
-export function SigningProgressTimeline({ envelope, compact = false }: SigningProgressTimelineProps) {
+export function SigningProgressTimeline({
+  envelope,
+  compact = false,
+}: SigningProgressTimelineProps) {
   const signers = [...(envelope.signers || [])].sort((a, b) => (a.order || 1) - (b.order || 1));
   const signingMode: SigningMode = envelope.signing_mode || 'sequential';
-  const signedCount = signers.filter(s => s.status === 'signed').length;
+  const signedCount = signers.filter((s) => s.status === 'signed').length;
   const totalSigners = signers.length;
   const percentComplete = totalSigners > 0 ? Math.round((signedCount / totalSigners) * 100) : 0;
 
@@ -156,7 +162,7 @@ export function SigningProgressTimeline({ envelope, compact = false }: SigningPr
             signingMode === 'sequential' &&
             signer.status !== 'signed' &&
             signer.status !== 'declined' &&
-            index === signers.findIndex(s => s.status !== 'signed' && s.status !== 'declined');
+            index === signers.findIndex((s) => s.status !== 'signed' && s.status !== 'declined');
 
           return (
             <div key={signer.id} className="relative flex gap-3">
@@ -168,7 +174,9 @@ export function SigningProgressTimeline({ envelope, compact = false }: SigningPr
               )}
 
               {/* Status icon */}
-              <div className={`relative z-10 flex-shrink-0 w-10 h-10 rounded-full flex items-center justify-center ${config.bgColor} ${config.color} ${isCurrentTurn ? 'ring-2 ring-purple-400 ring-offset-2' : ''}`}>
+              <div
+                className={`relative z-10 flex-shrink-0 w-10 h-10 rounded-full flex items-center justify-center ${config.bgColor} ${config.color} ${isCurrentTurn ? 'ring-2 ring-purple-400 ring-offset-2' : ''}`}
+              >
                 {config.icon}
               </div>
 
@@ -192,7 +200,10 @@ export function SigningProgressTimeline({ envelope, compact = false }: SigningPr
                     <p className="text-xs text-muted-foreground truncate">{signer.email}</p>
                   </div>
                   <div className="flex items-center gap-2 flex-shrink-0">
-                    <Badge variant="outline" className={`text-[10px] ${config.color} border-current/20`}>
+                    <Badge
+                      variant="outline"
+                      className={`text-[10px] ${config.color} border-current/20`}
+                    >
                       {config.label}
                     </Badge>
                   </div>

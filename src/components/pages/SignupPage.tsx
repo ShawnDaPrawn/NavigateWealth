@@ -19,7 +19,11 @@ import {
   HelpCircle,
 } from 'lucide-react';
 import { signUp } from '../../utils/auth/authService';
-import { validatePassword, getPasswordStrengthColor, getPasswordStrengthLabel } from '../../utils/auth/passwordValidation';
+import {
+  validatePassword,
+  getPasswordStrengthColor,
+  getPasswordStrengthLabel,
+} from '../../utils/auth/passwordValidation';
 import { projectId, publicAnonKey } from '../../utils/supabase/info';
 import { getUserErrorMessage, isError } from '../../utils/errorUtils';
 import { toast } from 'sonner';
@@ -91,7 +95,9 @@ export function SignupPage() {
 
     // Validate password
     if (!passwordStrength.isValid) {
-      setError('Password does not meet security requirements. Please check the requirements below.');
+      setError(
+        'Password does not meet security requirements. Please check the requirements below.',
+      );
       return;
     }
 
@@ -105,16 +111,16 @@ export function SignupPage() {
 
     try {
       const fullPhoneNumber = `${countryCode}${cellphone}`;
-      
+
       // Call our backend signup endpoint that creates user + application
-      
+
       const endpointUrl = `https://${projectId}.supabase.co/functions/v1/make-server-91ed8379/auth-signup/signup`;
 
       const response = await fetch(endpointUrl, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${publicAnonKey}`
+          Authorization: `Bearer ${publicAnonKey}`,
         },
         body: JSON.stringify({
           email,
@@ -122,13 +128,13 @@ export function SignupPage() {
           firstName: firstName.trim(),
           surname: surname.trim(),
           countryCode,
-          phoneNumber: cellphone.trim()
-        })
+          phoneNumber: cellphone.trim(),
+        }),
       });
 
       let result;
       const responseText = await response.text();
-      
+
       try {
         result = JSON.parse(responseText);
       } catch (parseError: unknown) {
@@ -144,25 +150,29 @@ export function SignupPage() {
       }
 
       // Show success message with application number
-      setSuccess(`Account created successfully! Your application number is ${result.application.application_number}. Redirecting to verification...`);
-      
+      setSuccess(
+        `Account created successfully! Your application number is ${result.application.application_number}. Redirecting to verification...`,
+      );
+
       // Redirect to verify email page
       setTimeout(() => {
-        navigate('/verify-email', { 
-          state: { 
+        navigate('/verify-email', {
+          state: {
             email,
-            message: 'Please verify your email address to continue.' 
-          } 
+            message: 'Please verify your email address to continue.',
+          },
         });
       }, 1500);
-      
     } catch (error: unknown) {
       if (isError(error)) {
         // Handle specific errors
-        if (error.message.includes('already registered') || 
-            error.message.includes('already exists') ||
-            error.message.includes('User already registered')) {
-          const msg = 'This email is already registered. Please sign in instead or use a different email address.';
+        if (
+          error.message.includes('already registered') ||
+          error.message.includes('already exists') ||
+          error.message.includes('User already registered')
+        ) {
+          const msg =
+            'This email is already registered. Please sign in instead or use a different email address.';
           setError(msg);
           toast.error(msg);
         } else if (error.message.includes('password')) {
@@ -176,7 +186,9 @@ export function SignupPage() {
         }
       } else {
         // Fallback for unknown errors - show the actual message for debugging
-        const msg = (error instanceof Error ? error.message : null) || 'Failed to create account. Please try again.';
+        const msg =
+          (error instanceof Error ? error.message : null) ||
+          'Failed to create account. Please try again.';
         setError(msg);
         toast.error(msg);
       }
@@ -211,7 +223,8 @@ export function SignupPage() {
                 <br />
                 You're testing on localhost. Verification emails may redirect to localhost.
                 <br />
-                <strong>For production:</strong> Ensure Supabase Site URL is set to your production domain.
+                <strong>For production:</strong> Ensure Supabase Site URL is set to your production
+                domain.
               </AlertDescription>
             </Alert>
           )}
@@ -219,16 +232,20 @@ export function SignupPage() {
           {success && (
             <Alert className="mb-6 border-green-200 bg-green-50">
               <CheckCircle2 className="h-4 w-4 text-green-600" />
-              <AlertDescription className="text-green-800">
-                {success}
-              </AlertDescription>
+              <AlertDescription className="text-green-800">{success}</AlertDescription>
             </Alert>
           )}
 
           {error && (
-            <Alert className="mb-6 border-red-200 bg-red-50 relative" role="alert" aria-live="assertive">
+            <Alert
+              className="mb-6 border-red-200 bg-red-50 relative"
+              role="alert"
+              aria-live="assertive"
+            >
               <XCircle className="h-4 w-4 text-red-600" />
-              <AlertDescription className="text-red-800 pr-8" id="signup-error">{error}</AlertDescription>
+              <AlertDescription className="text-red-800 pr-8" id="signup-error">
+                {error}
+              </AlertDescription>
               <button
                 onClick={() => setError('')}
                 className="absolute top-3 right-3 text-red-600 hover:text-red-800 transition-colors"
@@ -239,10 +256,16 @@ export function SignupPage() {
             </Alert>
           )}
 
-          <form onSubmit={handleSubmit} className="space-y-5" aria-describedby={error ? 'signup-error' : undefined}>
+          <form
+            onSubmit={handleSubmit}
+            className="space-y-5"
+            aria-describedby={error ? 'signup-error' : undefined}
+          >
             {/* ── Section: Personal Details ── */}
             <fieldset className="space-y-4">
-              <legend className="text-xs font-semibold uppercase tracking-wider text-gray-400 mb-1">Personal Details</legend>
+              <legend className="text-xs font-semibold uppercase tracking-wider text-gray-400 mb-1">
+                Personal Details
+              </legend>
 
               {/* Name Fields - Side by Side */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -332,7 +355,9 @@ export function SignupPage() {
 
             {/* ── Section: Security ── */}
             <fieldset className="space-y-4 pt-2">
-              <legend className="text-xs font-semibold uppercase tracking-wider text-gray-400 mb-1">Create Password</legend>
+              <legend className="text-xs font-semibold uppercase tracking-wider text-gray-400 mb-1">
+                Create Password
+              </legend>
 
               {/* Password Field */}
               <div>
@@ -374,7 +399,9 @@ export function SignupPage() {
                   <div className="mt-2.5 space-y-2">
                     <div className="flex items-center justify-between">
                       <span className="text-xs text-gray-500">Password Strength</span>
-                      <span className={`text-xs font-medium ${getPasswordStrengthColor(passwordStrength.score)}`}>
+                      <span
+                        className={`text-xs font-medium ${getPasswordStrengthColor(passwordStrength.score)}`}
+                      >
                         {getPasswordStrengthLabel(passwordStrength.score)}
                       </span>
                     </div>
@@ -384,10 +411,10 @@ export function SignupPage() {
                           passwordStrength.score === 0 || passwordStrength.score === 1
                             ? 'bg-red-500'
                             : passwordStrength.score === 2
-                            ? 'bg-orange-500'
-                            : passwordStrength.score === 3
-                            ? 'bg-yellow-500'
-                            : 'bg-green-500'
+                              ? 'bg-orange-500'
+                              : passwordStrength.score === 3
+                                ? 'bg-yellow-500'
+                                : 'bg-green-500'
                         }`}
                         style={{ width: `${(passwordStrength.score / 4) * 100}%` }}
                       />
@@ -395,7 +422,9 @@ export function SignupPage() {
 
                     {/* Password Requirements */}
                     <div className="text-xs space-y-1" id="password-requirements">
-                      <div className={`flex items-center gap-2 ${passwordStrength.requirements.minLength ? 'text-green-700' : 'text-gray-500'}`}>
+                      <div
+                        className={`flex items-center gap-2 ${passwordStrength.requirements.minLength ? 'text-green-700' : 'text-gray-500'}`}
+                      >
                         {passwordStrength.requirements.minLength ? (
                           <CheckCircle2 className="h-3.5 w-3.5 shrink-0" />
                         ) : (
@@ -403,7 +432,9 @@ export function SignupPage() {
                         )}
                         <span>At least 12 characters</span>
                       </div>
-                      <div className={`flex items-center gap-2 ${passwordStrength.requirements.characterTypes >= 3 ? 'text-green-700' : 'text-gray-500'}`}>
+                      <div
+                        className={`flex items-center gap-2 ${passwordStrength.requirements.characterTypes >= 3 ? 'text-green-700' : 'text-gray-500'}`}
+                      >
                         {passwordStrength.requirements.characterTypes >= 3 ? (
                           <CheckCircle2 className="h-3.5 w-3.5 shrink-0" />
                         ) : (
@@ -411,7 +442,9 @@ export function SignupPage() {
                         )}
                         <span>Mix of uppercase, lowercase, numbers & symbols</span>
                       </div>
-                      <div className={`flex items-center gap-2 ${passwordStrength.requirements.notCommon ? 'text-green-700' : 'text-gray-500'}`}>
+                      <div
+                        className={`flex items-center gap-2 ${passwordStrength.requirements.notCommon ? 'text-green-700' : 'text-gray-500'}`}
+                      >
                         {passwordStrength.requirements.notCommon ? (
                           <CheckCircle2 className="h-3.5 w-3.5 shrink-0" />
                         ) : (
@@ -446,7 +479,11 @@ export function SignupPage() {
                     onClick={() => setShowConfirmPassword(!showConfirmPassword)}
                     className="absolute inset-y-0 right-0 pr-3 flex items-center"
                     disabled={isLoading}
-                    aria-label={showConfirmPassword ? 'Hide password confirmation' : 'Show password confirmation'}
+                    aria-label={
+                      showConfirmPassword
+                        ? 'Hide password confirmation'
+                        : 'Show password confirmation'
+                    }
                   >
                     {showConfirmPassword ? (
                       <EyeOff className="h-4 w-4 text-gray-400" />
@@ -500,11 +537,22 @@ export function SignupPage() {
             <Button
               type="submit"
               className="w-full bg-purple-700 hover:bg-purple-800"
-              disabled={isLoading || !passwordStrength.isValid || !passwordsMatch || !email || !firstName.trim() || !surname.trim() || !cellphone.trim()}
+              disabled={
+                isLoading ||
+                !passwordStrength.isValid ||
+                !passwordsMatch ||
+                !email ||
+                !firstName.trim() ||
+                !surname.trim() ||
+                !cellphone.trim()
+              }
             >
               {isLoading ? (
                 <span className="flex items-center justify-center gap-2">
-                  <span className="animate-spin h-4 w-4 border-2 border-white border-t-transparent rounded-full" aria-hidden="true"></span>
+                  <span
+                    className="animate-spin h-4 w-4 border-2 border-white border-t-transparent rounded-full"
+                    aria-hidden="true"
+                  ></span>
                   Creating account...
                 </span>
               ) : (

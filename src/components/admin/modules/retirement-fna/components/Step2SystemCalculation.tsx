@@ -1,6 +1,6 @@
 /**
  * Step 2: System Auto-Calculation
- * 
+ *
  * Behaviour Rules:
  * - NO MANUAL EDITING IN THIS STEP
  * - Display all calculated values from Step 1 input
@@ -13,7 +13,15 @@ import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '../../../../ui/card';
 import { Button } from '../../../../ui/button';
 import { Alert, AlertDescription, AlertTitle } from '../../../../ui/alert';
-import { CheckCircle2, AlertTriangle, ArrowRight, ArrowLeft, Info, TrendingUp, TrendingDown } from 'lucide-react';
+import {
+  CheckCircle2,
+  AlertTriangle,
+  ArrowRight,
+  ArrowLeft,
+  Info,
+  TrendingUp,
+  TrendingDown,
+} from 'lucide-react';
 import { formatCurrency } from '../../../../../utils/currencyFormatter';
 import { RetirementFNAInputs, RetirementCalculationResults } from '../types';
 import { SVGBarChart } from '../../../../ui/svg-charts';
@@ -25,7 +33,12 @@ interface Step2SystemCalculationProps {
   onBack: () => void;
 }
 
-export function Step2SystemCalculation({ inputs, calculations, onNext, onBack }: Step2SystemCalculationProps) {
+export function Step2SystemCalculation({
+  inputs,
+  calculations,
+  onNext,
+  onBack,
+}: Step2SystemCalculationProps) {
   const {
     requiredCapital,
     projectedCapital,
@@ -34,7 +47,7 @@ export function Step2SystemCalculation({ inputs, calculations, onNext, onBack }:
     requiredAdditionalContribution,
     shortfallPercentage,
     targetMonthlyIncome,
-    yearsInRetirement
+    yearsInRetirement,
   } = calculations;
 
   const chartData = [
@@ -42,7 +55,7 @@ export function Step2SystemCalculation({ inputs, calculations, onNext, onBack }:
       name: 'At Retirement',
       Projected: Math.round(projectedCapital),
       Required: Math.round(requiredCapital),
-    }
+    },
   ];
 
   return (
@@ -50,26 +63,28 @@ export function Step2SystemCalculation({ inputs, calculations, onNext, onBack }:
       <Alert>
         <Info className="h-4 w-4" />
         <AlertDescription className="text-sm">
-          All calculations below are system-generated based on standard actuarial assumptions. 
-          You will have the opportunity to apply manual adjustments in Step 3.
+          All calculations below are system-generated based on standard actuarial assumptions. You
+          will have the opportunity to apply manual adjustments in Step 3.
         </AlertDescription>
       </Alert>
 
       {/* Status Banner */}
-      <Alert className={hasShortfall ? "border-yellow-200 bg-yellow-50" : "border-green-200 bg-green-50"}>
+      <Alert
+        className={hasShortfall ? 'border-yellow-200 bg-yellow-50' : 'border-green-200 bg-green-50'}
+      >
         {hasShortfall ? (
           <AlertTriangle className="h-5 w-5 text-yellow-600" />
         ) : (
           <CheckCircle2 className="h-5 w-5 text-green-600" />
         )}
         <div>
-          <AlertTitle className={hasShortfall ? "text-yellow-900" : "text-green-900"}>
-            {hasShortfall ? "Projected Shortfall Detected" : "On Track for Retirement"}
+          <AlertTitle className={hasShortfall ? 'text-yellow-900' : 'text-green-900'}>
+            {hasShortfall ? 'Projected Shortfall Detected' : 'On Track for Retirement'}
           </AlertTitle>
-          <AlertDescription className={hasShortfall ? "text-yellow-800" : "text-green-800"}>
-            {hasShortfall 
+          <AlertDescription className={hasShortfall ? 'text-yellow-800' : 'text-green-800'}>
+            {hasShortfall
               ? `The client is currently projected to fall ${shortfallPercentage.toFixed(0)}% short of their required retirement capital.`
-              : "The client is projected to fully meet their retirement capital goals with current savings and contributions."}
+              : 'The client is projected to fully meet their retirement capital goals with current savings and contributions.'}
           </AlertDescription>
         </div>
       </Alert>
@@ -84,9 +99,7 @@ export function Step2SystemCalculation({ inputs, calculations, onNext, onBack }:
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{formatCurrency(targetMonthlyIncome)}</div>
-            <p className="text-xs text-muted-foreground mt-1">
-              Future value (at retirement)
-            </p>
+            <p className="text-xs text-muted-foreground mt-1">Future value (at retirement)</p>
           </CardContent>
         </Card>
 
@@ -118,20 +131,28 @@ export function Step2SystemCalculation({ inputs, calculations, onNext, onBack }:
           </CardContent>
         </Card>
 
-        <Card className={hasShortfall ? "border-yellow-200 bg-yellow-50" : "border-green-200 bg-green-50"}>
+        <Card
+          className={
+            hasShortfall ? 'border-yellow-200 bg-yellow-50' : 'border-green-200 bg-green-50'
+          }
+        >
           <CardHeader className="pb-3">
             <CardTitle className="text-sm font-medium text-muted-foreground">
-              {hasShortfall ? "Shortfall" : "Surplus"}
+              {hasShortfall ? 'Shortfall' : 'Surplus'}
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className={`text-2xl font-bold flex items-center gap-1 ${hasShortfall ? "text-yellow-700" : "text-green-700"}`}>
-              {hasShortfall ? <TrendingDown className="h-5 w-5" /> : <TrendingUp className="h-5 w-5" />}
+            <div
+              className={`text-2xl font-bold flex items-center gap-1 ${hasShortfall ? 'text-yellow-700' : 'text-green-700'}`}
+            >
+              {hasShortfall ? (
+                <TrendingDown className="h-5 w-5" />
+              ) : (
+                <TrendingUp className="h-5 w-5" />
+              )}
               {formatCurrency(Math.abs(capitalShortfall))}
             </div>
-            <p className="text-xs text-muted-foreground mt-1">
-              At age {inputs.retirementAge}
-            </p>
+            <p className="text-xs text-muted-foreground mt-1">At age {inputs.retirementAge}</p>
           </CardContent>
         </Card>
       </div>
@@ -146,9 +167,9 @@ export function Step2SystemCalculation({ inputs, calculations, onNext, onBack }:
           <CardContent className="space-y-4">
             <div className="space-y-3 text-sm">
               <p>
-                Based on a retirement age of <strong>{inputs.retirementAge}</strong>, the client requires{' '}
-                <strong>{formatCurrency(requiredCapital)}</strong> to maintain a living standard of{' '}
-                <strong>{formatCurrency(targetMonthlyIncome)}</strong> per month.
+                Based on a retirement age of <strong>{inputs.retirementAge}</strong>, the client
+                requires <strong>{formatCurrency(requiredCapital)}</strong> to maintain a living
+                standard of <strong>{formatCurrency(targetMonthlyIncome)}</strong> per month.
               </p>
               <p>
                 Current savings and contribution levels are projected to reach{' '}
@@ -197,8 +218,8 @@ export function Step2SystemCalculation({ inputs, calculations, onNext, onBack }:
       <Alert className="border-blue-200 bg-blue-50">
         <Info className="h-4 w-4 text-blue-600" />
         <AlertDescription className="text-sm text-blue-900">
-          <strong>Next Step:</strong> You can apply manual adjustments to assumptions (inflation rate, growth rate) 
-          in Step 3 if the standard calculations need to be refined.
+          <strong>Next Step:</strong> You can apply manual adjustments to assumptions (inflation
+          rate, growth rate) in Step 3 if the standard calculations need to be refined.
         </AlertDescription>
       </Alert>
 

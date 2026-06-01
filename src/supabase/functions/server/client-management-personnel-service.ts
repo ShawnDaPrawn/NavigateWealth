@@ -1,5 +1,10 @@
-import { createClient } from "jsr:@supabase/supabase-js@2.49.8";
-import { CreatePersonnelPayload, PersonnelProfile, UserRole, PersonnelDocument } from "./client-management-personnel-types.ts";
+import { createClient } from 'jsr:@supabase/supabase-js@2.49.8';
+import {
+  CreatePersonnelPayload,
+  PersonnelProfile,
+  UserRole,
+  PersonnelDocument,
+} from './client-management-personnel-types.ts';
 import * as kv from './kv_store.tsx';
 import { createModuleLogger } from './stderr-logger.ts';
 import { SUPER_ADMIN_EMAIL } from './constants.ts';
@@ -8,10 +13,8 @@ import { sendEmail } from './email-service.tsx';
 const log = createModuleLogger('personnel-service');
 
 // Lazy Supabase client — must NOT be top-level to avoid deployment crashes in edge functions.
-const getSupabase = () => createClient(
-  Deno.env.get('SUPABASE_URL')!,
-  Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
-);
+const getSupabase = () =>
+  createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!);
 
 // Personnel Profile KV Store Helpers
 const PERSONNEL_PREFIX = 'personnel:profile:';
@@ -39,10 +42,10 @@ const PersonnelRepository = {
       await this.saveProfile(profile);
     }
   },
-  
+
   async deleteProfile(id: string): Promise<void> {
     await kv.del(`${PERSONNEL_PREFIX}${id}`);
-  }
+  },
 };
 
 export const PersonnelService = {
@@ -55,13 +58,11 @@ export const PersonnelService = {
   async inviteUser(currentUserRole: UserRole, payload: CreatePersonnelPayload, siteUrl?: string) {
     // 1. Security Check
     if (!['super_admin', 'admin'].includes(currentUserRole)) {
-      throw new Error("Unauthorized: Only admins can invite users.");
+      throw new Error('Unauthorized: Only admins can invite users.');
     }
 
     // 2. Build redirect URL — sends the invited user to the admin account setup page
-    const redirectTo = siteUrl
-      ? `${siteUrl}/auth/callback?type=invite`
-      : undefined;
+    const redirectTo = siteUrl ? `${siteUrl}/auth/callback?type=invite` : undefined;
 
     // 3. Invite via Supabase Auth
     const { data: authData, error: authError } = await getSupabase().auth.admin.inviteUserByEmail(
@@ -74,11 +75,11 @@ export const PersonnelService = {
           role: payload.role,
           invited: true,
         },
-      }
+      },
     );
-    
+
     if (authError) throw authError;
-    if (!authData.user) throw new Error("Failed to create user in Auth system");
+    if (!authData.user) throw new Error('Failed to create user in Auth system');
 
     // 4. Create Personnel Profile
     const newProfile: PersonnelProfile = {
@@ -113,40 +114,34 @@ export const PersonnelService = {
    */
   async resendInvite(currentUserRole: UserRole, personnelId: string, siteUrl?: string) {
     if (!['super_admin', 'admin'].includes(currentUserRole)) {
-      throw new Error("Unauthorized: Only admins can resend invitations.");
+      throw new Error('Unauthorized: Only admins can resend invitations.');
     }
 
     const profile = await PersonnelRepository.getProfile(personnelId);
-    if (!profile) throw new Error("Personnel profile not found");
+    if (!profile) throw new Error('Personnel profile not found');
     if (profile.status !== 'pending') {
-      throw new Error("Can only resend invitations for pending personnel");
+      throw new Error('Can only resend invitations for pending personnel');
     }
 
-    const redirectTo = siteUrl
-      ? `${siteUrl}/auth/callback?type=invite`
-      : undefined;
+    const redirectTo = siteUrl ? `${siteUrl}/auth/callback?type=invite` : undefined;
 
     // Attempt 1: Try the standard inviteUserByEmail flow
-    const { error: authError } = await getSupabase().auth.admin.inviteUserByEmail(
-      profile.email,
-      {
-        redirectTo,
-        data: {
-          firstName: profile.firstName,
-          lastName: profile.lastName,
-          role: profile.role,
-          invited: true,
-        },
-      }
-    );
+    const { error: authError } = await getSupabase().auth.admin.inviteUserByEmail(profile.email, {
+      redirectTo,
+      data: {
+        firstName: profile.firstName,
+        lastName: profile.lastName,
+        role: profile.role,
+        invited: true,
+      },
+    });
 
     if (authError) {
       // WORKAROUND: resend-invite-already-registered
       // If the user already exists in auth, generate a magic link and
       // send the invitation email manually via SendGrid.
       const isAlreadyRegistered =
-        authError.message?.includes('already been registered') ||
-        authError.status === 422;
+        authError.message?.includes('already been registered') || authError.status === 422;
 
       if (!isAlreadyRegistered) {
         throw authError;
@@ -177,12 +172,15 @@ export const PersonnelService = {
       const fullName = [profile.firstName, profile.lastName].filter(Boolean).join(' ');
       const emailSent = await sendEmail({
         to: profile.email,
-        subject: 'You\'re invited to Navigate Wealth',
+        subject: "You're invited to Navigate Wealth",
         html: buildInviteEmailHtml(fullName, inviteLink),
       });
 
       if (!emailSent) {
-        log.error('SendGrid email delivery failed for resend invite', { personnelId, email: profile.email });
+        log.error('SendGrid email delivery failed for resend invite', {
+          personnelId,
+          email: profile.email,
+        });
         throw new Error('Failed to send invitation email. Please check SendGrid configuration.');
       }
     }
@@ -202,19 +200,21 @@ export const PersonnelService = {
    */
   async cancelInvite(currentUserRole: UserRole, personnelId: string) {
     if (!['super_admin', 'admin'].includes(currentUserRole)) {
-      throw new Error("Unauthorized: Only admins can cancel invitations.");
+      throw new Error('Unauthorized: Only admins can cancel invitations.');
     }
 
     const profile = await PersonnelRepository.getProfile(personnelId);
-    if (!profile) throw new Error("Personnel profile not found");
+    if (!profile) throw new Error('Personnel profile not found');
     if (profile.status !== 'pending') {
-      throw new Error("Can only cancel invitations for pending personnel");
+      throw new Error('Can only cancel invitations for pending personnel');
     }
 
     // 1. Delete the auth user (this invalidates any outstanding invite links)
     const { error: authError } = await getSupabase().auth.admin.deleteUser(personnelId);
     if (authError) {
-      log.error('Failed to delete auth user during invite cancellation', authError, { personnelId });
+      log.error('Failed to delete auth user during invite cancellation', authError, {
+        personnelId,
+      });
       // Continue with KV cleanup even if auth deletion fails
     }
 
@@ -236,21 +236,14 @@ export const PersonnelService = {
    * Lists all personnel, filtering based on the viewer's role (Simulated RLS).
    * Auto-bootstraps the super admin profile if missing from KV.
    */
-  async listPersonnel(
-    currentUserId: string,
-    currentUserRole: UserRole,
-    currentUserEmail?: string
-  ) {
+  async listPersonnel(currentUserId: string, currentUserRole: UserRole, currentUserEmail?: string) {
     const allProfiles = await PersonnelRepository.listAll();
 
     // Auto-bootstrap: if the current user is the super admin and their profile
     // doesn't exist in KV yet, create it so they appear in the personnel table.
-    if (
-      currentUserEmail &&
-      currentUserEmail.toLowerCase() === SUPER_ADMIN_EMAIL.toLowerCase()
-    ) {
+    if (currentUserEmail && currentUserEmail.toLowerCase() === SUPER_ADMIN_EMAIL.toLowerCase()) {
       const alreadyExists = allProfiles.some(
-        (p) => p.id === currentUserId || p.email?.toLowerCase() === SUPER_ADMIN_EMAIL.toLowerCase()
+        (p) => p.id === currentUserId || p.email?.toLowerCase() === SUPER_ADMIN_EMAIL.toLowerCase(),
       );
 
       if (!alreadyExists) {
@@ -283,13 +276,13 @@ export const PersonnelService = {
       return allProfiles;
     } else if (currentUserRole === 'adviser') {
       // Adviser can only see themselves
-      return allProfiles.filter(p => p.id === currentUserId);
+      return allProfiles.filter((p) => p.id === currentUserId);
     } else if (currentUserRole === 'paraplanner') {
-        // Paraplanner might need to see their assigned advisers (Logic TBD)
-        // For now, let them see themselves
-        return allProfiles.filter(p => p.id === currentUserId);
+      // Paraplanner might need to see their assigned advisers (Logic TBD)
+      // For now, let them see themselves
+      return allProfiles.filter((p) => p.id === currentUserId);
     }
-    
+
     return [];
   },
 
@@ -299,7 +292,7 @@ export const PersonnelService = {
   async getProfile(viewerId: string, viewerRole: UserRole, targetId: string) {
     // RLS Logic
     if (viewerId !== targetId && !['super_admin', 'admin', 'compliance'].includes(viewerRole)) {
-      throw new Error("Unauthorized to view this profile");
+      throw new Error('Unauthorized to view this profile');
     }
     return await PersonnelRepository.getProfile(targetId);
   },
@@ -309,23 +302,23 @@ export const PersonnelService = {
    */
   async updateProfile(viewerRole: UserRole, targetId: string, updates: Partial<PersonnelProfile>) {
     if (!['super_admin', 'admin', 'compliance'].includes(viewerRole)) {
-       // Allow self-update? Maybe for phone number, but not Role/Commission
-       // But for now, strict control
-       throw new Error("Unauthorized to update profile");
+      // Allow self-update? Maybe for phone number, but not Role/Commission
+      // But for now, strict control
+      throw new Error('Unauthorized to update profile');
     }
 
     const existing = await PersonnelRepository.getProfile(targetId);
-    if (!existing) throw new Error("Profile not found");
+    if (!existing) throw new Error('Profile not found');
 
     // Prevent Role Escalation by non-super-admin
     if (updates.role && updates.role === 'super_admin' && viewerRole !== 'super_admin') {
-        throw new Error("Cannot assign super_admin role");
+      throw new Error('Cannot assign super_admin role');
     }
 
     const updated = {
       ...existing,
       ...updates,
-      updatedAt: new Date().toISOString()
+      updatedAt: new Date().toISOString(),
     };
 
     await PersonnelRepository.saveProfile(updated);
@@ -336,50 +329,49 @@ export const PersonnelService = {
    * Get Clients Assigned to a specific Personnel (Adviser)
    */
   async getAssignedClients(viewerRole: UserRole, personnelId: string) {
-      // RLS: Only Admin, Compliance, or the Adviser themselves can see their book
-      // (Caller should verify viewerId == personnelId if role is adviser, handled in controller/middleware usually)
-      
-      // Fetch all client profiles from KV
-      // Prefix is 'user_profile:' based on profileRoutes.tsx
-      const allClientProfiles = await kv.getByPrefix('user_profile:');
-      
-      // Filter by adviserId
-      const assignedClients = allClientProfiles.filter((profile: Record<string, unknown>) => {
-          const pi = profile.personalInformation as Record<string, unknown> | undefined;
-          // Check both possible locations for adviserId
-          return profile.adviserId === personnelId || 
-                 pi?.adviserId === personnelId;
-      });
-      
-      return assignedClients.map((p: Record<string, unknown>) => {
-          const pi = p.personalInformation as Record<string, unknown> | undefined;
-          const fin = p.financials as Record<string, unknown> | undefined;
-          return {
-              id: p.userId,
-              name: `${pi?.firstName || ''} ${pi?.lastName || ''}`.trim(),
-              email: (pi?.email as string) || '',
-              status: (p.applicationStatus as string) || 'active',
-              aum: (fin?.totalAssets as number) || 0 // Hypothetical field
-          };
-      });
+    // RLS: Only Admin, Compliance, or the Adviser themselves can see their book
+    // (Caller should verify viewerId == personnelId if role is adviser, handled in controller/middleware usually)
+
+    // Fetch all client profiles from KV
+    // Prefix is 'user_profile:' based on profileRoutes.tsx
+    const allClientProfiles = await kv.getByPrefix('user_profile:');
+
+    // Filter by adviserId
+    const assignedClients = allClientProfiles.filter((profile: Record<string, unknown>) => {
+      const pi = profile.personalInformation as Record<string, unknown> | undefined;
+      // Check both possible locations for adviserId
+      return profile.adviserId === personnelId || pi?.adviserId === personnelId;
+    });
+
+    return assignedClients.map((p: Record<string, unknown>) => {
+      const pi = p.personalInformation as Record<string, unknown> | undefined;
+      const fin = p.financials as Record<string, unknown> | undefined;
+      return {
+        id: p.userId,
+        name: `${pi?.firstName || ''} ${pi?.lastName || ''}`.trim(),
+        email: (pi?.email as string) || '',
+        status: (p.applicationStatus as string) || 'active',
+        aum: (fin?.totalAssets as number) || 0, // Hypothetical field
+      };
+    });
   },
-  
+
   /**
    * Add a document to personnel profile
    */
   async addDocument(viewerRole: UserRole, targetId: string, doc: PersonnelDocument) {
-      if (!['super_admin', 'admin', 'compliance'].includes(viewerRole)) {
-          throw new Error("Unauthorized to add documents");
-      }
-      
-      const profile = await PersonnelRepository.getProfile(targetId);
-      if (!profile) throw new Error("Profile not found");
-      
-      const documents = profile.documents || [];
-      documents.push(doc);
-      
-      await this.updateProfile(viewerRole, targetId, { documents });
-      return documents;
+    if (!['super_admin', 'admin', 'compliance'].includes(viewerRole)) {
+      throw new Error('Unauthorized to add documents');
+    }
+
+    const profile = await PersonnelRepository.getProfile(targetId);
+    if (!profile) throw new Error('Profile not found');
+
+    const documents = profile.documents || [];
+    documents.push(doc);
+
+    await this.updateProfile(viewerRole, targetId, { documents });
+    return documents;
   },
 
   /**
@@ -396,10 +388,14 @@ export const PersonnelService = {
    * @param payload - Account data (email, name, role, etc.)
    * @param siteUrl - Frontend origin URL for the recovery redirect
    */
-  async createAccount(currentUserRole: UserRole, payload: CreatePersonnelPayload, siteUrl?: string) {
+  async createAccount(
+    currentUserRole: UserRole,
+    payload: CreatePersonnelPayload,
+    siteUrl?: string,
+  ) {
     // 1. Security Check
     if (!['super_admin', 'admin'].includes(currentUserRole)) {
-      throw new Error("Unauthorized: Only admins can create personnel accounts.");
+      throw new Error('Unauthorized: Only admins can create personnel accounts.');
     }
 
     // 2. Generate temp password (user will set their own via recovery link)
@@ -421,7 +417,7 @@ export const PersonnelService = {
         firstName: payload.firstName,
         lastName: payload.lastName,
         role: payload.role,
-        invited: true,        // Signals "personnel account" to downstream guards
+        invited: true, // Signals "personnel account" to downstream guards
         mustSetPassword: true, // Frontend can prompt password change on first login
         createdByAdmin: true,
       },
@@ -438,7 +434,7 @@ export const PersonnelService = {
       }
       throw authError;
     }
-    if (!authData.user) throw new Error("Failed to create user in Auth system");
+    if (!authData.user) throw new Error('Failed to create user in Auth system');
 
     // 4. Create Personnel Profile (status: 'active', not 'pending')
     const newProfile: PersonnelProfile = {
@@ -455,7 +451,10 @@ export const PersonnelService = {
     };
 
     await PersonnelRepository.saveProfile(newProfile);
-    log.info('Personnel account created (direct)', { userId: authData.user.id, role: payload.role });
+    log.info('Personnel account created (direct)', {
+      userId: authData.user.id,
+      role: payload.role,
+    });
 
     // 5. Generate password recovery link
     let recoveryLink: string | null = null;
@@ -531,7 +530,10 @@ export const PersonnelService = {
     for (const profile of allProfiles) {
       try {
         // Fetch the Auth user
-        const { data: { user }, error: fetchErr } = await supabase.auth.admin.getUserById(profile.id);
+        const {
+          data: { user },
+          error: fetchErr,
+        } = await supabase.auth.admin.getUserById(profile.id);
 
         if (fetchErr || !user) {
           details.push({

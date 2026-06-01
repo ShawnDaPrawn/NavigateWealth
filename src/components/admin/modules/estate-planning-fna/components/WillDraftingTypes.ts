@@ -11,7 +11,13 @@ export interface PersonalDetails {
   fullName: string;
   idNumber: string;
   dateOfBirth: string;
-  maritalStatus: 'single' | 'married_cop' | 'married_anc' | 'married_customary' | 'divorced' | 'widowed';
+  maritalStatus:
+    | 'single'
+    | 'married_cop'
+    | 'married_anc'
+    | 'married_customary'
+    | 'divorced'
+    | 'widowed';
   spouseName?: string;
   spouseIdNumber?: string;
   physicalAddress: string;

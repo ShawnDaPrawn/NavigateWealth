@@ -36,7 +36,12 @@
  */
 
 import type { EsignAuditEvent, EsignEnvelope, EsignSigner } from './esign-types.ts';
-import { getAllEnvelopes, getAuditTrail, getEnvelopeSigners, logAuditEvent } from './esign-services.tsx';
+import {
+  getAllEnvelopes,
+  getAuditTrail,
+  getEnvelopeSigners,
+  logAuditEvent,
+} from './esign-services.tsx';
 import { getReminderConfig, type ReminderConfig } from './esign-automation.ts';
 import { sendSigningReminder } from './email-service.tsx';
 import { sendReminderSms } from './sms-service.ts';
@@ -142,7 +147,11 @@ export function computeReminderTier(args: {
     const expiresAt = new Date(expiresAtIso).getTime();
     if (Number.isFinite(expiresAt)) {
       const urgentWindowStart = expiresAt - config.remind_before_expiry_days * DAY_MS;
-      if (now >= urgentWindowStart && now < expiresAt && !tierAlreadyFired(auditEvents, signer.id, 'urgent')) {
+      if (
+        now >= urgentWindowStart &&
+        now < expiresAt &&
+        !tierAlreadyFired(auditEvents, signer.id, 'urgent')
+      ) {
         return { id: 'urgent', channelSuffix: 'Urgent' };
       }
     }

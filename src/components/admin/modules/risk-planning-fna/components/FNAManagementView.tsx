@@ -5,16 +5,7 @@
  */
 
 import React, { useState, useEffect } from 'react';
-import { 
-  Plus, 
-  FileText, 
-  Eye, 
-  Download, 
-  Calendar,
-  Loader2,
-  ArrowLeft,
-  Zap
-} from 'lucide-react';
+import { Plus, FileText, Eye, Download, Calendar, Loader2, ArrowLeft, Zap } from 'lucide-react';
 import { Button } from '../../../../ui/button';
 import { Card, CardContent } from '../../../../ui/card';
 import { Badge } from '../../../../ui/badge';
@@ -53,14 +44,14 @@ interface FNAManagementViewProps {
   apiUrl?: string;
 }
 
-export function FNAManagementView({ 
-  clientId, 
-  clientName, 
-  onCreateNew, 
+export function FNAManagementView({
+  clientId,
+  clientName,
+  onCreateNew,
   onViewFNA,
   onClose,
-  title = "Risk Planning FNAs",
-  apiUrl
+  title = 'Risk Planning FNAs',
+  apiUrl,
 }: FNAManagementViewProps) {
   const [fnas, setFnas] = useState<FNASummary[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -72,9 +63,7 @@ export function FNAManagementView({
   const loadFNAs = async (): Promise<void> => {
     try {
       setIsLoading(true);
-      const endpoint = resolveApiEndpoint(
-        apiUrl || `/risk-planning-fna/client/${clientId}/list`,
-      );
+      const endpoint = resolveApiEndpoint(apiUrl || `/risk-planning-fna/client/${clientId}/list`);
 
       const result = await api.get<unknown>(endpoint);
       const fnaList = normalizeFnaListResponse<FNASummary>(result);
@@ -102,7 +91,10 @@ export function FNAManagementView({
   };
 
   const getStatusBadge = (status: string) => {
-    const statusConfig: Record<string, { label: string; variant: 'default' | 'secondary' | 'destructive' | 'outline' }> = {
+    const statusConfig: Record<
+      string,
+      { label: string; variant: 'default' | 'secondary' | 'destructive' | 'outline' }
+    > = {
       published: { label: 'Published', variant: 'default' },
       draft: { label: 'Draft', variant: 'secondary' },
       archived: { label: 'Archived', variant: 'outline' },
@@ -128,23 +120,16 @@ export function FNAManagementView({
       <div className="flex justify-between items-start">
         <div>
           <div className="flex items-center gap-3 mb-2">
-            <Button 
-              variant="ghost" 
-              size="sm"
-              onClick={onClose}
-              className="h-8 w-8 p-0"
-            >
+            <Button variant="ghost" size="sm" onClick={onClose} className="h-8 w-8 p-0">
               <ArrowLeft className="h-4 w-4" />
             </Button>
-            <h3 className="text-2xl font-bold tracking-tight">
-              {title}
-            </h3>
+            <h3 className="text-2xl font-bold tracking-tight">{title}</h3>
           </div>
           <p className="text-sm text-muted-foreground ml-11">
             View and manage Financial Needs Analyses for {clientName}
           </p>
         </div>
-        
+
         <Button onClick={onCreateNew} size="lg">
           <Zap className="mr-2 h-4 w-4" />
           Run New FNA
@@ -164,7 +149,7 @@ export function FNAManagementView({
             <CardContent className="p-4">
               <div className="text-sm text-muted-foreground">Published</div>
               <div className="text-2xl font-bold text-[#6d28d9]">
-                {fnas.filter(f => f.status === 'published').length}
+                {fnas.filter((f) => f.status === 'published').length}
               </div>
             </CardContent>
           </Card>
@@ -172,7 +157,7 @@ export function FNAManagementView({
             <CardContent className="p-4">
               <div className="text-sm text-muted-foreground">Drafts</div>
               <div className="text-2xl font-bold text-gray-600">
-                {fnas.filter(f => f.status === 'draft').length}
+                {fnas.filter((f) => f.status === 'draft').length}
               </div>
             </CardContent>
           </Card>
@@ -189,9 +174,7 @@ export function FNAManagementView({
           ) : fnas.length === 0 ? (
             <div className="text-center py-12">
               <FileText className="h-12 w-12 mx-auto text-gray-400 mb-4" />
-              <h3 className="text-lg font-medium text-gray-900 mb-2">
-                No FNAs Found
-              </h3>
+              <h3 className="text-lg font-medium text-gray-900 mb-2">No FNAs Found</h3>
               <p className="text-sm text-gray-600 mb-6">
                 Get started by running your first Risk Planning FNA for this client.
               </p>
@@ -222,9 +205,7 @@ export function FNAManagementView({
                         {fna.version}
                       </div>
                     </TableCell>
-                    <TableCell>
-                      {getStatusBadge(fna.status)}
-                    </TableCell>
+                    <TableCell>{getStatusBadge(fna.status)}</TableCell>
                     <TableCell>
                       <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
                         <Calendar className="h-3.5 w-3.5" />
@@ -246,17 +227,11 @@ export function FNAManagementView({
                       )}
                     </TableCell>
                     <TableCell>
-                      <div className="text-sm text-muted-foreground">
-                        {fna.createdBy}
-                      </div>
+                      <div className="text-sm text-muted-foreground">{fna.createdBy}</div>
                     </TableCell>
                     <TableCell className="text-right">
                       <div className="flex items-center justify-end gap-2">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => onViewFNA(fna.id)}
-                        >
+                        <Button variant="ghost" size="sm" onClick={() => onViewFNA(fna.id)}>
                           <Eye className="h-4 w-4 mr-1.5" />
                           View
                         </Button>

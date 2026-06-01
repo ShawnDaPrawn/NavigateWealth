@@ -18,7 +18,11 @@ import { pendingCountsKeys } from '../../../../../utils/queryKeys';
 export function useSubmissions(filters?: SubmissionsFilters) {
   const queryClient = useQueryClient();
 
-  const { data: submissions = [], isLoading, error } = useQuery({
+  const {
+    data: submissions = [],
+    isLoading,
+    error,
+  } = useQuery({
     queryKey: submissionsKeys.list(filters as Record<string, unknown>),
     queryFn: () => submissionsApi.list(filters),
     staleTime: 2 * 60 * 1000,
@@ -39,10 +43,8 @@ export function useSubmissions(filters?: SubmissionsFilters) {
       if (previousSubmissions) {
         queryClient.setQueryData<Submission[]>(queryKey, (old) =>
           (old ?? []).map((s) =>
-            s.id === id
-              ? { ...s, ...input, updatedAt: new Date().toISOString() }
-              : s
-          )
+            s.id === id ? { ...s, ...input, updatedAt: new Date().toISOString() } : s,
+          ),
         );
       }
 
@@ -81,7 +83,7 @@ export function useSubmissions(filters?: SubmissionsFilters) {
         return { success: false, error: err instanceof Error ? err.message : 'Update failed' };
       }
     },
-    [updateMutation]
+    [updateMutation],
   );
 
   const deleteSubmission = useCallback(
@@ -93,7 +95,7 @@ export function useSubmissions(filters?: SubmissionsFilters) {
         return { success: false, error: err instanceof Error ? err.message : 'Delete failed' };
       }
     },
-    [deleteMutation]
+    [deleteMutation],
   );
 
   const refetch = useCallback(async () => {

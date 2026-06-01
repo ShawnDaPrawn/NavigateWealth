@@ -1,14 +1,14 @@
 /**
  * Personnel Permissions Service
- * 
+ *
  * Manages module-level access permissions and granular capabilities
  * for personnel members.
- * 
+ *
  * Permissions are stored separately from personnel profiles in the KV store
  * to allow independent evolution without touching profile records.
- * 
+ *
  * Key pattern: permissions:{personnelId}
- * 
+ *
  * Data shape:
  *   {
  *     personnelId: string,
@@ -21,7 +21,7 @@
  *     updatedAt: string,
  *     updatedBy: string
  *   }
- * 
+ *
  * Security:
  *  - Super admin (shawn@navigatewealth.co) bypasses all checks (hardcoded, never stored)
  *  - Only super_admin and admin roles can read/write permissions
@@ -79,7 +79,7 @@ export const PermissionsService = {
   async setPermissions(
     personnelId: string,
     modules: Record<string, ModuleAccess>,
-    updatedBy: string
+    updatedBy: string,
   ): Promise<PermissionSet> {
     const existing = await this.getPermissions(personnelId);
 
@@ -107,7 +107,7 @@ export const PermissionsService = {
     // Count total capabilities for logging
     const totalCaps = Object.values(mergedModules).reduce(
       (sum, m) => sum + (m.capabilities?.length || 0),
-      0
+      0,
     );
 
     log.info('Permissions updated', {
@@ -162,11 +162,7 @@ export const PermissionsService = {
    *  - capabilities array includes the capability, OR
    *  - capabilities array is empty/undefined (backwards-compatible full access)
    */
-  async hasCapability(
-    personnelId: string,
-    module: string,
-    capability: string
-  ): Promise<boolean> {
+  async hasCapability(personnelId: string, module: string, capability: string): Promise<boolean> {
     const permissions = await this.getPermissions(personnelId);
     if (!permissions) return false;
 

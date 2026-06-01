@@ -95,7 +95,9 @@ export async function getActiveConsent(): Promise<ConsentVersion> {
  * version when the requested id is missing so the cert renderer never
  * blows up on legacy envelopes.
  */
-export async function getConsentByVersion(versionId: string | undefined | null): Promise<ConsentVersion> {
+export async function getConsentByVersion(
+  versionId: string | undefined | null,
+): Promise<ConsentVersion> {
   if (versionId) {
     const record = (await kv.get(VERSION_KEY(versionId))) as ConsentVersion | null;
     if (record) return record;

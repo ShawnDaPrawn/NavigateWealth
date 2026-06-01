@@ -38,8 +38,7 @@ export function useUpdatePreferences() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (preferences: CommunicationSettings) =>
-      commApi.updatePreferences(preferences),
+    mutationFn: (preferences: CommunicationSettings) => commApi.updatePreferences(preferences),
     onSuccess: () => {
       queryClient.invalidateQueries({
         queryKey: communicationKeys.preferences(user?.id),

@@ -8,13 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../..
 import { Button } from '../../../ui/button';
 import { Badge } from '../../../ui/badge';
 import { Separator } from '../../../ui/separator';
-import {
-  Calendar,
-  Eye,
-  CheckCircle,
-  Clock,
-  Plus,
-} from 'lucide-react';
+import { Calendar, Eye, CheckCircle, Clock, Plus } from 'lucide-react';
 import type { PortfolioEvent } from '../api';
 import { formatDate } from '../utils';
 
@@ -32,11 +26,7 @@ export function EventsCard({ events, onBookMeeting }: EventsCardProps) {
             <Calendar className="h-5 w-5 text-blue-600" />
             <CardTitle className="text-black">Upcoming Reviews & Meetings</CardTitle>
           </div>
-          <Button
-            size="sm"
-            className="bg-blue-600 hover:bg-blue-700"
-            onClick={onBookMeeting}
-          >
+          <Button size="sm" className="bg-blue-600 hover:bg-blue-700" onClick={onBookMeeting}>
             <Plus className="mr-2 h-4 w-4" />
             Book Meeting
           </Button>
@@ -69,8 +59,8 @@ export function EventsCard({ events, onBookMeeting }: EventsCardProps) {
                       event.status === 'confirmed'
                         ? 'bg-green-100 text-green-800'
                         : event.status === 'pending'
-                        ? 'bg-yellow-100 text-yellow-800'
-                        : 'bg-red-100 text-red-800'
+                          ? 'bg-yellow-100 text-yellow-800'
+                          : 'bg-red-100 text-red-800'
                     }
                   >
                     {event.status}

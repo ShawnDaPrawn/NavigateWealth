@@ -3,11 +3,17 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../..
 import { Button } from '../../../../ui/button';
 import { Input } from '../../../../ui/input';
 import { Label } from '../../../../ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../../../ui/select';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '../../../../ui/select';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '../../../../ui/tabs';
 import { TaxPlanningInputs } from '../types';
 import { ArrowRight, Info, User, Wallet, Calculator, Loader2 } from 'lucide-react';
-import { toast } from "sonner";
+import { toast } from 'sonner';
 import { formatCurrencyInput, cleanCurrencyInput } from '../../../../../utils/currencyFormatter';
 import { useFormPrefill } from '../../form-prefill/useFormPrefill';
 
@@ -30,7 +36,7 @@ export function Step1InputForm({
 }: Step1Props) {
   const [activeTab, setActiveTab] = useState<string>('profile');
   const [prefillStarted, setPrefillStarted] = useState(false);
-  
+
   const [formData, setFormData] = React.useState<TaxPlanningInputs>({
     age: 45,
     maritalStatus: 'married_out_community',
@@ -69,7 +75,7 @@ export function Step1InputForm({
   }, [clientId, prefillStarted, initialData, startPrefill]);
 
   const handleChange = (field: keyof TaxPlanningInputs, value: string | number | boolean) => {
-    setFormData(prev => ({ ...prev, [field]: value }));
+    setFormData((prev) => ({ ...prev, [field]: value }));
   };
 
   const handleNumberChange = (field: keyof TaxPlanningInputs, value: string) => {
@@ -87,21 +93,21 @@ export function Step1InputForm({
   const handleSubmit = () => {
     // Basic Validation
     if (formData.age < 0 || formData.age > 120) {
-      toast.error("Please enter a valid age");
+      toast.error('Please enter a valid age');
       return;
     }
     if (formData.employmentIncome < 0) {
-      toast.error("Income cannot be negative");
+      toast.error('Income cannot be negative');
       return;
     }
-    
+
     onNext(formData);
   };
 
   return (
     <div className="space-y-6">
       {!intakeMode && PrefillUI}
-      
+
       {/* Introduction / Context */}
       <div className="bg-blue-50 border border-blue-100 rounded-lg p-4 flex gap-3 items-start text-blue-800">
         <Info className="w-5 h-5 shrink-0 mt-0.5" />
@@ -136,22 +142,24 @@ export function Step1InputForm({
                 <User className="h-5 w-5" />
                 Client Profile
               </CardTitle>
-              <CardDescription>Demographic factors affecting tax rebates and thresholds</CardDescription>
+              <CardDescription>
+                Demographic factors affecting tax rebates and thresholds
+              </CardDescription>
             </CardHeader>
             <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-6">
               <div className="space-y-2">
                 <Label>Age (Years)</Label>
-                <Input 
-                  type="number" 
-                  value={formData.age} 
+                <Input
+                  type="number"
+                  value={formData.age}
                   onChange={(e) => handleNumberChange('age', e.target.value)}
                 />
               </div>
-              
+
               <div className="space-y-2">
                 <Label>Tax Residency</Label>
-                <Select 
-                  value={formData.taxResidency} 
+                <Select
+                  value={formData.taxResidency}
                   onValueChange={(val: string) => handleChange('taxResidency', val)}
                 >
                   <SelectTrigger>
@@ -167,8 +175,8 @@ export function Step1InputForm({
 
               <div className="space-y-2">
                 <Label>Marital Status</Label>
-                 <Select 
-                  value={formData.maritalStatus} 
+                <Select
+                  value={formData.maritalStatus}
                   onValueChange={(val: string) => handleChange('maritalStatus', val)}
                 >
                   <SelectTrigger>
@@ -177,16 +185,18 @@ export function Step1InputForm({
                   <SelectContent>
                     <SelectItem value="single">Single / Widowed / Divorced</SelectItem>
                     <SelectItem value="married_in_community">Married (In Community)</SelectItem>
-                    <SelectItem value="married_out_community">Married (Out of Community)</SelectItem>
+                    <SelectItem value="married_out_community">
+                      Married (Out of Community)
+                    </SelectItem>
                   </SelectContent>
                 </Select>
               </div>
 
-               <div className="space-y-2">
+              <div className="space-y-2">
                 <Label>Medical Scheme Members</Label>
-                <Input 
-                  type="number" 
-                  value={formData.medicalSchemeMembers} 
+                <Input
+                  type="number"
+                  value={formData.medicalSchemeMembers}
                   onChange={(e) => handleNumberChange('medicalSchemeMembers', e.target.value)}
                 />
               </div>
@@ -208,44 +218,44 @@ export function Step1InputForm({
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="space-y-2">
                   <Label>Employment Income</Label>
-                  <Input 
-                    value={formatCurrencyInput(formData.employmentIncome)} 
-                    onChange={(e) => handleCurrencyChange('employmentIncome', e.target.value)} 
+                  <Input
+                    value={formatCurrencyInput(formData.employmentIncome)}
+                    onChange={(e) => handleCurrencyChange('employmentIncome', e.target.value)}
                     placeholder="R 0.00"
                   />
                 </div>
 
                 <div className="space-y-2">
                   <Label>Variable (Bonus/Comm)</Label>
-                  <Input 
-                    value={formatCurrencyInput(formData.variableIncome)} 
-                    onChange={(e) => handleCurrencyChange('variableIncome', e.target.value)} 
+                  <Input
+                    value={formatCurrencyInput(formData.variableIncome)}
+                    onChange={(e) => handleCurrencyChange('variableIncome', e.target.value)}
                     placeholder="R 0.00"
                   />
                 </div>
 
                 <div className="space-y-2">
                   <Label>Business / Director Fees</Label>
-                  <Input 
-                    value={formatCurrencyInput(formData.businessIncome)} 
-                    onChange={(e) => handleCurrencyChange('businessIncome', e.target.value)} 
+                  <Input
+                    value={formatCurrencyInput(formData.businessIncome)}
+                    onChange={(e) => handleCurrencyChange('businessIncome', e.target.value)}
                     placeholder="R 0.00"
                   />
                 </div>
 
                 <div className="space-y-2">
                   <Label>Rental Income (Profit)</Label>
-                  <Input 
-                    value={formatCurrencyInput(formData.rentalIncome)} 
-                    onChange={(e) => handleCurrencyChange('rentalIncome', e.target.value)} 
+                  <Input
+                    value={formatCurrencyInput(formData.rentalIncome)}
+                    onChange={(e) => handleCurrencyChange('rentalIncome', e.target.value)}
                     placeholder="R 0.00"
                   />
                 </div>
-                 <div className="space-y-2">
+                <div className="space-y-2">
                   <Label>Foreign Income</Label>
-                  <Input 
-                    value={formatCurrencyInput(formData.foreignIncome)} 
-                    onChange={(e) => handleCurrencyChange('foreignIncome', e.target.value)} 
+                  <Input
+                    value={formatCurrencyInput(formData.foreignIncome)}
+                    onChange={(e) => handleCurrencyChange('foreignIncome', e.target.value)}
                     placeholder="R 0.00"
                   />
                 </div>
@@ -255,7 +265,7 @@ export function Step1InputForm({
 
           {/* SECTION C: PASSIVE & CAPITAL */}
           <Card>
-             <CardHeader className="pb-3 border-b bg-muted/20">
+            <CardHeader className="pb-3 border-b bg-muted/20">
               <CardTitle className="text-lg flex items-center gap-2">
                 <Calculator className="h-5 w-5" />
                 Passive & Capital
@@ -266,27 +276,27 @@ export function Step1InputForm({
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="space-y-2">
                   <Label>Interest Income (Local)</Label>
-                  <Input 
-                    value={formatCurrencyInput(formData.interestIncome)} 
-                    onChange={(e) => handleCurrencyChange('interestIncome', e.target.value)} 
+                  <Input
+                    value={formatCurrencyInput(formData.interestIncome)}
+                    onChange={(e) => handleCurrencyChange('interestIncome', e.target.value)}
                     placeholder="R 0.00"
                   />
                 </div>
 
                 <div className="space-y-2">
                   <Label>Dividend Income</Label>
-                  <Input 
-                    value={formatCurrencyInput(formData.dividendIncome)} 
-                    onChange={(e) => handleCurrencyChange('dividendIncome', e.target.value)} 
+                  <Input
+                    value={formatCurrencyInput(formData.dividendIncome)}
+                    onChange={(e) => handleCurrencyChange('dividendIncome', e.target.value)}
                     placeholder="R 0.00"
                   />
                 </div>
 
                 <div className="space-y-2">
                   <Label>Capital Gains (Realised)</Label>
-                  <Input 
-                    value={formatCurrencyInput(formData.capitalGainsRealised)} 
-                    onChange={(e) => handleCurrencyChange('capitalGainsRealised', e.target.value)} 
+                  <Input
+                    value={formatCurrencyInput(formData.capitalGainsRealised)}
+                    onChange={(e) => handleCurrencyChange('capitalGainsRealised', e.target.value)}
                     placeholder="R 0.00"
                   />
                 </div>
@@ -294,9 +304,9 @@ export function Step1InputForm({
             </CardContent>
           </Card>
 
-           {/* SECTION D: CONTRIBUTIONS */}
+          {/* SECTION D: CONTRIBUTIONS */}
           <Card>
-             <CardHeader className="pb-3 border-b bg-muted/20">
+            <CardHeader className="pb-3 border-b bg-muted/20">
               <CardTitle className="text-lg flex items-center gap-2">
                 <ArrowRight className="h-5 w-5" />
                 Deductions & Allowances
@@ -305,24 +315,30 @@ export function Step1InputForm({
             </CardHeader>
             <CardContent className="space-y-6 pt-6">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                 <div className="space-y-2">
+                <div className="space-y-2">
                   <Label>RA / Pension Contributions (Annual)</Label>
-                  <Input 
-                    value={formatCurrencyInput(formData.raContributions)} 
-                    onChange={(e) => handleCurrencyChange('raContributions', e.target.value)} 
+                  <Input
+                    value={formatCurrencyInput(formData.raContributions)}
+                    onChange={(e) => handleCurrencyChange('raContributions', e.target.value)}
                     placeholder="R 0.00"
                   />
-                  <p className="text-xs text-muted-foreground">Total contributions to approved retirement funds</p>
+                  <p className="text-xs text-muted-foreground">
+                    Total contributions to approved retirement funds
+                  </p>
                 </div>
 
-                 <div className="space-y-2">
+                <div className="space-y-2">
                   <Label>TFSA Lifetime Total</Label>
-                  <Input 
-                    value={formatCurrencyInput(formData.tfsaContributionsLifetime)} 
-                    onChange={(e) => handleCurrencyChange('tfsaContributionsLifetime', e.target.value)} 
+                  <Input
+                    value={formatCurrencyInput(formData.tfsaContributionsLifetime)}
+                    onChange={(e) =>
+                      handleCurrencyChange('tfsaContributionsLifetime', e.target.value)
+                    }
                     placeholder="R 0.00"
                   />
-                  <p className="text-xs text-muted-foreground">Cumulative contributions since inception (Max R500k)</p>
+                  <p className="text-xs text-muted-foreground">
+                    Cumulative contributions since inception (Max R500k)
+                  </p>
                 </div>
               </div>
             </CardContent>
@@ -339,7 +355,8 @@ export function Step1InputForm({
             </Button>
           )}
           <Button onClick={handleSubmit} size="lg" className="gap-2">
-            {submitLabel ?? (intakeMode ? 'Continue to submit' : 'Confirm Inputs & Run Calculation')}{' '}
+            {submitLabel ??
+              (intakeMode ? 'Continue to submit' : 'Confirm Inputs & Run Calculation')}{' '}
             <ArrowRight className="h-4 w-4" />
           </Button>
         </div>

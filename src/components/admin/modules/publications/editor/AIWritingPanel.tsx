@@ -285,7 +285,7 @@ export function AIWritingPanel({
           setError(
             action === 'continue'
               ? 'Place your cursor where you want AI to continue writing.'
-              : 'Select text in the editor or write some content first.'
+              : 'Select text in the editor or write some content first.',
           );
           setIsLoading(false);
           setActiveAction(null);
@@ -325,7 +325,16 @@ export function AIWritingPanel({
         setActiveAction(null);
       }
     },
-    [editor, articleTitle, articleExcerpt, articleCategory, customPrompt, getEditorContent, getSelectedHTML, getSurroundingContext]
+    [
+      editor,
+      articleTitle,
+      articleExcerpt,
+      articleCategory,
+      customPrompt,
+      getEditorContent,
+      getSelectedHTML,
+      getSurroundingContext,
+    ],
   );
 
   // Listen for AI actions dispatched from slash commands
@@ -417,9 +426,7 @@ export function AIWritingPanel({
             {hasSelection ? (
               <div className="flex items-center gap-1.5 text-purple-700">
                 <CheckCircle2 className="h-3.5 w-3.5" />
-                <span className="font-medium">
-                  {selectedText.length} chars selected
-                </span>
+                <span className="font-medium">{selectedText.length} chars selected</span>
               </div>
             ) : (
               <div className="flex items-center gap-1.5 text-gray-500">
@@ -447,7 +454,7 @@ export function AIWritingPanel({
                     'flex items-center gap-2 px-3 py-2 rounded-lg text-left text-xs transition-all',
                     'border border-gray-200 hover:border-purple-300 hover:bg-purple-50',
                     'disabled:opacity-40 disabled:cursor-not-allowed',
-                    activeAction === action.action && 'border-purple-400 bg-purple-50'
+                    activeAction === action.action && 'border-purple-400 bg-purple-50',
                   )}
                 >
                   <span className="text-purple-600">{action.icon}</span>
@@ -506,7 +513,7 @@ export function AIWritingPanel({
                     'flex items-center gap-2 px-3 py-2 rounded-lg text-left text-xs transition-all',
                     'border border-gray-200 hover:border-purple-300 hover:bg-purple-50',
                     'disabled:opacity-40 disabled:cursor-not-allowed',
-                    activeAction === action.action && 'border-purple-400 bg-purple-50'
+                    activeAction === action.action && 'border-purple-400 bg-purple-50',
                   )}
                 >
                   <span className="text-purple-600">{action.icon}</span>
@@ -531,7 +538,7 @@ export function AIWritingPanel({
                     'flex items-center gap-2 px-3 py-2 rounded-lg text-left text-xs transition-all',
                     'border border-gray-200 hover:border-purple-300 hover:bg-purple-50',
                     'disabled:opacity-40 disabled:cursor-not-allowed',
-                    activeAction === action.action && 'border-purple-400 bg-purple-50'
+                    activeAction === action.action && 'border-purple-400 bg-purple-50',
                   )}
                 >
                   <span className="text-purple-600">{action.icon}</span>
@@ -607,8 +614,8 @@ export function AIWritingPanel({
               {activeAction === 'compliance_check'
                 ? 'Reviewing content for compliance issues...'
                 : activeAction === 'seo_optimize'
-                ? 'Analysing SEO performance...'
-                : 'AI is thinking...'}
+                  ? 'Analysing SEO performance...'
+                  : 'AI is thinking...'}
             </p>
           </div>
         )}
@@ -639,36 +646,34 @@ export function AIWritingPanel({
               <div className="flex items-center justify-between px-3 py-2 bg-purple-100/50 border-b border-purple-200">
                 <div className="flex items-center gap-1.5">
                   <Sparkles className="h-3.5 w-3.5 text-purple-600" />
-                  <span className="text-xs font-medium text-purple-700">
-                    AI Result
-                  </span>
+                  <span className="text-xs font-medium text-purple-700">AI Result</span>
                 </div>
                 {result.tokensUsed && (
-                  <span className="text-[10px] text-purple-500">
-                    {result.tokensUsed} tokens
-                  </span>
+                  <span className="text-[10px] text-purple-500">{result.tokensUsed} tokens</span>
                 )}
               </div>
 
               {/* Suggestions (headlines, SEO) */}
-              {result.suggestions && result.suggestions.length > 1 && result.action === 'headline' && (
-                <div className="px-3 py-2 space-y-1 border-b border-purple-100">
-                  <p className="text-[10px] font-semibold uppercase text-purple-600 tracking-wider">
-                    Suggestions
-                  </p>
-                  {result.suggestions.map((s, i) => (
-                    <button
-                      key={i}
-                      onClick={() => {
-                        navigator.clipboard.writeText(s);
-                      }}
-                      className="block w-full text-left text-xs text-gray-700 px-2 py-1.5 rounded hover:bg-purple-100 transition-colors"
-                    >
-                      {i + 1}. {s}
-                    </button>
-                  ))}
-                </div>
-              )}
+              {result.suggestions &&
+                result.suggestions.length > 1 &&
+                result.action === 'headline' && (
+                  <div className="px-3 py-2 space-y-1 border-b border-purple-100">
+                    <p className="text-[10px] font-semibold uppercase text-purple-600 tracking-wider">
+                      Suggestions
+                    </p>
+                    {result.suggestions.map((s, i) => (
+                      <button
+                        key={i}
+                        onClick={() => {
+                          navigator.clipboard.writeText(s);
+                        }}
+                        className="block w-full text-left text-xs text-gray-700 px-2 py-1.5 rounded hover:bg-purple-100 transition-colors"
+                      >
+                        {i + 1}. {s}
+                      </button>
+                    ))}
+                  </div>
+                )}
 
               {/* SEO suggestions */}
               {result.suggestions && result.action === 'seo_optimize' && (
@@ -677,10 +682,7 @@ export function AIWritingPanel({
                     SEO Suggestions
                   </p>
                   {result.suggestions.map((s, i) => (
-                    <div
-                      key={i}
-                      className="flex items-start gap-1.5 text-xs text-gray-700 py-1"
-                    >
+                    <div key={i} className="flex items-start gap-1.5 text-xs text-gray-700 py-1">
                       <CheckCircle2 className="h-3 w-3 text-green-500 mt-0.5 flex-shrink-0" />
                       <span>{s}</span>
                     </div>
@@ -695,10 +697,7 @@ export function AIWritingPanel({
                     Warnings
                   </p>
                   {result.warnings.map((w, i) => (
-                    <div
-                      key={i}
-                      className="flex items-start gap-1.5 text-xs text-amber-700 py-1"
-                    >
+                    <div key={i} className="flex items-start gap-1.5 text-xs text-amber-700 py-1">
                       <AlertTriangle className="h-3 w-3 text-amber-500 mt-0.5 flex-shrink-0" />
                       <span>{w}</span>
                     </div>
@@ -794,9 +793,7 @@ export function AIWritingPanel({
                       <p className="text-[11px] font-medium text-gray-700 truncate">
                         {entry.label}
                       </p>
-                      <p className="text-[10px] text-gray-400 truncate">
-                        {entry.input}
-                      </p>
+                      <p className="text-[10px] text-gray-400 truncate">{entry.input}</p>
                     </div>
                     <span className="text-[10px] text-gray-400 flex-shrink-0">
                       {entry.timestamp.toLocaleTimeString('en-ZA', {

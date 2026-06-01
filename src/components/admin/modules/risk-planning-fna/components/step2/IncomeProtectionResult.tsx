@@ -27,16 +27,17 @@ export function IncomeProtectionResult({ calculation }: IncomeProtectionResultPr
             Temporary Income Protection
             <Badge variant="secondary">{temporary.benefitPeriod}</Badge>
           </h4>
-          
+
           {temporary.exceedsLimit && (
             <Alert variant="destructive" className="mb-3">
               <AlertTriangle className="h-4 w-4" />
               <AlertDescription className="text-xs">
-                Calculated need exceeds typical insurer limits and may be restricted by underwriting.
+                Calculated need exceeds typical insurer limits and may be restricted by
+                underwriting.
               </AlertDescription>
             </Alert>
           )}
-          
+
           <div className="space-y-2 text-sm">
             <div className="flex justify-between">
               <span className="text-muted-foreground">Calculated Need (100% Net)</span>
@@ -59,9 +60,9 @@ export function IncomeProtectionResult({ calculation }: IncomeProtectionResultPr
             </div>
           </div>
         </div>
-        
+
         <Separator />
-        
+
         {/* Permanent IP */}
         <div>
           <h4 className="font-medium mb-3 flex items-center gap-2">
@@ -69,16 +70,17 @@ export function IncomeProtectionResult({ calculation }: IncomeProtectionResultPr
             <Badge variant="secondary">{permanent.escalation}</Badge>
             <Badge variant="outline">{permanent.benefitTerm} years</Badge>
           </h4>
-          
+
           {permanent.exceedsLimit && (
             <Alert variant="destructive" className="mb-3">
               <AlertTriangle className="h-4 w-4" />
               <AlertDescription className="text-xs">
-                Calculated need exceeds typical insurer limits and may be restricted by underwriting.
+                Calculated need exceeds typical insurer limits and may be restricted by
+                underwriting.
               </AlertDescription>
             </Alert>
           )}
-          
+
           <div className="space-y-2 text-sm">
             <div className="flex justify-between">
               <span className="text-muted-foreground">Calculated Need (100% Net)</span>
@@ -101,7 +103,7 @@ export function IncomeProtectionResult({ calculation }: IncomeProtectionResultPr
             </div>
           </div>
         </div>
-        
+
         <div className="mt-4 p-3 bg-muted/50 rounded-md">
           <p className="text-xs font-medium mb-2">Assumptions:</p>
           <ul className="text-xs text-muted-foreground space-y-1">

@@ -3,8 +3,8 @@
  * Handles email sending via SendGrid for e-signature notifications and other communications
  */
 
-import * as kv from "./kv_store.tsx";
-import { createModuleLogger } from "./stderr-logger.ts";
+import * as kv from './kv_store.tsx';
+import { createModuleLogger } from './stderr-logger.ts';
 
 const log = createModuleLogger('email-service');
 
@@ -39,15 +39,16 @@ export interface EmailFooterSettings {
 
 export const DEFAULT_FOOTER_SETTINGS: EmailFooterSettings = {
   companyName: 'Navigate Wealth',
-  address: 'First Floor, Milestone Place, Block A<br />25 Sovereign Dr, Route 21 Business Park<br />Irene, 0157',
+  address:
+    'First Floor, Milestone Place, Block A<br />25 Sovereign Dr, Route 21 Business Park<br />Irene, 0157',
   contactEmail: 'info@navigatewealth.co',
   contactPhone: '',
   socialLinks: {
     linkedin: 'https://www.linkedin.com/company/navigatewealth/',
     instagram: 'https://www.instagram.com/navigate_wealth?igsh=MTh6bTc2emszbXU0MA==',
-    youtube: 'https://www.youtube.com/@navigatewealth'
+    youtube: 'https://www.youtube.com/@navigatewealth',
   },
-  copyrightText: '© {{Year}} Navigate Wealth. All rights reserved.'
+  copyrightText: '© {{Year}} Navigate Wealth. All rights reserved.',
 };
 
 export const KV_FOOTER_KEY = 'email_footer_settings';
@@ -79,10 +80,11 @@ export const DEFAULT_TEMPLATES: Record<string, EmailTemplate> = {
     title: 'Welcome to Navigate Wealth',
     subtitle: 'You have been invited to join our platform',
     greeting: 'Hello there,',
-    bodyHtml: '<p>You have been invited to join the Navigate Wealth platform. Click the button below to set up your account.</p>',
+    bodyHtml:
+      '<p>You have been invited to join the Navigate Wealth platform. Click the button below to set up your account.</p>',
     buttonLabel: 'Accept Invitation',
     buttonUrl: '{{ .InviteLink }}',
-    footerNote: 'This link will expire in 48 hours.'
+    footerNote: 'This link will expire in 48 hours.',
   },
   welcome_email: {
     id: 'welcome_email',
@@ -92,10 +94,11 @@ export const DEFAULT_TEMPLATES: Record<string, EmailTemplate> = {
     title: 'Welcome Aboard!',
     subtitle: 'We are excited to have you with us',
     greeting: 'Hi {{ .Name }},',
-    bodyHtml: '<p>Thank you for joining Navigate Wealth. We are here to help you manage your wealth effectively.</p>',
+    bodyHtml:
+      '<p>Thank you for joining Navigate Wealth. We are here to help you manage your wealth effectively.</p>',
     buttonLabel: 'Go to Dashboard',
     buttonUrl: '{{ .DashboardLink }}',
-    footerNote: ''
+    footerNote: '',
   },
   application_received: {
     id: 'application_received',
@@ -105,10 +108,11 @@ export const DEFAULT_TEMPLATES: Record<string, EmailTemplate> = {
     title: 'Application Received',
     subtitle: 'Thank you for submitting your application',
     greeting: 'Dear {{ .Name }},',
-    bodyHtml: '<p>We have received your application and it is currently being reviewed by our team. We will get back to you shortly.</p>',
+    bodyHtml:
+      '<p>We have received your application and it is currently being reviewed by our team. We will get back to you shortly.</p>',
     buttonLabel: 'View Application Status',
     buttonUrl: '{{ .ApplicationLink }}',
-    footerNote: ''
+    footerNote: '',
   },
   application_approved: {
     id: 'application_approved',
@@ -118,10 +122,11 @@ export const DEFAULT_TEMPLATES: Record<string, EmailTemplate> = {
     title: 'Congratulations!',
     subtitle: 'Your application was successful',
     greeting: 'Dear {{ .Name }},',
-    bodyHtml: '<p>We are pleased to inform you that your application has been approved. You can now access all features of your account.</p>',
+    bodyHtml:
+      '<p>We are pleased to inform you that your application has been approved. You can now access all features of your account.</p>',
     buttonLabel: 'Get Started',
     buttonUrl: '{{ .DashboardLink }}',
-    footerNote: ''
+    footerNote: '',
   },
   password_reset: {
     id: 'password_reset',
@@ -131,10 +136,11 @@ export const DEFAULT_TEMPLATES: Record<string, EmailTemplate> = {
     title: 'Password Reset Request',
     subtitle: 'You requested to reset your password',
     greeting: 'Hello,',
-    bodyHtml: '<p>We received a request to reset your password. If you did not make this request, please ignore this email.</p>',
+    bodyHtml:
+      '<p>We received a request to reset your password. If you did not make this request, please ignore this email.</p>',
     buttonLabel: 'Reset Password',
     buttonUrl: '{{ .ResetLink }}',
-    footerNote: 'This link expires in 1 hour.'
+    footerNote: 'This link expires in 1 hour.',
   },
   new_documents_notification: {
     id: 'new_documents_notification',
@@ -144,10 +150,11 @@ export const DEFAULT_TEMPLATES: Record<string, EmailTemplate> = {
     title: 'New Documents Available',
     subtitle: 'Documents have been added to your profile',
     greeting: 'Dear {{ .Name }},',
-    bodyHtml: '{{ .CustomMessage }}<p>They are attached to this email in a secure, encrypted ZIP file.</p><p><strong>Password:</strong> Your National ID Number</p><p>Please log in to your portal to view them online.</p>',
+    bodyHtml:
+      '{{ .CustomMessage }}<p>They are attached to this email in a secure, encrypted ZIP file.</p><p><strong>Password:</strong> Your National ID Number</p><p>Please log in to your portal to view them online.</p>',
     buttonLabel: 'Login to Portal',
     buttonUrl: 'https://www.navigatewealth.co/login',
-    footerNote: ''
+    footerNote: '',
   },
   resend_documents_notification: {
     id: 'resend_documents_notification',
@@ -157,10 +164,11 @@ export const DEFAULT_TEMPLATES: Record<string, EmailTemplate> = {
     title: 'Documents Resent',
     subtitle: 'Documents have been resent to your profile',
     greeting: 'Dear {{ .Name }},',
-    bodyHtml: '{{ .CustomMessage }}<p>They are attached to this email in a secure, encrypted ZIP file.</p><p><strong>Password:</strong> Your National ID Number</p><p>Please log in to your portal to view them online.</p>',
+    bodyHtml:
+      '{{ .CustomMessage }}<p>They are attached to this email in a secure, encrypted ZIP file.</p><p><strong>Password:</strong> Your National ID Number</p><p>Please log in to your portal to view them online.</p>',
     buttonLabel: 'Login to Portal',
     buttonUrl: 'https://www.navigatewealth.co/login',
-    footerNote: ''
+    footerNote: '',
   },
   general_campaign: {
     id: 'general_campaign',
@@ -170,10 +178,11 @@ export const DEFAULT_TEMPLATES: Record<string, EmailTemplate> = {
     title: 'Navigate Wealth',
     subtitle: '',
     greeting: '',
-    bodyHtml: '<p>This is the base template for all general communication campaigns. The content of your campaigns will be injected here.</p>',
+    bodyHtml:
+      '<p>This is the base template for all general communication campaigns. The content of your campaigns will be injected here.</p>',
     buttonLabel: '',
     buttonUrl: '',
-    footerNote: ''
+    footerNote: '',
   },
   calendar_reminder: {
     id: 'calendar_reminder',
@@ -183,10 +192,11 @@ export const DEFAULT_TEMPLATES: Record<string, EmailTemplate> = {
     title: 'Event Reminder',
     subtitle: 'Upcoming Event',
     greeting: 'Hello {{ .Name }},',
-    bodyHtml: '<p>This is a reminder that you have an event scheduled for <strong>{{ .TimeFrame }}</strong>.</p><div style="background: #f3f4f6; padding: 20px; border-radius: 8px; margin: 20px 0;"><h3 style="margin-top: 0; color: #111827;">{{ .EventTitle }}</h3><p style="margin: 5px 0;"><strong>Date:</strong> {{ .EventDate }}</p><p style="margin: 5px 0;"><strong>Time:</strong> {{ .EventTime }}</p><p style="margin: 5px 0;"><strong>Location:</strong> {{ .Location }}</p>{{ .Description }}</div>',
+    bodyHtml:
+      '<p>This is a reminder that you have an event scheduled for <strong>{{ .TimeFrame }}</strong>.</p><div style="background: #f3f4f6; padding: 20px; border-radius: 8px; margin: 20px 0;"><h3 style="margin-top: 0; color: #111827;">{{ .EventTitle }}</h3><p style="margin: 5px 0;"><strong>Date:</strong> {{ .EventDate }}</p><p style="margin: 5px 0;"><strong>Time:</strong> {{ .EventTime }}</p><p style="margin: 5px 0;"><strong>Location:</strong> {{ .Location }}</p>{{ .Description }}</div>',
     buttonLabel: 'Join Meeting',
     buttonUrl: '{{ .MeetingLink }}',
-    footerNote: 'We look forward to seeing you there.'
+    footerNote: 'We look forward to seeing you there.',
   },
   admin_daily_report: {
     id: 'admin_daily_report',
@@ -196,10 +206,11 @@ export const DEFAULT_TEMPLATES: Record<string, EmailTemplate> = {
     title: 'Daily Calendar Report',
     subtitle: '',
     greeting: 'Good morning,',
-    bodyHtml: '<p>Please find attached the calendar for today, <strong>{{ .Date }}</strong>.</p><p>You have <strong>{{ .EventCount }}</strong> event(s) scheduled.</p>',
+    bodyHtml:
+      '<p>Please find attached the calendar for today, <strong>{{ .Date }}</strong>.</p><p>You have <strong>{{ .EventCount }}</strong> event(s) scheduled.</p>',
     buttonLabel: 'View Calendar',
     buttonUrl: 'https://www.navigatewealth.co/admin/calendar',
-    footerNote: ''
+    footerNote: '',
   },
   request_info_required: {
     id: 'request_info_required',
@@ -209,10 +220,11 @@ export const DEFAULT_TEMPLATES: Record<string, EmailTemplate> = {
     title: 'Information Request',
     subtitle: 'We need some additional information from you',
     greeting: 'Dear {{ .Name }},',
-    bodyHtml: '<p>A new request has been created that requires your input. Please click the button below to view the request and provide the necessary information.</p>',
+    bodyHtml:
+      '<p>A new request has been created that requires your input. Please click the button below to view the request and provide the necessary information.</p>',
     buttonLabel: 'Complete Request',
     buttonUrl: '{{ .RequestLink }}',
-    footerNote: 'If you have any questions, please contact us.'
+    footerNote: 'If you have any questions, please contact us.',
   },
   signature_request: {
     id: 'signature_request',
@@ -222,10 +234,12 @@ export const DEFAULT_TEMPLATES: Record<string, EmailTemplate> = {
     title: 'Document Signature Request',
     subtitle: 'Your signature is required',
     greeting: 'Hello {{ .RecipientName }},',
-    bodyHtml: '<p>{{ .SenderName }} has sent you a document to sign: <strong>{{ .DocumentName }}</strong></p><p>Please click the button below to review and sign the document.</p>',
+    bodyHtml:
+      '<p>{{ .SenderName }} has sent you a document to sign: <strong>{{ .DocumentName }}</strong></p><p>Please click the button below to review and sign the document.</p>',
     buttonLabel: 'Review & Sign Document',
     buttonUrl: '{{ .SigningUrl }}',
-    footerNote: 'This signature request was sent via Navigate Wealth\'s secure e-signature platform.'
+    footerNote:
+      "This signature request was sent via Navigate Wealth's secure e-signature platform.",
   },
   contact_form_admin: {
     id: 'contact_form_admin',
@@ -235,10 +249,11 @@ export const DEFAULT_TEMPLATES: Record<string, EmailTemplate> = {
     title: 'New Contact Form Submission',
     subtitle: 'A prospective client has reached out via the website',
     greeting: '',
-    bodyHtml: '<p>A new enquiry has been submitted via the website contact form. Please review the details below and respond within 24 hours.</p>',
+    bodyHtml:
+      '<p>A new enquiry has been submitted via the website contact form. Please review the details below and respond within 24 hours.</p>',
     buttonLabel: 'View Admin Dashboard',
     buttonUrl: 'https://www.navigatewealth.co/admin',
-    footerNote: ''
+    footerNote: '',
   },
   contact_form_acknowledgment: {
     id: 'contact_form_acknowledgment',
@@ -248,23 +263,27 @@ export const DEFAULT_TEMPLATES: Record<string, EmailTemplate> = {
     title: 'Thank You for Reaching Out',
     subtitle: 'We have received your message',
     greeting: 'Dear {{ .Name }},',
-    bodyHtml: '<p>Thank you for contacting Navigate Wealth. We have received your enquiry and one of our team members will be in touch with you shortly.</p><p>If your matter is urgent, please do not hesitate to call us directly.</p>',
+    bodyHtml:
+      '<p>Thank you for contacting Navigate Wealth. We have received your enquiry and one of our team members will be in touch with you shortly.</p><p>If your matter is urgent, please do not hesitate to call us directly.</p>',
     buttonLabel: 'Explore Our Services',
     buttonUrl: 'https://www.navigatewealth.co/services',
-    footerNote: 'If you have any immediate questions, contact us at <a href="mailto:info@navigatewealth.co" style="color: #6d28d9;">info@navigatewealth.co</a> or call <a href="tel:+27126672025" style="color: #6d28d9;">012 667 2025</a>.'
+    footerNote:
+      'If you have any immediate questions, contact us at <a href="mailto:info@navigatewealth.co" style="color: #6d28d9;">info@navigatewealth.co</a> or call <a href="tel:+27126672025" style="color: #6d28d9;">012 667 2025</a>.',
   },
   application_invite: {
     id: 'application_invite',
     name: 'Application Invitation',
     enabled: true,
-    subject: 'You\'re invited to join Navigate Wealth',
-    title: 'You\'re Invited',
+    subject: "You're invited to join Navigate Wealth",
+    title: "You're Invited",
     subtitle: 'Create your Navigate Wealth account',
     greeting: 'Dear {{ .Name }},',
-    bodyHtml: '<p>You have been personally invited to create an account with <strong>Navigate Wealth</strong>, South Africa\'s trusted independent financial advisory firm.</p><p>Click the button below to set up your account and get started on your financial journey. Our team is ready to assist you every step of the way.</p>',
+    bodyHtml:
+      "<p>You have been personally invited to create an account with <strong>Navigate Wealth</strong>, South Africa's trusted independent financial advisory firm.</p><p>Click the button below to set up your account and get started on your financial journey. Our team is ready to assist you every step of the way.</p>",
     buttonLabel: 'Create My Account',
     buttonUrl: '{{ .SetupLink }}',
-    footerNote: 'This invitation was sent on behalf of Navigate Wealth. If you did not expect this invitation, you may safely ignore this email.',
+    footerNote:
+      'This invitation was sent on behalf of Navigate Wealth. If you did not expect this invitation, you may safely ignore this email.',
     category: 'onboarding',
     isSystem: true,
   },
@@ -295,7 +314,7 @@ export async function getEmailTemplate(id: string): Promise<EmailTemplate> {
   return {
     ...defaultTemplate,
     ...(templateData || {}),
-    id // Ensure ID is preserved
+    id, // Ensure ID is preserved
   };
 }
 
@@ -337,7 +356,7 @@ export async function sendEmail(
   subject: string,
   html: string,
   text?: string,
-  attachments?: SendGridAttachment[]
+  attachments?: SendGridAttachment[],
 ): Promise<void>;
 /**
  * Implementation
@@ -347,7 +366,7 @@ export async function sendEmail(
   subject?: string,
   html?: string,
   text?: string,
-  attachments?: SendGridAttachment[]
+  attachments?: SendGridAttachment[],
 ): Promise<boolean | void> {
   const sendgridApiKey = getSendGridApiKey();
   if (!sendgridApiKey) {
@@ -370,24 +389,28 @@ export async function sendEmail(
     finalSubject = paramsOrTo.subject;
     finalHtml = paramsOrTo.html;
     // Improve text generation: remove style/script tags first, then strip tags, then collapse whitespace
-    finalText = paramsOrTo.text || paramsOrTo.html
-      .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '')
-      .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, '')
-      .replace(/<[^>]*>/g, ' ')
-      .replace(/\s+/g, ' ')
-      .trim();
+    finalText =
+      paramsOrTo.text ||
+      paramsOrTo.html
+        .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '')
+        .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, '')
+        .replace(/<[^>]*>/g, ' ')
+        .replace(/\s+/g, ' ')
+        .trim();
     finalAttachments = paramsOrTo.attachments || [];
   } else {
     // Legacy signature
     to = paramsOrTo;
     finalSubject = subject!;
     finalHtml = html!;
-    finalText = text || html!
-      .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '')
-      .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, '')
-      .replace(/<[^>]*>/g, ' ')
-      .replace(/\s+/g, ' ')
-      .trim();
+    finalText =
+      text ||
+      html!
+        .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '')
+        .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, '')
+        .replace(/<[^>]*>/g, ' ')
+        .replace(/\s+/g, ' ')
+        .trim();
     finalAttachments = attachments || [];
   }
 
@@ -398,7 +421,7 @@ export async function sendEmail(
     };
 
     if (cc && cc.length > 0) {
-      personalizations.cc = cc.map(email => ({ email }));
+      personalizations.cc = cc.map((email) => ({ email }));
     }
 
     const body: Record<string, unknown> = {
@@ -427,7 +450,7 @@ export async function sendEmail(
     const response = await fetch(SENDGRID_API_URL, {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${sendgridApiKey}`,
+        Authorization: `Bearer ${sendgridApiKey}`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify(body),
@@ -452,7 +475,7 @@ export async function sendEmail(
   }
 }
 
-import { BASE_EMAIL_TEMPLATE } from "./email_base_html.ts";
+import { BASE_EMAIL_TEMPLATE } from './email_base_html.ts';
 
 /**
  * Create HTML email template with Navigate Wealth branding
@@ -468,7 +491,7 @@ export function createEmailTemplate(
     unsubscribeLink?: string;
     footerNote?: string;
     footerSettings?: EmailFooterSettings;
-  } = {}
+  } = {},
 ): string {
   const {
     title = 'Navigate Wealth',
@@ -506,36 +529,36 @@ export function createEmailTemplate(
   // If I want to support it, I might need to append it to the body or footer.
   // User said "adhere to this UI standard". The standard has no unsubscribe link.
   // I will omit it for now to be safe, OR I could append it to the footer note if present.
-  
+
   if (unsubscribeLink) {
     // Append a small, inconspicuous unsubscribe link just before the final closing tags.
     // Injected after the Go-template rendering to avoid template interference.
     const unsubHtml = `<tr><td style="padding:8px 32px 16px 32px; text-align:center;"><a href="${unsubscribeLink}" style="font-size:11px; color:#9ca3af; text-decoration:underline;">Unsubscribe</a></td></tr>`;
     // Insert before the closing </table></body></html>
-    template = template.replace(
-      /(<\/table>\s*<\/body>\s*<\/html>\s*)$/i,
-      `${unsubHtml}$1`
-    );
+    template = template.replace(/(<\/table>\s*<\/body>\s*<\/html>\s*)$/i, `${unsubHtml}$1`);
     // If the pattern didn't match, try inserting before </body>
     if (!template.includes(unsubHtml)) {
       template = template.replace(
         /(<\/body>)/i,
-        `<div style="text-align:center; padding:8px 0;"><a href="${unsubscribeLink}" style="font-size:11px; color:#9ca3af; text-decoration:underline;">Unsubscribe</a></div>$1`
+        `<div style="text-align:center; padding:8px 0;"><a href="${unsubscribeLink}" style="font-size:11px; color:#9ca3af; text-decoration:underline;">Unsubscribe</a></div>$1`,
       );
     }
   }
 
   // Helper to render the Go-like template syntax with JS
-  
+
   // 1. Handle Conditionals: {{ if .Key }} ... {{ end }}
   // We support nested replacement inside the block, but not nested ifs.
-  template = template.replace(/\{\{ if \.([a-zA-Z0-9_]+) \}\}([\s\S]*?)\{\{ end \}\}/g, (_match, key, blockContent) => {
-    // If data[key] is truthy (and not empty string), return blockContent. Else empty string.
-    if (data[key]) {
-      return blockContent;
-    }
-    return '';
-  });
+  template = template.replace(
+    /\{\{ if \.([a-zA-Z0-9_]+) \}\}([\s\S]*?)\{\{ end \}\}/g,
+    (_match, key, blockContent) => {
+      // If data[key] is truthy (and not empty string), return blockContent. Else empty string.
+      if (data[key]) {
+        return blockContent;
+      }
+      return '';
+    },
+  );
 
   // 2. Handle Simple Replacements: {{ .Key }}
   template = template.replace(/\{\{ \.([a-zA-Z0-9_]+) \}\}/g, (_match, key) => {
@@ -549,9 +572,7 @@ export function createEmailTemplate(
  * Create plain text email with optional unsubscribe link
  */
 export function createPlainTextEmail(content: string, unsubscribeLink?: string): string {
-  const unsubscribeText = unsubscribeLink
-    ? `\n\n---\nUnsubscribe: ${unsubscribeLink}`
-    : '';
+  const unsubscribeText = unsubscribeLink ? `\n\n---\nUnsubscribe: ${unsubscribeLink}` : '';
 
   return `
 ${content}
@@ -571,10 +592,7 @@ Navigate Wealth | South Africa's Independent Financial Advisory Firm
  * Send a 2FA verification code email to the user.
  * Used during 2FA activation (security settings) and login-time verification.
  */
-export async function sendTwoFactorEmail(
-  to: string,
-  code: string,
-): Promise<boolean> {
+export async function sendTwoFactorEmail(to: string, code: string): Promise<boolean> {
   const footerSettings = await getFooterSettings();
 
   const html = createEmailTemplate(
@@ -592,7 +610,8 @@ export async function sendTwoFactorEmail(
     {
       title: 'Two-Factor Authentication',
       subtitle: 'Verification Code',
-      footerNote: 'If you did not request this code, you can safely ignore this email. Your account is secure.',
+      footerNote:
+        'If you did not request this code, you can safely ignore this email. Your account is secure.',
       footerSettings,
     },
   );
@@ -633,7 +652,7 @@ export async function sendEsignInvitation(params: {
 
   // Get template from KV store with fallback to default
   const template = await getEmailTemplate('signature_request');
-  
+
   // Check if template is enabled
   if (!template.enabled) {
     log.info('Signature request email disabled, skipping send', { to });
@@ -660,18 +679,15 @@ export async function sendEsignInvitation(params: {
   const buttonUrl = resolve(template.buttonUrl);
   const footerNote = resolve(template.footerNote);
 
-  const html = createEmailTemplate(
-    bodyContent,
-    {
-      title,
-      subtitle,
-      greeting,
-      buttonUrl,
-      buttonLabel,
-      footerNote,
-      footerSettings
-    }
-  );
+  const html = createEmailTemplate(bodyContent, {
+    title,
+    subtitle,
+    greeting,
+    buttonUrl,
+    buttonLabel,
+    footerNote,
+    footerSettings,
+  });
 
   const text = `
 ${greeting}
@@ -709,9 +725,9 @@ export async function sendEsignReminder(params: {
       title: 'Reminder: Signature Request',
       buttonUrl: signingUrl,
       buttonLabel: 'Review & Sign Document',
-      footerNote: 'This is an automated reminder from Navigate Wealth\'s e-signature platform.',
-      footerSettings
-    }
+      footerNote: "This is an automated reminder from Navigate Wealth's e-signature platform.",
+      footerSettings,
+    },
   );
 
   const text = `
@@ -724,7 +740,12 @@ Review and sign: ${signingUrl}
 This is an automated reminder from Navigate Wealth's e-signature platform.
   `.trim();
 
-  return await sendEmail({ to, subject: `Reminder: Signature Request for ${documentName}`, html, text });
+  return await sendEmail({
+    to,
+    subject: `Reminder: Signature Request for ${documentName}`,
+    html,
+    text,
+  });
 }
 
 /**
@@ -754,9 +775,9 @@ export async function sendRecallNotification(params: {
     `,
     {
       title: 'Signature Request Recalled',
-      footerNote: 'This notification was sent via Navigate Wealth\'s e-signature platform.',
-      footerSettings
-    }
+      footerNote: "This notification was sent via Navigate Wealth's e-signature platform.",
+      footerSettings,
+    },
   );
 
   const text = `
@@ -769,7 +790,12 @@ No action is required from you. If you have any questions, please contact Naviga
 This notification was sent via Navigate Wealth's e-signature platform.
   `.trim();
 
-  return await sendEmail({ to, subject: `Signature Request Recalled: ${documentName}`, html, text });
+  return await sendEmail({
+    to,
+    subject: `Signature Request Recalled: ${documentName}`,
+    html,
+    text,
+  });
 }
 
 /**
@@ -794,9 +820,9 @@ export async function sendCompletionNotification(params: {
       title: 'Document Completed',
       buttonUrl: 'https://www.navigatewealth.co/portal',
       buttonLabel: 'View Document',
-      footerNote: 'This notification was sent via Navigate Wealth\'s e-signature platform.',
-      footerSettings
-    }
+      footerNote: "This notification was sent via Navigate Wealth's e-signature platform.",
+      footerSettings,
+    },
   );
 
   const text = `
@@ -847,8 +873,8 @@ export async function sendAdminApplicationNotification(params: {
       title: 'New Application Submitted',
       buttonUrl: 'https://www.navigatewealth.co/admin',
       buttonLabel: 'Review Application',
-      footerSettings
-    }
+      footerSettings,
+    },
   );
 
   const text = `
@@ -897,9 +923,10 @@ export async function sendClientApplicationReceivedEmail(params: {
       title: 'Application Received',
       buttonUrl: 'https://www.navigatewealth.co/login',
       buttonLabel: 'Check Application Status',
-      footerNote: 'If you have any questions, contact us at <a href="mailto:info@navigatewealth.co" style="color: #6d28d9;">info@navigatewealth.co</a> or call <a href="tel:+27126672505" style="color: #6d28d9;">(+27) 12-667-2505</a>.',
-      footerSettings
-    }
+      footerNote:
+        'If you have any questions, contact us at <a href="mailto:info@navigatewealth.co" style="color: #6d28d9;">info@navigatewealth.co</a> or call <a href="tel:+27126672505" style="color: #6d28d9;">(+27) 12-667-2505</a>.',
+      footerSettings,
+    },
   );
 
   const text = `
@@ -945,9 +972,10 @@ export async function sendClientApprovalEmail(params: {
       title: 'Application Approved!',
       buttonUrl: 'https://www.navigatewealth.co/login',
       buttonLabel: 'Access Your Portal',
-      footerNote: 'If you have any questions, contact us at <a href="mailto:info@navigatewealth.co" style="color: #6d28d9;">info@navigatewealth.co</a> or call <a href="tel:+27126672505" style="color: #6d28d9;">(+27) 12-667-2505</a>.',
-      footerSettings
-    }
+      footerNote:
+        'If you have any questions, contact us at <a href="mailto:info@navigatewealth.co" style="color: #6d28d9;">info@navigatewealth.co</a> or call <a href="tel:+27126672505" style="color: #6d28d9;">(+27) 12-667-2505</a>.',
+      footerSettings,
+    },
   );
 
   const text = `
@@ -964,7 +992,12 @@ Our team is here to support you every step of the way on your financial journey.
 If you have any questions, contact us at info@navigatewealth.co or call (+27) 12-667-2505.
   `.trim();
 
-  return await sendEmail({ to, subject: 'Your Navigate Wealth Application Has Been Approved!', html, text });
+  return await sendEmail({
+    to,
+    subject: 'Your Navigate Wealth Application Has Been Approved!',
+    html,
+    text,
+  });
 }
 
 /**
@@ -980,9 +1013,7 @@ export async function sendClientDeclineEmail(params: {
 
   const footerSettings = await getFooterSettings();
 
-  const reasonText = reason
-    ? `<p><strong>Reason:</strong> ${reason}</p>`
-    : '';
+  const reasonText = reason ? `<p><strong>Reason:</strong> ${reason}</p>` : '';
 
   const html = createEmailTemplate(
     `
@@ -995,9 +1026,10 @@ export async function sendClientDeclineEmail(params: {
       title: 'Application Status Update',
       buttonUrl: 'https://www.navigatewealth.co/contact',
       buttonLabel: 'Contact Us',
-      footerNote: 'Reach us at <a href="mailto:info@navigatewealth.co" style="color: #6d28d9;">info@navigatewealth.co</a> or call <a href="tel:+27126672505" style="color: #6d28d9;">(+27) 12-667-2505</a>.',
-      footerSettings
-    }
+      footerNote:
+        'Reach us at <a href="mailto:info@navigatewealth.co" style="color: #6d28d9;">info@navigatewealth.co</a> or call <a href="tel:+27126672505" style="color: #6d28d9;">(+27) 12-667-2505</a>.',
+      footerSettings,
+    },
   );
 
   const reasonTextPlain = reason ? `\n\nReason: ${reason}` : '';
@@ -1044,8 +1076,8 @@ export async function sendAdminApprovalNotification(params: {
       title: 'Application Approved',
       buttonUrl: 'https://www.navigatewealth.co/admin',
       buttonLabel: 'View Admin Panel',
-      footerSettings
-    }
+      footerSettings,
+    },
   );
 
   const text = `
@@ -1099,8 +1131,8 @@ export async function sendAdminSignupNotification(params: {
       title: 'New User Signup',
       buttonUrl: 'https://www.navigatewealth.co/admin',
       buttonLabel: 'View Admin Panel',
-      footerSettings
-    }
+      footerSettings,
+    },
   );
 
   const text = `
@@ -1156,9 +1188,10 @@ export async function sendAdminOnboardedWelcomeEmail(params: {
       subtitle: 'Your account is ready',
       buttonUrl: passwordResetLink,
       buttonLabel: 'Set Your Password',
-      footerNote: 'This link will expire in 24 hours. If it has expired, visit <a href="https://www.navigatewealth.co/forgot-password" style="color: #6d28d9;">navigatewealth.co/forgot-password</a> to request a new one.<br/><br/>If you did not expect this email, please contact us at <a href="mailto:info@navigatewealth.co" style="color: #6d28d9;">info@navigatewealth.co</a>.',
+      footerNote:
+        'This link will expire in 24 hours. If it has expired, visit <a href="https://www.navigatewealth.co/forgot-password" style="color: #6d28d9;">navigatewealth.co/forgot-password</a> to request a new one.<br/><br/>If you did not expect this email, please contact us at <a href="mailto:info@navigatewealth.co" style="color: #6d28d9;">info@navigatewealth.co</a>.',
       footerSettings,
-    }
+    },
   );
 
   const text = `
@@ -1274,31 +1307,28 @@ export async function sendRequestInfoEmail(params: {
 
   const subject = resolve(template.subject);
   const bodyContent = resolve(template.bodyHtml);
-  
+
   // Create HTML
-  const html = createEmailTemplate(
-    bodyContent,
-    {
-      title: resolve(template.title),
-      subtitle: resolve(template.subtitle),
-      buttonUrl: resolve(template.buttonUrl),
-      buttonLabel: resolve(template.buttonLabel),
-      footerNote: resolve(template.footerNote),
-      footerSettings
-    }
-  );
+  const html = createEmailTemplate(bodyContent, {
+    title: resolve(template.title),
+    subtitle: resolve(template.subtitle),
+    buttonUrl: resolve(template.buttonUrl),
+    buttonLabel: resolve(template.buttonLabel),
+    footerNote: resolve(template.footerNote),
+    footerSettings,
+  });
 
   // Create Text
   const text = createPlainTextEmail(
     bodyContent.replace(/<[^>]*>?/gm, ''),
-    '' // No unsubscribe link for transactional
+    '', // No unsubscribe link for transactional
   );
 
   return await sendEmail({
     to,
     subject,
     html,
-    text
+    text,
   });
 }
 
@@ -1323,7 +1353,7 @@ export interface ContactFormData {
  */
 export async function sendContactFormAdminNotification(
   data: ContactFormData,
-  pdfBase64?: string
+  pdfBase64?: string,
 ): Promise<boolean> {
   const template = await getEmailTemplate('contact_form_admin');
 
@@ -1347,8 +1377,7 @@ export async function sendContactFormAdminNotification(
   const normalizedPhone = data.phone?.trim();
   const hasPhone = Boolean(normalizedPhone);
 
-  const resolve = (text: string) =>
-    text.replace(/\{\{ \.Name \}\}/g, fullName);
+  const resolve = (text: string) => text.replace(/\{\{ \.Name \}\}/g, fullName);
 
   const detailsHtml = `
     ${resolve(template.bodyHtml)}
@@ -1365,12 +1394,16 @@ export async function sendContactFormAdminNotification(
       ${data.service ? `<p style="margin: 8px 0;"><strong>Service Interest:</strong> ${data.service}</p>` : ''}
       <p style="margin: 8px 0;"><strong>Submitted:</strong> ${timestamp}</p>
     </div>
-    ${data.message ? `
+    ${
+      data.message
+        ? `
       <div style="background-color: #f8f9fa; padding: 24px; border-radius: 8px; margin: 24px 0;">
         <h3 style="margin-top: 0; font-size: 18px; color: #111827;">Message</h3>
         <p style="margin: 8px 0; padding: 16px; background-color: #fff; border-left: 3px solid #6d28d9; border-radius: 4px; white-space: pre-wrap;">${data.message}</p>
       </div>
-    ` : ''}
+    `
+        : ''
+    }
     <div style="background-color: #fef3c7; border: 1px solid #fbbf24; padding: 16px; border-radius: 8px; margin: 24px 0;">
       <p style="margin: 0; color: #92400e;"><strong>Action Required:</strong> Please respond to this enquiry within 24 hours.</p>
     </div>
@@ -1435,8 +1468,7 @@ export async function sendContactFormAcknowledgment(data: ContactFormData): Prom
   const footerSettings = await getFooterSettings();
   const fullName = `${data.firstName} ${data.lastName}`.trim();
 
-  const resolve = (text: string) =>
-    text.replace(/\{\{ \.Name \}\}/g, fullName);
+  const resolve = (text: string) => text.replace(/\{\{ \.Name \}\}/g, fullName);
 
   const bodyContent = `
     ${resolve(template.bodyHtml)}

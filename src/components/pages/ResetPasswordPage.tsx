@@ -7,7 +7,11 @@ import { Input } from '../ui/input';
 import { Label } from '../ui/label';
 import { Alert, AlertDescription } from '../ui/alert';
 import { Eye, EyeOff, KeyRound, CheckCircle2, XCircle, AlertTriangle, Clock } from 'lucide-react';
-import { validatePassword, getPasswordStrengthColor, getPasswordStrengthLabel } from '../../utils/auth/passwordValidation';
+import {
+  validatePassword,
+  getPasswordStrengthColor,
+  getPasswordStrengthLabel,
+} from '../../utils/auth/passwordValidation';
 import { getUserErrorMessage } from '../../utils/errorUtils';
 import { Logo } from '../layout/Logo';
 import { copyToClipboard } from '../../utils/clipboard';
@@ -174,7 +178,7 @@ export function ResetPasswordPage() {
     try {
       await updatePassword(newPassword);
       setSuccess(true);
-      
+
       // Invited personnel → admin panel; regular users → login
       const redirectTarget = isInviteFlow ? '/admin' : '/login';
       setTimeout(() => {
@@ -190,10 +194,17 @@ export function ResetPasswordPage() {
   // Show loading state while verifying session
   if (isVerifying) {
     return (
-      <div className="min-h-screen bg-gray-50 flex flex-col justify-center py-12 sm:px-6 lg:px-8" role="status" aria-label="Verifying reset link">
+      <div
+        className="min-h-screen bg-gray-50 flex flex-col justify-center py-12 sm:px-6 lg:px-8"
+        role="status"
+        aria-label="Verifying reset link"
+      >
         <div className="sm:mx-auto sm:w-full sm:max-w-md">
           <div className="text-center">
-            <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-purple-700" aria-hidden="true"></div>
+            <div
+              className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-purple-700"
+              aria-hidden="true"
+            ></div>
             <p className="mt-4 text-gray-600">Verifying reset link...</p>
           </div>
         </div>
@@ -209,7 +220,7 @@ export function ResetPasswordPage() {
           <Link to="/" className="flex justify-center mb-6">
             <Logo className="high-quality-image" />
           </Link>
-          
+
           <div className="bg-white py-8 px-4 shadow sm:rounded-lg sm:px-10">
             {/* Expired Icon */}
             <div className="flex justify-center mb-6">
@@ -231,8 +242,12 @@ export function ResetPasswordPage() {
               <AlertTriangle className="h-4 w-4 text-orange-600" />
               <AlertDescription className="text-orange-800">
                 <div className="space-y-2">
-                  <p className="font-medium">Password reset links expire after 24 hours for security reasons.</p>
-                  <p className="text-sm">Each link can only be used once and becomes invalid after:</p>
+                  <p className="font-medium">
+                    Password reset links expire after 24 hours for security reasons.
+                  </p>
+                  <p className="text-sm">
+                    Each link can only be used once and becomes invalid after:
+                  </p>
                   <ul className="text-sm list-disc list-inside ml-2 space-y-1">
                     <li>24 hours from when it was sent</li>
                     <li>Being used to reset your password</li>
@@ -247,17 +262,19 @@ export function ResetPasswordPage() {
               <AlertTriangle className="h-4 w-4 text-yellow-600" />
               <AlertDescription className="text-yellow-900">
                 <div className="space-y-2">
-                  <p className="font-semibold text-sm">⚠️ Most Common Issue: URLs Not Whitelisted</p>
+                  <p className="font-semibold text-sm">
+                    ⚠️ Most Common Issue: URLs Not Whitelisted
+                  </p>
                   <p className="text-xs">Go to Supabase Dashboard and add these URLs:</p>
                   <div className="mt-2 space-y-1">
-                    <code 
+                    <code
                       onClick={() => copyToClipboard(`${window.location.origin}/reset-password`)}
                       className="block bg-yellow-100 px-2 py-1 rounded text-xs cursor-pointer hover:bg-yellow-200 font-mono"
                       title="Click to copy"
                     >
                       {window.location.origin}/reset-password
                     </code>
-                    <code 
+                    <code
                       onClick={() => copyToClipboard(`${window.location.origin}/**`)}
                       className="block bg-yellow-100 px-2 py-1 rounded text-xs cursor-pointer hover:bg-yellow-200 font-mono"
                       title="Click to copy"
@@ -283,7 +300,7 @@ export function ResetPasswordPage() {
               >
                 Request New Reset Link
               </Button>
-              
+
               <Button
                 variant="outline"
                 onClick={() => navigate('/login')}
@@ -297,7 +314,10 @@ export function ResetPasswordPage() {
             <div className="mt-6 text-center">
               <p className="text-sm text-gray-600">
                 Need help?{' '}
-                <Link to="/contact" className="text-purple-700 hover:text-purple-800 hover:underline font-medium">
+                <Link
+                  to="/contact"
+                  className="text-purple-700 hover:text-purple-800 hover:underline font-medium"
+                >
                   Contact support
                 </Link>
               </p>
@@ -379,7 +399,9 @@ export function ResetPasswordPage() {
                 <div className="mt-2 space-y-2">
                   <div className="flex items-center justify-between">
                     <span className="text-sm text-gray-600">Password Strength:</span>
-                    <span className={`text-sm font-medium ${getPasswordStrengthColor(passwordStrength.score)}`}>
+                    <span
+                      className={`text-sm font-medium ${getPasswordStrengthColor(passwordStrength.score)}`}
+                    >
                       {getPasswordStrengthLabel(passwordStrength.score)}
                     </span>
                   </div>
@@ -389,10 +411,10 @@ export function ResetPasswordPage() {
                         passwordStrength.score === 0 || passwordStrength.score === 1
                           ? 'bg-red-500'
                           : passwordStrength.score === 2
-                          ? 'bg-orange-500'
-                          : passwordStrength.score === 3
-                          ? 'bg-yellow-500'
-                          : 'bg-green-500'
+                            ? 'bg-orange-500'
+                            : passwordStrength.score === 3
+                              ? 'bg-yellow-500'
+                              : 'bg-green-500'
                       }`}
                       style={{ width: `${(passwordStrength.score / 4) * 100}%` }}
                     />
@@ -404,7 +426,9 @@ export function ResetPasswordPage() {
               <div className="mt-3 space-y-1">
                 <p className="text-sm text-gray-700">Password must have:</p>
                 <ul className="text-sm space-y-1">
-                  <li className={`flex items-center gap-2 ${passwordStrength.requirements.minLength ? 'text-green-600' : 'text-gray-500'}`}>
+                  <li
+                    className={`flex items-center gap-2 ${passwordStrength.requirements.minLength ? 'text-green-600' : 'text-gray-500'}`}
+                  >
                     {passwordStrength.requirements.minLength ? (
                       <CheckCircle2 className="h-3 w-3" />
                     ) : (
@@ -412,7 +436,9 @@ export function ResetPasswordPage() {
                     )}
                     At least 12 characters
                   </li>
-                  <li className={`flex items-center gap-2 ${passwordStrength.requirements.characterTypes >= 3 ? 'text-green-600' : 'text-gray-500'}`}>
+                  <li
+                    className={`flex items-center gap-2 ${passwordStrength.requirements.characterTypes >= 3 ? 'text-green-600' : 'text-gray-500'}`}
+                  >
                     {passwordStrength.requirements.characterTypes >= 3 ? (
                       <CheckCircle2 className="h-3 w-3" />
                     ) : (
@@ -420,7 +446,9 @@ export function ResetPasswordPage() {
                     )}
                     At least 3 of: uppercase, lowercase, numbers, special characters
                   </li>
-                  <li className={`flex items-center gap-2 ${passwordStrength.requirements.notCommon ? 'text-green-600' : 'text-gray-500'}`}>
+                  <li
+                    className={`flex items-center gap-2 ${passwordStrength.requirements.notCommon ? 'text-green-600' : 'text-gray-500'}`}
+                  >
                     {passwordStrength.requirements.notCommon ? (
                       <CheckCircle2 className="h-3 w-3" />
                     ) : (
@@ -482,8 +510,12 @@ export function ResetPasswordPage() {
               disabled={isLoading || !passwordStrength.isValid || !passwordsMatch}
             >
               {isLoading
-                ? (isInviteFlow ? 'Setting up account...' : 'Resetting password...')
-                : (isInviteFlow ? 'Create Account' : 'Reset password')}
+                ? isInviteFlow
+                  ? 'Setting up account...'
+                  : 'Resetting password...'
+                : isInviteFlow
+                  ? 'Create Account'
+                  : 'Reset password'}
             </Button>
           </form>
 

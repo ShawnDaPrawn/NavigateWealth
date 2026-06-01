@@ -45,7 +45,11 @@ function loadEnvLocal() {
 }
 
 async function kvGet(supabase, key) {
-  const { data, error } = await supabase.from(KV_TABLE).select('value').eq('key', key).maybeSingle();
+  const { data, error } = await supabase
+    .from(KV_TABLE)
+    .select('value')
+    .eq('key', key)
+    .maybeSingle();
   if (error) throw new Error(error.message);
   return data?.value ?? null;
 }
@@ -63,7 +67,8 @@ async function kvDelete(supabase, key) {
 async function main() {
   const env = loadEnvLocal();
   const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || env.SUPABASE_SERVICE_ROLE_KEY;
-  const supabaseUrl = process.env.SUPABASE_URL || env.SUPABASE_URL || `https://${PROJECT_REF}.supabase.co`;
+  const supabaseUrl =
+    process.env.SUPABASE_URL || env.SUPABASE_URL || `https://${PROJECT_REF}.supabase.co`;
   if (!serviceKey) {
     throw new Error('Set SUPABASE_SERVICE_ROLE_KEY to run migration');
   }
@@ -95,10 +100,12 @@ async function main() {
     console.log(`  ${id} → ${storagePath} (${bytes.length} bytes)`);
 
     if (!dryRun) {
-      const { error: uploadError } = await supabase.storage.from(BUCKET).upload(storagePath, bytes, {
-        contentType: meta.mimeType || 'application/pdf',
-        upsert: true,
-      });
+      const { error: uploadError } = await supabase.storage
+        .from(BUCKET)
+        .upload(storagePath, bytes, {
+          contentType: meta.mimeType || 'application/pdf',
+          upsert: true,
+        });
       if (uploadError) throw new Error(`Upload failed for ${id}: ${uploadError.message}`);
 
       await kvSet(supabase, `${TEMPLATE_PREFIX}${id}`, {
@@ -115,9 +122,13 @@ async function main() {
     migrated += 1;
   }
 
-  console.log(`[migrate-form-templates] done migrated=${migrated} skipped=${skipped} dryRun=${dryRun}`);
+  console.log(
+    `[migrate-form-templates] done migrated=${migrated} skipped=${skipped} dryRun=${dryRun}`,
+  );
   if (!dryRun && migrated > 0 && deleteKvAfter) {
-    console.log('[migrate-form-templates] Set FORM_TEMPLATE_ALLOW_KV_FALLBACK=false on Edge Function after verifying fills.');
+    console.log(
+      '[migrate-form-templates] Set FORM_TEMPLATE_ALLOW_KV_FALLBACK=false on Edge Function after verifying fills.',
+    );
   }
 }
 

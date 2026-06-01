@@ -135,7 +135,12 @@ export async function createOrUpdateIntakeDraft(
   };
 
   await storageSaveSession(session, { activePointer: true });
-  log.info('Created client intake draft', { sessionId: session.id, clientId, domain, userId: user.id });
+  log.info('Created client intake draft', {
+    sessionId: session.id,
+    clientId,
+    domain,
+    userId: user.id,
+  });
   return session;
 }
 
@@ -169,7 +174,11 @@ export async function submitIntakeSession(
   await storageSaveSession(updated, { activePointer: true });
   await storageMarkSubmitted(session.id, now);
 
-  log.info('Client intake submitted', { sessionId, clientId: session.clientId, domain: session.domain });
+  log.info('Client intake submitted', {
+    sessionId,
+    clientId: session.clientId,
+    domain: session.domain,
+  });
   await recordIntakeAudit(
     'fna_intake_submitted',
     `Client intake submitted (${session.domain})`,
@@ -263,7 +272,11 @@ export async function acceptIntakeSession(
   const session = await getIntakeSession(sessionId);
   if (!session) throw intakeNotFound();
 
-  if (session.status === 'accepted' && session.linkedFnaId && !session.linkedFnaId.startsWith('pending:')) {
+  if (
+    session.status === 'accepted' &&
+    session.linkedFnaId &&
+    !session.linkedFnaId.startsWith('pending:')
+  ) {
     return { session, linkedFnaId: session.linkedFnaId };
   }
 
@@ -304,7 +317,7 @@ export function sanitizeIntakeForClient(session: FnaIntakeSession): FnaIntakeSes
   return {
     ...rest,
     acceptedBy: session.status === 'accepted' ? acceptedBy : undefined,
-    linkedFnaId: session.status === 'accepted' ? linkedFnaId ?? null : null,
+    linkedFnaId: session.status === 'accepted' ? (linkedFnaId ?? null) : null,
     submittedBy: submittedBy ? { id: submittedBy.id, email: '' } : null,
   };
 }

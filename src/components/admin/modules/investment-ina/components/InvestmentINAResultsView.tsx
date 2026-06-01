@@ -8,10 +8,10 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../..
 import { Badge } from '../../../../ui/badge';
 import { Button } from '../../../../ui/button';
 import { Separator } from '../../../../ui/separator';
-import { 
-  Target, 
-  TrendingUp, 
-  DollarSign, 
+import {
+  Target,
+  TrendingUp,
+  DollarSign,
   Calendar,
   AlertCircle,
   CheckCircle,
@@ -19,7 +19,7 @@ import {
   PieChart,
   ArrowRight,
   Download,
-  Edit
+  Edit,
 } from 'lucide-react';
 import type { InvestmentINASession, GoalCalculationResult } from '../types';
 import { InvestmentINACalculationService } from '../services/investmentINACalculationService';
@@ -30,10 +30,10 @@ interface InvestmentINAResultsViewProps {
   onDownloadPDF?: () => void;
 }
 
-export function InvestmentINAResultsView({ 
-  session, 
-  onEdit, 
-  onDownloadPDF 
+export function InvestmentINAResultsView({
+  session,
+  onEdit,
+  onDownloadPDF,
 }: InvestmentINAResultsViewProps) {
   if (!session.results) {
     return (
@@ -50,10 +50,9 @@ export function InvestmentINAResultsView({
   const { results } = session;
   const { portfolioSummary, goalResults, recommendations } = results;
 
-  const formatCurrency = (amount: number) => 
-    InvestmentINACalculationService.formatCurrency(amount);
-  
-  const formatPercentage = (value: number) => 
+  const formatCurrency = (amount: number) => InvestmentINACalculationService.formatCurrency(amount);
+
+  const formatPercentage = (value: number) =>
     InvestmentINACalculationService.formatPercentage(value);
 
   const getStatusBadgeVariant = (status: string) => {
@@ -94,8 +93,8 @@ export function InvestmentINAResultsView({
         <div>
           <h2 className="text-2xl">Investment Needs Analysis Results</h2>
           <p className="text-muted-foreground">
-            Version {session.version} • {session.status === 'published' ? 'Published' : 'Draft'} • 
-            {' '}{new Date(session.createdAt).toLocaleDateString()}
+            Version {session.version} • {session.status === 'published' ? 'Published' : 'Draft'} •{' '}
+            {new Date(session.createdAt).toLocaleDateString()}
           </p>
         </div>
         <div className="flex gap-2">
@@ -121,9 +120,7 @@ export function InvestmentINAResultsView({
             <PieChart className="h-5 w-5" />
             Portfolio Summary
           </CardTitle>
-          <CardDescription>
-            Overall investment portfolio health and goal tracking
-          </CardDescription>
+          <CardDescription>Overall investment portfolio health and goal tracking</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           {/* Health Badge */}
@@ -163,16 +160,23 @@ export function InvestmentINAResultsView({
             <div className="space-y-2">
               <div className="flex justify-between">
                 <span className="text-sm text-muted-foreground">Total Required Capital</span>
-                <span className="text-sm">{formatCurrency(portfolioSummary.totalRequiredCapital)}</span>
+                <span className="text-sm">
+                  {formatCurrency(portfolioSummary.totalRequiredCapital)}
+                </span>
               </div>
               <div className="flex justify-between">
                 <span className="text-sm text-muted-foreground">Total Projected Capital</span>
-                <span className="text-sm">{formatCurrency(portfolioSummary.totalProjectedCapital)}</span>
+                <span className="text-sm">
+                  {formatCurrency(portfolioSummary.totalProjectedCapital)}
+                </span>
               </div>
               <div className="flex justify-between font-semibold">
                 <span className="text-sm">Total Funding Gap</span>
-                <span className={`text-sm ${portfolioSummary.totalFundingGap > 0 ? 'text-red-600' : 'text-green-600'}`}>
-                  {portfolioSummary.totalFundingGap > 0 ? '-' : '+'}{formatCurrency(Math.abs(portfolioSummary.totalFundingGap))}
+                <span
+                  className={`text-sm ${portfolioSummary.totalFundingGap > 0 ? 'text-red-600' : 'text-green-600'}`}
+                >
+                  {portfolioSummary.totalFundingGap > 0 ? '-' : '+'}
+                  {formatCurrency(Math.abs(portfolioSummary.totalFundingGap))}
                 </span>
               </div>
             </div>
@@ -208,9 +212,7 @@ export function InvestmentINAResultsView({
               <AlertCircle className="h-5 w-5" />
               Recommendations
             </CardTitle>
-            <CardDescription>
-              Suggested actions to meet your investment goals
-            </CardDescription>
+            <CardDescription>Suggested actions to meet your investment goals</CardDescription>
           </CardHeader>
           <CardContent className="space-y-3">
             {recommendations.map((rec, index) => (
@@ -219,7 +221,15 @@ export function InvestmentINAResultsView({
                 <div className="flex-1">
                   <div className="flex items-center gap-2 mb-1">
                     <span className="font-medium">{rec.goalName}</span>
-                    <Badge variant={rec.priority === 'high' ? 'destructive' : rec.priority === 'medium' ? 'default' : 'secondary'}>
+                    <Badge
+                      variant={
+                        rec.priority === 'high'
+                          ? 'destructive'
+                          : rec.priority === 'medium'
+                            ? 'default'
+                            : 'secondary'
+                      }
+                    >
                       {rec.priority}
                     </Badge>
                   </div>
@@ -243,18 +253,22 @@ export function InvestmentINAResultsView({
         <CardContent className="space-y-3">
           <div className="flex justify-between">
             <span className="text-sm text-muted-foreground">Long-term Inflation Rate</span>
-            <span className="text-sm">{formatPercentage(results.economicAssumptions.inflationRate)}</span>
+            <span className="text-sm">
+              {formatPercentage(results.economicAssumptions.inflationRate)}
+            </span>
           </div>
           <Separator />
           <div className="space-y-2">
             <p className="text-sm font-medium">Expected Real Returns by Risk Profile</p>
             <div className="grid grid-cols-2 md:grid-cols-5 gap-2">
-              {Object.entries(results.economicAssumptions.realReturnsByProfile).map(([profile, returnRate]) => (
-                <div key={profile} className="text-center p-2 bg-muted/50 rounded">
-                  <p className="text-xs text-muted-foreground capitalize">{profile}</p>
-                  <p className="text-sm font-medium">{formatPercentage(returnRate)}</p>
-                </div>
-              ))}
+              {Object.entries(results.economicAssumptions.realReturnsByProfile).map(
+                ([profile, returnRate]) => (
+                  <div key={profile} className="text-center p-2 bg-muted/50 rounded">
+                    <p className="text-xs text-muted-foreground capitalize">{profile}</p>
+                    <p className="text-sm font-medium">{formatPercentage(returnRate)}</p>
+                  </div>
+                ),
+              )}
             </div>
           </div>
         </CardContent>
@@ -267,10 +281,9 @@ export function InvestmentINAResultsView({
  * Individual Goal Result Card Component
  */
 function GoalResultCard({ goal }: { goal: GoalCalculationResult }) {
-  const formatCurrency = (amount: number) => 
-    InvestmentINACalculationService.formatCurrency(amount);
-  
-  const formatPercentage = (value: number) => 
+  const formatCurrency = (amount: number) => InvestmentINACalculationService.formatCurrency(amount);
+
+  const formatPercentage = (value: number) =>
     InvestmentINACalculationService.formatPercentage(value);
 
   const getStatusBadgeVariant = (status: string) => {
@@ -303,9 +316,7 @@ function GoalResultCard({ goal }: { goal: GoalCalculationResult }) {
               {getStatusIcon(goal.goalStatus)}
               {goal.goalName}
             </CardTitle>
-            <CardDescription className="mt-1">
-              {goal.statusRationale}
-            </CardDescription>
+            <CardDescription className="mt-1">{goal.statusRationale}</CardDescription>
           </div>
           <Badge variant={getStatusBadgeVariant(goal.goalStatus)}>
             {InvestmentINACalculationService.getGoalStatusLabel(goal.goalStatus)}
@@ -316,9 +327,13 @@ function GoalResultCard({ goal }: { goal: GoalCalculationResult }) {
         {/* Time Horizon */}
         <div className="flex items-center gap-2 text-sm text-muted-foreground">
           <Calendar className="h-4 w-4" />
-          <span>{goal.timeHorizon.yearsToGoal} years until {goal.timeHorizon.targetYear}</span>
+          <span>
+            {goal.timeHorizon.yearsToGoal} years until {goal.timeHorizon.targetYear}
+          </span>
           {!goal.timeHorizon.isValidTimeHorizon && (
-            <Badge variant="destructive" className="ml-2">Invalid Timeline</Badge>
+            <Badge variant="destructive" className="ml-2">
+              Invalid Timeline
+            </Badge>
           )}
         </div>
 
@@ -328,18 +343,25 @@ function GoalResultCard({ goal }: { goal: GoalCalculationResult }) {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div className="space-y-1">
             <p className="text-sm text-muted-foreground">Required Capital</p>
-            <p className="text-lg font-semibold">{formatCurrency(goal.fundingGap.goalRequiredReal)}</p>
+            <p className="text-lg font-semibold">
+              {formatCurrency(goal.fundingGap.goalRequiredReal)}
+            </p>
           </div>
           <div className="space-y-1">
             <p className="text-sm text-muted-foreground">Projected Capital</p>
-            <p className="text-lg font-semibold">{formatCurrency(goal.fundingGap.projectedCapitalAtGoal)}</p>
+            <p className="text-lg font-semibold">
+              {formatCurrency(goal.fundingGap.projectedCapitalAtGoal)}
+            </p>
           </div>
           <div className="space-y-1">
             <p className="text-sm text-muted-foreground">
               {goal.fundingGap.hasShortfall ? 'Shortfall' : 'Surplus'}
             </p>
-            <p className={`text-lg font-semibold ${goal.fundingGap.hasShortfall ? 'text-red-600' : 'text-green-600'}`}>
-              {goal.fundingGap.hasShortfall ? '-' : '+'}{formatCurrency(Math.abs(goal.fundingGap.gapAmount))}
+            <p
+              className={`text-lg font-semibold ${goal.fundingGap.hasShortfall ? 'text-red-600' : 'text-green-600'}`}
+            >
+              {goal.fundingGap.hasShortfall ? '-' : '+'}
+              {formatCurrency(Math.abs(goal.fundingGap.gapAmount))}
             </p>
           </div>
         </div>
@@ -348,15 +370,20 @@ function GoalResultCard({ goal }: { goal: GoalCalculationResult }) {
         <div className="space-y-2">
           <div className="flex justify-between text-sm">
             <span>Funding Progress</span>
-            <span className="font-medium">{formatPercentage(goal.fundingGap.fundingPercentage / 100)}</span>
+            <span className="font-medium">
+              {formatPercentage(goal.fundingGap.fundingPercentage / 100)}
+            </span>
           </div>
           <div className="w-full bg-gray-200 rounded-full h-2">
-            <div 
+            <div
               className={`h-2 rounded-full ${
-                goal.fundingGap.fundingPercentage >= 100 ? 'bg-green-600' :
-                goal.fundingGap.fundingPercentage >= 90 ? 'bg-blue-600' :
-                goal.fundingGap.fundingPercentage >= 70 ? 'bg-orange-600' :
-                'bg-red-600'
+                goal.fundingGap.fundingPercentage >= 100
+                  ? 'bg-green-600'
+                  : goal.fundingGap.fundingPercentage >= 90
+                    ? 'bg-blue-600'
+                    : goal.fundingGap.fundingPercentage >= 70
+                      ? 'bg-orange-600'
+                      : 'bg-red-600'
               }`}
               style={{ width: `${Math.min(100, goal.fundingGap.fundingPercentage)}%` }}
             />
@@ -369,11 +396,17 @@ function GoalResultCard({ goal }: { goal: GoalCalculationResult }) {
           <div className="space-y-1 text-sm">
             <div className="flex justify-between">
               <span className="text-muted-foreground">Existing Investments</span>
-              <span>{formatCurrency(goal.projectedCapital.existingCapital.totalExistingFutureValue)}</span>
+              <span>
+                {formatCurrency(goal.projectedCapital.existingCapital.totalExistingFutureValue)}
+              </span>
             </div>
             <div className="flex justify-between">
               <span className="text-muted-foreground">Monthly Contributions</span>
-              <span>{formatCurrency(goal.projectedCapital.monthlyContributions.futureValueOfContributions)}</span>
+              <span>
+                {formatCurrency(
+                  goal.projectedCapital.monthlyContributions.futureValueOfContributions,
+                )}
+              </span>
             </div>
             {goal.projectedCapital.totalLumpSumFutureValue > 0 && (
               <div className="flex justify-between">
@@ -415,7 +448,8 @@ function GoalResultCard({ goal }: { goal: GoalCalculationResult }) {
               </div>
             </div>
             <p className="text-xs text-blue-600 italic mt-2">
-              Alternative: Invest a lump sum of {formatCurrency(goal.requiredContributions.alternativeLumpSumToday)} today
+              Alternative: Invest a lump sum of{' '}
+              {formatCurrency(goal.requiredContributions.alternativeLumpSumToday)} today
             </p>
           </div>
         )}
@@ -423,12 +457,16 @@ function GoalResultCard({ goal }: { goal: GoalCalculationResult }) {
         {/* Investment Details */}
         {goal.projectedCapital.existingCapital.linkedInvestments.length > 0 && (
           <div className="space-y-2">
-            <p className="text-sm font-medium">Linked Investments ({goal.projectedCapital.existingCapital.linkedInvestments.length})</p>
+            <p className="text-sm font-medium">
+              Linked Investments ({goal.projectedCapital.existingCapital.linkedInvestments.length})
+            </p>
             <div className="space-y-1 text-sm">
               {goal.projectedCapital.existingCapital.linkedInvestments.map((inv, index) => (
                 <div key={index} className="flex justify-between text-muted-foreground">
                   <span>{inv.investmentName}</span>
-                  <span>{formatCurrency(inv.currentValue)} → {formatCurrency(inv.futureValue)}</span>
+                  <span>
+                    {formatCurrency(inv.currentValue)} → {formatCurrency(inv.futureValue)}
+                  </span>
                 </div>
               ))}
             </div>

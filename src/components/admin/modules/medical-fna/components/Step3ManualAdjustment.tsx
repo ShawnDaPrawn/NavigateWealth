@@ -1,6 +1,6 @@
 /**
  * Step 3: Manual Adjustment
- * 
+ *
  * Behaviour Rules:
  * - Adviser can override system recommendations
  * - All overrides must include justification notes
@@ -15,7 +15,13 @@ import { Input } from '../../../../ui/input';
 import { Label } from '../../../../ui/label';
 import { Textarea } from '../../../../ui/textarea';
 import { Switch } from '../../../../ui/switch';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../../../ui/select';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '../../../../ui/select';
 import { Alert, AlertDescription } from '../../../../ui/alert';
 import { MedicalFNAResults, MedicalFNAAdjustments } from '../types';
 
@@ -26,24 +32,32 @@ interface Step3Props {
   onBack: () => void;
 }
 
-export function Step3ManualAdjustment({ calculations, initialAdjustments, onNext, onBack }: Step3Props) {
+export function Step3ManualAdjustment({
+  calculations,
+  initialAdjustments,
+  onNext,
+  onBack,
+}: Step3Props) {
   const [adjustments, setAdjustments] = useState<MedicalFNAAdjustments>(initialAdjustments);
 
-  const handleOverrideChange = (field: keyof MedicalFNAAdjustments, value: string | number | boolean) => {
-    setAdjustments(prev => ({
+  const handleOverrideChange = (
+    field: keyof MedicalFNAAdjustments,
+    value: string | number | boolean,
+  ) => {
+    setAdjustments((prev) => ({
       ...prev,
-      [field]: value
+      [field]: value,
     }));
   };
 
-  const AdjustmentCard = ({ 
-    title, 
-    icon: Icon, 
-    systemValue, 
-    overrideValue, 
+  const AdjustmentCard = ({
+    title,
+    icon: Icon,
+    systemValue,
+    overrideValue,
     onOverrideChange,
     options,
-    type = 'select' 
+    type = 'select',
   }: {
     title: string;
     icon: React.ComponentType<{ className?: string }>;
@@ -65,37 +79,40 @@ export function Step3ManualAdjustment({ calculations, initialAdjustments, onNext
           <Label className="text-xs text-muted-foreground uppercase font-semibold tracking-wider mb-1 block">
             System Calculation
           </Label>
-          <div className="p-2 bg-muted/50 rounded text-foreground font-medium">
-            {systemValue}
-          </div>
+          <div className="p-2 bg-muted/50 rounded text-foreground font-medium">{systemValue}</div>
         </div>
         <div>
           <Label className="text-xs text-primary uppercase font-semibold tracking-wider mb-1 block">
             Adviser Override
           </Label>
           {type === 'select' ? (
-            <Select
-              value={String(overrideValue || systemValue)}
-              onValueChange={onOverrideChange}
-            >
+            <Select value={String(overrideValue || systemValue)} onValueChange={onOverrideChange}>
               <SelectTrigger>
                 <SelectValue placeholder="Select override..." />
               </SelectTrigger>
               <SelectContent>
                 {options?.map((opt) => (
-                  <SelectItem key={opt} value={opt}>{opt}</SelectItem>
+                  <SelectItem key={opt} value={opt}>
+                    {opt}
+                  </SelectItem>
                 ))}
               </SelectContent>
             </Select>
           ) : type === 'switch' ? (
             <div className="flex items-center space-x-2 pt-2">
-               <Switch
-                 checked={overrideValue !== undefined ? Boolean(overrideValue) : (systemValue === 'Recommended')}
-                 onCheckedChange={onOverrideChange}
-               />
-               <span className="text-sm">
-                 {(overrideValue !== undefined ? overrideValue : (systemValue === 'Recommended')) ? 'Yes' : 'No'}
-               </span>
+              <Switch
+                checked={
+                  overrideValue !== undefined
+                    ? Boolean(overrideValue)
+                    : systemValue === 'Recommended'
+                }
+                onCheckedChange={onOverrideChange}
+              />
+              <span className="text-sm">
+                {(overrideValue !== undefined ? overrideValue : systemValue === 'Recommended')
+                  ? 'Yes'
+                  : 'No'}
+              </span>
             </div>
           ) : (
             <Input
@@ -113,7 +130,8 @@ export function Step3ManualAdjustment({ calculations, initialAdjustments, onNext
       <Alert>
         <Info className="h-4 w-4" />
         <AlertDescription className="text-sm">
-          You can override any system recommendations below. All overrides should be documented in the notes section for compliance.
+          You can override any system recommendations below. All overrides should be documented in
+          the notes section for compliance.
         </AlertDescription>
       </Alert>
 
@@ -123,14 +141,16 @@ export function Step3ManualAdjustment({ calculations, initialAdjustments, onNext
           icon={Shield}
           systemValue={calculations.recommendedInHospitalCover}
           overrideValue={adjustments.hospitalCoverOverride}
-          onOverrideChange={(val: string | boolean) => handleOverrideChange('hospitalCoverOverride', val)}
+          onOverrideChange={(val: string | boolean) =>
+            handleOverrideChange('hospitalCoverOverride', val)
+          }
           options={['100%', '200%']}
         />
-        
+
         <AdjustmentCard
           title="Medical Savings Account"
           icon={Wallet}
-          systemValue={calculations.msaRecommended ? "Recommended" : "Not Recommended"}
+          systemValue={calculations.msaRecommended ? 'Recommended' : 'Not Recommended'}
           overrideValue={adjustments.msaOverride}
           onOverrideChange={(val: string | boolean) => handleOverrideChange('msaOverride', val)}
           type="switch"
@@ -141,7 +161,9 @@ export function Step3ManualAdjustment({ calculations, initialAdjustments, onNext
           icon={Users}
           systemValue={calculations.recommendedDependents}
           overrideValue={adjustments.dependentsOverride}
-          onOverrideChange={(val: string | boolean) => handleOverrideChange('dependentsOverride', val)}
+          onOverrideChange={(val: string | boolean) =>
+            handleOverrideChange('dependentsOverride', val)
+          }
           type="text"
         />
 
@@ -160,7 +182,7 @@ export function Step3ManualAdjustment({ calculations, initialAdjustments, onNext
           <CardTitle className="text-base">Adviser Notes / Justification</CardTitle>
         </CardHeader>
         <CardContent>
-          <Textarea 
+          <Textarea
             placeholder="Explain any adjustments made to the system recommendations..."
             className="min-h-[100px]"
             value={adjustments.notes || ''}

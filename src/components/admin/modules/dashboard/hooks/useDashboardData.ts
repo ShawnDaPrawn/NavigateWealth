@@ -2,12 +2,7 @@ import { useQuery } from '@tanstack/react-query';
 import { useAuth } from '../../../../auth/AuthContext';
 import { dashboardApi } from '../api';
 import { dashboardKeys } from './queryKeys';
-import type {
-  DashboardStats,
-  DashboardMetrics,
-  TaskDueToday,
-  SystemActivity,
-} from '../types';
+import type { DashboardStats, DashboardMetrics, TaskDueToday, SystemActivity } from '../types';
 
 export interface UseDashboardDataReturn {
   stats: DashboardStats | null;
@@ -91,12 +86,7 @@ export function useDashboardData(): UseDashboardDataReturn {
 
   // Refetch all data
   const refetch = async () => {
-    await Promise.all([
-      refetchStats(),
-      refetchMetrics(),
-      refetchTasks(),
-      refetchActivities(),
-    ]);
+    await Promise.all([refetchStats(), refetchMetrics(), refetchTasks(), refetchActivities()]);
   };
 
   // Determine overall loading state

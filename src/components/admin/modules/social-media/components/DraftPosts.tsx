@@ -91,14 +91,10 @@ export function DraftPosts({
     const filtered = drafts.filter((d) => {
       if (!searchQuery.trim()) return true;
       const q = searchQuery.toLowerCase();
-      return (
-        d.body.toLowerCase().includes(q) ||
-        d.tags?.some((t) => t.toLowerCase().includes(q))
-      );
+      return d.body.toLowerCase().includes(q) || d.tags?.some((t) => t.toLowerCase().includes(q));
     });
     return [...filtered].sort(
-      (a, b) =>
-        new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime(),
+      (a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime(),
     );
   }, [drafts, searchQuery]);
 
@@ -157,16 +153,15 @@ export function DraftPosts({
           >
             <Inbox className="h-5 w-5" style={{ color: BRAND.navy }} />
           </div>
-          <h3
-            className="text-base font-semibold mb-1.5"
-            style={{ color: BRAND.navy }}
-          >
+          <h3 className="text-base font-semibold mb-1.5" style={{ color: BRAND.navy }}>
             No Drafts Yet
           </h3>
           <p className="text-sm text-muted-foreground max-w-xs leading-relaxed">
-            Create content with the AI Generator, click
-            {' '}<span className="font-medium" style={{ color: BRAND.navy }}>"Use in Post"</span>,
-            then save as a draft.
+            Create content with the AI Generator, click{' '}
+            <span className="font-medium" style={{ color: BRAND.navy }}>
+              "Use in Post"
+            </span>
+            , then save as a draft.
           </p>
         </CardContent>
       </Card>
@@ -189,10 +184,7 @@ export function DraftPosts({
             <FileText className="h-4 w-4" style={{ color: BRAND.navy }} />
           </div>
           <div>
-            <h3
-              className="text-base font-semibold leading-tight"
-              style={{ color: BRAND.navy }}
-            >
+            <h3 className="text-base font-semibold leading-tight" style={{ color: BRAND.navy }}>
               Saved Drafts
             </h3>
             <p className="text-xs text-muted-foreground mt-0.5">
@@ -218,9 +210,7 @@ export function DraftPosts({
       {sortedDrafts.length === 0 && searchQuery.trim() && (
         <div className="flex flex-col items-center py-10 text-center">
           <Search className="h-6 w-6 text-gray-300 mb-2" />
-          <p className="text-sm text-muted-foreground">
-            No drafts match "{searchQuery}"
-          </p>
+          <p className="text-sm text-muted-foreground">No drafts match "{searchQuery}"</p>
         </div>
       )}
 
@@ -249,10 +239,7 @@ export function DraftPosts({
                         />
                       ) : (
                         <div className="flex items-center justify-center w-full h-full">
-                          <ImageIcon
-                            className="h-5 w-5"
-                            style={{ color: BRAND.navy }}
-                          />
+                          <ImageIcon className="h-5 w-5" style={{ color: BRAND.navy }} />
                         </div>
                       )}
                       {draft.media.length > 1 && (
@@ -275,9 +262,7 @@ export function DraftPosts({
                     {draft.body.length > 160 && (
                       <button
                         type="button"
-                        onClick={() =>
-                          setExpandedId(isExpanded ? null : draft.id)
-                        }
+                        onClick={() => setExpandedId(isExpanded ? null : draft.id)}
                         className="text-xs font-medium mt-1"
                         style={{ color: BRAND.gold }}
                       >
@@ -403,10 +388,7 @@ export function DraftPosts({
       {/* ------------------------------------------------------------------ */}
       {/* Delete Confirmation Dialog                                          */}
       {/* ------------------------------------------------------------------ */}
-      <Dialog
-        open={!!deleteConfirmId}
-        onOpenChange={() => setDeleteConfirmId(null)}
-      >
+      <Dialog open={!!deleteConfirmId} onOpenChange={() => setDeleteConfirmId(null)}>
         <DialogContent className="max-w-sm">
           <DialogHeader>
             <DialogTitle>Delete Draft</DialogTitle>
@@ -443,24 +425,18 @@ export function DraftPosts({
             <DialogTitle>Schedule Draft</DialogTitle>
           </DialogHeader>
           <div className="space-y-4 py-2">
-            <p className="text-sm text-muted-foreground">
-              Choose when to publish this post.
-            </p>
+            <p className="text-sm text-muted-foreground">Choose when to publish this post.</p>
             <Calendar
               mode="single"
               selected={scheduleDate}
               onSelect={setScheduleDate}
-              disabled={(date) =>
-                date < new Date(new Date().setHours(0, 0, 0, 0))
-              }
+              disabled={(date) => date < new Date(new Date().setHours(0, 0, 0, 0))}
               className="rounded-md border mx-auto"
             />
             {scheduleDate && (
               <p className="text-sm text-center text-muted-foreground">
                 Scheduled for:{' '}
-                <span className="font-medium text-foreground">
-                  {formatDateZA(scheduleDate)}
-                </span>
+                <span className="font-medium text-foreground">{formatDateZA(scheduleDate)}</span>
               </p>
             )}
           </div>

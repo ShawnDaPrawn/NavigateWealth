@@ -8,7 +8,9 @@ import {
   resolveSiteVerificationToken,
 } from './seo-static-data.mjs';
 
-const siteUrl = normalizeSiteUrl(process.env.SITE_URL || process.env.VITE_SITE_URL || DEFAULT_SITE_URL);
+const siteUrl = normalizeSiteUrl(
+  process.env.SITE_URL || process.env.VITE_SITE_URL || DEFAULT_SITE_URL,
+);
 const distDir = path.resolve('dist');
 const failures = [];
 
@@ -55,14 +57,14 @@ function verifySitemap() {
   }
 
   const sitemap = fs.readFileSync(sitemapPath, 'utf8');
-  const urls = [...sitemap.matchAll(/<loc>([^<]+)<\/loc>/g)].map((match) =>
-    decodeXml(match[1])
-  );
+  const urls = [...sitemap.matchAll(/<loc>([^<]+)<\/loc>/g)].map((match) => decodeXml(match[1]));
   if (!urls.length) {
     failures.push('sitemap.xml contains no URLs');
     return;
   }
-  if (!/xmlns:image=["']http:\/\/www\.google\.com\/schemas\/sitemap-image\/1\.1["']/.test(sitemap)) {
+  if (
+    !/xmlns:image=["']http:\/\/www\.google\.com\/schemas\/sitemap-image\/1\.1["']/.test(sitemap)
+  ) {
     failures.push('sitemap.xml is missing the image sitemap namespace');
   }
 
@@ -74,7 +76,9 @@ function verifySitemap() {
     if (!url.startsWith(siteUrl)) {
       failures.push(`sitemap URL is not canonical: ${url}`);
     }
-    const isDisallowed = disallowedPrefixes.some((prefix) => url === prefix || url.startsWith(`${prefix}/`));
+    const isDisallowed = disallowedPrefixes.some(
+      (prefix) => url === prefix || url.startsWith(`${prefix}/`),
+    );
     if (isDisallowed) {
       failures.push(`sitemap URL is disallowed by robots.txt: ${url}`);
     }
@@ -112,7 +116,9 @@ function verifyStaticHtml() {
     if (!/<meta\s+property=["']og:title["']\s+content=["'][^"']+["']\s*\/?>/i.test(html)) {
       failures.push(`${route.path} is missing initial Open Graph title metadata`);
     }
-    if (!/<script\s+id=["']seo-structured-data["']\s+type=["']application\/ld\+json["']>/i.test(html)) {
+    if (
+      !/<script\s+id=["']seo-structured-data["']\s+type=["']application\/ld\+json["']>/i.test(html)
+    ) {
       failures.push(`${route.path} is missing initial JSON-LD structured data`);
     }
     if (!/<noscript\s+data-seo-static-body=["']true["']>/i.test(html)) {
@@ -126,7 +132,9 @@ function verifyStaticHtml() {
 }
 
 function verifyJsonLd(routePath, html) {
-  const match = html.match(/<script\s+id=["']seo-structured-data["']\s+type=["']application\/ld\+json["']>([\s\S]*?)<\/script>/i);
+  const match = html.match(
+    /<script\s+id=["']seo-structured-data["']\s+type=["']application\/ld\+json["']>([\s\S]*?)<\/script>/i,
+  );
   if (!match) return;
 
   try {
@@ -138,10 +146,7 @@ function verifyJsonLd(routePath, html) {
 
 function outputPathForRoute(routePath) {
   if (routePath === '/') return path.join(distDir, 'index.html');
-  const safeParts = routePath
-    .replace(/^\/+/, '')
-    .split('/')
-    .filter(Boolean);
+  const safeParts = routePath.replace(/^\/+/, '').split('/').filter(Boolean);
   return path.join(distDir, ...safeParts, 'index.html');
 }
 

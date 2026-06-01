@@ -60,7 +60,9 @@ function loadSession(service: string): Record<string, string> {
 function saveSession(service: string, data: Record<string, string>) {
   try {
     sessionStorage.setItem(`${SESSION_KEY}_${service}`, JSON.stringify(data));
-  } catch { /* non-critical */ }
+  } catch {
+    /* non-critical */
+  }
 }
 
 // ── Success screen ────────────────────────────────────────────────────────────
@@ -75,15 +77,16 @@ function SuccessScreen({ serviceName }: { serviceName: string }) {
         <div>
           <h1 className="text-2xl font-bold text-gray-900 mb-2">Quote Request Received!</h1>
           <p className="text-gray-600 leading-relaxed">
-            Thank you for your {serviceName.toLowerCase()} quote request. One of our qualified advisers
-            will be in touch within <strong>24 business hours</strong> with a personalised, no-obligation quote.
+            Thank you for your {serviceName.toLowerCase()} quote request. One of our qualified
+            advisers will be in touch within <strong>24 business hours</strong> with a personalised,
+            no-obligation quote.
           </p>
         </div>
         <div className="bg-green-50 border border-green-100 rounded-xl p-4 text-left space-y-2">
           {[
             'An adviser will review your requirements',
-            'We\'ll compare options from our partner providers',
-            'You\'ll receive a personalised recommendation',
+            "We'll compare options from our partner providers",
+            "You'll receive a personalised recommendation",
           ].map((item) => (
             <div key={item} className="flex items-start gap-2">
               <CheckCircle className="h-4 w-4 text-green-600 mt-0.5 flex-shrink-0" />
@@ -144,61 +147,72 @@ export function ProductQuotePage() {
 
   // Determine required fields validation
   const requiredProductFields = serviceConfig?.productFields.filter((f) => f.required) ?? [];
-  const productFieldsValid = requiredProductFields.every(
-    (f) => productFields[f.id]?.trim(),
-  );
+  const productFieldsValid = requiredProductFields.every((f) => productFields[f.id]?.trim());
   const contactValid = firstName.trim() && lastName.trim() && email.trim() && phone.trim();
   const isFormValid = contactValid && productFieldsValid;
 
   // ── Submit handler ──────────────────────────────────────────────────────────
-  const handleSubmit = useCallback(async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!isFormValid || !service || !serviceConfig) return;
+  const handleSubmit = useCallback(
+    async (e: React.FormEvent) => {
+      e.preventDefault();
+      if (!isFormValid || !service || !serviceConfig) return;
 
-    setIsSubmitting(true);
+      setIsSubmitting(true);
 
-    try {
-      const response = await fetch(
-        `https://${projectId}.supabase.co/functions/v1/make-server-91ed8379/quote-request/submit`,
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${publicAnonKey}`,
+      try {
+        const response = await fetch(
+          `https://${projectId}.supabase.co/functions/v1/make-server-91ed8379/quote-request/submit`,
+          {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              Authorization: `Bearer ${publicAnonKey}`,
+            },
+            body: JSON.stringify({
+              firstName: firstName.trim(),
+              lastName: lastName.trim(),
+              email: email.trim(),
+              phone: phone.trim(),
+              productName: serviceConfig.label,
+              stage: 'full',
+              service,
+              parentSubmissionId: routerState?.parentSubmissionId ?? undefined,
+              productDetails: productFields,
+            }),
           },
-          body: JSON.stringify({
-            firstName: firstName.trim(),
-            lastName: lastName.trim(),
-            email: email.trim(),
-            phone: phone.trim(),
-            productName: serviceConfig.label,
-            stage: 'full',
-            service,
-            parentSubmissionId: routerState?.parentSubmissionId ?? undefined,
-            productDetails: productFields,
-          }),
-        },
-      );
+        );
 
-      const result = await response.json();
+        const result = await response.json();
 
-      if (!response.ok) {
-        console.error('Product quote submission error:', result);
-        toast.error(result.error || 'Something went wrong. Please try again.');
-        return;
+        if (!response.ok) {
+          console.error('Product quote submission error:', result);
+          toast.error(result.error || 'Something went wrong. Please try again.');
+          return;
+        }
+
+        // Clear session
+        if (service) sessionStorage.removeItem(`${SESSION_KEY}_${service}`);
+
+        setIsSuccess(true);
+      } catch (error) {
+        console.error('Product quote network error:', error);
+        toast.error('Unable to submit your request. Please check your connection and try again.');
+      } finally {
+        setIsSubmitting(false);
       }
-
-      // Clear session
-      if (service) sessionStorage.removeItem(`${SESSION_KEY}_${service}`);
-
-      setIsSuccess(true);
-    } catch (error) {
-      console.error('Product quote network error:', error);
-      toast.error('Unable to submit your request. Please check your connection and try again.');
-    } finally {
-      setIsSubmitting(false);
-    }
-  }, [firstName, lastName, email, phone, service, serviceConfig, productFields, routerState, isFormValid]);
+    },
+    [
+      firstName,
+      lastName,
+      email,
+      phone,
+      service,
+      serviceConfig,
+      productFields,
+      routerState,
+      isFormValid,
+    ],
+  );
 
   // ── Invalid service ─────────────────────────────────────────────────────────
   useEffect(() => {
@@ -244,7 +258,13 @@ export function ProductQuotePage() {
   const isRetirement = service === 'retirement-planning';
   const isEmployeeBenefits = service === 'employee-benefits';
   const isTaxPlanning = service === 'tax-planning';
-  const hasPhase2Wizard = isRiskManagement || isMedicalAid || isInvestment || isRetirement || isEmployeeBenefits || isTaxPlanning;
+  const hasPhase2Wizard =
+    isRiskManagement ||
+    isMedicalAid ||
+    isInvestment ||
+    isRetirement ||
+    isEmployeeBenefits ||
+    isTaxPlanning;
 
   // ── Main render ─────────────────────────────────────────────────────────────
   return (
@@ -257,9 +277,13 @@ export function ProductQuotePage() {
         <div className="relative max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8 xl:px-12 py-10 sm:py-14">
           {/* Breadcrumb */}
           <div className="flex items-center gap-2 text-white/50 text-xs mb-5">
-            <Link to="/" className="hover:text-white/70 transition-colors">Home</Link>
+            <Link to="/" className="hover:text-white/70 transition-colors">
+              Home
+            </Link>
             <span>/</span>
-            <Link to="/get-quote" className="hover:text-white/70 transition-colors">Get a Quote</Link>
+            <Link to="/get-quote" className="hover:text-white/70 transition-colors">
+              Get a Quote
+            </Link>
             <span>/</span>
             <span className="text-white/80">{serviceConfig.label}</span>
           </div>
@@ -464,133 +488,143 @@ export function ProductQuotePage() {
                 )}
               </div>
             ) : (
-            <form onSubmit={handleSubmit} className="bg-white rounded-2xl shadow-lg border border-gray-100 overflow-hidden">
-              {/* Contact details section */}
-              <div className="p-6 border-b border-gray-100">
-                <div className="flex items-center justify-between mb-4">
-                  <div>
-                    <h2 className="text-base font-bold text-gray-900">Contact Details</h2>
-                    {hasContactFromGateway && (
-                      <p className="text-xs text-green-600 mt-0.5 flex items-center gap-1">
-                        <CheckCircle className="h-3 w-3" /> Pre-filled from your previous step
-                      </p>
-                    )}
+              <form
+                onSubmit={handleSubmit}
+                className="bg-white rounded-2xl shadow-lg border border-gray-100 overflow-hidden"
+              >
+                {/* Contact details section */}
+                <div className="p-6 border-b border-gray-100">
+                  <div className="flex items-center justify-between mb-4">
+                    <div>
+                      <h2 className="text-base font-bold text-gray-900">Contact Details</h2>
+                      {hasContactFromGateway && (
+                        <p className="text-xs text-green-600 mt-0.5 flex items-center gap-1">
+                          <CheckCircle className="h-3 w-3" /> Pre-filled from your previous step
+                        </p>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className="space-y-1.5">
+                      <Label htmlFor="pq-firstName" className="text-sm font-medium text-gray-700">
+                        First name <span className="text-red-500">*</span>
+                      </Label>
+                      <Input
+                        id="pq-firstName"
+                        type="text"
+                        placeholder="e.g. John"
+                        value={firstName}
+                        onChange={(e) => setFirstName(e.target.value)}
+                        required
+                        className="bg-white border-gray-300 h-11"
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label htmlFor="pq-lastName" className="text-sm font-medium text-gray-700">
+                        Surname <span className="text-red-500">*</span>
+                      </Label>
+                      <Input
+                        id="pq-lastName"
+                        type="text"
+                        placeholder="e.g. Smith"
+                        value={lastName}
+                        onChange={(e) => setLastName(e.target.value)}
+                        required
+                        className="bg-white border-gray-300 h-11"
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label htmlFor="pq-email" className="text-sm font-medium text-gray-700">
+                        Email address <span className="text-red-500">*</span>
+                      </Label>
+                      <Input
+                        id="pq-email"
+                        type="email"
+                        placeholder="e.g. john@email.co.za"
+                        value={email}
+                        onChange={(e) => setEmail(e.target.value)}
+                        required
+                        className="bg-white border-gray-300 h-11"
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label htmlFor="pq-phone" className="text-sm font-medium text-gray-700">
+                        Contact number <span className="text-red-500">*</span>
+                      </Label>
+                      <Input
+                        id="pq-phone"
+                        type="tel"
+                        placeholder="e.g. 082 345 6789"
+                        value={phone}
+                        onChange={(e) => setPhone(e.target.value)}
+                        required
+                        className="bg-white border-gray-300 h-11"
+                      />
+                    </div>
                   </div>
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div className="space-y-1.5">
-                    <Label htmlFor="pq-firstName" className="text-sm font-medium text-gray-700">
-                      First name <span className="text-red-500">*</span>
-                    </Label>
-                    <Input
-                      id="pq-firstName"
-                      type="text"
-                      placeholder="e.g. John"
-                      value={firstName}
-                      onChange={(e) => setFirstName(e.target.value)}
-                      required
-                      className="bg-white border-gray-300 h-11"
-                    />
-                  </div>
-                  <div className="space-y-1.5">
-                    <Label htmlFor="pq-lastName" className="text-sm font-medium text-gray-700">
-                      Surname <span className="text-red-500">*</span>
-                    </Label>
-                    <Input
-                      id="pq-lastName"
-                      type="text"
-                      placeholder="e.g. Smith"
-                      value={lastName}
-                      onChange={(e) => setLastName(e.target.value)}
-                      required
-                      className="bg-white border-gray-300 h-11"
-                    />
-                  </div>
-                  <div className="space-y-1.5">
-                    <Label htmlFor="pq-email" className="text-sm font-medium text-gray-700">
-                      Email address <span className="text-red-500">*</span>
-                    </Label>
-                    <Input
-                      id="pq-email"
-                      type="email"
-                      placeholder="e.g. john@email.co.za"
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
-                      required
-                      className="bg-white border-gray-300 h-11"
-                    />
-                  </div>
-                  <div className="space-y-1.5">
-                    <Label htmlFor="pq-phone" className="text-sm font-medium text-gray-700">
-                      Contact number <span className="text-red-500">*</span>
-                    </Label>
-                    <Input
-                      id="pq-phone"
-                      type="tel"
-                      placeholder="e.g. 082 345 6789"
-                      value={phone}
-                      onChange={(e) => setPhone(e.target.value)}
-                      required
-                      className="bg-white border-gray-300 h-11"
-                    />
-                  </div>
-                </div>
-              </div>
-
-              {/* Product-specific fields */}
-              <div className="p-6 border-b border-gray-100">
-                <h2 className="text-base font-bold text-gray-900 mb-1">
-                  {serviceConfig.label} Details
-                </h2>
-                <p className="text-sm text-gray-500 mb-4">
-                  Help us understand your specific needs so we can match you with the right solution.
-                </p>
-                <QuoteFormFields
-                  fields={serviceConfig.productFields}
-                  values={productFields}
-                  onChange={handleProductFieldChange}
-                />
-              </div>
-
-              {/* Submit section */}
-              <div className="p-6 bg-gray-50/50">
-                <div className="flex flex-col-reverse sm:flex-row items-center gap-3">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={() => navigate(`/get-quote/${service}/contact`)}
-                    className="w-full sm:w-auto h-11 px-5 border-gray-300 text-gray-700 hover:bg-gray-50 font-medium"
-                  >
-                    <ArrowLeft className="h-4 w-4 mr-2" />
-                    Back
-                  </Button>
-                  <Button
-                    type="submit"
-                    disabled={!isFormValid || isSubmitting}
-                    className="w-full sm:w-auto sm:flex-1 sm:max-w-xs h-11 bg-primary hover:bg-primary/90 text-white font-semibold text-sm shadow-md hover:shadow-lg transition-all duration-200"
-                  >
-                    {isSubmitting ? (
-                      <div className="contents">
-                        <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                        Submitting...
-                      </div>
-                    ) : (
-                      <div className="contents">
-                        Get My {serviceConfig.shortLabel} Quote
-                        <ArrowRight className="h-4 w-4 ml-2" />
-                      </div>
-                    )}
-                  </Button>
+                {/* Product-specific fields */}
+                <div className="p-6 border-b border-gray-100">
+                  <h2 className="text-base font-bold text-gray-900 mb-1">
+                    {serviceConfig.label} Details
+                  </h2>
+                  <p className="text-sm text-gray-500 mb-4">
+                    Help us understand your specific needs so we can match you with the right
+                    solution.
+                  </p>
+                  <QuoteFormFields
+                    fields={serviceConfig.productFields}
+                    values={productFields}
+                    onChange={handleProductFieldChange}
+                  />
                 </div>
 
-                <p className="text-xs text-gray-400 leading-relaxed text-center mt-4">
-                  By submitting, you agree to our{' '}
-                  <a href="/legal?tab=privacy" className="text-primary/70 hover:text-primary underline">Privacy Policy</a>.
-                  Your information is secure and will only be used to prepare your personalised quote.
-                </p>
-              </div>
-            </form>
+                {/* Submit section */}
+                <div className="p-6 bg-gray-50/50">
+                  <div className="flex flex-col-reverse sm:flex-row items-center gap-3">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => navigate(`/get-quote/${service}/contact`)}
+                      className="w-full sm:w-auto h-11 px-5 border-gray-300 text-gray-700 hover:bg-gray-50 font-medium"
+                    >
+                      <ArrowLeft className="h-4 w-4 mr-2" />
+                      Back
+                    </Button>
+                    <Button
+                      type="submit"
+                      disabled={!isFormValid || isSubmitting}
+                      className="w-full sm:w-auto sm:flex-1 sm:max-w-xs h-11 bg-primary hover:bg-primary/90 text-white font-semibold text-sm shadow-md hover:shadow-lg transition-all duration-200"
+                    >
+                      {isSubmitting ? (
+                        <div className="contents">
+                          <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                          Submitting...
+                        </div>
+                      ) : (
+                        <div className="contents">
+                          Get My {serviceConfig.shortLabel} Quote
+                          <ArrowRight className="h-4 w-4 ml-2" />
+                        </div>
+                      )}
+                    </Button>
+                  </div>
+
+                  <p className="text-xs text-gray-400 leading-relaxed text-center mt-4">
+                    By submitting, you agree to our{' '}
+                    <a
+                      href="/legal?tab=privacy"
+                      className="text-primary/70 hover:text-primary underline"
+                    >
+                      Privacy Policy
+                    </a>
+                    . Your information is secure and will only be used to prepare your personalised
+                    quote.
+                  </p>
+                </div>
+              </form>
             )}
           </div>
 
@@ -601,19 +635,45 @@ export function ProductQuotePage() {
               <h3 className="text-sm font-bold text-gray-900 mb-4">Why Navigate Wealth?</h3>
               <div className="space-y-3">
                 {[
-                  { icon: Shield, label: 'Independent & Unbiased', desc: 'We\'re not tied to any single provider' },
-                  { icon: Users, label: `${serviceConfig.providers.length > 0 ? serviceConfig.providers.length + '+ ' : ''}Trusted Partners`, desc: 'Compare the best options available' },
-                  { icon: Clock, label: '24-Hour Response', desc: 'We\'ll contact you within one business day' },
-                  { icon: Phone, label: 'Free Consultation', desc: 'No cost, no obligation — ever' },
-                  { icon: Star, label: 'Expert Advisers', desc: 'Qualified professionals with years of experience' },
-                  { icon: Lock, label: 'Your Data is Secure', desc: 'Strict privacy and POPIA compliance' },
+                  {
+                    icon: Shield,
+                    label: 'Independent & Unbiased',
+                    desc: "We're not tied to any single provider",
+                  },
+                  {
+                    icon: Users,
+                    label: `${serviceConfig.providers.length > 0 ? serviceConfig.providers.length + '+ ' : ''}Trusted Partners`,
+                    desc: 'Compare the best options available',
+                  },
+                  {
+                    icon: Clock,
+                    label: '24-Hour Response',
+                    desc: "We'll contact you within one business day",
+                  },
+                  {
+                    icon: Phone,
+                    label: 'Free Consultation',
+                    desc: 'No cost, no obligation — ever',
+                  },
+                  {
+                    icon: Star,
+                    label: 'Expert Advisers',
+                    desc: 'Qualified professionals with years of experience',
+                  },
+                  {
+                    icon: Lock,
+                    label: 'Your Data is Secure',
+                    desc: 'Strict privacy and POPIA compliance',
+                  },
                 ].map(({ icon: Ic, label, desc }) => (
                   <div key={label} className="flex items-start gap-3">
                     <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
                       <Ic className="h-4 w-4 text-primary" />
                     </div>
                     <div>
-                      <span className="text-sm font-semibold text-gray-900 block leading-tight">{label}</span>
+                      <span className="text-sm font-semibold text-gray-900 block leading-tight">
+                        {label}
+                      </span>
                       <span className="text-xs text-gray-500">{desc}</span>
                     </div>
                   </div>
@@ -629,10 +689,12 @@ export function ProductQuotePage() {
                 ))}
               </div>
               <p className="text-sm text-gray-700 italic leading-relaxed mb-3">
-                "Navigate Wealth compared multiple options and found us the best cover at a lower premium
-                than we were paying. The process was smooth and completely free."
+                "Navigate Wealth compared multiple options and found us the best cover at a lower
+                premium than we were paying. The process was smooth and completely free."
               </p>
-              <p className="text-xs font-semibold text-gray-900">— Satisfied client, Johannesburg</p>
+              <p className="text-xs font-semibold text-gray-900">
+                — Satisfied client, Johannesburg
+              </p>
             </div>
 
             {/* Trust bar */}

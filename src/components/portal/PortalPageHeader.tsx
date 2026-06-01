@@ -1,12 +1,12 @@
 /**
  * PortalPageHeader
- * 
+ *
  * Branded hero-style header for client portal pages.
  * Mirrors the website's dark gradient hero aesthetic while keeping
  * the content functional and dashboard-appropriate.
- * 
+ *
  * When ACTIVE_THEME is 'classic', renders a simple white/gray header.
- * 
+ *
  * Guidelines refs: §8.1, §8.3, §8.4
  */
 
@@ -75,14 +75,15 @@ export function PortalPageHeader({
       <div
         className="absolute inset-0 opacity-[0.03]"
         style={{
-          backgroundImage:
-            'radial-gradient(circle, rgba(255,255,255,0.8) 1px, transparent 1px)',
+          backgroundImage: 'radial-gradient(circle, rgba(255,255,255,0.8) 1px, transparent 1px)',
           backgroundSize: '32px 32px',
         }}
       />
 
       {/* Content */}
-      <div className={`relative z-10 max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8 ${compact ? 'py-6 lg:py-8' : 'py-8 lg:py-12'}`}>
+      <div
+        className={`relative z-10 max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8 ${compact ? 'py-6 lg:py-8' : 'py-8 lg:py-12'}`}
+      >
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div className="flex items-center gap-4">
             {Icon && (
@@ -91,16 +92,10 @@ export function PortalPageHeader({
               </div>
             )}
             <div>
-              {greeting && (
-                <p className="text-sm text-white/50 font-medium">{greeting}</p>
-              )}
-              <h1 className="text-2xl lg:text-3xl font-bold text-white tracking-tight">
-                {title}
-              </h1>
+              {greeting && <p className="text-sm text-white/50 font-medium">{greeting}</p>}
+              <h1 className="text-2xl lg:text-3xl font-bold text-white tracking-tight">{title}</h1>
               {subtitle && (
-                <p className="text-white/60 mt-0.5 text-sm lg:text-base max-w-xl">
-                  {subtitle}
-                </p>
+                <p className="text-white/60 mt-0.5 text-sm lg:text-base max-w-xl">{subtitle}</p>
               )}
             </div>
           </div>

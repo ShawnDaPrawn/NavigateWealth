@@ -7,11 +7,11 @@
 import React, { Suspense } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../../../../ui/card';
 import { Button } from '../../../../ui/button';
-import { 
-  FileText, 
-  Plus, 
-  Clock, 
-  CheckCircle2, 
+import {
+  FileText,
+  Plus,
+  Clock,
+  CheckCircle2,
   List,
   Bookmark,
   TrendingUp,
@@ -26,7 +26,9 @@ import { EnvelopesList } from './EnvelopesList';
 import { TemplateLibrary } from './TemplateLibrary';
 import { NotificationBell } from './NotificationBell';
 // P7.1 — metrics panel is lazily loaded so the envelopes tab stays fast.
-const MetricsPanel = React.lazy(() => import('./MetricsPanel').then(m => ({ default: m.MetricsPanel })));
+const MetricsPanel = React.lazy(() =>
+  import('./MetricsPanel').then((m) => ({ default: m.MetricsPanel })),
+);
 import type { EsignEnvelope, EsignTemplateRecord } from '../types';
 import { useEnvelopes } from '../hooks/useEnvelopes';
 import { EXPIRING_SOON_DAYS } from '../constants';
@@ -37,7 +39,11 @@ interface EsignDashboardProps {
   onResumePrepare?: (envelope: EsignEnvelope) => void;
   resumingEnvelopeId?: string | null;
   onUseTemplate?: (template: EsignTemplateRecord) => void;
-  onStartTemplateBuilder?: (seed: { name: string; description?: string; category?: string }) => void;
+  onStartTemplateBuilder?: (seed: {
+    name: string;
+    description?: string;
+    category?: string;
+  }) => void;
   onConfigureTemplate?: (template: EsignTemplateRecord) => void;
   /** P4.7 — opens the bulk-send dialog. */
   onBulkSend?: () => void;
@@ -58,7 +64,24 @@ interface EsignDashboardProps {
   refreshTrigger?: number;
 }
 
-export function EsignDashboard({ onCreateNew, onViewEnvelope, onResumePrepare, resumingEnvelopeId, onUseTemplate, onStartTemplateBuilder, onConfigureTemplate, onBulkSend, onPackets, onNotificationPrefs, onWebhooks, onRecoveryBin, onAuditLog, onRetentionPolicy, onBranding, refreshTrigger }: EsignDashboardProps) {
+export function EsignDashboard({
+  onCreateNew,
+  onViewEnvelope,
+  onResumePrepare,
+  resumingEnvelopeId,
+  onUseTemplate,
+  onStartTemplateBuilder,
+  onConfigureTemplate,
+  onBulkSend,
+  onPackets,
+  onNotificationPrefs,
+  onWebhooks,
+  onRecoveryBin,
+  onAuditLog,
+  onRetentionPolicy,
+  onBranding,
+  refreshTrigger,
+}: EsignDashboardProps) {
   const { envelopes, refetch } = useEnvelopes({ autoLoad: true, refreshTrigger });
 
   // Calculate metrics
@@ -67,11 +90,12 @@ export function EsignDashboard({ onCreateNew, onViewEnvelope, onResumePrepare, r
 
   const metrics = {
     total: envelopes.length,
-    completed: envelopes.filter(e => e.status === 'completed').length,
-    pending: envelopes.filter(e => ['sent', 'viewed', 'partially_signed'].includes(e.status)).length,
-    draft: envelopes.filter(e => e.status === 'draft').length,
-    expired: envelopes.filter(e => e.status === 'expired').length,
-    expiringSoon: envelopes.filter(e => {
+    completed: envelopes.filter((e) => e.status === 'completed').length,
+    pending: envelopes.filter((e) => ['sent', 'viewed', 'partially_signed'].includes(e.status))
+      .length,
+    draft: envelopes.filter((e) => e.status === 'draft').length,
+    expired: envelopes.filter((e) => e.status === 'expired').length,
+    expiringSoon: envelopes.filter((e) => {
       if (!['sent', 'viewed', 'partially_signed'].includes(e.status)) return false;
       const expiresAt = e.expires_at;
       if (!expiresAt) return false;
@@ -80,16 +104,16 @@ export function EsignDashboard({ onCreateNew, onViewEnvelope, onResumePrepare, r
     }).length,
   };
 
-  const completionRate = metrics.total > 0 
-    ? Math.round((metrics.completed / (metrics.total - metrics.draft)) * 100) 
-    : 0;
+  const completionRate =
+    metrics.total > 0 ? Math.round((metrics.completed / (metrics.total - metrics.draft)) * 100) : 0;
 
   const manageTabs = [
     {
       value: 'notifications',
       label: 'Notifications',
       title: 'Notifications',
-      description: 'Check recent signer activity and adjust how in-app notifications behave for your team.',
+      description:
+        'Check recent signer activity and adjust how in-app notifications behave for your team.',
       render: onNotificationPrefs ? (
         <div className="flex flex-wrap items-center gap-3">
           <div className="flex items-center gap-3 rounded-lg border border-gray-200 bg-gray-50 px-3 py-2">
@@ -118,7 +142,8 @@ export function EsignDashboard({ onCreateNew, onViewEnvelope, onResumePrepare, r
       value: 'webhooks',
       label: 'Webhooks',
       title: 'Webhooks',
-      description: 'Manage delivery endpoints and inspect e-sign integration hooks for downstream systems.',
+      description:
+        'Manage delivery endpoints and inspect e-sign integration hooks for downstream systems.',
       render: onWebhooks ? (
         <Button
           variant="outline"
@@ -133,7 +158,8 @@ export function EsignDashboard({ onCreateNew, onViewEnvelope, onResumePrepare, r
       value: 'packets',
       label: 'Packets',
       title: 'Packets',
-      description: 'Chain template steps into a guided packet flow for multi-stage signature journeys.',
+      description:
+        'Chain template steps into a guided packet flow for multi-stage signature journeys.',
       render: onPackets ? (
         <Button
           variant="outline"
@@ -148,7 +174,8 @@ export function EsignDashboard({ onCreateNew, onViewEnvelope, onResumePrepare, r
       value: 'recovery',
       label: 'Recovery Bin',
       title: 'Recovery Bin',
-      description: 'Restore soft-deleted envelopes or permanently purge old records inside the retention window.',
+      description:
+        'Restore soft-deleted envelopes or permanently purge old records inside the retention window.',
       render: onRecoveryBin ? (
         <Button
           variant="outline"
@@ -163,7 +190,8 @@ export function EsignDashboard({ onCreateNew, onViewEnvelope, onResumePrepare, r
       value: 'audit',
       label: 'Audit Log',
       title: 'Audit Log',
-      description: 'Search firm-wide envelope activity, delivery events, and signature actions from one place.',
+      description:
+        'Search firm-wide envelope activity, delivery events, and signature actions from one place.',
       render: onAuditLog ? (
         <Button
           variant="outline"
@@ -178,7 +206,8 @@ export function EsignDashboard({ onCreateNew, onViewEnvelope, onResumePrepare, r
       value: 'retention',
       label: 'Retention',
       title: 'Retention',
-      description: 'Adjust how long documents and certificates remain available for operational and compliance use.',
+      description:
+        'Adjust how long documents and certificates remain available for operational and compliance use.',
       render: onRetentionPolicy ? (
         <Button
           variant="outline"
@@ -193,7 +222,8 @@ export function EsignDashboard({ onCreateNew, onViewEnvelope, onResumePrepare, r
       value: 'branding',
       label: 'Branding',
       title: 'Branding',
-      description: 'Control the signer-facing branding applied to your envelopes, notifications, and completion flow.',
+      description:
+        'Control the signer-facing branding applied to your envelopes, notifications, and completion flow.',
       render: onBranding ? (
         <Button
           variant="outline"
@@ -226,7 +256,7 @@ export function EsignDashboard({ onCreateNew, onViewEnvelope, onResumePrepare, r
               Bulk send from template
             </Button>
           )}
-          <Button 
+          <Button
             onClick={onCreateNew}
             className="bg-purple-600 hover:bg-purple-700 text-white shadow-sm"
           >
@@ -241,8 +271,9 @@ export function EsignDashboard({ onCreateNew, onViewEnvelope, onResumePrepare, r
         <div className="flex items-center gap-3 bg-amber-50 border border-amber-200 rounded-lg px-4 py-2.5">
           <AlertCircle className="h-4 w-4 text-amber-600 flex-shrink-0" />
           <span className="text-sm text-amber-800">
-            <strong>{metrics.expiringSoon}</strong> envelope{metrics.expiringSoon > 1 ? 's' : ''} expiring within {EXPIRING_SOON_DAYS} days.
-            Consider sending reminders. Expired envelopes are swept automatically.
+            <strong>{metrics.expiringSoon}</strong> envelope{metrics.expiringSoon > 1 ? 's' : ''}{' '}
+            expiring within {EXPIRING_SOON_DAYS} days. Consider sending reminders. Expired envelopes
+            are swept automatically.
           </span>
         </div>
       )}
@@ -345,11 +376,13 @@ export function EsignDashboard({ onCreateNew, onViewEnvelope, onResumePrepare, r
           <Card>
             <CardHeader>
               <CardTitle>Recent Envelopes</CardTitle>
-              <CardDescription>View and manage all your envelope status and history</CardDescription>
+              <CardDescription>
+                View and manage all your envelope status and history
+              </CardDescription>
             </CardHeader>
             <CardContent>
-              <EnvelopesList 
-                onViewEnvelope={onViewEnvelope} 
+              <EnvelopesList
+                onViewEnvelope={onViewEnvelope}
                 onCreateNew={onCreateNew}
                 onResumePrepare={onResumePrepare}
                 resumingEnvelopeId={resumingEnvelopeId}
@@ -368,10 +401,12 @@ export function EsignDashboard({ onCreateNew, onViewEnvelope, onResumePrepare, r
               </div>
             }
           >
-            <MetricsPanel onOpenEnvelope={(envelopeId) => {
-              const target = envelopes.find((e) => e.id === envelopeId);
-              if (target) onViewEnvelope(target);
-            }} />
+            <MetricsPanel
+              onOpenEnvelope={(envelopeId) => {
+                const target = envelopes.find((e) => e.id === envelopeId);
+                if (target) onViewEnvelope(target);
+              }}
+            />
           </Suspense>
         </TabsContent>
 
@@ -380,7 +415,9 @@ export function EsignDashboard({ onCreateNew, onViewEnvelope, onResumePrepare, r
           <Card>
             <CardHeader>
               <CardTitle>Template Library</CardTitle>
-              <CardDescription>Save and reuse envelope configurations across documents</CardDescription>
+              <CardDescription>
+                Save and reuse envelope configurations across documents
+              </CardDescription>
             </CardHeader>
             <CardContent>
               <TemplateLibrary
@@ -398,7 +435,8 @@ export function EsignDashboard({ onCreateNew, onViewEnvelope, onResumePrepare, r
               <CardHeader>
                 <CardTitle>E-Signature Management</CardTitle>
                 <CardDescription>
-                  Open delivery settings, operational tools, and maintenance controls without crowding the page header.
+                  Open delivery settings, operational tools, and maintenance controls without
+                  crowding the page header.
                 </CardDescription>
               </CardHeader>
               <CardContent>
@@ -419,10 +457,10 @@ export function EsignDashboard({ onCreateNew, onViewEnvelope, onResumePrepare, r
                     <TabsContent key={tab.value} value={tab.value} className="mt-0">
                       <div className="rounded-xl border border-gray-200 bg-gray-50/80 p-5">
                         <h3 className="text-lg font-semibold text-gray-900">{tab.title}</h3>
-                        <p className="mt-1 max-w-2xl text-sm text-muted-foreground">{tab.description}</p>
-                        <div className="mt-4 flex flex-wrap items-center gap-3">
-                          {tab.render}
-                        </div>
+                        <p className="mt-1 max-w-2xl text-sm text-muted-foreground">
+                          {tab.description}
+                        </p>
+                        <div className="mt-4 flex flex-wrap items-center gap-3">{tab.render}</div>
                       </div>
                     </TabsContent>
                   ))}

@@ -41,31 +41,43 @@ describe('quality issue model', () => {
   });
 
   it('prioritizes security errors ahead of general errors', () => {
-    expect(inferQualityIssuePriority({
-      source: 'audit',
-      severity: 'error',
-      category: 'security',
-    })).toBe('critical');
+    expect(
+      inferQualityIssuePriority({
+        source: 'audit',
+        severity: 'error',
+        category: 'security',
+      }),
+    ).toBe('critical');
 
-    expect(inferQualityIssuePriority({
-      source: 'audit',
-      severity: 'warning',
-      category: 'security',
-      cvssScore: 8.2,
-    })).toBe('high');
+    expect(
+      inferQualityIssuePriority({
+        source: 'audit',
+        severity: 'warning',
+        category: 'security',
+        cvssScore: 8.2,
+      }),
+    ).toBe('high');
 
-    expect(inferQualityIssuePriority({
-      source: 'test',
-      severity: 'error',
-      category: 'test',
-    })).toBe('high');
+    expect(
+      inferQualityIssuePriority({
+        source: 'test',
+        severity: 'error',
+        category: 'test',
+      }),
+    ).toBe('high');
   });
 
   it('summarizes by source, category, and priority', () => {
     const summary = summarizeQualityIssues([
       issue({ source: 'audit', category: 'security', priority: 'critical' }),
       issue({ id: 'issue-2', source: 'runtime-client', category: 'runtime', priority: 'high' }),
-      issue({ id: 'issue-3', source: 'test', category: 'test', priority: 'medium', severity: 'warning' }),
+      issue({
+        id: 'issue-3',
+        source: 'test',
+        category: 'test',
+        priority: 'medium',
+        severity: 'warning',
+      }),
     ]);
 
     expect(summary.total).toBe(3);
@@ -105,32 +117,35 @@ describe('quality issue model', () => {
   });
 
   it('creates stable fingerprints from normalized issue identity fields', () => {
-    expect(createQualityIssueFingerprint(issue({
-      source: 'audit',
-      category: 'security',
-      packageName: 'minimist',
-      advisoryId: 'GHSA-vh95-rmgr-6w4m',
-      cve: 'CVE-2021-44906',
-      ruleId: 'GHSA-vh95-rmgr-6w4m',
-      filePath: 'package-lock.json',
-      title: 'Prototype pollution in minimist',
-    }))).toBe('audit:security:minimist:ghsa-vh95-rmgr-6w4m:cve-2021-44906:package-lock.json:prototype-pollution-in-minimist');
+    expect(
+      createQualityIssueFingerprint(
+        issue({
+          source: 'audit',
+          category: 'security',
+          packageName: 'minimist',
+          advisoryId: 'GHSA-vh95-rmgr-6w4m',
+          cve: 'CVE-2021-44906',
+          ruleId: 'GHSA-vh95-rmgr-6w4m',
+          filePath: 'package-lock.json',
+          title: 'Prototype pollution in minimist',
+        }),
+      ),
+    ).toBe(
+      'audit:security:minimist:ghsa-vh95-rmgr-6w4m:cve-2021-44906:package-lock.json:prototype-pollution-in-minimist',
+    );
   });
 
   it('overlays workflow state onto an issue for triage queues', () => {
-    const updated = applyQualityIssueWorkflow(
-      issue({ fingerprint: 'runtime:dashboard:load' }),
-      {
-        fingerprint: 'runtime:dashboard:load',
-        status: 'acknowledged',
-        ownerName: 'Platform Team',
-        statusNote: 'Reproduced in staging',
-        linkedTaskId: 'task-123',
-        linkedTaskTitle: 'Investigate dashboard runtime incident',
-        workflowUpdatedAt: '2026-04-29T08:00:00.000Z',
-        workflowUpdatedBy: 'shawn@navigatewealth.co',
-      },
-    );
+    const updated = applyQualityIssueWorkflow(issue({ fingerprint: 'runtime:dashboard:load' }), {
+      fingerprint: 'runtime:dashboard:load',
+      status: 'acknowledged',
+      ownerName: 'Platform Team',
+      statusNote: 'Reproduced in staging',
+      linkedTaskId: 'task-123',
+      linkedTaskTitle: 'Investigate dashboard runtime incident',
+      workflowUpdatedAt: '2026-04-29T08:00:00.000Z',
+      workflowUpdatedBy: 'shawn@navigatewealth.co',
+    });
 
     expect(updated.status).toBe('acknowledged');
     expect(updated.ownerName).toBe('Platform Team');
@@ -159,45 +174,54 @@ describe('quality issue model', () => {
     expect(updated.reopenedAt).toBe('2026-04-29T10:00:00.000Z');
     expect(updated.reopenedFromResolvedAt).toBe('2026-04-29T09:00:00.000Z');
     expect(updated.resolutionEvidence).toContain('dashboard smoke test');
-    expect(hasQualityIssueRecurredAfterResolution(updated, {
-      status: 'resolved',
-      resolvedAt: '2026-04-29T09:00:00.000Z',
-    })).toBe(true);
+    expect(
+      hasQualityIssueRecurredAfterResolution(updated, {
+        status: 'resolved',
+        resolvedAt: '2026-04-29T09:00:00.000Z',
+      }),
+    ).toBe(true);
   });
 
   it('flags open issues that are past the priority response target', () => {
-    expect(isQualityIssuePastResponseSla(
-      issue({
-        priority: 'critical',
-        status: 'open',
-        firstSeenAt: '2026-04-28T00:00:00.000Z',
-      }),
-      new Date('2026-04-29T01:00:00.000Z'),
-    )).toBe(true);
+    expect(
+      isQualityIssuePastResponseSla(
+        issue({
+          priority: 'critical',
+          status: 'open',
+          firstSeenAt: '2026-04-28T00:00:00.000Z',
+        }),
+        new Date('2026-04-29T01:00:00.000Z'),
+      ),
+    ).toBe(true);
 
-    expect(isQualityIssuePastResponseSla(
-      issue({
-        priority: 'critical',
-        status: 'resolved',
-        firstSeenAt: '2026-04-28T00:00:00.000Z',
-      }),
-      new Date('2026-04-29T01:00:00.000Z'),
-    )).toBe(false);
+    expect(
+      isQualityIssuePastResponseSla(
+        issue({
+          priority: 'critical',
+          status: 'resolved',
+          firstSeenAt: '2026-04-28T00:00:00.000Z',
+        }),
+        new Date('2026-04-29T01:00:00.000Z'),
+      ),
+    ).toBe(false);
   });
 
   it('creates automation alerts for critical, stale, reopened, and fixable security issues', () => {
-    const alerts = getQualityIssueAutomationAlerts([
-      issue({
-        source: 'audit',
-        category: 'security',
-        priority: 'critical',
-        packageName: 'minimist',
-        fixAvailable: true,
-        fixVersion: '1.2.8',
-        reopenedAt: '2026-04-29T10:00:00.000Z',
-        firstSeenAt: '2026-04-27T00:00:00.000Z',
-      }),
-    ], new Date('2026-04-29T10:00:00.000Z'));
+    const alerts = getQualityIssueAutomationAlerts(
+      [
+        issue({
+          source: 'audit',
+          category: 'security',
+          priority: 'critical',
+          packageName: 'minimist',
+          fixAvailable: true,
+          fixVersion: '1.2.8',
+          reopenedAt: '2026-04-29T10:00:00.000Z',
+          firstSeenAt: '2026-04-27T00:00:00.000Z',
+        }),
+      ],
+      new Date('2026-04-29T10:00:00.000Z'),
+    );
 
     expect(alerts.map((alert) => alert.type)).toEqual([
       'critical-open',
@@ -209,14 +233,16 @@ describe('quality issue model', () => {
   });
 
   it('recommends response actions that match issue type and workflow state', () => {
-    const actions = recommendQualityIssueActions(issue({
-      source: 'audit',
-      category: 'security',
-      priority: 'critical',
-      packageName: 'minimist',
-      fixAvailable: true,
-      fixVersion: '1.2.8',
-    }));
+    const actions = recommendQualityIssueActions(
+      issue({
+        source: 'audit',
+        category: 'security',
+        priority: 'critical',
+        packageName: 'minimist',
+        fixAvailable: true,
+        fixVersion: '1.2.8',
+      }),
+    );
 
     expect(actions.some((action) => action.includes('Assign an owner'))).toBe(true);
     expect(actions.some((action) => action.includes('upgrade minimist to 1.2.8'))).toBe(true);
@@ -224,23 +250,25 @@ describe('quality issue model', () => {
   });
 
   it('builds descriptive security remediation task plans', () => {
-    const plan = buildQualityIssueTaskPlan(issue({
-      source: 'audit',
-      category: 'security',
-      priority: 'critical',
-      title: 'Prototype pollution in xlsx',
-      message: 'xlsx is vulnerable when parsing crafted workbook files.',
-      packageName: 'xlsx',
-      packageVersion: '0.18.5',
-      vulnerableRange: '<=0.18.5',
-      fixVersion: '0.20.0',
-      cve: 'CVE-2026-1234',
-      advisoryId: 'GHSA-test',
-      cvssScore: 9.1,
-      referenceUrl: 'https://github.com/advisories/GHSA-test',
-      runUrl: 'https://github.com/ShawnDaPrawn/NavigateWealth/actions/runs/1',
-      fingerprint: 'audit:security:xlsx:prototype-pollution',
-    }));
+    const plan = buildQualityIssueTaskPlan(
+      issue({
+        source: 'audit',
+        category: 'security',
+        priority: 'critical',
+        title: 'Prototype pollution in xlsx',
+        message: 'xlsx is vulnerable when parsing crafted workbook files.',
+        packageName: 'xlsx',
+        packageVersion: '0.18.5',
+        vulnerableRange: '<=0.18.5',
+        fixVersion: '0.20.0',
+        cve: 'CVE-2026-1234',
+        advisoryId: 'GHSA-test',
+        cvssScore: 9.1,
+        referenceUrl: 'https://github.com/advisories/GHSA-test',
+        runUrl: 'https://github.com/ShawnDaPrawn/NavigateWealth/actions/runs/1',
+        fingerprint: 'audit:security:xlsx:prototype-pollution',
+      }),
+    );
 
     expect(plan.title).toContain('[Security] Upgrade xlsx to 0.20.0');
     expect(plan.description).toContain('Affected Dependency');
@@ -249,10 +277,12 @@ describe('quality issue model', () => {
     expect(plan.description).toContain('CVE: CVE-2026-1234');
     expect(plan.description).toContain('Required Remediation');
     expect(plan.description).toContain('Rerun the Issue Manager security intake');
-    expect(plan.checklist).toEqual(expect.arrayContaining([
-      'Run npm audit and capture the fresh result.',
-      'Run npm test.',
-      'Run npm run build.',
-    ]));
+    expect(plan.checklist).toEqual(
+      expect.arrayContaining([
+        'Run npm audit and capture the fresh result.',
+        'Run npm test.',
+        'Run npm run build.',
+      ]),
+    );
   });
 });

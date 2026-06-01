@@ -69,8 +69,10 @@ function getPasswordStrength(password: string) {
   if (/[0-9]/.test(password)) score++;
   if (/[^a-zA-Z0-9]/.test(password)) score++;
 
-  if (score <= 2) return { strength: 33, label: 'Weak', color: 'bg-red-500', textColor: 'text-red-600' };
-  if (score <= 3) return { strength: 66, label: 'Medium', color: 'bg-amber-500', textColor: 'text-amber-600' };
+  if (score <= 2)
+    return { strength: 33, label: 'Weak', color: 'bg-red-500', textColor: 'text-red-600' };
+  if (score <= 3)
+    return { strength: 66, label: 'Medium', color: 'bg-amber-500', textColor: 'text-amber-600' };
   return { strength: 100, label: 'Strong', color: 'bg-green-500', textColor: 'text-green-600' };
 }
 
@@ -89,12 +91,15 @@ function formatLastChanged(date: string | null): string {
 
 // ── Security Score ────────────────────────────────────────────────────────────
 
-function computeSecurityScore(twoFactorEnabled: boolean, passwordLastChanged: string | null): number {
+function computeSecurityScore(
+  twoFactorEnabled: boolean,
+  passwordLastChanged: string | null,
+): number {
   let score = 40; // base score for having an account with a password
   if (twoFactorEnabled) score += 35;
   if (passwordLastChanged) {
     const daysSinceChange = Math.floor(
-      (Date.now() - new Date(passwordLastChanged).getTime()) / (1000 * 60 * 60 * 24)
+      (Date.now() - new Date(passwordLastChanged).getTime()) / (1000 * 60 * 60 * 24),
     );
     if (daysSinceChange < 90) score += 25;
     else if (daysSinceChange < 180) score += 15;
@@ -104,9 +109,26 @@ function computeSecurityScore(twoFactorEnabled: boolean, passwordLastChanged: st
 }
 
 function getScoreConfig(score: number) {
-  if (score >= 80) return { label: 'Excellent', color: 'text-green-600', bg: 'bg-green-500', ringColor: 'stroke-green-500' };
-  if (score >= 60) return { label: 'Good', color: 'text-amber-600', bg: 'bg-amber-500', ringColor: 'stroke-amber-500' };
-  return { label: 'Needs Attention', color: 'text-red-600', bg: 'bg-red-500', ringColor: 'stroke-red-500' };
+  if (score >= 80)
+    return {
+      label: 'Excellent',
+      color: 'text-green-600',
+      bg: 'bg-green-500',
+      ringColor: 'stroke-green-500',
+    };
+  if (score >= 60)
+    return {
+      label: 'Good',
+      color: 'text-amber-600',
+      bg: 'bg-amber-500',
+      ringColor: 'stroke-amber-500',
+    };
+  return {
+    label: 'Needs Attention',
+    color: 'text-red-600',
+    bg: 'bg-red-500',
+    ringColor: 'stroke-red-500',
+  };
 }
 
 // ── Main Component ────────────────────────────────────────────────────────────
@@ -140,8 +162,9 @@ export function SecuritySettingsPage() {
   const passwordStrength = getPasswordStrength(passwordData.newPassword || '');
 
   const securityScore = useMemo(
-    () => computeSecurityScore(securitySettings.twoFactorEnabled, securitySettings.passwordLastChanged),
-    [securitySettings.twoFactorEnabled, securitySettings.passwordLastChanged]
+    () =>
+      computeSecurityScore(securitySettings.twoFactorEnabled, securitySettings.passwordLastChanged),
+    [securitySettings.twoFactorEnabled, securitySettings.passwordLastChanged],
   );
   const scoreConfig = getScoreConfig(securityScore);
 
@@ -166,7 +189,9 @@ export function SecuritySettingsPage() {
     const result = await verifyEmailChange();
     if (!result) return;
 
-    toast.success('Your sign-in email has been updated. Please sign in again with the new address.');
+    toast.success(
+      'Your sign-in email has been updated. Please sign in again with the new address.',
+    );
     if (result.requiresReauth) {
       setTimeout(() => {
         logout().catch(() => undefined);
@@ -179,7 +204,9 @@ export function SecuritySettingsPage() {
   const strokeDashoffset = circumference - (securityScore / 100) * circumference;
 
   return (
-    <div className={`min-h-screen ${ACTIVE_THEME === 'branded' ? 'bg-[#f8f9fb]' : 'bg-[rgb(249,249,249)]'}`}>
+    <div
+      className={`min-h-screen ${ACTIVE_THEME === 'branded' ? 'bg-[#f8f9fb]' : 'bg-[rgb(249,249,249)]'}`}
+    >
       {/* ── Header ───────────────────────────────────────────────────────── */}
       <PortalPageHeader
         title="Security Settings"
@@ -191,13 +218,14 @@ export function SecuritySettingsPage() {
       {/* ── Body ─────────────────────────────────────────────────────────── */}
       <div className="mx-auto max-w-screen-2xl px-4 sm:px-6 lg:px-8 py-6 lg:py-8">
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-
           {/* ── Sidebar (Desktop) ──────────────────────────────────────── */}
           <div className="lg:col-span-1">
             <div className="sticky top-6 z-10 hidden lg:block space-y-4">
               <Card className="border-gray-200">
                 <CardHeader className="pb-4">
-                  <CardTitle className="text-base font-semibold text-gray-900">Navigation</CardTitle>
+                  <CardTitle className="text-base font-semibold text-gray-900">
+                    Navigation
+                  </CardTitle>
                 </CardHeader>
                 <CardContent className="p-0">
                   <nav className="space-y-0.5">
@@ -229,7 +257,10 @@ export function SecuritySettingsPage() {
                     <svg className="w-24 h-24 -rotate-90" viewBox="0 0 96 96">
                       <circle cx="48" cy="48" r="40" fill="none" stroke="#e5e7eb" strokeWidth="6" />
                       <circle
-                        cx="48" cy="48" r="40" fill="none"
+                        cx="48"
+                        cy="48"
+                        r="40"
+                        fill="none"
                         className={scoreConfig.ringColor}
                         strokeWidth="6"
                         strokeLinecap="round"
@@ -242,7 +273,9 @@ export function SecuritySettingsPage() {
                       <span className="text-xl font-bold text-gray-900">{securityScore}</span>
                     </div>
                   </div>
-                  <p className={`text-sm font-semibold ${scoreConfig.color}`}>{scoreConfig.label}</p>
+                  <p className={`text-sm font-semibold ${scoreConfig.color}`}>
+                    {scoreConfig.label}
+                  </p>
                   <p className="text-xs text-gray-500 mt-1 text-center">Security Score</p>
                 </CardContent>
               </Card>
@@ -257,7 +290,9 @@ export function SecuritySettingsPage() {
               </SelectTrigger>
               <SelectContent>
                 {NAV_ITEMS.map((item) => (
-                  <SelectItem key={item.id} value={item.id}>{item.label}</SelectItem>
+                  <SelectItem key={item.id} value={item.id}>
+                    {item.label}
+                  </SelectItem>
                 ))}
               </SelectContent>
             </Select>
@@ -265,7 +300,6 @@ export function SecuritySettingsPage() {
 
           {/* ── Main Content ────────────────────────────────────────────── */}
           <div className="lg:col-span-3 space-y-6">
-
             {/* ════════════════════ SYSTEM ACTIVITY ════════════════════ */}
             {activeSection === 'activity' && (
               <div className="space-y-6">
@@ -274,9 +308,19 @@ export function SecuritySettingsPage() {
                   <CardContent className="py-5 flex items-center gap-5">
                     <div className="relative w-20 h-20 flex-shrink-0">
                       <svg className="w-20 h-20 -rotate-90" viewBox="0 0 96 96">
-                        <circle cx="48" cy="48" r="40" fill="none" stroke="#e5e7eb" strokeWidth="6" />
                         <circle
-                          cx="48" cy="48" r="40" fill="none"
+                          cx="48"
+                          cy="48"
+                          r="40"
+                          fill="none"
+                          stroke="#e5e7eb"
+                          strokeWidth="6"
+                        />
+                        <circle
+                          cx="48"
+                          cy="48"
+                          r="40"
+                          fill="none"
                           className={scoreConfig.ringColor}
                           strokeWidth="6"
                           strokeLinecap="round"
@@ -290,7 +334,9 @@ export function SecuritySettingsPage() {
                       </div>
                     </div>
                     <div>
-                      <p className={`text-sm font-semibold ${scoreConfig.color}`}>{scoreConfig.label}</p>
+                      <p className={`text-sm font-semibold ${scoreConfig.color}`}>
+                        {scoreConfig.label}
+                      </p>
                       <p className="text-xs text-gray-500 mt-0.5">Security Score</p>
                     </div>
                   </CardContent>
@@ -314,15 +360,21 @@ export function SecuritySettingsPage() {
                       <Lock className="h-5 w-5 text-[#6d28d9]" />
                     </div>
                     <div>
-                      <CardTitle className="text-base font-semibold text-gray-900">Change Password</CardTitle>
-                      <CardDescription className="text-sm text-gray-500">Update your password to keep your account secure</CardDescription>
+                      <CardTitle className="text-base font-semibold text-gray-900">
+                        Change Password
+                      </CardTitle>
+                      <CardDescription className="text-sm text-gray-500">
+                        Update your password to keep your account secure
+                      </CardDescription>
                     </div>
                   </div>
                 </CardHeader>
                 <CardContent className="space-y-6">
                   {/* Current Password */}
                   <div className="max-w-md">
-                    <Label htmlFor="currentPassword" className="text-sm font-medium text-gray-700">Current Password</Label>
+                    <Label htmlFor="currentPassword" className="text-sm font-medium text-gray-700">
+                      Current Password
+                    </Label>
                     <div className="relative mt-1.5">
                       <Input
                         id="currentPassword"
@@ -336,9 +388,15 @@ export function SecuritySettingsPage() {
                         type="button"
                         onClick={() => setShowCurrentPassword(!showCurrentPassword)}
                         className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
-                        aria-label={showCurrentPassword ? 'Hide current password' : 'Show current password'}
+                        aria-label={
+                          showCurrentPassword ? 'Hide current password' : 'Show current password'
+                        }
                       >
-                        {showCurrentPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                        {showCurrentPassword ? (
+                          <EyeOff className="h-4 w-4" />
+                        ) : (
+                          <Eye className="h-4 w-4" />
+                        )}
                       </button>
                     </div>
                   </div>
@@ -348,7 +406,9 @@ export function SecuritySettingsPage() {
                   {/* New + Confirm */}
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
-                      <Label htmlFor="newPassword" className="text-sm font-medium text-gray-700">New Password</Label>
+                      <Label htmlFor="newPassword" className="text-sm font-medium text-gray-700">
+                        New Password
+                      </Label>
                       <div className="relative mt-1.5">
                         <Input
                           id="newPassword"
@@ -364,13 +424,22 @@ export function SecuritySettingsPage() {
                           className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
                           aria-label={showNewPassword ? 'Hide new password' : 'Show new password'}
                         >
-                          {showNewPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                          {showNewPassword ? (
+                            <EyeOff className="h-4 w-4" />
+                          ) : (
+                            <Eye className="h-4 w-4" />
+                          )}
                         </button>
                       </div>
                     </div>
 
                     <div>
-                      <Label htmlFor="confirmPassword" className="text-sm font-medium text-gray-700">Confirm New Password</Label>
+                      <Label
+                        htmlFor="confirmPassword"
+                        className="text-sm font-medium text-gray-700"
+                      >
+                        Confirm New Password
+                      </Label>
                       <div className="relative mt-1.5">
                         <Input
                           id="confirmPassword"
@@ -384,9 +453,15 @@ export function SecuritySettingsPage() {
                           type="button"
                           onClick={() => setShowConfirmPassword(!showConfirmPassword)}
                           className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
-                          aria-label={showConfirmPassword ? 'Hide confirm password' : 'Show confirm password'}
+                          aria-label={
+                            showConfirmPassword ? 'Hide confirm password' : 'Show confirm password'
+                          }
                         >
-                          {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                          {showConfirmPassword ? (
+                            <EyeOff className="h-4 w-4" />
+                          ) : (
+                            <Eye className="h-4 w-4" />
+                          )}
                         </button>
                       </div>
                     </div>
@@ -409,19 +484,27 @@ export function SecuritySettingsPage() {
                       </div>
                       <ul className="text-xs text-gray-500 space-y-0.5 mt-1">
                         <li className="flex items-center gap-1.5">
-                          <CheckCircle2 className={`h-3 w-3 flex-shrink-0 ${(passwordData.newPassword?.length ?? 0) >= 8 ? 'text-green-500' : 'text-gray-300'}`} />
+                          <CheckCircle2
+                            className={`h-3 w-3 flex-shrink-0 ${(passwordData.newPassword?.length ?? 0) >= 8 ? 'text-green-500' : 'text-gray-300'}`}
+                          />
                           At least 8 characters
                         </li>
                         <li className="flex items-center gap-1.5">
-                          <CheckCircle2 className={`h-3 w-3 flex-shrink-0 ${/[a-z]/.test(passwordData.newPassword || '') && /[A-Z]/.test(passwordData.newPassword || '') ? 'text-green-500' : 'text-gray-300'}`} />
+                          <CheckCircle2
+                            className={`h-3 w-3 flex-shrink-0 ${/[a-z]/.test(passwordData.newPassword || '') && /[A-Z]/.test(passwordData.newPassword || '') ? 'text-green-500' : 'text-gray-300'}`}
+                          />
                           Upper and lower case letters
                         </li>
                         <li className="flex items-center gap-1.5">
-                          <CheckCircle2 className={`h-3 w-3 flex-shrink-0 ${/[0-9]/.test(passwordData.newPassword || '') ? 'text-green-500' : 'text-gray-300'}`} />
+                          <CheckCircle2
+                            className={`h-3 w-3 flex-shrink-0 ${/[0-9]/.test(passwordData.newPassword || '') ? 'text-green-500' : 'text-gray-300'}`}
+                          />
                           At least one number
                         </li>
                         <li className="flex items-center gap-1.5">
-                          <CheckCircle2 className={`h-3 w-3 flex-shrink-0 ${/[^a-zA-Z0-9]/.test(passwordData.newPassword || '') ? 'text-green-500' : 'text-gray-300'}`} />
+                          <CheckCircle2
+                            className={`h-3 w-3 flex-shrink-0 ${/[^a-zA-Z0-9]/.test(passwordData.newPassword || '') ? 'text-green-500' : 'text-gray-300'}`}
+                          />
                           At least one special character
                         </li>
                       </ul>
@@ -429,14 +512,15 @@ export function SecuritySettingsPage() {
                   )}
 
                   {/* Password Mismatch Warning */}
-                  {passwordData.confirmPassword && passwordData.newPassword !== passwordData.confirmPassword && (
-                    <Alert className="border-red-200 bg-red-50">
-                      <AlertTriangle className="h-4 w-4 text-red-600" />
-                      <AlertDescription className="text-sm text-red-700">
-                        Passwords do not match.
-                      </AlertDescription>
-                    </Alert>
-                  )}
+                  {passwordData.confirmPassword &&
+                    passwordData.newPassword !== passwordData.confirmPassword && (
+                      <Alert className="border-red-200 bg-red-50">
+                        <AlertTriangle className="h-4 w-4 text-red-600" />
+                        <AlertDescription className="text-sm text-red-700">
+                          Passwords do not match.
+                        </AlertDescription>
+                      </Alert>
+                    )}
 
                   <div className="flex items-center justify-between pt-2">
                     <p className="text-xs text-gray-500">
@@ -479,7 +563,9 @@ export function SecuritySettingsPage() {
                       <Mail className="h-5 w-5 text-[#6d28d9]" />
                     </div>
                     <div>
-                      <CardTitle className="text-base font-semibold text-gray-900">Change Sign-In Email</CardTitle>
+                      <CardTitle className="text-base font-semibold text-gray-900">
+                        Change Sign-In Email
+                      </CardTitle>
                       <CardDescription className="text-sm text-gray-500">
                         Update the email address used for authentication and security alerts.
                       </CardDescription>
@@ -490,13 +576,20 @@ export function SecuritySettingsPage() {
                   <Alert className="border-amber-200 bg-amber-50">
                     <AlertTriangle className="h-4 w-4 text-amber-700" />
                     <AlertDescription className="text-sm text-amber-900">
-                      For security, we will email your current address immediately and require verification codes from both your current and new email addresses before the change is completed.
+                      For security, we will email your current address immediately and require
+                      verification codes from both your current and new email addresses before the
+                      change is completed.
                     </AlertDescription>
                   </Alert>
 
                   <div className="grid gap-4 md:grid-cols-2">
                     <div className="space-y-2">
-                      <Label htmlFor="currentAuthEmail" className="text-sm font-medium text-gray-700">Current sign-in email</Label>
+                      <Label
+                        htmlFor="currentAuthEmail"
+                        className="text-sm font-medium text-gray-700"
+                      >
+                        Current sign-in email
+                      </Label>
                       <Input
                         id="currentAuthEmail"
                         value={user?.email || ''}
@@ -505,7 +598,9 @@ export function SecuritySettingsPage() {
                       />
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="newAuthEmail" className="text-sm font-medium text-gray-700">New sign-in email</Label>
+                      <Label htmlFor="newAuthEmail" className="text-sm font-medium text-gray-700">
+                        New sign-in email
+                      </Label>
                       <Input
                         id="newAuthEmail"
                         type="email"
@@ -519,7 +614,12 @@ export function SecuritySettingsPage() {
 
                   {!pendingEmailChange && (
                     <div className="max-w-md space-y-2">
-                      <Label htmlFor="emailChangePassword" className="text-sm font-medium text-gray-700">Current password</Label>
+                      <Label
+                        htmlFor="emailChangePassword"
+                        className="text-sm font-medium text-gray-700"
+                      >
+                        Current password
+                      </Label>
                       <Input
                         id="emailChangePassword"
                         type="password"
@@ -528,7 +628,8 @@ export function SecuritySettingsPage() {
                         placeholder="Enter your current password"
                       />
                       <p className="text-xs text-gray-500">
-                        This confirms the request is really coming from you before we send verification codes.
+                        This confirms the request is really coming from you before we send
+                        verification codes.
                       </p>
                     </div>
                   )}
@@ -537,9 +638,12 @@ export function SecuritySettingsPage() {
                     <div className="space-y-5 rounded-xl border border-gray-200 bg-gray-50 p-5">
                       <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                         <div>
-                          <p className="text-sm font-medium text-gray-900">Verification in progress</p>
+                          <p className="text-sm font-medium text-gray-900">
+                            Verification in progress
+                          </p>
                           <p className="text-xs text-gray-500">
-                            Complete the codes below to finish changing your sign-in email to {pendingEmailChange.newEmail}.
+                            Complete the codes below to finish changing your sign-in email to{' '}
+                            {pendingEmailChange.newEmail}.
                           </p>
                         </div>
                         <Badge className="w-fit border-amber-200 bg-amber-100 text-amber-800">
@@ -547,16 +651,17 @@ export function SecuritySettingsPage() {
                         </Badge>
                       </div>
 
-                      {pendingEmailChange.requiresCurrentEmailCode && !pendingEmailChange.currentEmailVerified && (
-                        <VerificationCodeField
-                          id="currentEmailCode"
-                          label="Code sent to your current email"
-                          description={`Enter the 6-digit code we sent to ${user?.email}.`}
-                          value={emailChangeData.currentEmailCode}
-                          onChange={(value) => handleEmailChangeField('currentEmailCode', value)}
-                          disabled={isLoading}
-                        />
-                      )}
+                      {pendingEmailChange.requiresCurrentEmailCode &&
+                        !pendingEmailChange.currentEmailVerified && (
+                          <VerificationCodeField
+                            id="currentEmailCode"
+                            label="Code sent to your current email"
+                            description={`Enter the 6-digit code we sent to ${user?.email}.`}
+                            value={emailChangeData.currentEmailCode}
+                            onChange={(value) => handleEmailChangeField('currentEmailCode', value)}
+                            disabled={isLoading}
+                          />
+                        )}
 
                       {pendingEmailChange.currentEmailVerified && (
                         <Alert className="border-green-200 bg-green-50">
@@ -593,7 +698,9 @@ export function SecuritySettingsPage() {
                             onClick={() => resendEmailChangeCodes('both')}
                             disabled={isLoading}
                           >
-                            <RefreshCw className={`mr-2 h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
+                            <RefreshCw
+                              className={`mr-2 h-4 w-4 ${isLoading ? 'animate-spin' : ''}`}
+                            />
                             Resend Codes
                           </Button>
                           <Button
@@ -625,7 +732,11 @@ export function SecuritySettingsPage() {
                         <Button
                           type="button"
                           onClick={requestEmailChange}
-                          disabled={isLoading || !emailChangeData.newEmail || !emailChangeData.currentPassword}
+                          disabled={
+                            isLoading ||
+                            !emailChangeData.newEmail ||
+                            !emailChangeData.currentPassword
+                          }
                           className="bg-[#6d28d9] hover:bg-[#5b21b6] text-white"
                         >
                           {isLoading ? (
@@ -657,7 +768,9 @@ export function SecuritySettingsPage() {
                       </div>
                       <div>
                         <div className="flex items-center gap-2">
-                          <CardTitle className="text-base font-semibold text-gray-900">Two-Factor Authentication</CardTitle>
+                          <CardTitle className="text-base font-semibold text-gray-900">
+                            Two-Factor Authentication
+                          </CardTitle>
                           {securitySettings.twoFactorEnabled && (
                             <Badge className="bg-green-100 text-green-700 border-green-200 text-xs">
                               <CheckCircle className="h-3 w-3 mr-1" />
@@ -665,7 +778,9 @@ export function SecuritySettingsPage() {
                             </Badge>
                           )}
                         </div>
-                        <CardDescription className="text-sm text-gray-500">Add an extra layer of security to your account</CardDescription>
+                        <CardDescription className="text-sm text-gray-500">
+                          Add an extra layer of security to your account
+                        </CardDescription>
                       </div>
                     </div>
                   </div>
@@ -674,23 +789,29 @@ export function SecuritySettingsPage() {
                   <Alert className="border-blue-200 bg-blue-50">
                     <Info className="h-4 w-4 text-blue-600" />
                     <AlertDescription className="text-sm text-blue-800">
-                      A one-time verification code will be sent to your email each time you sign in from a new device. We currently support 2FA via email only.
+                      A one-time verification code will be sent to your email each time you sign in
+                      from a new device. We currently support 2FA via email only.
                     </AlertDescription>
                   </Alert>
 
                   {/* Toggle */}
                   <div className="flex items-center justify-between p-4 rounded-lg bg-gray-50 border border-gray-200">
                     <div className="flex items-center gap-3">
-                      <div className={`h-9 w-9 rounded-lg flex items-center justify-center ${
-                        securitySettings.twoFactorEnabled ? 'bg-green-100' : 'bg-gray-200'
-                      }`}>
-                        {securitySettings.twoFactorEnabled
-                          ? <ShieldCheck className="h-4.5 w-4.5 text-green-600" />
-                          : <ShieldAlert className="h-4.5 w-4.5 text-gray-500" />
-                        }
+                      <div
+                        className={`h-9 w-9 rounded-lg flex items-center justify-center ${
+                          securitySettings.twoFactorEnabled ? 'bg-green-100' : 'bg-gray-200'
+                        }`}
+                      >
+                        {securitySettings.twoFactorEnabled ? (
+                          <ShieldCheck className="h-4.5 w-4.5 text-green-600" />
+                        ) : (
+                          <ShieldAlert className="h-4.5 w-4.5 text-gray-500" />
+                        )}
                       </div>
                       <div>
-                        <p className="text-sm font-medium text-gray-900">Enable Two-Factor Authentication</p>
+                        <p className="text-sm font-medium text-gray-900">
+                          Enable Two-Factor Authentication
+                        </p>
                         <p className="text-xs text-gray-500 mt-0.5">
                           Verification sent to {user?.email}
                         </p>
@@ -720,11 +841,13 @@ export function SecuritySettingsPage() {
                             }`}
                           >
                             <div className="flex items-start gap-3">
-                              <div className={`mt-0.5 h-5 w-5 rounded-full border-2 flex items-center justify-center ${
-                                securitySettings.twoFactorMethod === 'email'
-                                  ? 'border-[#6d28d9]'
-                                  : 'border-gray-300'
-                              }`}>
+                              <div
+                                className={`mt-0.5 h-5 w-5 rounded-full border-2 flex items-center justify-center ${
+                                  securitySettings.twoFactorMethod === 'email'
+                                    ? 'border-[#6d28d9]'
+                                    : 'border-gray-300'
+                                }`}
+                              >
                                 {securitySettings.twoFactorMethod === 'email' && (
                                   <div className="h-2.5 w-2.5 rounded-full bg-[#6d28d9]" />
                                 )}
@@ -747,7 +870,10 @@ export function SecuritySettingsPage() {
                                 <div className="flex items-center gap-2 mb-1">
                                   <Smartphone className="h-4 w-4 text-gray-400" />
                                   <p className="text-sm font-medium text-gray-500">SMS</p>
-                                  <Badge variant="outline" className="text-[10px] px-1.5 py-0 border-gray-300 text-gray-400">
+                                  <Badge
+                                    variant="outline"
+                                    className="text-[10px] px-1.5 py-0 border-gray-300 text-gray-400"
+                                  >
                                     Coming Soon
                                   </Badge>
                                 </div>

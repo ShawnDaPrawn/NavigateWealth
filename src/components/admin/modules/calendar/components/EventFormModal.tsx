@@ -1,10 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from '../../../../ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../../../../ui/dialog';
 import { Button } from '../../../../ui/button';
 import { Input } from '../../../../ui/input';
 import { Label } from '../../../../ui/label';
@@ -17,14 +12,14 @@ import {
   SelectTrigger,
   SelectValue,
 } from '../../../../ui/select';
-import { 
-  Calendar, 
-  MapPin, 
-  User, 
-  Video, 
-  Phone, 
-  AlignLeft, 
-  Clock, 
+import {
+  Calendar,
+  MapPin,
+  User,
+  Video,
+  Phone,
+  AlignLeft,
+  Clock,
   Type,
   Link,
   Repeat,
@@ -35,7 +30,7 @@ import {
   Info,
   RefreshCw,
   Cake,
-  ShieldCheck
+  ShieldCheck,
 } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '../../../../ui/alert';
 import { Badge } from '../../../../ui/badge';
@@ -46,13 +41,9 @@ import {
   CommandInput,
   CommandItem,
   CommandList,
-} from "../../../../ui/command";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "../../../../ui/popover";
-import { cn } from "../../../../ui/utils";
+} from '../../../../ui/command';
+import { Popover, PopoverContent, PopoverTrigger } from '../../../../ui/popover';
+import { cn } from '../../../../ui/utils';
 import type { CalendarEvent, EventType, LocationType, CreateEventInput } from '../types';
 import { EVENT_TYPE_LABELS, EVENT_TYPE_COLORS, LOCATION_TYPE_LABELS } from '../constants';
 import { useClients } from '../../../../../hooks/useClients';
@@ -65,7 +56,7 @@ const SYSTEM_EVENT_TYPES: EventType[] = ['birthday', 'renewal'];
 
 // Event types available for manual creation (excludes system types)
 const MANUAL_EVENT_TYPE_ENTRIES = Object.entries(EVENT_TYPE_LABELS).filter(
-  ([value]) => !SYSTEM_EVENT_TYPES.includes(value as EventType)
+  ([value]) => !SYSTEM_EVENT_TYPES.includes(value as EventType),
 );
 
 // Helper to check if an event is system-generated
@@ -97,7 +88,9 @@ export function EventFormModal({
   events = [],
   isSubmitting = false,
 }: EventFormModalProps) {
-  const clientSearchInputGuard = useSearchInputAutofillGuard({ id: 'calendar-event-client-search' });
+  const clientSearchInputGuard = useSearchInputAutofillGuard({
+    id: 'calendar-event-client-search',
+  });
   const { data: clients = [], isLoading: isLoadingClients } = useClients();
 
   const [formData, setFormData] = useState({
@@ -117,7 +110,7 @@ export function EventFormModal({
     if (!formData.start_at || !formData.end_at) return false;
     const start = new Date(formData.start_at);
     const end = new Date(formData.end_at);
-    
+
     // Check weekends (0 = Sunday, 6 = Saturday)
     const day = start.getDay();
     if (day === 0 || day === 6) return true;
@@ -143,13 +136,15 @@ export function EventFormModal({
 
   // Recurrence state
   const [isRecurring, setIsRecurring] = useState(false);
-  const [recurrenceFrequency, setRecurrenceFrequency] = useState<'daily' | 'weekly' | 'monthly' | 'yearly'>('weekly');
+  const [recurrenceFrequency, setRecurrenceFrequency] = useState<
+    'daily' | 'weekly' | 'monthly' | 'yearly'
+  >('weekly');
   const [recurrenceInterval, setRecurrenceInterval] = useState(1);
   const [recurrenceEndDate, setRecurrenceEndDate] = useState('');
 
   // Reminder state
   const [sendReminders, setSendReminders] = useState(false);
-  
+
   // Multi-select state
   const [selectedClientIds, setSelectedClientIds] = useState<string[]>([]);
   const [openClientSelect, setOpenClientSelect] = useState(false);
@@ -174,14 +169,14 @@ export function EventFormModal({
       // Initialize selected clients from event
       const initialClientIds = new Set<string>();
       if (event.client_id) initialClientIds.add(event.client_id);
-      
+
       if (event.attendees && typeof event.attendees === 'object') {
-         Object.keys(event.attendees).forEach(key => {
-           // We assume keys in attendees that match client IDs are clients
-           if (clients.some(c => c.id === key)) {
-             initialClientIds.add(key);
-           }
-         });
+        Object.keys(event.attendees).forEach((key) => {
+          // We assume keys in attendees that match client IDs are clients
+          if (clients.some((c) => c.id === key)) {
+            initialClientIds.add(key);
+          }
+        });
       }
       setSelectedClientIds(Array.from(initialClientIds));
 
@@ -209,7 +204,7 @@ export function EventFormModal({
       const now = new Date();
       now.setMinutes(Math.ceil(now.getMinutes() / 15) * 15); // Round to next 15 min
       const endTime = addHours(now, 1);
-      
+
       setFormData({
         title: '',
         description: '',
@@ -233,7 +228,7 @@ export function EventFormModal({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!formData.title || !formData.start_at || !formData.end_at) {
       return;
     }
@@ -259,7 +254,11 @@ export function EventFormModal({
 
     // Warn if duration is very long (> 12 hours)
     if (durationMs > 12 * 60 * 60 * 1000) {
-      if (!window.confirm(`This event is scheduled for ${(durationMs / (60 * 60 * 1000)).toFixed(1)} hours. Is this correct?`)) {
+      if (
+        !window.confirm(
+          `This event is scheduled for ${(durationMs / (60 * 60 * 1000)).toFixed(1)} hours. Is this correct?`,
+        )
+      ) {
         return;
       }
     }
@@ -274,23 +273,27 @@ export function EventFormModal({
     if (sendReminders) {
       const startMs = new Date(formData.start_at).getTime();
       const nowMs = new Date().getTime();
-      
+
       // 35 minutes buffer
       if (startMs < nowMs + 35 * 60 * 1000) {
-        toast.error('To send automatic email reminders, the event must start at least 35 minutes in the future.');
+        toast.error(
+          'To send automatic email reminders, the event must start at least 35 minutes in the future.',
+        );
         return;
       }
 
       // Check Client Email
       if (selectedClientIds.length === 0) {
-         toast.error('Please select at least one client to enable email reminders.');
-         return;
+        toast.error('Please select at least one client to enable email reminders.');
+        return;
       }
 
       const primaryClientId = selectedClientIds[0];
-      const client = clients.find(c => c.id === primaryClientId);
+      const client = clients.find((c) => c.id === primaryClientId);
       if (!client?.email) {
-        toast.error('The primary selected client does not have an email address on file. Cannot send reminders.');
+        toast.error(
+          'The primary selected client does not have an email address on file. Cannot send reminders.',
+        );
         return;
       }
     }
@@ -313,18 +316,22 @@ export function EventFormModal({
       const newStart = new Date(formData.start_at).getTime();
       const newEnd = new Date(formData.end_at).getTime();
 
-      const conflictingEvent = events.find(e => {
+      const conflictingEvent = events.find((e) => {
         if (event && e.id === event.id) return false; // Skip self
         if (e.status === 'cancelled') return false; // Skip cancelled
 
         const eStart = new Date(e.start_at).getTime();
         const eEnd = new Date(e.end_at).getTime();
 
-        return (newStart < eEnd && newEnd > eStart);
+        return newStart < eEnd && newEnd > eStart;
       });
 
       if (conflictingEvent) {
-        if (!window.confirm(`Time conflict detected with event: "${conflictingEvent.title}".\n\nDo you want to proceed anyway?`)) {
+        if (
+          !window.confirm(
+            `Time conflict detected with event: "${conflictingEvent.title}".\n\nDo you want to proceed anyway?`,
+          )
+        ) {
           return;
         }
       }
@@ -336,7 +343,7 @@ export function EventFormModal({
       if (recurrenceEndDate) {
         const start = new Date(formData.start_at);
         const endRecur = new Date(recurrenceEndDate);
-        
+
         // Ensure end date is after start date
         if (endRecur <= start) {
           toast.error('Recurrence end date must be after the event start date.');
@@ -345,7 +352,7 @@ export function EventFormModal({
 
         const twoYearsLater = new Date(start);
         twoYearsLater.setFullYear(start.getFullYear() + 2);
-        
+
         if (endRecur > twoYearsLater) {
           toast.error('Recurring events cannot extend beyond 2 years from the start date.');
           return;
@@ -355,21 +362,21 @@ export function EventFormModal({
       recurrenceRule = JSON.stringify({
         frequency: recurrenceFrequency,
         interval: recurrenceInterval,
-        endDate: recurrenceEndDate || null
+        endDate: recurrenceEndDate || null,
       });
     }
 
     // Construct attendees map
     const attendees: Record<string, unknown> = {};
-    selectedClientIds.forEach(id => {
-       const client = clients.find(c => c.id === id);
-       if (client) {
-          attendees[id] = {
-             name: client.full_name,
-             email: client.email,
-             type: 'client'
-          };
-       }
+    selectedClientIds.forEach((id) => {
+      const client = clients.find((c) => c.id === id);
+      if (client) {
+        attendees[id] = {
+          name: client.full_name,
+          email: client.email,
+          type: 'client',
+        };
+      }
     });
 
     onSubmit({
@@ -396,12 +403,19 @@ export function EventFormModal({
           <div className="contents">
             <DialogHeader className="p-6 pb-4 border-b border-gray-100 bg-gray-50/50">
               <DialogTitle className="text-xl font-semibold text-gray-900 flex items-center gap-2">
-                <div className={`p-2 rounded-lg ${
-                  event.event_type === 'renewal' ? 'bg-amber-100' :
-                  event.event_type === 'birthday' ? 'bg-pink-100' : 'bg-blue-100'
-                }`}>
+                <div
+                  className={`p-2 rounded-lg ${
+                    event.event_type === 'renewal'
+                      ? 'bg-amber-100'
+                      : event.event_type === 'birthday'
+                        ? 'bg-pink-100'
+                        : 'bg-blue-100'
+                  }`}
+                >
                   {event.event_type === 'renewal' ? (
-                    <RefreshCw className={`h-5 w-5 ${event.event_type === 'renewal' ? 'text-amber-600' : 'text-blue-600'}`} />
+                    <RefreshCw
+                      className={`h-5 w-5 ${event.event_type === 'renewal' ? 'text-amber-600' : 'text-blue-600'}`}
+                    />
                   ) : event.event_type === 'birthday' ? (
                     <Cake className="h-5 w-5 text-pink-600" />
                   ) : (
@@ -429,7 +443,9 @@ export function EventFormModal({
 
               {/* Title */}
               <div>
-                <Label className="text-xs font-semibold text-gray-400 uppercase tracking-wider block mb-1.5">Title</Label>
+                <Label className="text-xs font-semibold text-gray-400 uppercase tracking-wider block mb-1.5">
+                  Title
+                </Label>
                 <p className="text-base font-semibold text-gray-900">{event.title}</p>
               </div>
 
@@ -445,9 +461,12 @@ export function EventFormModal({
                   </p>
                 </div>
                 <div>
-                  <Label className="text-xs font-semibold text-gray-400 uppercase tracking-wider block mb-1.5">Time</Label>
+                  <Label className="text-xs font-semibold text-gray-400 uppercase tracking-wider block mb-1.5">
+                    Time
+                  </Label>
                   <p className="text-sm font-medium text-gray-900">
-                    {format(new Date(event.start_at), 'HH:mm')} – {format(new Date(event.end_at), 'HH:mm')}
+                    {format(new Date(event.start_at), 'HH:mm')} –{' '}
+                    {format(new Date(event.end_at), 'HH:mm')}
                   </p>
                 </div>
               </div>
@@ -483,8 +502,8 @@ export function EventFormModal({
                   {event.event_type === 'renewal'
                     ? 'Policy renewal reminders are automatically generated from policy inception dates. To change the date, update the policy details in the client profile.'
                     : event.event_type === 'birthday'
-                    ? 'Birthday reminders are automatically generated from client date of birth. To change the date, update the client profile.'
-                    : 'Task events are managed through the Tasks module.'}
+                      ? 'Birthday reminders are automatically generated from client date of birth. To change the date, update the client profile.'
+                      : 'Task events are managed through the Tasks module.'}
                 </AlertDescription>
               </Alert>
             </div>
@@ -517,7 +536,9 @@ export function EventFormModal({
                 )}
               </DialogTitle>
               <p className="text-sm text-muted-foreground mt-1.5 ml-11">
-                {event ? 'Update the details of your scheduled event.' : 'Schedule a new meeting, task, or reminder.'}
+                {event
+                  ? 'Update the details of your scheduled event.'
+                  : 'Schedule a new meeting, task, or reminder.'}
               </p>
             </DialogHeader>
 
@@ -525,13 +546,15 @@ export function EventFormModal({
               <div className="p-6 space-y-6 overflow-y-auto">
                 {/* Title */}
                 <div className="space-y-2">
-                  <Label htmlFor="title" className="text-sm font-medium text-gray-700">Event Title <span className="text-red-500">*</span></Label>
+                  <Label htmlFor="title" className="text-sm font-medium text-gray-700">
+                    Event Title <span className="text-red-500">*</span>
+                  </Label>
                   <div className="relative">
                     <Type className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
                     <Input
                       id="title"
                       value={formData.title}
-                      onChange={(e) => setFormData(prev => ({ ...prev, title: e.target.value }))}
+                      onChange={(e) => setFormData((prev) => ({ ...prev, title: e.target.value }))}
                       placeholder="e.g. Client Meeting – Investment Review"
                       required
                       className="pl-9 h-11 bg-gray-50/50 focus:bg-white transition-colors"
@@ -542,11 +565,13 @@ export function EventFormModal({
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   {/* Event Type */}
                   <div className="space-y-2">
-                    <Label htmlFor="event_type" className="text-sm font-medium text-gray-700">Event Type</Label>
+                    <Label htmlFor="event_type" className="text-sm font-medium text-gray-700">
+                      Event Type
+                    </Label>
                     <Select
                       value={formData.event_type}
-                      onValueChange={(value: EventType) => 
-                        setFormData(prev => ({ ...prev, event_type: value }))
+                      onValueChange={(value: EventType) =>
+                        setFormData((prev) => ({ ...prev, event_type: value }))
                       }
                     >
                       <SelectTrigger className="h-11 bg-gray-50/50 focus:bg-white transition-colors">
@@ -556,15 +581,25 @@ export function EventFormModal({
                         {MANUAL_EVENT_TYPE_ENTRIES.map(([value, label]) => (
                           <SelectItem key={value} value={value}>
                             <div className="flex items-center gap-2">
-                              <span className={`w-2 h-2 rounded-full ${
-                                value === 'meeting' ? 'bg-blue-500' :
-                                value === 'call' ? 'bg-green-500' :
-                                value === 'task' ? 'bg-purple-500' :
-                                value === 'deadline' ? 'bg-red-500' :
-                                value === 'review' ? 'bg-orange-500' :
-                                value === 'renewal' ? 'bg-amber-500' :
-                                value === 'birthday' ? 'bg-pink-500' : 'bg-gray-500'
-                              }`} />
+                              <span
+                                className={`w-2 h-2 rounded-full ${
+                                  value === 'meeting'
+                                    ? 'bg-blue-500'
+                                    : value === 'call'
+                                      ? 'bg-green-500'
+                                      : value === 'task'
+                                        ? 'bg-purple-500'
+                                        : value === 'deadline'
+                                          ? 'bg-red-500'
+                                          : value === 'review'
+                                            ? 'bg-orange-500'
+                                            : value === 'renewal'
+                                              ? 'bg-amber-500'
+                                              : value === 'birthday'
+                                                ? 'bg-pink-500'
+                                                : 'bg-gray-500'
+                                }`}
+                              />
                               {label}
                             </div>
                           </SelectItem>
@@ -575,11 +610,13 @@ export function EventFormModal({
 
                   {/* Location Type */}
                   <div className="space-y-2">
-                    <Label htmlFor="location_type" className="text-sm font-medium text-gray-700">Location Type</Label>
+                    <Label htmlFor="location_type" className="text-sm font-medium text-gray-700">
+                      Location Type
+                    </Label>
                     <Select
                       value={formData.location_type}
-                      onValueChange={(value: LocationType) => 
-                        setFormData(prev => ({ ...prev, location_type: value }))
+                      onValueChange={(value: LocationType) =>
+                        setFormData((prev) => ({ ...prev, location_type: value }))
                       }
                     >
                       <SelectTrigger className="h-11 bg-gray-50/50 focus:bg-white transition-colors">
@@ -588,7 +625,7 @@ export function EventFormModal({
                       <SelectContent>
                         {Object.entries(LOCATION_TYPE_LABELS).map(([value, label]) => (
                           <SelectItem key={value} value={value}>
-                             <div className="flex items-center gap-2">
+                            <div className="flex items-center gap-2">
                               {value === 'in_person' && <MapPin className="h-3.5 w-3.5" />}
                               {value === 'video' && <Video className="h-3.5 w-3.5" />}
                               {value === 'phone' && <Phone className="h-3.5 w-3.5" />}
@@ -604,7 +641,10 @@ export function EventFormModal({
                 {/* Date & Time */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6 p-4 bg-gray-50 rounded-lg border border-gray-100">
                   <div className="space-y-2">
-                    <Label htmlFor="start_at" className="text-sm font-medium text-gray-700 flex items-center gap-2">
+                    <Label
+                      htmlFor="start_at"
+                      className="text-sm font-medium text-gray-700 flex items-center gap-2"
+                    >
                       <Clock className="h-3.5 w-3.5 text-blue-600" />
                       Starts
                     </Label>
@@ -612,14 +652,19 @@ export function EventFormModal({
                       id="start_at"
                       type="datetime-local"
                       value={formData.start_at}
-                      onChange={(e) => setFormData(prev => ({ ...prev, start_at: e.target.value }))}
+                      onChange={(e) =>
+                        setFormData((prev) => ({ ...prev, start_at: e.target.value }))
+                      }
                       required
                       className="bg-white"
                     />
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="end_at" className="text-sm font-medium text-gray-700 flex items-center gap-2">
+                    <Label
+                      htmlFor="end_at"
+                      className="text-sm font-medium text-gray-700 flex items-center gap-2"
+                    >
                       <Clock className="h-3.5 w-3.5 text-gray-400" />
                       Ends
                     </Label>
@@ -627,7 +672,7 @@ export function EventFormModal({
                       id="end_at"
                       type="datetime-local"
                       value={formData.end_at}
-                      onChange={(e) => setFormData(prev => ({ ...prev, end_at: e.target.value }))}
+                      onChange={(e) => setFormData((prev) => ({ ...prev, end_at: e.target.value }))}
                       required
                       className="bg-white"
                     />
@@ -635,10 +680,11 @@ export function EventFormModal({
 
                   {isPastEvent && formData.event_type === 'meeting' && (
                     <div className="col-span-1 md:col-span-2">
-                       <Alert className="bg-blue-50 border-blue-200 text-blue-900 py-2">
+                      <Alert className="bg-blue-50 border-blue-200 text-blue-900 py-2">
                         <Clock className="h-4 w-4 text-blue-600" />
                         <AlertDescription className="text-xs text-blue-800 ml-2">
-                          You are scheduling a meeting in the past. It will be saved as a historical record.
+                          You are scheduling a meeting in the past. It will be saved as a historical
+                          record.
                         </AlertDescription>
                       </Alert>
                     </div>
@@ -649,7 +695,8 @@ export function EventFormModal({
                       <Alert className="bg-amber-50 border-amber-200 text-amber-900 py-2">
                         <AlertTriangle className="h-4 w-4 text-amber-600" />
                         <AlertDescription className="text-xs text-amber-800 ml-2">
-                          This event is scheduled outside of standard business hours (Mon-Fri, 08:00 - 18:00).
+                          This event is scheduled outside of standard business hours (Mon-Fri, 08:00
+                          - 18:00).
                         </AlertDescription>
                       </Alert>
                     </div>
@@ -664,7 +711,10 @@ export function EventFormModal({
                         <Repeat className="h-4 w-4 text-purple-600" />
                       </div>
                       <div>
-                        <Label htmlFor="is_recurring" className="text-sm font-medium text-gray-900 cursor-pointer">
+                        <Label
+                          htmlFor="is_recurring"
+                          className="text-sm font-medium text-gray-900 cursor-pointer"
+                        >
                           Recurring Event
                         </Label>
                         <p className="text-xs text-muted-foreground">Repeat this event regularly</p>
@@ -683,7 +733,9 @@ export function EventFormModal({
                         <Label className="text-xs font-medium text-gray-500">Frequency</Label>
                         <Select
                           value={recurrenceFrequency}
-                          onValueChange={(v: string) => setRecurrenceFrequency(v as typeof recurrenceFrequency)}
+                          onValueChange={(v: string) =>
+                            setRecurrenceFrequency(v as typeof recurrenceFrequency)
+                          }
                         >
                           <SelectTrigger className="h-9 bg-white">
                             <SelectValue />
@@ -710,15 +762,21 @@ export function EventFormModal({
                             className="h-9 bg-white"
                           />
                           <span className="text-sm text-gray-500">
-                            {recurrenceFrequency === 'daily' ? 'day(s)' : 
-                             recurrenceFrequency === 'weekly' ? 'week(s)' : 
-                             recurrenceFrequency === 'monthly' ? 'month(s)' : 'year(s)'}
+                            {recurrenceFrequency === 'daily'
+                              ? 'day(s)'
+                              : recurrenceFrequency === 'weekly'
+                                ? 'week(s)'
+                                : recurrenceFrequency === 'monthly'
+                                  ? 'month(s)'
+                                  : 'year(s)'}
                           </span>
                         </div>
                       </div>
 
                       <div className="space-y-2">
-                        <Label className="text-xs font-medium text-gray-500">End Date (Optional)</Label>
+                        <Label className="text-xs font-medium text-gray-500">
+                          End Date (Optional)
+                        </Label>
                         <Input
                           type="date"
                           value={recurrenceEndDate}
@@ -748,13 +806,17 @@ export function EventFormModal({
                             selectedClientIds.map((id) => {
                               const client = clients.find((c) => c.id === id);
                               return client ? (
-                                <Badge variant="secondary" key={id} className="mr-1 hover:bg-gray-200 pl-2 pr-1 py-0.5 h-6 flex items-center gap-1">
+                                <Badge
+                                  variant="secondary"
+                                  key={id}
+                                  className="mr-1 hover:bg-gray-200 pl-2 pr-1 py-0.5 h-6 flex items-center gap-1"
+                                >
                                   {client.full_name}
                                   <div
                                     className="rounded-full hover:bg-gray-300 p-0.5 cursor-pointer"
                                     onClick={(e) => {
                                       e.stopPropagation();
-                                      setSelectedClientIds(prev => prev.filter(p => p !== id));
+                                      setSelectedClientIds((prev) => prev.filter((p) => p !== id));
                                     }}
                                   >
                                     <X className="h-3 w-3 text-muted-foreground hover:text-foreground" />
@@ -763,7 +825,9 @@ export function EventFormModal({
                               ) : null;
                             })
                           ) : (
-                            <span className="text-muted-foreground font-normal">Select clients...</span>
+                            <span className="text-muted-foreground font-normal">
+                              Select clients...
+                            </span>
                           )}
                         </div>
                         <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
@@ -771,7 +835,10 @@ export function EventFormModal({
                     </PopoverTrigger>
                     <PopoverContent className="w-[400px] p-0" align="start">
                       <Command>
-                        <CommandInput {...(clientSearchInputGuard as React.ComponentProps<typeof CommandInput>)} placeholder="Search clients..." />
+                        <CommandInput
+                          {...(clientSearchInputGuard as React.ComponentProps<typeof CommandInput>)}
+                          placeholder="Search clients..."
+                        />
                         <CommandList>
                           <CommandEmpty>
                             {isLoadingClients ? 'Loading clients...' : 'No client found.'}
@@ -783,23 +850,25 @@ export function EventFormModal({
                                 value={client.full_name}
                                 keywords={[client.email]}
                                 onSelect={() => {
-                                  setSelectedClientIds((prev) => 
-                                    prev.includes(client.id) 
+                                  setSelectedClientIds((prev) =>
+                                    prev.includes(client.id)
                                       ? prev.filter((id) => id !== client.id)
-                                      : [...prev, client.id]
+                                      : [...prev, client.id],
                                   );
                                 }}
                               >
                                 <Check
                                   className={cn(
-                                    "mr-2 h-4 w-4",
-                                    selectedClientIds.includes(client.id) ? "opacity-100" : "opacity-0"
+                                    'mr-2 h-4 w-4',
+                                    selectedClientIds.includes(client.id)
+                                      ? 'opacity-100'
+                                      : 'opacity-0',
                                   )}
                                 />
                                 <div className="flex flex-col">
                                   <span>{client.full_name}</span>
                                   <span className="text-xs text-muted-foreground truncate max-w-[200px]">
-                                      {client.email}
+                                    {client.email}
                                   </span>
                                 </div>
                               </CommandItem>
@@ -814,7 +883,10 @@ export function EventFormModal({
                 {/* Email Reminders Toggle */}
                 <div className="flex items-center justify-between p-4 rounded-lg border border-gray-100 bg-gray-50/50">
                   <div className="space-y-0.5">
-                    <Label htmlFor="send_reminders" className="text-sm font-medium text-gray-900 cursor-pointer">
+                    <Label
+                      htmlFor="send_reminders"
+                      className="text-sm font-medium text-gray-900 cursor-pointer"
+                    >
                       Send Email Reminders
                     </Label>
                     <p className="text-xs text-muted-foreground">
@@ -829,21 +901,26 @@ export function EventFormModal({
                   />
                 </div>
                 {sendReminders && selectedClientIds.length === 0 && (
-                   <p className="text-xs text-amber-600 mt-1 pl-4">
-                     Please select at least one client to enable reminders.
-                   </p>
+                  <p className="text-xs text-amber-600 mt-1 pl-4">
+                    Please select at least one client to enable reminders.
+                  </p>
                 )}
 
                 {/* Description */}
                 <div className="space-y-2">
-                  <Label htmlFor="description" className="text-sm font-medium text-gray-700 flex items-center gap-2">
+                  <Label
+                    htmlFor="description"
+                    className="text-sm font-medium text-gray-700 flex items-center gap-2"
+                  >
                     <AlignLeft className="h-3.5 w-3.5 text-gray-400" />
                     Description
                   </Label>
                   <Textarea
                     id="description"
                     value={formData.description}
-                    onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
+                    onChange={(e) =>
+                      setFormData((prev) => ({ ...prev, description: e.target.value }))
+                    }
                     placeholder="Add notes or an agenda..."
                     className="min-h-[100px] bg-gray-50/50 focus:bg-white transition-colors"
                   />
@@ -852,9 +929,9 @@ export function EventFormModal({
 
               <div className="p-4 border-t border-gray-100 bg-gray-50/50 flex justify-between items-center mt-auto">
                 {event && onDelete ? (
-                  <Button 
-                    type="button" 
-                    variant="destructive" 
+                  <Button
+                    type="button"
+                    variant="destructive"
                     onClick={() => onDelete(event.id)}
                     disabled={isSubmitting}
                     className="bg-red-50 text-red-600 hover:bg-red-100 hover:text-red-700 border-red-100"
@@ -868,7 +945,11 @@ export function EventFormModal({
                   <Button type="button" variant="outline" onClick={onClose} disabled={isSubmitting}>
                     Cancel
                   </Button>
-                  <Button type="submit" disabled={isSubmitting} className="bg-purple-600 hover:bg-purple-700 text-white shadow-sm">
+                  <Button
+                    type="submit"
+                    disabled={isSubmitting}
+                    className="bg-purple-600 hover:bg-purple-700 text-white shadow-sm"
+                  >
                     {isSubmitting ? 'Saving...' : event ? 'Update Event' : 'Create Event'}
                   </Button>
                 </div>

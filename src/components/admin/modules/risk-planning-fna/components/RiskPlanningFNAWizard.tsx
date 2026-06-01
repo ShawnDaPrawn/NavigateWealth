@@ -1,13 +1,13 @@
 /**
  * Risk Planning FNA Wizard
  * Main wizard component that orchestrates the 4-step FNA process
- * 
+ *
  * Overall Tool Flow (MANDATORY):
  * 1. Information Gathering
  * 2. System Auto-Calculation (formula-driven, no edits)
  * 3. Adviser Manual Adjustment (Rand overrides only)
  * 4. Finalise & Publish
- * 
+ *
  * Users may not skip steps.
  * All prior data flows forward and is preserved for audit.
  */
@@ -16,12 +16,7 @@ import React, { useState } from 'react';
 import { CheckCircle2, Circle, X } from 'lucide-react';
 import { Card } from '../../../../ui/card';
 import { Button } from '../../../../ui/button';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from '../../../../ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../../../../ui/dialog';
 import { calculateRiskAnalysis } from '../utils';
 import { WIZARD_STEPS } from '../constants';
 import { useFNAMutations } from '../hooks';
@@ -65,7 +60,11 @@ function buildInitialRiskState(
   }
 
   return {
-    currentStep: (startAtStep && startAtStep >= 1 && startAtStep <= 4 ? startAtStep : 1) as 1 | 2 | 3 | 4,
+    currentStep: (startAtStep && startAtStep >= 1 && startAtStep <= 4 ? startAtStep : 1) as
+      | 1
+      | 2
+      | 3
+      | 4,
     clientId,
     clientName,
     inputData: intakePrefill ? (intakePrefill as unknown as InformationGatheringInput) : null,
@@ -75,10 +74,10 @@ function buildInitialRiskState(
   };
 }
 
-export function RiskPlanningFNAWizard({ 
-  clientId, 
-  clientName, 
-  onComplete, 
+export function RiskPlanningFNAWizard({
+  clientId,
+  clientName,
+  onComplete,
   onFNAComplete,
   open,
   onClose,
@@ -88,21 +87,21 @@ export function RiskPlanningFNAWizard({
   const [state, setState] = useState<WizardState>(() =>
     buildInitialRiskState(clientId, clientName, startAtStep, intakePrefill),
   );
-  
+
   const { publishFNA } = useFNAMutations();
-  
+
   // Handle completion callback
   const handleComplete = () => {
     if (onFNAComplete) onFNAComplete();
     if (onComplete) onComplete();
     if (onClose) onClose();
   };
-  
+
   // Step 1: Submit information gathering data
   const handleStep1Submit = (inputData: InformationGatheringInput) => {
     // Perform calculation immediately
     const calculations = calculateRiskAnalysis(inputData, 'Current User'); // TODO: Get from auth context
-    
+
     setState((prev) => ({
       ...prev,
       inputData,
@@ -110,22 +109,22 @@ export function RiskPlanningFNAWizard({
       currentStep: 2,
     }));
   };
-  
+
   // Step 2: Navigate back to Step 1
   const handleStep2Back = () => {
     setState((prev) => ({ ...prev, currentStep: 1 }));
   };
-  
+
   // Step 2: Proceed to Step 3
   const handleStep2Next = () => {
     setState((prev) => ({ ...prev, currentStep: 3 }));
   };
-  
+
   // Step 3: Navigate back to Step 2
   const handleStep3Back = () => {
     setState((prev) => ({ ...prev, currentStep: 2 }));
   };
-  
+
   // Step 3: Submit adjustments and proceed to Step 4
   const handleStep3Submit = (adjustments: Adjustments) => {
     setState((prev) => ({
@@ -134,20 +133,20 @@ export function RiskPlanningFNAWizard({
       currentStep: 4,
     }));
   };
-  
+
   // Step 4: Navigate back to Step 3
   const handleStep4Back = () => {
     setState((prev) => ({ ...prev, currentStep: 3 }));
   };
-  
+
   // Step 4: Publish FNA
   const handlePublish = async (finalNeeds: FinalRiskNeed[]) => {
     if (!state.inputData || !state.calculations || !clientId) {
       return;
     }
-    
+
     setState((prev) => ({ ...prev, isPublishing: true }));
-    
+
     try {
       // Step 1: Create FNA with all data
       const created = await RiskPlanningFnaAPI.create(clientId, {
@@ -156,23 +155,23 @@ export function RiskPlanningFNAWizard({
         adjustments: state.adjustments,
         finalNeeds,
       } as unknown as Parameters<typeof RiskPlanningFnaAPI.create>[1]);
-      
+
       const fnaId = created.id;
-      
+
       // Step 2: Publish the FNA
       await publishFNA(fnaId);
-      
+
       // Success - call onComplete callback if provided
       handleComplete();
     } catch (error) {
-      setState((prev) => ({ 
-        ...prev, 
+      setState((prev) => ({
+        ...prev,
         isPublishing: false,
         publishError: 'Failed to publish FNA. Please try again.',
       }));
     }
   };
-  
+
   // Render current step
   const renderStep = () => {
     switch (state.currentStep) {
@@ -184,7 +183,7 @@ export function RiskPlanningFNAWizard({
             onNext={handleStep1Submit}
           />
         );
-      
+
       case 2:
         if (!state.calculations) return null;
         return (
@@ -194,7 +193,7 @@ export function RiskPlanningFNAWizard({
             onBack={handleStep2Back}
           />
         );
-      
+
       case 3:
         if (!state.calculations) return null;
         return (
@@ -205,7 +204,7 @@ export function RiskPlanningFNAWizard({
             onBack={handleStep3Back}
           />
         );
-      
+
       case 4:
         if (!state.calculations) return null;
         return (
@@ -216,12 +215,12 @@ export function RiskPlanningFNAWizard({
             onBack={handleStep4Back}
           />
         );
-      
+
       default:
         return null;
     }
   };
-  
+
   return (
     <Dialog open={open} onOpenChange={onClose}>
       <DialogContent className="!max-w-[1600px] w-[95vw] max-h-[90vh] overflow-y-auto p-8">
@@ -230,7 +229,7 @@ export function RiskPlanningFNAWizard({
             Risk Planning FNA {clientName && `- ${clientName}`}
           </DialogTitle>
         </DialogHeader>
-        
+
         <div className="space-y-6">
           {/* Stepper */}
           <div className="flex justify-between items-center relative">
@@ -238,7 +237,7 @@ export function RiskPlanningFNAWizard({
             {WIZARD_STEPS.map((step) => {
               const isActive = state.currentStep === step.step;
               const isCompleted = state.currentStep > step.step;
-              
+
               return (
                 <div key={step.step} className="flex flex-col items-center bg-background px-2">
                   <div
@@ -247,8 +246,8 @@ export function RiskPlanningFNAWizard({
                         isActive
                           ? 'border-primary bg-primary text-primary-foreground'
                           : isCompleted
-                          ? 'border-primary bg-primary text-primary-foreground'
-                          : 'border-muted-foreground text-muted-foreground bg-background'
+                            ? 'border-primary bg-primary text-primary-foreground'
+                            : 'border-muted-foreground text-muted-foreground bg-background'
                       }`}
                   >
                     {isCompleted ? (
@@ -265,20 +264,16 @@ export function RiskPlanningFNAWizard({
                     >
                       {step.title}
                     </p>
-                    <p className="text-xs text-muted-foreground mt-1">
-                      {step.description}
-                    </p>
+                    <p className="text-xs text-muted-foreground mt-1">{step.description}</p>
                   </div>
                 </div>
               );
             })}
           </div>
-          
+
           {/* Step Content */}
-          <div className="min-h-[500px]">
-            {renderStep()}
-          </div>
-          
+          <div className="min-h-[500px]">{renderStep()}</div>
+
           {/* Publishing State Overlay */}
           {state.isPublishing && (
             <div className="fixed inset-0 bg-background/80 backdrop-blur-sm z-50 flex items-center justify-center">

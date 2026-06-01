@@ -27,7 +27,7 @@ export function calculateRetirementMaturityValue(
   annualEscalationRate: number,
   currentDate: Date,
   maturityDate: Date,
-  options?: RetirementMaturityCalculationOptions
+  options?: RetirementMaturityCalculationOptions,
 ): number {
   if (maturityDate <= currentDate) {
     return Math.round(currentFundValue * 100) / 100;
@@ -47,9 +47,7 @@ export function calculateRetirementMaturityValue(
 
   const inception = options?.premiumAnniversaryReference;
   const useAnniversary =
-    annualEscalationRate > 0 &&
-    inception instanceof Date &&
-    !Number.isNaN(inception.getTime());
+    annualEscalationRate > 0 && inception instanceof Date && !Number.isNaN(inception.getTime());
 
   for (let month = 1; month <= totalMonths; month++) {
     value = value * (1 + monthlyGrowthRate);

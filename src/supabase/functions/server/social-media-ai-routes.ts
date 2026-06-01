@@ -40,9 +40,7 @@ const app = new Hono();
 const log = createModuleLogger('social-media-ai');
 
 // Root handler
-app.get('/', (c) =>
-  c.json({ service: 'social-media-ai', status: 'active' }),
-);
+app.get('/', (c) => c.json({ service: 'social-media-ai', status: 'active' }));
 
 // ---------------------------------------------------------------------------
 // POST /generate-post — Generate platform-specific post text
@@ -57,10 +55,7 @@ app.post(
 
     const parsed = GeneratePostTextSchema.safeParse(body);
     if (!parsed.success) {
-      return c.json(
-        { error: 'Validation failed', ...formatZodError(parsed.error) },
-        400,
-      );
+      return c.json({ error: 'Validation failed', ...formatZodError(parsed.error) }, 400);
     }
 
     log.info('AI post text generation requested', {
@@ -148,10 +143,7 @@ app.post(
 
     const parsed = GenerateImageSchema.safeParse(body);
     if (!parsed.success) {
-      return c.json(
-        { error: 'Validation failed', ...formatZodError(parsed.error) },
-        400,
-      );
+      return c.json({ error: 'Validation failed', ...formatZodError(parsed.error) }, 400);
     }
 
     log.info('AI image generation requested', {
@@ -183,10 +175,7 @@ app.post(
 
     const parsed = RefreshImageUrlSchema.safeParse(body);
     if (!parsed.success) {
-      return c.json(
-        { error: 'Validation failed', ...formatZodError(parsed.error) },
-        400,
-      );
+      return c.json({ error: 'Validation failed', ...formatZodError(parsed.error) }, 400);
     }
 
     const signedUrl = await refreshImageUrl(parsed.data.storagePath);
@@ -230,10 +219,7 @@ app.post(
 
     const parsed = GenerateBundleSchema.safeParse(body);
     if (!parsed.success) {
-      return c.json(
-        { error: 'Validation failed', ...formatZodError(parsed.error) },
-        400,
-      );
+      return c.json({ error: 'Validation failed', ...formatZodError(parsed.error) }, 400);
     }
 
     log.info('AI bundle generation requested', {
@@ -267,10 +253,7 @@ app.post(
 
     const parsed = CreateCustomTemplateSchema.safeParse(body);
     if (!parsed.success) {
-      return c.json(
-        { error: 'Validation failed', ...formatZodError(parsed.error) },
-        400,
-      );
+      return c.json({ error: 'Validation failed', ...formatZodError(parsed.error) }, 400);
     }
 
     log.info('Custom template creation requested', { userId, name: parsed.data.name });
@@ -293,10 +276,7 @@ app.put(
 
     const parsed = UpdateCustomTemplateSchema.safeParse(body);
     if (!parsed.success) {
-      return c.json(
-        { error: 'Validation failed', ...formatZodError(parsed.error) },
-        400,
-      );
+      return c.json({ error: 'Validation failed', ...formatZodError(parsed.error) }, 400);
     }
 
     const result = await updateCustomTemplate(templateId, parsed.data, userId);

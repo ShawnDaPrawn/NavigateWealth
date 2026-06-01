@@ -9,7 +9,7 @@ Execute after Gates 0–4 pass (see `docs/PRODUCTION-READINESS.md` Section 0).
    ```bash
    npx supabase db push --project-ref vpjmdsltwrnpefzcgdmz
    ```
-   *(Applied 2026-05-23 via Supabase MCP — table `public.fna_intake_sessions` verified.)*
+   _(Applied 2026-05-23 via Supabase MCP — table `public.fna_intake_sessions` verified.)_
 3. [x] Enable dual-write on Edge Function secrets:
    - `FNA_INTAKE_DUAL_WRITE=true`
    - ~~`FNA_INTAKE_READ_FROM=kv`~~ → switched to `postgres` (no KV sessions to backfill)
@@ -21,7 +21,7 @@ Execute after Gates 0–4 pass (see `docs/PRODUCTION-READINESS.md` Section 0).
    ```bash
    node scripts/fna-intake-backfill.mjs
    ```
-   *(Skipped — 0 KV intake sessions at cutover.)*
+   _(Skipped — 0 KV intake sessions at cutover.)_
 6. [x] Switch reads to Postgres after verification:
    - `FNA_INTAKE_READ_FROM=postgres`
 7. [x] Staging UAT sign-off completed — `docs/fna-intake-uat-signoff.md` (automated API UAT, 2026-05-23)

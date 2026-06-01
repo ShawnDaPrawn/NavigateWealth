@@ -67,7 +67,8 @@ function getClientId(): string {
 
 function getClientSecret(): string {
   const secret = Deno.env.get('LINKEDIN_CLIENT_SECRET');
-  if (!secret) throw new APIError('LinkedIn client secret is not configured', 500, 'LINKEDIN_CONFIG_ERROR');
+  if (!secret)
+    throw new APIError('LinkedIn client secret is not configured', 500, 'LINKEDIN_CONFIG_ERROR');
   return secret;
 }
 
@@ -138,7 +139,11 @@ export class LinkedInService {
     // 1. Verify CSRF state
     const stateData = await kv.get(kvStateKey(state));
     if (!stateData) {
-      throw new APIError('Invalid or expired OAuth state. Please try connecting again.', 400, 'LINKEDIN_STATE_INVALID');
+      throw new APIError(
+        'Invalid or expired OAuth state. Please try connecting again.',
+        400,
+        'LINKEDIN_STATE_INVALID',
+      );
     }
 
     const { userId } = stateData as { userId: string; redirectUri: string; createdAt: string };
@@ -147,7 +152,11 @@ export class LinkedInService {
     const createdAt = new Date((stateData as { createdAt: string }).createdAt).getTime();
     if (Date.now() - createdAt > STATE_TTL_MS) {
       await kv.del(kvStateKey(state));
-      throw new APIError('OAuth state has expired. Please try connecting again.', 400, 'LINKEDIN_STATE_EXPIRED');
+      throw new APIError(
+        'OAuth state has expired. Please try connecting again.',
+        400,
+        'LINKEDIN_STATE_EXPIRED',
+      );
     }
 
     // Clean up state immediately
@@ -169,7 +178,11 @@ export class LinkedInService {
     if (!tokenResponse.ok) {
       const errBody = await tokenResponse.text();
       log.error('LinkedIn token exchange failed', { status: tokenResponse.status, body: errBody });
-      throw new APIError('Failed to exchange authorization code with LinkedIn', 502, 'LINKEDIN_TOKEN_ERROR');
+      throw new APIError(
+        'Failed to exchange authorization code with LinkedIn',
+        502,
+        'LINKEDIN_TOKEN_ERROR',
+      );
     }
 
     const tokenData: LinkedInTokenResponse = await tokenResponse.json();
@@ -197,7 +210,9 @@ export class LinkedInService {
         });
       }
     } catch (meErr) {
-      log.warn('LinkedIn /v2/me fetch failed, proceeding without profile info', { error: String(meErr) });
+      log.warn('LinkedIn /v2/me fetch failed, proceeding without profile info', {
+        error: String(meErr),
+      });
     }
 
     // If /v2/me didn't provide the person ID, we need it for the person URN.
@@ -241,7 +256,7 @@ export class LinkedInService {
    * Check whether LinkedIn is connected for the given admin user.
    */
   async getStatus(adminUserId: string): Promise<LinkedInConnectionStatus> {
-    const stored = await kv.get(kvTokenKey(adminUserId)) as LinkedInStoredToken | null;
+    const stored = (await kv.get(kvTokenKey(adminUserId))) as LinkedInStoredToken | null;
 
     if (!stored) {
       return { connected: false };
@@ -276,14 +291,22 @@ export class LinkedInService {
   // --------------------------------------------------------------------------
 
   private async getAccessToken(adminUserId: string): Promise<{ token: string; personUrn: string }> {
-    const stored = await kv.get(kvTokenKey(adminUserId)) as LinkedInStoredToken | null;
+    const stored = (await kv.get(kvTokenKey(adminUserId))) as LinkedInStoredToken | null;
 
     if (!stored) {
-      throw new APIError('LinkedIn is not connected. Please connect your account first.', 401, 'LINKEDIN_NOT_CONNECTED');
+      throw new APIError(
+        'LinkedIn is not connected. Please connect your account first.',
+        401,
+        'LINKEDIN_NOT_CONNECTED',
+      );
     }
 
     if (new Date(stored.expiresAt) < new Date()) {
-      throw new APIError('LinkedIn access token has expired. Please reconnect your account.', 401, 'LINKEDIN_TOKEN_EXPIRED');
+      throw new APIError(
+        'LinkedIn access token has expired. Please reconnect your account.',
+        401,
+        'LINKEDIN_TOKEN_EXPIRED',
+      );
     }
 
     // If we don't have a personUrn yet, try fetching it now
@@ -316,7 +339,7 @@ export class LinkedInService {
     const personUrn = `urn:li:person:${me.id}`;
 
     // Update stored token with the resolved URN
-    const stored = await kv.get(kvTokenKey(adminUserId)) as LinkedInStoredToken | null;
+    const stored = (await kv.get(kvTokenKey(adminUserId))) as LinkedInStoredToken | null;
     if (stored) {
       stored.personUrn = personUrn;
       const firstName = me.localizedFirstName || '';
@@ -417,8 +440,15 @@ export class LinkedInService {
 
     if (!initRes.ok) {
       const errText = await initRes.text();
-      log.error('LinkedIn image initializeUpload failed', { status: initRes.status, body: errText });
-      throw new APIError('Failed to initialize image upload with LinkedIn', 502, 'LINKEDIN_IMAGE_INIT_ERROR');
+      log.error('LinkedIn image initializeUpload failed', {
+        status: initRes.status,
+        body: errText,
+      });
+      throw new APIError(
+        'Failed to initialize image upload with LinkedIn',
+        502,
+        'LINKEDIN_IMAGE_INIT_ERROR',
+      );
     }
 
     const initData: InitializeImageUploadResponse = await initRes.json();
@@ -428,7 +458,11 @@ export class LinkedInService {
     // Step 2: Download the image from the provided URL
     const imageRes = await fetch(imageUrl);
     if (!imageRes.ok) {
-      throw new APIError('Failed to download image from the provided URL', 400, 'LINKEDIN_IMAGE_DOWNLOAD_ERROR');
+      throw new APIError(
+        'Failed to download image from the provided URL',
+        400,
+        'LINKEDIN_IMAGE_DOWNLOAD_ERROR',
+      );
     }
     const imageBytes = await imageRes.arrayBuffer();
 
@@ -497,7 +531,8 @@ export class LinkedInService {
     }
 
     // The post ID is in the x-restli-id header (or X-RestLi-Id)
-    const postId = response.headers.get('x-restli-id') || response.headers.get('X-RestLi-Id') || undefined;
+    const postId =
+      response.headers.get('x-restli-id') || response.headers.get('X-RestLi-Id') || undefined;
 
     log.info('LinkedIn post created successfully', { postId });
 

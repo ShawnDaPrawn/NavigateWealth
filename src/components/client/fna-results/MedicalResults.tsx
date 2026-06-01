@@ -1,7 +1,7 @@
 /**
  * Client-Side Medical FNA Results Display
  * Read-only view of published Medical Needs Analysis
- * 
+ *
  * Data source: /supabase/functions/server/medical-fna-routes.tsx
  * Backend stores inputs with nested structures: currentPlan, healthNeeds, preferences
  * Results use: hospitalCover, dayToDayCare, chronicCover, affordability
@@ -11,8 +11,8 @@ import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '../../ui/card';
 import { Badge } from '../../ui/badge';
 import { Separator } from '../../ui/separator';
-import { 
-  Heart, 
+import {
+  Heart,
   Activity,
   Pill,
   Stethoscope,
@@ -20,7 +20,7 @@ import {
   CheckCircle,
   Info,
   TrendingUp,
-  DollarSign
+  DollarSign,
 } from 'lucide-react';
 import { MedicalFNA, formatCurrency } from '../../../services/fna-api';
 
@@ -48,8 +48,8 @@ export function MedicalResults({ fna }: MedicalResultsProps) {
             <div className="flex-1">
               <h3 className="text-gray-900 mb-2">Medical Needs Analysis Summary</h3>
               <p className="text-sm text-gray-700 mb-4">
-                Comprehensive assessment of your medical aid scheme coverage, gap analysis, and recommendations 
-                for optimal healthcare protection.
+                Comprehensive assessment of your medical aid scheme coverage, gap analysis, and
+                recommendations for optimal healthcare protection.
               </p>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 <div className="bg-white p-3 rounded-lg border border-red-100">
@@ -62,11 +62,15 @@ export function MedicalResults({ fna }: MedicalResultsProps) {
                 </div>
                 <div className="bg-white p-3 rounded-lg border border-red-100">
                   <p className="text-xs text-gray-600 mb-1">Medical Scheme</p>
-                  <p className="text-gray-900 text-xs">{currentPlan?.schemeName || 'Not specified'}</p>
+                  <p className="text-gray-900 text-xs">
+                    {currentPlan?.schemeName || 'Not specified'}
+                  </p>
                 </div>
                 <div className="bg-white p-3 rounded-lg border border-red-100">
                   <p className="text-xs text-gray-600 mb-1">Monthly Premium</p>
-                  <p className="text-gray-900">{formatCurrency(currentPlan?.monthlyPremium || 0)}</p>
+                  <p className="text-gray-900">
+                    {formatCurrency(currentPlan?.monthlyPremium || 0)}
+                  </p>
                 </div>
               </div>
             </div>
@@ -101,7 +105,9 @@ export function MedicalResults({ fna }: MedicalResultsProps) {
               </div>
               <div className="p-4 bg-gray-50 rounded-lg">
                 <p className="text-xs text-gray-600 mb-1">Plan Type</p>
-                <p className="text-gray-900 capitalize">{currentPlan.planType || 'Not specified'}</p>
+                <p className="text-gray-900 capitalize">
+                  {currentPlan.planType || 'Not specified'}
+                </p>
               </div>
             </div>
 
@@ -119,7 +125,9 @@ export function MedicalResults({ fna }: MedicalResultsProps) {
               <div>
                 <p className="text-xs text-gray-600 mb-1">Medical Savings Account</p>
                 <p className="text-gray-900">
-                  {currentPlan.hasMedicalSavingsAccount ? `Yes (${formatCurrency(currentPlan.msaAmountAnnual || 0)}/yr)` : 'No'}
+                  {currentPlan.hasMedicalSavingsAccount
+                    ? `Yes (${formatCurrency(currentPlan.msaAmountAnnual || 0)}/yr)`
+                    : 'No'}
                 </p>
               </div>
               <div>
@@ -134,7 +142,10 @@ export function MedicalResults({ fna }: MedicalResultsProps) {
                 <div className="p-3 bg-blue-50 rounded-lg border border-blue-200">
                   <p className="text-sm text-gray-900 mb-1">Gap Cover</p>
                   <div className="flex justify-between text-xs text-gray-600">
-                    <span>{currentPlan.gapCoverProvider || 'Provider not specified'} - {currentPlan.gapCoverType || 'Standard'}</span>
+                    <span>
+                      {currentPlan.gapCoverProvider || 'Provider not specified'} -{' '}
+                      {currentPlan.gapCoverType || 'Standard'}
+                    </span>
                     <span>{formatCurrency(currentPlan.gapCoverMonthlyPremium || 0)}/mo</span>
                   </div>
                 </div>
@@ -155,8 +166,12 @@ export function MedicalResults({ fna }: MedicalResultsProps) {
                 </div>
                 <CardTitle className="text-base">Hospital Cover Analysis</CardTitle>
               </div>
-              <Badge 
-                variant={results.hospitalCover.hospitalBenefitAdequacy === 'adequate' ? 'default' : 'destructive'}
+              <Badge
+                variant={
+                  results.hospitalCover.hospitalBenefitAdequacy === 'adequate'
+                    ? 'default'
+                    : 'destructive'
+                }
                 className="capitalize"
               >
                 {results.hospitalCover.hospitalBenefitAdequacy}
@@ -171,17 +186,23 @@ export function MedicalResults({ fna }: MedicalResultsProps) {
               </div>
               <div className="p-3 bg-gray-50 rounded-lg">
                 <p className="text-xs text-gray-600 mb-1">Network Adequacy</p>
-                <p className="text-lg text-gray-900 capitalize">{results.hospitalCover.networkAdequacy}</p>
+                <p className="text-lg text-gray-900 capitalize">
+                  {results.hospitalCover.networkAdequacy}
+                </p>
               </div>
               <div className="p-3 bg-gray-50 rounded-lg">
                 <p className="text-xs text-gray-600 mb-1">Specialist Reimbursement Risk</p>
-                <p className="text-lg text-gray-900 capitalize">{results.hospitalCover.specialistReimbursementRisk}</p>
+                <p className="text-lg text-gray-900 capitalize">
+                  {results.hospitalCover.specialistReimbursementRisk}
+                </p>
               </div>
             </div>
 
             {results.hospitalCover.requiredTierRationale && (
               <div className="p-3 bg-blue-50 rounded-lg border border-blue-100">
-                <p className="text-xs text-gray-700">{results.hospitalCover.requiredTierRationale}</p>
+                <p className="text-xs text-gray-700">
+                  {results.hospitalCover.requiredTierRationale}
+                </p>
               </div>
             )}
 
@@ -191,24 +212,28 @@ export function MedicalResults({ fna }: MedicalResultsProps) {
                   <AlertTriangle className="h-4 w-4 text-yellow-600 flex-shrink-0 mt-0.5" />
                   <div>
                     <p className="text-sm text-gray-900 mb-1">
-                      Gap Cover: <span className="capitalize">{results.hospitalCover.gapCoverNecessity}</span>
+                      Gap Cover:{' '}
+                      <span className="capitalize">{results.hospitalCover.gapCoverNecessity}</span>
                     </p>
-                    <p className="text-xs text-gray-600">{results.hospitalCover.gapCoverRationale}</p>
+                    <p className="text-xs text-gray-600">
+                      {results.hospitalCover.gapCoverRationale}
+                    </p>
                   </div>
                 </div>
               </div>
             )}
 
-            {results.hospitalCover.recommendations && results.hospitalCover.recommendations.length > 0 && (
-              <div className="space-y-2">
-                {results.hospitalCover.recommendations.map((rec, idx) => (
-                  <div key={idx} className="flex items-start gap-2 text-xs text-gray-700">
-                    <CheckCircle className="h-3 w-3 text-blue-600 flex-shrink-0 mt-0.5" />
-                    <span>{rec}</span>
-                  </div>
-                ))}
-              </div>
-            )}
+            {results.hospitalCover.recommendations &&
+              results.hospitalCover.recommendations.length > 0 && (
+                <div className="space-y-2">
+                  {results.hospitalCover.recommendations.map((rec, idx) => (
+                    <div key={idx} className="flex items-start gap-2 text-xs text-gray-700">
+                      <CheckCircle className="h-3 w-3 text-blue-600 flex-shrink-0 mt-0.5" />
+                      <span>{rec}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
           </CardContent>
         </Card>
       )}
@@ -224,8 +249,10 @@ export function MedicalResults({ fna }: MedicalResultsProps) {
                 </div>
                 <CardTitle className="text-base">Day-to-Day Care Analysis</CardTitle>
               </div>
-              <Badge 
-                variant={results.dayToDayCare.adequacyScore === 'adequate' ? 'default' : 'destructive'}
+              <Badge
+                variant={
+                  results.dayToDayCare.adequacyScore === 'adequate' ? 'default' : 'destructive'
+                }
                 className="capitalize"
               >
                 {results.dayToDayCare.adequacyScore}
@@ -263,46 +290,59 @@ export function MedicalResults({ fna }: MedicalResultsProps) {
               <div className="space-y-1">
                 <div className="flex justify-between text-xs p-2 bg-gray-50 rounded">
                   <span className="text-gray-600">GP Visits</span>
-                  <span className="text-gray-900">{formatCurrency(results.dayToDayCare.expectedAnnualGPCost)}</span>
+                  <span className="text-gray-900">
+                    {formatCurrency(results.dayToDayCare.expectedAnnualGPCost)}
+                  </span>
                 </div>
                 <div className="flex justify-between text-xs p-2 bg-gray-50 rounded">
                   <span className="text-gray-600">Specialist Visits</span>
-                  <span className="text-gray-900">{formatCurrency(results.dayToDayCare.expectedAnnualSpecialistCost)}</span>
+                  <span className="text-gray-900">
+                    {formatCurrency(results.dayToDayCare.expectedAnnualSpecialistCost)}
+                  </span>
                 </div>
                 <div className="flex justify-between text-xs p-2 bg-gray-50 rounded">
                   <span className="text-gray-600">Dental</span>
-                  <span className="text-gray-900">{formatCurrency(results.dayToDayCare.expectedAnnualDentistCost)}</span>
+                  <span className="text-gray-900">
+                    {formatCurrency(results.dayToDayCare.expectedAnnualDentistCost)}
+                  </span>
                 </div>
                 <div className="flex justify-between text-xs p-2 bg-gray-50 rounded">
                   <span className="text-gray-600">Optometry</span>
-                  <span className="text-gray-900">{formatCurrency(results.dayToDayCare.expectedAnnualOptometryCost)}</span>
+                  <span className="text-gray-900">
+                    {formatCurrency(results.dayToDayCare.expectedAnnualOptometryCost)}
+                  </span>
                 </div>
                 {results.dayToDayCare.expectedAnnualChronicMedication > 0 && (
                   <div className="flex justify-between text-xs p-2 bg-gray-50 rounded">
                     <span className="text-gray-600">Chronic Medication</span>
-                    <span className="text-gray-900">{formatCurrency(results.dayToDayCare.expectedAnnualChronicMedication)}</span>
+                    <span className="text-gray-900">
+                      {formatCurrency(results.dayToDayCare.expectedAnnualChronicMedication)}
+                    </span>
                   </div>
                 )}
                 <div className="flex justify-between text-xs p-2 bg-gray-50 rounded">
                   <span className="text-gray-600">Other Costs</span>
-                  <span className="text-gray-900">{formatCurrency(results.dayToDayCare.expectedAnnualOtherCosts)}</span>
+                  <span className="text-gray-900">
+                    {formatCurrency(results.dayToDayCare.expectedAnnualOtherCosts)}
+                  </span>
                 </div>
               </div>
             </div>
 
-            {results.dayToDayCare.recommendations && results.dayToDayCare.recommendations.length > 0 && (
-              <div className="contents">
-                <Separator />
-                <div className="space-y-2">
-                  {results.dayToDayCare.recommendations.map((rec, idx) => (
-                    <div key={idx} className="flex items-start gap-2 text-xs text-gray-700">
-                      <CheckCircle className="h-3 w-3 text-green-600 flex-shrink-0 mt-0.5" />
-                      <span>{rec}</span>
-                    </div>
-                  ))}
+            {results.dayToDayCare.recommendations &&
+              results.dayToDayCare.recommendations.length > 0 && (
+                <div className="contents">
+                  <Separator />
+                  <div className="space-y-2">
+                    {results.dayToDayCare.recommendations.map((rec, idx) => (
+                      <div key={idx} className="flex items-start gap-2 text-xs text-gray-700">
+                        <CheckCircle className="h-3 w-3 text-green-600 flex-shrink-0 mt-0.5" />
+                        <span>{rec}</span>
+                      </div>
+                    ))}
+                  </div>
                 </div>
-              </div>
-            )}
+              )}
           </CardContent>
         </Card>
       )}
@@ -318,8 +358,12 @@ export function MedicalResults({ fna }: MedicalResultsProps) {
                 </div>
                 <CardTitle className="text-base">Chronic Cover Analysis</CardTitle>
               </div>
-              <Badge 
-                variant={results.chronicCover.chronicCoverAdequacy === 'excellent' ? 'default' : 'destructive'}
+              <Badge
+                variant={
+                  results.chronicCover.chronicCoverAdequacy === 'excellent'
+                    ? 'default'
+                    : 'destructive'
+                }
                 className="capitalize"
               >
                 {results.chronicCover.chronicCoverAdequacy}
@@ -331,45 +375,53 @@ export function MedicalResults({ fna }: MedicalResultsProps) {
               <div className="p-3 bg-gray-50 rounded-lg">
                 <p className="text-xs text-gray-600 mb-1">Chronic Conditions</p>
                 <p className="text-lg text-gray-900">
-                  {results.chronicCover.hasChronicConditions 
-                    ? `${results.chronicCover.chronicConditionsList.length} condition${results.chronicCover.chronicConditionsList.length !== 1 ? 's' : ''}` 
+                  {results.chronicCover.hasChronicConditions
+                    ? `${results.chronicCover.chronicConditionsList.length} condition${results.chronicCover.chronicConditionsList.length !== 1 ? 's' : ''}`
                     : 'None'}
                 </p>
               </div>
               <div className="p-3 bg-gray-50 rounded-lg">
                 <p className="text-xs text-gray-600 mb-1">PMB Qualifying</p>
-                <p className="text-lg text-gray-900">{results.chronicCover.isPMBQualifying ? 'Yes' : 'No'}</p>
+                <p className="text-lg text-gray-900">
+                  {results.chronicCover.isPMBQualifying ? 'Yes' : 'No'}
+                </p>
               </div>
               <div className="p-3 bg-gray-50 rounded-lg">
                 <p className="text-xs text-gray-600 mb-1">Formulary Adequacy</p>
-                <p className="text-lg text-gray-900 capitalize">{results.chronicCover.formularyAdequacy}</p>
+                <p className="text-lg text-gray-900 capitalize">
+                  {results.chronicCover.formularyAdequacy}
+                </p>
               </div>
             </div>
 
-            {results.chronicCover.identifiedGaps && results.chronicCover.identifiedGaps.length > 0 && (
-              <div className="space-y-2">
-                <p className="text-xs text-gray-700"><strong>Identified Gaps:</strong></p>
-                {results.chronicCover.identifiedGaps.map((gap, idx) => (
-                  <div key={idx} className="p-3 bg-orange-50 rounded-lg border border-orange-200">
-                    <div className="flex items-start gap-2">
-                      <AlertTriangle className="h-4 w-4 text-orange-600 flex-shrink-0 mt-0.5" />
-                      <p className="text-xs text-gray-900">{gap}</p>
+            {results.chronicCover.identifiedGaps &&
+              results.chronicCover.identifiedGaps.length > 0 && (
+                <div className="space-y-2">
+                  <p className="text-xs text-gray-700">
+                    <strong>Identified Gaps:</strong>
+                  </p>
+                  {results.chronicCover.identifiedGaps.map((gap, idx) => (
+                    <div key={idx} className="p-3 bg-orange-50 rounded-lg border border-orange-200">
+                      <div className="flex items-start gap-2">
+                        <AlertTriangle className="h-4 w-4 text-orange-600 flex-shrink-0 mt-0.5" />
+                        <p className="text-xs text-gray-900">{gap}</p>
+                      </div>
                     </div>
-                  </div>
-                ))}
-              </div>
-            )}
+                  ))}
+                </div>
+              )}
 
-            {results.chronicCover.recommendations && results.chronicCover.recommendations.length > 0 && (
-              <div className="space-y-2">
-                {results.chronicCover.recommendations.map((rec, idx) => (
-                  <div key={idx} className="flex items-start gap-2 text-xs text-gray-700">
-                    <CheckCircle className="h-3 w-3 text-purple-600 flex-shrink-0 mt-0.5" />
-                    <span>{rec}</span>
-                  </div>
-                ))}
-              </div>
-            )}
+            {results.chronicCover.recommendations &&
+              results.chronicCover.recommendations.length > 0 && (
+                <div className="space-y-2">
+                  {results.chronicCover.recommendations.map((rec, idx) => (
+                    <div key={idx} className="flex items-start gap-2 text-xs text-gray-700">
+                      <CheckCircle className="h-3 w-3 text-purple-600 flex-shrink-0 mt-0.5" />
+                      <span>{rec}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
           </CardContent>
         </Card>
       )}
@@ -385,7 +437,7 @@ export function MedicalResults({ fna }: MedicalResultsProps) {
                 </div>
                 <CardTitle className="text-base">Affordability Analysis</CardTitle>
               </div>
-              <Badge 
+              <Badge
                 variant={results.affordability.isSustainable ? 'default' : 'destructive'}
                 className="capitalize"
               >
@@ -413,25 +465,28 @@ export function MedicalResults({ fna }: MedicalResultsProps) {
               <div className="contents">
                 <Separator />
                 <div className="text-xs text-gray-600">
-                  <p><strong>Sustainability Assessment:</strong></p>
+                  <p>
+                    <strong>Sustainability Assessment:</strong>
+                  </p>
                   <p className="mt-1">{results.affordability.sustainabilityRationale}</p>
                 </div>
               </div>
             )}
 
-            {results.affordability.recommendations && results.affordability.recommendations.length > 0 && (
-              <div className="contents">
-                <Separator />
-                <div className="space-y-2">
-                  {results.affordability.recommendations.map((rec, idx) => (
-                    <div key={idx} className="flex items-start gap-2 text-xs text-gray-700">
-                      <CheckCircle className="h-3 w-3 text-indigo-600 flex-shrink-0 mt-0.5" />
-                      <span>{rec}</span>
-                    </div>
-                  ))}
+            {results.affordability.recommendations &&
+              results.affordability.recommendations.length > 0 && (
+                <div className="contents">
+                  <Separator />
+                  <div className="space-y-2">
+                    {results.affordability.recommendations.map((rec, idx) => (
+                      <div key={idx} className="flex items-start gap-2 text-xs text-gray-700">
+                        <CheckCircle className="h-3 w-3 text-indigo-600 flex-shrink-0 mt-0.5" />
+                        <span>{rec}</span>
+                      </div>
+                    ))}
+                  </div>
                 </div>
-              </div>
-            )}
+              )}
           </CardContent>
         </Card>
       )}
@@ -471,10 +526,14 @@ export function MedicalResults({ fna }: MedicalResultsProps) {
               <div className="contents">
                 <Separator />
                 <div>
-                  <p className="text-xs text-gray-700 mb-2"><strong>Chronic Conditions:</strong></p>
+                  <p className="text-xs text-gray-700 mb-2">
+                    <strong>Chronic Conditions:</strong>
+                  </p>
                   <div className="flex flex-wrap gap-2">
                     {healthNeeds.chronicConditions.map((condition, idx) => (
-                      <Badge key={idx} variant="outline" className="capitalize">{condition}</Badge>
+                      <Badge key={idx} variant="outline" className="capitalize">
+                        {condition}
+                      </Badge>
                     ))}
                   </div>
                 </div>
@@ -484,7 +543,9 @@ export function MedicalResults({ fna }: MedicalResultsProps) {
             {healthNeeds.chronicMedicationCostMonthly > 0 && (
               <div className="p-3 bg-purple-50 rounded-lg border border-purple-100">
                 <p className="text-xs text-gray-600 mb-1">Monthly Chronic Medication Cost</p>
-                <p className="text-gray-900">{formatCurrency(healthNeeds.chronicMedicationCostMonthly)}</p>
+                <p className="text-gray-900">
+                  {formatCurrency(healthNeeds.chronicMedicationCostMonthly)}
+                </p>
               </div>
             )}
           </CardContent>
@@ -498,8 +559,8 @@ export function MedicalResults({ fna }: MedicalResultsProps) {
             <div className="flex items-center gap-3">
               <AlertTriangle className="h-5 w-5 text-amber-600" />
               <p className="text-sm text-amber-900">
-                Medical analysis calculations have not yet been completed for this FNA. 
-                Contact your financial adviser for a detailed assessment.
+                Medical analysis calculations have not yet been completed for this FNA. Contact your
+                financial adviser for a detailed assessment.
               </p>
             </div>
           </CardContent>
@@ -516,10 +577,16 @@ export function MedicalResults({ fna }: MedicalResultsProps) {
                 <strong>Important Notes:</strong>
               </p>
               <ul className="space-y-1 text-xs">
-                <li>- This analysis is based on your current medical scheme benefits and PMB (Prescribed Minimum Benefits) regulations.</li>
+                <li>
+                  - This analysis is based on your current medical scheme benefits and PMB
+                  (Prescribed Minimum Benefits) regulations.
+                </li>
                 <li>- Medical scheme benefits and premiums are subject to change annually.</li>
                 <li>- Consider reviewing your medical cover during open enrollment periods.</li>
-                <li>- Consult with your financial adviser before making any changes to your medical scheme.</li>
+                <li>
+                  - Consult with your financial adviser before making any changes to your medical
+                  scheme.
+                </li>
               </ul>
             </div>
           </div>

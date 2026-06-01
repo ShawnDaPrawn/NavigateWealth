@@ -13,26 +13,27 @@ export function ReportsTab() {
       <div className="flex flex-col gap-2">
         <h2 className="text-2xl font-bold tracking-tight">Compliance Registers & Reports</h2>
         <p className="text-muted-foreground">
-          Centralised registers for tracking business activities, complaints, conflicts, and training.
+          Centralised registers for tracking business activities, complaints, conflicts, and
+          training.
         </p>
       </div>
 
       <Tabs defaultValue="new-business" className="w-full">
         <div className="w-full overflow-x-auto pb-2">
-            <TabsList className="w-full justify-start">
-              <TabsTrigger value="new-business">New Business</TabsTrigger>
-              <TabsTrigger value="cancellation">Cancellations</TabsTrigger>
-              <TabsTrigger value="complaints">Complaints</TabsTrigger>
-              <TabsTrigger value="gifts">Gifts & Conflicts</TabsTrigger>
-              <TabsTrigger value="cpd">CPD</TabsTrigger>
-              <TabsTrigger value="pst">Product Training</TabsTrigger>
-            </TabsList>
+          <TabsList className="w-full justify-start">
+            <TabsTrigger value="new-business">New Business</TabsTrigger>
+            <TabsTrigger value="cancellation">Cancellations</TabsTrigger>
+            <TabsTrigger value="complaints">Complaints</TabsTrigger>
+            <TabsTrigger value="gifts">Gifts & Conflicts</TabsTrigger>
+            <TabsTrigger value="cpd">CPD</TabsTrigger>
+            <TabsTrigger value="pst">Product Training</TabsTrigger>
+          </TabsList>
         </div>
-        
+
         <TabsContent value="new-business" className="mt-6">
           <NewBusinessRegisterTab />
         </TabsContent>
-        
+
         <TabsContent value="cancellation" className="mt-6">
           <CancellationRegisterTab />
         </TabsContent>
@@ -44,11 +45,11 @@ export function ReportsTab() {
         <TabsContent value="gifts" className="mt-6">
           <ConflictsMarketingTab />
         </TabsContent>
-        
+
         <TabsContent value="cpd" className="mt-6">
           <CPDRegisterTab />
         </TabsContent>
-        
+
         <TabsContent value="pst" className="mt-6">
           <ProductTrainingRegisterTab />
         </TabsContent>

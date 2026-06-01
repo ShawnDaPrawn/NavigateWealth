@@ -346,12 +346,14 @@ export function resolveRecipients(meta: LetterMeta): Recipient[] {
   }
   // Backward compat: build a single-entry array from legacy fields
   if (meta.recipientName || meta.recipientTitle || meta.recipientCompany || meta.recipientAddress) {
-    return [{
-      name: meta.recipientName,
-      title: meta.recipientTitle,
-      company: meta.recipientCompany,
-      address: meta.recipientAddress,
-    }];
+    return [
+      {
+        name: meta.recipientName,
+        title: meta.recipientTitle,
+        company: meta.recipientCompany,
+        address: meta.recipientAddress,
+      },
+    ];
   }
   return [];
 }
@@ -366,10 +368,12 @@ export function resolveSignatories(meta: LetterMeta): Signatory[] {
   }
   // Backward compat: build a single-entry array from legacy fields
   if (meta.signatoryName || meta.signatoryTitle) {
-    return [{
-      name: meta.signatoryName,
-      title: meta.signatoryTitle,
-    }];
+    return [
+      {
+        name: meta.signatoryName,
+        title: meta.signatoryTitle,
+      },
+    ];
   }
   return [];
 }
@@ -420,9 +424,7 @@ const LetterPage = ({
                 <div className="letterhead-logo">
                   Navigate <span className="lh-accent">Wealth</span>
                 </div>
-                <div className="letterhead-tagline">
-                  Independent Financial Advisory Services
-                </div>
+                <div className="letterhead-tagline">Independent Financial Advisory Services</div>
                 <div className="letterhead-fsp">
                   Authorised Financial Services Provider &mdash; FSP 54606
                 </div>
@@ -447,22 +449,21 @@ const LetterPage = ({
             </div>
 
             {/* Date */}
-            <div className="letter-date">
-              {formatLetterDate(meta.date)}
-            </div>
+            <div className="letter-date">{formatLetterDate(meta.date)}</div>
 
             {/* Recipients */}
             {recipients.length > 0 && (
               <div className="letter-recipient">
                 {recipients.map((recipient, idx) => (
-                  <div key={idx} style={{ marginBottom: idx < recipients.length - 1 ? '3mm' : undefined }}>
+                  <div
+                    key={idx}
+                    style={{ marginBottom: idx < recipients.length - 1 ? '3mm' : undefined }}
+                  >
                     {recipient.name && <div style={{ fontWeight: 600 }}>{recipient.name}</div>}
                     {recipient.title && <div>{recipient.title}</div>}
                     {recipient.company && <div>{recipient.company}</div>}
                     {recipient.address && (
-                      <div style={{ whiteSpace: 'pre-line' }}>
-                        {recipient.address}
-                      </div>
+                      <div style={{ whiteSpace: 'pre-line' }}>{recipient.address}</div>
                     )}
                   </div>
                 ))}
@@ -497,58 +498,59 @@ const LetterPage = ({
               Navigate <span className="cont-accent">Wealth</span>
             </span>
             <span>
-              {meta.reference ? `Ref: ${meta.reference}` : meta.subject || ''}
-              {' '}&mdash;{' '}
-              Page {pageNum} of {totalPages}
+              {meta.reference ? `Ref: ${meta.reference}` : meta.subject || ''} &mdash; Page{' '}
+              {pageNum} of {totalPages}
             </span>
           </div>
         )}
 
         {/* ======= BODY CONTENT ======= */}
-        <main className="letter-body" style={{ fontSize: `${bodyFontSize}px`, lineHeight: bodyLineHeight }}>
+        <main
+          className="letter-body"
+          style={{ fontSize: `${bodyFontSize}px`, lineHeight: bodyLineHeight }}
+        >
           {children}
         </main>
 
         {/* ======= CLOSING / SIGNATORY (from meta) ======= */}
-        {isLastPage && (() => {
-          const signatories = resolveSignatories(meta);
-          const hasClosing = meta.closing || signatories.length > 0;
-          if (!hasClosing) return null;
-          return (
-            <div className="letter-closing">
-              {meta.closing && (
-                <div className="closing-regards">{meta.closing},</div>
-              )}
-              {signatories.length > 0 && (
-                <div className="closing-signatories">
-                  {signatories.map((signatory, index) => (
-                    <div key={index} className="closing-signatory">
-                      <div className="closing-signature-line" />
-                      {signatory.name && (
-                        <div className="closing-name">{signatory.name}</div>
-                      )}
-                      {signatory.title && (
-                        <div className="closing-title">{signatory.title} &mdash; Navigate Wealth</div>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          );
-        })()}
+        {isLastPage &&
+          (() => {
+            const signatories = resolveSignatories(meta);
+            const hasClosing = meta.closing || signatories.length > 0;
+            if (!hasClosing) return null;
+            return (
+              <div className="letter-closing">
+                {meta.closing && <div className="closing-regards">{meta.closing},</div>}
+                {signatories.length > 0 && (
+                  <div className="closing-signatories">
+                    {signatories.map((signatory, index) => (
+                      <div key={index} className="closing-signatory">
+                        <div className="closing-signature-line" />
+                        {signatory.name && <div className="closing-name">{signatory.name}</div>}
+                        {signatory.title && (
+                          <div className="closing-title">
+                            {signatory.title} &mdash; Navigate Wealth
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            );
+          })()}
 
         {/* ======= FOOTER ======= */}
         <footer className="letter-footer">
           <div className="letter-footer-cols">
             <div className="lf-col">
-              <span className="footer-company">Wealthfront (Pty) Ltd</span>
-              {' '}trading as Navigate Wealth is an Authorised Financial Services Provider &ndash; FSP 54606.
-              Registration Number: 2024/071953/07.
+              <span className="footer-company">Wealthfront (Pty) Ltd</span> trading as Navigate
+              Wealth is an Authorised Financial Services Provider &ndash; FSP 54606. Registration
+              Number: 2024/071953/07.
             </div>
             <div className="lf-col">
-              Route 21 Corporate Park, 25 Sovereign Drive, Milestone Place A, Centurion, 0178.
-              Tel: (012) 667 2505 | Email: info@navigatewealth.co
+              Route 21 Corporate Park, 25 Sovereign Drive, Milestone Place A, Centurion, 0178. Tel:
+              (012) 667 2505 | Email: info@navigatewealth.co
             </div>
             <div className="lf-page">
               Page {pageNum}/{totalPages}
@@ -570,11 +572,7 @@ export interface LetterheadPdfLayoutProps {
   meta?: LetterMeta;
 }
 
-export const LetterheadPdfLayout = ({
-  children,
-  pages,
-  meta = {},
-}: LetterheadPdfLayoutProps) => {
+export const LetterheadPdfLayout = ({ children, pages, meta = {} }: LetterheadPdfLayoutProps) => {
   return (
     <div className="contents">
       <style dangerouslySetInnerHTML={{ __html: LETTER_CSS }} />
@@ -594,13 +592,7 @@ export const LetterheadPdfLayout = ({
               </LetterPage>
             ))
           ) : (
-            <LetterPage
-              pageNum={1}
-              totalPages={1}
-              isFirstPage={true}
-              isLastPage={true}
-              meta={meta}
-            >
+            <LetterPage pageNum={1} totalPages={1} isFirstPage={true} isLastPage={true} meta={meta}>
               {children}
             </LetterPage>
           )}

@@ -95,7 +95,6 @@ function stepKey(applicationId: string, step: number): string {
 // ── Service ────────────────────────────────────────────────────────────────────
 
 export const clientApplicationsService = {
-
   /**
    * Create a new application for a user (self-service).
    * Idempotent: if the user already has a non-deprecated application, returns it.
@@ -107,7 +106,10 @@ export const clientApplicationsService = {
     // Idempotent: check if an application already exists
     const existing = await this.getByUserId(userId);
     if (existing) {
-      log.info('Application already exists for user, returning existing', { userId, id: existing.id });
+      log.info('Application already exists for user, returning existing', {
+        userId,
+        id: existing.id,
+      });
       return existing;
     }
 
@@ -159,12 +161,13 @@ export const clientApplicationsService = {
     // Filter to entries that are top-level application records (not step data)
     // and belong to this user
     const userApps = (entries as Record<string, unknown>[])
-      .filter(e =>
-        e &&
-        e.user_id === userId &&
-        e.deprecated !== true &&
-        // Exclude step data entries (they have stepNumber)
-        !('stepNumber' in e)
+      .filter(
+        (e) =>
+          e &&
+          e.user_id === userId &&
+          e.deprecated !== true &&
+          // Exclude step data entries (they have stepNumber)
+          !('stepNumber' in e),
       )
       .sort((a, b) => {
         const aTime = new Date(String(a.created_at || 0)).getTime();
@@ -200,7 +203,10 @@ export const clientApplicationsService = {
       throw new Error(`Invalid step number: ${step}. Must be 1-5.`);
     }
 
-    const application = await kv.get(metadataKey(applicationId)) as Record<string, unknown> | null;
+    const application = (await kv.get(metadataKey(applicationId))) as Record<
+      string,
+      unknown
+    > | null;
     if (!application) {
       throw new Error(`Application not found: ${applicationId}`);
     }
@@ -272,7 +278,7 @@ export const clientApplicationsService = {
    * Load all steps for an application (for resume or admin review).
    */
   async getAllSteps(applicationId: string): Promise<Record<number, StepData>> {
-    const keys = [1, 2, 3, 4, 5].map(s => stepKey(applicationId, s));
+    const keys = [1, 2, 3, 4, 5].map((s) => stepKey(applicationId, s));
     const values = await kv.mget(keys);
 
     const result: Record<number, StepData> = {};
@@ -296,7 +302,10 @@ export const clientApplicationsService = {
     applicationId: string,
     submittedBy: CompletedBy,
   ): Promise<{ success: boolean; application: Record<string, unknown> }> {
-    const application = await kv.get(metadataKey(applicationId)) as Record<string, unknown> | null;
+    const application = (await kv.get(metadataKey(applicationId))) as Record<
+      string,
+      unknown
+    > | null;
     if (!application) {
       throw new Error(`Application not found: ${applicationId}`);
     }
@@ -324,14 +333,14 @@ export const clientApplicationsService = {
 
     if (!hasPerStepData && !hasBulkData) {
       // Neither path has sufficient data — report what's missing
-      const missingSteps = [1, 2, 3, 4, 5].filter(s => !completedSteps.includes(s));
+      const missingSteps = [1, 2, 3, 4, 5].filter((s) => !completedSteps.includes(s));
       throw new Error(`Cannot submit: steps ${missingSteps.join(', ')} are not completed.`);
     }
 
     const now = new Date().toISOString();
 
     // Build complete application_data from whichever path has data
-    let finalAppData: Record<string, unknown> = { ...appData };
+    const finalAppData: Record<string, unknown> = { ...appData };
     if (hasPerStepData) {
       for (const [, stepData] of Object.entries(steps)) {
         Object.assign(finalAppData, stepData.data);
@@ -347,7 +356,7 @@ export const clientApplicationsService = {
       updated_at: now,
       submittedBy,
       application_data: {
-        ...(application.application_data as Record<string, unknown> || {}),
+        ...((application.application_data as Record<string, unknown>) || {}),
         ...finalAppData,
         currentStep: 5,
       },
@@ -360,14 +369,14 @@ export const clientApplicationsService = {
     if (userId) {
       try {
         const profileKey = `user_profile:${userId}:personal_info`;
-        const profile = await kv.get(profileKey) as Record<string, unknown> | null;
+        const profile = (await kv.get(profileKey)) as Record<string, unknown> | null;
         if (profile) {
           await kv.set(profileKey, {
             ...profile,
             accountStatus: 'submitted_for_review',
             applicationStatus: 'submitted',
             metadata: {
-              ...(profile.metadata as Record<string, unknown> || {}),
+              ...((profile.metadata as Record<string, unknown>) || {}),
               updatedAt: now,
             },
           });
@@ -378,8 +387,11 @@ export const clientApplicationsService = {
     }
 
     // Send email notifications (non-blocking — submission should not fail if emails fail)
-    const applicationNumber = (application.applicationNumber || updatedApplication.applicationNumber || '') as string;
-    const clientName = [finalAppData.firstName, finalAppData.lastName].filter(Boolean).join(' ') || 'Client';
+    const applicationNumber = (application.applicationNumber ||
+      updatedApplication.applicationNumber ||
+      '') as string;
+    const clientName =
+      [finalAppData.firstName, finalAppData.lastName].filter(Boolean).join(' ') || 'Client';
     const clientEmail = (finalAppData.emailAddress || '') as string;
 
     try {
@@ -419,7 +431,10 @@ export const clientApplicationsService = {
     userId: string,
   ): Promise<{ success: boolean }> {
     const now = new Date().toISOString();
-    const application = await kv.get(metadataKey(applicationId)) as Record<string, unknown> | null;
+    const application = (await kv.get(metadataKey(applicationId))) as Record<
+      string,
+      unknown
+    > | null;
 
     if (!application) {
       throw new Error(`Application not found: ${applicationId}`);
@@ -439,23 +454,30 @@ export const clientApplicationsService = {
     const profileKey = `user_profile:${userId}:personal_info`;
     const profileUpdate = (async () => {
       try {
-        const profile = await kv.get(profileKey) as Record<string, unknown> | null;
+        const profile = (await kv.get(profileKey)) as Record<string, unknown> | null;
         if (profile) {
           const currentProfileStatus = profile.accountStatus as string;
           // Only update if status is still in a pre-application state
-          if (currentProfileStatus === 'no_application' || currentProfileStatus === 'draft' || !currentProfileStatus) {
+          if (
+            currentProfileStatus === 'no_application' ||
+            currentProfileStatus === 'draft' ||
+            !currentProfileStatus
+          ) {
             await kv.set(profileKey, {
               ...profile,
               accountStatus: 'application_in_progress',
               metadata: {
-                ...(profile.metadata as Record<string, unknown> || {}),
+                ...((profile.metadata as Record<string, unknown>) || {}),
                 updatedAt: now,
               },
             });
           }
         }
       } catch (profileErr) {
-        log.error('Failed to sync profile accountStatus during save-progress (non-blocking)', profileErr);
+        log.error(
+          'Failed to sync profile accountStatus during save-progress (non-blocking)',
+          profileErr,
+        );
       }
     })();
 

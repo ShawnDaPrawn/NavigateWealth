@@ -1,9 +1,9 @@
 /**
  * Personnel Validation - Enhanced
- * 
+ *
  * Extended personnel validation with comprehensive schemas.
  * This file extends the basic personnel-validation.ts from Phase 1.
- * 
+ *
  * Phase 3 - Increment 3.3
  */
 
@@ -38,12 +38,7 @@ export const PersonnelRoleSchema = z.enum([
 /**
  * Personnel Status
  */
-export const PersonnelStatusSchema = z.enum([
-  'active',
-  'suspended',
-  'pending',
-  'inactive',
-]);
+export const PersonnelStatusSchema = z.enum(['active', 'suspended', 'pending', 'inactive']);
 
 /**
  * FSCA Status
@@ -82,27 +77,27 @@ export const CompletePersonnelSchema = z.object({
   lastName: NonEmptyStringSchema,
   email: EmailSchema,
   phone: OptionalSaPhoneSchema,
-  
+
   // Role & Status
   role: PersonnelRoleSchema,
   status: PersonnelStatusSchema.default('active'),
   department: DepartmentSchema.optional(),
-  
+
   // Financial
   commissionSplit: DecimalPercentageSchema.optional(),
-  
+
   // Regulatory
   fscaNumber: OptionalStringSchema,
   fscaStatus: FSCAStatusSchema.optional(),
-  
+
   // Personal
   dateOfBirth: IsoDateSchema.optional(),
   idNumber: OptionalSaIdNumberSchema,
-  
+
   // Employment
   startDate: IsoDateSchema.optional(),
   endDate: IsoDateSchema.optional(),
-  
+
   // Metadata
   createdAt: z.string().datetime().optional(),
   updatedAt: z.string().datetime().optional(),
@@ -130,7 +125,7 @@ export const UpdatePersonnelSchema = CompletePersonnelSchema.partial().refine(
   },
   {
     message: 'At least one field must be provided for update',
-  }
+  },
 );
 
 /**

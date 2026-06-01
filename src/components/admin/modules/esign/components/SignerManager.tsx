@@ -92,9 +92,7 @@ export function SignerManager({
 
     // Check for duplicate emails
     const duplicateEmail = signers.some(
-      (s, idx) => 
-        s.email.toLowerCase() === signer.email.toLowerCase() && 
-        idx !== editingIndex
+      (s, idx) => s.email.toLowerCase() === signer.email.toLowerCase() && idx !== editingIndex,
     );
     if (duplicateEmail) {
       errors.email = 'Email already added';
@@ -173,7 +171,11 @@ export function SignerManager({
     }
   };
 
-  const updateSigner = (index: number, field: keyof SignerFormData, value: string | number | boolean) => {
+  const updateSigner = (
+    index: number,
+    field: keyof SignerFormData,
+    value: string | number | boolean,
+  ) => {
     const updatedSigners = [...signers];
     updatedSigners[index] = {
       ...updatedSigners[index],
@@ -243,9 +245,7 @@ export function SignerManager({
       <div className="flex items-center justify-between">
         <div>
           <h3 className="font-semibold text-lg">Signers</h3>
-          <p className="text-sm text-muted-foreground">
-            Add people who need to sign this document
-          </p>
+          <p className="text-sm text-muted-foreground">Add people who need to sign this document</p>
         </div>
         <Badge variant="outline" className="text-sm">
           {signers.length} {signers.length === 1 ? 'Signer' : 'Signers'}
@@ -253,7 +253,7 @@ export function SignerManager({
       </div>
 
       {/* Quick Add Client Button */}
-      {clientEmail && clientName && !signers.some(s => s.email === clientEmail) && (
+      {clientEmail && clientName && !signers.some((s) => s.email === clientEmail) && (
         <Button
           type="button"
           variant="outline"
@@ -271,9 +271,7 @@ export function SignerManager({
         {signers.map((signer, index) => {
           const isEditing = editingIndex === index;
           const isExpanded = expandedIndex === index;
-          const existingSigner = existingSigners?.find(
-            (es) => es.email === signer.email
-          );
+          const existingSigner = existingSigners?.find((es) => es.email === signer.email);
 
           return (
             <Card
@@ -296,9 +294,7 @@ export function SignerManager({
                         <Input
                           id={`signer-name-${index}`}
                           value={signer.name}
-                          onChange={(e) =>
-                            updateSigner(index, 'name', e.target.value)
-                          }
+                          onChange={(e) => updateSigner(index, 'name', e.target.value)}
                           placeholder="John Doe"
                         />
                       </div>
@@ -308,9 +304,7 @@ export function SignerManager({
                           id={`signer-email-${index}`}
                           type="email"
                           value={signer.email}
-                          onChange={(e) =>
-                            updateSigner(index, 'email', e.target.value)
-                          }
+                          onChange={(e) => updateSigner(index, 'email', e.target.value)}
                           placeholder="john@example.com"
                         />
                       </div>
@@ -318,29 +312,21 @@ export function SignerManager({
 
                     <div className="grid grid-cols-2 gap-4">
                       <div className="space-y-2">
-                        <Label htmlFor={`signer-role-${index}`}>
-                          Role (Optional)
-                        </Label>
+                        <Label htmlFor={`signer-role-${index}`}>Role (Optional)</Label>
                         <Input
                           id={`signer-role-${index}`}
                           value={signer.role || ''}
-                          onChange={(e) =>
-                            updateSigner(index, 'role', e.target.value)
-                          }
+                          onChange={(e) => updateSigner(index, 'role', e.target.value)}
                           placeholder="Client, Witness, etc."
                         />
                       </div>
                       <div className="space-y-2">
-                        <Label htmlFor={`signer-accessCode-${index}`}>
-                          Access Code (Optional)
-                        </Label>
+                        <Label htmlFor={`signer-accessCode-${index}`}>Access Code (Optional)</Label>
                         <Input
                           id={`signer-accessCode-${index}`}
                           type="text"
                           value={signer.accessCode || ''}
-                          onChange={(e) =>
-                            updateSigner(index, 'accessCode', e.target.value)
-                          }
+                          onChange={(e) => updateSigner(index, 'accessCode', e.target.value)}
                           placeholder="Min 4 characters"
                         />
                       </div>
@@ -354,10 +340,7 @@ export function SignerManager({
                           updateSigner(index, 'otpRequired', checked === true)
                         }
                       />
-                      <Label
-                        htmlFor={`signer-otp-${index}`}
-                        className="text-sm cursor-pointer"
-                      >
+                      <Label htmlFor={`signer-otp-${index}`} className="text-sm cursor-pointer">
                         Require OTP verification before signing
                       </Label>
                     </div>
@@ -372,12 +355,7 @@ export function SignerManager({
                         <Check className="h-4 w-4 mr-2" />
                         Save
                       </Button>
-                      <Button
-                        type="button"
-                        onClick={cancelEditing}
-                        variant="outline"
-                        size="sm"
-                      >
+                      <Button type="button" onClick={cancelEditing} variant="outline" size="sm">
                         <X className="h-4 w-4 mr-2" />
                         Cancel
                       </Button>
@@ -408,9 +386,7 @@ export function SignerManager({
                               #{signer.order}
                             </Badge>
                             {existingSigner && (
-                              <Badge
-                                className={getSignerStatusColor(existingSigner.status)}
-                              >
+                              <Badge className={getSignerStatusColor(existingSigner.status)}>
                                 {getSignerStatusLabel(existingSigner.status)}
                               </Badge>
                             )}
@@ -478,19 +454,14 @@ export function SignerManager({
                       <div className="pt-3 border-t">
                         <div className="bg-gray-50 rounded-lg p-4">
                           <div className="flex items-center justify-between mb-3">
-                            <h4 className="text-sm font-medium">
-                              Field Assignments
-                            </h4>
-                            <Button
-                              type="button"
-                              variant="outline"
-                              size="sm"
-                            >
+                            <h4 className="text-sm font-medium">Field Assignments</h4>
+                            <Button type="button" variant="outline" size="sm">
                               Add Field
                             </Button>
                           </div>
                           <p className="text-sm text-muted-foreground">
-                            No fields assigned yet. Add signature, initial, or text fields for this signer.
+                            No fields assigned yet. Add signature, initial, or text fields for this
+                            signer.
                           </p>
                         </div>
                       </div>
@@ -515,9 +486,7 @@ export function SignerManager({
                   <Input
                     id="new-signer-name"
                     value={newSigner.name}
-                    onChange={(e) =>
-                      setNewSigner({ ...newSigner, name: e.target.value })
-                    }
+                    onChange={(e) => setNewSigner({ ...newSigner, name: e.target.value })}
                     placeholder="John Doe"
                     className={newSignerErrors.name ? 'border-red-300' : ''}
                   />
@@ -534,9 +503,7 @@ export function SignerManager({
                     id="new-signer-email"
                     type="email"
                     value={newSigner.email}
-                    onChange={(e) =>
-                      setNewSigner({ ...newSigner, email: e.target.value })
-                    }
+                    onChange={(e) => setNewSigner({ ...newSigner, email: e.target.value })}
                     placeholder="john@example.com"
                     className={newSignerErrors.email ? 'border-red-300' : ''}
                   />
@@ -555,27 +522,19 @@ export function SignerManager({
                   <Input
                     id="new-signer-role"
                     value={newSigner.role || ''}
-                    onChange={(e) =>
-                      setNewSigner({ ...newSigner, role: e.target.value })
-                    }
+                    onChange={(e) => setNewSigner({ ...newSigner, role: e.target.value })}
                     placeholder="Client, Witness, etc."
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="new-signer-accessCode">
-                    Access Code (Optional)
-                  </Label>
+                  <Label htmlFor="new-signer-accessCode">Access Code (Optional)</Label>
                   <Input
                     id="new-signer-accessCode"
                     type="text"
                     value={newSigner.accessCode || ''}
-                    onChange={(e) =>
-                      setNewSigner({ ...newSigner, accessCode: e.target.value })
-                    }
+                    onChange={(e) => setNewSigner({ ...newSigner, accessCode: e.target.value })}
                     placeholder="Min 4 characters"
-                    className={
-                      newSignerErrors.accessCode ? 'border-red-300' : ''
-                    }
+                    className={newSignerErrors.accessCode ? 'border-red-300' : ''}
                   />
                   {newSignerErrors.accessCode && (
                     <p className="text-sm text-red-600 flex items-center gap-1">
@@ -594,10 +553,7 @@ export function SignerManager({
                     setNewSigner({ ...newSigner, otpRequired: checked === true })
                   }
                 />
-                <Label
-                  htmlFor="new-signer-otp"
-                  className="text-sm cursor-pointer"
-                >
+                <Label htmlFor="new-signer-otp" className="text-sm cursor-pointer">
                   Require OTP verification before signing
                 </Label>
               </div>

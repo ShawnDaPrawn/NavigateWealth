@@ -43,7 +43,7 @@ export const esignApi = {
    */
   async uploadDocument(request: UploadDocumentRequest): Promise<UploadDocumentResponse> {
     const formData = new FormData();
-    (request.files || []).forEach(file => {
+    (request.files || []).forEach((file) => {
       formData.append('files', file);
     });
     formData.append('context', JSON.stringify(request.context));
@@ -62,8 +62,14 @@ export const esignApi = {
   /**
    * Update/Save fields for an envelope
    */
-  async saveFields(envelopeId: string, fields: EsignField[]): Promise<{ success: boolean; fields: EsignField[] }> {
-    return api.put<{ success: boolean; fields: EsignField[] }>(`/esign/envelopes/${envelopeId}/fields`, { fields });
+  async saveFields(
+    envelopeId: string,
+    fields: EsignField[],
+  ): Promise<{ success: boolean; fields: EsignField[] }> {
+    return api.put<{ success: boolean; fields: EsignField[] }>(
+      `/esign/envelopes/${envelopeId}/fields`,
+      { fields },
+    );
   },
 
   /**
@@ -71,19 +77,25 @@ export const esignApi = {
    * Stores the lightweight form data (name, email, role, etc.) so
    * the "Continue Editing" flow can reconstruct the prepare studio.
    */
-  async saveDraftSigners(envelopeId: string, signers: Array<{
-    name: string;
-    email: string;
-    phone?: string;
-    role: string;
-    order: number;
-    otpRequired?: boolean;
-    accessCode?: string;
-    clientId?: string;
-    isSystemClient?: boolean;
-    smsOptIn?: boolean;
-  }>): Promise<{ success: boolean; count: number }> {
-    return api.put<{ success: boolean; count: number }>(`/esign/envelopes/${envelopeId}/draft-signers`, { signers });
+  async saveDraftSigners(
+    envelopeId: string,
+    signers: Array<{
+      name: string;
+      email: string;
+      phone?: string;
+      role: string;
+      order: number;
+      otpRequired?: boolean;
+      accessCode?: string;
+      clientId?: string;
+      isSystemClient?: boolean;
+      smsOptIn?: boolean;
+    }>,
+  ): Promise<{ success: boolean; count: number }> {
+    return api.put<{ success: boolean; count: number }>(
+      `/esign/envelopes/${envelopeId}/draft-signers`,
+      { signers },
+    );
   },
 
   /**
@@ -91,8 +103,14 @@ export const esignApi = {
    * mode) on a draft envelope. Phase 2 — used by the studio's settings popover.
    * Returns the diff of changed fields plus the latest envelope record.
    */
-  async updateDraftSettings(envelopeId: string, payload: UpdateDraftSettingsRequest): Promise<UpdateDraftSettingsResponse> {
-    return api.patch<UpdateDraftSettingsResponse>(`/esign/envelopes/${envelopeId}/draft-settings`, payload);
+  async updateDraftSettings(
+    envelopeId: string,
+    payload: UpdateDraftSettingsRequest,
+  ): Promise<UpdateDraftSettingsResponse> {
+    return api.patch<UpdateDraftSettingsResponse>(
+      `/esign/envelopes/${envelopeId}/draft-settings`,
+      payload,
+    );
   },
 
   /**
@@ -110,7 +128,7 @@ export const esignApi = {
     if (status) queryParams.append('status', status);
     const queryString = queryParams.toString();
     const endpoint = queryString ? `/esign/envelopes?${queryString}` : '/esign/envelopes';
-    
+
     try {
       return await api.get<{ envelopes: EsignEnvelope[] }>(endpoint);
     } catch (error) {
@@ -122,7 +140,10 @@ export const esignApi = {
   /**
    * Get all envelopes for a client (merges client_id linkage + signer-email index)
    */
-  async getClientEnvelopes(clientId: string, clientEmail?: string): Promise<GetClientEnvelopesResponse> {
+  async getClientEnvelopes(
+    clientId: string,
+    clientEmail?: string,
+  ): Promise<GetClientEnvelopesResponse> {
     try {
       const params = new URLSearchParams();
       if (clientEmail) params.append('email', clientEmail);
@@ -132,7 +153,10 @@ export const esignApi = {
         : `/esign/clients/${clientId}/envelopes`;
       return await api.get<GetClientEnvelopesResponse>(endpoint);
     } catch (error) {
-      logger.warn('E-Sign backend not available or error fetching client envelopes', { error, clientId });
+      logger.warn('E-Sign backend not available or error fetching client envelopes', {
+        error,
+        clientId,
+      });
       return { envelopes: [] };
     }
   },
@@ -140,7 +164,10 @@ export const esignApi = {
   /**
    * Save envelope as template
    */
-  async saveAsTemplate(envelopeId: string, request: SaveTemplateRequest): Promise<SaveTemplateResponse> {
+  async saveAsTemplate(
+    envelopeId: string,
+    request: SaveTemplateRequest,
+  ): Promise<SaveTemplateResponse> {
     return api.post<SaveTemplateResponse>(`/esign/envelopes/${envelopeId}/templates`, request);
   },
 
@@ -150,10 +177,10 @@ export const esignApi = {
   async downloadDocument(envelopeId: string, filename: string = 'document.pdf'): Promise<void> {
     // The API client returns the Response object if content-type is not json
     const response = await api.get<Response>(`/esign/envelopes/${envelopeId}/download`);
-    
+
     if (!(response instanceof Response)) {
-       logger.error('Expected Response object for download');
-       return;
+      logger.error('Expected Response object for download');
+      return;
     }
 
     const blob = await response.blob();
@@ -198,21 +225,34 @@ export const esignApi = {
   /**
    * Verify OTP and access code
    */
-  async verifyOTP(envelopeId: string, signerId: string, request: VerifyOTPRequest): Promise<VerifyOTPResponse> {
-    return api.post<VerifyOTPResponse>(`/esign/envelopes/${envelopeId}/signers/${signerId}/verify`, request);
+  async verifyOTP(
+    envelopeId: string,
+    signerId: string,
+    request: VerifyOTPRequest,
+  ): Promise<VerifyOTPResponse> {
+    return api.post<VerifyOTPResponse>(
+      `/esign/envelopes/${envelopeId}/signers/${signerId}/verify`,
+      request,
+    );
   },
 
   /**
    * Submit signature
    */
-  async submitSignature(envelopeId: string, request: SubmitSignatureRequest): Promise<SubmitSignatureResponse> {
+  async submitSignature(
+    envelopeId: string,
+    request: SubmitSignatureRequest,
+  ): Promise<SubmitSignatureResponse> {
     return api.post<SubmitSignatureResponse>(`/esign/envelopes/${envelopeId}/sign`, request);
   },
 
   /**
    * Reject signing
    */
-  async rejectSigning(envelopeId: string, request: RejectSigningRequest): Promise<RejectSigningResponse> {
+  async rejectSigning(
+    envelopeId: string,
+    request: RejectSigningRequest,
+  ): Promise<RejectSigningResponse> {
     return api.post<RejectSigningResponse>(`/esign/envelopes/${envelopeId}/reject`, request);
   },
 
@@ -258,21 +298,34 @@ export const esignApi = {
   /**
    * Verify OTP for public signer (no auth required)
    */
-  async verifyOTPPublic(envelopeId: string, signerId: string, request: VerifyOTPRequest): Promise<VerifyOTPResponse> {
-    return api.post<VerifyOTPResponse>(`/esign/envelopes/${envelopeId}/signers/${signerId}/verify`, request);
+  async verifyOTPPublic(
+    envelopeId: string,
+    signerId: string,
+    request: VerifyOTPRequest,
+  ): Promise<VerifyOTPResponse> {
+    return api.post<VerifyOTPResponse>(
+      `/esign/envelopes/${envelopeId}/signers/${signerId}/verify`,
+      request,
+    );
   },
 
   /**
    * Submit signature for public signer (no auth required)
    */
-  async submitSignaturePublic(envelopeId: string, request: SubmitSignatureRequest): Promise<SubmitSignatureResponse> {
+  async submitSignaturePublic(
+    envelopeId: string,
+    request: SubmitSignatureRequest,
+  ): Promise<SubmitSignatureResponse> {
     return api.post<SubmitSignatureResponse>(`/esign/envelopes/${envelopeId}/sign`, request);
   },
 
   /**
    * Reject signing for public signer (no auth required)
    */
-  async rejectSigningPublic(envelopeId: string, request: RejectSigningRequest): Promise<RejectSigningResponse> {
+  async rejectSigningPublic(
+    envelopeId: string,
+    request: RejectSigningRequest,
+  ): Promise<RejectSigningResponse> {
     return api.post<RejectSigningResponse>(`/esign/envelopes/${envelopeId}/reject`, request);
   },
 
@@ -289,7 +342,9 @@ export const esignApi = {
    * Void envelope (admin only)
    */
   async voidEnvelope(envelopeId: string, reason?: string): Promise<{ success: boolean }> {
-    return api.post<{ success: boolean }>(`/esign/envelopes/${envelopeId}/void`, { reason: reason || 'Voided by admin' });
+    return api.post<{ success: boolean }>(`/esign/envelopes/${envelopeId}/void`, {
+      reason: reason || 'Voided by admin',
+    });
   },
 
   /**
@@ -456,29 +511,47 @@ export const esignApi = {
 
   async getSyntheticProbe(): Promise<{
     latest: {
-      ok: boolean; latencyMs: number; ranAt: string; error?: string;
+      ok: boolean;
+      latencyMs: number;
+      ranAt: string;
+      error?: string;
       checks: Record<string, { ok: boolean; latencyMs: number; detail?: string }>;
     } | null;
     history: Array<{
-      ok: boolean; latencyMs: number; ranAt: string; error?: string;
+      ok: boolean;
+      latencyMs: number;
+      ranAt: string;
+      error?: string;
     }>;
   }> {
     return api.get<{
       latest: {
-        ok: boolean; latencyMs: number; ranAt: string; error?: string;
+        ok: boolean;
+        latencyMs: number;
+        ranAt: string;
+        error?: string;
         checks: Record<string, { ok: boolean; latencyMs: number; detail?: string }>;
       } | null;
       history: Array<{
-        ok: boolean; latencyMs: number; ranAt: string; error?: string;
+        ok: boolean;
+        latencyMs: number;
+        ranAt: string;
+        error?: string;
       }>;
     }>(`/esign/diagnostics/synthetic`);
   },
 
   async runSyntheticProbe(): Promise<{
-    ok: boolean; latencyMs: number; ranAt: string; error?: string;
+    ok: boolean;
+    latencyMs: number;
+    ranAt: string;
+    error?: string;
   }> {
     return api.post<{
-      ok: boolean; latencyMs: number; ranAt: string; error?: string;
+      ok: boolean;
+      latencyMs: number;
+      ranAt: string;
+      error?: string;
     }>(`/esign/diagnostics/synthetic/run`, {});
   },
 
@@ -490,8 +563,13 @@ export const esignApi = {
     generated_at: string;
     statusCounts: Record<string, number>;
     funnel: {
-      sent: number; opened: number; started: number; completed: number;
-      sentToOpenedPct: number; openedToStartedPct: number; startedToCompletedPct: number;
+      sent: number;
+      opened: number;
+      started: number;
+      completed: number;
+      sentToOpenedPct: number;
+      openedToStartedPct: number;
+      startedToCompletedPct: number;
     };
     timeToSign: {
       completedCount: number;
@@ -500,18 +578,27 @@ export const esignApi = {
       byTemplate: Array<{ templateId: string | null; count: number; averageMs: number }>;
     };
     stuckEnvelopes: Array<{
-      id: string; title: string; sent_at?: string;
-      days_since_sent: number; signer_count: number; client_id?: string;
+      id: string;
+      title: string;
+      sent_at?: string;
+      days_since_sent: number;
+      signer_count: number;
+      client_id?: string;
     }>;
-    throughput30d: Array<{ date: string; completed: number     }>;
+    throughput30d: Array<{ date: string; completed: number }>;
   }> {
     return api.get<{
       firm_id: string;
       generated_at: string;
       statusCounts: Record<string, number>;
       funnel: {
-        sent: number; opened: number; started: number; completed: number;
-        sentToOpenedPct: number; openedToStartedPct: number; startedToCompletedPct: number;
+        sent: number;
+        opened: number;
+        started: number;
+        completed: number;
+        sentToOpenedPct: number;
+        openedToStartedPct: number;
+        startedToCompletedPct: number;
       };
       timeToSign: {
         completedCount: number;
@@ -520,8 +607,12 @@ export const esignApi = {
         byTemplate: Array<{ templateId: string | null; count: number; averageMs: number }>;
       };
       stuckEnvelopes: Array<{
-        id: string; title: string; sent_at?: string;
-        days_since_sent: number; signer_count: number; client_id?: string;
+        id: string;
+        title: string;
+        sent_at?: string;
+        days_since_sent: number;
+        signer_count: number;
+        client_id?: string;
       }>;
       throughput30d: Array<{ date: string; completed: number }>;
     }>(`/esign/metrics`);
@@ -530,12 +621,17 @@ export const esignApi = {
   // ==================== RECOVERY BIN (P6.8) ====================
 
   /** List soft-deleted envelopes for the caller's firm. */
-  async listRecoveryBin(): Promise<{ envelopes: Array<Record<string, unknown>>; retention_days: number }> {
+  async listRecoveryBin(): Promise<{
+    envelopes: Array<Record<string, unknown>>;
+    retention_days: number;
+  }> {
     return api.get(`/esign/recovery-bin`);
   },
 
   /** Restore a soft-deleted envelope. */
-  async restoreEnvelope(envelopeId: string): Promise<{ success: boolean; envelope: Record<string, unknown> }> {
+  async restoreEnvelope(
+    envelopeId: string,
+  ): Promise<{ success: boolean; envelope: Record<string, unknown> }> {
     return api.post(`/esign/recovery-bin/${envelopeId}/restore`, {});
   },
 
@@ -563,8 +659,14 @@ export const esignApi = {
   /**
    * Update reminder configuration for an envelope
    */
-  async updateReminderConfig(envelopeId: string, config: Partial<ReminderConfig>): Promise<{ config: ReminderConfig }> {
-    return api.put<{ config: ReminderConfig }>(`/esign/envelopes/${envelopeId}/reminder-config`, config);
+  async updateReminderConfig(
+    envelopeId: string,
+    config: Partial<ReminderConfig>,
+  ): Promise<{ config: ReminderConfig }> {
+    return api.put<{ config: ReminderConfig }>(
+      `/esign/envelopes/${envelopeId}/reminder-config`,
+      config,
+    );
   },
 
   // ==================== SIGNING MODE ====================
@@ -572,15 +674,29 @@ export const esignApi = {
   /**
    * Update signing mode for an envelope
    */
-  async updateSigningMode(envelopeId: string, signingMode: SigningMode): Promise<{ success: boolean; signing_mode: SigningMode }> {
-    return api.patch<{ success: boolean; signing_mode: SigningMode }>(`/esign/envelopes/${envelopeId}/signing-mode`, { signing_mode: signingMode });
+  async updateSigningMode(
+    envelopeId: string,
+    signingMode: SigningMode,
+  ): Promise<{ success: boolean; signing_mode: SigningMode }> {
+    return api.patch<{ success: boolean; signing_mode: SigningMode }>(
+      `/esign/envelopes/${envelopeId}/signing-mode`,
+      { signing_mode: signingMode },
+    );
   },
 
   /**
    * Send manual reminder to pending signers
    */
-  async sendReminder(envelopeId: string): Promise<{ success: boolean; remindersSent: { signerId: string; email: string; sentAt: string }[]; totalReminders: number }> {
-    return api.post<{ success: boolean; remindersSent: { signerId: string; email: string; sentAt: string }[]; totalReminders: number }>(`/esign/envelopes/${envelopeId}/remind`);
+  async sendReminder(envelopeId: string): Promise<{
+    success: boolean;
+    remindersSent: { signerId: string; email: string; sentAt: string }[];
+    totalReminders: number;
+  }> {
+    return api.post<{
+      success: boolean;
+      remindersSent: { signerId: string; email: string; sentAt: string }[];
+      totalReminders: number;
+    }>(`/esign/envelopes/${envelopeId}/remind`);
   },
 
   /**
@@ -660,7 +776,10 @@ export const esignApi = {
   /**
    * Update a template
    */
-  async updateTemplate(templateId: string, updates: UpdateTemplateInput): Promise<{ template: EsignTemplateRecord }> {
+  async updateTemplate(
+    templateId: string,
+    updates: UpdateTemplateInput,
+  ): Promise<{ template: EsignTemplateRecord }> {
     return api.put<{ template: EsignTemplateRecord }>(`/esign/templates/${templateId}`, updates);
   },
 
@@ -790,7 +909,11 @@ export const esignApi = {
   async recordCampaignRowResult(
     id: string,
     rowId: string,
-    body: { status: 'sent' | 'failed' | 'cancelled' | 'queued'; envelopeId?: string; errorMessage?: string },
+    body: {
+      status: 'sent' | 'failed' | 'cancelled' | 'queued';
+      envelopeId?: string;
+      errorMessage?: string;
+    },
   ): Promise<{ campaign: import('./types').CampaignRecord }> {
     return api.post(`/esign/campaigns/${id}/results/${rowId}`, body);
   },
@@ -803,7 +926,10 @@ export const esignApi = {
    * advancement loop will materialise the envelope when its turn
    * comes round).
    */
-  async uploadStandaloneDocument(file: File, firmId?: string): Promise<{
+  async uploadStandaloneDocument(
+    file: File,
+    firmId?: string,
+  ): Promise<{
     documentId: string;
     pageCount: number;
     hash: string;
@@ -916,7 +1042,9 @@ export const esignApi = {
     url: string;
     events: string[];
     description?: string;
-  }): Promise<{ subscription: { id: string; secret: string; url: string; events: string[]; active: boolean } }> {
+  }): Promise<{
+    subscription: { id: string; secret: string; url: string; events: string[]; active: boolean };
+  }> {
     return api.post('/esign/webhooks', input);
   },
 
@@ -962,7 +1090,13 @@ export const esignApi = {
   },
 
   async listWebhookDeadLetters(): Promise<{
-    deliveries: Array<{ id: string; event_type: string; last_error?: string; attempts: number; created_at: string }>;
+    deliveries: Array<{
+      id: string;
+      event_type: string;
+      last_error?: string;
+      attempts: number;
+      created_at: string;
+    }>;
   }> {
     return api.get('/esign/webhooks/dead-letters');
   },
@@ -1033,7 +1167,10 @@ export const esignApi = {
   /**
    * Send reminders to pending signers across multiple envelopes (admin only)
    */
-  async bulkRemind(envelopeIds: string[], dryRun = true): Promise<{
+  async bulkRemind(
+    envelopeIds: string[],
+    dryRun = true,
+  ): Promise<{
     success: boolean;
     dryRun: boolean;
     envelopeCount: number;
@@ -1053,7 +1190,11 @@ export const esignApi = {
   /**
    * Void multiple envelopes at once (admin only, dry-run-first pattern)
    */
-  async bulkVoid(envelopeIds: string[], reason: string, dryRun = true): Promise<{
+  async bulkVoid(
+    envelopeIds: string[],
+    reason: string,
+    dryRun = true,
+  ): Promise<{
     success: boolean;
     dryRun: boolean;
     envelopeCount: number;
@@ -1126,7 +1267,10 @@ export const esignApi = {
     envelopeId: string,
     manifest?: PageManifestPayload,
   ): Promise<{ url: string; pageCount: number; pageMap: Record<number, number | null> }> {
-    return api.post(`/esign/envelopes/${envelopeId}/materialize-preview`, manifest ? { manifest } : {});
+    return api.post(
+      `/esign/envelopes/${envelopeId}/materialize-preview`,
+      manifest ? { manifest } : {},
+    );
   },
 
   // ─────────────────────────────────────────────────────────────────────────
@@ -1151,7 +1295,10 @@ export const esignApi = {
     envelopeId: string,
     file: File,
     options?: { displayName?: string; idempotencyKey?: string },
-  ): Promise<{ documents: EnvelopeDocumentRef[]; added: { document_id: string; page_count: number } }> {
+  ): Promise<{
+    documents: EnvelopeDocumentRef[];
+    added: { document_id: string; page_count: number };
+  }> {
     const fd = new FormData();
     fd.append('file', file);
     if (options?.displayName) fd.append('display_name', options.displayName);

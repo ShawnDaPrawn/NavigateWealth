@@ -24,10 +24,7 @@ function getDeviceDPR(): 1 | 2 {
 /**
  * Optimizes Unsplash image URLs with performance parameters
  */
-export function optimizeUnsplashUrl(
-  url: string,
-  params: ImageOptimizationParams = {}
-): string {
+export function optimizeUnsplashUrl(url: string, params: ImageOptimizationParams = {}): string {
   // Return non-Unsplash URLs as-is
   if (!url.includes('unsplash.com')) {
     return url;
@@ -39,7 +36,7 @@ export function optimizeUnsplashUrl(
     quality = 80,
     format = 'auto',
     fit = 'crop',
-    dpr = getDeviceDPR()
+    dpr = getDeviceDPR(),
   } = params;
 
   // Parse existing URL
@@ -48,7 +45,7 @@ export function optimizeUnsplashUrl(
 
   // Set width
   searchParams.set('w', Math.round(width * dpr).toString());
-  
+
   // Set height if provided
   if (height) {
     searchParams.set('h', Math.round(height * dpr).toString());
@@ -80,22 +77,19 @@ export function optimizeUnsplashUrl(
 /**
  * Generates responsive image srcset for Unsplash images
  */
-export function generateUnsplashSrcSet(
-  url: string,
-  baseWidth: number = 800
-): string {
+export function generateUnsplashSrcSet(url: string, baseWidth: number = 800): string {
   if (!url.includes('unsplash.com')) {
     return '';
   }
 
   const sizes = [0.5, 1, 1.5, 2]; // Multipliers for different screen densities
   const srcset = sizes
-    .map(multiplier => {
+    .map((multiplier) => {
       const width = Math.round(baseWidth * multiplier);
-      const optimizedUrl = optimizeUnsplashUrl(url, { 
+      const optimizedUrl = optimizeUnsplashUrl(url, {
         width,
         quality: 80,
-        format: 'auto'
+        format: 'auto',
       });
       return `${optimizedUrl} ${width}w`;
     })
@@ -115,7 +109,7 @@ export function generatePlaceholderUrl(url: string): string {
   return optimizeUnsplashUrl(url, {
     width: 40,
     quality: 30,
-    format: 'auto'
+    format: 'auto',
   });
 }
 
@@ -128,7 +122,7 @@ export function preloadImage(url: string, priority: 'high' | 'low' | 'auto' = 'a
   link.as = 'image';
   link.href = url;
   link.setAttribute('fetchpriority', priority);
-  
+
   // Check if already exists
   const existing = document.querySelector(`link[href="${url}"]`);
   if (!existing) {
@@ -139,21 +133,18 @@ export function preloadImage(url: string, priority: 'high' | 'low' | 'auto' = 'a
 /**
  * Determines optimal image width based on container and device
  */
-export function getOptimalImageWidth(
-  containerWidth?: number,
-  maxWidth: number = 2000
-): number {
+export function getOptimalImageWidth(containerWidth?: number, maxWidth: number = 2000): number {
   const screenWidth = typeof window !== 'undefined' ? window.innerWidth : 1920;
-  const dpr = typeof window !== 'undefined' ? (window.devicePixelRatio || 1) : 1;
-  
+  const dpr = typeof window !== 'undefined' ? window.devicePixelRatio || 1 : 1;
+
   let targetWidth = containerWidth || screenWidth;
-  
+
   // Cap at max width
   targetWidth = Math.min(targetWidth, maxWidth);
-  
+
   // Account for device pixel ratio (but cap at 2x for performance)
   targetWidth = Math.round(targetWidth * Math.min(dpr, 2));
-  
+
   return targetWidth;
 }
 
@@ -172,10 +163,7 @@ export const IMAGE_PRESETS = {
 /**
  * Applies a preset to an image URL
  */
-export function applyImagePreset(
-  url: string,
-  preset: keyof typeof IMAGE_PRESETS
-): string {
+export function applyImagePreset(url: string, preset: keyof typeof IMAGE_PRESETS): string {
   const presetParams = IMAGE_PRESETS[preset];
   return optimizeUnsplashUrl(url, presetParams);
 }

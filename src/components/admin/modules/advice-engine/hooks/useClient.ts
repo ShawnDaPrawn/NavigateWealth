@@ -1,9 +1,9 @@
 /**
  * useClient Hook
- * 
+ *
  * Fetches client details by ID.
  * Used for hydrating client data in RoA drafts.
- * 
+ *
  * @module advice-engine/hooks/useClient
  */
 
@@ -14,7 +14,7 @@ import { adviceEngineKeys } from './queryKeys';
 
 /**
  * Hook to fetch client details
- * 
+ *
  * @param clientId - Client ID to fetch
  * @returns Query result with client data
  */

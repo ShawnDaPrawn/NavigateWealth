@@ -119,14 +119,14 @@ export function ContentPipeline({
       archived: [],
     };
 
-    articles.forEach(a => {
+    articles.forEach((a) => {
       if (a.status in map) {
         map[a.status].push(a);
       }
     });
 
     // Sort each column by updated_at desc
-    Object.values(map).forEach(list =>
+    Object.values(map).forEach((list) =>
       list.sort((a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime()),
     );
 
@@ -160,7 +160,7 @@ export function ContentPipeline({
       const articleId = e.dataTransfer.getData('text/plain');
       if (!articleId || !onStatusChange) return;
 
-      const article = articles.find(a => a.id === articleId);
+      const article = articles.find((a) => a.id === articleId);
       if (!article || article.status === targetStatus) return;
 
       await onStatusChange(articleId, targetStatus);
@@ -176,7 +176,7 @@ export function ContentPipeline({
   // ── Get category label ───────────────────────────────────────────────
 
   const getCategoryName = useCallback(
-    (id: string) => categories.find(c => c.id === id)?.name || '',
+    (id: string) => categories.find((c) => c.id === id)?.name || '',
     [categories],
   );
 
@@ -204,7 +204,7 @@ export function ContentPipeline({
 
       {/* Kanban columns */}
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-5 gap-4 items-start min-h-[500px]">
-        {COLUMNS.map(col => {
+        {COLUMNS.map((col) => {
           const colArticles = grouped[col.status];
           const Icon = col.icon;
           const isDragOver = dragOverColumn === col.status;
@@ -222,7 +222,13 @@ export function ContentPipeline({
               onDrop={(e) => handleDrop(e, col.status)}
             >
               {/* Column header */}
-              <div className={cn('px-4 py-3 rounded-t-xl border-b flex items-center gap-2', col.bgLight, col.borderColor)}>
+              <div
+                className={cn(
+                  'px-4 py-3 rounded-t-xl border-b flex items-center gap-2',
+                  col.bgLight,
+                  col.borderColor,
+                )}
+              >
                 <Icon className={cn('w-4 h-4', col.color)} />
                 <span className="text-sm font-semibold text-gray-800">{col.label}</span>
                 <Badge variant="outline" className="ml-auto text-xs px-1.5 py-0">
@@ -239,7 +245,7 @@ export function ContentPipeline({
                   </div>
                 )}
 
-                {colArticles.map(article => (
+                {colArticles.map((article) => (
                   <PipelineCard
                     key={article.id}
                     article={article}
@@ -305,9 +311,7 @@ function PipelineCard({
       onClick={onEdit}
     >
       {/* Title */}
-      <p className="text-sm font-medium text-gray-900 line-clamp-2 leading-snug">
-        {article.title}
-      </p>
+      <p className="text-sm font-medium text-gray-900 line-clamp-2 leading-snug">{article.title}</p>
 
       {/* Excerpt */}
       {article.excerpt && (
@@ -323,9 +327,7 @@ function PipelineCard({
             {categoryName}
           </span>
         )}
-        {article.is_featured && (
-          <Star className="w-3 h-3 text-yellow-500 fill-yellow-500" />
-        )}
+        {article.is_featured && <Star className="w-3 h-3 text-yellow-500 fill-yellow-500" />}
         <span className="ml-auto text-[11px] text-muted-foreground flex items-center gap-1">
           <Clock className="w-3 h-3" />
           {getRelativeTime(article.updated_at)}

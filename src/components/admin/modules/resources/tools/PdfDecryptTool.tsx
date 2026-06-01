@@ -1,17 +1,24 @@
 import React, { useState, useRef } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '../../../../ui/card';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+  CardFooter,
+} from '../../../../ui/card';
 import { Button } from '../../../../ui/button';
 import { Input } from '../../../../ui/input';
 import { Label } from '../../../../ui/label';
-import { 
-  Unlock, 
-  Download, 
-  RefreshCw, 
+import {
+  Unlock,
+  Download,
+  RefreshCw,
   Upload,
   FileText,
   ChevronRight,
   ShieldAlert,
-  X
+  X,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import {
@@ -68,7 +75,10 @@ export function PdfDecryptTool() {
 
   return (
     <div className="contents">
-      <Card className="hover:shadow-md transition-shadow cursor-pointer border-dashed border-2 hover:border-red-500/50" onClick={() => setIsOpen(true)}>
+      <Card
+        className="hover:shadow-md transition-shadow cursor-pointer border-dashed border-2 hover:border-red-500/50"
+        onClick={() => setIsOpen(true)}
+      >
         <CardHeader>
           <div className="h-12 w-12 rounded-lg bg-red-100 flex items-center justify-center mb-4">
             <Unlock className="h-6 w-6 text-red-600" />
@@ -83,20 +93,27 @@ export function PdfDecryptTool() {
         </CardHeader>
         <CardContent>
           <p className="text-sm text-muted-foreground">
-            Unlock PDF files so they can be viewed, edited, or printed without entering a password every time.
+            Unlock PDF files so they can be viewed, edited, or printed without entering a password
+            every time.
           </p>
         </CardContent>
         <CardFooter>
-          <Button variant="ghost" className="w-full justify-start pl-0 text-red-600 group-hover:pl-2 transition-all">
+          <Button
+            variant="ghost"
+            className="w-full justify-start pl-0 text-red-600 group-hover:pl-2 transition-all"
+          >
             Open Tool <ChevronRight className="h-4 w-4 ml-2" />
           </Button>
         </CardFooter>
       </Card>
 
-      <Dialog open={isOpen} onOpenChange={(open) => {
-        setIsOpen(open);
-        if (!open) handleReset();
-      }}>
+      <Dialog
+        open={isOpen}
+        onOpenChange={(open) => {
+          setIsOpen(open);
+          if (!open) handleReset();
+        }}
+      >
         <DialogContent className="sm:max-w-md w-[95vw] overflow-hidden">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
@@ -104,7 +121,8 @@ export function PdfDecryptTool() {
               PDF Decryptor
             </DialogTitle>
             <DialogDescription>
-              Remove encryption from your PDF permanently. The file is processed locally in your browser.
+              Remove encryption from your PDF permanently. The file is processed locally in your
+              browser.
             </DialogDescription>
           </DialogHeader>
 
@@ -119,17 +137,17 @@ export function PdfDecryptTool() {
                   <h3 className="font-medium text-green-900">PDF Unlocked Successfully!</h3>
                   <p className="text-sm text-green-700 mt-1">Your document is ready to download.</p>
                 </div>
-                
-                <a 
-                  href={decryptedUrl} 
-                  download={`unlocked_${file?.name || 'document.pdf'}`} 
+
+                <a
+                  href={decryptedUrl}
+                  download={`unlocked_${file?.name || 'document.pdf'}`}
                   className="block w-full"
                 >
                   <Button className="w-full bg-green-600 hover:bg-green-700">
                     <Download className="h-4 w-4 mr-2" /> Download Unlocked PDF
                   </Button>
                 </a>
-                
+
                 <Button variant="outline" size="sm" onClick={handleReset} className="w-full">
                   Decrypt Another File
                 </Button>
@@ -140,7 +158,7 @@ export function PdfDecryptTool() {
                 <div className="space-y-2">
                   <Label>Upload Encrypted PDF</Label>
                   {!file ? (
-                    <div 
+                    <div
                       className="border-2 border-dashed rounded-lg p-8 text-center hover:bg-muted/50 transition-colors cursor-pointer"
                       onClick={() => fileInputRef.current?.click()}
                     >
@@ -149,57 +167,61 @@ export function PdfDecryptTool() {
                       <p className="text-xs text-muted-foreground mt-1">Max file size: 50MB</p>
                     </div>
                   ) : (
-                      <div className="flex items-center justify-between p-3 border rounded-lg bg-muted/30 overflow-hidden">
-                        <div className="flex items-center gap-3 overflow-hidden min-w-0">
-                          <div className="h-8 w-8 bg-red-100 rounded flex items-center justify-center flex-shrink-0">
-                            <FileText className="h-4 w-4 text-red-600" />
-                          </div>
-                          <div className="min-w-0 flex-1">
-                            <p className="text-sm font-medium truncate" title={file.name}>{file.name}</p>
-                            <p className="text-xs text-muted-foreground">{(file.size / 1024 / 1024).toFixed(2)} MB</p>
-                          </div>
+                    <div className="flex items-center justify-between p-3 border rounded-lg bg-muted/30 overflow-hidden">
+                      <div className="flex items-center gap-3 overflow-hidden min-w-0">
+                        <div className="h-8 w-8 bg-red-100 rounded flex items-center justify-center flex-shrink-0">
+                          <FileText className="h-4 w-4 text-red-600" />
                         </div>
-                        <Button variant="ghost" size="icon" onClick={handleRemoveFile} className="h-8 w-8 text-muted-foreground hover:text-destructive flex-shrink-0 ml-2">
-                          <X className="h-4 w-4" />
-                        </Button>
+                        <div className="min-w-0 flex-1">
+                          <p className="text-sm font-medium truncate" title={file.name}>
+                            {file.name}
+                          </p>
+                          <p className="text-xs text-muted-foreground">
+                            {(file.size / 1024 / 1024).toFixed(2)} MB
+                          </p>
+                        </div>
                       </div>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={handleRemoveFile}
+                        className="h-8 w-8 text-muted-foreground hover:text-destructive flex-shrink-0 ml-2"
+                      >
+                        <X className="h-4 w-4" />
+                      </Button>
+                    </div>
                   )}
-                  <input 
-                    type="file" 
-                    ref={fileInputRef} 
-                    className="hidden" 
-                    accept=".pdf" 
-                    onChange={handleFileChange} 
+                  <input
+                    type="file"
+                    ref={fileInputRef}
+                    className="hidden"
+                    accept=".pdf"
+                    onChange={handleFileChange}
                   />
                 </div>
 
                 <div className="space-y-2">
                   <Label htmlFor="pdf-pass">Current Password</Label>
-                  <Input 
-                    id="pdf-pass" 
-                    type="password" 
+                  <Input
+                    id="pdf-pass"
+                    type="password"
                     placeholder="Enter password (leave blank if not required to open)"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     disabled={!file}
                   />
                   <p className="text-[10px] text-muted-foreground">
-                    If the file opens without a password but has printing/editing restrictions, leave this blank.
+                    If the file opens without a password but has printing/editing restrictions,
+                    leave this blank.
                   </p>
                 </div>
 
                 <div className="bg-amber-50 text-amber-800 text-xs p-3 rounded-md border border-amber-100 flex gap-2">
                   <ShieldAlert className="h-4 w-4 flex-shrink-0" />
-                  <p>
-                    This tool removes all password protection and restrictions.
-                  </p>
+                  <p>This tool removes all password protection and restrictions.</p>
                 </div>
 
-                <Button 
-                  className="w-full" 
-                  onClick={handleDecrypt} 
-                  disabled={!file || processing}
-                >
+                <Button className="w-full" onClick={handleDecrypt} disabled={!file || processing}>
                   {processing ? (
                     <div className="contents">
                       <RefreshCw className="h-4 w-4 mr-2 animate-spin" /> Decrypting...

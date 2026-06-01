@@ -1,7 +1,7 @@
 /**
  * E-Signature Module Constants
  * Navigate Wealth Admin Dashboard
- * 
+ *
  * Centralized constants for E-Signature module including status labels, colors,
  * field types, and configuration values.
  */
@@ -160,20 +160,24 @@ export const SIGNER_STATUS_CONFIG: Record<SignerStatus, StatusConfig> = {
 // ============================================================================
 
 /** Human-readable labels for envelope statuses */
-export const ENVELOPE_STATUS_LABELS: Record<EnvelopeStatus, string> =
-  Object.fromEntries(Object.entries(ENVELOPE_STATUS_CONFIG).map(([k, v]) => [k, v.label])) as Record<EnvelopeStatus, string>;
+export const ENVELOPE_STATUS_LABELS: Record<EnvelopeStatus, string> = Object.fromEntries(
+  Object.entries(ENVELOPE_STATUS_CONFIG).map(([k, v]) => [k, v.label]),
+) as Record<EnvelopeStatus, string>;
 
 /** Color classes for envelope statuses (Tailwind CSS) */
-export const ENVELOPE_STATUS_COLORS: Record<EnvelopeStatus, string> =
-  Object.fromEntries(Object.entries(ENVELOPE_STATUS_CONFIG).map(([k, v]) => [k, v.badgeClass])) as Record<EnvelopeStatus, string>;
+export const ENVELOPE_STATUS_COLORS: Record<EnvelopeStatus, string> = Object.fromEntries(
+  Object.entries(ENVELOPE_STATUS_CONFIG).map(([k, v]) => [k, v.badgeClass]),
+) as Record<EnvelopeStatus, string>;
 
 /** Human-readable labels for signer statuses */
-export const SIGNER_STATUS_LABELS: Record<SignerStatus, string> =
-  Object.fromEntries(Object.entries(SIGNER_STATUS_CONFIG).map(([k, v]) => [k, v.label])) as Record<SignerStatus, string>;
+export const SIGNER_STATUS_LABELS: Record<SignerStatus, string> = Object.fromEntries(
+  Object.entries(SIGNER_STATUS_CONFIG).map(([k, v]) => [k, v.label]),
+) as Record<SignerStatus, string>;
 
 /** Color classes for signer statuses (Tailwind CSS) */
-export const SIGNER_STATUS_COLORS: Record<SignerStatus, string> =
-  Object.fromEntries(Object.entries(SIGNER_STATUS_CONFIG).map(([k, v]) => [k, v.badgeClass])) as Record<SignerStatus, string>;
+export const SIGNER_STATUS_COLORS: Record<SignerStatus, string> = Object.fromEntries(
+  Object.entries(SIGNER_STATUS_CONFIG).map(([k, v]) => [k, v.badgeClass]),
+) as Record<SignerStatus, string>;
 
 // ============================================================================
 // FIELD TYPE CONSTANTS
@@ -248,9 +252,7 @@ export const MAX_FILE_SIZE_BYTES = MAX_FILE_SIZE_MB * 1024 * 1024;
 /**
  * Allowed file types for document upload
  */
-export const ALLOWED_FILE_TYPES = [
-  'application/pdf',
-] as const;
+export const ALLOWED_FILE_TYPES = ['application/pdf'] as const;
 
 /**
  * Default field dimensions (in pixels)

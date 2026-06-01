@@ -53,7 +53,9 @@ export function useRetirementFNAMutations() {
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: RETIREMENT_FNA_QUERY_KEYS.detail(data.id) });
       queryClient.invalidateQueries({ queryKey: RETIREMENT_FNA_QUERY_KEYS.list(data.clientId) });
-      queryClient.invalidateQueries({ queryKey: RETIREMENT_FNA_QUERY_KEYS.latestPublished(data.clientId) });
+      queryClient.invalidateQueries({
+        queryKey: RETIREMENT_FNA_QUERY_KEYS.latestPublished(data.clientId),
+      });
       toast.success('Retirement FNA published successfully');
     },
     onError: (error) => {
@@ -67,7 +69,9 @@ export function useRetirementFNAMutations() {
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: RETIREMENT_FNA_QUERY_KEYS.detail(data.id) });
       queryClient.invalidateQueries({ queryKey: RETIREMENT_FNA_QUERY_KEYS.list(data.clientId) });
-      queryClient.invalidateQueries({ queryKey: RETIREMENT_FNA_QUERY_KEYS.latestPublished(data.clientId) });
+      queryClient.invalidateQueries({
+        queryKey: RETIREMENT_FNA_QUERY_KEYS.latestPublished(data.clientId),
+      });
       toast.success('Retirement FNA unpublished — reverted to draft');
     },
     onError: (error) => {

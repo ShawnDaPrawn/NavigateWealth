@@ -4,13 +4,7 @@
 
 import { api } from '../utils/api';
 
-export type FnaIntakeDomain =
-  | 'risk'
-  | 'medical'
-  | 'retirement'
-  | 'investment'
-  | 'tax'
-  | 'estate';
+export type FnaIntakeDomain = 'risk' | 'medical' | 'retirement' | 'investment' | 'tax' | 'estate';
 
 export type FnaIntakeSessionStatus = 'client_draft' | 'submitted' | 'accepted';
 
@@ -64,9 +58,7 @@ export async function saveIntakeDraft(
   return response.data;
 }
 
-export async function submitIntakeSession(
-  sessionId: string,
-): Promise<FnaIntakeSession> {
+export async function submitIntakeSession(sessionId: string): Promise<FnaIntakeSession> {
   const response = await api.post<{ success: boolean; data: FnaIntakeSession }>(
     `/fna-intake/session/${sessionId}/submit`,
     { consentAccepted: true },

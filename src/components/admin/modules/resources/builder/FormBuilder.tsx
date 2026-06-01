@@ -15,13 +15,20 @@ import {
   SelectTrigger,
   SelectValue,
 } from '../../../../ui/select';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '../../../../ui/tooltip';
 import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from '../../../../ui/tooltip';
-import { ArrowLeft, Save, Loader2, Undo2, Redo2, Check, AlertCircle, Cloud, CloudOff, Eye, PenTool } from 'lucide-react';
+  ArrowLeft,
+  Save,
+  Loader2,
+  Undo2,
+  Redo2,
+  Check,
+  AlertCircle,
+  Cloud,
+  CloudOff,
+  Eye,
+  PenTool,
+} from 'lucide-react';
 import { toast } from 'sonner';
 import { projectId, publicAnonKey } from '../../../../../utils/supabase/info';
 import { getBlockDefinition } from './registry';
@@ -29,7 +36,12 @@ import type { LetterMeta } from '../templates/LetterheadPdfLayout';
 
 // Phase 1/Phase 2 imports
 import { TemplateGallery } from './components/TemplateGallery';
-import { STARTER_TEMPLATES, type StarterTemplate, FORM_STATUS_CONFIG, type FormStatus } from './constants';
+import {
+  STARTER_TEMPLATES,
+  type StarterTemplate,
+  FORM_STATUS_CONFIG,
+  type FormStatus,
+} from './constants';
 
 // Helper to get auth token from localStorage
 const getAuthToken = (): string => {
@@ -48,7 +60,7 @@ const getAuthToken = (): string => {
 
 // Simple ID generator
 const generateId = () => {
-    return Math.random().toString(36).substring(2, 15);
+  return Math.random().toString(36).substring(2, 15);
 };
 
 // ============================================================================
@@ -84,7 +96,7 @@ interface FormResourceData {
 // ============================================================================
 async function saveToApi(
   payload: SavePayload,
-  resourceId: string | undefined
+  resourceId: string | undefined,
 ): Promise<Record<string, unknown>> {
   const token = getAuthToken();
 
@@ -144,7 +156,7 @@ export const FormBuilder = ({ onBack, onSave, initialData, mode = 'form' }: Form
 
   // -- Phase 1: Template Gallery for new resources --
   const [showTemplateGallery, setShowTemplateGallery] = useState(
-    !initialData && mode !== 'letter' // Show gallery for new forms, not edits or letters
+    !initialData && mode !== 'letter', // Show gallery for new forms, not edits or letters
   );
   const [templateBlocks, setTemplateBlocks] = useState<FormBlock[] | null>(null);
   const [templateCategory, setTemplateCategory] = useState<string | null>(null);
@@ -152,33 +164,37 @@ export const FormBuilder = ({ onBack, onSave, initialData, mode = 'form' }: Form
 
   const handleSelectTemplate = useCallback((template: StarterTemplate) => {
     // Deep-clone blocks to avoid sharing references
-    const clonedBlocks = template.blocks.length > 0
-      ? JSON.parse(JSON.stringify(template.blocks)).map((b: FormBlock) => ({
-          ...b,
-          id: generateId(), // Fresh IDs to avoid collisions
-        }))
-      : [];
+    const clonedBlocks =
+      template.blocks.length > 0
+        ? JSON.parse(JSON.stringify(template.blocks)).map((b: FormBlock) => ({
+            ...b,
+            id: generateId(), // Fresh IDs to avoid collisions
+          }))
+        : [];
     setTemplateBlocks(clonedBlocks);
     setTemplateCategory(template.category);
-    setTemplateTitle(template.id === 'blank' || template.id === 'blank_letter' ? null : template.name);
+    setTemplateTitle(
+      template.id === 'blank' || template.id === 'blank_letter' ? null : template.name,
+    );
     setShowTemplateGallery(false);
   }, []);
 
   // Show Template Gallery overlay for new forms
   if (showTemplateGallery) {
     return (
-      <TemplateGallery
-        mode={mode}
-        onSelectTemplate={handleSelectTemplate}
-        onCancel={onBack}
-      />
+      <TemplateGallery mode={mode} onSelectTemplate={handleSelectTemplate} onCancel={onBack} />
     );
   }
 
   // Resolve initial blocks: template selection > initialData > defaults
-  const resolvedInitialBlocks = templateBlocks ?? resource?.blocks ?? (isLetterMode && !initialData ? getLetterStarterBlocks() : []);
-  const resolvedCategory = templateCategory ?? resource?.category ?? (isLetterMode ? 'Letters' : 'Forms');
-  const resolvedTitle = templateTitle ?? resource?.name ?? (isLetterMode ? 'Company Letter' : 'Client Consent Form');
+  const resolvedInitialBlocks =
+    templateBlocks ??
+    resource?.blocks ??
+    (isLetterMode && !initialData ? getLetterStarterBlocks() : []);
+  const resolvedCategory =
+    templateCategory ?? resource?.category ?? (isLetterMode ? 'Letters' : 'Forms');
+  const resolvedTitle =
+    templateTitle ?? resource?.name ?? (isLetterMode ? 'Company Letter' : 'Client Consent Form');
 
   return (
     <FormBuilderWorkspace
@@ -229,10 +245,7 @@ const FormBuilderWorkspace = ({
     canRedo,
     historySize,
     futureSize,
-  } = useUndoRedo<FormBlock[]>(
-    resolvedInitialBlocks,
-    50
-  );
+  } = useUndoRedo<FormBlock[]>(resolvedInitialBlocks, 50);
 
   const [selectedBlockId, setSelectedBlockId] = useState<string | null>(null);
   const [formTitle, setFormTitle] = useState(resolvedTitle);
@@ -245,11 +258,14 @@ const FormBuilderWorkspace = ({
 
   // -- Letter metadata state (only relevant for letter-category resources) --
   const [letterMeta, setLetterMeta] = useState<LetterMeta>(
-    resource?.letterMeta || (isLetterMode && !initialData ? {
-      closing: 'Yours faithfully',
-      recipients: [{ name: '', title: '', company: '', address: '' }],
-      signatories: [{ name: '', title: '' }],
-    } : {})
+    resource?.letterMeta ||
+      (isLetterMode && !initialData
+        ? {
+            closing: 'Yours faithfully',
+            recipients: [{ name: '', title: '', company: '', address: '' }],
+            signatories: [{ name: '', title: '' }],
+          }
+        : {}),
   );
 
   // Resource ID — stateful so a new resource transitions to update mode after first save.
@@ -261,30 +277,41 @@ const FormBuilderWorkspace = ({
   React.useEffect(() => {
     if (resource) {
       resetBlocks(resource.blocks || []);
-      setFormTitle(resource.name || "Client Consent Form");
-      setFormCategory(resource.category || "Forms");
+      setFormTitle(resource.name || 'Client Consent Form');
+      setFormCategory(resource.category || 'Forms');
       setLetterMeta(resource.letterMeta || {});
       setResourceId(resource.id);
     }
   }, [initialData, resetBlocks]);
 
   // -- Memoised payload to track in autosave --
-  const currentPayload: SavePayload = useMemo(() => ({
-    title: formTitle,
-    description: resource?.description || "Created with Form Builder",
-    category: formCategory,
-    blocks: blocks,
-    clientTypes: resource?.clientTypes || ["Universal"],
-    version: resource?.version || "1.0",
-    letterMeta: formCategory === 'Letters' ? letterMeta : undefined,
-  }), [formTitle, formCategory, blocks, letterMeta, resource?.description, resource?.clientTypes, resource?.version]);
+  const currentPayload: SavePayload = useMemo(
+    () => ({
+      title: formTitle,
+      description: resource?.description || 'Created with Form Builder',
+      category: formCategory,
+      blocks: blocks,
+      clientTypes: resource?.clientTypes || ['Universal'],
+      version: resource?.version || '1.0',
+      letterMeta: formCategory === 'Letters' ? letterMeta : undefined,
+    }),
+    [
+      formTitle,
+      formCategory,
+      blocks,
+      letterMeta,
+      resource?.description,
+      resource?.clientTypes,
+      resource?.version,
+    ],
+  );
 
   // -- AUTOSAVE (only for existing resources) --
   const autosaveOnSave = useCallback(
     async (payload: SavePayload) => {
       await saveToApi(payload, resourceId);
     },
-    [resourceId]
+    [resourceId],
   );
 
   const {
@@ -310,169 +337,200 @@ const FormBuilderWorkspace = ({
 
   // -- BLOCK OPERATIONS (structural -> `setBlocks` creates history entry) --
 
-  const handleAddBlock = useCallback((type: BlockType) => {
-    const newBlock: FormBlock = {
-      id: generateId(),
-      type,
-      data: getInitialBlockData(type)
-    };
-    
-    // Insert after selected block if one is selected, otherwise append
-    setBlocks((prevBlocks: FormBlock[]) => {
-      if (selectedBlockId) {
-        const selectedIndex = prevBlocks.findIndex(b => b.id === selectedBlockId);
-        if (selectedIndex !== -1) {
-          const newBlocks = [...prevBlocks];
-          newBlocks.splice(selectedIndex + 1, 0, newBlock);
-          return newBlocks;
-        }
-      }
-      return [...prevBlocks, newBlock];
-    });
-    setSelectedBlockId(newBlock.id);
-  }, [selectedBlockId, setBlocks]);
-
-  // Property edits use merged updates (debounced history entries)
-  const handleUpdateBlock = useCallback((id: string, data: Record<string, unknown>) => {
-    setBlocksMerged((prevBlocks: FormBlock[]) => 
-      prevBlocks.map(b => b.id === id ? { ...b, data } : b)
-    );
-  }, [setBlocksMerged]);
-
-  const handleDeleteBlock = useCallback((id: string) => {
-    setBlocks((prevBlocks: FormBlock[]) => prevBlocks.filter(b => b.id !== id));
-    setSelectedBlockId(prev => prev === id ? null : prev);
-  }, [setBlocks]);
-
-  const handleMoveBlock = useCallback((id: string, direction: 'up' | 'down') => {
-    setBlocks((prevBlocks: FormBlock[]) => {
-      const index = prevBlocks.findIndex(b => b.id === id);
-      if (index === -1) return prevBlocks;
-      if (direction === 'up' && index === 0) return prevBlocks;
-      if (direction === 'down' && index === prevBlocks.length - 1) return prevBlocks;
-
-      const newBlocks = [...prevBlocks];
-      const targetIndex = direction === 'up' ? index - 1 : index + 1;
-      [newBlocks[index], newBlocks[targetIndex]] = [newBlocks[targetIndex], newBlocks[index]];
-      return newBlocks;
-    });
-  }, [setBlocks]);
-
-  const handleDuplicateBlock = useCallback((id: string) => {
-    let duplicateId = '';
-    setBlocks((prevBlocks: FormBlock[]) => {
-      const index = prevBlocks.findIndex(b => b.id === id);
-      if (index === -1) return prevBlocks;
-
-      const original = prevBlocks[index];
-      duplicateId = generateId();
-      const duplicate: FormBlock = {
-        id: duplicateId,
-        type: original.type,
-        data: JSON.parse(JSON.stringify(original.data))
+  const handleAddBlock = useCallback(
+    (type: BlockType) => {
+      const newBlock: FormBlock = {
+        id: generateId(),
+        type,
+        data: getInitialBlockData(type),
       };
 
-      const newBlocks = [...prevBlocks];
-      newBlocks.splice(index + 1, 0, duplicate);
-      return newBlocks;
-    });
-    // Select the duplicate after state updates
-    if (duplicateId) setSelectedBlockId(duplicateId);
-  }, [setBlocks]);
+      // Insert after selected block if one is selected, otherwise append
+      setBlocks((prevBlocks: FormBlock[]) => {
+        if (selectedBlockId) {
+          const selectedIndex = prevBlocks.findIndex((b) => b.id === selectedBlockId);
+          if (selectedIndex !== -1) {
+            const newBlocks = [...prevBlocks];
+            newBlocks.splice(selectedIndex + 1, 0, newBlock);
+            return newBlocks;
+          }
+        }
+        return [...prevBlocks, newBlock];
+      });
+      setSelectedBlockId(newBlock.id);
+    },
+    [selectedBlockId, setBlocks],
+  );
 
-  const handleReorderBlocks = useCallback((fromIndex: number, toIndex: number) => {
-    if (fromIndex === toIndex) return;
-    setBlocks((prevBlocks: FormBlock[]) => {
-      const newBlocks = [...prevBlocks];
-      const [moved] = newBlocks.splice(fromIndex, 1);
-      newBlocks.splice(toIndex, 0, moved);
-      return newBlocks;
-    });
-  }, [setBlocks]);
+  // Property edits use merged updates (debounced history entries)
+  const handleUpdateBlock = useCallback(
+    (id: string, data: Record<string, unknown>) => {
+      setBlocksMerged((prevBlocks: FormBlock[]) =>
+        prevBlocks.map((b) => (b.id === id ? { ...b, data } : b)),
+      );
+    },
+    [setBlocksMerged],
+  );
+
+  const handleDeleteBlock = useCallback(
+    (id: string) => {
+      setBlocks((prevBlocks: FormBlock[]) => prevBlocks.filter((b) => b.id !== id));
+      setSelectedBlockId((prev) => (prev === id ? null : prev));
+    },
+    [setBlocks],
+  );
+
+  const handleMoveBlock = useCallback(
+    (id: string, direction: 'up' | 'down') => {
+      setBlocks((prevBlocks: FormBlock[]) => {
+        const index = prevBlocks.findIndex((b) => b.id === id);
+        if (index === -1) return prevBlocks;
+        if (direction === 'up' && index === 0) return prevBlocks;
+        if (direction === 'down' && index === prevBlocks.length - 1) return prevBlocks;
+
+        const newBlocks = [...prevBlocks];
+        const targetIndex = direction === 'up' ? index - 1 : index + 1;
+        [newBlocks[index], newBlocks[targetIndex]] = [newBlocks[targetIndex], newBlocks[index]];
+        return newBlocks;
+      });
+    },
+    [setBlocks],
+  );
+
+  const handleDuplicateBlock = useCallback(
+    (id: string) => {
+      let duplicateId = '';
+      setBlocks((prevBlocks: FormBlock[]) => {
+        const index = prevBlocks.findIndex((b) => b.id === id);
+        if (index === -1) return prevBlocks;
+
+        const original = prevBlocks[index];
+        duplicateId = generateId();
+        const duplicate: FormBlock = {
+          id: duplicateId,
+          type: original.type,
+          data: JSON.parse(JSON.stringify(original.data)),
+        };
+
+        const newBlocks = [...prevBlocks];
+        newBlocks.splice(index + 1, 0, duplicate);
+        return newBlocks;
+      });
+      // Select the duplicate after state updates
+      if (duplicateId) setSelectedBlockId(duplicateId);
+    },
+    [setBlocks],
+  );
+
+  const handleReorderBlocks = useCallback(
+    (fromIndex: number, toIndex: number) => {
+      if (fromIndex === toIndex) return;
+      setBlocks((prevBlocks: FormBlock[]) => {
+        const newBlocks = [...prevBlocks];
+        const [moved] = newBlocks.splice(fromIndex, 1);
+        newBlocks.splice(toIndex, 0, moved);
+        return newBlocks;
+      });
+    },
+    [setBlocks],
+  );
 
   // -- CONTAINER DROP OPERATIONS --
 
   /** Move an existing top-level block into a container's nested blocks */
-  const handleMoveBlockToContainer = useCallback((blockId: string, containerId: string) => {
-    setBlocks((prevBlocks: FormBlock[]) => {
-      // Find the block to move
-      const blockToMove = prevBlocks.find(b => b.id === blockId);
-      if (!blockToMove) return prevBlocks;
-      // Don't allow moving a container into itself
-      if (blockId === containerId) return prevBlocks;
-      // Don't move page_break or container blocks into containers
-      if (blockToMove.type === 'page_break' || blockToMove.type === 'container' || blockToMove.type === 'repeater') {
-        return prevBlocks;
-      }
-
-      // Remove from top-level
-      const withoutBlock = prevBlocks.filter(b => b.id !== blockId);
-
-      // Add to container's nested blocks
-      return withoutBlock.map(b => {
-        if (b.id === containerId && b.type === 'container') {
-          const containerBlocks = (b.data.blocks as FormBlock[] | undefined) || [];
-          return {
-            ...b,
-            data: {
-              ...b.data,
-              blocks: [...containerBlocks, blockToMove],
-            },
-          };
+  const handleMoveBlockToContainer = useCallback(
+    (blockId: string, containerId: string) => {
+      setBlocks((prevBlocks: FormBlock[]) => {
+        // Find the block to move
+        const blockToMove = prevBlocks.find((b) => b.id === blockId);
+        if (!blockToMove) return prevBlocks;
+        // Don't allow moving a container into itself
+        if (blockId === containerId) return prevBlocks;
+        // Don't move page_break or container blocks into containers
+        if (
+          blockToMove.type === 'page_break' ||
+          blockToMove.type === 'container' ||
+          blockToMove.type === 'repeater'
+        ) {
+          return prevBlocks;
         }
-        return b;
+
+        // Remove from top-level
+        const withoutBlock = prevBlocks.filter((b) => b.id !== blockId);
+
+        // Add to container's nested blocks
+        return withoutBlock.map((b) => {
+          if (b.id === containerId && b.type === 'container') {
+            const containerBlocks = (b.data.blocks as FormBlock[] | undefined) || [];
+            return {
+              ...b,
+              data: {
+                ...b.data,
+                blocks: [...containerBlocks, blockToMove],
+              },
+            };
+          }
+          return b;
+        });
       });
-    });
-    setSelectedBlockId(containerId);
-  }, [setBlocks]);
+      setSelectedBlockId(containerId);
+    },
+    [setBlocks],
+  );
 
   /** Create a new block from toolbox type and add it inside a container */
-  const handleAddBlockToContainer = useCallback((type: BlockType, containerId: string) => {
-    // Don't allow structural blocks inside containers
-    if (type === 'page_break' || type === 'container' || type === 'repeater') return;
+  const handleAddBlockToContainer = useCallback(
+    (type: BlockType, containerId: string) => {
+      // Don't allow structural blocks inside containers
+      if (type === 'page_break' || type === 'container' || type === 'repeater') return;
 
-    const newBlock: FormBlock = {
-      id: generateId(),
-      type,
-      data: getInitialBlockData(type),
-    };
+      const newBlock: FormBlock = {
+        id: generateId(),
+        type,
+        data: getInitialBlockData(type),
+      };
 
-    setBlocks((prevBlocks: FormBlock[]) =>
-      prevBlocks.map(b => {
-        if (b.id === containerId && b.type === 'container') {
-          const containerBlocks = (b.data.blocks as FormBlock[] | undefined) || [];
-          return {
-            ...b,
-            data: {
-              ...b.data,
-              blocks: [...containerBlocks, newBlock],
-            },
-          };
-        }
-        return b;
-      })
-    );
-    setSelectedBlockId(containerId);
-  }, [setBlocks]);
+      setBlocks((prevBlocks: FormBlock[]) =>
+        prevBlocks.map((b) => {
+          if (b.id === containerId && b.type === 'container') {
+            const containerBlocks = (b.data.blocks as FormBlock[] | undefined) || [];
+            return {
+              ...b,
+              data: {
+                ...b.data,
+                blocks: [...containerBlocks, newBlock],
+              },
+            };
+          }
+          return b;
+        }),
+      );
+      setSelectedBlockId(containerId);
+    },
+    [setBlocks],
+  );
 
   /** Handle toolbox drag-and-drop onto the canvas (not into a container) */
-  const handleAddToolboxBlock = useCallback((type: BlockType, atIndex?: number) => {
-    const newBlock: FormBlock = {
-      id: generateId(),
-      type,
-      data: getInitialBlockData(type),
-    };
+  const handleAddToolboxBlock = useCallback(
+    (type: BlockType, atIndex?: number) => {
+      const newBlock: FormBlock = {
+        id: generateId(),
+        type,
+        data: getInitialBlockData(type),
+      };
 
-    setBlocks((prevBlocks: FormBlock[]) => {
-      if (atIndex !== undefined && atIndex >= 0 && atIndex <= prevBlocks.length) {
-        const newBlocks = [...prevBlocks];
-        newBlocks.splice(atIndex, 0, newBlock);
-        return newBlocks;
-      }
-      return [...prevBlocks, newBlock];
-    });
-    setSelectedBlockId(newBlock.id);
-  }, [setBlocks]);
+      setBlocks((prevBlocks: FormBlock[]) => {
+        if (atIndex !== undefined && atIndex >= 0 && atIndex <= prevBlocks.length) {
+          const newBlocks = [...prevBlocks];
+          newBlocks.splice(atIndex, 0, newBlock);
+          return newBlocks;
+        }
+        return [...prevBlocks, newBlock];
+      });
+      setSelectedBlockId(newBlock.id);
+    },
+    [setBlocks],
+  );
 
   // -- MANUAL SAVE (with explicit toast feedback) --
   // Saves in place without exiting the builder. On first save of a new resource,
@@ -480,9 +538,11 @@ const FormBuilderWorkspace = ({
   const handleManualSave = useCallback(async () => {
     setManualSaving(true);
     try {
-      const data = await saveToApi(currentPayload, resourceId) as { resource?: { id?: string } };
+      const data = (await saveToApi(currentPayload, resourceId)) as { resource?: { id?: string } };
       const isCreate = !resourceId;
-      toast.success(`${isLetterMode ? 'Letter' : 'Form template'} ${isCreate ? 'created' : 'updated'} successfully`);
+      toast.success(
+        `${isLetterMode ? 'Letter' : 'Form template'} ${isCreate ? 'created' : 'updated'} successfully`,
+      );
 
       // If this was a new resource, capture the ID so future saves are updates
       if (isCreate && data?.resource?.id) {
@@ -562,9 +622,17 @@ const FormBuilderWorkspace = ({
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [selectedBlockId, undo, redo, handleMoveBlock, handleDuplicateBlock, handleDeleteBlock, handleManualSave]);
+  }, [
+    selectedBlockId,
+    undo,
+    redo,
+    handleMoveBlock,
+    handleDuplicateBlock,
+    handleDeleteBlock,
+    handleManualSave,
+  ]);
 
-  const selectedBlock = blocks.find(b => b.id === selectedBlockId) || null;
+  const selectedBlock = blocks.find((b) => b.id === selectedBlockId) || null;
 
   // -- Determine combined saving state --
   const isSaving = manualSaving || autosaveStatus === 'saving';
@@ -581,9 +649,9 @@ const FormBuilderWorkspace = ({
             </Button>
             <div className="h-6 w-px bg-gray-200"></div>
             <Input
-               className="h-8 w-64 border-transparent hover:border-gray-200 focus:border-purple-500 font-bold text-lg text-gray-800 px-2 -ml-2"
-               value={formTitle}
-               onChange={(e) => setFormTitle(e.target.value)}
+              className="h-8 w-64 border-transparent hover:border-gray-200 focus:border-purple-500 font-bold text-lg text-gray-800 px-2 -ml-2"
+              value={formTitle}
+              onChange={(e) => setFormTitle(e.target.value)}
             />
             <div className="w-[140px]">
               <Select value={formCategory} onValueChange={setFormCategory}>
@@ -599,106 +667,131 @@ const FormBuilderWorkspace = ({
               </Select>
             </div>
           </div>
-          
+
           <div className="flex items-center gap-2">
-              {/* AUTOSAVE STATUS INDICATOR */}
-              <AutosaveIndicator
-                status={autosaveStatus}
-                isDirty={isDirty}
-                lastSavedAt={lastSavedAt}
-                isNew={isNewResource}
-                manualSaving={manualSaving}
-              />
+            {/* AUTOSAVE STATUS INDICATOR */}
+            <AutosaveIndicator
+              status={autosaveStatus}
+              isDirty={isDirty}
+              lastSavedAt={lastSavedAt}
+              isNew={isNewResource}
+              manualSaving={manualSaving}
+            />
 
-              <div className="h-6 w-px bg-gray-200 mx-1"></div>
+            <div className="h-6 w-px bg-gray-200 mx-1"></div>
 
-              {/* UNDO / REDO BUTTONS */}
-              <div className="flex items-center gap-0.5 mr-2">
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="h-8 w-8 p-0"
-                      disabled={!canUndo}
-                      onClick={undo}
-                    >
-                      <Undo2 className="h-4 w-4" />
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent side="bottom" className="text-xs">
-                    <p>Undo <kbd className="ml-1 px-1 py-0.5 bg-gray-700 rounded text-[10px] font-mono">Ctrl+Z</kbd></p>
-                    {canUndo && <p className="text-gray-400 mt-0.5">{historySize} step{historySize !== 1 ? 's' : ''} available</p>}
-                  </TooltipContent>
-                </Tooltip>
-
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="h-8 w-8 p-0"
-                      disabled={!canRedo}
-                      onClick={redo}
-                    >
-                      <Redo2 className="h-4 w-4" />
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent side="bottom" className="text-xs">
-                    <p>Redo <kbd className="ml-1 px-1 py-0.5 bg-gray-700 rounded text-[10px] font-mono">Ctrl+Shift+Z</kbd></p>
-                    {canRedo && <p className="text-gray-400 mt-0.5">{futureSize} step{futureSize !== 1 ? 's' : ''} available</p>}
-                  </TooltipContent>
-                </Tooltip>
-              </div>
-
-              <div className="h-6 w-px bg-gray-200 mr-1"></div>
-
-              {/* Phase 2: Preview Mode Toggle */}
+            {/* UNDO / REDO BUTTONS */}
+            <div className="flex items-center gap-0.5 mr-2">
               <Tooltip>
                 <TooltipTrigger asChild>
                   <Button
-                    variant={isPreviewMode ? 'default' : 'outline'}
+                    variant="ghost"
                     size="sm"
-                    className={`h-8 px-3 ${isPreviewMode ? 'bg-blue-600 hover:bg-blue-700 text-white' : ''}`}
-                    onClick={() => {
-                      setIsPreviewMode(!isPreviewMode);
-                      if (!isPreviewMode) {
-                        setSelectedBlockId(null); // Deselect when entering preview
-                      }
-                    }}
+                    className="h-8 w-8 p-0"
+                    disabled={!canUndo}
+                    onClick={undo}
                   >
-                    {isPreviewMode ? (
-                      <PenTool className="h-3.5 w-3.5 mr-1.5" />
-                    ) : (
-                      <Eye className="h-3.5 w-3.5 mr-1.5" />
-                    )}
-                    {isPreviewMode ? 'Edit' : 'Preview'}
+                    <Undo2 className="h-4 w-4" />
                   </Button>
                 </TooltipTrigger>
                 <TooltipContent side="bottom" className="text-xs">
-                  {isPreviewMode ? 'Switch back to builder mode' : 'Preview the form as users will see it'}
+                  <p>
+                    Undo{' '}
+                    <kbd className="ml-1 px-1 py-0.5 bg-gray-700 rounded text-[10px] font-mono">
+                      Ctrl+Z
+                    </kbd>
+                  </p>
+                  {canUndo && (
+                    <p className="text-gray-400 mt-0.5">
+                      {historySize} step{historySize !== 1 ? 's' : ''} available
+                    </p>
+                  )}
                 </TooltipContent>
               </Tooltip>
 
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <Button 
-                      onClick={handleManualSave} 
-                      className="bg-purple-700 hover:bg-purple-800"
-                      disabled={isSaving}
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-8 w-8 p-0"
+                    disabled={!canRedo}
+                    onClick={redo}
                   >
-                      {isSaving ? (
-                          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                      ) : (
-                          <Save className="h-4 w-4 mr-2" />
-                      )}
-                      {isSaving ? 'Saving...' : isLetterMode ? 'Save Letter' : 'Save Template'}
+                    <Redo2 className="h-4 w-4" />
                   </Button>
                 </TooltipTrigger>
                 <TooltipContent side="bottom" className="text-xs">
-                  <p>Save now <kbd className="ml-1 px-1 py-0.5 bg-gray-700 rounded text-[10px] font-mono">Ctrl+S</kbd></p>
+                  <p>
+                    Redo{' '}
+                    <kbd className="ml-1 px-1 py-0.5 bg-gray-700 rounded text-[10px] font-mono">
+                      Ctrl+Shift+Z
+                    </kbd>
+                  </p>
+                  {canRedo && (
+                    <p className="text-gray-400 mt-0.5">
+                      {futureSize} step{futureSize !== 1 ? 's' : ''} available
+                    </p>
+                  )}
                 </TooltipContent>
               </Tooltip>
+            </div>
+
+            <div className="h-6 w-px bg-gray-200 mr-1"></div>
+
+            {/* Phase 2: Preview Mode Toggle */}
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant={isPreviewMode ? 'default' : 'outline'}
+                  size="sm"
+                  className={`h-8 px-3 ${isPreviewMode ? 'bg-blue-600 hover:bg-blue-700 text-white' : ''}`}
+                  onClick={() => {
+                    setIsPreviewMode(!isPreviewMode);
+                    if (!isPreviewMode) {
+                      setSelectedBlockId(null); // Deselect when entering preview
+                    }
+                  }}
+                >
+                  {isPreviewMode ? (
+                    <PenTool className="h-3.5 w-3.5 mr-1.5" />
+                  ) : (
+                    <Eye className="h-3.5 w-3.5 mr-1.5" />
+                  )}
+                  {isPreviewMode ? 'Edit' : 'Preview'}
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent side="bottom" className="text-xs">
+                {isPreviewMode
+                  ? 'Switch back to builder mode'
+                  : 'Preview the form as users will see it'}
+              </TooltipContent>
+            </Tooltip>
+
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  onClick={handleManualSave}
+                  className="bg-purple-700 hover:bg-purple-800"
+                  disabled={isSaving}
+                >
+                  {isSaving ? (
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  ) : (
+                    <Save className="h-4 w-4 mr-2" />
+                  )}
+                  {isSaving ? 'Saving...' : isLetterMode ? 'Save Letter' : 'Save Template'}
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent side="bottom" className="text-xs">
+                <p>
+                  Save now{' '}
+                  <kbd className="ml-1 px-1 py-0.5 bg-gray-700 rounded text-[10px] font-mono">
+                    Ctrl+S
+                  </kbd>
+                </p>
+              </TooltipContent>
+            </Tooltip>
           </div>
         </div>
 
@@ -711,7 +804,9 @@ const FormBuilderWorkspace = ({
                 <div className="mb-6 pb-4 border-b border-gray-200">
                   <div className="flex items-center gap-2 mb-2">
                     <Eye className="h-4 w-4 text-blue-500" />
-                    <span className="text-xs font-semibold text-blue-600 uppercase tracking-wider">Interactive Preview</span>
+                    <span className="text-xs font-semibold text-blue-600 uppercase tracking-wider">
+                      Interactive Preview
+                    </span>
                   </div>
                   <h2 className="text-xl font-bold text-gray-900">{formTitle}</h2>
                   <p className="text-sm text-gray-500 mt-1">
@@ -751,32 +846,38 @@ const FormBuilderWorkspace = ({
             /* Builder Mode — standard three-pane layout */
             <div className="contents">
               <Toolbox onAddBlock={handleAddBlock} />
-              <FormCanvas 
-                  blocks={blocks} 
-                  selectedBlockId={selectedBlockId} 
-                  onSelectBlock={setSelectedBlockId}
-                  onDeleteBlock={handleDeleteBlock}
-                  onMoveBlock={handleMoveBlock}
-                  onDuplicateBlock={handleDuplicateBlock}
-                  onReorderBlocks={handleReorderBlocks}
-                  onMoveBlockToContainer={handleMoveBlockToContainer}
-                  onAddBlockToContainer={handleAddBlockToContainer}
-                  onAddToolboxBlock={handleAddToolboxBlock}
-                  docTitle={formTitle}
-                  category={formCategory}
-                  letterMeta={letterMeta}
+              <FormCanvas
+                blocks={blocks}
+                selectedBlockId={selectedBlockId}
+                onSelectBlock={setSelectedBlockId}
+                onDeleteBlock={handleDeleteBlock}
+                onMoveBlock={handleMoveBlock}
+                onDuplicateBlock={handleDuplicateBlock}
+                onReorderBlocks={handleReorderBlocks}
+                onMoveBlockToContainer={handleMoveBlockToContainer}
+                onAddBlockToContainer={handleAddBlockToContainer}
+                onAddToolboxBlock={handleAddToolboxBlock}
+                docTitle={formTitle}
+                category={formCategory}
+                letterMeta={letterMeta}
               />
-              <PropertiesPanel 
-                  block={selectedBlock} 
-                  onUpdate={handleUpdateBlock}
-                  onDelete={handleDeleteBlock}
-                  onMove={handleMoveBlock}
-                  onDuplicate={handleDuplicateBlock}
-                  isFirst={selectedBlock ? blocks.findIndex(b => b.id === selectedBlock.id) === 0 : false}
-                  isLast={selectedBlock ? blocks.findIndex(b => b.id === selectedBlock.id) === blocks.length - 1 : false}
-                  category={formCategory}
-                  letterMeta={letterMeta}
-                  onLetterMetaChange={setLetterMeta}
+              <PropertiesPanel
+                block={selectedBlock}
+                onUpdate={handleUpdateBlock}
+                onDelete={handleDeleteBlock}
+                onMove={handleMoveBlock}
+                onDuplicate={handleDuplicateBlock}
+                isFirst={
+                  selectedBlock ? blocks.findIndex((b) => b.id === selectedBlock.id) === 0 : false
+                }
+                isLast={
+                  selectedBlock
+                    ? blocks.findIndex((b) => b.id === selectedBlock.id) === blocks.length - 1
+                    : false
+                }
+                category={formCategory}
+                letterMeta={letterMeta}
+                onLetterMetaChange={setLetterMeta}
               />
             </div>
           )}
@@ -905,45 +1006,57 @@ function formatTimeAgo(date: Date): string {
 // ============================================================================
 
 const getInitialBlockData = (type: BlockType) => {
-    const definition = getBlockDefinition(type);
-    if (definition) {
-        return { ...definition.initialData }; // Return a copy
-    }
+  const definition = getBlockDefinition(type);
+  if (definition) {
+    return { ...definition.initialData }; // Return a copy
+  }
 
-    switch (type) {
-        case 'section_header':
-            return { number: '1.', title: 'SECTION TITLE' };
-        case 'text':
-            return { content: '<p>Enter your text here...</p>' };
-        case 'field_grid':
-            return { columns: 2, fields: [{ label: 'First Name' }, { label: 'Last Name' }] };
-        case 'signature':
-            return { signatories: [{ label: 'Client Signature', key: 'client' }], showDate: true };
-        case 'table':
-            return { 
-                hasColumnHeaders: true,
-                hasRowHeaders: false,
-                columnHeaders: ['Column 1', 'Column 2'],
-                rowHeaders: ['Row 1', 'Row 2'],
-                rows: [
-                    { id: 'row-1', cells: [{ type: 'static', value: '' }, { type: 'static', value: '' }] },
-                    { id: 'row-2', cells: [{ type: 'static', value: '' }, { type: 'static', value: '' }] }
-                ]
-            };
-        case 'checkbox_table':
-            return {
-                columns: ['Yes', 'No', 'N/A'],
-                rows: ['Question 1', 'Question 2', 'Question 3']
-            };
-        case 'radio_options':
-            return {
-                label: 'Select an option:',
-                options: ['Option 1', 'Option 2', 'Option 3'],
-                layout: 'vertical'
-            };
-        default:
-            return {};
-    }
+  switch (type) {
+    case 'section_header':
+      return { number: '1.', title: 'SECTION TITLE' };
+    case 'text':
+      return { content: '<p>Enter your text here...</p>' };
+    case 'field_grid':
+      return { columns: 2, fields: [{ label: 'First Name' }, { label: 'Last Name' }] };
+    case 'signature':
+      return { signatories: [{ label: 'Client Signature', key: 'client' }], showDate: true };
+    case 'table':
+      return {
+        hasColumnHeaders: true,
+        hasRowHeaders: false,
+        columnHeaders: ['Column 1', 'Column 2'],
+        rowHeaders: ['Row 1', 'Row 2'],
+        rows: [
+          {
+            id: 'row-1',
+            cells: [
+              { type: 'static', value: '' },
+              { type: 'static', value: '' },
+            ],
+          },
+          {
+            id: 'row-2',
+            cells: [
+              { type: 'static', value: '' },
+              { type: 'static', value: '' },
+            ],
+          },
+        ],
+      };
+    case 'checkbox_table':
+      return {
+        columns: ['Yes', 'No', 'N/A'],
+        rows: ['Question 1', 'Question 2', 'Question 3'],
+      };
+    case 'radio_options':
+      return {
+        label: 'Select an option:',
+        options: ['Option 1', 'Option 2', 'Option 3'],
+        layout: 'vertical',
+      };
+    default:
+      return {};
+  }
 };
 
 // ============================================================================

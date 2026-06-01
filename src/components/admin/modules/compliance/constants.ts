@@ -1,20 +1,20 @@
 /**
  * Compliance Module Constants
  * Navigate Wealth Admin Dashboard
- * 
+ *
  * Centralized constants for Compliance module including status labels, colors,
  * regulatory frameworks, and configuration values.
  */
 
-import type { 
-  RAGStatus, 
-  ComplianceStatus, 
-  REStatus, 
+import type {
+  RAGStatus,
+  ComplianceStatus,
+  REStatus,
   AMLCheckStatus,
   RiskLevel,
   ComplaintStatus,
   ComplaintCategory,
-  SupervisionFrequency 
+  SupervisionFrequency,
 } from './types';
 
 // ============================================================================
@@ -229,29 +229,29 @@ export const TCF_OUTCOMES = {
  * CPD (Continuing Professional Development) requirements
  */
 export const CPD_REQUIREMENTS = {
-  KEY_INDIVIDUAL: 30,      // Hours per year
-  REPRESENTATIVE_L1: 30,   // Level 1 Representative
-  REPRESENTATIVE_L2: 30,   // Level 2 Representative
-  REPRESENTATIVE_L3: 15,   // Level 3 Representative
+  KEY_INDIVIDUAL: 30, // Hours per year
+  REPRESENTATIVE_L1: 30, // Level 1 Representative
+  REPRESENTATIVE_L2: 30, // Level 2 Representative
+  REPRESENTATIVE_L3: 15, // Level 3 Representative
 } as const;
 
 /**
  * Deadline warning thresholds (in days)
  */
 export const DEADLINE_THRESHOLDS = {
-  CRITICAL: 7,   // Red warning
-  WARNING: 30,   // Amber warning
-  INFO: 90,      // Blue info
+  CRITICAL: 7, // Red warning
+  WARNING: 30, // Amber warning
+  INFO: 90, // Blue info
 } as const;
 
 /**
  * Complaint resolution targets (in days)
  */
 export const COMPLAINT_RESOLUTION_TARGETS = {
-  ACKNOWLEDGEMENT: 2,  // Days to acknowledge
-  STANDARD: 15,        // Standard resolution time
-  COMPLEX: 30,         // Complex case resolution
-  MAXIMUM: 90,         // Maximum allowed time
+  ACKNOWLEDGEMENT: 2, // Days to acknowledge
+  STANDARD: 15, // Standard resolution time
+  COMPLEX: 30, // Complex case resolution
+  MAXIMUM: 90, // Maximum allowed time
 } as const;
 
 /**
@@ -481,7 +481,7 @@ export const NOTIFICATION_LEAD_TIMES = {
   FIRST_WARNING: 30,
   SECOND_WARNING: 14,
   FINAL_WARNING: 7,
-  OVERDUE_REMINDER: 1,  // Days after overdue
+  OVERDUE_REMINDER: 1, // Days after overdue
 } as const;
 
 // ============================================================================

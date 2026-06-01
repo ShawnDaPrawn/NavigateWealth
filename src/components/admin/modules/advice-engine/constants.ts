@@ -4,7 +4,7 @@ export const ENDPOINTS = {
   AI_CHAT: '/ai-intelligence/chat',
   AI_HISTORY: '/ai-intelligence/history',
   AI_SEARCH_CLIENTS: '/ai-intelligence/search-clients',
-  
+
   // RoA
   ROA_DRAFT: '/advice-engine/roa/drafts',
   ROA_MODULES: '/advice-engine/roa/modules',

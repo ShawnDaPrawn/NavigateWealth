@@ -19,7 +19,13 @@ import { Card, CardContent, CardHeader, CardTitle } from '../../../../ui/card';
 import { Checkbox } from '../../../../ui/checkbox';
 import { Input } from '../../../../ui/input';
 import { Label } from '../../../../ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../../../ui/select';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '../../../../ui/select';
 import { Separator } from '../../../../ui/separator';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../../../ui/tabs';
 import { Textarea } from '../../../../ui/textarea';
@@ -27,11 +33,7 @@ import { useAuth } from '../../../../auth/AuthContext';
 import { useRoAModuleContracts } from '../hooks';
 import { FALLBACK_ROA_MODULE_CONTRACTS } from '../roaModuleContractFallbacks';
 import { renderRuntimeTemplate } from '../roaModuleRuntime';
-import type {
-  RoAContractFieldType,
-  RoAContractSourceType,
-  RoAModuleContract,
-} from '../types';
+import type { RoAContractFieldType, RoAContractSourceType, RoAModuleContract } from '../types';
 
 type ContractSection = RoAModuleContract['formSchema']['sections'][number];
 type ContractField = ContractSection['fields'][number];
@@ -190,7 +192,11 @@ function getStatusBadge(contract: RoAModuleContract) {
     return <Badge className="bg-green-100 text-green-700 border-green-200">Active</Badge>;
   }
   if (contract.status === 'archived') {
-    return <Badge variant="outline" className="bg-slate-100 text-slate-600">Archived</Badge>;
+    return (
+      <Badge variant="outline" className="bg-slate-100 text-slate-600">
+        Archived
+      </Badge>
+    );
   }
   return <Badge variant="secondary">Draft</Badge>;
 }
@@ -222,9 +228,24 @@ function getContractFieldTokens(contract: RoAModuleContract): TemplateTokenOptio
 
 function getTemplateTokenOptions(contract: RoAModuleContract): TemplateTokenOption[] {
   return [
-    { group: 'Client', label: 'Client name', token: '{{client.displayName}}', description: 'Client display name from the RoA snapshot' },
-    { group: 'Adviser', label: 'Adviser name', token: '{{adviser.displayName}}', description: 'Adviser display name from the RoA snapshot' },
-    { group: 'Adviser', label: 'Adviser email', token: '{{adviser.email}}', description: 'Adviser email from the RoA snapshot' },
+    {
+      group: 'Client',
+      label: 'Client name',
+      token: '{{client.displayName}}',
+      description: 'Client display name from the RoA snapshot',
+    },
+    {
+      group: 'Adviser',
+      label: 'Adviser name',
+      token: '{{adviser.displayName}}',
+      description: 'Adviser display name from the RoA snapshot',
+    },
+    {
+      group: 'Adviser',
+      label: 'Adviser email',
+      token: '{{adviser.email}}',
+      description: 'Adviser email from the RoA snapshot',
+    },
     ...getContractFieldTokens(contract),
     ...contract.evidence.requirements.map((requirement) => ({
       group: 'Evidence',
@@ -235,7 +256,9 @@ function getTemplateTokenOptions(contract: RoAModuleContract): TemplateTokenOpti
   ];
 }
 
-function extractTemplateTokens(template: string): Array<{ expression: string; path: string; filter?: string }> {
+function extractTemplateTokens(
+  template: string,
+): Array<{ expression: string; path: string; filter?: string }> {
   const tokens: Array<{ expression: string; path: string; filter?: string }> = [];
   const tokenPattern = /{{\s*([a-zA-Z0-9_.-]+)(?:\s*\|\s*([a-zA-Z]+))?\s*}}/g;
   let match: RegExpExecArray | null;
@@ -248,7 +271,9 @@ function extractTemplateTokens(template: string): Array<{ expression: string; pa
 function buildKnownModuleTokenPaths(contract: RoAModuleContract): Set<string> {
   return new Set([
     'module.rationale',
-    ...contract.formSchema.sections.flatMap((section) => section.fields.map((field) => `module.${field.key}`)),
+    ...contract.formSchema.sections.flatMap((section) =>
+      section.fields.map((field) => `module.${field.key}`),
+    ),
     ...contract.output.fields.map((field) => `module.${field.key}`),
   ]);
 }
@@ -262,7 +287,9 @@ function getTemplateIssues(contract: RoAModuleContract): string[] {
   contract.documentSections.forEach((section, index) => {
     if (!section.id.trim()) issues.push(`Document section ${index + 1} needs an ID.`);
     if (section.required && !section.template.trim()) {
-      issues.push(`${section.title || `Section ${index + 1}`} needs an output template before publish.`);
+      issues.push(
+        `${section.title || `Section ${index + 1}`} needs an output template before publish.`,
+      );
     }
 
     extractTemplateTokens(section.template).forEach((token) => {
@@ -276,7 +303,10 @@ function getTemplateIssues(contract: RoAModuleContract): string[] {
       if (root === 'module' && !modulePaths.has(token.path)) {
         issues.push(`${section.title} uses unknown module token ${token.expression}.`);
       }
-      if (root === 'evidence' && (!evidenceIds.has(evidenceId) || !EVIDENCE_TOKEN_PROPERTIES.includes(property))) {
+      if (
+        root === 'evidence' &&
+        (!evidenceIds.has(evidenceId) || !EVIDENCE_TOKEN_PROPERTIES.includes(property))
+      ) {
         issues.push(`${section.title} uses unknown evidence token ${token.expression}.`);
       }
     });
@@ -317,16 +347,18 @@ function getSampleTemplateContext(contract: RoAModuleContract): Record<string, u
       email: 'adviser@navigatewealth.co',
     },
     module,
-    evidence: Object.fromEntries(contract.evidence.requirements.map((requirement) => [
-      requirement.id,
-      {
-        fileName: `${requirement.id}.pdf`,
-        label: requirement.label,
-        type: requirement.type,
-        source: 'adviser-upload',
-        uploadedAt: '2026-05-05T08:00:00.000Z',
-      },
-    ])),
+    evidence: Object.fromEntries(
+      contract.evidence.requirements.map((requirement) => [
+        requirement.id,
+        {
+          fileName: `${requirement.id}.pdf`,
+          label: requirement.label,
+          type: requirement.type,
+          source: 'adviser-upload',
+          uploadedAt: '2026-05-05T08:00:00.000Z',
+        },
+      ]),
+    ),
     draft: { id: 'sample-draft', createdAt: '2026-05-05T08:00:00.000Z' },
   };
 }
@@ -375,7 +407,8 @@ export function RoAModuleContractManager() {
       )
       .filter((contract) => {
         if (!q) return true;
-        const haystack = `${contract.id} ${contract.title} ${contract.description} ${contract.output.normalizedKey} ${contract.category || ''}`.toLowerCase();
+        const haystack =
+          `${contract.id} ${contract.title} ${contract.description} ${contract.output.normalizedKey} ${contract.category || ''}`.toLowerCase();
         return haystack.includes(q);
       })
       .slice()
@@ -413,14 +446,17 @@ export function RoAModuleContractManager() {
     }
   }, [visibleContracts, selectedId]);
 
-  const updateDraft = React.useCallback((updater: (current: RoAModuleContract) => RoAModuleContract) => {
-    setDraft((current) => {
-      if (!current) return current;
-      const next = updater(cloneContract(current));
-      setJsonDraft(JSON.stringify(next, null, 2));
-      return next;
-    });
-  }, []);
+  const updateDraft = React.useCallback(
+    (updater: (current: RoAModuleContract) => RoAModuleContract) => {
+      setDraft((current) => {
+        if (!current) return current;
+        const next = updater(cloneContract(current));
+        setJsonDraft(JSON.stringify(next, null, 2));
+        return next;
+      });
+    },
+    [],
+  );
 
   const handleCreate = () => {
     const now = new Date().toISOString();
@@ -453,7 +489,9 @@ export function RoAModuleContractManager() {
     if (!draft) return;
     const issues = getTemplateIssues(draft);
     if (issues.length > 0) {
-      toast.error(`Fix ${issues.length} contract issue${issues.length === 1 ? '' : 's'} before publishing`);
+      toast.error(
+        `Fix ${issues.length} contract issue${issues.length === 1 ? '' : 's'} before publishing`,
+      );
       return;
     }
     try {
@@ -493,7 +531,9 @@ export function RoAModuleContractManager() {
         <CardContent className="py-10 text-center">
           <ShieldCheck className="h-10 w-10 mx-auto mb-3 text-muted-foreground" />
           <p className="font-medium">Super admin access required</p>
-          <p className="text-sm text-muted-foreground">RoA module contracts are system-level configuration.</p>
+          <p className="text-sm text-muted-foreground">
+            RoA module contracts are system-level configuration.
+          </p>
         </CardContent>
       </Card>
     );
@@ -502,8 +542,12 @@ export function RoAModuleContractManager() {
   if (isLoading) {
     return (
       <div className="grid gap-4 lg:grid-cols-[320px_1fr]">
-        <Card><CardContent className="h-96 animate-pulse bg-muted/30" /></Card>
-        <Card><CardContent className="h-96 animate-pulse bg-muted/30" /></Card>
+        <Card>
+          <CardContent className="h-96 animate-pulse bg-muted/30" />
+        </Card>
+        <Card>
+          <CardContent className="h-96 animate-pulse bg-muted/30" />
+        </Card>
       </div>
     );
   }
@@ -554,10 +598,10 @@ export function RoAModuleContractManager() {
         <Card>
           <CardContent className="p-4">
             <div className="text-sm text-muted-foreground">Active modules</div>
-            <div className="text-2xl font-semibold">{visibleContracts.filter((contract) => contract.status === 'active').length}</div>
-            <div className="mt-2 text-xs text-muted-foreground">
-              Flagship {flagshipCount}
+            <div className="text-2xl font-semibold">
+              {visibleContracts.filter((contract) => contract.status === 'active').length}
             </div>
+            <div className="mt-2 text-xs text-muted-foreground">Flagship {flagshipCount}</div>
           </CardContent>
         </Card>
       </div>
@@ -587,7 +631,10 @@ export function RoAModuleContractManager() {
             <div className="grid gap-2">
               <div className="space-y-1">
                 <Label className="text-xs text-muted-foreground">Status</Label>
-                <Select value={listStatus} onValueChange={(value) => setListStatus(value as typeof listStatus)}>
+                <Select
+                  value={listStatus}
+                  onValueChange={(value) => setListStatus(value as typeof listStatus)}
+                >
                   <SelectTrigger className="h-9">
                     <SelectValue />
                   </SelectTrigger>
@@ -617,7 +664,10 @@ export function RoAModuleContractManager() {
               </div>
               <div className="space-y-1">
                 <Label className="text-xs text-muted-foreground">Library</Label>
-                <Select value={listFlagship} onValueChange={(value) => setListFlagship(value as typeof listFlagship)}>
+                <Select
+                  value={listFlagship}
+                  onValueChange={(value) => setListFlagship(value as typeof listFlagship)}
+                >
                   <SelectTrigger className="h-9">
                     <SelectValue />
                   </SelectTrigger>
@@ -649,7 +699,8 @@ export function RoAModuleContractManager() {
           <CardContent className="space-y-2 max-h-[min(560px,calc(100vh-240px))] overflow-y-auto pr-1">
             {selectedHiddenByFilters && draft && (
               <div className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-950">
-                The open contract (&quot;{draft.title}&quot;) is hidden by filters. Clear search or widen filters to see it in this list.
+                The open contract (&quot;{draft.title}&quot;) is hidden by filters. Clear search or
+                widen filters to see it in this list.
               </div>
             )}
             {filteredContracts.length === 0 && (
@@ -680,7 +731,9 @@ export function RoAModuleContractManager() {
                         </Badge>
                       )}
                     </div>
-                    <div className="mt-1 truncate font-mono text-[11px] text-muted-foreground">{contract.id}</div>
+                    <div className="mt-1 truncate font-mono text-[11px] text-muted-foreground">
+                      {contract.id}
+                    </div>
                     <div className="mt-0.5 text-xs text-muted-foreground">{contract.category}</div>
                   </div>
                   {getStatusBadge(contract)}
@@ -741,7 +794,9 @@ export function RoAModuleContractManager() {
                     className="min-h-[520px] font-mono text-xs"
                     spellCheck={false}
                   />
-                  <Button variant="outline" onClick={handleJsonApply}>Apply JSON</Button>
+                  <Button variant="outline" onClick={handleJsonApply}>
+                    Apply JSON
+                  </Button>
                 </CardContent>
               </Card>
             </TabsContent>
@@ -752,14 +807,20 @@ export function RoAModuleContractManager() {
           </Tabs>
         ) : (
           <Card>
-            <CardContent className="py-12 text-center text-muted-foreground">Select a contract to edit.</CardContent>
+            <CardContent className="py-12 text-center text-muted-foreground">
+              Select a contract to edit.
+            </CardContent>
           </Card>
         )}
       </div>
 
       {draft && (
         <div className="flex justify-end">
-          <Button variant="outline" onClick={handleArchive} disabled={isSaving || draft.status === 'archived'}>
+          <Button
+            variant="outline"
+            onClick={handleArchive}
+            disabled={isSaving || draft.status === 'archived'}
+          >
             <Archive className="h-4 w-4 mr-2" />
             Archive Contract
           </Button>
@@ -778,14 +839,18 @@ function BasicEditor({
 }) {
   return (
     <Card>
-      <CardHeader><CardTitle className="text-base">Basic Information</CardTitle></CardHeader>
+      <CardHeader>
+        <CardTitle className="text-base">Basic Information</CardTitle>
+      </CardHeader>
       <CardContent className="grid gap-4 md:grid-cols-2">
         <div className="space-y-2">
           <Label htmlFor="contract-title">Title</Label>
           <Input
             id="contract-title"
             value={draft.title}
-            onChange={(event) => updateDraft((current) => ({ ...current, title: event.target.value }))}
+            onChange={(event) =>
+              updateDraft((current) => ({ ...current, title: event.target.value }))
+            }
           />
         </div>
         <div className="space-y-2">
@@ -793,7 +858,9 @@ function BasicEditor({
           <Input
             id="contract-id"
             value={draft.id}
-            onChange={(event) => updateDraft((current) => ({ ...current, id: toId(event.target.value) }))}
+            onChange={(event) =>
+              updateDraft((current) => ({ ...current, id: toId(event.target.value) }))
+            }
           />
         </div>
         <div className="space-y-2">
@@ -801,16 +868,25 @@ function BasicEditor({
           <Input
             id="contract-category"
             value={draft.category}
-            onChange={(event) => updateDraft((current) => ({ ...current, category: event.target.value }))}
+            onChange={(event) =>
+              updateDraft((current) => ({ ...current, category: event.target.value }))
+            }
           />
         </div>
         <div className="space-y-2">
           <Label>Status</Label>
           <Select
             value={draft.status}
-            onValueChange={(value) => updateDraft((current) => ({ ...current, status: value as RoAModuleContract['status'] }))}
+            onValueChange={(value) =>
+              updateDraft((current) => ({
+                ...current,
+                status: value as RoAModuleContract['status'],
+              }))
+            }
           >
-            <SelectTrigger><SelectValue /></SelectTrigger>
+            <SelectTrigger>
+              <SelectValue />
+            </SelectTrigger>
             <SelectContent>
               <SelectItem value="draft">Draft</SelectItem>
               <SelectItem value="active">Active</SelectItem>
@@ -823,7 +899,9 @@ function BasicEditor({
           <Textarea
             id="contract-description"
             value={draft.description}
-            onChange={(event) => updateDraft((current) => ({ ...current, description: event.target.value }))}
+            onChange={(event) =>
+              updateDraft((current) => ({ ...current, description: event.target.value }))
+            }
             className="min-h-[90px]"
           />
         </div>
@@ -854,11 +932,15 @@ function BasicEditor({
               }
             />
             <div className="space-y-1">
-              <Label htmlFor="contract-flagship" className="cursor-pointer font-medium leading-none">
+              <Label
+                htmlFor="contract-flagship"
+                className="cursor-pointer font-medium leading-none"
+              >
                 Flagship module
               </Label>
               <p className="text-xs text-muted-foreground">
-                Surfaces first in the adviser RoA library with a flagship badge during module selection.
+                Surfaces first in the adviser RoA library with a flagship badge during module
+                selection.
               </p>
             </div>
           </div>
@@ -870,16 +952,21 @@ function BasicEditor({
               onCheckedChange={(checked) =>
                 updateDraft((current) => ({
                   ...current,
-                  compilerHints: checked === true ? { includeReplacementAnalysis: true } : undefined,
+                  compilerHints:
+                    checked === true ? { includeReplacementAnalysis: true } : undefined,
                 }))
               }
             />
             <div className="space-y-1">
-              <Label htmlFor="contract-replacement-compile" className="cursor-pointer font-medium leading-none">
+              <Label
+                htmlFor="contract-replacement-compile"
+                className="cursor-pointer font-medium leading-none"
+              >
                 Include replacement-analysis section when compiling
               </Label>
               <p className="text-xs text-muted-foreground">
-                Adds a heightened-care replacement narrative to the canonical RoA when this module participates in a compilation.
+                Adds a heightened-care replacement narrative to the canonical RoA when this module
+                participates in a compilation.
               </p>
             </div>
           </div>
@@ -889,23 +976,30 @@ function BasicEditor({
           <Input
             id="normalized-key"
             value={draft.output.normalizedKey}
-            onChange={(event) => updateDraft((current) => ({
-              ...current,
-              output: { ...current.output, normalizedKey: event.target.value },
-            }))}
+            onChange={(event) =>
+              updateDraft((current) => ({
+                ...current,
+                output: { ...current.output, normalizedKey: event.target.value },
+              }))
+            }
           />
         </div>
         <div className="space-y-2">
           <Label>Gathering Methods</Label>
           <Input
             value={draft.input.gatheringMethods.join(', ')}
-            onChange={(event) => updateDraft((current) => ({
-              ...current,
-              input: {
-                ...current.input,
-                gatheringMethods: event.target.value.split(',').map((value) => value.trim()).filter(Boolean) as RoAModuleContract['input']['gatheringMethods'],
-              },
-            }))}
+            onChange={(event) =>
+              updateDraft((current) => ({
+                ...current,
+                input: {
+                  ...current.input,
+                  gatheringMethods: event.target.value
+                    .split(',')
+                    .map((value) => value.trim())
+                    .filter(Boolean) as RoAModuleContract['input']['gatheringMethods'],
+                },
+              }))
+            }
           />
         </div>
       </CardContent>
@@ -920,51 +1014,74 @@ function FieldsEditor({
 }: {
   draft: RoAModuleContract;
   updateDraft: (updater: (current: RoAModuleContract) => RoAModuleContract) => void;
-  schemaFormat?: { allowedFieldTypes: RoAContractFieldType[]; allowedSourceTypes: RoAContractSourceType[] };
+  schemaFormat?: {
+    allowedFieldTypes: RoAContractFieldType[];
+    allowedSourceTypes: RoAContractSourceType[];
+  };
 }) {
-  const addSection = () => updateDraft((current) => ({
-    ...current,
-    formSchema: {
-      sections: [
-        ...current.formSchema.sections,
-        { id: `section_${current.formSchema.sections.length + 1}`, title: 'New Section', fields: [] },
-      ],
-    },
-  }));
+  const addSection = () =>
+    updateDraft((current) => ({
+      ...current,
+      formSchema: {
+        sections: [
+          ...current.formSchema.sections,
+          {
+            id: `section_${current.formSchema.sections.length + 1}`,
+            title: 'New Section',
+            fields: [],
+          },
+        ],
+      },
+    }));
 
-  const addField = (sectionIndex: number) => updateDraft((current) => {
-    const sections = [...current.formSchema.sections];
-    sections[sectionIndex] = {
-      ...sections[sectionIndex],
-      fields: [
-        ...sections[sectionIndex].fields,
-        { key: `field_${sections[sectionIndex].fields.length + 1}`, label: 'New Field', type: 'text', source: 'moduleInput' },
-      ],
-    };
-    return { ...current, formSchema: { sections } };
-  });
+  const addField = (sectionIndex: number) =>
+    updateDraft((current) => {
+      const sections = [...current.formSchema.sections];
+      sections[sectionIndex] = {
+        ...sections[sectionIndex],
+        fields: [
+          ...sections[sectionIndex].fields,
+          {
+            key: `field_${sections[sectionIndex].fields.length + 1}`,
+            label: 'New Field',
+            type: 'text',
+            source: 'moduleInput',
+          },
+        ],
+      };
+      return { ...current, formSchema: { sections } };
+    });
 
-  const updateSection = (sectionIndex: number, patch: Partial<ContractSection>) => updateDraft((current) => {
-    const sections = [...current.formSchema.sections];
-    sections[sectionIndex] = { ...sections[sectionIndex], ...patch };
-    return { ...current, formSchema: { sections } };
-  });
+  const updateSection = (sectionIndex: number, patch: Partial<ContractSection>) =>
+    updateDraft((current) => {
+      const sections = [...current.formSchema.sections];
+      sections[sectionIndex] = { ...sections[sectionIndex], ...patch };
+      return { ...current, formSchema: { sections } };
+    });
 
-  const updateField = (sectionIndex: number, fieldIndex: number, patch: Partial<ContractField>) => updateDraft((current) => {
-    const sections = [...current.formSchema.sections];
-    const fields = [...sections[sectionIndex].fields];
-    fields[fieldIndex] = { ...fields[fieldIndex], ...patch };
-    sections[sectionIndex] = { ...sections[sectionIndex], fields };
-    const requiredFields = sections.flatMap((section) => section.fields.filter((field) => field.required).map((field) => field.key));
-    return { ...current, formSchema: { sections }, validation: { ...current.validation, requiredFields } };
-  });
+  const updateField = (sectionIndex: number, fieldIndex: number, patch: Partial<ContractField>) =>
+    updateDraft((current) => {
+      const sections = [...current.formSchema.sections];
+      const fields = [...sections[sectionIndex].fields];
+      fields[fieldIndex] = { ...fields[fieldIndex], ...patch };
+      sections[sectionIndex] = { ...sections[sectionIndex], fields };
+      const requiredFields = sections.flatMap((section) =>
+        section.fields.filter((field) => field.required).map((field) => field.key),
+      );
+      return {
+        ...current,
+        formSchema: { sections },
+        validation: { ...current.validation, requiredFields },
+      };
+    });
 
-  const removeField = (sectionIndex: number, fieldIndex: number) => updateDraft((current) => {
-    const sections = [...current.formSchema.sections];
-    const fields = sections[sectionIndex].fields.filter((_, index) => index !== fieldIndex);
-    sections[sectionIndex] = { ...sections[sectionIndex], fields };
-    return { ...current, formSchema: { sections } };
-  });
+  const removeField = (sectionIndex: number, fieldIndex: number) =>
+    updateDraft((current) => {
+      const sections = [...current.formSchema.sections];
+      const fields = sections[sectionIndex].fields.filter((_, index) => index !== fieldIndex);
+      sections[sectionIndex] = { ...sections[sectionIndex], fields };
+      return { ...current, formSchema: { sections } };
+    });
 
   return (
     <div className="space-y-4">
@@ -981,8 +1098,14 @@ function FieldsEditor({
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="grid gap-3 md:grid-cols-2">
-              <Input value={section.id} onChange={(event) => updateSection(sectionIndex, { id: toId(event.target.value) })} />
-              <Input value={section.title} onChange={(event) => updateSection(sectionIndex, { title: event.target.value })} />
+              <Input
+                value={section.id}
+                onChange={(event) => updateSection(sectionIndex, { id: toId(event.target.value) })}
+              />
+              <Input
+                value={section.title}
+                onChange={(event) => updateSection(sectionIndex, { title: event.target.value })}
+              />
             </div>
             <Separator />
             {section.fields.map((field, fieldIndex) => (
@@ -990,24 +1113,64 @@ function FieldsEditor({
                 <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-4">
                   <div className="space-y-2">
                     <Label>Key</Label>
-                    <Input value={field.key} onChange={(event) => updateField(sectionIndex, fieldIndex, { key: toId(event.target.value) })} />
+                    <Input
+                      value={field.key}
+                      onChange={(event) =>
+                        updateField(sectionIndex, fieldIndex, { key: toId(event.target.value) })
+                      }
+                    />
                   </div>
                   <div className="space-y-2">
                     <Label>Label</Label>
-                    <Input value={field.label} onChange={(event) => updateField(sectionIndex, fieldIndex, { label: event.target.value })} />
+                    <Input
+                      value={field.label}
+                      onChange={(event) =>
+                        updateField(sectionIndex, fieldIndex, { label: event.target.value })
+                      }
+                    />
                   </div>
                   <div className="space-y-2">
                     <Label>Type</Label>
-                    <Select value={field.type} onValueChange={(value) => updateField(sectionIndex, fieldIndex, { type: value as RoAContractFieldType })}>
-                      <SelectTrigger><SelectValue /></SelectTrigger>
-                      <SelectContent>{(schemaFormat?.allowedFieldTypes || ['text']).map((type) => <SelectItem key={type} value={type}>{type}</SelectItem>)}</SelectContent>
+                    <Select
+                      value={field.type}
+                      onValueChange={(value) =>
+                        updateField(sectionIndex, fieldIndex, {
+                          type: value as RoAContractFieldType,
+                        })
+                      }
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {(schemaFormat?.allowedFieldTypes || ['text']).map((type) => (
+                          <SelectItem key={type} value={type}>
+                            {type}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
                     </Select>
                   </div>
                   <div className="space-y-2">
                     <Label>Source</Label>
-                    <Select value={field.source} onValueChange={(value) => updateField(sectionIndex, fieldIndex, { source: value as RoAContractSourceType })}>
-                      <SelectTrigger><SelectValue /></SelectTrigger>
-                      <SelectContent>{(schemaFormat?.allowedSourceTypes || ['moduleInput']).map((type) => <SelectItem key={type} value={type}>{type}</SelectItem>)}</SelectContent>
+                    <Select
+                      value={field.source}
+                      onValueChange={(value) =>
+                        updateField(sectionIndex, fieldIndex, {
+                          source: value as RoAContractSourceType,
+                        })
+                      }
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {(schemaFormat?.allowedSourceTypes || ['moduleInput']).map((type) => (
+                          <SelectItem key={type} value={type}>
+                            {type}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
                     </Select>
                   </div>
                 </div>
@@ -1015,23 +1178,37 @@ function FieldsEditor({
                   <Input
                     placeholder="Options, comma separated"
                     value={field.options?.join(', ') || ''}
-                    onChange={(event) => updateField(sectionIndex, fieldIndex, {
-                      options: event.target.value.split(',').map((value) => value.trim()).filter(Boolean),
-                    })}
+                    onChange={(event) =>
+                      updateField(sectionIndex, fieldIndex, {
+                        options: event.target.value
+                          .split(',')
+                          .map((value) => value.trim())
+                          .filter(Boolean),
+                      })
+                    }
                   />
                   <Input
                     placeholder="Placeholder"
                     value={field.placeholder || ''}
-                    onChange={(event) => updateField(sectionIndex, fieldIndex, { placeholder: event.target.value })}
+                    onChange={(event) =>
+                      updateField(sectionIndex, fieldIndex, { placeholder: event.target.value })
+                    }
                   />
                   <Button
                     type="button"
                     variant={field.required ? 'default' : 'outline'}
-                    onClick={() => updateField(sectionIndex, fieldIndex, { required: !field.required })}
+                    onClick={() =>
+                      updateField(sectionIndex, fieldIndex, { required: !field.required })
+                    }
                   >
                     Required
                   </Button>
-                  <Button type="button" variant="ghost" size="icon" onClick={() => removeField(sectionIndex, fieldIndex)}>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => removeField(sectionIndex, fieldIndex)}
+                  >
                     <Trash2 className="h-4 w-4" />
                   </Button>
                 </div>
@@ -1057,26 +1234,38 @@ function EvidenceEditor({
   updateDraft: (updater: (current: RoAModuleContract) => RoAModuleContract) => void;
   schemaFormat?: { allowedEvidenceTypes: EvidenceRequirement['type'][] };
 }) {
-  const updateEvidence = (index: number, patch: Partial<EvidenceRequirement>) => updateDraft((current) => {
-    const requirements = [...current.evidence.requirements];
-    requirements[index] = { ...requirements[index], ...patch };
-    return { ...current, evidence: { requirements } };
-  });
+  const updateEvidence = (index: number, patch: Partial<EvidenceRequirement>) =>
+    updateDraft((current) => {
+      const requirements = [...current.evidence.requirements];
+      requirements[index] = { ...requirements[index], ...patch };
+      return { ...current, evidence: { requirements } };
+    });
 
   return (
     <Card>
       <CardHeader>
         <div className="flex items-center justify-between gap-3">
           <CardTitle className="text-base">Evidence Requirements</CardTitle>
-          <Button variant="outline" size="sm" onClick={() => updateDraft((current) => ({
-            ...current,
-            evidence: {
-              requirements: [
-                ...current.evidence.requirements,
-                { id: `evidence_${current.evidence.requirements.length + 1}`, label: 'New Evidence', type: 'other', required: false },
-              ],
-            },
-          }))}>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() =>
+              updateDraft((current) => ({
+                ...current,
+                evidence: {
+                  requirements: [
+                    ...current.evidence.requirements,
+                    {
+                      id: `evidence_${current.evidence.requirements.length + 1}`,
+                      label: 'New Evidence',
+                      type: 'other',
+                      required: false,
+                    },
+                  ],
+                },
+              }))
+            }
+          >
             <Plus className="h-4 w-4 mr-2" />
             Evidence
           </Button>
@@ -1084,18 +1273,55 @@ function EvidenceEditor({
       </CardHeader>
       <CardContent className="space-y-3">
         {draft.evidence.requirements.map((item, index) => (
-          <div key={`${item.id}-${index}`} className="grid gap-3 rounded-md border p-3 md:grid-cols-[1fr_1fr_160px_auto_auto]">
-            <Input value={item.id} onChange={(event) => updateEvidence(index, { id: toId(event.target.value) })} />
-            <Input value={item.label} onChange={(event) => updateEvidence(index, { label: event.target.value })} />
-            <Select value={item.type} onValueChange={(value) => updateEvidence(index, { type: value as EvidenceRequirement['type'] })}>
-              <SelectTrigger><SelectValue /></SelectTrigger>
-              <SelectContent>{(schemaFormat?.allowedEvidenceTypes || ['other']).map((type) => <SelectItem key={type} value={type}>{type}</SelectItem>)}</SelectContent>
+          <div
+            key={`${item.id}-${index}`}
+            className="grid gap-3 rounded-md border p-3 md:grid-cols-[1fr_1fr_160px_auto_auto]"
+          >
+            <Input
+              value={item.id}
+              onChange={(event) => updateEvidence(index, { id: toId(event.target.value) })}
+            />
+            <Input
+              value={item.label}
+              onChange={(event) => updateEvidence(index, { label: event.target.value })}
+            />
+            <Select
+              value={item.type}
+              onValueChange={(value) =>
+                updateEvidence(index, { type: value as EvidenceRequirement['type'] })
+              }
+            >
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {(schemaFormat?.allowedEvidenceTypes || ['other']).map((type) => (
+                  <SelectItem key={type} value={type}>
+                    {type}
+                  </SelectItem>
+                ))}
+              </SelectContent>
             </Select>
-            <Button variant={item.required ? 'default' : 'outline'} onClick={() => updateEvidence(index, { required: !item.required })}>Required</Button>
-            <Button variant="ghost" size="icon" onClick={() => updateDraft((current) => ({
-              ...current,
-              evidence: { requirements: current.evidence.requirements.filter((_, itemIndex) => itemIndex !== index) },
-            }))}>
+            <Button
+              variant={item.required ? 'default' : 'outline'}
+              onClick={() => updateEvidence(index, { required: !item.required })}
+            >
+              Required
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() =>
+                updateDraft((current) => ({
+                  ...current,
+                  evidence: {
+                    requirements: current.evidence.requirements.filter(
+                      (_, itemIndex) => itemIndex !== index,
+                    ),
+                  },
+                }))
+              }
+            >
               <Trash2 className="h-4 w-4" />
             </Button>
           </div>
@@ -1117,19 +1343,20 @@ function DocumentEditor({
   const sampleContext = React.useMemo(() => getSampleTemplateContext(draft), [draft]);
   const templateIssues = React.useMemo(() => getTemplateIssues(draft), [draft]);
 
-  const updateSection = (index: number, patch: Partial<DocumentSection>) => updateDraft((current) => {
-    const documentSections = [...current.documentSections];
-    documentSections[index] = { ...documentSections[index], ...patch };
-    const compileOrder = [...documentSections]
-      .sort((a, b) => a.order - b.order)
-      .map((section) => section.id)
-      .filter(Boolean);
-    return {
-      ...current,
-      documentSections,
-      compileOrder,
-    };
-  });
+  const updateSection = (index: number, patch: Partial<DocumentSection>) =>
+    updateDraft((current) => {
+      const documentSections = [...current.documentSections];
+      documentSections[index] = { ...documentSections[index], ...patch };
+      const compileOrder = [...documentSections]
+        .sort((a, b) => a.order - b.order)
+        .map((section) => section.id)
+        .filter(Boolean);
+      return {
+        ...current,
+        documentSections,
+        compileOrder,
+      };
+    });
 
   const insertToken = (index: number, token: string) => {
     const textarea = textareaRefs.current[index];
@@ -1151,7 +1378,9 @@ function DocumentEditor({
         <div className="rounded-md border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">
           <div className="font-medium">Publish checks</div>
           <ul className="mt-2 list-disc space-y-1 pl-5">
-            {templateIssues.slice(0, 6).map((issue) => <li key={issue}>{issue}</li>)}
+            {templateIssues.slice(0, 6).map((issue) => (
+              <li key={issue}>{issue}</li>
+            ))}
           </ul>
         </div>
       )}
@@ -1160,20 +1389,26 @@ function DocumentEditor({
         <CardHeader>
           <div className="flex items-center justify-between gap-3">
             <CardTitle className="text-base">Document Sections</CardTitle>
-            <Button variant="outline" size="sm" onClick={() => updateDraft((current) => ({
-              ...current,
-              documentSections: [
-                ...current.documentSections,
-                {
-                  id: `section_${current.documentSections.length + 1}`,
-                  title: 'New Section',
-                  purpose: '',
-                  order: (current.documentSections.length + 1) * 10,
-                  required: true,
-                  template: '## New Section\n{{module.rationale}}',
-                },
-              ],
-            }))}>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() =>
+                updateDraft((current) => ({
+                  ...current,
+                  documentSections: [
+                    ...current.documentSections,
+                    {
+                      id: `section_${current.documentSections.length + 1}`,
+                      title: 'New Section',
+                      purpose: '',
+                      order: (current.documentSections.length + 1) * 10,
+                      required: true,
+                      template: '## New Section\n{{module.rationale}}',
+                    },
+                  ],
+                }))
+              }
+            >
               <Plus className="h-4 w-4 mr-2" />
               Section
             </Button>
@@ -1184,48 +1419,81 @@ function DocumentEditor({
             <div className="text-sm font-medium">Common tokens</div>
             <div className="mt-2 flex flex-wrap gap-2">
               {TOKEN_EXAMPLES.map((token) => (
-                <code key={token} className="rounded border bg-background px-2 py-1 text-xs">{token}</code>
+                <code key={token} className="rounded border bg-background px-2 py-1 text-xs">
+                  {token}
+                </code>
               ))}
             </div>
           </div>
-        {draft.documentSections.map((section, index) => (
-          <div key={`${section.id}-${index}`} className="grid gap-3 rounded-md border p-3 md:grid-cols-[120px_1fr_1fr_auto_auto]">
-            <Input type="number" value={section.order} onChange={(event) => updateSection(index, { order: Number(event.target.value) })} />
-            <Input value={section.id} onChange={(event) => updateSection(index, { id: toId(event.target.value) })} />
-            <Input value={section.title} onChange={(event) => updateSection(index, { title: event.target.value })} />
-            <Button variant={section.required ? 'default' : 'outline'} onClick={() => updateSection(index, { required: !section.required })}>Required</Button>
-            <Button variant="ghost" size="icon" onClick={() => updateDraft((current) => ({
-              ...current,
-              documentSections: current.documentSections.filter((_, itemIndex) => itemIndex !== index),
-            }))}>
-              <Trash2 className="h-4 w-4" />
-            </Button>
-            <Textarea
-              value={section.purpose}
-              onChange={(event) => updateSection(index, { purpose: event.target.value })}
-              className="md:col-span-5 min-h-[70px]"
-            />
-            <div className="space-y-2 md:col-span-5">
-              <div className="flex flex-col gap-2 lg:flex-row lg:items-center lg:justify-between">
-                <Label>Output Template</Label>
-                <TokenPicker tokens={tokenOptions} onInsert={(token) => insertToken(index, token)} />
-              </div>
-              <Textarea
-                ref={(node) => { textareaRefs.current[index] = node; }}
-                value={section.template}
-                onChange={(event) => updateSection(index, { template: event.target.value })}
-                className="min-h-[180px] font-mono text-xs"
-                placeholder="Use safe tokens like {{client.displayName}} and {{module.rationale}}"
+          {draft.documentSections.map((section, index) => (
+            <div
+              key={`${section.id}-${index}`}
+              className="grid gap-3 rounded-md border p-3 md:grid-cols-[120px_1fr_1fr_auto_auto]"
+            >
+              <Input
+                type="number"
+                value={section.order}
+                onChange={(event) => updateSection(index, { order: Number(event.target.value) })}
               />
+              <Input
+                value={section.id}
+                onChange={(event) => updateSection(index, { id: toId(event.target.value) })}
+              />
+              <Input
+                value={section.title}
+                onChange={(event) => updateSection(index, { title: event.target.value })}
+              />
+              <Button
+                variant={section.required ? 'default' : 'outline'}
+                onClick={() => updateSection(index, { required: !section.required })}
+              >
+                Required
+              </Button>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() =>
+                  updateDraft((current) => ({
+                    ...current,
+                    documentSections: current.documentSections.filter(
+                      (_, itemIndex) => itemIndex !== index,
+                    ),
+                  }))
+                }
+              >
+                <Trash2 className="h-4 w-4" />
+              </Button>
+              <Textarea
+                value={section.purpose}
+                onChange={(event) => updateSection(index, { purpose: event.target.value })}
+                className="md:col-span-5 min-h-[70px]"
+              />
+              <div className="space-y-2 md:col-span-5">
+                <div className="flex flex-col gap-2 lg:flex-row lg:items-center lg:justify-between">
+                  <Label>Output Template</Label>
+                  <TokenPicker
+                    tokens={tokenOptions}
+                    onInsert={(token) => insertToken(index, token)}
+                  />
+                </div>
+                <Textarea
+                  ref={(node) => {
+                    textareaRefs.current[index] = node;
+                  }}
+                  value={section.template}
+                  onChange={(event) => updateSection(index, { template: event.target.value })}
+                  className="min-h-[180px] font-mono text-xs"
+                  placeholder="Use safe tokens like {{client.displayName}} and {{module.rationale}}"
+                />
+              </div>
+              <div className="space-y-2 md:col-span-5">
+                <Label>Live Preview</Label>
+                <pre className="max-h-72 overflow-auto whitespace-pre-wrap rounded-md border bg-muted/20 p-3 text-sm leading-relaxed">
+                  {renderRuntimeTemplate(section.template || section.purpose, sampleContext)}
+                </pre>
+              </div>
             </div>
-            <div className="space-y-2 md:col-span-5">
-              <Label>Live Preview</Label>
-              <pre className="max-h-72 overflow-auto whitespace-pre-wrap rounded-md border bg-muted/20 p-3 text-sm leading-relaxed">
-                {renderRuntimeTemplate(section.template || section.purpose, sampleContext)}
-              </pre>
-            </div>
-          </div>
-        ))}
+          ))}
         </CardContent>
       </Card>
     </div>
@@ -1240,7 +1508,10 @@ function TokenPicker({
   onInsert: (token: string) => void;
 }) {
   const [group, setGroup] = React.useState<string>('Client');
-  const groups = React.useMemo(() => Array.from(new Set(tokens.map((token) => token.group))), [tokens]);
+  const groups = React.useMemo(
+    () => Array.from(new Set(tokens.map((token) => token.group))),
+    [tokens],
+  );
   const visibleTokens = tokens.filter((token) => token.group === group);
 
   React.useEffect(() => {
@@ -1254,7 +1525,11 @@ function TokenPicker({
           <SelectValue />
         </SelectTrigger>
         <SelectContent>
-          {groups.map((item) => <SelectItem key={item} value={item}>{item}</SelectItem>)}
+          {groups.map((item) => (
+            <SelectItem key={item} value={item}>
+              {item}
+            </SelectItem>
+          ))}
         </SelectContent>
       </Select>
       <div className="flex max-w-full flex-wrap gap-1">
@@ -1284,13 +1559,20 @@ function DisclosuresEditor({
 }) {
   return (
     <Card>
-      <CardHeader><CardTitle className="text-base">Disclosures and Validation</CardTitle></CardHeader>
+      <CardHeader>
+        <CardTitle className="text-base">Disclosures and Validation</CardTitle>
+      </CardHeader>
       <CardContent className="grid gap-4 md:grid-cols-2">
         <div className="space-y-2">
           <Label>Disclosures</Label>
           <Textarea
             value={arrayToLines(draft.disclosures)}
-            onChange={(event) => updateDraft((current) => ({ ...current, disclosures: linesToArray(event.target.value) }))}
+            onChange={(event) =>
+              updateDraft((current) => ({
+                ...current,
+                disclosures: linesToArray(event.target.value),
+              }))
+            }
             className="min-h-[240px]"
           />
         </div>
@@ -1298,28 +1580,37 @@ function DisclosuresEditor({
           <Label>Compile Order</Label>
           <Textarea
             value={arrayToLines(draft.compileOrder)}
-            onChange={(event) => updateDraft((current) => ({ ...current, compileOrder: linesToArray(event.target.value) }))}
+            onChange={(event) =>
+              updateDraft((current) => ({
+                ...current,
+                compileOrder: linesToArray(event.target.value),
+              }))
+            }
             className="min-h-[240px]"
           />
         </div>
         <div className="space-y-2 md:col-span-2">
           <Label>Blocking and Warning Rules</Label>
           <Textarea
-            value={draft.validation.rules.map((rule) => `${rule.id}|${rule.severity}|${rule.message}`).join('\n')}
-            onChange={(event) => updateDraft((current) => ({
-              ...current,
-              validation: {
-                ...current.validation,
-                rules: linesToArray(event.target.value).map((line) => {
-                  const [id, severity, ...messageParts] = line.split('|');
-                  return {
-                    id: toId(id || 'rule'),
-                    severity: severity === 'blocking' ? 'blocking' : 'warning',
-                    message: messageParts.join('|') || '',
-                  };
-                }),
-              },
-            }))}
+            value={draft.validation.rules
+              .map((rule) => `${rule.id}|${rule.severity}|${rule.message}`)
+              .join('\n')}
+            onChange={(event) =>
+              updateDraft((current) => ({
+                ...current,
+                validation: {
+                  ...current.validation,
+                  rules: linesToArray(event.target.value).map((line) => {
+                    const [id, severity, ...messageParts] = line.split('|');
+                    return {
+                      id: toId(id || 'rule'),
+                      severity: severity === 'blocking' ? 'blocking' : 'warning',
+                      message: messageParts.join('|') || '',
+                    };
+                  }),
+                },
+              }))
+            }
             className="min-h-[180px]"
           />
         </div>
@@ -1355,7 +1646,9 @@ function PreviewPanel({ draft }: { draft: RoAModuleContract }) {
                     <span className="font-medium text-sm">{field.label}</span>
                     {field.required && <Badge variant="outline">Required</Badge>}
                   </div>
-                  <div className="mt-2 text-xs text-muted-foreground">{field.type} from {field.source}</div>
+                  <div className="mt-2 text-xs text-muted-foreground">
+                    {field.type} from {field.source}
+                  </div>
                 </div>
               ))}
             </div>

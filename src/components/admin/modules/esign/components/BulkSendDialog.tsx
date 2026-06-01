@@ -62,11 +62,18 @@ interface BulkSendDialogProps {
   onCompleted?: (campaign: CampaignRecord) => void;
 }
 
-export function BulkSendDialog({ open, onOpenChange, initialTemplate, onCompleted }: BulkSendDialogProps) {
+export function BulkSendDialog({
+  open,
+  onOpenChange,
+  initialTemplate,
+  onCompleted,
+}: BulkSendDialogProps) {
   const [templates, setTemplates] = useState<EsignTemplateRecord[]>([]);
   const [loadingTemplates, setLoadingTemplates] = useState(false);
   const [loadingGroups, setLoadingGroups] = useState(false);
-  const [selectedTemplateId, setSelectedTemplateId] = useState<string | null>(initialTemplate?.id ?? null);
+  const [selectedTemplateId, setSelectedTemplateId] = useState<string | null>(
+    initialTemplate?.id ?? null,
+  );
   const [sourceMode, setSourceMode] = useState<'group' | 'csv'>('group');
   const [groups, setGroups] = useState<ClientGroup[]>([]);
   const [clients, setClients] = useState<Client[]>([]);
@@ -86,10 +93,10 @@ export function BulkSendDialog({ open, onOpenChange, initialTemplate, onComplete
     setLoadingGroups(true);
     esignApi
       .listTemplates()
-      .then(r => {
+      .then((r) => {
         setTemplates(r.templates || []);
-        if (initialTemplate?.id && !r.templates?.some(t => t.id === initialTemplate.id)) {
-          setTemplates(prev => [initialTemplate, ...prev]);
+        if (initialTemplate?.id && !r.templates?.some((t) => t.id === initialTemplate.id)) {
+          setTemplates((prev) => [initialTemplate, ...prev]);
         }
       })
       .catch(() => setTemplates([]))
@@ -108,7 +115,7 @@ export function BulkSendDialog({ open, onOpenChange, initialTemplate, onComplete
   }, [open, initialTemplate]);
 
   const selectedTemplate = useMemo(
-    () => templates.find(t => t.id === selectedTemplateId) ?? initialTemplate ?? null,
+    () => templates.find((t) => t.id === selectedTemplateId) ?? initialTemplate ?? null,
     [templates, selectedTemplateId, initialTemplate],
   );
   const templateHasSavedDocuments = useMemo(
@@ -155,7 +162,9 @@ export function BulkSendDialog({ open, onOpenChange, initialTemplate, onComplete
   const templateHasDefaultEmailsForAdditionalRecipients = useMemo(() => {
     if (!selectedTemplate) return false;
     if (selectedTemplate.recipients.length <= 1) return true;
-    return selectedTemplate.recipients.slice(1).every((recipient) => Boolean(recipient.email?.trim()));
+    return selectedTemplate.recipients
+      .slice(1)
+      .every((recipient) => Boolean(recipient.email?.trim()));
   }, [selectedTemplate]);
 
   const groupRows = useMemo(() => {
@@ -197,18 +206,25 @@ export function BulkSendDialog({ open, onOpenChange, initialTemplate, onComplete
 
     groupRecipients.forEach((recipient) => {
       if (!recipient.email) {
-        warnings.push(`${recipient.name || 'Unnamed recipient'} has no email address and will be skipped.`);
+        warnings.push(
+          `${recipient.name || 'Unnamed recipient'} has no email address and will be skipped.`,
+        );
       }
     });
 
     return warnings;
-  }, [selectedGroup, recipientCount, templateHasDefaultEmailsForAdditionalRecipients, groupRecipients]);
+  }, [
+    selectedGroup,
+    recipientCount,
+    templateHasDefaultEmailsForAdditionalRecipients,
+    groupRecipients,
+  ]);
 
   const groupRowCount = groupRows.length;
   const csvRowCount = useMemo(() => {
     const trimmed = csvText.trim();
     if (!trimmed) return 0;
-    const lines = trimmed.split(/\r?\n/).filter(l => l.trim().length > 0);
+    const lines = trimmed.split(/\r?\n/).filter((l) => l.trim().length > 0);
     return Math.max(0, lines.length - 1);
   }, [csvText]);
 
@@ -216,13 +232,15 @@ export function BulkSendDialog({ open, onOpenChange, initialTemplate, onComplete
     if (!selectedTemplate) return '';
     if (recipientCount === 1) return 'email,name,role';
     return selectedTemplate.recipients
-      .map((r, i) => [
-        `email_${i + 1}`,
-        `name_${i + 1}`,
-        `role_${i + 1}`,
-        `${(r.name || `recipient_${i + 1}`).toLowerCase().replace(/\s+/g, '_')}_email`,
-        `${(r.name || `recipient_${i + 1}`).toLowerCase().replace(/\s+/g, '_')}_name`,
-      ].join(' / '))
+      .map((r, i) =>
+        [
+          `email_${i + 1}`,
+          `name_${i + 1}`,
+          `role_${i + 1}`,
+          `${(r.name || `recipient_${i + 1}`).toLowerCase().replace(/\s+/g, '_')}_email`,
+          `${(r.name || `recipient_${i + 1}`).toLowerCase().replace(/\s+/g, '_')}_name`,
+        ].join(' / '),
+      )
       .join(' | ');
   }, [selectedTemplate, recipientCount]);
 
@@ -289,7 +307,9 @@ export function BulkSendDialog({ open, onOpenChange, initialTemplate, onComplete
       return;
     }
     if (!templateHasSavedDocuments && files.length === 0) {
-      toast.error('Upload a document for this legacy template, or re-save the template with its source PDF.');
+      toast.error(
+        'Upload a document for this legacy template, or re-save the template with its source PDF.',
+      );
       return;
     }
     if (!title.trim()) {
@@ -325,12 +345,10 @@ export function BulkSendDialog({ open, onOpenChange, initialTemplate, onComplete
         title: title.trim(),
         message: message.trim() || undefined,
         expiryDays,
-        ...(sourceMode === 'group'
-          ? { rows: groupRows }
-          : { csvText }),
+        ...(sourceMode === 'group' ? { rows: groupRows } : { csvText }),
       });
       setCampaign(created.campaign);
-      setWarnings(sourceMode === 'group' ? groupWarnings : (created.warnings || []));
+      setWarnings(sourceMode === 'group' ? groupWarnings : created.warnings || []);
 
       // Walk through queued rows in series. Series (not parallel)
       // keeps the rate limiter happy and surfaces errors row-by-row
@@ -369,12 +387,15 @@ export function BulkSendDialog({ open, onOpenChange, initialTemplate, onComplete
 
           // Persist signers as a draft, then send invites with the
           // template's field positions resolved per-recipient.
-          await esignApi.saveDraftSigners(envelopeId, row.signers.map((s, idx) => ({
-            name: s.name,
-            email: s.email,
-            role: s.role || 'Signer',
-            order: s.order ?? idx + 1,
-          })));
+          await esignApi.saveDraftSigners(
+            envelopeId,
+            row.signers.map((s, idx) => ({
+              name: s.name,
+              email: s.email,
+              role: s.role || 'Signer',
+              order: s.order ?? idx + 1,
+            })),
+          );
 
           const fields = selectedTemplate.fields
             .map((tf, idx) => {
@@ -481,7 +502,8 @@ export function BulkSendDialog({ open, onOpenChange, initialTemplate, onComplete
             Bulk send from template
           </DialogTitle>
           <DialogDescription>
-            Send the same template to many recipients in one go. Start with an existing client group, or use CSV when you need a custom recipient list.
+            Send the same template to many recipients in one go. Start with an existing client
+            group, or use CSV when you need a custom recipient list.
           </DialogDescription>
         </DialogHeader>
 
@@ -496,10 +518,12 @@ export function BulkSendDialog({ open, onOpenChange, initialTemplate, onComplete
                   disabled={loadingTemplates}
                 >
                   <SelectTrigger>
-                    <SelectValue placeholder={loadingTemplates ? 'Loading templates…' : 'Choose a template'} />
+                    <SelectValue
+                      placeholder={loadingTemplates ? 'Loading templates…' : 'Choose a template'}
+                    />
                   </SelectTrigger>
                   <SelectContent>
-                    {templates.map(t => (
+                    {templates.map((t) => (
                       <SelectItem key={t.id} value={t.id}>
                         {t.name} {t.category ? `· ${t.category}` : ''}
                       </SelectItem>
@@ -521,13 +545,20 @@ export function BulkSendDialog({ open, onOpenChange, initialTemplate, onComplete
 
               <div className="space-y-3">
                 <Label>Recipient source</Label>
-                <Tabs value={sourceMode} onValueChange={(value) => setSourceMode(value as 'group' | 'csv')} className="w-full">
+                <Tabs
+                  value={sourceMode}
+                  onValueChange={(value) => setSourceMode(value as 'group' | 'csv')}
+                  className="w-full"
+                >
                   <TabsList className="grid w-full grid-cols-2">
                     <TabsTrigger value="group">Client Groups</TabsTrigger>
                     <TabsTrigger value="csv">CSV Import</TabsTrigger>
                   </TabsList>
 
-                  <TabsContent value="group" className="mt-3 space-y-3 rounded-lg border border-gray-200 p-4">
+                  <TabsContent
+                    value="group"
+                    className="mt-3 space-y-3 rounded-lg border border-gray-200 p-4"
+                  >
                     <div className="space-y-2">
                       <Label>Select group</Label>
                       <Select
@@ -536,12 +567,19 @@ export function BulkSendDialog({ open, onOpenChange, initialTemplate, onComplete
                         disabled={loadingGroups}
                       >
                         <SelectTrigger>
-                          <SelectValue placeholder={loadingGroups ? 'Loading client groups…' : 'Choose a predefined client group'} />
+                          <SelectValue
+                            placeholder={
+                              loadingGroups
+                                ? 'Loading client groups…'
+                                : 'Choose a predefined client group'
+                            }
+                          />
                         </SelectTrigger>
                         <SelectContent>
                           {groups.map((group) => (
                             <SelectItem key={group.id} value={group.id}>
-                              {group.name} · {group.clientCount} member{group.clientCount === 1 ? '' : 's'}
+                              {group.name} · {group.clientCount} member
+                              {group.clientCount === 1 ? '' : 's'}
                             </SelectItem>
                           ))}
                         </SelectContent>
@@ -553,7 +591,8 @@ export function BulkSendDialog({ open, onOpenChange, initialTemplate, onComplete
                         <div className="flex flex-wrap items-center gap-2">
                           <Badge variant="outline">{selectedGroup.name}</Badge>
                           <span className="text-muted-foreground">
-                            {groupRecipients.length} total member{groupRecipients.length === 1 ? '' : 's'}
+                            {groupRecipients.length} total member
+                            {groupRecipients.length === 1 ? '' : 's'}
                           </span>
                           <span className="text-muted-foreground">·</span>
                           <span className="text-muted-foreground">
@@ -561,7 +600,9 @@ export function BulkSendDialog({ open, onOpenChange, initialTemplate, onComplete
                           </span>
                         </div>
                         <p className="mt-2 text-xs text-muted-foreground">
-                          Group send uses the selected client group as the primary recipient source. CSV remains available below when you need custom rows or multi-recipient overrides.
+                          Group send uses the selected client group as the primary recipient source.
+                          CSV remains available below when you need custom rows or multi-recipient
+                          overrides.
                         </p>
                       </div>
                     )}
@@ -569,13 +610,18 @@ export function BulkSendDialog({ open, onOpenChange, initialTemplate, onComplete
                     {groupWarnings.length > 0 && (
                       <div className="rounded-md border border-amber-200 bg-amber-50 p-3 text-xs space-y-1">
                         {groupWarnings.map((warning, index) => (
-                          <p key={index} className="text-amber-800">{warning}</p>
+                          <p key={index} className="text-amber-800">
+                            {warning}
+                          </p>
                         ))}
                       </div>
                     )}
                   </TabsContent>
 
-                  <TabsContent value="csv" className="mt-3 space-y-3 rounded-lg border border-gray-200 p-4">
+                  <TabsContent
+                    value="csv"
+                    className="mt-3 space-y-3 rounded-lg border border-gray-200 p-4"
+                  >
                     <div className="flex flex-wrap items-center justify-between gap-2">
                       <div>
                         <Label>CSV upload</Label>
@@ -596,8 +642,15 @@ export function BulkSendDialog({ open, onOpenChange, initialTemplate, onComplete
                     </div>
 
                     <div className="flex items-center gap-2 text-xs">
-                      <Input type="file" accept=".csv,text/csv" onChange={handleCsvFile} className="flex-1" />
-                      <Badge variant="outline">{csvRowCount} row{csvRowCount === 1 ? '' : 's'}</Badge>
+                      <Input
+                        type="file"
+                        accept=".csv,text/csv"
+                        onChange={handleCsvFile}
+                        className="flex-1"
+                      />
+                      <Badge variant="outline">
+                        {csvRowCount} row{csvRowCount === 1 ? '' : 's'}
+                      </Badge>
                     </div>
                     {csvHeadersHint && (
                       <p className="text-[11px] text-muted-foreground">
@@ -627,7 +680,11 @@ export function BulkSendDialog({ open, onOpenChange, initialTemplate, onComplete
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-2">
                   <Label>Campaign title</Label>
-                  <Input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Q3 ROA renewals" />
+                  <Input
+                    value={title}
+                    onChange={(e) => setTitle(e.target.value)}
+                    placeholder="Q3 ROA renewals"
+                  />
                 </div>
                 <div className="space-y-2">
                   <Label>Expiry (days)</Label>
@@ -683,7 +740,9 @@ export function BulkSendDialog({ open, onOpenChange, initialTemplate, onComplete
                     <AlertCircle className="h-3 w-3" /> CSV warnings
                   </p>
                   <ul className="list-disc pl-4 text-amber-700">
-                    {warnings.slice(0, 5).map((w, i) => <li key={i}>{w}</li>)}
+                    {warnings.slice(0, 5).map((w, i) => (
+                      <li key={i}>{w}</li>
+                    ))}
                     {warnings.length > 5 && <li>+ {warnings.length - 5} more…</li>}
                   </ul>
                 </div>
@@ -695,18 +754,27 @@ export function BulkSendDialog({ open, onOpenChange, initialTemplate, onComplete
                     key={row.rowId}
                     className="flex items-center gap-2 text-xs border rounded-md px-2 py-1.5"
                   >
-                    {row.status === 'sent' && <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600" />}
+                    {row.status === 'sent' && (
+                      <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600" />
+                    )}
                     {row.status === 'failed' && <XCircle className="h-3.5 w-3.5 text-red-600" />}
-                    {row.status === 'queued' && <Loader2 className="h-3.5 w-3.5 animate-spin text-purple-500" />}
-                    {row.status === 'cancelled' && <XCircle className="h-3.5 w-3.5 text-gray-400" />}
+                    {row.status === 'queued' && (
+                      <Loader2 className="h-3.5 w-3.5 animate-spin text-purple-500" />
+                    )}
+                    {row.status === 'cancelled' && (
+                      <XCircle className="h-3.5 w-3.5 text-gray-400" />
+                    )}
                     <span className="font-medium flex-1 truncate">
-                      {row.signers.map(s => s.email).join(', ')}
+                      {row.signers.map((s) => s.email).join(', ')}
                     </span>
                     <Badge variant="outline" className="capitalize text-[10px]">
                       {row.status}
                     </Badge>
                     {row.errorMessage && (
-                      <span className="text-red-600 truncate max-w-[180px]" title={row.errorMessage}>
+                      <span
+                        className="text-red-600 truncate max-w-[180px]"
+                        title={row.errorMessage}
+                      >
                         {row.errorMessage}
                       </span>
                     )}
@@ -720,7 +788,9 @@ export function BulkSendDialog({ open, onOpenChange, initialTemplate, onComplete
         <DialogFooter className="border-t pt-3">
           {phase === 'compose' && (
             <>
-              <Button variant="ghost" onClick={handleClose}>Cancel</Button>
+              <Button variant="ghost" onClick={handleClose}>
+                Cancel
+              </Button>
               <Button
                 onClick={handleStart}
                 className="bg-purple-600 hover:bg-purple-700"
@@ -731,13 +801,17 @@ export function BulkSendDialog({ open, onOpenChange, initialTemplate, onComplete
                 }
               >
                 <Upload className="h-4 w-4 mr-2" />
-                Send {sourceMode === 'group' ? groupRowCount : csvRowCount}{' '}
-                envelope{(sourceMode === 'group' ? groupRowCount : csvRowCount) === 1 ? '' : 's'}
+                Send {sourceMode === 'group' ? groupRowCount : csvRowCount} envelope
+                {(sourceMode === 'group' ? groupRowCount : csvRowCount) === 1 ? '' : 's'}
               </Button>
             </>
           )}
           {phase === 'dispatching' && (
-            <Button variant="outline" onClick={handleCancel} className="text-red-600 hover:text-red-700">
+            <Button
+              variant="outline"
+              onClick={handleCancel}
+              className="text-red-600 hover:text-red-700"
+            >
               Cancel remaining rows
             </Button>
           )}

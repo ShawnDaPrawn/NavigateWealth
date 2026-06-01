@@ -9,14 +9,7 @@ import { Link } from 'react-router';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../../ui/card';
 import { Button } from '../../../ui/button';
 import { Separator } from '../../../ui/separator';
-import {
-  FileText,
-  Download,
-  Upload,
-  CheckCircle,
-  AlertTriangle,
-  FolderOpen,
-} from 'lucide-react';
+import { FileText, Download, Upload, CheckCircle, AlertTriangle, FolderOpen } from 'lucide-react';
 import type { PortfolioDocument } from '../api';
 import { formatDate } from '../utils';
 
@@ -57,7 +50,10 @@ export function DocumentsCard({ documents, onUploadClick }: DocumentsCardProps) 
             </div>
           )}
           {documents.slice(0, 4).map((document) => (
-            <div key={document.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+            <div
+              key={document.id}
+              className="flex items-center justify-between p-3 bg-gray-50 rounded-lg"
+            >
               <div className="flex items-center space-x-3">
                 <div className="flex-shrink-0">
                   {document.uploaded ? (
@@ -76,12 +72,7 @@ export function DocumentsCard({ documents, onUploadClick }: DocumentsCardProps) 
                   {document.uploaded ? formatDate(document.uploadDate) : 'Missing'}
                 </span>
                 {document.uploaded ? (
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    className="h-8 w-8 p-0"
-                    asChild
-                  >
+                  <Button size="sm" variant="ghost" className="h-8 w-8 p-0" asChild>
                     <Link to="/transactions-documents">
                       <Download className="h-4 w-4" />
                     </Link>

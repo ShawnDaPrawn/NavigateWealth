@@ -11,15 +11,20 @@
 import { z } from 'npm:zod';
 
 export const ConsultationRequestSchema = z.object({
-  name: z.string().min(1, 'Name is required').max(200)
+  name: z
+    .string()
+    .min(1, 'Name is required')
+    .max(200)
     .transform((v) => v.trim()),
-  email: z.string().email('Invalid email address format')
+  email: z
+    .string()
+    .email('Invalid email address format')
     .transform((v) => v.trim().toLowerCase()),
-  phone: z.string().min(1, 'Phone number is required').max(30)
-    .refine(
-      (val) => /^[\d\s\-+()]{7,}$/.test(val),
-      'Phone number must contain at least 7 digits',
-    ),
+  phone: z
+    .string()
+    .min(1, 'Phone number is required')
+    .max(30)
+    .refine((val) => /^[\d\s\-+()]{7,}$/.test(val), 'Phone number must contain at least 7 digits'),
   meetingType: z.enum(['virtual', 'telephonic'], {
     errorMap: () => ({ message: 'Meeting type must be "virtual" or "telephonic"' }),
   }),

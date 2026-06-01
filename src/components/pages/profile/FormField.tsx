@@ -33,9 +33,7 @@ export const FormField: React.FC<FormFieldProps> = ({
         {required && <span className="text-red-500 ml-1">*</span>}
       </Label>
       {children}
-      {hint && !error && (
-        <p className="text-xs text-gray-500">{hint}</p>
-      )}
+      {hint && !error && <p className="text-xs text-gray-500">{hint}</p>}
       {error && (
         <div className="flex items-center gap-1 text-xs text-red-600">
           <AlertCircle className="h-3 w-3" />

@@ -4,7 +4,9 @@ import { getKeysByCategory } from './keyManagerConstants';
 /**
  * Maps product category IDs to key categories
  */
-export function getKeyCategoryForProductCategory(productCategoryId: ProductCategoryId): ProductKeyCategory | null {
+export function getKeyCategoryForProductCategory(
+  productCategoryId: ProductCategoryId,
+): ProductKeyCategory | null {
   const mapping: Record<ProductCategoryId, ProductKeyCategory | null> = {
     risk_planning: 'risk',
     medical_aid: 'medical_aid',
@@ -20,7 +22,7 @@ export function getKeyCategoryForProductCategory(productCategoryId: ProductCateg
     tax_planning: 'tax',
     estate_planning: 'estate_planning',
   };
-  
+
   return mapping[productCategoryId] ?? null;
 }
 
@@ -31,9 +33,9 @@ export function getKeyCategoryForProductCategory(productCategoryId: ProductCateg
 export function getAvailableKeysForCategory(productCategoryId: ProductCategoryId) {
   const keyCategory = getKeyCategoryForProductCategory(productCategoryId);
   if (!keyCategory) return [];
-  
+
   const allKeys = getKeysByCategory(keyCategory);
-  
+
   // Filter out calculated keys - only return assignable field keys
-  return allKeys.filter(key => !key.isCalculated);
+  return allKeys.filter((key) => !key.isCalculated);
 }

@@ -32,7 +32,13 @@ function clampStr(raw: string, min: number, max: number): string {
   return raw;
 }
 
-export function DateSegmentInput({ value, onChange, id, className = '', disabled }: DateSegmentInputProps) {
+export function DateSegmentInput({
+  value,
+  onChange,
+  id,
+  className = '',
+  disabled,
+}: DateSegmentInputProps) {
   const yearRef = useRef<HTMLInputElement>(null);
   const monthRef = useRef<HTMLInputElement>(null);
   const dayRef = useRef<HTMLInputElement>(null);
@@ -54,11 +60,9 @@ export function DateSegmentInput({ value, onChange, id, className = '', disabled
         onChange('');
       } else {
         // Partial — store as-is so we don't lose partial input
-        const partial = [
-          y || '',
-          m ? m.padStart(2, '0') : '',
-          d ? d.padStart(2, '0') : '',
-        ].join('-');
+        const partial = [y || '', m ? m.padStart(2, '0') : '', d ? d.padStart(2, '0') : ''].join(
+          '-',
+        );
         onChange(partial);
       }
     },
@@ -66,7 +70,7 @@ export function DateSegmentInput({ value, onChange, id, className = '', disabled
   );
 
   const handleYearChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    let v = e.target.value.replace(/\D/g, '').slice(0, 4);
+    const v = e.target.value.replace(/\D/g, '').slice(0, 4);
     if (v.length === 4) {
       // Auto-advance to month
       monthRef.current?.focus();

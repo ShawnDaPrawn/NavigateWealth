@@ -16,14 +16,7 @@ import { Button } from '../../../../ui/button';
 import { Input } from '../../../../ui/input';
 import { Label } from '../../../../ui/label';
 import { Textarea } from '../../../../ui/textarea';
-import {
-  Upload,
-  FileText,
-  X,
-  AlertCircle,
-  CheckCircle2,
-  Loader2,
-} from 'lucide-react';
+import { Upload, FileText, X, AlertCircle, CheckCircle2, Loader2 } from 'lucide-react';
 import { useEnvelopeActions } from '../hooks/useEnvelopeActions';
 import type { Client } from '../../client-management/types';
 
@@ -180,7 +173,8 @@ export function UploadDocumentDialog({
         <DialogHeader>
           <DialogTitle>Upload Document for E-Signature</DialogTitle>
           <DialogDescription>
-            Upload a PDF document to send to {client.firstName} {client.lastName} for electronic signature
+            Upload a PDF document to send to {client.firstName} {client.lastName} for electronic
+            signature
           </DialogDescription>
         </DialogHeader>
 
@@ -188,15 +182,15 @@ export function UploadDocumentDialog({
           {/* File Upload Area */}
           <div className="space-y-2">
             <Label htmlFor="file-upload">Document File *</Label>
-            
+
             {!file ? (
               <div
                 className={`border-2 border-dashed rounded-lg p-8 text-center transition-colors ${
                   dragActive
                     ? 'border-purple-500 bg-purple-50'
                     : errors.file
-                    ? 'border-red-300 bg-red-50'
-                    : 'border-gray-300 hover:border-gray-400'
+                      ? 'border-red-300 bg-red-50'
+                      : 'border-gray-300 hover:border-gray-400'
                 }`}
                 onDragEnter={handleDrag}
                 onDragLeave={handleDrag}
@@ -205,17 +199,10 @@ export function UploadDocumentDialog({
               >
                 <Upload className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
                 <div className="space-y-2">
-                  <p className="text-sm font-medium">
-                    Drag and drop your PDF file here
-                  </p>
+                  <p className="text-sm font-medium">Drag and drop your PDF file here</p>
                   <p className="text-xs text-muted-foreground">or</p>
                   <label htmlFor="file-upload">
-                    <Button
-                      type="button"
-                      variant="outline"
-                      className="cursor-pointer"
-                      asChild
-                    >
+                    <Button type="button" variant="outline" className="cursor-pointer" asChild>
                       <span>Browse Files</span>
                     </Button>
                     <input
@@ -226,9 +213,7 @@ export function UploadDocumentDialog({
                       onChange={handleFileSelect}
                     />
                   </label>
-                  <p className="text-xs text-muted-foreground mt-2">
-                    PDF files only, max 10MB
-                  </p>
+                  <p className="text-xs text-muted-foreground mt-2">PDF files only, max 10MB</p>
                 </div>
               </div>
             ) : (
@@ -245,12 +230,7 @@ export function UploadDocumentDialog({
                       </p>
                     </div>
                   </div>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    onClick={removeFile}
-                  >
+                  <Button type="button" variant="ghost" size="sm" onClick={removeFile}>
                     <X className="h-4 w-4" />
                   </Button>
                 </div>
@@ -294,9 +274,7 @@ export function UploadDocumentDialog({
               rows={3}
               maxLength={500}
             />
-            <p className="text-xs text-muted-foreground text-right">
-              {message.length}/500
-            </p>
+            <p className="text-xs text-muted-foreground text-right">{message.length}/500</p>
           </div>
 
           {/* Expiry Days */}
@@ -319,9 +297,7 @@ export function UploadDocumentDialog({
             )}
             <p className="text-xs text-muted-foreground">
               Document will expire on{' '}
-              {new Date(
-                Date.now() + expiryDays * 24 * 60 * 60 * 1000
-              ).toLocaleDateString('en-ZA')}
+              {new Date(Date.now() + expiryDays * 24 * 60 * 60 * 1000).toLocaleDateString('en-ZA')}
             </p>
           </div>
 
@@ -340,12 +316,7 @@ export function UploadDocumentDialog({
         </div>
 
         <DialogFooter>
-          <Button
-            type="button"
-            variant="outline"
-            onClick={handleCancel}
-            disabled={uploading}
-          >
+          <Button type="button" variant="outline" onClick={handleCancel} disabled={uploading}>
             Cancel
           </Button>
           <Button

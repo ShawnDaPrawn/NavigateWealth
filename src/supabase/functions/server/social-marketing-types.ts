@@ -3,7 +3,7 @@
  */
 
 // Social platform
-export type SocialPlatform = 
+export type SocialPlatform =
   | 'facebook'
   | 'instagram'
   | 'twitter'

@@ -57,16 +57,16 @@ import { AutoContentPanel } from './components/AutoContentPanel';
 
 // Lazy-loaded components
 const NewsletterSubscribers = React.lazy(() =>
-  import('./components/NewsletterSubscribers').then(m => ({ default: m.NewsletterSubscribers }))
+  import('./components/NewsletterSubscribers').then((m) => ({ default: m.NewsletterSubscribers })),
 );
 const NewsletterBroadcast = React.lazy(() =>
-  import('./components/NewsletterBroadcast').then(m => ({ default: m.NewsletterBroadcast }))
+  import('./components/NewsletterBroadcast').then((m) => ({ default: m.NewsletterBroadcast })),
 );
 const TeamManager = React.lazy(() =>
-  import('./components/TeamManager').then(m => ({ default: m.TeamManager }))
+  import('./components/TeamManager').then((m) => ({ default: m.TeamManager })),
 );
 const CareersManager = React.lazy(() =>
-  import('./components/CareersManager').then(m => ({ default: m.CareersManager }))
+  import('./components/CareersManager').then((m) => ({ default: m.CareersManager })),
 );
 
 // Hooks
@@ -86,7 +86,9 @@ export function PublicationsModule() {
   const [showTemplatePicker, setShowTemplatePicker] = useState(false);
   const [showAIGenerator, setShowAIGenerator] = useState(false);
   const [selectedTemplate, setSelectedTemplate] = useState<ContentTemplate | null>(null);
-  const [aiGeneratedResult, setAiGeneratedResult] = useState<(GenerateArticleResult & { categoryId?: string }) | null>(null);
+  const [aiGeneratedResult, setAiGeneratedResult] = useState<
+    (GenerateArticleResult & { categoryId?: string }) | null
+  >(null);
 
   const { isInitialized, isLoading: initLoading, checkInitialization } = usePublicationsInit();
   const {
@@ -130,11 +132,14 @@ export function PublicationsModule() {
     setShowAIGenerator(true);
   }, []);
 
-  const handleAIGenerated = useCallback((result: GenerateArticleResult & { categoryId?: string }) => {
-    setAiGeneratedResult(result);
-    setShowAIGenerator(false);
-    setShowEditor(true);
-  }, []);
+  const handleAIGenerated = useCallback(
+    (result: GenerateArticleResult & { categoryId?: string }) => {
+      setAiGeneratedResult(result);
+      setShowAIGenerator(false);
+      setShowEditor(true);
+    },
+    [],
+  );
 
   const handleTemplateSelected = useCallback((template: ContentTemplate) => {
     setSelectedTemplate(template);
@@ -177,44 +182,46 @@ export function PublicationsModule() {
   }, [refetchArticles, checkInitialization]);
 
   const handleRefresh = useCallback(async () => {
-    await Promise.all([
-      refetchArticles(),
-      refetchCategories(),
-      checkInitialization(),
-    ]);
+    await Promise.all([refetchArticles(), refetchCategories(), checkInitialization()]);
   }, [checkInitialization, refetchArticles, refetchCategories]);
 
   // Kanban status change handler
-  const handleStatusChange = useCallback(async (articleId: string, newStatus: ArticleStatus) => {
-    // Gate publish action behind capability
-    if (newStatus === 'published' && !canPublish) {
-      toast.error('You do not have permission to publish articles');
-      return;
-    }
-    try {
-      if (newStatus === 'published') {
-        await PublicationsAPI.Articles.publishArticle(articleId);
-      } else if (newStatus === 'archived') {
-        await PublicationsAPI.Articles.archiveArticle(articleId);
-      } else {
-        await PublicationsAPI.Articles.updateArticle({ id: articleId, status: newStatus });
+  const handleStatusChange = useCallback(
+    async (articleId: string, newStatus: ArticleStatus) => {
+      // Gate publish action behind capability
+      if (newStatus === 'published' && !canPublish) {
+        toast.error('You do not have permission to publish articles');
+        return;
       }
-      toast.success(`Article moved to ${newStatus.replace('_', ' ')}`);
-      refetchArticles();
-    } catch (err) {
-      toast.error('Failed to update article status');
-      console.error('Status change error:', err);
-    }
-  }, [refetchArticles, canPublish]);
+      try {
+        if (newStatus === 'published') {
+          await PublicationsAPI.Articles.publishArticle(articleId);
+        } else if (newStatus === 'archived') {
+          await PublicationsAPI.Articles.archiveArticle(articleId);
+        } else {
+          await PublicationsAPI.Articles.updateArticle({ id: articleId, status: newStatus });
+        }
+        toast.success(`Article moved to ${newStatus.replace('_', ' ')}`);
+        refetchArticles();
+      } catch (err) {
+        toast.error('Failed to update article status');
+        console.error('Status change error:', err);
+      }
+    },
+    [refetchArticles, canPublish],
+  );
 
   // ── Quick stats for tab badges ───────────────────────────────────────
 
-  const stats = useMemo(() => ({
-    total: articles.length,
-    published: articles.filter(a => a.status === 'published').length,
-    drafts: articles.filter(a => a.status === 'draft').length,
-    categories: categories.length,
-  }), [articles, categories]);
+  const stats = useMemo(
+    () => ({
+      total: articles.length,
+      published: articles.filter((a) => a.status === 'published').length,
+      drafts: articles.filter((a) => a.status === 'draft').length,
+      categories: categories.length,
+    }),
+    [articles, categories],
+  );
 
   // ── Loading state ────────────────────────────────────────────────────
 
@@ -227,10 +234,7 @@ export function PublicationsModule() {
   if (isInitialized === false) {
     return (
       <div className="space-y-6 p-6">
-        <ModuleHeader
-          title="Publications"
-          subtitle="First-time setup required"
-        />
+        <ModuleHeader title="Publications" subtitle="First-time setup required" />
         <div className="max-w-2xl mx-auto mt-12">
           <InitializePublications onInitialized={checkInitialization} />
         </div>
@@ -244,7 +248,10 @@ export function PublicationsModule() {
     return (
       <div className="p-6">
         <ArticleEditor
-          key={selectedArticle?.id || `new-${selectedTemplate?.id || aiGeneratedResult?.suggestedSlug || 'blank'}`}
+          key={
+            selectedArticle?.id ||
+            `new-${selectedTemplate?.id || aiGeneratedResult?.suggestedSlug || 'blank'}`
+          }
           article={selectedArticle}
           initialTemplate={selectedTemplate}
           aiGeneratedResult={aiGeneratedResult}
@@ -311,7 +318,10 @@ export function PublicationsModule() {
               <Layers className="h-4 w-4" />
               Pipeline
               {stats.drafts > 0 && (
-                <Badge variant="outline" className="ml-1 text-[10px] px-1.5 py-0 h-4 border-orange-300 text-orange-600">
+                <Badge
+                  variant="outline"
+                  className="ml-1 text-[10px] px-1.5 py-0 h-4 border-orange-300 text-orange-600"
+                >
                   {stats.drafts}
                 </Badge>
               )}
@@ -361,10 +371,7 @@ export function PublicationsModule() {
             <LoadingPlaceholder message="Loading analytics..." />
           ) : (
             <div className="space-y-6">
-              <ContentAnalytics
-                articles={articles}
-                categories={categories}
-              />
+              <ContentAnalytics articles={articles} categories={categories} />
               <ArticleEmailEngagementPanel />
             </div>
           )}
@@ -372,10 +379,7 @@ export function PublicationsModule() {
 
         {/* Articles Tab */}
         <TabsContent value="articles" className="mt-6">
-          <ArticlesListView
-            onCreateNew={handleCreateNew}
-            onEditArticle={handleEditArticle}
-          />
+          <ArticlesListView onCreateNew={handleCreateNew} onEditArticle={handleEditArticle} />
         </TabsContent>
 
         {/* Pipeline Tab */}
@@ -414,10 +418,7 @@ export function PublicationsModule() {
 
         {/* Automation Tab */}
         <TabsContent value="automation" className="mt-6">
-          <AutoContentPanel
-            categories={categories}
-            onArticlesGenerated={refetchArticles}
-          />
+          <AutoContentPanel categories={categories} onArticlesGenerated={refetchArticles} />
         </TabsContent>
 
         {/* Categories Tab */}

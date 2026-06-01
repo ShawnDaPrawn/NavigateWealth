@@ -14,14 +14,18 @@ import {
 const app = new Hono();
 
 function getOpenClawSecret(): string {
-  return String(Deno.env.get('NW_OPENCLAW_GATEWAY_SECRET') || Deno.env.get('OPENCLAW_GATEWAY_SECRET') || '').trim();
+  return String(
+    Deno.env.get('NW_OPENCLAW_GATEWAY_SECRET') || Deno.env.get('OPENCLAW_GATEWAY_SECRET') || '',
+  ).trim();
 }
 
 function getAllowedCapabilities() {
   return normaliseOpenClawCapabilityList(Deno.env.get('NW_OPENCLAW_ALLOWED_CAPABILITIES'));
 }
 
-function hasValidOpenClawSecret(c: { req: { header: (name: string) => string | undefined } }): boolean {
+function hasValidOpenClawSecret(c: {
+  req: { header: (name: string) => string | undefined };
+}): boolean {
   const expected = getOpenClawSecret();
   if (!expected) return false;
 
@@ -33,7 +37,9 @@ function hasValidOpenClawSecret(c: { req: { header: (name: string) => string | u
 }
 
 async function appendEventSummary(summary: OpenClawEventSummary) {
-  const current = await kv.get(OPENCLAW_EVENT_HISTORY_KEY).catch(() => []) as OpenClawEventSummary[] | null;
+  const current = (await kv.get(OPENCLAW_EVENT_HISTORY_KEY).catch(() => [])) as
+    | OpenClawEventSummary[]
+    | null;
   const history = Array.isArray(current) ? current : [];
   await kv.set(OPENCLAW_EVENT_HISTORY_KEY, [summary, ...history].slice(0, 100));
 }
@@ -62,7 +68,9 @@ app.get('/capabilities', requireAdmin, (c) => {
 });
 
 app.get('/events/latest', requireAdmin, async (c) => {
-  const events = await kv.get(OPENCLAW_EVENT_HISTORY_KEY).catch(() => []) as OpenClawEventSummary[] | null;
+  const events = (await kv.get(OPENCLAW_EVENT_HISTORY_KEY).catch(() => [])) as
+    | OpenClawEventSummary[]
+    | null;
   return c.json({ success: true, events: Array.isArray(events) ? events : [] });
 });
 
@@ -75,7 +83,7 @@ app.post('/events', async (c) => {
     return c.json({ success: false, error: 'Unauthorized OpenClaw request' }, 401);
   }
 
-  const body = await c.req.json().catch(() => null) as Record<string, unknown> | null;
+  const body = (await c.req.json().catch(() => null)) as Record<string, unknown> | null;
   if (!body || typeof body !== 'object' || Array.isArray(body)) {
     return c.json({ success: false, error: 'Request body must be a JSON object' }, 400);
   }

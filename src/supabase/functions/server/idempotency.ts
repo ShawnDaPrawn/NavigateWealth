@@ -38,7 +38,7 @@ const log = createModuleLogger('idempotency');
 
 const IDEMPOTENCY_PREFIX = 'idempotency:';
 const IDEMPOTENCY_TTL_MS = 24 * 60 * 60 * 1000; // 24h
-const IN_FLIGHT_TTL_MS = 60 * 1000;             // 60s safety net for crashed handlers
+const IN_FLIGHT_TTL_MS = 60 * 1000; // 60s safety net for crashed handlers
 
 /** Maximum stored response body size in bytes (256 KB).
  *  Larger responses bypass the cache and execute every retry — safer than
@@ -101,19 +101,13 @@ export function requireIdempotency(opts?: { required?: boolean }): MiddlewareHan
 
     if (!key) {
       if (required) {
-        return c.json(
-          { error: 'Idempotency-Key header is required for this endpoint' },
-          400,
-        );
+        return c.json({ error: 'Idempotency-Key header is required for this endpoint' }, 400);
       }
       return next();
     }
 
     if (!KEY_PATTERN.test(key)) {
-      return c.json(
-        { error: 'Idempotency-Key must be 8-128 chars, [A-Za-z0-9_-] only' },
-        400,
-      );
+      return c.json({ error: 'Idempotency-Key must be 8-128 chars, [A-Za-z0-9_-] only' }, 400);
     }
 
     const path = new URL(c.req.url).pathname;
@@ -150,7 +144,10 @@ export function requireIdempotency(opts?: { required?: boolean }): MiddlewareHan
         if (cached.expiresAt > now) {
           c.header('Retry-After', '5');
           return c.json(
-            { error: 'A request with this Idempotency-Key is still in progress', code: 'idempotency_in_progress' },
+            {
+              error: 'A request with this Idempotency-Key is still in progress',
+              code: 'idempotency_in_progress',
+            },
             409,
           );
         }
@@ -158,9 +155,15 @@ export function requireIdempotency(opts?: { required?: boolean }): MiddlewareHan
       } else {
         if (cached.expiresAt > now) {
           if (cached.bodyHash !== bodyHash) {
-            log.warn('Idempotency-Key body mismatch', { path, keyHashPrefix: bodyHash.slice(0, 8) });
+            log.warn('Idempotency-Key body mismatch', {
+              path,
+              keyHashPrefix: bodyHash.slice(0, 8),
+            });
             return c.json(
-              { error: 'Idempotency-Key was reused with a different request body', code: 'idempotency_body_mismatch' },
+              {
+                error: 'Idempotency-Key was reused with a different request body',
+                code: 'idempotency_body_mismatch',
+              },
               409,
             );
           }

@@ -4,11 +4,11 @@ import { Skeleton } from '../../../../ui/skeleton';
 
 /**
  * DashboardSkeleton
- * 
+ *
  * A structural skeleton that mirrors the exact layout of DashboardModule.
  * Used as the Suspense fallback so the card structure is visible immediately
  * when the page initialises, before the module chunk or data has loaded.
- * 
+ *
  * Layout mirrors:
  * - 4-column KPI grid (top)
  * - 2-column middle section (System Activity + Quick Actions)
@@ -45,7 +45,7 @@ function SystemActivitySkeleton() {
       </CardHeader>
       <CardContent>
         <div className="grid grid-cols-2 gap-4">
-          {[1, 2, 3, 4].map(i => (
+          {[1, 2, 3, 4].map((i) => (
             <div key={i} className="p-4 rounded-xl border border-border">
               <div className="flex justify-between items-start mb-2">
                 <Skeleton className="h-9 w-9 rounded-lg" />
@@ -75,7 +75,7 @@ function QuickActionsSkeleton() {
       </CardHeader>
       <CardContent>
         <div className="grid grid-cols-2 gap-3">
-          {[1, 2, 3, 4, 5, 6, 7, 8].map(i => (
+          {[1, 2, 3, 4, 5, 6, 7, 8].map((i) => (
             <Skeleton key={i} className="h-14 w-full rounded-md" />
           ))}
         </div>
@@ -102,8 +102,11 @@ function TasksSkeleton() {
       </CardHeader>
       <CardContent className="flex-1">
         <div className="space-y-3">
-          {[1, 2, 3].map(i => (
-            <div key={i} className="flex flex-col sm:flex-row sm:items-center justify-between p-3 rounded-lg border border-border">
+          {[1, 2, 3].map((i) => (
+            <div
+              key={i}
+              className="flex flex-col sm:flex-row sm:items-center justify-between p-3 rounded-lg border border-border"
+            >
               <div className="flex items-start space-x-3 mb-2 sm:mb-0">
                 <Skeleton className="h-8 w-8 rounded-full flex-shrink-0" />
                 <div className="space-y-1.5">
@@ -129,7 +132,7 @@ export function DashboardSkeleton() {
       <span className="sr-only">Loading dashboard, please wait…</span>
       {/* KPI Grid — 4 columns */}
       <div className="grid gap-4 grid-cols-1 md:grid-cols-2 lg:grid-cols-4">
-        {[1, 2, 3, 4].map(i => (
+        {[1, 2, 3, 4].map((i) => (
           <KPICardSkeleton key={i} />
         ))}
       </div>

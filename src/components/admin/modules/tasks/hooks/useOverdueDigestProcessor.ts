@@ -66,7 +66,9 @@ export function useOverdueDigestProcessor(options?: {
     try {
       // Verify we have an active admin session before making auth-required calls
       const supabase = createClient();
-      const { data: { session } } = await supabase.auth.getSession();
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
       if (!session?.access_token) {
         // No session yet — skip this tick and wait for the next interval
         return;
@@ -85,7 +87,7 @@ export function useOverdueDigestProcessor(options?: {
 
       if (result.sent && result.overdue_count && result.overdue_count > 0) {
         console.log(
-          `[OverdueDigestProcessor] Sent digest email with ${result.overdue_count} overdue task(s)`
+          `[OverdueDigestProcessor] Sent digest email with ${result.overdue_count} overdue task(s)`,
         );
         onDigestSent?.(result.overdue_count);
       } else if (result.reason === 'no_overdue_tasks') {

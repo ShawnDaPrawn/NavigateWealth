@@ -56,12 +56,12 @@ interface PressArticle {
 // ============================================================================
 
 const BASE_URL = `https://${projectId}.supabase.co/functions/v1/make-server-91ed8379/publications`;
-const AUTH_HEADERS = { 'Authorization': `Bearer ${publicAnonKey}` };
+const AUTH_HEADERS = { Authorization: `Bearer ${publicAnonKey}` };
 
 const PRESS_CATEGORY_MAP: Record<string, string> = {
   'Company News': 'company_news',
   'Product Launch': 'product_launch',
-  'Awards': 'awards',
+  Awards: 'awards',
   'Team News': 'team_news',
   'Industry Insights': 'industry_insights',
 };
@@ -74,7 +74,14 @@ const PRESS_CATEGORY_LABEL_MAP: Record<string, string> = {
   industry_insights: 'Industry Insights',
 };
 
-const CATEGORY_TABS = ['All', 'Company News', 'Product Launch', 'Awards', 'Team News', 'Industry Insights'];
+const CATEGORY_TABS = [
+  'All',
+  'Company News',
+  'Product Launch',
+  'Awards',
+  'Team News',
+  'Industry Insights',
+];
 
 // ============================================================================
 // Data fetching
@@ -85,8 +92,16 @@ async function fetchPressStats(): Promise<PressStats> {
     const res = await fetch(`${BASE_URL}/press/stats`, { headers: AUTH_HEADERS });
     const json = await res.json();
     if (json.success && json.data) return json.data;
-  } catch { /* fall through */ }
-  return { aum: 'R500 mil+', activeClients: 0, activeClientsLabel: '—', yearsInBusiness: '15+', combinedExperience: '55+' };
+  } catch {
+    /* fall through */
+  }
+  return {
+    aum: 'R500 mil+',
+    activeClients: 0,
+    activeClientsLabel: '—',
+    yearsInBusiness: '15+',
+    combinedExperience: '55+',
+  };
 }
 
 async function fetchPressArticles(): Promise<PressArticle[]> {
@@ -94,7 +109,9 @@ async function fetchPressArticles(): Promise<PressArticle[]> {
     const res = await fetch(`${BASE_URL}/press/articles`, { headers: AUTH_HEADERS });
     const json = await res.json();
     if (json.success && Array.isArray(json.data)) return json.data;
-  } catch { /* fall through */ }
+  } catch {
+    /* fall through */
+  }
   return [];
 }
 
@@ -116,8 +133,14 @@ export function PressPage() {
   const seoData = getSEOData('press');
 
   useEffect(() => {
-    fetchPressStats().then(s => { setStats(s); setIsLoadingStats(false); });
-    fetchPressArticles().then(a => { setArticles(a); setIsLoadingArticles(false); });
+    fetchPressStats().then((s) => {
+      setStats(s);
+      setIsLoadingStats(false);
+    });
+    fetchPressArticles().then((a) => {
+      setArticles(a);
+      setIsLoadingArticles(false);
+    });
   }, []);
 
   const handleDownloadClick = (e: React.MouseEvent) => {
@@ -126,12 +149,19 @@ export function PressPage() {
   };
 
   // Derive company stats from real data
-  const companyStats = useMemo(() => [
-    { label: "Assets Under Management", value: stats?.aum || 'R500 mil+', icon: TrendingUp },
-    { label: "Active Clients", value: stats?.activeClientsLabel || '—', icon: Users },
-    { label: "Years in Business", value: stats?.yearsInBusiness || '15+', icon: Calendar },
-    { label: "Combined Years Experience", value: stats?.combinedExperience || '55+', icon: Building },
-  ], [stats]);
+  const companyStats = useMemo(
+    () => [
+      { label: 'Assets Under Management', value: stats?.aum || 'R500 mil+', icon: TrendingUp },
+      { label: 'Active Clients', value: stats?.activeClientsLabel || '—', icon: Users },
+      { label: 'Years in Business', value: stats?.yearsInBusiness || '15+', icon: Calendar },
+      {
+        label: 'Combined Years Experience',
+        value: stats?.combinedExperience || '55+',
+        icon: Building,
+      },
+    ],
+    [stats],
+  );
 
   // Filter articles by selected category tab + search query
   const filteredArticles = useMemo(() => {
@@ -141,17 +171,18 @@ export function PressPage() {
     if (selectedCategory !== 'All') {
       const catKey = PRESS_CATEGORY_MAP[selectedCategory];
       if (catKey) {
-        result = result.filter(a => a.press_category === catKey);
+        result = result.filter((a) => a.press_category === catKey);
       }
     }
 
     // Search filter
     if (searchQuery.trim()) {
       const q = searchQuery.toLowerCase();
-      result = result.filter(a =>
-        a.title.toLowerCase().includes(q) ||
-        a.excerpt.toLowerCase().includes(q) ||
-        (a.subtitle || '').toLowerCase().includes(q)
+      result = result.filter(
+        (a) =>
+          a.title.toLowerCase().includes(q) ||
+          a.excerpt.toLowerCase().includes(q) ||
+          (a.subtitle || '').toLowerCase().includes(q),
       );
     }
 
@@ -159,15 +190,43 @@ export function PressPage() {
   }, [articles, selectedCategory, searchQuery]);
 
   const mediaAssets = [
-    { title: "Brand Assets", description: "Logo packages, brand guidelines, and visual identity resources", type: "ZIP", size: "3.2 MB", icon: Building },
-    { title: "Executive Photos", description: "High-resolution leadership team photography", type: "ZIP", size: "8.7 MB", icon: Users },
-    { title: "Company Fact Sheet", description: "Key statistics, milestones, and company overview", type: "PDF", size: "1.4 MB", icon: FileText },
-    { title: "Product Brochures", description: "Comprehensive service and solution overviews", type: "PDF", size: "4.1 MB", icon: Newspaper },
+    {
+      title: 'Brand Assets',
+      description: 'Logo packages, brand guidelines, and visual identity resources',
+      type: 'ZIP',
+      size: '3.2 MB',
+      icon: Building,
+    },
+    {
+      title: 'Executive Photos',
+      description: 'High-resolution leadership team photography',
+      type: 'ZIP',
+      size: '8.7 MB',
+      icon: Users,
+    },
+    {
+      title: 'Company Fact Sheet',
+      description: 'Key statistics, milestones, and company overview',
+      type: 'PDF',
+      size: '1.4 MB',
+      icon: FileText,
+    },
+    {
+      title: 'Product Brochures',
+      description: 'Comprehensive service and solution overviews',
+      type: 'PDF',
+      size: '4.1 MB',
+      icon: Newspaper,
+    },
   ];
 
   function formatDate(dateStr: string): string {
     try {
-      return new Date(dateStr).toLocaleDateString('en-ZA', { day: 'numeric', month: 'short', year: 'numeric' });
+      return new Date(dateStr).toLocaleDateString('en-ZA', {
+        day: 'numeric',
+        month: 'short',
+        year: 'numeric',
+      });
     } catch {
       return dateStr;
     }
@@ -181,27 +240,41 @@ export function PressPage() {
         keywords={seoData.keywords}
         canonicalUrl={seoData.canonicalUrl}
         ogType={seoData.ogType}
-        structuredData={createWebPageSchema(seoData.title, seoData.description, seoData.canonicalUrl)}
+        structuredData={createWebPageSchema(
+          seoData.title,
+          seoData.description,
+          seoData.canonicalUrl,
+        )}
       />
       {/* Hero Section */}
       <section className="relative overflow-hidden bg-[#111827]" aria-label="Hero">
         <div className="absolute inset-0 bg-gradient-to-b from-[#111827] via-[#161b33] to-[#111827] pointer-events-none" />
-        <div className="absolute top-0 right-0 w-[600px] h-[600px] rounded-full opacity-20 pointer-events-none" style={{ background: 'radial-gradient(circle, rgba(109,40,217,0.25) 0%, transparent 70%)' }} />
+        <div
+          className="absolute top-0 right-0 w-[600px] h-[600px] rounded-full opacity-20 pointer-events-none"
+          style={{
+            background: 'radial-gradient(circle, rgba(109,40,217,0.25) 0%, transparent 70%)',
+          }}
+        />
 
         <div className="relative z-10 max-w-screen-xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex flex-col items-center text-center py-20 lg:py-28">
             <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-white/[0.06] border border-white/[0.08] mb-8">
               <Newspaper className="h-3.5 w-3.5 text-purple-400" />
-              <span className="text-[12px] font-medium text-gray-400 tracking-wide">Press Center</span>
+              <span className="text-[12px] font-medium text-gray-400 tracking-wide">
+                Press Center
+              </span>
             </div>
 
             <div className="max-w-3xl space-y-5">
               <h1 className="!text-[clamp(2rem,5vw,3.5rem)] !font-extrabold !leading-[1.1] text-white tracking-tight">
                 Navigate Wealth{' '}
-                <span className="bg-gradient-to-r from-purple-400 to-violet-300 bg-clip-text text-transparent">in the News</span>
+                <span className="bg-gradient-to-r from-purple-400 to-violet-300 bg-clip-text text-transparent">
+                  in the News
+                </span>
               </h1>
               <p className="text-gray-400 text-base sm:text-lg max-w-2xl mx-auto leading-relaxed">
-                Stay informed with the latest developments, announcements, and industry recognition from South Africa's leading independent financial advisory firm.
+                Stay informed with the latest developments, announcements, and industry recognition
+                from South Africa's leading independent financial advisory firm.
               </p>
             </div>
 
@@ -258,17 +331,18 @@ export function PressPage() {
                 className="pl-10 bg-gray-50 border-gray-200 w-full"
               />
             </div>
-            
+
             <div className="flex flex-wrap gap-2">
               {CATEGORY_TABS.map((category) => (
                 <Button
                   key={category}
-                  variant={selectedCategory === category ? "default" : "outline"}
+                  variant={selectedCategory === category ? 'default' : 'outline'}
                   size="sm"
                   onClick={() => setSelectedCategory(category)}
-                  className={selectedCategory === category 
-                    ? "bg-purple-600 hover:bg-purple-700 text-white" 
-                    : "border-gray-200 text-gray-600 hover:bg-gray-50"
+                  className={
+                    selectedCategory === category
+                      ? 'bg-purple-600 hover:bg-purple-700 text-white'
+                      : 'border-gray-200 text-gray-600 hover:bg-gray-50'
                   }
                 >
                   {category}
@@ -283,9 +357,7 @@ export function PressPage() {
       <section className="py-16 section-white">
         <div className="max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="mb-12">
-            <h2 className="text-black text-3xl font-medium mb-4">
-              Featured News
-            </h2>
+            <h2 className="text-black text-3xl font-medium mb-4">Featured News</h2>
             <p className="text-gray-600 text-xl">
               Latest major announcements and company developments.
             </p>
@@ -316,10 +388,7 @@ export function PressPage() {
                 <p className="text-sm text-gray-500">
                   For immediate assistance or inquiries, please contact our team directly.
                 </p>
-                <Button 
-                  className="bg-purple-600 hover:bg-purple-700 text-white px-6 py-3"
-                  asChild
-                >
+                <Button className="bg-purple-600 hover:bg-purple-700 text-white px-6 py-3" asChild>
                   <Link to="/contact">
                     Contact Us
                     <ArrowRight className="ml-2 h-5 w-5" />
@@ -331,11 +400,7 @@ export function PressPage() {
             /* Press Articles Grid */
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
               {filteredArticles.map((article) => (
-                <Link
-                  key={article.id}
-                  to={`/resources/article/${article.slug}`}
-                  className="group"
-                >
+                <Link key={article.id} to={`/resources/article/${article.slug}`} className="group">
                   <Card className="border-gray-200 hover:shadow-lg transition-all duration-300 overflow-hidden h-full flex flex-col">
                     {/* Image */}
                     {(article.hero_image_url || article.thumbnail_image_url) && (
@@ -352,7 +417,8 @@ export function PressPage() {
                       {/* Category Badge */}
                       <div className="mb-2">
                         <Badge className="bg-purple-100 text-purple-700 border-purple-200 text-xs">
-                          {PRESS_CATEGORY_LABEL_MAP[article.press_category] || article.press_category}
+                          {PRESS_CATEGORY_LABEL_MAP[article.press_category] ||
+                            article.press_category}
                         </Badge>
                       </div>
                       <CardTitle className="text-lg text-gray-900 group-hover:text-purple-700 transition-colors line-clamp-2 leading-snug">
@@ -395,24 +461,28 @@ export function PressPage() {
       <section id="media-kit" className="py-12 sm:py-16 section-dark-gray">
         <div className="max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-10 sm:mb-12">
-            <h2 className="text-white text-2xl sm:text-3xl font-medium mb-4">
-              Media Resources
-            </h2>
+            <h2 className="text-white text-2xl sm:text-3xl font-medium mb-4">Media Resources</h2>
             <p className="text-white/90 text-base sm:text-xl max-w-2xl mx-auto">
-              Access our comprehensive media kit including brand assets, executive materials, and company information.
+              Access our comprehensive media kit including brand assets, executive materials, and
+              company information.
             </p>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
             {mediaAssets.map((asset, index) => (
-              <Card key={index} className="bg-white border-gray-200 hover:shadow-xl transition-all duration-300 group text-center">
+              <Card
+                key={index}
+                className="bg-white border-gray-200 hover:shadow-xl transition-all duration-300 group text-center"
+              >
                 <CardHeader className="p-6">
                   <div className="w-16 h-16 mx-auto rounded-xl bg-purple-100 flex items-center justify-center mb-4 group-hover:bg-purple-200 transition-colors">
                     <asset.icon className="h-8 w-8 text-purple-600" />
                   </div>
                   <CardTitle className="text-lg text-gray-900 mb-2">{asset.title}</CardTitle>
                   <div className="flex items-center justify-center gap-3 text-sm text-gray-500">
-                    <Badge variant="outline" className="text-xs border-gray-300">{asset.type}</Badge>
+                    <Badge variant="outline" className="text-xs border-gray-300">
+                      {asset.type}
+                    </Badge>
                     <span>{asset.size}</span>
                   </div>
                 </CardHeader>
@@ -420,7 +490,7 @@ export function PressPage() {
                   <CardDescription className="text-gray-600 mb-6">
                     {asset.description}
                   </CardDescription>
-                  <Button 
+                  <Button
                     className="bg-purple-600 hover:bg-purple-700 text-white w-full group"
                     onClick={handleDownloadClick}
                   >
@@ -439,11 +509,10 @@ export function PressPage() {
         <div className="max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="max-w-4xl mx-auto">
             <div className="text-center mb-10 sm:mb-12">
-              <h2 className="text-black text-2xl sm:text-3xl font-medium mb-4">
-                Media Contact
-              </h2>
+              <h2 className="text-black text-2xl sm:text-3xl font-medium mb-4">Media Contact</h2>
               <p className="text-gray-600 text-base sm:text-xl">
-                For press inquiries, interviews, and additional information, contact our media relations team.
+                For press inquiries, interviews, and additional information, contact our media
+                relations team.
               </p>
             </div>
 
@@ -511,9 +580,9 @@ export function PressPage() {
       </section>
 
       {/* Media Access Modal */}
-      <MediaAccessModal 
-        isOpen={isMediaAccessModalOpen} 
-        onClose={() => setIsMediaAccessModalOpen(false)} 
+      <MediaAccessModal
+        isOpen={isMediaAccessModalOpen}
+        onClose={() => setIsMediaAccessModalOpen(false)}
       />
     </div>
   );

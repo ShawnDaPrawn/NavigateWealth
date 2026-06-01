@@ -99,7 +99,7 @@ function generateId(): string {
 // ============================================================================
 
 async function getIndex(): Promise<KBIndex> {
-  const index = await kv.get(INDEX_KEY) as KBIndex | null;
+  const index = (await kv.get(INDEX_KEY)) as KBIndex | null;
   return index || { entryIds: [], updatedAt: new Date().toISOString() };
 }
 
@@ -119,7 +119,7 @@ export async function getAllEntries(): Promise<KBEntry[]> {
   if (index.entryIds.length === 0) return [];
 
   const keys = index.entryIds.map(entryKey);
-  const entries = await kv.mget(keys) as (KBEntry | null)[];
+  const entries = (await kv.mget(keys)) as (KBEntry | null)[];
 
   // Filter out nulls (orphaned index entries)
   return entries.filter((e): e is KBEntry => e !== null);
@@ -165,7 +165,7 @@ export async function getStats(): Promise<KBStats> {
  * Get a single KB entry by ID.
  */
 export async function getEntry(id: string): Promise<KBEntry | null> {
-  return await kv.get(entryKey(id)) as KBEntry | null;
+  return (await kv.get(entryKey(id))) as KBEntry | null;
 }
 
 /**
@@ -196,10 +196,7 @@ export async function createEntry(input: CreateKBInput, userId: string): Promise
   const index = await getIndex();
   index.entryIds.push(id);
 
-  await Promise.all([
-    kv.set(entryKey(id), entry),
-    saveIndex(index),
-  ]);
+  await Promise.all([kv.set(entryKey(id), entry), saveIndex(index)]);
 
   log.info('KB entry created', { id, type: input.type, title: input.title });
   return entry;
@@ -214,9 +211,7 @@ export async function updateEntry(id: string, input: UpdateKBInput): Promise<KBE
 
   const updated: KBEntry = {
     ...existing,
-    ...Object.fromEntries(
-      Object.entries(input).filter(([_, v]) => v !== undefined)
-    ),
+    ...Object.fromEntries(Object.entries(input).filter(([_, v]) => v !== undefined)),
     id: existing.id, // Ensure ID cannot be changed
     createdBy: existing.createdBy,
     createdAt: existing.createdAt,
@@ -237,12 +232,9 @@ export async function deleteEntry(id: string): Promise<boolean> {
 
   // Remove from index and delete entry (§5.4 — multi-entry consistency)
   const index = await getIndex();
-  index.entryIds = index.entryIds.filter(eid => eid !== id);
+  index.entryIds = index.entryIds.filter((eid) => eid !== id);
 
-  await Promise.all([
-    kv.del(entryKey(id)),
-    saveIndex(index),
-  ]);
+  await Promise.all([kv.del(entryKey(id)), saveIndex(index)]);
 
   log.info('KB entry deleted', { id, title: existing.title });
   return true;

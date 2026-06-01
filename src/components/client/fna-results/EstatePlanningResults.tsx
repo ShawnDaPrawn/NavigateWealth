@@ -1,7 +1,7 @@
 /**
  * Client-Side Estate Planning FNA Results Display
  * Read-only view of published Estate Planning Analysis
- * 
+ *
  * Data source: /supabase/functions/server/estate-planning-fna-routes.tsx
  * Backend stores inputs with: familyInfo, dependants, willInfo, assets, liabilities,
  * lifePolicies, assumptions, hasOffshorAssets, hasTrusts, trustDetails, planningNotes
@@ -13,8 +13,8 @@ import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '../../ui/card';
 import { Badge } from '../../ui/badge';
 import { Separator } from '../../ui/separator';
-import { 
-  Home, 
+import {
+  Home,
   Users,
   FileText,
   DollarSign,
@@ -22,7 +22,7 @@ import {
   CheckCircle,
   Info,
   Scale,
-  Shield
+  Shield,
 } from 'lucide-react';
 import { EstatePlanningFNA, formatCurrency } from '../../../services/fna-api';
 
@@ -34,11 +34,40 @@ export function EstatePlanningResults({ fna }: EstatePlanningResultsProps) {
   const { results, inputs, adviserNotes } = fna;
 
   /** Typed estate asset from inputs */
-  interface EstateAsset { currentValue?: number; value?: number; type?: string; subType?: string; description?: string; [key: string]: unknown; }
-  interface EstateLiability { outstandingBalance?: number; amount?: number; description?: string; [key: string]: unknown; }
-  interface LifePolicy { payableToEstate?: boolean; sumAssured?: number; provider?: string; policyNumber?: string; [key: string]: unknown; }
-  interface EstateDependant { name?: string; relationship?: string; age?: number; [key: string]: unknown; }
-  interface EstateRecommendation { title?: string; recommendation?: string; description?: string; priority?: string; [key: string]: unknown; }
+  interface EstateAsset {
+    currentValue?: number;
+    value?: number;
+    type?: string;
+    subType?: string;
+    description?: string;
+    [key: string]: unknown;
+  }
+  interface EstateLiability {
+    outstandingBalance?: number;
+    amount?: number;
+    description?: string;
+    [key: string]: unknown;
+  }
+  interface LifePolicy {
+    payableToEstate?: boolean;
+    sumAssured?: number;
+    provider?: string;
+    policyNumber?: string;
+    [key: string]: unknown;
+  }
+  interface EstateDependant {
+    name?: string;
+    relationship?: string;
+    age?: number;
+    [key: string]: unknown;
+  }
+  interface EstateRecommendation {
+    title?: string;
+    recommendation?: string;
+    description?: string;
+    priority?: string;
+    [key: string]: unknown;
+  }
 
   // Safely access nested input structures
   const familyInfo = inputs?.familyInfo;
@@ -51,10 +80,13 @@ export function EstatePlanningResults({ fna }: EstatePlanningResultsProps) {
 
   // Calculate estate values from inputs when results are null
   const totalAssets = assets.reduce(
-    (sum: number, asset: EstateAsset) => sum + (asset.currentValue || asset.value || 0), 0
+    (sum: number, asset: EstateAsset) => sum + (asset.currentValue || asset.value || 0),
+    0,
   );
   const totalLiabilities = liabilities.reduce(
-    (sum: number, liability: EstateLiability) => sum + (liability.outstandingBalance || liability.amount || 0), 0
+    (sum: number, liability: EstateLiability) =>
+      sum + (liability.outstandingBalance || liability.amount || 0),
+    0,
   );
   const netEstateValue = totalAssets - totalLiabilities;
 
@@ -63,20 +95,31 @@ export function EstatePlanningResults({ fna }: EstatePlanningResultsProps) {
   // Use results if available, otherwise derive from inputs
   const estateValue = (resultsRecord.estateValue as number) ?? netEstateValue;
   const estateDutyAbatement = assumptions?.estateDutyAbatement || 3500000;
-  const estateDutyRate = assumptions?.estateDutyRate || 0.20;
-  const dutiableAmount = Math.max(0, estateValue - (assumptions?.spousalBequest ? estateValue : estateDutyAbatement));
-  const estimatedEstateDuty = (resultsRecord.estateDuty as number) ?? (dutiableAmount * estateDutyRate);
+  const estateDutyRate = assumptions?.estateDutyRate || 0.2;
+  const dutiableAmount = Math.max(
+    0,
+    estateValue - (assumptions?.spousalBequest ? estateValue : estateDutyAbatement),
+  );
+  const estimatedEstateDuty =
+    (resultsRecord.estateDuty as number) ?? dutiableAmount * estateDutyRate;
 
   // Calculate liquidity needs
-  const executorFees = estateValue * (assumptions?.executorFeePercentage || 3.5) / 100;
+  const executorFees = (estateValue * (assumptions?.executorFeePercentage || 3.5)) / 100;
   const masterFees = assumptions?.masterFeesEstimate || 5000;
   const funeralCosts = assumptions?.funeralCostsEstimate || 50000;
   const conveyancingFees = assumptions?.conveyancingFeesPerProperty || 50000;
-  const numProperties = assets.filter((a: EstateAsset) => 
-    (a.type || '').toLowerCase() === 'property' || (a.subType || '').toLowerCase().includes('property')
+  const numProperties = assets.filter(
+    (a: EstateAsset) =>
+      (a.type || '').toLowerCase() === 'property' ||
+      (a.subType || '').toLowerCase().includes('property'),
   ).length;
-  const totalLiquidityNeeds = (resultsRecord.liquidityNeeds as number) ?? 
-    (estimatedEstateDuty + executorFees + masterFees + funeralCosts + (conveyancingFees * numProperties));
+  const totalLiquidityNeeds =
+    (resultsRecord.liquidityNeeds as number) ??
+    estimatedEstateDuty +
+      executorFees +
+      masterFees +
+      funeralCosts +
+      conveyancingFees * numProperties;
 
   // Total life cover payable to estate
   const totalLifeCoverToEstate = lifePolicies
@@ -97,8 +140,9 @@ export function EstatePlanningResults({ fna }: EstatePlanningResultsProps) {
             <div className="flex-1">
               <h3 className="text-gray-900 mb-2">Estate Planning Analysis Summary</h3>
               <p className="text-sm text-gray-700 mb-4">
-                Comprehensive modeling of your estate on death, including asset valuation, estate duty calculations, 
-                liquidity requirements, and distribution planning for your beneficiaries.
+                Comprehensive modeling of your estate on death, including asset valuation, estate
+                duty calculations, liquidity requirements, and distribution planning for your
+                beneficiaries.
               </p>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 <div className="bg-white p-3 rounded-lg border border-indigo-100">
@@ -116,8 +160,11 @@ export function EstatePlanningResults({ fna }: EstatePlanningResultsProps) {
                 <div className="bg-white p-3 rounded-lg border border-indigo-100">
                   <p className="text-xs text-gray-600 mb-1">Will Status</p>
                   <p className="text-gray-900 capitalize">
-                    {(willInfo as Record<string, unknown>).hasValidWill === 'yes' ? 'Valid' : 
-                     (willInfo as Record<string, unknown>).hasValidWill === 'no' ? 'None' : 'Unknown'}
+                    {(willInfo as Record<string, unknown>).hasValidWill === 'yes'
+                      ? 'Valid'
+                      : (willInfo as Record<string, unknown>).hasValidWill === 'no'
+                        ? 'None'
+                        : 'Unknown'}
                   </p>
                 </div>
               </div>
@@ -163,7 +210,8 @@ export function EstatePlanningResults({ fna }: EstatePlanningResultsProps) {
               <div className="p-3 bg-purple-50 rounded-lg border border-purple-100">
                 <p className="text-xs text-gray-600 mb-1">Spouse</p>
                 <p className="text-sm text-gray-900">
-                  {familyInfo.spouseName} {familyInfo.spouseAge ? `(Age ${familyInfo.spouseAge})` : ''}
+                  {familyInfo.spouseName}{' '}
+                  {familyInfo.spouseAge ? `(Age ${familyInfo.spouseAge})` : ''}
                 </p>
               </div>
             )}
@@ -172,16 +220,25 @@ export function EstatePlanningResults({ fna }: EstatePlanningResultsProps) {
               <div className="contents">
                 <Separator />
                 <div>
-                  <p className="text-xs text-gray-700 mb-2"><strong>Dependants:</strong></p>
+                  <p className="text-xs text-gray-700 mb-2">
+                    <strong>Dependants:</strong>
+                  </p>
                   <div className="space-y-2">
                     {dependants.map((dep: EstateDependant, index: number) => (
-                      <div key={index} className="flex justify-between items-center text-xs p-2 bg-gray-50 rounded">
+                      <div
+                        key={index}
+                        className="flex justify-between items-center text-xs p-2 bg-gray-50 rounded"
+                      >
                         <div>
                           <p className="text-gray-900">{dep.name}</p>
-                          <p className="text-gray-600 capitalize">{dep.relationship} - Age {dep.age}</p>
+                          <p className="text-gray-600 capitalize">
+                            {dep.relationship} - Age {dep.age}
+                          </p>
                         </div>
                         {!!dep.specialNeeds && (
-                          <Badge variant="outline" className="text-xs">Special Needs</Badge>
+                          <Badge variant="outline" className="text-xs">
+                            Special Needs
+                          </Badge>
                         )}
                       </div>
                     ))}
@@ -220,17 +277,28 @@ export function EstatePlanningResults({ fna }: EstatePlanningResultsProps) {
             <div className="contents">
               <Separator />
               <div>
-                <p className="text-xs text-gray-700 mb-3"><strong>Assets:</strong></p>
+                <p className="text-xs text-gray-700 mb-3">
+                  <strong>Assets:</strong>
+                </p>
                 <div className="space-y-2">
                   {assets.map((asset: EstateAsset, index: number) => (
-                    <div key={index} className="flex justify-between items-center text-xs p-2 bg-gray-50 rounded">
+                    <div
+                      key={index}
+                      className="flex justify-between items-center text-xs p-2 bg-gray-50 rounded"
+                    >
                       <div className="flex-1">
-                        <p className="text-gray-900">{String(asset.description || asset.name || 'Asset')}</p>
+                        <p className="text-gray-900">
+                          {String(asset.description || asset.name || 'Asset')}
+                        </p>
                         {asset.type && (
-                          <p className="text-gray-600 text-xs capitalize">{asset.type} {asset.subType ? `- ${asset.subType}` : ''}</p>
+                          <p className="text-gray-600 text-xs capitalize">
+                            {asset.type} {asset.subType ? `- ${asset.subType}` : ''}
+                          </p>
                         )}
                       </div>
-                      <p className="text-gray-900">{formatCurrency(asset.currentValue || asset.value || 0)}</p>
+                      <p className="text-gray-900">
+                        {formatCurrency(asset.currentValue || asset.value || 0)}
+                      </p>
                     </div>
                   ))}
                 </div>
@@ -243,17 +311,28 @@ export function EstatePlanningResults({ fna }: EstatePlanningResultsProps) {
             <div className="contents">
               <Separator />
               <div>
-                <p className="text-xs text-gray-700 mb-3"><strong>Liabilities:</strong></p>
+                <p className="text-xs text-gray-700 mb-3">
+                  <strong>Liabilities:</strong>
+                </p>
                 <div className="space-y-2">
                   {liabilities.map((liability: EstateLiability, index: number) => (
-                    <div key={index} className="flex justify-between items-center text-xs p-2 bg-gray-50 rounded">
+                    <div
+                      key={index}
+                      className="flex justify-between items-center text-xs p-2 bg-gray-50 rounded"
+                    >
                       <div className="flex-1">
-                        <p className="text-gray-900">{String(liability.description || liability.name || 'Liability')}</p>
+                        <p className="text-gray-900">
+                          {String(liability.description || liability.name || 'Liability')}
+                        </p>
                         {!!liability.type && (
-                          <p className="text-gray-600 text-xs capitalize">{String(liability.type)}</p>
+                          <p className="text-gray-600 text-xs capitalize">
+                            {String(liability.type)}
+                          </p>
                         )}
                       </div>
-                      <p className="text-gray-900">{formatCurrency(liability.outstandingBalance || liability.amount || 0)}</p>
+                      <p className="text-gray-900">
+                        {formatCurrency(liability.outstandingBalance || liability.amount || 0)}
+                      </p>
                     </div>
                   ))}
                 </div>
@@ -264,7 +343,9 @@ export function EstatePlanningResults({ fna }: EstatePlanningResultsProps) {
           <Separator />
 
           <div className="flex justify-between items-center pt-2 bg-indigo-50 p-4 rounded-lg border border-indigo-200">
-            <p className="text-sm text-gray-900"><strong>Net Estate Value</strong></p>
+            <p className="text-sm text-gray-900">
+              <strong>Net Estate Value</strong>
+            </p>
             <p className="text-2xl text-gray-900">{formatCurrency(estateValue)}</p>
           </div>
         </CardContent>
@@ -290,7 +371,9 @@ export function EstatePlanningResults({ fna }: EstatePlanningResultsProps) {
               <p className="text-xs text-gray-600 mb-1">Estate Duty Abatement</p>
               <p className="text-lg text-gray-900">{formatCurrency(estateDutyAbatement)}</p>
               <p className="text-xs text-gray-600 mt-1">
-                {assumptions?.spousalBequest ? 'Spousal bequest exemption applies' : 'Standard R3.5M abatement'}
+                {assumptions?.spousalBequest
+                  ? 'Spousal bequest exemption applies'
+                  : 'Standard R3.5M abatement'}
               </p>
             </div>
           </div>
@@ -305,7 +388,8 @@ export function EstatePlanningResults({ fna }: EstatePlanningResultsProps) {
               <p className="text-2xl text-red-700">{formatCurrency(estimatedEstateDuty)}</p>
             </div>
             <p className="text-xs text-gray-600">
-              Calculated at {(estateDutyRate * 100).toFixed(0)}% on the dutiable amount above the abatement threshold
+              Calculated at {(estateDutyRate * 100).toFixed(0)}% on the dutiable amount above the
+              abatement threshold
             </p>
           </div>
         </CardContent>
@@ -331,14 +415,18 @@ export function EstatePlanningResults({ fna }: EstatePlanningResultsProps) {
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="space-y-2">
-            <p className="text-xs text-gray-700"><strong>Liquidity Components:</strong></p>
+            <p className="text-xs text-gray-700">
+              <strong>Liquidity Components:</strong>
+            </p>
             <div className="space-y-1">
               <div className="flex justify-between text-xs p-2 bg-gray-50 rounded">
                 <span className="text-gray-600">Estate Duty</span>
                 <span className="text-gray-900">{formatCurrency(estimatedEstateDuty)}</span>
               </div>
               <div className="flex justify-between text-xs p-2 bg-gray-50 rounded">
-                <span className="text-gray-600">Executor Fees ({assumptions?.executorFeePercentage || 3.5}%)</span>
+                <span className="text-gray-600">
+                  Executor Fees ({assumptions?.executorFeePercentage || 3.5}%)
+                </span>
                 <span className="text-gray-900">{formatCurrency(executorFees)}</span>
               </div>
               <div className="flex justify-between text-xs p-2 bg-gray-50 rounded">
@@ -351,8 +439,12 @@ export function EstatePlanningResults({ fna }: EstatePlanningResultsProps) {
               </div>
               {numProperties > 0 && (
                 <div className="flex justify-between text-xs p-2 bg-gray-50 rounded">
-                  <span className="text-gray-600">Conveyancing Fees ({numProperties} propert{numProperties === 1 ? 'y' : 'ies'})</span>
-                  <span className="text-gray-900">{formatCurrency(conveyancingFees * numProperties)}</span>
+                  <span className="text-gray-600">
+                    Conveyancing Fees ({numProperties} propert{numProperties === 1 ? 'y' : 'ies'})
+                  </span>
+                  <span className="text-gray-900">
+                    {formatCurrency(conveyancingFees * numProperties)}
+                  </span>
                 </div>
               )}
               <Separator />
@@ -371,8 +463,12 @@ export function EstatePlanningResults({ fna }: EstatePlanningResultsProps) {
                   <span className="text-gray-600">Life Cover Payable to Estate</span>
                   <span className="text-green-700">{formatCurrency(totalLifeCoverToEstate)}</span>
                 </div>
-                <div className={`flex justify-between text-xs p-2 rounded font-semibold ${liquidityShortfall > 0 ? 'bg-red-50' : 'bg-green-50'}`}>
-                  <span className="text-gray-900">{liquidityShortfall > 0 ? 'Liquidity Shortfall' : 'Liquidity Surplus'}</span>
+                <div
+                  className={`flex justify-between text-xs p-2 rounded font-semibold ${liquidityShortfall > 0 ? 'bg-red-50' : 'bg-green-50'}`}
+                >
+                  <span className="text-gray-900">
+                    {liquidityShortfall > 0 ? 'Liquidity Shortfall' : 'Liquidity Surplus'}
+                  </span>
                   <span className={liquidityShortfall > 0 ? 'text-red-700' : 'text-green-700'}>
                     {formatCurrency(Math.abs(liquidityShortfall))}
                   </span>
@@ -386,10 +482,13 @@ export function EstatePlanningResults({ fna }: EstatePlanningResultsProps) {
               <div className="flex items-start gap-3">
                 <AlertTriangle className="h-5 w-5 text-red-600 flex-shrink-0 mt-0.5" />
                 <div>
-                  <p className="text-sm text-gray-900 mb-1"><strong>Liquidity Shortfall Identified</strong></p>
+                  <p className="text-sm text-gray-900 mb-1">
+                    <strong>Liquidity Shortfall Identified</strong>
+                  </p>
                   <p className="text-xs text-gray-600">
-                    Your estate may need to sell assets to cover the {formatCurrency(liquidityShortfall)} shortfall. 
-                    Consider additional life cover with the estate as beneficiary to address this gap.
+                    Your estate may need to sell assets to cover the{' '}
+                    {formatCurrency(liquidityShortfall)} shortfall. Consider additional life cover
+                    with the estate as beneficiary to address this gap.
                   </p>
                 </div>
               </div>
@@ -412,9 +511,14 @@ export function EstatePlanningResults({ fna }: EstatePlanningResultsProps) {
           <CardContent>
             <div className="space-y-2">
               {lifePolicies.map((policy: LifePolicy, index: number) => (
-                <div key={index} className="flex justify-between items-center text-xs p-3 bg-teal-50 rounded-lg border border-teal-100">
+                <div
+                  key={index}
+                  className="flex justify-between items-center text-xs p-3 bg-teal-50 rounded-lg border border-teal-100"
+                >
                   <div>
-                    <p className="text-gray-900 capitalize">{String(policy.policyType || 'Life Cover').replace(/_/g, ' ')}</p>
+                    <p className="text-gray-900 capitalize">
+                      {String(policy.policyType || 'Life Cover').replace(/_/g, ' ')}
+                    </p>
                     <p className="text-gray-600">
                       {policy.payableToEstate ? 'Payable to Estate' : 'Nominated Beneficiary'}
                       {policy.cededTo ? ` (Ceded to ${policy.cededTo})` : ''}
@@ -459,16 +563,19 @@ export function EstatePlanningResults({ fna }: EstatePlanningResultsProps) {
               <div className="text-sm text-red-900">
                 <p className="mb-2">
                   <strong>
-                    {willInfo.hasValidWill === 'no' ? 'No Valid Will on Record' : 'Will Status Unknown'}
+                    {willInfo.hasValidWill === 'no'
+                      ? 'No Valid Will on Record'
+                      : 'Will Status Unknown'}
                   </strong>
                 </p>
                 <p className="text-xs mb-3">
-                  Without a valid will, your estate will be distributed according to the Intestate Succession Act, 
-                  which may not align with your wishes. This can also significantly delay the estate administration process.
+                  Without a valid will, your estate will be distributed according to the Intestate
+                  Succession Act, which may not align with your wishes. This can also significantly
+                  delay the estate administration process.
                 </p>
                 <p className="text-xs">
-                  <strong>Action Required:</strong> Consult with your financial adviser or estate planning 
-                  attorney to draft a will that reflects your distribution wishes.
+                  <strong>Action Required:</strong> Consult with your financial adviser or estate
+                  planning attorney to draft a will that reflects your distribution wishes.
                 </p>
               </div>
             </div>
@@ -483,7 +590,9 @@ export function EstatePlanningResults({ fna }: EstatePlanningResultsProps) {
             <div className="flex items-start gap-3">
               <Info className="h-5 w-5 text-blue-600 flex-shrink-0 mt-0.5" />
               <div>
-                <p className="text-sm text-blue-900 mb-2"><strong>Adviser Notes:</strong></p>
+                <p className="text-sm text-blue-900 mb-2">
+                  <strong>Adviser Notes:</strong>
+                </p>
                 <p className="text-xs text-blue-800 whitespace-pre-wrap">{adviserNotes}</p>
               </div>
             </div>
@@ -492,43 +601,47 @@ export function EstatePlanningResults({ fna }: EstatePlanningResultsProps) {
       )}
 
       {/* Backend Results (if available) */}
-      {results && Array.isArray(resultsRecord.recommendations) && (resultsRecord.recommendations as EstateRecommendation[]).length > 0 && (
-        <Card className="border-gray-200">
-          <CardHeader className="pb-3">
-            <div className="flex items-center gap-3">
-              <div className="p-2 rounded-lg bg-green-600">
-                <CheckCircle className="h-5 w-5 text-white" />
-              </div>
-              <CardTitle className="text-base">Estate Planning Recommendations</CardTitle>
-            </div>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            {(resultsRecord.recommendations as EstateRecommendation[]).map((recommendation: EstateRecommendation, index: number) => (
-              <div key={index} className="p-3 bg-indigo-50 rounded-lg border border-indigo-100">
-                <div className="flex items-start gap-3">
-                  <CheckCircle className="h-4 w-4 text-indigo-600 flex-shrink-0 mt-0.5" />
-                  <div className="flex-1">
-                    <p className="text-sm text-gray-900 mb-1">
-                      {recommendation.title || recommendation.recommendation}
-                    </p>
-                    {recommendation.description && (
-                      <p className="text-xs text-gray-600 mb-2">{recommendation.description}</p>
-                    )}
-                    {recommendation.priority && (
-                      <Badge 
-                        variant={recommendation.priority === 'high' ? 'destructive' : 'default'}
-                        className="text-xs capitalize"
-                      >
-                        {recommendation.priority} Priority
-                      </Badge>
-                    )}
-                  </div>
+      {results &&
+        Array.isArray(resultsRecord.recommendations) &&
+        (resultsRecord.recommendations as EstateRecommendation[]).length > 0 && (
+          <Card className="border-gray-200">
+            <CardHeader className="pb-3">
+              <div className="flex items-center gap-3">
+                <div className="p-2 rounded-lg bg-green-600">
+                  <CheckCircle className="h-5 w-5 text-white" />
                 </div>
+                <CardTitle className="text-base">Estate Planning Recommendations</CardTitle>
               </div>
-            ))}
-          </CardContent>
-        </Card>
-      )}
+            </CardHeader>
+            <CardContent className="space-y-3">
+              {(resultsRecord.recommendations as EstateRecommendation[]).map(
+                (recommendation: EstateRecommendation, index: number) => (
+                  <div key={index} className="p-3 bg-indigo-50 rounded-lg border border-indigo-100">
+                    <div className="flex items-start gap-3">
+                      <CheckCircle className="h-4 w-4 text-indigo-600 flex-shrink-0 mt-0.5" />
+                      <div className="flex-1">
+                        <p className="text-sm text-gray-900 mb-1">
+                          {recommendation.title || recommendation.recommendation}
+                        </p>
+                        {recommendation.description && (
+                          <p className="text-xs text-gray-600 mb-2">{recommendation.description}</p>
+                        )}
+                        {recommendation.priority && (
+                          <Badge
+                            variant={recommendation.priority === 'high' ? 'destructive' : 'default'}
+                            className="text-xs capitalize"
+                          >
+                            {recommendation.priority} Priority
+                          </Badge>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                ),
+              )}
+            </CardContent>
+          </Card>
+        )}
 
       {/* Important Notes */}
       <Card className="border-amber-200 bg-amber-50">
@@ -540,12 +653,25 @@ export function EstatePlanningResults({ fna }: EstatePlanningResultsProps) {
                 <strong>Important Notes:</strong>
               </p>
               <ul className="space-y-1 text-xs">
-                <li>- Estate duty is levied at 20% on estates up to R30M and 25% above that threshold.</li>
-                <li>- This analysis assumes death occurs today and uses current asset valuations.</li>
-                <li>- Regular reviews are essential, especially after major life events (marriage, divorce, births, etc.).</li>
-                <li>- Ensure your will is updated, signed, and stored securely with copies held by executors.</li>
+                <li>
+                  - Estate duty is levied at 20% on estates up to R30M and 25% above that threshold.
+                </li>
+                <li>
+                  - This analysis assumes death occurs today and uses current asset valuations.
+                </li>
+                <li>
+                  - Regular reviews are essential, especially after major life events (marriage,
+                  divorce, births, etc.).
+                </li>
+                <li>
+                  - Ensure your will is updated, signed, and stored securely with copies held by
+                  executors.
+                </li>
                 <li>- Consider life insurance to cover estate duty and liquidity needs.</li>
-                <li>- Consult with an estate planning attorney for comprehensive estate planning advice.</li>
+                <li>
+                  - Consult with an estate planning attorney for comprehensive estate planning
+                  advice.
+                </li>
               </ul>
             </div>
           </div>

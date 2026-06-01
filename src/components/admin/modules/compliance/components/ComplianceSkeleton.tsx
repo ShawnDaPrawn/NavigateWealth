@@ -26,7 +26,11 @@ function OverviewCardSkeleton() {
 
 export function ComplianceSkeleton() {
   return (
-    <div className="flex flex-col h-full w-full max-w-full bg-slate-50/50 overflow-hidden" role="status" aria-label="Loading compliance">
+    <div
+      className="flex flex-col h-full w-full max-w-full bg-slate-50/50 overflow-hidden"
+      role="status"
+      aria-label="Loading compliance"
+    >
       <span className="sr-only">Loading compliance module, please wait…</span>
       {/* Header */}
       <div className="border-b bg-white px-6 py-4 shadow-sm shrink-0">
@@ -72,7 +76,7 @@ export function ComplianceSkeleton() {
             <div className="rounded-lg border border-border bg-white p-5 h-64">
               <Skeleton className="h-5 w-44 mb-4" />
               <div className="space-y-3">
-                {[1, 2, 3, 4].map(i => (
+                {[1, 2, 3, 4].map((i) => (
                   <div key={i} className="flex items-center justify-between">
                     <Skeleton className="h-4 w-48" />
                     <Skeleton className="h-5 w-16 rounded-full" />
@@ -83,7 +87,7 @@ export function ComplianceSkeleton() {
             <div className="rounded-lg border border-border bg-white p-5 h-64">
               <Skeleton className="h-5 w-40 mb-4" />
               <div className="space-y-3">
-                {[1, 2, 3, 4].map(i => (
+                {[1, 2, 3, 4].map((i) => (
                   <div key={i} className="flex items-center justify-between">
                     <Skeleton className="h-4 w-44" />
                     <Skeleton className="h-5 w-20 rounded-full" />

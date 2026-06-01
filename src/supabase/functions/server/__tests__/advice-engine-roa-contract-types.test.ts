@@ -37,7 +37,9 @@ describe('RoA module contract definitions', () => {
     const legacyModule = contractToLegacyModule(DEFAULT_ROA_MODULE_CONTRACTS[0]);
 
     expect(legacyModule.id).toBe('new_life_assurance_proposal');
-    expect(legacyModule.fields.some((field) => field.key === 'cover_amount' && field.type === 'number')).toBe(true);
+    expect(
+      legacyModule.fields.some((field) => field.key === 'cover_amount' && field.type === 'number'),
+    ).toBe(true);
     expect(legacyModule.compileOrder).toContain('recommendation');
     expect(legacyModule.disclosures.length).toBeGreaterThan(0);
     expect(legacyModule.documentSections?.[0].template).toContain('{{');
@@ -52,13 +54,15 @@ describe('RoA module contract definitions', () => {
   });
 
   it('rejects malformed editable contracts', () => {
-    expect(() => validateRoAModuleContract({
-      id: 'Bad Id',
-      title: '',
-      formSchema: { sections: [] },
-      output: {},
-      documentSections: [],
-    })).toThrow(/id must use lowercase/);
+    expect(() =>
+      validateRoAModuleContract({
+        id: 'Bad Id',
+        title: '',
+        formSchema: { sections: [] },
+        output: {},
+        documentSections: [],
+      }),
+    ).toThrow(/id must use lowercase/);
   });
 
   it('requires editable output templates before publishing active contracts', () => {
@@ -91,7 +95,9 @@ describe('RoA module contract definitions', () => {
       compileOrder: ['recommendation', 'missing_section'],
     };
 
-    expect(() => validateRoAModuleContract(contract)).toThrow(/compileOrder references unknown document section/);
+    expect(() => validateRoAModuleContract(contract)).toThrow(
+      /compileOrder references unknown document section/,
+    );
   });
 
   it('rejects unsupported compilerHints keys', () => {
@@ -104,7 +110,9 @@ describe('RoA module contract definitions', () => {
   });
 
   it('does not emit canonical replacement analysis without compilerHints.includeReplacementAnalysis', () => {
-    const baseline = DEFAULT_ROA_MODULE_CONTRACTS.find((item) => item.id === 'life_insurance_comparison')!;
+    const baseline = DEFAULT_ROA_MODULE_CONTRACTS.find(
+      (item) => item.id === 'life_insurance_comparison',
+    )!;
     const contract = { ...baseline, compilerHints: undefined };
 
     const draft: RoADraftRecord = {
@@ -199,7 +207,9 @@ describe('RoA module contract definitions', () => {
 
   it('validates required fields and evidence without module-specific code', () => {
     const service = new AdviceEngineRoAService();
-    const contract = DEFAULT_ROA_MODULE_CONTRACTS.find((item) => item.id === 'life_insurance_comparison')!;
+    const contract = DEFAULT_ROA_MODULE_CONTRACTS.find(
+      (item) => item.id === 'life_insurance_comparison',
+    )!;
     const baseDraft: RoADraftRecord = {
       id: 'draft-1',
       clientId: 'client-1',
@@ -260,12 +270,16 @@ describe('RoA module contract definitions', () => {
 
     const result = service.validateDraftWithContracts(missingEvidence, [contract]);
     expect(result.valid).toBe(false);
-    expect(result.blocking.some((issue) => issue.requirementId === 'current_policy_schedule')).toBe(true);
+    expect(result.blocking.some((issue) => issue.requirementId === 'current_policy_schedule')).toBe(
+      true,
+    );
   });
 
   it('validates attached evidence metadata against contract requirements', () => {
     const service = new AdviceEngineRoAService();
-    const contract = DEFAULT_ROA_MODULE_CONTRACTS.find((item) => item.id === 'life_insurance_comparison')!;
+    const contract = DEFAULT_ROA_MODULE_CONTRACTS.find(
+      (item) => item.id === 'life_insurance_comparison',
+    )!;
     const draft: RoADraftRecord = {
       id: 'draft-bad-evidence',
       clientId: 'client-1',
@@ -322,7 +336,9 @@ describe('RoA module contract definitions', () => {
   });
 
   it('builds a regulatory RoA wrapper around contract-driven module sections', async () => {
-    const contract = DEFAULT_ROA_MODULE_CONTRACTS.find((item) => item.id === 'life_insurance_comparison')!;
+    const contract = DEFAULT_ROA_MODULE_CONTRACTS.find(
+      (item) => item.id === 'life_insurance_comparison',
+    )!;
     const draft: RoADraftRecord = {
       id: 'draft-compile-1',
       clientId: 'client-1',
@@ -416,7 +432,9 @@ describe('RoA module contract definitions', () => {
       compilationId: 'compilation-1',
     });
 
-    expect(compilation.documentSections.map((section) => section.id)).toContain('scope_and_purpose');
+    expect(compilation.documentSections.map((section) => section.id)).toContain(
+      'scope_and_purpose',
+    );
     expect(compilation.recommendationSummary[0].summary).toContain('Life Insurance Comparison');
     expect(compilation.replacementAnalysis).toHaveLength(1);
     const dc = compilation.documentControl as Record<string, unknown>;
@@ -424,7 +442,9 @@ describe('RoA module contract definitions', () => {
       life_insurance_comparison: '1.0',
     });
     expect(compilation.modules[0].compilerHints?.includeReplacementAnalysis).toBe(true);
-    const currentPolicyEvidence = compilation.modules[0].evidence.find((item) => item.id === 'ev-1');
+    const currentPolicyEvidence = compilation.modules[0].evidence.find(
+      (item) => item.id === 'ev-1',
+    );
     expect(currentPolicyEvidence?.sha256).toBe('abc123');
     expect(currentPolicyEvidence?.source).toBe('adviser-upload');
     expect(compilation.html).toContain('pdf-preview-container');

@@ -23,10 +23,23 @@ import {
   DialogHeader,
   DialogTitle,
 } from '../../ui/dialog';
-import { TrendingUp, DollarSign, Plus, Edit2, Trash2, X, Check, PieChart, AlertTriangle } from 'lucide-react';
+import {
+  TrendingUp,
+  DollarSign,
+  Plus,
+  Edit2,
+  Trash2,
+  X,
+  Check,
+  PieChart,
+  AlertTriangle,
+} from 'lucide-react';
 import { EmptyState } from '../../pages/profile/EmptyState';
 import { emptyStateConfigs } from '../../pages/profile/emptyStateConfigs';
-import { findPossiblePolicyAssetMatches, type DerivedPolicyAsset } from '../../../utils/derivedPolicyAssets';
+import {
+  findPossiblePolicyAssetMatches,
+  type DerivedPolicyAsset,
+} from '../../../utils/derivedPolicyAssets';
 import { useInlineEditDialogClose } from '../../shared/unsaved-changes';
 
 interface Asset {
@@ -65,7 +78,9 @@ interface AssetsLiabilitiesSectionProps {
   assetDisplayValues: { [id: string]: string };
   liabilityDisplayValues: { [id: string]: { amount?: string; monthlyPayment?: string } };
   setAssetDisplayValues: (value: React.SetStateAction<Record<string, string>>) => void;
-  setLiabilityDisplayValues: (value: React.SetStateAction<Record<string, { amount?: string; monthlyPayment?: string }>>) => void;
+  setLiabilityDisplayValues: (
+    value: React.SetStateAction<Record<string, { amount?: string; monthlyPayment?: string }>>,
+  ) => void;
   addAsset: () => void;
   editAsset: (id: string) => void;
   saveAsset: (id: string) => void;
@@ -107,19 +122,15 @@ function SummaryMetric({
 
   return (
     <div className={`rounded-xl border px-4 py-3 ${toneClasses}`}>
-      <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-current/70">{label}</p>
+      <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-current/70">
+        {label}
+      </p>
       <p className="mt-1 text-lg font-semibold text-current">{value}</p>
     </div>
   );
 }
 
-function DetailChip({
-  label,
-  value,
-}: {
-  label: string;
-  value: string;
-}) {
+function DetailChip({ label, value }: { label: string; value: string }) {
   return (
     <span className="inline-flex flex-wrap items-center gap-1 rounded-full bg-gray-100 px-2.5 py-1 text-[11px] font-medium text-gray-700">
       <span className="text-gray-500">{label}</span>
@@ -133,7 +144,9 @@ function getAssetTypeLabel(asset: Asset) {
 }
 
 function getLiabilityTypeLabel(liability: Liability) {
-  return liability.type === 'Other' ? liability.customType || 'Other' : liability.type || 'Liability';
+  return liability.type === 'Other'
+    ? liability.customType || 'Other'
+    : liability.type || 'Liability';
 }
 
 export function AssetsLiabilitiesSection({
@@ -173,7 +186,10 @@ export function AssetsLiabilitiesSection({
   const totalAssets = assets.reduce((sum, asset) => sum + (asset.value || 0), 0);
   const linkedPolicyAssetTotal = derivedPolicyAssets.reduce((sum, asset) => sum + asset.value, 0);
   const combinedAssets = totalAssets + linkedPolicyAssetTotal;
-  const totalLiabilities = liabilities.reduce((sum, liability) => sum + (liability.outstandingBalance || 0), 0);
+  const totalLiabilities = liabilities.reduce(
+    (sum, liability) => sum + (liability.outstandingBalance || 0),
+    0,
+  );
   const netWorth = combinedAssets - totalLiabilities;
   const possibleDuplicateMatches = findPossiblePolicyAssetMatches(assets, derivedPolicyAssets);
   const possibleDuplicateCount = Object.keys(possibleDuplicateMatches).length;
@@ -196,14 +212,26 @@ export function AssetsLiabilitiesSection({
     <div className="space-y-5">
       {hasBalanceSheetData && (
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-5">
-          <SummaryMetric label="Manual Assets" value={formatCurrency(totalAssets)} tone="positive" />
+          <SummaryMetric
+            label="Manual Assets"
+            value={formatCurrency(totalAssets)}
+            tone="positive"
+          />
           <SummaryMetric
             label="Linked Policy Assets"
             value={formatCurrency(linkedPolicyAssetTotal)}
             tone="accent"
           />
-          <SummaryMetric label="Combined Assets" value={formatCurrency(combinedAssets)} tone="positive" />
-          <SummaryMetric label="Total Liabilities" value={formatCurrency(totalLiabilities)} tone="negative" />
+          <SummaryMetric
+            label="Combined Assets"
+            value={formatCurrency(combinedAssets)}
+            tone="positive"
+          />
+          <SummaryMetric
+            label="Total Liabilities"
+            value={formatCurrency(totalLiabilities)}
+            tone="negative"
+          />
           <SummaryMetric label="Net Worth" value={formatCurrency(netWorth)} tone="accent" />
         </div>
       )}
@@ -232,7 +260,11 @@ export function AssetsLiabilitiesSection({
                 size="sm"
                 disabled={assetsInEditMode.size > 0}
                 className="bg-[#6d28d9] hover:bg-[#5b21b6] disabled:cursor-not-allowed disabled:opacity-50"
-                title={assetsInEditMode.size > 0 ? 'Please save the current asset before adding a new one' : 'Add a new asset'}
+                title={
+                  assetsInEditMode.size > 0
+                    ? 'Please save the current asset before adding a new one'
+                    : 'Add a new asset'
+                }
               >
                 <Plus className="mr-1 h-4 w-4" />
                 Add Asset
@@ -241,7 +273,9 @@ export function AssetsLiabilitiesSection({
           </div>
         </CardHeader>
         <CardContent className="space-y-3">
-          {(linkedPolicyAssetsLoading || linkedPolicyAssetsError || derivedPolicyAssets.length > 0) && (
+          {(linkedPolicyAssetsLoading ||
+            linkedPolicyAssetsError ||
+            derivedPolicyAssets.length > 0) && (
             <div className="rounded-xl border border-blue-100 bg-blue-50/70 px-4 py-3">
               <div className="flex items-start gap-3">
                 <div className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-blue-100">
@@ -276,10 +310,14 @@ export function AssetsLiabilitiesSection({
                   <AlertTriangle className="h-4 w-4 text-amber-700" />
                 </div>
                 <div className="min-w-0 flex-1">
-                  <p className="text-sm font-semibold text-amber-950">Possible duplicate assets detected</p>
+                  <p className="text-sm font-semibold text-amber-950">
+                    Possible duplicate assets detected
+                  </p>
                   <p className="mt-1 text-xs leading-relaxed text-amber-900/80">
-                    {possibleDuplicateCount} manual {possibleDuplicateCount === 1 ? 'asset appears' : 'assets appear'} to overlap with a linked retirement or investment policy.
-                    These are warnings only. Nothing has been merged or deleted.
+                    {possibleDuplicateCount} manual{' '}
+                    {possibleDuplicateCount === 1 ? 'asset appears' : 'assets appear'} to overlap
+                    with a linked retirement or investment policy. These are warnings only. Nothing
+                    has been merged or deleted.
                   </p>
                 </div>
               </div>
@@ -310,7 +348,8 @@ export function AssetsLiabilitiesSection({
               const isEditing = assetsInEditMode.has(asset.id);
               const isOtherType = asset.type === 'Other';
               const duplicateMatches = possibleDuplicateMatches[asset.id] || [];
-              let isValid: string | boolean | undefined = asset.type && asset.name && asset.ownershipType;
+              let isValid: string | boolean | undefined =
+                asset.type && asset.name && asset.ownershipType;
               if (isOtherType) {
                 isValid = isValid && asset.customType;
               }
@@ -325,20 +364,33 @@ export function AssetsLiabilitiesSection({
                         </div>
                         <div className="min-w-0 space-y-2">
                           <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-                            <p className="text-sm font-semibold text-gray-900">{asset.name || `Asset ${index + 1}`}</p>
-                            <span className="text-xs text-gray-500">{getAssetTypeLabel(asset)}</span>
+                            <p className="text-sm font-semibold text-gray-900">
+                              {asset.name || `Asset ${index + 1}`}
+                            </p>
+                            <span className="text-xs text-gray-500">
+                              {getAssetTypeLabel(asset)}
+                            </span>
                           </div>
                           <div className="flex flex-wrap gap-2">
                             <DetailChip label="Value" value={formatCurrency(asset.value || 0)} />
-                            <DetailChip label="Ownership" value={asset.ownershipType || 'Not set'} />
-                            {asset.provider && <DetailChip label="Provider" value={asset.provider} />}
+                            <DetailChip
+                              label="Ownership"
+                              value={asset.ownershipType || 'Not set'}
+                            />
+                            {asset.provider && (
+                              <DetailChip label="Provider" value={asset.provider} />
+                            )}
                           </div>
                           {asset.description && (
-                            <p className="text-xs leading-relaxed text-gray-500">{asset.description}</p>
+                            <p className="text-xs leading-relaxed text-gray-500">
+                              {asset.description}
+                            </p>
                           )}
                           {duplicateMatches.length > 0 && (
                             <div className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2">
-                              <p className="text-xs font-semibold text-amber-900">Possible duplicate of linked policy</p>
+                              <p className="text-xs font-semibold text-amber-900">
+                                Possible duplicate of linked policy
+                              </p>
                               <div className="mt-2 flex flex-wrap gap-2">
                                 {duplicateMatches.map((match) => (
                                   <span
@@ -387,12 +439,18 @@ export function AssetsLiabilitiesSection({
                     <DialogContent className="sm:max-w-2xl">
                       <DialogHeader>
                         <DialogTitle>{asset.name || `Asset ${index + 1}`}</DialogTitle>
-                        <DialogDescription>Update the client's asset details without expanding the entire profile page.</DialogDescription>
+                        <DialogDescription>
+                          Update the client's asset details without expanding the entire profile
+                          page.
+                        </DialogDescription>
                       </DialogHeader>
                       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                         <div className="sm:col-span-2">
                           <Label htmlFor={`asset-type-${asset.id}`}>Asset Type *</Label>
-                          <Select value={asset.type} onValueChange={(value) => updateAsset(asset.id, { type: value })}>
+                          <Select
+                            value={asset.type}
+                            onValueChange={(value) => updateAsset(asset.id, { type: value })}
+                          >
                             <SelectTrigger id={`asset-type-${asset.id}`} className="mt-1.5">
                               <SelectValue placeholder="Select asset type" />
                             </SelectTrigger>
@@ -414,14 +472,18 @@ export function AssetsLiabilitiesSection({
                             <Input
                               id={`custom-type-${asset.id}`}
                               value={asset.customType || ''}
-                              onChange={(e) => updateAsset(asset.id, { customType: e.target.value })}
+                              onChange={(e) =>
+                                updateAsset(asset.id, { customType: e.target.value })
+                              }
                               placeholder="Specify custom asset type"
                               className="mt-1.5"
                             />
                           </div>
                         )}
                         <div className="sm:col-span-2">
-                          <Label htmlFor={`asset-name-${asset.id}`}>Asset Name / Description *</Label>
+                          <Label htmlFor={`asset-name-${asset.id}`}>
+                            Asset Name / Description *
+                          </Label>
                           <Input
                             id={`asset-name-${asset.id}`}
                             value={asset.name}
@@ -431,11 +493,19 @@ export function AssetsLiabilitiesSection({
                           />
                         </div>
                         <div>
-                          <Label htmlFor={`asset-value-${asset.id}`}>Current Estimated Value (R) *</Label>
+                          <Label htmlFor={`asset-value-${asset.id}`}>
+                            Current Estimated Value (R) *
+                          </Label>
                           <Input
                             id={`asset-value-${asset.id}`}
                             type="text"
-                            value={assetDisplayValues[asset.id] !== undefined ? assetDisplayValues[asset.id] : (asset.value ? formatCurrencyInput(asset.value.toString()) : '')}
+                            value={
+                              assetDisplayValues[asset.id] !== undefined
+                                ? assetDisplayValues[asset.id]
+                                : asset.value
+                                  ? formatCurrencyInput(asset.value.toString())
+                                  : ''
+                            }
                             onChange={(e) => {
                               const raw = e.target.value.replace(/[^0-9.]/g, '');
                               setAssetDisplayValues((prev) => ({
@@ -465,7 +535,12 @@ export function AssetsLiabilitiesSection({
                         </div>
                         <div>
                           <Label htmlFor={`ownership-${asset.id}`}>Ownership Type *</Label>
-                          <Select value={asset.ownershipType} onValueChange={(value) => updateAsset(asset.id, { ownershipType: value })}>
+                          <Select
+                            value={asset.ownershipType}
+                            onValueChange={(value) =>
+                              updateAsset(asset.id, { ownershipType: value })
+                            }
+                          >
                             <SelectTrigger id={`ownership-${asset.id}`} className="mt-1.5">
                               <SelectValue placeholder="Select ownership" />
                             </SelectTrigger>
@@ -478,7 +553,9 @@ export function AssetsLiabilitiesSection({
                           </Select>
                         </div>
                         <div className="sm:col-span-2">
-                          <Label htmlFor={`provider-${asset.id}`}>Linked Provider or Institution</Label>
+                          <Label htmlFor={`provider-${asset.id}`}>
+                            Linked Provider or Institution
+                          </Label>
                           <Input
                             id={`provider-${asset.id}`}
                             value={asset.provider}
@@ -514,7 +591,11 @@ export function AssetsLiabilitiesSection({
                             saveAsset(asset.id);
                           }}
                           disabled={!isValid}
-                          className={!isValid ? 'cursor-not-allowed bg-gray-300 text-gray-500 hover:bg-gray-300' : 'bg-[#6d28d9] text-white hover:bg-[#5b21b6]'}
+                          className={
+                            !isValid
+                              ? 'cursor-not-allowed bg-gray-300 text-gray-500 hover:bg-gray-300'
+                              : 'bg-[#6d28d9] text-white hover:bg-[#5b21b6]'
+                          }
                         >
                           <Check className="mr-1 h-4 w-4" />
                           Save Asset
@@ -553,7 +634,9 @@ export function AssetsLiabilitiesSection({
                       </div>
                       <div className="min-w-0 space-y-2">
                         <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-                          <p className="text-sm font-semibold text-gray-900">{asset.providerName}</p>
+                          <p className="text-sm font-semibold text-gray-900">
+                            {asset.providerName}
+                          </p>
                           <span className="text-xs text-gray-500">{asset.assetTypeLabel}</span>
                         </div>
                         <div className="flex flex-wrap gap-2">
@@ -595,7 +678,11 @@ export function AssetsLiabilitiesSection({
                 size="sm"
                 disabled={liabilitiesInEditMode.size > 0}
                 className="bg-[#6d28d9] hover:bg-[#5b21b6] disabled:cursor-not-allowed disabled:opacity-50"
-                title={liabilitiesInEditMode.size > 0 ? 'Please save the current liability before adding a new one' : 'Add a new liability'}
+                title={
+                  liabilitiesInEditMode.size > 0
+                    ? 'Please save the current liability before adding a new one'
+                    : 'Add a new liability'
+                }
               >
                 <Plus className="mr-1 h-4 w-4" />
                 Add Liability
@@ -620,7 +707,8 @@ export function AssetsLiabilitiesSection({
             liabilities.map((liability, index) => {
               const isEditing = liabilitiesInEditMode.has(liability.id);
               const isOtherType = liability.type === 'Other';
-              let isValid: string | boolean | undefined = liability.type && liability.name && liability.provider;
+              let isValid: string | boolean | undefined =
+                liability.type && liability.name && liability.provider;
               if (isOtherType) {
                 isValid = isValid && liability.customType;
               }
@@ -635,17 +723,31 @@ export function AssetsLiabilitiesSection({
                         </div>
                         <div className="min-w-0 space-y-2">
                           <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-                            <p className="text-sm font-semibold text-gray-900">{liability.name || `Liability ${index + 1}`}</p>
-                            <span className="text-xs text-gray-500">{getLiabilityTypeLabel(liability)}</span>
+                            <p className="text-sm font-semibold text-gray-900">
+                              {liability.name || `Liability ${index + 1}`}
+                            </p>
+                            <span className="text-xs text-gray-500">
+                              {getLiabilityTypeLabel(liability)}
+                            </span>
                           </div>
                           <div className="flex flex-wrap gap-2">
-                            <DetailChip label="Outstanding" value={formatCurrency(liability.outstandingBalance || 0)} />
-                            <DetailChip label="Monthly" value={formatCurrency(liability.monthlyPayment || 0)} />
+                            <DetailChip
+                              label="Outstanding"
+                              value={formatCurrency(liability.outstandingBalance || 0)}
+                            />
+                            <DetailChip
+                              label="Monthly"
+                              value={formatCurrency(liability.monthlyPayment || 0)}
+                            />
                             <DetailChip label="Provider" value={liability.provider || 'Not set'} />
-                            {liability.interestRate > 0 && <DetailChip label="Interest" value={`${liability.interestRate}%`} />}
+                            {liability.interestRate > 0 && (
+                              <DetailChip label="Interest" value={`${liability.interestRate}%`} />
+                            )}
                           </div>
                           {liability.description && (
-                            <p className="text-xs leading-relaxed text-gray-500">{liability.description}</p>
+                            <p className="text-xs leading-relaxed text-gray-500">
+                              {liability.description}
+                            </p>
                           )}
                         </div>
                       </div>
@@ -653,10 +755,10 @@ export function AssetsLiabilitiesSection({
                         <Button
                           variant="outline"
                           size="sm"
-                            onClick={() => {
-                              liabilityEditGuard.trackEditStart(liability.id);
-                              editLiability(liability.id);
-                            }}
+                          onClick={() => {
+                            liabilityEditGuard.trackEditStart(liability.id);
+                            editLiability(liability.id);
+                          }}
                           className="border-[#6d28d9] text-[#6d28d9] hover:bg-[#6d28d9]/10"
                         >
                           <Edit2 className="mr-1 h-4 w-4" />
@@ -676,17 +778,26 @@ export function AssetsLiabilitiesSection({
 
                   <Dialog
                     open={isEditing}
-                    onOpenChange={(open) => liabilityEditGuard.handleDialogOpenChange(liability.id, open)}
+                    onOpenChange={(open) =>
+                      liabilityEditGuard.handleDialogOpenChange(liability.id, open)
+                    }
                   >
                     <DialogContent className="sm:max-w-2xl">
                       <DialogHeader>
                         <DialogTitle>{liability.name || `Liability ${index + 1}`}</DialogTitle>
-                        <DialogDescription>Update the client's liability details without stretching the whole page.</DialogDescription>
+                        <DialogDescription>
+                          Update the client's liability details without stretching the whole page.
+                        </DialogDescription>
                       </DialogHeader>
                       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                         <div className="sm:col-span-2">
                           <Label htmlFor={`liability-type-${liability.id}`}>Liability Type *</Label>
-                          <Select value={liability.type} onValueChange={(value) => updateLiability(liability.id, { type: value })}>
+                          <Select
+                            value={liability.type}
+                            onValueChange={(value) =>
+                              updateLiability(liability.id, { type: value })
+                            }
+                          >
                             <SelectTrigger id={`liability-type-${liability.id}`} className="mt-1.5">
                               <SelectValue placeholder="Select liability type" />
                             </SelectTrigger>
@@ -702,42 +813,62 @@ export function AssetsLiabilitiesSection({
                         </div>
                         {isOtherType && (
                           <div className="sm:col-span-2">
-                            <Label htmlFor={`custom-liability-type-${liability.id}`}>Custom Liability Type *</Label>
+                            <Label htmlFor={`custom-liability-type-${liability.id}`}>
+                              Custom Liability Type *
+                            </Label>
                             <Input
                               id={`custom-liability-type-${liability.id}`}
                               value={liability.customType || ''}
-                              onChange={(e) => updateLiability(liability.id, { customType: e.target.value })}
+                              onChange={(e) =>
+                                updateLiability(liability.id, { customType: e.target.value })
+                              }
                               placeholder="Specify custom liability type"
                               className="mt-1.5"
                             />
                           </div>
                         )}
                         <div className="sm:col-span-2">
-                          <Label htmlFor={`liability-name-${liability.id}`}>Liability Name / Description *</Label>
+                          <Label htmlFor={`liability-name-${liability.id}`}>
+                            Liability Name / Description *
+                          </Label>
                           <Input
                             id={`liability-name-${liability.id}`}
                             value={liability.name}
-                            onChange={(e) => updateLiability(liability.id, { name: e.target.value })}
+                            onChange={(e) =>
+                              updateLiability(liability.id, { name: e.target.value })
+                            }
                             placeholder="Enter liability name"
                             className="mt-1.5"
                           />
                         </div>
                         <div className="sm:col-span-2">
-                          <Label htmlFor={`liability-provider-${liability.id}`}>Provider / Bank *</Label>
+                          <Label htmlFor={`liability-provider-${liability.id}`}>
+                            Provider / Bank *
+                          </Label>
                           <Input
                             id={`liability-provider-${liability.id}`}
                             value={liability.provider}
-                            onChange={(e) => updateLiability(liability.id, { provider: e.target.value })}
+                            onChange={(e) =>
+                              updateLiability(liability.id, { provider: e.target.value })
+                            }
                             placeholder="e.g., Standard Bank, ABSA"
                             className="mt-1.5"
                           />
                         </div>
                         <div>
-                          <Label htmlFor={`outstanding-${liability.id}`}>Outstanding Balance (R) *</Label>
+                          <Label htmlFor={`outstanding-${liability.id}`}>
+                            Outstanding Balance (R) *
+                          </Label>
                           <Input
                             id={`outstanding-${liability.id}`}
                             type="text"
-                            value={liabilityDisplayValues[liability.id]?.amount !== undefined ? liabilityDisplayValues[liability.id].amount : (liability.outstandingBalance ? formatCurrencyInput(liability.outstandingBalance.toString()) : '')}
+                            value={
+                              liabilityDisplayValues[liability.id]?.amount !== undefined
+                                ? liabilityDisplayValues[liability.id].amount
+                                : liability.outstandingBalance
+                                  ? formatCurrencyInput(liability.outstandingBalance.toString())
+                                  : ''
+                            }
                             onChange={(e) => {
                               const raw = e.target.value.replace(/[^0-9.]/g, '');
                               setLiabilityDisplayValues((prev) => ({
@@ -747,7 +878,9 @@ export function AssetsLiabilitiesSection({
                                   amount: raw,
                                 },
                               }));
-                              updateLiability(liability.id, { outstandingBalance: parseFloat(raw) || 0 });
+                              updateLiability(liability.id, {
+                                outstandingBalance: parseFloat(raw) || 0,
+                              });
                             }}
                             onBlur={() => {
                               setLiabilityDisplayValues((prev) => {
@@ -768,7 +901,9 @@ export function AssetsLiabilitiesSection({
                                   ...prev,
                                   [liability.id]: {
                                     ...prev[liability.id],
-                                    amount: liability.outstandingBalance ? liability.outstandingBalance.toString() : '',
+                                    amount: liability.outstandingBalance
+                                      ? liability.outstandingBalance.toString()
+                                      : '',
                                   },
                                 }));
                               }
@@ -778,11 +913,19 @@ export function AssetsLiabilitiesSection({
                           />
                         </div>
                         <div>
-                          <Label htmlFor={`monthly-payment-${liability.id}`}>Monthly Repayment (R) *</Label>
+                          <Label htmlFor={`monthly-payment-${liability.id}`}>
+                            Monthly Repayment (R) *
+                          </Label>
                           <Input
                             id={`monthly-payment-${liability.id}`}
                             type="text"
-                            value={liabilityDisplayValues[liability.id]?.monthlyPayment !== undefined ? liabilityDisplayValues[liability.id].monthlyPayment : (liability.monthlyPayment ? formatCurrencyInput(liability.monthlyPayment.toString()) : '')}
+                            value={
+                              liabilityDisplayValues[liability.id]?.monthlyPayment !== undefined
+                                ? liabilityDisplayValues[liability.id].monthlyPayment
+                                : liability.monthlyPayment
+                                  ? formatCurrencyInput(liability.monthlyPayment.toString())
+                                  : ''
+                            }
                             onChange={(e) => {
                               const raw = e.target.value.replace(/[^0-9.]/g, '');
                               setLiabilityDisplayValues((prev) => ({
@@ -792,7 +935,9 @@ export function AssetsLiabilitiesSection({
                                   monthlyPayment: raw,
                                 },
                               }));
-                              updateLiability(liability.id, { monthlyPayment: parseFloat(raw) || 0 });
+                              updateLiability(liability.id, {
+                                monthlyPayment: parseFloat(raw) || 0,
+                              });
                             }}
                             onBlur={() => {
                               setLiabilityDisplayValues((prev) => {
@@ -807,13 +952,16 @@ export function AssetsLiabilitiesSection({
                               });
                             }}
                             onFocus={() => {
-                              const currentDisplay = liabilityDisplayValues[liability.id]?.monthlyPayment;
+                              const currentDisplay =
+                                liabilityDisplayValues[liability.id]?.monthlyPayment;
                               if (currentDisplay === undefined) {
                                 setLiabilityDisplayValues((prev) => ({
                                   ...prev,
                                   [liability.id]: {
                                     ...prev[liability.id],
-                                    monthlyPayment: liability.monthlyPayment ? liability.monthlyPayment.toString() : '',
+                                    monthlyPayment: liability.monthlyPayment
+                                      ? liability.monthlyPayment.toString()
+                                      : '',
                                   },
                                 }));
                               }
@@ -829,17 +977,25 @@ export function AssetsLiabilitiesSection({
                             type="number"
                             step="0.01"
                             value={liability.interestRate || ''}
-                            onChange={(e) => updateLiability(liability.id, { interestRate: parseFloat(e.target.value) || 0 })}
+                            onChange={(e) =>
+                              updateLiability(liability.id, {
+                                interestRate: parseFloat(e.target.value) || 0,
+                              })
+                            }
                             placeholder="0.00"
                             className="mt-1.5"
                           />
                         </div>
                         <div className="sm:col-span-2">
-                          <Label htmlFor={`liability-desc-${liability.id}`}>Additional Details</Label>
+                          <Label htmlFor={`liability-desc-${liability.id}`}>
+                            Additional Details
+                          </Label>
                           <Textarea
                             id={`liability-desc-${liability.id}`}
                             value={liability.description}
-                            onChange={(e) => updateLiability(liability.id, { description: e.target.value })}
+                            onChange={(e) =>
+                              updateLiability(liability.id, { description: e.target.value })
+                            }
                             placeholder="Any additional information"
                             className="mt-1.5"
                             rows={3}
@@ -849,7 +1005,9 @@ export function AssetsLiabilitiesSection({
                       <DialogFooter>
                         <Button
                           variant="outline"
-                          onClick={() => liabilityEditGuard.handleDialogOpenChange(liability.id, false)}
+                          onClick={() =>
+                            liabilityEditGuard.handleDialogOpenChange(liability.id, false)
+                          }
                           className="border-gray-300 text-gray-700 hover:bg-gray-50"
                         >
                           <X className="mr-1 h-4 w-4" />
@@ -861,7 +1019,11 @@ export function AssetsLiabilitiesSection({
                             saveLiability(liability.id);
                           }}
                           disabled={!isValid}
-                          className={!isValid ? 'cursor-not-allowed bg-gray-300 text-gray-500 hover:bg-gray-300' : 'bg-[#6d28d9] text-white hover:bg-[#5b21b6]'}
+                          className={
+                            !isValid
+                              ? 'cursor-not-allowed bg-gray-300 text-gray-500 hover:bg-gray-300'
+                              : 'bg-[#6d28d9] text-white hover:bg-[#5b21b6]'
+                          }
                         >
                           <Check className="mr-1 h-4 w-4" />
                           Save Liability
@@ -884,17 +1046,26 @@ export function AssetsLiabilitiesSection({
             </div>
             <div>
               <p className="text-sm font-medium text-gray-600">Net Worth Snapshot</p>
-              <p className={`text-xl font-semibold ${netWorth >= 0 ? 'text-[#4c1d95]' : 'text-red-600'}`}>{formatCurrency(netWorth)}</p>
+              <p
+                className={`text-xl font-semibold ${netWorth >= 0 ? 'text-[#4c1d95]' : 'text-red-600'}`}
+              >
+                {formatCurrency(netWorth)}
+              </p>
             </div>
           </CardContent>
         </Card>
       )}
 
-      <AlertDialog open={assetToDelete !== null} onOpenChange={(open) => !open && setAssetToDelete(null)}>
+      <AlertDialog
+        open={assetToDelete !== null}
+        onOpenChange={(open) => !open && setAssetToDelete(null)}
+      >
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Delete Asset</AlertDialogTitle>
-            <AlertDialogDescription>Are you sure you want to delete this asset? This action cannot be undone.</AlertDialogDescription>
+            <AlertDialogDescription>
+              Are you sure you want to delete this asset? This action cannot be undone.
+            </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel onClick={() => setAssetToDelete(null)}>Cancel</AlertDialogCancel>
@@ -905,11 +1076,16 @@ export function AssetsLiabilitiesSection({
         </AlertDialogContent>
       </AlertDialog>
 
-      <AlertDialog open={liabilityToDelete !== null} onOpenChange={(open) => !open && setLiabilityToDelete(null)}>
+      <AlertDialog
+        open={liabilityToDelete !== null}
+        onOpenChange={(open) => !open && setLiabilityToDelete(null)}
+      >
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Delete Liability</AlertDialogTitle>
-            <AlertDialogDescription>Are you sure you want to delete this liability? This action cannot be undone.</AlertDialogDescription>
+            <AlertDialogDescription>
+              Are you sure you want to delete this liability? This action cannot be undone.
+            </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel onClick={() => setLiabilityToDelete(null)}>Cancel</AlertDialogCancel>

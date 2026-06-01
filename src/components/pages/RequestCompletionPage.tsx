@@ -57,14 +57,17 @@ export function RequestCompletionPage() {
 
   const fetchRequest = async (requestId: string) => {
     try {
-      const res = await fetch(`https://${projectId}.supabase.co/functions/v1/make-server-91ed8379/requests/${requestId}`, {
-        headers: { 'Authorization': `Bearer ${publicAnonKey}` }
-      });
+      const res = await fetch(
+        `https://${projectId}.supabase.co/functions/v1/make-server-91ed8379/requests/${requestId}`,
+        {
+          headers: { Authorization: `Bearer ${publicAnonKey}` },
+        },
+      );
       if (!res.ok) throw new Error('Request not found');
       const data = await res.json();
       setRequest(data.request);
       if (data.request.status === 'Pending' || data.request.status === 'Finalised') {
-         setSubmitted(true);
+        setSubmitted(true);
       }
     } catch (err) {
       setError('Failed to load request. It may check have been deleted or does not exist.');
@@ -75,25 +78,29 @@ export function RequestCompletionPage() {
 
   const handleSubmit = async () => {
     if (!request) return;
-    
+
     // Validate required fields
     let missingFields: string[] = [];
-    
+
     if (request.blocks && request.blocks.length > 0) {
-        // Validate blocks
-        request.blocks.forEach(block => {
-            if (block.type === 'field_grid' && block.data.fields) {
-                block.data.fields.forEach((field: { key?: string; label: string; required?: boolean }, idx: number) => {
-                    const key = field.key || `field_${block.id}_${idx}`;
-                    if (field.required && !responses[key]) {
-                        missingFields.push(field.label);
-                    }
-                });
-            }
-        });
+      // Validate blocks
+      request.blocks.forEach((block) => {
+        if (block.type === 'field_grid' && block.data.fields) {
+          block.data.fields.forEach(
+            (field: { key?: string; label: string; required?: boolean }, idx: number) => {
+              const key = field.key || `field_${block.id}_${idx}`;
+              if (field.required && !responses[key]) {
+                missingFields.push(field.label);
+              }
+            },
+          );
+        }
+      });
     } else {
-        // Validate legacy fields
-        missingFields = request.fields.filter(f => f.required && !responses[f.id]).map(f => f.label);
+      // Validate legacy fields
+      missingFields = request.fields
+        .filter((f) => f.required && !responses[f.id])
+        .map((f) => f.label);
     }
 
     if (missingFields.length > 0) {
@@ -103,17 +110,20 @@ export function RequestCompletionPage() {
 
     setSubmitting(true);
     try {
-      const res = await fetch(`https://${projectId}.supabase.co/functions/v1/make-server-91ed8379/requests/${request.id}/submit`, {
-        method: 'POST',
-        headers: { 
+      const res = await fetch(
+        `https://${projectId}.supabase.co/functions/v1/make-server-91ed8379/requests/${request.id}/submit`,
+        {
+          method: 'POST',
+          headers: {
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${publicAnonKey}` 
+            Authorization: `Bearer ${publicAnonKey}`,
+          },
+          body: JSON.stringify({ responses }),
         },
-        body: JSON.stringify({ responses })
-      });
-      
+      );
+
       if (!res.ok) throw new Error('Failed to submit');
-      
+
       setSubmitted(true);
       toast.success('Form submitted successfully!');
     } catch (err) {
@@ -126,30 +136,56 @@ export function RequestCompletionPage() {
   const renderField = (field: TemplateField) => {
     // ... Legacy render logic ...
     const value = responses[field.id];
-    const handleChange = (val: string | number | boolean | string[]) => setResponses(prev => ({ ...prev, [field.id]: val }));
+    const handleChange = (val: string | number | boolean | string[]) =>
+      setResponses((prev) => ({ ...prev, [field.id]: val }));
 
     switch (field.type) {
       case 'text':
       case 'email':
       case 'phone':
-        return <Input value={(value as string) || ''} onChange={e => handleChange(e.target.value)} placeholder={field.placeholder} />;
+        return (
+          <Input
+            value={(value as string) || ''}
+            onChange={(e) => handleChange(e.target.value)}
+            placeholder={field.placeholder}
+          />
+        );
       case 'number':
-        return <Input type="number" value={(value as string) || ''} onChange={e => handleChange(e.target.value)} placeholder={field.placeholder} />;
+        return (
+          <Input
+            type="number"
+            value={(value as string) || ''}
+            onChange={(e) => handleChange(e.target.value)}
+            placeholder={field.placeholder}
+          />
+        );
       case 'textarea':
-        return <Textarea value={(value as string) || ''} onChange={e => handleChange(e.target.value)} placeholder={field.placeholder} />;
+        return (
+          <Textarea
+            value={(value as string) || ''}
+            onChange={(e) => handleChange(e.target.value)}
+            placeholder={field.placeholder}
+          />
+        );
       case 'select':
         return (
           <Select value={value as string | undefined} onValueChange={handleChange}>
-            <SelectTrigger><SelectValue placeholder="Select..." /></SelectTrigger>
+            <SelectTrigger>
+              <SelectValue placeholder="Select..." />
+            </SelectTrigger>
             <SelectContent>
-              {field.options?.map(opt => <SelectItem key={opt} value={opt}>{opt}</SelectItem>)}
+              {field.options?.map((opt) => (
+                <SelectItem key={opt} value={opt}>
+                  {opt}
+                </SelectItem>
+              ))}
             </SelectContent>
           </Select>
         );
       case 'radio':
         return (
           <RadioGroup value={value as string | undefined} onValueChange={handleChange}>
-            {field.options?.map(opt => (
+            {field.options?.map((opt) => (
               <div key={opt} className="flex items-center space-x-2">
                 <RadioGroupItem value={opt} id={`${field.id}-${opt}`} />
                 <Label htmlFor={`${field.id}-${opt}`}>{opt}</Label>
@@ -159,27 +195,33 @@ export function RequestCompletionPage() {
         );
       case 'checkbox':
         return (
-           <div className="space-y-2">
-             {field.options?.map(opt => (
-               <div key={opt} className="flex items-center space-x-2">
-                 <Checkbox 
-                   id={`${field.id}-${opt}`} 
-                   checked={Array.isArray(value) && value.includes(opt)}
-                   onCheckedChange={(checked) => {
-                     const current = Array.isArray(value) ? value : [];
-                     if (checked) handleChange([...current, opt]);
-                     else handleChange(current.filter((v: string) => v !== opt));
-                   }}
-                 />
-                 <Label htmlFor={`${field.id}-${opt}`}>{opt}</Label>
-               </div>
-             ))}
-           </div>
+          <div className="space-y-2">
+            {field.options?.map((opt) => (
+              <div key={opt} className="flex items-center space-x-2">
+                <Checkbox
+                  id={`${field.id}-${opt}`}
+                  checked={Array.isArray(value) && value.includes(opt)}
+                  onCheckedChange={(checked) => {
+                    const current = Array.isArray(value) ? value : [];
+                    if (checked) handleChange([...current, opt]);
+                    else handleChange(current.filter((v: string) => v !== opt));
+                  }}
+                />
+                <Label htmlFor={`${field.id}-${opt}`}>{opt}</Label>
+              </div>
+            ))}
+          </div>
         );
       case 'toggle':
         return <Switch checked={!!value} onCheckedChange={handleChange} />;
       case 'date':
-        return <Input type="date" value={(value as string) || ''} onChange={e => handleChange(e.target.value)} />;
+        return (
+          <Input
+            type="date"
+            value={(value as string) || ''}
+            onChange={(e) => handleChange(e.target.value)}
+          />
+        );
       case 'header':
         return <h3 className="text-lg font-semibold mt-6 mb-2 border-b pb-1">{field.label}</h3>;
       case 'paragraph':
@@ -197,10 +239,10 @@ export function RequestCompletionPage() {
     return (
       <div className="flex items-center justify-center min-h-screen bg-slate-50 p-4">
         <Card className="w-full max-w-md">
-           <CardHeader>
-             <CardTitle className="text-destructive">Error</CardTitle>
-             <CardDescription>{error || 'Request not found'}</CardDescription>
-           </CardHeader>
+          <CardHeader>
+            <CardTitle className="text-destructive">Error</CardTitle>
+            <CardDescription>{error || 'Request not found'}</CardDescription>
+          </CardHeader>
         </Card>
       </div>
     );
@@ -210,16 +252,18 @@ export function RequestCompletionPage() {
     return (
       <div className="flex items-center justify-center min-h-screen bg-slate-50 p-4">
         <Card className="w-full max-w-md text-center">
-           <CardHeader>
-             <div className="mx-auto bg-green-100 p-3 rounded-full mb-4">
-               <CheckCircle2 className="h-8 w-8 text-green-600" />
-             </div>
-             <CardTitle>Thank You!</CardTitle>
-             <CardDescription>Your response has been successfully submitted.</CardDescription>
-           </CardHeader>
-           <CardContent>
-             <p className="text-sm text-muted-foreground">We have notified the team and will review your information shortly.</p>
-           </CardContent>
+          <CardHeader>
+            <div className="mx-auto bg-green-100 p-3 rounded-full mb-4">
+              <CheckCircle2 className="h-8 w-8 text-green-600" />
+            </div>
+            <CardTitle>Thank You!</CardTitle>
+            <CardDescription>Your response has been successfully submitted.</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <p className="text-sm text-muted-foreground">
+              We have notified the team and will review your information shortly.
+            </p>
+          </CardContent>
         </Card>
       </div>
     );
@@ -229,10 +273,13 @@ export function RequestCompletionPage() {
     <div className="min-h-screen bg-gray-100 py-12 px-4">
       <div className="max-w-3xl mx-auto">
         {/* PDF-style Document */}
-        <div className="bg-white shadow-lg rounded-sm border border-gray-200" style={{ 
-          minHeight: '842px',
-          fontFamily: 'system-ui, -apple-system, sans-serif'
-        }}>
+        <div
+          className="bg-white shadow-lg rounded-sm border border-gray-200"
+          style={{
+            minHeight: '842px',
+            fontFamily: 'system-ui, -apple-system, sans-serif',
+          }}
+        >
           {/* Document Header with Logo and Company Details */}
           <div className="border-b border-gray-200 px-12 py-8">
             <div className="flex items-start justify-between mb-6">
@@ -252,12 +299,10 @@ export function RequestCompletionPage() {
                 </div>
               </div>
             </div>
-            
+
             {/* Document Title */}
             <div className="mt-6">
-              <h1 className="text-2xl font-bold text-gray-900 mb-2">
-                {request.templateName}
-              </h1>
+              <h1 className="text-2xl font-bold text-gray-900 mb-2">{request.templateName}</h1>
               <p className="text-sm text-gray-600">
                 Requested for: <span className="font-medium">{request.recipientEmail}</span>
               </p>
@@ -266,67 +311,72 @@ export function RequestCompletionPage() {
             {/* Date Reference */}
             <div className="mt-4 flex items-center text-xs text-gray-500">
               <Calendar className="h-3 w-3 mr-1" />
-              <span>Document Date: {new Date().toLocaleDateString('en-ZA', { 
-                year: 'numeric', 
-                month: 'long', 
-                day: 'numeric' 
-              })}</span>
+              <span>
+                Document Date:{' '}
+                {new Date().toLocaleDateString('en-ZA', {
+                  year: 'numeric',
+                  month: 'long',
+                  day: 'numeric',
+                })}
+              </span>
             </div>
           </div>
 
           {/* Form Content */}
           <div className="px-12 py-8">
             {request.blocks && request.blocks.length > 0 ? (
-                // --- NEW BLOCK RENDERER ---
-                <InteractiveFormRenderer 
-                    blocks={request.blocks as unknown as React.ComponentProps<typeof InteractiveFormRenderer>['blocks']}
-                    responses={responses}
-                    onChange={(key, val) => setResponses(prev => ({ ...prev, [key]: val }))}
-                />
+              // --- NEW BLOCK RENDERER ---
+              <InteractiveFormRenderer
+                blocks={
+                  request.blocks as unknown as React.ComponentProps<
+                    typeof InteractiveFormRenderer
+                  >['blocks']
+                }
+                responses={responses}
+                onChange={(key, val) => setResponses((prev) => ({ ...prev, [key]: val }))}
+              />
             ) : (
-                // --- LEGACY FIELD RENDERER ---
-                <div className="space-y-6">
+              // --- LEGACY FIELD RENDERER ---
+              <div className="space-y-6">
                 {request.fields.map((field) => {
-                    // Headers and paragraphs don't need the standard field wrapper
-                    if (field.type === 'header') {
+                  // Headers and paragraphs don't need the standard field wrapper
+                  if (field.type === 'header') {
                     return (
-                        <div key={field.id} className="pt-4 pb-2 border-b-2 border-primary/20">
+                      <div key={field.id} className="pt-4 pb-2 border-b-2 border-primary/20">
                         <h3 className="text-lg font-semibold text-gray-900">{field.label}</h3>
-                        </div>
+                      </div>
                     );
-                    }
-                    
-                    if (field.type === 'paragraph') {
+                  }
+
+                  if (field.type === 'paragraph') {
                     return (
-                        <div key={field.id} className="py-2">
+                      <div key={field.id} className="py-2">
                         <p className="text-sm text-gray-600 leading-relaxed">{field.description}</p>
-                        </div>
+                      </div>
                     );
-                    }
-                    
-                    return (
+                  }
+
+                  return (
                     <div key={field.id} className="space-y-2">
-                        <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-2">
                         <Label className="text-sm font-medium text-gray-700">
-                            {field.label}
-                            {field.required && (
-                            <span className="text-red-500 ml-1">*</span>
-                            )}
+                          {field.label}
+                          {field.required && <span className="text-red-500 ml-1">*</span>}
                         </Label>
                         {field.required && (
-                            <Badge variant="secondary" className="text-[10px] px-1.5 py-0">Required</Badge>
+                          <Badge variant="secondary" className="text-[10px] px-1.5 py-0">
+                            Required
+                          </Badge>
                         )}
-                        </div>
-                        {field.description && (
+                      </div>
+                      {field.description && (
                         <p className="text-xs text-gray-500 leading-relaxed">{field.description}</p>
-                        )}
-                        <div className="pt-1">
-                        {renderField(field)}
-                        </div>
+                      )}
+                      <div className="pt-1">{renderField(field)}</div>
                     </div>
-                    );
+                  );
                 })}
-                </div>
+              </div>
             )}
           </div>
 
@@ -349,7 +399,10 @@ export function RequestCompletionPage() {
               </div>
               <div className="text-xs text-gray-400 pt-2 border-t border-gray-200">
                 <p>Navigate Wealth Financial Services (Pty) Ltd | Authorized FSP</p>
-                <p className="mt-1">This document is for information purposes only and does not constitute financial advice.</p>
+                <p className="mt-1">
+                  This document is for information purposes only and does not constitute financial
+                  advice.
+                </p>
               </div>
             </div>
           </div>

@@ -22,14 +22,7 @@ import {
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../ui/card';
 import { Button } from '../ui/button';
 import { Badge } from '../ui/badge';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '../ui/table';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../ui/table';
 import { ACTIVE_THEME } from '../portal/portal-theme';
 
 export interface ServicePageAction {
@@ -194,9 +187,10 @@ export function ServicePageLayout<T extends { id?: string | number; [key: string
   ];
 
   return (
-    <div className={`min-h-screen ${ACTIVE_THEME === 'branded' ? 'bg-[#f8f9fb]' : 'bg-gray-50/50'}`}>
+    <div
+      className={`min-h-screen ${ACTIVE_THEME === 'branded' ? 'bg-[#f8f9fb]' : 'bg-gray-50/50'}`}
+    >
       <div className="mx-auto max-w-screen-2xl px-4 sm:px-6 lg:px-8 py-6 lg:py-8">
-
         {/* ── Header ── */}
         <div className="mb-6">
           <Button
@@ -209,11 +203,15 @@ export function ServicePageLayout<T extends { id?: string | number; [key: string
           </Button>
 
           <div className="flex items-start gap-4">
-            <div className={`h-12 w-12 rounded-xl flex items-center justify-center ${theme.iconBg} ${theme.iconText}`}>
+            <div
+              className={`h-12 w-12 rounded-xl flex items-center justify-center ${theme.iconBg} ${theme.iconText}`}
+            >
               <Icon className="h-6 w-6" />
             </div>
             <div className="flex-1 min-w-0">
-              <h1 className="text-2xl lg:text-3xl font-bold text-gray-900 tracking-tight">{title}</h1>
+              <h1 className="text-2xl lg:text-3xl font-bold text-gray-900 tracking-tight">
+                {title}
+              </h1>
               <p className="text-gray-500 mt-0.5 text-sm lg:text-base max-w-2xl">{description}</p>
             </div>
           </div>
@@ -231,11 +229,13 @@ export function ServicePageLayout<T extends { id?: string | number; [key: string
                   action.primary ? theme.actionBorder : 'border-gray-200 hover:border-gray-300'
                 }`}
               >
-                <div className={`h-8 w-8 rounded-md flex items-center justify-center flex-shrink-0 transition-colors ${
-                  action.primary
-                    ? `${theme.actionIconBg} ${theme.actionIconText}`
-                    : 'bg-gray-100 text-gray-500 group-hover:bg-gray-200'
-                }`}>
+                <div
+                  className={`h-8 w-8 rounded-md flex items-center justify-center flex-shrink-0 transition-colors ${
+                    action.primary
+                      ? `${theme.actionIconBg} ${theme.actionIconText}`
+                      : 'bg-gray-100 text-gray-500 group-hover:bg-gray-200'
+                  }`}
+                >
                   <ActionIcon className="h-4 w-4" />
                 </div>
                 <div className="min-w-0">
@@ -262,7 +262,10 @@ export function ServicePageLayout<T extends { id?: string | number; [key: string
             <div className="flex items-center gap-2 mb-3">
               <Lightbulb className={`h-4 w-4 ${theme.insightText}`} />
               <h3 className="text-sm font-semibold text-gray-700">Smart Insights</h3>
-              <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-4 border-gray-200 text-gray-500">
+              <Badge
+                variant="outline"
+                className="text-[10px] px-1.5 py-0 h-4 border-gray-200 text-gray-500"
+              >
                 {insights.length}
               </Badge>
             </div>

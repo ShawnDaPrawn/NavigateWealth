@@ -41,14 +41,14 @@ export const CATEGORY_CONFIG: Record<CommunicationCategory, CategoryConfig> = {
     bgColor: 'bg-amber-50',
     badgeClass: 'bg-amber-50 text-amber-700 border-amber-200',
   },
-  'Appointment': {
+  Appointment: {
     label: 'Appointment',
     icon: Calendar,
     iconColor: 'text-purple-600',
     bgColor: 'bg-purple-50',
     badgeClass: 'bg-purple-50 text-purple-700 border-purple-200',
   },
-  'Important': {
+  Important: {
     label: 'Important',
     icon: AlertCircle,
     iconColor: 'text-red-600',
@@ -62,7 +62,7 @@ export const CATEGORY_CONFIG: Record<CommunicationCategory, CategoryConfig> = {
     bgColor: 'bg-green-50',
     badgeClass: 'bg-green-50 text-green-700 border-green-200',
   },
-  'General': {
+  General: {
     label: 'General',
     icon: Bell,
     iconColor: 'text-gray-600',

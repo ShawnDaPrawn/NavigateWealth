@@ -21,16 +21,15 @@ export function useServiceFnaSection({
     panelRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }, []);
 
-  const topContent =
-    clientId ? (
-      <ServiceFnaPanel
-        ref={panelRef}
-        clientId={clientId}
-        fnaType={fnaType}
-        title={title}
-        description={description}
-      />
-    ) : null;
+  const topContent = clientId ? (
+    <ServiceFnaPanel
+      ref={panelRef}
+      clientId={clientId}
+      fnaType={fnaType}
+      title={title}
+      description={description}
+    />
+  ) : null;
 
   return { topContent, scrollToPanel };
 }

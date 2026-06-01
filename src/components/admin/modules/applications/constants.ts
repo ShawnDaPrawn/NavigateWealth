@@ -51,52 +51,195 @@ export interface FieldSyncMapping {
 export const APPLICATION_PROFILE_FIELD_MAP: FieldSyncMapping[] = [
   // Personal Information
   { applicationField: 'title', profileField: 'title', label: 'Title', section: 'personal' },
-  { applicationField: 'firstName', profileField: 'firstName', label: 'First Name', section: 'personal' },
-  { applicationField: 'middleName', profileField: 'middleName', label: 'Middle Name', section: 'personal' },
-  { applicationField: 'lastName', profileField: 'lastName', label: 'Last Name', section: 'personal' },
-  { applicationField: 'dateOfBirth', profileField: 'dateOfBirth', label: 'Date of Birth', section: 'personal' },
+  {
+    applicationField: 'firstName',
+    profileField: 'firstName',
+    label: 'First Name',
+    section: 'personal',
+  },
+  {
+    applicationField: 'middleName',
+    profileField: 'middleName',
+    label: 'Middle Name',
+    section: 'personal',
+  },
+  {
+    applicationField: 'lastName',
+    profileField: 'lastName',
+    label: 'Last Name',
+    section: 'personal',
+  },
+  {
+    applicationField: 'dateOfBirth',
+    profileField: 'dateOfBirth',
+    label: 'Date of Birth',
+    section: 'personal',
+  },
   { applicationField: 'gender', profileField: 'gender', label: 'Gender', section: 'personal' },
-  { applicationField: 'nationality', profileField: 'nationality', label: 'Nationality', section: 'personal' },
+  {
+    applicationField: 'nationality',
+    profileField: 'nationality',
+    label: 'Nationality',
+    section: 'personal',
+  },
 
   // Identification
-  { applicationField: 'idNumber', profileField: 'idNumber', label: 'ID / Passport Number', section: 'identification' },
-  { applicationField: 'taxNumber', profileField: 'taxNumber', label: 'Tax Number', section: 'identification' },
+  {
+    applicationField: 'idNumber',
+    profileField: 'idNumber',
+    label: 'ID / Passport Number',
+    section: 'identification',
+  },
+  {
+    applicationField: 'taxNumber',
+    profileField: 'taxNumber',
+    label: 'Tax Number',
+    section: 'identification',
+  },
 
   // Marital
-  { applicationField: 'maritalStatus', profileField: 'maritalStatus', label: 'Marital Status', section: 'marital' },
-  { applicationField: 'maritalRegime', profileField: 'maritalRegime', label: 'Marital Regime', section: 'marital' },
+  {
+    applicationField: 'maritalStatus',
+    profileField: 'maritalStatus',
+    label: 'Marital Status',
+    section: 'marital',
+  },
+  {
+    applicationField: 'maritalRegime',
+    profileField: 'maritalRegime',
+    label: 'Marital Regime',
+    section: 'marital',
+  },
 
   // Contact
-  { applicationField: 'emailAddress', profileField: 'email', label: 'Email Address', section: 'contact' },
-  { applicationField: 'alternativeEmail', profileField: 'secondaryEmail', label: 'Alternative Email', section: 'contact' },
-  { applicationField: 'cellphoneNumber', profileField: 'phoneNumber', label: 'Cellphone', section: 'contact' },
-  { applicationField: 'alternativeCellphone', profileField: 'alternativePhone', label: 'Alt. Cellphone', section: 'contact' },
-  { applicationField: 'preferredContactMethod', profileField: 'preferredContactMethod', label: 'Preferred Contact', section: 'contact' },
+  {
+    applicationField: 'emailAddress',
+    profileField: 'email',
+    label: 'Email Address',
+    section: 'contact',
+  },
+  {
+    applicationField: 'alternativeEmail',
+    profileField: 'secondaryEmail',
+    label: 'Alternative Email',
+    section: 'contact',
+  },
+  {
+    applicationField: 'cellphoneNumber',
+    profileField: 'phoneNumber',
+    label: 'Cellphone',
+    section: 'contact',
+  },
+  {
+    applicationField: 'alternativeCellphone',
+    profileField: 'alternativePhone',
+    label: 'Alt. Cellphone',
+    section: 'contact',
+  },
+  {
+    applicationField: 'preferredContactMethod',
+    profileField: 'preferredContactMethod',
+    label: 'Preferred Contact',
+    section: 'contact',
+  },
 
   // Address
-  { applicationField: 'residentialAddressLine1', profileField: 'residentialAddressLine1', label: 'Address Line 1', section: 'address' },
-  { applicationField: 'residentialAddressLine2', profileField: 'residentialAddressLine2', label: 'Address Line 2', section: 'address' },
-  { applicationField: 'residentialSuburb', profileField: 'residentialSuburb', label: 'Suburb', section: 'address' },
-  { applicationField: 'residentialCity', profileField: 'residentialCity', label: 'City', section: 'address' },
-  { applicationField: 'residentialProvince', profileField: 'residentialProvince', label: 'Province', section: 'address' },
-  { applicationField: 'residentialPostalCode', profileField: 'residentialPostalCode', label: 'Postal Code', section: 'address' },
-  { applicationField: 'residentialCountry', profileField: 'residentialCountry', label: 'Country', section: 'address' },
+  {
+    applicationField: 'residentialAddressLine1',
+    profileField: 'residentialAddressLine1',
+    label: 'Address Line 1',
+    section: 'address',
+  },
+  {
+    applicationField: 'residentialAddressLine2',
+    profileField: 'residentialAddressLine2',
+    label: 'Address Line 2',
+    section: 'address',
+  },
+  {
+    applicationField: 'residentialSuburb',
+    profileField: 'residentialSuburb',
+    label: 'Suburb',
+    section: 'address',
+  },
+  {
+    applicationField: 'residentialCity',
+    profileField: 'residentialCity',
+    label: 'City',
+    section: 'address',
+  },
+  {
+    applicationField: 'residentialProvince',
+    profileField: 'residentialProvince',
+    label: 'Province',
+    section: 'address',
+  },
+  {
+    applicationField: 'residentialPostalCode',
+    profileField: 'residentialPostalCode',
+    label: 'Postal Code',
+    section: 'address',
+  },
+  {
+    applicationField: 'residentialCountry',
+    profileField: 'residentialCountry',
+    label: 'Country',
+    section: 'address',
+  },
 
   // Employment
-  { applicationField: 'employmentStatus', profileField: 'employmentStatus', label: 'Employment Status', section: 'employment' },
-  { applicationField: 'jobTitle', profileField: 'employers[0].jobTitle', label: 'Job Title', section: 'employment' },
-  { applicationField: 'employerName', profileField: 'employers[0].employerName', label: 'Employer Name', section: 'employment' },
-  { applicationField: 'industry', profileField: 'employers[0].industry', label: 'Industry', section: 'employment' },
-  { applicationField: 'selfEmployedCompanyName', profileField: 'selfEmployedCompanyName', label: 'Company Name', section: 'employment' },
-  { applicationField: 'selfEmployedIndustry', profileField: 'selfEmployedIndustry', label: 'Business Industry', section: 'employment' },
-  { applicationField: 'selfEmployedDescription', profileField: 'selfEmployedDescription', label: 'Business Description', section: 'employment' },
-  { applicationField: 'grossMonthlyIncome', profileField: 'grossMonthlyIncome', label: 'Gross Monthly Income', section: 'employment' },
+  {
+    applicationField: 'employmentStatus',
+    profileField: 'employmentStatus',
+    label: 'Employment Status',
+    section: 'employment',
+  },
+  {
+    applicationField: 'jobTitle',
+    profileField: 'employers[0].jobTitle',
+    label: 'Job Title',
+    section: 'employment',
+  },
+  {
+    applicationField: 'employerName',
+    profileField: 'employers[0].employerName',
+    label: 'Employer Name',
+    section: 'employment',
+  },
+  {
+    applicationField: 'industry',
+    profileField: 'employers[0].industry',
+    label: 'Industry',
+    section: 'employment',
+  },
+  {
+    applicationField: 'selfEmployedCompanyName',
+    profileField: 'selfEmployedCompanyName',
+    label: 'Company Name',
+    section: 'employment',
+  },
+  {
+    applicationField: 'selfEmployedIndustry',
+    profileField: 'selfEmployedIndustry',
+    label: 'Business Industry',
+    section: 'employment',
+  },
+  {
+    applicationField: 'selfEmployedDescription',
+    profileField: 'selfEmployedDescription',
+    label: 'Business Description',
+    section: 'employment',
+  },
+  {
+    applicationField: 'grossMonthlyIncome',
+    profileField: 'grossMonthlyIncome',
+    label: 'Gross Monthly Income',
+    section: 'employment',
+  },
 ];
 
 /** Quick lookup set: applicationField → true if it syncs to profile */
-export const SYNCED_FIELDS = new Set(
-  APPLICATION_PROFILE_FIELD_MAP.map(m => m.applicationField)
-);
+export const SYNCED_FIELDS = new Set(APPLICATION_PROFILE_FIELD_MAP.map((m) => m.applicationField));
 
 /** Grouped mapping by section for display purposes */
 export const FIELD_MAP_BY_SECTION = APPLICATION_PROFILE_FIELD_MAP.reduce<
@@ -121,18 +264,68 @@ export interface ExternalProductCategory {
 }
 
 export const EXTERNAL_PRODUCT_CATEGORIES: ExternalProductCategory[] = [
-  { id: 'life_insurance', label: 'Life Insurance', icon: 'heart-pulse', description: 'Life cover, funeral cover, disability' },
-  { id: 'medical_aid', label: 'Medical Aid', icon: 'stethoscope', description: 'Medical scheme membership' },
-  { id: 'retirement', label: 'Retirement Annuity', icon: 'piggy-bank', description: 'RA, pension, provident fund' },
-  { id: 'investments', label: 'Investments', icon: 'trending-up', description: 'Unit trusts, ETFs, savings' },
-  { id: 'short_term', label: 'Short-Term Insurance', icon: 'shield-check', description: 'Car, home, contents insurance' },
-  { id: 'gap_cover', label: 'Gap Cover', icon: 'shield-plus', description: 'Medical aid shortfall cover' },
+  {
+    id: 'life_insurance',
+    label: 'Life Insurance',
+    icon: 'heart-pulse',
+    description: 'Life cover, funeral cover, disability',
+  },
+  {
+    id: 'medical_aid',
+    label: 'Medical Aid',
+    icon: 'stethoscope',
+    description: 'Medical scheme membership',
+  },
+  {
+    id: 'retirement',
+    label: 'Retirement Annuity',
+    icon: 'piggy-bank',
+    description: 'RA, pension, provident fund',
+  },
+  {
+    id: 'investments',
+    label: 'Investments',
+    icon: 'trending-up',
+    description: 'Unit trusts, ETFs, savings',
+  },
+  {
+    id: 'short_term',
+    label: 'Short-Term Insurance',
+    icon: 'shield-check',
+    description: 'Car, home, contents insurance',
+  },
+  {
+    id: 'gap_cover',
+    label: 'Gap Cover',
+    icon: 'shield-plus',
+    description: 'Medical aid shortfall cover',
+  },
   { id: 'home_loan', label: 'Home Loan', icon: 'home', description: 'Bond, mortgage' },
-  { id: 'vehicle_finance', label: 'Vehicle Finance', icon: 'car', description: 'Vehicle loan, lease' },
-  { id: 'education_policy', label: 'Education Policy', icon: 'graduation-cap', description: 'Education savings plan' },
-  { id: 'tax_free_savings', label: 'Tax-Free Savings', icon: 'wallet', description: 'TFSA account' },
+  {
+    id: 'vehicle_finance',
+    label: 'Vehicle Finance',
+    icon: 'car',
+    description: 'Vehicle loan, lease',
+  },
+  {
+    id: 'education_policy',
+    label: 'Education Policy',
+    icon: 'graduation-cap',
+    description: 'Education savings plan',
+  },
+  {
+    id: 'tax_free_savings',
+    label: 'Tax-Free Savings',
+    icon: 'wallet',
+    description: 'TFSA account',
+  },
   { id: 'will', label: 'Will', icon: 'file-text', description: 'Last will and testament' },
-  { id: 'trust', label: 'Trust', icon: 'landmark', description: 'Family trust, testamentary trust' },
+  {
+    id: 'trust',
+    label: 'Trust',
+    icon: 'landmark',
+    description: 'Family trust, testamentary trust',
+  },
 ];
 
 /** Map product strings from the application form to category IDs */
@@ -140,15 +333,15 @@ export const PRODUCT_LABEL_MAP: Record<string, string> = {
   'Life Insurance': 'life_insurance',
   'Medical Aid': 'medical_aid',
   'Retirement Annuity': 'retirement',
-  'Investments': 'investments',
+  Investments: 'investments',
   'Short-Term Insurance': 'short_term',
   'Gap Cover': 'gap_cover',
   'Home Loan': 'home_loan',
   'Vehicle Finance': 'vehicle_finance',
   'Education Policy': 'education_policy',
   'Tax-Free Savings Account': 'tax_free_savings',
-  'Will': 'will',
-  'Trust': 'trust',
+  Will: 'will',
+  Trust: 'trust',
 };
 
 // ---------------------------------------------------------------------------
@@ -205,7 +398,7 @@ export const SA_FINANCIAL_PROVIDERS: FinancialServiceProvider[] = [
 
 /** Quick lookup: provider id → provider */
 export const SA_PROVIDER_MAP = Object.fromEntries(
-  SA_FINANCIAL_PROVIDERS.map(p => [p.id, p]),
+  SA_FINANCIAL_PROVIDERS.map((p) => [p.id, p]),
 ) as Record<string, FinancialServiceProvider>;
 
 // ---------------------------------------------------------------------------

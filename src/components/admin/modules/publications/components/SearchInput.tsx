@@ -1,6 +1,6 @@
 /**
  * Publications Feature - SearchInput Component
- * 
+ *
  * Reusable search input with debouncing.
  */
 
@@ -21,7 +21,7 @@ export function SearchInput({
   onChange,
   placeholder = 'Search...',
   debounceMs = 300,
-  className
+  className,
 }: SearchInputProps) {
   const [localValue, setLocalValue] = useState(value);
 
@@ -49,7 +49,7 @@ export function SearchInput({
       <div className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
         <Search className="w-5 h-5" />
       </div>
-      
+
       <input
         type="text"
         value={localValue}
@@ -57,7 +57,7 @@ export function SearchInput({
         placeholder={placeholder}
         className="w-full pl-10 pr-10 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
       />
-      
+
       {localValue && (
         <button
           onClick={handleClear}

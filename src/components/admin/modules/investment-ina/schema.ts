@@ -21,9 +21,15 @@ export const InvestmentGoalSchema = z.object({
   goalName: z.string().min(1, 'Goal name is required'),
   goalDescription: z.string().optional(),
   goalType: z.enum([
-    'education', 'home-deposit', 'travel', 'emigration',
-    'wealth-creation', 'business-funding', 'sabbatical',
-    'financial-freedom', 'other',
+    'education',
+    'home-deposit',
+    'travel',
+    'emigration',
+    'wealth-creation',
+    'business-funding',
+    'sabbatical',
+    'financial-freedom',
+    'other',
   ]),
   goalAmountToday: z.number().min(0, 'Goal amount cannot be negative'),
   targetDate: z.string().min(1, 'Target date is required'),
@@ -44,7 +50,9 @@ export const DiscretionaryInvestmentSchema = z.object({
   monthlyContribution: z.number().min(0),
   expectedDrawdownDate: z.string().optional(),
   riskCategory: riskProfileEnum.optional(),
-  isDiscretionary: z.boolean().refine((val) => val === true, 'Only discretionary investments are included'),
+  isDiscretionary: z
+    .boolean()
+    .refine((val) => val === true, 'Only discretionary investments are included'),
 });
 
 export const RiskProfileReturnsSchema = z.object({
@@ -59,9 +67,7 @@ export const RiskProfileReturnsSchema = z.object({
 
 export const InvestmentINAInputSchema = z.object({
   // Personal Information
-  currentAge: z.number()
-    .min(18, 'Minimum age is 18')
-    .max(120, 'Maximum age is 120'),
+  currentAge: z.number().min(18, 'Minimum age is 18').max(120, 'Maximum age is 120'),
   dateOfBirth: z.string().min(1, 'Date of birth is required'),
   householdDependants: z.number().int().min(0),
   grossMonthlyIncome: z.number().min(0),
@@ -71,7 +77,7 @@ export const InvestmentINAInputSchema = z.object({
   clientRiskProfile: riskProfileEnum,
 
   // Economic Assumptions
-  longTermInflationRate: z.number().min(0).max(0.20),
+  longTermInflationRate: z.number().min(0).max(0.2),
   expectedRealReturns: RiskProfileReturnsSchema,
 
   // Existing Discretionary Investments

@@ -1,7 +1,7 @@
 /**
  * Personnel Module Constants
  * Navigate Wealth Admin Dashboard
- * 
+ *
  * Centralized constants for personnel module including role labels, colors,
  * and configuration values.
  */
@@ -176,20 +176,8 @@ export const ROLE_MODULE_PRESETS: Record<string, AdminModule[]> = {
     'communication',
     'resources',
   ],
-  paraplanner: [
-    'clients',
-    'advice-engine',
-    'resources',
-    'tasks',
-    'calendar',
-  ],
-  compliance: [
-    'compliance',
-    'reporting',
-    'issues',
-    'clients',
-    'calendar',
-  ],
+  paraplanner: ['clients', 'advice-engine', 'resources', 'tasks', 'calendar'],
+  compliance: ['compliance', 'reporting', 'issues', 'clients', 'calendar'],
   admin: [...PERMISSIONED_MODULES],
 };
 
@@ -212,7 +200,7 @@ export interface CapabilityMeta {
 /**
  * Module capabilities registry.
  * Maps each permissioned module to its available granular capabilities.
- * 
+ *
  * `view` is implicitly granted when a module has `access: true` and is
  * therefore NOT listed here — it exists in the type union for runtime
  * checks but never appears in the editor grid.
@@ -223,101 +211,105 @@ export const MODULE_CAPABILITIES: Record<AdminModule, CapabilityMeta[]> = {
 
   // ── Operations ───────────────────────────────────────────────
   applications: [
-    { key: 'create',  label: 'Create',  description: 'Submit new applications' },
-    { key: 'edit',    label: 'Edit',    description: 'Modify application details' },
+    { key: 'create', label: 'Create', description: 'Submit new applications' },
+    { key: 'edit', label: 'Edit', description: 'Modify application details' },
     { key: 'approve', label: 'Approve', description: 'Approve or reject applications' },
-    { key: 'export',  label: 'Export',  description: 'Export application data' },
+    { key: 'export', label: 'Export', description: 'Export application data' },
   ],
   tasks: [
     { key: 'create', label: 'Create', description: 'Create new tasks' },
-    { key: 'edit',   label: 'Edit',   description: 'Edit task details and status' },
+    { key: 'edit', label: 'Edit', description: 'Edit task details and status' },
     { key: 'delete', label: 'Delete', description: 'Delete or archive tasks' },
   ],
   calendar: [
     { key: 'create', label: 'Create', description: 'Create events and reminders' },
-    { key: 'edit',   label: 'Edit',   description: 'Modify event details' },
+    { key: 'edit', label: 'Edit', description: 'Modify event details' },
     { key: 'delete', label: 'Delete', description: 'Remove events' },
     { key: 'export', label: 'Export', description: 'Export calendar data' },
   ],
 
   // ── Manage ───────────────────────────────────────────────────
   clients: [
-    { key: 'create', label: 'Create',  description: 'Add new clients' },
-    { key: 'edit',   label: 'Edit',    description: 'Modify client profiles' },
-    { key: 'delete', label: 'Delete',  description: 'Archive or remove clients' },
-    { key: 'export', label: 'Export',  description: 'Export client data' },
+    { key: 'create', label: 'Create', description: 'Add new clients' },
+    { key: 'edit', label: 'Edit', description: 'Modify client profiles' },
+    { key: 'delete', label: 'Delete', description: 'Archive or remove clients' },
+    { key: 'export', label: 'Export', description: 'Export client data' },
   ],
   esign: [
-    { key: 'create', label: 'Create',  description: 'Create new envelopes' },
-    { key: 'edit',   label: 'Edit',    description: 'Modify envelope details' },
-    { key: 'send',   label: 'Send',    description: 'Send envelopes for signing' },
-    { key: 'delete', label: 'Delete',  description: 'Void or delete envelopes' },
+    { key: 'create', label: 'Create', description: 'Create new envelopes' },
+    { key: 'edit', label: 'Edit', description: 'Modify envelope details' },
+    { key: 'send', label: 'Send', description: 'Send envelopes for signing' },
+    { key: 'delete', label: 'Delete', description: 'Void or delete envelopes' },
   ],
   personnel: [
-    { key: 'create',             label: 'Invite',             description: 'Invite new personnel members' },
-    { key: 'edit',               label: 'Edit',               description: 'Modify personnel profiles' },
-    { key: 'delete',             label: 'Suspend',            description: 'Suspend personnel access' },
-    { key: 'manage_permissions', label: 'Manage Permissions', description: 'Edit module & capability permissions' },
+    { key: 'create', label: 'Invite', description: 'Invite new personnel members' },
+    { key: 'edit', label: 'Edit', description: 'Modify personnel profiles' },
+    { key: 'delete', label: 'Suspend', description: 'Suspend personnel access' },
+    {
+      key: 'manage_permissions',
+      label: 'Manage Permissions',
+      description: 'Edit module & capability permissions',
+    },
   ],
   'advice-engine': [
     { key: 'create', label: 'Create', description: 'Start new AI conversations & RoAs' },
-    { key: 'edit',   label: 'Edit',   description: 'Modify drafts and settings' },
+    { key: 'edit', label: 'Edit', description: 'Modify drafts and settings' },
     { key: 'export', label: 'Export', description: 'Export advice documents' },
   ],
   'product-management': [
     { key: 'create', label: 'Create', description: 'Add products and providers' },
-    { key: 'edit',   label: 'Edit',   description: 'Modify product schemas' },
+    { key: 'edit', label: 'Edit', description: 'Modify product schemas' },
     { key: 'delete', label: 'Delete', description: 'Remove products or providers' },
   ],
   resources: [
-    { key: 'create',  label: 'Create',  description: 'Create new forms and resources' },
-    { key: 'edit',    label: 'Edit',    description: 'Modify form builder content' },
-    { key: 'delete',  label: 'Delete',  description: 'Delete resources' },
+    { key: 'create', label: 'Create', description: 'Create new forms and resources' },
+    { key: 'edit', label: 'Edit', description: 'Modify form builder content' },
+    { key: 'delete', label: 'Delete', description: 'Delete resources' },
     { key: 'publish', label: 'Publish', description: 'Publish forms for client use' },
   ],
   publications: [
-    { key: 'create',  label: 'Create',  description: 'Write new articles' },
-    { key: 'edit',    label: 'Edit',    description: 'Modify existing articles' },
-    { key: 'delete',  label: 'Delete',  description: 'Delete articles' },
+    { key: 'create', label: 'Create', description: 'Write new articles' },
+    { key: 'edit', label: 'Edit', description: 'Modify existing articles' },
+    { key: 'delete', label: 'Delete', description: 'Delete articles' },
     { key: 'publish', label: 'Publish', description: 'Publish or unpublish articles' },
   ],
 
   // ── Risk & Compliance ────────────────────────────────────────
   compliance: [
-    { key: 'create',  label: 'Create',  description: 'Create compliance records' },
-    { key: 'edit',    label: 'Edit',    description: 'Modify compliance entries' },
+    { key: 'create', label: 'Create', description: 'Create compliance records' },
+    { key: 'edit', label: 'Edit', description: 'Modify compliance entries' },
     { key: 'approve', label: 'Approve', description: 'Approve compliance items' },
-    { key: 'export',  label: 'Export',  description: 'Export compliance reports' },
+    { key: 'export', label: 'Export', description: 'Export compliance reports' },
   ],
   reporting: [
     { key: 'create', label: 'Create', description: 'Create new report definitions' },
-    { key: 'edit',   label: 'Edit',   description: 'Modify report configurations' },
+    { key: 'edit', label: 'Edit', description: 'Modify report configurations' },
     { key: 'export', label: 'Export', description: 'Run and export reports' },
   ],
   issues: [
-    { key: 'edit',    label: 'Update',   description: 'Update issue workflow status and ownership' },
-    { key: 'approve', label: 'Resolve',  description: 'Mark issues as verified or resolved' },
-    { key: 'export',  label: 'Export',   description: 'Export quality issue evidence and summaries' },
+    { key: 'edit', label: 'Update', description: 'Update issue workflow status and ownership' },
+    { key: 'approve', label: 'Resolve', description: 'Mark issues as verified or resolved' },
+    { key: 'export', label: 'Export', description: 'Export quality issue evidence and summaries' },
   ],
 
   // ── Growth ───────────────────────────────────────────────────
   communication: [
     { key: 'create', label: 'Compose', description: 'Create email or WhatsApp messages' },
-    { key: 'edit',   label: 'Edit',    description: 'Edit templates and drafts' },
-    { key: 'send',   label: 'Send',    description: 'Send communications to clients' },
-    { key: 'delete', label: 'Delete',  description: 'Delete templates or history' },
+    { key: 'edit', label: 'Edit', description: 'Edit templates and drafts' },
+    { key: 'send', label: 'Send', description: 'Send communications to clients' },
+    { key: 'delete', label: 'Delete', description: 'Delete templates or history' },
   ],
   marketing: [
-    { key: 'create',  label: 'Create',  description: 'Create social media posts' },
-    { key: 'edit',    label: 'Edit',    description: 'Edit post content and scheduling' },
+    { key: 'create', label: 'Create', description: 'Create social media posts' },
+    { key: 'edit', label: 'Edit', description: 'Edit post content and scheduling' },
     { key: 'publish', label: 'Publish', description: 'Publish posts to connected accounts' },
-    { key: 'delete',  label: 'Delete',  description: 'Delete posts' },
+    { key: 'delete', label: 'Delete', description: 'Delete posts' },
   ],
 
   // ── Submissions ──────────────────────────────────────────────
   submissions: [
-    { key: 'create',  label: 'Create',  description: 'Submit new submissions' },
-    { key: 'edit',    label: 'Edit',    description: 'Modify submission details' },
+    { key: 'create', label: 'Create', description: 'Submit new submissions' },
+    { key: 'edit', label: 'Edit', description: 'Modify submission details' },
     { key: 'approve', label: 'Approve', description: 'Approve or reject submissions' },
   ],
 
@@ -326,9 +318,9 @@ export const MODULE_CAPABILITIES: Record<AdminModule, CapabilityMeta[]> = {
 
   // ── AI Management ───────────────────────────────────────────
   'ai-management': [
-    { key: 'edit',   label: 'Configure', description: 'Modify AI agent settings and prompts' },
+    { key: 'edit', label: 'Configure', description: 'Modify AI agent settings and prompts' },
     { key: 'create', label: 'Manage KB', description: 'Add and manage knowledge base content' },
-    { key: 'export', label: 'Export',    description: 'Export analytics and feedback data' },
+    { key: 'export', label: 'Export', description: 'Export analytics and feedback data' },
   ],
 };
 
@@ -336,14 +328,14 @@ export const MODULE_CAPABILITIES: Record<AdminModule, CapabilityMeta[]> = {
  * Human-readable labels for capabilities (used in badge/chip display).
  */
 export const CAPABILITY_LABELS: Record<Capability, string> = {
-  view:               'View',
-  create:             'Create',
-  edit:               'Edit',
-  delete:             'Delete',
-  publish:            'Publish',
-  approve:            'Approve',
-  send:               'Send',
-  export:             'Export',
+  view: 'View',
+  create: 'Create',
+  edit: 'Edit',
+  delete: 'Delete',
+  publish: 'Publish',
+  approve: 'Approve',
+  send: 'Send',
+  export: 'Export',
   manage_permissions: 'Manage Permissions',
 };
 
@@ -351,14 +343,14 @@ export const CAPABILITY_LABELS: Record<Capability, string> = {
  * Icon-friendly color tokens per capability for visual distinction.
  */
 export const CAPABILITY_COLORS: Record<Capability, string> = {
-  view:               'text-gray-500',
-  create:             'text-green-600',
-  edit:               'text-blue-600',
-  delete:             'text-red-600',
-  publish:            'text-purple-600',
-  approve:            'text-amber-600',
-  send:               'text-cyan-600',
-  export:             'text-indigo-600',
+  view: 'text-gray-500',
+  create: 'text-green-600',
+  edit: 'text-blue-600',
+  delete: 'text-red-600',
+  publish: 'text-purple-600',
+  approve: 'text-amber-600',
+  send: 'text-cyan-600',
+  export: 'text-indigo-600',
   manage_permissions: 'text-rose-600',
 };
 

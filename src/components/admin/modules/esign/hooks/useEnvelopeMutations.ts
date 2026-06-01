@@ -1,7 +1,7 @@
 /**
  * E-Signature Mutation Hooks
  * Navigate Wealth Admin Dashboard
- * 
+ *
  * React Query mutation hooks for E-Signature create, update, and delete operations.
  */
 
@@ -29,13 +29,13 @@ import type {
 
 /**
  * Hook to upload a document and create an envelope
- * 
+ *
  * @returns React Query mutation result
- * 
+ *
  * @example
  * ```tsx
  * const { mutate: uploadDocument, isPending } = useUploadDocument();
- * 
+ *
  * uploadDocument({
  *   files: [pdfFile],
  *   context: {
@@ -56,15 +56,15 @@ export function useUploadDocument() {
     },
     onSuccess: (data, variables) => {
       console.log('✅ [E-Sign Mutation] Document uploaded successfully');
-      
+
       queryClient.invalidateQueries({ queryKey: esignKeys.envelopes() });
 
       if (variables.context.clientId) {
-        queryClient.invalidateQueries({ 
-          queryKey: esignKeys.clientEnvelopes(variables.context.clientId) 
+        queryClient.invalidateQueries({
+          queryKey: esignKeys.clientEnvelopes(variables.context.clientId),
         });
       }
-      
+
       toast.success(SUCCESS_MESSAGES.ENVELOPE_CREATED);
     },
     onError: (error: Error, variables) => {
@@ -80,13 +80,13 @@ export function useUploadDocument() {
 
 /**
  * Hook to save fields for an envelope
- * 
+ *
  * @returns React Query mutation result
- * 
+ *
  * @example
  * ```tsx
  * const { mutate: saveFields, isPending } = useSaveFields();
- * 
+ *
  * saveFields({
  *   envelopeId: 'envelope-123',
  *   fields: [...],
@@ -103,7 +103,7 @@ export function useSaveFields() {
     onSuccess: (data, variables) => {
       console.log('✅ [E-Sign Mutation] Fields saved successfully');
       queryClient.invalidateQueries({
-        queryKey: esignKeys.envelope(variables.envelopeId)
+        queryKey: esignKeys.envelope(variables.envelopeId),
       });
       toast.success(SUCCESS_MESSAGES.FIELDS_SAVED);
     },
@@ -120,13 +120,13 @@ export function useSaveFields() {
 
 /**
  * Hook to send invitations to signers
- * 
+ *
  * @returns React Query mutation result
- * 
+ *
  * @example
  * ```tsx
  * const { mutate: sendInvites, isPending } = useSendInvites();
- * 
+ *
  * sendInvites({
  *   envelopeId: 'envelope-123',
  *   request: {
@@ -142,7 +142,13 @@ export function useSaveFields() {
 export function useSendInvites() {
   const queryClient = useQueryClient();
   const mutation = useMutation({
-    mutationFn: async ({ envelopeId, request }: { envelopeId: string; request: SendInvitesRequest }) => {
+    mutationFn: async ({
+      envelopeId,
+      request,
+    }: {
+      envelopeId: string;
+      request: SendInvitesRequest;
+    }) => {
       console.log('📧 [E-Sign Mutation] Sending invitations for envelope:', envelopeId);
       return esignApi.sendInvites(envelopeId, request);
     },
@@ -150,7 +156,7 @@ export function useSendInvites() {
       console.log('✅ [E-Sign Mutation] Invitations sent successfully');
       queryClient.invalidateQueries({ queryKey: esignKeys.envelopes() });
       queryClient.invalidateQueries({
-        queryKey: esignKeys.envelope(variables.envelopeId)
+        queryKey: esignKeys.envelope(variables.envelopeId),
       });
       toast.success(SUCCESS_MESSAGES.ENVELOPE_SENT);
     },
@@ -167,13 +173,13 @@ export function useSendInvites() {
 
 /**
  * Hook to void an envelope
- * 
+ *
  * @returns React Query mutation result
- * 
+ *
  * @example
  * ```tsx
  * const { mutate: voidEnvelope, isPending } = useVoidEnvelope();
- * 
+ *
  * voidEnvelope('envelope-123');
  * ```
  */
@@ -203,13 +209,13 @@ export function useVoidEnvelope() {
 
 /**
  * Hook to save envelope as template
- * 
+ *
  * @returns React Query mutation result
- * 
+ *
  * @example
  * ```tsx
  * const { mutate: saveAsTemplate, isPending } = useSaveAsTemplate();
- * 
+ *
  * saveAsTemplate({
  *   envelopeId: 'envelope-123',
  *   request: {
@@ -223,7 +229,13 @@ export function useSaveAsTemplate() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async ({ envelopeId, request }: { envelopeId: string; request: SaveTemplateRequest }) => {
+    mutationFn: async ({
+      envelopeId,
+      request,
+    }: {
+      envelopeId: string;
+      request: SaveTemplateRequest;
+    }) => {
       console.log('💾 [E-Sign Mutation] Saving envelope as template:', envelopeId);
       return esignApi.saveAsTemplate(envelopeId, request);
     },
@@ -244,13 +256,13 @@ export function useSaveAsTemplate() {
 
 /**
  * Hook to send OTP to a signer
- * 
+ *
  * @returns React Query mutation result
- * 
+ *
  * @example
  * ```tsx
  * const { mutate: sendOTP, isPending } = useSendOTP();
- * 
+ *
  * sendOTP({
  *   envelopeId: 'envelope-123',
  *   signerId: 'signer-456',
@@ -276,13 +288,13 @@ export function useSendOTP() {
 
 /**
  * Hook to submit a signature
- * 
+ *
  * @returns React Query mutation result
- * 
+ *
  * @example
  * ```tsx
  * const { mutate: submitSignature, isPending } = useSubmitSignature();
- * 
+ *
  * submitSignature({
  *   envelopeId: 'envelope-123',
  *   request: {
@@ -297,19 +309,25 @@ export function useSubmitSignature() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async ({ envelopeId, request }: { envelopeId: string; request: SubmitSignatureRequest }) => {
+    mutationFn: async ({
+      envelopeId,
+      request,
+    }: {
+      envelopeId: string;
+      request: SubmitSignatureRequest;
+    }) => {
       console.log('✍️ [E-Sign Mutation] Submitting signature for envelope:', envelopeId);
       return esignApi.submitSignature(envelopeId, request);
     },
     onSuccess: (data, variables) => {
       console.log('✅ [E-Sign Mutation] Signature submitted successfully');
-      
+
       // Invalidate envelope lists and specific envelope
       queryClient.invalidateQueries({ queryKey: esignKeys.envelopes() });
-      queryClient.invalidateQueries({ 
-        queryKey: esignKeys.envelope(variables.envelopeId) 
+      queryClient.invalidateQueries({
+        queryKey: esignKeys.envelope(variables.envelopeId),
       });
-      
+
       toast.success(SUCCESS_MESSAGES.SIGNATURE_SUBMITTED);
     },
     onError: (error: Error) => {
@@ -321,13 +339,13 @@ export function useSubmitSignature() {
 
 /**
  * Hook to reject signing
- * 
+ *
  * @returns React Query mutation result
- * 
+ *
  * @example
  * ```tsx
  * const { mutate: rejectSigning, isPending } = useRejectSigning();
- * 
+ *
  * rejectSigning({
  *   envelopeId: 'envelope-123',
  *   request: {
@@ -341,19 +359,25 @@ export function useRejectSigning() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async ({ envelopeId, request }: { envelopeId: string; request: RejectSigningRequest }) => {
+    mutationFn: async ({
+      envelopeId,
+      request,
+    }: {
+      envelopeId: string;
+      request: RejectSigningRequest;
+    }) => {
       console.log('❌ [E-Sign Mutation] Rejecting signing for envelope:', envelopeId);
       return esignApi.rejectSigning(envelopeId, request);
     },
     onSuccess: (data, variables) => {
       console.log('✅ [E-Sign Mutation] Signing rejected');
-      
+
       // Invalidate envelope lists and specific envelope
       queryClient.invalidateQueries({ queryKey: esignKeys.envelopes() });
-      queryClient.invalidateQueries({ 
-        queryKey: esignKeys.envelope(variables.envelopeId) 
+      queryClient.invalidateQueries({
+        queryKey: esignKeys.envelope(variables.envelopeId),
       });
-      
+
       toast.info('Signing rejected');
     },
     onError: (error: Error) => {

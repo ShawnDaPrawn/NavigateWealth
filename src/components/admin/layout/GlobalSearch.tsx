@@ -3,13 +3,7 @@
  */
 
 import * as React from 'react';
-import {
-  Search,
-  Users,
-  UserCog,
-  User,
-  Loader2,
-} from 'lucide-react';
+import { Search, Users, UserCog, User, Loader2 } from 'lucide-react';
 import {
   CommandDialog,
   CommandEmpty,
@@ -35,10 +29,12 @@ const STATUS_BADGE_CONFIG: Record<string, { label: string; className: string }> 
 
 function getStatusBadge(status: string | undefined | null) {
   const key = (status ?? 'unknown').trim().toLowerCase() || 'unknown';
-  return STATUS_BADGE_CONFIG[key] ?? {
-    label: key.charAt(0).toUpperCase() + key.slice(1),
-    className: 'bg-gray-100 text-gray-700 border-gray-200',
-  };
+  return (
+    STATUS_BADGE_CONFIG[key] ?? {
+      label: key.charAt(0).toUpperCase() + key.slice(1),
+      className: 'bg-gray-100 text-gray-700 border-gray-200',
+    }
+  );
 }
 
 function useDebouncedValue<T>(value: T, delayMs: number): T {
@@ -58,7 +54,10 @@ export function GlobalSearch() {
   const searchInputGuard = useSearchInputAutofillGuard({ id: 'admin-global-search' });
   const debouncedSearch = useDebouncedValue(searchValue, 250);
   const { navigateToAccount } = useAdminNavigation();
-  const { clients, personnel, isLoading, hasSearchQuery } = useGlobalSearchData(open, debouncedSearch);
+  const { clients, personnel, isLoading, hasSearchQuery } = useGlobalSearchData(
+    open,
+    debouncedSearch,
+  );
 
   React.useEffect(() => {
     const down = (e: KeyboardEvent) => {
@@ -115,8 +114,12 @@ export function GlobalSearch() {
           {!hasSearchQuery ? (
             <div className="flex flex-col items-center justify-center py-8 gap-1 text-center">
               <Search className="h-8 w-8 text-muted-foreground/40" />
-              <p className="text-sm font-medium text-muted-foreground">Search clients and personnel</p>
-              <p className="text-xs text-muted-foreground/70">Type at least 2 characters to start</p>
+              <p className="text-sm font-medium text-muted-foreground">
+                Search clients and personnel
+              </p>
+              <p className="text-xs text-muted-foreground/70">
+                Type at least 2 characters to start
+              </p>
             </div>
           ) : isLoading ? (
             <div className="flex items-center justify-center py-8 gap-2 text-sm text-muted-foreground">
@@ -138,11 +141,7 @@ export function GlobalSearch() {
               {clients.length > 0 && (
                 <CommandGroup heading="Clients">
                   {clients.map((account) => (
-                    <AccountItem
-                      key={account.id}
-                      account={account}
-                      onSelect={handleSelect}
-                    />
+                    <AccountItem key={account.id} account={account} onSelect={handleSelect} />
                   ))}
                 </CommandGroup>
               )}
@@ -152,11 +151,7 @@ export function GlobalSearch() {
               {personnel.length > 0 && (
                 <CommandGroup heading="Personnel">
                   {personnel.map((account) => (
-                    <AccountItem
-                      key={account.id}
-                      account={account}
-                      onSelect={handleSelect}
-                    />
+                    <AccountItem key={account.id} account={account} onSelect={handleSelect} />
                   ))}
                 </CommandGroup>
               )}
@@ -180,11 +175,17 @@ export function GlobalSearch() {
             )}
           </div>
           <div className="flex items-center gap-1">
-            <kbd className="inline-flex h-4 items-center rounded border bg-muted px-1 font-mono text-[10px]">{'\u2191\u2193'}</kbd>
+            <kbd className="inline-flex h-4 items-center rounded border bg-muted px-1 font-mono text-[10px]">
+              {'\u2191\u2193'}
+            </kbd>
             <span>navigate</span>
-            <kbd className="inline-flex h-4 items-center rounded border bg-muted px-1 font-mono text-[10px] ml-1">{'\u21B5'}</kbd>
+            <kbd className="inline-flex h-4 items-center rounded border bg-muted px-1 font-mono text-[10px] ml-1">
+              {'\u21B5'}
+            </kbd>
             <span>open</span>
-            <kbd className="inline-flex h-4 items-center rounded border bg-muted px-1 font-mono text-[10px] ml-1">esc</kbd>
+            <kbd className="inline-flex h-4 items-center rounded border bg-muted px-1 font-mono text-[10px] ml-1">
+              esc
+            </kbd>
             <span>close</span>
           </div>
         </div>

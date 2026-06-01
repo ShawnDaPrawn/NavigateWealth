@@ -1,32 +1,30 @@
 /**
  * Shared FNA Authentication Helper
- * 
+ *
  * Centralised authentication for all FNA (Financial Needs Analysis) route modules.
  * Eliminates duplicated auth logic across Retirement, Risk Planning, Tax Planning,
  * Estate Planning, Investment INA, and Medical FNA route files.
- * 
+ *
  * Supports two authentication modes:
  * 1. Anon key (admin/development access) — returns a deterministic admin user
  * 2. Real user tokens — validated via Supabase Auth, returns the authenticated user
- * 
+ *
  * Usage:
  *   import { authenticateUser } from './fna-auth.ts';
  *   const user = await authenticateUser(c.req.header('Authorization'), 'my-module');
- * 
+ *
  * Phase 3 of the FNA uniformity alignment plan.
  * Moved from shared/ subdirectory to root server directory for bundler compatibility.
  */
 
 import type { Context } from 'npm:hono';
-import { createClient } from "jsr:@supabase/supabase-js@2.49.8";
-import { createModuleLogger } from "./stderr-logger.ts";
+import { createClient } from 'jsr:@supabase/supabase-js@2.49.8';
+import { createModuleLogger } from './stderr-logger.ts';
 import { getErrMsg } from './shared-logger-utils.ts';
 
 // Lazy Supabase client — must NOT be top-level to avoid deployment crashes in edge functions.
-const getSupabase = () => createClient(
-  Deno.env.get('SUPABASE_URL')!,
-  Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,
-);
+const getSupabase = () =>
+  createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!);
 
 const log = createModuleLogger('fna-auth');
 
@@ -51,7 +49,7 @@ const ADMIN_USER: FNAAuthUser = Object.freeze({
 
 /**
  * Authenticate a user from the Authorization header.
- * 
+ *
  * @param authHeader - The raw Authorization header value (may be null or undefined)
  * @param moduleName - Optional module name for contextual logging (e.g. 'retirement-fna')
  * @returns The authenticated user object
@@ -79,7 +77,10 @@ export async function authenticateUser(
 
   // Validate as a real user token
   try {
-    const { data: { user }, error } = await getSupabase().auth.getUser(token);
+    const {
+      data: { user },
+      error,
+    } = await getSupabase().auth.getUser(token);
 
     if (error || !user) {
       log.error(`[${context}] Auth validation failed`, error);
@@ -121,7 +122,14 @@ export function fnaErrorResponse(c: Context, error: unknown) {
   }
 
   if (error && typeof error === 'object' && 'issues' in error) {
-    return c.json({ success: false, error: 'Validation failed', details: (error as { issues: unknown }).issues }, 400);
+    return c.json(
+      {
+        success: false,
+        error: 'Validation failed',
+        details: (error as { issues: unknown }).issues,
+      },
+      400,
+    );
   }
 
   const message = getErrMsg(error);
@@ -156,10 +164,5 @@ export function requireRealUserForIntakeAdmin(user: FNAAuthUser): void {
 }
 
 export function isFnaAdminRole(role: string): boolean {
-  return (
-    role === 'admin' ||
-    role === 'super_admin' ||
-    role === 'super-admin' ||
-    role === 'adviser'
-  );
+  return role === 'admin' || role === 'super_admin' || role === 'super-admin' || role === 'adviser';
 }

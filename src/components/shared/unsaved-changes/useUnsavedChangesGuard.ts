@@ -2,8 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { useBlocker, useBeforeUnload } from 'react-router';
 import type { UnsavedChangesGuardOptions } from './types';
 
-const DEFAULT_MESSAGE =
-  'You have unsaved changes. Would you like to save before leaving?';
+const DEFAULT_MESSAGE = 'You have unsaved changes. Would you like to save before leaving?';
 
 type PendingAction = (() => void) | null;
 
@@ -35,7 +34,13 @@ export function useUnsavedChangesGuard({
 
   const blocker = useBlocker(
     useCallback(
-      ({ currentLocation, nextLocation }: { currentLocation: { pathname: string; search: string; hash: string }; nextLocation: { pathname: string; search: string; hash: string } }) => {
+      ({
+        currentLocation,
+        nextLocation,
+      }: {
+        currentLocation: { pathname: string; search: string; hash: string };
+        nextLocation: { pathname: string; search: string; hash: string };
+      }) => {
         if (!enabled || !isDirtyRef.current) return false;
         return (
           currentLocation.pathname !== nextLocation.pathname ||

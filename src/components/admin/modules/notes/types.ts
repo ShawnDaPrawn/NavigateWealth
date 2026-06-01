@@ -13,14 +13,7 @@
 // ============================================================================
 
 /** Available note colour themes */
-export type NoteColor =
-  | 'default'
-  | 'yellow'
-  | 'green'
-  | 'blue'
-  | 'purple'
-  | 'pink'
-  | 'orange';
+export type NoteColor = 'default' | 'yellow' | 'green' | 'blue' | 'purple' | 'pink' | 'orange';
 
 /** View modes for the notes grid */
 export type NoteViewMode = 'grid' | 'list';
@@ -157,7 +150,13 @@ export interface SavedFilterPreset {
 // ============================================================================
 
 /** Available bulk action types */
-export type BulkActionType = 'archive' | 'unarchive' | 'delete' | 'addTag' | 'removeTag' | 'setColor';
+export type BulkActionType =
+  | 'archive'
+  | 'unarchive'
+  | 'delete'
+  | 'addTag'
+  | 'removeTag'
+  | 'setColor';
 
 // ============================================================================
 // COLOUR LABELS

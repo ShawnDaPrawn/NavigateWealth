@@ -2,13 +2,7 @@ import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '../../../ui/card';
 import { Button } from '../../../ui/button';
 import { Badge } from '../../../ui/badge';
-import { 
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '../../../ui/select';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../../ui/select';
 import {
   Dialog,
   DialogContent,
@@ -17,8 +11,8 @@ import {
   DialogTitle,
 } from '../../../ui/dialog';
 import { Calendar } from '../../../ui/calendar';
-import { 
-  ChevronLeft, 
+import {
+  ChevronLeft,
   ChevronRight,
   Calendar as CalendarIcon,
   Clock,
@@ -33,7 +27,7 @@ import {
   Instagram,
   Facebook,
   Twitter,
-  Plus
+  Plus,
 } from 'lucide-react';
 
 import { SocialPost, SocialPlatform } from './types';
@@ -98,7 +92,7 @@ export function PostCalendar({
   };
 
   const getPostsForDate = (date: Date): SocialPost[] => {
-    return posts.filter(post => {
+    return posts.filter((post) => {
       const postDate = post.scheduledAt || post.publishedAt;
       return postDate && isSameDay(postDate, date);
     });
@@ -136,13 +130,13 @@ export function PostCalendar({
             </div>
           </div>
         ))}
-        
+
         {/* Day content */}
         {days.map((day) => {
           const dayPosts = getPostsForDate(day);
           const isToday = isSameDay(day, new Date());
           const isSelected = isSameDay(day, selectedDate);
-          
+
           return (
             <div
               key={`content-${day.toISOString()}`}
@@ -167,27 +161,31 @@ export function PostCalendar({
                           // Mock platform detection from profile ID
                           const platform = profileId.split('-')[0] as SocialPlatform;
                           const Icon = platformIcons[platform];
-                          return (
-                            <Icon key={profileId} className="h-3 w-3" />
-                          );
+                          return <Icon key={profileId} className="h-3 w-3" />;
                         })}
                       </div>
                       <div className={`text-xs px-1 py-0.5 rounded ${statusColors[post.status]}`}>
                         {post.status}
                       </div>
                     </div>
-                    
-                    <div className="text-xs line-clamp-2 mb-1">
-                      {post.body}
-                    </div>
-                    
+
+                    <div className="text-xs line-clamp-2 mb-1">{post.body}</div>
+
                     <div className="text-xs text-muted-foreground">
-                      {post.scheduledAt && post.scheduledAt.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}
-                      {post.publishedAt && post.publishedAt.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}
+                      {post.scheduledAt &&
+                        post.scheduledAt.toLocaleTimeString('en-US', {
+                          hour: '2-digit',
+                          minute: '2-digit',
+                        })}
+                      {post.publishedAt &&
+                        post.publishedAt.toLocaleTimeString('en-US', {
+                          hour: '2-digit',
+                          minute: '2-digit',
+                        })}
                     </div>
                   </div>
                 ))}
-                
+
                 {/* Add post button */}
                 <Button
                   variant="ghost"
@@ -228,27 +226,29 @@ export function PostCalendar({
 
   const renderDayView = () => {
     const dayPosts = getPostsForDate(selectedDate);
-    
+
     return (
       <div className="space-y-4">
         <div className="text-center">
           <h3 className="text-lg font-medium">
-            {selectedDate.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
+            {selectedDate.toLocaleDateString('en-US', {
+              weekday: 'long',
+              year: 'numeric',
+              month: 'long',
+              day: 'numeric',
+            })}
           </h3>
           <p className="text-sm text-muted-foreground">
             {dayPosts.length} post{dayPosts.length !== 1 ? 's' : ''} scheduled
           </p>
         </div>
-        
+
         <div className="space-y-3">
           {dayPosts.length === 0 ? (
             <div className="text-center py-12 text-muted-foreground">
               <CalendarIcon className="h-12 w-12 mx-auto mb-4 opacity-50" />
               <p>No posts scheduled for this day</p>
-              <Button
-                className="mt-4"
-                onClick={() => onCreatePost(selectedDate)}
-              >
+              <Button className="mt-4" onClick={() => onCreatePost(selectedDate)}>
                 <Plus className="h-4 w-4 mr-2" />
                 Create Post
               </Button>
@@ -256,7 +256,7 @@ export function PostCalendar({
           ) : (
             dayPosts.map((post) => {
               const StatusIcon = statusIcons[post.status];
-              
+
               return (
                 <Card
                   key={post.id}
@@ -269,29 +269,37 @@ export function PostCalendar({
                         {post.profiles.map((profileId) => {
                           const platform = profileId.split('-')[0] as SocialPlatform;
                           const Icon = platformIcons[platform];
-                          return (
-                            <Icon key={profileId} className="h-4 w-4" />
-                          );
+                          return <Icon key={profileId} className="h-4 w-4" />;
                         })}
                         <Badge variant="outline">
                           {post.profiles.length} platform{post.profiles.length > 1 ? 's' : ''}
                         </Badge>
                       </div>
-                      
+
                       <div className="flex items-center gap-2">
                         <div className="text-sm text-muted-foreground">
-                          {post.scheduledAt && post.scheduledAt.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}
-                          {post.publishedAt && post.publishedAt.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}
+                          {post.scheduledAt &&
+                            post.scheduledAt.toLocaleTimeString('en-US', {
+                              hour: '2-digit',
+                              minute: '2-digit',
+                            })}
+                          {post.publishedAt &&
+                            post.publishedAt.toLocaleTimeString('en-US', {
+                              hour: '2-digit',
+                              minute: '2-digit',
+                            })}
                         </div>
-                        <div className={`flex items-center gap-1 px-2 py-1 rounded text-xs ${statusColors[post.status]}`}>
+                        <div
+                          className={`flex items-center gap-1 px-2 py-1 rounded text-xs ${statusColors[post.status]}`}
+                        >
                           <StatusIcon className="h-3 w-3" />
                           {post.status}
                         </div>
                       </div>
                     </div>
-                    
+
                     <p className="text-sm mb-3 line-clamp-3">{post.body}</p>
-                    
+
                     {post.media.length > 0 && (
                       <div className="flex items-center gap-2 mb-3">
                         <div className="flex -space-x-2">
@@ -319,7 +327,7 @@ export function PostCalendar({
                         </span>
                       </div>
                     )}
-                    
+
                     {post.analytics && (
                       <div className="flex items-center gap-4 text-xs text-muted-foreground pt-2 border-t">
                         <span>👀 {post.analytics.impressions}</span>
@@ -355,13 +363,20 @@ export function PostCalendar({
             >
               <ChevronLeft className="h-4 w-4" />
             </Button>
-            
+
             <h2 className="text-xl font-semibold">
-              {viewMode === 'month' && selectedDate.toLocaleDateString('en-US', { year: 'numeric', month: 'long' })}
-              {viewMode === 'week' && `Week of ${getStartOfWeek(new Date(selectedDate)).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`}
-              {viewMode === 'day' && selectedDate.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}
+              {viewMode === 'month' &&
+                selectedDate.toLocaleDateString('en-US', { year: 'numeric', month: 'long' })}
+              {viewMode === 'week' &&
+                `Week of ${getStartOfWeek(new Date(selectedDate)).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`}
+              {viewMode === 'day' &&
+                selectedDate.toLocaleDateString('en-US', {
+                  year: 'numeric',
+                  month: 'long',
+                  day: 'numeric',
+                })}
             </h2>
-            
+
             <Button
               variant="outline"
               size="sm"
@@ -374,18 +389,17 @@ export function PostCalendar({
               <ChevronRight className="h-4 w-4" />
             </Button>
           </div>
-          
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => onDateChange(new Date())}
-          >
+
+          <Button variant="outline" size="sm" onClick={() => onDateChange(new Date())}>
             Today
           </Button>
         </div>
-        
+
         <div className="flex items-center gap-2">
-          <Select value={viewMode} onValueChange={(value: string) => onViewModeChange(value as typeof viewMode)}>
+          <Select
+            value={viewMode}
+            onValueChange={(value: string) => onViewModeChange(value as typeof viewMode)}
+          >
             <SelectTrigger className="w-32">
               <SelectValue />
             </SelectTrigger>
@@ -395,7 +409,7 @@ export function PostCalendar({
               <SelectItem value="month">Month</SelectItem>
             </SelectContent>
           </Select>
-          
+
           <Button onClick={() => onCreatePost(selectedDate)}>
             <Plus className="h-4 w-4 mr-2" />
             New Post
@@ -418,10 +432,12 @@ export function PostCalendar({
           <DialogHeader>
             <DialogTitle>Post Details</DialogTitle>
             <DialogDescription>
-              {selectedPost?.status === 'published' ? 'Published post analytics and details' : 'Scheduled post details'}
+              {selectedPost?.status === 'published'
+                ? 'Published post analytics and details'
+                : 'Scheduled post details'}
             </DialogDescription>
           </DialogHeader>
-          
+
           {selectedPost && (
             <div className="space-y-4 mt-4">
               <div className="flex items-center justify-between">
@@ -429,20 +445,18 @@ export function PostCalendar({
                   {selectedPost.profiles.map((profileId) => {
                     const platform = profileId.split('-')[0] as SocialPlatform;
                     const Icon = platformIcons[platform];
-                    return (
-                      <Icon key={profileId} className="h-5 w-5" />
-                    );
+                    return <Icon key={profileId} className="h-5 w-5" />;
                   })}
                 </div>
                 <div className={`px-3 py-1 rounded text-sm ${statusColors[selectedPost.status]}`}>
                   {selectedPost.status}
                 </div>
               </div>
-              
+
               <div className="p-4 bg-muted/20 rounded-lg">
                 <p className="whitespace-pre-wrap">{selectedPost.body}</p>
               </div>
-              
+
               {selectedPost.analytics && (
                 <div className="grid grid-cols-4 gap-4 p-4 bg-muted/20 rounded-lg">
                   <div className="text-center">
@@ -458,12 +472,14 @@ export function PostCalendar({
                     <div className="text-sm text-muted-foreground">Reactions</div>
                   </div>
                   <div className="text-center">
-                    <div className="text-2xl font-medium">{selectedPost.analytics.engagement_rate.toFixed(1)}%</div>
+                    <div className="text-2xl font-medium">
+                      {selectedPost.analytics.engagement_rate.toFixed(1)}%
+                    </div>
                     <div className="text-sm text-muted-foreground">Engagement</div>
                   </div>
                 </div>
               )}
-              
+
               <div className="flex justify-end gap-2">
                 <Button variant="outline" onClick={() => onPostDuplicate(selectedPost)}>
                   <Copy className="h-4 w-4 mr-2" />

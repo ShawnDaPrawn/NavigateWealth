@@ -52,13 +52,16 @@ export function PersonnelDrawer({
         <SheetHeader>
           <SheetTitle className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-               <Avatar className="h-12 w-12">
+              <Avatar className="h-12 w-12">
                 <AvatarFallback className="text-lg">
-                  {(selectedPersonnel.firstName?.[0] || '')}{(selectedPersonnel.lastName?.[0] || '')}
+                  {selectedPersonnel.firstName?.[0] || ''}
+                  {selectedPersonnel.lastName?.[0] || ''}
                 </AvatarFallback>
               </Avatar>
               <div>
-                <div className="text-xl">{selectedPersonnel.firstName} {selectedPersonnel.lastName}</div>
+                <div className="text-xl">
+                  {selectedPersonnel.firstName} {selectedPersonnel.lastName}
+                </div>
                 <div className="text-sm text-muted-foreground font-normal flex items-center gap-2">
                   <Mail className="h-3 w-3" /> {selectedPersonnel.email}
                 </div>
@@ -68,24 +71,26 @@ export function PersonnelDrawer({
               {selectedPersonnel.status}
             </Badge>
           </SheetTitle>
-          <SheetDescription>
-            Manage profile, compliance, and commission settings.
-          </SheetDescription>
+          <SheetDescription>Manage profile, compliance, and commission settings.</SheetDescription>
         </SheetHeader>
 
         <Tabs defaultValue="profile" className="mt-8" onValueChange={onTabChange}>
-          <TabsList className={canManagePermissions ? "grid w-full grid-cols-5" : "grid w-full grid-cols-4"}>
+          <TabsList
+            className={canManagePermissions ? 'grid w-full grid-cols-5' : 'grid w-full grid-cols-4'}
+          >
             <TabsTrigger value="profile">Profile</TabsTrigger>
-            {canManagePermissions && (
-              <TabsTrigger value="permissions">Permissions</TabsTrigger>
-            )}
+            {canManagePermissions && <TabsTrigger value="permissions">Permissions</TabsTrigger>}
             <TabsTrigger value="compliance">Compliance</TabsTrigger>
             <TabsTrigger value="commission">Commission</TabsTrigger>
             <TabsTrigger value="clients">Client Book</TabsTrigger>
           </TabsList>
 
           <TabsContent value="profile">
-            <TabProfile selectedPersonnel={selectedPersonnel} onUpdate={onUpdate} onInviteCancelled={onInviteCancelled} />
+            <TabProfile
+              selectedPersonnel={selectedPersonnel}
+              onUpdate={onUpdate}
+              onInviteCancelled={onInviteCancelled}
+            />
           </TabsContent>
 
           {canManagePermissions && (
@@ -105,7 +110,6 @@ export function PersonnelDrawer({
           <TabsContent value="clients" className="mt-4">
             <TabClientBook clients={clients} loading={clientsLoading} />
           </TabsContent>
-
         </Tabs>
       </SheetContent>
     </Sheet>

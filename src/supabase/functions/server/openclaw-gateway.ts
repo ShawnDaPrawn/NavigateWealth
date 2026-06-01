@@ -23,12 +23,13 @@ export const OPENCLAW_CAPABILITY_REGISTRY = [
   {
     id: 'provider.otp.submit',
     label: 'Provider OTP submit',
-    description: 'Reserved for a later provider OTP capability. Disabled unless explicitly allow-listed.',
+    description:
+      'Reserved for a later provider OTP capability. Disabled unless explicitly allow-listed.',
     mutatesData: true,
   },
 ] as const;
 
-export type OpenClawCapabilityId = typeof OPENCLAW_CAPABILITY_REGISTRY[number]['id'];
+export type OpenClawCapabilityId = (typeof OPENCLAW_CAPABILITY_REGISTRY)[number]['id'];
 
 export interface OpenClawEvent {
   id: string;
@@ -59,9 +60,13 @@ export const DEFAULT_OPENCLAW_ALLOWED_CAPABILITIES: OpenClawCapabilityId[] = [
   'message.intake',
 ];
 
-const CAPABILITY_IDS = new Set<string>(OPENCLAW_CAPABILITY_REGISTRY.map((capability) => capability.id));
+const CAPABILITY_IDS = new Set<string>(
+  OPENCLAW_CAPABILITY_REGISTRY.map((capability) => capability.id),
+);
 
-export function normaliseOpenClawCapabilityList(value: string | undefined | null): OpenClawCapabilityId[] {
+export function normaliseOpenClawCapabilityList(
+  value: string | undefined | null,
+): OpenClawCapabilityId[] {
   const raw = String(value || '').trim();
   if (!raw) return [...DEFAULT_OPENCLAW_ALLOWED_CAPABILITIES];
 
@@ -114,8 +119,14 @@ export function buildOpenClawEvent(
     return { error: `OpenClaw capability is not enabled: ${capability}` };
   }
 
-  const source = String(body.source || 'openclaw-vps').trim().slice(0, 80) || 'openclaw-vps';
-  const eventType = String(body.eventType || capability).trim().slice(0, 120) || capability;
+  const source =
+    String(body.source || 'openclaw-vps')
+      .trim()
+      .slice(0, 80) || 'openclaw-vps';
+  const eventType =
+    String(body.eventType || capability)
+      .trim()
+      .slice(0, 120) || capability;
   const rawCorrelationId = String(body.correlationId || '').trim();
   const correlationId = rawCorrelationId ? rawCorrelationId.slice(0, 120) : undefined;
 

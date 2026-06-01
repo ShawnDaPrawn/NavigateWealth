@@ -168,7 +168,8 @@ export function ReminderConfigPanel({ envelopeId, envelopeStatus }: ReminderConf
                 >
                   <div className="text-xs font-medium text-gray-800">Escalating (recommended)</div>
                   <div className="text-[11px] text-muted-foreground mt-0.5">
-                    Reminders at {(config.escalation_offsets_days ?? [3, 7, 10, 13]).join(', ')} days after invite.
+                    Reminders at {(config.escalation_offsets_days ?? [3, 7, 10, 13]).join(', ')}{' '}
+                    days after invite.
                   </div>
                 </button>
                 <button
@@ -202,7 +203,9 @@ export function ReminderConfigPanel({ envelopeId, envelopeStatus }: ReminderConf
                     min={1}
                     max={30}
                     value={config.remind_interval_days}
-                    onChange={(e) => handleUpdate({ remind_interval_days: parseInt(e.target.value) || 3 })}
+                    onChange={(e) =>
+                      handleUpdate({ remind_interval_days: parseInt(e.target.value) || 3 })
+                    }
                     disabled={saving || !isActive}
                     className="h-8 text-sm"
                   />
@@ -259,7 +262,9 @@ export function ReminderConfigPanel({ envelopeId, envelopeStatus }: ReminderConf
                 min={1}
                 max={14}
                 value={config.remind_before_expiry_days}
-                onChange={(e) => handleUpdate({ remind_before_expiry_days: parseInt(e.target.value) || 2 })}
+                onChange={(e) =>
+                  handleUpdate({ remind_before_expiry_days: parseInt(e.target.value) || 2 })
+                }
                 disabled={saving || !isActive}
                 className="h-8 text-sm"
               />
@@ -272,11 +277,13 @@ export function ReminderConfigPanel({ envelopeId, envelopeStatus }: ReminderConf
 
         {/* Manual reminder result */}
         {reminderResult && (
-          <div className={`flex items-center gap-2 text-xs px-3 py-2 rounded-md ${
-            reminderResult.startsWith('Sent')
-              ? 'bg-green-50 text-green-700'
-              : 'bg-red-50 text-red-700'
-          }`}>
+          <div
+            className={`flex items-center gap-2 text-xs px-3 py-2 rounded-md ${
+              reminderResult.startsWith('Sent')
+                ? 'bg-green-50 text-green-700'
+                : 'bg-red-50 text-red-700'
+            }`}
+          >
             {reminderResult.startsWith('Sent') ? (
               <CheckCircle2 className="h-3.5 w-3.5" />
             ) : (
@@ -354,8 +361,12 @@ export function SigningModeSelector({
             } ${!canChange ? 'opacity-60 cursor-not-allowed' : 'cursor-pointer'}`}
           >
             <div className="flex items-center gap-2 mb-1">
-              <ListOrdered className={`h-4 w-4 ${mode === 'sequential' ? 'text-purple-600' : 'text-gray-400'}`} />
-              <span className={`text-sm font-medium ${mode === 'sequential' ? 'text-purple-700' : 'text-gray-700'}`}>
+              <ListOrdered
+                className={`h-4 w-4 ${mode === 'sequential' ? 'text-purple-600' : 'text-gray-400'}`}
+              />
+              <span
+                className={`text-sm font-medium ${mode === 'sequential' ? 'text-purple-700' : 'text-gray-700'}`}
+              >
                 Sequential
               </span>
             </div>
@@ -379,8 +390,12 @@ export function SigningModeSelector({
             } ${!canChange ? 'opacity-60 cursor-not-allowed' : 'cursor-pointer'}`}
           >
             <div className="flex items-center gap-2 mb-1">
-              <Shuffle className={`h-4 w-4 ${mode === 'parallel' ? 'text-blue-600' : 'text-gray-400'}`} />
-              <span className={`text-sm font-medium ${mode === 'parallel' ? 'text-blue-700' : 'text-gray-700'}`}>
+              <Shuffle
+                className={`h-4 w-4 ${mode === 'parallel' ? 'text-blue-600' : 'text-gray-400'}`}
+              />
+              <span
+                className={`text-sm font-medium ${mode === 'parallel' ? 'text-blue-700' : 'text-gray-700'}`}
+              >
                 Parallel
               </span>
             </div>

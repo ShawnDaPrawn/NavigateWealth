@@ -48,7 +48,9 @@ export function useScheduledPublishProcessor(options?: {
     try {
       // Verify we have an active session before making server calls
       const supabase = createClient();
-      const { data: { session } } = await supabase.auth.getSession();
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
       if (!session?.access_token) {
         // No session yet — skip this tick and wait for the next interval
         return;
@@ -56,7 +58,9 @@ export function useScheduledPublishProcessor(options?: {
 
       const result = await PublicationsAPI.Articles.processScheduled();
       if (result && result.processed > 0) {
-        console.log(`[ScheduledPublishProcessor] Published ${result.processed} scheduled article(s)`);
+        console.log(
+          `[ScheduledPublishProcessor] Published ${result.processed} scheduled article(s)`,
+        );
         onProcessed?.(result.processed);
       }
     } catch (err) {

@@ -4,9 +4,9 @@ import { Avatar, AvatarFallback, AvatarImage } from '../../../ui/avatar';
 import { Badge } from '../../../ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../../ui/tabs';
 import { Card, CardContent, CardHeader, CardTitle } from '../../../ui/card';
-import { 
-  Plus, 
-  Filter, 
+import {
+  Plus,
+  Filter,
   Download,
   Users,
   Search,
@@ -45,12 +45,26 @@ import type { IntakeHandoffState } from './components/IntakeWizardHandoff';
 import { isFnaIntakeFeatureEnabled } from '@/shared/fna-intake/fna-intake-labels';
 
 // Heavy sub-components — lazy-loaded (only rendered on user action)
-const ClientDrawer = React.lazy(() => import('./components/ClientDrawer').then(m => ({ default: m.ClientDrawer })));
-const ClientFieldRepository = React.lazy(() => import('./components/ClientFieldRepository').then(m => ({ default: m.ClientFieldRepository })));
-const CustomGroupManager = React.lazy(() => import('../communication/components/CustomGroupManager').then(m => ({ default: m.CustomGroupManager })));
-const AddClientDialog = React.lazy(() => import('./components/AddClientDialog').then(m => ({ default: m.AddClientDialog })));
-const FNAIntakeQueue = React.lazy(() => import('./components/FNAIntakeQueue').then(m => ({ default: m.FNAIntakeQueue })));
-const IntakeWizardHandoff = React.lazy(() => import('./components/IntakeWizardHandoff').then(m => ({ default: m.IntakeWizardHandoff })));
+const ClientDrawer = React.lazy(() =>
+  import('./components/ClientDrawer').then((m) => ({ default: m.ClientDrawer })),
+);
+const ClientFieldRepository = React.lazy(() =>
+  import('./components/ClientFieldRepository').then((m) => ({ default: m.ClientFieldRepository })),
+);
+const CustomGroupManager = React.lazy(() =>
+  import('../communication/components/CustomGroupManager').then((m) => ({
+    default: m.CustomGroupManager,
+  })),
+);
+const AddClientDialog = React.lazy(() =>
+  import('./components/AddClientDialog').then((m) => ({ default: m.AddClientDialog })),
+);
+const FNAIntakeQueue = React.lazy(() =>
+  import('./components/FNAIntakeQueue').then((m) => ({ default: m.FNAIntakeQueue })),
+);
+const IntakeWizardHandoff = React.lazy(() =>
+  import('./components/IntakeWizardHandoff').then((m) => ({ default: m.IntakeWizardHandoff })),
+);
 
 /** Shared spinner for lazy-loaded sub-components */
 function LazyFallback() {
@@ -85,7 +99,7 @@ export function ClientManagementModule() {
   React.useEffect(() => {
     const id = selectedClient?.id;
     if (!id) return;
-    const fresh = safeClients.find(c => c.id === id);
+    const fresh = safeClients.find((c) => c.id === id);
     if (!fresh) return;
     setSelectedClient((prev) => {
       if (!prev || prev.id !== id) return prev;
@@ -103,12 +117,8 @@ export function ClientManagementModule() {
 
   // ── GlobalSearch deep-link: auto-open drawer for pending client selection ──
   React.useEffect(() => {
-    if (
-      pendingSelection?.type === 'client' &&
-      !loading &&
-      safeClients.length > 0
-    ) {
-      const target = safeClients.find(c => c.id === pendingSelection.id);
+    if (pendingSelection?.type === 'client' && !loading && safeClients.length > 0) {
+      const target = safeClients.find((c) => c.id === pendingSelection.id);
       if (target) {
         setSelectedClient(target);
         setDrawerOpen(true);
@@ -167,7 +177,8 @@ export function ClientManagementModule() {
   // Currently active filter label for the status dropdown
   const activeStatusFilter = filters.accountStatus || 'all';
   const activeStatusLabel =
-    ACCOUNT_STATUS_FILTER_OPTIONS.find(o => o.value === activeStatusFilter)?.label || 'All Statuses';
+    ACCOUNT_STATUS_FILTER_OPTIONS.find((o) => o.value === activeStatusFilter)?.label ||
+    'All Statuses';
 
   const handleExport = () => {
     generateClientCSV(filteredSortedClients);
@@ -187,7 +198,8 @@ export function ClientManagementModule() {
               <Avatar className="h-8 w-8">
                 <AvatarImage src={`/api/placeholder/32/32`} />
                 <AvatarFallback>
-                  {client.firstName[0]}{client.lastName[0]}
+                  {client.firstName[0]}
+                  {client.lastName[0]}
                 </AvatarFallback>
               </Avatar>
               {/* Status dot overlay */}
@@ -212,30 +224,32 @@ export function ClientManagementModule() {
           </div>
         );
       },
-      width: '350px'
+      width: '350px',
     },
     {
       key: 'idNumber',
       title: 'ID or Passport',
       render: (idNumber) => (
         <span className="font-mono text-sm">
-          {idNumber && idNumber !== 'Not provided'
-            ? `${(idNumber as string).slice(0, 6)}***${(idNumber as string).slice(-2)}`
-            : <span className="text-muted-foreground">Not provided</span>
-          }
+          {idNumber && idNumber !== 'Not provided' ? (
+            `${(idNumber as string).slice(0, 6)}***${(idNumber as string).slice(-2)}`
+          ) : (
+            <span className="text-muted-foreground">Not provided</span>
+          )}
         </span>
       ),
-      width: '180px'
+      width: '180px',
     },
     {
       key: 'createdAt',
       title: 'Date Joined',
-      render: (date) => new Date(date as string).toLocaleDateString('en-ZA', {
-        day: '2-digit',
-        month: 'short',
-        year: 'numeric'
-      }),
-      width: '150px'
+      render: (date) =>
+        new Date(date as string).toLocaleDateString('en-ZA', {
+          day: '2-digit',
+          month: 'short',
+          year: 'numeric',
+        }),
+      width: '150px',
     },
     {
       key: 'accountStatus',
@@ -243,13 +257,9 @@ export function ClientManagementModule() {
       render: (_, client) => {
         const status = deriveAccountStatus(client);
         const cfg = ACCOUNT_STATUS_CONFIG[status];
-        return (
-          <Badge className={cfg.badgeClass}>
-            {cfg.label}
-          </Badge>
-        );
+        return <Badge className={cfg.badgeClass}>{cfg.label}</Badge>;
       },
-      width: '120px'
+      width: '120px',
     },
     {
       key: 'status',
@@ -257,7 +267,7 @@ export function ClientManagementModule() {
       render: (_, client) => {
         const isActive = client.applicationStatus === 'approved';
         return (
-          <Badge 
+          <Badge
             variant={isActive ? 'default' : 'secondary'}
             className={isActive ? 'bg-green-600 hover:bg-green-700' : ''}
           >
@@ -265,17 +275,15 @@ export function ClientManagementModule() {
           </Badge>
         );
       },
-      width: '120px'
-    }
+      width: '120px',
+    },
   ];
 
   if (showGroupManager) {
     return (
       <div className="p-6 bg-white min-h-screen">
         <Suspense fallback={<LazyFallback />}>
-          <CustomGroupManager 
-            onClose={() => setShowGroupManager(false)} 
-          />
+          <CustomGroupManager onClose={() => setShowGroupManager(false)} />
         </Suspense>
       </div>
     );
@@ -311,21 +319,21 @@ export function ClientManagementModule() {
       </div>
 
       {isFnaIntakeFeatureEnabled() && (
-      <Suspense fallback={<LazyFallback />}>
-        <FNAIntakeQueue
-          onOpenClient={(clientId) => {
-            const match = safeClients.find((c) => c.id === clientId);
-            if (match) setSelectedClient(match);
-          }}
-          onAccept={(handoff) => {
-            const match = safeClients.find((c) => c.id === handoff.clientId);
-            setIntakeHandoff({
-              ...handoff,
-              clientName: match ? `${match.firstName} ${match.lastName}` : undefined,
-            });
-          }}
-        />
-      </Suspense>
+        <Suspense fallback={<LazyFallback />}>
+          <FNAIntakeQueue
+            onOpenClient={(clientId) => {
+              const match = safeClients.find((c) => c.id === clientId);
+              if (match) setSelectedClient(match);
+            }}
+            onAccept={(handoff) => {
+              const match = safeClients.find((c) => c.id === handoff.clientId);
+              setIntakeHandoff({
+                ...handoff,
+                clientName: match ? `${match.firstName} ${match.lastName}` : undefined,
+              });
+            }}
+          />
+        </Suspense>
       )}
 
       {/* Stat Cards */}
@@ -353,9 +361,7 @@ export function ClientManagementModule() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{statusCounts.active}</div>
-            <p className="text-xs text-muted-foreground">
-              Active individual portfolios
-            </p>
+            <p className="text-xs text-muted-foreground">Active individual portfolios</p>
           </CardContent>
         </Card>
         <Card>
@@ -367,9 +373,7 @@ export function ClientManagementModule() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{statusCounts.suspended}</div>
-            <p className="text-xs text-muted-foreground">
-              Accounts temporarily suspended
-            </p>
+            <p className="text-xs text-muted-foreground">Accounts temporarily suspended</p>
           </CardContent>
         </Card>
         <Card>
@@ -381,9 +385,7 @@ export function ClientManagementModule() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{statusCounts.closed}</div>
-            <p className="text-xs text-muted-foreground">
-              Soft-deleted or closed accounts
-            </p>
+            <p className="text-xs text-muted-foreground">Soft-deleted or closed accounts</p>
           </CardContent>
         </Card>
       </div>
@@ -441,7 +443,7 @@ export function ClientManagementModule() {
                   setFilters({ ...filters, accountStatus: v as ClientFilters['accountStatus'] })
                 }
               >
-                {ACCOUNT_STATUS_FILTER_OPTIONS.map(opt => (
+                {ACCOUNT_STATUS_FILTER_OPTIONS.map((opt) => (
                   <DropdownMenuRadioItem key={opt.value} value={opt.value}>
                     {opt.label}
                   </DropdownMenuRadioItem>
@@ -450,9 +452,9 @@ export function ClientManagementModule() {
             </DropdownMenuContent>
           </DropdownMenu>
 
-          <Button 
-            variant="ghost" 
-            size="icon" 
+          <Button
+            variant="ghost"
+            size="icon"
             onClick={() => setShowRepository(true)}
             title="Field Repository"
             aria-label="Field Repository"
@@ -460,7 +462,7 @@ export function ClientManagementModule() {
             <Database className="h-4 w-4 text-muted-foreground" />
           </Button>
         </div>
-        
+
         <TabsContent value="personal" className="space-y-4">
           <DataTable
             columns={personalColumns as unknown as Column<Record<string, unknown>>[]}
@@ -473,7 +475,7 @@ export function ClientManagementModule() {
             getRowKey={(row) => row.id as React.Key}
           />
         </TabsContent>
-        
+
         <TabsContent value="corporate">
           <Card>
             <CardContent className="flex flex-col items-center justify-center py-10 text-center">
@@ -486,7 +488,7 @@ export function ClientManagementModule() {
             </CardContent>
           </Card>
         </TabsContent>
-        
+
         <TabsContent value="adviser">
           <Card>
             <CardContent className="flex flex-col items-center justify-center py-10 text-center">
@@ -511,16 +513,13 @@ export function ClientManagementModule() {
           canDelete={canDeleteClient}
         />
       </Suspense>
-      
+
       <Suspense fallback={<LazyFallback />}>
-        <ClientFieldRepository 
-          open={showRepository}
-          onOpenChange={setShowRepository}
-        />
+        <ClientFieldRepository open={showRepository} onOpenChange={setShowRepository} />
       </Suspense>
-      
+
       <Suspense fallback={<LazyFallback />}>
-        <AddClientDialog 
+        <AddClientDialog
           open={showAddClient}
           onOpenChange={setShowAddClient}
           onClientAdded={refetch}
@@ -528,12 +527,8 @@ export function ClientManagementModule() {
       </Suspense>
 
       <Suspense fallback={<LazyFallback />}>
-        <IntakeWizardHandoff
-          handoff={intakeHandoff}
-          onClose={() => setIntakeHandoff(null)}
-        />
+        <IntakeWizardHandoff handoff={intakeHandoff} onClose={() => setIntakeHandoff(null)} />
       </Suspense>
-
     </div>
   );
 }

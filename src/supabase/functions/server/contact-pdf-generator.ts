@@ -16,11 +16,7 @@ const log = createModuleLogger('contact-pdf');
 
 /** Escape special PDF text characters */
 function pdfEscape(text: string): string {
-  return text
-    .replace(/\\/g, '\\\\')
-    .replace(/\(/g, '\\(')
-    .replace(/\)/g, '\\)')
-    .replace(/\r/g, '');
+  return text.replace(/\\/g, '\\\\').replace(/\(/g, '\\(').replace(/\)/g, '\\)').replace(/\r/g, '');
 }
 
 /** Encode a JS string as a Uint8Array of Latin-1 bytes */
@@ -313,23 +309,19 @@ export function generateContactPdf(data: ContactPdfData): string {
 
     // Object 3: Page
     addObject(
-      `<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ${pageWidth} ${pageHeight}] /Contents 4 0 R /Resources << /Font << /F1 5 0 R /F2 6 0 R >> >> >>`
+      `<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ${pageWidth} ${pageHeight}] /Contents 4 0 R /Resources << /Font << /F1 5 0 R /F2 6 0 R >> >> >>`,
     );
 
     // Object 4: Content stream
     const streamBytes = encode(stream);
-    addObject(
-      `<< /Length ${streamBytes.length} >>\nstream\n${stream}\nendstream`
-    );
+    addObject(`<< /Length ${streamBytes.length} >>\nstream\n${stream}\nendstream`);
 
     // Object 5: Font (Helvetica)
-    addObject(
-      `<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>`
-    );
+    addObject(`<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>`);
 
     // Object 6: Font (Helvetica-Bold)
     addObject(
-      `<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold /Encoding /WinAnsiEncoding >>`
+      `<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold /Encoding /WinAnsiEncoding >>`,
     );
 
     // --- Build final PDF bytes -----------------------------------------------
@@ -346,8 +338,7 @@ export function generateContactPdf(data: ContactPdfData): string {
       runningOffset += encode(obj).length;
     }
 
-    const trailer =
-      `trailer\n<< /Size ${objects.length + 1} /Root 1 0 R >>\nstartxref\n${xrefOffset}\n%%EOF\n`;
+    const trailer = `trailer\n<< /Size ${objects.length + 1} /Root 1 0 R >>\nstartxref\n${xrefOffset}\n%%EOF\n`;
 
     const fullPdf = header + body + xref + trailer;
 

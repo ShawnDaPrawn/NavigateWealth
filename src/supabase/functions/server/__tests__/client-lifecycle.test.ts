@@ -60,8 +60,16 @@ vi.mock('../stderr-logger.ts', () => ({
 
 // Mock error middleware
 vi.mock('../error.middleware.ts', () => ({
-  ValidationError: class extends Error { constructor(m: string) { super(m); } },
-  NotFoundError: class extends Error { constructor(m: string) { super(m); } },
+  ValidationError: class extends Error {
+    constructor(m: string) {
+      super(m);
+    }
+  },
+  NotFoundError: class extends Error {
+    constructor(m: string) {
+      super(m);
+    }
+  },
 }));
 
 // Mock communication-repo (background group recalculation)
@@ -81,7 +89,9 @@ vi.mock('jsr:@supabase/supabase-js@2.49.8', () => ({
     auth: {
       admin: {
         listUsers: vi.fn().mockResolvedValue({ data: { users: [] }, error: null }),
-        getUserById: vi.fn().mockResolvedValue({ data: { user: null }, error: { message: 'not found' } }),
+        getUserById: vi
+          .fn()
+          .mockResolvedValue({ data: { user: null }, error: { message: 'not found' } }),
       },
     },
   }),

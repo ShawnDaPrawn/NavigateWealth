@@ -25,10 +25,7 @@ const BUCKET_NAME = 'make-91ed8379-brand-assets';
 
 /** Lazy Supabase admin client */
 const getSupabase = () =>
-  createClient(
-    Deno.env.get('SUPABASE_URL') || '',
-    Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || '',
-  );
+  createClient(Deno.env.get('SUPABASE_URL') || '', Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || '');
 
 // ============================================================================
 // KV KEYS
@@ -122,7 +119,14 @@ export interface TypographyConfig {
 export interface CollateralItem {
   id: string;
   name: string;
-  category: 'letterhead' | 'email_banner' | 'social_template' | 'watermark' | 'presentation' | 'business_card' | 'other';
+  category:
+    | 'letterhead'
+    | 'email_banner'
+    | 'social_template'
+    | 'watermark'
+    | 'presentation'
+    | 'business_card'
+    | 'other';
   description: string;
   fileName: string;
   storagePath: string;
@@ -169,14 +173,19 @@ export interface BrandSummary {
 // ============================================================================
 
 export class BrandService {
-  private getDisplayAsset(entry: Pick<LogoEntry, 'assets' | 'storagePath' | 'fileName' | 'mimeType' | 'fileSize' | 'uploadedAt' | 'uploadedBy'>) {
+  private getDisplayAsset(
+    entry: Pick<
+      LogoEntry,
+      'assets' | 'storagePath' | 'fileName' | 'mimeType' | 'fileSize' | 'uploadedAt' | 'uploadedBy'
+    >,
+  ) {
     if (entry.assets.length > 0) {
       return (
-        entry.assets.find((asset) => asset.format === 'png')
-        || entry.assets.find((asset) => asset.format === 'svg')
-        || entry.assets.find((asset) => asset.format === 'jpeg')
-        || entry.assets.find((asset) => asset.format === 'pdf')
-        || entry.assets[0]
+        entry.assets.find((asset) => asset.format === 'png') ||
+        entry.assets.find((asset) => asset.format === 'svg') ||
+        entry.assets.find((asset) => asset.format === 'jpeg') ||
+        entry.assets.find((asset) => asset.format === 'pdf') ||
+        entry.assets[0]
       );
     }
 
@@ -192,23 +201,27 @@ export class BrandService {
   }
 
   private normalizeLogoEntry(entry: LogoEntry): LogoEntry {
-    const assets = entry.assets && entry.assets.length > 0
-      ? entry.assets
-      : [{
-        format: entry.mimeType === 'application/pdf'
-          ? 'pdf'
-          : entry.mimeType === 'image/svg+xml'
-            ? 'svg'
-            : entry.mimeType === 'image/jpeg'
-              ? 'jpeg'
-              : 'png',
-        fileName: entry.fileName,
-        storagePath: entry.storagePath,
-        mimeType: entry.mimeType,
-        fileSize: entry.fileSize,
-        uploadedAt: entry.uploadedAt,
-        uploadedBy: entry.uploadedBy,
-      }];
+    const assets =
+      entry.assets && entry.assets.length > 0
+        ? entry.assets
+        : [
+            {
+              format:
+                entry.mimeType === 'application/pdf'
+                  ? 'pdf'
+                  : entry.mimeType === 'image/svg+xml'
+                    ? 'svg'
+                    : entry.mimeType === 'image/jpeg'
+                      ? 'jpeg'
+                      : 'png',
+              fileName: entry.fileName,
+              storagePath: entry.storagePath,
+              mimeType: entry.mimeType,
+              fileSize: entry.fileSize,
+              uploadedAt: entry.uploadedAt,
+              uploadedBy: entry.uploadedBy,
+            },
+          ];
 
     const displayAsset = this.getDisplayAsset({
       assets,
@@ -283,7 +296,7 @@ export class BrandService {
 
   async upsertLogo(entry: LogoEntry): Promise<LogoEntry[]> {
     const logos = await this.getLogos();
-    const idx = logos.findIndex(l => l.variant === entry.variant);
+    const idx = logos.findIndex((l) => l.variant === entry.variant);
     const normalizedEntry = this.normalizeLogoEntry(entry);
     if (idx >= 0) {
       const prev = logos[idx];
@@ -303,16 +316,13 @@ export class BrandService {
     } else {
       logos.push(normalizedEntry);
     }
-    await Promise.all([
-      kv.set(KEYS.logosMetadata, logos),
-      this.touchLastUpdated(),
-    ]);
+    await Promise.all([kv.set(KEYS.logosMetadata, logos), this.touchLastUpdated()]);
     return logos;
   }
 
   async deleteLogo(variant: string): Promise<LogoEntry[]> {
     let logos = await this.getLogos();
-    const target = logos.find(l => l.variant === variant);
+    const target = logos.find((l) => l.variant === variant);
     if (target) {
       // Delete from storage
       const supabase = getSupabase();
@@ -320,15 +330,12 @@ export class BrandService {
         ? target.assets.map((asset) => asset.storagePath)
         : [target.storagePath];
       if (target.previousVersions) {
-        pathsToDelete.push(...target.previousVersions.map(v => v.storagePath));
+        pathsToDelete.push(...target.previousVersions.map((v) => v.storagePath));
       }
       await supabase.storage.from(BUCKET_NAME).remove(pathsToDelete);
     }
-    logos = logos.filter(l => l.variant !== variant);
-    await Promise.all([
-      kv.set(KEYS.logosMetadata, logos),
-      this.touchLastUpdated(),
-    ]);
+    logos = logos.filter((l) => l.variant !== variant);
+    await Promise.all([kv.set(KEYS.logosMetadata, logos), this.touchLastUpdated()]);
     return logos;
   }
 
@@ -354,10 +361,7 @@ export class BrandService {
   }
 
   async saveColourPalette(palette: ColourPalette): Promise<ColourPalette> {
-    await Promise.all([
-      kv.set(KEYS.colourPalette, palette),
-      this.touchLastUpdated(),
-    ]);
+    await Promise.all([kv.set(KEYS.colourPalette, palette), this.touchLastUpdated()]);
     return palette;
   }
 
@@ -371,10 +375,7 @@ export class BrandService {
   }
 
   async saveTypography(config: TypographyConfig): Promise<TypographyConfig> {
-    await Promise.all([
-      kv.set(KEYS.typographyConfig, config),
-      this.touchLastUpdated(),
-    ]);
+    await Promise.all([kv.set(KEYS.typographyConfig, config), this.touchLastUpdated()]);
     return config;
   }
 
@@ -389,31 +390,25 @@ export class BrandService {
 
   async upsertCollateral(item: CollateralItem): Promise<CollateralItem[]> {
     const items = await this.getCollateral();
-    const idx = items.findIndex(c => c.id === item.id);
+    const idx = items.findIndex((c) => c.id === item.id);
     if (idx >= 0) {
       items[idx] = item;
     } else {
       items.push(item);
     }
-    await Promise.all([
-      kv.set(KEYS.collateralIndex, items),
-      this.touchLastUpdated(),
-    ]);
+    await Promise.all([kv.set(KEYS.collateralIndex, items), this.touchLastUpdated()]);
     return items;
   }
 
   async deleteCollateral(id: string): Promise<CollateralItem[]> {
     let items = await this.getCollateral();
-    const target = items.find(c => c.id === id);
+    const target = items.find((c) => c.id === id);
     if (target) {
       const supabase = getSupabase();
       await supabase.storage.from(BUCKET_NAME).remove([target.storagePath]);
     }
-    items = items.filter(c => c.id !== id);
-    await Promise.all([
-      kv.set(KEYS.collateralIndex, items),
-      this.touchLastUpdated(),
-    ]);
+    items = items.filter((c) => c.id !== id);
+    await Promise.all([kv.set(KEYS.collateralIndex, items), this.touchLastUpdated()]);
     return items;
   }
 
@@ -443,31 +438,23 @@ export class BrandService {
     return {
       rules: (rules as BrandRule[] | null) || [],
       voice: (voice as BrandGuidelines['voice'] | null) || { tone: '', terminology: '', notes: '' },
-      ...(pdf as { pdfStoragePath?: string; pdfFileName?: string; lastReviewedAt?: string } || {}),
+      ...((pdf as { pdfStoragePath?: string; pdfFileName?: string; lastReviewedAt?: string }) ||
+        {}),
       updatedAt: '',
       updatedBy: '',
     };
   }
 
   async saveGuidelineRules(rules: BrandRule[], updatedBy: string): Promise<void> {
-    await Promise.all([
-      kv.set(KEYS.guidelineRules, rules),
-      this.touchLastUpdated(),
-    ]);
+    await Promise.all([kv.set(KEYS.guidelineRules, rules), this.touchLastUpdated()]);
   }
 
   async saveGuidelineVoice(voice: BrandGuidelines['voice'], updatedBy: string): Promise<void> {
-    await Promise.all([
-      kv.set(KEYS.guidelineVoice, voice),
-      this.touchLastUpdated(),
-    ]);
+    await Promise.all([kv.set(KEYS.guidelineVoice, voice), this.touchLastUpdated()]);
   }
 
   async saveGuidelinePdf(meta: { pdfStoragePath: string; pdfFileName: string }): Promise<void> {
-    await Promise.all([
-      kv.set(KEYS.guidelinePdf, meta),
-      this.touchLastUpdated(),
-    ]);
+    await Promise.all([kv.set(KEYS.guidelinePdf, meta), this.touchLastUpdated()]);
   }
 
   // ------------------------------------------------------------------

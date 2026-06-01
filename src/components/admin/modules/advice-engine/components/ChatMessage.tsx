@@ -1,9 +1,9 @@
 /**
  * ChatMessage Component
- * 
+ *
  * Displays a single chat message with role-based styling.
  * Supports user and assistant messages with avatars.
- * 
+ *
  * @module advice-engine/components/ChatMessage
  */
 
@@ -15,7 +15,7 @@ import type { ChatMessageProps } from '../types';
 
 /**
  * Chat message component
- * 
+ *
  * @example
  * <ChatMessage
  *   message={{
@@ -40,11 +40,7 @@ export function ChatMessage({ message, onCopy, isLoading }: ChatMessageProps) {
   };
 
   return (
-    <div
-      className={`flex gap-3 mb-4 ${
-        isUser ? 'justify-end' : 'justify-start'
-      }`}
-    >
+    <div className={`flex gap-3 mb-4 ${isUser ? 'justify-end' : 'justify-start'}`}>
       {/* Assistant Avatar */}
       {isAssistant && (
         <div className="h-8 w-8 rounded-full bg-gradient-to-br from-violet-600 to-indigo-700 flex items-center justify-center flex-shrink-0 shadow-sm mt-1">
@@ -71,11 +67,7 @@ export function ChatMessage({ message, onCopy, isLoading }: ChatMessageProps) {
         </div>
 
         {/* Timestamp and Copy Button */}
-        <div
-          className={`flex items-center gap-2 px-1 ${
-            isUser ? 'flex-row-reverse' : 'flex-row'
-          }`}
-        >
+        <div className={`flex items-center gap-2 px-1 ${isUser ? 'flex-row-reverse' : 'flex-row'}`}>
           <span className="text-[10px] text-muted-foreground">
             {formatTimestamp(message.timestamp)}
           </span>
@@ -86,11 +78,7 @@ export function ChatMessage({ message, onCopy, isLoading }: ChatMessageProps) {
               className="text-muted-foreground hover:text-violet-600 transition-colors p-1 rounded hover:bg-violet-50"
               title="Copy message"
             >
-              {copied ? (
-                <Check className="h-3 w-3 text-green-600" />
-              ) : (
-                <Copy className="h-3 w-3" />
-              )}
+              {copied ? <Check className="h-3 w-3 text-green-600" /> : <Copy className="h-3 w-3" />}
             </button>
           )}
         </div>

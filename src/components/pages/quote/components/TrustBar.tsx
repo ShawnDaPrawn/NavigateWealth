@@ -42,7 +42,9 @@ export function TrustBar({ variant = 'light', className = '' }: TrustBarProps) {
               variant === 'dark' ? 'text-white/70' : 'text-gray-600'
             }`}
           >
-            <Icon className={`h-3.5 w-3.5 ${variant === 'dark' ? 'text-green-400' : 'text-green-600'}`} />
+            <Icon
+              className={`h-3.5 w-3.5 ${variant === 'dark' ? 'text-green-400' : 'text-green-600'}`}
+            />
             {item.label}
           </div>
         );

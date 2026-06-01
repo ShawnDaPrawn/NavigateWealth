@@ -1,6 +1,6 @@
 /**
  * Step 4: Finalise & Publish
- * 
+ *
  * Behaviour Rules:
  * - Lock calculations and generate final FNA output
  * - Display all final recommended cover amounts
@@ -32,13 +32,20 @@ interface Step4Props {
   clientId?: string;
 }
 
-export function Step4Finalise({ calculations, adjustments, onPublish, onBack, clientName = 'Client', clientId }: Step4Props) {
+export function Step4Finalise({
+  calculations,
+  adjustments,
+  onPublish,
+  onBack,
+  clientName = 'Client',
+  clientId,
+}: Step4Props) {
   const [isExportingPdf, setIsExportingPdf] = useState(false);
-  
+
   // Build final risk needs array
   const buildFinalNeeds = (): FinalRiskNeed[] => {
     const needs: FinalRiskNeed[] = [];
-    
+
     // Life Cover
     needs.push({
       riskType: 'life',
@@ -49,13 +56,14 @@ export function Step4Finalise({ calculations, adjustments, onPublish, onBack, cl
       existingCoverTotal: calculations.life.existingCover.total,
       netShortfall: calculations.life.netShortfall,
       isOverinsured: calculations.life.netShortfall < 0,
-      overinsuredAmount: calculations.life.netShortfall < 0 ? Math.abs(calculations.life.netShortfall) : 0,
+      overinsuredAmount:
+        calculations.life.netShortfall < 0 ? Math.abs(calculations.life.netShortfall) : 0,
       advisorOverride: adjustments.life,
       finalRecommendedCover: adjustments.life?.overrideValue ?? calculations.life.netShortfall,
       assumptions: calculations.life.assumptions,
       riskNotes: calculations.life.riskNotes,
     });
-    
+
     // Disability Cover
     needs.push({
       riskType: 'disability',
@@ -66,13 +74,17 @@ export function Step4Finalise({ calculations, adjustments, onPublish, onBack, cl
       existingCoverTotal: calculations.disability.existingCover.total,
       netShortfall: calculations.disability.netShortfall,
       isOverinsured: calculations.disability.netShortfall < 0,
-      overinsuredAmount: calculations.disability.netShortfall < 0 ? Math.abs(calculations.disability.netShortfall) : 0,
+      overinsuredAmount:
+        calculations.disability.netShortfall < 0
+          ? Math.abs(calculations.disability.netShortfall)
+          : 0,
       advisorOverride: adjustments.disability,
-      finalRecommendedCover: adjustments.disability?.overrideValue ?? calculations.disability.netShortfall,
+      finalRecommendedCover:
+        adjustments.disability?.overrideValue ?? calculations.disability.netShortfall,
       assumptions: calculations.disability.assumptions,
       riskNotes: calculations.disability.riskNotes,
     });
-    
+
     // Severe Illness Cover
     needs.push({
       riskType: 'severeIllness',
@@ -83,13 +95,17 @@ export function Step4Finalise({ calculations, adjustments, onPublish, onBack, cl
       existingCoverTotal: calculations.severeIllness.existingCover.total,
       netShortfall: calculations.severeIllness.netShortfall,
       isOverinsured: calculations.severeIllness.netShortfall < 0,
-      overinsuredAmount: calculations.severeIllness.netShortfall < 0 ? Math.abs(calculations.severeIllness.netShortfall) : 0,
+      overinsuredAmount:
+        calculations.severeIllness.netShortfall < 0
+          ? Math.abs(calculations.severeIllness.netShortfall)
+          : 0,
       advisorOverride: adjustments.severeIllness,
-      finalRecommendedCover: adjustments.severeIllness?.overrideValue ?? calculations.severeIllness.netShortfall,
+      finalRecommendedCover:
+        adjustments.severeIllness?.overrideValue ?? calculations.severeIllness.netShortfall,
       assumptions: calculations.severeIllness.assumptions,
       riskNotes: calculations.severeIllness.riskNotes,
     });
-    
+
     // Income Protection - Temporary
     needs.push({
       riskType: 'incomeProtectionTemporary',
@@ -100,13 +116,18 @@ export function Step4Finalise({ calculations, adjustments, onPublish, onBack, cl
       existingCoverTotal: calculations.incomeProtection.temporary.existingCover.total,
       netShortfall: calculations.incomeProtection.temporary.netShortfall,
       isOverinsured: calculations.incomeProtection.temporary.netShortfall < 0,
-      overinsuredAmount: calculations.incomeProtection.temporary.netShortfall < 0 ? Math.abs(calculations.incomeProtection.temporary.netShortfall) : 0,
+      overinsuredAmount:
+        calculations.incomeProtection.temporary.netShortfall < 0
+          ? Math.abs(calculations.incomeProtection.temporary.netShortfall)
+          : 0,
       advisorOverride: adjustments.incomeProtectionTemporary,
-      finalRecommendedCover: adjustments.incomeProtectionTemporary?.overrideValue ?? calculations.incomeProtection.temporary.netShortfall,
+      finalRecommendedCover:
+        adjustments.incomeProtectionTemporary?.overrideValue ??
+        calculations.incomeProtection.temporary.netShortfall,
       assumptions: calculations.incomeProtection.assumptions,
       riskNotes: calculations.incomeProtection.riskNotes,
     });
-    
+
     // Income Protection - Permanent
     needs.push({
       riskType: 'incomeProtectionPermanent',
@@ -117,29 +138,41 @@ export function Step4Finalise({ calculations, adjustments, onPublish, onBack, cl
       existingCoverTotal: calculations.incomeProtection.permanent.existingCover.total,
       netShortfall: calculations.incomeProtection.permanent.netShortfall,
       isOverinsured: calculations.incomeProtection.permanent.netShortfall < 0,
-      overinsuredAmount: calculations.incomeProtection.permanent.netShortfall < 0 ? Math.abs(calculations.incomeProtection.permanent.netShortfall) : 0,
+      overinsuredAmount:
+        calculations.incomeProtection.permanent.netShortfall < 0
+          ? Math.abs(calculations.incomeProtection.permanent.netShortfall)
+          : 0,
       advisorOverride: adjustments.incomeProtectionPermanent,
-      finalRecommendedCover: adjustments.incomeProtectionPermanent?.overrideValue ?? calculations.incomeProtection.permanent.netShortfall,
+      finalRecommendedCover:
+        adjustments.incomeProtectionPermanent?.overrideValue ??
+        calculations.incomeProtection.permanent.netShortfall,
       assumptions: calculations.incomeProtection.assumptions,
       riskNotes: calculations.incomeProtection.riskNotes,
     });
-    
+
     return needs;
   };
-  
+
   const finalNeeds = buildFinalNeeds();
   const hasAnyOverrides = Object.keys(adjustments).length > 0;
-  
+
   // Handle publish
   const handlePublish = () => {
     onPublish(finalNeeds);
   };
-  
+
   // Handle PDF export
   const handlePdfExport = async () => {
     setIsExportingPdf(true);
     try {
-      const pdfComponent = <RiskPlanningFNAPdfExport calculations={calculations} adjustments={adjustments} clientName={clientName} clientId={clientId} />;
+      const pdfComponent = (
+        <RiskPlanningFNAPdfExport
+          calculations={calculations}
+          adjustments={adjustments}
+          clientName={clientName}
+          clientId={clientId}
+        />
+      );
       const dateStr = new Date().toISOString().split('T')[0];
       await exportComponentToPdf(pdfComponent, {
         filename: `RiskPlanningFNA_${clientName}_${dateStr}.pdf`,
@@ -153,16 +186,17 @@ export function Step4Finalise({ calculations, adjustments, onPublish, onBack, cl
       setIsExportingPdf(false);
     }
   };
-  
+
   return (
     <div className="space-y-6">
       <Alert className="border-green-200 bg-green-50">
         <CheckCircle className="h-4 w-4 text-green-600" />
         <AlertDescription>
-          Review the final risk planning analysis below. Once published, this FNA will be locked and available for client review.
+          Review the final risk planning analysis below. Once published, this FNA will be locked and
+          available for client review.
         </AlertDescription>
       </Alert>
-      
+
       {/* Final Summary */}
       <Card>
         <CardHeader>
@@ -177,57 +211,89 @@ export function Step4Finalise({ calculations, adjustments, onPublish, onBack, cl
               const isMonthly = need.riskType.includes('incomeProtection');
               const hasOverride = !!need.advisorOverride;
               const isOverinsured = need.isOverinsured ?? false;
-              
+
               return (
-                <div key={need.riskType} className={`p-4 border rounded-lg ${isOverinsured ? 'border-amber-300 bg-amber-50' : ''}`}>
+                <div
+                  key={need.riskType}
+                  className={`p-4 border rounded-lg ${isOverinsured ? 'border-amber-300 bg-amber-50' : ''}`}
+                >
                   <div className="flex items-center justify-between mb-3">
                     <h4 className="font-semibold">{need.label}</h4>
                     <div className="flex gap-2">
-                      {isOverinsured && <Badge variant="outline" className="bg-amber-100 text-amber-800 border-amber-300">Overinsured</Badge>}
+                      {isOverinsured && (
+                        <Badge
+                          variant="outline"
+                          className="bg-amber-100 text-amber-800 border-amber-300"
+                        >
+                          Overinsured
+                        </Badge>
+                      )}
                       {hasOverride && <Badge variant="secondary">Overridden</Badge>}
                     </div>
                   </div>
-                  
+
                   <div className="grid grid-cols-2 gap-3 text-sm">
                     <div>
                       <p className="text-muted-foreground">Gross Need</p>
-                      <p className="font-medium">{formatCurrency(need.grossNeed)}{isMonthly && '/mo'}</p>
+                      <p className="font-medium">
+                        {formatCurrency(need.grossNeed)}
+                        {isMonthly && '/mo'}
+                      </p>
                     </div>
                     <div>
                       <p className="text-muted-foreground">Existing Cover</p>
-                      <p className="font-medium">{formatCurrency(need.existingCoverTotal)}{isMonthly && '/mo'}</p>
+                      <p className="font-medium">
+                        {formatCurrency(need.existingCoverTotal)}
+                        {isMonthly && '/mo'}
+                      </p>
                     </div>
                     {isOverinsured ? (
                       <div>
                         <p className="text-muted-foreground">Overinsured Amount</p>
-                        <p className="font-medium text-amber-700">{formatCurrency(need.overinsuredAmount ?? 0)}{isMonthly && '/mo'}</p>
+                        <p className="font-medium text-amber-700">
+                          {formatCurrency(need.overinsuredAmount ?? 0)}
+                          {isMonthly && '/mo'}
+                        </p>
                       </div>
                     ) : (
                       <div>
                         <p className="text-muted-foreground">Shortfall</p>
-                        <p className="font-medium">{formatCurrency(need.netShortfall)}{isMonthly && '/mo'}</p>
+                        <p className="font-medium">
+                          {formatCurrency(need.netShortfall)}
+                          {isMonthly && '/mo'}
+                        </p>
                       </div>
                     )}
                     <div>
                       <p className="text-muted-foreground">Final Recommended</p>
                       <p className="font-semibold text-primary text-base">
-                        {formatCurrency(need.finalRecommendedCover)}{isMonthly && '/mo'}
+                        {formatCurrency(need.finalRecommendedCover)}
+                        {isMonthly && '/mo'}
                       </p>
                     </div>
                   </div>
-                  
+
                   {isOverinsured && (
                     <Alert className="mt-3 border-amber-300 bg-amber-100">
                       <AlertDescription className="text-amber-900 text-xs">
-                        <strong>Overinsurance detected:</strong> Existing cover ({formatCurrency(need.existingCoverTotal)}{isMonthly && '/mo'}) exceeds calculated need by {formatCurrency(need.overinsuredAmount ?? 0)}{isMonthly && '/mo'}. Consider reducing cover to avoid unnecessary premium expenditure.
+                        <strong>Overinsurance detected:</strong> Existing cover (
+                        {formatCurrency(need.existingCoverTotal)}
+                        {isMonthly && '/mo'}) exceeds calculated need by{' '}
+                        {formatCurrency(need.overinsuredAmount ?? 0)}
+                        {isMonthly && '/mo'}. Consider reducing cover to avoid unnecessary premium
+                        expenditure.
                       </AlertDescription>
                     </Alert>
                   )}
-                  
+
                   {hasOverride && (
                     <div className="mt-3 p-2 bg-muted/50 rounded text-xs">
-                      <p><strong>Override Reason:</strong> {need.advisorOverride!.reason}</p>
-                      <p><strong>Classification:</strong> {need.advisorOverride!.classification}</p>
+                      <p>
+                        <strong>Override Reason:</strong> {need.advisorOverride!.reason}
+                      </p>
+                      <p>
+                        <strong>Classification:</strong> {need.advisorOverride!.classification}
+                      </p>
                     </div>
                   )}
                 </div>
@@ -236,9 +302,11 @@ export function Step4Finalise({ calculations, adjustments, onPublish, onBack, cl
           </div>
         </CardContent>
       </Card>
-      
+
       {/* Existing Cover Breakdown */}
-      {finalNeeds.some(need => (need.existingCoverPersonal || 0) > 0 || (need.existingCoverGroup || 0) > 0) && (
+      {finalNeeds.some(
+        (need) => (need.existingCoverPersonal || 0) > 0 || (need.existingCoverGroup || 0) > 0,
+      ) && (
         <Card>
           <CardHeader>
             <CardTitle>Existing Cover Offset Summary</CardTitle>
@@ -248,22 +316,26 @@ export function Step4Finalise({ calculations, adjustments, onPublish, onBack, cl
             <div className="space-y-3">
               {finalNeeds.map((need) => {
                 const isMonthly = need.riskType.includes('incomeProtection');
-                const totalExisting = (need.existingCoverPersonal || 0) + (need.existingCoverGroup || 0);
-                
+                const totalExisting =
+                  (need.existingCoverPersonal || 0) + (need.existingCoverGroup || 0);
+
                 if (totalExisting === 0) return null;
-                
+
                 return (
                   <div key={need.riskType} className="flex justify-between items-center text-sm">
                     <span className="text-muted-foreground">{need.label}</span>
                     <div className="flex gap-4">
                       <span>
-                        Personal: {formatCurrency(need.existingCoverPersonal)}{isMonthly && '/mo'}
+                        Personal: {formatCurrency(need.existingCoverPersonal)}
+                        {isMonthly && '/mo'}
                       </span>
                       <span>
-                        Group: {formatCurrency(need.existingCoverGroup)}{isMonthly && '/mo'}
+                        Group: {formatCurrency(need.existingCoverGroup)}
+                        {isMonthly && '/mo'}
                       </span>
                       <span className="font-medium">
-                        Total: {formatCurrency(totalExisting)}{isMonthly && '/mo'}
+                        Total: {formatCurrency(totalExisting)}
+                        {isMonthly && '/mo'}
                       </span>
                     </div>
                   </div>
@@ -273,7 +345,7 @@ export function Step4Finalise({ calculations, adjustments, onPublish, onBack, cl
           </CardContent>
         </Card>
       )}
-      
+
       {/* Compliance Disclaimers */}
       <Card className="border-amber-200 bg-amber-50">
         <CardHeader>
@@ -293,7 +365,7 @@ export function Step4Finalise({ calculations, adjustments, onPublish, onBack, cl
           </ul>
         </CardContent>
       </Card>
-      
+
       {/* Assumptions & Risk Notes */}
       <Card>
         <CardHeader>
@@ -304,7 +376,7 @@ export function Step4Finalise({ calculations, adjustments, onPublish, onBack, cl
           {finalNeeds.map((need) => (
             <div key={need.riskType}>
               <h4 className="font-medium mb-2">{need.label}</h4>
-              
+
               <div className="mb-3">
                 <p className="text-xs font-medium text-muted-foreground mb-1">Assumptions:</p>
                 <ul className="text-xs space-y-1">
@@ -313,7 +385,7 @@ export function Step4Finalise({ calculations, adjustments, onPublish, onBack, cl
                   ))}
                 </ul>
               </div>
-              
+
               <div>
                 <p className="text-xs font-medium text-muted-foreground mb-1">Risk Notes:</p>
                 <ul className="text-xs space-y-1">
@@ -322,29 +394,34 @@ export function Step4Finalise({ calculations, adjustments, onPublish, onBack, cl
                   ))}
                 </ul>
               </div>
-              
+
               {need !== finalNeeds[finalNeeds.length - 1] && <Separator className="mt-4" />}
             </div>
           ))}
         </CardContent>
       </Card>
-      
+
       {/* Metadata */}
       <div className="text-xs text-muted-foreground">
         <p>Calculated: {new Date(calculations.metadata.calculatedAt).toLocaleString()}</p>
         <p>System Version: {calculations.metadata.systemVersion}</p>
         <p>Calculated By: {calculations.metadata.calculatedBy}</p>
       </div>
-      
+
       {/* Actions */}
       <div className="flex justify-between pt-6 border-t gap-4">
         <Button type="button" variant="outline" onClick={onBack}>
           <ArrowLeft className="mr-2 h-4 w-4" />
           Back to Adjustments
         </Button>
-        
+
         <div className="flex gap-2">
-          <Button type="button" variant="outline" onClick={handlePdfExport} disabled={isExportingPdf}>
+          <Button
+            type="button"
+            variant="outline"
+            onClick={handlePdfExport}
+            disabled={isExportingPdf}
+          >
             <Download className="mr-2 h-4 w-4" />
             Export PDF
           </Button>

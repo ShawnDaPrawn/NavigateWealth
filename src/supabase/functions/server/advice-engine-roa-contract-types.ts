@@ -86,7 +86,14 @@ export interface RoAContractValidationRule {
 export interface RoAContractEvidenceRequirement {
   id: string;
   label: string;
-  type: 'quote' | 'policy_schedule' | 'comparison' | 'application' | 'fna' | 'client_instruction' | 'other';
+  type:
+    | 'quote'
+    | 'policy_schedule'
+    | 'comparison'
+    | 'application'
+    | 'fna'
+    | 'client_instruction'
+    | 'other';
   required: boolean;
   acceptedMimeTypes?: string[];
   guidance?: string;
@@ -111,7 +118,9 @@ export interface RoAModuleContract {
   schemaVersion: string;
   input: {
     sources: RoAContractInputSource[];
-    gatheringMethods: Array<'typed' | 'upload' | 'clientProfile' | 'policyRegister' | 'fna' | 'calculated'>;
+    gatheringMethods: Array<
+      'typed' | 'upload' | 'clientProfile' | 'policyRegister' | 'fna' | 'calculated'
+    >;
   };
   formSchema: {
     sections: RoAContractFormSection[];
@@ -191,10 +200,46 @@ const SYSTEM_USER = 'system:roa-contract-seed';
 
 export const ROA_MODULE_CONTRACT_SCHEMA_FORMAT: RoAModuleContractSchemaFormat = {
   schemaVersion: '1.0',
-  allowedFieldTypes: ['text', 'textarea', 'number', 'select', 'chips', 'checkbox', 'radio', 'date', 'currency', 'percentage', 'file'],
-  allowedSourceTypes: ['clientSnapshot', 'adviserSnapshot', 'policyRegister', 'fna', 'moduleInput', 'documentUpload', 'calculated', 'manual'],
-  allowedGatheringMethods: ['typed', 'upload', 'clientProfile', 'policyRegister', 'fna', 'calculated'],
-  allowedEvidenceTypes: ['quote', 'policy_schedule', 'comparison', 'application', 'fna', 'client_instruction', 'other'],
+  allowedFieldTypes: [
+    'text',
+    'textarea',
+    'number',
+    'select',
+    'chips',
+    'checkbox',
+    'radio',
+    'date',
+    'currency',
+    'percentage',
+    'file',
+  ],
+  allowedSourceTypes: [
+    'clientSnapshot',
+    'adviserSnapshot',
+    'policyRegister',
+    'fna',
+    'moduleInput',
+    'documentUpload',
+    'calculated',
+    'manual',
+  ],
+  allowedGatheringMethods: [
+    'typed',
+    'upload',
+    'clientProfile',
+    'policyRegister',
+    'fna',
+    'calculated',
+  ],
+  allowedEvidenceTypes: [
+    'quote',
+    'policy_schedule',
+    'comparison',
+    'application',
+    'fna',
+    'client_instruction',
+    'other',
+  ],
   allowedValidationSeverities: ['blocking', 'warning'],
   requiredContractKeys: [
     'id',
@@ -228,7 +273,11 @@ const clientSnapshotSources: RoAContractInputSource[] = [
   },
 ];
 
-function defaultDocumentTemplate(moduleTitle: string, sectionTitle: string, purpose: string): string {
+function defaultDocumentTemplate(
+  moduleTitle: string,
+  sectionTitle: string,
+  purpose: string,
+): string {
   return [
     `{{client.displayName}} - ${moduleTitle}`,
     '',
@@ -239,12 +288,18 @@ function defaultDocumentTemplate(moduleTitle: string, sectionTitle: string, purp
   ].join('\n');
 }
 
-function systemContract(input: Omit<RoAModuleContract, 'status' | 'version' | 'schemaVersion' | 'createdAt' | 'updatedAt' | 'createdBy' | 'updatedBy'>): RoAModuleContract {
+function systemContract(
+  input: Omit<
+    RoAModuleContract,
+    'status' | 'version' | 'schemaVersion' | 'createdAt' | 'updatedAt' | 'createdBy' | 'updatedBy'
+  >,
+): RoAModuleContract {
   return {
     ...input,
     documentSections: input.documentSections.map((section) => ({
       ...section,
-      template: section.template || defaultDocumentTemplate(input.title, section.title, section.purpose),
+      template:
+        section.template || defaultDocumentTemplate(input.title, section.title, section.purpose),
     })),
     status: 'active',
     version: 1,
@@ -260,12 +315,19 @@ export const DEFAULT_ROA_MODULE_CONTRACTS: RoAModuleContract[] = [
   systemContract({
     id: 'new_life_assurance_proposal',
     title: 'New Life Assurance Proposal',
-    description: 'Recommends new life assurance cover based on client needs, affordability, underwriting and suitability.',
+    description:
+      'Recommends new life assurance cover based on client needs, affordability, underwriting and suitability.',
     category: 'Risk Management',
     input: {
       sources: [
         ...clientSnapshotSources,
-        { id: 'risk_fna', label: 'Risk planning FNA', type: 'fna', required: false, sourcePath: 'fnaSummaries.risk' },
+        {
+          id: 'risk_fna',
+          label: 'Risk planning FNA',
+          type: 'fna',
+          required: false,
+          sourcePath: 'fnaSummaries.risk',
+        },
         { id: 'provider_quote', label: 'Provider quote', type: 'documentUpload', required: true },
       ],
       gatheringMethods: ['clientProfile', 'fna', 'typed', 'upload'],
@@ -276,12 +338,56 @@ export const DEFAULT_ROA_MODULE_CONTRACTS: RoAModuleContract[] = [
           id: 'proposal',
           title: 'Proposal',
           fields: [
-            { key: 'provider', label: 'Recommended Provider', type: 'select', required: true, source: 'moduleInput', options: ['Discovery Life', 'Momentum Life', 'Sanlam Life', 'Old Mutual Life', 'Hollard Life', 'Other'] },
-            { key: 'cover_amount', label: 'Recommended Cover Amount', type: 'currency', required: true, source: 'moduleInput' },
-            { key: 'monthly_premium', label: 'Monthly Premium', type: 'currency', required: true, source: 'moduleInput' },
-            { key: 'benefit_types', label: 'Benefit Types', type: 'chips', required: true, source: 'moduleInput', placeholder: 'Life cover, disability, severe illness' },
-            { key: 'rationale', label: 'Rationale', type: 'textarea', required: true, source: 'moduleInput' },
-            { key: 'underwriting_notes', label: 'Underwriting Notes', type: 'textarea', source: 'moduleInput' },
+            {
+              key: 'provider',
+              label: 'Recommended Provider',
+              type: 'select',
+              required: true,
+              source: 'moduleInput',
+              options: [
+                'Discovery Life',
+                'Momentum Life',
+                'Sanlam Life',
+                'Old Mutual Life',
+                'Hollard Life',
+                'Other',
+              ],
+            },
+            {
+              key: 'cover_amount',
+              label: 'Recommended Cover Amount',
+              type: 'currency',
+              required: true,
+              source: 'moduleInput',
+            },
+            {
+              key: 'monthly_premium',
+              label: 'Monthly Premium',
+              type: 'currency',
+              required: true,
+              source: 'moduleInput',
+            },
+            {
+              key: 'benefit_types',
+              label: 'Benefit Types',
+              type: 'chips',
+              required: true,
+              source: 'moduleInput',
+              placeholder: 'Life cover, disability, severe illness',
+            },
+            {
+              key: 'rationale',
+              label: 'Rationale',
+              type: 'textarea',
+              required: true,
+              source: 'moduleInput',
+            },
+            {
+              key: 'underwriting_notes',
+              label: 'Underwriting Notes',
+              type: 'textarea',
+              source: 'moduleInput',
+            },
           ],
         },
       ],
@@ -298,20 +404,52 @@ export const DEFAULT_ROA_MODULE_CONTRACTS: RoAModuleContract[] = [
     validation: {
       requiredFields: ['provider', 'cover_amount', 'monthly_premium', 'benefit_types', 'rationale'],
       rules: [
-        { id: 'quote_required', severity: 'blocking', message: 'A provider quote must be attached before final compilation.' },
-        { id: 'do_not_cancel_existing_cover', severity: 'warning', message: 'Confirm the client will not cancel existing cover until new cover is in force.' },
+        {
+          id: 'quote_required',
+          severity: 'blocking',
+          message: 'A provider quote must be attached before final compilation.',
+        },
+        {
+          id: 'do_not_cancel_existing_cover',
+          severity: 'warning',
+          message: 'Confirm the client will not cancel existing cover until new cover is in force.',
+        },
       ],
     },
     evidence: {
       requirements: [
-        { id: 'provider_quote', label: 'Provider quote', type: 'quote', required: true, acceptedMimeTypes: ['application/pdf', 'image/png', 'image/jpeg'] },
+        {
+          id: 'provider_quote',
+          label: 'Provider quote',
+          type: 'quote',
+          required: true,
+          acceptedMimeTypes: ['application/pdf', 'image/png', 'image/jpeg'],
+        },
         { id: 'risk_fna', label: 'Risk FNA or needs calculation', type: 'fna', required: false },
       ],
     },
     documentSections: [
-      { id: 'need', title: 'Identified Need', purpose: 'Explain the life assurance need and quantified shortfall.', order: 10, required: true },
-      { id: 'recommendation', title: 'Recommendation', purpose: 'Describe the recommended cover, provider and premium.', order: 20, required: true },
-      { id: 'risks', title: 'Risks and Underwriting', purpose: 'Record underwriting, exclusions and replacement cautions.', order: 30, required: true },
+      {
+        id: 'need',
+        title: 'Identified Need',
+        purpose: 'Explain the life assurance need and quantified shortfall.',
+        order: 10,
+        required: true,
+      },
+      {
+        id: 'recommendation',
+        title: 'Recommendation',
+        purpose: 'Describe the recommended cover, provider and premium.',
+        order: 20,
+        required: true,
+      },
+      {
+        id: 'risks',
+        title: 'Risks and Underwriting',
+        purpose: 'Record underwriting, exclusions and replacement cautions.',
+        order: 30,
+        required: true,
+      },
     ],
     disclosures: [
       'Life assurance is subject to underwriting and acceptance by the insurer.',
@@ -335,8 +473,19 @@ export const DEFAULT_ROA_MODULE_CONTRACTS: RoAModuleContract[] = [
     input: {
       sources: [
         ...clientSnapshotSources,
-        { id: 'current_policies', label: 'Current policies', type: 'policyRegister', required: true, sourcePath: 'clientSnapshot.policies' },
-        { id: 'comparison_schedule', label: 'Comparison schedule', type: 'documentUpload', required: true },
+        {
+          id: 'current_policies',
+          label: 'Current policies',
+          type: 'policyRegister',
+          required: true,
+          sourcePath: 'clientSnapshot.policies',
+        },
+        {
+          id: 'comparison_schedule',
+          label: 'Comparison schedule',
+          type: 'documentUpload',
+          required: true,
+        },
       ],
       gatheringMethods: ['clientProfile', 'policyRegister', 'typed', 'upload'],
     },
@@ -346,19 +495,56 @@ export const DEFAULT_ROA_MODULE_CONTRACTS: RoAModuleContract[] = [
           id: 'comparison',
           title: 'Comparison',
           fields: [
-            { key: 'current_providers', label: 'Current Providers', type: 'chips', required: true, source: 'policyRegister' },
-            { key: 'current_monthly_premium', label: 'Current Monthly Premium', type: 'currency', required: true, source: 'moduleInput' },
+            {
+              key: 'current_providers',
+              label: 'Current Providers',
+              type: 'chips',
+              required: true,
+              source: 'policyRegister',
+            },
+            {
+              key: 'current_monthly_premium',
+              label: 'Current Monthly Premium',
+              type: 'currency',
+              required: true,
+              source: 'moduleInput',
+            },
             {
               key: 'proposed_provider',
               label: 'Proposed Provider',
               type: 'select',
               required: true,
               source: 'moduleInput',
-              options: ['Discovery Life', 'Momentum Life', 'Sanlam Life', 'Old Mutual Life', 'Hollard Life', 'Other'],
+              options: [
+                'Discovery Life',
+                'Momentum Life',
+                'Sanlam Life',
+                'Old Mutual Life',
+                'Hollard Life',
+                'Other',
+              ],
             },
-            { key: 'proposed_monthly_premium', label: 'Proposed Monthly Premium', type: 'currency', required: true, source: 'moduleInput' },
-            { key: 'benefit_comparison', label: 'Benefit Comparison', type: 'textarea', required: true, source: 'moduleInput' },
-            { key: 'replacement_rationale', label: 'Replacement Rationale', type: 'textarea', required: true, source: 'moduleInput' },
+            {
+              key: 'proposed_monthly_premium',
+              label: 'Proposed Monthly Premium',
+              type: 'currency',
+              required: true,
+              source: 'moduleInput',
+            },
+            {
+              key: 'benefit_comparison',
+              label: 'Benefit Comparison',
+              type: 'textarea',
+              required: true,
+              source: 'moduleInput',
+            },
+            {
+              key: 'replacement_rationale',
+              label: 'Replacement Rationale',
+              type: 'textarea',
+              required: true,
+              source: 'moduleInput',
+            },
           ],
         },
       ],
@@ -369,23 +555,42 @@ export const DEFAULT_ROA_MODULE_CONTRACTS: RoAModuleContract[] = [
         { key: 'currentProviders', label: 'Current providers', type: 'array', required: true },
         { key: 'proposedProvider', label: 'Proposed provider', type: 'string', required: true },
         { key: 'premiumDifference', label: 'Premium difference', type: 'number', required: false },
-        { key: 'replacementRationale', label: 'Replacement rationale', type: 'string', required: true },
+        {
+          key: 'replacementRationale',
+          label: 'Replacement rationale',
+          type: 'string',
+          required: true,
+        },
       ],
     },
     validation: {
-      requiredFields: ['current_providers', 'current_monthly_premium', 'proposed_provider', 'proposed_monthly_premium', 'benefit_comparison', 'replacement_rationale'],
+      requiredFields: [
+        'current_providers',
+        'current_monthly_premium',
+        'proposed_provider',
+        'proposed_monthly_premium',
+        'benefit_comparison',
+        'replacement_rationale',
+      ],
       rules: [
-        { id: 'comparison_required', severity: 'blocking', message: 'A like-for-like comparison must be recorded before replacement advice is finalised.' },
+        {
+          id: 'comparison_required',
+          severity: 'blocking',
+          message:
+            'A like-for-like comparison must be recorded before replacement advice is finalised.',
+        },
         {
           id: 'lost_benefits_warning',
           severity: 'warning',
-          message: 'Explicitly record any lost benefits, exclusions, waiting periods, cashback clawbacks or premium escalation differences.',
+          message:
+            'Explicitly record any lost benefits, exclusions, waiting periods, cashback clawbacks or premium escalation differences.',
           fieldKeys: ['benefit_comparison'],
         },
         {
           id: 'underwriting_outcome',
           severity: 'warning',
-          message: 'Replacement cover remains subject to underwriting — benefit terms printed on the accepted policy schedule prevail.',
+          message:
+            'Replacement cover remains subject to underwriting — benefit terms printed on the accepted policy schedule prevail.',
         },
         {
           id: 'cooling_off',
@@ -402,14 +607,18 @@ export const DEFAULT_ROA_MODULE_CONTRACTS: RoAModuleContract[] = [
           type: 'policy_schedule',
           required: true,
           acceptedMimeTypes: ['application/pdf'],
-          guidance: 'Latest insurer-issued schedule showing benefits, exclusions, premiums and inception dates.',
+          guidance:
+            'Latest insurer-issued schedule showing benefits, exclusions, premiums and inception dates.',
         },
         {
           id: 'comparison_schedule',
           label: 'Comparison schedule',
           type: 'comparison',
           required: true,
-          acceptedMimeTypes: ['application/pdf', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'],
+          acceptedMimeTypes: [
+            'application/pdf',
+            'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+          ],
           guidance: 'Like-for-like or justified comparison worksheet signed by the adviser.',
         },
       ],
@@ -479,13 +688,25 @@ export const DEFAULT_ROA_MODULE_CONTRACTS: RoAModuleContract[] = [
   systemContract({
     id: 'new_investment_proposal',
     title: 'New Investment Proposal',
-    description: 'Recommends a new investment based on objectives, time horizon, risk profile, costs and product suitability.',
+    description:
+      'Recommends a new investment based on objectives, time horizon, risk profile, costs and product suitability.',
     category: 'Investments',
     input: {
       sources: [
         ...clientSnapshotSources,
-        { id: 'investment_ina', label: 'Investment needs analysis', type: 'fna', required: false, sourcePath: 'fnaSummaries.investment' },
-        { id: 'fund_fact_sheets', label: 'Fund fact sheets or proposal', type: 'documentUpload', required: true },
+        {
+          id: 'investment_ina',
+          label: 'Investment needs analysis',
+          type: 'fna',
+          required: false,
+          sourcePath: 'fnaSummaries.investment',
+        },
+        {
+          id: 'fund_fact_sheets',
+          label: 'Fund fact sheets or proposal',
+          type: 'documentUpload',
+          required: true,
+        },
       ],
       gatheringMethods: ['clientProfile', 'fna', 'typed', 'upload'],
     },
@@ -495,13 +716,64 @@ export const DEFAULT_ROA_MODULE_CONTRACTS: RoAModuleContract[] = [
           id: 'investment',
           title: 'Investment',
           fields: [
-            { key: 'investment_amount', label: 'Investment Amount', type: 'currency', required: true, source: 'moduleInput' },
-            { key: 'platform', label: 'Investment Platform', type: 'select', required: true, source: 'moduleInput', options: ['Allan Gray', 'Coronation', 'Sygnia', 'Momentum', 'Discovery', 'Other'] },
-            { key: 'recommended_funds', label: 'Recommended Funds', type: 'textarea', required: true, source: 'moduleInput' },
-            { key: 'risk_profile', label: 'Risk Profile', type: 'select', required: true, source: 'clientSnapshot', options: ['Conservative', 'Moderate Conservative', 'Moderate', 'Moderate Aggressive', 'Aggressive'] },
-            { key: 'time_horizon', label: 'Time Horizon', type: 'select', required: true, source: 'moduleInput', options: ['Less than 2 years', '2-5 years', '5-10 years', 'More than 10 years'] },
-            { key: 'total_annual_fee', label: 'Total Annual Fee', type: 'percentage', required: true, source: 'moduleInput' },
-            { key: 'rationale', label: 'Rationale', type: 'textarea', required: true, source: 'moduleInput' },
+            {
+              key: 'investment_amount',
+              label: 'Investment Amount',
+              type: 'currency',
+              required: true,
+              source: 'moduleInput',
+            },
+            {
+              key: 'platform',
+              label: 'Investment Platform',
+              type: 'select',
+              required: true,
+              source: 'moduleInput',
+              options: ['Allan Gray', 'Coronation', 'Sygnia', 'Momentum', 'Discovery', 'Other'],
+            },
+            {
+              key: 'recommended_funds',
+              label: 'Recommended Funds',
+              type: 'textarea',
+              required: true,
+              source: 'moduleInput',
+            },
+            {
+              key: 'risk_profile',
+              label: 'Risk Profile',
+              type: 'select',
+              required: true,
+              source: 'clientSnapshot',
+              options: [
+                'Conservative',
+                'Moderate Conservative',
+                'Moderate',
+                'Moderate Aggressive',
+                'Aggressive',
+              ],
+            },
+            {
+              key: 'time_horizon',
+              label: 'Time Horizon',
+              type: 'select',
+              required: true,
+              source: 'moduleInput',
+              options: ['Less than 2 years', '2-5 years', '5-10 years', 'More than 10 years'],
+            },
+            {
+              key: 'total_annual_fee',
+              label: 'Total Annual Fee',
+              type: 'percentage',
+              required: true,
+              source: 'moduleInput',
+            },
+            {
+              key: 'rationale',
+              label: 'Rationale',
+              type: 'textarea',
+              required: true,
+              source: 'moduleInput',
+            },
           ],
         },
       ],
@@ -516,22 +788,68 @@ export const DEFAULT_ROA_MODULE_CONTRACTS: RoAModuleContract[] = [
       ],
     },
     validation: {
-      requiredFields: ['investment_amount', 'platform', 'recommended_funds', 'risk_profile', 'time_horizon', 'total_annual_fee', 'rationale'],
+      requiredFields: [
+        'investment_amount',
+        'platform',
+        'recommended_funds',
+        'risk_profile',
+        'time_horizon',
+        'total_annual_fee',
+        'rationale',
+      ],
       rules: [
-        { id: 'risk_match', severity: 'blocking', message: 'Investment selection must be consistent with the captured risk profile and time horizon.' },
-        { id: 'fees_disclosed', severity: 'blocking', message: 'All product, advice and platform fees must be recorded.' },
+        {
+          id: 'risk_match',
+          severity: 'blocking',
+          message:
+            'Investment selection must be consistent with the captured risk profile and time horizon.',
+        },
+        {
+          id: 'fees_disclosed',
+          severity: 'blocking',
+          message: 'All product, advice and platform fees must be recorded.',
+        },
       ],
     },
     evidence: {
       requirements: [
-        { id: 'investment_proposal', label: 'Investment proposal or fund fact sheets', type: 'comparison', required: true, acceptedMimeTypes: ['application/pdf'] },
-        { id: 'client_instruction', label: 'Client investment instruction', type: 'client_instruction', required: false },
+        {
+          id: 'investment_proposal',
+          label: 'Investment proposal or fund fact sheets',
+          type: 'comparison',
+          required: true,
+          acceptedMimeTypes: ['application/pdf'],
+        },
+        {
+          id: 'client_instruction',
+          label: 'Client investment instruction',
+          type: 'client_instruction',
+          required: false,
+        },
       ],
     },
     documentSections: [
-      { id: 'objectives', title: 'Objectives and Time Horizon', purpose: 'Record objectives, investment term and liquidity needs.', order: 10, required: true },
-      { id: 'recommendation', title: 'Investment Recommendation', purpose: 'Explain product, platform, funds and allocation.', order: 20, required: true },
-      { id: 'fees_risks', title: 'Fees and Investment Risks', purpose: 'Disclose costs, volatility, currency and market risks.', order: 30, required: true },
+      {
+        id: 'objectives',
+        title: 'Objectives and Time Horizon',
+        purpose: 'Record objectives, investment term and liquidity needs.',
+        order: 10,
+        required: true,
+      },
+      {
+        id: 'recommendation',
+        title: 'Investment Recommendation',
+        purpose: 'Explain product, platform, funds and allocation.',
+        order: 20,
+        required: true,
+      },
+      {
+        id: 'fees_risks',
+        title: 'Fees and Investment Risks',
+        purpose: 'Disclose costs, volatility, currency and market risks.',
+        order: 30,
+        required: true,
+      },
     ],
     disclosures: [
       'Investment values can rise and fall and past performance is not a reliable guide to future returns.',
@@ -542,13 +860,25 @@ export const DEFAULT_ROA_MODULE_CONTRACTS: RoAModuleContract[] = [
   systemContract({
     id: 'investment_replacement_proposal',
     title: 'Investment Replacement Proposal',
-    description: 'Documents replacement or transfer of an existing investment, including costs, benefits, risks and disadvantages.',
+    description:
+      'Documents replacement or transfer of an existing investment, including costs, benefits, risks and disadvantages.',
     category: 'Investments',
     input: {
       sources: [
         ...clientSnapshotSources,
-        { id: 'current_investment', label: 'Current investment details', type: 'policyRegister', required: true, sourcePath: 'clientSnapshot.policies' },
-        { id: 'replacement_analysis', label: 'Replacement analysis', type: 'documentUpload', required: true },
+        {
+          id: 'current_investment',
+          label: 'Current investment details',
+          type: 'policyRegister',
+          required: true,
+          sourcePath: 'clientSnapshot.policies',
+        },
+        {
+          id: 'replacement_analysis',
+          label: 'Replacement analysis',
+          type: 'documentUpload',
+          required: true,
+        },
       ],
       gatheringMethods: ['clientProfile', 'policyRegister', 'typed', 'upload'],
     },
@@ -558,14 +888,62 @@ export const DEFAULT_ROA_MODULE_CONTRACTS: RoAModuleContract[] = [
           id: 'replacement',
           title: 'Replacement',
           fields: [
-            { key: 'current_provider', label: 'Current Provider', type: 'text', required: true, source: 'policyRegister' },
-            { key: 'current_value', label: 'Current Value', type: 'currency', required: true, source: 'moduleInput' },
-            { key: 'proposed_provider', label: 'Proposed Provider', type: 'text', required: true, source: 'moduleInput' },
-            { key: 'exit_penalties', label: 'Exit Penalties or Market Adjustments', type: 'currency', required: false, source: 'moduleInput' },
-            { key: 'current_eac', label: 'Current EAC', type: 'percentage', required: false, source: 'moduleInput' },
-            { key: 'proposed_eac', label: 'Proposed EAC', type: 'percentage', required: false, source: 'moduleInput' },
-            { key: 'replacement_rationale', label: 'Replacement Rationale', type: 'textarea', required: true, source: 'moduleInput' },
-            { key: 'disadvantages', label: 'Disadvantages and Risks', type: 'textarea', required: true, source: 'moduleInput' },
+            {
+              key: 'current_provider',
+              label: 'Current Provider',
+              type: 'text',
+              required: true,
+              source: 'policyRegister',
+            },
+            {
+              key: 'current_value',
+              label: 'Current Value',
+              type: 'currency',
+              required: true,
+              source: 'moduleInput',
+            },
+            {
+              key: 'proposed_provider',
+              label: 'Proposed Provider',
+              type: 'text',
+              required: true,
+              source: 'moduleInput',
+            },
+            {
+              key: 'exit_penalties',
+              label: 'Exit Penalties or Market Adjustments',
+              type: 'currency',
+              required: false,
+              source: 'moduleInput',
+            },
+            {
+              key: 'current_eac',
+              label: 'Current EAC',
+              type: 'percentage',
+              required: false,
+              source: 'moduleInput',
+            },
+            {
+              key: 'proposed_eac',
+              label: 'Proposed EAC',
+              type: 'percentage',
+              required: false,
+              source: 'moduleInput',
+            },
+            {
+              key: 'replacement_rationale',
+              label: 'Replacement Rationale',
+              type: 'textarea',
+              required: true,
+              source: 'moduleInput',
+            },
+            {
+              key: 'disadvantages',
+              label: 'Disadvantages and Risks',
+              type: 'textarea',
+              required: true,
+              source: 'moduleInput',
+            },
           ],
         },
       ],
@@ -575,27 +953,77 @@ export const DEFAULT_ROA_MODULE_CONTRACTS: RoAModuleContract[] = [
       fields: [
         { key: 'currentProvider', label: 'Current provider', type: 'string', required: true },
         { key: 'proposedProvider', label: 'Proposed provider', type: 'string', required: true },
-        { key: 'replacementRationale', label: 'Replacement rationale', type: 'string', required: true },
+        {
+          key: 'replacementRationale',
+          label: 'Replacement rationale',
+          type: 'string',
+          required: true,
+        },
         { key: 'disadvantages', label: 'Disadvantages', type: 'string', required: true },
       ],
     },
     validation: {
-      requiredFields: ['current_provider', 'current_value', 'proposed_provider', 'replacement_rationale', 'disadvantages'],
+      requiredFields: [
+        'current_provider',
+        'current_value',
+        'proposed_provider',
+        'replacement_rationale',
+        'disadvantages',
+      ],
       rules: [
-        { id: 'replacement_analysis_required', severity: 'blocking', message: 'Replacement advice must record benefits, costs, disadvantages and alternatives.' },
-        { id: 'penalties_reviewed', severity: 'warning', message: 'Confirm whether penalties, paybacks or out-of-market periods apply.' },
+        {
+          id: 'replacement_analysis_required',
+          severity: 'blocking',
+          message:
+            'Replacement advice must record benefits, costs, disadvantages and alternatives.',
+        },
+        {
+          id: 'penalties_reviewed',
+          severity: 'warning',
+          message: 'Confirm whether penalties, paybacks or out-of-market periods apply.',
+        },
       ],
     },
     evidence: {
       requirements: [
-        { id: 'current_statement', label: 'Current investment statement', type: 'policy_schedule', required: true, acceptedMimeTypes: ['application/pdf'] },
-        { id: 'replacement_analysis', label: 'Replacement analysis', type: 'comparison', required: true, acceptedMimeTypes: ['application/pdf'] },
+        {
+          id: 'current_statement',
+          label: 'Current investment statement',
+          type: 'policy_schedule',
+          required: true,
+          acceptedMimeTypes: ['application/pdf'],
+        },
+        {
+          id: 'replacement_analysis',
+          label: 'Replacement analysis',
+          type: 'comparison',
+          required: true,
+          acceptedMimeTypes: ['application/pdf'],
+        },
       ],
     },
     documentSections: [
-      { id: 'current_position', title: 'Current Investment Position', purpose: 'Summarise the existing investment.', order: 10, required: true },
-      { id: 'replacement_analysis', title: 'Replacement Analysis', purpose: 'Compare current and proposed investments.', order: 20, required: true },
-      { id: 'recommendation', title: 'Recommendation and Rationale', purpose: 'Explain why replacement is suitable.', order: 30, required: true },
+      {
+        id: 'current_position',
+        title: 'Current Investment Position',
+        purpose: 'Summarise the existing investment.',
+        order: 10,
+        required: true,
+      },
+      {
+        id: 'replacement_analysis',
+        title: 'Replacement Analysis',
+        purpose: 'Compare current and proposed investments.',
+        order: 20,
+        required: true,
+      },
+      {
+        id: 'recommendation',
+        title: 'Recommendation and Rationale',
+        purpose: 'Explain why replacement is suitable.',
+        order: 30,
+        required: true,
+      },
     ],
     disclosures: [
       'Replacement may trigger fees, penalties, tax consequences or temporary out-of-market exposure.',
@@ -607,13 +1035,25 @@ export const DEFAULT_ROA_MODULE_CONTRACTS: RoAModuleContract[] = [
   systemContract({
     id: 'new_retirement_proposal',
     title: 'New Retirement Proposal',
-    description: 'Recommends a new retirement product or contribution strategy based on retirement objectives and affordability.',
+    description:
+      'Recommends a new retirement product or contribution strategy based on retirement objectives and affordability.',
     category: 'Retirement',
     input: {
       sources: [
         ...clientSnapshotSources,
-        { id: 'retirement_fna', label: 'Retirement FNA', type: 'fna', required: false, sourcePath: 'fnaSummaries.retirement' },
-        { id: 'retirement_quote', label: 'Retirement product quote', type: 'documentUpload', required: true },
+        {
+          id: 'retirement_fna',
+          label: 'Retirement FNA',
+          type: 'fna',
+          required: false,
+          sourcePath: 'fnaSummaries.retirement',
+        },
+        {
+          id: 'retirement_quote',
+          label: 'Retirement product quote',
+          type: 'documentUpload',
+          required: true,
+        },
       ],
       gatheringMethods: ['clientProfile', 'fna', 'typed', 'upload'],
     },
@@ -623,13 +1063,62 @@ export const DEFAULT_ROA_MODULE_CONTRACTS: RoAModuleContract[] = [
           id: 'retirement',
           title: 'Retirement Proposal',
           fields: [
-            { key: 'product_type', label: 'Product Type', type: 'select', required: true, source: 'moduleInput', options: ['Retirement Annuity', 'Preservation Fund', 'Living Annuity', 'Life Annuity', 'Other'] },
-            { key: 'provider', label: 'Provider', type: 'text', required: true, source: 'moduleInput' },
-            { key: 'monthly_contribution', label: 'Monthly Contribution', type: 'currency', required: false, source: 'moduleInput' },
-            { key: 'lump_sum', label: 'Lump Sum', type: 'currency', required: false, source: 'moduleInput' },
-            { key: 'retirement_age', label: 'Target Retirement Age', type: 'number', required: true, source: 'moduleInput' },
-            { key: 'investment_strategy', label: 'Investment Strategy', type: 'textarea', required: true, source: 'moduleInput' },
-            { key: 'rationale', label: 'Rationale', type: 'textarea', required: true, source: 'moduleInput' },
+            {
+              key: 'product_type',
+              label: 'Product Type',
+              type: 'select',
+              required: true,
+              source: 'moduleInput',
+              options: [
+                'Retirement Annuity',
+                'Preservation Fund',
+                'Living Annuity',
+                'Life Annuity',
+                'Other',
+              ],
+            },
+            {
+              key: 'provider',
+              label: 'Provider',
+              type: 'text',
+              required: true,
+              source: 'moduleInput',
+            },
+            {
+              key: 'monthly_contribution',
+              label: 'Monthly Contribution',
+              type: 'currency',
+              required: false,
+              source: 'moduleInput',
+            },
+            {
+              key: 'lump_sum',
+              label: 'Lump Sum',
+              type: 'currency',
+              required: false,
+              source: 'moduleInput',
+            },
+            {
+              key: 'retirement_age',
+              label: 'Target Retirement Age',
+              type: 'number',
+              required: true,
+              source: 'moduleInput',
+            },
+            {
+              key: 'investment_strategy',
+              label: 'Investment Strategy',
+              type: 'textarea',
+              required: true,
+              source: 'moduleInput',
+            },
+            {
+              key: 'rationale',
+              label: 'Rationale',
+              type: 'textarea',
+              required: true,
+              source: 'moduleInput',
+            },
           ],
         },
       ],
@@ -644,22 +1133,60 @@ export const DEFAULT_ROA_MODULE_CONTRACTS: RoAModuleContract[] = [
       ],
     },
     validation: {
-      requiredFields: ['product_type', 'provider', 'retirement_age', 'investment_strategy', 'rationale'],
+      requiredFields: [
+        'product_type',
+        'provider',
+        'retirement_age',
+        'investment_strategy',
+        'rationale',
+      ],
       rules: [
-        { id: 'contribution_or_lump_sum', severity: 'blocking', message: 'Record either a recurring contribution or lump sum amount.' },
-        { id: 'retirement_objective', severity: 'blocking', message: 'Retirement objective and target retirement age must be documented.' },
+        {
+          id: 'contribution_or_lump_sum',
+          severity: 'blocking',
+          message: 'Record either a recurring contribution or lump sum amount.',
+        },
+        {
+          id: 'retirement_objective',
+          severity: 'blocking',
+          message: 'Retirement objective and target retirement age must be documented.',
+        },
       ],
     },
     evidence: {
       requirements: [
-        { id: 'retirement_quote', label: 'Retirement product quote', type: 'quote', required: true, acceptedMimeTypes: ['application/pdf'] },
+        {
+          id: 'retirement_quote',
+          label: 'Retirement product quote',
+          type: 'quote',
+          required: true,
+          acceptedMimeTypes: ['application/pdf'],
+        },
         { id: 'retirement_fna', label: 'Retirement FNA', type: 'fna', required: false },
       ],
     },
     documentSections: [
-      { id: 'retirement_need', title: 'Retirement Need', purpose: 'Summarise retirement objective and shortfall.', order: 10, required: true },
-      { id: 'recommendation', title: 'Retirement Recommendation', purpose: 'Explain product, provider and contribution strategy.', order: 20, required: true },
-      { id: 'tax_fees_risks', title: 'Tax, Fees and Risks', purpose: 'Disclose tax treatment, Regulation 28, fees and investment risk.', order: 30, required: true },
+      {
+        id: 'retirement_need',
+        title: 'Retirement Need',
+        purpose: 'Summarise retirement objective and shortfall.',
+        order: 10,
+        required: true,
+      },
+      {
+        id: 'recommendation',
+        title: 'Retirement Recommendation',
+        purpose: 'Explain product, provider and contribution strategy.',
+        order: 20,
+        required: true,
+      },
+      {
+        id: 'tax_fees_risks',
+        title: 'Tax, Fees and Risks',
+        purpose: 'Disclose tax treatment, Regulation 28, fees and investment risk.',
+        order: 30,
+        required: true,
+      },
     ],
     disclosures: [
       'Retirement products are subject to retirement fund rules, Regulation 28 and applicable tax legislation.',
@@ -670,13 +1197,25 @@ export const DEFAULT_ROA_MODULE_CONTRACTS: RoAModuleContract[] = [
   systemContract({
     id: 'section_14_transfer_proposal',
     title: 'Section 14 Proposal',
-    description: 'Documents a Section 14 retirement fund transfer, including ceding and receiving funds, costs, risks and process.',
+    description:
+      'Documents a Section 14 retirement fund transfer, including ceding and receiving funds, costs, risks and process.',
     category: 'Retirement',
     input: {
       sources: [
         ...clientSnapshotSources,
-        { id: 'current_retirement_policy', label: 'Current retirement policy', type: 'policyRegister', required: true, sourcePath: 'clientSnapshot.policies' },
-        { id: 'section_14_docs', label: 'Section 14 transfer documents', type: 'documentUpload', required: true },
+        {
+          id: 'current_retirement_policy',
+          label: 'Current retirement policy',
+          type: 'policyRegister',
+          required: true,
+          sourcePath: 'clientSnapshot.policies',
+        },
+        {
+          id: 'section_14_docs',
+          label: 'Section 14 transfer documents',
+          type: 'documentUpload',
+          required: true,
+        },
       ],
       gatheringMethods: ['clientProfile', 'policyRegister', 'typed', 'upload'],
     },
@@ -686,14 +1225,64 @@ export const DEFAULT_ROA_MODULE_CONTRACTS: RoAModuleContract[] = [
           id: 'section_14',
           title: 'Section 14 Transfer',
           fields: [
-            { key: 'ceding_provider', label: 'Ceding Provider/Fund', type: 'text', required: true, source: 'policyRegister' },
-            { key: 'receiving_provider', label: 'Receiving Provider/Fund', type: 'text', required: true, source: 'moduleInput' },
-            { key: 'transfer_amount', label: 'Transfer Amount', type: 'currency', required: true, source: 'moduleInput' },
-            { key: 'current_eac', label: 'Current EAC', type: 'percentage', required: false, source: 'moduleInput' },
-            { key: 'receiving_eac', label: 'Receiving EAC', type: 'percentage', required: false, source: 'moduleInput' },
-            { key: 'penalties', label: 'Penalties, Paybacks or Adjustments', type: 'textarea', required: false, source: 'moduleInput' },
-            { key: 'rationale', label: 'Transfer Rationale', type: 'textarea', required: true, source: 'moduleInput' },
-            { key: 'process_notes', label: 'Process Notes', type: 'textarea', required: false, source: 'moduleInput', default: 'Section 14 transfers can take several weeks and may include a short out-of-market period.' },
+            {
+              key: 'ceding_provider',
+              label: 'Ceding Provider/Fund',
+              type: 'text',
+              required: true,
+              source: 'policyRegister',
+            },
+            {
+              key: 'receiving_provider',
+              label: 'Receiving Provider/Fund',
+              type: 'text',
+              required: true,
+              source: 'moduleInput',
+            },
+            {
+              key: 'transfer_amount',
+              label: 'Transfer Amount',
+              type: 'currency',
+              required: true,
+              source: 'moduleInput',
+            },
+            {
+              key: 'current_eac',
+              label: 'Current EAC',
+              type: 'percentage',
+              required: false,
+              source: 'moduleInput',
+            },
+            {
+              key: 'receiving_eac',
+              label: 'Receiving EAC',
+              type: 'percentage',
+              required: false,
+              source: 'moduleInput',
+            },
+            {
+              key: 'penalties',
+              label: 'Penalties, Paybacks or Adjustments',
+              type: 'textarea',
+              required: false,
+              source: 'moduleInput',
+            },
+            {
+              key: 'rationale',
+              label: 'Transfer Rationale',
+              type: 'textarea',
+              required: true,
+              source: 'moduleInput',
+            },
+            {
+              key: 'process_notes',
+              label: 'Process Notes',
+              type: 'textarea',
+              required: false,
+              source: 'moduleInput',
+              default:
+                'Section 14 transfers can take several weeks and may include a short out-of-market period.',
+            },
           ],
         },
       ],
@@ -710,20 +1299,58 @@ export const DEFAULT_ROA_MODULE_CONTRACTS: RoAModuleContract[] = [
     validation: {
       requiredFields: ['ceding_provider', 'receiving_provider', 'transfer_amount', 'rationale'],
       rules: [
-        { id: 'ceding_and_receiving_required', severity: 'blocking', message: 'Both ceding and receiving funds must be identified.' },
-        { id: 'transfer_process_warning', severity: 'warning', message: 'Record process timelines, possible out-of-market period and any penalties.' },
+        {
+          id: 'ceding_and_receiving_required',
+          severity: 'blocking',
+          message: 'Both ceding and receiving funds must be identified.',
+        },
+        {
+          id: 'transfer_process_warning',
+          severity: 'warning',
+          message: 'Record process timelines, possible out-of-market period and any penalties.',
+        },
       ],
     },
     evidence: {
       requirements: [
-        { id: 'current_statement', label: 'Current retirement statement', type: 'policy_schedule', required: true, acceptedMimeTypes: ['application/pdf'] },
-        { id: 'transfer_form', label: 'Section 14 transfer/application form', type: 'application', required: true, acceptedMimeTypes: ['application/pdf'] },
+        {
+          id: 'current_statement',
+          label: 'Current retirement statement',
+          type: 'policy_schedule',
+          required: true,
+          acceptedMimeTypes: ['application/pdf'],
+        },
+        {
+          id: 'transfer_form',
+          label: 'Section 14 transfer/application form',
+          type: 'application',
+          required: true,
+          acceptedMimeTypes: ['application/pdf'],
+        },
       ],
     },
     documentSections: [
-      { id: 'current_fund', title: 'Current Retirement Fund', purpose: 'Summarise the ceding fund and current position.', order: 10, required: true },
-      { id: 'receiving_fund', title: 'Receiving Fund Recommendation', purpose: 'Explain the receiving fund and investment strategy.', order: 20, required: true },
-      { id: 'transfer_considerations', title: 'Transfer Considerations', purpose: 'Record fees, risks, timelines and disadvantages.', order: 30, required: true },
+      {
+        id: 'current_fund',
+        title: 'Current Retirement Fund',
+        purpose: 'Summarise the ceding fund and current position.',
+        order: 10,
+        required: true,
+      },
+      {
+        id: 'receiving_fund',
+        title: 'Receiving Fund Recommendation',
+        purpose: 'Explain the receiving fund and investment strategy.',
+        order: 20,
+        required: true,
+      },
+      {
+        id: 'transfer_considerations',
+        title: 'Transfer Considerations',
+        purpose: 'Record fees, risks, timelines and disadvantages.',
+        order: 30,
+        required: true,
+      },
     ],
     disclosures: [
       'Section 14 transfers are subject to fund administrator and regulatory processing requirements.',
@@ -757,9 +1384,18 @@ function isAllowed<T extends string>(value: unknown, allowed: readonly T[]): val
 
 const ALLOWED_TEMPLATE_ROOTS = ['client', 'adviser', 'module', 'evidence', 'draft'] as const;
 const ALLOWED_TEMPLATE_FILTERS = ['currency', 'percentage', 'date'] as const;
-const EVIDENCE_TOKEN_PROPERTIES = ['fileName', 'label', 'type', 'source', 'sha256', 'uploadedAt'] as const;
+const EVIDENCE_TOKEN_PROPERTIES = [
+  'fileName',
+  'label',
+  'type',
+  'source',
+  'sha256',
+  'uploadedAt',
+] as const;
 
-function extractTemplateTokens(template: string): Array<{ expression: string; path: string; filter?: string }> {
+function extractTemplateTokens(
+  template: string,
+): Array<{ expression: string; path: string; filter?: string }> {
   const tokens: Array<{ expression: string; path: string; filter?: string }> = [];
   const tokenPattern = /{{\s*([a-zA-Z0-9_.-]+)(?:\s*\|\s*([a-zA-Z]+))?\s*}}/g;
   let match: RegExpExecArray | null;
@@ -785,20 +1421,28 @@ export function validateRoAModuleContract(input: unknown): RoAModuleContract {
   const title = ensureString(input.title, 'title', errors);
   const description = ensureString(input.description, 'description', errors);
   const category = ensureString(input.category, 'category', errors);
-  const status = isAllowed(input.status, ['draft', 'active', 'archived'] as const) ? input.status : 'draft';
-  const version = typeof input.version === 'number' && input.version > 0 ? Math.floor(input.version) : 1;
-  const schemaVersion = typeof input.schemaVersion === 'string' && input.schemaVersion.trim() ? input.schemaVersion.trim() : '1.0';
+  const status = isAllowed(input.status, ['draft', 'active', 'archived'] as const)
+    ? input.status
+    : 'draft';
+  const version =
+    typeof input.version === 'number' && input.version > 0 ? Math.floor(input.version) : 1;
+  const schemaVersion =
+    typeof input.schemaVersion === 'string' && input.schemaVersion.trim()
+      ? input.schemaVersion.trim()
+      : '1.0';
 
   const formSchema = isRecord(input.formSchema) ? input.formSchema : {};
   const sectionsRaw = Array.isArray(formSchema.sections) ? formSchema.sections : [];
-  if (sectionsRaw.length === 0) errors.push('formSchema.sections must include at least one section');
+  if (sectionsRaw.length === 0)
+    errors.push('formSchema.sections must include at least one section');
 
   const sections: RoAContractFormSection[] = sectionsRaw.map((sectionRaw, sectionIndex) => {
     const section = isRecord(sectionRaw) ? sectionRaw : {};
     const sectionId = ensureString(section.id, `formSchema.sections[${sectionIndex}].id`, errors);
     if (sectionId) validateId(sectionId, `formSchema.sections[${sectionIndex}].id`, errors);
     const fieldsRaw = Array.isArray(section.fields) ? section.fields : [];
-    if (fieldsRaw.length === 0) errors.push(`formSchema.sections[${sectionIndex}].fields must include at least one field`);
+    if (fieldsRaw.length === 0)
+      errors.push(`formSchema.sections[${sectionIndex}].fields must include at least one field`);
 
     return {
       id: sectionId,
@@ -818,15 +1462,27 @@ export function validateRoAModuleContract(input: unknown): RoAModuleContract {
         return {
           key: fieldKey,
           label: ensureString(field.label, `field ${fieldKey || fieldIndex} label`, errors),
-          type: (isAllowed(field.type, ROA_MODULE_CONTRACT_SCHEMA_FORMAT.allowedFieldTypes) ? field.type : 'text') as RoAContractFieldType,
+          type: (isAllowed(field.type, ROA_MODULE_CONTRACT_SCHEMA_FORMAT.allowedFieldTypes)
+            ? field.type
+            : 'text') as RoAContractFieldType,
           required: field.required === true,
-          source: (isAllowed(field.source, ROA_MODULE_CONTRACT_SCHEMA_FORMAT.allowedSourceTypes) ? field.source : 'moduleInput') as RoAContractSourceType,
+          source: (isAllowed(field.source, ROA_MODULE_CONTRACT_SCHEMA_FORMAT.allowedSourceTypes)
+            ? field.source
+            : 'moduleInput') as RoAContractSourceType,
           sourcePath: typeof field.sourcePath === 'string' ? field.sourcePath : undefined,
-          options: Array.isArray(field.options) ? field.options.filter((option): option is string => typeof option === 'string' && !!option.trim()) : undefined,
-          default: ['string', 'number', 'boolean'].includes(typeof field.default) ? field.default as string | number | boolean : undefined,
+          options: Array.isArray(field.options)
+            ? field.options.filter(
+                (option): option is string => typeof option === 'string' && !!option.trim(),
+              )
+            : undefined,
+          default: ['string', 'number', 'boolean'].includes(typeof field.default)
+            ? (field.default as string | number | boolean)
+            : undefined,
           placeholder: typeof field.placeholder === 'string' ? field.placeholder : undefined,
           helpText: typeof field.helpText === 'string' ? field.helpText : undefined,
-          validation: isRecord(field.validation) ? field.validation as RoAContractField['validation'] : undefined,
+          validation: isRecord(field.validation)
+            ? (field.validation as RoAContractField['validation'])
+            : undefined,
         };
       }),
     };
@@ -834,7 +1490,9 @@ export function validateRoAModuleContract(input: unknown): RoAModuleContract {
 
   const inputConfig = isRecord(input.input) ? input.input : {};
   const sourcesRaw = Array.isArray(inputConfig.sources) ? inputConfig.sources : [];
-  const gatheringMethodsRaw = Array.isArray(inputConfig.gatheringMethods) ? inputConfig.gatheringMethods : [];
+  const gatheringMethodsRaw = Array.isArray(inputConfig.gatheringMethods)
+    ? inputConfig.gatheringMethods
+    : [];
 
   const output = isRecord(input.output) ? input.output : {};
   const outputFieldsRaw = Array.isArray(output.fields) ? output.fields : [];
@@ -843,7 +1501,8 @@ export function validateRoAModuleContract(input: unknown): RoAModuleContract {
   }
 
   const documentSectionsRaw = Array.isArray(input.documentSections) ? input.documentSections : [];
-  if (documentSectionsRaw.length === 0) errors.push('documentSections must include at least one section');
+  if (documentSectionsRaw.length === 0)
+    errors.push('documentSections must include at least one section');
 
   if (status === 'active') {
     const moduleTokenPaths = new Set<string>();
@@ -861,9 +1520,9 @@ export function validateRoAModuleContract(input: unknown): RoAModuleContract {
     const evidenceRequirementIds = new Set(
       Array.isArray((input.evidence as JsonRecord | undefined)?.requirements)
         ? ((input.evidence as JsonRecord).requirements as unknown[])
-          .filter(isRecord)
-          .map((requirement) => typeof requirement.id === 'string' ? requirement.id.trim() : '')
-          .filter(Boolean)
+            .filter(isRecord)
+            .map((requirement) => (typeof requirement.id === 'string' ? requirement.id.trim() : ''))
+            .filter(Boolean)
         : [],
     );
     const documentSectionIds = new Set<string>();
@@ -882,30 +1541,44 @@ export function validateRoAModuleContract(input: unknown): RoAModuleContract {
       for (const token of extractTemplateTokens(template)) {
         const root = token.path.split('.')[0];
         if (!isAllowed(root, ALLOWED_TEMPLATE_ROOTS)) {
-          errors.push(`documentSections[${index}].template uses unsupported token ${token.expression}`);
+          errors.push(
+            `documentSections[${index}].template uses unsupported token ${token.expression}`,
+          );
           continue;
         }
         if (token.filter && !isAllowed(token.filter.toLowerCase(), ALLOWED_TEMPLATE_FILTERS)) {
-          errors.push(`documentSections[${index}].template uses unsupported filter ${token.filter}`);
+          errors.push(
+            `documentSections[${index}].template uses unsupported filter ${token.filter}`,
+          );
         }
         if (root === 'module' && !moduleTokenPaths.has(token.path)) {
-          errors.push(`documentSections[${index}].template uses unknown module token ${token.expression}`);
+          errors.push(
+            `documentSections[${index}].template uses unknown module token ${token.expression}`,
+          );
         }
         if (root === 'evidence') {
           const [, requirementId, property] = token.path.split('.');
-          if (!requirementId || !evidenceRequirementIds.has(requirementId) || !isAllowed(property, EVIDENCE_TOKEN_PROPERTIES)) {
-            errors.push(`documentSections[${index}].template uses unknown evidence token ${token.expression}`);
+          if (
+            !requirementId ||
+            !evidenceRequirementIds.has(requirementId) ||
+            !isAllowed(property, EVIDENCE_TOKEN_PROPERTIES)
+          ) {
+            errors.push(
+              `documentSections[${index}].template uses unknown evidence token ${token.expression}`,
+            );
           }
         }
       }
     });
 
     const compileOrderRaw = Array.isArray(input.compileOrder) ? input.compileOrder : [];
-    compileOrderRaw.filter((value): value is string => typeof value === 'string').forEach((sectionId) => {
-      if (sectionId !== 'disclosures' && !documentSectionIds.has(sectionId)) {
-        errors.push(`compileOrder references unknown document section ${sectionId}`);
-      }
-    });
+    compileOrderRaw
+      .filter((value): value is string => typeof value === 'string')
+      .forEach((sectionId) => {
+        if (sectionId !== 'disclosures' && !documentSectionIds.has(sectionId)) {
+          errors.push(`compileOrder references unknown document section ${sectionId}`);
+        }
+      });
   }
 
   const compilerHintsRaw = input.compilerHints;
@@ -948,13 +1621,16 @@ export function validateRoAModuleContract(input: unknown): RoAModuleContract {
       sources: sourcesRaw.filter(isRecord).map((source) => ({
         id: String(source.id || ''),
         label: String(source.label || ''),
-        type: (isAllowed(source.type, ROA_MODULE_CONTRACT_SCHEMA_FORMAT.allowedSourceTypes) ? source.type : 'manual') as RoAContractSourceType,
+        type: (isAllowed(source.type, ROA_MODULE_CONTRACT_SCHEMA_FORMAT.allowedSourceTypes)
+          ? source.type
+          : 'manual') as RoAContractSourceType,
         required: source.required === true,
         sourcePath: typeof source.sourcePath === 'string' ? source.sourcePath : undefined,
         description: typeof source.description === 'string' ? source.description : undefined,
       })),
-      gatheringMethods: gatheringMethodsRaw.filter((method): method is RoAModuleContract['input']['gatheringMethods'][number] =>
-        isAllowed(method, ROA_MODULE_CONTRACT_SCHEMA_FORMAT.allowedGatheringMethods),
+      gatheringMethods: gatheringMethodsRaw.filter(
+        (method): method is RoAModuleContract['input']['gatheringMethods'][number] =>
+          isAllowed(method, ROA_MODULE_CONTRACT_SCHEMA_FORMAT.allowedGatheringMethods),
       ),
     },
     formSchema: { sections },
@@ -963,36 +1639,65 @@ export function validateRoAModuleContract(input: unknown): RoAModuleContract {
       fields: outputFieldsRaw.filter(isRecord).map((field) => ({
         key: String(field.key || ''),
         label: String(field.label || ''),
-        type: isAllowed(field.type, ['string', 'number', 'boolean', 'array', 'object', 'date'] as const) ? field.type : 'string',
+        type: isAllowed(field.type, [
+          'string',
+          'number',
+          'boolean',
+          'array',
+          'object',
+          'date',
+        ] as const)
+          ? field.type
+          : 'string',
         required: field.required === true,
         description: typeof field.description === 'string' ? field.description : undefined,
       })),
     },
     validation: {
       requiredFields: Array.isArray((input.validation as JsonRecord | undefined)?.requiredFields)
-        ? ((input.validation as JsonRecord).requiredFields as unknown[]).filter((value): value is string => typeof value === 'string')
-        : sections.flatMap((section) => section.fields.filter((field) => field.required).map((field) => field.key)),
+        ? ((input.validation as JsonRecord).requiredFields as unknown[]).filter(
+            (value): value is string => typeof value === 'string',
+          )
+        : sections.flatMap((section) =>
+            section.fields.filter((field) => field.required).map((field) => field.key),
+          ),
       rules: Array.isArray((input.validation as JsonRecord | undefined)?.rules)
         ? ((input.validation as JsonRecord).rules as unknown[]).filter(isRecord).map((rule) => ({
             id: String(rule.id || ''),
-            severity: isAllowed(rule.severity, ROA_MODULE_CONTRACT_SCHEMA_FORMAT.allowedValidationSeverities) ? rule.severity : 'warning',
+            severity: isAllowed(
+              rule.severity,
+              ROA_MODULE_CONTRACT_SCHEMA_FORMAT.allowedValidationSeverities,
+            )
+              ? rule.severity
+              : 'warning',
             message: String(rule.message || ''),
-            fieldKeys: Array.isArray(rule.fieldKeys) ? rule.fieldKeys.filter((value): value is string => typeof value === 'string') : undefined,
+            fieldKeys: Array.isArray(rule.fieldKeys)
+              ? rule.fieldKeys.filter((value): value is string => typeof value === 'string')
+              : undefined,
           }))
         : [],
     },
     evidence: {
       requirements: Array.isArray((input.evidence as JsonRecord | undefined)?.requirements)
-        ? ((input.evidence as JsonRecord).requirements as unknown[]).filter(isRecord).map((requirement) => ({
-            id: String(requirement.id || ''),
-            label: String(requirement.label || ''),
-            type: isAllowed(requirement.type, ROA_MODULE_CONTRACT_SCHEMA_FORMAT.allowedEvidenceTypes) ? requirement.type : 'other',
-            required: requirement.required === true,
-            acceptedMimeTypes: Array.isArray(requirement.acceptedMimeTypes)
-              ? requirement.acceptedMimeTypes.filter((value): value is string => typeof value === 'string')
-              : undefined,
-            guidance: typeof requirement.guidance === 'string' ? requirement.guidance : undefined,
-          }))
+        ? ((input.evidence as JsonRecord).requirements as unknown[])
+            .filter(isRecord)
+            .map((requirement) => ({
+              id: String(requirement.id || ''),
+              label: String(requirement.label || ''),
+              type: isAllowed(
+                requirement.type,
+                ROA_MODULE_CONTRACT_SCHEMA_FORMAT.allowedEvidenceTypes,
+              )
+                ? requirement.type
+                : 'other',
+              required: requirement.required === true,
+              acceptedMimeTypes: Array.isArray(requirement.acceptedMimeTypes)
+                ? requirement.acceptedMimeTypes.filter(
+                    (value): value is string => typeof value === 'string',
+                  )
+                : undefined,
+              guidance: typeof requirement.guidance === 'string' ? requirement.guidance : undefined,
+            }))
         : [],
     },
     documentSections: documentSectionsRaw.filter(isRecord).map((section, index) => ({
@@ -1003,10 +1708,15 @@ export function validateRoAModuleContract(input: unknown): RoAModuleContract {
       required: section.required !== false,
       template: typeof section.template === 'string' ? section.template : '',
     })),
-    disclosures: Array.isArray(input.disclosures) ? input.disclosures.filter((value): value is string => typeof value === 'string') : [],
+    disclosures: Array.isArray(input.disclosures)
+      ? input.disclosures.filter((value): value is string => typeof value === 'string')
+      : [],
     compileOrder: Array.isArray(input.compileOrder)
       ? input.compileOrder.filter((value): value is string => typeof value === 'string')
-      : documentSectionsRaw.filter(isRecord).map((section) => String(section.id || '')).filter(Boolean),
+      : documentSectionsRaw
+          .filter(isRecord)
+          .map((section) => String(section.id || ''))
+          .filter(Boolean),
     compilerHints,
     metadata: isRecord(input.metadata) ? input.metadata : undefined,
     createdAt: typeof input.createdAt === 'string' ? input.createdAt : now,
@@ -1018,30 +1728,35 @@ export function validateRoAModuleContract(input: unknown): RoAModuleContract {
 }
 
 export function contractToLegacyModule(contract: RoAModuleContract): LegacyRoAModule {
-  const fields = contract.formSchema.sections.flatMap((section) => section.fields).map((field) => {
-    const legacyType = field.type === 'currency' || field.type === 'percentage' || field.type === 'file'
-      ? field.type === 'file' ? 'text' : 'number'
-      : field.type;
+  const fields = contract.formSchema.sections
+    .flatMap((section) => section.fields)
+    .map((field) => {
+      const legacyType =
+        field.type === 'currency' || field.type === 'percentage' || field.type === 'file'
+          ? field.type === 'file'
+            ? 'text'
+            : 'number'
+          : field.type;
 
-    return {
-      key: field.key,
-      label: field.label,
-      type: legacyType,
-      required: field.required,
-      options: field.options,
-      default: field.default,
-      placeholder: field.placeholder,
-      helpText: field.helpText,
-      validation: field.validation
-        ? {
-            minLength: field.validation.minLength,
-            maxLength: field.validation.maxLength,
-            min: field.validation.min,
-            max: field.validation.max,
-          }
-        : undefined,
-    };
-  });
+      return {
+        key: field.key,
+        label: field.label,
+        type: legacyType,
+        required: field.required,
+        options: field.options,
+        default: field.default,
+        placeholder: field.placeholder,
+        helpText: field.helpText,
+        validation: field.validation
+          ? {
+              minLength: field.validation.minLength,
+              maxLength: field.validation.maxLength,
+              min: field.validation.min,
+              max: field.validation.max,
+            }
+          : undefined,
+      };
+    });
 
   return {
     id: contract.id,

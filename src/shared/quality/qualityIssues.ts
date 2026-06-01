@@ -322,9 +322,8 @@ export function coalesceQualityIssuesByFingerprint(issues: QualityIssue[]): Qual
       continue;
     }
 
-    const latestIssue = issueTime(issue.lastSeenAt) >= issueTime(existing.lastSeenAt)
-      ? issue
-      : existing;
+    const latestIssue =
+      issueTime(issue.lastSeenAt) >= issueTime(existing.lastSeenAt) ? issue : existing;
 
     byFingerprint.set(key, {
       ...latestIssue,
@@ -336,7 +335,9 @@ export function coalesceQualityIssuesByFingerprint(issues: QualityIssue[]): Qual
     });
   }
 
-  return [...byFingerprint.values()].sort((a, b) => issueTime(b.lastSeenAt) - issueTime(a.lastSeenAt));
+  return [...byFingerprint.values()].sort(
+    (a, b) => issueTime(b.lastSeenAt) - issueTime(a.lastSeenAt),
+  );
 }
 
 export function applyQualityIssueWorkflow(
@@ -377,7 +378,10 @@ export function hasQualityIssueRecurredAfterResolution(
   return Number.isFinite(lastSeenAt) && Number.isFinite(resolvedAt) && lastSeenAt > resolvedAt;
 }
 
-export function getQualityIssueAgeHours(issue: Pick<QualityIssue, 'firstSeenAt'>, now = new Date()): number {
+export function getQualityIssueAgeHours(
+  issue: Pick<QualityIssue, 'firstSeenAt'>,
+  now = new Date(),
+): number {
   const firstSeenAt = new Date(issue.firstSeenAt).getTime();
   if (!Number.isFinite(firstSeenAt)) return 0;
   return Math.max(0, (now.getTime() - firstSeenAt) / (60 * 60 * 1000));
@@ -387,7 +391,10 @@ export function getQualityIssueResponseSlaHours(issue: Pick<QualityIssue, 'prior
   return QUALITY_ISSUE_RESPONSE_SLA_HOURS[issue.priority];
 }
 
-export function isQualityIssuePastResponseSla(issue: Pick<QualityIssue, 'firstSeenAt' | 'priority' | 'status'>, now = new Date()): boolean {
+export function isQualityIssuePastResponseSla(
+  issue: Pick<QualityIssue, 'firstSeenAt' | 'priority' | 'status'>,
+  now = new Date(),
+): boolean {
   if (issue.status === 'resolved') return false;
   return getQualityIssueAgeHours(issue, now) > getQualityIssueResponseSlaHours(issue);
 }
@@ -453,7 +460,10 @@ export function getQualityIssueAlerts(issue: QualityIssue, now = new Date()): Qu
   return alerts;
 }
 
-export function getQualityIssueAutomationAlerts(issues: QualityIssue[], now = new Date()): QualityIssueAlert[] {
+export function getQualityIssueAutomationAlerts(
+  issues: QualityIssue[],
+  now = new Date(),
+): QualityIssueAlert[] {
   return issues.flatMap((issue) => getQualityIssueAlerts(issue, now));
 }
 
@@ -461,11 +471,15 @@ export function recommendQualityIssueActions(issue: QualityIssue): string[] {
   const actions: string[] = [];
 
   if (issue.reopenedAt) {
-    actions.push('Treat this as a regression because the same fingerprint appeared again after being resolved.');
+    actions.push(
+      'Treat this as a regression because the same fingerprint appeared again after being resolved.',
+    );
   }
 
   if (isQualityIssuePastResponseSla(issue)) {
-    actions.push('Escalate ownership because this issue is past the response target for its priority.');
+    actions.push(
+      'Escalate ownership because this issue is past the response target for its priority.',
+    );
   }
 
   if (issue.category === 'security') {
@@ -474,27 +488,49 @@ export function recommendQualityIssueActions(issue: QualityIssue): string[] {
         `Create a remediation task to upgrade ${issue.packageName || 'the affected dependency'}${issue.fixVersion ? ` to ${issue.fixVersion}` : ''}.`,
       );
     } else {
-      actions.push('Record the compensating control and monitor the advisory feed until a fix is published.');
+      actions.push(
+        'Record the compensating control and monitor the advisory feed until a fix is published.',
+      );
     }
 
-    actions.push('Confirm the vulnerable package is reachable in production paths and capture any immediate exposure.');
-    actions.push('Retest with a fresh audit snapshot after the dependency change or mitigation lands.');
+    actions.push(
+      'Confirm the vulnerable package is reachable in production paths and capture any immediate exposure.',
+    );
+    actions.push(
+      'Retest with a fresh audit snapshot after the dependency change or mitigation lands.',
+    );
   } else if (issue.category === 'runtime') {
-    actions.push('Reproduce the failure path with the affected screen or request flow open in the browser or logs.');
-    actions.push('Capture the stack, user path, and environment so repeated reports collapse into one fix thread.');
+    actions.push(
+      'Reproduce the failure path with the affected screen or request flow open in the browser or logs.',
+    );
+    actions.push(
+      'Capture the stack, user path, and environment so repeated reports collapse into one fix thread.',
+    );
     actions.push('Patch the failing path, then verify the same runtime signal stops reappearing.');
   } else if (issue.category === 'configuration') {
-    actions.push('Check the relevant environment variables, secrets, and deploy-time configuration first.');
+    actions.push(
+      'Check the relevant environment variables, secrets, and deploy-time configuration first.',
+    );
     actions.push('Verify the failing config path in the current environment before changing code.');
   } else if (issue.category === 'accessibility') {
-    actions.push('Fix the affected control or page structure and retest with the same accessibility rule or scanner.');
-    actions.push('Verify the user-visible interaction still behaves correctly after the markup change.');
+    actions.push(
+      'Fix the affected control or page structure and retest with the same accessibility rule or scanner.',
+    );
+    actions.push(
+      'Verify the user-visible interaction still behaves correctly after the markup change.',
+    );
   } else if (issue.category === 'test') {
-    actions.push('Stabilize the failing test or its fixture, then rerun the focused suite before the full pass.');
-    actions.push('Check whether the failure reflects a product regression or only a brittle assertion.');
+    actions.push(
+      'Stabilize the failing test or its fixture, then rerun the focused suite before the full pass.',
+    );
+    actions.push(
+      'Check whether the failure reflects a product regression or only a brittle assertion.',
+    );
   } else {
     actions.push('Reproduce the issue on the latest code path before changing anything broad.');
-    actions.push('Land the smallest correction that removes the signal and verify with the originating feed.');
+    actions.push(
+      'Land the smallest correction that removes the signal and verify with the originating feed.',
+    );
   }
 
   if (issue.status === 'open' && !issue.ownerName) {

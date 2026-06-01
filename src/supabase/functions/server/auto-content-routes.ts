@@ -206,10 +206,13 @@ app.post('/calendar-events', async (c) => {
   try {
     const body = await c.req.json();
     if (!body.name || !body.month || !body.day || !body.articleTopic) {
-      return c.json({
-        success: false,
-        error: 'name, month, day, and articleTopic are required',
-      }, 400);
+      return c.json(
+        {
+          success: false,
+          error: 'name, month, day, and articleTopic are required',
+        },
+        400,
+      );
     }
     const event = await AutoContentService.addCalendarEvent(body);
     return c.json({ success: true, data: event });
@@ -261,7 +264,9 @@ app.post('/sources/discover-feeds', async (c) => {
     }
 
     // Basic URL validation
-    try { new URL(url); } catch {
+    try {
+      new URL(url);
+    } catch {
       return c.json({ success: false, error: 'Invalid URL format' }, 400);
     }
 
@@ -289,10 +294,13 @@ app.post('/sources', async (c) => {
   try {
     const body = await c.req.json();
     if (!body.name || !body.url || !body.pipelines?.length) {
-      return c.json({
-        success: false,
-        error: 'name, url, and pipelines are required',
-      }, 400);
+      return c.json(
+        {
+          success: false,
+          error: 'name, url, and pipelines are required',
+        },
+        400,
+      );
     }
     const source = await AutoContentService.addContentSource(body);
     return c.json({ success: true, data: source });

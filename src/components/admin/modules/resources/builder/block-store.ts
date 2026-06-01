@@ -23,13 +23,24 @@ export interface BlockDefinition {
   type: BlockType;
   label: string;
   icon: LucideIcon;
-  category: 'layout' | 'content' | 'data_entry' | 'tables' | 'signatures' | 'client_data' | 'compliance' | 'admin';
+  category:
+    | 'layout'
+    | 'content'
+    | 'data_entry'
+    | 'tables'
+    | 'signatures'
+    | 'client_data'
+    | 'compliance'
+    | 'admin';
   description?: string;
   initialData: Record<string, unknown>;
   /** Render the block on the A4 canvas (WYSIWYG preview). */
   render: (props: { block: FormBlock }) => ReactNode;
   /** Render the properties-panel editor for this block. */
-  editor: (props: { block: FormBlock; onChange: (key: string | Record<string, unknown>, value?: unknown) => void }) => ReactNode;
+  editor: (props: {
+    block: FormBlock;
+    onChange: (key: string | Record<string, unknown>, value?: unknown) => void;
+  }) => ReactNode;
 }
 
 // ============================================================================

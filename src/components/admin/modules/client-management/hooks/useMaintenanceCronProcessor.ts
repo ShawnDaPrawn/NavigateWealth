@@ -68,7 +68,9 @@ export function useMaintenanceCronProcessor(options?: {
     try {
       // Verify we have an active session before making auth-required calls
       const supabase = createClient();
-      const { data: { session } } = await supabase.auth.getSession();
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
       if (!session?.access_token) {
         // No session yet — skip this tick and wait for the next interval
         return;
@@ -81,14 +83,15 @@ export function useMaintenanceCronProcessor(options?: {
         if (!clientStatus.alreadyRanToday) {
           // Trigger the cleanup — uses the existing /clients/maintenance/cleanup
           // endpoint which the admin already has access to
-          const result = await api.post<{ success: boolean; dryRun: boolean; totalProfilesScanned: number }>(
-            '/clients/maintenance/cleanup',
-            { dryRun: false },
-          );
+          const result = await api.post<{
+            success: boolean;
+            dryRun: boolean;
+            totalProfilesScanned: number;
+          }>('/clients/maintenance/cleanup', { dryRun: false });
 
           if (result.success) {
             console.log(
-              `[MaintenanceCronProcessor] Client cleanup complete: ${result.totalProfilesScanned} profiles scanned`
+              `[MaintenanceCronProcessor] Client cleanup complete: ${result.totalProfilesScanned} profiles scanned`,
             );
             onClientCleanupRan?.();
           }
@@ -103,14 +106,15 @@ export function useMaintenanceCronProcessor(options?: {
         const kvStatus = await api.get<StatusResponse>('/kv-cleanup/status');
 
         if (!kvStatus.alreadyRanToday) {
-          const result = await api.post<{ success: boolean; dryRun: boolean; totalKeysDeleted: number }>(
-            '/kv-cleanup/run',
-            { dryRun: false },
-          );
+          const result = await api.post<{
+            success: boolean;
+            dryRun: boolean;
+            totalKeysDeleted: number;
+          }>('/kv-cleanup/run', { dryRun: false });
 
           if (result.success) {
             console.log(
-              `[MaintenanceCronProcessor] KV cleanup complete: ${result.totalKeysDeleted} stale keys deleted`
+              `[MaintenanceCronProcessor] KV cleanup complete: ${result.totalKeysDeleted} stale keys deleted`,
             );
             onKvCleanupRan?.();
           }

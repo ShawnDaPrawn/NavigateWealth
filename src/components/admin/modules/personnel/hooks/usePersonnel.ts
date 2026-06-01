@@ -1,7 +1,7 @@
 /**
  * usePersonnel Hook
  * Navigate Wealth Admin Dashboard
- * 
+ *
  * React Query hook for fetching all personnel members with filtering.
  */
 
@@ -23,13 +23,13 @@ import { personnelKeys } from '../../../../../utils/queryKeys';
 
 /**
  * Hook to fetch all personnel members with optional filtering
- * 
+ *
  * @param filters - Optional filters to apply
  * @returns React Query result with personnel data
- * 
+ *
  * @example
  * ```tsx
- * const { data: personnel = [], isLoading } = usePersonnel({ 
+ * const { data: personnel = [], isLoading } = usePersonnel({
  *   roles: ['adviser', 'paraplanner'],
  *   statuses: ['active']
  * });
@@ -49,11 +49,11 @@ export function usePersonnel(filters?: Partial<PersonnelFilters>) {
 
 /**
  * Hook to fetch a single personnel member by ID
- * 
+ *
  * @param id - Personnel ID
  * @param enabled - Whether the query should run (default: true)
  * @returns React Query result with personnel data
- * 
+ *
  * @example
  * ```tsx
  * const { data: personnel, isLoading } = usePersonnelById('123');
@@ -72,11 +72,11 @@ export function usePersonnelById(id: string, enabled: boolean = true) {
 
 /**
  * Hook to fetch clients assigned to a personnel member
- * 
+ *
  * @param personnelId - Personnel ID
  * @param enabled - Whether the query should run (default: false, must be explicitly enabled)
  * @returns React Query result with client summaries
- * 
+ *
  * @example
  * ```tsx
  * const { data: clients = [], isLoading } = usePersonnelClients(personnelId, true);
@@ -95,9 +95,9 @@ export function usePersonnelClients(personnelId: string, enabled: boolean = fals
 
 /**
  * Hook to fetch super admin profile
- * 
+ *
  * @returns React Query result with super admin profile
- * 
+ *
  * @example
  * ```tsx
  * const { data: superAdmin, isLoading } = useSuperAdmin();

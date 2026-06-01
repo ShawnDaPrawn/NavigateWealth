@@ -28,7 +28,11 @@ export function AddClientDialog({ open, onOpenChange, onClientAdded }: AddClient
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-[960px] max-h-[92vh] overflow-hidden p-0 gap-0 flex flex-col">
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="flex flex-col min-h-0 flex-1">
+        <Tabs
+          value={activeTab}
+          onValueChange={setActiveTab}
+          className="flex flex-col min-h-0 flex-1"
+        >
           {/* ── Fixed Header ─────────────────────────────── */}
           <div className="shrink-0">
             {/* Purple accent stripe */}
@@ -44,10 +48,14 @@ export function AddClientDialog({ open, onOpenChange, onClientAdded }: AddClient
                     Add New Client
                   </DialogTitle>
                   <DialogDescription className="text-sm text-gray-500 mt-0.5">
-                    Add a single client or import a batch from Excel. An application will be created for review in the Applications module.
+                    Add a single client or import a batch from Excel. An application will be created
+                    for review in the Applications module.
                   </DialogDescription>
                 </div>
-                <Badge variant="outline" className="text-[10px] font-medium text-[#6d28d9] border-[#6d28d9]/20 bg-[#6d28d9]/5 shrink-0">
+                <Badge
+                  variant="outline"
+                  className="text-[10px] font-medium text-[#6d28d9] border-[#6d28d9]/20 bg-[#6d28d9]/5 shrink-0"
+                >
                   Client Onboarding
                 </Badge>
               </div>
@@ -77,17 +85,11 @@ export function AddClientDialog({ open, onOpenChange, onClientAdded }: AddClient
           {/* ── Scrollable Content ───────────────────────── */}
           <div className="flex-1 overflow-y-auto min-h-0 bg-gray-50/40">
             <TabsContent value="single" className="mt-0 p-7 pt-6 m-0">
-              <SingleClientForm
-                onSuccess={handleSuccess}
-                onClose={() => onOpenChange(false)}
-              />
+              <SingleClientForm onSuccess={handleSuccess} onClose={() => onOpenChange(false)} />
             </TabsContent>
 
             <TabsContent value="bulk" className="mt-0 p-7 pt-6 m-0">
-              <BulkImportTab
-                onSuccess={handleSuccess}
-                onClose={() => onOpenChange(false)}
-              />
+              <BulkImportTab onSuccess={handleSuccess} onClose={() => onOpenChange(false)} />
             </TabsContent>
           </div>
         </Tabs>

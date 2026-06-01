@@ -1,7 +1,7 @@
 /**
  * Publications Module - Type Definitions
  * Navigate Wealth Admin Dashboard
- * 
+ *
  * Comprehensive type system for the Publications module including:
  * - Article types and statuses
  * - Category management types
@@ -9,7 +9,7 @@
  * - Input/Update types for CRUD operations
  * - Filter and search types
  * - Settings and configuration types
- * 
+ *
  * @module publications/types
  */
 
@@ -21,12 +21,12 @@
  * Article status enum
  * Represents the publication workflow stages
  */
-export type ArticleStatus = 
-  | 'draft'        // Initial draft state
-  | 'in_review'    // Submitted for review
-  | 'scheduled'    // Scheduled for future publication
-  | 'published'    // Currently published
-  | 'archived';    // Archived/unpublished
+export type ArticleStatus =
+  | 'draft' // Initial draft state
+  | 'in_review' // Submitted for review
+  | 'scheduled' // Scheduled for future publication
+  | 'published' // Currently published
+  | 'archived'; // Archived/unpublished
 
 /**
  * Complete article entity
@@ -35,87 +35,93 @@ export type ArticleStatus =
 export interface Article {
   /** Unique identifier */
   id: string;
-  
+
   /** Article title */
   title: string;
-  
+
   /** Optional subtitle */
   subtitle?: string | null;
-  
+
   /** URL-friendly slug */
   slug: string;
-  
+
   /** Short excerpt/summary */
   excerpt: string;
-  
+
   /** Full article content (HTML) — server field name */
   body?: string | null;
-  
+
   /** Full article content (legacy alias) */
   content?: string | null;
-  
+
   /** Foreign key to category */
   category_id: string;
-  
+
   /** Foreign key to content type */
   type_id: string;
-  
+
   /** Current publication status */
   status: ArticleStatus;
-  
+
   /** Whether article is featured */
   is_featured: boolean;
-  
+
   /** Publication timestamp (if published) */
   published_at?: string | null;
-  
+
   /** Scheduled publication timestamp */
   scheduled_for?: string | null;
-  
+
   /** Creation timestamp */
   created_at: string;
-  
+
   /** Last update timestamp */
   updated_at: string;
-  
+
   /** Optional: Populated category relation */
   category?: Category;
-  
+
   /** Optional: Populated content type relation */
   type?: ContentType;
-  
+
   /** Optional: Author information */
   author_id?: string;
   author_name?: string;
-  
+
   /** Optional: SEO metadata */
   seo_title?: string | null;
   seo_description?: string | null;
   seo_canonical_url?: string | null;
   meta_description?: string | null;
   meta_keywords?: string[] | null;
-  
+
   /** Optional: Hero/featured image */
   hero_image_url?: string | null;
   featured_image?: string | null;
-  
+
   /** Optional: Thumbnail image */
   thumbnail_image_url?: string | null;
-  
+
   /** Reading time in minutes */
   reading_time_minutes?: number;
-  
+
   /** Optional: View count */
   view_count?: number;
-  
+
   /** Last editor */
   last_edited_by?: string;
-  
+
   /** Whether to send email notifications when this article is published (used for scheduled articles) */
   notify_on_publish?: boolean;
 
   /** Optional press category for Press page display */
-  press_category?: 'company_news' | 'product_launch' | 'awards' | 'team_news' | 'industry_insights' | null;
+  press_category?:
+    | 'company_news'
+    | 'product_launch'
+    | 'awards'
+    | 'team_news'
+    | 'industry_insights'
+    | null;
 
   /** Enriched fields from server (joins) */
   category_name?: string;
@@ -129,59 +135,65 @@ export interface Article {
  */
 export interface CreateArticleInput {
   /** Optional press-page category */
-  press_category?: 'company_news' | 'product_launch' | 'awards' | 'team_news' | 'industry_insights' | null;
+  press_category?:
+    | 'company_news'
+    | 'product_launch'
+    | 'awards'
+    | 'team_news'
+    | 'industry_insights'
+    | null;
 
   /** Article title */
   title: string;
-  
+
   /** Optional subtitle */
   subtitle?: string;
-  
+
   /** URL slug (auto-generated from title if not provided) */
   slug?: string;
-  
+
   /** Short excerpt */
   excerpt: string;
-  
+
   /** Full article body (rich text) */
   body?: string;
-  
+
   /** Full content (legacy alias) */
   content?: string;
-  
+
   /** Category ID */
   category_id: string;
-  
+
   /** Content type ID */
   type_id: string;
-  
+
   /** Initial status (defaults to 'draft') */
   status?: ArticleStatus;
-  
+
   /** Featured flag */
   is_featured?: boolean;
-  
+
   /** Schedule for future publication */
   scheduled_for?: string;
-  
+
   /** SEO metadata */
   meta_description?: string;
   meta_keywords?: string[];
   seo_title?: string;
   seo_description?: string;
-  
+
   /** Featured image URL */
   featured_image?: string;
-  
+
   /** Hero image URL (displayed at article top) */
   hero_image_url?: string;
-  
+
   /** Thumbnail image URL (used in lists/cards) */
   thumbnail_image_url?: string;
-  
+
   /** Author display name */
   author_name?: string;
-  
+
   /** Estimated reading time in minutes */
   reading_time_minutes?: number;
 
@@ -195,7 +207,7 @@ export interface CreateArticleInput {
 export interface UpdateArticleInput extends Partial<CreateArticleInput> {
   /** Article ID (required) */
   id: string;
-  
+
   /** Publication timestamp (set when publishing) */
   published_at?: string;
 }
@@ -223,7 +235,13 @@ export interface ArticleFormData {
   meta_title?: string;
   meta_description?: string;
   canonical_url?: string;
-  press_category?: 'company_news' | 'product_launch' | 'awards' | 'team_news' | 'industry_insights' | null;
+  press_category?:
+    | 'company_news'
+    | 'product_launch'
+    | 'awards'
+    | 'team_news'
+    | 'industry_insights'
+    | null;
 }
 
 /**
@@ -252,31 +270,31 @@ export interface ArticleSummary {
 export interface Category {
   /** Unique identifier */
   id: string;
-  
+
   /** Category name */
   name: string;
-  
+
   /** URL-friendly slug */
   slug: string;
-  
+
   /** Optional description */
   description?: string | null;
-  
+
   /** Optional icon (emoji or icon name) */
   icon?: string | null;
-  
+
   /** Display order */
   sort_order: number;
-  
+
   /** Active/inactive flag */
   is_active: boolean;
-  
+
   /** Creation timestamp */
   created_at: string;
-  
+
   /** Last update timestamp */
   updated_at: string;
-  
+
   /** Optional: Article count */
   article_count?: number;
 }
@@ -287,19 +305,19 @@ export interface Category {
 export interface CreateCategoryInput {
   /** Category name */
   name: string;
-  
+
   /** URL slug (auto-generated if not provided) */
   slug?: string;
-  
+
   /** Description */
   description?: string;
-  
+
   /** Icon */
   icon?: string;
-  
+
   /** Sort order */
   sort_order?: number;
-  
+
   /** Active flag */
   is_active?: boolean;
 }
@@ -323,31 +341,31 @@ export interface UpdateCategoryInput extends Partial<CreateCategoryInput> {
 export interface ContentType {
   /** Unique identifier */
   id: string;
-  
+
   /** Type name */
   name: string;
-  
+
   /** URL-friendly slug */
   slug: string;
-  
+
   /** Optional description */
   description?: string | null;
-  
+
   /** Optional icon (emoji or icon name) */
   icon?: string | null;
-  
+
   /** Display order */
   sort_order: number;
-  
+
   /** Active/inactive flag */
   is_active: boolean;
-  
+
   /** Creation timestamp */
   created_at: string;
-  
+
   /** Last update timestamp */
   updated_at: string;
-  
+
   /** Optional: Article count */
   article_count?: number;
 }
@@ -358,19 +376,19 @@ export interface ContentType {
 export interface CreateContentTypeInput {
   /** Type name */
   name: string;
-  
+
   /** URL slug (auto-generated if not provided) */
   slug?: string;
-  
+
   /** Description */
   description?: string;
-  
+
   /** Icon */
   icon?: string;
-  
+
   /** Sort order */
   sort_order?: number;
-  
+
   /** Active flag */
   is_active?: boolean;
 }
@@ -394,19 +412,19 @@ export interface UpdateContentTypeInput extends Partial<CreateContentTypeInput> 
 export interface ArticleFilters {
   /** Search query */
   search?: string;
-  
+
   /** Filter by status */
   status?: ArticleStatus | 'all';
-  
+
   /** Filter by category */
   category_id?: string | 'all';
-  
+
   /** Filter by content type */
   type_id?: string | 'all';
-  
+
   /** Filter by featured */
   is_featured?: boolean;
-  
+
   /** Filter by date range */
   date_from?: string;
   date_to?: string;
@@ -415,7 +433,7 @@ export interface ArticleFilters {
 /**
  * Sort options for articles
  */
-export type ArticleSortField = 
+export type ArticleSortField =
   | 'created_at'
   | 'updated_at'
   | 'published_at'
@@ -457,7 +475,7 @@ export type NewsData = Record<NewsCategory, NewsItem[]>;
 export interface PublicationStats {
   /** Total articles */
   total: number;
-  
+
   /** By status */
   by_status: {
     draft: number;
@@ -466,16 +484,16 @@ export interface PublicationStats {
     published: number;
     archived: number;
   };
-  
+
   /** Featured articles */
   featured: number;
-  
+
   /** Articles by category */
   by_category: Record<string, number>;
-  
+
   /** Articles by type */
   by_type: Record<string, number>;
-  
+
   /** Recent activity */
   recent_published: number;
   recent_updated: number;
@@ -491,22 +509,22 @@ export interface PublicationStats {
 export interface PublicationsSettings {
   /** Default article status */
   default_status: ArticleStatus;
-  
+
   /** Auto-generate slugs */
   auto_generate_slug: boolean;
-  
+
   /** Require approval before publishing */
   require_approval: boolean;
-  
+
   /** Enable scheduling */
   enable_scheduling: boolean;
-  
+
   /** Default category */
   default_category_id?: string;
-  
+
   /** Default content type */
   default_type_id?: string;
-  
+
   /** SEO settings */
   seo_enabled: boolean;
   default_meta_keywords?: string[];
@@ -522,13 +540,13 @@ export interface PublicationsSettings {
 export interface InitializationStatus {
   /** Whether publications is initialized */
   is_initialized: boolean;
-  
+
   /** Has categories */
   has_categories: boolean;
-  
+
   /** Has content types */
   has_types: boolean;
-  
+
   /** Optional: Default data created */
   defaults_created?: boolean;
 }
@@ -539,10 +557,10 @@ export interface InitializationStatus {
 export interface InitializePublicationsInput {
   /** Create default categories */
   create_default_categories?: boolean;
-  
+
   /** Create default content types */
   create_default_types?: boolean;
-  
+
   /** Sample articles */
   create_sample_articles?: boolean;
 }
@@ -557,7 +575,7 @@ export interface InitializePublicationsInput {
 export interface ReorderUpdate {
   /** Entity ID */
   id: string;
-  
+
   /** New sort order */
   sort_order: number;
 }
@@ -572,13 +590,13 @@ export interface ReorderUpdate {
 export interface ApiResponse<T> {
   /** Response data */
   data: T;
-  
+
   /** Success flag */
   success: boolean;
-  
+
   /** Optional error message */
   error?: string;
-  
+
   /** Optional metadata */
   meta?: {
     total?: number;
@@ -593,7 +611,7 @@ export interface ApiResponse<T> {
 export interface PaginatedResponse<T> {
   /** Data items */
   data: T[];
-  
+
   /** Pagination metadata */
   meta: {
     total: number;
@@ -615,10 +633,10 @@ export interface PaginatedResponse<T> {
 export interface ValidationResult {
   /** Is valid */
   valid: boolean;
-  
+
   /** Errors by field */
   errors: Record<string, string>;
-  
+
   /** Warning messages */
   warnings?: string[];
 }
@@ -848,7 +866,11 @@ export interface GenerateArticleResult {
 // AUTO CONTENT PIPELINE TYPES (Phase 5 — Automation)
 // ============================================================================
 
-export type PipelineId = 'market_commentary' | 'regulatory_monitor' | 'news_commentary' | 'calendar_content';
+export type PipelineId =
+  | 'market_commentary'
+  | 'regulatory_monitor'
+  | 'news_commentary'
+  | 'calendar_content';
 
 export interface PipelineConfig {
   id: PipelineId;
@@ -933,7 +955,18 @@ export interface ContentSource {
   updated_at: string;
 }
 
-export type CreateContentSourceInput = Omit<ContentSource, 'id' | 'lastCheckedAt' | 'articlesGeneratedToday' | 'articlesGeneratedThisWeek' | 'dailyResetDate' | 'weeklyResetDate' | 'totalGenerated' | 'created_at' | 'updated_at'>;
+export type CreateContentSourceInput = Omit<
+  ContentSource,
+  | 'id'
+  | 'lastCheckedAt'
+  | 'articlesGeneratedToday'
+  | 'articlesGeneratedThisWeek'
+  | 'dailyResetDate'
+  | 'weeklyResetDate'
+  | 'totalGenerated'
+  | 'created_at'
+  | 'updated_at'
+>;
 
 /**
  * Feed discovered from a webpage URL via auto-discovery
@@ -1056,7 +1089,11 @@ export type ArticleEmailDeliveryStatus =
   | 'failed_retryable'
   | 'failed_terminal';
 export type ArticleEmailTrackingSource = 'publish' | 'reshare';
-export type ArticleNotificationJobStatus = 'queued' | 'processing' | 'completed' | 'completed_with_failures';
+export type ArticleNotificationJobStatus =
+  | 'queued'
+  | 'processing'
+  | 'completed'
+  | 'completed_with_failures';
 export type ArticleNotificationCampaignStatus =
   | ArticleNotificationJobStatus
   | 'no_recipients'

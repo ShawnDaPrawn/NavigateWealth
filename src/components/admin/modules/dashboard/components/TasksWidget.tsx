@@ -8,11 +8,11 @@ import { useDashboardData } from '../hooks';
 import { getPriorityLabel, getPriorityVariant, isTaskOverdue, formatDate } from '../utils';
 import type { TasksWidgetProps } from '../types';
 
-export function TasksWidget({ 
-  onNewTask, 
-  onModuleChange, 
+export function TasksWidget({
+  onNewTask,
+  onModuleChange,
   onViewTask,
-  maxTasks = 5 
+  maxTasks = 5,
 }: TasksWidgetProps) {
   const { tasks, loading } = useDashboardData();
 
@@ -46,8 +46,11 @@ export function TasksWidget({
       <CardContent className="flex-1">
         {loading ? (
           <div className="space-y-3">
-            {[1, 2, 3].map(i => (
-              <div key={i} className="flex flex-col sm:flex-row sm:items-center justify-between p-3 rounded-lg border border-border">
+            {[1, 2, 3].map((i) => (
+              <div
+                key={i}
+                className="flex flex-col sm:flex-row sm:items-center justify-between p-3 rounded-lg border border-border"
+              >
                 <div className="flex items-start space-x-3 mb-2 sm:mb-0">
                   <Skeleton className="h-8 w-8 rounded-full flex-shrink-0" />
                   <div className="space-y-1.5">
@@ -74,20 +77,26 @@ export function TasksWidget({
           <div className="space-y-4">
             {displayTasks.map((task) => {
               const overdue = isTaskOverdue(task);
-              
+
               return (
-                <div 
-                  key={task.id} 
+                <div
+                  key={task.id}
                   className={`flex flex-col sm:flex-row sm:items-center justify-between p-3 rounded-lg border bg-card hover:bg-accent/50 transition-colors cursor-pointer ${
                     overdue ? 'border-red-200 bg-red-50/30' : ''
                   }`}
                   onClick={() => onViewTask?.(task.id)}
                 >
                   <div className="flex items-start space-x-3 mb-2 sm:mb-0">
-                    <div className={`p-2 rounded-full flex-shrink-0 mt-0.5 ${
-                      overdue ? 'bg-red-100 text-red-600' : 'bg-primary/10 text-primary'
-                    }`}>
-                      {overdue ? <AlertTriangle className="h-4 w-4" /> : <CheckSquare className="h-4 w-4" />}
+                    <div
+                      className={`p-2 rounded-full flex-shrink-0 mt-0.5 ${
+                        overdue ? 'bg-red-100 text-red-600' : 'bg-primary/10 text-primary'
+                      }`}
+                    >
+                      {overdue ? (
+                        <AlertTriangle className="h-4 w-4" />
+                      ) : (
+                        <CheckSquare className="h-4 w-4" />
+                      )}
                     </div>
                     <div>
                       <div className="font-medium text-sm text-gray-900 line-clamp-1">
@@ -98,14 +107,16 @@ export function TasksWidget({
                       </div>
                     </div>
                   </div>
-                  
+
                   <div className="flex items-center justify-between sm:justify-end space-x-3 w-full sm:w-auto">
                     <Badge variant={getPriorityVariant(task.priority)}>
                       {getPriorityLabel(task.priority)}
                     </Badge>
-                    <div className={`text-xs flex items-center whitespace-nowrap ${
-                      overdue ? 'text-red-600 font-medium' : 'text-muted-foreground'
-                    }`}>
+                    <div
+                      className={`text-xs flex items-center whitespace-nowrap ${
+                        overdue ? 'text-red-600 font-medium' : 'text-muted-foreground'
+                      }`}
+                    >
                       <Clock className="h-3 w-3 mr-1" />
                       {overdue ? 'Overdue' : 'Today'}
                     </div>

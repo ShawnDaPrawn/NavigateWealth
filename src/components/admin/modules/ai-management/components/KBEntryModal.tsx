@@ -10,7 +10,11 @@
 import React, { useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import {
-  Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
   DialogDescription,
 } from '../../../../ui/dialog';
 import { Input } from '../../../../ui/input';
@@ -19,13 +23,23 @@ import { Textarea } from '../../../../ui/textarea';
 import { Button } from '../../../../ui/button';
 import { Badge } from '../../../../ui/badge';
 import {
-  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
 } from '../../../../ui/select';
 import { Loader2 } from 'lucide-react';
 import { cn } from '../../../../ui/utils';
 import { KB_ENTRY_TYPE_CONFIG, KB_DEFAULT_CATEGORIES } from '../constants';
 import { useAgents } from '../hooks';
-import type { KBEntry, KBEntryType, KBEntryStatus, CreateKBEntryInput, UpdateKBEntryInput } from '../types';
+import type {
+  KBEntry,
+  KBEntryType,
+  KBEntryStatus,
+  CreateKBEntryInput,
+  UpdateKBEntryInput,
+} from '../types';
 
 interface KBEntryModalProps {
   open: boolean;
@@ -48,11 +62,24 @@ interface FormValues {
   priority: number;
 }
 
-export function KBEntryModal({ open, onOpenChange, entry, onSubmit, isSubmitting }: KBEntryModalProps) {
+export function KBEntryModal({
+  open,
+  onOpenChange,
+  entry,
+  onSubmit,
+  isSubmitting,
+}: KBEntryModalProps) {
   const isEditing = !!entry;
   const { data: agents } = useAgents();
 
-  const { register, handleSubmit, watch, setValue, reset, formState: { errors } } = useForm<FormValues>({
+  const {
+    register,
+    handleSubmit,
+    watch,
+    setValue,
+    reset,
+    formState: { errors },
+  } = useForm<FormValues>({
     defaultValues: {
       title: '',
       type: 'article',
@@ -103,17 +130,21 @@ export function KBEntryModal({ open, onOpenChange, entry, onSubmit, isSubmitting
   const onFormSubmit = (values: FormValues) => {
     const tags = values.tags
       .split(',')
-      .map(t => t.trim())
+      .map((t) => t.trim())
       .filter(Boolean);
 
-    const agentScope = values.agentScope === 'all'
-      ? 'all' as const
-      : values.agentScope.split(',').map(s => s.trim()).filter(Boolean);
+    const agentScope =
+      values.agentScope === 'all'
+        ? ('all' as const)
+        : values.agentScope
+            .split(',')
+            .map((s) => s.trim())
+            .filter(Boolean);
 
     const data: CreateKBEntryInput = {
       title: values.title,
       type: values.type,
-      content: values.content || (values.type === 'qa' ? (values.answer || '') : ''),
+      content: values.content || (values.type === 'qa' ? values.answer || '' : ''),
       question: values.type === 'qa' ? values.question : undefined,
       answer: values.type === 'qa' ? values.answer : undefined,
       category: values.category,
@@ -134,8 +165,7 @@ export function KBEntryModal({ open, onOpenChange, entry, onSubmit, isSubmitting
           <DialogDescription>
             {isEditing
               ? 'Update the content entry below. Changes take effect immediately for active entries.'
-              : 'Add structured content for AI agents to draw from during conversations.'
-            }
+              : 'Add structured content for AI agents to draw from during conversations.'}
           </DialogDescription>
         </DialogHeader>
 
@@ -148,9 +178,7 @@ export function KBEntryModal({ open, onOpenChange, entry, onSubmit, isSubmitting
               {...register('title', { required: 'Title is required' })}
               placeholder="e.g. Tax-Free Savings Account Limits"
             />
-            {errors.title && (
-              <p className="text-xs text-red-600">{errors.title.message}</p>
-            )}
+            {errors.title && <p className="text-xs text-red-600">{errors.title.message}</p>}
           </div>
 
           {/* Type & Status row */}
@@ -165,7 +193,7 @@ export function KBEntryModal({ open, onOpenChange, entry, onSubmit, isSubmitting
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  {(Object.keys(KB_ENTRY_TYPE_CONFIG) as KBEntryType[]).map(type => (
+                  {(Object.keys(KB_ENTRY_TYPE_CONFIG) as KBEntryType[]).map((type) => (
                     <SelectItem key={type} value={type}>
                       <span className="flex items-center gap-2">
                         <Badge className={cn('text-[10px]', KB_ENTRY_TYPE_CONFIG[type].badgeClass)}>
@@ -207,7 +235,8 @@ export function KBEntryModal({ open, onOpenChange, entry, onSubmit, isSubmitting
                 <Input
                   id="kb-question"
                   {...register('question', {
-                    validate: (v) => watchType !== 'qa' || !!v || 'Question is required for Q&A type'
+                    validate: (v) =>
+                      watchType !== 'qa' || !!v || 'Question is required for Q&A type',
                   })}
                   placeholder="e.g. What is the annual TFSA contribution limit?"
                 />
@@ -220,14 +249,12 @@ export function KBEntryModal({ open, onOpenChange, entry, onSubmit, isSubmitting
                 <Textarea
                   id="kb-answer"
                   {...register('answer', {
-                    validate: (v) => watchType !== 'qa' || !!v || 'Answer is required for Q&A type'
+                    validate: (v) => watchType !== 'qa' || !!v || 'Answer is required for Q&A type',
                   })}
                   placeholder="The annual TFSA contribution limit is R36,000 per tax year..."
                   rows={4}
                 />
-                {errors.answer && (
-                  <p className="text-xs text-red-600">{errors.answer.message}</p>
-                )}
+                {errors.answer && <p className="text-xs text-red-600">{errors.answer.message}</p>}
               </div>
             </div>
           )}
@@ -240,7 +267,7 @@ export function KBEntryModal({ open, onOpenChange, entry, onSubmit, isSubmitting
             <Textarea
               id="kb-content"
               {...register('content', {
-                required: watchType !== 'qa' ? 'Content is required' : false
+                required: watchType !== 'qa' ? 'Content is required' : false,
               })}
               placeholder={
                 watchType === 'qa'
@@ -250,25 +277,22 @@ export function KBEntryModal({ open, onOpenChange, entry, onSubmit, isSubmitting
               rows={watchType === 'qa' ? 3 : 8}
               className="font-mono text-sm"
             />
-            {errors.content && (
-              <p className="text-xs text-red-600">{errors.content.message}</p>
-            )}
+            {errors.content && <p className="text-xs text-red-600">{errors.content.message}</p>}
           </div>
 
           {/* Category & Priority row */}
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-1.5">
               <Label>Category</Label>
-              <Select
-                value={watch('category')}
-                onValueChange={(v) => setValue('category', v)}
-              >
+              <Select value={watch('category')} onValueChange={(v) => setValue('category', v)}>
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  {KB_DEFAULT_CATEGORIES.map(cat => (
-                    <SelectItem key={cat} value={cat}>{cat}</SelectItem>
+                  {KB_DEFAULT_CATEGORIES.map((cat) => (
+                    <SelectItem key={cat} value={cat}>
+                      {cat}
+                    </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
@@ -318,9 +342,15 @@ export function KBEntryModal({ open, onOpenChange, entry, onSubmit, isSubmitting
             </Select>
             {watch('agentScope') !== 'all' && (
               <div className="flex flex-wrap gap-1.5 mt-2">
-                {agents?.map(agent => {
+                {agents?.map((agent) => {
                   const currentScope = watch('agentScope');
-                  const selectedIds = currentScope === 'all' ? [] : currentScope.split(',').map(s => s.trim()).filter(Boolean);
+                  const selectedIds =
+                    currentScope === 'all'
+                      ? []
+                      : currentScope
+                          .split(',')
+                          .map((s) => s.trim())
+                          .filter(Boolean);
                   const isSelected = selectedIds.includes(agent.id);
 
                   return (
@@ -329,7 +359,7 @@ export function KBEntryModal({ open, onOpenChange, entry, onSubmit, isSubmitting
                       type="button"
                       onClick={() => {
                         const updated = isSelected
-                          ? selectedIds.filter(id => id !== agent.id)
+                          ? selectedIds.filter((id) => id !== agent.id)
                           : [...selectedIds, agent.id];
                         setValue('agentScope', updated.join(', '));
                       }}
@@ -337,7 +367,7 @@ export function KBEntryModal({ open, onOpenChange, entry, onSubmit, isSubmitting
                         'text-xs px-2.5 py-1 rounded-full border transition-colors',
                         isSelected
                           ? 'bg-purple-100 border-purple-300 text-purple-700'
-                          : 'bg-gray-50 border-gray-200 text-gray-600 hover:bg-gray-100'
+                          : 'bg-gray-50 border-gray-200 text-gray-600 hover:bg-gray-100',
                       )}
                     >
                       {agent.name}
@@ -352,7 +382,11 @@ export function KBEntryModal({ open, onOpenChange, entry, onSubmit, isSubmitting
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
               Cancel
             </Button>
-            <Button type="submit" disabled={isSubmitting} className="gap-2 bg-purple-600 hover:bg-purple-700">
+            <Button
+              type="submit"
+              disabled={isSubmitting}
+              className="gap-2 bg-purple-600 hover:bg-purple-700"
+            >
               {isSubmitting && <Loader2 className="h-4 w-4 animate-spin" />}
               {isEditing ? 'Save Changes' : 'Create Entry'}
             </Button>

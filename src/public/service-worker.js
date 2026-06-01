@@ -7,7 +7,7 @@ const ASSETS_TO_CACHE = [
   '/favicon-192x192.png',
   '/favicon-512x512.png',
   '/apple-touch-icon.png',
-  '/robots.txt'
+  '/robots.txt',
 ];
 
 // Install: Cache static core assets
@@ -15,7 +15,7 @@ self.addEventListener('install', (event) => {
   event.waitUntil(
     caches.open(CACHE_NAME).then((cache) => {
       return cache.addAll(ASSETS_TO_CACHE);
-    })
+    }),
   );
   self.skipWaiting();
 });
@@ -29,9 +29,9 @@ self.addEventListener('activate', (event) => {
           if (cacheName !== CACHE_NAME) {
             return caches.delete(cacheName);
           }
-        })
+        }),
       );
-    })
+    }),
   );
   self.clients.claim();
 });
@@ -53,41 +53,38 @@ self.addEventListener('fetch', (event) => {
   // 2. HTML / Navigation (Network First, fallback to cache, fallback to /index.html)
   if (event.request.mode === 'navigate') {
     event.respondWith(
-      fetch(event.request)
-        .catch(() => {
-          return caches.match(event.request)
-            .then((response) => {
-              if (response) {
-                return response;
-              }
-              // Fallback to /index.html for SPA offline support
-              return caches.match('/');
-            });
-        })
+      fetch(event.request).catch(() => {
+        return caches.match(event.request).then((response) => {
+          if (response) {
+            return response;
+          }
+          // Fallback to /index.html for SPA offline support
+          return caches.match('/');
+        });
+      }),
     );
     return;
   }
 
   // 3. Static Assets (Cache First, fallback to network)
   // JS, CSS, Images, Fonts
-  if (
-    url.pathname.match(/\.(js|css|png|jpg|jpeg|svg|ico|json|woff|woff2|ttf|eot)$/)
-  ) {
+  if (url.pathname.match(/\.(js|css|png|jpg|jpeg|svg|ico|json|woff|woff2|ttf|eot)$/)) {
     event.respondWith(
       caches.match(event.request).then((response) => {
-        return response || fetch(event.request).then((networkResponse) => {
-          return caches.open(CACHE_NAME).then((cache) => {
-            cache.put(event.request, networkResponse.clone());
-            return networkResponse;
-          });
-        });
-      })
+        return (
+          response ||
+          fetch(event.request).then((networkResponse) => {
+            return caches.open(CACHE_NAME).then((cache) => {
+              cache.put(event.request, networkResponse.clone());
+              return networkResponse;
+            });
+          })
+        );
+      }),
     );
     return;
   }
 
   // Default: Network First
-  event.respondWith(
-    fetch(event.request).catch(() => caches.match(event.request))
-  );
+  event.respondWith(fetch(event.request).catch(() => caches.match(event.request)));
 });

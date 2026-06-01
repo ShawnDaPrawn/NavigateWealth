@@ -4,16 +4,7 @@ import { Button } from '../../../ui/button';
 import { Card, CardContent } from '../../../ui/card';
 import { Badge } from '../../../ui/badge';
 import { Skeleton } from '../../../ui/skeleton';
-import {
-  Plus,
-  Users,
-  UserCheck,
-  UserX,
-  Clock,
-  Shield,
-  ChevronDown,
-  ChevronUp,
-} from 'lucide-react';
+import { Plus, Users, UserCheck, UserX, Clock, Shield, ChevronDown, ChevronUp } from 'lucide-react';
 import { cn } from '../../../ui/utils';
 import { Personnel, UserRole, type SuperAdminProfile } from './types';
 import type { InviteUserFormValues } from './schema';
@@ -27,7 +18,15 @@ import { PersonnelDrawer } from './components/drawer/PersonnelDrawer';
 import { SuperAdminProfileCard } from './components/SuperAdminProfileCard';
 
 // Hooks
-import { usePersonnel, useSuperAdmin, usePersonnelClients, useInvitePersonnel, useCreatePersonnelAccount, useUpdatePersonnel, useUpdateSuperAdmin } from './hooks';
+import {
+  usePersonnel,
+  useSuperAdmin,
+  usePersonnelClients,
+  useInvitePersonnel,
+  useCreatePersonnelAccount,
+  useUpdatePersonnel,
+  useUpdateSuperAdmin,
+} from './hooks';
 import { usePersonnelFilters } from './hooks/usePersonnelFilters';
 import { useCurrentUserPermissions } from './hooks/usePermissions';
 import { useAdminNavigation } from '../../layout/AdminNavigationContext';
@@ -86,10 +85,7 @@ function TableSkeleton() {
         {Array.from({ length: 5 }).map((_, i) => (
           <div
             key={i}
-            className={cn(
-              'flex items-center gap-4 px-6 py-4',
-              i < 4 && 'border-b border-gray-100'
-            )}
+            className={cn('flex items-center gap-4 px-6 py-4', i < 4 && 'border-b border-gray-100')}
           >
             <div className="flex items-center gap-3 w-60">
               <Skeleton className="h-9 w-9 rounded-full" />
@@ -134,12 +130,8 @@ export function PersonnelModule() {
 
   // ── GlobalSearch deep-link: auto-open drawer for pending personnel selection ──
   useEffect(() => {
-    if (
-      pendingSelection?.type === 'personnel' &&
-      !isLoading &&
-      personnel.length > 0
-    ) {
-      const target = personnel.find(p => p.id === pendingSelection.id);
+    if (pendingSelection?.type === 'personnel' && !isLoading && personnel.length > 0) {
+      const target = personnel.find((p) => p.id === pendingSelection.id);
       if (target) {
         setSelectedPersonnel(target);
         setActiveTab('profile');
@@ -165,18 +157,18 @@ export function PersonnelModule() {
   // 3. Stats
   const stats = useMemo(() => {
     const total = personnel.length;
-    const active = personnel.filter(p => p.status === 'active').length;
-    const suspended = personnel.filter(p => p.status === 'suspended').length;
-    const pending = personnel.filter(p => p.status === 'pending').length;
+    const active = personnel.filter((p) => p.status === 'active').length;
+    const suspended = personnel.filter((p) => p.status === 'suspended').length;
+    const pending = personnel.filter((p) => p.status === 'pending').length;
     return { total, active, suspended, pending };
   }, [personnel]);
 
   // 4. Sub-resource Data (Clients) - Only fetch when needed
   const clientsEnabled = drawerOpen && activeTab === 'clients' && !!selectedPersonnel?.id;
-  const {
-    data: clients = [],
-    isLoading: clientsLoading,
-  } = usePersonnelClients(selectedPersonnel?.id || '', clientsEnabled);
+  const { data: clients = [], isLoading: clientsLoading } = usePersonnelClients(
+    selectedPersonnel?.id || '',
+    clientsEnabled,
+  );
 
   // 5. Mutations
   const { mutate: inviteUser } = useInvitePersonnel();
@@ -200,9 +192,9 @@ export function PersonnelModule() {
       { id, ...data },
       {
         onSuccess: () => {
-          setSelectedPersonnel(prev => (prev ? { ...prev, ...data } : null));
+          setSelectedPersonnel((prev) => (prev ? { ...prev, ...data } : null));
         },
-      }
+      },
     );
   };
 
@@ -218,13 +210,13 @@ export function PersonnelModule() {
           onError: () => {
             resolve(false);
           },
-        }
+        },
       );
     });
   };
 
   const handleCreateAccount = async (
-    values: InviteUserFormValues
+    values: InviteUserFormValues,
   ): Promise<{ recoveryLink: string | null } | false> => {
     try {
       const { moduleAccess, ...createValues } = values;
@@ -252,7 +244,7 @@ export function PersonnelModule() {
       };
       return acc;
     },
-    {} as Record<string, { label: string; color: string }>
+    {} as Record<string, { label: string; color: string }>,
   );
 
   return (
@@ -312,7 +304,9 @@ export function PersonnelModule() {
         <SuperAdminProfileCard
           profile={superAdminProfile ?? null}
           loading={superAdminLoading}
-          onUpdate={updateSuperAdmin as unknown as (updates: Partial<SuperAdminProfile>) => Promise<boolean>}
+          onUpdate={
+            updateSuperAdmin as unknown as (updates: Partial<SuperAdminProfile>) => Promise<boolean>
+          }
         />
       )}
 
@@ -389,14 +383,12 @@ export function PersonnelModule() {
               <Users className="h-7 w-7 text-gray-400" />
             </div>
             <h3 className="text-base font-medium text-gray-900 mb-1">
-              {personnel.length === 0
-                ? 'No personnel yet'
-                : 'No results found'}
+              {personnel.length === 0 ? 'No personnel yet' : 'No results found'}
             </h3>
             <p className="text-sm text-muted-foreground max-w-sm">
               {personnel.length === 0
                 ? 'Get started by inviting your first team member.'
-                : 'Try adjusting your search or filters to find what you\'re looking for.'}
+                : "Try adjusting your search or filters to find what you're looking for."}
             </p>
             {personnel.length === 0 && canInvite && (
               <Button
@@ -441,7 +433,12 @@ export function PersonnelModule() {
         clientsLoading={clientsLoading}
         onTabChange={handleTabChange}
         onUpload={handleFileUpload}
-        onUpdate={handleUpdateProfile as unknown as (id: string, data: Partial<Personnel>) => Promise<boolean>}
+        onUpdate={
+          handleUpdateProfile as unknown as (
+            id: string,
+            data: Partial<Personnel>,
+          ) => Promise<boolean>
+        }
         onInviteCancelled={() => {
           setDrawerOpen(false);
           setSelectedPersonnel(null);

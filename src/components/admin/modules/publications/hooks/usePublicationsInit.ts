@@ -10,14 +10,18 @@ export function usePublicationsInit() {
     queryKey: publicationsKeys.initialization(),
     queryFn: PublicationsAPI.Init.checkStatus,
     staleTime: 0,
-    retry: 1
+    retry: 1,
   });
 
-  const { mutateAsync: initialize, isPending: isInitializing, error: initError } = useMutation({
+  const {
+    mutateAsync: initialize,
+    isPending: isInitializing,
+    error: initError,
+  } = useMutation({
     mutationFn: (input: InitializePublicationsInput = {}) => PublicationsAPI.Init.initialize(input),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: publicationsKeys.initialization() });
-    }
+    },
   });
 
   return {
@@ -28,6 +32,6 @@ export function usePublicationsInit() {
     isInitializing,
     error: error || initError,
     checkInitialization: refetch,
-    initialize
+    initialize,
   };
 }

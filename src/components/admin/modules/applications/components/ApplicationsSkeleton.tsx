@@ -18,9 +18,7 @@ function StatsCardSkeleton({ active = false }: { active?: boolean }) {
   return (
     <div
       className={`bg-white p-5 rounded-xl border text-left ${
-        active
-          ? 'border-[#6d28d9]/30 shadow-sm ring-1 ring-[#6d28d9]/20'
-          : 'border-gray-100'
+        active ? 'border-[#6d28d9]/30 shadow-sm ring-1 ring-[#6d28d9]/20' : 'border-gray-100'
       }`}
     >
       <div className="flex items-center justify-between mb-2">
@@ -53,7 +51,11 @@ function TableRowSkeleton() {
 
 export function ApplicationsSkeleton() {
   return (
-    <div className="p-6 space-y-6 max-w-[1600px] mx-auto" role="status" aria-label="Loading applications">
+    <div
+      className="p-6 space-y-6 max-w-[1600px] mx-auto"
+      role="status"
+      aria-label="Loading applications"
+    >
       <span className="sr-only">Loading applications, please wait…</span>
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -94,7 +96,7 @@ export function ApplicationsSkeleton() {
             <Skeleton className="h-4 w-24" />
             <Skeleton className="h-4 w-20" />
           </div>
-          {[1, 2, 3, 4, 5, 6].map(i => (
+          {[1, 2, 3, 4, 5, 6].map((i) => (
             <TableRowSkeleton key={i} />
           ))}
         </div>

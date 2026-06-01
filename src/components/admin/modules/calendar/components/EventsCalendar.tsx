@@ -9,7 +9,7 @@ interface EventsCalendarProps {
   isLoading: boolean;
   currentDate: Date;
   onDateChange: (date: Date) => void;
-  
+
   // Event callbacks
   onEdit: (event: CalendarEvent) => void;
   onDelete: (id: string) => void;
@@ -32,7 +32,7 @@ export function EventsCalendar({
   return (
     <div className="flex flex-col h-full gap-4">
       {/* Enhanced Calendar Controls */}
-      <CalendarHeader 
+      <CalendarHeader
         view={view}
         currentDate={currentDate}
         onDateChange={onDateChange}
@@ -47,10 +47,10 @@ export function EventsCalendar({
             <div className="h-8 w-8 animate-spin rounded-full border-4 border-purple-600 border-t-transparent" />
           </div>
         )}
-        
+
         {/* Render views */}
         {view === 'month' && (
-          <MonthView 
+          <MonthView
             events={events}
             currentDate={currentDate}
             onDateChange={onDateChange}
@@ -58,9 +58,9 @@ export function EventsCalendar({
             onViewEvent={onView}
           />
         )}
-        
+
         {(view === 'agenda' || view === 'day' || view === 'week') && (
-          <AgendaView 
+          <AgendaView
             events={events}
             currentDate={currentDate}
             onViewChange={setView}

@@ -41,7 +41,8 @@ export function TaxPlanningDashboardPage() {
       result.push({
         id: 'tax-no-fna',
         title: 'Get a Tax Assessment',
-        description: 'A tax planning review can identify deductions you may be missing and help optimise your effective tax rate.',
+        description:
+          'A tax planning review can identify deductions you may be missing and help optimise your effective tax rate.',
         severity: 'high',
         onClick: scrollToPanel,
       });
@@ -85,7 +86,8 @@ export function TaxPlanningDashboardPage() {
       result.push({
         id: 'tax-provisional',
         title: 'Provisional Tax Due This Month',
-        description: 'Provisional taxpayers must submit payments by the end of February and August. Ensure your provisional return is filed on time.',
+        description:
+          'Provisional taxpayers must submit payments by the end of February and August. Ensure your provisional return is filed on time.',
         severity: 'medium',
       });
     }

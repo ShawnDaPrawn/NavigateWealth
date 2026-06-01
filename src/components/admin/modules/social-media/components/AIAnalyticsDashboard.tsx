@@ -31,8 +31,14 @@ import {
   TrendingUp,
 } from 'lucide-react';
 import {
-  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
-  ResponsiveContainer, Legend,
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+  Legend,
 } from 'recharts';
 import { useAIAnalytics } from '../hooks/useAIAnalytics';
 import { BRAND } from '../constants';
@@ -81,7 +87,11 @@ const TYPE_CONFIG: Record<string, { label: string; icon: React.ReactNode }> = {
 };
 
 function formatDate(dateStr: string): string {
-  return new Date(dateStr).toLocaleDateString('en-ZA', { day: '2-digit', month: 'short', year: 'numeric' });
+  return new Date(dateStr).toLocaleDateString('en-ZA', {
+    day: '2-digit',
+    month: 'short',
+    year: 'numeric',
+  });
 }
 
 function formatShortDate(dateStr: string): string {
@@ -92,7 +102,13 @@ function formatShortDate(dateStr: string): string {
 // Sub-components
 // ============================================================================
 
-function BreakdownBar({ items, labels }: { items: Record<string, number>; labels: Record<string, string> }) {
+function BreakdownBar({
+  items,
+  labels,
+}: {
+  items: Record<string, number>;
+  labels: Record<string, string>;
+}) {
   const total = Object.values(items).reduce((s, v) => s + v, 0);
   if (total === 0) return <p className="text-xs text-muted-foreground">No data yet</p>;
 
@@ -104,11 +120,18 @@ function BreakdownBar({ items, labels }: { items: Record<string, number>; labels
         return (
           <div key={key} className="space-y-1">
             <div className="flex items-center justify-between text-xs">
-              <span className="text-gray-700 capitalize">{labels[key] || key.replace('_', ' ')}</span>
-              <span className="text-muted-foreground">{count} ({pct}%)</span>
+              <span className="text-gray-700 capitalize">
+                {labels[key] || key.replace('_', ' ')}
+              </span>
+              <span className="text-muted-foreground">
+                {count} ({pct}%)
+              </span>
             </div>
             <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
-              <div className="h-full rounded-full transition-all" style={{ width: `${pct}%`, backgroundColor: BRAND.navy }} />
+              <div
+                className="h-full rounded-full transition-all"
+                style={{ width: `${pct}%`, backgroundColor: BRAND.navy }}
+              />
             </div>
           </div>
         );
@@ -126,32 +149,40 @@ export function AIAnalyticsDashboard() {
 
   if (analyticsLoading) {
     return (
-      <Card><CardContent className="flex items-center justify-center py-12">
-        <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-        <span className="ml-2 text-muted-foreground">Loading analytics...</span>
-      </CardContent></Card>
+      <Card>
+        <CardContent className="flex items-center justify-center py-12">
+          <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+          <span className="ml-2 text-muted-foreground">Loading analytics...</span>
+        </CardContent>
+      </Card>
     );
   }
 
   if (analyticsError) {
     return (
-      <Card><CardContent className="flex flex-col items-center justify-center py-12 text-center">
-        <AlertCircle className="h-8 w-8 text-amber-500 mb-2" />
-        <p className="text-sm text-muted-foreground mb-3">{analyticsError}</p>
-        <Button variant="outline" size="sm" onClick={() => refetchAnalytics()}>
-          <RefreshCw className="h-3 w-3 mr-1.5" /> Retry
-        </Button>
-      </CardContent></Card>
+      <Card>
+        <CardContent className="flex flex-col items-center justify-center py-12 text-center">
+          <AlertCircle className="h-8 w-8 text-amber-500 mb-2" />
+          <p className="text-sm text-muted-foreground mb-3">{analyticsError}</p>
+          <Button variant="outline" size="sm" onClick={() => refetchAnalytics()}>
+            <RefreshCw className="h-3 w-3 mr-1.5" /> Retry
+          </Button>
+        </CardContent>
+      </Card>
     );
   }
 
   if (!analytics) {
     return (
-      <Card><CardContent className="flex flex-col items-center justify-center py-12 text-center">
-        <BarChart3 className="h-12 w-12 text-gray-300 mb-4" />
-        <h3 className="text-lg font-semibold mb-2">No Analytics Data</h3>
-        <p className="text-muted-foreground max-w-md">Generate some AI content to start seeing usage analytics here.</p>
-      </CardContent></Card>
+      <Card>
+        <CardContent className="flex flex-col items-center justify-center py-12 text-center">
+          <BarChart3 className="h-12 w-12 text-gray-300 mb-4" />
+          <h3 className="text-lg font-semibold mb-2">No Analytics Data</h3>
+          <p className="text-muted-foreground max-w-md">
+            Generate some AI content to start seeing usage analytics here.
+          </p>
+        </CardContent>
+      </Card>
     );
   }
 
@@ -175,11 +206,12 @@ export function AIAnalyticsDashboard() {
 
         {(['text', 'image', 'bundle'] as const).map((type) => {
           const cfg = TYPE_CONFIG[type];
-          const count = type === 'text'
-            ? analytics.totalTextGenerations
-            : type === 'image'
-              ? analytics.totalImageGenerations
-              : analytics.totalBundleGenerations;
+          const count =
+            type === 'text'
+              ? analytics.totalTextGenerations
+              : type === 'image'
+                ? analytics.totalImageGenerations
+                : analytics.totalBundleGenerations;
           return (
             <Card key={type}>
               <CardContent className="pt-6">
@@ -188,7 +220,10 @@ export function AIAnalyticsDashboard() {
                     <p className="text-sm text-muted-foreground">{cfg.label} Generations</p>
                     <p className="text-2xl font-medium">{count}</p>
                   </div>
-                  <div className="flex items-center justify-center h-10 w-10 rounded-lg" style={{ backgroundColor: BRAND.navyLight }}>
+                  <div
+                    className="flex items-center justify-center h-10 w-10 rounded-lg"
+                    style={{ backgroundColor: BRAND.navyLight }}
+                  >
                     <span style={{ color: BRAND.navy }}>{cfg.icon}</span>
                   </div>
                 </div>
@@ -203,7 +238,8 @@ export function AIAnalyticsDashboard() {
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium flex items-center gap-2">
-              <Activity className="h-4 w-4" style={{ color: BRAND.navy }} /> Daily Activity (Last 30 Days)
+              <Activity className="h-4 w-4" style={{ color: BRAND.navy }} /> Daily Activity (Last 30
+              Days)
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -211,7 +247,12 @@ export function AIAnalyticsDashboard() {
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={analytics.dailyActivity} barSize={12}>
                   <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f0f0f0" />
-                  <XAxis dataKey="date" tickFormatter={formatShortDate} tick={{ fontSize: 10 }} interval="preserveStartEnd" />
+                  <XAxis
+                    dataKey="date"
+                    tickFormatter={formatShortDate}
+                    tick={{ fontSize: 10 }}
+                    interval="preserveStartEnd"
+                  />
                   <YAxis allowDecimals={false} tick={{ fontSize: 10 }} width={30} />
                   <Tooltip
                     labelFormatter={(v) => formatDate(v as string)}
@@ -236,18 +277,22 @@ export function AIAnalyticsDashboard() {
           </CardHeader>
           <CardContent>
             <div className="space-y-2">
-              {Object.entries(analytics.platformBreakdown).sort((a, b) => b[1] - a[1]).map(([p, count]) => {
-                const cfg = PLATFORM_LABELS[p];
-                return (
-                  <div key={p} className="flex items-center justify-between text-sm">
-                    <div className="flex items-center gap-1.5 text-gray-700">
-                      {cfg?.icon}
-                      <span className="capitalize">{cfg?.label || p}</span>
+              {Object.entries(analytics.platformBreakdown)
+                .sort((a, b) => b[1] - a[1])
+                .map(([p, count]) => {
+                  const cfg = PLATFORM_LABELS[p];
+                  return (
+                    <div key={p} className="flex items-center justify-between text-sm">
+                      <div className="flex items-center gap-1.5 text-gray-700">
+                        {cfg?.icon}
+                        <span className="capitalize">{cfg?.label || p}</span>
+                      </div>
+                      <Badge variant="secondary" className="text-xs">
+                        {count}
+                      </Badge>
                     </div>
-                    <Badge variant="secondary" className="text-xs">{count}</Badge>
-                  </div>
-                );
-              })}
+                  );
+                })}
               {Object.keys(analytics.platformBreakdown).length === 0 && (
                 <p className="text-xs text-muted-foreground">No data yet</p>
               )}
@@ -256,18 +301,30 @@ export function AIAnalyticsDashboard() {
         </Card>
 
         <Card>
-          <CardHeader className="pb-3"><CardTitle className="text-sm font-medium">Tone Distribution</CardTitle></CardHeader>
-          <CardContent><BreakdownBar items={analytics.toneBreakdown} labels={TONE_LABELS} /></CardContent>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-sm font-medium">Tone Distribution</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <BreakdownBar items={analytics.toneBreakdown} labels={TONE_LABELS} />
+          </CardContent>
         </Card>
 
         <Card>
-          <CardHeader className="pb-3"><CardTitle className="text-sm font-medium">Goal Distribution</CardTitle></CardHeader>
-          <CardContent><BreakdownBar items={analytics.goalBreakdown} labels={GOAL_LABELS} /></CardContent>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-sm font-medium">Goal Distribution</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <BreakdownBar items={analytics.goalBreakdown} labels={GOAL_LABELS} />
+          </CardContent>
         </Card>
 
         <Card>
-          <CardHeader className="pb-3"><CardTitle className="text-sm font-medium">Image Style Usage</CardTitle></CardHeader>
-          <CardContent><BreakdownBar items={analytics.styleBreakdown} labels={STYLE_LABELS} /></CardContent>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-sm font-medium">Image Style Usage</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <BreakdownBar items={analytics.styleBreakdown} labels={STYLE_LABELS} />
+          </CardContent>
         </Card>
       </div>
 
@@ -277,7 +334,12 @@ export function AIAnalyticsDashboard() {
           <CardHeader className="pb-3">
             <div className="flex items-center justify-between">
               <CardTitle className="text-sm font-medium">Recent Generations</CardTitle>
-              <Button variant="ghost" size="sm" onClick={() => refetchAnalytics()} className="text-xs">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => refetchAnalytics()}
+                className="text-xs"
+              >
                 <RefreshCw className="h-3 w-3 mr-1" /> Refresh
               </Button>
             </div>
@@ -287,16 +349,28 @@ export function AIAnalyticsDashboard() {
               {analytics.recentGenerations.map((gen) => {
                 const cfg = TYPE_CONFIG[gen.type];
                 return (
-                  <div key={gen.id} className="flex items-center gap-3 p-2 rounded-lg hover:bg-gray-50 transition-colors">
-                    <div className="flex items-center justify-center h-8 w-8 rounded-lg flex-shrink-0" style={{ backgroundColor: BRAND.navyLight }}>
-                      <span className="[&>svg]:h-4 [&>svg]:w-4" style={{ color: BRAND.navy }}>{cfg?.icon}</span>
+                  <div
+                    key={gen.id}
+                    className="flex items-center gap-3 p-2 rounded-lg hover:bg-gray-50 transition-colors"
+                  >
+                    <div
+                      className="flex items-center justify-center h-8 w-8 rounded-lg flex-shrink-0"
+                      style={{ backgroundColor: BRAND.navyLight }}
+                    >
+                      <span className="[&>svg]:h-4 [&>svg]:w-4" style={{ color: BRAND.navy }}>
+                        {cfg?.icon}
+                      </span>
                     </div>
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-medium line-clamp-1">{gen.topic || 'Untitled'}</p>
                       <div className="flex items-center gap-2 mt-0.5">
-                        <Badge variant="outline" className="text-[9px] px-1 py-0">{cfg?.label || gen.type}</Badge>
+                        <Badge variant="outline" className="text-[9px] px-1 py-0">
+                          {cfg?.label || gen.type}
+                        </Badge>
                         {gen.platforms?.map((p) => (
-                          <span key={p} className="text-[9px] text-muted-foreground capitalize">{p === 'x' ? 'X' : p}</span>
+                          <span key={p} className="text-[9px] text-muted-foreground capitalize">
+                            {p === 'x' ? 'X' : p}
+                          </span>
                         ))}
                       </div>
                     </div>

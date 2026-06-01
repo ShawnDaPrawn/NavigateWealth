@@ -1,9 +1,9 @@
 /**
  * Publications Feature - Constants & Configuration
- * 
+ *
  * Central configuration for the Publications feature including API endpoints,
  * validation rules, and default values.
- * 
+ *
  * All constants are type-safe and organized by category.
  */
 
@@ -18,7 +18,7 @@ export const PUBLICATIONS_BASE_URL = `https://${projectId}.supabase.co/functions
 
 /**
  * API endpoint paths for all Publications operations
- * 
+ *
  * @example
  * ```ts
  * const url = PUBLICATIONS_BASE_URL + API_ENDPOINTS.articles;
@@ -35,37 +35,37 @@ export const API_ENDPOINTS = {
   articleSchedule: (id: string) => `/articles/${id}/schedule`,
   articleDuplicate: (id: string) => `/articles/${id}/duplicate`,
   articleViewIncrement: (id: string) => `/articles/${id}/view`,
-  
+
   // Categories
   categories: '/categories',
   categoryById: (id: string) => `/categories/${id}`,
-  
+
   // Types
   types: '/types',
   typeById: (id: string) => `/types/${id}`,
-  
+
   // User Groups
   userGroups: '/user-groups',
   userGroupById: (id: string) => `/user-groups/${id}`,
-  
+
   // Email
   emailNotify: '/email/notify',
-  
+
   // Export/Import
   export: '/export',
   import: '/import',
-  
+
   // Images
-  imageUpload: '/images/upload'
+  imageUpload: '/images/upload',
 } as const;
 
 export const API_HEADERS = {
-  'Authorization': `Bearer ${publicAnonKey}`,
-  'Content-Type': 'application/json'
+  Authorization: `Bearer ${publicAnonKey}`,
+  'Content-Type': 'application/json',
 } as const;
 
 export const API_HEADERS_MULTIPART = {
-  'Authorization': `Bearer ${publicAnonKey}`
+  Authorization: `Bearer ${publicAnonKey}`,
   // Content-Type is omitted for multipart/form-data
 } as const;
 
@@ -98,14 +98,14 @@ export const DEFAULT_CATEGORY = {
   description: '',
   icon_key: '',
   sort_order: 0,
-  is_active: true
+  is_active: true,
 };
 
 export const DEFAULT_TYPE = {
   name: '',
   description: '',
   sort_order: 0,
-  is_active: true
+  is_active: true,
 };
 
 // ==================== Pagination ====================
@@ -118,35 +118,35 @@ export const PAGE_SIZE_OPTIONS = [10, 25, 50, 100] as const;
 export const VALIDATION_RULES = {
   title: {
     minLength: 3,
-    maxLength: 200
+    maxLength: 200,
   },
   subtitle: {
-    maxLength: 300
+    maxLength: 300,
   },
   slug: {
     minLength: 3,
     maxLength: 200,
-    pattern: /^[a-z0-9]+(?:-[a-z0-9]+)*$/
+    pattern: /^[a-z0-9]+(?:-[a-z0-9]+)*$/,
   },
   excerpt: {
     minLength: 10,
-    maxLength: 500
+    maxLength: 500,
   },
   body: {
-    minLength: 50
+    minLength: 50,
   },
   categoryName: {
     minLength: 2,
-    maxLength: 100
+    maxLength: 100,
   },
   typeName: {
     minLength: 2,
-    maxLength: 100
+    maxLength: 100,
   },
   readingTime: {
     min: 1,
-    max: 120
-  }
+    max: 120,
+  },
 } as const;
 
 // ==================== UI Messages ====================
@@ -159,19 +159,19 @@ export const SUCCESS_MESSAGES = {
   articleUnpublished: 'Article unpublished successfully',
   articleScheduled: 'Article scheduled successfully',
   articleDuplicated: 'Article duplicated successfully',
-  
+
   categoryCreated: 'Category created successfully',
   categoryUpdated: 'Category updated successfully',
   categoryDeleted: 'Category deleted successfully',
-  
+
   typeCreated: 'Type created successfully',
   typeUpdated: 'Type updated successfully',
   typeDeleted: 'Type deleted successfully',
-  
+
   exportComplete: 'Export completed successfully',
   importComplete: 'Import completed successfully',
-  
-  emailSent: 'Email notifications sent successfully'
+
+  emailSent: 'Email notifications sent successfully',
 } as const;
 
 export const ERROR_MESSAGES = {
@@ -183,29 +183,29 @@ export const ERROR_MESSAGES = {
   articleScheduleFailed: 'Failed to schedule article',
   articleDuplicateFailed: 'Failed to duplicate article',
   articleNotFound: 'Article not found',
-  
+
   categoryCreateFailed: 'Failed to create category',
   categoryUpdateFailed: 'Failed to update category',
   categoryDeleteFailed: 'Failed to delete category',
   categoryNotFound: 'Category not found',
   categoryHasArticles: 'Cannot delete category with existing articles',
-  
+
   typeCreateFailed: 'Failed to create type',
   typeUpdateFailed: 'Failed to update type',
   typeDeleteFailed: 'Failed to delete type',
   typeNotFound: 'Type not found',
   typeHasArticles: 'Cannot delete type with existing articles',
-  
+
   exportFailed: 'Export failed',
   importFailed: 'Import failed',
-  
+
   emailSendFailed: 'Failed to send email notifications',
-  
+
   validationFailed: 'Please check all required fields',
   networkError: 'Network error. Please try again.',
   unauthorized: 'You are not authorized to perform this action',
-  
-  imageUploadFailed: 'Failed to upload image'
+
+  imageUploadFailed: 'Failed to upload image',
 } as const;
 
 // ==================== Status Configuration ====================
@@ -215,7 +215,7 @@ export const STATUS_LABELS = {
   in_review: 'In Review',
   scheduled: 'Scheduled',
   published: 'Published',
-  archived: 'Archived'
+  archived: 'Archived',
 } as const;
 
 export const STATUS_COLORS = {
@@ -223,7 +223,7 @@ export const STATUS_COLORS = {
   in_review: 'bg-yellow-100 text-yellow-800 border-yellow-200',
   scheduled: 'bg-blue-100 text-blue-800 border-blue-200',
   published: 'bg-green-100 text-green-800 border-green-200',
-  archived: 'bg-red-100 text-red-800 border-red-200'
+  archived: 'bg-red-100 text-red-800 border-red-200',
 } as const;
 
 // ==================== Category Icons ====================
@@ -236,7 +236,7 @@ export const CATEGORY_ICON_MAP = {
   'estate-tax': 'FileText',
   'financial-literacy': 'GraduationCap',
   'global-perspectives': 'Globe',
-  'advisers-corner': 'Users'
+  'advisers-corner': 'Users',
 } as const;
 
 export const CATEGORY_SLUG_MAP = {
@@ -247,7 +247,7 @@ export const CATEGORY_SLUG_MAP = {
   'Estate & Tax Planning': 'estate-tax',
   'Financial Literacy': 'financial-literacy',
   'Global Markets': 'global-perspectives',
-  "Adviser's Corner": 'advisers-corner'
+  "Adviser's Corner": 'advisers-corner',
 } as const;
 
 // ==================== Local Storage Keys ====================
@@ -256,7 +256,7 @@ export const STORAGE_KEYS = {
   draftArticle: 'publications_draft_article',
   editorPreferences: 'publications_editor_preferences',
   listViewFilters: 'publications_list_filters',
-  listViewSort: 'publications_list_sort'
+  listViewSort: 'publications_list_sort',
 } as const;
 
 // ==================== Date Formats ====================
@@ -266,7 +266,7 @@ export const DATE_FORMATS = {
   displayWithTime: 'MMM d, yyyy h:mm a',
   input: 'yyyy-MM-dd',
   inputWithTime: "yyyy-MM-dd'T'HH:mm",
-  api: "yyyy-MM-dd'T'HH:mm:ss'Z'"
+  api: "yyyy-MM-dd'T'HH:mm:ss'Z'",
 } as const;
 
 // ==================== Image Upload ====================
@@ -275,7 +275,7 @@ export const IMAGE_UPLOAD_CONFIG = {
   maxSizeInMB: 5,
   maxSizeInBytes: 5 * 1024 * 1024,
   acceptedFormats: ['image/jpeg', 'image/png', 'image/webp', 'image/gif'],
-  acceptedExtensions: ['.jpg', '.jpeg', '.png', '.webp', '.gif']
+  acceptedExtensions: ['.jpg', '.jpeg', '.png', '.webp', '.gif'],
 } as const;
 
 // ==================== Editor Configuration ====================

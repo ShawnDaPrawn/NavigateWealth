@@ -27,8 +27,7 @@ export function useCustomTemplates() {
   });
 
   const createMutation = useMutation({
-    mutationFn: (input: CreateCustomTemplateInput) =>
-      socialMediaAIApi.createCustomTemplate(input),
+    mutationFn: (input: CreateCustomTemplateInput) => socialMediaAIApi.createCustomTemplate(input),
     onSuccess: (response) => {
       if (response.success) {
         toast.success('Custom template created');

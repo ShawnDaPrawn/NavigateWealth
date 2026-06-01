@@ -7,10 +7,10 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '../ui/tabs';
 import { useAuth } from '../auth/AuthContext';
 import { projectId, publicAnonKey } from '../../utils/supabase/info';
 import { toast } from 'sonner';
-import { 
-  FileText, 
-  Download, 
-  Eye, 
+import {
+  FileText,
+  Download,
+  Eye,
   Search,
   Filter,
   Calendar,
@@ -28,7 +28,7 @@ import {
   ChevronLeft,
   ChevronRight,
   Files,
-  ChevronDown
+  ChevronDown,
 } from 'lucide-react';
 
 interface DocumentItem {
@@ -57,7 +57,7 @@ interface DocumentItem {
 export function TransactionsDocumentsPage() {
   const { user } = useAuth();
   const [activeTab, setActiveTab] = useState('transactions');
-  
+
   // Real Data State
   const [documents, setDocuments] = useState<DocumentItem[]>([]);
   const [loading, setLoading] = useState(false);
@@ -85,22 +85,23 @@ export function TransactionsDocumentsPage() {
         const response = await fetch(
           `https://${projectId}.supabase.co/functions/v1/make-server-91ed8379/documents/${user.id}`,
           {
-            headers: { 'Authorization': `Bearer ${publicAnonKey}` }
-          }
+            headers: { Authorization: `Bearer ${publicAnonKey}` },
+          },
         );
 
         if (!response.ok) throw new Error('Failed to fetch documents');
 
         const data = await response.json();
         // Sort by upload date, newest first
-        const sortedDocs = data.documents.sort((a: DocumentItem, b: DocumentItem) => 
-          new Date(b.uploadDate).getTime() - new Date(a.uploadDate).getTime()
+        const sortedDocs = data.documents.sort(
+          (a: DocumentItem, b: DocumentItem) =>
+            new Date(b.uploadDate).getTime() - new Date(a.uploadDate).getTime(),
         );
         setDocuments(sortedDocs);
         return; // Success — exit retry loop
       } catch (error) {
         if (attempt < maxRetries) {
-          await new Promise(r => setTimeout(r, 800 * (attempt + 1)));
+          await new Promise((r) => setTimeout(r, 800 * (attempt + 1)));
           continue;
         }
         console.error('Error fetching documents after retries:', error);
@@ -121,8 +122,8 @@ export function TransactionsDocumentsPage() {
       const response = await fetch(
         `https://${projectId}.supabase.co/functions/v1/make-server-91ed8379/documents/${doc.userId}/${doc.id}/download`,
         {
-          headers: { 'Authorization': `Bearer ${publicAnonKey}` }
-        }
+          headers: { Authorization: `Bearer ${publicAnonKey}` },
+        },
       );
 
       if (!response.ok) throw new Error('Failed to get download URL');
@@ -143,15 +144,27 @@ export function TransactionsDocumentsPage() {
 
   // Group documents logic
   const getGroupedDocuments = () => {
-    const groupedItems: (DocumentItem | { type: 'pack', id: string, title: string, documents: DocumentItem[], category: string, date: string })[] = [];
+    const groupedItems: (
+      | DocumentItem
+      | {
+          type: 'pack';
+          id: string;
+          title: string;
+          documents: DocumentItem[];
+          category: string;
+          date: string;
+        }
+    )[] = [];
     const processedPackIds = new Set<string>();
 
-    documents.forEach(doc => {
-      if (doc.packId && documents.filter(d => d.packId === doc.packId).length > 1) {
+    documents.forEach((doc) => {
+      if (doc.packId && documents.filter((d) => d.packId === doc.packId).length > 1) {
         if (!processedPackIds.has(doc.packId)) {
           processedPackIds.add(doc.packId);
-          const packDocs = documents.filter(d => d.packId === doc.packId);
-          const sortedPackDocs = [...packDocs].sort((a, b) => a.title.localeCompare(b.title, undefined, { numeric: true }));
+          const packDocs = documents.filter((d) => d.packId === doc.packId);
+          const sortedPackDocs = [...packDocs].sort((a, b) =>
+            a.title.localeCompare(b.title, undefined, { numeric: true }),
+          );
 
           groupedItems.push({
             type: 'pack',
@@ -159,7 +172,7 @@ export function TransactionsDocumentsPage() {
             title: doc.packTitle || doc.title.replace(/\s\(\d+\)$/, ''),
             documents: sortedPackDocs,
             category: doc.productCategory,
-            date: doc.uploadDate
+            date: doc.uploadDate,
           });
         }
       } else if (!doc.packId || !processedPackIds.has(doc.packId)) {
@@ -172,42 +185,60 @@ export function TransactionsDocumentsPage() {
   const groupedDocuments = getGroupedDocuments();
 
   // Calculate real counts for categories
-  const getCategoryCount = (cat: string) => documents.filter(d => d.productCategory === cat).length;
+  const getCategoryCount = (cat: string) =>
+    documents.filter((d) => d.productCategory === cat).length;
 
   // Formatting helpers
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('en-GB', {
-      day: 'numeric', month: 'short', year: 'numeric'
+      day: 'numeric',
+      month: 'short',
+      year: 'numeric',
     });
   };
-  
+
   const formatFileSize = (bytes?: number) => {
     if (!bytes) return '';
     return `${(bytes / (1024 * 1024)).toFixed(2)} MB`;
   };
 
   const getCategoryColor = (category: string) => {
-     switch (category) {
-       case 'Life': return 'bg-red-50 text-red-700';
-       case 'Short-Term': return 'bg-blue-50 text-blue-700';
-       case 'Investment': return 'bg-green-50 text-green-700';
-       case 'Medical Aid': return 'bg-purple-50 text-purple-700';
-       case 'Retirement': return 'bg-orange-50 text-orange-700';
-       case 'Estate': return 'bg-amber-50 text-amber-700';
-       default: return 'bg-gray-50 text-gray-700';
-     }
+    switch (category) {
+      case 'Life':
+        return 'bg-red-50 text-red-700';
+      case 'Short-Term':
+        return 'bg-blue-50 text-blue-700';
+      case 'Investment':
+        return 'bg-green-50 text-green-700';
+      case 'Medical Aid':
+        return 'bg-purple-50 text-purple-700';
+      case 'Retirement':
+        return 'bg-orange-50 text-orange-700';
+      case 'Estate':
+        return 'bg-amber-50 text-amber-700';
+      default:
+        return 'bg-gray-50 text-gray-700';
+    }
   };
 
   const getCategoryIcon = (category: string) => {
     switch (category) {
-      case 'Risk Planning': return Shield;
-      case 'Medical Aid': return Heart;
-      case 'Retirement Planning': return Target;
-      case 'Investment Management': return TrendingUp;
-      case 'Employee Benefits': return Briefcase;
-      case 'Tax Planning': return Calculator;
-      case 'Estate Planning': return Users;
-      default: return FolderOpen;
+      case 'Risk Planning':
+        return Shield;
+      case 'Medical Aid':
+        return Heart;
+      case 'Retirement Planning':
+        return Target;
+      case 'Investment Management':
+        return TrendingUp;
+      case 'Employee Benefits':
+        return Briefcase;
+      case 'Tax Planning':
+        return Calculator;
+      case 'Estate Planning':
+        return Users;
+      default:
+        return FolderOpen;
     }
   };
 
@@ -224,15 +255,15 @@ export function TransactionsDocumentsPage() {
 
         <Tabs defaultValue="transactions" className="space-y-6" onValueChange={setActiveTab}>
           <TabsList className="grid w-full grid-cols-2 bg-gray-100">
-            <TabsTrigger 
-              value="transactions" 
+            <TabsTrigger
+              value="transactions"
               className="data-[state=active]:bg-purple-600 data-[state=active]:text-white"
             >
               <CreditCard className="h-4 w-4 mr-2" />
               Transactions
             </TabsTrigger>
-            <TabsTrigger 
-              value="documents" 
+            <TabsTrigger
+              value="documents"
               className="data-[state=active]:bg-purple-600 data-[state=active]:text-white"
             >
               <FileText className="h-4 w-4 mr-2" />
@@ -249,24 +280,36 @@ export function TransactionsDocumentsPage() {
               </CardHeader>
               <CardContent>
                 <div className="flex flex-wrap gap-4">
-                  <Button 
+                  <Button
                     variant={selectedFilter === 'all' ? 'default' : 'outline'}
                     onClick={() => setSelectedFilter('all')}
-                    className={selectedFilter === 'all' ? 'bg-purple-600 hover:bg-purple-700 text-white' : 'border-gray-300 text-gray-700 hover:bg-gray-50'}
+                    className={
+                      selectedFilter === 'all'
+                        ? 'bg-purple-600 hover:bg-purple-700 text-white'
+                        : 'border-gray-300 text-gray-700 hover:bg-gray-50'
+                    }
                   >
                     All Transactions
                   </Button>
-                  <Button 
+                  <Button
                     variant={selectedFilter === 'deposits' ? 'default' : 'outline'}
                     onClick={() => setSelectedFilter('deposits')}
-                    className={selectedFilter === 'deposits' ? 'bg-purple-600 hover:bg-purple-700 text-white' : 'border-gray-300 text-gray-700 hover:bg-gray-50'}
+                    className={
+                      selectedFilter === 'deposits'
+                        ? 'bg-purple-600 hover:bg-purple-700 text-white'
+                        : 'border-gray-300 text-gray-700 hover:bg-gray-50'
+                    }
                   >
                     Deposits
                   </Button>
-                  <Button 
+                  <Button
                     variant={selectedFilter === 'withdrawals' ? 'default' : 'outline'}
                     onClick={() => setSelectedFilter('withdrawals')}
-                    className={selectedFilter === 'withdrawals' ? 'bg-purple-600 hover:bg-purple-700 text-white' : 'border-gray-300 text-gray-700 hover:bg-gray-50'}
+                    className={
+                      selectedFilter === 'withdrawals'
+                        ? 'bg-purple-600 hover:bg-purple-700 text-white'
+                        : 'border-gray-300 text-gray-700 hover:bg-gray-50'
+                    }
                   >
                     Withdrawals
                   </Button>
@@ -292,7 +335,7 @@ export function TransactionsDocumentsPage() {
                       date: 'Jan 30, 2024',
                       time: '09:30 AM',
                       status: 'Completed',
-                      reference: 'AUTO-INV-001'
+                      reference: 'AUTO-INV-001',
                     },
                     {
                       id: 'TXN-2024-002',
@@ -303,7 +346,7 @@ export function TransactionsDocumentsPage() {
                       date: 'Jan 29, 2024',
                       time: '10:15 AM',
                       status: 'Completed',
-                      reference: 'TRADE-001'
+                      reference: 'TRADE-001',
                     },
                     {
                       id: 'TXN-2024-003',
@@ -314,7 +357,7 @@ export function TransactionsDocumentsPage() {
                       date: 'Jan 28, 2024',
                       time: '12:00 PM',
                       status: 'Completed',
-                      reference: 'AUTO-SAVE-001'
+                      reference: 'AUTO-SAVE-001',
                     },
                     {
                       id: 'TXN-2024-004',
@@ -325,7 +368,7 @@ export function TransactionsDocumentsPage() {
                       date: 'Jan 28, 2024',
                       time: '11:00 AM',
                       status: 'Completed',
-                      reference: 'FEE-001'
+                      reference: 'FEE-001',
                     },
                     {
                       id: 'TXN-2024-005',
@@ -336,31 +379,47 @@ export function TransactionsDocumentsPage() {
                       date: 'Jan 25, 2024',
                       time: '02:30 PM',
                       status: 'Completed',
-                      reference: 'DIV-001'
-                    }
+                      reference: 'DIV-001',
+                    },
                   ].map((transaction) => (
-                    <div key={transaction.id} className="border border-gray-200 rounded-lg p-4 hover:shadow-sm transition-shadow">
+                    <div
+                      key={transaction.id}
+                      className="border border-gray-200 rounded-lg p-4 hover:shadow-sm transition-shadow"
+                    >
                       <div className="flex items-center justify-between mb-2">
                         <div className="flex items-center space-x-3">
-                          <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-medium ${
-                            transaction.type === 'Deposit' ? 'bg-green-100 text-green-700' :
-                            transaction.type === 'Purchase' ? 'bg-blue-100 text-blue-700' :
-                            transaction.type === 'Fee' ? 'bg-red-100 text-red-700' :
-                            'bg-purple-100 text-purple-700'
-                          }`}>
-                            {transaction.type === 'Deposit' ? <ArrowDownLeft className="h-4 w-4" /> :
-                             transaction.type === 'Purchase' ? <ArrowUpRight className="h-4 w-4" /> :
-                             <CreditCard className="h-4 w-4" />}
+                          <div
+                            className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-medium ${
+                              transaction.type === 'Deposit'
+                                ? 'bg-green-100 text-green-700'
+                                : transaction.type === 'Purchase'
+                                  ? 'bg-blue-100 text-blue-700'
+                                  : transaction.type === 'Fee'
+                                    ? 'bg-red-100 text-red-700'
+                                    : 'bg-purple-100 text-purple-700'
+                            }`}
+                          >
+                            {transaction.type === 'Deposit' ? (
+                              <ArrowDownLeft className="h-4 w-4" />
+                            ) : transaction.type === 'Purchase' ? (
+                              <ArrowUpRight className="h-4 w-4" />
+                            ) : (
+                              <CreditCard className="h-4 w-4" />
+                            )}
                           </div>
                           <div>
-                            <div className="font-medium text-black text-sm">{transaction.description}</div>
+                            <div className="font-medium text-black text-sm">
+                              {transaction.description}
+                            </div>
                             <div className="text-xs text-gray-500">{transaction.account}</div>
                           </div>
                         </div>
                         <div className="text-right">
-                          <div className={`font-medium text-sm ${
-                            transaction.amount.startsWith('+') ? 'text-green-600' : 'text-red-600'
-                          }`}>
+                          <div
+                            className={`font-medium text-sm ${
+                              transaction.amount.startsWith('+') ? 'text-green-600' : 'text-red-600'
+                            }`}
+                          >
                             {transaction.amount}
                           </div>
                           <Badge className="bg-green-100 text-green-800 text-xs mt-1">
@@ -373,7 +432,9 @@ export function TransactionsDocumentsPage() {
                           <span>ID: {transaction.id}</span>
                           <span>Ref: {transaction.reference}</span>
                         </div>
-                        <span>{transaction.date} at {transaction.time}</span>
+                        <span>
+                          {transaction.date} at {transaction.time}
+                        </span>
                       </div>
                     </div>
                   ))}
@@ -387,21 +448,66 @@ export function TransactionsDocumentsPage() {
             {/* Document Categories */}
             <div className="grid md:grid-cols-4 gap-6">
               {[
-                { category: 'Risk Planning', description: 'Life and disability insurance', icon: Shield, color: 'bg-blue-100 text-blue-700' },
-                { category: 'Medical Aid', description: 'Medical scheme documents', icon: Heart, color: 'bg-red-100 text-red-700' },
-                { category: 'Retirement Planning', description: 'Retirement fund statements', icon: Target, color: 'bg-purple-100 text-purple-700' },
-                { category: 'Investment Management', description: 'Portfolio reports and statements', icon: TrendingUp, color: 'bg-green-100 text-green-700' },
-                { category: 'Employee Benefits', description: 'Benefits and provident fund', icon: Briefcase, color: 'bg-orange-100 text-orange-700' },
-                { category: 'Tax Planning', description: 'IT3(b) and tax certificates', icon: Calculator, color: 'bg-yellow-100 text-yellow-700' },
-                { category: 'Estate Planning', description: 'Wills and trust documents', icon: Users, color: 'bg-indigo-100 text-indigo-700' },
-                { category: 'General', description: 'Miscellaneous documents', icon: FolderOpen, color: 'bg-gray-100 text-gray-700' }
+                {
+                  category: 'Risk Planning',
+                  description: 'Life and disability insurance',
+                  icon: Shield,
+                  color: 'bg-blue-100 text-blue-700',
+                },
+                {
+                  category: 'Medical Aid',
+                  description: 'Medical scheme documents',
+                  icon: Heart,
+                  color: 'bg-red-100 text-red-700',
+                },
+                {
+                  category: 'Retirement Planning',
+                  description: 'Retirement fund statements',
+                  icon: Target,
+                  color: 'bg-purple-100 text-purple-700',
+                },
+                {
+                  category: 'Investment Management',
+                  description: 'Portfolio reports and statements',
+                  icon: TrendingUp,
+                  color: 'bg-green-100 text-green-700',
+                },
+                {
+                  category: 'Employee Benefits',
+                  description: 'Benefits and provident fund',
+                  icon: Briefcase,
+                  color: 'bg-orange-100 text-orange-700',
+                },
+                {
+                  category: 'Tax Planning',
+                  description: 'IT3(b) and tax certificates',
+                  icon: Calculator,
+                  color: 'bg-yellow-100 text-yellow-700',
+                },
+                {
+                  category: 'Estate Planning',
+                  description: 'Wills and trust documents',
+                  icon: Users,
+                  color: 'bg-indigo-100 text-indigo-700',
+                },
+                {
+                  category: 'General',
+                  description: 'Miscellaneous documents',
+                  icon: FolderOpen,
+                  color: 'bg-gray-100 text-gray-700',
+                },
               ].map((category, index) => {
                 const Icon = category.icon;
                 const count = getCategoryCount(category.category);
                 return (
-                  <Card key={index} className="bg-white border-gray-200 hover:shadow-md transition-shadow cursor-pointer">
+                  <Card
+                    key={index}
+                    className="bg-white border-gray-200 hover:shadow-md transition-shadow cursor-pointer"
+                  >
                     <CardHeader className="text-center">
-                      <div className={`w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-2 ${category.color}`}>
+                      <div
+                        className={`w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-2 ${category.color}`}
+                      >
                         <Icon className="h-6 w-6" />
                       </div>
                       <CardTitle className="text-lg text-black">{category.category}</CardTitle>
@@ -423,95 +529,148 @@ export function TransactionsDocumentsPage() {
                   <div>
                     <CardTitle className="text-black">All Documents</CardTitle>
                     <CardDescription>
-                      {loading ? <BrandInlineLoader label="Loading documents..." /> : `Showing ${groupedDocuments.length} items`}
+                      {loading ? (
+                        <BrandInlineLoader label="Loading documents..." />
+                      ) : (
+                        `Showing ${groupedDocuments.length} items`
+                      )}
                     </CardDescription>
                   </div>
                 </div>
               </CardHeader>
               <CardContent>
                 {loading ? (
-                   <BrandSectionLoader
-                     title="Loading your documents"
-                     message="Collecting statements, shared files, and document packs for this view."
-                     containerClassName="py-4"
-                   />
+                  <BrandSectionLoader
+                    title="Loading your documents"
+                    message="Collecting statements, shared files, and document packs for this view."
+                    containerClassName="py-4"
+                  />
                 ) : groupedDocuments.length === 0 ? (
-                   <div className="text-center py-8 text-muted-foreground">No documents found</div>
+                  <div className="text-center py-8 text-muted-foreground">No documents found</div>
                 ) : (
-                   <div className="space-y-4">
-                     {groupedDocuments.map((item) => {
-                        if ('documents' in item) {
-                          // PACK RENDER
-                          const isExpanded = expandedPacks.has(item.id);
-                          return (
-                            <div key={item.id} className="border border-gray-200 rounded-lg overflow-hidden">
-                               <div 
-                                 className="flex items-center gap-4 p-4 cursor-pointer hover:bg-gray-50 bg-gray-50/50"
-                                 onClick={() => togglePack(item.id)}
-                               >
-                                  <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
-                                     <Files className="h-5 w-5 text-blue-600" />
-                                  </div>
-                                  <div className="flex-1">
-                                     <h4 className="font-medium text-black">{item.title}</h4>
-                                     <div className="flex items-center gap-2 text-xs text-gray-500">
-                                       <Badge variant="secondary">{item.documents.length} files</Badge>
-                                       <span>{formatDate(item.date)}</span>
-                                       <Badge className={`${getCategoryColor(item.category)} border border-transparent`}>{item.category}</Badge>
-                                     </div>
-                                  </div>
-                                  <div>
-                                     {isExpanded ? <ChevronDown className="h-5 w-5 text-gray-400" /> : <ChevronRight className="h-5 w-5 text-gray-400" />}
-                                  </div>
-                               </div>
-                               {isExpanded && (
-                                 <div className="bg-gray-50 border-t border-gray-200 p-3 pl-8 space-y-2">
-                                    {item.documents.map(doc => (
-                                       <div key={doc.id} className="flex items-center justify-between p-3 bg-white rounded border border-gray-200">
-                                          <div className="flex items-center gap-3">
-                                             <FileText className="h-4 w-4 text-gray-400" />
-                                             <div>
-                                                <p className="text-sm font-medium text-black">{doc.title}</p>
-                                                <p className="text-xs text-gray-500">{doc.fileName} • {formatFileSize(doc.fileSize)}</p>
-                                             </div>
-                                          </div>
-                                          <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); handleDownload(doc); }}>
-                                             <Download className="h-4 w-4" />
-                                          </Button>
-                                       </div>
-                                    ))}
-                                 </div>
-                               )}
-                            </div>
-                          );
-                        } else {
-                          // SINGLE DOC RENDER
-                          const doc = item;
-                          return (
-                            <div key={doc.id} className="flex items-center justify-between p-4 border border-gray-200 rounded-lg hover:shadow-sm transition-shadow">
-                              <div className="flex items-center space-x-4">
-                                <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${doc.type === 'link' ? 'bg-purple-100' : 'bg-red-100'}`}>
-                                  {doc.type === 'link' ? <CreditCard className="h-5 w-5 text-purple-600" /> : <FileText className="h-5 w-5 text-red-600" />}
-                                </div>
-                                <div>
-                                  <div className="font-medium text-black text-sm">{doc.title}</div>
-                                  <div className="flex items-center space-x-2 text-xs text-gray-500">
-                                    <Badge className={`${getCategoryColor(doc.productCategory)} border border-transparent`}>{doc.productCategory}</Badge>
-                                    {doc.type === 'document' && <span>• {formatFileSize(doc.fileSize)}</span>}
-                                    <span>• {formatDate(doc.uploadDate)}</span>
-                                  </div>
+                  <div className="space-y-4">
+                    {groupedDocuments.map((item) => {
+                      if ('documents' in item) {
+                        // PACK RENDER
+                        const isExpanded = expandedPacks.has(item.id);
+                        return (
+                          <div
+                            key={item.id}
+                            className="border border-gray-200 rounded-lg overflow-hidden"
+                          >
+                            <div
+                              className="flex items-center gap-4 p-4 cursor-pointer hover:bg-gray-50 bg-gray-50/50"
+                              onClick={() => togglePack(item.id)}
+                            >
+                              <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
+                                <Files className="h-5 w-5 text-blue-600" />
+                              </div>
+                              <div className="flex-1">
+                                <h4 className="font-medium text-black">{item.title}</h4>
+                                <div className="flex items-center gap-2 text-xs text-gray-500">
+                                  <Badge variant="secondary">{item.documents.length} files</Badge>
+                                  <span>{formatDate(item.date)}</span>
+                                  <Badge
+                                    className={`${getCategoryColor(item.category)} border border-transparent`}
+                                  >
+                                    {item.category}
+                                  </Badge>
                                 </div>
                               </div>
-                              <div className="flex items-center space-x-2">
-                                <Button variant="ghost" size="sm" className="text-purple-600 hover:text-purple-700 hover:bg-purple-50" onClick={() => handleDownload(doc)}>
-                                  {doc.type === 'link' ? <ArrowUpRight className="h-4 w-4" /> : <Download className="h-4 w-4" />}
-                                </Button>
+                              <div>
+                                {isExpanded ? (
+                                  <ChevronDown className="h-5 w-5 text-gray-400" />
+                                ) : (
+                                  <ChevronRight className="h-5 w-5 text-gray-400" />
+                                )}
                               </div>
                             </div>
-                          );
-                        }
-                     })}
-                   </div>
+                            {isExpanded && (
+                              <div className="bg-gray-50 border-t border-gray-200 p-3 pl-8 space-y-2">
+                                {item.documents.map((doc) => (
+                                  <div
+                                    key={doc.id}
+                                    className="flex items-center justify-between p-3 bg-white rounded border border-gray-200"
+                                  >
+                                    <div className="flex items-center gap-3">
+                                      <FileText className="h-4 w-4 text-gray-400" />
+                                      <div>
+                                        <p className="text-sm font-medium text-black">
+                                          {doc.title}
+                                        </p>
+                                        <p className="text-xs text-gray-500">
+                                          {doc.fileName} • {formatFileSize(doc.fileSize)}
+                                        </p>
+                                      </div>
+                                    </div>
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        handleDownload(doc);
+                                      }}
+                                    >
+                                      <Download className="h-4 w-4" />
+                                    </Button>
+                                  </div>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                        );
+                      } else {
+                        // SINGLE DOC RENDER
+                        const doc = item;
+                        return (
+                          <div
+                            key={doc.id}
+                            className="flex items-center justify-between p-4 border border-gray-200 rounded-lg hover:shadow-sm transition-shadow"
+                          >
+                            <div className="flex items-center space-x-4">
+                              <div
+                                className={`w-10 h-10 rounded-lg flex items-center justify-center ${doc.type === 'link' ? 'bg-purple-100' : 'bg-red-100'}`}
+                              >
+                                {doc.type === 'link' ? (
+                                  <CreditCard className="h-5 w-5 text-purple-600" />
+                                ) : (
+                                  <FileText className="h-5 w-5 text-red-600" />
+                                )}
+                              </div>
+                              <div>
+                                <div className="font-medium text-black text-sm">{doc.title}</div>
+                                <div className="flex items-center space-x-2 text-xs text-gray-500">
+                                  <Badge
+                                    className={`${getCategoryColor(doc.productCategory)} border border-transparent`}
+                                  >
+                                    {doc.productCategory}
+                                  </Badge>
+                                  {doc.type === 'document' && (
+                                    <span>• {formatFileSize(doc.fileSize)}</span>
+                                  )}
+                                  <span>• {formatDate(doc.uploadDate)}</span>
+                                </div>
+                              </div>
+                            </div>
+                            <div className="flex items-center space-x-2">
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="text-purple-600 hover:text-purple-700 hover:bg-purple-50"
+                                onClick={() => handleDownload(doc)}
+                              >
+                                {doc.type === 'link' ? (
+                                  <ArrowUpRight className="h-4 w-4" />
+                                ) : (
+                                  <Download className="h-4 w-4" />
+                                )}
+                              </Button>
+                            </div>
+                          </div>
+                        );
+                      }
+                    })}
+                  </div>
                 )}
               </CardContent>
             </Card>

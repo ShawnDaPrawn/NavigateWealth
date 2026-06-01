@@ -3,7 +3,13 @@ import { Calendar as CalendarIcon, Clock, Repeat } from 'lucide-react';
 import { RadioGroup, RadioGroupItem } from '../../../../ui/radio-group';
 import { Label } from '../../../../ui/label';
 import { Input } from '../../../../ui/input';
-import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '../../../../ui/select';
+import {
+  Select,
+  SelectTrigger,
+  SelectValue,
+  SelectContent,
+  SelectItem,
+} from '../../../../ui/select';
 import { Calendar } from '../../../../ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '../../../../ui/popover';
 import { Button } from '../../../../ui/button';
@@ -27,8 +33,8 @@ export function SchedulingOptions({ config, onChange }: SchedulingOptionsProps) 
 
   return (
     <div className="space-y-6">
-      <RadioGroup 
-        value={config.type} 
+      <RadioGroup
+        value={config.type}
         onValueChange={(val) => handleTypeChange(val as 'immediate' | 'scheduled')}
         className="grid grid-cols-1 sm:grid-cols-2 gap-4"
       >
@@ -70,14 +76,18 @@ export function SchedulingOptions({ config, onChange }: SchedulingOptionsProps) 
                 <Popover>
                   <PopoverTrigger asChild>
                     <Button
-                      variant={"outline"}
+                      variant={'outline'}
                       className={cn(
-                        "w-full justify-start text-left font-normal",
-                        !config.startDate && "text-muted-foreground"
+                        'w-full justify-start text-left font-normal',
+                        !config.startDate && 'text-muted-foreground',
                       )}
                     >
                       <CalendarIcon className="mr-2 h-4 w-4" />
-                      {config.startDate ? config.startDate.toDateString() : <span>Pick a date</span>}
+                      {config.startDate ? (
+                        config.startDate.toDateString()
+                      ) : (
+                        <span>Pick a date</span>
+                      )}
                     </Button>
                   </PopoverTrigger>
                   <PopoverContent className="w-auto p-0">
@@ -86,18 +96,18 @@ export function SchedulingOptions({ config, onChange }: SchedulingOptionsProps) 
                       selected={config.startDate}
                       onSelect={(date) => updateScheduled({ startDate: date })}
                       initialFocus
-                      disabled={(date) => date < new Date(new Date().setHours(0,0,0,0))}
+                      disabled={(date) => date < new Date(new Date().setHours(0, 0, 0, 0))}
                     />
                   </PopoverContent>
                 </Popover>
               </div>
-              
+
               <div className="space-y-2">
                 <Label>Time</Label>
                 <div className="relative">
                   <Clock className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
-                  <Input 
-                    type="time" 
+                  <Input
+                    type="time"
                     className="pl-9"
                     value={config.time || ''}
                     onChange={(e) => updateScheduled({ time: e.target.value })}
@@ -109,14 +119,17 @@ export function SchedulingOptions({ config, onChange }: SchedulingOptionsProps) 
             {/* Recurring Options */}
             <div className="space-y-2 pt-2">
               <div className="flex items-center space-x-2">
-                <input 
-                  type="checkbox" 
-                  id="recurring" 
+                <input
+                  type="checkbox"
+                  id="recurring"
                   className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
                   checked={config.isRecurring || false}
                   onChange={(e) => updateScheduled({ isRecurring: e.target.checked })}
                 />
-                <Label htmlFor="recurring" className="flex items-center gap-2 font-medium cursor-pointer">
+                <Label
+                  htmlFor="recurring"
+                  className="flex items-center gap-2 font-medium cursor-pointer"
+                >
                   <Repeat className="h-4 w-4" /> Repeat this email
                 </Label>
               </div>
@@ -126,9 +139,13 @@ export function SchedulingOptions({ config, onChange }: SchedulingOptionsProps) 
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
                       <Label>Frequency</Label>
-                      <Select 
-                        value={config.recurringFrequency || 'monthly'} 
-                        onValueChange={(val: string) => updateScheduled({ recurringFrequency: val as typeof config.recurringFrequency })}
+                      <Select
+                        value={config.recurringFrequency || 'monthly'}
+                        onValueChange={(val: string) =>
+                          updateScheduled({
+                            recurringFrequency: val as typeof config.recurringFrequency,
+                          })
+                        }
                       >
                         <SelectTrigger>
                           <SelectValue />
@@ -142,12 +159,14 @@ export function SchedulingOptions({ config, onChange }: SchedulingOptionsProps) 
                         </SelectContent>
                       </Select>
                     </div>
-                    
+
                     <div className="space-y-2">
                       <Label>End Condition</Label>
-                      <Select 
+                      <Select
                         value={config.endCondition || 'never'}
-                        onValueChange={(val: string) => updateScheduled({ endCondition: val as typeof config.endCondition })}
+                        onValueChange={(val: string) =>
+                          updateScheduled({ endCondition: val as typeof config.endCondition })
+                        }
                       >
                         <SelectTrigger>
                           <SelectValue />
@@ -164,11 +183,13 @@ export function SchedulingOptions({ config, onChange }: SchedulingOptionsProps) 
                   {config.endCondition === 'after_occurrences' && (
                     <div className="space-y-2">
                       <Label>Number of occurrences</Label>
-                      <Input 
-                        type="number" 
+                      <Input
+                        type="number"
                         min={1}
                         value={config.endOccurrences || ''}
-                        onChange={(e) => updateScheduled({ endOccurrences: parseInt(e.target.value) })}
+                        onChange={(e) =>
+                          updateScheduled({ endOccurrences: parseInt(e.target.value) })
+                        }
                       />
                     </div>
                   )}
@@ -199,5 +220,5 @@ function SendIcon(props: React.SVGProps<SVGSVGElement>) {
       <line x1="22" y1="2" x2="11" y2="13" />
       <polygon points="22 2 15 22 11 13 2 9 22 2" />
     </svg>
-  )
+  );
 }

@@ -19,11 +19,7 @@ import {
 } from 'lucide-react';
 import { cn } from '../../../../../ui/utils';
 import { Button } from '../../../../../ui/button';
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from '../../../../../ui/popover';
+import { Popover, PopoverContent, PopoverTrigger } from '../../../../../ui/popover';
 import { Input } from '../../../../../ui/input';
 import { Label } from '../../../../../ui/label';
 import { KeySelector } from './KeySelector';
@@ -158,7 +154,7 @@ export function RichTextEditor({
       document.execCommand(command, false, value);
       handleInput();
     },
-    [handleInput]
+    [handleInput],
   );
 
   // -- Block format (paragraph / heading) --
@@ -168,7 +164,7 @@ export function RichTextEditor({
       document.execCommand('formatBlock', false, `<${tag}>`);
       handleInput();
     },
-    [handleInput]
+    [handleInput],
   );
 
   // -- Save/restore selection for popover interactions --
@@ -212,11 +208,15 @@ export function RichTextEditor({
       editorRef.current?.focus();
       const variable = `{{${key}}}`;
       // Use insertHTML to place at cursor position
-      document.execCommand('insertHTML', false, `<span class="variable-tag">${variable}</span>&nbsp;`);
+      document.execCommand(
+        'insertHTML',
+        false,
+        `<span class="variable-tag">${variable}</span>&nbsp;`,
+      );
       handleInput();
       toast.success(`Inserted ${variable}`);
     },
-    [handleInput]
+    [handleInput],
   );
 
   // -- Handle paste: strip complex formatting, keep basic HTML --
@@ -235,7 +235,7 @@ export function RichTextEditor({
       }
       handleInput();
     },
-    [handleInput]
+    [handleInput],
   );
 
   // -- Keyboard shortcuts inside editor --
@@ -258,10 +258,14 @@ export function RichTextEditor({
         }
       }
     },
-    [exec]
+    [exec],
   );
 
-  const isEmpty = !value || value === '<br>' || value === '<p><br></p>' || value.replace(/<[^>]*>/g, '').trim() === '';
+  const isEmpty =
+    !value ||
+    value === '<br>' ||
+    value === '<p><br></p>' ||
+    value.replace(/<[^>]*>/g, '').trim() === '';
 
   // ---- TOOLBAR BUTTON ----
   const ToolbarBtn = ({
@@ -286,7 +290,7 @@ export function RichTextEditor({
       className={cn(
         'h-7 w-7 flex items-center justify-center rounded text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition-colors',
         active && 'bg-purple-100 text-purple-700 hover:bg-purple-200 hover:text-purple-800',
-        disabled && 'opacity-40 cursor-not-allowed hover:bg-transparent'
+        disabled && 'opacity-40 cursor-not-allowed hover:bg-transparent',
       )}
     >
       {children}
@@ -408,10 +412,13 @@ export function RichTextEditor({
             <Unlink className="h-3.5 w-3.5" />
           </ToolbarBtn>
         ) : (
-          <Popover open={linkPopoverOpen} onOpenChange={(open) => {
-            if (open) saveSelection();
-            setLinkPopoverOpen(open);
-          }}>
+          <Popover
+            open={linkPopoverOpen}
+            onOpenChange={(open) => {
+              if (open) saveSelection();
+              setLinkPopoverOpen(open);
+            }}
+          >
             <PopoverTrigger asChild>
               <button
                 type="button"
@@ -509,7 +516,7 @@ export function RichTextEditor({
             '[&_ol]:my-1 [&_ol]:pl-5 [&_ol]:text-xs',
             '[&_li]:my-0.5',
             '[&_a]:text-purple-600 [&_a]:underline',
-            '[&_.variable-tag]:bg-purple-100 [&_.variable-tag]:text-purple-700 [&_.variable-tag]:px-1 [&_.variable-tag]:py-0.5 [&_.variable-tag]:rounded [&_.variable-tag]:text-[10px] [&_.variable-tag]:font-mono [&_.variable-tag]:whitespace-nowrap'
+            '[&_.variable-tag]:bg-purple-100 [&_.variable-tag]:text-purple-700 [&_.variable-tag]:px-1 [&_.variable-tag]:py-0.5 [&_.variable-tag]:rounded [&_.variable-tag]:text-[10px] [&_.variable-tag]:font-mono [&_.variable-tag]:whitespace-nowrap',
           )}
           style={{ minHeight }}
           onInput={handleInput}
@@ -533,11 +540,34 @@ function sanitizePastedHtml(html: string): string {
 
   // Tags we allow
   const allowedTags = new Set([
-    'P', 'BR', 'B', 'STRONG', 'I', 'EM', 'U', 'S', 'STRIKE', 'DEL',
-    'H1', 'H2', 'H3', 'H4', 'H5', 'H6',
-    'UL', 'OL', 'LI',
-    'A', 'SPAN', 'DIV',
-    'TABLE', 'THEAD', 'TBODY', 'TR', 'TH', 'TD',
+    'P',
+    'BR',
+    'B',
+    'STRONG',
+    'I',
+    'EM',
+    'U',
+    'S',
+    'STRIKE',
+    'DEL',
+    'H1',
+    'H2',
+    'H3',
+    'H4',
+    'H5',
+    'H6',
+    'UL',
+    'OL',
+    'LI',
+    'A',
+    'SPAN',
+    'DIV',
+    'TABLE',
+    'THEAD',
+    'TBODY',
+    'TR',
+    'TH',
+    'TD',
   ]);
 
   // Allowed attributes

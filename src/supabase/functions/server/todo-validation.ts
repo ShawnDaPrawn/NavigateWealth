@@ -17,10 +17,14 @@ import { z } from 'npm:zod';
  * but legacy IDs may be present, so we enforce non-empty + max length
  * rather than strict UUID regex.
  */
-export const TaskIdParamSchema = z.string()
+export const TaskIdParamSchema = z
+  .string()
   .min(1, 'taskId is required')
   .max(128, 'taskId must not exceed 128 characters')
-  .regex(/^[a-zA-Z0-9_-]+$/, 'taskId must contain only alphanumeric characters, hyphens, or underscores');
+  .regex(
+    /^[a-zA-Z0-9_-]+$/,
+    'taskId must contain only alphanumeric characters, hyphens, or underscores',
+  );
 
 // ── Query Parameters ───────────────────────────────────────────────────────
 
@@ -28,7 +32,8 @@ export const TaskIdParamSchema = z.string()
  * Date query param for the /by-date endpoint.
  * Must be a valid ISO 8601 date string (YYYY-MM-DD).
  */
-export const DateQuerySchema = z.string()
+export const DateQuerySchema = z
+  .string()
   .min(1, 'Date parameter is required')
   .regex(/^\d{4}-\d{2}-\d{2}$/, 'Date must be in YYYY-MM-DD format')
   .refine((val) => {
@@ -73,7 +78,9 @@ export const ALLOWED_ATTACHMENT_TYPES = [
  * This cannot use Zod directly (File is a runtime object, not JSON),
  * so we export a plain validation function.
  */
-export function validateAttachmentFile(file: File): { valid: true } | { valid: false; error: string } {
+export function validateAttachmentFile(
+  file: File,
+): { valid: true } | { valid: false; error: string } {
   if (!file.name || file.name.trim().length === 0) {
     return { valid: false, error: 'Attachment file name is required' };
   }

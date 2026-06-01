@@ -29,7 +29,9 @@ type SpreadsheetWorkbook = ReturnType<typeof XLSX.utils.book_new>;
 type SpreadsheetSheet = ReturnType<typeof XLSX.utils.aoa_to_sheet>;
 
 function normaliseTemplateMetadataValue(value: unknown): string {
-  return String(value || '').trim().slice(0, 240);
+  return String(value || '')
+    .trim()
+    .slice(0, 240);
 }
 
 function isBlank(value: unknown): boolean {
@@ -45,22 +47,34 @@ export function normalisePolicyNumber(value: unknown): string {
 }
 
 export function isUnsafeSpreadsheetKey(value: unknown): boolean {
-  return UNSAFE_SPREADSHEET_KEYS.has(String(value || '').trim().toLowerCase());
+  return UNSAFE_SPREADSHEET_KEYS.has(
+    String(value || '')
+      .trim()
+      .toLowerCase(),
+  );
 }
 
 export function isTemplateMetadataColumn(header: unknown): boolean {
   const value = String(header || '').trim();
-  return Object.values(TEMPLATE_METADATA_COLUMNS).includes(value as typeof TEMPLATE_METADATA_COLUMNS[keyof typeof TEMPLATE_METADATA_COLUMNS]);
+  return Object.values(TEMPLATE_METADATA_COLUMNS).includes(
+    value as (typeof TEMPLATE_METADATA_COLUMNS)[keyof typeof TEMPLATE_METADATA_COLUMNS],
+  );
 }
 
-export function getTemplateRowMetadata(rawData: Record<string, unknown>): IntegrationTemplateRowMetadata {
+export function getTemplateRowMetadata(
+  rawData: Record<string, unknown>,
+): IntegrationTemplateRowMetadata {
   return {
-    templateVersion: normaliseTemplateMetadataValue(rawData[TEMPLATE_METADATA_COLUMNS.templateVersion]),
+    templateVersion: normaliseTemplateMetadataValue(
+      rawData[TEMPLATE_METADATA_COLUMNS.templateVersion],
+    ),
     policyId: normaliseTemplateMetadataValue(rawData[TEMPLATE_METADATA_COLUMNS.policyId]),
     clientId: normaliseTemplateMetadataValue(rawData[TEMPLATE_METADATA_COLUMNS.clientId]),
     providerId: normaliseTemplateMetadataValue(rawData[TEMPLATE_METADATA_COLUMNS.providerId]),
     categoryId: normaliseTemplateMetadataValue(rawData[TEMPLATE_METADATA_COLUMNS.categoryId]),
-    normalizedPolicyNumber: normalisePolicyNumber(rawData[TEMPLATE_METADATA_COLUMNS.normalizedPolicyNumber]),
+    normalizedPolicyNumber: normalisePolicyNumber(
+      rawData[TEMPLATE_METADATA_COLUMNS.normalizedPolicyNumber],
+    ),
   };
 }
 
@@ -70,22 +84,32 @@ export function applyTemplateRowMetadata(
 ): Record<string, unknown> {
   return {
     ...rawData,
-    [TEMPLATE_METADATA_COLUMNS.templateVersion]: normaliseTemplateMetadataValue(metadata.templateVersion),
+    [TEMPLATE_METADATA_COLUMNS.templateVersion]: normaliseTemplateMetadataValue(
+      metadata.templateVersion,
+    ),
     [TEMPLATE_METADATA_COLUMNS.policyId]: normaliseTemplateMetadataValue(metadata.policyId),
     [TEMPLATE_METADATA_COLUMNS.clientId]: normaliseTemplateMetadataValue(metadata.clientId),
     [TEMPLATE_METADATA_COLUMNS.providerId]: normaliseTemplateMetadataValue(metadata.providerId),
     [TEMPLATE_METADATA_COLUMNS.categoryId]: normaliseTemplateMetadataValue(metadata.categoryId),
-    [TEMPLATE_METADATA_COLUMNS.normalizedPolicyNumber]: normalisePolicyNumber(metadata.normalizedPolicyNumber),
+    [TEMPLATE_METADATA_COLUMNS.normalizedPolicyNumber]: normalisePolicyNumber(
+      metadata.normalizedPolicyNumber,
+    ),
   };
 }
 
-export function stripTemplateMetadataColumns(rawData: Record<string, unknown>): Record<string, unknown> {
+export function stripTemplateMetadataColumns(
+  rawData: Record<string, unknown>,
+): Record<string, unknown> {
   return Object.fromEntries(
-    Object.entries(rawData || {}).filter(([key]) => !isTemplateMetadataColumn(key) && !isUnsafeSpreadsheetKey(key)),
+    Object.entries(rawData || {}).filter(
+      ([key]) => !isTemplateMetadataColumn(key) && !isUnsafeSpreadsheetKey(key),
+    ),
   );
 }
 
-export function stripUnsafeSpreadsheetKeys(rawData: Record<string, unknown>): Record<string, unknown> {
+export function stripUnsafeSpreadsheetKeys(
+  rawData: Record<string, unknown>,
+): Record<string, unknown> {
   return Object.fromEntries(
     Object.entries(rawData || {}).filter(([key]) => !isUnsafeSpreadsheetKey(key)),
   );
@@ -112,7 +136,12 @@ export function serialiseTemplateCellValue(value: unknown): unknown {
 
 export function buildTemplateFileName(providerName: string, categoryLabel: string): string {
   const parts = [providerName || 'Provider', categoryLabel, 'Integration Template']
-    .map((part) => String(part || '').replace(/[\\/:*?"<>|]/g, ' ').replace(/\s+/g, ' ').trim())
+    .map((part) =>
+      String(part || '')
+        .replace(/[\\/:*?"<>|]/g, ' ')
+        .replace(/\s+/g, ' ')
+        .trim(),
+    )
     .filter(Boolean);
   return `${parts.join(' - ')}.xlsx`;
 }
@@ -159,7 +188,9 @@ export function writeSpreadsheetWorkbook(workbook: SpreadsheetWorkbook): ArrayBu
   return XLSX.write(workbook, { type: 'array', bookType: 'xlsx' }) as ArrayBuffer;
 }
 
-export function parseSpreadsheetDateSerial(raw: number): { y: number; m: number; d: number } | null {
+export function parseSpreadsheetDateSerial(
+  raw: number,
+): { y: number; m: number; d: number } | null {
   return XLSX.SSF.parse_date_code(raw) || null;
 }
 
@@ -168,7 +199,10 @@ export function readSpreadsheetUpload(buffer: ArrayBuffer): {
   rawRows: Record<string, unknown>[];
   previewRows: Record<string, unknown>[];
 } {
-  const workbook = XLSX.read(new Uint8Array(buffer), { type: 'array', sheetRows: MAX_INTEGRATION_UPLOAD_ROWS + 2 });
+  const workbook = XLSX.read(new Uint8Array(buffer), {
+    type: 'array',
+    sheetRows: MAX_INTEGRATION_UPLOAD_ROWS + 2,
+  });
   const dataSheetName = workbook.SheetNames.includes(CANONICAL_TEMPLATE_SHEET_NAME)
     ? CANONICAL_TEMPLATE_SHEET_NAME
     : workbook.SheetNames.includes('Provider Data')
@@ -187,7 +221,9 @@ export function readSpreadsheetUpload(buffer: ArrayBuffer): {
   }
 
   if (jsonData.length > MAX_INTEGRATION_UPLOAD_ROWS + 1) {
-    throw new Error(`Spreadsheet has too many rows. Maximum ${MAX_INTEGRATION_UPLOAD_ROWS} policy rows are allowed per upload.`);
+    throw new Error(
+      `Spreadsheet has too many rows. Maximum ${MAX_INTEGRATION_UPLOAD_ROWS} policy rows are allowed per upload.`,
+    );
   }
 
   const headers = ((jsonData[0] || []) as unknown[])

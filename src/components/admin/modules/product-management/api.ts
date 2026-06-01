@@ -2,12 +2,12 @@ import { api } from '../../../../utils/api/client';
 import { projectId, publicAnonKey } from '../../../../utils/supabase/info';
 import { createClient } from '../../../../utils/supabase/client';
 import { logger } from '../../../../utils/logger';
-import { 
-  Provider, 
+import {
+  Provider,
   ProviderDTO,
-  ProductCategoryId, 
-  CategoryTableStructure, 
-  SaveProviderRequest, 
+  ProductCategoryId,
+  CategoryTableStructure,
+  SaveProviderRequest,
   SaveSchemaRequest,
   IntegrationProvider,
   IntegrationStats,
@@ -22,7 +22,7 @@ import {
   PortalJobQueueSummary,
   PortalJobRunMode,
   PortalSyncJob,
-  ProductField
+  ProductField,
 } from './types';
 
 interface ProvidersResponse {
@@ -71,17 +71,20 @@ const formatIntegrationDate = (value: string) => {
 const buildIntegrationStats = (history: IntegrationHistoryItem[]): IntegrationStats => {
   if (!Array.isArray(history) || history.length === 0) return emptyIntegrationStats();
 
-  const sortedHistory = [...history].sort((a, b) =>
-    new Date(b.uploadedAt).getTime() - new Date(a.uploadedAt).getTime()
+  const sortedHistory = [...history].sort(
+    (a, b) => new Date(b.uploadedAt).getTime() - new Date(a.uploadedAt).getTime(),
   );
   const lastAttempt = sortedHistory[0];
   const lastSuccess = sortedHistory.find((item) => item.status === 'success');
 
   return {
-    lastAttempted: lastAttempt?.uploadedAt ? formatIntegrationDateTime(lastAttempt.uploadedAt) : '-',
-    lastUpdateStatus: lastAttempt?.status === 'success' || lastAttempt?.status === 'failed'
-      ? lastAttempt.status
-      : null,
+    lastAttempted: lastAttempt?.uploadedAt
+      ? formatIntegrationDateTime(lastAttempt.uploadedAt)
+      : '-',
+    lastUpdateStatus:
+      lastAttempt?.status === 'success' || lastAttempt?.status === 'failed'
+        ? lastAttempt.status
+        : null,
     lastSuccessful: lastSuccess?.uploadedAt ? formatIntegrationDate(lastSuccess.uploadedAt) : '-',
   };
 };
@@ -90,7 +93,9 @@ async function getSupabaseAuthToken(): Promise<string> {
   let token = publicAnonKey;
   try {
     const supabase = createClient();
-    const { data: { session } } = await supabase.auth.getSession();
+    const {
+      data: { session },
+    } = await supabase.auth.getSession();
     token = session?.access_token || publicAnonKey;
   } catch (error) {
     logger.warn('Failed to retrieve session, using anon key');
@@ -104,7 +109,9 @@ export const productManagementApi = {
   fetchProviders: async (): Promise<Provider[]> => {
     const [providerResponse, productsResponse] = await Promise.all([
       api.get<{ providers: ProviderDTO[] }>('product-management/providers'),
-      api.get<{ products: ProductDTO[] }>('product-management/products?active=true').catch(() => ({ products: [] })),
+      api
+        .get<{ products: ProductDTO[] }>('product-management/products?active=true')
+        .catch(() => ({ products: [] })),
     ]);
 
     const rawProviders = providerResponse.providers || [];
@@ -128,22 +135,30 @@ export const productManagementApi = {
       code: p.code,
       type: p.type,
       description: p.description,
-      
+
       // Transformed mappings — belt-and-suspenders for legacy camelCase data
-      logo: p.logo_url || (p as unknown as Record<string, unknown>).logoUrl as string || '',
+      logo: p.logo_url || ((p as unknown as Record<string, unknown>).logoUrl as string) || '',
       website: p.website,
-      contactEmail: p.contact_email || (p as unknown as Record<string, unknown>).contactEmail as string || '',
-      contactPhone: p.contact_phone || (p as unknown as Record<string, unknown>).contactPhone as string || '',
-      active: p.is_active !== undefined ? p.is_active : ((p as unknown as Record<string, unknown>).isActive !== undefined ? (p as unknown as Record<string, unknown>).isActive as boolean : true),
-      categoryIds: p.category_ids || (p as unknown as Record<string, unknown>).categoryIds as string[] || [],
-      
+      contactEmail:
+        p.contact_email || ((p as unknown as Record<string, unknown>).contactEmail as string) || '',
+      contactPhone:
+        p.contact_phone || ((p as unknown as Record<string, unknown>).contactPhone as string) || '',
+      active:
+        p.is_active !== undefined
+          ? p.is_active
+          : (p as unknown as Record<string, unknown>).isActive !== undefined
+            ? ((p as unknown as Record<string, unknown>).isActive as boolean)
+            : true,
+      categoryIds:
+        p.category_ids || ((p as unknown as Record<string, unknown>).categoryIds as string[]) || [],
+
       // Enriched / UI-specific
       brokerConsultants: [],
       supportedProducts: (productsByProvider.get(p.id) || []).sort((a, b) => a.localeCompare(b)),
-      
+
       // Metadata
       createdAt: p.created_at,
-      updatedAt: p.updated_at
+      updatedAt: p.updated_at,
     }));
   },
 
@@ -159,9 +174,9 @@ export const productManagementApi = {
       contact_email: provider.contactEmail,
       contact_phone: provider.contactPhone,
       category_ids: provider.categoryIds,
-      is_active: provider.active
+      is_active: provider.active,
     };
-    
+
     const res = await api.post<{ provider: ProviderDTO }>('product-management/providers', payload);
     const p = res.provider;
 
@@ -181,7 +196,7 @@ export const productManagementApi = {
       brokerConsultants: [],
       supportedProducts: [],
       createdAt: p.created_at,
-      updatedAt: p.updated_at
+      updatedAt: p.updated_at,
     };
   },
 
@@ -195,10 +210,13 @@ export const productManagementApi = {
       contact_email: provider.contactEmail,
       contact_phone: provider.contactPhone,
       category_ids: provider.categoryIds,
-      is_active: provider.active
+      is_active: provider.active,
     };
 
-    const res = await api.put<{ provider: ProviderDTO }>(`product-management/providers/${id}`, payload);
+    const res = await api.put<{ provider: ProviderDTO }>(
+      `product-management/providers/${id}`,
+      payload,
+    );
     const p = res.provider;
 
     // Map back
@@ -217,7 +235,7 @@ export const productManagementApi = {
       brokerConsultants: [],
       supportedProducts: [],
       createdAt: p.created_at,
-      updatedAt: p.updated_at
+      updatedAt: p.updated_at,
     };
   },
 
@@ -229,11 +247,13 @@ export const productManagementApi = {
 
   fetchSchema: async (categoryId: ProductCategoryId): Promise<CategoryTableStructure | null> => {
     try {
-      const response = await api.get<SchemaResponse>(`integrations/schemas?categoryId=${categoryId}`);
+      const response = await api.get<SchemaResponse>(
+        `integrations/schemas?categoryId=${categoryId}`,
+      );
       if (response && response.fields) {
         return {
           categoryId,
-          fields: response.fields
+          fields: response.fields,
         };
       }
       return null;
@@ -255,57 +275,77 @@ export const productManagementApi = {
     const response = await api.get<{ providers: ProviderDTO[] }>('product-management/providers');
     const rawProviders = response.providers || [];
 
-    return Promise.all(rawProviders.map(async (p) => {
-      const categoryIds = p.category_ids || (p as unknown as Record<string, unknown>).categoryIds as string[] || [];
-      const categoryHistoryResults = await Promise.allSettled(
-        categoryIds.map((categoryId) =>
-          api.get<IntegrationHistoryItem[]>(
-            `integrations/history?providerId=${encodeURIComponent(p.id)}&categoryId=${encodeURIComponent(categoryId)}`
-          )
-        )
-      );
-      const providerHistory = categoryHistoryResults.flatMap((result) =>
-        result.status === 'fulfilled' && Array.isArray(result.value) ? result.value : []
-      );
-      const stats = buildIntegrationStats(providerHistory);
+    return Promise.all(
+      rawProviders.map(async (p) => {
+        const categoryIds =
+          p.category_ids ||
+          ((p as unknown as Record<string, unknown>).categoryIds as string[]) ||
+          [];
+        const categoryHistoryResults = await Promise.allSettled(
+          categoryIds.map((categoryId) =>
+            api.get<IntegrationHistoryItem[]>(
+              `integrations/history?providerId=${encodeURIComponent(p.id)}&categoryId=${encodeURIComponent(categoryId)}`,
+            ),
+          ),
+        );
+        const providerHistory = categoryHistoryResults.flatMap((result) =>
+          result.status === 'fulfilled' && Array.isArray(result.value) ? result.value : [],
+        );
+        const stats = buildIntegrationStats(providerHistory);
 
-      return {
-        id: p.id,
-        name: p.name,
-        description: p.description,
-        categoryIds,
-        logoUrl: p.logo_url || (p as unknown as Record<string, unknown>).logoUrl as string || '',
-        lastAttempted: stats.lastAttempted,
-        lastUpdateStatus: stats.lastUpdateStatus || 'never',
-        lastSuccessful: stats.lastSuccessful,
-      };
-    }));
+        return {
+          id: p.id,
+          name: p.name,
+          description: p.description,
+          categoryIds,
+          logoUrl:
+            p.logo_url || ((p as unknown as Record<string, unknown>).logoUrl as string) || '',
+          lastAttempted: stats.lastAttempted,
+          lastUpdateStatus: stats.lastUpdateStatus || 'never',
+          lastSuccessful: stats.lastSuccessful,
+        };
+      }),
+    );
   },
 
-  fetchIntegrationHistory: async (providerId: string, categoryId: string): Promise<IntegrationStats> => {
-    const history = await api.get<IntegrationHistoryItem[]>(`integrations/history?providerId=${providerId}&categoryId=${categoryId}`);
-    
+  fetchIntegrationHistory: async (
+    providerId: string,
+    categoryId: string,
+  ): Promise<IntegrationStats> => {
+    const history = await api.get<IntegrationHistoryItem[]>(
+      `integrations/history?providerId=${providerId}&categoryId=${categoryId}`,
+    );
+
     return buildIntegrationStats(history);
   },
 
-  fetchIntegrationConfig: async (providerId: string, categoryId: string): Promise<IntegrationConfig> => {
-    return api.get<IntegrationConfig>(`integrations/config?providerId=${providerId}&categoryId=${categoryId}`);
+  fetchIntegrationConfig: async (
+    providerId: string,
+    categoryId: string,
+  ): Promise<IntegrationConfig> => {
+    return api.get<IntegrationConfig>(
+      `integrations/config?providerId=${providerId}&categoryId=${categoryId}`,
+    );
   },
 
-  saveIntegrationConfig: async (providerId: string, categoryId: string, config: IntegrationConfig): Promise<void> => {
+  saveIntegrationConfig: async (
+    providerId: string,
+    categoryId: string,
+    config: IntegrationConfig,
+  ): Promise<void> => {
     const payload = {
-        providerId,
-        categoryId,
-        ...config
+      providerId,
+      categoryId,
+      ...config,
     };
     await api.post('integrations/config', payload);
   },
 
   uploadIntegrationFile: async (
-    file: File, 
-    providerId: string, 
-    categoryId: string, 
-    mode: 'preview' | 'commit'
+    file: File,
+    providerId: string,
+    categoryId: string,
+    mode: 'preview' | 'commit',
   ): Promise<UploadPreviewResponse> => {
     const formData = new FormData();
     formData.append('file', file);
@@ -315,29 +355,40 @@ export const productManagementApi = {
 
     const token = await getSupabaseAuthToken();
 
-    const res = await fetch(`https://${projectId}.supabase.co/functions/v1/make-server-91ed8379/integrations/upload`, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${token}`,
+    const res = await fetch(
+      `https://${projectId}.supabase.co/functions/v1/make-server-91ed8379/integrations/upload`,
+      {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+        body: formData,
       },
-      body: formData
-    });
+    );
 
     const data = await res.json();
     if (!res.ok) throw new Error(data.error || 'Failed to process file');
     return data;
   },
 
-  publishIntegrationSyncRun: async (runId: string, providerId: string, categoryId: string, rowIds?: string[]): Promise<IntegrationSyncRun> => {
+  publishIntegrationSyncRun: async (
+    runId: string,
+    providerId: string,
+    categoryId: string,
+    rowIds?: string[],
+  ): Promise<IntegrationSyncRun> => {
     const token = await getSupabaseAuthToken();
-    const res = await fetch(`https://${projectId}.supabase.co/functions/v1/make-server-91ed8379/integrations/sync-runs/${runId}/publish`, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${token}`,
-        'Content-Type': 'application/json',
+    const res = await fetch(
+      `https://${projectId}.supabase.co/functions/v1/make-server-91ed8379/integrations/sync-runs/${runId}/publish`,
+      {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ providerId, categoryId, rowIds }),
       },
-      body: JSON.stringify({ providerId, categoryId, rowIds }),
-    });
+    );
 
     const data = await res.json();
     if (!res.ok) throw new Error(data.error || 'Failed to publish sync run');
@@ -346,11 +397,14 @@ export const productManagementApi = {
 
   fetchIntegrationSyncRun: async (runId: string): Promise<IntegrationSyncRun> => {
     const token = await getSupabaseAuthToken();
-    const res = await fetch(`https://${projectId}.supabase.co/functions/v1/make-server-91ed8379/integrations/sync-runs/${runId}`, {
-      headers: {
-        'Authorization': `Bearer ${token}`,
+    const res = await fetch(
+      `https://${projectId}.supabase.co/functions/v1/make-server-91ed8379/integrations/sync-runs/${runId}`,
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
       },
-    });
+    );
 
     const data = await res.json();
     if (!res.ok) throw new Error(data.error || 'Failed to fetch sync run');
@@ -359,11 +413,14 @@ export const productManagementApi = {
 
   downloadIntegrationTemplate: async (providerId: string, categoryId: string): Promise<void> => {
     const token = await getSupabaseAuthToken();
-    const res = await fetch(`https://${projectId}.supabase.co/functions/v1/make-server-91ed8379/integrations/template?providerId=${encodeURIComponent(providerId)}&categoryId=${encodeURIComponent(categoryId)}`, {
-      headers: {
-        'Authorization': `Bearer ${token}`,
+    const res = await fetch(
+      `https://${projectId}.supabase.co/functions/v1/make-server-91ed8379/integrations/template?providerId=${encodeURIComponent(providerId)}&categoryId=${encodeURIComponent(categoryId)}`,
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
       },
-    });
+    );
 
     if (!res.ok) {
       const data = await res.json().catch(() => ({}));
@@ -386,42 +443,60 @@ export const productManagementApi = {
 
   fetchPortalFlow: async (providerId: string, categoryId: string): Promise<PortalProviderFlow> => {
     const response = await api.get<{ success: boolean; flow: PortalProviderFlow }>(
-      `integrations/portal-flows/${providerId}?categoryId=${encodeURIComponent(categoryId)}`
+      `integrations/portal-flows/${providerId}?categoryId=${encodeURIComponent(categoryId)}`,
     );
     return response.flow;
   },
 
-  fetchPortalBrainMemory: async (providerId: string, categoryId: string): Promise<PortalBrainMemorySummary> => {
-    const response = await api.get<{ success: boolean; summary: PortalBrainMemorySummary }>(`integrations/portal-flows/${providerId}/brain-memory?categoryId=${categoryId}`);
+  fetchPortalBrainMemory: async (
+    providerId: string,
+    categoryId: string,
+  ): Promise<PortalBrainMemorySummary> => {
+    const response = await api.get<{ success: boolean; summary: PortalBrainMemorySummary }>(
+      `integrations/portal-flows/${providerId}/brain-memory?categoryId=${categoryId}`,
+    );
     return response.summary;
   },
 
-  savePortalFlow: async (providerId: string, categoryId: string, flow: PortalProviderFlow): Promise<PortalProviderFlow> => {
+  savePortalFlow: async (
+    providerId: string,
+    categoryId: string,
+    flow: PortalProviderFlow,
+  ): Promise<PortalProviderFlow> => {
     const response = await api.put<{ success: boolean; flow: PortalProviderFlow }>(
       `integrations/portal-flows/${providerId}?categoryId=${encodeURIComponent(categoryId)}`,
-      flow
+      flow,
     );
     return response.flow;
   },
 
   resetPortalFlow: async (providerId: string, categoryId: string): Promise<PortalProviderFlow> => {
     const response = await api.delete<{ success: boolean; flow: PortalProviderFlow }>(
-      `integrations/portal-flows/${providerId}?categoryId=${encodeURIComponent(categoryId)}`
+      `integrations/portal-flows/${providerId}?categoryId=${encodeURIComponent(categoryId)}`,
     );
     return response.flow;
   },
 
-  fetchPortalCredentialStatus: async (providerId: string, profileId: string, categoryId: string): Promise<PortalCredentialStatus> => {
+  fetchPortalCredentialStatus: async (
+    providerId: string,
+    profileId: string,
+    categoryId: string,
+  ): Promise<PortalCredentialStatus> => {
     const response = await api.get<{ success: boolean; status: PortalCredentialStatus }>(
-      `integrations/portal-flows/${providerId}/credentials/${profileId}?categoryId=${encodeURIComponent(categoryId)}`
+      `integrations/portal-flows/${providerId}/credentials/${profileId}?categoryId=${encodeURIComponent(categoryId)}`,
     );
     return response.status;
   },
 
-  savePortalCredentials: async (providerId: string, profileId: string, categoryId: string, credentials: { username: string; password?: string }): Promise<PortalCredentialStatus> => {
+  savePortalCredentials: async (
+    providerId: string,
+    profileId: string,
+    categoryId: string,
+    credentials: { username: string; password?: string },
+  ): Promise<PortalCredentialStatus> => {
     const response = await api.put<{ success: boolean; status: PortalCredentialStatus }>(
       `integrations/portal-flows/${providerId}/credentials/${profileId}?categoryId=${encodeURIComponent(categoryId)}`,
-      credentials
+      credentials,
     );
     return response.status;
   },
@@ -433,52 +508,95 @@ export const productManagementApi = {
     runMode: PortalJobRunMode,
     options: Pick<PortalProviderFlow, 'policySchedule' | 'documentArtifacts'> = {},
   ): Promise<{ job: PortalSyncJob; flow: PortalProviderFlow }> => {
-    return api.post<{ success: boolean; job: PortalSyncJob; flow: PortalProviderFlow }>('integrations/portal-jobs', {
-      providerId,
-      categoryId,
-      credentialProfileId,
-      runMode,
-      policySchedule: options.policySchedule,
-      documentArtifacts: options.documentArtifacts,
-    });
+    return api.post<{ success: boolean; job: PortalSyncJob; flow: PortalProviderFlow }>(
+      'integrations/portal-jobs',
+      {
+        providerId,
+        categoryId,
+        credentialProfileId,
+        runMode,
+        policySchedule: options.policySchedule,
+        documentArtifacts: options.documentArtifacts,
+      },
+    );
   },
 
-  fetchPortalJob: async (jobId: string, providerId: string, categoryId: string): Promise<PortalSyncJob> => {
+  fetchPortalJob: async (
+    jobId: string,
+    providerId: string,
+    categoryId: string,
+  ): Promise<PortalSyncJob> => {
     const response = await api.get<{ success: boolean; job: PortalSyncJob }>(
-      `integrations/portal-jobs/${jobId}?providerId=${encodeURIComponent(providerId)}&categoryId=${encodeURIComponent(categoryId)}`
+      `integrations/portal-jobs/${jobId}?providerId=${encodeURIComponent(providerId)}&categoryId=${encodeURIComponent(categoryId)}`,
     );
     return response.job;
   },
 
-  fetchPortalJobItems: async (jobId: string, providerId: string, categoryId: string): Promise<{ items: PortalJobPolicyItem[]; summary: PortalJobQueueSummary }> => {
-    const response = await api.get<{ success: boolean; items: PortalJobPolicyItem[]; summary: PortalJobQueueSummary }>(
-      `integrations/portal-jobs/${jobId}/items?providerId=${encodeURIComponent(providerId)}&categoryId=${encodeURIComponent(categoryId)}`
+  fetchPortalJobItems: async (
+    jobId: string,
+    providerId: string,
+    categoryId: string,
+  ): Promise<{ items: PortalJobPolicyItem[]; summary: PortalJobQueueSummary }> => {
+    const response = await api.get<{
+      success: boolean;
+      items: PortalJobPolicyItem[];
+      summary: PortalJobQueueSummary;
+    }>(
+      `integrations/portal-jobs/${jobId}/items?providerId=${encodeURIComponent(providerId)}&categoryId=${encodeURIComponent(categoryId)}`,
     );
     return { items: response.items || [], summary: response.summary };
   },
 
-  retryPortalJobItem: async (jobId: string, itemId: string, providerId: string, categoryId: string): Promise<{ job: PortalSyncJob; items: PortalJobPolicyItem[]; summary: PortalJobQueueSummary }> => {
-    const response = await api.post<{ success: boolean; job: PortalSyncJob; items: PortalJobPolicyItem[]; summary: PortalJobQueueSummary }>(
-      `integrations/portal-jobs/${jobId}/items/${itemId}/retry`,
-      { providerId, categoryId }
-    );
+  retryPortalJobItem: async (
+    jobId: string,
+    itemId: string,
+    providerId: string,
+    categoryId: string,
+  ): Promise<{
+    job: PortalSyncJob;
+    items: PortalJobPolicyItem[];
+    summary: PortalJobQueueSummary;
+  }> => {
+    const response = await api.post<{
+      success: boolean;
+      job: PortalSyncJob;
+      items: PortalJobPolicyItem[];
+      summary: PortalJobQueueSummary;
+    }>(`integrations/portal-jobs/${jobId}/items/${itemId}/retry`, { providerId, categoryId });
     return { job: response.job, items: response.items || [], summary: response.summary };
   },
 
-  fetchLatestPortalJob: async (providerId: string, categoryId: string): Promise<PortalSyncJob | null> => {
-    const response = await api.get<{ success: boolean; job: PortalSyncJob | null }>(`integrations/portal-jobs/latest?providerId=${providerId}&categoryId=${categoryId}`);
+  fetchLatestPortalJob: async (
+    providerId: string,
+    categoryId: string,
+  ): Promise<PortalSyncJob | null> => {
+    const response = await api.get<{ success: boolean; job: PortalSyncJob | null }>(
+      `integrations/portal-jobs/latest?providerId=${providerId}&categoryId=${categoryId}`,
+    );
     return response.job;
   },
 
-  fetchPortalDiscoveryReport: async (jobId: string, providerId: string, categoryId: string): Promise<PortalDiscoveryReport | null> => {
+  fetchPortalDiscoveryReport: async (
+    jobId: string,
+    providerId: string,
+    categoryId: string,
+  ): Promise<PortalDiscoveryReport | null> => {
     const response = await api.get<{ success: boolean; report: PortalDiscoveryReport | null }>(
-      `integrations/portal-jobs/${jobId}/discovery-report?providerId=${encodeURIComponent(providerId)}&categoryId=${encodeURIComponent(categoryId)}`
+      `integrations/portal-jobs/${jobId}/discovery-report?providerId=${encodeURIComponent(providerId)}&categoryId=${encodeURIComponent(categoryId)}`,
     );
     return response.report;
   },
 
-  submitPortalOtp: async (jobId: string, otp: string, providerId: string, categoryId: string): Promise<PortalSyncJob> => {
-    const response = await api.post<{ success: boolean; job: PortalSyncJob }>(`integrations/portal-jobs/${jobId}/otp`, { otp, providerId, categoryId });
+  submitPortalOtp: async (
+    jobId: string,
+    otp: string,
+    providerId: string,
+    categoryId: string,
+  ): Promise<PortalSyncJob> => {
+    const response = await api.post<{ success: boolean; job: PortalSyncJob }>(
+      `integrations/portal-jobs/${jobId}/otp`,
+      { otp, providerId, categoryId },
+    );
     return response.job;
-  }
+  },
 };

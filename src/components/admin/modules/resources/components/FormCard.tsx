@@ -33,7 +33,7 @@ export function FormCard({
   onSelect,
 }: FormCardProps) {
   return (
-    <Card 
+    <Card
       className={`group hover:shadow-md transition-all cursor-pointer ${
         selected ? 'ring-2 ring-primary' : ''
       }`}
@@ -48,13 +48,9 @@ export function FormCard({
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2 mb-1">
                 <h3 className="font-semibold truncate">{form.name}</h3>
-                {form.isPopular && (
-                  <Star className="h-4 w-4 text-yellow-500 fill-yellow-500" />
-                )}
+                {form.isPopular && <Star className="h-4 w-4 text-yellow-500 fill-yellow-500" />}
               </div>
-              <p className="text-sm text-muted-foreground line-clamp-2">
-                {form.description}
-              </p>
+              <p className="text-sm text-muted-foreground line-clamp-2">{form.description}</p>
             </div>
           </div>
         </div>
@@ -97,7 +93,7 @@ export function FormCard({
               Preview
             </Button>
           )}
-          
+
           {onEdit && (
             <Button
               size="sm"
@@ -111,7 +107,7 @@ export function FormCard({
               Edit
             </Button>
           )}
-          
+
           {onDuplicate && (
             <Button
               size="sm"
@@ -124,7 +120,7 @@ export function FormCard({
               <Copy className="h-3 w-3" />
             </Button>
           )}
-          
+
           {onDelete && (
             <Button
               size="sm"

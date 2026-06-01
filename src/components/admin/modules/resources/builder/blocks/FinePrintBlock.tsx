@@ -29,7 +29,8 @@ export const FinePrintBlock: BlockDefinition = {
   description: 'Multi-column small text',
   initialData: {
     columns: 2,
-    content: '<p>Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.</p>',
+    content:
+      '<p>Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.</p>',
   },
 
   // ==========================================================================
@@ -53,14 +54,13 @@ export const FinePrintBlock: BlockDefinition = {
         ) : (
           <div className="contents">
             <p className="mb-2">
-              Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do
-              eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut
-              enim ad minim veniam, quis nostrud exercitation ullamco laboris.
+              Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor
+              incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud
+              exercitation ullamco laboris.
             </p>
             <p>
-              Duis aute irure dolor in reprehenderit in voluptate velit esse
-              cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat
-              cupidatat non proident.
+              Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat
+              nulla pariatur. Excepteur sint occaecat cupidatat non proident.
             </p>
           </div>
         )}
@@ -101,8 +101,8 @@ export const FinePrintBlock: BlockDefinition = {
             minHeight="200px"
           />
           <p className="text-[10px] text-gray-400 leading-relaxed">
-            This text renders at 8px in the final document. Use the toolbar to
-            format content and insert data variables as needed.
+            This text renders at 8px in the final document. Use the toolbar to format content and
+            insert data variables as needed.
           </p>
         </div>
       </div>

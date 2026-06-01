@@ -48,7 +48,9 @@ export function SelectedClientCard({ client, isLoading }: SelectedClientCardProp
             <div className="mt-2 grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <p className="text-sm text-muted-foreground">Name</p>
-                <p className="font-medium">{client.first_name} {client.last_name}</p>
+                <p className="font-medium">
+                  {client.first_name} {client.last_name}
+                </p>
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">Email</p>

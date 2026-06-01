@@ -66,7 +66,10 @@ export class FirmScopeError extends Error {
  * record's. Use in imperative/middleware contexts where a boolean
  * check is awkward.
  */
-export function assertFirmAccess(user: AuthenticatedUser, record: FirmScopedRecord | null | undefined): void {
+export function assertFirmAccess(
+  user: AuthenticatedUser,
+  record: FirmScopedRecord | null | undefined,
+): void {
   if (!record) return;
   if (!belongsToFirm(user, record)) throw new FirmScopeError();
 }

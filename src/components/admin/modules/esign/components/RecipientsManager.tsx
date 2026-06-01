@@ -130,23 +130,44 @@ export function RecipientsManager({
       const users = response?.users || response?.clients || [];
       // Filter to active and pending clients only, then map to simplified shape
       const eligible = users
-        .map((u: { id: string; email?: string; name?: string; user_metadata?: Record<string, unknown>; profile?: Record<string, unknown>; application_status?: string }) => {
-          // Server may return profile as flat ProfileData or nested ClientProfile
-          const pi = (u.profile?.personalInformation as Record<string, unknown> | undefined) || u.profile;
-          return {
-            id: u.id,
-            firstName: String(u.user_metadata?.firstName || pi?.firstName || u.name?.split(' ')[0] || ''),
-            lastName: String(u.user_metadata?.surname || pi?.lastName || u.name?.split(' ').slice(1).join(' ') || ''),
-            email: u.email || '',
-            status: u.application_status || 'active',
-            nationalId: (u.user_metadata?.nationalId || pi?.idNumber || pi?.passportNumber || undefined) as string | undefined,
-          };
-        })
+        .map(
+          (u: {
+            id: string;
+            email?: string;
+            name?: string;
+            user_metadata?: Record<string, unknown>;
+            profile?: Record<string, unknown>;
+            application_status?: string;
+          }) => {
+            // Server may return profile as flat ProfileData or nested ClientProfile
+            const pi =
+              (u.profile?.personalInformation as Record<string, unknown> | undefined) || u.profile;
+            return {
+              id: u.id,
+              firstName: String(
+                u.user_metadata?.firstName || pi?.firstName || u.name?.split(' ')[0] || '',
+              ),
+              lastName: String(
+                u.user_metadata?.surname ||
+                  pi?.lastName ||
+                  u.name?.split(' ').slice(1).join(' ') ||
+                  '',
+              ),
+              email: u.email || '',
+              status: u.application_status || 'active',
+              nationalId: (u.user_metadata?.nationalId ||
+                pi?.idNumber ||
+                pi?.passportNumber ||
+                undefined) as string | undefined,
+            };
+          },
+        )
         .filter((client: SystemClient) => {
           const status = client.status.toLowerCase();
           // Include active, pending, approved, onboarded clients
-          return ['active', 'pending', 'approved', 'onboarded', 'unknown'].includes(status)
-            || !status;
+          return (
+            ['active', 'pending', 'approved', 'onboarded', 'unknown'].includes(status) || !status
+          );
         })
         .filter((client: SystemClient) => client.email); // Must have an email
       setSystemClients(eligible);
@@ -179,11 +200,7 @@ export function RecipientsManager({
   // Auto-populate client as first signer when clientContext is provided
   // and no signers have been added yet (runs once on mount).
   useEffect(() => {
-    if (
-      clientContext &&
-      clientContext.email &&
-      signers.length === 0
-    ) {
+    if (clientContext && clientContext.email && signers.length === 0) {
       const clientSigner: SignerFormData = {
         name: `${clientContext.firstName} ${clientContext.lastName}`.trim(),
         email: clientContext.email,
@@ -201,19 +218,21 @@ export function RecipientsManager({
 
   // ==================== FILTERED CLIENTS ====================
 
-  const filteredClients = systemClients.filter((client) => {
-    const query = searchQuery.toLowerCase();
-    if (!query) return true;
-    const fullName = `${client.firstName} ${client.lastName}`.toLowerCase();
-    return (
-      fullName.includes(query) ||
-      client.email.toLowerCase().includes(query) ||
-      client.id.toLowerCase().includes(query)
-    );
-  }).filter((client) => {
-    // Exclude already-added signers
-    return !signers.some((s) => s.clientId === client.id || s.email === client.email);
-  });
+  const filteredClients = systemClients
+    .filter((client) => {
+      const query = searchQuery.toLowerCase();
+      if (!query) return true;
+      const fullName = `${client.firstName} ${client.lastName}`.toLowerCase();
+      return (
+        fullName.includes(query) ||
+        client.email.toLowerCase().includes(query) ||
+        client.id.toLowerCase().includes(query)
+      );
+    })
+    .filter((client) => {
+      // Exclude already-added signers
+      return !signers.some((s) => s.clientId === client.id || s.email === client.email);
+    });
 
   // ==================== VALIDATION ====================
 
@@ -264,37 +283,38 @@ export function RecipientsManager({
     // hard-default OTP / access-code off for them. The Studio also suppresses
     // field placement when `kind === 'cc'`.
     const effectiveOtp = signerKind === 'cc' ? false : otpRequired;
-    const effectiveAccessCode = signerKind === 'cc' ? undefined : (accessCode || undefined);
+    const effectiveAccessCode = signerKind === 'cc' ? undefined : accessCode || undefined;
 
     const phoneTrimmed = manualPhone.trim();
     const effectiveSmsOptIn = signerKind !== 'cc' && smsOptIn && !!phoneTrimmed;
 
-    const newSigner: SignerFormData = addMode === 'system'
-      ? {
-          name: `${selectedClient!.firstName} ${selectedClient!.lastName}`.trim(),
-          email: selectedClient!.email,
-          phone: phoneTrimmed || undefined,
-          role: roleLabel,
-          order: signers.length + 1,
-          otpRequired: effectiveOtp,
-          accessCode: effectiveAccessCode,
-          clientId: selectedClient!.id,
-          isSystemClient: true,
-          kind: signerKind,
-          smsOptIn: effectiveSmsOptIn,
-        }
-      : {
-          name: manualName.trim(),
-          email: manualEmail.trim(),
-          phone: phoneTrimmed || undefined,
-          role: roleLabel,
-          order: signers.length + 1,
-          otpRequired: effectiveOtp,
-          accessCode: effectiveAccessCode,
-          isSystemClient: false,
-          kind: signerKind,
-          smsOptIn: effectiveSmsOptIn,
-        };
+    const newSigner: SignerFormData =
+      addMode === 'system'
+        ? {
+            name: `${selectedClient!.firstName} ${selectedClient!.lastName}`.trim(),
+            email: selectedClient!.email,
+            phone: phoneTrimmed || undefined,
+            role: roleLabel,
+            order: signers.length + 1,
+            otpRequired: effectiveOtp,
+            accessCode: effectiveAccessCode,
+            clientId: selectedClient!.id,
+            isSystemClient: true,
+            kind: signerKind,
+            smsOptIn: effectiveSmsOptIn,
+          }
+        : {
+            name: manualName.trim(),
+            email: manualEmail.trim(),
+            phone: phoneTrimmed || undefined,
+            role: roleLabel,
+            order: signers.length + 1,
+            otpRequired: effectiveOtp,
+            accessCode: effectiveAccessCode,
+            isSystemClient: false,
+            kind: signerKind,
+            smsOptIn: effectiveSmsOptIn,
+          };
 
     onChange([...signers, newSigner]);
     resetAddForm();
@@ -391,9 +411,7 @@ export function RecipientsManager({
       <div className="flex items-center justify-between">
         <div>
           <h3 className="text-lg font-semibold text-gray-900">Recipients</h3>
-          <p className="text-sm text-gray-500">
-            Select who needs to sign this document
-          </p>
+          <p className="text-sm text-gray-500">Select who needs to sign this document</p>
         </div>
         {canAddMore && !showAddForm && (
           <Button
@@ -539,7 +557,10 @@ export function RecipientsManager({
                 <div className="flex items-center gap-2 flex-wrap">
                   <h4 className="font-medium text-gray-900">{signer.name}</h4>
                   {signer.isSystemClient && (
-                    <Badge variant="outline" className="text-xs font-normal bg-green-50 border-green-200 text-green-700">
+                    <Badge
+                      variant="outline"
+                      className="text-xs font-normal bg-green-50 border-green-200 text-green-700"
+                    >
                       <UserCheck className="h-3 w-3 mr-1" />
                       System Client
                     </Badge>
@@ -548,13 +569,19 @@ export function RecipientsManager({
                     {signer.role || 'Signer'}
                   </Badge>
                   {signer.kind === 'cc' && (
-                    <Badge variant="outline" className="text-xs font-normal bg-cyan-50 border-cyan-200 text-cyan-700">
+                    <Badge
+                      variant="outline"
+                      className="text-xs font-normal bg-cyan-50 border-cyan-200 text-cyan-700"
+                    >
                       <Send className="h-3 w-3 mr-1" />
                       Receives copy
                     </Badge>
                   )}
                   {signer.kind === 'witness' && (
-                    <Badge variant="outline" className="text-xs font-normal bg-amber-50 border-amber-200 text-amber-700">
+                    <Badge
+                      variant="outline"
+                      className="text-xs font-normal bg-amber-50 border-amber-200 text-amber-700"
+                    >
                       <ScrollText className="h-3 w-3 mr-1" />
                       Witness
                     </Badge>
@@ -605,7 +632,10 @@ export function RecipientsManager({
               <div className="flex gap-2 p-1 bg-gray-100 rounded-lg">
                 <button
                   type="button"
-                  onClick={() => { setAddMode('system'); setErrors({}); }}
+                  onClick={() => {
+                    setAddMode('system');
+                    setErrors({});
+                  }}
                   className={`flex-1 flex items-center justify-center gap-2 py-2 px-3 rounded-md text-sm font-medium transition-colors ${
                     addMode === 'system'
                       ? 'bg-white text-purple-700 shadow-sm'
@@ -617,7 +647,11 @@ export function RecipientsManager({
                 </button>
                 <button
                   type="button"
-                  onClick={() => { setAddMode('manual'); setErrors({}); setSelectedClient(null); }}
+                  onClick={() => {
+                    setAddMode('manual');
+                    setErrors({});
+                    setSelectedClient(null);
+                  }}
                   className={`flex-1 flex items-center justify-center gap-2 py-2 px-3 rounded-md text-sm font-medium transition-colors ${
                     addMode === 'manual'
                       ? 'bg-white text-purple-700 shadow-sm'
@@ -685,7 +719,8 @@ export function RecipientsManager({
                             >
                               <div className="flex items-center gap-3">
                                 <div className="flex items-center justify-center w-8 h-8 rounded-full bg-purple-100 text-purple-700 text-xs font-semibold shrink-0">
-                                  {client.firstName?.[0]}{client.lastName?.[0]}
+                                  {client.firstName?.[0]}
+                                  {client.lastName?.[0]}
                                 </div>
                                 <div className="flex-1 min-w-0">
                                   <p className="text-sm font-medium text-gray-900 truncate">
@@ -708,7 +743,8 @@ export function RecipientsManager({
                   {selectedClient && (
                     <div className="flex items-center gap-3 p-3 bg-green-50 border border-green-200 rounded-lg">
                       <div className="flex items-center justify-center w-10 h-10 rounded-full bg-green-100 text-green-700 font-semibold text-sm shrink-0">
-                        {selectedClient.firstName?.[0]}{selectedClient.lastName?.[0]}
+                        {selectedClient.firstName?.[0]}
+                        {selectedClient.lastName?.[0]}
                       </div>
                       <div className="flex-1 min-w-0">
                         <p className="text-sm font-semibold text-green-900">
@@ -731,8 +767,8 @@ export function RecipientsManager({
                   <div className="flex items-start gap-2 p-3 bg-blue-50 border border-blue-200 rounded-lg">
                     <Info className="h-4 w-4 text-blue-600 mt-0.5 shrink-0" />
                     <p className="text-xs text-blue-800">
-                      When a system client is selected, this envelope will automatically appear
-                      on their client profile page for tracking and management.
+                      When a system client is selected, this envelope will automatically appear on
+                      their client profile page for tracking and management.
                     </p>
                   </div>
                 </div>
@@ -749,9 +785,7 @@ export function RecipientsManager({
                       onChange={(e) => setManualName(e.target.value)}
                       className={errors.name ? 'border-red-300' : ''}
                     />
-                    {errors.name && (
-                      <p className="text-xs text-red-500">{errors.name}</p>
-                    )}
+                    {errors.name && <p className="text-xs text-red-500">{errors.name}</p>}
                   </div>
                   <div className="space-y-1">
                     <Label>Email Address *</Label>
@@ -762,9 +796,7 @@ export function RecipientsManager({
                       onChange={(e) => setManualEmail(e.target.value)}
                       className={errors.email ? 'border-red-300' : ''}
                     />
-                    {errors.email && (
-                      <p className="text-xs text-red-500">{errors.email}</p>
-                    )}
+                    {errors.email && <p className="text-xs text-red-500">{errors.email}</p>}
                   </div>
                 </div>
               )}
@@ -797,7 +829,9 @@ export function RecipientsManager({
                           <Icon className="h-4 w-4" />
                           <span className="text-sm font-semibold">{opt.label}</span>
                         </div>
-                        <span className="text-xs text-gray-500 block leading-snug">{opt.sublabel}</span>
+                        <span className="text-xs text-gray-500 block leading-snug">
+                          {opt.sublabel}
+                        </span>
                       </button>
                     );
                   })}
@@ -820,9 +854,7 @@ export function RecipientsManager({
                       ))}
                     </SelectContent>
                   </Select>
-                  {errors.role && (
-                    <p className="text-xs text-red-500">{errors.role}</p>
-                  )}
+                  {errors.role && <p className="text-xs text-red-500">{errors.role}</p>}
                 </div>
 
                 <div className="grid grid-cols-2 gap-4">
@@ -948,7 +980,8 @@ export function RecipientsManager({
               <p className="font-medium text-gray-700">Signing Order</p>
               <p className="mt-1">
                 Recipients will receive the document in the numbered order shown above.
-                {signers.length > 1 && ' Each signer will be notified once the previous signer completes.'}
+                {signers.length > 1 &&
+                  ' Each signer will be notified once the previous signer completes.'}
               </p>
             </div>
           </div>
@@ -958,10 +991,10 @@ export function RecipientsManager({
             <div className="flex items-start gap-2 pt-2 border-t border-gray-200">
               <ExternalLink className="h-4 w-4 text-purple-500 mt-0.5 shrink-0" />
               <p className="text-xs text-gray-500">
-                <span className="font-medium text-purple-600">Coming soon:</span>{' '}
-                Multi-signer sequential signing with role-based ordering
-                (e.g., First Life Assured signs, then Premium Payer receives the document).
-                Fields placed in the editor will be assignable per signer.
+                <span className="font-medium text-purple-600">Coming soon:</span> Multi-signer
+                sequential signing with role-based ordering (e.g., First Life Assured signs, then
+                Premium Payer receives the document). Fields placed in the editor will be assignable
+                per signer.
               </p>
             </div>
           )}

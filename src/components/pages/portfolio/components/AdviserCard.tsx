@@ -9,13 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '../../../ui/card';
 import { Button } from '../../../ui/button';
 import { Avatar, AvatarFallback } from '../../../ui/avatar';
 import { Separator } from '../../../ui/separator';
-import {
-  User,
-  Mail,
-  Phone,
-  ShieldCheck,
-  Calendar,
-} from 'lucide-react';
+import { User, Mail, Phone, ShieldCheck, Calendar } from 'lucide-react';
 import type { AdviserDetails } from '../api';
 
 interface AdviserCardProps {
@@ -86,10 +80,7 @@ export function AdviserCard({ adviser, onBookMeeting }: AdviserCardProps) {
 
         <Separator className="my-4" />
 
-        <Button
-          className="w-full bg-purple-600 hover:bg-purple-700"
-          onClick={onBookMeeting}
-        >
+        <Button className="w-full bg-purple-600 hover:bg-purple-700" onClick={onBookMeeting}>
           <Calendar className="mr-2 h-4 w-4" />
           Book a Meeting
         </Button>

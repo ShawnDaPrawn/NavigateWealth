@@ -23,8 +23,11 @@ export function SubmissionsSkeleton() {
 
         {/* Stat cards */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          {[1, 2, 3, 4].map(i => (
-            <div key={i} className="bg-white p-5 rounded-xl border border-gray-100 shadow-sm space-y-3">
+          {[1, 2, 3, 4].map((i) => (
+            <div
+              key={i}
+              className="bg-white p-5 rounded-xl border border-gray-100 shadow-sm space-y-3"
+            >
               <div className="flex items-center justify-between">
                 <Skeleton className="h-4 w-16" />
                 <Skeleton className="h-8 w-8 rounded-lg" />
@@ -43,14 +46,17 @@ export function SubmissionsSkeleton() {
 
         {/* Kanban board */}
         <div className="flex gap-6 h-[500px]">
-          {[1, 2, 3].map(i => (
-            <div key={i} className="flex-1 min-w-[350px] rounded-xl bg-gray-100/50 border border-gray-200">
+          {[1, 2, 3].map((i) => (
+            <div
+              key={i}
+              className="flex-1 min-w-[350px] rounded-xl bg-gray-100/50 border border-gray-200"
+            >
               <div className="p-3 bg-white rounded-t-xl border-b flex items-center justify-between">
                 <Skeleton className="h-4 w-20" />
                 <Skeleton className="h-5 w-6 rounded-md" />
               </div>
               <div className="p-3 space-y-3">
-                {[1, 2].map(j => (
+                {[1, 2].map((j) => (
                   <div key={j} className="bg-white rounded-lg border border-gray-200 p-4 space-y-2">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2.5">

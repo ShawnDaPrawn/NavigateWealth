@@ -37,4 +37,3 @@ When someone has complex needs, high intent, or requires personal recommendation
 export function getDefaultPrompt(agentId: string, context: PromptContext): string | null {
   return DEFAULT_PROMPTS[`${agentId}:${context}` as PromptSeedKey] ?? null;
 }
-

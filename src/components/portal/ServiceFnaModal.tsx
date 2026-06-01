@@ -5,13 +5,7 @@
 import React from 'react';
 import { ServiceFnaPanel } from './ServiceFnaPanel';
 import type { FnaIntakeDomain } from '@/services/fna-intake-api';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from '../ui/dialog';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '../ui/dialog';
 
 interface ServiceFnaModalProps {
   open: boolean;

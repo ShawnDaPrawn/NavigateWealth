@@ -16,23 +16,9 @@ import { Input } from '../../../../ui/input';
 import { Button } from '../../../../ui/button';
 import { Label } from '../../../../ui/label';
 import { Checkbox } from '../../../../ui/checkbox';
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from '../../../../ui/tooltip';
-import {
-  Building2,
-  Plus,
-  X,
-  Search,
-  Info,
-} from 'lucide-react';
-import {
-  SA_FINANCIAL_PROVIDERS,
-  SA_PROVIDER_MAP,
-} from '../constants';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '../../../../ui/tooltip';
+import { Building2, Plus, X, Search, Info } from 'lucide-react';
+import { SA_FINANCIAL_PROVIDERS, SA_PROVIDER_MAP } from '../constants';
 import type { FinancialServiceProvider } from '../constants';
 
 // ── Group providers by category for display ──────────────────────────
@@ -124,9 +110,7 @@ export function ExternalProvidersSection({
     const result: Record<string, FinancialServiceProvider[]> = {};
     for (const [category, providers] of Object.entries(PROVIDER_GROUPS)) {
       const filtered = providers.filter(
-        (p) =>
-          p.name.toLowerCase().includes(q) ||
-          p.category.toLowerCase().includes(q),
+        (p) => p.name.toLowerCase().includes(q) || p.category.toLowerCase().includes(q),
       );
       if (filtered.length > 0) result[category] = filtered;
     }
@@ -136,11 +120,7 @@ export function ExternalProvidersSection({
   // ── View Mode ──────────────────────────────────────────────────────
   if (!isEditing) {
     if (totalCount === 0) {
-      return (
-        <div className="text-sm text-gray-300 italic">
-          No external providers recorded
-        </div>
-      );
+      return <div className="text-sm text-gray-300 italic">No external providers recorded</div>;
     }
 
     return (
@@ -183,7 +163,8 @@ export function ExternalProvidersSection({
 
         <p className="text-[11px] text-gray-400 flex items-center gap-1.5">
           <Info className="h-3 w-3 shrink-0" />
-          These are financial service providers the client may hold existing policies with. This helps advisers identify where to look for existing cover.
+          These are financial service providers the client may hold existing policies with. This
+          helps advisers identify where to look for existing cover.
         </p>
       </div>
     );
@@ -299,8 +280,8 @@ export function ExternalProvidersSection({
       {totalCount > 0 && (
         <div className="text-[11px] text-gray-400 flex items-center gap-1.5 pt-1">
           <Info className="h-3 w-3 shrink-0" />
-          {totalCount} provider{totalCount !== 1 ? 's' : ''} selected
-          ({selectedProviders.length} from list, {customProviders.length} custom)
+          {totalCount} provider{totalCount !== 1 ? 's' : ''} selected ({selectedProviders.length}{' '}
+          from list, {customProviders.length} custom)
         </div>
       )}
     </div>

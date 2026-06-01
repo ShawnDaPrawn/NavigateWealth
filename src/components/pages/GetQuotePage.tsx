@@ -62,8 +62,9 @@ export function GetQuotePage() {
             Get Your Personalised Quote
           </h1>
           <p className="text-white/70 max-w-xl mx-auto text-sm sm:text-base leading-relaxed">
-            Tap a category below to go straight to the next step, where you&apos;ll share your details so we can match you
-            with the best options from South Africa&apos;s leading financial providers.
+            Tap a category below to go straight to the next step, where you&apos;ll share your
+            details so we can match you with the best options from South Africa&apos;s leading
+            financial providers.
           </p>
 
           <div className="flex flex-wrap items-center justify-center gap-x-6 gap-y-2 mt-6">
@@ -111,8 +112,9 @@ export function GetQuotePage() {
           </div>
         </div>
         <p className="text-xs text-gray-600 leading-relaxed mb-4 sm:hidden -mt-2">
-          Not sure which to pick? Read the labels under each option — for example, life cover and income protection are
-          under <strong className="font-semibold text-gray-800">Risk Management</strong>.
+          Not sure which to pick? Read the labels under each option — for example, life cover and
+          income protection are under{' '}
+          <strong className="font-semibold text-gray-800">Risk Management</strong>.
         </p>
 
         <div className="grid grid-cols-1 min-[400px]:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-4 lg:gap-5 mb-8 lg:max-w-6xl xl:max-w-7xl lg:mx-auto">

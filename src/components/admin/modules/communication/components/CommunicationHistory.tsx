@@ -48,8 +48,7 @@ import {
 } from '../types';
 import { communicationApi } from '../api';
 
-const SENDER_UUID_RE =
-  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+const SENDER_UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 function displaySenderName(log: ActivityLogEntry): string {
   const n = log.userName.trim();
@@ -134,14 +133,7 @@ export function CommunicationHistory({ onClose }: CommunicationHistoryProps) {
     return () => {
       cancelled = true;
     };
-  }, [
-    currentPage,
-    debouncedSearch,
-    channelFilter,
-    recipientFilter,
-    userFilter,
-    refreshToken,
-  ]);
+  }, [currentPage, debouncedSearch, channelFilter, recipientFilter, userFilter, refreshToken]);
 
   const triggerRefresh = useCallback(() => setRefreshToken((n) => n + 1), []);
 
@@ -174,9 +166,7 @@ export function CommunicationHistory({ onClose }: CommunicationHistoryProps) {
   const getStatusBadge = (status: string) => {
     switch (status) {
       case 'completed':
-        return (
-          <Badge className="bg-green-600 text-white border-transparent">Completed</Badge>
-        );
+        return <Badge className="bg-green-600 text-white border-transparent">Completed</Badge>;
       case 'sent':
         return <Badge className="bg-green-600 text-white border-transparent">Sent</Badge>;
       case 'scheduled':
@@ -190,7 +180,9 @@ export function CommunicationHistory({ onClose }: CommunicationHistoryProps) {
       case 'failed':
         return <Badge variant="destructive">Failed</Badge>;
       case 'sending':
-        return <Badge className="bg-blue-600 text-white border-transparent animate-pulse">Sending</Badge>;
+        return (
+          <Badge className="bg-blue-600 text-white border-transparent animate-pulse">Sending</Badge>
+        );
       default:
         return <Badge variant="secondary">{status}</Badge>;
     }
@@ -240,7 +232,10 @@ export function CommunicationHistory({ onClose }: CommunicationHistoryProps) {
               Search communications
             </label>
             <div className="relative">
-              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" aria-hidden />
+              <Search
+                className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground"
+                aria-hidden
+              />
               <Input
                 id="comm-history-search"
                 placeholder="Search communications..."
@@ -410,7 +405,10 @@ export function CommunicationHistory({ onClose }: CommunicationHistoryProps) {
                             <span className="text-sm text-muted-foreground italic">No subject</span>
                           )}
                           {log.templateUsed ? (
-                            <Badge variant="outline" className="text-[10px] shrink-0 py-0 h-6 gap-1">
+                            <Badge
+                              variant="outline"
+                              className="text-[10px] shrink-0 py-0 h-6 gap-1"
+                            >
                               <FileText className="h-3 w-3" aria-hidden />
                               {log.templateUsed}
                             </Badge>
@@ -436,8 +434,7 @@ export function CommunicationHistory({ onClose }: CommunicationHistoryProps) {
                         <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
                           <Paperclip className="h-4 w-4 shrink-0" aria-hidden />
                           <span>
-                            {log.attachmentCount}{' '}
-                            {log.attachmentCount === 1 ? 'file' : 'files'}
+                            {log.attachmentCount} {log.attachmentCount === 1 ? 'file' : 'files'}
                           </span>
                         </div>
                       ) : (
@@ -465,7 +462,8 @@ export function CommunicationHistory({ onClose }: CommunicationHistoryProps) {
             <span className="text-sm text-muted-foreground text-center">
               Page {currentPage} of {totalPages}
               <span className="mx-1 text-muted-foreground/70">·</span>
-              {(currentPage - 1) * PAGE_SIZE + 1}–{Math.min(currentPage * PAGE_SIZE, total)} of {total}
+              {(currentPage - 1) * PAGE_SIZE + 1}–{Math.min(currentPage * PAGE_SIZE, total)} of{' '}
+              {total}
             </span>
             <Button
               variant="ghost"
@@ -492,7 +490,10 @@ export function CommunicationHistory({ onClose }: CommunicationHistoryProps) {
                   <div className="space-y-1 text-left">
                     <p>{formatTimestamp(detailLog.timestamp)}</p>
                     <p>
-                      Sent by <span className="font-medium text-foreground">{displaySenderName(detailLog)}</span>
+                      Sent by{' '}
+                      <span className="font-medium text-foreground">
+                        {displaySenderName(detailLog)}
+                      </span>
                     </p>
                     <p className="capitalize">
                       {detailLog.channel} · {formatRecipientLine(detailLog)}

@@ -12,7 +12,7 @@ const columns = [
   { key: 'storageLocation', label: 'Storage', type: 'text' as const },
   { key: 'legalBasis', label: 'Legal Basis', type: 'text' as const },
   { key: 'destructionDate', label: 'Destruction Date', type: 'date' as const },
-  { key: 'status', label: 'Status', type: 'badge' as const }
+  { key: 'status', label: 'Status', type: 'badge' as const },
 ];
 
 const filters = [
@@ -24,8 +24,8 @@ const filters = [
       { value: 'Marketing Materials', label: 'Marketing Materials' },
       { value: 'Complaints Register', label: 'Complaints Register' },
       { value: 'Client Files', label: 'Client Files' },
-      { value: 'Training Records', label: 'Training Records' }
-    ]
+      { value: 'Training Records', label: 'Training Records' },
+    ],
   },
   {
     key: 'storageLocation',
@@ -33,9 +33,9 @@ const filters = [
     options: [
       { value: 'Digital Archive', label: 'Digital Archive' },
       { value: 'Physical & Digital', label: 'Physical & Digital' },
-      { value: 'Physical Archive', label: 'Physical Archive' }
-    ]
-  }
+      { value: 'Physical Archive', label: 'Physical Archive' },
+    ],
+  },
 ];
 
 export function RecordKeepingTab() {

@@ -22,16 +22,8 @@
 import { ZipWriter, Uint8ArrayWriter, Uint8ArrayReader, TextReader } from 'npm:@zip.js/zip.js';
 import * as kv from './kv_store.tsx';
 import { EsignKeys } from './esign-keys.ts';
-import {
-  getEnvelopeDetails,
-  getEnvelopeSigners,
-  getAuditTrail,
-} from './esign-services.ts';
-import {
-  downloadDocument,
-  downloadCertificate,
-  downloadAttachment,
-} from './esign-storage.ts';
+import { getEnvelopeDetails, getEnvelopeSigners, getAuditTrail } from './esign-services.ts';
+import { downloadDocument, downloadCertificate, downloadAttachment } from './esign-storage.ts';
 import { getCertificate } from './esign-certificates.ts';
 import { getConsentByVersion } from './esign-consent-registry.ts';
 import { createModuleLogger } from './stderr-logger.ts';
@@ -44,7 +36,10 @@ export interface EvidencePack {
 }
 
 function safeFilename(input: string, fallback: string): string {
-  const trimmed = (input || '').trim().replace(/[^a-zA-Z0-9._-]/g, '_').slice(0, 80);
+  const trimmed = (input || '')
+    .trim()
+    .replace(/[^a-zA-Z0-9._-]/g, '_')
+    .slice(0, 80);
   return trimmed || fallback;
 }
 
@@ -60,7 +55,9 @@ export async function buildEvidencePack(envelopeId: string): Promise<EvidencePac
     return null;
   }
   if (envelope.status !== 'completed') {
-    throw new Error(`Envelope ${envelopeId} is ${envelope.status}; evidence pack requires status=completed`);
+    throw new Error(
+      `Envelope ${envelopeId} is ${envelope.status}; evidence pack requires status=completed`,
+    );
   }
 
   const signers = await getEnvelopeSigners(envelopeId);
@@ -94,8 +91,18 @@ export async function buildEvidencePack(envelopeId: string): Promise<EvidencePac
       for (const rec of attIndex) {
         if (rec && typeof rec === 'object') {
           const r = rec as Record<string, unknown>;
-          const path = typeof r.storage_path === 'string' ? r.storage_path : (typeof r.path === 'string' ? r.path : '');
-          const originalName = typeof r.original_filename === 'string' ? r.original_filename : (typeof r.filename === 'string' ? r.filename : 'attachment.bin');
+          const path =
+            typeof r.storage_path === 'string'
+              ? r.storage_path
+              : typeof r.path === 'string'
+                ? r.path
+                : '';
+          const originalName =
+            typeof r.original_filename === 'string'
+              ? r.original_filename
+              : typeof r.filename === 'string'
+                ? r.filename
+                : 'attachment.bin';
           const attachmentId = typeof r.id === 'string' ? r.id : crypto.randomUUID();
           if (path) attachments.push({ path, originalName, attachmentId });
         }

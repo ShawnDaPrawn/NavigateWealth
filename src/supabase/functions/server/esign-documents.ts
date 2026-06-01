@@ -46,9 +46,12 @@ export async function getEnvelopeDocuments(
   // Synthesise a single-document list from the legacy primary record so
   // multi-document code paths can treat every envelope uniformly.
   if (envelope.document_id) {
-    const doc = (await kv.get(EsignKeys.PREFIX_DOCUMENT + envelope.document_id)) as
-      | { id: string; original_filename: string; page_count: number; storage_path: string }
-      | null;
+    const doc = (await kv.get(EsignKeys.PREFIX_DOCUMENT + envelope.document_id)) as {
+      id: string;
+      original_filename: string;
+      page_count: number;
+      storage_path: string;
+    } | null;
     if (doc) {
       return [
         {
@@ -136,7 +139,8 @@ export async function removeEnvelopeDocument(
   await setEnvelopeDocuments(envelopeId, next);
   // Drop fields anchored to the removed document so the studio doesn't
   // show ghost placements.
-  const fields = ((await kv.get(EsignKeys.envelopeFields(envelopeId))) as EsignField[] | null) ?? [];
+  const fields =
+    ((await kv.get(EsignKeys.envelopeFields(envelopeId))) as EsignField[] | null) ?? [];
   const filtered = fields.filter((f) => (f.document_id ?? envelope.document_id) !== documentId);
   if (filtered.length !== fields.length) {
     await kv.set(EsignKeys.envelopeFields(envelopeId), filtered);
@@ -287,9 +291,12 @@ export async function materialiseEnvelope(
   );
   // Mirror the merged result onto the primary document record so the
   // certificate renderer, signer fetch path and worker continue to work.
-  const primary = (await kv.get(EsignKeys.PREFIX_DOCUMENT + envelope.document_id)) as
-    | { storage_path: string; original_storage_path?: string; page_count: number; hash?: string }
-    | null;
+  const primary = (await kv.get(EsignKeys.PREFIX_DOCUMENT + envelope.document_id)) as {
+    storage_path: string;
+    original_storage_path?: string;
+    page_count: number;
+    hash?: string;
+  } | null;
   if (primary) {
     await kv.set(EsignKeys.PREFIX_DOCUMENT + envelope.document_id, {
       ...primary,

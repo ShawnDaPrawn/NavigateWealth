@@ -120,7 +120,7 @@ export function FieldPalette({
       JSON.stringify({
         fieldType: template.type,
         signerId: selectedSignerId,
-      })
+      }),
     );
   };
 
@@ -130,12 +130,15 @@ export function FieldPalette({
   };
 
   // Group fields by signer
-  const fieldsBySigner = fields.reduce((acc, field) => {
-    const signerId = field.signer_id || 'unassigned';
-    if (!acc[signerId]) acc[signerId] = [];
-    acc[signerId].push(field);
-    return acc;
-  }, {} as Record<string, EsignField[]>);
+  const fieldsBySigner = fields.reduce(
+    (acc, field) => {
+      const signerId = field.signer_id || 'unassigned';
+      if (!acc[signerId]) acc[signerId] = [];
+      acc[signerId].push(field);
+      return acc;
+    },
+    {} as Record<string, EsignField[]>,
+  );
 
   return (
     <div className="space-y-4">
@@ -217,16 +220,11 @@ export function FieldPalette({
                         className="p-2 rounded"
                         style={{ backgroundColor: `${template.color}20` }}
                       >
-                        <Icon
-                          className="h-4 w-4"
-                          style={{ color: template.color }}
-                        />
+                        <Icon className="h-4 w-4" style={{ color: template.color }} />
                       </div>
                       <div className="flex-1">
                         <p className="font-medium text-sm">{template.label}</p>
-                        <p className="text-xs text-muted-foreground">
-                          {template.description}
-                        </p>
+                        <p className="text-xs text-muted-foreground">{template.description}</p>
                       </div>
                       <GripVertical className="h-4 w-4 text-gray-400" />
                     </div>
@@ -272,9 +270,7 @@ export function FieldPalette({
             {fields.length === 0 ? (
               <div className="text-center py-8">
                 <FileSignature className="h-12 w-12 text-gray-300 mx-auto mb-2" />
-                <p className="text-sm text-muted-foreground">
-                  No fields placed yet
-                </p>
+                <p className="text-sm text-muted-foreground">No fields placed yet</p>
                 <p className="text-xs text-muted-foreground mt-1">
                   Drag fields from the palette onto the document
                 </p>
@@ -300,9 +296,7 @@ export function FieldPalette({
 
                       {/* Fields for this signer */}
                       {signerFields.map((field) => {
-                        const template = FIELD_TEMPLATES.find(
-                          (t) => t.type === field.type
-                        );
+                        const template = FIELD_TEMPLATES.find((t) => t.type === field.type);
                         const Icon = template?.icon || FileSignature;
 
                         return (
@@ -316,7 +310,9 @@ export function FieldPalette({
                             />
                             <div className="flex-1 min-w-0">
                               <p className="text-sm font-medium truncate">
-                                {(field as { label?: string }).label || template?.label || field.type}
+                                {(field as { label?: string }).label ||
+                                  template?.label ||
+                                  field.type}
                               </p>
                               <p className="text-xs text-muted-foreground">
                                 Page {field.page} • {field.required ? 'Required' : 'Optional'}
@@ -367,9 +363,7 @@ export function FieldPalette({
         <span>
           {fields.length} total field{fields.length !== 1 ? 's' : ''}
         </span>
-        <span>
-          {fields.filter((f) => f.required).length} required
-        </span>
+        <span>{fields.filter((f) => f.required).length} required</span>
       </div>
     </div>
   );

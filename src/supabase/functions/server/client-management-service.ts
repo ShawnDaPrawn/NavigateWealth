@@ -1,6 +1,6 @@
 /**
  * Client Management Module - Service Layer
- * 
+ *
  * Business logic for client management
  */
 
@@ -8,8 +8,19 @@ import { createClient } from 'jsr:@supabase/supabase-js@2.49.8';
 import * as kv from './kv_store.tsx';
 import { createModuleLogger } from './stderr-logger.ts';
 import { ValidationError, NotFoundError } from './error.middleware.ts';
-import type { Client, ClientFilters, ClientProfile, ClientSecurity, PaginatedClientResponse, GroupMatcherData, CommunicationRecord } from './client-management-types.ts';
-import { shouldIncludeInClientManagement, shouldLoadClientManagementProfile } from './client-management-visibility.ts';
+import type {
+  Client,
+  ClientFilters,
+  ClientProfile,
+  ClientSecurity,
+  PaginatedClientResponse,
+  GroupMatcherData,
+  CommunicationRecord,
+} from './client-management-types.ts';
+import {
+  shouldIncludeInClientManagement,
+  shouldLoadClientManagementProfile,
+} from './client-management-visibility.ts';
 import { listAllAuthUsers } from './auth-admin-list-users.ts';
 import { autoSubscribeClient, removeSubscriberByEmail } from './newsletter-service.ts';
 
@@ -17,34 +28,31 @@ const log = createModuleLogger('clients-service');
 
 // Helper to create Supabase client
 function createServiceClient() {
-  return createClient(
-    Deno.env.get('SUPABASE_URL')!,
-    Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
-  );
+  return createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!);
 }
 
 export class ClientsService {
-  
   /**
    * Convert client data to group matcher format
    * Handles both flat and nested profile structures
    */
   private clientToMatcherFormat(client: Client): GroupMatcherData {
-    const profile = client.profile || {} as ClientProfile;
-    
+    const profile = client.profile || ({} as ClientProfile);
+
     // Extract fields - try flat first, then nested
     const gender = profile.gender || profile.personalInformation?.gender;
     const nationality = profile.nationality || profile.personalInformation?.nationality;
     const maritalStatus = profile.maritalStatus || profile.personalInformation?.maritalStatus;
     const dateOfBirth = profile.dateOfBirth || profile.personalInformation?.dateOfBirth;
     const occupation = profile.occupation || profile.employmentInformation?.occupation;
-    const employmentStatus = profile.employmentStatus || profile.employmentInformation?.employmentStatus;
+    const employmentStatus =
+      profile.employmentStatus || profile.employmentInformation?.employmentStatus;
     const grossIncome = profile.grossIncome || profile.personalInformation?.grossIncome;
     const netIncome = profile.netIncome || profile.personalInformation?.netIncome;
     const netWorth = profile.netWorth || profile.financialInformation?.netWorth;
     const dependants = profile.dependants || profile.additionalInformation?.dependants;
     const retirementAge = profile.retirementAge || profile.additionalInformation?.retirementAge;
-    
+
     return {
       id: client.id,
       gender,
@@ -57,13 +65,15 @@ export class ClientsService {
       netWorth,
       dependants,
       retirementAge,
-      age: dateOfBirth ? 
-        Math.floor((Date.now() - new Date(dateOfBirth).getTime()) / (365.25 * 24 * 60 * 60 * 1000)) : 
-        undefined,
+      age: dateOfBirth
+        ? Math.floor(
+            (Date.now() - new Date(dateOfBirth).getTime()) / (365.25 * 24 * 60 * 60 * 1000),
+          )
+        : undefined,
       productIds: profile.productIds || [],
     };
   }
-  
+
   /**
    * Trigger group membership recalculation
    * Excludes deleted and suspended clients — they should not be in
@@ -74,7 +84,8 @@ export class ClientsService {
       log.info('Triggering group membership recalculation');
       // Use the communication-repo's fetchMatcherClients which properly
       // fetches policies for product filter matching
-      const { fetchMatcherClients, recalculateAllGroupMemberships } = await import('./communication-repo.ts');
+      const { fetchMatcherClients, recalculateAllGroupMemberships } =
+        await import('./communication-repo.ts');
       const matcherClients = await fetchMatcherClients();
       await recalculateAllGroupMemberships(matcherClients);
       log.success('Group memberships recalculated', {
@@ -85,19 +96,19 @@ export class ClientsService {
       // Don't throw - group recalculation is a background task
     }
   }
-  
+
   /**
    * Get all clients with profiles
-   * 
+   *
    * Returns ALL clients (including deleted/suspended) for admin visibility.
    * The `deleted`, `suspended`, and `accountStatus` fields are exposed so
    * the frontend can show status indicators and apply client-side filters.
    */
   async getAllClients(filters?: Partial<ClientFilters>): Promise<Client[]> {
     log.info('Getting all clients', { filters });
-    
+
     const supabase = createServiceClient();
-    
+
     let usersRaw: unknown[];
     try {
       usersRaw = await listAllAuthUsers(supabase);
@@ -107,18 +118,26 @@ export class ClientsService {
     }
 
     const users = usersRaw.filter(
-      (u): u is { id: string; email?: string | null; user_metadata?: Record<string, unknown>; created_at?: string } =>
-        typeof u === 'object' && u !== null && 'id' in u,
+      (
+        u,
+      ): u is {
+        id: string;
+        email?: string | null;
+        user_metadata?: Record<string, unknown>;
+        created_at?: string;
+      } => typeof u === 'object' && u !== null && 'id' in u,
     );
 
     // ── Personnel exclusion ─────────────────────────────────────────
     const personnelProfiles = await kv.getByPrefix('personnel:profile:');
     const personnelIds = new Set<string>(
-      personnelProfiles.map((p: Record<string, unknown>) => p.id as string).filter(Boolean)
+      personnelProfiles.map((p: Record<string, unknown>) => p.id as string).filter(Boolean),
     );
 
     // Filter out personnel users before the expensive per-user KV reads
-    const clientUsers = users.filter(user => shouldLoadClientManagementProfile(user, personnelIds));
+    const clientUsers = users.filter((user) =>
+      shouldLoadClientManagementProfile(user, personnelIds),
+    );
 
     log.info('Personnel filtered from client list', {
       totalAuthUsers: users.length,
@@ -133,26 +152,28 @@ export class ClientsService {
           // Get profile from KV
           const profileKey = `user_profile:${user.id}:personal_info`;
           const profile = await kv.get(profileKey);
-          
+
           // Get application if exists
           let application = null;
           const appId = profile?.applicationId || profile?.application_id;
-          
+
           if (appId) {
             application = await kv.get(`application:${appId}`);
           }
-          
+
           // Get security status
           const security = await kv.get(`security:${user.id}`);
-          
+
           return {
             id: user.id,
             email: user.email,
-            firstName: user.user_metadata?.firstName || profile?.personalInformation?.firstName || '',
+            firstName:
+              user.user_metadata?.firstName || profile?.personalInformation?.firstName || '',
             lastName: user.user_metadata?.surname || profile?.personalInformation?.lastName || '',
             createdAt: user.created_at,
             accountType: user.user_metadata?.accountType || 'personal',
-            applicationStatus: application?.status || user.user_metadata?.applicationStatus || 'none',
+            applicationStatus:
+              application?.status || user.user_metadata?.applicationStatus || 'none',
             suspended: security?.suspended || false,
             deleted: security?.deleted || false,
             accountStatus: profile?.accountStatus,
@@ -176,45 +197,48 @@ export class ClientsService {
             role: 'client',
           };
         }
-      })
+      }),
     );
-    
+
     // Apply filters
-    let filteredClients = enhancedUsers.filter(client => shouldIncludeInClientManagement({
-      user: {
-        id: client.id,
-        email: client.email ?? undefined,
-        user_metadata: {
-          role: client.role,
-          accountStatus: client.accountStatus,
-          applicationStatus: client.applicationStatus,
+    let filteredClients = enhancedUsers.filter((client) =>
+      shouldIncludeInClientManagement({
+        user: {
+          id: client.id,
+          email: client.email ?? undefined,
+          user_metadata: {
+            role: client.role,
+            accountStatus: client.accountStatus,
+            applicationStatus: client.applicationStatus,
+          },
         },
-      },
-      personnelIds,
-      profile: client.profile as Record<string, unknown> | undefined,
-      applicationStatus: client.applicationStatus,
-    }));
-    
+        personnelIds,
+        profile: client.profile as Record<string, unknown> | undefined,
+        applicationStatus: client.applicationStatus,
+      }),
+    );
+
     if (filters?.status) {
-      filteredClients = filteredClients.filter(c => c.applicationStatus === filters.status);
+      filteredClients = filteredClients.filter((c) => c.applicationStatus === filters.status);
     }
-    
+
     if (filters?.accountType) {
-      filteredClients = filteredClients.filter(c => c.accountType === filters.accountType);
+      filteredClients = filteredClients.filter((c) => c.accountType === filters.accountType);
     }
-    
+
     if (filters?.search) {
       const search = filters.search.toLowerCase();
-      filteredClients = filteredClients.filter(c =>
-        (c.email ?? '').toLowerCase().includes(search) ||
-        c.firstName?.toLowerCase().includes(search) ||
-        c.lastName?.toLowerCase().includes(search)
+      filteredClients = filteredClients.filter(
+        (c) =>
+          (c.email ?? '').toLowerCase().includes(search) ||
+          c.firstName?.toLowerCase().includes(search) ||
+          c.lastName?.toLowerCase().includes(search),
       );
     }
-    
+
     return filteredClients;
   }
-  
+
   /**
    * Get paginated clients with profiles
    *
@@ -243,26 +267,29 @@ export class ClientsService {
    */
   async getClientById(clientId: string): Promise<Client> {
     const supabase = createServiceClient();
-    
-    const { data: { user }, error } = await supabase.auth.admin.getUserById(clientId);
-    
+
+    const {
+      data: { user },
+      error,
+    } = await supabase.auth.admin.getUserById(clientId);
+
     if (error || !user) {
       throw new NotFoundError('Client not found');
     }
-    
+
     // Get profile
     const profile = await kv.get(`user_profile:${clientId}:personal_info`);
-    
+
     // Get application
     let application = null;
     const appId = profile?.applicationId || profile?.application_id;
     if (appId) {
       application = await kv.get(`application:${appId}`);
     }
-    
+
     // Get security status
     const security = await kv.get(`security:${clientId}`);
-    
+
     return {
       id: user.id,
       email: user.email,
@@ -279,13 +306,13 @@ export class ClientsService {
       application,
     };
   }
-  
+
   /**
    * Update client
    */
   async updateClient(clientId: string, updates: Partial<Client>): Promise<Client> {
     const supabase = createServiceClient();
-    
+
     // Update user metadata in Supabase Auth
     if (updates.firstName || updates.lastName || updates.accountType) {
       await supabase.auth.admin.updateUserById(clientId, {
@@ -296,22 +323,22 @@ export class ClientsService {
         },
       });
     }
-    
+
     // Update profile in KV if provided
     if (updates.profile) {
       await kv.set(`user_profile:${clientId}:personal_info`, updates.profile);
     }
-    
+
     log.success('Client updated', { clientId });
-    
+
     // Trigger group recalculation in background
-    this.triggerGroupRecalculation().catch(err => 
-      log.error('Background group recalculation failed', err)
+    this.triggerGroupRecalculation().catch((err) =>
+      log.error('Background group recalculation failed', err),
     );
-    
+
     return this.getClientById(clientId);
   }
-  
+
   /**
    * Delete client (soft delete by marking as inactive)
    * Sets security.deleted flag AND updates accountStatus on the profile
@@ -322,7 +349,7 @@ export class ClientsService {
    */
   async deleteClient(clientId: string): Promise<void> {
     // Read both entries before writing either
-    const security = await kv.get(`security:${clientId}`) || {};
+    const security = (await kv.get(`security:${clientId}`)) || {};
     const profileKey = `user_profile:${clientId}:personal_info`;
     const profile = await kv.get(profileKey);
 
@@ -357,10 +384,10 @@ export class ClientsService {
     // Per Guidelines §12.3: downstream data must reflect the entity's
     // lifecycle state.
     await this.cascadeDeprecateApplications(clientId, 'Client soft-deleted');
-    
+
     // Auto-unsubscribe from newsletter (fire-and-forget, §12.3)
     this.syncNewsletterState(clientId, profile, 'delete').catch((err) =>
-      log.error('Newsletter sync failed during client deletion', err)
+      log.error('Newsletter sync failed during client deletion', err),
     );
 
     log.warn('Client deleted (soft)', { clientId });
@@ -378,9 +405,13 @@ export class ClientsService {
    * Auth account is NOT removed (compliance retention).
    * Both entries updated atomically.
    */
-  async closeAccount(clientId: string, adminUserId: string, reason: string): Promise<{ success: boolean; message: string }> {
+  async closeAccount(
+    clientId: string,
+    adminUserId: string,
+    reason: string,
+  ): Promise<{ success: boolean; message: string }> {
     // Read both entries before writing either
-    const security = await kv.get(`security:${clientId}`) || {};
+    const security = (await kv.get(`security:${clientId}`)) || {};
     const profileKey = `user_profile:${clientId}:personal_info`;
     const profile = await kv.get(profileKey);
 
@@ -422,13 +453,13 @@ export class ClientsService {
     await this.cascadeDeprecateApplications(clientId, `Account closed: ${reason}`);
 
     // Trigger group recalculation — closed clients must be excluded
-    this.triggerGroupRecalculation().catch(err =>
-      log.error('Background group recalculation failed after account closure', err)
+    this.triggerGroupRecalculation().catch((err) =>
+      log.error('Background group recalculation failed after account closure', err),
     );
 
     // Auto-unsubscribe from newsletter (fire-and-forget, §12.3)
     this.syncNewsletterState(clientId, profile, 'close').catch((err) =>
-      log.error('Newsletter sync failed during account closure', err)
+      log.error('Newsletter sync failed during account closure', err),
     );
 
     return { success: true, message: 'Account closed successfully' };
@@ -444,9 +475,13 @@ export class ClientsService {
    * Per Guidelines §12.3: Both security and profile entries must be
    * updated together.
    */
-  async reinstateAccount(clientId: string, adminUserId: string, note?: string): Promise<{ success: boolean; message: string }> {
+  async reinstateAccount(
+    clientId: string,
+    adminUserId: string,
+    note?: string,
+  ): Promise<{ success: boolean; message: string }> {
     // Read both entries
-    const security = await kv.get(`security:${clientId}`) || {};
+    const security = (await kv.get(`security:${clientId}`)) || {};
     const profileKey = `user_profile:${clientId}:personal_info`;
     const profile = await kv.get(profileKey);
 
@@ -488,21 +523,25 @@ export class ClientsService {
       profile ? kv.set(profileKey, profile) : Promise.resolve(),
     ]);
 
-    log.success('Client account reinstated', { clientId, adminUserId, restoredStatus: previousStatus });
+    log.success('Client account reinstated', {
+      clientId,
+      adminUserId,
+      restoredStatus: previousStatus,
+    });
 
     // Trigger group recalculation — reinstated client may rejoin groups
-    this.triggerGroupRecalculation().catch(err =>
-      log.error('Background group recalculation failed after account reinstatement', err)
+    this.triggerGroupRecalculation().catch((err) =>
+      log.error('Background group recalculation failed after account reinstatement', err),
     );
 
     // Re-subscribe to newsletter on reinstatement (fire-and-forget, §12.3)
     this.syncNewsletterState(clientId, profile, 'reinstate').catch((err) =>
-      log.error('Newsletter sync failed during account reinstatement', err)
+      log.error('Newsletter sync failed during account reinstatement', err),
     );
 
     return { success: true, message: 'Account reinstated successfully' };
   }
-  
+
   /**
    * Get client profile
    */
@@ -510,28 +549,31 @@ export class ClientsService {
     const profile = await kv.get(`user_profile:${clientId}:personal_info`);
     return profile || null;
   }
-  
+
   /**
    * Update client profile
    */
-  async updateClientProfile(clientId: string, profileData: Partial<ClientProfile>): Promise<ClientProfile> {
-    const profile = await kv.get(`user_profile:${clientId}:personal_info`) || {};
-    
+  async updateClientProfile(
+    clientId: string,
+    profileData: Partial<ClientProfile>,
+  ): Promise<ClientProfile> {
+    const profile = (await kv.get(`user_profile:${clientId}:personal_info`)) || {};
+
     Object.assign(profile, profileData);
     profile.updatedAt = new Date().toISOString();
-    
+
     await kv.set(`user_profile:${clientId}:personal_info`, profile);
-    
+
     log.success('Client profile updated', { clientId });
-    
+
     // Trigger group recalculation in background
-    this.triggerGroupRecalculation().catch(err => 
-      log.error('Background group recalculation failed', err)
+    this.triggerGroupRecalculation().catch((err) =>
+      log.error('Background group recalculation failed', err),
     );
-    
+
     return profile;
   }
-  
+
   /**
    * Get client documents
    */
@@ -539,31 +581,33 @@ export class ClientsService {
     const documents = await kv.getByPrefix(`document:${clientId}:`);
     return documents || [];
   }
-  
+
   /**
    * Get client communication history
    */
   async getClientCommunication(clientId: string): Promise<CommunicationRecord[]> {
-    const communications = (await kv.getByPrefix(`communication_log:${clientId}:`)) as CommunicationRecord[];
-    
+    const communications = (await kv.getByPrefix(
+      `communication_log:${clientId}:`,
+    )) as CommunicationRecord[];
+
     if (!communications || communications.length === 0) {
       return [];
     }
-    
+
     // Sort by created date (newest first)
-    communications.sort((a, b) =>
-      new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime()
+    communications.sort(
+      (a, b) => new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime(),
     );
-    
+
     return communications;
   }
-  
+
   /**
    * Get client security status
    */
   async getClientSecurity(clientId: string): Promise<ClientSecurity> {
-    const security = await kv.get(`security:${clientId}`) || {};
-    
+    const security = (await kv.get(`security:${clientId}`)) || {};
+
     return {
       suspended: security.suspended || false,
       suspendedAt: security.suspendedAt,
@@ -573,7 +617,7 @@ export class ClientsService {
       last2faVerifiedAt: security.last2faVerifiedAt,
     };
   }
-  
+
   /**
    * Suspend client account
    * Sets security.suspended flag AND updates accountStatus on the profile.
@@ -583,7 +627,7 @@ export class ClientsService {
    */
   async suspendClient(clientId: string, adminUserId: string, reason: string) {
     // Read both entries before writing either
-    const security = await kv.get(`security:${clientId}`) || {};
+    const security = (await kv.get(`security:${clientId}`)) || {};
     const profileKey = `user_profile:${clientId}:personal_info`;
     const profile = await kv.get(profileKey);
 
@@ -609,15 +653,15 @@ export class ClientsService {
       kv.set(`security:${clientId}`, security),
       profile ? kv.set(profileKey, profile) : Promise.resolve(),
     ]);
-    
+
     log.warn('Client suspended', { clientId, adminUserId, reason });
-    
+
     return {
       success: true,
       message: 'Client account suspended',
     };
   }
-  
+
   /**
    * Unsuspend client account
    * Clears security.suspended flag AND restores accountStatus on the profile.
@@ -627,18 +671,18 @@ export class ClientsService {
    */
   async unsuspendClient(clientId: string, adminUserId: string) {
     // Read both entries before writing either
-    const security = await kv.get(`security:${clientId}`) || {};
+    const security = (await kv.get(`security:${clientId}`)) || {};
     const profileKey = `user_profile:${clientId}:personal_info`;
     const profile = await kv.get(profileKey);
 
     const previousStatus = security.previousAccountStatus || 'approved';
-    
+
     security.suspended = false;
     security.unsuspendedAt = new Date().toISOString();
     security.unsuspendedBy = adminUserId;
     delete security.reason;
     delete security.previousAccountStatus;
-    
+
     // Restore the previous accountStatus on the profile
     if (profile) {
       profile.accountStatus = previousStatus;
@@ -650,9 +694,9 @@ export class ClientsService {
       kv.set(`security:${clientId}`, security),
       profile ? kv.set(profileKey, profile) : Promise.resolve(),
     ]);
-    
+
     log.success('Client unsuspended', { clientId, adminUserId });
-    
+
     return {
       success: true,
       message: 'Client account unsuspended',
@@ -676,7 +720,9 @@ export class ClientsService {
         profile?.email ||
         profile?.personalInformation?.email ||
         profile?.contactDetails?.email
-      )?.trim().toLowerCase();
+      )
+        ?.trim()
+        .toLowerCase();
 
       if (!email) {
         log.warn('No email found on profile, skipping newsletter sync', { clientId, action });
@@ -729,7 +775,7 @@ export class ClientsService {
       if (!allApplications || allApplications.length === 0) return;
 
       const clientApps = allApplications.filter(
-        (app: Record<string, unknown>) => app.user_id === clientId && app.deprecated !== true
+        (app: Record<string, unknown>) => app.user_id === clientId && app.deprecated !== true,
       );
 
       if (clientApps.length === 0) return;
@@ -742,8 +788,8 @@ export class ClientsService {
             deprecated: true,
             deprecated_at: now,
             deprecated_reason: reason,
-          })
-        )
+          }),
+        ),
       );
 
       log.info('Cascade-deprecated applications for deleted client', {

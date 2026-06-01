@@ -36,9 +36,9 @@ export function useClientActions() {
     }
   };
 
-  return { 
-    updating, 
+  return {
+    updating,
     updateClientMetadata,
-    runSanctionsScreening
+    runSanctionsScreening,
   };
 }

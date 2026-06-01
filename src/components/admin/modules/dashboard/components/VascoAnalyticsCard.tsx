@@ -1,6 +1,6 @@
 /**
  * VascoAnalyticsCard — Admin Dashboard Widget
- * 
+ *
  * Displays analytics for the "Ask Vasco" public chatbot:
  * - 7-day message/session metrics
  * - Feedback summary (positive/negative)
@@ -159,9 +159,8 @@ export function VascoAnalyticsCard() {
   const messagesData = analytics.last7Days.map((d) => d.messages);
   const maxMessages = Math.max(...messagesData, 1);
   const feedbackTotal = analytics.totalFeedbackPositive + analytics.totalFeedbackNegative;
-  const satisfactionRate = feedbackTotal > 0
-    ? Math.round((analytics.totalFeedbackPositive / feedbackTotal) * 100)
-    : null;
+  const satisfactionRate =
+    feedbackTotal > 0 ? Math.round((analytics.totalFeedbackPositive / feedbackTotal) * 100) : null;
 
   return (
     <Card className="border-gray-200 shadow-sm">
@@ -248,7 +247,9 @@ export function VascoAnalyticsCard() {
           <div className="flex justify-between mt-1 px-0.5">
             {analytics.last7Days.map((d) => (
               <span key={d.date} className="text-[9px] text-gray-400">
-                {new Date(d.date + 'T00:00:00').toLocaleDateString('en-ZA', { weekday: 'short' }).slice(0, 2)}
+                {new Date(d.date + 'T00:00:00')
+                  .toLocaleDateString('en-ZA', { weekday: 'short' })
+                  .slice(0, 2)}
               </span>
             ))}
           </div>
@@ -279,7 +280,10 @@ export function VascoAnalyticsCard() {
             {showTopics && (
               <div className="mt-2 space-y-1.5">
                 {analytics.topTopics.slice(0, 8).map((t) => (
-                  <div key={t.topic} className="flex items-center justify-between px-2 py-1 rounded bg-gray-50">
+                  <div
+                    key={t.topic}
+                    className="flex items-center justify-between px-2 py-1 rounded bg-gray-50"
+                  >
                     <span className="text-xs text-gray-700">{t.topic}</span>
                     <span className="text-[10px] text-gray-400 font-medium">{t.count}</span>
                   </div>
@@ -302,7 +306,11 @@ export function VascoAnalyticsCard() {
                   {newHandoffs.length} new
                 </Badge>
               )}
-              {showHandoffs ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
+              {showHandoffs ? (
+                <ChevronUp className="h-3 w-3" />
+              ) : (
+                <ChevronDown className="h-3 w-3" />
+              )}
             </button>
             {showHandoffs && (
               <div className="mt-2 space-y-2 max-h-64 overflow-y-auto">
@@ -330,7 +338,9 @@ export function VascoAnalyticsCard() {
                             size="sm"
                             variant="outline"
                             className="text-[10px] h-6 px-2 border-gray-200"
-                            onClick={() => updateHandoffMutation.mutate({ id: h.id, status: 'contacted' })}
+                            onClick={() =>
+                              updateHandoffMutation.mutate({ id: h.id, status: 'contacted' })
+                            }
                             disabled={updateHandoffMutation.isPending}
                           >
                             Mark Contacted
@@ -342,7 +352,9 @@ export function VascoAnalyticsCard() {
                               size="sm"
                               variant="outline"
                               className="text-[10px] h-6 px-2 border-green-200 text-green-700"
-                              onClick={() => updateHandoffMutation.mutate({ id: h.id, status: 'converted' })}
+                              onClick={() =>
+                                updateHandoffMutation.mutate({ id: h.id, status: 'converted' })
+                              }
                               disabled={updateHandoffMutation.isPending}
                             >
                               Converted
@@ -351,7 +363,9 @@ export function VascoAnalyticsCard() {
                               size="sm"
                               variant="ghost"
                               className="text-[10px] h-6 px-2 text-gray-500"
-                              onClick={() => updateHandoffMutation.mutate({ id: h.id, status: 'closed' })}
+                              onClick={() =>
+                                updateHandoffMutation.mutate({ id: h.id, status: 'closed' })
+                              }
                               disabled={updateHandoffMutation.isPending}
                             >
                               Close

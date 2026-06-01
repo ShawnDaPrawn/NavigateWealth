@@ -208,30 +208,30 @@ Important:
 
 ### Section 1.3 What Is Actually On `main`
 
-| Area | Current state on clean `main` |
-|---|---|
-| Frontend | React SPA, Vite, TypeScript. Single `package.json`, not a monorepo. |
-| Backend | Remote Supabase Edge Function at `https://vpjmdsltwrnpefzcgdmz.supabase.co/functions/v1/make-server-91ed8379`. |
-| Supabase function entrypoint | `supabase/functions/make-server-91ed8379/index.ts` imports `src/supabase/functions/server/index.tsx`. |
-| CORS | `index.tsx` reflects any browser origin when `NW_ALLOWED_ORIGINS` is unset, and logs a warning. If `NW_ALLOWED_ORIGINS` is set, it uses a strict allow-list. |
-| Health checks | `/make-server-91ed8379`, `/make-server-91ed8379/health`, and `/make-server-91ed8379/health/ready` are unauthenticated. Business routes must still enforce auth at router scope. |
-| Request IDs | `index.tsx` adds/echoes `x-request-id`. |
-| Supabase deploy workflow | `.github/workflows/deploy-supabase-function.yml` exists and can deploy the Edge Function if `SUPABASE_ACCESS_TOKEN` is configured. |
-| Scripts | Current `package.json` has `dev`, `build`, `optimize:images`, `ui:inspect`, `provider:sync`, `provider:worker`, `test`, and `test:watch`. |
-| Lint/typecheck scripts | Not present on clean `main` as of 2026-04-20. Do not tell users to run `npm run lint`, `npm run typecheck`, or `npm run test:coverage` unless those scripts are later landed. |
-| Test config | `vitest.config.ts` exists to make Vitest resolve the same version-pinned imports Vite resolves (`sonner@2.0.3`, `react-hook-form@7.55.0`, etc.). |
-| TypeScript config | `tsconfig.json` is at the project root and includes `src/**/*.ts` and `src/**/*.tsx`. |
-| Broad production tooling | ESLint config, Prettier config, Husky hooks, strict tsconfig, CI, dependency-cruiser, Playwright config, Lighthouse config, compliance docs, migrations, shared schemas, Sentry scaffold, and analytics/consent scaffolding are not landed unless later applied from the broad stash. |
+| Area                         | Current state on clean `main`                                                                                                                                                                                                                                                         |
+| ---------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Frontend                     | React SPA, Vite, TypeScript. Single `package.json`, not a monorepo.                                                                                                                                                                                                                   |
+| Backend                      | Remote Supabase Edge Function at `https://vpjmdsltwrnpefzcgdmz.supabase.co/functions/v1/make-server-91ed8379`.                                                                                                                                                                        |
+| Supabase function entrypoint | `supabase/functions/make-server-91ed8379/index.ts` imports `src/supabase/functions/server/index.tsx`.                                                                                                                                                                                 |
+| CORS                         | `index.tsx` reflects any browser origin when `NW_ALLOWED_ORIGINS` is unset, and logs a warning. If `NW_ALLOWED_ORIGINS` is set, it uses a strict allow-list.                                                                                                                          |
+| Health checks                | `/make-server-91ed8379`, `/make-server-91ed8379/health`, and `/make-server-91ed8379/health/ready` are unauthenticated. Business routes must still enforce auth at router scope.                                                                                                       |
+| Request IDs                  | `index.tsx` adds/echoes `x-request-id`.                                                                                                                                                                                                                                               |
+| Supabase deploy workflow     | `.github/workflows/deploy-supabase-function.yml` exists and can deploy the Edge Function if `SUPABASE_ACCESS_TOKEN` is configured.                                                                                                                                                    |
+| Scripts                      | Current `package.json` has `dev`, `build`, `optimize:images`, `ui:inspect`, `provider:sync`, `provider:worker`, `test`, and `test:watch`.                                                                                                                                             |
+| Lint/typecheck scripts       | Not present on clean `main` as of 2026-04-20. Do not tell users to run `npm run lint`, `npm run typecheck`, or `npm run test:coverage` unless those scripts are later landed.                                                                                                         |
+| Test config                  | `vitest.config.ts` exists to make Vitest resolve the same version-pinned imports Vite resolves (`sonner@2.0.3`, `react-hook-form@7.55.0`, etc.).                                                                                                                                      |
+| TypeScript config            | `tsconfig.json` is at the project root and includes `src/**/*.ts` and `src/**/*.tsx`.                                                                                                                                                                                                 |
+| Broad production tooling     | ESLint config, Prettier config, Husky hooks, strict tsconfig, CI, dependency-cruiser, Playwright config, Lighthouse config, compliance docs, migrations, shared schemas, Sentry scaffold, and analytics/consent scaffolding are not landed unless later applied from the broad stash. |
 
 ### Section 1.4 Intentional Fallbacks And Why They Exist
 
 These fallbacks are deliberate. Do not remove them during unrelated work.
 
-| File | Fallback | Why it exists | Removal prerequisite |
-|---|---|---|---|
-| `src/supabase/functions/server/index.tsx` | If `NW_ALLOWED_ORIGINS` is unset, reflect the incoming origin and log a warning. | Prevents another production CORS lockout. Auth, not CORS, is the real authorization boundary. | All real SPA origins are known, `NW_ALLOWED_ORIGINS` is set in Supabase secrets, and preflights pass from every origin. |
-| `src/utils/supabase/info.tsx` | Hardcoded project ref / anon key fallback. | Allows the SPA to boot without local env vars. | Vercel production and preview env vars are pinned and verified. |
-| `src/supabase/functions/server/constants.ts` | `SUPER_ADMIN_EMAIL = 'shawn@navigatewealth.co'`. | Bootstrap/recovery access for the owner while authz is still evolving. | A durable Supabase/KV super-admin allowlist exists in every environment, with at least two recovery admins and tested rollback. |
+| File                                         | Fallback                                                                         | Why it exists                                                                                 | Removal prerequisite                                                                                                            |
+| -------------------------------------------- | -------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------- |
+| `src/supabase/functions/server/index.tsx`    | If `NW_ALLOWED_ORIGINS` is unset, reflect the incoming origin and log a warning. | Prevents another production CORS lockout. Auth, not CORS, is the real authorization boundary. | All real SPA origins are known, `NW_ALLOWED_ORIGINS` is set in Supabase secrets, and preflights pass from every origin.         |
+| `src/utils/supabase/info.tsx`                | Hardcoded project ref / anon key fallback.                                       | Allows the SPA to boot without local env vars.                                                | Vercel production and preview env vars are pinned and verified.                                                                 |
+| `src/supabase/functions/server/constants.ts` | `SUPER_ADMIN_EMAIL = 'shawn@navigatewealth.co'`.                                 | Bootstrap/recovery access for the owner while authz is still evolving.                        | A durable Supabase/KV super-admin allowlist exists in every environment, with at least two recovery admins and tested rollback. |
 
 ---
 
@@ -245,24 +245,24 @@ must be reviewed before they can count.
 - [x] Current clean `main` builds with `npm run build`.
 - [x] Current test suite exits 0 without relying on custom assertion logging.
 - [x] `NW_ALLOWED_ORIGINS` is set explicitly in Supabase secrets for production
-  browser origins and the local dev/test origins used to verify this remote
-  Edge Function from `localhost` and `127.0.0.1`.
+      browser origins and the local dev/test origins used to verify this remote
+      Edge Function from `localhost` and `127.0.0.1`.
 - [x] Vercel has explicit `VITE_SUPABASE_URL`,
-  `VITE_SUPABASE_PROJECT_ID`, and `VITE_SUPABASE_ANON_KEY` values.
+      `VITE_SUPABASE_PROJECT_ID`, and `VITE_SUPABASE_ANON_KEY` values.
 - [x] Edge Function deploy workflow is configured with
-  `SUPABASE_ACCESS_TOKEN` and has succeeded from GitHub Actions.
+      `SUPABASE_ACCESS_TOKEN` and has succeeded from GitHub Actions.
 - [ ] Broad tooling update has been reviewed on a separate branch before any
-  ESLint/Husky/CI requirements are enabled.
+      ESLint/Husky/CI requirements are enabled.
 - [ ] If lint/typecheck/coverage gates are introduced, `package.json` contains
-  those scripts and they pass locally before Git hooks or CI require them.
+      those scripts and they pass locally before Git hooks or CI require them.
 - [ ] Any migrations proposed by the broad update are reviewed, applied to a
-  disposable/staging Supabase project first, and only then promoted.
+      disposable/staging Supabase project first, and only then promoted.
 - [ ] `integrations.tsx` is split incrementally with no behavior changes.
 - [ ] Audit logging exists and is wired into privileged state-changing routes.
 - [ ] Super-admin fallback removal is done only after a tested replacement
-  allowlist exists.
+      allowlist exists.
 - [ ] Backup, DR, POPIA, FAIS, Sentry, CSP, and environment-split work is
-  operationally verified, not merely documented.
+      operationally verified, not merely documented.
 
 If any box is unchecked, answer "not fully production grade yet" and explain
 which category is blocking: operational configuration, test/tooling hygiene,
@@ -654,17 +654,17 @@ events that future agents could repeat.
 
 ## Section 7 - How Future Agents Should Use This File
 
-| User question | Where to look |
-|---|---|
-| "Is the app production grade?" | Section 2 checklist. |
-| "What should I do now?" | Section 3, then Section 4. |
-| "What did Claude change?" | Section 1.2 and Section 3.5. |
-| "Why is CORS permissive?" | Sections 1.4, 5.1, and 6. |
-| "Can I remove the super admin fallback?" | Sections 1.4 and 4.6. |
-| "Why did commits fail?" | Section 6 tooling incident. |
-| "Why does npm test fail?" | Section 4.3. |
-| "What should we refactor next?" | Section 4, top-down. |
-| "How do I deploy the Edge Function?" | Sections 3.2, 3.4, and 8. |
+| User question                            | Where to look                |
+| ---------------------------------------- | ---------------------------- |
+| "Is the app production grade?"           | Section 2 checklist.         |
+| "What should I do now?"                  | Section 3, then Section 4.   |
+| "What did Claude change?"                | Section 1.2 and Section 3.5. |
+| "Why is CORS permissive?"                | Sections 1.4, 5.1, and 6.    |
+| "Can I remove the super admin fallback?" | Sections 1.4 and 4.6.        |
+| "Why did commits fail?"                  | Section 6 tooling incident.  |
+| "Why does npm test fail?"                | Section 4.3.                 |
+| "What should we refactor next?"          | Section 4, top-down.         |
+| "How do I deploy the Edge Function?"     | Sections 3.2, 3.4, and 8.    |
 
 Editing rules:
 
@@ -725,7 +725,7 @@ Invoke-WebRequest -UseBasicParsing https://vpjmdsltwrnpefzcgdmz.supabase.co/func
 Expected shape:
 
 ```json
-{"status":"healthy","version":"4.1.0","requestId":"..."}
+{ "status": "healthy", "version": "4.1.0", "requestId": "..." }
 ```
 
 ### CORS Preflight Checks
@@ -838,16 +838,16 @@ cleanup. Verify before referencing them as real:
 
 ### Launch metadata
 
-| Item | Value |
-|------|-------|
-| Edge Function deploy | 2026-05-23 (final publish redeploy) |
-| Production API smoke | **PASS** — 6 `/prefill/resolve` + audit + `/form-templates` → `tmp/form-prefill-smoke-report.json` |
-| Frontend deploy | **Done** — Vercel `https://www.navigatewealth.co` (dpl_9k6nE4EBWh2UuXgaste5USGaQVyM) |
-| Rollback drill | `VITE_FORM_PREFILL_ENABLED=false` build verified — Medical Step 1 legacy gate in `Step1InputForm.tsx` ~L108 |
-| Access model | **Platform-wide** — any adviser/admin (`form-prefill-auth.ts`) |
-| Runbook | [`docs/runbooks/form-prefill.md`](docs/runbooks/form-prefill.md) |
-| E-sign tokens doc | [`docs/compliance/form-prefill-esign-tokens.md`](docs/compliance/form-prefill-esign-tokens.md) |
-| Template KV migration | [`scripts/migrate-form-templates-to-storage.mjs`](scripts/migrate-form-templates-to-storage.mjs) (Tier B) |
+| Item                  | Value                                                                                                       |
+| --------------------- | ----------------------------------------------------------------------------------------------------------- |
+| Edge Function deploy  | 2026-05-23 (final publish redeploy)                                                                         |
+| Production API smoke  | **PASS** — 6 `/prefill/resolve` + audit + `/form-templates` → `tmp/form-prefill-smoke-report.json`          |
+| Frontend deploy       | **Done** — Vercel `https://www.navigatewealth.co` (dpl_9k6nE4EBWh2UuXgaste5USGaQVyM)                        |
+| Rollback drill        | `VITE_FORM_PREFILL_ENABLED=false` build verified — Medical Step 1 legacy gate in `Step1InputForm.tsx` ~L108 |
+| Access model          | **Platform-wide** — any adviser/admin (`form-prefill-auth.ts`)                                              |
+| Runbook               | [`docs/runbooks/form-prefill.md`](docs/runbooks/form-prefill.md)                                            |
+| E-sign tokens doc     | [`docs/compliance/form-prefill-esign-tokens.md`](docs/compliance/form-prefill-esign-tokens.md)              |
+| Template KV migration | [`scripts/migrate-form-templates-to-storage.mjs`](scripts/migrate-form-templates-to-storage.mjs) (Tier B)   |
 
 ### Tier A production-ready checklist
 
@@ -861,16 +861,16 @@ cleanup. Verify before referencing them as real:
 
 ### What is landed
 
-| Area | Status | Key files |
-|------|--------|-----------|
-| Shared resolver + registry | Landed | `src/shared/form-prefill/`, `src/supabase/functions/server/form-prefill-resolver.ts` |
-| API routes | Landed — auth, rate limits | `form-prefill-routes.ts`, `form-prefill-auth.ts`, `form-prefill-rate-limit.ts` |
-| Review-before-apply UI | Landed — all 6 FNA Step 1 + client drawer picker | `useFormPrefill.tsx`, `PrefillDomainPicker.tsx`, `PrefillReviewModal.tsx` |
-| Auto-populate API | Landed — all six domain routes delegate to unified resolver | `form-prefill-auto-populate.ts`, `*-fna-routes.*` |
-| Prefill audit | Landed — `GET /prefill/audit/:clientId` + drawer history panel | `form-prefill-routes.ts`, `PrefillHistoryPanel.tsx` |
-| External PDF templates (Tier B) | Storage upload + checkbox/radio fill + drawer deep link | `FormTemplatesModule.tsx`, `form-template-routes.ts`, `FillExternalFormButton.tsx` |
-| Tests | Resolver + parity + risk guard + route auth + E2E spec + CI prefill suite | `__tests__/form-prefill-*.test.ts`, `Step1InformationGathering.prefill-guard.test.ts`, `e2e/form-prefill-smoke.spec.ts` |
-| Ops | Smoke script + UAT matrix | `npm run form-prefill:smoke`, `docs/form-prefill-uat-signoff.md` |
+| Area                            | Status                                                                    | Key files                                                                                                               |
+| ------------------------------- | ------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------- |
+| Shared resolver + registry      | Landed                                                                    | `src/shared/form-prefill/`, `src/supabase/functions/server/form-prefill-resolver.ts`                                    |
+| API routes                      | Landed — auth, rate limits                                                | `form-prefill-routes.ts`, `form-prefill-auth.ts`, `form-prefill-rate-limit.ts`                                          |
+| Review-before-apply UI          | Landed — all 6 FNA Step 1 + client drawer picker                          | `useFormPrefill.tsx`, `PrefillDomainPicker.tsx`, `PrefillReviewModal.tsx`                                               |
+| Auto-populate API               | Landed — all six domain routes delegate to unified resolver               | `form-prefill-auto-populate.ts`, `*-fna-routes.*`                                                                       |
+| Prefill audit                   | Landed — `GET /prefill/audit/:clientId` + drawer history panel            | `form-prefill-routes.ts`, `PrefillHistoryPanel.tsx`                                                                     |
+| External PDF templates (Tier B) | Storage upload + checkbox/radio fill + drawer deep link                   | `FormTemplatesModule.tsx`, `form-template-routes.ts`, `FillExternalFormButton.tsx`                                      |
+| Tests                           | Resolver + parity + risk guard + route auth + E2E spec + CI prefill suite | `__tests__/form-prefill-*.test.ts`, `Step1InformationGathering.prefill-guard.test.ts`, `e2e/form-prefill-smoke.spec.ts` |
+| Ops                             | Smoke script + UAT matrix                                                 | `npm run form-prefill:smoke`, `docs/form-prefill-uat-signoff.md`                                                        |
 
 ### Deploy verification
 
@@ -896,8 +896,8 @@ Smoke requires `e2e/.env.local` with `E2E_FNA_ADVISER_*` and `E2E_FNA_CLIENT_ID`
 
 ## Section 10 - Changelog
 
-| Date | Change | Author |
-|---|---|---|
-| 2026-04-18 | Initial Claude roadmap draft created, describing a broad production-readiness update and the original CORS incident. | Claude Opus 4.7 |
-| 2026-04-20 | Corrected the roadmap against the clean repository state after the CORS restore. Added deployed verification, stash quarantine status, tooling-hook incident, accurate command list, and landed-vs-proposed inventory. | Codex |
-| 2026-05-23 | Form Prefill refinement: expanded smoke, parity tests, CI hooks, E2E hardening, migration script. | Agent |
+| Date       | Change                                                                                                                                                                                                                 | Author          |
+| ---------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------- |
+| 2026-04-18 | Initial Claude roadmap draft created, describing a broad production-readiness update and the original CORS incident.                                                                                                   | Claude Opus 4.7 |
+| 2026-04-20 | Corrected the roadmap against the clean repository state after the CORS restore. Added deployed verification, stash quarantine status, tooling-hook incident, accurate command list, and landed-vs-proposed inventory. | Codex           |
+| 2026-05-23 | Form Prefill refinement: expanded smoke, parity tests, CI hooks, E2E hardening, migration script.                                                                                                                      | Agent           |

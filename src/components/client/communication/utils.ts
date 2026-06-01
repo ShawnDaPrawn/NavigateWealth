@@ -27,14 +27,14 @@ export function stripHtml(html: string): string {
   const text = html
     .replace(/<br\s*\/?>/gi, ' ')
     .replace(/<\/?(p|div|li|h[1-6]|tr|blockquote)[^>]*>/gi, ' ')
-    .replace(/<[^>]+>/g, '')           // Remove remaining tags
+    .replace(/<[^>]+>/g, '') // Remove remaining tags
     .replace(/&nbsp;/gi, ' ')
     .replace(/&amp;/gi, '&')
     .replace(/&lt;/gi, '<')
     .replace(/&gt;/gi, '>')
     .replace(/&quot;/gi, '"')
     .replace(/&#39;/gi, "'")
-    .replace(/\s+/g, ' ')             // Collapse whitespace
+    .replace(/\s+/g, ' ') // Collapse whitespace
     .trim();
   return text;
 }
@@ -52,21 +52,57 @@ export function stripHtml(html: string): string {
 export function sanitizeHtml(dirty: string): string {
   return DOMPurify.sanitize(dirty, {
     ALLOWED_TAGS: [
-      'h1', 'h2', 'h3', 'h4', 'h5', 'h6',
-      'p', 'br', 'hr',
-      'ul', 'ol', 'li',
-      'strong', 'b', 'em', 'i', 'u', 's', 'del', 'ins', 'mark',
-      'a', 'img',
-      'blockquote', 'pre', 'code',
-      'table', 'thead', 'tbody', 'tfoot', 'tr', 'th', 'td',
-      'div', 'span',
-      'sub', 'sup',
+      'h1',
+      'h2',
+      'h3',
+      'h4',
+      'h5',
+      'h6',
+      'p',
+      'br',
+      'hr',
+      'ul',
+      'ol',
+      'li',
+      'strong',
+      'b',
+      'em',
+      'i',
+      'u',
+      's',
+      'del',
+      'ins',
+      'mark',
+      'a',
+      'img',
+      'blockquote',
+      'pre',
+      'code',
+      'table',
+      'thead',
+      'tbody',
+      'tfoot',
+      'tr',
+      'th',
+      'td',
+      'div',
+      'span',
+      'sub',
+      'sup',
     ],
     ALLOWED_ATTR: [
-      'href', 'target', 'rel', 'title',
-      'src', 'alt', 'width', 'height',
-      'class', 'style',
-      'colspan', 'rowspan',
+      'href',
+      'target',
+      'rel',
+      'title',
+      'src',
+      'alt',
+      'width',
+      'height',
+      'class',
+      'style',
+      'colspan',
+      'rowspan',
     ],
     ALLOW_DATA_ATTR: false,
   });
@@ -123,17 +159,15 @@ export function filterCommunications(
   // Search
   if (filters.search) {
     const query = filters.search.toLowerCase();
-    filtered = filtered.filter(
-      (c) => {
-        // Strip HTML from message content for clean text search
-        const plainMessage = isHtmlContent(c.message) ? stripHtml(c.message) : c.message;
-        return (
-          c.subject.toLowerCase().includes(query) ||
-          plainMessage.toLowerCase().includes(query) ||
-          c.from.toLowerCase().includes(query)
-        );
-      },
-    );
+    filtered = filtered.filter((c) => {
+      // Strip HTML from message content for clean text search
+      const plainMessage = isHtmlContent(c.message) ? stripHtml(c.message) : c.message;
+      return (
+        c.subject.toLowerCase().includes(query) ||
+        plainMessage.toLowerCase().includes(query) ||
+        c.from.toLowerCase().includes(query)
+      );
+    });
   }
 
   // Category

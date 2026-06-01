@@ -17,7 +17,7 @@ export const RiskPlanningFnaAPI = {
     logger.debug('[RiskPlanningFnaAPI] Fetching client profile', { clientId });
     try {
       const response = await api.get<{ success: boolean; data: Record<string, unknown> }>(
-        `/risk-planning-fna/client-profile/${clientId}`
+        `/risk-planning-fna/client-profile/${clientId}`,
       );
       return response.data || null;
     } catch (error) {
@@ -42,7 +42,7 @@ export const RiskPlanningFnaAPI = {
     logger.debug('[RiskPlanningFnaAPI] Fetching latest published', { clientId });
     try {
       const response = await api.get<{ success: boolean; data: PublishedFNA | null }>(
-        `/risk-planning-fna/client/${clientId}/latest`
+        `/risk-planning-fna/client/${clientId}/latest`,
       );
       return response.data || null;
     } catch (error) {
@@ -63,12 +63,15 @@ export const RiskPlanningFnaAPI = {
   /**
    * Create new FNA draft
    */
-  async create(clientId: string, inputData: Partial<InformationGatheringInput>): Promise<PublishedFNA> {
+  async create(
+    clientId: string,
+    inputData: Partial<InformationGatheringInput>,
+  ): Promise<PublishedFNA> {
     logger.debug('[RiskPlanningFnaAPI] Creating new FNA', { clientId });
     try {
       const response = await api.post<{ success: boolean; data: PublishedFNA }>(
         '/risk-planning-fna/create',
-        { clientId, inputData }
+        { clientId, inputData },
       );
       return response.data;
     } catch (error) {
@@ -85,7 +88,7 @@ export const RiskPlanningFnaAPI = {
     try {
       const response = await api.put<{ success: boolean; data: PublishedFNA }>(
         `/risk-planning-fna/update/${fnaId}`,
-        updates
+        updates,
       );
       return response.data;
     } catch (error) {
@@ -101,7 +104,7 @@ export const RiskPlanningFnaAPI = {
     logger.debug('[RiskPlanningFnaAPI] Publishing FNA', { fnaId });
     try {
       const response = await api.post<{ success: boolean; data: PublishedFNA }>(
-        `/risk-planning-fna/publish/${fnaId}`
+        `/risk-planning-fna/publish/${fnaId}`,
       );
       return response.data;
     } catch (error) {
@@ -117,7 +120,7 @@ export const RiskPlanningFnaAPI = {
     logger.debug('[RiskPlanningFnaAPI] Unpublishing FNA', { fnaId });
     try {
       const response = await api.post<{ success: boolean; data: PublishedFNA }>(
-        `/risk-planning-fna/unpublish/${fnaId}`
+        `/risk-planning-fna/unpublish/${fnaId}`,
       );
       return response.data;
     } catch (error) {
@@ -167,7 +170,7 @@ export const RiskPlanningFnaAPI = {
     logger.debug('[RiskPlanningFnaAPI] Fetching FNA by ID', { fnaId });
     try {
       const response = await api.get<{ success: boolean; data: PublishedFNA }>(
-        `/risk-planning-fna/${fnaId}`
+        `/risk-planning-fna/${fnaId}`,
       );
       return response.data;
     } catch (error) {
@@ -183,7 +186,7 @@ export const RiskPlanningFnaAPI = {
     logger.debug('[RiskPlanningFnaAPI] Listing FNAs for client', { clientId });
     try {
       const response = await api.get<{ success: boolean; data: PublishedFNA[] }>(
-        `/risk-planning-fna/client/${clientId}/list`
+        `/risk-planning-fna/client/${clientId}/list`,
       );
       return response.data || [];
     } catch (error) {

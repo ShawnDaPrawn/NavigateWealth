@@ -9,13 +9,7 @@
  */
 
 import React, { useState } from 'react';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-} from '../ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '../ui/dialog';
 import { Button } from '../ui/button';
 import { Badge } from '../ui/badge';
 import { Separator } from '../ui/separator';
@@ -180,8 +174,7 @@ export function PolicyDetailModal({
 
   // ── Document helpers ──
 
-  const document: PolicyDocument | null =
-    (policyRecord?.document as PolicyDocument) || null;
+  const document: PolicyDocument | null = (policyRecord?.document as PolicyDocument) || null;
 
   const policyId = policyRecord?.id as string | undefined;
   const clientId = policyRecord?.clientId as string | undefined;
@@ -358,7 +351,9 @@ export function PolicyDetailModal({
                       {otherFields.map((field, index) => (
                         <div key={field.id}>
                           <div className="flex justify-between items-start gap-4">
-                            <span className="text-sm text-gray-600 flex-shrink-0">{field.name}</span>
+                            <span className="text-sm text-gray-600 flex-shrink-0">
+                              {field.name}
+                            </span>
                             <span
                               className={`text-sm text-right ${
                                 field.type === 'long_text'
@@ -469,7 +464,9 @@ export function PolicyDetailModal({
         <Separator className="my-6" />
 
         <div className="flex justify-between items-center">
-          <p className="text-xs text-gray-500">For changes or updates, please contact your adviser</p>
+          <p className="text-xs text-gray-500">
+            For changes or updates, please contact your adviser
+          </p>
           <Button onClick={onClose} variant="outline">
             Close
           </Button>

@@ -15,44 +15,44 @@ export function TopBar() {
               <span className="text-sm font-semibold">Mon - Friday 08:00am - 16:30pm</span>
             </div>
           </div>
-          
+
           {/* Right side - Contact links and Get Quote button */}
           <div className="flex items-center space-x-3">
             {/* Contact Information */}
             <div className="hidden lg:flex items-center space-x-4 bg-white/70 px-4 py-1.5 rounded-md shadow-sm border border-gray-300/50">
-              <a 
-                href="tel:012-667-2505" 
+              <a
+                href="tel:012-667-2505"
                 className="flex items-center space-x-1.5 text-gray-700 hover:text-primary transition-all duration-200"
               >
                 <Phone className="h-4 w-4 text-primary" />
                 <span className="text-sm font-semibold">012-667-2505</span>
               </a>
-              
+
               <div className="w-px h-4 bg-gray-300"></div>
-              
-              <a 
-                href="mailto:enquiries@navigatewealth.co" 
+
+              <a
+                href="mailto:enquiries@navigatewealth.co"
                 className="flex items-center space-x-1.5 text-gray-700 hover:text-primary transition-all duration-200"
               >
                 <Mail className="h-4 w-4 text-primary" />
                 <span className="text-sm font-semibold">info@navigatewealth.co</span>
               </a>
-              
+
               <div className="w-px h-4 bg-gray-300"></div>
-              
-              <a 
-                href="https://wa.me/message/BOLRR5DSCWNAG1" 
-                target="_blank" 
+
+              <a
+                href="https://wa.me/message/BOLRR5DSCWNAG1"
+                target="_blank"
                 rel="noopener noreferrer"
                 className="flex items-center space-x-1.5 text-gray-700 hover:text-green-600 transition-all duration-200"
               >
                 <MessageCircle className="h-4 w-4 text-green-600" />
                 <span className="text-sm font-semibold">WhatsApp</span>
               </a>
-              
+
               <div className="w-px h-4 bg-gray-300"></div>
-              
-              <Link 
+
+              <Link
                 to="/get-quote"
                 className="flex items-center space-x-1.5 text-gray-700 hover:text-cyan-600 transition-all duration-200"
               >
@@ -63,25 +63,25 @@ export function TopBar() {
 
             {/* Mobile contact - simplified */}
             <div className="flex lg:hidden items-center space-x-2">
-              <a 
-                href="tel:012-667-2505" 
+              <a
+                href="tel:012-667-2505"
                 aria-label="Call Navigate Wealth on 012 667 2505"
                 className="flex items-center justify-center w-8 h-8 bg-white/75 rounded-md shadow-sm border border-gray-300/50 text-primary hover:bg-primary hover:text-white transition-all duration-200"
               >
                 <Phone className="h-4 w-4" aria-hidden="true" />
               </a>
-              
-              <a 
-                href="https://wa.me/message/BOLRR5DSCWNAG1" 
-                target="_blank" 
+
+              <a
+                href="https://wa.me/message/BOLRR5DSCWNAG1"
+                target="_blank"
                 rel="noopener noreferrer"
                 aria-label="Chat to Navigate Wealth on WhatsApp"
                 className="flex items-center justify-center w-8 h-8 bg-white/75 rounded-md shadow-sm border border-gray-300/50 text-green-600 hover:bg-green-600 hover:text-white transition-all duration-200"
               >
                 <MessageCircle className="h-4 w-4" aria-hidden="true" />
               </a>
-              
-              <Link 
+
+              <Link
                 to="/get-quote"
                 aria-label="Get a quote"
                 className="flex items-center justify-center w-8 h-8 bg-white/75 rounded-md shadow-sm border border-gray-300/50 text-cyan-600 hover:bg-cyan-600 hover:text-white transition-all duration-200"
@@ -89,7 +89,6 @@ export function TopBar() {
                 <FileText className="h-4 w-4" aria-hidden="true" />
               </Link>
             </div>
-
           </div>
         </div>
       </div>

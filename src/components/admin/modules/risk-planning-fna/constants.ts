@@ -1,9 +1,9 @@
 /**
  * Risk Planning FNA System Constants
- * 
+ *
  * ⚠️ CRITICAL: Do NOT change, optimize, or reinterpret these formulas
  * All constants are explicit and auditable for FAIS compliance
- * 
+ *
  * Mandatory Fix #1: Additional Income Multiple per Additional Dependant = +1×
  * Mandatory Fix #2: Insurable Maximum Guardrail (admin-configurable)
  * Mandatory Fix #3: Existing Cover Offset Rules
@@ -17,7 +17,7 @@ export const LIFE_COVER = {
   // Immediate Capital Components
   FUNERAL_FINAL_EXPENSES: 100_000, // Default R100,000
   ESTATE_COSTS_PERCENTAGE: 0.0399, // 3.99% of estate
-  
+
   // Income Multiple Rules
   MULTIPLES: {
     SINGLE_NO_DEPENDANTS: 5,
@@ -35,7 +35,7 @@ export const DISABILITY_COVER = {
   VEHICLE_ADAPTATION: 150_000, // Default R150,000
   MEDICAL_EQUIPMENT: 200_000, // Default R200,000
   ONCE_OFF_CARE_COSTS: 150_000, // Default R150,000
-  
+
   // Disability Multiple Rules
   MULTIPLES: {
     ONE_DEPENDANT: 6,
@@ -75,21 +75,22 @@ export const SEVERE_ILLNESS_COVER = {
 export const INCOME_PROTECTION = {
   // Benefit Calculation
   NET_INCOME_PERCENTAGE: 1.0, // 100% of Net Monthly Income
-  
+
   // Insurable Maximum Guardrail (Mandatory Fix #2)
   // Admin-configurable field - this is the default
   DEFAULT_INSURABLE_MAXIMUM_MONTHLY: 150_000,
-  
+
   // Warning Message
-  EXCEEDS_LIMIT_WARNING: 'Calculated need exceeds typical insurer limits and may be restricted by underwriting.',
-  
+  EXCEEDS_LIMIT_WARNING:
+    'Calculated need exceeds typical insurer limits and may be restricted by underwriting.',
+
   // Benefit Periods (Temporary IP)
   BENEFIT_PERIODS: [
     { value: '6-months', label: '6 months' },
     { value: '12-months', label: '12 months' },
     { value: '24-months', label: '24 months' },
   ] as const,
-  
+
   // Escalation Options (Permanent IP)
   ESCALATION_OPTIONS: [
     { value: 'fixed-1', label: 'Fixed 1%' },
@@ -142,7 +143,7 @@ export const DEFAULT_FORM_VALUES = {
   spouseFullName: '',
   spouseAverageMonthlyIncome: '',
   totalHouseholdMonthlyExpenditure: '0', // Default to R0
-  
+
   // Existing Cover Defaults (all zero)
   existingCoverLifePersonal: '0',
   existingCoverLifeGroup: '0',
@@ -154,7 +155,7 @@ export const DEFAULT_FORM_VALUES = {
   existingCoverIPTemporaryGroup: '0',
   existingCoverIPPermanentPersonal: '0',
   existingCoverIPPermanentGroup: '0',
-  
+
   // Income Protection Settings Defaults
   ipTemporaryBenefitPeriod: '12-months' as IPBenefitPeriod,
   ipPermanentEscalation: 'cpi-linked' as IPEscalationType,

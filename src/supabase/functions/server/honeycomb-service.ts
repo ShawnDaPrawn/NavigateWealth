@@ -12,8 +12,8 @@
  * - ID validation and normalisation
  */
 
-import { createModuleLogger } from "./stderr-logger.ts";
-import * as kv from "./kv_store.tsx";
+import { createModuleLogger } from './stderr-logger.ts';
+import * as kv from './kv_store.tsx';
 import type {
   HoneycombNaturalPersonRequest,
   HoneycombCheckResult,
@@ -40,17 +40,15 @@ import type {
   CategoryStatus,
   CheckStatus,
   RiskFlag,
-} from "./honeycomb-types.ts";
+} from './honeycomb-types.ts';
 
-const log = createModuleLogger("honeycomb-service");
+const log = createModuleLogger('honeycomb-service');
 
-const HONEYCOMB_API_URL = "https://publicapi.honeycombonline.co.za";
-const NIL_UUID = "00000000-0000-0000-0000-000000000000";
+const HONEYCOMB_API_URL = 'https://publicapi.honeycombonline.co.za';
+const NIL_UUID = '00000000-0000-0000-0000-000000000000';
 
 /** Sentinel values that indicate "no real ID number" */
-const INVALID_ID_SENTINELS = [
-  "not provided", "n/a", "undefined", "null", "none", "-", "",
-];
+const INVALID_ID_SENTINELS = ['not provided', 'n/a', 'undefined', 'null', 'none', '-', ''];
 
 // ============================================================================
 // HELPERS
@@ -59,7 +57,7 @@ const INVALID_ID_SENTINELS = [
 /** Check if a string is a real identification value (not a sentinel/placeholder) */
 export function isRealIdNumber(val: unknown): val is string {
   return (
-    typeof val === "string" &&
+    typeof val === 'string' &&
     val.trim().length > 0 &&
     !INVALID_ID_SENTINELS.includes(val.trim().toLowerCase())
   );
@@ -67,20 +65,20 @@ export function isRealIdNumber(val: unknown): val is string {
 
 /** Check if a value is a valid UUID / non-nil ID */
 function isValidId(id: unknown): boolean {
-  return typeof id === "string" && id.length > 0 && id !== NIL_UUID;
+  return typeof id === 'string' && id.length > 0 && id !== NIL_UUID;
 }
 
 /** Get authenticated headers for Honeycomb API */
 function getHeaders(): Record<string, string> {
-  const apiKey = Deno.env.get("HONEYCOMB_API_KEY");
+  const apiKey = Deno.env.get('HONEYCOMB_API_KEY');
   if (!apiKey) {
-    throw new Error("HONEYCOMB_API_KEY is not configured");
+    throw new Error('HONEYCOMB_API_KEY is not configured');
   }
   return {
     Authorization: `Bearer ${apiKey}`,
-    "Content-Type": "application/json",
-    Accept: "application/json",
-    "User-Agent": "NavigateWealth-Admin/1.0",
+    'Content-Type': 'application/json',
+    Accept: 'application/json',
+    'User-Agent': 'NavigateWealth-Admin/1.0',
   };
 }
 
@@ -91,15 +89,21 @@ function getHeaders(): Record<string, string> {
 export function extractId(data: Record<string, unknown>): string | null {
   // 1. Top-level keys
   const topLevelKeys = [
-    "Id", "ClientId", "ReferenceId", "id", "PersonId",
-    "NaturalPersonId", "naturalPersonId", "reference",
+    'Id',
+    'ClientId',
+    'ReferenceId',
+    'id',
+    'PersonId',
+    'NaturalPersonId',
+    'naturalPersonId',
+    'reference',
   ];
   for (const key of topLevelKeys) {
     if (isValidId(data[key])) return data[key] as string;
   }
 
   // 2. Nested objects
-  const nestedPaths = ["naturalPerson", "entity", "client", "result", "data"];
+  const nestedPaths = ['naturalPerson', 'entity', 'client', 'result', 'data'];
   for (const path of nestedPaths) {
     const nested = data[path] as Record<string, unknown> | undefined;
     if (nested && isValidId(nested.id)) return nested.id as string;
@@ -108,8 +112,8 @@ export function extractId(data: Record<string, unknown>): string | null {
   // 3. Fallback: search for any key containing "id"
   const probableKey = Object.keys(data).find(
     (k) =>
-      (k.toLowerCase().includes("id") && !k.toLowerCase().includes("valid")) ||
-      k.toLowerCase() === "code"
+      (k.toLowerCase().includes('id') && !k.toLowerCase().includes('valid')) ||
+      k.toLowerCase() === 'code',
   );
   if (probableKey && isValidId(data[probableKey])) {
     log.info(`Found probable ID in key: ${probableKey}`);
@@ -129,7 +133,7 @@ async function callHoneycomb(
   body?: unknown,
   maxRetries = 3,
 ): Promise<{ ok: boolean; status: number; data: Record<string, unknown> | null; raw?: string }> {
-  const url = `${HONEYCOMB_API_URL}${path.startsWith("/") ? path : `/${path}`}`;
+  const url = `${HONEYCOMB_API_URL}${path.startsWith('/') ? path : `/${path}`}`;
   const headers = getHeaders();
 
   for (let attempt = 0; attempt <= maxRetries; attempt++) {
@@ -140,7 +144,7 @@ async function callHoneycomb(
         method,
         headers,
       };
-      if (body && (method === "POST" || method === "PUT" || method === "PATCH")) {
+      if (body && (method === 'POST' || method === 'PUT' || method === 'PATCH')) {
         fetchOpts.body = JSON.stringify(body);
       }
 
@@ -148,7 +152,7 @@ async function callHoneycomb(
 
       // Handle rate limiting with exponential backoff
       if (response.status === 429 && attempt < maxRetries) {
-        const retryAfter = response.headers.get("Retry-After");
+        const retryAfter = response.headers.get('Retry-After');
         const delay = retryAfter
           ? parseInt(retryAfter, 10) * 1000
           : Math.min(1000 * Math.pow(2, attempt), 30000);
@@ -179,7 +183,7 @@ async function callHoneycomb(
   }
 
   // Unreachable, but satisfies TS
-  throw new Error("Max retries exhausted");
+  throw new Error('Max retries exhausted');
 }
 
 /** Build the standard natural-person payload from normalised inputs */
@@ -194,8 +198,8 @@ function buildPersonPayload(
     uniqueId: clientId,
     firstName,
     surname: lastName,
-    identityNumber: isRealIdNumber(idNumber) ? idNumber : "",
-    passport: isRealIdNumber(passport) ? passport : "",
+    identityNumber: isRealIdNumber(idNumber) ? idNumber : '',
+    passport: isRealIdNumber(passport) ? passport : '',
   };
 }
 
@@ -203,8 +207,8 @@ function buildPersonPayload(
 function requireIdentification(idNumber: string | null, passport: string | null): void {
   if (!isRealIdNumber(idNumber) && !isRealIdNumber(passport)) {
     throw new Error(
-      "Client has no valid ID number or passport. " +
-      "Please update their profile before running this check."
+      'Client has no valid ID number or passport. ' +
+        'Please update their profile before running this check.',
     );
   }
 }
@@ -226,7 +230,7 @@ export async function logActivity(
     type,
     date: new Date().toISOString(),
     details,
-    status: "Completed",
+    status: 'Completed',
   };
   await kv.set(key, [entry, ...(Array.isArray(existing) ? existing : [])]);
   return { id: entry.id };
@@ -246,7 +250,7 @@ async function storeCheckResult(
     clientId,
     matterId,
     submittedAt: new Date().toISOString(),
-    status: "completed",
+    status: 'completed',
     summary,
     rawResponse,
   };
@@ -280,14 +284,14 @@ export async function runIdvNoPhoto(
     const payload = buildPersonPayload(clientId, firstName, lastName, idNumber, passport);
 
     const endpoint = secondary
-      ? "/natural-person-idv-no-photo-no-upload-secondary"
-      : "/natural-person-idv-no-photo-no-upload";
+      ? '/natural-person-idv-no-photo-no-upload-secondary'
+      : '/natural-person-idv-no-photo-no-upload';
 
-    const checkType: HoneycombCheckType = secondary ? "idv_no_photo_secondary" : "idv_no_photo";
+    const checkType: HoneycombCheckType = secondary ? 'idv_no_photo_secondary' : 'idv_no_photo';
 
-    log.info(`Running IDV (no photo${secondary ? ", secondary" : ""}) for ${clientId}`);
+    log.info(`Running IDV (no photo${secondary ? ', secondary' : ''}) for ${clientId}`);
 
-    const { ok, status, data } = await callHoneycomb("POST", endpoint, payload);
+    const { ok, status, data } = await callHoneycomb('POST', endpoint, payload);
 
     if (!ok) {
       const errMsg = data?.message || data?.error || `Honeycomb returned ${status}`;
@@ -296,17 +300,23 @@ export async function runIdvNoPhoto(
     }
 
     const matterId = extractId(data) || null;
-    const result = await storeCheckResult(clientId, checkType, matterId, "IDV check completed", data);
-    await logActivity(clientId, "IDV Report", {
+    const result = await storeCheckResult(
+      clientId,
+      checkType,
+      matterId,
+      'IDV check completed',
+      data,
+    );
+    await logActivity(clientId, 'IDV Report', {
       reportId: result.id,
       matterId,
       checkType,
-      verificationStatus: data?.verificationStatus || "completed",
+      verificationStatus: data?.verificationStatus || 'completed',
     });
 
     return { success: true, data, matterId, checkType };
   } catch (err) {
-    log.error("IDV (no photo) error:", err);
+    log.error('IDV (no photo) error:', err);
     return { success: false, error: (err as Error).message };
   }
 }
@@ -332,14 +342,14 @@ export async function runIdvWithPhoto(
     };
 
     const endpoint = secondary
-      ? "/natural-person-idv-photo-no-upload-secondary"
-      : "/natural-person-idv-photo-no-upload";
+      ? '/natural-person-idv-photo-no-upload-secondary'
+      : '/natural-person-idv-photo-no-upload';
 
-    const checkType: HoneycombCheckType = secondary ? "idv_with_photo_secondary" : "idv_with_photo";
+    const checkType: HoneycombCheckType = secondary ? 'idv_with_photo_secondary' : 'idv_with_photo';
 
-    log.info(`Running IDV (with photo${secondary ? ", secondary" : ""}) for ${clientId}`);
+    log.info(`Running IDV (with photo${secondary ? ', secondary' : ''}) for ${clientId}`);
 
-    const { ok, status, data } = await callHoneycomb("POST", endpoint, payload);
+    const { ok, status, data } = await callHoneycomb('POST', endpoint, payload);
 
     if (!ok) {
       const errMsg = data?.message || data?.error || `Honeycomb returned ${status}`;
@@ -347,8 +357,8 @@ export async function runIdvWithPhoto(
     }
 
     const matterId = extractId(data) || null;
-    await storeCheckResult(clientId, checkType, matterId, "IDV photo check completed", data);
-    await logActivity(clientId, "IDV Report (Photo)", {
+    await storeCheckResult(clientId, checkType, matterId, 'IDV photo check completed', data);
+    await logActivity(clientId, 'IDV Report (Photo)', {
       matterId,
       checkType,
       photoMatch: data?.photoMatch,
@@ -356,7 +366,7 @@ export async function runIdvWithPhoto(
 
     return { success: true, data, matterId, checkType };
   } catch (err) {
-    log.error("IDV (with photo) error:", err);
+    log.error('IDV (with photo) error:', err);
     return { success: false, error: (err as Error).message };
   }
 }
@@ -390,8 +400,8 @@ export async function runBankVerification(
     log.info(`Running bank account verification for ${clientId}`);
 
     const { ok, status, data } = await callHoneycomb(
-      "POST",
-      "/natural-person-account-verification-real-time",
+      'POST',
+      '/natural-person-account-verification-real-time',
       payload,
     );
 
@@ -401,17 +411,23 @@ export async function runBankVerification(
     }
 
     const matterId = extractId(data) || null;
-    await storeCheckResult(clientId, "bank_verification", matterId, "Bank verification completed", data);
-    await logActivity(clientId, "Bank Verification", {
+    await storeCheckResult(
+      clientId,
+      'bank_verification',
+      matterId,
+      'Bank verification completed',
+      data,
+    );
+    await logActivity(clientId, 'Bank Verification', {
       matterId,
       verified: data?.verified ?? data?.accountExists,
       bankName,
       // Do NOT log account number (PII) — only bank name
     });
 
-    return { success: true, data, matterId, checkType: "bank_verification" };
+    return { success: true, data, matterId, checkType: 'bank_verification' };
   } catch (err) {
-    log.error("Bank verification error:", err);
+    log.error('Bank verification error:', err);
     return { success: false, error: (err as Error).message };
   }
 }
@@ -434,8 +450,8 @@ export async function runConsumerCredit(
     log.info(`Running consumer credit check for ${clientId}`);
 
     const { ok, status, data } = await callHoneycomb(
-      "POST",
-      "/natural-person-consumer-credit",
+      'POST',
+      '/natural-person-consumer-credit',
       payload,
     );
 
@@ -445,16 +461,16 @@ export async function runConsumerCredit(
     }
 
     const matterId = extractId(data) || null;
-    await storeCheckResult(clientId, "consumer_credit", matterId, "Credit check completed", data);
-    await logActivity(clientId, "Consumer Credit Check", {
+    await storeCheckResult(clientId, 'consumer_credit', matterId, 'Credit check completed', data);
+    await logActivity(clientId, 'Consumer Credit Check', {
       matterId,
       creditScore: data?.creditScore,
       // Do NOT log detailed financial data (PII)
     });
 
-    return { success: true, data, matterId, checkType: "consumer_credit" };
+    return { success: true, data, matterId, checkType: 'consumer_credit' };
   } catch (err) {
-    log.error("Consumer credit error:", err);
+    log.error('Consumer credit error:', err);
     return { success: false, error: (err as Error).message };
   }
 }
@@ -480,8 +496,8 @@ export async function runConsumerTrace(
     log.info(`Running consumer trace for ${clientId}`);
 
     const { ok, status, data } = await callHoneycomb(
-      "POST",
-      "/natural-person-consumer-trace",
+      'POST',
+      '/natural-person-consumer-trace',
       payload,
     );
 
@@ -491,15 +507,15 @@ export async function runConsumerTrace(
     }
 
     const matterId = extractId(data) || null;
-    await storeCheckResult(clientId, "consumer_trace", matterId, "Consumer trace completed", data);
-    await logActivity(clientId, "Consumer Trace", {
+    await storeCheckResult(clientId, 'consumer_trace', matterId, 'Consumer trace completed', data);
+    await logActivity(clientId, 'Consumer Trace', {
       matterId,
-      checkType: "consumer_trace",
+      checkType: 'consumer_trace',
     });
 
-    return { success: true, data, matterId, checkType: "consumer_trace" };
+    return { success: true, data, matterId, checkType: 'consumer_trace' };
   } catch (err) {
-    log.error("Consumer trace error:", err);
+    log.error('Consumer trace error:', err);
     return { success: false, error: (err as Error).message };
   }
 }
@@ -525,8 +541,8 @@ export async function runDebtReviewEnquiry(
     log.info(`Running debt review enquiry for ${clientId}`);
 
     const { ok, status, data } = await callHoneycomb(
-      "POST",
-      "/natural-person-debt-review",
+      'POST',
+      '/natural-person-debt-review',
       payload,
     );
 
@@ -538,18 +554,20 @@ export async function runDebtReviewEnquiry(
     const matterId = extractId(data) || null;
     const isUnderReview = data?.debtReviewStatus === true || data?.isUnderReview === true;
     await storeCheckResult(
-      clientId, "debt_enquiry", matterId,
-      isUnderReview ? "Under debt review" : "Not under debt review",
+      clientId,
+      'debt_enquiry',
+      matterId,
+      isUnderReview ? 'Under debt review' : 'Not under debt review',
       data,
     );
-    await logActivity(clientId, "Debt Review Enquiry", {
+    await logActivity(clientId, 'Debt Review Enquiry', {
       matterId,
-      debtReviewStatus: isUnderReview ? "Under Review" : "Clear",
+      debtReviewStatus: isUnderReview ? 'Under Review' : 'Clear',
     });
 
-    return { success: true, data, matterId, checkType: "debt_enquiry" };
+    return { success: true, data, matterId, checkType: 'debt_enquiry' };
   } catch (err) {
-    log.error("Debt review enquiry error:", err);
+    log.error('Debt review enquiry error:', err);
     return { success: false, error: (err as Error).message };
   }
 }
@@ -569,17 +587,17 @@ export async function searchSanctions(
   try {
     // Build query string
     const params = new URLSearchParams();
-    if (name) params.append("name", name);
-    if (surname) params.append("surname", surname);
+    if (name) params.append('name', name);
+    if (surname) params.append('surname', surname);
     if (identityNumber && isRealIdNumber(identityNumber)) {
-      params.append("identityNumber", identityNumber);
+      params.append('identityNumber', identityNumber);
     }
-    if (uniqueId) params.append("uniqueId", uniqueId);
+    if (uniqueId) params.append('uniqueId', uniqueId);
 
     // Choose endpoint based on whether source filter is provided
     let endpoint: string;
     if (source) {
-      params.append("source", source);
+      params.append('source', source);
       endpoint = `/search-sanctions-natural-persons-by-source?${params.toString()}`;
     } else {
       endpoint = `/search-sanctions-natural-persons?${params.toString()}`;
@@ -587,7 +605,7 @@ export async function searchSanctions(
 
     log.info(`Searching sanctions for ${clientId}: ${name} ${surname}`);
 
-    const { ok, status, data } = await callHoneycomb("GET", endpoint);
+    const { ok, status, data } = await callHoneycomb('GET', endpoint);
 
     if (!ok) {
       const errMsg = data?.message || data?.error || `Honeycomb returned ${status}`;
@@ -600,26 +618,26 @@ export async function searchSanctions(
     const sanctionsData: HoneycombSanctionsResponse = {
       results,
       totalMatches,
-      searchedLists: source ? [source] : ["all"],
-      ...(typeof data === "object" && data !== null ? data : {}),
+      searchedLists: source ? [source] : ['all'],
+      ...(typeof data === 'object' && data !== null ? data : {}),
     };
 
     await storeCheckResult(
       clientId,
-      "sanctions_search",
+      'sanctions_search',
       null,
       `Sanctions search: ${totalMatches} match(es)`,
       sanctionsData,
     );
-    await logActivity(clientId, "Sanctions Search", {
+    await logActivity(clientId, 'Sanctions Search', {
       totalMatches,
-      source: source || "all",
-      screeningOutcome: totalMatches === 0 ? "Clear" : "Matches Found",
+      source: source || 'all',
+      screeningOutcome: totalMatches === 0 ? 'Clear' : 'Matches Found',
     });
 
-    return { success: true, data: sanctionsData, checkType: "sanctions_search" };
+    return { success: true, data: sanctionsData, checkType: 'sanctions_search' };
   } catch (err) {
-    log.error("Sanctions search error:", err);
+    log.error('Sanctions search error:', err);
     return { success: false, error: (err as Error).message };
   }
 }
@@ -644,21 +662,23 @@ export async function searchEnforcementActions(
 ): Promise<ServiceResult<HoneycombEnforcementResponse>> {
   try {
     const params = new URLSearchParams();
-    if (name) params.append("name", name);
-    if (surname) params.append("surname", surname);
+    if (name) params.append('name', name);
+    if (surname) params.append('surname', surname);
     if (identityNumber && isRealIdNumber(identityNumber)) {
-      params.append("identityNumber", identityNumber);
+      params.append('identityNumber', identityNumber);
     }
-    if (uniqueId) params.append("uniqueId", uniqueId);
+    if (uniqueId) params.append('uniqueId', uniqueId);
 
     const endpoint = `/search-enforcement-actions-natural-persons?${params.toString()}`;
 
     log.info(`Searching enforcement actions for ${clientId}: ${name} ${surname}`);
 
-    const { ok, status, data, raw } = await callHoneycomb("GET", endpoint);
+    const { ok, status, data, raw } = await callHoneycomb('GET', endpoint);
 
     if (!ok) {
-      log.error(`Enforcement actions Honeycomb error: status=${status}, raw=${raw?.substring(0, 500)}`);
+      log.error(
+        `Enforcement actions Honeycomb error: status=${status}, raw=${raw?.substring(0, 500)}`,
+      );
       const errMsg = data?.message || data?.error || `Honeycomb returned ${status}`;
       return { success: false, error: `Enforcement search failed: ${errMsg}` };
     }
@@ -668,23 +688,23 @@ export async function searchEnforcementActions(
 
     await storeCheckResult(
       clientId,
-      "enforcement_actions",
+      'enforcement_actions',
       null,
       `Enforcement: ${totalMatches} match(es)`,
       { results, totalMatches },
     );
-    await logActivity(clientId, "Enforcement Actions Search", {
+    await logActivity(clientId, 'Enforcement Actions Search', {
       totalMatches,
-      screeningOutcome: totalMatches === 0 ? "Clear" : "Matches Found",
+      screeningOutcome: totalMatches === 0 ? 'Clear' : 'Matches Found',
     });
 
     return {
       success: true,
       data: { results, totalMatches },
-      checkType: "enforcement_actions",
+      checkType: 'enforcement_actions',
     };
   } catch (err) {
-    log.error("Enforcement actions search error:", err);
+    log.error('Enforcement actions search error:', err);
     return { success: false, error: (err as Error).message };
   }
 }
@@ -705,18 +725,18 @@ export async function searchLegalAListing(
 ): Promise<ServiceResult<HoneycombLegalAListingResponse>> {
   try {
     const params = new URLSearchParams();
-    if (name) params.append("name", name);
-    if (surname) params.append("surname", surname);
+    if (name) params.append('name', name);
+    if (surname) params.append('surname', surname);
     if (identityNumber && isRealIdNumber(identityNumber)) {
-      params.append("identityNumber", identityNumber);
+      params.append('identityNumber', identityNumber);
     }
-    if (uniqueId) params.append("uniqueId", uniqueId);
+    if (uniqueId) params.append('uniqueId', uniqueId);
 
     const endpoint = `/search-legal-a-listing-natural-persons?${params.toString()}`;
 
     log.info(`Searching legal A listing for ${clientId}: ${name} ${surname}`);
 
-    const { ok, status, data, raw } = await callHoneycomb("GET", endpoint);
+    const { ok, status, data, raw } = await callHoneycomb('GET', endpoint);
 
     if (!ok) {
       log.error(`Legal A listing Honeycomb error: status=${status}, raw=${raw?.substring(0, 500)}`);
@@ -729,23 +749,23 @@ export async function searchLegalAListing(
 
     await storeCheckResult(
       clientId,
-      "legal_a_listing",
+      'legal_a_listing',
       null,
       `Legal A: ${totalMatches} match(es)`,
       { results, totalMatches },
     );
-    await logActivity(clientId, "Legal A Listing Search", {
+    await logActivity(clientId, 'Legal A Listing Search', {
       totalMatches,
-      screeningOutcome: totalMatches === 0 ? "Clear" : "Matches Found",
+      screeningOutcome: totalMatches === 0 ? 'Clear' : 'Matches Found',
     });
 
     return {
       success: true,
       data: { results, totalMatches },
-      checkType: "legal_a_listing",
+      checkType: 'legal_a_listing',
     };
   } catch (err) {
-    log.error("Legal A listing search error:", err);
+    log.error('Legal A listing search error:', err);
     return { success: false, error: (err as Error).message };
   }
 }
@@ -774,11 +794,7 @@ export async function runCipcSearch(
 
     log.info(`Running CIPC company search for ${clientId}`);
 
-    const { ok, status, data } = await callHoneycomb(
-      "POST",
-      "/natural-person-cipc",
-      payload,
-    );
+    const { ok, status, data } = await callHoneycomb('POST', '/natural-person-cipc', payload);
 
     if (!ok) {
       const errMsg = data?.message || data?.error || `Honeycomb returned ${status}`;
@@ -786,16 +802,26 @@ export async function runCipcSearch(
     }
 
     const matterId = extractId(data) || null;
-    const companies = Array.isArray(data?.companies) ? data.companies : (Array.isArray(data) ? data : []);
-    await storeCheckResult(clientId, "cipc", matterId, `CIPC: ${companies.length} company/ies`, data);
-    await logActivity(clientId, "CIPC Company Search", {
+    const companies = Array.isArray(data?.companies)
+      ? data.companies
+      : Array.isArray(data)
+        ? data
+        : [];
+    await storeCheckResult(
+      clientId,
+      'cipc',
+      matterId,
+      `CIPC: ${companies.length} company/ies`,
+      data,
+    );
+    await logActivity(clientId, 'CIPC Company Search', {
       matterId,
       companiesFound: companies.length,
     });
 
-    return { success: true, data, matterId, checkType: "cipc" };
+    return { success: true, data, matterId, checkType: 'cipc' };
   } catch (err) {
-    log.error("CIPC search error:", err);
+    log.error('CIPC search error:', err);
     return { success: false, error: (err as Error).message };
   }
 }
@@ -821,8 +847,8 @@ export async function runDirectorEnquiry(
     log.info(`Running director enquiry for ${clientId}`);
 
     const { ok, status, data } = await callHoneycomb(
-      "POST",
-      "/natural-person-director-enquiry",
+      'POST',
+      '/natural-person-director-enquiry',
       payload,
     );
 
@@ -834,18 +860,20 @@ export async function runDirectorEnquiry(
     const matterId = extractId(data) || null;
     const directorships = Array.isArray(data?.directorships) ? data.directorships : [];
     await storeCheckResult(
-      clientId, "director_enquiry", matterId,
+      clientId,
+      'director_enquiry',
+      matterId,
       `Director enquiry: ${directorships.length} directorship(s)`,
       data,
     );
-    await logActivity(clientId, "Director Enquiry", {
+    await logActivity(clientId, 'Director Enquiry', {
       matterId,
       directorshipsFound: directorships.length,
     });
 
-    return { success: true, data, matterId, checkType: "director_enquiry" };
+    return { success: true, data, matterId, checkType: 'director_enquiry' };
   } catch (err) {
-    log.error("Director enquiry error:", err);
+    log.error('Director enquiry error:', err);
     return { success: false, error: (err as Error).message };
   }
 }
@@ -873,11 +901,7 @@ export async function runBestKnownAddress(
 
     log.info(`Running best known address lookup for ${clientId}`);
 
-    const { ok, status, data } = await callHoneycomb(
-      "POST",
-      "/natural-person-address",
-      payload,
-    );
+    const { ok, status, data } = await callHoneycomb('POST', '/natural-person-address', payload);
 
     if (!ok) {
       const errMsg = data?.message || data?.error || `Honeycomb returned ${status}`;
@@ -885,15 +909,21 @@ export async function runBestKnownAddress(
     }
 
     const matterId = extractId(data) || null;
-    await storeCheckResult(clientId, "best_known_address", matterId, "Address lookup completed", data);
-    await logActivity(clientId, "Best Known Address", {
+    await storeCheckResult(
+      clientId,
+      'best_known_address',
       matterId,
-      checkType: "best_known_address",
+      'Address lookup completed',
+      data,
+    );
+    await logActivity(clientId, 'Best Known Address', {
+      matterId,
+      checkType: 'best_known_address',
     });
 
-    return { success: true, data, matterId, checkType: "best_known_address" };
+    return { success: true, data, matterId, checkType: 'best_known_address' };
   } catch (err) {
-    log.error("Best known address error:", err);
+    log.error('Best known address error:', err);
     return { success: false, error: (err as Error).message };
   }
 }
@@ -924,8 +954,8 @@ export async function runCustomScreening(
     log.info(`Running custom screening for ${clientId}`);
 
     const { ok, status, data } = await callHoneycomb(
-      "POST",
-      "/natural-person-custom-screening",
+      'POST',
+      '/natural-person-custom-screening',
       payload,
     );
 
@@ -935,15 +965,21 @@ export async function runCustomScreening(
     }
 
     const matterId = extractId(data) || null;
-    await storeCheckResult(clientId, "custom_screening", matterId, "Custom screening completed", data);
-    await logActivity(clientId, "Custom Screening", {
+    await storeCheckResult(
+      clientId,
+      'custom_screening',
       matterId,
-      packageId: packageId || "default",
+      'Custom screening completed',
+      data,
+    );
+    await logActivity(clientId, 'Custom Screening', {
+      matterId,
+      packageId: packageId || 'default',
     });
 
-    return { success: true, data, matterId, checkType: "custom_screening" };
+    return { success: true, data, matterId, checkType: 'custom_screening' };
   } catch (err) {
-    log.error("Custom screening error:", err);
+    log.error('Custom screening error:', err);
     return { success: false, error: (err as Error).message };
   }
 }
@@ -970,8 +1006,8 @@ export async function runLifestyleAudit(
     log.info(`Running lifestyle audit for ${clientId}`);
 
     const { ok, status, data } = await callHoneycomb(
-      "POST",
-      "/natural-person-lifestyle-audit",
+      'POST',
+      '/natural-person-lifestyle-audit',
       payload,
     );
 
@@ -981,16 +1017,22 @@ export async function runLifestyleAudit(
     }
 
     const matterId = extractId(data) || null;
-    await storeCheckResult(clientId, "lifestyle_audit", matterId, "Lifestyle audit completed", data);
-    await logActivity(clientId, "Lifestyle Audit", {
+    await storeCheckResult(
+      clientId,
+      'lifestyle_audit',
+      matterId,
+      'Lifestyle audit completed',
+      data,
+    );
+    await logActivity(clientId, 'Lifestyle Audit', {
       matterId,
       lifestyleScore: data?.lifestyleScore,
       estimatedIncome: data?.estimatedIncome,
     });
 
-    return { success: true, data, matterId, checkType: "lifestyle_audit" };
+    return { success: true, data, matterId, checkType: 'lifestyle_audit' };
   } catch (err) {
-    log.error("Lifestyle audit error:", err);
+    log.error('Lifestyle audit error:', err);
     return { success: false, error: (err as Error).message };
   }
 }
@@ -1013,8 +1055,8 @@ export async function runIncomePredictor(
     log.info(`Running income predictor for ${clientId}`);
 
     const { ok, status, data } = await callHoneycomb(
-      "POST",
-      "/natural-person-income-predictor",
+      'POST',
+      '/natural-person-income-predictor',
       payload,
     );
 
@@ -1024,16 +1066,22 @@ export async function runIncomePredictor(
     }
 
     const matterId = extractId(data) || null;
-    await storeCheckResult(clientId, "income_predictor", matterId, "Income predictor completed", data);
-    await logActivity(clientId, "Income Predictor", {
+    await storeCheckResult(
+      clientId,
+      'income_predictor',
+      matterId,
+      'Income predictor completed',
+      data,
+    );
+    await logActivity(clientId, 'Income Predictor', {
       matterId,
       estimatedIncome: data?.estimatedIncome,
       confidenceLevel: data?.confidenceLevel,
     });
 
-    return { success: true, data, matterId, checkType: "income_predictor" };
+    return { success: true, data, matterId, checkType: 'income_predictor' };
   } catch (err) {
-    log.error("Income predictor error:", err);
+    log.error('Income predictor error:', err);
     return { success: false, error: (err as Error).message };
   }
 }
@@ -1056,8 +1104,8 @@ export async function runTendersBlue(
     log.info(`Running tenders blue search for ${clientId}`);
 
     const { ok, status, data } = await callHoneycomb(
-      "POST",
-      "/natural-person-tenders-blue",
+      'POST',
+      '/natural-person-tenders-blue',
       payload,
     );
 
@@ -1067,16 +1115,22 @@ export async function runTendersBlue(
     }
 
     const matterId = extractId(data) || null;
-    const tenders = Array.isArray(data?.tenders) ? data.tenders : (Array.isArray(data) ? data : []);
-    await storeCheckResult(clientId, "tenders_blue", matterId, `Tenders: ${tenders.length} record(s)`, data);
-    await logActivity(clientId, "Tenders Blue Search", {
+    const tenders = Array.isArray(data?.tenders) ? data.tenders : Array.isArray(data) ? data : [];
+    await storeCheckResult(
+      clientId,
+      'tenders_blue',
+      matterId,
+      `Tenders: ${tenders.length} record(s)`,
+      data,
+    );
+    await logActivity(clientId, 'Tenders Blue Search', {
       matterId,
       tendersFound: tenders.length,
     });
 
-    return { success: true, data, matterId, checkType: "tenders_blue" };
+    return { success: true, data, matterId, checkType: 'tenders_blue' };
   } catch (err) {
-    log.error("Tenders blue error:", err);
+    log.error('Tenders blue error:', err);
     return { success: false, error: (err as Error).message };
   }
 }
@@ -1102,28 +1156,27 @@ export async function runCddReport(
 
     log.info(`Running CDD report for ${clientId}`);
 
-    const { ok, status, data } = await callHoneycomb(
-      "POST",
-      "/natural-person-cdd",
-      payload,
-    );
+    const { ok, status, data } = await callHoneycomb('POST', '/natural-person-cdd', payload);
 
     if (!ok) {
       const errMsg = data?.message || data?.error || `Honeycomb returned ${status}`;
-      log.error(`CDD report failed (${status}):`, { error: errMsg, rawResponse: JSON.stringify(data) });
+      log.error(`CDD report failed (${status}):`, {
+        error: errMsg,
+        rawResponse: JSON.stringify(data),
+      });
       return { success: false, error: `CDD report failed: ${errMsg}` };
     }
 
     const matterId = extractId(data) || null;
-    await storeCheckResult(clientId, "cdd_report", matterId, "CDD report completed", data);
-    await logActivity(clientId, "CDD Report", {
+    await storeCheckResult(clientId, 'cdd_report', matterId, 'CDD report completed', data);
+    await logActivity(clientId, 'CDD Report', {
       matterId,
-      checkType: "cdd_report",
+      checkType: 'cdd_report',
     });
 
-    return { success: true, data, matterId, checkType: "cdd_report" };
+    return { success: true, data, matterId, checkType: 'cdd_report' };
   } catch (err) {
-    log.error("CDD report error:", err);
+    log.error('CDD report error:', err);
     return { success: false, error: (err as Error).message };
   }
 }
@@ -1145,9 +1198,7 @@ export async function getCheckHistory(
  * GET ALL CHECKS HISTORY
  * Returns stored results across all check types for a client.
  */
-export async function getAllCheckHistory(
-  clientId: string,
-): Promise<HoneycombCheckResult[]> {
+export async function getAllCheckHistory(clientId: string): Promise<HoneycombCheckResult[]> {
   const prefix = `honeycomb_checks:${clientId}:`;
   const entries = await kv.getByPrefix(prefix);
 
@@ -1161,7 +1212,7 @@ export async function getAllCheckHistory(
 
   // Sort by submittedAt descending
   return allResults.sort(
-    (a, b) => new Date(b.submittedAt).getTime() - new Date(a.submittedAt).getTime()
+    (a, b) => new Date(b.submittedAt).getTime() - new Date(a.submittedAt).getTime(),
   );
 }
 
@@ -1186,7 +1237,7 @@ export async function runBulkIdv(
 ): Promise<ServiceResult<HoneycombBulkIdvResponse>> {
   try {
     if (!persons.length) {
-      return { success: false, error: "At least one person is required for bulk IDV" };
+      return { success: false, error: 'At least one person is required for bulk IDV' };
     }
 
     const payload = persons.map((p) => ({
@@ -1194,36 +1245,36 @@ export async function runBulkIdv(
       firstName: p.firstName,
       surname: p.lastName,
       identityNumber: p.idNumber,
-      passport: "",
+      passport: '',
     }));
 
     log.info(`Running bulk IDV for ${clientId}: ${persons.length} person(s)`);
 
-    const { ok, status, data } = await callHoneycomb(
-      "POST",
-      "/natural-person-idv-bulk",
-      payload,
-    );
+    const { ok, status, data } = await callHoneycomb('POST', '/natural-person-idv-bulk', payload);
 
     if (!ok) {
       const errMsg = data?.message || data?.error || `Honeycomb returned ${status}`;
       return { success: false, error: `Bulk IDV failed: ${errMsg}` };
     }
 
-    const results = Array.isArray(data?.results) ? data.results : (Array.isArray(data) ? data : []);
+    const results = Array.isArray(data?.results) ? data.results : Array.isArray(data) ? data : [];
     const totalProcessed = results.length;
-    const totalMatched = results.filter((r: Record<string, unknown>) => r?.status === "matched" || r?.matchResult === "matched").length;
-    const totalFailed = results.filter((r: Record<string, unknown>) => r?.status === "failed" || r?.matchResult === "failed").length;
+    const totalMatched = results.filter(
+      (r: Record<string, unknown>) => r?.status === 'matched' || r?.matchResult === 'matched',
+    ).length;
+    const totalFailed = results.filter(
+      (r: Record<string, unknown>) => r?.status === 'failed' || r?.matchResult === 'failed',
+    ).length;
 
     const matterId = extractId(data) || null;
     await storeCheckResult(
       clientId,
-      "idv_bulk",
+      'idv_bulk',
       matterId,
       `Bulk IDV: ${totalProcessed} processed, ${totalMatched} matched, ${totalFailed} failed`,
       data,
     );
-    await logActivity(clientId, "Bulk IDV", {
+    await logActivity(clientId, 'Bulk IDV', {
       matterId,
       totalProcessed,
       totalMatched,
@@ -1234,10 +1285,10 @@ export async function runBulkIdv(
       success: true,
       data: { ...data, results, totalProcessed, totalMatched, totalFailed },
       matterId,
-      checkType: "idv_bulk",
+      checkType: 'idv_bulk',
     };
   } catch (err) {
-    log.error("Bulk IDV error:", err);
+    log.error('Bulk IDV error:', err);
     return { success: false, error: (err as Error).message };
   }
 }
@@ -1249,73 +1300,86 @@ export async function runBulkIdv(
 /** Category definitions for the compliance matrix */
 const COMPLIANCE_CATEGORIES: ComplianceCategory[] = [
   {
-    id: "identity",
-    label: "Identity Verification",
-    checkTypes: ["idv_no_photo", "idv_with_photo", "idv_no_photo_secondary", "idv_with_photo_secondary", "idv_bulk"],
-    colour: "blue",
+    id: 'identity',
+    label: 'Identity Verification',
+    checkTypes: [
+      'idv_no_photo',
+      'idv_with_photo',
+      'idv_no_photo_secondary',
+      'idv_with_photo_secondary',
+      'idv_bulk',
+    ],
+    colour: 'blue',
   },
   {
-    id: "cdd",
-    label: "Customer Due Diligence",
-    checkTypes: ["cdd_report"],
-    colour: "teal",
+    id: 'cdd',
+    label: 'Customer Due Diligence',
+    checkTypes: ['cdd_report'],
+    colour: 'teal',
   },
   {
-    id: "financial",
-    label: "Financial Intelligence",
-    checkTypes: ["bank_verification", "consumer_credit", "consumer_trace", "debt_enquiry", "lifestyle_audit", "income_predictor"],
-    colour: "green",
+    id: 'financial',
+    label: 'Financial Intelligence',
+    checkTypes: [
+      'bank_verification',
+      'consumer_credit',
+      'consumer_trace',
+      'debt_enquiry',
+      'lifestyle_audit',
+      'income_predictor',
+    ],
+    colour: 'green',
   },
   {
-    id: "sanctions",
-    label: "Screening & Sanctions",
-    checkTypes: ["sanctions_search", "enforcement_actions", "legal_a_listing", "custom_screening"],
-    colour: "purple",
+    id: 'sanctions',
+    label: 'Screening & Sanctions',
+    checkTypes: ['sanctions_search', 'enforcement_actions', 'legal_a_listing', 'custom_screening'],
+    colour: 'purple',
   },
   {
-    id: "corporate",
-    label: "Corporate & Governance",
-    checkTypes: ["cipc", "director_enquiry", "tenders_blue"],
-    colour: "indigo",
+    id: 'corporate',
+    label: 'Corporate & Governance',
+    checkTypes: ['cipc', 'director_enquiry', 'tenders_blue'],
+    colour: 'indigo',
   },
   {
-    id: "address",
-    label: "Address",
-    checkTypes: ["best_known_address"],
-    colour: "emerald",
+    id: 'address',
+    label: 'Address',
+    checkTypes: ['best_known_address'],
+    colour: 'emerald',
   },
   {
-    id: "assessment",
-    label: "Risk Assessment",
-    checkTypes: ["assessment"],
-    colour: "amber",
+    id: 'assessment',
+    label: 'Risk Assessment',
+    checkTypes: ['assessment'],
+    colour: 'amber',
   },
 ];
 
 /** Human-readable labels for each check type */
 const CHECK_TYPE_LABELS: Record<HoneycombCheckType, string> = {
-  idv_no_photo: "IDV (No Photo)",
-  idv_with_photo: "IDV (With Photo)",
-  idv_no_photo_secondary: "IDV Secondary (No Photo)",
-  idv_with_photo_secondary: "IDV Secondary (With Photo)",
-  idv_bulk: "Bulk IDV",
-  bank_verification: "Bank Verification",
-  consumer_credit: "Consumer Credit",
-  consumer_trace: "Consumer Trace",
-  debt_enquiry: "Debt Review Enquiry",
-  lifestyle_audit: "Lifestyle Audit",
-  income_predictor: "Income Predictor",
-  cipc: "CIPC Company Search",
-  director_enquiry: "Director Enquiry",
-  tenders_blue: "Tenders Blue List",
-  custom_screening: "Custom Screening",
-  sanctions_search: "Sanctions Search",
-  enforcement_actions: "Enforcement Actions",
-  legal_a_listing: "Legal A Listing",
-  best_known_address: "Best Known Address",
-  cdd_report: "CDD Report",
-  assessment: "Risk Assessment",
-  registration: "Registration",
+  idv_no_photo: 'IDV (No Photo)',
+  idv_with_photo: 'IDV (With Photo)',
+  idv_no_photo_secondary: 'IDV Secondary (No Photo)',
+  idv_with_photo_secondary: 'IDV Secondary (With Photo)',
+  idv_bulk: 'Bulk IDV',
+  bank_verification: 'Bank Verification',
+  consumer_credit: 'Consumer Credit',
+  consumer_trace: 'Consumer Trace',
+  debt_enquiry: 'Debt Review Enquiry',
+  lifestyle_audit: 'Lifestyle Audit',
+  income_predictor: 'Income Predictor',
+  cipc: 'CIPC Company Search',
+  director_enquiry: 'Director Enquiry',
+  tenders_blue: 'Tenders Blue List',
+  custom_screening: 'Custom Screening',
+  sanctions_search: 'Sanctions Search',
+  enforcement_actions: 'Enforcement Actions',
+  legal_a_listing: 'Legal A Listing',
+  best_known_address: 'Best Known Address',
+  cdd_report: 'CDD Report',
+  assessment: 'Risk Assessment',
+  registration: 'Registration',
 };
 
 /** Extract risk flags from raw check results */
@@ -1327,13 +1391,16 @@ function extractRiskFlags(allResults: HoneycombCheckResult[]): RiskFlag[] {
     if (!raw) continue;
 
     switch (result.checkType) {
-      case "sanctions_search": {
+      case 'sanctions_search': {
         const resultsArr = Array.isArray(raw.results) ? raw.results : [];
-        const matches = (typeof raw.totalMatches === 'number' ? raw.totalMatches : null) ?? resultsArr.length ?? 0;
+        const matches =
+          (typeof raw.totalMatches === 'number' ? raw.totalMatches : null) ??
+          resultsArr.length ??
+          0;
         if (matches > 0) {
           flags.push({
-            severity: "high",
-            source: "Sanctions Search",
+            severity: 'high',
+            source: 'Sanctions Search',
             message: `${matches} sanctions match(es) found`,
             checkType: result.checkType,
             detectedAt: result.submittedAt,
@@ -1341,13 +1408,16 @@ function extractRiskFlags(allResults: HoneycombCheckResult[]): RiskFlag[] {
         }
         break;
       }
-      case "enforcement_actions": {
+      case 'enforcement_actions': {
         const resultsArr = Array.isArray(raw.results) ? raw.results : [];
-        const matches = (typeof raw.totalMatches === 'number' ? raw.totalMatches : null) ?? resultsArr.length ?? 0;
+        const matches =
+          (typeof raw.totalMatches === 'number' ? raw.totalMatches : null) ??
+          resultsArr.length ??
+          0;
         if (matches > 0) {
           flags.push({
-            severity: "high",
-            source: "Enforcement Actions",
+            severity: 'high',
+            source: 'Enforcement Actions',
             message: `${matches} enforcement action(s) found`,
             checkType: result.checkType,
             detectedAt: result.submittedAt,
@@ -1355,13 +1425,16 @@ function extractRiskFlags(allResults: HoneycombCheckResult[]): RiskFlag[] {
         }
         break;
       }
-      case "legal_a_listing": {
+      case 'legal_a_listing': {
         const resultsArr = Array.isArray(raw.results) ? raw.results : [];
-        const matches = (typeof raw.totalMatches === 'number' ? raw.totalMatches : null) ?? resultsArr.length ?? 0;
+        const matches =
+          (typeof raw.totalMatches === 'number' ? raw.totalMatches : null) ??
+          resultsArr.length ??
+          0;
         if (matches > 0) {
           flags.push({
-            severity: "medium",
-            source: "Legal A Listing",
+            severity: 'medium',
+            source: 'Legal A Listing',
             message: `${matches} legal listing(s) found`,
             checkType: result.checkType,
             detectedAt: result.submittedAt,
@@ -1369,34 +1442,34 @@ function extractRiskFlags(allResults: HoneycombCheckResult[]): RiskFlag[] {
         }
         break;
       }
-      case "debt_enquiry": {
+      case 'debt_enquiry': {
         if (raw.isUnderDebtReview === true) {
           flags.push({
-            severity: "medium",
-            source: "Debt Review",
-            message: "Client is under debt review",
+            severity: 'medium',
+            source: 'Debt Review',
+            message: 'Client is under debt review',
             checkType: result.checkType,
             detectedAt: result.submittedAt,
           });
         }
         break;
       }
-      case "idv_no_photo":
-      case "idv_with_photo": {
+      case 'idv_no_photo':
+      case 'idv_with_photo': {
         if (raw.idVerified === false) {
           flags.push({
-            severity: "high",
-            source: "Identity Verification",
-            message: "Identity could not be verified",
+            severity: 'high',
+            source: 'Identity Verification',
+            message: 'Identity could not be verified',
             checkType: result.checkType,
             detectedAt: result.submittedAt,
           });
         }
         if (raw.photoMatch === false) {
           flags.push({
-            severity: "medium",
-            source: "IDV Photo Match",
-            message: "Photo does not match bureau records",
+            severity: 'medium',
+            source: 'IDV Photo Match',
+            message: 'Photo does not match bureau records',
             checkType: result.checkType,
             detectedAt: result.submittedAt,
           });
@@ -1418,9 +1491,7 @@ function extractRiskFlags(allResults: HoneycombCheckResult[]): RiskFlag[] {
  * Aggregates all check history for a client into a readiness score,
  * per-category completion, and risk flags.
  */
-export async function getComplianceDashboard(
-  clientId: string,
-): Promise<ComplianceDashboardData> {
+export async function getComplianceDashboard(clientId: string): Promise<ComplianceDashboardData> {
   const allResults = await getAllCheckHistory(clientId);
 
   // Build a map of checkType -> results
@@ -1471,9 +1542,9 @@ export async function getComplianceDashboard(
   const weights: Record<string, number> = {
     identity: 0.25,
     cdd: 0.15,
-    financial: 0.20,
-    sanctions: 0.20,
-    corporate: 0.10,
+    financial: 0.2,
+    sanctions: 0.2,
+    corporate: 0.1,
     address: 0.05,
     assessment: 0.05,
   };

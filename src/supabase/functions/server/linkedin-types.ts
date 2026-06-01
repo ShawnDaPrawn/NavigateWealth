@@ -98,7 +98,7 @@ export interface ShareArticleInput {
 
 export interface ShareImageInput {
   text: string;
-  imageUrl: string;       // URL of the image to upload (could be a signed URL from storage)
+  imageUrl: string; // URL of the image to upload (could be a signed URL from storage)
   title?: string;
   description?: string;
   visibility?: ShareVisibility;

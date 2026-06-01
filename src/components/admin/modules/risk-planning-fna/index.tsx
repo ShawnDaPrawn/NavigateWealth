@@ -1,7 +1,7 @@
 /**
  * Risk Planning FNA Module
  * Entry point for the Financial Needs Analysis - Risk Planning tool
- * 
+ *
  * South African FAIS-compliant risk planning module
  * Implements deterministic, auditable calculations for:
  * - Life Cover (Death) – Capital Replacement Model

@@ -65,7 +65,9 @@ export function HoneycombActionCard({
   onError,
 }: HoneycombActionCardProps) {
   const [isLoading, setIsLoading] = useState(false);
-  const [result, setResult] = useState<{ success: boolean; data?: unknown; error?: string } | null>(null);
+  const [result, setResult] = useState<{ success: boolean; data?: unknown; error?: string } | null>(
+    null,
+  );
   const [showRawResponse, setShowRawResponse] = useState(false);
 
   const handleAction = async () => {
@@ -130,17 +132,17 @@ export function HoneycombActionCard({
           {actionLabel}
         </Button>
 
-        {disabled && disabledReason && (
-          <p className="text-xs text-amber-600">{disabledReason}</p>
-        )}
+        {disabled && disabledReason && <p className="text-xs text-amber-600">{disabledReason}</p>}
 
         {/* Result display */}
         {result && (
-          <div className={`mt-3 rounded-lg p-3 text-sm ${
-            result.success
-              ? 'bg-green-50 border border-green-200'
-              : 'bg-red-50 border border-red-200'
-          }`}>
+          <div
+            className={`mt-3 rounded-lg p-3 text-sm ${
+              result.success
+                ? 'bg-green-50 border border-green-200'
+                : 'bg-red-50 border border-red-200'
+            }`}
+          >
             <div className="flex items-center gap-2 font-medium">
               {result.success ? (
                 <CheckCircle className="h-4 w-4 text-green-600" />
@@ -152,9 +154,7 @@ export function HoneycombActionCard({
               </span>
             </div>
 
-            {result.error && (
-              <p className="mt-1 text-red-700 text-xs">{result.error}</p>
-            )}
+            {result.error && <p className="mt-1 text-red-700 text-xs">{result.error}</p>}
 
             {result.success && !!result.data && (
               <div className="mt-2">
@@ -173,7 +173,11 @@ export function HoneycombActionCard({
                   onClick={() => setShowRawResponse(!showRawResponse)}
                   className="flex items-center gap-1 mt-2 text-xs text-gray-500 hover:text-gray-700 transition-colors"
                 >
-                  {showRawResponse ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
+                  {showRawResponse ? (
+                    <ChevronUp className="h-3 w-3" />
+                  ) : (
+                    <ChevronDown className="h-3 w-3" />
+                  )}
                   {showRawResponse ? 'Hide' : 'Show'} details
                 </button>
 

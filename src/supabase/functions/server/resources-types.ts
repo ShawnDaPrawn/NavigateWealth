@@ -4,7 +4,7 @@
  */
 
 // Resource category
-export type ResourceCategory = 
+export type ResourceCategory =
   | 'General'
   | 'Market Data'
   | 'Research'

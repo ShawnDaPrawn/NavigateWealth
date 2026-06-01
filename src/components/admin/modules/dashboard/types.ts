@@ -63,7 +63,7 @@ export interface SystemActivity {
   color?: 'blue' | 'green' | 'orange' | 'red' | 'purple';
 }
 
-export type SystemActivityType = 
+export type SystemActivityType =
   | 'new_applications'
   | 'new_policies'
   | 'completed_fnas'
@@ -165,11 +165,14 @@ export interface LastCleanupRun {
 
 export interface CleanupRunResult extends LastCleanupRun {
   dryRun: boolean;
-  categories: Record<string, {
-    keysFound: number;
-    keysDeleted: number;
-    sampleKeys: string[];
-  }>;
+  categories: Record<
+    string,
+    {
+      keysFound: number;
+      keysDeleted: number;
+      sampleKeys: string[];
+    }
+  >;
 }
 
 export interface SystemHealthCardProps {

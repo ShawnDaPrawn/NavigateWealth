@@ -73,7 +73,7 @@ const SERVICES: ServiceItem[] = [
     icon: Stethoscope,
     title: 'Medical Aid',
     description:
-      'Access quality healthcare with comprehensive medical aid schemes tailored to your family\'s needs and budget, from major medical to full cover options.',
+      "Access quality healthcare with comprehensive medical aid schemes tailored to your family's needs and budget, from major medical to full cover options.",
     highlights: ['Hospital Plans', 'Comprehensive Cover', 'Gap Cover', 'Day-to-day Benefits'],
     image: medicalAidImage,
     imageKey: 'medical-aid',
@@ -111,7 +111,12 @@ const SERVICES: ServiceItem[] = [
     title: 'Employee Benefits',
     description:
       'Tailored benefit plans for businesses to attract and retain top talent with group risk, retirement, and healthcare solutions.',
-    highlights: ['Group Risk Cover', 'Retirement Funds', 'Healthcare Benefits', 'Wellness Programs'],
+    highlights: [
+      'Group Risk Cover',
+      'Retirement Funds',
+      'Healthcare Benefits',
+      'Wellness Programs',
+    ],
     image: employeeBenefitsTeamImage,
     imageKey: 'employee-benefits',
     path: '/employee-benefits',
@@ -134,7 +139,7 @@ const SERVICES: ServiceItem[] = [
     icon: FileText,
     title: 'Estate Planning',
     description:
-      'Preserve your legacy and minimise taxes through wills, trusts, and tailored strategies to protect your family\'s future.',
+      "Preserve your legacy and minimise taxes through wills, trusts, and tailored strategies to protect your family's future.",
     highlights: ['Will Drafting', 'Trust Structures', 'Estate Duty', 'Beneficiary Nominations'],
     image: estatePlanningImage,
     imageKey: 'estate-planning',
@@ -147,7 +152,12 @@ const SERVICES: ServiceItem[] = [
     title: 'Financial Planning',
     description:
       'Holistic financial planning that aligns all aspects of your financial life with your personal goals through a comprehensive needs analysis.',
-    highlights: ['Financial Needs Analysis', 'Goal Setting', 'Cash Flow Planning', 'Debt Management'],
+    highlights: [
+      'Financial Needs Analysis',
+      'Goal Setting',
+      'Cash Flow Planning',
+      'Debt Management',
+    ],
     image: southAfricanCurrencyImage,
     imageKey: 'financial-planning',
     path: '/financial-planning',
@@ -159,25 +169,29 @@ const PROCESS_STEPS = [
   {
     step: '01',
     title: 'Discovery',
-    description: 'We learn about your goals, timeline, risk tolerance, and current financial situation through a no-obligation consultation.',
+    description:
+      'We learn about your goals, timeline, risk tolerance, and current financial situation through a no-obligation consultation.',
     icon: Users,
   },
   {
     step: '02',
     title: 'Analysis',
-    description: 'Our team conducts a comprehensive financial needs analysis and develops a customised strategy tailored to your needs.',
+    description:
+      'Our team conducts a comprehensive financial needs analysis and develops a customised strategy tailored to your needs.',
     icon: Target,
   },
   {
     step: '03',
     title: 'Implementation',
-    description: 'We source the best products from 12+ providers and implement your financial plan with complete transparency.',
+    description:
+      'We source the best products from 12+ providers and implement your financial plan with complete transparency.',
     icon: CheckCircle,
   },
   {
     step: '04',
     title: 'Ongoing Support',
-    description: 'Continuous portfolio management, annual reviews, and planning updates to keep you on track as your life evolves.',
+    description:
+      'Continuous portfolio management, annual reviews, and planning updates to keep you on track as your life evolves.',
     icon: TrendingUp,
   },
 ];
@@ -186,22 +200,26 @@ const WHY_US = [
   {
     icon: Globe,
     title: 'Fiercely Independent',
-    description: 'We are not tied to any single provider. Our independence means unbiased advice and access to the best products across 12+ top-tier partners.',
+    description:
+      'We are not tied to any single provider. Our independence means unbiased advice and access to the best products across 12+ top-tier partners.',
   },
   {
     icon: Heart,
     title: 'Client-First Philosophy',
-    description: 'Every recommendation is tailored to your unique goals, values, and timeline — never driven by commission or product quotas.',
+    description:
+      'Every recommendation is tailored to your unique goals, values, and timeline — never driven by commission or product quotas.',
   },
   {
     icon: Zap,
     title: 'Technology-Enabled',
-    description: 'We integrate modern technology to streamline onboarding, real-time portfolio monitoring, and transparent reporting.',
+    description:
+      'We integrate modern technology to streamline onboarding, real-time portfolio monitoring, and transparent reporting.',
   },
   {
     icon: Shield,
     title: 'FSCA Regulated',
-    description: 'Licensed under FSP 54606, we adhere to the highest standards of governance, compliance, and fiduciary responsibility.',
+    description:
+      'Licensed under FSP 54606, we adhere to the highest standards of governance, compliance, and fiduciary responsibility.',
   },
 ];
 
@@ -219,9 +237,7 @@ export function ServicesPage() {
 
   // While the user browses Services, warm the cache for likely next navigations.
   useImagePrefetch(
-    SERVICES
-      .filter((s) => !!s.imageKey)
-      .map((s) => getOptimizedImageUrl(s.imageKey!, 768, 'webp')),
+    SERVICES.filter((s) => !!s.imageKey).map((s) => getOptimizedImageUrl(s.imageKey!, 768, 'webp')),
     { delayMs: 2500, idleTimeoutMs: 4000 },
   );
 
@@ -230,7 +246,18 @@ export function ServicesPage() {
       <SEO
         title="Our Services | Navigate Wealth"
         description="Comprehensive wealth management services from Navigate Wealth — risk management, retirement planning, investments, medical aid, estate planning, tax planning, and employee benefits."
-        keywords={['financial services', 'wealth management', 'risk management', 'retirement planning', 'investment management', 'medical aid', 'estate planning', 'tax planning', 'employee benefits', 'South Africa']}
+        keywords={[
+          'financial services',
+          'wealth management',
+          'risk management',
+          'retirement planning',
+          'investment management',
+          'medical aid',
+          'estate planning',
+          'tax planning',
+          'employee benefits',
+          'South Africa',
+        ]}
         canonicalUrl={`${SITE_ORIGIN}/services`}
       />
 
@@ -241,16 +268,21 @@ export function ServicesPage() {
           <div className="absolute inset-0 bg-gradient-to-br from-[#111827] via-[#1a1f3a] to-[#111827] pointer-events-none" />
           <div
             className="absolute -top-32 -right-32 w-[600px] h-[600px] rounded-full opacity-25 pointer-events-none"
-            style={{ background: 'radial-gradient(circle, rgba(109,40,217,0.35) 0%, transparent 70%)' }}
+            style={{
+              background: 'radial-gradient(circle, rgba(109,40,217,0.35) 0%, transparent 70%)',
+            }}
           />
           <div
             className="absolute -bottom-48 -left-32 w-[450px] h-[450px] rounded-full opacity-20 pointer-events-none"
-            style={{ background: 'radial-gradient(circle, rgba(99,102,241,0.3) 0%, transparent 70%)' }}
+            style={{
+              background: 'radial-gradient(circle, rgba(99,102,241,0.3) 0%, transparent 70%)',
+            }}
           />
           <div
             className="absolute inset-0 opacity-[0.03] pointer-events-none"
             style={{
-              backgroundImage: 'linear-gradient(rgba(255,255,255,0.07) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.07) 1px, transparent 1px)',
+              backgroundImage:
+                'linear-gradient(rgba(255,255,255,0.07) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.07) 1px, transparent 1px)',
               backgroundSize: '64px 64px',
             }}
           />
@@ -260,7 +292,9 @@ export function ServicesPage() {
               {/* Badge */}
               <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/[0.06] border border-white/[0.08]">
                 <Shield className="h-3.5 w-3.5 text-purple-400" />
-                <span className="text-[12px] font-medium text-gray-400 tracking-wide">Comprehensive Wealth Management</span>
+                <span className="text-[12px] font-medium text-gray-400 tracking-wide">
+                  Comprehensive Wealth Management
+                </span>
               </div>
 
               {/* Heading */}
@@ -272,7 +306,9 @@ export function ServicesPage() {
               </h1>
 
               <p className="text-gray-400 text-base lg:text-lg max-w-2xl mx-auto leading-relaxed">
-                From investment management to estate planning, we provide independent, unbiased financial advice backed by 12+ trusted product partners — so you always get the best solution for your goals.
+                From investment management to estate planning, we provide independent, unbiased
+                financial advice backed by 12+ trusted product partners — so you always get the best
+                solution for your goals.
               </p>
 
               {/* CTA row */}
@@ -306,7 +342,9 @@ export function ServicesPage() {
                 ].map(({ icon: Icon, text }) => (
                   <div key={text} className="flex items-center gap-1.5 text-gray-500">
                     <Icon className="h-3.5 w-3.5 text-purple-400/70 flex-shrink-0" />
-                    <span className="text-[11px] sm:text-xs font-medium whitespace-nowrap">{text}</span>
+                    <span className="text-[11px] sm:text-xs font-medium whitespace-nowrap">
+                      {text}
+                    </span>
                   </div>
                 ))}
               </div>
@@ -318,13 +356,20 @@ export function ServicesPage() {
             <div className="max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8 xl:px-12">
               <div className="grid grid-cols-2 lg:grid-cols-4 divide-x divide-white/[0.06]">
                 {STATS.map((stat) => (
-                  <div key={stat.label} className="flex items-center gap-3 py-6 lg:py-7 justify-center group">
+                  <div
+                    key={stat.label}
+                    className="flex items-center gap-3 py-6 lg:py-7 justify-center group"
+                  >
                     <div className="w-9 h-9 rounded-lg bg-purple-500/[0.08] flex items-center justify-center flex-shrink-0 group-hover:bg-purple-500/[0.14] transition-colors">
                       <stat.icon className="h-[18px] w-[18px] text-purple-400/80" />
                     </div>
                     <div>
-                      <div className="text-lg sm:text-xl font-bold text-white tracking-tight leading-none">{stat.value}</div>
-                      <div className="text-[11px] text-gray-500 font-medium mt-0.5">{stat.label}</div>
+                      <div className="text-lg sm:text-xl font-bold text-white tracking-tight leading-none">
+                        {stat.value}
+                      </div>
+                      <div className="text-[11px] text-gray-500 font-medium mt-0.5">
+                        {stat.label}
+                      </div>
                     </div>
                   </div>
                 ))}
@@ -392,8 +437,12 @@ export function ServicesPage() {
 
                   {/* Content */}
                   <CardContent className="p-5 space-y-3">
-                    <h3 className="text-gray-900 text-lg font-semibold leading-tight">{service.title}</h3>
-                    <p className="text-gray-600 text-[13px] leading-relaxed line-clamp-3">{service.description}</p>
+                    <h3 className="text-gray-900 text-lg font-semibold leading-tight">
+                      {service.title}
+                    </h3>
+                    <p className="text-gray-600 text-[13px] leading-relaxed line-clamp-3">
+                      {service.description}
+                    </p>
 
                     {/* Highlights */}
                     <div className="flex flex-wrap gap-1.5 pt-1">
@@ -442,9 +491,7 @@ export function ServicesPage() {
                           className="bg-primary text-primary-foreground hover:bg-primary/90 transition-all duration-200 text-xs px-4"
                           asChild
                         >
-                          <Link to={`/get-quote/${service.quoteSlug}/contact`}>
-                            Get Quote
-                          </Link>
+                          <Link to={`/get-quote/${service.quoteSlug}/contact`}>Get Quote</Link>
                         </Button>
                       )}
                     </div>
@@ -461,13 +508,17 @@ export function ServicesPage() {
             <div className="text-center mb-14 lg:mb-16">
               <h2 className="text-white mb-4">Why Choose Navigate Wealth?</h2>
               <p className="text-gray-300 max-w-2xl mx-auto text-base lg:text-lg">
-                We exist to give you access to the best financial products and unbiased advice — because your goals deserve nothing less.
+                We exist to give you access to the best financial products and unbiased advice —
+                because your goals deserve nothing less.
               </p>
             </div>
 
             <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6 lg:gap-8">
               {WHY_US.map((item) => (
-                <div key={item.title} className="group text-center space-y-4 p-6 rounded-xl bg-white/[0.04] border border-white/[0.06] hover:bg-white/[0.07] hover:border-white/[0.1] transition-all duration-300">
+                <div
+                  key={item.title}
+                  className="group text-center space-y-4 p-6 rounded-xl bg-white/[0.04] border border-white/[0.06] hover:bg-white/[0.07] hover:border-white/[0.1] transition-all duration-300"
+                >
                   <div className="w-14 h-14 bg-primary/15 rounded-xl flex items-center justify-center mx-auto group-hover:bg-primary/25 transition-colors">
                     <item.icon className="h-7 w-7 text-purple-400" />
                   </div>
@@ -485,7 +536,8 @@ export function ServicesPage() {
             <div className="text-center mb-14 lg:mb-16">
               <h2 className="text-black mb-4">How We Work</h2>
               <p className="text-gray-600 max-w-2xl mx-auto text-base lg:text-lg">
-                A simple, transparent process designed to put your financial goals at the centre of every decision.
+                A simple, transparent process designed to put your financial goals at the centre of
+                every decision.
               </p>
             </div>
 
@@ -526,13 +578,16 @@ export function ServicesPage() {
               <div className="space-y-4">
                 <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-primary/15 border border-primary/20">
                   <div className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse" />
-                  <span className="text-xs font-medium text-gray-300">Free initial consultation</span>
+                  <span className="text-xs font-medium text-gray-300">
+                    Free initial consultation
+                  </span>
                 </div>
                 <h2 className="!text-[28px] sm:!text-[32px] !font-bold !leading-tight text-white">
                   Ready to Take the First Step?
                 </h2>
                 <p className="text-gray-400 text-base max-w-xl mx-auto leading-relaxed">
-                  Schedule a complimentary, no-obligation consultation to discuss how our services can help you reach your financial goals.
+                  Schedule a complimentary, no-obligation consultation to discuss how our services
+                  can help you reach your financial goals.
                 </p>
               </div>
 
@@ -558,21 +613,31 @@ export function ServicesPage() {
 
               {/* Contact strip */}
               <div className="flex flex-col sm:flex-row gap-6 sm:gap-8 justify-center pt-4">
-                <a href="tel:+27126672505" className="flex items-center gap-2.5 group justify-center">
+                <a
+                  href="tel:+27126672505"
+                  className="flex items-center gap-2.5 group justify-center"
+                >
                   <div className="w-8 h-8 rounded-lg bg-white/10 flex items-center justify-center group-hover:bg-primary/30 transition-colors">
                     <Phone className="h-4 w-4 text-purple-400" />
                   </div>
                   <div className="text-left">
-                    <div className="text-[11px] text-gray-500 font-medium uppercase tracking-wider">Call us</div>
+                    <div className="text-[11px] text-gray-500 font-medium uppercase tracking-wider">
+                      Call us
+                    </div>
                     <div className="text-sm text-white font-medium">+27 12 667 2505</div>
                   </div>
                 </a>
-                <a href="mailto:info@navigatewealth.co" className="flex items-center gap-2.5 group justify-center">
+                <a
+                  href="mailto:info@navigatewealth.co"
+                  className="flex items-center gap-2.5 group justify-center"
+                >
                   <div className="w-8 h-8 rounded-lg bg-white/10 flex items-center justify-center group-hover:bg-primary/30 transition-colors">
                     <Mail className="h-4 w-4 text-purple-400" />
                   </div>
                   <div className="text-left">
-                    <div className="text-[11px] text-gray-500 font-medium uppercase tracking-wider">Email</div>
+                    <div className="text-[11px] text-gray-500 font-medium uppercase tracking-wider">
+                      Email
+                    </div>
                     <div className="text-sm text-white font-medium">info@navigatewealth.co</div>
                   </div>
                 </a>
@@ -581,7 +646,9 @@ export function ServicesPage() {
                     <MapPin className="h-4 w-4 text-purple-400" />
                   </div>
                   <div className="text-left">
-                    <div className="text-[11px] text-gray-500 font-medium uppercase tracking-wider">Office</div>
+                    <div className="text-[11px] text-gray-500 font-medium uppercase tracking-wider">
+                      Office
+                    </div>
                     <div className="text-sm text-white font-medium">Irene, Centurion</div>
                   </div>
                 </div>
@@ -592,10 +659,7 @@ export function ServicesPage() {
       </div>
 
       {/* Consultation booking modal */}
-      <ConsultationModal
-        open={consultationOpen}
-        onOpenChange={setConsultationOpen}
-      />
+      <ConsultationModal open={consultationOpen} onOpenChange={setConsultationOpen} />
     </div>
   );
 }

@@ -155,7 +155,7 @@ export function VersionHistory({
         setRestoring(null);
       }
     },
-    [articleId, onRestore, loadVersions]
+    [articleId, onRestore, loadVersions],
   );
 
   // Diff indicator
@@ -170,7 +170,7 @@ export function VersionHistory({
       if (wordDiff < 0) return { text: `${wordDiff} words`, color: 'text-red-600' };
       return { text: 'No word change', color: 'text-gray-400' };
     },
-    [versions]
+    [versions],
   );
 
   if (!isOpen) return null;
@@ -236,15 +236,10 @@ export function VersionHistory({
               </div>
               <p className="text-sm font-medium text-gray-700 mb-1">No versions yet</p>
               <p className="text-xs text-gray-500 mb-4">
-                Versions are created automatically when you save changes.
-                You can also create a manual snapshot.
+                Versions are created automatically when you save changes. You can also create a
+                manual snapshot.
               </p>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={handleSaveVersion}
-                className="gap-1.5"
-              >
+              <Button variant="outline" size="sm" onClick={handleSaveVersion} className="gap-1.5">
                 <History className="h-3.5 w-3.5" />
                 Create First Snapshot
               </Button>
@@ -269,14 +264,14 @@ export function VersionHistory({
                       key={version.id}
                       className={cn(
                         'relative px-5 py-3 transition-colors',
-                        isPreviewing && 'bg-blue-50/50'
+                        isPreviewing && 'bg-blue-50/50',
                       )}
                     >
                       {/* Timeline dot */}
                       <div
                         className={cn(
                           'absolute left-[25px] top-[18px] w-[9px] h-[9px] rounded-full border-2 bg-white z-10',
-                          isFirst ? 'border-blue-500' : 'border-gray-300'
+                          isFirst ? 'border-blue-500' : 'border-gray-300',
                         )}
                       />
 
@@ -325,9 +320,7 @@ export function VersionHistory({
                           <Button
                             variant="ghost"
                             size="sm"
-                            onClick={() =>
-                              setPreviewVersion(isPreviewing ? null : version)
-                            }
+                            onClick={() => setPreviewVersion(isPreviewing ? null : version)}
                             className="h-6 text-[10px] px-2"
                           >
                             <Eye className="h-3 w-3 mr-1" />

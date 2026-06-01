@@ -21,7 +21,7 @@ export class NotesApiError extends Error {
   constructor(
     message: string,
     public code?: string,
-    public details?: unknown
+    public details?: unknown,
   ) {
     super(message);
     this.name = 'NotesApiError';
@@ -45,7 +45,7 @@ export const NotesAPI = {
     logger.debug('[NotesAPI] Fetching notes for personnel', { personnelId });
     try {
       const data = await api.get<{ notes: Note[] }>(
-        `${ENDPOINTS.NOTES}?personnelId=${encodeURIComponent(personnelId)}`
+        `${ENDPOINTS.NOTES}?personnelId=${encodeURIComponent(personnelId)}`,
       );
       return data?.notes || [];
     } catch (error) {
@@ -115,7 +115,7 @@ export const NotesAPI = {
     try {
       const data = await api.post<{ taskId: string; note: Note }>(
         ENDPOINTS.CONVERT_TO_TASK(id),
-        {}
+        {},
       );
       return data;
     } catch (error) {
@@ -124,13 +124,23 @@ export const NotesAPI = {
   },
 
   /** Transcribe audio to text via OpenAI Whisper */
-  async transcribe(audio: string, format: string, language?: string): Promise<{ text: string; duration?: number; warning?: string }> {
-    logger.debug('[NotesAPI] Sending audio for transcription', { format, audioLength: audio.length });
+  async transcribe(
+    audio: string,
+    format: string,
+    language?: string,
+  ): Promise<{ text: string; duration?: number; warning?: string }> {
+    logger.debug('[NotesAPI] Sending audio for transcription', {
+      format,
+      audioLength: audio.length,
+    });
     try {
-      const data = await api.post<{ success: boolean; text: string; duration?: number; warning?: string; error?: string }>(
-        ENDPOINTS.TRANSCRIBE,
-        { audio, format, language }
-      );
+      const data = await api.post<{
+        success: boolean;
+        text: string;
+        duration?: number;
+        warning?: string;
+        error?: string;
+      }>(ENDPOINTS.TRANSCRIBE, { audio, format, language });
       if (!data.success) {
         throw new NotesApiError(data.error || 'Transcription failed', 'TRANSCRIPTION_ERROR');
       }
@@ -144,10 +154,12 @@ export const NotesAPI = {
   async summariseNote(id: string): Promise<{ summary: string; note: Note }> {
     logger.debug(`[NotesAPI] Summarising note ${id}`);
     try {
-      const data = await api.post<{ success: boolean; summary: string; note: Note; error?: string }>(
-        ENDPOINTS.SUMMARISE(id),
-        {}
-      );
+      const data = await api.post<{
+        success: boolean;
+        summary: string;
+        note: Note;
+        error?: string;
+      }>(ENDPOINTS.SUMMARISE(id), {});
       if (!data.success) {
         throw new NotesApiError(data.error || 'Summarisation failed', 'SUMMARISE_ERROR');
       }

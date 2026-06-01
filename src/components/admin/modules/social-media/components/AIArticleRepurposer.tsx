@@ -44,7 +44,15 @@ import {
 } from 'lucide-react';
 import { projectId, publicAnonKey } from '../../../../../utils/supabase/info';
 import { useSocialMediaAI } from '../hooks/useSocialMediaAI';
-import type { SocialAIPlatform, ContentTone, ContentGoal, ImageStyle, GeneratedPlatformPost, GeneratedImage, GeneratePostTextInput } from '../types';
+import type {
+  SocialAIPlatform,
+  ContentTone,
+  ContentGoal,
+  ImageStyle,
+  GeneratedPlatformPost,
+  GeneratedImage,
+  GeneratePostTextInput,
+} from '../types';
 import { BRAND } from '../constants';
 
 // ============================================================================
@@ -67,10 +75,7 @@ interface PublishedArticle {
 // Constants
 // ============================================================================
 
-const PLATFORM_CONFIG: Record<
-  SocialAIPlatform,
-  { label: string; icon: React.ReactNode }
-> = {
+const PLATFORM_CONFIG: Record<SocialAIPlatform, { label: string; icon: React.ReactNode }> = {
   linkedin: { label: 'LinkedIn', icon: <Linkedin className="h-4 w-4" /> },
   instagram: { label: 'Instagram', icon: <Instagram className="h-4 w-4" /> },
   facebook: { label: 'Facebook', icon: <Facebook className="h-4 w-4" /> },
@@ -103,11 +108,18 @@ const IMAGE_STYLE_OPTIONS: { value: ImageStyle; label: string }[] = [
 ];
 
 function formatDate(dateStr: string): string {
-  return new Date(dateStr).toLocaleDateString('en-ZA', { day: '2-digit', month: 'short', year: 'numeric' });
+  return new Date(dateStr).toLocaleDateString('en-ZA', {
+    day: '2-digit',
+    month: 'short',
+    year: 'numeric',
+  });
 }
 
 function stripHtml(html: string): string {
-  return html.replace(/<[^>]*>/g, '').replace(/\s+/g, ' ').trim();
+  return html
+    .replace(/<[^>]*>/g, '')
+    .replace(/\s+/g, ' ')
+    .trim();
 }
 
 // ============================================================================
@@ -182,7 +194,9 @@ export function AIArticleRepurposer({ onUseContent }: AIArticleRepurposerProps) 
     }
   }, []);
 
-  useEffect(() => { fetchArticles(); }, [fetchArticles]);
+  useEffect(() => {
+    fetchArticles();
+  }, [fetchArticles]);
 
   const filteredArticles = articles.filter((a) => {
     if (!searchQuery.trim()) return true;
@@ -201,8 +215,14 @@ export function AIArticleRepurposer({ onUseContent }: AIArticleRepurposerProps) 
   }, []);
 
   const handleGenerate = useCallback(async () => {
-    if (!selectedArticle) { toast.error('Please select an article to repurpose'); return; }
-    if (selectedPlatforms.length === 0) { toast.error('Please select at least one platform'); return; }
+    if (!selectedArticle) {
+      toast.error('Please select an article to repurpose');
+      return;
+    }
+    if (selectedPlatforms.length === 0) {
+      toast.error('Please select at least one platform');
+      return;
+    }
 
     const articleBody = selectedArticle.body || selectedArticle.content || '';
     const plainContent = stripHtml(articleBody);
@@ -210,7 +230,10 @@ export function AIArticleRepurposer({ onUseContent }: AIArticleRepurposerProps) 
     const textInput: GeneratePostTextInput = {
       platforms: selectedPlatforms,
       topic: selectedArticle.title,
-      tone, goal, includeHashtags, includeCTA,
+      tone,
+      goal,
+      includeHashtags,
+      includeCTA,
       articleTitle: selectedArticle.title,
       articleContent: plainContent.slice(0, 8000),
       additionalInstructions:
@@ -227,7 +250,8 @@ export function AIArticleRepurposer({ onUseContent }: AIArticleRepurposerProps) 
             subject: `Visual representation of: ${selectedArticle.title}`,
             style: imageStyle,
             topic: selectedArticle.title,
-            additionalInstructions: 'Create a compelling image that complements an article being repurposed for social media.',
+            additionalInstructions:
+              'Create a compelling image that complements an article being repurposed for social media.',
           },
         });
         if (response.success && response.data) {
@@ -242,13 +266,28 @@ export function AIArticleRepurposer({ onUseContent }: AIArticleRepurposerProps) 
           setGeneratedImages([]);
         }
       }
-    } catch { /* hook handles */ }
-  }, [selectedArticle, selectedPlatforms, tone, goal, includeHashtags, includeCTA, bundleMode, imageStyle, imagePlatform, generatePostText, generateBundle]);
+    } catch {
+      /* hook handles */
+    }
+  }, [
+    selectedArticle,
+    selectedPlatforms,
+    tone,
+    goal,
+    includeHashtags,
+    includeCTA,
+    bundleMode,
+    imageStyle,
+    imagePlatform,
+    generatePostText,
+    generateBundle,
+  ]);
 
   const handleCopy = useCallback(async (post: GeneratedPlatformPost) => {
-    const fullContent = post.hashtags.length > 0
-      ? `${post.content}\n\n${post.hashtags.map((h) => `#${h}`).join(' ')}`
-      : post.content;
+    const fullContent =
+      post.hashtags.length > 0
+        ? `${post.content}\n\n${post.hashtags.map((h) => `#${h}`).join(' ')}`
+        : post.content;
     await navigator.clipboard.writeText(fullContent);
     setCopiedPlatform(post.platform);
     toast.success('Copied to clipboard');
@@ -261,20 +300,24 @@ export function AIArticleRepurposer({ onUseContent }: AIArticleRepurposerProps) 
 
   if (statusLoading) {
     return (
-      <Card><CardContent className="flex items-center justify-center py-12">
-        <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-        <span className="ml-2 text-muted-foreground">Checking AI service...</span>
-      </CardContent></Card>
+      <Card>
+        <CardContent className="flex items-center justify-center py-12">
+          <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+          <span className="ml-2 text-muted-foreground">Checking AI service...</span>
+        </CardContent>
+      </Card>
     );
   }
 
   if (!isConfigured) {
     return (
-      <Card><CardContent className="flex flex-col items-center justify-center py-12 text-center">
-        <AlertCircle className="h-12 w-12 text-amber-500 mb-4" />
-        <h3 className="text-lg font-semibold mb-2">AI Service Not Configured</h3>
-        <p className="text-muted-foreground max-w-md">The OpenAI API key is not configured.</p>
-      </CardContent></Card>
+      <Card>
+        <CardContent className="flex flex-col items-center justify-center py-12 text-center">
+          <AlertCircle className="h-12 w-12 text-amber-500 mb-4" />
+          <h3 className="text-lg font-semibold mb-2">AI Service Not Configured</h3>
+          <p className="text-muted-foreground max-w-md">The OpenAI API key is not configured.</p>
+        </CardContent>
+      </Card>
     );
   }
 
@@ -296,7 +339,12 @@ export function AIArticleRepurposer({ onUseContent }: AIArticleRepurposerProps) 
         <CardContent className="space-y-4">
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input placeholder="Search articles..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="pl-9" />
+            <Input
+              placeholder="Search articles..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-9"
+            />
           </div>
 
           {articlesLoading ? (
@@ -307,14 +355,21 @@ export function AIArticleRepurposer({ onUseContent }: AIArticleRepurposerProps) 
           ) : articlesError ? (
             <div className="flex flex-col items-center py-8 text-center">
               <AlertCircle className="h-8 w-8 text-amber-500 mb-2" />
-              <p className="text-sm text-muted-foreground mb-2">Unable to load articles from the Publications module.</p>
-              <Button variant="outline" size="sm" onClick={fetchArticles}><RefreshCw className="h-3 w-3 mr-1.5" />Retry</Button>
+              <p className="text-sm text-muted-foreground mb-2">
+                Unable to load articles from the Publications module.
+              </p>
+              <Button variant="outline" size="sm" onClick={fetchArticles}>
+                <RefreshCw className="h-3 w-3 mr-1.5" />
+                Retry
+              </Button>
             </div>
           ) : filteredArticles.length === 0 ? (
             <div className="flex flex-col items-center py-8 text-center">
               <Inbox className="h-8 w-8 text-gray-400 mb-2" />
               <p className="text-sm text-muted-foreground">
-                {articles.length === 0 ? 'No published articles found. Publish an article first.' : 'No articles match your search.'}
+                {articles.length === 0
+                  ? 'No published articles found. Publish an article first.'
+                  : 'No articles match your search.'}
               </p>
             </div>
           ) : (
@@ -322,8 +377,12 @@ export function AIArticleRepurposer({ onUseContent }: AIArticleRepurposerProps) 
               {filteredArticles.map((article) => {
                 const isSelected = selectedArticle?.id === article.id;
                 return (
-                  <button key={article.id} type="button" onClick={() => setSelectedArticle(isSelected ? null : article)}
-                    className={`w-full text-left p-3 rounded-lg border transition-all ${isSelected ? 'border-emerald-500 bg-emerald-50 ring-1 ring-emerald-200' : 'border-gray-200 bg-white hover:border-gray-300 hover:bg-gray-50/50'}`}>
+                  <button
+                    key={article.id}
+                    type="button"
+                    onClick={() => setSelectedArticle(isSelected ? null : article)}
+                    className={`w-full text-left p-3 rounded-lg border transition-all ${isSelected ? 'border-emerald-500 bg-emerald-50 ring-1 ring-emerald-200' : 'border-gray-200 bg-white hover:border-gray-300 hover:bg-gray-50/50'}`}
+                  >
                     <div className="flex items-start justify-between gap-3">
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 mb-0.5">
@@ -331,11 +390,16 @@ export function AIArticleRepurposer({ onUseContent }: AIArticleRepurposerProps) 
                           <span className="text-sm font-medium line-clamp-1">{article.title}</span>
                         </div>
                         <p className="text-xs text-muted-foreground line-clamp-2 ml-5">
-                          {article.excerpt || (article.body ? stripHtml(article.body).slice(0, 120) : '')}
+                          {article.excerpt ||
+                            (article.body ? stripHtml(article.body).slice(0, 120) : '')}
                         </p>
                       </div>
                       <div className="flex flex-col items-end gap-1 flex-shrink-0">
-                        {article.published_at && <span className="text-[10px] text-muted-foreground">{formatDate(article.published_at)}</span>}
+                        {article.published_at && (
+                          <span className="text-[10px] text-muted-foreground">
+                            {formatDate(article.published_at)}
+                          </span>
+                        )}
                         {isSelected && <Check className="h-4 w-4 text-emerald-600" />}
                       </div>
                     </div>
@@ -352,7 +416,8 @@ export function AIArticleRepurposer({ onUseContent }: AIArticleRepurposerProps) 
         <Card>
           <CardHeader className="pb-4">
             <CardTitle className="text-sm font-medium">
-              Generate Social Posts from: <span className="text-emerald-700">{selectedArticle.title}</span>
+              Generate Social Posts from:{' '}
+              <span className="text-emerald-700">{selectedArticle.title}</span>
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -360,17 +425,24 @@ export function AIArticleRepurposer({ onUseContent }: AIArticleRepurposerProps) 
             <div className="space-y-2">
               <Label className="text-sm font-medium">Target Platforms</Label>
               <div className="flex flex-wrap gap-2">
-                {(Object.entries(PLATFORM_CONFIG) as [SocialAIPlatform, typeof PLATFORM_CONFIG[SocialAIPlatform]][]).map(
-                  ([key, config]) => {
-                    const isSelected = selectedPlatforms.includes(key);
-                    return (
-                      <button key={key} type="button" onClick={() => togglePlatform(key)}
-                        className={`flex items-center gap-2 px-3 py-2 rounded-lg border text-sm font-medium transition-all duration-150 ${isSelected ? 'bg-gray-50 text-gray-900 border-current' : 'bg-white text-gray-500 border-gray-200 hover:border-gray-300'}`}>
-                        {config.icon} {config.label} {isSelected && <Check className="h-3 w-3" />}
-                      </button>
-                    );
-                  },
-                )}
+                {(
+                  Object.entries(PLATFORM_CONFIG) as [
+                    SocialAIPlatform,
+                    (typeof PLATFORM_CONFIG)[SocialAIPlatform],
+                  ][]
+                ).map(([key, config]) => {
+                  const isSelected = selectedPlatforms.includes(key);
+                  return (
+                    <button
+                      key={key}
+                      type="button"
+                      onClick={() => togglePlatform(key)}
+                      className={`flex items-center gap-2 px-3 py-2 rounded-lg border text-sm font-medium transition-all duration-150 ${isSelected ? 'bg-gray-50 text-gray-900 border-current' : 'bg-white text-gray-500 border-gray-200 hover:border-gray-300'}`}
+                    >
+                      {config.icon} {config.label} {isSelected && <Check className="h-3 w-3" />}
+                    </button>
+                  );
+                })}
               </div>
             </div>
 
@@ -379,15 +451,31 @@ export function AIArticleRepurposer({ onUseContent }: AIArticleRepurposerProps) 
               <div className="space-y-2">
                 <Label className="text-sm font-medium">Tone</Label>
                 <Select value={tone} onValueChange={(v) => setTone(v as ContentTone)}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>{TONE_OPTIONS.map((o) => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}</SelectContent>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {TONE_OPTIONS.map((o) => (
+                      <SelectItem key={o.value} value={o.value}>
+                        {o.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
                 </Select>
               </div>
               <div className="space-y-2">
                 <Label className="text-sm font-medium">Goal</Label>
                 <Select value={goal} onValueChange={(v) => setGoal(v as ContentGoal)}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>{GOAL_OPTIONS.map((o) => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}</SelectContent>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {GOAL_OPTIONS.map((o) => (
+                      <SelectItem key={o.value} value={o.value}>
+                        {o.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
                 </Select>
               </div>
             </div>
@@ -395,12 +483,24 @@ export function AIArticleRepurposer({ onUseContent }: AIArticleRepurposerProps) 
             {/* Options */}
             <div className="flex flex-wrap gap-6">
               <div className="flex items-center gap-2">
-                <Checkbox id="repurpose-hashtags" checked={includeHashtags} onCheckedChange={(c) => setIncludeHashtags(c === true)} />
-                <Label htmlFor="repurpose-hashtags" className="text-sm cursor-pointer">Include hashtags</Label>
+                <Checkbox
+                  id="repurpose-hashtags"
+                  checked={includeHashtags}
+                  onCheckedChange={(c) => setIncludeHashtags(c === true)}
+                />
+                <Label htmlFor="repurpose-hashtags" className="text-sm cursor-pointer">
+                  Include hashtags
+                </Label>
               </div>
               <div className="flex items-center gap-2">
-                <Checkbox id="repurpose-cta" checked={includeCTA} onCheckedChange={(c) => setIncludeCTA(c === true)} />
-                <Label htmlFor="repurpose-cta" className="text-sm cursor-pointer">Include call-to-action</Label>
+                <Checkbox
+                  id="repurpose-cta"
+                  checked={includeCTA}
+                  onCheckedChange={(c) => setIncludeCTA(c === true)}
+                />
+                <Label htmlFor="repurpose-cta" className="text-sm cursor-pointer">
+                  Include call-to-action
+                </Label>
               </div>
             </div>
 
@@ -413,29 +513,57 @@ export function AIArticleRepurposer({ onUseContent }: AIArticleRepurposerProps) 
                     Generate with Branded Image
                   </Label>
                 </div>
-                <Checkbox id="bundle-toggle" checked={bundleMode} onCheckedChange={(c) => setBundleMode(c === true)} />
+                <Checkbox
+                  id="bundle-toggle"
+                  checked={bundleMode}
+                  onCheckedChange={(c) => setBundleMode(c === true)}
+                />
               </div>
               <p className="text-xs text-muted-foreground">
-                Enable to generate a branded image alongside your text posts (text + image in parallel via bundle API).
+                Enable to generate a branded image alongside your text posts (text + image in
+                parallel via bundle API).
               </p>
 
               {bundleMode && (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2 border-t">
                   <div className="space-y-2">
                     <Label className="text-sm font-medium">Image Style</Label>
-                    <Select value={imageStyle} onValueChange={(v) => setImageStyle(v as ImageStyle)}>
-                      <SelectTrigger><SelectValue /></SelectTrigger>
-                      <SelectContent>{IMAGE_STYLE_OPTIONS.map((o) => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}</SelectContent>
+                    <Select
+                      value={imageStyle}
+                      onValueChange={(v) => setImageStyle(v as ImageStyle)}
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {IMAGE_STYLE_OPTIONS.map((o) => (
+                          <SelectItem key={o.value} value={o.value}>
+                            {o.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
                     </Select>
                   </div>
                   <div className="space-y-2">
                     <Label className="text-sm font-medium">Image Platform</Label>
-                    <Select value={imagePlatform} onValueChange={(v) => setImagePlatform(v as SocialAIPlatform)}>
-                      <SelectTrigger><SelectValue /></SelectTrigger>
+                    <Select
+                      value={imagePlatform}
+                      onValueChange={(v) => setImagePlatform(v as SocialAIPlatform)}
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
                       <SelectContent>
-                        {(Object.entries(PLATFORM_CONFIG) as [SocialAIPlatform, typeof PLATFORM_CONFIG[SocialAIPlatform]][]).map(
-                          ([key, config]) => <SelectItem key={key} value={key}>{config.label}</SelectItem>,
-                        )}
+                        {(
+                          Object.entries(PLATFORM_CONFIG) as [
+                            SocialAIPlatform,
+                            (typeof PLATFORM_CONFIG)[SocialAIPlatform],
+                          ][]
+                        ).map(([key, config]) => (
+                          <SelectItem key={key} value={key}>
+                            {config.label}
+                          </SelectItem>
+                        ))}
                       </SelectContent>
                     </Select>
                   </div>
@@ -445,11 +573,21 @@ export function AIArticleRepurposer({ onUseContent }: AIArticleRepurposerProps) 
 
             {/* Generate Button */}
             <div className="flex justify-end">
-              <Button onClick={handleGenerate} disabled={isProcessing || selectedPlatforms.length === 0} className="flex items-center gap-2">
+              <Button
+                onClick={handleGenerate}
+                disabled={isProcessing || selectedPlatforms.length === 0}
+                className="flex items-center gap-2"
+              >
                 {isProcessing ? (
-                  <><Loader2 className="h-4 w-4 animate-spin" /> {bundleMode ? 'Generating Bundle...' : 'Generating...'}</>
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin" />{' '}
+                    {bundleMode ? 'Generating Bundle...' : 'Generating...'}
+                  </>
                 ) : (
-                  <>{bundleMode ? <Layers className="h-4 w-4" /> : <Sparkles className="h-4 w-4" />} {bundleMode ? 'Repurpose as Bundle' : 'Repurpose Article'}</>
+                  <>
+                    {bundleMode ? <Layers className="h-4 w-4" /> : <Sparkles className="h-4 w-4" />}{' '}
+                    {bundleMode ? 'Repurpose as Bundle' : 'Repurpose Article'}
+                  </>
                 )}
               </Button>
             </div>
@@ -468,16 +606,36 @@ export function AIArticleRepurposer({ onUseContent }: AIArticleRepurposerProps) 
           <CardContent>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {generatedImages.map((img, idx) => (
-                <div key={idx} className="relative rounded-lg overflow-hidden border border-gray-200">
-                  <img src={img.signedUrl} alt={`AI-generated for ${img.platform}`} className="w-full h-auto" loading="lazy" />
+                <div
+                  key={idx}
+                  className="relative rounded-lg overflow-hidden border border-gray-200"
+                >
+                  <img
+                    src={img.signedUrl}
+                    alt={`AI-generated for ${img.platform}`}
+                    className="w-full h-auto"
+                    loading="lazy"
+                  />
                   <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/60 to-transparent p-3">
                     <div className="flex items-center justify-between">
-                      <Badge className="bg-white/20 text-white text-xs">{img.platform} &middot; {img.dimensions}</Badge>
+                      <Badge className="bg-white/20 text-white text-xs">
+                        {img.platform} &middot; {img.dimensions}
+                      </Badge>
                       {onUseContent && (
-                        <Button size="sm" variant="secondary" className="text-xs h-7" onClick={() => {
-                          const firstPost = generatedPosts[0];
-                          if (firstPost) onUseContent(firstPost.platform, firstPost.content, firstPost.hashtags);
-                        }}>
+                        <Button
+                          size="sm"
+                          variant="secondary"
+                          className="text-xs h-7"
+                          onClick={() => {
+                            const firstPost = generatedPosts[0];
+                            if (firstPost)
+                              onUseContent(
+                                firstPost.platform,
+                                firstPost.content,
+                                firstPost.hashtags,
+                              );
+                          }}
+                        >
                           <ArrowRight className="h-3 w-3 mr-1" /> Use in Post
                         </Button>
                       )}
@@ -498,10 +656,18 @@ export function AIArticleRepurposer({ onUseContent }: AIArticleRepurposerProps) 
               <Check className="h-5 w-5 text-green-600" />
               Repurposed Content
               {bundleMode && generatedImages.length > 0 && (
-                <Badge variant="secondary" className="text-xs"><Layers className="h-3 w-3 mr-1" /> Bundle</Badge>
+                <Badge variant="secondary" className="text-xs">
+                  <Layers className="h-3 w-3 mr-1" /> Bundle
+                </Badge>
               )}
             </h3>
-            <Button variant="outline" size="sm" onClick={handleGenerate} disabled={isProcessing} className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleGenerate}
+              disabled={isProcessing}
+              className="flex items-center gap-2"
+            >
               <RefreshCw className={`h-4 w-4 ${isProcessing ? 'animate-spin' : ''}`} /> Regenerate
             </Button>
           </div>
@@ -514,15 +680,30 @@ export function AIArticleRepurposer({ onUseContent }: AIArticleRepurposerProps) 
                 <Card key={post.platform} className="bg-gray-50 border">
                   <CardHeader className="pb-3">
                     <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2 font-semibold text-gray-800">{config?.icon}{config?.label || post.platform}</div>
-                      <Badge variant="secondary" className="text-xs font-normal">{post.characterCount}/{post.characterLimit}</Badge>
+                      <div className="flex items-center gap-2 font-semibold text-gray-800">
+                        {config?.icon}
+                        {config?.label || post.platform}
+                      </div>
+                      <Badge variant="secondary" className="text-xs font-normal">
+                        {post.characterCount}/{post.characterLimit}
+                      </Badge>
                     </div>
                   </CardHeader>
                   <CardContent className="space-y-3">
-                    <div className="bg-white rounded-lg p-4 text-sm leading-relaxed whitespace-pre-wrap border border-gray-100">{post.content}</div>
+                    <div className="bg-white rounded-lg p-4 text-sm leading-relaxed whitespace-pre-wrap border border-gray-100">
+                      {post.content}
+                    </div>
                     {post.hashtags.length > 0 && (
                       <div className="flex flex-wrap gap-1.5">
-                        {post.hashtags.map((tag, i) => <span key={i} className="text-xs px-2 py-0.5 rounded-full" style={{ backgroundColor: BRAND.navyLight, color: BRAND.navy }}>#{tag}</span>)}
+                        {post.hashtags.map((tag, i) => (
+                          <span
+                            key={i}
+                            className="text-xs px-2 py-0.5 rounded-full"
+                            style={{ backgroundColor: BRAND.navyLight, color: BRAND.navy }}
+                          >
+                            #{tag}
+                          </span>
+                        ))}
                       </div>
                     )}
                     {post.callToAction && (
@@ -532,11 +713,28 @@ export function AIArticleRepurposer({ onUseContent }: AIArticleRepurposerProps) 
                       </div>
                     )}
                     <div className="flex items-center gap-2 pt-1">
-                      <Button variant="outline" size="sm" onClick={() => handleCopy(post)} className="flex items-center gap-1.5 text-xs">
-                        {isCopied ? <><Check className="h-3 w-3 text-green-600" /> Copied</> : <><Copy className="h-3 w-3" /> Copy</>}
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleCopy(post)}
+                        className="flex items-center gap-1.5 text-xs"
+                      >
+                        {isCopied ? (
+                          <>
+                            <Check className="h-3 w-3 text-green-600" /> Copied
+                          </>
+                        ) : (
+                          <>
+                            <Copy className="h-3 w-3" /> Copy
+                          </>
+                        )}
                       </Button>
                       {onUseContent && (
-                        <Button size="sm" onClick={() => onUseContent(post.platform, post.content, post.hashtags)} className="flex items-center gap-1.5 text-xs">
+                        <Button
+                          size="sm"
+                          onClick={() => onUseContent(post.platform, post.content, post.hashtags)}
+                          className="flex items-center gap-1.5 text-xs"
+                        >
                           <ArrowRight className="h-3 w-3" /> Use in Post
                         </Button>
                       )}

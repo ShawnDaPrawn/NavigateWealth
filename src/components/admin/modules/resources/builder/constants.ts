@@ -102,9 +102,19 @@ export const STARTER_TEMPLATES: StarterTemplate[] = [
           fields: [
             { label: 'Title', placeholder: 'Mr / Mrs / Ms / Dr', key: 'title' },
             { label: 'Full Name', placeholder: 'Enter full name', key: 'fullName', required: true },
-            { label: 'ID / Passport Number', placeholder: 'Enter ID number', key: 'idNumber', required: true },
+            {
+              label: 'ID / Passport Number',
+              placeholder: 'Enter ID number',
+              key: 'idNumber',
+              required: true,
+            },
             { label: 'Date of Birth', placeholder: 'DD/MM/YYYY', key: 'dateOfBirth' },
-            { label: 'Email Address', placeholder: 'email@example.com', key: 'email', required: true },
+            {
+              label: 'Email Address',
+              placeholder: 'email@example.com',
+              key: 'email',
+              required: true,
+            },
             { label: 'Contact Number', placeholder: '000 000 0000', key: 'phone', required: true },
           ],
         },
@@ -198,7 +208,14 @@ export const STARTER_TEMPLATES: StarterTemplate[] = [
         type: 'radio_options',
         data: {
           label: 'Primary Source of Income',
-          options: ['Employment', 'Self-Employment', 'Investments', 'Inheritance', 'Pension', 'Other'],
+          options: [
+            'Employment',
+            'Self-Employment',
+            'Investments',
+            'Inheritance',
+            'Pension',
+            'Other',
+          ],
           layout: 'vertical',
         },
       },
@@ -225,7 +242,13 @@ export const STARTER_TEMPLATES: StarterTemplate[] = [
         type: 'risk_profile',
         data: {
           level: 3,
-          labels: ['Very Conservative', 'Conservative', 'Moderate', 'Moderately Aggressive', 'Aggressive'],
+          labels: [
+            'Very Conservative',
+            'Conservative',
+            'Moderate',
+            'Moderately Aggressive',
+            'Aggressive',
+          ],
         },
       },
       {
@@ -398,7 +421,13 @@ export const STARTER_TEMPLATES: StarterTemplate[] = [
         type: 'risk_profile',
         data: {
           level: 3,
-          labels: ['Conservative', 'Moderate Conservative', 'Moderate', 'Moderate Aggressive', 'Aggressive'],
+          labels: [
+            'Conservative',
+            'Moderate Conservative',
+            'Moderate',
+            'Moderate Aggressive',
+            'Aggressive',
+          ],
         },
       },
       {
@@ -572,7 +601,7 @@ export const STARTER_TEMPLATES: StarterTemplate[] = [
         type: 'text',
         data: {
           content:
-            '<p>Summarise the client\'s background, financial needs, and objectives that formed the basis of this advice:</p>',
+            "<p>Summarise the client's background, financial needs, and objectives that formed the basis of this advice:</p>",
         },
       },
       {
@@ -687,10 +716,7 @@ export interface ValidationRule {
   message: string;
 }
 
-export const VALIDATION_RULE_PRESETS: Record<
-  string,
-  { label: string; rules: ValidationRule[] }
-> = {
+export const VALIDATION_RULE_PRESETS: Record<string, { label: string; rules: ValidationRule[] }> = {
   sa_id: {
     label: 'SA ID Number',
     rules: [

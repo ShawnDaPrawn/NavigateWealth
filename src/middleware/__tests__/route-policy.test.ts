@@ -17,7 +17,12 @@ const manifest: SeoRouteManifest = {
 describe('route-policy', () => {
   it('does not enforce when manifest was not generated (local dev)', () => {
     expect(
-      shouldReturnNotFound('/nonexistent-abc', { generated: false, generatedAt: null, paths: [], articleSlugs: [] }),
+      shouldReturnNotFound('/nonexistent-abc', {
+        generated: false,
+        generatedAt: null,
+        paths: [],
+        articleSlugs: [],
+      }),
     ).toBe(false);
   });
 

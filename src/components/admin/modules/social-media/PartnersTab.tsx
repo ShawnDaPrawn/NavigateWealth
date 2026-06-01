@@ -2,11 +2,11 @@ import React, { useState } from 'react';
 import { Button } from '../../../ui/button';
 import { Badge } from '../../../ui/badge';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../../ui/card';
-import { 
-  PlusCircle, 
-  Users, 
-  Link2, 
-  TrendingUp, 
+import {
+  PlusCircle,
+  Users,
+  Link2,
+  TrendingUp,
   DollarSign,
   Eye,
   UserPlus,
@@ -15,7 +15,7 @@ import {
   Copy,
   BarChart3,
   Calendar,
-  Search
+  Search,
 } from 'lucide-react';
 import { cn } from '../../../ui/utils';
 import { toast } from 'sonner';
@@ -50,7 +50,7 @@ const PLACEHOLDER_PARTNERS: Partner[] = [
     revenue: 115000,
     conversionRate: 48.9,
     joinDate: new Date('2024-09-15'),
-    lastActivity: new Date('2025-01-02')
+    lastActivity: new Date('2025-01-02'),
   },
   {
     id: '2',
@@ -64,7 +64,7 @@ const PLACEHOLDER_PARTNERS: Partner[] = [
     revenue: 89000,
     conversionRate: 56.3,
     joinDate: new Date('2024-10-20'),
-    lastActivity: new Date('2025-01-01')
+    lastActivity: new Date('2025-01-01'),
   },
   {
     id: '3',
@@ -77,7 +77,7 @@ const PLACEHOLDER_PARTNERS: Partner[] = [
     conversions: 0,
     revenue: 0,
     conversionRate: 0,
-    joinDate: new Date('2025-01-01')
+    joinDate: new Date('2025-01-01'),
   },
   {
     id: '4',
@@ -91,8 +91,8 @@ const PLACEHOLDER_PARTNERS: Partner[] = [
     revenue: 34500,
     conversionRate: 46.7,
     joinDate: new Date('2024-08-10'),
-    lastActivity: new Date('2024-11-20')
-  }
+    lastActivity: new Date('2024-11-20'),
+  },
 ];
 
 export function PartnersTab() {
@@ -100,17 +100,21 @@ export function PartnersTab() {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedStatus, setSelectedStatus] = useState<string | null>(null);
 
-  const activePartners = partners.filter(p => p.status === 'active').length;
+  const activePartners = partners.filter((p) => p.status === 'active').length;
   const totalSignups = partners.reduce((sum, p) => sum + p.signups, 0);
   const totalConversions = partners.reduce((sum, p) => sum + p.conversions, 0);
   const totalRevenue = partners.reduce((sum, p) => sum + p.revenue, 0);
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'active': return 'bg-green-100 text-green-800 border-green-200';
-      case 'inactive': return 'bg-gray-100 text-gray-800 border-gray-200';
-      case 'pending': return 'bg-yellow-100 text-yellow-800 border-yellow-200';
-      default: return 'bg-gray-100 text-gray-800 border-gray-200';
+      case 'active':
+        return 'bg-green-100 text-green-800 border-green-200';
+      case 'inactive':
+        return 'bg-gray-100 text-gray-800 border-gray-200';
+      case 'pending':
+        return 'bg-yellow-100 text-yellow-800 border-yellow-200';
+      default:
+        return 'bg-gray-100 text-gray-800 border-gray-200';
     }
   };
 
@@ -119,8 +123,9 @@ export function PartnersTab() {
     toast.success('Referral link copied to clipboard');
   };
 
-  const filteredPartners = partners.filter(partner => {
-    const matchesSearch = searchQuery === '' || 
+  const filteredPartners = partners.filter((partner) => {
+    const matchesSearch =
+      searchQuery === '' ||
       partner.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       partner.company.toLowerCase().includes(searchQuery.toLowerCase()) ||
       partner.email.toLowerCase().includes(searchQuery.toLowerCase());
@@ -238,7 +243,7 @@ export function PartnersTab() {
                       <div>
                         <div className="flex items-center gap-2 mb-1">
                           <h3 className="font-semibold text-gray-900">{partner.name}</h3>
-                          <Badge className={cn("text-xs", getStatusColor(partner.status))}>
+                          <Badge className={cn('text-xs', getStatusColor(partner.status))}>
                             {partner.status.charAt(0).toUpperCase() + partner.status.slice(1)}
                           </Badge>
                         </div>
@@ -250,7 +255,9 @@ export function PartnersTab() {
                     {/* Referral Link */}
                     <div className="flex items-center gap-2 p-3 bg-gray-50 rounded-lg border border-gray-200">
                       <Link2 className="h-4 w-4 text-gray-400 flex-shrink-0" />
-                      <code className="text-xs text-gray-700 flex-1 truncate">{partner.referralLink}</code>
+                      <code className="text-xs text-gray-700 flex-1 truncate">
+                        {partner.referralLink}
+                      </code>
                       <Button
                         variant="ghost"
                         size="sm"
@@ -282,21 +289,28 @@ export function PartnersTab() {
                       </div>
                       <div className="space-y-1">
                         <p className="text-xs text-gray-500">Conv. Rate</p>
-                        <p className="text-lg font-semibold text-gray-900">{partner.conversionRate.toFixed(1)}%</p>
+                        <p className="text-lg font-semibold text-gray-900">
+                          {partner.conversionRate.toFixed(1)}%
+                        </p>
                       </div>
                       <div className="space-y-1">
                         <p className="text-xs text-gray-500">Revenue</p>
                         <p className="text-lg font-semibold text-gray-900">
-                          ${partner.revenue >= 1000 ? `${(partner.revenue / 1000).toFixed(0)}K` : partner.revenue}
+                          $
+                          {partner.revenue >= 1000
+                            ? `${(partner.revenue / 1000).toFixed(0)}K`
+                            : partner.revenue}
                         </p>
                       </div>
                       <div className="space-y-1">
                         <p className="text-xs text-gray-500">Last Activity</p>
                         <p className="text-sm text-gray-700">
-                          {partner.lastActivity 
-                            ? partner.lastActivity.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
-                            : 'Never'
-                          }
+                          {partner.lastActivity
+                            ? partner.lastActivity.toLocaleDateString('en-US', {
+                                month: 'short',
+                                day: 'numeric',
+                              })
+                            : 'Never'}
                         </p>
                       </div>
                     </div>

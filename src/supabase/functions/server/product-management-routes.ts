@@ -1,6 +1,6 @@
 /**
  * Product Management Module - Routes
- * 
+ *
  * Product catalog and provider management:
  * - Provider management
  * - Product catalog
@@ -36,104 +36,124 @@ const service = new ProductManagementService();
  * GET /product-management/providers
  * Get all providers
  */
-app.get('/providers', requireAuth, asyncHandler(async (c) => {
-  const providers = await service.getAllProviders();
-  
-  return c.json({ providers });
-}));
+app.get(
+  '/providers',
+  requireAuth,
+  asyncHandler(async (c) => {
+    const providers = await service.getAllProviders();
+
+    return c.json({ providers });
+  }),
+);
 
 /**
  * POST /product-management/providers
  * Create new provider
  */
-app.post('/providers', requireAdmin, asyncHandler(async (c) => {
-  const adminUserId = c.get('userId');
-  const body = await c.req.json();
-  const parsed = CreateProviderSchema.safeParse(body);
-  if (!parsed.success) {
-    return c.json({ error: 'Validation failed', ...formatZodError(parsed.error) }, 400);
-  }
-  
-  log.info('Creating provider', { adminUserId, providerName: parsed.data.name });
-  
-  const provider = await service.createProvider(parsed.data);
-  
-  log.success('Provider created', { providerId: provider.id });
+app.post(
+  '/providers',
+  requireAdmin,
+  asyncHandler(async (c) => {
+    const adminUserId = c.get('userId');
+    const body = await c.req.json();
+    const parsed = CreateProviderSchema.safeParse(body);
+    if (!parsed.success) {
+      return c.json({ error: 'Validation failed', ...formatZodError(parsed.error) }, 400);
+    }
 
-  // Audit trail (non-blocking — §12.2)
-  AdminAuditService.record({
-    actorId: adminUserId,
-    actorRole: c.get('userRole') || 'admin',
-    category: 'configuration',
-    action: 'provider_created',
-    summary: `Provider created: ${parsed.data.name}`,
-    severity: 'info',
-    entityType: 'provider',
-    entityId: provider.id,
-  }).catch(() => {});
+    log.info('Creating provider', { adminUserId, providerName: parsed.data.name });
 
-  return c.json({ provider }, 201);
-}));
+    const provider = await service.createProvider(parsed.data);
+
+    log.success('Provider created', { providerId: provider.id });
+
+    // Audit trail (non-blocking — §12.2)
+    AdminAuditService.record({
+      actorId: adminUserId,
+      actorRole: c.get('userRole') || 'admin',
+      category: 'configuration',
+      action: 'provider_created',
+      summary: `Provider created: ${parsed.data.name}`,
+      severity: 'info',
+      entityType: 'provider',
+      entityId: provider.id,
+    }).catch(() => {});
+
+    return c.json({ provider }, 201);
+  }),
+);
 
 /**
  * POST /product-management/providers/migrate
  * Migrate legacy providers
  */
-app.post('/providers/migrate', requireAdmin, asyncHandler(async (c) => {
-  const result = await service.migrateLegacyProviders();
-  return c.json(result);
-}));
+app.post(
+  '/providers/migrate',
+  requireAdmin,
+  asyncHandler(async (c) => {
+    const result = await service.migrateLegacyProviders();
+    return c.json(result);
+  }),
+);
 
 /**
  * PUT /product-management/providers/:id
  * Update provider
  */
-app.put('/providers/:id', requireAdmin, asyncHandler(async (c) => {
-  const providerId = c.req.param('id');
-  const body = await c.req.json();
-  const parsed = UpdateProviderSchema.safeParse(body);
-  if (!parsed.success) {
-    return c.json({ error: 'Validation failed', ...formatZodError(parsed.error) }, 400);
-  }
-  
-  const provider = await service.updateProvider(providerId, parsed.data);
+app.put(
+  '/providers/:id',
+  requireAdmin,
+  asyncHandler(async (c) => {
+    const providerId = c.req.param('id');
+    const body = await c.req.json();
+    const parsed = UpdateProviderSchema.safeParse(body);
+    if (!parsed.success) {
+      return c.json({ error: 'Validation failed', ...formatZodError(parsed.error) }, 400);
+    }
 
-  AdminAuditService.record({
-    actorId: c.get('userId') || 'admin',
-    actorRole: c.get('userRole') || 'admin',
-    category: 'configuration',
-    action: 'provider_updated',
-    summary: `Provider updated`,
-    severity: 'info',
-    entityType: 'provider',
-    entityId: providerId,
-  }).catch(() => {});
+    const provider = await service.updateProvider(providerId, parsed.data);
 
-  return c.json({ provider });
-}));
+    AdminAuditService.record({
+      actorId: c.get('userId') || 'admin',
+      actorRole: c.get('userRole') || 'admin',
+      category: 'configuration',
+      action: 'provider_updated',
+      summary: `Provider updated`,
+      severity: 'info',
+      entityType: 'provider',
+      entityId: providerId,
+    }).catch(() => {});
+
+    return c.json({ provider });
+  }),
+);
 
 /**
  * DELETE /product-management/providers/:id
  * Delete provider
  */
-app.delete('/providers/:id', requireAdmin, asyncHandler(async (c) => {
-  const providerId = c.req.param('id');
-  
-  await service.deleteProvider(providerId);
+app.delete(
+  '/providers/:id',
+  requireAdmin,
+  asyncHandler(async (c) => {
+    const providerId = c.req.param('id');
 
-  AdminAuditService.record({
-    actorId: c.get('userId') || 'admin',
-    actorRole: c.get('userRole') || 'admin',
-    category: 'configuration',
-    action: 'provider_deleted',
-    summary: `Provider deleted`,
-    severity: 'warning',
-    entityType: 'provider',
-    entityId: providerId,
-  }).catch(() => {});
+    await service.deleteProvider(providerId);
 
-  return c.json({ success: true });
-}));
+    AdminAuditService.record({
+      actorId: c.get('userId') || 'admin',
+      actorRole: c.get('userRole') || 'admin',
+      category: 'configuration',
+      action: 'provider_deleted',
+      summary: `Provider deleted`,
+      severity: 'warning',
+      entityType: 'provider',
+      entityId: providerId,
+    }).catch(() => {});
+
+    return c.json({ success: true });
+  }),
+);
 
 // ============================================================================
 // PRODUCTS
@@ -143,112 +163,132 @@ app.delete('/providers/:id', requireAdmin, asyncHandler(async (c) => {
  * GET /product-management/products
  * Get all products
  */
-app.get('/products', requireAuth, asyncHandler(async (c) => {
-  const filters = {
-    providerId: c.req.query('providerId'),
-    category: c.req.query('category'),
-    active: c.req.query('active') === 'true',
-  };
-  
-  const products = await service.getAllProducts(filters);
-  
-  return c.json({ products });
-}));
+app.get(
+  '/products',
+  requireAuth,
+  asyncHandler(async (c) => {
+    const filters = {
+      providerId: c.req.query('providerId'),
+      category: c.req.query('category'),
+      active: c.req.query('active') === 'true',
+    };
+
+    const products = await service.getAllProducts(filters);
+
+    return c.json({ products });
+  }),
+);
 
 /**
  * GET /product-management/products/:id
  * Get product by ID
  */
-app.get('/products/:id', requireAuth, asyncHandler(async (c) => {
-  const productId = c.req.param('id');
-  
-  const product = await service.getProductById(productId);
-  
-  return c.json({ product });
-}));
+app.get(
+  '/products/:id',
+  requireAuth,
+  asyncHandler(async (c) => {
+    const productId = c.req.param('id');
+
+    const product = await service.getProductById(productId);
+
+    return c.json({ product });
+  }),
+);
 
 /**
  * POST /product-management/products
  * Create new product
  */
-app.post('/products', requireAdmin, asyncHandler(async (c) => {
-  const adminUserId = c.get('userId');
-  const body = await c.req.json();
-  const parsed = CreateProductSchema.safeParse(body);
-  if (!parsed.success) {
-    return c.json({ error: 'Validation failed', ...formatZodError(parsed.error) }, 400);
-  }
-  
-  log.info('Creating product', { adminUserId, productName: parsed.data.name });
-  
-  const product = await service.createProduct(parsed.data);
-  
-  log.success('Product created', { productId: product.id });
+app.post(
+  '/products',
+  requireAdmin,
+  asyncHandler(async (c) => {
+    const adminUserId = c.get('userId');
+    const body = await c.req.json();
+    const parsed = CreateProductSchema.safeParse(body);
+    if (!parsed.success) {
+      return c.json({ error: 'Validation failed', ...formatZodError(parsed.error) }, 400);
+    }
 
-  AdminAuditService.record({
-    actorId: adminUserId,
-    actorRole: c.get('userRole') || 'admin',
-    category: 'configuration',
-    action: 'product_created',
-    summary: `Product created: ${parsed.data.name}`,
-    severity: 'info',
-    entityType: 'product',
-    entityId: product.id,
-  }).catch(() => {});
+    log.info('Creating product', { adminUserId, productName: parsed.data.name });
 
-  return c.json({ product }, 201);
-}));
+    const product = await service.createProduct(parsed.data);
+
+    log.success('Product created', { productId: product.id });
+
+    AdminAuditService.record({
+      actorId: adminUserId,
+      actorRole: c.get('userRole') || 'admin',
+      category: 'configuration',
+      action: 'product_created',
+      summary: `Product created: ${parsed.data.name}`,
+      severity: 'info',
+      entityType: 'product',
+      entityId: product.id,
+    }).catch(() => {});
+
+    return c.json({ product }, 201);
+  }),
+);
 
 /**
  * PUT /product-management/products/:id
  * Update product
  */
-app.put('/products/:id', requireAdmin, asyncHandler(async (c) => {
-  const productId = c.req.param('id');
-  const body = await c.req.json();
-  const parsed = UpdateProductSchema.safeParse(body);
-  if (!parsed.success) {
-    return c.json({ error: 'Validation failed', ...formatZodError(parsed.error) }, 400);
-  }
-  
-  const product = await service.updateProduct(productId, parsed.data);
+app.put(
+  '/products/:id',
+  requireAdmin,
+  asyncHandler(async (c) => {
+    const productId = c.req.param('id');
+    const body = await c.req.json();
+    const parsed = UpdateProductSchema.safeParse(body);
+    if (!parsed.success) {
+      return c.json({ error: 'Validation failed', ...formatZodError(parsed.error) }, 400);
+    }
 
-  AdminAuditService.record({
-    actorId: c.get('userId') || 'admin',
-    actorRole: c.get('userRole') || 'admin',
-    category: 'configuration',
-    action: 'product_updated',
-    summary: `Product updated`,
-    severity: 'info',
-    entityType: 'product',
-    entityId: productId,
-  }).catch(() => {});
+    const product = await service.updateProduct(productId, parsed.data);
 
-  return c.json({ product });
-}));
+    AdminAuditService.record({
+      actorId: c.get('userId') || 'admin',
+      actorRole: c.get('userRole') || 'admin',
+      category: 'configuration',
+      action: 'product_updated',
+      summary: `Product updated`,
+      severity: 'info',
+      entityType: 'product',
+      entityId: productId,
+    }).catch(() => {});
+
+    return c.json({ product });
+  }),
+);
 
 /**
  * DELETE /product-management/products/:id
  * Delete product
  */
-app.delete('/products/:id', requireAdmin, asyncHandler(async (c) => {
-  const productId = c.req.param('id');
-  
-  await service.deleteProduct(productId);
+app.delete(
+  '/products/:id',
+  requireAdmin,
+  asyncHandler(async (c) => {
+    const productId = c.req.param('id');
 
-  AdminAuditService.record({
-    actorId: c.get('userId') || 'admin',
-    actorRole: c.get('userRole') || 'admin',
-    category: 'configuration',
-    action: 'product_deleted',
-    summary: `Product deleted`,
-    severity: 'warning',
-    entityType: 'product',
-    entityId: productId,
-  }).catch(() => {});
+    await service.deleteProduct(productId);
 
-  return c.json({ success: true });
-}));
+    AdminAuditService.record({
+      actorId: c.get('userId') || 'admin',
+      actorRole: c.get('userRole') || 'admin',
+      category: 'configuration',
+      action: 'product_deleted',
+      summary: `Product deleted`,
+      severity: 'warning',
+      entityType: 'product',
+      entityId: productId,
+    }).catch(() => {});
+
+    return c.json({ success: true });
+  }),
+);
 
 // ============================================================================
 // INTEGRATIONS
@@ -258,49 +298,61 @@ app.delete('/products/:id', requireAdmin, asyncHandler(async (c) => {
  * GET /product-management/integrations
  * Get all integrations
  */
-app.get('/integrations', requireAdmin, asyncHandler(async (c) => {
-  const integrations = await service.getAllIntegrations();
-  
-  return c.json({ integrations });
-}));
+app.get(
+  '/integrations',
+  requireAdmin,
+  asyncHandler(async (c) => {
+    const integrations = await service.getAllIntegrations();
+
+    return c.json({ integrations });
+  }),
+);
 
 /**
  * POST /product-management/integrations
  * Create integration
  */
-app.post('/integrations', requireAdmin, asyncHandler(async (c) => {
-  const adminUserId = c.get('userId');
-  const body = await c.req.json();
-  const parsed = CreateIntegrationSchema.safeParse(body);
-  if (!parsed.success) {
-    return c.json({ error: 'Validation failed', ...formatZodError(parsed.error) }, 400);
-  }
-  
-  log.info('Creating integration', { adminUserId });
-  
-  const integration = await service.createIntegration(parsed.data);
-  
-  log.success('Integration created', { integrationId: integration.id });
-  
-  return c.json({ integration }, 201);
-}));
+app.post(
+  '/integrations',
+  requireAdmin,
+  asyncHandler(async (c) => {
+    const adminUserId = c.get('userId');
+    const body = await c.req.json();
+    const parsed = CreateIntegrationSchema.safeParse(body);
+    if (!parsed.success) {
+      return c.json({ error: 'Validation failed', ...formatZodError(parsed.error) }, 400);
+    }
+
+    log.info('Creating integration', { adminUserId });
+
+    const integration = await service.createIntegration(parsed.data);
+
+    log.success('Integration created', { integrationId: integration.id });
+
+    return c.json({ integration }, 201);
+  }),
+);
 
 /**
  * POST /product-management/integrations/:id/sync
  * Sync integration data
  */
-app.post('/integrations/:id/sync', requireAdmin, asyncHandler(async (c) => {
-  const adminUserId = c.get('userId');
-  const integrationId = c.req.param('id');
-  
-  log.info('Syncing integration', { adminUserId, integrationId });
-  
-  const result = await service.syncIntegration(integrationId);
-  
-  log.success('Integration synced', { integrationId });
-  
-  return c.json(result);
-}));
+app.post(
+  '/integrations/:id/sync',
+  requireAdmin,
+  asyncHandler(async (c) => {
+    const adminUserId = c.get('userId');
+    const integrationId = c.req.param('id');
+
+    log.info('Syncing integration', { adminUserId, integrationId });
+
+    const result = await service.syncIntegration(integrationId);
+
+    log.success('Integration synced', { integrationId });
+
+    return c.json(result);
+  }),
+);
 
 // ============================================================================
 // PRODUCT UPLOAD
@@ -310,18 +362,22 @@ app.post('/integrations/:id/sync', requireAdmin, asyncHandler(async (c) => {
  * POST /product-management/upload
  * Upload product data (CSV/Excel)
  */
-app.post('/upload', requireAdmin, asyncHandler(async (c) => {
-  const adminUserId = c.get('userId');
-  const formData = await c.req.formData();
-  const file = formData.get('file') as File;
-  
-  log.info('Uploading product data', { adminUserId, fileName: file?.name });
-  
-  const result = await service.uploadProducts(file);
-  
-  log.success('Products uploaded', { count: result.count });
-  
-  return c.json(result);
-}));
+app.post(
+  '/upload',
+  requireAdmin,
+  asyncHandler(async (c) => {
+    const adminUserId = c.get('userId');
+    const formData = await c.req.formData();
+    const file = formData.get('file') as File;
+
+    log.info('Uploading product data', { adminUserId, fileName: file?.name });
+
+    const result = await service.uploadProducts(file);
+
+    log.success('Products uploaded', { count: result.count });
+
+    return c.json(result);
+  }),
+);
 
 export default app;

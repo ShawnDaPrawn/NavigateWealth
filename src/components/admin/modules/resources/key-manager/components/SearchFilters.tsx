@@ -39,7 +39,7 @@ export function SearchFilters({
   onDataTypeChange,
   showCategoryFilter = true,
   showDataTypeFilter = true,
-  className = ''
+  className = '',
 }: SearchFiltersProps) {
   const dataTypes = KeyAPI.getDataTypes();
   const searchInputGuard = useSearchInputAutofillGuard({ id: 'resource-key-manager-search' });
@@ -65,8 +65,8 @@ export function SearchFilters({
       {showCategoryFilter && (
         <div>
           <Label className="text-sm font-medium text-muted-foreground">CATEGORY</Label>
-          <Select 
-            value={selectedCategory} 
+          <Select
+            value={selectedCategory}
             onValueChange={(value) => onCategoryChange(value as ProductKeyCategory | 'all')}
           >
             <SelectTrigger className="h-11 mt-1">
@@ -88,10 +88,7 @@ export function SearchFilters({
       {showDataTypeFilter && (
         <div>
           <Label className="text-sm font-medium text-muted-foreground">DATA TYPE</Label>
-          <Select 
-            value={selectedDataType} 
-            onValueChange={onDataTypeChange}
-          >
+          <Select value={selectedDataType} onValueChange={onDataTypeChange}>
             <SelectTrigger className="h-11 mt-1">
               <SelectValue />
             </SelectTrigger>

@@ -1,7 +1,7 @@
 /**
  * Client-Side Retirement FNA Results Display
  * Read-only view of published Retirement Planning Analysis
- * 
+ *
  * Data source: /supabase/functions/server/retirement-fna-routes.tsx
  * Uses "inputs" and "results" fields from the stored session
  */
@@ -10,8 +10,8 @@ import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '../../ui/card';
 import { Badge } from '../../ui/badge';
 import { Separator } from '../../ui/separator';
-import { 
-  TrendingUp, 
+import {
+  TrendingUp,
   Calendar,
   DollarSign,
   Target,
@@ -20,7 +20,7 @@ import {
   Info,
   PiggyBank,
   BarChart3,
-  TrendingDown
+  TrendingDown,
 } from 'lucide-react';
 import { RetirementFNA, formatCurrency } from '../../../services/fna-api';
 
@@ -38,7 +38,9 @@ export function RetirementResults({ fna }: RetirementResultsProps) {
         <CardContent className="py-6">
           <div className="flex items-center gap-3">
             <AlertCircle className="h-5 w-5 text-amber-600" />
-            <p className="text-sm text-amber-900">Retirement calculation results are not yet available for this analysis.</p>
+            <p className="text-sm text-amber-900">
+              Retirement calculation results are not yet available for this analysis.
+            </p>
           </div>
         </CardContent>
       </Card>
@@ -49,8 +51,10 @@ export function RetirementResults({ fna }: RetirementResultsProps) {
   const currentAge = inputs.currentAge || 0;
   const retirementAge = inputs.intendedRetirementAge || inputs.retirementAge || 65;
   const yearsToRetirement = results.yearsToRetirement;
-  const currentSavings = inputs.currentRetirementSavings || inputs.totalCurrentRetirementCapital || 0;
-  const monthlyContribution = inputs.currentMonthlyContribution || inputs.totalMonthlyContribution || 0;
+  const currentSavings =
+    inputs.currentRetirementSavings || inputs.totalCurrentRetirementCapital || 0;
+  const monthlyContribution =
+    inputs.currentMonthlyContribution || inputs.totalMonthlyContribution || 0;
 
   return (
     <div className="space-y-6">
@@ -64,8 +68,8 @@ export function RetirementResults({ fna }: RetirementResultsProps) {
             <div className="flex-1">
               <h3 className="text-gray-900 mb-2">Retirement Planning Analysis Summary</h3>
               <p className="text-sm text-gray-700 mb-4">
-                Comprehensive projection of your retirement savings and income based on your current contributions 
-                and economic assumptions.
+                Comprehensive projection of your retirement savings and income based on your current
+                contributions and economic assumptions.
               </p>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 <div className="bg-white p-3 rounded-lg border border-green-100">
@@ -117,23 +121,21 @@ export function RetirementResults({ fna }: RetirementResultsProps) {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="p-4 bg-blue-50 rounded-lg border border-blue-100">
               <p className="text-xs text-gray-600 mb-1">Required Capital at Retirement</p>
-              <p className="text-xl text-gray-900">
-                {formatCurrency(results.requiredCapital)}
+              <p className="text-xl text-gray-900">{formatCurrency(results.requiredCapital)}</p>
+              <p className="text-xs text-gray-600 mt-1">
+                To sustain {results.yearsInRetirement} years of income
               </p>
-              <p className="text-xs text-gray-600 mt-1">To sustain {results.yearsInRetirement} years of income</p>
             </div>
             <div className="p-4 bg-green-50 rounded-lg border border-green-100">
               <p className="text-xs text-gray-600 mb-1">Projected Capital at Retirement</p>
-              <p className="text-xl text-gray-900">
-                {formatCurrency(results.projectedCapital)}
+              <p className="text-xl text-gray-900">{formatCurrency(results.projectedCapital)}</p>
+              <p className="text-xs text-gray-600 mt-1">
+                Based on current savings and contributions
               </p>
-              <p className="text-xs text-gray-600 mt-1">Based on current savings and contributions</p>
             </div>
             <div className="p-4 bg-purple-50 rounded-lg border border-purple-100">
               <p className="text-xs text-gray-600 mb-1">Target Monthly Income</p>
-              <p className="text-xl text-gray-900">
-                {formatCurrency(results.targetMonthlyIncome)}
-              </p>
+              <p className="text-xl text-gray-900">{formatCurrency(results.targetMonthlyIncome)}</p>
               <p className="text-xs text-gray-600 mt-1">In future value terms</p>
             </div>
           </div>
@@ -150,8 +152,10 @@ export function RetirementResults({ fna }: RetirementResultsProps) {
                     </p>
                     <p className="text-xs text-gray-600 mb-2">
                       Based on current savings and contributions, there is a projected shortfall of{' '}
-                      <strong className="text-red-700">{formatCurrency(results.capitalShortfall)}</strong> at retirement
-                      ({results.shortfallPercentage.toFixed(1)}% of required capital).
+                      <strong className="text-red-700">
+                        {formatCurrency(results.capitalShortfall)}
+                      </strong>{' '}
+                      at retirement ({results.shortfallPercentage.toFixed(1)}% of required capital).
                     </p>
                   </div>
                 </div>
@@ -203,7 +207,8 @@ export function RetirementResults({ fna }: RetirementResultsProps) {
                       </strong>
                     </p>
                     <p className="text-xs text-gray-600">
-                      This represents {results.percentageOfIncome.toFixed(1)}% of your gross monthly income.
+                      This represents {results.percentageOfIncome.toFixed(1)}% of your gross monthly
+                      income.
                     </p>
                   </div>
                 </div>
@@ -230,7 +235,9 @@ export function RetirementResults({ fna }: RetirementResultsProps) {
                 <TrendingUp className="h-4 w-4 text-indigo-600" />
                 <p className="text-xs text-gray-600">Pre-Retirement Return</p>
               </div>
-              <p className="text-lg text-gray-900">{(results.realGrowthRate * 100).toFixed(1)}% p.a.</p>
+              <p className="text-lg text-gray-900">
+                {(results.realGrowthRate * 100).toFixed(1)}% p.a.
+              </p>
               <p className="text-xs text-gray-600 mt-1">Nominal growth rate</p>
             </div>
             <div className="p-3 bg-orange-50 rounded-lg border border-orange-100">
@@ -238,7 +245,9 @@ export function RetirementResults({ fna }: RetirementResultsProps) {
                 <TrendingDown className="h-4 w-4 text-orange-600" />
                 <p className="text-xs text-gray-600">Salary Escalation</p>
               </div>
-              <p className="text-lg text-gray-900">{(results.realSalaryGrowth * 100).toFixed(1)}% p.a.</p>
+              <p className="text-lg text-gray-900">
+                {(results.realSalaryGrowth * 100).toFixed(1)}% p.a.
+              </p>
               <p className="text-xs text-gray-600 mt-1">Expected annual increase</p>
             </div>
             <div className="p-3 bg-green-50 rounded-lg border border-green-100">
@@ -263,11 +272,23 @@ export function RetirementResults({ fna }: RetirementResultsProps) {
                 <strong>Important Notes:</strong>
               </p>
               <ul className="space-y-1 text-xs">
-                <li>- Projections are based on assumed investment returns and inflation rates, which may vary.</li>
-                <li>- Actual retirement outcomes depend on market performance, contribution consistency, and life events.</li>
-                <li>- Regular reviews (annually) are recommended to stay on track toward your retirement goals.</li>
+                <li>
+                  - Projections are based on assumed investment returns and inflation rates, which
+                  may vary.
+                </li>
+                <li>
+                  - Actual retirement outcomes depend on market performance, contribution
+                  consistency, and life events.
+                </li>
+                <li>
+                  - Regular reviews (annually) are recommended to stay on track toward your
+                  retirement goals.
+                </li>
                 <li>- Consider tax implications of retirement withdrawals and annuity income.</li>
-                <li>- Consult your financial adviser before making significant changes to your retirement strategy.</li>
+                <li>
+                  - Consult your financial adviser before making significant changes to your
+                  retirement strategy.
+                </li>
               </ul>
             </div>
           </div>

@@ -1,10 +1,5 @@
 import React, { useState, useRef } from 'react';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from '../../../../ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../../../../ui/dialog';
 import { Button } from '../../../../ui/button';
 import { Label } from '../../../../ui/label';
 import { Input } from '../../../../ui/input';
@@ -31,13 +26,9 @@ interface CalendarPDFExportModalProps {
 
 type ExportScope = 'day' | 'month' | 'year';
 
-export function CalendarPDFExportModal({
-  open,
-  onClose,
-  events,
-}: CalendarPDFExportModalProps) {
+export function CalendarPDFExportModal({ open, onClose, events }: CalendarPDFExportModalProps) {
   const [scope, setScope] = useState<ExportScope>('day');
-  
+
   // Date state
   const [selectedDate, setSelectedDate] = useState<string>(format(new Date(), 'yyyy-MM-dd'));
   const [selectedMonth, setSelectedMonth] = useState<string>(String(new Date().getMonth()));
@@ -49,7 +40,7 @@ export function CalendarPDFExportModal({
   // Filter events based on current selection
   // Construct the effective date based on scope
   let date: Date;
-  
+
   if (scope === 'day') {
     // For day scope, use the specific selected date
     const [sYear, sMonth, sDay] = selectedDate.split('-').map(Number);
@@ -67,15 +58,15 @@ export function CalendarPDFExportModal({
   let period = '';
 
   if (scope === 'day') {
-    filteredEvents = events.filter(e => isSameDay(new Date(e.start_at), date));
+    filteredEvents = events.filter((e) => isSameDay(new Date(e.start_at), date));
     docTitle = 'Daily Schedule';
     period = format(date, 'EEEE, MMMM d, yyyy');
   } else if (scope === 'month') {
-    filteredEvents = events.filter(e => isSameMonth(new Date(e.start_at), date));
+    filteredEvents = events.filter((e) => isSameMonth(new Date(e.start_at), date));
     docTitle = 'Monthly Schedule';
     period = format(date, 'MMMM yyyy');
   } else if (scope === 'year') {
-    filteredEvents = events.filter(e => isSameYear(new Date(e.start_at), date));
+    filteredEvents = events.filter((e) => isSameYear(new Date(e.start_at), date));
     docTitle = 'Annual Schedule';
     period = format(date, 'yyyy');
   }
@@ -106,7 +97,7 @@ export function CalendarPDFExportModal({
   // Group events by day for month/year views
   const eventsByDay: Record<string, CalendarEvent[]> = {};
   if (scope !== 'day') {
-    filteredEvents.forEach(event => {
+    filteredEvents.forEach((event) => {
       const dayKey = format(new Date(event.start_at), 'yyyy-MM-dd');
       if (!eventsByDay[dayKey]) {
         eventsByDay[dayKey] = [];
@@ -114,17 +105,17 @@ export function CalendarPDFExportModal({
       eventsByDay[dayKey].push(event);
     });
   }
-  
+
   const sortedDays = Object.keys(eventsByDay).sort();
 
   const handleExport = () => {
     setIsGenerating(true);
-    
+
     // 1. Create iframe
     const iframe = document.createElement('iframe');
     iframe.style.display = 'none';
     document.body.appendChild(iframe);
-    
+
     const doc = iframe.contentWindow?.document;
     if (!doc || !printRef.current) {
       setIsGenerating(false);
@@ -212,7 +203,7 @@ export function CalendarPDFExportModal({
     setTimeout(() => {
       iframe.contentWindow?.focus();
       iframe.contentWindow?.print();
-      
+
       // Cleanup
       setTimeout(() => {
         document.body.removeChild(iframe);
@@ -227,9 +218,24 @@ export function CalendarPDFExportModal({
       <table className="w-full text-[9.5px] border-collapse table-fixed">
         <thead>
           <tr className="bg-gray-100">
-            <th className="border border-gray-200 px-2 py-1.5 text-left font-bold text-gray-700" style={{ width: '10%' }}>Time</th>
-            <th className="border border-gray-200 px-2 py-1.5 text-left font-bold text-gray-700" style={{ width: '70%' }}>Event Details</th>
-            <th className="border border-gray-200 px-2 py-1.5 text-left font-bold text-gray-700" style={{ width: '20%' }}>Type / Location</th>
+            <th
+              className="border border-gray-200 px-2 py-1.5 text-left font-bold text-gray-700"
+              style={{ width: '10%' }}
+            >
+              Time
+            </th>
+            <th
+              className="border border-gray-200 px-2 py-1.5 text-left font-bold text-gray-700"
+              style={{ width: '70%' }}
+            >
+              Event Details
+            </th>
+            <th
+              className="border border-gray-200 px-2 py-1.5 text-left font-bold text-gray-700"
+              style={{ width: '20%' }}
+            >
+              Type / Location
+            </th>
           </tr>
         </thead>
         <tbody>
@@ -254,7 +260,10 @@ export function CalendarPDFExportModal({
                 <td className="border border-gray-200 px-2 py-1.5 align-top">
                   <div className="font-bold text-gray-900">{event.title}</div>
                   {event.description && (
-                    <div className="text-gray-600 mt-1 whitespace-pre-wrap" style={{ wordBreak: 'break-word', overflowWrap: 'anywhere' }}>
+                    <div
+                      className="text-gray-600 mt-1 whitespace-pre-wrap"
+                      style={{ wordBreak: 'break-word', overflowWrap: 'anywhere' }}
+                    >
                       {event.description}
                     </div>
                   )}
@@ -265,7 +274,9 @@ export function CalendarPDFExportModal({
                   </div>
                   {(event.location || event.location_type) && (
                     <div className="mt-1 text-gray-500" style={{ wordBreak: 'break-word' }}>
-                      {event.location_type === 'video' ? 'Video Meeting' : (event.location || 'In Person')}
+                      {event.location_type === 'video'
+                        ? 'Video Meeting'
+                        : event.location || 'In Person'}
                     </div>
                   )}
                 </td>
@@ -290,38 +301,44 @@ export function CalendarPDFExportModal({
         <div className="space-y-6 py-4">
           <div className="space-y-3">
             <Label>Export Scope</Label>
-            <RadioGroup 
-              value={scope} 
+            <RadioGroup
+              value={scope}
               onValueChange={(v) => setScope(v as ExportScope)}
               className="flex flex-col space-y-2"
             >
-              <div 
+              <div
                 className={`flex items-center space-x-2 rounded-lg border p-3 cursor-pointer hover:bg-gray-50 transition-colors ${scope === 'day' ? 'border-purple-600 bg-purple-50' : 'border-gray-200'}`}
                 onClick={() => setScope('day')}
               >
                 <RadioGroupItem value="day" id="export-scope-day" />
-                <Label htmlFor="export-scope-day" className="flex-1 cursor-pointer">Daily Schedule</Label>
+                <Label htmlFor="export-scope-day" className="flex-1 cursor-pointer">
+                  Daily Schedule
+                </Label>
               </div>
-              <div 
+              <div
                 className={`flex items-center space-x-2 rounded-lg border p-3 cursor-pointer hover:bg-gray-50 transition-colors ${scope === 'month' ? 'border-purple-600 bg-purple-50' : 'border-gray-200'}`}
                 onClick={() => setScope('month')}
               >
                 <RadioGroupItem value="month" id="export-scope-month" />
-                <Label htmlFor="export-scope-month" className="flex-1 cursor-pointer">Monthly Overview</Label>
+                <Label htmlFor="export-scope-month" className="flex-1 cursor-pointer">
+                  Monthly Overview
+                </Label>
               </div>
-              <div 
+              <div
                 className={`flex items-center space-x-2 rounded-lg border p-3 cursor-pointer hover:bg-gray-50 transition-colors ${scope === 'year' ? 'border-purple-600 bg-purple-50' : 'border-gray-200'}`}
                 onClick={() => setScope('year')}
               >
                 <RadioGroupItem value="year" id="export-scope-year" />
-                <Label htmlFor="export-scope-year" className="flex-1 cursor-pointer">Yearly Summary</Label>
+                <Label htmlFor="export-scope-year" className="flex-1 cursor-pointer">
+                  Yearly Summary
+                </Label>
               </div>
             </RadioGroup>
           </div>
 
           <div className="space-y-2">
             <Label>Select Period</Label>
-            
+
             {scope === 'day' && (
               <Input
                 type="date"
@@ -384,23 +401,33 @@ export function CalendarPDFExportModal({
               {scope === 'year' && 'Choose the year to export (Current + Past 5 Years).'}
             </p>
           </div>
-          
+
           <div className="flex justify-end pt-2">
-             <Button variant="outline" onClick={() => {
+            <Button
+              variant="outline"
+              onClick={() => {
                 const now = new Date();
                 setSelectedDate(format(now, 'yyyy-MM-dd'));
                 setSelectedMonth(String(now.getMonth()));
                 setSelectedYear(String(now.getFullYear()));
                 setScope('day');
-             }} className="mr-auto text-xs">
-                Reset to Today
-             </Button>
+              }}
+              className="mr-auto text-xs"
+            >
+              Reset to Today
+            </Button>
           </div>
         </div>
 
         <div className="flex justify-end gap-3">
-          <Button variant="outline" onClick={onClose}>Cancel</Button>
-          <Button onClick={handleExport} disabled={isGenerating} className="bg-purple-600 hover:bg-purple-700">
+          <Button variant="outline" onClick={onClose}>
+            Cancel
+          </Button>
+          <Button
+            onClick={handleExport}
+            disabled={isGenerating}
+            className="bg-purple-600 hover:bg-purple-700"
+          >
             {isGenerating ? (
               <span>Generating...</span>
             ) : (
@@ -414,31 +441,27 @@ export function CalendarPDFExportModal({
 
         {/* Hidden Print View */}
         <div style={{ display: 'none' }}>
-           <div ref={printRef}>
-              <BasePdfLayout
-                docTitle={docTitle}
-                issueDate={format(new Date(), 'dd/MM/yyyy')}
-              >
-                {/* Custom Content for Calendar */}
-                <div className="section">
-                  <div className="section-head">
-                    <span className="num mr-2 text-purple-700 font-bold">01</span>
-                    <h2 className="uppercase font-bold text-gray-800 m-0">{period}</h2>
+          <div ref={printRef}>
+            <BasePdfLayout docTitle={docTitle} issueDate={format(new Date(), 'dd/MM/yyyy')}>
+              {/* Custom Content for Calendar */}
+              <div className="section">
+                <div className="section-head">
+                  <span className="num mr-2 text-purple-700 font-bold">01</span>
+                  <h2 className="uppercase font-bold text-gray-800 m-0">{period}</h2>
+                </div>
+
+                {filteredEvents.length === 0 ? (
+                  <div className="p-4 text-sm text-gray-500 italic border border-gray-200 rounded bg-gray-50">
+                    No events scheduled for this period.
                   </div>
-                  
-                  {filteredEvents.length === 0 ? (
-                    <div className="p-4 text-sm text-gray-500 italic border border-gray-200 rounded bg-gray-50">
-                      No events scheduled for this period.
-                    </div>
-                  ) : (
-                    <div className="mt-4">
-                      {scope === 'day' ? (
-                        renderEventTable(filteredEvents)
-                      ) : (
-                        sortedDays.map((dayKey) => {
+                ) : (
+                  <div className="mt-4">
+                    {scope === 'day'
+                      ? renderEventTable(filteredEvents)
+                      : sortedDays.map((dayKey) => {
                           const [y, m, d] = dayKey.split('-').map(Number);
                           const dayDate = new Date(y, m - 1, d);
-                          
+
                           return (
                             <div key={dayKey} className="mb-8 day-section break-inside-avoid">
                               <h3 className="font-bold text-[12px] text-purple-800 border-b border-purple-100 pb-2 mb-3 uppercase tracking-wide">
@@ -447,39 +470,49 @@ export function CalendarPDFExportModal({
                               {renderEventTable(eventsByDay[dayKey])}
                             </div>
                           );
-                        })
-                      )}
+                        })}
+                  </div>
+                )}
+
+                {/* Summary / Stats Block */}
+                <div className="mt-6 border border-gray-200 rounded p-4 bg-gray-50">
+                  <div className="font-bold text-[10px] mb-4 text-purple-800 uppercase tracking-wider border-b border-gray-200 pb-2">
+                    Schedule Summary
+                  </div>
+                  <div className="flex gap-8 text-[9.5px]">
+                    <div className="flex-1">
+                      <div className="text-[8px] text-gray-500 uppercase tracking-wide mb-1">
+                        Total Events
+                      </div>
+                      <div className="font-medium text-gray-900 border-b border-gray-300 pb-1">
+                        {filteredEvents.length}
+                      </div>
                     </div>
-                  )}
-                  
-                  {/* Summary / Stats Block */}
-                  <div className="mt-6 border border-gray-200 rounded p-4 bg-gray-50">
-                     <div className="font-bold text-[10px] mb-4 text-purple-800 uppercase tracking-wider border-b border-gray-200 pb-2">
-                        Schedule Summary
-                     </div>
-                     <div className="flex gap-8 text-[9.5px]">
-                        <div className="flex-1">
-                           <div className="text-[8px] text-gray-500 uppercase tracking-wide mb-1">Total Events</div>
-                           <div className="font-medium text-gray-900 border-b border-gray-300 pb-1">{filteredEvents.length}</div>
-                        </div>
-                        <div className="flex-1">
-                           <div className="text-[8px] text-gray-500 uppercase tracking-wide mb-1">Date Range</div>
-                           <div className="font-medium text-gray-900 border-b border-gray-300 pb-1">
-                              {scope === 'day' ? format(date, 'dd MMM yyyy') : 
-                               scope === 'month' ? `${format(startOfMonth(date), 'dd MMM')} - ${format(endOfMonth(date), 'dd MMM yyyy')}` :
-                               `${format(startOfYear(date), 'dd MMM')} - ${format(endOfYear(date), 'dd MMM yyyy')}`
-                              }
-                           </div>
-                        </div>
-                        <div className="flex-1">
-                           <div className="text-[8px] text-gray-500 uppercase tracking-wide mb-1">Generated On</div>
-                           <div className="font-medium text-gray-900 border-b border-gray-300 pb-1">{format(new Date(), 'dd MMM yyyy HH:mm')}</div>
-                        </div>
-                     </div>
+                    <div className="flex-1">
+                      <div className="text-[8px] text-gray-500 uppercase tracking-wide mb-1">
+                        Date Range
+                      </div>
+                      <div className="font-medium text-gray-900 border-b border-gray-300 pb-1">
+                        {scope === 'day'
+                          ? format(date, 'dd MMM yyyy')
+                          : scope === 'month'
+                            ? `${format(startOfMonth(date), 'dd MMM')} - ${format(endOfMonth(date), 'dd MMM yyyy')}`
+                            : `${format(startOfYear(date), 'dd MMM')} - ${format(endOfYear(date), 'dd MMM yyyy')}`}
+                      </div>
+                    </div>
+                    <div className="flex-1">
+                      <div className="text-[8px] text-gray-500 uppercase tracking-wide mb-1">
+                        Generated On
+                      </div>
+                      <div className="font-medium text-gray-900 border-b border-gray-300 pb-1">
+                        {format(new Date(), 'dd MMM yyyy HH:mm')}
+                      </div>
+                    </div>
                   </div>
                 </div>
-              </BasePdfLayout>
-           </div>
+              </div>
+            </BasePdfLayout>
+          </div>
         </div>
       </DialogContent>
     </Dialog>
@@ -487,7 +520,15 @@ export function CalendarPDFExportModal({
 }
 
 // Helpers needed if not imported
-function startOfMonth(date: Date) { return new Date(date.getFullYear(), date.getMonth(), 1); }
-function endOfMonth(date: Date) { return new Date(date.getFullYear(), date.getMonth() + 1, 0); }
-function startOfYear(date: Date) { return new Date(date.getFullYear(), 0, 1); }
-function endOfYear(date: Date) { return new Date(date.getFullYear(), 11, 31); }
+function startOfMonth(date: Date) {
+  return new Date(date.getFullYear(), date.getMonth(), 1);
+}
+function endOfMonth(date: Date) {
+  return new Date(date.getFullYear(), date.getMonth() + 1, 0);
+}
+function startOfYear(date: Date) {
+  return new Date(date.getFullYear(), 0, 1);
+}
+function endOfYear(date: Date) {
+  return new Date(date.getFullYear(), 11, 31);
+}

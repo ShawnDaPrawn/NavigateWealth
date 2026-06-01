@@ -3,7 +3,21 @@ import { FormBlock } from './types';
 import { Button } from '../../../../ui/button';
 import { Input } from '../../../../ui/input';
 import { Label } from '../../../../ui/label';
-import { Trash2, ChevronUp, ChevronDown, Copy, Mail, User, FileText, Hash, Calendar, Pen, Plus, X, Type } from 'lucide-react';
+import {
+  Trash2,
+  ChevronUp,
+  ChevronDown,
+  Copy,
+  Mail,
+  User,
+  FileText,
+  Hash,
+  Calendar,
+  Pen,
+  Plus,
+  X,
+  Type,
+} from 'lucide-react';
 import { getBlockDefinition } from './registry';
 import type { LetterMeta, Signatory } from '../templates/LetterheadPdfLayout';
 import { resolveSignatories } from '../templates/LetterheadPdfLayout';
@@ -30,9 +44,9 @@ interface PropertiesPanelProps {
   onLetterMetaChange?: (meta: LetterMeta) => void;
 }
 
-export const PropertiesPanel = ({ 
-  block, 
-  onUpdate, 
+export const PropertiesPanel = ({
+  block,
+  onUpdate,
   onDelete,
   onMove,
   onDuplicate,
@@ -68,14 +82,39 @@ export const PropertiesPanel = ({
           // Default empty state
           <div className="flex-1 flex items-center justify-center p-6 text-center">
             <div>
-              <p className="text-sm text-gray-500">Select a block on the canvas to edit its properties.</p>
+              <p className="text-sm text-gray-500">
+                Select a block on the canvas to edit its properties.
+              </p>
               <div className="mt-4 text-xs text-gray-400 space-y-1">
-                <p><kbd className="px-1 py-0.5 bg-gray-100 rounded font-mono text-[10px]">Ctrl</kbd>+<kbd className="px-1 py-0.5 bg-gray-100 rounded font-mono text-[10px]">S</kbd> Save</p>
-                <p><kbd className="px-1 py-0.5 bg-gray-100 rounded font-mono text-[10px]">Ctrl</kbd>+<kbd className="px-1 py-0.5 bg-gray-100 rounded font-mono text-[10px]">Z</kbd> Undo</p>
-                <p><kbd className="px-1 py-0.5 bg-gray-100 rounded font-mono text-[10px]">Ctrl</kbd>+<kbd className="px-1 py-0.5 bg-gray-100 rounded font-mono text-[10px]">⇧Z</kbd> Redo</p>
-                <p><kbd className="px-1 py-0.5 bg-gray-100 rounded font-mono text-[10px]">Alt</kbd>+<kbd className="px-1 py-0.5 bg-gray-100 rounded font-mono text-[10px]">↑↓</kbd> Move block</p>
-                <p><kbd className="px-1 py-0.5 bg-gray-100 rounded font-mono text-[10px]">Ctrl</kbd>+<kbd className="px-1 py-0.5 bg-gray-100 rounded font-mono text-[10px]">D</kbd> Duplicate</p>
-                <p><kbd className="px-1 py-0.5 bg-gray-100 rounded font-mono text-[10px]">Del</kbd> Delete block</p>
+                <p>
+                  <kbd className="px-1 py-0.5 bg-gray-100 rounded font-mono text-[10px]">Ctrl</kbd>+
+                  <kbd className="px-1 py-0.5 bg-gray-100 rounded font-mono text-[10px]">S</kbd>{' '}
+                  Save
+                </p>
+                <p>
+                  <kbd className="px-1 py-0.5 bg-gray-100 rounded font-mono text-[10px]">Ctrl</kbd>+
+                  <kbd className="px-1 py-0.5 bg-gray-100 rounded font-mono text-[10px]">Z</kbd>{' '}
+                  Undo
+                </p>
+                <p>
+                  <kbd className="px-1 py-0.5 bg-gray-100 rounded font-mono text-[10px]">Ctrl</kbd>+
+                  <kbd className="px-1 py-0.5 bg-gray-100 rounded font-mono text-[10px]">⇧Z</kbd>{' '}
+                  Redo
+                </p>
+                <p>
+                  <kbd className="px-1 py-0.5 bg-gray-100 rounded font-mono text-[10px]">Alt</kbd>+
+                  <kbd className="px-1 py-0.5 bg-gray-100 rounded font-mono text-[10px]">↑↓</kbd>{' '}
+                  Move block
+                </p>
+                <p>
+                  <kbd className="px-1 py-0.5 bg-gray-100 rounded font-mono text-[10px]">Ctrl</kbd>+
+                  <kbd className="px-1 py-0.5 bg-gray-100 rounded font-mono text-[10px]">D</kbd>{' '}
+                  Duplicate
+                </p>
+                <p>
+                  <kbd className="px-1 py-0.5 bg-gray-100 rounded font-mono text-[10px]">Del</kbd>{' '}
+                  Delete block
+                </p>
               </div>
             </div>
           </div>
@@ -101,9 +140,7 @@ export const PropertiesPanel = ({
         <div className="flex items-center justify-between mb-2">
           <div>
             <h3 className="font-semibold text-sm text-gray-900">Properties</h3>
-            {definition && (
-              <p className="text-[10px] text-gray-400 mt-0.5">{definition.label}</p>
-            )}
+            {definition && <p className="text-[10px] text-gray-400 mt-0.5">{definition.label}</p>}
           </div>
         </div>
 
@@ -141,9 +178,9 @@ export const PropertiesPanel = ({
           >
             <Copy className="h-3.5 w-3.5" />
           </Button>
-          <Button 
+          <Button
             variant="outline"
-            size="sm" 
+            size="sm"
             className="h-7 px-2 text-xs text-red-500 hover:text-red-600 hover:bg-red-50 hover:border-red-200"
             onClick={() => onDelete(block.id)}
             title="Delete (Del)"
@@ -158,9 +195,9 @@ export const PropertiesPanel = ({
         {/* Block Properties */}
         <div className="p-4 space-y-6">
           {definition ? (
-            definition.editor({ 
-              block, 
-              onChange: (key, value) => handleChange(key, value) 
+            definition.editor({
+              block,
+              onChange: (key, value) => handleChange(key, value),
             })
           ) : (
             <div className="p-4 bg-amber-50 text-amber-700 text-xs rounded border border-amber-200">
@@ -344,7 +381,9 @@ function LetterMetaEditor({ meta, onChange }: LetterMetaEditorProps) {
         </legend>
 
         <div className="space-y-1">
-          <Label htmlFor="lm-date" className="text-xs text-gray-600">Date</Label>
+          <Label htmlFor="lm-date" className="text-xs text-gray-600">
+            Date
+          </Label>
           <Input
             id="lm-date"
             className="h-8 text-xs"
@@ -356,7 +395,9 @@ function LetterMetaEditor({ meta, onChange }: LetterMetaEditorProps) {
         </div>
 
         <div className="space-y-1">
-          <Label htmlFor="lm-subject" className="text-xs text-gray-600">Subject</Label>
+          <Label htmlFor="lm-subject" className="text-xs text-gray-600">
+            Subject
+          </Label>
           <Input
             id="lm-subject"
             className="h-8 text-xs"
@@ -367,7 +408,9 @@ function LetterMetaEditor({ meta, onChange }: LetterMetaEditorProps) {
         </div>
 
         <div className="space-y-1">
-          <Label htmlFor="lm-reference" className="text-xs text-gray-600">Reference Number</Label>
+          <Label htmlFor="lm-reference" className="text-xs text-gray-600">
+            Reference Number
+          </Label>
           <Input
             id="lm-reference"
             className="h-8 text-xs"
@@ -386,7 +429,9 @@ function LetterMetaEditor({ meta, onChange }: LetterMetaEditorProps) {
         </legend>
 
         <div className="space-y-1">
-          <Label htmlFor="lm-closing" className="text-xs text-gray-600">Closing</Label>
+          <Label htmlFor="lm-closing" className="text-xs text-gray-600">
+            Closing
+          </Label>
           <Input
             id="lm-closing"
             className="h-8 text-xs"
@@ -609,7 +654,7 @@ function RecipientCard({ index, recipient, onUpdate, onRemove, total }: Recipien
         <Label className="text-[10px] text-gray-500">Address</Label>
         <textarea
           className="w-full h-16 rounded-md border border-gray-200 px-3 py-2 text-xs resize-none focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent"
-          placeholder={"123 Main Street\nSandton, 2196"}
+          placeholder={'123 Main Street\nSandton, 2196'}
           value={recipient.address || ''}
           onChange={(e) => onUpdate(index, 'address', e.target.value)}
         />

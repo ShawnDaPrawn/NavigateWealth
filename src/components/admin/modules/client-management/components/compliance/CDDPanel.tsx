@@ -161,10 +161,10 @@ export function CDDPanel({
             Customer Due Diligence (CDD)
           </CardTitle>
           <CardDescription>
-            Run a comprehensive due diligence report via the Honeycomb bureau integration.
-            This consolidated check covers identity verification, address confirmation, and
-            risk indicators in a single call. Results are attributed to Honeycomb Information
-            Services (Beeswax platform).
+            Run a comprehensive due diligence report via the Honeycomb bureau integration. This
+            consolidated check covers identity verification, address confirmation, and risk
+            indicators in a single call. Results are attributed to Honeycomb Information Services
+            (Beeswax platform).
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-3">
@@ -196,7 +196,8 @@ export function CDDPanel({
             <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 flex items-start gap-2">
               <AlertTriangle className="h-4 w-4 text-amber-600 mt-0.5 flex-shrink-0" />
               <p className="text-xs text-amber-700">
-                No valid ID number or passport on file. Update the client's profile before running a CDD report.
+                No valid ID number or passport on file. Update the client's profile before running a
+                CDD report.
               </p>
             </div>
           )}
@@ -214,11 +215,13 @@ export function CDDPanel({
 
           {/* Result */}
           {result && (
-            <div className={`rounded-lg p-3 text-sm ${
-              result.success
-                ? 'bg-green-50 border border-green-200'
-                : 'bg-red-50 border border-red-200'
-            }`}>
+            <div
+              className={`rounded-lg p-3 text-sm ${
+                result.success
+                  ? 'bg-green-50 border border-green-200'
+                  : 'bg-red-50 border border-red-200'
+              }`}
+            >
               <div className="flex items-center gap-2 font-medium">
                 {result.success ? (
                   <CheckCircle className="h-4 w-4 text-green-600" />
@@ -230,9 +233,7 @@ export function CDDPanel({
                 </span>
               </div>
 
-              {result.error && (
-                <p className="mt-1 text-red-700 text-xs">{result.error}</p>
-              )}
+              {result.error && <p className="mt-1 text-red-700 text-xs">{result.error}</p>}
 
               {result.success && (
                 <div className="mt-2 space-y-1">
@@ -254,7 +255,11 @@ export function CDDPanel({
                     onClick={() => setShowDetails(!showDetails)}
                     className="flex items-center gap-1 mt-1 text-xs text-gray-500 hover:text-gray-700 transition-colors"
                   >
-                    {showDetails ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
+                    {showDetails ? (
+                      <ChevronUp className="h-3 w-3" />
+                    ) : (
+                      <ChevronDown className="h-3 w-3" />
+                    )}
                     {showDetails ? 'Hide' : 'Show'} full response
                   </button>
 
@@ -281,10 +286,16 @@ export function CDDPanel({
               <History className="h-5 w-5 text-gray-500" />
               CDD Report History
               {history.length > 0 && (
-                <Badge variant="secondary" className="text-xs">{history.length}</Badge>
+                <Badge variant="secondary" className="text-xs">
+                  {history.length}
+                </Badge>
               )}
             </CardTitle>
-            {showHistory ? <ChevronUp className="h-4 w-4 text-gray-400" /> : <ChevronDown className="h-4 w-4 text-gray-400" />}
+            {showHistory ? (
+              <ChevronUp className="h-4 w-4 text-gray-400" />
+            ) : (
+              <ChevronDown className="h-4 w-4 text-gray-400" />
+            )}
           </button>
         </CardHeader>
         {showHistory && (
@@ -300,7 +311,10 @@ export function CDDPanel({
             ) : (
               <div className="space-y-2">
                 {history.map((entry) => (
-                  <div key={entry.id} className="flex items-center justify-between p-2 rounded-lg bg-gray-50 text-sm">
+                  <div
+                    key={entry.id}
+                    className="flex items-center justify-between p-2 rounded-lg bg-gray-50 text-sm"
+                  >
                     <div className="flex items-center gap-2">
                       <Clock className="h-3.5 w-3.5 text-gray-400" />
                       <span className="text-xs text-gray-500">
@@ -325,8 +339,8 @@ export function CDDPanel({
                           entry.status === 'completed'
                             ? 'bg-green-50 text-green-700 border-green-200'
                             : entry.status === 'failed'
-                            ? 'bg-red-50 text-red-700 border-red-200'
-                            : 'bg-amber-50 text-amber-700 border-amber-200'
+                              ? 'bg-red-50 text-red-700 border-red-200'
+                              : 'bg-amber-50 text-amber-700 border-amber-200'
                         }
                       >
                         {entry.status}

@@ -1,5 +1,11 @@
 export const MARITAL_STATUS_OPTIONS = ['Single', 'Married', 'Divorced', 'Widowed', 'Common Law'];
-export const EMPLOYMENT_STATUS_OPTIONS = ['Employed', 'Self-Employed', 'Unemployed', 'Retired', 'Student'];
+export const EMPLOYMENT_STATUS_OPTIONS = [
+  'Employed',
+  'Self-Employed',
+  'Unemployed',
+  'Retired',
+  'Student',
+];
 
 export const GENDER_OPTIONS = ['Male', 'Female', 'Other', 'Prefer not to say'];
 
@@ -15,7 +21,7 @@ export const COUNTRY_OPTIONS = [
   'France',
   'Netherlands',
   'Switzerland',
-  'Other'
+  'Other',
 ];
 
 // Common occupations for filtering
@@ -35,5 +41,5 @@ export const OCCUPATION_OPTIONS = [
   'Tradesperson',
   'Artist/Creative',
   'Retired',
-  'Other'
+  'Other',
 ];

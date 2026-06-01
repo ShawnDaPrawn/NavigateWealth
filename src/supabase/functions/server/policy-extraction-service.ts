@@ -46,10 +46,7 @@ function hasExtractedValue(value: unknown): boolean {
 // ---------------------------------------------------------------------------
 
 const getSupabase = () =>
-  createClient(
-    Deno.env.get('SUPABASE_URL')!,
-    Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,
-  );
+  createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!);
 
 function getOpenAIKey(): string {
   const key = Deno.env.get('OPENAI_API_KEY');
@@ -68,9 +65,7 @@ function getOpenAIKey(): string {
 async function downloadPdfAsBase64(storageKey: string): Promise<string> {
   const supabase = getSupabase();
 
-  const { data, error } = await supabase.storage
-    .from(POLICY_DOC_BUCKET)
-    .download(storageKey);
+  const { data, error } = await supabase.storage.from(POLICY_DOC_BUCKET).download(storageKey);
 
   if (error || !data) {
     throw new Error(`Failed to download policy document: ${error?.message || 'Unknown error'}`);
@@ -267,7 +262,13 @@ function parseExtractionResponse(rawText: string): ExtractedPolicyData {
     if (typeof parsed.overallConfidence !== 'number') {
       // Calculate from available fields
       const confidences: number[] = [];
-      for (const key of ['policyNumber', 'providerName', 'productName', 'premiumAmount', 'policyStartDate']) {
+      for (const key of [
+        'policyNumber',
+        'providerName',
+        'productName',
+        'premiumAmount',
+        'policyStartDate',
+      ]) {
         if (parsed[key]?.confidence !== undefined) {
           confidences.push(parsed[key].confidence);
         }
@@ -277,9 +278,10 @@ function parseExtractionResponse(rawText: string): ExtractedPolicyData {
           confidences.push(benefit.canonicalType.confidence);
         }
       }
-      parsed.overallConfidence = confidences.length > 0
-        ? confidences.reduce((a: number, b: number) => a + b, 0) / confidences.length
-        : 0.5;
+      parsed.overallConfidence =
+        confidences.length > 0
+          ? confidences.reduce((a: number, b: number) => a + b, 0) / confidences.length
+          : 0.5;
     }
 
     return parsed as ExtractedPolicyData;
@@ -306,7 +308,7 @@ async function applyProviderTerminology(
   providerId: string,
 ): Promise<ExtractedPolicyData> {
   const termMapKey = `config:provider-terms:${providerId}`;
-  const termMap = await kv.get(termMapKey) as ProviderTerminologyMap | null;
+  const termMap = (await kv.get(termMapKey)) as ProviderTerminologyMap | null;
 
   if (!termMap || !termMap.benefitMappings) {
     return extracted; // No terminology map — AI's mapping stands
@@ -356,7 +358,7 @@ async function mapToSchemaFields(
 ): Promise<FieldMappingEntry[]> {
   // Load the schema for this category
   const schemaKey = `config:schema:${categoryId}`;
-  let schema = await kv.get(schemaKey) as KvSchema | null;
+  let schema = (await kv.get(schemaKey)) as KvSchema | null;
 
   if (!schema) {
     const defaultSchema = DEFAULT_SCHEMAS[categoryId];
@@ -402,21 +404,31 @@ async function mapToSchemaFields(
     {
       canonicalKey: 'inception_date',
       extracted: extracted.policyStartDate,
-      fieldNameFallbacks: ['date of inception', 'inception date', 'commencement date', 'start date'],
+      fieldNameFallbacks: [
+        'date of inception',
+        'inception date',
+        'commencement date',
+        'start date',
+      ],
     },
   ];
 
   for (const { canonicalKey, extracted: extractedField, fieldNameFallbacks } of topLevelMappings) {
-    if (!extractedField || extractedField.confidence === 0 || !hasExtractedValue(extractedField.value)) continue;
+    if (
+      !extractedField ||
+      extractedField.confidence === 0 ||
+      !hasExtractedValue(extractedField.value)
+    )
+      continue;
 
     // Try keyId match first (for premium/inception which may have keyIds)
     let matched = false;
     for (const [keyId, field] of keyIdToField.entries()) {
       const keyLower = keyId.toLowerCase();
       if (
-        keyLower.includes('premium') && canonicalKey === 'premium' ||
-        keyLower.includes('inception') && canonicalKey === 'inception_date' ||
-        keyLower.includes('date_of_inception') && canonicalKey === 'inception_date'
+        (keyLower.includes('premium') && canonicalKey === 'premium') ||
+        (keyLower.includes('inception') && canonicalKey === 'inception_date') ||
+        (keyLower.includes('date_of_inception') && canonicalKey === 'inception_date')
       ) {
         mappings.push({
           canonicalKey,
@@ -460,10 +472,7 @@ async function mapToSchemaFields(
         schemaFieldId: field.id,
         schemaFieldName: field.name || field.id,
         value: benefit.coverAmount.value,
-        confidence: Math.min(
-          benefit.canonicalType.confidence,
-          benefit.coverAmount.confidence,
-        ),
+        confidence: Math.min(benefit.canonicalType.confidence, benefit.coverAmount.confidence),
       });
     }
   }
@@ -524,7 +533,8 @@ function validateExtraction(
       warnings.push({
         severity: 'warning',
         code: 'ZERO_PREMIUM',
-        message: 'Premium is R0 but benefits were found. The premium may not have been extracted correctly.',
+        message:
+          'Premium is R0 but benefits were found. The premium may not have been extracted correctly.',
         relatedFields: ['premiumAmount'],
       });
     }
@@ -545,7 +555,8 @@ function validateExtraction(
       warnings.push({
         severity: 'info',
         code: 'ANNUAL_PREMIUM',
-        message: 'Premium appears to be annual. Navigate Wealth typically stores monthly premiums — you may need to divide by 12 before applying.',
+        message:
+          'Premium appears to be annual. Navigate Wealth typically stores monthly premiums — you may need to divide by 12 before applying.',
         relatedFields: ['premiumAmount', 'premiumFrequency'],
       });
     }
@@ -553,14 +564,14 @@ function validateExtraction(
 
   // 5. Benefits with very low confidence
   const lowConfBenefits = extracted.benefits.filter(
-    b => b.canonicalType?.confidence < 0.5 && b.coverAmount?.value,
+    (b) => b.canonicalType?.confidence < 0.5 && b.coverAmount?.value,
   );
   if (lowConfBenefits.length > 0) {
     warnings.push({
       severity: 'warning',
       code: 'LOW_CONFIDENCE_BENEFITS',
       message: `${lowConfBenefits.length} benefit(s) have low classification confidence. Review their canonical type mappings before applying.`,
-      relatedFields: lowConfBenefits.map(b => b.canonicalType?.value).filter(Boolean) as string[],
+      relatedFields: lowConfBenefits.map((b) => b.canonicalType?.value).filter(Boolean) as string[],
     });
   }
 
@@ -588,7 +599,8 @@ function validateExtraction(
     warnings.push({
       severity: 'error',
       code: 'NO_FIELD_MAPPINGS',
-      message: 'Benefits were extracted but none could be mapped to the product schema. The provider terminology may need configuration.',
+      message:
+        'Benefits were extracted but none could be mapped to the product schema. The provider terminology may need configuration.',
     });
   }
 
@@ -700,7 +712,7 @@ export function buildHistoryEntry(
 
   // Store a compact field mappings snapshot for comparison (limit to 50 fields to cap KV size)
   if (fieldMappings && fieldMappings.length > 0) {
-    entry.fieldMappingsSnapshot = fieldMappings.slice(0, 50).map(fm => ({
+    entry.fieldMappingsSnapshot = fieldMappings.slice(0, 50).map((fm) => ({
       k: fm.canonicalKey,
       f: fm.schemaFieldId,
       n: fm.schemaFieldName,
@@ -815,12 +827,10 @@ export async function extractPolicyDocument(
 export async function getProviderTerminology(
   providerId: string,
 ): Promise<ProviderTerminologyMap | null> {
-  return await kv.get(`config:provider-terms:${providerId}`) as ProviderTerminologyMap | null;
+  return (await kv.get(`config:provider-terms:${providerId}`)) as ProviderTerminologyMap | null;
 }
 
-export async function saveProviderTerminology(
-  map: ProviderTerminologyMap,
-): Promise<void> {
+export async function saveProviderTerminology(map: ProviderTerminologyMap): Promise<void> {
   await kv.set(`config:provider-terms:${map.providerId}`, map);
   log.info('Provider terminology map saved', { providerId: map.providerId });
 }

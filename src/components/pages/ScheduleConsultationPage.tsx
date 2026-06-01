@@ -26,12 +26,7 @@ export function ScheduleConsultationPage() {
     const sp = new URLSearchParams(location.search);
     const attribution: Record<string, string> = {};
     sp.forEach((value, key) => {
-      if (
-        key.startsWith('utm_') ||
-        key === 'gclid' ||
-        key === 'fbclid' ||
-        key === 'msclkid'
-      ) {
+      if (key.startsWith('utm_') || key === 'gclid' || key === 'fbclid' || key === 'msclkid') {
         attribution[key] = value;
       }
     });
@@ -81,7 +76,9 @@ export function ScheduleConsultationPage() {
         <ConsultationModal open={modalOpen} onOpenChange={handleModalOpenChange} />
 
         {/* While booking: empty canvas so the dimmed area stays clean (nav remains from MainLayout) */}
-        {!showFallback && <div className="min-h-[calc(100dvh-5rem)] w-full bg-white" aria-hidden="true" />}
+        {!showFallback && (
+          <div className="min-h-[calc(100dvh-5rem)] w-full bg-white" aria-hidden="true" />
+        )}
 
         {showFallback && (
           <div className={`${SITE_PAGE_WRAP} py-10 sm:py-14 lg:py-16`}>
@@ -97,7 +94,12 @@ export function ScheduleConsultationPage() {
                   Choose a time that works for you — no obligation.
                 </p>
               </div>
-              <Button variant="outline" size="default" className="shrink-0 w-full sm:w-auto" asChild>
+              <Button
+                variant="outline"
+                size="default"
+                className="shrink-0 w-full sm:w-auto"
+                asChild
+              >
                 <Link to={contactHref}>Full contact page</Link>
               </Button>
             </div>
@@ -107,7 +109,10 @@ export function ScheduleConsultationPage() {
               aria-labelledby="consultation-fallback-heading"
             >
               <div className="bg-gradient-to-r from-primary/10 via-primary/5 to-primary/10 px-6 sm:px-8 py-6 sm:py-8 border-b border-gray-100">
-                <h2 id="consultation-fallback-heading" className="text-xl sm:text-2xl font-bold text-gray-900">
+                <h2
+                  id="consultation-fallback-heading"
+                  className="text-xl sm:text-2xl font-bold text-gray-900"
+                >
                   Other ways to reach us
                 </h2>
                 <p className="text-sm sm:text-base text-gray-600 mt-2 max-w-3xl leading-relaxed">
@@ -124,7 +129,10 @@ export function ScheduleConsultationPage() {
                     </div>
                     <div>
                       <p className="font-semibold text-gray-900">Phone</p>
-                      <a href="tel:+27126672505" className="text-primary font-medium hover:underline mt-0.5 inline-block">
+                      <a
+                        href="tel:+27126672505"
+                        className="text-primary font-medium hover:underline mt-0.5 inline-block"
+                      >
                         +27 (0)12 667 2505
                       </a>
                     </div>
@@ -146,7 +154,11 @@ export function ScheduleConsultationPage() {
                 </ul>
 
                 <div className="flex flex-col sm:flex-row gap-3 sm:items-center pt-2 border-t border-gray-100">
-                  <Button asChild size="lg" className="bg-primary text-primary-foreground hover:bg-primary/90 w-full sm:w-auto">
+                  <Button
+                    asChild
+                    size="lg"
+                    className="bg-primary text-primary-foreground hover:bg-primary/90 w-full sm:w-auto"
+                  >
                     <Link to={contactHref}>Open full contact form</Link>
                   </Button>
                   <Button

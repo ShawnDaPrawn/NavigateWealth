@@ -22,23 +22,14 @@ import { useAutoSave } from '../hooks/useAutoSave';
 import type { AutoSaveStatus } from '../hooks/useAutoSave';
 import { useSummariseNote } from '../hooks/useSummariseNote';
 import { MarkdownPreview } from './MarkdownPreview';
-import {
-  Dialog,
-  DialogContent,
-  DialogTitle,
-} from '../../../../ui/dialog';
+import { Dialog, DialogContent, DialogTitle } from '../../../../ui/dialog';
 import { Button } from '../../../../ui/button';
 import { Input } from '../../../../ui/input';
 import { Textarea } from '../../../../ui/textarea';
 import { Label } from '../../../../ui/label';
 import { Badge } from '../../../../ui/badge';
 import { Separator } from '../../../../ui/separator';
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from '../../../../ui/tooltip';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '../../../../ui/tooltip';
 import {
   Select,
   SelectContent,
@@ -116,7 +107,10 @@ interface NoteEditorModalProps {
 function AutoSaveIndicator({ status }: { status: AutoSaveStatus }) {
   if (status === 'idle') return null;
 
-  const configs: Record<Exclude<AutoSaveStatus, 'idle'>, { icon: React.ReactNode; text: string; className: string }> = {
+  const configs: Record<
+    Exclude<AutoSaveStatus, 'idle'>,
+    { icon: React.ReactNode; text: string; className: string }
+  > = {
     saving: {
       icon: <Loader2 className="h-3 w-3 animate-spin" />,
       text: 'Saving...',
@@ -160,15 +154,34 @@ function MarkdownHelpTooltip() {
         <TooltipContent side="bottom" className="max-w-xs text-xs leading-relaxed p-3">
           <p className="font-semibold mb-1">Markdown shortcuts</p>
           <div className="space-y-0.5 text-gray-600">
-            <p><code className="bg-gray-100 px-1 rounded">**bold**</code> → <strong>bold</strong></p>
-            <p><code className="bg-gray-100 px-1 rounded">*italic*</code> → <em>italic</em></p>
-            <p><code className="bg-gray-100 px-1 rounded"># Heading</code> → heading</p>
-            <p><code className="bg-gray-100 px-1 rounded">- item</code> → bullet list</p>
-            <p><code className="bg-gray-100 px-1 rounded">1. item</code> → numbered list</p>
-            <p><code className="bg-gray-100 px-1 rounded">- [ ] task</code> → checklist</p>
-            <p><code className="bg-gray-100 px-1 rounded">`code`</code> → <code className="bg-gray-100 px-0.5 text-pink-600 rounded">code</code></p>
-            <p><code className="bg-gray-100 px-1 rounded">&gt; quote</code> → blockquote</p>
-            <p><code className="bg-gray-100 px-1 rounded">[text](url)</code> → link</p>
+            <p>
+              <code className="bg-gray-100 px-1 rounded">**bold**</code> → <strong>bold</strong>
+            </p>
+            <p>
+              <code className="bg-gray-100 px-1 rounded">*italic*</code> → <em>italic</em>
+            </p>
+            <p>
+              <code className="bg-gray-100 px-1 rounded"># Heading</code> → heading
+            </p>
+            <p>
+              <code className="bg-gray-100 px-1 rounded">- item</code> → bullet list
+            </p>
+            <p>
+              <code className="bg-gray-100 px-1 rounded">1. item</code> → numbered list
+            </p>
+            <p>
+              <code className="bg-gray-100 px-1 rounded">- [ ] task</code> → checklist
+            </p>
+            <p>
+              <code className="bg-gray-100 px-1 rounded">`code`</code> →{' '}
+              <code className="bg-gray-100 px-0.5 text-pink-600 rounded">code</code>
+            </p>
+            <p>
+              <code className="bg-gray-100 px-1 rounded">&gt; quote</code> → blockquote
+            </p>
+            <p>
+              <code className="bg-gray-100 px-1 rounded">[text](url)</code> → link
+            </p>
           </div>
         </TooltipContent>
       </Tooltip>
@@ -283,10 +296,32 @@ export function NoteEditorModal({
     setLocalSummary(null);
     // Also clear from server via auto-save
     if (isEditing && onAutoSave && note?.id) {
-      const tags = tagsInput.split(',').map((t) => t.trim()).filter((t) => t.length > 0);
-      autoSave.markDirty({ title: title.trim(), content, color, tags, clientId, clientName, summary: null });
+      const tags = tagsInput
+        .split(',')
+        .map((t) => t.trim())
+        .filter((t) => t.length > 0);
+      autoSave.markDirty({
+        title: title.trim(),
+        content,
+        color,
+        tags,
+        clientId,
+        clientName,
+        summary: null,
+      });
     }
-  }, [isEditing, onAutoSave, note?.id, title, content, color, tagsInput, clientId, clientName, autoSave]);
+  }, [
+    isEditing,
+    onAutoSave,
+    note?.id,
+    title,
+    content,
+    color,
+    tagsInput,
+    clientId,
+    clientName,
+    autoSave,
+  ]);
 
   // ── Explicit save ───────────────────────────────────────────────────────
   const handleSave = useCallback(async () => {
@@ -330,7 +365,21 @@ export function NoteEditorModal({
     } finally {
       setIsSaving(false);
     }
-  }, [title, content, color, tagsInput, clientId, clientName, note, isEditing, personnelId, personnelName, onSave, onClose, autoSave]);
+  }, [
+    title,
+    content,
+    color,
+    tagsInput,
+    clientId,
+    clientName,
+    note,
+    isEditing,
+    personnelId,
+    personnelName,
+    onSave,
+    onClose,
+    autoSave,
+  ]);
 
   // Keyboard shortcut: Ctrl/Cmd+S to save
   useEffect(() => {
@@ -365,15 +414,29 @@ export function NoteEditorModal({
     }
     // Debounce content auto-save
     if (isEditing && onAutoSave && title.trim()) {
-      const tags = tagsInput.split(',').map((t) => t.trim()).filter((t) => t.length > 0);
-      autoSave.markDirty({ title: title.trim(), content: val, color, tags, clientId, clientName, summary: null });
+      const tags = tagsInput
+        .split(',')
+        .map((t) => t.trim())
+        .filter((t) => t.length > 0);
+      autoSave.markDirty({
+        title: title.trim(),
+        content: val,
+        color,
+        tags,
+        clientId,
+        clientName,
+        summary: null,
+      });
     }
   };
 
   const handleColorChange = (c: NoteColor) => {
     setColor(c);
     if (isEditing && onAutoSave && title.trim()) {
-      const tags = tagsInput.split(',').map((t) => t.trim()).filter((t) => t.length > 0);
+      const tags = tagsInput
+        .split(',')
+        .map((t) => t.trim())
+        .filter((t) => t.length > 0);
       autoSave.markDirty({ title: title.trim(), content, color: c, tags, clientId, clientName });
     }
   };
@@ -418,14 +481,17 @@ export function NoteEditorModal({
   }, [content]);
 
   // ── Voice transcription insert handler ──────────────────────────────────
-  const handleTranscriptionInsert = useCallback((text: string) => {
-    // Append transcribed text to content, with spacing
-    const separator = content.trim() ? '\n\n' : '';
-    const newContent = content + separator + text;
-    handleContentChange(newContent);
-    // Switch to write mode so user can see the inserted text
-    setEditorMode('write');
-  }, [content, handleContentChange]);
+  const handleTranscriptionInsert = useCallback(
+    (text: string) => {
+      // Append transcribed text to content, with spacing
+      const separator = content.trim() ? '\n\n' : '';
+      const newContent = content + separator + text;
+      handleContentChange(newContent);
+      // Switch to write mode so user can see the inserted text
+      setEditorMode('write');
+    },
+    [content, handleContentChange],
+  );
 
   // Determine if summarise is available (need saved note + content)
   const canSummarise = isEditing && !!content.trim();
@@ -435,10 +501,19 @@ export function NoteEditorModal({
 
   return (
     <div className="contents">
-      <Dialog open={isOpen} onOpenChange={(open) => { if (!open) handleClose(); }}>
-        <DialogContent className={`max-w-3xl h-[85vh] p-0 gap-0 overflow-hidden flex flex-col ${colorCfg.bg}`}>
+      <Dialog
+        open={isOpen}
+        onOpenChange={(open) => {
+          if (!open) handleClose();
+        }}
+      >
+        <DialogContent
+          className={`max-w-3xl h-[85vh] p-0 gap-0 overflow-hidden flex flex-col ${colorCfg.bg}`}
+        >
           {/* ── Header ─────────────────────────────────────────────────── */}
-          <div className={`px-6 py-4 border-b flex items-center justify-between shrink-0 ${colorCfg.headerBg} ${colorCfg.border}`}>
+          <div
+            className={`px-6 py-4 border-b flex items-center justify-between shrink-0 ${colorCfg.headerBg} ${colorCfg.border}`}
+          >
             <div className="flex items-center gap-3">
               <DialogTitle className="text-lg font-bold text-gray-900">
                 {isEditing ? 'Edit Note' : 'New Note'}
@@ -454,7 +529,9 @@ export function NoteEditorModal({
                     type="button"
                     onClick={() => handleColorChange(c)}
                     className={`w-5 h-5 rounded-full border-2 transition-all ${NOTE_COLOR_CONFIG[c].dot} ${
-                      color === c ? 'border-gray-800 scale-125' : 'border-transparent hover:scale-110'
+                      color === c
+                        ? 'border-gray-800 scale-125'
+                        : 'border-transparent hover:scale-110'
                     }`}
                     title={getColourTooltipLabel(c, customColourLabels)}
                   />
@@ -542,7 +619,9 @@ export function NoteEditorModal({
                   ref={textareaRef}
                   value={content}
                   onChange={(e) => handleContentChange(e.target.value)}
-                  placeholder={'Write your note here...\n\nSupports **bold**, *italic*, # headings, - lists, - [ ] checklists, `code`, > quotes, and [links](url).'}
+                  placeholder={
+                    'Write your note here...\n\nSupports **bold**, *italic*, # headings, - lists, - [ ] checklists, `code`, > quotes, and [links](url).'
+                  }
                   className="min-h-[280px] resize-y text-sm leading-relaxed border border-gray-200 rounded-lg bg-white/60 p-4 focus-visible:ring-1 focus-visible:ring-purple-300 placeholder:text-gray-400"
                 />
               ) : (
@@ -556,7 +635,10 @@ export function NoteEditorModal({
                         AI Summary
                       </span>
                       {localSummary && (
-                        <Badge variant="secondary" className="text-[10px] px-1.5 py-0 bg-green-100 text-green-700 border-green-200">
+                        <Badge
+                          variant="secondary"
+                          className="text-[10px] px-1.5 py-0 bg-green-100 text-green-700 border-green-200"
+                        >
                           <CheckCircle2 className="h-3 w-3 mr-0.5" /> Generated
                         </Badge>
                       )}
@@ -632,8 +714,8 @@ export function NoteEditorModal({
                           <div className="flex items-start gap-2 text-[11px] text-gray-400">
                             <FileText className="h-3.5 w-3.5 shrink-0 mt-0.5" />
                             <p>
-                              This summary will be used when converting to a task.
-                              If you edit the note content, the summary will be cleared and can be regenerated.
+                              This summary will be used when converting to a task. If you edit the
+                              note content, the summary will be cleared and can be regenerated.
                             </p>
                           </div>
                         </div>
@@ -651,11 +733,9 @@ export function NoteEditorModal({
                     ) : (
                       <div className="flex flex-col items-center justify-center py-12 text-center">
                         <Sparkles className="h-8 w-8 text-purple-300 mb-3" />
-                        <p className="text-sm font-medium text-gray-700 mb-1">
-                          Ready to summarise
-                        </p>
+                        <p className="text-sm font-medium text-gray-700 mb-1">Ready to summarise</p>
                         <p className="text-xs text-gray-400 mb-4 max-w-sm">
-                          AI will organise your note into a structured summary with key points, 
+                          AI will organise your note into a structured summary with key points,
                           action items, and follow-ups — perfect for converting to tasks.
                         </p>
                         <Button
@@ -697,12 +777,11 @@ export function NoteEditorModal({
               <div className="flex items-start gap-3">
                 <User className="h-4 w-4 text-gray-400 mt-2.5 shrink-0" />
                 <div className="flex-1">
-                  <Label className="text-xs font-medium text-gray-500 uppercase">Link to Client</Label>
+                  <Label className="text-xs font-medium text-gray-500 uppercase">
+                    Link to Client
+                  </Label>
                   {clients.length > 0 ? (
-                    <Select
-                      value={clientId || '__none__'}
-                      onValueChange={handleClientChange}
-                    >
+                    <Select value={clientId || '__none__'} onValueChange={handleClientChange}>
                       <SelectTrigger className="h-9 text-sm mt-1">
                         <SelectValue placeholder="No client linked" />
                       </SelectTrigger>
@@ -729,7 +808,8 @@ export function NoteEditorModal({
                     </div>
                   ) : (
                     <p className="text-xs text-gray-400 mt-1">
-                      No clients available for linking. You can create notes from the client management screen to auto-link.
+                      No clients available for linking. You can create notes from the client
+                      management screen to auto-link.
                     </p>
                   )}
                 </div>
@@ -765,7 +845,9 @@ export function NoteEditorModal({
           </div>
 
           {/* ── Footer ─────────────────────────────────────────────────── */}
-          <div className={`px-6 py-4 border-t flex items-center justify-between shrink-0 ${colorCfg.border}`}>
+          <div
+            className={`px-6 py-4 border-t flex items-center justify-between shrink-0 ${colorCfg.border}`}
+          >
             <div className="flex items-center gap-2">
               {isEditing && onDelete && (
                 <Button
@@ -792,9 +874,7 @@ export function NoteEditorModal({
                         }}
                       >
                         <ListTodo className="h-4 w-4 mr-1" /> Convert to Task
-                        {localSummary && (
-                          <Sparkles className="h-3 w-3 ml-1 text-purple-500" />
-                        )}
+                        {localSummary && <Sparkles className="h-3 w-3 ml-1 text-purple-500" />}
                       </Button>
                     </TooltipTrigger>
                     <TooltipContent side="top" className="text-xs max-w-xs">

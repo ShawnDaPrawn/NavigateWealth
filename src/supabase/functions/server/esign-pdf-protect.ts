@@ -83,7 +83,11 @@ export interface SignPdfOptions {
  * Subject identifies Navigate Wealth as the signing platform.
  * Extensions limit usage to digital signing and non-repudiation.
  */
-function generateP12(passphrase: string): { p12Buffer: Buffer; expiresAt: Date; serialNumber: string } {
+function generateP12(passphrase: string): {
+  p12Buffer: Buffer;
+  expiresAt: Date;
+  serialNumber: string;
+} {
   log.info('Generating 2048-bit RSA key pair for platform signing certificate...');
   const keys = forge.pki.rsa.generateKeyPair(2048);
 
@@ -152,10 +156,12 @@ function generateP12(passphrase: string): { p12Buffer: Buffer; expiresAt: Date; 
  */
 async function getOrCreatePlatformP12(): Promise<{ p12Buffer: Buffer; passphrase: string }> {
   try {
-    const cached = await kv.get(PLATFORM_CERT_KV_KEY) as CachedPlatformCert | null;
+    const cached = (await kv.get(PLATFORM_CERT_KV_KEY)) as CachedPlatformCert | null;
 
     if (cached && new Date(cached.expiresAt) > new Date()) {
-      log.info(`Using cached platform certificate (serial: ${cached.serialNumber}, expires: ${cached.expiresAt})`);
+      log.info(
+        `Using cached platform certificate (serial: ${cached.serialNumber}, expires: ${cached.expiresAt})`,
+      );
       return {
         p12Buffer: Buffer.from(cached.p12Base64, 'base64'),
         passphrase: cached.passphrase,
@@ -181,7 +187,9 @@ async function getOrCreatePlatformP12(): Promise<{ p12Buffer: Buffer; passphrase
     };
     await kv.set(PLATFORM_CERT_KV_KEY, certData);
 
-    log.success(`Platform signing certificate generated (serial: ${serialNumber}, expires: ${expiresAt.toISOString()})`);
+    log.success(
+      `Platform signing certificate generated (serial: ${serialNumber}, expires: ${expiresAt.toISOString()})`,
+    );
     return { p12Buffer, passphrase };
   } catch (err) {
     log.error('Failed to get/create platform certificate:', err);

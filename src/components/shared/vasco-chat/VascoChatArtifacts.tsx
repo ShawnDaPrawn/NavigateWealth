@@ -38,7 +38,9 @@ function MetricCard({ metric }: { metric: VascoArtifactMetric }) {
 
   return (
     <div className={`rounded-xl border px-4 py-3 ${toneClass}`}>
-      <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-current/70">{metric.label}</p>
+      <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-current/70">
+        {metric.label}
+      </p>
       <p className="mt-1 text-lg font-semibold text-current">{metric.value}</p>
       {metric.helper && <p className="mt-1 text-xs text-current/70">{metric.helper}</p>}
     </div>
@@ -47,7 +49,9 @@ function MetricCard({ metric }: { metric: VascoArtifactMetric }) {
 
 function ArtifactTitle({ title }: { title?: string }) {
   if (!title) return null;
-  return <p className="mb-3 text-xs font-semibold uppercase tracking-[0.16em] text-gray-500">{title}</p>;
+  return (
+    <p className="mb-3 text-xs font-semibold uppercase tracking-[0.16em] text-gray-500">{title}</p>
+  );
 }
 
 function ArtifactTable({ artifact }: { artifact: VascoTableArtifact }) {
@@ -132,7 +136,10 @@ export function VascoChatArtifacts({ artifacts }: { artifacts?: VascoChatArtifac
       {artifacts.map((artifact, index) => {
         if (artifact.type === 'metric_cards') {
           return (
-            <div key={`metric-cards-${index}`} className="rounded-2xl border border-gray-200 bg-white p-4 shadow-sm">
+            <div
+              key={`metric-cards-${index}`}
+              className="rounded-2xl border border-gray-200 bg-white p-4 shadow-sm"
+            >
               <ArtifactTitle title={artifact.title} />
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
                 {artifact.metrics.map((metric, metricIndex) => (
@@ -145,7 +152,10 @@ export function VascoChatArtifacts({ artifacts }: { artifacts?: VascoChatArtifac
 
         if (artifact.type === 'assumptions') {
           return (
-            <div key={`assumptions-${index}`} className="rounded-2xl border border-gray-200 bg-white p-4 shadow-sm">
+            <div
+              key={`assumptions-${index}`}
+              className="rounded-2xl border border-gray-200 bg-white p-4 shadow-sm"
+            >
               <ArtifactTitle title={artifact.title || 'Projection Assumptions'} />
               <div className="space-y-2">
                 {artifact.items.map((item, itemIndex) => (
@@ -174,7 +184,10 @@ export function VascoChatArtifacts({ artifacts }: { artifacts?: VascoChatArtifac
                 : 'border-gray-200 bg-gray-50 text-gray-900';
 
           return (
-            <div key={`projection-note-${index}`} className={`rounded-2xl border p-4 shadow-sm ${toneClass}`}>
+            <div
+              key={`projection-note-${index}`}
+              className={`rounded-2xl border p-4 shadow-sm ${toneClass}`}
+            >
               <ArtifactTitle title={artifact.title || 'Projection Note'} />
               <p className="text-sm leading-relaxed">{artifact.body}</p>
             </div>

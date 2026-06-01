@@ -28,7 +28,13 @@ interface UseTypesReturn {
 export function useTypes(options?: UseTypesOptions): UseTypesReturn {
   const { activeOnly = false, autoSort = true } = options || {};
 
-  const { data: rawTypes = [], isLoading, isFetching, error, refetch: queryRefetch } = useQuery({
+  const {
+    data: rawTypes = [],
+    isLoading,
+    isFetching,
+    error,
+    refetch: queryRefetch,
+  } = useQuery({
     queryKey: publicationKeys.types(),
     queryFn: () => PublicationsAPI.Types.getTypes(),
     staleTime: 5 * 60 * 1000,
@@ -37,7 +43,7 @@ export function useTypes(options?: UseTypesOptions): UseTypesReturn {
   const types = useMemo(() => {
     let result = [...rawTypes];
     if (activeOnly) {
-      result = result.filter(type => type.is_active);
+      result = result.filter((type) => type.is_active);
     }
     if (autoSort) {
       result = result.sort((a, b) => a.sort_order - b.sort_order);

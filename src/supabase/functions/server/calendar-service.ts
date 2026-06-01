@@ -1,11 +1,11 @@
 /**
  * Calendar Module - Service Layer
- * 
+ *
  * Uses SHARED domain logic for validation and filtering.
  * Responsible only for Data Access (KV) and Logging.
  */
 
-import { createClient } from "jsr:@supabase/supabase-js@2.49.8";
+import { createClient } from 'jsr:@supabase/supabase-js@2.49.8';
 import { createModuleLogger } from './stderr-logger.ts';
 import { ValidationError, NotFoundError } from './error.middleware.ts';
 import type {
@@ -20,11 +20,11 @@ import type {
 } from './calendar-types.ts';
 
 // Shared Logic Imports
-import { 
-  CreateEventSchema, 
-  UpdateEventSchema, 
-  CreateReminderSchema, 
-  UpdateReminderSchema 
+import {
+  CreateEventSchema,
+  UpdateEventSchema,
+  CreateReminderSchema,
+  UpdateReminderSchema,
 } from './shared-calendar-validation.ts';
 
 const log = createModuleLogger('calendar-service');
@@ -33,31 +33,27 @@ const log = createModuleLogger('calendar-service');
  * Create Supabase client with Service Role Key for backend operations
  * This bypasses RLS, so we must manually enforce user ownership where applicable
  * OR better: use the user's JWT if available, but here we are in service layer.
- * 
+ *
  * Ideally, we should receive the Supabase client (scoped to user) from the controller,
  * but for now let's use the Service Role and filter by user_id manually.
  */
 function createServiceClient() {
-  return createClient(
-    Deno.env.get('SUPABASE_URL')!,
-    Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
-  );
+  return createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!);
 }
 
 export class CalendarService {
-  
   private supabase = createServiceClient();
 
   // ========================================================================
   // EVENTS
   // ========================================================================
-  
+
   /**
    * Get all events for user
    */
   async getEvents(userId: string, filters?: Partial<EventFilters>): Promise<CalendarEvent[]> {
     log.info('Getting events', { userId, filters });
-    
+
     let query = this.supabase
       .from('events')
       .select('*, client:clients(*)')
@@ -67,7 +63,7 @@ export class CalendarService {
     if (filters?.start) {
       query = query.gte('start_at', filters.start.toISOString());
     }
-    
+
     if (filters?.end) {
       query = query.lte('start_at', filters.end.toISOString());
     }
@@ -87,17 +83,17 @@ export class CalendarService {
     if (filters?.clientId) {
       query = query.eq('client_id', filters.clientId);
     }
-    
+
     const { data, error } = await query;
-    
+
     if (error) {
       log.error('Error fetching events', error);
       throw error;
     }
-    
+
     return data || [];
   }
-  
+
   /**
    * Get event by ID
    */
@@ -108,29 +104,29 @@ export class CalendarService {
       .eq('id', eventId)
       .eq('created_by', userId)
       .single();
-      
+
     if (error || !data) {
       throw new NotFoundError('Event not found');
     }
-    
+
     return data;
   }
-  
+
   /**
    * Create a new event
    */
   async createEvent(userId: string, data: EventCreate): Promise<CalendarEvent> {
     log.info('Creating event', { userId });
-    
+
     // Use Shared Validation
     const validation = CreateEventSchema.safeParse(data);
     if (!validation.success) {
       throw new ValidationError(validation.error.message);
     }
-    
+
     // Validated data with defaults applied
     const validData = validation.data;
-    
+
     const { data: event, error } = await this.supabase
       .from('events')
       .insert({
@@ -156,32 +152,32 @@ export class CalendarService {
       log.error('Error creating event', error);
       throw error;
     }
-    
+
     log.success('Event created', { userId, eventId: event.id });
     return event;
   }
-  
+
   /**
    * Update an event
    */
   async updateEvent(userId: string, eventId: string, updates: EventUpdate): Promise<CalendarEvent> {
     // Verify existence and ownership
     await this.getEventById(userId, eventId);
-    
+
     // Use Shared Validation
     const validation = UpdateEventSchema.safeParse(updates);
     if (!validation.success) {
       throw new ValidationError(validation.error.message);
     }
-    
+
     const validUpdates = validation.data;
     const updatePayload: Record<string, unknown> = { ...validUpdates };
-    
+
     // Recalculate attendee count if needed
     if (validUpdates.attendees) {
       updatePayload.attendee_count = Object.keys(validUpdates.attendees).length;
     }
-    
+
     const { data: event, error } = await this.supabase
       .from('events')
       .update(updatePayload)
@@ -189,40 +185,40 @@ export class CalendarService {
       .eq('created_by', userId)
       .select('*, client:clients(*)')
       .single();
-      
+
     if (error) {
       log.error('Error updating event', error);
       throw error;
     }
-    
+
     log.success('Event updated', { userId, eventId });
     return event;
   }
-  
+
   /**
    * Delete an event
    */
   async deleteEvent(userId: string, eventId: string): Promise<void> {
     await this.getEventById(userId, eventId); // Verify exists and ownership
-    
+
     const { error } = await this.supabase
       .from('events')
       .delete()
       .eq('id', eventId)
       .eq('created_by', userId);
-      
+
     if (error) {
       log.error('Error deleting event', error);
       throw error;
     }
-    
+
     log.success('Event deleted', { userId, eventId });
   }
 
   // ========================================================================
   // REMINDERS
   // ========================================================================
-  
+
   /**
    * Get all reminders for user
    */
@@ -238,24 +234,24 @@ export class CalendarService {
     if (filters?.status) {
       query = query.eq('status', filters.status);
     }
-    
+
     // Add date range filters for reminders if needed
-    
+
     const { data, error } = await query;
-    
+
     if (error) {
       // Handle missing table gracefully
       if (error.code === '42P01') {
-         log.warn('Reminders table does not exist');
-         return [];
+        log.warn('Reminders table does not exist');
+        return [];
       }
       log.error('Error fetching reminders', error);
       throw error;
     }
-    
+
     return data || [];
   }
-  
+
   /**
    * Get reminder by ID
    */
@@ -317,7 +313,11 @@ export class CalendarService {
   /**
    * Update a reminder
    */
-  async updateReminder(userId: string, reminderId: string, updates: ReminderUpdate): Promise<Reminder> {
+  async updateReminder(
+    userId: string,
+    reminderId: string,
+    updates: ReminderUpdate,
+  ): Promise<Reminder> {
     await this.getReminderById(userId, reminderId);
 
     const validation = UpdateReminderSchema.safeParse(updates);

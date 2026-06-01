@@ -19,23 +19,11 @@ import {
   DialogDescription,
 } from '../../../../ui/dialog';
 import { Button } from '../../../../ui/button';
-import {
-  Tabs,
-  TabsContent,
-  TabsList,
-  TabsTrigger,
-} from '../../../../ui/tabs';
-import {
-  Card,
-  CardContent,
-} from '../../../../ui/card';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../../../ui/tabs';
+import { Card, CardContent } from '../../../../ui/card';
 import { Badge } from '../../../../ui/badge';
 import { Skeleton } from '../../../../ui/skeleton';
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from '../../../../ui/tooltip';
+import { Tooltip, TooltipContent, TooltipTrigger } from '../../../../ui/tooltip';
 import {
   Download,
   Send,
@@ -120,22 +108,97 @@ interface AuditEventStyle {
 }
 
 const AUDIT_EVENT_CONFIG: Record<string, AuditEventStyle> = {
-  envelope_created: { label: 'Envelope Created', icon: FilePlus, color: 'text-blue-600', bgColor: 'bg-blue-50' },
-  envelope_sent: { label: 'Envelope Sent', icon: Send, color: 'text-purple-600', bgColor: 'bg-purple-50' },
-  envelope_completed: { label: 'Envelope Completed', icon: CheckCircle2, color: 'text-green-600', bgColor: 'bg-green-50' },
-  envelope_voided: { label: 'Envelope Voided', icon: Ban, color: 'text-red-600', bgColor: 'bg-red-50' },
-  envelope_expired: { label: 'Envelope Expired', icon: AlertCircle, color: 'text-orange-600', bgColor: 'bg-orange-50' },
-  signer_invited: { label: 'Signer Invited', icon: UserPlus, color: 'text-blue-600', bgColor: 'bg-blue-50' },
-  signer_viewed: { label: 'Document Viewed', icon: Eye, color: 'text-cyan-600', bgColor: 'bg-cyan-50' },
-  signer_signed: { label: 'Document Signed', icon: PenTool, color: 'text-green-600', bgColor: 'bg-green-50' },
-  signer_rejected: { label: 'Signing Rejected', icon: XCircle, color: 'text-red-600', bgColor: 'bg-red-50' },
-  signer_declined: { label: 'Signing Declined', icon: XCircle, color: 'text-red-600', bgColor: 'bg-red-50' },
+  envelope_created: {
+    label: 'Envelope Created',
+    icon: FilePlus,
+    color: 'text-blue-600',
+    bgColor: 'bg-blue-50',
+  },
+  envelope_sent: {
+    label: 'Envelope Sent',
+    icon: Send,
+    color: 'text-purple-600',
+    bgColor: 'bg-purple-50',
+  },
+  envelope_completed: {
+    label: 'Envelope Completed',
+    icon: CheckCircle2,
+    color: 'text-green-600',
+    bgColor: 'bg-green-50',
+  },
+  envelope_voided: {
+    label: 'Envelope Voided',
+    icon: Ban,
+    color: 'text-red-600',
+    bgColor: 'bg-red-50',
+  },
+  envelope_expired: {
+    label: 'Envelope Expired',
+    icon: AlertCircle,
+    color: 'text-orange-600',
+    bgColor: 'bg-orange-50',
+  },
+  signer_invited: {
+    label: 'Signer Invited',
+    icon: UserPlus,
+    color: 'text-blue-600',
+    bgColor: 'bg-blue-50',
+  },
+  signer_viewed: {
+    label: 'Document Viewed',
+    icon: Eye,
+    color: 'text-cyan-600',
+    bgColor: 'bg-cyan-50',
+  },
+  signer_signed: {
+    label: 'Document Signed',
+    icon: PenTool,
+    color: 'text-green-600',
+    bgColor: 'bg-green-50',
+  },
+  signer_rejected: {
+    label: 'Signing Rejected',
+    icon: XCircle,
+    color: 'text-red-600',
+    bgColor: 'bg-red-50',
+  },
+  signer_declined: {
+    label: 'Signing Declined',
+    icon: XCircle,
+    color: 'text-red-600',
+    bgColor: 'bg-red-50',
+  },
   otp_sent: { label: 'OTP Sent', icon: Shield, color: 'text-amber-600', bgColor: 'bg-amber-50' },
-  otp_verified: { label: 'OTP Verified', icon: ShieldCheck, color: 'text-green-600', bgColor: 'bg-green-50' },
-  reminder_sent: { label: 'Reminder Sent', icon: Bell, color: 'text-amber-600', bgColor: 'bg-amber-50' },
-  document_uploaded: { label: 'Document Uploaded', icon: FileText, color: 'text-blue-600', bgColor: 'bg-blue-50' },
-  fields_updated: { label: 'Fields Updated', icon: PenTool, color: 'text-gray-600', bgColor: 'bg-gray-50' },
-  certificate_generated: { label: 'Certificate Generated', icon: FileText, color: 'text-green-600', bgColor: 'bg-green-50' },
+  otp_verified: {
+    label: 'OTP Verified',
+    icon: ShieldCheck,
+    color: 'text-green-600',
+    bgColor: 'bg-green-50',
+  },
+  reminder_sent: {
+    label: 'Reminder Sent',
+    icon: Bell,
+    color: 'text-amber-600',
+    bgColor: 'bg-amber-50',
+  },
+  document_uploaded: {
+    label: 'Document Uploaded',
+    icon: FileText,
+    color: 'text-blue-600',
+    bgColor: 'bg-blue-50',
+  },
+  fields_updated: {
+    label: 'Fields Updated',
+    icon: PenTool,
+    color: 'text-gray-600',
+    bgColor: 'bg-gray-50',
+  },
+  certificate_generated: {
+    label: 'Certificate Generated',
+    icon: FileText,
+    color: 'text-green-600',
+    bgColor: 'bg-green-50',
+  },
 };
 
 const DEFAULT_EVENT_STYLE: AuditEventStyle = {
@@ -151,9 +214,7 @@ function getEventStyle(action: string): AuditEventStyle {
 
 /** Convert snake_case action to Title Case label */
 function formatActionLabel(action: string): string {
-  return action
-    .replace(/_/g, ' ')
-    .replace(/\b\w/g, c => c.toUpperCase());
+  return action.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
 }
 
 // ==================== PROPS ====================
@@ -430,20 +491,21 @@ export function EnvelopeDetailsDialog({
                     icon={Calendar}
                     label="Expires"
                     value={
-                      envelope.expires_at
-                        ? formatDateTime(envelope.expires_at)
-                        : 'No expiry set'
+                      envelope.expires_at ? formatDateTime(envelope.expires_at) : 'No expiry set'
                     }
                     valueClassName={
-                      isExpired ? 'text-red-600 font-medium' :
-                      isExpiringSoon ? 'text-amber-600 font-medium' : undefined
+                      isExpired
+                        ? 'text-red-600 font-medium'
+                        : isExpiringSoon
+                          ? 'text-amber-600 font-medium'
+                          : undefined
                     }
                     suffix={
                       daysUntilExpiry !== null && daysUntilExpiry > 0
                         ? `(${daysUntilExpiry} days)`
                         : daysUntilExpiry !== null && daysUntilExpiry < 0
-                        ? '(Expired)'
-                        : undefined
+                          ? '(Expired)'
+                          : undefined
                     }
                   />
                   <DetailItem
@@ -564,7 +626,12 @@ export function EnvelopeDetailsDialog({
                             </TooltipContent>
                           </Tooltip>
                         )}
-                        <StatusBadge status={signer.status} type="signer" showIcon={true} size="sm" />
+                        <StatusBadge
+                          status={signer.status}
+                          type="signer"
+                          showIcon={true}
+                          size="sm"
+                        />
                       </div>
                     </div>
                   ))
@@ -709,7 +776,9 @@ function ActivityTimeline({ events, loading, error, onRetry }: ActivityTimelineP
               {/* Content */}
               <div className="flex-1 min-w-0 pt-0.5">
                 <div className="flex items-center justify-between gap-2">
-                  <span className={`text-sm font-medium ${isFirst ? 'text-foreground' : 'text-foreground/80'}`}>
+                  <span
+                    className={`text-sm font-medium ${isFirst ? 'text-foreground' : 'text-foreground/80'}`}
+                  >
                     {style.label}
                   </span>
                   <Tooltip>
@@ -718,9 +787,7 @@ function ActivityTimeline({ events, loading, error, onRetry }: ActivityTimelineP
                         {formatRelative(timestamp)}
                       </span>
                     </TooltipTrigger>
-                    <TooltipContent side="left">
-                      {formatDateTime(timestamp)}
-                    </TooltipContent>
+                    <TooltipContent side="left">{formatDateTime(timestamp)}</TooltipContent>
                   </Tooltip>
                 </div>
 

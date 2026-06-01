@@ -7,7 +7,10 @@ import { Button } from '../ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card';
 import { Separator } from '../ui/separator';
 import { projectId, publicAnonKey } from '../../utils/supabase/info';
-import { LEGAL_DOCUMENTS_BY_SLUG, LEGAL_SECTION_LABELS } from '../../shared/legal-documents-registry';
+import {
+  LEGAL_DOCUMENTS_BY_SLUG,
+  LEGAL_SECTION_LABELS,
+} from '../../shared/legal-documents-registry';
 import { LegalDocumentPdfDialog } from '../shared/LegalDocumentPdf';
 import {
   LEGAL_DOCUMENT_CONTENT_CLASS,
@@ -80,68 +83,78 @@ function escapeHtml(value: string): string {
 }
 
 function blocksToHtml(blocks: LegalBlock[]): string {
-  return blocks.map((block) => {
-    switch (block.type) {
-      case 'section_header': {
-        const title = block.data?.title || '';
-        const number = block.data?.number ? `${block.data.number} ` : '';
-        const heading = `${number}${title}`.trim();
-        const id = heading
-          .toLowerCase()
-          .replace(/[^a-z0-9\s-]/g, '')
-          .trim()
-          .replace(/\s+/g, '-')
-          || `section-${Math.random().toString(36).slice(2, 8)}`;
+  return blocks
+    .map((block) => {
+      switch (block.type) {
+        case 'section_header': {
+          const title = block.data?.title || '';
+          const number = block.data?.number ? `${block.data.number} ` : '';
+          const heading = `${number}${title}`.trim();
+          const id =
+            heading
+              .toLowerCase()
+              .replace(/[^a-z0-9\s-]/g, '')
+              .trim()
+              .replace(/\s+/g, '-') || `section-${Math.random().toString(36).slice(2, 8)}`;
 
-        return `<section class="legal-section"><h2 id="${escapeHtml(id)}">${escapeHtml(heading)}</h2></section>`;
-      }
-      case 'text':
-        return block.data?.content || '';
-      case 'table': {
-        const hasRowHeaders = Boolean(block.data?.hasRowHeaders);
-        const headerCells = (block.data?.columnHeaders || [])
-          .map((header) => `<th>${escapeHtml(header)}</th>`)
-          .join('');
-        const headerRow = block.data?.hasColumnHeaders
-          ? `<thead><tr>${hasRowHeaders ? '<th></th>' : ''}${headerCells}</tr></thead>`
-          : '';
-
-        const bodyRows = (block.data?.rows || []).map((row, rowIndex) => {
-          const rowHeader = hasRowHeaders
-            ? `<th>${escapeHtml((block.data?.rowHeaders || [])[rowIndex] || '')}</th>`
+          return `<section class="legal-section"><h2 id="${escapeHtml(id)}">${escapeHtml(heading)}</h2></section>`;
+        }
+        case 'text':
+          return block.data?.content || '';
+        case 'table': {
+          const hasRowHeaders = Boolean(block.data?.hasRowHeaders);
+          const headerCells = (block.data?.columnHeaders || [])
+            .map((header) => `<th>${escapeHtml(header)}</th>`)
+            .join('');
+          const headerRow = block.data?.hasColumnHeaders
+            ? `<thead><tr>${hasRowHeaders ? '<th></th>' : ''}${headerCells}</tr></thead>`
             : '';
-          const cells = (row.cells || []).map((cell) => `<td>${escapeHtml(cell.value || '')}</td>`).join('');
-          return `<tr>${rowHeader}${cells}</tr>`;
-        }).join('');
 
-        return `<div class="legal-table-wrap"><table>${headerRow}<tbody>${bodyRows}</tbody></table></div>`;
-      }
-      case 'signature': {
-        const signatories = (block.data?.signatories || []).map((signatory) => (
-          `<div class="legal-signature-line"><div class="line"></div><span>${escapeHtml(signatory.label || 'Signature')}</span></div>`
-        )).join('');
+          const bodyRows = (block.data?.rows || [])
+            .map((row, rowIndex) => {
+              const rowHeader = hasRowHeaders
+                ? `<th>${escapeHtml((block.data?.rowHeaders || [])[rowIndex] || '')}</th>`
+                : '';
+              const cells = (row.cells || [])
+                .map((cell) => `<td>${escapeHtml(cell.value || '')}</td>`)
+                .join('');
+              return `<tr>${rowHeader}${cells}</tr>`;
+            })
+            .join('');
 
-        return `<div class="legal-signatures">${signatories}</div>`;
+          return `<div class="legal-table-wrap"><table>${headerRow}<tbody>${bodyRows}</tbody></table></div>`;
+        }
+        case 'signature': {
+          const signatories = (block.data?.signatories || [])
+            .map(
+              (signatory) =>
+                `<div class="legal-signature-line"><div class="line"></div><span>${escapeHtml(signatory.label || 'Signature')}</span></div>`,
+            )
+            .join('');
+
+          return `<div class="legal-signatures">${signatories}</div>`;
+        }
+        case 'page_break':
+          return '<div class="legal-page-break"></div>';
+        default:
+          return '';
       }
-      case 'page_break':
-        return '<div class="legal-page-break"></div>';
-      default:
-        return '';
-    }
-  }).join('');
+    })
+    .join('');
 }
 
 function deriveTocFromBlocks(blocks: LegalBlock[]) {
   return blocks
     .filter((block) => block.type === 'section_header')
     .map((block, index) => {
-      const title = `${block.data?.number ? `${block.data.number} ` : ''}${block.data?.title || `Section ${index + 1}`}`.trim();
-      const id = title
-        .toLowerCase()
-        .replace(/[^a-z0-9\s-]/g, '')
-        .trim()
-        .replace(/\s+/g, '-')
-        || `section-${index + 1}`;
+      const title =
+        `${block.data?.number ? `${block.data.number} ` : ''}${block.data?.title || `Section ${index + 1}`}`.trim();
+      const id =
+        title
+          .toLowerCase()
+          .replace(/[^a-z0-9\s-]/g, '')
+          .trim()
+          .replace(/\s+/g, '-') || `section-${index + 1}`;
 
       return { id, title, level: 2 };
     });
@@ -149,7 +162,9 @@ function deriveTocFromBlocks(blocks: LegalBlock[]) {
 
 export function LegalDocumentPage() {
   const { slug } = useParams<{ slug: string }>();
-  const [documentResponse, setDocumentResponse] = useState<PublicLegalDocumentResponse | null>(null);
+  const [documentResponse, setDocumentResponse] = useState<PublicLegalDocumentResponse | null>(
+    null,
+  );
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [pdfPreviewOpen, setPdfPreviewOpen] = useState(false);
@@ -176,7 +191,7 @@ export function LegalDocumentPage() {
           throw new Error(`Failed to fetch document (${res.status})`);
         }
 
-        const data = await res.json() as PublicLegalDocumentResponse;
+        const data = (await res.json()) as PublicLegalDocumentResponse;
         if (!active) return;
 
         if (!data.available || !data.document) {
@@ -187,7 +202,9 @@ export function LegalDocumentPage() {
         }
       } catch (fetchError) {
         if (!active) return;
-        setError(fetchError instanceof Error ? fetchError.message : 'Unable to load legal document');
+        setError(
+          fetchError instanceof Error ? fetchError.message : 'Unable to load legal document',
+        );
       } finally {
         if (active) {
           setLoading(false);
@@ -203,21 +220,19 @@ export function LegalDocumentPage() {
 
   const legalDocument = documentResponse?.document || null;
   const registryEntry = slug ? LEGAL_DOCUMENTS_BY_SLUG[slug] : null;
-  const sectionLabel = legalDocument?.section && legalDocument.section in LEGAL_SECTION_LABELS
-    ? LEGAL_SECTION_LABELS[legalDocument.section as keyof typeof LEGAL_SECTION_LABELS]
-    : registryEntry?.section
-      ? LEGAL_SECTION_LABELS[registryEntry.section]
-      : 'Legal Document';
+  const sectionLabel =
+    legalDocument?.section && legalDocument.section in LEGAL_SECTION_LABELS
+      ? LEGAL_SECTION_LABELS[legalDocument.section as keyof typeof LEGAL_SECTION_LABELS]
+      : registryEntry?.section
+        ? LEGAL_SECTION_LABELS[registryEntry.section]
+        : 'Legal Document';
 
   const articleHtml = useMemo(() => {
     if (!legalDocument) return '<p></p>';
     return legalDocument.contentHtml || blocksToHtml(legalDocument.blocks || []);
   }, [legalDocument]);
 
-  const sanitizedArticleHtml = useMemo(
-    () => sanitizeLegalDocumentHtml(articleHtml),
-    [articleHtml],
-  );
+  const sanitizedArticleHtml = useMemo(() => sanitizeLegalDocumentHtml(articleHtml), [articleHtml]);
 
   const normalizedDocumentContent = useMemo(() => {
     if (!legalDocument) {
@@ -257,25 +272,32 @@ export function LegalDocumentPage() {
     setPdfPreviewOpen(true);
   }, [legalDocument]);
 
-  const handleTocNavigate = useCallback((event: React.MouseEvent<HTMLAnchorElement>, id: string) => {
-    event.preventDefault();
+  const handleTocNavigate = useCallback(
+    (event: React.MouseEvent<HTMLAnchorElement>, id: string) => {
+      event.preventDefault();
 
-    if (typeof window === 'undefined') return;
+      if (typeof window === 'undefined') return;
 
-    const target = window.document.getElementById(id);
-    if (!target) return;
+      const target = window.document.getElementById(id);
+      if (!target) return;
 
-    const offset = 180;
-    const top = target.getBoundingClientRect().top + window.scrollY - offset;
-    window.history.replaceState(null, '', `#${id}`);
-    window.scrollTo({
-      top: Math.max(top, 0),
-      behavior: 'smooth',
-    });
-  }, []);
+      const offset = 180;
+      const top = target.getBoundingClientRect().top + window.scrollY - offset;
+      window.history.replaceState(null, '', `#${id}`);
+      window.scrollTo({
+        top: Math.max(top, 0),
+        behavior: 'smooth',
+      });
+    },
+    [],
+  );
 
-  const seoTitle = legalDocument ? `${legalDocument.title} | Navigate Wealth Legal` : 'Legal Document | Navigate Wealth';
-  const seoDescription = legalDocument?.description || `Read the ${registryEntry?.name || 'legal document'} from Navigate Wealth.`;
+  const seoTitle = legalDocument
+    ? `${legalDocument.title} | Navigate Wealth Legal`
+    : 'Legal Document | Navigate Wealth';
+  const seoDescription =
+    legalDocument?.description ||
+    `Read the ${registryEntry?.name || 'legal document'} from Navigate Wealth.`;
 
   if (loading) {
     return (
@@ -293,12 +315,18 @@ export function LegalDocumentPage() {
   if (!legalDocument || error) {
     return (
       <div className="min-h-screen bg-stone-50">
-        <SEO title={seoTitle} description={seoDescription} canonicalUrl={siteAbsoluteUrl(`/legal/${slug || ''}`)} />
+        <SEO
+          title={seoTitle}
+          description={seoDescription}
+          canonicalUrl={siteAbsoluteUrl(`/legal/${slug || ''}`)}
+        />
         <div className="mx-auto max-w-4xl px-4 py-20 sm:px-6 lg:px-8">
           <Card className="border-stone-200 bg-white shadow-sm">
             <CardHeader>
               <CardTitle className="text-2xl text-stone-900">Legal document unavailable</CardTitle>
-              <CardDescription>{error || 'This document could not be loaded right now.'}</CardDescription>
+              <CardDescription>
+                {error || 'This document could not be loaded right now.'}
+              </CardDescription>
             </CardHeader>
             <CardContent>
               <Button asChild variant="outline">
@@ -320,20 +348,24 @@ export function LegalDocumentPage() {
         title={seoTitle}
         description={seoDescription}
         canonicalUrl={siteAbsoluteUrl(`/legal/${slug}`)}
-        structuredData={createWebPageSchema(seoTitle, seoDescription, siteAbsoluteUrl(`/legal/${slug}`))}
+        structuredData={createWebPageSchema(
+          seoTitle,
+          seoDescription,
+          siteAbsoluteUrl(`/legal/${slug}`),
+        )}
       />
 
       <div className="mx-auto max-w-screen-2xl px-4 py-12 sm:px-6 lg:px-8">
         <div className="mb-8 flex flex-wrap items-center gap-3">
           <Button asChild variant="outline" className="border-stone-300 bg-white/90">
-            <Link to={`/legal?section=${legalDocument.section || registryEntry?.section || 'legal-notices'}`}>
+            <Link
+              to={`/legal?section=${legalDocument.section || registryEntry?.section || 'legal-notices'}`}
+            >
               <ArrowLeft className="mr-2 h-4 w-4" />
               Back to legal hub
             </Link>
           </Button>
-          <Badge className="bg-sky-100 text-sky-800 hover:bg-sky-100">
-            {sectionLabel}
-          </Badge>
+          <Badge className="bg-sky-100 text-sky-800 hover:bg-sky-100">{sectionLabel}</Badge>
         </div>
 
         <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_320px]">
@@ -366,17 +398,29 @@ export function LegalDocumentPage() {
 
                   <div className="mt-6 grid gap-3 sm:grid-cols-3">
                     <div className="rounded-2xl border border-white/70 bg-white/80 px-4 py-3">
-                      <div className="text-xs uppercase tracking-wide text-stone-500">Effective date</div>
-                      <div className="mt-1 text-sm font-medium text-stone-900">{formatLongDate(legalDocument.effectiveDate)}</div>
-                    </div>
-                    <div className="rounded-2xl border border-white/70 bg-white/80 px-4 py-3">
-                      <div className="text-xs uppercase tracking-wide text-stone-500">Last updated</div>
-                      <div className="mt-1 text-sm font-medium text-stone-900">{formatLongDate(legalDocument.updatedAt)}</div>
-                    </div>
-                    <div className="rounded-2xl border border-white/70 bg-white/80 px-4 py-3">
-                      <div className="text-xs uppercase tracking-wide text-stone-500">Reader mode</div>
+                      <div className="text-xs uppercase tracking-wide text-stone-500">
+                        Effective date
+                      </div>
                       <div className="mt-1 text-sm font-medium text-stone-900">
-                        {legalDocument.renderMode === 'versioned_document' ? 'Versioned legal document' : 'Legacy legal document'}
+                        {formatLongDate(legalDocument.effectiveDate)}
+                      </div>
+                    </div>
+                    <div className="rounded-2xl border border-white/70 bg-white/80 px-4 py-3">
+                      <div className="text-xs uppercase tracking-wide text-stone-500">
+                        Last updated
+                      </div>
+                      <div className="mt-1 text-sm font-medium text-stone-900">
+                        {formatLongDate(legalDocument.updatedAt)}
+                      </div>
+                    </div>
+                    <div className="rounded-2xl border border-white/70 bg-white/80 px-4 py-3">
+                      <div className="text-xs uppercase tracking-wide text-stone-500">
+                        Reader mode
+                      </div>
+                      <div className="mt-1 text-sm font-medium text-stone-900">
+                        {legalDocument.renderMode === 'versioned_document'
+                          ? 'Versioned legal document'
+                          : 'Legacy legal document'}
                       </div>
                       <div className="mt-1 text-xs font-medium uppercase tracking-wide text-stone-500">
                         Version {legalDocument.version}
@@ -402,9 +446,7 @@ export function LegalDocumentPage() {
                   <FileText className="h-4 w-4 text-sky-700" />
                   On this page
                 </CardTitle>
-                <CardDescription>
-                  Jump to the sections most relevant to you.
-                </CardDescription>
+                <CardDescription>Jump to the sections most relevant to you.</CardDescription>
               </CardHeader>
               <CardContent className="space-y-2">
                 {toc.length > 0 ? (
@@ -421,7 +463,9 @@ export function LegalDocumentPage() {
                     </a>
                   ))
                 ) : (
-                  <p className="text-sm text-stone-500">This document does not have indexed sections yet.</p>
+                  <p className="text-sm text-stone-500">
+                    This document does not have indexed sections yet.
+                  </p>
                 )}
               </CardContent>
             </Card>
@@ -433,9 +477,19 @@ export function LegalDocumentPage() {
                   Reading details
                 </div>
                 <Separator className="my-3" />
-                <div>Section: <span className="font-medium text-stone-900">{sectionLabel}</span></div>
-                <div className="mt-2">Version: <span className="font-medium text-stone-900">{legalDocument.version}</span></div>
-                <div className="mt-2">Effective: <span className="font-medium text-stone-900">{formatLongDate(legalDocument.effectiveDate)}</span></div>
+                <div>
+                  Section: <span className="font-medium text-stone-900">{sectionLabel}</span>
+                </div>
+                <div className="mt-2">
+                  Version:{' '}
+                  <span className="font-medium text-stone-900">{legalDocument.version}</span>
+                </div>
+                <div className="mt-2">
+                  Effective:{' '}
+                  <span className="font-medium text-stone-900">
+                    {formatLongDate(legalDocument.effectiveDate)}
+                  </span>
+                </div>
               </CardContent>
             </Card>
           </div>

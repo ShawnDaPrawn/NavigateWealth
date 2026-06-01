@@ -14,7 +14,7 @@ import type { FNAStatus } from '../types';
 const ICON_MAP = {
   'check-circle': CheckCircle,
   'file-edit': FileEdit,
-  'archive': Archive,
+  archive: Archive,
 } as const;
 
 interface FNAStatusBadgeProps {

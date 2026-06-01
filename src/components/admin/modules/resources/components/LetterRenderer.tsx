@@ -91,12 +91,7 @@ export const LetterRenderer: React.FC<LetterRendererProps> = ({
     );
   }
 
-  return (
-    <LetterheadPdfLayout
-      pages={pages}
-      meta={letterMeta}
-    />
-  );
+  return <LetterheadPdfLayout pages={pages} meta={letterMeta} />;
 };
 
 export default LetterRenderer;

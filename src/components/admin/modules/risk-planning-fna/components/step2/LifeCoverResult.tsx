@@ -9,12 +9,22 @@ interface LifeCoverResultProps {
 }
 
 export function LifeCoverResult({ calculation }: LifeCoverResultProps) {
-  const { immediateCapital, incomeReplacementCapital, educationCapital, grossNeed, existingCover, netShortfall, assumptions } = calculation;
+  const {
+    immediateCapital,
+    incomeReplacementCapital,
+    educationCapital,
+    grossNeed,
+    existingCover,
+    netShortfall,
+    assumptions,
+  } = calculation;
 
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="text-lg font-semibold">Life Cover (Death) – Capital Replacement Model</CardTitle>
+        <CardTitle className="text-lg font-semibold">
+          Life Cover (Death) – Capital Replacement Model
+        </CardTitle>
         <CardDescription className="text-sm">Gross need calculation breakdown</CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
@@ -24,11 +34,15 @@ export function LifeCoverResult({ calculation }: LifeCoverResultProps) {
           <div className="space-y-2.5 text-sm">
             <div className="flex justify-between">
               <span className="text-muted-foreground">Outstanding Debt</span>
-              <span className="font-medium">{formatCurrency(immediateCapital.outstandingDebt)}</span>
+              <span className="font-medium">
+                {formatCurrency(immediateCapital.outstandingDebt)}
+              </span>
             </div>
             <div className="flex justify-between">
               <span className="text-muted-foreground">Funeral & Final Expenses</span>
-              <span className="font-medium">{formatCurrency(immediateCapital.funeralFinalExpenses)}</span>
+              <span className="font-medium">
+                {formatCurrency(immediateCapital.funeralFinalExpenses)}
+              </span>
             </div>
             <div className="flex justify-between">
               <span className="text-muted-foreground">Estate Costs (3.99%)</span>
@@ -41,14 +55,16 @@ export function LifeCoverResult({ calculation }: LifeCoverResultProps) {
             </div>
           </div>
         </div>
-        
+
         {/* Income Replacement Capital */}
         <div>
           <h4 className="text-base font-semibold mb-3">2. Income Replacement Capital</h4>
           <div className="space-y-2.5 text-sm">
             <div className="flex justify-between">
               <span className="text-muted-foreground">Net Annual Income</span>
-              <span className="font-medium">{formatCurrency(incomeReplacementCapital.netAnnualIncome)}</span>
+              <span className="font-medium">
+                {formatCurrency(incomeReplacementCapital.netAnnualIncome)}
+              </span>
             </div>
             <div className="flex justify-between">
               <span className="text-muted-foreground">Income Multiple</span>
@@ -61,7 +77,7 @@ export function LifeCoverResult({ calculation }: LifeCoverResultProps) {
             </div>
           </div>
         </div>
-        
+
         {/* Education Capital */}
         <div>
           <h4 className="text-base font-semibold mb-3">3. Education Capital</h4>
@@ -85,9 +101,9 @@ export function LifeCoverResult({ calculation }: LifeCoverResultProps) {
             <p className="text-sm text-muted-foreground">No dependants</p>
           )}
         </div>
-        
+
         <Separator className="my-4" />
-        
+
         {/* Total Life Cover */}
         <div className="space-y-2">
           <div className="flex justify-between text-lg font-semibold">
@@ -110,7 +126,7 @@ export function LifeCoverResult({ calculation }: LifeCoverResultProps) {
             </span>
           </div>
         </div>
-        
+
         {/* Assumptions */}
         <div className="mt-4 p-3 bg-muted/50 rounded-md">
           <p className="text-xs font-medium mb-2">Assumptions:</p>

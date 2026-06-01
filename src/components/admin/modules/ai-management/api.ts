@@ -43,7 +43,9 @@ export const agentApi = {
       return response.agents;
     } catch (error) {
       // Fallback to defaults if backend route not yet available
-      logger.warn('Agent registry fetch failed — using defaults', { error: getErrorMessage(error) });
+      logger.warn('Agent registry fetch failed — using defaults', {
+        error: getErrorMessage(error),
+      });
       return DEFAULT_AGENTS;
     }
   },
@@ -56,8 +58,10 @@ export const agentApi = {
       const response = await api.get<{ agent: AIAgentConfig }>(ENDPOINTS.AGENT_DETAIL(id));
       return response.agent;
     } catch (error) {
-      logger.warn(`Agent fetch failed for ${id} — using defaults`, { error: getErrorMessage(error) });
-      return DEFAULT_AGENTS.find(a => a.id === id) || null;
+      logger.warn(`Agent fetch failed for ${id} — using defaults`, {
+        error: getErrorMessage(error),
+      });
+      return DEFAULT_AGENTS.find((a) => a.id === id) || null;
     }
   },
 };
@@ -119,7 +123,7 @@ export const feedbackApi = {
   async getRecent(limit = 50): Promise<FeedbackEntry[]> {
     try {
       const response = await api.get<{ feedback: FeedbackEntry[] }>(
-        `${ENDPOINTS.FEEDBACK_LIST}?limit=${limit}`
+        `${ENDPOINTS.FEEDBACK_LIST}?limit=${limit}`,
       );
       return response.feedback;
     } catch (error) {
@@ -139,9 +143,7 @@ export const handoffApi = {
    */
   async getAll(status?: HandoffStatus): Promise<HandoffRequest[]> {
     try {
-      const url = status
-        ? `${ENDPOINTS.HANDOFFS_LIST}?status=${status}`
-        : ENDPOINTS.HANDOFFS_LIST;
+      const url = status ? `${ENDPOINTS.HANDOFFS_LIST}?status=${status}` : ENDPOINTS.HANDOFFS_LIST;
       const response = await api.get<{ handoffs: HandoffRequest[] }>(url);
       return response.handoffs;
     } catch (error) {
@@ -154,10 +156,9 @@ export const handoffApi = {
    * Update a handoff request status.
    */
   async updateStatus(id: string, status: HandoffStatus): Promise<HandoffRequest> {
-    const response = await api.put<{ handoff: HandoffRequest }>(
-      ENDPOINTS.HANDOFF_UPDATE(id),
-      { status }
-    );
+    const response = await api.put<{ handoff: HandoffRequest }>(ENDPOINTS.HANDOFF_UPDATE(id), {
+      status,
+    });
     return response.handoff;
   },
 };
@@ -274,21 +275,38 @@ export const kbApi = {
 // ============================================================================
 
 export const promptApi = {
-  async getBundle(agentId: string, context: PromptContext): Promise<{ active: string | null; draft: string | null; versions: PromptVersion[] }> {
+  async getBundle(
+    agentId: string,
+    context: PromptContext,
+  ): Promise<{ active: string | null; draft: string | null; versions: PromptVersion[] }> {
     return await api.get(ENDPOINTS.PROMPT_BUNDLE(agentId, context));
   },
   async saveDraft(agentId: string, context: PromptContext, prompt: string): Promise<void> {
     await api.put(ENDPOINTS.PROMPT_DRAFT(agentId, context), { prompt });
   },
   async publish(agentId: string, context: PromptContext): Promise<PromptVersion> {
-    const res = await api.post<{ version: PromptVersion }>(ENDPOINTS.PROMPT_PUBLISH(agentId, context), {});
+    const res = await api.post<{ version: PromptVersion }>(
+      ENDPOINTS.PROMPT_PUBLISH(agentId, context),
+      {},
+    );
     return res.version;
   },
-  async rollback(agentId: string, context: PromptContext, versionId: string): Promise<PromptVersion> {
-    const res = await api.post<{ version: PromptVersion }>(ENDPOINTS.PROMPT_ROLLBACK(agentId, context), { versionId });
+  async rollback(
+    agentId: string,
+    context: PromptContext,
+    versionId: string,
+  ): Promise<PromptVersion> {
+    const res = await api.post<{ version: PromptVersion }>(
+      ENDPOINTS.PROMPT_ROLLBACK(agentId, context),
+      { versionId },
+    );
     return res.version;
   },
-  async seedIfMissing(agentId: string, context: PromptContext, seedPrompt: string): Promise<{ active: string | null; draft: string | null; versions: PromptVersion[] }> {
+  async seedIfMissing(
+    agentId: string,
+    context: PromptContext,
+    seedPrompt: string,
+  ): Promise<{ active: string | null; draft: string | null; versions: PromptVersion[] }> {
     return await api.post(ENDPOINTS.PROMPT_SEED(agentId, context), { seedPrompt });
   },
 };

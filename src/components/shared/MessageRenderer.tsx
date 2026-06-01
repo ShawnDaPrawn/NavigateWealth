@@ -15,14 +15,7 @@
  */
 
 import React from 'react';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '../ui/table';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../ui/table';
 
 interface MessageRendererProps {
   content: string;
@@ -48,7 +41,7 @@ function renderInline(text: string, keyPrefix: string): React.ReactNode[] {
       parts.push(
         <strong key={`${keyPrefix}-b${counter++}`} className="font-semibold">
           {match[2]}
-        </strong>
+        </strong>,
       );
     } else if (match[3]) {
       // Inline code
@@ -58,7 +51,7 @@ function renderInline(text: string, keyPrefix: string): React.ReactNode[] {
           className="bg-slate-100 rounded px-1 py-0.5 text-[0.8em] font-mono"
         >
           {match[3]}
-        </code>
+        </code>,
       );
     }
     lastIndex = match.index + match[0].length;
@@ -95,10 +88,19 @@ function renderTable(data: unknown, isUser: boolean, key: string): React.ReactNo
   const rowCls = isUser ? 'hover:bg-purple-50' : 'hover:bg-gray-50';
 
   if (Array.isArray(data)) {
-    if (data.length === 0) return <p key={key} className="text-sm italic text-gray-500">Empty data set</p>;
+    if (data.length === 0)
+      return (
+        <p key={key} className="text-sm italic text-gray-500">
+          Empty data set
+        </p>
+      );
     const firstItem = data[0];
     if (typeof firstItem !== 'object' || firstItem === null) {
-      return <p key={key} className="text-sm italic text-gray-500">Cannot render as table</p>;
+      return (
+        <p key={key} className="text-sm italic text-gray-500">
+          Cannot render as table
+        </p>
+      );
     }
     const headers = Object.keys(firstItem as Record<string, unknown>);
     return (
@@ -106,7 +108,11 @@ function renderTable(data: unknown, isUser: boolean, key: string): React.ReactNo
         <Table>
           <TableHeader>
             <TableRow className={headerCls}>
-              {headers.map((h, i) => <TableHead key={i} className="text-gray-900">{h}</TableHead>)}
+              {headers.map((h, i) => (
+                <TableHead key={i} className="text-gray-900">
+                  {h}
+                </TableHead>
+              ))}
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -213,7 +219,7 @@ function renderMarkdownLines(text: string, keyPrefix: string, isUser: boolean): 
               {renderInline(item, `${keyPrefix}-ul${elemIdx}-${ii}`)}
             </li>
           ))}
-        </ul>
+        </ul>,
       );
       continue;
     }
@@ -232,22 +238,20 @@ function renderMarkdownLines(text: string, keyPrefix: string, isUser: boolean): 
               {renderInline(item, `${keyPrefix}-ol${elemIdx}-${ii}`)}
             </li>
           ))}
-        </ol>
+        </ol>,
       );
       continue;
     }
 
     if (cl.type === 'heading') {
-      const cls = 'font-semibold mt-3 mb-1 ' + (
-        cl.level === 1 ? 'text-base' :
-        cl.level === 2 ? 'text-sm' :
-        'text-sm text-gray-700'
-      );
+      const cls =
+        'font-semibold mt-3 mb-1 ' +
+        (cl.level === 1 ? 'text-base' : cl.level === 2 ? 'text-sm' : 'text-sm text-gray-700');
       const Tag = cl.level === 1 ? 'p' : 'p'; // Avoid h1-h4 to prevent global CSS override
       elements.push(
         <Tag key={`${keyPrefix}-h${elemIdx++}`} className={cls}>
           {renderInline(cl.text, `${keyPrefix}-hd${elemIdx}`)}
-        </Tag>
+        </Tag>,
       );
       i++;
       continue;
@@ -256,7 +260,10 @@ function renderMarkdownLines(text: string, keyPrefix: string, isUser: boolean): 
     if (cl.type === 'blank') {
       // Accumulate blanks as a small spacer
       let blankCount = 0;
-      while (i < classified.length && classified[i].type === 'blank') { blankCount++; i++; }
+      while (i < classified.length && classified[i].type === 'blank') {
+        blankCount++;
+        i++;
+      }
       if (blankCount > 0) {
         elements.push(<br key={`${keyPrefix}-br${elemIdx++}`} />);
       }
@@ -267,7 +274,7 @@ function renderMarkdownLines(text: string, keyPrefix: string, isUser: boolean): 
     elements.push(
       <span key={`${keyPrefix}-t${elemIdx++}`} className="block leading-relaxed">
         {renderInline(cl.text, `${keyPrefix}-inline${elemIdx}`)}
-      </span>
+      </span>,
     );
     i++;
   }
@@ -290,7 +297,7 @@ function parseContent(text: string, isUser: boolean): React.ReactNode[] {
       elements.push(
         <div key={`txt-${elementKey++}`}>
           {renderMarkdownLines(currentText, `mk-${elementKey}`, isUser)}
-        </div>
+        </div>,
       );
       currentText = '';
     }
@@ -325,7 +332,7 @@ function parseContent(text: string, isUser: boolean): React.ReactNode[] {
               elements.push(
                 <pre key={`json-${elementKey++}`} className={preClass}>
                   <code>{JSON.stringify(parsed, null, 2)}</code>
-                </pre>
+                </pre>,
               );
             }
           } catch {
@@ -355,9 +362,5 @@ function parseContent(text: string, isUser: boolean): React.ReactNode[] {
 
 export function MessageRenderer({ content, role = 'assistant' }: MessageRendererProps) {
   const isUser = role === 'user';
-  return (
-    <div className="message-content text-sm">
-      {parseContent(content, isUser)}
-    </div>
-  );
+  return <div className="message-content text-sm">{parseContent(content, isUser)}</div>;
 }

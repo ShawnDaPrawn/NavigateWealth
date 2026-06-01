@@ -50,7 +50,16 @@ export interface EsignEnvelope {
   // request path (which used to wait for burn-in + certificate merge +
   // seal) while keeping the UI honest: the envelope is no longer
   // `partially_signed` but also not yet fully `completed`.
-  status: 'draft' | 'sent' | 'in_progress' | 'partially_signed' | 'completing' | 'completed' | 'declined' | 'voided' | 'expired';
+  status:
+    | 'draft'
+    | 'sent'
+    | 'in_progress'
+    | 'partially_signed'
+    | 'completing'
+    | 'completed'
+    | 'declined'
+    | 'voided'
+    | 'expired';
   message?: string;
   signing_mode?: SigningMode;
   created_by_user_id: string;
@@ -253,12 +262,7 @@ export interface PacketRecord {
   updated_at: string;
 }
 
-export type PacketRunStatus =
-  | 'queued'
-  | 'running'
-  | 'completed'
-  | 'cancelled'
-  | 'failed';
+export type PacketRunStatus = 'queued' | 'running' | 'completed' | 'cancelled' | 'failed';
 
 export interface PacketRunStepRecord {
   step_index: number;

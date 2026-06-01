@@ -215,9 +215,7 @@ export function createWebPageSchema(
   };
 }
 
-export function createFAQSchema(
-  faqs: FAQItem[],
-): Record<string, unknown> {
+export function createFAQSchema(faqs: FAQItem[]): Record<string, unknown> {
   return {
     '@type': 'FAQPage',
     mainEntity: faqs.map((faq) => ({
@@ -251,8 +249,7 @@ export function createContactPageSchema(): Record<string, unknown> {
     '@context': 'https://schema.org',
     '@type': 'ContactPage',
     name: `Contact ${SITE_NAME}`,
-    description:
-      'Get in touch with Navigate Wealth for a free financial planning consultation.',
+    description: 'Get in touch with Navigate Wealth for a free financial planning consultation.',
     url: `${BASE_URL}/contact`,
     publisher: {
       '@type': 'Organization',
@@ -272,9 +269,7 @@ export function createContactPageSchema(): Record<string, unknown> {
  *   { name: 'Risk Management' },  // current page — no url
  * ])
  */
-export function createBreadcrumbSchema(
-  items: BreadcrumbItem[],
-): Record<string, unknown> {
+export function createBreadcrumbSchema(items: BreadcrumbItem[]): Record<string, unknown> {
   return {
     '@type': 'BreadcrumbList',
     itemListElement: items.map((item, index) => ({

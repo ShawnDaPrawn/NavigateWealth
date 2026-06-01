@@ -14,7 +14,11 @@ import { ChevronLeft, ChevronRight, FileText, Save } from 'lucide-react';
 import { RoADraft, RoAModule, RoAField, RoAEvidenceItem } from '../types';
 import { roaApi } from '../api';
 import { adviceEngineKeys } from '../hooks/queryKeys';
-import { getFallbackRuntimeModules, getModuleRuntimeStatus, moduleContractToRuntimeModule } from '../roaModuleRuntime';
+import {
+  getFallbackRuntimeModules,
+  getModuleRuntimeStatus,
+  moduleContractToRuntimeModule,
+} from '../roaModuleRuntime';
 
 export type { RoADraft, RoAModule, RoAField, RoAEvidenceItem };
 
@@ -23,7 +27,7 @@ const STEPS = [
   { id: 'client', title: 'Client', description: 'Select or create client' },
   { id: 'modules', title: 'Modules', description: 'Choose advice modules' },
   { id: 'details', title: 'Details', description: 'Complete module forms' },
-  { id: 'review', title: 'Review', description: 'Compile and export' }
+  { id: 'review', title: 'Review', description: 'Compile and export' },
 ];
 
 export function DraftRoAInterface() {
@@ -45,9 +49,8 @@ export function DraftRoAInterface() {
   const existingDrafts = allDrafts.filter((draft) => !draft.lockedAt);
   const finalisedDrafts = allDrafts.filter((draft) => Boolean(draft.lockedAt));
   const contractModules = activeContracts.map(moduleContractToRuntimeModule);
-  const availableModules = contractModules.length > 0
-    ? contractModules
-    : getFallbackRuntimeModules();
+  const availableModules =
+    contractModules.length > 0 ? contractModules : getFallbackRuntimeModules();
 
   const currentStepData = STEPS[currentStep];
   const progress = ((currentStep + 1) / STEPS.length) * 100;
@@ -67,7 +70,7 @@ export function DraftRoAInterface() {
 
   const autoSave = async (draftToSave = roaDraft) => {
     if (!draftToSave) return;
-    
+
     setIsAutoSaving(true);
     try {
       const savedDraft = await roaApi.saveDraft(draftToSave.id, draftToSave);
@@ -75,20 +78,26 @@ export function DraftRoAInterface() {
       queryClient.invalidateQueries({ queryKey: adviceEngineKeys.roa.drafts() });
     } catch (error) {
       console.error('Failed to save RoA draft:', error);
-      toast.error(error instanceof Error ? error.message : 'Could not save RoA draft — your changes are kept locally.');
-      setRoaDraft((prev) => (prev
-        ? {
-            ...prev,
-            updatedAt: new Date(),
-          }
-        : null));
+      toast.error(
+        error instanceof Error
+          ? error.message
+          : 'Could not save RoA draft — your changes are kept locally.',
+      );
+      setRoaDraft((prev) =>
+        prev
+          ? {
+              ...prev,
+              updatedAt: new Date(),
+            }
+          : null,
+      );
     } finally {
       setIsAutoSaving(false);
     }
   };
 
   const updateDraft = (updates: Partial<RoADraft>) => {
-    setRoaDraft(prev => prev ? { ...prev, ...updates } : null);
+    setRoaDraft((prev) => (prev ? { ...prev, ...updates } : null));
   };
 
   const createNewDraft = async () => {
@@ -99,7 +108,7 @@ export function DraftRoAInterface() {
       status: 'draft',
       createdAt: new Date(),
       updatedAt: new Date(),
-      version: 1
+      version: 1,
     };
     setRoaDraft(newDraft);
     setCurrentStep(1); // Move to client step
@@ -159,16 +168,19 @@ export function DraftRoAInterface() {
       case 2: // Modules
         return roaDraft && roaDraft.selectedModules.length > 0;
       case 3: // Details
-        return roaDraft && roaDraft.selectedModules.every(moduleId => {
-          const module = availableModules.find(item => item.id === moduleId);
-          const moduleData = roaDraft.moduleData[moduleId];
-          if (!module || !moduleData) return false;
-          return getModuleRuntimeStatus(
-            module,
-            moduleData,
-            roaDraft.moduleEvidence?.[moduleId] || {},
-          ).complete;
-        });
+        return (
+          roaDraft &&
+          roaDraft.selectedModules.every((moduleId) => {
+            const module = availableModules.find((item) => item.id === moduleId);
+            const moduleData = roaDraft.moduleData[moduleId];
+            if (!module || !moduleData) return false;
+            return getModuleRuntimeStatus(
+              module,
+              moduleData,
+              roaDraft.moduleEvidence?.[moduleId] || {},
+            ).complete;
+          })
+        );
       case 4: // Review
         return true;
       default:
@@ -192,23 +204,14 @@ export function DraftRoAInterface() {
           />
         );
       case 1:
-        return (
-          <RoAStepClient 
-            draft={roaDraft}
-            onUpdate={updateDraft}
-          />
-        );
+        return <RoAStepClient draft={roaDraft} onUpdate={updateDraft} />;
       case 2:
         return (
-          <RoAStepModules 
-            draft={roaDraft}
-            onUpdate={updateDraft}
-            modules={availableModules}
-          />
+          <RoAStepModules draft={roaDraft} onUpdate={updateDraft} modules={availableModules} />
         );
       case 3:
         return (
-          <RoAStepModuleDetails 
+          <RoAStepModuleDetails
             draft={roaDraft}
             onUpdate={updateDraft}
             modules={availableModules}
@@ -253,11 +256,7 @@ export function DraftRoAInterface() {
                   Saving...
                 </Badge>
               )}
-              {roaDraft && (
-                <Badge variant="secondary">
-                  Draft v{roaDraft.version}
-                </Badge>
-              )}
+              {roaDraft && <Badge variant="secondary">Draft v{roaDraft.version}</Badge>}
             </div>
           </div>
         </CardHeader>
@@ -276,26 +275,31 @@ export function DraftRoAInterface() {
             <div className="flex items-center justify-between">
               {STEPS.map((step, index) => (
                 <div key={step.id} className="flex items-center">
-                  <div className={`
+                  <div
+                    className={`
                     w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium
-                    ${index <= currentStep 
-                      ? 'bg-primary text-primary-foreground' 
-                      : 'bg-muted text-muted-foreground'
+                    ${
+                      index <= currentStep
+                        ? 'bg-primary text-primary-foreground'
+                        : 'bg-muted text-muted-foreground'
                     }
-                  `}>
+                  `}
+                  >
                     {index + 1}
                   </div>
                   <div className="ml-2 hidden sm:block">
-                    <p className={`text-sm font-medium ${
-                      index <= currentStep ? 'text-foreground' : 'text-muted-foreground'
-                    }`}>
+                    <p
+                      className={`text-sm font-medium ${
+                        index <= currentStep ? 'text-foreground' : 'text-muted-foreground'
+                      }`}
+                    >
                       {step.title}
                     </p>
                   </div>
                   {index < STEPS.length - 1 && (
-                    <div className={`h-px w-8 mx-4 ${
-                      index < currentStep ? 'bg-primary' : 'bg-muted'
-                    }`} />
+                    <div
+                      className={`h-px w-8 mx-4 ${index < currentStep ? 'bg-primary' : 'bg-muted'}`}
+                    />
                   )}
                 </div>
               ))}
@@ -306,9 +310,7 @@ export function DraftRoAInterface() {
 
       {/* Step Content */}
       <Card>
-        <CardContent className="p-6">
-          {renderStepContent()}
-        </CardContent>
+        <CardContent className="p-6">{renderStepContent()}</CardContent>
       </Card>
 
       {/* Navigation */}
@@ -316,11 +318,7 @@ export function DraftRoAInterface() {
         <Card>
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
-              <Button
-                variant="outline"
-                onClick={handlePrevious}
-                disabled={currentStep === 0}
-              >
+              <Button variant="outline" onClick={handlePrevious} disabled={currentStep === 0}>
                 <ChevronLeft className="h-4 w-4 mr-2" />
                 Previous
               </Button>

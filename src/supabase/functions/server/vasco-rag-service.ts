@@ -174,7 +174,7 @@ async function generateEmbeddings(texts: string[]): Promise<number[][]> {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      'Authorization': `Bearer ${openaiKey}`,
+      Authorization: `Bearer ${openaiKey}`,
     },
     body: JSON.stringify({
       model: EMBEDDING_MODEL,
@@ -222,13 +222,13 @@ function cosineSimilarity(a: number[], b: number[]): number {
  */
 async function deleteArticleEntries(articleId: string, chunkCount: number): Promise<void> {
   const embKeys = Array.from({ length: chunkCount }, (_, i) => `${EMB_PREFIX}${articleId}:${i}`);
-  const chunkKeys = Array.from({ length: chunkCount }, (_, i) => `${CHUNK_PREFIX}${articleId}:${i}`);
+  const chunkKeys = Array.from(
+    { length: chunkCount },
+    (_, i) => `${CHUNK_PREFIX}${articleId}:${i}`,
+  );
 
   // Delete in parallel, small batches
-  await Promise.all([
-    ...embKeys.map((k) => kv.del(k)),
-    ...chunkKeys.map((k) => kv.del(k)),
-  ]);
+  await Promise.all([...embKeys.map((k) => kv.del(k)), ...chunkKeys.map((k) => kv.del(k))]);
 }
 
 /**
@@ -243,7 +243,7 @@ export async function indexAllArticles(): Promise<IndexResult> {
 
   try {
     // Get current index so we can clean up old entries
-    const existingIndex = await kv.get(ARTICLE_INDEX_KEY) as ArticleIndex | null;
+    const existingIndex = (await kv.get(ARTICLE_INDEX_KEY)) as ArticleIndex | null;
 
     // Delete all old embeddings/chunks per-article (bounded by article count)
     if (existingIndex?.articles) {
@@ -255,7 +255,7 @@ export async function indexAllArticles(): Promise<IndexResult> {
     // Fetch all articles from KV
     const allArticles = await kv.getByPrefix('article:');
     const publishedArticles = allArticles.filter(
-      (a: { status: string }) => a.status === 'published'
+      (a: { status: string }) => a.status === 'published',
     );
 
     log.info(`Starting article indexing: ${publishedArticles.length} published articles`);
@@ -325,7 +325,9 @@ export async function indexAllArticles(): Promise<IndexResult> {
     await kv.set(ARTICLE_INDEX_KEY, index);
 
     const durationMs = Date.now() - startTime;
-    log.info(`Indexing complete: ${indexedArticles.length} articles, ${totalChunks} chunks in ${durationMs}ms`);
+    log.info(
+      `Indexing complete: ${indexedArticles.length} articles, ${totalChunks} chunks in ${durationMs}ms`,
+    );
 
     return { articlesIndexed: indexedArticles.length, totalChunks, errors, durationMs };
   } catch (err) {
@@ -335,11 +337,11 @@ export async function indexAllArticles(): Promise<IndexResult> {
 }
 
 export async function getArticleIndex(): Promise<ArticleIndex | null> {
-  return await kv.get(ARTICLE_INDEX_KEY) as ArticleIndex | null;
+  return (await kv.get(ARTICLE_INDEX_KEY)) as ArticleIndex | null;
 }
 
 export async function clearArticleIndex(): Promise<void> {
-  const index = await kv.get(ARTICLE_INDEX_KEY) as ArticleIndex | null;
+  const index = (await kv.get(ARTICLE_INDEX_KEY)) as ArticleIndex | null;
 
   if (index?.articles) {
     for (const article of index.articles) {
@@ -365,7 +367,7 @@ export async function clearArticleIndex(): Promise<void> {
  */
 export async function retrieveContext(query: string): Promise<RetrievedContext[]> {
   try {
-    const index = await kv.get(ARTICLE_INDEX_KEY) as ArticleIndex | null;
+    const index = (await kv.get(ARTICLE_INDEX_KEY)) as ArticleIndex | null;
     if (!index || index.articles.length === 0) {
       return [];
     }
@@ -381,10 +383,10 @@ export async function retrieveContext(query: string): Promise<RetrievedContext[]
     for (const articleMeta of index.articles) {
       const embKeys = Array.from(
         { length: articleMeta.chunkCount },
-        (_, i) => `${EMB_PREFIX}${articleMeta.articleId}:${i}`
+        (_, i) => `${EMB_PREFIX}${articleMeta.articleId}:${i}`,
       );
 
-      const embeddings = await kv.mget(embKeys) as (StoredEmbedding | null)[];
+      const embeddings = (await kv.mget(embKeys)) as (StoredEmbedding | null)[];
 
       for (const emb of embeddings) {
         if (!emb?.embedding) continue;
@@ -413,10 +415,8 @@ export async function retrieveContext(query: string): Promise<RetrievedContext[]
     if (topK.length === 0) return [];
 
     // NOW fetch only the text for the winning chunks
-    const chunkKeys = topK.map(
-      (s) => `${CHUNK_PREFIX}${s.articleId}:${s.chunkIndex}`
-    );
-    const chunkTexts = await kv.mget(chunkKeys) as (StoredChunk | null)[];
+    const chunkKeys = topK.map((s) => `${CHUNK_PREFIX}${s.articleId}:${s.chunkIndex}`);
+    const chunkTexts = (await kv.mget(chunkKeys)) as (StoredChunk | null)[];
 
     const results: RetrievedContext[] = [];
     for (let i = 0; i < topK.length; i++) {

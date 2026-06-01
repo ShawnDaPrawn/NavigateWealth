@@ -1,7 +1,7 @@
 /**
  * Compliance Module API
  * Navigate Wealth Admin Dashboard
- * 
+ *
  * Centralized API layer for all compliance-related data operations.
  * Uses the shared API client for consistent error handling and authentication.
  */
@@ -75,7 +75,9 @@ export const faisApi = {
    * Get FAIS records by adviser
    */
   async getByAdviser(adviserId: string): Promise<FAISRecord[]> {
-    const response = await api.get<ComplianceListResponse<FAISRecord>>(`/compliance/fais/adviser/${adviserId}`);
+    const response = await api.get<ComplianceListResponse<FAISRecord>>(
+      `/compliance/fais/adviser/${adviserId}`,
+    );
     return response.data || [];
   },
 };
@@ -118,7 +120,9 @@ export const amlFicaApi = {
    * Get AML/FICA records for a client
    */
   async getByClient(clientId: string): Promise<AMLFICARecord[]> {
-    const response = await api.get<ComplianceListResponse<AMLFICARecord>>(`/compliance/aml-fica/client/${clientId}`);
+    const response = await api.get<ComplianceListResponse<AMLFICARecord>>(
+      `/compliance/aml-fica/client/${clientId}`,
+    );
     return response.data || [];
   },
 
@@ -139,7 +143,9 @@ export const popiPaiaApi = {
    * Get all POPIA consent records
    */
   async getAllConsents(): Promise<POPIAConsentRecord[]> {
-    const response = await api.get<ComplianceListResponse<POPIAConsentRecord>>('/compliance/popia/consents');
+    const response = await api.get<ComplianceListResponse<POPIAConsentRecord>>(
+      '/compliance/popia/consents',
+    );
     return response.data || [];
   },
 
@@ -161,7 +167,9 @@ export const popiPaiaApi = {
    * Get consents by user
    */
   async getConsentsByUser(userId: string): Promise<POPIAConsentRecord[]> {
-    const response = await api.get<ComplianceListResponse<POPIAConsentRecord>>(`/compliance/popia/consents/user/${userId}`);
+    const response = await api.get<ComplianceListResponse<POPIAConsentRecord>>(
+      `/compliance/popia/consents/user/${userId}`,
+    );
     return response.data || [];
   },
 
@@ -169,7 +177,9 @@ export const popiPaiaApi = {
    * Get all PAIA requests
    */
   async getAllPAIARequests(): Promise<PAIARequest[]> {
-    const response = await api.get<ComplianceListResponse<PAIARequest>>('/compliance/paia/requests');
+    const response = await api.get<ComplianceListResponse<PAIARequest>>(
+      '/compliance/paia/requests',
+    );
     return response.data || [];
   },
 
@@ -183,7 +193,10 @@ export const popiPaiaApi = {
   /**
    * Update PAIA request
    */
-  async updatePAIARequest(id: string, data: UpdateRecordRequest<PAIARequest>): Promise<PAIARequest> {
+  async updatePAIARequest(
+    id: string,
+    data: UpdateRecordRequest<PAIARequest>,
+  ): Promise<PAIARequest> {
     return api.put<PAIARequest>(`/compliance/paia/requests/${id}`, data);
   },
 };
@@ -197,7 +210,8 @@ export const statutoryApi = {
    * Get all statutory records
    */
   async getAll(): Promise<StatutoryRecord[]> {
-    const response = await api.get<ComplianceListResponse<StatutoryRecord>>('/compliance/statutory');
+    const response =
+      await api.get<ComplianceListResponse<StatutoryRecord>>('/compliance/statutory');
     return response.data || [];
   },
 
@@ -267,7 +281,9 @@ export const recordKeepingApi = {
    * Get all record keeping entries
    */
   async getAll(): Promise<RecordKeepingEntry[]> {
-    const response = await api.get<ComplianceListResponse<RecordKeepingEntry>>('/compliance/record-keeping');
+    const response = await api.get<ComplianceListResponse<RecordKeepingEntry>>(
+      '/compliance/record-keeping',
+    );
     return response.data || [];
   },
 
@@ -295,7 +311,8 @@ export const debarmentSupervisionApi = {
    * Get all debarment records
    */
   async getAllDebarments(): Promise<DebarmentRecord[]> {
-    const response = await api.get<ComplianceListResponse<DebarmentRecord>>('/compliance/debarment');
+    const response =
+      await api.get<ComplianceListResponse<DebarmentRecord>>('/compliance/debarment');
     return response.data || [];
   },
 
@@ -310,21 +327,27 @@ export const debarmentSupervisionApi = {
    * Get all supervision records
    */
   async getAllSupervision(): Promise<SupervisionRecord[]> {
-    const response = await api.get<ComplianceListResponse<SupervisionRecord>>('/compliance/supervision');
+    const response =
+      await api.get<ComplianceListResponse<SupervisionRecord>>('/compliance/supervision');
     return response.data || [];
   },
 
   /**
    * Create supervision record
    */
-  async createSupervision(data: CreateRecordRequest<SupervisionRecord>): Promise<SupervisionRecord> {
+  async createSupervision(
+    data: CreateRecordRequest<SupervisionRecord>,
+  ): Promise<SupervisionRecord> {
     return api.post<SupervisionRecord>('/compliance/supervision', data);
   },
 
   /**
    * Update supervision record
    */
-  async updateSupervision(id: string, data: UpdateRecordRequest<SupervisionRecord>): Promise<SupervisionRecord> {
+  async updateSupervision(
+    id: string,
+    data: UpdateRecordRequest<SupervisionRecord>,
+  ): Promise<SupervisionRecord> {
     return api.put<SupervisionRecord>(`/compliance/supervision/${id}`, data);
   },
 };
@@ -352,7 +375,10 @@ export const conflictsMarketingApi = {
   /**
    * Update conflict record
    */
-  async updateConflict(id: string, data: UpdateRecordRequest<ConflictRecord>): Promise<ConflictRecord> {
+  async updateConflict(
+    id: string,
+    data: UpdateRecordRequest<ConflictRecord>,
+  ): Promise<ConflictRecord> {
     return api.put<ConflictRecord>(`/compliance/conflicts/${id}`, data);
   },
 
@@ -360,7 +386,8 @@ export const conflictsMarketingApi = {
    * Get all marketing records
    */
   async getAllMarketing(): Promise<MarketingRecord[]> {
-    const response = await api.get<ComplianceListResponse<MarketingRecord>>('/compliance/marketing');
+    const response =
+      await api.get<ComplianceListResponse<MarketingRecord>>('/compliance/marketing');
     return response.data || [];
   },
 
@@ -388,21 +415,28 @@ export const documentsInsuranceApi = {
    * Get all documents & insurance records
    */
   async getAll(): Promise<DocumentsInsuranceRecord[]> {
-    const response = await api.get<ComplianceListResponse<DocumentsInsuranceRecord>>('/compliance/documents-insurance');
+    const response = await api.get<ComplianceListResponse<DocumentsInsuranceRecord>>(
+      '/compliance/documents-insurance',
+    );
     return response.data || [];
   },
 
   /**
    * Create documents & insurance record
    */
-  async create(data: CreateRecordRequest<DocumentsInsuranceRecord>): Promise<DocumentsInsuranceRecord> {
+  async create(
+    data: CreateRecordRequest<DocumentsInsuranceRecord>,
+  ): Promise<DocumentsInsuranceRecord> {
     return api.post<DocumentsInsuranceRecord>('/compliance/documents-insurance', data);
   },
 
   /**
    * Update documents & insurance record
    */
-  async update(id: string, data: UpdateRecordRequest<DocumentsInsuranceRecord>): Promise<DocumentsInsuranceRecord> {
+  async update(
+    id: string,
+    data: UpdateRecordRequest<DocumentsInsuranceRecord>,
+  ): Promise<DocumentsInsuranceRecord> {
     return api.put<DocumentsInsuranceRecord>(`/compliance/documents-insurance/${id}`, data);
   },
 
@@ -423,7 +457,9 @@ export const newBusinessApi = {
    * Get all new business records
    */
   async getAll(): Promise<NewBusinessRecord[]> {
-    const response = await api.get<ComplianceListResponse<NewBusinessRecord>>('/compliance/new-business');
+    const response = await api.get<ComplianceListResponse<NewBusinessRecord>>(
+      '/compliance/new-business',
+    );
     return response.data || [];
   },
 
@@ -437,7 +473,10 @@ export const newBusinessApi = {
   /**
    * Update new business record
    */
-  async update(id: string, data: UpdateRecordRequest<NewBusinessRecord>): Promise<NewBusinessRecord> {
+  async update(
+    id: string,
+    data: UpdateRecordRequest<NewBusinessRecord>,
+  ): Promise<NewBusinessRecord> {
     return api.put<NewBusinessRecord>(`/compliance/new-business/${id}`, data);
   },
 
@@ -445,7 +484,9 @@ export const newBusinessApi = {
    * Get records by client
    */
   async getByClient(clientId: string): Promise<NewBusinessRecord[]> {
-    const response = await api.get<ComplianceListResponse<NewBusinessRecord>>(`/compliance/new-business/client/${clientId}`);
+    const response = await api.get<ComplianceListResponse<NewBusinessRecord>>(
+      `/compliance/new-business/client/${clientId}`,
+    );
     return response.data || [];
   },
 };
@@ -459,7 +500,8 @@ export const complaintsApi = {
    * Get all complaints
    */
   async getAll(): Promise<ComplaintRecord[]> {
-    const response = await api.get<ComplianceListResponse<ComplaintRecord>>('/compliance/complaints');
+    const response =
+      await api.get<ComplianceListResponse<ComplaintRecord>>('/compliance/complaints');
     return response.data || [];
   },
 
@@ -488,7 +530,10 @@ export const complaintsApi = {
    * Resolve complaint
    */
   async resolve(id: string, resolution: string, outcome: string): Promise<ComplaintRecord> {
-    return api.post<ComplaintRecord>(`/compliance/complaints/${id}/resolve`, { resolution, outcome });
+    return api.post<ComplaintRecord>(`/compliance/complaints/${id}/resolve`, {
+      resolution,
+      outcome,
+    });
   },
 
   /**
@@ -508,7 +553,9 @@ export const complianceOverviewApi = {
    * Get recent compliance activities
    */
   async getRecentActivities(limit: number = 20): Promise<ComplianceActivity[]> {
-    const response = await api.get<ComplianceListResponse<ComplianceActivity>>(`/compliance/activities?limit=${limit}`);
+    const response = await api.get<ComplianceListResponse<ComplianceActivity>>(
+      `/compliance/activities?limit=${limit}`,
+    );
     return response.data || [];
   },
 
@@ -516,7 +563,9 @@ export const complianceOverviewApi = {
    * Get upcoming deadlines
    */
   async getUpcomingDeadlines(days: number = 30): Promise<ComplianceDeadline[]> {
-    const response = await api.get<ComplianceListResponse<ComplianceDeadline>>(`/compliance/deadlines?days=${days}`);
+    const response = await api.get<ComplianceListResponse<ComplianceDeadline>>(
+      `/compliance/deadlines?days=${days}`,
+    );
     return response.data || [];
   },
 

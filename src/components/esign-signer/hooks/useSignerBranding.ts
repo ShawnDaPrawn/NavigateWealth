@@ -41,9 +41,10 @@ export interface SignerBranding {
 
 export function useSignerBranding(branding: BrandingInput | null | undefined): SignerBranding {
   const result = useMemo<SignerBranding>(() => {
-    const accent = branding?.accent_hex && HEX_RE.test(branding.accent_hex)
-      ? branding.accent_hex
-      : DEFAULT_ACCENT;
+    const accent =
+      branding?.accent_hex && HEX_RE.test(branding.accent_hex)
+        ? branding.accent_hex
+        : DEFAULT_ACCENT;
     const displayName = branding?.display_name?.trim() || DEFAULT_DISPLAY_NAME;
     const logoUrl = branding?.logo_url?.trim() || null;
     const supportEmail = branding?.support_email?.trim() || null;

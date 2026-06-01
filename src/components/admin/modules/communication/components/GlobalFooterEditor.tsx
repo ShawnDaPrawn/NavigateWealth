@@ -24,9 +24,9 @@ const DEFAULT_SETTINGS: EmailFooterSettings = {
     instagram: '',
     youtube: '',
     facebook: '',
-    twitter: ''
+    twitter: '',
   },
-  copyrightText: '© {{Year}} Navigate Wealth. All rights reserved.'
+  copyrightText: '© {{Year}} Navigate Wealth. All rights reserved.',
 };
 
 export function GlobalFooterEditor({ onBack }: GlobalFooterEditorProps) {
@@ -61,9 +61,9 @@ export function GlobalFooterEditor({ onBack }: GlobalFooterEditorProps) {
       // Convert newlines to HTML breaks for storage/email rendering
       const settingsToSave = {
         ...settings,
-        address: settings.address.replace(/\n/g, '<br />')
+        address: settings.address.replace(/\n/g, '<br />'),
       };
-      
+
       await communicationApi.saveFooterSettings(settingsToSave);
       toast.success('Footer settings saved successfully');
     } catch (error) {
@@ -87,7 +87,12 @@ export function GlobalFooterEditor({ onBack }: GlobalFooterEditorProps) {
     <div className="space-y-6">
       <div className="flex flex-col gap-2">
         <div>
-          <Button variant="ghost" size="sm" onClick={onBack} className="-ml-2 text-muted-foreground hover:text-foreground">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={onBack}
+            className="-ml-2 text-muted-foreground hover:text-foreground"
+          >
             <ArrowLeft className="h-4 w-4 mr-2" />
             Back to Templates
           </Button>
@@ -100,7 +105,11 @@ export function GlobalFooterEditor({ onBack }: GlobalFooterEditorProps) {
             </p>
           </div>
           <Button onClick={handleSave} disabled={saving}>
-            {saving ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Save className="h-4 w-4 mr-2" />}
+            {saving ? (
+              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+            ) : (
+              <Save className="h-4 w-4 mr-2" />
+            )}
             Save Changes
           </Button>
         </div>
@@ -114,29 +123,29 @@ export function GlobalFooterEditor({ onBack }: GlobalFooterEditorProps) {
                 <Building className="h-5 w-5 text-primary" />
                 Company Details
               </CardTitle>
-              <CardDescription>
-                Basic information about your organization
-              </CardDescription>
+              <CardDescription>Basic information about your organization</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="space-y-2">
                 <Label>Company Name</Label>
-                <Input 
-                  value={settings.companyName} 
+                <Input
+                  value={settings.companyName}
                   onChange={(e) => setSettings({ ...settings, companyName: e.target.value })}
                   placeholder="e.g. Navigate Wealth"
                 />
               </div>
-              
+
               <div className="space-y-2">
                 <Label>Physical Address</Label>
-                <Textarea 
-                  value={settings.address} 
+                <Textarea
+                  value={settings.address}
                   onChange={(e) => setSettings({ ...settings, address: e.target.value })}
                   placeholder="Enter physical address (one line per row)"
                   className="min-h-[100px] text-sm"
                 />
-                <p className="text-xs text-muted-foreground">Enter the address exactly as you want it to appear. Line breaks will be preserved.</p>
+                <p className="text-xs text-muted-foreground">
+                  Enter the address exactly as you want it to appear. Line breaks will be preserved.
+                </p>
               </div>
 
               <div className="grid grid-cols-2 gap-4">
@@ -144,8 +153,8 @@ export function GlobalFooterEditor({ onBack }: GlobalFooterEditorProps) {
                   <Label>Contact Email</Label>
                   <div className="relative">
                     <Mail className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
-                    <Input 
-                      value={settings.contactEmail} 
+                    <Input
+                      value={settings.contactEmail}
                       onChange={(e) => setSettings({ ...settings, contactEmail: e.target.value })}
                       className="pl-9"
                     />
@@ -153,25 +162,27 @@ export function GlobalFooterEditor({ onBack }: GlobalFooterEditorProps) {
                 </div>
                 <div className="space-y-2">
                   <Label>Contact Phone</Label>
-                   <div className="relative">
+                  <div className="relative">
                     <Phone className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
-                    <Input 
-                      value={settings.contactPhone} 
+                    <Input
+                      value={settings.contactPhone}
                       onChange={(e) => setSettings({ ...settings, contactPhone: e.target.value })}
                       className="pl-9"
                     />
                   </div>
                 </div>
               </div>
-              
+
               <div className="space-y-2">
                 <Label>Copyright Text</Label>
-                <Input 
-                  value={settings.copyrightText} 
+                <Input
+                  value={settings.copyrightText}
                   onChange={(e) => setSettings({ ...settings, copyrightText: e.target.value })}
                   placeholder="© {{Year}} Navigate Wealth. All rights reserved."
                 />
-                <p className="text-xs text-muted-foreground">Use <code>{'{{Year}}'}</code> to insert current year.</p>
+                <p className="text-xs text-muted-foreground">
+                  Use <code>{'{{Year}}'}</code> to insert current year.
+                </p>
               </div>
             </CardContent>
           </Card>
@@ -191,52 +202,62 @@ export function GlobalFooterEditor({ onBack }: GlobalFooterEditorProps) {
             <CardContent className="space-y-4">
               <div className="space-y-2">
                 <Label>LinkedIn URL</Label>
-                <Input 
-                  value={settings.socialLinks?.linkedin || ''} 
-                  onChange={(e) => setSettings({ 
-                    ...settings, 
-                    socialLinks: { ...settings.socialLinks, linkedin: e.target.value } 
-                  })}
+                <Input
+                  value={settings.socialLinks?.linkedin || ''}
+                  onChange={(e) =>
+                    setSettings({
+                      ...settings,
+                      socialLinks: { ...settings.socialLinks, linkedin: e.target.value },
+                    })
+                  }
                 />
               </div>
               <div className="space-y-2">
                 <Label>Instagram URL</Label>
-                <Input 
-                  value={settings.socialLinks?.instagram || ''} 
-                  onChange={(e) => setSettings({ 
-                    ...settings, 
-                    socialLinks: { ...settings.socialLinks, instagram: e.target.value } 
-                  })}
+                <Input
+                  value={settings.socialLinks?.instagram || ''}
+                  onChange={(e) =>
+                    setSettings({
+                      ...settings,
+                      socialLinks: { ...settings.socialLinks, instagram: e.target.value },
+                    })
+                  }
                 />
               </div>
               <div className="space-y-2">
                 <Label>YouTube URL</Label>
-                <Input 
-                  value={settings.socialLinks?.youtube || ''} 
-                  onChange={(e) => setSettings({ 
-                    ...settings, 
-                    socialLinks: { ...settings.socialLinks, youtube: e.target.value } 
-                  })}
+                <Input
+                  value={settings.socialLinks?.youtube || ''}
+                  onChange={(e) =>
+                    setSettings({
+                      ...settings,
+                      socialLinks: { ...settings.socialLinks, youtube: e.target.value },
+                    })
+                  }
                 />
               </div>
-               <div className="space-y-2">
+              <div className="space-y-2">
                 <Label>Facebook URL</Label>
-                <Input 
-                  value={settings.socialLinks?.facebook || ''} 
-                  onChange={(e) => setSettings({ 
-                    ...settings, 
-                    socialLinks: { ...settings.socialLinks, facebook: e.target.value } 
-                  })}
+                <Input
+                  value={settings.socialLinks?.facebook || ''}
+                  onChange={(e) =>
+                    setSettings({
+                      ...settings,
+                      socialLinks: { ...settings.socialLinks, facebook: e.target.value },
+                    })
+                  }
                 />
               </div>
               <div className="space-y-2">
                 <Label>Twitter / X URL</Label>
-                <Input 
-                  value={settings.socialLinks?.twitter || ''} 
-                  onChange={(e) => setSettings({ 
-                    ...settings, 
-                    socialLinks: { ...settings.socialLinks, twitter: e.target.value } 
-                  })}
+                <Input
+                  value={settings.socialLinks?.twitter || ''}
+                  onChange={(e) =>
+                    setSettings({
+                      ...settings,
+                      socialLinks: { ...settings.socialLinks, twitter: e.target.value },
+                    })
+                  }
                 />
               </div>
             </CardContent>

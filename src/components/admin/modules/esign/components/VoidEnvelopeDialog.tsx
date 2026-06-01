@@ -26,7 +26,7 @@ export function VoidEnvelopeDialog({
   onOpenChange,
   onConfirm,
   loading = false,
-  title
+  title,
 }: VoidEnvelopeDialogProps) {
   const [reason, setReason] = useState('');
 
@@ -46,11 +46,11 @@ export function VoidEnvelopeDialog({
             Void Envelope
           </DialogTitle>
           <DialogDescription>
-            Are you sure you want to void "{title || 'this envelope'}"? This action cannot be undone. 
-            All parties will be notified that the envelope has been voided.
+            Are you sure you want to void "{title || 'this envelope'}"? This action cannot be
+            undone. All parties will be notified that the envelope has been voided.
           </DialogDescription>
         </DialogHeader>
-        
+
         <div className="grid gap-4 py-4">
           <div className="grid gap-2">
             <Label htmlFor="reason">Reason for voiding (Required)</Label>
@@ -66,15 +66,11 @@ export function VoidEnvelopeDialog({
         </div>
 
         <DialogFooter>
-          <Button 
-            variant="outline" 
-            onClick={() => onOpenChange(false)}
-            disabled={loading}
-          >
+          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={loading}>
             Cancel
           </Button>
-          <Button 
-            variant="destructive" 
+          <Button
+            variant="destructive"
             onClick={handleConfirm}
             disabled={loading || !reason.trim()}
           >

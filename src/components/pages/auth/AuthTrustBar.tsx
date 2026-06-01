@@ -19,7 +19,10 @@ export function AuthTrustBar() {
         {TRUST_ITEMS.map((item) => {
           const Icon = item.icon;
           return (
-            <div key={item.label} className="flex items-center gap-1.5 text-xs font-medium text-gray-500">
+            <div
+              key={item.label}
+              className="flex items-center gap-1.5 text-xs font-medium text-gray-500"
+            >
               <Icon className="h-3.5 w-3.5 text-green-600" />
               {item.label}
             </div>

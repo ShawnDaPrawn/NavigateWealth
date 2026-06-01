@@ -149,16 +149,38 @@ export interface PortfolioSummary {
 // ═══════════════════════════════════════════════════════
 
 /** Loose shape for objects coming from the KV store */
-interface KvRecord { [key: string]: unknown }
-interface FnaRecord extends KvRecord { status?: string; updatedAt?: string; createdAt?: string; value?: unknown }
-interface PolicyRecord extends KvRecord { id?: string; name?: string; provider?: string; coverAmount?: number; currentValue?: number; monthlyPremium?: number; category?: string; product_category?: string; productCategory?: string; status?: string }
+interface KvRecord {
+  [key: string]: unknown;
+}
+interface FnaRecord extends KvRecord {
+  status?: string;
+  updatedAt?: string;
+  createdAt?: string;
+  value?: unknown;
+}
+interface PolicyRecord extends KvRecord {
+  id?: string;
+  name?: string;
+  provider?: string;
+  coverAmount?: number;
+  currentValue?: number;
+  monthlyPremium?: number;
+  category?: string;
+  product_category?: string;
+  productCategory?: string;
+  status?: string;
+}
 
 /** Pick the most recent FNA from a list of KV entries */
 function latestFna(entries: unknown[]): FnaRecord | null {
   if (!entries || entries.length === 0) return null;
   // Each KV entry is { key, value } where value is the FNA object
   const sorted = entries
-    .map((e: unknown) => (typeof e === 'object' && e !== null ? ((e as KvRecord).value ?? e) as FnaRecord : e as FnaRecord))
+    .map((e: unknown) =>
+      typeof e === 'object' && e !== null
+        ? (((e as KvRecord).value ?? e) as FnaRecord)
+        : (e as FnaRecord),
+    )
     .filter(Boolean)
     .sort((a: FnaRecord, b: FnaRecord) => {
       const dateA = new Date(a.updatedAt || a.createdAt || 0).getTime();
@@ -265,18 +287,14 @@ function extractProductHoldings(policies: PolicyRecord[]): ProductHolding[] {
       if (bucket === 'retirement') {
         value = num(
           d.retirement_fund_value ??
-          d.retirement_current_value ??
-          d.post_retirement_capital_value ??
-          d.ret_3 ??
-          d.ret_pre_3 ??
-          d.ret_post_3,
+            d.retirement_current_value ??
+            d.post_retirement_capital_value ??
+            d.ret_3 ??
+            d.ret_pre_3 ??
+            d.ret_post_3,
         );
       } else if (bucket === 'investment') {
-        value = num(
-          d.invest_current_value ??
-          d.inv_3 ??
-          d.inv_vol_3,
-        );
+        value = num(d.invest_current_value ?? d.inv_3 ?? d.inv_vol_3);
       }
 
       for (const [key, val] of allEntries) {
@@ -308,17 +326,23 @@ function extractProductHoldings(policies: PolicyRecord[]): ProductHolding[] {
         if (
           bucket !== 'retirement' &&
           bucket !== 'investment' &&
-          (lk.includes('value') || lk.includes('cover') || lk.includes('capital') ||
-           lk.includes('sum_assured') || lk.includes('amount')) &&
-          !lk.includes('maturity') && !lk.includes('projected') &&
-          n > 0 && value === 0
+          (lk.includes('value') ||
+            lk.includes('cover') ||
+            lk.includes('capital') ||
+            lk.includes('sum_assured') ||
+            lk.includes('amount')) &&
+          !lk.includes('maturity') &&
+          !lk.includes('projected') &&
+          n > 0 &&
+          value === 0
         ) {
           value = n;
         }
         // Premium: monthly premium, contribution
         if (
           (lk.includes('premium') || lk.includes('contribution') || lk.includes('income')) &&
-          n > 0 && premium === 0
+          n > 0 &&
+          premium === 0
         ) {
           premium = n;
         }
@@ -338,24 +362,79 @@ function extractProductHoldings(policies: PolicyRecord[]): ProductHolding[] {
         if (
           bucket !== 'retirement' &&
           bucket !== 'investment' &&
-          ['rp_2', 'rp_3', 'rp_4', 'rp_5', 'ret_3', 'ret_pre_3', 'ret_post_3', 'inv_3',
-           'inv_vol_3', 'inv_gua_3', 'eb_4', 'eb_risk_4', 'eb_ret_4', 'tax_4'].includes(key)
+          [
+            'rp_2',
+            'rp_3',
+            'rp_4',
+            'rp_5',
+            'ret_3',
+            'ret_pre_3',
+            'ret_post_3',
+            'inv_3',
+            'inv_vol_3',
+            'inv_gua_3',
+            'eb_4',
+            'eb_risk_4',
+            'eb_ret_4',
+            'tax_4',
+          ].includes(key)
         ) {
           if (value === 0) value = n;
         }
         // Premium fields
-        if (['rp_6', 'ret_6', 'ret_pre_6', 'ret_post_6', 'inv_6', 'inv_vol_6',
-             'ma_6', 'eb_5', 'eb_risk_5', 'eb_ret_5', 'est_5'].includes(key)) {
+        if (
+          [
+            'rp_6',
+            'ret_6',
+            'ret_pre_6',
+            'ret_post_6',
+            'inv_6',
+            'inv_vol_6',
+            'ma_6',
+            'eb_5',
+            'eb_risk_5',
+            'eb_ret_5',
+            'est_5',
+          ].includes(key)
+        ) {
           if (premium === 0) premium = n;
         }
         // Product type from numbered fields
-        if (['ret_2', 'ret_pre_2', 'ret_post_2', 'inv_2', 'inv_vol_2', 'inv_gua_2',
-             'eb_3', 'eb_risk_3', 'eb_ret_3', 'ma_2', 'tax_2'].includes(key)) {
+        if (
+          [
+            'ret_2',
+            'ret_pre_2',
+            'ret_post_2',
+            'inv_2',
+            'inv_vol_2',
+            'inv_gua_2',
+            'eb_3',
+            'eb_risk_3',
+            'eb_ret_3',
+            'ma_2',
+            'tax_2',
+          ].includes(key)
+        ) {
           if (!productName && typeof val === 'string') productName = val;
         }
         // Policy number from _1 numbered fields
-        if (['rp_1', 'ret_1', 'ret_pre_1', 'ret_post_1', 'inv_1', 'inv_vol_1',
-             'inv_gua_1', 'ma_1', 'eb_1', 'eb_risk_1', 'eb_ret_1', 'est_1', 'tax_1'].includes(key)) {
+        if (
+          [
+            'rp_1',
+            'ret_1',
+            'ret_pre_1',
+            'ret_post_1',
+            'inv_1',
+            'inv_vol_1',
+            'inv_gua_1',
+            'ma_1',
+            'eb_1',
+            'eb_risk_1',
+            'eb_ret_1',
+            'est_1',
+            'tax_1',
+          ].includes(key)
+        ) {
           if (!policyNumber && typeof val === 'string') policyNumber = val;
         }
       }
@@ -373,7 +452,9 @@ function extractProductHoldings(policies: PolicyRecord[]): ProductHolding[] {
     });
 
   if (skippedCount > 0) {
-    log.warn('Skipped non-object entries in policies array during product holdings extraction', { skippedCount });
+    log.warn('Skipped non-object entries in policies array during product holdings extraction', {
+      skippedCount,
+    });
   }
 
   return holdings;
@@ -402,31 +483,45 @@ async function resolveAdviserDetails(
     // 2. Fetch the application to find adviserId or approvedBy
     const application = await kv.get(`application:${applicationId}`);
     if (!application) {
-      log.info('Application not found — using platform defaults for adviser', { clientId, applicationId });
+      log.info('Application not found — using platform defaults for adviser', {
+        clientId,
+        applicationId,
+      });
       return PLATFORM_DEFAULTS;
     }
 
     const adviserId = application.adviserId || application.reviewed_by || application.approvedBy;
     if (!adviserId) {
-      log.info('No adviserId on application — using platform defaults for adviser', { clientId, applicationId });
+      log.info('No adviserId on application — using platform defaults for adviser', {
+        clientId,
+        applicationId,
+      });
       return PLATFORM_DEFAULTS;
     }
 
     // 3. Look up the adviser's personnel profile
     const personnelProfile = await kv.get(`personnel:profile:${adviserId}`);
     if (!personnelProfile) {
-      log.info('Personnel profile not found for adviser — using platform defaults', { clientId, adviserId });
+      log.info('Personnel profile not found for adviser — using platform defaults', {
+        clientId,
+        adviserId,
+      });
       return PLATFORM_DEFAULTS;
     }
 
     return {
-      name: `${personnelProfile.firstName || ''} ${personnelProfile.lastName || ''}`.trim() || PLATFORM_DEFAULTS.name,
+      name:
+        `${personnelProfile.firstName || ''} ${personnelProfile.lastName || ''}`.trim() ||
+        PLATFORM_DEFAULTS.name,
       email: personnelProfile.email || PLATFORM_DEFAULTS.email,
       phone: personnelProfile.phone || personnelProfile.cellphone || PLATFORM_DEFAULTS.phone,
       fspReference: personnelProfile.fspReference || PLATFORM_DEFAULTS.fspReference,
     };
   } catch (err: unknown) {
-    log.error('Error resolving adviser details — falling back to platform defaults', err instanceof Error ? err.message : err);
+    log.error(
+      'Error resolving adviser details — falling back to platform defaults',
+      err instanceof Error ? err.message : err,
+    );
     return PLATFORM_DEFAULTS;
   }
 }
@@ -471,7 +566,9 @@ export async function getPortfolioSummary(clientId: string): Promise<PortfolioSu
 
   const firstName = String(pi.firstName || ckRaw.profile_first_name || 'Client');
   const lastName = String(pi.lastName || ckRaw.profile_last_name || '');
-  const memberNumber = String(pi.memberNumber || ckRaw.member_number || `NW-${clientId.substring(0, 6).toUpperCase()}`);
+  const memberNumber = String(
+    pi.memberNumber || ckRaw.member_number || `NW-${clientId.substring(0, 6).toUpperCase()}`,
+  );
 
   // ── Extract latest FNA per domain ────────────────────
   const latestRisk = latestFna(riskFnas);
@@ -482,25 +579,60 @@ export async function getPortfolioSummary(clientId: string): Promise<PortfolioSu
   const latestEstate = latestFna(estateFnas);
 
   // ── Compute total wealth from client_keys or FNA data ──
-  const retirementValue = num(ckRaw.retirement_total || latestRetirement?.results?.currentValue || latestRetirement?.inputs?.currentRetirementSavings);
-  const investmentValue = num(ckRaw.investment_total || latestInvestment?.results?.totalValue || latestInvestment?.inputs?.currentInvestmentValue);
-  const riskDeathCover = num(ckRaw.risk_death_cover || latestRisk?.results?.deathCover || latestRisk?.inputs?.existingDeathCover);
-  const riskDisabilityCover = num(ckRaw.risk_disability_cover || latestRisk?.results?.disabilityCover || latestRisk?.inputs?.existingDisabilityCover);
-  const riskCriticalIllness = num(ckRaw.risk_critical_illness || latestRisk?.results?.criticalIllnessCover || latestRisk?.inputs?.existingCriticalIllnessCover);
+  const retirementValue = num(
+    ckRaw.retirement_total ||
+      latestRetirement?.results?.currentValue ||
+      latestRetirement?.inputs?.currentRetirementSavings,
+  );
+  const investmentValue = num(
+    ckRaw.investment_total ||
+      latestInvestment?.results?.totalValue ||
+      latestInvestment?.inputs?.currentInvestmentValue,
+  );
+  const riskDeathCover = num(
+    ckRaw.risk_death_cover ||
+      latestRisk?.results?.deathCover ||
+      latestRisk?.inputs?.existingDeathCover,
+  );
+  const riskDisabilityCover = num(
+    ckRaw.risk_disability_cover ||
+      latestRisk?.results?.disabilityCover ||
+      latestRisk?.inputs?.existingDisabilityCover,
+  );
+  const riskCriticalIllness = num(
+    ckRaw.risk_critical_illness ||
+      latestRisk?.results?.criticalIllnessCover ||
+      latestRisk?.inputs?.existingCriticalIllnessCover,
+  );
   const totalWealthValue = retirementValue + investmentValue;
 
   // Financial health score: rough heuristic based on how many pillars have assessments
-  const assessedPillars = [latestRisk, latestMedical, latestRetirement, latestInvestment, latestTax, latestEstate].filter(Boolean).length;
+  const assessedPillars = [
+    latestRisk,
+    latestMedical,
+    latestRetirement,
+    latestInvestment,
+    latestTax,
+    latestEstate,
+  ].filter(Boolean).length;
   const financialScore = Math.min(100, Math.round((assessedPillars / 6) * 100));
 
   // Most recent FNA update date
-  const allFnas = [latestRisk, latestMedical, latestRetirement, latestInvestment, latestTax, latestEstate].filter(Boolean);
-  const lastUpdated = allFnas.length > 0
-    ? allFnas.reduce((latest: string, fna: FnaRecord) => {
-        const d = fna.updatedAt || fna.createdAt || '';
-        return d > latest ? d : latest;
-      }, '')
-    : new Date().toISOString();
+  const allFnas = [
+    latestRisk,
+    latestMedical,
+    latestRetirement,
+    latestInvestment,
+    latestTax,
+    latestEstate,
+  ].filter(Boolean);
+  const lastUpdated =
+    allFnas.length > 0
+      ? allFnas.reduce((latest: string, fna: FnaRecord) => {
+          const d = fna.updatedAt || fna.createdAt || '';
+          return d > latest ? d : latest;
+        }, '')
+      : new Date().toISOString();
 
   const clientData: PortfolioClientData = {
     firstName,
@@ -508,7 +640,12 @@ export async function getPortfolioSummary(clientId: string): Promise<PortfolioSu
     memberNumber,
     totalWealthValue,
     lastUpdated,
-    riskTolerance: String(pi.riskTolerance || ckRaw.risk_tolerance || latestRisk?.inputs?.riskTolerance || 'Not assessed'),
+    riskTolerance: String(
+      pi.riskTolerance ||
+        ckRaw.risk_tolerance ||
+        latestRisk?.inputs?.riskTolerance ||
+        'Not assessed',
+    ),
     financialScore,
   };
 
@@ -524,8 +661,20 @@ export async function getPortfolioSummary(clientId: string): Promise<PortfolioSu
     retirement: {
       currentValue: retirementValue,
       projectedValue: num(latestRetirement?.results?.projectedValue || retirementValue * 2),
-      monthlyContribution: num(ckRaw.retirement_monthly_contribution || latestRetirement?.inputs?.monthlyContribution),
-      progressToGoal: retirementValue > 0 ? Math.min(100, Math.round((retirementValue / Math.max(1, num(latestRetirement?.results?.targetValue || retirementValue * 3))) * 100)) : 0,
+      monthlyContribution: num(
+        ckRaw.retirement_monthly_contribution || latestRetirement?.inputs?.monthlyContribution,
+      ),
+      progressToGoal:
+        retirementValue > 0
+          ? Math.min(
+              100,
+              Math.round(
+                (retirementValue /
+                  Math.max(1, num(latestRetirement?.results?.targetValue || retirementValue * 3))) *
+                  100,
+              ),
+            )
+          : 0,
       ...retirementStatus,
       nextReview: nextReviewDate(latestRetirement),
     },
@@ -538,16 +687,25 @@ export async function getPortfolioSummary(clientId: string): Promise<PortfolioSu
     },
     investment: {
       totalValue: investmentValue,
-      monthlyContribution: num(ckRaw.investment_monthly_contribution || latestInvestment?.inputs?.monthlyContribution),
+      monthlyContribution: num(
+        ckRaw.investment_monthly_contribution || latestInvestment?.inputs?.monthlyContribution,
+      ),
       goalsLinked: num(latestInvestment?.inputs?.goalsLinked || 0),
       performance: latestInvestment?.results?.performanceYtd || 'N/A',
       ...investmentStatus,
       nextReview: nextReviewDate(latestInvestment),
     },
     estate: {
-      willStatus: latestEstate?.results?.willStatus || latestEstate?.inputs?.willStatus || 'not-drafted',
-      trustStatus: latestEstate?.results?.trustStatus || latestEstate?.inputs?.trustStatus || 'not-established',
-      nominationStatus: latestEstate?.results?.nominationStatus || latestEstate?.inputs?.nominationStatus || 'incomplete',
+      willStatus:
+        latestEstate?.results?.willStatus || latestEstate?.inputs?.willStatus || 'not-drafted',
+      trustStatus:
+        latestEstate?.results?.trustStatus ||
+        latestEstate?.inputs?.trustStatus ||
+        'not-established',
+      nominationStatus:
+        latestEstate?.results?.nominationStatus ||
+        latestEstate?.inputs?.nominationStatus ||
+        'incomplete',
       lastUpdated: latestEstate?.updatedAt || latestEstate?.createdAt || '',
       ...estateStatus,
       nextReview: nextReviewDate(latestEstate),
@@ -561,7 +719,9 @@ export async function getPortfolioSummary(clientId: string): Promise<PortfolioSu
       nextReview: nextReviewDate(latestMedical),
     },
     tax: {
-      returnStatus: String(latestTax?.results?.returnStatus || latestTax?.inputs?.returnStatus || 'not-filed'),
+      returnStatus: String(
+        latestTax?.results?.returnStatus || latestTax?.inputs?.returnStatus || 'not-filed',
+      ),
       estimatedRefund: num(latestTax?.results?.estimatedRefund),
       taxYear: num(latestTax?.inputs?.taxYear || new Date().getFullYear()),
       filingDate: latestTax?.results?.filingDate || latestTax?.inputs?.filingDate || '',
@@ -580,7 +740,8 @@ export async function getPortfolioSummary(clientId: string): Promise<PortfolioSu
       priority: 'high',
       iconSlug: 'shield',
       title: 'Complete Risk Assessment',
-      description: 'Your risk cover has not been assessed. Book a risk review to ensure you and your family are adequately protected.',
+      description:
+        'Your risk cover has not been assessed. Book a risk review to ensure you and your family are adequately protected.',
       action: 'Book Risk Review',
       dueDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
     });
@@ -593,20 +754,26 @@ export async function getPortfolioSummary(clientId: string): Promise<PortfolioSu
       priority: 'high',
       iconSlug: 'target',
       title: 'Start Retirement Planning',
-      description: 'No retirement assessment on file. Understanding your retirement readiness is crucial for long-term financial security.',
+      description:
+        'No retirement assessment on file. Understanding your retirement readiness is crucial for long-term financial security.',
       action: 'Schedule Consultation',
       dueDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
     });
   }
 
-  if (latestEstate && (latestEstate.results?.willStatus === 'not-drafted' || latestEstate.inputs?.willStatus === 'not-drafted')) {
+  if (
+    latestEstate &&
+    (latestEstate.results?.willStatus === 'not-drafted' ||
+      latestEstate.inputs?.willStatus === 'not-drafted')
+  ) {
     recommendations.push({
       id: 'rec-estate-will',
       type: 'estate',
       priority: 'urgent',
       iconSlug: 'users',
       title: 'Estate Planning Update',
-      description: 'Your Will has not been drafted. This is essential for protecting your family and ensuring your wishes are honoured.',
+      description:
+        'Your Will has not been drafted. This is essential for protecting your family and ensuring your wishes are honoured.',
       action: 'Schedule Estate Consultation',
       dueDate: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
     });
@@ -619,7 +786,8 @@ export async function getPortfolioSummary(clientId: string): Promise<PortfolioSu
       priority: 'medium',
       iconSlug: 'calculator',
       title: 'Tax Planning Review',
-      description: 'No tax assessment on file. A review could identify opportunities to optimise your tax position.',
+      description:
+        'No tax assessment on file. A review could identify opportunities to optimise your tax position.',
       action: 'Review Tax Situation',
       dueDate: new Date(Date.now() + 60 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
     });
@@ -628,7 +796,9 @@ export async function getPortfolioSummary(clientId: string): Promise<PortfolioSu
   // ── Recent Documents ─────────────────────────────────
   const recentDocuments: PortfolioDocument[] = (documents || [])
     .map((entry: unknown) => {
-      const doc = (typeof entry === 'object' && entry !== null ? (entry as KvRecord).value ?? entry : entry) as KvRecord | null;
+      const doc = (
+        typeof entry === 'object' && entry !== null ? ((entry as KvRecord).value ?? entry) : entry
+      ) as KvRecord | null;
       if (!doc || typeof doc !== 'object') return null;
       return {
         id: String(doc.id || ''),
@@ -640,14 +810,19 @@ export async function getPortfolioSummary(clientId: string): Promise<PortfolioSu
       };
     })
     .filter(Boolean)
-    .sort((a: PortfolioDocument, b: PortfolioDocument) => new Date(b.uploadDate || 0).getTime() - new Date(a.uploadDate || 0).getTime())
+    .sort(
+      (a: PortfolioDocument, b: PortfolioDocument) =>
+        new Date(b.uploadDate || 0).getTime() - new Date(a.uploadDate || 0).getTime(),
+    )
     .slice(0, 5);
 
   // ── Upcoming Events ──────────────────────────────────
   const now = new Date();
   const upcomingEvents: PortfolioEvent[] = (calendarEvents || [])
     .map((entry: unknown) => {
-      const evt = (typeof entry === 'object' && entry !== null ? (entry as KvRecord).value ?? entry : entry) as KvRecord | null;
+      const evt = (
+        typeof entry === 'object' && entry !== null ? ((entry as KvRecord).value ?? entry) : entry
+      ) as KvRecord | null;
       if (!evt || typeof evt !== 'object') return null;
       // Filter to this client's events
       if (evt.clientId && evt.clientId !== clientId) return null;
@@ -663,7 +838,10 @@ export async function getPortfolioSummary(clientId: string): Promise<PortfolioSu
     })
     .filter(Boolean)
     .filter((evt: PortfolioEvent) => new Date(evt.date) >= now)
-    .sort((a: PortfolioEvent, b: PortfolioEvent) => new Date(a.date).getTime() - new Date(b.date).getTime())
+    .sort(
+      (a: PortfolioEvent, b: PortfolioEvent) =>
+        new Date(a.date).getTime() - new Date(b.date).getTime(),
+    )
     .slice(0, 5);
 
   // ── Product Holdings ────────────────────────────────

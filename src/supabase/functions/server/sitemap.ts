@@ -44,10 +44,8 @@ interface SitemapEntry {
 }
 
 // Lazy Supabase client — must NOT be top-level to avoid deployment crashes in edge functions.
-const getSupabase = () => createClient(
-  Deno.env.get('SUPABASE_URL')!,
-  Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
-);
+const getSupabase = () =>
+  createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!);
 
 /**
  * When adding new public pages, update BOTH:
@@ -155,16 +153,19 @@ async function generateSitemapXml(): Promise<string> {
 // The lazy router strips the prefix, so routes here are relative to /
 
 /** GET /xml — returns the XML sitemap directly (requires auth) */
-app.get('/xml', asyncHandler(async (c) => {
-  const xml = await generateSitemapXml();
+app.get(
+  '/xml',
+  asyncHandler(async (c) => {
+    const xml = await generateSitemapXml();
 
-  return new Response(xml, {
-    headers: {
-      'Content-Type': 'application/xml; charset=utf-8',
-      'Cache-Control': 'public, max-age=86400',
-    },
-  });
-}));
+    return new Response(xml, {
+      headers: {
+        'Content-Type': 'application/xml; charset=utf-8',
+        'Cache-Control': 'public, max-age=86400',
+      },
+    });
+  }),
+);
 
 /**
  * POST /publish — generates sitemap XML and uploads to a PUBLIC Supabase Storage bucket.
@@ -175,54 +176,59 @@ app.get('/xml', asyncHandler(async (c) => {
  * - Periodically to refresh lastmod dates
  * - From the admin panel as a maintenance action
  */
-app.post('/publish', asyncHandler(async (c) => {
-  const supabase = getSupabase();
-  const xml = await generateSitemapXml();
-  const urls = await getSitemapUrls();
+app.post(
+  '/publish',
+  asyncHandler(async (c) => {
+    const supabase = getSupabase();
+    const xml = await generateSitemapXml();
+    const urls = await getSitemapUrls();
 
-  // Ensure the public bucket exists (idempotent)
-  const { data: buckets } = await supabase.storage.listBuckets();
-  const bucketExists = buckets?.some((b: { name: string }) => b.name === BUCKET_NAME);
+    // Ensure the public bucket exists (idempotent)
+    const { data: buckets } = await supabase.storage.listBuckets();
+    const bucketExists = buckets?.some((b: { name: string }) => b.name === BUCKET_NAME);
 
-  if (!bucketExists) {
-    const { error: createError } = await supabase.storage.createBucket(BUCKET_NAME, {
-      public: true,
-      fileSizeLimit: 1048576, // 1MB — more than enough for a sitemap
-    });
-    if (createError) {
-      log.error('[SITEMAP] Failed to create bucket:', createError.message);
-      return c.json({ error: 'Failed to create storage bucket', details: createError.message }, 500);
+    if (!bucketExists) {
+      const { error: createError } = await supabase.storage.createBucket(BUCKET_NAME, {
+        public: true,
+        fileSizeLimit: 1048576, // 1MB — more than enough for a sitemap
+      });
+      if (createError) {
+        log.error('[SITEMAP] Failed to create bucket:', createError.message);
+        return c.json(
+          { error: 'Failed to create storage bucket', details: createError.message },
+          500,
+        );
+      }
     }
-  }
 
-  // Upload (upsert) the sitemap XML file
-  const { error: uploadError } = await supabase.storage
-    .from(BUCKET_NAME)
-    .upload(SITEMAP_FILE, new TextEncoder().encode(xml), {
-      contentType: 'application/xml',
-      upsert: true,
+    // Upload (upsert) the sitemap XML file
+    const { error: uploadError } = await supabase.storage
+      .from(BUCKET_NAME)
+      .upload(SITEMAP_FILE, new TextEncoder().encode(xml), {
+        contentType: 'application/xml',
+        upsert: true,
+      });
+
+    if (uploadError) {
+      log.error('[SITEMAP] Failed to upload sitemap:', uploadError.message);
+      return c.json({ error: 'Failed to upload sitemap', details: uploadError.message }, 500);
+    }
+
+    // Get the public URL
+    const { data: urlData } = supabase.storage.from(BUCKET_NAME).getPublicUrl(SITEMAP_FILE);
+
+    const publicUrl = urlData?.publicUrl || '';
+
+    return c.json({
+      success: true,
+      publicUrl,
+      urlCount: urls.length,
+      lastmod: new Date().toISOString().split('T')[0],
+      message:
+        'Sitemap published to public storage. Use the publicUrl in robots.txt and Google Search Console.',
     });
-
-  if (uploadError) {
-    log.error('[SITEMAP] Failed to upload sitemap:', uploadError.message);
-    return c.json({ error: 'Failed to upload sitemap', details: uploadError.message }, 500);
-  }
-
-  // Get the public URL
-  const { data: urlData } = supabase.storage
-    .from(BUCKET_NAME)
-    .getPublicUrl(SITEMAP_FILE);
-
-  const publicUrl = urlData?.publicUrl || '';
-
-  return c.json({
-    success: true,
-    publicUrl,
-    urlCount: urls.length,
-    lastmod: new Date().toISOString().split('T')[0],
-    message: 'Sitemap published to public storage. Use the publicUrl in robots.txt and Google Search Console.',
-  });
-}));
+  }),
+);
 
 /** Root handler — returns info about the sitemap service */
 app.get('/', (c) => {

@@ -30,17 +30,11 @@ import type {
   ApplicationDetailResponse,
   ApplicationData,
 } from './types.ts';
-import {
-  DATABASE_SCHEMA,
-  ERROR_MESSAGES,
-} from './constants.ts';
+import { DATABASE_SCHEMA, ERROR_MESSAGES } from './constants.ts';
 
 import { createModuleLogger } from './stderr-logger.ts';
 import { getErrMsg } from './shared-logger-utils.ts';
-import {
-  syncApplicationToProfile,
-  mergeProfileOnApproval,
-} from './profile-application-sync.ts';
+import { syncApplicationToProfile, mergeProfileOnApproval } from './profile-application-sync.ts';
 import type {
   SupabaseAdminClient,
   KvApplication,
@@ -79,14 +73,16 @@ async function excludeApplicationsForDeletedClients(
   applications: KvApplication[],
   cascadeDeprecate: boolean,
 ): Promise<KvApplication[]> {
-  const uniqueUserIds = [...new Set(
-    applications
-      .map((app: KvApplication) => app.user_id)
-      .filter((uid: string | undefined): uid is string => !!uid && isValidUUID(uid))
-  )];
+  const uniqueUserIds = [
+    ...new Set(
+      applications
+        .map((app: KvApplication) => app.user_id)
+        .filter((uid: string | undefined): uid is string => !!uid && isValidUUID(uid)),
+    ),
+  ];
   if (uniqueUserIds.length === 0) return applications;
 
-  const securityKeys = uniqueUserIds.map(uid => `security:${uid}`);
+  const securityKeys = uniqueUserIds.map((uid) => `security:${uid}`);
   const securityEntries = await kv.mget(securityKeys);
   const deletedUserIds = new Set<string>();
   uniqueUserIds.forEach((uid, idx) => {
@@ -100,7 +96,7 @@ async function excludeApplicationsForDeletedClients(
   if (cascadeDeprecate) {
     log.info(`Excluding ${deletedUserIds.size} application(s) for deleted clients from listing`);
     const staleApps = applications.filter(
-      (app: KvApplication) => app.user_id && deletedUserIds.has(app.user_id)
+      (app: KvApplication) => app.user_id && deletedUserIds.has(app.user_id),
     );
     for (const app of staleApps) {
       kv.set(`application:${app.id}`, {
@@ -108,14 +104,18 @@ async function excludeApplicationsForDeletedClients(
         deprecated: true,
         deprecated_at: new Date().toISOString(),
         deprecated_reason: 'Client account deleted — cascade cleanup',
-      }).catch(err => log.error('Failed to cascade-deprecate stale application', { appId: app.id, err }));
+      }).catch((err) =>
+        log.error('Failed to cascade-deprecate stale application', { appId: app.id, err }),
+      );
     }
   } else {
-    log.info(`getStats: Excluding ${deletedUserIds.size} application(s) for deleted clients from counts`);
+    log.info(
+      `getStats: Excluding ${deletedUserIds.size} application(s) for deleted clients from counts`,
+    );
   }
 
   return applications.filter(
-    (app: KvApplication) => !app.user_id || !deletedUserIds.has(app.user_id)
+    (app: KvApplication) => !app.user_id || !deletedUserIds.has(app.user_id),
   );
 }
 
@@ -128,7 +128,7 @@ function createServiceClient(): SupabaseAdminClient {
       db: {
         schema: DATABASE_SCHEMA,
       },
-    }
+    },
   );
 }
 
@@ -141,7 +141,7 @@ function isValidUUID(uuid: string): boolean {
 // Helper for safe email sending
 async function sendEmailSafely(
   emailFunction: () => Promise<void>,
-  emailType: string
+  emailType: string,
 ): Promise<void> {
   try {
     await emailFunction();
@@ -154,7 +154,7 @@ async function sendEmailSafely(
 async function updateUserMetadataSafely(
   supabase: SupabaseAdminClient,
   userId: string,
-  metadata: Record<string, unknown>
+  metadata: Record<string, unknown>,
 ): Promise<void> {
   try {
     await supabase.auth.admin.updateUserById(userId, {
@@ -173,7 +173,7 @@ async function updateUserMetadataSafely(
 async function verifyUserExists(
   supabase: SupabaseAdminClient,
   userId: string,
-  applicationId: string
+  applicationId: string,
 ): Promise<void> {
   const { data, error } = await supabase.auth.admin.getUserById(userId);
 
@@ -188,18 +188,16 @@ async function verifyUserExists(
 }
 
 export class AdminApplicationsService {
-  
   /**
    * Get all applications with filtering and sorting
    */
   static async getApplications(
     status?: string,
     sortBy: string = 'created_at',
-    sortOrder: string = 'desc'
+    sortOrder: string = 'desc',
   ): Promise<ApplicationListResponse> {
-
     const allApplications = await kv.getByPrefix('application:');
-    
+
     if (!allApplications || allApplications.length === 0) {
       return { applications: [], total: 0 };
     }
@@ -236,7 +234,7 @@ export class AdminApplicationsService {
           aVal = new Date(a.created_at || 0).getTime();
           bVal = new Date(b.created_at || 0).getTime();
       }
-      return sortOrder === 'asc' ? (aVal > bVal ? 1 : -1) : (aVal < bVal ? 1 : -1);
+      return sortOrder === 'asc' ? (aVal > bVal ? 1 : -1) : aVal < bVal ? 1 : -1;
     });
 
     const supabase = createServiceClient();
@@ -266,34 +264,48 @@ export class AdminApplicationsService {
             return {
               ...baseFields,
               user_email: null,
-              user_name: app.application_data?.personalInfo?.firstName + ' ' + app.application_data?.personalInfo?.lastName || 'Unknown',
+              user_name:
+                app.application_data?.personalInfo?.firstName +
+                  ' ' +
+                  app.application_data?.personalInfo?.lastName || 'Unknown',
             };
           }
 
           const { data, error: authError } = await supabase.auth.admin.getUserById(app.user_id);
-          
+
           if (authError || !data?.user) {
-             return {
+            return {
               ...baseFields,
               user_email: null,
-              user_name: app.application_data?.personalInfo?.firstName + ' ' + app.application_data?.personalInfo?.lastName || 'Unknown',
+              user_name:
+                app.application_data?.personalInfo?.firstName +
+                  ' ' +
+                  app.application_data?.personalInfo?.lastName || 'Unknown',
             };
           }
-          
+
           const user = data.user;
           return {
             ...baseFields,
             user_email: user?.email || null,
-            user_name: user?.user_metadata?.name || app.application_data?.personalInfo?.firstName + ' ' + app.application_data?.personalInfo?.lastName || null,
+            user_name:
+              user?.user_metadata?.name ||
+              app.application_data?.personalInfo?.firstName +
+                ' ' +
+                app.application_data?.personalInfo?.lastName ||
+              null,
           };
         } catch (error) {
           return {
             ...baseFields,
             user_email: null,
-            user_name: app.application_data?.personalInfo?.firstName + ' ' + app.application_data?.personalInfo?.lastName || 'Unknown',
+            user_name:
+              app.application_data?.personalInfo?.firstName +
+                ' ' +
+                app.application_data?.personalInfo?.lastName || 'Unknown',
           };
         }
-      })
+      }),
     );
 
     return {
@@ -315,8 +327,10 @@ export class AdminApplicationsService {
     const supabase = createServiceClient();
 
     try {
-      const { data: { user } } = await supabase.auth.admin.getUserById(application.user_id);
-      
+      const {
+        data: { user },
+      } = await supabase.auth.admin.getUserById(application.user_id);
+
       const detailedApplication = {
         id: application.id,
         user_id: application.user_id,
@@ -328,13 +342,17 @@ export class AdminApplicationsService {
         review_notes: application.review_notes || null,
         application_data: application.application_data || {},
         user_email: user?.email || null,
-        user_name: user?.user_metadata?.name || application.application_data?.personalInfo?.firstName + ' ' + application.application_data?.personalInfo?.lastName || null,
+        user_name:
+          user?.user_metadata?.name ||
+          application.application_data?.personalInfo?.firstName +
+            ' ' +
+            application.application_data?.personalInfo?.lastName ||
+          null,
         user_metadata: user?.user_metadata || {},
       };
 
       return { application: detailedApplication };
     } catch (error) {
-      
       return {
         application: {
           ...application,
@@ -378,11 +396,7 @@ export class AdminApplicationsService {
 
     await kv.set(`application:${applicationId}`, updatedApplication);
 
-    await updateUserMetadataSafely(
-      supabase,
-      userId,
-      buildApprovalMetadata(appData)
-    );
+    await updateUserMetadataSafely(supabase, userId, buildApprovalMetadata(appData));
 
     // Populate the client profile from application data.
     // For admin-onboarded clients, the skeleton was created during onboarding —
@@ -440,11 +454,15 @@ export class AdminApplicationsService {
       }
     } catch (profileError) {
       // Non-blocking: profile creation failure should not prevent approval
-      log.warn(`Failed to create client profile for user ${userId} during approval: ${profileError}`);
+      log.warn(
+        `Failed to create client profile for user ${userId} during approval: ${profileError}`,
+      );
     }
 
     // User was already verified above — fetch again for email details
-    const { data: { user } } = await supabase.auth.admin.getUserById(userId);
+    const {
+      data: { user },
+    } = await supabase.auth.admin.getUserById(userId);
 
     if (user?.email) {
       const isAdminOnboarded = application.origin === 'admin_import';
@@ -454,16 +472,19 @@ export class AdminApplicationsService {
       if (isAdminOnboarded) {
         // Admin-onboarded client: send welcome email with password-setup link
         try {
-          const resetLink = await AdminClientOnboardingService.generatePasswordResetLink(user.email!);
+          const resetLink = await AdminClientOnboardingService.generatePasswordResetLink(
+            user.email!,
+          );
           if (resetLink) {
             await sendEmailSafely(
-              () => sendAdminOnboardedWelcomeEmail({
-                to: user.email!,
-                clientName,
-                applicationNumber: appNumber,
-                passwordResetLink: resetLink,
-              }),
-              'admin-onboarded welcome'
+              () =>
+                sendAdminOnboardedWelcomeEmail({
+                  to: user.email!,
+                  clientName,
+                  applicationNumber: appNumber,
+                  passwordResetLink: resetLink,
+                }),
+              'admin-onboarded welcome',
             );
           }
         } catch (linkError) {
@@ -472,17 +493,19 @@ export class AdminApplicationsService {
       } else {
         // Self-service client: send normal approval email
         await sendEmailSafely(
-          () => sendClientApprovalEmail(extractApprovalEmailData(user.email!, appData, applicationId)),
-          'client approval'
+          () =>
+            sendClientApprovalEmail(extractApprovalEmailData(user.email!, appData, applicationId)),
+          'client approval',
         );
       }
 
       // Always send admin notification
       await sendEmailSafely(
-        () => sendAdminApprovalNotification(
-          extractAdminNotificationData(user.email!, appData, applicationId, adminUserId)
-        ),
-        'admin notification'
+        () =>
+          sendAdminApprovalNotification(
+            extractAdminNotificationData(user.email!, appData, applicationId, adminUserId),
+          ),
+        'admin notification',
       );
     }
   }
@@ -490,7 +513,11 @@ export class AdminApplicationsService {
   /**
    * Decline an application
    */
-  static async declineApplication(applicationId: string, adminUserId: string, reason?: string): Promise<void> {
+  static async declineApplication(
+    applicationId: string,
+    adminUserId: string,
+    reason?: string,
+  ): Promise<void> {
     const application = await kv.get(`application:${applicationId}`);
 
     if (!application) {
@@ -519,11 +546,7 @@ export class AdminApplicationsService {
 
     await kv.set(`application:${applicationId}`, updatedApplication);
 
-    await updateUserMetadataSafely(
-      supabase,
-      userId,
-      buildDeclineMetadata(appData)
-    );
+    await updateUserMetadataSafely(supabase, userId, buildDeclineMetadata(appData));
 
     // Non-Negotiable (§5.4, §12.3): Multi-entry consistency — update the KV profile's
     // accountStatus to 'declined' so the frontend routes the client correctly.
@@ -541,18 +564,23 @@ export class AdminApplicationsService {
         log.info('Decline-time profile accountStatus updated', { userId });
       }
     } catch (profileError) {
-      log.warn(`Failed to update profile accountStatus on decline for user ${userId}: ${profileError}`);
+      log.warn(
+        `Failed to update profile accountStatus on decline for user ${userId}: ${profileError}`,
+      );
     }
 
     // User was already verified above — fetch again for email details
-    const { data: { user } } = await supabase.auth.admin.getUserById(userId);
+    const {
+      data: { user },
+    } = await supabase.auth.admin.getUserById(userId);
 
     if (user?.email) {
       await sendEmailSafely(
-        () => sendClientDeclineEmail(
-          extractDeclineEmailData(user.email!, appData, reason || '', applicationId)
-        ),
-        'client decline'
+        () =>
+          sendClientDeclineEmail(
+            extractDeclineEmailData(user.email!, appData, reason || '', applicationId),
+          ),
+        'client decline',
       );
     }
   }
@@ -611,7 +639,7 @@ export class AdminApplicationsService {
     // consistent while the application is in a pre-approval status.
     // Non-blocking — sync failure must not break the amendment response.
     syncApplicationToProfile(applicationId, mergedData, adminUserId)
-      .then(result => {
+      .then((result) => {
         if (result.synced) {
           log.info('Application → Profile sync triggered after amendment', {
             applicationId,
@@ -619,7 +647,7 @@ export class AdminApplicationsService {
           });
         }
       })
-      .catch(syncErr => {
+      .catch((syncErr) => {
         log.error('Application → Profile background sync error', syncErr);
       });
 
@@ -638,7 +666,13 @@ export class AdminApplicationsService {
     input: { email: string; firstName: string; lastName: string; cellphoneNumber?: string },
     adminUserId: string,
     origin?: string,
-  ): Promise<{ success: boolean; applicationId?: string; applicationNumber?: string; error?: string; errorCode?: string }> {
+  ): Promise<{
+    success: boolean;
+    applicationId?: string;
+    applicationNumber?: string;
+    error?: string;
+    errorCode?: string;
+  }> {
     const supabase = createServiceClient();
     const email = input.email.trim().toLowerCase();
     const firstName = input.firstName.trim();
@@ -678,9 +712,17 @@ export class AdminApplicationsService {
         userError?.message?.includes('already been registered') ||
         userError?.code === 'email_exists'
       ) {
-        return { success: false, error: `A user with email ${email} already exists`, errorCode: 'EMAIL_EXISTS' };
+        return {
+          success: false,
+          error: `A user with email ${email} already exists`,
+          errorCode: 'EMAIL_EXISTS',
+        };
       }
-      return { success: false, error: userError?.message || 'Failed to create user account', errorCode: 'AUTH_ERROR' };
+      return {
+        success: false,
+        error: userError?.message || 'Failed to create user account',
+        errorCode: 'AUTH_ERROR',
+      };
     }
 
     const userId = userData.user.id;
@@ -818,7 +860,10 @@ export class AdminApplicationsService {
     // Generate a fresh password-setup link
     const setupLink = await AdminClientOnboardingService.generatePasswordResetLink(email, origin);
     if (!setupLink) {
-      return { success: false, error: 'Failed to generate a new setup link. The recovery token could not be created.' };
+      return {
+        success: false,
+        error: 'Failed to generate a new setup link. The recovery token could not be created.',
+      };
     }
 
     // Re-send the invitation email
@@ -831,7 +876,11 @@ export class AdminApplicationsService {
       });
     } catch (emailError) {
       log.error('Failed to resend invitation email', emailError as Error);
-      return { success: false, error: 'Setup link generated but the email could not be sent. Check email service configuration.' };
+      return {
+        success: false,
+        error:
+          'Setup link generated but the email could not be sent. Check email service configuration.',
+      };
     }
 
     // Update the application's updated_at timestamp for audit
@@ -872,7 +921,7 @@ export class AdminApplicationsService {
 
     const sevenDaysAgo = new Date();
     sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
-    
+
     // Calculate monthly stats
     const now = new Date();
     const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
@@ -880,23 +929,23 @@ export class AdminApplicationsService {
     const endOfLastMonth = new Date(now.getFullYear(), now.getMonth(), 0);
 
     const newThisMonth = applications.filter((a: KvApplication) => {
-        const d = new Date(a.created_at);
-        return d >= startOfMonth;
+      const d = new Date(a.created_at);
+      return d >= startOfMonth;
     }).length;
 
     const newLastMonth = applications.filter((a: KvApplication) => {
-        const d = new Date(a.created_at);
-        return d >= startOfLastMonth && d <= endOfLastMonth;
+      const d = new Date(a.created_at);
+      return d >= startOfLastMonth && d <= endOfLastMonth;
     }).length;
 
-    let taskStats = { new_tasks: 0, pending_tasks: 0 };
+    const taskStats = { new_tasks: 0, pending_tasks: 0 };
     try {
       // Tasks are stored in KV store (not a Postgres table)
       const kvTasks = (await kv.getByPrefix('task:')) as KvTask[];
       if (Array.isArray(kvTasks)) {
         taskStats.new_tasks = kvTasks.filter((t) => t && t.status === 'new').length;
-        taskStats.pending_tasks = kvTasks.filter((t) =>
-          t && (t.status === 'new' || t.status === 'in_progress')
+        taskStats.pending_tasks = kvTasks.filter(
+          (t) => t && (t.status === 'new' || t.status === 'in_progress'),
         ).length;
       }
     } catch (taskError) {
@@ -927,31 +976,36 @@ export class AdminApplicationsService {
       const requests = (await kv.getByPrefix('requests:request:')) as KvRequest[];
       if (requests) {
         totalRequests = requests.length;
-        pendingRequests = requests.filter((r) => 
-          r.status === 'New' || 
-          r.status === 'In Compliance Review' || 
-          r.status === 'In Lifecycle' || 
-          r.status === 'In Sign-Off'
+        pendingRequests = requests.filter(
+          (r) =>
+            r.status === 'New' ||
+            r.status === 'In Compliance Review' ||
+            r.status === 'In Lifecycle' ||
+            r.status === 'In Sign-Off',
         ).length;
       }
 
       // Get pending e-signatures
       const esignItems = (await kv.getByPrefix('esign:envelope:')) as KvEsignEnvelope[];
-      pendingEsignatures = esignItems ? esignItems.filter((item) => 
-        item && 
-        typeof item === 'object' &&
-        !Array.isArray(item) && 
-        item.status && 
-        (item.status === 'sent' || item.status === 'in_progress')
-      ).length : 0;
-
+      pendingEsignatures = esignItems
+        ? esignItems.filter(
+            (item) =>
+              item &&
+              typeof item === 'object' &&
+              !Array.isArray(item) &&
+              item.status &&
+              (item.status === 'sent' || item.status === 'in_progress'),
+          ).length
+        : 0;
     } catch (requestError) {
       log.error('getStats: Failed to fetch request/esign stats', requestError as Error);
     }
 
     return {
       total: applications.length,
-      submitted_for_review: applications.filter((a) => a.status === 'submitted' || a.status === 'pending' as string).length,
+      submitted_for_review: applications.filter(
+        (a) => a.status === 'submitted' || a.status === ('pending' as string),
+      ).length,
       approved: applications.filter((a) => a.status === 'approved').length,
       declined: applications.filter((a) => a.status === 'declined').length,
       application_in_progress: inProgressCount,
@@ -959,7 +1013,9 @@ export class AdminApplicationsService {
       draft: draftCount,
       incomplete: incompleteCount,
       no_application: 0,
-      new_applications_7d: applications.filter((a) => a.status === 'submitted' && a.created_at && new Date(a.created_at) >= sevenDaysAgo).length,
+      new_applications_7d: applications.filter(
+        (a) => a.status === 'submitted' && a.created_at && new Date(a.created_at) >= sevenDaysAgo,
+      ).length,
       new_this_month: newThisMonth,
       new_last_month: newLastMonth,
       new_tasks: taskStats.new_tasks,
@@ -977,7 +1033,7 @@ export class AdminApplicationsService {
    */
   static async clearApplications(): Promise<number> {
     const applications = await kv.getByPrefix('application:');
-    
+
     if (!applications || applications.length === 0) {
       return 0;
     }
@@ -999,7 +1055,7 @@ export class AdminApplicationsService {
    */
   static async migrateApplications(): Promise<MigrationResult> {
     const allApplications = await kv.getByPrefix('application:');
-    
+
     if (!allApplications || allApplications.length === 0) {
       return { migrated: 0, deleted: 0, applications: [] };
     }
@@ -1010,15 +1066,16 @@ export class AdminApplicationsService {
 
     for (const app of allApplications) {
       try {
-        const isOldFormat = !app.id || 
-                           typeof app.id !== 'string' || 
-                           app.id.length < 20 || 
-                           !app.user_id ||
-                           !app.created_at;
+        const isOldFormat =
+          !app.id ||
+          typeof app.id !== 'string' ||
+          app.id.length < 20 ||
+          !app.user_id ||
+          !app.created_at;
 
         if (isOldFormat) {
           const newId = crypto.randomUUID();
-          
+
           const newApplication: KvApplication = {
             id: newId,
             user_id: app.user_id || 'unknown',
@@ -1050,7 +1107,7 @@ export class AdminApplicationsService {
           };
 
           await kv.set(`application:${newId}`, newApplication);
-          
+
           migratedCount++;
           migratedApps.push({
             oldId: app.id,
@@ -1084,7 +1141,7 @@ export class AdminApplicationsService {
     for (const appId of applicationIds) {
       try {
         const application = await kv.get(`application:${appId}`);
-        
+
         if (application) {
           const deprecatedApp = {
             ...application,
@@ -1121,7 +1178,7 @@ export class AdminApplicationsService {
     for (const appId of applicationIds) {
       try {
         const application = await kv.get(`application:${appId}`);
-        
+
         if (application) {
           const { deprecated, deprecated_at, deprecated_reason, ...restoredApp } = application;
           await kv.set(`application:${appId}`, restoredApp);
@@ -1162,11 +1219,7 @@ export class AdminApplicationsService {
         if (items && items.length > 0) {
           for (const item of items) {
             try {
-              const possibleKeys = [
-                `${prefix}${item.id}`,
-                item.id,
-                item.key,
-              ];
+              const possibleKeys = [`${prefix}${item.id}`, item.id, item.key];
 
               for (const possibleKey of possibleKeys) {
                 if (possibleKey) {

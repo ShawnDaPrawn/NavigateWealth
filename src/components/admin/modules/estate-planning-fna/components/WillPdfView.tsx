@@ -7,12 +7,7 @@
  */
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from '../../../../ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../../../../ui/dialog';
 import { Button } from '../../../../ui/button';
 import { Loader2, Printer, X, Download } from 'lucide-react';
 import { toast } from 'sonner';
@@ -159,11 +154,11 @@ function SectionPreamble({ data }: { data: WillDataPayload }) {
       </div>
       <div className="callout" style={{ marginTop: '2mm' }}>
         <p style={{ fontSize: '9.5px', lineHeight: 1.5 }}>
-          I, <strong>{data.personalDetails.fullName || '___________________'}</strong>,
-          Identity Number <strong>{data.personalDetails.idNumber || '___________________'}</strong>,
-          born on <strong>{formatDate(data.personalDetails.dateOfBirth)}</strong>,
-          residing at <strong>{data.personalDetails.physicalAddress || '___________________'}</strong>,
-          being of sound mind and under no duress, hereby revoke all former wills and testamentary
+          I, <strong>{data.personalDetails.fullName || '___________________'}</strong>, Identity
+          Number <strong>{data.personalDetails.idNumber || '___________________'}</strong>, born on{' '}
+          <strong>{formatDate(data.personalDetails.dateOfBirth)}</strong>, residing at{' '}
+          <strong>{data.personalDetails.physicalAddress || '___________________'}</strong>, being of
+          sound mind and under no duress, hereby revoke all former wills and testamentary
           dispositions previously made by me and declare this to be my Last Will and Testament.
         </p>
       </div>
@@ -200,7 +195,10 @@ function SectionPersonalDetails({ data }: { data: WillDataPayload }) {
           {pd.maritalStatus?.startsWith('married') && pd.spouseName && (
             <tr>
               <th>Spouse</th>
-              <td>{pd.spouseName}{pd.spouseIdNumber ? ` (ID: ${pd.spouseIdNumber})` : ''}</td>
+              <td>
+                {pd.spouseName}
+                {pd.spouseIdNumber ? ` (ID: ${pd.spouseIdNumber})` : ''}
+              </td>
             </tr>
           )}
           <tr>
@@ -222,7 +220,8 @@ function SectionExecutors({ executors }: { executors: WillDataPayload['executors
         <h2>Appointment of Executor(s)</h2>
       </div>
       <p style={{ fontSize: '9.5px', lineHeight: 1.5, marginBottom: '2mm' }}>
-        I hereby nominate and appoint the following person(s) as executor(s) of this my Last Will and Testament:
+        I hereby nominate and appoint the following person(s) as executor(s) of this my Last Will
+        and Testament:
       </p>
       <table>
         <thead>
@@ -240,7 +239,7 @@ function SectionExecutors({ executors }: { executors: WillDataPayload['executors
               <td>{idx + 1}</td>
               <td>{exec.name}</td>
               <td>{exec.type === 'professional' ? 'Professional' : 'Individual'}</td>
-              <td>{exec.type === 'professional' ? (exec.company || '-') : (exec.idNumber || '-')}</td>
+              <td>{exec.type === 'professional' ? exec.company || '-' : exec.idNumber || '-'}</td>
               <td>{exec.contactDetails || '-'}</td>
             </tr>
           ))}
@@ -250,7 +249,11 @@ function SectionExecutors({ executors }: { executors: WillDataPayload['executors
   );
 }
 
-function SectionBeneficiaries({ beneficiaries }: { beneficiaries: WillDataPayload['beneficiaries'] }) {
+function SectionBeneficiaries({
+  beneficiaries,
+}: {
+  beneficiaries: WillDataPayload['beneficiaries'];
+}) {
   if (beneficiaries.length === 0) return null;
   const total = beneficiaries.reduce((s, b) => s + b.percentage, 0);
   return (
@@ -260,7 +263,8 @@ function SectionBeneficiaries({ beneficiaries }: { beneficiaries: WillDataPayloa
         <h2>Beneficiaries &amp; Distribution of Estate</h2>
       </div>
       <p style={{ fontSize: '9.5px', lineHeight: 1.5, marginBottom: '2mm' }}>
-        Subject to the specific bequests herein below, the residue of my estate shall be distributed as follows:
+        Subject to the specific bequests herein below, the residue of my estate shall be distributed
+        as follows:
       </p>
       <table>
         <thead>
@@ -283,8 +287,16 @@ function SectionBeneficiaries({ beneficiaries }: { beneficiaries: WillDataPayloa
             </tr>
           ))}
           <tr>
-            <td colSpan={4} style={{ fontWeight: 700, textAlign: 'right' }}>Total</td>
-            <td style={{ fontWeight: 700, textAlign: 'right', color: total === 100 ? '#16a34a' : '#dc2626' }}>
+            <td colSpan={4} style={{ fontWeight: 700, textAlign: 'right' }}>
+              Total
+            </td>
+            <td
+              style={{
+                fontWeight: 700,
+                textAlign: 'right',
+                color: total === 100 ? '#16a34a' : '#dc2626',
+              }}
+            >
               {total}%
             </td>
           </tr>
@@ -303,7 +315,8 @@ function SectionGuardians({ guardians }: { guardians: WillDataPayload['guardians
         <h2>Guardianship of Minor Children</h2>
       </div>
       <p style={{ fontSize: '9.5px', lineHeight: 1.5, marginBottom: '2mm' }}>
-        In the event of my death, I nominate and appoint the following person(s) as guardian(s) of my minor children:
+        In the event of my death, I nominate and appoint the following person(s) as guardian(s) of
+        my minor children:
       </p>
       <table>
         <thead>
@@ -366,7 +379,13 @@ function SectionBequests({ bequests }: { bequests: WillDataPayload['specificBequ
   );
 }
 
-function SectionFuneralWishes({ funeralWishes, additionalClauses }: { funeralWishes: string; additionalClauses: string }) {
+function SectionFuneralWishes({
+  funeralWishes,
+  additionalClauses,
+}: {
+  funeralWishes: string;
+  additionalClauses: string;
+}) {
   const hasFuneral = funeralWishes && funeralWishes.trim().length > 0;
   const hasAdditional = additionalClauses && additionalClauses.trim().length > 0;
   if (!hasFuneral && !hasAdditional) return null;
@@ -382,15 +401,21 @@ function SectionFuneralWishes({ funeralWishes, additionalClauses }: { funeralWis
         <div style={{ marginBottom: '3mm' }}>
           <p style={{ fontSize: '9.5px', fontWeight: 700, marginBottom: '1mm' }}>Funeral Wishes:</p>
           <div className="callout">
-            <p style={{ fontSize: '9.5px', lineHeight: 1.5, whiteSpace: 'pre-wrap' }}>{funeralWishes}</p>
+            <p style={{ fontSize: '9.5px', lineHeight: 1.5, whiteSpace: 'pre-wrap' }}>
+              {funeralWishes}
+            </p>
           </div>
         </div>
       )}
       {hasAdditional && (
         <div>
-          <p style={{ fontSize: '9.5px', fontWeight: 700, marginBottom: '1mm' }}>Additional Clauses:</p>
+          <p style={{ fontSize: '9.5px', fontWeight: 700, marginBottom: '1mm' }}>
+            Additional Clauses:
+          </p>
           <div className="callout">
-            <p style={{ fontSize: '9.5px', lineHeight: 1.5, whiteSpace: 'pre-wrap' }}>{additionalClauses}</p>
+            <p style={{ fontSize: '9.5px', lineHeight: 1.5, whiteSpace: 'pre-wrap' }}>
+              {additionalClauses}
+            </p>
           </div>
         </div>
       )}
@@ -405,16 +430,20 @@ function SectionLegalNotice() {
         <span className="num">8.</span>
         <h2>Legal Notice</h2>
       </div>
-      <div className="callout" style={{
-        background: '#fffbeb',
-        borderColor: '#fde68a',
-      }}>
+      <div
+        className="callout"
+        style={{
+          background: '#fffbeb',
+          borderColor: '#fde68a',
+        }}
+      >
         <p style={{ fontSize: '9px', lineHeight: 1.5, color: '#92400e' }}>
-          <strong>Important:</strong> This document is a draft prepared by Navigate Wealth for review purposes only.
-          It does not constitute a valid Last Will and Testament until it has been printed, signed by the testator
-          in the presence of two competent witnesses (who must also sign), in compliance with the requirements
-          of the Wills Act 7 of 1953 (South Africa). Navigate Wealth recommends that the testator seek
-          independent legal advice before executing this will.
+          <strong>Important:</strong> This document is a draft prepared by Navigate Wealth for
+          review purposes only. It does not constitute a valid Last Will and Testament until it has
+          been printed, signed by the testator in the presence of two competent witnesses (who must
+          also sign), in compliance with the requirements of the Wills Act 7 of 1953 (South Africa).
+          Navigate Wealth recommends that the testator seek independent legal advice before
+          executing this will.
         </p>
       </div>
     </div>
@@ -429,13 +458,19 @@ function SectionSignatures({ data }: { data: WillDataPayload }) {
         <h2>Signatures</h2>
       </div>
       <p style={{ fontSize: '9.5px', lineHeight: 1.5, marginBottom: '4mm' }}>
-        Signed at _________________________ on this _________ day of _________________________ 20______
+        Signed at _________________________ on this _________ day of _________________________
+        20______
       </p>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8mm', marginTop: '4mm' }}>
+      <div
+        style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8mm', marginTop: '4mm' }}
+      >
         <div>
           <p style={{ fontSize: '9px', fontWeight: 700, marginBottom: '1mm' }}>TESTATOR</p>
-          <div className="signature-box" style={{ border: '1px solid #d1d5db', borderRadius: '4px', padding: '4px' }}>
+          <div
+            className="signature-box"
+            style={{ border: '1px solid #d1d5db', borderRadius: '4px', padding: '4px' }}
+          >
             <div className="signature-line" style={{ marginTop: '10mm' }}></div>
           </div>
           <p style={{ fontSize: '8.5px', color: '#6b7280', marginTop: '1mm' }}>
@@ -445,22 +480,38 @@ function SectionSignatures({ data }: { data: WillDataPayload }) {
         <div></div>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8mm', marginTop: '6mm' }}>
+      <div
+        style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8mm', marginTop: '6mm' }}
+      >
         <div>
           <p style={{ fontSize: '9px', fontWeight: 700, marginBottom: '1mm' }}>WITNESS 1</p>
-          <div className="signature-box" style={{ border: '1px solid #d1d5db', borderRadius: '4px', padding: '4px' }}>
+          <div
+            className="signature-box"
+            style={{ border: '1px solid #d1d5db', borderRadius: '4px', padding: '4px' }}
+          >
             <div className="signature-line" style={{ marginTop: '10mm' }}></div>
           </div>
-          <p style={{ fontSize: '8.5px', color: '#6b7280', marginTop: '1mm' }}>Full Name: _______________________________</p>
-          <p style={{ fontSize: '8.5px', color: '#6b7280' }}>ID Number: _______________________________</p>
+          <p style={{ fontSize: '8.5px', color: '#6b7280', marginTop: '1mm' }}>
+            Full Name: _______________________________
+          </p>
+          <p style={{ fontSize: '8.5px', color: '#6b7280' }}>
+            ID Number: _______________________________
+          </p>
         </div>
         <div>
           <p style={{ fontSize: '9px', fontWeight: 700, marginBottom: '1mm' }}>WITNESS 2</p>
-          <div className="signature-box" style={{ border: '1px solid #d1d5db', borderRadius: '4px', padding: '4px' }}>
+          <div
+            className="signature-box"
+            style={{ border: '1px solid #d1d5db', borderRadius: '4px', padding: '4px' }}
+          >
             <div className="signature-line" style={{ marginTop: '10mm' }}></div>
           </div>
-          <p style={{ fontSize: '8.5px', color: '#6b7280', marginTop: '1mm' }}>Full Name: _______________________________</p>
-          <p style={{ fontSize: '8.5px', color: '#6b7280' }}>ID Number: _______________________________</p>
+          <p style={{ fontSize: '8.5px', color: '#6b7280', marginTop: '1mm' }}>
+            Full Name: _______________________________
+          </p>
+          <p style={{ fontSize: '8.5px', color: '#6b7280' }}>
+            ID Number: _______________________________
+          </p>
         </div>
       </div>
     </div>
@@ -484,13 +535,13 @@ function LivingWillPreamble({ data }: { data: LivingWillDataPayload }) {
       </div>
       <div className="callout" style={{ marginTop: '2mm' }}>
         <p style={{ fontSize: '9.5px', lineHeight: 1.5 }}>
-          I, <strong>{data.personalDetails.fullName || '___________________'}</strong>,
-          Identity Number <strong>{data.personalDetails.idNumber || '___________________'}</strong>,
-          born on <strong>{formatDate(data.personalDetails.dateOfBirth)}</strong>,
-          residing at <strong>{data.personalDetails.physicalAddress || '___________________'}</strong>,
-          being of sound and disposing mind and memory, make this Living Will to express my wishes
-          regarding medical treatment and end-of-life care in the event that I am unable to communicate
-          my decisions.
+          I, <strong>{data.personalDetails.fullName || '___________________'}</strong>, Identity
+          Number <strong>{data.personalDetails.idNumber || '___________________'}</strong>, born on{' '}
+          <strong>{formatDate(data.personalDetails.dateOfBirth)}</strong>, residing at{' '}
+          <strong>{data.personalDetails.physicalAddress || '___________________'}</strong>, being of
+          sound and disposing mind and memory, make this Living Will to express my wishes regarding
+          medical treatment and end-of-life care in the event that I am unable to communicate my
+          decisions.
         </p>
       </div>
     </div>
@@ -507,17 +558,33 @@ function LivingWillPersonalDetails({ data }: { data: LivingWillDataPayload }) {
       </div>
       <table>
         <tbody>
-          <tr><th>Full Legal Name</th><td>{pd.fullName || '-'}</td></tr>
-          <tr><th>Identity Number</th><td>{pd.idNumber || '-'}</td></tr>
-          <tr><th>Date of Birth</th><td>{formatDate(pd.dateOfBirth)}</td></tr>
-          <tr><th>Physical Address</th><td>{pd.physicalAddress || '-'}</td></tr>
+          <tr>
+            <th>Full Legal Name</th>
+            <td>{pd.fullName || '-'}</td>
+          </tr>
+          <tr>
+            <th>Identity Number</th>
+            <td>{pd.idNumber || '-'}</td>
+          </tr>
+          <tr>
+            <th>Date of Birth</th>
+            <td>{formatDate(pd.dateOfBirth)}</td>
+          </tr>
+          <tr>
+            <th>Physical Address</th>
+            <td>{pd.physicalAddress || '-'}</td>
+          </tr>
         </tbody>
       </table>
     </div>
   );
 }
 
-function SectionHealthcareAgents({ agents }: { agents: LivingWillDataPayload['healthcareAgents'] }) {
+function SectionHealthcareAgents({
+  agents,
+}: {
+  agents: LivingWillDataPayload['healthcareAgents'];
+}) {
   if (!agents || agents.length === 0) return null;
   return (
     <div className="section">
@@ -556,7 +623,11 @@ function SectionHealthcareAgents({ agents }: { agents: LivingWillDataPayload['he
   );
 }
 
-function SectionTreatmentPreferences({ treatment }: { treatment: LivingWillDataPayload['lifeSustainingTreatment'] }) {
+function SectionTreatmentPreferences({
+  treatment,
+}: {
+  treatment: LivingWillDataPayload['lifeSustainingTreatment'];
+}) {
   return (
     <div className="section">
       <div className="section-head">
@@ -568,18 +639,37 @@ function SectionTreatmentPreferences({ treatment }: { treatment: LivingWillDataP
       </p>
       <table>
         <tbody>
-          <tr><th>Mechanical Ventilation</th><td>{TREATMENT_PREF_LABELS[treatment.ventilator] || '-'}</td></tr>
-          <tr><th>CPR</th><td>{TREATMENT_PREF_LABELS[treatment.cpr] || '-'}</td></tr>
-          <tr><th>Artificial Nutrition &amp; Hydration</th><td>{TREATMENT_PREF_LABELS[treatment.artificialNutrition] || '-'}</td></tr>
-          <tr><th>Dialysis</th><td>{TREATMENT_PREF_LABELS[treatment.dialysis] || '-'}</td></tr>
-          <tr><th>Antibiotics</th><td>{TREATMENT_PREF_LABELS[treatment.antibiotics] || '-'}</td></tr>
+          <tr>
+            <th>Mechanical Ventilation</th>
+            <td>{TREATMENT_PREF_LABELS[treatment.ventilator] || '-'}</td>
+          </tr>
+          <tr>
+            <th>CPR</th>
+            <td>{TREATMENT_PREF_LABELS[treatment.cpr] || '-'}</td>
+          </tr>
+          <tr>
+            <th>Artificial Nutrition &amp; Hydration</th>
+            <td>{TREATMENT_PREF_LABELS[treatment.artificialNutrition] || '-'}</td>
+          </tr>
+          <tr>
+            <th>Dialysis</th>
+            <td>{TREATMENT_PREF_LABELS[treatment.dialysis] || '-'}</td>
+          </tr>
+          <tr>
+            <th>Antibiotics</th>
+            <td>{TREATMENT_PREF_LABELS[treatment.antibiotics] || '-'}</td>
+          </tr>
         </tbody>
       </table>
       {treatment.additionalInstructions && (
         <div style={{ marginTop: '2mm' }}>
-          <p style={{ fontSize: '9.5px', fontWeight: 700, marginBottom: '1mm' }}>Additional Instructions:</p>
+          <p style={{ fontSize: '9.5px', fontWeight: 700, marginBottom: '1mm' }}>
+            Additional Instructions:
+          </p>
           <div className="callout">
-            <p style={{ fontSize: '9.5px', lineHeight: 1.5, whiteSpace: 'pre-wrap' }}>{treatment.additionalInstructions}</p>
+            <p style={{ fontSize: '9.5px', lineHeight: 1.5, whiteSpace: 'pre-wrap' }}>
+              {treatment.additionalInstructions}
+            </p>
           </div>
         </div>
       )}
@@ -587,7 +677,11 @@ function SectionTreatmentPreferences({ treatment }: { treatment: LivingWillDataP
   );
 }
 
-function SectionPainManagement({ painMgmt }: { painMgmt: LivingWillDataPayload['painManagement'] }) {
+function SectionPainManagement({
+  painMgmt,
+}: {
+  painMgmt: LivingWillDataPayload['painManagement'];
+}) {
   return (
     <div className="section">
       <div className="section-head">
@@ -596,15 +690,25 @@ function SectionPainManagement({ painMgmt }: { painMgmt: LivingWillDataPayload['
       </div>
       <table>
         <tbody>
-          <tr><th>Comfort Care Only</th><td>{painMgmt.comfortCareOnly ? 'Yes' : 'No'}</td></tr>
-          <tr><th>Maximum Pain Relief</th><td>{painMgmt.maximumPainRelief ? 'Yes' : 'No'}</td></tr>
+          <tr>
+            <th>Comfort Care Only</th>
+            <td>{painMgmt.comfortCareOnly ? 'Yes' : 'No'}</td>
+          </tr>
+          <tr>
+            <th>Maximum Pain Relief</th>
+            <td>{painMgmt.maximumPainRelief ? 'Yes' : 'No'}</td>
+          </tr>
         </tbody>
       </table>
       {painMgmt.additionalInstructions && (
         <div style={{ marginTop: '2mm' }}>
-          <p style={{ fontSize: '9.5px', fontWeight: 700, marginBottom: '1mm' }}>Additional Instructions:</p>
+          <p style={{ fontSize: '9.5px', fontWeight: 700, marginBottom: '1mm' }}>
+            Additional Instructions:
+          </p>
           <div className="callout">
-            <p style={{ fontSize: '9.5px', lineHeight: 1.5, whiteSpace: 'pre-wrap' }}>{painMgmt.additionalInstructions}</p>
+            <p style={{ fontSize: '9.5px', lineHeight: 1.5, whiteSpace: 'pre-wrap' }}>
+              {painMgmt.additionalInstructions}
+            </p>
           </div>
         </div>
       )}
@@ -613,8 +717,12 @@ function SectionPainManagement({ painMgmt }: { painMgmt: LivingWillDataPayload['
 }
 
 function SectionOrganDonation({ donation }: { donation: LivingWillDataPayload['organDonation'] }) {
-  const donationTypeLabel = donation.donationType === 'all' ? 'All organs and tissues'
-    : donation.donationType === 'specific' ? 'Specific organs only' : 'None';
+  const donationTypeLabel =
+    donation.donationType === 'all'
+      ? 'All organs and tissues'
+      : donation.donationType === 'specific'
+        ? 'Specific organs only'
+        : 'None';
   return (
     <div className="section">
       <div className="section-head">
@@ -623,17 +731,30 @@ function SectionOrganDonation({ donation }: { donation: LivingWillDataPayload['o
       </div>
       <table>
         <tbody>
-          <tr><th>Organ Donor</th><td>{donation.isDonor ? 'Yes' : 'No'}</td></tr>
-          {donation.isDonor && <tr><th>Donation Type</th><td>{donationTypeLabel}</td></tr>}
+          <tr>
+            <th>Organ Donor</th>
+            <td>{donation.isDonor ? 'Yes' : 'No'}</td>
+          </tr>
+          {donation.isDonor && (
+            <tr>
+              <th>Donation Type</th>
+              <td>{donationTypeLabel}</td>
+            </tr>
+          )}
           {donation.donationType === 'specific' && donation.specificOrgans && (
-            <tr><th>Specific Organs</th><td>{donation.specificOrgans}</td></tr>
+            <tr>
+              <th>Specific Organs</th>
+              <td>{donation.specificOrgans}</td>
+            </tr>
           )}
         </tbody>
       </table>
       {donation.additionalInstructions && (
         <div style={{ marginTop: '2mm' }}>
           <div className="callout">
-            <p style={{ fontSize: '9.5px', lineHeight: 1.5, whiteSpace: 'pre-wrap' }}>{donation.additionalInstructions}</p>
+            <p style={{ fontSize: '9.5px', lineHeight: 1.5, whiteSpace: 'pre-wrap' }}>
+              {donation.additionalInstructions}
+            </p>
           </div>
         </div>
       )}
@@ -641,7 +762,13 @@ function SectionOrganDonation({ donation }: { donation: LivingWillDataPayload['o
   );
 }
 
-function SectionLivingWillWishes({ funeralWishes, additionalDirectives }: { funeralWishes: string; additionalDirectives: string }) {
+function SectionLivingWillWishes({
+  funeralWishes,
+  additionalDirectives,
+}: {
+  funeralWishes: string;
+  additionalDirectives: string;
+}) {
   const hasFuneral = funeralWishes && funeralWishes.trim().length > 0;
   const hasDirectives = additionalDirectives && additionalDirectives.trim().length > 0;
   if (!hasFuneral && !hasDirectives) return null;
@@ -655,15 +782,21 @@ function SectionLivingWillWishes({ funeralWishes, additionalDirectives }: { fune
         <div style={{ marginBottom: '3mm' }}>
           <p style={{ fontSize: '9.5px', fontWeight: 700, marginBottom: '1mm' }}>Funeral Wishes:</p>
           <div className="callout">
-            <p style={{ fontSize: '9.5px', lineHeight: 1.5, whiteSpace: 'pre-wrap' }}>{funeralWishes}</p>
+            <p style={{ fontSize: '9.5px', lineHeight: 1.5, whiteSpace: 'pre-wrap' }}>
+              {funeralWishes}
+            </p>
           </div>
         </div>
       )}
       {hasDirectives && (
         <div>
-          <p style={{ fontSize: '9.5px', fontWeight: 700, marginBottom: '1mm' }}>Additional Directives:</p>
+          <p style={{ fontSize: '9.5px', fontWeight: 700, marginBottom: '1mm' }}>
+            Additional Directives:
+          </p>
           <div className="callout">
-            <p style={{ fontSize: '9.5px', lineHeight: 1.5, whiteSpace: 'pre-wrap' }}>{additionalDirectives}</p>
+            <p style={{ fontSize: '9.5px', lineHeight: 1.5, whiteSpace: 'pre-wrap' }}>
+              {additionalDirectives}
+            </p>
           </div>
         </div>
       )}
@@ -680,10 +813,11 @@ function LivingWillLegalNotice() {
       </div>
       <div className="callout" style={{ background: '#fffbeb', borderColor: '#fde68a' }}>
         <p style={{ fontSize: '9px', lineHeight: 1.5, color: '#92400e' }}>
-          <strong>Important:</strong> This document is a draft prepared by Navigate Wealth for review purposes only.
-          It does not constitute a valid Living Will until it has been printed, signed by the declarant
-          in the presence of two competent witnesses (who must also sign). Navigate Wealth recommends that the
-          declarant seek independent legal advice before executing this living will.
+          <strong>Important:</strong> This document is a draft prepared by Navigate Wealth for
+          review purposes only. It does not constitute a valid Living Will until it has been
+          printed, signed by the declarant in the presence of two competent witnesses (who must also
+          sign). Navigate Wealth recommends that the declarant seek independent legal advice before
+          executing this living will.
         </p>
       </div>
     </div>
@@ -698,9 +832,12 @@ function LivingWillSignatures({ data }: { data: LivingWillDataPayload }) {
         <h2>Signatures</h2>
       </div>
       <p style={{ fontSize: '9.5px', lineHeight: 1.5, marginBottom: '4mm' }}>
-        Signed at _________________________ on this _________ day of _________________________ 20______
+        Signed at _________________________ on this _________ day of _________________________
+        20______
       </p>
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8mm', marginTop: '4mm' }}>
+      <div
+        style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8mm', marginTop: '4mm' }}
+      >
         <div>
           <p style={{ fontSize: '9px', fontWeight: 700, marginBottom: '1mm' }}>DECLARANT</p>
           <div style={{ border: '1px solid #d1d5db', borderRadius: '4px', padding: '4px' }}>
@@ -712,22 +849,32 @@ function LivingWillSignatures({ data }: { data: LivingWillDataPayload }) {
         </div>
         <div></div>
       </div>
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8mm', marginTop: '6mm' }}>
+      <div
+        style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8mm', marginTop: '6mm' }}
+      >
         <div>
           <p style={{ fontSize: '9px', fontWeight: 700, marginBottom: '1mm' }}>WITNESS 1</p>
           <div style={{ border: '1px solid #d1d5db', borderRadius: '4px', padding: '4px' }}>
             <div style={{ marginTop: '10mm', borderBottom: '1px solid #000' }}></div>
           </div>
-          <p style={{ fontSize: '8.5px', color: '#6b7280', marginTop: '1mm' }}>Full Name: _______________________________</p>
-          <p style={{ fontSize: '8.5px', color: '#6b7280' }}>ID Number: _______________________________</p>
+          <p style={{ fontSize: '8.5px', color: '#6b7280', marginTop: '1mm' }}>
+            Full Name: _______________________________
+          </p>
+          <p style={{ fontSize: '8.5px', color: '#6b7280' }}>
+            ID Number: _______________________________
+          </p>
         </div>
         <div>
           <p style={{ fontSize: '9px', fontWeight: 700, marginBottom: '1mm' }}>WITNESS 2</p>
           <div style={{ border: '1px solid #d1d5db', borderRadius: '4px', padding: '4px' }}>
             <div style={{ marginTop: '10mm', borderBottom: '1px solid #000' }}></div>
           </div>
-          <p style={{ fontSize: '8.5px', color: '#6b7280', marginTop: '1mm' }}>Full Name: _______________________________</p>
-          <p style={{ fontSize: '8.5px', color: '#6b7280' }}>ID Number: _______________________________</p>
+          <p style={{ fontSize: '8.5px', color: '#6b7280', marginTop: '1mm' }}>
+            Full Name: _______________________________
+          </p>
+          <p style={{ fontSize: '8.5px', color: '#6b7280' }}>
+            ID Number: _______________________________
+          </p>
         </div>
       </div>
     </div>
@@ -843,7 +990,9 @@ export function WillPdfView({ open, onClose, willId, clientName }: WillPdfViewPr
         </table>
       </div>
 
-      ${data.executors.length > 0 ? `
+      ${
+        data.executors.length > 0
+          ? `
       <div class="section">
         <div class="section-head">
           <span class="num">3.</span>
@@ -855,12 +1004,16 @@ export function WillPdfView({ open, onClose, willId, clientName }: WillPdfViewPr
         <table>
           <thead><tr><th style="width:5%">#</th><th style="width:25%">Name</th><th style="width:15%">Type</th><th style="width:20%">ID / Company</th><th style="width:35%">Contact Details</th></tr></thead>
           <tbody>
-            ${data.executors.map((e, i) => `<tr><td>${i+1}</td><td>${e.name}</td><td>${e.type === 'professional' ? 'Professional' : 'Individual'}</td><td>${e.type === 'professional' ? (e.company || '-') : (e.idNumber || '-')}</td><td>${e.contactDetails || '-'}</td></tr>`).join('')}
+            ${data.executors.map((e, i) => `<tr><td>${i + 1}</td><td>${e.name}</td><td>${e.type === 'professional' ? 'Professional' : 'Individual'}</td><td>${e.type === 'professional' ? e.company || '-' : e.idNumber || '-'}</td><td>${e.contactDetails || '-'}</td></tr>`).join('')}
           </tbody>
         </table>
-      </div>` : ''}
+      </div>`
+          : ''
+      }
 
-      ${data.beneficiaries.length > 0 ? `
+      ${
+        data.beneficiaries.length > 0
+          ? `
       <div class="section">
         <div class="section-head">
           <span class="num">4.</span>
@@ -872,13 +1025,17 @@ export function WillPdfView({ open, onClose, willId, clientName }: WillPdfViewPr
         <table>
           <thead><tr><th style="width:5%">#</th><th style="width:30%">Name</th><th style="width:20%">ID Number</th><th style="width:20%">Relationship</th><th style="width:12%">Share (%)</th></tr></thead>
           <tbody>
-            ${data.beneficiaries.map((b, i) => `<tr><td>${i+1}</td><td>${b.name}</td><td>${b.idNumber || '-'}</td><td>${b.relationship || '-'}</td><td style="text-align:right">${b.percentage}%</td></tr>`).join('')}
+            ${data.beneficiaries.map((b, i) => `<tr><td>${i + 1}</td><td>${b.name}</td><td>${b.idNumber || '-'}</td><td>${b.relationship || '-'}</td><td style="text-align:right">${b.percentage}%</td></tr>`).join('')}
             <tr><td colspan="4" style="font-weight:700;text-align:right">Total</td><td style="font-weight:700;text-align:right">${data.beneficiaries.reduce((s, b) => s + b.percentage, 0)}%</td></tr>
           </tbody>
         </table>
-      </div>` : ''}
+      </div>`
+          : ''
+      }
 
-      ${data.guardians.length > 0 ? `
+      ${
+        data.guardians.length > 0
+          ? `
       <div class="section">
         <div class="section-head">
           <span class="num">5.</span>
@@ -890,12 +1047,16 @@ export function WillPdfView({ open, onClose, willId, clientName }: WillPdfViewPr
         <table>
           <thead><tr><th style="width:5%">#</th><th style="width:25%">Name</th><th style="width:15%">ID Number</th><th style="width:15%">Relationship</th><th style="width:40%">Address</th></tr></thead>
           <tbody>
-            ${data.guardians.map((g, i) => `<tr><td>${i+1}</td><td>${g.name}</td><td>${g.idNumber || '-'}</td><td>${g.relationship || '-'}</td><td>${g.address || '-'}</td></tr>`).join('')}
+            ${data.guardians.map((g, i) => `<tr><td>${i + 1}</td><td>${g.name}</td><td>${g.idNumber || '-'}</td><td>${g.relationship || '-'}</td><td>${g.address || '-'}</td></tr>`).join('')}
           </tbody>
         </table>
-      </div>` : ''}
+      </div>`
+          : ''
+      }
 
-      ${data.specificBequests.length > 0 ? `
+      ${
+        data.specificBequests.length > 0
+          ? `
       <div class="section">
         <div class="section-head">
           <span class="num">6.</span>
@@ -907,26 +1068,40 @@ export function WillPdfView({ open, onClose, willId, clientName }: WillPdfViewPr
         <table>
           <thead><tr><th style="width:5%">#</th><th style="width:40%">Item / Description</th><th style="width:30%">Beneficiary</th><th style="width:25%">ID Number</th></tr></thead>
           <tbody>
-            ${data.specificBequests.map((b, i) => `<tr><td>${i+1}</td><td>${b.itemDescription}</td><td>${b.beneficiaryName}</td><td>${b.beneficiaryIdNumber || '-'}</td></tr>`).join('')}
+            ${data.specificBequests.map((b, i) => `<tr><td>${i + 1}</td><td>${b.itemDescription}</td><td>${b.beneficiaryName}</td><td>${b.beneficiaryIdNumber || '-'}</td></tr>`).join('')}
           </tbody>
         </table>
-      </div>` : ''}
+      </div>`
+          : ''
+      }
 
-      ${(data.funeralWishes || data.additionalClauses) ? `
+      ${
+        data.funeralWishes || data.additionalClauses
+          ? `
       <div class="section">
         <div class="section-head">
           <span class="num">7.</span>
           <h2>Funeral Wishes &amp; Additional Clauses</h2>
         </div>
-        ${data.funeralWishes ? `
+        ${
+          data.funeralWishes
+            ? `
           <p style="font-size:9.5px;font-weight:700;margin-bottom:1mm;">Funeral Wishes:</p>
           <div class="callout"><p style="font-size:9.5px;line-height:1.5;white-space:pre-wrap;">${data.funeralWishes}</p></div>
-        ` : ''}
-        ${data.additionalClauses ? `
+        `
+            : ''
+        }
+        ${
+          data.additionalClauses
+            ? `
           <p style="font-size:9.5px;font-weight:700;margin-bottom:1mm;margin-top:3mm;">Additional Clauses:</p>
           <div class="callout"><p style="font-size:9.5px;line-height:1.5;white-space:pre-wrap;">${data.additionalClauses}</p></div>
-        ` : ''}
-      </div>` : ''}
+        `
+            : ''
+        }
+      </div>`
+          : ''
+      }
 
       <div class="section">
         <div class="section-head">
@@ -1132,7 +1307,7 @@ export function WillPdfView({ open, onClose, willId, clientName }: WillPdfViewPr
           />
           <LivingWillLegalNotice />
           <LivingWillSignatures data={lwData} />
-        </div>
+        </div>,
       ];
     }
 
@@ -1152,7 +1327,7 @@ export function WillPdfView({ open, onClose, willId, clientName }: WillPdfViewPr
         />
         <SectionLegalNotice />
         <SectionSignatures data={lwData} />
-      </div>
+      </div>,
     ];
   };
 
@@ -1197,7 +1372,9 @@ export function WillPdfView({ open, onClose, willId, clientName }: WillPdfViewPr
             <div className="contents">
               {/* Override: allow content to flow naturally in preview instead of clipping at A4 height.
                   Print/PDF output uses the separate print handler which opens a new window with proper pagination. */}
-              <style dangerouslySetInnerHTML={{ __html: `
+              <style
+                dangerouslySetInnerHTML={{
+                  __html: `
                 .will-pdf-preview .pdf-page {
                   height: auto !important;
                   min-height: var(--a4-h);
@@ -1212,7 +1389,9 @@ export function WillPdfView({ open, onClose, willId, clientName }: WillPdfViewPr
                   bottom: auto !important;
                   margin-top: 8mm;
                 }
-              `}} />
+              `,
+                }}
+              />
               <div className="will-pdf-preview">
                 <BasePdfLayout
                   pages={buildPages()}

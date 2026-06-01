@@ -7,9 +7,9 @@ const columns = [
   { key: 'title', label: 'Description', type: 'text' as const },
   { key: 'supervisionType', label: 'Type', type: 'text' as const },
   { key: 'frequency', label: 'Frequency', type: 'text' as const },
-  { 
-    key: 'progress', 
-    label: 'Progress', 
+  {
+    key: 'progress',
+    label: 'Progress',
     type: 'custom' as const,
     render: (_: unknown, record: ComplianceRecord) => {
       if (record.checkpointsTotal) {
@@ -20,9 +20,13 @@ const columns = [
               {record.checkpointsCompleted}/{record.checkpointsTotal}
             </div>
             <div className="w-full bg-gray-200 rounded-full h-1.5">
-              <div 
+              <div
                 className={`h-1.5 rounded-full ${
-                  percentage >= 80 ? 'bg-green-500' : percentage >= 60 ? 'bg-yellow-500' : 'bg-red-500'
+                  percentage >= 80
+                    ? 'bg-green-500'
+                    : percentage >= 60
+                      ? 'bg-yellow-500'
+                      : 'bg-red-500'
                 }`}
                 style={{ width: `${percentage}%` }}
               />
@@ -31,11 +35,11 @@ const columns = [
         );
       }
       return record.checkResult || '—';
-    }
+    },
   },
   { key: 'supervisionStatus', label: 'Status', type: 'badge' as const },
   { key: 'nextCheckpoint', label: 'Next Checkpoint', type: 'date' as const },
-  { key: 'due', label: 'Due Date', type: 'date' as const }
+  { key: 'due', label: 'Due Date', type: 'date' as const },
 ];
 
 export function DebarmentSupervisionTab() {
@@ -43,7 +47,10 @@ export function DebarmentSupervisionTab() {
   const { data: supervision = [], isLoading: supervisionLoading } = useSupervisionRecords();
 
   // Merge both data sources into a single list for the combined register view
-  const records = [...(debarments as unknown as ComplianceRecord[]), ...(supervision as unknown as ComplianceRecord[])];
+  const records = [
+    ...(debarments as unknown as ComplianceRecord[]),
+    ...(supervision as unknown as ComplianceRecord[]),
+  ];
   const isLoading = debarmentsLoading || supervisionLoading;
 
   return (

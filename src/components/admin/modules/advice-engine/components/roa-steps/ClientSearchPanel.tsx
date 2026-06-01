@@ -1,6 +1,6 @@
 /**
  * ClientSearchPanel Component
- * 
+ *
  * Sub-component for searching and selecting clients.
  * Part of the RoA Client Selection Step.
  */
@@ -27,7 +27,7 @@ export function ClientSearchPanel({
   results,
   isSearching,
   onSelectClient,
-  selectedClientId
+  selectedClientId,
 }: ClientSearchPanelProps) {
   const searchInputGuard = useSearchInputAutofillGuard({ id: 'advice-engine-client-search-panel' });
 
@@ -60,8 +60,8 @@ export function ClientSearchPanel({
           ) : results.length > 0 ? (
             <div className="space-y-2">
               {results.map((client) => (
-                <Card 
-                  key={client.user_id} 
+                <Card
+                  key={client.user_id}
                   className={`cursor-pointer transition-all hover:shadow-md ${
                     selectedClientId === client.user_id ? 'ring-2 ring-primary bg-primary/5' : ''
                   }`}
@@ -70,7 +70,9 @@ export function ClientSearchPanel({
                   <CardContent className="p-4">
                     <div className="flex items-center justify-between">
                       <div>
-                        <p className="font-medium">{client.first_name} {client.last_name}</p>
+                        <p className="font-medium">
+                          {client.first_name} {client.last_name}
+                        </p>
                         <p className="text-sm text-muted-foreground">{client.email}</p>
                         <p className="text-sm text-muted-foreground">{client.phone}</p>
                       </div>
@@ -84,7 +86,9 @@ export function ClientSearchPanel({
               <CardContent className="flex flex-col items-center justify-center py-8">
                 <User className="h-12 w-12 text-muted-foreground opacity-50 mb-4" />
                 <p className="text-muted-foreground">No clients found matching your search.</p>
-                <p className="text-sm text-muted-foreground mt-1">Try a different search term or create a new client.</p>
+                <p className="text-sm text-muted-foreground mt-1">
+                  Try a different search term or create a new client.
+                </p>
               </CardContent>
             </Card>
           )}

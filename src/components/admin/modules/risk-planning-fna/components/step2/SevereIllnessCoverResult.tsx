@@ -9,7 +9,8 @@ interface SevereIllnessCoverResultProps {
 }
 
 export function SevereIllnessCoverResult({ calculation }: SevereIllnessCoverResultProps) {
-  const { grossAnnualIncome, incomeMultiple, grossNeed, existingCover, netShortfall, assumptions } = calculation;
+  const { grossAnnualIncome, incomeMultiple, grossNeed, existingCover, netShortfall, assumptions } =
+    calculation;
 
   return (
     <Card>
@@ -44,7 +45,7 @@ export function SevereIllnessCoverResult({ calculation }: SevereIllnessCoverResu
             </span>
           </div>
         </div>
-        
+
         <div className="mt-4 p-3 bg-muted/50 rounded-md">
           <p className="text-xs font-medium mb-2">Assumptions:</p>
           <ul className="text-xs text-muted-foreground space-y-1">

@@ -193,30 +193,56 @@ function parseCurrencyToNumber(value: string): number {
 }
 
 function getInitialBusiness(): BusinessState {
-  return { company_name: '', trading_name: '', industry_sector: '', employee_count: '', province: '' };
+  return {
+    company_name: '',
+    trading_name: '',
+    industry_sector: '',
+    employee_count: '',
+    province: '',
+  };
 }
 
 function getInitialBudget(): BudgetState {
-  return { monthly_budget: '', budget_adviser_assist: false, contribution_structure: '', compulsory_for_all: '' };
+  return {
+    monthly_budget: '',
+    budget_adviser_assist: false,
+    contribution_structure: '',
+    compulsory_for_all: '',
+  };
 }
 
 function getInitialWorkforce(): WorkforceState {
-  return { average_age_band: '', workforce_type: '', has_existing_benefits: null, existing_benefits_description: '' };
+  return {
+    average_age_band: '',
+    workforce_type: '',
+    has_existing_benefits: null,
+    existing_benefits_description: '',
+  };
 }
 
 function loadDraft(): WizardDraft | null {
   try {
     const raw = sessionStorage.getItem(DRAFT_KEY);
     return raw ? JSON.parse(raw) : null;
-  } catch { return null; }
+  } catch {
+    return null;
+  }
 }
 
 function saveDraft(draft: WizardDraft) {
-  try { sessionStorage.setItem(DRAFT_KEY, JSON.stringify(draft)); } catch { /* non-critical */ }
+  try {
+    sessionStorage.setItem(DRAFT_KEY, JSON.stringify(draft));
+  } catch {
+    /* non-critical */
+  }
 }
 
 function clearDraft() {
-  try { sessionStorage.removeItem(DRAFT_KEY); } catch { /* non-critical */ }
+  try {
+    sessionStorage.removeItem(DRAFT_KEY);
+  } catch {
+    /* non-critical */
+  }
 }
 
 // ── Step Indicator ──────────────────────────────────────────────────────────────
@@ -239,7 +265,9 @@ function StepIndicator({ currentStep }: { currentStep: number }) {
         return (
           <React.Fragment key={step.num}>
             {idx > 0 && (
-              <div className={`flex-1 h-0.5 mx-1 sm:mx-2 transition-colors ${isCompleted ? 'bg-green-500' : 'bg-gray-200'}`} />
+              <div
+                className={`flex-1 h-0.5 mx-1 sm:mx-2 transition-colors ${isCompleted ? 'bg-green-500' : 'bg-gray-200'}`}
+              />
             )}
             <div className="flex flex-col items-center gap-1">
               <div
@@ -251,9 +279,15 @@ function StepIndicator({ currentStep }: { currentStep: number }) {
                       : 'bg-gray-100 text-gray-400 border border-gray-200'
                 }`}
               >
-                {isCompleted ? <CheckCircle className="h-4 w-4" /> : <IconComp className="h-4 w-4" />}
+                {isCompleted ? (
+                  <CheckCircle className="h-4 w-4" />
+                ) : (
+                  <IconComp className="h-4 w-4" />
+                )}
               </div>
-              <span className={`text-[10px] sm:text-xs font-medium ${isActive ? 'text-gray-900' : 'text-gray-400'}`}>
+              <span
+                className={`text-[10px] sm:text-xs font-medium ${isActive ? 'text-gray-900' : 'text-gray-400'}`}
+              >
                 {step.label}
               </span>
             </div>
@@ -279,7 +313,9 @@ function Step1Business({
     <div className="space-y-4">
       <div>
         <h2 className="text-lg font-bold text-gray-900 mb-1">Tell us about your business</h2>
-        <p className="text-sm text-gray-500">Basic company information to help us prepare your employee benefits proposal.</p>
+        <p className="text-sm text-gray-500">
+          Basic company information to help us prepare your employee benefits proposal.
+        </p>
       </div>
 
       <div className="space-y-1.5">
@@ -324,7 +360,9 @@ function Step1Business({
             }`}
           >
             {business.industry_sector || 'Select industry sector'}
-            <ChevronDown className={`h-4 w-4 text-gray-400 transition-transform ${sectorOpen ? 'rotate-180' : ''}`} />
+            <ChevronDown
+              className={`h-4 w-4 text-gray-400 transition-transform ${sectorOpen ? 'rotate-180' : ''}`}
+            />
           </button>
           {sectorOpen && (
             <div className="absolute z-20 mt-1 w-full bg-white border border-gray-200 rounded-lg shadow-lg max-h-60 overflow-y-auto">
@@ -332,9 +370,14 @@ function Step1Business({
                 <button
                   key={sector}
                   type="button"
-                  onClick={() => { onChange({ ...business, industry_sector: sector }); setSectorOpen(false); }}
+                  onClick={() => {
+                    onChange({ ...business, industry_sector: sector });
+                    setSectorOpen(false);
+                  }}
                   className={`w-full text-left px-3 py-2.5 text-sm hover:bg-gray-50 transition-colors ${
-                    business.industry_sector === sector ? 'bg-primary/5 text-primary font-medium' : 'text-gray-700'
+                    business.industry_sector === sector
+                      ? 'bg-primary/5 text-primary font-medium'
+                      : 'text-gray-700'
                   }`}
                 >
                   {sector}
@@ -406,8 +449,12 @@ function Step2BenefitType({
   return (
     <div className="space-y-4">
       <div>
-        <h2 className="text-lg font-bold text-gray-900 mb-1">What benefits are you looking to implement?</h2>
-        <p className="text-sm text-gray-500">Select the type of employee benefits your business needs.</p>
+        <h2 className="text-lg font-bold text-gray-900 mb-1">
+          What benefits are you looking to implement?
+        </h2>
+        <p className="text-sm text-gray-500">
+          Select the type of employee benefits your business needs.
+        </p>
       </div>
 
       <div className="space-y-2">
@@ -424,9 +471,11 @@ function Step2BenefitType({
                   : 'border-gray-200 bg-white hover:border-gray-300'
               }`}
             >
-              <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center mt-0.5 flex-shrink-0 ${
-                isSelected ? 'border-primary' : 'border-gray-300'
-              }`}>
+              <div
+                className={`w-4 h-4 rounded-full border-2 flex items-center justify-center mt-0.5 flex-shrink-0 ${
+                  isSelected ? 'border-primary' : 'border-gray-300'
+                }`}
+              >
                 {isSelected && <div className="w-2 h-2 rounded-full bg-primary" />}
               </div>
               <div className="min-w-0">
@@ -456,35 +505,46 @@ function Step3Budget({
   return (
     <div className="space-y-5">
       <div>
-        <h2 className="text-lg font-bold text-gray-900 mb-1">What is your intended monthly budget?</h2>
-        <p className="text-sm text-gray-500">An estimate helps your adviser right-size the proposal.</p>
+        <h2 className="text-lg font-bold text-gray-900 mb-1">
+          What is your intended monthly budget?
+        </h2>
+        <p className="text-sm text-gray-500">
+          An estimate helps your adviser right-size the proposal.
+        </p>
       </div>
 
       {/* Monthly budget */}
       <div className="space-y-1.5">
         <Label className="text-sm font-medium text-gray-700">
-          Estimated total monthly budget for employee benefits <span className="text-red-500">*</span>
+          Estimated total monthly budget for employee benefits{' '}
+          <span className="text-red-500">*</span>
         </Label>
         <div className="flex items-center gap-3">
           <div className="relative flex-1">
-            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-gray-400">R</span>
+            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-gray-400">
+              R
+            </span>
             <Input
               type="text"
               inputMode="numeric"
               placeholder="e.g. 25,000"
               value={budget.monthly_budget}
-              onChange={(e) => onChange({ ...budget, monthly_budget: formatCurrency(e.target.value) })}
+              onChange={(e) =>
+                onChange({ ...budget, monthly_budget: formatCurrency(e.target.value) })
+              }
               disabled={budget.budget_adviser_assist}
               className="bg-white border-gray-300 h-11 pl-7"
             />
           </div>
           <button
             type="button"
-            onClick={() => onChange({
-              ...budget,
-              budget_adviser_assist: !budget.budget_adviser_assist,
-              monthly_budget: !budget.budget_adviser_assist ? '' : budget.monthly_budget,
-            })}
+            onClick={() =>
+              onChange({
+                ...budget,
+                budget_adviser_assist: !budget.budget_adviser_assist,
+                monthly_budget: !budget.budget_adviser_assist ? '' : budget.monthly_budget,
+              })
+            }
             className={`text-xs px-3 py-2.5 rounded-lg border font-medium whitespace-nowrap transition-all ${
               budget.budget_adviser_assist
                 ? 'border-primary bg-primary/10 text-primary'
@@ -514,10 +574,14 @@ function Step3Budget({
                   : 'border-gray-200 bg-white text-gray-700 hover:border-gray-300'
               }`}
             >
-              <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center flex-shrink-0 ${
-                budget.contribution_structure === opt.value ? 'border-primary' : 'border-gray-300'
-              }`}>
-                {budget.contribution_structure === opt.value && <div className="w-2 h-2 rounded-full bg-primary" />}
+              <div
+                className={`w-4 h-4 rounded-full border-2 flex items-center justify-center flex-shrink-0 ${
+                  budget.contribution_structure === opt.value ? 'border-primary' : 'border-gray-300'
+                }`}
+              >
+                {budget.contribution_structure === opt.value && (
+                  <div className="w-2 h-2 rounded-full bg-primary" />
+                )}
               </div>
               {opt.label}
             </button>
@@ -564,7 +628,9 @@ function Step4Workforce({
     <div className="space-y-5">
       <div>
         <h2 className="text-lg font-bold text-gray-900 mb-1">Workforce overview</h2>
-        <p className="text-sm text-gray-500">A high-level view of your workforce helps your adviser structure the right solution.</p>
+        <p className="text-sm text-gray-500">
+          A high-level view of your workforce helps your adviser structure the right solution.
+        </p>
       </div>
 
       {/* Average age band */}
@@ -616,7 +682,8 @@ function Step4Workforce({
       {/* Existing benefits */}
       <div className="space-y-2">
         <Label className="text-sm font-medium text-gray-700">
-          Do you currently have any employee benefits in place? <span className="text-red-500">*</span>
+          Do you currently have any employee benefits in place?{' '}
+          <span className="text-red-500">*</span>
         </Label>
         <div className="grid grid-cols-2 gap-2">
           {[
@@ -626,11 +693,15 @@ function Step4Workforce({
             <button
               key={String(opt.value)}
               type="button"
-              onClick={() => onChange({
-                ...workforce,
-                has_existing_benefits: opt.value,
-                existing_benefits_description: opt.value ? workforce.existing_benefits_description : '',
-              })}
+              onClick={() =>
+                onChange({
+                  ...workforce,
+                  has_existing_benefits: opt.value,
+                  existing_benefits_description: opt.value
+                    ? workforce.existing_benefits_description
+                    : '',
+                })
+              }
               className={`flex items-center justify-center p-3 rounded-xl border-2 text-sm font-medium transition-all ${
                 workforce.has_existing_benefits === opt.value
                   ? 'border-primary/50 bg-primary/[0.03] text-gray-900'
@@ -651,7 +722,9 @@ function Step4Workforce({
           <textarea
             placeholder="e.g. Group RA with Old Mutual, basic group life cover"
             value={workforce.existing_benefits_description}
-            onChange={(e) => onChange({ ...workforce, existing_benefits_description: e.target.value })}
+            onChange={(e) =>
+              onChange({ ...workforce, existing_benefits_description: e.target.value })
+            }
             rows={3}
             className="w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary resize-none"
           />
@@ -677,11 +750,17 @@ function Step5Review({
   onEditStep: (step: number) => void;
 }) {
   const benefitLabel = BENEFIT_TYPE_OPTIONS.find((b) => b.id === benefitType)?.label ?? benefitType;
-  const contribLabel = CONTRIBUTION_STRUCTURE_OPTIONS.find((c) => c.value === budget.contribution_structure)?.label ?? '';
-  const compulsoryLabel = COMPULSORY_OPTIONS.find((c) => c.value === budget.compulsory_for_all)?.label ?? '';
-  const ageBandLabel = AGE_BAND_OPTIONS.find((a) => a.value === workforce.average_age_band)?.label ?? '';
-  const workforceTypeLabel = WORKFORCE_TYPE_OPTIONS.find((w) => w.value === workforce.workforce_type)?.label ?? '';
-  const empCountLabel = EMPLOYEE_COUNT_OPTIONS.find((e) => e.value === business.employee_count)?.label ?? '';
+  const contribLabel =
+    CONTRIBUTION_STRUCTURE_OPTIONS.find((c) => c.value === budget.contribution_structure)?.label ??
+    '';
+  const compulsoryLabel =
+    COMPULSORY_OPTIONS.find((c) => c.value === budget.compulsory_for_all)?.label ?? '';
+  const ageBandLabel =
+    AGE_BAND_OPTIONS.find((a) => a.value === workforce.average_age_band)?.label ?? '';
+  const workforceTypeLabel =
+    WORKFORCE_TYPE_OPTIONS.find((w) => w.value === workforce.workforce_type)?.label ?? '';
+  const empCountLabel =
+    EMPLOYEE_COUNT_OPTIONS.find((e) => e.value === business.employee_count)?.label ?? '';
 
   function SectionHeader({ title, step }: { title: string; step: number }) {
     return (
@@ -711,7 +790,9 @@ function Step5Review({
     <div className="space-y-5">
       <div>
         <h2 className="text-lg font-bold text-gray-900 mb-1">Review & submit</h2>
-        <p className="text-sm text-gray-500">Please review your details before submitting your employee benefits quote request.</p>
+        <p className="text-sm text-gray-500">
+          Please review your details before submitting your employee benefits quote request.
+        </p>
       </div>
 
       {/* Business */}
@@ -735,7 +816,13 @@ function Step5Review({
         <SectionHeader title="Budget & Contribution" step={3} />
         <Row
           label="Monthly budget"
-          value={budget.budget_adviser_assist ? 'Adviser guidance requested' : budget.monthly_budget ? `R ${budget.monthly_budget} /month` : '—'}
+          value={
+            budget.budget_adviser_assist
+              ? 'Adviser guidance requested'
+              : budget.monthly_budget
+                ? `R ${budget.monthly_budget} /month`
+                : '—'
+          }
         />
         <Row label="Contribution structure" value={contribLabel} />
         <Row label="Compulsory for all staff" value={compulsoryLabel} />
@@ -746,7 +833,16 @@ function Step5Review({
         <SectionHeader title="Workforce Overview" step={4} />
         <Row label="Average age band" value={ageBandLabel} />
         <Row label="Workforce type" value={workforceTypeLabel} />
-        <Row label="Existing benefits" value={workforce.has_existing_benefits === null ? '—' : workforce.has_existing_benefits ? 'Yes' : 'No'} />
+        <Row
+          label="Existing benefits"
+          value={
+            workforce.has_existing_benefits === null
+              ? '—'
+              : workforce.has_existing_benefits
+                ? 'Yes'
+                : 'No'
+          }
+        />
         {workforce.has_existing_benefits && workforce.existing_benefits_description && (
           <Row label="Current arrangement" value={workforce.existing_benefits_description} />
         )}
@@ -770,7 +866,9 @@ export function EmployeeBenefitsQuoteWizard({
   const [business, setBusiness] = useState<BusinessState>(draft?.business ?? getInitialBusiness());
   const [benefitType, setBenefitType] = useState(draft?.benefit_type ?? '');
   const [budget, setBudget] = useState<BudgetState>(draft?.budget ?? getInitialBudget());
-  const [workforce, setWorkforce] = useState<WorkforceState>(draft?.workforce ?? getInitialWorkforce());
+  const [workforce, setWorkforce] = useState<WorkforceState>(
+    draft?.workforce ?? getInitialWorkforce(),
+  );
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Persist draft
@@ -787,46 +885,80 @@ export function EmployeeBenefitsQuoteWizard({
   // ── Validation ──
 
   const step1Valid = useMemo(() => {
-    return Boolean(business.company_name.trim() && business.industry_sector && business.employee_count && business.province);
+    return Boolean(
+      business.company_name.trim() &&
+      business.industry_sector &&
+      business.employee_count &&
+      business.province,
+    );
   }, [business]);
 
   const step2Valid = useMemo(() => Boolean(benefitType), [benefitType]);
 
   const step3Valid = useMemo(() => {
     const hasBudget = budget.budget_adviser_assist || Boolean(budget.monthly_budget);
-    return hasBudget && Boolean(budget.contribution_structure) && Boolean(budget.compulsory_for_all);
+    return (
+      hasBudget && Boolean(budget.contribution_structure) && Boolean(budget.compulsory_for_all)
+    );
   }, [budget]);
 
   const step4Valid = useMemo(() => {
-    return Boolean(workforce.average_age_band && workforce.workforce_type && workforce.has_existing_benefits !== null);
+    return Boolean(
+      workforce.average_age_band &&
+      workforce.workforce_type &&
+      workforce.has_existing_benefits !== null,
+    );
   }, [workforce]);
 
   const canProceed = useMemo(() => {
     switch (currentStep) {
-      case 1: return step1Valid;
-      case 2: return step2Valid;
-      case 3: return step3Valid;
-      case 4: return step4Valid;
-      case 5: return true;
-      default: return false;
+      case 1:
+        return step1Valid;
+      case 2:
+        return step2Valid;
+      case 3:
+        return step3Valid;
+      case 4:
+        return step4Valid;
+      case 5:
+        return true;
+      default:
+        return false;
     }
   }, [currentStep, step1Valid, step2Valid, step3Valid, step4Valid]);
 
-  const goNext = useCallback(() => { if (currentStep < 5) setCurrentStep((s) => s + 1); }, [currentStep]);
-  const goBack = useCallback(() => { if (currentStep > 1) setCurrentStep((s) => s - 1); }, [currentStep]);
-  const goToStep = useCallback((step: number) => { setCurrentStep(step); }, []);
+  const goNext = useCallback(() => {
+    if (currentStep < 5) setCurrentStep((s) => s + 1);
+  }, [currentStep]);
+  const goBack = useCallback(() => {
+    if (currentStep > 1) setCurrentStep((s) => s - 1);
+  }, [currentStep]);
+  const goToStep = useCallback((step: number) => {
+    setCurrentStep(step);
+  }, []);
 
   // ── Submit ──
 
   const handleSubmit = useCallback(async () => {
     setIsSubmitting(true);
     try {
-      const benefitLabel = BENEFIT_TYPE_OPTIONS.find((b) => b.id === benefitType)?.label ?? benefitType;
-      const contribLabel = CONTRIBUTION_STRUCTURE_OPTIONS.find((c) => c.value === budget.contribution_structure)?.label ?? budget.contribution_structure;
-      const compulsoryLabel = COMPULSORY_OPTIONS.find((c) => c.value === budget.compulsory_for_all)?.label ?? budget.compulsory_for_all;
-      const ageBandLabel = AGE_BAND_OPTIONS.find((a) => a.value === workforce.average_age_band)?.label ?? workforce.average_age_band;
-      const workforceTypeLabel = WORKFORCE_TYPE_OPTIONS.find((w) => w.value === workforce.workforce_type)?.label ?? workforce.workforce_type;
-      const empCountLabel = EMPLOYEE_COUNT_OPTIONS.find((e) => e.value === business.employee_count)?.label ?? business.employee_count;
+      const benefitLabel =
+        BENEFIT_TYPE_OPTIONS.find((b) => b.id === benefitType)?.label ?? benefitType;
+      const contribLabel =
+        CONTRIBUTION_STRUCTURE_OPTIONS.find((c) => c.value === budget.contribution_structure)
+          ?.label ?? budget.contribution_structure;
+      const compulsoryLabel =
+        COMPULSORY_OPTIONS.find((c) => c.value === budget.compulsory_for_all)?.label ??
+        budget.compulsory_for_all;
+      const ageBandLabel =
+        AGE_BAND_OPTIONS.find((a) => a.value === workforce.average_age_band)?.label ??
+        workforce.average_age_band;
+      const workforceTypeLabel =
+        WORKFORCE_TYPE_OPTIONS.find((w) => w.value === workforce.workforce_type)?.label ??
+        workforce.workforce_type;
+      const empCountLabel =
+        EMPLOYEE_COUNT_OPTIONS.find((e) => e.value === business.employee_count)?.label ??
+        business.employee_count;
 
       const productDetails = {
         vertical: 'EmployeeBenefits',
@@ -842,7 +974,9 @@ export function EmployeeBenefitsQuoteWizard({
         benefit_type: benefitLabel,
         benefit_type_id: benefitType,
         budget: {
-          monthly_budget: budget.budget_adviser_assist ? null : parseCurrencyToNumber(budget.monthly_budget),
+          monthly_budget: budget.budget_adviser_assist
+            ? null
+            : parseCurrencyToNumber(budget.monthly_budget),
           budget_adviser_assist: budget.budget_adviser_assist,
           contribution_structure: contribLabel,
           contribution_structure_id: budget.contribution_structure,
@@ -902,7 +1036,18 @@ export function EmployeeBenefitsQuoteWizard({
     } finally {
       setIsSubmitting(false);
     }
-  }, [firstName, lastName, email, phone, parentSubmissionId, business, benefitType, budget, workforce, onSuccess]);
+  }, [
+    firstName,
+    lastName,
+    email,
+    phone,
+    parentSubmissionId,
+    business,
+    benefitType,
+    budget,
+    workforce,
+    onSuccess,
+  ]);
 
   // ── Render ──
 
@@ -913,7 +1058,9 @@ export function EmployeeBenefitsQuoteWizard({
       <div className="bg-white rounded-2xl shadow-lg border border-gray-100 overflow-hidden">
         <div className="p-5 sm:p-6">
           {currentStep === 1 && <Step1Business business={business} onChange={setBusiness} />}
-          {currentStep === 2 && <Step2BenefitType selected={benefitType} onChange={setBenefitType} />}
+          {currentStep === 2 && (
+            <Step2BenefitType selected={benefitType} onChange={setBenefitType} />
+          )}
           {currentStep === 3 && <Step3Budget budget={budget} onChange={setBudget} />}
           {currentStep === 4 && <Step4Workforce workforce={workforce} onChange={setWorkforce} />}
           {currentStep === 5 && (

@@ -54,7 +54,11 @@ function TableRowSkeleton({ isLast = false }: { isLast?: boolean }) {
 
 export function PersonnelSkeleton() {
   return (
-    <div className="p-6 space-y-6 max-w-[1600px] mx-auto" role="status" aria-label="Loading personnel">
+    <div
+      className="p-6 space-y-6 max-w-[1600px] mx-auto"
+      role="status"
+      aria-label="Loading personnel"
+    >
       <span className="sr-only">Loading personnel module, please wait…</span>
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
@@ -83,7 +87,7 @@ export function PersonnelSkeleton() {
       <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
         <Skeleton className="h-9 w-64 rounded-md" />
         <div className="flex items-center gap-2">
-          {[1, 2, 3, 4, 5].map(i => (
+          {[1, 2, 3, 4, 5].map((i) => (
             <Skeleton key={i} className="h-8 w-20 rounded-full" />
           ))}
         </div>

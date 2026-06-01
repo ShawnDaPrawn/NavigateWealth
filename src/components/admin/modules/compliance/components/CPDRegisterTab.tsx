@@ -9,7 +9,7 @@ const columns = [
   { key: 'provider', label: 'Provider', type: 'text' as const },
   { key: 'category', label: 'Category', type: 'text' as const },
   { key: 'verificationStatus', label: 'Verification', type: 'badge' as const },
-  { key: 'status', label: 'Status', type: 'badge' as const }
+  { key: 'status', label: 'Status', type: 'badge' as const },
 ];
 
 export function CPDRegisterTab() {

@@ -1,6 +1,6 @@
 /**
  * Publications Feature - useArticle Hook
- * 
+ *
  * Hook for fetching and managing a single article.
  */
 
@@ -23,7 +23,7 @@ interface UseArticleReturn {
 
 export function useArticle(options: UseArticleOptions): UseArticleReturn {
   const { id, slug, enabled = true } = options;
-  
+
   const [article, setArticle] = useState<Article | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -35,10 +35,10 @@ export function useArticle(options: UseArticleOptions): UseArticleReturn {
 
     setIsLoading(true);
     setError(null);
-    
+
     try {
       let data: Article;
-      
+
       if (id) {
         data = await ArticlesAPI.getArticle(id);
       } else if (slug) {
@@ -46,7 +46,7 @@ export function useArticle(options: UseArticleOptions): UseArticleReturn {
       } else {
         throw new Error('Either id or slug must be provided');
       }
-      
+
       setArticle(data);
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to fetch article';
@@ -65,6 +65,6 @@ export function useArticle(options: UseArticleOptions): UseArticleReturn {
     article,
     isLoading,
     error,
-    refetch: fetchArticle
+    refetch: fetchArticle,
   };
 }

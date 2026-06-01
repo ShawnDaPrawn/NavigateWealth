@@ -77,7 +77,8 @@ const ROLE_OPTIONS: RoleOption[] = [
   {
     value: 'adviser',
     label: 'Financial Adviser',
-    description: 'Client-facing role with access to client management, applications, and advice tools.',
+    description:
+      'Client-facing role with access to client management, applications, and advice tools.',
     icon: <Briefcase className="h-5 w-5" />,
     badgeColor: 'bg-green-50 text-green-700 border-green-200',
   },
@@ -105,14 +106,17 @@ const ROLE_OPTIONS: RoleOption[] = [
 ];
 
 // ── Mode metadata ──────────────────────────────────────────────────
-const MODE_CONFIG: Record<DialogMode, {
-  headerTitle: string;
-  headerDescription: string;
-  headerIcon: React.ReactNode;
-  submitLabel: string;
-  submitIcon: React.ReactNode;
-  submittingLabel: string;
-}> = {
+const MODE_CONFIG: Record<
+  DialogMode,
+  {
+    headerTitle: string;
+    headerDescription: string;
+    headerIcon: React.ReactNode;
+    submitLabel: string;
+    submitIcon: React.ReactNode;
+    submittingLabel: string;
+  }
+> = {
   invite: {
     headerTitle: 'Invite Team Member',
     headerDescription: 'Send a secure invitation and configure module access.',
@@ -141,7 +145,12 @@ interface InviteUserDialogProps {
   onCreateAccount?: (values: InviteUserFormValues) => Promise<CreateAccountResult | false>;
 }
 
-export function InviteUserDialog({ open, onOpenChange, onInvite, onCreateAccount }: InviteUserDialogProps) {
+export function InviteUserDialog({
+  open,
+  onOpenChange,
+  onInvite,
+  onCreateAccount,
+}: InviteUserDialogProps) {
   const [mode, setMode] = useState<DialogMode>('invite');
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [submitSuccess, setSubmitSuccess] = useState(false);
@@ -225,9 +234,7 @@ export function InviteUserDialog({ open, onOpenChange, onInvite, onCreateAccount
         }
       }
     } catch (err: unknown) {
-      setSubmitError(
-        err instanceof Error ? err.message : 'Operation failed. Please try again.'
-      );
+      setSubmitError(err instanceof Error ? err.message : 'Operation failed. Please try again.');
     }
   };
 
@@ -263,7 +270,7 @@ export function InviteUserDialog({ open, onOpenChange, onInvite, onCreateAccount
   };
 
   const enabledCount = (selectedModules as string[]).filter((m) =>
-    PERMISSIONED_MODULES.includes(m as AdminModule)
+    PERMISSIONED_MODULES.includes(m as AdminModule),
   ).length;
 
   // ── Create-account success view ─────────────────────────────────
@@ -294,12 +301,10 @@ export function InviteUserDialog({ open, onOpenChange, onInvite, onCreateAccount
             {/* Recovery link section */}
             {recoveryLink ? (
               <div className="space-y-2">
-                <Label className="text-xs font-medium text-gray-700">
-                  Password Setup Link
-                </Label>
+                <Label className="text-xs font-medium text-gray-700">Password Setup Link</Label>
                 <p className="text-[11px] text-gray-500">
-                  Share this link with the new user so they can set their password.
-                  This link is single-use and will expire.
+                  Share this link with the new user so they can set their password. This link is
+                  single-use and will expire.
                 </p>
                 <div className="flex gap-2">
                   <Input
@@ -334,8 +339,8 @@ export function InviteUserDialog({ open, onOpenChange, onInvite, onCreateAccount
               <div className="flex items-start gap-2 px-3 py-2.5 bg-amber-50 border border-amber-200 rounded-lg">
                 <AlertCircle className="h-3.5 w-3.5 text-amber-600 mt-0.5 shrink-0" />
                 <p className="text-[11px] text-amber-800">
-                  No recovery link was generated. The user may need to use the
-                  "Forgot Password" flow to set their password.
+                  No recovery link was generated. The user may need to use the "Forgot Password"
+                  flow to set their password.
                 </p>
               </div>
             )}
@@ -344,9 +349,8 @@ export function InviteUserDialog({ open, onOpenChange, onInvite, onCreateAccount
             <div className="flex items-start gap-2 px-3 py-2.5 bg-blue-50 border border-blue-200 rounded-lg">
               <Info className="h-3.5 w-3.5 text-blue-600 mt-0.5 shrink-0" />
               <p className="text-[11px] text-blue-800">
-                The account is immediately active. Module permissions have been
-                configured based on the selected role. You can adjust them later
-                via the Permissions tab.
+                The account is immediately active. Module permissions have been configured based on
+                the selected role. You can adjust them later via the Permissions tab.
               </p>
             </div>
           </div>
@@ -388,7 +392,10 @@ export function InviteUserDialog({ open, onOpenChange, onInvite, onCreateAccount
         </div>
 
         {/* ── Form ───────────────────────────────────────────────── */}
-        <form onSubmit={handleSubmit(onSubmit)} className="flex-1 overflow-y-auto px-6 py-5 space-y-5">
+        <form
+          onSubmit={handleSubmit(onSubmit)}
+          className="flex-1 overflow-y-auto px-6 py-5 space-y-5"
+        >
           {/* ── Mode Toggle ────────────────────────────────────────── */}
           {onCreateAccount && (
             <div className="flex items-center gap-1 p-1 bg-gray-100 rounded-lg">
@@ -398,7 +405,7 @@ export function InviteUserDialog({ open, onOpenChange, onInvite, onCreateAccount
                   'flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-md text-xs font-medium transition-all',
                   mode === 'invite'
                     ? 'bg-white text-gray-900 shadow-sm'
-                    : 'text-gray-500 hover:text-gray-700'
+                    : 'text-gray-500 hover:text-gray-700',
                 )}
                 onClick={() => {
                   setMode('invite');
@@ -415,7 +422,7 @@ export function InviteUserDialog({ open, onOpenChange, onInvite, onCreateAccount
                   'flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-md text-xs font-medium transition-all',
                   mode === 'create'
                     ? 'bg-white text-gray-900 shadow-sm'
-                    : 'text-gray-500 hover:text-gray-700'
+                    : 'text-gray-500 hover:text-gray-700',
                 )}
                 onClick={() => {
                   setMode('create');
@@ -436,7 +443,7 @@ export function InviteUserDialog({ open, onOpenChange, onInvite, onCreateAccount
               <p className="text-[11px] text-gray-600">
                 {mode === 'invite'
                   ? 'An invitation email will be sent. The user must click the link to complete account setup.'
-                  : 'The account will be created immediately with a temporary password. You\'ll receive a password-setup link to share.'}
+                  : "The account will be created immediately with a temporary password. You'll receive a password-setup link to share."}
               </p>
             </div>
           )}
@@ -455,7 +462,7 @@ export function InviteUserDialog({ open, onOpenChange, onInvite, onCreateAccount
                   placeholder="e.g. Sarah"
                   className={cn(
                     'pl-9 h-10 text-sm',
-                    errors.firstName && 'border-red-400 focus-visible:ring-red-400'
+                    errors.firstName && 'border-red-400 focus-visible:ring-red-400',
                   )}
                   disabled={isSubmitting || submitSuccess}
                   autoFocus
@@ -464,7 +471,11 @@ export function InviteUserDialog({ open, onOpenChange, onInvite, onCreateAccount
                 />
               </div>
               {errors.firstName && (
-                <p id="invite-firstName-error" role="alert" className="flex items-center gap-1 text-xs text-red-500 mt-1">
+                <p
+                  id="invite-firstName-error"
+                  role="alert"
+                  className="flex items-center gap-1 text-xs text-red-500 mt-1"
+                >
                   <AlertCircle className="h-3 w-3 shrink-0" />
                   {errors.firstName.message}
                 </p>
@@ -483,7 +494,7 @@ export function InviteUserDialog({ open, onOpenChange, onInvite, onCreateAccount
                   placeholder="e.g. van der Merwe"
                   className={cn(
                     'pl-9 h-10 text-sm',
-                    errors.lastName && 'border-red-400 focus-visible:ring-red-400'
+                    errors.lastName && 'border-red-400 focus-visible:ring-red-400',
                   )}
                   disabled={isSubmitting || submitSuccess}
                   aria-invalid={!!errors.lastName}
@@ -491,7 +502,11 @@ export function InviteUserDialog({ open, onOpenChange, onInvite, onCreateAccount
                 />
               </div>
               {errors.lastName && (
-                <p id="invite-lastName-error" role="alert" className="flex items-center gap-1 text-xs text-red-500 mt-1">
+                <p
+                  id="invite-lastName-error"
+                  role="alert"
+                  className="flex items-center gap-1 text-xs text-red-500 mt-1"
+                >
                   <AlertCircle className="h-3 w-3 shrink-0" />
                   {errors.lastName.message}
                 </p>
@@ -513,18 +528,23 @@ export function InviteUserDialog({ open, onOpenChange, onInvite, onCreateAccount
                 placeholder="sarah@yourpractice.co.za"
                 className={cn(
                   'pl-9 h-10 text-sm',
-                  errors.email && 'border-red-400 focus-visible:ring-red-400'
+                  errors.email && 'border-red-400 focus-visible:ring-red-400',
                 )}
                 disabled={isSubmitting || submitSuccess}
                 aria-invalid={!!errors.email}
-                aria-describedby={[
-                  errors.email ? 'invite-email-error' : '',
-                  'invite-email-hint',
-                ].filter(Boolean).join(' ') || undefined}
+                aria-describedby={
+                  [errors.email ? 'invite-email-error' : '', 'invite-email-hint']
+                    .filter(Boolean)
+                    .join(' ') || undefined
+                }
               />
             </div>
             {errors.email && (
-              <p id="invite-email-error" role="alert" className="flex items-center gap-1 text-xs text-red-500 mt-1">
+              <p
+                id="invite-email-error"
+                role="alert"
+                className="flex items-center gap-1 text-xs text-red-500 mt-1"
+              >
                 <AlertCircle className="h-3 w-3 shrink-0" />
                 {errors.email.message}
               </p>
@@ -568,7 +588,7 @@ export function InviteUserDialog({ open, onOpenChange, onInvite, onCreateAccount
                         isSelected
                           ? 'border-purple-500 bg-purple-50/60 shadow-sm'
                           : 'border-gray-200 bg-white hover:border-gray-300',
-                        (isSubmitting || submitSuccess) && 'opacity-60 cursor-not-allowed'
+                        (isSubmitting || submitSuccess) && 'opacity-60 cursor-not-allowed',
                       )}
                     >
                       {/* Selection indicator */}
@@ -577,7 +597,7 @@ export function InviteUserDialog({ open, onOpenChange, onInvite, onCreateAccount
                           'mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full border-2 transition-colors',
                           isSelected
                             ? 'border-purple-600 bg-purple-600'
-                            : 'border-gray-300 bg-white group-hover:border-gray-400'
+                            : 'border-gray-300 bg-white group-hover:border-gray-400',
                         )}
                       >
                         {isSelected && (
@@ -598,7 +618,7 @@ export function InviteUserDialog({ open, onOpenChange, onInvite, onCreateAccount
                           <span
                             className={cn(
                               'text-sm font-medium transition-colors',
-                              isSelected ? 'text-purple-900' : 'text-gray-800'
+                              isSelected ? 'text-purple-900' : 'text-gray-800',
                             )}
                           >
                             {opt.label}
@@ -612,7 +632,7 @@ export function InviteUserDialog({ open, onOpenChange, onInvite, onCreateAccount
                       <div
                         className={cn(
                           'shrink-0 mt-0.5 transition-colors',
-                          isSelected ? 'text-purple-600' : 'text-gray-400'
+                          isSelected ? 'text-purple-600' : 'text-gray-400',
                         )}
                       >
                         {opt.icon}
@@ -653,12 +673,14 @@ export function InviteUserDialog({ open, onOpenChange, onInvite, onCreateAccount
                 'hover:shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-500 focus-visible:ring-offset-1',
                 showModuleAccess
                   ? 'border-purple-300 bg-purple-50/50'
-                  : 'border-gray-200 bg-gray-50/50 hover:border-gray-300'
+                  : 'border-gray-200 bg-gray-50/50 hover:border-gray-300',
               )}
               disabled={isSubmitting || submitSuccess}
             >
               <div className="flex items-center gap-2.5">
-                <Shield className={cn('h-4 w-4', showModuleAccess ? 'text-purple-600' : 'text-gray-400')} />
+                <Shield
+                  className={cn('h-4 w-4', showModuleAccess ? 'text-purple-600' : 'text-gray-400')}
+                />
                 <div>
                   <span className="text-sm font-medium text-gray-800">
                     {enabledCount} of {PERMISSIONED_MODULES.length} modules enabled
@@ -673,7 +695,10 @@ export function InviteUserDialog({ open, onOpenChange, onInvite, onCreateAccount
                 </div>
               </div>
               <div className="flex items-center gap-2">
-                <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-5 bg-purple-50 text-purple-700 border-purple-200">
+                <Badge
+                  variant="outline"
+                  className="text-[10px] px-1.5 py-0 h-5 bg-purple-50 text-purple-700 border-purple-200"
+                >
                   {enabledCount} / {PERMISSIONED_MODULES.length}
                 </Badge>
                 {showModuleAccess ? (
@@ -694,7 +719,9 @@ export function InviteUserDialog({ open, onOpenChange, onInvite, onCreateAccount
                     variant="outline"
                     size="sm"
                     className="text-xs h-7"
-                    onClick={() => setValue('moduleAccess', [...PERMISSIONED_MODULES], { shouldDirty: true })}
+                    onClick={() =>
+                      setValue('moduleAccess', [...PERMISSIONED_MODULES], { shouldDirty: true })
+                    }
                     disabled={isSubmitting || submitSuccess}
                   >
                     Grant All
@@ -726,12 +753,10 @@ export function InviteUserDialog({ open, onOpenChange, onInvite, onCreateAccount
 
                 {/* Grouped module toggles */}
                 {moduleGroups
-                  .filter((group) =>
-                    group.modules.some((m) => PERMISSIONED_MODULES.includes(m))
-                  )
+                  .filter((group) => group.modules.some((m) => PERMISSIONED_MODULES.includes(m)))
                   .map((group) => {
                     const groupModules = group.modules.filter((m) =>
-                      PERMISSIONED_MODULES.includes(m)
+                      PERMISSIONED_MODULES.includes(m),
                     );
                     if (groupModules.length === 0) return null;
 
@@ -753,21 +778,21 @@ export function InviteUserDialog({ open, onOpenChange, onInvite, onCreateAccount
                                   'flex items-center justify-between px-3 py-2 rounded-lg border transition-colors',
                                   isEnabled
                                     ? 'bg-purple-50/50 border-purple-200'
-                                    : 'bg-gray-50/30 border-gray-100'
+                                    : 'bg-gray-50/30 border-gray-100',
                                 )}
                               >
                                 <div className="flex items-center gap-2.5">
                                   <Icon
                                     className={cn(
                                       'h-4 w-4 shrink-0',
-                                      isEnabled ? 'text-purple-600' : 'text-gray-400'
+                                      isEnabled ? 'text-purple-600' : 'text-gray-400',
                                     )}
                                   />
                                   <Label
                                     htmlFor={`invite-perm-${module}`}
                                     className={cn(
                                       'text-sm cursor-pointer',
-                                      isEnabled ? 'text-gray-900 font-medium' : 'text-gray-500'
+                                      isEnabled ? 'text-gray-900 font-medium' : 'text-gray-500',
                                     )}
                                   >
                                     {config.label}
@@ -791,8 +816,9 @@ export function InviteUserDialog({ open, onOpenChange, onInvite, onCreateAccount
                 <div className="flex items-start gap-2 px-3 py-2.5 bg-blue-50 border border-blue-200 rounded-lg">
                   <Info className="h-3.5 w-3.5 text-blue-600 mt-0.5 shrink-0" />
                   <p className="text-[11px] text-blue-800">
-                    This sets initial module visibility. Granular capabilities (create, edit, delete, etc.)
-                    can be configured after the user is created via the Permissions tab.
+                    This sets initial module visibility. Granular capabilities (create, edit,
+                    delete, etc.) can be configured after the user is created via the Permissions
+                    tab.
                   </p>
                 </div>
               </div>

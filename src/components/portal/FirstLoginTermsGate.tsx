@@ -45,7 +45,9 @@ export function FirstLoginTermsGate({ children }: FirstLoginTermsGateProps) {
 
     try {
       const supabase = createClient();
-      const { data: { user: authUser } } = await supabase.auth.getUser();
+      const {
+        data: { user: authUser },
+      } = await supabase.auth.getUser();
 
       if (authUser?.user_metadata?.mustAcceptTerms === true) {
         setMustAcceptTerms(true);
@@ -80,7 +82,9 @@ export function FirstLoginTermsGate({ children }: FirstLoginTermsGateProps) {
       // Also update the user profile in KV to record consent
       try {
         const profileKey = `user_profile:${user!.id}:personal_info`;
-        const profileRes = await api.get<{ data: Record<string, unknown> }>(`/profile/personal-info?key=${encodeURIComponent(profileKey)}`);
+        const profileRes = await api.get<{ data: Record<string, unknown> }>(
+          `/profile/personal-info?key=${encodeURIComponent(profileKey)}`,
+        );
         const existingProfile = profileRes?.data || {};
 
         await api.post('/profile/personal-info', {
@@ -108,7 +112,9 @@ export function FirstLoginTermsGate({ children }: FirstLoginTermsGateProps) {
       if (refreshUser) await refreshUser();
     } catch (error: unknown) {
       console.error('Terms acceptance error:', error);
-      toast.error(error instanceof Error ? error.message : 'Failed to save your consent. Please try again.');
+      toast.error(
+        error instanceof Error ? error.message : 'Failed to save your consent. Please try again.',
+      );
     } finally {
       setIsSubmitting(false);
     }
@@ -141,8 +147,8 @@ export function FirstLoginTermsGate({ children }: FirstLoginTermsGateProps) {
           </div>
           <CardTitle className="text-xl">Welcome to Navigate Wealth</CardTitle>
           <CardDescription className="text-sm">
-            Before you can access your financial portal, please review and accept
-            the following terms and conditions.
+            Before you can access your financial portal, please review and accept the following
+            terms and conditions.
           </CardDescription>
         </CardHeader>
 

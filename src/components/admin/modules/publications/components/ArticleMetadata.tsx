@@ -1,6 +1,6 @@
 /**
  * Publications Feature - ArticleMetadata Component
- * 
+ *
  * Display article metadata (author, date, reading time, views).
  */
 
@@ -23,7 +23,7 @@ export function ArticleMetadata({
   readingTime,
   viewCount,
   showRelativeTime = false,
-  className
+  className,
 }: ArticleMetadataProps) {
   const formattedDate = showRelativeTime ? getRelativeTime(date) : formatDate(date);
 
@@ -35,19 +35,19 @@ export function ArticleMetadata({
           <span>{author}</span>
         </div>
       )}
-      
+
       <div className="flex items-center gap-1.5">
         <Calendar className="w-4 h-4" />
         <span>{formattedDate}</span>
       </div>
-      
+
       {readingTime && (
         <div className="flex items-center gap-1.5">
           <Clock className="w-4 h-4" />
           <span>{readingTime} min read</span>
         </div>
       )}
-      
+
       {viewCount !== undefined && viewCount > 0 && (
         <div className="flex items-center gap-1.5">
           <Eye className="w-4 h-4" />
@@ -65,7 +65,7 @@ export function ArticleMetadataCompact({
   author,
   date,
   readingTime,
-  className
+  className,
 }: {
   author?: string;
   date: string;
@@ -73,16 +73,12 @@ export function ArticleMetadataCompact({
   className?: string;
 }) {
   const parts = [];
-  
+
   if (author) parts.push(author);
   parts.push(formatDate(date));
   if (readingTime) parts.push(`${readingTime} min read`);
 
-  return (
-    <div className={`text-sm text-gray-600 ${className || ''}`}>
-      {parts.join(' • ')}
-    </div>
-  );
+  return <div className={`text-sm text-gray-600 ${className || ''}`}>{parts.join(' • ')}</div>;
 }
 
 /**
@@ -94,7 +90,7 @@ export function ArticleMetadataDetailed({
   updatedAt,
   publishedAt,
   lastEditedBy,
-  className
+  className,
 }: {
   author?: string;
   createdAt: string;
@@ -108,23 +104,23 @@ export function ArticleMetadataDetailed({
       {author && (
         <div className="flex items-center gap-2 text-gray-700">
           <User className="w-4 h-4" />
-          <span>Author: <strong>{author}</strong></span>
+          <span>
+            Author: <strong>{author}</strong>
+          </span>
         </div>
       )}
-      
+
       <div className="text-gray-600 space-y-1">
         <div>Created: {formatDateTime(createdAt)}</div>
-        
+
         {updatedAt && updatedAt !== createdAt && (
           <div>
             Updated: {formatDateTime(updatedAt)}
             {lastEditedBy && <span> by {lastEditedBy}</span>}
           </div>
         )}
-        
-        {publishedAt && (
-          <div>Published: {formatDateTime(publishedAt)}</div>
-        )}
+
+        {publishedAt && <div>Published: {formatDateTime(publishedAt)}</div>}
       </div>
     </div>
   );

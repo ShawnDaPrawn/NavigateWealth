@@ -1,13 +1,13 @@
 /**
  * Task Management Module - Mutation Hooks
  * Navigate Wealth Admin Dashboard
- * 
+ *
  * React Query hooks for data modification operations:
  * - Create, update, delete tasks
  * - Move and reorder tasks
  * - Duplicate and archive tasks
  * - Optimistic updates for better UX
- * 
+ *
  * @module tasks/hooks/useTaskMutations
  */
 
@@ -18,7 +18,10 @@ import { TasksAPI } from '../api';
 import { taskKeys } from './useTaskQueries';
 import type { Task, CreateTaskInput, UpdateTaskInput, TaskStatus } from '../types';
 
-export function mergeTaskReorderIntoList(previousTasks: Task[] | undefined, reorderedTasks: Task[]): Task[] {
+export function mergeTaskReorderIntoList(
+  previousTasks: Task[] | undefined,
+  reorderedTasks: Task[],
+): Task[] {
   if (!previousTasks) return reorderedTasks;
 
   const reorderedById = new Map(reorderedTasks.map((task) => [task.id, task]));
@@ -31,14 +34,14 @@ export function mergeTaskReorderIntoList(previousTasks: Task[] | undefined, reor
 
 /**
  * Create a new task
- * 
+ *
  * @returns React Query mutation for creating tasks
- * 
+ *
  * @example
  * ```tsx
  * function CreateTaskButton() {
  *   const createTask = useCreateTask();
- *   
+ *
  *   const handleCreate = async () => {
  *     await createTask.mutateAsync({
  *       title: 'New Task',
@@ -46,7 +49,7 @@ export function mergeTaskReorderIntoList(previousTasks: Task[] | undefined, reor
  *       priority: 'high',
  *     });
  *   };
- *   
+ *
  *   return (
  *     <button onClick={handleCreate} disabled={createTask.isPending}>
  *       {createTask.isPending ? 'Creating...' : 'Create Task'}
@@ -64,11 +67,11 @@ export function useCreateTask() {
       // Invalidate all task-related queries
       queryClient.invalidateQueries({ queryKey: taskKeys.lists() });
       queryClient.invalidateQueries({ queryKey: taskKeys.stats() });
-      
+
       // Invalidate dashboard queries (if they exist)
       queryClient.invalidateQueries({ queryKey: pendingCountsKeys.all });
       queryClient.invalidateQueries({ queryKey: tasksKeys.dueToday() });
-      
+
       toast.success('Task created successfully');
     },
     onError: (error) => {
@@ -84,14 +87,14 @@ export function useCreateTask() {
 
 /**
  * Update an existing task
- * 
+ *
  * @returns React Query mutation for updating tasks
- * 
+ *
  * @example
  * ```tsx
  * function UpdateTaskButton({ task }: { task: Task }) {
  *   const updateTask = useUpdateTask();
- *   
+ *
  *   const handleUpdate = async () => {
  *     await updateTask.mutateAsync({
  *       id: task.id,
@@ -99,7 +102,7 @@ export function useCreateTask() {
  *       completed_at: new Date().toISOString(),
  *     });
  *   };
- *   
+ *
  *   return (
  *     <button onClick={handleUpdate}>
  *       Mark Complete
@@ -118,7 +121,7 @@ export function useUpdateTask() {
       queryClient.invalidateQueries({ queryKey: taskKeys.stats() });
       queryClient.invalidateQueries({ queryKey: pendingCountsKeys.all });
       queryClient.invalidateQueries({ queryKey: tasksKeys.dueToday() });
-      
+
       toast.success('Task updated successfully');
     },
     onError: (error) => {
@@ -134,20 +137,20 @@ export function useUpdateTask() {
 
 /**
  * Delete a task
- * 
+ *
  * @returns React Query mutation for deleting tasks
- * 
+ *
  * @example
  * ```tsx
  * function DeleteTaskButton({ taskId }: { taskId: string }) {
  *   const deleteTask = useDeleteTask();
- *   
+ *
  *   const handleDelete = async () => {
  *     if (confirm('Are you sure?')) {
  *       await deleteTask.mutateAsync(taskId);
  *     }
  *   };
- *   
+ *
  *   return (
  *     <button onClick={handleDelete}>
  *       Delete
@@ -166,7 +169,7 @@ export function useDeleteTask() {
       queryClient.invalidateQueries({ queryKey: taskKeys.stats() });
       queryClient.invalidateQueries({ queryKey: pendingCountsKeys.all });
       queryClient.invalidateQueries({ queryKey: tasksKeys.dueToday() });
-      
+
       toast.success('Task deleted successfully');
     },
     onError: (error) => {
@@ -182,14 +185,14 @@ export function useDeleteTask() {
 
 /**
  * Move task to different status with optimistic updates
- * 
+ *
  * @returns React Query mutation for moving tasks
- * 
+ *
  * @example
  * ```tsx
  * function MoveTaskButton({ task }: { task: Task }) {
  *   const moveTask = useMoveTask();
- *   
+ *
  *   const handleMove = async () => {
  *     await moveTask.mutateAsync({
  *       taskId: task.id,
@@ -197,7 +200,7 @@ export function useDeleteTask() {
  *       newSortOrder: 0,
  *     });
  *   };
- *   
+ *
  *   return <button onClick={handleMove}>Move</button>;
  * }
  * ```
@@ -206,26 +209,28 @@ export function useMoveTask() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: ({ taskId, newStatus, newSortOrder }: { 
-      taskId: string; 
-      newStatus: TaskStatus; 
-      newSortOrder: number 
+    mutationFn: ({
+      taskId,
+      newStatus,
+      newSortOrder,
+    }: {
+      taskId: string;
+      newStatus: TaskStatus;
+      newSortOrder: number;
     }) => TasksAPI.moveTask(taskId, newStatus, newSortOrder),
-    
+
     // Optimistic update
     onMutate: async ({ taskId, newStatus, newSortOrder }) => {
       // Cancel outgoing queries
       await queryClient.cancelQueries({ queryKey: taskKeys.lists() });
-      
+
       // Snapshot previous value
       const previousTasks = queryClient.getQueryData<Task[]>(taskKeys.lists());
 
       // Optimistically update the cache
       if (previousTasks) {
         const updatedTasks = previousTasks.map((task) =>
-          task.id === taskId
-            ? { ...task, status: newStatus, sort_order: newSortOrder }
-            : task
+          task.id === taskId ? { ...task, status: newStatus, sort_order: newSortOrder } : task,
         );
         queryClient.setQueryData(taskKeys.lists(), updatedTasks);
       }
@@ -233,7 +238,7 @@ export function useMoveTask() {
       // Return context for rollback
       return { previousTasks };
     },
-    
+
     // Rollback on error
     onError: (err, variables, context) => {
       if (context?.previousTasks) {
@@ -241,7 +246,7 @@ export function useMoveTask() {
       }
       toast.error('Failed to move task');
     },
-    
+
     // Refetch on settle
     onSettled: () => {
       queryClient.invalidateQueries({ queryKey: taskKeys.lists() });
@@ -258,18 +263,18 @@ export function useMoveTask() {
 
 /**
  * Reorder tasks within a column with optimistic updates
- * 
+ *
  * @returns React Query mutation for reordering tasks
- * 
+ *
  * @example
  * ```tsx
  * function TaskColumn({ tasks }: { tasks: Task[] }) {
  *   const reorderTasks = useReorderTasks();
- *   
+ *
  *   const handleReorder = async (reorderedTasks: Task[]) => {
  *     await reorderTasks.mutateAsync(reorderedTasks);
  *   };
- *   
+ *
  *   return <div>...</div>;
  * }
  * ```
@@ -285,17 +290,17 @@ export function useReorderTasks() {
       }));
       return TasksAPI.reorderTasks(updates);
     },
-    
+
     // Optimistic update
     onMutate: async (tasks) => {
       await queryClient.cancelQueries({ queryKey: taskKeys.lists() });
       const previousTasks = queryClient.getQueryData<Task[]>(taskKeys.lists());
-      
+
       queryClient.setQueryData(taskKeys.lists(), mergeTaskReorderIntoList(previousTasks, tasks));
 
       return { previousTasks };
     },
-    
+
     // Rollback on error
     onError: (err, variables, context) => {
       if (context?.previousTasks) {
@@ -303,7 +308,7 @@ export function useReorderTasks() {
       }
       toast.error('Failed to reorder tasks');
     },
-    
+
     // Refetch on settle
     onSettled: () => {
       queryClient.invalidateQueries({ queryKey: taskKeys.lists() });
@@ -320,18 +325,18 @@ export function useReorderTasks() {
 
 /**
  * Duplicate a task
- * 
+ *
  * @returns React Query mutation for duplicating tasks
- * 
+ *
  * @example
  * ```tsx
  * function DuplicateButton({ taskId }: { taskId: string }) {
  *   const duplicateTask = useDuplicateTask();
- *   
+ *
  *   const handleDuplicate = async () => {
  *     await duplicateTask.mutateAsync(taskId);
  *   };
- *   
+ *
  *   return <button onClick={handleDuplicate}>Duplicate</button>;
  * }
  * ```
@@ -346,7 +351,7 @@ export function useDuplicateTask() {
       queryClient.invalidateQueries({ queryKey: taskKeys.stats() });
       queryClient.invalidateQueries({ queryKey: pendingCountsKeys.all });
       queryClient.invalidateQueries({ queryKey: tasksKeys.dueToday() });
-      
+
       toast.success('Task duplicated successfully');
     },
     onError: (error) => {
@@ -362,18 +367,18 @@ export function useDuplicateTask() {
 
 /**
  * Archive a task
- * 
+ *
  * @returns React Query mutation for archiving tasks
- * 
+ *
  * @example
  * ```tsx
  * function ArchiveButton({ taskId }: { taskId: string }) {
  *   const archiveTask = useArchiveTask();
- *   
+ *
  *   const handleArchive = async () => {
  *     await archiveTask.mutateAsync(taskId);
  *   };
- *   
+ *
  *   return <button onClick={handleArchive}>Archive</button>;
  * }
  * ```
@@ -388,7 +393,7 @@ export function useArchiveTask() {
       queryClient.invalidateQueries({ queryKey: taskKeys.stats() });
       queryClient.invalidateQueries({ queryKey: pendingCountsKeys.all });
       queryClient.invalidateQueries({ queryKey: tasksKeys.dueToday() });
-      
+
       toast.success('Task archived successfully');
     },
     onError: (error) => {
@@ -400,18 +405,18 @@ export function useArchiveTask() {
 
 /**
  * Unarchive a task
- * 
+ *
  * @returns React Query mutation for unarchiving tasks
- * 
+ *
  * @example
  * ```tsx
  * function UnarchiveButton({ taskId }: { taskId: string }) {
  *   const unarchiveTask = useUnarchiveTask();
- *   
+ *
  *   const handleUnarchive = async () => {
  *     await unarchiveTask.mutateAsync({ taskId, newStatus: 'new' });
  *   };
- *   
+ *
  *   return <button onClick={handleUnarchive}>Unarchive</button>;
  * }
  * ```
@@ -420,14 +425,14 @@ export function useUnarchiveTask() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: ({ taskId, newStatus }: { taskId: string; newStatus?: TaskStatus }) => 
+    mutationFn: ({ taskId, newStatus }: { taskId: string; newStatus?: TaskStatus }) =>
       TasksAPI.unarchiveTask(taskId, newStatus),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: taskKeys.lists() });
       queryClient.invalidateQueries({ queryKey: taskKeys.stats() });
       queryClient.invalidateQueries({ queryKey: pendingCountsKeys.all });
       queryClient.invalidateQueries({ queryKey: tasksKeys.dueToday() });
-      
+
       toast.success('Task unarchived successfully');
     },
     onError: (error) => {

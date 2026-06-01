@@ -1,4 +1,3 @@
-
 import fs from 'fs';
 import { defineConfig, type Plugin } from 'vite';
 import react from '@vitejs/plugin-react-swc';
@@ -22,7 +21,7 @@ function figmaAssetResolver(): Plugin {
       const parsed = path.parse(filename);
       const candidates = [`${parsed.name}.webp`, filename];
       const match = candidates.find((candidate) =>
-        fs.existsSync(path.join(assetDirectory, candidate))
+        fs.existsSync(path.join(assetDirectory, candidate)),
       );
       return path.join(assetDirectory, match ?? filename);
     },
@@ -42,10 +41,7 @@ function getManualChunk(id: string): string | undefined {
     return 'vendor-router';
   }
 
-  if (
-    id.includes('/@supabase/supabase-js/') ||
-    id.includes('/@jsr/supabase__supabase-js/')
-  ) {
+  if (id.includes('/@supabase/supabase-js/') || id.includes('/@jsr/supabase__supabase-js/')) {
     return 'vendor-supabase';
   }
 
@@ -57,18 +53,11 @@ function getManualChunk(id: string): string | undefined {
     return 'vendor-forms';
   }
 
-  if (
-    id.includes('/@tanstack/react-query/') ||
-    id.includes('/@tanstack/react-virtual/')
-  ) {
+  if (id.includes('/@tanstack/react-query/') || id.includes('/@tanstack/react-virtual/')) {
     return 'vendor-data';
   }
 
-  if (
-    id.includes('/motion/') ||
-    id.includes('/sonner/') ||
-    id.includes('/react-toastify/')
-  ) {
+  if (id.includes('/motion/') || id.includes('/sonner/') || id.includes('/react-toastify/')) {
     return 'vendor-feedback';
   }
 
@@ -80,10 +69,7 @@ function getManualChunk(id: string): string | undefined {
     return 'vendor-dnd';
   }
 
-  if (
-    id.includes('/react-quill-new/') ||
-    id.includes('/quill/')
-  ) {
+  if (id.includes('/react-quill-new/') || id.includes('/quill/')) {
     return 'vendor-quill';
   }
 
@@ -91,9 +77,7 @@ function getManualChunk(id: string): string | undefined {
     return 'vendor-tiptap';
   }
 
-  if (
-    id.includes('/pdf-lib/')
-  ) {
+  if (id.includes('/pdf-lib/')) {
     return 'vendor-pdf-lib';
   }
 
@@ -105,10 +89,7 @@ function getManualChunk(id: string): string | undefined {
     return 'vendor-pdf-viewer';
   }
 
-  if (
-    id.includes('/jspdf/') ||
-    id.includes('/jspdf-autotable/')
-  ) {
+  if (id.includes('/jspdf/') || id.includes('/jspdf-autotable/')) {
     return 'vendor-jspdf';
   }
 

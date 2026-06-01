@@ -5,15 +5,15 @@ import { LucideIcon, ArrowUp, ArrowDown, Minus } from 'lucide-react';
 import { formatKPIValue } from '../utils';
 import type { KPICardProps } from '../types';
 
-export function KPICard({ 
-  title, 
-  value, 
-  change, 
-  icon: Icon, 
+export function KPICard({
+  title,
+  value,
+  change,
+  icon: Icon,
   format = 'number',
   subtitle,
   onClick,
-  loading = false
+  loading = false,
 }: KPICardProps) {
   const isPositive = change > 0;
   const isNegative = change < 0;
@@ -38,7 +38,7 @@ export function KPICard({
   }
 
   return (
-    <Card 
+    <Card
       className={`transition-all ${onClick ? 'cursor-pointer hover:-translate-y-1 hover:shadow-lg' : ''}`}
       onClick={onClick}
     >
@@ -73,12 +73,8 @@ export function KPICard({
               0.0%
             </span>
           )}
-          
-          {subtitle && (
-            <span className="text-muted-foreground ml-2 truncate">
-              {subtitle}
-            </span>
-          )}
+
+          {subtitle && <span className="text-muted-foreground ml-2 truncate">{subtitle}</span>}
         </div>
       </CardContent>
     </Card>

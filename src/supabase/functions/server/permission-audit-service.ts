@@ -13,8 +13,8 @@
  * @module server/permission-audit-service
  */
 
-import * as kv from "./kv_store.tsx";
-import { createModuleLogger } from "./stderr-logger.ts";
+import * as kv from './kv_store.tsx';
+import { createModuleLogger } from './stderr-logger.ts';
 
 const log = createModuleLogger('permission-audit');
 
@@ -64,7 +64,9 @@ export const PermissionAuditService = {
   /**
    * Record a permission change in the audit log.
    */
-  async recordChange(entry: Omit<PermissionAuditEntry, 'id' | 'timestamp'>): Promise<PermissionAuditEntry> {
+  async recordChange(
+    entry: Omit<PermissionAuditEntry, 'id' | 'timestamp'>,
+  ): Promise<PermissionAuditEntry> {
     const timestamp = new Date().toISOString();
     const id = `${timestamp}:${entry.targetPersonnelId}`;
     const fullEntry: PermissionAuditEntry = {
@@ -86,7 +88,7 @@ export const PermissionAuditService = {
     targetPersonnelId: string,
     changedByPersonnelId: string,
     oldModules: Record<string, unknown>,
-    newModules: Record<string, unknown>
+    newModules: Record<string, unknown>,
   ): Promise<PermissionAuditEntry | null> {
     const changes: PermissionChange[] = [];
 

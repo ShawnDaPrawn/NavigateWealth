@@ -13,7 +13,13 @@
  */
 
 import React, { useEffect, useState } from 'react';
-import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '../../../../ui/dialog';
+import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '../../../../ui/dialog';
 import { Button } from '../../../../ui/button';
 import { Label } from '../../../../ui/label';
 import { RadioGroup, RadioGroupItem } from '../../../../ui/radio-group';
@@ -42,7 +48,8 @@ const OPTIONS: Array<{ value: Mode; label: string; description: string }> = [
   {
     value: 'digest',
     label: 'Daily digest',
-    description: 'One summary email per day with all events. Completion emails still land immediately.',
+    description:
+      'One summary email per day with all events. Completion emails still land immediately.',
   },
   {
     value: 'off',
@@ -101,18 +108,27 @@ export function NotificationPrefsDialog({ open, onOpenChange }: NotificationPref
           {loading ? (
             <p className="text-sm text-gray-500">Loading…</p>
           ) : (
-            <RadioGroup value={mode} onValueChange={(v) => setMode(v as Mode)} className="space-y-3">
+            <RadioGroup
+              value={mode}
+              onValueChange={(v) => setMode(v as Mode)}
+              className="space-y-3"
+            >
               {OPTIONS.map((opt) => (
                 <label
                   key={opt.value}
                   htmlFor={`prefs-${opt.value}`}
                   className={`flex items-start gap-3 p-3 rounded-lg border cursor-pointer transition-colors ${
-                    mode === opt.value ? 'border-purple-400 bg-purple-50' : 'border-gray-200 hover:border-gray-300'
+                    mode === opt.value
+                      ? 'border-purple-400 bg-purple-50'
+                      : 'border-gray-200 hover:border-gray-300'
                   }`}
                 >
                   <RadioGroupItem id={`prefs-${opt.value}`} value={opt.value} className="mt-0.5" />
                   <div className="flex-1">
-                    <Label htmlFor={`prefs-${opt.value}`} className="text-sm font-medium cursor-pointer">
+                    <Label
+                      htmlFor={`prefs-${opt.value}`}
+                      className="text-sm font-medium cursor-pointer"
+                    >
                       {opt.label}
                     </Label>
                     <p className="text-xs text-gray-500 mt-1">{opt.description}</p>

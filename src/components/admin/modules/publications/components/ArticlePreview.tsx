@@ -179,11 +179,11 @@ function processContent(content: string): string {
     processed = processed.replace(/\*(.*?)\*/g, '<em>$1</em>');
     processed = processed.replace(
       /\[(.*?)\]\((.*?)\)/g,
-      '<a href="$2" class="text-purple-600 hover:underline">$1</a>'
+      '<a href="$2" class="text-purple-600 hover:underline">$1</a>',
     );
     processed = processed.replace(
       /`(.*?)`/g,
-      '<code class="bg-purple-50 text-purple-600 px-1.5 py-0.5 rounded text-sm font-medium">$1</code>'
+      '<code class="bg-purple-50 text-purple-600 px-1.5 py-0.5 rounded text-sm font-medium">$1</code>',
     );
     html += `<p>${processed}</p>`;
   }
@@ -230,12 +230,12 @@ function isHtmlContent(content: string): boolean {
   return /<[a-z][\s\S]*>/i.test(t);
 }
 
-function buildPreviewHtml(bodyContent: string): { ok: true; html: string } | { ok: false; message: string } {
+function buildPreviewHtml(
+  bodyContent: string,
+): { ok: true; html: string } | { ok: false; message: string } {
   try {
     const normalized = normalizeHtmlDocumentToFragment(bodyContent);
-    const rawHtml = isHtmlContent(normalized)
-      ? normalized
-      : processContent(normalized);
+    const rawHtml = isHtmlContent(normalized) ? normalized : processContent(normalized);
     const sanitisedHtml = DOMPurify.sanitize(rawHtml);
     const enhancedHtml = enhanceArticleHtml(sanitisedHtml);
     return { ok: true, html: enhancedHtml };
@@ -245,12 +245,7 @@ function buildPreviewHtml(bodyContent: string): { ok: true; html: string } | { o
   }
 }
 
-export function ArticlePreview({
-  article,
-  categories,
-  types,
-  onClose,
-}: ArticlePreviewProps) {
+export function ArticlePreview({ article, categories, types, onClose }: ArticlePreviewProps) {
   const categoryName = categories.find((c) => c.id === article.category_id)?.name;
   const bodyContent = article.body || article.content || '';
   const imageUrl = getArticleImageUrl(article as Parameters<typeof getArticleImageUrl>[0]);
@@ -272,21 +267,14 @@ export function ArticlePreview({
           {/* Toolbar */}
           <div className="flex items-center justify-between mb-4 sticky top-2 z-10">
             <div className="flex items-center gap-2">
-              <Badge className="bg-amber-500 text-white border-0 text-xs">
-                Preview Mode
-              </Badge>
+              <Badge className="bg-amber-500 text-white border-0 text-xs">Preview Mode</Badge>
               {article.status && (
                 <Badge variant="outline" className="bg-white text-xs">
                   {article.status}
                 </Badge>
               )}
             </div>
-            <Button
-              onClick={onClose}
-              variant="outline"
-              size="sm"
-              className="bg-white shadow-sm"
-            >
+            <Button onClick={onClose} variant="outline" size="sm" className="bg-white shadow-sm">
               <X className="h-4 w-4 mr-2" />
               Close Preview
             </Button>
@@ -303,16 +291,11 @@ export function ArticlePreview({
                     {categoryName}
                   </Badge>
                 )}
-                <Badge
-                  variant="outline"
-                  className="text-white/80 border-white/25 text-xs"
-                >
+                <Badge variant="outline" className="text-white/80 border-white/25 text-xs">
                   {types?.find((t) => t.id === article.type_id)?.name || 'Insights & Education'}
                 </Badge>
                 {article.is_featured && (
-                  <Badge className="bg-amber-500 text-white border-0 text-xs">
-                    Featured
-                  </Badge>
+                  <Badge className="bg-amber-500 text-white border-0 text-xs">Featured</Badge>
                 )}
               </div>
 
@@ -369,9 +352,7 @@ export function ArticlePreview({
               {/* Excerpt */}
               {article.excerpt && (
                 <div className="mb-10 pl-6 border-l-[3px] border-purple-500">
-                  <p className="text-lg text-gray-600 leading-relaxed italic">
-                    {article.excerpt}
-                  </p>
+                  <p className="text-lg text-gray-600 leading-relaxed italic">{article.excerpt}</p>
                 </div>
               )}
 
@@ -391,7 +372,7 @@ export function ArticlePreview({
                       'prose-ul:my-6 prose-ol:my-6',
                       'prose-li:text-gray-700 prose-li:my-2 prose-li:leading-relaxed',
                       'prose-img:rounded-xl prose-img:shadow-lg prose-img:my-8',
-                      'prose-code:text-purple-600 prose-code:bg-purple-50 prose-code:px-1.5 prose-code:py-0.5 prose-code:rounded prose-code:text-sm prose-code:font-medium'
+                      'prose-code:text-purple-600 prose-code:bg-purple-50 prose-code:px-1.5 prose-code:py-0.5 prose-code:rounded prose-code:text-sm prose-code:font-medium',
                     )}
                     dangerouslySetInnerHTML={{ __html: previewHtml.html }}
                   />
@@ -402,17 +383,16 @@ export function ArticlePreview({
                       <p className="text-sm font-medium text-red-900">Preview failed</p>
                       <p className="text-sm text-red-800 mt-1">{previewHtml.message}</p>
                       <p className="text-xs text-red-700/90 mt-3">
-                        Legal and Word-style HTML often starts with a DOCTYPE or comments. If this persists, try
-                        pasting only the body content, or save and view the live article.
+                        Legal and Word-style HTML often starts with a DOCTYPE or comments. If this
+                        persists, try pasting only the body content, or save and view the live
+                        article.
                       </p>
                     </div>
                   </div>
                 )
               ) : (
                 <div className="py-12 text-center">
-                  <p className="text-gray-400 italic text-lg">
-                    No content to preview yet.
-                  </p>
+                  <p className="text-gray-400 italic text-lg">No content to preview yet.</p>
                   <p className="text-gray-300 text-sm mt-2">
                     Start writing in the editor to see your article here.
                   </p>
@@ -422,12 +402,10 @@ export function ArticlePreview({
               {/* Disclaimer preview */}
               <div className="mt-10 p-5 rounded-xl bg-gray-50 border border-gray-100 text-xs text-gray-500 leading-relaxed">
                 <p>
-                  <strong className="text-gray-600">Disclaimer:</strong> This
-                  article is for informational purposes only and does not
-                  constitute financial, tax, or legal advice. Please consult a
-                  qualified financial adviser before making any investment
-                  decisions. Navigate Wealth is an authorised
-                  Financial Services Provider.
+                  <strong className="text-gray-600">Disclaimer:</strong> This article is for
+                  informational purposes only and does not constitute financial, tax, or legal
+                  advice. Please consult a qualified financial adviser before making any investment
+                  decisions. Navigate Wealth is an authorised Financial Services Provider.
                 </p>
               </div>
             </div>

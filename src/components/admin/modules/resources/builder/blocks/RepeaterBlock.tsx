@@ -71,9 +71,7 @@ export const RepeaterBlock: BlockDefinition = {
               </div>
             ))}
             {data.userPopulated && (
-              <div className="w-8 p-1.5 text-center text-gray-400 flex-shrink-0">
-                ×
-              </div>
+              <div className="w-8 p-1.5 text-center text-gray-400 flex-shrink-0">×</div>
             )}
           </div>
 
@@ -90,9 +88,7 @@ export const RepeaterBlock: BlockDefinition = {
                 {'}}'}
               </div>
             ))}
-            {data.userPopulated && (
-              <div className="w-8 p-1.5 flex-shrink-0" />
-            )}
+            {data.userPopulated && <div className="w-8 p-1.5 flex-shrink-0" />}
           </div>
 
           {/* Sample row 2 — indicates repetition */}
@@ -106,9 +102,7 @@ export const RepeaterBlock: BlockDefinition = {
                 {i === 0 ? '… repeats per item' : '…'}
               </div>
             ))}
-            {data.userPopulated && (
-              <div className="w-8 p-1.5 flex-shrink-0" />
-            )}
+            {data.userPopulated && <div className="w-8 p-1.5 flex-shrink-0" />}
           </div>
         </div>
 
@@ -126,9 +120,7 @@ export const RepeaterBlock: BlockDefinition = {
             Bound to: <span className="text-amber-600">{data.variableName || '(none)'}</span>
           </div>
           {data.emptyMessage && (
-            <div className="text-[8px] text-gray-400 italic">
-              Empty: "{data.emptyMessage}"
-            </div>
+            <div className="text-[8px] text-gray-400 italic">Empty: "{data.emptyMessage}"</div>
           )}
         </div>
       </div>
@@ -143,25 +135,21 @@ export const RepeaterBlock: BlockDefinition = {
     const columns = data.columns || [];
 
     const addColumn = () => {
-      const newCols = [
-        ...columns,
-        { header: 'New Column', key: 'new_col', width: '' },
-      ];
+      const newCols = [...columns, { header: 'New Column', key: 'new_col', width: '' }];
       onChange('columns', newCols);
     };
 
-    const updateColumn = (
-      index: number,
-      field: keyof RepeaterColumn,
-      val: string
-    ) => {
+    const updateColumn = (index: number, field: keyof RepeaterColumn, val: string) => {
       const newCols = [...columns];
       newCols[index] = { ...newCols[index], [field]: val };
       onChange('columns', newCols);
     };
 
     const removeColumn = (index: number) => {
-      onChange('columns', columns.filter((_: RepeaterColumn, i: number) => i !== index));
+      onChange(
+        'columns',
+        columns.filter((_: RepeaterColumn, i: number) => i !== index),
+      );
     };
 
     const moveColumn = (index: number, direction: 'up' | 'down') => {
@@ -199,18 +187,11 @@ export const RepeaterBlock: BlockDefinition = {
         </div>
 
         <div className="space-y-2">
-          <Label className="text-xs">
-            Columns ({columns.length})
-          </Label>
+          <Label className="text-xs">Columns ({columns.length})</Label>
           {columns.map((col: RepeaterColumn, i: number) => (
-            <div
-              key={i}
-              className="border border-gray-200 rounded-md p-2 bg-gray-50 space-y-2"
-            >
+            <div key={i} className="border border-gray-200 rounded-md p-2 bg-gray-50 space-y-2">
               <div className="flex items-center gap-1">
-                <span className="text-[10px] text-gray-400 font-mono w-5 text-center">
-                  {i + 1}
-                </span>
+                <span className="text-[10px] text-gray-400 font-mono w-5 text-center">{i + 1}</span>
                 <Input
                   placeholder="Header"
                   value={col.header}
@@ -222,14 +203,18 @@ export const RepeaterBlock: BlockDefinition = {
                   disabled={i === 0}
                   className="h-6 w-6 flex items-center justify-center text-gray-400 hover:text-gray-600 disabled:opacity-30"
                 >
-                  <svg width="10" height="10" viewBox="0 0 10 10"><path d="M5 2L9 7H1z" fill="currentColor"/></svg>
+                  <svg width="10" height="10" viewBox="0 0 10 10">
+                    <path d="M5 2L9 7H1z" fill="currentColor" />
+                  </svg>
                 </button>
                 <button
                   onClick={() => moveColumn(i, 'down')}
                   disabled={i === columns.length - 1}
                   className="h-6 w-6 flex items-center justify-center text-gray-400 hover:text-gray-600 disabled:opacity-30"
                 >
-                  <svg width="10" height="10" viewBox="0 0 10 10"><path d="M5 8L1 3h8z" fill="currentColor"/></svg>
+                  <svg width="10" height="10" viewBox="0 0 10 10">
+                    <path d="M5 8L1 3h8z" fill="currentColor" />
+                  </svg>
                 </button>
                 <button
                   onClick={() => removeColumn(i)}

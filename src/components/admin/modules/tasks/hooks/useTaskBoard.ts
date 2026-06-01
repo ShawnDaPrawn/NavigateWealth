@@ -1,13 +1,13 @@
 /**
  * Task Management Module - Board Hook
  * Navigate Wealth Admin Dashboard
- * 
+ *
  * Main state management hook for the Kanban task board:
  * - Filter state management
  * - Modal state management
  * - Drag-and-drop handling
  * - Task grouping and organization
- * 
+ *
  * @module tasks/hooks/useTaskBoard
  */
 
@@ -23,17 +23,17 @@ import { applyFilters, groupByStatus } from '../utils';
 
 /**
  * Task board state management hook
- * 
+ *
  * Manages all state and logic for the Kanban task board including:
  * - Filtering tasks
  * - Modal state (create/edit/view)
  * - Drag-and-drop operations
  * - Task grouping by status
  * - Visible columns
- * 
+ *
  * @param tasks - Array of all tasks
  * @returns Board state and handlers
- * 
+ *
  * @example
  * ```tsx
  * function TaskBoard() {
@@ -52,7 +52,7 @@ import { applyFilters, groupByStatus } from '../utils';
  *     handleViewTask,
  *     handleCloseModal,
  *   } = useTaskBoard(tasks);
- *   
+ *
  *   return (
  *     <div>
  *       {visibleColumns.map(status => (
@@ -97,7 +97,7 @@ export function useTaskBoard(tasks: Task[] = []) {
   useEffect(() => {
     if (!selectedTask || !isModalOpen) return;
 
-    const updatedTask = tasks.find(task => task.id === selectedTask.id);
+    const updatedTask = tasks.find((task) => task.id === selectedTask.id);
     if (updatedTask) {
       // Only update if the task data actually changed (compare updated_at)
       if (updatedTask.updated_at !== selectedTask.updated_at) {
@@ -258,21 +258,21 @@ export function useTaskBoard(tasks: Task[] = []) {
     // Filter state
     filters,
     setFilters,
-    
+
     // Modal state
     isModalOpen,
     setIsModalOpen,
     selectedTask,
     modalMode,
-    
+
     // View state
     showArchived,
     setShowArchived,
-    
+
     // Computed data
     tasksByStatus,
     visibleColumns,
-    
+
     // Event handlers
     handleDragEnd,
     handleCreateTask,

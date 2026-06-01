@@ -54,9 +54,7 @@ export function getBlockedIpAddress(ipAddress: string | null | undefined): strin
     return null;
   }
 
-  return (BLOCKED_IP_ADDRESSES as readonly string[]).includes(normalizedIp)
-    ? normalizedIp
-    : null;
+  return (BLOCKED_IP_ADDRESSES as readonly string[]).includes(normalizedIp) ? normalizedIp : null;
 }
 
 export function getBlockedClientIp(getHeader: HeaderGetter): string | null {

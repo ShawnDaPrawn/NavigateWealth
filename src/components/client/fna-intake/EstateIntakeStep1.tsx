@@ -7,7 +7,13 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { Plus, Trash2 } from 'lucide-react';
 
@@ -131,7 +137,9 @@ export function EstateIntakeStep1({
                 value={asset.value || ''}
                 onChange={(e) =>
                   setAssets((prev) =>
-                    prev.map((a, i) => (i === index ? { ...a, value: Number(e.target.value) || 0 } : a)),
+                    prev.map((a, i) =>
+                      i === index ? { ...a, value: Number(e.target.value) || 0 } : a,
+                    ),
                   )
                 }
               />
@@ -148,7 +156,12 @@ export function EstateIntakeStep1({
             </div>
           ))}
           {!readOnly && (
-            <Button type="button" variant="outline" size="sm" onClick={() => setAssets((prev) => [...prev, emptyAsset()])}>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => setAssets((prev) => [...prev, emptyAsset()])}
+            >
               <Plus className="mr-2 h-4 w-4" />
               Add asset
             </Button>
@@ -180,7 +193,9 @@ export function EstateIntakeStep1({
                 value={liability.value || ''}
                 onChange={(e) =>
                   setLiabilities((prev) =>
-                    prev.map((l, i) => (i === index ? { ...l, value: Number(e.target.value) || 0 } : l)),
+                    prev.map((l, i) =>
+                      i === index ? { ...l, value: Number(e.target.value) || 0 } : l,
+                    ),
                   )
                 }
               />
@@ -212,12 +227,22 @@ export function EstateIntakeStep1({
 
       <div className="space-y-1.5">
         <Label>Additional notes</Label>
-        <Textarea disabled={readOnly} value={notes} onChange={(e) => setNotes(e.target.value)} rows={3} />
+        <Textarea
+          disabled={readOnly}
+          value={notes}
+          onChange={(e) => setNotes(e.target.value)}
+          rows={3}
+        />
       </div>
 
       {!readOnly && (
         <div className="flex flex-wrap justify-end gap-2">
-          <Button type="button" variant="outline" disabled={isSaving} onClick={() => onSaveDraft(buildInputs())}>
+          <Button
+            type="button"
+            variant="outline"
+            disabled={isSaving}
+            onClick={() => onSaveDraft(buildInputs())}
+          >
             Save draft
           </Button>
           <Button type="button" disabled={isSaving} onClick={() => onContinue(buildInputs())}>

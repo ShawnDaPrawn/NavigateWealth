@@ -22,11 +22,7 @@ import {
   MessageSquare,
   CheckCircle2,
 } from 'lucide-react';
-import {
-  discoveryLogo,
-  momentumLogo,
-}
- from '../shared/assets/provider-logos';
+import { discoveryLogo, momentumLogo } from '../shared/assets/provider-logos';
 
 // Product images
 import image_974aab623b920eed5028b31b90f6ad78d88b7922 from 'figma:asset/974aab623b920eed5028b31b90f6ad78d88b7922.png';
@@ -47,15 +43,15 @@ const partnerLogos = [
 // ── Tab icons ─────────────────────────────────────────────────────────────────
 
 const INDIVIDUAL_TAB_ICONS: Record<string, React.ComponentType<{ className?: string }>> = {
-  'comprehensive': Stethoscope,
-  'hospital': Shield,
-  'savings': Heart,
+  comprehensive: Stethoscope,
+  hospital: Shield,
+  savings: Heart,
 };
 
 const BUSINESS_TAB_ICONS: Record<string, React.ComponentType<{ className?: string }>> = {
   'group-schemes': Users,
-  'wellness': Activity,
-  'executive': Crown,
+  wellness: Activity,
+  executive: Crown,
 };
 
 // ── Individual product data ───────────────────────────────────────────────────
@@ -67,13 +63,18 @@ const individualToggleOptions = [
 ];
 
 const individualProducts: Record<string, CoverContent> = {
-  'comprehensive': {
+  comprehensive: {
     title: 'Comprehensive Medical Aid',
-    description: 'Full coverage with unlimited private hospital benefits and comprehensive day-to-day benefits.',
-    benefitsDescription: 'Comprehensive medical aid provides the highest level of healthcare coverage, ensuring you have access to private hospitals, specialists, and day-to-day medical expenses. This premium option offers peace of mind with unlimited hospital benefits and generous annual limits for routine healthcare needs, prescription medicines, and preventative care.',
+    description:
+      'Full coverage with unlimited private hospital benefits and comprehensive day-to-day benefits.',
+    benefitsDescription:
+      'Comprehensive medical aid provides the highest level of healthcare coverage, ensuring you have access to private hospitals, specialists, and day-to-day medical expenses. This premium option offers peace of mind with unlimited hospital benefits and generous annual limits for routine healthcare needs, prescription medicines, and preventative care.',
     features: [
       { title: 'Hospital Cover', description: 'Unlimited private hospital and specialist cover' },
-      { title: 'Day-to-Day Benefits', description: 'GP visits, chronic medication, preventative care' },
+      {
+        title: 'Day-to-Day Benefits',
+        description: 'GP visits, chronic medication, preventative care',
+      },
       { title: 'Specialist Access', description: 'Direct access to specialist networks' },
       { title: 'Emergency Cover', description: 'Emergency medical cover worldwide' },
     ],
@@ -87,14 +88,19 @@ const individualProducts: Record<string, CoverContent> = {
     image: image_708b0e7710c401ef95a1826b60aa1fa5c231ef80,
     imageKey: '708b0e7710c401ef95a1826b60aa1fa5c231ef80',
   },
-  'hospital': {
+  hospital: {
     title: 'Hospital Plans',
-    description: 'Focus on major medical expenses with comprehensive hospital cover and emergency benefits.',
-    benefitsDescription: 'Hospital plans are designed for individuals who want protection against major medical expenses while managing day-to-day healthcare costs independently. These plans provide comprehensive cover for hospitalization, emergency treatment, and major medical procedures, offering excellent value for those who don\'t require extensive day-to-day benefits.',
+    description:
+      'Focus on major medical expenses with comprehensive hospital cover and emergency benefits.',
+    benefitsDescription:
+      "Hospital plans are designed for individuals who want protection against major medical expenses while managing day-to-day healthcare costs independently. These plans provide comprehensive cover for hospitalization, emergency treatment, and major medical procedures, offering excellent value for those who don't require extensive day-to-day benefits.",
     features: [
       { title: 'In-Hospital Cover', description: 'Private hospital accommodation and procedures' },
       { title: 'Emergency Treatment', description: 'Emergency room and ambulance services' },
-      { title: 'Chronic Medication', description: 'Prescribed minimum benefits for chronic conditions' },
+      {
+        title: 'Chronic Medication',
+        description: 'Prescribed minimum benefits for chronic conditions',
+      },
       { title: 'Major Diagnostics', description: 'Cover for significant diagnostic procedures' },
     ],
     benefits: [
@@ -107,10 +113,12 @@ const individualProducts: Record<string, CoverContent> = {
     image: image_0e2b917f64eba502a24068ea5244bd25b0dfc9d5,
     imageKey: '0e2b917f64eba502a24068ea5244bd25b0dfc9d5',
   },
-  'savings': {
+  savings: {
     title: 'Medical Savings Plans',
-    description: 'Combination of hospital cover with a savings component for day-to-day medical expenses.',
-    benefitsDescription: 'Medical savings plans combine hospital benefits with a personal medical savings account that you can use for day-to-day healthcare expenses. This flexible approach allows you to manage routine medical costs while maintaining comprehensive cover for major medical events, with unused savings rolling over to the following year.',
+    description:
+      'Combination of hospital cover with a savings component for day-to-day medical expenses.',
+    benefitsDescription:
+      'Medical savings plans combine hospital benefits with a personal medical savings account that you can use for day-to-day healthcare expenses. This flexible approach allows you to manage routine medical costs while maintaining comprehensive cover for major medical events, with unused savings rolling over to the following year.',
     features: [
       { title: 'Savings Account', description: 'Personal medical savings for day-to-day costs' },
       { title: 'Hospital Cover', description: 'Comprehensive hospital and emergency benefits' },
@@ -130,9 +138,9 @@ const individualProducts: Record<string, CoverContent> = {
 };
 
 const individualImageAltMap: Record<string, string> = {
-  'comprehensive': 'Comprehensive medical aid coverage with doctor consultation',
-  'hospital': 'Hospital plan providing emergency and major medical cover',
-  'savings': 'Medical savings plan with personal savings component',
+  comprehensive: 'Comprehensive medical aid coverage with doctor consultation',
+  hospital: 'Hospital plan providing emergency and major medical cover',
+  savings: 'Medical savings plan with personal savings component',
 };
 
 // ── Business product data ─────────────────────────────────────────────────────
@@ -146,10 +154,15 @@ const businessToggleOptions = [
 const businessProducts: Record<string, CoverContent> = {
   'group-schemes': {
     title: 'Group Medical Schemes',
-    description: 'Cost-effective medical aid solutions for employee groups with comprehensive benefits.',
-    benefitsDescription: 'Group medical schemes provide cost-effective healthcare benefits for your employees while offering significant savings through group discounts. These schemes improve employee satisfaction and retention while providing comprehensive medical coverage that supports workforce health and productivity.',
+    description:
+      'Cost-effective medical aid solutions for employee groups with comprehensive benefits.',
+    benefitsDescription:
+      'Group medical schemes provide cost-effective healthcare benefits for your employees while offering significant savings through group discounts. These schemes improve employee satisfaction and retention while providing comprehensive medical coverage that supports workforce health and productivity.',
     features: [
-      { title: 'Group Discounts', description: 'Reduced premiums through employer-negotiated group rates' },
+      {
+        title: 'Group Discounts',
+        description: 'Reduced premiums through employer-negotiated group rates',
+      },
       { title: 'Admin Support', description: 'Simplified payroll deductions and onboarding' },
       { title: 'Flexible Tiers', description: 'Multiple plan options to suit every employee' },
       { title: 'Wellness Integration', description: 'Built-in wellness programmes and screenings' },
@@ -164,10 +177,11 @@ const businessProducts: Record<string, CoverContent> = {
     image: image_974aab623b920eed5028b31b90f6ad78d88b7922,
     imageKey: '974aab623b920eed5028b31b90f6ad78d88b7922',
   },
-  'wellness': {
+  wellness: {
     title: 'Corporate Wellness Programs',
     description: 'Preventative healthcare initiatives to improve employee health and productivity.',
-    benefitsDescription: 'Corporate wellness programs focus on preventative healthcare and lifestyle management to reduce healthcare costs and improve employee productivity. These comprehensive programs include health screenings, wellness coaching, and lifestyle interventions that create a healthier, more engaged workforce.',
+    benefitsDescription:
+      'Corporate wellness programs focus on preventative healthcare and lifestyle management to reduce healthcare costs and improve employee productivity. These comprehensive programs include health screenings, wellness coaching, and lifestyle interventions that create a healthier, more engaged workforce.',
     features: [
       { title: 'Health Screenings', description: 'Regular biometric and risk assessments' },
       { title: 'Lifestyle Coaching', description: 'Personalised nutrition and fitness guidance' },
@@ -184,10 +198,11 @@ const businessProducts: Record<string, CoverContent> = {
     image: wellnessProgramImage,
     imageKey: '0a60effb7ee71f5609f910b26a2203fd47255d98',
   },
-  'executive': {
+  executive: {
     title: 'Executive Health Plans',
     description: 'Premium healthcare coverage designed for key personnel and executives.',
-    benefitsDescription: 'Executive health plans provide premium medical coverage for key personnel, ensuring your leadership team has access to the best healthcare services. These comprehensive plans include enhanced benefits, priority appointments, and exclusive healthcare services that support executive health and business continuity.',
+    benefitsDescription:
+      'Executive health plans provide premium medical coverage for key personnel, ensuring your leadership team has access to the best healthcare services. These comprehensive plans include enhanced benefits, priority appointments, and exclusive healthcare services that support executive health and business continuity.',
     features: [
       { title: 'Priority Access', description: 'Fast-tracked specialist appointments' },
       { title: 'Global Cover', description: 'International medical and travel benefits' },
@@ -208,8 +223,8 @@ const businessProducts: Record<string, CoverContent> = {
 
 const businessImageAltMap: Record<string, string> = {
   'group-schemes': 'Group medical scheme for employee teams and corporate healthcare',
-  'wellness': 'Corporate wellness program supporting employee health',
-  'executive': 'Executive health plan with premium healthcare services',
+  wellness: 'Corporate wellness program supporting employee health',
+  executive: 'Executive health plan with premium healthcare services',
 };
 
 // ── Main page ─────────────────────────────────────────────────────────────────
@@ -237,10 +252,12 @@ export function MedicalAidPage() {
           badgeText: 'Medical Aid Solutions',
           titleLine1: 'Your Health,',
           titleLine2: 'Our Priority',
-          description: 'Comprehensive medical aid solutions to ensure you and your family receive the best healthcare — tailored to your needs and budget.',
+          description:
+            'Comprehensive medical aid solutions to ensure you and your family receive the best healthcare — tailored to your needs and budget.',
           heroImage: medicalHeroImage,
           heroImageKey: 'medical-hero',
-          heroImageAlt: 'Healthcare professionals providing medical consultation representing comprehensive medical aid',
+          heroImageAlt:
+            'Healthcare professionals providing medical consultation representing comprehensive medical aid',
           statusLabel: 'Healthcare Status',
           statusValue: 'Individuals & Businesses',
           stats: [
@@ -282,7 +299,7 @@ export function MedicalAidPage() {
 
         partners: {
           logos: partnerLogos,
-          heading: 'We work with South Africa\'s leading medical schemes',
+          heading: "We work with South Africa's leading medical schemes",
           subHeading: 'Trusted Healthcare Partners',
         },
 
@@ -299,17 +316,39 @@ export function MedicalAidPage() {
             { value: 'senior-plan', label: 'Senior Medical Plan' },
             { value: 'consultation', label: 'General Consultation' },
           ],
-          textareaPlaceholder: 'Tell us about your medical aid requirements and family situation...',
+          textareaPlaceholder:
+            'Tell us about your medical aid requirements and family situation...',
           selectFieldName: 'medicalNeed',
         },
 
         structuredDataOffers: [
-          { name: 'Comprehensive Medical Aid', description: 'Full coverage with unlimited private hospital benefits and day-to-day benefits.' },
-          { name: 'Hospital Plans', description: 'Major medical expense cover with comprehensive hospital and emergency benefits.' },
-          { name: 'Medical Savings Plans', description: 'Hospital cover with personal savings component for day-to-day expenses.' },
-          { name: 'Group Medical Schemes', description: 'Cost-effective medical aid for employee groups with group discount rates.' },
-          { name: 'Corporate Wellness Programs', description: 'Preventative healthcare initiatives to improve employee health.' },
-          { name: 'Executive Health Plans', description: 'Premium healthcare coverage for key personnel and executives.' },
+          {
+            name: 'Comprehensive Medical Aid',
+            description:
+              'Full coverage with unlimited private hospital benefits and day-to-day benefits.',
+          },
+          {
+            name: 'Hospital Plans',
+            description:
+              'Major medical expense cover with comprehensive hospital and emergency benefits.',
+          },
+          {
+            name: 'Medical Savings Plans',
+            description: 'Hospital cover with personal savings component for day-to-day expenses.',
+          },
+          {
+            name: 'Group Medical Schemes',
+            description:
+              'Cost-effective medical aid for employee groups with group discount rates.',
+          },
+          {
+            name: 'Corporate Wellness Programs',
+            description: 'Preventative healthcare initiatives to improve employee health.',
+          },
+          {
+            name: 'Executive Health Plans',
+            description: 'Premium healthcare coverage for key personnel and executives.',
+          },
         ],
         structuredDataServiceType: 'Health Insurance Advisory',
         structuredDataServiceName: 'Medical Aid & Health Insurance',
@@ -323,13 +362,15 @@ export function MedicalAidPage() {
 
         approach: {
           serviceName: 'How We Find Your Ideal Plan',
-          headerDescription: 'A proven 3-step process to match you with the right medical aid solution.',
+          headerDescription:
+            'A proven 3-step process to match you with the right medical aid solution.',
           steps: [
             {
               step: '1',
               title: 'Assess Your Needs',
               icon: Search,
-              description: 'Thorough assessment of your healthcare requirements, family situation, and budget to identify the optimal solution.',
+              description:
+                'Thorough assessment of your healthcare requirements, family situation, and budget to identify the optimal solution.',
               details: [
                 'Healthcare needs analysis',
                 'Family structure review',
@@ -343,7 +384,8 @@ export function MedicalAidPage() {
               step: '2',
               title: 'Compare & Recommend',
               icon: MessageSquare,
-              description: 'Multi-scheme comparison across providers to find the best balance of benefits, network access, and affordability.',
+              description:
+                'Multi-scheme comparison across providers to find the best balance of benefits, network access, and affordability.',
               details: [
                 'Multi-scheme comparison',
                 'Benefit-cost analysis',
@@ -357,7 +399,8 @@ export function MedicalAidPage() {
               step: '3',
               title: 'Enrol & Support',
               icon: CheckCircle2,
-              description: 'Full enrolment management and ongoing support to ensure you get the most from your medical aid.',
+              description:
+                'Full enrolment management and ongoing support to ensure you get the most from your medical aid.',
               details: [
                 'Seamless enrolment',
                 'Claims support',
@@ -369,7 +412,8 @@ export function MedicalAidPage() {
             },
           ],
           summaryCards: [],
-          commitmentText: 'We only proceed when you fully understand your chosen medical aid plan and are completely satisfied with your decision. Your health is our priority.',
+          commitmentText:
+            'We only proceed when you fully understand your chosen medical aid plan and are completely satisfied with your decision. Your health is our priority.',
         },
       }}
     />

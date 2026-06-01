@@ -10,12 +10,7 @@ import { Button } from '../../../../../ui/button';
 import { Input } from '../../../../../ui/input';
 import { Badge } from '../../../../../ui/badge';
 import { CardDescription } from '../../../../../ui/card';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from '../../../../../ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../../../../../ui/dialog';
 import {
   Select,
   SelectContent,
@@ -23,15 +18,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '../../../../../ui/select';
-import {
-  Search,
-  Loader2,
-  MessageSquare,
-  CheckCircle2,
-  Eye,
-  Paperclip,
-  Trash2,
-} from 'lucide-react';
+import { Search, Loader2, MessageSquare, CheckCircle2, Eye, Paperclip, Trash2 } from 'lucide-react';
 import { useVirtualizedRows } from '../../../../../shared/useVirtualizedRows';
 import { getCategoryIcon, getCategoryColor, CATEGORIES } from './constants';
 import type { CommunicationLog } from '../../../communication/types';
@@ -96,8 +83,8 @@ export function HistoryDialog({
     threshold: 50,
   });
 
-  const readCount = communications.filter(c => c.read).length;
-  const unreadCount = communications.filter(c => !c.read).length;
+  const readCount = communications.filter((c) => c.read).length;
+  const unreadCount = communications.filter((c) => !c.read).length;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -128,8 +115,10 @@ export function HistoryDialog({
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="All">All Categories</SelectItem>
-                  {CATEGORIES.map(cat => (
-                    <SelectItem key={cat} value={cat}>{cat}</SelectItem>
+                  {CATEGORIES.map((cat) => (
+                    <SelectItem key={cat} value={cat}>
+                      {cat}
+                    </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
@@ -164,7 +153,11 @@ export function HistoryDialog({
           </div>
 
           {/* List */}
-          <div ref={commListRef} className="flex-1 border rounded-md overflow-y-auto" style={{ maxHeight: '500px' }}>
+          <div
+            ref={commListRef}
+            className="flex-1 border rounded-md overflow-y-auto"
+            style={{ maxHeight: '500px' }}
+          >
             {isLoading ? (
               <div className="flex items-center justify-center py-12">
                 <Loader2 className="h-8 w-8 animate-spin text-gray-400" />
@@ -181,7 +174,7 @@ export function HistoryDialog({
                   position: commIsVirtualized ? 'relative' : undefined,
                 }}
               >
-                {commVirtualItems.map(vRow => {
+                {commVirtualItems.map((vRow) => {
                   const log = filteredCommunications[vRow.index];
                   const Icon = getCategoryIcon(log.category);
                   const isRead = log.read;
@@ -199,28 +192,39 @@ export function HistoryDialog({
                           onViewDetail(log);
                         }
                       }}
-                      style={commIsVirtualized ? {
-                        position: 'absolute',
-                        top: 0,
-                        left: 0,
-                        width: '100%',
-                        height: vRow.size,
-                        transform: `translateY(${vRow.start}px)`,
-                      } : undefined}
+                      style={
+                        commIsVirtualized
+                          ? {
+                              position: 'absolute',
+                              top: 0,
+                              left: 0,
+                              width: '100%',
+                              height: vRow.size,
+                              transform: `translateY(${vRow.start}px)`,
+                            }
+                          : undefined
+                      }
                     >
                       {/* Icon */}
-                      <div className={`p-2 rounded-full ${getCategoryColor(log.category)} bg-opacity-10 mr-4 flex-shrink-0`}>
+                      <div
+                        className={`p-2 rounded-full ${getCategoryColor(log.category)} bg-opacity-10 mr-4 flex-shrink-0`}
+                      >
                         <Icon className={`h-5 w-5 ${getCategoryColor(log.category)}`} />
                       </div>
 
                       {/* Content */}
                       <div className="flex-1 min-w-0 mr-4">
                         <div className="flex items-center gap-2 mb-1">
-                          <h4 className={`font-medium truncate ${!isRead ? 'text-black' : 'text-gray-700'}`}>
+                          <h4
+                            className={`font-medium truncate ${!isRead ? 'text-black' : 'text-gray-700'}`}
+                          >
                             {log.subject}
                           </h4>
                           {!isRead && (
-                            <span className="h-2 w-2 rounded-full bg-blue-600 flex-shrink-0" title="Unread" />
+                            <span
+                              className="h-2 w-2 rounded-full bg-blue-600 flex-shrink-0"
+                              title="Unread"
+                            />
                           )}
                         </div>
                         <div className="flex items-center gap-3 text-xs text-gray-500">
@@ -245,11 +249,17 @@ export function HistoryDialog({
                         <div className="flex flex-col items-end gap-1">
                           <div className="flex gap-2">
                             {log.sent_via_email && (
-                              <Badge variant="outline" className="text-[10px] h-5 px-1.5 font-normal text-gray-500">
+                              <Badge
+                                variant="outline"
+                                className="text-[10px] h-5 px-1.5 font-normal text-gray-500"
+                              >
                                 Email
                               </Badge>
                             )}
-                            <Badge variant="outline" className="text-[10px] h-5 px-1.5 font-normal text-gray-500">
+                            <Badge
+                              variant="outline"
+                              className="text-[10px] h-5 px-1.5 font-normal text-gray-500"
+                            >
                               Portal
                             </Badge>
                           </div>

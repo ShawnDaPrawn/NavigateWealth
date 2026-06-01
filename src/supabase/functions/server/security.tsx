@@ -8,7 +8,12 @@ import { createClient } from 'jsr:@supabase/supabase-js@2.49.8';
 import * as kv from './kv_store.tsx';
 import { createModuleLogger } from './stderr-logger.ts';
 import { getErrMsg } from './shared-logger-utils.ts';
-import { sendEmail, sendTwoFactorEmail, createEmailTemplate, getFooterSettings } from './email-service.ts';
+import {
+  sendEmail,
+  sendTwoFactorEmail,
+  createEmailTemplate,
+  getFooterSettings,
+} from './email-service.ts';
 import { requireAuth } from './auth-mw.ts';
 import {
   LogActivitySchema,
@@ -31,21 +36,16 @@ app.get('/', (c) => c.json({ service: 'security', status: 'active' }));
 app.get('', (c) => c.json({ service: 'security', status: 'active' }));
 
 // Lazy Supabase client — must NOT be top-level to avoid deployment crashes in edge functions.
-const getSupabase = () => createClient(
-  Deno.env.get('SUPABASE_URL')!,
-  Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
-);
+const getSupabase = () =>
+  createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!);
 
-const getPasswordVerifier = () => createClient(
-  Deno.env.get('SUPABASE_URL')!,
-  Deno.env.get('SUPABASE_ANON_KEY')!,
-  {
+const getPasswordVerifier = () =>
+  createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_ANON_KEY')!, {
     auth: {
       persistSession: false,
       autoRefreshToken: false,
     },
-  }
-);
+  });
 
 /**
  * Helper to sanitize error messages
@@ -54,7 +54,11 @@ const getPasswordVerifier = () => createClient(
 function getErrorMessage(error: unknown): string {
   const message = getErrMsg(error);
   // Check for HTML content (common in Cloudflare/Gateway errors)
-  if (message.includes('<!DOCTYPE html>') || message.includes('<html') || message.includes('Cloudflare')) {
+  if (
+    message.includes('<!DOCTYPE html>') ||
+    message.includes('<html') ||
+    message.includes('Cloudflare')
+  ) {
     return 'Service temporarily unavailable. Please try again later.';
   }
   return message;
@@ -207,7 +211,9 @@ async function createCodePair() {
   };
 }
 
-function getEmailChangeSummary(request: PendingEmailChangeRequest | null): EmailChangeSummary | null {
+function getEmailChangeSummary(
+  request: PendingEmailChangeRequest | null,
+): EmailChangeSummary | null {
   if (!request) return null;
   return {
     requestId: request.id,
@@ -221,7 +227,7 @@ function getEmailChangeSummary(request: PendingEmailChangeRequest | null): Email
 }
 
 async function getPendingEmailChange(userId: string): Promise<PendingEmailChangeRequest | null> {
-  const request = await kv.get(emailChangeKey(userId)) as PendingEmailChangeRequest | null;
+  const request = (await kv.get(emailChangeKey(userId))) as PendingEmailChangeRequest | null;
   if (!request) return null;
 
   if (new Date(request.expiresAt).getTime() < Date.now()) {
@@ -252,7 +258,7 @@ async function writeActivityLog(
 
 async function updateStoredPrimaryEmail(userId: string, newEmail: string) {
   const profileKey = `user_profile:${userId}:personal_info`;
-  const existingProfile = await kv.get(profileKey) as Record<string, unknown> | null;
+  const existingProfile = (await kv.get(profileKey)) as Record<string, unknown> | null;
   if (!existingProfile) return;
 
   const nextProfile: Record<string, unknown> = {
@@ -412,24 +418,24 @@ app.get('/:userId/activity', requireAuth, async (c) => {
     const limit = parseInt(c.req.query('limit') || '50');
     const denied = ensureSelfOrAdmin(c, userId);
     if (denied) return denied;
-    
+
     log.info(`📊 Fetching activity logs for user: ${userId}`);
 
     // Get activity logs from KV store
     const logs = await kv.getByPrefix(`activity:${userId}:`);
-    
+
     // Sort by timestamp descending and limit
     const sortedLogs = logs
-      .filter(log => log && log.id)
+      .filter((log) => log && log.id)
       .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
       .slice(0, limit);
-    
+
     log.info(`✅ Found ${sortedLogs.length} activity logs for user ${userId}`);
-    
+
     return c.json({
       success: true,
       count: sortedLogs.length,
-      logs: sortedLogs
+      logs: sortedLogs,
     });
   } catch (error) {
     const errorMsg = logSafeError('Error fetching activity logs', error);
@@ -447,10 +453,13 @@ app.post('/:userId/activity', requireAuth, async (c) => {
     const denied = ensureSelfOrAdmin(c, userId);
     if (denied) return denied;
     const body = await c.req.json();
-    
+
     const parsed = LogActivitySchema.safeParse(body);
     if (!parsed.success) {
-      return c.json({ success: false, error: 'Validation failed', ...formatZodError(parsed.error) }, 400);
+      return c.json(
+        { success: false, error: 'Validation failed', ...formatZodError(parsed.error) },
+        400,
+      );
     }
     const { type, success: activitySuccess, errorMessage, metadata } = parsed.data;
 
@@ -458,11 +467,11 @@ app.post('/:userId/activity', requireAuth, async (c) => {
 
     const timestamp = new Date().toISOString();
     const logId = `log_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-    
+
     // Get request info
     const ip = c.req.header('x-forwarded-for') || c.req.header('x-real-ip') || 'unknown';
     const userAgent = c.req.header('user-agent') || 'unknown';
-    
+
     const activityLog: ActivityLogEntry = {
       id: logId,
       userId,
@@ -472,7 +481,7 @@ app.post('/:userId/activity', requireAuth, async (c) => {
       userAgent,
       success: activitySuccess,
       errorMessage,
-      metadata
+      metadata,
     };
 
     // Store activity log
@@ -482,7 +491,7 @@ app.post('/:userId/activity', requireAuth, async (c) => {
 
     return c.json({
       success: true,
-      log: activityLog
+      log: activityLog,
     });
   } catch (error) {
     const errorMsg = logSafeError('Error logging activity', error);
@@ -502,10 +511,13 @@ app.post('/:userId/password', requireAuth, async (c) => {
     const denied = ensureSelfOrAdmin(c, userId);
     if (denied) return denied;
     const body = await c.req.json();
-    
+
     const parsed = ChangePasswordSchema.safeParse(body);
     if (!parsed.success) {
-      return c.json({ success: false, error: 'Validation failed', ...formatZodError(parsed.error) }, 400);
+      return c.json(
+        { success: false, error: 'Validation failed', ...formatZodError(parsed.error) },
+        400,
+      );
     }
     const { currentPassword, newPassword, emailPassword } = parsed.data;
 
@@ -513,7 +525,7 @@ app.post('/:userId/password', requireAuth, async (c) => {
 
     // Verify current password and update to new password using Supabase Auth
     const { data: user, error: getUserError } = await getSupabase().auth.admin.getUserById(userId);
-    
+
     if (getUserError || !user) {
       log.error('❌ User not found:', getUserError);
       return c.json({ success: false, error: 'User not found' }, 404);
@@ -533,13 +545,16 @@ app.post('/:userId/password', requireAuth, async (c) => {
       }
 
       if (currentPassword === newPassword) {
-        return c.json({ success: false, error: 'New password cannot be the same as your current password' }, 400);
+        return c.json(
+          { success: false, error: 'New password cannot be the same as your current password' },
+          400,
+        );
       }
     }
 
     // Update password using admin API
     const { data, error } = await getSupabase().auth.admin.updateUserById(userId, {
-      password: newPassword
+      password: newPassword,
     });
 
     if (error) {
@@ -551,16 +566,16 @@ app.post('/:userId/password', requireAuth, async (c) => {
     if (emailPassword && user.user.email) {
       try {
         log.info(`📧 Sending password reset notification to ${user.user.email}`);
-        
+
         const footerSettings = await getFooterSettings();
-        
+
         // Construct email content manually since we don't have a specific template for this yet
         // and we need to include the dynamic password which might not be safe to store in a template default
-        
-        const title = "Password Reset Notification";
-        const subtitle = "Your account password has been reset by an administrator";
+
+        const title = 'Password Reset Notification';
+        const subtitle = 'Your account password has been reset by an administrator';
         const greeting = `Hello ${user.user.user_metadata?.firstName || 'Client'},`;
-        
+
         const bodyContent = `
           <p>Your password for the Navigate Wealth Admin Panel has been reset.</p>
           <div style="background-color: #f3f4f6; padding: 16px; border-radius: 8px; margin: 16px 0; border: 1px solid #e5e7eb;">
@@ -579,29 +594,26 @@ app.post('/:userId/password', requireAuth, async (c) => {
         // If running locally or on edge, construct the login URL appropriately
         // For now, using the base URL + /login which is standard for SPAs hosted on Supabase or similar
         // Or better, just point to the origin if known, but we don't have request origin easily here for the frontend app
-        // Let's assume the app is hosted where the user logs in. 
+        // Let's assume the app is hosted where the user logs in.
         // A safe bet is usually the frontend URL. Since I don't have a FRONTEND_URL env, I'll use a generic approach or try to infer.
         // Actually, for this specific environment, I know it's a PWA.
-        
-        // Let's use a generic "Log In" link that points to the main app URL if possible, 
+
+        // Let's use a generic "Log In" link that points to the main app URL if possible,
         // or just omit the link if we can't be sure.
         // However, the user asked for "Log In Now" button.
         // I'll try to use the Referer header from the request if available as a base, or default to a standard URL.
         const origin = c.req.header('origin') || c.req.header('referer') || supabaseUrl;
         const buttonUrl = `${origin.replace(/\/$/, '')}/login`;
-        const buttonLabel = "Log In Now";
+        const buttonLabel = 'Log In Now';
 
-        const emailHtml = createEmailTemplate(
-          bodyContent,
-          {
-            title,
-            subtitle,
-            greeting,
-            buttonUrl,
-            buttonLabel,
-            footerSettings
-          }
-        );
+        const emailHtml = createEmailTemplate(bodyContent, {
+          title,
+          subtitle,
+          greeting,
+          buttonUrl,
+          buttonLabel,
+          footerSettings,
+        });
 
         const textBody = `
 Password Reset Notification
@@ -620,7 +632,7 @@ Log In: ${buttonUrl}
           to: user.user.email,
           subject: 'Your Password Has Been Reset',
           html: emailHtml,
-          text: textBody
+          text: textBody,
         });
 
         log.info('✅ Password reset email sent');
@@ -631,7 +643,7 @@ Log In: ${buttonUrl}
     }
 
     // Update security status
-    const securityStatus = await kv.get(`security:${userId}`) || {};
+    const securityStatus = (await kv.get(`security:${userId}`)) || {};
     securityStatus.passwordLastChanged = new Date().toISOString();
     await kv.set(`security:${userId}`, securityStatus);
 
@@ -643,14 +655,14 @@ Log In: ${buttonUrl}
       userId,
       type: 'password_changed',
       timestamp,
-      success: true
+      success: true,
     });
 
     log.info('✅ Password changed successfully');
 
     return c.json({
       success: true,
-      message: isAdminReset ? 'Password reset successfully' : 'Password changed successfully'
+      message: isAdminReset ? 'Password reset successfully' : 'Password changed successfully',
     });
   } catch (error) {
     const errorMsg = logSafeError('Error changing password', error);
@@ -667,23 +679,23 @@ app.get('/:userId/status', requireAuth, async (c) => {
     const userId = c.req.param('userId');
     const denied = ensureSelfOrAdmin(c, userId);
     if (denied) return denied;
-    
+
     log.info(`🔍 Fetching security status for user: ${userId}`);
 
-    const securityStatus: UserSecurityStatus = await kv.get(`security:${userId}`) || {
+    const securityStatus: UserSecurityStatus = (await kv.get(`security:${userId}`)) || {
       suspended: false,
-      twoFactorEnabled: false
+      twoFactorEnabled: false,
     };
     const pendingEmailChange = getEmailChangeSummary(await getPendingEmailChange(userId));
-    
+
     log.info(`✅ Security status retrieved for user ${userId}`);
-    
+
     return c.json({
       success: true,
       status: {
         ...securityStatus,
         pendingEmailChange,
-      }
+      },
     });
   } catch (error) {
     const errorMsg = logSafeError('Error fetching security status', error);
@@ -706,7 +718,10 @@ app.post('/:userId/email-change/request', requireAuth, async (c) => {
     const body = await c.req.json();
     const parsed = RequestEmailChangeSchema.safeParse(body);
     if (!parsed.success) {
-      return c.json({ success: false, error: 'Validation failed', ...formatZodError(parsed.error) }, 400);
+      return c.json(
+        { success: false, error: 'Validation failed', ...formatZodError(parsed.error) },
+        400,
+      );
     }
 
     const isAdminInitiated = isAdminRole(userRole) && authUserId !== userId;
@@ -724,7 +739,10 @@ app.post('/:userId/email-change/request', requireAuth, async (c) => {
     }
 
     if (normalizedNewEmail === currentEmail) {
-      return c.json({ success: false, error: 'New email must be different from the current email' }, 400);
+      return c.json(
+        { success: false, error: 'New email must be different from the current email' },
+        400,
+      );
     }
 
     if (!isAdminInitiated) {
@@ -812,7 +830,10 @@ app.post('/:userId/email-change/resend', requireAuth, async (c) => {
     const body = await c.req.json();
     const parsed = ResendEmailChangeCodeSchema.safeParse(body);
     if (!parsed.success) {
-      return c.json({ success: false, error: 'Validation failed', ...formatZodError(parsed.error) }, 400);
+      return c.json(
+        { success: false, error: 'Validation failed', ...formatZodError(parsed.error) },
+        400,
+      );
     }
 
     const request = await getPendingEmailChange(userId);
@@ -821,7 +842,10 @@ app.post('/:userId/email-change/resend', requireAuth, async (c) => {
     }
 
     if (parsed.data.requestId && parsed.data.requestId !== request.id) {
-      return c.json({ success: false, error: 'Email change request no longer matches the active session' }, 409);
+      return c.json(
+        { success: false, error: 'Email change request no longer matches the active session' },
+        409,
+      );
     }
 
     const nextRequest = { ...request };
@@ -876,7 +900,10 @@ app.post('/:userId/email-change/verify', requireAuth, async (c) => {
     const body = await c.req.json();
     const parsed = VerifyEmailChangeSchema.safeParse(body);
     if (!parsed.success) {
-      return c.json({ success: false, error: 'Validation failed', ...formatZodError(parsed.error) }, 400);
+      return c.json(
+        { success: false, error: 'Validation failed', ...formatZodError(parsed.error) },
+        400,
+      );
     }
 
     const request = await getPendingEmailChange(userId);
@@ -885,7 +912,10 @@ app.post('/:userId/email-change/verify', requireAuth, async (c) => {
     }
 
     if (parsed.data.requestId && parsed.data.requestId !== request.id) {
-      return c.json({ success: false, error: 'Email change request no longer matches the active session' }, 409);
+      return c.json(
+        { success: false, error: 'Email change request no longer matches the active session' },
+        409,
+      );
     }
 
     const nextRequest = { ...request };
@@ -893,17 +923,29 @@ app.post('/:userId/email-change/verify', requireAuth, async (c) => {
 
     if (request.requiresCurrentEmailCode && !request.currentEmailVerifiedAt) {
       if (!parsed.data.currentEmailCode) {
-        return c.json({ success: false, error: 'Current email verification code is required' }, 400);
+        return c.json(
+          { success: false, error: 'Current email verification code is required' },
+          400,
+        );
       }
 
       if (!request.currentEmailCodeHash || !request.currentEmailCodeExpiresAt) {
         await kv.del(emailChangeKey(userId));
-        return c.json({ success: false, error: 'Current email verification has expired. Please start again.' }, 400);
+        return c.json(
+          { success: false, error: 'Current email verification has expired. Please start again.' },
+          400,
+        );
       }
 
       if (new Date(request.currentEmailCodeExpiresAt).getTime() < Date.now()) {
         await kv.del(emailChangeKey(userId));
-        return c.json({ success: false, error: 'Current email verification code has expired. Please start again.' }, 400);
+        return c.json(
+          {
+            success: false,
+            error: 'Current email verification code has expired. Please start again.',
+          },
+          400,
+        );
       }
 
       const currentHash = await sha256Hex(parsed.data.currentEmailCode.trim());
@@ -911,8 +953,17 @@ app.post('/:userId/email-change/verify', requireAuth, async (c) => {
         nextRequest.currentEmailCodeAttempts += 1;
         if (nextRequest.currentEmailCodeAttempts >= EMAIL_CHANGE_MAX_ATTEMPTS) {
           await kv.del(emailChangeKey(userId));
-          await writeActivityLog(userId, 'email_change_verification_failed', false, { stage: 'current_email', exhausted: true });
-          return c.json({ success: false, error: 'Too many incorrect current-email codes. Please start the email change again.' }, 400);
+          await writeActivityLog(userId, 'email_change_verification_failed', false, {
+            stage: 'current_email',
+            exhausted: true,
+          });
+          return c.json(
+            {
+              success: false,
+              error: 'Too many incorrect current-email codes. Please start the email change again.',
+            },
+            400,
+          );
         }
 
         await kv.set(emailChangeKey(userId), nextRequest);
@@ -920,7 +971,10 @@ app.post('/:userId/email-change/verify', requireAuth, async (c) => {
           stage: 'current_email',
           attempts: nextRequest.currentEmailCodeAttempts,
         });
-        return c.json({ success: false, error: 'Current email verification code is incorrect' }, 400);
+        return c.json(
+          { success: false, error: 'Current email verification code is incorrect' },
+          400,
+        );
       }
 
       nextRequest.currentEmailVerifiedAt = nowIso;
@@ -928,12 +982,18 @@ app.post('/:userId/email-change/verify', requireAuth, async (c) => {
 
     if (!request.newEmailCodeHash || !request.newEmailCodeExpiresAt) {
       await kv.del(emailChangeKey(userId));
-      return c.json({ success: false, error: 'New email verification has expired. Please start again.' }, 400);
+      return c.json(
+        { success: false, error: 'New email verification has expired. Please start again.' },
+        400,
+      );
     }
 
     if (new Date(request.newEmailCodeExpiresAt).getTime() < Date.now()) {
       await kv.del(emailChangeKey(userId));
-      return c.json({ success: false, error: 'New email verification code has expired. Please start again.' }, 400);
+      return c.json(
+        { success: false, error: 'New email verification code has expired. Please start again.' },
+        400,
+      );
     }
 
     const newHash = await sha256Hex(parsed.data.newEmailCode.trim());
@@ -941,8 +1001,17 @@ app.post('/:userId/email-change/verify', requireAuth, async (c) => {
       nextRequest.newEmailCodeAttempts += 1;
       if (nextRequest.newEmailCodeAttempts >= EMAIL_CHANGE_MAX_ATTEMPTS) {
         await kv.del(emailChangeKey(userId));
-        await writeActivityLog(userId, 'email_change_verification_failed', false, { stage: 'new_email', exhausted: true });
-        return c.json({ success: false, error: 'Too many incorrect new-email codes. Please start the email change again.' }, 400);
+        await writeActivityLog(userId, 'email_change_verification_failed', false, {
+          stage: 'new_email',
+          exhausted: true,
+        });
+        return c.json(
+          {
+            success: false,
+            error: 'Too many incorrect new-email codes. Please start the email change again.',
+          },
+          400,
+        );
       }
 
       await kv.set(emailChangeKey(userId), nextRequest);
@@ -960,7 +1029,10 @@ app.post('/:userId/email-change/verify', requireAuth, async (c) => {
       email_confirm: true,
     });
     if (updateError) {
-      return c.json({ success: false, error: updateError.message || 'Failed to update auth email' }, 400);
+      return c.json(
+        { success: false, error: updateError.message || 'Failed to update auth email' },
+        400,
+      );
     }
 
     await updateStoredPrimaryEmail(userId, request.newEmail);
@@ -999,19 +1071,24 @@ app.post('/:userId/suspend', requireAuth, async (c) => {
     const denied = ensureAdmin(c);
     if (denied) return denied;
     const body = await c.req.json();
-    
+
     const parsed = SuspendUserSchema.safeParse(body);
     if (!parsed.success) {
-      return c.json({ success: false, error: 'Validation failed', ...formatZodError(parsed.error) }, 400);
+      return c.json(
+        { success: false, error: 'Validation failed', ...formatZodError(parsed.error) },
+        400,
+      );
     }
     const { suspended, reason, adminId } = parsed.data;
 
-    log.info(`${suspended ? '🔒' : '🔓'} ${suspended ? 'Suspending' : 'Unsuspending'} user: ${userId}`);
+    log.info(
+      `${suspended ? '🔒' : '🔓'} ${suspended ? 'Suspending' : 'Unsuspending'} user: ${userId}`,
+    );
 
     // Get or create security status
-    const securityStatus: UserSecurityStatus = await kv.get(`security:${userId}`) || {
+    const securityStatus: UserSecurityStatus = (await kv.get(`security:${userId}`)) || {
       suspended: false,
-      twoFactorEnabled: false
+      twoFactorEnabled: false,
     };
 
     // Update suspension status
@@ -1041,7 +1118,7 @@ app.post('/:userId/suspend', requireAuth, async (c) => {
       type: suspended ? 'account_suspended' : 'account_unsuspended',
       timestamp,
       success: true,
-      metadata: { adminId, reason }
+      metadata: { adminId, reason },
     });
 
     log.info(`✅ User ${suspended ? 'suspended' : 'unsuspended'} successfully`);
@@ -1049,7 +1126,7 @@ app.post('/:userId/suspend', requireAuth, async (c) => {
     return c.json({
       success: true,
       status: securityStatus,
-      message: `Account ${suspended ? 'suspended' : 'unsuspended'} successfully`
+      message: `Account ${suspended ? 'suspended' : 'unsuspended'} successfully`,
     });
   } catch (error) {
     const errorMsg = logSafeError('Error updating suspension status', error);
@@ -1067,19 +1144,22 @@ app.post('/:userId/2fa', requireAuth, async (c) => {
     const denied = ensureSelfOrAdmin(c, userId);
     if (denied) return denied;
     const body = await c.req.json();
-    
+
     const parsed = Toggle2FASchema.safeParse(body);
     if (!parsed.success) {
-      return c.json({ success: false, error: 'Validation failed', ...formatZodError(parsed.error) }, 400);
+      return c.json(
+        { success: false, error: 'Validation failed', ...formatZodError(parsed.error) },
+        400,
+      );
     }
     const { enabled } = parsed.data;
     const method = (body as Record<string, unknown>).method;
 
     log.info(`🔑 ${enabled ? 'Enabling' : 'Disabling'} 2FA for user: ${userId}`);
 
-    const securityStatus: UserSecurityStatus = await kv.get(`security:${userId}`) || {
+    const securityStatus: UserSecurityStatus = (await kv.get(`security:${userId}`)) || {
       suspended: false,
-      twoFactorEnabled: false
+      twoFactorEnabled: false,
     };
 
     securityStatus.twoFactorEnabled = enabled;
@@ -1094,14 +1174,14 @@ app.post('/:userId/2fa', requireAuth, async (c) => {
       type: enabled ? '2fa_enabled' : '2fa_disabled',
       timestamp,
       success: true,
-      metadata: { method }
+      metadata: { method },
     });
 
     log.info(`✅ 2FA ${enabled ? 'enabled' : 'disabled'} successfully`);
 
     return c.json({
       success: true,
-      status: securityStatus
+      status: securityStatus,
     });
   } catch (error) {
     const errorMsg = logSafeError('Error toggling 2FA', error);
@@ -1119,7 +1199,7 @@ app.post('/:userId/2fa/send-code', requireAuth, async (c) => {
     const denied = ensureSelfOrAdmin(c, userId);
     if (denied) return denied;
     let email = '';
-    
+
     // Try to get email from body
     try {
       const body = await c.req.json();
@@ -1129,34 +1209,34 @@ app.post('/:userId/2fa/send-code', requireAuth, async (c) => {
     } catch (e) {
       // Body might be empty, ignore
     }
-    
+
     log.info(`📧 Generating 2FA code for user: ${userId}`);
 
     // Get user details from Supabase
     const { data: user, error: getUserError } = await getSupabase().auth.admin.getUserById(userId);
-    
+
     if (getUserError || !user) {
       log.error('❌ User not found:', getUserError);
       return c.json({ success: false, error: 'User not found' }, 404);
     }
-    
+
     // Use user.email from Supabase if available, otherwise fallback to provided email
     const targetEmail = user.email || email;
-    
+
     if (!targetEmail) {
-       log.error('❌ No email address found for user');
-       return c.json({ success: false, error: 'No email address found for user' }, 400);
+      log.error('❌ No email address found for user');
+      return c.json({ success: false, error: 'No email address found for user' }, 400);
     }
 
     // Generate 6-digit code
     const code = Math.floor(100000 + Math.random() * 900000).toString();
-    
+
     // Store code with expiration (5 minutes)
     const expiresAt = new Date(Date.now() + 5 * 60 * 1000).toISOString();
     await kv.set(`2fa:${userId}:code`, {
       code,
       expiresAt,
-      attempts: 0
+      attempts: 0,
     });
 
     log.info(`🔑 Generated 2FA code for user ${userId}, expires at ${expiresAt}`);
@@ -1174,14 +1254,14 @@ app.post('/:userId/2fa/send-code', requireAuth, async (c) => {
       userId,
       type: '2fa_code_sent',
       timestamp,
-      success: true
+      success: true,
     });
 
     log.info(`✅ 2FA code sent successfully to ${targetEmail}`);
 
     return c.json({
       success: true,
-      message: 'Verification code sent to your email'
+      message: 'Verification code sent to your email',
     });
   } catch (error) {
     const errorMsg = logSafeError('Error sending 2FA code', error);
@@ -1207,32 +1287,44 @@ app.post('/:userId/2fa/verify-code', requireAuth, async (c) => {
     const denied = ensureSelfOrAdmin(c, userId);
     if (denied) return denied;
     const body = await c.req.json();
-    
+
     const parsed = Verify2FACodeSchema.safeParse(body);
     if (!parsed.success) {
-      return c.json({ success: false, error: 'Validation failed', ...formatZodError(parsed.error) }, 400);
+      return c.json(
+        { success: false, error: 'Validation failed', ...formatZodError(parsed.error) },
+        400,
+      );
     }
     const { code } = parsed.data;
 
     log.info(`🔍 Verifying 2FA code for user: ${userId}`);
 
     // ── Check if the account is already suspended ────────────────
-    const securityStatus: UserSecurityStatus = await kv.get(`security:${userId}`) || {
+    const securityStatus: UserSecurityStatus = (await kv.get(`security:${userId}`)) || {
       suspended: false,
       twoFactorEnabled: false,
     };
 
     if (securityStatus.suspended) {
       log.info('❌ Account is suspended — rejecting 2FA verification');
-      return c.json({ success: false, error: 'Your account has been suspended. Please contact Navigate Wealth support.' }, 403);
+      return c.json(
+        {
+          success: false,
+          error: 'Your account has been suspended. Please contact Navigate Wealth support.',
+        },
+        403,
+      );
     }
 
     // ── Get stored code ──────────────────────────────────────────
     const storedData = await kv.get(`2fa:${userId}:code`);
-    
+
     if (!storedData) {
       log.info('❌ No 2FA code found or code expired');
-      return c.json({ success: false, error: 'Invalid or expired code. Please request a new one.' }, 400);
+      return c.json(
+        { success: false, error: 'Invalid or expired code. Please request a new one.' },
+        400,
+      );
     }
 
     // Check if expired
@@ -1246,13 +1338,16 @@ app.post('/:userId/2fa/verify-code', requireAuth, async (c) => {
     if (storedData.attempts >= 3) {
       log.info('❌ Too many failed attempts for this code');
       await kv.del(`2fa:${userId}:code`);
-      return c.json({ success: false, error: 'Too many failed attempts. Please request a new code.' }, 400);
+      return c.json(
+        { success: false, error: 'Too many failed attempts. Please request a new code.' },
+        400,
+      );
     }
 
     // ── Verify code ──────────────────────────────────────────────
     if (storedData.code !== code) {
       log.info('❌ Invalid 2FA code');
-      
+
       // Increment per-code attempts
       await kv.set(`2fa:${userId}:code`, {
         ...storedData,
@@ -1260,7 +1355,7 @@ app.post('/:userId/2fa/verify-code', requireAuth, async (c) => {
       });
 
       // ── Increment cumulative failure counter ───────────────────
-      const failureRecord = await kv.get(`2fa_failures:${userId}`) || { count: 0 };
+      const failureRecord = (await kv.get(`2fa_failures:${userId}`)) || { count: 0 };
       const newCount = failureRecord.count + 1;
       await kv.set(`2fa_failures:${userId}`, {
         count: newCount,
@@ -1282,7 +1377,9 @@ app.post('/:userId/2fa/verify-code', requireAuth, async (c) => {
       // ── 15 cumulative failures → suspend + alert emails ────────
       const MAX_CUMULATIVE_FAILURES = 15;
       if (newCount >= MAX_CUMULATIVE_FAILURES) {
-        log.info(`🚨 User ${userId} reached ${MAX_CUMULATIVE_FAILURES} cumulative 2FA failures — suspending account`);
+        log.info(
+          `🚨 User ${userId} reached ${MAX_CUMULATIVE_FAILURES} cumulative 2FA failures — suspending account`,
+        );
 
         // Suspend the account (multi-entry consistency: security + profile)
         securityStatus.suspended = true;
@@ -1329,7 +1426,10 @@ app.post('/:userId/2fa/verify-code', requireAuth, async (c) => {
         try {
           const { data: supabaseUser } = await getSupabase().auth.admin.getUserById(userId);
           const clientEmail = supabaseUser?.user?.email;
-          const clientName = supabaseUser?.user?.user_metadata?.firstName || supabaseUser?.user?.user_metadata?.name || 'Client';
+          const clientName =
+            supabaseUser?.user?.user_metadata?.firstName ||
+            supabaseUser?.user?.user_metadata?.name ||
+            'Client';
           const footerSettings = await getFooterSettings();
 
           // 1) Email to client — security warning
@@ -1355,9 +1455,10 @@ app.post('/:userId/2fa/verify-code', requireAuth, async (c) => {
                 greeting: '',
                 buttonUrl: 'https://www.navigatewealth.co/contact',
                 buttonLabel: 'Contact Support',
-                footerNote: 'If you have any concerns, contact us immediately at <a href="mailto:info@navigatewealth.co" style="color: #6d28d9;">info@navigatewealth.co</a> or call <a href="tel:+27126672025" style="color: #6d28d9;">012 667 2025</a>.',
+                footerNote:
+                  'If you have any concerns, contact us immediately at <a href="mailto:info@navigatewealth.co" style="color: #6d28d9;">info@navigatewealth.co</a> or call <a href="tel:+27126672025" style="color: #6d28d9;">012 667 2025</a>.',
                 footerSettings,
-              }
+              },
             );
             await sendEmail({
               to: clientEmail,
@@ -1389,7 +1490,7 @@ app.post('/:userId/2fa/verify-code', requireAuth, async (c) => {
               subtitle: 'Automatic account suspension triggered',
               greeting: '',
               footerSettings,
-            }
+            },
           );
           await sendEmail({
             to: adminEmail,
@@ -1403,18 +1504,25 @@ app.post('/:userId/2fa/verify-code', requireAuth, async (c) => {
           log.error('⚠️ Failed to send 2FA suspension alert emails:', emailErr);
         }
 
-        return c.json({
-          success: false,
-          error: 'Your account has been suspended due to too many failed verification attempts. Please contact Navigate Wealth support.',
-          suspended: true,
-        }, 403);
+        return c.json(
+          {
+            success: false,
+            error:
+              'Your account has been suspended due to too many failed verification attempts. Please contact Navigate Wealth support.',
+            suspended: true,
+          },
+          403,
+        );
       }
 
       const perCodeRemaining = 3 - storedData.attempts - 1;
-      return c.json({ 
-        success: false, 
-        error: `Invalid code. ${perCodeRemaining} attempt${perCodeRemaining !== 1 ? 's' : ''} remaining for this code.`,
-      }, 400);
+      return c.json(
+        {
+          success: false,
+          error: `Invalid code. ${perCodeRemaining} attempt${perCodeRemaining !== 1 ? 's' : ''} remaining for this code.`,
+        },
+        400,
+      );
     }
 
     // ── Code is valid ────────────────────────────────────────────

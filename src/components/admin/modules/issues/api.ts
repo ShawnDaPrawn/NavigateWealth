@@ -19,12 +19,14 @@ import { buildQualityIssueTaskPlan } from '../../../../shared/quality/qualityIss
 function normalizeSnapshotForClient(snapshot: QualityIssueSnapshot): QualityIssueSnapshot {
   const issues = (snapshot.issues || []).map((issue) => {
     const category = issue.category || inferQualityIssueCategory(issue.source, issue.ruleId);
-    const priority = issue.priority || inferQualityIssuePriority({
-      source: issue.source,
-      severity: issue.severity,
-      category,
-      cvssScore: issue.cvssScore,
-    });
+    const priority =
+      issue.priority ||
+      inferQualityIssuePriority({
+        source: issue.source,
+        severity: issue.severity,
+        category,
+        cvssScore: issue.cvssScore,
+      });
     const normalizedIssue = {
       ...issue,
       category,
@@ -45,7 +47,9 @@ function normalizeSnapshotForClient(snapshot: QualityIssueSnapshot): QualityIssu
 }
 
 export async function fetchQualityIssuesSnapshot(): Promise<QualityIssueSnapshot> {
-  const response = await api.get<{ success: boolean; snapshot: QualityIssueSnapshot }>('/quality-issues');
+  const response = await api.get<{ success: boolean; snapshot: QualityIssueSnapshot }>(
+    '/quality-issues',
+  );
   return normalizeSnapshotForClient(response.snapshot);
 }
 

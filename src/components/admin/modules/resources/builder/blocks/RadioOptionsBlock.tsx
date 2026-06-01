@@ -4,7 +4,13 @@ import { BlockDefinition } from '../registry';
 import { RadioOptionsData } from '../types';
 import { Input } from '../../../../../ui/input';
 import { Label } from '../../../../../ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../../../../ui/select';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '../../../../../ui/select';
 import { Button } from '../../../../../ui/button';
 import { cn } from '../../../../../ui/utils';
 
@@ -17,20 +23,30 @@ export const RadioOptionsBlock: BlockDefinition = {
   initialData: {
     label: 'Select an option',
     options: ['Option 1', 'Option 2'],
-    layout: 'vertical'
+    layout: 'vertical',
   },
   render: ({ block }) => {
     const data = block.data as RadioOptionsData;
     return (
       <div className="text-[9.5px]">
         {data.label && <div className="font-bold mb-2 text-gray-800">{data.label}</div>}
-        <div className={cn(
-          "flex gap-4",
-          data.layout === 'vertical' ? "flex-col" : "flex-row flex-wrap"
-        )}>
+        <div
+          className={cn(
+            'flex gap-4',
+            data.layout === 'vertical' ? 'flex-col' : 'flex-row flex-wrap',
+          )}
+        >
           {data.options.map((opt, i) => (
             <div key={i} className="flex items-center gap-2">
-              <div style={{ width: '3mm', height: '3mm', border: '1px solid #9ca3af', borderRadius: '50%', flexShrink: 0 }}></div>
+              <div
+                style={{
+                  width: '3mm',
+                  height: '3mm',
+                  border: '1px solid #9ca3af',
+                  borderRadius: '50%',
+                  flexShrink: 0,
+                }}
+              ></div>
               <span className="text-gray-700">{opt}</span>
             </div>
           ))}
@@ -113,5 +129,5 @@ export const RadioOptionsBlock: BlockDefinition = {
         </div>
       </div>
     );
-  }
+  },
 };

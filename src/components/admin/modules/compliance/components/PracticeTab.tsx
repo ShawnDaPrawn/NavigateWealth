@@ -17,18 +17,18 @@ export function PracticeTab() {
 
       <Tabs defaultValue="documents" className="w-full">
         <div className="w-full overflow-x-auto pb-2">
-            <TabsList className="w-full justify-start">
-              <TabsTrigger value="documents">Documents & Insurance</TabsTrigger>
-              <TabsTrigger value="statutory">Statutory Returns</TabsTrigger>
-              <TabsTrigger value="popia">POPIA / PAIA</TabsTrigger>
-              <TabsTrigger value="records">Record Keeping</TabsTrigger>
-            </TabsList>
+          <TabsList className="w-full justify-start">
+            <TabsTrigger value="documents">Documents & Insurance</TabsTrigger>
+            <TabsTrigger value="statutory">Statutory Returns</TabsTrigger>
+            <TabsTrigger value="popia">POPIA / PAIA</TabsTrigger>
+            <TabsTrigger value="records">Record Keeping</TabsTrigger>
+          </TabsList>
         </div>
-        
+
         <TabsContent value="documents" className="mt-6">
           <DocumentsInsuranceTab />
         </TabsContent>
-        
+
         <TabsContent value="statutory" className="mt-6">
           <StatutoryReturnsTab />
         </TabsContent>

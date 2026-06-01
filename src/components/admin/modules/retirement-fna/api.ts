@@ -14,7 +14,9 @@ export const RetirementFnaAPI = {
   async getAllForClient(clientId: string): Promise<RetirementFNASession[]> {
     logger.debug('[RetirementFnaAPI] Getting all sessions for client', { clientId });
     try {
-      const response = await api.get<{ success: boolean; data: RetirementFNASession[] }>(`/retirement-fna/client/${clientId}`);
+      const response = await api.get<{ success: boolean; data: RetirementFNASession[] }>(
+        `/retirement-fna/client/${clientId}`,
+      );
       return response.data;
     } catch (error) {
       logger.error('Failed to fetch Retirement FNA sessions', error);
@@ -28,7 +30,9 @@ export const RetirementFnaAPI = {
   async getById(fnaId: string): Promise<RetirementFNASession> {
     logger.debug('[RetirementFnaAPI] Getting session', { fnaId });
     try {
-      const response = await api.get<{ success: boolean; data: RetirementFNASession }>(`/retirement-fna/${fnaId}`);
+      const response = await api.get<{ success: boolean; data: RetirementFNASession }>(
+        `/retirement-fna/${fnaId}`,
+      );
       return response.data;
     } catch (error) {
       logger.error('Failed to fetch Retirement FNA', error);
@@ -42,11 +46,13 @@ export const RetirementFnaAPI = {
   async getLatestPublished(clientId: string): Promise<RetirementFNASession | null> {
     logger.debug('[RetirementFnaAPI] Getting latest published', { clientId });
     try {
-      const response = await api.get<{ success: boolean; data: RetirementFNASession | null }>(`/retirement-fna/client/${clientId}/latest-published`);
+      const response = await api.get<{ success: boolean; data: RetirementFNASession | null }>(
+        `/retirement-fna/client/${clientId}/latest-published`,
+      );
       return response.data || null;
     } catch (error) {
       // Silently return null for 404s/errors as this is often used for checking existence
-      const isNotFound = 
+      const isNotFound =
         (error instanceof APIError && error.statusCode === 404) ||
         (error instanceof Error && error.message && error.message.includes('404'));
 
@@ -66,7 +72,10 @@ export const RetirementFnaAPI = {
   async create(clientId: string): Promise<RetirementFNASession> {
     logger.debug('[RetirementFnaAPI] Creating new session', { clientId });
     try {
-      const response = await api.post<{ success: boolean; data: RetirementFNASession }>('/retirement-fna/create', { clientId });
+      const response = await api.post<{ success: boolean; data: RetirementFNASession }>(
+        '/retirement-fna/create',
+        { clientId },
+      );
       return response.data;
     } catch (error) {
       logger.error('Failed to create Retirement FNA', error);
@@ -78,12 +87,15 @@ export const RetirementFnaAPI = {
    * Update Retirement FNA inputs
    */
   async updateInputs(
-    fnaId: string, 
-    inputs: Partial<RetirementFNAInputs>
+    fnaId: string,
+    inputs: Partial<RetirementFNAInputs>,
   ): Promise<RetirementFNASession> {
     logger.debug('[RetirementFnaAPI] Updating inputs', { fnaId });
     try {
-      const response = await api.put<{ success: boolean; data: RetirementFNASession }>(`/retirement-fna/${fnaId}/inputs`, inputs);
+      const response = await api.put<{ success: boolean; data: RetirementFNASession }>(
+        `/retirement-fna/${fnaId}/inputs`,
+        inputs,
+      );
       return response.data;
     } catch (error) {
       logger.error('Failed to update Retirement FNA inputs', error);
@@ -97,7 +109,9 @@ export const RetirementFnaAPI = {
   async calculate(fnaId: string): Promise<RetirementFNASession> {
     logger.debug('[RetirementFnaAPI] Calculating results', { fnaId });
     try {
-      const response = await api.post<{ success: boolean; data: RetirementFNASession }>(`/retirement-fna/${fnaId}/calculate`);
+      const response = await api.post<{ success: boolean; data: RetirementFNASession }>(
+        `/retirement-fna/${fnaId}/calculate`,
+      );
       return response.data;
     } catch (error) {
       logger.error('Failed to calculate Retirement FNA', error);
@@ -111,7 +125,9 @@ export const RetirementFnaAPI = {
   async saveDraft(fnaId: string): Promise<RetirementFNASession> {
     logger.debug('[RetirementFnaAPI] Saving draft', { fnaId });
     try {
-      const response = await api.put<{ success: boolean; data: RetirementFNASession }>(`/retirement-fna/${fnaId}/draft`);
+      const response = await api.put<{ success: boolean; data: RetirementFNASession }>(
+        `/retirement-fna/${fnaId}/draft`,
+      );
       return response.data;
     } catch (error) {
       logger.error('Failed to save Retirement FNA draft', error);
@@ -125,7 +141,9 @@ export const RetirementFnaAPI = {
   async publish(fnaId: string): Promise<RetirementFNASession> {
     logger.debug('[RetirementFnaAPI] Publishing session', { fnaId });
     try {
-      const response = await api.put<{ success: boolean; data: RetirementFNASession }>(`/retirement-fna/${fnaId}/publish`);
+      const response = await api.put<{ success: boolean; data: RetirementFNASession }>(
+        `/retirement-fna/${fnaId}/publish`,
+      );
       return response.data;
     } catch (error) {
       logger.error('Failed to publish Retirement FNA', error);
@@ -139,7 +157,9 @@ export const RetirementFnaAPI = {
   async unpublish(fnaId: string): Promise<RetirementFNASession> {
     logger.debug('[RetirementFnaAPI] Unpublishing session', { fnaId });
     try {
-      const response = await api.put<{ success: boolean; data: RetirementFNASession }>(`/retirement-fna/${fnaId}/unpublish`);
+      const response = await api.put<{ success: boolean; data: RetirementFNASession }>(
+        `/retirement-fna/${fnaId}/unpublish`,
+      );
       return response.data;
     } catch (error) {
       logger.error('Failed to unpublish Retirement FNA', error);
@@ -153,7 +173,9 @@ export const RetirementFnaAPI = {
   async archive(fnaId: string): Promise<RetirementFNASession> {
     logger.debug('[RetirementFnaAPI] Archiving session', { fnaId });
     try {
-      const response = await api.put<{ success: boolean; data: RetirementFNASession }>(`/retirement-fna/${fnaId}/archive`);
+      const response = await api.put<{ success: boolean; data: RetirementFNASession }>(
+        `/retirement-fna/${fnaId}/archive`,
+      );
       return response.data;
     } catch (error) {
       logger.error('Failed to archive Retirement FNA', error);
@@ -180,11 +202,13 @@ export const RetirementFnaAPI = {
   async getAutoPopulatedInputs(clientId: string): Promise<Partial<RetirementFNAInputs>> {
     logger.debug('[RetirementFnaAPI] Fetching auto-populated inputs', { clientId });
     try {
-      const response = await api.get<{ success: boolean; data: Partial<RetirementFNAInputs> }>(`/retirement-fna/client/${clientId}/auto-populate`);
+      const response = await api.get<{ success: boolean; data: Partial<RetirementFNAInputs> }>(
+        `/retirement-fna/client/${clientId}/auto-populate`,
+      );
       return response.data;
     } catch (error) {
       logger.error('Failed to auto-populate inputs', error);
       throw error;
     }
-  }
+  },
 };

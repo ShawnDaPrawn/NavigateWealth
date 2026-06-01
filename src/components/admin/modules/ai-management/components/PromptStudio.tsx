@@ -1,12 +1,25 @@
 import React, { useMemo, useState } from 'react';
 import { Bot, Loader2, Save, Upload, RotateCcw, History, Sprout } from 'lucide-react';
 import { Button } from '../../../../ui/button';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../../../ui/select';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '../../../../ui/select';
 import { Textarea } from '../../../../ui/textarea';
 import { Badge } from '../../../../ui/badge';
 import { cn } from '../../../../ui/utils';
 import type { AIAgentConfig, PromptContext, PromptVersion } from '../types';
-import { useAgents, usePromptBundle, useSaveDraftPrompt, usePublishPrompt, useRollbackPrompt, useSeedPrompt } from '../hooks';
+import {
+  useAgents,
+  usePromptBundle,
+  useSaveDraftPrompt,
+  usePublishPrompt,
+  useRollbackPrompt,
+  useSeedPrompt,
+} from '../hooks';
 import { getDefaultPrompt } from '../defaultPrompts';
 
 const CONTEXTS: Array<{ id: PromptContext; label: string }> = [
@@ -50,7 +63,6 @@ export function PromptStudio() {
     } else {
       setLocalDraft('');
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [agentId, context, data?.draft, data?.active]);
 
   const versions: PromptVersion[] = data?.versions ?? [];
@@ -77,7 +89,9 @@ export function PromptStudio() {
           </div>
           <div>
             <div className="text-sm font-semibold text-gray-900">Prompt Studio</div>
-            <div className="text-xs text-gray-500">Edit and publish prompts without redeploying</div>
+            <div className="text-xs text-gray-500">
+              Edit and publish prompts without redeploying
+            </div>
           </div>
         </div>
 
@@ -101,7 +115,9 @@ export function PromptStudio() {
             </SelectTrigger>
             <SelectContent>
               {CONTEXTS.map((c) => (
-                <SelectItem key={c.id} value={c.id}>{c.label}</SelectItem>
+                <SelectItem key={c.id} value={c.id}>
+                  {c.label}
+                </SelectItem>
               ))}
             </SelectContent>
           </Select>
@@ -112,7 +128,11 @@ export function PromptStudio() {
             disabled={!dirty || saveDraft.isPending}
             onClick={() => saveDraft.mutate({ agentId, context, prompt: localDraft })}
           >
-            {saveDraft.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+            {saveDraft.isPending ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <Save className="h-4 w-4" />
+            )}
             Save Draft
           </Button>
 
@@ -122,7 +142,11 @@ export function PromptStudio() {
             disabled={seed.isPending || !localDraft.trim()}
             onClick={() => seed.mutate({ agentId, context, seedPrompt: localDraft })}
           >
-            {seed.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sprout className="h-4 w-4" />}
+            {seed.isPending ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <Sprout className="h-4 w-4" />
+            )}
             Seed (if empty)
           </Button>
 
@@ -133,7 +157,11 @@ export function PromptStudio() {
               disabled={seed.isPending}
               onClick={() => seed.mutate({ agentId, context, seedPrompt: defaultPrompt })}
             >
-              {seed.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sprout className="h-4 w-4" />}
+              {seed.isPending ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Sprout className="h-4 w-4" />
+              )}
               Seed from default
             </Button>
           )}
@@ -143,7 +171,11 @@ export function PromptStudio() {
             disabled={publish.isPending || !localDraft.trim()}
             onClick={() => publish.mutate({ agentId, context })}
           >
-            {publish.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
+            {publish.isPending ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <Upload className="h-4 w-4" />
+            )}
             Publish
           </Button>
         </div>
@@ -218,7 +250,9 @@ export function PromptStudio() {
                 >
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0">
-                      <div className="text-xs font-semibold text-gray-800 truncate">{formatWhen(v.publishedAt)}</div>
+                      <div className="text-xs font-semibold text-gray-800 truncate">
+                        {formatWhen(v.publishedAt)}
+                      </div>
                       <div className="text-[11px] text-gray-500 truncate">by {v.publishedBy}</div>
                     </div>
                     <Button
@@ -241,4 +275,3 @@ export function PromptStudio() {
     </div>
   );
 }
-

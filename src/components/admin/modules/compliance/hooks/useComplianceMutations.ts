@@ -1,7 +1,7 @@
 /**
  * Compliance Mutation Hooks
  * Navigate Wealth Admin Dashboard
- * 
+ *
  * React Query mutation hooks for compliance create, update, and delete operations.
  */
 
@@ -422,7 +422,8 @@ export function useCreateConflictRecord() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (data: CreateRecordRequest<ConflictRecord>) => conflictsMarketingApi.createConflict(data),
+    mutationFn: (data: CreateRecordRequest<ConflictRecord>) =>
+      conflictsMarketingApi.createConflict(data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: complianceKeys.conflicts() });
       toast.success(SUCCESS_MESSAGES.RECORD_CREATED);
@@ -441,7 +442,8 @@ export function useCreateMarketingRecord() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (data: CreateRecordRequest<MarketingRecord>) => conflictsMarketingApi.createMarketing(data),
+    mutationFn: (data: CreateRecordRequest<MarketingRecord>) =>
+      conflictsMarketingApi.createMarketing(data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: complianceKeys.marketing() });
       toast.success(SUCCESS_MESSAGES.RECORD_CREATED);
@@ -484,7 +486,8 @@ export function useCreateDocumentsInsuranceRecord() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (data: CreateRecordRequest<DocumentsInsuranceRecord>) => documentsInsuranceApi.create(data),
+    mutationFn: (data: CreateRecordRequest<DocumentsInsuranceRecord>) =>
+      documentsInsuranceApi.create(data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: complianceKeys.documentsInsurance() });
       queryClient.invalidateQueries({ queryKey: complianceKeys.stats() });
@@ -592,8 +595,15 @@ export function useResolveComplaint() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: ({ id, resolution, outcome }: { id: string; resolution: string; outcome: string }) =>
-      complaintsApi.resolve(id, resolution, outcome),
+    mutationFn: ({
+      id,
+      resolution,
+      outcome,
+    }: {
+      id: string;
+      resolution: string;
+      outcome: string;
+    }) => complaintsApi.resolve(id, resolution, outcome),
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: complianceKeys.complaints() });
       queryClient.invalidateQueries({ queryKey: complianceKeys.complaint(variables.id) });

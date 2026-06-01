@@ -126,16 +126,8 @@ function QuickLinkCard({ link }: { link: QuickLink }) {
     <Link to={link.path} className="group block">
       <div className={styles.card}>
         <div className={`p-4 flex items-center gap-3`}>
-          <div
-            className={`${styles.iconWrap} ${
-              isBranded ? link.brandedIconBg : link.bgColor
-            }`}
-          >
-            <link.icon
-              className={`h-5 w-5 ${
-                isBranded ? link.brandedIconColor : link.color
-              }`}
-            />
+          <div className={`${styles.iconWrap} ${isBranded ? link.brandedIconBg : link.bgColor}`}>
+            <link.icon className={`h-5 w-5 ${isBranded ? link.brandedIconColor : link.color}`} />
           </div>
           <div className="min-w-0">
             <p className={styles.label}>{link.label}</p>

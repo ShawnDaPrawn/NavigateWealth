@@ -1,10 +1,10 @@
 /**
  * Lazy Router - Dynamic Import Proxy for Hono Sub-Routers
- * 
+ *
  * Converts static route imports to on-demand dynamic imports.
  * Each route module is loaded only when the first request hits its path prefix,
  * dramatically reducing boot time and initial memory footprint.
- * 
+ *
  * This is critical for Supabase Edge Function deployment limits.
  */
 
@@ -20,12 +20,16 @@ const pendingImports = new Map<string, Promise<void>>();
  * Register a lazily-loaded Hono sub-router at the given path.
  * The module is imported on first request and cached for subsequent requests.
  * Concurrent requests for the same unloaded module share a single import promise.
- * 
+ *
  * @param app - The parent Hono app
  * @param path - The sub-path (without PREFIX), e.g. '/esign'
  * @param load - A function that returns a dynamic import, e.g. () => import('./esign-routes.ts')
  */
-export function lazy(app: Hono, path: string, load: () => Promise<{ default: { fetch: (req: Request) => Response | Promise<Response> } }>) {
+export function lazy(
+  app: Hono,
+  path: string,
+  load: () => Promise<{ default: { fetch: (req: Request) => Response | Promise<Response> } }>,
+) {
   const base = `${PREFIX}${path}`;
 
   const handler = async (c: Context) => {
@@ -37,7 +41,10 @@ export function lazy(app: Hono, path: string, load: () => Promise<{ default: { f
             routerCache.set(base, mod.default);
           })
           .catch((err: unknown) => {
-            console.error(`[LAZY] Failed to load module ${path}:`, err instanceof Error ? err.message : err);
+            console.error(
+              `[LAZY] Failed to load module ${path}:`,
+              err instanceof Error ? err.message : err,
+            );
             throw err;
           })
           .finally(() => {
@@ -50,7 +57,10 @@ export function lazy(app: Hono, path: string, load: () => Promise<{ default: { f
         await pendingImports.get(base);
       } catch (err: unknown) {
         return c.json(
-          { error: `Failed to load module: ${path}`, details: err instanceof Error ? err.message : String(err) },
+          {
+            error: `Failed to load module: ${path}`,
+            details: err instanceof Error ? err.message : String(err),
+          },
           500,
         );
       }

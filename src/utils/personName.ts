@@ -35,8 +35,8 @@ function isAllCapsName(value: string): boolean {
 function toSmartTitleCase(value: string): string {
   return value
     .toLowerCase()
-    .replace(/(^|[\s-])[a-z]/g, match => match.toUpperCase())
-    .replace(/(')[a-z]/g, match => match.toUpperCase());
+    .replace(/(^|[\s-])[a-z]/g, (match) => match.toUpperCase())
+    .replace(/(')[a-z]/g, (match) => match.toUpperCase());
 }
 
 export function normalizePersonNamePart(value?: string | null): string {
@@ -46,7 +46,10 @@ export function normalizePersonNamePart(value?: string | null): string {
   return isAllCapsName(compact) ? toSmartTitleCase(compact) : compact;
 }
 
-export function resolvePersonName(input: ResolvePersonNameInput): { firstName: string; lastName: string } {
+export function resolvePersonName(input: ResolvePersonNameInput): {
+  firstName: string;
+  lastName: string;
+} {
   const fullName = firstNonEmpty(input.fullName);
   const [splitFirstName = '', ...splitLastParts] = fullName ? fullName.split(' ') : [];
   const splitLastName = splitLastParts.join(' ');
@@ -71,4 +74,3 @@ export function resolvePersonName(input: ResolvePersonNameInput): { firstName: s
 
   return { firstName, lastName };
 }
-

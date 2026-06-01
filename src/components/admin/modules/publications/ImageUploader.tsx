@@ -78,12 +78,8 @@ export function ImageUploader({
 
   return (
     <div className="space-y-3">
-      <label className="block text-sm font-medium text-gray-700">
-        {label}
-      </label>
-      {description && (
-        <p className="text-xs text-gray-500 -mt-1">{description}</p>
-      )}
+      <label className="block text-sm font-medium text-gray-700">{label}</label>
+      {description && <p className="text-xs text-gray-500 -mt-1">{description}</p>}
 
       {error && (
         <div className="bg-red-50 border border-red-200 rounded-lg p-3 text-sm text-red-600">
@@ -99,7 +95,8 @@ export function ImageUploader({
               alt="Preview"
               className="w-full h-full object-cover"
               onError={(e) => {
-                e.currentTarget.src = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="400" height="300"%3E%3Crect fill="%23ddd" width="400" height="300"/%3E%3Ctext fill="%23999" x="50%25" y="50%25" text-anchor="middle" dominant-baseline="middle"%3EImage not found%3C/text%3E%3C/svg%3E';
+                e.currentTarget.src =
+                  'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="400" height="300"%3E%3Crect fill="%23ddd" width="400" height="300"/%3E%3Ctext fill="%23999" x="50%25" y="50%25" text-anchor="middle" dominant-baseline="middle"%3EImage not found%3C/text%3E%3C/svg%3E';
               }}
             />
             <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
@@ -140,13 +137,20 @@ export function ImageUploader({
                 <Button onClick={handleUrlSubmit} size="sm" disabled={disabled || uploading}>
                   Add
                 </Button>
-                <Button onClick={() => setShowUrlInput(false)} variant="outline" size="sm" disabled={disabled || uploading}>
+                <Button
+                  onClick={() => setShowUrlInput(false)}
+                  variant="outline"
+                  size="sm"
+                  disabled={disabled || uploading}
+                >
                   Cancel
                 </Button>
               </div>
             </div>
           ) : (
-            <div className={`border-2 border-dashed border-gray-300 rounded-lg ${previewHeight} flex flex-col items-center justify-center gap-3 hover:border-purple-400 transition-colors`}>
+            <div
+              className={`border-2 border-dashed border-gray-300 rounded-lg ${previewHeight} flex flex-col items-center justify-center gap-3 hover:border-purple-400 transition-colors`}
+            >
               <ImageIcon className="h-12 w-12 text-gray-400" />
               <div className="text-center">
                 <p className="text-sm text-gray-600 mb-3">Upload an image or add URL</p>

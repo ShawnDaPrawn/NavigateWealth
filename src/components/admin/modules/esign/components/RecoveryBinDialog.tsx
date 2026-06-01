@@ -99,9 +99,7 @@ export function RecoveryBinDialog({ open, onOpenChange, onChanged }: RecoveryBin
   const handlePurge = async (id: string) => {
     // Purge is destructive and immediate; surface an inline confirm via
     // toast.promise so the UX stays in-dialog without another modal.
-    const confirmed = window.confirm(
-      'Permanently delete this envelope? This cannot be undone.',
-    );
+    const confirmed = window.confirm('Permanently delete this envelope? This cannot be undone.');
     if (!confirmed) return;
     setBusyId(id);
     try {
@@ -117,7 +115,7 @@ export function RecoveryBinDialog({ open, onOpenChange, onChanged }: RecoveryBin
   };
 
   const sortedItems = useMemo(
-    () => [...items].sort((a, b) => (a.deleted_at || '') < (b.deleted_at || '') ? 1 : -1),
+    () => [...items].sort((a, b) => ((a.deleted_at || '') < (b.deleted_at || '') ? 1 : -1)),
     [items],
   );
 
@@ -130,9 +128,9 @@ export function RecoveryBinDialog({ open, onOpenChange, onChanged }: RecoveryBin
             Recovery Bin
           </DialogTitle>
           <DialogDescription>
-            Soft-deleted envelopes stay here for {retentionDays} days before being
-            permanently purged. Restore an envelope to return it to the active
-            workspace, or purge now to remove it immediately.
+            Soft-deleted envelopes stay here for {retentionDays} days before being permanently
+            purged. Restore an envelope to return it to the active workspace, or purge now to remove
+            it immediately.
           </DialogDescription>
         </DialogHeader>
 

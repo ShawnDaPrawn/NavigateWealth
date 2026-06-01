@@ -250,7 +250,8 @@ export function RiskProfilePdfDocument({
               <div className="callout-title">What this means</div>
               <p>
                 <strong>{categorySummary?.label || 'Risk profile pending'}:</strong>{' '}
-                {categorySummary?.body || 'The assessment must be completed before a risk profile can be interpreted.'}
+                {categorySummary?.body ||
+                  'The assessment must be completed before a risk profile can be interpreted.'}
               </p>
             </div>
 
@@ -300,7 +301,8 @@ export function RiskProfilePdfDocument({
           </table>
 
           <div className="footnote">
-            This portrait is generated from the completed client risk assessment captured in the admin portal and is intended to support adviser review and downstream documentation.
+            This portrait is generated from the completed client risk assessment captured in the
+            admin portal and is intended to support adviser review and downstream documentation.
           </div>
         </section>
       </div>

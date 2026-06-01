@@ -72,7 +72,9 @@ export function SuperAdminProfileCard({ profile, loading, onUpdate }: SuperAdmin
         <CardContent className="p-5">
           <div className="flex items-center gap-3 text-muted-foreground">
             <Shield className="h-5 w-5 text-purple-400" />
-            <p className="text-sm">Unable to load super admin profile. Please check your permissions.</p>
+            <p className="text-sm">
+              Unable to load super admin profile. Please check your permissions.
+            </p>
           </div>
         </CardContent>
       </Card>
@@ -105,7 +107,10 @@ export function SuperAdminProfileCard({ profile, loading, onUpdate }: SuperAdmin
                   <Badge className="bg-purple-600 hover:bg-purple-700 text-[10px] px-1.5 py-0 h-5">
                     Super Admin
                   </Badge>
-                  <Badge variant="outline" className="border-green-400 text-green-700 text-[10px] px-1.5 py-0 h-5">
+                  <Badge
+                    variant="outline"
+                    className="border-green-400 text-green-700 text-[10px] px-1.5 py-0 h-5"
+                  >
                     Active
                   </Badge>
                 </div>
@@ -163,9 +168,7 @@ export function SuperAdminProfileCard({ profile, loading, onUpdate }: SuperAdmin
                 <Input
                   id="sa-lastName"
                   value={editedProfile.lastName || ''}
-                  onChange={(e) =>
-                    setEditedProfile({ ...editedProfile, lastName: e.target.value })
-                  }
+                  onChange={(e) => setEditedProfile({ ...editedProfile, lastName: e.target.value })}
                   placeholder="Enter last name"
                   className="h-9 text-sm"
                 />
@@ -178,9 +181,7 @@ export function SuperAdminProfileCard({ profile, loading, onUpdate }: SuperAdmin
                 <Input
                   id="sa-phone"
                   value={editedProfile.phone || ''}
-                  onChange={(e) =>
-                    setEditedProfile({ ...editedProfile, phone: e.target.value })
-                  }
+                  onChange={(e) => setEditedProfile({ ...editedProfile, phone: e.target.value })}
                   placeholder="+27..."
                   className="h-9 text-sm"
                 />

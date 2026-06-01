@@ -7,8 +7,8 @@ import { PDFDocument, rgb, StandardFonts } from 'npm:pdf-lib@1.17.1';
 import type { PDFFont, PDFPage, RGB } from 'npm:pdf-lib@1.17.1';
 import type { EsignField, EsignSigner } from './esign-types.ts';
 import { calculateHash } from './esign-storage.ts';
-import { createModuleLogger } from "./stderr-logger.ts";
-import { getErrMsg } from "./shared-logger-utils.ts";
+import { createModuleLogger } from './stderr-logger.ts';
+import { getErrMsg } from './shared-logger-utils.ts';
 
 const log = createModuleLogger('esign-pdf-service');
 
@@ -19,7 +19,6 @@ export interface PDFBurnInResult {
 }
 
 export class PDFService {
-
   // ==========================================================================
   // Signature Metadata Helpers (rendered below signature/initials on burn-in)
   // ==========================================================================
@@ -48,11 +47,11 @@ export class PDFService {
    */
   private static findSignerForField(
     field: EsignField,
-    signers: EsignSigner[]
+    signers: EsignSigner[],
   ): EsignSigner | undefined {
     return (
-      signers.find(s => s.id === field.signer_id) ||
-      signers.find(s => s.email === field.signer_id)
+      signers.find((s) => s.id === field.signer_id) ||
+      signers.find((s) => s.email === field.signer_id)
     );
   }
 
@@ -76,15 +75,19 @@ export class PDFService {
   private static formatMetaDate(iso: string): string {
     try {
       const d = new Date(iso);
-      return d.toLocaleDateString('en-ZA', {
-        day: '2-digit',
-        month: 'short',
-        year: 'numeric',
-      }) + ', ' + d.toLocaleTimeString('en-ZA', {
-        hour: '2-digit',
-        minute: '2-digit',
-        hour12: false,
-      });
+      return (
+        d.toLocaleDateString('en-ZA', {
+          day: '2-digit',
+          month: 'short',
+          year: 'numeric',
+        }) +
+        ', ' +
+        d.toLocaleTimeString('en-ZA', {
+          hour: '2-digit',
+          minute: '2-digit',
+          hour12: false,
+        })
+      );
     } catch {
       return iso;
     }
@@ -125,12 +128,8 @@ export class PDFService {
 
     // Prepare text segments
     const nameText = signer.name;
-    const datePart = signer.signed_at
-      ? PDFService.formatMetaDate(signer.signed_at)
-      : 'Pending';
-    const ipPart = signer.ip_address
-      ? `IP: ${PDFService.maskIp(signer.ip_address)}`
-      : '';
+    const datePart = signer.signed_at ? PDFService.formatMetaDate(signer.signed_at) : 'Pending';
+    const ipPart = signer.ip_address ? `IP: ${PDFService.maskIp(signer.ip_address)}` : '';
 
     // Measure widths to decide single-line vs two-line
     const nameW = boldFont.widthOfTextAtSize(nameText, META_FONT_SIZE);
@@ -166,33 +165,48 @@ export class PDFService {
 
       // Bold name
       page.drawText(nameText, {
-        x: cursorX, y: textY,
-        size: META_FONT_SIZE, font: boldFont, color: META_COLOR_BOLD,
+        x: cursorX,
+        y: textY,
+        size: META_FONT_SIZE,
+        font: boldFont,
+        color: META_COLOR_BOLD,
       });
       cursorX += nameW;
 
       // Separator + date
       page.drawText(META_SEP, {
-        x: cursorX, y: textY,
-        size: META_FONT_SIZE, font: regularFont, color: META_COLOR,
+        x: cursorX,
+        y: textY,
+        size: META_FONT_SIZE,
+        font: regularFont,
+        color: META_COLOR,
       });
       cursorX += sepW;
       page.drawText(datePart, {
-        x: cursorX, y: textY,
-        size: META_FONT_SIZE, font: regularFont, color: META_COLOR,
+        x: cursorX,
+        y: textY,
+        size: META_FONT_SIZE,
+        font: regularFont,
+        color: META_COLOR,
       });
       cursorX += dateW;
 
       // Separator + IP (if available)
       if (ipPart) {
         page.drawText(META_SEP, {
-          x: cursorX, y: textY,
-          size: META_FONT_SIZE, font: regularFont, color: META_COLOR,
+          x: cursorX,
+          y: textY,
+          size: META_FONT_SIZE,
+          font: regularFont,
+          color: META_COLOR,
         });
         cursorX += sepW;
         page.drawText(ipPart, {
-          x: cursorX, y: textY,
-          size: META_FONT_SIZE, font: regularFont, color: META_COLOR,
+          x: cursorX,
+          y: textY,
+          size: META_FONT_SIZE,
+          font: regularFont,
+          color: META_COLOR,
         });
       }
     } else {
@@ -204,8 +218,11 @@ export class PDFService {
 
       // Bold name
       page.drawText(nameText, {
-        x: cursorX, y: line1Y,
-        size: META_FONT_SIZE, font: boldFont, color: META_COLOR_BOLD,
+        x: cursorX,
+        y: line1Y,
+        size: META_FONT_SIZE,
+        font: boldFont,
+        color: META_COLOR_BOLD,
       });
       cursorX += nameW;
 
@@ -213,21 +230,30 @@ export class PDFService {
       const dateWithSepW = sepW + dateW;
       if (cursorX + dateWithSepW <= fieldX + fieldW) {
         page.drawText(META_SEP, {
-          x: cursorX, y: line1Y,
-          size: META_FONT_SIZE, font: regularFont, color: META_COLOR,
+          x: cursorX,
+          y: line1Y,
+          size: META_FONT_SIZE,
+          font: regularFont,
+          color: META_COLOR,
         });
         cursorX += sepW;
         page.drawText(datePart, {
-          x: cursorX, y: line1Y,
-          size: META_FONT_SIZE, font: regularFont, color: META_COLOR,
+          x: cursorX,
+          y: line1Y,
+          size: META_FONT_SIZE,
+          font: regularFont,
+          color: META_COLOR,
         });
       } else {
         // Date on line 2 instead
         const line2Y = line1Y - META_LINE_HEIGHT;
         const dateIpText = ipPart ? `${datePart}${META_SEP}${ipPart}` : datePart;
         page.drawText(dateIpText, {
-          x: fieldX, y: line2Y,
-          size: META_FONT_SIZE, font: regularFont, color: META_COLOR,
+          x: fieldX,
+          y: line2Y,
+          size: META_FONT_SIZE,
+          font: regularFont,
+          color: META_COLOR,
           maxWidth: fieldW,
         });
         return; // Already drew line 2, done
@@ -237,8 +263,11 @@ export class PDFService {
       if (ipPart) {
         const line2Y = line1Y - META_LINE_HEIGHT;
         page.drawText(ipPart, {
-          x: fieldX, y: line2Y,
-          size: META_FONT_SIZE, font: regularFont, color: META_COLOR,
+          x: fieldX,
+          y: line2Y,
+          size: META_FONT_SIZE,
+          font: regularFont,
+          color: META_COLOR,
         });
       }
     }
@@ -250,7 +279,7 @@ export class PDFService {
   static async burnIn(
     originalPdfBuffer: Uint8Array,
     fields: EsignField[],
-    signers: EsignSigner[]
+    signers: EsignSigner[],
   ): Promise<PDFBurnInResult> {
     try {
       // Load the PDF
@@ -277,7 +306,7 @@ export class PDFService {
 
       // Group fields by page for efficiency
       const fieldsByPage: Record<number, EsignField[]> = {};
-      (fields || []).forEach(field => {
+      (fields || []).forEach((field) => {
         if (!fieldsByPage[field.page]) {
           fieldsByPage[field.page] = [];
         }
@@ -298,45 +327,48 @@ export class PDFService {
           // width,height are stored in PDF points (absolute pixel values).
           // PDF origin is bottom-left; stored y is top-down.
           const x = (field.x / 100) * page.getWidth();
-          const w = field.width;   // already in PDF points
-          const h = field.height;  // already in PDF points
-          const y = height - ((field.y / 100) * height) - h;
+          const w = field.width; // already in PDF points
+          const h = field.height; // already in PDF points
+          const y = height - (field.y / 100) * height - h;
 
           if (field.type === 'text' || field.type === 'date') {
             // Clamp font size to fit the field height, min 8, max 14
             const fontSize = Math.max(8, Math.min(14, h * 0.6));
             page.drawText(field.value, {
               x: x + 2,
-              y: y + (h / 2) - (fontSize * 0.35),
+              y: y + h / 2 - fontSize * 0.35,
               size: fontSize,
               font: helveticaFont,
               color: rgb(0, 0, 0),
               maxWidth: w - 4,
             });
           } else if (field.type === 'checkbox') {
-             if (field.value === 'true' || field.value === 'checked') {
-                page.drawText('X', {
-                  x: x + (w/2) - 4,
-                  y: y + (h/2) - 4,
-                  size: Math.min(14, h * 0.7),
-                  font: helveticaFont,
-                  color: rgb(0, 0, 0),
-                });
-             }
+            if (field.value === 'true' || field.value === 'checked') {
+              page.drawText('X', {
+                x: x + w / 2 - 4,
+                y: y + h / 2 - 4,
+                size: Math.min(14, h * 0.7),
+                font: helveticaFont,
+                color: rgb(0, 0, 0),
+              });
+            }
           } else if (field.type === 'signature' || field.type === 'initials') {
             // Handle both PNG and JPEG data URLs
             try {
               if (field.value.startsWith('data:image/png')) {
                 const base64Data = field.value.split(',')[1];
                 if (base64Data) {
-                  const pngImageBytes = Uint8Array.from(atob(base64Data), c => c.charCodeAt(0));
+                  const pngImageBytes = Uint8Array.from(atob(base64Data), (c) => c.charCodeAt(0));
                   const pngImage = await pdfDoc.embedPng(pngImageBytes);
                   page.drawImage(pngImage, { x, y, width: w, height: h });
                 }
-              } else if (field.value.startsWith('data:image/jpeg') || field.value.startsWith('data:image/jpg')) {
+              } else if (
+                field.value.startsWith('data:image/jpeg') ||
+                field.value.startsWith('data:image/jpg')
+              ) {
                 const base64Data = field.value.split(',')[1];
                 if (base64Data) {
-                  const jpgImageBytes = Uint8Array.from(atob(base64Data), c => c.charCodeAt(0));
+                  const jpgImageBytes = Uint8Array.from(atob(base64Data), (c) => c.charCodeAt(0));
                   const jpgImage = await pdfDoc.embedJpg(jpgImageBytes);
                   page.drawImage(jpgImage, { x, y, width: w, height: h });
                 }
@@ -344,7 +376,7 @@ export class PDFService {
                 // Fallback: try PNG for any other image data URL
                 const base64Data = field.value.split(',')[1];
                 if (base64Data) {
-                  const imgBytes = Uint8Array.from(atob(base64Data), c => c.charCodeAt(0));
+                  const imgBytes = Uint8Array.from(atob(base64Data), (c) => c.charCodeAt(0));
                   try {
                     const img = await pdfDoc.embedPng(imgBytes);
                     page.drawImage(img, { x, y, width: w, height: h });
@@ -359,7 +391,7 @@ export class PDFService {
                 const fontSize = Math.max(10, Math.min(18, h * 0.5));
                 page.drawText(field.value, {
                   x: x + 2,
-                  y: y + (h / 2) - (fontSize * 0.35),
+                  y: y + h / 2 - fontSize * 0.35,
                   size: fontSize,
                   font: helveticaFont,
                   color: rgb(0, 0, 0),
@@ -373,16 +405,22 @@ export class PDFService {
               const signer = PDFService.findSignerForField(field, signers);
               if (signer) {
                 PDFService.drawSignatureMetadata(
-                  page, field, signer, helveticaFont, helveticaBoldFont, x, y, w
+                  page,
+                  field,
+                  signer,
+                  helveticaFont,
+                  helveticaBoldFont,
+                  x,
+                  y,
+                  w,
                 );
               }
-
             } catch (imgError: unknown) {
               log.error(`Failed to embed image for field ${field.id}:`, imgError);
               // Fallback: render value as text so we don't lose data
               page.drawText('[Signature]', {
                 x: x + 2,
-                y: y + (h / 2) - 5,
+                y: y + h / 2 - 5,
                 size: 10,
                 font: helveticaFont,
                 color: rgb(0.5, 0.5, 0.5),
@@ -400,9 +438,8 @@ export class PDFService {
       return {
         pdfBuffer: pdfBytes,
         hash,
-        pageCount: pages.length
+        pageCount: pages.length,
       };
-
     } catch (error: unknown) {
       log.error('PDF Burn-in failed:', error);
       throw new Error(`PDF Burn-in failed: ${getErrMsg(error)}`);
@@ -414,24 +451,24 @@ export class PDFService {
    */
   static async mergeCertificate(
     signedPdfBuffer: Uint8Array,
-    certificatePdfBuffer: Uint8Array
+    certificatePdfBuffer: Uint8Array,
   ): Promise<Uint8Array> {
     try {
       const mergedPdf = await PDFDocument.create();
-      
+
       const signedDoc = await PDFDocument.load(signedPdfBuffer);
       const certificateDoc = await PDFDocument.load(certificatePdfBuffer);
-      
+
       const signedPages = await mergedPdf.copyPages(signedDoc, signedDoc.getPageIndices());
-      (signedPages || []).forEach(page => mergedPdf.addPage(page));
-      
+      (signedPages || []).forEach((page) => mergedPdf.addPage(page));
+
       const certPages = await mergedPdf.copyPages(certificateDoc, certificateDoc.getPageIndices());
-      (certPages || []).forEach(page => mergedPdf.addPage(page));
-      
+      (certPages || []).forEach((page) => mergedPdf.addPage(page));
+
       return await mergedPdf.save();
     } catch (error: unknown) {
-       log.error('PDF Merge failed:', error);
-       throw new Error(`PDF Merge failed: ${getErrMsg(error)}`);
+      log.error('PDF Merge failed:', error);
+      throw new Error(`PDF Merge failed: ${getErrMsg(error)}`);
     }
   }
 
@@ -443,13 +480,13 @@ export class PDFService {
       if (pdfBuffers.length === 0) {
         throw new Error('No PDF buffers provided for merging');
       }
-      
+
       if (pdfBuffers.length === 1) {
         return pdfBuffers[0];
       }
 
       const mergedPdf = await PDFDocument.create();
-      
+
       for (const buffer of pdfBuffers) {
         const doc = await PDFDocument.load(buffer);
         const indices = doc.getPageIndices();
@@ -462,9 +499,9 @@ export class PDFService {
           log.warn('copyPages returned unexpected value, skipping');
           continue;
         }
-        pages.forEach(page => mergedPdf.addPage(page));
+        pages.forEach((page) => mergedPdf.addPage(page));
       }
-      
+
       return await mergedPdf.save();
     } catch (error: unknown) {
       log.error('PDF Document Merge failed:', error);

@@ -217,16 +217,18 @@ export async function bookMeeting(
       type: 'meeting',
       date: dateStr,
       startDate: dateStr,
-      startTime: input.preferredTime === 'morning'
-        ? '09:00'
-        : input.preferredTime === 'afternoon'
-        ? '13:00'
-        : '17:00',
-      endTime: input.preferredTime === 'morning'
-        ? '10:00'
-        : input.preferredTime === 'afternoon'
-        ? '14:00'
-        : '18:00',
+      startTime:
+        input.preferredTime === 'morning'
+          ? '09:00'
+          : input.preferredTime === 'afternoon'
+            ? '13:00'
+            : '17:00',
+      endTime:
+        input.preferredTime === 'morning'
+          ? '10:00'
+          : input.preferredTime === 'afternoon'
+            ? '14:00'
+            : '18:00',
       status: 'pending',
       clientId: input.clientId,
       format: input.format,
@@ -250,7 +252,10 @@ export async function bookMeeting(
     return { success: true };
   } catch (err: unknown) {
     console.error('bookMeeting exception:', err);
-    return { success: false, error: err instanceof Error ? err.message : 'Network error while booking meeting' };
+    return {
+      success: false,
+      error: err instanceof Error ? err.message : 'Network error while booking meeting',
+    };
   }
 }
 
@@ -295,6 +300,9 @@ export async function uploadDocument(
     return { success: true };
   } catch (err: unknown) {
     console.error('uploadDocument exception:', err);
-    return { success: false, error: err instanceof Error ? err.message : 'Network error while uploading document' };
+    return {
+      success: false,
+      error: err instanceof Error ? err.message : 'Network error while uploading document',
+    };
   }
 }

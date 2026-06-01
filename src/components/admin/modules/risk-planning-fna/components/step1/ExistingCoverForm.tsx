@@ -3,8 +3,21 @@ import { useFormContext } from 'react-hook-form';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '../../../../../ui/card';
 import { Button } from '../../../../../ui/button';
 import { Alert, AlertDescription } from '../../../../../ui/alert';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../../../../ui/select';
-import { FormControl, FormField, FormItem, FormLabel, FormMessage, FormDescription } from '../../../../../ui/form';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '../../../../../ui/select';
+import {
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+  FormDescription,
+} from '../../../../../ui/form';
 import { CurrencyInputField } from '../../../../../ui/currency-input';
 import { AlertCircle, Loader2, RefreshCw, Info } from 'lucide-react';
 import { INCOME_PROTECTION } from '../../constants';
@@ -18,12 +31,12 @@ interface ExistingCoverFormProps {
   isClientKeysError: boolean;
 }
 
-export function ExistingCoverForm({ 
-  clientId, 
-  isRecalculating, 
-  onRecalculate, 
-  hasClientKeys, 
-  isClientKeysError 
+export function ExistingCoverForm({
+  clientId,
+  isRecalculating,
+  onRecalculate,
+  hasClientKeys,
+  isClientKeysError,
 }: ExistingCoverFormProps) {
   const form = useFormContext<InformationGatheringFormValues>();
 
@@ -63,20 +76,21 @@ export function ExistingCoverForm({
       <Alert>
         <AlertCircle className="h-4 w-4" />
         <AlertDescription>
-          Mandatory Fix #3: Separate Personal and Group cover for accurate offset calculations.
-          Do not cross-offset temporary and permanent income protection benefits.
+          Mandatory Fix #3: Separate Personal and Group cover for accurate offset calculations. Do
+          not cross-offset temporary and permanent income protection benefits.
         </AlertDescription>
       </Alert>
-      
+
       {!hasClientKeys && !isClientKeysError && (
         <Alert variant="default" className="border-amber-200 bg-amber-50">
           <Info className="h-4 w-4 text-amber-600" />
           <AlertDescription className="text-sm text-amber-900">
-            <strong>Note:</strong> Existing cover totals will auto-populate from saved policies once they are entered in the Product Configuration section.
+            <strong>Note:</strong> Existing cover totals will auto-populate from saved policies once
+            they are entered in the Product Configuration section.
           </AlertDescription>
         </Alert>
       )}
-      
+
       <Card>
         <CardHeader>
           <CardTitle>Life Cover</CardTitle>
@@ -115,7 +129,7 @@ export function ExistingCoverForm({
           </div>
         </CardContent>
       </Card>
-      
+
       <Card>
         <CardHeader>
           <CardTitle>Disability Cover</CardTitle>
@@ -154,7 +168,7 @@ export function ExistingCoverForm({
           </div>
         </CardContent>
       </Card>
-      
+
       <Card>
         <CardHeader>
           <CardTitle>Severe Illness Cover</CardTitle>
@@ -193,7 +207,7 @@ export function ExistingCoverForm({
           </div>
         </CardContent>
       </Card>
-      
+
       <Card>
         <CardHeader>
           <CardTitle>Income Protection - Temporary</CardTitle>
@@ -254,7 +268,7 @@ export function ExistingCoverForm({
           />
         </CardContent>
       </Card>
-      
+
       <Card>
         <CardHeader>
           <CardTitle>Income Protection - Permanent</CardTitle>

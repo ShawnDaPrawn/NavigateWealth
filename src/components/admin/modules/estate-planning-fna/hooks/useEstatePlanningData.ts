@@ -11,7 +11,8 @@ const QUERY_KEYS = {
   all: ['estate-planning-fna'] as const,
   sessions: (clientId: string) => ['estate-planning-fna', 'sessions', clientId] as const,
   detail: (sessionId: string) => ['estate-planning-fna', 'detail', sessionId] as const,
-  latestPublished: (clientId: string) => ['estate-planning-fna', 'latest-published', clientId] as const,
+  latestPublished: (clientId: string) =>
+    ['estate-planning-fna', 'latest-published', clientId] as const,
   autoPopulate: (clientId: string) => ['estate-planning-fna', 'auto-populate', clientId] as const,
 };
 

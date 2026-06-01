@@ -455,12 +455,10 @@ export function LinkedInConnector({ onStatusChange }: LinkedInConnectorProps) {
             <Linkedin className="h-7 w-7" style={{ color: LINKEDIN_BLUE }} />
           </div>
 
-          <h3 className="font-medium text-sm text-gray-900">
-            Connect Your LinkedIn Account
-          </h3>
+          <h3 className="font-medium text-sm text-gray-900">Connect Your LinkedIn Account</h3>
           <p className="text-xs text-muted-foreground max-w-sm mt-1">
-            Share text posts, articles with links, and branded images directly to your LinkedIn
-            feed from the Navigate Wealth admin panel.
+            Share text posts, articles with links, and branded images directly to your LinkedIn feed
+            from the Navigate Wealth admin panel.
           </p>
 
           <Button

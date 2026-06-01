@@ -9,7 +9,13 @@ export interface FamilyInformation {
   fullName: string;
   dateOfBirth: string;
   age: number;
-  maritalStatus: 'single' | 'married_cop' | 'married_anc' | 'married_customary' | 'divorced' | 'widowed';
+  maritalStatus:
+    | 'single'
+    | 'married_cop'
+    | 'married_anc'
+    | 'married_customary'
+    | 'divorced'
+    | 'widowed';
   spouseName?: string;
   spouseId?: string;
   spouseAge?: number;
@@ -85,13 +91,25 @@ export interface RetirementAsset extends AssetItem {
   beneficiaryDetails?: string;
 }
 
-export type EstatePlanningAsset = PropertyAsset | FinancialAsset | BusinessAsset | PersonalAsset | RetirementAsset;
+export type EstatePlanningAsset =
+  | PropertyAsset
+  | FinancialAsset
+  | BusinessAsset
+  | PersonalAsset
+  | RetirementAsset;
 
 // ============= LIABILITIES =============
 
 export interface LiabilityItem {
   id: string;
-  type: 'home_loan' | 'vehicle_finance' | 'personal_loan' | 'credit_card' | 'business_debt' | 'tax_liability' | 'other';
+  type:
+    | 'home_loan'
+    | 'vehicle_finance'
+    | 'personal_loan'
+    | 'credit_card'
+    | 'business_debt'
+    | 'tax_liability'
+    | 'other';
   description: string;
   outstandingBalance: number;
   securedAgainst?: string;
@@ -269,7 +287,7 @@ export interface BeneficiaryAlignment {
   willBeneficiaries: string[];
   policyBeneficiaries: string[];
   retirementBeneficiaries: string[];
-  
+
   alignmentStatus: 'aligned' | 'misaligned' | 'unknown';
   misalignmentIssues: string[];
   recommendations: string[];
@@ -278,7 +296,14 @@ export interface BeneficiaryAlignment {
 // ============= STRUCTURAL RISKS =============
 
 export interface StructuralRisk {
-  category: 'will' | 'guardianship' | 'beneficiary' | 'liquidity' | 'business' | 'cross_border' | 'trust';
+  category:
+    | 'will'
+    | 'guardianship'
+    | 'beneficiary'
+    | 'liquidity'
+    | 'business'
+    | 'cross_border'
+    | 'trust';
   severity: 'high' | 'medium' | 'low';
   issue: string;
   impact: string;
@@ -321,7 +346,7 @@ export interface EstatePlanningResults {
   minorChildrenAnalysis: MinorChildrenAnalysis;
   businessContinuity: BusinessContinuityAnalysis;
   structuralRisks: StructuralRisk[];
-  
+
   executiveSummary: {
     grossEstateValue: number;
     netEstateValue: number;

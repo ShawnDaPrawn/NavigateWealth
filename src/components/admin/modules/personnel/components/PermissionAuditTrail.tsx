@@ -10,13 +10,7 @@
 import React from 'react';
 import { Badge } from '../../../../ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '../../../../ui/card';
-import {
-  ShieldPlus,
-  ShieldMinus,
-  KeyRound,
-  Clock,
-  History,
-} from 'lucide-react';
+import { ShieldPlus, ShieldMinus, KeyRound, Clock, History } from 'lucide-react';
 import { usePermissionAudit } from '../hooks';
 import { formatDistanceToNow } from 'date-fns';
 
@@ -63,10 +57,7 @@ const CHANGE_CONFIG: Record<string, { icon: React.ElementType; label: string; co
   },
 };
 
-export function PermissionAuditTrail({
-  personnelId,
-  enabled = true,
-}: PermissionAuditTrailProps) {
+export function PermissionAuditTrail({ personnelId, enabled = true }: PermissionAuditTrailProps) {
   const { data: entries = [], isLoading } = usePermissionAudit(personnelId, enabled);
 
   if (isLoading) {
@@ -81,10 +72,7 @@ export function PermissionAuditTrail({
         <CardContent>
           <div className="space-y-2">
             {[1, 2, 3].map((i) => (
-              <div
-                key={i}
-                className="h-10 bg-muted/50 rounded animate-pulse"
-              />
+              <div key={i} className="h-10 bg-muted/50 rounded animate-pulse" />
             ))}
           </div>
         </CardContent>
@@ -140,9 +128,7 @@ export function PermissionAuditTrail({
                 <div className="space-y-1.5">
                   <div className="flex items-center gap-2">
                     <Clock className="h-3 w-3 text-muted-foreground" />
-                    <span className="text-[10px] text-muted-foreground font-medium">
-                      {timeAgo}
-                    </span>
+                    <span className="text-[10px] text-muted-foreground font-medium">{timeAgo}</span>
                     <span className="text-[9px] text-muted-foreground">
                       by {entry.changedByPersonnelId.slice(0, 8)}...
                     </span>

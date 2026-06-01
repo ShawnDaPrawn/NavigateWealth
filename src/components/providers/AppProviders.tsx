@@ -76,9 +76,7 @@ function AppShell({ children }: { children: React.ReactNode }) {
       <InactivityManager />
       <ScrollToTop />
       <UnsavedChangesRegistryProvider>
-        <ErrorBoundary fallbackTitle="Navigation Error">
-          {children}
-        </ErrorBoundary>
+        <ErrorBoundary fallbackTitle="Navigation Error">{children}</ErrorBoundary>
       </UnsavedChangesRegistryProvider>
       <Toaster position="top-right" richColors />
     </>
@@ -87,11 +85,12 @@ function AppShell({ children }: { children: React.ReactNode }) {
 
 export function AppProviders() {
   const router = useMemo(
-    () => createAppRouter(
-      <AppShell>
-        <AppRoutes />
-      </AppShell>,
-    ),
+    () =>
+      createAppRouter(
+        <AppShell>
+          <AppRoutes />
+        </AppShell>,
+      ),
     [],
   );
 

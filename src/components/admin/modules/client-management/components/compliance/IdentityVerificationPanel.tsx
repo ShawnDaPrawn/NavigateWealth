@@ -137,7 +137,12 @@ export function IdentityVerificationPanel({
         return;
       }
 
-      setResult({ success: true, data: data.data, matterId: data.matterId, checkType: data.checkType });
+      setResult({
+        success: true,
+        data: data.data,
+        matterId: data.matterId,
+        checkType: data.checkType,
+      });
       toast.success('Identity Verification completed', { id: toastId });
       loadHistory();
       onCheckComplete?.();
@@ -212,7 +217,12 @@ export function IdentityVerificationPanel({
         return;
       }
 
-      setPhotoResult({ success: true, data: data.data, matterId: data.matterId, checkType: data.checkType });
+      setPhotoResult({
+        success: true,
+        data: data.data,
+        matterId: data.matterId,
+        checkType: data.checkType,
+      });
       toast.success('IDV with Photo completed', { id: toastId });
       loadHistory();
       onCheckComplete?.();
@@ -235,8 +245,8 @@ export function IdentityVerificationPanel({
             Identity Verification (IDV)
           </CardTitle>
           <CardDescription>
-            Verify the client's identity using their SA ID number or passport via the
-            Honeycomb bureau integration. This creates a matter and runs a real-time IDV check.
+            Verify the client's identity using their SA ID number or passport via the Honeycomb
+            bureau integration. This creates a matter and runs a real-time IDV check.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-3">
@@ -279,7 +289,8 @@ export function IdentityVerificationPanel({
             <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 flex items-start gap-2">
               <AlertTriangle className="h-4 w-4 text-amber-600 mt-0.5 flex-shrink-0" />
               <p className="text-xs text-amber-700">
-                No valid ID number or passport on file. Update the client's profile before running IDV.
+                No valid ID number or passport on file. Update the client's profile before running
+                IDV.
               </p>
             </div>
           )}
@@ -297,11 +308,13 @@ export function IdentityVerificationPanel({
 
           {/* Result */}
           {result && (
-            <div className={`rounded-lg p-3 text-sm ${
-              result.success
-                ? 'bg-green-50 border border-green-200'
-                : 'bg-red-50 border border-red-200'
-            }`}>
+            <div
+              className={`rounded-lg p-3 text-sm ${
+                result.success
+                  ? 'bg-green-50 border border-green-200'
+                  : 'bg-red-50 border border-red-200'
+              }`}
+            >
               <div className="flex items-center gap-2 font-medium">
                 {result.success ? (
                   <CheckCircle className="h-4 w-4 text-green-600" />
@@ -313,9 +326,7 @@ export function IdentityVerificationPanel({
                 </span>
               </div>
 
-              {result.error && (
-                <p className="mt-1 text-red-700 text-xs">{result.error}</p>
-              )}
+              {result.error && <p className="mt-1 text-red-700 text-xs">{result.error}</p>}
 
               {result.success && (
                 <div className="mt-2 space-y-1">
@@ -332,7 +343,11 @@ export function IdentityVerificationPanel({
                     onClick={() => setShowDetails(!showDetails)}
                     className="flex items-center gap-1 mt-1 text-xs text-gray-500 hover:text-gray-700 transition-colors"
                   >
-                    {showDetails ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
+                    {showDetails ? (
+                      <ChevronUp className="h-3 w-3" />
+                    ) : (
+                      <ChevronDown className="h-3 w-3" />
+                    )}
                     {showDetails ? 'Hide' : 'Show'} full response
                   </button>
 
@@ -366,11 +381,13 @@ export function IdentityVerificationPanel({
             <Label className="text-xs font-medium">Client Photo</Label>
             <div className="flex items-center gap-3">
               <label className="flex-1 cursor-pointer">
-                <div className={`flex items-center justify-center gap-2 px-4 py-3 rounded-lg border-2 border-dashed transition-colors ${
-                  photoBase64
-                    ? 'border-purple-300 bg-purple-50'
-                    : 'border-gray-300 hover:border-purple-400 hover:bg-purple-50/50'
-                }`}>
+                <div
+                  className={`flex items-center justify-center gap-2 px-4 py-3 rounded-lg border-2 border-dashed transition-colors ${
+                    photoBase64
+                      ? 'border-purple-300 bg-purple-50'
+                      : 'border-gray-300 hover:border-purple-400 hover:bg-purple-50/50'
+                  }`}
+                >
                   <Upload className="h-4 w-4 text-gray-500" />
                   <span className="text-sm text-gray-600">
                     {photoFileName || 'Click to upload photo (JPG, PNG — max 5 MB)'}
@@ -387,7 +404,10 @@ export function IdentityVerificationPanel({
                 <Button
                   variant="ghost"
                   size="sm"
-                  onClick={() => { setPhotoBase64(null); setPhotoFileName(null); }}
+                  onClick={() => {
+                    setPhotoBase64(null);
+                    setPhotoFileName(null);
+                  }}
                   className="text-xs text-gray-500"
                 >
                   Clear
@@ -397,7 +417,7 @@ export function IdentityVerificationPanel({
             {photoBase64 && (
               <div className="flex items-center gap-2 text-xs text-green-700">
                 <CheckCircle className="h-3 w-3" />
-                Photo loaded ({Math.round(photoBase64.length * 0.75 / 1024)} KB)
+                Photo loaded ({Math.round((photoBase64.length * 0.75) / 1024)} KB)
               </div>
             )}
           </div>
@@ -405,9 +425,7 @@ export function IdentityVerificationPanel({
           {!hasIdentification && (
             <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 flex items-start gap-2">
               <AlertTriangle className="h-4 w-4 text-amber-600 mt-0.5 flex-shrink-0" />
-              <p className="text-xs text-amber-700">
-                Client ID/passport required for photo IDV.
-              </p>
+              <p className="text-xs text-amber-700">Client ID/passport required for photo IDV.</p>
             </div>
           )}
 
@@ -431,11 +449,13 @@ export function IdentityVerificationPanel({
 
           {/* Photo IDV Result */}
           {photoResult && (
-            <div className={`rounded-lg p-3 text-sm ${
-              photoResult.success
-                ? 'bg-green-50 border border-green-200'
-                : 'bg-red-50 border border-red-200'
-            }`}>
+            <div
+              className={`rounded-lg p-3 text-sm ${
+                photoResult.success
+                  ? 'bg-green-50 border border-green-200'
+                  : 'bg-red-50 border border-red-200'
+              }`}
+            >
               <div className="flex items-center gap-2 font-medium">
                 {photoResult.success ? (
                   <CheckCircle className="h-4 w-4 text-green-600" />
@@ -443,7 +463,9 @@ export function IdentityVerificationPanel({
                   <AlertTriangle className="h-4 w-4 text-red-600" />
                 )}
                 <span className={photoResult.success ? 'text-green-800' : 'text-red-800'}>
-                  {photoResult.success ? 'Photo Verification Complete' : 'Photo Verification Failed'}
+                  {photoResult.success
+                    ? 'Photo Verification Complete'
+                    : 'Photo Verification Failed'}
                 </span>
               </div>
 
@@ -468,12 +490,16 @@ export function IdentityVerificationPanel({
                       {photoResult.data.photoMatch ? (
                         <div className="contents">
                           <CheckCircle className="h-3 w-3 text-green-600" />
-                          <span className="text-green-700 font-medium">Photo matches bureau records</span>
+                          <span className="text-green-700 font-medium">
+                            Photo matches bureau records
+                          </span>
                         </div>
                       ) : (
                         <div className="contents">
                           <AlertTriangle className="h-3 w-3 text-amber-600" />
-                          <span className="text-amber-700 font-medium">Photo match inconclusive or failed</span>
+                          <span className="text-amber-700 font-medium">
+                            Photo match inconclusive or failed
+                          </span>
                         </div>
                       )}
                     </div>
@@ -483,7 +509,11 @@ export function IdentityVerificationPanel({
                     onClick={() => setShowPhotoDetails(!showPhotoDetails)}
                     className="flex items-center gap-1 mt-1 text-xs text-gray-500 hover:text-gray-700 transition-colors"
                   >
-                    {showPhotoDetails ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
+                    {showPhotoDetails ? (
+                      <ChevronUp className="h-3 w-3" />
+                    ) : (
+                      <ChevronDown className="h-3 w-3" />
+                    )}
                     {showPhotoDetails ? 'Hide' : 'Show'} full response
                   </button>
 
@@ -510,10 +540,16 @@ export function IdentityVerificationPanel({
               <History className="h-5 w-5 text-gray-500" />
               IDV Check History
               {history.length > 0 && (
-                <Badge variant="secondary" className="text-xs">{history.length}</Badge>
+                <Badge variant="secondary" className="text-xs">
+                  {history.length}
+                </Badge>
               )}
             </CardTitle>
-            {showHistory ? <ChevronUp className="h-4 w-4 text-gray-400" /> : <ChevronDown className="h-4 w-4 text-gray-400" />}
+            {showHistory ? (
+              <ChevronUp className="h-4 w-4 text-gray-400" />
+            ) : (
+              <ChevronDown className="h-4 w-4 text-gray-400" />
+            )}
           </button>
         </CardHeader>
         {showHistory && (
@@ -529,7 +565,10 @@ export function IdentityVerificationPanel({
             ) : (
               <div className="space-y-2">
                 {history.map((entry) => (
-                  <div key={entry.id} className="flex items-center justify-between p-2 rounded-lg bg-gray-50 text-sm">
+                  <div
+                    key={entry.id}
+                    className="flex items-center justify-between p-2 rounded-lg bg-gray-50 text-sm"
+                  >
                     <div className="flex items-center gap-2">
                       <Clock className="h-3.5 w-3.5 text-gray-400" />
                       <span className="text-xs text-gray-500">
@@ -554,8 +593,8 @@ export function IdentityVerificationPanel({
                           entry.status === 'completed'
                             ? 'bg-green-50 text-green-700 border-green-200'
                             : entry.status === 'failed'
-                            ? 'bg-red-50 text-red-700 border-red-200'
-                            : 'bg-amber-50 text-amber-700 border-amber-200'
+                              ? 'bg-red-50 text-red-700 border-red-200'
+                              : 'bg-amber-50 text-amber-700 border-amber-200'
                         }
                       >
                         {entry.status}

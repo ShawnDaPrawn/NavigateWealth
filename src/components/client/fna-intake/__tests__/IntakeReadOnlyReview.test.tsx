@@ -4,12 +4,7 @@ import { IntakeReadOnlyReview } from '@/components/client/fna-intake/IntakeReadO
 
 describe('IntakeReadOnlyReview', () => {
   it('renders flattened submitted answers', () => {
-    render(
-      <IntakeReadOnlyReview
-        domain="tax"
-        inputs={{ age: 42, employmentIncome: 850000 }}
-      />,
-    );
+    render(<IntakeReadOnlyReview domain="tax" inputs={{ age: 42, employmentIncome: 850000 }} />);
 
     expect(screen.getByText('Tax planning discovery')).toBeTruthy();
     expect(screen.getByText('42')).toBeTruthy();

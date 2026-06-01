@@ -1,9 +1,9 @@
 /**
  * ClientSelector Component
- * 
+ *
  * Client search and selection dropdown.
  * Supports debounced search with live results.
- * 
+ *
  * @module advice-engine/components/ClientSelector
  */
 
@@ -20,18 +20,14 @@ import {
   CommandItem,
   CommandList,
 } from '../../../../ui/command';
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from '../../../../ui/popover';
+import { Popover, PopoverContent, PopoverTrigger } from '../../../../ui/popover';
 import { formatClientDisplay, formatClientName, getClientInitials } from '../utils';
 import type { ClientSelectorProps } from '../types';
 import { useSearchInputAutofillGuard } from '@/shared/forms/useSearchInputAutofillGuard';
 
 /**
  * Client selector with search
- * 
+ *
  * @example
  * <ClientSelector
  *   searchTerm={searchTerm}
@@ -52,7 +48,9 @@ export function ClientSelector({
   placeholder = 'Search clients...',
 }: ClientSelectorProps) {
   const [open, setOpen] = React.useState(false);
-  const searchInputGuard = useSearchInputAutofillGuard({ id: 'advice-engine-client-selector-search' });
+  const searchInputGuard = useSearchInputAutofillGuard({
+    id: 'advice-engine-client-selector-search',
+  });
 
   const handleSelect = (client: ClientSelectorProps['results'][number]) => {
     onSelectClient(client);
@@ -98,16 +96,12 @@ export function ClientSelector({
             {isSearching && (
               <div className="flex items-center justify-center py-6">
                 <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
-                <span className="ml-2 text-sm text-muted-foreground">
-                  Searching...
-                </span>
+                <span className="ml-2 text-sm text-muted-foreground">Searching...</span>
               </div>
             )}
 
             {!isSearching && searchTerm.length < 2 && (
-              <CommandEmpty>
-                Type at least 2 characters to search
-              </CommandEmpty>
+              <CommandEmpty>Type at least 2 characters to search</CommandEmpty>
             )}
 
             {!isSearching && searchTerm.length >= 2 && results.length === 0 && (
@@ -129,12 +123,8 @@ export function ClientSelector({
                       </span>
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium truncate">
-                        {formatClientName(client)}
-                      </p>
-                      <p className="text-xs text-muted-foreground truncate">
-                        {client.email}
-                      </p>
+                      <p className="text-sm font-medium truncate">{formatClientName(client)}</p>
+                      <p className="text-xs text-muted-foreground truncate">{client.email}</p>
                     </div>
                     {selectedClient?.user_id === client.user_id && (
                       <Check className="h-4 w-4 text-violet-600" />

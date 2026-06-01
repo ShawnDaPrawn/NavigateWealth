@@ -15,7 +15,7 @@ export const EstatePlanningAPI = {
     logger.debug('[EstatePlanningAPI] Auto-populating inputs', { clientId });
     try {
       const response = await api.get<{ success: boolean; data: Partial<EstatePlanningInputs> }>(
-        `/estate-planning-fna/client/${clientId}/auto-populate`
+        `/estate-planning-fna/client/${clientId}/auto-populate`,
       );
       return response.data;
     } catch (error) {
@@ -32,7 +32,7 @@ export const EstatePlanningAPI = {
     inputs: EstatePlanningInputs,
     results: EstatePlanningResults | null,
     status: 'draft' | 'published',
-    adviserNotes: string = ''
+    adviserNotes: string = '',
   ): Promise<EstatePlanningSession> {
     logger.debug('[EstatePlanningAPI] Saving session', { clientId, status });
     try {
@@ -44,7 +44,7 @@ export const EstatePlanningAPI = {
           results,
           status,
           adviserNotes,
-        }
+        },
       );
       return response.data;
     } catch (error) {
@@ -60,7 +60,7 @@ export const EstatePlanningAPI = {
     logger.debug('[EstatePlanningAPI] Fetching all sessions', { clientId });
     try {
       const response = await api.get<{ success: boolean; data: EstatePlanningSession[] }>(
-        `/estate-planning-fna/client/${clientId}/sessions`
+        `/estate-planning-fna/client/${clientId}/sessions`,
       );
       return response.data;
     } catch (error) {
@@ -76,12 +76,12 @@ export const EstatePlanningAPI = {
     logger.debug('[EstatePlanningAPI] Fetching latest published', { clientId });
     try {
       const response = await api.get<{ success: boolean; data: EstatePlanningSession | null }>(
-        `/estate-planning-fna/client/${clientId}/latest-published`
+        `/estate-planning-fna/client/${clientId}/latest-published`,
       );
       return response.data || null;
     } catch (error) {
       // Silently return null for 404s/errors as this is often used for checking existence
-      const isNotFound = 
+      const isNotFound =
         (error instanceof APIError && error.statusCode === 404) ||
         (error instanceof Error && error.message && error.message.includes('404'));
 
@@ -102,7 +102,7 @@ export const EstatePlanningAPI = {
     logger.debug('[EstatePlanningAPI] Fetching session', { sessionId });
     try {
       const response = await api.get<{ success: boolean; data: EstatePlanningSession }>(
-        `/estate-planning-fna/session/${sessionId}`
+        `/estate-planning-fna/session/${sessionId}`,
       );
       return response.data;
     } catch (error) {
@@ -131,7 +131,7 @@ export const EstatePlanningAPI = {
     logger.debug('[EstatePlanningAPI] Publishing session', { sessionId });
     try {
       const response = await api.put<{ success: boolean; data: EstatePlanningSession }>(
-        `/estate-planning-fna/session/${sessionId}/publish`
+        `/estate-planning-fna/session/${sessionId}/publish`,
       );
       return response.data;
     } catch (error) {
@@ -147,12 +147,12 @@ export const EstatePlanningAPI = {
     logger.debug('[EstatePlanningAPI] Unpublishing session', { sessionId });
     try {
       const response = await api.put<{ success: boolean; data: EstatePlanningSession }>(
-        `/estate-planning-fna/session/${sessionId}/unpublish`
+        `/estate-planning-fna/session/${sessionId}/unpublish`,
       );
       return response.data;
     } catch (error) {
       logger.error('Failed to unpublish Estate Planning session', error);
       throw error;
     }
-  }
+  },
 };

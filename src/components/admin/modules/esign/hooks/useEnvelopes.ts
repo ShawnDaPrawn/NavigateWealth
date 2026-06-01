@@ -30,7 +30,11 @@ export function useEnvelopes(options: UseEnvelopesOptions = {}): UseEnvelopesRet
   const { clientId, clientEmail, autoLoad = true } = options;
   const queryClient = useQueryClient();
 
-  const { data: envelopes = [], isLoading: loading, error: queryError } = useQuery({
+  const {
+    data: envelopes = [],
+    isLoading: loading,
+    error: queryError,
+  } = useQuery({
     queryKey: clientId ? esignKeys.clientEnvelopes(clientId) : esignKeys.allEnvelopes(),
     queryFn: async () => {
       if (clientId) {
@@ -60,7 +64,11 @@ export function useEnvelopes(options: UseEnvelopesOptions = {}): UseEnvelopesRet
   return {
     envelopes,
     loading,
-    error: queryError ? (queryError instanceof Error ? queryError.message : 'Failed to load envelopes') : null,
+    error: queryError
+      ? queryError instanceof Error
+        ? queryError.message
+        : 'Failed to load envelopes'
+      : null,
     refetch,
     getEnvelope,
   };

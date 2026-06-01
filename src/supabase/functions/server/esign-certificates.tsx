@@ -4,12 +4,12 @@
  * Uses the Navigate Wealth branded PDF template with proper pagination.
  */
 
-import * as kv from "./kv_store.tsx";
-import { uploadCertificate, calculateHash } from "./esign-storage.ts";
-import { getEnvelopeDetails, getAuditTrail } from "./esign-services.ts";
+import * as kv from './kv_store.tsx';
+import { uploadCertificate, calculateHash } from './esign-storage.ts';
+import { getEnvelopeDetails, getAuditTrail } from './esign-services.ts';
 import { PDFDocument, rgb, StandardFonts } from 'npm:pdf-lib@1.17.1';
 import { EsignKeys } from './esign-keys.ts';
-import { createModuleLogger } from "./stderr-logger.ts";
+import { createModuleLogger } from './stderr-logger.ts';
 import { getConsentByVersion } from './esign-consent-registry.ts';
 
 const log = createModuleLogger('esign-certificates');
@@ -70,8 +70,11 @@ function formatDateSafe(dateStr: string | undefined): string {
   if (!dateStr) return 'N/A';
   try {
     return new Date(dateStr).toLocaleString('en-ZA', {
-      day: '2-digit', month: 'short', year: 'numeric',
-      hour: '2-digit', minute: '2-digit',
+      day: '2-digit',
+      month: 'short',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
     });
   } catch {
     return dateStr;
@@ -98,26 +101,26 @@ async function generateCertificatePDF(data: EnvelopeData): Promise<Uint8Array> {
   const PAGE_W = 595;
   const PAGE_H = 842;
   const MARGIN = 50;
-  const CONTENT_W = PAGE_W - MARGIN * 2;       // 495pt usable width
-  const HEADER_H = 65;                          // Branded header band
-  const FOOTER_ZONE = 70;                       // Reserved footer space (generous)
-  const FOOTER_LINE_Y = FOOTER_ZONE + 2;       // Line just above footer text
-  const FOOTER_TEXT_Y = FOOTER_ZONE - 15;       // Footer text baseline
-  const CONTENT_TOP = PAGE_H - HEADER_H - 24;   // First usable Y after header
-  const MIN_CONTENT_Y = FOOTER_ZONE + 15;       // Lowest Y before footer
+  const CONTENT_W = PAGE_W - MARGIN * 2; // 495pt usable width
+  const HEADER_H = 65; // Branded header band
+  const FOOTER_ZONE = 70; // Reserved footer space (generous)
+  const FOOTER_LINE_Y = FOOTER_ZONE + 2; // Line just above footer text
+  const FOOTER_TEXT_Y = FOOTER_ZONE - 15; // Footer text baseline
+  const CONTENT_TOP = PAGE_H - HEADER_H - 24; // First usable Y after header
+  const MIN_CONTENT_Y = FOOTER_ZONE + 15; // Lowest Y before footer
 
   // ── Brand colours ──────────────────────────────────────────────────
-  const PURPLE       = rgb(109 / 255, 40 / 255, 217 / 255);   // #6D28D9
-  const PURPLE_LIGHT = rgb(139 / 255, 92 / 255, 246 / 255);   // #8B5CF6
-  const DARK         = rgb(30 / 255, 27 / 255, 75 / 255);     // #1E1B4B
-  const TEXT_COLOR   = rgb(17 / 255, 24 / 255, 39 / 255);     // gray-900
-  const MUTED        = rgb(107 / 255, 114 / 255, 128 / 255);  // gray-500
-  const LINE_COLOR   = rgb(0.82, 0.82, 0.82);
-  const WHITE        = rgb(1, 1, 1);
-  const SECTION_BG   = rgb(0.975, 0.975, 0.985);              // very light purple-gray
-  const ROW_ALT_BG   = rgb(0.96, 0.96, 0.97);                 // alternating row
+  const PURPLE = rgb(109 / 255, 40 / 255, 217 / 255); // #6D28D9
+  const PURPLE_LIGHT = rgb(139 / 255, 92 / 255, 246 / 255); // #8B5CF6
+  const DARK = rgb(30 / 255, 27 / 255, 75 / 255); // #1E1B4B
+  const TEXT_COLOR = rgb(17 / 255, 24 / 255, 39 / 255); // gray-900
+  const MUTED = rgb(107 / 255, 114 / 255, 128 / 255); // gray-500
+  const LINE_COLOR = rgb(0.82, 0.82, 0.82);
+  const WHITE = rgb(1, 1, 1);
+  const SECTION_BG = rgb(0.975, 0.975, 0.985); // very light purple-gray
+  const ROW_ALT_BG = rgb(0.96, 0.96, 0.97); // alternating row
   const TABLE_BORDER = rgb(0.85, 0.85, 0.88);
-  const GREEN        = rgb(22 / 255, 163 / 255, 74 / 255);    // #16A34A
+  const GREEN = rgb(22 / 255, 163 / 255, 74 / 255); // #16A34A
 
   // ── Page management ────────────────────────────────────────────────
   type PDFPage = ReturnType<typeof pdfDoc.addPage>;
@@ -131,7 +134,12 @@ async function generateCertificatePDF(data: EnvelopeData): Promise<Uint8Array> {
    * Break text into lines that fit within maxWidth.
    * Returns an array of line strings.
    */
-  const wrapText = (text: string, fontSize: number, usedFont: typeof font, maxWidth: number): string[] => {
+  const wrapText = (
+    text: string,
+    fontSize: number,
+    usedFont: typeof font,
+    maxWidth: number,
+  ): string[] => {
     const words = text.split(' ');
     const lines: string[] = [];
     let currentLine = '';
@@ -156,29 +164,41 @@ async function generateCertificatePDF(data: EnvelopeData): Promise<Uint8Array> {
   const drawHeader = (page: PDFPage) => {
     // Gradient-like effect: two rectangles
     page.drawRectangle({
-      x: 0, y: PAGE_H - HEADER_H,
-      width: PAGE_W, height: HEADER_H,
+      x: 0,
+      y: PAGE_H - HEADER_H,
+      width: PAGE_W,
+      height: HEADER_H,
       color: PURPLE,
     });
     // Accent line at bottom of header
     page.drawRectangle({
-      x: 0, y: PAGE_H - HEADER_H,
-      width: PAGE_W, height: 2,
+      x: 0,
+      y: PAGE_H - HEADER_H,
+      width: PAGE_W,
+      height: 2,
       color: PURPLE_LIGHT,
     });
     page.drawText('Navigate Wealth', {
-      x: MARGIN, y: PAGE_H - 28,
-      size: 16, font: boldFont, color: WHITE,
+      x: MARGIN,
+      y: PAGE_H - 28,
+      size: 16,
+      font: boldFont,
+      color: WHITE,
     });
     page.drawText('E-Signature Completion Certificate', {
-      x: MARGIN, y: PAGE_H - 48,
-      size: 10, font, color: rgb(0.88, 0.88, 0.95),
+      x: MARGIN,
+      y: PAGE_H - 48,
+      size: 10,
+      font,
+      color: rgb(0.88, 0.88, 0.95),
     });
     // Date on the right
     page.drawText(formatDateSafe(data.completed_at), {
       x: PAGE_W - MARGIN - font.widthOfTextAtSize(formatDateSafe(data.completed_at), 8),
       y: PAGE_H - 28,
-      size: 8, font, color: rgb(0.8, 0.8, 0.9),
+      size: 8,
+      font,
+      color: rgb(0.8, 0.8, 0.9),
     });
   };
 
@@ -187,20 +207,20 @@ async function generateCertificatePDF(data: EnvelopeData): Promise<Uint8Array> {
     page.drawLine({
       start: { x: MARGIN, y: FOOTER_LINE_Y },
       end: { x: PAGE_W - MARGIN, y: FOOTER_LINE_Y },
-      thickness: 0.5, color: LINE_COLOR,
+      thickness: 0.5,
+      color: LINE_COLOR,
     });
     page.drawText(
       'This certificate is electronically generated and legally binding under the ECTA. | Navigate Wealth',
-      { x: MARGIN, y: FOOTER_TEXT_Y, size: 6.5, font: italicFont, color: MUTED }
+      { x: MARGIN, y: FOOTER_TEXT_Y, size: 6.5, font: italicFont, color: MUTED },
     );
-    page.drawText(
-      `Page ${pageNum} of ${totalPages}`,
-      {
-        x: PAGE_W - MARGIN - font.widthOfTextAtSize(`Page ${pageNum} of ${totalPages}`, 7),
-        y: FOOTER_TEXT_Y,
-        size: 7, font, color: MUTED,
-      }
-    );
+    page.drawText(`Page ${pageNum} of ${totalPages}`, {
+      x: PAGE_W - MARGIN - font.widthOfTextAtSize(`Page ${pageNum} of ${totalPages}`, 7),
+      y: FOOTER_TEXT_Y,
+      size: 7,
+      font,
+      color: MUTED,
+    });
   };
 
   /** Ensure enough vertical space; if not, create a new page */
@@ -222,15 +242,20 @@ async function generateCertificatePDF(data: EnvelopeData): Promise<Uint8Array> {
 
     // Section heading background
     currentPage.drawRectangle({
-      x: MARGIN, y: y - headingH + 8,
-      width: CONTENT_W, height: headingH,
+      x: MARGIN,
+      y: y - headingH + 8,
+      width: CONTENT_W,
+      height: headingH,
       color: PURPLE,
       borderColor: PURPLE,
       borderWidth: 0,
     });
     currentPage.drawText(title, {
-      x: MARGIN + 10, y: y - headingH + 16,
-      size: 9.5, font: boldFont, color: WHITE,
+      x: MARGIN + 10,
+      y: y - headingH + 16,
+      size: 9.5,
+      font: boldFont,
+      color: WHITE,
     });
     y -= headingH + 4;
   };
@@ -239,7 +264,7 @@ async function generateCertificatePDF(data: EnvelopeData): Promise<Uint8Array> {
   const formRow = (
     label: string,
     value: string,
-    options?: { isLast?: boolean; labelWidth?: number; valueBold?: boolean }
+    options?: { isLast?: boolean; labelWidth?: number; valueBold?: boolean },
   ) => {
     const labelW = options?.labelWidth ?? 140;
     const valueMaxW = CONTENT_W - labelW - 25;
@@ -251,8 +276,10 @@ async function generateCertificatePDF(data: EnvelopeData): Promise<Uint8Array> {
 
     // Row background (light)
     currentPage.drawRectangle({
-      x: MARGIN, y: y - rowH + 4,
-      width: CONTENT_W, height: rowH,
+      x: MARGIN,
+      y: y - rowH + 4,
+      width: CONTENT_W,
+      height: rowH,
       color: SECTION_BG,
     });
 
@@ -260,32 +287,41 @@ async function generateCertificatePDF(data: EnvelopeData): Promise<Uint8Array> {
     currentPage.drawLine({
       start: { x: MARGIN, y: y + 4 },
       end: { x: MARGIN, y: y - rowH + 4 },
-      thickness: 0.5, color: TABLE_BORDER,
+      thickness: 0.5,
+      color: TABLE_BORDER,
     });
     currentPage.drawLine({
       start: { x: MARGIN + CONTENT_W, y: y + 4 },
       end: { x: MARGIN + CONTENT_W, y: y - rowH + 4 },
-      thickness: 0.5, color: TABLE_BORDER,
+      thickness: 0.5,
+      color: TABLE_BORDER,
     });
 
     // Bottom border
     currentPage.drawLine({
       start: { x: MARGIN, y: y - rowH + 4 },
       end: { x: MARGIN + CONTENT_W, y: y - rowH + 4 },
-      thickness: 0.5, color: options?.isLast ? TABLE_BORDER : LINE_COLOR,
+      thickness: 0.5,
+      color: options?.isLast ? TABLE_BORDER : LINE_COLOR,
     });
 
     // Label
     currentPage.drawText(label, {
-      x: MARGIN + 10, y: y - 6,
-      size: 8, font: boldFont, color: MUTED,
+      x: MARGIN + 10,
+      y: y - 6,
+      size: 8,
+      font: boldFont,
+      color: MUTED,
     });
 
     // Value (potentially multi-line)
     valueLines.forEach((line, i) => {
       currentPage.drawText(line, {
-        x: MARGIN + labelW + 10, y: y - 6 - (i * 12),
-        size: 8.5, font: valueFont, color: TEXT_COLOR,
+        x: MARGIN + labelW + 10,
+        y: y - 6 - i * 12,
+        size: 8.5,
+        font: valueFont,
+        color: TEXT_COLOR,
       });
     });
 
@@ -322,12 +358,16 @@ async function generateCertificatePDF(data: EnvelopeData): Promise<Uint8Array> {
 
     // P6.3 — per-signer evidence package.
     if (signer.user_agent) {
-      const ua = signer.user_agent.length > 140 ? `${signer.user_agent.slice(0, 140)}…` : signer.user_agent;
+      const ua =
+        signer.user_agent.length > 140 ? `${signer.user_agent.slice(0, 140)}…` : signer.user_agent;
       formRow('Device / User Agent', ua);
     }
     if (typeof signer.time_to_sign_ms === 'number') {
       const mins = Math.round(signer.time_to_sign_ms / 60000);
-      const pretty = mins >= 1 ? `${mins} minute${mins === 1 ? '' : 's'}` : `${Math.round(signer.time_to_sign_ms / 1000)} second(s)`;
+      const pretty =
+        mins >= 1
+          ? `${mins} minute${mins === 1 ? '' : 's'}`
+          : `${Math.round(signer.time_to_sign_ms / 1000)} second(s)`;
       formRow('Time to Sign', pretty);
     }
     if (signer.otp_methods && signer.otp_methods.length > 0) {
@@ -338,11 +378,15 @@ async function generateCertificatePDF(data: EnvelopeData): Promise<Uint8Array> {
       const parts: string[] = [];
       if (tel.method) parts.push(`method=${tel.method}`);
       if (typeof tel.strokes === 'number') parts.push(`strokes=${tel.strokes}`);
-      if (typeof tel.duration_ms === 'number') parts.push(`duration=${Math.round(tel.duration_ms / 100) / 10}s`);
+      if (typeof tel.duration_ms === 'number')
+        parts.push(`duration=${Math.round(tel.duration_ms / 100) / 10}s`);
       if (parts.length > 0) formRow('Signature Capture', parts.join(' · '));
     }
     if (signer.kba) {
-      formRow('KBA', `${signer.kba.provider} — ${signer.kba.status}${signer.kba.reference ? ` (ref ${signer.kba.reference})` : ''}`);
+      formRow(
+        'KBA',
+        `${signer.kba.provider} — ${signer.kba.status}${signer.kba.reference ? ` (ref ${signer.kba.reference})` : ''}`,
+      );
     }
     if (signer.consent_version) {
       formRow('Consent Version', signer.consent_version);
@@ -373,8 +417,10 @@ async function generateCertificatePDF(data: EnvelopeData): Promise<Uint8Array> {
     const blockH = consentLines.length * 11 + 20;
     y = ensureSpace(blockH + 8);
     currentPage.drawRectangle({
-      x: MARGIN, y: y - blockH,
-      width: CONTENT_W, height: blockH,
+      x: MARGIN,
+      y: y - blockH,
+      width: CONTENT_W,
+      height: blockH,
       color: SECTION_BG,
       borderColor: TABLE_BORDER,
       borderWidth: 0.5,
@@ -382,8 +428,10 @@ async function generateCertificatePDF(data: EnvelopeData): Promise<Uint8Array> {
     consentLines.forEach((line, i) => {
       currentPage.drawText(line, {
         x: MARGIN + 12,
-        y: y - 14 - (i * 11),
-        size: 8.5, font, color: TEXT_COLOR,
+        y: y - 14 - i * 11,
+        size: 8.5,
+        font,
+        color: TEXT_COLOR,
       });
     });
     y -= blockH + 10;
@@ -410,21 +458,32 @@ async function generateCertificatePDF(data: EnvelopeData): Promise<Uint8Array> {
   const drawAuditTableHeader = () => {
     const headerH = 22;
     currentPage.drawRectangle({
-      x: MARGIN, y: y - headerH + 4,
-      width: CONTENT_W, height: headerH,
+      x: MARGIN,
+      y: y - headerH + 4,
+      width: CONTENT_W,
+      height: headerH,
       color: DARK,
     });
     currentPage.drawText('DATE & TIME', {
-      x: colDate, y: y - headerH + 12,
-      size: 7, font: boldFont, color: WHITE,
+      x: colDate,
+      y: y - headerH + 12,
+      size: 7,
+      font: boldFont,
+      color: WHITE,
     });
     currentPage.drawText('ACTION', {
-      x: colAction, y: y - headerH + 12,
-      size: 7, font: boldFont, color: WHITE,
+      x: colAction,
+      y: y - headerH + 12,
+      size: 7,
+      font: boldFont,
+      color: WHITE,
     });
     currentPage.drawText('ACTOR / IP', {
-      x: colActor, y: y - headerH + 12,
-      size: 7, font: boldFont, color: WHITE,
+      x: colActor,
+      y: y - headerH + 12,
+      size: 7,
+      font: boldFont,
+      color: WHITE,
     });
     y -= headerH;
   };
@@ -449,7 +508,9 @@ async function generateCertificatePDF(data: EnvelopeData): Promise<Uint8Array> {
 
   // Table rows
   data.audit_events.forEach((event, index) => {
-    const actionText = event.action.replace(/_/g, ' ').replace(/\b\w/g, (c: string) => c.toUpperCase());
+    const actionText = event.action
+      .replace(/_/g, ' ')
+      .replace(/\b\w/g, (c: string) => c.toUpperCase());
     const actorText = `${event.actor_email}${event.ip ? `  |  ${event.ip}` : ''}`;
 
     // Calculate wrapped lines for action and actor
@@ -464,8 +525,10 @@ async function generateCertificatePDF(data: EnvelopeData): Promise<Uint8Array> {
 
     // Row background
     currentPage.drawRectangle({
-      x: MARGIN, y: y - rowH + 4,
-      width: CONTENT_W, height: rowH,
+      x: MARGIN,
+      y: y - rowH + 4,
+      width: CONTENT_W,
+      height: rowH,
       color: isAlternate ? ROW_ALT_BG : WHITE,
     });
 
@@ -473,40 +536,52 @@ async function generateCertificatePDF(data: EnvelopeData): Promise<Uint8Array> {
     currentPage.drawLine({
       start: { x: MARGIN, y: y + 4 },
       end: { x: MARGIN, y: y - rowH + 4 },
-      thickness: 0.5, color: TABLE_BORDER,
+      thickness: 0.5,
+      color: TABLE_BORDER,
     });
     currentPage.drawLine({
       start: { x: MARGIN + CONTENT_W, y: y + 4 },
       end: { x: MARGIN + CONTENT_W, y: y - rowH + 4 },
-      thickness: 0.5, color: TABLE_BORDER,
+      thickness: 0.5,
+      color: TABLE_BORDER,
     });
 
     // Bottom border
     currentPage.drawLine({
       start: { x: MARGIN, y: y - rowH + 4 },
       end: { x: MARGIN + CONTENT_W, y: y - rowH + 4 },
-      thickness: 0.5, color: LINE_COLOR,
+      thickness: 0.5,
+      color: LINE_COLOR,
     });
 
     // Date
     currentPage.drawText(formatDateSafe(event.at), {
-      x: colDate, y: y - 6,
-      size: 7.5, font, color: TEXT_COLOR,
+      x: colDate,
+      y: y - 6,
+      size: 7.5,
+      font,
+      color: TEXT_COLOR,
     });
 
     // Action (possibly multi-line)
     actionLines.forEach((line, i) => {
       currentPage.drawText(line, {
-        x: colAction, y: y - 6 - (i * 11),
-        size: 7.5, font: i === 0 ? boldFont : font, color: TEXT_COLOR,
+        x: colAction,
+        y: y - 6 - i * 11,
+        size: 7.5,
+        font: i === 0 ? boldFont : font,
+        color: TEXT_COLOR,
       });
     });
 
     // Actor / IP (possibly multi-line)
     actorLines.forEach((line, i) => {
       currentPage.drawText(line, {
-        x: colActor, y: y - 6 - (i * 11),
-        size: 7, font, color: MUTED,
+        x: colActor,
+        y: y - 6 - i * 11,
+        size: 7,
+        font,
+        color: MUTED,
       });
     });
 
@@ -517,7 +592,8 @@ async function generateCertificatePDF(data: EnvelopeData): Promise<Uint8Array> {
   currentPage.drawLine({
     start: { x: MARGIN, y: y + 4 },
     end: { x: MARGIN + CONTENT_W, y: y + 4 },
-    thickness: 1, color: TABLE_BORDER,
+    thickness: 1,
+    color: TABLE_BORDER,
   });
 
   y -= 20;
@@ -529,8 +605,10 @@ async function generateCertificatePDF(data: EnvelopeData): Promise<Uint8Array> {
 
     // Bordered box
     currentPage.drawRectangle({
-      x: MARGIN, y: y - integrityH,
-      width: CONTENT_W, height: integrityH,
+      x: MARGIN,
+      y: y - integrityH,
+      width: CONTENT_W,
+      height: integrityH,
       color: rgb(0.97, 0.99, 0.97), // very light green
       borderColor: rgb(0.8, 0.9, 0.8),
       borderWidth: 0.5,
@@ -541,36 +619,50 @@ async function generateCertificatePDF(data: EnvelopeData): Promise<Uint8Array> {
     const checkBoxX = MARGIN + 12;
     const checkBoxY = y - 18;
     currentPage.drawRectangle({
-      x: checkBoxX, y: checkBoxY,
-      width: checkBoxSize, height: checkBoxSize,
+      x: checkBoxX,
+      y: checkBoxY,
+      width: checkBoxSize,
+      height: checkBoxSize,
       color: GREEN,
       borderColor: GREEN,
       borderWidth: 0,
     });
     // White "V" as check symbol inside the green box
     currentPage.drawText('V', {
-      x: checkBoxX + 2.5, y: checkBoxY + 2,
-      size: 7, font: boldFont, color: WHITE,
+      x: checkBoxX + 2.5,
+      y: checkBoxY + 2,
+      size: 7,
+      font: boldFont,
+      color: WHITE,
     });
 
     currentPage.drawText('Document Integrity Verified', {
-      x: MARGIN + 28, y: y - 16,
-      size: 9, font: boldFont, color: GREEN,
+      x: MARGIN + 28,
+      y: y - 16,
+      size: 9,
+      font: boldFont,
+      color: GREEN,
     });
 
     currentPage.drawText(
       'This document has been electronically signed by all required parties. The signing process was conducted in',
       {
-        x: MARGIN + 12, y: y - 30,
-        size: 7.5, font, color: MUTED,
-      }
+        x: MARGIN + 12,
+        y: y - 30,
+        size: 7.5,
+        font,
+        color: MUTED,
+      },
     );
     currentPage.drawText(
       'compliance with the Electronic Communications and Transactions Act 25 of 2002 (ECTA) of South Africa.',
       {
-        x: MARGIN + 12, y: y - 42,
-        size: 7.5, font, color: MUTED,
-      }
+        x: MARGIN + 12,
+        y: y - 42,
+        size: 7.5,
+        font,
+        color: MUTED,
+      },
     );
 
     y -= integrityH + 8;
@@ -621,18 +713,19 @@ async function fetchEnvelopeData(envelopeId: string): Promise<EnvelopeData | nul
     // and consent stamps.
     const signersWithEvidence = signedSigners.map((signer: EsignSigner) => {
       const signEvent = auditEvents.find(
-        (e: EsignAuditEvent) => e.action === 'signed' && e.email === signer.email
+        (e: EsignAuditEvent) => e.action === 'signed' && e.email === signer.email,
       );
       const viewedEvent = auditEvents.find(
-        (e: EsignAuditEvent) => e.action === 'viewed' && e.email === signer.email
+        (e: EsignAuditEvent) => e.action === 'viewed' && e.email === signer.email,
       );
       const otpChannels = new Set<string>();
       for (const ev of auditEvents) {
         if (ev.email !== signer.email) continue;
         if (ev.action === 'otp_sent' || ev.action === 'otp_resent') {
-          const ch = (ev.metadata?.channel as string | undefined)
-            || (ev.metadata?.method as string | undefined)
-            || 'email';
+          const ch =
+            (ev.metadata?.channel as string | undefined) ||
+            (ev.metadata?.method as string | undefined) ||
+            'email';
           otpChannels.add(ch);
         }
       }
@@ -662,9 +755,14 @@ async function fetchEnvelopeData(envelopeId: string): Promise<EnvelopeData | nul
         signature_telemetry: signer.signature_telemetry,
         consent_version: signer.consent_version,
         signing_reason: signer.signing_reason,
-        kba: signer.kba && signer.kba.status !== 'skipped'
-          ? { provider: signer.kba.provider, status: signer.kba.status, reference: signer.kba.reference }
-          : undefined,
+        kba:
+          signer.kba && signer.kba.status !== 'skipped'
+            ? {
+                provider: signer.kba.provider,
+                status: signer.kba.status,
+                reference: signer.kba.reference,
+              }
+            : undefined,
       };
     });
 
@@ -681,7 +779,7 @@ async function fetchEnvelopeData(envelopeId: string): Promise<EnvelopeData | nul
       client_name: 'Client', // TODO: Fetch from client data if available
       sender_name: 'Admin', // TODO: Fetch from user data if available
       signing_reason_prompt: envelope.signing_reason_required
-        ? (envelope.signing_reason_prompt || 'Signed in capacity as disclosed by the signer')
+        ? envelope.signing_reason_prompt || 'Signed in capacity as disclosed by the signer'
         : undefined,
       consent: consent ? { id: consent.id, text: consent.text } : undefined,
       signers: signersWithEvidence,
@@ -706,7 +804,7 @@ async function fetchEnvelopeData(envelopeId: string): Promise<EnvelopeData | nul
  * Generate and store completion certificate
  */
 export async function generateCompletionCertificate(
-  envelopeId: string
+  envelopeId: string,
 ): Promise<{ success: boolean; certificateId?: string; error?: string; pdfBuffer?: Uint8Array }> {
   try {
     log.info(`Generating completion certificate for envelope ${envelopeId}...`);
@@ -725,7 +823,9 @@ export async function generateCompletionCertificate(
     const certificateBuffer = await generateCertificatePDF(envelopeData);
 
     if (existingCert) {
-      log.info(`Certificate record already exists for envelope ${envelopeId}, returning fresh PDF buffer`);
+      log.info(
+        `Certificate record already exists for envelope ${envelopeId}, returning fresh PDF buffer`,
+      );
       return { success: true, certificateId: existingCert.id, pdfBuffer: certificateBuffer };
     }
 
@@ -733,10 +833,7 @@ export async function generateCompletionCertificate(
     const hash = await calculateHash(certificateBuffer);
 
     // Upload to storage
-    const { path, error: uploadError } = await uploadCertificate(
-      envelopeId,
-      certificateBuffer
-    );
+    const { path, error: uploadError } = await uploadCertificate(envelopeId, certificateBuffer);
 
     if (uploadError || !path) {
       return { success: false, error: uploadError || 'Failed to upload certificate' };
@@ -815,9 +912,7 @@ export async function getCertificate(envelopeId: string): Promise<{
  * Auto-generate certificate when envelope completes
  * Called by the signing service after all signers complete
  */
-export async function autoGenerateCertificateIfComplete(
-  envelopeId: string
-): Promise<void> {
+export async function autoGenerateCertificateIfComplete(envelopeId: string): Promise<void> {
   try {
     const eligible = await isEligibleForCertificate(envelopeId);
 

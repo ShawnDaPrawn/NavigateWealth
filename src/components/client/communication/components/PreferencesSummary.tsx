@@ -17,9 +17,10 @@ interface PreferencesSummaryProps {
 
 function StatusBadge({ active, variant }: { active: boolean; variant: 'green' | 'purple' }) {
   if (active) {
-    const cls = variant === 'green'
-      ? 'bg-green-100 text-green-700 border-green-200'
-      : 'bg-[#6d28d9]/10 text-[#6d28d9] border-[#6d28d9]/20';
+    const cls =
+      variant === 'green'
+        ? 'bg-green-100 text-green-700 border-green-200'
+        : 'bg-[#6d28d9]/10 text-[#6d28d9] border-[#6d28d9]/20';
     return (
       <Badge className={cls}>
         <CheckCircle2 className="h-3 w-3 mr-1" />

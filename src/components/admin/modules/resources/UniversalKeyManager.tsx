@@ -8,30 +8,18 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../..
 import { Badge } from '../../../ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../../ui/tabs';
 import { Label } from '../../../ui/label';
-import { 
-  Info,
-  Key,
-  Database,
-  Workflow,
-  Calculator,
-  UserCircle,
-  Target,
-} from 'lucide-react';
+import { Info, Key, Database, Workflow, Calculator, UserCircle, Target } from 'lucide-react';
 import { ProductKeyCategory } from '../product-management';
-import { 
-  KeyAPI,
-  KeyList,
-  CategoryFilter,
-  SearchFilters,
-  CATEGORY_ICONS,
-} from './key-manager';
+import { KeyAPI, KeyList, CategoryFilter, SearchFilters, CATEGORY_ICONS } from './key-manager';
 
 export function UniversalKeyManager() {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<ProductKeyCategory | 'all'>('all');
   const [selectedDataType, setSelectedDataType] = useState<string>('all');
   const [productKeysCategory, setProductKeysCategory] = useState<ProductKeyCategory | 'all'>('all');
-  const [calculatedKeysCategory, setCalculatedKeysCategory] = useState<ProductKeyCategory | 'all'>('all');
+  const [calculatedKeysCategory, setCalculatedKeysCategory] = useState<ProductKeyCategory | 'all'>(
+    'all',
+  );
   const [clientKeysCategory, setClientKeysCategory] = useState<ProductKeyCategory | 'all'>('all');
   const [fnaKeysCategory, setFnaKeysCategory] = useState<ProductKeyCategory | 'all'>('all');
 
@@ -42,69 +30,66 @@ export function UniversalKeyManager() {
   // Filter keys based on search and filters
   const filteredKeys = useMemo(() => {
     if (!hasKeys) return [];
-    
+
     return KeyAPI.filterKeys({
       category: selectedCategory,
       dataType: selectedDataType,
-      searchTerm: searchTerm
+      searchTerm: searchTerm,
     });
   }, [searchTerm, selectedCategory, selectedDataType, hasKeys]);
 
   // Separate individual and calculated keys
-  const individualKeys = useMemo(() => 
-    KeyAPI.getIndividualKeys(filteredKeys),
-    [filteredKeys]
+  const individualKeys = useMemo(() => KeyAPI.getIndividualKeys(filteredKeys), [filteredKeys]);
+
+  const calculatedKeys = useMemo(
+    () => KeyAPI.getCalculatedKeys(filteredKeys).filter((key) => !key.isRecommendation),
+    [filteredKeys],
   );
 
-  const calculatedKeys = useMemo(() => 
-    KeyAPI.getCalculatedKeys(filteredKeys).filter(key => !key.isRecommendation),
-    [filteredKeys]
-  );
-
-  const fnaRecommendationKeys = useMemo(() => 
-    filteredKeys.filter(key => key.isRecommendation),
-    [filteredKeys]
+  const fnaRecommendationKeys = useMemo(
+    () => filteredKeys.filter((key) => key.isRecommendation),
+    [filteredKeys],
   );
 
   // Filter out profile keys from product keys (they have their own tab)
-  const productOnlyIndividualKeys = useMemo(() => 
-    individualKeys.filter(key => !KeyAPI.isClientProfileKey(key)),
-    [individualKeys]
+  const productOnlyIndividualKeys = useMemo(
+    () => individualKeys.filter((key) => !KeyAPI.isClientProfileKey(key)),
+    [individualKeys],
   );
 
-  const productOnlyCalculatedKeys = useMemo(() => 
-    calculatedKeys.filter(key => !KeyAPI.isClientProfileKey(key)),
-    [calculatedKeys]
+  const productOnlyCalculatedKeys = useMemo(
+    () => calculatedKeys.filter((key) => !KeyAPI.isClientProfileKey(key)),
+    [calculatedKeys],
   );
 
   // Get only profile keys for client keys tab
-  const clientProfileKeys = useMemo(() => 
-    individualKeys.filter(key => KeyAPI.isClientProfileKey(key)),
-    [individualKeys]
+  const clientProfileKeys = useMemo(
+    () => individualKeys.filter((key) => KeyAPI.isClientProfileKey(key)),
+    [individualKeys],
   );
 
   // Filter client keys by category
   const filteredClientKeys = useMemo(() => {
     if (clientKeysCategory === 'all') return clientProfileKeys;
-    return clientProfileKeys.filter(key => key.category === clientKeysCategory);
+    return clientProfileKeys.filter((key) => key.category === clientKeysCategory);
   }, [clientProfileKeys, clientKeysCategory]);
 
   // Filter individual keys by product keys category
   const filteredIndividualKeys = useMemo(() => {
     if (productKeysCategory === 'all') return productOnlyIndividualKeys;
-    return productOnlyIndividualKeys.filter(key => key.category === productKeysCategory);
+    return productOnlyIndividualKeys.filter((key) => key.category === productKeysCategory);
   }, [productOnlyIndividualKeys, productKeysCategory]);
 
   // Filter calculated keys by calculated keys category
   const filteredCalculatedKeys = useMemo(() => {
     if (calculatedKeysCategory === 'all') return productOnlyCalculatedKeys;
-    return productOnlyCalculatedKeys.filter(key => key.category === calculatedKeysCategory);
+    return productOnlyCalculatedKeys.filter((key) => key.category === calculatedKeysCategory);
   }, [productOnlyCalculatedKeys, calculatedKeysCategory]);
 
   // Filter FNA keys by category
   const filteredFnaKeys = useMemo(() => {
     if (fnaKeysCategory === 'all') return fnaRecommendationKeys;
-    return fnaRecommendationKeys.filter(key => key.category === fnaKeysCategory);
+    return fnaRecommendationKeys.filter((key) => key.category === fnaKeysCategory);
   }, [fnaRecommendationKeys, fnaKeysCategory]);
 
   return (
@@ -117,7 +102,10 @@ export function UniversalKeyManager() {
               <Info className="w-5 h-5 text-red-600 mt-0.5 flex-shrink-0" />
               <div className="space-y-2 text-sm text-red-900">
                 <p className="font-medium">Key data failed to load</p>
-                <p>The product key definitions could not be loaded from the key manager constants. Please refresh the page or contact support if the issue persists.</p>
+                <p>
+                  The product key definitions could not be loaded from the key manager constants.
+                  Please refresh the page or contact support if the issue persists.
+                </p>
               </div>
             </div>
           </CardContent>
@@ -134,8 +122,9 @@ export function UniversalKeyManager() {
             <div className="flex-1">
               <CardTitle className="text-2xl">Universal Key Manager</CardTitle>
               <CardDescription className="mt-2 text-base">
-                Centralized reference for all keys in the Navigate Wealth platform. Keys are the 
-                standardized data points used throughout FNAs, dashboards, reports, and calculations.
+                Centralized reference for all keys in the Navigate Wealth platform. Keys are the
+                standardized data points used throughout FNAs, dashboards, reports, and
+                calculations.
               </CardDescription>
             </div>
           </div>
@@ -150,10 +139,22 @@ export function UniversalKeyManager() {
             <div className="space-y-2 text-sm text-blue-900">
               <p className="font-medium">Understanding Client Keys:</p>
               <ul className="list-disc list-inside space-y-1 text-blue-800">
-                <li><strong>Product Keys</strong> - Individual data points mapped from product fields (e.g., &quot;Life Cover&quot; for a specific policy)</li>
-                <li><strong>Calculated Keys</strong> - Automatically computed totals by summing related product keys (e.g., &quot;Life Cover Total&quot; across all policies)</li>
-                <li><strong>Client Key Values</strong> - Stored per client in KV store (e.g., <code className="bg-blue-100 px-1 rounded">user_profile:shawn:client_keys</code>)</li>
-                <li><strong>Usage</strong> - Keys power FNAs, dashboards, AI advice engine, reports, and compliance tracking</li>
+                <li>
+                  <strong>Product Keys</strong> - Individual data points mapped from product fields
+                  (e.g., &quot;Life Cover&quot; for a specific policy)
+                </li>
+                <li>
+                  <strong>Calculated Keys</strong> - Automatically computed totals by summing
+                  related product keys (e.g., &quot;Life Cover Total&quot; across all policies)
+                </li>
+                <li>
+                  <strong>Client Key Values</strong> - Stored per client in KV store (e.g.,{' '}
+                  <code className="bg-blue-100 px-1 rounded">user_profile:shawn:client_keys</code>)
+                </li>
+                <li>
+                  <strong>Usage</strong> - Keys power FNAs, dashboards, AI advice engine, reports,
+                  and compliance tracking
+                </li>
               </ul>
             </div>
           </div>
@@ -217,7 +218,7 @@ export function UniversalKeyManager() {
                   {filteredClientKeys.length} keys
                 </Badge>
               </div>
-              
+
               {/* Category Filter */}
               <div className="mt-4 pt-4 border-t">
                 <CategoryFilter
@@ -253,7 +254,7 @@ export function UniversalKeyManager() {
                   {filteredIndividualKeys.length} keys
                 </Badge>
               </div>
-              
+
               {/* Category Filter */}
               <div className="mt-4 pt-4 border-t">
                 <CategoryFilter
@@ -282,14 +283,15 @@ export function UniversalKeyManager() {
                 <div>
                   <CardTitle>Calculated Total Keys</CardTitle>
                   <CardDescription className="mt-1">
-                    Automatically computed totals derived from summing product keys across all client policies
+                    Automatically computed totals derived from summing product keys across all
+                    client policies
                   </CardDescription>
                 </div>
                 <Badge variant="outline" className="text-sm">
                   {filteredCalculatedKeys.length} totals
                 </Badge>
               </div>
-              
+
               {/* Category Filter */}
               <div className="mt-4 pt-4 border-t">
                 <CategoryFilter
@@ -306,7 +308,12 @@ export function UniversalKeyManager() {
                   <Info className="w-5 h-5 text-amber-600 mt-0.5 flex-shrink-0" />
                   <div className="text-sm text-amber-900">
                     <p className="font-medium mb-1">How Calculated Keys Work:</p>
-                    <p>These totals are automatically computed by the backend <code className="bg-amber-100 px-1 rounded">recalculateClientTotals</code> function whenever policies are saved. The FNA modules read these pre-calculated values from the KV store.</p>
+                    <p>
+                      These totals are automatically computed by the backend{' '}
+                      <code className="bg-amber-100 px-1 rounded">recalculateClientTotals</code>{' '}
+                      function whenever policies are saved. The FNA modules read these
+                      pre-calculated values from the KV store.
+                    </p>
                   </div>
                 </div>
               </div>
@@ -335,7 +342,7 @@ export function UniversalKeyManager() {
                   {filteredFnaKeys.length} recommendations
                 </Badge>
               </div>
-              
+
               {/* Category Filter */}
               <div className="mt-4 pt-4 border-t">
                 <CategoryFilter
@@ -352,7 +359,11 @@ export function UniversalKeyManager() {
                   <Target className="w-5 h-5 text-purple-600 mt-0.5 flex-shrink-0" />
                   <div className="text-sm text-purple-900">
                     <p className="font-medium mb-1">How FNA Recommendations Work:</p>
-                    <p>These keys are used to store the &quot;Recommended&quot; or &quot;Goal&quot; values calculated by the FNA engines. They can be mapped to document generation, AI advice, and summary dashboards.</p>
+                    <p>
+                      These keys are used to store the &quot;Recommended&quot; or &quot;Goal&quot;
+                      values calculated by the FNA engines. They can be mapped to document
+                      generation, AI advice, and summary dashboards.
+                    </p>
                   </div>
                 </div>
               </div>
@@ -377,9 +388,10 @@ export function UniversalKeyManager() {
             </CardHeader>
             <CardContent>
               <div className="space-y-6">
-                {KeyAPI.KEY_CATEGORIES.map(category => {
-                  const categoryKeys = KeyAPI.getKeysByCategory(category.id).filter(key =>
-                    KeyAPI.KEY_USAGE_MAP[key.id] && KeyAPI.KEY_USAGE_MAP[key.id].length > 0
+                {KeyAPI.KEY_CATEGORIES.map((category) => {
+                  const categoryKeys = KeyAPI.getKeysByCategory(category.id).filter(
+                    (key) =>
+                      KeyAPI.KEY_USAGE_MAP[key.id] && KeyAPI.KEY_USAGE_MAP[key.id].length > 0,
                   );
 
                   if (categoryKeys.length === 0) return null;
@@ -397,8 +409,8 @@ export function UniversalKeyManager() {
                       </div>
 
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                        {categoryKeys.map(key => (
-                          <div 
+                        {categoryKeys.map((key) => (
+                          <div
                             key={key.id}
                             className="p-3 border rounded-lg bg-gray-50/50 hover:bg-gray-50"
                           >
@@ -409,8 +421,8 @@ export function UniversalKeyManager() {
                                   {key.name}
                                 </div>
                                 <div className="flex flex-wrap gap-1">
-                                  {KeyAPI.KEY_USAGE_MAP[key.id]?.map(module => (
-                                    <Badge 
+                                  {KeyAPI.KEY_USAGE_MAP[key.id]?.map((module) => (
+                                    <Badge
                                       key={module}
                                       variant="outline"
                                       className="text-xs bg-blue-50 text-blue-700 border-blue-200"

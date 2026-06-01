@@ -1,9 +1,9 @@
 /**
  * useChatHistory Hook
- * 
+ *
  * Hook for managing chat history.
  * Handles loading and clearing history.
- * 
+ *
  * @module advice-engine/hooks/useChatHistory
  */
 
@@ -14,9 +14,9 @@ import type { Message, UseChatHistoryReturn } from '../types';
 
 /**
  * Hook for chat history management
- * 
+ *
  * @returns History state and actions
- * 
+ *
  * @example
  * const {
  *   history,
@@ -26,10 +26,10 @@ import type { Message, UseChatHistoryReturn } from '../types';
  *   clearHistory,
  *   hasLoaded
  * } = useChatHistory();
- * 
+ *
  * // Load history manually
  * await loadHistory();
- * 
+ *
  * // Clear history
  * await clearHistory();
  */

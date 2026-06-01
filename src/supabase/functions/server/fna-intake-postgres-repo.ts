@@ -9,7 +9,11 @@
 
 import { createClient, type SupabaseClient } from 'jsr:@supabase/supabase-js@2.49.8';
 import { createModuleLogger } from './stderr-logger.ts';
-import type { FnaIntakeDomain, FnaIntakeSession, FnaIntakeSubmittedBy } from './fna-intake-types.ts';
+import type {
+  FnaIntakeDomain,
+  FnaIntakeSession,
+  FnaIntakeSubmittedBy,
+} from './fna-intake-types.ts';
 
 const log = createModuleLogger('fna-intake-pg-repo');
 
@@ -25,9 +29,7 @@ export const fnaIntakeDualWriteEnabled: boolean =
   (envGet('FNA_INTAKE_DUAL_WRITE') ?? 'false').toLowerCase() === 'true';
 
 export const fnaIntakeReadSource: FnaIntakeReadSource =
-  (envGet('FNA_INTAKE_READ_FROM') ?? 'kv').toLowerCase() === 'postgres'
-    ? 'postgres'
-    : 'kv';
+  (envGet('FNA_INTAKE_READ_FROM') ?? 'kv').toLowerCase() === 'postgres' ? 'postgres' : 'kv';
 
 export const fnaIntakePostgresOnly: boolean =
   !fnaIntakeDualWriteEnabled && fnaIntakeReadSource === 'postgres';
@@ -188,11 +190,19 @@ export const fnaIntakePgRepo = {
     sessionId: string,
     admin: FnaIntakeSubmittedBy,
     placeholderLinkedId: string,
-  ): Promise<{ kind: 'claimed'; session: FnaIntakeSession } | { kind: 'already_accepted'; session: FnaIntakeSession } | null> {
+  ): Promise<
+    | { kind: 'claimed'; session: FnaIntakeSession }
+    | { kind: 'already_accepted'; session: FnaIntakeSession }
+    | null
+  > {
     const run = async () => {
       const existing = await fnaIntakePgRepo.getSessionById(sessionId);
       if (!existing) return null;
-      if (existing.status === 'accepted' && existing.linkedFnaId && !existing.linkedFnaId.startsWith('pending:')) {
+      if (
+        existing.status === 'accepted' &&
+        existing.linkedFnaId &&
+        !existing.linkedFnaId.startsWith('pending:')
+      ) {
         return { kind: 'already_accepted' as const, session: existing };
       }
       if (existing.status !== 'submitted') return null;

@@ -1,5 +1,12 @@
 import React, { Suspense, useState } from 'react';
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '../../../../ui/card';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from '../../../../ui/card';
 import { Button } from '../../../../ui/button';
 import {
   Dialog,
@@ -13,7 +20,9 @@ import { FileSpreadsheet, ChevronRight, AlertTriangle, Loader2 } from 'lucide-re
 import { isFormPrefillEnabled } from '../../../../../utils/formPrefillFeature';
 
 const FormTemplatesModule = React.lazy(() =>
-  import('../../form-prefill/FormTemplatesModule').then((m) => ({ default: m.FormTemplatesModule })),
+  import('../../form-prefill/FormTemplatesModule').then((m) => ({
+    default: m.FormTemplatesModule,
+  })),
 );
 
 function DialogFallback() {
@@ -54,7 +63,10 @@ export function FormTemplateTool({ selectedClientId }: FormTemplateToolProps) {
           </p>
         </CardContent>
         <CardFooter>
-          <Button variant="ghost" className="w-full justify-start pl-0 text-purple-600 transition-all group-hover:pl-2">
+          <Button
+            variant="ghost"
+            className="w-full justify-start pl-0 text-purple-600 transition-all group-hover:pl-2"
+          >
             Open Tool <ChevronRight className="ml-2 h-4 w-4" />
           </Button>
         </CardFooter>

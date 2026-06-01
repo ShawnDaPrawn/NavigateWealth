@@ -1,13 +1,5 @@
 import React, { useState, Suspense } from 'react';
-import { 
-  CheckCircle, 
-  Users, 
-  Mail, 
-  Send, 
-  History,
-  Settings,
-  Loader2
-} from 'lucide-react';
+import { CheckCircle, Users, Mail, Send, History, Settings, Loader2 } from 'lucide-react';
 import { Button } from '../../../ui/button';
 import { CommunicationDraft } from './types';
 import { Step1Recipients } from './components/steps/Step1Recipients';
@@ -19,8 +11,14 @@ import { Step3Review } from './components/steps/Step3Review';
 import { useCurrentUserPermissions } from '../personnel/hooks/usePermissions';
 
 // Heavy sub-views — lazy-loaded (only rendered on user action)
-const CommunicationHistory = React.lazy(() => import('./components/CommunicationHistory').then(m => ({ default: m.CommunicationHistory })));
-const TransactionalEmailsManager = React.lazy(() => import('./components/TransactionalEmailsManager').then(m => ({ default: m.TransactionalEmailsManager })));
+const CommunicationHistory = React.lazy(() =>
+  import('./components/CommunicationHistory').then((m) => ({ default: m.CommunicationHistory })),
+);
+const TransactionalEmailsManager = React.lazy(() =>
+  import('./components/TransactionalEmailsManager').then((m) => ({
+    default: m.TransactionalEmailsManager,
+  })),
+);
 
 function ViewFallback() {
   return (
@@ -55,8 +53,8 @@ export function CommunicationModule() {
     bodyHtml: '',
     attachments: [],
     scheduling: {
-      type: 'immediate'
-    }
+      type: 'immediate',
+    },
   });
 
   const handleNext = () => {
@@ -68,7 +66,7 @@ export function CommunicationModule() {
   };
 
   const updateDraft = (updates: Partial<CommunicationDraft>) => {
-    setDraft(prev => ({ ...prev, ...updates }));
+    setDraft((prev) => ({ ...prev, ...updates }));
   };
 
   const handleReset = () => {
@@ -82,8 +80,8 @@ export function CommunicationModule() {
       bodyHtml: '',
       attachments: [],
       scheduling: {
-        type: 'immediate'
-      }
+        type: 'immediate',
+      },
     });
   };
 
@@ -109,9 +107,7 @@ export function CommunicationModule() {
       <div className="flex items-start justify-between">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Communication Centre</h1>
-          <p className="text-muted-foreground mt-1">
-            Create and manage client communications
-          </p>
+          <p className="text-muted-foreground mt-1">Create and manage client communications</p>
         </div>
         <div className="flex gap-2">
           <Button variant="outline" onClick={() => setShowHistory(true)}>
@@ -136,20 +132,28 @@ export function CommunicationModule() {
             return (
               <div key={step.id} className="contents">
                 <div className="flex flex-col items-center relative z-10">
-                  <div 
+                  <div
                     className={`w-10 h-10 rounded-full flex items-center justify-center border-2 transition-all duration-200 ${
-                      isActive 
-                        ? 'border-primary bg-primary text-white shadow-md scale-110' 
+                      isActive
+                        ? 'border-primary bg-primary text-white shadow-md scale-110'
                         : isCompleted
-                        ? 'border-primary bg-primary/10 text-primary'
-                        : 'border-muted bg-white text-muted-foreground'
+                          ? 'border-primary bg-primary/10 text-primary'
+                          : 'border-muted bg-white text-muted-foreground'
                     }`}
                   >
-                    {isCompleted ? <CheckCircle className="h-5 w-5" /> : <Icon className="h-5 w-5" />}
+                    {isCompleted ? (
+                      <CheckCircle className="h-5 w-5" />
+                    ) : (
+                      <Icon className="h-5 w-5" />
+                    )}
                   </div>
-                  <span 
+                  <span
                     className={`text-xs font-medium mt-2 transition-colors duration-200 ${
-                      isActive ? 'text-primary' : isCompleted ? 'text-primary' : 'text-muted-foreground'
+                      isActive
+                        ? 'text-primary'
+                        : isCompleted
+                          ? 'text-primary'
+                          : 'text-muted-foreground'
                     }`}
                   >
                     {step.name}
@@ -157,7 +161,7 @@ export function CommunicationModule() {
                 </div>
                 {index < STEPS.length - 1 && (
                   <div className="flex-1 h-[2px] mx-4 bg-gray-100 relative">
-                    <div 
+                    <div
                       className="absolute top-0 left-0 h-full bg-primary transition-all duration-500 ease-in-out"
                       style={{ width: isCompleted ? '100%' : '0%' }}
                     />
@@ -172,25 +176,21 @@ export function CommunicationModule() {
       {/* Step Content */}
       <div className="min-h-[500px] animate-in fade-in slide-in-from-bottom-4 duration-500">
         {currentStep === 1 && (
-          <Step1Recipients 
-            draft={draft} 
-            updateDraft={updateDraft} 
-            onNext={handleNext} 
-          />
+          <Step1Recipients draft={draft} updateDraft={updateDraft} onNext={handleNext} />
         )}
         {currentStep === 2 && (
-          <Step2Compose 
-            draft={draft} 
-            updateDraft={updateDraft} 
-            onNext={handleNext} 
-            onBack={handleBack} 
+          <Step2Compose
+            draft={draft}
+            updateDraft={updateDraft}
+            onNext={handleNext}
+            onBack={handleBack}
           />
         )}
         {currentStep === 3 && (
-          <Step3Review 
-            draft={draft} 
-            updateDraft={updateDraft} 
-            onBack={handleBack} 
+          <Step3Review
+            draft={draft}
+            updateDraft={updateDraft}
+            onBack={handleBack}
             onReset={handleReset}
             canSend={canSend}
           />

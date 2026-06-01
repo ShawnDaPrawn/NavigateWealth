@@ -10,32 +10,30 @@ import { z } from 'zod';
 const positiveNumber = z.number().min(0, 'Cannot be negative');
 const positiveOptionalNumber = z.number().min(0, 'Cannot be negative').optional();
 
-export const RetirementFNAInputSchema = z.object({
-  // Client Profile
-  currentAge: z.number()
-    .min(18, 'Minimum age is 18')
-    .max(100, 'Maximum age is 100'),
-  retirementAge: z.number()
-    .min(40, 'Minimum retirement age is 40')
-    .max(80, 'Maximum retirement age is 80'),
+export const RetirementFNAInputSchema = z
+  .object({
+    // Client Profile
+    currentAge: z.number().min(18, 'Minimum age is 18').max(100, 'Maximum age is 100'),
+    retirementAge: z
+      .number()
+      .min(40, 'Minimum retirement age is 40')
+      .max(80, 'Maximum retirement age is 80'),
 
-  // Current Financial Position
-  currentMonthlyIncome: positiveNumber.refine(
-    (val) => val > 0,
-    'Monthly income must be greater than zero'
-  ),
-  currentMonthlyContribution: positiveNumber,
-  currentRetirementSavings: positiveNumber,
+    // Current Financial Position
+    currentMonthlyIncome: positiveNumber.refine(
+      (val) => val > 0,
+      'Monthly income must be greater than zero',
+    ),
+    currentMonthlyContribution: positiveNumber,
+    currentRetirementSavings: positiveNumber,
 
-  // Optional / Advanced
-  existingProducts: z.array(z.unknown()).optional(),
-}).refine(
-  (data) => data.retirementAge > data.currentAge,
-  {
+    // Optional / Advanced
+    existingProducts: z.array(z.unknown()).optional(),
+  })
+  .refine((data) => data.retirementAge > data.currentAge, {
     message: 'Retirement age must be greater than current age',
     path: ['retirementAge'],
-  }
-);
+  });
 
 export type RetirementFNAFormValues = z.infer<typeof RetirementFNAInputSchema>;
 
@@ -48,11 +46,11 @@ export const RetirementFNAAdjustmentsSchema = z.object({
   replacementRatio: z.number().min(0.1).max(1.0).optional(),
 
   // Economic Assumptions (Nominal Rates)
-  inflationRate: z.number().min(0).max(0.20).optional(),
-  preRetirementReturn: z.number().min(0).max(0.30).optional(),
-  postRetirementReturn: z.number().min(0).max(0.30).optional(),
-  salaryEscalation: z.number().min(0).max(0.20).optional(),
-  premiumEscalation: z.number().min(0).max(0.20).optional(),
+  inflationRate: z.number().min(0).max(0.2).optional(),
+  preRetirementReturn: z.number().min(0).max(0.3).optional(),
+  postRetirementReturn: z.number().min(0).max(0.3).optional(),
+  salaryEscalation: z.number().min(0).max(0.2).optional(),
+  premiumEscalation: z.number().min(0).max(0.2).optional(),
 
   // Documentation
   adviserNotes: z.string().optional(),

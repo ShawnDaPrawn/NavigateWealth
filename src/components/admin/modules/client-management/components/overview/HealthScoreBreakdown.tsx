@@ -54,9 +54,7 @@ export function HealthScoreBreakdown({ subScores, mode = 'adviser' }: HealthScor
           <div key={key} className="flex items-center gap-3">
             {/* Label */}
             <div className="w-[76px] flex-shrink-0">
-              <span className={`text-xs font-medium ${cfg.textClass}`}>
-                {cfg.label}
-              </span>
+              <span className={`text-xs font-medium ${cfg.textClass}`}>{cfg.label}</span>
             </div>
 
             {/* Progress bar */}

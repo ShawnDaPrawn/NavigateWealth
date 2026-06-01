@@ -46,32 +46,40 @@ const service = new LinkedInService();
  * Query params:
  *   redirectUri — the URI LinkedIn should redirect back to after authorization
  */
-app.get('/auth-url', requireAdmin, asyncHandler(async (c) => {
-  const adminUserId = c.get('userId') as string;
-  const redirectUri = c.req.query('redirectUri');
+app.get(
+  '/auth-url',
+  requireAdmin,
+  asyncHandler(async (c) => {
+    const adminUserId = c.get('userId') as string;
+    const redirectUri = c.req.query('redirectUri');
 
-  if (!redirectUri) {
-    return c.json({ success: false, error: 'redirectUri query parameter is required' }, 400);
-  }
+    if (!redirectUri) {
+      return c.json({ success: false, error: 'redirectUri query parameter is required' }, 400);
+    }
 
-  const authUrl = await service.getAuthorizationUrl(adminUserId, redirectUri);
+    const authUrl = await service.getAuthorizationUrl(adminUserId, redirectUri);
 
-  return c.json({ success: true, data: { authUrl } });
-}));
+    return c.json({ success: true, data: { authUrl } });
+  }),
+);
 
 /**
  * POST /linkedin/callback
  * Exchange the authorization code for tokens.
  * Body: { code, state, redirectUri }
  */
-app.post('/callback', requireAdmin, asyncHandler(async (c) => {
-  const body = await c.req.json();
-  const input = OAuthCallbackSchema.parse(body);
+app.post(
+  '/callback',
+  requireAdmin,
+  asyncHandler(async (c) => {
+    const body = await c.req.json();
+    const input = OAuthCallbackSchema.parse(body);
 
-  const status = await service.handleCallback(input.code, input.state, input.redirectUri);
+    const status = await service.handleCallback(input.code, input.state, input.redirectUri);
 
-  return c.json({ success: true, data: status });
-}));
+    return c.json({ success: true, data: status });
+  }),
+);
 
 // ============================================================================
 // Connection Management
@@ -81,23 +89,31 @@ app.post('/callback', requireAdmin, asyncHandler(async (c) => {
  * GET /linkedin/status
  * Check whether LinkedIn is connected for the current admin user.
  */
-app.get('/status', requireAdmin, asyncHandler(async (c) => {
-  const adminUserId = c.get('userId') as string;
-  const status = await service.getStatus(adminUserId);
+app.get(
+  '/status',
+  requireAdmin,
+  asyncHandler(async (c) => {
+    const adminUserId = c.get('userId') as string;
+    const status = await service.getStatus(adminUserId);
 
-  return c.json({ success: true, data: status });
-}));
+    return c.json({ success: true, data: status });
+  }),
+);
 
 /**
  * POST /linkedin/disconnect
  * Disconnect LinkedIn — removes stored tokens.
  */
-app.post('/disconnect', requireAdmin, asyncHandler(async (c) => {
-  const adminUserId = c.get('userId') as string;
-  await service.disconnect(adminUserId);
+app.post(
+  '/disconnect',
+  requireAdmin,
+  asyncHandler(async (c) => {
+    const adminUserId = c.get('userId') as string;
+    await service.disconnect(adminUserId);
 
-  return c.json({ success: true, data: { message: 'LinkedIn disconnected successfully' } });
-}));
+    return c.json({ success: true, data: { message: 'LinkedIn disconnected successfully' } });
+  }),
+);
 
 // ============================================================================
 // Share on LinkedIn
@@ -107,68 +123,80 @@ app.post('/disconnect', requireAdmin, asyncHandler(async (c) => {
  * POST /linkedin/share/text
  * Create a text-only LinkedIn post.
  */
-app.post('/share/text', requireAdmin, asyncHandler(async (c) => {
-  const adminUserId = c.get('userId') as string;
-  const body = await c.req.json();
-  const input = ShareTextSchema.parse(body);
+app.post(
+  '/share/text',
+  requireAdmin,
+  asyncHandler(async (c) => {
+    const adminUserId = c.get('userId') as string;
+    const body = await c.req.json();
+    const input = ShareTextSchema.parse(body);
 
-  const result = await service.shareText(adminUserId, input.text, input.visibility);
+    const result = await service.shareText(adminUserId, input.text, input.visibility);
 
-  if (!result.success) {
-    return c.json({ success: false, error: result.error }, 502);
-  }
+    if (!result.success) {
+      return c.json({ success: false, error: result.error }, 502);
+    }
 
-  return c.json({ success: true, data: { postId: result.postId } });
-}));
+    return c.json({ success: true, data: { postId: result.postId } });
+  }),
+);
 
 /**
  * POST /linkedin/share/article
  * Create a LinkedIn post with an article/URL attachment.
  */
-app.post('/share/article', requireAdmin, asyncHandler(async (c) => {
-  const adminUserId = c.get('userId') as string;
-  const body = await c.req.json();
-  const input = ShareArticleSchema.parse(body);
+app.post(
+  '/share/article',
+  requireAdmin,
+  asyncHandler(async (c) => {
+    const adminUserId = c.get('userId') as string;
+    const body = await c.req.json();
+    const input = ShareArticleSchema.parse(body);
 
-  const result = await service.shareArticle(
-    adminUserId,
-    input.text,
-    input.url,
-    input.title,
-    input.description,
-    input.visibility,
-  );
+    const result = await service.shareArticle(
+      adminUserId,
+      input.text,
+      input.url,
+      input.title,
+      input.description,
+      input.visibility,
+    );
 
-  if (!result.success) {
-    return c.json({ success: false, error: result.error }, 502);
-  }
+    if (!result.success) {
+      return c.json({ success: false, error: result.error }, 502);
+    }
 
-  return c.json({ success: true, data: { postId: result.postId } });
-}));
+    return c.json({ success: true, data: { postId: result.postId } });
+  }),
+);
 
 /**
  * POST /linkedin/share/image
  * Upload an image to LinkedIn and create a share with it.
  */
-app.post('/share/image', requireAdmin, asyncHandler(async (c) => {
-  const adminUserId = c.get('userId') as string;
-  const body = await c.req.json();
-  const input = ShareImageSchema.parse(body);
+app.post(
+  '/share/image',
+  requireAdmin,
+  asyncHandler(async (c) => {
+    const adminUserId = c.get('userId') as string;
+    const body = await c.req.json();
+    const input = ShareImageSchema.parse(body);
 
-  const result = await service.shareImage(
-    adminUserId,
-    input.text,
-    input.imageUrl,
-    input.title,
-    input.description,
-    input.visibility,
-  );
+    const result = await service.shareImage(
+      adminUserId,
+      input.text,
+      input.imageUrl,
+      input.title,
+      input.description,
+      input.visibility,
+    );
 
-  if (!result.success) {
-    return c.json({ success: false, error: result.error }, 502);
-  }
+    if (!result.success) {
+      return c.json({ success: false, error: result.error }, 502);
+    }
 
-  return c.json({ success: true, data: { postId: result.postId } });
-}));
+    return c.json({ success: true, data: { postId: result.postId } });
+  }),
+);
 
 export default app;

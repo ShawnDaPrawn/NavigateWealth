@@ -80,9 +80,7 @@ async function main() {
     process.exit(1);
   }
 
-  out =
-    out ||
-    src.replace(/\.xlsx$/i, '_IMPORT_READY.xlsx');
+  out = out || src.replace(/\.xlsx$/i, '_IMPORT_READY.xlsx');
 
   const absoluteSrc = path.resolve(src);
   const buf = fs.readFileSync(absoluteSrc);
@@ -95,10 +93,9 @@ async function main() {
   const headerRow = raw[0].map((/** @type {unknown} */ h) => String(h || '').trim());
 
   const headerToField = buildHeaderFieldMap(headerRow);
-  const missingTpl = hdrCols.filter(
-    ([hdr]) =>
-      headerRow.findIndex((x) => x.toLowerCase() === hdr.toLowerCase()) < 0,
-  ).map(([h]) => h);
+  const missingTpl = hdrCols
+    .filter(([hdr]) => headerRow.findIndex((x) => x.toLowerCase() === hdr.toLowerCase()) < 0)
+    .map(([h]) => h);
   if (missingTpl.length) {
     console.error('Unexpected: template headers missing from sheet:', missingTpl.join(', '));
     process.exit(1);
@@ -160,7 +157,9 @@ async function main() {
   fs.writeFileSync(absOut, outBuf);
   console.log('Written:', absOut);
   console.log(`Client Data: ${good.length - 1} row(s) ready to import (+ header)`);
-  console.log(`${needs.length - 1} row(s) saved on "Needs contact fields" — add Email / Cellphone, then paste back or merge.`);
+  console.log(
+    `${needs.length - 1} row(s) saved on "Needs contact fields" — add Email / Cellphone, then paste back or merge.`,
+  );
 
   process.exit(0);
 }

@@ -1,11 +1,11 @@
-export type BlockType = 
-  | 'section_header' 
-  | 'text' 
-  | 'field_grid' 
-  | 'table' 
-  | 'checkbox_table' 
-  | 'radio_options' 
-  | 'signature' 
+export type BlockType =
+  | 'section_header'
+  | 'text'
+  | 'field_grid'
+  | 'table'
+  | 'checkbox_table'
+  | 'radio_options'
+  | 'signature'
   | 'page_break'
   | 'client_summary'
   | 'financial_table'
@@ -41,7 +41,14 @@ export interface FormBlock {
     matchAny: boolean;
     conditions: Array<{
       fieldKey: string;
-      operator: 'equals' | 'not_equals' | 'contains' | 'not_empty' | 'is_empty' | 'greater_than' | 'less_than';
+      operator:
+        | 'equals'
+        | 'not_equals'
+        | 'contains'
+        | 'not_empty'
+        | 'is_empty'
+        | 'greater_than'
+        | 'less_than';
       value?: string | number;
     }>;
   };
@@ -105,7 +112,7 @@ export interface TableData extends BlockData {
   hasColumnHeaders: boolean;
   hasRowHeaders: boolean;
   columnHeaders: string[]; // Text for column headers
-  rowHeaders: string[];    // Text for row headers
+  rowHeaders: string[]; // Text for row headers
   rows: TableRow[];
 }
 

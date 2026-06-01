@@ -12,11 +12,9 @@ export const PageBreakBlock: BlockDefinition = {
   render: () => null, // Page breaks are handled structurally by FormCanvas
   editor: () => {
     return (
-        <div className="p-4 bg-gray-50 rounded border border-gray-200 text-center">
-            <div className="text-xs text-gray-500">
-                This block forces a new page in the PDF output.
-            </div>
-        </div>
+      <div className="p-4 bg-gray-50 rounded border border-gray-200 text-center">
+        <div className="text-xs text-gray-500">This block forces a new page in the PDF output.</div>
+      </div>
     );
-  }
+  },
 };

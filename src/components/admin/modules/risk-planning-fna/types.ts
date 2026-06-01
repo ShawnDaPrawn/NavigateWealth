@@ -1,7 +1,7 @@
 /**
  * Risk Planning FNA (Financial Needs Analysis) Type Definitions
  * South African FAIS-compliant risk planning module
- * 
+ *
  * Non-Negotiable: No `any` types, all boundaries strictly typed
  */
 
@@ -9,7 +9,7 @@
 
 export type EmploymentType = 'employed' | 'self-employed';
 
-export type OverrideClassification = 
+export type OverrideClassification =
   | 'Affordability Constraint'
   | 'Client Specific Request'
   | 'Underwriting Limitation'
@@ -19,7 +19,14 @@ export type OverrideClassification =
 
 export type IPBenefitPeriod = '6-months' | '12-months' | '24-months';
 
-export type IPEscalationType = 'fixed-1' | 'fixed-2' | 'fixed-3' | 'fixed-4' | 'fixed-5' | 'cpi-linked' | 'level';
+export type IPEscalationType =
+  | 'fixed-1'
+  | 'fixed-2'
+  | 'fixed-3'
+  | 'fixed-4'
+  | 'fixed-5'
+  | 'cpi-linked'
+  | 'level';
 
 // ==================== INPUT TYPES ====================
 
@@ -75,32 +82,32 @@ export interface InformationGatheringInput {
   netMonthlyIncome: number;
   netAnnualIncome: number; // Derived: netMonthlyIncome × 12
   incomeEscalationAssumption: number; // Percentage (e.g., 6 for 6%)
-  
+
   // Personal Information
   currentAge: number;
   retirementAge: number;
   employmentType: EmploymentType;
-  
+
   // Dependants
   dependants: Dependant[];
-  
+
   // Financial Position
   totalOutstandingDebts: number;
   totalCurrentAssets: number;
   totalEstateValue: number; // Derived: totalCurrentAssets - totalOutstandingDebts
-  
+
   // Spouse Information (optional)
   spouseFullName?: string;
   spouseAverageMonthlyIncome?: number;
   combinedHouseholdIncome: number; // Derived: grossMonthlyIncome + (spouseAverageMonthlyIncome || 0)
   clientIncomePercentage: number; // Derived: (grossMonthlyIncome / combinedHouseholdIncome) × 100
-  
+
   // Household
   totalHouseholdMonthlyExpenditure: number; // From budget module
-  
+
   // Existing Cover
   existingCover: ExistingCover;
-  
+
   // Income Protection Settings
   incomeProtectionSettings: IncomeProtectionSettings;
 }
@@ -246,7 +253,12 @@ export interface Adjustments {
 // ==================== FINAL OUTPUT TYPES ====================
 
 export interface FinalRiskNeed {
-  riskType: 'life' | 'disability' | 'severeIllness' | 'incomeProtectionTemporary' | 'incomeProtectionPermanent';
+  riskType:
+    | 'life'
+    | 'disability'
+    | 'severeIllness'
+    | 'incomeProtectionTemporary'
+    | 'incomeProtectionPermanent';
   label: string;
   grossNeed: number;
   existingCoverPersonal: number;
@@ -266,20 +278,20 @@ export interface PublishedFNA {
   clientId: string;
   clientName: string;
   status: 'draft' | 'published' | 'archived';
-  
+
   // Step 1: Input Data
   inputData: InformationGatheringInput;
-  
+
   // Step 2: Calculations
   calculations: RiskCalculations;
-  
+
   // Step 3: Adjustments
   adjustments: Adjustments;
-  
+
   // Step 4: Final Output
   finalNeeds: FinalRiskNeed[];
   complianceDisclaimers: string[];
-  
+
   // Metadata
   createdAt: string;
   updatedAt: string;
@@ -301,16 +313,16 @@ export interface WizardState {
   currentStep: WizardStep;
   clientId?: string;
   clientName?: string;
-  
+
   // Step 1
   inputData: InformationGatheringInput | null;
-  
+
   // Step 2
   calculations: RiskCalculations | null;
-  
+
   // Step 3
   adjustments: Adjustments;
-  
+
   // Step 4
   isPublishing: boolean;
   publishError?: string;
@@ -394,7 +406,7 @@ export interface InformationGatheringFormValues {
   spouseFullName: string;
   spouseAverageMonthlyIncome: string;
   totalHouseholdMonthlyExpenditure: string;
-  
+
   // Existing Cover
   existingCoverLifePersonal: string;
   existingCoverLifeGroup: string;
@@ -406,7 +418,7 @@ export interface InformationGatheringFormValues {
   existingCoverIPTemporaryGroup: string;
   existingCoverIPPermanentPersonal: string;
   existingCoverIPPermanentGroup: string;
-  
+
   // Income Protection Settings
   ipTemporaryBenefitPeriod: IPBenefitPeriod;
   ipPermanentEscalation: IPEscalationType;

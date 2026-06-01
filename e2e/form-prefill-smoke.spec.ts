@@ -12,10 +12,8 @@
 
 import { test, expect, type Page } from '@playwright/test';
 
-const adviserEmail =
-  process.env.E2E_ADMIN_EMAIL ?? process.env.E2E_FNA_ADVISER_EMAIL;
-const adviserPassword =
-  process.env.E2E_ADMIN_PASSWORD ?? process.env.E2E_FNA_ADVISER_PASSWORD;
+const adviserEmail = process.env.E2E_ADMIN_EMAIL ?? process.env.E2E_FNA_ADVISER_EMAIL;
+const adviserPassword = process.env.E2E_ADMIN_PASSWORD ?? process.env.E2E_FNA_ADVISER_PASSWORD;
 const clientId = process.env.E2E_FNA_CLIENT_ID;
 const hasCredentials = adviserEmail && adviserPassword;
 
@@ -64,7 +62,9 @@ async function dismissPrefillReviewIfOpen(page: Page) {
 }
 
 async function applyPrefillFromBanner(page: Page) {
-  const openReviewDialog = page.getByRole('dialog').filter({ hasText: /review client data matches/i });
+  const openReviewDialog = page
+    .getByRole('dialog')
+    .filter({ hasText: /review client data matches/i });
   if (await openReviewDialog.isVisible().catch(() => false)) {
     const applyBtn = openReviewDialog.getByTestId('prefill-apply-selected');
     await expect(applyBtn).toBeEnabled({ timeout: 15_000 });
@@ -81,7 +81,10 @@ async function applyPrefillFromBanner(page: Page) {
 }
 
 test.describe('Form prefill — staging smoke', () => {
-  test.skip(!hasCredentials, 'Set E2E_ADMIN_* or E2E_FNA_ADVISER_* credentials to run prefill smoke.');
+  test.skip(
+    !hasCredentials,
+    'Set E2E_ADMIN_* or E2E_FNA_ADVISER_* credentials to run prefill smoke.',
+  );
 
   test('client drawer exposes prefill entry points', async ({ page }) => {
     await loginAsAdviser(page);
@@ -106,7 +109,10 @@ test.describe('Form prefill — staging smoke', () => {
     await openClientDrawer(page);
     await openFnaWizard(page, /risk planning/i);
 
-    const reviewDialog = page.getByRole('dialog').filter({ hasText: /review client data matches/i }).last();
+    const reviewDialog = page
+      .getByRole('dialog')
+      .filter({ hasText: /review client data matches/i })
+      .last();
     await expect(reviewDialog).toBeVisible({ timeout: 30_000 });
     await reviewDialog.getByRole('button', { name: /skip prefill/i }).click();
     await expect(reviewDialog).toBeHidden({ timeout: 20_000 });
@@ -138,7 +144,9 @@ test.describe('Form prefill — staging smoke', () => {
 
     await expect(page).toHaveURL(/module=resources/, { timeout: 15_000 });
     await expect(page).toHaveURL(/resourcesTab=tools/);
-    await expect(page.getByRole('heading', { name: /resource center/i })).toBeVisible({ timeout: 30_000 });
+    await expect(page.getByRole('heading', { name: /resource center/i })).toBeVisible({
+      timeout: 30_000,
+    });
     await expect(page.getByText(/Form Template Library/i)).toBeVisible({ timeout: 30_000 });
     await expect(page.getByRole('tab', { name: /tools/i })).toHaveAttribute('data-state', 'active');
 

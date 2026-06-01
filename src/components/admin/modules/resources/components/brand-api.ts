@@ -98,7 +98,14 @@ export interface TypographyConfig {
 export interface CollateralItem {
   id: string;
   name: string;
-  category: 'letterhead' | 'email_banner' | 'social_template' | 'watermark' | 'presentation' | 'business_card' | 'other';
+  category:
+    | 'letterhead'
+    | 'email_banner'
+    | 'social_template'
+    | 'watermark'
+    | 'presentation'
+    | 'business_card'
+    | 'other';
   description: string;
   fileName: string;
   storagePath: string;
@@ -245,39 +252,56 @@ export const brandApi = {
     formData.append('label', label);
     formData.append('usageNotes', usageNotes);
     formData.append('uploadedBy', 'admin');
-    (Object.entries(files) as Array<[LogoAssetFormat, File | null | undefined]>).forEach(([format, file]) => {
-      if (file) {
-        formData.append(`${format}File`, file);
-      }
-    });
-    const res = await api.post<{ success: boolean; logos: LogoEntry[] }>('/brand/logos/upload', formData);
+    (Object.entries(files) as Array<[LogoAssetFormat, File | null | undefined]>).forEach(
+      ([format, file]) => {
+        if (file) {
+          formData.append(`${format}File`, file);
+        }
+      },
+    );
+    const res = await api.post<{ success: boolean; logos: LogoEntry[] }>(
+      '/brand/logos/upload',
+      formData,
+    );
     return res.logos || [];
   },
 
   async deleteLogo(variant: string): Promise<LogoEntry[]> {
-    const res = await api.delete<{ success: boolean; logos: LogoEntry[] }>(`/brand/logos/${variant}`);
+    const res = await api.delete<{ success: boolean; logos: LogoEntry[] }>(
+      `/brand/logos/${variant}`,
+    );
     return res.logos || [];
   },
 
   // Colours
   async getColourPalette(): Promise<ColourPalette | null> {
-    const res = await api.get<{ success: boolean; palette: ColourPalette | null }>('/brand/colours');
+    const res = await api.get<{ success: boolean; palette: ColourPalette | null }>(
+      '/brand/colours',
+    );
     return res.palette;
   },
 
   async saveColourPalette(palette: ColourPalette): Promise<ColourPalette> {
-    const res = await api.put<{ success: boolean; palette: ColourPalette }>('/brand/colours', palette);
+    const res = await api.put<{ success: boolean; palette: ColourPalette }>(
+      '/brand/colours',
+      palette,
+    );
     return res.palette;
   },
 
   // Typography
   async getTypography(): Promise<TypographyConfig | null> {
-    const res = await api.get<{ success: boolean; config: TypographyConfig | null }>('/brand/typography');
+    const res = await api.get<{ success: boolean; config: TypographyConfig | null }>(
+      '/brand/typography',
+    );
     return res.config;
   },
 
   async saveTypography(config: TypographyConfig): Promise<TypographyConfig> {
-    const res = await api.put<{ success: boolean; config: TypographyConfig }>('/brand/typography', config);
+    const res = await api.put<{ success: boolean; config: TypographyConfig }>(
+      '/brand/typography',
+      config,
+    );
     return res.config;
   },
 
@@ -287,25 +311,39 @@ export const brandApi = {
     return res.items || [];
   },
 
-  async uploadCollateral(file: File, name: string, category: string, description: string): Promise<CollateralItem[]> {
+  async uploadCollateral(
+    file: File,
+    name: string,
+    category: string,
+    description: string,
+  ): Promise<CollateralItem[]> {
     const formData = new FormData();
     formData.append('file', file);
     formData.append('name', name);
     formData.append('category', category);
     formData.append('description', description);
     formData.append('uploadedBy', 'admin');
-    const res = await api.post<{ success: boolean; items: CollateralItem[] }>('/brand/collateral/upload', formData);
+    const res = await api.post<{ success: boolean; items: CollateralItem[] }>(
+      '/brand/collateral/upload',
+      formData,
+    );
     return res.items || [];
   },
 
   async deleteCollateral(id: string): Promise<CollateralItem[]> {
-    const res = await api.delete<{ success: boolean; items: CollateralItem[] }>(`/brand/collateral/${id}`);
+    const res = await api.delete<{ success: boolean; items: CollateralItem[] }>(
+      `/brand/collateral/${id}`,
+    );
     return res.items || [];
   },
 
   // Guidelines
   async getGuidelines(): Promise<{ guidelines: BrandGuidelines | null; pdfUrl: string | null }> {
-    const res = await api.get<{ success: boolean; guidelines: BrandGuidelines | null; pdfUrl: string | null }>('/brand/guidelines');
+    const res = await api.get<{
+      success: boolean;
+      guidelines: BrandGuidelines | null;
+      pdfUrl: string | null;
+    }>('/brand/guidelines');
     return { guidelines: res.guidelines, pdfUrl: res.pdfUrl };
   },
 

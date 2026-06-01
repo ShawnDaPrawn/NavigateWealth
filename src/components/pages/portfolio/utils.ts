@@ -121,9 +121,7 @@ interface MapperContext {
  * Group ProductHolding[] by category bucket into the products shape
  * expected by ClientPortfolioData.
  */
-function groupHoldingsByCategory(
-  holdings: ProductHolding[],
-): ClientPortfolioData['products'] {
+function groupHoldingsByCategory(holdings: ProductHolding[]): ClientPortfolioData['products'] {
   const buckets: ClientPortfolioData['products'] = {
     life: [],
     retirement: [],
@@ -221,55 +219,65 @@ export function mapPortfolioToReportData(
       fo.investment.monthlyContribution +
       fo.medicalAid.monthlyPremium;
 
-    totalPortfolioValue =
-      fo.retirement.currentValue + fo.investment.totalValue;
+    totalPortfolioValue = fo.retirement.currentValue + fo.investment.totalValue;
 
     const retirementProducts =
       fo.retirement.currentValue > 0 || fo.retirement.monthlyContribution > 0
-        ? [{
-            provider: 'Retirement Fund',
-            product: 'Retirement Annuity',
-            policyNumber: `RET-${clientData.memberNumber}`,
-            value: fo.retirement.currentValue,
-            premium: fo.retirement.monthlyContribution,
-            status: fo.retirement.status === 'on-track' ? 'Active' : 'Review Needed',
-          }]
+        ? [
+            {
+              provider: 'Retirement Fund',
+              product: 'Retirement Annuity',
+              policyNumber: `RET-${clientData.memberNumber}`,
+              value: fo.retirement.currentValue,
+              premium: fo.retirement.monthlyContribution,
+              status: fo.retirement.status === 'on-track' ? 'Active' : 'Review Needed',
+            },
+          ]
         : [];
 
     const investmentProducts =
       fo.investment.totalValue > 0 || fo.investment.monthlyContribution > 0
-        ? [{
-            provider: 'Investment Portfolio',
-            product: fo.investment.performance !== 'N/A' ? `Performance: ${fo.investment.performance}` : 'Investment Portfolio',
-            policyNumber: `INV-${clientData.memberNumber}`,
-            value: fo.investment.totalValue,
-            premium: fo.investment.monthlyContribution,
-            status: fo.investment.status === 'on-track' ? 'Active' : 'Review Needed',
-          }]
+        ? [
+            {
+              provider: 'Investment Portfolio',
+              product:
+                fo.investment.performance !== 'N/A'
+                  ? `Performance: ${fo.investment.performance}`
+                  : 'Investment Portfolio',
+              policyNumber: `INV-${clientData.memberNumber}`,
+              value: fo.investment.totalValue,
+              premium: fo.investment.monthlyContribution,
+              status: fo.investment.status === 'on-track' ? 'Active' : 'Review Needed',
+            },
+          ]
         : [];
 
     const lifeProducts =
       fo.risk.deathCover > 0
-        ? [{
-            provider: 'Risk Cover',
-            product: 'Life & Disability Cover',
-            policyNumber: `LIF-${clientData.memberNumber}`,
-            value: fo.risk.deathCover,
-            premium: 0,
-            status: fo.risk.status === 'on-track' ? 'Active' : 'Review Needed',
-          }]
+        ? [
+            {
+              provider: 'Risk Cover',
+              product: 'Life & Disability Cover',
+              policyNumber: `LIF-${clientData.memberNumber}`,
+              value: fo.risk.deathCover,
+              premium: 0,
+              status: fo.risk.status === 'on-track' ? 'Active' : 'Review Needed',
+            },
+          ]
         : [];
 
     const medicalProducts =
       fo.medicalAid.monthlyPremium > 0
-        ? [{
-            provider: fo.medicalAid.scheme,
-            product: fo.medicalAid.plan,
-            policyNumber: `MED-${clientData.memberNumber}`,
-            value: 0,
-            premium: fo.medicalAid.monthlyPremium,
-            status: fo.medicalAid.status === 'on-track' ? 'Active' : 'Review Needed',
-          }]
+        ? [
+            {
+              provider: fo.medicalAid.scheme,
+              product: fo.medicalAid.plan,
+              policyNumber: `MED-${clientData.memberNumber}`,
+              value: 0,
+              premium: fo.medicalAid.monthlyPremium,
+              status: fo.medicalAid.status === 'on-track' ? 'Active' : 'Review Needed',
+            },
+          ]
         : [];
 
     products = {
@@ -291,13 +299,17 @@ export function mapPortfolioToReportData(
     strengths.push('Retirement planning is on track with consistent contributions.');
   }
   if (fo.risk.status === 'on-track' && fo.risk.deathCover > 0) {
-    strengths.push(`Adequate risk cover in place with ${formatCurrency(fo.risk.deathCover)} death benefit.`);
+    strengths.push(
+      `Adequate risk cover in place with ${formatCurrency(fo.risk.deathCover)} death benefit.`,
+    );
   }
   if (fo.investment.status === 'on-track') {
     strengths.push('Investment portfolio is performing within expected parameters.');
   }
   if (fo.medicalAid.status === 'on-track') {
-    strengths.push(`Medical aid coverage active on ${fo.medicalAid.scheme} — ${fo.medicalAid.plan}.`);
+    strengths.push(
+      `Medical aid coverage active on ${fo.medicalAid.scheme} — ${fo.medicalAid.plan}.`,
+    );
   }
   if (fo.estate.status === 'on-track') {
     strengths.push('Estate planning documentation is up to date.');
@@ -306,7 +318,9 @@ export function mapPortfolioToReportData(
     strengths.push('Tax affairs are in order.');
   }
   if (strengths.length === 0) {
-    strengths.push('Your financial plan is being established. Completing assessments will strengthen your position.');
+    strengths.push(
+      'Your financial plan is being established. Completing assessments will strengthen your position.',
+    );
   }
 
   // Map API recommendations to insight categories
@@ -319,13 +333,19 @@ export function mapPortfolioToReportData(
 
   // Add generic opportunities if pillars are unassessed
   if (fo.retirement.status === 'not-assessed') {
-    opportunities.push('A retirement planning assessment would help establish long-term savings goals.');
+    opportunities.push(
+      'A retirement planning assessment would help establish long-term savings goals.',
+    );
   }
   if (fo.risk.status === 'not-assessed') {
-    opportunities.push('Consider completing a risk needs analysis to ensure adequate cover for your family.');
+    opportunities.push(
+      'Consider completing a risk needs analysis to ensure adequate cover for your family.',
+    );
   }
   if (fo.tax.status === 'not-assessed') {
-    opportunities.push('A tax planning review could identify contribution optimisation opportunities.');
+    opportunities.push(
+      'A tax planning review could identify contribution optimisation opportunities.',
+    );
   }
 
   return {

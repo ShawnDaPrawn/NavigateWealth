@@ -27,4 +27,3 @@ export function getOptimizedFallbackUrl(key: string) {
   // Use webp as <img src> fallback; <source> will try avif first.
   return getOptimizedImageUrl(key, 768, 'webp');
 }
-

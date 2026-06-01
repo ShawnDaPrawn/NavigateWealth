@@ -78,7 +78,7 @@ function ToolbarButton({
       className={cn(
         'h-8 w-8 p-0 rounded-md transition-colors',
         isActive && 'bg-purple-100 text-purple-700 hover:bg-purple-200',
-        !isActive && 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
+        !isActive && 'text-gray-600 hover:bg-gray-100 hover:text-gray-900',
       )}
     >
       {children}
@@ -91,13 +91,7 @@ function Divider() {
 }
 
 // Callout submenu
-function CalloutMenu({
-  editor,
-  onClose,
-}: {
-  editor: Editor;
-  onClose: () => void;
-}) {
+function CalloutMenu({ editor, onClose }: { editor: Editor; onClose: () => void }) {
   const items: { type: CalloutType; icon: React.ReactNode; label: string }[] = [
     { type: 'takeaway', icon: <Lightbulb className="h-4 w-4" />, label: 'Key Takeaway' },
     { type: 'important', icon: <AlertTriangle className="h-4 w-4" />, label: 'Important' },
@@ -140,7 +134,13 @@ function CalloutMenu({
   );
 }
 
-export function EditorToolbar({ editor, onInsertImage, onToggleAI, isAIOpen, preset = 'full' }: EditorToolbarProps) {
+export function EditorToolbar({
+  editor,
+  onInsertImage,
+  onToggleAI,
+  isAIOpen,
+  preset = 'full',
+}: EditorToolbarProps) {
   const [showCalloutMenu, setShowCalloutMenu] = useState(false);
   const showAdvancedBlocks = preset === 'full';
 
@@ -154,20 +154,11 @@ export function EditorToolbar({ editor, onInsertImage, onToggleAI, isAIOpen, pre
       return;
     }
 
-    editor
-      .chain()
-      .focus()
-      .extendMarkRange('link')
-      .setLink({ href: url, target: '_blank' })
-      .run();
+    editor.chain().focus().extendMarkRange('link').setLink({ href: url, target: '_blank' }).run();
   }, [editor]);
 
   const insertTable = useCallback(() => {
-    editor
-      .chain()
-      .focus()
-      .insertTable({ rows: 3, cols: 3, withHeaderRow: true })
-      .run();
+    editor.chain().focus().insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run();
   }, [editor]);
 
   return (
@@ -281,18 +272,12 @@ export function EditorToolbar({ editor, onInsertImage, onToggleAI, isAIOpen, pre
         <LinkIcon className="h-4 w-4" />
       </ToolbarButton>
       {editor.isActive('link') && (
-        <ToolbarButton
-          onClick={() => editor.chain().focus().unsetLink().run()}
-          title="Remove Link"
-        >
+        <ToolbarButton onClick={() => editor.chain().focus().unsetLink().run()} title="Remove Link">
           <Unlink className="h-4 w-4" />
         </ToolbarButton>
       )}
       {showAdvancedBlocks && (
-        <ToolbarButton
-          onClick={onInsertImage}
-          title="Insert Image"
-        >
+        <ToolbarButton onClick={onInsertImage} title="Insert Image">
           <ImageIcon className="h-4 w-4" />
         </ToolbarButton>
       )}
@@ -322,11 +307,7 @@ export function EditorToolbar({ editor, onInsertImage, onToggleAI, isAIOpen, pre
           <Minus className="h-4 w-4" />
         </ToolbarButton>
       )}
-      <ToolbarButton
-        onClick={insertTable}
-        isActive={editor.isActive('table')}
-        title="Insert Table"
-      >
+      <ToolbarButton onClick={insertTable} isActive={editor.isActive('table')} title="Insert Table">
         <TableIcon className="h-4 w-4" />
       </ToolbarButton>
 
@@ -343,10 +324,7 @@ export function EditorToolbar({ editor, onInsertImage, onToggleAI, isAIOpen, pre
             <Lightbulb className="h-4 w-4" />
           </ToolbarButton>
           {showCalloutMenu && (
-            <CalloutMenu
-              editor={editor}
-              onClose={() => setShowCalloutMenu(false)}
-            />
+            <CalloutMenu editor={editor} onClose={() => setShowCalloutMenu(false)} />
           )}
         </div>
       )}
@@ -390,11 +368,7 @@ export function EditorToolbar({ editor, onInsertImage, onToggleAI, isAIOpen, pre
       {onToggleAI && (
         <div className="contents">
           <Divider />
-          <ToolbarButton
-            onClick={onToggleAI}
-            isActive={isAIOpen}
-            title="AI Writing Assistant"
-          >
+          <ToolbarButton onClick={onToggleAI} isActive={isAIOpen} title="AI Writing Assistant">
             <Sparkles className="h-4 w-4" />
           </ToolbarButton>
         </div>

@@ -7,14 +7,17 @@ const columns: ComplianceColumn[] = [
   { key: 'title', label: 'Document', type: 'text' as const },
   { key: 'documentType', label: 'Type', type: 'text' as const },
   { key: 'version', label: 'Version', type: 'text' as const },
-  { 
-    key: 'insurance', 
-    label: 'Insurance Details', 
+  {
+    key: 'insurance',
+    label: 'Insurance Details',
     type: 'custom' as const,
     render: (_, record) => {
       // Cast to DocumentsInsuranceRecord to access specific fields safely
-      const docRecord = record as DocumentsInsuranceRecord & { sumInsured?: number; insuranceProvider?: string };
-      
+      const docRecord = record as DocumentsInsuranceRecord & {
+        sumInsured?: number;
+        insuranceProvider?: string;
+      };
+
       if (docRecord.sumInsured) {
         return (
           <div className="text-sm">
@@ -24,13 +27,13 @@ const columns: ComplianceColumn[] = [
         );
       }
       return '—';
-    }
+    },
   },
   { key: 'approvedBy', label: 'Approved By', type: 'text' as const },
   { key: 'effectiveDate', label: 'Effective Date', type: 'date' as const },
   { key: 'reviewCycle', label: 'Review Cycle', type: 'text' as const },
   { key: 'due', label: 'Next Review', type: 'date' as const },
-  { key: 'status', label: 'Status', type: 'badge' as const }
+  { key: 'status', label: 'Status', type: 'badge' as const },
 ];
 
 const filters = [
@@ -42,9 +45,9 @@ const filters = [
       { value: 'RMCP', label: 'RMCP' },
       { value: 'PI Insurance', label: 'PI Insurance' },
       { value: 'COI Policy', label: 'COI Policy' },
-      { value: 'TCF Policy', label: 'TCF Policy' }
-    ]
-  }
+      { value: 'TCF Policy', label: 'TCF Policy' },
+    ],
+  },
 ];
 
 export function DocumentsInsuranceTab() {

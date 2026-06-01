@@ -15,12 +15,12 @@ interface FieldWithCopyProps extends React.InputHTMLAttributes<HTMLInputElement>
   className?: string;
 }
 
-export function FieldWithCopy({ 
-  id, 
-  value, 
-  onChange, 
-  disabled, 
-  type = 'text', 
+export function FieldWithCopy({
+  id,
+  value,
+  onChange,
+  disabled,
+  type = 'text',
   placeholder,
   className,
   ...props
@@ -30,7 +30,7 @@ export function FieldWithCopy({
   const handleCopy = async () => {
     try {
       const textToCopy = value !== undefined && value !== null ? String(value) : '';
-      
+
       if (!textToCopy) {
         toast.error('Nothing to copy');
         return;

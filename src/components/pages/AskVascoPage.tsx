@@ -153,7 +153,10 @@ function HandoffModal({
               A Navigate Wealth adviser will be in touch within 24 hours to discuss your financial
               needs.
             </p>
-            <Button onClick={onClose} className="bg-primary text-primary-foreground hover:bg-primary/90">
+            <Button
+              onClick={onClose}
+              className="bg-primary text-primary-foreground hover:bg-primary/90"
+            >
               Back to Chat
             </Button>
           </div>
@@ -399,7 +402,12 @@ export function AskVascoPage() {
   const handleFeedback = useCallback(
     async (messageIndex: number, rating: 'positive' | 'negative') => {
       const message = messages[messageIndex];
-      if (!message || message.role !== 'assistant' || message.feedback || isWelcomeMessage(message)) {
+      if (
+        !message ||
+        message.role !== 'assistant' ||
+        message.feedback ||
+        isWelcomeMessage(message)
+      ) {
         return;
       }
 
@@ -443,7 +451,11 @@ export function AskVascoPage() {
       <div className="contents">
         <SEO
           {...seoData}
-          structuredData={createWebPageSchema(seoData.title, seoData.description, seoData.canonicalUrl)}
+          structuredData={createWebPageSchema(
+            seoData.title,
+            seoData.description,
+            seoData.canonicalUrl,
+          )}
         />
         <div
           className={`flex min-h-[60vh] items-center justify-center px-4 ${
@@ -462,7 +474,10 @@ export function AskVascoPage() {
               services or get in touch with our team.
             </p>
             <div className="flex flex-wrap justify-center gap-3">
-              <Button asChild className="bg-primary px-6 text-primary-foreground hover:bg-primary/90">
+              <Button
+                asChild
+                className="bg-primary px-6 text-primary-foreground hover:bg-primary/90"
+              >
                 <Link to="/services">Explore Services</Link>
               </Button>
               <Button asChild variant="outline" className="px-6">
@@ -479,7 +494,11 @@ export function AskVascoPage() {
     <div className="contents">
       <SEO
         {...seoData}
-        structuredData={createWebPageSchema(seoData.title, seoData.description, seoData.canonicalUrl)}
+        structuredData={createWebPageSchema(
+          seoData.title,
+          seoData.description,
+          seoData.canonicalUrl,
+        )}
       />
       <div
         className={`relative min-h-screen overflow-hidden ${
@@ -505,8 +524,14 @@ export function AskVascoPage() {
           <div className="grid grid-cols-1 gap-6 lg:grid-cols-4">
             <div className="space-y-6 lg:col-span-1">
               <Card className="relative overflow-hidden border-[#ddd6fe]/80 bg-gradient-to-br from-white via-[#f5f3ff] to-white shadow-sm">
-                <div aria-hidden="true" className="absolute -right-10 -top-10 h-28 w-28 rounded-full border border-[#c4b5fd]/40" />
-                <div aria-hidden="true" className="absolute -right-4 top-6 h-16 w-16 rounded-full border border-[#6d28d9]/10" />
+                <div
+                  aria-hidden="true"
+                  className="absolute -right-10 -top-10 h-28 w-28 rounded-full border border-[#c4b5fd]/40"
+                />
+                <div
+                  aria-hidden="true"
+                  className="absolute -right-4 top-6 h-16 w-16 rounded-full border border-[#6d28d9]/10"
+                />
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2 text-base">
                     <Compass className="h-4 w-4 text-[#6d28d9]" />
@@ -515,18 +540,27 @@ export function AskVascoPage() {
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <p className="text-sm leading-relaxed text-gray-600">
-                    Vasco is trained on South African financial regulations and Navigate Wealth&apos;s
-                    planning philosophy. Ask about retirement, tax, risk cover, estate planning, and
-                    our services — no account needed.
+                    Vasco is trained on South African financial regulations and Navigate
+                    Wealth&apos;s planning philosophy. Ask about retirement, tax, risk cover, estate
+                    planning, and our services — no account needed.
                   </p>
                   <div className="flex flex-wrap gap-2">
-                    <Badge variant="secondary" className="border-[#ddd6fe]/80 bg-white/70 text-gray-600">
+                    <Badge
+                      variant="secondary"
+                      className="border-[#ddd6fe]/80 bg-white/70 text-gray-600"
+                    >
                       24/7 Support
                     </Badge>
-                    <Badge variant="secondary" className="border-[#ddd6fe]/80 bg-white/70 text-gray-600">
+                    <Badge
+                      variant="secondary"
+                      className="border-[#ddd6fe]/80 bg-white/70 text-gray-600"
+                    >
                       No Login
                     </Badge>
-                    <Badge variant="secondary" className="border-[#ddd6fe]/80 bg-white/70 text-gray-600">
+                    <Badge
+                      variant="secondary"
+                      className="border-[#ddd6fe]/80 bg-white/70 text-gray-600"
+                    >
                       Focused Scope
                     </Badge>
                   </div>
@@ -573,7 +607,10 @@ export function AskVascoPage() {
                     { name: 'Tax Efficiency', icon: FileText },
                     { name: 'Risk Management', icon: Shield },
                   ].map((capability) => (
-                    <div key={capability.name} className="flex items-center gap-3 text-sm text-gray-600">
+                    <div
+                      key={capability.name}
+                      className="flex items-center gap-3 text-sm text-gray-600"
+                    >
                       <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg border border-[#ddd6fe]/80 bg-[#f5f3ff]">
                         <capability.icon className="h-4 w-4 text-[#6d28d9]" />
                       </div>
@@ -599,8 +636,8 @@ export function AskVascoPage() {
                 </div>
                 <p className="text-[11px] leading-relaxed text-gray-500">
                   Vasco is an AI-powered experimental tool and is not a licensed financial adviser.
-                  Nothing in this conversation constitutes formal financial advice, a recommendation,
-                  or an offer to buy or sell any financial product.
+                  Nothing in this conversation constitutes formal financial advice, a
+                  recommendation, or an offer to buy or sell any financial product.
                 </p>
               </div>
             </div>
@@ -639,7 +676,8 @@ export function AskVascoPage() {
                 inputFooter={
                   <div className="flex items-center justify-between gap-4">
                     <p className="text-center text-[10px] text-gray-400">
-                      Vasco provides general financial information only — not personal financial advice.
+                      Vasco provides general financial information only — not personal financial
+                      advice.
                     </p>
                     <Link
                       to="/signup"
@@ -654,7 +692,9 @@ export function AskVascoPage() {
                     <div className="mx-6 mb-2 flex items-center justify-between gap-3 rounded-xl border border-[#ddd6fe]/80 bg-gradient-to-r from-[#f5f3ff] to-purple-50/70 p-3">
                       <p className="min-w-0 text-xs text-gray-700">
                         You have used the free public questions for now.{' '}
-                        <span className="font-medium text-primary">A Navigate Wealth adviser can help from here.</span>
+                        <span className="font-medium text-primary">
+                          A Navigate Wealth adviser can help from here.
+                        </span>
                       </p>
                       <Button
                         onClick={() => setShowHandoff(true)}
@@ -668,7 +708,9 @@ export function AskVascoPage() {
                     <div className="mx-6 mb-2 flex items-center justify-between gap-3 rounded-xl border border-[#ddd6fe]/80 bg-gradient-to-r from-[#f5f3ff] to-purple-50/70 p-3">
                       <p className="min-w-0 truncate text-xs text-gray-700">
                         Want personalised advice?{' '}
-                        <span className="font-medium text-primary">Talk to a qualified adviser.</span>
+                        <span className="font-medium text-primary">
+                          Talk to a qualified adviser.
+                        </span>
                       </p>
                       <Button
                         onClick={() => setShowHandoff(true)}

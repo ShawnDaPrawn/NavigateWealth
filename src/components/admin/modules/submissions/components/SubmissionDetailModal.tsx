@@ -33,10 +33,24 @@ import { Button } from '../../../../ui/button';
 import { Textarea } from '../../../../ui/textarea';
 import { Separator } from '../../../../ui/separator';
 import {
-  MessageSquare, FileText, Calculator, Download, User,
-  Mail, Clock, Globe, Trash2, Save, Calendar, Phone,
-  CheckCircle2, AlertCircle, ChevronDown,
-  UserPlus, ExternalLink, ClipboardList,
+  MessageSquare,
+  FileText,
+  Calculator,
+  Download,
+  User,
+  Mail,
+  Clock,
+  Globe,
+  Trash2,
+  Save,
+  Calendar,
+  Phone,
+  CheckCircle2,
+  AlertCircle,
+  ChevronDown,
+  UserPlus,
+  ExternalLink,
+  ClipboardList,
 } from 'lucide-react';
 import { cn } from '../../../../ui/utils';
 import { toast } from 'sonner';
@@ -64,8 +78,11 @@ interface SubmissionDetailModalProps {
 function formatDate(dateStr: string): string {
   try {
     return new Date(dateStr).toLocaleString('en-ZA', {
-      day: '2-digit', month: 'short', year: 'numeric',
-      hour: '2-digit', minute: '2-digit',
+      day: '2-digit',
+      month: 'short',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
     });
   } catch {
     return dateStr;
@@ -75,14 +92,21 @@ function formatDate(dateStr: string): string {
 function TypeIcon({ type, className }: { type: SubmissionType; className?: string }) {
   const c = className || 'h-4 w-4';
   switch (type) {
-    case 'will_draft':     return <FileText className={c} />;
-    case 'tax_planning':   return <Calculator className={c} />;
-    case 'consultation':   return <Calendar className={c} />;
-    case 'contact':        return <Mail className={c} />;
-    case 'client_signup':  return <UserPlus className={c} />;
-    case 'change_request': return <ClipboardList className={c} />;
+    case 'will_draft':
+      return <FileText className={c} />;
+    case 'tax_planning':
+      return <Calculator className={c} />;
+    case 'consultation':
+      return <Calendar className={c} />;
+    case 'contact':
+      return <Mail className={c} />;
+    case 'client_signup':
+      return <UserPlus className={c} />;
+    case 'change_request':
+      return <ClipboardList className={c} />;
     case 'quote':
-    default:               return <MessageSquare className={c} />;
+    default:
+      return <MessageSquare className={c} />;
   }
 }
 
@@ -93,7 +117,7 @@ function formatPayloadKey(key: string): string {
   return key
     .replace(/([A-Z])/g, ' $1')
     .replace(/_/g, ' ')
-    .replace(/\b\w/g, c => c.toUpperCase())
+    .replace(/\b\w/g, (c) => c.toUpperCase())
     .trim();
 }
 
@@ -102,17 +126,21 @@ function formatPayloadValue(value: unknown): string {
   if (typeof value === 'boolean') return value ? 'Yes' : 'No';
   if (Array.isArray(value)) {
     if (value.length === 0) return '\u2014';
-    if (value.every(v => typeof v === 'string')) return value.join(', ');
-    if (value.every(v => typeof v === 'object' && v !== null && ('dob' in v || 'age' in v))) {
-      return value.map((child, i) => {
-        const c = child as Record<string, unknown>;
-        if (c.dob) {
-          try {
-            return `Child ${i + 1}: ${new Date(String(c.dob)).toLocaleDateString('en-ZA', { day: '2-digit', month: 'short', year: 'numeric' })}`;
-          } catch { return `Child ${i + 1}: ${c.dob}`; }
-        }
-        return `Child ${i + 1}: Age ${c.age}`;
-      }).join(', ');
+    if (value.every((v) => typeof v === 'string')) return value.join(', ');
+    if (value.every((v) => typeof v === 'object' && v !== null && ('dob' in v || 'age' in v))) {
+      return value
+        .map((child, i) => {
+          const c = child as Record<string, unknown>;
+          if (c.dob) {
+            try {
+              return `Child ${i + 1}: ${new Date(String(c.dob)).toLocaleDateString('en-ZA', { day: '2-digit', month: 'short', year: 'numeric' })}`;
+            } catch {
+              return `Child ${i + 1}: ${c.dob}`;
+            }
+          }
+          return `Child ${i + 1}: Age ${c.age}`;
+        })
+        .join(', ');
     }
     return JSON.stringify(value, null, 2);
   }
@@ -122,14 +150,14 @@ function formatPayloadValue(value: unknown): string {
 
 /** Keys to skip entirely — shown elsewhere or internal references */
 const SKIP_KEYS = new Set([
-  'quoteRequestId', 'contactFormId', 'consultationId', 'parentSubmissionId',
+  'quoteRequestId',
+  'contactFormId',
+  'consultationId',
+  'parentSubmissionId',
 ]);
 
 /** Keys to skip in Phase 2 payloads (productDetails is rendered separately) */
-const PHASE2_TOP_SKIP = new Set([
-  ...SKIP_KEYS,
-  'productDetails',
-]);
+const PHASE2_TOP_SKIP = new Set([...SKIP_KEYS, 'productDetails']);
 
 /**
  * Flatten payload entries for display.
@@ -156,14 +184,10 @@ function flattenPayload(
 
       const fullKey = keyPath ? `${keyPath}.${key}` : key;
       const label = formatPayloadKey(key);
-      const effectiveGroup = group ?? (depth > 0 ? formatPayloadKey(keyPath.split('.').pop() || keyPath) : undefined);
+      const effectiveGroup =
+        group ?? (depth > 0 ? formatPayloadKey(keyPath.split('.').pop() || keyPath) : undefined);
 
-      if (
-        value !== null &&
-        typeof value === 'object' &&
-        !Array.isArray(value) &&
-        depth < 3
-      ) {
+      if (value !== null && typeof value === 'object' && !Array.isArray(value) && depth < 3) {
         const vObj = value as Record<string, unknown>;
         if ('selected' in vObj && 'adviser_assist' in vObj) {
           if (vObj.selected) {
@@ -175,17 +199,29 @@ function flattenPayload(
               const amt = vObj.amount ?? vObj.amount_per_month ?? null;
               const suffix = vObj.amount_per_month !== undefined ? ' /month' : '';
               coverValue = amt
-                ? `R${Math.round(Number(amt)).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',')}${suffix}`
+                ? `R${Math.round(Number(amt))
+                    .toString()
+                    .replace(/\B(?=(\d{3})+(?!\d))/g, ',')}${suffix}`
                 : 'Amount not specified';
             }
-            result.push({ key: fullKey, label: coverLabel, value: coverValue, group: effectiveGroup });
+            result.push({
+              key: fullKey,
+              label: coverLabel,
+              value: coverValue,
+              group: effectiveGroup,
+            });
           }
           continue;
         }
 
         recurse(vObj, fullKey, effectiveGroup ?? label, depth + 1);
       } else {
-        result.push({ key: fullKey, label, value: formatPayloadValue(value), group: effectiveGroup });
+        result.push({
+          key: fullKey,
+          label,
+          value: formatPayloadValue(value),
+          group: effectiveGroup,
+        });
       }
     }
   }
@@ -244,12 +280,14 @@ function StatusDropdown({
         className={cn(
           'inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium transition-all border border-gray-200',
           'bg-white text-gray-700 hover:bg-gray-50',
-          disabled && 'opacity-50 cursor-not-allowed'
+          disabled && 'opacity-50 cursor-not-allowed',
         )}
       >
         <span className={cn('w-2 h-2 rounded-full flex-shrink-0', DOT_COLORS[current])} />
         {currentCfg.label}
-        <ChevronDown className={cn('h-3 w-3 text-gray-400 transition-transform', open && 'rotate-180')} />
+        <ChevronDown
+          className={cn('h-3 w-3 text-gray-400 transition-transform', open && 'rotate-180')}
+        />
       </button>
 
       {open && (
@@ -272,14 +310,12 @@ function StatusDropdown({
                     'w-full flex items-center gap-2 px-3 py-2 text-xs font-medium transition-colors',
                     isCurrent
                       ? 'bg-gray-50 text-gray-900 cursor-default'
-                      : 'text-gray-700 hover:bg-gray-50'
+                      : 'text-gray-700 hover:bg-gray-50',
                   )}
                 >
                   <span className={cn('w-2 h-2 rounded-full', DOT_COLORS[status])} />
                   {cfg.label}
-                  {isCurrent && (
-                    <CheckCircle2 className="h-3 w-3 text-gray-400 ml-auto" />
-                  )}
+                  {isCurrent && <CheckCircle2 className="h-3 w-3 text-gray-400 ml-auto" />}
                 </button>
               );
             })}
@@ -314,18 +350,21 @@ export function SubmissionDetailModal({
   const handleSaveNotes = useCallback(async () => {
     if (!submission) return;
     setSavingNotes(true);
-    const result = await onNotesChange(submission.id, notes) as { success: boolean };
+    const result = (await onNotesChange(submission.id, notes)) as { success: boolean };
     setSavingNotes(false);
     if (result?.success) toast.success('Notes saved');
     else toast.error('Failed to save notes');
   }, [submission, notes, onNotesChange]);
 
-  const handleStatusChange = useCallback(async (status: SubmissionStatus) => {
-    if (!submission) return;
-    setAdvancing(true);
-    await onStatusChange(submission.id, status);
-    setAdvancing(false);
-  }, [submission, onStatusChange]);
+  const handleStatusChange = useCallback(
+    async (status: SubmissionStatus) => {
+      if (!submission) return;
+      setAdvancing(true);
+      await onStatusChange(submission.id, status);
+      setAdvancing(false);
+    },
+    [submission, onStatusChange],
+  );
 
   const handleDownload = useCallback(async () => {
     if (!submission) return;
@@ -354,13 +393,23 @@ export function SubmissionDetailModal({
   const serviceName = submission.payload.productName
     ? String(submission.payload.productName)
     : submission.payload.service
-      ? String(submission.payload.service).replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase())
+      ? String(submission.payload.service)
+          .replace(/-/g, ' ')
+          .replace(/\b\w/g, (c) => c.toUpperCase())
       : null;
 
   return (
     <div className="contents">
-      <Dialog open={open} onOpenChange={(v) => { if (!v) onClose(); }}>
-        <DialogContent className="max-w-4xl h-[85vh] p-0 gap-0 overflow-hidden bg-white flex flex-col" hideCloseButton>
+      <Dialog
+        open={open}
+        onOpenChange={(v) => {
+          if (!v) onClose();
+        }}
+      >
+        <DialogContent
+          className="max-w-4xl h-[85vh] p-0 gap-0 overflow-hidden bg-white flex flex-col"
+          hideCloseButton
+        >
           {/* ── Clean White Header ── */}
           <div className="px-6 py-4 border-b flex items-center justify-between bg-white shrink-0">
             <div className="flex items-center gap-3 min-w-0">
@@ -372,7 +421,8 @@ export function SubmissionDetailModal({
                   {typeCfg.label}
                 </DialogTitle>
                 <DialogDescription className="text-xs text-gray-400 mt-0.5">
-                  {submission.submitterName || 'Unknown'} &middot; {formatDate(submission.submittedAt)}
+                  {submission.submitterName || 'Unknown'} &middot;{' '}
+                  {formatDate(submission.submittedAt)}
                 </DialogDescription>
               </div>
             </div>
@@ -386,7 +436,6 @@ export function SubmissionDetailModal({
           {/* ── Scrollable Content ── */}
           <div className="flex-1 overflow-y-auto">
             <div className="p-6 md:p-8 space-y-6">
-
               {/* ── Contact Information ── */}
               <section>
                 <h4 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3 flex items-center gap-1.5">
@@ -397,7 +446,9 @@ export function SubmissionDetailModal({
                   {submission.submitterName && (
                     <div className="flex items-center gap-3 px-4 py-3">
                       <User className="h-4 w-4 text-gray-400 flex-shrink-0" />
-                      <span className="text-sm font-semibold text-gray-900">{submission.submitterName}</span>
+                      <span className="text-sm font-semibold text-gray-900">
+                        {submission.submitterName}
+                      </span>
                     </div>
                   )}
                   {submission.submitterEmail && (
@@ -428,7 +479,8 @@ export function SubmissionDetailModal({
                     <div className="flex items-center gap-3">
                       <Globe className="h-4 w-4 text-gray-400 flex-shrink-0" />
                       <span className="text-xs text-gray-600 font-medium">
-                        {SOURCE_CHANNEL_LABELS[submission.sourceChannel] ?? submission.sourceChannel}
+                        {SOURCE_CHANNEL_LABELS[submission.sourceChannel] ??
+                          submission.sourceChannel}
                       </span>
                     </div>
                     <div className="flex items-center gap-1.5 text-xs text-gray-400">
@@ -450,8 +502,12 @@ export function SubmissionDetailModal({
                   </h4>
                   <div className="bg-violet-50 rounded-xl border border-violet-100 p-4 space-y-3">
                     <p className="text-sm text-gray-700">
-                      A new client has signed up and their application is in <strong className="font-semibold">{String(submission.payload.applicationStatus || 'draft')}</strong> status.
-                      You can view their application in the Applications module, or wait for the client to log in and complete it themselves.
+                      A new client has signed up and their application is in{' '}
+                      <strong className="font-semibold">
+                        {String(submission.payload.applicationStatus || 'draft')}
+                      </strong>{' '}
+                      status. You can view their application in the Applications module, or wait for
+                      the client to log in and complete it themselves.
                     </p>
                     <div className="flex flex-wrap gap-2">
                       <Button
@@ -482,7 +538,8 @@ export function SubmissionDetailModal({
                     </div>
                     {!!submission.payload.applicationNumber && (
                       <p className="text-xs text-gray-500">
-                        Application #{String(submission.payload.applicationNumber)} &middot; {String(submission.payload.accountType || 'Personal Client')}
+                        Application #{String(submission.payload.applicationNumber)} &middot;{' '}
+                        {String(submission.payload.accountType || 'Personal Client')}
                       </p>
                     )}
                   </div>
@@ -502,17 +559,26 @@ export function SubmissionDetailModal({
                 {(serviceName || !!submission.payload.stage) && (
                   <div className="flex items-center gap-2 flex-wrap mb-4">
                     {serviceName && (
-                      <Badge variant="secondary" className="text-xs bg-gray-100 text-gray-700 border-gray-200">
+                      <Badge
+                        variant="secondary"
+                        className="text-xs bg-gray-100 text-gray-700 border-gray-200"
+                      >
                         {serviceName}
                       </Badge>
                     )}
                     {!!submission.payload.stage && (
-                      <Badge variant="secondary" className="text-xs bg-gray-100 text-gray-600 border-gray-200">
+                      <Badge
+                        variant="secondary"
+                        className="text-xs bg-gray-100 text-gray-600 border-gray-200"
+                      >
                         {submission.payload.stage === 'full' ? 'Full Quote' : 'Initial Enquiry'}
                       </Badge>
                     )}
                     {isP2 && (
-                      <Badge variant="secondary" className="text-xs bg-gray-100 text-gray-600 border-gray-200">
+                      <Badge
+                        variant="secondary"
+                        className="text-xs bg-gray-100 text-gray-600 border-gray-200"
+                      >
                         Phase 2
                       </Badge>
                     )}
@@ -523,7 +589,10 @@ export function SubmissionDetailModal({
                 {topLevelFields.length > 0 && (
                   <div className="bg-white rounded-xl border border-gray-100 divide-y divide-gray-50 mb-4">
                     {topLevelFields.map((entry) => (
-                      <div key={entry.key} className="flex justify-between items-start px-4 py-2.5 gap-4">
+                      <div
+                        key={entry.key}
+                        className="flex justify-between items-start px-4 py-2.5 gap-4"
+                      >
                         <span className="text-xs font-medium text-gray-500 min-w-[100px] flex-shrink-0 pt-0.5">
                           {entry.label}
                         </span>
@@ -536,17 +605,13 @@ export function SubmissionDetailModal({
                 )}
 
                 {/* Phase 2 structured rendering */}
-                {isP2 && phase2Data && (
-                  <Phase2DetailRenderer productDetails={phase2Data} />
-                )}
+                {isP2 && phase2Data && <Phase2DetailRenderer productDetails={phase2Data} />}
 
                 {/* Non-Phase-2 generic rendering — empty state */}
                 {!isP2 && topLevelFields.length === 0 && (
                   <div className="rounded-xl border border-dashed border-gray-200 bg-gray-50 px-4 py-8 text-center">
                     <AlertCircle className="h-6 w-6 text-gray-300 mx-auto mb-2" />
-                    <p className="text-sm text-gray-400">
-                      No submission fields recorded.
-                    </p>
+                    <p className="text-sm text-gray-400">No submission fields recorded.</p>
                   </div>
                 )}
               </section>

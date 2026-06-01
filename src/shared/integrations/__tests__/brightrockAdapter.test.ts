@@ -71,8 +71,11 @@ describe('brightRockAdapter', () => {
       { url: () => 'https://flint.brightrock.co.za/policy-details' },
       { policyNumber: '700056377' },
       {
-        evaluateWithNavigationRetry: async (_page: unknown, callback: (policyNumber: string) => unknown, policyNumber: string) =>
-          callback(policyNumber),
+        evaluateWithNavigationRetry: async (
+          _page: unknown,
+          callback: (policyNumber: string) => unknown,
+          policyNumber: string,
+        ) => callback(policyNumber),
       },
     );
 
@@ -105,8 +108,11 @@ describe('brightRockAdapter', () => {
       { url: () => 'https://flint.brightrock.co.za/policy-details' },
       { policyNumber: '700056377' },
       {
-        evaluateWithNavigationRetry: async (_page: unknown, callback: (policyNumber: string) => unknown, policyNumber: string) =>
-          callback(policyNumber),
+        evaluateWithNavigationRetry: async (
+          _page: unknown,
+          callback: (policyNumber: string) => unknown,
+          policyNumber: string,
+        ) => callback(policyNumber),
       },
     );
 

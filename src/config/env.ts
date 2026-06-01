@@ -1,12 +1,12 @@
 /**
  * Environment Variable Validation
- * 
+ *
  * Validates required environment variables on app startup to fail fast
  * with clear error messages instead of cryptic runtime errors.
- * 
+ *
  * Note: In this Figma Make environment, Supabase credentials are hardcoded in
  * /utils/supabase/info.tsx, so environment validation is optional.
- * 
+ *
  * Usage:
  * - Import `getEnv()` to get validated environment variables
  * - Call `validateEnv()` in App.tsx before rendering (optional)
@@ -17,7 +17,7 @@ interface EnvConfig {
   // Supabase (optional - falls back to info.tsx)
   VITE_SUPABASE_URL?: string;
   VITE_SUPABASE_ANON_KEY?: string;
-  
+
   // Optional
   VITE_ENVIRONMENT?: string;
   DEV: boolean;
@@ -51,7 +51,7 @@ function getEnvVar(key: string): string | undefined {
 
 /**
  * Validates that required environment variables are present and valid
- * 
+ *
  * @throws {EnvValidationError} If validation fails
  */
 export function validateEnv(): EnvConfig {
@@ -62,8 +62,13 @@ export function validateEnv(): EnvConfig {
 
   try {
     // Try to access import.meta.env
-    const env = (typeof import.meta !== 'undefined' && import.meta.env ? import.meta.env : {}) as { DEV?: boolean; PROD?: boolean; MODE?: string; [key: string]: unknown };
-    
+    const env = (typeof import.meta !== 'undefined' && import.meta.env ? import.meta.env : {}) as {
+      DEV?: boolean;
+      PROD?: boolean;
+      MODE?: string;
+      [key: string]: unknown;
+    };
+
     // Cache validated config (with optional Supabase vars)
     cachedEnv = {
       VITE_SUPABASE_URL: getEnvVar('VITE_SUPABASE_URL'),
@@ -78,13 +83,13 @@ export function validateEnv(): EnvConfig {
   } catch (error) {
     // If validation fails, return a minimal config
     console.warn('Environment validation encountered an error, using defaults:', error);
-    
+
     cachedEnv = {
       DEV: true,
       PROD: false,
       MODE: 'development',
     };
-    
+
     return cachedEnv;
   }
 }
@@ -92,7 +97,7 @@ export function validateEnv(): EnvConfig {
 /**
  * Get validated and type-safe environment configuration
  * Lazy loads and validates on first access
- * 
+ *
  * @example
  * import { getEnv } from '@/config/env';
  * const env = getEnv();
@@ -148,7 +153,7 @@ export function logEnvironmentInfo() {
     console.log('🌍 Environment Configuration:');
     console.log(`  Mode: ${env.MODE}`);
     console.log(`  Environment: ${getEnvironment()}`);
-    
+
     // Note that Supabase credentials come from /utils/supabase/info.tsx
     if (env.VITE_SUPABASE_URL) {
       console.log(`  Supabase URL (from env): ${env.VITE_SUPABASE_URL}`);

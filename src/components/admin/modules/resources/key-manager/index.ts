@@ -1,7 +1,7 @@
 /**
  * Key Manager Module
  * Central export point for all key manager functionality
- * 
+ *
  * Usage:
  *   import { KeyAPI } from '@/components/admin/modules/resources/key-manager';
  *   const key = KeyAPI.getKeyById('risk_life_cover');

@@ -32,7 +32,12 @@ import {
   Sparkles,
 } from 'lucide-react';
 import { useSocialMediaAI } from '../hooks/useSocialMediaAI';
-import type { SocialAIPlatform, GeneratedPlatformPost, AIGenerationRecord, AIImageRecord } from '../types';
+import type {
+  SocialAIPlatform,
+  GeneratedPlatformPost,
+  AIGenerationRecord,
+  AIImageRecord,
+} from '../types';
 import { BRAND } from '../constants';
 
 // ============================================================================
@@ -98,17 +103,13 @@ export function AIGenerationHistory({ onUseText, onUseImage }: AIGenerationHisto
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [imageView, setImageView] = useState<'grid' | 'list'>('grid');
 
-  const {
-    history,
-    historyLoading,
-    imageHistory,
-    imageHistoryLoading,
-  } = useSocialMediaAI();
+  const { history, historyLoading, imageHistory, imageHistoryLoading } = useSocialMediaAI();
 
   const handleCopyText = useCallback(async (post: GeneratedPlatformPost) => {
-    const fullContent = post.hashtags.length > 0
-      ? `${post.content}\n\n${post.hashtags.map((h) => `#${h}`).join(' ')}`
-      : post.content;
+    const fullContent =
+      post.hashtags.length > 0
+        ? `${post.content}\n\n${post.hashtags.map((h) => `#${h}`).join(' ')}`
+        : post.content;
     await navigator.clipboard.writeText(fullContent);
     setCopiedId(`${post.platform}-${post.content.slice(0, 20)}`);
     toast.success('Copied to clipboard');
@@ -159,8 +160,8 @@ export function AIGenerationHistory({ onUseText, onUseImage }: AIGenerationHisto
           </div>
           <h3 className="text-lg font-semibold mb-1">No Generation History</h3>
           <p className="text-sm text-muted-foreground max-w-sm">
-            Generated text and images will appear here. Switch to the Post Text
-            or Branded Image tabs to start generating.
+            Generated text and images will appear here. Switch to the Post Text or Branded Image
+            tabs to start generating.
           </p>
         </CardContent>
       </Card>
@@ -225,10 +226,7 @@ export function AIGenerationHistory({ onUseText, onUseImage }: AIGenerationHisto
                         const isCopied = copiedId === copyKey;
 
                         return (
-                          <div
-                            key={post.platform}
-                            className="border rounded-lg p-3 bg-gray-50/50"
-                          >
+                          <div key={post.platform} className="border rounded-lg p-3 bg-gray-50/50">
                             <div className="flex items-center justify-between mb-2">
                               <div className="flex items-center gap-1.5 text-xs font-medium">
                                 {PLATFORM_ICONS[post.platform]}
@@ -274,11 +272,7 @@ export function AIGenerationHistory({ onUseText, onUseImage }: AIGenerationHisto
                                   size="sm"
                                   className="h-6 text-[10px] px-2"
                                   onClick={() =>
-                                    onUseText(
-                                      post.platform,
-                                      post.content,
-                                      post.hashtags,
-                                    )
+                                    onUseText(post.platform, post.content, post.hashtags)
                                   }
                                 >
                                   <ArrowRight className="h-3 w-3 mr-1" />
@@ -357,9 +351,7 @@ export function AIGenerationHistory({ onUseText, onUseImage }: AIGenerationHisto
                                 variant="secondary"
                                 size="sm"
                                 className="h-6 text-[10px] px-2"
-                                onClick={() =>
-                                  handleDownloadImage(image.signedUrl, platform)
-                                }
+                                onClick={() => handleDownloadImage(image.signedUrl, platform)}
                               >
                                 <Download className="h-3 w-3" />
                               </Button>
@@ -368,11 +360,7 @@ export function AIGenerationHistory({ onUseText, onUseImage }: AIGenerationHisto
                                   size="sm"
                                   className="h-6 text-[10px] px-2"
                                   onClick={() =>
-                                    onUseImage(
-                                      image.signedUrl,
-                                      image.storagePath,
-                                      platform,
-                                    )
+                                    onUseImage(image.signedUrl, image.storagePath, platform)
                                   }
                                 >
                                   <ArrowRight className="h-3 w-3 mr-0.5" />
@@ -386,9 +374,7 @@ export function AIGenerationHistory({ onUseText, onUseImage }: AIGenerationHisto
                         {/* Meta below */}
                         <div className="mt-1.5 flex items-center justify-between">
                           <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                            {PLATFORM_ICONS[platform] || (
-                              <ImageIcon className="h-3 w-3" />
-                            )}
+                            {PLATFORM_ICONS[platform] || <ImageIcon className="h-3 w-3" />}
                             {PLATFORM_LABELS[platform] || platform}
                           </div>
                           <span className="text-[10px] text-muted-foreground">
@@ -434,16 +420,10 @@ export function AIGenerationHistory({ onUseText, onUseImage }: AIGenerationHisto
                                   {PLATFORM_ICONS[platform]}
                                   {PLATFORM_LABELS[platform] || platform}
                                 </Badge>
-                                <Badge
-                                  variant="outline"
-                                  className="text-[10px]"
-                                >
+                                <Badge variant="outline" className="text-[10px]">
                                   {record.input.style}
                                 </Badge>
-                                <Badge
-                                  variant="outline"
-                                  className="text-[10px]"
-                                >
+                                <Badge variant="outline" className="text-[10px]">
                                   {image.dimensions}
                                 </Badge>
                               </div>
@@ -464,12 +444,7 @@ export function AIGenerationHistory({ onUseText, onUseImage }: AIGenerationHisto
                                 variant="outline"
                                 size="sm"
                                 className="h-7 text-xs"
-                                onClick={() =>
-                                  handleDownloadImage(
-                                    image.signedUrl,
-                                    platform,
-                                  )
-                                }
+                                onClick={() => handleDownloadImage(image.signedUrl, platform)}
                               >
                                 <Download className="h-3 w-3 mr-1" />
                                 Download
@@ -479,11 +454,7 @@ export function AIGenerationHistory({ onUseText, onUseImage }: AIGenerationHisto
                                   size="sm"
                                   className="h-7 text-xs"
                                   onClick={() =>
-                                    onUseImage(
-                                      image.signedUrl,
-                                      image.storagePath,
-                                      platform,
-                                    )
+                                    onUseImage(image.signedUrl, image.storagePath, platform)
                                   }
                                 >
                                   <ArrowRight className="h-3 w-3 mr-1" />

@@ -67,35 +67,35 @@ export const HEALTH_SUB_SCORE_CONFIG = {
   risk: {
     label: 'Risk',
     description: 'Risk cover adequacy relative to FNA recommendations',
-    color: '#6d28d9',   // brand purple
+    color: '#6d28d9', // brand purple
     bgClass: 'bg-[#6d28d9]/10',
     textClass: 'text-[#6d28d9]',
   },
   medicalAid: {
     label: 'Medical Aid',
     description: 'Medical aid coverage and FNA completeness',
-    color: '#2563eb',   // blue-600
+    color: '#2563eb', // blue-600
     bgClass: 'bg-blue-50',
     textClass: 'text-blue-600',
   },
   retirement: {
     label: 'Retirement',
     description: 'Retirement funding adequacy and shortfall analysis',
-    color: '#16a34a',   // green-600
+    color: '#16a34a', // green-600
     bgClass: 'bg-green-50',
     textClass: 'text-green-600',
   },
   investments: {
     label: 'Investments',
     description: 'Investment planning and portfolio coverage',
-    color: '#f59e0b',   // amber-500
+    color: '#f59e0b', // amber-500
     bgClass: 'bg-amber-50',
     textClass: 'text-amber-600',
   },
   estatePlanning: {
     label: 'Estate',
     description: 'Estate planning completeness and coverage',
-    color: '#64748b',   // slate-500
+    color: '#64748b', // slate-500
     bgClass: 'bg-slate-50',
     textClass: 'text-slate-600',
   },
@@ -142,7 +142,7 @@ export const KPI_DEFINITIONS: KPIDefinition[] = [
   {
     id: 'savings_rate',
     label: 'Retirement Saving',
-    description: 'How much of your income you\'re putting towards retirement',
+    description: "How much of your income you're putting towards retirement",
     format: 'percentage',
     targetText: 'At least 15% of your income',
     iconSlug: 'piggy-bank',
@@ -160,7 +160,7 @@ export const KPI_DEFINITIONS: KPIDefinition[] = [
     label: 'Life Cover',
     description: 'How your current life cover compares to what you actually need',
     format: 'percentage',
-    targetText: 'Fully covers what\'s recommended',
+    targetText: "Fully covers what's recommended",
     iconSlug: 'shield-check',
   },
   {
@@ -176,12 +176,15 @@ export const KPI_DEFINITIONS: KPIDefinition[] = [
 /** KPI status thresholds — determines green/amber/red badge */
 export type KPIStatus = 'good' | 'caution' | 'gap' | 'no-data';
 
-export const KPI_STATUS_CONFIG: Record<KPIStatus, {
-  label: string;
-  badgeClass: string;
-  dotClass: string;
-  textClass: string;
-}> = {
+export const KPI_STATUS_CONFIG: Record<
+  KPIStatus,
+  {
+    label: string;
+    badgeClass: string;
+    dotClass: string;
+    textClass: string;
+  }
+> = {
   good: {
     label: 'On Track',
     badgeClass: 'bg-green-50 text-green-700 border-green-200',

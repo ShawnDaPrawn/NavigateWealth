@@ -1,18 +1,25 @@
 import React, { useState, useRef } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '../../../../ui/card';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+  CardFooter,
+} from '../../../../ui/card';
 import { Button } from '../../../../ui/button';
 import { Input } from '../../../../ui/input';
 import { Label } from '../../../../ui/label';
-import { 
-  Lock, 
-  Download, 
-  RefreshCw, 
+import {
+  Lock,
+  Download,
+  RefreshCw,
   Upload,
   Plus,
   X,
   ChevronRight,
   FolderOpen,
-  FileArchive
+  FileArchive,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import {
@@ -35,12 +42,12 @@ import { useZipEncryption, FileItem, EncryptionMethod } from '../hooks/useZipEnc
 
 // Constants
 const DEFAULT_SUBCATEGORIES = [
-  "Compliance",
-  "New Business Welcome Pack",
-  "FICA Documents",
-  "Application Forms",
-  "Policy Schedule",
-  "Other"
+  'Compliance',
+  'New Business Welcome Pack',
+  'FICA Documents',
+  'Application Forms',
+  'Policy Schedule',
+  'Other',
 ];
 
 // --- Sub-components ---
@@ -58,7 +65,7 @@ function ZipUploadSection({ onFilesAdded, processing }: ZipUploadSectionProps) {
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0) {
       let finalSubcategory = uploadSubcategory;
-      
+
       if (uploadSubcategory === 'Other') {
         if (!customSubcategory.trim()) {
           toast.error('Please enter a name for the custom folder');
@@ -67,17 +74,17 @@ function ZipUploadSection({ onFilesAdded, processing }: ZipUploadSectionProps) {
         finalSubcategory = customSubcategory.trim();
       }
 
-      const newFiles: FileItem[] = Array.from(e.target.files).map(f => ({
+      const newFiles: FileItem[] = Array.from(e.target.files).map((f) => ({
         id: `upload-${Date.now()}-${f.name}`,
         name: f.name,
         file: f,
         subcategory: finalSubcategory,
-        size: f.size
+        size: f.size,
       }));
 
       onFilesAdded(newFiles);
       toast.success(`${newFiles.length} file(s) added to "${finalSubcategory}"`);
-      
+
       if (fileInputRef.current) fileInputRef.current.value = '';
     }
   };
@@ -100,8 +107,10 @@ function ZipUploadSection({ onFilesAdded, processing }: ZipUploadSectionProps) {
                     <SelectValue placeholder="Select folder..." />
                   </SelectTrigger>
                   <SelectContent>
-                    {DEFAULT_SUBCATEGORIES.map(sub => (
-                      <SelectItem key={sub} value={sub}>{sub}</SelectItem>
+                    {DEFAULT_SUBCATEGORIES.map((sub) => (
+                      <SelectItem key={sub} value={sub}>
+                        {sub}
+                      </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
@@ -112,8 +121,8 @@ function ZipUploadSection({ onFilesAdded, processing }: ZipUploadSectionProps) {
           {uploadSubcategory === 'Other' && (
             <div className="space-y-2 animate-in fade-in slide-in-from-top-1 duration-200">
               <Label className="text-xs font-medium">Custom Folder Name</Label>
-              <Input 
-                placeholder="e.g., Client ID Documents" 
+              <Input
+                placeholder="e.g., Client ID Documents"
                 value={customSubcategory}
                 onChange={(e) => setCustomSubcategory(e.target.value)}
                 className="h-9"
@@ -122,7 +131,7 @@ function ZipUploadSection({ onFilesAdded, processing }: ZipUploadSectionProps) {
           )}
 
           <div className="pt-2">
-             <Button 
+            <Button
               className="w-full"
               onClick={() => {
                 if (uploadSubcategory === 'Other' && !customSubcategory.trim()) {
@@ -145,7 +154,11 @@ function ZipUploadSection({ onFilesAdded, processing }: ZipUploadSectionProps) {
           </div>
 
           <p className="text-xs text-muted-foreground text-center">
-            Files will be added to the <strong>{uploadSubcategory === 'Other' ? (customSubcategory || 'Custom') : uploadSubcategory}</strong> folder.
+            Files will be added to the{' '}
+            <strong>
+              {uploadSubcategory === 'Other' ? customSubcategory || 'Custom' : uploadSubcategory}
+            </strong>{' '}
+            folder.
           </p>
         </CardContent>
       </Card>
@@ -174,24 +187,32 @@ interface ZipFileListProps {
 
 function ZipFileList({ files, processing, onRemove, onClear }: ZipFileListProps) {
   // Group files by subcategory
-  const groupedFiles = files.reduce((acc, file) => {
-    const sub = file.subcategory || 'General';
-    if (!acc[sub]) acc[sub] = [];
-    acc[sub].push(file);
-    return acc;
-  }, {} as Record<string, FileItem[]>);
+  const groupedFiles = files.reduce(
+    (acc, file) => {
+      const sub = file.subcategory || 'General';
+      if (!acc[sub]) acc[sub] = [];
+      acc[sub].push(file);
+      return acc;
+    },
+    {} as Record<string, FileItem[]>,
+  );
 
   return (
     <div className="bg-muted/50 rounded-lg p-4 border min-h-[300px] flex flex-col">
       <h3 className="font-medium text-sm mb-3 flex items-center justify-between">
         Selected Files ({files.length})
         {files.length > 0 && !processing && (
-          <Button variant="ghost" size="sm" className="h-6 text-xs text-destructive hover:text-destructive" onClick={onClear}>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-6 text-xs text-destructive hover:text-destructive"
+            onClick={onClear}
+          >
             Clear All
           </Button>
         )}
       </h3>
-      
+
       <div className="flex-1 overflow-y-auto space-y-4 max-h-[400px]">
         {Object.entries(groupedFiles).length === 0 ? (
           <div className="h-full flex flex-col items-center justify-center text-muted-foreground opacity-50">
@@ -202,22 +223,27 @@ function ZipFileList({ files, processing, onRemove, onClear }: ZipFileListProps)
           Object.entries(groupedFiles).map(([category, fileList]) => (
             <div key={category} className="space-y-1">
               <div className="flex items-center gap-2 px-2">
-                 <FolderOpen className="h-3 w-3 text-muted-foreground" />
-                 <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                <FolderOpen className="h-3 w-3 text-muted-foreground" />
+                <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
                   {category}
                 </span>
               </div>
-              
-              {fileList.map(file => (
-                <div key={file.id} className="group flex items-center justify-between p-2 bg-background border rounded-md text-sm">
+
+              {fileList.map((file) => (
+                <div
+                  key={file.id}
+                  className="group flex items-center justify-between p-2 bg-background border rounded-md text-sm"
+                >
                   <div className="flex items-center gap-2 overflow-hidden">
                     <span className="truncate">{file.name}</span>
-                    <span className="text-[10px] text-muted-foreground ml-2">{(file.size / 1024 / 1024).toFixed(2)} MB</span>
+                    <span className="text-[10px] text-muted-foreground ml-2">
+                      {(file.size / 1024 / 1024).toFixed(2)} MB
+                    </span>
                   </div>
                   {!processing && (
-                    <Button 
-                      variant="ghost" 
-                      size="icon" 
+                    <Button
+                      variant="ghost"
+                      size="icon"
                       className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity text-destructive hover:text-destructive hover:bg-destructive/10"
                       onClick={() => onRemove(file.id)}
                     >
@@ -263,9 +289,8 @@ function ZipSettingsSection({
   zipUrl,
   onGenerate,
   onReset,
-  fileCount
+  fileCount,
 }: ZipSettingsSectionProps) {
-  
   if (zipUrl) {
     return (
       <div className="p-4 bg-green-50 border border-green-100 rounded-md space-y-3 animate-in fade-in zoom-in-95 duration-200">
@@ -286,57 +311,67 @@ function ZipSettingsSection({
 
   return (
     <div className="space-y-5">
-       {/* Settings Section */}
-       <div className="space-y-4 pt-2 border-t">
-          <div className="space-y-2">
-            <Label htmlFor="zip-name">Archive Name</Label>
-            <div className="flex items-center gap-2">
-              <Input 
-                id="zip-name" 
-                placeholder="e.g. Client_Documents" 
-                value={zipFilename}
-                onChange={(e) => setZipFilename(e.target.value)}
-                disabled={processing}
-              />
-              <span className="text-sm text-muted-foreground whitespace-nowrap">.zip</span>
-            </div>
-          </div>
-
-          <div className="space-y-2">
-            <Label>Encryption Method</Label>
-            <RadioGroup 
-              value={encryptionMethod} 
-              onValueChange={(val: EncryptionMethod) => setEncryptionMethod(val)}
-              className="grid grid-cols-1 gap-2"
+      {/* Settings Section */}
+      <div className="space-y-4 pt-2 border-t">
+        <div className="space-y-2">
+          <Label htmlFor="zip-name">Archive Name</Label>
+          <div className="flex items-center gap-2">
+            <Input
+              id="zip-name"
+              placeholder="e.g. Client_Documents"
+              value={zipFilename}
+              onChange={(e) => setZipFilename(e.target.value)}
               disabled={processing}
-            >
-              <div className={`flex items-start space-x-3 space-y-0 rounded-md border p-3 cursor-pointer hover:bg-muted/50 ${encryptionMethod === 'individual' ? 'border-primary bg-primary/5' : ''}`}>
-                <RadioGroupItem value="individual" id="method-individual" className="mt-1" />
-                <div className="space-y-1">
-                  <Label htmlFor="method-individual" className="font-medium cursor-pointer">Individual Files</Label>
-                  <p className="text-xs text-muted-foreground">
-                    Files are encrypted individually inside the zip. You can see the file list without a password, but need the password to open each file.
-                  </p>
-                </div>
-              </div>
-              <div className={`flex items-start space-x-3 space-y-0 rounded-md border p-3 cursor-pointer hover:bg-muted/50 ${encryptionMethod === 'folder' ? 'border-primary bg-primary/5' : ''}`}>
-                <RadioGroupItem value="folder" id="method-folder" className="mt-1" />
-                <div className="space-y-1">
-                  <Label htmlFor="method-folder" className="font-medium cursor-pointer">Entire Folder (Recommended)</Label>
-                  <p className="text-xs text-muted-foreground">
-                    Wraps everything in a secure envelope. You enter the password once to unlock the package, then all files inside are accessible.
-                  </p>
-                </div>
-              </div>
-            </RadioGroup>
+            />
+            <span className="text-sm text-muted-foreground whitespace-nowrap">.zip</span>
           </div>
-       </div>
+        </div>
 
-       <div className="space-y-2">
+        <div className="space-y-2">
+          <Label>Encryption Method</Label>
+          <RadioGroup
+            value={encryptionMethod}
+            onValueChange={(val: EncryptionMethod) => setEncryptionMethod(val)}
+            className="grid grid-cols-1 gap-2"
+            disabled={processing}
+          >
+            <div
+              className={`flex items-start space-x-3 space-y-0 rounded-md border p-3 cursor-pointer hover:bg-muted/50 ${encryptionMethod === 'individual' ? 'border-primary bg-primary/5' : ''}`}
+            >
+              <RadioGroupItem value="individual" id="method-individual" className="mt-1" />
+              <div className="space-y-1">
+                <Label htmlFor="method-individual" className="font-medium cursor-pointer">
+                  Individual Files
+                </Label>
+                <p className="text-xs text-muted-foreground">
+                  Files are encrypted individually inside the zip. You can see the file list without
+                  a password, but need the password to open each file.
+                </p>
+              </div>
+            </div>
+            <div
+              className={`flex items-start space-x-3 space-y-0 rounded-md border p-3 cursor-pointer hover:bg-muted/50 ${encryptionMethod === 'folder' ? 'border-primary bg-primary/5' : ''}`}
+            >
+              <RadioGroupItem value="folder" id="method-folder" className="mt-1" />
+              <div className="space-y-1">
+                <Label htmlFor="method-folder" className="font-medium cursor-pointer">
+                  Entire Folder (Recommended)
+                </Label>
+                <p className="text-xs text-muted-foreground">
+                  Wraps everything in a secure envelope. You enter the password once to unlock the
+                  package, then all files inside are accessible.
+                </p>
+              </div>
+            </div>
+          </RadioGroup>
+        </div>
+      </div>
+
+      <div className="space-y-2">
         <Label htmlFor="zip-pass">Encryption Password</Label>
-        <Input 
-          id="zip-pass" 
-          type="password" 
+        <Input
+          id="zip-pass"
+          type="password"
           placeholder="Enter password..."
           value={password}
           onChange={(e) => setPassword(e.target.value)}
@@ -354,8 +389,8 @@ function ZipSettingsSection({
         </div>
       )}
 
-      <Button 
-        className="w-full" 
+      <Button
+        className="w-full"
         disabled={fileCount === 0 || password.length < 4 || !zipFilename.trim() || processing}
         onClick={onGenerate}
       >
@@ -377,7 +412,7 @@ function ZipSettingsSection({
 
 export function ZipEncryptTool() {
   const [isOpen, setIsOpen] = useState(false);
-  
+
   // Local State for input management
   const [uploadedFiles, setUploadedFiles] = useState<FileItem[]>([]);
   const [password, setPassword] = useState('');
@@ -385,21 +420,14 @@ export function ZipEncryptTool() {
   const [encryptionMethod, setEncryptionMethod] = useState<EncryptionMethod>('individual');
 
   // Custom Hook
-  const { 
-    processing, 
-    progress, 
-    currentAction, 
-    zipUrl, 
-    generateZip, 
-    reset 
-  } = useZipEncryption();
+  const { processing, progress, currentAction, zipUrl, generateZip, reset } = useZipEncryption();
 
   const handleFilesAdded = (files: FileItem[]) => {
-    setUploadedFiles(prev => [...prev, ...files]);
+    setUploadedFiles((prev) => [...prev, ...files]);
   };
 
   const removeFile = (id: string) => {
-    setUploadedFiles(prev => prev.filter(f => f.id !== id));
+    setUploadedFiles((prev) => prev.filter((f) => f.id !== id));
   };
 
   const clearAll = () => {
@@ -421,7 +449,10 @@ export function ZipEncryptTool() {
 
   return (
     <div className="contents">
-      <Card className="hover:shadow-md transition-shadow cursor-pointer border-dashed border-2 hover:border-primary/50" onClick={() => setIsOpen(true)}>
+      <Card
+        className="hover:shadow-md transition-shadow cursor-pointer border-dashed border-2 hover:border-primary/50"
+        onClick={() => setIsOpen(true)}
+      >
         <CardHeader>
           <div className="h-12 w-12 rounded-lg bg-primary/10 flex items-center justify-center mb-4">
             <Lock className="h-6 w-6 text-primary" />
@@ -437,7 +468,10 @@ export function ZipEncryptTool() {
           </p>
         </CardContent>
         <CardFooter>
-          <Button variant="ghost" className="w-full justify-start pl-0 text-primary group-hover:pl-2 transition-all">
+          <Button
+            variant="ghost"
+            className="w-full justify-start pl-0 text-primary group-hover:pl-2 transition-all"
+          >
             Open Tool <ChevronRight className="h-4 w-4 ml-2" />
           </Button>
         </CardFooter>
@@ -451,27 +485,25 @@ export function ZipEncryptTool() {
               Zip & Encrypt Tool
             </DialogTitle>
             <DialogDescription>
-              Create a secure archive from your documents. Files are processed locally on your device.
+              Create a secure archive from your documents. Files are processed locally on your
+              device.
             </DialogDescription>
           </DialogHeader>
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 py-4">
             {/* Left Column: Upload & Instructions */}
-            <ZipUploadSection 
-              onFilesAdded={handleFilesAdded} 
-              processing={processing} 
-            />
+            <ZipUploadSection onFilesAdded={handleFilesAdded} processing={processing} />
 
             {/* Right Column: List & Settings */}
             <div className="space-y-6">
-              <ZipFileList 
-                files={uploadedFiles} 
-                processing={processing} 
+              <ZipFileList
+                files={uploadedFiles}
+                processing={processing}
                 onRemove={removeFile}
                 onClear={clearAll}
               />
 
-              <ZipSettingsSection 
+              <ZipSettingsSection
                 zipFilename={zipFilename}
                 setZipFilename={setZipFilename}
                 encryptionMethod={encryptionMethod}

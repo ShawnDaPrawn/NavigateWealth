@@ -43,10 +43,7 @@ export const validateBankAccount = (account: BankAccount): string | null => {
 };
 
 export const isBankAccountEmpty = (account: BankAccount): boolean =>
-  !account.accountHolderName &&
-  !account.bankName &&
-  !account.accountNumber &&
-  !account.accountType;
+  !account.accountHolderName && !account.bankName && !account.accountNumber && !account.accountType;
 
 // ============================================================================
 // Family Member

@@ -1,13 +1,13 @@
 /**
  * PlatformFeaturesCard — Admin Dashboard Widget
- * 
+ *
  * Allows admins to toggle platform-level feature flags and manage
  * the Vasco article index (RAG).
- * 
+ *
  * Currently manages:
  *   - Vasco (Public AI Financial Navigator) — enabled/disabled
  *   - Article Index — trigger/clear indexing for RAG-powered responses
- * 
+ *
  * Displays toggle state, last-updated timestamp, and who made the change.
  */
 
@@ -66,7 +66,11 @@ export function PlatformFeaturesCard() {
   const [showIndexDetails, setShowIndexDetails] = useState(false);
 
   // Fetch current Vasco config
-  const { data: vascoConfig, isLoading, isError: configError } = useQuery({
+  const {
+    data: vascoConfig,
+    isLoading,
+    isError: configError,
+  } = useQuery({
     queryKey: vascoKeys.config(),
     queryFn: async () => {
       const res = await api.get<{ success: boolean; config: VascoConfig }>('/vasco/config');
@@ -95,7 +99,7 @@ export function PlatformFeaturesCard() {
       toast.success(
         newConfig.enabled
           ? 'Ask Vasco is now live on the public site'
-          : 'Ask Vasco has been disabled on the public site'
+          : 'Ask Vasco has been disabled on the public site',
       );
     },
     onError: (error: Error) => {
@@ -112,11 +116,11 @@ export function PlatformFeaturesCard() {
       if (data.errors && data.errors.length > 0) {
         toast.warning(
           `Indexed ${data.articlesIndexed} articles (${data.totalChunks} chunks) with ${data.errors.length} error(s)`,
-          { duration: 5000 }
+          { duration: 5000 },
         );
       } else {
         toast.success(
-          `Indexed ${data.articlesIndexed} articles (${data.totalChunks} chunks) in ${(data.durationMs / 1000).toFixed(1)}s`
+          `Indexed ${data.articlesIndexed} articles (${data.totalChunks} chunks) in ${(data.durationMs / 1000).toFixed(1)}s`,
         );
       }
     },
@@ -179,7 +183,8 @@ export function PlatformFeaturesCard() {
             <div>
               <p className="text-xs font-medium text-amber-700">Unable to load Vasco config</p>
               <p className="text-[11px] text-amber-600 mt-0.5">
-                The toggle may not reflect the current state. Check that you are logged in as an admin.
+                The toggle may not reflect the current state. Check that you are logged in as an
+                admin.
               </p>
             </div>
           </div>
@@ -204,9 +209,7 @@ export function PlatformFeaturesCard() {
                   {isEnabled ? 'Live' : 'Off'}
                 </Badge>
               </div>
-              <p className="text-xs text-gray-500 mt-0.5">
-                Public AI financial navigator
-              </p>
+              <p className="text-xs text-gray-500 mt-0.5">Public AI financial navigator</p>
             </div>
           </div>
           <div className="flex items-center gap-2">
@@ -224,9 +227,7 @@ export function PlatformFeaturesCard() {
 
         {/* Last updated info */}
         {lastUpdated && (
-          <p className="text-[11px] text-gray-400 px-1">
-            Last updated: {lastUpdated}
-          </p>
+          <p className="text-[11px] text-gray-400 px-1">Last updated: {lastUpdated}</p>
         )}
 
         {/* Quick link to view the page */}
@@ -274,9 +275,7 @@ export function PlatformFeaturesCard() {
                 <span>{indexStatus!.totalChunks} chunks</span>
               </div>
               {lastIndexed && (
-                <span className="text-[11px] text-gray-400">
-                  Last indexed: {lastIndexed}
-                </span>
+                <span className="text-[11px] text-gray-400">Last indexed: {lastIndexed}</span>
               )}
             </div>
           )}
@@ -304,7 +303,11 @@ export function PlatformFeaturesCard() {
                 variant="ghost"
                 className="text-xs h-8 text-red-500 hover:text-red-700 hover:bg-red-50"
                 onClick={() => {
-                  if (window.confirm('Clear the entire article index? Vasco will no longer reference articles until re-indexed.')) {
+                  if (
+                    window.confirm(
+                      'Clear the entire article index? Vasco will no longer reference articles until re-indexed.',
+                    )
+                  ) {
                     clearIndexMutation.mutate();
                   }
                 }}
@@ -328,7 +331,9 @@ export function PlatformFeaturesCard() {
                 {indexMutation.data.errors.length} indexing error(s)
               </div>
               {indexMutation.data.errors.slice(0, 3).map((err, i) => (
-                <p key={i} className="text-[11px] text-amber-600 pl-4">{err}</p>
+                <p key={i} className="text-[11px] text-amber-600 pl-4">
+                  {err}
+                </p>
               ))}
             </div>
           )}
@@ -340,7 +345,8 @@ export function PlatformFeaturesCard() {
                 onClick={() => setShowIndexDetails(!showIndexDetails)}
                 className="text-[11px] text-[#6d28d9] hover:underline px-1"
               >
-                {showIndexDetails ? 'Hide' : 'Show'} indexed articles ({indexStatus!.articles.length})
+                {showIndexDetails ? 'Hide' : 'Show'} indexed articles (
+                {indexStatus!.articles.length})
               </button>
               {showIndexDetails && (
                 <div className="mt-2 space-y-1 max-h-48 overflow-y-auto">

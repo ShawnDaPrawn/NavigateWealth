@@ -51,7 +51,9 @@ export interface ProbeResult {
   checks: Record<string, ProbeCheck>;
 }
 
-async function time<T>(fn: () => Promise<T>): Promise<{ ok: boolean; latencyMs: number; value?: T; detail?: string }> {
+async function time<T>(
+  fn: () => Promise<T>,
+): Promise<{ ok: boolean; latencyMs: number; value?: T; detail?: string }> {
   const start = Date.now();
   try {
     const value = await fn();
@@ -161,7 +163,7 @@ export async function runSyntheticProbe(): Promise<ProbeResult> {
   if (!result.ok) {
     log.error(
       `Synthetic probe FAILED: latencyMs=${latencyMs} error=${result.error} ` +
-      `kv=${checks.kv.ok} sha=${checks.sha256.ok} hmac=${checks.hmac.ok} pdf=${checks.pdfLib.ok}`,
+        `kv=${checks.kv.ok} sha=${checks.sha256.ok} hmac=${checks.hmac.ok} pdf=${checks.pdfLib.ok}`,
     );
   } else {
     log.info(`Synthetic probe ok in ${latencyMs}ms`);
@@ -175,7 +177,9 @@ export async function getLatestProbe(): Promise<ProbeResult | null> {
   return raw ? (raw as ProbeResult) : null;
 }
 
-export async function getProbeHistory(): Promise<Array<Pick<ProbeResult, 'ok' | 'latencyMs' | 'ranAt' | 'error'>>> {
+export async function getProbeHistory(): Promise<
+  Array<Pick<ProbeResult, 'ok' | 'latencyMs' | 'ranAt' | 'error'>>
+> {
   const raw = await kv.get(EsignKeys.syntheticProbeHistory());
   return Array.isArray(raw) ? raw : [];
 }

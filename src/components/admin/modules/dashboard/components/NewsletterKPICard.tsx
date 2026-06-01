@@ -58,13 +58,19 @@ function LastBroadcastBadge({ iso }: { iso: string }) {
   const days = Math.floor(diff / 86_400_000);
   if (days > 30) {
     return (
-      <Badge variant="outline" className="text-[10px] px-1.5 py-0 leading-4 text-amber-700 border-amber-300 bg-amber-50">
+      <Badge
+        variant="outline"
+        className="text-[10px] px-1.5 py-0 leading-4 text-amber-700 border-amber-300 bg-amber-50"
+      >
         Overdue
       </Badge>
     );
   }
   return (
-    <Badge variant="outline" className="text-[10px] px-1.5 py-0 leading-4 text-green-700 border-green-300 bg-green-50">
+    <Badge
+      variant="outline"
+      className="text-[10px] px-1.5 py-0 leading-4 text-green-700 border-green-300 bg-green-50"
+    >
       Recent
     </Badge>
   );
@@ -75,7 +81,7 @@ export function NewsletterKPICard() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetchNewsletterStats().then(s => {
+    fetchNewsletterStats().then((s) => {
       setStats(s);
       setLoading(false);
     });
@@ -115,9 +121,7 @@ export function NewsletterKPICard() {
             </div>
             Newsletter
           </CardTitle>
-          {!loading && stats?.lastBroadcastAt && (
-            <LastBroadcastBadge iso={stats.lastBroadcastAt} />
-          )}
+          {!loading && stats?.lastBroadcastAt && <LastBroadcastBadge iso={stats.lastBroadcastAt} />}
         </div>
         <CardDescription>Subscriber &amp; broadcast overview</CardDescription>
       </CardHeader>
@@ -151,7 +155,9 @@ export function NewsletterKPICard() {
               <Skeleton className="h-3.5 w-20 mt-0.5" />
             ) : (
               <p className="text-xs text-muted-foreground mt-0.5">
-                {stats?.lastBroadcastAt ? formatRelativeDate(stats.lastBroadcastAt) : 'No broadcasts yet'}
+                {stats?.lastBroadcastAt
+                  ? formatRelativeDate(stats.lastBroadcastAt)
+                  : 'No broadcasts yet'}
               </p>
             )}
           </div>

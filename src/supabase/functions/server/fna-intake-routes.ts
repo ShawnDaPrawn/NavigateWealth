@@ -49,7 +49,10 @@ function assertClientAccess(user: { id: string; role: string }, clientId: string
   }
 }
 
-function parseParam(schema: { safeParse: (v: string) => { success: boolean; data?: string } }, value: string) {
+function parseParam(
+  schema: { safeParse: (v: string) => { success: boolean; data?: string } },
+  value: string,
+) {
   const parsed = schema.safeParse(value);
   if (!parsed.success) {
     throw intakeUnprocessable('Invalid ID format');
@@ -131,7 +134,10 @@ fnaIntakeRoutes.put('/:domain/draft/:clientId', async (c) => {
 
     const bodyParse = FnaIntakeSaveDraftSchema.safeParse(await c.req.json());
     if (!bodyParse.success) {
-      return c.json({ success: false, error: 'Validation failed', details: bodyParse.error.issues }, 400);
+      return c.json(
+        { success: false, error: 'Validation failed', details: bodyParse.error.issues },
+        400,
+      );
     }
 
     await assertIntakeDraftRateLimit(user.id);
@@ -156,7 +162,10 @@ fnaIntakeRoutes.post('/session/:sessionId/submit', async (c) => {
 
     const bodyParse = FnaIntakeSubmitSchema.safeParse(await c.req.json());
     if (!bodyParse.success) {
-      return c.json({ success: false, error: 'Validation failed', details: bodyParse.error.issues }, 400);
+      return c.json(
+        { success: false, error: 'Validation failed', details: bodyParse.error.issues },
+        400,
+      );
     }
 
     const existing = await getIntakeSession(sessionId);

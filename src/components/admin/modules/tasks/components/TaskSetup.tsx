@@ -1,10 +1,10 @@
 /**
  * Task Management Module - Task Setup Component
  * Navigate Wealth Admin Dashboard
- * 
+ *
  * Setup wizard for creating the tasks table in Supabase
  * Provides SQL migration code and step-by-step instructions
- * 
+ *
  * @module tasks/components/TaskSetup
  */
 
@@ -164,8 +164,9 @@ export function TaskSetup() {
               Task Management Setup Required
             </h2>
             <p className="text-sm text-yellow-800 leading-relaxed">
-              The <code className="px-1.5 py-0.5 bg-yellow-100 rounded">tasks</code> table doesn't exist in your Supabase database yet. 
-              Follow the quick steps below to set it up (takes about 2 minutes).
+              The <code className="px-1.5 py-0.5 bg-yellow-100 rounded">tasks</code> table doesn't
+              exist in your Supabase database yet. Follow the quick steps below to set it up (takes
+              about 2 minutes).
             </p>
           </div>
         </div>
@@ -177,7 +178,7 @@ export function TaskSetup() {
           <span className="text-purple-600">→</span>
           Setup Steps
         </h3>
-        
+
         <ol className="space-y-5">
           <li className="flex gap-4">
             <div className="flex-shrink-0 w-8 h-8 rounded-full bg-gradient-to-br from-purple-500 to-purple-600 text-white flex items-center justify-center font-semibold shadow-md">
@@ -185,37 +186,45 @@ export function TaskSetup() {
             </div>
             <div className="flex-1 pt-1">
               <p className="text-gray-700 font-medium mb-1">Open Supabase SQL Editor</p>
-              <p className="text-sm text-gray-600">Click the button below to open the SQL Editor in a new tab</p>
+              <p className="text-sm text-gray-600">
+                Click the button below to open the SQL Editor in a new tab
+              </p>
             </div>
           </li>
-          
+
           <li className="flex gap-4">
             <div className="flex-shrink-0 w-8 h-8 rounded-full bg-gradient-to-br from-purple-500 to-purple-600 text-white flex items-center justify-center font-semibold shadow-md">
               2
             </div>
             <div className="flex-1 pt-1">
               <p className="text-gray-700 font-medium mb-1">Copy the SQL code</p>
-              <p className="text-sm text-gray-600">Use the "Copy SQL" button below to copy the migration code</p>
+              <p className="text-sm text-gray-600">
+                Use the "Copy SQL" button below to copy the migration code
+              </p>
             </div>
           </li>
-          
+
           <li className="flex gap-4">
             <div className="flex-shrink-0 w-8 h-8 rounded-full bg-gradient-to-br from-purple-500 to-purple-600 text-white flex items-center justify-center font-semibold shadow-md">
               3
             </div>
             <div className="flex-1 pt-1">
               <p className="text-gray-700 font-medium mb-1">Paste and run the SQL</p>
-              <p className="text-sm text-gray-600">Paste the code in the SQL Editor and click "Run"</p>
+              <p className="text-sm text-gray-600">
+                Paste the code in the SQL Editor and click "Run"
+              </p>
             </div>
           </li>
-          
+
           <li className="flex gap-4">
             <div className="flex-shrink-0 w-8 h-8 rounded-full bg-gradient-to-br from-purple-500 to-purple-600 text-white flex items-center justify-center font-semibold shadow-md">
               4
             </div>
             <div className="flex-1 pt-1">
               <p className="text-gray-700 font-medium mb-1">Refresh this page</p>
-              <p className="text-sm text-gray-600">After the SQL runs successfully, refresh this page to start using Task Management</p>
+              <p className="text-sm text-gray-600">
+                After the SQL runs successfully, refresh this page to start using Task Management
+              </p>
             </div>
           </li>
         </ol>
@@ -281,8 +290,9 @@ export function TaskSetup() {
           <div>
             <p className="font-medium text-blue-900 mb-1">Need help?</p>
             <p className="text-sm text-blue-800">
-              If you encounter any issues, make sure you're logged into Supabase and have permissions to run SQL queries. 
-              The table will be created with proper Row Level Security (RLS) policies to ensure data safety.
+              If you encounter any issues, make sure you're logged into Supabase and have
+              permissions to run SQL queries. The table will be created with proper Row Level
+              Security (RLS) policies to ensure data safety.
             </p>
           </div>
         </div>

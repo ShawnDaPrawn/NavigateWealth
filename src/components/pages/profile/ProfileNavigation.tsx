@@ -1,17 +1,17 @@
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '../../ui/card';
-import { 
-  User, 
-  Mail, 
-  MapPin, 
-  Briefcase, 
-  Heart, 
-  Users, 
-  CreditCard, 
-  Shield, 
+import {
+  User,
+  Mail,
+  MapPin,
+  Briefcase,
+  Heart,
+  Users,
+  CreditCard,
+  Shield,
   Target,
   PieChart,
-  Wallet
+  Wallet,
 } from 'lucide-react';
 import { ProfileSection } from './types';
 
@@ -32,7 +32,7 @@ export function ProfileNavigation({ activeSection, onSectionChange }: ProfileNav
     { id: 'banking' as ProfileSection, label: 'Banking', icon: CreditCard },
     { id: 'risk' as ProfileSection, label: 'Risk Profile', icon: Target },
     { id: 'assets' as ProfileSection, label: 'Assets & Liabilities', icon: PieChart },
-    { id: 'budgeting' as ProfileSection, label: 'Budgeting', icon: Wallet }
+    { id: 'budgeting' as ProfileSection, label: 'Budgeting', icon: Wallet },
   ];
 
   return (

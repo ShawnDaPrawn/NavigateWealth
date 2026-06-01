@@ -28,6 +28,8 @@ export function intakeUnprocessable(message: string): FnaIntakeError {
   return new FnaIntakeError(message, 422);
 }
 
-export function intakeRateLimited(message = 'Too many requests. Please try again later.'): FnaIntakeError {
+export function intakeRateLimited(
+  message = 'Too many requests. Please try again later.',
+): FnaIntakeError {
   return new FnaIntakeError(message, 429);
 }

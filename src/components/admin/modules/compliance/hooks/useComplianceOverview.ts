@@ -15,9 +15,9 @@ export function useComplianceOverview() {
       const [activitiesData, deadlinesData, statsData] = await Promise.all([
         complianceApi.getRecentActivities(),
         complianceApi.getUpcomingDeadlines(),
-        complianceApi.getComplianceStats()
+        complianceApi.getComplianceStats(),
       ]);
-      
+
       setActivities(activitiesData);
       setDeadlines(deadlinesData);
       setStats(statsData);

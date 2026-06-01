@@ -81,7 +81,7 @@ export function startExpirySweepScheduler(): void {
 
   log.info(
     `Expiry sweep scheduler registered: initial run in ${INITIAL_DELAY_MS / 1000}s, ` +
-    `then every ${EXPIRY_SWEEP_INTERVAL_MS / 1000 / 60 / 60}h`
+      `then every ${EXPIRY_SWEEP_INTERVAL_MS / 1000 / 60 / 60}h`,
   );
 
   // Initial delayed sweep
@@ -91,8 +91,8 @@ export function startExpirySweepScheduler(): void {
       const result = await runExpirySweep(false); // live run
       log.info(
         `Scheduled sweep complete: expired=${result.expiredCount}, ` +
-        `skipped=${result.skippedCount}, errors=${result.errors.length}, ` +
-        `duration=${result.durationMs}ms`
+          `skipped=${result.skippedCount}, errors=${result.errors.length}, ` +
+          `duration=${result.durationMs}ms`,
       );
     } catch (err) {
       log.error('Scheduled expiry sweep failed:', err);
@@ -106,8 +106,8 @@ export function startExpirySweepScheduler(): void {
       const result = await runExpirySweep(false); // live run
       log.info(
         `Scheduled sweep complete: expired=${result.expiredCount}, ` +
-        `skipped=${result.skippedCount}, errors=${result.errors.length}, ` +
-        `duration=${result.durationMs}ms`
+          `skipped=${result.skippedCount}, errors=${result.errors.length}, ` +
+          `duration=${result.durationMs}ms`,
       );
     } catch (err) {
       log.error('Scheduled expiry sweep failed:', err);
@@ -119,7 +119,9 @@ export function startExpirySweepScheduler(): void {
   setTimeout(async () => {
     try {
       const result = await flushDigests();
-      log.info(`Initial digest flush: users=${result.usersNotified}, entries=${result.entriesSent}`);
+      log.info(
+        `Initial digest flush: users=${result.usersNotified}, entries=${result.entriesSent}`,
+      );
     } catch (err) {
       log.error('Initial digest flush failed:', err);
     }
@@ -127,7 +129,9 @@ export function startExpirySweepScheduler(): void {
   setInterval(async () => {
     try {
       const result = await flushDigests();
-      log.info(`Scheduled digest flush: users=${result.usersNotified}, entries=${result.entriesSent}`);
+      log.info(
+        `Scheduled digest flush: users=${result.usersNotified}, entries=${result.entriesSent}`,
+      );
     } catch (err) {
       log.error('Scheduled digest flush failed:', err);
     }
@@ -140,7 +144,7 @@ export function startExpirySweepScheduler(): void {
       const result = await runReminderSweep(false);
       log.info(
         `Initial reminder sweep: envelopes=${result.scannedCount}, ` +
-        `remindersSent=${result.remindersSent}, errors=${result.errors.length}`,
+          `remindersSent=${result.remindersSent}, errors=${result.errors.length}`,
       );
     } catch (err) {
       log.error('Initial reminder sweep failed:', err);
@@ -152,7 +156,7 @@ export function startExpirySweepScheduler(): void {
       if (result.remindersSent > 0) {
         log.info(
           `Scheduled reminder sweep: envelopes=${result.scannedCount}, ` +
-          `remindersSent=${result.remindersSent}`,
+            `remindersSent=${result.remindersSent}`,
         );
       }
     } catch (err) {
@@ -168,8 +172,8 @@ export function startExpirySweepScheduler(): void {
       if (result.attempted > 0) {
         log.info(
           `Webhook outbox tick: attempted=${result.attempted}, ` +
-          `delivered=${result.delivered}, retried=${result.retried}, ` +
-          `deadLettered=${result.deadLettered}`,
+            `delivered=${result.delivered}, retried=${result.retried}, ` +
+            `deadLettered=${result.deadLettered}`,
         );
       }
     } catch (err) {
@@ -186,7 +190,7 @@ export function startExpirySweepScheduler(): void {
       if (result.purgedCount > 0) {
         log.info(
           `Initial recovery sweep: scanned=${result.scannedCount}, ` +
-          `purged=${result.purgedCount}`,
+            `purged=${result.purgedCount}`,
         );
       }
     } catch (err) {
@@ -199,7 +203,7 @@ export function startExpirySweepScheduler(): void {
       if (result.purgedCount > 0) {
         log.info(
           `Scheduled recovery sweep: scanned=${result.scannedCount}, ` +
-          `purged=${result.purgedCount}`,
+            `purged=${result.purgedCount}`,
         );
       }
     } catch (err) {
@@ -238,7 +242,7 @@ export function startExpirySweepScheduler(): void {
       const result = await runSyntheticProbe();
       log.info(
         `Initial synthetic probe: ok=${result.ok}, latencyMs=${result.latencyMs}` +
-        (result.error ? `, error=${result.error}` : ''),
+          (result.error ? `, error=${result.error}` : ''),
       );
     } catch (err) {
       log.error('Initial synthetic probe failed:', err);
@@ -260,8 +264,7 @@ export function startExpirySweepScheduler(): void {
       const result = await drainCompletionQueue();
       if (result.processed > 0) {
         log.info(
-          `Completion queue drain: processed=${result.processed}, ` +
-          `failed=${result.failed}`,
+          `Completion queue drain: processed=${result.processed}, ` + `failed=${result.failed}`,
         );
       }
     } catch (err) {

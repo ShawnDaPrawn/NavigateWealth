@@ -39,7 +39,7 @@ export function EmployeeBenefitsDashboardPage() {
         id: 'eb-none',
         title: 'No Employee Benefits on Record',
         description:
-          'If you\'re employed, your employer may offer group life, disability, pension, or provident fund benefits. Ask your HR department for details.',
+          "If you're employed, your employer may offer group life, disability, pension, or provident fund benefits. Ask your HR department for details.",
         severity: 'low',
       });
     } else {
@@ -48,7 +48,7 @@ export function EmployeeBenefitsDashboardPage() {
         id: 'eb-review',
         title: 'Review Group Scheme Adequacy',
         description:
-          'Group life cover is typically 3–5x annual salary. Check whether your employer\'s scheme provides sufficient cover or if you need a top-up personal policy.',
+          "Group life cover is typically 3–5x annual salary. Check whether your employer's scheme provides sufficient cover or if you need a top-up personal policy.",
         severity: 'low',
       });
 

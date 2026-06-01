@@ -11,11 +11,7 @@
 import { api } from '../../../utils/api';
 import { createClient } from '../../../utils/supabase/client';
 import { projectId } from '../../../utils/supabase/info';
-import type {
-  Communication,
-  InboxResponse,
-  CommunicationSettings,
-} from './types';
+import type { Communication, InboxResponse, CommunicationSettings } from './types';
 
 // ── Inbox API ───────────────────────────────────────────────────────────────
 
@@ -54,7 +50,9 @@ export async function markAsRead(messageId: string): Promise<void> {
  */
 async function getAccessToken(): Promise<string | null> {
   const supabase = createClient();
-  const { data: { session } } = await supabase.auth.getSession();
+  const {
+    data: { session },
+  } = await supabase.auth.getSession();
   return session?.access_token ?? null;
 }
 
@@ -83,9 +81,7 @@ export async function fetchPreferences(): Promise<CommunicationSettings | null> 
 /**
  * Persist updated communication preferences.
  */
-export async function updatePreferences(
-  preferences: CommunicationSettings,
-): Promise<void> {
+export async function updatePreferences(preferences: CommunicationSettings): Promise<void> {
   const token = await getAccessToken();
   if (!token) {
     throw new Error('Not authenticated — cannot save preferences.');

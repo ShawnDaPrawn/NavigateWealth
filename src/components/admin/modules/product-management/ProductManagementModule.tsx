@@ -1,8 +1,8 @@
 import React, { useState, useEffect, Suspense } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../../ui/tabs';
-import { 
-  Briefcase, 
-  Database, 
+import {
+  Briefcase,
+  Database,
   LayoutTemplate,
   Building2,
   Key,
@@ -19,7 +19,7 @@ import { ProductManagementSkeleton } from './components/ProductManagementSkeleto
 
 // Lazy-load the Document AI tab since it's less frequently accessed
 const DocumentMappingTab = React.lazy(() =>
-  import('./components/DocumentMappingTab').then(m => ({ default: m.DocumentMappingTab }))
+  import('./components/DocumentMappingTab').then((m) => ({ default: m.DocumentMappingTab })),
 );
 
 export function ProductManagementModule() {
@@ -58,7 +58,8 @@ export function ProductManagementModule() {
       <div className="flex flex-col gap-2">
         <h1 className="text-3xl font-bold text-gray-900 tracking-tight">Product Configuration</h1>
         <p className="text-lg text-gray-500 max-w-3xl">
-          Manage your financial product providers, define product data structures, and configure external data integrations.
+          Manage your financial product providers, define product data structures, and configure
+          external data integrations.
         </p>
       </div>
 
@@ -69,7 +70,7 @@ export function ProductManagementModule() {
             <Building2 className="w-4 h-4 mr-2" />
             Provider Management
           </TabsTrigger>
-          
+
           <TabsTrigger value="products">
             <LayoutTemplate className="w-4 h-4 mr-2" />
             Product Structure
@@ -108,11 +109,13 @@ export function ProductManagementModule() {
         </TabsContent>
 
         <TabsContent value="document-ai" className="m-0 focus-visible:outline-none">
-          <Suspense fallback={
-            <div className="flex items-center justify-center py-16">
-              <Loader2 className="h-8 w-8 animate-spin text-purple-600" />
-            </div>
-          }>
+          <Suspense
+            fallback={
+              <div className="flex items-center justify-center py-16">
+                <Loader2 className="h-8 w-8 animate-spin text-purple-600" />
+              </div>
+            }
+          >
             <DocumentMappingTab />
           </Suspense>
         </TabsContent>

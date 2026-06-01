@@ -66,8 +66,8 @@ export async function attachFilledPdfToClientDocuments(options: {
   const sanitizedFileName = options.fileName.replace(/[^a-zA-Z0-9.-]/g, '_');
   const filePath = `${options.clientId}/${timestamp}_${sanitizedFileName}`;
 
-  const { error: uploadError } = await getSupabase().storage
-    .from(BUCKET_NAME)
+  const { error: uploadError } = await getSupabase()
+    .storage.from(BUCKET_NAME)
     .upload(filePath, options.pdfBytes, {
       contentType: 'application/pdf',
       upsert: false,

@@ -75,7 +75,10 @@ function formatDate(date: string | Date, options?: Intl.DateTimeFormatOptions): 
 }
 
 function estimateReadingTime(html: string): number {
-  const text = html.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
+  const text = html
+    .replace(/<[^>]+>/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
   const words = text.split(' ').length;
   return Math.max(1, Math.ceil(words / 200));
 }
@@ -135,7 +138,10 @@ function stripEmailTrackingTokenFromUrl(): void {
   window.history.replaceState(window.history.state, '', nextUrl);
 }
 
-async function postArticleEmailEngagementEvent(event: 'open' | 'read', token: string): Promise<void> {
+async function postArticleEmailEngagementEvent(
+  event: 'open' | 'read',
+  token: string,
+): Promise<void> {
   await fetch(`${API_CONFIG.BASE_URL}/publications/email-engagement/${event}`, {
     method: 'POST',
     headers: {
@@ -196,19 +202,15 @@ function useArticleBySlug(slug: string | undefined) {
       // Increment view count silently
       const articleData = data.data || data;
       if (articleData?.id) {
-        fetch(
-          `${API_CONFIG.BASE_URL}/publications/articles/${articleData.id}/increment-views`,
-          {
-            method: 'POST',
-            headers: { Authorization: `Bearer ${publicAnonKey}` },
-          }
-        ).catch(() => {
+        fetch(`${API_CONFIG.BASE_URL}/publications/articles/${articleData.id}/increment-views`, {
+          method: 'POST',
+          headers: { Authorization: `Bearer ${publicAnonKey}` },
+        }).catch(() => {
           /* silent */
         });
       }
     } catch (err) {
-      const errorMessage =
-        err instanceof Error ? err.message : 'Failed to fetch article';
+      const errorMessage = err instanceof Error ? err.message : 'Failed to fetch article';
       setError(errorMessage);
       console.error('useArticleBySlug error:', err);
     } finally {
@@ -358,13 +360,7 @@ function ArticleLoadingState() {
   );
 }
 
-function ArticleErrorState({
-  message,
-  onRetry,
-}: {
-  message: string;
-  onRetry?: () => void;
-}) {
+function ArticleErrorState({ message, onRetry }: { message: string; onRetry?: () => void }) {
   useEffect(() => {
     let el = document.querySelector('meta[name="robots"]') as HTMLMetaElement | null;
     if (!el) {
@@ -433,7 +429,7 @@ function ShareActions({ title, excerpt }: { title: string; excerpt?: string }) {
     window.open(
       `https://www.linkedin.com/sharing/share-offsite/?url=${url}`,
       '_blank',
-      'width=600,height=400'
+      'width=600,height=400',
     );
     setShowMenu(false);
   };
@@ -443,7 +439,7 @@ function ShareActions({ title, excerpt }: { title: string; excerpt?: string }) {
     window.open(
       `https://www.facebook.com/sharer/sharer.php?u=${url}`,
       '_blank',
-      'width=600,height=400'
+      'width=600,height=400',
     );
     setShowMenu(false);
   };
@@ -454,7 +450,7 @@ function ShareActions({ title, excerpt }: { title: string; excerpt?: string }) {
     window.open(
       `https://twitter.com/intent/tweet?url=${url}&text=${text}`,
       '_blank',
-      'width=600,height=400'
+      'width=600,height=400',
     );
     setShowMenu(false);
   };
@@ -468,9 +464,7 @@ function ShareActions({ title, excerpt }: { title: string; excerpt?: string }) {
 
   const shareEmail = () => {
     const subj = encodeURIComponent(title);
-    const body = encodeURIComponent(
-      `${excerpt || title}\n\nRead more: ${window.location.href}`
-    );
+    const body = encodeURIComponent(`${excerpt || title}\n\nRead more: ${window.location.href}`);
     window.location.href = `mailto:?subject=${subj}&body=${body}`;
     setShowMenu(false);
   };
@@ -500,16 +494,21 @@ function ShareActions({ title, excerpt }: { title: string; excerpt?: string }) {
     const authorEl = document.querySelector('header .flex.flex-wrap.items-center.gap-x-5');
     if (authorEl) {
       const spans = authorEl.querySelectorAll('span');
-      spans.forEach(s => {
+      spans.forEach((s) => {
         const text = s.textContent?.trim();
         if (text) metaParts.push(text);
       });
     }
-    const metaHtml = metaParts.length > 0
-      ? `<div style="font-size:9px;color:#6b7280;margin-bottom:4mm;">${metaParts.join('  |  ')}</div>`
-      : '';
+    const metaHtml =
+      metaParts.length > 0
+        ? `<div style="font-size:9px;color:#6b7280;margin-bottom:4mm;">${metaParts.join('  |  ')}</div>`
+        : '';
 
-    const issueDate = new Date().toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' });
+    const issueDate = new Date().toLocaleDateString('en-GB', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+    });
 
     const fullHtml = `<!DOCTYPE html>
 <html><head><meta charset="utf-8"><title>${escapeHtmlText(navigateWealthPdfDocumentTitle(title))}</title>
@@ -705,7 +704,7 @@ function ShareActions({ title, excerpt }: { title: string; excerpt?: string }) {
       <div class="brand-sub">Independent Financial Advisory Services</div>
     </div>
     <div class="doc-block">
-      <div class="doc-title">${title.replace(/</g,'&lt;').replace(/>/g,'&gt;')}</div>
+      <div class="doc-title">${title.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</div>
       <div class="doc-meta">
         <span class="mk">Issue date</span>
         <span>${issueDate}</span>
@@ -751,12 +750,7 @@ function ShareActions({ title, excerpt }: { title: string; excerpt?: string }) {
           <Share2 className="h-4 w-4" />
           Share
         </Button>
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={handlePrint}
-          className="gap-2 print:hidden"
-        >
+        <Button variant="outline" size="sm" onClick={handlePrint} className="gap-2 print:hidden">
           <Printer className="h-4 w-4" />
           Print
         </Button>
@@ -886,7 +880,7 @@ export function ArticleDetailPage() {
 
   // Fallback to demo
   const article: ArticleDisplay | null =
-    apiArticle || (slug ? DEMO_ARTICLES[slug] ?? null : null);
+    apiArticle || (slug ? (DEMO_ARTICLES[slug] ?? null) : null);
 
   // Scroll to top on slug change
   useEffect(() => {
@@ -917,8 +911,7 @@ export function ArticleDetailPage() {
       '';
     const description = article.excerpt || article.subtitle || '';
     const url =
-      article.seo_canonical_url ||
-      `${window.location.origin}/resources/article/${article.slug}`;
+      article.seo_canonical_url || `${window.location.origin}/resources/article/${article.slug}`;
 
     const metaTags: Record<string, string> = {
       'og:title': article.title,
@@ -929,7 +922,7 @@ export function ArticleDetailPage() {
       'twitter:card': ogImage ? 'summary_large_image' : 'summary',
       'twitter:title': article.title,
       'twitter:description': description,
-      'description': description,
+      description: description,
     };
     if (ogImage) {
       metaTags['og:image'] = ogImage;
@@ -984,7 +977,7 @@ export function ArticleDetailPage() {
 
     return () => {
       document.title = prevTitle;
-      createdEls.forEach(el => el.remove());
+      createdEls.forEach((el) => el.remove());
       if (canonicalEl) {
         if (prevCanonicalHref) {
           canonicalEl.setAttribute('href', prevCanonicalHref);
@@ -1156,10 +1149,8 @@ export function ArticleDetailPage() {
 
   // Resolve field name variants
   const articleBody = (article.body || article.content || '') as string;
-  const articleCategoryName =
-    article.category_name || article.category?.name || '';
-  const articleTypeName =
-    article.type_name || article.type?.name || '';
+  const articleCategoryName = article.category_name || article.category?.name || '';
+  const articleTypeName = article.type_name || article.type?.name || '';
   const articleImage =
     article.hero_image_url ||
     article.featured_image_url ||
@@ -1167,16 +1158,10 @@ export function ArticleDetailPage() {
     article.featured_image ||
     article.thumbnail_image_url ||
     '';
-  const publishedDate = article.published_at
-    ? formatDate(article.published_at)
-    : '';
-  const updatedDate = article.updated_at
-    ? formatDate(article.updated_at)
-    : '';
-  const readingTime =
-    article.reading_time_minutes || estimateReadingTime(articleBody);
-  const authorName =
-    article.author_name || 'Navigate Wealth Editorial Team';
+  const publishedDate = article.published_at ? formatDate(article.published_at) : '';
+  const updatedDate = article.updated_at ? formatDate(article.updated_at) : '';
+  const readingTime = article.reading_time_minutes || estimateReadingTime(articleBody);
+  const authorName = article.author_name || 'Navigate Wealth Editorial Team';
 
   // Sanitise and enhance HTML
   const sanitisedHtml = DOMPurify.sanitize(articleBody);
@@ -1218,9 +1203,7 @@ export function ArticleDetailPage() {
                 </Badge>
               )}
               {article.is_featured && (
-                <Badge className="bg-amber-500 text-white border-0 text-xs">
-                  Featured
-                </Badge>
+                <Badge className="bg-amber-500 text-white border-0 text-xs">Featured</Badge>
               )}
             </div>
 
@@ -1269,11 +1252,7 @@ export function ArticleDetailPage() {
         {articleImage && (
           <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 -mt-8 print:hidden">
             <div className="aspect-[21/9] rounded-2xl overflow-hidden shadow-2xl ring-1 ring-black/5">
-              <img
-                src={articleImage}
-                alt={article.title}
-                className="w-full h-full object-cover"
-              />
+              <img src={articleImage} alt={article.title} className="w-full h-full object-cover" />
             </div>
           </div>
         )}
@@ -1288,16 +1267,11 @@ export function ArticleDetailPage() {
             <div className="flex-1 min-w-0 max-w-4xl">
               {/* Actions bar */}
               <div className="flex items-center justify-between pb-6 mb-8 border-b border-gray-200 print:hidden">
-                <ShareActions
-                  title={article.title}
-                  excerpt={article.excerpt}
-                />
+                <ShareActions title={article.title} excerpt={article.excerpt} />
 
                 {/* Updated timestamp */}
                 {updatedDate && updatedDate !== publishedDate && (
-                  <span className="text-xs text-gray-400">
-                    Updated {updatedDate}
-                  </span>
+                  <span className="text-xs text-gray-400">Updated {updatedDate}</span>
                 )}
               </div>
 
@@ -1338,7 +1312,7 @@ export function ArticleDetailPage() {
                   // Tables
                   'prose-table:border-collapse prose-table:rounded-lg prose-table:overflow-hidden',
                   'prose-th:bg-gray-50 prose-th:font-semibold prose-th:text-left prose-th:px-4 prose-th:py-3',
-                  'prose-td:px-4 prose-td:py-3 prose-td:border-t prose-td:border-gray-100'
+                  'prose-td:px-4 prose-td:py-3 prose-td:border-t prose-td:border-gray-100',
                 )}
                 dangerouslySetInnerHTML={{ __html: enhancedHtml }}
               />
@@ -1366,12 +1340,10 @@ export function ArticleDetailPage() {
               {/* Compliance Disclaimer */}
               <div className="mt-10 p-5 rounded-xl bg-gray-50 border border-gray-100 text-xs text-gray-500 leading-relaxed print:mt-6">
                 <p>
-                  <strong className="text-gray-600">Disclaimer:</strong> This
-                  article is for informational purposes only and does not
-                  constitute financial, tax, or legal advice. Please consult a
-                  qualified financial adviser before making any investment
-                  decisions. Navigate Wealth is an authorised
-                  Financial Services Provider.
+                  <strong className="text-gray-600">Disclaimer:</strong> This article is for
+                  informational purposes only and does not constitute financial, tax, or legal
+                  advice. Please consult a qualified financial adviser before making any investment
+                  decisions. Navigate Wealth is an authorised Financial Services Provider.
                 </p>
               </div>
 
@@ -1379,10 +1351,7 @@ export function ArticleDetailPage() {
               <AuthorCard name={authorName} />
 
               {/* Related Articles */}
-              <RelatedArticles
-                currentArticleId={article.id}
-                categoryId={article.category_id}
-              />
+              <RelatedArticles currentArticleId={article.id} categoryId={article.category_id} />
 
               {/* Bottom CTA */}
               <div className="mt-16 text-center print:hidden">

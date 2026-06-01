@@ -1,11 +1,11 @@
 /**
  * Centralized currency formatting utility for the Navigate Wealth application
- * 
+ *
  * Standard format: R1,234,567.89
  * - Thousand separators with commas (,)
  * - Decimal point for cents (.)
  * - Currency symbol: R (South African Rand)
- * 
+ *
  * All currency fields across the application MUST use these utilities
  * to ensure consistent formatting. See Guidelines §5.3, §8.3.
  */
@@ -13,7 +13,7 @@
 /**
  * Format a number as currency for display (read-only contexts)
  * Output: "R1,234,567.89"
- * 
+ *
  * Uses manual formatting to guarantee consistent output across
  * all browser/platform Intl implementations.
  */
@@ -86,11 +86,11 @@ export function formatCurrencyDisplay(value: number | string | undefined | null)
 
 /**
  * Format input value while the user is typing in a currency field.
- * 
+ *
  * IMPORTANT: This should only be used on BLUR, not on every keystroke.
  * While the user is typing, show the raw value to avoid cursor issues.
  * On blur, call this to add thousand separators.
- * 
+ *
  * Accepts raw user input and returns formatted string.
  * Input: "1234567.89" → Output: "1,234,567.89"
  * Input: "1234" → Output: "1,234"
@@ -109,7 +109,9 @@ export function formatCurrencyInput(value: string | number | undefined | null): 
   let processedValue = cleaned;
   if (decimalCount > 1) {
     const firstDecimalIndex = cleaned.indexOf('.');
-    processedValue = cleaned.substring(0, firstDecimalIndex + 1) + cleaned.substring(firstDecimalIndex + 1).replace(/\./g, '');
+    processedValue =
+      cleaned.substring(0, firstDecimalIndex + 1) +
+      cleaned.substring(firstDecimalIndex + 1).replace(/\./g, '');
   }
 
   // Split by decimal point

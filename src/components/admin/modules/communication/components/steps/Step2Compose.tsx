@@ -2,16 +2,14 @@ import React, { useState, useRef, useMemo } from 'react';
 import ReactQuill from 'react-quill-new';
 import 'react-quill-new/dist/quill.snow.css';
 import DOMPurify from 'dompurify';
-import { 
-  Type, Eye, Paperclip, X, ArrowLeft, ArrowRight
-} from 'lucide-react';
+import { Type, Eye, Paperclip, X, ArrowLeft, ArrowRight } from 'lucide-react';
 import { Card, CardContent } from '../../../../../ui/card';
 import { Input } from '../../../../../ui/input';
 import { Button } from '../../../../../ui/button';
 import { Label } from '../../../../../ui/label';
 import { ScrollArea } from '../../../../../ui/scroll-area';
 import { Badge } from '../../../../../ui/badge';
-import { 
+import {
   Dialog,
   DialogContent,
   DialogHeader,
@@ -48,22 +46,20 @@ export function Step2Compose({ draft, updateDraft, onNext, onBack }: Step2Props)
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
   const quillRef = useRef<ReactQuill>(null);
 
-  const modules = useMemo(() => ({
-    toolbar: [
-      ['bold', 'italic', 'underline'],
-      [{ 'list': 'ordered'}, { 'list': 'bullet' }],
-      [{ 'align': [] }],
-      ['link', 'image'],
-      ['clean']
-    ],
-  }), []);
+  const modules = useMemo(
+    () => ({
+      toolbar: [
+        ['bold', 'italic', 'underline'],
+        [{ list: 'ordered' }, { list: 'bullet' }],
+        [{ align: [] }],
+        ['link', 'image'],
+        ['clean'],
+      ],
+    }),
+    [],
+  );
 
-  const formats = [
-    'bold', 'italic', 'underline',
-    'list',
-    'align',
-    'link', 'image'
-  ];
+  const formats = ['bold', 'italic', 'underline', 'list', 'align', 'link', 'image'];
 
   const handleInsertMergeField = (field: string) => {
     const editor = quillRef.current?.getEditor();
@@ -97,7 +93,7 @@ export function Step2Compose({ draft, updateDraft, onNext, onBack }: Step2Props)
       }
 
       const toastId = toast.loading('Uploading attachment...');
-      
+
       try {
         const uploadedFile = await communicationApi.uploadFile(file);
         updateDraft({ attachments: [...draft.attachments, uploadedFile] });
@@ -111,7 +107,7 @@ export function Step2Compose({ draft, updateDraft, onNext, onBack }: Step2Props)
   };
 
   const removeAttachment = (id: string) => {
-    updateDraft({ attachments: draft.attachments.filter(a => a.id !== id) });
+    updateDraft({ attachments: draft.attachments.filter((a) => a.id !== id) });
   };
 
   /** Resolve merge field placeholders with example data for preview */
@@ -151,27 +147,28 @@ export function Step2Compose({ draft, updateDraft, onNext, onBack }: Step2Props)
         }
       `}</style>
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-        
         {/* Main Editor Area */}
         <div className="lg:col-span-3 space-y-6">
           <Card>
             <CardContent className="p-6 space-y-4">
               <div>
                 <Label htmlFor="subject">Subject Line</Label>
-                <Input 
-                  id="subject" 
-                  placeholder="Enter email subject..." 
+                <Input
+                  id="subject"
+                  placeholder="Enter email subject..."
                   value={draft.subject}
                   onChange={(e) => updateDraft({ subject: e.target.value })}
                   className="mt-1.5 text-lg font-medium"
                 />
               </div>
-              
+
               <div>
-                <Label htmlFor="title" className="text-muted-foreground text-xs">Internal Title (Optional)</Label>
-                <Input 
-                  id="title" 
-                  placeholder="Campaign title (internal use only)..." 
+                <Label htmlFor="title" className="text-muted-foreground text-xs">
+                  Internal Title (Optional)
+                </Label>
+                <Input
+                  id="title"
+                  placeholder="Campaign title (internal use only)..."
                   value={draft.title || ''}
                   onChange={(e) => updateDraft({ title: e.target.value })}
                   className="mt-1"
@@ -180,7 +177,7 @@ export function Step2Compose({ draft, updateDraft, onNext, onBack }: Step2Props)
 
               {/* WYSIWYG Editor */}
               <div className="rounded-lg shadow-sm">
-                <ReactQuill 
+                <ReactQuill
                   ref={quillRef}
                   theme="snow"
                   value={draft.bodyHtml}
@@ -202,15 +199,19 @@ export function Step2Compose({ draft, updateDraft, onNext, onBack }: Step2Props)
                     Upload File
                   </Button>
                 </div>
-                
+
                 {draft.attachments.length > 0 && (
                   <div className="flex flex-wrap gap-2">
-                    {draft.attachments.map(file => (
-                      <Badge key={file.id} variant="secondary" className="pl-3 pr-1 py-1 h-8 flex items-center gap-2">
+                    {draft.attachments.map((file) => (
+                      <Badge
+                        key={file.id}
+                        variant="secondary"
+                        className="pl-3 pr-1 py-1 h-8 flex items-center gap-2"
+                      >
                         {file.name}
-                        <Button 
-                          variant="ghost" 
-                          size="icon" 
+                        <Button
+                          variant="ghost"
+                          size="icon"
                           className="h-5 w-5 rounded-full hover:bg-muted"
                           onClick={() => removeAttachment(file.id)}
                           aria-label={`Remove attachment ${file.name}`}
@@ -232,7 +233,7 @@ export function Step2Compose({ draft, updateDraft, onNext, onBack }: Step2Props)
           <Card>
             <CardContent className="p-4">
               <h3 className="font-semibold mb-3 flex items-center gap-2">
-                <Type className="h-4 w-4 text-primary" /> 
+                <Type className="h-4 w-4 text-primary" />
                 Merge Fields
               </h3>
               <p className="text-xs text-muted-foreground mb-4">
@@ -240,13 +241,15 @@ export function Step2Compose({ draft, updateDraft, onNext, onBack }: Step2Props)
               </p>
               <ScrollArea className="h-[300px] pr-4">
                 <div className="space-y-2">
-                  {MERGE_FIELDS.map(field => (
+                  {MERGE_FIELDS.map((field) => (
                     <button
                       key={field.key}
                       onClick={() => handleInsertMergeField(field.key)}
                       className="w-full text-left p-2.5 rounded-md border hover:border-primary hover:bg-primary/5 transition-colors text-sm group"
                     >
-                      <div className="font-medium text-gray-700 group-hover:text-primary">{field.label}</div>
+                      <div className="font-medium text-gray-700 group-hover:text-primary">
+                        {field.label}
+                      </div>
                       <code className="text-xs text-muted-foreground bg-muted px-1 rounded mt-1 inline-block">
                         {field.key}
                       </code>
@@ -268,7 +271,10 @@ export function Step2Compose({ draft, updateDraft, onNext, onBack }: Step2Props)
             <DialogContent className="max-w-3xl max-h-[80vh] overflow-y-auto">
               <DialogHeader>
                 <DialogTitle>Email Preview</DialogTitle>
-                <p className="text-sm text-muted-foreground">This is how your email will appear to recipients. Merge fields are shown with example data.</p>
+                <p className="text-sm text-muted-foreground">
+                  This is how your email will appear to recipients. Merge fields are shown with
+                  example data.
+                </p>
               </DialogHeader>
               {/* Email envelope info */}
               <div className="space-y-1.5 border rounded-lg p-4 bg-muted/30 mt-2">
@@ -282,45 +288,76 @@ export function Step2Compose({ draft, updateDraft, onNext, onBack }: Step2Props)
                 </div>
                 <div className="grid grid-cols-[80px_1fr] gap-2 items-center text-sm">
                   <span className="font-medium text-muted-foreground">Subject:</span>
-                  <span className="font-semibold">{resolvePreviewMergeFields(draft.subject) || '(No Subject)'}</span>
+                  <span className="font-semibold">
+                    {resolvePreviewMergeFields(draft.subject) || '(No Subject)'}
+                  </span>
                 </div>
               </div>
               {/* WYSIWYG email template preview — mirrors the actual Navigate Wealth email template */}
-              <div className="mt-4 rounded-xl overflow-hidden border shadow-lg" style={{ backgroundColor: '#f3f4f6' }}>
+              <div
+                className="mt-4 rounded-xl overflow-hidden border shadow-lg"
+                style={{ backgroundColor: '#f3f4f6' }}
+              >
                 <div style={{ padding: '32px 16px' }}>
-                  <div style={{
-                    maxWidth: '600px',
-                    margin: '0 auto',
-                    backgroundColor: '#ffffff',
-                    borderRadius: '12px',
-                    border: '1px solid #e5e7eb',
-                    boxShadow: '0 8px 20px rgba(15,23,42,0.10)',
-                    overflow: 'hidden',
-                    fontFamily: 'Arial, sans-serif',
-                  }}>
+                  <div
+                    style={{
+                      maxWidth: '600px',
+                      margin: '0 auto',
+                      backgroundColor: '#ffffff',
+                      borderRadius: '12px',
+                      border: '1px solid #e5e7eb',
+                      boxShadow: '0 8px 20px rgba(15,23,42,0.10)',
+                      overflow: 'hidden',
+                      fontFamily: 'Arial, sans-serif',
+                    }}
+                  >
                     {/* Purple gradient accent */}
-                    <div style={{
-                      height: '5px',
-                      background: 'linear-gradient(90deg, #6d28d9, #a855f7, #6d28d9)',
-                      borderRadius: '12px 12px 0 0',
-                    }} />
+                    <div
+                      style={{
+                        height: '5px',
+                        background: 'linear-gradient(90deg, #6d28d9, #a855f7, #6d28d9)',
+                        borderRadius: '12px 12px 0 0',
+                      }}
+                    />
                     {/* Main content */}
                     <div style={{ padding: '30px 32px 24px 32px', textAlign: 'center' }}>
                       {/* Logo */}
                       <div style={{ marginBottom: '20px' }}>
-                        <span style={{ fontSize: '24px', fontWeight: 'bold', color: '#000000' }}>Navigate</span>
-                        <span style={{ fontSize: '24px', fontWeight: 'bold', color: '#6d28d9' }}>Wealth</span>
+                        <span style={{ fontSize: '24px', fontWeight: 'bold', color: '#000000' }}>
+                          Navigate
+                        </span>
+                        <span style={{ fontSize: '24px', fontWeight: 'bold', color: '#6d28d9' }}>
+                          Wealth
+                        </span>
                       </div>
                       {/* Title */}
-                      <div style={{ fontSize: '16px', fontWeight: 'bold', color: '#111827', marginBottom: '24px' }}>
+                      <div
+                        style={{
+                          fontSize: '16px',
+                          fontWeight: 'bold',
+                          color: '#111827',
+                          marginBottom: '24px',
+                        }}
+                      >
                         {resolvePreviewMergeFields(draft.subject) || 'Navigate Wealth'}
                       </div>
                       {/* Body content */}
-                      <div style={{ fontSize: '14px', color: '#374151', lineHeight: '1.6', textAlign: 'left' }}>
+                      <div
+                        style={{
+                          fontSize: '14px',
+                          color: '#374151',
+                          lineHeight: '1.6',
+                          textAlign: 'left',
+                        }}
+                      >
                         {draft.bodyHtml ? (
-                          <div dangerouslySetInnerHTML={{
-                            __html: sanitizeComposerHtml(resolvePreviewMergeFields(draft.bodyHtml))
-                          }} />
+                          <div
+                            dangerouslySetInnerHTML={{
+                              __html: sanitizeComposerHtml(
+                                resolvePreviewMergeFields(draft.bodyHtml),
+                              ),
+                            }}
+                          />
                         ) : (
                           <p style={{ color: '#9ca3af', fontStyle: 'italic' }}>No content yet...</p>
                         )}
@@ -331,22 +368,35 @@ export function Step2Compose({ draft, updateDraft, onNext, onBack }: Step2Props)
                       <hr style={{ border: 'none', borderTop: '1px solid #e5e7eb', margin: 0 }} />
                     </div>
                     {/* Footer */}
-                    <div style={{ padding: '18px 32px 24px 32px', fontSize: '12px', color: '#6b7280', lineHeight: '1.6', textAlign: 'center' }}>
+                    <div
+                      style={{
+                        padding: '18px 32px 24px 32px',
+                        fontSize: '12px',
+                        color: '#6b7280',
+                        lineHeight: '1.6',
+                        textAlign: 'center',
+                      }}
+                    >
                       <p style={{ margin: 0 }}>
-                        <strong>Navigate Wealth</strong><br />
+                        <strong>Navigate Wealth</strong>
+                        <br />
                         Independent Financial Advisory Services
                       </p>
                       <p style={{ margin: '8px 0 0' }}>
                         First Floor, Milestone Place, Block A<br />
-                        25 Sovereign Dr, Route 21 Business Park<br />
+                        25 Sovereign Dr, Route 21 Business Park
+                        <br />
                         Irene, 0157
                       </p>
                       <p style={{ margin: '8px 0 0' }}>
                         Email: <span style={{ color: '#6d28d9' }}>info@navigatewealth.co</span>
                       </p>
                       <p style={{ margin: '12px 0 0' }}>
-                        <strong>Follow us:</strong><br />
-                        <span style={{ color: '#6d28d9' }}>LinkedIn</span> | <span style={{ color: '#6d28d9' }}>Instagram</span> | <span style={{ color: '#6d28d9' }}>YouTube</span>
+                        <strong>Follow us:</strong>
+                        <br />
+                        <span style={{ color: '#6d28d9' }}>LinkedIn</span> |{' '}
+                        <span style={{ color: '#6d28d9' }}>Instagram</span> |{' '}
+                        <span style={{ color: '#6d28d9' }}>YouTube</span>
                       </p>
                       <p style={{ margin: '12px 0 0', color: '#9ca3af' }}>
                         &copy; {new Date().getFullYear()} Navigate Wealth. All rights reserved.
@@ -358,9 +408,11 @@ export function Step2Compose({ draft, updateDraft, onNext, onBack }: Step2Props)
               {/* Attachments in preview */}
               {draft.attachments.length > 0 && (
                 <div className="mt-3 p-3 border rounded-lg bg-muted/30">
-                  <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Attachments</span>
+                  <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                    Attachments
+                  </span>
                   <div className="flex flex-wrap gap-2 mt-2">
-                    {draft.attachments.map(f => (
+                    {draft.attachments.map((f) => (
                       <Badge key={f.id} variant="secondary" className="gap-1">
                         <Paperclip className="h-3 w-3" /> {f.name}
                       </Badge>

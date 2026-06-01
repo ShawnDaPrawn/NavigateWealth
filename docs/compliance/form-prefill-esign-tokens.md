@@ -4,11 +4,11 @@ This document describes how e-sign field prefill tokens relate to the unified fo
 
 ## Allowed token families
 
-| Token pattern | Resolver path | PII scope |
-|---------------|---------------|-----------|
-| `client.*` | Legacy profile flatten in `esign-prefill.ts` | Name, email, phone, ID, address, tax number, DOB, marital status |
-| `key:profile_*` | `resolveCanonicalValueForClient` | Individual canonical profile / client key fields |
-| `envelope.*` | Envelope metadata only | Non-PII workflow IDs |
+| Token pattern   | Resolver path                                | PII scope                                                        |
+| --------------- | -------------------------------------------- | ---------------------------------------------------------------- |
+| `client.*`      | Legacy profile flatten in `esign-prefill.ts` | Name, email, phone, ID, address, tax number, DOB, marital status |
+| `key:profile_*` | `resolveCanonicalValueForClient`             | Individual canonical profile / client key fields                 |
+| `envelope.*`    | Envelope metadata only                       | Non-PII workflow IDs                                             |
 
 ## Key Manager tokens (recommended)
 

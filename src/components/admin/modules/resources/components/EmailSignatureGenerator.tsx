@@ -84,11 +84,20 @@ interface SignatureData {
 
 /** Fields that define a reusable branding format (excludes personal details). */
 const FORMAT_FIELD_KEYS: (keyof SignatureData)[] = [
-  'website', 'address',
-  'linkedinUrl', 'instagramUrl', 'youtubeUrl', 'xUrl',
+  'website',
+  'address',
+  'linkedinUrl',
+  'instagramUrl',
+  'youtubeUrl',
+  'xUrl',
   'disclaimerText',
-  'logoUrl', 'logoSize', 'logoTransparentBg',
-  'primaryColour', 'secondaryColour', 'nameColour', 'titleColour',
+  'logoUrl',
+  'logoSize',
+  'logoTransparentBg',
+  'primaryColour',
+  'secondaryColour',
+  'nameColour',
+  'titleColour',
   'showFspTagline',
 ];
 
@@ -182,31 +191,44 @@ function getSocialLinks(data: SignatureData) {
     { platform: 'instagram' as const, url: data.instagramUrl, label: 'Instagram' },
     { platform: 'youtube' as const, url: data.youtubeUrl, label: 'YouTube' },
     { platform: 'x' as const, url: data.xUrl, label: 'X' },
-  ].filter(l => l.url.trim());
+  ].filter((l) => l.url.trim());
 }
 
-function buildSocialRow(data: SignatureData, colour: string, style: 'icons' | 'pills' | 'text'): string {
+function buildSocialRow(
+  data: SignatureData,
+  colour: string,
+  style: 'icons' | 'pills' | 'text',
+): string {
   const links = getSocialLinks(data);
   if (links.length === 0) return '';
 
   if (style === 'pills') {
-    const items = links.map(l =>
-      `<a href="${l.url}" target="_blank" style="display:inline-block;padding:5px 12px;border-radius:14px;background-color:${colour}14;color:${colour};font-size:11px;font-weight:500;text-decoration:none;margin-right:6px;margin-bottom:4px;font-family:'Segoe UI',Roboto,Helvetica,Arial,sans-serif;">${l.label}</a>`
-    ).join('');
+    const items = links
+      .map(
+        (l) =>
+          `<a href="${l.url}" target="_blank" style="display:inline-block;padding:5px 12px;border-radius:14px;background-color:${colour}14;color:${colour};font-size:11px;font-weight:500;text-decoration:none;margin-right:6px;margin-bottom:4px;font-family:'Segoe UI',Roboto,Helvetica,Arial,sans-serif;">${l.label}</a>`,
+      )
+      .join('');
     return `<tr><td style="padding-top:12px;padding-bottom:8px;">${items}</td></tr>`;
   }
 
   if (style === 'icons') {
-    const items = links.map(l =>
-      `<a href="${l.url}" target="_blank" style="display:inline-block;margin-right:10px;text-decoration:none;vertical-align:middle;" title="${l.label}">${socialIconHtml(l.platform, colour)}</a>`
-    ).join('');
+    const items = links
+      .map(
+        (l) =>
+          `<a href="${l.url}" target="_blank" style="display:inline-block;margin-right:10px;text-decoration:none;vertical-align:middle;" title="${l.label}">${socialIconHtml(l.platform, colour)}</a>`,
+      )
+      .join('');
     return `<tr><td style="padding-top:12px;padding-bottom:8px;">${items}</td></tr>`;
   }
 
   // text style
-  const items = links.map(l =>
-    `<a href="${l.url}" target="_blank" style="color:${colour};font-size:11px;text-decoration:none;margin-right:14px;font-family:'Segoe UI',Roboto,Helvetica,Arial,sans-serif;">${l.label}</a>`
-  ).join(' ');
+  const items = links
+    .map(
+      (l) =>
+        `<a href="${l.url}" target="_blank" style="color:${colour};font-size:11px;text-decoration:none;margin-right:14px;font-family:'Segoe UI',Roboto,Helvetica,Arial,sans-serif;">${l.label}</a>`,
+    )
+    .join(' ');
   return `<tr><td style="padding-top:10px;padding-bottom:8px;">${items}</td></tr>`;
 }
 
@@ -279,10 +301,18 @@ function generateElegantHtml(data: SignatureData, logoSrc: string): string {
   const titleCol = data.titleColour || gold;
 
   const contactItems = [
-    data.phone ? `<a href="tel:${data.phone.replace(/\s/g, '')}" style="color:${c};text-decoration:none;font-size:12.5px;">${data.phone}</a>` : '',
-    data.mobile ? `<a href="tel:${data.mobile.replace(/\s/g, '')}" style="color:${c};text-decoration:none;font-size:12.5px;">${data.mobile}</a>` : '',
-    data.email ? `<a href="mailto:${data.email}" style="color:${c};text-decoration:none;font-size:12.5px;">${data.email}</a>` : '',
-  ].filter(Boolean).join('<span style="color:#d1d5db;margin:0 10px;">|</span>');
+    data.phone
+      ? `<a href="tel:${data.phone.replace(/\s/g, '')}" style="color:${c};text-decoration:none;font-size:12.5px;">${data.phone}</a>`
+      : '',
+    data.mobile
+      ? `<a href="tel:${data.mobile.replace(/\s/g, '')}" style="color:${c};text-decoration:none;font-size:12.5px;">${data.mobile}</a>`
+      : '',
+    data.email
+      ? `<a href="mailto:${data.email}" style="color:${c};text-decoration:none;font-size:12.5px;">${data.email}</a>`
+      : '',
+  ]
+    .filter(Boolean)
+    .join('<span style="color:#d1d5db;margin:0 10px;">|</span>');
 
   return `<table cellpadding="0" cellspacing="0" border="0" style="font-family:'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-size:13px;color:#374151;line-height:1.55;max-width:540px;">
   <tr><td style="text-align:center;padding-bottom:14px;">${logoBgHtml(logoSrc, data.logoSize, data.logoTransparentBg, false)}</td></tr>
@@ -356,11 +386,15 @@ function generateNavigateHtml(data: SignatureData, logoSrc: string): string {
   const headerLogoSize = Math.max(16, Math.round(data.logoSize * 0.6));
 
   const socialLinks = getSocialLinks(data);
-  const socialBar = socialLinks.length > 0
-    ? `<tr><td style="padding-top:14px;padding-bottom:6px;">${socialLinks.map(l =>
-        `<a href="${l.url}" target="_blank" style="display:inline-block;margin-right:12px;text-decoration:none;vertical-align:middle;" title="${l.label}">${socialIconHtml(l.platform, '#ffffffaa')}</a>`
-      ).join('')}</td></tr>`
-    : '';
+  const socialBar =
+    socialLinks.length > 0
+      ? `<tr><td style="padding-top:14px;padding-bottom:6px;">${socialLinks
+          .map(
+            (l) =>
+              `<a href="${l.url}" target="_blank" style="display:inline-block;margin-right:12px;text-decoration:none;vertical-align:middle;" title="${l.label}">${socialIconHtml(l.platform, '#ffffffaa')}</a>`,
+          )
+          .join('')}</td></tr>`
+      : '';
 
   const fspRow = data.showFspTagline
     ? `<tr><td style="padding-top:8px;"><span style="font-size:10px;color:#ffffff55;letter-spacing:0.3px;font-family:'Segoe UI',Roboto,Helvetica,Arial,sans-serif;">${FSP_TAGLINE}</span></td></tr>`
@@ -405,10 +439,14 @@ function generateNavigateHtml(data: SignatureData, logoSrc: string): string {
 
 function generateSignatureHtml(template: string, data: SignatureData, logoSrc: string): string {
   switch (template) {
-    case 'elegant': return generateElegantHtml(data, logoSrc);
-    case 'bold': return generateBoldHtml(data, logoSrc);
-    case 'navigate': return generateNavigateHtml(data, logoSrc);
-    default: return generateModernHtml(data, logoSrc);
+    case 'elegant':
+      return generateElegantHtml(data, logoSrc);
+    case 'bold':
+      return generateBoldHtml(data, logoSrc);
+    case 'navigate':
+      return generateNavigateHtml(data, logoSrc);
+    default:
+      return generateModernHtml(data, logoSrc);
   }
 }
 
@@ -441,9 +479,12 @@ export function EmailSignatureGenerator() {
     }
   }, []);
 
-  const updateField = useCallback(<K extends keyof SignatureData>(field: K, value: SignatureData[K]) => {
-    setData(prev => ({ ...prev, [field]: value }));
-  }, []);
+  const updateField = useCallback(
+    <K extends keyof SignatureData>(field: K, value: SignatureData[K]) => {
+      setData((prev) => ({ ...prev, [field]: value }));
+    },
+    [],
+  );
 
   const resetForm = useCallback(() => {
     setData({ ...DEFAULT_DATA });
@@ -454,7 +495,8 @@ export function EmailSignatureGenerator() {
   const logoSrc = data.logoUrl || navigateWealthLogo;
 
   // Resolve effective display colours for UI swatches — mirrors the HTML generators' fallback logic
-  const effectiveNameColour = data.nameColour || (template === 'bold' || template === 'navigate' ? '#ffffff' : '#111827');
+  const effectiveNameColour =
+    data.nameColour || (template === 'bold' || template === 'navigate' ? '#ffffff' : '#111827');
   const effectiveTitleColour = (() => {
     if (data.titleColour) return data.titleColour;
     if (template === 'elegant') return '#92711f';
@@ -495,7 +537,11 @@ export function EmailSignatureGenerator() {
     };
     const updated = [...savedFormats, newFormat];
     setSavedFormats(updated);
-    try { localStorage.setItem(FORMAT_STORAGE_KEY, JSON.stringify(updated)); } catch { /* quota */ }
+    try {
+      localStorage.setItem(FORMAT_STORAGE_KEY, JSON.stringify(updated));
+    } catch {
+      /* quota */
+    }
     setFormatName('');
     setSaveFormatOpen(false);
     toast.success(`Format "${newFormat.name}" saved`);
@@ -507,34 +553,44 @@ export function EmailSignatureGenerator() {
     toast.success(`Format "${format.name}" loaded`);
   }, []);
 
-  const handleDeleteFormat = useCallback((id: string) => {
-    const updated = savedFormats.filter((f) => f.id !== id);
-    setSavedFormats(updated);
-    try { localStorage.setItem(FORMAT_STORAGE_KEY, JSON.stringify(updated)); } catch { /* quota */ }
-    toast.success('Format deleted');
-  }, [savedFormats]);
+  const handleDeleteFormat = useCallback(
+    (id: string) => {
+      const updated = savedFormats.filter((f) => f.id !== id);
+      setSavedFormats(updated);
+      try {
+        localStorage.setItem(FORMAT_STORAGE_KEY, JSON.stringify(updated));
+      } catch {
+        /* quota */
+      }
+      toast.success('Format deleted');
+    },
+    [savedFormats],
+  );
 
   // ── Logo Upload ─────────────────────────────────────────────────────────────
 
-  const handleLogoUpload = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    if (!file.type.startsWith('image/')) {
-      toast.error('Please select an image file (PNG, JPG, SVG, WebP…)');
-      return;
-    }
-    const reader = new FileReader();
-    reader.onload = (ev) => {
-      const result = ev.target?.result;
-      if (typeof result === 'string') {
-        updateField('logoUrl', result);
-        toast.success('Logo uploaded successfully');
+  const handleLogoUpload = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      const file = e.target.files?.[0];
+      if (!file) return;
+      if (!file.type.startsWith('image/')) {
+        toast.error('Please select an image file (PNG, JPG, SVG, WebP…)');
+        return;
       }
-    };
-    reader.readAsDataURL(file);
-    // Reset so the same file can be re-selected
-    e.target.value = '';
-  }, [updateField]);
+      const reader = new FileReader();
+      reader.onload = (ev) => {
+        const result = ev.target?.result;
+        if (typeof result === 'string') {
+          updateField('logoUrl', result);
+          toast.success('Logo uploaded successfully');
+        }
+      };
+      reader.readAsDataURL(file);
+      // Reset so the same file can be re-selected
+      e.target.value = '';
+    },
+    [updateField],
+  );
 
   const handleClearLogo = useCallback(() => {
     updateField('logoUrl', '');
@@ -575,7 +631,10 @@ export function EmailSignatureGenerator() {
             size="sm"
             variant="outline"
             className="border-purple-200 text-purple-700 hover:bg-purple-50"
-            onClick={() => { setFormatName(''); setSaveFormatOpen(true); }}
+            onClick={() => {
+              setFormatName('');
+              setSaveFormatOpen(true);
+            }}
           >
             <Bookmark className="h-3.5 w-3.5 mr-1.5" />
             Save Format
@@ -616,16 +675,25 @@ export function EmailSignatureGenerator() {
                 />
               )}
               {/* Mini preview swatch */}
-              <div className={`h-2 w-10 rounded-full mb-3 ${
-                t.id === 'modern' ? 'bg-gradient-to-r from-purple-600 to-purple-400'
-                : t.id === 'elegant' ? 'bg-gradient-to-r from-amber-600 to-amber-400'
-                : t.id === 'navigate' ? 'bg-[#313653]'
-                : 'bg-purple-600'
-              }`} />
-              <p className={`text-sm font-semibold ${active ? 'text-purple-700' : 'text-foreground'}`}>
+              <div
+                className={`h-2 w-10 rounded-full mb-3 ${
+                  t.id === 'modern'
+                    ? 'bg-gradient-to-r from-purple-600 to-purple-400'
+                    : t.id === 'elegant'
+                      ? 'bg-gradient-to-r from-amber-600 to-amber-400'
+                      : t.id === 'navigate'
+                        ? 'bg-[#313653]'
+                        : 'bg-purple-600'
+                }`}
+              />
+              <p
+                className={`text-sm font-semibold ${active ? 'text-purple-700' : 'text-foreground'}`}
+              >
                 {t.name}
               </p>
-              <p className="text-[11px] text-muted-foreground mt-0.5 leading-snug">{t.description}</p>
+              <p className="text-[11px] text-muted-foreground mt-0.5 leading-snug">
+                {t.description}
+              </p>
             </motion.button>
           );
         })}
@@ -649,7 +717,10 @@ export function EmailSignatureGenerator() {
             size="sm"
             variant="outline"
             className="h-7 text-xs border-purple-200 text-purple-700 hover:bg-purple-50"
-            onClick={() => { setFormatName(''); setSaveFormatOpen(true); }}
+            onClick={() => {
+              setFormatName('');
+              setSaveFormatOpen(true);
+            }}
           >
             <Bookmark className="h-3 w-3 mr-1.5" />
             Save current
@@ -662,7 +733,10 @@ export function EmailSignatureGenerator() {
               No saved formats yet. Configure branding settings and click{' '}
               <button
                 className="text-purple-600 underline underline-offset-2"
-                onClick={() => { setFormatName(''); setSaveFormatOpen(true); }}
+                onClick={() => {
+                  setFormatName('');
+                  setSaveFormatOpen(true);
+                }}
               >
                 Save Format
               </button>{' '}
@@ -682,7 +756,9 @@ export function EmailSignatureGenerator() {
                   style={{ backgroundColor: (fmt.fields.primaryColour as string) || '#6d28d9' }}
                 />
                 <div className="min-w-0">
-                  <p className="text-xs font-medium text-foreground truncate max-w-[120px]">{fmt.name}</p>
+                  <p className="text-xs font-medium text-foreground truncate max-w-[120px]">
+                    {fmt.name}
+                  </p>
                   <p className="text-[10px] text-muted-foreground capitalize">{fmt.template}</p>
                 </div>
                 <div className="flex items-center gap-0.5 ml-1">
@@ -724,7 +800,9 @@ export function EmailSignatureGenerator() {
             </CardHeader>
             <CardContent className="space-y-3">
               <div className="space-y-1.5">
-                <Label className="text-xs">Full Name <span className="text-red-500">*</span></Label>
+                <Label className="text-xs">
+                  Full Name <span className="text-red-500">*</span>
+                </Label>
                 <Input
                   value={data.fullName}
                   onChange={(e) => updateField('fullName', e.target.value)}
@@ -865,7 +943,9 @@ export function EmailSignatureGenerator() {
                 </div>
                 <div className="space-y-1.5">
                   <Label className="text-xs flex items-center gap-1.5">
-                    <svg viewBox="0 0 24 24" className="h-3 w-3" fill="currentColor"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
+                    <svg viewBox="0 0 24 24" className="h-3 w-3" fill="currentColor">
+                      <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
+                    </svg>
                     X (Twitter)
                   </Label>
                   <Input
@@ -968,7 +1048,9 @@ export function EmailSignatureGenerator() {
                   </div>
                   {/* URL fallback */}
                   <div className="space-y-1 pt-1 border-t border-gray-200">
-                    <p className="text-[10px] text-muted-foreground">Or paste a remote image URL:</p>
+                    <p className="text-[10px] text-muted-foreground">
+                      Or paste a remote image URL:
+                    </p>
                     <Input
                       value={data.logoUrl.startsWith('data:') ? '' : data.logoUrl}
                       onChange={(e) => updateField('logoUrl', e.target.value)}
@@ -1091,7 +1173,11 @@ export function EmailSignatureGenerator() {
                     <div className="flex items-center gap-1.5">
                       <input
                         type="color"
-                        value={effectiveTitleColour.length > 7 ? effectiveTitleColour.slice(0, 7) : effectiveTitleColour}
+                        value={
+                          effectiveTitleColour.length > 7
+                            ? effectiveTitleColour.slice(0, 7)
+                            : effectiveTitleColour
+                        }
                         onChange={(e) => updateField('titleColour', e.target.value)}
                         className="h-8 w-8 rounded border cursor-pointer shrink-0"
                         title="Pick title colour"
@@ -1189,7 +1275,7 @@ export function EmailSignatureGenerator() {
                     <CardTitle className="text-sm">Live Preview</CardTitle>
                   </div>
                   <Badge variant="secondary" className="text-[10px] font-medium">
-                    {TEMPLATES.find(t => t.id === template)?.name} Template
+                    {TEMPLATES.find((t) => t.id === template)?.name} Template
                   </Badge>
                 </div>
               </CardHeader>
@@ -1210,12 +1296,25 @@ export function EmailSignatureGenerator() {
                             <div className="w-2.5 h-2.5 rounded-full bg-red-400/80" />
                             <div className="w-2.5 h-2.5 rounded-full bg-amber-400/80" />
                             <div className="w-2.5 h-2.5 rounded-full bg-green-400/80" />
-                            <span className="ml-3 text-[10px] text-muted-foreground font-mono">New Message</span>
+                            <span className="ml-3 text-[10px] text-muted-foreground font-mono">
+                              New Message
+                            </span>
                           </div>
                           <div className="space-y-1 text-[11px]">
-                            <div className="flex gap-2"><span className="text-muted-foreground w-10 shrink-0">From:</span><span className="font-medium text-foreground truncate">{data.fullName} &lt;{data.email || 'email@navigatewealth.co.za'}&gt;</span></div>
-                            <div className="flex gap-2"><span className="text-muted-foreground w-10 shrink-0">To:</span><span className="text-muted-foreground">client@example.com</span></div>
-                            <div className="flex gap-2"><span className="text-muted-foreground w-10 shrink-0">Subj:</span><span className="text-foreground">Your Financial Plan Review</span></div>
+                            <div className="flex gap-2">
+                              <span className="text-muted-foreground w-10 shrink-0">From:</span>
+                              <span className="font-medium text-foreground truncate">
+                                {data.fullName} &lt;{data.email || 'email@navigatewealth.co.za'}&gt;
+                              </span>
+                            </div>
+                            <div className="flex gap-2">
+                              <span className="text-muted-foreground w-10 shrink-0">To:</span>
+                              <span className="text-muted-foreground">client@example.com</span>
+                            </div>
+                            <div className="flex gap-2">
+                              <span className="text-muted-foreground w-10 shrink-0">Subj:</span>
+                              <span className="text-foreground">Your Financial Plan Review</span>
+                            </div>
                           </div>
                         </div>
 
@@ -1228,7 +1327,10 @@ export function EmailSignatureGenerator() {
                             className="text-xs text-gray-400 space-y-2 mb-6"
                           >
                             <p>Dear Client,</p>
-                            <p>Thank you for our meeting earlier today. Please find your updated financial plan attached for review.</p>
+                            <p>
+                              Thank you for our meeting earlier today. Please find your updated
+                              financial plan attached for review.
+                            </p>
                             <p>Kind regards,</p>
                           </motion.div>
 
@@ -1253,8 +1355,12 @@ export function EmailSignatureGenerator() {
                             <Mail className="h-8 w-8 text-purple-300" />
                           </div>
                         </motion.div>
-                        <p className="text-sm font-medium text-muted-foreground mt-4">Enter your name to see the preview</p>
-                        <p className="text-xs text-muted-foreground/60 mt-1">Fill in the details on the left to generate your signature</p>
+                        <p className="text-sm font-medium text-muted-foreground mt-4">
+                          Enter your name to see the preview
+                        </p>
+                        <p className="text-xs text-muted-foreground/60 mt-1">
+                          Fill in the details on the left to generate your signature
+                        </p>
                       </div>
                     )}
                   </motion.div>
@@ -1271,11 +1377,23 @@ export function EmailSignatureGenerator() {
               >
                 <AnimatePresence mode="wait">
                   {copied ? (
-                    <motion.div key="copied" initial={{ scale: 0.8, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.8, opacity: 0 }} className="flex items-center gap-1.5">
+                    <motion.div
+                      key="copied"
+                      initial={{ scale: 0.8, opacity: 0 }}
+                      animate={{ scale: 1, opacity: 1 }}
+                      exit={{ scale: 0.8, opacity: 0 }}
+                      className="flex items-center gap-1.5"
+                    >
                       <Check className="h-4 w-4" /> Copied!
                     </motion.div>
                   ) : (
-                    <motion.div key="copy" initial={{ scale: 0.8, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.8, opacity: 0 }} className="flex items-center gap-1.5">
+                    <motion.div
+                      key="copy"
+                      initial={{ scale: 0.8, opacity: 0 }}
+                      animate={{ scale: 1, opacity: 1 }}
+                      exit={{ scale: 0.8, opacity: 0 }}
+                      className="flex items-center gap-1.5"
+                    >
                       <Copy className="h-4 w-4" /> Copy HTML
                     </motion.div>
                   )}
@@ -1300,14 +1418,26 @@ export function EmailSignatureGenerator() {
               >
                 <div className="flex items-center gap-2">
                   <Code className="h-3.5 w-3.5 text-muted-foreground" />
-                  <span className="text-xs font-medium text-muted-foreground">View HTML Source</span>
+                  <span className="text-xs font-medium text-muted-foreground">
+                    View HTML Source
+                  </span>
                 </div>
                 <motion.svg
                   animate={{ rotate: showSource ? 180 : 0 }}
                   transition={{ duration: 0.2 }}
-                  width="14" height="14" viewBox="0 0 14 14" fill="none" className="text-muted-foreground"
+                  width="14"
+                  height="14"
+                  viewBox="0 0 14 14"
+                  fill="none"
+                  className="text-muted-foreground"
                 >
-                  <path d="M3.5 5.25L7 8.75L10.5 5.25" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                  <path
+                    d="M3.5 5.25L7 8.75L10.5 5.25"
+                    stroke="currentColor"
+                    strokeWidth="1.5"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
                 </motion.svg>
               </button>
               <AnimatePresence>
@@ -1330,7 +1460,11 @@ export function EmailSignatureGenerator() {
                           className="absolute top-2 right-2 h-7 text-[10px]"
                           onClick={handleCopyHtml}
                         >
-                          {copied ? <Check className="h-3 w-3 mr-1" /> : <Copy className="h-3 w-3 mr-1" />}
+                          {copied ? (
+                            <Check className="h-3 w-3 mr-1" />
+                          ) : (
+                            <Copy className="h-3 w-3 mr-1" />
+                          )}
                           {copied ? 'Copied' : 'Copy'}
                         </Button>
                       </div>
@@ -1351,7 +1485,7 @@ export function EmailSignatureGenerator() {
               <Eye className="h-5 w-5 text-purple-500" />
               Full Email Preview
               <Badge variant="secondary" className="text-[10px] ml-2">
-                {TEMPLATES.find(t => t.id === template)?.name}
+                {TEMPLATES.find((t) => t.id === template)?.name}
               </Badge>
             </DialogTitle>
           </DialogHeader>
@@ -1366,17 +1500,34 @@ export function EmailSignatureGenerator() {
                   <span className="ml-4 text-xs text-muted-foreground font-mono">New Message</span>
                 </div>
                 <div className="space-y-1.5 text-xs">
-                  <div className="flex gap-2"><span className="text-muted-foreground w-12">From:</span><span className="font-medium">{data.fullName} &lt;{data.email || 'email@navigatewealth.co.za'}&gt;</span></div>
-                  <div className="flex gap-2"><span className="text-muted-foreground w-12">To:</span><span className="text-muted-foreground">client@example.com</span></div>
-                  <div className="flex gap-2"><span className="text-muted-foreground w-12">Subject:</span><span>Your Financial Plan Review</span></div>
+                  <div className="flex gap-2">
+                    <span className="text-muted-foreground w-12">From:</span>
+                    <span className="font-medium">
+                      {data.fullName} &lt;{data.email || 'email@navigatewealth.co.za'}&gt;
+                    </span>
+                  </div>
+                  <div className="flex gap-2">
+                    <span className="text-muted-foreground w-12">To:</span>
+                    <span className="text-muted-foreground">client@example.com</span>
+                  </div>
+                  <div className="flex gap-2">
+                    <span className="text-muted-foreground w-12">Subject:</span>
+                    <span>Your Financial Plan Review</span>
+                  </div>
                 </div>
               </div>
               {/* Email body */}
               <div className="px-6 py-6">
                 <div className="text-sm text-gray-500 space-y-3 mb-8 leading-relaxed">
                   <p>Dear Client,</p>
-                  <p>Thank you for our meeting earlier today. I have reviewed your current financial portfolio and prepared an updated plan based on our discussion.</p>
-                  <p>Please find the updated documents attached for your review. Should you have any questions, please do not hesitate to contact me.</p>
+                  <p>
+                    Thank you for our meeting earlier today. I have reviewed your current financial
+                    portfolio and prepared an updated plan based on our discussion.
+                  </p>
+                  <p>
+                    Please find the updated documents attached for your review. Should you have any
+                    questions, please do not hesitate to contact me.
+                  </p>
                   <p>Kind regards,</p>
                 </div>
                 <div className="border-t border-dashed border-gray-200 my-6" />
@@ -1390,7 +1541,9 @@ export function EmailSignatureGenerator() {
             </div>
           </div>
           <div className="flex items-center justify-end gap-2 pt-2">
-            <Button variant="outline" onClick={() => setPreviewOpen(false)}>Close</Button>
+            <Button variant="outline" onClick={() => setPreviewOpen(false)}>
+              Close
+            </Button>
             <Button variant="outline" onClick={handleDownloadHtml}>
               <Download className="h-4 w-4 mr-1.5" />
               Download
@@ -1432,24 +1585,34 @@ export function EmailSignatureGenerator() {
                   <p className="text-xs font-medium capitalize">
                     {TEMPLATES.find((t) => t.id === template)?.name} template
                   </p>
-                  <p className="text-[10px] text-muted-foreground font-mono">{data.primaryColour}</p>
+                  <p className="text-[10px] text-muted-foreground font-mono">
+                    {data.primaryColour}
+                  </p>
                 </div>
                 <div className="h-8 w-12 rounded border bg-white flex items-center justify-center overflow-hidden shrink-0">
-                  <img src={logoSrc} alt="logo" className="max-h-full max-w-full object-contain p-0.5" />
+                  <img
+                    src={logoSrc}
+                    alt="logo"
+                    className="max-h-full max-w-full object-contain p-0.5"
+                  />
                 </div>
               </div>
             </div>
 
             {/* Format name input */}
             <div className="space-y-1.5">
-              <Label className="text-xs font-medium">Format name <span className="text-red-500">*</span></Label>
+              <Label className="text-xs font-medium">
+                Format name <span className="text-red-500">*</span>
+              </Label>
               <Input
                 value={formatName}
                 onChange={(e) => setFormatName(e.target.value)}
                 placeholder='e.g. "Navigate Dark", "Adviser Standard"'
                 className="h-9"
                 autoFocus
-                onKeyDown={(e) => { if (e.key === 'Enter') handleSaveFormat(); }}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') handleSaveFormat();
+                }}
               />
               <p className="text-[10px] text-muted-foreground">
                 This name will appear in the Saved Formats panel for quick loading.

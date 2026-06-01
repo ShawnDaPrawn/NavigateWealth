@@ -57,7 +57,7 @@ export const SIGNER_DICTIONARY = {
   },
   'expired.fallback': {
     en: 'This signing link has expired or is no longer valid. Please contact the sender for a new link.',
-    af: 'Hierdie tekenskakel het verval of is nie meer geldig nie. Kontak die sender vir \'n nuwe skakel.',
+    af: "Hierdie tekenskakel het verval of is nie meer geldig nie. Kontak die sender vir 'n nuwe skakel.",
     zu: 'Lesi sixhumanisi sokusayina siphelelwe yisikhathi noma asisasebenzi. Sicela uxhumane nomthumeli ukuthola isixhumanisi esisha.',
   },
   'expired.return': {
@@ -91,7 +91,7 @@ export const SIGNER_DICTIONARY = {
   },
   'waiting.body': {
     en: "This document requires signatures in a specific order. You'll receive an email when it's your turn to sign.",
-    af: 'Hierdie dokument vereis handtekeninge in \'n spesifieke volgorde. Jy sal \'n e-pos ontvang wanneer dit jou beurt is om te teken.',
+    af: "Hierdie dokument vereis handtekeninge in 'n spesifieke volgorde. Jy sal 'n e-pos ontvang wanneer dit jou beurt is om te teken.",
     zu: 'Le dokhumenti idinga amasiginesha ngokulandelana okuthile. Uzothola i-imeyili lapho sekuyithuba lakho lokusayina.',
   },
   'waiting.order': {

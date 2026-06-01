@@ -73,21 +73,23 @@ export const SaveTaxPlanningSessionSchema = z.object({
  * PUT /inputs/:fnaId — Partial input update.
  * Accepts any valid JSON object to merge into existing inputs.
  */
-export const UpdateInputsSchema = z.record(z.unknown()).refine(
-  (obj) => Object.keys(obj).length > 0,
-  { message: 'Input update must contain at least one field' },
-);
+export const UpdateInputsSchema = z
+  .record(z.unknown())
+  .refine((obj) => Object.keys(obj).length > 0, {
+    message: 'Input update must contain at least one field',
+  });
 
 /**
  * PUT /results/:fnaId — Update results and/or adjustments (medical-fna).
  */
-export const UpdateResultsSchema = z.object({
-  results: z.record(z.unknown()).optional(),
-  adjustments: z.record(z.unknown()).optional(),
-}).refine(
-  (data) => data.results !== undefined || data.adjustments !== undefined,
-  { message: 'At least one of results or adjustments must be provided' },
-);
+export const UpdateResultsSchema = z
+  .object({
+    results: z.record(z.unknown()).optional(),
+    adjustments: z.record(z.unknown()).optional(),
+  })
+  .refine((data) => data.results !== undefined || data.adjustments !== undefined, {
+    message: 'At least one of results or adjustments must be provided',
+  });
 
 /**
  * POST /client/:clientId/save — Save Investment INA session.
@@ -102,10 +104,11 @@ export const SaveInvestmentSessionSchema = z.object({
  * POST /client/:clientId/calculate — Calculate Investment INA.
  * Accepts the full inputs object for calculation.
  */
-export const CalculateInputsSchema = z.record(z.unknown()).refine(
-  (obj) => Object.keys(obj).length > 0,
-  { message: 'Calculation inputs must not be empty' },
-);
+export const CalculateInputsSchema = z
+  .record(z.unknown())
+  .refine((obj) => Object.keys(obj).length > 0, {
+    message: 'Calculation inputs must not be empty',
+  });
 
 /**
  * POST /risk-planning-fna/create — Create a Risk Planning FNA session.
@@ -121,16 +124,17 @@ export const CreateRiskPlanningFnaSchema = z.object({
 /**
  * PUT /risk-planning-fna/update/:fnaId — Update a Risk Planning FNA session.
  */
-export const UpdateRiskPlanningFnaSchema = z.object({
-  inputData: z.record(z.unknown()).optional(),
-  calculations: z.record(z.unknown()).nullable().optional(),
-  adjustments: z.record(z.unknown()).nullable().optional(),
-  finalNeeds: z.record(z.unknown()).nullable().optional(),
-  status: FnaStatusSchema.optional(),
-}).refine(
-  (data) => Object.keys(data).length > 0,
-  { message: 'At least one field must be provided for update' },
-);
+export const UpdateRiskPlanningFnaSchema = z
+  .object({
+    inputData: z.record(z.unknown()).optional(),
+    calculations: z.record(z.unknown()).nullable().optional(),
+    adjustments: z.record(z.unknown()).nullable().optional(),
+    finalNeeds: z.record(z.unknown()).nullable().optional(),
+    status: FnaStatusSchema.optional(),
+  })
+  .refine((data) => Object.keys(data).length > 0, {
+    message: 'At least one field must be provided for update',
+  });
 
 // ============================================================================
 // TYPE EXPORTS

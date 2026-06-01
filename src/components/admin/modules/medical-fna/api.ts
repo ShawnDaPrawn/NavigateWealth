@@ -7,7 +7,12 @@
 
 import { api, APIError } from '../../../../utils/api';
 import { logger } from '../../../../utils/logger';
-import type { MedicalFNASession, MedicalFNAInputs, MedicalFNAResults, MedicalFNAAdjustments } from './types';
+import type {
+  MedicalFNASession,
+  MedicalFNAInputs,
+  MedicalFNAResults,
+  MedicalFNAAdjustments,
+} from './types';
 
 export const MedicalFnaAPI = {
   /**
@@ -17,7 +22,7 @@ export const MedicalFnaAPI = {
     logger.debug('[MedicalFnaAPI] Fetching client FNAs', { clientId });
     try {
       const response = await api.get<{ success: boolean; data: MedicalFNASession[] }>(
-        `/medical-fna/client/${clientId}`
+        `/medical-fna/client/${clientId}`,
       );
       return response.data;
     } catch (error) {
@@ -33,7 +38,7 @@ export const MedicalFnaAPI = {
     logger.debug('[MedicalFnaAPI] Fetching FNA', { fnaId });
     try {
       const response = await api.get<{ success: boolean; data: MedicalFNASession }>(
-        `/medical-fna/${fnaId}`
+        `/medical-fna/${fnaId}`,
       );
       return response.data;
     } catch (error) {
@@ -49,7 +54,7 @@ export const MedicalFnaAPI = {
     logger.debug('[MedicalFnaAPI] Fetching latest published', { clientId });
     try {
       const response = await api.get<{ success: boolean; data: MedicalFNASession | null }>(
-        `/medical-fna/client/${clientId}/latest-published`
+        `/medical-fna/client/${clientId}/latest-published`,
       );
       return response.data || null;
     } catch (error) {
@@ -75,7 +80,7 @@ export const MedicalFnaAPI = {
     try {
       const response = await api.post<{ success: boolean; data: MedicalFNASession }>(
         '/medical-fna/create',
-        { clientId }
+        { clientId },
       );
       return response.data;
     } catch (error) {
@@ -87,12 +92,15 @@ export const MedicalFnaAPI = {
   /**
    * Update Medical FNA inputs
    */
-  async updateMedicalFNAInputs(fnaId: string, inputs: Partial<MedicalFNAInputs>): Promise<MedicalFNASession> {
+  async updateMedicalFNAInputs(
+    fnaId: string,
+    inputs: Partial<MedicalFNAInputs>,
+  ): Promise<MedicalFNASession> {
     logger.debug('[MedicalFnaAPI] Updating inputs', { fnaId });
     try {
       const response = await api.put<{ success: boolean; data: MedicalFNASession }>(
         `/medical-fna/inputs/${fnaId}`,
-        inputs
+        inputs,
       );
       return response.data;
     } catch (error) {
@@ -104,12 +112,16 @@ export const MedicalFnaAPI = {
   /**
    * Update Medical FNA results and adjustments
    */
-  async updateMedicalFNAResults(fnaId: string, results: MedicalFNAResults, adjustments: MedicalFNAAdjustments): Promise<MedicalFNASession> {
+  async updateMedicalFNAResults(
+    fnaId: string,
+    results: MedicalFNAResults,
+    adjustments: MedicalFNAAdjustments,
+  ): Promise<MedicalFNASession> {
     logger.debug('[MedicalFnaAPI] Updating results', { fnaId });
     try {
       const response = await api.put<{ success: boolean; data: MedicalFNASession }>(
         `/medical-fna/results/${fnaId}`,
-        { results, adjustments }
+        { results, adjustments },
       );
       return response.data;
     } catch (error) {
@@ -125,7 +137,7 @@ export const MedicalFnaAPI = {
     logger.debug('[MedicalFnaAPI] Calculating', { fnaId });
     try {
       const response = await api.post<{ success: boolean; data: MedicalFNASession }>(
-        `/medical-fna/calculate/${fnaId}`
+        `/medical-fna/calculate/${fnaId}`,
       );
       return response.data;
     } catch (error) {
@@ -141,7 +153,7 @@ export const MedicalFnaAPI = {
     logger.debug('[MedicalFnaAPI] Saving draft', { fnaId });
     try {
       const response = await api.put<{ success: boolean; data: MedicalFNASession }>(
-        `/medical-fna/draft/${fnaId}`
+        `/medical-fna/draft/${fnaId}`,
       );
       return response.data;
     } catch (error) {
@@ -157,7 +169,7 @@ export const MedicalFnaAPI = {
     logger.debug('[MedicalFnaAPI] Publishing', { fnaId });
     try {
       const response = await api.post<{ success: boolean; data: MedicalFNASession }>(
-        `/medical-fna/publish/${fnaId}`
+        `/medical-fna/publish/${fnaId}`,
       );
       return response.data;
     } catch (error) {
@@ -173,7 +185,7 @@ export const MedicalFnaAPI = {
     logger.debug('[MedicalFnaAPI] Unpublishing', { fnaId });
     try {
       const response = await api.post<{ success: boolean; data: MedicalFNASession }>(
-        `/medical-fna/unpublish/${fnaId}`
+        `/medical-fna/unpublish/${fnaId}`,
       );
       return response.data;
     } catch (error) {
@@ -216,7 +228,7 @@ export const MedicalFnaAPI = {
     logger.debug('[MedicalFnaAPI] Auto-populating from profile', { clientId });
     try {
       const response = await api.get<{ success: boolean; data: Partial<MedicalFNAInputs> }>(
-        `/medical-fna/client/${clientId}/auto-populate`
+        `/medical-fna/client/${clientId}/auto-populate`,
       );
       return response.data;
     } catch (error) {

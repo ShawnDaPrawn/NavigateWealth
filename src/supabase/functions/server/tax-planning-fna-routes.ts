@@ -5,20 +5,18 @@
 
 import { Hono } from 'npm:hono';
 import * as kv from './kv_store.tsx';
-import { createModuleLogger } from "./stderr-logger.ts";
-import { authenticateUser, fnaErrorResponse } from "./fna-auth.ts";
-import { getErrMsg } from "./shared-logger-utils.ts";
-import { SaveTaxPlanningSessionSchema } from "./fna-validation.ts";
-import { formatZodError } from "./shared-validation-utils.ts";
+import { createModuleLogger } from './stderr-logger.ts';
+import { authenticateUser, fnaErrorResponse } from './fna-auth.ts';
+import { getErrMsg } from './shared-logger-utils.ts';
+import { SaveTaxPlanningSessionSchema } from './fna-validation.ts';
+import { formatZodError } from './shared-validation-utils.ts';
 import { createClient } from 'jsr:@supabase/supabase-js@2.49.8';
 
 const taxPlanningRoutes = new Hono();
 const log = createModuleLogger('tax-planning-fna-routes');
 
-const getSupabase = () => createClient(
-  Deno.env.get('SUPABASE_URL')!,
-  Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
-);
+const getSupabase = () =>
+  createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!);
 
 const TAX_DOCS_BUCKET = 'make-91ed8379-tax-docs';
 
@@ -29,18 +27,14 @@ async function ensureTaxDocsBucket() {
   try {
     const supabase = getSupabase();
     const { data: buckets } = await supabase.storage.listBuckets();
-    const bucketExists = buckets?.some(bucket => bucket.name === TAX_DOCS_BUCKET);
+    const bucketExists = buckets?.some((bucket) => bucket.name === TAX_DOCS_BUCKET);
 
     if (!bucketExists) {
       log.info(`Creating storage bucket: ${TAX_DOCS_BUCKET}`);
       const { error } = await supabase.storage.createBucket(TAX_DOCS_BUCKET, {
         public: false,
         fileSizeLimit: 52428800, // 50MB
-        allowedMimeTypes: [
-          'application/pdf',
-          'image/jpeg',
-          'image/png',
-        ],
+        allowedMimeTypes: ['application/pdf', 'image/jpeg', 'image/png'],
       });
       if (error) {
         log.error(`Failed to create bucket ${TAX_DOCS_BUCKET}:`, error);
@@ -64,7 +58,8 @@ taxPlanningRoutes.post('/client/:clientId/auto-populate', async (c) => {
     await authenticateUser(c.req.header('Authorization'));
 
     const clientId = c.req.param('clientId');
-    const { taxAutoPopulateFromResolver, enrichTaxFromDomainSessions } = await import('./form-prefill-auto-populate.ts');
+    const { taxAutoPopulateFromResolver, enrichTaxFromDomainSessions } =
+      await import('./form-prefill-auto-populate.ts');
     let inputs = await taxAutoPopulateFromResolver(clientId);
     inputs = await enrichTaxFromDomainSessions(clientId, inputs);
 
@@ -88,36 +83,32 @@ taxPlanningRoutes.post('/save', async (c) => {
   try {
     log.info('ðŸ“¥ POST /tax-planning-fna/save');
     const authUser = await authenticateUser(c.req.header('Authorization'), 'tax-planning-fna');
-    
+
     const body = await c.req.json();
     // Destructure new fields: adjustments, recommendations, finalResults
-    const { 
-      clientId, 
-      inputs, 
-      finalResults, 
-      adjustments, 
-      recommendations,
-      adviserNotes,
-      status 
-    } = body;
-    
+    const { clientId, inputs, finalResults, adjustments, recommendations, adviserNotes, status } =
+      body;
+
     // Validate the input data
     const validationResult = SaveTaxPlanningSessionSchema.safeParse(body);
     if (!validationResult.success) {
       const formattedError = formatZodError(validationResult.error);
-      return c.json({
-        success: false,
-        error: formattedError
-      }, 400);
+      return c.json(
+        {
+          success: false,
+          error: formattedError,
+        },
+        400,
+      );
     }
-    
+
     // Get existing sessions to determine version
     const sessions = await kv.getByPrefix(`tax-planning-fna:client:${clientId}:`);
     const version = (sessions?.length || 0) + 1;
-    
+
     const sessionId = `${clientId}-v${version}`;
     const timestamp = new Date().toISOString();
-    
+
     // Structure as FinalTaxPlan (mostly) but wrapped in session metadata
     const session = {
       id: sessionId,
@@ -125,25 +116,25 @@ taxPlanningRoutes.post('/save', async (c) => {
       adviserId: authUser.id,
       version,
       status: status || 'published',
-      
+
       // The Plan Data
       inputs,
       finalResults,
       adjustments: adjustments || [],
       recommendations: recommendations || [],
       adviserNotes: adviserNotes || '',
-      
+
       createdAt: timestamp,
       updatedAt: timestamp,
       generatedAt: timestamp,
-      createdBy: 'Adviser' // Default for now since we don't have user name
+      createdBy: 'Adviser', // Default for now since we don't have user name
     };
-    
+
     const key = `tax-planning-fna:client:${clientId}:${sessionId}`;
     await kv.set(key, session);
-    
+
     log.info('âœ… Tax Planning session saved:', { sessionId });
-    
+
     return c.json({
       success: true,
       data: session,
@@ -162,11 +153,13 @@ taxPlanningRoutes.get('/client/:clientId', async (c) => {
   try {
     log.info('ðŸ“¥ GET /tax-planning-fna/client/:clientId');
     await authenticateUser(c.req.header('Authorization'));
-    
+
     const clientId = c.req.param('clientId');
     const sessions = await kv.getByPrefix(`tax-planning-fna:client:${clientId}:`);
-    const sortedSessions = (sessions || []).sort((a: VersionedSession, b: VersionedSession) => b.version - a.version);
-    
+    const sortedSessions = (sessions || []).sort(
+      (a: VersionedSession, b: VersionedSession) => b.version - a.version,
+    );
+
     return c.json({
       success: true,
       data: sortedSessions,
@@ -184,13 +177,13 @@ taxPlanningRoutes.get('/client/:clientId/latest-published', async (c) => {
   try {
     const clientId = c.req.param('clientId');
     // Simplified auth check for read
-    await authenticateUser(c.req.header('Authorization')); 
-    
+    await authenticateUser(c.req.header('Authorization'));
+
     const sessions = await kv.getByPrefix(`tax-planning-fna:client:${clientId}:`);
     const published = (sessions || [])
       .filter((s: VersionedSession) => s.status === 'published')
       .sort((a: VersionedSession, b: VersionedSession) => b.version - a.version);
-    
+
     return c.json({ success: true, data: published[0] || null });
   } catch (error: unknown) {
     return fnaErrorResponse(c, error);
@@ -231,10 +224,13 @@ taxPlanningRoutes.post('/tax-docs/:clientId/upload', async (c) => {
     // Validate file type
     const allowedTypes = ['application/pdf', 'image/jpeg', 'image/png'];
     if (!allowedTypes.includes(file.type)) {
-      return c.json({
-        success: false,
-        error: 'Invalid file type. Only PDF, JPEG, and PNG files are allowed.',
-      }, 400);
+      return c.json(
+        {
+          success: false,
+          error: 'Invalid file type. Only PDF, JPEG, and PNG files are allowed.',
+        },
+        400,
+      );
     }
 
     // Generate unique document ID
@@ -253,10 +249,13 @@ taxPlanningRoutes.post('/tax-docs/:clientId/upload', async (c) => {
 
     if (uploadError) {
       log.error('Storage upload failed for tax document:', uploadError);
-      return c.json({
-        success: false,
-        error: `Failed to upload document: ${uploadError.message}`,
-      }, 500);
+      return c.json(
+        {
+          success: false,
+          error: `Failed to upload document: ${uploadError.message}`,
+        },
+        500,
+      );
     }
 
     const timestamp = new Date().toISOString();
@@ -303,7 +302,7 @@ taxPlanningRoutes.get('/tax-docs/:clientId', async (c) => {
 
     const sorted = (docs || []).sort(
       (a: { uploadedAt?: string }, b: { uploadedAt?: string }) =>
-        new Date(b.uploadedAt || 0).getTime() - new Date(a.uploadedAt || 0).getTime()
+        new Date(b.uploadedAt || 0).getTime() - new Date(a.uploadedAt || 0).getTime(),
     );
 
     log.info(`Retrieved ${sorted.length} tax documents for client:`, { clientId });
@@ -410,30 +409,30 @@ taxPlanningRoutes.get('/:fnaId', async (c) => {
   try {
     log.info('GET /tax-planning-fna/:fnaId');
     await authenticateUser(c.req.header('Authorization'));
-    
+
     const fnaId = c.req.param('fnaId');
-    
+
     // fnaId format is "${clientId}-v${version}"
     const match = fnaId.match(/^(.+)-v(\d+)$/);
-    
+
     if (match) {
       const clientId = match[1];
       const key = `tax-planning-fna:client:${clientId}:${fnaId}`;
       const fna = await kv.get(key);
-      
+
       if (fna) {
         return c.json({ success: true, data: fna });
       }
     }
-    
+
     // Fallback: search all tax-planning FNA entries by prefix
     const allSessions = await kv.getByPrefix('tax-planning-fna:client:');
     const found = (allSessions || []).find((s: VersionedSession) => s.id === fnaId);
-    
+
     if (found) {
       return c.json({ success: true, data: found });
     }
-    
+
     return c.json({ success: false, error: 'Tax Planning FNA not found' }, 404);
   } catch (error: unknown) {
     log.error('Error fetching Tax Planning FNA by ID:', error);

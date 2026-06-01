@@ -20,8 +20,10 @@ import type {
 export function calculateSigningProgress(envelope: EsignEnvelope): SigningProgress {
   const signers = envelope.signers || [];
   const totalSigners = signers.length;
-  const signedCount = signers.filter(s => s.status === 'signed').length;
-  const pendingCount = signers.filter(s => ['pending', 'viewed', 'otp_verified'].includes(s.status)).length;
+  const signedCount = signers.filter((s) => s.status === 'signed').length;
+  const pendingCount = signers.filter((s) =>
+    ['pending', 'viewed', 'otp_verified'].includes(s.status),
+  ).length;
   const percentComplete = totalSigners > 0 ? Math.round((signedCount / totalSigners) * 100) : 0;
   const isComplete = totalSigners > 0 && signedCount === totalSigners;
 
@@ -40,11 +42,11 @@ export function calculateSigningProgress(envelope: EsignEnvelope): SigningProgre
 export function calculateEnvelopeStats(envelopes: EsignEnvelope[]): EnvelopeStats {
   return {
     total: envelopes.length,
-    draft: envelopes.filter(e => e.status === 'draft').length,
-    sent: envelopes.filter(e => ['sent', 'viewed', 'partially_signed'].includes(e.status)).length,
-    completed: envelopes.filter(e => e.status === 'completed').length,
-    expired: envelopes.filter(e => e.status === 'expired').length,
-    rejected: envelopes.filter(e => e.status === 'rejected').length,
+    draft: envelopes.filter((e) => e.status === 'draft').length,
+    sent: envelopes.filter((e) => ['sent', 'viewed', 'partially_signed'].includes(e.status)).length,
+    completed: envelopes.filter((e) => e.status === 'completed').length,
+    expired: envelopes.filter((e) => e.status === 'expired').length,
+    rejected: envelopes.filter((e) => e.status === 'rejected').length,
   };
 }
 
@@ -84,11 +86,10 @@ export function isValidPDF(file: File): { valid: boolean; error?: string } {
 /**
  * Validate signer data
  */
-export function validateSigner(signer: {
-  name: string;
-  email: string;
-  order?: number;
-}): { valid: boolean; errors: string[] } {
+export function validateSigner(signer: { name: string; email: string; order?: number }): {
+  valid: boolean;
+  errors: string[];
+} {
   const errors: string[] = [];
 
   if (!signer.name || signer.name.trim().length === 0) {
@@ -131,7 +132,7 @@ export function canSendEnvelope(envelope: EsignEnvelope): { canSend: boolean; re
 
   // Check all signers have at least one field
   for (const signer of signers) {
-    const signerFields = fields.filter(f => f.signer_id === signer.id);
+    const signerFields = fields.filter((f) => f.signer_id === signer.id);
     if (signerFields.length === 0) {
       return { canSend: false, reason: `Signer "${signer.name}" has no assigned fields` };
     }
@@ -154,13 +155,13 @@ export function sortSignersByOrder(signers: EsignSigner[]): EsignSigner[] {
  */
 export function groupFieldsByPage(fields: EsignField[]): Map<number, EsignField[]> {
   const grouped = new Map<number, EsignField[]>();
-  
+
   for (const field of fields) {
     const pageFields = grouped.get(field.page) || [];
     pageFields.push(field);
     grouped.set(field.page, pageFields);
   }
-  
+
   return grouped;
 }
 
@@ -168,7 +169,7 @@ export function groupFieldsByPage(fields: EsignField[]): Map<number, EsignField[
  * Get fields for a specific signer
  */
 export function getSignerFields(fields: EsignField[], signerId: string): EsignField[] {
-  return fields.filter(f => f.signer_id === signerId);
+  return fields.filter((f) => f.signer_id === signerId);
 }
 
 /**
@@ -176,10 +177,10 @@ export function getSignerFields(fields: EsignField[], signerId: string): EsignFi
  */
 export function filterEnvelopesByStatus(
   envelopes: EsignEnvelope[],
-  statuses: string[]
+  statuses: string[],
 ): EsignEnvelope[] {
   if (statuses.length === 0) return envelopes;
-  return envelopes.filter(e => statuses.includes(e.status));
+  return envelopes.filter((e) => statuses.includes(e.status));
 }
 
 /**
@@ -187,7 +188,7 @@ export function filterEnvelopesByStatus(
  */
 export function sortEnvelopesByDate(
   envelopes: EsignEnvelope[],
-  direction: 'asc' | 'desc' = 'desc'
+  direction: 'asc' | 'desc' = 'desc',
 ): EsignEnvelope[] {
   return [...envelopes].sort((a, b) => {
     const dateA = new Date(a.created_at).getTime();
@@ -203,12 +204,12 @@ export function sortEnvelopesByDate(
  */
 export function formatFileSize(bytes: number): string {
   if (bytes === 0) return '0 Bytes';
-  
+
   const k = 1024;
   const sizes = ['Bytes', 'KB', 'MB', 'GB'];
   const i = Math.floor(Math.log(bytes) / Math.log(k));
-  
-  return Math.round(bytes / Math.pow(k, i) * 100) / 100 + ' ' + sizes[i];
+
+  return Math.round((bytes / Math.pow(k, i)) * 100) / 100 + ' ' + sizes[i];
 }
 
 /**
@@ -223,7 +224,7 @@ export function formatSignerName(signer: EsignSigner): string {
  */
 export function getNextSigner(signers: EsignSigner[]): EsignSigner | null {
   const sorted = sortSignersByOrder(signers);
-  return sorted.find(s => ['pending', 'viewed', 'otp_verified'].includes(s.status)) || null;
+  return sorted.find((s) => ['pending', 'viewed', 'otp_verified'].includes(s.status)) || null;
 }
 
 /**
@@ -231,15 +232,15 @@ export function getNextSigner(signers: EsignSigner[]): EsignSigner | null {
  */
 export function getProgressMessage(envelope: EsignEnvelope): string {
   const progress = calculateSigningProgress(envelope);
-  
+
   if (progress.isComplete) {
     return 'All signers have completed signing';
   }
-  
+
   if (progress.signedCount === 0) {
     return `Waiting for ${progress.totalSigners} signer${progress.totalSigners > 1 ? 's' : ''}`;
   }
-  
+
   return `${progress.signedCount} of ${progress.totalSigners} signed`;
 }
 
@@ -288,14 +289,11 @@ export function getFieldLabel(type: FieldType): string {
 /**
  * Check if all required fields are filled
  */
-export function areAllRequiredFieldsFilled(
-  fields: EsignField[],
-  signerId: string
-): boolean {
+export function areAllRequiredFieldsFilled(fields: EsignField[], signerId: string): boolean {
   const signerFields = getSignerFields(fields, signerId);
-  const requiredFields = signerFields.filter(f => f.required);
-  
-  return requiredFields.every(f => f.value !== null && f.value !== undefined && f.value !== '');
+  const requiredFields = signerFields.filter((f) => f.required);
+
+  return requiredFields.every((f) => f.value !== null && f.value !== undefined && f.value !== '');
 }
 
 // ==================== URL HELPERS ====================
@@ -338,7 +336,7 @@ export function getRelativeTime(dateString: string): string {
   if (diffMins < 60) return `${diffMins} minute${diffMins > 1 ? 's' : ''} ago`;
   if (diffHours < 24) return `${diffHours} hour${diffHours > 1 ? 's' : ''} ago`;
   if (diffDays < 7) return `${diffDays} day${diffDays > 1 ? 's' : ''} ago`;
-  
+
   return date.toLocaleDateString('en-ZA', {
     day: 'numeric',
     month: 'short',
@@ -350,20 +348,20 @@ export function getRelativeTime(dateString: string): string {
  * Get expiry warning level
  */
 export function getExpiryWarningLevel(
-  expiresAt: string | null
+  expiresAt: string | null,
 ): 'none' | 'info' | 'warning' | 'danger' {
   if (!expiresAt) return 'none';
-  
+
   const now = new Date();
   const expiry = new Date(expiresAt);
   const diffMs = expiry.getTime() - now.getTime();
   const diffHours = diffMs / (1000 * 60 * 60);
-  
+
   if (diffMs <= 0) return 'danger'; // Expired
   if (diffHours <= 24) return 'danger'; // Less than 1 day
   if (diffHours <= 72) return 'warning'; // Less than 3 days
   if (diffHours <= 168) return 'info'; // Less than 7 days
-  
+
   return 'none';
 }
 
@@ -384,7 +382,7 @@ export function getProgressColor(percent: number): string {
  */
 export function getExpiryBadgeColor(expiresAt: string | null): string {
   const level = getExpiryWarningLevel(expiresAt);
-  
+
   switch (level) {
     case 'danger':
       return 'bg-red-100 text-red-800';
@@ -404,15 +402,15 @@ export function getExpiryBadgeColor(expiresAt: string | null): string {
  */
 export function parseApiError(error: unknown): string {
   if (typeof error === 'string') return error;
-  
+
   if (error instanceof Error) {
     return error.message;
   }
-  
+
   if (typeof error === 'object' && error !== null && 'error' in error) {
     return String((error as Record<string, unknown>).error);
   }
-  
+
   return 'An unexpected error occurred';
 }
 
@@ -421,10 +419,10 @@ export function parseApiError(error: unknown): string {
  */
 export function getUserFriendlyErrorMessage(error: unknown): string {
   const message = parseApiError(error);
-  
+
   // Common error translations
   const errorMappings: Record<string, string> = {
-    'Unauthorized': 'You are not authorized to perform this action',
+    Unauthorized: 'You are not authorized to perform this action',
     'Invalid access token': 'Your signing link has expired or is invalid',
     'OTP has expired': 'Your verification code has expired. Please request a new one.',
     'Invalid OTP': 'The verification code you entered is incorrect',
@@ -432,6 +430,6 @@ export function getUserFriendlyErrorMessage(error: unknown): string {
     'Signer not found': 'Signer information could not be found',
     'Upload failed': 'Failed to upload document. Please try again.',
   };
-  
+
   return errorMappings[message] || message;
 }

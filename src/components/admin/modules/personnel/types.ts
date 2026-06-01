@@ -1,7 +1,7 @@
 /**
  * Personnel Module Types
  * Navigate Wealth Admin Dashboard
- * 
+ *
  * All TypeScript type definitions for the Personnel module.
  */
 
@@ -14,12 +14,12 @@ import type { AdminModule } from '../../layout/types';
 /**
  * User role types
  */
-export type UserRole = 
-  | 'super_admin' 
-  | 'admin' 
-  | 'adviser' 
-  | 'paraplanner' 
-  | 'compliance' 
+export type UserRole =
+  | 'super_admin'
+  | 'admin'
+  | 'adviser'
+  | 'paraplanner'
+  | 'compliance'
   | 'viewer';
 
 /**
@@ -43,13 +43,13 @@ export type CommissionEntity = 'personal' | 'company';
 
 /**
  * Granular capability within a module.
- * 
+ *
  * Generic capabilities (available in most modules):
  *  - view:    Read-only access (implicitly granted when access is true)
  *  - create:  Create new records
  *  - edit:    Modify existing records
  *  - delete:  Delete / archive records
- * 
+ *
  * Module-specific capabilities:
  *  - publish:  Publish content (publications, resources)
  *  - approve:  Approve submissions (applications, compliance)
@@ -120,123 +120,123 @@ export interface UpdatePermissionsInput {
 export interface PersonnelQualifications {
   /** Has RE5 certification */
   re5: boolean;
-  
+
   /** Has Certified Financial Planner certification */
   cfp: boolean;
-  
+
   /** Has Code of Business certification */
   cob: boolean;
-  
+
   /** Other qualifications (array of names) */
   other?: string[];
 }
 
 /**
  * Personnel document entity (database record)
- * 
+ *
  * Represents a document associated with a personnel member
  * (certificates, ID, CV, etc.)
  */
 export interface PersonnelDocument {
   /** Document unique identifier */
   id: string;
-  
+
   /** Document display name */
   name: string;
-  
+
   /** Document type/category */
   type: string;
-  
+
   /** Document download URL */
   url: string;
-  
+
   /** Upload timestamp (ISO 8601) */
   uploadedAt: string;
 }
 
 /**
  * Personnel entity (database record)
- * 
+ *
  * Represents a staff member in the Navigate Wealth admin system.
  * Field names use snake_case to match database schema.
  */
 export interface Personnel {
   /** Personnel unique identifier */
   id: string;
-  
+
   /** Full name (computed field for frontend compatibility) */
   name: string;
-  
+
   /** First name */
   firstName: string;
-  
+
   /** Last name */
   lastName: string;
-  
+
   /** Email address */
   email: string;
-  
+
   /** User role */
   role: UserRole;
-  
+
   /** Phone number */
   phone: string;
-  
+
   /** Current status */
   status: PersonnelStatus;
-  
+
   // Professional Information
-  
+
   /** Job title/position */
   jobTitle?: string;
-  
+
   /** Branch/office location */
   branch?: string;
-  
+
   /** Manager's personnel ID (nullable) */
   managerId?: string | null;
-  
+
   // Compliance Information
-  
+
   /** FSP reference number */
   fspReference?: string;
-  
+
   /** FSCA compliance status */
   fscaStatus?: FSCAStatus;
-  
+
   /** Professional qualifications */
   qualifications?: PersonnelQualifications;
-  
+
   // Commission Configuration
-  
+
   /** Commission split percentage (0-100) */
   commissionSplit: number;
-  
+
   /** Commission payment entity */
   commissionEntity?: CommissionEntity;
-  
+
   // Legacy/Frontend Compatibility Fields
-  
+
   /** Region (legacy field) */
   region?: string;
-  
+
   /** Module access permissions (frontend only) */
   moduleAccess?: AdminModule[];
-  
+
   /** Active status (legacy field) */
   active?: boolean;
-  
+
   /** License number (legacy field) */
   licenseNo?: string;
-  
+
   /** Associated documents */
   documents?: PersonnelDocument[];
-  
+
   // Audit Fields
-  
+
   /** Creation timestamp (ISO 8601) */
   createdAt: string;
-  
+
   /** Last update timestamp (ISO 8601) */
   updatedAt: string;
 
@@ -254,16 +254,16 @@ export interface Personnel {
 export interface InvitePersonnelInput {
   /** First name */
   firstName: string;
-  
+
   /** Last name */
   lastName: string;
-  
+
   /** Email address */
   email: string;
-  
+
   /** Assigned role */
   role: Exclude<UserRole, 'super_admin'>;
-  
+
   /** Optional commission split (defaults to 70%) */
   commissionSplit?: number;
 }
@@ -280,34 +280,34 @@ export interface UpdatePersonnelInput {
 
   /** Last name */
   lastName?: string;
-  
+
   /** Phone number */
   phone?: string;
-  
+
   /** Job title */
   jobTitle?: string;
-  
+
   /** User role */
   role?: UserRole;
-  
+
   /** Manager ID */
   managerId?: string | null;
-  
+
   /** Branch location */
   branch?: string;
-  
+
   /** Commission split percentage */
   commissionSplit?: number;
-  
+
   /** Commission entity */
   commissionEntity?: CommissionEntity;
-  
+
   /** FSP reference */
   fspReference?: string;
-  
+
   /** FSCA status */
   fscaStatus?: FSCAStatus;
-  
+
   /** Qualifications */
   qualifications?: PersonnelQualifications;
 }
@@ -318,13 +318,13 @@ export interface UpdatePersonnelInput {
 export interface AddPersonnelDocumentInput {
   /** Personnel ID */
   personnelId: string;
-  
+
   /** Document name */
   name: string;
-  
+
   /** Document type */
   type: string;
-  
+
   /** Document URL */
   url: string;
 }
@@ -339,13 +339,13 @@ export interface AddPersonnelDocumentInput {
 export interface PersonnelFilters {
   /** Search term (name or email) */
   search: string;
-  
+
   /** Filter by roles */
   roles: UserRole[];
-  
+
   /** Filter by statuses */
   statuses: PersonnelStatus[];
-  
+
   /** Filter by branches */
   branches: string[];
 }
@@ -360,16 +360,16 @@ export interface PersonnelFilters {
 export interface ClientSummary {
   /** Client unique identifier */
   id: string;
-  
+
   /** Client full name */
   name: string;
-  
+
   /** Client email */
   email: string;
-  
+
   /** Client status */
   status: string;
-  
+
   /** Assets under management */
   aum: number;
 }
@@ -380,7 +380,7 @@ export interface ClientSummary {
 export interface SuperAdminProfile {
   /** Profile ID */
   id: string;
-  
+
   /** Full name */
   name: string;
 
@@ -389,16 +389,16 @@ export interface SuperAdminProfile {
 
   /** Last name */
   lastName: string;
-  
+
   /** Email address */
   email: string;
-  
+
   /** Phone number */
   phone?: string;
-  
+
   /** Company/organization name */
   company?: string;
-  
+
   /** Last updated timestamp */
   updatedAt?: string;
 }
