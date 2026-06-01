@@ -1,10 +1,11 @@
 import React, { useRef, useState } from 'react';
+import { formatFileSize } from '@/shared/formatting';
 import { Card, CardContent, CardHeader, CardTitle } from '../../../../ui/card';
 import { Button } from '../../../../ui/button';
 import { Label } from '../../../../ui/label';
 import { Textarea } from '../../../../ui/textarea';
 import { Badge } from '../../../../ui/badge';
-import { 
+import {
   Select,
   SelectContent,
   SelectItem,
@@ -18,16 +19,16 @@ import {
   DialogHeader,
   DialogTitle,
 } from '../../../../ui/dialog';
-import { 
-  MessageSquare, 
-  FileText, 
-  Send, 
-  Eye, 
-  X, 
+import {
+  MessageSquare,
+  FileText,
+  Send,
+  Eye,
+  X,
   Upload,
   AlertCircle,
   Image,
-  FileIcon
+  FileIcon,
 } from 'lucide-react';
 import { AttachmentFile } from '../types';
 
@@ -56,11 +57,11 @@ const MAX_MESSAGE_LENGTH = 4096;
 const MAX_FILE_SIZE = 16 * 1024 * 1024; // 16MB
 const ALLOWED_FILE_TYPES = [
   'image/jpeg',
-  'image/png', 
+  'image/png',
   'image/gif',
   'application/pdf',
   'application/msword',
-  'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+  'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
 ];
 
 export function WhatsAppComposer({
@@ -86,7 +87,7 @@ export function WhatsAppComposer({
     setUploadError(null);
     const newAttachments: AttachmentFile[] = [];
     const errors: string[] = [];
-    
+
     Array.from(files).forEach((file) => {
       // Validate file type
       if (!ALLOWED_FILE_TYPES.includes(file.type)) {
@@ -118,7 +119,7 @@ export function WhatsAppComposer({
     if (newAttachments.length > 0) {
       onAttachmentsChange([...attachments, ...newAttachments]);
     }
-    
+
     // Reset file input
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
@@ -128,14 +129,6 @@ export function WhatsAppComposer({
   const removeAttachment = (index: number) => {
     const updated = attachments.filter((_, i) => i !== index);
     onAttachmentsChange(updated);
-  };
-
-  const formatFileSize = (bytes: number): string => {
-    if (bytes === 0) return '0 Bytes';
-    const k = 1024;
-    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
-    const i = Math.floor(Math.log(bytes) / Math.log(k));
-    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
   };
 
   const getFileIcon = (type: string) => {
@@ -155,15 +148,15 @@ export function WhatsAppComposer({
 
   const getPreviewMessage = (): string => {
     let message = messageText;
-    
+
     // Replace merge fields with sample data for preview
     message = message.replace(/\{\{first_name\}\}/g, 'John');
     message = message.replace(/\{\{advisor_name\}\}/g, 'Sarah Johnson');
-    
+
     return message;
   };
 
-  const selectedFromNumber = fromNumbers.find(num => num.id === selectedFrom);
+  const selectedFromNumber = fromNumbers.find((num) => num.id === selectedFrom);
 
   return (
     <div className="space-y-4">
@@ -204,10 +197,7 @@ export function WhatsAppComposer({
           <CardTitle className="flex items-center justify-between">
             <span>Message Content</span>
             <div className="flex items-center gap-2">
-              <Badge 
-                variant={isOverLimit() ? "destructive" : "secondary"}
-                className="text-xs"
-              >
+              <Badge variant={isOverLimit() ? 'destructive' : 'secondary'} className="text-xs">
                 {getCharacterCount()}/{MAX_MESSAGE_LENGTH}
               </Badge>
               <Button variant="outline" size="sm" onClick={() => setShowPreview(true)}>
@@ -232,12 +222,14 @@ export function WhatsAppComposer({
               {isOverLimit() && (
                 <div className="mt-2 text-sm text-destructive flex items-center gap-2">
                   <AlertCircle className="h-4 w-4" />
-                  Message is too long. WhatsApp messages are limited to {MAX_MESSAGE_LENGTH} characters.
+                  Message is too long. WhatsApp messages are limited to {MAX_MESSAGE_LENGTH}{' '}
+                  characters.
                 </div>
               )}
             </div>
             <div className="mt-2 text-xs text-muted-foreground">
-              Available merge fields: &#123;&#123;first_name&#125;&#125;, &#123;&#123;advisor_name&#125;&#125;
+              Available merge fields: &#123;&#123;first_name&#125;&#125;,
+              &#123;&#123;advisor_name&#125;&#125;
             </div>
           </div>
         </CardContent>
@@ -296,7 +288,10 @@ export function WhatsAppComposer({
           {attachments.length > 0 && (
             <div className="space-y-2">
               {attachments.map((attachment, index) => (
-                <div key={index} className="flex items-center justify-between p-2 bg-muted/20 rounded">
+                <div
+                  key={index}
+                  className="flex items-center justify-between p-2 bg-muted/20 rounded"
+                >
                   <div className="flex items-center gap-2">
                     {getFileIcon(attachment.type)}
                     <div>
@@ -333,7 +328,7 @@ export function WhatsAppComposer({
               <Send className="h-4 w-4" />
               Send WhatsApp
             </Button>
-            
+
             <Button
               variant="outline"
               onClick={onTestSend}
@@ -370,16 +365,17 @@ export function WhatsAppComposer({
                 <MessageSquare className="h-4 w-4" />
                 From: {selectedFromNumber?.number}
               </div>
-              
+
               <div className="bg-white rounded-lg p-3 border">
-                <div className="whitespace-pre-wrap text-sm">
-                  {getPreviewMessage()}
-                </div>
-                
+                <div className="whitespace-pre-wrap text-sm">{getPreviewMessage()}</div>
+
                 {attachments.length > 0 && (
                   <div className="mt-3 pt-3 border-t space-y-2">
                     {attachments.map((attachment, index) => (
-                      <div key={index} className="flex items-center gap-2 text-sm text-muted-foreground">
+                      <div
+                        key={index}
+                        className="flex items-center gap-2 text-sm text-muted-foreground"
+                      >
                         {getFileIcon(attachment.type)}
                         <span>{attachment.name}</span>
                         <span className="text-xs">({formatFileSize(attachment.size)})</span>

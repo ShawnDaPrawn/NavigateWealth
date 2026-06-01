@@ -7,6 +7,7 @@ import {
   formatDate,
   formatTime,
   formatDateTime,
+  formatFileSize,
 } from '../format';
 
 describe('formatNumber', () => {
@@ -80,5 +81,15 @@ describe('date helpers', () => {
     const out = formatDateTime(d);
     expect(out).toBe(`${formatDate(d)} ${formatTime(d)}`);
     expect(out).toContain(' ');
+  });
+});
+
+describe('formatFileSize', () => {
+  it('picks the largest fitting unit', () => {
+    expect(formatFileSize(0)).toBe('0 Bytes');
+    expect(formatFileSize(512)).toBe('512 Bytes');
+    expect(formatFileSize(1536)).toBe('1.5 KB');
+    expect(formatFileSize(2.34 * 1024 * 1024)).toBe('2.34 MB');
+    expect(formatFileSize(3 * 1024 * 1024 * 1024)).toBe('3 GB');
   });
 });

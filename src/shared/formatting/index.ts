@@ -6,4 +6,5 @@ export {
   formatDate,
   formatTime,
   formatDateTime,
+  formatFileSize,
 } from './format';

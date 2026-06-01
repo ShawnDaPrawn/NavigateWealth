@@ -75,3 +75,12 @@ export function formatTime(date: string | Date, options?: Intl.DateTimeFormatOpt
 export function formatDateTime(date: string | Date): string {
   return `${formatDate(date)} ${formatTime(date)}`;
 }
+
+/** Human file size with the largest fitting unit: "1.5 KB", "2.34 MB", "0 Bytes". */
+export function formatFileSize(bytes: number): string {
+  if (bytes === 0) return '0 Bytes';
+  const k = 1024;
+  const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+  const i = Math.floor(Math.log(bytes) / Math.log(k));
+  return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+}

@@ -1,4 +1,5 @@
 import React, { useState, useRef } from 'react';
+import { formatFileSize } from '@/shared/formatting';
 import { Card, CardContent, CardHeader, CardTitle } from '../../../../ui/card';
 import { Button } from '../../../../ui/button';
 import { Input } from '../../../../ui/input';
@@ -6,7 +7,7 @@ import { Label } from '../../../../ui/label';
 import { Textarea } from '../../../../ui/textarea';
 import { Badge } from '../../../../ui/badge';
 import DOMPurify from 'dompurify';
-import { 
+import {
   Select,
   SelectContent,
   SelectItem,
@@ -22,17 +23,17 @@ import {
   DialogTrigger,
 } from '../../../../ui/dialog';
 import { Separator } from '../../../../ui/separator';
-import { 
-  Mail, 
-  Paperclip, 
-  FileText, 
-  Send, 
-  Eye, 
-  Save, 
-  X, 
+import {
+  Mail,
+  Paperclip,
+  FileText,
+  Send,
+  Eye,
+  Save,
+  X,
   Plus,
   Upload,
-  AlertCircle
+  AlertCircle,
 } from 'lucide-react';
 import { EmailTemplate, AttachmentFile } from '../types';
 import { communicationApi } from '../api';
@@ -113,7 +114,7 @@ export function EmailComposer({
     if (!files) return;
 
     const newAttachments: AttachmentFile[] = [];
-    
+
     Array.from(files).forEach((file) => {
       // In real implementation, you'd upload to storage and get back the path
       const attachment: AttachmentFile = {
@@ -127,7 +128,7 @@ export function EmailComposer({
     });
 
     onAttachmentsChange([...attachments, ...newAttachments]);
-    
+
     // Reset file input
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
@@ -139,14 +140,6 @@ export function EmailComposer({
     onAttachmentsChange(updated);
   };
 
-  const formatFileSize = (bytes: number): string => {
-    if (bytes === 0) return '0 Bytes';
-    const k = 1024;
-    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
-    const i = Math.floor(Math.log(bytes) / Math.log(k));
-    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
-  };
-
   const getTotalAttachmentSize = (): string => {
     const totalBytes = attachments.reduce((sum, att) => sum + att.size, 0);
     return formatFileSize(totalBytes);
@@ -154,18 +147,18 @@ export function EmailComposer({
 
   const getPreviewHtml = (): string => {
     let html = bodyHtml;
-    
+
     // Replace merge fields with sample data for preview
     html = html.replace(/\{\{first_name\}\}/g, 'John');
     html = html.replace(/\{\{advisor_name\}\}/g, 'Sarah Johnson');
     html = html.replace(/\{\{quarter\}\}/g, '4');
     html = html.replace(/\{\{month\}\}/g, 'January');
     html = html.replace(/\{\{year\}\}/g, '2024');
-    
+
     return html;
   };
 
-  const selectedFromAddress = fromAddresses.find(addr => addr.id === selectedFrom);
+  const selectedFromAddress = fromAddresses.find((addr) => addr.id === selectedFrom);
 
   return (
     <div className="space-y-4">
@@ -228,12 +221,15 @@ export function EmailComposer({
                 </DialogHeader>
                 <div className="space-y-4 mt-4">
                   {Object.entries(
-                    templates.reduce((acc, template) => {
-                      const category = template.category || 'Uncategorized';
-                      if (!acc[category]) acc[category] = [];
-                      acc[category].push(template);
-                      return acc;
-                    }, {} as Record<string, EmailTemplate[]>)
+                    templates.reduce(
+                      (acc, template) => {
+                        const category = template.category || 'Uncategorized';
+                        if (!acc[category]) acc[category] = [];
+                        acc[category].push(template);
+                        return acc;
+                      },
+                      {} as Record<string, EmailTemplate[]>,
+                    ),
                   ).map(([category, templates]) => (
                     <div key={category}>
                       <h4 className="font-medium mb-2">{category}</h4>
@@ -251,9 +247,7 @@ export function EmailComposer({
                                   {template.subject}
                                 </div>
                               </div>
-                              {template.isSystem && (
-                                <Badge variant="secondary">System</Badge>
-                              )}
+                              {template.isSystem && <Badge variant="secondary">System</Badge>}
                             </div>
                           </div>
                         ))}
@@ -266,12 +260,12 @@ export function EmailComposer({
 
             {selectedTemplate && (
               <Badge variant="outline">
-                Template: {templates.find(t => t.id === selectedTemplate)?.name}
+                Template: {templates.find((t) => t.id === selectedTemplate)?.name}
               </Badge>
             )}
-            
+
             <div className="flex-1" />
-            
+
             <Button variant="outline" size="sm" onClick={() => setShowPreview(true)}>
               <Eye className="h-4 w-4 mr-2" />
               Preview
@@ -300,7 +294,9 @@ export function EmailComposer({
               />
             </div>
             <div className="mt-2 text-xs text-muted-foreground">
-              Available merge fields: &#123;&#123;first_name&#125;&#125;, &#123;&#123;advisor_name&#125;&#125;, &#123;&#123;quarter&#125;&#125;, &#123;&#123;month&#125;&#125;, &#123;&#123;year&#125;&#125;
+              Available merge fields: &#123;&#123;first_name&#125;&#125;,
+              &#123;&#123;advisor_name&#125;&#125;, &#123;&#123;quarter&#125;&#125;,
+              &#123;&#123;month&#125;&#125;, &#123;&#123;year&#125;&#125;
             </div>
           </div>
         </CardContent>
@@ -314,7 +310,8 @@ export function EmailComposer({
             Attachments
             {attachments.length > 0 && (
               <Badge variant="secondary">
-                {attachments.length} file{attachments.length > 1 ? 's' : ''} • {getTotalAttachmentSize()}
+                {attachments.length} file{attachments.length > 1 ? 's' : ''} •{' '}
+                {getTotalAttachmentSize()}
               </Badge>
             )}
           </CardTitle>
@@ -345,7 +342,10 @@ export function EmailComposer({
           {attachments.length > 0 && (
             <div className="space-y-2">
               {attachments.map((attachment, index) => (
-                <div key={index} className="flex items-center justify-between p-2 bg-muted/20 rounded">
+                <div
+                  key={index}
+                  className="flex items-center justify-between p-2 bg-muted/20 rounded"
+                >
                   <div className="flex items-center gap-2">
                     <FileText className="h-4 w-4" />
                     <div>
@@ -382,7 +382,7 @@ export function EmailComposer({
               <Send className="h-4 w-4" />
               Send Email
             </Button>
-            
+
             <Button
               variant="outline"
               onClick={onTestSend}
@@ -422,7 +422,7 @@ export function EmailComposer({
                 <div className="text-sm text-muted-foreground mb-1">Subject:</div>
                 <div className="font-medium">{subject.replace(/\{\{first_name\}\}/g, 'John')}</div>
               </div>
-              <div 
+              <div
                 className="prose prose-sm max-w-none"
                 dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(getPreviewHtml()) }}
               />
