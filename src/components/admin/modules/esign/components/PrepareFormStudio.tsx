@@ -72,6 +72,7 @@ import { Switch } from '../../../../ui/switch';
 import { logger } from '../../../../../utils/logger';
 import { RecipientsManager } from './RecipientsManager';
 import { PageManagerDialog } from './PageManagerDialog';
+import { createFieldsFromCandidates, isEditableTarget } from './prepareFormStudioUtils';
 
 interface PrepareFormStudioProps {
   envelope: EsignEnvelope;
@@ -230,45 +231,14 @@ export function PrepareFormStudio({
   // shouldn't appear in the "Placing fields for" picker. The legend still
   // shows them (so the sender knows who else gets a copy) but they're
   // visually distinguished and unclickable for filtering.
-  const eligibleSigners = useMemo(
-    () => signers.filter((s) => s.kind !== 'cc'),
-    [signers],
-  );
+  const eligibleSigners = useMemo(() => signers.filter((s) => s.kind !== 'cc'), [signers]);
 
   const buildFieldsFromCandidates = useCallback(
     (
       candidateList: NonNullable<EsignEnvelope['field_candidates']>,
       targetSignerId: string,
-    ): EsignField[] => {
-      const now = new Date().toISOString();
-      const newFields: EsignField[] = [];
-      for (const cand of candidateList) {
-        const dupe = fields.some(
-          (f) =>
-            f.page === cand.page &&
-            f.type === cand.type &&
-            Math.abs(f.x - cand.x) < 1.5 &&
-            Math.abs(f.y - cand.y) < 1.5,
-        );
-        if (dupe) continue;
-        newFields.push({
-          id: `field-${Date.now()}-${newFields.length}-${Math.random().toString(36).slice(2, 6)}`,
-          envelope_id: envelope.id,
-          signer_id: targetSignerId,
-          type: cand.type,
-          page: cand.page,
-          x: cand.x,
-          y: cand.y,
-          width: cand.width,
-          height: cand.height,
-          required: cand.required,
-          metadata: { ...(cand.metadata ?? {}), source: cand.source, label: cand.label },
-          created_at: now,
-          updated_at: now,
-        });
-      }
-      return newFields;
-    },
+    ): EsignField[] =>
+      createFieldsFromCandidates(candidateList, targetSignerId, fields, envelope.id),
     [fields, envelope.id],
   );
 
@@ -309,11 +279,7 @@ export function PrepareFormStudio({
   const activeDocumentUrl = useMemo<string | undefined>(() => {
     const fromList = envelopeDocuments.find((d) => d.document_id === activeDocumentId);
     return (
-      fromList?.url ??
-      documentUrl ??
-      envelope.document?.url ??
-      envelope.documentUrl ??
-      undefined
+      fromList?.url ?? documentUrl ?? envelope.document?.url ?? envelope.documentUrl ?? undefined
     );
   }, [envelopeDocuments, activeDocumentId, documentUrl, envelope.document, envelope.documentUrl]);
 
@@ -325,7 +291,8 @@ export function PrepareFormStudio({
   const visibleFields = useMemo<EsignField[]>(() => {
     if (envelopeDocuments.length <= 1) return fields;
     return fields.filter((f) => {
-      const docId = (f as EsignField & { document_id?: string }).document_id ?? envelope.document_id;
+      const docId =
+        (f as EsignField & { document_id?: string }).document_id ?? envelope.document_id;
       return docId === activeDocumentId;
     });
   }, [fields, envelopeDocuments.length, activeDocumentId, envelope.document_id]);
@@ -414,10 +381,13 @@ export function PrepareFormStudio({
   );
 
   // Build signer color map for consistent color assignment
-  const signerColorMap = signers.reduce((map, signer, index) => {
-    map[signer.email] = SIGNER_COLORS[index % SIGNER_COLORS.length].hex;
-    return map;
-  }, {} as Record<string, string>);
+  const signerColorMap = signers.reduce(
+    (map, signer, index) => {
+      map[signer.email] = SIGNER_COLORS[index % SIGNER_COLORS.length].hex;
+      return map;
+    },
+    {} as Record<string, string>,
+  );
 
   // If the currently-selected signer is a CC (e.g. they were edited after
   // selection), drop the selection back to the first eligible signer.
@@ -458,63 +428,81 @@ export function PrepareFormStudio({
 
   // ==================== FIELD OPERATIONS ====================
 
-  const handleFieldPlace = useCallback((newField: Partial<EsignField>) => {
-    // Guard: never place a field on a CC recipient. Falls back to the first
-    // eligible signer (or the currently-selected one if they're not a CC).
-    let assignedSigner = newField.signer_id || selectedSignerId || eligibleSigners[0]?.email;
-    const assigneeRecord = signers.find((s) => s.email === assignedSigner);
-    if (!assigneeRecord || assigneeRecord.kind === 'cc') {
-      assignedSigner = eligibleSigners[0]?.email;
-    }
+  const handleFieldPlace = useCallback(
+    (newField: Partial<EsignField>) => {
+      // Guard: never place a field on a CC recipient. Falls back to the first
+      // eligible signer (or the currently-selected one if they're not a CC).
+      let assignedSigner = newField.signer_id || selectedSignerId || eligibleSigners[0]?.email;
+      const assigneeRecord = signers.find((s) => s.email === assignedSigner);
+      if (!assigneeRecord || assigneeRecord.kind === 'cc') {
+        assignedSigner = eligibleSigners[0]?.email;
+      }
 
-    const field: EsignField = {
-      id: `field-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-      envelope_id: envelope.id,
-      // P3.4 — stamp the field with the active document so multi-doc
-      // envelopes know which PDF the field belongs to. Single-doc
-      // envelopes still get a value here; the materialiser treats it
-      // as a no-op when there's only one document.
-      document_id: activeDocumentId,
-      type: newField.type || 'signature',
-      page: newField.page || 1,
-      x: newField.x || 50,
-      y: newField.y || 50,
-      width: newField.width || 150,
-      height: newField.height || 50,
-      required: true,
-      signer_id: assignedSigner,
-      value: null,
-      metadata: {},
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-    } as EsignField;
+      const field: EsignField = {
+        id: `field-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+        envelope_id: envelope.id,
+        // P3.4 — stamp the field with the active document so multi-doc
+        // envelopes know which PDF the field belongs to. Single-doc
+        // envelopes still get a value here; the materialiser treats it
+        // as a no-op when there's only one document.
+        document_id: activeDocumentId,
+        type: newField.type || 'signature',
+        page: newField.page || 1,
+        x: newField.x || 50,
+        y: newField.y || 50,
+        width: newField.width || 150,
+        height: newField.height || 50,
+        required: true,
+        signer_id: assignedSigner,
+        value: null,
+        metadata: {},
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      } as EsignField;
 
-    pushToHistory([...fields, field]);
-    setPrimarySelectedId(field.id);
-    setSelectedFieldIds(new Set([field.id]));
-  }, [envelope.id, selectedSignerId, signers, eligibleSigners, fields, history, historyIndex, activeDocumentId]);
+      pushToHistory([...fields, field]);
+      setPrimarySelectedId(field.id);
+      setSelectedFieldIds(new Set([field.id]));
+    },
+    [
+      envelope.id,
+      selectedSignerId,
+      signers,
+      eligibleSigners,
+      fields,
+      history,
+      historyIndex,
+      activeDocumentId,
+    ],
+  );
 
-  const handleFieldUpdate = useCallback((fieldId: string, updates: Partial<EsignField>) => {
-    const updatedFields = fields.map(f => f.id === fieldId ? { ...f, ...updates } : f);
-    // Don't push to history for every micro-drag event?
-    // Ideally we debounce history pushes or only push on mouse up.
-    // For now, we update state directly for smooth drag, but history might get spammy.
-    // Optimization: Just update state here, push to history on "drag end" (not implemented in this simplified version)
-    // We'll update state directly and set unsaved changes.
-    setFields(updatedFields);
-    setHasUnsavedChanges(true);
-  }, [fields]);
+  const handleFieldUpdate = useCallback(
+    (fieldId: string, updates: Partial<EsignField>) => {
+      const updatedFields = fields.map((f) => (f.id === fieldId ? { ...f, ...updates } : f));
+      // Don't push to history for every micro-drag event?
+      // Ideally we debounce history pushes or only push on mouse up.
+      // For now, we update state directly for smooth drag, but history might get spammy.
+      // Optimization: Just update state here, push to history on "drag end" (not implemented in this simplified version)
+      // We'll update state directly and set unsaved changes.
+      setFields(updatedFields);
+      setHasUnsavedChanges(true);
+    },
+    [fields],
+  );
 
-  const handleFieldDelete = useCallback((fieldId: string) => {
-    const newFields = fields.filter(f => f.id !== fieldId);
-    pushToHistory(newFields);
-    setSelectedFieldIds((prev) => {
-      const next = new Set(prev);
-      next.delete(fieldId);
-      return next;
-    });
-    if (primarySelectedId === fieldId) setPrimarySelectedId(undefined);
-  }, [fields, primarySelectedId]);
+  const handleFieldDelete = useCallback(
+    (fieldId: string) => {
+      const newFields = fields.filter((f) => f.id !== fieldId);
+      pushToHistory(newFields);
+      setSelectedFieldIds((prev) => {
+        const next = new Set(prev);
+        next.delete(fieldId);
+        return next;
+      });
+      if (primarySelectedId === fieldId) setPrimarySelectedId(undefined);
+    },
+    [fields, primarySelectedId],
+  );
 
   // ==================== MULTI-SELECT / CLIPBOARD ====================
 
@@ -659,8 +647,18 @@ export function PrepareFormStudio({
     }
     pushToHistory([...fields, ...newFields]);
     setCandidates([]);
-    toast.success(`Accepted ${newFields.length} suggested field${newFields.length === 1 ? '' : 's'}`);
-  }, [candidates, selectedSignerId, eligibleSigners, buildFieldsFromCandidates, fields, history, historyIndex]);
+    toast.success(
+      `Accepted ${newFields.length} suggested field${newFields.length === 1 ? '' : 's'}`,
+    );
+  }, [
+    candidates,
+    selectedSignerId,
+    eligibleSigners,
+    buildFieldsFromCandidates,
+    fields,
+    history,
+    historyIndex,
+  ]);
 
   useEffect(() => {
     if (!autoPopulateSuggestedFields) {
@@ -687,7 +685,9 @@ export function PrepareFormStudio({
     }
 
     pushToHistory([...fields, ...newFields]);
-    toast.success(`Auto-added ${newFields.length} suggested field${newFields.length === 1 ? '' : 's'} from the PDF.`);
+    toast.success(
+      `Auto-added ${newFields.length} suggested field${newFields.length === 1 ? '' : 's'} from the PDF.`,
+    );
   }, [
     autoPopulateSuggestedFields,
     candidates,
@@ -725,24 +725,32 @@ export function PrepareFormStudio({
    * bulk-action bar dropdown so a sender can drag a marquee around 12 fields
    * and re-route them all to a different signer in one action.
    */
-  const handleBulkReassign = useCallback((signerEmail: string) => {
-    if (selectedFieldIds.size === 0) return;
-    const updated = fields.map((f) =>
-      selectedFieldIds.has(f.id) ? { ...f, signer_id: signerEmail } : f,
-    );
-    pushToHistory(updated);
-    toast.success(`Reassigned ${selectedFieldIds.size} field${selectedFieldIds.size === 1 ? '' : 's'}`);
-  }, [fields, selectedFieldIds, history, historyIndex]);
+  const handleBulkReassign = useCallback(
+    (signerEmail: string) => {
+      if (selectedFieldIds.size === 0) return;
+      const updated = fields.map((f) =>
+        selectedFieldIds.has(f.id) ? { ...f, signer_id: signerEmail } : f,
+      );
+      pushToHistory(updated);
+      toast.success(
+        `Reassigned ${selectedFieldIds.size} field${selectedFieldIds.size === 1 ? '' : 's'}`,
+      );
+    },
+    [fields, selectedFieldIds, history, historyIndex],
+  );
 
   /** Toggle the `required` flag on every selected field to a single value. */
-  const handleBulkRequired = useCallback((required: boolean) => {
-    if (selectedFieldIds.size === 0) return;
-    const updated = fields.map((f) =>
-      selectedFieldIds.has(f.id) ? { ...f, required } : f,
-    );
-    pushToHistory(updated);
-    toast.success(`${selectedFieldIds.size} field${selectedFieldIds.size === 1 ? '' : 's'} marked ${required ? 'required' : 'optional'}`);
-  }, [fields, selectedFieldIds, history, historyIndex]);
+  const handleBulkRequired = useCallback(
+    (required: boolean) => {
+      if (selectedFieldIds.size === 0) return;
+      const updated = fields.map((f) => (selectedFieldIds.has(f.id) ? { ...f, required } : f));
+      pushToHistory(updated);
+      toast.success(
+        `${selectedFieldIds.size} field${selectedFieldIds.size === 1 ? '' : 's'} marked ${required ? 'required' : 'optional'}`,
+      );
+    },
+    [fields, selectedFieldIds, history, historyIndex],
+  );
 
   // ── P2.5 2.3 — Apply to all pages ──
   /**
@@ -784,7 +792,9 @@ export function PrepareFormStudio({
       return;
     }
     pushToHistory([...fields, ...replicas]);
-    toast.success(`Replicated to ${replicas.length} field${replicas.length === 1 ? '' : 's'} across ${pageCount - 1} other page${pageCount - 1 === 1 ? '' : 's'}`);
+    toast.success(
+      `Replicated to ${replicas.length} field${replicas.length === 1 ? '' : 's'} across ${pageCount - 1} other page${pageCount - 1 === 1 ? '' : 's'}`,
+    );
   }, [fields, selectedFieldIds, pageCount, history, historyIndex]);
 
   // ==================== ACTIONS ====================
@@ -971,14 +981,6 @@ export function PrepareFormStudio({
   // one place (the help dialog below). We early-exit when the user is typing
   // in a real input so we never hijack normal typing.
   useEffect(() => {
-    const isEditableTarget = (el: EventTarget | null): boolean => {
-      if (!(el instanceof HTMLElement)) return false;
-      const tag = el.tagName;
-      if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return true;
-      if (el.isContentEditable) return true;
-      return false;
-    };
-
     const onKey = (e: KeyboardEvent) => {
       if (isEditableTarget(e.target)) return;
       const meta = e.metaKey || e.ctrlKey;
@@ -1074,7 +1076,6 @@ export function PrepareFormStudio({
     eligibleSigners,
   ]);
 
-
   // ==================== RENDER ====================
 
   // Currently-displayed field for the right-hand Properties panel.
@@ -1106,7 +1107,7 @@ export function PrepareFormStudio({
           </button>
           {/* Auto-save status indicator */}
           <div className="text-xs text-gray-500 ml-1 min-w-[110px]" aria-live="polite">
-            {(saving || autoSaving) ? (
+            {saving || autoSaving ? (
               <span className="flex items-center gap-1">
                 <Loader2 className="h-3 w-3 animate-spin" />
                 Saving…
@@ -1188,10 +1189,22 @@ export function PrepareFormStudio({
 
           <div className="h-6 w-px bg-gray-200 mx-1" />
 
-          <Button variant="ghost" size="icon" onClick={undo} disabled={historyIndex === 0} aria-label="Undo">
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={undo}
+            disabled={historyIndex === 0}
+            aria-label="Undo"
+          >
             <Undo className="h-4 w-4" />
           </Button>
-          <Button variant="ghost" size="icon" onClick={redo} disabled={historyIndex === history.length - 1} aria-label="Redo">
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={redo}
+            disabled={historyIndex === history.length - 1}
+            aria-label="Redo"
+          >
             <Redo className="h-4 w-4" />
           </Button>
 
@@ -1203,7 +1216,7 @@ export function PrepareFormStudio({
             disabled={!hasUnsavedChanges || saving || autoSaving}
             className="w-24"
           >
-            {(saving || autoSaving) ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Save'}
+            {saving || autoSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Save'}
           </Button>
 
           <Button
@@ -1235,7 +1248,9 @@ export function PrepareFormStudio({
           active recipient AND scrolls the canvas to the top so the sender
           can immediately start dropping fields. */}
       <div className="bg-white border-b px-4 py-2 flex items-center gap-2 overflow-x-auto shrink-0">
-        <span className="text-xs uppercase tracking-wider text-gray-400 mr-1 shrink-0">Signers</span>
+        <span className="text-xs uppercase tracking-wider text-gray-400 mr-1 shrink-0">
+          Signers
+        </span>
         {signers.map((signer, idx) => {
           const color = SIGNER_COLORS[idx % SIGNER_COLORS.length].hex;
           const isCC = signer.kind === 'cc';
@@ -1277,18 +1292,24 @@ export function PrepareFormStudio({
                   'inline-flex items-center gap-2 px-2.5 py-1',
                   isCC ? 'cursor-not-allowed' : 'cursor-pointer hover:bg-gray-50',
                 ].join(' ')}
-                title={isCC ? `${signer.name} — Receives a copy` : `Filter to ${signer.name}'s fields`}
+                title={
+                  isCC ? `${signer.name} — Receives a copy` : `Filter to ${signer.name}'s fields`
+                }
               >
                 <span
                   className="w-3 h-3 rounded-full shrink-0 ring-1 ring-black/5"
                   style={{ backgroundColor: color }}
                 />
-                <span className="truncate max-w-[120px] font-medium text-gray-700">{signer.name}</span>
+                <span className="truncate max-w-[120px] font-medium text-gray-700">
+                  {signer.name}
+                </span>
                 {isCC && (
                   <span className="text-[10px] uppercase tracking-wide text-gray-400 ml-1">CC</span>
                 )}
                 {isWitness && (
-                  <span className="text-[10px] uppercase tracking-wide text-amber-600 ml-1">Witness</span>
+                  <span className="text-[10px] uppercase tracking-wide text-amber-600 ml-1">
+                    Witness
+                  </span>
                 )}
               </button>
               {!isCC && count > 0 && (
@@ -1300,7 +1321,9 @@ export function PrepareFormStudio({
                   }}
                   className={[
                     'text-[10px] tabular-nums px-1.5 py-1 rounded-r-full',
-                    isActive ? 'bg-purple-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200',
+                    isActive
+                      ? 'bg-purple-600 text-white'
+                      : 'bg-gray-100 text-gray-600 hover:bg-gray-200',
                   ].join(' ')}
                   title={`${count} field${count === 1 ? '' : 's'} — click to place fields for ${signer.name}`}
                 >
@@ -1445,7 +1468,6 @@ export function PrepareFormStudio({
 
       {/* Main Studio Area */}
       <div className="flex-1 flex overflow-hidden min-h-0">
-
         {/* Left Sidebar: Toolbox */}
         <div className="w-64 bg-white border-r flex flex-col z-10 overflow-hidden">
           <div className="p-4 border-b">
@@ -1456,8 +1478,16 @@ export function PrepareFormStudio({
               <DropdownMenuTrigger asChild>
                 <Button variant="outline" className="w-full justify-between">
                   <div className="flex items-center gap-2 min-w-0 overflow-hidden">
-                    <div className="w-3 h-3 rounded-full shrink-0" style={{ backgroundColor: signerColorMap[selectedSignerId || ''] || '#6d28d9' }} />
-                    <span className="truncate text-sm">{eligibleSigners.find(s => s.email === selectedSignerId)?.name || 'Select signer'}</span>
+                    <div
+                      className="w-3 h-3 rounded-full shrink-0"
+                      style={{
+                        backgroundColor: signerColorMap[selectedSignerId || ''] || '#6d28d9',
+                      }}
+                    />
+                    <span className="truncate text-sm">
+                      {eligibleSigners.find((s) => s.email === selectedSignerId)?.name ||
+                        'Select signer'}
+                    </span>
                   </div>
                   <ChevronDown className="h-4 w-4 opacity-50 shrink-0 ml-2" />
                 </Button>
@@ -1472,9 +1502,14 @@ export function PrepareFormStudio({
                       onClick={() => setSelectedSignerId(signer.email)}
                       className="flex items-center gap-2"
                     >
-                      <div className="w-3 h-3 rounded-full shrink-0" style={{ backgroundColor: color.hex }} />
+                      <div
+                        className="w-3 h-3 rounded-full shrink-0"
+                        style={{ backgroundColor: color.hex }}
+                      />
                       <span className="flex-1 truncate">{signer.name}</span>
-                      <span className="text-xs text-gray-400">{signer.kind === 'witness' ? 'Witness' : (signer.role || 'Signer')}</span>
+                      <span className="text-xs text-gray-400">
+                        {signer.kind === 'witness' ? 'Witness' : signer.role || 'Signer'}
+                      </span>
                     </DropdownMenuItem>
                   );
                 })}
@@ -1483,19 +1518,22 @@ export function PrepareFormStudio({
           </div>
 
           <div className="flex-1 overflow-y-auto p-4">
-             <FieldPalette
-               signers={eligibleSigners}
-               fields={fields}
-               onAddField={handleFieldPlace}
-               onUpdateField={handleFieldUpdate}
-               onDeleteField={handleFieldDelete}
-               selectedSignerId={selectedSignerId}
-             />
+            <FieldPalette
+              signers={eligibleSigners}
+              fields={fields}
+              onAddField={handleFieldPlace}
+              onUpdateField={handleFieldUpdate}
+              onDeleteField={handleFieldDelete}
+              selectedSignerId={selectedSignerId}
+            />
           </div>
         </div>
 
         {/* Center: Canvas — independent scroll area for the document */}
-        <div className="flex-1 bg-gray-100/50 relative min-h-0 min-w-0 overflow-hidden" data-esign-canvas>
+        <div
+          className="flex-1 bg-gray-100/50 relative min-h-0 min-w-0 overflow-hidden"
+          data-esign-canvas
+        >
           {/* P3.1 + P3.2 — Suggested-fields banner. Shows once after upload
               when the backend's PDF analysis pipeline returned candidates.
               The sender accepts/dismisses individually or in bulk; once
@@ -1506,7 +1544,8 @@ export function PrepareFormStudio({
                 <Magnet className="h-4 w-4 text-amber-700 shrink-0" />
                 <div className="flex-1 min-w-0">
                   <div className="font-medium text-amber-900">
-                    {candidates.length} suggested field{candidates.length === 1 ? '' : 's'} from this PDF
+                    {candidates.length} suggested field{candidates.length === 1 ? '' : 's'} from
+                    this PDF
                   </div>
                   <div className="text-xs text-amber-700/80 truncate">
                     {candidates.filter((c) => c.source === 'acroform').length} from PDF form
@@ -1558,7 +1597,9 @@ export function PrepareFormStudio({
                     <span className="font-medium capitalize w-16 shrink-0">{c.type}</span>
                     <span className="text-amber-700/80 shrink-0">p.{c.page}</span>
                     <span className="flex-1 truncate text-gray-700">
-                      {c.label || c.anchorText || (c.source === 'acroform' ? 'PDF form widget' : 'Text anchor')}
+                      {c.label ||
+                        c.anchorText ||
+                        (c.source === 'acroform' ? 'PDF form widget' : 'Text anchor')}
                     </span>
                     <button
                       type="button"
@@ -1593,8 +1634,7 @@ export function PrepareFormStudio({
               {envelopeDocuments.map((d) => {
                 const isActive = d.document_id === activeDocumentId;
                 const fieldCount = fieldCountsByDocument[d.document_id] ?? 0;
-                const canRemove =
-                  envelope.status === 'draft' && envelopeDocuments.length > 1;
+                const canRemove = envelope.status === 'draft' && envelopeDocuments.length > 1;
                 return (
                   <div
                     key={d.document_id}
@@ -1614,9 +1654,7 @@ export function PrepareFormStudio({
                       {fieldCount > 0 && (
                         <span
                           className={`text-[10px] px-1 py-px rounded ${
-                            isActive
-                              ? 'bg-blue-200 text-blue-900'
-                              : 'bg-gray-200 text-gray-700'
+                            isActive ? 'bg-blue-200 text-blue-900' : 'bg-gray-200 text-gray-700'
                           }`}
                         >
                           {fieldCount}
@@ -1694,15 +1732,14 @@ export function PrepareFormStudio({
 
         {/* Right Sidebar: Properties */}
         <div className="w-72 bg-white border-l z-10 overflow-y-auto">
-           <FieldPropertiesPanel
-             field={propertiesField}
-             signers={signers}
-             allFields={fields}
-             onUpdate={handleFieldUpdate}
-             onDelete={handleFieldDelete}
-           />
+          <FieldPropertiesPanel
+            field={propertiesField}
+            signers={signers}
+            allFields={fields}
+            onUpdate={handleFieldUpdate}
+            onDelete={handleFieldDelete}
+          />
         </div>
-
       </div>
 
       {/* ====================== SETTINGS DIALOG ====================== */}
@@ -1714,7 +1751,8 @@ export function PrepareFormStudio({
               Envelope settings
             </DialogTitle>
             <DialogDescription>
-              Update the envelope title, message, signing order, and expiry. Changes apply immediately to this draft.
+              Update the envelope title, message, signing order, and expiry. Changes apply
+              immediately to this draft.
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 mt-2">
@@ -1779,10 +1817,18 @@ export function PrepareFormStudio({
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setShowSettings(false)} disabled={savingSettings}>
+            <Button
+              variant="outline"
+              onClick={() => setShowSettings(false)}
+              disabled={savingSettings}
+            >
               Cancel
             </Button>
-            <Button onClick={handleSaveSettings} disabled={savingSettings} className="bg-purple-600 hover:bg-purple-700">
+            <Button
+              onClick={handleSaveSettings}
+              disabled={savingSettings}
+              className="bg-purple-600 hover:bg-purple-700"
+            >
               {savingSettings ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
               Save settings
             </Button>
@@ -1859,8 +1905,8 @@ export function PrepareFormStudio({
           <SheetHeader>
             <SheetTitle>Recipients</SheetTitle>
             <SheetDescription>
-              Reorder, add or remove recipients without leaving the studio.
-              Changes save automatically when you close this panel.
+              Reorder, add or remove recipients without leaving the studio. Changes save
+              automatically when you close this panel.
             </SheetDescription>
           </SheetHeader>
           <div className="mt-4">
@@ -1893,8 +1939,8 @@ export function PrepareFormStudio({
               Preview as recipient
             </DialogTitle>
             <DialogDescription>
-              See the document and email exactly as a recipient will. Choose a
-              specific signer to filter the document view to their fields only.
+              See the document and email exactly as a recipient will. Choose a specific signer to
+              filter the document view to their fields only.
             </DialogDescription>
           </DialogHeader>
 
@@ -1965,13 +2011,15 @@ export function PrepareFormStudio({
                 envelope={{
                   title: envelope.title,
                   message: envelope.message ?? undefined,
-                  sender_name: (envelope as { sender_name?: string | null }).sender_name ?? undefined,
+                  sender_name:
+                    (envelope as { sender_name?: string | null }).sender_name ?? undefined,
                   firm_name: (envelope as { firm_name?: string | null }).firm_name ?? undefined,
                 }}
                 signer={
                   previewSignerEmail === '__all__'
                     ? eligibleSigners[0] // best-effort fallback
-                    : eligibleSigners.find((s) => s.email === previewSignerEmail) ?? eligibleSigners[0]
+                    : (eligibleSigners.find((s) => s.email === previewSignerEmail) ??
+                      eligibleSigners[0])
                 }
               />
             )}
@@ -2013,12 +2061,12 @@ function EmailPreview({ envelope, signer }: EmailPreviewProps) {
       <div className="max-w-[640px] mx-auto bg-white rounded-lg shadow border border-gray-200 overflow-hidden">
         <div className="px-5 py-3 border-b bg-gray-50 text-xs text-gray-600 space-y-1">
           <div>
-            <span className="font-medium text-gray-700">From:</span>{' '}
-            {senderName} &lt;noreply@navigatewealth.co&gt;
+            <span className="font-medium text-gray-700">From:</span> {senderName}{' '}
+            &lt;noreply@navigatewealth.co&gt;
           </div>
           <div>
-            <span className="font-medium text-gray-700">To:</span>{' '}
-            {signerName} &lt;{signer?.email || 'recipient@example.com'}&gt;
+            <span className="font-medium text-gray-700">To:</span> {signerName} &lt;
+            {signer?.email || 'recipient@example.com'}&gt;
           </div>
           <div>
             <span className="font-medium text-gray-700">Subject:</span> {subject}
@@ -2031,9 +2079,8 @@ function EmailPreview({ envelope, signer }: EmailPreviewProps) {
           <p className="mb-4">Hi {signerName},</p>
 
           <p className="mb-4">
-            <span className="font-medium">{senderName}</span> has sent you the
-            document <span className="font-medium">"{title}"</span> to
-            review and sign.
+            <span className="font-medium">{senderName}</span> has sent you the document{' '}
+            <span className="font-medium">"{title}"</span> to review and sign.
           </p>
 
           {envelope.message && (
@@ -2054,8 +2101,8 @@ function EmailPreview({ envelope, signer }: EmailPreviewProps) {
 
           <hr className="my-6 border-gray-200" />
           <p className="text-xs text-gray-500">
-            If you weren't expecting this, you can safely ignore the email or
-            contact {senderName} directly.
+            If you weren't expecting this, you can safely ignore the email or contact {senderName}{' '}
+            directly.
           </p>
         </div>
       </div>
