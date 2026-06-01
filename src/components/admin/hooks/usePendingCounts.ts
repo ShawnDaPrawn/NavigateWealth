@@ -1,16 +1,32 @@
 import { useQuery } from '@tanstack/react-query';
-import { projectId } from '../../../utils/supabase/info';
+import { api } from '../../../utils/api';
 import { getSession } from '../../../utils/auth';
+import type { ApplicationStats } from '../modules/applications/types';
 import type { AdminModule } from '../layout/types';
 import { pendingCountsKeys } from '../../../utils/queryKeys';
 import { getIncompleteCount } from '../modules/applications/utils';
 
 // All admin modules — stable list used for initialisation
 const ALL_MODULES: AdminModule[] = [
-  'dashboard', 'clients', 'personnel', 'advice-engine', 'product-management',
-  'resources', 'publications', 'compliance', 'tasks', 'notes', 'applications',
-  'submissions', 'communication', 'marketing', 'reporting', 'calendar',
-  'esign', 'issues', 'ai-management',
+  'dashboard',
+  'clients',
+  'personnel',
+  'advice-engine',
+  'product-management',
+  'resources',
+  'publications',
+  'compliance',
+  'tasks',
+  'notes',
+  'applications',
+  'submissions',
+  'communication',
+  'marketing',
+  'reporting',
+  'calendar',
+  'esign',
+  'issues',
+  'ai-management',
 ];
 
 /** Build a zeroed-out counts record — used as placeholder and fallback */
@@ -25,9 +41,6 @@ function buildEmptyCounts(): Record<AdminModule, { count: number }> {
 /** Module-level stable placeholder so React Query never re-creates it */
 const EMPTY_COUNTS = buildEmptyCounts();
 
-/** Base URL for server requests */
-const SERVER_BASE = `https://${projectId}.supabase.co/functions/v1/make-server-91ed8379`;
-
 function safeCount(value: unknown): number {
   return typeof value === 'number' && Number.isFinite(value) ? value : 0;
 }
@@ -40,74 +53,45 @@ async function fetchPendingCounts(): Promise<Record<AdminModule, { count: number
     return EMPTY_COUNTS;
   }
 
-  const headers = {
-    'Authorization': `Bearer ${session.access_token}`,
-    'Content-Type': 'application/json',
-  };
-
-  // Fetch application stats from backend
+  // Each call is independent + best-effort: a failing endpoint leaves its count at
+  // 0 (the api client throws APIError on non-2xx) without affecting the others.
+  // The api client supplies the session JWT and refreshes it as needed.
   let applicationsPending = 0;
   try {
-    const statsResponse = await fetch(
-      `${SERVER_BASE}/admin/stats`,
-      { headers }
-    );
-
-    if (statsResponse.ok) {
-      const data = await statsResponse.json();
-      // Count "submitted_for_review" + incomplete (draft + in-progress signups)
-      applicationsPending =
-        (data.stats?.submitted_for_review || 0) + getIncompleteCount(data.stats);
-    }
-  } catch (error) {
-    // Silently handle network errors - these are expected when offline or server unavailable
-    // The function returns zeroed counts as a safe fallback — no logging needed
+    const data = await api.get<{ stats?: ApplicationStats }>('/admin/stats');
+    // Count "submitted_for_review" + incomplete (draft + in-progress signups)
+    applicationsPending = (data.stats?.submitted_for_review || 0) + getIncompleteCount(data.stats);
+  } catch {
+    // Silent — zeroed fallback (offline / server unavailable)
   }
 
-  // Fetch tasks count (New + In Progress) via the tasks/stats KV-backed endpoint
+  // Tasks count (New + In Progress) via the tasks/stats KV-backed endpoint
   let tasksPending = 0;
   try {
-    const tasksResponse = await fetch(
-      `${SERVER_BASE}/tasks/stats`,
-      { headers }
-    );
-    if (tasksResponse.ok) {
-      const tasksData = await tasksResponse.json();
-      // Sum "new" + "in_progress" statuses for the pending badge
-      tasksPending = (tasksData.new ?? 0) + (tasksData.in_progress ?? 0);
-    }
-  } catch (error) {
-    // Silently handle errors - tasks module may not be initialized
+    const tasksData = await api.get<{ new?: number; in_progress?: number }>('/tasks/stats');
+    tasksPending = (tasksData.new ?? 0) + (tasksData.in_progress ?? 0);
+  } catch {
+    // Silent — tasks module may not be initialised
   }
 
-  // Fetch submissions 'new' count
+  // Submissions 'new' count
   let submissionsNew = 0;
   try {
-    const subResponse = await fetch(
-      `${SERVER_BASE}/submissions/count/new`,
-      { headers }
-    );
-    if (subResponse.ok) {
-      const subData = await subResponse.json();
-      submissionsNew = subData.count ?? 0;
-    }
-  } catch (error) {
-    // Silently handle errors - submissions module may not be initialized
+    const subData = await api.get<{ count?: number }>('/submissions/count/new');
+    submissionsNew = subData.count ?? 0;
+  } catch {
+    // Silent — submissions module may not be initialised
   }
 
-  // Fetch open issue count for Issue Manager
+  // Open issue count for the Issue Manager
   let issuesOpen = 0;
   try {
-    const issuesResponse = await fetch(
-      `${SERVER_BASE}/quality-issues`,
-      { headers }
+    const issuesData = await api.get<{ snapshot?: { summary?: { open?: unknown } } }>(
+      '/quality-issues',
     );
-    if (issuesResponse.ok) {
-      const issuesData = await issuesResponse.json();
-      issuesOpen = safeCount(issuesData?.snapshot?.summary?.open);
-    }
-  } catch (error) {
-    // Silently handle errors - quality issues module may be unavailable
+    issuesOpen = safeCount(issuesData?.snapshot?.summary?.open);
+  } catch {
+    // Silent — quality issues module may be unavailable
   }
 
   // Initialize all modules with 0 count
