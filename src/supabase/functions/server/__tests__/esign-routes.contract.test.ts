@@ -239,6 +239,38 @@ describe('esign-routes.tsx route contracts', () => {
     expect(res.status).toBe(401);
   });
 
+  // ---- Envelope documents + manifest group (prep-time doc management) ----
+  const DOC_MANIFEST_AUTH_GUARDED: ReadonlyArray<readonly [string, string, RequestInit?]> = [
+    ['GET', '/envelopes/env_x/manifest'],
+    ['DELETE', '/envelopes/env_x/manifest', { method: 'DELETE' }],
+    ['POST', '/envelopes/env_x/materialize-preview', { method: 'POST', body: '{}' }],
+    ['GET', '/envelopes/env_x/documents'],
+    ['DELETE', '/envelopes/env_x/documents/doc1', { method: 'DELETE' }],
+    ['PUT', '/envelopes/env_x/documents/order', { method: 'PUT', body: '{}' }],
+    ['POST', '/envelopes/env_x/invites', { method: 'POST', body: '{}' }],
+  ];
+  for (const [method, path, init] of DOC_MANIFEST_AUTH_GUARDED) {
+    it(`${method} ${path} returns 401 without an Authorization header`, async () => {
+      const res = await esignRoutes.request(path, init ?? {});
+      expect(res.status).toBe(401);
+    });
+  }
+
+  it('GET /envelopes/:id/manifest returns { manifest: null } for an unknown envelope', async () => {
+    const res = await esignRoutes.request('/envelopes/env_missing/manifest', {
+      headers: { Authorization: 'Bearer test-token' },
+    });
+    expect(res.status).toBe(200);
+    expect(await res.json()).toMatchObject({ manifest: null });
+  });
+
+  it('GET /envelopes/:id/documents returns 404 for an unknown envelope when authenticated', async () => {
+    const res = await esignRoutes.request('/envelopes/env_missing/documents', {
+      headers: { Authorization: 'Bearer test-token' },
+    });
+    expect(res.status).toBe(404);
+  });
+
   // ---- /cron/* uses the service-role-key auth model, not user sessions ----
   // (token must equal SUPABASE_SERVICE_ROLE_KEY; the Deno.env mock returns
   // 'test', so `Bearer test` authenticates and anything else / nothing 401s.)
