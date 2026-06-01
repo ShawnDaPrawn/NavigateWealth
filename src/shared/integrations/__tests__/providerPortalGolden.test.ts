@@ -50,6 +50,12 @@ describe('provider portal golden flows', () => {
   const docStorageSource = readRepoFile(
     'src/supabase/functions/server/integrations-document-storage.ts',
   );
+  // Portal automation HTTP routes (/portal-flows, /portal-jobs, /portal-worker)
+  // were extracted out of integrations.tsx into a mounted Hono sub-app (Phase 5);
+  // those route + handler anchors live here now.
+  const portalRoutesSource = readRepoFile(
+    'src/supabase/functions/server/integrations-portal-routes.ts',
+  );
   const portalDefaultFlowsSource = readRepoFile(
     'src/supabase/functions/server/portal-default-flows.ts',
   );
@@ -235,8 +241,10 @@ describe('provider portal golden flows', () => {
     expect(portalAutomationTabSource).toContain('This refreshes while the worker is running');
     expect(portalAutomationTabSource).toContain('npm run provider:watch -- --job-id');
     expect(workerSource).toContain("jobPath('/live-view')");
-    expect(integrationsSource).toContain('app.post("/portal-worker/jobs/:jobId/live-view"');
-    expect(integrationsSource).toContain('app.post("/portal-jobs/:jobId/live-view"');
+    expect(portalRoutesSource).toContain(
+      "portalRoutes.post('/portal-worker/jobs/:jobId/live-view'",
+    );
+    expect(portalRoutesSource).toContain("portalRoutes.post('/portal-jobs/:jobId/live-view'");
   });
 
   it('provides a BrightRock risk portal flow without document download', () => {
@@ -320,7 +328,7 @@ describe('provider portal golden flows', () => {
     expect(portalFlowSource).toContain(
       "loginUrl: String(configured.loginUrl || '').trim() || defaultFlow.loginUrl",
     );
-    expect(integrationsSource).toContain(
+    expect(portalRoutesSource).toContain(
       "loginUrl: String(body?.loginUrl || '').trim() || defaultFlow.loginUrl",
     );
   });
@@ -329,10 +337,10 @@ describe('provider portal golden flows', () => {
     expect(productTypesSource).toContain("attachTo?: 'matched_policy' | 'estate_documents'");
     expect(portalTypesSource).toContain("attachTo?: 'matched_policy' | 'estate_documents'");
     expect(portalFlowConfigSource).toContain('const PORTAL_ESTATE_DOCUMENT_TYPES =');
-    expect(integrationsSource).toContain(
-      'app.post("/portal-worker/jobs/:jobId/items/:itemId/estate-document"',
+    expect(portalRoutesSource).toContain(
+      "portalRoutes.post('/portal-worker/jobs/:jobId/items/:itemId/estate-document'",
     );
-    expect(integrationsSource).toContain('uploadEstateDocumentForClient');
+    expect(portalRoutesSource).toContain('uploadEstateDocumentForClient');
     expect(docStorageSource).toContain('LEGAL_DOCS_BUCKET');
   });
 
@@ -343,11 +351,11 @@ describe('provider portal golden flows', () => {
     expect(portalCredentialsSource).toContain(
       "const CAPITAL_LEGACY_LEGACY_CREDENTIAL_PROFILE_ID = 'capital-legacy-env'",
     );
-    expect(integrationsSource).toContain('normalisePortalCredentialProfileId');
-    expect(integrationsSource).toContain('loadPortalCredentialRecord');
-    expect(integrationsSource).toContain('savePortalCredentialRecord');
-    expect(integrationsSource).toContain(
-      'const categoryId = String(c.req.query("categoryId") || \'\').trim();',
+    expect(portalRoutesSource).toContain('normalisePortalCredentialProfileId');
+    expect(portalRoutesSource).toContain('loadPortalCredentialRecord');
+    expect(portalRoutesSource).toContain('savePortalCredentialRecord');
+    expect(portalRoutesSource).toContain(
+      "const categoryId = String(c.req.query('categoryId') || '').trim();",
     );
     expect(readRepoFile('src/components/admin/modules/product-management/api.ts')).toContain(
       'credentials/${profileId}?categoryId=',
@@ -366,7 +374,7 @@ describe('provider portal golden flows', () => {
     expect(portalFlowSource).toContain(
       'await kv.set(portalFlowKey(providerId, categoryId), configured)',
     );
-    expect(integrationsSource).toContain('app.delete("/portal-flows/:providerId"');
+    expect(portalRoutesSource).toContain("portalRoutes.delete('/portal-flows/:providerId'");
     expect(portalFlowSource).toContain(
       'function getPortalJobScopeError(job: PortalSyncJob, providerId?: string, categoryId?: string): string | null',
     );
@@ -382,7 +390,7 @@ describe('provider portal golden flows', () => {
     expect(portalGuardsSource).toContain(
       'function portalArtifactsMatchCategory(categoryId: string, options: {',
     );
-    expect(integrationsSource).toContain(
+    expect(portalRoutesSource).toContain(
       'await getPortalFlow(provider, job.providerId, job.categoryId)',
     );
     expect(portalDefaultFlowsSource).toContain("investments: 'Investments'");
@@ -419,7 +427,7 @@ describe('provider portal golden flows', () => {
     );
     expect(portalGuardsSource).toContain('Retirement Planning is a parent category');
     expect(portalGuardsSource).toContain('Investments is a parent category');
-    expect(integrationsSource).toContain(
+    expect(portalRoutesSource).toContain(
       'const automationCategoryError = getPortalAutomationCategoryError(categoryId);',
     );
     expect(syncEngineSource).toContain('policy.categoryId !== job.categoryId');
