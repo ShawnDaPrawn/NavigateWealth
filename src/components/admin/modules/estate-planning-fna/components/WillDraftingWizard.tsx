@@ -39,8 +39,7 @@ import {
   Check,
 } from 'lucide-react';
 import { toast } from 'sonner';
-import { projectId } from '../../../../../utils/supabase/info';
-import { getEstatePlanningAuthToken } from '../utils/auth';
+import { api } from '../../../../../utils/api';
 
 // ── Extracted modules ──────────────────────────────────────────────
 import type {
@@ -124,16 +123,11 @@ export function WillDraftingWizard({
     const loadExistingDraft = async () => {
       setIsLoadingDraft(true);
       try {
-        const API_BASE = `https://${projectId}.supabase.co/functions/v1/make-server-91ed8379`;
-        const token = await getEstatePlanningAuthToken();
-        const resp = await fetch(`${API_BASE}/estate-planning-fna/wills/${existingWillId}`, {
-          headers: {
-            Authorization: `Bearer ${token}`,
-            'Content-Type': 'application/json',
-          },
-        });
-        if (!resp.ok) throw new Error(`Failed to load draft: ${resp.status}`);
-        const result = await resp.json();
+        const result = await api.get<{
+          success?: boolean;
+          data?: { type?: string; data?: unknown };
+          error?: string;
+        }>(`/estate-planning-fna/wills/${existingWillId}`);
         if (!result.success || !result.data) throw new Error(result.error || 'Draft not found');
 
         const existing = result.data;
@@ -162,24 +156,10 @@ export function WillDraftingWizard({
     const fetchClientProfile = async () => {
       setIsLoadingProfile(true);
       try {
-        const API_BASE = `https://${projectId}.supabase.co/functions/v1/make-server-91ed8379`;
-        const token = await getEstatePlanningAuthToken();
-        const response = await fetch(
-          `${API_BASE}/estate-planning-fna/wills/client/${clientId}/profile-prefill`,
-          {
-            headers: {
-              Authorization: `Bearer ${token}`,
-              'Content-Type': 'application/json',
-            },
-          },
-        );
-
-        if (!response.ok) {
-          console.error('Failed to fetch client profile for will pre-fill:', response.status);
-          return;
-        }
-
-        const result = await response.json();
+        const result = await api.get<{
+          profile?: any;
+          clientKeys?: Record<string, unknown> | null;
+        }>(`/estate-planning-fna/wills/client/${clientId}/profile-prefill`);
         const profile = result.profile;
         // Universal Key Manager: client_keys KV entry (flat map of keyId -> value)
         const ckRaw = result.clientKeys as Record<string, unknown> | null;
@@ -572,31 +552,17 @@ export function WillDraftingWizard({
     const toastId = toast.loading(isUpdate ? 'Updating will draft...' : 'Saving will draft...');
 
     try {
-      const API_BASE = `https://${projectId}.supabase.co/functions/v1/make-server-91ed8379`;
       const dataPayload = isLivingWill ? livingWillData : willData;
-      const token = await getEstatePlanningAuthToken();
 
-      const url = isUpdate
-        ? `${API_BASE}/estate-planning-fna/wills/${existingWillId}`
-        : `${API_BASE}/estate-planning-fna/wills/create`;
-
-      const response = await fetch(url, {
-        method: isUpdate ? 'PUT' : 'POST',
-        headers: {
-          Authorization: `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(
-          isUpdate ? { data: dataPayload } : { clientId, type: willType, data: dataPayload },
-        ),
-      });
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(`Failed to ${isUpdate ? 'update' : 'save'} will draft: ${errorText}`);
-      }
-
-      const result = await response.json();
+      const result = isUpdate
+        ? await api.put<{ success?: boolean; error?: string }>(
+            `/estate-planning-fna/wills/${existingWillId}`,
+            { data: dataPayload },
+          )
+        : await api.post<{ success?: boolean; error?: string }>(
+            `/estate-planning-fna/wills/create`,
+            { clientId, type: willType, data: dataPayload },
+          );
 
       if (!result.success) {
         throw new Error(result.error || `Failed to ${isUpdate ? 'update' : 'save'} will draft`);

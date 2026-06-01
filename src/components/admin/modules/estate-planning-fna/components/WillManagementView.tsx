@@ -62,8 +62,7 @@ import {
 } from '../../../../ui/dialog';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '../../../../ui/tooltip';
 import { toast } from 'sonner';
-import { projectId } from '../../../../../utils/supabase/info';
-import { getEstatePlanningAuthToken } from '../utils/auth';
+import { api } from '../../../../../utils/api';
 import { downloadWillPdf, type WillRecord } from '../utils/will-pdf-generator';
 import { WillChatInterface } from './WillChatInterface';
 import { EstateDocumentsSection } from './EstateDocumentsSection';
@@ -101,8 +100,6 @@ interface WillManagementViewProps {
   onAIWillBuilder?: () => void;
 }
 
-const API_BASE = `https://${projectId}.supabase.co/functions/v1/make-server-91ed8379`;
-
 export function WillManagementView({
   clientId,
   clientName,
@@ -139,22 +136,9 @@ export function WillManagementView({
   const loadWills = async (): Promise<void> => {
     try {
       setIsLoading(true);
-      const url = `${API_BASE}/estate-planning-fna/wills/client/${clientId}`;
-      const token = await getEstatePlanningAuthToken();
-
-      const response = await fetch(url, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-      });
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(`HTTP error! status: ${response.status}, body: ${errorText}`);
-      }
-
-      const result = await response.json();
+      const result = await api.get<{ success?: boolean; data?: WillSummary[]; error?: string }>(
+        `/estate-planning-fna/wills/client/${clientId}`,
+      );
 
       if (!result.success) {
         throw new Error(result.error || 'Failed to load wills');
@@ -185,15 +169,9 @@ export function WillManagementView({
   const handleDownload = async (willId: string): Promise<void> => {
     setDownloadingWillId(willId);
     try {
-      const token = await getEstatePlanningAuthToken();
-      const resp = await fetch(`${API_BASE}/estate-planning-fna/wills/${willId}`, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-      });
-      if (!resp.ok) throw new Error(`Failed to fetch will: ${resp.status}`);
-      const result = await resp.json();
+      const result = await api.get<{ success?: boolean; data?: WillRecord; error?: string }>(
+        `/estate-planning-fna/wills/${willId}`,
+      );
       if (!result.success || !result.data) throw new Error(result.error || 'Will not found');
 
       downloadWillPdf(result.data as WillRecord);
@@ -214,25 +192,14 @@ export function WillManagementView({
 
     setIsAttaching(true);
     try {
-      const token = await getEstatePlanningAuthToken();
       const formData = new FormData();
       formData.append('file', attachFile);
 
-      const resp = await fetch(
-        `${API_BASE}/estate-planning-fna/wills/${attachTarget.id}/attach-signed`,
-        {
-          method: 'POST',
-          headers: { Authorization: `Bearer ${token}` },
-          body: formData,
-        },
-      );
-
-      if (!resp.ok) {
-        const errorData = await resp.json().catch(() => ({}));
-        throw new Error(errorData.error || `Upload failed: ${resp.status}`);
-      }
-
-      const result = await resp.json();
+      const result = await api.post<{
+        success?: boolean;
+        data?: Record<string, unknown>;
+        error?: string;
+      }>(`/estate-planning-fna/wills/${attachTarget.id}/attach-signed`, formData);
       if (!result.success) throw new Error(result.error || 'Failed to attach signed document');
 
       toast.success('Signed document attached successfully', {
@@ -260,14 +227,9 @@ export function WillManagementView({
   const handleDownloadSignedDocument = async (will: WillSummary): Promise<void> => {
     setDownloadingSignedId(will.id);
     try {
-      const token = await getEstatePlanningAuthToken();
-      const resp = await fetch(`${API_BASE}/estate-planning-fna/wills/${will.id}/signed-document`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-
-      if (!resp.ok) throw new Error('Failed to get download URL');
-
-      const result = await resp.json();
+      const result = await api.get<{ success?: boolean; url?: string }>(
+        `/estate-planning-fna/wills/${will.id}/signed-document`,
+      );
       if (result.success && result.url) {
         window.open(result.url, '_blank');
       }
@@ -284,18 +246,9 @@ export function WillManagementView({
 
     setIsRemovingSigned(true);
     try {
-      const token = await getEstatePlanningAuthToken();
-      const resp = await fetch(
-        `${API_BASE}/estate-planning-fna/wills/${removeSignedTarget.id}/signed-document`,
-        {
-          method: 'DELETE',
-          headers: { Authorization: `Bearer ${token}` },
-        },
+      const result = await api.delete<{ success?: boolean; data?: Record<string, unknown> }>(
+        `/estate-planning-fna/wills/${removeSignedTarget.id}/signed-document`,
       );
-
-      if (!resp.ok) throw new Error('Failed to remove signed document');
-
-      const result = await resp.json();
       toast.success('Signed document removed');
 
       setWills((prev) =>
@@ -365,21 +318,9 @@ export function WillManagementView({
     if (!discardTarget) return;
     setIsDiscarding(true);
     try {
-      const token = await getEstatePlanningAuthToken();
-      const resp = await fetch(`${API_BASE}/estate-planning-fna/wills/${discardTarget.id}`, {
-        method: 'DELETE',
-        headers: {
-          Authorization: `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-      });
-
-      if (!resp.ok) {
-        const errorBody = await resp.text();
-        throw new Error(`HTTP ${resp.status}: ${errorBody}`);
-      }
-
-      const result = await resp.json();
+      const result = await api.delete<{ success?: boolean; error?: string }>(
+        `/estate-planning-fna/wills/${discardTarget.id}`,
+      );
       if (!result.success) {
         throw new Error(result.error || 'Failed to discard draft');
       }
