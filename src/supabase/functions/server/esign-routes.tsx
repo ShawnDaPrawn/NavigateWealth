@@ -4,7 +4,6 @@
  */
 
 import { Hono } from 'npm:hono';
-import type { Context } from 'npm:hono';
 import { cors } from 'npm:hono/cors';
 import { createClient } from 'jsr:@supabase/supabase-js@2.49.8';
 import * as kv from './kv_store.tsx';
@@ -33,7 +32,6 @@ import {
   clearAllEsignData,
 } from './esign-services.ts';
 import {
-  initializeStorageBuckets,
   uploadDocument,
   downloadDocument,
   getDocumentUrl,
@@ -140,7 +138,6 @@ import {
   updateApiKey,
   deleteApiKey,
   rotateApiKey,
-  resolveApiKey,
   redactApiKey,
 } from './api-key-service.ts';
 import { enqueue as enqueueInAppNotification } from './esign-inapp-notifications.ts';
@@ -162,7 +159,15 @@ import {
   purgeExpiredDeletedEnvelopes,
   RECOVERY_RETENTION_DAYS,
 } from './esign-recovery-bin.ts';
-import { resolveFirmId as resolveFirmIdShared, belongsToFirm } from './esign-firm-scope.ts';
+import { belongsToFirm } from './esign-firm-scope.ts';
+import {
+  getRequestMetadata,
+  audActor,
+  ensureStorageBuckets,
+  resolveFirmId,
+  requireApiKey,
+} from './esign-route-helpers.ts';
+import type { SignerRecord, FieldRecord } from './esign-route-helpers.ts';
 import { getEsignMetrics } from './esign-metrics-service.ts';
 import { runStuckAlertSweep } from './esign-stuck-alert-service.ts';
 import { searchAuditEvents } from './esign-audit-search-service.ts';
@@ -219,68 +224,6 @@ esignRoutes.route('/', opsRoutes);
 startExpirySweepScheduler();
 
 // ==================== HELPER FUNCTIONS ====================
-
-/**
- * Extract client IP and User Agent from request
- */
-/** Shared callback types for e-sign route operations */
-interface SignerRecord {
-  id: string;
-  name: string;
-  email: string;
-  phone?: string;
-  role?: string;
-  order?: number;
-  status?: string;
-  access_token?: string;
-  requiresOtp?: boolean;
-  accessCode?: string;
-  clientId?: string;
-  [key: string]: unknown;
-}
-interface FieldRecord {
-  id?: string;
-  type?: string;
-  signerId?: string;
-  signerIndex?: number;
-  signer_id?: string;
-  [key: string]: unknown;
-}
-
-function getRequestMetadata(c: { req: { header: (name: string) => string | undefined } }) {
-  return {
-    ip: c.req.header('x-forwarded-for') || c.req.header('x-real-ip') || 'unknown',
-    userAgent: c.req.header('user-agent') || 'unknown',
-  };
-}
-
-/**
- * P2.5 2.8 — derive the audit actor_type for a given signer.
- *
- * Witnesses are first-class actors in the evidence trail. A primary signer's
- * `signed` event and a witness's `witness_attestation` event are both legally
- * meaningful but signify different things — they must be distinguishable in
- * the audit log without a metadata lookup.
- *
- * `kind` is optional on `EsignSigner` for back-compat with KV records written
- * before the field existed; a missing kind falls back to `'signer'`.
- */
-function audActor(signer: { kind?: string } | null | undefined): 'signer' | 'witness' {
-  return signer?.kind === 'witness' ? 'witness' : 'signer';
-}
-
-// Storage bucket initialization is deferred to first upload request
-// to avoid top-level async side effects that can cause deployment errors (544).
-let storageBucketsInitialized = false;
-async function ensureStorageBuckets(): Promise<void> {
-  if (storageBucketsInitialized) return;
-  try {
-    await initializeStorageBuckets();
-    storageBucketsInitialized = true;
-  } catch (error) {
-    log.error('Failed to initialize E-Sign storage buckets:', error);
-  }
-}
 
 // ==================== API ROUTES ====================
 
@@ -5781,12 +5724,6 @@ esignRoutes.post('/packet-runs/:id/cancel', rateLimit('SENDER_MUTATE'), async (c
 // derived from `ctx.user.user_metadata.firm_id` with a fallback to the
 // user id so a single-firm install still works.
 
-// P6.9 — canonical firm-scope helper now lives in `esign-firm-scope.ts`.
-// We keep a thin local alias so existing call sites compile unchanged.
-function resolveFirmId(user: { id: string; user_metadata?: Record<string, unknown> }): string {
-  return resolveFirmIdShared(user);
-}
-
 const KNOWN_WEBHOOK_EVENTS: SenderEvent[] = [
   'signer.signed',
   'signer.declined',
@@ -6210,25 +6147,6 @@ esignRoutes.delete('/api-keys/:id', rateLimit('SENDER_MUTATE'), async (c) => {
 // P5.5 — PUBLIC REST API (`/v1/*`)
 // ============================================================================
 //
-// Authenticated via `Authorization: Bearer navsig_<prefix>_<secret>`.
-// Scoped to the firm that owns the key. Rate-limited via the shared
-// `rateLimit` helper keyed off the key prefix so one noisy integration
-// doesn't starve another.
-
-async function requireApiKey(
-  c: Context,
-): Promise<{ ok: true; firmId: string; keyId: string } | { ok: false; response: Response }> {
-  const header = c.req.header('Authorization');
-  const token = header?.startsWith('Bearer ') ? header.slice(7).trim() : null;
-  if (!token) {
-    return { ok: false, response: c.json({ error: 'Missing API key' }, 401) };
-  }
-  const key = await resolveApiKey(token);
-  if (!key) {
-    return { ok: false, response: c.json({ error: 'Invalid or revoked API key' }, 401) };
-  }
-  return { ok: true, firmId: key.firm_id, keyId: key.id };
-}
 
 /** GET /v1/envelopes — list envelopes in the caller's firm. */
 esignRoutes.get('/v1/envelopes', async (c) => {
