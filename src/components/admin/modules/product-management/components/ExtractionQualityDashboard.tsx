@@ -29,10 +29,7 @@ import {
   ChevronUp,
 } from 'lucide-react';
 import { SVGBarChart } from '../../../../ui/svg-charts';
-import { projectId, publicAnonKey } from '../../../../../utils/supabase/info';
-import { createClient } from '../../../../../utils/supabase/client';
-
-const API_BASE = `https://${projectId}.supabase.co/functions/v1/make-server-91ed8379/integrations`;
+import { api } from '../../../../../utils/api';
 
 interface OverviewStats {
   totalPolicies: number;
@@ -118,22 +115,7 @@ export function ExtractionQualityDashboard() {
   const fetchStats = useCallback(async () => {
     setIsLoading(true);
     try {
-      const supabase = createClient();
-      const {
-        data: { session },
-      } = await supabase.auth.getSession();
-      const token = session?.access_token || publicAnonKey;
-
-      const res = await fetch(`${API_BASE}/policy-extraction/quality-stats`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-
-      if (!res.ok) {
-        const errorData = await res.json();
-        throw new Error(errorData.error || 'Failed to load quality stats');
-      }
-
-      const result = await res.json();
+      const result = await api.get<QualityData>('/integrations/policy-extraction/quality-stats');
       setData({
         overview: result.overview,
         providerStats: result.providerStats,

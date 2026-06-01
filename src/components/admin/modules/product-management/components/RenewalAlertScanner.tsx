@@ -39,10 +39,7 @@ import {
   ChevronUp,
 } from 'lucide-react';
 import { toast } from 'sonner';
-import { projectId, publicAnonKey } from '../../../../../utils/supabase/info';
-import { createClient } from '../../../../../utils/supabase/client';
-
-const API_BASE = `https://${projectId}.supabase.co/functions/v1/make-server-91ed8379/integrations`;
+import { api } from '../../../../../utils/api';
 
 interface AlertCandidate {
   clientId: string;
@@ -109,14 +106,6 @@ export function RenewalAlertScanner() {
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
   const [showCandidates, setShowCandidates] = useState(true);
 
-  const getAuthToken = useCallback(async (): Promise<string> => {
-    const supabase = createClient();
-    const {
-      data: { session },
-    } = await supabase.auth.getSession();
-    return session?.access_token || publicAnonKey;
-  }, []);
-
   const runScan = useCallback(
     async (dryRun: boolean) => {
       if (dryRun) {
@@ -126,22 +115,10 @@ export function RenewalAlertScanner() {
       }
 
       try {
-        const token = await getAuthToken();
-        const res = await fetch(`${API_BASE}/policy-renewal-alerts/scan`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${token}`,
-          },
-          body: JSON.stringify({ daysAhead, dryRun }),
+        const data = await api.post<ScanResult>('/integrations/policy-renewal-alerts/scan', {
+          daysAhead,
+          dryRun,
         });
-
-        if (!res.ok) {
-          const errorData = await res.json();
-          throw new Error(errorData.error || 'Scan failed');
-        }
-
-        const data: ScanResult = await res.json();
         setScanResult(data);
 
         if (dryRun) {
@@ -164,7 +141,7 @@ export function RenewalAlertScanner() {
         setIsCreating(false);
       }
     },
-    [daysAhead, getAuthToken],
+    [daysAhead],
   );
 
   const handlePreview = () => runScan(true);
