@@ -72,7 +72,11 @@ import { Switch } from '../../../../ui/switch';
 import { logger } from '../../../../../utils/logger';
 import { RecipientsManager } from './RecipientsManager';
 import { PageManagerDialog } from './PageManagerDialog';
-import { createFieldsFromCandidates, isEditableTarget } from './prepareFormStudioUtils';
+import {
+  createFieldsFromCandidates,
+  isEditableTarget,
+  buildPageReplicas,
+} from './prepareFormStudioUtils';
 
 interface PrepareFormStudioProps {
   envelope: EsignEnvelope;
@@ -762,31 +766,7 @@ export function PrepareFormStudio({
   const handleApplyToAllPages = useCallback(() => {
     if (selectedFieldIds.size === 0 || pageCount <= 1) return;
     const seeds = fields.filter((f) => selectedFieldIds.has(f.id));
-    const now = new Date().toISOString();
-    const replicas: EsignField[] = [];
-    for (const seed of seeds) {
-      for (let p = 1; p <= pageCount; p++) {
-        if (p === seed.page) continue;
-        // Skip if a near-duplicate already exists on this page (same signer,
-        // same coords ±0.5%) so repeated clicks don't carpet-bomb the doc.
-        const dupe = fields.some(
-          (f) =>
-            f.page === p &&
-            f.signer_id === seed.signer_id &&
-            f.type === seed.type &&
-            Math.abs(f.x - seed.x) < 0.5 &&
-            Math.abs(f.y - seed.y) < 0.5,
-        );
-        if (dupe) continue;
-        replicas.push({
-          ...seed,
-          id: `field-${Date.now()}-${p}-${Math.random().toString(36).slice(2, 8)}`,
-          page: p,
-          created_at: now,
-          updated_at: now,
-        });
-      }
-    }
+    const replicas = buildPageReplicas(seeds, fields, pageCount);
     if (replicas.length === 0) {
       toast.info('Selected fields already exist on every page.');
       return;

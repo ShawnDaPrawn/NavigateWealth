@@ -1,5 +1,9 @@
 import { describe, expect, it } from 'vitest';
-import { isEditableTarget, createFieldsFromCandidates } from '../prepareFormStudioUtils';
+import {
+  isEditableTarget,
+  createFieldsFromCandidates,
+  buildPageReplicas,
+} from '../prepareFormStudioUtils';
 import type { EsignEnvelope, EsignField } from '../../types';
 
 describe('isEditableTarget', () => {
@@ -60,5 +64,42 @@ describe('createFieldsFromCandidates', () => {
   it('keeps a candidate far enough from any existing field', () => {
     const existing = [{ page: 1, type: 'signature', x: 200, y: 200 } as unknown as EsignField];
     expect(createFieldsFromCandidates(candidates, 'signer1', existing, 'env1')).toHaveLength(1);
+  });
+});
+
+describe('buildPageReplicas', () => {
+  const seed = {
+    id: 's1',
+    envelope_id: 'e1',
+    signer_id: 'sig1',
+    type: 'signature',
+    page: 1,
+    x: 10,
+    y: 20,
+    width: 50,
+    height: 20,
+    required: true,
+  } as unknown as EsignField;
+
+  it('replicates a seed onto every other page, preserving geometry', () => {
+    const out = buildPageReplicas([seed], [seed], 3);
+    expect(out.map((f) => f.page).sort()).toEqual([2, 3]);
+    expect(out[0]).toMatchObject({
+      signer_id: 'sig1',
+      type: 'signature',
+      x: 10,
+      y: 20,
+      width: 50,
+      height: 20,
+    });
+  });
+
+  it('skips a page that already holds a near-duplicate', () => {
+    const existing = [seed, { ...seed, id: 'x', page: 2 } as EsignField];
+    expect(buildPageReplicas([seed], existing, 3).map((f) => f.page)).toEqual([3]);
+  });
+
+  it('produces nothing for a single-page document', () => {
+    expect(buildPageReplicas([seed], [seed], 1)).toEqual([]);
   });
 });

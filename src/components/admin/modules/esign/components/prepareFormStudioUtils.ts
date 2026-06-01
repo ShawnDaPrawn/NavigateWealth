@@ -62,3 +62,40 @@ export function createFieldsFromCandidates(
   }
   return newFields;
 }
+
+/**
+ * Replicate seed fields onto every OTHER page (1..pageCount), preserving
+ * geometry + metadata, skipping any near-duplicate already on the target page
+ * (same signer + type within 0.5%) so repeated clicks don't carpet-bomb the
+ * document. Pure given its inputs (modulo the generated id/timestamp).
+ */
+export function buildPageReplicas(
+  seeds: EsignField[],
+  existingFields: EsignField[],
+  pageCount: number,
+): EsignField[] {
+  const now = new Date().toISOString();
+  const replicas: EsignField[] = [];
+  for (const seed of seeds) {
+    for (let p = 1; p <= pageCount; p++) {
+      if (p === seed.page) continue;
+      const dupe = existingFields.some(
+        (f) =>
+          f.page === p &&
+          f.signer_id === seed.signer_id &&
+          f.type === seed.type &&
+          Math.abs(f.x - seed.x) < 0.5 &&
+          Math.abs(f.y - seed.y) < 0.5,
+      );
+      if (dupe) continue;
+      replicas.push({
+        ...seed,
+        id: `field-${Date.now()}-${p}-${Math.random().toString(36).slice(2, 8)}`,
+        page: p,
+        created_at: now,
+        updated_at: now,
+      });
+    }
+  }
+  return replicas;
+}
