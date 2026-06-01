@@ -78,15 +78,17 @@ export default defineConfig({
       // only go UP. Ratchet these toward the 70/65/70/70 target as
       // characterization tests are added for the Phase 5/6 decomposition files.
       //
-      // Ratcheted as characterization tests land. Latest (after extracting +
-      // testing ClientOverviewTab's pillars -> derivePillars): measured lines 6.46
-      // / functions 4.55 / branches 5.81 / statements 6.41.
-      // Floor kept just below measured (small CI safety margin).
+      // Ratcheted as characterization tests land. Latest (2026-06-01, after a
+      // Phase 4 pure-logic batch — validationHelpers / documents-utils /
+      // portfolio-utils): measured statements 7.42 / lines 7.44 / branches 6.8 /
+      // functions 5.44. Floor kept ~0.5 below measured this round (wider margin
+      // than usual) because the working tree had concurrent untracked tests whose
+      // coverage may not be present on the committed tree CI runs.
       thresholds: {
-        lines: 6.4,
-        functions: 4.5,
-        branches: 5.7,
-        statements: 6.35,
+        lines: 6.9,
+        functions: 4.9,
+        branches: 6.3,
+        statements: 6.9,
       },
     },
   },
