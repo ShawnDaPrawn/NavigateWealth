@@ -161,4 +161,81 @@ describe('esign-routes.tsx route contracts', () => {
     const body = (await res.json()) as { envelopes: unknown[] };
     expect(Array.isArray(body.envelopes)).toBe(true);
   });
+
+  // ---- Auth-enforcement contracts across the major route groups ----
+  // These lock the invariant that every group is reachable AND auth-gated,
+  // so the Phase 5 extraction into sub-apps cannot silently drop a group's
+  // mount or its getAuthContext guard. A no-Authorization request must 401.
+  const AUTH_GUARDED: ReadonlyArray<readonly [string, string, RequestInit?]> = [
+    ['GET', '/me/notification-prefs'],
+    ['PUT', '/me/notification-prefs', { method: 'PUT', body: '{}' }],
+    ['GET', '/me/notifications'],
+    ['POST', '/me/notifications/read-all', { method: 'POST' }],
+    ['GET', '/diagnostics/sms'],
+    ['POST', '/maintenance/expiry-sweep', { method: 'POST', body: '{}' }],
+    ['POST', '/maintenance/reminder-sweep', { method: 'POST', body: '{}' }],
+    ['GET', '/envelopes/env_missing'],
+    ['GET', '/clients/c1/envelopes'],
+  ];
+  for (const [method, path, init] of AUTH_GUARDED) {
+    it(`${method} ${path} returns 401 without an Authorization header`, async () => {
+      const res = await esignRoutes.request(path, init ?? {});
+      expect(res.status).toBe(401);
+    });
+  }
+
+  it('GET /me/notification-prefs returns the prefs envelope when authenticated', async () => {
+    const res = await esignRoutes.request('/me/notification-prefs', {
+      headers: { Authorization: 'Bearer test-token' },
+    });
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as { success: boolean; preferences: unknown };
+    expect(body.success).toBe(true);
+    expect(body.preferences).toBeDefined();
+  });
+
+  it('GET /me/notifications returns the notifications envelope when authenticated', async () => {
+    const res = await esignRoutes.request('/me/notifications', {
+      headers: { Authorization: 'Bearer test-token' },
+    });
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as { success: boolean };
+    expect(body.success).toBe(true);
+  });
+
+  it('GET /diagnostics/sms reports the SMS provider status when authenticated', async () => {
+    const res = await esignRoutes.request('/diagnostics/sms', {
+      headers: { Authorization: 'Bearer test-token' },
+    });
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as { success: boolean; sms: unknown };
+    expect(body.success).toBe(true);
+    expect(body.sms).toBeDefined();
+  });
+
+  // ---- /cron/* uses the service-role-key auth model, not user sessions ----
+  // (token must equal SUPABASE_SERVICE_ROLE_KEY; the Deno.env mock returns
+  // 'test', so `Bearer test` authenticates and anything else / nothing 401s.)
+  it('POST /cron/expiry-sweep returns 401 without the service role key', async () => {
+    const res = await esignRoutes.request('/cron/expiry-sweep', { method: 'POST' });
+    expect(res.status).toBe(401);
+  });
+
+  it('POST /cron/expiry-sweep returns 401 with a wrong bearer token', async () => {
+    const res = await esignRoutes.request('/cron/expiry-sweep', {
+      method: 'POST',
+      headers: { Authorization: 'Bearer not-the-service-key' },
+    });
+    expect(res.status).toBe(401);
+  });
+
+  it('POST /cron/expiry-sweep runs the sweep with the service role key', async () => {
+    const res = await esignRoutes.request('/cron/expiry-sweep', {
+      method: 'POST',
+      headers: { Authorization: 'Bearer test' },
+    });
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as { success: boolean };
+    expect(body.success).toBe(true);
+  });
 });
