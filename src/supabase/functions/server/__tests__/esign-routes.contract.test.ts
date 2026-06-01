@@ -162,6 +162,45 @@ describe('esign-routes.tsx route contracts', () => {
     expect(Array.isArray(body.envelopes)).toBe(true);
   });
 
+  // ---- Envelope CRUD + draft group ----
+  it('POST /verify-hash is public but 400s without a hash in the body', async () => {
+    const res = await esignRoutes.request('/verify-hash', { method: 'POST', body: '{}' });
+    expect(res.status).toBe(400);
+  });
+
+  it('DELETE /envelopes returns 401 without an Authorization header', async () => {
+    const res = await esignRoutes.request('/envelopes', { method: 'DELETE' });
+    expect(res.status).toBe(401);
+  });
+
+  it('POST /envelopes/upload returns 401 without an Authorization header', async () => {
+    const res = await esignRoutes.request('/envelopes/upload', { method: 'POST' });
+    expect(res.status).toBe(401);
+  });
+
+  it('GET /envelopes/:id returns 404 for an unknown envelope when authenticated', async () => {
+    const res = await esignRoutes.request('/envelopes/env_missing', {
+      headers: { Authorization: 'Bearer test-token' },
+    });
+    expect(res.status).toBe(404);
+  });
+
+  it('PUT /envelopes/:id/draft-signers returns 401 without an Authorization header', async () => {
+    const res = await esignRoutes.request('/envelopes/env_x/draft-signers', {
+      method: 'PUT',
+      body: '{}',
+    });
+    expect(res.status).toBe(401);
+  });
+
+  it('PATCH /envelopes/:id/draft-settings returns 401 without an Authorization header', async () => {
+    const res = await esignRoutes.request('/envelopes/env_x/draft-settings', {
+      method: 'PATCH',
+      body: '{}',
+    });
+    expect(res.status).toBe(401);
+  });
+
   // ---- Auth-enforcement contracts across the major route groups ----
   // These lock the invariant that every group is reachable AND auth-gated,
   // so the Phase 5 extraction into sub-apps cannot silently drop a group's
