@@ -80,16 +80,16 @@ export default defineConfig({
       // characterization tests are added for the Phase 5/6 decomposition files.
       //
       // Ratcheted as characterization tests land. Latest (2026-06-01, after the
-      // PrepareFormStudio render tests + the shared src/test setup/utils):
-      // measured statements 7.47 / lines 7.45 / branches 6.85 / functions 5.50
-      // across 826 tests. Floor raised from 6.9/6.9/6.3/4.9, kept ~0.35 below
+      // auth/security cluster unit tests — authService 90% + securityService 80%):
+      // measured statements 7.95 / lines 7.96 / branches 7.20 / functions 5.73
+      // across 871 tests. Floor raised from 7.1/7.1/6.5/5.2, kept ~0.35 below
       // measured for headroom against the actively churning tree. The 70/65/70/70
       // end-goal is long-horizon — this floor only ratchets up, it never jumps.
       thresholds: {
-        lines: 7.1,
-        functions: 5.2,
-        branches: 6.5,
-        statements: 7.1,
+        lines: 7.6,
+        functions: 5.4,
+        branches: 6.9,
+        statements: 7.6,
       },
     },
   },
