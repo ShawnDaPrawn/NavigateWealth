@@ -129,9 +129,11 @@ import {
   deriveInsuranceCoverageItems,
   deriveCashflowData,
   deriveActionDistribution,
+  deriveEnrichedActivityEvents,
   type Policy,
   type ActionItem,
   type ActionPriority,
+  type ActivityEvent,
   type GapStatus,
   type PillarHealth,
   type SchemaField,
@@ -195,16 +197,6 @@ interface FNAStatusItem {
 }
 
 /** Normalised activity event for timeline */
-interface ActivityEvent {
-  id: string;
-  type: string;
-  label: string;
-  timestamp: string;
-  icon: React.ElementType;
-  iconColor: string;
-  success?: boolean;
-  detail?: string;
-}
 
 // ── Constants ───────────────────────────────────────────────────────────
 
@@ -315,9 +307,6 @@ const INITIAL_ACTIVITY_COUNT = 8;
 /** Known inception date field IDs — includes both keyIds AND schema field IDs
  *  so we find the date regardless of how the policy data is keyed. */
 
-/** Activity types to EXCLUDE from overview (noise — belongs in Security tab) */
-const ACTIVITY_NOISE_TYPES = new Set(['session_refresh', 'session_expired']);
-
 // ── Helpers ─────────────────────────────────────────────────────────────
 
 /**
@@ -391,17 +380,6 @@ const CATEGORY_GROUP_MAP: Record<string, string> = {
  */
 /** Dashboard display mode — controls language, visibility, and CTAs */
 export type DashboardMode = 'adviser' | 'client';
-
-/** Activity types to hide from client view (security / internal) */
-const CLIENT_HIDDEN_ACTIVITY_TYPES = new Set([
-  'login_failure',
-  'login_attempt',
-  'password_reset_request',
-  'password_change',
-  'forced_logout',
-  'account_locked',
-  'suspicious_activity',
-]);
 
 // ── Props ───────────────────────────────────────────────────────────────
 
@@ -774,52 +752,16 @@ export function ClientOverviewTab({ client, mode = 'adviser' }: ClientOverviewTa
 
   // ── Synthesise FNA milestone events into activity timeline ────────────
 
-  const enrichedActivityEvents = useMemo<ActivityEvent[]>(() => {
-    const fnaEvents: ActivityEvent[] = [];
-
-    fnaStatuses.forEach((fna) => {
-      if (fna.publishedAt) {
-        fnaEvents.push({
-          id: `fna-published-${fna.key}`,
-          type: 'fna_published',
-          label: `${fna.name} published`,
-          timestamp: fna.publishedAt,
-          icon: FileCheck,
-          iconColor: 'text-gray-500',
-          success: true,
-        });
-      } else if (fna.status === 'submitted' && (fna.submittedAt || fna.updatedAt)) {
-        fnaEvents.push({
-          id: `fna-intake-submitted-${fna.key}`,
-          type: 'fna_intake_submitted',
-          label: isClient
-            ? `${fna.name} submitted for review`
-            : `${fna.name} — client intake submitted`,
-          timestamp: (fna.submittedAt || fna.updatedAt) as string,
-          icon: ClipboardCheck,
-          iconColor: 'text-blue-600',
-          success: true,
-        });
-      } else if (fna.updatedAt && fna.status === 'draft') {
-        fnaEvents.push({
-          id: `fna-draft-${fna.key}`,
-          type: 'fna_draft',
-          label: `${fna.name} draft saved`,
-          timestamp: fna.updatedAt,
-          icon: FileText,
-          iconColor: 'text-gray-500',
-          success: true,
-        });
-      }
-    });
-
-    // Combine and filter noise (client mode also hides security events)
-    const combined = [...activityEvents, ...fnaEvents]
-      .filter((evt) => !ACTIVITY_NOISE_TYPES.has(evt.type))
-      .filter((evt) => !isClient || !CLIENT_HIDDEN_ACTIVITY_TYPES.has(evt.type));
-    combined.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
-    return combined;
-  }, [activityEvents, fnaStatuses, isClient]);
+  const enrichedActivityEvents = useMemo<ActivityEvent[]>(
+    () =>
+      deriveEnrichedActivityEvents({
+        activityEvents,
+        fnaStatuses,
+        isClient,
+        icons: { FileCheck, ClipboardCheck, FileText },
+      }),
+    [activityEvents, fnaStatuses, isClient],
+  );
 
   const visibleEvents = activityExpanded
     ? enrichedActivityEvents

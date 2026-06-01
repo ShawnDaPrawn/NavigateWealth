@@ -31,6 +31,7 @@ import {
   deriveInsuranceCoverageItems,
   deriveCashflowData,
   deriveActionDistribution,
+  deriveEnrichedActivityEvents,
   type GapAnalysisInputs,
   type PillarsInputs,
   type HealthScoreInputs,
@@ -281,6 +282,65 @@ describe('chart-data derivations', () => {
     const items = [mk('urgent'), mk('urgent'), mk('attention'), mk('recommended')];
     const dist = deriveActionDistribution(items as Parameters<typeof deriveActionDistribution>[0]);
     expect(dist).toEqual({ urgent: 2, attention: 1, recommended: 1, monitoring: 0 });
+  });
+});
+
+describe('deriveEnrichedActivityEvents', () => {
+  const Icon = () => null;
+  const icons = { FileCheck: Icon, ClipboardCheck: Icon, FileText: Icon };
+
+  it('merges FNA events with stored events, drops noise, sorts newest-first', () => {
+    const out = deriveEnrichedActivityEvents({
+      activityEvents: [
+        {
+          id: 'a1',
+          type: 'login',
+          label: 'Login',
+          timestamp: '2024-01-01T00:00:00Z',
+          icon: Icon,
+          iconColor: 'x',
+        },
+        {
+          id: 'noise',
+          type: 'session_refresh',
+          label: 'Refresh',
+          timestamp: '2024-06-01T00:00:00Z',
+          icon: Icon,
+          iconColor: 'x',
+        },
+      ],
+      fnaStatuses: [
+        {
+          key: 'risk',
+          name: 'Risk Plan',
+          status: 'published',
+          publishedAt: '2024-03-01T00:00:00Z',
+        },
+      ],
+      isClient: false,
+      icons,
+    });
+    // session_refresh dropped as noise; remaining sorted newest-first
+    expect(out.map((e) => e.id)).toEqual(['fna-published-risk', 'a1']);
+  });
+
+  it('hides client-restricted activity types in client mode', () => {
+    const out = deriveEnrichedActivityEvents({
+      activityEvents: [
+        {
+          id: 'login-fail',
+          type: 'login_failure',
+          label: 'x',
+          timestamp: '2024-01-01T00:00:00Z',
+          icon: Icon,
+          iconColor: 'x',
+        },
+      ],
+      fnaStatuses: [],
+      isClient: true,
+      icons,
+    });
+    expect(out).toEqual([]);
   });
 });
 
