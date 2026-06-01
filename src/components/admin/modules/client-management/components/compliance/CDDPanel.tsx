@@ -26,8 +26,7 @@ import {
   Shield,
 } from 'lucide-react';
 import { toast } from 'sonner';
-import { projectId } from '../../../../../../utils/supabase/info';
-import { getAuthToken } from './compliance-auth';
+import { api } from '../../../../../../utils/api';
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 
@@ -60,8 +59,6 @@ interface CheckHistoryEntry {
 
 // ─── Constants ──────────────────────────────────────────────────────────────
 
-const API_BASE = `https://${projectId}.supabase.co/functions/v1/make-server-91ed8379/integrations/honeycomb`;
-
 // ─── Component ──────────────────────────────────────────────────────────────
 
 export function CDDPanel({
@@ -89,13 +86,10 @@ export function CDDPanel({
   const loadHistory = async () => {
     setIsLoadingHistory(true);
     try {
-      const res = await fetch(`${API_BASE}/checks/history/${clientId}/cdd_report`, {
-        headers: { Authorization: `Bearer ${await getAuthToken()}` },
-      });
-      if (res.ok) {
-        const data = await res.json();
-        setHistory(data.history || []);
-      }
+      const data = await api.get<{ history?: CheckHistoryEntry[] }>(
+        `/integrations/honeycomb/checks/history/${clientId}/cdd_report`,
+      );
+      setHistory(data.history || []);
     } catch (err) {
       console.error('[CDD Panel] Failed to load history:', err);
     } finally {
@@ -109,29 +103,17 @@ export function CDDPanel({
     const toastId = toast.loading('Running Customer Due Diligence report...');
 
     try {
-      const res = await fetch(`${API_BASE}/reports/cdd`, {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${await getAuthToken()}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          clientId,
-          firstName,
-          lastName,
-          idNumber,
-          passport,
-        }),
+      const data = await api.post<{
+        data?: Record<string, unknown>;
+        matterId?: string;
+        checkType?: string;
+      }>(`/integrations/honeycomb/reports/cdd`, {
+        clientId,
+        firstName,
+        lastName,
+        idNumber,
+        passport,
       });
-
-      const data = await res.json();
-
-      if (!res.ok) {
-        const errMsg = typeof data?.error === 'string' ? data.error : JSON.stringify(data?.error);
-        setResult({ success: false, error: errMsg });
-        toast.error(errMsg, { id: toastId });
-        return;
-      }
 
       setResult({
         success: true,

@@ -11,8 +11,7 @@ import { Button } from '../../../../../ui/button';
 import { Badge } from '../../../../../ui/badge';
 import { Loader2, CheckCircle, AlertTriangle, ChevronDown, ChevronUp } from 'lucide-react';
 import { toast } from 'sonner';
-import { projectId } from '../../../../../../utils/supabase/info';
-import { getAuthToken } from './compliance-auth';
+import { api } from '../../../../../../utils/api';
 
 interface HoneycombActionCardProps {
   /** Card title */
@@ -40,8 +39,6 @@ interface HoneycombActionCardProps {
   /** Called after an error */
   onError?: (error: string) => void;
 }
-
-const API_BASE = `https://${projectId}.supabase.co/functions/v1/make-server-91ed8379/integrations/honeycomb`;
 
 const variantStyles: Record<string, string> = {
   default: 'bg-slate-50 border-slate-200',
@@ -76,25 +73,7 @@ export function HoneycombActionCard({
     const toastId = toast.loading(`Running ${title}...`);
 
     try {
-      const res = await fetch(`${API_BASE}/${endpoint}`, {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${await getAuthToken()}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(requestBody),
-      });
-
-      const data = await res.json();
-
-      if (!res.ok) {
-        const errMsg = data?.error || `Request failed (${res.status})`;
-        const errorStr = typeof errMsg === 'string' ? errMsg : JSON.stringify(errMsg);
-        setResult({ success: false, error: errorStr });
-        toast.error(errorStr, { id: toastId });
-        onError?.(errorStr);
-        return;
-      }
+      const data = await api.post<unknown>(`/integrations/honeycomb/${endpoint}`, requestBody);
 
       setResult({ success: true, data });
       toast.success(`${title} completed successfully`, { id: toastId });

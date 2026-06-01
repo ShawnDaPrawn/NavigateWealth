@@ -46,8 +46,7 @@ import {
   Camera,
   X,
 } from 'lucide-react';
-import { projectId } from '../../../../../../utils/supabase/info';
-import { getAuthToken } from './compliance-auth';
+import { api } from '../../../../../../utils/api';
 import { BASE_PDF_CSS } from '../../../resources/templates/BasePdfLayout';
 import {
   escapeHtmlText,
@@ -99,8 +98,6 @@ interface ComplianceResultViewerProps {
 }
 
 // ─── Constants ────────────────────────────────────────────────────────────────
-
-const API_BASE = `https://${projectId}.supabase.co/functions/v1/make-server-91ed8379/integrations/honeycomb`;
 
 /**
  * Maps the activity `type` string (from logActivity) to the KV checkType
@@ -210,16 +207,9 @@ export function ComplianceResultViewer({
     setCheckResult(null);
 
     try {
-      const authToken = await getAuthToken();
-      const res = await fetch(`${API_BASE}/checks/history/${clientId}/${checkType}`, {
-        headers: { Authorization: `Bearer ${authToken}` },
-      });
-
-      if (!res.ok) {
-        throw new Error(`Failed to fetch check history (${res.status})`);
-      }
-
-      const data = await res.json();
+      const data = await api.get<{ history?: CheckResult[] }>(
+        `/integrations/honeycomb/checks/history/${clientId}/${checkType}`,
+      );
       const history: CheckResult[] = data.history || [];
 
       // Find the matching result by matterId or by closest timestamp

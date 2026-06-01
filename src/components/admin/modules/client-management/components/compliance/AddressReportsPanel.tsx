@@ -21,8 +21,7 @@ import {
   Home,
 } from 'lucide-react';
 import { toast } from 'sonner';
-import { projectId } from '../../../../../../utils/supabase/info';
-import { getAuthToken } from './compliance-auth';
+import { api } from '../../../../../../utils/api';
 
 interface AddressReportsPanelProps {
   clientId: string;
@@ -33,8 +32,6 @@ interface AddressReportsPanelProps {
   hasIdentification: boolean;
   onCheckComplete?: () => void;
 }
-
-const API_BASE = `https://${projectId}.supabase.co/functions/v1/make-server-91ed8379/integrations/honeycomb`;
 
 interface AddressResult {
   success: boolean;
@@ -74,23 +71,10 @@ export function AddressReportsPanel({
     const toastId = toast.loading('Looking up best known address...');
 
     try {
-      const res = await fetch(`${API_BASE}/address/best-known`, {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${await getAuthToken()}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ clientId, firstName, lastName, idNumber, passport }),
-      });
-
-      const data = await res.json();
-
-      if (!res.ok) {
-        const errMsg = typeof data?.error === 'string' ? data.error : JSON.stringify(data?.error);
-        setAddressResult({ success: false, error: errMsg });
-        toast.error(errMsg, { id: toastId });
-        return;
-      }
+      const data = await api.post<{ data?: Record<string, unknown>; matterId?: string }>(
+        `/integrations/honeycomb/address/best-known`,
+        { clientId, firstName, lastName, idNumber, passport },
+      );
 
       setAddressResult({ success: true, data: data.data, matterId: data.matterId });
       toast.success('Address lookup completed', { id: toastId });

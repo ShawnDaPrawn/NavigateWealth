@@ -28,8 +28,7 @@ import {
   ChevronDown,
   ChevronUp,
 } from 'lucide-react';
-import { projectId } from '../../../../../../utils/supabase/info';
-import { getAuthToken } from './compliance-auth';
+import { api } from '../../../../../../utils/api';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -75,8 +74,6 @@ interface ComplianceDashboardPanelProps {
   clientId: string;
   onNavigate?: (tab: string) => void;
 }
-
-const API_BASE = `https://${projectId}.supabase.co/functions/v1/make-server-91ed8379/integrations/honeycomb`;
 
 // ─── Colour mappings ────────────────────────────────────────────────────────
 
@@ -194,14 +191,9 @@ export function ComplianceDashboardPanel({ clientId, onNavigate }: ComplianceDas
     setIsLoading(true);
     setError(null);
     try {
-      const res = await fetch(`${API_BASE}/dashboard/${clientId}`, {
-        headers: { Authorization: `Bearer ${await getAuthToken()}` },
-      });
-      if (!res.ok) {
-        const data = await res.json().catch(() => ({}));
-        throw new Error(data?.error || `Dashboard request failed (${res.status})`);
-      }
-      const data = await res.json();
+      const data = await api.get<{ dashboard: DashboardData }>(
+        `/integrations/honeycomb/dashboard/${clientId}`,
+      );
       setDashboard(data.dashboard);
     } catch (err: unknown) {
       console.error('[ComplianceDashboard] Error:', err);
