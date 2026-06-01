@@ -59,10 +59,9 @@ import {
   ChevronRight,
 } from 'lucide-react';
 import { toast } from 'sonner';
-import { projectId } from '../../../../../utils/supabase/info';
+import { api } from '../../../../../utils/api';
 import { BASE_PDF_CSS } from '../../resources/templates/BasePdfLayout';
 import { escapeHtmlText, navigateWealthPdfDocumentTitle } from '../../../../../utils/pdfPrintTitle';
-import { getAuthToken } from './compliance/compliance-auth';
 
 import { Client } from '../types';
 import { getClientProfileQueryOptions } from '../api';
@@ -121,8 +120,6 @@ const SUB_TABS: {
 ];
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
-
-const API_BASE = `https://${projectId}.supabase.co/functions/v1/make-server-91ed8379/integrations/honeycomb`;
 
 const isValidIdNumber = (val: unknown): val is string =>
   typeof val === 'string' &&
@@ -220,19 +217,12 @@ export function ComplianceTab({
   const checkRegistration = async () => {
     try {
       setRegistrationStatus('loading');
-      const token = await getAuthToken();
-      const res = await fetch(`${API_BASE}/status/${selectedClient.id}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-
-      if (res.ok) {
-        const data = await res.json();
-        if (data.registered) {
-          setRegistrationStatus('registered');
-          setHoneycombId(data.honeycombId);
-        } else {
-          setRegistrationStatus('unregistered');
-        }
+      const data = await api.get<{ registered?: boolean; honeycombId?: string }>(
+        `/integrations/honeycomb/status/${selectedClient.id}`,
+      );
+      if (data.registered) {
+        setRegistrationStatus('registered');
+        setHoneycombId(data.honeycombId ?? null);
       } else {
         setRegistrationStatus('unregistered');
       }
@@ -245,14 +235,10 @@ export function ComplianceTab({
   const fetchActivityLog = async () => {
     try {
       setIsLoadingActivity(true);
-      const token = await getAuthToken();
-      const res = await fetch(`${API_BASE}/activity/${selectedClient.id}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      if (res.ok) {
-        const data = await res.json();
-        setActivities(data.activity || []);
-      }
+      const data = await api.get<{ activity?: ComplianceActivity[] }>(
+        `/integrations/honeycomb/activity/${selectedClient.id}`,
+      );
+      setActivities(data.activity || []);
     } catch (error) {
       console.error('Error fetching activity:', error);
     } finally {
@@ -265,31 +251,20 @@ export function ComplianceTab({
     const toastId = toast.loading('Registering client with Honeycomb/Beeswax...');
 
     try {
-      const token = await getAuthToken();
-      const res = await fetch(`${API_BASE}/register-client`, {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
+      const data = await api.post<{ honeycombId?: string }>(
+        `/integrations/honeycomb/register-client`,
+        {
           clientId: selectedClient.id,
           firstName: selectedClient.firstName,
           lastName: selectedClient.lastName,
           idNumber: resolvedIdNumber,
           passport: resolvedPassport,
           email: selectedClient.email,
-        }),
-      });
-
-      const data = await res.json();
-
-      if (!res.ok) {
-        throw new Error(data.error || 'Registration failed');
-      }
+        },
+      );
 
       toast.success('Client registered successfully!', { id: toastId });
-      setHoneycombId(data.honeycombId);
+      setHoneycombId(data.honeycombId ?? null);
       setRegistrationStatus('registered');
     } catch (error: unknown) {
       console.error('Registration error:', error);
@@ -822,14 +797,9 @@ function ActivityLogContent({
     const toastId = toast.loading('Generating compliance dossier...');
 
     try {
-      const token = await getAuthToken();
-      const res = await fetch(`${API_BASE}/checks/history/${clientId}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-
-      if (!res.ok) throw new Error(`Failed to fetch check history (${res.status})`);
-
-      const data = await res.json();
+      const data = await api.get<{ history?: ComplianceCheckResult[] }>(
+        `/integrations/honeycomb/checks/history/${clientId}`,
+      );
       const allResults = data.history || [];
 
       const now = new Date().toLocaleString('en-ZA', {
