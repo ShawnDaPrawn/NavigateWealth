@@ -213,6 +213,32 @@ describe('esign-routes.tsx route contracts', () => {
     expect(body.sms).toBeDefined();
   });
 
+  // ---- Envelope fields group (CRUD on a draft envelope's signature fields) ----
+  it('GET /envelopes/:id/fields returns 401 without an Authorization header', async () => {
+    const res = await esignRoutes.request('/envelopes/env_x/fields');
+    expect(res.status).toBe(401);
+  });
+
+  it('GET /envelopes/:id/fields returns 404 for an unknown envelope when authenticated', async () => {
+    const res = await esignRoutes.request('/envelopes/env_missing/fields', {
+      headers: { Authorization: 'Bearer test-token' },
+    });
+    expect(res.status).toBe(404);
+  });
+
+  it('PATCH /envelopes/:id/fields/:fieldId returns 401 without an Authorization header', async () => {
+    const res = await esignRoutes.request('/envelopes/env_x/fields/f1', {
+      method: 'PATCH',
+      body: '{}',
+    });
+    expect(res.status).toBe(401);
+  });
+
+  it('DELETE /envelopes/:id/fields/:fieldId returns 401 without an Authorization header', async () => {
+    const res = await esignRoutes.request('/envelopes/env_x/fields/f1', { method: 'DELETE' });
+    expect(res.status).toBe(401);
+  });
+
   // ---- /cron/* uses the service-role-key auth model, not user sessions ----
   // (token must equal SUPABASE_SERVICE_ROLE_KEY; the Deno.env mock returns
   // 'test', so `Bearer test` authenticates and anything else / nothing 401s.)
