@@ -33,7 +33,7 @@ describe('createFieldsFromCandidates', () => {
       source: 'auto',
       label: 'Sign',
     },
-  ] as NonNullable<EsignEnvelope['field_candidates']>;
+  ] as unknown as NonNullable<EsignEnvelope['field_candidates']>;
 
   it('creates a field per candidate stamped with the target signer + envelope id', () => {
     const out = createFieldsFromCandidates(candidates, 'signer1', [], 'env1');
