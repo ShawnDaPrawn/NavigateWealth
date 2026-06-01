@@ -78,6 +78,7 @@ import {
   buildPageReplicas,
 } from './prepareFormStudioUtils';
 import { useFieldHistory } from './useFieldHistory';
+import { useAutoSave } from './useAutoSave';
 
 interface PrepareFormStudioProps {
   envelope: EsignEnvelope;
@@ -133,8 +134,6 @@ export function PrepareFormStudio({
   // emails are shown. Driven by clicking a swatch in the signer legend.
   const [visibleSignerIds, setVisibleSignerIds] = useState<Set<string> | null>(null);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
-  const [autoSaving, setAutoSaving] = useState(false);
-  const [lastSavedAt, setLastSavedAt] = useState<Date | null>(null);
   const [snapEnabled, setSnapEnabled] = useState(true);
   // P2.5 2.3 — total page count, populated by PDFViewer once the doc loads.
   const [pageCount, setPageCount] = useState<number>(1);
@@ -213,15 +212,6 @@ export function PrepareFormStudio({
     setFields,
     setHasUnsavedChanges,
   );
-
-  // Auto-save tracking — `lastSavedFieldsRef` is the canonical record of the
-  // most recently persisted state so we can short-circuit redundant saves and
-  // detect drift on unmount/back navigation.
-  const lastSavedFieldsRef = useRef<string>(JSON.stringify(envelope.fields || []));
-  const fieldsRef = useRef<EsignField[]>(envelope.fields || []);
-  fieldsRef.current = fields;
-  const onSaveFieldsRef = useRef(onSaveFields);
-  onSaveFieldsRef.current = onSaveFields;
 
   // Field counts per signer — drives the legend badges. Computed from the
   // current `fields` so it's always in sync with edits.
@@ -753,35 +743,18 @@ export function PrepareFormStudio({
 
   // ==================== ACTIONS ====================
 
-  /**
-   * Persist the *current* `fieldsRef.current` snapshot. We deliberately read
-   * from the ref (not the closure) because both auto-save and unmount-flush
-   * can race with the latest user edits; the ref always holds the freshest
-   * state. Returns true on success, false if a save was already in flight or
-   * the snapshot matched the last saved version (no-op).
-   */
-  const persistFields = useCallback(async (opts?: { silent?: boolean }): Promise<boolean> => {
-    const handler = onSaveFieldsRef.current;
-    if (!handler) return false;
-    const snapshot = fieldsRef.current;
-    const serialized = JSON.stringify(snapshot);
-    if (serialized === lastSavedFieldsRef.current) return false;
-    try {
-      if (!opts?.silent) setAutoSaving(true);
-      await handler(snapshot);
-      lastSavedFieldsRef.current = serialized;
-      setLastSavedAt(new Date());
-      setHasUnsavedChanges(false);
-      return true;
-    } catch (err) {
-      if (!opts?.silent) {
-        toast.error('Auto-save failed — please click Save to retry.');
-      }
-      return false;
-    } finally {
-      if (!opts?.silent) setAutoSaving(false);
-    }
-  }, []);
+  // Auto-save: owns autoSaving/lastSavedAt + the debounce, beforeunload and
+  // unmount-flush effects. `fieldsRef` always holds the freshest fields (read
+  // by the send path below, which can race the latest edits).
+  const { autoSaving, lastSavedAt, persistFields, fieldsRef } = useAutoSave({
+    fields,
+    initialFields: envelope.fields || [],
+    onSaveFields,
+    hasUnsavedChanges,
+    setHasUnsavedChanges,
+    saving,
+    sending,
+  });
 
   const handleSave = async () => {
     await persistFields();
@@ -801,55 +774,6 @@ export function PrepareFormStudio({
       await onSendForSignature(fieldsRef.current);
     }
   };
-
-  // ==================== AUTO-SAVE ====================
-  //
-  // Debounced auto-save (1.5s after the last change). This is the single most
-  // important defence against the "I clicked Save and lost my work" class of
-  // bugs — it means a user who places fields and walks away for two seconds
-  // is already safely persisted.
-  useEffect(() => {
-    if (!hasUnsavedChanges) return;
-    if (saving || sending || autoSaving) return;
-    const timer = setTimeout(() => {
-      persistFields({ silent: true });
-    }, 1500);
-    return () => clearTimeout(timer);
-  }, [fields, hasUnsavedChanges, saving, sending, autoSaving, persistFields]);
-
-  // beforeunload: warn the user if they try to close the tab / navigate away
-  // with unsaved changes still in memory. We can't make `await persistFields`
-  // run reliably here (browsers cancel async work in unload), so we surface a
-  // confirmation prompt instead.
-  useEffect(() => {
-    const handler = (e: BeforeUnloadEvent) => {
-      if (hasUnsavedChanges) {
-        e.preventDefault();
-        // Modern browsers ignore the message and show their own copy, but the
-        // returnValue assignment is still required to trigger the prompt.
-        e.returnValue = 'You have unsaved field changes. Are you sure you want to leave?';
-        return e.returnValue;
-      }
-    };
-    window.addEventListener('beforeunload', handler);
-    return () => window.removeEventListener('beforeunload', handler);
-  }, [hasUnsavedChanges]);
-
-  // Unmount-flush: when this view is torn down (top-nav click, route change,
-  // parent state transition), make a best-effort silent save so nothing is
-  // lost. The empty-deps array intentionally captures persistFields via ref.
-  const persistFieldsRef = useRef(persistFields);
-  persistFieldsRef.current = persistFields;
-  useEffect(() => {
-    return () => {
-      const serialized = JSON.stringify(fieldsRef.current);
-      if (serialized !== lastSavedFieldsRef.current) {
-        // fire-and-forget — the parent React Query cache will refresh on
-        // next dashboard visit.
-        void persistFieldsRef.current({ silent: true });
-      }
-    };
-  }, []);
 
   /**
    * Save before navigating back. If the save fails or there are still
