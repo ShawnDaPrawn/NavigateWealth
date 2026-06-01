@@ -79,6 +79,7 @@ import {
 } from './prepareFormStudioUtils';
 import { useFieldHistory } from './useFieldHistory';
 import { useAutoSave } from './useAutoSave';
+import { useFieldSelection } from './useFieldSelection';
 
 interface PrepareFormStudioProps {
   envelope: EsignEnvelope;
@@ -123,16 +124,23 @@ export function PrepareFormStudio({
 }: PrepareFormStudioProps) {
   // State
   const [fields, setFields] = useState<EsignField[]>(envelope.fields || []);
-  // Multi-selection: Set of selected field ids. The "primary" selection
-  // (used by the Properties panel) is whichever id was added LAST.
-  const [selectedFieldIds, setSelectedFieldIds] = useState<Set<string>>(new Set());
-  // Most recently selected id — drives the Properties panel and the
-  // legacy `selectedFieldId` prop on PDFViewer.
-  const [primarySelectedId, setPrimarySelectedId] = useState<string | undefined>(undefined);
+  // Field selection + signer-filter state machine: selectedFieldIds (the
+  // overlay selection), primarySelectedId (the Properties-panel / PDFViewer
+  // target — whichever id was touched last) and visibleSignerIds (the legend
+  // filter), plus the discrete operations the handlers below drive.
+  const {
+    selectedFieldIds,
+    primarySelectedId,
+    visibleSignerIds,
+    selectOnly,
+    toggleInSelection,
+    removeFromSelection,
+    selectMany,
+    clearSelection,
+    toggleSignerFilter,
+    clearSignerFilter,
+  } = useFieldSelection();
   const [selectedSignerId, setSelectedSignerId] = useState<string | undefined>(signers[0]?.email);
-  // Optional filter: when non-empty, only fields belonging to these signer
-  // emails are shown. Driven by clicking a swatch in the signer legend.
-  const [visibleSignerIds, setVisibleSignerIds] = useState<Set<string> | null>(null);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [snapEnabled, setSnapEnabled] = useState(true);
   // P2.5 2.3 — total page count, populated by PDFViewer once the doc loads.
@@ -432,8 +440,7 @@ export function PrepareFormStudio({
       } as EsignField;
 
       pushToHistory([...fields, field]);
-      setPrimarySelectedId(field.id);
-      setSelectedFieldIds(new Set([field.id]));
+      selectOnly(field.id);
     },
     [
       envelope.id,
@@ -443,6 +450,7 @@ export function PrepareFormStudio({
       fields,
       pushToHistory,
       activeDocumentId,
+      selectOnly,
     ],
   );
 
@@ -464,14 +472,9 @@ export function PrepareFormStudio({
     (fieldId: string) => {
       const newFields = fields.filter((f) => f.id !== fieldId);
       pushToHistory(newFields);
-      setSelectedFieldIds((prev) => {
-        const next = new Set(prev);
-        next.delete(fieldId);
-        return next;
-      });
-      if (primarySelectedId === fieldId) setPrimarySelectedId(undefined);
+      removeFromSelection(fieldId);
     },
-    [fields, primarySelectedId],
+    [fields, pushToHistory, removeFromSelection],
   );
 
   // ==================== MULTI-SELECT / CLIPBOARD ====================
@@ -490,37 +493,22 @@ export function PrepareFormStudio({
     (field: EsignField | null, modifiers?: { shiftKey: boolean; metaOrCtrl: boolean }) => {
       if (!field) {
         if (modifiers?.shiftKey) return;
-        setSelectedFieldIds(new Set());
-        setPrimarySelectedId(undefined);
+        clearSelection();
         return;
       }
       const isMulti = modifiers?.shiftKey || modifiers?.metaOrCtrl;
-      setSelectedFieldIds((prev) => {
-        if (!isMulti) return new Set([field.id]);
-        const next = new Set(prev);
-        if (next.has(field.id)) next.delete(field.id);
-        else next.add(field.id);
-        return next;
-      });
-      setPrimarySelectedId(field.id);
+      if (isMulti) toggleInSelection(field.id);
+      else selectOnly(field.id);
     },
-    [],
+    [clearSelection, toggleInSelection, selectOnly],
   );
 
   /** Marquee callback from PDFViewer — replace or union with current selection. */
   const handleMarqueeSelect = useCallback(
     (ids: string[], modifiers: { shiftKey: boolean; metaOrCtrl: boolean }) => {
-      setSelectedFieldIds((prev) => {
-        if (modifiers.shiftKey || modifiers.metaOrCtrl) {
-          const next = new Set(prev);
-          ids.forEach((id) => next.add(id));
-          return next;
-        }
-        return new Set(ids);
-      });
-      setPrimarySelectedId(ids[ids.length - 1]);
+      selectMany(ids, { additive: modifiers.shiftKey || modifiers.metaOrCtrl });
     },
-    [],
+    [selectMany],
   );
 
   /** Copy currently-selected fields to the in-memory clipboard. */
@@ -546,11 +534,9 @@ export function PrepareFormStudio({
       updated_at: now,
     }));
     pushToHistory([...fields, ...newFields]);
-    const newIds = new Set(newFields.map((f) => f.id));
-    setSelectedFieldIds(newIds);
-    setPrimarySelectedId(newFields[newFields.length - 1]?.id);
+    selectMany(newFields.map((f) => f.id));
     toast.success(`Pasted ${newFields.length} field${newFields.length === 1 ? '' : 's'}`);
-  }, [fields, pushToHistory]);
+  }, [fields, pushToHistory, selectMany]);
 
   /** Duplicate selection in-place (cmd+d) — a copy + paste in one step. */
   const handleDuplicate = useCallback(() => {
@@ -683,9 +669,8 @@ export function PrepareFormStudio({
     if (selectedFieldIds.size === 0) return;
     const remaining = fields.filter((f) => !selectedFieldIds.has(f.id));
     pushToHistory(remaining);
-    setSelectedFieldIds(new Set());
-    setPrimarySelectedId(undefined);
-  }, [fields, selectedFieldIds, pushToHistory]);
+    clearSelection();
+  }, [fields, selectedFieldIds, pushToHistory, clearSelection]);
 
   // ── P2.5 2.2 — Bulk reassign / required toggle ──
   /**
@@ -872,8 +857,7 @@ export function PrepareFormStudio({
       // Escape — clear selection / close popovers handled by Radix
       if (e.key === 'Escape') {
         if (selectedFieldIds.size > 0 || primarySelectedId) {
-          setSelectedFieldIds(new Set());
-          setPrimarySelectedId(undefined);
+          clearSelection();
         }
         return;
       }
@@ -921,8 +905,7 @@ export function PrepareFormStudio({
         const visibleIds = fields
           .filter((f) => !visibleSignerIds || (f.signer_id && visibleSignerIds.has(f.signer_id)))
           .map((f) => f.id);
-        setSelectedFieldIds(new Set(visibleIds));
-        setPrimarySelectedId(visibleIds[visibleIds.length - 1]);
+        selectMany(visibleIds);
         return;
       }
       // P2.5 2.11 — number keys 1..9 jump to the Nth signer in the
@@ -952,6 +935,8 @@ export function PrepareFormStudio({
     handleBulkDelete,
     persistFields,
     eligibleSigners,
+    clearSelection,
+    selectMany,
   ]);
 
   // ==================== RENDER ====================
@@ -1141,18 +1126,7 @@ export function PrepareFormStudio({
                 disabled={isCC}
                 onClick={() => {
                   if (isCC) return;
-                  setVisibleSignerIds((prev) => {
-                    if (!prev) return new Set([signer.email]);
-                    if (prev.has(signer.email) && prev.size === 1) return null;
-                    if (prev.has(signer.email)) {
-                      const next = new Set(prev);
-                      next.delete(signer.email);
-                      return next.size === 0 ? null : next;
-                    }
-                    const next = new Set(prev);
-                    next.add(signer.email);
-                    return next;
-                  });
+                  toggleSignerFilter(signer.email);
                 }}
                 className={[
                   'inline-flex items-center gap-2 px-2.5 py-1',
@@ -1224,7 +1198,7 @@ export function PrepareFormStudio({
         {visibleSignerIds && visibleSignerIds.size > 0 && (
           <button
             type="button"
-            onClick={() => setVisibleSignerIds(null)}
+            onClick={() => clearSignerFilter()}
             className="ml-1 inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs text-gray-500 hover:bg-gray-100 shrink-0"
             title="Show all signers"
           >
