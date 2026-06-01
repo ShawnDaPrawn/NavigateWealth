@@ -371,4 +371,33 @@ describe('esign-routes.tsx route contracts', () => {
     const res = await esignRoutes.request('/envelopes/env_x/attachments');
     expect(res.status).toBe(401);
   });
+
+  // ---- Sender envelope-actions group (session-authed sender operations) ----
+  // Only the routes that authenticate before touching the body/envelope have a
+  // stable no-auth 401 contract; the body-first POSTs (otp/send, verify, sign,
+  // reject, recall, remind) are validation/seed-dependent and are exercised by
+  // the service-layer happy-path test instead.
+  const SENDER_AUTH_GUARDED: ReadonlyArray<readonly [string, string, RequestInit?]> = [
+    ['GET', '/envelopes/env_x/audit'],
+    ['GET', '/envelopes/env_x/document'],
+    ['GET', '/envelopes/env_x/certificate'],
+    ['DELETE', '/envelopes/env_x', { method: 'DELETE' }],
+    ['GET', '/envelopes/env_x/evidence-pack'],
+    ['GET', '/envelopes/env_x/reminder-config'],
+    ['PUT', '/envelopes/env_x/reminder-config', { method: 'PUT', body: '{}' }],
+    ['PATCH', '/envelopes/env_x/signing-mode', { method: 'PATCH', body: '{}' }],
+    ['GET', '/envelopes/env_x/audit/export'],
+    ['GET', '/diagnostics/kba'],
+  ];
+  for (const [method, path, init] of SENDER_AUTH_GUARDED) {
+    it(`${method} ${path} returns 401 without an Authorization header`, async () => {
+      const res = await esignRoutes.request(path, init ?? {});
+      expect(res.status).toBe(401);
+    });
+  }
+
+  it('POST /signer/kba returns 400 for an empty/invalid body (token-authed)', async () => {
+    const res = await esignRoutes.request('/signer/kba', { method: 'POST', body: '{}' });
+    expect(res.status).toBe(400);
+  });
 });
