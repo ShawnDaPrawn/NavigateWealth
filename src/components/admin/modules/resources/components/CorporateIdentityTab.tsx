@@ -34,11 +34,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '../../../../ui/select';
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from '../../../../ui/tooltip';
+import { Tooltip, TooltipContent, TooltipTrigger } from '../../../../ui/tooltip';
 import {
   Image,
   Palette,
@@ -61,12 +57,7 @@ import {
   Mail,
 } from 'lucide-react';
 import { toast } from 'sonner';
-import {
-  brandApi,
-  LOGO_THEME_GROUPS,
-  LOGO_VARIANTS,
-  COLLATERAL_CATEGORIES,
-} from './brand-api';
+import { brandApi, LOGO_THEME_GROUPS, LOGO_VARIANTS, COLLATERAL_CATEGORIES } from './brand-api';
 import type {
   LogoEntry,
   LogoAssetFormat,
@@ -78,9 +69,10 @@ import type {
   BrandGuidelines,
   BrandSummary,
 } from './brand-api';
+import { formatDate, hexToRgb, getContrastRatio } from './corporateIdentityUtils';
 
 const EmailSignatureGenerator = React.lazy(() =>
-  import('./EmailSignatureGenerator').then(m => ({ default: m.EmailSignatureGenerator }))
+  import('./EmailSignatureGenerator').then((m) => ({ default: m.EmailSignatureGenerator })),
 );
 
 // ============================================================================
@@ -88,10 +80,30 @@ const EmailSignatureGenerator = React.lazy(() =>
 // ============================================================================
 
 const STAT_CONFIG = {
-  logoCount: { label: 'Logo Assets', icon: Image, iconColor: 'text-blue-600', bgColor: 'bg-blue-50' },
-  colourCount: { label: 'Brand Colours', icon: Palette, iconColor: 'text-purple-600', bgColor: 'bg-purple-50' },
-  collateralCount: { label: 'Collateral', icon: FolderOpen, iconColor: 'text-green-600', bgColor: 'bg-green-50' },
-  lastUpdated: { label: 'Last Updated', icon: Clock, iconColor: 'text-amber-600', bgColor: 'bg-amber-50' },
+  logoCount: {
+    label: 'Logo Assets',
+    icon: Image,
+    iconColor: 'text-blue-600',
+    bgColor: 'bg-blue-50',
+  },
+  colourCount: {
+    label: 'Brand Colours',
+    icon: Palette,
+    iconColor: 'text-purple-600',
+    bgColor: 'bg-purple-50',
+  },
+  collateralCount: {
+    label: 'Collateral',
+    icon: FolderOpen,
+    iconColor: 'text-green-600',
+    bgColor: 'bg-green-50',
+  },
+  lastUpdated: {
+    label: 'Last Updated',
+    icon: Clock,
+    iconColor: 'text-amber-600',
+    bgColor: 'bg-amber-50',
+  },
 } as const;
 
 const LOGO_UPLOAD_FIELDS: Array<{
@@ -100,10 +112,30 @@ const LOGO_UPLOAD_FIELDS: Array<{
   accept: string;
   helper: string;
 }> = [
-  { format: 'png', label: 'PNG', accept: 'image/png', helper: 'Used for the live card and modal preview.' },
-  { format: 'jpeg', label: 'JPEG', accept: 'image/jpeg,image/jpg', helper: 'Optional flat export for sharing.' },
-  { format: 'svg', label: 'SVG', accept: 'image/svg+xml', helper: 'Optional vector master for scaling.' },
-  { format: 'pdf', label: 'PDF', accept: 'application/pdf', helper: 'Optional print or approval file.' },
+  {
+    format: 'png',
+    label: 'PNG',
+    accept: 'image/png',
+    helper: 'Used for the live card and modal preview.',
+  },
+  {
+    format: 'jpeg',
+    label: 'JPEG',
+    accept: 'image/jpeg,image/jpg',
+    helper: 'Optional flat export for sharing.',
+  },
+  {
+    format: 'svg',
+    label: 'SVG',
+    accept: 'image/svg+xml',
+    helper: 'Optional vector master for scaling.',
+  },
+  {
+    format: 'pdf',
+    label: 'PDF',
+    accept: 'application/pdf',
+    helper: 'Optional print or approval file.',
+  },
 ];
 
 const TRANSPARENT_PREVIEW_STYLE: React.CSSProperties = {
@@ -137,13 +169,9 @@ export function CorporateIdentityTab() {
     }
   }, []);
 
-  useEffect(() => { loadSummary(); }, [loadSummary]);
-
-  const formatDate = (d: string | null) => {
-    if (!d) return 'Never';
-    try { return new Date(d).toLocaleDateString('en-ZA', { day: 'numeric', month: 'short', year: 'numeric' }); }
-    catch { return 'Unknown'; }
-  };
+  useEffect(() => {
+    loadSummary();
+  }, [loadSummary]);
 
   return (
     <div className="space-y-6">
@@ -163,8 +191,8 @@ export function CorporateIdentityTab() {
           const value = loading
             ? null
             : key === 'lastUpdated'
-            ? formatDate(summary?.lastUpdated ?? null)
-            : summary?.[key as keyof BrandSummary] ?? 0;
+              ? formatDate(summary?.lastUpdated ?? null)
+              : (summary?.[key as keyof BrandSummary] ?? 0);
           return (
             <Card key={key}>
               <CardContent className="pt-4 pb-4">
@@ -234,7 +262,13 @@ export function CorporateIdentityTab() {
           <CollateralSection onUpdate={loadSummary} />
         </TabsContent>
         <TabsContent value="signatures">
-          <React.Suspense fallback={<div className="flex items-center justify-center py-12"><Loader2 className="h-6 w-6 animate-spin text-purple-600" /></div>}>
+          <React.Suspense
+            fallback={
+              <div className="flex items-center justify-center py-12">
+                <Loader2 className="h-6 w-6 animate-spin text-purple-600" />
+              </div>
+            }
+          >
             <EmailSignatureGenerator />
           </React.Suspense>
         </TabsContent>
@@ -264,7 +298,8 @@ function LogosSection({ onUpdate }: { onUpdate: () => void }) {
   const [selectedVariant, setSelectedVariant] = useState<string>(LOGO_VARIANTS[0].value);
   const [isUploadSlotLocked, setIsUploadSlotLocked] = useState(false);
   const [usageNotes, setUsageNotes] = useState('');
-  const [uploadFiles, setUploadFiles] = useState<Partial<Record<LogoAssetFormat, File | null>>>(createEmptyUploadFiles);
+  const [uploadFiles, setUploadFiles] =
+    useState<Partial<Record<LogoAssetFormat, File | null>>>(createEmptyUploadFiles);
   const [uploading, setUploading] = useState(false);
   const [previewTarget, setPreviewTarget] = useState<{
     logo: LogoEntry;
@@ -283,34 +318,42 @@ function LogosSection({ onUpdate }: { onUpdate: () => void }) {
     }
   }, []);
 
-  useEffect(() => { loadLogos(); }, [loadLogos]);
+  useEffect(() => {
+    loadLogos();
+  }, [loadLogos]);
 
-  const logosByVariant = useMemo(
-    () => new Map(logos.map((logo) => [logo.variant, logo])),
-    [logos],
-  );
+  const logosByVariant = useMemo(() => new Map(logos.map((logo) => [logo.variant, logo])), [logos]);
 
   const selectedVariantConfig = useMemo(
     () => LOGO_VARIANTS.find((variant) => variant.value === selectedVariant) ?? LOGO_VARIANTS[0],
     [selectedVariant],
   );
 
-  const openUploadDialog = useCallback((variant: string, options?: { lockSlot?: boolean }) => {
-    const existingLogo = logosByVariant.get(variant as LogoEntry['variant']);
-    setSelectedVariant(variant);
-    setUploadFiles(createEmptyUploadFiles());
-    setUsageNotes(existingLogo?.usageNotes ?? '');
-    setIsUploadSlotLocked(options?.lockSlot ?? false);
-    setUploadOpen(true);
-  }, [logosByVariant]);
+  const openUploadDialog = useCallback(
+    (variant: string, options?: { lockSlot?: boolean }) => {
+      const existingLogo = logosByVariant.get(variant as LogoEntry['variant']);
+      setSelectedVariant(variant);
+      setUploadFiles(createEmptyUploadFiles());
+      setUsageNotes(existingLogo?.usageNotes ?? '');
+      setIsUploadSlotLocked(options?.lockSlot ?? false);
+      setUploadOpen(true);
+    },
+    [logosByVariant],
+  );
 
   const handleUpload = async () => {
     const hasSelectedFile = Object.values(uploadFiles).some(Boolean);
     if (!hasSelectedFile) return;
     setUploading(true);
     try {
-      const variantLabel = LOGO_VARIANTS.find(v => v.value === selectedVariant)?.label || selectedVariant;
-      const updated = await brandApi.uploadLogo(uploadFiles, selectedVariant, variantLabel, usageNotes);
+      const variantLabel =
+        LOGO_VARIANTS.find((v) => v.value === selectedVariant)?.label || selectedVariant;
+      const updated = await brandApi.uploadLogo(
+        uploadFiles,
+        selectedVariant,
+        variantLabel,
+        usageNotes,
+      );
       setLogos(updated);
       setUploadOpen(false);
       setUploadFiles(createEmptyUploadFiles());
@@ -358,7 +401,10 @@ function LogosSection({ onUpdate }: { onUpdate: () => void }) {
 
     if (logo.signedUrl && logo.mimeType.startsWith('image/')) {
       return (
-        <div className="flex h-full w-full items-center justify-center rounded-lg p-3" style={TRANSPARENT_PREVIEW_STYLE}>
+        <div
+          className="flex h-full w-full items-center justify-center rounded-lg p-3"
+          style={TRANSPARENT_PREVIEW_STYLE}
+        >
           <img
             src={logo.signedUrl}
             alt={logo.label}
@@ -371,7 +417,9 @@ function LogosSection({ onUpdate }: { onUpdate: () => void }) {
     return (
       <div className="flex h-full w-full flex-col items-center justify-center gap-2 rounded-lg border border-dashed border-slate-300 bg-slate-50 px-4 text-center text-slate-600">
         <FileText className="h-6 w-6" />
-        <span className="text-xs font-medium uppercase tracking-wide">{logo.mimeType === 'application/pdf' ? 'PDF Asset' : 'Preview unavailable'}</span>
+        <span className="text-xs font-medium uppercase tracking-wide">
+          {logo.mimeType === 'application/pdf' ? 'PDF Asset' : 'Preview unavailable'}
+        </span>
         <span className="text-[11px] text-muted-foreground">{logo.fileName}</span>
       </div>
     );
@@ -384,17 +432,26 @@ function LogosSection({ onUpdate }: { onUpdate: () => void }) {
       <div className="flex items-center justify-between">
         <div>
           <h3 className="text-base font-semibold">Logo Library</h3>
-          <p className="text-sm text-muted-foreground">Manage each logo slot by theme, including quick preview, detailed preview, download, and replacement uploads.</p>
+          <p className="text-sm text-muted-foreground">
+            Manage each logo slot by theme, including quick preview, detailed preview, download, and
+            replacement uploads.
+          </p>
         </div>
-        <Button size="sm" className="bg-purple-600 hover:bg-purple-700" onClick={() => openUploadDialog(LOGO_VARIANTS[0].value)}>
-            <Upload className="h-4 w-4 mr-1.5" />
-            Upload Asset
+        <Button
+          size="sm"
+          className="bg-purple-600 hover:bg-purple-700"
+          onClick={() => openUploadDialog(LOGO_VARIANTS[0].value)}
+        >
+          <Upload className="h-4 w-4 mr-1.5" />
+          Upload Asset
         </Button>
       </div>
 
       <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
         {LOGO_THEME_GROUPS.map((themeGroup) => {
-          const themeVariants = LOGO_VARIANTS.filter((variant) => variant.theme === themeGroup.value);
+          const themeVariants = LOGO_VARIANTS.filter(
+            (variant) => variant.theme === themeGroup.value,
+          );
           return (
             <Card key={themeGroup.value}>
               <CardHeader className="pb-4">
@@ -432,7 +489,12 @@ function LogosSection({ onUpdate }: { onUpdate: () => void }) {
                               {logo?.signedUrl && (
                                 <Tooltip>
                                   <TooltipTrigger asChild>
-                                    <a href={logo.signedUrl} download={logo.fileName} target="_blank" rel="noopener noreferrer">
+                                    <a
+                                      href={logo.signedUrl}
+                                      download={logo.fileName}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                    >
                                       <Button
                                         size="icon"
                                         variant="ghost"
@@ -451,7 +513,9 @@ function LogosSection({ onUpdate }: { onUpdate: () => void }) {
                                     size="icon"
                                     variant="ghost"
                                     className="h-7 w-7 text-blue-500 hover:text-blue-600 hover:bg-blue-50"
-                                    onClick={() => openUploadDialog(variant.value, { lockSlot: true })}
+                                    onClick={() =>
+                                      openUploadDialog(variant.value, { lockSlot: true })
+                                    }
                                   >
                                     <Upload className="h-3.5 w-3.5" />
                                   </Button>
@@ -478,7 +542,11 @@ function LogosSection({ onUpdate }: { onUpdate: () => void }) {
 
                           <button
                             type="button"
-                            onClick={() => logo ? setPreviewTarget({ logo, variant }) : openUploadDialog(variant.value, { lockSlot: true })}
+                            onClick={() =>
+                              logo
+                                ? setPreviewTarget({ logo, variant })
+                                : openUploadDialog(variant.value, { lockSlot: true })
+                            }
                             className="w-full rounded-lg flex items-center justify-center h-28 transition-colors"
                           >
                             {renderLogoPreview(logo, `Upload ${variant.label}`)}
@@ -493,18 +561,25 @@ function LogosSection({ onUpdate }: { onUpdate: () => void }) {
                               {logo.assets?.length > 0 && (
                                 <div className="flex flex-wrap gap-1.5">
                                   {logo.assets.map((asset) => (
-                                    <Badge key={`${logo.id}-${asset.format}`} variant="outline" className="text-[10px] uppercase">
+                                    <Badge
+                                      key={`${logo.id}-${asset.format}`}
+                                      variant="outline"
+                                      className="text-[10px] uppercase"
+                                    >
                                       {asset.format}
                                     </Badge>
                                   ))}
                                 </div>
                               )}
                               {logo.usageNotes && (
-                                <p className="text-xs text-muted-foreground bg-gray-50 rounded px-2 py-1.5">{logo.usageNotes}</p>
+                                <p className="text-xs text-muted-foreground bg-gray-50 rounded px-2 py-1.5">
+                                  {logo.usageNotes}
+                                </p>
                               )}
                               {logo.previousVersions && logo.previousVersions.length > 0 && (
                                 <Badge variant="outline" className="text-[10px]">
-                                  {logo.previousVersions.length} previous version{logo.previousVersions.length > 1 ? 's' : ''}
+                                  {logo.previousVersions.length} previous version
+                                  {logo.previousVersions.length > 1 ? 's' : ''}
                                 </Badge>
                               )}
                             </div>
@@ -545,9 +620,11 @@ function LogosSection({ onUpdate }: { onUpdate: () => void }) {
               <div className="space-y-2">
                 <Label>Upload Slot</Label>
                 <Select value={selectedVariant} onValueChange={setSelectedVariant}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
                   <SelectContent>
-                    {LOGO_VARIANTS.map(v => (
+                    {LOGO_VARIANTS.map((v) => (
                       <SelectItem key={v.value} value={v.value}>
                         {`${v.theme === 'light' ? 'Light' : 'Dark'} - ${v.label}`}
                       </SelectItem>
@@ -563,16 +640,20 @@ function LogosSection({ onUpdate }: { onUpdate: () => void }) {
                   <Input
                     type="file"
                     accept={field.accept}
-                    onChange={(e) => setUploadFiles((current) => ({
-                      ...current,
-                      [field.format]: e.target.files?.[0] || null,
-                    }))}
+                    onChange={(e) =>
+                      setUploadFiles((current) => ({
+                        ...current,
+                        [field.format]: e.target.files?.[0] || null,
+                      }))
+                    }
                   />
                   <p className="text-xs text-muted-foreground">{field.helper}</p>
                 </div>
               ))}
             </div>
-            <p className="text-xs text-muted-foreground">Transparent PNG is used for the card preview whenever one is provided.</p>
+            <p className="text-xs text-muted-foreground">
+              Transparent PNG is used for the card preview whenever one is provided.
+            </p>
             <div className="space-y-2">
               <Label>Usage Notes (optional)</Label>
               <Textarea
@@ -584,13 +665,19 @@ function LogosSection({ onUpdate }: { onUpdate: () => void }) {
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => handleUploadDialogChange(false)}>Cancel</Button>
+            <Button variant="outline" onClick={() => handleUploadDialogChange(false)}>
+              Cancel
+            </Button>
             <Button
               className="bg-purple-600 hover:bg-purple-700"
               onClick={handleUpload}
               disabled={!Object.values(uploadFiles).some(Boolean) || uploading}
             >
-              {uploading ? <Loader2 className="h-4 w-4 mr-1.5 animate-spin" /> : <Upload className="h-4 w-4 mr-1.5" />}
+              {uploading ? (
+                <Loader2 className="h-4 w-4 mr-1.5 animate-spin" />
+              ) : (
+                <Upload className="h-4 w-4 mr-1.5" />
+              )}
               Upload
             </Button>
           </DialogFooter>
@@ -614,7 +701,8 @@ function LogosSection({ onUpdate }: { onUpdate: () => void }) {
               <div className="space-y-4 py-2">
                 <div className="rounded-xl min-h-[360px] p-8" style={TRANSPARENT_PREVIEW_STYLE}>
                   <div className="flex min-h-[296px] items-center justify-center rounded-xl border border-slate-200 bg-white/70 p-8 backdrop-blur-sm">
-                    {previewTarget.logo.signedUrl && previewTarget.logo.mimeType.startsWith('image/') ? (
+                    {previewTarget.logo.signedUrl &&
+                    previewTarget.logo.mimeType.startsWith('image/') ? (
                       <img
                         src={previewTarget.logo.signedUrl}
                         alt={previewTarget.logo.label}
@@ -624,32 +712,43 @@ function LogosSection({ onUpdate }: { onUpdate: () => void }) {
                       <div className="flex flex-col items-center gap-3 text-center text-slate-600">
                         <FileText className="h-10 w-10" />
                         <p className="text-sm font-medium">{previewTarget.logo.fileName}</p>
-                        <p className="text-xs text-muted-foreground">This asset type does not render inline here. Use the download action below.</p>
+                        <p className="text-xs text-muted-foreground">
+                          This asset type does not render inline here. Use the download action
+                          below.
+                        </p>
                       </div>
                     )}
                   </div>
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
                   <div className="rounded-lg border p-3">
-                    <p className="text-xs uppercase tracking-wide text-muted-foreground mb-1">File</p>
+                    <p className="text-xs uppercase tracking-wide text-muted-foreground mb-1">
+                      File
+                    </p>
                     <p className="font-medium break-all">{previewTarget.logo.fileName}</p>
                   </div>
                   <div className="rounded-lg border p-3">
-                    <p className="text-xs uppercase tracking-wide text-muted-foreground mb-1">Size</p>
+                    <p className="text-xs uppercase tracking-wide text-muted-foreground mb-1">
+                      Size
+                    </p>
                     <p className="font-medium">{`${(previewTarget.logo.fileSize / 1024).toFixed(0)} KB`}</p>
                   </div>
                 </div>
                 {previewTarget.logo.usageNotes && (
                   <div className="rounded-lg border p-3">
-                    <p className="text-xs uppercase tracking-wide text-muted-foreground mb-1">Usage Notes</p>
+                    <p className="text-xs uppercase tracking-wide text-muted-foreground mb-1">
+                      Usage Notes
+                    </p>
                     <p className="text-sm text-muted-foreground">{previewTarget.logo.usageNotes}</p>
                   </div>
                 )}
                 {previewTarget.logo.assets?.length > 0 && (
                   <div className="rounded-lg border p-3 space-y-3">
-                    <p className="text-xs uppercase tracking-wide text-muted-foreground">Available Files</p>
+                    <p className="text-xs uppercase tracking-wide text-muted-foreground">
+                      Available Files
+                    </p>
                     <div className="flex flex-wrap gap-2">
-                      {previewTarget.logo.assets.map((asset) => (
+                      {previewTarget.logo.assets.map((asset) =>
                         asset.signedUrl ? (
                           <a
                             key={`${previewTarget.logo.id}-${asset.format}`}
@@ -663,15 +762,20 @@ function LogosSection({ onUpdate }: { onUpdate: () => void }) {
                               {asset.format}
                             </Button>
                           </a>
-                        ) : null
-                      ))}
+                        ) : null,
+                      )}
                     </div>
                   </div>
                 )}
               </div>
               <DialogFooter>
                 {previewTarget.logo.signedUrl && (
-                  <a href={previewTarget.logo.signedUrl} download={previewTarget.logo.fileName} target="_blank" rel="noopener noreferrer">
+                  <a
+                    href={previewTarget.logo.signedUrl}
+                    download={previewTarget.logo.fileName}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
                     <Button variant="outline">
                       <Download className="h-4 w-4 mr-1.5" />
                       Download
@@ -707,7 +811,9 @@ function ColoursSection({ onUpdate }: { onUpdate: () => void }) {
   const [saving, setSaving] = useState(false);
   const [addOpen, setAddOpen] = useState(false);
   const [newSwatch, setNewSwatch] = useState<Partial<ColourSwatch>>({
-    name: '', hex: '#6d28d9', group: 'primary',
+    name: '',
+    hex: '#6d28d9',
+    group: 'primary',
   });
   const [copiedId, setCopiedId] = useState<string | null>(null);
 
@@ -722,20 +828,9 @@ function ColoursSection({ onUpdate }: { onUpdate: () => void }) {
     }
   }, []);
 
-  useEffect(() => { loadPalette(); }, [loadPalette]);
-
-  const hexToRgb = (hex: string) => {
-    const r = parseInt(hex.slice(1, 3), 16);
-    const g = parseInt(hex.slice(3, 5), 16);
-    const b = parseInt(hex.slice(5, 7), 16);
-    return { r, g, b };
-  };
-
-  const getContrastRatio = (hex: string): number => {
-    const { r, g, b } = hexToRgb(hex);
-    const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
-    return luminance;
-  };
+  useEffect(() => {
+    loadPalette();
+  }, [loadPalette]);
 
   const handleAddSwatch = async () => {
     if (!newSwatch.name || !newSwatch.hex || !palette) return;
@@ -744,7 +839,7 @@ function ColoursSection({ onUpdate }: { onUpdate: () => void }) {
       name: newSwatch.name!,
       hex: newSwatch.hex!,
       rgb: hexToRgb(newSwatch.hex!),
-      group: newSwatch.group as ColourSwatch['group'] || 'primary',
+      group: (newSwatch.group as ColourSwatch['group']) || 'primary',
       order: palette.swatches.length,
     };
     const updated: ColourPalette = {
@@ -773,7 +868,7 @@ function ColoursSection({ onUpdate }: { onUpdate: () => void }) {
     if (!palette) return;
     const updated: ColourPalette = {
       ...palette,
-      swatches: palette.swatches.filter(s => s.id !== id),
+      swatches: palette.swatches.filter((s) => s.id !== id),
       updatedAt: new Date().toISOString(),
       updatedBy: 'admin',
     };
@@ -802,9 +897,15 @@ function ColoursSection({ onUpdate }: { onUpdate: () => void }) {
       <div className="flex items-center justify-between">
         <div>
           <h3 className="text-base font-semibold">Brand Colours</h3>
-          <p className="text-sm text-muted-foreground">Define and manage the brand colour palette.</p>
+          <p className="text-sm text-muted-foreground">
+            Define and manage the brand colour palette.
+          </p>
         </div>
-        <Button size="sm" className="bg-purple-600 hover:bg-purple-700" onClick={() => setAddOpen(true)}>
+        <Button
+          size="sm"
+          className="bg-purple-600 hover:bg-purple-700"
+          onClick={() => setAddOpen(true)}
+        >
           <Plus className="h-4 w-4 mr-1.5" />
           Add Colour
         </Button>
@@ -812,11 +913,13 @@ function ColoursSection({ onUpdate }: { onUpdate: () => void }) {
 
       {/* Colour groups */}
       {groups.map((group) => {
-        const swatches = palette?.swatches.filter(s => s.group === group) || [];
+        const swatches = palette?.swatches.filter((s) => s.group === group) || [];
         if (swatches.length === 0) return null;
         return (
           <div key={group} className="space-y-3">
-            <h4 className="text-sm font-medium capitalize text-muted-foreground">{group} Colours</h4>
+            <h4 className="text-sm font-medium capitalize text-muted-foreground">
+              {group} Colours
+            </h4>
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
               {swatches.map((swatch) => {
                 const luminance = getContrastRatio(swatch.hex);
@@ -836,7 +939,11 @@ function ColoursSection({ onUpdate }: { onUpdate: () => void }) {
                           onClick={() => copyToClipboard(swatch.hex, swatch.id + '-hex')}
                         >
                           {swatch.hex.toUpperCase()}
-                          {copiedId === swatch.id + '-hex' ? <Check className="h-3 w-3 text-green-500" /> : <Copy className="h-3 w-3" />}
+                          {copiedId === swatch.id + '-hex' ? (
+                            <Check className="h-3 w-3 text-green-500" />
+                          ) : (
+                            <Copy className="h-3 w-3" />
+                          )}
                         </button>
                         <Button
                           size="icon"
@@ -849,14 +956,26 @@ function ColoursSection({ onUpdate }: { onUpdate: () => void }) {
                       </div>
                       <button
                         className="text-[10px] text-muted-foreground font-mono hover:text-foreground transition-colors flex items-center gap-1"
-                        onClick={() => copyToClipboard(`rgb(${swatch.rgb.r}, ${swatch.rgb.g}, ${swatch.rgb.b})`, swatch.id + '-rgb')}
+                        onClick={() =>
+                          copyToClipboard(
+                            `rgb(${swatch.rgb.r}, ${swatch.rgb.g}, ${swatch.rgb.b})`,
+                            swatch.id + '-rgb',
+                          )
+                        }
                       >
                         RGB({swatch.rgb.r}, {swatch.rgb.g}, {swatch.rgb.b})
-                        {copiedId === swatch.id + '-rgb' ? <Check className="h-2.5 w-2.5 text-green-500" /> : <Copy className="h-2.5 w-2.5" />}
+                        {copiedId === swatch.id + '-rgb' ? (
+                          <Check className="h-2.5 w-2.5 text-green-500" />
+                        ) : (
+                          <Copy className="h-2.5 w-2.5" />
+                        )}
                       </button>
                       {/* Contrast indicator */}
                       <div className="flex items-center gap-1.5">
-                        <div className={`h-4 w-4 rounded text-[8px] font-bold flex items-center justify-center ${textColor}`} style={{ backgroundColor: swatch.hex }}>
+                        <div
+                          className={`h-4 w-4 rounded text-[8px] font-bold flex items-center justify-center ${textColor}`}
+                          style={{ backgroundColor: swatch.hex }}
+                        >
                           Aa
                         </div>
                         <span className="text-[10px] text-muted-foreground">
@@ -877,8 +996,14 @@ function ColoursSection({ onUpdate }: { onUpdate: () => void }) {
           <CardContent className="py-12 text-center">
             <Palette className="h-10 w-10 text-muted-foreground/30 mx-auto mb-3" />
             <p className="font-medium text-sm">No colours defined yet</p>
-            <p className="text-xs text-muted-foreground mt-1">Add your brand colours to build a consistent palette.</p>
-            <Button size="sm" className="mt-4 bg-purple-600 hover:bg-purple-700" onClick={() => setAddOpen(true)}>
+            <p className="text-xs text-muted-foreground mt-1">
+              Add your brand colours to build a consistent palette.
+            </p>
+            <Button
+              size="sm"
+              className="mt-4 bg-purple-600 hover:bg-purple-700"
+              onClick={() => setAddOpen(true)}
+            >
               <Plus className="h-4 w-4 mr-1.5" />
               Add First Colour
             </Button>
@@ -898,7 +1023,7 @@ function ColoursSection({ onUpdate }: { onUpdate: () => void }) {
               <Label>Colour Name</Label>
               <Input
                 value={newSwatch.name || ''}
-                onChange={(e) => setNewSwatch(prev => ({ ...prev, name: e.target.value }))}
+                onChange={(e) => setNewSwatch((prev) => ({ ...prev, name: e.target.value }))}
                 placeholder="e.g. Navigate Purple"
               />
             </div>
@@ -908,12 +1033,12 @@ function ColoursSection({ onUpdate }: { onUpdate: () => void }) {
                 <input
                   type="color"
                   value={newSwatch.hex || '#6d28d9'}
-                  onChange={(e) => setNewSwatch(prev => ({ ...prev, hex: e.target.value }))}
+                  onChange={(e) => setNewSwatch((prev) => ({ ...prev, hex: e.target.value }))}
                   className="h-10 w-14 rounded border cursor-pointer"
                 />
                 <Input
                   value={newSwatch.hex || ''}
-                  onChange={(e) => setNewSwatch(prev => ({ ...prev, hex: e.target.value }))}
+                  onChange={(e) => setNewSwatch((prev) => ({ ...prev, hex: e.target.value }))}
                   placeholder="#6d28d9"
                   className="font-mono"
                 />
@@ -923,9 +1048,13 @@ function ColoursSection({ onUpdate }: { onUpdate: () => void }) {
               <Label>Group</Label>
               <Select
                 value={newSwatch.group || 'primary'}
-                onValueChange={(v) => setNewSwatch(prev => ({ ...prev, group: v as ColourSwatch['group'] }))}
+                onValueChange={(v) =>
+                  setNewSwatch((prev) => ({ ...prev, group: v as ColourSwatch['group'] }))
+                }
               >
-                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="primary">Primary</SelectItem>
                   <SelectItem value="secondary">Secondary</SelectItem>
@@ -939,7 +1068,10 @@ function ColoursSection({ onUpdate }: { onUpdate: () => void }) {
             <div className="space-y-2">
               <Label>Preview</Label>
               <div className="flex items-center gap-3">
-                <div className="h-12 w-12 rounded-lg border" style={{ backgroundColor: newSwatch.hex }} />
+                <div
+                  className="h-12 w-12 rounded-lg border"
+                  style={{ backgroundColor: newSwatch.hex }}
+                />
                 <div className="space-y-1">
                   <p className="text-sm font-medium">{newSwatch.name || 'Unnamed'}</p>
                   <p className="text-xs font-mono text-muted-foreground">{newSwatch.hex}</p>
@@ -948,8 +1080,14 @@ function ColoursSection({ onUpdate }: { onUpdate: () => void }) {
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setAddOpen(false)}>Cancel</Button>
-            <Button className="bg-purple-600 hover:bg-purple-700" onClick={handleAddSwatch} disabled={!newSwatch.name || saving}>
+            <Button variant="outline" onClick={() => setAddOpen(false)}>
+              Cancel
+            </Button>
+            <Button
+              className="bg-purple-600 hover:bg-purple-700"
+              onClick={handleAddSwatch}
+              disabled={!newSwatch.name || saving}
+            >
               {saving ? <Loader2 className="h-4 w-4 mr-1.5 animate-spin" /> : null}
               Add Colour
             </Button>
@@ -969,24 +1107,37 @@ function TypographySection({ onUpdate }: { onUpdate: () => void }) {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
-  const [editFont, setEditFont] = useState({ role: 'heading', family: '', weights: '400,500,700', fallback: 'sans-serif' });
+  const [editFont, setEditFont] = useState({
+    role: 'heading',
+    family: '',
+    weights: '400,500,700',
+    fallback: 'sans-serif',
+  });
 
   const loadConfig = useCallback(async () => {
     try {
       const data = await brandApi.getTypography();
-      setConfig(data || {
-        fonts: [],
-        scale: [
-          { token: 'h1', label: 'Heading 1', size: '2.25rem', lineHeight: '2.5rem', weight: 700 },
-          { token: 'h2', label: 'Heading 2', size: '1.875rem', lineHeight: '2.25rem', weight: 600 },
-          { token: 'h3', label: 'Heading 3', size: '1.5rem', lineHeight: '2rem', weight: 600 },
-          { token: 'body', label: 'Body', size: '0.875rem', lineHeight: '1.25rem', weight: 400 },
-          { token: 'small', label: 'Small', size: '0.75rem', lineHeight: '1rem', weight: 400 },
-        ],
-        notes: '',
-        updatedAt: '',
-        updatedBy: '',
-      });
+      setConfig(
+        data || {
+          fonts: [],
+          scale: [
+            { token: 'h1', label: 'Heading 1', size: '2.25rem', lineHeight: '2.5rem', weight: 700 },
+            {
+              token: 'h2',
+              label: 'Heading 2',
+              size: '1.875rem',
+              lineHeight: '2.25rem',
+              weight: 600,
+            },
+            { token: 'h3', label: 'Heading 3', size: '1.5rem', lineHeight: '2rem', weight: 600 },
+            { token: 'body', label: 'Body', size: '0.875rem', lineHeight: '1.25rem', weight: 400 },
+            { token: 'small', label: 'Small', size: '0.75rem', lineHeight: '1rem', weight: 400 },
+          ],
+          notes: '',
+          updatedAt: '',
+          updatedBy: '',
+        },
+      );
     } catch (err) {
       console.error('Failed to load typography:', err);
     } finally {
@@ -994,7 +1145,9 @@ function TypographySection({ onUpdate }: { onUpdate: () => void }) {
     }
   }, []);
 
-  useEffect(() => { loadConfig(); }, [loadConfig]);
+  useEffect(() => {
+    loadConfig();
+  }, [loadConfig]);
 
   const handleAddFont = async () => {
     if (!config || !editFont.family) return;
@@ -1002,7 +1155,10 @@ function TypographySection({ onUpdate }: { onUpdate: () => void }) {
       id: crypto.randomUUID(),
       role: editFont.role as 'heading' | 'body' | 'mono' | 'display',
       family: editFont.family,
-      weights: editFont.weights.split(',').map(w => parseInt(w.trim())).filter(Boolean),
+      weights: editFont.weights
+        .split(',')
+        .map((w) => parseInt(w.trim()))
+        .filter(Boolean),
       fallback: editFont.fallback,
     };
     const updated: TypographyConfig = {
@@ -1030,7 +1186,7 @@ function TypographySection({ onUpdate }: { onUpdate: () => void }) {
     if (!config) return;
     const updated: TypographyConfig = {
       ...config,
-      fonts: config.fonts.filter(f => f.id !== id),
+      fonts: config.fonts.filter((f) => f.id !== id),
       updatedAt: new Date().toISOString(),
       updatedBy: 'admin',
     };
@@ -1072,7 +1228,11 @@ function TypographySection({ onUpdate }: { onUpdate: () => void }) {
           <h3 className="text-base font-semibold">Typography</h3>
           <p className="text-sm text-muted-foreground">Approved fonts, scale, and usage rules.</p>
         </div>
-        <Button size="sm" className="bg-purple-600 hover:bg-purple-700" onClick={() => setEditOpen(true)}>
+        <Button
+          size="sm"
+          className="bg-purple-600 hover:bg-purple-700"
+          onClick={() => setEditOpen(true)}
+        >
           <Plus className="h-4 w-4 mr-1.5" />
           Add Font
         </Button>
@@ -1085,8 +1245,15 @@ function TypographySection({ onUpdate }: { onUpdate: () => void }) {
             <Card key={font.id}>
               <CardContent className="pt-4 pb-4 space-y-3">
                 <div className="flex items-center justify-between">
-                  <Badge variant="outline" className="text-xs">{roleLabels[font.role] || font.role}</Badge>
-                  <Button size="icon" variant="ghost" className="h-6 w-6 text-red-400 hover:text-red-600" onClick={() => handleDeleteFont(font.id)}>
+                  <Badge variant="outline" className="text-xs">
+                    {roleLabels[font.role] || font.role}
+                  </Badge>
+                  <Button
+                    size="icon"
+                    variant="ghost"
+                    className="h-6 w-6 text-red-400 hover:text-red-600"
+                    onClick={() => handleDeleteFont(font.id)}
+                  >
                     <Trash2 className="h-3 w-3" />
                   </Button>
                 </div>
@@ -1098,7 +1265,9 @@ function TypographySection({ onUpdate }: { onUpdate: () => void }) {
                 </div>
                 <div className="flex flex-wrap gap-1.5">
                   {font.weights.map((w) => (
-                    <Badge key={w} variant="secondary" className="text-[10px] font-mono">{w}</Badge>
+                    <Badge key={w} variant="secondary" className="text-[10px] font-mono">
+                      {w}
+                    </Badge>
                   ))}
                 </div>
                 <p className="text-xs text-muted-foreground">Fallback: {font.fallback}</p>
@@ -1124,14 +1293,23 @@ function TypographySection({ onUpdate }: { onUpdate: () => void }) {
           </CardHeader>
           <CardContent className="space-y-3">
             {config.scale.map((s) => (
-              <div key={s.token} className="flex items-baseline justify-between border-b border-dashed pb-2 last:border-0 last:pb-0">
+              <div
+                key={s.token}
+                className="flex items-baseline justify-between border-b border-dashed pb-2 last:border-0 last:pb-0"
+              >
                 <div className="flex items-baseline gap-3">
-                  <Badge variant="outline" className="font-mono text-[10px] w-12 justify-center">{s.token}</Badge>
-                  <span style={{ fontSize: s.size, lineHeight: s.lineHeight, fontWeight: s.weight }}>
+                  <Badge variant="outline" className="font-mono text-[10px] w-12 justify-center">
+                    {s.token}
+                  </Badge>
+                  <span
+                    style={{ fontSize: s.size, lineHeight: s.lineHeight, fontWeight: s.weight }}
+                  >
                     {s.label}
                   </span>
                 </div>
-                <span className="text-xs font-mono text-muted-foreground">{s.size} / {s.lineHeight}</span>
+                <span className="text-xs font-mono text-muted-foreground">
+                  {s.size} / {s.lineHeight}
+                </span>
               </div>
             ))}
           </CardContent>
@@ -1142,12 +1320,16 @@ function TypographySection({ onUpdate }: { onUpdate: () => void }) {
       <Card>
         <CardHeader className="pb-3">
           <CardTitle className="text-sm">Usage Notes</CardTitle>
-          <CardDescription className="text-xs">Rules and guidelines for typography usage.</CardDescription>
+          <CardDescription className="text-xs">
+            Rules and guidelines for typography usage.
+          </CardDescription>
         </CardHeader>
         <CardContent>
           <Textarea
             value={config?.notes || ''}
-            onChange={(e) => setConfig(prev => prev ? { ...prev, notes: e.target.value } : prev)}
+            onChange={(e) =>
+              setConfig((prev) => (prev ? { ...prev, notes: e.target.value } : prev))
+            }
             onBlur={(e) => handleSaveNotes(e.target.value)}
             placeholder="e.g. Never use Light weight below 14px. Use Bold for monetary values..."
             rows={3}
@@ -1165,8 +1347,13 @@ function TypographySection({ onUpdate }: { onUpdate: () => void }) {
           <div className="space-y-4 py-2">
             <div className="space-y-2">
               <Label>Role</Label>
-              <Select value={editFont.role} onValueChange={(v) => setEditFont(prev => ({ ...prev, role: v }))}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
+              <Select
+                value={editFont.role}
+                onValueChange={(v) => setEditFont((prev) => ({ ...prev, role: v }))}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="heading">Headings</SelectItem>
                   <SelectItem value="body">Body Text</SelectItem>
@@ -1179,7 +1366,7 @@ function TypographySection({ onUpdate }: { onUpdate: () => void }) {
               <Label>Font Family</Label>
               <Input
                 value={editFont.family}
-                onChange={(e) => setEditFont(prev => ({ ...prev, family: e.target.value }))}
+                onChange={(e) => setEditFont((prev) => ({ ...prev, family: e.target.value }))}
                 placeholder="e.g. Inter, Roboto, Playfair Display"
               />
             </div>
@@ -1187,7 +1374,7 @@ function TypographySection({ onUpdate }: { onUpdate: () => void }) {
               <Label>Weights (comma-separated)</Label>
               <Input
                 value={editFont.weights}
-                onChange={(e) => setEditFont(prev => ({ ...prev, weights: e.target.value }))}
+                onChange={(e) => setEditFont((prev) => ({ ...prev, weights: e.target.value }))}
                 placeholder="400, 500, 700"
                 className="font-mono"
               />
@@ -1196,14 +1383,20 @@ function TypographySection({ onUpdate }: { onUpdate: () => void }) {
               <Label>Fallback</Label>
               <Input
                 value={editFont.fallback}
-                onChange={(e) => setEditFont(prev => ({ ...prev, fallback: e.target.value }))}
+                onChange={(e) => setEditFont((prev) => ({ ...prev, fallback: e.target.value }))}
                 placeholder="sans-serif"
               />
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setEditOpen(false)}>Cancel</Button>
-            <Button className="bg-purple-600 hover:bg-purple-700" onClick={handleAddFont} disabled={!editFont.family || saving}>
+            <Button variant="outline" onClick={() => setEditOpen(false)}>
+              Cancel
+            </Button>
+            <Button
+              className="bg-purple-600 hover:bg-purple-700"
+              onClick={handleAddFont}
+              disabled={!editFont.family || saving}
+            >
               {saving ? <Loader2 className="h-4 w-4 mr-1.5 animate-spin" /> : null}
               Add Font
             </Button>
@@ -1239,13 +1432,18 @@ function CollateralSection({ onUpdate }: { onUpdate: () => void }) {
     }
   }, []);
 
-  useEffect(() => { loadItems(); }, [loadItems]);
+  useEffect(() => {
+    loadItems();
+  }, [loadItems]);
 
   const filtered = useMemo(() => {
     let result = items;
-    if (filter !== 'all') result = result.filter(i => i.category === filter);
+    if (filter !== 'all') result = result.filter((i) => i.category === filter);
     const q = search.trim().toLowerCase();
-    if (q) result = result.filter(i => i.name.toLowerCase().includes(q) || i.description.toLowerCase().includes(q));
+    if (q)
+      result = result.filter(
+        (i) => i.name.toLowerCase().includes(q) || i.description.toLowerCase().includes(q),
+      );
     return result;
   }, [items, filter, search]);
 
@@ -1253,7 +1451,12 @@ function CollateralSection({ onUpdate }: { onUpdate: () => void }) {
     if (!file || !newItem.name) return;
     setUploading(true);
     try {
-      const updated = await brandApi.uploadCollateral(file, newItem.name, newItem.category, newItem.description);
+      const updated = await brandApi.uploadCollateral(
+        file,
+        newItem.name,
+        newItem.category,
+        newItem.description,
+      );
       setItems(updated);
       setUploadOpen(false);
       setFile(null);
@@ -1279,7 +1482,8 @@ function CollateralSection({ onUpdate }: { onUpdate: () => void }) {
     }
   };
 
-  const getCategoryLabel = (cat: string) => COLLATERAL_CATEGORIES.find(c => c.value === cat)?.label || cat;
+  const getCategoryLabel = (cat: string) =>
+    COLLATERAL_CATEGORIES.find((c) => c.value === cat)?.label || cat;
 
   const isImage = (mime: string) => mime.startsWith('image/');
 
@@ -1290,9 +1494,15 @@ function CollateralSection({ onUpdate }: { onUpdate: () => void }) {
       <div className="flex items-center justify-between">
         <div>
           <h3 className="text-base font-semibold">Brand Collateral</h3>
-          <p className="text-sm text-muted-foreground">Letterheads, banners, templates, and other brand assets.</p>
+          <p className="text-sm text-muted-foreground">
+            Letterheads, banners, templates, and other brand assets.
+          </p>
         </div>
-        <Button size="sm" className="bg-purple-600 hover:bg-purple-700" onClick={() => setUploadOpen(true)}>
+        <Button
+          size="sm"
+          className="bg-purple-600 hover:bg-purple-700"
+          onClick={() => setUploadOpen(true)}
+        >
           <Upload className="h-4 w-4 mr-1.5" />
           Upload Asset
         </Button>
@@ -1311,11 +1521,15 @@ function CollateralSection({ onUpdate }: { onUpdate: () => void }) {
             />
           </div>
           <Select value={filter} onValueChange={setFilter}>
-            <SelectTrigger className="w-[180px] h-9"><SelectValue placeholder="All Categories" /></SelectTrigger>
+            <SelectTrigger className="w-[180px] h-9">
+              <SelectValue placeholder="All Categories" />
+            </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">All Categories</SelectItem>
-              {COLLATERAL_CATEGORIES.map(c => (
-                <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>
+              {COLLATERAL_CATEGORIES.map((c) => (
+                <SelectItem key={c.value} value={c.value}>
+                  {c.label}
+                </SelectItem>
               ))}
             </SelectContent>
           </Select>
@@ -1328,8 +1542,14 @@ function CollateralSection({ onUpdate }: { onUpdate: () => void }) {
           <CardContent className="py-12 text-center">
             <FolderOpen className="h-10 w-10 text-muted-foreground/30 mx-auto mb-3" />
             <p className="font-medium text-sm">No collateral uploaded</p>
-            <p className="text-xs text-muted-foreground mt-1">Upload brand assets like letterheads, banners, and templates.</p>
-            <Button size="sm" className="mt-4 bg-purple-600 hover:bg-purple-700" onClick={() => setUploadOpen(true)}>
+            <p className="text-xs text-muted-foreground mt-1">
+              Upload brand assets like letterheads, banners, and templates.
+            </p>
+            <Button
+              size="sm"
+              className="mt-4 bg-purple-600 hover:bg-purple-700"
+              onClick={() => setUploadOpen(true)}
+            >
               <Upload className="h-4 w-4 mr-1.5" />
               Upload First Asset
             </Button>
@@ -1350,7 +1570,11 @@ function CollateralSection({ onUpdate }: { onUpdate: () => void }) {
               {/* Preview */}
               <div className="h-32 bg-gray-50 flex items-center justify-center border-b overflow-hidden relative">
                 {item.signedUrl && isImage(item.mimeType) ? (
-                  <img src={item.signedUrl} alt={item.name} className="max-h-full max-w-full object-contain" />
+                  <img
+                    src={item.signedUrl}
+                    alt={item.name}
+                    className="max-h-full max-w-full object-contain"
+                  />
                 ) : (
                   <FileText className="h-10 w-10 text-muted-foreground/30" />
                 )}
@@ -1370,7 +1594,12 @@ function CollateralSection({ onUpdate }: { onUpdate: () => void }) {
                       </Tooltip>
                       <Tooltip>
                         <TooltipTrigger asChild>
-                          <a href={item.signedUrl} download={item.fileName} target="_blank" rel="noopener noreferrer">
+                          <a
+                            href={item.signedUrl}
+                            download={item.fileName}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                          >
                             <Button size="icon" variant="secondary" className="h-8 w-8">
                               <Download className="h-3.5 w-3.5" />
                             </Button>
@@ -1398,8 +1627,12 @@ function CollateralSection({ onUpdate }: { onUpdate: () => void }) {
               <CardContent className="pt-3 pb-3 space-y-1">
                 <p className="text-sm font-medium truncate">{item.name}</p>
                 <div className="flex items-center justify-between">
-                  <Badge variant="outline" className="text-[10px]">{getCategoryLabel(item.category)}</Badge>
-                  <span className="text-[10px] text-muted-foreground">{(item.fileSize / 1024).toFixed(0)} KB</span>
+                  <Badge variant="outline" className="text-[10px]">
+                    {getCategoryLabel(item.category)}
+                  </Badge>
+                  <span className="text-[10px] text-muted-foreground">
+                    {(item.fileSize / 1024).toFixed(0)} KB
+                  </span>
                 </div>
                 {item.description && (
                   <p className="text-xs text-muted-foreground line-clamp-2">{item.description}</p>
@@ -1422,17 +1655,24 @@ function CollateralSection({ onUpdate }: { onUpdate: () => void }) {
               <Label>Asset Name</Label>
               <Input
                 value={newItem.name}
-                onChange={(e) => setNewItem(prev => ({ ...prev, name: e.target.value }))}
+                onChange={(e) => setNewItem((prev) => ({ ...prev, name: e.target.value }))}
                 placeholder="e.g. Email Header Banner - Q1 2026"
               />
             </div>
             <div className="space-y-2">
               <Label>Category</Label>
-              <Select value={newItem.category} onValueChange={(v) => setNewItem(prev => ({ ...prev, category: v }))}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
+              <Select
+                value={newItem.category}
+                onValueChange={(v) => setNewItem((prev) => ({ ...prev, category: v }))}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
                 <SelectContent>
-                  {COLLATERAL_CATEGORIES.map(c => (
-                    <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>
+                  {COLLATERAL_CATEGORIES.map((c) => (
+                    <SelectItem key={c.value} value={c.value}>
+                      {c.label}
+                    </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
@@ -1441,7 +1681,7 @@ function CollateralSection({ onUpdate }: { onUpdate: () => void }) {
               <Label>Description (optional)</Label>
               <Textarea
                 value={newItem.description}
-                onChange={(e) => setNewItem(prev => ({ ...prev, description: e.target.value }))}
+                onChange={(e) => setNewItem((prev) => ({ ...prev, description: e.target.value }))}
                 placeholder="Brief description of this asset and its intended usage..."
                 rows={2}
               />
@@ -1452,9 +1692,19 @@ function CollateralSection({ onUpdate }: { onUpdate: () => void }) {
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setUploadOpen(false)}>Cancel</Button>
-            <Button className="bg-purple-600 hover:bg-purple-700" onClick={handleUpload} disabled={!file || !newItem.name || uploading}>
-              {uploading ? <Loader2 className="h-4 w-4 mr-1.5 animate-spin" /> : <Upload className="h-4 w-4 mr-1.5" />}
+            <Button variant="outline" onClick={() => setUploadOpen(false)}>
+              Cancel
+            </Button>
+            <Button
+              className="bg-purple-600 hover:bg-purple-700"
+              onClick={handleUpload}
+              disabled={!file || !newItem.name || uploading}
+            >
+              {uploading ? (
+                <Loader2 className="h-4 w-4 mr-1.5 animate-spin" />
+              ) : (
+                <Upload className="h-4 w-4 mr-1.5" />
+              )}
               Upload
             </Button>
           </DialogFooter>
@@ -1494,7 +1744,9 @@ function GuidelinesSection({ onUpdate }: { onUpdate: () => void }) {
     }
   }, []);
 
-  useEffect(() => { loadGuidelines(); }, [loadGuidelines]);
+  useEffect(() => {
+    loadGuidelines();
+  }, [loadGuidelines]);
 
   const handleAddRule = async () => {
     if (!newRule.title) return;
@@ -1508,7 +1760,7 @@ function GuidelinesSection({ onUpdate }: { onUpdate: () => void }) {
     setSaving(true);
     try {
       await brandApi.saveGuidelineRules(rules);
-      setGuidelines(prev => prev ? { ...prev, rules } : null);
+      setGuidelines((prev) => (prev ? { ...prev, rules } : null));
       setAddRuleOpen(false);
       setNewRule({ title: '', description: '' });
       onUpdate();
@@ -1521,10 +1773,10 @@ function GuidelinesSection({ onUpdate }: { onUpdate: () => void }) {
   };
 
   const handleDeleteRule = async (id: string) => {
-    const rules = (guidelines?.rules || []).filter(r => r.id !== id);
+    const rules = (guidelines?.rules || []).filter((r) => r.id !== id);
     try {
       await brandApi.saveGuidelineRules(rules);
-      setGuidelines(prev => prev ? { ...prev, rules } : null);
+      setGuidelines((prev) => (prev ? { ...prev, rules } : null));
       onUpdate();
       toast.success('Rule removed');
     } catch (err) {
@@ -1536,7 +1788,7 @@ function GuidelinesSection({ onUpdate }: { onUpdate: () => void }) {
     setSaving(true);
     try {
       await brandApi.saveGuidelineVoice(voiceDraft);
-      setGuidelines(prev => prev ? { ...prev, voice: voiceDraft } : null);
+      setGuidelines((prev) => (prev ? { ...prev, voice: voiceDraft } : null));
       setVoiceEditing(false);
       onUpdate();
       toast.success('Brand voice saved');
@@ -1573,7 +1825,9 @@ function GuidelinesSection({ onUpdate }: { onUpdate: () => void }) {
       <div className="flex items-center justify-between">
         <div>
           <h3 className="text-base font-semibold">Brand Guidelines</h3>
-          <p className="text-sm text-muted-foreground">Quick-reference rules, brand voice, and downloadable guidelines.</p>
+          <p className="text-sm text-muted-foreground">
+            Quick-reference rules, brand voice, and downloadable guidelines.
+          </p>
         </div>
       </div>
 
@@ -1594,7 +1848,11 @@ function GuidelinesSection({ onUpdate }: { onUpdate: () => void }) {
               <Label htmlFor="pdf-upload" className="cursor-pointer">
                 <Button size="sm" variant="outline" asChild>
                   <span>
-                    {pdfUploading ? <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" /> : <Upload className="h-3.5 w-3.5 mr-1.5" />}
+                    {pdfUploading ? (
+                      <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />
+                    ) : (
+                      <Upload className="h-3.5 w-3.5 mr-1.5" />
+                    )}
                     {guidelines?.pdfFileName ? 'Replace PDF' : 'Upload PDF'}
                   </span>
                 </Button>
@@ -1630,7 +1888,9 @@ function GuidelinesSection({ onUpdate }: { onUpdate: () => void }) {
           <div className="flex items-center justify-between">
             <div>
               <CardTitle className="text-sm">Quick Reference Rules</CardTitle>
-              <CardDescription className="text-xs">Key brand rules for quick scanning.</CardDescription>
+              <CardDescription className="text-xs">
+                Key brand rules for quick scanning.
+              </CardDescription>
             </div>
             <Button size="sm" variant="outline" onClick={() => setAddRuleOpen(true)}>
               <Plus className="h-3.5 w-3.5 mr-1.5" />
@@ -1640,11 +1900,16 @@ function GuidelinesSection({ onUpdate }: { onUpdate: () => void }) {
         </CardHeader>
         <CardContent>
           {rules.length === 0 ? (
-            <p className="text-sm text-muted-foreground text-center py-6">No rules defined yet. Add quick-reference brand rules.</p>
+            <p className="text-sm text-muted-foreground text-center py-6">
+              No rules defined yet. Add quick-reference brand rules.
+            </p>
           ) : (
             <div className="space-y-3">
               {rules.map((rule) => (
-                <div key={rule.id} className="flex items-start gap-3 p-3 bg-gray-50 rounded-lg group">
+                <div
+                  key={rule.id}
+                  className="flex items-start gap-3 p-3 bg-gray-50 rounded-lg group"
+                >
                   <AlertCircle className="h-4 w-4 text-purple-500 mt-0.5 flex-shrink-0" />
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-medium">{rule.title}</p>
@@ -1673,17 +1938,33 @@ function GuidelinesSection({ onUpdate }: { onUpdate: () => void }) {
           <div className="flex items-center justify-between">
             <div>
               <CardTitle className="text-sm">Brand Voice</CardTitle>
-              <CardDescription className="text-xs">Tone, terminology, and communication style.</CardDescription>
+              <CardDescription className="text-xs">
+                Tone, terminology, and communication style.
+              </CardDescription>
             </div>
             {!voiceEditing ? (
-              <Button size="sm" variant="outline" onClick={() => { setVoiceDraft(voice); setVoiceEditing(true); }}>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => {
+                  setVoiceDraft(voice);
+                  setVoiceEditing(true);
+                }}
+              >
                 <Pencil className="h-3.5 w-3.5 mr-1.5" />
                 Edit
               </Button>
             ) : (
               <div className="flex items-center gap-2">
-                <Button size="sm" variant="outline" onClick={() => setVoiceEditing(false)}>Cancel</Button>
-                <Button size="sm" className="bg-purple-600 hover:bg-purple-700" onClick={handleSaveVoice} disabled={saving}>
+                <Button size="sm" variant="outline" onClick={() => setVoiceEditing(false)}>
+                  Cancel
+                </Button>
+                <Button
+                  size="sm"
+                  className="bg-purple-600 hover:bg-purple-700"
+                  onClick={handleSaveVoice}
+                  disabled={saving}
+                >
                   {saving ? <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" /> : null}
                   Save
                 </Button>
@@ -1698,7 +1979,7 @@ function GuidelinesSection({ onUpdate }: { onUpdate: () => void }) {
                 <Label>Tone of Voice</Label>
                 <Textarea
                   value={voiceDraft.tone}
-                  onChange={(e) => setVoiceDraft(prev => ({ ...prev, tone: e.target.value }))}
+                  onChange={(e) => setVoiceDraft((prev) => ({ ...prev, tone: e.target.value }))}
                   placeholder="e.g. Professional, approachable, knowledgeable. Avoid jargon unless speaking to industry peers..."
                   rows={3}
                 />
@@ -1707,7 +1988,9 @@ function GuidelinesSection({ onUpdate }: { onUpdate: () => void }) {
                 <Label>Preferred Terminology</Label>
                 <Textarea
                   value={voiceDraft.terminology}
-                  onChange={(e) => setVoiceDraft(prev => ({ ...prev, terminology: e.target.value }))}
+                  onChange={(e) =>
+                    setVoiceDraft((prev) => ({ ...prev, terminology: e.target.value }))
+                  }
                   placeholder="e.g. Use 'wealth planning' not 'financial planning'. Use 'clients' not 'customers'..."
                   rows={3}
                 />
@@ -1716,7 +1999,7 @@ function GuidelinesSection({ onUpdate }: { onUpdate: () => void }) {
                 <Label>Additional Notes</Label>
                 <Textarea
                   value={voiceDraft.notes}
-                  onChange={(e) => setVoiceDraft(prev => ({ ...prev, notes: e.target.value }))}
+                  onChange={(e) => setVoiceDraft((prev) => ({ ...prev, notes: e.target.value }))}
                   placeholder="Any other brand voice guidelines..."
                   rows={2}
                 />
@@ -1728,25 +2011,33 @@ function GuidelinesSection({ onUpdate }: { onUpdate: () => void }) {
                 <div className="space-y-4">
                   {voice.tone && (
                     <div>
-                      <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1">Tone</p>
+                      <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1">
+                        Tone
+                      </p>
                       <p className="text-sm">{voice.tone}</p>
                     </div>
                   )}
                   {voice.terminology && (
                     <div>
-                      <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1">Terminology</p>
+                      <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1">
+                        Terminology
+                      </p>
                       <p className="text-sm">{voice.terminology}</p>
                     </div>
                   )}
                   {voice.notes && (
                     <div>
-                      <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1">Notes</p>
+                      <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1">
+                        Notes
+                      </p>
                       <p className="text-sm">{voice.notes}</p>
                     </div>
                   )}
                 </div>
               ) : (
-                <p className="text-sm text-muted-foreground text-center py-4">No brand voice guidelines defined yet.</p>
+                <p className="text-sm text-muted-foreground text-center py-4">
+                  No brand voice guidelines defined yet.
+                </p>
               )}
             </div>
           )}
@@ -1765,7 +2056,7 @@ function GuidelinesSection({ onUpdate }: { onUpdate: () => void }) {
               <Label>Rule Title</Label>
               <Input
                 value={newRule.title}
-                onChange={(e) => setNewRule(prev => ({ ...prev, title: e.target.value }))}
+                onChange={(e) => setNewRule((prev) => ({ ...prev, title: e.target.value }))}
                 placeholder="e.g. Minimum logo size: 30mm wide"
               />
             </div>
@@ -1773,15 +2064,21 @@ function GuidelinesSection({ onUpdate }: { onUpdate: () => void }) {
               <Label>Description (optional)</Label>
               <Textarea
                 value={newRule.description}
-                onChange={(e) => setNewRule(prev => ({ ...prev, description: e.target.value }))}
+                onChange={(e) => setNewRule((prev) => ({ ...prev, description: e.target.value }))}
                 placeholder="Additional context or explanation..."
                 rows={3}
               />
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setAddRuleOpen(false)}>Cancel</Button>
-            <Button className="bg-purple-600 hover:bg-purple-700" onClick={handleAddRule} disabled={!newRule.title || saving}>
+            <Button variant="outline" onClick={() => setAddRuleOpen(false)}>
+              Cancel
+            </Button>
+            <Button
+              className="bg-purple-600 hover:bg-purple-700"
+              onClick={handleAddRule}
+              disabled={!newRule.title || saving}
+            >
               {saving ? <Loader2 className="h-4 w-4 mr-1.5 animate-spin" /> : null}
               Add Rule
             </Button>
