@@ -1,0 +1,5 @@
+# Local backstop before push. CI (quality-check.yml) is the authoritative gate;
+# this just catches issues earlier. `format:check` fails on any unformatted file;
+# `lint` exits non-zero only on ESLint *errors* (the warning backlog is allowed).
+# Bypass in an emergency with `git push --no-verify`.
+npm run format:check && npm run lint
