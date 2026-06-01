@@ -2,8 +2,11 @@
  * DocumentsTab — Render / Characterization Test (Phase 4)
  * =======================================================
  *
- * Locks the baseline render + data-fetch contract of DocumentsTab (1,885 lines,
- * a Phase 6 decomposition target) so a regression during extraction fails CI.
+ * Locks the render + data-fetch + filter behavior of DocumentsTab (a Phase 6
+ * decomposition target, now split into DocumentStatsCards / DocumentFiltersBar /
+ * DocumentList / *Dialog sub-components). Rendering WITH documents exercises
+ * those extracted children transitively, so a regression during/after the split
+ * fails CI.
  *
  * Notes:
  *   • react-quill-new is stubbed — it only renders inside closed dialogs here,
@@ -12,9 +15,11 @@
  *   • The centralized `api` client is mocked (Phase 6a routed the component's
  *     raw, anon-key fetches through it); we assert it fetches the client's
  *     documents on mount.
+ *   • The category filter is a Radix Select (unreliable under jsdom pointer
+ *     events), so filtering is exercised via the plain search input instead.
  */
 import { describe, expect, it, vi, beforeEach } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor, fireEvent } from '@testing-library/react';
 
 vi.mock('react-quill-new', () => ({
   default: () => <textarea data-testid="react-quill-stub" />,
@@ -36,6 +41,7 @@ vi.mock('@/utils/api', () => ({
 
 import { DocumentsTab } from '@/components/admin/modules/client-management/components/DocumentsTab';
 import { api } from '@/utils/api';
+import type { DocumentItem } from '@/components/admin/modules/client-management/components/documentsUtils';
 
 const selectedClient = {
   id: 'client-1',
@@ -43,6 +49,24 @@ const selectedClient = {
   lastName: 'Client',
   email: 'test@example.com',
 };
+
+function makeDoc(over: Partial<DocumentItem> = {}): DocumentItem {
+  return {
+    id: 'doc-1',
+    userId: 'client-1',
+    type: 'document',
+    title: 'Policy Schedule',
+    uploadDate: '2024-06-01T00:00:00.000Z',
+    productCategory: 'Life',
+    policyNumber: 'POL-1',
+    status: 'viewed',
+    isFavourite: false,
+    uploadedBy: 'admin-1',
+    fileName: 'policy.pdf',
+    fileSize: 1024,
+    ...over,
+  };
+}
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -70,5 +94,62 @@ describe('DocumentsTab', () => {
   it('shows a guard message when no client is selected', () => {
     render(<DocumentsTab selectedClient={undefined as unknown as typeof selectedClient} />);
     expect(screen.getByText(/Select a client to view their documents/i)).toBeTruthy();
+  });
+
+  it('renders fetched documents in the list', async () => {
+    vi.mocked(api.get).mockResolvedValueOnce({
+      documents: [
+        makeDoc({ id: 'a', title: 'Policy Schedule' }),
+        makeDoc({
+          id: 'b',
+          title: 'ID Copy',
+          productCategory: 'General',
+          policyNumber: 'GEN-2',
+          fileName: 'id.pdf',
+        }),
+      ],
+    });
+
+    render(<DocumentsTab selectedClient={selectedClient} />);
+
+    await waitFor(() => {
+      expect(screen.getByText('Policy Schedule')).toBeTruthy();
+      expect(screen.getByText('ID Copy')).toBeTruthy();
+    });
+  });
+
+  it('filters the rendered list by the search query', async () => {
+    vi.mocked(api.get).mockResolvedValueOnce({
+      documents: [
+        makeDoc({ id: 'a', title: 'Policy Schedule', fileName: 'policy.pdf' }),
+        makeDoc({ id: 'b', title: 'ID Copy', fileName: 'id.pdf', policyNumber: 'GEN-2' }),
+      ],
+    });
+
+    render(<DocumentsTab selectedClient={selectedClient} />);
+    await waitFor(() => expect(screen.getByText('ID Copy')).toBeTruthy());
+
+    fireEvent.change(screen.getByPlaceholderText(/search by title/i), {
+      target: { value: 'policy' },
+    });
+
+    await waitFor(() => {
+      expect(screen.queryByText('ID Copy')).toBeNull();
+    });
+    expect(screen.getByText('Policy Schedule')).toBeTruthy();
+    // DocumentList shows a "(Showing X of Y)" count once a filter narrows the set.
+    expect(screen.getByText(/showing 1 of 2/i)).toBeTruthy();
+  });
+
+  it('re-fetches when Refresh is clicked', async () => {
+    render(<DocumentsTab selectedClient={selectedClient} />);
+    await waitFor(() => expect(api.get).toHaveBeenCalled());
+
+    const before = vi.mocked(api.get).mock.calls.length;
+    fireEvent.click(screen.getByRole('button', { name: /refresh/i }));
+
+    await waitFor(() => {
+      expect(vi.mocked(api.get).mock.calls.length).toBeGreaterThan(before);
+    });
   });
 });
