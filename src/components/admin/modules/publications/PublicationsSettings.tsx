@@ -18,8 +18,7 @@ import {
 } from 'lucide-react';
 import { PublicationsAPI } from './api';
 import { toast } from 'sonner';
-import { projectId, publicAnonKey } from '../../../../utils/supabase/info';
-import { createClient } from '../../../../utils/supabase/client';
+import { api } from '../../../../utils/api';
 
 export function PublicationsSettings() {
   const [confirmClear, setConfirmClear] = useState(false);
@@ -39,15 +38,10 @@ export function PublicationsSettings() {
   const loadPressConfig = useCallback(async () => {
     setPressLoading(true);
     try {
-      const supabase = createClient();
-      const { data: sessionData } = await supabase.auth.getSession();
-      const token = sessionData?.session?.access_token || publicAnonKey;
-
-      const res = await fetch(
-        `https://${projectId}.supabase.co/functions/v1/make-server-91ed8379/publications/press/config`,
-        { headers: { Authorization: `Bearer ${token}` } },
-      );
-      const json = await res.json();
+      const json = await api.get<{
+        success?: boolean;
+        data?: { aum?: string; yearsInBusiness?: string; combinedExperience?: string };
+      }>('/publications/press/config');
       if (json.success && json.data) {
         setPressAum(json.data.aum || 'R500 mil+');
         setPressYears(json.data.yearsInBusiness || '15+');
@@ -67,27 +61,11 @@ export function PublicationsSettings() {
   const handleSavePressConfig = async () => {
     setPressSaving(true);
     try {
-      const supabase = createClient();
-      const { data: sessionData } = await supabase.auth.getSession();
-      const token = sessionData?.session?.access_token || publicAnonKey;
-
-      const res = await fetch(
-        `https://${projectId}.supabase.co/functions/v1/make-server-91ed8379/publications/press/config`,
-        {
-          method: 'PUT',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${token}`,
-          },
-          body: JSON.stringify({
-            aum: pressAum.trim(),
-            yearsInBusiness: pressYears.trim(),
-            combinedExperience: pressExperience.trim(),
-          }),
-        },
-      );
-      const json = await res.json();
-      if (!res.ok) throw new Error(json.error || 'Failed to save');
+      await api.put('/publications/press/config', {
+        aum: pressAum.trim(),
+        yearsInBusiness: pressYears.trim(),
+        combinedExperience: pressExperience.trim(),
+      });
       toast.success('Press page stats updated');
     } catch (err) {
       console.error('Failed to save press config:', err);
