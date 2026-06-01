@@ -112,13 +112,8 @@ import opsRoutes from './esign-ops-routes.ts';
 import webhooksRoutes from './esign-webhooks-routes.ts';
 import apiKeysRoutes from './esign-api-keys-routes.ts';
 import templatesRoutes from './esign-templates-routes.ts';
-import {
-  getActiveConsent,
-  getConsentByVersion,
-  listConsentVersions,
-  publishConsentVersion,
-  setActiveConsent,
-} from './esign-consent-registry.ts';
+import consentRoutes from './esign-consent-routes.ts';
+import { getActiveConsent, getConsentByVersion } from './esign-consent-registry.ts';
 import { runKbaCheck, getKbaStatus } from './kba-service.ts';
 import { buildEvidencePack } from './esign-evidence-export.ts';
 import {
@@ -196,6 +191,9 @@ esignRoutes.route('/', apiKeysRoutes);
 
 // --- /templates/* reusable envelope templates (esign-templates-routes.ts) ---
 esignRoutes.route('/', templatesRoutes);
+
+// --- /consent/* consent document registry (esign-consent-routes.ts) ---
+esignRoutes.route('/', consentRoutes);
 
 // Start the background expiry sweep scheduler on first module load.
 // Safe to call multiple times — internally deduped.
@@ -5636,65 +5634,6 @@ esignRoutes.post('/v1/envelopes/from-template', rateLimit('SENDER_MUTATE'), asyn
       { error: error instanceof Error ? error.message : 'Failed to create envelope' },
       500,
     );
-  }
-});
-
-// ==================== P6.4 — CONSENT REGISTRY ====================
-
-/**
- * GET /consent/active — public; signer UI uses this for legacy envelopes
- * that predate `consent_version` pinning. Returns `{ id, text }` only.
- */
-esignRoutes.get('/consent/active', async (c) => {
-  try {
-    const rec = await getActiveConsent();
-    return c.json({ id: rec.id, text: rec.text });
-  } catch (error: unknown) {
-    return c.json({ error: getErrMsg(error) }, 500);
-  }
-});
-
-/** GET /consent/versions — admin: list every published version. */
-esignRoutes.get('/consent/versions', async (c) => {
-  try {
-    await getAuthContext(c);
-    const versions = await listConsentVersions();
-    const activeId = (await getActiveConsent()).id;
-    return c.json({ active_id: activeId, versions });
-  } catch (error: unknown) {
-    const status = error instanceof AuthError ? error.statusCode : 500;
-    return c.json({ error: getErrMsg(error) }, status);
-  }
-});
-
-/** POST /consent/versions — publish & activate a new consent version. */
-esignRoutes.post('/consent/versions', rateLimit('SENDER_MUTATE'), async (c) => {
-  try {
-    const ctx = await getAuthContext(c);
-    const body = (await c.req.json().catch(() => null)) as Record<string, unknown> | null;
-    if (!body) return c.json({ error: 'Invalid JSON body' }, 400);
-    const id = String(body.id ?? '').trim();
-    const text = String(body.text ?? '').trim();
-    const summary = typeof body.summary === 'string' ? body.summary : undefined;
-    if (!id || !text) return c.json({ error: 'id and text are required' }, 400);
-    const record = await publishConsentVersion({ id, text, summary, publishedBy: ctx.user.id });
-    return c.json({ success: true, version: record }, 201);
-  } catch (error: unknown) {
-    const status = error instanceof AuthError ? error.statusCode : 400;
-    return c.json({ error: getErrMsg(error) }, status);
-  }
-});
-
-/** POST /consent/versions/:id/activate — flip the active pointer. */
-esignRoutes.post('/consent/versions/:id/activate', rateLimit('SENDER_MUTATE'), async (c) => {
-  try {
-    await getAuthContext(c);
-    const id = c.req.param('id');
-    const record = await setActiveConsent(id);
-    return c.json({ success: true, version: record });
-  } catch (error: unknown) {
-    const status = error instanceof AuthError ? error.statusCode : 400;
-    return c.json({ error: getErrMsg(error) }, status);
   }
 });
 
