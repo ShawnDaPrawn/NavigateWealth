@@ -65,8 +65,7 @@ import {
   TableRow,
 } from '../../../../ui/table';
 import { toast } from 'sonner';
-import { projectId } from '../../../../../utils/supabase/info';
-import { getEstatePlanningAuthToken } from '../utils/auth';
+import { api } from '../../../../../utils/api';
 
 // ── Constants ────────────────────────────────────────────────────
 
@@ -137,8 +136,6 @@ interface EstateDocumentsSectionProps {
 
 // ── API Base ─────────────────────────────────────────────────────
 
-const API_BASE = `https://${projectId}.supabase.co/functions/v1/make-server-91ed8379/estate-planning-fna`;
-
 // ── Component ────────────────────────────────────────────────────
 
 export function EstateDocumentsSection({
@@ -174,16 +171,9 @@ export function EstateDocumentsSection({
   const loadDocuments = async () => {
     try {
       setIsLoading(true);
-      const token = await getEstatePlanningAuthToken();
-      const response = await fetch(`${API_BASE}/estate-docs/${clientId}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-
-      if (!response.ok) {
-        throw new Error(`Failed to load estate documents: ${response.status}`);
-      }
-
-      const result = await response.json();
+      const result = await api.get<{ success?: boolean; data?: EstateDocument[] }>(
+        `/estate-planning-fna/estate-docs/${clientId}`,
+      );
       if (result.success) {
         setDocuments(result.data || []);
       }
@@ -203,7 +193,6 @@ export function EstateDocumentsSection({
 
     try {
       setIsUploading(true);
-      const token = await getEstatePlanningAuthToken();
       const formData = new FormData();
       formData.append('file', selectedFile);
       formData.append('title', title);
@@ -211,21 +200,13 @@ export function EstateDocumentsSection({
       formData.append('notes', notes);
       if (signingDate) formData.append('signingDate', signingDate);
 
-      const response = await fetch(`${API_BASE}/estate-docs/${clientId}/upload`, {
-        method: 'POST',
-        headers: { Authorization: `Bearer ${token}` },
-        body: formData,
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.error || 'Failed to upload document');
-      }
-
-      const result = await response.json();
+      const result = await api.post<{ success?: boolean; data?: EstateDocument }>(
+        `/estate-planning-fna/estate-docs/${clientId}/upload`,
+        formData,
+      );
       if (result.success) {
         toast.success('Estate document uploaded successfully');
-        setDocuments((prev) => [result.data, ...prev]);
+        setDocuments((prev) => (result.data ? [result.data, ...prev] : prev));
         resetForm();
         setUploadDialogOpen(false);
       }
@@ -240,14 +221,9 @@ export function EstateDocumentsSection({
   const handleDownload = async (doc: EstateDocument) => {
     try {
       setDownloadingDocId(doc.id);
-      const token = await getEstatePlanningAuthToken();
-      const response = await fetch(`${API_BASE}/estate-docs/${clientId}/${doc.id}/download`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-
-      if (!response.ok) throw new Error('Failed to get download URL');
-
-      const result = await response.json();
+      const result = await api.get<{ success?: boolean; url?: string }>(
+        `/estate-planning-fna/estate-docs/${clientId}/${doc.id}/download`,
+      );
       if (result.success && result.url) {
         window.open(result.url, '_blank');
       }
@@ -264,13 +240,7 @@ export function EstateDocumentsSection({
 
     try {
       setIsDeleting(true);
-      const token = await getEstatePlanningAuthToken();
-      const response = await fetch(`${API_BASE}/estate-docs/${clientId}/${deleteTarget.id}`, {
-        method: 'DELETE',
-        headers: { Authorization: `Bearer ${token}` },
-      });
-
-      if (!response.ok) throw new Error('Failed to delete document');
+      await api.delete(`/estate-planning-fna/estate-docs/${clientId}/${deleteTarget.id}`);
 
       toast.success('Estate document deleted');
       setDocuments((prev) => prev.filter((d) => d.id !== deleteTarget.id));
