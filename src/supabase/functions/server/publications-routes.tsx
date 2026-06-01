@@ -51,6 +51,7 @@ import {
   articleTrackingDetails,
   deletedArticleTrackingDetails,
   isAuthorizedPublicationsCronRequest,
+  kickArticleNotificationJob,
   PUBLICATIONS_CRON_SHARED_HEADER,
   type ArticleCategory,
   type ArticleType,
@@ -217,26 +218,6 @@ function buildCampaignFirstEmailEngagementSummary(
     publishFailed,
     publishUndelivered: publishPending,
   };
-}
-
-async function kickArticleNotificationJob(jobId: string | null | undefined) {
-  if (!jobId) return null;
-
-  try {
-    const result = await processArticleNotificationJobs({
-      jobId,
-      maxJobs: 1,
-      maxBatchesPerJob: 1,
-    });
-
-    return result.jobs[0] ?? (await getArticleNotificationJob(jobId));
-  } catch (error) {
-    log.warn('Failed to kick article notification job immediately', {
-      jobId,
-      error: error instanceof Error ? error.message : String(error),
-    });
-    return null;
-  }
 }
 
 // ============================================================================

@@ -12,6 +12,10 @@
  */
 import * as kv from './kv_store.tsx';
 import { createModuleLogger } from './stderr-logger.ts';
+import {
+  processArticleNotificationJobs,
+  getArticleNotificationJob,
+} from './publications-notification-service.ts';
 
 const log = createModuleLogger('publications-route-helpers');
 
@@ -177,5 +181,25 @@ export async function isAuthorizedPublicationsCronRequest(
       error: error instanceof Error ? error.message : String(error),
     });
     return false;
+  }
+}
+
+export async function kickArticleNotificationJob(jobId: string | null | undefined) {
+  if (!jobId) return null;
+
+  try {
+    const result = await processArticleNotificationJobs({
+      jobId,
+      maxJobs: 1,
+      maxBatchesPerJob: 1,
+    });
+
+    return result.jobs[0] ?? (await getArticleNotificationJob(jobId));
+  } catch (error) {
+    log.warn('Failed to kick article notification job immediately', {
+      jobId,
+      error: error instanceof Error ? error.message : String(error),
+    });
+    return null;
   }
 }
