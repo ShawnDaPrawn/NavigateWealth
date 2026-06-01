@@ -9,6 +9,7 @@
  * only. Behaviour-preserving; the contract suite is the guard.
  */
 import { Hono } from 'npm:hono';
+import { createModuleLogger } from './stderr-logger.ts';
 import { getAuthContext, AuthError } from './auth-mw.ts';
 import { rateLimit } from './esign-rate-limit.ts';
 import { resolveFirmId } from './esign-route-helpers.ts';
@@ -22,6 +23,8 @@ import {
   rotateApiKey,
   redactApiKey,
 } from './api-key-service.ts';
+
+const log = createModuleLogger('esign-api-keys-routes');
 
 const apiKeysRoutes = new Hono();
 

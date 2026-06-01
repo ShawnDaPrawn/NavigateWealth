@@ -10,6 +10,7 @@
  * shared esign services. Behaviour-preserving; the contract suite is the guard.
  */
 import { Hono } from 'npm:hono';
+import { createModuleLogger } from './stderr-logger.ts';
 import { rateLimit } from './esign-rate-limit.ts';
 import { requireApiKey } from './esign-route-helpers.ts';
 import {
@@ -30,6 +31,8 @@ import {
   extractPageCount,
 } from './esign-storage.ts';
 import { getTemplate, listTemplates, incrementUsageCount } from './esign-template-service.ts';
+
+const log = createModuleLogger('esign-v1-routes');
 
 const v1Routes = new Hono();
 

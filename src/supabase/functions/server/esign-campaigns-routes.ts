@@ -11,6 +11,7 @@
  * here too. Behaviour-preserving; the contract suite is the guard.
  */
 import { Hono } from 'npm:hono';
+import { createModuleLogger } from './stderr-logger.ts';
 import { getAuthContext, AuthError } from './auth-mw.ts';
 import { rateLimit } from './esign-rate-limit.ts';
 import { requireIdempotency } from './idempotency.ts';
@@ -42,6 +43,8 @@ import {
   listPacketRuns,
   cancelPacketRun,
 } from './esign-packet-service.ts';
+
+const log = createModuleLogger('esign-campaigns-routes');
 
 const campaignsRoutes = new Hono();
 

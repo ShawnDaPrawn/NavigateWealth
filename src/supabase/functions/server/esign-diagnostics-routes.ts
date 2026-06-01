@@ -11,11 +11,14 @@
  * contract suite is the guard.
  */
 import { Hono } from 'npm:hono';
+import { createModuleLogger } from './stderr-logger.ts';
 import { getAuthContext, AuthError } from './auth-mw.ts';
 import { resolveFirmId } from './esign-route-helpers.ts';
 import { runStuckAlertSweep } from './esign-stuck-alert-service.ts';
 import { searchAuditEvents } from './esign-audit-search-service.ts';
 import { runSyntheticProbe, getLatestProbe, getProbeHistory } from './esign-synthetic-probe.ts';
+
+const log = createModuleLogger('esign-diagnostics-routes');
 
 const diagnosticsRoutes = new Hono();
 

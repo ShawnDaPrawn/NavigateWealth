@@ -11,6 +11,7 @@
  * contract suite is the guard.
  */
 import { Hono } from 'npm:hono';
+import { createModuleLogger } from './stderr-logger.ts';
 import { getAuthContext, AuthError } from './auth-mw.ts';
 import { rateLimit } from './esign-rate-limit.ts';
 import { requireIdempotency } from './idempotency.ts';
@@ -30,6 +31,8 @@ import {
   getTemplateVersion,
   listTemplateVersions,
 } from './esign-template-service.ts';
+
+const log = createModuleLogger('esign-templates-routes');
 
 const templatesRoutes = new Hono();
 

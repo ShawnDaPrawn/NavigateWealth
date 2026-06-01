@@ -12,6 +12,7 @@
  * in esign-route-helpers.ts). Behaviour-preserving; the contract suite guards.
  */
 import { Hono } from 'npm:hono';
+import { createModuleLogger } from './stderr-logger.ts';
 import { getAuthContext, AuthError } from './auth-mw.ts';
 import { rateLimit } from './esign-rate-limit.ts';
 import { resolveFirmId } from './esign-route-helpers.ts';
@@ -29,6 +30,8 @@ import {
   replayDelivery as replayWebhookDelivery,
   type WebhookDeliveryStatus,
 } from './webhook-service.ts';
+
+const log = createModuleLogger('esign-webhooks-routes');
 
 const webhooksRoutes = new Hono();
 

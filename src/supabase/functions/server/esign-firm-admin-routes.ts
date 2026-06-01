@@ -11,6 +11,7 @@
  * used only here move with it. Behaviour-preserving; the contract suite guards.
  */
 import { Hono } from 'npm:hono';
+import { createModuleLogger } from './stderr-logger.ts';
 import { getAuthContext, AuthError } from './auth-mw.ts';
 import { rateLimit } from './esign-rate-limit.ts';
 import { getRequestMetadata, resolveFirmId } from './esign-route-helpers.ts';
@@ -30,6 +31,8 @@ import {
   purgeExpiredDeletedEnvelopes,
   RECOVERY_RETENTION_DAYS,
 } from './esign-recovery-bin.ts';
+
+const log = createModuleLogger('esign-firm-admin-routes');
 
 const firmAdminRoutes = new Hono();
 
