@@ -96,6 +96,7 @@ import consentRoutes from './esign-consent-routes.ts';
 import v1Routes from './esign-v1-routes.ts';
 import firmAdminRoutes from './esign-firm-admin-routes.ts';
 import campaignsRoutes from './esign-campaigns-routes.ts';
+import diagnosticsRoutes from './esign-diagnostics-routes.ts';
 import { getActiveConsent, getConsentByVersion } from './esign-consent-registry.ts';
 import { runKbaCheck, getKbaStatus } from './kba-service.ts';
 import { buildEvidencePack } from './esign-evidence-export.ts';
@@ -107,9 +108,6 @@ import {
   resolveFirmId,
 } from './esign-route-helpers.ts';
 import type { SignerRecord, FieldRecord } from './esign-route-helpers.ts';
-import { runStuckAlertSweep } from './esign-stuck-alert-service.ts';
-import { searchAuditEvents } from './esign-audit-search-service.ts';
-import { runSyntheticProbe, getLatestProbe, getProbeHistory } from './esign-synthetic-probe.ts';
 import { enqueueCompletion } from './esign-completion-queue.ts';
 // P8.6 — Per-firm signer-page branding (logo, accent colour).
 import { getFirmBranding, toPublicBranding } from './esign-branding-service.ts';
@@ -166,6 +164,9 @@ esignRoutes.route('/', firmAdminRoutes);
 
 // --- campaigns / documents-upload / packets + packet-runs (esign-campaigns-routes.ts) ---
 esignRoutes.route('/', campaignsRoutes);
+
+// --- diagnostics / ops sweeps: stuck-alert, audit-search, synthetic-probe (esign-diagnostics-routes.ts) ---
+esignRoutes.route('/', diagnosticsRoutes);
 
 // Start the background expiry sweep scheduler on first module load.
 // Safe to call multiple times — internally deduped.
@@ -4304,122 +4305,6 @@ esignRoutes.get('/envelopes/:envelopeId/evidence-pack', async (c) => {
       status,
     );
   }
-});
-
-// ==================== STUCK-ENVELOPE ALERTS (P7.2) ====================
-
-/**
- * POST /maintenance/stuck-alert-sweep — manual sweep trigger. Admins
- * can force a scan instead of waiting for the scheduler. Returns the
- * sweep summary.
- */
-esignRoutes.post('/maintenance/stuck-alert-sweep', async (c) => {
-  try {
-    await getAuthContext(c);
-    const result = await runStuckAlertSweep();
-    return c.json(result);
-  } catch (error: unknown) {
-    log.error('Manual stuck-alert sweep failed:', error);
-    const status = error instanceof AuthError ? error.statusCode : 500;
-    return c.json({ error: error instanceof Error ? error.message : 'Stuck sweep failed' }, status);
-  }
-});
-
-/**
- * POST /cron/stuck-alert-sweep — external cron trigger (CRON_SECRET
- * gated). Mirrors /maintenance/stuck-alert-sweep but without a user
- * session requirement.
- */
-esignRoutes.post('/cron/stuck-alert-sweep', async (c) => {
-  const cronSecret = Deno.env.get('CRON_SECRET');
-  const provided = c.req.header('x-cron-secret');
-  if (!cronSecret || provided !== cronSecret) {
-    return c.json({ error: 'Unauthorized' }, 401);
-  }
-  const result = await runStuckAlertSweep();
-  return c.json(result);
-});
-
-// ==================== GLOBAL AUDIT SEARCH (P7.3) ====================
-
-/**
- * GET /audit/search — firm-scoped audit log search. Supports filters:
- *   • signer_email  — exact match
- *   • action        — substring match (case-insensitive)
- *   • from, to      — ISO-8601 timestamps
- *   • envelope_id   — narrow to one envelope
- *   • limit         — default 100, max 500
- */
-esignRoutes.get('/audit/search', async (c) => {
-  try {
-    const ctx = await getAuthContext(c);
-    const firmId = resolveFirmId(ctx.user);
-    const qs = c.req.query();
-    const result = await searchAuditEvents({
-      firmId,
-      signerEmail: qs.signer_email,
-      action: qs.action,
-      from: qs.from,
-      to: qs.to,
-      envelopeId: qs.envelope_id,
-      limit: qs.limit ? Math.min(500, parseInt(qs.limit, 10) || 100) : 100,
-    });
-    return c.json(result);
-  } catch (error: unknown) {
-    log.error('Audit search failed:', error);
-    const status = error instanceof AuthError ? error.statusCode : 500;
-    return c.json(
-      { error: error instanceof Error ? error.message : 'Audit search failed' },
-      status,
-    );
-  }
-});
-
-// ==================== SYNTHETIC PROBE (P7.4) ====================
-
-/**
- * GET /diagnostics/synthetic — returns the latest probe result +
- * rolling history. Lightweight; hits KV only.
- */
-esignRoutes.get('/diagnostics/synthetic', async (c) => {
-  try {
-    await getAuthContext(c);
-    const [latest, history] = await Promise.all([getLatestProbe(), getProbeHistory()]);
-    return c.json({ latest, history });
-  } catch (error: unknown) {
-    const status = error instanceof AuthError ? error.statusCode : 500;
-    return c.json(
-      { error: error instanceof Error ? error.message : 'Failed to read probe state' },
-      status,
-    );
-  }
-});
-
-/**
- * POST /diagnostics/synthetic/run — force a probe right now and
- * return the result. Useful when we need to confirm we are healthy
- * before shipping.
- */
-esignRoutes.post('/diagnostics/synthetic/run', async (c) => {
-  try {
-    await getAuthContext(c);
-    const result = await runSyntheticProbe();
-    return c.json(result);
-  } catch (error: unknown) {
-    const status = error instanceof AuthError ? error.statusCode : 500;
-    return c.json({ error: error instanceof Error ? error.message : 'Probe failed' }, status);
-  }
-});
-
-/** External cron — avoids needing a sender session. */
-esignRoutes.post('/cron/synthetic-probe', async (c) => {
-  const cronSecret = Deno.env.get('CRON_SECRET');
-  const provided = c.req.header('x-cron-secret');
-  if (!cronSecret || provided !== cronSecret) {
-    return c.json({ error: 'Unauthorized' }, 401);
-  }
-  const result = await runSyntheticProbe();
-  return c.json(result);
 });
 
 // ==================== REMINDER CONFIG ROUTES ====================
