@@ -63,10 +63,6 @@ jobs:
         # type error fails CI. The Supabase Edge Function (Deno) source is
         # excluded here (tsconfig.typecheck.json) and must be checked separately
         # with `deno check`.
-        #
-        # Phase 7: noUnusedLocals + noUnusedParameters are now TRUE (the source
-        # tree was verified clean before enabling them). Any unused local or
-        # parameter introduced in new code will fail this check.
         shell: bash
         run: |
           set +e

@@ -4,14 +4,21 @@
  * Run locally:  npx dependency-cruiser@16 'src/**\/*.{ts,tsx}' --config .dependency-cruiser.cjs
  * CI gate:      see .github/workflows/quality-check.yml "Run dependency-cruiser"
  *
- * Two hard boundaries are enforced:
+ * Three hard boundaries are enforced:
  *
  *   1. no-cross-feature-internals
- *      Feature modules (src/components/admin/modules/<name>/) may only expose
- *      themselves through their barrel index.  Any code importing a non-index
- *      file from a *different* feature module will fail CI.
+ *      Any file inside feature module A (src/components/admin/modules/A/) may
+ *      not import internal files from feature module B — only B's barrel index.
+ *      Uses a regex backreference ($1 = module A name) to allow intra-module
+ *      imports while blocking cross-module ones.
  *
- *   2. no-spa-edge-source
+ *   2. no-outsider-admin-internals
+ *      Any file OUTSIDE src/components/admin/modules/ (e.g. src/components/client/,
+ *      src/components/pages/, etc.) may not import admin module internals either —
+ *      only through the module's public barrel index.  This broadens rule 1 to
+ *      catch callers that the backreference-based rule cannot reach.
+ *
+ *   3. no-spa-edge-source
  *      The SPA bundle must never import Supabase Edge Function (Deno) source
  *      at runtime — those routes are called over HTTP.  Type-only imports are
  *      permitted (allowTypeImports: true in eslint.config.mjs mirrors this).
@@ -31,16 +38,16 @@ module.exports = {
     {
       name: 'no-cross-feature-internals',
       comment:
-        'Feature modules communicate through their index barrel (index.tsx). ' +
-        "Reaching into another module's internal files creates hidden coupling. " +
-        "Import from the module's public index instead of its hooks/, components/, api.ts, etc.",
+        'Feature modules communicate through their index barrel (index.ts/tsx). ' +
+        "Any code inside module A reaching into module B's hooks/, components/, " +
+        'api.ts, types.ts, constants.ts etc. creates hidden coupling. ' +
+        "Import from B's public barrel instead.",
       severity: 'error',
       from: {
         // Any file inside any one named feature module (group $1 = module name).
         // `from` paths are always fully-resolved disk paths so only `src/` form needed.
         path: '^src/components/admin/modules/([^/]+)/',
-        // Exclude test files — they use absolute `@/` imports into their own module's
-        // internals for subject imports and that is acceptable.
+        // Test files may use absolute @/ imports into their own module's internals.
         pathNot: ['(\\.test\\.tsx?$|__tests__/)'],
       },
       to: {
@@ -49,12 +56,46 @@ module.exports = {
         path: '^(src|@)/components/admin/modules/',
         pathNot: [
           // Allow importing anything within the SAME module (backreference $1 = module name).
-          // Covers both src/ and @/ forms.
           '^src/components/admin/modules/$1/',
           '^@/components/admin/modules/$1/',
           // Allow importing any other module's public barrel index.
           '^src/components/admin/modules/[^/]+/index\\.tsx?$',
           '^@/components/admin/modules/[^/]+/index\\.tsx?$',
+          // index.ts (without x) is also a valid barrel
+          '^src/components/admin/modules/[^/]+/index\\.ts$',
+          '^@/components/admin/modules/[^/]+/index\\.ts$',
+        ],
+      },
+    },
+
+    {
+      name: 'no-outsider-admin-internals',
+      comment:
+        'Code outside src/components/admin/modules/ must not import admin feature ' +
+        "module internals — only through the module's public barrel (index.ts/tsx). " +
+        'Examples of forbidden imports: /hooks/useX, /components/X, /api, /types, /constants. ' +
+        'If a type or constant is needed outside the module, it should either be ' +
+        're-exported from the barrel or moved to src/shared/.',
+      severity: 'error',
+      from: {
+        // Any src/ file that is NOT inside an admin feature module
+        path: '^src/',
+        pathNot: [
+          '^src/components/admin/modules/',
+          // Test files are excluded (same rationale as no-cross-feature-internals)
+          '\\.test\\.tsx?$',
+          '__tests__/',
+        ],
+      },
+      to: {
+        // Targeting any admin feature module path …
+        path: '^(src|@)/components/admin/modules/[^/]+/',
+        // … that is NOT the barrel index
+        pathNot: [
+          '^src/components/admin/modules/[^/]+/index\\.tsx?$',
+          '^@/components/admin/modules/[^/]+/index\\.tsx?$',
+          '^src/components/admin/modules/[^/]+/index\\.ts$',
+          '^@/components/admin/modules/[^/]+/index\\.ts$',
         ],
       },
     },

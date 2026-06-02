@@ -97,19 +97,19 @@ If a file does not clearly belong in the module's structure, the module is likel
 Every module must contain:
 
 module-name/
-├── index.tsx      # Single presentation entry point (UI only) — the public barrel
-├── api.ts         # Data boundary (Supabase, external services)
-├── types.ts       # Centralised type definitions
-├── constants.ts   # Labels, mappings, configuration
-├── hooks/         # React Query hooks (only API consumers)
-│   ├── useModuleData.ts
-│   └── useModuleMutations.ts
-├── components/    # Reusable, module-scoped components
-│   ├── ModuleList.tsx
-│   ├── ModuleForm.tsx
-│   └── ModuleFilters.tsx
-├── utils.ts       # Pure utility functions (optional)
-└── README.md      # Lightweight technical documentation
+├── index.tsx # Single presentation entry point (UI only) — the public barrel
+├── api.ts # Data boundary (Supabase, external services)
+├── types.ts # Centralised type definitions
+├── constants.ts # Labels, mappings, configuration
+├── hooks/ # React Query hooks (only API consumers)
+│ ├── useModuleData.ts
+│ └── useModuleMutations.ts
+├── components/ # Reusable, module-scoped components
+│ ├── ModuleList.tsx
+│ ├── ModuleForm.tsx
+│ └── ModuleFilters.tsx
+├── utils.ts # Pure utility functions (optional)
+└── README.md # Lightweight technical documentation
 
 Mandatory files: `index.tsx`, `api.ts`, `types.ts`.
 Optional but conventional: `constants.ts`, `hooks/`, `components/`, `utils.ts`.
@@ -118,7 +118,7 @@ This structure exists for discoverability, ownership, and safe evolution.
 
 **Cross-module access rule (enforced by dependency-cruiser in CI):**
 
-Code outside a module may only import from that module's `index.tsx` barrel. Importing `api.ts`, `types.ts`, `hooks/`, `components/`, or any internal file from a *different* feature module is forbidden — it creates hidden coupling that makes decomposition risky. This is blocked at PR time by the `no-cross-feature-internals` rule in `.dependency-cruiser.cjs`.
+Code outside a module may only import from that module's `index.tsx` barrel. Importing `api.ts`, `types.ts`, `hooks/`, `components/`, or any internal file from a _different_ feature module is forbidden — it creates hidden coupling that makes decomposition risky. This is blocked at PR time by the `no-cross-feature-internals` rule in `.dependency-cruiser.cjs`.
 
 ```
 ✅  import { ClientList }   from '@/components/admin/modules/client-management';        // index barrel
