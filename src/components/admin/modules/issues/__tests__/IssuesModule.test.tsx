@@ -10,8 +10,7 @@
  * calls useQueryClient to invalidate pending-counts queries).
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { screen, waitFor } from '@/test/utils';
-import { renderWithQueryClient } from '@/test/utils';
+import { screen, waitFor, renderWithQueryClient } from '@/test/utils';
 
 vi.mock('@/components/admin/modules/issues/api', () => ({
   fetchQualityIssuesSnapshot: vi.fn(),
