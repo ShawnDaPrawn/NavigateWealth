@@ -1,3 +1,4 @@
+/* eslint-disable react-refresh/only-export-components */
 import React, { useState, Suspense } from 'react';
 import { toast } from 'sonner';
 import { Button } from '../../../ui/button';

@@ -1,3 +1,4 @@
+/* eslint-disable react-refresh/only-export-components */
 /**
  * Medical Aid FNA Module
  * South African Medical Aid Financial Needs Analysis - Gap Analysis Tool

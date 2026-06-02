@@ -1,3 +1,4 @@
+/* eslint-disable react-refresh/only-export-components */
 import React, { useState, useRef } from 'react';
 import {
   BASE_PDF_CSS,

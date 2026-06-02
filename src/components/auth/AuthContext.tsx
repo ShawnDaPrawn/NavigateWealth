@@ -1,3 +1,4 @@
+/* eslint-disable react-refresh/only-export-components */
 // Authentication Context - Global auth state management
 
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';

@@ -1,3 +1,4 @@
+/* eslint-disable react-refresh/only-export-components */
 /**
  * Route Guards for Navigate Wealth
  * Comprehensive route protection based on user role and account status

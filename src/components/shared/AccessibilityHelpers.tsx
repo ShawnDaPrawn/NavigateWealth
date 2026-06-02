@@ -1,3 +1,4 @@
+/* eslint-disable react-refresh/only-export-components */
 /**
  * AccessibilityHelpers — Shared utilities for WCAG 2.1 AA compliance
  *

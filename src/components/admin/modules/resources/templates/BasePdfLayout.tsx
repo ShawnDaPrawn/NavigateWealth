@@ -1,3 +1,4 @@
+/* eslint-disable react-refresh/only-export-components */
 import React, { ReactNode } from 'react';
 
 export const BASE_PDF_CSS = `
