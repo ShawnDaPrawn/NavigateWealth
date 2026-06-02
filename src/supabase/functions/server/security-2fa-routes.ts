@@ -194,8 +194,8 @@ app.post('/:userId/2fa/send-code', requireAuth, async (c) => {
       return c.json({ success: false, error: 'User not found' }, 404);
     }
 
-    // Use user.email from Supabase if available, otherwise fallback to provided email
-    const targetEmail = user.email || email;
+    // Use user.user.email from Supabase if available, otherwise fallback to provided email
+    const targetEmail = user.user?.email || email;
 
     if (!targetEmail) {
       log.error('❌ No email address found for user');
