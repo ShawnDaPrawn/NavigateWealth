@@ -435,7 +435,7 @@ export function PortalAutomationTab({
 
   const buildFlowDraft = (): PortalProviderFlow | null => {
     if (!flow) return null;
-    let policyListSteps = flow.navigation.policyListSteps || [];
+    let policyListSteps;
     try {
       const parsed = JSON.parse(policyListStepsJson || '[]');
       policyListSteps = Array.isArray(parsed) ? parsed : [];

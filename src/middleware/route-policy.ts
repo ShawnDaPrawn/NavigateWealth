@@ -74,7 +74,7 @@ const SPA_PATH_PATTERNS: RegExp[] = [
 const ARTICLE_PREFIX = '/resources/article/';
 
 export function normalizePathname(pathname: string): string {
-  let path = pathname;
+  let path: string;
   try {
     path = decodeURI(pathname);
   } catch {

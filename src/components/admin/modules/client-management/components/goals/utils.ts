@@ -166,13 +166,9 @@ export function calculateGoalStatus(
     const r = growthRate / 100 / 12;
     const e = escalation / 100 / 12;
 
-    let annuityFactor = 0;
-    if (Math.abs(r - e) < 0.0000001) {
-      annuityFactor = effectiveMonths * Math.pow(1 + r, effectiveMonths - 1);
-    } else {
-      annuityFactor =
-        (Math.pow(1 + r, effectiveMonths) - Math.pow(1 + e, effectiveMonths)) / (r - e);
-    }
+    const annuityFactor = Math.abs(r - e) < 0.0000001
+      ? effectiveMonths * Math.pow(1 + r, effectiveMonths - 1)
+      : (Math.pow(1 + r, effectiveMonths) - Math.pow(1 + e, effectiveMonths)) / (r - e);
 
     if (annuityFactor > 0) {
       requiredMonthlyContribution = shortfall / annuityFactor;

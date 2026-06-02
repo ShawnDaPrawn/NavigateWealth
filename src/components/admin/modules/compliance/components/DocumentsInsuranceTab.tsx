@@ -2,6 +2,7 @@ import React from 'react';
 import { ComplianceTable } from './ComplianceTable';
 import { ComplianceColumn, DocumentsInsuranceRecord } from '../types';
 import { useDocumentsInsuranceRecords } from '../hooks/useDocumentsInsuranceRecords';
+import { logger } from '../../../../../utils/logger';
 
 const columns: ComplianceColumn[] = [
   { key: 'title', label: 'Document', type: 'text' as const },
@@ -61,9 +62,9 @@ export function DocumentsInsuranceTab() {
       columns={columns}
       filters={filters}
       loading={loading}
-      onAdd={() => console.log('Add document/insurance record')}
-      onEdit={(record) => console.log('Edit record:', record)}
-      onExport={() => console.log('Export records')}
+      onAdd={() => logger.info('Add document/insurance record')}
+      onEdit={(record) => logger.info('Edit record:', { record })}
+      onExport={() => logger.info('Export records')}
     />
   );
 }

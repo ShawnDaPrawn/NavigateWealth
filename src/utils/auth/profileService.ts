@@ -1,6 +1,7 @@
 // User Profile Service - Handles profile data operations
 
 import { projectId, publicAnonKey } from '../supabase/info';
+import { logger } from '../logger';
 import { AppUser, UserProfile, UserSuspensionStatus, AccountStatus } from './types';
 import {
   AUTH_ERRORS,
@@ -147,7 +148,7 @@ async function fetchSecurityStatus(
       error instanceof Error &&
       (error.name === 'AbortError' || error.message.includes('Failed to fetch'))
     ) {
-      console.log('Security status unavailable, proceeding with default');
+      logger.debug('Security status unavailable, proceeding with default');
     } else {
       console.warn('Error fetching security status:', error);
     }
@@ -185,7 +186,7 @@ async function fetchProfileResponse(encodedKey: string, encodedEmail: string): P
         err instanceof Error &&
         (err.name === 'AbortError' || err.message.includes('Failed to fetch'))
       ) {
-        console.log(`Profile fetch timed out, retrying... (${retries} attempts left)`);
+        logger.debug('Profile fetch timed out, retrying...', { attemptsLeft: retries });
       } else {
         console.warn(`Profile fetch failed, retrying... (${retries} attempts left)`);
       }
@@ -210,7 +211,7 @@ export async function loadUserProfile(
   authAccessTokenHint?: string,
 ): Promise<AppUser> {
   try {
-    console.log('Loading user profile for:', userId, email);
+    logger.info('Loading user profile', { userId, email });
 
     if (!userId || !email) {
       console.warn('Missing userId or email for profile load, skipping fetch.');
@@ -242,7 +243,7 @@ export async function loadUserProfile(
       const result = await response.json();
       const profileData: UserProfile = result.data || result;
 
-      console.log('Profile loaded successfully:', {
+      logger.info('Profile loaded successfully', {
         role: profileData.role,
         email,
         isSuperAdmin: email.toLowerCase() === SUPER_ADMIN_EMAIL.toLowerCase(),
@@ -265,16 +266,16 @@ export async function loadUserProfile(
         preDecisionStatuses.includes(kvStatus) &&
         (supabaseStatus === 'approved' || supabaseStatus === 'declined')
       ) {
-        console.log(
-          'KV/Supabase accountStatus mismatch detected - auto-healing.',
-          `KV: "${kvStatus}", Supabase: "${supabaseStatus}".`,
-        );
+        logger.info('KV/Supabase accountStatus mismatch detected - auto-healing.', {
+          kvStatus,
+          supabaseStatus,
+        });
         profileData.accountStatus = supabaseStatus as AccountStatus;
         try {
           await updateUserProfile(userId, {
             accountStatus: supabaseStatus,
           } as Partial<UserProfile>);
-          console.log('KV profile auto-healed to', supabaseStatus);
+          logger.info('KV profile auto-healed', { supabaseStatus });
         } catch (healErr) {
           console.warn('Failed to persist KV profile auto-heal:', healErr);
         }
@@ -290,7 +291,7 @@ export async function loadUserProfile(
         (metaRole && (PERSONNEL_ROLES as readonly string[]).includes(metaRole)) || isInvited;
 
       if (isPersonnel) {
-        console.log('User is personnel - skipping client profile creation', {
+        logger.info('User is personnel - skipping client profile creation', {
           userId,
           email,
           metaRole,
@@ -310,10 +311,9 @@ export async function loadUserProfile(
         };
       }
 
-      console.log(
-        'Profile not found (or error), creating default profile. Status:',
-        response.status,
-      );
+      logger.info('Profile not found (or error), creating default profile', {
+        status: response.status,
+      });
       await createDefaultProfile(userId, email, supabaseUserData?.firstName || '');
 
       const retryResponse = await fetchProfileResponse(encodedKey, encodedEmail);
@@ -328,15 +328,13 @@ export async function loadUserProfile(
     throw new Error('Failed to load profile after creation');
   } catch (error) {
     if (error instanceof Error && error.name === 'AbortError') {
-      console.log('Profile loading timed out or aborted');
+      logger.debug('Profile loading timed out or aborted');
     } else {
       console.error('Error loading profile:', error);
     }
 
     const isSuperAdmin = email.toLowerCase() === SUPER_ADMIN_EMAIL.toLowerCase();
-    console.log(
-      'Login validation server unavailable (likely cold start or dev mode), proceeding with login.',
-    );
+    logger.info('Login validation server unavailable (likely cold start or dev mode), proceeding with login.');
 
     return {
       id: userId,
@@ -362,7 +360,7 @@ export async function createDefaultProfile(
   displayName: string = '',
 ): Promise<void> {
   try {
-    console.log('Creating default profile for user:', userId);
+    logger.info('Creating default profile for user', { userId });
 
     const response = await fetch(`${API_BASE}/profile/create-default`, {
       method: 'POST',
@@ -387,7 +385,7 @@ export async function createDefaultProfile(
       }
     } else {
       const responseData = await response.json();
-      console.log('Default profile created successfully:', responseData);
+      logger.info('Default profile created successfully', { responseData });
     }
   } catch (error) {
     console.error('Error creating default profile:', error);
@@ -419,7 +417,7 @@ export async function updateUserProfile(
       throw new Error('Failed to update profile');
     }
 
-    console.log('Profile updated successfully');
+    logger.info('Profile updated successfully');
   } catch (error) {
     console.error('Error updating profile:', error);
     throw error;
@@ -463,7 +461,7 @@ function mapProfileToAppUser(
     suspendedAt: securityStatus?.suspendedAt,
   };
 
-  console.log('Mapped profile to AppUser:', {
+  logger.info('Mapped profile to AppUser', {
     email,
     isSuperAdmin,
     profileRole: profileData.role,

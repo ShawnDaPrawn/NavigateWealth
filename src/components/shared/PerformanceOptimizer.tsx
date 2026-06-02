@@ -1,4 +1,5 @@
 import { useEffect } from 'react';
+import { logger } from '../../utils/logger';
 
 export function PerformanceOptimizer() {
   useEffect(() => {
@@ -58,12 +59,12 @@ export function PerformanceOptimizer() {
           }
         } catch (error) {
           // Skip external stylesheets that cause security errors
-          console.debug('Skipping external stylesheet optimization due to CORS');
+          logger.debug('Skipping external stylesheet optimization due to CORS');
         }
       });
     } catch (error) {
       // Silently handle CSS access errors to prevent console noise
-      console.debug('CSS optimization skipped due to security restrictions');
+      logger.debug('CSS optimization skipped due to security restrictions');
     }
 
     // Add global error handler for CSS-related security errors
@@ -72,7 +73,7 @@ export function PerformanceOptimizer() {
       // Filter out CSS security errors to reduce console noise
       const message = args[0]?.toString() || '';
       if (message.includes('cssRules') || message.includes('SecurityError')) {
-        console.debug('CSS security error suppressed:', ...args);
+        logger.debug('CSS security error suppressed', { args });
         return;
       }
       originalConsoleError.apply(console, args);

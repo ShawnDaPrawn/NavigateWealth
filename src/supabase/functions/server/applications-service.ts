@@ -953,7 +953,7 @@ export class AdminApplicationsService {
     }
 
     // Client count MUST match Client Management (same eligibility as ClientsService.getAllClients)
-    let activeUsers = 0;
+    let activeUsers: number;
 
     try {
       const { ClientsService } = await import('./client-management-service.ts');

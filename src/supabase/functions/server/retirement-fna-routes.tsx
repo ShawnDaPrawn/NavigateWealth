@@ -144,7 +144,7 @@ function performCalculations(inputs: RetirementCalcInputs, adjustments: Retireme
   const targetAnnualIncome = targetMonthlyIncome * 12;
 
   // 4. Required Capital (Future Value)
-  let requiredCapital = 0;
+  let requiredCapital: number;
   if (Math.abs(realPostReturn) < 0.000001) {
     requiredCapital = targetAnnualIncome * yearsInRetirement;
   } else {
@@ -185,7 +185,7 @@ function performCalculations(inputs: RetirementCalcInputs, adjustments: Retireme
   // 7. Solve for Additional Contribution (PMT)
   let requiredAdditionalContribution = 0;
   if (hasShortfall && months > 0) {
-    let annuityFactor = 0;
+    let annuityFactor: number;
     if (Math.abs(nominalMonthlyGrowth - nominalMonthlyEscalation) < 0.000001) {
       annuityFactor = months * Math.pow(1 + nominalMonthlyGrowth, months - 1);
     } else {

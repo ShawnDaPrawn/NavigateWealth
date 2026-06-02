@@ -5,6 +5,7 @@ import { Alert, AlertDescription } from '../ui/alert';
 import { Mail, CheckCircle2, ArrowLeft } from 'lucide-react';
 import { getCurrentUser, getSupabaseClient } from '../../utils/auth';
 import { Logo } from '../layout/Logo';
+import { logger } from '../../utils/logger';
 
 export function VerifyEmailPage() {
   const location = useLocation();
@@ -31,7 +32,7 @@ export function VerifyEmailPage() {
 
             // If already verified, redirect to dashboard
             if (user.emailConfirmed) {
-              console.log('✅ Email already verified, redirecting to dashboard...');
+              logger.info('Email already verified, redirecting to dashboard');
               setSuccess('Email already verified! Redirecting to dashboard...');
               setTimeout(() => {
                 navigate('/dashboard');

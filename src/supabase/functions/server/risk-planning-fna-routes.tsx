@@ -188,7 +188,7 @@ function calculateLifeCover(input: RiskCalcInputData) {
   const numDependants = dependants.length;
   const isSingleIncome = !spouseAverageMonthlyIncome || spouseAverageMonthlyIncome === 0;
 
-  let incomeMultiple = 0;
+  let incomeMultiple: number;
 
   if (numDependants === 0) {
     incomeMultiple = LIFE_COVER_MULTIPLES.SINGLE_NO_DEPENDANTS;

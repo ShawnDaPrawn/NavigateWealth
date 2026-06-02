@@ -1,3 +1,4 @@
+import { logger } from '../../utils/logger';
 import React, { useEffect, useRef, memo, useState } from 'react';
 
 function TradingViewEconomicCalendarWidget() {
@@ -18,30 +19,16 @@ function TradingViewEconomicCalendarWidget() {
 
       // Graceful fallback if external script fails to load
       script.onerror = () => {
-        console.debug('[TradingView] Economic calendar widget script failed to load.');
+        logger.debug('[TradingView] Economic calendar widget script failed to load.');
         setHasError(true);
       };
 
       // Calculate responsive dimensions
       const width = window.innerWidth;
-      let dimensions = { width: '100%', height: '600' };
-
-      if (width >= 1536) {
-        // 2xl
-        dimensions = { width: '100%', height: '800' };
-      } else if (width >= 1280) {
-        // xl
-        dimensions = { width: '100%', height: '700' };
-      } else if (width >= 1024) {
-        // lg
-        dimensions = { width: '100%', height: '650' };
-      } else if (width >= 768) {
-        // md
-        dimensions = { width: '100%', height: '600' };
-      } else {
-        // sm and smaller
-        dimensions = { width: '100%', height: '500' };
-      }
+      const dimensions = {
+        width: '100%',
+        height: width >= 1536 ? '800' : width >= 1280 ? '700' : width >= 1024 ? '650' : width >= 768 ? '600' : '500',
+      };
 
       script.innerHTML = JSON.stringify({
         colorTheme: 'light',

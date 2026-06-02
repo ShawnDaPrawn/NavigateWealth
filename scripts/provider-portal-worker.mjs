@@ -819,7 +819,6 @@ async function detectCloudflareChallenge(page) {
 
 async function waitForLoginReady(page, flow, timeoutMs = 30000) {
   const deadline = Date.now() + timeoutMs;
-  let lastCloudflareSample = '';
   while (Date.now() < deadline) {
     await page.waitForLoadState('domcontentloaded', { timeout: 5000 }).catch(() => undefined);
     await page.waitForLoadState('networkidle', { timeout: 2500 }).catch(() => undefined);
@@ -836,7 +835,7 @@ async function waitForLoginReady(page, flow, timeoutMs = 30000) {
     await page.waitForTimeout(1000);
   }
 
-  lastCloudflareSample = await detectCloudflareChallenge(page);
+  const lastCloudflareSample = await detectCloudflareChallenge(page);
   return {
     status: lastCloudflareSample ? 'cloudflare' : 'timeout',
     checkpoint: lastCloudflareSample,
@@ -1885,7 +1884,7 @@ async function chooseInputWithBrain(page, flow, item) {
       : 'No visible search inputs or search triggers were available for smart assist after retrying.');
   }
   const fallback = chooseDeterministicSearchCandidate(snapshot.candidates);
-  let response = null;
+  let response;
   try {
     response = await requestBrainDecision('search_input', page, flow, item, snapshot);
   } catch (error) {
@@ -1932,7 +1931,7 @@ async function chooseSearchResultWithBrain(page, flow, item) {
     throw new Error('No visible search results were available for smart assist.');
   }
   const fallback = chooseDeterministicResultCandidate(snapshot.candidates, item.policyNumber);
-  let response = null;
+  let response;
   try {
     response = await requestBrainDecision('search_result', page, flow, item, snapshot);
   } catch (error) {
@@ -2213,7 +2212,7 @@ async function runDocumentDownloadSteps(page, artifact, item, providerAdapter) {
     throw new Error(`Could not find document download action for ${artifact.label}.`);
   }
 
-  let download = null;
+  let download;
   try {
     const directDownloadPromise = page.waitForEvent('download', { timeout: directTimeout });
     await clickTarget.click();
@@ -3197,7 +3196,7 @@ async function readField(row, field) {
     return '';
   }
 
-  let value = '';
+  let value;
   if (field.attribute === 'value') {
     value = await locator.inputValue().catch(() => '');
   } else if (field.attribute && field.attribute !== 'text') {

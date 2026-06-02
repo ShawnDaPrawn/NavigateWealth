@@ -57,6 +57,7 @@ import { InvestmentINACalculationService } from '../services/investmentINACalcul
 import { toast } from 'sonner';
 import { useFormPrefill } from '../../form-prefill/useFormPrefill';
 import { isFormPrefillEnabled } from '../../../../../utils/formPrefillFeature';
+import { logger } from '../../../../../utils/logger';
 
 interface InvestmentINAWizardProps {
   open: boolean;
@@ -144,7 +145,7 @@ export function InvestmentINAWizard({
       setInputs(intakePrefill ? { ...autoPopulated, ...intakePrefill } : autoPopulated);
       toast.success('Client data loaded successfully');
     } catch (error: unknown) {
-      console.log('⚠️ Investment INA backend not available - working in client-side mode');
+      logger.info('Investment INA backend not available - working in client-side mode');
       setInputs(intakePrefill ?? {});
     } finally {
       setLoading(false);

@@ -193,7 +193,7 @@ export function requireIdempotency(opts?: { required?: boolean }): MiddlewareHan
     if (!res) return;
 
     const contentType = res.headers.get('content-type') ?? 'application/json';
-    let body = '';
+    let body: string;
     try {
       body = await res.clone().text();
     } catch (err) {

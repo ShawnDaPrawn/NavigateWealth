@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { logger } from '../../../../../utils/logger';
 import { Button } from '../../../../ui/button';
 import { Input } from '../../../../ui/input';
 import { Label } from '../../../../ui/label';
@@ -191,7 +192,7 @@ export function UploadDocumentDialog({
       for (let i = 0; i < filesToUpload.length; i++) {
         const { file, subcategory } = filesToUpload[i];
 
-        console.log(`📤 Uploading document: ${file.name}`);
+        logger.info('Uploading document', { fileName: file.name });
 
         const formData = new FormData();
 
@@ -233,7 +234,7 @@ export function UploadDocumentDialog({
           formData,
         );
 
-        console.log('✅ Document uploaded:', data.document);
+        logger.info('Document uploaded', { document: data.document });
 
         newDocIds.push(data.document.id);
 
@@ -266,7 +267,7 @@ export function UploadDocumentDialog({
     try {
       setUploading(true);
 
-      console.log(`🔗 Creating link: ${linkTitle}`);
+      logger.info('Creating link', { linkTitle });
 
       const data = await api.post<{ document: DocumentItem }>(
         `/documents/${selectedClient.id}/link`,
@@ -286,7 +287,7 @@ export function UploadDocumentDialog({
         },
       );
 
-      console.log('✅ Link created:', data.document);
+      logger.info('Link created', { document: data.document });
 
       toast.success('Link added successfully');
 

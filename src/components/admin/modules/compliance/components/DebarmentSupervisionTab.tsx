@@ -2,6 +2,7 @@ import React from 'react';
 import { ComplianceTable } from './ComplianceTable';
 import { ComplianceRecord } from '../types';
 import { useDebarmentRecords, useSupervisionRecords } from '../hooks';
+import { logger } from '../../../../../utils/logger';
 
 const columns = [
   { key: 'title', label: 'Description', type: 'text' as const },
@@ -60,9 +61,9 @@ export function DebarmentSupervisionTab() {
       records={records}
       columns={columns}
       loading={isLoading}
-      onAdd={() => console.log('Add supervision record')}
-      onEdit={(record) => console.log('Edit record:', record)}
-      onExport={() => console.log('Export records')}
+      onAdd={() => logger.info('Add supervision record')}
+      onEdit={(record) => logger.info('Edit record:', { record })}
+      onExport={() => logger.info('Export records')}
     />
   );
 }

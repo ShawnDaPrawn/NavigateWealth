@@ -9,6 +9,7 @@ import { useQuery } from '@tanstack/react-query';
 import { esignApi } from '../api';
 import type { EsignEnvelope } from '../types';
 import { QUERY_STALE_TIME, QUERY_GC_TIME } from '../constants';
+import { logger } from '../../../../../utils/logger';
 
 // ============================================================================
 // QUERY KEY FACTORY
@@ -44,9 +45,9 @@ export function useAllEnvelopes(status?: string, enabled: boolean = true) {
   return useQuery({
     queryKey: esignKeys.allEnvelopes(status),
     queryFn: async () => {
-      console.log('📡 [E-Sign Query] Fetching all envelopes...');
+      logger.debug('[E-Sign Query] Fetching all envelopes...');
       const response = await esignApi.getAllEnvelopes(status);
-      console.log(`✅ [E-Sign Query] Fetched ${response.envelopes?.length || 0} envelopes`);
+      logger.debug('[E-Sign Query] Fetched envelopes', { count: response.envelopes?.length || 0 });
       return response.envelopes || [];
     },
     staleTime: QUERY_STALE_TIME,
@@ -78,9 +79,9 @@ export function useClientEnvelopes(
   return useQuery({
     queryKey: esignKeys.clientEnvelopes(clientId),
     queryFn: async () => {
-      console.log('📡 [E-Sign Query] Fetching envelopes for client:', clientId);
+      logger.debug('[E-Sign Query] Fetching envelopes for client', { clientId });
       const response = await esignApi.getClientEnvelopes(clientId, clientEmail);
-      console.log(`✅ [E-Sign Query] Fetched ${response.envelopes?.length || 0} client envelopes`);
+      logger.debug('[E-Sign Query] Fetched client envelopes', { count: response.envelopes?.length || 0 });
       return response.envelopes || [];
     },
     staleTime: QUERY_STALE_TIME,
@@ -106,9 +107,9 @@ export function useEnvelope(envelopeId: string, enabled: boolean = true) {
   return useQuery({
     queryKey: esignKeys.envelope(envelopeId),
     queryFn: async () => {
-      console.log('📡 [E-Sign Query] Fetching envelope:', envelopeId);
+      logger.debug('[E-Sign Query] Fetching envelope', { envelopeId });
       const envelope = await esignApi.getEnvelope(envelopeId);
-      console.log('✅ [E-Sign Query] Fetched envelope:', envelope.title);
+      logger.debug('[E-Sign Query] Fetched envelope', { title: envelope.title });
       return envelope;
     },
     staleTime: QUERY_STALE_TIME,
@@ -134,9 +135,9 @@ export function useAuditTrail(envelopeId: string, enabled: boolean = false) {
   return useQuery({
     queryKey: esignKeys.auditTrail(envelopeId),
     queryFn: async () => {
-      console.log('📡 [E-Sign Query] Fetching audit trail for envelope:', envelopeId);
+      logger.debug('[E-Sign Query] Fetching audit trail for envelope', { envelopeId });
       const response = await esignApi.getAuditTrail(envelopeId);
-      console.log(`✅ [E-Sign Query] Fetched ${response.events?.length || 0} audit events`);
+      logger.debug('[E-Sign Query] Fetched audit events', { count: response.events?.length || 0 });
       return response.events || [];
     },
     staleTime: QUERY_STALE_TIME,

@@ -7,6 +7,7 @@ import {
   onAuthStateChange,
   getSupabaseClient,
 } from '../../utils/auth';
+import { logger } from '../../utils/logger';
 import {
   buildAppUserFromAuthSessionFallback,
   loadUserProfile,
@@ -95,7 +96,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // Supabase client emits INITIAL_SESSION (and SIGNED_IN) via onAuthStateChange;
   // parallel getSession() bootstrap was removed — it contended with auth and produced 30s timeouts.
   useEffect(() => {
-    console.log('🔐 Initializing auth state listener...');
+    logger.info('Initializing auth state listener...');
     let cancelled = false;
 
     const finishLoading = () => {
@@ -115,14 +116,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         if (!authUser) {
           profileHydrateInFlightRef.current.clear();
           profileLoadedForUserRef.current = null;
-          console.log('❌ No auth user');
+          logger.info('No auth user');
           setUser(null);
           logoutGuardRef.current = false;
           return;
         }
 
         if (logoutGuardRef.current) {
-          console.log('⚠️ Auth event ignored — logout in progress');
+          logger.info('Auth event ignored — logout in progress');
           return;
         }
 
@@ -134,7 +135,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         if (!hydrate) {
           hydrate = (async () => {
             try {
-              console.log('✅ Auth user detected, loading profile...');
+              logger.info('Auth user detected, loading profile...');
               let userData: AppUser;
               try {
                 userData = await promiseWithTimeout(
@@ -160,13 +161,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
               }
 
               if (cancelled || currentAuthUserRef.current !== authUser.id) {
-                console.log('⚠️ Discarding stale profile load (auth state changed)');
+                logger.info('Discarding stale profile load (auth state changed)');
                 return;
               }
 
               profileLoadedForUserRef.current = authUser.id;
               setUser(userData);
-              console.log(`👤 User loaded with role: ${userData.role}`);
+              logger.info('User loaded', { role: userData.role });
             } catch (error) {
               console.error('❌ Critical auth initialization error:', error);
               profileLoadedForUserRef.current = null;
@@ -185,7 +186,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     };
 
     const subscription = onAuthStateChange(async (authUser, { event, supabaseUser, accessToken }) => {
-      console.log('🔐 Auth pipeline event:', event);
+      logger.info('Auth pipeline event', { event });
       await resolveAuthSession(
         authUser,
         supabaseUser || accessToken ? { supabaseUser, accessToken } : undefined,
@@ -200,10 +201,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   // Listen for logout events from other tabs
   useEffect(() => {
-    console.log('🔗 Setting up cross-tab session sync...');
+    logger.info('Setting up cross-tab session sync...');
     
     const unsubscribe = onLogoutBroadcast(async () => {
-      console.log('📡 Logout broadcast received from another tab');
+      logger.info('Logout broadcast received from another tab');
       
       // Sign out in this tab without broadcasting again (to prevent infinite loop)
       try {
@@ -212,7 +213,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         profileHydrateInFlightRef.current.clear();
         await authSignOut();
         setUser(null);
-        console.log('✅ Synced logout from other tab');
+        logger.info('Synced logout from other tab');
       } catch (error) {
         console.error('❌ Error syncing logout:', error);
       }
@@ -277,9 +278,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const updatedUser = { ...user, ...userData };
       setUser(updatedUser);
       
-      console.log('📝 Updating user profile:', {
+      logger.info('Updating user profile', {
         userId: user.id,
-        updates: userData
+        updates: userData,
       });
 
       // Filter out undefined values to prevent overwriting existing KV data with undefined
@@ -307,7 +308,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       // Update database with only defined fields
       await updateUserProfile(user.id, cleanUpdates);
 
-      console.log('✅ User updated successfully');
+      logger.info('User updated successfully');
     } catch (error) {
       console.error('❌ Failed to update user:', error);
       // Revert local state on error
@@ -336,14 +337,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       profileHydrateInFlightRef.current.clear();
 
       await authSignOut();
-      console.log('✅ Logout successful on backend');
+      logger.info('Logout successful on backend');
     } catch (error) {
       // Even on error (e.g. session already expired on backend), 
       // we MUST clear local state to prevent zombie authenticated sessions.
       console.error('❌ Backend logout error (proceeding with local logout):', error);
     } finally {
       setUser(null);
-      console.log('✅ Local logout successful');
+      logger.info('Local logout successful');
       broadcastLogout();
     }
   };
@@ -359,7 +360,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       // Double-check guard after the async gap — logout may have started while we waited
       if (logoutGuardRef.current) return;
       setUser(userData);
-      console.log('✅ User data refreshed');
+      logger.info('User data refreshed');
     } catch (error) {
       console.error('❌ Failed to refresh user:', error);
       throw error;

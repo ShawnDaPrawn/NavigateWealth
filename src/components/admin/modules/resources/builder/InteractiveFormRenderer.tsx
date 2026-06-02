@@ -317,7 +317,7 @@ export const InteractiveFormRenderer = ({
 
         // Evaluate condition against current responses
         const actualValue = condVar ? responses[condVar] : undefined;
-        let conditionMet = false;
+        let conditionMet: boolean;
         switch (condOp) {
           case 'equals':
             conditionMet = String(actualValue) === String(condVal);

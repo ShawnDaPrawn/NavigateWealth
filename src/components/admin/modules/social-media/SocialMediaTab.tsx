@@ -46,6 +46,7 @@ import { AIArticleRepurposer } from './components/AIArticleRepurposer';
 import { AIBrandTemplates } from './components/AIBrandTemplates';
 import { AIAnalyticsDashboard } from './components/AIAnalyticsDashboard';
 import { DraftPosts } from './components/DraftPosts';
+import { logger } from '../../../../utils/logger';
 
 // ============================================================================
 // Helpers
@@ -178,7 +179,7 @@ export function SocialMediaTab() {
 
   const handlePostEdit = (post: SocialPost) => {
     // TODO: Implement edit functionality
-    console.log('Edit post:', post);
+    logger.info('Edit post', { post });
   };
 
   const handlePostDelete = async (postId: string) => {

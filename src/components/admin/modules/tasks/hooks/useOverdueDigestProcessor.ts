@@ -19,6 +19,7 @@
 import { useEffect, useRef, useCallback } from 'react';
 import { api } from '../../../../../utils/api/client';
 import { createClient } from '../../../../../utils/supabase/client';
+import { logger } from '../../../../../utils/logger';
 
 /** Re-check interval — 30 minutes */
 const POLL_INTERVAL_MS = 30 * 60 * 1000;
@@ -86,12 +87,10 @@ export function useOverdueDigestProcessor(options?: {
       const result = await api.post<DigestSendResponse>('/tasks-digest/send-overdue');
 
       if (result.sent && result.overdue_count && result.overdue_count > 0) {
-        console.log(
-          `[OverdueDigestProcessor] Sent digest email with ${result.overdue_count} overdue task(s)`,
-        );
+        logger.info('[OverdueDigestProcessor] Sent digest email', { overdueCount: result.overdue_count });
         onDigestSent?.(result.overdue_count);
       } else if (result.reason === 'no_overdue_tasks') {
-        console.log('[OverdueDigestProcessor] No overdue tasks — no email sent');
+        logger.info('[OverdueDigestProcessor] No overdue tasks — no email sent');
       }
     } catch (err) {
       // Silent failure — this is a background task

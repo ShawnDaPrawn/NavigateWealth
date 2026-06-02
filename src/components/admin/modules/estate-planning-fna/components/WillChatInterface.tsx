@@ -57,6 +57,7 @@ import { toast } from 'sonner';
 import { MessageRenderer } from '../../../../shared/MessageRenderer';
 import { api } from '../../../../../utils/api/client';
 import { navigateWealthPdfSaveFileName } from '../../../../../utils/pdfPrintTitle';
+import { logger } from '../../../../../utils/logger';
 
 // ── Constants ──────────────────────────────────────────────────────
 
@@ -508,7 +509,7 @@ export function WillChatInterface({
     }
 
     setAgentConnected(true);
-    console.info(`[WillChat] Agent responded via ${strategy}`, {
+    logger.info(`[WillChat] Agent responded via ${strategy}`, {
       responseId,
       replyLen: assistantReply.length,
     });

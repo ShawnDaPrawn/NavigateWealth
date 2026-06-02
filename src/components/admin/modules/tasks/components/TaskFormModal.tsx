@@ -68,6 +68,7 @@ import {
 } from 'lucide-react';
 import { DragDropContext, Droppable, Draggable, DropResult } from '@hello-pangea/dnd';
 import { toast } from 'sonner';
+import { logger } from '../../../../../utils/logger';
 
 interface Attachment {
   id: string;
@@ -390,7 +391,7 @@ export function TaskFormModal({ isOpen, onClose, task, mode, onModeChange }: Tas
           isSystem: true,
         });
         // We don't toast here to avoid spamming user, just log
-        console.log('Task Reminder email template created');
+        logger.info('Task Reminder email template created');
       }
     } catch (e) {
       console.error('Error checking/creating reminder template:', e);

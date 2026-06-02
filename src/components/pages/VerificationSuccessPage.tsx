@@ -4,6 +4,7 @@ import { Button } from '../ui/button';
 import { CheckCircle2, ArrowRight } from 'lucide-react';
 import { Logo } from '../layout/Logo';
 import { useAuth } from '../auth/AuthContext';
+import { logger } from '../../utils/logger';
 
 export default function VerificationSuccessPage() {
   const navigate = useNavigate();
@@ -30,7 +31,7 @@ export default function VerificationSuccessPage() {
         if (prev <= 1) {
           clearInterval(timer);
           const redirectPath = getRedirectPath();
-          console.log(`✅ Redirecting to ${redirectPath}`);
+          logger.info('Redirecting', { path: redirectPath });
           navigate(redirectPath, { replace: true });
           return 0;
         }

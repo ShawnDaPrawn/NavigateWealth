@@ -13,6 +13,8 @@
  * - Use `import.meta.env` directly for raw access (not recommended)
  */
 
+import { logger } from '../utils/logger';
+
 interface EnvConfig {
   // Supabase (optional - falls back to info.tsx)
   VITE_SUPABASE_URL?: string;
@@ -150,16 +152,11 @@ export function logEnvironmentInfo() {
 
   try {
     const env = getEnv();
-    console.log('🌍 Environment Configuration:');
-    console.log(`  Mode: ${env.MODE}`);
-    console.log(`  Environment: ${getEnvironment()}`);
-
-    // Note that Supabase credentials come from /utils/supabase/info.tsx
-    if (env.VITE_SUPABASE_URL) {
-      console.log(`  Supabase URL (from env): ${env.VITE_SUPABASE_URL}`);
-    } else {
-      console.log(`  Supabase URL: Using hardcoded value from /utils/supabase/info.tsx`);
-    }
+    logger.info('Environment Configuration', {
+      mode: env.MODE,
+      environment: getEnvironment(),
+      supabaseUrl: env.VITE_SUPABASE_URL || 'Using hardcoded value from /utils/supabase/info.tsx',
+    });
   } catch (error) {
     console.error('Failed to log environment info:', error);
   }

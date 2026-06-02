@@ -7,6 +7,7 @@ import React from 'react';
 import { Navigate, useLocation } from 'react-router';
 import { useAuth } from './AuthContext';
 import { PageLoader } from '../ui/page-loader';
+import { logger } from '../../utils/logger';
 
 // ============================================================================
 // TYPES
@@ -123,7 +124,7 @@ export function ProtectedRoute({ children }: { children: React.ReactNode }) {
   }
 
   if (!isAuthenticated) {
-    console.log('🔒 ProtectedRoute: Not authenticated, redirecting to login');
+    logger.info('ProtectedRoute: Not authenticated, redirecting to login');
     return <Navigate to="/login" state={{ from: location }} replace />;
   }
 
@@ -143,7 +144,7 @@ export function PublicRoute({ children }: { children: React.ReactNode }) {
 
   if (isAuthenticated) {
     const redirectPath = getAuthenticatedRedirectPath(user);
-    console.log('🔄 PublicRoute: Already authenticated, redirecting to', redirectPath);
+    logger.info('PublicRoute: Already authenticated, redirecting', { redirectPath });
     return <Navigate to={redirectPath} replace />;
   }
 
@@ -165,7 +166,7 @@ export function FlexibleRoute({ children }: { children: React.ReactNode }) {
 export function AdminRoute({ children }: { children: React.ReactNode }) {
   const { isAuthenticated, user, isLoading } = useAuth();
 
-  console.log('🔒 AdminRoute check:', {
+  logger.debug('AdminRoute check', {
     isAuthenticated,
     userRole: user?.role,
     email: user?.email,
@@ -176,17 +177,17 @@ export function AdminRoute({ children }: { children: React.ReactNode }) {
   }
 
   if (!isAuthenticated) {
-    console.log('❌ AdminRoute: Not authenticated, redirecting to login');
+    logger.info('AdminRoute: Not authenticated, redirecting to login');
     return <Navigate to="/login" replace />;
   }
 
   if (!isAdminUser(user)) {
-    console.log('❌ AdminRoute: Not an admin, redirecting to appropriate location');
+    logger.info('AdminRoute: Not an admin, redirecting to appropriate location');
     const redirectPath = getAuthenticatedRedirectPath(user);
     return <Navigate to={redirectPath} replace />;
   }
 
-  console.log('✅ AdminRoute: Admin access granted');
+  logger.info('AdminRoute: Admin access granted');
   return <div className="contents">{children}</div>;
 }
 
@@ -197,7 +198,7 @@ export function AdminRoute({ children }: { children: React.ReactNode }) {
 export function DashboardRoute({ children }: { children: React.ReactNode }) {
   const { isAuthenticated, user, isLoading } = useAuth();
 
-  console.log('🔒 DashboardRoute check:', {
+  logger.debug('DashboardRoute check', {
     isAuthenticated,
     role: user?.role,
     accountStatus: user?.accountStatus || user?.applicationStatus,
@@ -208,13 +209,13 @@ export function DashboardRoute({ children }: { children: React.ReactNode }) {
   }
 
   if (!isAuthenticated) {
-    console.log('❌ DashboardRoute: Not authenticated');
+    logger.info('DashboardRoute: Not authenticated');
     return <Navigate to="/login" replace />;
   }
 
   // Admin users can always access dashboard
   if (isAdminUser(user)) {
-    console.log('✅ DashboardRoute: Admin access granted');
+    logger.info('DashboardRoute: Admin access granted');
     return <div className="contents">{children}</div>;
   }
 
@@ -223,12 +224,12 @@ export function DashboardRoute({ children }: { children: React.ReactNode }) {
 
   // Only allow dashboard access if approved
   if (status === 'approved') {
-    console.log('✅ DashboardRoute: Approved client access granted');
+    logger.info('DashboardRoute: Approved client access granted');
     return <div className="contents">{children}</div>;
   }
 
   // Otherwise redirect to appropriate page
-  console.log('❌ DashboardRoute: Not approved, redirecting based on status:', status);
+  logger.info('DashboardRoute: Not approved, redirecting based on status', { status });
   const redirectPath = getAuthenticatedRedirectPath(user);
   return <Navigate to={redirectPath} replace />;
 }
@@ -240,7 +241,7 @@ export function DashboardRoute({ children }: { children: React.ReactNode }) {
 export function OnboardingRoute({ children }: { children: React.ReactNode }) {
   const { isAuthenticated, user, isLoading } = useAuth();
 
-  console.log('🔒 OnboardingRoute check:', {
+  logger.debug('OnboardingRoute check', {
     isAuthenticated,
     accountStatus: user?.accountStatus || user?.applicationStatus,
   });
@@ -250,7 +251,7 @@ export function OnboardingRoute({ children }: { children: React.ReactNode }) {
   }
 
   if (!isAuthenticated) {
-    console.log('❌ OnboardingRoute: Not authenticated');
+    logger.info('OnboardingRoute: Not authenticated');
     return <Navigate to="/login" replace />;
   }
 
@@ -258,12 +259,12 @@ export function OnboardingRoute({ children }: { children: React.ReactNode }) {
 
   // Only allow if status is no_application
   if (status === 'no_application' || !status) {
-    console.log('✅ OnboardingRoute: Access granted');
+    logger.info('OnboardingRoute: Access granted');
     return <div className="contents">{children}</div>;
   }
 
   // If they already have an application, redirect to appropriate location
-  console.log('❌ OnboardingRoute: Already has application, redirecting');
+  logger.info('OnboardingRoute: Already has application, redirecting');
   const redirectPath = getAuthenticatedRedirectPath(user);
   return <Navigate to={redirectPath} replace />;
 }
@@ -275,7 +276,7 @@ export function OnboardingRoute({ children }: { children: React.ReactNode }) {
 export function ApplicationRoute({ children }: { children: React.ReactNode }) {
   const { isAuthenticated, user, isLoading } = useAuth();
 
-  console.log('🔒 ApplicationRoute check:', {
+  logger.debug('ApplicationRoute check', {
     isAuthenticated,
     accountStatus: user?.accountStatus || user?.applicationStatus,
   });
@@ -285,7 +286,7 @@ export function ApplicationRoute({ children }: { children: React.ReactNode }) {
   }
 
   if (!isAuthenticated) {
-    console.log('❌ ApplicationRoute: Not authenticated');
+    logger.info('ApplicationRoute: Not authenticated');
     return <Navigate to="/login" replace />;
   }
 
@@ -293,18 +294,18 @@ export function ApplicationRoute({ children }: { children: React.ReactNode }) {
 
   // Allow access if application is in progress OR declined (can resubmit)
   if (status === 'application_in_progress' || status === 'declined') {
-    console.log('✅ ApplicationRoute: Access granted (status:', status, ')');
+    logger.info('ApplicationRoute: Access granted', { status });
     return <div className="contents">{children}</div>;
   }
 
   // If no application yet, redirect to onboarding
   if (status === 'no_application' || !status) {
-    console.log('❌ ApplicationRoute: No application started, redirecting to onboarding');
+    logger.info('ApplicationRoute: No application started, redirecting to onboarding');
     return <Navigate to="/onboarding/choose-account" replace />;
   }
 
   // Otherwise redirect to appropriate location
-  console.log('❌ ApplicationRoute: Cannot access, redirecting based on status:', status);
+  logger.info('ApplicationRoute: Cannot access, redirecting based on status', { status });
   const redirectPath = getAuthenticatedRedirectPath(user);
   return <Navigate to={redirectPath} replace />;
 }
@@ -316,7 +317,7 @@ export function ApplicationRoute({ children }: { children: React.ReactNode }) {
 export function PendingRoute({ children }: { children: React.ReactNode }) {
   const { isAuthenticated, user, isLoading } = useAuth();
 
-  console.log('🔒 PendingRoute check:', {
+  logger.debug('PendingRoute check', {
     isAuthenticated,
     accountStatus: user?.accountStatus || user?.applicationStatus,
   });
@@ -326,7 +327,7 @@ export function PendingRoute({ children }: { children: React.ReactNode }) {
   }
 
   if (!isAuthenticated) {
-    console.log('❌ PendingRoute: Not authenticated');
+    logger.info('PendingRoute: Not authenticated');
     return <Navigate to="/login" replace />;
   }
 
@@ -334,12 +335,12 @@ export function PendingRoute({ children }: { children: React.ReactNode }) {
 
   // Only allow if status is submitted_for_review
   if (status === 'submitted_for_review') {
-    console.log('✅ PendingRoute: Access granted');
+    logger.info('PendingRoute: Access granted');
     return <div className="contents">{children}</div>;
   }
 
   // Otherwise redirect to appropriate location
-  console.log('❌ PendingRoute: Not in review, redirecting based on status:', status);
+  logger.info('PendingRoute: Not in review, redirecting based on status', { status });
   const redirectPath = getAuthenticatedRedirectPath(user);
   return <Navigate to={redirectPath} replace />;
 }
@@ -351,7 +352,7 @@ export function PendingRoute({ children }: { children: React.ReactNode }) {
 export function DeclinedRoute({ children }: { children: React.ReactNode }) {
   const { isAuthenticated, user, isLoading } = useAuth();
 
-  console.log('🔒 DeclinedRoute check:', {
+  logger.debug('DeclinedRoute check', {
     isAuthenticated,
     accountStatus: user?.accountStatus || user?.applicationStatus,
   });
@@ -361,7 +362,7 @@ export function DeclinedRoute({ children }: { children: React.ReactNode }) {
   }
 
   if (!isAuthenticated) {
-    console.log('❌ DeclinedRoute: Not authenticated');
+    logger.info('DeclinedRoute: Not authenticated');
     return <Navigate to="/login" replace />;
   }
 
@@ -369,12 +370,12 @@ export function DeclinedRoute({ children }: { children: React.ReactNode }) {
 
   // Only allow if status is declined
   if (status === 'declined') {
-    console.log('✅ DeclinedRoute: Access granted');
+    logger.info('DeclinedRoute: Access granted');
     return <div className="contents">{children}</div>;
   }
 
   // Otherwise redirect to appropriate location
-  console.log('❌ DeclinedRoute: Not declined, redirecting based on status:', status);
+  logger.info('DeclinedRoute: Not declined, redirecting based on status', { status });
   const redirectPath = getAuthenticatedRedirectPath(user);
   return <Navigate to={redirectPath} replace />;
 }
@@ -394,7 +395,7 @@ export function StatusBasedRoute({
 }) {
   const { isAuthenticated, user, isLoading } = useAuth();
 
-  console.log('🔒 StatusBasedRoute check:', {
+  logger.debug('StatusBasedRoute check', {
     isAuthenticated,
     requiredStatus,
     currentStatus: user?.accountStatus || user?.applicationStatus,
@@ -406,17 +407,17 @@ export function StatusBasedRoute({
   }
 
   if (!isAuthenticated) {
-    console.log('❌ StatusBasedRoute: Not authenticated');
+    logger.info('StatusBasedRoute: Not authenticated');
     return <Navigate to="/login" replace />;
   }
 
   if (canAccessRoute(user, requiredStatus, allowAdmin)) {
-    console.log('✅ StatusBasedRoute: Access granted');
+    logger.info('StatusBasedRoute: Access granted');
     return <div className="contents">{children}</div>;
   }
 
   // Redirect to appropriate location based on status
-  console.log('❌ StatusBasedRoute: Access denied, redirecting');
+  logger.info('StatusBasedRoute: Access denied, redirecting');
   const redirectPath = getAuthenticatedRedirectPath(user);
   return <Navigate to={redirectPath} replace />;
 }

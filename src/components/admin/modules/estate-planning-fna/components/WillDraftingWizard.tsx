@@ -40,6 +40,7 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { api } from '../../../../../utils/api';
+import { logger } from '../../../../../utils/logger';
 
 // ── Extracted modules ──────────────────────────────────────────────
 import type {
@@ -172,12 +173,13 @@ export function WillDraftingWizard({
         // The KV profile may store personal data under a nested `personalInformation`
         // key, or directly at the top level. Check both paths (nested first, then flat).
         const pi = profile?.personalInformation || profile || {};
-        console.log(
-          'Profile pre-fill: raw profile keys',
-          profile ? Object.keys(profile) : '(null)',
-        );
-        console.log('Profile pre-fill: pi keys', Object.keys(pi));
-        console.log('Profile pre-fill: clientKeys IDs', ckRaw ? Object.keys(ckRaw) : '(null)');
+        logger.debug('Profile pre-fill: raw profile keys', {
+          profileKeys: profile ? Object.keys(profile) : '(null)',
+        });
+        logger.debug('Profile pre-fill: pi keys', { piKeys: Object.keys(pi) });
+        logger.debug('Profile pre-fill: clientKeys IDs', {
+          clientKeyIds: ckRaw ? Object.keys(ckRaw) : '(null)',
+        });
 
         // Universal Key Manager key -> profile field name mapping
         // These IDs come from keyManagerConstants.ts PROFILE_PERSONAL_KEYS
@@ -204,14 +206,14 @@ export function WillDraftingWizard({
             }
           }
         }
-        console.log('Profile pre-fill: mapped client keys ->', ck);
+        logger.debug('Profile pre-fill: mapped client keys', { ck });
 
         // Helper: resolve a field from nested profile -> flat profile -> client keys -> undefined
         // Priority: personal_info data first (most detailed), then Universal Key Manager fallback
         const field = (name: string): string | undefined =>
           pi?.[name] ?? profile?.[name] ?? ck?.[name] ?? undefined;
 
-        console.log('Profile pre-fill: resolved fields ->', {
+        logger.debug('Profile pre-fill: resolved fields', {
           idNumber: field('idNumber'),
           dateOfBirth: field('dateOfBirth'),
           maritalStatus: field('maritalStatus') || field('maritalRegime'),
@@ -270,7 +272,7 @@ export function WillDraftingWizard({
           physicalAddress: addressStr || '',
         };
 
-        console.log('Profile pre-fill: final preFillPersonalDetails', preFillPersonalDetails);
+        logger.debug('Profile pre-fill: final preFillPersonalDetails', { preFillPersonalDetails });
 
         if (isLivingWill) {
           setLivingWillData((prev) => ({

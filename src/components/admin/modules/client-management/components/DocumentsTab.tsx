@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { logger } from '../../../../../utils/logger';
 import { filterDocuments, groupDocumentsByPack, type DocumentItem } from './documentsUtils';
 import { DocumentStatsCards } from './DocumentStatsCards';
 import { DocumentFiltersBar } from './DocumentFiltersBar';
@@ -153,7 +154,7 @@ export function DocumentsTab({ selectedClient }: DocumentsTabProps) {
     }
 
     try {
-      console.log(`⬇️ Downloading: ${doc.fileName}`);
+      logger.info('Downloading document', { fileName: doc.fileName });
 
       const data = await api.get<{ url: string }>(`/documents/${doc.userId}/${doc.id}/download`);
 
@@ -189,7 +190,7 @@ export function DocumentsTab({ selectedClient }: DocumentsTabProps) {
     if (!documentToDelete) return;
 
     try {
-      console.log(`🗑️ Deleting: ${documentToDelete.title}`);
+      logger.info('Deleting document', { title: documentToDelete.title });
 
       await api.delete(`/documents/${documentToDelete.userId}/${documentToDelete.id}`);
 
@@ -218,7 +219,7 @@ export function DocumentsTab({ selectedClient }: DocumentsTabProps) {
     const toastId = toast.loading('Deleting document pack...');
 
     try {
-      console.log(`🗑️ Deleting pack: ${packToDelete.id} (${docsToDelete.length} documents)`);
+      logger.info('Deleting document pack', { packId: packToDelete.id, documentCount: docsToDelete.length });
 
       // Delete all documents in parallel
       await Promise.all(

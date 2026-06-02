@@ -56,6 +56,7 @@ import {
 } from './entityConfigs';
 import { formatCurrency } from '../../../../utils/currencyFormatter';
 import { deepSanitize } from '../../../../utils/sanitization';
+import { logger } from '../../../../utils/logger';
 import { getSession } from '../../../../utils/auth/authService';
 import { api } from '../../../../utils/api/client';
 import { toast } from 'sonner';
@@ -485,7 +486,7 @@ export function useProfileManager({
       if (originalData) {
         (Object.keys(profileData) as Array<keyof ProfileData>).forEach((key) => {
           if (profileData[key] !== originalData[key]) {
-            // @ts-expect-error - Dynamic assignment is safe here as keys match
+            // @ts-expect-error — Dynamic assignment is safe here as keys match
             patchData[key] = profileData[key];
           }
         });
@@ -494,7 +495,7 @@ export function useProfileManager({
       }
 
       if (originalData && Object.keys(patchData).length === 0) {
-        console.log('No top-level changes detected.');
+        logger.debug('No top-level changes detected.');
         toast.success('Profile saved successfully!');
         setSaveSuccess(true);
         setTimeout(() => setSaveSuccess(false), 3000);
@@ -505,7 +506,7 @@ export function useProfileManager({
 
       const payloadString = JSON.stringify(cleanPatchData);
       const payloadSize = payloadString.length;
-      console.log(`Payload size: ${payloadSize} bytes`);
+      logger.debug('Payload size', { payloadSizeBytes: payloadSize });
 
       if (payloadSize > 200000) {
         console.warn(
@@ -514,7 +515,7 @@ export function useProfileManager({
       }
 
       if (Object.keys(cleanPatchData).length === 0) {
-        console.log('Patch data empty after sanitization.');
+        logger.debug('Patch data empty after sanitization.');
         toast.success('Profile saved successfully!');
         setSaveSuccess(true);
         setTimeout(() => setSaveSuccess(false), 3000);

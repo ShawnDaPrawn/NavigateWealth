@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useAuth } from '../auth/AuthContext';
+import { logger } from '../../utils/logger';
 import { EmptyPolicyState } from './EmptyPolicyState';
 import { projectId, publicAnonKey } from '../../utils/supabase/info';
 import { SUPER_ADMIN_EMAIL } from '../../utils/auth/constants';
@@ -84,31 +85,23 @@ export function ApplicationStatusGuard({
         headers: { Authorization: `Bearer ${publicAnonKey}` },
       });
 
-      console.log('🔍 Application API Response Status:', appRes.status);
+      logger.debug('Application API Response Status', { status: appRes.status });
 
       if (appRes.ok) {
         const applicationResponse = await appRes.json();
-        console.log(
-          '🔍 Application API Response Data:',
-          JSON.stringify(applicationResponse, null, 2),
-        );
+        logger.debug('Application API Response Data', { applicationResponse });
 
         // The endpoint returns { success: true, data: application }
         const userApp = applicationResponse.data;
         if (userApp && userApp.status) {
           status = userApp.status;
-          console.log('✅ Application status loaded:', status);
+          logger.info('Application status loaded', { status });
         } else {
-          console.log('ℹ️ No application found for user, defaulting to in_progress');
+          logger.info('No application found for user, defaulting to in_progress');
         }
       } else {
         const errorText = await appRes.text();
-        console.log(
-          '⚠️ Failed to fetch application. Status:',
-          appRes.status,
-          'Response:',
-          errorText,
-        );
+        logger.info('Failed to fetch application', { httpStatus: appRes.status, errorText });
       }
 
       setApplicationStatus(status);

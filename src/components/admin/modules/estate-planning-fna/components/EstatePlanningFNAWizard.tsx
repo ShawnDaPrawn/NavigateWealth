@@ -14,6 +14,7 @@ import { ESTATE_PLANNING_CONSTANTS } from '../constants';
 import { ReviewStep } from './ReviewStep';
 import { useFormPrefill } from '../../form-prefill/useFormPrefill';
 import { isFormPrefillEnabled } from '../../../../../utils/formPrefillFeature';
+import { logger } from '../../../../../utils/logger';
 
 interface EstatePlanningFNAWizardProps {
   open: boolean;
@@ -137,7 +138,7 @@ export function EstatePlanningFNAWizard({
       toast.success('Estate Planning FNA initialized with client data');
     } catch (error: unknown) {
       setInputs(buildDefaultInputs(intakePrefill));
-      console.log('⚠️ Estate Planning FNA backend not available - working in client-side mode');
+      logger.info('Estate Planning FNA backend not available - working in client-side mode');
     } finally {
       setLoading(false);
     }

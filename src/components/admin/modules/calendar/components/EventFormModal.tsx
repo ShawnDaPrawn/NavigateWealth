@@ -50,6 +50,7 @@ import { useClients } from '../../../../../hooks/useClients';
 import { format, addHours } from 'date-fns';
 import { toast } from 'sonner';
 import { useSearchInputAutofillGuard } from '@/shared/forms/useSearchInputAutofillGuard';
+import { logger } from '../../../../../utils/logger';
 
 // System-generated event types that cannot be manually created
 const SYSTEM_EVENT_TYPES: EventType[] = ['birthday', 'renewal'];
@@ -190,7 +191,7 @@ export function EventFormModal({
           setRecurrenceEndDate(rule.endDate || '');
         } catch (e) {
           // If not JSON, maybe ignore or try to handle legacy format if any (none expected for events yet)
-          console.log('Failed to parse recurrence rule', e);
+          logger.debug('Failed to parse recurrence rule', { error: e });
           setIsRecurring(false);
         }
       } else {

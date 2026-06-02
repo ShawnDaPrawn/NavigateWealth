@@ -386,7 +386,7 @@ export async function sendEmail(
   let finalSubject: string;
   let finalHtml: string;
   let finalText: string;
-  let finalAttachments: SendGridAttachment[] = [];
+  let finalAttachments: SendGridAttachment[];
 
   if (typeof paramsOrTo === 'object') {
     // New signature

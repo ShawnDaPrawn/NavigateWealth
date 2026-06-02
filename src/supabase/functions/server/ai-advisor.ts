@@ -464,23 +464,21 @@ function uniqueItems(items: unknown[]): unknown[] {
   const seen = new Set<string>();
 
   return items.filter((item, index) => {
-    let key = `idx:${index}`;
-
-    if (isRecord(item)) {
-      const explicitKey = [
-        item.id,
-        item.messageId,
-        item.documentId,
-        item.policyNumber,
-        item.filePath,
-        item.url,
-      ].find((value) => typeof value === 'string' && value.trim());
-
-      key =
-        typeof explicitKey === 'string' && explicitKey.trim() ? explicitKey : JSON.stringify(item);
-    } else {
-      key = JSON.stringify(item);
-    }
+    const key: string = isRecord(item)
+      ? (() => {
+          const explicitKey = [
+            item.id,
+            item.messageId,
+            item.documentId,
+            item.policyNumber,
+            item.filePath,
+            item.url,
+          ].find((value) => typeof value === 'string' && value.trim());
+          return typeof explicitKey === 'string' && explicitKey.trim()
+            ? explicitKey
+            : JSON.stringify(item);
+        })()
+      : JSON.stringify(item);
 
     if (seen.has(key)) return false;
     seen.add(key);

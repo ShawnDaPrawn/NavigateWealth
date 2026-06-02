@@ -1,6 +1,7 @@
 import React, { useEffect } from 'react';
 import { SpeedInsights } from '@vercel/speed-insights/react';
 import { Analytics } from '@vercel/analytics/react';
+import { logger } from './utils/logger';
 import { validateEnv, logEnvironmentInfo } from './config/env';
 import { AppProviders } from './components/providers/AppProviders';
 import { SkipToContent } from './components/shared/AccessibilityHelpers';
@@ -83,9 +84,7 @@ export default function App() {
         event.message?.includes('Cannot listen to the event from the provided iframe')
       ) {
         event.preventDefault();
-        console.debug(
-          '[TradingView] Suppressed non-fatal iframe access error in preview environment.',
-        );
+        logger.debug('[TradingView] Suppressed non-fatal iframe access error in preview environment.');
         return true;
       }
 
@@ -120,9 +119,7 @@ export default function App() {
         reason.includes('Cannot listen to the event from the provided iframe')
       ) {
         event.preventDefault();
-        console.debug(
-          '[TradingView] Suppressed non-fatal iframe promise rejection in preview environment.',
-        );
+        logger.debug('[TradingView] Suppressed non-fatal iframe promise rejection in preview environment.');
       }
 
       void reportRuntimeClientIssue(runtimeIssueFromUnknown('unhandled-rejection', event.reason));
@@ -221,10 +218,10 @@ export default function App() {
           navigator.serviceWorker
             .register('/service-worker.js')
             .then((registration) => {
-              console.log('SW registered: ', registration);
+              logger.info('SW registered', { registration });
             })
             .catch((registrationError) => {
-              console.log('SW registration failed: ', registrationError);
+              logger.info('SW registration failed', { error: registrationError });
             });
         };
 
