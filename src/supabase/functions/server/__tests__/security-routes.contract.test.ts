@@ -110,6 +110,7 @@ vi.mock('jsr:@supabase/supabase-js@2.49.8', () => ({
         })),
       },
       signInWithPassword: vi.fn(async () => ({ data: {}, error: null })),
+      signOut: vi.fn(async () => ({})),
       updateUser: vi.fn(async () => ({ data: { user: mockSupabaseUser }, error: null })),
     },
     from: () => ({
@@ -336,9 +337,12 @@ describe('security.tsx route contracts', () => {
         headers: { ...AUTH, 'Content-Type': 'application/json' },
       });
       expect(res.status).toBe(200);
-      const body = (await res.json()) as { success: boolean; twoFactorEnabled: boolean };
+      const body = (await res.json()) as {
+        success: boolean;
+        status: { twoFactorEnabled: boolean };
+      };
       expect(body.success).toBe(true);
-      expect(body.twoFactorEnabled).toBe(true);
+      expect(body.status.twoFactorEnabled).toBe(true);
     });
   });
 
@@ -450,13 +454,16 @@ describe('security.tsx route contracts', () => {
     it('returns 200 with email change summary on valid request', async () => {
       const res = await securityApp.request('/test-user/email-change/request', {
         method: 'POST',
-        body: JSON.stringify({ newEmail: 'new@test.co' }),
+        body: JSON.stringify({ newEmail: 'new@test.co', currentPassword: 'test-password' }),
         headers: { ...AUTH, 'Content-Type': 'application/json' },
       });
       expect(res.status).toBe(200);
-      const body = (await res.json()) as { success: boolean; emailChange: Record<string, unknown> };
+      const body = (await res.json()) as {
+        success: boolean;
+        pendingEmailChange: Record<string, unknown>;
+      };
       expect(body.success).toBe(true);
-      expect(body.emailChange).toMatchObject({ newEmail: 'new@test.co' });
+      expect(body.pendingEmailChange).toMatchObject({ newEmail: 'new@test.co' });
     });
   });
 
