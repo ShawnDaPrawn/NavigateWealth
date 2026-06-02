@@ -181,7 +181,10 @@ function formatDate(dateStr: string | null): string {
 
 // ─── Component ──────────────────────────────────────────────────────────────
 
-export function ComplianceDashboardPanel({ clientId, onNavigate: _onNavigate }: ComplianceDashboardPanelProps) {
+export function ComplianceDashboardPanel({
+  clientId,
+  onNavigate: _onNavigate,
+}: ComplianceDashboardPanelProps) {
   const [dashboard, setDashboard] = useState<DashboardData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);

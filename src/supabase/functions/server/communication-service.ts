@@ -1082,10 +1082,12 @@ export class CommunicationService {
 
     const fileBuffer = await file.arrayBuffer();
 
-    const { data: _data, error } = await supabase.storage.from(BUCKET_NAME).upload(path, fileBuffer, {
-      contentType: file.type,
-      upsert: false,
-    });
+    const { data: _data, error } = await supabase.storage
+      .from(BUCKET_NAME)
+      .upload(path, fileBuffer, {
+        contentType: file.type,
+        upsert: false,
+      });
 
     if (error) {
       throw new Error(`Upload failed: ${error.message}`);

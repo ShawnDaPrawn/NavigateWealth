@@ -1,15 +1,6 @@
 import React from 'react';
 import { Link, useLocation, useNavigate } from 'react-router';
-import {
-  Home,
-  Package,
-  Bot,
-  MessageSquare,
-  PenLine,
-  History,
-  User,
-  LogOut,
-} from 'lucide-react';
+import { Home, Package, Bot, MessageSquare, PenLine, History, User, LogOut } from 'lucide-react';
 import { ACTIVE_THEME, NAV_STYLES } from '../portal/portal-theme';
 import { useCommunications } from '../client/communication/hooks/useCommunications';
 import { deriveInboxStats } from '../client/communication/utils';

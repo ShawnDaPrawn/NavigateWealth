@@ -31,16 +31,7 @@ import { MAX_RECORDING_DURATION_MS } from '../constants';
 import { Button } from '../../../../ui/button';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '../../../../ui/tooltip';
 import { Popover, PopoverContent, PopoverTrigger } from '../../../../ui/popover';
-import {
-  Mic,
-  Square,
-  Loader2,
-  Check,
-  X,
-  AlertCircle,
-  Upload,
-  FileAudio,
-} from 'lucide-react';
+import { Mic, Square, Loader2, Check, X, AlertCircle, Upload, FileAudio } from 'lucide-react';
 
 // ============================================================================
 // TYPES

@@ -28,7 +28,6 @@ import {
 import { toast } from 'sonner';
 import { api } from '../../../../../../utils/api';
 
-
 interface IdentityVerificationPanelProps {
   clientId: string;
   firstName: string;

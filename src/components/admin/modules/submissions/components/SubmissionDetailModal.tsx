@@ -21,12 +21,7 @@
 
 import React, { useState, useCallback } from 'react';
 import { useNavigate } from 'react-router';
-import {
-  Dialog,
-  DialogContent,
-  DialogTitle,
-  DialogDescription,
-} from '../../../../ui/dialog';
+import { Dialog, DialogContent, DialogTitle, DialogDescription } from '../../../../ui/dialog';
 import { Badge } from '../../../../ui/badge';
 import { Button } from '../../../../ui/button';
 import { Textarea } from '../../../../ui/textarea';

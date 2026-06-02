@@ -104,7 +104,6 @@ const EMPTY_STATE_CONFIG: Record<
   },
 };
 
-
 export function ApplicationsTable({
   loading,
   refreshing,

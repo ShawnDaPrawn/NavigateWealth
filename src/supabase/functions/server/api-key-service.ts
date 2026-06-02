@@ -23,7 +23,6 @@
 import * as kv from './kv_store.tsx';
 import { createModuleLogger } from './stderr-logger.ts';
 
-
 const log = createModuleLogger('api-key-service');
 
 // ============================================================================
