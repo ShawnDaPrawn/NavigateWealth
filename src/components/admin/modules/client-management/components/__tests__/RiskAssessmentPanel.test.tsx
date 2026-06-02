@@ -4,14 +4,21 @@
  * The client KYC/AML risk-screening panel (Honeycomb integration). Locks the
  * list view (templates loaded from the API), the empty state, the
  * identification gate on starting a screening, and the list -> form view
- * transition (which drives parseFormJson). fetch + supabase keys are mocked.
+ * transition (which drives parseFormJson). api + supabase info are mocked.
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent } from '@/test/utils';
 
+const { mockGet, mockPost } = vi.hoisted(() => ({
+  mockGet: vi.fn(),
+  mockPost: vi.fn(),
+}));
+
+vi.mock('@/utils/api', () => ({ api: { get: mockGet, post: mockPost } }));
 vi.mock('../../../../../../utils/supabase/info', () => ({
   projectId: 'proj',
   publicAnonKey: 'anon',
+  supabaseUrl: 'https://proj.supabase.co',
 }));
 
 import { RiskAssessmentPanel } from '../RiskAssessmentPanel';
@@ -28,16 +35,12 @@ const template = {
   updated_at: '2026-01-02T00:00:00Z',
 };
 
-function mockFetch(templates: unknown[], history: unknown[] = []) {
-  global.fetch = vi.fn((url: RequestInfo | URL) => {
-    const u = String(url);
-    const body = u.includes('/templates')
-      ? { templates }
-      : u.includes('/history/')
-        ? { assessments: history }
-        : {};
-    return Promise.resolve({ ok: true, json: async () => body });
-  }) as unknown as typeof fetch;
+function setupApi(templates: unknown[], history: unknown[] = []) {
+  mockGet.mockImplementation((url: string) => {
+    if (url.includes('/templates')) return Promise.resolve({ templates });
+    if (url.includes('/history/')) return Promise.resolve({ assessments: history });
+    return Promise.resolve({});
+  });
 }
 
 function renderPanel(over: Record<string, unknown> = {}) {
@@ -60,7 +63,7 @@ beforeEach(() => {
 
 describe('RiskAssessmentPanel', () => {
   it('lists the Honeycomb assessment templates', async () => {
-    mockFetch([template]);
+    setupApi([template]);
     renderPanel();
     expect(await screen.findByText('AML Screening')).toBeTruthy();
     expect(screen.getByText('Risk Assessments')).toBeTruthy();
@@ -68,20 +71,20 @@ describe('RiskAssessmentPanel', () => {
   });
 
   it('shows an empty state when there are no templates', async () => {
-    mockFetch([]);
+    setupApi([]);
     renderPanel();
     expect(await screen.findByText(/no assessment templates available/i)).toBeTruthy();
   });
 
   it('disables Start when the client has no identification (KYC gate)', async () => {
-    mockFetch([template]);
+    setupApi([template]);
     renderPanel({ hasIdentification: false });
     const start = await screen.findByRole('button', { name: /start/i });
     expect((start as HTMLButtonElement).disabled).toBe(true);
   });
 
   it('opens the assessment form when Start is clicked', async () => {
-    mockFetch([template]);
+    setupApi([template]);
     renderPanel();
     const start = await screen.findByRole('button', { name: /start/i });
     fireEvent.click(start);

@@ -80,12 +80,11 @@ export default defineConfig({
       // characterization tests are added for the Phase 5/6 decomposition files.
       //
       // Ratcheted as characterization tests land. Latest (2026-06-02,
-      // SingleClientForm.tsx — exhaustive unit tests for its exported
-      // compliance-critical SA-ID helpers (validateSaIdNumber: Luhn + structure
-      // + DOB/gender; computeAge) plus a form render smoke test): measured
-      // statements 9.89 / lines 9.9 / branches 8.64 / functions 8.07 across 1025
-      // tests. Floor raised from 9.35/9.35/8.15/7.6, kept ~0.35-0.4 below
-      // measured for headroom against the actively churning tree.
+      // EsignModule render test — dashboard mount + template-picker → upload
+      // wizard transition; also fixed RiskAssessmentPanel mock after Cursor
+      // refactored it from raw fetch to api.get): measured statements 10.06 /
+      // lines 10.08 / branches 8.71 / functions 8.12 across 1028 tests. Floor
+      // raised from 9.5/9.5/8.25/7.7, kept ~0.35-0.4 below measured.
       //
       // CAVEAT — silent denominator: ~16 mostly-static .tsx files (HomePage +
       // the marketing/product pages, Logo, HeroSection, provider-logos,
@@ -96,10 +95,10 @@ export default defineConfig({
       //
       // The 70/65/70/70 end-goal is long-horizon — floor only ratchets up.
       thresholds: {
-        lines: 9.5,
-        functions: 7.7,
-        branches: 8.25,
-        statements: 9.5,
+        lines: 9.7,
+        functions: 7.75,
+        branches: 8.35,
+        statements: 9.7,
       },
     },
   },
