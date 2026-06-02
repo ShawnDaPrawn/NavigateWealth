@@ -86,6 +86,12 @@ export default defineConfig({
       // lines 10.08 / branches 8.71 / functions 8.12 across 1028 tests. Floor
       // raised from 9.5/9.5/8.25/7.7, kept ~0.35-0.4 below measured.
       //
+      // 2026-06-02 (phase4 characterization batch): added render-contract tests
+      // for PortalAutomationTab (1,709 lines), ReviewDialog (1,825 lines), and
+      // ComplianceTab (1,723 lines) — all previously at 0% coverage. Conservative
+      // floor bump of ~0.2 pending CI measurement of the actual delta. Re-measure
+      // after CI and ratchet further if headroom allows.
+      //
       // CAVEAT — silent denominator: ~16 mostly-static .tsx files (HomePage +
       // the marketing/product pages, Logo, HeroSection, provider-logos,
       // EmailSignatureGenerator) fail @vitest/coverage-v8 parsing and are
@@ -95,10 +101,10 @@ export default defineConfig({
       //
       // The 70/65/70/70 end-goal is long-horizon — floor only ratchets up.
       thresholds: {
-        lines: 9.7,
-        functions: 7.75,
-        branches: 8.35,
-        statements: 9.7,
+        lines: 9.9,
+        functions: 7.95,
+        branches: 8.55,
+        statements: 9.9,
       },
     },
   },
