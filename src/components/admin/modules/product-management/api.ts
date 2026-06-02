@@ -353,22 +353,7 @@ export const productManagementApi = {
     formData.append('categoryId', categoryId);
     formData.append('mode', mode);
 
-    const token = await getSupabaseAuthToken();
-
-    const res = await fetch(
-      `https://${projectId}.supabase.co/functions/v1/make-server-91ed8379/integrations/upload`,
-      {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-        body: formData,
-      },
-    );
-
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.error || 'Failed to process file');
-    return data;
+    return api.post<UploadPreviewResponse>('/integrations/upload', formData);
   },
 
   publishIntegrationSyncRun: async (
@@ -377,38 +362,16 @@ export const productManagementApi = {
     categoryId: string,
     rowIds?: string[],
   ): Promise<IntegrationSyncRun> => {
-    const token = await getSupabaseAuthToken();
-    const res = await fetch(
-      `https://${projectId}.supabase.co/functions/v1/make-server-91ed8379/integrations/sync-runs/${runId}/publish`,
-      {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ providerId, categoryId, rowIds }),
-      },
+    const data = await api.post<{ run: IntegrationSyncRun }>(
+      `/integrations/sync-runs/${runId}/publish`,
+      { providerId, categoryId, rowIds },
     );
-
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.error || 'Failed to publish sync run');
-    return data.run as IntegrationSyncRun;
+    return data.run;
   },
 
   fetchIntegrationSyncRun: async (runId: string): Promise<IntegrationSyncRun> => {
-    const token = await getSupabaseAuthToken();
-    const res = await fetch(
-      `https://${projectId}.supabase.co/functions/v1/make-server-91ed8379/integrations/sync-runs/${runId}`,
-      {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      },
-    );
-
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.error || 'Failed to fetch sync run');
-    return data.run as IntegrationSyncRun;
+    const data = await api.get<{ run: IntegrationSyncRun }>(`/integrations/sync-runs/${runId}`);
+    return data.run;
   },
 
   downloadIntegrationTemplate: async (providerId: string, categoryId: string): Promise<void> => {

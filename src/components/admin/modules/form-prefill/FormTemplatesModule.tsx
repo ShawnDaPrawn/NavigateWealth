@@ -32,7 +32,7 @@ import {
 } from '../../../../services/form-prefill-api';
 import { PrefillReviewModal } from './PrefillReviewModal';
 import { ClientPicker } from '../resources/components/ClientPicker';
-import { projectId } from '../../../../utils/supabase/info';
+import { api } from '../../../../utils/api';
 
 interface ClientOption {
   id: string;
@@ -72,27 +72,24 @@ export function FormTemplatesModule({
     let cancelled = false;
     void (async () => {
       try {
-        const storageKey = `sb-${projectId}-auth-token`;
-        const stored = localStorage.getItem(storageKey);
-        const token = stored ? JSON.parse(stored).access_token : '';
-        if (!token) return;
-
-        const res = await fetch(
-          `https://${projectId}.supabase.co/functions/v1/make-server-91ed8379/profile/all-users`,
-          { headers: { Authorization: `Bearer ${token}` } },
-        );
-        if (!res.ok) return;
-        const data = await res.json();
-        const match = (data.users ?? []).find((u: { id: string }) => u.id === selectedClientIdProp);
+        const data = await api.get<{
+          users?: Array<{
+            id: string;
+            user_metadata?: Record<string, unknown>;
+            profile?: Record<string, unknown>;
+            name?: string;
+          }>;
+        }>('/profile/all-users');
+        const match = (data.users ?? []).find((u) => u.id === selectedClientIdProp);
         if (cancelled || !match) return;
         const first =
           match.user_metadata?.firstName ||
-          match.profile?.personalInformation?.firstName ||
+          (match.profile?.personalInformation as Record<string, unknown>)?.firstName ||
           match.name?.split(' ')[0] ||
           'Client';
         const last =
           match.user_metadata?.surname ||
-          match.profile?.personalInformation?.lastName ||
+          (match.profile?.personalInformation as Record<string, unknown>)?.lastName ||
           match.name?.split(' ').slice(1).join(' ') ||
           '';
         setLinkedClientLabel(`${first} ${last}`.trim());

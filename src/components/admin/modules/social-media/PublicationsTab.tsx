@@ -6,7 +6,7 @@ import { ArticleEditor } from '../publications/ArticleEditor';
 import { CategoriesManager } from '../publications/CategoriesManager';
 import { PublicationsSettings } from '../publications/PublicationsSettings';
 import { InitializePublications } from '../publications/InitializePublications';
-import { projectId, publicAnonKey } from '../../../../utils/supabase/info';
+import { api } from '../../../../utils/api';
 
 interface Article {
   id: string;
@@ -31,24 +31,14 @@ export function PublicationsTab() {
   const [isInitialized, setIsInitialized] = useState<boolean | null>(null);
   const [loading, setLoading] = useState(true);
 
-  const baseUrl = `https://${projectId}.supabase.co/functions/v1/make-server-91ed8379/publications`;
-
   useEffect(() => {
     checkInitialization();
   }, []);
 
   const checkInitialization = async () => {
     try {
-      const response = await fetch(`${baseUrl}/categories`, {
-        headers: { Authorization: `Bearer ${publicAnonKey}` },
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        setIsInitialized(data.data && data.data.length > 0);
-      } else {
-        setIsInitialized(false);
-      }
+      const data = await api.get<{ data?: unknown[] }>('/publications/categories');
+      setIsInitialized(!!(data.data && data.data.length > 0));
     } catch (error) {
       // Suppress fetch errors if backend is not available
       // console.error('Error checking initialization:', error);

@@ -42,7 +42,7 @@ import {
   Image as ImageIcon,
   Layers,
 } from 'lucide-react';
-import { projectId, publicAnonKey } from '../../../../../utils/supabase/info';
+import { api } from '../../../../../utils/api';
 import { useSocialMediaAI } from '../hooks/useSocialMediaAI';
 import type {
   SocialAIPlatform,
@@ -177,14 +177,10 @@ export function AIArticleRepurposer({ onUseContent }: AIArticleRepurposerProps) 
     setArticlesLoading(true);
     setArticlesError(null);
     try {
-      const baseUrl = `https://${projectId}.supabase.co/functions/v1/make-server-91ed8379/publications`;
-      const response = await fetch(`${baseUrl}/articles?status=published`, {
-        headers: { Authorization: `Bearer ${publicAnonKey}` },
-      });
-      if (!response.ok) throw new Error(`Failed to fetch articles: ${response.status}`);
-      const data = await response.json();
-      const list = data.data || data || [];
-      setArticles(Array.isArray(list) ? list : []);
+      const data = await api.get<{ data?: PublishedArticle[] }>(
+        '/publications/articles?status=published',
+      );
+      setArticles(data.data || []);
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Unknown error';
       console.error('AIArticleRepurposer: Failed to fetch articles', msg);

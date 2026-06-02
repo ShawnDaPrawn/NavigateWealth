@@ -23,7 +23,7 @@ import { Button } from '../../../../ui/button';
 import { Input } from '../../../../ui/input';
 import { Label } from '../../../../ui/label';
 import { cn } from '../../../../ui/utils';
-import { projectId, publicAnonKey } from '../../../../../utils/supabase/info';
+import { api } from '../../../../../utils/api';
 
 interface ImageInsertDialogProps {
   isOpen: boolean;
@@ -39,8 +39,6 @@ export function ImageInsertDialog({ isOpen, onClose, onInsert }: ImageInsertDial
   const [error, setError] = useState<string | null>(null);
   const [preview, setPreview] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
-
-  const baseUrl = `https://${projectId}.supabase.co/functions/v1/make-server-91ed8379/publications`;
 
   const handleUrlSubmit = () => {
     if (!url.trim()) {
@@ -72,17 +70,10 @@ export function ImageInsertDialog({ isOpen, onClose, onInsert }: ImageInsertDial
       const formData = new FormData();
       formData.append('file', file);
 
-      const response = await fetch(`${baseUrl}/upload-image`, {
-        method: 'POST',
-        headers: { Authorization: `Bearer ${publicAnonKey}` },
-        body: formData,
-      });
-
-      if (!response.ok) {
-        throw new Error('Upload failed');
-      }
-
-      const data = await response.json();
+      const data = await api.post<{ url?: string; data?: { url?: string } }>(
+        '/publications/upload-image',
+        formData,
+      );
       const uploadedUrl = data.url || data.data?.url;
 
       if (!uploadedUrl) {

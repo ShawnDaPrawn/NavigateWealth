@@ -4,8 +4,7 @@
 // ============================================================================
 
 import { api } from '../../../../utils/api/client';
-import { projectId, publicAnonKey } from '../../../../utils/supabase/info';
-import { createClient } from '../../../../utils/supabase/client';
+import { projectId } from '../../../../utils/supabase/info';
 import { logger } from '../../../../utils/logger';
 import {
   EsignEnvelope,
@@ -1302,33 +1301,16 @@ export const esignApi = {
     const fd = new FormData();
     fd.append('file', file);
     if (options?.displayName) fd.append('display_name', options.displayName);
-    // Multipart bodies bypass the shared `api` client so we resolve the
-    // current Supabase access token here. Falls back to the anon key for
-    // unauthenticated callers (which the server will then reject).
-    let token = publicAnonKey;
-    try {
-      const supabase = createClient();
-      const { data } = await supabase.auth.getSession();
-      if (data.session?.access_token) token = data.session.access_token;
-    } catch {
-      /* fall back to anon */
-    }
-    const res = await fetch(
-      `https://${projectId}.supabase.co/functions/v1/make-server-91ed8379/esign/envelopes/${envelopeId}/documents`,
-      {
-        method: 'POST',
-        headers: {
-          ...(options?.idempotencyKey ? { 'Idempotency-Key': options.idempotencyKey } : {}),
-          Authorization: `Bearer ${token}`,
-        },
-        body: fd,
-      },
+    return api.post<{
+      documents: EnvelopeDocumentRef[];
+      added: { document_id: string; page_count: number };
+    }>(
+      `/esign/envelopes/${envelopeId}/documents`,
+      fd,
+      options?.idempotencyKey
+        ? { headers: { 'Idempotency-Key': options.idempotencyKey } }
+        : undefined,
     );
-    if (!res.ok) {
-      const data = await res.json().catch(() => ({}));
-      throw new Error(data.error || `Failed to add document (${res.status})`);
-    }
-    return res.json();
   },
 
   /**

@@ -56,7 +56,7 @@ import {
   Zap,
   X,
 } from 'lucide-react';
-import { projectId, publicAnonKey } from '../../../../utils/supabase/info';
+import { api } from '../../../../utils/api';
 import { BRAND } from './constants';
 
 // ============================================================================
@@ -228,17 +228,21 @@ const CATEGORY_LABELS: Record<string, string> = {
 // API
 // ============================================================================
 
-const BASE = `https://${projectId}.supabase.co/functions/v1/make-server-91ed8379/linktree`;
-const headers = () => ({
-  'Content-Type': 'application/json',
-  Authorization: `Bearer ${publicAnonKey}`,
-});
+const BASE = '/linktree';
 
 async function fetchJson<T>(url: string, opts?: RequestInit): Promise<T> {
-  const res = await fetch(url, { headers: headers(), ...opts });
-  const data = await res.json();
-  if (!data.success) throw new Error(data.error || 'Request failed');
-  return data.data;
+  // url is BASE + suffix (e.g. '/linktree/links'); strip to just the suffix
+  const path = url.startsWith('/linktree') ? url : BASE + url.replace(/^.*\/linktree/, '');
+  const method = (opts?.method || 'GET') as 'GET' | 'POST' | 'PUT' | 'DELETE';
+  const body = opts?.body ? JSON.parse(opts.body as string) : undefined;
+  const res = await (method === 'GET'
+    ? api.get<{ data: T }>(path)
+    : method === 'DELETE'
+      ? api.delete<{ data: T }>(path)
+      : method === 'PUT'
+        ? api.put<{ data: T }>(path, body)
+        : api.post<{ data: T }>(path, body));
+  return res.data;
 }
 
 // ============================================================================
