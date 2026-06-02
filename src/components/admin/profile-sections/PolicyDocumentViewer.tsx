@@ -23,10 +23,7 @@ import {
   Maximize2,
   Minimize2,
 } from 'lucide-react';
-import { projectId, publicAnonKey } from '../../../utils/supabase/info';
-import { createClient } from '../../../utils/supabase/client';
-
-const API_BASE = `https://${projectId}.supabase.co/functions/v1/make-server-91ed8379/integrations`;
+import { api } from '../../../utils/api';
 
 /** Minimal document meta needed for display */
 export interface ViewerDocumentMeta {
@@ -79,33 +76,16 @@ export function PolicyDocumentViewer({
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [docInfo, setDocInfo] = useState<ViewerDocumentMeta | null>(documentMeta || null);
 
-  const getAuthToken = useCallback(async (): Promise<string> => {
-    const supabase = createClient();
-    const {
-      data: { session },
-    } = await supabase.auth.getSession();
-    return session?.access_token || publicAnonKey;
-  }, []);
-
   const fetchSignedUrl = useCallback(async () => {
     setIsLoading(true);
     setError(null);
     setSignedUrl(null);
 
     try {
-      const token = await getAuthToken();
-      const res = await fetch(
-        `${API_BASE}/policy-documents/download?policyId=${encodeURIComponent(policyId)}&clientId=${encodeURIComponent(clientId)}`,
-        { headers: { Authorization: `Bearer ${token}` } },
+      const data = await api.get<{ url?: string; document?: ViewerDocumentMeta }>(
+        `/integrations/policy-documents/download?policyId=${encodeURIComponent(policyId)}&clientId=${encodeURIComponent(clientId)}`,
       );
-
-      if (!res.ok) {
-        const data = await res.json().catch(() => ({}));
-        throw new Error(data.error || `Failed to load document (${res.status})`);
-      }
-
-      const data = await res.json();
-      setSignedUrl(data.url);
+      setSignedUrl(data.url ?? null);
 
       // Update doc info from server response if we didn't have it
       if (data.document && !docInfo) {
@@ -122,7 +102,7 @@ export function PolicyDocumentViewer({
     } finally {
       setIsLoading(false);
     }
-  }, [policyId, clientId, getAuthToken, docInfo]);
+  }, [policyId, clientId, docInfo]);
 
   // Fetch signed URL when dialog opens
   useEffect(() => {

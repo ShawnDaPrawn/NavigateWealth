@@ -33,12 +33,10 @@ import {
   Unlock,
 } from 'lucide-react';
 import { toast } from 'sonner';
-import { projectId, publicAnonKey } from '../../../utils/supabase/info';
+import { api } from '../../../utils/api';
 import { createClient } from '../../../utils/supabase/client';
 import { ExtractionHistoryPanel } from './ExtractionHistoryPanel';
 import { PolicyDocumentViewer } from './PolicyDocumentViewer';
-
-const API_BASE = `https://${projectId}.supabase.co/functions/v1/make-server-91ed8379/integrations`;
 
 /** Document type options matching the server validation */
 const DOCUMENT_TYPES = [
@@ -235,14 +233,6 @@ export function PolicyDocumentUpload({
   );
   const [lockingField, setLockingField] = useState<string | null>(null);
 
-  const getAuthToken = useCallback(async (): Promise<string> => {
-    const supabase = createClient();
-    const {
-      data: { session },
-    } = await supabase.auth.getSession();
-    return session?.access_token || publicAnonKey;
-  }, []);
-
   const handleFileSelect = (file: File) => {
     if (file.type !== 'application/pdf') {
       toast.error('Only PDF files are accepted');
@@ -281,7 +271,6 @@ export function PolicyDocumentUpload({
     );
 
     try {
-      const token = await getAuthToken();
       const supabase = createClient();
       const {
         data: { user },
@@ -294,16 +283,7 @@ export function PolicyDocumentUpload({
       formData.append('documentType', documentType);
       formData.append('uploadedBy', user?.id || 'unknown');
 
-      const res = await fetch(`${API_BASE}/policy-documents/upload`, {
-        method: 'POST',
-        headers: { Authorization: `Bearer ${token}` },
-        body: formData,
-      });
-
-      if (!res.ok) {
-        const errorData = await res.json();
-        throw new Error(errorData.error || 'Upload failed');
-      }
+      await api.post('/integrations/policy-documents/upload', formData);
 
       toast.success(existingDocument ? 'Policy document replaced' : 'Policy document attached', {
         id: toastId,
@@ -326,16 +306,9 @@ export function PolicyDocumentUpload({
     if (!existingDocument) return;
     setIsDownloading(true);
     try {
-      const token = await getAuthToken();
-      const res = await fetch(
-        `${API_BASE}/policy-documents/download?policyId=${encodeURIComponent(policyId)}&clientId=${encodeURIComponent(clientId)}`,
-        { headers: { Authorization: `Bearer ${token}` } },
+      const { url } = await api.get<{ url: string }>(
+        `/integrations/policy-documents/download?policyId=${encodeURIComponent(policyId)}&clientId=${encodeURIComponent(clientId)}`,
       );
-      if (!res.ok) {
-        const errorData = await res.json();
-        throw new Error(errorData.error || 'Failed to get download link');
-      }
-      const { url } = await res.json();
       window.open(url, '_blank');
     } catch (err: unknown) {
       console.error('Policy document download error:', err);
@@ -350,19 +323,9 @@ export function PolicyDocumentUpload({
     setIsDeleting(true);
     const toastId = toast.loading('Removing policy document...');
     try {
-      const token = await getAuthToken();
-      const res = await fetch(`${API_BASE}/policy-documents`, {
-        method: 'DELETE',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
+      await api.delete('/integrations/policy-documents', {
         body: JSON.stringify({ policyId, clientId }),
       });
-      if (!res.ok) {
-        const errorData = await res.json();
-        throw new Error(errorData.error || 'Failed to remove document');
-      }
       toast.success('Policy document removed', { id: toastId });
       setExtractionResult(null);
       setFieldMappings([]);
@@ -385,23 +348,12 @@ export function PolicyDocumentUpload({
     const toastId = toast.loading('Extracting policy data with AI... This may take 15-30 seconds.');
 
     try {
-      const token = await getAuthToken();
-      const res = await fetch(`${API_BASE}/policy-extraction/extract`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({ policyId, clientId }),
-      });
-
-      if (!res.ok) {
-        const errorData = await res.json();
-        throw new Error(errorData.error || 'Extraction failed');
-      }
-
-      const data = await res.json();
-      setExtractionResult(data.extraction);
+      const data = await api.post<{
+        extraction?: ExtractionResult;
+        fieldMappings?: FieldMappingEntry[];
+        diff?: FieldDiff[];
+      }>('/integrations/policy-extraction/extract', { policyId, clientId });
+      setExtractionResult(data.extraction ?? null);
       setFieldMappings(data.fieldMappings || []);
 
       // Phase 3: Capture diffs from re-extraction
@@ -479,7 +431,6 @@ export function PolicyDocumentUpload({
     const toastId = toast.loading('Applying extracted data...');
 
     try {
-      const token = await getAuthToken();
       const fieldsToApply: Record<string, unknown> = {};
 
       for (const mapping of fieldMappings) {
@@ -494,21 +445,10 @@ export function PolicyDocumentUpload({
         return;
       }
 
-      const res = await fetch(`${API_BASE}/policy-extraction/apply`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({ policyId, clientId, fieldsToApply }),
-      });
-
-      if (!res.ok) {
-        const errorData = await res.json();
-        throw new Error(errorData.error || 'Failed to apply data');
-      }
-
-      const result = await res.json();
+      const result = await api.post<{
+        appliedFields?: string[];
+        skippedLockedFields?: string[];
+      }>('/integrations/policy-extraction/apply', { policyId, clientId, fieldsToApply });
       const appliedCount = result.appliedFields?.length || selectedFields.size;
       const skippedCount = result.skippedLockedFields?.length || 0;
 
@@ -546,22 +486,10 @@ export function PolicyDocumentUpload({
 
       setLockingField(fieldId);
       try {
-        const token = await getAuthToken();
-        const res = await fetch(`${API_BASE}/policy-extraction/lock-fields`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${token}`,
-          },
-          body: JSON.stringify({ policyId, clientId, fieldIds: [fieldId], action }),
-        });
-
-        if (!res.ok) {
-          const errorData = await res.json();
-          throw new Error(errorData.error || `Failed to ${action} field`);
-        }
-
-        const data = await res.json();
+        const data = await api.post<{ lockedFields?: string[] }>(
+          '/integrations/policy-extraction/lock-fields',
+          { policyId, clientId, fieldIds: [fieldId], action },
+        );
         setLockedFields(new Set(data.lockedFields || []));
 
         // If locking, deselect the field
@@ -585,7 +513,7 @@ export function PolicyDocumentUpload({
         setLockingField(null);
       }
     },
-    [lockedFields, getAuthToken, policyId, clientId],
+    [lockedFields, policyId, clientId],
   );
 
   // Derive extraction display state

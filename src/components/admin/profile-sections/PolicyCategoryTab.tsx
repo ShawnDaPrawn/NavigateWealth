@@ -10,7 +10,8 @@ import { Plus, Loader2, FileBarChart, EyeOff, History, Target } from 'lucide-rea
 import { PolicyFormDialog } from './PolicyFormDialog';
 import { ArchivePolicyDialog } from './ArchivePolicyDialog';
 import { toast } from 'sonner';
-import { projectId, publicAnonKey } from '../../../utils/supabase/info';
+import { api } from '../../../utils/api';
+import { projectId } from '../../../utils/supabase/info';
 import { DEFAULT_SCHEMAS } from './default-schemas';
 import {
   AlertDialog,
@@ -78,8 +79,6 @@ const TaxDocumentsSection = React.lazy(() =>
 
 import { Goal } from '../modules/client-management/components/goals/types';
 import { calculateGoalStatus } from '../modules/client-management/components/goals/utils';
-
-const API_BASE = `https://${projectId}.supabase.co/functions/v1/make-server-91ed8379/integrations`;
 
 interface PolicyCategoryTabProps {
   categorySubtabId: string; // e.g., 'risk-planning'
@@ -240,17 +239,11 @@ export function PolicyCategoryTab({
     const fetchSchemaForCategory = async (catId: string, retries = 2): Promise<SchemaField[]> => {
       for (let attempt = 0; attempt <= retries; attempt++) {
         try {
-          const res = await fetch(`${API_BASE}/schemas?categoryId=${catId}`, {
-            headers: { Authorization: `Bearer ${publicAnonKey}` },
-          });
-
-          if (res.ok) {
-            const data = await res.json();
-            if (data && data.fields) return data.fields;
-            if (Array.isArray(data)) return data;
-          }
-
-          // Non-ok response — fallback without retry
+          const data = await api.get<{ fields?: SchemaField[] } | SchemaField[]>(
+            `/integrations/schemas?categoryId=${catId}`,
+          );
+          if (data && !Array.isArray(data) && data.fields) return data.fields;
+          if (Array.isArray(data)) return data;
           break;
         } catch (err) {
           // Retry on transient network errors (cold-start / Failed to fetch)
@@ -305,16 +298,9 @@ export function PolicyCategoryTab({
   const loadPolicies = async () => {
     setIsLoading(true);
     try {
-      const res = await fetch(
-        `${API_BASE}/policies?clientId=${clientId}&categoryId=${categoryId}&includeArchived=${showArchived}`,
-        {
-          headers: { Authorization: `Bearer ${publicAnonKey}` },
-        },
+      const data = await api.get<{ policies?: PolicyRecord[] }>(
+        `/integrations/policies?clientId=${clientId}&categoryId=${categoryId}&includeArchived=${showArchived}`,
       );
-
-      if (!res.ok) throw new Error('Failed to load policies');
-
-      const data = await res.json();
       setPolicies(data.policies || []);
     } catch (err) {
       console.error('Error loading policies:', err);
@@ -342,12 +328,7 @@ export function PolicyCategoryTab({
     const toastId = toast.loading('Deleting policy...');
 
     try {
-      const res = await fetch(`${API_BASE}/policies?id=${deletingPolicy.id}&clientId=${clientId}`, {
-        method: 'DELETE',
-        headers: { Authorization: `Bearer ${publicAnonKey}` },
-      });
-
-      if (!res.ok) throw new Error('Failed to delete policy');
+      await api.delete(`/integrations/policies?id=${deletingPolicy.id}&clientId=${clientId}`);
 
       toast.success('Policy deleted successfully', { id: toastId });
       setDeletingPolicy(null);
@@ -367,20 +348,11 @@ export function PolicyCategoryTab({
     const toastId = toast.loading('Archiving policy...');
 
     try {
-      const res = await fetch(`${API_BASE}/policies/archive`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${publicAnonKey}`,
-        },
-        body: JSON.stringify({
-          id: archivingPolicy.id,
-          clientId,
-          reason,
-        }),
+      await api.post('/integrations/policies/archive', {
+        id: archivingPolicy.id,
+        clientId,
+        reason,
       });
-
-      if (!res.ok) throw new Error('Failed to archive policy');
 
       toast.success('Policy archived successfully', { id: toastId });
       setArchivingPolicy(null);
@@ -396,19 +368,10 @@ export function PolicyCategoryTab({
   const handleReinstatePolicy = async (policy: Record<string, unknown>) => {
     const toastId = toast.loading('Reinstating policy...');
     try {
-      const res = await fetch(`${API_BASE}/policies/reinstate`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${publicAnonKey}`,
-        },
-        body: JSON.stringify({
-          id: policy.id,
-          clientId,
-        }),
+      await api.post('/integrations/policies/reinstate', {
+        id: policy.id,
+        clientId,
       });
-
-      if (!res.ok) throw new Error('Failed to reinstate policy');
 
       toast.success('Policy reinstated successfully', { id: toastId });
       loadPolicies();

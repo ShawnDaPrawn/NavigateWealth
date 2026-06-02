@@ -23,11 +23,8 @@ import {
   Sparkles,
   ArrowLeftRight,
 } from 'lucide-react';
-import { projectId, publicAnonKey } from '../../../utils/supabase/info';
-import { createClient } from '../../../utils/supabase/client';
+import { api } from '../../../utils/api';
 import { ExtractionComparisonDialog } from './ExtractionComparisonDialog';
-
-const API_BASE = `https://${projectId}.supabase.co/functions/v1/make-server-91ed8379/integrations`;
 
 interface ExtractionHistoryEntry {
   id: string;
@@ -88,21 +85,10 @@ export function ExtractionHistoryPanel({
   const fetchHistory = useCallback(async () => {
     setIsLoading(true);
     try {
-      const supabase = createClient();
-      const {
-        data: { session },
-      } = await supabase.auth.getSession();
-      const token = session?.access_token || publicAnonKey;
-
-      const res = await fetch(
-        `${API_BASE}/policy-extraction/history?policyId=${encodeURIComponent(policyId)}&clientId=${encodeURIComponent(clientId)}`,
-        { headers: { Authorization: `Bearer ${token}` } },
+      const data = await api.get<{ history?: ExtractionHistoryEntry[] }>(
+        `/integrations/policy-extraction/history?policyId=${encodeURIComponent(policyId)}&clientId=${encodeURIComponent(clientId)}`,
       );
-
-      if (res.ok) {
-        const data = await res.json();
-        setHistory(data.history || []);
-      }
+      setHistory(data.history || []);
     } catch (err) {
       console.error('Failed to fetch extraction history:', err);
     } finally {

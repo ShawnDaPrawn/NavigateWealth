@@ -38,16 +38,12 @@ import {
   ExternalLink,
 } from 'lucide-react';
 import { toast } from 'sonner';
-import { projectId, publicAnonKey } from '../../../utils/supabase/info';
-import { createClient } from '../../../utils/supabase/client';
+import { api } from '../../../utils/api';
 import { formatCurrency } from '../../../utils/currencyFormatter';
 import { CurrencyInputField } from '../../ui/currency-input';
 import { DEFAULT_SCHEMAS } from './default-schemas';
 import { calculateRetirementMaturityValue } from '../../../utils/retirementCalculations';
 import { PolicyDocumentUpload } from './PolicyDocumentUpload';
-
-const API_BASE = `https://${projectId}.supabase.co/functions/v1/make-server-91ed8379/integrations`;
-const PROVIDERS_API = `https://${projectId}.supabase.co/functions/v1/make-server-91ed8379/product-management/providers`;
 
 // Map subtab IDs to Product Category IDs
 const SUBTAB_TO_CATEGORY: Record<string, string> = {
@@ -232,35 +228,28 @@ export function PolicyFormDialog({
   const loadProviders = async () => {
     setIsLoading(true);
     try {
-      const supabase = createClient();
-      const {
-        data: { session },
-      } = await supabase.auth.getSession();
-      const token = session?.access_token || publicAnonKey;
-
-      const res = await fetch(PROVIDERS_API, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-
-      if (!res.ok) throw new Error('Failed to load providers');
-
-      const data = await res.json();
+      const data = await api.get<{
+        providers?: Array<{
+          id: string;
+          name: string;
+          description?: string;
+          category_ids?: string[];
+          categoryIds?: string[];
+          logo_url?: string;
+          logoUrl?: string;
+        }>;
+      }>('/product-management/providers');
 
       // Map server response (snake_case) to component interface (camelCase)
       // Belt-and-suspenders: accept both legacy camelCase and canonical snake_case
       // fields, since KV data may predate the naming convention migration
-      const allProviders = (data.providers || []).map(
-        (p: { id: string; name: string; [key: string]: unknown }) => ({
-          id: p.id,
-          name: p.name,
-          description: p.description,
-          categoryIds:
-            (p.category_ids as string[] | undefined) ||
-            (p.categoryIds as string[] | undefined) ||
-            [],
-          logoUrl: (p.logo_url as string | undefined) || (p.logoUrl as string | undefined),
-        }),
-      );
+      const allProviders = (data.providers || []).map((p) => ({
+        id: p.id,
+        name: p.name,
+        description: p.description || '',
+        categoryIds: p.category_ids || p.categoryIds || [],
+        logoUrl: p.logo_url || p.logoUrl,
+      }));
 
       // Filter providers that support this category
       // For retirement/investment subcategories, we also accept providers linked to the parent category
@@ -303,18 +292,17 @@ export function PolicyFormDialog({
   const loadTableStructure = async () => {
     setIsLoading(true);
     try {
-      const res = await fetch(`${API_BASE}/schemas?categoryId=${activeCategoryId}`, {
-        headers: { Authorization: `Bearer ${publicAnonKey}` },
-      });
-
-      if (!res.ok) throw new Error('Failed to load table structure');
-
-      const data = await res.json();
+      const raw = await api.get<unknown>(`/integrations/schemas?categoryId=${activeCategoryId}`);
       // Handle both formats: direct fields array or wrapped in object
-      if (data && data.fields) {
-        setTableStructure(data.fields);
-      } else if (Array.isArray(data)) {
-        setTableStructure(data);
+      if (
+        raw &&
+        typeof raw === 'object' &&
+        !Array.isArray(raw) &&
+        (raw as { fields?: ProductField[] }).fields
+      ) {
+        setTableStructure((raw as { fields: ProductField[] }).fields);
+      } else if (Array.isArray(raw)) {
+        setTableStructure(raw as ProductField[]);
       } else {
         setTableStructure([]);
       }
@@ -496,25 +484,9 @@ export function PolicyFormDialog({
         updatedAt: new Date().toISOString(),
       };
 
-      const supabase = createClient();
-      const {
-        data: { session },
-      } = await supabase.auth.getSession();
-      const token = session?.access_token || publicAnonKey;
-
-      const res = await fetch(`${API_BASE}/policies`, {
-        method: editingPolicy ? 'PUT' : 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify(policyData),
-      });
-
-      if (!res.ok) {
-        const errorData = await res.json();
-        throw new Error(errorData.error || 'Failed to save policy');
-      }
+      await (editingPolicy
+        ? api.put('/integrations/policies', policyData)
+        : api.post('/integrations/policies', policyData));
 
       toast.success(editingPolicy ? 'Policy updated successfully' : 'Policy added successfully', {
         id: toastId,

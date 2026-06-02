@@ -27,10 +27,7 @@ import {
   Filter,
   AlertCircle,
 } from 'lucide-react';
-import { projectId, publicAnonKey } from '../../../utils/supabase/info';
-import { createClient } from '../../../utils/supabase/client';
-
-const API_BASE = `https://${projectId}.supabase.co/functions/v1/make-server-91ed8379/integrations`;
+import { api } from '../../../utils/api';
 
 /** Compact snapshot format stored in history entries */
 interface FieldMappingSnapshot {
@@ -168,28 +165,17 @@ export function ExtractionComparisonDialog({
     // Try server-side compare endpoint first
     setIsLoading(true);
     try {
-      const supabase = createClient();
-      const {
-        data: { session },
-      } = await supabase.auth.getSession();
-      const token = session?.access_token || publicAnonKey;
-
-      const res = await fetch(
-        `${API_BASE}/policy-extraction/compare?policyId=${encodeURIComponent(policyId)}&clientId=${encodeURIComponent(clientId)}&leftId=${encodeURIComponent(leftEntry.id)}&rightId=${encodeURIComponent(rightEntry.id)}`,
-        { headers: { Authorization: `Bearer ${token}` } },
+      const data = await api.get<{ fields?: ComparisonField[]; message?: string }>(
+        `/integrations/policy-extraction/compare?policyId=${encodeURIComponent(policyId)}&clientId=${encodeURIComponent(clientId)}&leftId=${encodeURIComponent(leftEntry.id)}&rightId=${encodeURIComponent(rightEntry.id)}`,
       );
-
-      if (res.ok) {
-        const data = await res.json();
-        if (data.fields && data.fields.length > 0) {
-          setComparisonFields(data.fields);
-          setIsLoading(false);
-          return;
-        }
-        // If server returns empty fields, it means no snapshot data
-        if (data.message) {
-          setNoSnapshotData(true);
-        }
+      if (data.fields && data.fields.length > 0) {
+        setComparisonFields(data.fields);
+        setIsLoading(false);
+        return;
+      }
+      // If server returns empty fields, it means no snapshot data
+      if (data.message) {
+        setNoSnapshotData(true);
       }
     } catch (err) {
       console.error('Server-side compare failed, trying client-side fallback:', err);

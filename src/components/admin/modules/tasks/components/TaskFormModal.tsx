@@ -188,7 +188,7 @@ export function TaskFormModal({ isOpen, onClose, task, mode, onModeChange }: Tas
   const fetchAttachments = async (taskId: string) => {
     setIsLoadingAttachments(true);
     try {
-      const data = await api.get<{ attachments?: TaskAttachment[] }>(`/todo/attachments/${taskId}`);
+      const data = await api.get<{ attachments?: Attachment[] }>(`/todo/attachments/${taskId}`);
       setAttachments(data.attachments || []);
     } catch (e) {
       console.error(e);
@@ -328,7 +328,7 @@ export function TaskFormModal({ isOpen, onClose, task, mode, onModeChange }: Tas
     try {
       const formData = new FormData();
       formData.append('file', file);
-      const data = await api.post<{ attachment?: TaskAttachment }>(
+      const data = await api.post<{ attachment?: Attachment }>(
         `/todo/attachments/${targetId}`,
         formData,
       );

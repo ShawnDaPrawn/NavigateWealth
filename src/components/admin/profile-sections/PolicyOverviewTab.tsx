@@ -30,7 +30,7 @@ import {
   TableRow,
   TableFooter,
 } from '../../ui/table';
-import { projectId, publicAnonKey } from '../../../utils/supabase/info';
+import { api } from '../../../utils/api';
 import { withNavigateWealthPrintTitle } from '../../../utils/pdfPrintTitle';
 import { toast } from 'sonner';
 import { getFNAConfig, hasFNASupport } from './fna-config';
@@ -40,8 +40,6 @@ import { calculateGoalStatus } from '../modules/client-management/components/goa
 import { PolicyComparisonPanel } from './PolicyComparisonPanel';
 
 import type { PolicyRecord, SchemaField, LinkedGoalStatus } from './PolicyTable';
-
-const API_BASE = `https://${projectId}.supabase.co/functions/v1/make-server-91ed8379/integrations`;
 
 // Define the order as requested
 const SECTIONS = [
@@ -235,17 +233,11 @@ function OverviewSection({
       const fetchSchemaForCategory = async (catId: string, retries = 2): Promise<SchemaField[]> => {
         for (let attempt = 0; attempt <= retries; attempt++) {
           try {
-            const res = await fetch(`${API_BASE}/schemas?categoryId=${catId}`, {
-              headers: { Authorization: `Bearer ${publicAnonKey}` },
-            });
-
-            if (res.ok) {
-              const data = await res.json();
-              if (data && data.fields) return data.fields;
-              if (Array.isArray(data)) return data;
-            }
-
-            // Non-ok response — fallback without retry
+            const data = await api.get<{ fields?: SchemaField[] } | SchemaField[]>(
+              `/integrations/schemas?categoryId=${catId}`,
+            );
+            if (data && !Array.isArray(data) && data.fields) return data.fields;
+            if (Array.isArray(data)) return data;
             break;
           } catch (err) {
             // Retry on transient network errors (cold-start / Failed to fetch)
@@ -295,31 +287,16 @@ function OverviewSection({
       }
 
       // 3. Fetch Policies
-      const policiesRes = await fetch(
-        `${API_BASE}/policies?clientId=${clientId}&categoryId=${section.categoryId}`,
-        {
-          headers: { Authorization: `Bearer ${publicAnonKey}` },
-        },
+      const policiesData = await api.get<{ policies?: PolicyRecord[] }>(
+        `/integrations/policies?clientId=${clientId}&categoryId=${section.categoryId}`,
       );
-
-      if (policiesRes.ok) {
-        const policiesData = await policiesRes.json();
-        setPolicies(policiesData.policies || []);
-      }
+      setPolicies(policiesData.policies || []);
 
       // 4. Fetch Goals (for Investments)
       if (section.categoryId === 'investments') {
         try {
-          const goalsRes = await fetch(
-            `https://${projectId}.supabase.co/functions/v1/make-server-91ed8379/goals/${clientId}`,
-            {
-              headers: { Authorization: `Bearer ${publicAnonKey}` },
-            },
-          );
-          if (goalsRes.ok) {
-            const goalsData = await goalsRes.json();
-            setGoals(goalsData.goals || []);
-          }
+          const goalsData = await api.get<{ goals?: Goal[] }>(`/goals/${clientId}`);
+          setGoals(goalsData.goals || []);
         } catch (err) {
           console.warn('Error fetching goals:', err);
         }

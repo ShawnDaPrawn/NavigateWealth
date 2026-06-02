@@ -25,10 +25,7 @@ import {
   Building2,
   AlertCircle,
 } from 'lucide-react';
-import { projectId, publicAnonKey } from '../../../utils/supabase/info';
-import { createClient } from '../../../utils/supabase/client';
-
-const API_BASE = `https://${projectId}.supabase.co/functions/v1/make-server-91ed8379/integrations`;
+import { api } from '../../../utils/api';
 
 interface KeyField {
   label: string;
@@ -94,23 +91,9 @@ export function PolicyComparisonPanel({ clientId }: PolicyComparisonPanelProps) 
   const fetchComparison = useCallback(async () => {
     setIsLoading(true);
     try {
-      const supabase = createClient();
-      const {
-        data: { session },
-      } = await supabase.auth.getSession();
-      const token = session?.access_token || publicAnonKey;
-
-      const res = await fetch(
-        `${API_BASE}/policies/compare?clientId=${encodeURIComponent(clientId)}`,
-        { headers: { Authorization: `Bearer ${token}` } },
+      const data = await api.get<{ policies?: ComparisonPolicy[] }>(
+        `/integrations/policies/compare?clientId=${encodeURIComponent(clientId)}`,
       );
-
-      if (!res.ok) {
-        const errorData = await res.json();
-        throw new Error(errorData.error || 'Failed to load comparison data');
-      }
-
-      const data = await res.json();
       setPolicies(data.policies || []);
     } catch (err) {
       console.error('Error loading policy comparison:', err);
