@@ -152,6 +152,7 @@
     "fna-intake:uat-report": "node ./scripts/fna-intake-uat-report.mjs",
     "form-prefill:smoke": "node ./scripts/form-prefill-api-smoke.mjs",
     "form-prefill:e2e": "playwright test e2e/form-prefill-smoke.spec.ts --project=desktop-chromium",
-    "form-prefill:migrate-templates": "node ./scripts/migrate-form-templates-to-storage.mjs"
+    "form-prefill:migrate-templates": "node ./scripts/migrate-form-templates-to-storage.mjs",
+    "depcruise": "npx dependency-cruiser@16 'src/**/*.{ts,tsx}' --config .dependency-cruiser.cjs"
   }
 }
