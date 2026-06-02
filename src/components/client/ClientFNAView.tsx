@@ -11,7 +11,6 @@ import { BrandSectionLoader } from '../ui/brand-loader';
 import {
   Shield,
   Heart,
-  Users,
   Home,
   TrendingUp,
   DollarSign,
@@ -19,7 +18,6 @@ import {
   AlertCircle,
   CheckCircle,
   FileText,
-  Download,
   Phone,
 } from 'lucide-react';
 import {

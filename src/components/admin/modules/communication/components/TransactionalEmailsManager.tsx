@@ -1,13 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import {
-  ArrowLeft,
-  Settings,
-  Mail,
-  Edit,
-  Loader2,
-  Bell,
-  Megaphone,
-} from 'lucide-react';
+import { ArrowLeft, Settings, Mail, Edit, Loader2, Bell, Megaphone } from 'lucide-react';
 import { Button } from '../../../../ui/button';
 import { Switch } from '../../../../ui/switch';
 

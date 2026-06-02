@@ -81,7 +81,9 @@ export function useClientEnvelopes(
     queryFn: async () => {
       logger.debug('[E-Sign Query] Fetching envelopes for client', { clientId });
       const response = await esignApi.getClientEnvelopes(clientId, clientEmail);
-      logger.debug('[E-Sign Query] Fetched client envelopes', { count: response.envelopes?.length || 0 });
+      logger.debug('[E-Sign Query] Fetched client envelopes', {
+        count: response.envelopes?.length || 0,
+      });
       return response.envelopes || [];
     },
     staleTime: QUERY_STALE_TIME,

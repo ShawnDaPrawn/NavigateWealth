@@ -13,7 +13,6 @@ import { ArrowLeft, ArrowRight, Shield, Users, Wallet, Clock, Info } from 'lucid
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../../../../ui/card';
 import { Button } from '../../../../ui/button';
 import { Alert, AlertDescription } from '../../../../ui/alert';
-import { Separator } from '../../../../ui/separator';
 import { MedicalFNAInputs, MedicalFNAResults } from '../types';
 
 interface Step2Props {

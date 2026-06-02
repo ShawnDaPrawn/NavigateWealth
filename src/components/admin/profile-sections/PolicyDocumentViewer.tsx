@@ -13,14 +13,7 @@ import React, { useState, useCallback, useEffect } from 'react';
 import { Dialog, DialogContent, DialogTitle } from '../../ui/dialog';
 import { Button } from '../../ui/button';
 import { Badge } from '../../ui/badge';
-import {
-  FileText,
-  ExternalLink,
-  Loader2,
-  AlertCircle,
-  Maximize2,
-  Minimize2,
-} from 'lucide-react';
+import { FileText, ExternalLink, Loader2, AlertCircle, Maximize2, Minimize2 } from 'lucide-react';
 import { api } from '../../../utils/api';
 
 /** Minimal document meta needed for display */

@@ -36,9 +36,7 @@ import type { LetterMeta } from '../templates/LetterheadPdfLayout';
 
 // Phase 1/Phase 2 imports
 import { TemplateGallery } from './components/TemplateGallery';
-import {
-  type StarterTemplate,
-} from './constants';
+import { type StarterTemplate } from './constants';
 
 // Simple ID generator
 const generateId = () => {

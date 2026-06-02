@@ -7,16 +7,7 @@ import { Slider } from '../ui/slider';
 import { RadioGroup, RadioGroupItem } from '../ui/radio-group';
 import { Progress } from '../ui/progress';
 import { ImageWithFallback } from '../figma/ImageWithFallback';
-import {
-  CheckCircle,
-  ArrowRight,
-  ArrowLeft,
-  X,
-  Info,
-  User,
-  Shield,
-  Loader2,
-} from 'lucide-react';
+import { CheckCircle, ArrowRight, ArrowLeft, X, Info, User, Shield, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { projectId, publicAnonKey } from '../../utils/supabase/info';
 

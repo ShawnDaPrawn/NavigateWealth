@@ -20,7 +20,6 @@ import {
   ChangePasswordSchema,
   SuspendUserSchema,
   Toggle2FASchema,
-  Send2FACodeSchema,
   Verify2FACodeSchema,
   RequestEmailChangeSchema,
   VerifyEmailChangeSchema,
@@ -553,7 +552,7 @@ app.post('/:userId/password', requireAuth, async (c) => {
     }
 
     // Update password using admin API
-    const { data, error } = await getSupabase().auth.admin.updateUserById(userId, {
+    const { data: _data, error } = await getSupabase().auth.admin.updateUserById(userId, {
       password: newPassword,
     });
 

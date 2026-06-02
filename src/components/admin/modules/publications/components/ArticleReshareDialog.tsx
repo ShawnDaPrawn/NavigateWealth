@@ -21,16 +21,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '../../../../ui/alert-dialog';
-import {
-  AlertCircle,
-  Eye,
-  Loader2,
-  Mail,
-  Search,
-  Send,
-  UserPlus,
-  Users,
-} from 'lucide-react';
+import { AlertCircle, Eye, Loader2, Mail, Search, Send, UserPlus, Users } from 'lucide-react';
 import { toast } from 'sonner';
 
 import { PublicationsAPI } from '../api';

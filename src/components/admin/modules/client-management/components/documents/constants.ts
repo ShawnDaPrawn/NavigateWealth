@@ -2,7 +2,6 @@
  * Constants for Documents/History module
  */
 
-
 export const DOCUMENT_TYPES = {
   DOCUMENT: 'document',
   LINK: 'link',

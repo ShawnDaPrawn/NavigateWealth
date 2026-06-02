@@ -1,12 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import {
-  Check,
-  ChevronsUpDown,
-  Database,
-  UserCircle,
-  Calculator,
-  Target,
-} from 'lucide-react';
+import { Check, ChevronsUpDown, Database, UserCircle, Calculator, Target } from 'lucide-react';
 import { cn } from '../../../../../ui/utils';
 import { Button } from '../../../../../ui/button';
 import {

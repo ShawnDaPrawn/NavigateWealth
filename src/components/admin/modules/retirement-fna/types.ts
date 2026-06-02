@@ -8,7 +8,6 @@
  * - Aligned with Risk Planning FNA patterns
  */
 
-
 // ==================== WIZARD STEPS ====================
 // Moved to constants.ts — re-exported for backward compatibility
 export { WIZARD_STEPS } from './constants';

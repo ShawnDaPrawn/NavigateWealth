@@ -128,7 +128,7 @@ export function CategoryPolicyKPIs({ categories, mode = 'adviser' }: CategoryPol
 
 function CategoryKPICard({
   category,
-  mode = 'adviser',
+  mode: _mode = 'adviser',
 }: {
   category: CategoryKPI;
   mode?: DashboardMode;

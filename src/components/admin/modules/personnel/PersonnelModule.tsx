@@ -46,7 +46,14 @@ interface StatCardProps {
   subtitle?: string;
 }
 
-function StatCard({ label, value, icon: Icon, iconColor, iconBg, subtitle: _subtitle }: StatCardProps) {
+function StatCard({
+  label,
+  value,
+  icon: Icon,
+  iconColor,
+  iconBg,
+  subtitle: _subtitle,
+}: StatCardProps) {
   return (
     <Card className="border border-gray-200/80 shadow-none hover:shadow-sm transition-shadow">
       <CardContent className="p-4">

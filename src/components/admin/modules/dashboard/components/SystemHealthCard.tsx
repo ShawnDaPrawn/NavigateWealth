@@ -77,7 +77,7 @@ const CATEGORY_LABELS: Record<string, string> = {
 
 type CleanupStage = 'idle' | 'previewing' | 'preview_done' | 'executing' | 'done' | 'error';
 
-export function SystemHealthCard({ onModuleChange }: SystemHealthCardProps) {
+export function SystemHealthCard({ onModuleChange: _onModuleChange }: SystemHealthCardProps) {
   const [lastRun, setLastRun] = useState<LastCleanupRun | null>(null);
   const [loading, setLoading] = useState(true);
 

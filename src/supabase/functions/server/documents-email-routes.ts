@@ -225,9 +225,10 @@ documentsEmailRoutes.post('/:userId/email', async (c) => {
       let resolved = text.replace(/\{\{ \.Name \}\}/g, firstName || 'Client');
 
       // Resolve CustomMessage with appropriate defaults
-      const defaultMsg = emailType === 'resend'
-        ? '<p>Please find attached the documents you requested.</p>'
-        : '<p>New documents have been uploaded to your profile.</p>';
+      const defaultMsg =
+        emailType === 'resend'
+          ? '<p>Please find attached the documents you requested.</p>'
+          : '<p>New documents have been uploaded to your profile.</p>';
 
       let msg = defaultMsg;
       if (customMessage) {

@@ -16,7 +16,7 @@ import { Button } from '../../../../ui/button';
 import { Input } from '../../../../ui/input';
 import { Label } from '../../../../ui/label';
 import { Textarea } from '../../../../ui/textarea';
-import { Upload, FileText, X, AlertCircle, CheckCircle2, Loader2 } from 'lucide-react';
+import { Upload, FileText, X, AlertCircle, Loader2 } from 'lucide-react';
 import { useEnvelopeActions } from '../hooks/useEnvelopeActions';
 import type { Client } from '../../client-management/types';
 

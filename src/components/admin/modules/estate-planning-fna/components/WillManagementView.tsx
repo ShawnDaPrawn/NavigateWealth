@@ -103,7 +103,7 @@ interface WillManagementViewProps {
 export function WillManagementView({
   clientId,
   clientName,
-  onDraftLastWill,
+  onDraftLastWill: _onDraftLastWill,
   onDraftLivingWill,
   onViewWill,
   onResumeDraft,

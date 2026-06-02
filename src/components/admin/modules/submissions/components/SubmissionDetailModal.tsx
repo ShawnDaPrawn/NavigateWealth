@@ -24,7 +24,6 @@ import { useNavigate } from 'react-router';
 import {
   Dialog,
   DialogContent,
-  DialogHeader,
   DialogTitle,
   DialogDescription,
 } from '../../../../ui/dialog';

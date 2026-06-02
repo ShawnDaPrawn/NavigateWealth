@@ -95,7 +95,7 @@ export function AuditLogWidget({ maxEntries = 8 }: AuditLogWidgetProps) {
   const [loading, setLoading] = useState(true);
   const [viewerOpen, setViewerOpen] = useState(false);
   const [summary, setSummary] = useState<Record<AuditActionCategory, number> | null>(null);
-  const [summaryDays, setSummaryDays] = useState(7);
+  const [summaryDays, _setSummaryDays] = useState(7);
 
   const fetchEntries = useCallback(async () => {
     setLoading(true);

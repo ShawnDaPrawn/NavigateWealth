@@ -49,7 +49,6 @@ import type {
   Guardian,
   Executor,
   SpecificBequest,
-  HealthcareAgent,
   WillData,
   LivingWillData,
   WizardStep,

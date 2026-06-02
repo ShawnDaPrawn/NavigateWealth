@@ -11,11 +11,7 @@ import { useCreateTask, useUpdateTask, useDeleteTask } from '../hooks';
 import { STATUS_LABELS, PRIORITY_LABELS } from '../constants';
 import { communicationApi } from '../../communication/api';
 import { api } from '../../../../../utils/api';
-import {
-  Dialog,
-  DialogContent,
-  DialogTitle,
-} from '../../../../ui/dialog';
+import { Dialog, DialogContent, DialogTitle } from '../../../../ui/dialog';
 import { Button } from '../../../../ui/button';
 import { Input } from '../../../../ui/input';
 import { Textarea } from '../../../../ui/textarea';
@@ -84,7 +80,13 @@ interface TaskFormModalProps {
   onModeChange?: (mode: 'create' | 'edit' | 'view') => void;
 }
 
-export function TaskFormModal({ isOpen, onClose, task, mode, onModeChange: _onModeChange }: TaskFormModalProps) {
+export function TaskFormModal({
+  isOpen,
+  onClose,
+  task,
+  mode,
+  onModeChange: _onModeChange,
+}: TaskFormModalProps) {
   const createTask = useCreateTask();
   const updateTask = useUpdateTask();
   const deleteTask = useDeleteTask();

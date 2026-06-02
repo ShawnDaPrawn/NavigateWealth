@@ -397,10 +397,7 @@ export function ClientOverviewTab({ client, mode = 'adviser' }: ClientOverviewTa
 
   // ── Phase 2 state ───────────────────────────────────────────────────
   // FNA statuses via React Query hook — replaces manual useState/useCallback/useEffect
-  const {
-    data: batchFnaData,
-    refetch: refetchFna,
-  } = useFnaBatchStatus(client.id);
+  const { data: batchFnaData, refetch: refetchFna } = useFnaBatchStatus(client.id);
 
   /** Raw FNA result data keyed by module key — only populated for published FNAs */
   const fnaResultsMap = useMemo<Record<string, Record<string, unknown> | null>>(() => {

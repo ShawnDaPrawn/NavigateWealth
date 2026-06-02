@@ -7,8 +7,6 @@ import {
   MessageSquare,
   PenLine,
   History,
-  Briefcase,
-  TrendingUp,
   User,
   LogOut,
 } from 'lucide-react';

@@ -2,7 +2,6 @@ import React, { useEffect } from 'react';
 import { Link } from 'react-router';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 import { Badge } from '../ui/badge';
-import { Separator } from '../ui/separator';
 import {
   Home,
   Shield,
@@ -11,7 +10,6 @@ import {
   FileText,
   Phone,
   Settings,
-  PieChart,
   TrendingUp,
   Calculator,
   BookOpen,

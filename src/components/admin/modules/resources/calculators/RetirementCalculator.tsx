@@ -204,11 +204,12 @@ export function RetirementCalculator({ onBack }: RetirementCalculatorProps) {
     const fvCurrentSavings = currentSavings * Math.pow(1 + r, n);
 
     // 2. Future Value of Contributions (at Retirement)
-    const fvContributions = Math.abs(r - g_real) < 0.0001
-      // Special case r ~ g
-      ? annualContribution * n * Math.pow(1 + r, n - 1)
-      // Growing annuity formula (end of period payments)
-      : annualContribution * ((Math.pow(1 + r, n) - Math.pow(1 + g_real, n)) / (r - g_real));
+    const fvContributions =
+      Math.abs(r - g_real) < 0.0001
+        ? // Special case r ~ g
+          annualContribution * n * Math.pow(1 + r, n - 1)
+        : // Growing annuity formula (end of period payments)
+          annualContribution * ((Math.pow(1 + r, n) - Math.pow(1 + g_real, n)) / (r - g_real));
 
     const totalCapital = fvCurrentSavings + fvContributions;
 

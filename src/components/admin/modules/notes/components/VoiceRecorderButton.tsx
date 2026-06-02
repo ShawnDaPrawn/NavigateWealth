@@ -37,7 +37,6 @@ import {
   Loader2,
   Check,
   X,
-  RotateCcw,
   AlertCircle,
   Upload,
   FileAudio,

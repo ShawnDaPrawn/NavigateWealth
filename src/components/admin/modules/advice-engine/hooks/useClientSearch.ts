@@ -11,7 +11,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { adviceEngineKeys } from './queryKeys';
 import { aiIntelligenceApi } from '../api';
-import type { Client, ClientSearchResult, UseClientSearchReturn } from '../types';
+import type { Client, UseClientSearchReturn } from '../types';
 
 /**
  * Debounce delay for search input (ms)

@@ -21,7 +21,7 @@ export function useSummariseNote() {
 
   return useMutation({
     mutationFn: (noteId: string) => NotesAPI.summariseNote(noteId),
-    onSuccess: (data) => {
+    onSuccess: (_data) => {
       qc.invalidateQueries({ queryKey: noteKeys.all });
       toast.success('Note summarised', {
         description: 'AI summary has been generated and saved.',

@@ -339,7 +339,6 @@ app.post(
   asyncHandler(async (c) => {
     const slug = c.req.param('slug');
     const versionId = c.req.param('versionId');
-    const userId = c.get('userId') || 'admin';
 
     const result = await service.archiveLegalDocumentVersion(slug, versionId);
 
@@ -727,7 +726,7 @@ app.get(
   '/training',
   requireAuth,
   asyncHandler(async (c) => {
-    const type = c.req.query('type');
+    const _type = c.req.query('type');
     const category = c.req.query('category');
     const search = c.req.query('search');
 

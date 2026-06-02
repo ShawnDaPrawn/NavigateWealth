@@ -12,7 +12,7 @@ describe('provider portal golden flows', () => {
   const allanGrayAdapterSource = readRepoFile('scripts/provider-adapters/allan-gray.mjs');
   const brightRockAdapterSource = readRepoFile('scripts/provider-adapters/brightrock.mjs');
   const capitalLegacyAdapterSource = readRepoFile('scripts/provider-adapters/capital-legacy.mjs');
-  const integrationsSource = readRepoFile('src/supabase/functions/server/integrations.tsx');
+  const _integrationsSource = readRepoFile('src/supabase/functions/server/integrations.tsx');
   // Portal automation types were extracted out of integrations.tsx (Phase 5
   // decomposition); the type-level anchors now live in this module.
   const portalTypesSource = readRepoFile(
@@ -59,7 +59,7 @@ describe('provider portal golden flows', () => {
   const portalDefaultFlowsSource = readRepoFile(
     'src/supabase/functions/server/portal-default-flows.ts',
   );
-  const productManagementApiSource = readRepoFile(
+  const _productManagementApiSource = readRepoFile(
     'src/components/admin/modules/product-management/api.ts',
   );
   const productTypesSource = readRepoFile(

@@ -7,10 +7,7 @@ import { Input } from '../ui/input';
 import { Label } from '../ui/label';
 import { Alert, AlertDescription } from '../ui/alert';
 import { Separator } from '../ui/separator';
-import {
-  formatCurrency,
-  cleanCurrencyInput,
-} from '../../utils/currencyFormatter';
+import { formatCurrency, cleanCurrencyInput } from '../../utils/currencyFormatter';
 import { EmptyState } from './profile/EmptyState';
 import { emptyStateConfigs } from './profile/emptyStateConfigs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';

@@ -1,7 +1,7 @@
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '../../../../ui/card';
 import { Skeleton } from '../../../../ui/skeleton';
-import { LucideIcon, ArrowUp, ArrowDown, Minus } from 'lucide-react';
+import { ArrowUp, ArrowDown, Minus } from 'lucide-react';
 import { formatKPIValue } from '../utils';
 import type { KPICardProps } from '../types';
 

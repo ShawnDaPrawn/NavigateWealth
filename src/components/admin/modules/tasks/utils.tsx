@@ -17,10 +17,7 @@ const ISSUE_MANAGER_TASK_HEADING_PATTERN =
   /^(Security Issue|Issue Manager Task|Affected Dependency|Why This Matters|Required Remediation|References|Context|Required Response)$/i;
 
 function cleanPreviewLine(value: string): string {
-  return value
-    .replace(/^-\s*/, '')
-    .replace(/\s+/g, ' ')
-    .trim();
+  return value.replace(/^-\s*/, '').replace(/\s+/g, ' ').trim();
 }
 
 export function isIssueManagerTask(task: Pick<Task, 'title' | 'tags'>): boolean {

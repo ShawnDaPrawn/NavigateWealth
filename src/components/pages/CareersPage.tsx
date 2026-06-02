@@ -124,7 +124,6 @@ const values = [
   },
 ];
 
-
 const HERO_STATS = [
   { label: 'Years Experience', value: 15, suffix: '+', icon: Award },
   { label: 'Team Members', value: 20, suffix: '+', icon: Users },

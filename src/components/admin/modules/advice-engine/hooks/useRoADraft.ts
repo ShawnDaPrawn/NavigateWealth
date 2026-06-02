@@ -12,7 +12,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { roaApi } from '../api';
 import { adviceEngineKeys } from './queryKeys';
 import { getFallbackRuntimeModules, moduleContractToRuntimeModule } from '../roaModuleRuntime';
-import type { RoADraft, RoAModule, UseRoADraftOptions, UseRoADraftReturn } from '../types';
+import type { RoADraft, UseRoADraftOptions, UseRoADraftReturn } from '../types';
 
 /**
  * Default auto-save delay (ms)

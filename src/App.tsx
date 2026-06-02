@@ -84,7 +84,9 @@ export default function App() {
         event.message?.includes('Cannot listen to the event from the provided iframe')
       ) {
         event.preventDefault();
-        logger.debug('[TradingView] Suppressed non-fatal iframe access error in preview environment.');
+        logger.debug(
+          '[TradingView] Suppressed non-fatal iframe access error in preview environment.',
+        );
         return true;
       }
 
@@ -119,7 +121,9 @@ export default function App() {
         reason.includes('Cannot listen to the event from the provided iframe')
       ) {
         event.preventDefault();
-        logger.debug('[TradingView] Suppressed non-fatal iframe promise rejection in preview environment.');
+        logger.debug(
+          '[TradingView] Suppressed non-fatal iframe promise rejection in preview environment.',
+        );
       }
 
       void reportRuntimeClientIssue(runtimeIssueFromUnknown('unhandled-rejection', event.reason));

@@ -11,7 +11,6 @@ import {
   FileText,
   Plus,
   Clock,
-  CheckCircle2,
   List,
   Bookmark,
   TrendingUp,

@@ -248,7 +248,10 @@ export function PDFViewer({
           // P2.5 2.3 — surface the page count to the parent so it can offer
           // "Apply to all pages" without re-parsing the PDF.
           onPageCount?.(pdf.numPages);
-          logger.info('PDF loaded', { numPages: pdf.numPages, urlPrefix: documentUrl.slice(0, 80) });
+          logger.info('PDF loaded', {
+            numPages: pdf.numPages,
+            urlPrefix: documentUrl.slice(0, 80),
+          });
         }
       } catch (err: unknown) {
         console.error('Failed to load PDF:', err);

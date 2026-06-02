@@ -34,17 +34,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '../../../../ui/alert-dialog';
-import {
-  Users,
-  Plus,
-  Pencil,
-  Trash2,
-  Loader2,
-  Save,
-  X,
-  Eye,
-  EyeOff,
-} from 'lucide-react';
+import { Users, Plus, Pencil, Trash2, Loader2, Save, X, Eye, EyeOff } from 'lucide-react';
 import { toast } from 'sonner';
 import { projectId, publicAnonKey } from '../../../../../utils/supabase/info';
 import { createClient } from '../../../../../utils/supabase/client';

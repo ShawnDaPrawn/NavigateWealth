@@ -12,14 +12,7 @@
 import React, { useState, useEffect } from 'react';
 import { useSearchParams, useNavigate } from 'react-router';
 import { motion } from 'motion/react';
-import {
-  Loader2,
-  AlertCircle,
-  ShieldCheck,
-  Clock,
-  CheckCircle2,
-  XCircle,
-} from 'lucide-react';
+import { Loader2, AlertCircle, ShieldCheck, Clock, CheckCircle2, XCircle } from 'lucide-react';
 import { Card } from '../ui/card';
 import { Button } from '../ui/button';
 import { Badge } from '../ui/badge';

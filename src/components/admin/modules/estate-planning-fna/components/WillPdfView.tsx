@@ -7,7 +7,7 @@
  */
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../../../../ui/dialog';
+import { Dialog, DialogContent, DialogTitle } from '../../../../ui/dialog';
 import { Button } from '../../../../ui/button';
 import { Loader2, Printer, X, Download } from 'lucide-react';
 import { toast } from 'sonner';

@@ -1180,7 +1180,12 @@ export class AdminApplicationsService {
         const application = await kv.get(`application:${appId}`);
 
         if (application) {
-          const { deprecated: _deprecated, deprecated_at: _deprecated_at, deprecated_reason: _deprecated_reason, ...restoredApp } = application;
+          const {
+            deprecated: _deprecated,
+            deprecated_at: _deprecated_at,
+            deprecated_reason: _deprecated_reason,
+            ...restoredApp
+          } = application;
           await kv.set(`application:${appId}`, restoredApp);
           undeprecatedCount++;
         }

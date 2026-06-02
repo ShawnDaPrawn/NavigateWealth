@@ -140,7 +140,7 @@ export function FNAIntakeQueue({ onAccept, onOpenClient }: FNAIntakeQueueProps) 
   };
 
   const handleAccept = async (session: FnaIntakeSession) => {
-    const formId = intakeFormId(session.domain as FnaIntakeDomain);
+    const _formId = intakeFormId(session.domain as FnaIntakeDomain);
     setPendingSession(session);
     setPrefillLoading(true);
     setReviewOpen(true);

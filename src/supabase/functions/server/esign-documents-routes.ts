@@ -460,7 +460,7 @@ documentsRoutes.post(
       const envelopeId = c.req.param('envelopeId');
 
       const body = await c.req.json();
-      const { signers, fields, expiryDays, message, signingMode } = body;
+      const { signers, fields, expiryDays: _expiryDays, message, signingMode } = body;
 
       if (!signers || signers.length === 0) {
         return c.json({ error: 'At least one signer required' }, 400);
@@ -479,7 +479,7 @@ documentsRoutes.post(
       // Add signers
       const { signerIds, error: signerError } = await addSignersToEnvelope(
         envelopeId,
-        signers.map((s: SignerRecord, index: number) => ({
+        signers.map((s: SignerRecord, _index: number) => ({
           name: s.name,
           email: s.email,
           phone: s.phone,

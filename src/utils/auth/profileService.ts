@@ -334,7 +334,9 @@ export async function loadUserProfile(
     }
 
     const isSuperAdmin = email.toLowerCase() === SUPER_ADMIN_EMAIL.toLowerCase();
-    logger.info('Login validation server unavailable (likely cold start or dev mode), proceeding with login.');
+    logger.info(
+      'Login validation server unavailable (likely cold start or dev mode), proceeding with login.',
+    );
 
     return {
       id: userId,

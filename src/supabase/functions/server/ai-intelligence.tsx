@@ -650,7 +650,6 @@ async function callOpenAIWorkflow(messages: ChatMessage[], systemPrompt: string)
       stack: error instanceof Error ? error.stack : undefined,
       error: error,
     });
-
   }
 }
 

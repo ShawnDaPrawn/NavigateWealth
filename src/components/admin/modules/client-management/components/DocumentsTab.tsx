@@ -219,7 +219,10 @@ export function DocumentsTab({ selectedClient }: DocumentsTabProps) {
     const toastId = toast.loading('Deleting document pack...');
 
     try {
-      logger.info('Deleting document pack', { packId: packToDelete.id, documentCount: docsToDelete.length });
+      logger.info('Deleting document pack', {
+        packId: packToDelete.id,
+        documentCount: docsToDelete.length,
+      });
 
       // Delete all documents in parallel
       await Promise.all(

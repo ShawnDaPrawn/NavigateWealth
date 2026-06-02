@@ -48,9 +48,6 @@ const EnvelopeInspector = React.lazy(() =>
 const TemplatePickerDialog = React.lazy(() =>
   import('./components/TemplatePickerDialog').then((m) => ({ default: m.TemplatePickerDialog })),
 );
-const SaveAsTemplateDialog = React.lazy(() =>
-  import('./components/SaveAsTemplateDialog').then((m) => ({ default: m.SaveAsTemplateDialog })),
-);
 const BulkSendDialog = React.lazy(() =>
   import('./components/BulkSendDialog').then((m) => ({ default: m.BulkSendDialog })),
 );

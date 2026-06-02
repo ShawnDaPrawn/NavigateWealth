@@ -17,7 +17,7 @@ import {
   ListOrdered,
 } from 'lucide-react';
 import { Badge } from '../../../../ui/badge';
-import type { EsignSigner, EsignEnvelope, SigningMode } from '../types';
+import type { EsignEnvelope, SigningMode } from '../types';
 
 interface SigningProgressTimelineProps {
   envelope: EsignEnvelope;

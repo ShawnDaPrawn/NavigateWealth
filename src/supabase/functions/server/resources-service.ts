@@ -13,9 +13,7 @@ import type {
   ResourceFilters,
 } from './resources-types.ts';
 import { createClient } from 'jsr:@supabase/supabase-js@2.49.8';
-import {
-  ZipWriter,
-} from 'npm:@zip.js/zip.js';
+import { ZipWriter } from 'npm:@zip.js/zip.js';
 import {
   LEGAL_DOCUMENTS_BY_SLUG,
   LEGAL_MIGRATION_PRIORITY_SLUGS,

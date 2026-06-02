@@ -11,7 +11,6 @@ import {
   Clock,
   RefreshCw,
   AlertTriangle,
-  CheckCircle2,
   Loader2,
   Settings,
   ListOrdered,

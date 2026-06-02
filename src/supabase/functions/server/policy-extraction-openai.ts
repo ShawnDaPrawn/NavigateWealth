@@ -264,7 +264,9 @@ function parseExtractionResponse(rawText: string): ExtractedPolicyData {
       error: getErrMsg(parseErr),
       rawText: cleaned.substring(0, 500),
     });
-    throw new Error(`Failed to parse AI extraction response: ${getErrMsg(parseErr)}`, { cause: parseErr });
+    throw new Error(`Failed to parse AI extraction response: ${getErrMsg(parseErr)}`, {
+      cause: parseErr,
+    });
   }
 }
 

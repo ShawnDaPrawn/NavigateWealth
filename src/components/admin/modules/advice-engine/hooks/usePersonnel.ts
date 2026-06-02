@@ -8,7 +8,7 @@
 
 import { useQuery } from '@tanstack/react-query';
 import { adviceEngineApi } from '../api';
-import type { Personnel } from '../types';
+
 import { adviceEngineKeys } from './queryKeys';
 
 export function usePersonnel() {

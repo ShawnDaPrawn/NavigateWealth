@@ -411,10 +411,13 @@ export async function sendPasswordResetEmail(email: string): Promise<void> {
       currentOrigin,
       redirectUrl,
     });
-    logger.info('CRITICAL: Add this EXACT URL to Supabase Dashboard → Authentication → URL Configuration → Redirect URLs', {
-      redirectUrl,
-      backupUrl: `${currentOrigin}/**`,
-    });
+    logger.info(
+      'CRITICAL: Add this EXACT URL to Supabase Dashboard → Authentication → URL Configuration → Redirect URLs',
+      {
+        redirectUrl,
+        backupUrl: `${currentOrigin}/**`,
+      },
+    );
 
     const { data, error } = await supabase.auth.resetPasswordForEmail(email, {
       redirectTo: redirectUrl,
@@ -433,7 +436,9 @@ export async function sendPasswordResetEmail(email: string): Promise<void> {
     }
 
     logger.info('Password reset email request completed successfully');
-    logger.info('Note: Supabase always returns success even if email does not exist (security feature)');
+    logger.info(
+      'Note: Supabase always returns success even if email does not exist (security feature)',
+    );
     logger.info('If email exists in database, user should receive email from Supabase');
 
     // Log password reset request

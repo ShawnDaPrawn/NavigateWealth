@@ -59,7 +59,9 @@ export function useScheduledPublishProcessor(options?: {
 
       const result = await PublicationsAPI.Articles.processScheduled();
       if (result && result.processed > 0) {
-        logger.info('[ScheduledPublishProcessor] Published scheduled articles', { processed: result.processed });
+        logger.info('[ScheduledPublishProcessor] Published scheduled articles', {
+          processed: result.processed,
+        });
         onProcessed?.(result.processed);
       }
     } catch (err) {

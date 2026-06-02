@@ -27,7 +27,16 @@ function TradingViewEconomicCalendarWidget() {
       const width = window.innerWidth;
       const dimensions = {
         width: '100%',
-        height: width >= 1536 ? '800' : width >= 1280 ? '700' : width >= 1024 ? '650' : width >= 768 ? '600' : '500',
+        height:
+          width >= 1536
+            ? '800'
+            : width >= 1280
+              ? '700'
+              : width >= 1024
+                ? '650'
+                : width >= 768
+                  ? '600'
+                  : '500',
       };
 
       script.innerHTML = JSON.stringify({

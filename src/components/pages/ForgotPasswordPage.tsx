@@ -3,15 +3,7 @@ import { Button } from '../ui/button';
 import { Input } from '../ui/input';
 import { Label } from '../ui/label';
 import { Alert, AlertDescription } from '../ui/alert';
-import {
-  Mail,
-  ArrowLeft,
-  Shield,
-  CheckCircle,
-  Lock,
-  Clock,
-  AlertCircle,
-} from 'lucide-react';
+import { Mail, ArrowLeft, Shield, CheckCircle, Lock, Clock, AlertCircle } from 'lucide-react';
 import { getUserErrorMessage } from '../../utils/errorUtils';
 import { useNavigate, Link } from 'react-router';
 import { useState } from 'react';

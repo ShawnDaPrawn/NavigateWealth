@@ -11,7 +11,6 @@ import type {
   Guardian,
   SpecificBequest,
   HealthcareAgent,
-  WillData,
   LivingWillData,
 } from '../WillDraftingTypes';
 

@@ -323,7 +323,7 @@ export function TabPermissions({ selectedPersonnel }: TabPermissionsProps) {
                       const activeCaps = localModules[module]?.capabilities || [];
                       const allCapsGranted =
                         hasCaps && capabilities.every((c) => activeCaps.includes(c.key));
-                      const someCapsGranted = hasCaps && activeCaps.length > 0 && !allCapsGranted;
+                      const _someCapsGranted = hasCaps && activeCaps.length > 0 && !allCapsGranted;
 
                       return (
                         <div

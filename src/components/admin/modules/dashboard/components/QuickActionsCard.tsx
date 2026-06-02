@@ -10,7 +10,6 @@ import {
   Calendar,
   Settings,
   Shield,
-  Plus,
   ClipboardCheck,
 } from 'lucide-react';
 import type { QuickActionsCardProps, QuickAction } from '../types';

@@ -1,9 +1,5 @@
 import React from 'react';
-import type {
-  ProfileData,
-  IdentityDocument,
-  IdentityDocumentType,
-} from '../types';
+import type { ProfileData, IdentityDocument, IdentityDocumentType } from '../types';
 import { CountrySelect } from '../CountrySelect';
 import { EmptyState } from '../EmptyState';
 import { emptyStateConfigs } from '../emptyStateConfigs';

@@ -22,16 +22,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '../../../../ui/dialog';
-import {
-  Mail,
-  Paperclip,
-  FileText,
-  Send,
-  Eye,
-  X,
-  Upload,
-  AlertCircle,
-} from 'lucide-react';
+import { Mail, Paperclip, FileText, Send, Eye, X, Upload, AlertCircle } from 'lucide-react';
 import { EmailTemplate, AttachmentFile } from '../types';
 import { communicationApi } from '../api';
 

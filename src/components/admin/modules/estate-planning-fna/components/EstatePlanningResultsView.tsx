@@ -18,7 +18,7 @@ import {
   Shield,
 } from 'lucide-react';
 import type { EstatePlanningSession } from '../types';
-import { EstatePlanningCalculationService, formatCurrency as formatCurrencyValue } from '../utils';
+import { formatCurrency as formatCurrencyValue } from '../utils';
 
 interface EstatePlanningResultsViewProps {
   fna: EstatePlanningSession;

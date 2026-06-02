@@ -18,14 +18,7 @@ import {
   Loader2,
   Building2,
 } from 'lucide-react';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '../../ui/table';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../ui/table';
 import { api } from '../../../utils/api';
 import { withNavigateWealthPrintTitle } from '../../../utils/pdfPrintTitle';
 import { getFNAConfig, hasFNASupport } from './fna-config';

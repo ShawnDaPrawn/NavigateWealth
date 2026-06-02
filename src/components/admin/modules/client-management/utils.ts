@@ -1,6 +1,6 @@
 import { Client, ClientFilters } from './types';
 import { CONFIG, PERSONNEL_ROLES } from './constants';
-import type { HealthSubCategory, KPIStatus } from './constants';
+import type { KPIStatus } from './constants';
 
 function normalizeClientStatus(value: string | undefined): string | undefined {
   const normalized = value?.trim().toLowerCase();

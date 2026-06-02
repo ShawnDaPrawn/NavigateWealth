@@ -23,7 +23,6 @@ import { Step3ManualAdjustment } from './Step3ManualAdjustment';
 import { Step4Finalise } from './Step4Finalise';
 import {
   MedicalFNAInputs,
-  MedicalFNAResults,
   MedicalFNAAdjustments,
   MedicalFNAFinalNeeds,
   MedicalFNAWizardState,

@@ -6,7 +6,6 @@
 import { z } from 'zod';
 import { VALIDATION_RULES } from './constants';
 
-
 // ==================== DEPENDANT SCHEMA ====================
 
 export const DependantSchema = z.object({

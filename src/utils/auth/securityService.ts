@@ -132,7 +132,9 @@ export async function validateLoginAttempt(email: string): Promise<{
       error instanceof Error &&
       (error.name === 'AbortError' || error.message.includes('fetch'))
     ) {
-      logger.info('Login validation server unavailable (likely cold start or dev mode), proceeding with login.');
+      logger.info(
+        'Login validation server unavailable (likely cold start or dev mode), proceeding with login.',
+      );
       return { allowed: true };
     }
     console.error('Login validation error:', error);

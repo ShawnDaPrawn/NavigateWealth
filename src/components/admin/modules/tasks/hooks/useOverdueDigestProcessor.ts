@@ -87,7 +87,9 @@ export function useOverdueDigestProcessor(options?: {
       const result = await api.post<DigestSendResponse>('/tasks-digest/send-overdue');
 
       if (result.sent && result.overdue_count && result.overdue_count > 0) {
-        logger.info('[OverdueDigestProcessor] Sent digest email', { overdueCount: result.overdue_count });
+        logger.info('[OverdueDigestProcessor] Sent digest email', {
+          overdueCount: result.overdue_count,
+        });
         onDigestSent?.(result.overdue_count);
       } else if (result.reason === 'no_overdue_tasks') {
         logger.info('[OverdueDigestProcessor] No overdue tasks — no email sent');

@@ -91,7 +91,9 @@ export function useMaintenanceCronProcessor(options?: {
           }>('/clients/maintenance/cleanup', { dryRun: false });
 
           if (result.success) {
-            logger.info('[MaintenanceCronProcessor] Client cleanup complete', { totalProfilesScanned: result.totalProfilesScanned });
+            logger.info('[MaintenanceCronProcessor] Client cleanup complete', {
+              totalProfilesScanned: result.totalProfilesScanned,
+            });
             onClientCleanupRan?.();
           }
         }
@@ -112,7 +114,9 @@ export function useMaintenanceCronProcessor(options?: {
           }>('/kv-cleanup/run', { dryRun: false });
 
           if (result.success) {
-            logger.info('[MaintenanceCronProcessor] KV cleanup complete', { totalKeysDeleted: result.totalKeysDeleted });
+            logger.info('[MaintenanceCronProcessor] KV cleanup complete', {
+              totalKeysDeleted: result.totalKeysDeleted,
+            });
             onKvCleanupRan?.();
           }
         }

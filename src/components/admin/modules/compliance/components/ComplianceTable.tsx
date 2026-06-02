@@ -403,7 +403,9 @@ export function ComplianceTable({
                             Download Files
                           </DropdownMenuItem>
                           <DropdownMenuSeparator />
-                          <DropdownMenuItem onClick={() => logger.info('Audit trail', { id: record.id })}>
+                          <DropdownMenuItem
+                            onClick={() => logger.info('Audit trail', { id: record.id })}
+                          >
                             View Audit Trail
                           </DropdownMenuItem>
                         </DropdownMenuContent>

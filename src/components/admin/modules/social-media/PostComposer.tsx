@@ -33,13 +33,7 @@ import {
   Zap,
   AlertCircle,
 } from 'lucide-react';
-import {
-  SocialProfile,
-  MediaFile,
-  PostLink,
-  UTMParameters,
-  PLATFORM_LIMITS,
-} from './types';
+import { SocialProfile, MediaFile, PostLink, UTMParameters, PLATFORM_LIMITS } from './types';
 import { campaignsApi } from './api';
 
 /** Data shape for composing a new post */
