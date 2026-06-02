@@ -14,8 +14,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../..
 import { Badge } from '../../../../ui/badge';
 import { Skeleton } from '../../../../ui/skeleton';
 import { Mail, Send, Users, Calendar, TrendingUp } from 'lucide-react';
-import { projectId, publicAnonKey } from '../../../../../utils/supabase/info';
-import { createClient } from '../../../../../utils/supabase/client';
+import { api } from '../../../../../utils/api';
 
 interface NewsletterStats {
   activeSubscribers: number;
@@ -26,17 +25,10 @@ interface NewsletterStats {
 
 async function fetchNewsletterStats(): Promise<NewsletterStats | null> {
   try {
-    const supabase = createClient();
-    const { data } = await supabase.auth.getSession();
-    const token = data?.session?.access_token;
-    if (!token) return null;
-
-    const res = await fetch(
-      `https://${projectId}.supabase.co/functions/v1/make-server-91ed8379/newsletter/admin/stats`,
-      { headers: { Authorization: `Bearer ${token}` } },
+    const json = await api.get<{ success?: boolean; data?: NewsletterStats }>(
+      '/newsletter/admin/stats',
     );
-    const json = await res.json();
-    if (json.success) return json.data;
+    if (json.success) return json.data ?? null;
   } catch (err) {
     console.error('Failed to fetch newsletter stats:', err);
   }

@@ -19,8 +19,7 @@ import { Button } from '../../../../../ui/button';
 import { Badge } from '../../../../../ui/badge';
 import { TrendingUp, Camera, Loader2, History, Trash2, Info } from 'lucide-react';
 import { SVGLineChart } from '../../../../../ui/svg-charts';
-import { projectId, publicAnonKey } from '../../../../../../utils/supabase/info';
-import { createClient as createSupabaseClient } from '../../../../../../utils/supabase/client';
+import { api } from '../../../../../../utils/api';
 import type { DashboardMode } from '../ClientOverviewTab';
 
 // ── Types ───────────────────────────────────────────────────────────────
@@ -56,8 +55,6 @@ interface NetWorthHistoryProps {
 }
 
 // ── Constants ───────────────────────────────────────────────────────────
-
-const API_BASE = `https://${projectId}.supabase.co/functions/v1/make-server-91ed8379`;
 
 const fmt = (n: number): string => {
   if (n === undefined || n === null || isNaN(Number(n))) return 'R 0';
@@ -132,35 +129,15 @@ export function NetWorthHistory({
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
   const [dateRange, setDateRange] = useState<DateRange>('all');
 
-  // ── Auth helper ───────────────────────────────────────────────────
-
-  const getAuthToken = useCallback(async (): Promise<string> => {
-    try {
-      const supabase = createSupabaseClient();
-      const {
-        data: { session },
-      } = await supabase.auth.getSession();
-      return session?.access_token || publicAnonKey;
-    } catch {
-      return publicAnonKey;
-    }
-  }, []);
-
   // ── Fetch snapshots ───────────────────────────────────────────────
 
   const fetchSnapshots = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
-      const token = await getAuthToken();
-      const res = await fetch(`${API_BASE}/net-worth-snapshots/${clientId}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      if (!res.ok) {
-        const errData = await res.json().catch(() => null);
-        throw new Error(errData?.error || `Server returned ${res.status}`);
-      }
-      const data = await res.json();
+      const data = await api.get<{ success?: boolean; snapshots?: NetWorthSnapshotData[] }>(
+        `/net-worth-snapshots/${clientId}`,
+      );
       if (data.success && Array.isArray(data.snapshots)) {
         setSnapshots(data.snapshots);
       }
@@ -170,7 +147,7 @@ export function NetWorthHistory({
     } finally {
       setLoading(false);
     }
-  }, [clientId, getAuthToken]);
+  }, [clientId]);
 
   useEffect(() => {
     fetchSnapshots().catch(() => {
@@ -185,29 +162,17 @@ export function NetWorthHistory({
     setError(null);
     setSuccessMsg(null);
     try {
-      const token = await getAuthToken();
-      const res = await fetch(`${API_BASE}/net-worth-snapshots/${clientId}`, {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          totalAssets: currentTotalAssets,
-          totalLiabilities: currentTotalLiabilities,
-          netWorth: currentNetWorth,
-          policyCount: currentPolicyCount,
-          monthlyPremiums: currentMonthlyPremiums,
-          retirementValue: currentRetirementValue,
-          investmentValue: currentInvestmentValue,
-          assetBreakdown,
-          liabilityBreakdown,
-        }),
+      await api.post(`/net-worth-snapshots/${clientId}`, {
+        totalAssets: currentTotalAssets,
+        totalLiabilities: currentTotalLiabilities,
+        netWorth: currentNetWorth,
+        policyCount: currentPolicyCount,
+        monthlyPremiums: currentMonthlyPremiums,
+        retirementValue: currentRetirementValue,
+        investmentValue: currentInvestmentValue,
+        assetBreakdown,
+        liabilityBreakdown,
       });
-      if (!res.ok) {
-        const errData = await res.json().catch(() => null);
-        throw new Error(errData?.error || `Server returned ${res.status}`);
-      }
       setSuccessMsg('Snapshot saved successfully.');
       setTimeout(() => setSuccessMsg(null), 3000);
       // Re-fetch to get updated list
@@ -229,7 +194,6 @@ export function NetWorthHistory({
     currentInvestmentValue,
     assetBreakdown,
     liabilityBreakdown,
-    getAuthToken,
     fetchSnapshots,
   ]);
 
