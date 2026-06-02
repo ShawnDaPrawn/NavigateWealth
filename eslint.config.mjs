@@ -26,6 +26,7 @@ export default tseslint.config(
       'build/**',
       'node_modules/**',
       'tmp/**',
+      '.claude/**',
       'playwright-report/**',
       'test-results/**',
       '.vercel/**',

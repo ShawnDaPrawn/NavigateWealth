@@ -391,7 +391,7 @@ export async function createDefaultProfile(
     }
   } catch (error) {
     console.error('Error creating default profile:', error);
-    throw new Error(AUTH_ERRORS.PROFILE_LOAD_ERROR);
+    throw new Error(AUTH_ERRORS.PROFILE_LOAD_ERROR, { cause: error });
   }
 }
 

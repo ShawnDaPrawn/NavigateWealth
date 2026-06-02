@@ -226,7 +226,7 @@ function isHtmlContent(content: string): boolean {
   if (/^<\/?[a-z][a-z0-9]*(?:\s|>|\/)/i.test(t)) return true;
   if (/^<![\s\S]*?>/i.test(t)) return true;
   const head = t.slice(0, 800);
-  if (/<[a-z][a-z0-9]*[\s>\/]/i.test(head) || /<\/[a-z][a-z0-9]*>/i.test(head)) return true;
+  if (/<[a-z][a-z0-9]*[\s>/]/i.test(head) || /<\/[a-z][a-z0-9]*>/i.test(head)) return true;
   return /<[a-z][\s\S]*>/i.test(t);
 }
 

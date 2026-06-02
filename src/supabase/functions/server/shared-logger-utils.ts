@@ -15,7 +15,7 @@ export function sanitizeLogData(data: unknown, seen = new WeakSet()): unknown {
       name: data.name,
       message: data.message,
       stack: data.stack,
-      // @ts-ignore
+      // @ts-expect-error — `code` is not in the standard Error type but is set at runtime
       code: data.code,
     };
   }

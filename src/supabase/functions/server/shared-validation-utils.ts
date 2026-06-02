@@ -132,7 +132,7 @@ export function sanitizeEmail(email: string): string {
  * Sanitize phone: remove spaces and dashes
  */
 export function sanitizePhone(phone: string): string {
-  return phone.replace(/[\s\-]/g, '');
+  return phone.replace(/[\s-]/g, '');
 }
 
 /**

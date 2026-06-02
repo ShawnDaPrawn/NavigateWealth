@@ -712,7 +712,7 @@ router.post(
           finalProfile = { ...existing, ...data, updatedAt: new Date().toISOString() };
         } catch (readError) {
           log.error('Failed to read profile for PATCH.', readError);
-          throw new Error('Database error. Please refresh the page.');
+          throw new Error('Database error. Please refresh the page.', { cause: readError });
         }
       }
 
@@ -724,7 +724,7 @@ router.post(
         }
       } catch (sanitizationError) {
         log.error('Deep sanitize failed on server', sanitizationError);
-        throw new Error('Sanitization failed');
+        throw new Error('Sanitization failed', { cause: sanitizationError });
       }
 
       // Save to KV store
@@ -734,6 +734,7 @@ router.post(
         log.error('KV Write Failed', setError);
         throw new Error(
           `KV Write Failed: ${setError instanceof Error ? setError.message : String(setError)}`,
+          { cause: setError },
         );
       }
 

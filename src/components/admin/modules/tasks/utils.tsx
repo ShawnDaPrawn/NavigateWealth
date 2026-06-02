@@ -18,7 +18,7 @@ const ISSUE_MANAGER_TASK_HEADING_PATTERN =
 
 function cleanPreviewLine(value: string): string {
   return value
-    .replace(/^\-\s*/, '')
+    .replace(/^-\s*/, '')
     .replace(/\s+/g, ' ')
     .trim();
 }

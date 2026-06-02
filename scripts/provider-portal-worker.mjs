@@ -1007,6 +1007,7 @@ async function promptForManualOtp(page, flow, preferredSelector, existingTarget)
     throw new Error(
       'Timed out waiting for manual OTP. The provider showed an OTP step, but no code was submitted in Navigate Wealth before the timeout. '
       + 'Worker diagnostics were captured for the OTP screen when debug artifacts are enabled.',
+      { cause: error },
     );
   }
   return fillManualOtp(page, flow, code, preferredSelector, existingTarget);

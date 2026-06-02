@@ -447,7 +447,7 @@ export async function calculateHash(buffer: Uint8Array): Promise<string> {
     return hashHex;
   } catch (error) {
     log.error('Hash calculation error:', error);
-    throw new Error('Failed to calculate file hash');
+    throw new Error('Failed to calculate file hash', { cause: error });
   }
 }
 

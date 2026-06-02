@@ -1232,12 +1232,12 @@ function generateTextPdf(willText: string, clientName: string): void {
 
 function addFooter(
   doc: {
-    setFontSize: Function;
-    setTextColor: Function;
-    text: Function;
-    setDrawColor: Function;
-    setLineWidth: Function;
-    line: Function;
+    setFontSize: (size: number) => void;
+    setTextColor: (r: number, g: number, b: number) => void;
+    text: (text: string, x: number, y: number, options?: Record<string, unknown>) => void;
+    setDrawColor: (r: number, g: number, b: number) => void;
+    setLineWidth: (width: number) => void;
+    line: (x1: number, y1: number, x2: number, y2: number) => void;
   },
   pageNum: number,
   title: string,

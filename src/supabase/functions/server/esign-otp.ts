@@ -44,7 +44,7 @@ export async function hashOTP(otp: string): Promise<string> {
     return hashHex;
   } catch (error) {
     log.error('OTP hashing error:', error);
-    throw new Error('Failed to hash OTP');
+    throw new Error('Failed to hash OTP', { cause: error });
   }
 }
 

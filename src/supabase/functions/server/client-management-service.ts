@@ -114,7 +114,7 @@ export class ClientsService {
       usersRaw = await listAllAuthUsers(supabase);
     } catch (err) {
       log.error('Failed to fetch users', err as Error);
-      throw new Error('Failed to fetch clients');
+      throw new Error('Failed to fetch clients', { cause: err });
     }
 
     const users = usersRaw.filter(

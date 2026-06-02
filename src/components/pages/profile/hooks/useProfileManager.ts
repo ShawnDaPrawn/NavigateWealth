@@ -485,7 +485,7 @@ export function useProfileManager({
       if (originalData) {
         (Object.keys(profileData) as Array<keyof ProfileData>).forEach((key) => {
           if (profileData[key] !== originalData[key]) {
-            // @ts-ignore - Dynamic assignment is safe here as keys match
+            // @ts-expect-error - Dynamic assignment is safe here as keys match
             patchData[key] = profileData[key];
           }
         });

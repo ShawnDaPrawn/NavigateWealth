@@ -38,7 +38,7 @@ interface KvRow {
   key: string;
   value: unknown;
 }
-interface AdvisorMessageArtifact extends Record<string, unknown> {}
+type AdvisorMessageArtifact = Record<string, unknown>;
 interface AdvisorStoredMessage {
   role: 'user' | 'assistant';
   content: string;
@@ -119,7 +119,7 @@ function toTimestampKey(timestamp: string): string {
 
 function stripMarkdownArtifacts(content: string): string {
   return content
-    .replace(/[*_`#>\-]+/g, ' ')
+    .replace(/[*_`#>-]+/g, ' ')
     .replace(/\[(.*?)\]\((.*?)\)/g, '$1')
     .replace(/\s+/g, ' ')
     .trim();

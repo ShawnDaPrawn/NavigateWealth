@@ -275,7 +275,7 @@ export class RequestsService {
       return newTemplate;
     } catch (error) {
       log.error('Failed to create template', error as Error);
-      throw new Error(`Failed to create template: ${error}`);
+      throw new Error(`Failed to create template: ${error}`, { cause: error });
     }
   }
 
@@ -347,7 +347,7 @@ export class RequestsService {
       }
     } catch (error) {
       log.error('Failed to update template', error as Error, { templateId });
-      throw new Error(`Failed to update template: ${error}`);
+      throw new Error(`Failed to update template: ${error}`, { cause: error });
     }
   }
 
@@ -384,7 +384,7 @@ export class RequestsService {
       return newTemplate;
     } catch (error) {
       log.error('Failed to duplicate template', error as Error, { templateId });
-      throw new Error(`Failed to duplicate template: ${error}`);
+      throw new Error(`Failed to duplicate template: ${error}`, { cause: error });
     }
   }
 
@@ -410,7 +410,7 @@ export class RequestsService {
       return updatedTemplate;
     } catch (error) {
       log.error('Failed to archive template', error as Error, { templateId });
-      throw new Error(`Failed to archive template: ${error}`);
+      throw new Error(`Failed to archive template: ${error}`, { cause: error });
     }
   }
 
@@ -608,7 +608,7 @@ export class RequestsService {
       return newRequest;
     } catch (error) {
       log.error('Failed to create request', error as Error, { templateId });
-      throw new Error(`Failed to create request: ${error}`);
+      throw new Error(`Failed to create request: ${error}`, { cause: error });
     }
   }
 
@@ -652,7 +652,7 @@ export class RequestsService {
       return updatedRequest;
     } catch (error) {
       log.error('Failed to update request', error as Error, { requestId });
-      throw new Error(`Failed to update request: ${error}`);
+      throw new Error(`Failed to update request: ${error}`, { cause: error });
     }
   }
 
@@ -720,7 +720,7 @@ export class RequestsService {
       return updatedRequest;
     } catch (error) {
       log.error('Failed to move lifecycle stage', error as Error, { requestId });
-      throw new Error(`Failed to move lifecycle stage: ${error}`);
+      throw new Error(`Failed to move lifecycle stage: ${error}`, { cause: error });
     }
   }
 
@@ -782,7 +782,7 @@ export class RequestsService {
       return updatedRequest;
     } catch (error) {
       log.error('Failed to update compliance sign-off', error as Error, { requestId });
-      throw new Error(`Failed to update compliance sign-off: ${error}`);
+      throw new Error(`Failed to update compliance sign-off: ${error}`, { cause: error });
     }
   }
 
@@ -829,7 +829,7 @@ export class RequestsService {
       return updatedRequest;
     } catch (error) {
       log.error('Failed to finalise request', error as Error, { requestId });
-      throw new Error(`Failed to finalise request: ${error}`);
+      throw new Error(`Failed to finalise request: ${error}`, { cause: error });
     }
   }
 
@@ -851,7 +851,7 @@ export class RequestsService {
       log.success('Request deleted', { requestId });
     } catch (error) {
       log.error('Failed to delete request', error as Error, { requestId });
-      throw new Error(`Failed to delete request: ${error}`);
+      throw new Error(`Failed to delete request: ${error}`, { cause: error });
     }
   }
 
@@ -902,7 +902,7 @@ export class RequestsService {
       const entries = await kv.getByPrefix<AuditLogEntry>(`requests:audit:${requestId}:`);
       return entries.sort((a, b) => b.performedAt.localeCompare(a.performedAt));
     } catch (error) {
-      throw new Error(`Failed to retrieve audit log: ${error}`);
+      throw new Error(`Failed to retrieve audit log: ${error}`, { cause: error });
     }
   }
 }

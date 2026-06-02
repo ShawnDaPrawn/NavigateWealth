@@ -47,7 +47,7 @@ const MAX_CACHED_BODY_BYTES = 256 * 1024;
 
 /** Loose key shape — UUIDs, ULIDs, opaque tokens are all fine.
  *  Reject anything obviously malicious (CRLF injection / path traversal). */
-const KEY_PATTERN = /^[A-Za-z0-9_\-]{8,128}$/;
+const KEY_PATTERN = /^[A-Za-z0-9_-]{8,128}$/;
 
 interface CachedRecord {
   /** Stable hash of the request body — used for "same key, different body" detection. */

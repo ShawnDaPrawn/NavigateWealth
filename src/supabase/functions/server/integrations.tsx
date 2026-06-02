@@ -799,7 +799,7 @@ app.post("/policies/archive", async (c) => {
     const { id, clientId, reason } = parsed.data;
 
     const policiesKey = `policies:client:${clientId}`;
-    let policies = (await kv.get(policiesKey)) || [];
+    const policies = (await kv.get(policiesKey)) || [];
 
     const policyIndex = policies.findIndex((p: KvPolicy) => p.id === id);
     
@@ -836,7 +836,7 @@ app.post("/policies/reinstate", async (c) => {
     const { id, clientId } = parsed.data;
 
     const policiesKey = `policies:client:${clientId}`;
-    let policies = (await kv.get(policiesKey)) || [];
+    const policies = (await kv.get(policiesKey)) || [];
 
     const policyIndex = policies.findIndex((p: KvPolicy) => p.id === id);
     
@@ -891,7 +891,7 @@ app.post("/policies", async (c) => {
     };
 
     const policiesKey = `policies:client:${clientId}`;
-    let policies = (await kv.get(policiesKey)) || [];
+    const policies = (await kv.get(policiesKey)) || [];
     
     policies.push(policy);
     
@@ -920,7 +920,7 @@ app.put("/policies", async (c) => {
     }
 
     const policiesKey = `policies:client:${clientId}`;
-    let policies = (await kv.get(policiesKey)) || [];
+    const policies = (await kv.get(policiesKey)) || [];
 
     const policyIndex = policies.findIndex((p: KvPolicy) => p.id === id);
     

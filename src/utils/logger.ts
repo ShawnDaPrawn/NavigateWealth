@@ -18,13 +18,13 @@ class Logger implements ILogger {
 
   private detectEnvironment(): boolean {
     try {
-      // @ts-ignore
+      // @ts-expect-error — import.meta.env is Vite-injected, not in standard TS lib
       if (
         typeof import.meta !== 'undefined' &&
         import.meta.env &&
         typeof import.meta.env.DEV !== 'undefined'
       ) {
-        // @ts-ignore
+        // @ts-expect-error — same as above
         return !!import.meta.env.DEV;
       }
       if (typeof window !== 'undefined' && window.location) {

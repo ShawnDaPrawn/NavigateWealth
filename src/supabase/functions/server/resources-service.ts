@@ -76,7 +76,9 @@ class DenoFileReader {
   close() {
     try {
       this.file.close();
-    } catch {}
+    } catch {
+      // intentionally empty
+    }
   }
 }
 
@@ -1730,7 +1732,7 @@ export class ResourcesService {
 
     // Use our custom file writer to stream output to disk
     // This prevents the growing Zip file from consuming all RAM
-    // @ts-ignore - ZipWriter expects a specific interface which we roughly satisfy
+    // @ts-expect-error - ZipWriter expects a specific interface which we roughly satisfy
     const zipWriter = new ZipWriter(new DenoFileWriter(zipFilePath), {
       bufferedWrite: false, // Must be false for large files to stream without pre-buffering
       useWebWorkers: false,
@@ -1963,7 +1965,7 @@ export class ResourcesService {
               // Use custom reader to stream from disk (saves RAM)
               const fileReader = new DenoFileReader(tempFilePath);
               try {
-                // @ts-ignore - Custom reader matches interface but not class
+                // @ts-expect-error - Custom reader matches interface but not class
                 await zipWriter.add(zipPath, fileReader, {
                   level: 0,
                   password: password,
@@ -2047,7 +2049,9 @@ export class ResourcesService {
           // Ensure we close the handle for this attempt
           try {
             zipFileHandle?.close();
-          } catch {}
+          } catch {
+            // intentionally empty
+          }
         }
       }
 

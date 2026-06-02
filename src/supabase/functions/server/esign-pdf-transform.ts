@@ -161,7 +161,7 @@ export async function applyManifest(
     return { pdfBuffer, pageCount: manifest.pages.length, pageMap };
   } catch (err) {
     log.error('Failed to apply page manifest:', err);
-    throw new Error(`Failed to apply page manifest: ${getErrMsg(err)}`);
+    throw new Error(`Failed to apply page manifest: ${getErrMsg(err)}`, { cause: err });
   }
 }
 

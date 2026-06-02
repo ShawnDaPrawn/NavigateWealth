@@ -192,10 +192,10 @@ export const aiIntelligenceApi = {
       const message = getErrorMessage(error);
       // Handle specific error cases
       if (message.includes('API key') || message.includes('401')) {
-        throw new Error('⚠️ OpenAI API Key Issue\n\nThe OpenAI API key needs to be updated.');
+        throw new Error('⚠️ OpenAI API Key Issue\n\nThe OpenAI API key needs to be updated.', { cause: error });
       }
       if (message.includes('403')) {
-        throw new Error('Access denied. Admin privileges required.');
+        throw new Error('Access denied. Admin privileges required.', { cause: error });
       }
 
       throw error;
