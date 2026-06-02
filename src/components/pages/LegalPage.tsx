@@ -11,7 +11,6 @@ import { Separator } from '../ui/separator';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../ui/dialog';
 import { FileText, Shield, Scale, Archive, Mail, Phone, Eye, Printer } from 'lucide-react';
 import { toast } from 'sonner';
-import { projectId } from '../../utils/supabase/info';
 import { escapeHtmlText, navigateWealthPdfDocumentTitle } from '../../utils/pdfPrintTitle';
 import { BASE_PDF_CSS } from '../admin/modules/resources/templates/BasePdfLayout';
 

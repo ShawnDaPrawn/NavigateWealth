@@ -17,8 +17,6 @@ import type {
   Article,
   ArticleFormData,
   ArticleStatus,
-  Category,
-  ContentType,
   CreateArticleInput,
   CreateCategoryInput,
   CreateContentTypeInput,

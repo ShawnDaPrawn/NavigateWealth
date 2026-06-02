@@ -469,7 +469,6 @@ export function CashflowWaterfallChart({
   }
 
   // Compute disposable as percentage of gross
-  const taxDeductions = data.grossIncome - data.netIncome;
   const totalPremiums =
     data.riskPremiums +
     data.medicalPremiums +
@@ -583,7 +582,7 @@ export interface ActionDistribution {
  */
 export function ActionPriorityBar({
   distribution,
-  mode = 'adviser',
+  mode: _mode = 'adviser',
 }: {
   distribution: ActionDistribution;
   mode?: DashboardMode;
