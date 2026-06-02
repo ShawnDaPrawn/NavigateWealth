@@ -69,7 +69,7 @@ function getCategoryLabel(categoryId: string): string {
 
 // GET /providers - Legacy/Fallback support
 // Normalises camelCase ↔ snake_case fields for backward compatibility
-app.get("/providers", requireAuth, async (c) => {
+app.get('/providers', requireAuth, async (c) => {
   try {
     const providers = await kv.getByPrefix('provider:');
 
@@ -82,10 +82,13 @@ app.get("/providers", requireAuth, async (c) => {
     const normalised = providers.map((p: Record<string, unknown>) => ({
       ...p,
       // Canonical snake_case
-      category_ids: (p.category_ids as string[] | undefined) || (p.categoryIds as string[] | undefined) || [],
-      logo_url: (p.logo_url as string | undefined) || (p.logoUrl as string | undefined) || undefined,
+      category_ids:
+        (p.category_ids as string[] | undefined) || (p.categoryIds as string[] | undefined) || [],
+      logo_url:
+        (p.logo_url as string | undefined) || (p.logoUrl as string | undefined) || undefined,
       // Legacy camelCase (for any consumer still expecting it)
-      categoryIds: (p.category_ids as string[] | undefined) || (p.categoryIds as string[] | undefined) || [],
+      categoryIds:
+        (p.category_ids as string[] | undefined) || (p.categoryIds as string[] | undefined) || [],
       logoUrl: (p.logo_url as string | undefined) || (p.logoUrl as string | undefined) || undefined,
     }));
 
@@ -93,18 +96,18 @@ app.get("/providers", requireAuth, async (c) => {
 
     return c.json({ providers: normalised });
   } catch (e) {
-    log.error("Error fetching providers:", e);
-    return c.json({ error: "Failed to fetch providers" }, 500);
+    log.error('Error fetching providers:', e);
+    return c.json({ error: 'Failed to fetch providers' }, 500);
   }
 });
 
 // GET /config
-app.get("/config", requireAuth, async (c) => {
-  const providerId = c.req.query("providerId");
-  const categoryId = c.req.query("categoryId");
+app.get('/config', requireAuth, async (c) => {
+  const providerId = c.req.query('providerId');
+  const categoryId = c.req.query('categoryId');
 
   if (!providerId || !categoryId) {
-    return c.json({ error: "Missing providerId or categoryId" }, 400);
+    return c.json({ error: 'Missing providerId or categoryId' }, 400);
   }
 
   const key = `config:mapping:${providerId}:${categoryId}`;
@@ -117,7 +120,7 @@ app.get("/config", requireAuth, async (c) => {
       providerId,
       categoryId,
       updatedAt: new Date().toISOString(),
-      updatedBy: "system",
+      updatedBy: 'system',
       fieldMapping: {},
       fieldBindings: [],
       settings: {
@@ -129,25 +132,34 @@ app.get("/config", requireAuth, async (c) => {
     });
   }
 
-  return c.json(normaliseIntegrationConfig({
-    ...(config as IntegrationConfig),
-    providerId,
-    categoryId,
-  }, fields));
+  return c.json(
+    normaliseIntegrationConfig(
+      {
+        ...(config as IntegrationConfig),
+        providerId,
+        categoryId,
+      },
+      fields,
+    ),
+  );
 });
 
 // POST /config
-app.post("/config", requireAuth, async (c) => {
+app.post('/config', requireAuth, async (c) => {
   try {
     const body = await c.req.json();
     const parsed = SaveConfigSchema.safeParse(body);
     if (!parsed.success) {
-      return c.json({ error: "Validation failed", ...formatZodError(parsed.error) }, 400);
+      return c.json({ error: 'Validation failed', ...formatZodError(parsed.error) }, 400);
     }
     const { providerId, categoryId, fieldMapping, fieldBindings, settings } = parsed.data;
     const schema = await getSchemaForCategory(categoryId);
     const fields = schema.fields || [];
-    const normalisedBindings = normaliseFieldBindings(fieldBindings, fieldMapping as Record<string, string>, fields);
+    const normalisedBindings = normaliseFieldBindings(
+      fieldBindings,
+      fieldMapping as Record<string, string>,
+      fields,
+    );
 
     const key = `config:mapping:${providerId}:${categoryId}`;
 
@@ -155,44 +167,53 @@ app.post("/config", requireAuth, async (c) => {
       providerId,
       categoryId,
       updatedAt: new Date().toISOString(),
-      updatedBy: "user",
+      updatedBy: 'user',
       fieldBindings: normalisedBindings,
-      fieldMapping: fieldBindingsToMapping(normalisedBindings, fieldMapping as Record<string, string>),
+      fieldMapping: fieldBindingsToMapping(
+        normalisedBindings,
+        fieldMapping as Record<string, string>,
+      ),
       settings: normaliseSettings(settings as Partial<IntegrationConfig['settings']>),
     };
 
     await kv.set(key, config);
     return c.json({ success: true, config });
-
   } catch (e) {
-    log.error("Error saving config:", e);
-    return c.json({ error: "Failed to save configuration" }, 500);
+    log.error('Error saving config:', e);
+    return c.json({ error: 'Failed to save configuration' }, 500);
   }
 });
 
 // GET /template
-app.get("/template", requireAuth, async (c) => {
+app.get('/template', requireAuth, async (c) => {
   try {
-    const providerId = c.req.query("providerId");
-    const categoryId = c.req.query("categoryId");
+    const providerId = c.req.query('providerId');
+    const categoryId = c.req.query('categoryId');
 
     if (!providerId || !categoryId) {
-      return c.json({ error: "Missing providerId or categoryId" }, 400);
+      return c.json({ error: 'Missing providerId or categoryId' }, 400);
     }
 
     const provider = (await kv.get(`provider:${providerId}`)) as KvProvider | null;
     if (!provider) {
-      return c.json({ error: "Invalid provider ID" }, 400);
+      return c.json({ error: 'Invalid provider ID' }, 400);
     }
 
     const schema = await getSchemaForCategory(categoryId);
     const fields = schema.fields || [];
-    const storedConfig = (await kv.get(`config:mapping:${providerId}:${categoryId}`)) as IntegrationConfig | null;
-    const config = normaliseIntegrationConfig(storedConfig ? {
-      ...storedConfig,
-      providerId,
-      categoryId,
-    } : null, fields);
+    const storedConfig = (await kv.get(
+      `config:mapping:${providerId}:${categoryId}`,
+    )) as IntegrationConfig | null;
+    const config = normaliseIntegrationConfig(
+      storedConfig
+        ? {
+            ...storedConfig,
+            providerId,
+            categoryId,
+          }
+        : null,
+      fields,
+    );
     const settings = normaliseSettings(config?.settings);
     const templateBindings = getTemplateFieldBindings(config, fields);
     const templateVersion = `${providerId}:${categoryId}:${config.updatedAt || new Date().toISOString()}`;
@@ -209,14 +230,25 @@ app.get("/template", requireAuth, async (c) => {
       ['Navigate Wealth Integration Template'],
       ['Provider', provider.name || providerId],
       ['Product Type', categoryLabel],
-      ['Purpose', 'This workbook mirrors the Mapping Configuration and contains the current database snapshot for this provider/product combination.'],
+      [
+        'Purpose',
+        'This workbook mirrors the Mapping Configuration and contains the current database snapshot for this provider/product combination.',
+      ],
       [],
       ['Workflow'],
       ['1. Work only in the Integration Update Template sheet.'],
-      ['2. Each row is prefilled from the current Navigate Wealth policy database for this provider/product type.'],
-      ['3. Hidden _NW columns keep the stable policy metadata used for safe matching during upload. Do not delete those columns.'],
-      ['4. Leaving a mapped cell blank normally does not clear the database value unless that field is explicitly configured to clear on blank.'],
-      ['5. Upload the workbook in Product Configuration > Integrations to stage a sync run, then review and publish the proposed diffs.'],
+      [
+        '2. Each row is prefilled from the current Navigate Wealth policy database for this provider/product type.',
+      ],
+      [
+        '3. Hidden _NW columns keep the stable policy metadata used for safe matching during upload. Do not delete those columns.',
+      ],
+      [
+        '4. Leaving a mapped cell blank normally does not clear the database value unless that field is explicitly configured to clear on blank.',
+      ],
+      [
+        '5. Upload the workbook in Product Configuration > Integrations to stage a sync run, then review and publish the proposed diffs.',
+      ],
       [],
       ['Upload Rules'],
       ['Auto-map future uploads', settings.autoMap ? 'Yes' : 'No'],
@@ -227,15 +259,18 @@ app.get("/template", requireAuth, async (c) => {
     appendSpreadsheetRowsSheet(workbook, instructions, TEMPLATE_INSTRUCTIONS_SHEET_NAME);
 
     const templateRows: Record<string, unknown>[] = [];
-    const sortablePolicies = await Promise.all(providerPolicies.map(async (policy) => {
-      const policyNumber = await getPolicyNumberForPolicy(policy, fields, schemaCache);
-      return { policy, policyNumber };
-    }));
+    const sortablePolicies = await Promise.all(
+      providerPolicies.map(async (policy) => {
+        const policyNumber = await getPolicyNumberForPolicy(policy, fields, schemaCache);
+        return { policy, policyNumber };
+      }),
+    );
 
-    sortablePolicies.sort((a, b) =>
-      a.policyNumber.localeCompare(b.policyNumber) ||
-      a.policy.clientId.localeCompare(b.policy.clientId) ||
-      a.policy.id.localeCompare(b.policy.id),
+    sortablePolicies.sort(
+      (a, b) =>
+        a.policyNumber.localeCompare(b.policyNumber) ||
+        a.policy.clientId.localeCompare(b.policy.clientId) ||
+        a.policy.id.localeCompare(b.policy.id),
     );
 
     for (const { policy, policyNumber } of sortablePolicies) {
@@ -245,19 +280,22 @@ app.get("/template", requireAuth, async (c) => {
           serialiseTemplateCellValue(policy.data?.[binding.targetFieldId]),
         ]),
       );
-      templateRows.push(applyTemplateRowMetadata(visibleRow, {
-        templateVersion,
-        policyId: policy.id,
-        clientId: policy.clientId,
-        providerId: policy.providerId,
-        categoryId: policy.categoryId,
-        normalizedPolicyNumber: normalisePolicyNumber(policyNumber),
-      }));
+      templateRows.push(
+        applyTemplateRowMetadata(visibleRow, {
+          templateVersion,
+          policyId: policy.id,
+          clientId: policy.clientId,
+          providerId: policy.providerId,
+          categoryId: policy.categoryId,
+          normalizedPolicyNumber: normalisePolicyNumber(policyNumber),
+        }),
+      );
     }
 
-    const templateSheet = templateRows.length > 0
-      ? jsonRowsToSpreadsheetSheet(templateRows, { header: allHeaders })
-      : rowsToSpreadsheetSheet([allHeaders]);
+    const templateSheet =
+      templateRows.length > 0
+        ? jsonRowsToSpreadsheetSheet(templateRows, { header: allHeaders })
+        : rowsToSpreadsheetSheet([allHeaders]);
     templateSheet['!cols'] = allHeaders.map((header) => ({
       wch: isTemplateMetadataColumn(header) ? 22 : Math.max(16, Math.min(32, header.length + 4)),
       hidden: isTemplateMetadataColumn(header),
@@ -271,7 +309,18 @@ app.get("/template", requireAuth, async (c) => {
     appendSpreadsheetSheet(workbook, templateSheet, CANONICAL_TEMPLATE_SHEET_NAME);
 
     const mappingRows = [
-      ['Spreadsheet Column', 'Navigate Wealth Field ID', 'Navigate Wealth Field', 'Type', 'Required', 'Portal Labels', 'Selector Override', 'Blank Behavior', 'Dropdown Options', 'Notes'],
+      [
+        'Spreadsheet Column',
+        'Navigate Wealth Field ID',
+        'Navigate Wealth Field',
+        'Type',
+        'Required',
+        'Portal Labels',
+        'Selector Override',
+        'Blank Behavior',
+        'Dropdown Options',
+        'Notes',
+      ],
       ...templateBindings.map((binding) => [
         binding.columnName,
         binding.targetFieldId,
@@ -305,8 +354,8 @@ app.get("/template", requireAuth, async (c) => {
       },
     });
   } catch (e) {
-    log.error("Template generation error:", e);
-    return c.json({ error: "Failed to generate integration template" }, 500);
+    log.error('Template generation error:', e);
+    return c.json({ error: 'Failed to generate integration template' }, 500);
   }
 });
 

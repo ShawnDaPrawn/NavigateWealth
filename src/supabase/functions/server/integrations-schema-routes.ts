@@ -20,17 +20,15 @@ import { formatZodError } from './shared-validation-utils.ts';
 import { DEFAULT_SCHEMAS } from './default-schemas.ts';
 import { SaveSchemaInputSchema } from './integrations-validation.ts';
 import type { KvSchema } from './integrations-types.ts';
-import {
-  autoGenerateCustomKeysForSchema,
-} from './integrations-derive.ts';
+import { autoGenerateCustomKeysForSchema } from './integrations-derive.ts';
 
 const app = new Hono();
 const log = createModuleLogger('integrations-schema');
 
 // GET /schemas
-app.get("/schemas", async (c) => {
-  const categoryId = c.req.query("categoryId");
-  if (!categoryId) return c.json({ error: "Missing categoryId" }, 400);
+app.get('/schemas', async (c) => {
+  const categoryId = c.req.query('categoryId');
+  if (!categoryId) return c.json({ error: 'Missing categoryId' }, 400);
 
   try {
     const key = `config:schema:${categoryId}`;
@@ -43,7 +41,7 @@ app.get("/schemas", async (c) => {
 
     return c.json(schema || { fields: [] });
   } catch (e) {
-    log.error("Error fetching schema, returning default:", e as Error, { categoryId });
+    log.error('Error fetching schema, returning default:', e as Error, { categoryId });
     const defaultSchema = DEFAULT_SCHEMAS[categoryId] || { fields: [] };
     return c.json(defaultSchema);
   }
@@ -51,10 +49,10 @@ app.get("/schemas", async (c) => {
 
 // GET /schemas/batch — returns all schemas in one call (defaults merged with custom overrides)
 // Used by the client overview dashboard to avoid 13+ individual schema calls
-app.get("/schemas/batch", async (c) => {
+app.get('/schemas/batch', async (c) => {
   try {
     // Fetch all custom schema overrides in one batch KV read
-    const customSchemas = await kv.getByPrefix("config:schema:");
+    const customSchemas = await kv.getByPrefix('config:schema:');
     const customMap: Record<string, unknown> = {};
     if (Array.isArray(customSchemas)) {
       for (const schema of customSchemas) {
@@ -79,17 +77,17 @@ app.get("/schemas/batch", async (c) => {
 
     return c.json({ schemas: allSchemas });
   } catch (e) {
-    log.error("Error fetching batch schemas, returning defaults:", e as Error);
+    log.error('Error fetching batch schemas, returning defaults:', e as Error);
     return c.json({ schemas: DEFAULT_SCHEMAS });
   }
 });
 
 // GET /custom-keys
-app.get("/custom-keys", async (c) => {
-  const categoryId = c.req.query("categoryId");
+app.get('/custom-keys', async (c) => {
+  const categoryId = c.req.query('categoryId');
 
   if (!categoryId) {
-    return c.json({ error: "Missing categoryId" }, 400);
+    return c.json({ error: 'Missing categoryId' }, 400);
   }
 
   try {
@@ -98,18 +96,18 @@ app.get("/custom-keys", async (c) => {
 
     return c.json({ customKeys });
   } catch (e) {
-    log.error("Error fetching custom keys:", e);
+    log.error('Error fetching custom keys:', e);
     return c.json({ customKeys: [] });
   }
 });
 
 // POST /schemas
-app.post("/schemas", async (c) => {
+app.post('/schemas', async (c) => {
   try {
     const body = await c.req.json();
     const parsed = SaveSchemaInputSchema.safeParse(body);
     if (!parsed.success) {
-      return c.json({ error: "Validation failed", ...formatZodError(parsed.error) }, 400);
+      return c.json({ error: 'Validation failed', ...formatZodError(parsed.error) }, 400);
     }
     const { categoryId, fields } = parsed.data;
 
@@ -117,20 +115,19 @@ app.post("/schemas", async (c) => {
     const schema = {
       categoryId,
       fields,
-      updatedAt: new Date().toISOString()
+      updatedAt: new Date().toISOString(),
     };
 
     await kv.set(key, schema);
 
     autoGenerateCustomKeysForSchema(categoryId, fields).catch((e) => {
-      log.error("Background error generating custom keys:", e);
+      log.error('Background error generating custom keys:', e);
     });
 
     return c.json({ success: true, schema });
-
   } catch (e) {
-    log.error("Error saving schema:", e);
-    return c.json({ error: "Failed to save schema" }, 500);
+    log.error('Error saving schema:', e);
+    return c.json({ error: 'Failed to save schema' }, 500);
   }
 });
 

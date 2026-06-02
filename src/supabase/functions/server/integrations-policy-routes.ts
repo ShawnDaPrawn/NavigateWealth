@@ -40,42 +40,36 @@ import type {
   KvFnaEntry,
   PolicyRenewal,
 } from './integrations-types.ts';
-import {
-  recalculateClientTotals,
-} from './integrations-derive.ts';
-import {
-  isValidDate,
-} from './integrations-field-utils.ts';
-import {
-  POLICY_DOC_BUCKET,
-} from './integrations-document-storage.ts';
+import { recalculateClientTotals } from './integrations-derive.ts';
+import { isValidDate } from './integrations-field-utils.ts';
+import { POLICY_DOC_BUCKET } from './integrations-document-storage.ts';
 
 const app = new Hono();
 const log = createModuleLogger('integrations-policy');
 
 const getByPrefix = async (prefix: string) => {
   const supabase = createClient(
-    Deno.env.get("SUPABASE_URL")!,
-    Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
+    Deno.env.get('SUPABASE_URL')!,
+    Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,
   );
   const { data, error } = await supabase
-    .from("kv_store_91ed8379")
-    .select("value")
-    .like("key", prefix + "%");
+    .from('kv_store_91ed8379')
+    .select('value')
+    .like('key', prefix + '%');
 
   if (error) throw new Error(error.message);
-  return data?.map(d => d.value) || [];
+  return data?.map((d) => d.value) || [];
 };
 
 // GET /policies
-app.get("/policies", async (c) => {
+app.get('/policies', async (c) => {
   try {
-    const clientId = c.req.query("clientId");
-    const categoryId = c.req.query("categoryId");
-    const includeArchived = c.req.query("includeArchived") === 'true';
+    const clientId = c.req.query('clientId');
+    const categoryId = c.req.query('categoryId');
+    const includeArchived = c.req.query('includeArchived') === 'true';
 
     if (!clientId) {
-      return c.json({ error: "Missing clientId" }, 400);
+      return c.json({ error: 'Missing clientId' }, 400);
     }
 
     const policiesKey = `policies:client:${clientId}`;
@@ -83,16 +77,18 @@ app.get("/policies", async (c) => {
 
     if (categoryId) {
       if (categoryId === 'retirement_planning') {
-        policies = policies.filter((p: KvPolicy) =>
-          p.categoryId === 'retirement_planning' ||
-          p.categoryId === 'retirement_pre' ||
-          p.categoryId === 'retirement_post'
+        policies = policies.filter(
+          (p: KvPolicy) =>
+            p.categoryId === 'retirement_planning' ||
+            p.categoryId === 'retirement_pre' ||
+            p.categoryId === 'retirement_post',
         );
       } else if (categoryId === 'investments') {
-        policies = policies.filter((p: KvPolicy) =>
-          p.categoryId === 'investments' ||
-          p.categoryId === 'investments_voluntary' ||
-          p.categoryId === 'investments_guaranteed'
+        policies = policies.filter(
+          (p: KvPolicy) =>
+            p.categoryId === 'investments' ||
+            p.categoryId === 'investments_voluntary' ||
+            p.categoryId === 'investments_guaranteed',
         );
       } else {
         policies = policies.filter((p: KvPolicy) => p.categoryId === categoryId);
@@ -107,18 +103,21 @@ app.get("/policies", async (c) => {
 
     return c.json({ policies });
   } catch (e) {
-    log.error("Error fetching policies, returning empty array:", e as Error, { clientId: c.req.query("clientId"), categoryId: c.req.query("categoryId") });
+    log.error('Error fetching policies, returning empty array:', e as Error, {
+      clientId: c.req.query('clientId'),
+      categoryId: c.req.query('categoryId'),
+    });
     return c.json({ policies: [] });
   }
 });
 
 // POST /policies/archive
-app.post("/policies/archive", async (c) => {
+app.post('/policies/archive', async (c) => {
   try {
     const body = await c.req.json();
     const parsed = ArchivePolicySchema.safeParse(body);
     if (!parsed.success) {
-      return c.json({ error: "Validation failed", ...formatZodError(parsed.error) }, 400);
+      return c.json({ error: 'Validation failed', ...formatZodError(parsed.error) }, 400);
     }
     const { id, clientId, reason } = parsed.data;
 
@@ -128,7 +127,7 @@ app.post("/policies/archive", async (c) => {
     const policyIndex = policies.findIndex((p: KvPolicy) => p.id === id);
 
     if (policyIndex === -1) {
-      return c.json({ error: "Policy not found" }, 404);
+      return c.json({ error: 'Policy not found' }, 404);
     }
 
     policies[policyIndex] = {
@@ -144,18 +143,18 @@ app.post("/policies/archive", async (c) => {
 
     return c.json({ success: true, policy: policies[policyIndex] });
   } catch (e) {
-    log.error("Error archiving policy:", e);
-    return c.json({ error: "Failed to archive policy" }, 500);
+    log.error('Error archiving policy:', e);
+    return c.json({ error: 'Failed to archive policy' }, 500);
   }
 });
 
 // POST /policies/reinstate
-app.post("/policies/reinstate", async (c) => {
+app.post('/policies/reinstate', async (c) => {
   try {
     const body = await c.req.json();
     const parsed = ReinstatePolicySchema.safeParse(body);
     if (!parsed.success) {
-      return c.json({ error: "Validation failed", ...formatZodError(parsed.error) }, 400);
+      return c.json({ error: 'Validation failed', ...formatZodError(parsed.error) }, 400);
     }
     const { id, clientId } = parsed.data;
 
@@ -165,7 +164,7 @@ app.post("/policies/reinstate", async (c) => {
     const policyIndex = policies.findIndex((p: KvPolicy) => p.id === id);
 
     if (policyIndex === -1) {
-      return c.json({ error: "Policy not found" }, 404);
+      return c.json({ error: 'Policy not found' }, 404);
     }
 
     policies[policyIndex] = {
@@ -181,24 +180,24 @@ app.post("/policies/reinstate", async (c) => {
 
     return c.json({ success: true, policy: policies[policyIndex] });
   } catch (e) {
-    log.error("Error reinstating policy:", e);
-    return c.json({ error: "Failed to reinstate policy" }, 500);
+    log.error('Error reinstating policy:', e);
+    return c.json({ error: 'Failed to reinstate policy' }, 500);
   }
 });
 
 // POST /policies
-app.post("/policies", async (c) => {
+app.post('/policies', async (c) => {
   try {
     const body = await c.req.json();
     const parsed = CreatePolicySchema.safeParse(body);
     if (!parsed.success) {
-      return c.json({ error: "Validation failed", ...formatZodError(parsed.error) }, 400);
+      return c.json({ error: 'Validation failed', ...formatZodError(parsed.error) }, 400);
     }
     const { clientId, categoryId, providerId, providerName, data } = parsed.data;
 
     const provider = await kv.get(`provider:${providerId}`);
     if (!provider) {
-        return c.json({ error: "Invalid provider ID" }, 400);
+      return c.json({ error: 'Invalid provider ID' }, 400);
     }
     const safeProviderName = (provider as KvProvider).name || providerName;
 
@@ -224,23 +223,23 @@ app.post("/policies", async (c) => {
 
     return c.json({ success: true, policy });
   } catch (e) {
-    log.error("Error creating policy:", e);
-    return c.json({ error: "Failed to create policy" }, 500);
+    log.error('Error creating policy:', e);
+    return c.json({ error: 'Failed to create policy' }, 500);
   }
 });
 
 // PUT /policies
-app.put("/policies", async (c) => {
+app.put('/policies', async (c) => {
   try {
     const body = await c.req.json();
     const parsed = UpdatePolicySchema.safeParse(body);
     if (!parsed.success) {
-      return c.json({ error: "Validation failed", ...formatZodError(parsed.error) }, 400);
+      return c.json({ error: 'Validation failed', ...formatZodError(parsed.error) }, 400);
     }
     const { id, clientId, categoryId, providerId, providerName, data } = parsed.data;
 
     if (!id || !clientId) {
-      return c.json({ error: "Missing policy id or clientId" }, 400);
+      return c.json({ error: 'Missing policy id or clientId' }, 400);
     }
 
     const policiesKey = `policies:client:${clientId}`;
@@ -249,16 +248,16 @@ app.put("/policies", async (c) => {
     const policyIndex = policies.findIndex((p: KvPolicy) => p.id === id);
 
     if (policyIndex === -1) {
-      return c.json({ error: "Policy not found" }, 404);
+      return c.json({ error: 'Policy not found' }, 404);
     }
 
     let newProviderName = providerName || policies[policyIndex].providerName;
     if (providerId && providerId !== policies[policyIndex].providerId) {
-         const provider = await kv.get(`provider:${providerId}`);
-         if (!provider) {
-             return c.json({ error: "Invalid provider ID" }, 400);
-         }
-         newProviderName = (provider as KvProvider).name;
+      const provider = await kv.get(`provider:${providerId}`);
+      if (!provider) {
+        return c.json({ error: 'Invalid provider ID' }, 400);
+      }
+      newProviderName = (provider as KvProvider).name;
     }
 
     policies[policyIndex] = {
@@ -275,19 +274,19 @@ app.put("/policies", async (c) => {
 
     return c.json({ success: true, policy: policies[policyIndex] });
   } catch (e) {
-    log.error("Error updating policy:", e);
-    return c.json({ error: "Failed to update policy" }, 500);
+    log.error('Error updating policy:', e);
+    return c.json({ error: 'Failed to update policy' }, 500);
   }
 });
 
 // DELETE /policies
-app.delete("/policies", async (c) => {
+app.delete('/policies', async (c) => {
   try {
-    const id = c.req.query("id");
-    const clientId = c.req.query("clientId");
+    const id = c.req.query('id');
+    const clientId = c.req.query('clientId');
 
     if (!id || !clientId) {
-      return c.json({ error: "Missing policy id or clientId" }, 400);
+      return c.json({ error: 'Missing policy id or clientId' }, 400);
     }
 
     const policiesKey = `policies:client:${clientId}`;
@@ -300,7 +299,7 @@ app.delete("/policies", async (c) => {
     policies = policies.filter((p: KvPolicy) => p.id !== id);
 
     if (policies.length === initialLength) {
-      return c.json({ error: "Policy not found" }, 404);
+      return c.json({ error: 'Policy not found' }, 404);
     }
 
     // Clean up attached document from storage if present
@@ -310,9 +309,7 @@ app.delete("/policies", async (c) => {
           Deno.env.get('SUPABASE_URL')!,
           Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,
         );
-        await supabase.storage
-          .from(POLICY_DOC_BUCKET)
-          .remove([policyToDelete.document.storageKey]);
+        await supabase.storage.from(POLICY_DOC_BUCKET).remove([policyToDelete.document.storageKey]);
         log.info('Deleted attached document during policy deletion', {
           policyId: id,
           storageKey: policyToDelete.document.storageKey,
@@ -327,36 +324,36 @@ app.delete("/policies", async (c) => {
 
     return c.json({ success: true });
   } catch (e) {
-    log.error("Error deleting policy:", e);
-    return c.json({ error: "Failed to delete policy" }, 500);
+    log.error('Error deleting policy:', e);
+    return c.json({ error: 'Failed to delete policy' }, 500);
   }
 });
 
 // --- DASHBOARD STATS ENDPOINTS ---
 
 // POST /recalculate-totals
-app.post("/recalculate-totals", async (c) => {
+app.post('/recalculate-totals', async (c) => {
   try {
     const body = await c.req.json();
     const parsed = RecalculateTotalsSchema.safeParse(body);
     if (!parsed.success) {
-      return c.json({ error: "Validation failed", ...formatZodError(parsed.error) }, 400);
+      return c.json({ error: 'Validation failed', ...formatZodError(parsed.error) }, 400);
     }
     const { clientId } = parsed.data;
 
     await recalculateClientTotals(clientId);
 
-    return c.json({ success: true, message: "Totals recalculated successfully" });
+    return c.json({ success: true, message: 'Totals recalculated successfully' });
   } catch (e) {
-    log.error("Error triggering recalculation:", e);
-    return c.json({ error: "Failed to recalculate totals" }, 500);
+    log.error('Error triggering recalculation:', e);
+    return c.json({ error: 'Failed to recalculate totals' }, 500);
   }
 });
 
 // GET /dashboard-stats
-app.get("/dashboard-stats", async (c) => {
+app.get('/dashboard-stats', async (c) => {
   try {
-    const allPoliciesKeys = await getByPrefix("policies:client:");
+    const allPoliciesKeys = await getByPrefix('policies:client:');
     let totalActivePolicies = 0;
     let newPoliciesCount = 0;
 
@@ -368,17 +365,17 @@ app.get("/dashboard-stats", async (c) => {
         totalActivePolicies += policies.length;
 
         newPoliciesCount += policies.filter((p: KvPolicy) => {
-           return p.createdAt && new Date(p.createdAt) >= startOfMonth;
+          return p.createdAt && new Date(p.createdAt) >= startOfMonth;
         }).length;
       }
     }
 
-    const riskFnaKeys = await getByPrefix("risk_planning_fna:client:");
-    const medicalFnaKeys = await getByPrefix("medical_fna:client:");
-    const retirementFnaKeys = await getByPrefix("retirement_fna:client:");
-    const investmentInaKeys = await getByPrefix("investment_ina:client:");
-    const taxPlanningKeys = await getByPrefix("tax_planning_fna:client:");
-    const estatePlanningKeys = await getByPrefix("estate_planning_fna:client:");
+    const riskFnaKeys = await getByPrefix('risk_planning_fna:client:');
+    const medicalFnaKeys = await getByPrefix('medical_fna:client:');
+    const retirementFnaKeys = await getByPrefix('retirement_fna:client:');
+    const investmentInaKeys = await getByPrefix('investment_ina:client:');
+    const taxPlanningKeys = await getByPrefix('tax_planning_fna:client:');
+    const estatePlanningKeys = await getByPrefix('estate_planning_fna:client:');
 
     let publishedFnasCount = 0;
 
@@ -397,7 +394,7 @@ app.get("/dashboard-stats", async (c) => {
     log.info('Dashboard stats calculated', {
       activePolicies: totalActivePolicies,
       newPoliciesCount,
-      publishedFnas: publishedFnasCount
+      publishedFnas: publishedFnasCount,
     });
 
     return c.json({
@@ -406,7 +403,7 @@ app.get("/dashboard-stats", async (c) => {
       publishedFnas: publishedFnasCount,
     });
   } catch (e) {
-    log.error("Error fetching dashboard stats:", e);
+    log.error('Error fetching dashboard stats:', e);
     return c.json({
       activePolicies: 0,
       newPoliciesCount: 0,
@@ -416,13 +413,13 @@ app.get("/dashboard-stats", async (c) => {
 });
 
 // GET /policy-renewals
-app.get("/policy-renewals", requireAuth, async (c) => {
+app.get('/policy-renewals', requireAuth, async (c) => {
   try {
     log.info('Fetching policy renewal data for calendar');
 
-    const allPoliciesEntries = await getByPrefix("policies:client:");
+    const allPoliciesEntries = await getByPrefix('policies:client:');
 
-    const customSchemas = await getByPrefix("config:schema:");
+    const customSchemas = await getByPrefix('config:schema:');
     const schemaMap: Record<string, SchemaField[]> = {};
 
     for (const schema of customSchemas) {
@@ -521,7 +518,11 @@ app.get("/policy-renewals", requireAuth, async (c) => {
         let policyNumber = '';
         for (const field of schemaFields) {
           const fn = (field.name || '').toLowerCase();
-          if (fn.includes('policy number') || fn.includes('policy no') || fn.includes('reference')) {
+          if (
+            fn.includes('policy number') ||
+            fn.includes('policy no') ||
+            fn.includes('reference')
+          ) {
             policyNumber = policy.data[field.id] || '';
             if (policyNumber) break;
           }
@@ -542,9 +543,8 @@ app.get("/policy-renewals", requireAuth, async (c) => {
 
     log.info(`Found ${renewals.length} policies with renewal dates`);
     return c.json({ renewals });
-
   } catch (e) {
-    log.error("Error fetching policy renewals:", e);
+    log.error('Error fetching policy renewals:', e);
     return c.json({ renewals: [] });
   }
 });

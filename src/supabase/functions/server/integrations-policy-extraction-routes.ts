@@ -32,13 +32,8 @@ import {
   getAllProviderTerminologies,
   buildHistoryEntry,
 } from './policy-extraction-service.ts';
-import type {
-  ProviderTerminologyMap,
-  FieldDiff,
-} from './policy-extraction-types.ts';
-import {
-  recalculateClientTotals,
-} from './integrations-derive.ts';
+import type { ProviderTerminologyMap, FieldDiff } from './policy-extraction-types.ts';
+import { recalculateClientTotals } from './integrations-derive.ts';
 
 const app = new Hono();
 const log = createModuleLogger('integrations-policy-extraction');
@@ -72,17 +67,27 @@ app.post('/policy-extraction/extract', requireAuth, async (c) => {
     const policy = (policies as KvPolicy[])[policyIndex];
 
     if (!policy.document?.storageKey) {
-      return c.json({ error: 'No document attached to this policy. Upload a document first.' }, 400);
+      return c.json(
+        { error: 'No document attached to this policy. Upload a document first.' },
+        400,
+      );
     }
 
     // Phase 3: Preserve previous extraction in history before overwriting
     const previousExtraction = policy.extraction;
 
-    if (previousExtraction && (previousExtraction.status === 'completed' || previousExtraction.status === 'failed')) {
+    if (
+      previousExtraction &&
+      (previousExtraction.status === 'completed' || previousExtraction.status === 'failed')
+    ) {
       // Pass the stored field mappings snapshot for comparison in history
       const previousFieldMappings = policy.lastFieldMappingsSnapshot
-        ? policy.lastFieldMappingsSnapshot.map(s => ({
-            canonicalKey: s.k, schemaFieldId: s.f, schemaFieldName: s.n, value: s.v, confidence: s.c,
+        ? policy.lastFieldMappingsSnapshot.map((s) => ({
+            canonicalKey: s.k,
+            schemaFieldId: s.f,
+            schemaFieldName: s.n,
+            value: s.v,
+            confidence: s.c,
           }))
         : undefined;
 
@@ -123,14 +128,18 @@ app.post('/policy-extraction/extract', requireAuth, async (c) => {
     // Phase 3: Generate diff comparing new extraction against current policy data
     let diff: FieldDiff[] | undefined;
     if (extraction.status === 'completed') {
-      const changedFields = fieldMappings.filter(m => {
+      const changedFields = fieldMappings.filter((m) => {
         const current = policy.data?.[m.schemaFieldId];
-        return current !== undefined && current !== null && current !== '' &&
-          String(current) !== String(m.value);
+        return (
+          current !== undefined &&
+          current !== null &&
+          current !== '' &&
+          String(current) !== String(m.value)
+        );
       });
 
       if (changedFields.length > 0) {
-        diff = changedFields.map(m => ({
+        diff = changedFields.map((m) => ({
           schemaFieldId: m.schemaFieldId,
           fieldName: m.schemaFieldName,
           oldValue: policy.data?.[m.schemaFieldId] ?? null,
@@ -146,8 +155,12 @@ app.post('/policy-extraction/extract', requireAuth, async (c) => {
     (policies as KvPolicy[])[policyIndex] = {
       ...(policies as KvPolicy[])[policyIndex],
       extraction,
-      lastFieldMappingsSnapshot: fieldMappings.slice(0, 50).map(fm => ({
-        k: fm.canonicalKey, f: fm.schemaFieldId, n: fm.schemaFieldName, v: fm.value, c: fm.confidence,
+      lastFieldMappingsSnapshot: fieldMappings.slice(0, 50).map((fm) => ({
+        k: fm.canonicalKey,
+        f: fm.schemaFieldId,
+        n: fm.schemaFieldName,
+        v: fm.value,
+        c: fm.confidence,
       })),
       updatedAt: new Date().toISOString(),
     };
@@ -265,13 +278,15 @@ app.get('/policy-extraction/compare', requireAuth, async (c) => {
     const history = policy.extractionHistory || [];
 
     // Resolve left entry
-    const leftEntry = history.find(h => h.id === leftId);
+    const leftEntry = history.find((h) => h.id === leftId);
     if (!leftEntry) {
       return c.json({ error: `Left entry '${leftId}' not found in history` }, 404);
     }
 
     // Resolve right entry — 'current' means the live extraction's stored snapshot
-    let rightSnapshot: Array<{ k: string; f: string; n: string; v: unknown; c: number }> | undefined;
+    let rightSnapshot:
+      | Array<{ k: string; f: string; n: string; v: unknown; c: number }>
+      | undefined;
     let rightMeta: { confidence: number; extractedAt: string } | undefined;
 
     if (rightId === 'current') {
@@ -280,7 +295,7 @@ app.get('/policy-extraction/compare', requireAuth, async (c) => {
         ? { confidence: policy.extraction.confidence, extractedAt: policy.extraction.extractedAt }
         : undefined;
     } else {
-      const rightEntry = history.find(h => h.id === rightId);
+      const rightEntry = history.find((h) => h.id === rightId);
       if (!rightEntry) {
         return c.json({ error: `Right entry '${rightId}' not found in history` }, 404);
       }
@@ -295,12 +310,13 @@ app.get('/policy-extraction/compare', requireAuth, async (c) => {
       return c.json({
         success: true,
         fields: [],
-        message: 'Neither entry has field mapping snapshots. Comparison data is unavailable for extractions before snapshot storage was enabled.',
+        message:
+          'Neither entry has field mapping snapshots. Comparison data is unavailable for extractions before snapshot storage was enabled.',
       });
     }
 
-    const leftMap = new Map((leftSnapshot || []).map(s => [s.f, s]));
-    const rightMap = new Map((rightSnapshot || []).map(s => [s.f, s]));
+    const leftMap = new Map((leftSnapshot || []).map((s) => [s.f, s]));
+    const rightMap = new Map((rightSnapshot || []).map((s) => [s.f, s]));
     const allFieldIds = new Set([...leftMap.keys(), ...rightMap.keys()]);
 
     const fields: Array<{
@@ -408,11 +424,13 @@ app.post('/policy-extraction/apply', requireAuth, async (c) => {
     (policies as KvPolicy[])[policyIndex] = {
       ...policy,
       data: updatedData,
-      extraction: policy.extraction ? {
-        ...policy.extraction,
-        appliedAt: new Date().toISOString(),
-        appliedFields: appliedFieldIds,
-      } : undefined,
+      extraction: policy.extraction
+        ? {
+            ...policy.extraction,
+            appliedAt: new Date().toISOString(),
+            appliedFields: appliedFieldIds,
+          }
+        : undefined,
       updatedAt: new Date().toISOString(),
     };
 
@@ -447,8 +465,18 @@ app.post('/policy-extraction/lock-fields', requireAuth, async (c) => {
     const body = await c.req.json();
     const { policyId, clientId, fieldIds, action } = body;
 
-    if (!policyId || !clientId || !Array.isArray(fieldIds) || !['lock', 'unlock'].includes(action)) {
-      return c.json({ error: 'Missing or invalid policyId, clientId, fieldIds (array), or action (lock|unlock)' }, 400);
+    if (
+      !policyId ||
+      !clientId ||
+      !Array.isArray(fieldIds) ||
+      !['lock', 'unlock'].includes(action)
+    ) {
+      return c.json(
+        {
+          error: 'Missing or invalid policyId, clientId, fieldIds (array), or action (lock|unlock)',
+        },
+        400,
+      );
     }
 
     const policiesKey = `policies:client:${clientId}`;
@@ -583,8 +611,16 @@ app.get('/policy-extraction/quality-stats', requireAuth, async (c) => {
     }
 
     const providerMap = new Map<string, ProviderStats>();
-    const fieldConfidenceMap = new Map<string, { fieldName: string; totalConfidence: number; count: number; lowCount: number }>();
-    const timelineEntries: Array<{ date: string; confidence: number; provider: string; status: string }> = [];
+    const fieldConfidenceMap = new Map<
+      string,
+      { fieldName: string; totalConfidence: number; count: number; lowCount: number }
+    >();
+    const timelineEntries: Array<{
+      date: string;
+      confidence: number;
+      provider: string;
+      status: string;
+    }> = [];
     let totalPolicies = 0;
     let totalWithDocs = 0;
     let totalWithExtractions = 0;
@@ -679,14 +715,16 @@ app.get('/policy-extraction/quality-stats', requireAuth, async (c) => {
     }
 
     // Compute averages
-    const providerStats = Array.from(providerMap.values()).map(ps => ({
+    const providerStats = Array.from(providerMap.values()).map((ps) => ({
       ...ps,
-      avgConfidence: ps.completedExtractions > 0
-        ? Math.round((ps.confidenceSum / ps.completedExtractions) * 100) / 100
-        : 0,
-      successRate: ps.withExtractions > 0
-        ? Math.round(((ps.completedExtractions / ps.withExtractions) * 100) * 10) / 10
-        : 0,
+      avgConfidence:
+        ps.completedExtractions > 0
+          ? Math.round((ps.confidenceSum / ps.completedExtractions) * 100) / 100
+          : 0,
+      successRate:
+        ps.withExtractions > 0
+          ? Math.round((ps.completedExtractions / ps.withExtractions) * 100 * 10) / 10
+          : 0,
     }));
 
     // Sort providers by extraction count descending
@@ -702,7 +740,7 @@ app.get('/policy-extraction/quality-stats', requireAuth, async (c) => {
         lowConfidenceCount: s.lowCount,
         lowConfidenceRate: Math.round((s.lowCount / s.count) * 100),
       }))
-      .filter(f => f.lowConfidenceCount > 0)
+      .filter((f) => f.lowConfidenceCount > 0)
       .sort((a, b) => b.lowConfidenceRate - a.lowConfidenceRate)
       .slice(0, 15);
 
@@ -717,12 +755,12 @@ app.get('/policy-extraction/quality-stats', requireAuth, async (c) => {
         totalExtractions: totalWithExtractions,
         completedExtractions: totalCompleted,
         failedExtractions: totalFailed,
-        avgConfidence: totalCompleted > 0
-          ? Math.round((overallConfidenceSum / totalCompleted) * 100) / 100
-          : 0,
-        successRate: totalWithExtractions > 0
-          ? Math.round(((totalCompleted / totalWithExtractions) * 100) * 10) / 10
-          : 0,
+        avgConfidence:
+          totalCompleted > 0 ? Math.round((overallConfidenceSum / totalCompleted) * 100) / 100 : 0,
+        successRate:
+          totalWithExtractions > 0
+            ? Math.round((totalCompleted / totalWithExtractions) * 100 * 10) / 10
+            : 0,
         totalLockedFields,
       },
       providerStats,
@@ -769,11 +807,7 @@ app.post('/policy-extraction/bulk-reextract', requireAuth, async (c) => {
       const policies = (Array.isArray(entry) ? entry : []) as KvPolicy[];
 
       for (const policy of policies) {
-        if (
-          policy.providerId === providerId &&
-          policy.document?.storageKey &&
-          !policy.archived
-        ) {
+        if (policy.providerId === providerId && policy.document?.storageKey && !policy.archived) {
           candidates.push({
             clientId: policy.clientId,
             policyId: policy.id,
@@ -790,7 +824,7 @@ app.post('/policy-extraction/bulk-reextract', requireAuth, async (c) => {
         success: true,
         dryRun: true,
         candidateCount: candidates.length,
-        candidates: candidates.map(cand => ({
+        candidates: candidates.map((cand) => ({
           policyId: cand.policyId,
           fileName: cand.fileName,
           hasExistingExtraction: cand.hasExistingExtraction,
@@ -827,7 +861,7 @@ app.post('/policy-extraction/bulk-reextract', requireAuth, async (c) => {
           try {
             const policiesKey = `policies:client:${cand.clientId}`;
             const policies = ((await kv.get(policiesKey)) || []) as KvPolicy[];
-            const policyIndex = policies.findIndex(p => p.id === cand.policyId);
+            const policyIndex = policies.findIndex((p) => p.id === cand.policyId);
 
             if (policyIndex === -1) {
               send({
@@ -845,10 +879,17 @@ app.post('/policy-extraction/bulk-reextract', requireAuth, async (c) => {
             const policy = policies[policyIndex];
 
             // Preserve previous extraction in history with field mappings snapshot
-            if (policy.extraction && (policy.extraction.status === 'completed' || policy.extraction.status === 'failed')) {
+            if (
+              policy.extraction &&
+              (policy.extraction.status === 'completed' || policy.extraction.status === 'failed')
+            ) {
               const prevFM = policy.lastFieldMappingsSnapshot
-                ? policy.lastFieldMappingsSnapshot.map(s => ({
-                    canonicalKey: s.k, schemaFieldId: s.f, schemaFieldName: s.n, value: s.v, confidence: s.c,
+                ? policy.lastFieldMappingsSnapshot.map((s) => ({
+                    canonicalKey: s.k,
+                    schemaFieldId: s.f,
+                    schemaFieldName: s.n,
+                    value: s.v,
+                    confidence: s.c,
                   }))
                 : undefined;
 
@@ -870,8 +911,12 @@ app.post('/policy-extraction/bulk-reextract', requireAuth, async (c) => {
             policies[policyIndex] = {
               ...policies[policyIndex],
               extraction,
-              lastFieldMappingsSnapshot: newFM.slice(0, 50).map(fm => ({
-                k: fm.canonicalKey, f: fm.schemaFieldId, n: fm.schemaFieldName, v: fm.value, c: fm.confidence,
+              lastFieldMappingsSnapshot: newFM.slice(0, 50).map((fm) => ({
+                k: fm.canonicalKey,
+                f: fm.schemaFieldId,
+                n: fm.schemaFieldName,
+                v: fm.value,
+                c: fm.confidence,
               })),
               updatedAt: new Date().toISOString(),
             };

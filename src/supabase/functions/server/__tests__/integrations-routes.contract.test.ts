@@ -474,7 +474,9 @@ describe('integrations.tsx route contracts', () => {
     });
 
     it('archives an existing policy and returns { success, policy }', async () => {
-      kvStore.set('policies:client:c1', [{ id: 'p1', clientId: 'c1', categoryId: 'risk', archived: false }]);
+      kvStore.set('policies:client:c1', [
+        { id: 'p1', clientId: 'c1', categoryId: 'risk', archived: false },
+      ]);
       const res = await integrationsApp.request('/policies/archive', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -618,7 +620,10 @@ describe('integrations.tsx route contracts', () => {
     });
 
     it('merges stored custom schemas over defaults', async () => {
-      kvStore.set('config:schema:risk', { categoryId: 'risk', fields: [{ id: 'f1', name: 'Custom' }] });
+      kvStore.set('config:schema:risk', {
+        categoryId: 'risk',
+        fields: [{ id: 'f1', name: 'Custom' }],
+      });
       const res = await integrationsApp.request('/schemas/batch');
       expect(res.status).toBe(200);
       const body = (await res.json()) as { schemas: Record<string, { fields: unknown[] }> };
@@ -642,7 +647,10 @@ describe('integrations.tsx route contracts', () => {
       const res = await integrationsApp.request('/schemas', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ categoryId: 'risk', fields: [{ id: 'f1', name: 'Field One', type: 'text' }] }),
+        body: JSON.stringify({
+          categoryId: 'risk',
+          fields: [{ id: 'f1', name: 'Field One', type: 'text' }],
+        }),
       });
       expect(res.status).toBe(200);
       const body = (await res.json()) as { success: boolean; schema: Record<string, unknown> };
@@ -837,7 +845,9 @@ describe('integrations.tsx route contracts', () => {
   // ── GET /policy-documents/download ────────────────────────────────────────
   describe('GET /policy-documents/download', () => {
     it('returns 401 without an Authorization header', async () => {
-      const res = await integrationsApp.request('/policy-documents/download?policyId=p1&clientId=c1');
+      const res = await integrationsApp.request(
+        '/policy-documents/download?policyId=p1&clientId=c1',
+      );
       expect(res.status).toBe(401);
     });
 
@@ -868,12 +878,14 @@ describe('integrations.tsx route contracts', () => {
     });
 
     it('returns 200 with a signed URL when policy has a document', async () => {
-      kvStore.set('policies:client:c1', [{
-        id: 'p1',
-        clientId: 'c1',
-        data: {},
-        document: { storageKey: 'test/doc.pdf', fileName: 'doc.pdf' },
-      }]);
+      kvStore.set('policies:client:c1', [
+        {
+          id: 'p1',
+          clientId: 'c1',
+          data: {},
+          document: { storageKey: 'test/doc.pdf', fileName: 'doc.pdf' },
+        },
+      ]);
       const res = await integrationsApp.request(
         '/policy-documents/download?policyId=p1&clientId=c1',
         { headers: AUTH },
@@ -928,12 +940,14 @@ describe('integrations.tsx route contracts', () => {
     });
 
     it('returns 200 and removes the document metadata when valid', async () => {
-      kvStore.set('policies:client:c1', [{
-        id: 'p1',
-        clientId: 'c1',
-        data: {},
-        document: { storageKey: 'test/doc.pdf', fileName: 'doc.pdf' },
-      }]);
+      kvStore.set('policies:client:c1', [
+        {
+          id: 'p1',
+          clientId: 'c1',
+          data: {},
+          document: { storageKey: 'test/doc.pdf', fileName: 'doc.pdf' },
+        },
+      ]);
       const res = await integrationsApp.request('/policy-documents', {
         method: 'DELETE',
         body: JSON.stringify({ policyId: 'p1', clientId: 'c1' }),
@@ -982,16 +996,20 @@ describe('integrations.tsx route contracts', () => {
         headers: { ...AUTH, 'Content-Type': 'application/json' },
       });
       expect(res.status).toBe(400);
-      expect(await res.json()).toMatchObject({ error: expect.stringContaining('Upload a document') });
+      expect(await res.json()).toMatchObject({
+        error: expect.stringContaining('Upload a document'),
+      });
     });
 
     it('returns 200 with extraction result when policy has a document', async () => {
-      kvStore.set('policies:client:c1', [{
-        id: 'p1',
-        clientId: 'c1',
-        data: {},
-        document: { storageKey: 'test/doc.pdf', fileName: 'doc.pdf' },
-      }]);
+      kvStore.set('policies:client:c1', [
+        {
+          id: 'p1',
+          clientId: 'c1',
+          data: {},
+          document: { storageKey: 'test/doc.pdf', fileName: 'doc.pdf' },
+        },
+      ]);
       const res = await integrationsApp.request('/policy-extraction/extract', {
         method: 'POST',
         body: JSON.stringify({ policyId: 'p1', clientId: 'c1' }),
@@ -1009,7 +1027,9 @@ describe('integrations.tsx route contracts', () => {
   // ── GET /policy-extraction/result ─────────────────────────────────────────
   describe('GET /policy-extraction/result', () => {
     it('returns 401 without an Authorization header', async () => {
-      const res = await integrationsApp.request('/policy-extraction/result?policyId=p1&clientId=c1');
+      const res = await integrationsApp.request(
+        '/policy-extraction/result?policyId=p1&clientId=c1',
+      );
       expect(res.status).toBe(401);
     });
 
@@ -1039,12 +1059,18 @@ describe('integrations.tsx route contracts', () => {
     });
 
     it('returns 200 with extraction data', async () => {
-      kvStore.set('policies:client:c1', [{
-        id: 'p1',
-        clientId: 'c1',
-        data: {},
-        extraction: { status: 'completed', extractedAt: '2025-01-01T00:00:00.000Z', confidence: 0.9 },
-      }]);
+      kvStore.set('policies:client:c1', [
+        {
+          id: 'p1',
+          clientId: 'c1',
+          data: {},
+          extraction: {
+            status: 'completed',
+            extractedAt: '2025-01-01T00:00:00.000Z',
+            confidence: 0.9,
+          },
+        },
+      ]);
       const res = await integrationsApp.request(
         '/policy-extraction/result?policyId=p1&clientId=c1',
         { headers: AUTH },
@@ -1059,7 +1085,9 @@ describe('integrations.tsx route contracts', () => {
   // ── GET /policy-extraction/history ────────────────────────────────────────
   describe('GET /policy-extraction/history', () => {
     it('returns 401 without an Authorization header', async () => {
-      const res = await integrationsApp.request('/policy-extraction/history?policyId=p1&clientId=c1');
+      const res = await integrationsApp.request(
+        '/policy-extraction/history?policyId=p1&clientId=c1',
+      );
       expect(res.status).toBe(401);
     });
 
@@ -1119,7 +1147,9 @@ describe('integrations.tsx route contracts', () => {
     });
 
     it('returns 404 when leftId is not in history', async () => {
-      kvStore.set('policies:client:c1', [{ id: 'p1', clientId: 'c1', data: {}, extractionHistory: [] }]);
+      kvStore.set('policies:client:c1', [
+        { id: 'p1', clientId: 'c1', data: {}, extractionHistory: [] },
+      ]);
       const res = await integrationsApp.request(
         '/policy-extraction/compare?policyId=p1&clientId=c1&leftId=no-such&rightId=current',
         { headers: AUTH },
@@ -1161,7 +1191,11 @@ describe('integrations.tsx route contracts', () => {
       kvStore.set('policies:client:c1', [{ id: 'p1', clientId: 'c1', data: {} }]);
       const res = await integrationsApp.request('/policy-extraction/apply', {
         method: 'POST',
-        body: JSON.stringify({ policyId: 'p1', clientId: 'c1', fieldsToApply: { field1: 'value1' } }),
+        body: JSON.stringify({
+          policyId: 'p1',
+          clientId: 'c1',
+          fieldsToApply: { field1: 'value1' },
+        }),
         headers: { ...AUTH, 'Content-Type': 'application/json' },
       });
       expect(res.status).toBe(200);
@@ -1194,7 +1228,12 @@ describe('integrations.tsx route contracts', () => {
     it('returns 404 when policy not found', async () => {
       const res = await integrationsApp.request('/policy-extraction/lock-fields', {
         method: 'POST',
-        body: JSON.stringify({ policyId: 'ghost', clientId: 'c1', fieldIds: ['f1'], action: 'lock' }),
+        body: JSON.stringify({
+          policyId: 'ghost',
+          clientId: 'c1',
+          fieldIds: ['f1'],
+          action: 'lock',
+        }),
         headers: { ...AUTH, 'Content-Type': 'application/json' },
       });
       expect(res.status).toBe(404);
@@ -1204,7 +1243,12 @@ describe('integrations.tsx route contracts', () => {
       kvStore.set('policies:client:c1', [{ id: 'p1', clientId: 'c1', data: {} }]);
       const res = await integrationsApp.request('/policy-extraction/lock-fields', {
         method: 'POST',
-        body: JSON.stringify({ policyId: 'p1', clientId: 'c1', fieldIds: ['f1', 'f2'], action: 'lock' }),
+        body: JSON.stringify({
+          policyId: 'p1',
+          clientId: 'c1',
+          fieldIds: ['f1', 'f2'],
+          action: 'lock',
+        }),
         headers: { ...AUTH, 'Content-Type': 'application/json' },
       });
       expect(res.status).toBe(200);

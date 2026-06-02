@@ -47,9 +47,12 @@ app.post('/policy-documents/upload', requireAuth, async (c) => {
       formData = await c.req.parseBody();
     } catch (parseErr) {
       log.error('Failed to parse policy document upload form data:', parseErr);
-      return c.json({
-        error: 'Invalid form data. Ensure the request uses multipart/form-data encoding.',
-      }, 400);
+      return c.json(
+        {
+          error: 'Invalid form data. Ensure the request uses multipart/form-data encoding.',
+        },
+        400,
+      );
     }
 
     const file = formData['file'];
