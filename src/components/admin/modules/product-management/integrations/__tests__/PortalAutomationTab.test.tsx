@@ -12,9 +12,7 @@
  */
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen } from '@/test/utils';
-import {
-  PortalAutomationTab,
-} from '@/components/admin/modules/product-management/integrations/PortalAutomationTab';
+import { PortalAutomationTab } from '@/components/admin/modules/product-management/integrations/PortalAutomationTab';
 import type {
   IntegrationProvider,
   PortalProviderFlow,
