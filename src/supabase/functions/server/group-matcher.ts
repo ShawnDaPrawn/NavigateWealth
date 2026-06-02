@@ -12,7 +12,7 @@
 import { createModuleLogger } from './stderr-logger.ts';
 import type { GroupFilterConfig } from './communication-types.ts';
 
-const log = createModuleLogger('group-matcher');
+const _log = createModuleLogger('group-matcher');
 
 export interface MatcherClient {
   id: string;

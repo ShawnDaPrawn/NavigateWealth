@@ -221,7 +221,7 @@ function convertBlock(
   lineHeight?: number,
 ): (Paragraph | Table)[] {
   const elements: (Paragraph | Table)[] = [];
-  const lineRule = lineHeight ? Math.round(lineHeight * 240) : Math.round(1.65 * 240);
+  const _lineRule = lineHeight ? Math.round(lineHeight * 240) : Math.round(1.65 * 240);
 
   switch (block.type) {
     case 'section_header': {

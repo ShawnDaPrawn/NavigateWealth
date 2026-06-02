@@ -71,7 +71,7 @@ export const CalloutExtension = Node.create<CalloutOptions>({
             return 'warning';
           return 'note';
         },
-        renderHTML: (attributes) => {
+        renderHTML: (_attributes) => {
           return {};
         },
       },

@@ -5,7 +5,7 @@
 
 import React, { useRef } from 'react';
 import { Button } from '../../ui/button';
-import { Upload, FileText, CheckCircle, X } from 'lucide-react';
+import { Upload, CheckCircle, X } from 'lucide-react';
 
 interface DocumentUploadProps {
   label: string;

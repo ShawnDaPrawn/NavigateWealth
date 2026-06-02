@@ -190,7 +190,7 @@ app.post('/:userId/upload', async (c) => {
 
     // Upload file to Supabase Storage
     const fileBuffer = await file.arrayBuffer();
-    const { data: uploadData, error: uploadError } = await getSupabase()
+    const { error: uploadError } = await getSupabase()
       .storage.from(BUCKET_NAME)
       .upload(filePath, fileBuffer, {
         contentType: file.type,

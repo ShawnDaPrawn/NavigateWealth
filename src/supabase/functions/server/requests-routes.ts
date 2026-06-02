@@ -13,7 +13,7 @@ import type { Context } from 'npm:hono';
 import { asyncHandler } from './error.middleware.ts';
 import { createModuleLogger } from './stderr-logger.ts';
 import { RequestsService } from './requests-service.ts';
-import type { RequestStatus, TemplateStatus } from './requests-types.ts';
+import type { RequestStatus } from './requests-types.ts';
 import {
   CreateRequestTemplateSchema,
   UpdateRequestTemplateSchema,

@@ -507,7 +507,7 @@ export function createEmailTemplate(
     buttonLabel,
     unsubscribeLink,
     footerNote,
-    footerSettings = DEFAULT_FOOTER_SETTINGS,
+    footerSettings: _footerSettings = DEFAULT_FOOTER_SETTINGS,
   } = options;
 
   let template = BASE_EMAIL_TEMPLATE;

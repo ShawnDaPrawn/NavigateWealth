@@ -70,7 +70,7 @@ estatePlanningRoutes.get('', (c) => c.json({ service: 'estate-planning-fna', sta
 estatePlanningRoutes.get('/client/:clientId/auto-populate', async (c) => {
   try {
     log.info('📥 GET /estate-planning-fna/client/:clientId/auto-populate');
-    const user = await authenticateUser(c.req.header('Authorization'));
+    await authenticateUser(c.req.header('Authorization'));
 
     const clientId = c.req.param('clientId');
 

@@ -72,7 +72,7 @@ export interface ApplicationMetadata {
 
 // ── Valid state transitions ────────────────────────────────────────────────────
 
-const VALID_TRANSITIONS: Record<ApplicationLifecycleStatus, ApplicationLifecycleStatus[]> = {
+const _VALID_TRANSITIONS: Record<ApplicationLifecycleStatus, ApplicationLifecycleStatus[]> = {
   draft: ['in_progress'],
   in_progress: ['submitted'],
   submitted: ['under_review'],

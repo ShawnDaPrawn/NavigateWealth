@@ -15,7 +15,7 @@ import {
 } from '../../utils/auth/profileService';
 import type { AuthUser } from '../../utils/auth/types';
 import type { User as SupabaseSessionUser } from '@supabase/supabase-js';
-import { broadcastLogout, onLogoutBroadcast, broadcastNavigate } from '../../utils/auth/sessionSync';
+import { broadcastLogout, onLogoutBroadcast } from '../../utils/auth/sessionSync';
 import { AUTH_SESSION_EXPIRED_EVENT } from '../../utils/api/client';
 import { toast } from 'sonner';
 

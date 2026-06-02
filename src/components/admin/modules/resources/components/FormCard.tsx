@@ -28,7 +28,7 @@ export function FormCard({
   onEdit,
   onDelete,
   onDuplicate,
-  onDownload,
+  onDownload: _onDownload,
   selected,
   onSelect,
 }: FormCardProps) {

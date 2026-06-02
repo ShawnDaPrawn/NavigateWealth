@@ -18,7 +18,6 @@ import React, { useState, useCallback, useRef } from 'react';
 import {
   Dialog,
   DialogContent,
-  DialogHeader,
   DialogTitle,
   DialogDescription,
 } from '../../../../ui/dialog';

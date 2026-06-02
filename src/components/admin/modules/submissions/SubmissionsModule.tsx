@@ -187,7 +187,7 @@ export function SubmissionsModule() {
   const [showArchived, setShowArchived] = useState(false);
   const [showInviteModal, setShowInviteModal] = useState(false);
 
-  const { submissions, isLoading, error, updateSubmission, deleteSubmission, refetch, isUpdating } =
+  const { submissions, isLoading, error, updateSubmission, deleteSubmission, refetch } =
     useSubmissions(filters.type ? { type: filters.type } : undefined);
 
   // ── Deep Link: auto-open detail drawer for ?id= param ──

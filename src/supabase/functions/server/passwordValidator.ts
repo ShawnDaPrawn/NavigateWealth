@@ -161,7 +161,7 @@ export function validateEmail(email: string): { isValid: boolean; error?: string
  */
 export function validatePhoneNumber(
   phoneNumber: string,
-  countryCode: string,
+  _countryCode: string,
 ): { isValid: boolean; error?: string } {
   if (!phoneNumber || typeof phoneNumber !== 'string') {
     return { isValid: false, error: 'Phone number is required' };

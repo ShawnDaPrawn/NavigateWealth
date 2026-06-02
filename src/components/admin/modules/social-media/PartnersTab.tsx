@@ -8,7 +8,6 @@ import {
   Link2,
   TrendingUp,
   DollarSign,
-  Eye,
   UserPlus,
   MoreVertical,
   ExternalLink,

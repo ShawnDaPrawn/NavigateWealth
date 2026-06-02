@@ -52,7 +52,7 @@ export function calculateLifeCover(input: InformationGatheringInput): LifeCoverC
 
   // Step 2: Income Replacement Capital
   const numDependants = dependants.length;
-  const isMarried = !!spouseFullName && spouseFullName.trim().length > 0;
+  const _isMarried = !!spouseFullName && spouseFullName.trim().length > 0;
   const isSingleIncome = !spouseAverageMonthlyIncome || spouseAverageMonthlyIncome === 0;
 
   let incomeMultiple: number;

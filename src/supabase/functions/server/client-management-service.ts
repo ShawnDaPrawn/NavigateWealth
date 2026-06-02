@@ -7,7 +7,7 @@
 import { createClient } from 'jsr:@supabase/supabase-js@2.49.8';
 import * as kv from './kv_store.tsx';
 import { createModuleLogger } from './stderr-logger.ts';
-import { ValidationError, NotFoundError } from './error.middleware.ts';
+import { NotFoundError } from './error.middleware.ts';
 import type {
   Client,
   ClientFilters,

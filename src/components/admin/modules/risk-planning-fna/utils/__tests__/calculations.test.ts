@@ -26,7 +26,6 @@ import type {
 import {
   LIFE_COVER,
   DISABILITY_COVER,
-  SEVERE_ILLNESS_COVER,
   INCOME_PROTECTION,
   SYSTEM_VERSION,
 } from '../../constants';

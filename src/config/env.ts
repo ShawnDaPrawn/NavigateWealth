@@ -27,13 +27,6 @@ interface EnvConfig {
   MODE: string;
 }
 
-class EnvValidationError extends Error {
-  constructor(message: string) {
-    super(message);
-    this.name = 'EnvValidationError';
-  }
-}
-
 // Cache for validated environment
 let cachedEnv: EnvConfig | null = null;
 
@@ -54,7 +47,7 @@ function getEnvVar(key: string): string | undefined {
 /**
  * Validates that required environment variables are present and valid
  *
- * @throws {EnvValidationError} If validation fails
+ * @throws {Error} If validation fails
  */
 export function validateEnv(): EnvConfig {
   // Return cached value if already validated

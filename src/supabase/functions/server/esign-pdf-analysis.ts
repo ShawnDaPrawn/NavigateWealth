@@ -409,7 +409,7 @@ function rectForAnchor(
 ): [number, number, number, number] {
   const [x1, y1, x2, y2] = line.rect;
   const lineWidth = x2 - x1;
-  const lineHeight = y2 - y1;
+  const _lineHeight = y2 - y1;
   const matchStartFrac = (match.index ?? 0) / Math.max(line.text.length, 1);
   const matchEndFrac = ((match.index ?? 0) + match[0].length) / Math.max(line.text.length, 1);
   // Anchor field sits to the *right* of the caption, occupying the trailing

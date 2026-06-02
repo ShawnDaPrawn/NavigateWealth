@@ -12,7 +12,6 @@
 import * as kv from './kv_store.tsx';
 import { EsignKeys } from './esign-keys.ts';
 import {
-  getEnvelopeDetails,
   getEnvelopeSigners,
   updateEnvelopeStatus,
   logAuditEvent,

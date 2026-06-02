@@ -21,7 +21,6 @@ import {
   PiggyBank,
   Landmark,
   FileText,
-  Briefcase,
   ChevronDown,
   ChevronUp,
   ArrowRight,

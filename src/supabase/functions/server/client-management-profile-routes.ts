@@ -13,7 +13,7 @@ import { getErrMsg } from './shared-logger-utils.ts';
 import { createClient } from 'jsr:@supabase/supabase-js@2.49.8';
 import { asyncHandler } from './error.middleware.ts';
 import {
-  isPersonnelAuthUser,
+  _isPersonnelAuthUser,
   shouldIncludeInClientManagement,
   shouldLoadClientManagementProfile,
 } from './client-management-visibility.ts';

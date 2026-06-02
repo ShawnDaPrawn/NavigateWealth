@@ -1,6 +1,5 @@
 import {
   Group,
-  Campaign,
   CachedRecipient,
   CommunicationClient,
   SupabaseAdminClient,

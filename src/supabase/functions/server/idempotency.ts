@@ -32,7 +32,7 @@
 
 import * as kv from './kv_store.tsx';
 import { createModuleLogger } from './stderr-logger.ts';
-import type { Context, MiddlewareHandler } from 'npm:hono';
+import type { MiddlewareHandler } from 'npm:hono';
 
 const log = createModuleLogger('idempotency');
 

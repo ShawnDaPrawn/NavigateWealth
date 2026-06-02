@@ -12,7 +12,7 @@ import { Link } from 'react-router';
 import { Calendar, Clock, ArrowRight, BookOpen } from 'lucide-react';
 import { Badge } from '../../ui/badge';
 import { Card, CardContent } from '../../ui/card';
-import { cn } from '../../ui/utils';
+
 import { projectId, publicAnonKey } from '../../../utils/supabase/info';
 
 interface RelatedArticle {

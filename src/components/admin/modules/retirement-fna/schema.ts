@@ -8,7 +8,7 @@ import { z } from 'zod';
 // ==================== INPUT VALIDATION ====================
 
 const positiveNumber = z.number().min(0, 'Cannot be negative');
-const positiveOptionalNumber = z.number().min(0, 'Cannot be negative').optional();
+const _positiveOptionalNumber = z.number().min(0, 'Cannot be negative').optional();
 
 export const RetirementFNAInputSchema = z
   .object({

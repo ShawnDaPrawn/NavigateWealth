@@ -168,7 +168,7 @@ export function AssetsLiabilitiesSection({
   removeLiability,
   totalAssets,
   totalLiabilities,
-  netWorth,
+  netWorth: _netWorth,
 }: AssetsLiabilitiesSectionProps) {
   const linkedPolicyAssetTotal = derivedPolicyAssets.reduce((sum, asset) => sum + asset.value, 0);
   const combinedAssets = totalAssets + linkedPolicyAssetTotal;

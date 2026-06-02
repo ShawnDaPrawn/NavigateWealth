@@ -68,7 +68,7 @@ export function PendingDashboardPage() {
   const { user, logout, refreshUser } = useAuth();
   const navigate = useNavigate();
   const intervalRef = useRef<number | null>(null);
-  const [lastChecked, setLastChecked] = useState<Date>(new Date());
+  const [_lastChecked, setLastChecked] = useState<Date>(new Date());
 
   const checkApprovalStatus = useCallback(async () => {
     try {

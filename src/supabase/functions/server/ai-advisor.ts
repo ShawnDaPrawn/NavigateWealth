@@ -463,7 +463,7 @@ function extractTimestamp(value: unknown): number {
 function uniqueItems(items: unknown[]): unknown[] {
   const seen = new Set<string>();
 
-  return items.filter((item, index) => {
+  return items.filter((item, _index) => {
     const key: string = isRecord(item)
       ? (() => {
           const explicitKey = [

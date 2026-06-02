@@ -2,7 +2,7 @@ import React from 'react';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '../ui/dialog';
 import { Button } from '../ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card';
-import { Shield, Mail, Phone, ArrowRight, AlertCircle } from 'lucide-react';
+import { Shield, Mail, ArrowRight, AlertCircle } from 'lucide-react';
 
 interface MediaAccessModalProps {
   isOpen: boolean;

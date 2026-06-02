@@ -181,7 +181,7 @@ export function AssetsLiabilitiesSection({
   setLiabilityToDelete,
   formatCurrency,
   formatCurrencyInput,
-  cleanCurrencyInput,
+  cleanCurrencyInput: _cleanCurrencyInput,
 }: AssetsLiabilitiesSectionProps) {
   const totalAssets = assets.reduce((sum, asset) => sum + (asset.value || 0), 0);
   const linkedPolicyAssetTotal = derivedPolicyAssets.reduce((sum, asset) => sum + asset.value, 0);

@@ -181,7 +181,7 @@ export function RiskPlanningResults({ fna }: RiskPlanningResultsProps) {
             finalNeeds.map((need, index) => {
               const isMonthly = need.riskType.includes('incomeProtection');
               const isOverinsured = need.isOverinsured ?? false;
-              const hasOverride = !!need.advisorOverride;
+              const _hasOverride = !!need.advisorOverride;
 
               return (
                 <div key={need.riskType}>

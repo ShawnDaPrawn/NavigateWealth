@@ -5,7 +5,7 @@
  */
 
 import React, { useState, useEffect } from 'react';
-import { Plus, FileText, Eye, Download, Calendar, Loader2, ArrowLeft, Zap } from 'lucide-react';
+import { FileText, Eye, Download, Calendar, Loader2, ArrowLeft, Zap } from 'lucide-react';
 import { Button } from '../../../../ui/button';
 import { Card, CardContent } from '../../../../ui/card';
 import { Badge } from '../../../../ui/badge';

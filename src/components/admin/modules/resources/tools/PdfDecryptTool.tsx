@@ -14,7 +14,6 @@ import {
   Unlock,
   Download,
   RefreshCw,
-  Upload,
   FileText,
   ChevronRight,
   ShieldAlert,

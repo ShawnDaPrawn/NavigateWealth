@@ -57,7 +57,7 @@ investmentInaRoutes.get('/client/:clientId/auto-populate', async (c) => {
  */
 investmentInaRoutes.post('/client/:clientId/calculate', async (c) => {
   try {
-    const user = await authenticateUser(c.req.header('Authorization'));
+    await authenticateUser(c.req.header('Authorization'));
     const clientId = c.req.param('clientId');
     const inputs = await c.req.json();
 

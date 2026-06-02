@@ -17,7 +17,6 @@ import {
   Shield,
   Target,
   Users,
-  Zap,
 } from 'lucide-react';
 import { Logo } from '../layout/Logo';
 

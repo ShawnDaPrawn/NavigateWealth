@@ -19,7 +19,6 @@ import {
   RotateCcw,
   FileText,
   Sparkles,
-  Eye,
 } from 'lucide-react';
 import { PolicyDocumentViewer, type ViewerDocumentMeta } from './PolicyDocumentViewer';
 

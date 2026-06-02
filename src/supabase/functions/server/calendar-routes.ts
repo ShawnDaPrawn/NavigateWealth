@@ -6,7 +6,7 @@
 import { Hono } from 'npm:hono';
 import { requireAuth } from './auth-mw.ts';
 import { asyncHandler } from './error.middleware.ts';
-import { createModuleLogger } from './stderr-logger.ts';
+
 import { CalendarService } from './calendar-service.ts';
 import {
   CreateEventSchema,
@@ -17,7 +17,6 @@ import {
 import { formatZodError } from './shared-validation-utils.ts';
 
 const app = new Hono();
-const log = createModuleLogger('calendar');
 const service = new CalendarService();
 
 // Root handlers

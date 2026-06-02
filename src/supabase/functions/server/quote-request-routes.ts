@@ -179,7 +179,7 @@ app.post(
     // --- Create Submissions Manager entry ---------------------------------------
     let submissionEntryId: string | undefined;
     try {
-      const displayService = productName || service || 'General';
+      const _displayService = productName || service || 'General';
       const payloadData: Record<string, unknown> = {
         service: service || '',
         stage,

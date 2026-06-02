@@ -3,7 +3,6 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { Button } from '../ui/button';
 import { Badge } from '../ui/badge';
 import { CheckCircle2, Phone, Mail, Clock, Calendar, ArrowRight, Star, Shield } from 'lucide-react';
-import exampleImage from 'figma:asset/dbeb61494c13e4289499d3be7c162dbc9fb1c3bb.png';
 
 interface ThankYouModalProps {
   open: boolean;

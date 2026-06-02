@@ -110,7 +110,7 @@ export function Pagination({ currentPage, totalPages, onPageChange, className }:
  */
 export function PaginationInfo({
   currentPage,
-  totalPages,
+  totalPages: _totalPages,
   totalItems,
   itemsPerPage,
   className,

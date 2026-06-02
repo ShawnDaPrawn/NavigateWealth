@@ -1,5 +1,5 @@
 import React from 'react';
-import type { ProfileData, FamilyMember, HandleInputChange } from '../types';
+import type { ProfileData, FamilyMember } from '../types';
 import { EmptyState } from '../EmptyState';
 import { emptyStateConfigs } from '../emptyStateConfigs';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../../ui/card';

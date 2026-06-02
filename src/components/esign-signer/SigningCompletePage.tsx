@@ -21,7 +21,7 @@ interface SigningCompletePageProps {
 
 export function SigningCompletePage({ sessionData, onClose, token }: SigningCompletePageProps) {
   const [isDownloading, setIsDownloading] = useState(false);
-  const [showConfetti, setShowConfetti] = useState(true);
+  const [_showConfetti, setShowConfetti] = useState(true);
 
   useEffect(() => {
     // Hide confetti after animation completes

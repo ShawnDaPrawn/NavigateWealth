@@ -195,7 +195,7 @@ function classifyLine(line: string): LineType {
  * Render a block of plain markdown text (no JSON) into React elements.
  * Groups consecutive list items into <ul>/<ol> blocks.
  */
-function renderMarkdownLines(text: string, keyPrefix: string, isUser: boolean): React.ReactNode[] {
+function renderMarkdownLines(text: string, keyPrefix: string, _isUser: boolean): React.ReactNode[] {
   const lines = text.split('\n');
   const classified = lines.map(classifyLine);
   const elements: React.ReactNode[] = [];
