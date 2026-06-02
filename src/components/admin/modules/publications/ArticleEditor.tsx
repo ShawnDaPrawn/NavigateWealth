@@ -36,7 +36,6 @@ import type {
   ArticleNotificationCampaign,
   ArticleNotificationJob,
   CreateArticleInput,
-  UpdateArticleInput,
 } from './types';
 import type { ContentTemplate, GenerateArticleResult } from './types';
 import { useArticleForm, useCategories, useTypes, useArticleActions } from './hooks';
@@ -89,15 +88,12 @@ export function ArticleEditor({
     isSaving,
     updateField,
     updateMultipleFields,
-    generateSlugFromTitle,
-    calculateReadingTimeFromBody,
     save,
     validate,
-    reset,
   } = useArticleForm({
     article: article || null,
     autoSave: true,
-    onSuccess: (savedArticle) => {
+    onSuccess: (_savedArticle) => {
       // For published articles being updated: stay in the editor so the user
       // can continue making changes without being navigated back to the list.
       // The article remains published — the URL/slug is unchanged.
@@ -122,7 +118,7 @@ export function ArticleEditor({
   const { types } = useTypes({ activeOnly: true });
 
   // Article actions
-  const { handleCreate, handleUpdate, handleSchedule, isProcessing } = useArticleActions({
+  const { handleSchedule, isProcessing } = useArticleActions({
     onSuccess: (message) => {
       setSuccessMessage(message);
       onSaved();

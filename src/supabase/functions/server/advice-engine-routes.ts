@@ -217,7 +217,6 @@ app.put(
   '/medical-fna/:id',
   requireAuth,
   asyncHandler(async (c) => {
-    const userId = c.get('userId');
     const { id: fnaId } = FNAIdParamSchema.parse(c.req.param());
     const body = await c.req.json();
 
@@ -299,7 +298,6 @@ app.put(
   '/retirement-fna/:id',
   requireAuth,
   asyncHandler(async (c) => {
-    const userId = c.get('userId');
     const { id: fnaId } = FNAIdParamSchema.parse(c.req.param());
     const body = await c.req.json();
 
@@ -381,7 +379,6 @@ app.put(
   '/investment-ina/:id',
   requireAuth,
   asyncHandler(async (c) => {
-    const userId = c.get('userId');
     const { id: inaId } = FNAIdParamSchema.parse(c.req.param());
     const body = await c.req.json();
 
@@ -463,7 +460,6 @@ app.put(
   '/tax-planning-fna/:id',
   requireAuth,
   asyncHandler(async (c) => {
-    const userId = c.get('userId');
     const { id: fnaId } = FNAIdParamSchema.parse(c.req.param());
     const body = await c.req.json();
 
@@ -545,7 +541,6 @@ app.put(
   '/estate-planning-fna/:id',
   requireAuth,
   asyncHandler(async (c) => {
-    const userId = c.get('userId');
     const { id: fnaId } = FNAIdParamSchema.parse(c.req.param());
     const body = await c.req.json();
 

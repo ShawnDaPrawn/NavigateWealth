@@ -32,8 +32,6 @@ import {
   ChevronDown,
   ChevronUp,
   XCircle,
-  History,
-  Clock,
   Gavel,
   Scale,
 } from 'lucide-react';
@@ -93,7 +91,7 @@ export function SanctionsScreeningPanel({
   firstName,
   lastName,
   idNumber,
-  passport,
+  passport: _passport,
   onCheckComplete,
 }: SanctionsScreeningPanelProps) {
   // Search fields (pre-populated from client)
@@ -107,11 +105,6 @@ export function SanctionsScreeningPanel({
   const [result, setResult] = useState<SanctionsResult | null>(null);
   const [showDetails, setShowDetails] = useState(false);
 
-  // History
-  const [history, setHistory] = useState<SearchHistoryEntry[]>([]);
-  const [showHistory, setShowHistory] = useState(false);
-  const [isLoadingHistory, setIsLoadingHistory] = useState(false);
-
   // Update search fields when client changes
   useEffect(() => {
     setSearchName(firstName);
@@ -122,16 +115,12 @@ export function SanctionsScreeningPanel({
   }, [clientId, firstName, lastName, idNumber]);
 
   const loadHistory = async () => {
-    setIsLoadingHistory(true);
     try {
-      const data = await api.get<{ history?: SearchHistoryEntry[] }>(
+      await api.get<{ history?: SearchHistoryEntry[] }>(
         `/integrations/honeycomb/checks/history/${clientId}/sanctions_search`,
       );
-      setHistory(data.history || []);
     } catch (err) {
       console.error('[Sanctions Panel] History load error:', err);
-    } finally {
-      setIsLoadingHistory(false);
     }
   };
 

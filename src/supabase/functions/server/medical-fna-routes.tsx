@@ -25,23 +25,6 @@ interface FnaSession {
   status?: string;
   [key: string]: unknown;
 }
-interface FamilyMember {
-  fullName?: string;
-  dateOfBirth?: string;
-  relationship?: string;
-  isFinanciallyDependent?: boolean;
-  [key: string]: unknown;
-}
-interface AssetEntry {
-  type?: string;
-  value?: number;
-  [key: string]: unknown;
-}
-interface RiskPolicy {
-  name?: string;
-  coverAmount?: number;
-  [key: string]: unknown;
-}
 interface MedicalFNAInputs {
   currentPlan: { monthlyPremium: number };
   netMonthlyIncome: number;
@@ -85,21 +68,6 @@ async function autoPopulateFromProfile(clientId: string) {
     log.error('âŒ Error auto-populating Medical FNA:', error);
     return getDefaultMedicalFNAInputs();
   }
-}
-
-/**
- * Determine plan type from plan name
- */
-function determinePlanType(
-  planName: string,
-): 'hospital-only' | 'saver' | 'comprehensive' | 'network' {
-  const name = planName.toLowerCase();
-  if (name.includes('hospital') && !name.includes('saver')) return 'hospital-only';
-  if (name.includes('saver') || name.includes('smart')) return 'saver';
-  if (name.includes('comprehensive') || name.includes('executive') || name.includes('classic'))
-    return 'comprehensive';
-  if (name.includes('network')) return 'network';
-  return 'comprehensive'; // Default
 }
 
 /**
@@ -252,7 +220,7 @@ medicalFnaRoutes.get('/client/:clientId/latest-published', async (c) => {
           );
           return c.json({ success: false, error: 'Unauthorized access to client data' }, 403);
         }
-      } catch (authError) {
+      } catch (_authError) {
         // WORKAROUND: Auth bypass for backward compatibility with client portal
         // Problem: Client portal accesses published FNA data using the anon key without a user session.
         // Why chosen: Removing this would break client-facing FNA display until portal auth is refactored.
@@ -580,8 +548,8 @@ medicalFnaRoutes.post('/publish/:fnaId', async (c) => {
  */
 medicalFnaRoutes.post('/unpublish/:fnaId', async (c) => {
   try {
-    log.info('ðŸ“¥ POST /medical-fna/unpublish/:fnaId');
-    const user = await authenticateUser(c.req.header('Authorization'));
+    log.info('ðŸ”¥ POST /medical-fna/unpublish/:fnaId');
+    await authenticateUser(c.req.header('Authorization'));
 
     const fnaId = c.req.param('fnaId');
     const fna = await kv.get(`medical-fna:${fnaId}`);

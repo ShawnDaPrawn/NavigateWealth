@@ -15,11 +15,6 @@ import type {
 import { createClient } from 'jsr:@supabase/supabase-js@2.49.8';
 import {
   ZipWriter,
-  Uint8ArrayWriter,
-  Uint8ArrayReader,
-  BlobReader,
-  Reader,
-  Writer,
 } from 'npm:@zip.js/zip.js';
 import {
   LEGAL_DOCUMENTS_BY_SLUG,
@@ -1670,7 +1665,7 @@ export class ResourcesService {
     const folder = subcategory ? `${subcategory}/` : '';
     const path = `temp/${runId}/${folder}${safeName}`;
 
-    const { data, error } = await getSupabase().storage.from(BUCKET_NAME).upload(path, file, {
+    const { error } = await getSupabase().storage.from(BUCKET_NAME).upload(path, file, {
       upsert: false,
       contentType: file.type,
     });

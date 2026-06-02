@@ -11,7 +11,7 @@
  *   §14.1 — Dry-run-first pattern for batch operations
  */
 
-import React, { useState, useCallback, useEffect, useMemo } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../../../../ui/card';
 import { Button } from '../../../../ui/button';
 import { Badge } from '../../../../ui/badge';
@@ -19,14 +19,6 @@ import { Input } from '../../../../ui/input';
 import { Label } from '../../../../ui/label';
 import { Textarea } from '../../../../ui/textarea';
 import { Skeleton } from '../../../../ui/skeleton';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '../../../../ui/dialog';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -45,11 +37,8 @@ import {
   XCircle,
   Users,
   Mail,
-  Clock,
-  FileText,
   History,
   AlertCircle,
-  ArrowLeft,
   Sparkles,
   MailCheck,
   RotateCcw,

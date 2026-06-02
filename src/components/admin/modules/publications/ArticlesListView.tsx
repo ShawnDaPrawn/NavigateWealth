@@ -15,7 +15,7 @@
 import React, { useState, useMemo, useCallback } from 'react';
 import { Button } from '../../../ui/button';
 import { Badge } from '../../../ui/badge';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../../ui/card';
+import { Card, CardContent } from '../../../ui/card';
 import {
   PlusCircle,
   Filter,
@@ -24,21 +24,16 @@ import {
   Copy,
   Archive,
   Trash2,
-  Calendar,
   Clock,
   Star,
   FileText,
   LayoutGrid,
   LayoutList,
-  ChevronDown,
   X,
   ArrowUpDown,
   CheckSquare,
   Square,
-  Loader2,
-  Send,
   Search,
-  User,
 } from 'lucide-react';
 import { cn } from '../../../ui/utils';
 
@@ -48,8 +43,8 @@ import { LoadingState } from './components/LoadingState';
 import { ErrorState } from './components/ErrorState';
 import { StatusBadge } from './components/StatusBadge';
 import { ConfirmDialog, useConfirmDialog } from './components/ConfirmDialog';
-import { formatDate, getRelativeTime, truncateText } from './utils';
-import type { Article, ArticleStatus } from './types';
+import { getRelativeTime } from './utils';
+import type { Article } from './types';
 import { toast } from 'sonner';
 
 interface ArticlesListViewProps {
@@ -753,7 +748,7 @@ function SortableHeader({
   label,
   field,
   current,
-  dir,
+  dir: _dir,
   onSort,
 }: {
   label: string;

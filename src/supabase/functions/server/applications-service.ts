@@ -141,11 +141,11 @@ function isValidUUID(uuid: string): boolean {
 // Helper for safe email sending
 async function sendEmailSafely(
   emailFunction: () => Promise<void>,
-  emailType: string,
+  _emailType: string,
 ): Promise<void> {
   try {
     await emailFunction();
-  } catch (error) {
+  } catch (_error) {
     // Silent fail
   }
 }
@@ -295,7 +295,7 @@ export class AdminApplicationsService {
                 app.application_data?.personalInfo?.lastName ||
               null,
           };
-        } catch (error) {
+        } catch (_error) {
           return {
             ...baseFields,
             user_email: null,
@@ -352,7 +352,7 @@ export class AdminApplicationsService {
       };
 
       return { application: detailedApplication };
-    } catch (error) {
+    } catch (_error) {
       return {
         application: {
           ...application,
@@ -1119,12 +1119,12 @@ export class AdminApplicationsService {
             try {
               await kv.del(`application:${app.id}`);
               deletedCount++;
-            } catch (delError) {
+            } catch (_delError) {
               // Silent fail
             }
           }
         }
-      } catch (appError) {
+      } catch (_appError) {
         // Silent fail
       }
     }
@@ -1153,7 +1153,7 @@ export class AdminApplicationsService {
           await kv.set(`application:${appId}`, deprecatedApp);
           deprecatedCount++;
         }
-      } catch (error) {
+      } catch (_error) {
         // Silent fail
       }
     }
@@ -1180,11 +1180,11 @@ export class AdminApplicationsService {
         const application = await kv.get(`application:${appId}`);
 
         if (application) {
-          const { deprecated, deprecated_at, deprecated_reason, ...restoredApp } = application;
+          const { deprecated: _deprecated, deprecated_at: _deprecated_at, deprecated_reason: _deprecated_reason, ...restoredApp } = application;
           await kv.set(`application:${appId}`, restoredApp);
           undeprecatedCount++;
         }
-      } catch (error) {
+      } catch (_error) {
         // Silent fail
       }
     }
@@ -1227,12 +1227,12 @@ export class AdminApplicationsService {
                   totalDeleted++;
                 }
               }
-            } catch (delError) {
+            } catch (_delError) {
               // Silent fail
             }
           }
         }
-      } catch (prefixError) {
+      } catch (_prefixError) {
         // Silent fail
       }
     }

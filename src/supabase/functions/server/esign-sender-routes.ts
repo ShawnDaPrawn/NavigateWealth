@@ -491,7 +491,7 @@ senderRoutes.post('/envelopes/:envelopeId/reject', async (c) => {
 senderRoutes.get('/envelopes/:envelopeId/audit', async (c) => {
   try {
     // Authenticate
-    const ctx = await getAuthContext(c);
+    await getAuthContext(c);
     const envelopeId = c.req.param('envelopeId');
 
     const events = await getAuditTrail(envelopeId);
@@ -514,7 +514,7 @@ senderRoutes.get('/envelopes/:envelopeId/audit', async (c) => {
 senderRoutes.get('/envelopes/:envelopeId/document', async (c) => {
   try {
     // Authenticate
-    const ctx = await getAuthContext(c);
+    await getAuthContext(c);
     const envelopeId = c.req.param('envelopeId');
 
     const envelope = await getEnvelopeDetails(envelopeId);
@@ -543,7 +543,7 @@ senderRoutes.get('/envelopes/:envelopeId/document', async (c) => {
 senderRoutes.get('/envelopes/:envelopeId/certificate', async (c) => {
   try {
     // Authenticate
-    const ctx = await getAuthContext(c);
+    await getAuthContext(c);
     const envelopeId = c.req.param('envelopeId');
 
     const certificate = await getCertificate(envelopeId);
@@ -994,7 +994,7 @@ senderRoutes.post(
 senderRoutes.get('/envelopes/:envelopeId/download', async (c) => {
   try {
     // Authenticate
-    const ctx = await getAuthContext(c);
+    await getAuthContext(c);
     const envelopeId = c.req.param('envelopeId');
 
     // Get envelope details
@@ -1148,7 +1148,7 @@ senderRoutes.get('/envelopes/:envelopeId/evidence-pack', async (c) => {
  */
 senderRoutes.get('/envelopes/:envelopeId/reminder-config', async (c) => {
   try {
-    const ctx = await getAuthContext(c);
+    await getAuthContext(c);
     const envelopeId = c.req.param('envelopeId');
     const config = await getReminderConfig(envelopeId);
     return c.json({ config });
@@ -1278,7 +1278,7 @@ senderRoutes.patch('/envelopes/:envelopeId/signing-mode', async (c) => {
  */
 senderRoutes.get('/envelopes/:envelopeId/audit/export', async (c) => {
   try {
-    const ctx = await getAuthContext(c);
+    await getAuthContext(c);
     const envelopeId = c.req.param('envelopeId');
 
     const events = await getAuditTrail(envelopeId);

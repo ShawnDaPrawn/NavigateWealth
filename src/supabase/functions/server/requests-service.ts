@@ -18,11 +18,6 @@ import {
   AuditAction,
   ApprovalOutcome,
   RequestPriority,
-  RequestCategory,
-  RequestType,
-  ClientAssociationRule,
-  FieldType,
-  FieldVisibility,
   AssignmentRule,
 } from './requests-types.ts';
 
@@ -204,7 +199,7 @@ export class RequestsService {
   async createTemplate(
     templateData: Partial<RequestTemplate>,
     userId: string,
-    userName: string,
+    _userName: string,
   ): Promise<RequestTemplate> {
     try {
       const now = new Date().toISOString();

@@ -1,4 +1,3 @@
-import { createClient } from '../../utils/supabase/client';
 import { toast } from 'sonner';
 import { projectId, publicAnonKey } from '../../utils/supabase/info';
 import { getUserErrorMessage } from '../../utils/errorUtils';
@@ -9,18 +8,7 @@ import { Badge } from '../ui/badge';
 import { Button } from '../ui/button';
 import { BrandSectionLoader } from '../ui/brand-loader';
 import { Input } from '../ui/input';
-import { Label } from '../ui/label';
-import { Textarea } from '../ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from '../ui/dialog';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '../ui/tabs';
 import {
   History,
   Search,
@@ -35,10 +23,7 @@ import {
   Activity,
   Briefcase,
   Home,
-  ChevronRight,
-  Plus,
   Link as LinkIcon,
-  Upload,
   ExternalLink,
 } from 'lucide-react';
 import { PortalPageHeader } from '../portal/PortalPageHeader';
@@ -206,7 +191,7 @@ export function HistoryPage() {
           prev.map((item) => (item.id === id ? { ...item, isFavourite: !item.isFavourite } : item)),
         );
       }
-    } catch (error: unknown) {
+    } catch (_error: unknown) {
       // Silent fail for non-critical functionality
     }
   };
@@ -243,7 +228,7 @@ export function HistoryPage() {
 
       // Mark as viewed
       await markAsViewed(item);
-    } catch (error: unknown) {
+    } catch (_error: unknown) {
       toast.error('Failed to download document');
     }
   };
@@ -277,7 +262,7 @@ export function HistoryPage() {
           prev.map((i) => (i.id === item.id ? { ...i, status: 'viewed' as const } : i)),
         );
       }
-    } catch (error: unknown) {
+    } catch (_error: unknown) {
       // Silently fail - this is not critical functionality
     }
   };

@@ -42,25 +42,17 @@ import {
   CheckCircle,
   AlertCircle,
   Info,
-  Terminal,
   Layers,
-  Box,
   Mail,
-  Lock,
   Eye,
   User,
   Shield,
-  Bell,
   LogOut,
   ChevronDown,
-  MessageSquare,
   Key,
   Building,
-  Users as UsersIcon,
   TrendingUp,
-  Clock,
   Home,
-  PieChart,
   Package,
   CreditCard,
   FileText,
@@ -70,7 +62,6 @@ import {
   Settings,
   UserCheck,
   Download,
-  FolderArchive,
   Loader2,
   X,
   ArrowRight,
@@ -80,7 +71,6 @@ import {
   Search,
   ArrowUp,
 } from 'lucide-react';
-import { CodebaseDownload } from '../modules/codebase/CodebaseDownload';
 import { DownloadCodebaseTab } from '../modules/codebase/DownloadCodebaseTab';
 import { copyToClipboard as copyToClipboardUtil } from '../../utils/clipboard';
 import { TypographyTab } from './design-system/TypographyTab';

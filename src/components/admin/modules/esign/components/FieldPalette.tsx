@@ -8,16 +8,12 @@ import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '../../../../ui/card';
 import { Badge } from '../../../../ui/badge';
 import { Button } from '../../../../ui/button';
-import { Label } from '../../../../ui/label';
-import { Input } from '../../../../ui/input';
-import { Checkbox } from '../../../../ui/checkbox';
 import { ScrollArea } from '../../../../ui/scroll-area';
 import {
   FileSignature,
   Type,
   Calendar,
   CheckSquare,
-  Hash,
   GripVertical,
   Trash2,
   Eye,
@@ -88,7 +84,7 @@ const FIELD_TEMPLATES: FieldTemplate[] = [
 export function FieldPalette({
   signers,
   fields,
-  onAddField,
+  onAddField: _onAddField,
   onUpdateField,
   onDeleteField,
   selectedSignerId,

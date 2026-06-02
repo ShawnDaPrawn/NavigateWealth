@@ -9,7 +9,6 @@ import { Hono } from 'npm:hono';
 import * as kv from './kv_store.tsx';
 import { createModuleLogger } from './stderr-logger.ts';
 import { authenticateUser, fnaErrorResponse } from './fna-auth.ts';
-import { getErrMsg } from './shared-logger-utils.ts';
 import { CreateRiskPlanningFnaSchema, UpdateRiskPlanningFnaSchema } from './fna-validation.ts';
 import { formatZodError } from './shared-validation-utils.ts';
 import { NetWorthSnapshotService } from './net-worth-snapshot-service.ts';
@@ -20,40 +19,12 @@ const snapshotService = new NetWorthSnapshotService();
 
 // ==================== LOCAL INTERFACES ====================
 
-/** Family member record from client profile KV data */
-interface FamilyMemberRecord {
-  relationship?: string;
-  dateOfBirth?: string;
-  isFinanciallyDependent?: boolean;
-  [key: string]: unknown;
-}
-
 /** Dependant derived from family member data */
 interface DependantRecord {
   id: string;
   relationship: string;
   dependencyTerm: number;
   monthlyEducationCost: number;
-}
-
-/** Liability record from client profile */
-interface LiabilityRecord {
-  outstandingBalance?: number | string;
-  [key: string]: unknown;
-}
-
-/** Asset record from client profile */
-interface AssetRecord {
-  value?: number | string;
-  [key: string]: unknown;
-}
-
-/** Policy record from KV policies data */
-interface PolicyRecord {
-  id?: string;
-  categoryId?: string;
-  data?: Record<string, unknown>;
-  [key: string]: unknown;
 }
 
 /** Existing cover structure for calculation functions */
@@ -95,7 +66,6 @@ interface RiskCalcInputData {
 // ==================== CONSTANTS ====================
 
 const SYSTEM_VERSION = '1.0.0';
-const INSURABLE_MAXIMUM_DEFAULT = 150000; // R150,000/month default guardrail
 
 // Life Cover Constants
 const LIFE_COVER_MULTIPLES = {
@@ -138,21 +108,6 @@ async function getNextVersionNumber(clientId: string): Promise<number> {
 }
 
 /**
- * Calculate age from date of birth
- */
-function calculateAge(dob: string): number {
-  if (!dob) return 0;
-  const birthDate = new Date(dob);
-  const today = new Date();
-  let age = today.getFullYear() - birthDate.getFullYear();
-  const monthDiff = today.getMonth() - birthDate.getMonth();
-  if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
-    age--;
-  }
-  return age;
-}
-
-/**
  * Auto-populate Risk Planning FNA inputs via unified resolver.
  */
 async function autoPopulateFromProfile(clientId: string) {
@@ -170,7 +125,6 @@ function calculateLifeCover(input: RiskCalcInputData) {
     totalOutstandingDebts,
     totalEstateValue,
     dependants,
-    spouseFullName,
     spouseAverageMonthlyIncome,
     existingCover,
   } = input;
@@ -819,8 +773,8 @@ riskPlanningFnaRoutes.post('/publish/:fnaId', async (c) => {
  */
 riskPlanningFnaRoutes.post('/unpublish/:fnaId', async (c) => {
   try {
-    log.info('ðŸ“¥ POST /risk-planning-fna/unpublish/:fnaId');
-    const user = await authenticateUser(c.req.header('Authorization'));
+    log.info('ðŸ”¥ POST /risk-planning-fna/unpublish/:fnaId');
+    await authenticateUser(c.req.header('Authorization'));
 
     const fnaId = c.req.param('fnaId');
     const fna = await kv.get(`risk_planning_fna:${fnaId}`);

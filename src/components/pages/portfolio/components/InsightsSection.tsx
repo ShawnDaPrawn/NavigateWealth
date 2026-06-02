@@ -9,7 +9,6 @@
 
 import React, { useMemo, useState, useEffect } from 'react';
 import { useNavigate } from 'react-router';
-import { Card, CardContent, CardHeader, CardTitle } from '../../../ui/card';
 import { Badge } from '../../../ui/badge';
 import { Button } from '../../../ui/button';
 import {
@@ -78,28 +77,6 @@ const SEVERITY_STYLES = {
     label: 'Opportunity',
   },
 } as const;
-
-const PILLAR_CONFIG: Record<string, { icon: React.ElementType; color: string; path: string }> = {
-  'Risk Management': { icon: Shield, color: 'text-purple-600', path: '/dashboard/risk-management' },
-  'Medical Aid': { icon: Heart, color: 'text-rose-600', path: '/dashboard/medical-aid' },
-  Retirement: { icon: PiggyBank, color: 'text-amber-600', path: '/dashboard/retirement-planning' },
-  Investment: {
-    icon: TrendingUp,
-    color: 'text-green-600',
-    path: '/dashboard/investment-management',
-  },
-  'Estate Planning': {
-    icon: Landmark,
-    color: 'text-purple-600',
-    path: '/dashboard/estate-planning',
-  },
-  'Tax Planning': { icon: FileText, color: 'text-indigo-600', path: '/dashboard/tax-planning' },
-  'Employee Benefits': {
-    icon: Briefcase,
-    color: 'text-blue-600',
-    path: '/dashboard/employee-benefits',
-  },
-};
 
 export function InsightsSection({
   overview,

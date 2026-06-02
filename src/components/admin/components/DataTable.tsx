@@ -2,16 +2,9 @@ import React, { useState, useEffect } from 'react';
 import { cn } from '../../ui/utils';
 import { Button } from '../../ui/button';
 import { Input } from '../../ui/input';
-import { Badge } from '../../ui/badge';
 import { Skeleton } from '../../ui/skeleton';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../ui/table';
-import {
-  DropdownMenu,
-  DropdownMenuCheckboxItem,
-  DropdownMenuContent,
-  DropdownMenuTrigger,
-} from '../../ui/dropdown-menu';
-import { ChevronLeft, ChevronRight, Download, Filter, Settings, Search } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Download, Search } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../ui/select';
 
 /** Numbered pagination buttons spanning up to maxButtons pages around currentPage (1-based). */
@@ -87,7 +80,7 @@ export function DataTable<T extends Record<string, unknown>>({
   const [rowsPerPage, setRowsPerPage] = useState(pageSize);
   const [sortColumn, setSortColumn] = useState<string | null>(null);
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
-  const [visibleColumns, setVisibleColumns] = useState<string[]>(columns.map((col) => col.key));
+  const [visibleColumns] = useState<string[]>(columns.map((col) => col.key));
 
   useEffect(() => {
     setRowsPerPage(pageSize);

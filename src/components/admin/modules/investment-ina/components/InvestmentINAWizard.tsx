@@ -19,10 +19,8 @@ import {
 import { Textarea } from '../../../../ui/textarea';
 import { Badge } from '../../../../ui/badge';
 import { Separator } from '../../../../ui/separator';
-import { Checkbox } from '../../../../ui/checkbox';
 import {
   ArrowRight,
-  ArrowLeft,
   Check,
   Loader2,
   Plus,
@@ -31,8 +29,6 @@ import {
   CheckCircle,
   Target,
   TrendingUp,
-  DollarSign,
-  Calendar,
   Settings,
   Users,
   PiggyBank,
@@ -43,7 +39,6 @@ import type {
   InvestmentINAInputs,
   InvestmentGoal,
   DiscretionaryInvestment,
-  LumpSumContribution,
   RiskProfile,
   GoalType,
   PriorityLevel,
@@ -144,7 +139,7 @@ export function InvestmentINAWizard({
       const autoPopulated = await InvestmentINAApiService.autoPopulateInputs(clientId);
       setInputs(intakePrefill ? { ...autoPopulated, ...intakePrefill } : autoPopulated);
       toast.success('Client data loaded successfully');
-    } catch (error: unknown) {
+    } catch (_error: unknown) {
       logger.info('Investment INA backend not available - working in client-side mode');
       setInputs(intakePrefill ?? {});
     } finally {
@@ -419,7 +414,7 @@ function ClientOverviewStep({ inputs, updateInputs }: INAStepProps) {
   );
 }
 
-function DiscretionaryInvestmentsStep({ inputs, updateInputs }: INAStepProps) {
+function DiscretionaryInvestmentsStep({ inputs, updateInputs: _updateInputs }: INAStepProps) {
   const discretionaryInvs = inputs.discretionaryInvestments || [];
 
   return (
@@ -440,7 +435,7 @@ function DiscretionaryInvestmentsStep({ inputs, updateInputs }: INAStepProps) {
             </div>
           ) : (
             <div className="space-y-3">
-              {discretionaryInvs.map((inv: DiscretionaryInvestment, index: number) => (
+              {discretionaryInvs.map((inv: DiscretionaryInvestment) => (
                 <div
                   key={inv.id}
                   className="flex items-center justify-between p-3 border rounded-lg"
@@ -679,7 +674,7 @@ function GoalEditorCard({
   onCollapse,
   onUpdate,
   onDelete,
-  discretionaryInvestments,
+  discretionaryInvestments: _discretionaryInvestments,
 }: {
   goal: InvestmentGoal;
   index: number;
