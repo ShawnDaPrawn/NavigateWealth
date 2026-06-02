@@ -8,10 +8,8 @@
  */
 
 import React from 'react';
-import { Search, X, User, Loader2, Check } from 'lucide-react';
-import { Input } from '../../../../ui/input';
+import { Search, X, Loader2, Check } from 'lucide-react';
 import { Button } from '../../../../ui/button';
-import { Badge } from '../../../../ui/badge';
 import {
   Command,
   CommandEmpty,
@@ -21,7 +19,7 @@ import {
   CommandList,
 } from '../../../../ui/command';
 import { Popover, PopoverContent, PopoverTrigger } from '../../../../ui/popover';
-import { formatClientDisplay, formatClientName, getClientInitials } from '../utils';
+import { formatClientName, getClientInitials } from '../utils';
 import type { ClientSelectorProps } from '../types';
 import { useSearchInputAutofillGuard } from '@/shared/forms/useSearchInputAutofillGuard';
 

@@ -1,9 +1,8 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../../../ui/tabs';
 import { AMLFICATab } from './AMLFICATab';
 import { FAISTab } from './FAISTab';
 import { DebarmentSupervisionTab } from './DebarmentSupervisionTab';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../../../ui/card';
 
 export function CDDTab() {
   return (

@@ -16,16 +16,12 @@ import {
   Loader2,
   AlertCircle,
   ShieldCheck,
-  FileText,
-  Lock,
   Clock,
   CheckCircle2,
-  User,
   XCircle,
 } from 'lucide-react';
 import { Card } from '../ui/card';
 import { Button } from '../ui/button';
-import { Alert, AlertDescription } from '../ui/alert';
 import { Badge } from '../ui/badge';
 import { OtpVerificationStep } from './OtpVerificationStep';
 import { SigningWorkflow } from './SigningWorkflow';
@@ -54,8 +50,8 @@ export function SignerLandingPage() {
   const [errorMessage, setErrorMessage] = useState<string>('');
   const {
     sessionData,
-    loading,
-    error,
+    loading: _loading,
+    error: _error,
     validateToken,
     verifyOtp,
     submitSignature,

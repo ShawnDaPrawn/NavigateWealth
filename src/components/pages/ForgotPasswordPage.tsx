@@ -6,12 +6,9 @@ import { Alert, AlertDescription } from '../ui/alert';
 import {
   Mail,
   ArrowLeft,
-  CheckCircle2,
-  XCircle,
   Shield,
   CheckCircle,
   Lock,
-  Key,
   Clock,
   AlertCircle,
 } from 'lucide-react';
@@ -152,8 +149,6 @@ export function ForgotPasswordPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [error, setError] = useState('');
-  const [currentSlide, setCurrentSlide] = useState(0);
-
   const navigate = useNavigate();
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -186,14 +181,6 @@ export function ForgotPasswordPage() {
 
   const handleBackToLogin = () => {
     navigate('/login');
-  };
-
-  const nextSlide = () => {
-    setCurrentSlide((prev) => (prev + 1) % carouselSlides.length);
-  };
-
-  const prevSlide = () => {
-    setCurrentSlide((prev) => (prev - 1 + carouselSlides.length) % carouselSlides.length);
   };
 
   if (isSubmitted) {

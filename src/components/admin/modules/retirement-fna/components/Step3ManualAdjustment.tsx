@@ -38,7 +38,7 @@ interface Step3ManualAdjustmentProps {
 
 export function Step3ManualAdjustment({
   inputs,
-  calculations,
+  calculations: _calculations,
   initialAdjustments,
   onNext,
   onBack,

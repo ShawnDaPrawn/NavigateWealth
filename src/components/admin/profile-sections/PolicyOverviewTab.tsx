@@ -28,11 +28,9 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-  TableFooter,
 } from '../../ui/table';
 import { api } from '../../../utils/api';
 import { withNavigateWealthPrintTitle } from '../../../utils/pdfPrintTitle';
-import { toast } from 'sonner';
 import { getFNAConfig, hasFNASupport } from './fna-config';
 import { DEFAULT_SCHEMAS } from './default-schemas';
 import { Goal } from '../modules/client-management/components/goals/types';
@@ -110,7 +108,7 @@ export function PolicyOverviewTab({
   clientDisplayName,
   onRunFNA,
   onAddPolicy,
-  onViewDetails,
+  onViewDetails: _onViewDetails,
   variant = 'full',
 }: PolicyOverviewTabProps) {
   const isEmbedded = variant === 'embedded';
