@@ -102,3 +102,48 @@ describe('PrepareFormStudio', () => {
     expect((screen.getByRole('button', { name: 'Redo' }) as HTMLButtonElement).disabled).toBe(true);
   });
 });
+
+describe('PrepareFormStudio interactions', () => {
+  it('Save button is disabled on initial mount (no unsaved changes)', () => {
+    render(<PrepareFormStudio envelope={envelope} signers={signers} />);
+    expect((screen.getByRole('button', { name: 'Save' }) as HTMLButtonElement).disabled).toBe(true);
+  });
+
+  it('calls onSendForSignature when the Send button is clicked with pre-loaded fields', async () => {
+    const onSendForSignature = vi.fn(async () => {});
+    const envelopeWithField = {
+      ...envelope,
+      fields: [
+        {
+          id: 'field-1',
+          envelope_id: 'env-1',
+          type: 'signature',
+          page: 1,
+          x: 100,
+          y: 200,
+          width: 100,
+          height: 50,
+          required: true,
+          metadata: {},
+          created_at: '2026-01-01T00:00:00.000Z',
+          updated_at: '2026-01-01T00:00:00.000Z',
+        },
+      ],
+    } as unknown as EsignEnvelope;
+
+    render(
+      <PrepareFormStudio
+        envelope={envelopeWithField}
+        signers={signers}
+        sendActionLabel="Send for Signature"
+        onSendForSignature={onSendForSignature}
+      />,
+    );
+
+    screen.getByRole('button', { name: /send for signature/i }).click();
+
+    await waitFor(() => {
+      expect(onSendForSignature).toHaveBeenCalled();
+    });
+  });
+});

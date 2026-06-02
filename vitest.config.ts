@@ -89,8 +89,12 @@ export default defineConfig({
       // 2026-06-02 (phase4 characterization batch): added render-contract tests
       // for PortalAutomationTab (1,709 lines), ReviewDialog (1,825 lines), and
       // ComplianceTab (1,723 lines) — all previously at 0% coverage. Conservative
-      // floor bump of ~0.2 pending CI measurement of the actual delta. Re-measure
-      // after CI and ratchet further if headroom allows.
+      // floor bump of ~0.2 pending CI measurement of the actual delta.
+      //
+      // 2026-06-02 (phase4 S4/S5): added ClientOverviewTab adviser-mode test
+      // (Risk pillar card + full five-pillar set) and PrepareFormStudio
+      // interaction tests (Save disabled on mount, Send calls onSendForSignature).
+      // Conservative floor bump +0.1.
       //
       // CAVEAT — silent denominator: ~16 mostly-static .tsx files (HomePage +
       // the marketing/product pages, Logo, HeroSection, provider-logos,
@@ -101,10 +105,10 @@ export default defineConfig({
       //
       // The 70/65/70/70 end-goal is long-horizon — floor only ratchets up.
       thresholds: {
-        lines: 9.9,
-        functions: 7.95,
-        branches: 8.55,
-        statements: 9.9,
+        lines: 10.0,
+        functions: 8.05,
+        branches: 8.65,
+        statements: 10.0,
       },
     },
   },
