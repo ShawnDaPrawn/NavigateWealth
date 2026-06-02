@@ -3,7 +3,7 @@ import { useLocation, useNavigate } from 'react-router';
 import { SEO, createContactPageSchema } from '../seo/SEO';
 import { getSEOData } from '../seo/seo-config';
 import { Button } from '../ui/button';
-import { CardContent, CardHeader, CardTitle } from '../ui/card';
+
 import { Input } from '../ui/input';
 import { Textarea } from '../ui/textarea';
 import { Label } from '../ui/label';

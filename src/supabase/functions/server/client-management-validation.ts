@@ -18,16 +18,11 @@ import {
   OptionalEmailSchema,
   NonEmptyStringSchema,
   OptionalStringSchema,
-  SaPhoneSchema,
   OptionalSaPhoneSchema,
-  SaIdNumberSchema,
   OptionalSaIdNumberSchema,
   IsoDateSchema,
   IsoDateTimeSchema,
-  PastDateSchema,
   AddressSchema,
-  SaProvinceSchema,
-  SaPostalCodeSchema,
 } from './common-schemas.ts';
 
 // Inlined validation utilities to avoid bundler import issues
@@ -37,10 +32,6 @@ function stripHtml(text: string): string {
 
 function normalizeWhitespace(text: string): string {
   return text.replace(/\s+/g, ' ').trim();
-}
-
-function sanitizeEmail(email: string): string {
-  return email.trim().toLowerCase();
 }
 
 // ============================================================================
@@ -321,7 +312,7 @@ export const AlternativeProfileUpdateSchema = z
   .refine(
     (data) => {
       // Must have at least one update field besides userId
-      const { userId, ...rest } = data;
+      const { userId: _userId, ...rest } = data;
       return Object.keys(rest).length > 0;
     },
     {

@@ -9,7 +9,6 @@ import { Hono } from 'npm:hono';
 import * as kv from './kv_store.tsx';
 import { createModuleLogger } from './stderr-logger.ts';
 import { authenticateUser, fnaErrorResponse } from './fna-auth.ts';
-import { getErrMsg } from './shared-logger-utils.ts';
 import { CreateSessionSchema, UpdateInputsSchema } from './fna-validation.ts';
 import { formatZodError } from './shared-validation-utils.ts';
 
@@ -55,21 +54,6 @@ function safeNumber(val: unknown, defaultVal: number): number {
   if (val === undefined || val === null || val === '') return defaultVal;
   const num = Number(val);
   return Number.isNaN(num) ? defaultVal : num;
-}
-
-/**
- * Calculate age from date of birth
- */
-function calculateAge(dob: string | Date | undefined): number {
-  if (!dob) return 30; // Default fallback
-  const birthDate = new Date(dob);
-  const today = new Date();
-  let age = today.getFullYear() - birthDate.getFullYear();
-  const monthDiff = today.getMonth() - birthDate.getMonth();
-  if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
-    age--;
-  }
-  return age;
 }
 
 /**
@@ -318,7 +302,7 @@ retirementFnaRoutes.post('/create', async (c) => {
 // UPDATE Inputs
 retirementFnaRoutes.put('/:fnaId/inputs', async (c) => {
   try {
-    const user = await authenticateUser(c.req.header('Authorization'));
+    await authenticateUser(c.req.header('Authorization'));
     const fnaId = c.req.param('fnaId');
     const body = await c.req.json();
     const parsed = UpdateInputsSchema.safeParse(body);
@@ -344,7 +328,7 @@ retirementFnaRoutes.put('/:fnaId/inputs', async (c) => {
 // CALCULATE Results
 retirementFnaRoutes.post('/:fnaId/calculate', async (c) => {
   try {
-    const user = await authenticateUser(c.req.header('Authorization'));
+    await authenticateUser(c.req.header('Authorization'));
     const fnaId = c.req.param('fnaId');
 
     const session = await kv.get(`retirement_fna:${fnaId}`);
@@ -440,20 +424,6 @@ retirementFnaRoutes.get('/client/:clientId/auto-populate', async (c) => {
 export default retirementFnaRoutes;
 
 // ==================== INTERFACES ====================
-
-/** Loosely-typed investment record from KV policies data */
-interface InvestmentRecord {
-  name?: string;
-  productName?: string;
-  category?: string;
-  productCategory?: string;
-  type?: string;
-  currentValue?: string | number;
-  contribution?: string | number;
-  monthlyContribution?: string | number;
-  isDiscretionary?: boolean;
-  [key: string]: unknown;
-}
 
 /** Input shape for retirement FNA calculations */
 interface RetirementCalcInputs {

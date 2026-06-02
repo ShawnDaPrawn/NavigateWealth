@@ -13,18 +13,12 @@ import {
   Eye,
   MousePointer,
   Heart,
-  MessageCircle,
   Share,
   Users,
-  Calendar,
-  Filter,
   BarChart3,
   FileText,
-  Mail,
 } from 'lucide-react';
-import { SocialPost, SocialPlatform, Campaign } from './types';
-
-const COLORS = ['#6366f1', '#8b5cf6', '#ec4899', '#14b8a6'];
+import { SocialPlatform } from './types';
 
 const MOCK_ENGAGEMENT = [
   { month: 'Oct', linkedin: 420, instagram: 380, facebook: 210, x: 150 },
