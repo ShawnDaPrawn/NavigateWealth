@@ -404,4 +404,46 @@ describe('integrations.tsx route contracts', () => {
       expect(await res.json()).toMatchObject({ error: 'Unauthorized portal worker' });
     });
   });
+
+  // ── GET /template ─────────────────────────────────────────────────────────
+  // Locks the template download endpoint's auth and validation contracts before
+  // it is extracted into integrations-provider-routes.ts (Phase 5 Slice A).
+  describe('GET /template', () => {
+    it('returns 401 without an Authorization header', async () => {
+      const res = await integrationsApp.request('/template?providerId=p1&categoryId=risk');
+      expect(res.status).toBe(401);
+    });
+
+    it('returns 400 when providerId is missing', async () => {
+      const res = await integrationsApp.request('/template?categoryId=risk', { headers: AUTH });
+      expect(res.status).toBe(400);
+      expect(await res.json()).toMatchObject({ error: expect.stringContaining('Missing') });
+    });
+
+    it('returns 400 when categoryId is missing', async () => {
+      const res = await integrationsApp.request('/template?providerId=p1', { headers: AUTH });
+      expect(res.status).toBe(400);
+      expect(await res.json()).toMatchObject({ error: expect.stringContaining('Missing') });
+    });
+
+    it('returns 400 when the provider does not exist', async () => {
+      const res = await integrationsApp.request('/template?providerId=ghost&categoryId=risk', {
+        headers: AUTH,
+      });
+      expect(res.status).toBe(400);
+      expect(await res.json()).toMatchObject({ error: 'Invalid provider ID' });
+    });
+
+    it('returns 200 with xlsx Content-Type for a known provider', async () => {
+      kvStore.set('provider:p1', { id: 'p1', name: 'Provider One', categoryIds: ['risk'] });
+      const res = await integrationsApp.request('/template?providerId=p1&categoryId=risk', {
+        headers: AUTH,
+      });
+      expect(res.status).toBe(200);
+      expect(res.headers.get('Content-Type')).toMatch(
+        /application\/vnd\.openxmlformats-officedocument\.spreadsheetml\.sheet/,
+      );
+      expect(res.headers.get('Content-Disposition')).toMatch(/attachment/);
+    });
+  });
 });
