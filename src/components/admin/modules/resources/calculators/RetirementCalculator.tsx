@@ -34,24 +34,9 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { RetirementInputs, RetirementResults, RetirementScenario, ProjectionYear } from './types';
-import { projectId, publicAnonKey } from '../../../../../utils/supabase/info';
+import { api } from '../../../../../utils/api';
 import { navigateWealthPdfDocumentTitle } from '../../../../../utils/pdfPrintTitle';
 import { RetirementReportTemplate } from './RetirementReportTemplate';
-
-// Helper to get auth token
-const getAuthToken = (): string => {
-  try {
-    const storageKey = `sb-${projectId}-auth-token`;
-    const stored = localStorage.getItem(storageKey);
-    if (stored) {
-      const session = JSON.parse(stored);
-      return session.access_token || publicAnonKey;
-    }
-  } catch (e) {
-    console.error('Error reading auth token:', e);
-  }
-  return publicAnonKey;
-};
 
 interface RetirementCalculatorProps {
   onBack: () => void;
@@ -89,45 +74,38 @@ export function RetirementCalculator({ onBack }: RetirementCalculatorProps) {
   useEffect(() => {
     const fetchClients = async () => {
       try {
-        const token = getAuthToken();
-        const response = await fetch(
-          `https://${projectId}.supabase.co/functions/v1/make-server-91ed8379/profile/all-users`,
-          {
-            headers: {
-              Authorization: `Bearer ${token}`,
-            },
-          },
-        );
-
-        if (response.ok) {
-          const data = await response.json();
-          if (data.users && Array.isArray(data.users)) {
-            const transformedUsers = data.users
-              .map(
-                (user: {
-                  id: string;
-                  user_metadata?: Record<string, unknown>;
-                  profile?: Record<string, unknown>;
-                  name?: string;
-                }) => ({
-                  id: user.id,
-                  first_name: (user.user_metadata?.firstName ||
-                    (user.profile?.personalInformation as Record<string, unknown>)?.firstName ||
-                    user.name?.split(' ')[0] ||
-                    'Unknown') as string,
-                  last_name: (user.user_metadata?.surname ||
-                    (user.profile?.personalInformation as Record<string, unknown>)?.lastName ||
-                    user.name?.split(' ').slice(1).join(' ') ||
-                    'User') as string,
-                }),
-              )
-              .sort((a: { last_name: string }, b: { last_name: string }) =>
-                a.last_name.localeCompare(b.last_name),
-              );
-            setClients(transformedUsers);
-          }
-        } else {
-          throw new Error('Failed to fetch clients');
+        const data = await api.get<{
+          users?: Array<{
+            id: string;
+            user_metadata?: Record<string, unknown>;
+            profile?: Record<string, unknown>;
+            name?: string;
+          }>;
+        }>('/profile/all-users');
+        if (data.users && Array.isArray(data.users)) {
+          const transformedUsers = data.users
+            .map(
+              (user: {
+                id: string;
+                user_metadata?: Record<string, unknown>;
+                profile?: Record<string, unknown>;
+                name?: string;
+              }) => ({
+                id: user.id,
+                first_name: (user.user_metadata?.firstName ||
+                  (user.profile?.personalInformation as Record<string, unknown>)?.firstName ||
+                  user.name?.split(' ')[0] ||
+                  'Unknown') as string,
+                last_name: (user.user_metadata?.surname ||
+                  (user.profile?.personalInformation as Record<string, unknown>)?.lastName ||
+                  user.name?.split(' ').slice(1).join(' ') ||
+                  'User') as string,
+              }),
+            )
+            .sort((a: { last_name: string }, b: { last_name: string }) =>
+              a.last_name.localeCompare(b.last_name),
+            );
+          setClients(transformedUsers);
         }
       } catch (error) {
         console.error('Error fetching clients:', error);
@@ -153,20 +131,10 @@ export function RetirementCalculator({ onBack }: RetirementCalculatorProps) {
 
   const loadScenarios = async (clientId: string) => {
     try {
-      const token = getAuthToken();
-      const response = await fetch(
-        `https://${projectId}.supabase.co/functions/v1/make-server-91ed8379/resources/calculators/retirement/scenarios/${clientId}`,
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        },
+      const data = await api.get<{ scenarios?: RetirementScenario[] }>(
+        `/resources/calculators/retirement/scenarios/${clientId}`,
       );
-
-      if (response.ok) {
-        const data = await response.json();
-        setScenarios(data.scenarios || []);
-      }
+      setScenarios(data.scenarios || []);
     } catch (error) {
       console.error('Error loading scenarios:', error);
     }
@@ -175,21 +143,9 @@ export function RetirementCalculator({ onBack }: RetirementCalculatorProps) {
   const deleteScenario = async (id: string) => {
     if (!confirm('Are you sure you want to delete this scenario?')) return;
     try {
-      const token = getAuthToken();
-      const response = await fetch(
-        `https://${projectId}.supabase.co/functions/v1/make-server-91ed8379/resources/calculators/retirement/scenarios/${selectedClientId}/${id}`,
-        {
-          method: 'DELETE',
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        },
-      );
-
-      if (response.ok) {
-        toast.success('Scenario deleted');
-        loadScenarios(selectedClientId);
-      }
+      await api.delete(`/resources/calculators/retirement/scenarios/${selectedClientId}/${id}`);
+      toast.success('Scenario deleted');
+      loadScenarios(selectedClientId);
     } catch (error) {
       toast.error('Failed to delete scenario');
     }
@@ -415,7 +371,6 @@ export function RetirementCalculator({ onBack }: RetirementCalculatorProps) {
 
     setSaving(true);
     try {
-      const token = getAuthToken();
       const scenario: Partial<RetirementScenario> = {
         clientId: selectedClientId,
         name: scenarioName,
@@ -423,24 +378,9 @@ export function RetirementCalculator({ onBack }: RetirementCalculatorProps) {
         results: results!,
       };
 
-      const response = await fetch(
-        `https://${projectId}.supabase.co/functions/v1/make-server-91ed8379/resources/calculators/retirement/scenarios`,
-        {
-          method: 'POST',
-          headers: {
-            Authorization: `Bearer ${token}`,
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify(scenario),
-        },
-      );
-
-      if (response.ok) {
-        toast.success('Scenario saved successfully');
-        loadScenarios(selectedClientId);
-      } else {
-        throw new Error('Failed to save');
-      }
+      await api.post('/resources/calculators/retirement/scenarios', scenario);
+      toast.success('Scenario saved successfully');
+      loadScenarios(selectedClientId);
     } catch (error) {
       console.error(error);
       toast.error('Failed to save scenario');

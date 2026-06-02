@@ -9,7 +9,7 @@ import { Input } from '../../../../ui/input';
 import { Button } from '../../../../ui/button';
 import { Badge } from '../../../../ui/badge';
 import { Search, User, X, Loader2, CheckCircle2 } from 'lucide-react';
-import { projectId, publicAnonKey } from '../../../../../utils/supabase/info';
+import { api } from '../../../../../utils/api';
 
 interface ClientOption {
   id: string;
@@ -37,18 +37,15 @@ export function ClientPicker({ selectedClient, onSelect }: ClientPickerProps) {
   const fetchClients = useCallback(async () => {
     setLoading(true);
     try {
-      const storageKey = `sb-${projectId}-auth-token`;
-      const stored = localStorage.getItem(storageKey);
-      const token = stored ? JSON.parse(stored).access_token : publicAnonKey;
-
-      const res = await fetch(
-        `https://${projectId}.supabase.co/functions/v1/make-server-91ed8379/profile/all-users`,
-        { headers: { Authorization: `Bearer ${token}` } },
-      );
-
-      if (!res.ok) throw new Error('Failed to fetch clients');
-
-      const data = await res.json();
+      const data = await api.get<{
+        users?: Array<{
+          id: string;
+          email?: string;
+          name?: string;
+          user_metadata?: Record<string, unknown>;
+          profile?: { personalInformation?: Record<string, unknown>; [key: string]: unknown };
+        }>;
+      }>('/profile/all-users');
       const users = data.users || [];
 
       const mapped: ClientOption[] = users.map(

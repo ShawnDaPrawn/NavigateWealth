@@ -30,7 +30,7 @@ import {
   PenTool,
 } from 'lucide-react';
 import { toast } from 'sonner';
-import { projectId, publicAnonKey } from '../../../../../utils/supabase/info';
+import { api } from '../../../../../utils/api';
 import { getBlockDefinition } from './registry';
 import type { LetterMeta } from '../templates/LetterheadPdfLayout';
 
@@ -42,21 +42,6 @@ import {
   FORM_STATUS_CONFIG,
   type FormStatus,
 } from './constants';
-
-// Helper to get auth token from localStorage
-const getAuthToken = (): string => {
-  try {
-    const storageKey = `sb-${projectId}-auth-token`;
-    const stored = localStorage.getItem(storageKey);
-    if (stored) {
-      const session = JSON.parse(stored);
-      return session.access_token || publicAnonKey;
-    }
-  } catch (e) {
-    console.error('[FormBuilder] Error reading auth token:', e);
-  }
-  return publicAnonKey;
-};
 
 // Simple ID generator
 const generateId = () => {
@@ -98,18 +83,6 @@ async function saveToApi(
   payload: SavePayload,
   resourceId: string | undefined,
 ): Promise<Record<string, unknown>> {
-  const token = getAuthToken();
-
-  if (token === publicAnonKey) {
-    throw new Error('You must be logged in to save templates');
-  }
-
-  const url = resourceId
-    ? `https://${projectId}.supabase.co/functions/v1/make-server-91ed8379/resources/${resourceId}`
-    : `https://${projectId}.supabase.co/functions/v1/make-server-91ed8379/resources`;
-
-  const method = resourceId ? 'PUT' : 'POST';
-
   console.log('[FormBuilder] Saving form:', {
     isUpdate: !!resourceId,
     formId: resourceId,
@@ -117,22 +90,10 @@ async function saveToApi(
     blocksCount: payload.blocks.length,
   });
 
-  const response = await fetch(url, {
-    method,
-    headers: {
-      Authorization: `Bearer ${token}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify(payload),
-  });
+  const data = resourceId
+    ? await api.put<Record<string, unknown>>(`/resources/${resourceId}`, payload)
+    : await api.post<Record<string, unknown>>('/resources', payload);
 
-  if (!response.ok) {
-    const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
-    console.error('[FormBuilder] Save failed:', response.status, errorData);
-    throw new Error(errorData.error || 'Failed to save form');
-  }
-
-  const data = await response.json();
   console.log('[FormBuilder] Save successful:', data);
   return data;
 }

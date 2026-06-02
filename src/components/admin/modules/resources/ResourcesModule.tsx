@@ -57,7 +57,7 @@ import { useResources } from './hooks/useResources';
 import { FormDefinition } from './types';
 import { generatePreviewData, getCategoryColor } from './utils';
 import { LEGAL_DOCUMENTS } from './legal-constants';
-import { projectId, publicAnonKey } from '../../../../utils/supabase/info';
+import { api } from '../../../../utils/api';
 import { Skeleton } from '../../../ui/skeleton';
 
 import { useCurrentUserPermissions } from '../personnel/hooks/usePermissions';
@@ -343,28 +343,10 @@ export function ResourcesModule() {
   const handleSeedLegalDocuments = async () => {
     setSeedingLegal(true);
     try {
-      const storageKey = `sb-${projectId}-auth-token`;
-      const stored = localStorage.getItem(storageKey);
-      const token = stored ? JSON.parse(stored).access_token : publicAnonKey;
-
-      const response = await fetch(
-        `https://${projectId}.supabase.co/functions/v1/make-server-91ed8379/resources/legal/seed`,
-        {
-          method: 'POST',
-          headers: {
-            Authorization: `Bearer ${token}`,
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({ documents: LEGAL_DOCUMENTS }),
-        },
+      const result = await api.post<{ seeded?: number; skipped?: number; total?: number }>(
+        '/resources/legal/seed',
+        { documents: LEGAL_DOCUMENTS },
       );
-
-      if (!response.ok) {
-        const errData = await response.json().catch(() => ({ error: 'Unknown error' }));
-        throw new Error(errData.error || `Seed failed (${response.status})`);
-      }
-
-      const result = await response.json();
       const { seeded = 0, skipped = 0, total = 0 } = result;
 
       if (seeded > 0) {
