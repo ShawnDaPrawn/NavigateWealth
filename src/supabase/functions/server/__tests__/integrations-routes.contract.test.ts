@@ -405,6 +405,51 @@ describe('integrations.tsx route contracts', () => {
     });
   });
 
+  // ── GET /schemas/batch ───────────────────────────────────────────────────
+  // Shape-assertion before Slice C extraction.
+  describe('GET /schemas/batch', () => {
+    it('returns a schemas map keyed by categoryId', async () => {
+      const res = await integrationsApp.request('/schemas/batch');
+      expect(res.status).toBe(200);
+      const body = (await res.json()) as { schemas: Record<string, unknown> };
+      expect(body).toHaveProperty('schemas');
+      expect(typeof body.schemas).toBe('object');
+    });
+
+    it('merges stored custom schemas over defaults', async () => {
+      kvStore.set('config:schema:risk', { categoryId: 'risk', fields: [{ id: 'f1', name: 'Custom' }] });
+      const res = await integrationsApp.request('/schemas/batch');
+      expect(res.status).toBe(200);
+      const body = (await res.json()) as { schemas: Record<string, { fields: unknown[] }> };
+      expect(body.schemas.risk).toMatchObject({ fields: [{ id: 'f1' }] });
+    });
+  });
+
+  // ── POST /schemas ─────────────────────────────────────────────────────────
+  describe('POST /schemas', () => {
+    it('returns 400 on invalid body', async () => {
+      const res = await integrationsApp.request('/schemas', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ bad: true }),
+      });
+      expect(res.status).toBe(400);
+      expect(await res.json()).toMatchObject({ error: 'Validation failed' });
+    });
+
+    it('persists a valid schema and echoes it under { success, schema }', async () => {
+      const res = await integrationsApp.request('/schemas', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ categoryId: 'risk', fields: [{ id: 'f1', name: 'Field One', type: 'text' }] }),
+      });
+      expect(res.status).toBe(200);
+      const body = (await res.json()) as { success: boolean; schema: Record<string, unknown> };
+      expect(body.success).toBe(true);
+      expect(body.schema).toMatchObject({ categoryId: 'risk', fields: [{ id: 'f1' }] });
+    });
+  });
+
   // ── POST /upload ──────────────────────────────────────────────────────────
   // Locks auth and early-exit validation shapes before Slice B extraction.
   describe('POST /upload', () => {
