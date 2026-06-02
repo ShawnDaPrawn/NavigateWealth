@@ -120,7 +120,7 @@ export const CreatePersonnelSchema = CompletePersonnelSchema.omit({
 export const UpdatePersonnelSchema = CompletePersonnelSchema.partial().refine(
   (data) => {
     // Must have at least one update field
-    const { id, createdAt, updatedAt, ...rest } = data;
+    const { id: _id, createdAt: _createdAt, updatedAt: _updatedAt, ...rest } = data;
     return Object.keys(rest).length > 0;
   },
   {

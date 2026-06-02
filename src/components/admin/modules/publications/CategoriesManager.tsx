@@ -178,7 +178,6 @@ export function CategoriesManager() {
   const {
     categories: initialCategories,
     isLoading,
-    error,
     refetch,
   } = useCategories({ autoSort: true });
 
@@ -198,7 +197,7 @@ export function CategoriesManager() {
     handleReorder,
     isProcessing,
   } = useCategoryActions({
-    onSuccess: (message) => {
+    onSuccess: (_message) => {
       refetch();
     },
     onError: (error) => {

@@ -9,7 +9,6 @@ import { useState } from 'react';
 import type { NoteColor } from '../types';
 import { NOTE_COLOR_CONFIG, NOTE_COLORS } from '../constants';
 import { Button } from '../../../../ui/button';
-import { Badge } from '../../../../ui/badge';
 import { Input } from '../../../../ui/input';
 import {
   AlertDialog,
@@ -39,7 +38,6 @@ import {
   Palette,
   X,
   CheckSquare,
-  MoreHorizontal,
   Loader2,
 } from 'lucide-react';
 

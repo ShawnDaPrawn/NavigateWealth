@@ -9,7 +9,7 @@ import {
   TaxRecommendation,
 } from '../types';
 import { TaxPlanningCalculationService } from '../services/taxPlanningCalculationService';
-import { ArrowLeft, CheckCircle, FileText, Printer, Lock, Save } from 'lucide-react';
+import { ArrowLeft, FileText, Printer, Lock, Save } from 'lucide-react';
 import { Badge } from '../../../../ui/badge';
 import { Textarea } from '../../../../ui/textarea';
 import { Label } from '../../../../ui/label';
@@ -24,7 +24,7 @@ interface Step4Props {
 }
 
 export function Step4Finalise({
-  finalInputs,
+  finalInputs: _finalInputs,
   finalResults,
   adjustments,
   onPublish,

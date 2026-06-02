@@ -3,7 +3,6 @@ import type {
   ProfileData,
   IdentityDocument,
   IdentityDocumentType,
-  HandleInputChange,
 } from '../types';
 import { CountrySelect } from '../CountrySelect';
 import { EmptyState } from '../EmptyState';
@@ -32,8 +31,6 @@ import {
   CheckCircle,
   Upload,
   FileText,
-  CreditCard,
-  IdCard,
   Info,
   X,
   Check,

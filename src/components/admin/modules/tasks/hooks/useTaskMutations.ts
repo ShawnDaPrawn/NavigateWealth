@@ -16,7 +16,7 @@ import { toast } from 'sonner';
 import { pendingCountsKeys, tasksKeys } from '../../../../../utils/queryKeys';
 import { TasksAPI } from '../api';
 import { taskKeys } from './useTaskQueries';
-import type { Task, CreateTaskInput, UpdateTaskInput, TaskStatus } from '../types';
+import type { Task, TaskStatus } from '../types';
 
 export function mergeTaskReorderIntoList(
   previousTasks: Task[] | undefined,

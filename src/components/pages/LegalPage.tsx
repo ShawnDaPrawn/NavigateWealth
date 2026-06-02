@@ -11,7 +11,7 @@ import { Separator } from '../ui/separator';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../ui/dialog';
 import { FileText, Shield, Scale, Archive, Mail, Phone, Eye, Printer } from 'lucide-react';
 import { toast } from 'sonner';
-import { projectId, publicAnonKey } from '../../utils/supabase/info';
+import { projectId } from '../../utils/supabase/info';
 import { escapeHtmlText, navigateWealthPdfDocumentTitle } from '../../utils/pdfPrintTitle';
 import { BASE_PDF_CSS } from '../admin/modules/resources/templates/BasePdfLayout';
 
@@ -223,8 +223,6 @@ function LegalBlockRenderer({ blocks, title }: { blocks: LegalBlock[]; title: st
 // LEGAL PAGE
 // ============================================================================
 
-const BASE_URL = `https://${projectId}.supabase.co/functions/v1/make-server-91ed8379`;
-
 export function LegalPage() {
   const [searchParams, setSearchParams] = useSearchParams();
   const location = useLocation();
@@ -232,7 +230,7 @@ export function LegalPage() {
 
   // Document viewer state
   const [viewerOpen, setViewerOpen] = useState(false);
-  const [viewerDocument, setViewerDocument] = useState<LegalDocumentResponse['document'] | null>(
+  const [viewerDocument, _setViewerDocument] = useState<LegalDocumentResponse['document'] | null>(
     null,
   );
   const printRef = useRef<HTMLDivElement>(null);

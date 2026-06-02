@@ -1,10 +1,9 @@
 import React, { useEffect, useState } from 'react';
 import { useAuth } from '../auth/AuthContext';
 import { logger } from '../../utils/logger';
-import { EmptyPolicyState } from './EmptyPolicyState';
 import { projectId, publicAnonKey } from '../../utils/supabase/info';
 import { SUPER_ADMIN_EMAIL } from '../../utils/auth/constants';
-import { AlertCircle, Clock, CheckCircle } from 'lucide-react';
+import { AlertCircle, Clock } from 'lucide-react';
 import { BrandPageLoader } from '../ui/brand-loader';
 
 const API_BASE = `https://${projectId}.supabase.co/functions/v1/make-server-91ed8379`;
@@ -31,7 +30,7 @@ export function ApplicationStatusGuard({
   const [loading, setLoading] = useState(true);
   const [applicationStatus, setApplicationStatus] = useState<string | null>(null);
   const [personalClientEnabled, setPersonalClientEnabled] = useState(false);
-  const [hasPolicies, setHasPolicies] = useState(false);
+  const [_hasPolicies, setHasPolicies] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {

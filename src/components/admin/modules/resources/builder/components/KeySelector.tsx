@@ -2,7 +2,6 @@ import React, { useState, useMemo } from 'react';
 import {
   Check,
   ChevronsUpDown,
-  Search,
   Database,
   UserCircle,
   Calculator,
@@ -17,7 +16,6 @@ import {
   CommandInput,
   CommandItem,
   CommandList,
-  CommandSeparator,
 } from '../../../../../ui/command';
 import { Popover, PopoverContent, PopoverTrigger } from '../../../../../ui/popover';
 import { Badge } from '../../../../../ui/badge';

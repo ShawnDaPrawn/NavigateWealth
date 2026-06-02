@@ -8,8 +8,6 @@ import {
   DialogTitle,
 } from '../../../ui/dialog';
 import { Progress } from '../../../ui/progress';
-import { Separator } from '../../../ui/separator';
-import { ScrollArea } from '../../../ui/scroll-area';
 import { ChevronLeft, ChevronRight, Save, Check, Loader2 } from 'lucide-react';
 
 export interface FNAWizardStepConfig {

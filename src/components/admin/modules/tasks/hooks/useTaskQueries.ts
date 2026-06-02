@@ -12,7 +12,6 @@
 
 import { useQuery } from '@tanstack/react-query';
 import { TasksAPI, TaskStatsAPI } from '../api';
-import type { Task, TaskStats } from '../types';
 
 // ============================================================================
 // QUERY KEYS

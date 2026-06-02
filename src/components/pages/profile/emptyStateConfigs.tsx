@@ -12,11 +12,8 @@ import {
   CreditCard,
   TrendingUp,
   Target,
-  DollarSign,
   Building,
   Activity,
-  FileText,
-  Home,
   Wallet,
   PieChart,
 } from 'lucide-react';

@@ -132,8 +132,8 @@ function ClientDrawerInner({
   client,
   open,
   onOpenChange,
-  canEdit,
-  canDelete,
+  canEdit: _canEdit,
+  canDelete: _canDelete,
 }: ClientDrawerInnerProps) {
   const queryClient = useQueryClient();
   const unsavedChangesRegistry = useOptionalUnsavedChangesRegistry();

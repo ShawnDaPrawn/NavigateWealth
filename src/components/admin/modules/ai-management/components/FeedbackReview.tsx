@@ -11,7 +11,6 @@ import {
   ThumbsDown,
   Search,
   Loader2,
-  MessageSquare,
   Clock,
   Filter,
   Inbox,
@@ -27,7 +26,7 @@ import type { FeedbackRating, FeedbackEntry } from '../types';
 type FilterRating = FeedbackRating | 'all';
 
 export function FeedbackReview() {
-  const { data: feedback, isLoading, error } = useFeedback();
+  const { data: feedback, isLoading, error: _error } = useFeedback();
   const [ratingFilter, setRatingFilter] = useState<FilterRating>('all');
   const [searchTerm, setSearchTerm] = useState('');
 

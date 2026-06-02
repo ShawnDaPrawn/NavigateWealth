@@ -61,7 +61,6 @@ import {
 } from '../constants';
 import {
   deriveSubscriberStatus,
-  deriveUnsubscribeReason,
   formatDateZA,
   exportUnsubscribedToExcel,
   downloadSubscriberExcelTemplate,

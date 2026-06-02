@@ -24,14 +24,12 @@ import {
   Users,
   ListOrdered,
   Shuffle,
-  Clock,
   TrendingUp,
   Loader2,
   ArrowRight,
 } from 'lucide-react';
 import { esignApi } from '../api';
 import { cn } from '../../../../ui/utils';
-import { format } from 'date-fns';
 import type { EsignTemplateRecord } from '../types';
 
 interface TemplatePickerDialogProps {

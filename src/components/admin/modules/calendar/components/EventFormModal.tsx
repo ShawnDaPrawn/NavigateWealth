@@ -21,7 +21,6 @@ import {
   AlignLeft,
   Clock,
   Type,
-  Link,
   Repeat,
   AlertTriangle,
   Check,
@@ -32,7 +31,7 @@ import {
   Cake,
   ShieldCheck,
 } from 'lucide-react';
-import { Alert, AlertDescription, AlertTitle } from '../../../../ui/alert';
+import { Alert, AlertDescription } from '../../../../ui/alert';
 import { Badge } from '../../../../ui/badge';
 import {
   Command,

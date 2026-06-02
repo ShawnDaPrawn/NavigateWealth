@@ -868,8 +868,8 @@ export const BasePdfLayout = ({
   pages,
   docTitle = 'Document Title',
   issueDate,
-  formCode,
-  version,
+  formCode: _formCode,
+  version: _version,
   pageSize = 'A4',
   orientation = 'portrait',
 }: {
