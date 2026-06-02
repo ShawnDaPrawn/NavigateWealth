@@ -5,6 +5,7 @@ node_modules
 tmp
 coverage
 .vercel
+.next
 playwright-report
 test-results
 

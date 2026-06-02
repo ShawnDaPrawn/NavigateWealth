@@ -100,6 +100,15 @@ vi.mock('../policy-extraction-service.ts', () => ({
   buildHistoryEntry: vi.fn(),
 }));
 
+// ── Document storage module (Supabase storage calls) ─────────────────────────
+vi.mock('../integrations-document-storage.ts', () => ({
+  POLICY_DOC_BUCKET: 'test-bucket',
+  POLICY_CATEGORY_LABELS: {},
+  ensurePolicyDocBucket: vi.fn(async () => {}),
+  uploadEstateDocumentForClient: vi.fn(async () => ({ url: 'test-url', path: 'test-path' })),
+  replacePolicyDocumentForPolicy: vi.fn(async () => ({ url: 'test-url', path: 'test-path' })),
+}));
+
 import integrationsApp from '../integrations.tsx';
 
 const AUTH = { Authorization: 'Bearer test-token' };
