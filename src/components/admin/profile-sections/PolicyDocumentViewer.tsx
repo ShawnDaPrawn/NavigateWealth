@@ -10,7 +10,7 @@
  */
 
 import React, { useState, useCallback, useEffect } from 'react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../../ui/dialog';
+import { Dialog, DialogContent, DialogTitle } from '../../ui/dialog';
 import { Button } from '../../ui/button';
 import { Badge } from '../../ui/badge';
 import {
@@ -18,8 +18,6 @@ import {
   ExternalLink,
   Loader2,
   AlertCircle,
-  Download,
-  X,
   Maximize2,
   Minimize2,
 } from 'lucide-react';

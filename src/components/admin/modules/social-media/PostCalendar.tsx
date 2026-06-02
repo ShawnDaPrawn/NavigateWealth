@@ -303,7 +303,7 @@ export function PostCalendar({
                     {post.media.length > 0 && (
                       <div className="flex items-center gap-2 mb-3">
                         <div className="flex -space-x-2">
-                          {post.media.slice(0, 3).map((media, index) => (
+                          {post.media.slice(0, 3).map((media, _index) => (
                             <div
                               key={media.id}
                               className="h-8 w-8 rounded border-2 border-white bg-muted overflow-hidden"

@@ -21,7 +21,7 @@ import { toast } from 'sonner';
 import { Button } from '../../ui/button';
 import { Input } from '../../ui/input';
 import { Label } from '../../ui/label';
-import { Card, CardContent, CardHeader, CardTitle } from '../../ui/card';
+import { Card, CardContent } from '../../ui/card';
 import { Badge } from '../../ui/badge';
 import { Textarea } from '../../ui/textarea';
 import { Separator } from '../../ui/separator';
@@ -41,8 +41,6 @@ import {
   Plus,
   Trash2,
   AlertCircle,
-  Download,
-  Copy,
   Check,
 } from 'lucide-react';
 import { projectId, publicAnonKey } from '../../../utils/supabase/info';

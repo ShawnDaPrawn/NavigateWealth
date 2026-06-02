@@ -30,7 +30,6 @@ const getSupabase = () =>
   createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!);
 
 // Workflow configuration
-const WORKFLOW_ID = 'wf_692b6eb221fc8190a671198e7251755c0af51c5b55ce7f96';
 const getOpenAIKey = () => Deno.env.get('OPENAI_API_KEY');
 
 /**
@@ -85,7 +84,7 @@ async function requireAdmin(c: Context, next: Next) {
 /**
  * Fetch comprehensive client data for AI context
  */
-async function getClientContext(clientId: string, userId: string) {
+async function getClientContext(clientId: string, _userId: string) {
   try {
     // Fetch client profile from KV store
     const profileKey = `user_profile:${clientId}:personal_info`;
@@ -229,7 +228,7 @@ async function getClientContext(clientId: string, userId: string) {
 /**
  * Fetch platform operational insights
  */
-async function getPlatformContext(userId: string) {
+async function getPlatformContext(_userId: string) {
   try {
     const [
       pendingApplications,
@@ -652,8 +651,6 @@ async function callOpenAIWorkflow(messages: ChatMessage[], systemPrompt: string)
       error: error,
     });
 
-    // Extract error message safely
-    const errorMessage = getErrMsg(error);
   }
 }
 

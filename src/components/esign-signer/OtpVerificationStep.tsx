@@ -11,13 +11,11 @@ import { Card } from '../ui/card';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
 import { Alert, AlertDescription } from '../ui/alert';
-import { Badge } from '../ui/badge';
 import {
   ShieldCheck,
   Loader2,
   AlertCircle,
   Mail,
-  ArrowLeft,
   CheckCircle2,
   Clock,
   FileText,

@@ -6,7 +6,6 @@ import { Label } from '../ui/label';
 import { Slider } from '../ui/slider';
 import { RadioGroup, RadioGroupItem } from '../ui/radio-group';
 import { Progress } from '../ui/progress';
-import { Badge } from '../ui/badge';
 import { ImageWithFallback } from '../figma/ImageWithFallback';
 import {
   CheckCircle,
@@ -16,8 +15,6 @@ import {
   Info,
   User,
   Shield,
-  Phone,
-  Mail,
   Loader2,
 } from 'lucide-react';
 import { toast } from 'sonner';

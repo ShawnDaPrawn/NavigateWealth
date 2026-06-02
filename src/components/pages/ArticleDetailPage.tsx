@@ -17,7 +17,7 @@
  * @module pages/ArticleDetailPage
  */
 
-import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { useParams, Link } from 'react-router';
 import { Badge } from '../ui/badge';
 import { Button } from '../ui/button';
@@ -32,7 +32,6 @@ import {
   Link as LinkIcon,
   AlertCircle,
   RefreshCw,
-  Loader2,
   Printer,
   BookOpen,
   Eye,
@@ -42,7 +41,7 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import DOMPurify from 'dompurify';
-import { projectId, publicAnonKey } from '../../utils/supabase/info';
+import { publicAnonKey } from '../../utils/supabase/info';
 import { escapeHtmlText, navigateWealthPdfDocumentTitle } from '../../utils/pdfPrintTitle';
 import { API_CONFIG } from '../../utils/api/config';
 import { cn } from '../ui/utils';
@@ -456,7 +455,6 @@ function ShareActions({ title, excerpt }: { title: string; excerpt?: string }) {
   };
 
   const shareWhatsApp = () => {
-    const url = encodeURIComponent(window.location.href);
     const text = encodeURIComponent(`${title} — ${window.location.href}`);
     window.open(`https://wa.me/?text=${text}`, '_blank');
     setShowMenu(false);
