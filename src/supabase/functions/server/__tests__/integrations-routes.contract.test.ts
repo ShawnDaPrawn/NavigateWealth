@@ -114,14 +114,34 @@ vi.mock('../integrations-document-storage.ts', () => ({
   })),
 }));
 
-// ── Heavy service module not exercised by the read routes under test ─────────
+// ── Policy extraction service stub ───────────────────────────────────────────
 vi.mock('../policy-extraction-service.ts', () => ({
-  extractPolicyDocument: vi.fn(),
-  getProviderTerminology: vi.fn(),
-  saveProviderTerminology: vi.fn(),
+  extractPolicyDocument: vi.fn(async () => ({
+    extraction: {
+      status: 'completed',
+      extractedAt: '2025-01-01T00:00:00.000Z',
+      confidence: 0.9,
+      extractedData: { field1: 'value1' },
+      appliedFields: [],
+      validationWarnings: [],
+    },
+    fieldMappings: [],
+  })),
+  getProviderTerminology: vi.fn(async () => ({
+    providerId: 'p1',
+    providerName: 'Test Provider',
+    benefitMappings: {},
+    productMappings: {},
+  })),
+  saveProviderTerminology: vi.fn(async () => {}),
   getAllProviderTerminologies: vi.fn(async () => ({})),
   generateExtractionDiff: vi.fn(),
-  buildHistoryEntry: vi.fn(),
+  buildHistoryEntry: vi.fn(() => ({
+    id: 'hist-1',
+    extractedAt: '2025-01-01T00:00:00.000Z',
+    confidence: 0.8,
+    fieldMappingsSnapshot: [],
+  })),
 }));
 
 import integrationsApp from '../integrations.tsx';
@@ -921,6 +941,390 @@ describe('integrations.tsx route contracts', () => {
       });
       expect(res.status).toBe(200);
       expect(await res.json()).toMatchObject({ success: true });
+    });
+  });
+
+  // ── POST /policy-extraction/extract ───────────────────────────────────────
+  describe('POST /policy-extraction/extract', () => {
+    it('returns 401 without an Authorization header', async () => {
+      const res = await integrationsApp.request('/policy-extraction/extract', {
+        method: 'POST',
+        body: JSON.stringify({ policyId: 'p1', clientId: 'c1' }),
+        headers: { 'Content-Type': 'application/json' },
+      });
+      expect(res.status).toBe(401);
+    });
+
+    it('returns 400 when policyId or clientId is missing', async () => {
+      const res = await integrationsApp.request('/policy-extraction/extract', {
+        method: 'POST',
+        body: JSON.stringify({ clientId: 'c1' }),
+        headers: { ...AUTH, 'Content-Type': 'application/json' },
+      });
+      expect(res.status).toBe(400);
+      expect(await res.json()).toMatchObject({ error: 'Missing policyId or clientId' });
+    });
+
+    it('returns 404 when policy is not found', async () => {
+      const res = await integrationsApp.request('/policy-extraction/extract', {
+        method: 'POST',
+        body: JSON.stringify({ policyId: 'ghost', clientId: 'c1' }),
+        headers: { ...AUTH, 'Content-Type': 'application/json' },
+      });
+      expect(res.status).toBe(404);
+    });
+
+    it('returns 400 when policy has no document', async () => {
+      kvStore.set('policies:client:c1', [{ id: 'p1', clientId: 'c1', data: {} }]);
+      const res = await integrationsApp.request('/policy-extraction/extract', {
+        method: 'POST',
+        body: JSON.stringify({ policyId: 'p1', clientId: 'c1' }),
+        headers: { ...AUTH, 'Content-Type': 'application/json' },
+      });
+      expect(res.status).toBe(400);
+      expect(await res.json()).toMatchObject({ error: expect.stringContaining('Upload a document') });
+    });
+
+    it('returns 200 with extraction result when policy has a document', async () => {
+      kvStore.set('policies:client:c1', [{
+        id: 'p1',
+        clientId: 'c1',
+        data: {},
+        document: { storageKey: 'test/doc.pdf', fileName: 'doc.pdf' },
+      }]);
+      const res = await integrationsApp.request('/policy-extraction/extract', {
+        method: 'POST',
+        body: JSON.stringify({ policyId: 'p1', clientId: 'c1' }),
+        headers: { ...AUTH, 'Content-Type': 'application/json' },
+      });
+      expect(res.status).toBe(200);
+      const body = await res.json();
+      expect(body.success).toBe(true);
+      expect(body.extraction).toBeDefined();
+      expect(Array.isArray(body.fieldMappings)).toBe(true);
+      expect(Array.isArray(body.diff)).toBe(true);
+    });
+  });
+
+  // ── GET /policy-extraction/result ─────────────────────────────────────────
+  describe('GET /policy-extraction/result', () => {
+    it('returns 401 without an Authorization header', async () => {
+      const res = await integrationsApp.request('/policy-extraction/result?policyId=p1&clientId=c1');
+      expect(res.status).toBe(401);
+    });
+
+    it('returns 400 when policyId or clientId is missing', async () => {
+      const res = await integrationsApp.request('/policy-extraction/result?policyId=p1', {
+        headers: AUTH,
+      });
+      expect(res.status).toBe(400);
+    });
+
+    it('returns 404 when policy is not found', async () => {
+      const res = await integrationsApp.request(
+        '/policy-extraction/result?policyId=ghost&clientId=c1',
+        { headers: AUTH },
+      );
+      expect(res.status).toBe(404);
+    });
+
+    it('returns 404 when no extraction result exists', async () => {
+      kvStore.set('policies:client:c1', [{ id: 'p1', clientId: 'c1', data: {} }]);
+      const res = await integrationsApp.request(
+        '/policy-extraction/result?policyId=p1&clientId=c1',
+        { headers: AUTH },
+      );
+      expect(res.status).toBe(404);
+      expect(await res.json()).toMatchObject({ error: 'No extraction result available' });
+    });
+
+    it('returns 200 with extraction data', async () => {
+      kvStore.set('policies:client:c1', [{
+        id: 'p1',
+        clientId: 'c1',
+        data: {},
+        extraction: { status: 'completed', extractedAt: '2025-01-01T00:00:00.000Z', confidence: 0.9 },
+      }]);
+      const res = await integrationsApp.request(
+        '/policy-extraction/result?policyId=p1&clientId=c1',
+        { headers: AUTH },
+      );
+      expect(res.status).toBe(200);
+      const body = await res.json();
+      expect(body.success).toBe(true);
+      expect(body.extraction).toMatchObject({ status: 'completed' });
+    });
+  });
+
+  // ── GET /policy-extraction/history ────────────────────────────────────────
+  describe('GET /policy-extraction/history', () => {
+    it('returns 401 without an Authorization header', async () => {
+      const res = await integrationsApp.request('/policy-extraction/history?policyId=p1&clientId=c1');
+      expect(res.status).toBe(401);
+    });
+
+    it('returns 400 when params are missing', async () => {
+      const res = await integrationsApp.request('/policy-extraction/history?policyId=p1', {
+        headers: AUTH,
+      });
+      expect(res.status).toBe(400);
+    });
+
+    it('returns 404 when policy not found', async () => {
+      const res = await integrationsApp.request(
+        '/policy-extraction/history?policyId=ghost&clientId=c1',
+        { headers: AUTH },
+      );
+      expect(res.status).toBe(404);
+    });
+
+    it('returns 200 with empty history array when policy has no history', async () => {
+      kvStore.set('policies:client:c1', [{ id: 'p1', clientId: 'c1', data: {} }]);
+      const res = await integrationsApp.request(
+        '/policy-extraction/history?policyId=p1&clientId=c1',
+        { headers: AUTH },
+      );
+      expect(res.status).toBe(200);
+      const body = await res.json();
+      expect(body.success).toBe(true);
+      expect(Array.isArray(body.history)).toBe(true);
+      expect(body.history).toHaveLength(0);
+      expect(body.currentExtraction).toBeNull();
+    });
+  });
+
+  // ── GET /policy-extraction/compare ────────────────────────────────────────
+  describe('GET /policy-extraction/compare', () => {
+    it('returns 401 without an Authorization header', async () => {
+      const res = await integrationsApp.request(
+        '/policy-extraction/compare?policyId=p1&clientId=c1&leftId=h1&rightId=h2',
+      );
+      expect(res.status).toBe(401);
+    });
+
+    it('returns 400 when required params are missing', async () => {
+      const res = await integrationsApp.request(
+        '/policy-extraction/compare?policyId=p1&clientId=c1&leftId=h1',
+        { headers: AUTH },
+      );
+      expect(res.status).toBe(400);
+    });
+
+    it('returns 404 when policy not found', async () => {
+      const res = await integrationsApp.request(
+        '/policy-extraction/compare?policyId=ghost&clientId=c1&leftId=h1&rightId=h2',
+        { headers: AUTH },
+      );
+      expect(res.status).toBe(404);
+    });
+
+    it('returns 404 when leftId is not in history', async () => {
+      kvStore.set('policies:client:c1', [{ id: 'p1', clientId: 'c1', data: {}, extractionHistory: [] }]);
+      const res = await integrationsApp.request(
+        '/policy-extraction/compare?policyId=p1&clientId=c1&leftId=no-such&rightId=current',
+        { headers: AUTH },
+      );
+      expect(res.status).toBe(404);
+    });
+  });
+
+  // ── POST /policy-extraction/apply ─────────────────────────────────────────
+  describe('POST /policy-extraction/apply', () => {
+    it('returns 401 without an Authorization header', async () => {
+      const res = await integrationsApp.request('/policy-extraction/apply', {
+        method: 'POST',
+        body: JSON.stringify({ policyId: 'p1', clientId: 'c1', fieldsToApply: {} }),
+        headers: { 'Content-Type': 'application/json' },
+      });
+      expect(res.status).toBe(401);
+    });
+
+    it('returns 400 when required params are missing', async () => {
+      const res = await integrationsApp.request('/policy-extraction/apply', {
+        method: 'POST',
+        body: JSON.stringify({ policyId: 'p1' }),
+        headers: { ...AUTH, 'Content-Type': 'application/json' },
+      });
+      expect(res.status).toBe(400);
+    });
+
+    it('returns 404 when policy not found', async () => {
+      const res = await integrationsApp.request('/policy-extraction/apply', {
+        method: 'POST',
+        body: JSON.stringify({ policyId: 'ghost', clientId: 'c1', fieldsToApply: {} }),
+        headers: { ...AUTH, 'Content-Type': 'application/json' },
+      });
+      expect(res.status).toBe(404);
+    });
+
+    it('returns 200 and reports applied fields', async () => {
+      kvStore.set('policies:client:c1', [{ id: 'p1', clientId: 'c1', data: {} }]);
+      const res = await integrationsApp.request('/policy-extraction/apply', {
+        method: 'POST',
+        body: JSON.stringify({ policyId: 'p1', clientId: 'c1', fieldsToApply: { field1: 'value1' } }),
+        headers: { ...AUTH, 'Content-Type': 'application/json' },
+      });
+      expect(res.status).toBe(200);
+      const body = await res.json();
+      expect(body.success).toBe(true);
+      expect(Array.isArray(body.appliedFields)).toBe(true);
+    });
+  });
+
+  // ── POST /policy-extraction/lock-fields ───────────────────────────────────
+  describe('POST /policy-extraction/lock-fields', () => {
+    it('returns 401 without an Authorization header', async () => {
+      const res = await integrationsApp.request('/policy-extraction/lock-fields', {
+        method: 'POST',
+        body: JSON.stringify({ policyId: 'p1', clientId: 'c1', fieldIds: ['f1'], action: 'lock' }),
+        headers: { 'Content-Type': 'application/json' },
+      });
+      expect(res.status).toBe(401);
+    });
+
+    it('returns 400 when action is invalid', async () => {
+      const res = await integrationsApp.request('/policy-extraction/lock-fields', {
+        method: 'POST',
+        body: JSON.stringify({ policyId: 'p1', clientId: 'c1', fieldIds: ['f1'], action: 'bad' }),
+        headers: { ...AUTH, 'Content-Type': 'application/json' },
+      });
+      expect(res.status).toBe(400);
+    });
+
+    it('returns 404 when policy not found', async () => {
+      const res = await integrationsApp.request('/policy-extraction/lock-fields', {
+        method: 'POST',
+        body: JSON.stringify({ policyId: 'ghost', clientId: 'c1', fieldIds: ['f1'], action: 'lock' }),
+        headers: { ...AUTH, 'Content-Type': 'application/json' },
+      });
+      expect(res.status).toBe(404);
+    });
+
+    it('returns 200 with updated lockedFields array', async () => {
+      kvStore.set('policies:client:c1', [{ id: 'p1', clientId: 'c1', data: {} }]);
+      const res = await integrationsApp.request('/policy-extraction/lock-fields', {
+        method: 'POST',
+        body: JSON.stringify({ policyId: 'p1', clientId: 'c1', fieldIds: ['f1', 'f2'], action: 'lock' }),
+        headers: { ...AUTH, 'Content-Type': 'application/json' },
+      });
+      expect(res.status).toBe(200);
+      const body = await res.json();
+      expect(body.success).toBe(true);
+      expect(body.lockedFields).toContain('f1');
+      expect(body.lockedFields).toContain('f2');
+    });
+  });
+
+  // ── GET /policy-extraction/quality-stats ──────────────────────────────────
+  describe('GET /policy-extraction/quality-stats', () => {
+    it('returns 401 without an Authorization header', async () => {
+      const res = await integrationsApp.request('/policy-extraction/quality-stats');
+      expect(res.status).toBe(401);
+    });
+
+    it('returns 200 with numeric overview shape when no policies exist', async () => {
+      const res = await integrationsApp.request('/policy-extraction/quality-stats', {
+        headers: AUTH,
+      });
+      expect(res.status).toBe(200);
+      const body = await res.json();
+      expect(body.success).toBe(true);
+      expect(typeof body.overview.totalPolicies).toBe('number');
+      expect(typeof body.overview.totalExtractions).toBe('number');
+      expect(Array.isArray(body.providerStats)).toBe(true);
+      expect(Array.isArray(body.lowConfidenceFields)).toBe(true);
+      expect(Array.isArray(body.timeline)).toBe(true);
+    });
+  });
+
+  // ── POST /policy-extraction/bulk-reextract ────────────────────────────────
+  describe('POST /policy-extraction/bulk-reextract', () => {
+    it('returns 401 without an Authorization header', async () => {
+      const res = await integrationsApp.request('/policy-extraction/bulk-reextract', {
+        method: 'POST',
+        body: JSON.stringify({ providerId: 'p1' }),
+        headers: { 'Content-Type': 'application/json' },
+      });
+      expect(res.status).toBe(401);
+    });
+
+    it('returns 400 when providerId is missing', async () => {
+      const res = await integrationsApp.request('/policy-extraction/bulk-reextract', {
+        method: 'POST',
+        body: JSON.stringify({}),
+        headers: { ...AUTH, 'Content-Type': 'application/json' },
+      });
+      expect(res.status).toBe(400);
+      expect(await res.json()).toMatchObject({ error: 'Missing providerId' });
+    });
+
+    it('returns 200 streaming response for a valid dry-run request', async () => {
+      const res = await integrationsApp.request('/policy-extraction/bulk-reextract', {
+        method: 'POST',
+        body: JSON.stringify({ providerId: 'p1', dryRun: true }),
+        headers: { ...AUTH, 'Content-Type': 'application/json' },
+      });
+      expect(res.status).toBe(200);
+    });
+  });
+
+  // ── GET /provider-terminology ─────────────────────────────────────────────
+  describe('GET /provider-terminology', () => {
+    it('returns 401 without an Authorization header', async () => {
+      const res = await integrationsApp.request('/provider-terminology');
+      expect(res.status).toBe(401);
+    });
+
+    it('returns 200 with all terminologies when no providerId given', async () => {
+      const res = await integrationsApp.request('/provider-terminology', { headers: AUTH });
+      expect(res.status).toBe(200);
+      const body = await res.json();
+      expect(body.success).toBe(true);
+      expect(body.terminologies).toBeDefined();
+    });
+
+    it('returns 200 with specific terminology when providerId is given', async () => {
+      const res = await integrationsApp.request('/provider-terminology?providerId=p1', {
+        headers: AUTH,
+      });
+      expect(res.status).toBe(200);
+      const body = await res.json();
+      expect(body.success).toBe(true);
+      expect(body.terminology).toBeDefined();
+    });
+  });
+
+  // ── POST /provider-terminology ────────────────────────────────────────────
+  describe('POST /provider-terminology', () => {
+    it('returns 401 without an Authorization header', async () => {
+      const res = await integrationsApp.request('/provider-terminology', {
+        method: 'POST',
+        body: JSON.stringify({ providerId: 'p1', providerName: 'Test' }),
+        headers: { 'Content-Type': 'application/json' },
+      });
+      expect(res.status).toBe(401);
+    });
+
+    it('returns 400 when providerId or providerName is missing', async () => {
+      const res = await integrationsApp.request('/provider-terminology', {
+        method: 'POST',
+        body: JSON.stringify({ providerId: 'p1' }),
+        headers: { ...AUTH, 'Content-Type': 'application/json' },
+      });
+      expect(res.status).toBe(400);
+      expect(await res.json()).toMatchObject({ error: 'Missing providerId or providerName' });
+    });
+
+    it('returns 200 with saved terminology', async () => {
+      const res = await integrationsApp.request('/provider-terminology', {
+        method: 'POST',
+        body: JSON.stringify({ providerId: 'p1', providerName: 'Test Provider' }),
+        headers: { ...AUTH, 'Content-Type': 'application/json' },
+      });
+      expect(res.status).toBe(200);
+      const body = await res.json();
+      expect(body.success).toBe(true);
+      expect(body.terminology).toMatchObject({ providerId: 'p1', providerName: 'Test Provider' });
     });
   });
 });
