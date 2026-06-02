@@ -405,6 +405,163 @@ describe('integrations.tsx route contracts', () => {
     });
   });
 
+  // ── POST /policies/archive ───────────────────────────────────────────────
+  // Shape assertions before Slice D extraction.
+  describe('POST /policies/archive', () => {
+    it('returns 400 on invalid body', async () => {
+      const res = await integrationsApp.request('/policies/archive', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ bad: true }),
+      });
+      expect(res.status).toBe(400);
+      expect(await res.json()).toMatchObject({ error: 'Validation failed' });
+    });
+
+    it('returns 404 when the policy does not exist', async () => {
+      kvStore.set('policies:client:c1', []);
+      const res = await integrationsApp.request('/policies/archive', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: 'p-ghost', clientId: 'c1' }),
+      });
+      expect(res.status).toBe(404);
+      expect(await res.json()).toMatchObject({ error: 'Policy not found' });
+    });
+
+    it('archives an existing policy and returns { success, policy }', async () => {
+      kvStore.set('policies:client:c1', [{ id: 'p1', clientId: 'c1', categoryId: 'risk', archived: false }]);
+      const res = await integrationsApp.request('/policies/archive', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: 'p1', clientId: 'c1', reason: 'test' }),
+      });
+      expect(res.status).toBe(200);
+      const body = (await res.json()) as { success: boolean; policy: Record<string, unknown> };
+      expect(body.success).toBe(true);
+      expect(body.policy.archived).toBe(true);
+    });
+  });
+
+  // ── POST /policies/reinstate ──────────────────────────────────────────────
+  describe('POST /policies/reinstate', () => {
+    it('returns 400 on invalid body', async () => {
+      const res = await integrationsApp.request('/policies/reinstate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ bad: true }),
+      });
+      expect(res.status).toBe(400);
+    });
+
+    it('returns 404 when the policy does not exist', async () => {
+      kvStore.set('policies:client:c1', []);
+      const res = await integrationsApp.request('/policies/reinstate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: 'ghost', clientId: 'c1' }),
+      });
+      expect(res.status).toBe(404);
+    });
+  });
+
+  // ── PUT /policies (update) ────────────────────────────────────────────────
+  describe('PUT /policies', () => {
+    it('returns 400 on invalid body', async () => {
+      const res = await integrationsApp.request('/policies', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ bad: true }),
+      });
+      expect(res.status).toBe(400);
+      expect(await res.json()).toMatchObject({ error: 'Validation failed' });
+    });
+
+    it('returns 404 when the policy does not exist', async () => {
+      kvStore.set('policies:client:c1', []);
+      const res = await integrationsApp.request('/policies', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: 'ghost', clientId: 'c1' }),
+      });
+      expect(res.status).toBe(404);
+    });
+  });
+
+  // ── DELETE /policies ──────────────────────────────────────────────────────
+  describe('DELETE /policies', () => {
+    it('returns 400 when id or clientId is missing', async () => {
+      const res = await integrationsApp.request('/policies?clientId=c1', { method: 'DELETE' });
+      expect(res.status).toBe(400);
+    });
+
+    it('returns 404 when the policy does not exist', async () => {
+      kvStore.set('policies:client:c1', []);
+      const res = await integrationsApp.request('/policies?id=ghost&clientId=c1', {
+        method: 'DELETE',
+      });
+      expect(res.status).toBe(404);
+    });
+
+    it('deletes an existing policy and returns { success: true }', async () => {
+      kvStore.set('policies:client:c1', [{ id: 'p1', clientId: 'c1', categoryId: 'risk' }]);
+      const res = await integrationsApp.request('/policies?id=p1&clientId=c1', {
+        method: 'DELETE',
+      });
+      expect(res.status).toBe(200);
+      expect(await res.json()).toMatchObject({ success: true });
+    });
+  });
+
+  // ── POST /recalculate-totals ──────────────────────────────────────────────
+  describe('POST /recalculate-totals', () => {
+    it('returns 400 on invalid body', async () => {
+      const res = await integrationsApp.request('/recalculate-totals', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({}),
+      });
+      expect(res.status).toBe(400);
+    });
+
+    it('returns { success: true } for a valid clientId', async () => {
+      const res = await integrationsApp.request('/recalculate-totals', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ clientId: 'c1' }),
+      });
+      expect(res.status).toBe(200);
+      expect(await res.json()).toMatchObject({ success: true });
+    });
+  });
+
+  // ── GET /dashboard-stats ──────────────────────────────────────────────────
+  describe('GET /dashboard-stats', () => {
+    it('returns 200 with the expected numeric stat keys', async () => {
+      const res = await integrationsApp.request('/dashboard-stats');
+      expect(res.status).toBe(200);
+      const body = (await res.json()) as Record<string, unknown>;
+      expect(typeof body.activePolicies).toBe('number');
+      expect(typeof body.newPoliciesCount).toBe('number');
+      expect(typeof body.publishedFnas).toBe('number');
+    });
+  });
+
+  // ── GET /policy-renewals ──────────────────────────────────────────────────
+  describe('GET /policy-renewals', () => {
+    it('returns 401 without an Authorization header', async () => {
+      const res = await integrationsApp.request('/policy-renewals');
+      expect(res.status).toBe(401);
+    });
+
+    it('returns 200 with a renewals array when no policies are stored', async () => {
+      const res = await integrationsApp.request('/policy-renewals', { headers: AUTH });
+      expect(res.status).toBe(200);
+      const body = (await res.json()) as Record<string, unknown>;
+      expect(Array.isArray(body.renewals)).toBe(true);
+    });
+  });
+
   // ── GET /schemas/batch ───────────────────────────────────────────────────
   // Shape-assertion before Slice C extraction.
   describe('GET /schemas/batch', () => {
