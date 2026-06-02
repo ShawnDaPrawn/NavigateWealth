@@ -91,7 +91,7 @@ describe('ReviewDialog', () => {
     expect(container.firstChild).toBeNull();
   });
 
-  it('shows the applicant full name in the dialog title when open with a submitted application', () => {
+  it('shows applicant full name in the dialog title for a submitted application', () => {
     render(
       <ReviewDialog
         open={true}
