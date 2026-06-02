@@ -13,6 +13,13 @@ package-lock.json
 public/sitemap.xml
 seo-route-manifest.json
 
+# CI-generated quality-check reports (written to the repo root during the
+# quality-check workflow run; not committed, but Prettier checks the working
+# directory and flags them if they are present when format:check runs).
+quality-vitest-report.json
+quality-npm-audit-report.json
+quality-issues-payload.json
+
 # Minified / vendored
 **/*.min.js
 **/*.min.css
