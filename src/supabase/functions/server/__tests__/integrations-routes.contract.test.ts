@@ -81,13 +81,37 @@ vi.mock('../auth-mw.ts', () => ({
   },
 }));
 
-// ── Supabase client stub (the module-level createClient + local getByPrefix) ─
+// ── Supabase client stub ─────────────────────────────────────────────────────
 vi.mock('jsr:@supabase/supabase-js@2.49.8', () => ({
   createClient: () => ({
     from: () => ({
       select: () => ({ like: () => ({ data: [], error: null }) }),
     }),
+    storage: {
+      from: () => ({
+        createSignedUrl: vi.fn(async () => ({
+          data: { signedUrl: 'https://test-signed-url/doc.pdf' },
+          error: null,
+        })),
+        remove: vi.fn(async () => ({ error: null })),
+      }),
+    },
   }),
+}));
+
+// ── Document storage stub ────────────────────────────────────────────────────
+vi.mock('../integrations-document-storage.ts', () => ({
+  POLICY_DOC_BUCKET: 'policy-documents',
+  ensurePolicyDocBucket: vi.fn(async () => {}),
+  replacePolicyDocumentForPolicy: vi.fn(async () => ({
+    storageKey: 'test/policy-doc.pdf',
+    fileName: 'uploaded.pdf',
+    documentType: 'policy_schedule',
+    uploadedAt: '2025-01-01T00:00:00.000Z',
+    uploadedBy: 'test@test.com',
+    mimeType: 'application/pdf',
+    sizeBytes: 100,
+  })),
 }));
 
 // ── Heavy service module not exercised by the read routes under test ─────────
@@ -735,6 +759,168 @@ describe('integrations.tsx route contracts', () => {
         /application\/vnd\.openxmlformats-officedocument\.spreadsheetml\.sheet/,
       );
       expect(res.headers.get('Content-Disposition')).toMatch(/attachment/);
+    });
+  });
+
+  // ── POST /policy-documents/upload ─────────────────────────────────────────
+  describe('POST /policy-documents/upload', () => {
+    it('returns 401 without an Authorization header', async () => {
+      const res = await integrationsApp.request('/policy-documents/upload', { method: 'POST' });
+      expect(res.status).toBe(401);
+    });
+
+    it('returns 400 when no file is included in the form', async () => {
+      const form = new FormData();
+      form.append('policyId', 'p1');
+      form.append('clientId', 'c1');
+      const res = await integrationsApp.request('/policy-documents/upload', {
+        method: 'POST',
+        body: form,
+        headers: AUTH,
+      });
+      expect(res.status).toBe(400);
+      expect(await res.json()).toMatchObject({ error: 'No file provided' });
+    });
+
+    it('returns 400 when metadata validation fails (missing policyId)', async () => {
+      const form = new FormData();
+      form.append('file', new File(['pdf'], 'doc.pdf', { type: 'application/pdf' }));
+      form.append('clientId', 'c1');
+      const res = await integrationsApp.request('/policy-documents/upload', {
+        method: 'POST',
+        body: form,
+        headers: AUTH,
+      });
+      expect(res.status).toBe(400);
+      expect(await res.json()).toHaveProperty('error');
+    });
+
+    it('returns 200 with document metadata when upload succeeds', async () => {
+      const form = new FormData();
+      form.append('file', new File(['pdf'], 'doc.pdf', { type: 'application/pdf' }));
+      form.append('policyId', 'p1');
+      form.append('clientId', 'c1');
+      form.append('documentType', 'policy_schedule');
+      form.append('uploadedBy', 'test@test.com');
+      const res = await integrationsApp.request('/policy-documents/upload', {
+        method: 'POST',
+        body: form,
+        headers: AUTH,
+      });
+      expect(res.status).toBe(200);
+      const body = await res.json();
+      expect(body.success).toBe(true);
+      expect(body.document).toMatchObject({ storageKey: expect.any(String) });
+    });
+  });
+
+  // ── GET /policy-documents/download ────────────────────────────────────────
+  describe('GET /policy-documents/download', () => {
+    it('returns 401 without an Authorization header', async () => {
+      const res = await integrationsApp.request('/policy-documents/download?policyId=p1&clientId=c1');
+      expect(res.status).toBe(401);
+    });
+
+    it('returns 400 when policyId or clientId is missing', async () => {
+      const res = await integrationsApp.request('/policy-documents/download?policyId=p1', {
+        headers: AUTH,
+      });
+      expect(res.status).toBe(400);
+      expect(await res.json()).toHaveProperty('error');
+    });
+
+    it('returns 404 when policy is not found', async () => {
+      const res = await integrationsApp.request(
+        '/policy-documents/download?policyId=ghost&clientId=c1',
+        { headers: AUTH },
+      );
+      expect(res.status).toBe(404);
+    });
+
+    it('returns 404 when policy has no document attached', async () => {
+      kvStore.set('policies:client:c1', [{ id: 'p1', clientId: 'c1', data: {} }]);
+      const res = await integrationsApp.request(
+        '/policy-documents/download?policyId=p1&clientId=c1',
+        { headers: AUTH },
+      );
+      expect(res.status).toBe(404);
+      expect(await res.json()).toMatchObject({ error: 'No document attached to this policy' });
+    });
+
+    it('returns 200 with a signed URL when policy has a document', async () => {
+      kvStore.set('policies:client:c1', [{
+        id: 'p1',
+        clientId: 'c1',
+        data: {},
+        document: { storageKey: 'test/doc.pdf', fileName: 'doc.pdf' },
+      }]);
+      const res = await integrationsApp.request(
+        '/policy-documents/download?policyId=p1&clientId=c1',
+        { headers: AUTH },
+      );
+      expect(res.status).toBe(200);
+      const body = await res.json();
+      expect(body.success).toBe(true);
+      expect(body.url).toMatch(/https?:\/\//);
+      expect(body.document).toBeDefined();
+    });
+  });
+
+  // ── DELETE /policy-documents ───────────────────────────────────────────────
+  describe('DELETE /policy-documents', () => {
+    it('returns 401 without an Authorization header', async () => {
+      const res = await integrationsApp.request('/policy-documents', {
+        method: 'DELETE',
+        body: JSON.stringify({ policyId: 'p1', clientId: 'c1' }),
+        headers: { 'Content-Type': 'application/json' },
+      });
+      expect(res.status).toBe(401);
+    });
+
+    it('returns 400 for validation failure (empty body)', async () => {
+      const res = await integrationsApp.request('/policy-documents', {
+        method: 'DELETE',
+        body: JSON.stringify({}),
+        headers: { ...AUTH, 'Content-Type': 'application/json' },
+      });
+      expect(res.status).toBe(400);
+      expect(await res.json()).toHaveProperty('error');
+    });
+
+    it('returns 404 when policy is not found', async () => {
+      const res = await integrationsApp.request('/policy-documents', {
+        method: 'DELETE',
+        body: JSON.stringify({ policyId: 'ghost', clientId: 'c1' }),
+        headers: { ...AUTH, 'Content-Type': 'application/json' },
+      });
+      expect(res.status).toBe(404);
+    });
+
+    it('returns 404 when policy has no document', async () => {
+      kvStore.set('policies:client:c1', [{ id: 'p1', clientId: 'c1', data: {} }]);
+      const res = await integrationsApp.request('/policy-documents', {
+        method: 'DELETE',
+        body: JSON.stringify({ policyId: 'p1', clientId: 'c1' }),
+        headers: { ...AUTH, 'Content-Type': 'application/json' },
+      });
+      expect(res.status).toBe(404);
+      expect(await res.json()).toMatchObject({ error: 'No document attached to this policy' });
+    });
+
+    it('returns 200 and removes the document metadata when valid', async () => {
+      kvStore.set('policies:client:c1', [{
+        id: 'p1',
+        clientId: 'c1',
+        data: {},
+        document: { storageKey: 'test/doc.pdf', fileName: 'doc.pdf' },
+      }]);
+      const res = await integrationsApp.request('/policy-documents', {
+        method: 'DELETE',
+        body: JSON.stringify({ policyId: 'p1', clientId: 'c1' }),
+        headers: { ...AUTH, 'Content-Type': 'application/json' },
+      });
+      expect(res.status).toBe(200);
+      expect(await res.json()).toMatchObject({ success: true });
     });
   });
 });
