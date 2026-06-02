@@ -96,7 +96,6 @@ export class ErrorBoundary extends Component<Props, State> {
   }
 
   private isDevelopment(): boolean {
-    // @ts-expect-error — import.meta.env is Vite-injected, not in standard TS lib
     return import.meta.env?.DEV || false;
   }
 
