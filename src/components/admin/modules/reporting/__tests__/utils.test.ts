@@ -49,6 +49,9 @@ describe('normaliseRowsForXLSX', () => {
     ]);
   });
 
+  // exceljs workbook generation is heavy under v8 coverage instrumentation
+  // (CI runs the suite with --coverage), so this needs more headroom than the
+  // 15s global default — it reliably timed out at 15s under coverage.
   it('creates a branded Navigate Wealth workbook for report exports', async () => {
     const workbook = await createBrandedReportWorkbook(
       [
@@ -91,8 +94,5 @@ describe('normaliseRowsForXLSX', () => {
     expect(worksheet?.getCell('B6').font.bold).toBe(true);
     expect(worksheet?.getCell('C6').numFmt).toBe('R #,##0.00');
     expect(worksheet?.getCell('D6').value).toBeInstanceOf(Date);
-  }, // exceljs workbook generation is heavy under v8 coverage instrumentation
-  // (CI runs the suite with --coverage), so this needs more headroom than the
-  // 15s global default — it reliably timed out at 15s under coverage.
-  60_000);
+  }, 60_000);
 });
