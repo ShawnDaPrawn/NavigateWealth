@@ -405,6 +405,95 @@ describe('integrations.tsx route contracts', () => {
     });
   });
 
+  // ── POST /upload ──────────────────────────────────────────────────────────
+  // Locks auth and early-exit validation shapes before Slice B extraction.
+  describe('POST /upload', () => {
+    it('returns 401 without an Authorization header', async () => {
+      const res = await integrationsApp.request('/upload', { method: 'POST' });
+      expect(res.status).toBe(401);
+    });
+
+    it('returns 400 when the body cannot be parsed as form data', async () => {
+      const res = await integrationsApp.request('/upload', {
+        method: 'POST',
+        headers: { ...AUTH, 'Content-Type': 'application/json' },
+        body: JSON.stringify({}),
+      });
+      expect(res.status).toBe(400);
+    });
+
+    it('returns 400 when no file is provided', async () => {
+      const form = new FormData();
+      form.append('providerId', 'p1');
+      form.append('categoryId', 'risk');
+      const res = await integrationsApp.request('/upload', {
+        method: 'POST',
+        headers: AUTH,
+        body: form,
+      });
+      expect(res.status).toBe(400);
+      expect(await res.json()).toMatchObject({ error: 'No file uploaded' });
+    });
+
+    it('returns 400 when provider does not exist', async () => {
+      const file = new File(['col1\nval1'], 'data.csv', { type: 'text/csv' });
+      const form = new FormData();
+      form.append('file', file);
+      form.append('providerId', 'ghost');
+      form.append('categoryId', 'risk');
+      const res = await integrationsApp.request('/upload', {
+        method: 'POST',
+        headers: AUTH,
+        body: form,
+      });
+      expect(res.status).toBe(400);
+      expect(await res.json()).toMatchObject({ error: 'Invalid provider ID' });
+    });
+  });
+
+  // ── GET /sync-runs/:runId ─────────────────────────────────────────────────
+  describe('GET /sync-runs/:runId', () => {
+    it('returns 401 without an Authorization header', async () => {
+      const res = await integrationsApp.request('/sync-runs/run1');
+      expect(res.status).toBe(401);
+    });
+
+    it('returns 404 when the run does not exist', async () => {
+      const res = await integrationsApp.request('/sync-runs/missing-run', { headers: AUTH });
+      expect(res.status).toBe(404);
+      expect(await res.json()).toMatchObject({ error: 'Sync run not found' });
+    });
+
+    it('returns the run under { success, run } when it exists', async () => {
+      kvStore.set('sync-run:run1', { id: 'run1', status: 'staged', summary: {} });
+      const res = await integrationsApp.request('/sync-runs/run1', { headers: AUTH });
+      expect(res.status).toBe(200);
+      expect(await res.json()).toMatchObject({ success: true, run: { id: 'run1' } });
+    });
+  });
+
+  // ── POST /sync-runs/:runId/publish ────────────────────────────────────────
+  describe('POST /sync-runs/:runId/publish', () => {
+    it('returns 401 without an Authorization header', async () => {
+      const res = await integrationsApp.request('/sync-runs/run1/publish', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({}),
+      });
+      expect(res.status).toBe(401);
+    });
+
+    it('returns 404 when the run does not exist', async () => {
+      const res = await integrationsApp.request('/sync-runs/no-such-run/publish', {
+        method: 'POST',
+        headers: { ...AUTH, 'Content-Type': 'application/json' },
+        body: JSON.stringify({}),
+      });
+      expect(res.status).toBe(404);
+      expect(await res.json()).toMatchObject({ error: 'Sync run not found' });
+    });
+  });
+
   // ── GET /template ─────────────────────────────────────────────────────────
   // Locks the template download endpoint's auth and validation contracts before
   // it is extracted into integrations-provider-routes.ts (Phase 5 Slice A).
