@@ -7,7 +7,7 @@
  */
 import { describe, expect, it, vi } from 'vitest';
 
-vi.mock('../constants', () => ({ DATE_RANGE_DAYS: { '7days': 7, '30days': 30 } }));
+vi.mock('../constants', () => ({ DATE_RANGE_DAYS: { week: 7, month: 30 } }));
 
 import {
   isHtmlContent,
@@ -106,7 +106,7 @@ describe('filterCommunications', () => {
       comm({ id: 'old', timestamp: new Date(Date.now() - 20 * 24 * 3600 * 1000) }),
       comm({ id: 'new', timestamp: new Date(Date.now() - 1 * 24 * 3600 * 1000) }),
     ];
-    const res = filterCommunications(items, { search: '', category: 'all', dateRange: '7days' });
+    const res = filterCommunications(items, { search: '', category: 'all', dateRange: 'week' });
     expect(res.map((c) => c.id)).toEqual(['new']);
   });
 });
