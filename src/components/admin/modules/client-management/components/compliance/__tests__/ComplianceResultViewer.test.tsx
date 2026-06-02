@@ -11,7 +11,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen } from '@/test/utils';
 
-const mockApiGet = vi.fn();
+const { mockApiGet } = vi.hoisted(() => ({ mockApiGet: vi.fn() }));
 vi.mock('@/utils/api', () => ({
   api: { get: mockApiGet },
 }));
