@@ -82,6 +82,12 @@ const minimalFlow = {
     instructions: '',
   },
   navigation: {},
+  // extraction and notes are required (non-optional) fields — the component's
+  // hydration useEffect accesses flow.extraction.policyRowSelector and renders
+  // flow.notes.length directly, so omitting them throws at runtime.
+  extraction: { policyRowSelector: '', fields: [] },
+  notes: [],
+  updatedAt: '2026-01-01T00:00:00.000Z',
 } as unknown as PortalProviderFlow;
 
 function makeJob(status: PortalSyncJob['status']): PortalSyncJob {

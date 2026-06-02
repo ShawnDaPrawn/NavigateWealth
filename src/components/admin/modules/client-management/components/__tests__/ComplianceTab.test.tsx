@@ -129,8 +129,12 @@ describe('ComplianceTab — registered state', () => {
   it('shows the Identity Verification sub-tab button', async () => {
     renderCompliance();
 
+    // The sub-tab navigation AND the Overview quick-action card both render
+    // "Identity Verification" buttons; use getAllByRole (not getByRole) so
+    // the assertion doesn't fail when both are present simultaneously.
     await waitFor(() => {
-      expect(screen.getByRole('button', { name: /identity verification/i })).toBeTruthy();
+      const buttons = screen.getAllByRole('button', { name: /identity verification/i });
+      expect(buttons.length).toBeGreaterThan(0);
     });
   });
 });
