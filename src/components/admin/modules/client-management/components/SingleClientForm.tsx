@@ -66,7 +66,7 @@ const SA_POSTAL_REGEX = /^\d{4}$/;
 // ---------------------------------------------------------------------------
 // SA ID Validation — Luhn checksum + structure
 // ---------------------------------------------------------------------------
-function validateSaIdNumber(id: string): {
+export function validateSaIdNumber(id: string): {
   valid: boolean;
   error?: string;
   dob?: string;
@@ -112,7 +112,7 @@ function validateSaIdNumber(id: string): {
   return { valid: true, dob: dateStr, gender };
 }
 
-function computeAge(dobStr: string): number | null {
+export function computeAge(dobStr: string): number | null {
   const dob = new Date(dobStr);
   if (isNaN(dob.getTime())) return null;
   const today = new Date();

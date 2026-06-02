@@ -80,17 +80,26 @@ export default defineConfig({
       // characterization tests are added for the Phase 5/6 decomposition files.
       //
       // Ratcheted as characterization tests land. Latest (2026-06-02,
-      // RiskAssessmentPanel.tsx render test — the client KYC/AML risk-screening
-      // panel, Honeycomb-integrated, 0% -> list/form views + the ID gate):
-      // measured statements 9.72 / lines 9.74 / branches 8.51 / functions 7.97
-      // across 1011 tests. Floor raised from 9.2/9.2/7.9/7.5, kept ~0.35 below
-      // measured for headroom against the actively churning tree. The
-      // 70/65/70/70 end-goal is long-horizon — floor only ratchets up.
+      // SingleClientForm.tsx — exhaustive unit tests for its exported
+      // compliance-critical SA-ID helpers (validateSaIdNumber: Luhn + structure
+      // + DOB/gender; computeAge) plus a form render smoke test): measured
+      // statements 9.89 / lines 9.9 / branches 8.64 / functions 8.07 across 1025
+      // tests. Floor raised from 9.35/9.35/8.15/7.6, kept ~0.35-0.4 below
+      // measured for headroom against the actively churning tree.
+      //
+      // CAVEAT — silent denominator: ~16 mostly-static .tsx files (HomePage +
+      // the marketing/product pages, Logo, HeroSection, provider-logos,
+      // EmailSignatureGenerator) fail @vitest/coverage-v8 parsing and are
+      // auto-excluded from coverage. The % is over the parseable files only;
+      // fixing the parser quirk would add ~0%-covered files to the denominator
+      // and could dip the %, so RE-MEASURE before trusting headroom.
+      //
+      // The 70/65/70/70 end-goal is long-horizon — floor only ratchets up.
       thresholds: {
-        lines: 9.35,
-        functions: 7.6,
-        branches: 8.15,
-        statements: 9.35,
+        lines: 9.5,
+        functions: 7.7,
+        branches: 8.25,
+        statements: 9.5,
       },
     },
   },
