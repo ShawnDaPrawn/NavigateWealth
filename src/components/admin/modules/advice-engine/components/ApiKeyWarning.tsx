@@ -21,7 +21,7 @@ import type { ApiKeyWarningProps } from '../types';
  *   onDismiss={() => console.log('Dismissed')}
  * />
  */
-export function ApiKeyWarning({ status, onDismiss }: ApiKeyWarningProps) {
+export function ApiKeyWarning({ status }: ApiKeyWarningProps) {
   // Don't show if API key is configured
   if (!status || status.configured) {
     return null;

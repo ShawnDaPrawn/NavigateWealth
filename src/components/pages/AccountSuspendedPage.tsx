@@ -3,7 +3,7 @@ import { Button } from '../ui/button';
 import { Card, CardContent } from '../ui/card';
 import { Alert, AlertDescription } from '../ui/alert';
 import { Ban, Mail, Phone, AlertTriangle } from 'lucide-react';
-import { CONTACT_INFO, SECURITY_COLORS } from '../../utils/auth/securityConstants';
+import { CONTACT_INFO } from '../../utils/auth/securityConstants';
 
 interface AccountSuspendedPageProps {
   reason?: string;

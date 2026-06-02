@@ -1,7 +1,6 @@
 import React, { useState, useEffect, Suspense } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../../ui/tabs';
 import {
-  Briefcase,
   Database,
   LayoutTemplate,
   Building2,

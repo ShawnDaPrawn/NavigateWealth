@@ -13,11 +13,8 @@
 import React from 'react';
 import { Draggable } from '@hello-pangea/dnd';
 import {
-  MessageSquare,
   FileText,
   Calculator,
-  Calendar,
-  Mail,
   MoreHorizontal,
   Eye,
   Archive,
@@ -27,7 +24,7 @@ import {
   Target,
   Building2,
   Briefcase,
-  UserPlus,
+  _UserPlus,
   ClipboardList,
 } from 'lucide-react';
 import { cn } from '../../../../ui/utils';

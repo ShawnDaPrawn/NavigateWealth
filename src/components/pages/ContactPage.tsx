@@ -3,26 +3,21 @@ import { useLocation, useNavigate } from 'react-router';
 import { SEO, createContactPageSchema } from '../seo/SEO';
 import { getSEOData } from '../seo/seo-config';
 import { Button } from '../ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 import { Input } from '../ui/input';
 import { Textarea } from '../ui/textarea';
 import { Label } from '../ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
 import { Badge } from '../ui/badge';
 import {
-  MapPin,
   Phone,
   Mail,
-  Clock,
   Calendar,
   ArrowRight,
   MessageCircle,
   Users,
   CheckCircle,
-  Headphones,
   Building,
   UserCheck,
-  Briefcase,
   Loader2,
 } from 'lucide-react';
 import { ThankYouModal } from '../modals/ThankYouModal';
@@ -324,7 +319,6 @@ export function ContactPage() {
             {/* Active Client Type Content */}
             <div className="max-w-4xl mx-auto">
               {Object.entries(clientTypes).map(([key, type]) => {
-                const Icon = type.icon;
                 return (
                   <div
                     key={key}

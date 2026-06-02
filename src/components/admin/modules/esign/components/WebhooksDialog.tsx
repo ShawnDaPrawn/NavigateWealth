@@ -23,7 +23,7 @@ import { Button } from '../../../../ui/button';
 import { Input } from '../../../../ui/input';
 import { Label } from '../../../../ui/label';
 import { Checkbox } from '../../../../ui/checkbox';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../../../ui/tabs';
+import { Tabs, TabsList, TabsTrigger } from '../../../../ui/tabs';
 import { Badge } from '../../../../ui/badge';
 import { ScrollArea } from '../../../../ui/scroll-area';
 import { toast } from 'sonner';

@@ -1,8 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useNavigate, useLocation } from 'react-router';
-import { useAuth } from '../auth/AuthContext';
 import { usePendingCounts } from './hooks/usePendingCounts';
-import { toast } from 'sonner';
 import { Menu } from 'lucide-react';
 import { Button } from '../ui/button';
 import { cn } from '../ui/utils';
@@ -23,9 +20,7 @@ export function AdminLayout({ activeModule, onModuleChange, children }: AdminLay
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
 
   const pendingCounts = usePendingCounts();
-  const navigate = useNavigate();
 
-  const sidebarWidth = sidebarCollapsed ? 'w-16' : 'w-72';
   const mainContentMargin = sidebarCollapsed ? 'lg:ml-16' : 'lg:ml-72';
 
   // Expose sidebar width as a CSS variable on :root so portals (Sheet, Dialog)

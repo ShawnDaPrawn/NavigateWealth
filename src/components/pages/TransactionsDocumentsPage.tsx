@@ -10,10 +10,10 @@ import { toast } from 'sonner';
 import {
   FileText,
   Download,
-  Eye,
-  Search,
-  Filter,
-  Calendar,
+  _Eye,
+  _Search,
+  _Filter,
+  _Calendar,
   ArrowUpRight,
   ArrowDownLeft,
   CreditCard,
@@ -25,7 +25,7 @@ import {
   Calculator,
   Users,
   FolderOpen,
-  ChevronLeft,
+  _ChevronLeft,
   ChevronRight,
   Files,
   ChevronDown,
@@ -65,8 +65,7 @@ export function TransactionsDocumentsPage() {
 
   // Filter State
   const [selectedFilter, setSelectedFilter] = useState('all');
-  const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 30;
+  const [_currentPage, _setCurrentPage] = useState(1);
 
   useEffect(() => {
     if (user?.id && activeTab === 'documents') {
@@ -218,27 +217,6 @@ export function TransactionsDocumentsPage() {
         return 'bg-amber-50 text-amber-700';
       default:
         return 'bg-gray-50 text-gray-700';
-    }
-  };
-
-  const getCategoryIcon = (category: string) => {
-    switch (category) {
-      case 'Risk Planning':
-        return Shield;
-      case 'Medical Aid':
-        return Heart;
-      case 'Retirement Planning':
-        return Target;
-      case 'Investment Management':
-        return TrendingUp;
-      case 'Employee Benefits':
-        return Briefcase;
-      case 'Tax Planning':
-        return Calculator;
-      case 'Estate Planning':
-        return Users;
-      default:
-        return FolderOpen;
     }
   };
 

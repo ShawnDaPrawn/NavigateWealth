@@ -70,7 +70,7 @@ export function calculatePolicyFV(
 export function calculateGoalStatus(
   goal: Goal,
   policies: GoalPolicyRecord[],
-  schemas: Record<string, SchemaFieldRecord[]> = {},
+  _schemas: Record<string, SchemaFieldRecord[]> = {},
 ): GoalCalculationResult {
   const linkedPolicies = policies.filter((p) => goal.linkedInvestmentIds.includes(p.id));
 
@@ -152,7 +152,6 @@ export function calculateGoalStatus(
 
   const projectedValue = fvTotal + fvAdHoc;
   const shortfall = Math.max(0, goal.targetAmount - projectedValue);
-  const surplus = projectedValue - goal.targetAmount;
 
   // 4. Reverse Calculation for Shortfall
   let requiredMonthlyContribution = 0;

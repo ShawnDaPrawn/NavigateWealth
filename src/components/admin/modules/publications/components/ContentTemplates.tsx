@@ -16,15 +16,12 @@ import {
   Eye,
   Loader2,
   Sparkles,
-  X,
   Save,
-  AlertTriangle,
   RotateCcw,
 } from 'lucide-react';
 import { Button } from '../../../../ui/button';
 import { Badge } from '../../../../ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '../../../../ui/card';
-import { cn } from '../../../../ui/utils';
 import { PublicationsAPI } from '../api';
 import type { ContentTemplate, CreateTemplateInput, UpdateTemplateInput } from '../types';
 import { toast } from 'sonner';

@@ -73,7 +73,6 @@ interface FieldHighlightProps {
 
 export function FieldHighlight({
   field,
-  zoom,
   isFilled,
   isNextRequired = false,
   inactive = false,

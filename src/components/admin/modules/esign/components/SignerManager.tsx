@@ -3,7 +3,7 @@
  * Manages signers for e-signature envelopes - add, edit, reorder, and assign fields
  */
 
-import React, { useState, useCallback } from 'react';
+import React, { useState } from 'react';
 import { Button } from '../../../../ui/button';
 import { Input } from '../../../../ui/input';
 import { Label } from '../../../../ui/label';
@@ -13,9 +13,7 @@ import { Checkbox } from '../../../../ui/checkbox';
 import {
   UserPlus,
   Mail,
-  User,
   Users,
-  Tag,
   Hash,
   Lock,
   Shield,
@@ -28,7 +26,7 @@ import {
   ChevronDown,
   ChevronUp,
 } from 'lucide-react';
-import type { EsignSigner, SignerFormData, SignerStatus } from '../types';
+import type { EsignSigner, SignerFormData } from '../types';
 import { getSignerStatusColor, getSignerStatusLabel } from '../types';
 
 interface SignerManagerProps {
@@ -39,12 +37,6 @@ interface SignerManagerProps {
   clientName?: string;
   disabled?: boolean;
   showFieldAssignment?: boolean;
-}
-
-interface SignerEditState {
-  index: number;
-  data: SignerFormData;
-  errors: Record<string, string>;
 }
 
 export function SignerManager({

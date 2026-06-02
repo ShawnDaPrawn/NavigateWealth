@@ -24,7 +24,6 @@ import {
 } from '../../../../ui/select';
 import { toast } from 'sonner';
 import {
-  Sparkles,
   Loader2,
   Copy,
   Check,

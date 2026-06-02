@@ -59,7 +59,7 @@ export function Step1InformationGathering({
   submitLabel,
   onSaveDraft,
 }: Step1Props) {
-  const { data: profileData, isLoading: isLoadingProfile } = useClientProfile(clientId);
+  const { data: _profileData, isLoading: isLoadingProfile } = useClientProfile(clientId);
   const { data: clientKeys, isError: isClientKeysError } = useClientKeys(clientId);
   const queryClient = useQueryClient();
   const [isRecalculating, setIsRecalculating] = React.useState(false);

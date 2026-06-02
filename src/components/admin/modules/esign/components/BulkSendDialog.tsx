@@ -249,7 +249,7 @@ export function BulkSendDialog({
     const headers =
       recipientCount <= 1
         ? ['email', 'name', 'role']
-        : selectedTemplate.recipients.flatMap((recipient, index) => [
+        : selectedTemplate.recipients.flatMap((_recipient, index) => [
             `email_${index + 1}`,
             `name_${index + 1}`,
             `role_${index + 1}`,

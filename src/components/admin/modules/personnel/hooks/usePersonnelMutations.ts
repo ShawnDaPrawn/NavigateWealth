@@ -150,7 +150,7 @@ export function useUpdatePersonnel() {
       const { id, ...updates } = input;
       return personnelApi.update(id, updates);
     },
-    onSuccess: (data, variables) => {
+    onSuccess: (_data, variables) => {
       // Invalidate all lists
       queryClient.invalidateQueries({ queryKey: personnelKeys.lists() });
 

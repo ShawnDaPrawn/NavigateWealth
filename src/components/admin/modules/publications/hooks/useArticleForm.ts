@@ -8,7 +8,7 @@ import { useState, useCallback, useEffect, useRef } from 'react';
 import { PublicationsAPI } from '../api';
 import { generateSlug, calculateReadingTime, validateArticleForm } from '../utils';
 import { DEFAULT_ARTICLE, EDITOR_CONFIG } from '../constants';
-import type { Article, ArticleFormData, ArticleStatus } from '../types';
+import type { Article, ArticleFormData } from '../types';
 
 interface UseArticleFormOptions {
   article?: Article | null;

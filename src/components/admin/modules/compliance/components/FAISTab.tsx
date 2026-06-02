@@ -81,7 +81,7 @@ export function FAISTab() {
     toast.info('Add FAIS record functionality coming soon');
   };
 
-  const handleEdit = (record: ComplianceRecord) => {
+  const handleEdit = (_record: ComplianceRecord) => {
     toast.info('Edit FAIS record functionality coming soon');
   };
 

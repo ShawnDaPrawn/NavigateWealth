@@ -16,8 +16,6 @@ import {
   TrendingUp,
   Calculator,
   PieChart,
-  Shield,
-  Heart,
   Home,
   Briefcase,
   Building,

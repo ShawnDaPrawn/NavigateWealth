@@ -7,8 +7,6 @@ import { Alert, AlertDescription, AlertTitle } from '../../ui/alert';
 import { Skeleton } from '../../ui/skeleton';
 import { Switch } from '../../ui/switch';
 import { Label } from '../../ui/label';
-import { Checkbox } from '../../ui/checkbox';
-import { Progress } from '../../ui/progress';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '../../ui/tooltip';
 import {
   Users,
@@ -27,7 +25,7 @@ import {
   Loader2,
   Shield,
   Layers,
-  Sparkles,
+  _Sparkles,
 } from 'lucide-react';
 import { copyToClipboard as copyToClipboardUtil } from '../../../utils/clipboard';
 

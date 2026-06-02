@@ -9,7 +9,6 @@
 
 import { useQuery } from '@tanstack/react-query';
 import { adviceEngineApi } from '../api';
-import type { Client } from '../types';
 import { adviceEngineKeys } from './queryKeys';
 
 /**

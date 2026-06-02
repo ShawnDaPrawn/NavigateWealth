@@ -7,7 +7,7 @@
 
 import { useQuery } from '@tanstack/react-query';
 import { personnelApi } from '../api';
-import type { Personnel, PersonnelFilters } from '../types';
+import type { PersonnelFilters } from '../types';
 import { QUERY_STALE_TIME, QUERY_GC_TIME } from '../constants';
 
 // ============================================================================

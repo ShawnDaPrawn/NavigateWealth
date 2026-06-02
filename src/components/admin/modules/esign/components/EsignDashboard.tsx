@@ -82,7 +82,7 @@ export function EsignDashboard({
   onBranding,
   refreshTrigger,
 }: EsignDashboardProps) {
-  const { envelopes, refetch } = useEnvelopes({ autoLoad: true, refreshTrigger });
+  const { envelopes } = useEnvelopes({ autoLoad: true, refreshTrigger });
 
   // Calculate metrics
   const now = new Date();

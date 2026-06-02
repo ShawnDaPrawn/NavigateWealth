@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Link, useNavigate } from 'react-router';
+import { Link } from 'react-router';
 import { motion } from 'motion/react';
 import { SEO, createWebPageSchema } from '../seo/SEO';
 import { getSEOData } from '../seo/seo-config';
@@ -43,7 +43,6 @@ interface Service {
 
 export function ProductsServicesPage() {
   const { user } = useAuth();
-  const navigate = useNavigate();
   const [searchQuery, setSearchQuery] = useState('');
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
 

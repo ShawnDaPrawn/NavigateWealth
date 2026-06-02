@@ -34,7 +34,7 @@ import {
 } from 'lucide-react';
 import { Button } from '../../../../ui/button';
 import { Badge } from '../../../../ui/badge';
-import { Card, CardContent, CardHeader, CardTitle } from '../../../../ui/card';
+import { Card, CardContent } from '../../../../ui/card';
 import { Input } from '../../../../ui/input';
 import { Label } from '../../../../ui/label';
 import { Textarea } from '../../../../ui/textarea';

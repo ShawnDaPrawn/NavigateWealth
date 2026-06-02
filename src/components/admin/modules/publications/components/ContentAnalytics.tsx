@@ -71,7 +71,6 @@ export function ContentAnalytics({ articles, categories }: ContentAnalyticsProps
   // ── KPI computation ──────────────────────────────────────────────────
 
   const kpis = useMemo(() => {
-    const now = new Date();
     const thirtyDaysAgo = daysAgo(30);
     const sixtyDaysAgo = daysAgo(60);
 

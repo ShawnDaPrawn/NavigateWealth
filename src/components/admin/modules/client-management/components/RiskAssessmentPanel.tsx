@@ -5,7 +5,7 @@ import { Button } from '../../../../ui/button';
 import { Label } from '../../../../ui/label';
 import { Input } from '../../../../ui/input';
 import {
-  Shield,
+  _Shield,
   RefreshCw,
   AlertTriangle,
   CheckCircle,
@@ -13,7 +13,7 @@ import {
   ClipboardList,
   ChevronDown,
   ChevronUp,
-  ChevronRight,
+  _ChevronRight,
   BarChart3,
   Users,
   UserCheck,
@@ -26,10 +26,10 @@ import {
   Play,
   ArrowLeft,
   FileText,
-  Eye,
+  _Eye,
   Clock,
-  Hash,
-  CircleDot,
+  _Hash,
+  _CircleDot,
   ListChecks,
   Info,
 } from 'lucide-react';
@@ -263,18 +263,6 @@ function normaliseFormItem(item: Record<string, unknown>): FormField[] {
       defaultValue: item.defaultValue != null ? String(item.defaultValue) : undefined,
     },
   ];
-}
-
-/** Parse weightingJson into a lookup of question-id → weights */
-function parseWeightingJson(raw: string): Record<string, unknown> {
-  if (!raw || raw.trim() === '') return {};
-  try {
-    const parsed = JSON.parse(raw);
-    if (typeof parsed === 'object') return parsed;
-    return {};
-  } catch {
-    return {};
-  }
 }
 
 // ─── Screening result helpers ────────────────────────────────────────────────

@@ -1,13 +1,12 @@
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../../../../ui/card';
 import { Skeleton } from '../../../../ui/skeleton';
-import { Activity, ArrowRight, UserPlus, FileCheck, CheckSquare, AlertCircle } from 'lucide-react';
+import { Activity, ArrowRight, UserPlus, FileCheck, CheckSquare } from 'lucide-react';
 import { useDashboardData } from '../hooks';
 import type { SystemActivityCardProps } from '../types';
 
 export function SystemActivityCard({
   onViewDetails,
-  onModuleChange,
   loading: propLoading,
 }: SystemActivityCardProps) {
   const { activities, loading: hookLoading } = useDashboardData();

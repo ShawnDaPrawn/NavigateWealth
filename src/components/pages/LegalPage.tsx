@@ -9,9 +9,8 @@ import { Badge } from '../ui/badge';
 import { Button } from '../ui/button';
 import { Separator } from '../ui/separator';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../ui/dialog';
-import { FileText, Shield, Scale, Archive, Mail, Phone, Eye, Loader2, Printer } from 'lucide-react';
+import { FileText, Shield, Scale, Archive, Mail, Phone, Eye, Printer } from 'lucide-react';
 import { toast } from 'sonner';
-import { projectId, publicAnonKey } from '../../utils/supabase/info';
 import { escapeHtmlText, navigateWealthPdfDocumentTitle } from '../../utils/pdfPrintTitle';
 import { BASE_PDF_CSS } from '../admin/modules/resources/templates/BasePdfLayout';
 
@@ -223,8 +222,6 @@ function LegalBlockRenderer({ blocks, title }: { blocks: LegalBlock[]; title: st
 // LEGAL PAGE
 // ============================================================================
 
-const BASE_URL = `https://${projectId}.supabase.co/functions/v1/make-server-91ed8379`;
-
 export function LegalPage() {
   const [searchParams, setSearchParams] = useSearchParams();
   const location = useLocation();
@@ -232,11 +229,9 @@ export function LegalPage() {
 
   // Document viewer state
   const [viewerOpen, setViewerOpen] = useState(false);
-  const [viewerLoading, setViewerLoading] = useState(false);
-  const [viewerDocument, setViewerDocument] = useState<LegalDocumentResponse['document'] | null>(
-    null,
-  );
-  const [loadingSlug, setLoadingSlug] = useState<string | null>(null);
+  const [_viewerLoading] = useState(false);
+  const [viewerDocument] = useState<LegalDocumentResponse['document'] | null>(null);
+  const [_loadingSlug] = useState<string | null>(null);
   const printRef = useRef<HTMLDivElement>(null);
 
   // Valid tab values
@@ -264,42 +259,6 @@ export function LegalPage() {
     setActiveTab(value);
     setSearchParams({ section: value }, { replace: true });
   };
-
-  /**
-   * Fetch legal document content from the public API and open the viewer.
-   */
-  const handleViewDocument = useCallback(async (slug: string) => {
-    setLoadingSlug(slug);
-    setViewerLoading(true);
-
-    try {
-      const res = await fetch(`${BASE_URL}/resources/legal/${slug}`, {
-        headers: { Authorization: `Bearer ${publicAnonKey}` },
-      });
-
-      if (!res.ok) {
-        throw new Error(`Failed to fetch document (${res.status})`);
-      }
-
-      const data: LegalDocumentResponse = await res.json();
-
-      if (!data.available || !data.document) {
-        toast.info('This document is not yet available. Please check back later.', {
-          description: 'The compliance team is working on making this document available.',
-        });
-        return;
-      }
-
-      setViewerDocument(data.document);
-      setViewerOpen(true);
-    } catch (error) {
-      console.error('Error fetching legal document:', error);
-      toast.error('Unable to load document. Please try again later.');
-    } finally {
-      setViewerLoading(false);
-      setLoadingSlug(null);
-    }
-  }, []);
 
   /**
    * Print/save as PDF the currently viewed document.
@@ -338,15 +297,6 @@ export function LegalPage() {
 
           case 'field_grid': {
             const cols = block.data?.columns || 2;
-            const fields = (block.data?.fields || [])
-              .map(
-                (f: LegalBlockField) => `
-            <td style="border:1px solid var(--border);padding:5px 6px;vertical-align:top;">
-              <div style="font-size:8px;font-weight:700;color:#4b5563;margin-bottom:2px;">${f.label || ''}</div>
-              <div class="field"></div>
-            </td>`,
-              )
-              .join('');
             // Wrap fields into rows of `cols` columns
             const fieldArr = block.data?.fields || [];
             let rows = '';

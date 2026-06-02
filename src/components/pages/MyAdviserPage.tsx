@@ -17,9 +17,7 @@ import { Label } from '../ui/label';
 import { Textarea } from '../ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
 import { Alert, AlertDescription } from '../ui/alert';
-import { Separator } from '../ui/separator';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../ui/tabs';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../ui/table';
 import { useAuth } from '../auth/AuthContext';
 import {
   User,
@@ -36,11 +34,11 @@ import {
   Users,
   Send,
   CheckCircle,
-  AlertCircle,
+  _AlertCircle,
   UserCheck,
   MapPin,
   GraduationCap,
-  Building,
+  _Building,
   Globe,
   Briefcase,
   TrendingUp,
@@ -54,12 +52,12 @@ import {
   MessageCircle,
   ArrowRight,
   Info,
-  Linkedin,
+  _Linkedin,
   BookOpen,
-  Heart,
-  ThumbsUp,
-  Coffee,
-  CalendarDays,
+  _Heart,
+  _ThumbsUp,
+  _Coffee,
+  _CalendarDays,
   Handshake,
 } from 'lucide-react';
 
@@ -885,7 +883,7 @@ export function MyAdviserPage() {
               <CardContent>
                 {isAdviserAssigned && meetingHistory.length > 0 ? (
                   <div className="space-y-6">
-                    {meetingHistory.map((meeting, index) => (
+                    {meetingHistory.map((meeting, _index) => (
                       <div key={meeting.id} className="border border-gray-200 rounded-lg p-6">
                         <div className="flex items-start justify-between mb-4">
                           <div>
@@ -967,7 +965,7 @@ export function MyAdviserPage() {
               <CardContent>
                 {isAdviserAssigned && communicationHistory.length > 0 ? (
                   <div className="space-y-4">
-                    {communicationHistory.map((comm, index) => (
+                    {communicationHistory.map((comm, _index) => (
                       <div
                         key={comm.id}
                         className="flex items-start space-x-4 p-4 border border-gray-200 rounded-lg"

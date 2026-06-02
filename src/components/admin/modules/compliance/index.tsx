@@ -62,7 +62,7 @@ const navigationItems = [
 
 export function ComplianceModule() {
   const [activeTab, setActiveTab] = useState('overview');
-  const [exportLoading, setExportLoading] = useState(false);
+  const [exportLoading, _setExportLoading] = useState(false);
   const { canDo } = useCurrentUserPermissions();
 
   const canExport = canDo('compliance', 'export');

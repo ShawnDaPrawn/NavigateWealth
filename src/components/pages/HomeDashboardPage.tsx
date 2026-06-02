@@ -12,8 +12,6 @@
 
 import React, { useMemo } from 'react';
 import { useAuth } from '../auth/AuthContext';
-import { Card, CardContent } from '../ui/card';
-import { Button } from '../ui/button';
 import { BrandPageLoader } from '../ui/brand-loader';
 import { Link } from 'react-router';
 import {
@@ -22,17 +20,9 @@ import {
   FileText,
   User,
   MessageSquare,
-  ArrowRight,
-  Shield,
-  PiggyBank,
-  Heart,
-  Briefcase,
   Activity,
-  Bell,
-  Calendar,
-  Settings,
   ChevronRight,
-  Sparkles,
+  _Sparkles,
 } from 'lucide-react';
 import { ClientOverviewTab } from '../admin/modules/client-management/components/ClientOverviewTab';
 import type { Client } from '../admin/modules/client-management/types';
@@ -139,30 +129,6 @@ function QuickLinkCard({ link }: { link: QuickLink }) {
         </div>
       </div>
     </Link>
-  );
-}
-
-// ── Stat Pill (branded theme only) ──────────────────────────────────────────
-
-function StatPill({
-  icon: Icon,
-  label,
-  value,
-}: {
-  icon: React.ElementType;
-  label: string;
-  value: string;
-}) {
-  return (
-    <div className="flex items-center gap-3 bg-white/[0.06] backdrop-blur-sm rounded-lg border border-white/[0.08] px-4 py-3">
-      <div className="h-9 w-9 rounded-lg bg-purple-500/15 flex items-center justify-center flex-shrink-0">
-        <Icon className="h-4.5 w-4.5 text-purple-300" />
-      </div>
-      <div>
-        <p className="text-xs text-white/40 font-medium">{label}</p>
-        <p className="text-sm font-semibold text-white">{value}</p>
-      </div>
-    </div>
   );
 }
 

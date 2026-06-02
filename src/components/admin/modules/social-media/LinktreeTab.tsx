@@ -15,7 +15,7 @@
  */
 
 import React, { useState, useCallback, useEffect } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '../../../ui/card';
+import { Card, CardContent } from '../../../ui/card';
 import { Button } from '../../../ui/button';
 import { Badge } from '../../../ui/badge';
 import { Input } from '../../../ui/input';
@@ -30,7 +30,7 @@ import {
   Plus,
   Pencil,
   Trash2,
-  ExternalLink,
+  _ExternalLink,
   Eye,
   Copy,
   Check,
@@ -39,7 +39,7 @@ import {
   Loader2,
   ArrowUp,
   ArrowDown,
-  BarChart3,
+  _BarChart3,
   Settings,
   Inbox,
   MousePointer,

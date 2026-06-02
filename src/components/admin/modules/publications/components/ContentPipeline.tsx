@@ -10,8 +10,6 @@
  */
 
 import React, { useState, useMemo, useCallback } from 'react';
-import { Card, CardContent } from '../../../../ui/card';
-import { Button } from '../../../../ui/button';
 import { Badge } from '../../../../ui/badge';
 import {
   PenLine,
@@ -19,21 +17,16 @@ import {
   CalendarDays,
   CheckCircle2,
   Archive,
-  GripVertical,
   Eye,
   Star,
   Clock,
-  MoreHorizontal,
   PlusCircle,
-  Edit,
-  Trash2,
-  Copy,
   ArrowRight,
   FileText,
 } from 'lucide-react';
 import { cn } from '../../../../ui/utils';
 import type { Article, ArticleStatus, Category } from '../types';
-import { formatDate, getRelativeTime, truncateText } from '../utils';
+import { getRelativeTime, truncateText } from '../utils';
 
 interface ContentPipelineProps {
   articles: Article[];

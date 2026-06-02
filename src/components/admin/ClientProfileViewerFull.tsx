@@ -8,13 +8,11 @@
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { Button } from '../ui/button';
-import { Input } from '../ui/input';
 import { Label } from '../ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
 import { Separator } from '../ui/separator';
 import { Alert, AlertDescription, AlertTitle } from '../ui/alert';
-import { EmptyState } from '../pages/profile/EmptyState';
 import { toast } from 'sonner';
 import {
   formatCurrency,
@@ -39,7 +37,7 @@ import {
   Wallet,
   Loader2,
   Copy,
-  MoreHorizontal,
+  _MoreHorizontal,
   AlertCircle,
   Banknote,
 } from 'lucide-react';
@@ -109,9 +107,9 @@ const SelectWithCopy = ({
 }) => {
   const [copied, setCopied] = useState(false);
 
-  const handleCopy = async (e: React.MouseEvent) => {
+  const handleCopy = async (_e: React.MouseEvent) => {
     // Don't prevent default/propagation as it might interfere with clipboard operations
-    // e.preventDefault();
+    // _e.preventDefault();
     // e.stopPropagation();
 
     try {
@@ -891,7 +889,7 @@ export function ClientProfileViewerFull({ clientData, onSave }: ClientProfileVie
             removeProofOfResidence={actions.removeProofOfResidence}
             proofOfResidenceToDelete={state.proofOfResidenceToDelete}
             setProofOfResidenceToDelete={actions.setProofOfResidenceToDelete}
-            copyToClipboard={(text: string, fieldName: string) => copyToClipboard(text)}
+            copyToClipboard={(text: string, _fieldName: string) => copyToClipboard(text)}
           />
         )}
 
@@ -914,7 +912,7 @@ export function ClientProfileViewerFull({ clientData, onSave }: ClientProfileVie
             cancelEditSelfEmployed={actions.cancelEditSelfEmployed}
             employerToDelete={state.employerToDelete}
             setEmployerToDelete={actions.setEmployerToDelete}
-            copyToClipboard={(text: string, fieldName: string) => copyToClipboard(text)}
+            copyToClipboard={(text: string, _fieldName: string) => copyToClipboard(text)}
           />
         )}
 
@@ -972,7 +970,7 @@ export function ClientProfileViewerFull({ clientData, onSave }: ClientProfileVie
             setBankAccountToDelete={actions.setBankAccountToDelete}
             proofOfBankToDelete={state.proofOfBankToDelete}
             setProofOfBankToDelete={actions.setProofOfBankToDelete}
-            copyToClipboard={(text: string, fieldName: string) => copyToClipboard(text)}
+            copyToClipboard={(text: string, _fieldName: string) => copyToClipboard(text)}
           />
         )}
 

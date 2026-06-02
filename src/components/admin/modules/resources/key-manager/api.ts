@@ -13,8 +13,6 @@ import {
   ProductKey,
   ProductKeyCategory,
   KeyFilterOptions,
-  KeyMetadata,
-  CategoryMetadata,
   KeyLookupResult,
   KeySelectorOption,
   KeyUsageInfo,

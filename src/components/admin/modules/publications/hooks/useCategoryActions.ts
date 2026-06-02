@@ -7,7 +7,7 @@
 import { useState, useCallback } from 'react';
 import { PublicationsAPI } from '../api';
 import { SUCCESS_MESSAGES, ERROR_MESSAGES } from '../constants';
-import type { Category, CreateCategoryInput, UpdateCategoryInput } from '../types';
+import type { Category, CreateCategoryInput } from '../types';
 
 interface UseCategoryActionsOptions {
   onSuccess?: (message: string, category?: Category) => void;

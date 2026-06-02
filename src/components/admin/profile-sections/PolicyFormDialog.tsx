@@ -20,7 +20,6 @@ import { Label } from '../../ui/label';
 import { Textarea } from '../../ui/textarea';
 import { Switch } from '../../ui/switch';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../ui/select';
-import { RadioGroup, RadioGroupItem } from '../../ui/radio-group';
 import {
   AlertCircle,
   ChevronRight,
@@ -32,10 +31,6 @@ import {
   Coins,
   TrendingUp,
   Lock,
-  FileText,
-  Upload,
-  X,
-  ExternalLink,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { api } from '../../../utils/api';
@@ -516,7 +511,6 @@ export function PolicyFormDialog({
 
     // Determine context (Retirement vs Investment)
     const isInvestment = field.keyId === 'invest_maturity_value';
-    const prefix = isInvestment ? 'invest' : 'retirement';
 
     // Key mappings
     const growthKey = isInvestment ? 'invest_assumptions_growth' : 'retirement_assumptions_growth';

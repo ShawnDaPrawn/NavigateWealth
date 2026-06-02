@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Tabs, TabsContent } from '../../../ui/tabs';
 import {
-  IntegrationProvider,
   IntegrationConfig,
   IntegrationFieldBinding,
   PreviewData,

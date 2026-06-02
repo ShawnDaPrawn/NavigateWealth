@@ -25,7 +25,7 @@ interface EnvConfig {
   MODE: string;
 }
 
-class EnvValidationError extends Error {
+class  extends Error {
   constructor(message: string) {
     super(message);
     this.name = 'EnvValidationError';

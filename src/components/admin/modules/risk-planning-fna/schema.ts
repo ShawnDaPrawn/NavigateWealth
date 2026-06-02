@@ -5,7 +5,6 @@
 
 import { z } from 'zod';
 import { VALIDATION_RULES } from './constants';
-import type { EmploymentType, IPBenefitPeriod, IPEscalationType } from './types';
 
 // ==================== DEPENDANT SCHEMA ====================
 

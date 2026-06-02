@@ -22,8 +22,6 @@ import {
   AlertCircle,
   Move,
   X,
-  ChevronUp,
-  ChevronDown,
 } from 'lucide-react';
 import type { EsignField, FieldType, SignerFormData } from '../types';
 import { SIGNER_COLORS } from '../constants';
@@ -106,8 +104,6 @@ type ZoomLevel = 25 | 50 | 75 | 100 | 125 | 150 | 200;
 const ZOOM_LEVELS: ZoomLevel[] = [25, 50, 75, 100, 125, 150, 200];
 
 // Fallback A4 size in PDF points — used if a page's mediaBox is unavailable
-const DEFAULT_PAGE_WIDTH = 595;
-const DEFAULT_PAGE_HEIGHT = 842;
 
 /** Per-page dimension info resolved from the actual PDF */
 interface PageInfo {
@@ -120,7 +116,6 @@ interface PageInfo {
 
 export function PDFViewer({
   documentUrl,
-  documentName = 'Document',
   fields = [],
   signers = [],
   onFieldPlace,

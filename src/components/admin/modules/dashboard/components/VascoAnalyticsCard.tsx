@@ -18,7 +18,6 @@ import {
   MessageSquare,
   Users,
   ThumbsUp,
-  ThumbsDown,
   Phone,
   TrendingUp,
   Loader2,

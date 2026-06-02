@@ -10,29 +10,17 @@ import {
   FileText,
   Landmark,
   TrendingUp,
-  AlertCircle,
   CheckCircle,
   Target,
   Plus,
   Zap,
-  ChevronDown,
-  ChevronUp,
   Info,
   Loader2,
   Building2,
 } from 'lucide-react';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-  TableFooter,
-} from '../../ui/table';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../ui/table';
 import { api } from '../../../utils/api';
 import { withNavigateWealthPrintTitle } from '../../../utils/pdfPrintTitle';
-import { toast } from 'sonner';
 import { getFNAConfig, hasFNASupport } from './fna-config';
 import { DEFAULT_SCHEMAS } from './default-schemas';
 import { Goal } from '../modules/client-management/components/goals/types';
@@ -110,7 +98,6 @@ export function PolicyOverviewTab({
   clientDisplayName,
   onRunFNA,
   onAddPolicy,
-  onViewDetails,
   variant = 'full',
 }: PolicyOverviewTabProps) {
   const isEmbedded = variant === 'embedded';

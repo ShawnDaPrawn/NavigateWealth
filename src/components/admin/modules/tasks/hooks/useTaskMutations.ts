@@ -16,7 +16,7 @@ import { toast } from 'sonner';
 import { pendingCountsKeys, tasksKeys } from '../../../../../utils/queryKeys';
 import { TasksAPI } from '../api';
 import { taskKeys } from './useTaskQueries';
-import type { Task, CreateTaskInput, UpdateTaskInput, TaskStatus } from '../types';
+import type { Task, TaskStatus } from '../types';
 
 export function mergeTaskReorderIntoList(
   previousTasks: Task[] | undefined,
@@ -240,7 +240,7 @@ export function useMoveTask() {
     },
 
     // Rollback on error
-    onError: (err, variables, context) => {
+    onError: (_err, _variables, context) => {
       if (context?.previousTasks) {
         queryClient.setQueryData(taskKeys.lists(), context.previousTasks);
       }
@@ -302,7 +302,7 @@ export function useReorderTasks() {
     },
 
     // Rollback on error
-    onError: (err, variables, context) => {
+    onError: (_err, _variables, context) => {
       if (context?.previousTasks) {
         queryClient.setQueryData(taskKeys.lists(), context.previousTasks);
       }

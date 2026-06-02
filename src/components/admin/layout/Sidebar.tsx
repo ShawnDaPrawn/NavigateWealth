@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Settings, LogOut, ArrowLeftRight, Menu, X } from 'lucide-react';
+import { Settings, LogOut, ArrowLeftRight, X } from 'lucide-react';
 import { Button } from '../../ui/button';
 import { Badge } from '../../ui/badge';
 import {

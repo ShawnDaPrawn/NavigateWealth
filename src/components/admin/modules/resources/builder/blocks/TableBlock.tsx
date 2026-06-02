@@ -1,7 +1,7 @@
 import React from 'react';
-import { Grid, Plus, Trash2, GripVertical, Settings2 } from 'lucide-react';
+import { Grid, Plus, Trash2 } from 'lucide-react';
 import { BlockDefinition } from '../registry';
-import { TableData, TableRow, TableCell } from '../types';
+import { TableData, TableCell } from '../types';
 import { Input } from '../../../../../ui/input';
 import { Label } from '../../../../../ui/label';
 import { Button } from '../../../../../ui/button';

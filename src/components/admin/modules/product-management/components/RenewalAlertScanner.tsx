@@ -29,12 +29,9 @@ import {
   CalendarClock,
   Loader2,
   CheckCircle2,
-  AlertTriangle,
   Clock,
-  RefreshCw,
   ListTodo,
   FileText,
-  XCircle,
   ChevronDown,
   ChevronUp,
 } from 'lucide-react';

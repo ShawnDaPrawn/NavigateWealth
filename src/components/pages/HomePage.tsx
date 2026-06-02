@@ -4,17 +4,14 @@ import { SEO, createOrganizationSchema, createWebPageSchema, createFAQSchema } f
 import { getSEOData, commonFAQs } from '../seo/seo-config';
 import { createWebSiteSchema } from '../seo/SEO';
 import { Button } from '../ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card';
+import { Card, CardContent } from '../ui/card';
 import { Input } from '../ui/input';
 import { Label } from '../ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
-import { Textarea } from '../ui/textarea';
-import { Badge } from '../ui/badge';
 import { Dialog, DialogContent, DialogTitle, DialogDescription } from '../ui/dialog';
-import { ImageWithFallback } from '../figma/ImageWithFallback';
 import { OptimizedImage } from '../shared/OptimizedImage';
 import { ResponsiveImage } from '../shared/ResponsiveImage';
-import { Avatar, AvatarFallback, AvatarImage } from '../ui/avatar';
+import { Avatar, AvatarFallback } from '../ui/avatar';
 const VideoModal = React.lazy(() =>
   import('../modals/VideoModal').then((m) => ({ default: m.VideoModal })),
 );
@@ -32,14 +29,12 @@ import familyImage from 'figma:asset/8a93f2fa219696290136738d0dc439f43b6c6235.pn
 import consultationImage from 'figma:asset/b0b37f186d8c48117bede379a79e329626b6ac95.png';
 import investmentConsultationImage from 'figma:asset/fc6a85769d1248cdde73b1d2252674e730f0655a.png';
 import estatePlanningImage from 'figma:asset/482a45127e501f4b3cecd244241cff6024f47011.png';
-import trustedPartnersTemplate from 'figma:asset/93f99cf845ed1c9ec1d831acbc1d5f3f297e3ba5.png';
 import {
   allanGrayLogo,
   brightRockLogo,
   capitalLegacyLogo,
   discoveryLogo,
   hollardLogo,
-  inn8Logo,
   libertyLogo,
   momentumLogo,
   oldMutualLogo,
@@ -51,7 +46,6 @@ import {
 // WORKAROUND: consultationImage reused as retirementPlanningImage — same asset hash.
 // If a distinct retirement image is added in Figma, replace this alias.
 const retirementPlanningImage = consultationImage;
-import teamVideoImage from 'figma:asset/7544a9a9b8dff620a2783be94ba019a570916dc7.png';
 import taxPlanningImage from 'figma:asset/7f33deddff0f6240cb18dcef045f830436c30355.png';
 import southAfricanCurrencyImage from 'figma:asset/1f32a99aadd795f3c7f5c530f916c758d6ccb6f0.png';
 import employeeBenefitsTeamImage from 'figma:asset/dc2935371f93dc2f6da2f85cfa093001ca172d63.png';
@@ -66,7 +60,7 @@ import {
   Calculator,
   Briefcase,
   Gift,
-  Play,
+  _Play,
   CheckCircle,
   Phone,
   Mail,
@@ -78,7 +72,7 @@ import {
   Heart,
   Globe,
   Stethoscope,
-  X,
+  _X,
   Loader2,
 } from 'lucide-react';
 
@@ -403,18 +397,6 @@ export function HomePage() {
       const previous = prev - 4;
       return previous < 0 ? Math.floor((providers.length - 1) / 4) * 4 : previous;
     });
-  };
-
-  const nextSlide = () => {
-    setCurrentSlideIndex((prev) => (prev + 1) % heroSlides.length);
-  };
-
-  const prevSlide = () => {
-    setCurrentSlideIndex((prev) => (prev - 1 + heroSlides.length) % heroSlides.length);
-  };
-
-  const goToSlide = (index: number) => {
-    setCurrentSlideIndex(index);
   };
 
   const currentSlide = heroSlides[currentSlideIndex];

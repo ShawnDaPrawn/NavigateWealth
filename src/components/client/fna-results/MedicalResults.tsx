@@ -34,7 +34,6 @@ export function MedicalResults({ fna }: MedicalResultsProps) {
   // Safely access nested input structures
   const currentPlan = inputs?.currentPlan;
   const healthNeeds = inputs?.healthNeeds;
-  const preferences = inputs?.preferences;
 
   return (
     <div className="space-y-6">

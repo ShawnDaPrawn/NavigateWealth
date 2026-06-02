@@ -17,12 +17,12 @@
  * @module pages/CareersPage
  */
 
-import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { Link } from 'react-router';
 import { SEO, createWebPageSchema } from '../seo/SEO';
 import { getSEOData } from '../seo/seo-config';
 import { Button } from '../ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
+import { Card } from '../ui/card';
 import { Badge } from '../ui/badge';
 import { CVUploadModal } from '../modals/CVUploadModal';
 import { projectId, publicAnonKey } from '../../utils/supabase/info';
@@ -35,7 +35,7 @@ import {
   CheckCircle,
   Shield,
   Megaphone,
-  Star,
+  _Star,
   Globe,
   MapPin,
   Clock,
@@ -44,14 +44,13 @@ import {
   Award,
   Heart,
   Lightbulb,
-  Target,
+  _Target,
   Rocket,
   GraduationCap,
-  Handshake,
   Coffee,
   ChevronRight,
-  Building2,
-  Zap,
+  _Building2,
+  _Zap,
   Send,
 } from 'lucide-react';
 
@@ -128,30 +127,6 @@ const values = [
     icon: Globe,
   },
 ];
-
-const HERO_CAREER_CARDS = [
-  {
-    icon: TrendingUp,
-    title: 'Growth Path',
-    subtitle: 'Fast-track development',
-    color: 'from-purple-500/20 to-indigo-500/20',
-    border: 'border-purple-400/20',
-  },
-  {
-    icon: Handshake,
-    title: 'Team Culture',
-    subtitle: 'Collaborative & supportive',
-    color: 'from-emerald-500/20 to-teal-500/20',
-    border: 'border-emerald-400/20',
-  },
-  {
-    icon: Award,
-    title: 'Industry Leader',
-    subtitle: 'FSCA Regulated · FSP 54606',
-    color: 'from-amber-500/20 to-orange-500/20',
-    border: 'border-amber-400/20',
-  },
-] as const;
 
 const HERO_STATS = [
   { label: 'Years Experience', value: 15, suffix: '+', icon: Award },

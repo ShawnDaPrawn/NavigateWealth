@@ -175,12 +175,7 @@ function DraggableCategoryRow({
 
 export function CategoriesManager() {
   // Data fetching with hooks
-  const {
-    categories: initialCategories,
-    isLoading,
-    error,
-    refetch,
-  } = useCategories({ autoSort: true });
+  const { categories: initialCategories, isLoading, refetch } = useCategories({ autoSort: true });
 
   // Local state for drag reordering
   const [categories, setCategories] = useState<Category[]>([]);
@@ -198,7 +193,7 @@ export function CategoriesManager() {
     handleReorder,
     isProcessing,
   } = useCategoryActions({
-    onSuccess: (message) => {
+    onSuccess: (_message) => {
       refetch();
     },
     onError: (error) => {

@@ -82,7 +82,7 @@ export function useClients(search?: string) {
 
         // Filter out admin users if possible (optional, but good for consistency)
         // Similar logic to ClientManagementModule
-        result = result.filter((client) => {
+        result = result.filter((_client) => {
           // We can't easily check role here without the raw user object or profile role
           // But assuming the API returns what we need.
           // For now, let's just return all users so we don't accidentally hide someone.

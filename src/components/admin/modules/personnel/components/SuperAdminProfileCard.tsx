@@ -6,8 +6,7 @@ import { Label } from '../../../../ui/label';
 import { Badge } from '../../../../ui/badge';
 import { Avatar, AvatarFallback } from '../../../../ui/avatar';
 import { Skeleton } from '../../../../ui/skeleton';
-import { Shield, Edit2, Save, X, Mail, Phone, User, Loader2 } from 'lucide-react';
-import { cn } from '../../../../ui/utils';
+import { Shield, Edit2, Save, X, Mail, Phone, Loader2 } from 'lucide-react';
 import { SuperAdminProfile } from '../types';
 
 interface SuperAdminProfileCardProps {

@@ -9,7 +9,6 @@
  */
 
 import React, { useState, useEffect, useCallback } from 'react';
-import { Card, CardContent } from '../../ui/card';
 import { Badge } from '../../ui/badge';
 import { Button } from '../../ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../ui/table';

@@ -16,7 +16,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '../../ui/alert-dialog';
-import { CreditCard, Plus, Edit2, Trash2, X, Check, Upload, FileText, Copy } from 'lucide-react';
+import { CreditCard, Plus, Edit2, Trash2, X, Check, Upload, FileText } from 'lucide-react';
 import { EmptyState } from '../../pages/profile/EmptyState';
 import { emptyStateConfigs } from '../../pages/profile/emptyStateConfigs';
 

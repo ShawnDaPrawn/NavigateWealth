@@ -5,7 +5,6 @@ import { Input } from '../../../../ui/input';
 import { Badge } from '../../../../ui/badge';
 import { Label } from '../../../../ui/label';
 import { Avatar, AvatarFallback } from '../../../../ui/avatar';
-import { Checkbox } from '../../../../ui/checkbox';
 import {
   Select,
   SelectContent,
@@ -22,7 +21,6 @@ import {
   CheckCircle,
   X,
   Filter,
-  UserCheck,
   Mail,
   MessageSquare,
   ChevronDown,
@@ -70,7 +68,7 @@ export function RecipientSelector({
   const [filteredClients, setFilteredClients] = useState<Client[]>([]);
   const [allClients, setAllClients] = useState<Client[]>([]);
   const [allGroups, setAllGroups] = useState<ClientGroup[]>([]);
-  const [dataLoading, setDataLoading] = useState(true);
+  const [_dataLoading, setDataLoading] = useState(true);
 
   // Fetch clients and groups from backend (matches Step1Recipients pattern)
   useEffect(() => {

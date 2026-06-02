@@ -1,10 +1,5 @@
 import React from 'react';
-import type {
-  ProfileData,
-  IdentityDocument,
-  IdentityDocumentType,
-  HandleInputChange,
-} from '../types';
+import type { ProfileData, IdentityDocument, IdentityDocumentType } from '../types';
 import { CountrySelect } from '../CountrySelect';
 import { EmptyState } from '../EmptyState';
 import { emptyStateConfigs } from '../emptyStateConfigs';
@@ -32,8 +27,6 @@ import {
   CheckCircle,
   Upload,
   FileText,
-  CreditCard,
-  IdCard,
   Info,
   X,
   Check,

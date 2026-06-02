@@ -1,9 +1,7 @@
-import React, { useMemo, useRef, useEffect } from 'react';
+import React, { useRef, useEffect } from 'react';
 import {
   format,
   isToday,
-  startOfDay,
-  endOfDay,
   startOfWeek,
   endOfWeek,
   startOfMonth,
@@ -73,7 +71,7 @@ export function MonthView({
         ref={scrollContainerRef}
         className="grid grid-cols-7 gap-px bg-gray-200 flex-1 overflow-y-auto"
       >
-        {days.map((day, idx) => {
+        {days.map((day, _idx) => {
           const isCurrentMonth = day.getMonth() === currentDate.getMonth();
           const isTodayDate = isToday(day);
 
@@ -116,7 +114,7 @@ export function MonthView({
               </div>
 
               <div className="space-y-1">
-                {visibleItems.map((event, i) => {
+                {visibleItems.map((event, _i) => {
                   return (
                     <div
                       key={`evt-${event.id}`}

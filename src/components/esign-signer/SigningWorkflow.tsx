@@ -268,8 +268,8 @@ export function SigningWorkflow({
 
   // P3.5 — hidden file input wired up to the active attachment field.
   const attachmentInputRef = useRef<HTMLInputElement>(null);
-  const [attachmentUploading, setAttachmentUploading] = useState<string | null>(null);
-  const [attachments, setAttachments] = useState<
+  const [_attachmentUploading, setAttachmentUploading] = useState<string | null>(null);
+  const [_attachments, setAttachments] = useState<
     Record<string, { id: string; filename: string; size: number }>
   >({});
   const [pdfLoading, setPdfLoading] = useState(true);

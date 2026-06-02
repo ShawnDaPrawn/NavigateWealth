@@ -11,7 +11,7 @@ import {
   LABEL_CLASS,
   SECTION_CONTAINER_SPACED_CLASS,
 } from '../form-styles';
-import { Mail, Phone, MapPin, Clock, Globe } from 'lucide-react';
+import { Mail, MapPin, Clock, Globe } from 'lucide-react';
 
 function SectionHeader({
   icon: Icon,

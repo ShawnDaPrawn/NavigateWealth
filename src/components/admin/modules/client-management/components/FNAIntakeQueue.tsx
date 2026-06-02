@@ -16,10 +16,7 @@ import {
   type FnaIntakeSession,
 } from '../../../../../services/fna-intake-api';
 import { normalizeIntakeInputs } from '../../../../../services/form-prefill-api';
-import type {
-  FormPrefillId,
-  PrefillResolveResponse,
-} from '../../../../../shared/form-prefill/types';
+import type { PrefillResolveResponse } from '../../../../../shared/form-prefill/types';
 import {
   mergePrefillValues,
   normalizeIntakeToWizard,
@@ -42,18 +39,6 @@ const DOMAIN_LABELS: Record<string, string> = {
   tax: 'Tax Planning',
   estate: 'Estate Planning',
 };
-
-function intakeFormId(domain: FnaIntakeDomain): FormPrefillId {
-  const map: Record<FnaIntakeDomain, FormPrefillId> = {
-    risk: 'risk-fna-step1',
-    medical: 'medical-fna-step1',
-    retirement: 'retirement-fna-step1',
-    tax: 'tax-fna-step1',
-    estate: 'estate-fna-step1',
-    investment: 'investment-ina-step1',
-  };
-  return map[domain];
-}
 
 export function FNAIntakeQueue({ onAccept, onOpenClient }: FNAIntakeQueueProps) {
   const [loading, setLoading] = useState(true);
@@ -140,7 +125,6 @@ export function FNAIntakeQueue({ onAccept, onOpenClient }: FNAIntakeQueueProps) 
   };
 
   const handleAccept = async (session: FnaIntakeSession) => {
-    const formId = intakeFormId(session.domain as FnaIntakeDomain);
     setPendingSession(session);
     setPrefillLoading(true);
     setReviewOpen(true);

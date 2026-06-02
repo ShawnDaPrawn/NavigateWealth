@@ -36,7 +36,6 @@ import {
   ListTodo,
   User,
   CheckCircle2,
-  ExternalLink,
   Sparkles,
 } from 'lucide-react';
 

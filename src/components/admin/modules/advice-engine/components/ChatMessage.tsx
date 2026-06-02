@@ -8,7 +8,7 @@
  */
 
 import React from 'react';
-import { Bot, User, Copy, Check } from 'lucide-react';
+import { Bot, Copy, Check } from 'lucide-react';
 import { MessageRenderer } from '../../../../shared/MessageRenderer';
 import { formatTimestamp } from '../utils';
 import type { ChatMessageProps } from '../types';
@@ -26,7 +26,7 @@ import type { ChatMessageProps } from '../types';
  *   onCopy={(content) => console.log('Copied:', content)}
  * />
  */
-export function ChatMessage({ message, onCopy, isLoading }: ChatMessageProps) {
+export function ChatMessage({ message, onCopy }: ChatMessageProps) {
   const [copied, setCopied] = React.useState(false);
   const isUser = message.role === 'user';
   const isAssistant = message.role === 'assistant';

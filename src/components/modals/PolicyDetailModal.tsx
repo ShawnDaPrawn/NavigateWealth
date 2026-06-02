@@ -14,17 +14,7 @@ import { Button } from '../ui/button';
 import { Badge } from '../ui/badge';
 import { Separator } from '../ui/separator';
 import { Card, CardContent } from '../ui/card';
-import {
-  X,
-  Building2,
-  FileText,
-  Download,
-  Loader2,
-  File,
-  FileImage,
-  FileSpreadsheet,
-  ExternalLink,
-} from 'lucide-react';
+import { FileText, Download, Loader2, File, FileImage, FileSpreadsheet } from 'lucide-react';
 import { formatCurrency } from '../../utils/currencyFormatter';
 import { projectId, publicAnonKey } from '../../utils/supabase/info';
 import { toast } from 'sonner';

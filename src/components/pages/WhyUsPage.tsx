@@ -5,7 +5,6 @@ import { getSEOData } from '../seo/seo-config';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 import { Button } from '../ui/button';
 import { Badge } from '../ui/badge';
-import { OptimizedImage } from '../shared/OptimizedImage';
 import { GetQuoteModal } from '../modals/GetQuoteModal';
 import { ConsultationModal } from '../modals/ConsultationModal';
 import { ProvidersModal } from '../modals/ProvidersModal';
@@ -14,25 +13,25 @@ import {
   Shield,
   Users,
   TrendingUp,
-  Heart,
+  _Heart,
   Globe,
-  Zap,
+  _Zap,
   CheckCircle,
   ArrowRight,
   Star,
-  Clock,
-  Target,
+  _Clock,
+  _Target,
   Monitor,
   Handshake,
-  PieChart,
-  Phone,
+  _PieChart,
+  _Phone,
   Lock,
   HeadphonesIcon,
   Lightbulb,
   BarChart3,
   FileCheck,
-  Sparkles,
-  ThumbsUp,
+  _Sparkles,
+  _ThumbsUp,
   UserCheck,
   Building2,
   Headset,

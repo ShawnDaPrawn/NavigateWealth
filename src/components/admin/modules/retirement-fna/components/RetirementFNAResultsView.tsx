@@ -18,7 +18,7 @@ interface RetirementFNAResultsViewProps {
   onClose?: () => void;
 }
 
-export function RetirementFNAResultsView({ fna, onClose }: RetirementFNAResultsViewProps) {
+export function RetirementFNAResultsView({ fna }: RetirementFNAResultsViewProps) {
   if (!fna.results) {
     return (
       <Alert>

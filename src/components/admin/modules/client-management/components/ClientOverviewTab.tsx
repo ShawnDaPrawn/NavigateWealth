@@ -93,31 +93,30 @@ import {
   Loader2,
   PlayCircle,
 } from 'lucide-react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../../../../ui/dialog';
 import { projectId, publicAnonKey } from '../../../../../utils/supabase/info';
 import { createClient as createSupabaseClient } from '../../../../../utils/supabase/client';
 import { getClientProfileQueryOptions } from '../api';
 import { Client, ProfileData } from '../types';
 import {
   fmt,
-  pct,
-  fmtCompact,
+  _pct,
+  _fmtCompact,
   calcAge,
   fmtDate,
   fmtDateTime,
   fmtRelative,
   addMonths,
   isPast,
-  nextAnniversary,
-  daysBetween,
+  _nextAnniversary,
+  _daysBetween,
   addressLine,
   numVal,
-  strVal,
+  _strVal,
   sumField,
   sumInvestmentPremiums,
   sumFirstNonZero,
   sumMultiField,
-  worstGapStatus,
+  _worstGapStatus,
   normalizePolicyData,
   extractRetirementResults,
   deriveGapAnalysis,
@@ -134,7 +133,7 @@ import {
   type ActionItem,
   type ActionPriority,
   type ActivityEvent,
-  type GapStatus,
+  type _GapStatus,
   type PillarHealth,
   type SchemaField,
   type GapItem,
@@ -407,7 +406,7 @@ export function ClientOverviewTab({ client, mode = 'adviser' }: ClientOverviewTa
   // FNA statuses via React Query hook — replaces manual useState/useCallback/useEffect
   const {
     data: batchFnaData,
-    isLoading: loadingFna,
+    isLoading: _loadingFna,
     refetch: refetchFna,
   } = useFnaBatchStatus(client.id);
 
@@ -657,7 +656,6 @@ export function ClientOverviewTab({ client, mode = 'adviser' }: ClientOverviewTa
   const investmentPolicies = policiesByCategory.investment || [];
   const employeePolicies = policiesByCategory.employee || [];
   const estatePolicies = policiesByCategory.estate || [];
-  const taxPolicies = policiesByCategory.tax || [];
 
   const grossMonthly = p?.grossMonthlyIncome || p?.grossIncome || 0;
   const grossAnnual = p?.grossAnnualIncome || grossMonthly * 12;
@@ -2536,10 +2534,6 @@ function UnifiedActionItems({
 }) {
   const [collapsed, setCollapsed] = useState(false);
   const isClientMode = mode === 'client';
-
-  const urgentCount = items.filter((i) => i.priority === 'urgent').length;
-  const attentionCount = items.filter((i) => i.priority === 'attention').length;
-  const recommendedCount = items.filter((i) => i.priority === 'recommended').length;
 
   if (items.length === 0) {
     return (

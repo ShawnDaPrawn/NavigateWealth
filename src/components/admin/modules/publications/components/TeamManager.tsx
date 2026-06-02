@@ -9,7 +9,7 @@
  */
 
 import React, { useState, useCallback, useEffect } from 'react';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../../../../ui/card';
+import { Card, CardContent } from '../../../../ui/card';
 import { Button } from '../../../../ui/button';
 import { Badge } from '../../../../ui/badge';
 import { Input } from '../../../../ui/input';
@@ -34,22 +34,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '../../../../ui/alert-dialog';
-import {
-  Users,
-  Plus,
-  Pencil,
-  Trash2,
-  Loader2,
-  CheckCircle,
-  XCircle,
-  GripVertical,
-  Linkedin,
-  Mail,
-  Save,
-  X,
-  Eye,
-  EyeOff,
-} from 'lucide-react';
+import { Users, Plus, Pencil, Trash2, Loader2, Save, X, Eye, EyeOff } from 'lucide-react';
 import { toast } from 'sonner';
 import { projectId, publicAnonKey } from '../../../../../utils/supabase/info';
 import { createClient } from '../../../../../utils/supabase/client';

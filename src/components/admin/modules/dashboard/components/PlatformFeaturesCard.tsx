@@ -81,7 +81,7 @@ export function PlatformFeaturesCard() {
   });
 
   // Fetch article index status
-  const { data: indexStatus, isLoading: indexLoading } = useQuery({
+  const { data: indexStatus, isLoading: _indexLoading } = useQuery({
     queryKey: vascoKeys.indexStatus(),
     queryFn: () => api.get<ArticleIndexStatus>('/vasco/index'),
     staleTime: 2 * 60 * 1000,

@@ -128,7 +128,7 @@ export function DocumentMappingTab() {
   const [newBenefitRow, setNewBenefitRow] = useState<NewMappingRow>({ term: '', canonicalKey: '' });
   const [newProductRow, setNewProductRow] = useState<NewMappingRow>({ term: '', canonicalKey: '' });
   const [isSaving, setIsSaving] = useState(false);
-  const [hasChanges, setHasChanges] = useState(false);
+  const [_hasChanges, setHasChanges] = useState(false);
 
   // Bulk re-extract state
   const [bulkReextractProvider, setBulkReextractProvider] = useState<{

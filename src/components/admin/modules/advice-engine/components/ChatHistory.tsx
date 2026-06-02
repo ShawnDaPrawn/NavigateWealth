@@ -8,7 +8,7 @@
  */
 
 import React, { useRef, useEffect } from 'react';
-import { Loader2, MessageSquare, Bot } from 'lucide-react';
+import { Bot } from 'lucide-react';
 import { ChatMessage } from './ChatMessage';
 import { WelcomeMessage } from './WelcomeMessage';
 import { Alert, AlertDescription } from '../../../../ui/alert';

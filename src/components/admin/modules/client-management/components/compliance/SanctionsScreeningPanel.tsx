@@ -32,8 +32,6 @@ import {
   ChevronDown,
   ChevronUp,
   XCircle,
-  History,
-  Clock,
   Gavel,
   Scale,
 } from 'lucide-react';
@@ -93,7 +91,6 @@ export function SanctionsScreeningPanel({
   firstName,
   lastName,
   idNumber,
-  passport,
   onCheckComplete,
 }: SanctionsScreeningPanelProps) {
   // Search fields (pre-populated from client)
@@ -108,9 +105,9 @@ export function SanctionsScreeningPanel({
   const [showDetails, setShowDetails] = useState(false);
 
   // History
-  const [history, setHistory] = useState<SearchHistoryEntry[]>([]);
-  const [showHistory, setShowHistory] = useState(false);
-  const [isLoadingHistory, setIsLoadingHistory] = useState(false);
+  const [_history, setHistory] = useState<SearchHistoryEntry[]>([]);
+  const [_showHistory, _setShowHistory] = useState(false);
+  const [_isLoadingHistory, setIsLoadingHistory] = useState(false);
 
   // Update search fields when client changes
   useEffect(() => {

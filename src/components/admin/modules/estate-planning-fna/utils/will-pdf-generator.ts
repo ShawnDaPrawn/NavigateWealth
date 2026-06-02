@@ -165,7 +165,7 @@ class WillPdfBuilder {
   private doc: jsPDF;
   private y: number = MARGIN_TOP;
   private pageNum: number = 1;
-  private totalPages: number = 1;
+  private: number = 1;
   private docTitle: string;
   private status: string;
   private version: string;

@@ -1,16 +1,7 @@
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '../../../../ui/card';
 import { Badge } from '../../../../ui/badge';
-import { Separator } from '../../../../ui/separator';
-import {
-  FileText,
-  DollarSign,
-  TrendingUp,
-  AlertTriangle,
-  CheckCircle,
-  Lock,
-  Calendar,
-} from 'lucide-react';
+import { FileText, DollarSign, CheckCircle, Lock } from 'lucide-react';
 import { FinalTaxPlan } from '../types';
 
 interface TaxPlanningResultsViewProps {

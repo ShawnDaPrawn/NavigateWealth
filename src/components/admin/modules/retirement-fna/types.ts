@@ -8,9 +8,6 @@
  * - Aligned with Risk Planning FNA patterns
  */
 
-import { User, PiggyBank, Target, TrendingUp, Calculator, CheckCircle } from 'lucide-react';
-import type { LucideIcon } from 'lucide-react';
-
 // ==================== WIZARD STEPS ====================
 // Moved to constants.ts — re-exported for backward compatibility
 export { WIZARD_STEPS } from './constants';

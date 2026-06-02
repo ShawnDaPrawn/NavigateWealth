@@ -27,7 +27,7 @@ import {
   Sparkles,
   ShieldAlert,
   Pilcrow,
-  Type,
+  _Type,
   Wand2,
   Expand,
   Shrink,
@@ -127,7 +127,7 @@ const SLASH_ITEMS: SlashMenuItem[] = [
     description: 'Insert an image by URL',
     icon: <ImageIcon className="h-4 w-4" />,
     category: 'Blocks',
-    action: (editor) => {
+    action: (_editor) => {
       // Dispatch custom event — the parent RichTextEditor listens for it
       window.dispatchEvent(new CustomEvent('tiptap:insert-image'));
     },
@@ -325,7 +325,7 @@ export function SlashCommandMenu({
   const selectItem = useCallback(
     (item: SlashMenuItem) => {
       // Delete the slash command text before executing
-      const { from, to } = editor.state.selection;
+      const { from } = editor.state.selection;
       const textBefore = editor.state.doc.textBetween(
         Math.max(0, from - query.length - 1),
         from,

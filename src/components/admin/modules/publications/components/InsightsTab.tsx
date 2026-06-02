@@ -103,7 +103,6 @@ export const InsightsTab = memo(function InsightsTab({
   articles,
 }: InsightsTabProps) {
   const currentCategory = categories.find((cat) => cat.id === activeCategory);
-  const isAllCategory = activeCategory === ALL_CATEGORY_ID;
 
   // ── Pagination state (per-category) ──────────────────────────────────────
   const [pageMap, setPageMap] = useState<Record<string, number>>({});

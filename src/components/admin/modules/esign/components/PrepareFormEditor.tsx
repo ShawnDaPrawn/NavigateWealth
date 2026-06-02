@@ -17,11 +17,10 @@ import {
   AlertCircle,
   CheckCircle2,
   Loader2,
-  Plus,
 } from 'lucide-react';
 import { PDFViewer } from './PDFViewer';
 import { FieldPalette } from './FieldPalette';
-import type { EsignEnvelope, EsignField, SignerFormData, FieldType } from '../types';
+import type { EsignEnvelope, EsignField, SignerFormData } from '../types';
 import { projectId, publicAnonKey } from '../../../../../utils/supabase/info';
 
 interface PrepareFormEditorProps {

@@ -11,7 +11,7 @@
  * @module tasks/hooks/useTaskBoard
  */
 
-import { useState, useMemo, useEffect, useRef } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { DropResult } from '@hello-pangea/dnd';
 import type { Task, TaskFilters, TaskStatus, TaskModalMode } from '../types';
 import { useMoveTask, useReorderTasks } from './useTaskMutations';

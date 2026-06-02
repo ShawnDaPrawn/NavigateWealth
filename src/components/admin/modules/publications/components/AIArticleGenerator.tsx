@@ -18,7 +18,6 @@ import {
   Users,
   BookOpen,
   Briefcase,
-  FileText,
   Plus,
   Trash2,
   ChevronDown,
@@ -26,7 +25,6 @@ import {
   AlertCircle,
 } from 'lucide-react';
 import { Button } from '../../../../ui/button';
-import { Badge } from '../../../../ui/badge';
 import { cn } from '../../../../ui/utils';
 import { PublicationsAPI } from '../api';
 import type {

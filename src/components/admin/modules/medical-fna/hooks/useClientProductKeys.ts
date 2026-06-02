@@ -1,7 +1,6 @@
 import { useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useClientKeys } from '../../client-management/hooks/useClientKeys';
-import { MEDICAL_AID_KEYS } from '../../product-management/keyManagerConstants';
 import { api } from '../../../../../utils/api';
 import { medicalFnaKeys } from './queryKeys';
 

@@ -321,9 +321,7 @@ export function TabPermissions({ selectedPersonnel }: TabPermissionsProps) {
                       const hasCaps = capabilities.length > 0;
                       const isExpanded = expandedModules.has(module) && isEnabled && hasCaps;
                       const activeCaps = localModules[module]?.capabilities || [];
-                      const allCapsGranted =
-                        hasCaps && capabilities.every((c) => activeCaps.includes(c.key));
-                      const someCapsGranted = hasCaps && activeCaps.length > 0 && !allCapsGranted;
+                      hasCaps && capabilities.every((c) => activeCaps.includes(c.key));
 
                       return (
                         <div

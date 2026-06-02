@@ -29,7 +29,7 @@ export function Step1Recipients({ draft, updateDraft, onNext }: Step1Props) {
   const [filteredClients, setFilteredClients] = useState<Client[]>([]);
   const [selectedGroup, setSelectedGroup] = useState<ClientGroup | undefined>(draft.selectedGroup);
   const [showGroupManager, setShowGroupManager] = useState(false);
-  const [loading, setLoading] = useState(true);
+  const [_loading, setLoading] = useState(true);
 
   // Fetch Data
   useEffect(() => {

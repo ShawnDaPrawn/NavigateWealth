@@ -13,9 +13,8 @@
  */
 
 import React, { useState } from 'react';
-import { CheckCircle2, Circle, X } from 'lucide-react';
+import { CheckCircle2 } from 'lucide-react';
 import { Card } from '../../../../ui/card';
-import { Button } from '../../../../ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../../../../ui/dialog';
 import { calculateRiskAnalysis } from '../utils';
 import { WIZARD_STEPS } from '../constants';

@@ -7,7 +7,6 @@ import React from 'react';
 import {
   CheckCircle2,
   AlertTriangle,
-  FileText,
   ArrowLeft,
   Save,
   Shield,
@@ -20,7 +19,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '../../../../ui/card';
 import { Button } from '../../../../ui/button';
 import { Badge } from '../../../../ui/badge';
 import { useClientKeys } from '../../client-management/hooks/useClientKeys';
-import { MedicalFNAInputs, MedicalFNAResults } from '../types';
+import { MedicalFNAResults } from '../types';
 
 interface Step2Props {
   clientId?: string;

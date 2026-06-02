@@ -35,7 +35,7 @@ const queryClient = new QueryClient({
     },
   },
   queryCache: new QueryCache({
-    onError: (error: unknown, query) => {
+    onError: (error: unknown, _query) => {
       // When a 401 reaches the global cache handler, the session is truly
       // invalid (the API client already tried refreshing). Attempt one
       // last proactive refresh — if it succeeds, invalidate all queries

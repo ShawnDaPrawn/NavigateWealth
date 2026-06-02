@@ -37,10 +37,6 @@ import {
   Clock,
   Image as ImageIcon,
   Inbox,
-  Linkedin,
-  Instagram,
-  Facebook,
-  Twitter,
 } from 'lucide-react';
 import type { SocialPost, SocialPlatform } from '../types';
 import { BRAND, PLATFORM_DISPLAY, formatDateZA, formatTimeZA } from '../constants';
