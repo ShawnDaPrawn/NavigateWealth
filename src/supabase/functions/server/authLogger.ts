@@ -115,7 +115,7 @@ export async function getAuthEventsForUser(
       .slice(0, limit);
 
     return userEvents;
-  } catch (error) {
+  } catch (_error) {
     return [];
   }
 }
@@ -139,7 +139,7 @@ export async function getFailedLoginAttempts(
     return filtered.sort(
       (a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime(),
     );
-  } catch (error) {
+  } catch (_error) {
     return [];
   }
 }
@@ -168,7 +168,7 @@ export async function getSecurityStats(): Promise<{
       accountLocks24h: recentEvents.filter((e) => e.type === 'account_locked').length,
       suspiciousActivity24h: recentEvents.filter((e) => e.type === 'suspicious_activity').length,
     };
-  } catch (error) {
+  } catch (_error) {
     return {
       totalEvents: 0,
       failedLogins24h: 0,

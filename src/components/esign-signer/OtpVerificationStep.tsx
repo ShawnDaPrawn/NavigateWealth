@@ -133,7 +133,7 @@ export function OtpVerificationStep({
       } else {
         setError(result.error || 'Failed to resend code');
       }
-    } catch (err) {
+    } catch (_err) {
       setError('An error occurred while resending the code');
     }
   };

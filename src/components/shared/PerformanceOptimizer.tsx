@@ -57,12 +57,12 @@ export function PerformanceOptimizer() {
           if (href && (href.startsWith('/') || href.includes(window.location.origin))) {
             stylesheet.setAttribute('media', 'all');
           }
-        } catch (error) {
+        } catch (_error) {
           // Skip external stylesheets that cause security errors
           logger.debug('Skipping external stylesheet optimization due to CORS');
         }
       });
-    } catch (error) {
+    } catch (_error) {
       // Silently handle CSS access errors to prevent console noise
       logger.debug('CSS optimization skipped due to security restrictions');
     }

@@ -635,7 +635,7 @@ export async function generateFullArticle(
       .replace(/\n?```\s*$/i, '')
       .trim();
     parsed = JSON.parse(cleaned);
-  } catch (parseErr) {
+  } catch (_parseErr) {
     log.error('Failed to parse article generation response as JSON', { text: text.slice(0, 500) });
     // Attempt to extract fields manually
     parsed = {

@@ -322,7 +322,7 @@ export async function importFormFromJSON(file: File): Promise<Record<string, unk
       try {
         const json = JSON.parse(e.target?.result as string);
         resolve(json);
-      } catch (error) {
+      } catch (_error) {
         reject(new Error('Invalid JSON file'));
       }
     };

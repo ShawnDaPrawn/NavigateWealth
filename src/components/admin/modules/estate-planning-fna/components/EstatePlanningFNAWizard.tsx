@@ -136,7 +136,7 @@ export function EstatePlanningFNAWizard({
       const autoPopulatedInputs = await EstatePlanningAPI.autoPopulateInputs(clientId);
       setInputs({ ...defaults, ...autoPopulatedInputs });
       toast.success('Estate Planning FNA initialized with client data');
-    } catch (error: unknown) {
+    } catch (_error: unknown) {
       setInputs(buildDefaultInputs(intakePrefill));
       logger.info('Estate Planning FNA backend not available - working in client-side mode');
     } finally {

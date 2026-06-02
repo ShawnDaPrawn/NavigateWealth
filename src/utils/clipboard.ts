@@ -22,7 +22,7 @@ export async function copyToClipboard(text: string): Promise<void> {
     if (success) {
       return;
     }
-  } catch (err) {
+  } catch (_err) {
     // Library failed, try fallback
   }
 

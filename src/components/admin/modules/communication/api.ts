@@ -452,7 +452,7 @@ export const communicationApi = {
         active: true,
         categoryIds: p.categoryIds || [],
       }));
-    } catch (error) {
+    } catch (_error) {
       console.warn(
         'Failed to fetch providers from integrations, trying fallback product-management endpoint',
       );

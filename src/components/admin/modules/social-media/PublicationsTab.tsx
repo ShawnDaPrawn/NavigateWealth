@@ -39,7 +39,7 @@ export function PublicationsTab() {
     try {
       const data = await api.get<{ data?: unknown[] }>('/publications/categories');
       setIsInitialized(!!(data.data && data.data.length > 0));
-    } catch (error) {
+    } catch (_error) {
       // Suppress fetch errors if backend is not available
       // console.error('Error checking initialization:', error);
       setIsInitialized(false);

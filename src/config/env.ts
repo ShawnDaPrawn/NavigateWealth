@@ -45,7 +45,7 @@ function getEnvVar(key: string): string | undefined {
     if (typeof import.meta !== 'undefined' && import.meta.env) {
       return import.meta.env[key];
     }
-  } catch (e) {
+  } catch (_e) {
     // Silently fail - import.meta.env not available
   }
   return undefined;

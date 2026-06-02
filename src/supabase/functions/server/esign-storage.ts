@@ -511,7 +511,7 @@ export function validateDocument(
     }
 
     return { valid: true };
-  } catch (error) {
+  } catch (_error) {
     return { valid: false, error: 'Invalid file: Unable to validate' };
   }
 }

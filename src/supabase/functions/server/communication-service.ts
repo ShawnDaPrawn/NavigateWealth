@@ -228,7 +228,7 @@ export class CommunicationService {
                 phone: (pi.cellphoneNumber as string) || '',
               };
             }
-          } catch (kvErr) {
+          } catch (_kvErr) {
             log.warn('Failed to look up recipient profile for merge fields', { recipientId });
           }
         }

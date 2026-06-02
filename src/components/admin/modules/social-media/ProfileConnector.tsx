@@ -158,7 +158,7 @@ export function ProfileConnector({
       onConnect(platform);
       toast.success(`Successfully connected to ${PLATFORM_CONFIG[platform].name}!`);
       setShowConnectDialog(false);
-    } catch (error) {
+    } catch (_error) {
       toast.error(`Failed to connect to ${PLATFORM_CONFIG[platform].name}`);
     } finally {
       setConnectingPlatform(null);
@@ -169,7 +169,7 @@ export function ProfileConnector({
     try {
       onDisconnect(profileId);
       toast.success('Profile disconnected successfully');
-    } catch (error) {
+    } catch (_error) {
       toast.error('Failed to disconnect profile');
     }
   };
@@ -178,7 +178,7 @@ export function ProfileConnector({
     try {
       onRefresh(profileId);
       toast.success('Profile data refreshed');
-    } catch (error) {
+    } catch (_error) {
       toast.error('Failed to refresh profile data');
     }
   };

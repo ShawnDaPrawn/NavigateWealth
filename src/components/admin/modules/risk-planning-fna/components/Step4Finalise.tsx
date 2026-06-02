@@ -180,7 +180,7 @@ export function Step4Finalise({
       });
       // Toast AFTER print dialog closes, not before
       toast.success('PDF export complete');
-    } catch (error) {
+    } catch (_error) {
       toast.error('Failed to export FNA. Please try again.');
     } finally {
       setIsExportingPdf(false);

@@ -137,7 +137,7 @@ export function CVUploadModal({ isOpen, onClose }: CVUploadModalProps) {
         fileInputRef.current.value = '';
       }
       onClose();
-    } catch (error) {
+    } catch (_error) {
       toast.error('There was an error submitting your CV. Please try again.');
     } finally {
       setIsUploading(false);

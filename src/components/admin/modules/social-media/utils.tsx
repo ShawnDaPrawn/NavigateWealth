@@ -285,7 +285,7 @@ export function buildUTMUrl(url: string, params: UTMParameters): string {
     if (params.content) urlObj.searchParams.set('utm_content', params.content);
 
     return urlObj.toString();
-  } catch (error) {
+  } catch (_error) {
     // If URL is invalid, return original
     return url;
   }
@@ -310,7 +310,7 @@ export function parseUTMParams(url: string): UTMParameters | null {
       term: urlObj.searchParams.get('utm_term') || undefined,
       content: urlObj.searchParams.get('utm_content') || undefined,
     };
-  } catch (error) {
+  } catch (_error) {
     return null;
   }
 }

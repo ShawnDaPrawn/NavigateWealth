@@ -102,7 +102,7 @@ export function CollateralSection({ onUpdate }: { onUpdate: () => void }) {
       setItems(updated);
       onUpdate();
       toast.success('File deleted');
-    } catch (err) {
+    } catch (_err) {
       toast.error('Failed to delete file');
     }
   };

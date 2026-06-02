@@ -192,7 +192,7 @@ investmentInaRoutes.get('/client/:clientId/latest-published', async (c) => {
           );
           return c.json({ error: 'Unauthorized access to client data' }, 403);
         }
-      } catch (authError) {
+      } catch (_authError) {
         // WORKAROUND: Auth bypass for backward compatibility with client portal
         // Problem: Client portal accesses published INA data using the anon key without a user session.
         // Why chosen: Removing this would break client-facing INA display until portal auth is refactored.

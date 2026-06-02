@@ -1364,7 +1364,7 @@ app.get('/history', requireAuth, async (c) => {
 
     const messages = await loadAdvisorSessionMessages(user.id, activeSession.id);
     return c.json({ messages, sessionId: activeSession.id, session: activeSession });
-  } catch (error) {
+  } catch (_error) {
     return c.json({ error: 'Failed to fetch history' }, 500);
   }
 });
@@ -1390,7 +1390,7 @@ app.delete('/history', requireAuth, async (c) => {
     await deleteLegacyAdvisorHistory(user.id);
 
     return c.json({ success: true });
-  } catch (error) {
+  } catch (_error) {
     return c.json({ error: 'Failed to clear history' }, 500);
   }
 });

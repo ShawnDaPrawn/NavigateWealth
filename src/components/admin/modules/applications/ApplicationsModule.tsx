@@ -104,7 +104,7 @@ export function ApplicationsModule() {
       const detail = await applicationsApi.getApplicationDetail(application.id);
       setSelectedApplication(detail);
       setReviewDialogOpen(true);
-    } catch (error) {
+    } catch (_error) {
       toast.error('Failed to load application details');
     }
   }, []);

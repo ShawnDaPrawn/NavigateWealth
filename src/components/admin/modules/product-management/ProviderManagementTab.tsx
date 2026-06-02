@@ -56,7 +56,7 @@ export function ProviderManagementTab() {
         await addProvider(data);
       }
       handleCloseModal();
-    } catch (error) {
+    } catch (_error) {
       // Error is handled in hook
     } finally {
       setIsSaving(false);
@@ -78,7 +78,7 @@ export function ProviderManagementTab() {
     try {
       await deleteProvider(providerToDelete.id);
       setProviderToDelete(null);
-    } catch (error) {
+    } catch (_error) {
       // Error is handled in hook (toast)
     } finally {
       setIsDeleting(false);
