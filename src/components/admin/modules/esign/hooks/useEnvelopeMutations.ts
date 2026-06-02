@@ -227,8 +227,6 @@ export function useVoidEnvelope() {
  * ```
  */
 export function useSaveAsTemplate() {
-  const queryClient = useQueryClient();
-
   return useMutation({
     mutationFn: async ({
       envelopeId,

@@ -1,5 +1,5 @@
 import { api } from '../../../../utils/api/client';
-import { projectId, publicAnonKey } from '../../../../utils/supabase/info';
+import { publicAnonKey } from '../../../../utils/supabase/info';
 import { createClient } from '../../../../utils/supabase/client';
 import { ENDPOINTS, BASE_URL } from './constants';
 import {
@@ -399,7 +399,6 @@ export const communicationApi = {
         return data;
       } else {
         if (!response.ok) {
-          const text = await response.text();
           throw new Error(`Failed to send: ${response.status} ${response.statusText}`);
         }
         return { success: true, messageId: 'unknown' };

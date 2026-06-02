@@ -18,7 +18,6 @@ import {
   Lock,
   HelpCircle,
 } from 'lucide-react';
-import { signUp } from '../../utils/auth/authService';
 import {
   validatePassword,
   getPasswordStrengthColor,
@@ -110,8 +109,6 @@ export function SignupPage() {
     setIsLoading(true);
 
     try {
-      const fullPhoneNumber = `${countryCode}${cellphone}`;
-
       // Call our backend signup endpoint that creates user + application
 
       const endpointUrl = `https://${projectId}.supabase.co/functions/v1/make-server-91ed8379/auth-signup/signup`;

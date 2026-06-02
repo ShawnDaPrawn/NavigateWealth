@@ -7,7 +7,6 @@ import { Card, CardContent } from '../ui/card';
 import { Badge } from '../ui/badge';
 import { Dialog, DialogContent, DialogTitle, DialogDescription } from '../ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
-import { ImageWithFallback } from '../figma/ImageWithFallback';
 import { ConsultationModal } from '../modals/ConsultationModal';
 import { ThankYouModal } from '../modals/ThankYouModal';
 import { ProvidersModal } from '../modals/ProvidersModal';
@@ -22,10 +21,8 @@ import {
   Target,
   ArrowRight,
   Building,
-  Globe,
   CheckCircle,
   Star,
-  Clock,
   Handshake,
   Zap,
   Calendar,

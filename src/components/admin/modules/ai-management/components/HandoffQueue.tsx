@@ -7,7 +7,6 @@
 
 import React, { useState, useMemo } from 'react';
 import {
-  PhoneForwarded,
   Search,
   Loader2,
   Clock,
@@ -16,9 +15,7 @@ import {
   User,
   MessageSquare,
   ChevronDown,
-  Filter,
   Inbox,
-  CheckCircle2,
 } from 'lucide-react';
 import { Input } from '../../../../ui/input';
 import { Badge } from '../../../../ui/badge';

@@ -10,7 +10,7 @@
  */
 
 import React, { useEffect, useMemo } from 'react';
-import { X, Calendar, Clock, User, Monitor, Smartphone, Tablet, AlertCircle } from 'lucide-react';
+import { X, Calendar, Clock, User, AlertCircle } from 'lucide-react';
 import DOMPurify from 'dompurify';
 import { Button } from '../../../../ui/button';
 import { Badge } from '../../../../ui/badge';

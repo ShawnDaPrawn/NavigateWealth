@@ -9,7 +9,6 @@ import { Alert, AlertDescription } from '../ui/alert';
 import { Separator } from '../ui/separator';
 import {
   formatCurrency,
-  formatCurrencyInput,
   cleanCurrencyInput,
 } from '../../utils/currencyFormatter';
 import { EmptyState } from './profile/EmptyState';
@@ -113,10 +112,10 @@ export function BudgetingPage({
   netIncome: propNetIncome,
   grossIncome: propGrossIncome,
   onEmptyStateAction,
-  userId,
+  userId: _userId,
   embedded,
   profileData,
-  handleInputChange,
+  handleInputChange: _handleInputChange,
 }: BudgetingPageProps) {
   const navigate = useNavigate();
 

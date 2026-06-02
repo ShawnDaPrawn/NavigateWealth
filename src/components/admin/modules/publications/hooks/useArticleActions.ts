@@ -274,7 +274,7 @@ export function useArticleActions(options?: UseArticleActionsOptions): UseArticl
         const original = await PublicationsAPI.Articles.getArticle(id);
 
         // Create copy
-        const { id: _, created_at, updated_at, published_at, ...data } = original;
+        const { id: _, created_at: _created_at, updated_at: _updated_at, published_at: _published_at, ...data } = original;
         const copyData = {
           ...data,
           title: `${data.title} (Copy)`,

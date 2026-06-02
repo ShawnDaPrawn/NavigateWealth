@@ -9,8 +9,6 @@ import {
   SelectLabel,
 } from '../../../ui/select';
 import { Label } from '../../../ui/label';
-import { Card, CardContent } from '../../../ui/card';
-import { Info } from 'lucide-react';
 import { PRODUCT_CATEGORIES, ProductCategoryId } from './types';
 import { useProductSchema } from './hooks/useProductSchema';
 import { SchemaEditor } from './components/SchemaEditor';

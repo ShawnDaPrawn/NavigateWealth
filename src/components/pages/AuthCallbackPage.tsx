@@ -3,7 +3,6 @@ import { useNavigate } from 'react-router';
 import { Alert, AlertDescription } from '../ui/alert';
 import { CheckCircle2, XCircle, Loader2 } from 'lucide-react';
 import { getSupabaseClient } from '../../utils/supabase/client';
-import { AUTH_ROUTES } from '../../utils/auth/constants';
 import { logger } from '../../utils/logger';
 
 export default function AuthCallbackPage() {
