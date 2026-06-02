@@ -11,7 +11,7 @@ import type {
 import { useCreateTask, useUpdateTask, useDeleteTask } from '../hooks';
 import { STATUS_LABELS, PRIORITY_LABELS, CATEGORY_OPTIONS } from '../constants';
 import { communicationApi } from '../../communication/api';
-import { projectId } from '../../../../../utils/supabase/info';
+import { api } from '../../../../../utils/api';
 import {
   Dialog,
   DialogContent,
@@ -185,32 +185,11 @@ export function TaskFormModal({ isOpen, onClose, task, mode, onModeChange }: Tas
     }
   }, [task, isOpen]);
 
-  const getAuthToken = () => {
-    try {
-      const storageKey = `sb-${projectId}-auth-token`;
-      const stored = localStorage.getItem(storageKey);
-      if (stored) {
-        return JSON.parse(stored).access_token;
-      }
-    } catch (e) {}
-    return null;
-  };
-
   const fetchAttachments = async (taskId: string) => {
     setIsLoadingAttachments(true);
     try {
-      const token = getAuthToken();
-      // Using /todo/ endpoints for now as tasks module might share backend or needs new endpoint
-      const res = await fetch(
-        `https://${projectId}.supabase.co/functions/v1/make-server-91ed8379/todo/attachments/${taskId}`,
-        {
-          headers: token ? { Authorization: `Bearer ${token}` } : {},
-        },
-      );
-      if (res.ok) {
-        const data = await res.json();
-        setAttachments(data.attachments || []);
-      }
+      const data = await api.get<{ attachments?: TaskAttachment[] }>(`/todo/attachments/${taskId}`);
+      setAttachments(data.attachments || []);
     } catch (e) {
       console.error(e);
     } finally {
@@ -221,17 +200,8 @@ export function TaskFormModal({ isOpen, onClose, task, mode, onModeChange }: Tas
   const fetchChecklist = async (taskId: string) => {
     setIsLoadingChecklist(true);
     try {
-      const token = getAuthToken();
-      const res = await fetch(
-        `https://${projectId}.supabase.co/functions/v1/make-server-91ed8379/task-checklists/${taskId}`,
-        {
-          headers: token ? { Authorization: `Bearer ${token}` } : {},
-        },
-      );
-      if (res.ok) {
-        const data = await res.json();
-        setChecklistItems(data.checklist || []);
-      }
+      const data = await api.get<{ checklist?: TaskChecklistItem[] }>(`/task-checklists/${taskId}`);
+      setChecklistItems(data.checklist || []);
     } catch (e) {
       console.error(e);
     } finally {
@@ -242,17 +212,8 @@ export function TaskFormModal({ isOpen, onClose, task, mode, onModeChange }: Tas
   const fetchComments = async (taskId: string) => {
     setIsLoadingComments(true);
     try {
-      const token = getAuthToken();
-      const res = await fetch(
-        `https://${projectId}.supabase.co/functions/v1/make-server-91ed8379/task-comments/${taskId}`,
-        {
-          headers: token ? { Authorization: `Bearer ${token}` } : {},
-        },
-      );
-      if (res.ok) {
-        const data = await res.json();
-        setComments(data.comments || []);
-      }
+      const data = await api.get<{ comments?: TaskComment[] }>(`/task-comments/${taskId}`);
+      setComments(data.comments || []);
     } catch (e) {
       console.error(e);
     } finally {
@@ -267,29 +228,12 @@ export function TaskFormModal({ isOpen, onClose, task, mode, onModeChange }: Tas
     if (!targetId) return;
 
     try {
-      const token = getAuthToken();
-      // In a real app we'd get the user info from context/auth
-      // For now we'll assume "Super Admin" if no user info is available
-      const commentData = {
-        text: newComment,
-        userName: 'Super Admin', // Default fallback as per requirement
-      };
-
-      const res = await fetch(
-        `https://${projectId}.supabase.co/functions/v1/make-server-91ed8379/task-comments/${targetId}`,
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            ...(token ? { Authorization: `Bearer ${token}` } : {}),
-          },
-          body: JSON.stringify({ comment: commentData }),
-        },
-      );
-
-      if (res.ok) {
-        const data = await res.json();
-        setComments((prev) => [data.comment, ...prev]); // Add new comment to top
+      const commentData = { text: newComment, userName: 'Super Admin' };
+      const data = await api.post<{ comment?: TaskComment }>(`/task-comments/${targetId}`, {
+        comment: commentData,
+      });
+      if (data.comment) {
+        setComments((prev) => [data.comment!, ...prev]);
         setNewComment('');
       }
     } catch (e) {
@@ -302,18 +246,8 @@ export function TaskFormModal({ isOpen, onClose, task, mode, onModeChange }: Tas
     if (!targetId) return;
 
     try {
-      const token = getAuthToken();
-      const res = await fetch(
-        `https://${projectId}.supabase.co/functions/v1/make-server-91ed8379/task-comments/${targetId}/${commentId}`,
-        {
-          method: 'DELETE',
-          headers: token ? { Authorization: `Bearer ${token}` } : {},
-        },
-      );
-
-      if (res.ok) {
-        setComments((prev) => prev.filter((c) => c.id !== commentId));
-      }
+      await api.delete(`/task-comments/${targetId}/${commentId}`);
+      setComments((prev) => prev.filter((c) => c.id !== commentId));
     } catch (e) {
       console.error('Error deleting comment:', e);
     }
@@ -321,18 +255,7 @@ export function TaskFormModal({ isOpen, onClose, task, mode, onModeChange }: Tas
 
   const saveChecklist = async (taskId: string, items: TaskChecklistItem[]) => {
     try {
-      const token = getAuthToken();
-      await fetch(
-        `https://${projectId}.supabase.co/functions/v1/make-server-91ed8379/task-checklists/${taskId}`,
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            ...(token ? { Authorization: `Bearer ${token}` } : {}),
-          },
-          body: JSON.stringify({ checklist: items }),
-        },
-      );
+      await api.post(`/task-checklists/${taskId}`, { checklist: items });
     } catch (e) {
       console.error('Error saving checklist:', e);
     }
@@ -403,24 +326,14 @@ export function TaskFormModal({ isOpen, onClose, task, mode, onModeChange }: Tas
 
     setIsUploading(true);
     try {
-      const token = getAuthToken();
       const formData = new FormData();
       formData.append('file', file);
-
-      const res = await fetch(
-        `https://${projectId}.supabase.co/functions/v1/make-server-91ed8379/todo/attachments/${targetId}`,
-        {
-          method: 'POST',
-          headers: token ? { Authorization: `Bearer ${token}` } : {},
-          body: formData,
-        },
+      const data = await api.post<{ attachment?: TaskAttachment }>(
+        `/todo/attachments/${targetId}`,
+        formData,
       );
-
-      if (res.ok) {
-        const data = await res.json();
-        setAttachments((prev) => [...prev, data.attachment]);
-      } else {
-        alert('Failed to upload file');
+      if (data.attachment) {
+        setAttachments((prev) => [...prev, data.attachment!]);
       }
     } catch (e) {
       console.error(e);
@@ -447,17 +360,8 @@ export function TaskFormModal({ isOpen, onClose, task, mode, onModeChange }: Tas
     if (!targetId) return;
 
     try {
-      const token = getAuthToken();
-      const res = await fetch(
-        `https://${projectId}.supabase.co/functions/v1/make-server-91ed8379/todo/attachments/${targetId}/${attachmentToDelete}`,
-        {
-          method: 'DELETE',
-          headers: token ? { Authorization: `Bearer ${token}` } : {},
-        },
-      );
-      if (res.ok) {
-        setAttachments((prev) => prev.filter((a) => a.id !== attachmentToDelete));
-      }
+      await api.delete(`/todo/attachments/${targetId}/${attachmentToDelete}`);
+      setAttachments((prev) => prev.filter((a) => a.id !== attachmentToDelete));
     } catch (e) {
       console.error(e);
     } finally {
