@@ -47,9 +47,7 @@ describe('WillPdfView', () => {
     // Never resolves — will stays null, but the title is always rendered.
     mockApiGet.mockReturnValue(new Promise(() => {}));
 
-    render(
-      <WillPdfView open={true} onClose={noop} willId="will-1" clientName="Test Client" />,
-    );
+    render(<WillPdfView open={true} onClose={noop} willId="will-1" clientName="Test Client" />);
 
     expect(screen.getByText(/Last Will and Testament/i)).toBeTruthy();
   });
@@ -57,9 +55,7 @@ describe('WillPdfView', () => {
   it('renders the Print / Save PDF and Download PDF buttons when open', () => {
     mockApiGet.mockReturnValue(new Promise(() => {}));
 
-    render(
-      <WillPdfView open={true} onClose={noop} willId="will-1" clientName="Test Client" />,
-    );
+    render(<WillPdfView open={true} onClose={noop} willId="will-1" clientName="Test Client" />);
 
     expect(screen.getByRole('button', { name: /print \/ save pdf/i })).toBeTruthy();
     expect(screen.getByRole('button', { name: /download pdf/i })).toBeTruthy();
@@ -68,9 +64,7 @@ describe('WillPdfView', () => {
   it('shows the loading text while the will document is being fetched', () => {
     mockApiGet.mockReturnValue(new Promise(() => {}));
 
-    render(
-      <WillPdfView open={true} onClose={noop} willId="will-1" clientName="Test Client" />,
-    );
+    render(<WillPdfView open={true} onClose={noop} willId="will-1" clientName="Test Client" />);
 
     expect(screen.getByText('Loading will document...')).toBeTruthy();
   });
