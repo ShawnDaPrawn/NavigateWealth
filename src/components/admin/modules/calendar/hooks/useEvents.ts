@@ -8,7 +8,7 @@
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
-import { projectId, publicAnonKey } from '../../../../../utils/supabase/info';
+import { api } from '../../../../../utils/api';
 import { calendarApi } from '../api';
 import type { CalendarEvent, CreateEventInput, UpdateEventInput, CalendarFilters } from '../types';
 import { QUERY_STALE_TIME, QUERY_GC_TIME } from '../constants';
@@ -89,21 +89,11 @@ export function useCreateEvent() {
       // Handle Reminders (if enabled)
       if (create_reminder && input.client_id) {
         try {
-          await fetch(
-            `https://${projectId}.supabase.co/functions/v1/make-server-91ed8379/communication/calendar/reminder`,
-            {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-                Authorization: `Bearer ${publicAnonKey}`,
-              },
-              body: JSON.stringify({
-                eventId: event.id,
-                clientId: input.client_id,
-                eventData: event,
-              }),
-            },
-          );
+          await api.post('/communication/calendar/reminder', {
+            eventId: event.id,
+            clientId: input.client_id,
+            eventData: event,
+          });
         } catch (reminderError) {
           console.error('Failed to schedule reminders:', reminderError);
           // Don't block success of event creation, just warn

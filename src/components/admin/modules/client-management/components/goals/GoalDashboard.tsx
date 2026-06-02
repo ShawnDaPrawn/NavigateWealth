@@ -3,7 +3,7 @@ import { Button } from '../../../../../ui/button';
 import { Plus, Loader2 } from 'lucide-react';
 import { Goal } from './types';
 import { GoalCard } from './GoalCard';
-import { projectId, publicAnonKey } from '../../../../../../utils/supabase/info';
+import { api } from '../../../../../../utils/api';
 import { GoalFormDialog } from './GoalFormDialog';
 
 interface GoalDashboardProps {
@@ -26,8 +26,6 @@ export function GoalDashboard({
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingGoal, setEditingGoal] = useState<Goal | undefined>(undefined);
 
-  const API_BASE = `https://${projectId}.supabase.co/functions/v1/make-server-91ed8379/goals`;
-
   useEffect(() => {
     fetchGoals();
   }, [clientId]);
@@ -35,15 +33,10 @@ export function GoalDashboard({
   const fetchGoals = async () => {
     setLoading(true);
     try {
-      const res = await fetch(`${API_BASE}/${clientId}`, {
-        headers: { Authorization: `Bearer ${publicAnonKey}` },
-      });
-      if (res.ok) {
-        const data = await res.json();
-        const loadedGoals = data.goals || [];
-        setGoals(loadedGoals);
-        if (onGoalsUpdate) onGoalsUpdate(loadedGoals);
-      }
+      const data = await api.get<{ goals?: Goal[] }>(`/goals/${clientId}`);
+      const loadedGoals = data.goals || [];
+      setGoals(loadedGoals);
+      if (onGoalsUpdate) onGoalsUpdate(loadedGoals);
     } catch (error) {
       console.error('Error fetching goals:', error);
     } finally {
@@ -65,14 +58,7 @@ export function GoalDashboard({
 
     // Persist
     try {
-      await fetch(`${API_BASE}/${clientId}`, {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${publicAnonKey}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ goals: updatedGoals }),
-      });
+      await api.post(`/goals/${clientId}`, { goals: updatedGoals });
     } catch (e) {
       console.error('Failed to save goals', e);
       // Revert on error would go here
@@ -87,14 +73,7 @@ export function GoalDashboard({
     if (onGoalsUpdate) onGoalsUpdate(updatedGoals);
 
     try {
-      await fetch(`${API_BASE}/${clientId}`, {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${publicAnonKey}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ goals: updatedGoals }),
-      });
+      await api.post(`/goals/${clientId}`, { goals: updatedGoals });
     } catch (e) {
       console.error('Failed to delete goal', e);
     }

@@ -21,7 +21,7 @@ import { communicationApi } from '../../communication/api';
 import { CommunicationLog, SendMessageResponse, AttachmentFile } from '../../communication/types';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
-import { projectId, publicAnonKey } from '../../../../../utils/supabase/info';
+import { api } from '../../../../../utils/api';
 import { clientKeys } from '../hooks/queryKeys';
 
 // Sub-components
@@ -95,21 +95,10 @@ export function CommunicationTab({ client }: CommunicationTabProps) {
       formData.append('packTitle', subject || 'Communication Attachments');
     }
 
-    const response = await fetch(
-      `https://${projectId}.supabase.co/functions/v1/make-server-91ed8379/documents/${client.id}/upload`,
-      {
-        method: 'POST',
-        headers: { Authorization: `Bearer ${publicAnonKey}` },
-        body: formData,
-      },
+    const data = await api.post<{ document: { id: string } }>(
+      `/documents/${client.id}/upload`,
+      formData,
     );
-
-    if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(errorData.error || `Failed to upload ${file.name}`);
-    }
-
-    const data = await response.json();
     return data.document.id;
   };
 
@@ -164,32 +153,17 @@ export function CommunicationTab({ client }: CommunicationTabProps) {
           ),
         );
 
-        const response = await fetch(
-          `https://${projectId}.supabase.co/functions/v1/make-server-91ed8379/documents/${client.id}/email`,
-          {
-            method: 'POST',
-            headers: {
-              Authorization: `Bearer ${publicAnonKey}`,
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-              documentIds: docIds,
-              email: client.email,
-              idNumber: clientIdNumber,
-              customMessage: payload.message,
-              subject: payload.subject,
-              isHtml: true,
-              ccAdmin: payload.ccAdmin,
-              cc: ccList,
-              source: 'communication_tab',
-            }),
-          },
-        );
-
-        if (!response.ok) {
-          const errorData = await response.json();
-          throw new Error(errorData.error || 'Failed to send encrypted communication');
-        }
+        await api.post(`/documents/${client.id}/email`, {
+          documentIds: docIds,
+          email: client.email,
+          idNumber: clientIdNumber,
+          customMessage: payload.message,
+          subject: payload.subject,
+          isHtml: true,
+          ccAdmin: payload.ccAdmin,
+          cc: ccList,
+          source: 'communication_tab',
+        });
 
         return { success: true, messageId: 'encrypted-doc-send' } as SendMessageResponse;
       }

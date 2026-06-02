@@ -34,7 +34,7 @@ import {
   Info,
 } from 'lucide-react';
 import { toast } from 'sonner';
-import { projectId, publicAnonKey } from '../../../../../utils/supabase/info';
+import { api } from '../../../../../utils/api';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -102,13 +102,6 @@ interface FormField {
 type PanelView = 'list' | 'form' | 'result';
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
-
-const API_BASE = `https://${projectId}.supabase.co/functions/v1/make-server-91ed8379/integrations/honeycomb`;
-
-const authHeaders = () => ({
-  Authorization: `Bearer ${publicAnonKey}`,
-  'Content-Type': 'application/json',
-});
 
 /**
  * Attempt to parse the `formJson` string from a template into renderable fields.
@@ -443,12 +436,9 @@ export function RiskAssessmentPanel({
     setTemplatesLoading(true);
     setTemplatesError(null);
     try {
-      const res = await fetch(`${API_BASE}/assessments/templates`, { headers: authHeaders() });
-      if (!res.ok) {
-        const err = await res.json().catch(() => ({}));
-        throw new Error(err.error || `Failed to load templates (${res.status})`);
-      }
-      const data = await res.json();
+      const data = await api.get<{ templates?: AssessmentTemplate[] }>(
+        '/integrations/honeycomb/assessments/templates',
+      );
       setTemplates(data.templates || []);
     } catch (e: unknown) {
       console.error('[RiskAssessmentPanel] Template fetch error:', e);
@@ -461,13 +451,10 @@ export function RiskAssessmentPanel({
   const fetchHistory = useCallback(async () => {
     setHistoryLoading(true);
     try {
-      const res = await fetch(`${API_BASE}/assessments/history/${clientId}`, {
-        headers: authHeaders(),
-      });
-      if (res.ok) {
-        const data = await res.json();
-        setHistory(data.assessments || []);
-      }
+      const data = await api.get<{ assessments?: AssessmentResult[] }>(
+        `/integrations/honeycomb/assessments/history/${clientId}`,
+      );
+      setHistory(data.assessments || []);
     } catch (e) {
       console.error('[RiskAssessmentPanel] History fetch error:', e);
     } finally {
@@ -525,10 +512,9 @@ export function RiskAssessmentPanel({
         templateVersion: activeTemplate.version,
       });
 
-      const res = await fetch(`${API_BASE}/assessments/run`, {
-        method: 'POST',
-        headers: authHeaders(),
-        body: JSON.stringify({
+      const data = await api.post<{ data?: AssessmentResult }>(
+        '/integrations/honeycomb/assessments/run',
+        {
           clientId,
           assessmentId: activeTemplate.id,
           assessmentName: activeTemplate.assessmentName,
@@ -537,14 +523,8 @@ export function RiskAssessmentPanel({
           idNumber,
           passport,
           submission: submissionPayload,
-        }),
-      });
-
-      const data = await res.json();
-
-      if (!res.ok) {
-        throw new Error(data.error || 'Assessment submission failed');
-      }
+        },
+      );
 
       toast.success('Assessment completed successfully!', { id: toastId });
 
