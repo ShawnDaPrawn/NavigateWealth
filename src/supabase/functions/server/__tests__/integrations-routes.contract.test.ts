@@ -102,7 +102,25 @@ vi.mock('jsr:@supabase/supabase-js@2.49.8', () => ({
 // ── Document storage stub ────────────────────────────────────────────────────
 vi.mock('../integrations-document-storage.ts', () => ({
   POLICY_DOC_BUCKET: 'policy-documents',
+  POLICY_CATEGORY_LABELS: {
+    risk_planning: 'Risk Planning',
+    medical_aid: 'Medical Aid',
+    retirement_planning: 'Retirement Planning',
+    investments: 'Investments',
+    employee_benefits: 'Employee Benefits',
+    tax_planning: 'Tax Planning',
+    estate_planning: 'Estate Planning',
+  },
   ensurePolicyDocBucket: vi.fn(async () => {}),
+  uploadEstateDocumentForClient: vi.fn(async () => ({
+    storageKey: 'test/estate-doc.pdf',
+    fileName: 'estate.pdf',
+    documentType: 'last_will_scanned',
+    uploadedAt: '2025-01-01T00:00:00.000Z',
+    uploadedBy: 'test@test.com',
+    mimeType: 'application/pdf',
+    sizeBytes: 100,
+  })),
   replacePolicyDocumentForPolicy: vi.fn(async () => ({
     storageKey: 'test/policy-doc.pdf',
     fileName: 'uploaded.pdf',
