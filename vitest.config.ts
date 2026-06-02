@@ -79,17 +79,18 @@ export default defineConfig({
       // only go UP. Ratchet these toward the 70/65/70/70 target as
       // characterization tests are added for the Phase 5/6 decomposition files.
       //
-      // Ratcheted as characterization tests land. Latest (2026-06-02, first
-      // component render test — SigningWorkflow.tsx (the e-sign signer flow)
-      // 0->36%): measured statements 9.56 / lines 9.57 / branches 8.27 /
-      // functions 7.87 across ~1007 tests. Floor raised from 8.8/8.8/7.6/7.25,
-      // kept ~0.35 below measured for headroom against the actively churning
-      // tree. The 70/65/70/70 end-goal is long-horizon — floor only ratchets up.
+      // Ratcheted as characterization tests land. Latest (2026-06-02,
+      // RiskAssessmentPanel.tsx render test — the client KYC/AML risk-screening
+      // panel, Honeycomb-integrated, 0% -> list/form views + the ID gate):
+      // measured statements 9.72 / lines 9.74 / branches 8.51 / functions 7.97
+      // across 1011 tests. Floor raised from 9.2/9.2/7.9/7.5, kept ~0.35 below
+      // measured for headroom against the actively churning tree. The
+      // 70/65/70/70 end-goal is long-horizon — floor only ratchets up.
       thresholds: {
-        lines: 9.2,
-        functions: 7.5,
-        branches: 7.9,
-        statements: 9.2,
+        lines: 9.35,
+        functions: 7.6,
+        branches: 8.15,
+        statements: 9.35,
       },
     },
   },
