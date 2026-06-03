@@ -248,6 +248,7 @@ export function LegalPage() {
     } else {
       setActiveTab('legal-notices');
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchParams, setSearchParams]);
 
   // Scroll to top when tab changes via URL

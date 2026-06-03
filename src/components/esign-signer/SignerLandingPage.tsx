@@ -89,6 +89,7 @@ export function SignerLandingPage() {
         setCurrentStep('expired');
       }
     });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [token]);
 
   const handleOtpVerified = () => {

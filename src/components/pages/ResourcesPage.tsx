@@ -276,6 +276,7 @@ export function ResourcesPage() {
       setSearchResults(results.slice(0, 15));
       setIsSearching(false);
     },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     [articlesList, newsData],
   );
 

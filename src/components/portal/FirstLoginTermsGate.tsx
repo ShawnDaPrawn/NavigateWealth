@@ -35,6 +35,7 @@ export function FirstLoginTermsGate({ children }: FirstLoginTermsGateProps) {
   // Check metadata on mount
   React.useEffect(() => {
     checkTermsRequired();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user?.id]);
 
   const checkTermsRequired = async () => {

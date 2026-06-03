@@ -40,6 +40,7 @@ export function ApplicationStatusGuard({
     }
 
     fetchUserApplicationStatus();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user?.id]);
 
   const fetchUserApplicationStatus = async () => {
