@@ -19,6 +19,7 @@ import {
   Activity,
   Loader2,
   Settings2,
+  CheckCircle2,
 } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../../../ui/tabs';
 import { EnvelopesList } from './EnvelopesList';

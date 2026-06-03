@@ -119,7 +119,7 @@ export function PageManagerDialog({
         // Lazy-import pdfjs — heavy module, no need on first paint.
         const pdfjs = await import('pdfjs-dist/legacy/build/pdf.mjs');
         pdfjs.GlobalWorkerOptions.workerSrc = '';
-        const loadingTask = pdfjs.getDocument({ url: documentUrl, isEvalSupported: false });
+        const loadingTask = pdfjs.getDocument({ url: documentUrl });
         const doc = await loadingTask.promise;
         const out: Record<number, string> = {};
         for (let p = 1; p <= doc.numPages; p++) {
