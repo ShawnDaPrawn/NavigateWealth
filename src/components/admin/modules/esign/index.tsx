@@ -151,7 +151,6 @@ export function EsignModule() {
 
   // Prepare State
   const [activeEnvelope, setActiveEnvelope] = useState<EsignEnvelope | null>(null);
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [_pendingEnvelopes, setPendingEnvelopes] = useState<EsignEnvelope[]>([]);
   const [documentUrl, setDocumentUrl] = useState<string | null>(null);
   const [savingTemplate, setSavingTemplate] = useState(false);

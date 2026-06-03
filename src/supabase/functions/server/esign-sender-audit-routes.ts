@@ -39,7 +39,7 @@ app.get('/envelopes/:envelopeId/audit', async (c) => {
 app.get('/envelopes/:envelopeId/document', async (c) => {
   try {
     // Authenticate
-    const ctx = await getAuthContext(c);
+    const _ctx = await getAuthContext(c);
     const envelopeId = c.req.param('envelopeId');
 
     const envelope = await getEnvelopeDetails(envelopeId);
@@ -68,7 +68,7 @@ app.get('/envelopes/:envelopeId/document', async (c) => {
 app.get('/envelopes/:envelopeId/certificate', async (c) => {
   try {
     // Authenticate
-    const ctx = await getAuthContext(c);
+    const _ctx = await getAuthContext(c);
     const envelopeId = c.req.param('envelopeId');
 
     const certificate = await getCertificate(envelopeId);
