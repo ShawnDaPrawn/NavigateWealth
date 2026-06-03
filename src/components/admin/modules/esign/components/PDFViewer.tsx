@@ -264,23 +264,25 @@ export function PDFViewer({
 
     load();
 
+    const renderTasks = renderTasksRef.current;
     return () => {
       cancelled = true;
       // Cancel any in-flight render tasks
-      renderTasksRef.current.forEach((task) => {
+      renderTasks.forEach((task) => {
         try {
           task.cancel();
         } catch {
           /* noop */
         }
       });
-      renderTasksRef.current.clear();
+      renderTasks.clear();
       // Destroy the PDF document
       if (pdfDocRef.current) {
         pdfDocRef.current.destroy();
         pdfDocRef.current = null;
       }
     };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [documentUrl]);
 
   // ── Render pages to canvases ──────────────────────────────────────
@@ -551,6 +553,7 @@ export function PDFViewer({
       document.addEventListener('mousemove', handleMouseMove);
       document.addEventListener('mouseup', handleMouseUp);
     },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     [readOnly, onFieldUpdate, fields, pages, effectiveSelection, gridSize, snapToGrid],
   );
 
@@ -774,6 +777,7 @@ export function PDFViewer({
         </div>
       );
     },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     [
       draggingField,
       resizingField,

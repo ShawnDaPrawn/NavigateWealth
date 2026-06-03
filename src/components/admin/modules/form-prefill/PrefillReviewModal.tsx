@@ -64,7 +64,7 @@ export function PrefillReviewModal({
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [overwriteConflicts, setOverwriteConflicts] = useState(false);
 
-  const safeMatches = result?.matches ?? [];
+  const safeMatches = useMemo(() => result?.matches ?? [], [result?.matches]);
   const conflictMatches = useMemo(() => safeMatches.filter((m) => m.conflict), [safeMatches]);
 
   const profileCompletenessHints = useMemo(() => {

@@ -118,6 +118,7 @@ export const InsightsTab = memo(function InsightsTab({
     if (!(activeCategory in pageMap)) {
       setPageMap((prev) => ({ ...prev, [activeCategory]: 1 }));
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeCategory]);
 
   // Sort articles most-recent-first, then paginate

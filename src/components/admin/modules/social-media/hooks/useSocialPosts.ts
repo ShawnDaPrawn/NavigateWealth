@@ -12,7 +12,7 @@
  * @module social-media/hooks/useSocialPosts
  */
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { postsApi, type CreatePostRequest, type UpdatePostRequest, type PostFilters } from '../api';
 import type { SocialPost, PostStatus } from '../types';
@@ -98,7 +98,7 @@ export function useSocialPosts(options: UseSocialPostsOptions = {}): UseSocialPo
     staleTime: POSTS_STALE_TIME,
   });
 
-  const posts: SocialPost[] = postsQuery.data ?? [];
+  const posts: SocialPost[] = useMemo(() => postsQuery.data ?? [], [postsQuery.data]);
 
   // ── Mutations ─────────────────────────────────────────────────────────
 

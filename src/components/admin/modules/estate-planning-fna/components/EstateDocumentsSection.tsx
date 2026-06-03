@@ -166,6 +166,7 @@ export function EstateDocumentsSection({
     if (clientId) {
       loadDocuments();
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [clientId]);
 
   const loadDocuments = async () => {

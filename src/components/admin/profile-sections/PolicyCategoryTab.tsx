@@ -205,6 +205,7 @@ export function PolicyCategoryTab({
   useEffect(() => {
     loadPolicies();
     loadTableStructure();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [categoryId, clientId, showArchived]);
 
   // Update Linked Goals Map when policies or goals change

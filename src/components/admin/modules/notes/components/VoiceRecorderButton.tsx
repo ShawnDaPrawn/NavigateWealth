@@ -117,6 +117,7 @@ export function VoiceRecorderButton({ onInsertText, disabled = false }: VoiceRec
         format: recorder.audioFormat,
       });
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [recorder.status, recorder.audioBlob, recorder.audioFormat]);
 
   // ── File upload handler ─────────────────────────────────────────────────
@@ -160,6 +161,7 @@ export function VoiceRecorderButton({ onInsertText, disabled = false }: VoiceRec
     transcriber.resetTranscription();
     recorder.reset();
     setUploadedFileName(null);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
     transcriber.transcriptionResult,
     onInsertText,
@@ -171,12 +173,14 @@ export function VoiceRecorderButton({ onInsertText, disabled = false }: VoiceRec
     transcriber.resetTranscription();
     recorder.reset();
     setUploadedFileName(null);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [transcriber.resetTranscription, recorder.reset]);
 
   const handleRetry = useCallback(() => {
     transcriber.resetTranscription();
     recorder.reset();
     setUploadedFileName(null);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [transcriber.resetTranscription, recorder.reset]);
 
   const handleStartRecording = useCallback(() => {

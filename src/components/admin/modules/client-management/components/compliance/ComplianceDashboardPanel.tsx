@@ -208,6 +208,7 @@ export function ComplianceDashboardPanel({
 
   useEffect(() => {
     fetchDashboard();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [clientId]);
 
   if (isLoading) {

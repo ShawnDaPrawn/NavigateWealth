@@ -276,6 +276,7 @@ export function NoteEditorModal({
     }
     setEditorMode('write');
     autoSave.reset();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [note, isOpen, defaultClientId, defaultClientName]);
 
   // ── Summarise handler ──────────────────────────────────────────────────
@@ -490,6 +491,7 @@ export function NoteEditorModal({
       // Switch to write mode so user can see the inserted text
       setEditorMode('write');
     },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     [content, handleContentChange],
   );
 

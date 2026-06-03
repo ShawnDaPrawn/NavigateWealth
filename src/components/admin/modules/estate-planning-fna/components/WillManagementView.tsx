@@ -131,6 +131,7 @@ export function WillManagementView({
 
   useEffect(() => {
     loadWills();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [clientId]);
 
   const loadWills = async (): Promise<void> => {

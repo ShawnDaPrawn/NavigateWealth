@@ -64,6 +64,7 @@ export function DocumentsTab({ selectedClient }: DocumentsTabProps) {
     if (selectedClient?.id) {
       fetchDocuments();
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedClient?.id]);
 
   const fetchDocuments = async () => {

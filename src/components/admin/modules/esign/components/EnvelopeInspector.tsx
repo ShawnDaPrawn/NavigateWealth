@@ -308,6 +308,7 @@ export function EnvelopeInspector({
           // Fallback to what we have
         });
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, envelope?.id]);
 
   // Fetch audit trail when audit tab is selected

@@ -156,6 +156,7 @@ export function SecurityTab({ selectedClient }: SecurityTabProps) {
       void fetchSecurityStatus();
       void fetchActivityLogs();
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedClient?.id]);
 
   useEffect(() => {

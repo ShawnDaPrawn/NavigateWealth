@@ -639,12 +639,12 @@ export function ClientOverviewTab({ client, mode = 'adviser' }: ClientOverviewTa
 
   const age = useMemo(() => calcAge(p?.dateOfBirth), [p?.dateOfBirth]);
 
-  const riskPolicies = policiesByCategory.risk || [];
-  const medicalPolicies = policiesByCategory.medical || [];
-  const retirementPolicies = policiesByCategory.retirement || [];
-  const investmentPolicies = policiesByCategory.investment || [];
-  const employeePolicies = policiesByCategory.employee || [];
-  const estatePolicies = policiesByCategory.estate || [];
+  const riskPolicies = useMemo(() => policiesByCategory.risk || [], [policiesByCategory.risk]);
+  const medicalPolicies = useMemo(() => policiesByCategory.medical || [], [policiesByCategory.medical]);
+  const retirementPolicies = useMemo(() => policiesByCategory.retirement || [], [policiesByCategory.retirement]);
+  const investmentPolicies = useMemo(() => policiesByCategory.investment || [], [policiesByCategory.investment]);
+  const employeePolicies = useMemo(() => policiesByCategory.employee || [], [policiesByCategory.employee]);
+  const estatePolicies = useMemo(() => policiesByCategory.estate || [], [policiesByCategory.estate]);
 
   const grossMonthly = p?.grossMonthlyIncome || p?.grossIncome || 0;
   const grossAnnual = p?.grossAnnualIncome || grossMonthly * 12;
@@ -932,7 +932,6 @@ export function ClientOverviewTab({ client, mode = 'adviser' }: ClientOverviewTa
       totalMonthlyDebt,
       totalRetirementPremium,
       totalInvestmentPremium,
-      gapAnalysis,
       riskFnaPublished,
       fnaResultsMap,
       retResultsForSubScore,
@@ -945,7 +944,7 @@ export function ClientOverviewTab({ client, mode = 'adviser' }: ClientOverviewTa
 
   const assetAllocationData = useMemo<AssetAllocationData>(
     () => deriveAssetAllocation({ profile: p, retirementCurrentValue, investmentCurrentValue }),
-    [p?.assets, retirementCurrentValue, investmentCurrentValue],
+    [p, retirementCurrentValue, investmentCurrentValue],
   );
 
   const insuranceCoverageItems = useMemo<InsuranceCoverageItem[]>(

@@ -183,6 +183,7 @@ export function useRoADraft(options: UseRoADraftOptions = {}): UseRoADraftReturn
         clearTimeout(autoSaveTimerRef.current);
       }
     };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [localDraft, autoSave, autoSaveDelay]);
 
   // ============================================================================

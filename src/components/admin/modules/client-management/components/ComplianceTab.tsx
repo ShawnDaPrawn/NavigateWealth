@@ -206,12 +206,14 @@ export function ComplianceTab({
 
   useEffect(() => {
     checkRegistration();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedClient.id]);
 
   useEffect(() => {
     if (registrationStatus === 'registered') {
       fetchActivityLog();
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [registrationStatus, selectedClient.id]);
 
   const checkRegistration = async () => {

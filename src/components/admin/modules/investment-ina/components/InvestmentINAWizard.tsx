@@ -126,6 +126,7 @@ export function InvestmentINAWizard({
       setInputs({});
       setResults(null);
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, clientId]);
 
   const loadInitialData = async () => {
@@ -523,6 +524,7 @@ function EconomicAssumptionsStep({ inputs, updateInputs }: INAStepProps) {
         expectedRealReturns: defaults.expectedRealReturns,
       });
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   return (

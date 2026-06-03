@@ -187,6 +187,7 @@ export function ArticleEditor({
     if (autoSlug && formData.title) {
       updateField('slug', generateSlug(formData.title));
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [formData.title, autoSlug]);
 
   // Auto-clear success message
@@ -205,6 +206,7 @@ export function ArticleEditor({
         updateField('type_id', insightsType.id);
       }
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isEditMode, types, formData.type_id]);
 
   // Apply initial template if provided

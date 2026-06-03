@@ -93,7 +93,7 @@ export function ClientManagementModule() {
   const clientIdFromUrl = searchParams.get('clientId');
 
   // Defensive: ensure clients is always an array (§10 — never swallow errors silently)
-  const safeClients = Array.isArray(clients) ? clients : [];
+  const safeClients = useMemo(() => (Array.isArray(clients) ? clients : []), [clients]);
 
   // Keep drawer header / table selection in sync when the client list refreshes (e.g. after name save).
   React.useEffect(() => {

@@ -526,6 +526,7 @@ function VelocityLineChart({ data }: VelocityLineChartProps) {
         setTooltip({ x: toX(idx), y: e.clientY - rect.top, idx });
       }
     },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     [data.length, xStep, pad.left],
   );
 

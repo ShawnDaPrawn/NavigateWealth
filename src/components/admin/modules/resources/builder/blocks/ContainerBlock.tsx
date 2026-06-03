@@ -8,7 +8,7 @@
  * unconditionally. Quarantined here so the rule can be promoted to "error"
  * repo-wide; remove this directive when resolved.
  */
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useMemo } from 'react';
 import { Boxes, Plus, Trash2, ChevronUp, ChevronDown, ChevronRight } from 'lucide-react';
 import { BlockDefinition, getBlockDefinition } from '../block-store';
 import { ContainerData, FormBlock, BlockType } from '../types';
@@ -153,7 +153,7 @@ export const ContainerBlock: BlockDefinition = {
   editor: ({ block, onChange }) => {
     const data = block.data as ContainerData & { conditionOperator?: ConditionOperator };
     const operator: ConditionOperator = data.conditionOperator || 'equals';
-    const childBlocks: FormBlock[] = data.blocks || [];
+    const childBlocks: FormBlock[] = useMemo(() => data.blocks || [], [data.blocks]);
 
     const [expandedChildId, setExpandedChildId] = useState<string | null>(null);
     const [addBlockOpen, setAddBlockOpen] = useState(false);

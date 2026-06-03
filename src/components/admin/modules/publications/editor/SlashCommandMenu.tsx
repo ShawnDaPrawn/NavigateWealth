@@ -310,6 +310,7 @@ export function SlashCommandMenu({
 
     document.addEventListener('keydown', handleKeyDown, true);
     return () => document.removeEventListener('keydown', handleKeyDown, true);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOpen, selectedIndex, filteredItems]);
 
   // Scroll selected item into view

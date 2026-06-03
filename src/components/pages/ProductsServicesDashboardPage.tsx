@@ -554,7 +554,7 @@ export function ProductsServicesDashboardPage() {
   // ── Fetch real portfolio data ──
   const { data: portfolioData, isLoading } = usePortfolioSummary(user?.id);
 
-  const holdings = portfolioData?.productHoldings ?? [];
+  const holdings = useMemo(() => portfolioData?.productHoldings ?? [], [portfolioData?.productHoldings]);
   const overview = portfolioData?.financialOverview ?? null;
 
   // ── Derived module data ──

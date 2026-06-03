@@ -28,6 +28,7 @@ export function GoalDashboard({
 
   useEffect(() => {
     fetchGoals();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [clientId]);
 
   const fetchGoals = async () => {

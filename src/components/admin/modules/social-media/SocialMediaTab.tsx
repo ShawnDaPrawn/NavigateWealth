@@ -111,9 +111,9 @@ export function SocialMediaTab() {
     [connectedProfiles],
   );
 
-  const scheduledPosts = useMemo(() => getPostsByStatus('scheduled'), [posts, getPostsByStatus]);
+  const scheduledPosts = useMemo(() => getPostsByStatus('scheduled'), [getPostsByStatus]);
 
-  const publishedPosts = useMemo(() => getPostsByStatus('published'), [posts, getPostsByStatus]);
+  const publishedPosts = useMemo(() => getPostsByStatus('published'), [getPostsByStatus]);
 
   const totalEngagement = useMemo(
     () =>
@@ -128,7 +128,7 @@ export function SocialMediaTab() {
     [publishedPosts],
   );
 
-  const draftPosts = useMemo(() => getPostsByStatus('draft'), [posts, getPostsByStatus]);
+  const draftPosts = useMemo(() => getPostsByStatus('draft'), [getPostsByStatus]);
 
   /** Profile ID → { name, platform } lookup for DraftPosts display */
   const profileNameLookup = useMemo(() => {

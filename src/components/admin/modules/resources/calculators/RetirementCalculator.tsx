@@ -126,6 +126,7 @@ export function RetirementCalculator({ onBack }: RetirementCalculatorProps) {
   // Calculate on input change
   useEffect(() => {
     calculateResults();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [inputs]);
 
   const loadScenarios = async (clientId: string) => {

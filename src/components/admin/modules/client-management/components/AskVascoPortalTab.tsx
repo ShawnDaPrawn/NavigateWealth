@@ -303,7 +303,7 @@ export function AskVascoPortalTab({ selectedClient }: AskVascoPortalTabProps) {
     staleTime: 60 * 1000,
   });
 
-  const sessions = sessionsQuery.data?.sessions ?? [];
+  const sessions = useMemo(() => sessionsQuery.data?.sessions ?? [], [sessionsQuery.data?.sessions]);
   const activeSession = useMemo(
     () => sessions.find((session) => session.id === activeSessionId) || null,
     [sessions, activeSessionId],

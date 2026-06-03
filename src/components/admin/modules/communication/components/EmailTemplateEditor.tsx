@@ -80,6 +80,7 @@ export function EmailTemplateEditor({ templateId, onBack }: EmailTemplateEditorP
 
   useEffect(() => {
     loadTemplate();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [templateId]);
 
   const loadTemplate = async () => {

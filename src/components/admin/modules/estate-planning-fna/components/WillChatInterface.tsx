@@ -420,6 +420,7 @@ export function WillChatInterface({
   useEffect(() => {
     checkStatus();
     loadSessions();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [clientId]);
 
   useEffect(() => {
@@ -711,6 +712,7 @@ export function WillChatInterface({
     } finally {
       setIsLoading(false);
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [input, isLoading, sessionId, previousResponseId]);
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {

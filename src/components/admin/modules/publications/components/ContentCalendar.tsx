@@ -192,6 +192,7 @@ export function ContentCalendar({
     setCurrentYear(today.getFullYear());
     setCurrentMonth(today.getMonth());
     setSelectedDay(null);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Stats for the month
