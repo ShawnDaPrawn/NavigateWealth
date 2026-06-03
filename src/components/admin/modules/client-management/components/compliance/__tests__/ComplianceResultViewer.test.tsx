@@ -89,7 +89,9 @@ describe('ComplianceResultViewer', () => {
     );
 
     expect(screen.getByRole('button', { name: /download report/i })).toBeTruthy();
-    expect(screen.getByRole('button', { name: /close/i })).toBeTruthy();
+    // Dialog's built-in X close button + the footer Close button both match
+    // /close/i — use getAllByRole to avoid "Found multiple elements" throw.
+    expect(screen.getAllByRole('button', { name: /close/i }).length).toBeGreaterThan(0);
   });
 
   it('shows the loading text while the check result is being fetched', () => {
