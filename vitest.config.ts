@@ -23,6 +23,7 @@ export default defineConfig({
       'npm:hono': 'hono',
       'npm:hono/cors': 'hono/cors',
       'npm:@e965/xlsx@0.20.3': 'xlsx',
+      'npm:@zip.js/zip.js': '@zip.js/zip.js',
       'jsr:@std/encoding/base64': '@jsr/std__encoding/base64',
       'node-forge@1.3.1': 'node-forge',
       '@jsr/supabase__supabase-js@2.49.8': '@jsr/supabase__supabase-js',
