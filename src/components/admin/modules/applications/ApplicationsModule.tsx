@@ -79,7 +79,7 @@ export function ApplicationsModule() {
       setLoading(false);
       setRefreshing(false);
     }
-  }, [activeTab]);
+  }, [activeTab, applications.length]);
 
   const loadStats = useCallback(async () => {
     try {

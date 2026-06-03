@@ -108,7 +108,7 @@ export function useTaskBoard(tasks: Task[] = []) {
       setIsModalOpen(false);
       setSelectedTask(null);
     }
-  }, [tasks]);
+  }, [tasks, isModalOpen, selectedTask]);
 
   // ============================================================================
   // COMPUTED VALUES

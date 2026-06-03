@@ -112,12 +112,15 @@ export function ResourcesPage() {
   } = useMarketNews(activeTab === 'market-updates');
 
   // Constants
-  const defaultNewsData = {
-    economicNews: [],
-    forexNews: [],
-    stockMarket: [],
-    investingIdeas: [],
-  };
+  const defaultNewsData = useMemo(
+    () => ({
+      economicNews: [],
+      forexNews: [],
+      stockMarket: [],
+      investingIdeas: [],
+    }),
+    [],
+  );
 
   // Build insights categories from API data (no hardcoded fallback — API is the
   // single source of truth, eliminating ID-mismatch bugs between fallback slugs
@@ -276,7 +279,7 @@ export function ResourcesPage() {
       setSearchResults(results.slice(0, 15));
       setIsSearching(false);
     },
-    [articlesList, newsData],
+    [articlesList, newsData, defaultNewsData],
   );
 
   const handleSearchChange = useCallback(

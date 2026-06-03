@@ -406,29 +406,32 @@ export function NoteEditorModal({
     }
   };
 
-  const handleContentChange = (val: string) => {
-    setContent(val);
-    // When content changes, invalidate existing summary
-    if (localSummary) {
-      setLocalSummary(null);
-    }
-    // Debounce content auto-save
-    if (isEditing && onAutoSave && title.trim()) {
-      const tags = tagsInput
-        .split(',')
-        .map((t) => t.trim())
-        .filter((t) => t.length > 0);
-      autoSave.markDirty({
-        title: title.trim(),
-        content: val,
-        color,
-        tags,
-        clientId,
-        clientName,
-        summary: null,
-      });
-    }
-  };
+  const handleContentChange = useCallback(
+    (val: string) => {
+      setContent(val);
+      // When content changes, invalidate existing summary
+      if (localSummary) {
+        setLocalSummary(null);
+      }
+      // Debounce content auto-save
+      if (isEditing && onAutoSave && title.trim()) {
+        const tags = tagsInput
+          .split(',')
+          .map((t) => t.trim())
+          .filter((t) => t.length > 0);
+        autoSave.markDirty({
+          title: title.trim(),
+          content: val,
+          color,
+          tags,
+          clientId,
+          clientName,
+          summary: null,
+        });
+      }
+    },
+    [localSummary, isEditing, onAutoSave, title, tagsInput, autoSave, color, clientId, clientName],
+  );
 
   const handleColorChange = (c: NoteColor) => {
     setColor(c);

@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback, useRef } from 'react';
+import React, { useEffect, useState, useCallback, useRef, useMemo } from 'react';
 import { Link, useSearchParams, useLocation } from 'react-router';
 import DOMPurify from 'dompurify';
 import { SEO, createWebPageSchema } from '../seo/SEO';
@@ -235,7 +235,10 @@ export function LegalPage() {
   const printRef = useRef<HTMLDivElement>(null);
 
   // Valid tab values
-  const validTabs = ['legal-notices', 'privacy-data-protection', 'regulatory-disclosures', 'other'];
+  const validTabs = useMemo(
+    () => ['legal-notices', 'privacy-data-protection', 'regulatory-disclosures', 'other'],
+    [],
+  );
 
   // Handle URL parameters for direct navigation
   useEffect(() => {
@@ -248,7 +251,7 @@ export function LegalPage() {
     } else {
       setActiveTab('legal-notices');
     }
-  }, [searchParams, setSearchParams]);
+  }, [searchParams, setSearchParams, validTabs]);
 
   // Scroll to top when tab changes via URL
   useEffect(() => {

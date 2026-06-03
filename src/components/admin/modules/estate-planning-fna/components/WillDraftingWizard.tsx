@@ -115,7 +115,7 @@ export function WillDraftingWizard({
       setCurrentStep('personal-details');
       setValidationErrors([]);
     }
-  }, [open]);
+  }, [open, existingWillId, isLivingWill]);
 
   // ── Resume Draft: load existing will data ────────────────────────
   useEffect(() => {
@@ -314,7 +314,7 @@ export function WillDraftingWizard({
     };
 
     fetchClientProfile();
-  }, [open, clientId]);
+  }, [open, clientId, clientName, existingWillId, isLivingWill]);
 
   // ── Steps configuration ──────────────────────────────────────────
   const steps: { id: WizardStep; label: string; icon: React.ElementType; description: string }[] =

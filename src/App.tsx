@@ -247,7 +247,7 @@ export default function App() {
       if (script1.parentNode) document.head.removeChild(script1);
       if (script2.parentNode) document.head.removeChild(script2);
     };
-  }, []);
+  }, [appIcon192, appIcon512]);
 
   return (
     <ErrorBoundary
