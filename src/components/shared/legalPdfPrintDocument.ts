@@ -280,7 +280,6 @@ export function buildLegalPagedPrintSource(document: LegalPdfDocumentData) {
   const normalized = getNormalizedLegalPdfDocument(document);
   const mastheadLabel = (document.title || document.sectionLabel || 'LEGAL DOCUMENT').toUpperCase();
   const issueDate = formatLongDate(document.updatedAt || document.effectiveDate);
-  ('Wealthfront (Pty) Ltd t/a Navigate Wealth | FSP 54606 | Email: info@navigatewealth.co');
   const footerText =
     'Wealthfront (Pty) Ltd, trading as Navigate Wealth, is an Authorised Financial Services Provider - FSP 54606. Registration Number: 2024/071953/07. Located at Route 21 Corporate Park, 25 Sovereign Drive, Milestone Place A, Centurion, 0178. For inquiries, please contact us at Tel: (012) 667 2505.';
 
