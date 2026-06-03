@@ -24,7 +24,6 @@ import {
   Target,
   Building2,
   Briefcase,
-  _UserPlus,
   ClipboardList,
 } from 'lucide-react';
 import { cn } from '../../../../ui/utils';

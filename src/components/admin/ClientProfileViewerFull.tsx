@@ -37,7 +37,6 @@ import {
   Wallet,
   Loader2,
   Copy,
-  _MoreHorizontal,
   AlertCircle,
   Banknote,
 } from 'lucide-react';

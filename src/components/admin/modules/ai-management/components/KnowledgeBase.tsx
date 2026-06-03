@@ -25,11 +25,9 @@ import {
   CheckCircle2,
   Clock,
   Eye,
-  _Filter,
   Inbox,
   Tag,
   Bot,
-  _ChevronDown,
 } from 'lucide-react';
 import { Input } from '../../../../ui/input';
 import { Badge } from '../../../../ui/badge';

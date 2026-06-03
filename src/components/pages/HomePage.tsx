@@ -60,7 +60,6 @@ import {
   Calculator,
   Briefcase,
   Gift,
-  _Play,
   CheckCircle,
   Phone,
   Mail,
@@ -72,7 +71,6 @@ import {
   Heart,
   Globe,
   Stethoscope,
-  _X,
   Loader2,
 } from 'lucide-react';
 

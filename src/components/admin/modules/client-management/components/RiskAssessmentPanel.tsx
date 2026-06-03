@@ -5,7 +5,6 @@ import { Button } from '../../../../ui/button';
 import { Label } from '../../../../ui/label';
 import { Input } from '../../../../ui/input';
 import {
-  _Shield,
   RefreshCw,
   AlertTriangle,
   CheckCircle,
@@ -13,7 +12,6 @@ import {
   ClipboardList,
   ChevronDown,
   ChevronUp,
-  _ChevronRight,
   BarChart3,
   Users,
   UserCheck,
@@ -26,10 +24,7 @@ import {
   Play,
   ArrowLeft,
   FileText,
-  _Eye,
   Clock,
-  _Hash,
-  _CircleDot,
   ListChecks,
   Info,
 } from 'lucide-react';

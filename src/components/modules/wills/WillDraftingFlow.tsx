@@ -41,7 +41,6 @@ import {
   Plus,
   Trash2,
   AlertCircle,
-  _Copy,
   Check,
 } from 'lucide-react';
 import { projectId, publicAnonKey } from '../../../utils/supabase/info';

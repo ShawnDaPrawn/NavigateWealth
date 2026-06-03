@@ -27,7 +27,6 @@ import {
   Sparkles,
   ShieldAlert,
   Pilcrow,
-  _Type,
   Wand2,
   Expand,
   Shrink,

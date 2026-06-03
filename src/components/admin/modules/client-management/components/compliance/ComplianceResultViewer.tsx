@@ -44,7 +44,6 @@ import {
   Gavel,
   Scale,
   Camera,
-  _X,
 } from 'lucide-react';
 import { api } from '../../../../../../utils/api';
 import { BASE_PDF_CSS } from '../../../resources/templates/BasePdfLayout';

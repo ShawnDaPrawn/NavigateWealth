@@ -24,21 +24,16 @@ import {
   Copy,
   Archive,
   Trash2,
-  _Calendar,
   Clock,
   Star,
   FileText,
   LayoutGrid,
   LayoutList,
-  _ChevronDown,
   X,
   ArrowUpDown,
   CheckSquare,
   Square,
-  _Loader2,
-  _Send,
   Search,
-  _User,
 } from 'lucide-react';
 import { cn } from '../../../ui/utils';
 

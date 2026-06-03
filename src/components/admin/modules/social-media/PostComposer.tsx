@@ -31,8 +31,6 @@ import {
   AtSign,
   Sparkles,
   Zap,
-  _Globe,
-  _Target,
   AlertCircle,
 } from 'lucide-react';
 import { SocialProfile, MediaFile, PostLink, UTMParameters, PLATFORM_LIMITS } from './types';

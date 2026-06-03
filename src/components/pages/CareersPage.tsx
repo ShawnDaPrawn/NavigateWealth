@@ -35,7 +35,6 @@ import {
   CheckCircle,
   Shield,
   Megaphone,
-  _Star,
   Globe,
   MapPin,
   Clock,
@@ -44,13 +43,10 @@ import {
   Award,
   Heart,
   Lightbulb,
-  _Target,
   Rocket,
   GraduationCap,
   Coffee,
   ChevronRight,
-  _Building2,
-  _Zap,
   Send,
 } from 'lucide-react';
 

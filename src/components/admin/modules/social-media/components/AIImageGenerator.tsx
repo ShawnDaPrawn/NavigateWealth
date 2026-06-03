@@ -36,7 +36,6 @@ import {
   Sparkles,
   Camera,
   Paintbrush,
-  _Layers,
   Lightbulb,
   Users,
   BarChart3,

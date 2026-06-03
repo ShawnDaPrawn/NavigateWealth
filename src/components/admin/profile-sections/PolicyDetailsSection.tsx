@@ -12,23 +12,7 @@ import {
   FileText,
   Landmark,
   Target,
-  _Plus,
-  _Eye,
-  _Edit,
-  _Archive,
-  _Download,
-  _Zap,
   TrendingUp,
-  _DollarSign,
-  _Activity,
-  _Users,
-  _Calendar,
-  _AlertCircle,
-  _CheckCircle,
-  _BarChart3,
-  _LineChart,
-  _Loader2,
-  _Trash2,
 } from 'lucide-react';
 import { PolicyCategoryTab } from './PolicyCategoryTab';
 import { PolicyOverviewTab } from './PolicyOverviewTab';

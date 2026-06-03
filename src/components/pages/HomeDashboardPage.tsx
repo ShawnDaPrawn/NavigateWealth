@@ -14,16 +14,7 @@ import React, { useMemo } from 'react';
 import { useAuth } from '../auth/AuthContext';
 import { BrandPageLoader } from '../ui/brand-loader';
 import { Link } from 'react-router';
-import {
-  Package,
-  Bot,
-  FileText,
-  User,
-  MessageSquare,
-  Activity,
-  ChevronRight,
-  _Sparkles,
-} from 'lucide-react';
+import { Package, Bot, FileText, User, MessageSquare, Activity, ChevronRight } from 'lucide-react';
 import { ClientOverviewTab } from '../admin/modules/client-management/components/ClientOverviewTab';
 import type { Client } from '../admin/modules/client-management/types';
 import { PortalPageHeader } from '../portal/PortalPageHeader';

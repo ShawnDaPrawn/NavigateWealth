@@ -10,10 +10,6 @@ import { toast } from 'sonner';
 import {
   FileText,
   Download,
-  _Eye,
-  _Search,
-  _Filter,
-  _Calendar,
   ArrowUpRight,
   ArrowDownLeft,
   CreditCard,
@@ -25,7 +21,6 @@ import {
   Calculator,
   Users,
   FolderOpen,
-  _ChevronLeft,
   ChevronRight,
   Files,
   ChevronDown,

@@ -22,7 +22,6 @@ import {
   Target,
   DollarSign,
   Coins,
-  _Gem,
   Lock,
 } from 'lucide-react';
 import { ProductKeyCategory } from './types';

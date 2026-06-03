@@ -25,7 +25,6 @@ import {
   Loader2,
   Shield,
   Layers,
-  _Sparkles,
 } from 'lucide-react';
 import { copyToClipboard as copyToClipboardUtil } from '../../../utils/clipboard';
 

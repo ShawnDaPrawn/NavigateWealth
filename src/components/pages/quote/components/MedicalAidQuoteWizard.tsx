@@ -39,8 +39,6 @@ import {
   Pencil,
   Plus,
   Minus,
-  _MapPin,
-  _DollarSign,
   FileText,
 } from 'lucide-react';
 import { projectId, publicAnonKey } from '../../../../utils/supabase/info';

@@ -8,7 +8,6 @@ import React, { useState, useCallback, useEffect, useRef, useMemo } from 'react'
 import { Button } from '../../../../ui/button';
 import {
   ArrowLeft,
-  _Save,
   Send,
   Loader2,
   CheckCircle2,

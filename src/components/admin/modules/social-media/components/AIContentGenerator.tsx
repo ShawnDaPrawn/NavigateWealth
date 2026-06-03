@@ -40,7 +40,6 @@ import {
   MessageSquare,
   ArrowRight,
   RefreshCw,
-  _Clock,
 } from 'lucide-react';
 import { useSocialMediaAI } from '../hooks/useSocialMediaAI';
 import type {
