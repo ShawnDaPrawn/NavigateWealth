@@ -84,7 +84,7 @@ app.post('/signup', async (c) => {
           (userError as Error & { code?: string }).code === 'email_exists') ||
         userError?.message?.includes('already been registered')
       ) {
-        log.warn('⚠️ User already exists:', email);
+        log.warn('⚠️ User already exists:', { email });
         return c.json(
           {
             error: 'An account with this email already exists. Please sign in.',
@@ -119,14 +119,18 @@ app.post('/signup', async (c) => {
       });
 
       if (resendError) {
-        log.warn('⚠️ Failed to send verification email:', resendError);
+        log.warn('⚠️ Failed to send verification email:', {
+          error: resendError instanceof Error ? resendError.message : String(resendError),
+        });
         // We don't fail the request here, as the user is created.
         // They can request a new verification email from the frontend.
       } else {
         log.info('✅ Verification email sent successfully');
       }
     } catch (emailErr) {
-      log.warn('⚠️ Exception sending verification email:', emailErr);
+      log.warn('⚠️ Exception sending verification email:', {
+        error: emailErr instanceof Error ? emailErr.message : String(emailErr),
+      });
     }
 
     // Generate Application Number

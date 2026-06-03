@@ -235,7 +235,7 @@ signerRoutes.post('/signer/validate', rateLimit('SIGNER_ACCESS'), async (c) => {
         savedInitials = typeof profile.initials === 'string' ? profile.initials : null;
       }
     } catch (profileErr) {
-      log.warn('Failed to load signer profile (non-critical):', profileErr);
+      log.warn('Failed to load signer profile (non-critical):', { error: profileErr instanceof Error ? profileErr.message : String(profileErr) });
     }
 
     // Auto-send OTP if required and not verified
@@ -292,7 +292,7 @@ signerRoutes.post('/signer/validate', rateLimit('SIGNER_ACCESS'), async (c) => {
         branding = toPublicBranding(record);
       }
     } catch (brandErr) {
-      log.warn('Failed to load firm branding for signer (non-critical):', brandErr);
+      log.warn('Failed to load firm branding for signer (non-critical):', { error: brandErr instanceof Error ? brandErr.message : String(brandErr) });
     }
 
     // P8.7 — Surface the signer's preferred language so the UI can
@@ -594,7 +594,7 @@ signerRoutes.post('/signer/submit', requireIdempotency(), rateLimit('SIGNER_SUBM
         return c.json({ error: 'Identity verification (KBA) is required before signing' }, 403);
       }
     } catch (kbaErr) {
-      log.warn('KBA gate check failed; allowing submit:', kbaErr);
+      log.warn('KBA gate check failed; allowing submit:', { error: kbaErr instanceof Error ? kbaErr.message : String(kbaErr) });
     }
 
     // Update field values

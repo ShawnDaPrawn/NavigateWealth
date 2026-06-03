@@ -382,7 +382,9 @@ taxPlanningRoutes.delete('/tax-docs/:clientId/:docId', async (c) => {
       .remove([doc.filePath]);
 
     if (deleteError) {
-      log.warn('Failed to delete tax document from storage (non-critical):', deleteError);
+      log.warn('Failed to delete tax document from storage (non-critical):', {
+        error: deleteError instanceof Error ? deleteError.message : String(deleteError),
+      });
     }
 
     // Remove from KV
