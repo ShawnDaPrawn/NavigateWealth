@@ -23,6 +23,7 @@ import { requireIdempotency } from './idempotency.ts';
 import { formatZodError } from './shared-validation-utils.ts';
 import { SignerValidateSchema, OtpVerifySchema } from './esign-validation.ts';
 import { getRequestMetadata, audActor, ensureStorageBuckets } from './esign-route-helpers.ts';
+import type { SignerRecord } from './esign-route-helpers.ts';
 import { checkRateLimit } from './rateLimiter.ts';
 import {
   getEnvelopeDetails,

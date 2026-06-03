@@ -9,6 +9,7 @@
  */
 
 import { Hono } from 'npm:hono';
+import type { Context } from 'npm:hono';
 import { createModuleLogger } from './stderr-logger.ts';
 import { getErrMsg } from './shared-logger-utils.ts';
 import * as kv from './kv_store.tsx';
@@ -52,9 +53,12 @@ const HONEYCOMB_API_URL = 'https://publicapi.honeycombonline.co.za';
 const NIL_UUID = '00000000-0000-0000-0000-000000000000';
 
 /** Build a route error response, distinguishing Zod validation errors */
-const routeError = (c: { json: (body: unknown, status: number) => unknown }, e: unknown) => {
+const routeError = (c: Context, e: unknown): Response => {
   const isZod = e instanceof Error && e.name === 'ZodError';
-  return c.json({ error: isZod ? (e as ZodError).errors : getErrMsg(e) }, isZod ? 400 : 500);
+  if (isZod) {
+    return c.json({ error: (e as ZodError).errors }, 400);
+  }
+  return c.json({ error: getErrMsg(e) }, 500);
 };
 
 /** Helper to get Honeycomb headers (used by legacy/proxy routes) */
@@ -90,9 +94,9 @@ app.post('/proxy', async (c) => {
 
     if (!response.ok) {
       log.error(`Honeycomb proxy error: ${response.status}`, { data });
-      return c.json(
-        { error: 'Honeycomb API Error', details: data, status: response.status },
-        response.status as number,
+      return new Response(
+        JSON.stringify({ error: 'Honeycomb API Error', details: data, status: response.status }),
+        { status: response.status, headers: { 'Content-Type': 'application/json' } },
       );
     }
 
@@ -493,12 +497,12 @@ app.get('/assessments/templates', async (c) => {
     if (!res.ok) {
       const errText = await res.text().catch(() => 'Unknown error');
       log.error(`Failed to fetch assessment templates: ${res.status}`, { error: errText });
-      return c.json(
-        {
+      return new Response(
+        JSON.stringify({
           error: `Honeycomb returned ${res.status} when fetching assessment templates`,
           details: errText.substring(0, 300),
-        },
-        res.status as number,
+        }),
+        { status: res.status, headers: { 'Content-Type': 'application/json' } },
       );
     }
 
@@ -571,9 +575,12 @@ app.post('/assessments/run', async (c) => {
         (responseData as Record<string, unknown>)?.error ||
         responseText.substring(0, 300);
       log.error(`Assessment submission failed (${res.status}):`, { error: errDetail });
-      return c.json(
-        { error: `Assessment submission failed: ${errDetail}`, status: res.status },
-        (res.status >= 400 && res.status < 600 ? res.status : 500) as number,
+      return new Response(
+        JSON.stringify({ error: `Assessment submission failed: ${errDetail}`, status: res.status }),
+        {
+          status: res.status >= 400 && res.status < 600 ? res.status : 500,
+          headers: { 'Content-Type': 'application/json' },
+        },
       );
     }
 

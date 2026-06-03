@@ -27,6 +27,7 @@ import { requireIdempotency } from './idempotency.ts';
 import { formatZodError } from './shared-validation-utils.ts';
 import { SignEnvelopeSchema, RejectEnvelopeSchema } from './esign-validation.ts';
 import { getRequestMetadata, audActor, resolveFirmId } from './esign-route-helpers.ts';
+import type { SignerRecord } from './esign-route-helpers.ts';
 import { belongsToFirm } from './esign-firm-scope.ts';
 import {
   getEnvelopeDetails,
