@@ -146,7 +146,9 @@ async function resolvePointerModule(
       intakeSessionId: resolved.intakeSessionId,
     };
   } catch (err) {
-    log.warn(`Error processing ${key} FNA status:`, { error: err instanceof Error ? err.message : String(err) });
+    log.warn(`Error processing ${key} FNA status:`, {
+      error: err instanceof Error ? err.message : String(err),
+    });
     return { key, status: 'error' as const, data: null };
   }
 }
@@ -190,7 +192,9 @@ async function resolvePrefixModule(
       intakeSessionId: resolved.intakeSessionId,
     };
   } catch (err) {
-    log.warn(`Error processing ${key} FNA status:`, { error: err instanceof Error ? err.message : String(err) });
+    log.warn(`Error processing ${key} FNA status:`, {
+      error: err instanceof Error ? err.message : String(err),
+    });
     return { key, status: 'error' as const, data: null };
   }
 }

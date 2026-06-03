@@ -449,7 +449,9 @@ envelopesRoutes.post(
           `Upload analysis: ${fieldCandidates.length} candidate(s) in ${analysis.durationMs}ms (ok=${analysis.ok})`,
         );
       } catch (analysisErr) {
-        log.warn('PDF analysis threw (non-fatal):', { error: analysisErr instanceof Error ? analysisErr.message : String(analysisErr) });
+        log.warn('PDF analysis threw (non-fatal):', {
+          error: analysisErr instanceof Error ? analysisErr.message : String(analysisErr),
+        });
       }
 
       return c.json({

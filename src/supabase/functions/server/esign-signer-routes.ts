@@ -235,7 +235,9 @@ signerRoutes.post('/signer/validate', rateLimit('SIGNER_ACCESS'), async (c) => {
         savedInitials = typeof profile.initials === 'string' ? profile.initials : null;
       }
     } catch (profileErr) {
-      log.warn('Failed to load signer profile (non-critical):', { error: profileErr instanceof Error ? profileErr.message : String(profileErr) });
+      log.warn('Failed to load signer profile (non-critical):', {
+        error: profileErr instanceof Error ? profileErr.message : String(profileErr),
+      });
     }
 
     // Auto-send OTP if required and not verified
@@ -275,7 +277,9 @@ signerRoutes.post('/signer/validate', rateLimit('SIGNER_ACCESS'), async (c) => {
           log.info(`✅ Auto-sent OTP to ${signer.email} for signer ${signer.id}`);
         }
       } catch (err) {
-        log.warn('❌ Failed to auto-send OTP:', { error: err instanceof Error ? err.message : String(err) });
+        log.warn('❌ Failed to auto-send OTP:', {
+          error: err instanceof Error ? err.message : String(err),
+        });
         // We don't block the response, but we log the error
       }
     }
@@ -292,7 +296,9 @@ signerRoutes.post('/signer/validate', rateLimit('SIGNER_ACCESS'), async (c) => {
         branding = toPublicBranding(record);
       }
     } catch (brandErr) {
-      log.warn('Failed to load firm branding for signer (non-critical):', { error: brandErr instanceof Error ? brandErr.message : String(brandErr) });
+      log.warn('Failed to load firm branding for signer (non-critical):', {
+        error: brandErr instanceof Error ? brandErr.message : String(brandErr),
+      });
     }
 
     // P8.7 — Surface the signer's preferred language so the UI can
@@ -594,7 +600,9 @@ signerRoutes.post('/signer/submit', requireIdempotency(), rateLimit('SIGNER_SUBM
         return c.json({ error: 'Identity verification (KBA) is required before signing' }, 403);
       }
     } catch (kbaErr) {
-      log.warn('KBA gate check failed; allowing submit:', { error: kbaErr instanceof Error ? kbaErr.message : String(kbaErr) });
+      log.warn('KBA gate check failed; allowing submit:', {
+        error: kbaErr instanceof Error ? kbaErr.message : String(kbaErr),
+      });
     }
 
     // Update field values
@@ -1082,7 +1090,9 @@ signerRoutes.get('/signer/download/:token', async (c) => {
           finalPdfBuffer = await PDFService.mergeCertificate(burnedPdfBuffer, certBuffer);
         }
       } catch (certError) {
-        log.warn('Certificate merge failed during fallback download', { error: certError instanceof Error ? certError.message : String(certError) });
+        log.warn('Certificate merge failed during fallback download', {
+          error: certError instanceof Error ? certError.message : String(certError),
+        });
       }
 
       return new Response(finalPdfBuffer, {

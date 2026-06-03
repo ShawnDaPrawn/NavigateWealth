@@ -127,7 +127,9 @@ export async function enqueue(params: {
 
     return record;
   } catch (error: unknown) {
-    log.warn('Failed to enqueue in-app notification', { error: error instanceof Error ? error.message : String(error) });
+    log.warn('Failed to enqueue in-app notification', {
+      error: error instanceof Error ? error.message : String(error),
+    });
     return null;
   }
 }
@@ -169,7 +171,9 @@ export async function markRead(userId: string, notificationId: string): Promise<
     await writeUnread(userId, unread - 1);
     return true;
   } catch (error: unknown) {
-    log.warn('Failed to mark notification read', { error: error instanceof Error ? error.message : String(error) });
+    log.warn('Failed to mark notification read', {
+      error: error instanceof Error ? error.message : String(error),
+    });
     return false;
   }
 }
@@ -189,7 +193,9 @@ export async function markAllRead(userId: string): Promise<number> {
     await writeUnread(userId, 0);
     return changed;
   } catch (error: unknown) {
-    log.warn('Failed to mark all notifications read', { error: error instanceof Error ? error.message : String(error) });
+    log.warn('Failed to mark all notifications read', {
+      error: error instanceof Error ? error.message : String(error),
+    });
     return 0;
   }
 }

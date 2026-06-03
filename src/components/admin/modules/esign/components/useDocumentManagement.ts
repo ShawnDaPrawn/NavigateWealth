@@ -83,7 +83,11 @@ export function useDocumentManagement(params: {
   const activeDocumentUrl = useMemo<string | undefined>(() => {
     const fromList = envelopeDocuments.find((d) => d.document_id === activeDocumentId);
     return (
-      fromList?.url ?? initialDocumentUrl ?? envelopeDocumentUrl ?? envelopeDocumentUrlLegacy ?? undefined
+      fromList?.url ??
+      initialDocumentUrl ??
+      envelopeDocumentUrl ??
+      envelopeDocumentUrlLegacy ??
+      undefined
     );
   }, [
     envelopeDocuments,

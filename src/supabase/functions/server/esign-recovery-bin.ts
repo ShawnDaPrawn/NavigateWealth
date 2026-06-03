@@ -181,7 +181,9 @@ export async function hardDeleteEnvelope(envelopeId: string): Promise<void> {
     }
     log.info(`Hard-deleted envelope ${envelopeId}`);
   } catch (err) {
-    log.warn(`Failed to hard-delete envelope ${envelopeId}:`, { error: err instanceof Error ? err.message : String(err) });
+    log.warn(`Failed to hard-delete envelope ${envelopeId}:`, {
+      error: err instanceof Error ? err.message : String(err),
+    });
   }
 }
 

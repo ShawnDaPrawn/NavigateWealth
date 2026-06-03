@@ -1819,7 +1819,9 @@ export class ResourcesService {
                     lastError = err;
                     retries--;
                     if (retries > 0) {
-                      log.warn(`Chunk ${i} retry (${retries} left)`, { error: err instanceof Error ? err.message : String(err) });
+                      log.warn(`Chunk ${i} retry (${retries} left)`, {
+                        error: err instanceof Error ? err.message : String(err),
+                      });
                       await new Promise((r) => setTimeout(r, 1000));
                     }
                   }
@@ -1834,7 +1836,11 @@ export class ResourcesService {
                 getSupabase()
                   .storage.from(BUCKET_NAME)
                   .remove(chunksToDelete)
-                  .catch((e) => log.warn('Chunk cleanup failed', { error: e instanceof Error ? e.message : String(e) }));
+                  .catch((e) =>
+                    log.warn('Chunk cleanup failed', {
+                      error: e instanceof Error ? e.message : String(e),
+                    }),
+                  );
               }
             } finally {
               // Always close the file handle
@@ -1890,7 +1896,9 @@ export class ResourcesService {
                   lastError = err;
                   retries--;
                   if (retries > 0) {
-                    log.warn(`Storage file retry (${retries} left)`, { error: err instanceof Error ? err.message : String(err) });
+                    log.warn(`Storage file retry (${retries} left)`, {
+                      error: err instanceof Error ? err.message : String(err),
+                    });
                     await new Promise((r) => setTimeout(r, 1000));
                   }
                 }
@@ -1943,7 +1951,9 @@ export class ResourcesService {
                   lastError = err;
                   retries--;
                   if (retries > 0) {
-                    log.warn(`URL file retry (${retries} left)`, { error: err instanceof Error ? err.message : String(err) });
+                    log.warn(`URL file retry (${retries} left)`, {
+                      error: err instanceof Error ? err.message : String(err),
+                    });
                     await new Promise((r) => setTimeout(r, 1000));
                   }
                 }
@@ -2040,7 +2050,9 @@ export class ResourcesService {
           lastUploadError = err;
           uploadRetries--;
           if (uploadRetries > 0) {
-            log.warn(`Upload attempt failed`, { error: err instanceof Error ? err.message : String(err) });
+            log.warn(`Upload attempt failed`, {
+              error: err instanceof Error ? err.message : String(err),
+            });
             await new Promise((r) => setTimeout(r, 2000));
           }
         } finally {

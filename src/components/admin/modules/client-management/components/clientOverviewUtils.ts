@@ -1646,3 +1646,5 @@ export function deriveEnrichedActivityEvents(inputs: EnrichedActivityInputs): Ac
   combined.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
   return combined;
 }
+
+export const INITIAL_ACTIVITY_COUNT = 8;

@@ -311,7 +311,9 @@ export async function getEmailTemplate(id: string): Promise<EmailTemplate> {
     try {
       templateData = JSON.parse(customTemplate);
     } catch (e) {
-      log.warn(`Failed to parse template data for ${id}`, { error: e instanceof Error ? e.message : String(e) });
+      log.warn(`Failed to parse template data for ${id}`, {
+        error: e instanceof Error ? e.message : String(e),
+      });
       templateData = {};
     }
   }
@@ -329,7 +331,9 @@ export async function getFooterSettings(): Promise<EmailFooterSettings> {
     const data = await kv.get(KV_FOOTER_KEY);
     if (data) return { ...DEFAULT_FOOTER_SETTINGS, ...data };
   } catch (e) {
-    log.warn('Failed to fetch footer settings', { error: e instanceof Error ? e.message : String(e) });
+    log.warn('Failed to fetch footer settings', {
+      error: e instanceof Error ? e.message : String(e),
+    });
   }
   return DEFAULT_FOOTER_SETTINGS;
 }

@@ -109,7 +109,9 @@ export async function buildEvidencePack(envelopeId: string): Promise<EvidencePac
       }
     }
   } catch (err) {
-    log.warn('Failed to read attachments index; continuing without:', { error: err instanceof Error ? err.message : String(err) });
+    log.warn('Failed to read attachments index; continuing without:', {
+      error: err instanceof Error ? err.message : String(err),
+    });
   }
 
   // ── Shape manifest + audit JSON ────────────────────────────────────
