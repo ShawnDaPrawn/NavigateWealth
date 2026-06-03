@@ -76,8 +76,8 @@ vi.mock('../stderr-logger.ts', () => ({
 
 // ── Auth middleware ────────────────────────────────────────────────────────────
 // The test userId for "self" checks is 'test-user'
-vi.mock('../auth-mw.ts', () => ({
-  requireAuth: async (c: any, next: any) => {
+const authMocks = vi.hoisted(() => ({
+  requireAuth: vi.fn(async (c: any, next: any) => {
     if (!c.req.header('Authorization')) {
       return c.json({ error: 'Unauthorized' }, 401);
     }
@@ -85,7 +85,11 @@ vi.mock('../auth-mw.ts', () => ({
     c.set('userId', 'test-user');
     c.set('userRole', 'admin');
     await next();
-  },
+  }),
+}));
+
+vi.mock('../auth-mw.ts', () => ({
+  requireAuth: authMocks.requireAuth,
 }));
 
 // ── Supabase client stub ───────────────────────────────────────────────────────

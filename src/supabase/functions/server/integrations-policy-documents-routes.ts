@@ -33,6 +33,14 @@ import {
 const app = new Hono();
 const log = createModuleLogger('integrations-policy-documents');
 
+const isUploadedFile = (value: unknown): value is File =>
+  value instanceof File ||
+  (typeof value === 'object' &&
+    value !== null &&
+    typeof (value as File).arrayBuffer === 'function' &&
+    typeof (value as File).name === 'string' &&
+    typeof (value as File).size === 'number');
+
 /**
  * POST /policy-documents/upload
  * Upload (or replace) a policy document for a specific policy line item.
@@ -56,7 +64,7 @@ app.post('/policy-documents/upload', requireAuth, async (c) => {
     }
 
     const file = formData['file'];
-    if (!file || !(file instanceof File)) {
+    if (!isUploadedFile(file)) {
       return c.json({ error: 'No file provided' }, 400);
     }
 

@@ -47,6 +47,14 @@ import {
 const app = new Hono();
 const log = createModuleLogger('integrations-upload');
 
+const isUploadedFile = (value: unknown): value is File =>
+  value instanceof File ||
+  (typeof value === 'object' &&
+    value !== null &&
+    typeof (value as File).arrayBuffer === 'function' &&
+    typeof (value as File).name === 'string' &&
+    typeof (value as File).size === 'number');
+
 // POST /upload
 app.post('/upload', requireAuth, async (c) => {
   try {
@@ -72,7 +80,7 @@ app.post('/upload', requireAuth, async (c) => {
     const categoryId = body['categoryId'] as string;
     const mode = (body['mode'] as string) || 'preview';
 
-    if (!file || !(file instanceof File)) {
+    if (!isUploadedFile(file)) {
       return c.json({ error: 'No file uploaded' }, 400);
     }
     if (!providerId || !categoryId) {

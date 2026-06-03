@@ -91,9 +91,21 @@ vi.mock('../email-service.ts', () => ({
   sendEmail: vi.fn(async () => ({ success: true })),
 }));
 
-// ── asyncHandler pass-through ─────────────────────────────────────────────────
+// ── asyncHandler test double ──────────────────────────────────────────────────
 vi.mock('../error.middleware.ts', () => ({
-  asyncHandler: (fn: any) => fn,
+  asyncHandler: (fn: any) => async (c: any) => {
+    try {
+      return await fn(c);
+    } catch (error: any) {
+      if (error?.name === 'ZodError' || Array.isArray(error?.errors)) {
+        return c.json({ error: 'Validation failed', errors: error.errors || error.issues }, 400);
+      }
+      return c.json(
+        { error: error instanceof Error ? error.message : 'Internal server error' },
+        500,
+      );
+    }
+  },
 }));
 
 // ── Supabase client stub ──────────────────────────────────────────────────────

@@ -1,6 +1,8 @@
 import { Hono } from 'npm:hono';
+import { ZodError } from 'npm:zod';
 import { createModuleLogger } from './stderr-logger.ts';
 import { getErrMsg } from './shared-logger-utils.ts';
+import { formatZodError } from './shared-validation-utils.ts';
 import { ProxySchema } from './honeycomb-validation.ts';
 import { HONEYCOMB_API_URL, getHeaders } from './honeycomb-utils.ts';
 
@@ -33,6 +35,9 @@ app.post('/proxy', async (c) => {
 
     return c.json(data);
   } catch (e: unknown) {
+    if (e instanceof ZodError) {
+      return c.json({ error: 'Validation failed', ...formatZodError(e) }, 400);
+    }
     log.error('Proxy error:', e);
     return c.json({ error: getErrMsg(e) }, 500);
   }
