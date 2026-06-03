@@ -25,13 +25,6 @@ interface EnvConfig {
   MODE: string;
 }
 
-class  extends Error {
-  constructor(message: string) {
-    super(message);
-    this.name = 'EnvValidationError';
-  }
-}
-
 // Cache for validated environment
 let cachedEnv: EnvConfig | null = null;
 
