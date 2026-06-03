@@ -16,8 +16,8 @@ import {
 } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { Plus, Trash2 } from 'lucide-react';
-import { RISK_PROFILE_LABELS } from '@/components/admin/modules/investment-ina/constants';
-import type { RiskProfile } from '@/components/admin/modules/investment-ina/types';
+import { RISK_PROFILE_LABELS } from '@/components/admin/modules/investment-ina';
+import type { RiskProfile } from '@/components/admin/modules/investment-ina';
 
 interface GoalRow {
   id: string;
