@@ -10,7 +10,10 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen } from '@/test/utils';
 
-const mutStub = () => ({ mutate: vi.fn(), mutateAsync: vi.fn(), isPending: false });
+const { mutStub } = vi.hoisted(() => {
+  const mutStub = () => ({ mutate: vi.fn(), mutateAsync: vi.fn(), isPending: false });
+  return { mutStub };
+});
 
 vi.mock('@/components/admin/modules/publications/hooks/useNewsletterSubscribers', () => ({
   useNewsletterSubscribers: () => ({

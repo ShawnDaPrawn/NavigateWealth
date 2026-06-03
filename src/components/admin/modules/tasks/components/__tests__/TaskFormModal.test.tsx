@@ -12,7 +12,10 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen } from '@/test/utils';
 
-const mutationStub = () => ({ mutate: vi.fn(), mutateAsync: vi.fn(), isPending: false });
+const { mutationStub } = vi.hoisted(() => {
+  const mutationStub = () => ({ mutate: vi.fn(), mutateAsync: vi.fn(), isPending: false });
+  return { mutationStub };
+});
 
 vi.mock('@/components/admin/modules/tasks/hooks', () => ({
   useCreateTask: mutationStub,
