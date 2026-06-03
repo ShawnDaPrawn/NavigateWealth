@@ -32,7 +32,6 @@ export function SearchInput({
     }, debounceMs);
 
     debouncedChange(localValue);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [localValue, debounceMs]);
 
   // Sync with external value changes

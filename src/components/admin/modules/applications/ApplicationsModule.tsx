@@ -57,14 +57,12 @@ export function ApplicationsModule() {
     if (isAdmin) {
       loadApplications();
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeTab, isAdmin]);
 
   useEffect(() => {
     if (isAdmin) {
       loadStats();
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isAdmin]);
 
   const loadApplications = useCallback(async () => {
@@ -81,7 +79,6 @@ export function ApplicationsModule() {
       setLoading(false);
       setRefreshing(false);
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeTab]);
 
   const loadStats = useCallback(async () => {

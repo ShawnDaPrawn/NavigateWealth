@@ -65,7 +65,6 @@ export function TransactionsDocumentsPage() {
     if (user?.id && activeTab === 'documents') {
       fetchDocuments();
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user?.id, activeTab]);
 
   const fetchDocuments = async () => {

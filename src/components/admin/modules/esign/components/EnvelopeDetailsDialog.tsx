@@ -262,7 +262,6 @@ export function EnvelopeDetailsDialog({
       setAuditError(null);
       setCopiedId(false);
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, envelope?.id]);
 
   // Lazy-load audit events when Activity tab is selected

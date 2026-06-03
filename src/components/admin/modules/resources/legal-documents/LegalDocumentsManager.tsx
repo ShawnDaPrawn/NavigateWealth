@@ -632,7 +632,6 @@ function DraftEditor({ detail }: { detail: LegalDocumentDetailResponse }) {
         orientation,
       },
     }),
-    // eslint-disable-next-line react-hooks/exhaustive-deps
     [
       detail.currentDraftVersion?.toc,
       detail.currentDraftVersion?.updatedAt,

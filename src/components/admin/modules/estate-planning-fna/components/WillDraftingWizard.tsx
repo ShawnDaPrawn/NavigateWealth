@@ -115,7 +115,6 @@ export function WillDraftingWizard({
       setCurrentStep('personal-details');
       setValidationErrors([]);
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
 
   // ── Resume Draft: load existing will data ────────────────────────
@@ -315,7 +314,6 @@ export function WillDraftingWizard({
     };
 
     fetchClientProfile();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, clientId]);
 
   // ── Steps configuration ──────────────────────────────────────────

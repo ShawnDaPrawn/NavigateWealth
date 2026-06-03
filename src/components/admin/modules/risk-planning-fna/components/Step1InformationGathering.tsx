@@ -111,7 +111,6 @@ export function Step1InformationGathering({
     if (hasPersistedRiskIntake(initialData)) {
       populateFromInitialData(initialData!);
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [initialData]);
 
   const populateFromInitialData = (data: Partial<InformationGatheringInput>) => {

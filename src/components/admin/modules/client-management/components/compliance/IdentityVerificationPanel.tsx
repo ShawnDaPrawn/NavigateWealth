@@ -83,7 +83,6 @@ export function IdentityVerificationPanel({
 
   useEffect(() => {
     loadHistory();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [clientId]);
 
   const loadHistory = async () => {

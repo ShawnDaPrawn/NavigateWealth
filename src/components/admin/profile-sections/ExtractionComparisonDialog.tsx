@@ -207,7 +207,6 @@ export function ExtractionComparisonDialog({
       setFilterMode('all');
       setNoSnapshotData(false);
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOpen, fetchComparisonData]);
 
   // Filter fields

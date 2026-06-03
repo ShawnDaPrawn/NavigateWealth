@@ -638,7 +638,6 @@ export function IssuesModule() {
     setDraftOwnerName(selectedIssue.ownerName || '');
     setDraftStatusNote(selectedIssue.statusNote || '');
     setDraftResolutionEvidence(selectedIssue.resolutionEvidence || '');
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
     selectedIssue?.fingerprint,
     selectedIssue?.ownerName,

@@ -98,7 +98,6 @@ export function DynamicServicePageWrapper({
 
   useEffect(() => {
     if (user?.id) fetchData();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user?.id, categoryId]);
 
   const fetchData = async () => {

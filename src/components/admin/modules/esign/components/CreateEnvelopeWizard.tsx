@@ -96,7 +96,6 @@ export function CreateEnvelopeWizard({
     if (droppedFile) {
       validateAndSetFile(droppedFile);
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const handleFileSelect = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
@@ -104,7 +103,6 @@ export function CreateEnvelopeWizard({
     if (selectedFile) {
       validateAndSetFile(selectedFile);
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const validateAndSetFile = (selectedFile: File) => {

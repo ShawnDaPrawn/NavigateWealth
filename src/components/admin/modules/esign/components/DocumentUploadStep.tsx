@@ -61,7 +61,6 @@ export function DocumentUploadStep({
     if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
       processFiles(Array.from(e.dataTransfer.files));
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {

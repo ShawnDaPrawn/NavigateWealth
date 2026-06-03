@@ -112,7 +112,6 @@ export function SanctionsScreeningPanel({
     setSearchIdNumber(idNumber || '');
     setResult(null);
     loadHistory();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [clientId, firstName, lastName, idNumber]);
 
   const loadHistory = async () => {

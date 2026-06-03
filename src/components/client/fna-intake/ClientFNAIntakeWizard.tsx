@@ -171,7 +171,6 @@ export function ClientFNAIntakeWizard({
     } finally {
       setIsSaving(false);
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [session?.id, pendingInputs, persistDraft, invalidateStatus, onComplete, isReadOnly]);
 
   if (loading) {

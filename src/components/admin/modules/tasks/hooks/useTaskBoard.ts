@@ -108,7 +108,6 @@ export function useTaskBoard(tasks: Task[] = []) {
       setIsModalOpen(false);
       setSelectedTask(null);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tasks]);
 
   // ============================================================================

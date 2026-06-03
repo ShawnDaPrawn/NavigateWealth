@@ -57,7 +57,6 @@ export function PreviousFNAsDialog({
     if (open && clientId) {
       loadFNAs();
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, clientId, apiUrl]);
 
   const loadFNAs = async (): Promise<void> => {

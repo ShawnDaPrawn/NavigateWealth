@@ -690,7 +690,6 @@ export function SigningWorkflow({
         }
       }
     },
-    // eslint-disable-next-line react-hooks/exhaustive-deps
     [phase, signatures],
   );
 

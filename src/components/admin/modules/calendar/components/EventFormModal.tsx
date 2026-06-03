@@ -224,7 +224,6 @@ export function EventFormModal({
       setRecurrenceEndDate('');
       setSendReminders(false);
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [event, open]);
 
   const handleSubmit = (e: React.FormEvent) => {

@@ -81,7 +81,6 @@ export function CDDPanel({
 
   useEffect(() => {
     loadHistory();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [clientId]);
 
   const loadHistory = async () => {

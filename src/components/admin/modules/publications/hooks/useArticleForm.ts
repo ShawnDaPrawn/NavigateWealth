@@ -243,7 +243,6 @@ export function useArticleForm(options: UseArticleFormOptions = {}): UseArticleF
     initialFormDataRef.current = JSON.stringify(formData);
     setIsDirty(false);
     setErrors([]);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [article]);
 
   return {

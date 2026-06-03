@@ -58,7 +58,6 @@ export function OtpVerificationStep({
     if (isComplete && !isVerifying) {
       handleVerify();
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [otp]);
 
   const handleOtpChange = (index: number, value: string) => {

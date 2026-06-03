@@ -194,7 +194,6 @@ export function GoalFormDialog({
       lumpSum: linked.reduce((sum, p) => sum + getPolicyValue(p), 0),
       monthly: linked.reduce((sum, p) => sum + getPolicyPremium(p), 0),
     };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedPolicyIds, policies]);
 
   // AdHoc Input State

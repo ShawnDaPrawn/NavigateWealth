@@ -86,7 +86,6 @@ export function PrepareFormEditor({
         clearTimeout(autoSaveTimerRef.current);
       }
     };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [fields, hasUnsavedChanges, saving, sending]);
 
   const handleAutoSave = async () => {

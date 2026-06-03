@@ -238,7 +238,6 @@ const FormBuilderWorkspace = ({
       setLetterMeta(resource.letterMeta || {});
       setResourceId(resource.id);
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [initialData, resetBlocks]);
 
   // -- Memoised payload to track in autosave --

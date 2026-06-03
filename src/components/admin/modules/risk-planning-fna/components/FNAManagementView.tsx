@@ -58,7 +58,6 @@ export function FNAManagementView({
 
   useEffect(() => {
     loadFNAs();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [clientId, apiUrl]);
 
   const loadFNAs = async (): Promise<void> => {

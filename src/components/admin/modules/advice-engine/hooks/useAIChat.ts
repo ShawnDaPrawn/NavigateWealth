@@ -67,7 +67,6 @@ export function useAIChat(options: UseAIChatOptions = {}): UseAIChatReturn {
     if (initialMessages.length > 0 && messages.length === 1) {
       setMessages([WELCOME_MESSAGE, ...initialMessages]);
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [initialMessages]);
 
   // ============================================================================

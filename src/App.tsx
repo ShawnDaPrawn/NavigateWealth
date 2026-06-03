@@ -247,7 +247,6 @@ export default function App() {
       if (script1.parentNode) document.head.removeChild(script1);
       if (script2.parentNode) document.head.removeChild(script2);
     };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   return (

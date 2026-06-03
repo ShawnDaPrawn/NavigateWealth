@@ -185,7 +185,6 @@ function OverviewSection({
 
   useEffect(() => {
     loadData();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [clientId, section.categoryId]);
 
   // Update Linked Goals Map when policies or goals change

@@ -172,7 +172,6 @@ export function TaxDocumentsSection({ clientId, clientName }: TaxDocumentsSectio
     if (clientId) {
       loadDocuments();
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [clientId]);
 
   const loadDocuments = async () => {

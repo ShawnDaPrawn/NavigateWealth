@@ -889,7 +889,6 @@ export function WillPdfView({ open, onClose, willId, clientName }: WillPdfViewPr
   useEffect(() => {
     if (!open || !willId) return;
     loadWill();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, willId]);
 
   const loadWill = async () => {

@@ -206,7 +206,6 @@ export function PolicyFormDialog({
       loadProviders();
       loadTableStructure();
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOpen, activeCategoryId, step]);
 
   useEffect(() => {

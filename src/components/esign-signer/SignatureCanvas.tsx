@@ -138,7 +138,6 @@ export function SignatureCanvas({
     const canvas = drawCanvasRef.current;
     if (!canvas) return;
     initCanvas(canvas);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [signatureMode, inkColor]);
 
   const initCanvas = (canvas: HTMLCanvasElement) => {
@@ -161,7 +160,6 @@ export function SignatureCanvas({
   useEffect(() => {
     if (signatureMode !== 'type' || !fontsLoaded) return;
     renderTypedSignature();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [typedText, selectedFont, inkColor, fontsLoaded, signatureMode]);
 
   const renderTypedSignature = useCallback(() => {

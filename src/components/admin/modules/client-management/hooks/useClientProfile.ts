@@ -205,7 +205,6 @@ export function useClientProfile(clientData: Client, onSave?: (data: ProfileData
     if (allQuestionsAnswered()) {
       setAssessmentStarted(true);
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [profileData.riskAssessment]);
 
   // Load profile data from backend when client changes
@@ -285,7 +284,6 @@ export function useClientProfile(clientData: Client, onSave?: (data: ProfileData
     };
 
     loadClientProfile();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [clientData.id, queryClient]);
 
   // Capture snapshot of merged profileData after server data has been applied.

@@ -434,7 +434,6 @@ export function useProfileManager({
     return () => {
       controller.abort();
     };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // ── Assessment completion check ─────────────────────────────────
@@ -442,7 +441,6 @@ export function useProfileManager({
     if (allQuestionsAnswered()) {
       setAssessmentStarted(true);
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [profileData.riskAssessment]);
 
   // ── Auto-enable self-employed edit mode if empty ────────────────
