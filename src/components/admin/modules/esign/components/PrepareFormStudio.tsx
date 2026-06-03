@@ -6,10 +6,8 @@
 
 import React, { useState, useCallback, useEffect, useRef, useMemo } from 'react';
 import { Button } from '../../../../ui/button';
-import { Badge } from '../../../../ui/badge';
 import {
   ArrowLeft,
-  Save,
   Send,
   Loader2,
   CheckCircle2,
@@ -34,7 +32,7 @@ import { PDFViewer } from './PDFViewer';
 import { FieldPalette } from './FieldPalette';
 import { FieldPropertiesPanel } from './FieldPropertiesPanel';
 import type { EsignEnvelope, EsignField, SignerFormData } from '../types';
-import { esignApi, type EnvelopeDocumentRef } from '../api';
+import { esignApi } from '../api';
 import { SIGNER_COLORS } from '../constants';
 import { toast } from 'sonner';
 import {
@@ -68,18 +66,17 @@ import {
   SelectTrigger,
   SelectValue,
 } from '../../../../ui/select';
-import { Switch } from '../../../../ui/switch';
 import { logger } from '../../../../../utils/logger';
 import { RecipientsManager } from './RecipientsManager';
 import { PageManagerDialog } from './PageManagerDialog';
-import {
-  createFieldsFromCandidates,
-  isEditableTarget,
-  buildPageReplicas,
-} from './prepareFormStudioUtils';
+import { createFieldsFromCandidates, buildPageReplicas } from './prepareFormStudioUtils';
 import { useFieldHistory } from './useFieldHistory';
 import { useAutoSave } from './useAutoSave';
 import { useFieldSelection } from './useFieldSelection';
+import { useDocumentManagement } from './useDocumentManagement';
+import { useCandidateManagement } from './useCandidateManagement';
+import { useKeyboardShortcuts } from './useKeyboardShortcuts';
+import { EmailPreview } from './EmailPreview';
 
 interface PrepareFormStudioProps {
   envelope: EsignEnvelope;
@@ -122,54 +119,15 @@ export function PrepareFormStudio({
   sending = false,
   documentUrl,
 }: PrepareFormStudioProps) {
-  // State
+  // Core field state
   const [fields, setFields] = useState<EsignField[]>(envelope.fields || []);
-  // Field selection + signer-filter state machine: selectedFieldIds (the
-  // overlay selection), primarySelectedId (the Properties-panel / PDFViewer
-  // target — whichever id was touched last) and visibleSignerIds (the legend
-  // filter), plus the discrete operations the handlers below drive.
-  const {
-    selectedFieldIds,
-    primarySelectedId,
-    visibleSignerIds,
-    selectOnly,
-    toggleInSelection,
-    removeFromSelection,
-    selectMany,
-    clearSelection,
-    toggleSignerFilter,
-    clearSignerFilter,
-  } = useFieldSelection();
-  const [selectedSignerId, setSelectedSignerId] = useState<string | undefined>(signers[0]?.email);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+
+  // Simple local state (snap, page count, dialog toggles)
+  const [selectedSignerId, setSelectedSignerId] = useState<string | undefined>(signers[0]?.email);
   const [snapEnabled, setSnapEnabled] = useState(true);
   // P2.5 2.3 — total page count, populated by PDFViewer once the doc loads.
   const [pageCount, setPageCount] = useState<number>(1);
-
-  // ── P3.4 — Multi-document envelope state ──
-  // Even single-document envelopes get a one-element list here so the
-  // tab-bar UI doesn't have to special-case "old" envelopes. The
-  // active document drives which PDF is rendered and which document_id
-  // is stamped onto newly-placed fields.
-  const [envelopeDocuments, setEnvelopeDocuments] = useState<EnvelopeDocumentRef[]>([]);
-  const [activeDocumentId, setActiveDocumentId] = useState<string>(envelope.document_id ?? '');
-  const [docsLoading, setDocsLoading] = useState(false);
-  const [addingDoc, setAddingDoc] = useState(false);
-  const addDocInputRef = useRef<HTMLInputElement>(null);
-
-  // ── P3.1 + P3.2 — autodetect candidates ──
-  // Populated once from `envelope.field_candidates` (returned only on the
-  // upload response). The studio shows them as a dismissable banner with
-  // per-candidate accept and "Accept all" actions. Once accepted/dismissed
-  // they're cleared from this state — they're not persisted to the
-  // envelope until the sender hits Save.
-  const [candidates, setCandidates] = useState<NonNullable<EsignEnvelope['field_candidates']>>(
-    envelope.field_candidates ?? [],
-  );
-  const [showCandidatesPanel, setShowCandidatesPanel] = useState<boolean>(
-    (envelope.field_candidates?.length ?? 0) > 0,
-  );
-  const autoPopulateHandledRef = useRef<string | null>(null);
 
   // Phase 2 dialogs / sheets
   const [showSettings, setShowSettings] = useState(false);
@@ -214,15 +172,43 @@ export function PrepareFormStudio({
   // it). On paste, fields are placed at +20px offset from their originals.
   const fieldClipboardRef = useRef<EsignField[] | null>(null);
 
-  // Undo/redo history (owns the stack + cursor; drives setFields on undo/redo)
+  // ── Hook: Undo/redo history ──
   const { pushToHistory, undo, redo, canUndo, canRedo } = useFieldHistory(
     envelope.fields || [],
     setFields,
     setHasUnsavedChanges,
   );
 
-  // Field counts per signer — drives the legend badges. Computed from the
-  // current `fields` so it's always in sync with edits.
+  // ── Hook: Field selection + signer-filter state machine ──
+  const {
+    selectedFieldIds,
+    primarySelectedId,
+    visibleSignerIds,
+    selectOnly,
+    toggleInSelection,
+    removeFromSelection,
+    selectMany,
+    clearSelection,
+    toggleSignerFilter,
+    clearSignerFilter,
+  } = useFieldSelection();
+
+  // Eligible signers for placing fields = everyone EXCEPT carbon-copy
+  // recipients. CCs are notified only and never sign anything, so they
+  // shouldn't appear in the "Placing fields for" picker.
+  const eligibleSigners = useMemo(() => signers.filter((s) => s.kind !== 'cc'), [signers]);
+
+  // If the currently-selected signer is a CC (e.g. they were edited after
+  // selection), drop the selection back to the first eligible signer.
+  useEffect(() => {
+    if (!selectedSignerId) return;
+    const cur = signers.find((s) => s.email === selectedSignerId);
+    if (!cur || cur.kind === 'cc') {
+      setSelectedSignerId(eligibleSigners[0]?.email);
+    }
+  }, [selectedSignerId, signers, eligibleSigners]);
+
+  // Field counts per signer — drives the legend badges.
   const fieldCountsBySigner = useMemo(() => {
     const counts: Record<string, number> = {};
     fields.forEach((f) => {
@@ -231,13 +217,6 @@ export function PrepareFormStudio({
     });
     return counts;
   }, [fields]);
-
-  // Eligible signers for placing fields = everyone EXCEPT carbon-copy
-  // recipients. CCs are notified only and never sign anything, so they
-  // shouldn't appear in the "Placing fields for" picker. The legend still
-  // shows them (so the sender knows who else gets a copy) but they're
-  // visually distinguished and unclickable for filtering.
-  const eligibleSigners = useMemo(() => signers.filter((s) => s.kind !== 'cc'), [signers]);
 
   const buildFieldsFromCandidates = useCallback(
     (
@@ -248,46 +227,60 @@ export function PrepareFormStudio({
     [fields, envelope.id],
   );
 
-  // ── P3.4 — Load envelope documents ──
-  // Fetch the ordered document list (with presigned URLs) on mount and
-  // whenever the envelope id changes. Falls back gracefully on network
-  // errors so the studio still works as a single-doc editor using the
-  // legacy `documentUrl` prop.
-  useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      setDocsLoading(true);
-      try {
-        const { documents } = await esignApi.listEnvelopeDocuments(envelope.id);
-        if (cancelled) return;
-        setEnvelopeDocuments(documents);
-        if (!documents.some((d) => d.document_id === activeDocumentId)) {
-          setActiveDocumentId(documents[0]?.document_id ?? envelope.document_id);
-        }
-      } catch (err) {
-        // Non-fatal — single-doc envelopes still work via the legacy prop.
-        console.warn('Failed to load envelope documents:', err);
-      } finally {
-        if (!cancelled) setDocsLoading(false);
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [envelope.id]);
+  // ── Hook: Multi-document management ──
+  const {
+    envelopeDocuments,
+    activeDocumentId,
+    setActiveDocumentId,
+    docsLoading,
+    addingDoc,
+    addDocInputRef,
+    activeDocumentUrl,
+    fieldCountsByDocument,
+    handleAddDocument,
+    handleRemoveDocument,
+  } = useDocumentManagement({
+    envelopeId: envelope.id,
+    envelopeStatus: envelope.status,
+    initialDocumentId: envelope.document_id ?? '',
+    initialDocumentUrl: documentUrl,
+    envelopeDocumentUrl: envelope.document?.url,
+    envelopeDocumentUrlLegacy: envelope.documentUrl,
+    envelopePrimaryDocumentId: envelope.document_id,
+    fields,
+    setFields,
+  });
 
-  /**
-   * Resolve the active document's URL. Prefers the multi-doc list
-   * (which carries presigned URLs) but falls back to the legacy
-   * single-document `documentUrl` prop for back-compat.
-   */
-  const activeDocumentUrl = useMemo<string | undefined>(() => {
-    const fromList = envelopeDocuments.find((d) => d.document_id === activeDocumentId);
-    return (
-      fromList?.url ?? documentUrl ?? envelope.document?.url ?? envelope.documentUrl ?? undefined
-    );
-  }, [envelopeDocuments, activeDocumentId, documentUrl, envelope.document, envelope.documentUrl]);
+  // ── Hook: Autodetect candidate management ──
+  const {
+    candidates,
+    showCandidatesPanel,
+    setShowCandidatesPanel,
+    acceptCandidate,
+    acceptAllCandidates,
+    dismissCandidate,
+    dismissAllCandidates,
+  } = useCandidateManagement({
+    envelopeId: envelope.id,
+    initialCandidates: envelope.field_candidates,
+    autoPopulateSuggestedFields,
+    fields,
+    pushToHistory,
+    selectedSignerId,
+    eligibleSigners,
+    buildFieldsFromCandidates,
+  });
+
+  // ── Hook: Auto-save ──
+  const { autoSaving, lastSavedAt, persistFields, fieldsRef } = useAutoSave({
+    fields,
+    initialFields: envelope.fields || [],
+    onSaveFields,
+    hasUnsavedChanges,
+    setHasUnsavedChanges,
+    saving,
+    sending,
+  });
 
   /**
    * Filter the in-memory fields to only those belonging to the active
@@ -303,89 +296,6 @@ export function PrepareFormStudio({
     });
   }, [fields, envelopeDocuments.length, activeDocumentId, envelope.document_id]);
 
-  /**
-   * Per-document field counts shown as small badges in the tab bar so
-   * the sender can see at a glance which documents they've placed
-   * fields on.
-   */
-  const fieldCountsByDocument = useMemo(() => {
-    const counts: Record<string, number> = {};
-    fields.forEach((f) => {
-      const docId =
-        (f as EsignField & { document_id?: string }).document_id ?? envelope.document_id ?? '';
-      if (!docId) return;
-      counts[docId] = (counts[docId] ?? 0) + 1;
-    });
-    return counts;
-  }, [fields, envelope.document_id]);
-
-  /**
-   * Upload a new document to the envelope. Errors are surfaced as
-   * toasts; on success the document list is refreshed and the new
-   * document becomes the active tab so the user can immediately start
-   * placing fields on it.
-   */
-  const handleAddDocument = useCallback(
-    async (file: File) => {
-      if (envelope.status !== 'draft') {
-        toast.error('Only draft envelopes can have documents added');
-        return;
-      }
-      setAddingDoc(true);
-      try {
-        const result = await esignApi.addEnvelopeDocument(envelope.id, file, {
-          displayName: file.name.replace(/\.pdf$/i, ''),
-          idempotencyKey: `add-doc-${envelope.id}-${Date.now()}`,
-        });
-        setEnvelopeDocuments(result.documents);
-        setActiveDocumentId(result.added.document_id);
-        toast.success(`Added ${file.name}`);
-      } catch (err) {
-        toast.error(err instanceof Error ? err.message : 'Failed to add document');
-      } finally {
-        setAddingDoc(false);
-      }
-    },
-    [envelope.id, envelope.status],
-  );
-
-  /**
-   * Remove a document from the envelope. Refuses to remove the last
-   * one (server enforces the same rule). On success, also drop any
-   * fields anchored to that document from local state so the UI stays
-   * in sync without a full refetch.
-   */
-  const handleRemoveDocument = useCallback(
-    async (documentId: string) => {
-      if (envelopeDocuments.length <= 1) {
-        toast.error('An envelope must have at least one document');
-        return;
-      }
-      const confirmed = window.confirm(
-        'Remove this document from the envelope? Any fields placed on it will also be removed.',
-      );
-      if (!confirmed) return;
-      try {
-        const { documents } = await esignApi.removeEnvelopeDocument(envelope.id, documentId);
-        setEnvelopeDocuments(documents);
-        setFields((prev) =>
-          prev.filter((f) => {
-            const docId =
-              (f as EsignField & { document_id?: string }).document_id ?? envelope.document_id;
-            return docId !== documentId;
-          }),
-        );
-        if (activeDocumentId === documentId) {
-          setActiveDocumentId(documents[0]?.document_id ?? envelope.document_id);
-        }
-        toast.success('Document removed');
-      } catch (err) {
-        toast.error(err instanceof Error ? err.message : 'Failed to remove document');
-      }
-    },
-    [envelope.id, envelope.document_id, envelopeDocuments.length, activeDocumentId],
-  );
-
   // Build signer color map for consistent color assignment
   const signerColorMap = signers.reduce(
     (map, signer, index) => {
@@ -394,16 +304,6 @@ export function PrepareFormStudio({
     },
     {} as Record<string, string>,
   );
-
-  // If the currently-selected signer is a CC (e.g. they were edited after
-  // selection), drop the selection back to the first eligible signer.
-  useEffect(() => {
-    if (!selectedSignerId) return;
-    const cur = signers.find((s) => s.email === selectedSignerId);
-    if (!cur || cur.kind === 'cc') {
-      setSelectedSignerId(eligibleSigners[0]?.email);
-    }
-  }, [selectedSignerId, signers, eligibleSigners]);
 
   // ==================== FIELD OPERATIONS ====================
 
@@ -421,9 +321,7 @@ export function PrepareFormStudio({
         id: `field-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
         envelope_id: envelope.id,
         // P3.4 — stamp the field with the active document so multi-doc
-        // envelopes know which PDF the field belongs to. Single-doc
-        // envelopes still get a value here; the materialiser treats it
-        // as a no-op when there's only one document.
+        // envelopes know which PDF the field belongs to.
         document_id: activeDocumentId,
         type: newField.type || 'signature',
         page: newField.page || 1,
@@ -457,11 +355,6 @@ export function PrepareFormStudio({
   const handleFieldUpdate = useCallback(
     (fieldId: string, updates: Partial<EsignField>) => {
       const updatedFields = fields.map((f) => (f.id === fieldId ? { ...f, ...updates } : f));
-      // Don't push to history for every micro-drag event?
-      // Ideally we debounce history pushes or only push on mouse up.
-      // For now, we update state directly for smooth drag, but history might get spammy.
-      // Optimization: Just update state here, push to history on "drag end" (not implemented in this simplified version)
-      // We'll update state directly and set unsaved changes.
       setFields(updatedFields);
       setHasUnsavedChanges(true);
     },
@@ -484,10 +377,6 @@ export function PrepareFormStudio({
    *   • plain click  → single-select (replace selection)
    *   • shift-click  → toggle the field in/out of the existing selection
    *   • cmd/ctrl     → same as shift on Mac/Windows for muscle-memory
-   *
-   * Clicking the empty canvas (`field === null`) clears the selection
-   * unless shift is held, which is a no-op so users can keep their
-   * selection while panning.
    */
   const handleFieldClick = useCallback(
     (field: EsignField | null, modifiers?: { shiftKey: boolean; metaOrCtrl: boolean }) => {
@@ -545,125 +434,6 @@ export function PrepareFormStudio({
     handlePaste();
   }, [selectedFieldIds, fields, handlePaste]);
 
-  // ── P3.1 + P3.2 — Accept / dismiss autodetect candidates ──
-  /**
-   * Convert one candidate into a real EsignField bound to the currently
-   * active signer. The candidate is removed from the candidates list once
-   * accepted so we never duplicate it. Pushes to undo history so the
-   * sender can roll back.
-   */
-  const acceptCandidate = useCallback(
-    (candidateId: string) => {
-      const cand = candidates.find((c) => c.id === candidateId);
-      if (!cand) return;
-      const target = selectedSignerId || eligibleSigners[0]?.email;
-      if (!target) {
-        toast.error('Add a recipient first.');
-        return;
-      }
-      const now = new Date().toISOString();
-      const newField: EsignField = {
-        id: `field-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
-        envelope_id: envelope.id,
-        signer_id: target,
-        type: cand.type,
-        page: cand.page,
-        x: cand.x,
-        y: cand.y,
-        width: cand.width,
-        height: cand.height,
-        required: cand.required,
-        metadata: { ...(cand.metadata ?? {}), source: cand.source, label: cand.label },
-        created_at: now,
-        updated_at: now,
-      };
-      pushToHistory([...fields, newField]);
-      setCandidates((prev) => prev.filter((c) => c.id !== candidateId));
-    },
-    [candidates, selectedSignerId, eligibleSigners, fields, envelope.id, pushToHistory],
-  );
-
-  /**
-   * Bulk accept — convert every remaining candidate into a field bound to
-   * the active signer. Same dedupe rules as `handleApplyToAllPages` so we
-   * never carpet-bomb the doc with overlapping fields.
-   */
-  const acceptAllCandidates = useCallback(() => {
-    const target = selectedSignerId || eligibleSigners[0]?.email;
-    if (!target) {
-      toast.error('Add a recipient first.');
-      return;
-    }
-    if (candidates.length === 0) return;
-    const newFields = buildFieldsFromCandidates(candidates, target);
-    if (newFields.length === 0) {
-      toast.info('All suggested fields already match an existing one.');
-      setCandidates([]);
-      return;
-    }
-    pushToHistory([...fields, ...newFields]);
-    setCandidates([]);
-    toast.success(
-      `Accepted ${newFields.length} suggested field${newFields.length === 1 ? '' : 's'}`,
-    );
-  }, [
-    candidates,
-    selectedSignerId,
-    eligibleSigners,
-    buildFieldsFromCandidates,
-    fields,
-    pushToHistory,
-  ]);
-
-  useEffect(() => {
-    if (!autoPopulateSuggestedFields) {
-      autoPopulateHandledRef.current = envelope.id;
-      return;
-    }
-    if (candidates.length === 0) {
-      autoPopulateHandledRef.current = envelope.id;
-      return;
-    }
-    if (autoPopulateHandledRef.current === envelope.id) return;
-
-    const target = selectedSignerId || eligibleSigners[0]?.email;
-    if (!target) return;
-
-    const newFields = buildFieldsFromCandidates(candidates, target);
-    autoPopulateHandledRef.current = envelope.id;
-    setShowCandidatesPanel(false);
-    setCandidates([]);
-
-    if (newFields.length === 0) {
-      toast.info('Suggested PDF fields were already present on this envelope.');
-      return;
-    }
-
-    pushToHistory([...fields, ...newFields]);
-    toast.success(
-      `Auto-added ${newFields.length} suggested field${newFields.length === 1 ? '' : 's'} from the PDF.`,
-    );
-  }, [
-    autoPopulateSuggestedFields,
-    candidates,
-    selectedSignerId,
-    eligibleSigners,
-    buildFieldsFromCandidates,
-    envelope.id,
-    fields,
-    pushToHistory,
-  ]);
-
-  const dismissCandidate = useCallback(
-    (candidateId: string) => setCandidates((prev) => prev.filter((c) => c.id !== candidateId)),
-    [],
-  );
-
-  const dismissAllCandidates = useCallback(() => {
-    setCandidates([]);
-    setShowCandidatesPanel(false);
-  }, []);
-
   /** Bulk-delete every selected field. */
   const handleBulkDelete = useCallback(() => {
     if (selectedFieldIds.size === 0) return;
@@ -673,11 +443,6 @@ export function PrepareFormStudio({
   }, [fields, selectedFieldIds, pushToHistory, clearSelection]);
 
   // ── P2.5 2.2 — Bulk reassign / required toggle ──
-  /**
-   * Reassign every currently-selected field to `signerEmail`. Used from the
-   * bulk-action bar dropdown so a sender can drag a marquee around 12 fields
-   * and re-route them all to a different signer in one action.
-   */
   const handleBulkReassign = useCallback(
     (signerEmail: string) => {
       if (selectedFieldIds.size === 0) return;
@@ -692,7 +457,6 @@ export function PrepareFormStudio({
     [fields, selectedFieldIds, pushToHistory],
   );
 
-  /** Toggle the `required` flag on every selected field to a single value. */
   const handleBulkRequired = useCallback(
     (required: boolean) => {
       if (selectedFieldIds.size === 0) return;
@@ -706,12 +470,6 @@ export function PrepareFormStudio({
   );
 
   // ── P2.5 2.3 — Apply to all pages ──
-  /**
-   * Replicate the currently-selected fields onto every other page in the
-   * document at the same x/y/width/height. Useful for footers, initials,
-   * page-number stamps, etc. We deliberately copy field-level metadata too
-   * (validation rules, format) so a SA-ID field stays a SA-ID field.
-   */
   const handleApplyToAllPages = useCallback(() => {
     if (selectedFieldIds.size === 0 || pageCount <= 1) return;
     const seeds = fields.filter((f) => selectedFieldIds.has(f.id));
@@ -727,19 +485,6 @@ export function PrepareFormStudio({
   }, [fields, selectedFieldIds, pageCount, pushToHistory]);
 
   // ==================== ACTIONS ====================
-
-  // Auto-save: owns autoSaving/lastSavedAt + the debounce, beforeunload and
-  // unmount-flush effects. `fieldsRef` always holds the freshest fields (read
-  // by the send path below, which can race the latest edits).
-  const { autoSaving, lastSavedAt, persistFields, fieldsRef } = useAutoSave({
-    fields,
-    initialFields: envelope.fields || [],
-    onSaveFields,
-    hasUnsavedChanges,
-    setHasUnsavedChanges,
-    saving,
-    sending,
-  });
 
   const handleSave = async () => {
     await persistFields();
@@ -837,94 +582,8 @@ export function PrepareFormStudio({
     [envelope.id, onSignersChange],
   );
 
-  // ==================== KEYBOARD SHORTCUTS ====================
-  //
-  // Single global listener — saves us from having a hundred onKeyDown handlers
-  // strewn through child components and means every shortcut is documented in
-  // one place (the help dialog below). We early-exit when the user is typing
-  // in a real input so we never hijack normal typing.
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => {
-      if (isEditableTarget(e.target)) return;
-      const meta = e.metaKey || e.ctrlKey;
-
-      // Help — '?' (shift+/)
-      if (e.key === '?' && !meta) {
-        e.preventDefault();
-        setShowShortcuts((v) => !v);
-        return;
-      }
-      // Escape — clear selection / close popovers handled by Radix
-      if (e.key === 'Escape') {
-        if (selectedFieldIds.size > 0 || primarySelectedId) {
-          clearSelection();
-        }
-        return;
-      }
-      // Save — cmd/ctrl + S
-      if (meta && e.key.toLowerCase() === 's') {
-        e.preventDefault();
-        void persistFields();
-        return;
-      }
-      // Undo / Redo — handled by global meta+z / shift+meta+z
-      if (meta && e.key.toLowerCase() === 'z') {
-        e.preventDefault();
-        if (e.shiftKey) redo();
-        else undo();
-        return;
-      }
-      // Copy / Paste / Duplicate
-      if (meta && e.key.toLowerCase() === 'c') {
-        if (selectedFieldIds.size === 0) return;
-        e.preventDefault();
-        handleCopy();
-        return;
-      }
-      if (meta && e.key.toLowerCase() === 'v') {
-        if (!fieldClipboardRef.current) return;
-        e.preventDefault();
-        handlePaste();
-        return;
-      }
-      if (meta && e.key.toLowerCase() === 'd') {
-        if (selectedFieldIds.size === 0) return;
-        e.preventDefault();
-        handleDuplicate();
-        return;
-      }
-      // Delete / Backspace
-      if ((e.key === 'Delete' || e.key === 'Backspace') && selectedFieldIds.size > 0) {
-        e.preventDefault();
-        handleBulkDelete();
-        return;
-      }
-      // Select-all — cmd/ctrl + a
-      if (meta && e.key.toLowerCase() === 'a' && fields.length > 0) {
-        e.preventDefault();
-        const visibleIds = fields
-          .filter((f) => !visibleSignerIds || (f.signer_id && visibleSignerIds.has(f.signer_id)))
-          .map((f) => f.id);
-        selectMany(visibleIds);
-        return;
-      }
-      // P2.5 2.11 — number keys 1..9 jump to the Nth signer in the
-      // "Placing fields for" picker. Cuts the round-trip through the
-      // dropdown out of the field-placement loop entirely.
-      if (!meta && /^[1-9]$/.test(e.key) && eligibleSigners.length > 0) {
-        const idx = Number(e.key) - 1;
-        const target = eligibleSigners[idx];
-        if (target) {
-          e.preventDefault();
-          setSelectedSignerId(target.email);
-        }
-        return;
-      }
-    };
-
-    window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
-  }, [
+  // ── Hook: Keyboard shortcuts ──
+  useKeyboardShortcuts({
     selectedFieldIds,
     primarySelectedId,
     fields,
@@ -937,7 +596,11 @@ export function PrepareFormStudio({
     eligibleSigners,
     clearSelection,
     selectMany,
-  ]);
+    undo,
+    redo,
+    setShowShortcuts,
+    setSelectedSignerId,
+  });
 
   // ==================== RENDER ====================
 
@@ -1156,7 +819,6 @@ export function PrepareFormStudio({
                 <button
                   type="button"
                   onClick={() => {
-                    // Make this signer the active one for new placements.
                     setSelectedSignerId(signer.email);
                   }}
                   className={[
@@ -1174,9 +836,6 @@ export function PrepareFormStudio({
                 <button
                   type="button"
                   onClick={() => {
-                    // Jump-to-first-unplaced: set as active recipient and scroll
-                    // the document canvas back to the top so the sender's next
-                    // click will place a field for this signer.
                     setSelectedSignerId(signer.email);
                     const canvas = document.querySelector('[data-esign-canvas]');
                     canvas?.scrollTo({ top: 0, behavior: 'smooth' });
@@ -1866,86 +1525,6 @@ export function PrepareFormStudio({
           </div>
         </DialogContent>
       </Dialog>
-    </div>
-  );
-}
-
-// =============================================================================
-// EmailPreview — P2.5 2.10
-// -----------------------------------------------------------------------------
-// Renders a static, branded mock of the invitation email so a sender can
-// visually verify the subject, salutation, document title, and personal
-// message before clicking Send. Deliberately read-only and self-contained so
-// it can be lifted out into Storybook later.
-// =============================================================================
-interface EmailPreviewProps {
-  // Structural subset — pulls only the optional fields we render. We use a
-  // narrow type rather than `EsignEnvelope` so EmailPreview is reusable from
-  // tests and Storybook with a hand-built fixture.
-  envelope: {
-    title?: string;
-    message?: string;
-    sender_name?: string;
-    firm_name?: string;
-  };
-  signer?: { name: string; email: string; role?: string };
-}
-
-function EmailPreview({ envelope, signer }: EmailPreviewProps) {
-  const senderName = envelope.sender_name || envelope.firm_name || 'Your adviser';
-  const signerName = signer?.name || 'Recipient';
-  const title = envelope.title || 'document';
-  const subject = `${senderName} sent you "${title}" to sign`;
-  return (
-    <div className="h-full overflow-auto p-6">
-      <div className="max-w-[640px] mx-auto bg-white rounded-lg shadow border border-gray-200 overflow-hidden">
-        <div className="px-5 py-3 border-b bg-gray-50 text-xs text-gray-600 space-y-1">
-          <div>
-            <span className="font-medium text-gray-700">From:</span> {senderName}{' '}
-            &lt;noreply@navigatewealth.co&gt;
-          </div>
-          <div>
-            <span className="font-medium text-gray-700">To:</span> {signerName} &lt;
-            {signer?.email || 'recipient@example.com'}&gt;
-          </div>
-          <div>
-            <span className="font-medium text-gray-700">Subject:</span> {subject}
-          </div>
-        </div>
-        <div className="px-6 py-8 text-gray-800">
-          <div className="text-2xl font-semibold text-gray-900 mb-1">Navigate Wealth</div>
-          <div className="text-xs text-gray-500 mb-6">Secure document signing</div>
-
-          <p className="mb-4">Hi {signerName},</p>
-
-          <p className="mb-4">
-            <span className="font-medium">{senderName}</span> has sent you the document{' '}
-            <span className="font-medium">"{title}"</span> to review and sign.
-          </p>
-
-          {envelope.message && (
-            <div className="border-l-4 border-purple-300 bg-purple-50/60 px-4 py-3 mb-5 text-sm text-gray-700 whitespace-pre-wrap">
-              {envelope.message}
-            </div>
-          )}
-
-          <div className="flex justify-center my-6">
-            <span className="inline-block px-6 py-3 rounded-md bg-purple-600 text-white font-medium">
-              Review and sign
-            </span>
-          </div>
-
-          <p className="text-sm text-gray-600 mb-4">
-            This link is unique to you. Please do not forward this email.
-          </p>
-
-          <hr className="my-6 border-gray-200" />
-          <p className="text-xs text-gray-500">
-            If you weren't expecting this, you can safely ignore the email or contact {senderName}{' '}
-            directly.
-          </p>
-        </div>
-      </div>
     </div>
   );
 }
