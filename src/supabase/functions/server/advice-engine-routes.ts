@@ -89,7 +89,7 @@ app.post(
   '/fna/create',
   requireAuth,
   asyncHandler(async (c) => {
-    const userId = c.get('userId');
+    const userId = c.get('userId' as never);
     const body = await c.req.json();
 
     // Validate input
@@ -113,7 +113,7 @@ app.put(
   '/fna/:id',
   requireAuth,
   asyncHandler(async (c) => {
-    const userId = c.get('userId');
+    const userId = c.get('userId' as never);
     const { id: fnaId } = FNAIdParamSchema.parse(c.req.param());
     const body = await c.req.json();
 
@@ -168,7 +168,7 @@ app.post(
   '/fna/:id/publish',
   requireAdmin,
   asyncHandler(async (c) => {
-    const adminUserId = c.get('userId');
+    const adminUserId = c.get('userId' as never);
     const { id: fnaId } = FNAIdParamSchema.parse(c.req.param());
 
     log.info('Publishing Risk FNA', { adminUserId, fnaId });
@@ -193,7 +193,7 @@ app.post(
   '/medical-fna/create',
   requireAuth,
   asyncHandler(async (c) => {
-    const userId = c.get('userId');
+    const userId = c.get('userId' as never);
     const body = await c.req.json();
 
     // Validate input
@@ -217,7 +217,7 @@ app.put(
   '/medical-fna/:id',
   requireAuth,
   asyncHandler(async (c) => {
-    const userId = c.get('userId');
+    const userId = c.get('userId' as never);
     const { id: fnaId } = FNAIdParamSchema.parse(c.req.param());
     const body = await c.req.json();
 
@@ -254,7 +254,7 @@ app.post(
   '/medical-fna/:id/publish',
   requireAdmin,
   asyncHandler(async (c) => {
-    const adminUserId = c.get('userId');
+    const adminUserId = c.get('userId' as never);
     const { id: fnaId } = FNAIdParamSchema.parse(c.req.param());
 
     const fna = await service.publishFNA('medical', fnaId, adminUserId);
@@ -275,7 +275,7 @@ app.post(
   '/retirement-fna/create',
   requireAuth,
   asyncHandler(async (c) => {
-    const userId = c.get('userId');
+    const userId = c.get('userId' as never);
     const body = await c.req.json();
 
     // Validate input
@@ -299,7 +299,7 @@ app.put(
   '/retirement-fna/:id',
   requireAuth,
   asyncHandler(async (c) => {
-    const userId = c.get('userId');
+    const userId = c.get('userId' as never);
     const { id: fnaId } = FNAIdParamSchema.parse(c.req.param());
     const body = await c.req.json();
 
@@ -336,7 +336,7 @@ app.post(
   '/retirement-fna/:id/publish',
   requireAdmin,
   asyncHandler(async (c) => {
-    const adminUserId = c.get('userId');
+    const adminUserId = c.get('userId' as never);
     const { id: fnaId } = FNAIdParamSchema.parse(c.req.param());
 
     const fna = await service.publishFNA('retirement', fnaId, adminUserId);
@@ -357,7 +357,7 @@ app.post(
   '/investment-ina/create',
   requireAuth,
   asyncHandler(async (c) => {
-    const userId = c.get('userId');
+    const userId = c.get('userId' as never);
     const body = await c.req.json();
 
     // Validate input
@@ -381,7 +381,7 @@ app.put(
   '/investment-ina/:id',
   requireAuth,
   asyncHandler(async (c) => {
-    const userId = c.get('userId');
+    const userId = c.get('userId' as never);
     const { id: inaId } = FNAIdParamSchema.parse(c.req.param());
     const body = await c.req.json();
 
@@ -418,7 +418,7 @@ app.post(
   '/investment-ina/:id/publish',
   requireAdmin,
   asyncHandler(async (c) => {
-    const adminUserId = c.get('userId');
+    const adminUserId = c.get('userId' as never);
     const { id: inaId } = FNAIdParamSchema.parse(c.req.param());
 
     const ina = await service.publishFNA('investment', inaId, adminUserId);
@@ -439,7 +439,7 @@ app.post(
   '/tax-planning-fna/create',
   requireAuth,
   asyncHandler(async (c) => {
-    const userId = c.get('userId');
+    const userId = c.get('userId' as never);
     const body = await c.req.json();
 
     // Validate input
@@ -463,7 +463,7 @@ app.put(
   '/tax-planning-fna/:id',
   requireAuth,
   asyncHandler(async (c) => {
-    const userId = c.get('userId');
+    const userId = c.get('userId' as never);
     const { id: fnaId } = FNAIdParamSchema.parse(c.req.param());
     const body = await c.req.json();
 
@@ -500,7 +500,7 @@ app.post(
   '/tax-planning-fna/:id/publish',
   requireAdmin,
   asyncHandler(async (c) => {
-    const adminUserId = c.get('userId');
+    const adminUserId = c.get('userId' as never);
     const { id: fnaId } = FNAIdParamSchema.parse(c.req.param());
 
     const fna = await service.publishFNA('tax', fnaId, adminUserId);
@@ -521,7 +521,7 @@ app.post(
   '/estate-planning-fna/create',
   requireAuth,
   asyncHandler(async (c) => {
-    const userId = c.get('userId');
+    const userId = c.get('userId' as never);
     const body = await c.req.json();
 
     // Validate input
@@ -545,7 +545,7 @@ app.put(
   '/estate-planning-fna/:id',
   requireAuth,
   asyncHandler(async (c) => {
-    const userId = c.get('userId');
+    const userId = c.get('userId' as never);
     const { id: fnaId } = FNAIdParamSchema.parse(c.req.param());
     const body = await c.req.json();
 
@@ -582,7 +582,7 @@ app.post(
   '/estate-planning-fna/:id/publish',
   requireAdmin,
   asyncHandler(async (c) => {
-    const adminUserId = c.get('userId');
+    const adminUserId = c.get('userId' as never);
     const { id: fnaId } = FNAIdParamSchema.parse(c.req.param());
 
     const fna = await service.publishFNA('estate', fnaId, adminUserId);
@@ -603,7 +603,7 @@ app.post(
   '/ai/chat',
   requireAuth,
   asyncHandler(async (c) => {
-    const userId = c.get('userId');
+    const userId = c.get('userId' as never);
     const body = await c.req.json();
 
     // Validate input
@@ -625,7 +625,7 @@ app.post(
   '/ai/analyze',
   requireAdmin,
   asyncHandler(async (c) => {
-    const adminUserId = c.get('userId');
+    const adminUserId = c.get('userId' as never);
     const body = await c.req.json();
 
     // Validate input
@@ -651,13 +651,13 @@ app.get(
   '/roa/client/:clientId/context',
   requireAuth,
   asyncHandler(async (c) => {
-    const role = c.get('userRole');
+    const role = c.get('userRole' as never);
     if (!canUseRoA(role)) {
       return c.json({ error: 'Forbidden: Advice access required', code: 'FORBIDDEN_ADVICE' }, 403);
     }
 
     const { clientId } = ClientIdParamSchema.parse(c.req.param());
-    const context = await roaService.buildClientContext(clientId, c.get('user'));
+    const context = await roaService.buildClientContext(clientId, c.get('user' as never));
 
     return c.json({ context });
   }),
@@ -671,7 +671,7 @@ app.get(
   '/roa/modules',
   requireAuth,
   asyncHandler(async (c) => {
-    const role = c.get('userRole');
+    const role = c.get('userRole' as never);
     if (!canUseRoA(role)) {
       return c.json({ error: 'Forbidden: Advice access required', code: 'FORBIDDEN_ADVICE' }, 403);
     }
@@ -689,7 +689,7 @@ app.get(
   '/roa/module-contracts/schema',
   requireAuth,
   asyncHandler(async (c) => {
-    const role = c.get('userRole');
+    const role = c.get('userRole' as never);
     if (!canUseRoA(role)) {
       return c.json({ error: 'Forbidden: Advice access required', code: 'FORBIDDEN_ADVICE' }, 403);
     }
@@ -707,7 +707,7 @@ app.get(
   '/roa/module-contracts',
   requireAuth,
   asyncHandler(async (c) => {
-    const role = c.get('userRole');
+    const role = c.get('userRole' as never);
     if (!canUseRoA(role)) {
       return c.json({ error: 'Forbidden: Advice access required', code: 'FORBIDDEN_ADVICE' }, 403);
     }
@@ -735,7 +735,7 @@ app.get(
   '/roa/module-contracts/:moduleId',
   requireAuth,
   asyncHandler(async (c) => {
-    const role = c.get('userRole');
+    const role = c.get('userRole' as never);
     if (!canUseRoA(role)) {
       return c.json({ error: 'Forbidden: Advice access required', code: 'FORBIDDEN_ADVICE' }, 403);
     }
@@ -760,7 +760,7 @@ app.post(
   '/roa/module-contracts',
   requireAuth,
   asyncHandler(async (c) => {
-    const role = c.get('userRole');
+    const role = c.get('userRole' as never);
     if (!canManageRoAContracts(role)) {
       return c.json(
         { error: 'Forbidden: Super admin access required', code: 'FORBIDDEN_ROA_CONTRACT' },
@@ -769,7 +769,7 @@ app.post(
     }
 
     const body = await c.req.json();
-    const contract = await roaContractService.saveContract(body, c.get('user'));
+    const contract = await roaContractService.saveContract(body, c.get('user' as never));
     return c.json({ contract });
   }),
 );
@@ -782,7 +782,7 @@ app.put(
   '/roa/module-contracts/:moduleId',
   requireAuth,
   asyncHandler(async (c) => {
-    const role = c.get('userRole');
+    const role = c.get('userRole' as never);
     if (!canManageRoAContracts(role)) {
       return c.json(
         { error: 'Forbidden: Super admin access required', code: 'FORBIDDEN_ROA_CONTRACT' },
@@ -793,7 +793,7 @@ app.put(
     const body = await c.req.json();
     const contract = await roaContractService.saveContract(
       { ...body, id: c.req.param('moduleId')! },
-      c.get('user'),
+      c.get('user' as never),
     );
     return c.json({ contract });
   }),
@@ -807,7 +807,7 @@ app.post(
   '/roa/module-contracts/:moduleId/publish',
   requireAuth,
   asyncHandler(async (c) => {
-    const role = c.get('userRole');
+    const role = c.get('userRole' as never);
     if (!canManageRoAContracts(role)) {
       return c.json(
         { error: 'Forbidden: Super admin access required', code: 'FORBIDDEN_ROA_CONTRACT' },
@@ -817,7 +817,7 @@ app.post(
 
     const contract = await roaContractService.publishContract(
       c.req.param('moduleId')!,
-      c.get('user'),
+      c.get('user' as never),
     );
     return c.json({ contract });
   }),
@@ -831,7 +831,7 @@ app.post(
   '/roa/module-contracts/:moduleId/archive',
   requireAuth,
   asyncHandler(async (c) => {
-    const role = c.get('userRole');
+    const role = c.get('userRole' as never);
     if (!canManageRoAContracts(role)) {
       return c.json(
         { error: 'Forbidden: Super admin access required', code: 'FORBIDDEN_ROA_CONTRACT' },
@@ -841,7 +841,7 @@ app.post(
 
     const contract = await roaContractService.archiveContract(
       c.req.param('moduleId')!,
-      c.get('user'),
+      c.get('user' as never),
     );
     return c.json({ contract });
   }),
@@ -855,12 +855,12 @@ app.get(
   '/roa/drafts',
   requireAuth,
   asyncHandler(async (c) => {
-    const role = c.get('userRole');
+    const role = c.get('userRole' as never);
     if (!canUseRoA(role)) {
       return c.json({ error: 'Forbidden: Advice access required', code: 'FORBIDDEN_ADVICE' }, 403);
     }
 
-    const userId = c.get('userId');
+    const userId = c.get('userId' as never);
     const status = c.req.query('status');
     const clientId = c.req.query('clientId');
     const adviserId = canReviewAllRoADrafts(role) ? c.req.query('adviserId') : userId;
@@ -878,7 +878,7 @@ app.get(
   '/roa/client/:clientId/files',
   requireAuth,
   asyncHandler(async (c) => {
-    const role = c.get('userRole');
+    const role = c.get('userRole' as never);
     if (!canUseRoA(role)) {
       return c.json({ error: 'Forbidden: Advice access required', code: 'FORBIDDEN_ADVICE' }, 403);
     }
@@ -896,14 +896,17 @@ app.post(
   '/roa/drafts',
   requireAuth,
   asyncHandler(async (c) => {
-    const role = c.get('userRole');
+    const role = c.get('userRole' as never);
     if (!canUseRoA(role)) {
       return c.json({ error: 'Forbidden: Advice access required', code: 'FORBIDDEN_ADVICE' }, 403);
     }
 
-    const userId = c.get('userId');
+    const userId = c.get('userId' as never);
     const body = await c.req.json();
-    const draft = await roaService.saveDraft({ ...body, adviserId: userId }, c.get('user'));
+    const draft = await roaService.saveDraft(
+      { ...body, adviserId: userId },
+      c.get('user' as never),
+    );
 
     return c.json({ draft });
   }),
@@ -917,13 +920,13 @@ app.get(
   '/roa/drafts/:draftId',
   requireAuth,
   asyncHandler(async (c) => {
-    const role = c.get('userRole');
+    const role = c.get('userRole' as never);
     if (!canUseRoA(role)) {
       return c.json({ error: 'Forbidden: Advice access required', code: 'FORBIDDEN_ADVICE' }, 403);
     }
 
     const draft = await roaService.getDraft(c.req.param('draftId')!);
-    if (!canAccessRoADraft(role, c.get('userId'), draft)) {
+    if (!canAccessRoADraft(role, c.get('userId' as never), draft)) {
       return forbiddenRoADraftResponse(c);
     }
     return c.json({ draft });
@@ -938,21 +941,21 @@ app.put(
   '/roa/drafts/:draftId',
   requireAuth,
   asyncHandler(async (c) => {
-    const role = c.get('userRole');
+    const role = c.get('userRole' as never);
     if (!canUseRoA(role)) {
       return c.json({ error: 'Forbidden: Advice access required', code: 'FORBIDDEN_ADVICE' }, 403);
     }
 
     const draftId = c.req.param('draftId')!;
     const existingDraft = await roaService.getDraft(draftId);
-    if (!canAccessRoADraft(role, c.get('userId'), existingDraft)) {
+    if (!canAccessRoADraft(role, c.get('userId' as never), existingDraft)) {
       return forbiddenRoADraftResponse(c);
     }
 
     const body = await c.req.json();
     const draft = await roaService.saveDraft(
       { ...body, id: draftId, adviserId: existingDraft.adviserId },
-      c.get('user'),
+      c.get('user' as never),
     );
 
     return c.json({ draft });
@@ -967,18 +970,18 @@ app.delete(
   '/roa/drafts/:draftId',
   requireAuth,
   asyncHandler(async (c) => {
-    const role = c.get('userRole');
+    const role = c.get('userRole' as never);
     if (!canUseRoA(role)) {
       return c.json({ error: 'Forbidden: Advice access required', code: 'FORBIDDEN_ADVICE' }, 403);
     }
 
     const draftId = c.req.param('draftId')!;
     const existingDraft = await roaService.getDraft(draftId);
-    if (!canAccessRoADraft(role, c.get('userId'), existingDraft)) {
+    if (!canAccessRoADraft(role, c.get('userId' as never), existingDraft)) {
       return forbiddenRoADraftResponse(c);
     }
 
-    await roaService.deleteDraft(draftId, c.get('user'));
+    await roaService.deleteDraft(draftId, c.get('user' as never));
     return c.body(null, 204);
   }),
 );
@@ -991,18 +994,18 @@ app.post(
   '/roa/drafts/:draftId/clone-from-final',
   requireAuth,
   asyncHandler(async (c) => {
-    const role = c.get('userRole');
+    const role = c.get('userRole' as never);
     if (!canUseRoA(role)) {
       return c.json({ error: 'Forbidden: Advice access required', code: 'FORBIDDEN_ADVICE' }, 403);
     }
 
     const draftId = c.req.param('draftId')!;
     const existingDraft = await roaService.getDraft(draftId);
-    if (!canAccessRoADraft(role, c.get('userId'), existingDraft)) {
+    if (!canAccessRoADraft(role, c.get('userId' as never), existingDraft)) {
       return forbiddenRoADraftResponse(c);
     }
 
-    const draft = await roaService.cloneDraftFromFinal(draftId, c.get('user'));
+    const draft = await roaService.cloneDraftFromFinal(draftId, c.get('user' as never));
     return c.json({ draft });
   }),
 );
@@ -1015,18 +1018,18 @@ app.post(
   '/roa/drafts/:draftId/submit',
   requireAuth,
   asyncHandler(async (c) => {
-    const role = c.get('userRole');
+    const role = c.get('userRole' as never);
     if (!canUseRoA(role)) {
       return c.json({ error: 'Forbidden: Advice access required', code: 'FORBIDDEN_ADVICE' }, 403);
     }
 
     const draftId = c.req.param('draftId')!;
     const existingDraft = await roaService.getDraft(draftId);
-    if (!canAccessRoADraft(role, c.get('userId'), existingDraft)) {
+    if (!canAccessRoADraft(role, c.get('userId' as never), existingDraft)) {
       return forbiddenRoADraftResponse(c);
     }
 
-    const draft = await roaService.submitDraft(draftId, c.get('user'));
+    const draft = await roaService.submitDraft(draftId, c.get('user' as never));
     return c.json({ draft });
   }),
 );
@@ -1039,19 +1042,19 @@ app.post(
   '/roa/drafts/:draftId/validate',
   requireAuth,
   asyncHandler(async (c) => {
-    const role = c.get('userRole');
+    const role = c.get('userRole' as never);
     if (!canUseRoA(role)) {
       return c.json({ error: 'Forbidden: Advice access required', code: 'FORBIDDEN_ADVICE' }, 403);
     }
 
     const draftId = c.req.param('draftId')!;
     const existingDraft = await roaService.getDraft(draftId);
-    if (!canAccessRoADraft(role, c.get('userId'), existingDraft)) {
+    if (!canAccessRoADraft(role, c.get('userId' as never), existingDraft)) {
       return forbiddenRoADraftResponse(c);
     }
 
     const contracts = await roaContractService.listContracts({ status: 'active' });
-    const draft = await roaService.validateDraft(draftId, contracts, c.get('user'));
+    const draft = await roaService.validateDraft(draftId, contracts, c.get('user' as never));
     return c.json({ draft, validation: draft.validationResults });
   }),
 );
@@ -1064,7 +1067,7 @@ app.post(
   '/roa/drafts/:draftId/evidence',
   requireAuth,
   asyncHandler(async (c) => {
-    const role = c.get('userRole');
+    const role = c.get('userRole' as never);
     if (!canUseRoA(role)) {
       return c.json({ error: 'Forbidden: Advice access required', code: 'FORBIDDEN_ADVICE' }, 403);
     }
@@ -1072,12 +1075,12 @@ app.post(
     const body = await c.req.json();
     const draftId = c.req.param('draftId')!;
     const existingDraft = await roaService.getDraft(draftId);
-    if (!canAccessRoADraft(role, c.get('userId'), existingDraft)) {
+    if (!canAccessRoADraft(role, c.get('userId' as never), existingDraft)) {
       return forbiddenRoADraftResponse(c);
     }
 
     const contracts = await roaContractService.listContracts({ status: 'active' });
-    const draft = await roaService.uploadEvidence(draftId, body, contracts, c.get('user'));
+    const draft = await roaService.uploadEvidence(draftId, body, contracts, c.get('user' as never));
     const evidence = draft.moduleEvidence?.[body.moduleId]?.[body.requirementId];
     return c.json({ draft, evidence });
   }),
@@ -1091,19 +1094,19 @@ app.post(
   '/roa/drafts/:draftId/compile',
   requireAuth,
   asyncHandler(async (c) => {
-    const role = c.get('userRole');
+    const role = c.get('userRole' as never);
     if (!canUseRoA(role)) {
       return c.json({ error: 'Forbidden: Advice access required', code: 'FORBIDDEN_ADVICE' }, 403);
     }
 
     const draftId = c.req.param('draftId')!;
     const existingDraft = await roaService.getDraft(draftId);
-    if (!canAccessRoADraft(role, c.get('userId'), existingDraft)) {
+    if (!canAccessRoADraft(role, c.get('userId' as never), existingDraft)) {
       return forbiddenRoADraftResponse(c);
     }
 
     const contracts = await roaContractService.listContracts({ status: 'active' });
-    const draft = await roaService.compileDraft(draftId, contracts, c.get('user'));
+    const draft = await roaService.compileDraft(draftId, contracts, c.get('user' as never));
     return c.json({
       draft,
       compilation: draft.compiledOutput,
@@ -1120,7 +1123,7 @@ app.post(
   '/roa/drafts/:draftId/generate',
   requireAuth,
   asyncHandler(async (c) => {
-    const role = c.get('userRole');
+    const role = c.get('userRole' as never);
     if (!canUseRoA(role)) {
       return c.json({ error: 'Forbidden: Advice access required', code: 'FORBIDDEN_ADVICE' }, 403);
     }
@@ -1132,7 +1135,7 @@ app.post(
     );
     const draftId = c.req.param('draftId')!;
     const before = await roaService.getDraft(draftId);
-    if (!canAccessRoADraft(role, c.get('userId'), before)) {
+    if (!canAccessRoADraft(role, c.get('userId' as never), before)) {
       return forbiddenRoADraftResponse(c);
     }
 
@@ -1144,7 +1147,7 @@ app.post(
       draftId,
       formats.length > 0 ? formats : ['pdf'],
       contracts,
-      c.get('user'),
+      c.get('user' as never),
     );
     const documents = (draft.generatedDocuments || []).filter(
       (document) => !existingDocumentIds.has(document.id),
@@ -1161,14 +1164,14 @@ app.post(
   '/roa/drafts/:draftId/finalise',
   requireAuth,
   asyncHandler(async (c) => {
-    const role = c.get('userRole');
+    const role = c.get('userRole' as never);
     if (!canUseRoA(role)) {
       return c.json({ error: 'Forbidden: Advice access required', code: 'FORBIDDEN_ADVICE' }, 403);
     }
 
     const draftId = c.req.param('draftId')!;
     const before = await roaService.getDraft(draftId);
-    if (!canAccessRoADraft(role, c.get('userId'), before)) {
+    if (!canAccessRoADraft(role, c.get('userId' as never), before)) {
       return forbiddenRoADraftResponse(c);
     }
 
@@ -1176,7 +1179,7 @@ app.post(
       (before.generatedDocuments || []).map((document) => document.id),
     );
     const contracts = await roaContractService.listContracts({ status: 'active' });
-    const draft = await roaService.finaliseDraft(draftId, contracts, c.get('user'));
+    const draft = await roaService.finaliseDraft(draftId, contracts, c.get('user' as never));
     const documents = (draft.generatedDocuments || []).filter(
       (document) => !existingDocumentIds.has(document.id),
     );
@@ -1192,14 +1195,14 @@ app.get(
   '/roa/documents/:documentId/download',
   requireAuth,
   asyncHandler(async (c) => {
-    const role = c.get('userRole');
+    const role = c.get('userRole' as never);
     if (!canUseRoA(role)) {
       return c.json({ error: 'Forbidden: Advice access required', code: 'FORBIDDEN_ADVICE' }, 403);
     }
 
     const document = await roaService.getGeneratedDocument(c.req.param('documentId')!);
     const draft = await roaService.getDraft(document.draftId);
-    if (!canAccessRoADraft(role, c.get('userId'), draft)) {
+    if (!canAccessRoADraft(role, c.get('userId' as never), draft)) {
       return forbiddenRoADraftResponse(c);
     }
 

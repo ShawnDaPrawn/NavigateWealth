@@ -375,10 +375,10 @@ notificationsRoutes.post(
           : notificationJob;
     }
 
-    const adminUserId = c.get('userId') || 'system';
+    const adminUserId = c.get('userId' as never) || 'system';
     AdminAuditService.record({
       actorId: adminUserId,
-      actorRole: c.get('userRole') || 'admin',
+      actorRole: c.get('userRole' as never) || 'admin',
       category: 'communication',
       action: blastAll ? 'article_delivery_blast_all' : 'article_delivery_retried',
       summary: blastAll

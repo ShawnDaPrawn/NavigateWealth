@@ -527,7 +527,7 @@ app.post(
     const result = await addSubscriber(parsed.data);
 
     // Audit trail (non-blocking — §12.2)
-    const adminUserId = c.get('userId') || 'unknown';
+    const adminUserId = c.get('userId' as never) || 'unknown';
     AdminAuditService.record({
       actorId: adminUserId,
       actorRole: 'admin',
@@ -558,7 +558,7 @@ app.post(
     const results = await bulkAddSubscribers(parsed.data.subscribers);
 
     // Audit trail (non-blocking — §12.2)
-    const adminUserId = c.get('userId') || 'unknown';
+    const adminUserId = c.get('userId' as never) || 'unknown';
     AdminAuditService.record({
       actorId: adminUserId,
       actorRole: 'admin',
@@ -594,7 +594,7 @@ app.post(
     await removeSubscriberByEmail(parsed.data.email);
 
     // Audit trail (non-blocking — §12.2)
-    const adminUserId = c.get('userId') || 'unknown';
+    const adminUserId = c.get('userId' as never) || 'unknown';
     AdminAuditService.record({
       actorId: adminUserId,
       actorRole: 'admin',
@@ -625,7 +625,7 @@ app.post(
     const result = await resubscribeByEmail(parsed.data.email);
 
     // Audit trail (non-blocking — §12.2)
-    const adminUserId = c.get('userId') || 'unknown';
+    const adminUserId = c.get('userId' as never) || 'unknown';
     AdminAuditService.record({
       actorId: adminUserId,
       actorRole: 'admin',
@@ -655,7 +655,7 @@ app.post(
 
     const result = await updateSubscriberDetails(parsed.data);
 
-    const adminUserId = c.get('userId') || 'unknown';
+    const adminUserId = c.get('userId' as never) || 'unknown';
     AdminAuditService.record({
       actorId: adminUserId,
       actorRole: 'admin',
@@ -719,7 +719,7 @@ app.post(
 
     const result = await reconcileClientsToSubscribers();
 
-    const adminUserId = c.get('userId') || 'unknown';
+    const adminUserId = c.get('userId' as never) || 'unknown';
     AdminAuditService.record({
       actorId: adminUserId,
       actorRole: 'admin',

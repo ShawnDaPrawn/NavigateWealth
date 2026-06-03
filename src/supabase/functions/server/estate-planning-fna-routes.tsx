@@ -72,7 +72,7 @@ estatePlanningRoutes.get('/client/:clientId/auto-populate', async (c) => {
     log.info('📥 GET /estate-planning-fna/client/:clientId/auto-populate');
     const user = await authenticateUser(c.req.header('Authorization'));
 
-    const clientId = c.req.param('clientId');
+    const clientId = c.req.param('clientId')!;
 
     const { estateAutoPopulateFromResolver } = await import('./form-prefill-auto-populate.ts');
     const resolverInputs = await estateAutoPopulateFromResolver(clientId);
@@ -255,7 +255,7 @@ estatePlanningRoutes.get('/client/:clientId/sessions', async (c) => {
     log.info('📥 GET /estate-planning-fna/client/:clientId/sessions');
     await authenticateUser(c.req.header('Authorization'));
 
-    const clientId = c.req.param('clientId');
+    const clientId = c.req.param('clientId')!;
 
     const sessions = await kv.getByPrefix(`estate-planning-fna:client:${clientId}:`);
     const sortedSessions = (sessions || []).sort(
@@ -283,7 +283,7 @@ estatePlanningRoutes.get('/client/:clientId/sessions', async (c) => {
 estatePlanningRoutes.get('/client/:clientId/latest-published', async (c) => {
   try {
     log.info('📥 GET /estate-planning-fna/client/:clientId/latest-published');
-    const clientId = c.req.param('clientId');
+    const clientId = c.req.param('clientId')!;
 
     // Optional authentication - allow both authenticated clients and anon key access
     const authHeader = c.req.header('Authorization');
@@ -345,7 +345,7 @@ estatePlanningRoutes.get('/session/:sessionId', async (c) => {
     log.info('📥 GET /estate-planning-fna/session/:sessionId');
     await authenticateUser(c.req.header('Authorization'));
 
-    const sessionId = c.req.param('sessionId');
+    const sessionId = c.req.param('sessionId')!;
     const clientId = sessionId.split('-v')[0];
 
     const key = `estate-planning-fna:client:${clientId}:${sessionId}`;
@@ -382,7 +382,7 @@ estatePlanningRoutes.delete('/session/:sessionId', async (c) => {
     log.info('📥 DELETE /estate-planning-fna/session/:sessionId');
     await authenticateUser(c.req.header('Authorization'));
 
-    const sessionId = c.req.param('sessionId');
+    const sessionId = c.req.param('sessionId')!;
     const clientId = sessionId.split('-v')[0];
 
     const key = `estate-planning-fna:client:${clientId}:${sessionId}`;
@@ -446,7 +446,7 @@ estatePlanningRoutes.get('/wills/client/:clientId/profile-prefill', async (c) =>
     log.info('📥 GET /estate-planning-fna/wills/client/:clientId/profile-prefill');
     await authenticateUser(c.req.header('Authorization'));
 
-    const clientId = c.req.param('clientId');
+    const clientId = c.req.param('clientId')!;
 
     // Read both KV entries in parallel for comprehensive pre-fill
     const [profile, clientKeys] = await Promise.all([
@@ -555,7 +555,7 @@ estatePlanningRoutes.put('/wills/:willId', async (c) => {
     log.info('📥 PUT /estate-planning-fna/wills/:willId');
     await authenticateUser(c.req.header('Authorization'));
 
-    const willId = c.req.param('willId');
+    const willId = c.req.param('willId')!;
     const { clientId, type } = parseWillId(willId);
 
     const key = `will:${clientId}:${type}:${willId}`;
@@ -624,7 +624,7 @@ estatePlanningRoutes.get('/wills/client/:clientId', async (c) => {
     log.info('📥 GET /estate-planning-fna/wills/client/:clientId');
     await authenticateUser(c.req.header('Authorization'));
 
-    const clientId = c.req.param('clientId');
+    const clientId = c.req.param('clientId')!;
 
     const wills = await kv.getByPrefix(`will:${clientId}:`);
     const sortedWills = (wills || []).sort(
@@ -654,7 +654,7 @@ estatePlanningRoutes.get('/wills/:willId', async (c) => {
     log.info('📥 GET /estate-planning-fna/wills/:willId');
     await authenticateUser(c.req.header('Authorization'));
 
-    const willId = c.req.param('willId');
+    const willId = c.req.param('willId')!;
     const { clientId, type } = parseWillId(willId);
 
     const key = `will:${clientId}:${type}:${willId}`;
@@ -692,7 +692,7 @@ estatePlanningRoutes.put('/wills/:willId/finalize', async (c) => {
     log.info('📥 PUT /estate-planning-fna/wills/:willId/finalize');
     const user = await authenticateUser(c.req.header('Authorization'));
 
-    const willId = c.req.param('willId');
+    const willId = c.req.param('willId')!;
     const { clientId, type } = parseWillId(willId);
 
     const key = `will:${clientId}:${type}:${willId}`;
@@ -761,7 +761,7 @@ estatePlanningRoutes.delete('/wills/:willId', async (c) => {
     log.info('📥 DELETE /estate-planning-fna/wills/:willId');
     await authenticateUser(c.req.header('Authorization'));
 
-    const willId = c.req.param('willId');
+    const willId = c.req.param('willId')!;
     const { clientId, type } = parseWillId(willId);
 
     const key = `will:${clientId}:${type}:${willId}`;
@@ -816,7 +816,7 @@ estatePlanningRoutes.post('/wills/:willId/attach-signed', async (c) => {
     const user = await authenticateUser(c.req.header('Authorization'));
     await ensureLegalDocsBucket();
 
-    const willId = c.req.param('willId');
+    const willId = c.req.param('willId')!;
     const { clientId, type } = parseWillId(willId);
 
     // Fetch the will record
@@ -919,7 +919,7 @@ estatePlanningRoutes.get('/wills/:willId/signed-document', async (c) => {
     log.info('GET /estate-planning-fna/wills/:willId/signed-document');
     await authenticateUser(c.req.header('Authorization'));
 
-    const willId = c.req.param('willId');
+    const willId = c.req.param('willId')!;
     const { clientId, type } = parseWillId(willId);
 
     const kvKey = `will:${clientId}:${type}:${willId}`;
@@ -964,7 +964,7 @@ estatePlanningRoutes.delete('/wills/:willId/signed-document', async (c) => {
     log.info('DELETE /estate-planning-fna/wills/:willId/signed-document');
     await authenticateUser(c.req.header('Authorization'));
 
-    const willId = c.req.param('willId');
+    const willId = c.req.param('willId')!;
     const { clientId, type } = parseWillId(willId);
 
     const kvKey = `will:${clientId}:${type}:${willId}`;
@@ -985,7 +985,9 @@ estatePlanningRoutes.delete('/wills/:willId/signed-document', async (c) => {
       .remove([will.signedDocumentPath]);
 
     if (deleteError) {
-      log.warn('Failed to delete signed document from storage (non-critical):', deleteError);
+      log.warn('Failed to delete signed document from storage (non-critical):', {
+        error: deleteError instanceof Error ? deleteError.message : String(deleteError),
+      });
     }
 
     // Revert will status and clear signed document fields
@@ -1025,7 +1027,7 @@ estatePlanningRoutes.post('/estate-docs/:clientId/upload', async (c) => {
     const user = await authenticateUser(c.req.header('Authorization'));
     await ensureLegalDocsBucket();
 
-    const clientId = c.req.param('clientId');
+    const clientId = c.req.param('clientId')!;
     const formData = await c.req.formData();
 
     const file = formData.get('file') as File | null;
@@ -1118,7 +1120,7 @@ estatePlanningRoutes.get('/estate-docs/:clientId', async (c) => {
     log.info('GET /estate-planning-fna/estate-docs/:clientId');
     await authenticateUser(c.req.header('Authorization'));
 
-    const clientId = c.req.param('clientId');
+    const clientId = c.req.param('clientId')!;
     const docs = await kv.getByPrefix(`estate_doc:${clientId}:`);
 
     const sorted = (docs || []).sort(
@@ -1145,8 +1147,8 @@ estatePlanningRoutes.get('/estate-docs/:clientId/:docId/download', async (c) => 
     log.info('GET /estate-planning-fna/estate-docs/:clientId/:docId/download');
     await authenticateUser(c.req.header('Authorization'));
 
-    const clientId = c.req.param('clientId');
-    const docId = c.req.param('docId');
+    const clientId = c.req.param('clientId')!;
+    const docId = c.req.param('docId')!;
 
     const kvKey = `estate_doc:${clientId}:${docId}`;
     const doc = await kv.get(kvKey);
@@ -1186,8 +1188,8 @@ estatePlanningRoutes.delete('/estate-docs/:clientId/:docId', async (c) => {
     log.info('DELETE /estate-planning-fna/estate-docs/:clientId/:docId');
     await authenticateUser(c.req.header('Authorization'));
 
-    const clientId = c.req.param('clientId');
-    const docId = c.req.param('docId');
+    const clientId = c.req.param('clientId')!;
+    const docId = c.req.param('docId')!;
 
     const kvKey = `estate_doc:${clientId}:${docId}`;
     const doc = await kv.get(kvKey);
@@ -1203,7 +1205,9 @@ estatePlanningRoutes.delete('/estate-docs/:clientId/:docId', async (c) => {
       .remove([doc.filePath]);
 
     if (deleteError) {
-      log.warn('Failed to delete estate document from storage (non-critical):', deleteError);
+      log.warn('Failed to delete estate document from storage (non-critical):', {
+        error: deleteError instanceof Error ? deleteError.message : String(deleteError),
+      });
     }
 
     // Remove from KV

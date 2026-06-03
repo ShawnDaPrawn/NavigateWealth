@@ -228,10 +228,10 @@ app.delete(
     const logos = await service.deleteLogo(variant);
 
     // Audit trail
-    const adminUserId = c.get('userId') || 'admin';
+    const adminUserId = c.get('userId' as never) || 'admin';
     AdminAuditService.record({
       actorId: adminUserId,
-      actorRole: c.get('userRole') || 'admin',
+      actorRole: c.get('userRole' as never) || 'admin',
       category: 'configuration',
       action: 'brand_logo_deleted',
       summary: `Brand logo deleted: ${variant}`,
@@ -277,8 +277,8 @@ app.put(
     const saved = await service.saveColourPalette(body);
 
     AdminAuditService.record({
-      actorId: c.get('userId') || 'admin',
-      actorRole: c.get('userRole') || 'admin',
+      actorId: c.get('userId' as never) || 'admin',
+      actorRole: c.get('userRole' as never) || 'admin',
       category: 'configuration',
       action: 'brand_colours_updated',
       summary: 'Brand colour palette updated',
@@ -312,8 +312,8 @@ app.put(
     const saved = await service.saveTypography(body);
 
     AdminAuditService.record({
-      actorId: c.get('userId') || 'admin',
-      actorRole: c.get('userRole') || 'admin',
+      actorId: c.get('userId' as never) || 'admin',
+      actorRole: c.get('userRole' as never) || 'admin',
       category: 'configuration',
       action: 'brand_typography_updated',
       summary: 'Brand typography configuration updated',
@@ -422,8 +422,8 @@ app.put(
     await service.saveGuidelineRules(rules, updatedBy);
 
     AdminAuditService.record({
-      actorId: updatedBy || c.get('userId') || 'admin',
-      actorRole: c.get('userRole') || 'admin',
+      actorId: updatedBy || c.get('userId' as never) || 'admin',
+      actorRole: c.get('userRole' as never) || 'admin',
       category: 'configuration',
       action: 'brand_guidelines_rules_updated',
       summary: `Brand guideline rules updated (${rules.length} rules)`,
@@ -448,8 +448,8 @@ app.put(
     await service.saveGuidelineVoice(voice, updatedBy);
 
     AdminAuditService.record({
-      actorId: updatedBy || c.get('userId') || 'admin',
-      actorRole: c.get('userRole') || 'admin',
+      actorId: updatedBy || c.get('userId' as never) || 'admin',
+      actorRole: c.get('userRole' as never) || 'admin',
       category: 'configuration',
       action: 'brand_guidelines_voice_updated',
       summary: 'Brand voice & terminology guidelines updated',

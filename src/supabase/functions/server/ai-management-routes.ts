@@ -100,7 +100,7 @@ app.get(
 app.post(
   '/kb',
   asyncHandler(async (c) => {
-    const userId = c.get('userId') as string;
+    const userId = c.get('userId' as never) as string;
     const input = (await c.req.json()) as kbService.CreateKBInput;
 
     // Basic validation
@@ -213,7 +213,7 @@ app.get(
 app.put(
   '/prompts/:agentId/:context/draft',
   asyncHandler(async (c) => {
-    const userId = c.get('userId') as string;
+    const userId = c.get('userId' as never) as string;
     const { agentId, context } = c.req.param();
     const ctx = parsePromptContext(context);
     if (!ctx) return c.json({ error: 'Invalid context' }, 400);
@@ -232,7 +232,7 @@ app.put(
 app.post(
   '/prompts/:agentId/:context/publish',
   asyncHandler(async (c) => {
-    const userId = c.get('userId') as string;
+    const userId = c.get('userId' as never) as string;
     const { agentId, context } = c.req.param();
     const ctx = parsePromptContext(context);
     if (!ctx) return c.json({ error: 'Invalid context' }, 400);
@@ -258,7 +258,7 @@ app.get(
 app.post(
   '/prompts/:agentId/:context/rollback',
   asyncHandler(async (c) => {
-    const userId = c.get('userId') as string;
+    const userId = c.get('userId' as never) as string;
     const { agentId, context } = c.req.param();
     const ctx = parsePromptContext(context);
     if (!ctx) return c.json({ error: 'Invalid context' }, 400);
@@ -287,7 +287,7 @@ app.post(
 app.post(
   '/prompts/:agentId/:context/seed',
   asyncHandler(async (c) => {
-    const userId = c.get('userId') as string;
+    const userId = c.get('userId' as never) as string;
     const { agentId, context } = c.req.param();
     const ctx = parsePromptContext(context);
     if (!ctx) return c.json({ error: 'Invalid context' }, 400);

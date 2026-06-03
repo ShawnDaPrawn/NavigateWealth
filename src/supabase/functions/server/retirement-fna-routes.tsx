@@ -230,7 +230,7 @@ function performCalculations(inputs: RetirementCalcInputs, adjustments: Retireme
 retirementFnaRoutes.get('/client/:clientId', async (c) => {
   try {
     await authenticateUser(c.req.header('Authorization'));
-    const clientId = c.req.param('clientId');
+    const clientId = c.req.param('clientId')!;
 
     // Fetch all sessions (using list pattern or prefix scan)
     const listKey = `retirement_fna:${clientId}:list`;
@@ -256,7 +256,7 @@ retirementFnaRoutes.get('/client/:clientId', async (c) => {
 retirementFnaRoutes.get('/:fnaId', async (c) => {
   try {
     await authenticateUser(c.req.header('Authorization'));
-    const fnaId = c.req.param('fnaId');
+    const fnaId = c.req.param('fnaId')!;
     const session = await kv.get(`retirement_fna:${fnaId}`);
 
     if (!session) return c.json({ success: false, error: 'Session not found' }, 404);
@@ -319,7 +319,7 @@ retirementFnaRoutes.post('/create', async (c) => {
 retirementFnaRoutes.put('/:fnaId/inputs', async (c) => {
   try {
     const user = await authenticateUser(c.req.header('Authorization'));
-    const fnaId = c.req.param('fnaId');
+    const fnaId = c.req.param('fnaId')!;
     const body = await c.req.json();
     const parsed = UpdateInputsSchema.safeParse(body);
     if (!parsed.success) {
@@ -345,7 +345,7 @@ retirementFnaRoutes.put('/:fnaId/inputs', async (c) => {
 retirementFnaRoutes.post('/:fnaId/calculate', async (c) => {
   try {
     const user = await authenticateUser(c.req.header('Authorization'));
-    const fnaId = c.req.param('fnaId');
+    const fnaId = c.req.param('fnaId')!;
 
     const session = await kv.get(`retirement_fna:${fnaId}`);
     if (!session) return c.json({ success: false, error: 'Session not found' }, 404);
@@ -372,7 +372,7 @@ retirementFnaRoutes.post('/:fnaId/calculate', async (c) => {
 retirementFnaRoutes.put('/:fnaId/publish', async (c) => {
   try {
     const user = await authenticateUser(c.req.header('Authorization'));
-    const fnaId = c.req.param('fnaId');
+    const fnaId = c.req.param('fnaId')!;
 
     const session = await kv.get(`retirement_fna:${fnaId}`);
     if (!session) return c.json({ success: false, error: 'Session not found' }, 404);
@@ -397,7 +397,7 @@ retirementFnaRoutes.put('/:fnaId/publish', async (c) => {
 retirementFnaRoutes.get('/client/:clientId/latest-published', async (c) => {
   try {
     await authenticateUser(c.req.header('Authorization'));
-    const clientId = c.req.param('clientId');
+    const clientId = c.req.param('clientId')!;
 
     const latest = await kv.get(`retirement_fna:${clientId}:latest`);
 
@@ -426,7 +426,7 @@ retirementFnaRoutes.get('/client/:clientId/latest-published', async (c) => {
 retirementFnaRoutes.get('/client/:clientId/auto-populate', async (c) => {
   try {
     await authenticateUser(c.req.header('Authorization'));
-    const clientId = c.req.param('clientId');
+    const clientId = c.req.param('clientId')!;
 
     const inputs = await autoPopulateFromProfile(clientId);
 

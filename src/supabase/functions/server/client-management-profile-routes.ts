@@ -255,7 +255,7 @@ router.post(
   '/super-admin/enable-personal-client',
   requireSuperAdmin,
   asyncHandler(async (c) => {
-    const authUser = c.get('user') as { id: string; email?: string } | undefined;
+    const authUser = c.get('user' as never) as { id: string; email?: string } | undefined;
     const callerEmail = authUser?.email?.toLowerCase();
 
     if (callerEmail !== SUPER_ADMIN_EMAIL.toLowerCase()) {

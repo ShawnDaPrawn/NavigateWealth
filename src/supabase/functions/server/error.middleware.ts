@@ -110,7 +110,7 @@ export async function errorHandler(error: Error, c: Context) {
     path: new URL(c.req.url).pathname,
     method: c.req.method,
     statusCode: 500,
-    requestId: c.get('requestId') as string | undefined,
+    requestId: c.get('requestId' as never) as string | undefined,
   });
 
   return c.json(

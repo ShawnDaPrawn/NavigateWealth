@@ -147,8 +147,8 @@ function isAdminRole(role: string | undefined): boolean {
 }
 
 function ensureSelfOrAdmin(c: Context, targetUserId: string): Response | null {
-  const authUserId = c.get('userId') as string | undefined;
-  const role = c.get('userRole') as string | undefined;
+  const authUserId = c.get('userId' as never) as string | undefined;
+  const role = c.get('userRole' as never) as string | undefined;
 
   if (authUserId === targetUserId || isAdminRole(role)) {
     return null;
@@ -158,7 +158,7 @@ function ensureSelfOrAdmin(c: Context, targetUserId: string): Response | null {
 }
 
 function ensureAdmin(c: Context): Response | null {
-  const role = c.get('userRole') as string | undefined;
+  const role = c.get('userRole' as never) as string | undefined;
   if (isAdminRole(role)) {
     return null;
   }
@@ -414,7 +414,7 @@ async function sendEmailChangeCompletedNotice(oldEmail: string, newEmail: string
  */
 app.get('/:userId/activity', requireAuth, async (c) => {
   try {
-    const userId = c.req.param('userId');
+    const userId = c.req.param('userId')!;
     const limit = parseInt(c.req.query('limit') || '50');
     const denied = ensureSelfOrAdmin(c, userId);
     if (denied) return denied;
@@ -449,7 +449,7 @@ app.get('/:userId/activity', requireAuth, async (c) => {
  */
 app.post('/:userId/activity', requireAuth, async (c) => {
   try {
-    const userId = c.req.param('userId');
+    const userId = c.req.param('userId')!;
     const denied = ensureSelfOrAdmin(c, userId);
     if (denied) return denied;
     const body = await c.req.json();
@@ -505,9 +505,9 @@ app.post('/:userId/activity', requireAuth, async (c) => {
  */
 app.post('/:userId/password', requireAuth, async (c) => {
   try {
-    const userId = c.req.param('userId');
-    const authUserId = c.get('userId') as string | undefined;
-    const userRole = c.get('userRole') as string | undefined;
+    const userId = c.req.param('userId')!;
+    const authUserId = c.get('userId' as never) as string | undefined;
+    const userRole = c.get('userRole' as never) as string | undefined;
     const denied = ensureSelfOrAdmin(c, userId);
     if (denied) return denied;
     const body = await c.req.json();
@@ -676,7 +676,7 @@ Log In: ${buttonUrl}
  */
 app.get('/:userId/status', requireAuth, async (c) => {
   try {
-    const userId = c.req.param('userId');
+    const userId = c.req.param('userId')!;
     const denied = ensureSelfOrAdmin(c, userId);
     if (denied) return denied;
 
@@ -709,9 +709,9 @@ app.get('/:userId/status', requireAuth, async (c) => {
  */
 app.post('/:userId/email-change/request', requireAuth, async (c) => {
   try {
-    const userId = c.req.param('userId');
-    const authUserId = c.get('userId') as string | undefined;
-    const userRole = c.get('userRole') as string | undefined;
+    const userId = c.req.param('userId')!;
+    const authUserId = c.get('userId' as never) as string | undefined;
+    const userRole = c.get('userRole' as never) as string | undefined;
     const denied = ensureSelfOrAdmin(c, userId);
     if (denied) return denied;
 
@@ -823,7 +823,7 @@ app.post('/:userId/email-change/request', requireAuth, async (c) => {
  */
 app.post('/:userId/email-change/resend', requireAuth, async (c) => {
   try {
-    const userId = c.req.param('userId');
+    const userId = c.req.param('userId')!;
     const denied = ensureSelfOrAdmin(c, userId);
     if (denied) return denied;
 
@@ -892,8 +892,8 @@ app.post('/:userId/email-change/resend', requireAuth, async (c) => {
  */
 app.post('/:userId/email-change/verify', requireAuth, async (c) => {
   try {
-    const userId = c.req.param('userId');
-    const authUserId = c.get('userId') as string | undefined;
+    const userId = c.req.param('userId')!;
+    const authUserId = c.get('userId' as never) as string | undefined;
     const denied = ensureSelfOrAdmin(c, userId);
     if (denied) return denied;
 
@@ -1067,7 +1067,7 @@ app.post('/:userId/email-change/verify', requireAuth, async (c) => {
  */
 app.post('/:userId/suspend', requireAuth, async (c) => {
   try {
-    const userId = c.req.param('userId');
+    const userId = c.req.param('userId')!;
     const denied = ensureAdmin(c);
     if (denied) return denied;
     const body = await c.req.json();
@@ -1140,7 +1140,7 @@ app.post('/:userId/suspend', requireAuth, async (c) => {
  */
 app.post('/:userId/2fa', requireAuth, async (c) => {
   try {
-    const userId = c.req.param('userId');
+    const userId = c.req.param('userId')!;
     const denied = ensureSelfOrAdmin(c, userId);
     if (denied) return denied;
     const body = await c.req.json();
@@ -1195,7 +1195,7 @@ app.post('/:userId/2fa', requireAuth, async (c) => {
  */
 app.post('/:userId/2fa/send-code', requireAuth, async (c) => {
   try {
-    const userId = c.req.param('userId');
+    const userId = c.req.param('userId')!;
     const denied = ensureSelfOrAdmin(c, userId);
     if (denied) return denied;
     let email = '';
@@ -1283,7 +1283,7 @@ app.post('/:userId/2fa/send-code', requireAuth, async (c) => {
  */
 app.post('/:userId/2fa/verify-code', requireAuth, async (c) => {
   try {
-    const userId = c.req.param('userId');
+    const userId = c.req.param('userId')!;
     const denied = ensureSelfOrAdmin(c, userId);
     if (denied) return denied;
     const body = await c.req.json();

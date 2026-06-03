@@ -842,7 +842,7 @@ app.post(
   '/automation/run',
   requireAdmin,
   asyncHandler(async (c) => {
-    const user = c.get('user') as { id?: string; email?: string } | undefined;
+    const user = c.get('user' as never) as { id?: string; email?: string } | undefined;
     const actorLabel = user?.email || user?.id || 'admin';
     const result = await runAutomationOnCurrentState(actorLabel);
 
@@ -932,7 +932,7 @@ app.patch(
     }
 
     const currentWorkflowState = normalizeWorkflowMap(await kv.get(ISSUE_WORKFLOW_KEY));
-    const user = c.get('user') as { id?: string; email?: string } | undefined;
+    const user = c.get('user' as never) as { id?: string; email?: string } | undefined;
     const actorLabel = user?.email || user?.id || 'admin';
     const workflow = mergeWorkflowState(
       currentWorkflowState[update.fingerprint],
@@ -971,7 +971,7 @@ app.post(
     const componentStack = asTrimmedString(body.componentStack, '', 3000);
     const href = asTrimmedString(body.href, '', 500);
     const userAgent = asTrimmedString(body.userAgent, '', 500);
-    const user = c.get('user') as { id?: string; email?: string } | undefined;
+    const user = c.get('user' as never) as { id?: string; email?: string } | undefined;
     const userEmail = user?.email ? `\nUser: ${user.email}` : '';
     const context = [
       href ? `URL: ${href}` : '',

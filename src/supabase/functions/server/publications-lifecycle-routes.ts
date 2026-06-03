@@ -52,7 +52,7 @@ lifecycleRoutes.post('/articles/:id/archive', async (c) => {
 
     // Audit trail (non-blocking — §12.2)
     AdminAuditService.record({
-      actorId: c.get('userId') || 'system',
+      actorId: c.get('userId' as never) || 'system',
       actorRole: 'admin',
       category: 'configuration',
       action: 'article_archived',
@@ -91,7 +91,7 @@ lifecycleRoutes.post('/articles/:id/unarchive', async (c) => {
 
     // Audit trail (non-blocking — §12.2)
     AdminAuditService.record({
-      actorId: c.get('userId') || 'system',
+      actorId: c.get('userId' as never) || 'system',
       actorRole: 'admin',
       category: 'configuration',
       action: 'article_unarchived',
@@ -131,7 +131,7 @@ lifecycleRoutes.post('/articles/:id/unpublish', async (c) => {
 
     // Audit trail (non-blocking — §12.2)
     AdminAuditService.record({
-      actorId: c.get('userId') || 'system',
+      actorId: c.get('userId' as never) || 'system',
       actorRole: 'admin',
       category: 'configuration',
       action: 'article_unpublished',

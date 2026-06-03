@@ -171,7 +171,7 @@ app.post(
   '/posts',
   requireAdmin,
   asyncHandler(async (c) => {
-    const adminUserId = c.get('userId');
+    const adminUserId = c.get('userId' as never);
     const body = await c.req.json();
     const parsed = CreatePostSchema.safeParse(body);
     if (!parsed.success) {
@@ -217,7 +217,7 @@ app.post(
   '/posts/:id/publish',
   requireAdmin,
   asyncHandler(async (c) => {
-    const adminUserId = c.get('userId');
+    const adminUserId = c.get('userId' as never);
     const postId = c.req.param('id')!;
 
     log.info('Publishing social post', { adminUserId, postId });
@@ -275,7 +275,7 @@ app.post(
   '/posts/:id/schedule',
   requireAdmin,
   asyncHandler(async (c) => {
-    const adminUserId = c.get('userId');
+    const adminUserId = c.get('userId' as never);
     const postId = c.req.param('id')!;
     const { scheduledFor } = await c.req.json();
 
@@ -351,7 +351,7 @@ app.post(
   '/campaigns',
   requireAdmin,
   asyncHandler(async (c) => {
-    const adminUserId = c.get('userId');
+    const adminUserId = c.get('userId' as never);
     const body = await c.req.json();
 
     log.info('Creating marketing campaign', { adminUserId, campaignName: body.name });

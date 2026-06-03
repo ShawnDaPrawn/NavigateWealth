@@ -328,7 +328,7 @@ portalRoutes.put('/portal-flows/:providerId/credentials/:profileId', requireAuth
       username,
       password,
       updatedAt: new Date().toISOString(),
-      updatedBy: String(c.get('userId') || 'admin'),
+      updatedBy: String(c.get('userId' as never) || 'admin'),
     };
     await savePortalCredentialRecord(record);
 

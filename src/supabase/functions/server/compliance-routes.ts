@@ -163,7 +163,7 @@ app.post(
   requireAuth,
   requireAdmin,
   asyncHandler(async (c) => {
-    const adminUserId = c.get('userId');
+    const adminUserId = c.get('userId' as never);
     const body = await c.req.json();
     const parsed = CreateFAISRecordSchema.safeParse(body);
     if (!parsed.success) {
@@ -208,7 +208,7 @@ app.post(
   requireAuth,
   requireAdmin,
   asyncHandler(async (c) => {
-    const adminUserId = c.get('userId');
+    const adminUserId = c.get('userId' as never);
     const body = await c.req.json();
     const parsed = AMLCheckSchema.safeParse(body);
     if (!parsed.success) {
@@ -252,7 +252,7 @@ app.post(
   '/popia/consent',
   requireAuth,
   asyncHandler(async (c) => {
-    const userId = c.get('userId');
+    const userId = c.get('userId' as never);
     const body = await c.req.json();
     const parsed = POPIAConsentSchema.safeParse(body);
     if (!parsed.success) {
@@ -275,7 +275,7 @@ app.post(
   '/popia/withdraw',
   requireAuth,
   asyncHandler(async (c) => {
-    const userId = c.get('userId');
+    const userId = c.get('userId' as never);
 
     log.info('Withdrawing POPIA consent', { userId });
 
@@ -313,7 +313,7 @@ app.post(
   requireAuth,
   requireAdmin,
   asyncHandler(async (c) => {
-    const adminUserId = c.get('userId');
+    const adminUserId = c.get('userId' as never);
     const body = await c.req.json();
     const parsed = DebarmentCheckSchema.safeParse(body);
     if (!parsed.success) {
@@ -364,7 +364,7 @@ app.post(
   requireAuth,
   requireAdmin,
   asyncHandler(async (c) => {
-    const adminUserId = c.get('userId');
+    const adminUserId = c.get('userId' as never);
     const body = await c.req.json();
     const parsed = DocumentsInsuranceRecordSchema.safeParse(body);
     if (!parsed.success) {
@@ -469,7 +469,7 @@ app.post(
   requireAdmin,
   asyncHandler(async (c) => {
     const clientId = c.req.param('clientId')!;
-    const adminUserId = c.get('userId');
+    const adminUserId = c.get('userId' as never);
     const record = await service.createAMLFICARecord({
       clientId,
       checkedBy: adminUserId,

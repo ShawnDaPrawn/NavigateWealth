@@ -101,7 +101,7 @@ app.get('/make-server-91ed8379', (c) =>
   c.json({
     status: 'ok',
     version: '4.1.0',
-    requestId: c.get('requestId'),
+    requestId: c.get('requestId' as never),
   }),
 );
 
@@ -110,7 +110,7 @@ app.get('/make-server-91ed8379/health', (c) =>
   c.json({
     status: 'healthy',
     version: '4.1.0',
-    requestId: c.get('requestId'),
+    requestId: c.get('requestId' as never),
   }),
 );
 
@@ -124,7 +124,7 @@ app.get('/make-server-91ed8379/health/ready', async (c) => {
     return c.json({
       status: 'ready',
       version: '4.1.0',
-      requestId: c.get('requestId'),
+      requestId: c.get('requestId' as never),
       checks: { kv: 'ok' },
     });
   } catch (error) {
@@ -132,7 +132,7 @@ app.get('/make-server-91ed8379/health/ready', async (c) => {
       {
         status: 'unready',
         version: '4.1.0',
-        requestId: c.get('requestId'),
+        requestId: c.get('requestId' as never),
         checks: { kv: 'fail' },
         error: error instanceof Error ? error.message : 'unknown',
       },

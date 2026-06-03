@@ -43,7 +43,7 @@ app.post(
   requireAuth,
   requireAdmin,
   asyncHandler(async (c) => {
-    const adminUserId = c.get('userId');
+    const adminUserId = c.get('userId' as never);
     const body = await c.req.json();
     const parsed = SendMessageSchema.safeParse(body);
     if (!parsed.success) {
@@ -59,7 +59,7 @@ app.post(
     // Audit trail (non-blocking — §12.2)
     AdminAuditService.record({
       actorId: adminUserId,
-      actorRole: c.get('userRole') || 'admin',
+      actorRole: c.get('userRole' as never) || 'admin',
       category: 'communication',
       action: 'message_sent',
       summary: `Message sent to ${parsed.data.recipients?.length || 0} recipient(s)`,
@@ -81,7 +81,7 @@ app.post(
   requireAuth,
   requireAdmin,
   asyncHandler(async (c) => {
-    const adminUserId = c.get('userId');
+    const adminUserId = c.get('userId' as never);
     const formData = await c.req.formData();
     const file = formData.get('file');
 
@@ -131,7 +131,7 @@ app.get(
   '/inbox',
   requireAuth,
   asyncHandler(async (c) => {
-    const userId = c.get('userId');
+    const userId = c.get('userId' as never);
 
     log.info('Fetching inbox', { userId });
 
@@ -149,7 +149,7 @@ app.post(
   '/read/:id',
   requireAuth,
   asyncHandler(async (c) => {
-    const userId = c.get('userId');
+    const userId = c.get('userId' as never);
     const messageId = c.req.param('id')!;
 
     await service.markAsRead(userId, messageId);
@@ -166,7 +166,7 @@ app.delete(
   '/inbox/:id',
   requireAuth,
   asyncHandler(async (c) => {
-    const userId = c.get('userId');
+    const userId = c.get('userId' as never);
     const messageId = c.req.param('id')!;
 
     await service.deleteMessage(userId, messageId);
@@ -223,7 +223,7 @@ app.post(
   requireAuth,
   requireAdmin,
   asyncHandler(async (c) => {
-    const adminUserId = c.get('userId');
+    const adminUserId = c.get('userId' as never);
     const body = await c.req.json();
     const parsed = CreateGroupSchema.safeParse(body);
     if (!parsed.success) {
@@ -238,7 +238,7 @@ app.post(
 
     AdminAuditService.record({
       actorId: adminUserId,
-      actorRole: c.get('userRole') || 'admin',
+      actorRole: c.get('userRole' as never) || 'admin',
       category: 'communication',
       action: 'group_created',
       summary: `Communication group created: ${parsed.data.name}`,
@@ -260,7 +260,7 @@ app.put(
   requireAuth,
   requireAdmin,
   asyncHandler(async (c) => {
-    const adminUserId = c.get('userId');
+    const adminUserId = c.get('userId' as never);
     const groupId = c.req.param('id')!;
     const body = await c.req.json();
     const parsed = UpdateGroupSchema.safeParse(body);
@@ -274,7 +274,7 @@ app.put(
 
     AdminAuditService.record({
       actorId: adminUserId,
-      actorRole: c.get('userRole') || 'admin',
+      actorRole: c.get('userRole' as never) || 'admin',
       category: 'communication',
       action: 'group_updated',
       summary: `Communication group updated`,
@@ -296,7 +296,7 @@ app.delete(
   requireAuth,
   requireAdmin,
   asyncHandler(async (c) => {
-    const adminUserId = c.get('userId');
+    const adminUserId = c.get('userId' as never);
     const groupId = c.req.param('id')!;
 
     log.warn('Admin: Deleting group', { adminUserId, groupId });
@@ -305,7 +305,7 @@ app.delete(
 
     AdminAuditService.record({
       actorId: adminUserId,
-      actorRole: c.get('userRole') || 'admin',
+      actorRole: c.get('userRole' as never) || 'admin',
       category: 'communication',
       action: 'group_deleted',
       summary: `Communication group deleted`,
@@ -331,7 +331,7 @@ app.post(
   requireAuth,
   requireAdmin,
   asyncHandler(async (c) => {
-    const adminUserId = c.get('userId');
+    const adminUserId = c.get('userId' as never);
 
     log.info('Admin: Manually triggering group recalculation', { adminUserId });
 
@@ -422,7 +422,7 @@ app.post(
   requireAuth,
   requireAdmin,
   asyncHandler(async (c) => {
-    const adminUserId = c.get('userId');
+    const adminUserId = c.get('userId' as never);
     const body = await c.req.json();
     const parsed = CreateTemplateSchema.safeParse(body);
     if (!parsed.success) {
@@ -437,7 +437,7 @@ app.post(
 
     AdminAuditService.record({
       actorId: adminUserId,
-      actorRole: c.get('userRole') || 'admin',
+      actorRole: c.get('userRole' as never) || 'admin',
       category: 'communication',
       action: 'template_created',
       summary: `Email template created: ${parsed.data.name}`,
@@ -479,7 +479,7 @@ app.put(
   requireAuth,
   requireAdmin,
   asyncHandler(async (c) => {
-    const adminUserId = c.get('userId');
+    const adminUserId = c.get('userId' as never);
     const templateId = c.req.param('id')!;
     const body = await c.req.json();
     const parsed = UpdateTemplateSchema.safeParse(body);
@@ -493,7 +493,7 @@ app.put(
 
     AdminAuditService.record({
       actorId: adminUserId,
-      actorRole: c.get('userRole') || 'admin',
+      actorRole: c.get('userRole' as never) || 'admin',
       category: 'communication',
       action: 'template_updated',
       summary: `Email template updated`,
@@ -515,7 +515,7 @@ app.delete(
   requireAuth,
   requireAdmin,
   asyncHandler(async (c) => {
-    const adminUserId = c.get('userId');
+    const adminUserId = c.get('userId' as never);
     const templateId = c.req.param('id')!;
 
     log.warn('Admin: Deleting template', { adminUserId, templateId });
@@ -524,7 +524,7 @@ app.delete(
 
     AdminAuditService.record({
       actorId: adminUserId,
-      actorRole: c.get('userRole') || 'admin',
+      actorRole: c.get('userRole' as never) || 'admin',
       category: 'communication',
       action: 'template_deleted',
       summary: `Email template deleted`,
@@ -565,7 +565,7 @@ app.post(
   requireAuth,
   requireAdmin,
   asyncHandler(async (c) => {
-    const adminUserId = c.get('userId');
+    const adminUserId = c.get('userId' as never);
     const body = await c.req.json();
     const parsed = EmailFooterSettingsSchema.safeParse(body);
     if (!parsed.success) {
@@ -580,7 +580,7 @@ app.post(
 
     AdminAuditService.record({
       actorId: adminUserId,
-      actorRole: c.get('userRole') || 'admin',
+      actorRole: c.get('userRole' as never) || 'admin',
       category: 'configuration',
       action: 'email_footer_updated',
       summary: 'Email footer settings updated',
@@ -645,7 +645,7 @@ app.post(
   requireAuth,
   requireAdmin,
   asyncHandler(async (c) => {
-    const adminUserId = c.get('userId');
+    const adminUserId = c.get('userId' as never);
     const body = await c.req.json();
     const parsed = CreateCampaignSchema.safeParse(body);
     if (!parsed.success) {
@@ -660,7 +660,7 @@ app.post(
 
     AdminAuditService.record({
       actorId: adminUserId,
-      actorRole: c.get('userRole') || 'admin',
+      actorRole: c.get('userRole' as never) || 'admin',
       category: 'communication',
       action: 'campaign_created',
       summary: `Campaign created`,
@@ -682,7 +682,7 @@ app.post(
   requireAuth,
   requireAdmin,
   asyncHandler(async (c) => {
-    const adminUserId = c.get('userId');
+    const adminUserId = c.get('userId' as never);
     const campaignId = c.req.param('id')!;
 
     log.info('Admin: Sending campaign', { adminUserId, campaignId });
@@ -693,7 +693,7 @@ app.post(
 
     AdminAuditService.record({
       actorId: adminUserId,
-      actorRole: c.get('userRole') || 'admin',
+      actorRole: c.get('userRole' as never) || 'admin',
       category: 'communication',
       action: 'campaign_sent',
       summary: `Campaign sent`,
@@ -720,7 +720,7 @@ app.delete(
   requireAuth,
   requireAdmin,
   asyncHandler(async (c) => {
-    const adminUserId = c.get('userId');
+    const adminUserId = c.get('userId' as never);
     const messageId = c.req.param('id')!;
 
     log.warn('Admin: Deleting communication log', { adminUserId, messageId });
@@ -729,7 +729,7 @@ app.delete(
 
     AdminAuditService.record({
       actorId: adminUserId,
-      actorRole: c.get('userRole') || 'admin',
+      actorRole: c.get('userRole' as never) || 'admin',
       category: 'communication',
       action: 'communication_log_deleted',
       summary: `Communication log entry deleted`,

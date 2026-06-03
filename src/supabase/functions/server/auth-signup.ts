@@ -58,7 +58,7 @@ app.post('/signup', async (c) => {
     const supabase = getSupabaseClient();
 
     // Create user in Supabase Auth with email verification required
-    log.info('👤 Creating user account:', email);
+    log.info('👤 Creating user account:', { email });
     const { data: userData, error: userError } = await supabase.auth.admin.createUser({
       email,
       password,
@@ -99,7 +99,7 @@ app.post('/signup', async (c) => {
     }
 
     const userId = userData.user.id;
-    log.info('✅ User created:', userId);
+    log.info('✅ User created:', { userId });
 
     // Send verification email explicitly
     // We need to do this because admin.createUser with email_confirm: false doesn't send the email automatically
@@ -107,8 +107,8 @@ app.post('/signup', async (c) => {
       const origin = c.req.header('origin') || 'https://www.navigatewealth.co';
       const redirectTo = `${origin}/auth/callback`;
 
-      log.info('📧 Sending verification email to:', email);
-      log.info('🔗 Redirect URL:', redirectTo);
+      log.info('📧 Sending verification email to:', { email });
+      log.info('🔗 Redirect URL:', { redirectTo });
 
       const { error: resendError } = await supabase.auth.resend({
         type: 'signup',
@@ -135,7 +135,7 @@ app.post('/signup', async (c) => {
 
     // Generate Application Number
     const applicationNumber = await generateApplicationNumber();
-    log.info('📋 Generated application number:', applicationNumber);
+    log.info('📋 Generated application number:', { applicationNumber });
 
     // Create application record
     const applicationId = crypto.randomUUID();

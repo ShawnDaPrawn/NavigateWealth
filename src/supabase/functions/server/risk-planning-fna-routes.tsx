@@ -453,7 +453,7 @@ riskPlanningFnaRoutes.get('/client-profile/:clientId', async (c) => {
     log.info('ðŸ“¥ GET /risk-planning-fna/client-profile/:clientId');
     await authenticateUser(c.req.header('Authorization'));
 
-    const clientId = c.req.param('clientId');
+    const clientId = c.req.param('clientId')!;
     const profileData = await autoPopulateFromProfile(clientId);
 
     return c.json({
@@ -475,7 +475,7 @@ riskPlanningFnaRoutes.get('/client/:clientId/latest', async (c) => {
     log.info('ðŸ“¥ GET /risk-planning-fna/client/:clientId/latest');
     await authenticateUser(c.req.header('Authorization'));
 
-    const clientId = c.req.param('clientId');
+    const clientId = c.req.param('clientId')!;
     const latestKey = `risk_planning_fna:${clientId}:latest`;
     const latest = await kv.get(latestKey);
 
@@ -505,7 +505,7 @@ riskPlanningFnaRoutes.get('/client/:clientId/list', async (c) => {
     log.info('ðŸ“¥ GET /risk-planning-fna/client/:clientId/list');
     await authenticateUser(c.req.header('Authorization'));
 
-    const clientId = c.req.param('clientId');
+    const clientId = c.req.param('clientId')!;
     const listKey = `risk_planning_fna:${clientId}:list`;
     const list = (await kv.get(listKey)) || [];
 
@@ -652,7 +652,7 @@ riskPlanningFnaRoutes.get('/:fnaId', async (c) => {
     log.info('ðŸ“¥ GET /risk-planning-fna/:fnaId');
     await authenticateUser(c.req.header('Authorization'));
 
-    const fnaId = c.req.param('fnaId');
+    const fnaId = c.req.param('fnaId')!;
     const fna = await kv.get(`risk_planning_fna:${fnaId}`);
 
     if (!fna) {
@@ -684,7 +684,7 @@ riskPlanningFnaRoutes.put('/update/:fnaId', async (c) => {
     log.info('ðŸ“¥ PUT /risk-planning-fna/update/:fnaId');
     const user = await authenticateUser(c.req.header('Authorization'));
 
-    const fnaId = c.req.param('fnaId');
+    const fnaId = c.req.param('fnaId')!;
     const updates = await c.req.json();
 
     // Validate input data
@@ -758,7 +758,7 @@ riskPlanningFnaRoutes.post('/publish/:fnaId', async (c) => {
     log.info('ðŸ“¥ POST /risk-planning-fna/publish/:fnaId');
     const user = await authenticateUser(c.req.header('Authorization'));
 
-    const fnaId = c.req.param('fnaId');
+    const fnaId = c.req.param('fnaId')!;
     const fna = await kv.get(`risk_planning_fna:${fnaId}`);
 
     if (!fna) {
@@ -822,7 +822,7 @@ riskPlanningFnaRoutes.post('/unpublish/:fnaId', async (c) => {
     log.info('ðŸ“¥ POST /risk-planning-fna/unpublish/:fnaId');
     const user = await authenticateUser(c.req.header('Authorization'));
 
-    const fnaId = c.req.param('fnaId');
+    const fnaId = c.req.param('fnaId')!;
     const fna = await kv.get(`risk_planning_fna:${fnaId}`);
 
     if (!fna) {
@@ -878,7 +878,7 @@ riskPlanningFnaRoutes.delete('/archive/:fnaId', async (c) => {
     log.info('ðŸ“¥ DELETE /risk-planning-fna/archive/:fnaId');
     await authenticateUser(c.req.header('Authorization'));
 
-    const fnaId = c.req.param('fnaId');
+    const fnaId = c.req.param('fnaId')!;
     const fna = await kv.get(`risk_planning_fna:${fnaId}`);
 
     if (!fna) {
@@ -939,7 +939,7 @@ riskPlanningFnaRoutes.delete('/hard-delete/:fnaId', async (c) => {
     log.info('ðŸ“¥ DELETE /risk-planning-fna/hard-delete/:fnaId');
     await authenticateUser(c.req.header('Authorization'));
 
-    const fnaId = c.req.param('fnaId');
+    const fnaId = c.req.param('fnaId')!;
     const fna = await kv.get(`risk_planning_fna:${fnaId}`);
 
     if (!fna) {

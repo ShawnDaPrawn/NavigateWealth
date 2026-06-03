@@ -671,7 +671,7 @@ authRoutes.post('/confirm-email', async (c) => {
       return c.json({ confirmed: false }, 200);
     }
 
-    log.info('Auto-confirmed email for legacy user:', email);
+    log.info('Auto-confirmed email for legacy user:', { email });
     return c.json({ confirmed: true }, 200);
   } catch (error) {
     log.error('confirm-email error:', error);

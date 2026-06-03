@@ -31,7 +31,9 @@ const service = new RequestsService();
 // Helper to extract user from context
 function getUserFromContext(c: Context): { id: string; name: string } {
   // Try to get user from Hono context set by middleware
-  const user = c.get('user') as { id: string; user_metadata?: { name?: string } } | undefined;
+  const user = c.get('user' as never) as
+    | { id: string; user_metadata?: { name?: string } }
+    | undefined;
   if (user) {
     return { id: user.id, name: user.user_metadata?.name || 'Admin User' };
   }

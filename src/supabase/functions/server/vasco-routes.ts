@@ -335,7 +335,7 @@ app.get('/config', requireAdmin, asyncHandler(async (c) => {
 // ============================================================================
 
 app.put('/config', requireAdmin, asyncHandler(async (c) => {
-  const userId = c.get('userId') as string;
+  const userId = c.get('userId' as never) as string;
   const body = await c.req.json();
 
   if (typeof body.enabled !== 'boolean') {

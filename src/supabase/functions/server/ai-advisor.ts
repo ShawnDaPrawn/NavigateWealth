@@ -1007,7 +1007,7 @@ app.get('/status', requireAuth, (c) => {
  */
 app.post('/chat/stream', requireAuth, async (c) => {
   try {
-    const user = c.get('user');
+    const user = c.get('user' as never);
     const body = await c.req.json();
     const { messages: clientMessages, sessionId } = body;
     return await buildAdvisorSseResponse(user.id, clientMessages, sessionId);
@@ -1022,7 +1022,7 @@ app.post('/chat/stream', requireAuth, async (c) => {
  */
 app.get('/sessions', requireAuth, async (c) => {
   try {
-    const user = c.get('user');
+    const user = c.get('user' as never);
     const sessions = await listEnsuredAdvisorSessions(user.id);
     return c.json({ sessions });
   } catch (error) {
@@ -1036,7 +1036,7 @@ app.get('/sessions', requireAuth, async (c) => {
  */
 app.post('/sessions', requireAuth, async (c) => {
   try {
-    const user = c.get('user');
+    const user = c.get('user' as never);
     const body = await c.req.json().catch(() => ({}));
     const title = isRecord(body) && typeof body.title === 'string' ? body.title : undefined;
     const session = await ensureAdvisorSession(user.id, null, title);
@@ -1052,7 +1052,7 @@ app.post('/sessions', requireAuth, async (c) => {
  */
 app.get('/sessions/:sessionId', requireAuth, async (c) => {
   try {
-    const user = c.get('user');
+    const user = c.get('user' as never);
     const sessionId = c.req.param('sessionId')!;
     const session = await getAdvisorSessionSummary(user.id, sessionId);
     if (!session) {
@@ -1072,7 +1072,7 @@ app.get('/sessions/:sessionId', requireAuth, async (c) => {
  */
 app.delete('/sessions/:sessionId', requireAuth, async (c) => {
   try {
-    const user = c.get('user');
+    const user = c.get('user' as never);
     const sessionId = c.req.param('sessionId')!;
     await deleteAdvisorSession(user.id, sessionId);
     return c.json({ success: true });
@@ -1292,7 +1292,7 @@ app.delete('/admin/history', async (c) => {
  */
 app.post('/chat', requireAuth, async (c) => {
   try {
-    const user = c.get('user');
+    const user = c.get('user' as never);
     const body = await c.req.json();
     const { message } = body;
 
@@ -1346,7 +1346,7 @@ app.post('/chat', requireAuth, async (c) => {
  */
 app.get('/history', requireAuth, async (c) => {
   try {
-    const user = c.get('user');
+    const user = c.get('user' as never);
     const sessionId = c.req.query('sessionId')?.trim();
 
     if (sessionId) {
@@ -1376,7 +1376,7 @@ app.get('/history', requireAuth, async (c) => {
  */
 app.delete('/history', requireAuth, async (c) => {
   try {
-    const user = c.get('user');
+    const user = c.get('user' as never);
     const sessionId = c.req.query('sessionId')?.trim();
 
     if (sessionId) {

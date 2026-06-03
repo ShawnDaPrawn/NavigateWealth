@@ -85,7 +85,7 @@ adminApp.use('*', verifyAdmin);
 // POST /applications/invite — Invite a prospective client
 adminApp.post('/applications/invite', async (c) => {
   try {
-    const adminUserId = c.get('userId');
+    const adminUserId = c.get('userId' as never);
     const body = await c.req.json();
     const parsed = InviteClientSchema.safeParse(body);
     if (!parsed.success) {
@@ -126,7 +126,7 @@ adminApp.post('/applications/invite', async (c) => {
 // POST /applications/invite/resend — Resend invite email for an existing invited application
 adminApp.post('/applications/invite/resend', async (c) => {
   try {
-    const adminUserId = c.get('userId');
+    const adminUserId = c.get('userId' as never);
     const body = await c.req.json();
     const parsed = ResendInviteSchema.safeParse(body);
     if (!parsed.success) {
@@ -206,7 +206,7 @@ adminApp.get('/applications/:applicationId', async (c) => {
 adminApp.patch('/applications/:applicationId', async (c) => {
   try {
     const applicationId = c.req.param('applicationId')!;
-    const adminUserId = c.get('userId');
+    const adminUserId = c.get('userId' as never);
     const body = await c.req.json();
     const { application_data, amendment_notes } = body || {};
 
@@ -250,7 +250,7 @@ adminApp.patch('/applications/:applicationId', async (c) => {
 adminApp.post('/applications/:applicationId/approve', async (c) => {
   try {
     const applicationId = c.req.param('applicationId')!;
-    const adminUserId = c.get('userId');
+    const adminUserId = c.get('userId' as never);
 
     await AdminApplicationsService.approveApplication(applicationId, adminUserId);
 
@@ -286,7 +286,7 @@ adminApp.post('/applications/:applicationId/approve', async (c) => {
 adminApp.post('/applications/:applicationId/decline', async (c) => {
   try {
     const applicationId = c.req.param('applicationId')!;
-    const adminUserId = c.get('userId');
+    const adminUserId = c.get('userId' as never);
     const body = await c.req.json();
     const { reason } = body || {};
 
