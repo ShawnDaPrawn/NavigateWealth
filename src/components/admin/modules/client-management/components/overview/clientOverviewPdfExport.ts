@@ -5,9 +5,9 @@
  * Extracted from ClientOverviewTab.tsx handleDownloadPDF callback.
  */
 
-import { api } from '../../../../../utils/api/client';
-import { createClient as createSupabaseClient } from '../../../../../utils/supabase/client';
-import { publicAnonKey, supabaseUrl } from '../../../../../utils/supabase/info';
+import { api } from '../../../../../../utils/api/client';
+import { createClient as createSupabaseClient } from '../../../../../../utils/supabase/client';
+import { publicAnonKey, supabaseUrl } from '../../../../../../utils/supabase/info';
 import { addressLine, numVal } from '../clientOverviewUtils';
 import type { Policy, ActionItem, GapItem } from '../clientOverviewUtils';
 import type { Client, ProfileData } from '../../types';
@@ -278,18 +278,19 @@ export async function downloadClientOverviewPDF(params: {
 
   // Phase 4: Fetch net worth snapshots for PDF inclusion
   try {
+    type NetWorthSnapshot = {
+      date: string;
+      totalAssets: number;
+      totalLiabilities: number;
+      netWorth: number;
+    };
     const snapData = await api.get<{
       success: boolean;
-      snapshots?: Array<{
-        date: string;
-        totalAssets: number;
-        totalLiabilities: number;
-        netWorth: number;
-      }>;
+      snapshots?: NetWorthSnapshot[];
     }>(`/net-worth-snapshots/${client.id}`);
 
     if (snapData.success && Array.isArray(snapData.snapshots) && snapData.snapshots.length > 0) {
-      reportData.netWorthHistory = snapData.snapshots.map((s) => ({
+      reportData.netWorthHistory = snapData.snapshots.map((s: NetWorthSnapshot) => ({
         date: s.date,
         totalAssets: s.totalAssets,
         totalLiabilities: s.totalLiabilities,
