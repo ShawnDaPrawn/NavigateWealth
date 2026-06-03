@@ -28,7 +28,7 @@ app.use('*', requireAdmin);
 app.get(
   '/:taskId',
   asyncHandler(async (c) => {
-    const taskId = c.req.param('taskId')!;
+    const taskId = c.req.param('taskId');
 
     if (!taskId) {
       return c.json({ success: false, error: 'Task ID is required' }, 400);
@@ -50,7 +50,7 @@ app.get(
 app.post(
   '/:taskId',
   asyncHandler(async (c) => {
-    const taskId = c.req.param('taskId')!;
+    const taskId = c.req.param('taskId');
 
     if (!taskId) {
       return c.json({ success: false, error: 'Task ID is required' }, 400);

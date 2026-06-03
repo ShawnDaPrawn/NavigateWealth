@@ -675,7 +675,7 @@ app.get('/status', requireAdmin, async (c) => {
  */
 app.post('/chat', requireAdmin, async (c) => {
   try {
-    const user = c.get('user' as never);
+    const user = c.get('user');
     const body = await c.req.json();
     const { message, clientId, conversationHistory } = body;
 
@@ -796,7 +796,7 @@ app.post('/chat', requireAdmin, async (c) => {
  */
 app.get('/history', requireAdmin, async (c) => {
   try {
-    const user = c.get('user' as never);
+    const user = c.get('user');
 
     const { data, error } = await getSupabase()
       .from('kv_store_91ed8379')
@@ -826,7 +826,7 @@ app.get('/history', requireAdmin, async (c) => {
  */
 app.delete('/history', requireAdmin, async (c) => {
   try {
-    const user = c.get('user' as never);
+    const user = c.get('user');
 
     // Delete all conversation history for this user
     const { error } = await getSupabase()

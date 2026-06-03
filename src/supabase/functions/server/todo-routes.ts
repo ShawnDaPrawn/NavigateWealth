@@ -25,7 +25,7 @@ function getSupabase() {
 app.post(
   '/attachments/:taskId',
   asyncHandler(async (c) => {
-    const taskId = TaskIdParamSchema.parse(c.req.param('taskId')!);
+    const taskId = TaskIdParamSchema.parse(c.req.param('taskId'));
     const body = await c.req.parseBody();
     const file = body['file'];
 
@@ -96,7 +96,7 @@ app.post(
 app.get(
   '/attachments/:taskId',
   asyncHandler(async (c) => {
-    const taskId = TaskIdParamSchema.parse(c.req.param('taskId')!);
+    const taskId = TaskIdParamSchema.parse(c.req.param('taskId'));
     const key = `task_attachments:${taskId}`;
     const attachmentsRaw = await kv.get(key);
     const attachments = Array.isArray(attachmentsRaw) ? attachmentsRaw : [];
@@ -134,12 +134,11 @@ app.get(
 
     const tasksDueToday = allTasksRaw
       .map((item: Record<string, unknown>) => item.value)
-      .filter((task: unknown) => {
-        const t = task as Record<string, unknown>;
-        if (!t || !t.dueDate) return false;
-        const dueDate = new Date(t.dueDate as string);
+      .filter((task: Record<string, unknown>) => {
+        if (!task || !task.dueDate) return false;
+        const dueDate = new Date(task.dueDate as string);
         dueDate.setHours(0, 0, 0, 0);
-        return dueDate.getTime() === today.getTime() && t.status !== 'completed';
+        return dueDate.getTime() === today.getTime() && task.status !== 'completed';
       });
 
     log.info('Fetched tasks due today', { count: tasksDueToday.length });
@@ -162,10 +161,9 @@ app.get(
 
     const tasksByDate = allTasksRaw
       .map((item: Record<string, unknown>) => item.value)
-      .filter((task: unknown) => {
-        const t = task as Record<string, unknown>;
-        if (!t || !t.dueDate) return false;
-        const dueDate = new Date(t.dueDate as string);
+      .filter((task: Record<string, unknown>) => {
+        if (!task || !task.dueDate) return false;
+        const dueDate = new Date(task.dueDate as string);
         dueDate.setHours(0, 0, 0, 0);
         return dueDate.getTime() === targetDate.getTime();
       });

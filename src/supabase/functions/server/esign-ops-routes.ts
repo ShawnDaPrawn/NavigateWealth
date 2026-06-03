@@ -40,10 +40,7 @@ opsRoutes.get('/diagnostics/sms', async (c) => {
     return c.json({ success: true, sms: getSmsProviderStatus() });
   } catch (error: unknown) {
     const status = error instanceof AuthError ? error.statusCode : 500;
-    return new Response(
-      JSON.stringify({ error: error instanceof Error ? error.message : 'Failed' }),
-      { status: status, headers: { 'Content-Type': 'application/json' } },
-    );
+    return c.json({ error: error instanceof Error ? error.message : 'Failed' }, status);
   }
 });
 
@@ -342,10 +339,7 @@ opsRoutes.post('/maintenance/bulk-remind', rateLimit('SENDER_BULK'), async (c) =
   } catch (error: unknown) {
     log.error('Bulk remind error:', error);
     const status = error instanceof AuthError ? error.statusCode : 500;
-    return new Response(
-      JSON.stringify({ error: error instanceof Error ? error.message : 'Bulk remind failed' }),
-      { status: status, headers: { 'Content-Type': 'application/json' } },
-    );
+    return c.json({ error: error instanceof Error ? error.message : 'Bulk remind failed' }, status);
   }
 });
 
@@ -458,10 +452,7 @@ opsRoutes.post('/maintenance/bulk-void', rateLimit('SENDER_BULK'), async (c) => 
   } catch (error: unknown) {
     log.error('Bulk void error:', error);
     const status = error instanceof AuthError ? error.statusCode : 500;
-    return new Response(
-      JSON.stringify({ error: error instanceof Error ? error.message : 'Bulk void failed' }),
-      { status: status, headers: { 'Content-Type': 'application/json' } },
-    );
+    return c.json({ error: error instanceof Error ? error.message : 'Bulk void failed' }, status);
   }
 });
 

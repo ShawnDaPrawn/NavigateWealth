@@ -52,7 +52,7 @@ taxonomyRoutes.get('/categories', async (c) => {
 
 taxonomyRoutes.get('/categories/:id', async (c) => {
   try {
-    const id = c.req.param('id')!;
+    const id = c.req.param('id');
     const category = await kv.get(`article_category:${id}`);
 
     if (!category) {
@@ -102,7 +102,7 @@ taxonomyRoutes.post('/categories', async (c) => {
 
 taxonomyRoutes.put('/categories/:id', async (c) => {
   try {
-    const id = c.req.param('id')!;
+    const id = c.req.param('id');
     const body = await c.req.json();
     const existing = await kv.get(`article_category:${id}`);
 
@@ -136,7 +136,7 @@ taxonomyRoutes.put('/categories/:id', async (c) => {
 
 taxonomyRoutes.delete('/categories/:id', async (c) => {
   try {
-    const id = c.req.param('id')!;
+    const id = c.req.param('id');
     await kv.del(`article_category:${id}`);
     return c.json({ success: true });
   } catch (error) {
@@ -161,7 +161,7 @@ taxonomyRoutes.get('/types', async (c) => {
 
 taxonomyRoutes.get('/types/:id', async (c) => {
   try {
-    const id = c.req.param('id')!;
+    const id = c.req.param('id');
     const type = await kv.get(`article_type:${id}`);
 
     if (!type) {
@@ -210,7 +210,7 @@ taxonomyRoutes.post('/types', async (c) => {
 
 taxonomyRoutes.put('/types/:id', async (c) => {
   try {
-    const id = c.req.param('id')!;
+    const id = c.req.param('id');
     const body = await c.req.json();
     const existing = await kv.get(`article_type:${id}`);
 
@@ -240,7 +240,7 @@ taxonomyRoutes.put('/types/:id', async (c) => {
 
 taxonomyRoutes.delete('/types/:id', async (c) => {
   try {
-    const id = c.req.param('id')!;
+    const id = c.req.param('id');
     await kv.del(`article_type:${id}`);
     return c.json({ success: true });
   } catch (error) {

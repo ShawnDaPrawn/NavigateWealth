@@ -54,7 +54,7 @@ app.post(
   '/providers',
   requireAdmin,
   asyncHandler(async (c) => {
-    const adminUserId = c.get('userId' as never);
+    const adminUserId = c.get('userId');
     const body = await c.req.json();
     const parsed = CreateProviderSchema.safeParse(body);
     if (!parsed.success) {
@@ -70,7 +70,7 @@ app.post(
     // Audit trail (non-blocking — §12.2)
     AdminAuditService.record({
       actorId: adminUserId,
-      actorRole: c.get('userRole' as never) || 'admin',
+      actorRole: c.get('userRole') || 'admin',
       category: 'configuration',
       action: 'provider_created',
       summary: `Provider created: ${parsed.data.name}`,
@@ -104,7 +104,7 @@ app.put(
   '/providers/:id',
   requireAdmin,
   asyncHandler(async (c) => {
-    const providerId = c.req.param('id')!;
+    const providerId = c.req.param('id');
     const body = await c.req.json();
     const parsed = UpdateProviderSchema.safeParse(body);
     if (!parsed.success) {
@@ -114,8 +114,8 @@ app.put(
     const provider = await service.updateProvider(providerId, parsed.data);
 
     AdminAuditService.record({
-      actorId: c.get('userId' as never) || 'admin',
-      actorRole: c.get('userRole' as never) || 'admin',
+      actorId: c.get('userId') || 'admin',
+      actorRole: c.get('userRole') || 'admin',
       category: 'configuration',
       action: 'provider_updated',
       summary: `Provider updated`,
@@ -136,13 +136,13 @@ app.delete(
   '/providers/:id',
   requireAdmin,
   asyncHandler(async (c) => {
-    const providerId = c.req.param('id')!;
+    const providerId = c.req.param('id');
 
     await service.deleteProvider(providerId);
 
     AdminAuditService.record({
-      actorId: c.get('userId' as never) || 'admin',
-      actorRole: c.get('userRole' as never) || 'admin',
+      actorId: c.get('userId') || 'admin',
+      actorRole: c.get('userRole') || 'admin',
       category: 'configuration',
       action: 'provider_deleted',
       summary: `Provider deleted`,
@@ -187,7 +187,7 @@ app.get(
   '/products/:id',
   requireAuth,
   asyncHandler(async (c) => {
-    const productId = c.req.param('id')!;
+    const productId = c.req.param('id');
 
     const product = await service.getProductById(productId);
 
@@ -203,7 +203,7 @@ app.post(
   '/products',
   requireAdmin,
   asyncHandler(async (c) => {
-    const adminUserId = c.get('userId' as never);
+    const adminUserId = c.get('userId');
     const body = await c.req.json();
     const parsed = CreateProductSchema.safeParse(body);
     if (!parsed.success) {
@@ -218,7 +218,7 @@ app.post(
 
     AdminAuditService.record({
       actorId: adminUserId,
-      actorRole: c.get('userRole' as never) || 'admin',
+      actorRole: c.get('userRole') || 'admin',
       category: 'configuration',
       action: 'product_created',
       summary: `Product created: ${parsed.data.name}`,
@@ -239,7 +239,7 @@ app.put(
   '/products/:id',
   requireAdmin,
   asyncHandler(async (c) => {
-    const productId = c.req.param('id')!;
+    const productId = c.req.param('id');
     const body = await c.req.json();
     const parsed = UpdateProductSchema.safeParse(body);
     if (!parsed.success) {
@@ -249,8 +249,8 @@ app.put(
     const product = await service.updateProduct(productId, parsed.data);
 
     AdminAuditService.record({
-      actorId: c.get('userId' as never) || 'admin',
-      actorRole: c.get('userRole' as never) || 'admin',
+      actorId: c.get('userId') || 'admin',
+      actorRole: c.get('userRole') || 'admin',
       category: 'configuration',
       action: 'product_updated',
       summary: `Product updated`,
@@ -271,13 +271,13 @@ app.delete(
   '/products/:id',
   requireAdmin,
   asyncHandler(async (c) => {
-    const productId = c.req.param('id')!;
+    const productId = c.req.param('id');
 
     await service.deleteProduct(productId);
 
     AdminAuditService.record({
-      actorId: c.get('userId' as never) || 'admin',
-      actorRole: c.get('userRole' as never) || 'admin',
+      actorId: c.get('userId') || 'admin',
+      actorRole: c.get('userRole') || 'admin',
       category: 'configuration',
       action: 'product_deleted',
       summary: `Product deleted`,
@@ -316,7 +316,7 @@ app.post(
   '/integrations',
   requireAdmin,
   asyncHandler(async (c) => {
-    const adminUserId = c.get('userId' as never);
+    const adminUserId = c.get('userId');
     const body = await c.req.json();
     const parsed = CreateIntegrationSchema.safeParse(body);
     if (!parsed.success) {
@@ -341,8 +341,8 @@ app.post(
   '/integrations/:id/sync',
   requireAdmin,
   asyncHandler(async (c) => {
-    const adminUserId = c.get('userId' as never);
-    const integrationId = c.req.param('id')!;
+    const adminUserId = c.get('userId');
+    const integrationId = c.req.param('id');
 
     log.info('Syncing integration', { adminUserId, integrationId });
 
@@ -366,7 +366,7 @@ app.post(
   '/upload',
   requireAdmin,
   asyncHandler(async (c) => {
-    const adminUserId = c.get('userId' as never);
+    const adminUserId = c.get('userId');
     const formData = await c.req.formData();
     const file = formData.get('file') as File;
 

@@ -132,7 +132,7 @@ campaignsRoutes.get('/campaigns', async (c) => {
 campaignsRoutes.get('/campaigns/:id', async (c) => {
   try {
     await getAuthContext(c);
-    const campaign = await getCampaign(c.req.param('id')!);
+    const campaign = await getCampaign(c.req.param('id'));
     if (!campaign) return c.json({ error: 'Campaign not found' }, 404);
     return c.json({ campaign });
   } catch (error: unknown) {
@@ -145,8 +145,8 @@ campaignsRoutes.get('/campaigns/:id', async (c) => {
 campaignsRoutes.post('/campaigns/:id/results/:rowId', rateLimit('SENDER_MUTATE'), async (c) => {
   try {
     await getAuthContext(c);
-    const id = c.req.param('id')!;
-    const rowId = c.req.param('rowId')!;
+    const id = c.req.param('id');
+    const rowId = c.req.param('rowId');
     const body = await c.req.json();
     const status = body.status as 'sent' | 'failed' | 'cancelled' | 'queued';
     if (!['sent', 'failed', 'cancelled', 'queued'].includes(status)) {
@@ -169,7 +169,7 @@ campaignsRoutes.post('/campaigns/:id/results/:rowId', rateLimit('SENDER_MUTATE')
 campaignsRoutes.post('/campaigns/:id/cancel', rateLimit('SENDER_MUTATE'), async (c) => {
   try {
     await getAuthContext(c);
-    const result = await cancelCampaign(c.req.param('id')!);
+    const result = await cancelCampaign(c.req.param('id'));
     if (result.error) return c.json({ error: result.error }, 404);
     return c.json({ campaign: result.campaign });
   } catch (error: unknown) {
@@ -287,7 +287,7 @@ campaignsRoutes.get('/packets', async (c) => {
 campaignsRoutes.get('/packets/:id', async (c) => {
   try {
     await getAuthContext(c);
-    const packet = await getPacket(c.req.param('id')!);
+    const packet = await getPacket(c.req.param('id'));
     if (!packet) return c.json({ error: 'Packet not found' }, 404);
     return c.json({ packet });
   } catch (error: unknown) {
@@ -300,7 +300,7 @@ campaignsRoutes.get('/packets/:id', async (c) => {
 campaignsRoutes.delete('/packets/:id', rateLimit('SENDER_MUTATE'), async (c) => {
   try {
     await getAuthContext(c);
-    const result = await deletePacket(c.req.param('id')!);
+    const result = await deletePacket(c.req.param('id'));
     if (!result.ok) return c.json({ error: result.error }, 400);
     return c.json({ ok: true });
   } catch (error: unknown) {
@@ -378,7 +378,7 @@ campaignsRoutes.get('/packet-runs', async (c) => {
 campaignsRoutes.get('/packet-runs/:id', async (c) => {
   try {
     await getAuthContext(c);
-    const run = await getPacketRun(c.req.param('id')!);
+    const run = await getPacketRun(c.req.param('id'));
     if (!run) return c.json({ error: 'Packet run not found' }, 404);
     return c.json({ run });
   } catch (error: unknown) {
@@ -391,7 +391,7 @@ campaignsRoutes.get('/packet-runs/:id', async (c) => {
 campaignsRoutes.post('/packet-runs/:id/cancel', rateLimit('SENDER_MUTATE'), async (c) => {
   try {
     await getAuthContext(c);
-    const result = await cancelPacketRun(c.req.param('id')!);
+    const result = await cancelPacketRun(c.req.param('id'));
     if (result.error) return c.json({ error: result.error }, 404);
     return c.json({ run: result.run });
   } catch (error: unknown) {

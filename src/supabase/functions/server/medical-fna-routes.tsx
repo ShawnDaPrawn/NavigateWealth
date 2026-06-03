@@ -168,7 +168,7 @@ medicalFnaRoutes.get('/client/:clientId', async (c) => {
     log.info('ðŸ“¥ GET /medical-fna/client/:clientId');
     await authenticateUser(c.req.header('Authorization'));
 
-    const clientId = c.req.param('clientId')!;
+    const clientId = c.req.param('clientId');
 
     // Support both legacy (colon) and new (underscore) ID formats
     const legacyFnas = (await kv.getByPrefix(`medical-fna:client:${clientId}:`)) || [];
@@ -198,7 +198,7 @@ medicalFnaRoutes.get('/client/:clientId', async (c) => {
 medicalFnaRoutes.get('/client/:clientId/latest-published', async (c) => {
   try {
     log.info('ðŸ“¥ GET /medical-fna/client/:clientId/latest-published');
-    const clientId = c.req.param('clientId')!;
+    const clientId = c.req.param('clientId');
 
     // Optional authentication - allow both authenticated clients and anon key access
     const authHeader = c.req.header('Authorization');
@@ -273,7 +273,7 @@ medicalFnaRoutes.get('/client/:clientId/auto-populate', async (c) => {
     log.info('ðŸ“¥ GET /medical-fna/client/:clientId/auto-populate');
     await authenticateUser(c.req.header('Authorization'));
 
-    const clientId = c.req.param('clientId')!;
+    const clientId = c.req.param('clientId');
     const inputs = await autoPopulateFromProfile(clientId);
 
     log.info('✅ Auto-population data generated');
@@ -345,7 +345,7 @@ medicalFnaRoutes.put('/inputs/:fnaId', async (c) => {
     log.info('ðŸ“¥ PUT /medical-fna/inputs/:fnaId');
     await authenticateUser(c.req.header('Authorization'));
 
-    const fnaId = c.req.param('fnaId')!;
+    const fnaId = c.req.param('fnaId');
     const inputUpdates = await c.req.json();
 
     const fna = await kv.get(`medical-fna:${fnaId}`);
@@ -381,7 +381,7 @@ medicalFnaRoutes.put('/results/:fnaId', async (c) => {
     log.info('ðŸ“¥ PUT /medical-fna/results/:fnaId');
     await authenticateUser(c.req.header('Authorization'));
 
-    const fnaId = c.req.param('fnaId')!;
+    const fnaId = c.req.param('fnaId');
     const { results, adjustments } = await c.req.json();
 
     const fna = await kv.get(`medical-fna:${fnaId}`);
@@ -426,7 +426,7 @@ medicalFnaRoutes.post('/calculate/:fnaId', async (c) => {
     log.info('ðŸ“¥ POST /medical-fna/calculate/:fnaId');
     await authenticateUser(c.req.header('Authorization'));
 
-    const fnaId = c.req.param('fnaId')!;
+    const fnaId = c.req.param('fnaId');
     const fna = await kv.get(`medical-fna:${fnaId}`);
 
     if (!fna) {
@@ -462,7 +462,7 @@ medicalFnaRoutes.put('/draft/:fnaId', async (c) => {
     log.info('ðŸ“¥ PUT /medical-fna/draft/:fnaId');
     await authenticateUser(c.req.header('Authorization'));
 
-    const fnaId = c.req.param('fnaId')!;
+    const fnaId = c.req.param('fnaId');
     const fna = await kv.get(`medical-fna:${fnaId}`);
 
     if (!fna) {
@@ -498,7 +498,7 @@ medicalFnaRoutes.post('/publish/:fnaId', async (c) => {
     const user = await authenticateUser(c.req.header('Authorization'));
     log.info('✅ User authenticated:', { userId: user.id });
 
-    const fnaId = c.req.param('fnaId')!;
+    const fnaId = c.req.param('fnaId');
     log.info('ðŸ“Œ FNA ID from params:', { fnaId });
 
     const fna = await kv.get(`medical-fna:${fnaId}`);
@@ -551,7 +551,7 @@ medicalFnaRoutes.post('/unpublish/:fnaId', async (c) => {
     log.info('ðŸ”¥ POST /medical-fna/unpublish/:fnaId');
     await authenticateUser(c.req.header('Authorization'));
 
-    const fnaId = c.req.param('fnaId')!;
+    const fnaId = c.req.param('fnaId');
     const fna = await kv.get(`medical-fna:${fnaId}`);
 
     if (!fna) {
@@ -580,7 +580,7 @@ medicalFnaRoutes.put('/archive/:fnaId', async (c) => {
     log.info('ðŸ“¥ PUT /medical-fna/archive/:fnaId');
     await authenticateUser(c.req.header('Authorization'));
 
-    const fnaId = c.req.param('fnaId')!;
+    const fnaId = c.req.param('fnaId');
     const fna = await kv.get(`medical-fna:${fnaId}`);
 
     if (!fna) {
@@ -609,7 +609,7 @@ medicalFnaRoutes.delete('/delete/:fnaId', async (c) => {
     log.info('ðŸ“¥ DELETE /medical-fna/delete/:fnaId');
     await authenticateUser(c.req.header('Authorization'));
 
-    const fnaId = c.req.param('fnaId')!;
+    const fnaId = c.req.param('fnaId');
 
     await kv.del(`medical-fna:${fnaId}`);
 
@@ -631,7 +631,7 @@ medicalFnaRoutes.get('/:fnaId', async (c) => {
     log.info('ðŸ“¥ GET /medical-fna/:fnaId');
     await authenticateUser(c.req.header('Authorization'));
 
-    const fnaId = c.req.param('fnaId')!;
+    const fnaId = c.req.param('fnaId');
     const fna = await kv.get(`medical-fna:${fnaId}`);
 
     if (!fna) {

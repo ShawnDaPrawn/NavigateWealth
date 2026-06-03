@@ -108,7 +108,7 @@ articlesReadRoutes.get('/articles', async (c) => {
 
 articlesReadRoutes.get('/articles/:id', async (c) => {
   try {
-    const id = c.req.param('id')!;
+    const id = c.req.param('id');
     const article = await kv.get(`article:${id}`);
 
     if (!article) {
@@ -124,7 +124,7 @@ articlesReadRoutes.get('/articles/:id', async (c) => {
 
 articlesReadRoutes.get('/articles/by-slug/:slug', async (c) => {
   try {
-    const slug = c.req.param('slug')!;
+    const slug = c.req.param('slug');
     const articles = await kv.getByPrefix('article:');
     const article = articles.find((a: Article) => a.slug === slug);
 
@@ -163,7 +163,7 @@ articlesReadRoutes.get('/articles/by-slug/:slug', async (c) => {
 
 articlesReadRoutes.get('/articles/slug/:slug', async (c) => {
   try {
-    const slug = c.req.param('slug')!;
+    const slug = c.req.param('slug');
     const articles = await kv.getByPrefix('article:');
     const article = articles.find((a: Article) => a.slug === slug);
 

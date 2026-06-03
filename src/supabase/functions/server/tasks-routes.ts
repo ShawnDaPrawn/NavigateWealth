@@ -18,7 +18,7 @@ import { createModuleLogger } from './stderr-logger.ts';
 import { asyncHandler } from './error.middleware.ts';
 import { requireAdmin } from './auth-mw.ts';
 import * as kv from './kv_store.tsx';
-import type { KvTask, RawKvTask, TaskStatus, TaskPriority } from './tasks-types.ts';
+import type { KvTask, RawKvTask } from './tasks-types.ts';
 import {
   CreateTaskSchema,
   UpdateTaskSchema,
@@ -47,35 +47,23 @@ function normaliseTask(raw: RawKvTask): KvTask {
   if (!raw || typeof raw !== 'object') return raw as unknown as KvTask;
   return {
     ...raw,
-    // Required string fields — RawKvTask marks them optional, KvTask requires them
-    id: (raw.id ?? '') as string,
-    title: (raw.title ?? '') as string,
     // Ensure snake_case fields exist (handle legacy camelCase data)
     due_date: raw.due_date ?? raw.dueDate ?? null,
-    is_template: (raw.is_template ?? raw.isTemplate ?? false) as boolean,
-    assignee_initials: (raw.assignee_initials ?? raw.assigneeInitials ?? null) as
-      | string
-      | null
-      | undefined,
-    assignee_id: (raw.assignee_id ?? raw.assigneeId ?? null) as string | null | undefined,
-    created_by: (raw.created_by ?? raw.createdBy ?? '') as string,
-    created_at: (raw.created_at ?? raw.createdAt ?? new Date().toISOString()) as string,
-    updated_at: (raw.updated_at ?? raw.updatedAt ?? new Date().toISOString()) as string,
-    completed_at: (raw.completed_at ?? raw.completedAt ?? null) as string | null | undefined,
+    is_template: raw.is_template ?? raw.isTemplate ?? false,
+    assignee_initials: raw.assignee_initials ?? raw.assigneeInitials ?? null,
+    assignee_id: raw.assignee_id ?? raw.assigneeId ?? null,
+    created_by: raw.created_by ?? raw.createdBy ?? '',
+    created_at: raw.created_at ?? raw.createdAt ?? raw.created_at ?? new Date().toISOString(),
+    updated_at: raw.updated_at ?? raw.updatedAt ?? raw.updated_at ?? new Date().toISOString(),
+    completed_at: raw.completed_at ?? raw.completedAt ?? null,
     sort_order: raw.sort_order ?? raw.sortOrder ?? 0,
-    reminder_frequency: (raw.reminder_frequency ?? raw.reminderFrequency ?? null) as
-      | string
-      | null
-      | undefined,
-    last_reminder_sent: (raw.last_reminder_sent ?? raw.lastReminderSent ?? null) as
-      | string
-      | null
-      | undefined,
-    tags: (raw.tags ?? []) as string[],
-    category: (raw.category ?? null) as string | null | undefined,
-    priority: (raw.priority ?? 'medium') as TaskPriority,
-    status: (raw.status ?? 'new') as TaskStatus,
-    description: (raw.description ?? null) as string | null | undefined,
+    reminder_frequency: raw.reminder_frequency ?? raw.reminderFrequency ?? null,
+    last_reminder_sent: raw.last_reminder_sent ?? raw.lastReminderSent ?? null,
+    tags: raw.tags ?? [],
+    category: raw.category ?? null,
+    priority: raw.priority ?? 'medium',
+    status: raw.status ?? 'new',
+    description: raw.description ?? null,
   };
 }
 
@@ -255,7 +243,7 @@ app.get(
 app.get(
   '/:id',
   asyncHandler(async (c) => {
-    const id = c.req.param('id')!;
+    const id = c.req.param('id');
     try {
       const task = await kv.get(taskKey(id));
       if (!task) {
@@ -344,7 +332,7 @@ app.post(
 app.patch(
   '/:id',
   asyncHandler(async (c) => {
-    const id = c.req.param('id')!;
+    const id = c.req.param('id');
     try {
       const existing = await kv.get(taskKey(id));
       if (!existing) {
@@ -368,7 +356,7 @@ app.patch(
 
       await kv.set(taskKey(id), updated);
       log.info(`Updated task ${id}`);
-      return c.json(normaliseTask(updated as unknown as RawKvTask));
+      return c.json(normaliseTask(updated));
     } catch (error) {
       log.error(`Failed to update task ${id}`, error);
       return c.json({ error: 'Failed to update task' }, 500);
@@ -383,7 +371,7 @@ app.patch(
 app.delete(
   '/:id',
   asyncHandler(async (c) => {
-    const id = c.req.param('id')!;
+    const id = c.req.param('id');
     try {
       await kv.del(taskKey(id));
       // Also clean up related data
@@ -414,7 +402,7 @@ app.delete(
 app.post(
   '/:id/move',
   asyncHandler(async (c) => {
-    const id = c.req.param('id')!;
+    const id = c.req.param('id');
     try {
       const existing = await kv.get(taskKey(id));
       if (!existing) {
@@ -445,7 +433,7 @@ app.post(
 
       await kv.set(taskKey(id), updates);
       log.info(`Moved task ${id} to ${status}`);
-      return c.json(normaliseTask(updates as unknown as RawKvTask));
+      return c.json(normaliseTask(updates));
     } catch (error) {
       log.error(`Failed to move task ${id}`, error);
       return c.json({ error: 'Failed to move task' }, 500);
@@ -496,7 +484,7 @@ app.post(
 app.post(
   '/:id/duplicate',
   asyncHandler(async (c) => {
-    const id = c.req.param('id')!;
+    const id = c.req.param('id');
     try {
       const original = await kv.get(taskKey(id));
       if (!original) {
@@ -537,7 +525,7 @@ app.post(
 
       await kv.set(taskKey(newId), duplicate);
       log.info(`Duplicated task ${id} → ${newId}`);
-      return c.json(normaliseTask(duplicate as unknown as RawKvTask), 201);
+      return c.json(normaliseTask(duplicate), 201);
     } catch (error) {
       log.error(`Failed to duplicate task ${id}`, error);
       return c.json({ error: 'Failed to duplicate task' }, 500);
@@ -552,7 +540,7 @@ app.post(
 app.post(
   '/:id/archive',
   asyncHandler(async (c) => {
-    const id = c.req.param('id')!;
+    const id = c.req.param('id');
     try {
       const existing = await kv.get(taskKey(id));
       if (!existing) {
@@ -567,7 +555,7 @@ app.post(
 
       await kv.set(taskKey(id), updated);
       log.info(`Archived task ${id}`);
-      return c.json(normaliseTask(updated as unknown as RawKvTask));
+      return c.json(normaliseTask(updated));
     } catch (error) {
       log.error(`Failed to archive task ${id}`, error);
       return c.json({ error: 'Failed to archive task' }, 500);
@@ -582,7 +570,7 @@ app.post(
 app.post(
   '/:id/unarchive',
   asyncHandler(async (c) => {
-    const id = c.req.param('id')!;
+    const id = c.req.param('id');
     try {
       const existing = await kv.get(taskKey(id));
       if (!existing) {
@@ -620,7 +608,7 @@ app.post(
 
       await kv.set(taskKey(id), updated);
       log.info(`Unarchived task ${id} to ${newStatus}`);
-      return c.json(normaliseTask(updated as unknown as RawKvTask));
+      return c.json(normaliseTask(updated));
     } catch (error) {
       log.error(`Failed to unarchive task ${id}`, error);
       return c.json({ error: 'Failed to unarchive task' }, 500);

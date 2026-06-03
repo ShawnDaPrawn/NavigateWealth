@@ -223,14 +223,14 @@ app.delete(
   requireAuth,
   requireAdmin,
   asyncHandler(async (c) => {
-    const variant = c.req.param('variant')!;
+    const variant = c.req.param('variant');
     const logos = await service.deleteLogo(variant);
 
     // Audit trail
-    const adminUserId = c.get('userId' as never) || 'admin';
+    const adminUserId = c.get('userId') || 'admin';
     AdminAuditService.record({
       actorId: adminUserId,
-      actorRole: c.get('userRole' as never) || 'admin',
+      actorRole: c.get('userRole') || 'admin',
       category: 'configuration',
       action: 'brand_logo_deleted',
       summary: `Brand logo deleted: ${variant}`,
@@ -276,8 +276,8 @@ app.put(
     const saved = await service.saveColourPalette(body);
 
     AdminAuditService.record({
-      actorId: c.get('userId' as never) || 'admin',
-      actorRole: c.get('userRole' as never) || 'admin',
+      actorId: c.get('userId') || 'admin',
+      actorRole: c.get('userRole') || 'admin',
       category: 'configuration',
       action: 'brand_colours_updated',
       summary: 'Brand colour palette updated',
@@ -311,8 +311,8 @@ app.put(
     const saved = await service.saveTypography(body);
 
     AdminAuditService.record({
-      actorId: c.get('userId' as never) || 'admin',
-      actorRole: c.get('userRole' as never) || 'admin',
+      actorId: c.get('userId') || 'admin',
+      actorRole: c.get('userRole') || 'admin',
       category: 'configuration',
       action: 'brand_typography_updated',
       summary: 'Brand typography configuration updated',
@@ -387,7 +387,7 @@ app.delete(
   requireAuth,
   requireAdmin,
   asyncHandler(async (c) => {
-    const id = c.req.param('id')!;
+    const id = c.req.param('id');
     const items = await service.deleteCollateral(id);
     return c.json({ success: true, items });
   }),
@@ -420,8 +420,8 @@ app.put(
     await service.saveGuidelineRules(rules, updatedBy);
 
     AdminAuditService.record({
-      actorId: updatedBy || c.get('userId' as never) || 'admin',
-      actorRole: c.get('userRole' as never) || 'admin',
+      actorId: updatedBy || c.get('userId') || 'admin',
+      actorRole: c.get('userRole') || 'admin',
       category: 'configuration',
       action: 'brand_guidelines_rules_updated',
       summary: `Brand guideline rules updated (${rules.length} rules)`,
@@ -446,8 +446,8 @@ app.put(
     await service.saveGuidelineVoice(voice, updatedBy);
 
     AdminAuditService.record({
-      actorId: updatedBy || c.get('userId' as never) || 'admin',
-      actorRole: c.get('userRole' as never) || 'admin',
+      actorId: updatedBy || c.get('userId') || 'admin',
+      actorRole: c.get('userRole') || 'admin',
       category: 'configuration',
       action: 'brand_guidelines_voice_updated',
       summary: 'Brand voice & terminology guidelines updated',

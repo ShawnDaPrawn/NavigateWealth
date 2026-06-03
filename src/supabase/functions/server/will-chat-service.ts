@@ -173,9 +173,7 @@ export async function sendToAgent(
     const errBody = await res.text();
     log.warn(`Responses API failed (${res.status}): ${errBody.slice(0, 300)}`);
   } catch (err) {
-    log.warn('Responses API network error', {
-      error: err instanceof Error ? err.message : String(err),
-    });
+    log.warn('Responses API network error', err);
   }
 
   // ── Attempt 2: POST /v1/chat/completions (fallback)

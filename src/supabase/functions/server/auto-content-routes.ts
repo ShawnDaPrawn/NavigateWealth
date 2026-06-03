@@ -65,7 +65,7 @@ app.get('/configs', async (c) => {
 
 app.get('/configs/:id', async (c) => {
   try {
-    const id = c.req.param('id')!;
+    const id = c.req.param('id');
     if (!isValidPipelineId(id)) {
       return c.json({ success: false, error: `Invalid pipeline ID: ${id}` }, 400);
     }
@@ -82,7 +82,7 @@ app.get('/configs/:id', async (c) => {
 
 app.put('/configs/:id', async (c) => {
   try {
-    const id = c.req.param('id')!;
+    const id = c.req.param('id');
     if (!isValidPipelineId(id)) {
       return c.json({ success: false, error: `Invalid pipeline ID: ${id}` }, 400);
     }
@@ -111,7 +111,7 @@ app.post('/configs/seed', async (c) => {
 
 app.post('/trigger/:id', async (c) => {
   try {
-    const id = c.req.param('id')!;
+    const id = c.req.param('id');
     if (!isValidPipelineId(id)) {
       return c.json({ success: false, error: `Invalid pipeline ID: ${id}` }, 400);
     }
@@ -157,7 +157,7 @@ app.post('/trigger-all', async (c) => {
 // Trigger a single content source — must be registered BEFORE /:id routes
 app.post('/trigger-source/:sourceId', async (c) => {
   try {
-    const sourceId = c.req.param('sourceId')!;
+    const sourceId = c.req.param('sourceId');
     log.info(`Manual trigger for source: ${sourceId}`);
     const result = await AutoContentService.triggerSource(sourceId);
     return c.json({ success: true, data: result });
@@ -175,7 +175,7 @@ app.post('/trigger-source/:sourceId', async (c) => {
 
 app.get('/history/:id', async (c) => {
   try {
-    const id = c.req.param('id')!;
+    const id = c.req.param('id');
     if (!isValidPipelineId(id)) {
       return c.json({ success: false, error: `Invalid pipeline ID: ${id}` }, 400);
     }
@@ -224,7 +224,7 @@ app.post('/calendar-events', async (c) => {
 
 app.put('/calendar-events/:id', async (c) => {
   try {
-    const id = c.req.param('id')!;
+    const id = c.req.param('id');
     const body = await c.req.json();
     const updated = await AutoContentService.updateCalendarEvent(id, body);
     if (!updated) {
@@ -239,7 +239,7 @@ app.put('/calendar-events/:id', async (c) => {
 
 app.delete('/calendar-events/:id', async (c) => {
   try {
-    const id = c.req.param('id')!;
+    const id = c.req.param('id');
     const deleted = await AutoContentService.deleteCalendarEvent(id);
     if (!deleted) {
       return c.json({ success: false, error: 'Calendar event not found' }, 404);
@@ -312,7 +312,7 @@ app.post('/sources', async (c) => {
 
 app.put('/sources/:id', async (c) => {
   try {
-    const id = c.req.param('id')!;
+    const id = c.req.param('id');
     const body = await c.req.json();
     const updated = await AutoContentService.updateContentSource(id, body);
     if (!updated) {
@@ -327,7 +327,7 @@ app.put('/sources/:id', async (c) => {
 
 app.delete('/sources/:id', async (c) => {
   try {
-    const id = c.req.param('id')!;
+    const id = c.req.param('id');
     const deleted = await AutoContentService.deleteContentSource(id);
     if (!deleted) {
       return c.json({ success: false, error: 'Content source not found' }, 404);

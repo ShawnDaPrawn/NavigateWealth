@@ -50,7 +50,7 @@ app.post(
   '/generate-post',
   requireAdmin,
   asyncHandler(async (c) => {
-    const userId = c.get('userId' as never);
+    const userId = c.get('userId');
     const body = await c.req.json();
 
     const parsed = GeneratePostTextSchema.safeParse(body);
@@ -83,7 +83,7 @@ app.get(
   '/history',
   requireAdmin,
   asyncHandler(async (c) => {
-    const userId = c.get('userId' as never);
+    const userId = c.get('userId');
     const limitParam = c.req.query('limit');
 
     const parsed = GetHistorySchema.safeParse({ limit: limitParam || 20 });
@@ -103,7 +103,7 @@ app.get(
   '/generation/:id',
   requireAdmin,
   asyncHandler(async (c) => {
-    const generationId = c.req.param('id')!;
+    const generationId = c.req.param('id');
 
     const record = await getGenerationById(generationId);
     if (!record) {
@@ -138,7 +138,7 @@ app.post(
   '/generate-image',
   requireAdmin,
   asyncHandler(async (c) => {
-    const userId = c.get('userId' as never);
+    const userId = c.get('userId');
     const body = await c.req.json();
 
     const parsed = GenerateImageSchema.safeParse(body);
@@ -195,7 +195,7 @@ app.get(
   '/image-history',
   requireAdmin,
   asyncHandler(async (c) => {
-    const userId = c.get('userId' as never);
+    const userId = c.get('userId');
     const limitParam = c.req.query('limit');
     const parsed = GetHistorySchema.safeParse({ limit: limitParam || 20 });
     const limit = parsed.success ? parsed.data.limit : 20;
@@ -214,7 +214,7 @@ app.post(
   '/generate-bundle',
   requireAdmin,
   asyncHandler(async (c) => {
-    const userId = c.get('userId' as never);
+    const userId = c.get('userId');
     const body = await c.req.json();
 
     const parsed = GenerateBundleSchema.safeParse(body);
@@ -248,7 +248,7 @@ app.post(
   '/templates',
   requireAdmin,
   asyncHandler(async (c) => {
-    const userId = c.get('userId' as never);
+    const userId = c.get('userId');
     const body = await c.req.json();
 
     const parsed = CreateCustomTemplateSchema.safeParse(body);
@@ -270,8 +270,8 @@ app.put(
   '/templates/:id',
   requireAdmin,
   asyncHandler(async (c) => {
-    const userId = c.get('userId' as never);
-    const templateId = c.req.param('id')!;
+    const userId = c.get('userId');
+    const templateId = c.req.param('id');
     const body = await c.req.json();
 
     const parsed = UpdateCustomTemplateSchema.safeParse(body);
@@ -295,8 +295,8 @@ app.delete(
   '/templates/:id',
   requireAdmin,
   asyncHandler(async (c) => {
-    const userId = c.get('userId' as never);
-    const templateId = c.req.param('id')!;
+    const userId = c.get('userId');
+    const templateId = c.req.param('id');
 
     const deleted = await deleteCustomTemplate(templateId, userId);
     if (!deleted) {
@@ -314,7 +314,7 @@ app.get(
   '/templates',
   requireAdmin,
   asyncHandler(async (c) => {
-    const userId = c.get('userId' as never);
+    const userId = c.get('userId');
     const templates = await listCustomTemplates(userId);
     return c.json({ success: true, data: templates });
   }),
@@ -328,7 +328,7 @@ app.get(
   '/analytics',
   requireAdmin,
   asyncHandler(async (c) => {
-    const userId = c.get('userId' as never);
+    const userId = c.get('userId');
     const analytics = await getAIAnalytics(userId);
     return c.json({ success: true, data: analytics });
   }),

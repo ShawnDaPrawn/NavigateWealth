@@ -80,8 +80,8 @@ fnaIntakeRoutes.get('/queue/list', async (c) => {
 fnaIntakeRoutes.get('/:domain/status/:clientId', async (c) => {
   try {
     const user = await requireAuth(c);
-    const clientId = parseParam(FnaIntakeClientIdParamSchema, c.req.param('clientId')!);
-    const domain = c.req.param('domain')! as FnaIntakeDomain;
+    const clientId = parseParam(FnaIntakeClientIdParamSchema, c.req.param('clientId'));
+    const domain = c.req.param('domain') as FnaIntakeDomain;
     if (!isFnaIntakeDomain(domain)) {
       return c.json({ success: false, error: 'Invalid domain' }, 400);
     }
@@ -102,8 +102,8 @@ fnaIntakeRoutes.get('/:domain/status/:clientId', async (c) => {
 fnaIntakeRoutes.get('/:domain/draft/:clientId', async (c) => {
   try {
     const user = await requireAuth(c);
-    const clientId = parseParam(FnaIntakeClientIdParamSchema, c.req.param('clientId')!);
-    const domain = c.req.param('domain')! as FnaIntakeDomain;
+    const clientId = parseParam(FnaIntakeClientIdParamSchema, c.req.param('clientId'));
+    const domain = c.req.param('domain') as FnaIntakeDomain;
     if (!isFnaIntakeDomain(domain)) {
       return c.json({ success: false, error: 'Invalid domain' }, 400);
     }
@@ -125,8 +125,8 @@ fnaIntakeRoutes.put('/:domain/draft/:clientId', async (c) => {
   try {
     const user = await requireAuth(c);
     requireRealUserForClientWrite(user);
-    const clientId = parseParam(FnaIntakeClientIdParamSchema, c.req.param('clientId')!);
-    const domain = c.req.param('domain')! as FnaIntakeDomain;
+    const clientId = parseParam(FnaIntakeClientIdParamSchema, c.req.param('clientId'));
+    const domain = c.req.param('domain') as FnaIntakeDomain;
     if (!isFnaIntakeDomain(domain)) {
       return c.json({ success: false, error: 'Invalid domain' }, 400);
     }
@@ -158,7 +158,7 @@ fnaIntakeRoutes.post('/session/:sessionId/submit', async (c) => {
   try {
     const user = await requireAuth(c);
     requireRealUserForClientWrite(user);
-    const sessionId = parseParam(FnaIntakeSessionIdParamSchema, c.req.param('sessionId')!);
+    const sessionId = parseParam(FnaIntakeSessionIdParamSchema, c.req.param('sessionId'));
 
     const bodyParse = FnaIntakeSubmitSchema.safeParse(await c.req.json());
     if (!bodyParse.success) {
@@ -196,9 +196,9 @@ fnaIntakeRoutes.post('/session/:sessionId/accept', async (c) => {
       return c.json({ success: false, error: 'Admin access required' }, 403);
     }
 
-    parseParam(FnaIntakeSessionIdParamSchema, c.req.param('sessionId')!);
+    parseParam(FnaIntakeSessionIdParamSchema, c.req.param('sessionId'));
 
-    const result = await acceptIntakeSession(c.req.param('sessionId')!, {
+    const result = await acceptIntakeSession(c.req.param('sessionId'), {
       id: user.id,
       email: user.email,
     });
@@ -227,9 +227,9 @@ fnaIntakeRoutes.post('/session/:sessionId/request-info', async (c) => {
       return c.json({ success: false, error: 'Admin access required' }, 403);
     }
 
-    parseParam(FnaIntakeSessionIdParamSchema, c.req.param('sessionId')!);
+    parseParam(FnaIntakeSessionIdParamSchema, c.req.param('sessionId'));
 
-    const session = await requestMoreInfo(c.req.param('sessionId')!, {
+    const session = await requestMoreInfo(c.req.param('sessionId'), {
       id: user.id,
       email: user.email,
     });

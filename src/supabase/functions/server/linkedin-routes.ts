@@ -12,7 +12,7 @@
  *   POST /linkedin/share/article   — Create an article/URL share
  *   POST /linkedin/share/image     — Upload image + create share
  *
- * All routes require admin authentication (requireAdmin → sets c.get('userId' as never)).
+ * All routes require admin authentication (requireAdmin → sets c.get('userId')).
  *
  * Response contract: all routes return { success: true, data: T } on success,
  * consistent with the standardised social media API response shape.
@@ -50,7 +50,7 @@ app.get(
   '/auth-url',
   requireAdmin,
   asyncHandler(async (c) => {
-    const adminUserId = c.get('userId' as never) as string;
+    const adminUserId = c.get('userId') as string;
     const redirectUri = c.req.query('redirectUri');
 
     if (!redirectUri) {
@@ -93,7 +93,7 @@ app.get(
   '/status',
   requireAdmin,
   asyncHandler(async (c) => {
-    const adminUserId = c.get('userId' as never) as string;
+    const adminUserId = c.get('userId') as string;
     const status = await service.getStatus(adminUserId);
 
     return c.json({ success: true, data: status });
@@ -108,7 +108,7 @@ app.post(
   '/disconnect',
   requireAdmin,
   asyncHandler(async (c) => {
-    const adminUserId = c.get('userId' as never) as string;
+    const adminUserId = c.get('userId') as string;
     await service.disconnect(adminUserId);
 
     return c.json({ success: true, data: { message: 'LinkedIn disconnected successfully' } });
@@ -127,7 +127,7 @@ app.post(
   '/share/text',
   requireAdmin,
   asyncHandler(async (c) => {
-    const adminUserId = c.get('userId' as never) as string;
+    const adminUserId = c.get('userId') as string;
     const body = await c.req.json();
     const input = ShareTextSchema.parse(body);
 
@@ -149,7 +149,7 @@ app.post(
   '/share/article',
   requireAdmin,
   asyncHandler(async (c) => {
-    const adminUserId = c.get('userId' as never) as string;
+    const adminUserId = c.get('userId') as string;
     const body = await c.req.json();
     const input = ShareArticleSchema.parse(body);
 
@@ -178,7 +178,7 @@ app.post(
   '/share/image',
   requireAdmin,
   asyncHandler(async (c) => {
-    const adminUserId = c.get('userId' as never) as string;
+    const adminUserId = c.get('userId') as string;
     const body = await c.req.json();
     const input = ShareImageSchema.parse(body);
 

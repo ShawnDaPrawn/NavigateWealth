@@ -156,7 +156,7 @@ articlesRoutes.post('/articles', async (c) => {
 
 articlesRoutes.put('/articles/:id', async (c) => {
   try {
-    const id = c.req.param('id')!;
+    const id = c.req.param('id');
     const body = await c.req.json();
     const existing = await kv.get(`article:${id}`);
 
@@ -336,7 +336,7 @@ articlesRoutes.put('/articles/:id', async (c) => {
 
 articlesRoutes.post('/articles/:id/publish', async (c) => {
   try {
-    const id = c.req.param('id')!;
+    const id = c.req.param('id');
     const body = await c.req.json().catch(() => ({}));
     const notifySubscribers = body.notify_subscribers !== false; // default true
 
@@ -465,7 +465,7 @@ articlesRoutes.post(
   requireAuth,
   requireAdmin,
   asyncHandler(async (c) => {
-    const id = c.req.param('id')!;
+    const id = c.req.param('id');
     const parsed = ArticleReshareSchema.safeParse(await c.req.json().catch(() => ({})));
     if (!parsed.success) {
       return c.json(
@@ -510,10 +510,10 @@ articlesRoutes.post(
     );
 
     const action = parsed.data.dryRun ? 'article_reshare_preview' : 'article_reshared';
-    const adminUserId = c.get('userId' as never) || 'system';
+    const adminUserId = c.get('userId') || 'system';
     AdminAuditService.record({
       actorId: adminUserId,
-      actorRole: c.get('userRole' as never) || 'admin',
+      actorRole: c.get('userRole') || 'admin',
       category: 'communication',
       action,
       summary: `${parsed.data.dryRun ? 'Previewed' : 'Reshared'} article notifications: ${article.title}`,

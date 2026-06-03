@@ -35,7 +35,7 @@ const documentsEmailRoutes = new Hono();
  */
 documentsEmailRoutes.post('/:userId/email', async (c) => {
   try {
-    const userId = c.req.param('userId')!;
+    const userId = c.req.param('userId');
     const {
       documentIds,
       email: providedEmail,
@@ -82,9 +82,7 @@ documentsEmailRoutes.post('/:userId/email', async (c) => {
         firstName = profile.firstName || 'Client';
       }
     } catch (err) {
-      log.warn('⚠️ Failed to fetch latest profile, falling back to provided details', {
-        error: err instanceof Error ? err.message : String(err),
-      });
+      log.warn('⚠️ Failed to fetch latest profile, falling back to provided details', err);
     }
 
     if (!email) {

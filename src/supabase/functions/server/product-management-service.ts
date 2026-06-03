@@ -351,9 +351,7 @@ export class ProductManagementService {
    * Migrate legacy providers from config:providers_list
    */
   async migrateLegacyProviders(): Promise<{ migrated: number; skipped: number; errors: string[] }> {
-    const legacyProviders = (await kv.get('config:providers_list')) as Array<
-      Record<string, unknown>
-    > | null;
+    const legacyProviders = (await kv.get('config:providers_list')) as unknown[];
 
     if (!legacyProviders || !Array.isArray(legacyProviders)) {
       return { migrated: 0, skipped: 0, errors: ['No legacy providers found'] };
@@ -364,12 +362,10 @@ export class ProductManagementService {
     const errors: string[] = [];
 
     for (const p of legacyProviders) {
-      const pId = (p.id as string) || '';
-      const pName = (p.name as string) || '';
       try {
         // Check if exists in new system
         // We use the OLD ID to preserve config mapping compatibility
-        const existing = await kv.get(`provider:${pId}`);
+        const existing = await kv.get(`provider:${p.id}`);
 
         if (existing) {
           skipped++;
@@ -378,25 +374,25 @@ export class ProductManagementService {
 
         const timestamp = new Date().toISOString();
         const newProvider: Provider = {
-          id: pId, // KEEP OLD ID
-          name: pName,
-          code: pId, // Use ID as code
+          id: p.id, // KEEP OLD ID
+          name: p.name,
+          code: p.id, // Use ID as code
           type: 'other', // Default type since legacy didn't have it
-          description: p.description as string | undefined,
-          category_ids: (p.categoryIds as string[] | undefined) || [], // Map camelCase to snake_case
-          logo_url: p.logoUrl as string | undefined, // Map camelCase to snake_case
+          description: p.description,
+          category_ids: p.categoryIds || [], // Map camelCase to snake_case
+          logo_url: p.logoUrl, // Map camelCase to snake_case
           is_active: true,
           created_at: timestamp,
           updated_at: timestamp,
         };
 
-        await kv.set(`provider:${pId}`, newProvider);
+        await kv.set(`provider:${p.id}`, newProvider);
         migrated++;
-        log.info(`Migrated provider: ${pName} (${pId})`);
+        log.info(`Migrated provider: ${p.name} (${p.id})`);
       } catch (e) {
         const msg = getErrMsg(e);
-        errors.push(`Failed to migrate ${pId}: ${msg}`);
-        log.error(`Migration failed for ${pId}`, e);
+        errors.push(`Failed to migrate ${p.id}: ${msg}`);
+        log.error(`Migration failed for ${p.id}`, e);
       }
     }
 

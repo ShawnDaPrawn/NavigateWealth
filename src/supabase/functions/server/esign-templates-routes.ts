@@ -116,7 +116,7 @@ templatesRoutes.get('/templates', async (c) => {
 templatesRoutes.get('/templates/:templateId', async (c) => {
   try {
     await getAuthContext(c);
-    const templateId = c.req.param('templateId')!;
+    const templateId = c.req.param('templateId');
     const template = await getTemplate(templateId);
 
     if (!template) {
@@ -143,7 +143,7 @@ templatesRoutes.get('/templates/:templateId', async (c) => {
 templatesRoutes.put('/templates/:templateId', async (c) => {
   try {
     await getAuthContext(c);
-    const templateId = c.req.param('templateId')!;
+    const templateId = c.req.param('templateId');
     const body = await c.req.json();
 
     const updated = await updateTemplate(templateId, body);
@@ -172,7 +172,7 @@ templatesRoutes.put('/templates/:templateId', async (c) => {
 templatesRoutes.post('/templates/:templateId/from-envelope', async (c) => {
   try {
     await getAuthContext(c);
-    const templateId = c.req.param('templateId')!;
+    const templateId = c.req.param('templateId');
     const body = (await c.req.json().catch(() => null)) as Record<string, unknown> | null;
     if (!body) {
       return c.json({ error: 'Invalid JSON body' }, 400);
@@ -217,7 +217,7 @@ templatesRoutes.post('/templates/:templateId/materialise-draft', async (c) => {
   try {
     const ctx = await getAuthContext(c);
     const user = ctx.user;
-    const templateId = c.req.param('templateId')!;
+    const templateId = c.req.param('templateId');
     const body = (await c.req.json().catch(() => ({}))) as Record<string, unknown>;
 
     const template = await getTemplate(templateId);
@@ -314,7 +314,7 @@ templatesRoutes.post('/templates/:templateId/materialise-draft', async (c) => {
 templatesRoutes.delete('/templates/:templateId', async (c) => {
   try {
     await getAuthContext(c);
-    const templateId = c.req.param('templateId')!;
+    const templateId = c.req.param('templateId');
     const deleted = await deleteTemplate(templateId);
 
     if (!deleted) {
@@ -345,7 +345,7 @@ templatesRoutes.delete('/templates/:templateId', async (c) => {
 templatesRoutes.post('/templates/:templateId/use', async (c) => {
   try {
     await getAuthContext(c);
-    const templateId = c.req.param('templateId')!;
+    const templateId = c.req.param('templateId');
 
     const template = await getTemplate(templateId);
     if (!template) {
@@ -378,7 +378,7 @@ templatesRoutes.post('/templates/:templateId/use', async (c) => {
 templatesRoutes.get('/templates/:templateId/versions', async (c) => {
   try {
     await getAuthContext(c);
-    const templateId = c.req.param('templateId')!;
+    const templateId = c.req.param('templateId');
     const versions = await listTemplateVersions(templateId);
     return c.json({ versions });
   } catch (error: unknown) {
@@ -401,8 +401,8 @@ templatesRoutes.get('/templates/:templateId/versions', async (c) => {
 templatesRoutes.get('/templates/:templateId/versions/:version', async (c) => {
   try {
     await getAuthContext(c);
-    const templateId = c.req.param('templateId')!;
-    const versionParam = c.req.param('version')!;
+    const templateId = c.req.param('templateId');
+    const versionParam = c.req.param('version');
     const version = Number.parseInt(versionParam, 10);
     if (!Number.isFinite(version) || version < 1) {
       return c.json({ error: 'Invalid version' }, 400);

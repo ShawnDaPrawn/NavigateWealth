@@ -146,18 +146,12 @@ firmAdminRoutes.put('/branding', async (c) => {
     return c.json({ branding: saved });
   } catch (error: unknown) {
     if (error instanceof AuthError) {
-      return new Response(JSON.stringify({ error: error.message }), {
-        status: error.statusCode,
-        headers: { 'Content-Type': 'application/json' },
-      });
+      return c.json({ error: error.message }, error.statusCode);
     }
     const message = error instanceof Error ? error.message : 'Branding write failed';
     // Validation errors surface as 400; everything else is treated as 500.
     const status = /must be|required/i.test(message) ? 400 : 500;
-    return new Response(JSON.stringify({ error: message }), {
-      status: status,
-      headers: { 'Content-Type': 'application/json' },
-    });
+    return c.json({ error: message }, status);
   }
 });
 
@@ -230,7 +224,7 @@ firmAdminRoutes.get('/recovery-bin', async (c) => {
 firmAdminRoutes.post('/recovery-bin/:envelopeId/restore', rateLimit('SENDER_MUTATE'), async (c) => {
   try {
     const ctx = await getAuthContext(c);
-    const envelopeId = c.req.param('envelopeId')!;
+    const envelopeId = c.req.param('envelopeId');
     const envelope = await getEnvelopeDetails(envelopeId);
     if (!envelope) return c.json({ error: 'Envelope not found' }, 404);
 
@@ -281,7 +275,7 @@ firmAdminRoutes.post('/recovery-bin/:envelopeId/restore', rateLimit('SENDER_MUTA
 firmAdminRoutes.delete('/recovery-bin/:envelopeId', rateLimit('SENDER_MUTATE'), async (c) => {
   try {
     const ctx = await getAuthContext(c);
-    const envelopeId = c.req.param('envelopeId')!;
+    const envelopeId = c.req.param('envelopeId');
     const envelope = await getEnvelopeDetails(envelopeId);
     if (!envelope) return c.json({ success: true, purged: true, already: true });
 

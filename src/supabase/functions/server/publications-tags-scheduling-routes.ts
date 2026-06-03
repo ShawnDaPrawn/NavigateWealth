@@ -78,8 +78,8 @@ tagsSchedulingRoutes.post('/tags', async (c) => {
 
 tagsSchedulingRoutes.post('/articles/:articleId/tags/:tagId', async (c) => {
   try {
-    const articleId = c.req.param('articleId')!;
-    const tagId = c.req.param('tagId')!;
+    const articleId = c.req.param('articleId');
+    const tagId = c.req.param('tagId');
 
     const link: ArticleTagLink = {
       article_id: articleId,
@@ -97,8 +97,8 @@ tagsSchedulingRoutes.post('/articles/:articleId/tags/:tagId', async (c) => {
 
 tagsSchedulingRoutes.delete('/articles/:articleId/tags/:tagId', async (c) => {
   try {
-    const articleId = c.req.param('articleId')!;
-    const tagId = c.req.param('tagId')!;
+    const articleId = c.req.param('articleId');
+    const tagId = c.req.param('tagId');
 
     await kv.del(`article_tag_link:${articleId}:${tagId}`);
 
@@ -111,7 +111,7 @@ tagsSchedulingRoutes.delete('/articles/:articleId/tags/:tagId', async (c) => {
 
 tagsSchedulingRoutes.get('/articles/:articleId/tags', async (c) => {
   try {
-    const articleId = c.req.param('articleId')!;
+    const articleId = c.req.param('articleId');
     const links = await kv.getByPrefix(`article_tag_link:${articleId}:`);
 
     const tags = [];

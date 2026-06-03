@@ -43,10 +43,7 @@ function handleRouteError(
     return c.json({ success: false, error: 'Unauthorized' }, 401);
   }
   if (error instanceof FnaIntakeError) {
-    return new Response(JSON.stringify({ success: false, error: error.message }), {
-      status: error.status,
-      headers: { 'Content-Type': 'application/json' },
-    });
+    return c.json({ success: false, error: error.message }, error.status);
   }
   log.error('Form template route error', error);
   return c.json(
@@ -71,9 +68,7 @@ async function extractPdfFields(base64Content: string): Promise<FormTemplateFiel
 
     return autoMapTemplateFields(extractedFields).fields;
   } catch (error) {
-    log.warn('PDF field extraction failed', {
-      error: error instanceof Error ? error.message : String(error),
-    });
+    log.warn('PDF field extraction failed', error);
     return [];
   }
 }
@@ -145,7 +140,7 @@ routes.post('/', async (c) => {
 routes.put('/:id/mappings', async (c) => {
   try {
     requirePrefillUser(await authenticateUser(c.req.header('Authorization')));
-    const id = c.req.param('id')!;
+    const id = c.req.param('id');
     const body = await c.req.json();
     const { fields, status } = body ?? {};
 
@@ -180,7 +175,7 @@ routes.post('/:id/preview', async (c) => {
     requirePrefillUser(user);
     await assertPrefillResolveRateLimit(user.id);
 
-    const id = c.req.param('id')!;
+    const id = c.req.param('id');
     const body = await c.req.json();
     const { clientId } = body ?? {};
 
@@ -254,7 +249,7 @@ routes.post('/:id/fill', async (c) => {
     requirePrefillUser(user);
     await assertPrefillResolveRateLimit(user.id);
 
-    const id = c.req.param('id')!;
+    const id = c.req.param('id');
     const body = await c.req.json();
     const { clientId, attachToDocuments } = body ?? {};
 

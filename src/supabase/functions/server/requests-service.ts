@@ -424,7 +424,7 @@ export class RequestsService {
     } else {
       log.warn('Found malformed request, attempting to heal', {
         requestId: data.id,
-        errors: result.error.issues,
+        errors: result.error.errors,
       });
 
       // If Zod fails, we can either return null or try to force it.
@@ -435,39 +435,33 @@ export class RequestsService {
 
       // Attempt to salvage ID and TemplateID at minimum
       const salvaged: Request = {
-        id: (data.id as string | undefined) || 'unknown',
-        templateId: (data.templateId as string | undefined) || 'unknown',
-        templateVersion: (data.templateVersion as number | undefined) || 1,
-        status: (data.status as RequestStatus | undefined) || RequestStatus.NEW,
-        priority: (data.priority as RequestPriority | undefined) || RequestPriority.MEDIUM,
-        requestDetails: (data.requestDetails as Record<string, unknown> | undefined) || {},
-        assignees: Array.isArray(data.assignees) ? (data.assignees as Request['assignees']) : [],
+        id: data.id || 'unknown',
+        templateId: data.templateId || 'unknown',
+        templateVersion: data.templateVersion || 1,
+        status: data.status || RequestStatus.NEW,
+        priority: data.priority || RequestPriority.MEDIUM,
+        requestDetails: data.requestDetails || {},
+        assignees: Array.isArray(data.assignees) ? data.assignees : [],
         complianceApproval: {
           required: false,
           checklistStatus: [],
-          ...(typeof data.complianceApproval === 'object' && data.complianceApproval !== null
-            ? (data.complianceApproval as object)
-            : {}),
+          ...data.complianceApproval,
         },
         lifecycle: {
           stageHistory: [],
-          ...(typeof data.lifecycle === 'object' && data.lifecycle !== null
-            ? (data.lifecycle as object)
-            : {}),
+          ...data.lifecycle,
         },
         complianceSignOff: {
           required: false,
           deficiencies: [],
-          ...(typeof data.complianceSignOff === 'object' && data.complianceSignOff !== null
-            ? (data.complianceSignOff as object)
-            : {}),
+          ...data.complianceSignOff,
         },
-        finalised: !!(data.finalised as boolean | undefined),
-        documentIds: Array.isArray(data.documentIds) ? (data.documentIds as string[]) : [],
-        createdBy: (data.createdBy as string | undefined) || 'system',
-        createdAt: (data.createdAt as string | undefined) || new Date().toISOString(),
-        updatedBy: (data.updatedBy as string | undefined) || 'system',
-        updatedAt: (data.updatedAt as string | undefined) || new Date().toISOString(),
+        finalised: !!data.finalised,
+        documentIds: Array.isArray(data.documentIds) ? data.documentIds : [],
+        createdBy: data.createdBy || 'system',
+        createdAt: data.createdAt || new Date().toISOString(),
+        updatedBy: data.updatedBy || 'system',
+        updatedAt: data.updatedAt || new Date().toISOString(),
       };
 
       return salvaged;

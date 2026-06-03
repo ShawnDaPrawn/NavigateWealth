@@ -37,7 +37,7 @@ app.get(
     const eventTypes = c.req.query('eventTypes')?.split(',') as string[] | undefined;
     const eventStatuses = c.req.query('eventStatuses')?.split(',') as string[] | undefined;
 
-    const userId = c.get('userId' as never);
+    const userId = c.get('userId');
 
     const events = await service.getEvents(userId, {
       start: start ? new Date(start) : undefined,
@@ -65,7 +65,7 @@ app.post(
     if (!parsed.success) {
       return c.json({ error: 'Validation failed', ...formatZodError(parsed.error) }, 400);
     }
-    const userId = c.get('userId' as never);
+    const userId = c.get('userId');
     const event = await service.createEvent(userId, parsed.data);
     return c.json(event);
   }),
@@ -79,13 +79,13 @@ app.put(
   '/events/:id',
   requireAuth,
   asyncHandler(async (c) => {
-    const id = c.req.param('id')!;
+    const id = c.req.param('id');
     const body = await c.req.json();
     const parsed = UpdateEventSchema.safeParse(body);
     if (!parsed.success) {
       return c.json({ error: 'Validation failed', ...formatZodError(parsed.error) }, 400);
     }
-    const userId = c.get('userId' as never);
+    const userId = c.get('userId');
     const event = await service.updateEvent(userId, id, parsed.data);
     return c.json(event);
   }),
@@ -99,8 +99,8 @@ app.delete(
   '/events/:id',
   requireAuth,
   asyncHandler(async (c) => {
-    const id = c.req.param('id')!;
-    const userId = c.get('userId' as never);
+    const id = c.req.param('id');
+    const userId = c.get('userId');
     await service.deleteEvent(userId, id);
     return c.json({ success: true });
   }),
@@ -115,7 +115,7 @@ app.get(
   requireAuth,
   asyncHandler(async (c) => {
     const status = c.req.query('status') as string | undefined;
-    const userId = c.get('userId' as never);
+    const userId = c.get('userId');
 
     const reminders = await service.getReminders(userId, { status });
     return c.json(reminders);
@@ -135,7 +135,7 @@ app.post(
     if (!parsed.success) {
       return c.json({ error: 'Validation failed', ...formatZodError(parsed.error) }, 400);
     }
-    const userId = c.get('userId' as never);
+    const userId = c.get('userId');
     const reminder = await service.createReminder(userId, parsed.data);
     return c.json(reminder);
   }),
@@ -149,13 +149,13 @@ app.put(
   '/reminders/:id',
   requireAuth,
   asyncHandler(async (c) => {
-    const id = c.req.param('id')!;
+    const id = c.req.param('id');
     const body = await c.req.json();
     const parsed = UpdateReminderSchema.safeParse(body);
     if (!parsed.success) {
       return c.json({ error: 'Validation failed', ...formatZodError(parsed.error) }, 400);
     }
-    const userId = c.get('userId' as never);
+    const userId = c.get('userId');
     const reminder = await service.updateReminder(userId, id, parsed.data);
     return c.json(reminder);
   }),
@@ -169,8 +169,8 @@ app.delete(
   '/reminders/:id',
   requireAuth,
   asyncHandler(async (c) => {
-    const id = c.req.param('id')!;
-    const userId = c.get('userId' as never);
+    const id = c.req.param('id');
+    const userId = c.get('userId');
     await service.deleteReminder(userId, id);
     return c.json({ success: true });
   }),

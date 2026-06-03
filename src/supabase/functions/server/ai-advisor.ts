@@ -1005,7 +1005,7 @@ app.get('/status', requireAuth, (c) => {
  */
 app.post('/chat/stream', requireAuth, async (c) => {
   try {
-    const user = c.get('user' as never);
+    const user = c.get('user');
     const body = await c.req.json();
     const { messages: clientMessages, sessionId } = body;
     return await buildAdvisorSseResponse(user.id, clientMessages, sessionId);
@@ -1020,7 +1020,7 @@ app.post('/chat/stream', requireAuth, async (c) => {
  */
 app.get('/sessions', requireAuth, async (c) => {
   try {
-    const user = c.get('user' as never);
+    const user = c.get('user');
     const sessions = await listEnsuredAdvisorSessions(user.id);
     return c.json({ sessions });
   } catch (error) {
@@ -1034,7 +1034,7 @@ app.get('/sessions', requireAuth, async (c) => {
  */
 app.post('/sessions', requireAuth, async (c) => {
   try {
-    const user = c.get('user' as never);
+    const user = c.get('user');
     const body = await c.req.json().catch(() => ({}));
     const title = isRecord(body) && typeof body.title === 'string' ? body.title : undefined;
     const session = await ensureAdvisorSession(user.id, null, title);
@@ -1050,8 +1050,8 @@ app.post('/sessions', requireAuth, async (c) => {
  */
 app.get('/sessions/:sessionId', requireAuth, async (c) => {
   try {
-    const user = c.get('user' as never);
-    const sessionId = c.req.param('sessionId')!;
+    const user = c.get('user');
+    const sessionId = c.req.param('sessionId');
     const session = await getAdvisorSessionSummary(user.id, sessionId);
     if (!session) {
       return c.json({ error: 'Chat session not found' }, 404);
@@ -1070,8 +1070,8 @@ app.get('/sessions/:sessionId', requireAuth, async (c) => {
  */
 app.delete('/sessions/:sessionId', requireAuth, async (c) => {
   try {
-    const user = c.get('user' as never);
-    const sessionId = c.req.param('sessionId')!;
+    const user = c.get('user');
+    const sessionId = c.req.param('sessionId');
     await deleteAdvisorSession(user.id, sessionId);
     return c.json({ success: true });
   } catch (error) {
@@ -1113,10 +1113,7 @@ app.get('/admin/history', async (c) => {
     return c.json({ messages, sessionId: activeSession.id, session: activeSession });
   } catch (error) {
     if (error instanceof AuthError) {
-      return new Response(JSON.stringify({ error: error.message, code: error.code }), {
-        status: error.statusCode,
-        headers: { 'Content-Type': 'application/json' },
-      });
+      return c.json({ error: error.message, code: error.code }, error.statusCode);
     }
     return c.json({ error: 'Failed to fetch history' }, 500);
   }
@@ -1139,10 +1136,7 @@ app.get('/admin/sessions', async (c) => {
     return c.json({ sessions });
   } catch (error) {
     if (error instanceof AuthError) {
-      return new Response(JSON.stringify({ error: error.message, code: error.code }), {
-        status: error.statusCode,
-        headers: { 'Content-Type': 'application/json' },
-      });
+      return c.json({ error: error.message, code: error.code }, error.statusCode);
     }
     log.error('Failed to list admin advisor sessions', error);
     return c.json({ error: 'Failed to load chat sessions' }, 500);
@@ -1169,10 +1163,7 @@ app.post('/admin/sessions', async (c) => {
     return c.json({ session });
   } catch (error) {
     if (error instanceof AuthError) {
-      return new Response(JSON.stringify({ error: error.message, code: error.code }), {
-        status: error.statusCode,
-        headers: { 'Content-Type': 'application/json' },
-      });
+      return c.json({ error: error.message, code: error.code }, error.statusCode);
     }
     log.error('Failed to create admin advisor session', error);
     return c.json({ error: 'Failed to create chat session' }, 500);
@@ -1186,7 +1177,7 @@ app.get('/admin/sessions/:sessionId', async (c) => {
   try {
     const { userId, role } = await getAuthContext(c);
     const clientUserId = c.req.query('clientUserId')?.trim();
-    const sessionId = c.req.param('sessionId')!;
+    const sessionId = c.req.param('sessionId');
     if (!clientUserId) {
       return c.json({ error: 'clientUserId query parameter is required' }, 400);
     }
@@ -1202,10 +1193,7 @@ app.get('/admin/sessions/:sessionId', async (c) => {
     return c.json({ session, messages });
   } catch (error) {
     if (error instanceof AuthError) {
-      return new Response(JSON.stringify({ error: error.message, code: error.code }), {
-        status: error.statusCode,
-        headers: { 'Content-Type': 'application/json' },
-      });
+      return c.json({ error: error.message, code: error.code }, error.statusCode);
     }
     log.error('Failed to load admin advisor session', error);
     return c.json({ error: 'Failed to load chat session' }, 500);
@@ -1219,7 +1207,7 @@ app.delete('/admin/sessions/:sessionId', async (c) => {
   try {
     const { userId, role } = await getAuthContext(c);
     const clientUserId = c.req.query('clientUserId')?.trim();
-    const sessionId = c.req.param('sessionId')!;
+    const sessionId = c.req.param('sessionId');
     if (!clientUserId) {
       return c.json({ error: 'clientUserId query parameter is required' }, 400);
     }
@@ -1230,10 +1218,7 @@ app.delete('/admin/sessions/:sessionId', async (c) => {
     return c.json({ success: true });
   } catch (error) {
     if (error instanceof AuthError) {
-      return new Response(JSON.stringify({ error: error.message, code: error.code }), {
-        status: error.statusCode,
-        headers: { 'Content-Type': 'application/json' },
-      });
+      return c.json({ error: error.message, code: error.code }, error.statusCode);
     }
     log.error('Failed to delete admin advisor session', error);
     return c.json({ error: 'Failed to delete chat session' }, 500);
@@ -1258,10 +1243,7 @@ app.post('/admin/chat/stream', async (c) => {
   } catch (error: unknown) {
     if (error instanceof AuthError) {
       const ae = error as AuthError;
-      return new Response(JSON.stringify({ error: ae.message, code: ae.code }), {
-        status: ae.statusCode,
-        headers: { 'Content-Type': 'application/json' },
-      });
+      return c.json({ error: ae.message, code: ae.code }, ae.statusCode);
     }
     log.error('Admin streaming chat error:', error);
     return c.json({ error: error instanceof Error ? error.message : 'Chat failed' }, 500);
@@ -1297,10 +1279,7 @@ app.delete('/admin/history', async (c) => {
     return c.json({ success: true });
   } catch (error) {
     if (error instanceof AuthError) {
-      return new Response(JSON.stringify({ error: error.message, code: error.code }), {
-        status: error.statusCode,
-        headers: { 'Content-Type': 'application/json' },
-      });
+      return c.json({ error: error.message, code: error.code }, error.statusCode);
     }
     return c.json({ error: 'Failed to clear history' }, 500);
   }
@@ -1311,7 +1290,7 @@ app.delete('/admin/history', async (c) => {
  */
 app.post('/chat', requireAuth, async (c) => {
   try {
-    const user = c.get('user' as never);
+    const user = c.get('user');
     const body = await c.req.json();
     const { message } = body;
 
@@ -1365,7 +1344,7 @@ app.post('/chat', requireAuth, async (c) => {
  */
 app.get('/history', requireAuth, async (c) => {
   try {
-    const user = c.get('user' as never);
+    const user = c.get('user');
     const sessionId = c.req.query('sessionId')?.trim();
 
     if (sessionId) {
@@ -1395,7 +1374,7 @@ app.get('/history', requireAuth, async (c) => {
  */
 app.delete('/history', requireAuth, async (c) => {
   try {
-    const user = c.get('user' as never);
+    const user = c.get('user');
     const sessionId = c.req.query('sessionId')?.trim();
 
     if (sessionId) {

@@ -58,7 +58,7 @@ app.post('/signup', async (c) => {
     const supabase = getSupabaseClient();
 
     // Create user in Supabase Auth with email verification required
-    log.info('👤 Creating user account:', { email });
+    log.info('👤 Creating user account:', email);
     const { data: userData, error: userError } = await supabase.auth.admin.createUser({
       email,
       password,
@@ -84,7 +84,7 @@ app.post('/signup', async (c) => {
           (userError as Error & { code?: string }).code === 'email_exists') ||
         userError?.message?.includes('already been registered')
       ) {
-        log.warn('⚠️ User already exists:', { email });
+        log.warn('⚠️ User already exists:', email);
         return c.json(
           {
             error: 'An account with this email already exists. Please sign in.',
@@ -99,7 +99,7 @@ app.post('/signup', async (c) => {
     }
 
     const userId = userData.user.id;
-    log.info('✅ User created:', { userId });
+    log.info('✅ User created:', userId);
 
     // Send verification email explicitly
     // We need to do this because admin.createUser with email_confirm: false doesn't send the email automatically
@@ -107,8 +107,8 @@ app.post('/signup', async (c) => {
       const origin = c.req.header('origin') || 'https://www.navigatewealth.co';
       const redirectTo = `${origin}/auth/callback`;
 
-      log.info('📧 Sending verification email to:', { email });
-      log.info('🔗 Redirect URL:', { redirectTo });
+      log.info('📧 Sending verification email to:', email);
+      log.info('🔗 Redirect URL:', redirectTo);
 
       const { error: resendError } = await supabase.auth.resend({
         type: 'signup',
@@ -119,23 +119,19 @@ app.post('/signup', async (c) => {
       });
 
       if (resendError) {
-        log.warn('⚠️ Failed to send verification email:', {
-          error: resendError instanceof Error ? resendError.message : String(resendError),
-        });
+        log.warn('⚠️ Failed to send verification email:', resendError);
         // We don't fail the request here, as the user is created.
         // They can request a new verification email from the frontend.
       } else {
         log.info('✅ Verification email sent successfully');
       }
     } catch (emailErr) {
-      log.warn('⚠️ Exception sending verification email:', {
-        error: emailErr instanceof Error ? emailErr.message : String(emailErr),
-      });
+      log.warn('⚠️ Exception sending verification email:', emailErr);
     }
 
     // Generate Application Number
     const applicationNumber = await generateApplicationNumber();
-    log.info('📋 Generated application number:', { applicationNumber });
+    log.info('📋 Generated application number:', applicationNumber);
 
     // Create application record
     const applicationId = crypto.randomUUID();
@@ -211,9 +207,7 @@ app.post('/signup', async (c) => {
 
     // Auto-subscribe client to newsletter (fire-and-forget, §12.3)
     autoSubscribeClient(email, firstName, surname).catch((err) => {
-      log.warn('Auto-subscribe newsletter failed (non-blocking)', {
-        error: err instanceof Error ? err.message : String(err),
-      });
+      log.warn('Auto-subscribe newsletter failed (non-blocking)', err);
     });
 
     // Create a submission to notify admin of the new signup (appears in Submissions inbox)

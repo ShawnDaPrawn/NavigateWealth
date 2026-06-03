@@ -301,7 +301,7 @@ app.post('/session', asyncHandler(async (c) => {
 // ============================================================================
 
 app.get('/session/:sessionId', asyncHandler(async (c) => {
-  const sessionId = c.req.param('sessionId')!;
+  const sessionId = c.req.param('sessionId');
   const session = await loadSession(sessionId);
 
   if (!session) {
@@ -316,7 +316,7 @@ app.get('/session/:sessionId', asyncHandler(async (c) => {
 // ============================================================================
 
 app.delete('/session/:sessionId', asyncHandler(async (c) => {
-  const sessionId = c.req.param('sessionId')!;
+  const sessionId = c.req.param('sessionId');
   await deleteSession(sessionId);
   return c.json({ success: true });
 }));
@@ -335,7 +335,7 @@ app.get('/config', requireAdmin, asyncHandler(async (c) => {
 // ============================================================================
 
 app.put('/config', requireAdmin, asyncHandler(async (c) => {
-  const userId = c.get('userId' as never) as string;
+  const userId = c.get('userId') as string;
   const body = await c.req.json();
 
   if (typeof body.enabled !== 'boolean') {
@@ -427,7 +427,7 @@ app.get('/handoffs', requireAdmin, asyncHandler(async (c) => {
 // ============================================================================
 
 app.put('/handoffs/:id', requireAdmin, asyncHandler(async (c) => {
-  const id = c.req.param('id')!;
+  const id = c.req.param('id');
   const body = await c.req.json();
 
   if (!body.status || !['new', 'contacted', 'converted', 'closed'].includes(body.status)) {

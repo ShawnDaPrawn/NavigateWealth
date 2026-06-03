@@ -157,7 +157,7 @@ fnaRoutes.get('/types', (c) => {
  * Get details about a specific FNA type
  */
 fnaRoutes.get('/types/:typeId', (c) => {
-  const typeId = c.req.param('typeId')!;
+  const typeId = c.req.param('typeId');
   const fnaType = FNA_TYPES.find((fna) => fna.id === typeId);
 
   if (!fnaType) {

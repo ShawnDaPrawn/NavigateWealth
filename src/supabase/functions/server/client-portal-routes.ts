@@ -35,7 +35,7 @@ app.get('/', (c) => c.json({ service: 'client-portal', status: 'active' }));
  */
 app.get('/portfolio/:clientId', requireAuth, async (c) => {
   try {
-    const clientId = c.req.param('clientId')!;
+    const clientId = c.req.param('clientId');
 
     if (!clientId) {
       return c.json({ success: false, error: 'Client ID is required' }, 400);
@@ -43,8 +43,8 @@ app.get('/portfolio/:clientId', requireAuth, async (c) => {
 
     // Authorisation gate: clients may only access their own portfolio;
     // admin / super_admin roles may access any client's portfolio.
-    const userId = c.get('userId' as never) as string | undefined;
-    const userRole = c.get('userRole' as never) as string | undefined;
+    const userId = c.get('userId') as string | undefined;
+    const userRole = c.get('userRole') as string | undefined;
     const isAdmin =
       userRole === 'admin' || userRole === 'super_admin' || userRole === 'super-admin';
 
@@ -84,7 +84,7 @@ app.get(
   '/comm-prefs',
   requireAuth,
   asyncHandler(async (c) => {
-    const userId = c.get('userId' as never) as string | undefined;
+    const userId = c.get('userId') as string | undefined;
     if (!userId) return c.json({ error: 'Unauthorized' }, 401);
 
     const prefs = await kv.get(`comm_prefs:${userId}`);
@@ -102,7 +102,7 @@ app.put(
   '/comm-prefs',
   requireAuth,
   asyncHandler(async (c) => {
-    const userId = c.get('userId' as never) as string | undefined;
+    const userId = c.get('userId') as string | undefined;
     if (!userId) return c.json({ error: 'Unauthorized' }, 401);
 
     const body = await c.req.json();

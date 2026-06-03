@@ -74,7 +74,7 @@ export type EsignRateLimitAction = keyof typeof ESIGN_RATE_LIMITS;
 function defaultIdentifier(c: {
   req: { header: (n: string) => string | undefined; param: (n: string) => string | undefined };
 }): string {
-  const token = c.req.param('token')! || c.req.header('x-signer-token');
+  const token = c.req.param('token') || c.req.header('x-signer-token');
   if (token) return `tkn:${token.slice(0, 32)}`;
   const ip =
     c.req.header('x-forwarded-for')?.split(',')[0].trim() || c.req.header('x-real-ip') || 'noip';

@@ -103,7 +103,7 @@ app.get('/sessions/client/:clientId', async (c) => {
     log.info('GET /sessions/client/:clientId');
     await authenticateUser(c.req.header('Authorization'), 'tax-agent');
 
-    const clientId = c.req.param('clientId')!;
+    const clientId = c.req.param('clientId');
     const sessions = await service.getClientSessions(clientId);
 
     const summaries = sessions.map((s) => ({
@@ -133,7 +133,7 @@ app.get('/sessions/:sessionId', async (c) => {
     log.info('GET /sessions/:sessionId');
     await authenticateUser(c.req.header('Authorization'), 'tax-agent');
 
-    const sessionId = c.req.param('sessionId')!;
+    const sessionId = c.req.param('sessionId');
     // clientId is the prefix of the sessionId before '-ta-'
     const clientId = sessionId.replace(/-ta-\d+$/, '');
 
@@ -172,7 +172,7 @@ app.post('/sessions/:sessionId/send', async (c) => {
     log.info('POST /sessions/:sessionId/send');
     await authenticateUser(c.req.header('Authorization'), 'tax-agent');
 
-    const sessionId = c.req.param('sessionId')!;
+    const sessionId = c.req.param('sessionId');
     const clientId = sessionId.replace(/-ta-\d+$/, '');
 
     const body = await c.req.json();
@@ -214,7 +214,7 @@ app.post('/sessions/:sessionId/save', async (c) => {
     log.info('POST /sessions/:sessionId/save');
     const user = await authenticateUser(c.req.header('Authorization'), 'tax-agent');
 
-    const sessionId = c.req.param('sessionId')!;
+    const sessionId = c.req.param('sessionId');
     const clientId = sessionId.replace(/-ta-\d+$/, '');
 
     const result = await service.saveSessionOutput(clientId, sessionId, user.id);
@@ -233,7 +233,7 @@ app.delete('/sessions/:sessionId', async (c) => {
     log.info('DELETE /sessions/:sessionId');
     await authenticateUser(c.req.header('Authorization'), 'tax-agent');
 
-    const sessionId = c.req.param('sessionId')!;
+    const sessionId = c.req.param('sessionId');
     const clientId = sessionId.replace(/-ta-\d+$/, '');
 
     await service.deleteSession(clientId, sessionId);

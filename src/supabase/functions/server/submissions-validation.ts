@@ -29,12 +29,12 @@ const SOURCE_CHANNELS = ['website_form', 'admin', 'client_portal'] as const;
 
 export const CreateSubmissionSchema = z.object({
   type: z.enum(SUBMISSION_TYPES, {
-    error: () => ({
+    errorMap: () => ({
       message: `Invalid submission type. Must be one of: ${SUBMISSION_TYPES.join(', ')}`,
     }),
   }),
   sourceChannel: z.enum(SOURCE_CHANNELS, {
-    error: () => ({
+    errorMap: () => ({
       message: `Invalid source channel. Must be one of: ${SOURCE_CHANNELS.join(', ')}`,
     }),
   }),
@@ -60,7 +60,7 @@ export const CreateSubmissionSchema = z.object({
 export const UpdateSubmissionSchema = z.object({
   status: z
     .enum(SUBMISSION_STATUSES, {
-      error: () => ({
+      errorMap: () => ({
         message: `Invalid status. Must be one of: ${SUBMISSION_STATUSES.join(', ')}`,
       }),
     })

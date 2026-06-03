@@ -69,7 +69,7 @@ v1Routes.get('/v1/envelopes/:id', async (c) => {
   const auth = await requireApiKey(c);
   if (!auth.ok) return auth.response;
   try {
-    const id = c.req.param('id')!;
+    const id = c.req.param('id');
     const envelope = await getEnvelopeDetails(id);
     if (!envelope) return c.json({ error: 'Envelope not found' }, 404);
     if (envelope.firm_id !== auth.firmId) return c.json({ error: 'Forbidden' }, 403);
@@ -85,7 +85,7 @@ v1Routes.get('/v1/envelopes/:id/audit', async (c) => {
   const auth = await requireApiKey(c);
   if (!auth.ok) return auth.response;
   try {
-    const id = c.req.param('id')!;
+    const id = c.req.param('id');
     const envelope = await getEnvelopeDetails(id);
     if (!envelope) return c.json({ error: 'Envelope not found' }, 404);
     if (envelope.firm_id !== auth.firmId) return c.json({ error: 'Forbidden' }, 403);
@@ -102,7 +102,7 @@ v1Routes.get('/v1/envelopes/:id/signed-pdf', async (c) => {
   const auth = await requireApiKey(c);
   if (!auth.ok) return auth.response;
   try {
-    const id = c.req.param('id')!;
+    const id = c.req.param('id');
     const envelope = await getEnvelopeDetails(id);
     if (!envelope) return c.json({ error: 'Envelope not found' }, 404);
     if (envelope.firm_id !== auth.firmId) return c.json({ error: 'Forbidden' }, 403);
@@ -146,7 +146,7 @@ v1Routes.get('/v1/templates/:id', async (c) => {
   const auth = await requireApiKey(c);
   if (!auth.ok) return auth.response;
   try {
-    const id = c.req.param('id')!;
+    const id = c.req.param('id');
     const template = await getTemplate(id);
     if (!template) return c.json({ error: 'Template not found' }, 404);
     const tFirm = (template as unknown as Record<string, unknown>).firm_id as string | undefined;

@@ -87,7 +87,7 @@ apiKeysRoutes.get('/api-keys', async (c) => {
 apiKeysRoutes.patch('/api-keys/:id', rateLimit('SENDER_MUTATE'), async (c) => {
   try {
     const ctx = await getAuthContext(c);
-    const id = c.req.param('id')!;
+    const id = c.req.param('id');
     const existing = await getApiKey(id);
     if (!existing) return c.json({ error: 'API key not found' }, 404);
     if (existing.firm_id !== resolveFirmId(ctx.user)) {
@@ -127,7 +127,7 @@ apiKeysRoutes.patch('/api-keys/:id', rateLimit('SENDER_MUTATE'), async (c) => {
 apiKeysRoutes.post('/api-keys/:id/rotate', rateLimit('SENDER_MUTATE'), async (c) => {
   try {
     const ctx = await getAuthContext(c);
-    const id = c.req.param('id')!;
+    const id = c.req.param('id');
     const existing = await getApiKey(id);
     if (!existing) return c.json({ error: 'API key not found' }, 404);
     if (existing.firm_id !== resolveFirmId(ctx.user)) {
@@ -157,7 +157,7 @@ apiKeysRoutes.post('/api-keys/:id/rotate', rateLimit('SENDER_MUTATE'), async (c)
 apiKeysRoutes.delete('/api-keys/:id', rateLimit('SENDER_MUTATE'), async (c) => {
   try {
     const ctx = await getAuthContext(c);
-    const id = c.req.param('id')!;
+    const id = c.req.param('id');
     const existing = await getApiKey(id);
     if (!existing) return c.json({ error: 'API key not found' }, 404);
     if (existing.firm_id !== resolveFirmId(ctx.user)) {

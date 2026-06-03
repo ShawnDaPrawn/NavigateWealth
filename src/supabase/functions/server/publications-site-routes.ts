@@ -64,7 +64,7 @@ siteRoutes.post('/templates', async (c) => {
 
 siteRoutes.get('/templates/:id', async (c) => {
   try {
-    const id = c.req.param('id')!;
+    const id = c.req.param('id');
     const template = await TemplateService.get(id);
     if (!template) {
       return c.json({ success: false, error: 'Template not found' }, 404);
@@ -78,7 +78,7 @@ siteRoutes.get('/templates/:id', async (c) => {
 
 siteRoutes.put('/templates/:id', async (c) => {
   try {
-    const id = c.req.param('id')!;
+    const id = c.req.param('id');
     const body = await c.req.json();
     const template = await TemplateService.update(id, body);
     if (!template) {
@@ -93,7 +93,7 @@ siteRoutes.put('/templates/:id', async (c) => {
 
 siteRoutes.delete('/templates/:id', async (c) => {
   try {
-    const id = c.req.param('id')!;
+    const id = c.req.param('id');
     const deleted = await TemplateService.delete(id);
     if (!deleted) {
       return c.json({ success: false, error: 'Template not found' }, 404);
@@ -111,7 +111,7 @@ siteRoutes.delete('/templates/:id', async (c) => {
 
 siteRoutes.get('/versions/:articleId', async (c) => {
   try {
-    const articleId = c.req.param('articleId')!;
+    const articleId = c.req.param('articleId');
     const versions = await VersionService.listVersions(articleId);
     return c.json({ success: true, data: versions });
   } catch (error) {
@@ -122,7 +122,7 @@ siteRoutes.get('/versions/:articleId', async (c) => {
 
 siteRoutes.post('/versions/:articleId', async (c) => {
   try {
-    const articleId = c.req.param('articleId')!;
+    const articleId = c.req.param('articleId');
     const article = await kv.get(`article:${articleId}`);
     if (!article) {
       return c.json({ success: false, error: 'Article not found' }, 404);
@@ -139,8 +139,8 @@ siteRoutes.post('/versions/:articleId', async (c) => {
 
 siteRoutes.post('/versions/:articleId/:versionId/restore', async (c) => {
   try {
-    const articleId = c.req.param('articleId')!;
-    const versionId = c.req.param('versionId')!;
+    const articleId = c.req.param('articleId');
+    const versionId = c.req.param('versionId');
 
     const version = await VersionService.getVersion(articleId, versionId);
     if (!version) {

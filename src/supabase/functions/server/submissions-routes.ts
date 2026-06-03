@@ -17,7 +17,7 @@
 
 import { Hono } from 'npm:hono';
 import * as kv from './kv_store.tsx';
-import { submissionsService, SubmissionType, SubmissionStatus } from './submissions-service.ts';
+import { submissionsService } from './submissions-service.ts';
 import { requireAuth } from './auth-mw.ts';
 import { asyncHandler } from './error.middleware.ts';
 import { sendEmail, createEmailTemplate, getFooterSettings } from './email-service.ts';
@@ -139,7 +139,7 @@ app.get(
           400,
         );
       }
-      filters = parsed.data as { type?: SubmissionType; status?: SubmissionStatus } | undefined;
+      filters = parsed.data;
     }
 
     const submissions = await submissionsService.list(filters);
@@ -164,7 +164,7 @@ app.get(
   '/:id',
   requireAuth,
   asyncHandler(async (c) => {
-    const id = c.req.param('id')!;
+    const id = c.req.param('id');
     const submission = await submissionsService.getById(id);
     if (!submission) {
       return c.json({ success: false, error: 'Submission not found' }, 404);
@@ -292,7 +292,7 @@ app.patch(
   '/:id',
   requireAuth,
   asyncHandler(async (c) => {
-    const id = c.req.param('id')!;
+    const id = c.req.param('id');
     const body = await c.req.json();
 
     const parsed = UpdateSubmissionSchema.safeParse(body);
@@ -322,7 +322,7 @@ app.delete(
   '/:id',
   requireAuth,
   asyncHandler(async (c) => {
-    const id = c.req.param('id')!;
+    const id = c.req.param('id');
     await submissionsService.delete(id);
     log.info('Submission deleted', { id });
     return c.json({ success: true });
