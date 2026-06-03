@@ -82,7 +82,9 @@ documentsEmailRoutes.post('/:userId/email', async (c) => {
         firstName = profile.firstName || 'Client';
       }
     } catch (err) {
-      log.warn('⚠️ Failed to fetch latest profile, falling back to provided details', err);
+      log.warn('⚠️ Failed to fetch latest profile, falling back to provided details', {
+        error: err instanceof Error ? err.message : String(err),
+      });
     }
 
     if (!email) {

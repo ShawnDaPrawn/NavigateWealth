@@ -207,7 +207,7 @@ app.post('/signup', async (c) => {
 
     // Auto-subscribe client to newsletter (fire-and-forget, §12.3)
     autoSubscribeClient(email, firstName, surname).catch((err) => {
-      log.warn('Auto-subscribe newsletter failed (non-blocking)', err);
+      log.warn('Auto-subscribe newsletter failed (non-blocking)', { error: err instanceof Error ? err.message : String(err) });
     });
 
     // Create a submission to notify admin of the new signup (appears in Submissions inbox)

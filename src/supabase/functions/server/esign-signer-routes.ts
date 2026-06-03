@@ -275,7 +275,7 @@ signerRoutes.post('/signer/validate', rateLimit('SIGNER_ACCESS'), async (c) => {
           log.info(`✅ Auto-sent OTP to ${signer.email} for signer ${signer.id}`);
         }
       } catch (err) {
-        log.warn('❌ Failed to auto-send OTP:', err);
+        log.warn('❌ Failed to auto-send OTP:', { error: err instanceof Error ? err.message : String(err) });
         // We don't block the response, but we log the error
       }
     }
@@ -1082,7 +1082,7 @@ signerRoutes.get('/signer/download/:token', async (c) => {
           finalPdfBuffer = await PDFService.mergeCertificate(burnedPdfBuffer, certBuffer);
         }
       } catch (certError) {
-        log.warn('Certificate merge failed during fallback download', certError);
+        log.warn('Certificate merge failed during fallback download', { error: certError instanceof Error ? certError.message : String(certError) });
       }
 
       return new Response(finalPdfBuffer, {
