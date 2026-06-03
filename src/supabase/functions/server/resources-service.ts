@@ -9,6 +9,7 @@ import { ValidationError, NotFoundError, APIError } from './error.middleware.ts'
 import type {
   LegalDocumentDefinition,
   LegalDocumentVersion,
+  LegalDocumentRenderMode,
   Resource,
   ResourceFilters,
 } from './resources-types.ts';
@@ -1971,7 +1972,7 @@ export class ResourcesService {
           } catch (e) {
             log.warn(
               `Failed to add ${file.name} to zip (Strategy: ${processingStrategy})`,
-              e as Error,
+              { error: String(e) },
             );
           }
         } catch (e) {
@@ -2023,7 +2024,7 @@ export class ResourcesService {
               'x-upsert': 'false',
             },
             duplex: 'half', // Required for streaming bodies
-          });
+          } as RequestInit);
 
           if (!uploadResponse.ok) {
             const text = await uploadResponse.text();

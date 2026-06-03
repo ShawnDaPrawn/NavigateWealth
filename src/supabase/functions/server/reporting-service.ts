@@ -250,8 +250,7 @@ export class ReportingService {
       total: 0,
       currency: 'ZAR',
       period: dateRange,
-      byProduct: [],
-      byAdviser: [],
+      breakdown: { commissions: 0, fees: 0, recurring: 0 },
     };
   }
 
@@ -512,7 +511,7 @@ export class ReportingService {
     const clients = await kv.getByPrefix('user_profile:');
 
     if (!clients || clients.length === 0) {
-      return { total: 0, byAge: [], byAccountType: [] };
+      return { total: 0, byAccountType: [] };
     }
 
     // Group by account type

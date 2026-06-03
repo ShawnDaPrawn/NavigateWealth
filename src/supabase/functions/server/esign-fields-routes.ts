@@ -135,9 +135,10 @@ fieldsRoutes.get('/envelopes/:envelopeId/fields', async (c) => {
     }
 
     // Return the hydrated fields from the envelope details
+    const fields = Array.isArray(envelope.fields) ? envelope.fields : [];
     return c.json({
-      fields: envelope.fields || [],
-      count: (envelope.fields || []).length,
+      fields,
+      count: fields.length,
     });
   } catch (error: unknown) {
     log.error('❌ Get fields error:', error);

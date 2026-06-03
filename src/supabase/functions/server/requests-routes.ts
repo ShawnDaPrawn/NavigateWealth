@@ -538,7 +538,11 @@ app.patch(
       parsed.data.outcome,
       user.id,
       user.name,
-      parsed.data.deficiencies,
+      parsed.data.deficiencies as unknown as Array<{
+        description: string;
+        requiresDocument: boolean;
+        requiresComment: boolean;
+      }> | undefined,
     );
 
     return c.json({

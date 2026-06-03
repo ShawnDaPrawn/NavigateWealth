@@ -28,6 +28,7 @@ import {
   updateEnvelopeStatus,
   logAuditEvent,
 } from './esign-services.ts';
+import { AdminAuditService } from './admin-audit-service.ts';
 
 const log = createModuleLogger('esign-ops-routes');
 
@@ -74,9 +75,9 @@ opsRoutes.post('/maintenance/expiry-sweep', async (c) => {
   } catch (error: unknown) {
     log.error('Expiry sweep error:', error);
     const status = error instanceof AuthError ? error.statusCode : 500;
-    return c.json(
-      { error: error instanceof Error ? error.message : 'Expiry sweep failed' },
-      status,
+    return new Response(
+      JSON.stringify({ error: error instanceof Error ? error.message : 'Expiry sweep failed' }),
+      { status, headers: { 'Content-Type': 'application/json' } },
     );
   }
 });
@@ -127,8 +128,8 @@ opsRoutes.post('/cron/expiry-sweep', async (c) => {
     return c.json({ success: true, ...result });
   } catch (error: unknown) {
     log.error('CRON expiry sweep error:', error);
-    return c.json(
-      { error: error instanceof Error ? error.message : 'CRON expiry sweep failed' },
+    return new Response(
+      JSON.stringify({ error: error instanceof Error ? error.message : 'CRON expiry sweep failed' },
       500,
     );
   }
@@ -167,8 +168,8 @@ opsRoutes.post('/maintenance/reminder-sweep', async (c) => {
     log.error('Reminder sweep error:', error);
     const status = error instanceof AuthError ? error.statusCode : 500;
     return c.json(
-      { error: error instanceof Error ? error.message : 'Reminder sweep failed' },
-      status,
+      { error: error instanceof Error ? error.message : 'Reminder sweep failed' }),
+      { status, headers: { 'Content-Type': 'application/json' } },
     );
   }
 });

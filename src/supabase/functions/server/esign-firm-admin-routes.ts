@@ -31,6 +31,7 @@ import {
   purgeExpiredDeletedEnvelopes,
   RECOVERY_RETENTION_DAYS,
 } from './esign-recovery-bin.ts';
+import { AdminAuditService } from './admin-audit-service.ts';
 
 const log = createModuleLogger('esign-firm-admin-routes');
 

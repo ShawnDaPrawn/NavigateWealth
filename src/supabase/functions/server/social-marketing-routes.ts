@@ -13,7 +13,7 @@ import { requireAdmin } from './auth-mw.ts';
 import { asyncHandler } from './error.middleware.ts';
 import { createModuleLogger } from './stderr-logger.ts';
 import { SocialMarketingService } from './social-marketing-service.ts';
-import type { PostCreate, PostUpdate } from './social-marketing-types.ts';
+import type { PostCreate, PostUpdate, SocialPlatform, PostStatus } from './social-marketing-types.ts';
 import { CreatePostSchema, UpdatePostSchema } from './social-marketing-validation.ts';
 import { formatZodError } from './shared-validation-utils.ts';
 
@@ -138,8 +138,8 @@ app.get(
   requireAdmin,
   asyncHandler(async (c) => {
     const filters = {
-      platform: c.req.query('platform'),
-      status: c.req.query('status'),
+      platform: c.req.query('platform') as SocialPlatform | undefined,
+      status: c.req.query('status') as PostStatus | undefined,
     };
 
     const posts = await service.getAllPosts(filters);

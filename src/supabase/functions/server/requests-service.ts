@@ -423,8 +423,8 @@ export class RequestsService {
       return result.data as Request;
     } else {
       log.warn('Found malformed request, attempting to heal', {
-        requestId: data.id,
-        errors: result.error.errors,
+        requestId: data.id as string | undefined,
+        errors: result.error.issues,
       });
 
       // If Zod fails, we can either return null or try to force it.
@@ -894,7 +894,7 @@ export class RequestsService {
    */
   async getAuditLog(requestId: string): Promise<AuditLogEntry[]> {
     try {
-      const entries = await kv.getByPrefix<AuditLogEntry>(`requests:audit:${requestId}:`);
+      const entries = (await kv.getByPrefix(`requests:audit:${requestId}:`)) as AuditLogEntry[];
       return entries.sort((a, b) => b.performedAt.localeCompare(a.performedAt));
     } catch (error) {
       throw new Error(`Failed to retrieve audit log: ${error}`, { cause: error });

@@ -77,9 +77,9 @@ diagnosticsRoutes.get('/audit/search', async (c) => {
   } catch (error: unknown) {
     log.error('Audit search failed:', error);
     const status = error instanceof AuthError ? error.statusCode : 500;
-    return c.json(
-      { error: error instanceof Error ? error.message : 'Audit search failed' },
-      status,
+    return new Response(
+      JSON.stringify({ error: error instanceof Error ? error.message : 'Audit search failed' }),
+      { status, headers: { 'Content-Type': 'application/json' } },
     );
   }
 });
@@ -97,9 +97,9 @@ diagnosticsRoutes.get('/diagnostics/synthetic', async (c) => {
     return c.json({ latest, history });
   } catch (error: unknown) {
     const status = error instanceof AuthError ? error.statusCode : 500;
-    return c.json(
-      { error: error instanceof Error ? error.message : 'Failed to read probe state' },
-      status,
+    return new Response(
+      JSON.stringify({ error: error instanceof Error ? error.message : 'Failed to read probe state' }),
+      { status, headers: { 'Content-Type': 'application/json' } },
     );
   }
 });

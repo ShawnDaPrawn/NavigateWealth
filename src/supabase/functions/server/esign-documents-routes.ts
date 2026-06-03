@@ -51,6 +51,7 @@ import { createSigningInviteEmail } from './esign-email-templates.ts';
 import { getActiveConsent } from './esign-consent-registry.ts';
 import { sendEmail } from './email-service.ts';
 import { sendInviteSms } from './sms-service.ts';
+import { AdminAuditService } from './admin-audit-service.ts';
 
 const log = createModuleLogger('esign-documents-routes');
 

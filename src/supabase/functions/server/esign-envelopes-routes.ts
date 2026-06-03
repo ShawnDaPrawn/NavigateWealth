@@ -38,6 +38,7 @@ import {
 } from './esign-storage.ts';
 import { analyzeUploadedPdf } from './esign-pdf-analysis.ts';
 import { PDFService } from './esign-pdf.service.ts';
+import { AdminAuditService } from './admin-audit-service.ts';
 
 const log = createModuleLogger('esign-envelopes-routes');
 
