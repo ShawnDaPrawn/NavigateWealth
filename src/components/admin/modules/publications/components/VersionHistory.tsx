@@ -8,7 +8,7 @@
  * @module publications/components/VersionHistory
  */
 
-import React, { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import {
   History,
   X,
@@ -79,13 +79,7 @@ function timeAgo(iso: string): string {
 // Component
 // ---------------------------------------------------------------------------
 
-export function VersionHistory({
-  articleId,
-  isOpen,
-  onClose,
-  onRestore,
-  currentBody: _currentBody,
-}: VersionHistoryProps) {
+export function VersionHistory({ articleId, isOpen, onClose, onRestore }: VersionHistoryProps) {
   const [versions, setVersions] = useState<ArticleVersion[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);

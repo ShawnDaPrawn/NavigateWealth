@@ -40,7 +40,6 @@ export function CommunicationModule() {
   const [showTransactional, setShowTransactional] = useState(false);
   const { canDo } = useCurrentUserPermissions();
 
-  const _canCompose = canDo('communication', 'create');
   const canSend = canDo('communication', 'send');
 
   // Central State for the Wizard

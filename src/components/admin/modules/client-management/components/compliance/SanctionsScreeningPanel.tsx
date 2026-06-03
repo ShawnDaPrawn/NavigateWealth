@@ -9,7 +9,7 @@
  * sanctions list source (OFAC, UN, EU, etc.).
  */
 
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../../../../../ui/card';
 import { Badge } from '../../../../../ui/badge';
 import { Button } from '../../../../../ui/button';
@@ -91,7 +91,6 @@ export function SanctionsScreeningPanel({
   firstName,
   lastName,
   idNumber,
-  passport: _passport,
   onCheckComplete,
 }: SanctionsScreeningPanelProps) {
   // Search fields (pre-populated from client)
@@ -104,6 +103,11 @@ export function SanctionsScreeningPanel({
   const [isSearching, setIsSearching] = useState(false);
   const [result, setResult] = useState<SanctionsResult | null>(null);
   const [showDetails, setShowDetails] = useState(false);
+
+  // History
+  const [_history, setHistory] = useState<SearchHistoryEntry[]>([]);
+  const [_showHistory, _setShowHistory] = useState(false);
+  const [_isLoadingHistory, setIsLoadingHistory] = useState(false);
 
   // Update search fields when client changes
   useEffect(() => {

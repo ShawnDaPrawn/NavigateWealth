@@ -109,7 +109,7 @@ const SelectWithCopy = ({
   const handleCopy = async (_e: React.MouseEvent) => {
     // Don't prevent default/propagation as it might interfere with clipboard operations
     // _e.preventDefault();
-    // _e.stopPropagation();
+    // e.stopPropagation();
 
     try {
       const textToCopy = String(value || '');

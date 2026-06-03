@@ -4,7 +4,7 @@
  * This is the CRITICAL step between upload and sending
  */
 
-import React, { useState, useCallback, useEffect, useRef } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import { Button } from '../../../../ui/button';
 import { Badge } from '../../../../ui/badge';
 import { Card } from '../../../../ui/card';

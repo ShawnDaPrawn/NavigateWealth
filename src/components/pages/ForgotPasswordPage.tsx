@@ -13,6 +13,8 @@ export function ForgotPasswordPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [error, setError] = useState('');
+  const [_currentSlide] = useState(0);
+
   const navigate = useNavigate();
 
   const handleSubmit = async (e: React.FormEvent) => {

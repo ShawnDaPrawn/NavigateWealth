@@ -8,7 +8,7 @@
  * @module ExtractionHistoryPanel
  */
 
-import React, { useState, useCallback, useId } from 'react';
+import { useState, useCallback, useId } from 'react';
 import { Badge } from '../../ui/badge';
 import { Button } from '../../ui/button';
 import { SVGAreaSparkline } from '../../ui/svg-charts';

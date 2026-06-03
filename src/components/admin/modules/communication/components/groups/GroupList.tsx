@@ -1,4 +1,3 @@
-import React from 'react';
 import { Users, Edit2, Trash2 } from 'lucide-react';
 import { Button } from '../../../../../ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../../../../../ui/card';

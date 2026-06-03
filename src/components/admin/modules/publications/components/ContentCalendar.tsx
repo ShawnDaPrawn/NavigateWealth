@@ -8,7 +8,7 @@
  * @module publications/components/ContentCalendar
  */
 
-import React, { useState, useMemo, useCallback } from 'react';
+import { useState, useMemo, useCallback } from 'react';
 import {
   ChevronLeft,
   ChevronRight,

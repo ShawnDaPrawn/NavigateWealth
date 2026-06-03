@@ -17,7 +17,7 @@
  * @module pages/ArticleDetailPage
  */
 
-import React, { useState, useRef, useEffect, useCallback } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
 import { useParams, Link } from 'react-router';
 import { Badge } from '../ui/badge';
 import { Button } from '../ui/button';

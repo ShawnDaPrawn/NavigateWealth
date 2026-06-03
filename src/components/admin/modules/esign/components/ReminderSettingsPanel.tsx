@@ -4,7 +4,7 @@
  * Includes auto-remind toggle, interval, max count, and expiry warning threshold.
  */
 
-import React, { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import {
   Bell,
   BellOff,

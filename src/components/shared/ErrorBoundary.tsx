@@ -5,7 +5,6 @@ import { Button } from '../ui/button';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '../ui/card';
 import { Alert, AlertDescription, AlertTitle } from '../ui/alert';
 import { logger } from '../../utils/logger';
-
 import { reportRuntimeClientIssue } from '../../utils/quality/runtimeIssueReporter';
 
 interface Props {

@@ -1,4 +1,3 @@
-import React from 'react';
 import { Users, Plus, Minus } from 'lucide-react';
 import { BlockDefinition } from '../registry';
 import { BeneficiaryTableData } from '../types';

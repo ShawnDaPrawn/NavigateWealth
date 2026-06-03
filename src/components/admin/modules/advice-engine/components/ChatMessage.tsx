@@ -26,7 +26,7 @@ import type { ChatMessageProps } from '../types';
  *   onCopy={(content) => console.log('Copied:', content)}
  * />
  */
-export function ChatMessage({ message, onCopy, isLoading: _isLoading }: ChatMessageProps) {
+export function ChatMessage({ message, onCopy }: ChatMessageProps) {
   const [copied, setCopied] = React.useState(false);
   const isUser = message.role === 'user';
   const isAssistant = message.role === 'assistant';

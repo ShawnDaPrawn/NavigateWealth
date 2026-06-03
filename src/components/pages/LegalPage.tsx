@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback, useRef, useMemo } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import { Link, useSearchParams, useLocation } from 'react-router';
 import DOMPurify from 'dompurify';
 import { SEO, createWebPageSchema } from '../seo/SEO';
@@ -229,9 +229,9 @@ export function LegalPage() {
 
   // Document viewer state
   const [viewerOpen, setViewerOpen] = useState(false);
-  const [viewerDocument, _setViewerDocument] = useState<LegalDocumentResponse['document'] | null>(
-    null,
-  );
+  const [_viewerLoading] = useState(false);
+  const [viewerDocument] = useState<LegalDocumentResponse['document'] | null>(null);
+  const [_loadingSlug] = useState<string | null>(null);
   const printRef = useRef<HTMLDivElement>(null);
 
   // Valid tab values

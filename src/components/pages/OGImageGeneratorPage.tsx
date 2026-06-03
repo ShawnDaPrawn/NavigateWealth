@@ -27,7 +27,6 @@ import { ImageWithFallback } from '../figma/ImageWithFallback';
 ───────────────────────────────────────────────────────────────────────────── */
 
 const NAVY = '#313653';
-const _NAVY_LIGHT = '#3d4268';
 const PURPLE = '#6d28d9';
 const PURPLE_LIGHT = '#7c3aed';
 const WHITE = '#ffffff';

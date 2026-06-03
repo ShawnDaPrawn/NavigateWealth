@@ -1,4 +1,3 @@
-import React from 'react';
 import { Link } from 'react-router';
 import { Phone, MessageCircle, Mail, Clock, FileText } from 'lucide-react';
 

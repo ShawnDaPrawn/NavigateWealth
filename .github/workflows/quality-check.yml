@@ -169,6 +169,30 @@ jobs:
           echo "${PIPESTATUS[0]}" > quality-form-prefill-test.exit
           exit 0
 
+      - name: Run dependency-cruiser (blocking)
+        # Phase 7 boundary guardrails — two rules, both error-severity:
+        #
+        #   no-cross-feature-internals
+        #     Feature modules under src/components/admin/modules/ communicate
+        #     only through their public index barrel (index.tsx). Importing
+        #     another module's hooks/, components/, api.ts, etc. directly is
+        #     forbidden — it creates hidden coupling that makes refactors risky.
+        #
+        #   no-spa-edge-source
+        #     SPA source must not import Supabase Edge Function (Deno) code at
+        #     runtime. Call those routes over HTTP; use `import type` for shared
+        #     type definitions only. Belt-and-suspenders on top of the ESLint
+        #     no-restricted-imports error that already enforces this.
+        #
+        # Config: .dependency-cruiser.cjs
+        # Run locally: npm run depcruise
+        shell: bash
+        run: |
+          set +e
+          npx dependency-cruiser@16 'src/**/*.{ts,tsx}' --config .dependency-cruiser.cjs 2>&1 | tee quality-depcruise.log
+          echo "${PIPESTATUS[0]}" > quality-depcruise.exit
+          exit 0
+
       - name: Run dependency audit
         shell: bash
         run: npm audit --json > quality-npm-audit-report.json || true
@@ -203,6 +227,8 @@ jobs:
             quality-vitest-report.json
             quality-npm-audit-report.json
             quality-issues-payload.json
+            quality-depcruise.log
+            quality-depcruise.exit
 
       - name: Enforce quality gates
         # Runs last so the dashboard snapshot is published and artifacts are
@@ -221,6 +247,7 @@ jobs:
           format_exit="$(cat quality-format.exit 2>/dev/null || echo 1)"
           mw_exit="$(cat quality-typecheck-middleware.exit 2>/dev/null || echo 1)"
           deno_exit="$(cat quality-typecheck-deno.exit 2>/dev/null || echo 1)"
+          depcruise_exit="$(cat quality-depcruise.exit 2>/dev/null || echo 1)"
           deno_count="$(cat quality-typecheck-deno.count 2>/dev/null | tr -dc '0-9')"; deno_count="${deno_count:-999999}"
           deno_baseline="$(cat .deno-check-baseline 2>/dev/null | tr -dc '0-9')"; deno_baseline="${deno_baseline:-0}"
           echo "build exit code:           $build_exit"
@@ -229,6 +256,7 @@ jobs:
           echo "lint exit code:            $lint_exit"
           echo "format check exit code:    $format_exit"
           echo "middleware typecheck code: $mw_exit"
+          echo "dependency-cruiser code:   $depcruise_exit"
           echo "deno type-error count:     $deno_count (ratchet floor $deno_baseline; raw exit $deno_exit)"
           failed=0
           if [ "$build_exit" != "0" ]; then echo "::error::Production build failed (see quality-build.log)"; failed=1; fi
@@ -237,6 +265,7 @@ jobs:
           if [ "$lint_exit" != "0" ]; then echo "::error::ESLint failed — a new lint error was introduced (baseline is 0 errors). See quality-lint.log"; failed=1; fi
           if [ "$format_exit" != "0" ]; then echo "::error::Prettier format check failed — run 'npm run format' to fix unformatted files (see quality-format.log)"; failed=1; fi
           if [ "$mw_exit" != "0" ]; then echo "::error::Middleware typecheck failed — middleware.ts must not import 'next/server' (see quality-typecheck-middleware.log)"; failed=1; fi
+          if [ "$depcruise_exit" != "0" ]; then echo "::error::dependency-cruiser found boundary violations — a feature module is importing another module's internals, or SPA code is importing edge-function source at runtime. Fix the import or export through the module's index barrel. See quality-depcruise.log"; failed=1; fi
           if [ "$deno_count" -gt "$deno_baseline" ]; then
             echo "::error::Deno edge-code type errors rose to $deno_count (ratchet floor $deno_baseline) — a NEW edge-code type error was introduced (e.g. a used-but-unimported reference, the class behind the OTP/log ReferenceErrors). Fix it; or, if you deliberately changed the floor, update .deno-check-baseline. See quality-typecheck-deno.log"
             failed=1

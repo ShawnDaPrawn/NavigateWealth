@@ -240,7 +240,7 @@ export function useMoveTask() {
     },
 
     // Rollback on error
-    onError: (err, variables, context) => {
+    onError: (_err, _variables, context) => {
       if (context?.previousTasks) {
         queryClient.setQueryData(taskKeys.lists(), context.previousTasks);
       }
@@ -302,7 +302,7 @@ export function useReorderTasks() {
     },
 
     // Rollback on error
-    onError: (err, variables, context) => {
+    onError: (_err, _variables, context) => {
       if (context?.previousTasks) {
         queryClient.setQueryData(taskKeys.lists(), context.previousTasks);
       }

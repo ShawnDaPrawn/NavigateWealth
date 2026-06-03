@@ -115,10 +115,7 @@ interface AutoContentPanelProps {
 // Component
 // ---------------------------------------------------------------------------
 
-export function AutoContentPanel({
-  categories: _categories,
-  onArticlesGenerated,
-}: AutoContentPanelProps) {
+export function AutoContentPanel({ onArticlesGenerated }: AutoContentPanelProps) {
   const [configs, setConfigs] = useState<PipelineConfig[]>([]);
   const [loading, setLoading] = useState(true);
   const [expandedPipeline, setExpandedPipeline] = useState<PipelineId | null>(null);

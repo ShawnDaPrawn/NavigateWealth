@@ -4,7 +4,7 @@
  * Allows editing properties of the selected field
  */
 
-import React, { useMemo } from 'react';
+import { useMemo } from 'react';
 import { Input } from '../../../../ui/input';
 import { Label } from '../../../../ui/label';
 import { Checkbox } from '../../../../ui/checkbox';

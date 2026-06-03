@@ -51,7 +51,6 @@ const renderPageContent = (blocks: FormBlock[], data: Record<string, unknown>) =
 export const LetterRenderer: React.FC<LetterRendererProps> = ({
   data = {},
   blocks = [],
-  formName: _formName = 'Company Letter',
   letterMeta = {},
 }) => {
   // Split blocks into pages at page_break markers. Declared before the early

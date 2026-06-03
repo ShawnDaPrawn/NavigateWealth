@@ -68,7 +68,7 @@ export function RecipientSelector({
   const [filteredClients, setFilteredClients] = useState<Client[]>([]);
   const [allClients, setAllClients] = useState<Client[]>([]);
   const [allGroups, setAllGroups] = useState<ClientGroup[]>([]);
-  const [, setDataLoading] = useState(true);
+  const [_dataLoading, setDataLoading] = useState(true);
 
   // Fetch clients and groups from backend (matches Step1Recipients pattern)
   useEffect(() => {

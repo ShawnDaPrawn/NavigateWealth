@@ -4,7 +4,6 @@
  * Comprehensive report including all calculations, assumptions, and compliance information
  */
 
-import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../../ui/card';
 import { Badge } from '../../ui/badge';
 import { Separator } from '../../ui/separator';
@@ -181,7 +180,6 @@ export function RiskPlanningResults({ fna }: RiskPlanningResultsProps) {
             finalNeeds.map((need, index) => {
               const isMonthly = need.riskType.includes('incomeProtection');
               const isOverinsured = need.isOverinsured ?? false;
-              const _hasOverride = !!need.advisorOverride;
 
               return (
                 <div key={need.riskType}>

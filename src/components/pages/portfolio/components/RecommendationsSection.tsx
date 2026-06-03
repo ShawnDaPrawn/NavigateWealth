@@ -4,7 +4,6 @@
  * Guidelines §7 (presentation only), §8.3 (consistent patterns).
  */
 
-import React from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../../ui/card';
 import { Button } from '../../../ui/button';
 import { Badge } from '../../../ui/badge';

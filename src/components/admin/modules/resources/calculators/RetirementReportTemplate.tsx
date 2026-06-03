@@ -14,7 +14,6 @@ export const RetirementReportTemplate = ({
   inputs,
   results,
   clientName,
-  adviserName: _adviserName = 'Navigate Wealth Adviser',
   scenarioName = 'Retirement Projection',
 }: RetirementReportTemplateProps) => {
   const formatCurrency = (val: number) => {

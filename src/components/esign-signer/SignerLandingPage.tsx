@@ -9,7 +9,7 @@
  *       signing → rejected (signer declines)
  */
 
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useSearchParams, useNavigate } from 'react-router';
 import { motion } from 'motion/react';
 import { Loader2, AlertCircle, ShieldCheck, Clock, CheckCircle2, XCircle } from 'lucide-react';
@@ -41,16 +41,8 @@ export function SignerLandingPage() {
 
   const [currentStep, setCurrentStep] = useState<SigningStep>('loading');
   const [errorMessage, setErrorMessage] = useState<string>('');
-  const {
-    sessionData,
-    loading: _loading,
-    error: _error,
-    validateToken,
-    verifyOtp,
-    submitSignature,
-    rejectDocument,
-    resendOtp,
-  } = useSignerSession();
+  const { sessionData, validateToken, verifyOtp, submitSignature, rejectDocument, resendOtp } =
+    useSignerSession();
 
   // Initial token validation
   useEffect(() => {

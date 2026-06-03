@@ -6,7 +6,6 @@
  * @module advice-engine/components/WelcomeMessage
  */
 
-import React from 'react';
 import { Brain } from 'lucide-react';
 import type { WelcomeMessageProps } from '../types';
 

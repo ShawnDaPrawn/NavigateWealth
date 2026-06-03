@@ -1,4 +1,3 @@
-import React from 'react';
 import { Dialog, DialogContent, DialogTitle, DialogDescription } from '../ui/dialog';
 import { Button } from '../ui/button';
 import { X } from 'lucide-react';

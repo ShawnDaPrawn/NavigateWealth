@@ -69,6 +69,7 @@ export function EmailComposer({
 }: EmailComposerProps) {
   const [showTemplateDialog, setShowTemplateDialog] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
+  const [_newTemplateName, _setNewTemplateName] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Fetch templates from backend (replaces inline mockTemplates)

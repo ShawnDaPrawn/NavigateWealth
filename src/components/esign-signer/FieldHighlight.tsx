@@ -13,7 +13,7 @@
  * the page, then the next brightest", which the styling above enforces.
  */
 
-import React, { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { motion } from 'motion/react';
 import {
   Pen,
@@ -73,7 +73,6 @@ interface FieldHighlightProps {
 
 export function FieldHighlight({
   field,
-  zoom: _zoom,
   isFilled,
   isNextRequired = false,
   inactive = false,

@@ -1,5 +1,4 @@
-import { logger } from '../../utils/logger';
-import React, { useEffect, useRef, memo, useState } from 'react';
+import { useEffect, useRef, memo, useState } from 'react';
 
 function TradingViewETFHeatmapWidget() {
   const container = useRef<HTMLDivElement>(null);

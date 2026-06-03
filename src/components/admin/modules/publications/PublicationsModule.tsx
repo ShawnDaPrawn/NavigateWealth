@@ -110,8 +110,6 @@ export function PublicationsModule() {
   // They were previously here but only fired when the Publications tab was open.
 
   const canCreate = canDo('publications', 'create');
-  const _canEdit = canDo('publications', 'edit');
-  const _canDelete = canDo('publications', 'delete');
   const canPublish = canDo('publications', 'publish');
   const isRefreshing = articlesRefreshing || categoriesRefreshing;
 

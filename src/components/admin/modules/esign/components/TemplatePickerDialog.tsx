@@ -4,7 +4,7 @@
  * of starting from scratch or choosing a saved template.
  */
 
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import {
   Dialog,
   DialogContent,

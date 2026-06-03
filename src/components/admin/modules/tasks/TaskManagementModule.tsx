@@ -43,7 +43,6 @@ export function TaskManagementModule({ initialTaskId }: TaskManagementModuleProp
     filters,
     setFilters,
     isModalOpen,
-    setIsModalOpen: _setIsModalOpen,
     selectedTask,
     modalMode,
     showArchived,

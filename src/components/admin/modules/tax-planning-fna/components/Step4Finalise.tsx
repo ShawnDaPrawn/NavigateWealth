@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../../../../ui/card';
 import { Button } from '../../../../ui/button';
 import { Checkbox } from '../../../../ui/checkbox';
@@ -23,13 +23,7 @@ interface Step4Props {
   onBack: () => void;
 }
 
-export function Step4Finalise({
-  finalInputs: _finalInputs,
-  finalResults,
-  adjustments,
-  onPublish,
-  onBack,
-}: Step4Props) {
+export function Step4Finalise({ finalResults, adjustments, onPublish, onBack }: Step4Props) {
   const [recommendations, setRecommendations] = useState<TaxRecommendation[]>([]);
   const [selectedRecIds, setSelectedRecIds] = useState<string[]>([]);
   const [adviserNotes, setAdviserNotes] = useState('');

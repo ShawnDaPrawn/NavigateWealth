@@ -1,6 +1,5 @@
 import React, { useEffect, useState } from 'react';
 import { useAuth } from '../auth/AuthContext';
-import { logger } from '../../utils/logger';
 import { projectId, publicAnonKey } from '../../utils/supabase/info';
 import { SUPER_ADMIN_EMAIL } from '../../utils/auth/constants';
 import { AlertCircle, Clock } from 'lucide-react';

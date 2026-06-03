@@ -128,13 +128,7 @@ type DrawerTab =
  * The Sheet's visual overlay and close-on-X behaviour are unaffected because
  * SheetOverlay always renders and onOpenChange remains wired.
  */
-function ClientDrawerInner({
-  client,
-  open,
-  onOpenChange,
-  canEdit: _canEdit,
-  canDelete: _canDelete,
-}: ClientDrawerInnerProps) {
+function ClientDrawerInner({ client, open, onOpenChange }: ClientDrawerInnerProps) {
   const queryClient = useQueryClient();
   const unsavedChangesRegistry = useOptionalUnsavedChangesRegistry();
   const [sanctionsScreeningRunning, setSanctionsScreeningRunning] = useState(false);

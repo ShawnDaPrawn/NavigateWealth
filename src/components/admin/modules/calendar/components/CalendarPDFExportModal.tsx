@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import { useState, useRef } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../../../../ui/dialog';
 import { Button } from '../../../../ui/button';
 import { Label } from '../../../../ui/label';
@@ -13,7 +13,6 @@ import {
 } from '../../../../ui/select';
 import { FileText, Download } from 'lucide-react';
 import { format, isSameDay, isSameMonth, isSameYear } from 'date-fns';
-
 import type { CalendarEvent } from '../types';
 import { BasePdfLayout, BASE_PDF_CSS } from '../../resources/templates/BasePdfLayout';
 import { escapeHtmlText, navigateWealthPdfDocumentTitle } from '../../../../../utils/pdfPrintTitle';

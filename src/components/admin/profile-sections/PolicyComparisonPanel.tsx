@@ -8,8 +8,7 @@
  * @module PolicyComparisonPanel
  */
 
-import React, { useState, useEffect, useCallback } from 'react';
-
+import { useState, useEffect, useCallback } from 'react';
 import { Badge } from '../../ui/badge';
 import { Button } from '../../ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../ui/table';

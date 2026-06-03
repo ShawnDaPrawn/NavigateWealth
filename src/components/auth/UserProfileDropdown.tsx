@@ -1,7 +1,5 @@
-import React from 'react';
 import { Link, useNavigate } from 'react-router';
 import { useAuth } from './AuthContext';
-
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -35,6 +33,7 @@ export function UserProfileDropdown() {
 
   const isApproved = user.accountStatus === 'approved' || user.applicationStatus === 'approved';
   const isAdmin = user.role === 'admin' || user.role === 'super_admin';
+
   const getInitials = () => {
     if (user.firstName && user.lastName) {
       return `${user.firstName[0]}${user.lastName[0]}`.toUpperCase();

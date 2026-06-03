@@ -128,12 +128,7 @@ const isValidIdNumber = (val: unknown): val is string =>
 
 // ─── Component ──────────────────────────────────────────────────────────────
 
-export function ComplianceTab({
-  selectedClient,
-  sanctionsScreeningRunning: _sanctionsScreeningRunning,
-  onRunSanctionsScreening: _onRunSanctionsScreening,
-  lastSanctionsCheck: _lastSanctionsCheck,
-}: ComplianceTabProps) {
+export function ComplianceTab({ selectedClient }: ComplianceTabProps) {
   const queryClient = useQueryClient();
   const [registrationStatus, setRegistrationStatus] = useState<
     'loading' | 'registered' | 'unregistered'
@@ -519,7 +514,6 @@ function OverviewContent({
   resolvedPassport,
   hasIdentification,
   activities,
-  isLoadingActivity: _isLoadingActivity,
   onNavigate,
 }: {
   selectedClient: Client;

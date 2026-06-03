@@ -1,5 +1,4 @@
-/* eslint-disable react-refresh/only-export-components */
-import React, { ReactNode } from 'react';
+import { ReactNode } from 'react';
 
 export const BASE_PDF_CSS = `
     :root {
@@ -869,8 +868,6 @@ export const BasePdfLayout = ({
   pages,
   docTitle = 'Document Title',
   issueDate,
-  formCode: _formCode,
-  version: _version,
   pageSize = 'A4',
   orientation = 'portrait',
 }: {

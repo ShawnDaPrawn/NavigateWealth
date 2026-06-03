@@ -15,7 +15,7 @@
  * @module shared/vasco-chat/VascoChatMessage
  */
 
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { Link } from 'react-router';
 import { User, Copy, Check, ThumbsUp, ThumbsDown, ChevronRight, Sparkles } from 'lucide-react';
 import { toast } from 'sonner';

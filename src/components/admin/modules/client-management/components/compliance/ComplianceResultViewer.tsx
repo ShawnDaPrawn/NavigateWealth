@@ -1154,13 +1154,6 @@ function generateReportHtml(
   result: CheckResult,
   clientName: string,
 ): string {
-  const _now = new Date().toLocaleString('en-ZA', {
-    day: '2-digit',
-    month: 'long',
-    year: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-  });
   const issueDate = new Date().toLocaleDateString('en-GB', {
     day: '2-digit',
     month: '2-digit',

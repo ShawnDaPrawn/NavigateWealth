@@ -104,6 +104,8 @@ type ZoomLevel = 25 | 50 | 75 | 100 | 125 | 150 | 200;
 
 const ZOOM_LEVELS: ZoomLevel[] = [25, 50, 75, 100, 125, 150, 200];
 
+// Fallback A4 size in PDF points — used if a page's mediaBox is unavailable
+
 /** Per-page dimension info resolved from the actual PDF */
 interface PageInfo {
   pageNumber: number;
@@ -115,7 +117,6 @@ interface PageInfo {
 
 export function PDFViewer({
   documentUrl,
-  documentName: _documentName = 'Document',
   fields = [],
   signers = [],
   onFieldPlace,

@@ -65,9 +65,6 @@ export interface ComposePayload {
 export function ComposeForm({
   clientFirstName,
   clientLastName,
-  clientId: _clientId,
-  clientEmail: _clientEmail,
-  clientIdNumber: _clientIdNumber,
   onSend,
   isSending,
   onViewHistory,

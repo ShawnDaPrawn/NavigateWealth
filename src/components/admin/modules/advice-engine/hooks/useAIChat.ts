@@ -175,7 +175,7 @@ export function useAIChat(options: UseAIChatOptions = {}): UseAIChatReturn {
       // Don't invalidate history to prevent race conditions
       // History is only loaded on initial mount
     },
-    onError: (error: Error, variables, context) => {
+    onError: (error: Error, _variables, context) => {
       // Check if this is a rate limit error (429)
       const is429RateLimit =
         error.message.includes('rate limit') ||

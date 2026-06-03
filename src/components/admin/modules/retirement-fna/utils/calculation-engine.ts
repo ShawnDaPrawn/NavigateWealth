@@ -67,7 +67,6 @@ export function calculateRetirementFNA(
   // The Capital Required to fund an inflation-linked income stream starting at X is X * AnnuityFactor(RealRate).
   // So we still use Real Post-Retirement Return for the Annuity Factor calculation.
   const realPostReturn = (1 + postRetReturn) / (1 + inflation) - 1;
-  const _realSalaryGrowth = (1 + salaryEscalation) / (1 + inflation) - 1;
 
   // 3. Target Income (Future Value)
   // Project current income to retirement using Salary Escalation (Nominal)

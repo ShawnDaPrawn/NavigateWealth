@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card';
 import { Badge } from '../ui/badge';
 import { Button } from '../ui/button';
@@ -60,6 +60,7 @@ export function TransactionsDocumentsPage() {
 
   // Filter State
   const [selectedFilter, setSelectedFilter] = useState('all');
+  const [_currentPage, _setCurrentPage] = useState(1);
 
   useEffect(() => {
     if (user?.id && activeTab === 'documents') {

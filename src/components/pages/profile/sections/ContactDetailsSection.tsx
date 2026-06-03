@@ -1,4 +1,3 @@
-import React from 'react';
 import type { ProfileData, HandleInputChange } from '../types';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../../ui/card';
 import { Input } from '../../../ui/input';

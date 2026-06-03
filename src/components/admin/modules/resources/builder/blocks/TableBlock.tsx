@@ -1,4 +1,3 @@
-import React from 'react';
 import { Grid, Plus, Trash2 } from 'lucide-react';
 import { BlockDefinition } from '../registry';
 import { TableData, TableCell } from '../types';

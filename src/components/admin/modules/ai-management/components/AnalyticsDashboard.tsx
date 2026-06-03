@@ -5,7 +5,6 @@
  * Guidelines: §7, §8.3
  */
 
-import React from 'react';
 import {
   BarChart,
   Bar,

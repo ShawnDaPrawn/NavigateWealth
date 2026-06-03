@@ -1,4 +1,3 @@
-import React from 'react';
 import { ComplianceTable } from './ComplianceTable';
 import { logger } from '../../../../../utils/logger';
 

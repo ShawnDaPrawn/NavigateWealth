@@ -80,7 +80,7 @@ export function DataTable<T extends Record<string, unknown>>({
   const [rowsPerPage, setRowsPerPage] = useState(pageSize);
   const [sortColumn, setSortColumn] = useState<string | null>(null);
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
-  const [visibleColumns] = useState<string[]>(columns.map((col) => col.key));
+  const [visibleColumns, _setVisibleColumns] = useState<string[]>(columns.map((col) => col.key));
 
   useEffect(() => {
     setRowsPerPage(pageSize);

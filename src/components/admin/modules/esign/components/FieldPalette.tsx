@@ -84,7 +84,6 @@ const FIELD_TEMPLATES: FieldTemplate[] = [
 export function FieldPalette({
   signers,
   fields,
-  onAddField: _onAddField,
   onUpdateField,
   onDeleteField,
   selectedSignerId,

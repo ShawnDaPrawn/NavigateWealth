@@ -3,7 +3,6 @@
  * Hidden on desktop where the right-column showcase provides this context.
  */
 
-import React from 'react';
 import { Shield, CheckCircle, Lock } from 'lucide-react';
 
 const TRUST_ITEMS = [

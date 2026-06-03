@@ -16,8 +16,6 @@
  * §7 — Presentation only
  */
 
-import React from 'react';
-
 interface MarkdownPreviewProps {
   content: string;
   className?: string;

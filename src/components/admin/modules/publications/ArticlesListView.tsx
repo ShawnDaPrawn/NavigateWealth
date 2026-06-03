@@ -748,7 +748,6 @@ function SortableHeader({
   label,
   field,
   current,
-  dir: _dir,
   onSort,
 }: {
   label: string;

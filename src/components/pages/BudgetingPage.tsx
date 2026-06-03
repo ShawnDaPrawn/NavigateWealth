@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card';
 import { Badge } from '../ui/badge';
@@ -109,10 +109,8 @@ export function BudgetingPage({
   netIncome: propNetIncome,
   grossIncome: propGrossIncome,
   onEmptyStateAction,
-  userId: _userId,
   embedded,
   profileData,
-  handleInputChange: _handleInputChange,
 }: BudgetingPageProps) {
   const navigate = useNavigate();
 

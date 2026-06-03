@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import { useMemo } from 'react';
 import { Button } from '../../../../ui/button';
 import { BlockType } from './types';
 import { BLOCK_REGISTRY, BlockDefinition } from './registry';

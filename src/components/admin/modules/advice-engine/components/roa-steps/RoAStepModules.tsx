@@ -255,7 +255,6 @@ export function RoAStepModules({ draft, onUpdate, modules }: RoAStepModulesProps
                 if (!module) return null;
 
                 const isSelected = selectedModules.includes(moduleId);
-                const _completionStatus = getModuleCompletionStatus(moduleId);
 
                 return (
                   <Card

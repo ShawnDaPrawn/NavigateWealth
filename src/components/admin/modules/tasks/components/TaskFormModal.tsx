@@ -46,6 +46,7 @@ import {
   User,
   Activity,
   AlignLeft,
+  Tag as _TagIcon,
   CreditCard,
   Bell,
   Pencil,
@@ -80,13 +81,7 @@ interface TaskFormModalProps {
   onModeChange?: (mode: 'create' | 'edit' | 'view') => void;
 }
 
-export function TaskFormModal({
-  isOpen,
-  onClose,
-  task,
-  mode,
-  onModeChange: _onModeChange,
-}: TaskFormModalProps) {
+export function TaskFormModal({ isOpen, onClose, task, mode }: TaskFormModalProps) {
   const createTask = useCreateTask();
   const updateTask = useUpdateTask();
   const deleteTask = useDeleteTask();
@@ -126,6 +121,9 @@ export function TaskFormModal({
   const [tagsInput, setTagsInput] = useState('');
 
   const [tempId, setTempId] = useState<string | null>(null);
+
+  // Track if form has been modified
+  const [_isModified, _setIsModified] = useState(false);
 
   // Title edit mode: in create mode always editable; in edit/view mode, starts as display text
   const [isTitleEditing, setIsTitleEditing] = useState(false);
@@ -460,16 +458,6 @@ export function TaskFormModal({
         console.error('Error deleting task:', error);
       }
     }, 100);
-  };
-
-  const _handleStatusChange = (newStatus: TaskStatus) => {
-    if (!task) return;
-
-    updateTask.mutate({
-      id: task.id,
-      status: newStatus,
-      completed_at: newStatus === 'completed' ? new Date().toISOString() : null,
-    });
   };
 
   const handleArchive = () => {

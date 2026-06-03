@@ -1,4 +1,3 @@
-import React from 'react';
 import { FormBlock } from './types';
 import { Button } from '../../../../ui/button';
 import { Input } from '../../../../ui/input';
@@ -549,13 +548,7 @@ interface SignatoryCardProps {
   total: number;
 }
 
-function SignatoryCard({
-  index,
-  signatory,
-  onUpdate,
-  onRemove,
-  total: _total,
-}: SignatoryCardProps) {
+function SignatoryCard({ index, signatory, onUpdate, onRemove }: SignatoryCardProps) {
   return (
     <div className="relative rounded-md border border-gray-200 bg-gray-50/50 p-3 space-y-2">
       {/* Card header with number and remove button */}
@@ -607,13 +600,7 @@ interface RecipientCardProps {
   total: number;
 }
 
-function RecipientCard({
-  index,
-  recipient,
-  onUpdate,
-  onRemove,
-  total: _total,
-}: RecipientCardProps) {
+function RecipientCard({ index, recipient, onUpdate, onRemove }: RecipientCardProps) {
   return (
     <div className="relative rounded-md border border-gray-200 bg-gray-50/50 p-3 space-y-2">
       {/* Card header with number and remove button */}

@@ -553,9 +553,6 @@ export function PolicyCategoryTab({
     }
 
     if (categoryId === 'employee_benefits') {
-      const _riskPolicies = policies.filter(
-        (p) => p.categoryId === 'employee_benefits_risk' || p.categoryId === 'employee_benefits',
-      ); // Include legacy as risk
       const riskPoliciesOnly = policies.filter((p) => p.categoryId === 'employee_benefits_risk');
       const retPoliciesOnly = policies.filter(
         (p) => p.categoryId === 'employee_benefits_retirement',

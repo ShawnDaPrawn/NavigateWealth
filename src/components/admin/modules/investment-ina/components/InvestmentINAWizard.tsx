@@ -3,7 +3,7 @@
  * Multi-step form for creating and editing Investment INA sessions
  */
 
-import React, { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect } from 'react';
 import { FNAWizardLayout, FNAWizardStepConfig } from '../../fna/FNAWizardLayout';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../../../ui/card';
 import { Input } from '../../../../ui/input';
@@ -417,7 +417,7 @@ function ClientOverviewStep({ inputs, updateInputs }: INAStepProps) {
   );
 }
 
-function DiscretionaryInvestmentsStep({ inputs, updateInputs: _updateInputs }: INAStepProps) {
+function DiscretionaryInvestmentsStep({ inputs }: INAStepProps) {
   const discretionaryInvs = inputs.discretionaryInvestments || [];
 
   return (
@@ -438,7 +438,7 @@ function DiscretionaryInvestmentsStep({ inputs, updateInputs: _updateInputs }: I
             </div>
           ) : (
             <div className="space-y-3">
-              {discretionaryInvs.map((inv: DiscretionaryInvestment) => (
+              {discretionaryInvs.map((inv: DiscretionaryInvestment, _index: number) => (
                 <div
                   key={inv.id}
                   className="flex items-center justify-between p-3 border rounded-lg"
@@ -677,7 +677,6 @@ function GoalEditorCard({
   onCollapse,
   onUpdate,
   onDelete,
-  discretionaryInvestments: _discretionaryInvestments,
 }: {
   goal: InvestmentGoal;
   index: number;

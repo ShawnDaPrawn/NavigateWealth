@@ -12,7 +12,6 @@ describe('provider portal golden flows', () => {
   const allanGrayAdapterSource = readRepoFile('scripts/provider-adapters/allan-gray.mjs');
   const brightRockAdapterSource = readRepoFile('scripts/provider-adapters/brightrock.mjs');
   const capitalLegacyAdapterSource = readRepoFile('scripts/provider-adapters/capital-legacy.mjs');
-  const _integrationsSource = readRepoFile('src/supabase/functions/server/integrations.tsx');
   // Portal automation types were extracted out of integrations.tsx (Phase 5
   // decomposition); the type-level anchors now live in this module.
   const portalTypesSource = readRepoFile(
@@ -51,16 +50,17 @@ describe('provider portal golden flows', () => {
     'src/supabase/functions/server/integrations-document-storage.ts',
   );
   // Portal automation HTTP routes (/portal-flows, /portal-jobs, /portal-worker)
-  // were extracted out of integrations.tsx into a mounted Hono sub-app (Phase 5);
-  // those route + handler anchors live here now.
-  const portalRoutesSource = readRepoFile(
-    'src/supabase/functions/server/integrations-portal-routes.ts',
-  );
+  // were extracted out of integrations.tsx into a mounted Hono sub-app (Phase 5)
+  // and then split into flow/job/worker route modules. Keep the golden anchors
+  // pointed at the actual handler modules instead of the thin orchestrator.
+  const portalRoutesSource = [
+    readRepoFile('src/supabase/functions/server/integrations-portal-routes.ts'),
+    readRepoFile('src/supabase/functions/server/integrations-portal-flow-routes.ts'),
+    readRepoFile('src/supabase/functions/server/integrations-portal-jobs-routes.ts'),
+    readRepoFile('src/supabase/functions/server/integrations-portal-worker-routes.ts'),
+  ].join('\n');
   const portalDefaultFlowsSource = readRepoFile(
     'src/supabase/functions/server/portal-default-flows.ts',
-  );
-  const _productManagementApiSource = readRepoFile(
-    'src/components/admin/modules/product-management/api.ts',
   );
   const productTypesSource = readRepoFile(
     'src/components/admin/modules/product-management/types.ts',
@@ -241,10 +241,8 @@ describe('provider portal golden flows', () => {
     expect(portalAutomationTabSource).toContain('This refreshes while the worker is running');
     expect(portalAutomationTabSource).toContain('npm run provider:watch -- --job-id');
     expect(workerSource).toContain("jobPath('/live-view')");
-    expect(portalRoutesSource).toContain(
-      "portalRoutes.post('/portal-worker/jobs/:jobId/live-view'",
-    );
-    expect(portalRoutesSource).toContain("portalRoutes.post('/portal-jobs/:jobId/live-view'");
+    expect(portalRoutesSource).toContain("app.post('/portal-worker/jobs/:jobId/live-view'");
+    expect(portalRoutesSource).toContain("app.post('/portal-jobs/:jobId/live-view'");
   });
 
   it('provides a BrightRock risk portal flow without document download', () => {
@@ -338,7 +336,7 @@ describe('provider portal golden flows', () => {
     expect(portalTypesSource).toContain("attachTo?: 'matched_policy' | 'estate_documents'");
     expect(portalFlowConfigSource).toContain('const PORTAL_ESTATE_DOCUMENT_TYPES =');
     expect(portalRoutesSource).toContain(
-      "portalRoutes.post('/portal-worker/jobs/:jobId/items/:itemId/estate-document'",
+      "app.post('/portal-worker/jobs/:jobId/items/:itemId/estate-document'",
     );
     expect(portalRoutesSource).toContain('uploadEstateDocumentForClient');
     expect(docStorageSource).toContain('LEGAL_DOCS_BUCKET');
@@ -374,7 +372,7 @@ describe('provider portal golden flows', () => {
     expect(portalFlowSource).toContain(
       'await kv.set(portalFlowKey(providerId, categoryId), configured)',
     );
-    expect(portalRoutesSource).toContain("portalRoutes.delete('/portal-flows/:providerId'");
+    expect(portalRoutesSource).toContain("app.delete('/portal-flows/:providerId'");
     expect(portalFlowSource).toContain(
       'function getPortalJobScopeError(job: PortalSyncJob, providerId?: string, categoryId?: string): string | null',
     );

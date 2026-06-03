@@ -1,4 +1,3 @@
-import React from 'react';
 import { Grid3x3, Plus, Trash2 } from 'lucide-react';
 import { BlockDefinition } from '../registry';
 import { FieldGridData } from '../types';

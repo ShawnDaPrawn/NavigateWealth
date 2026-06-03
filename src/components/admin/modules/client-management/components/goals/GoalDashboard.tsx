@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { Button } from '../../../../../ui/button';
 import { Plus, Loader2 } from 'lucide-react';
 import { Goal } from './types';

@@ -179,9 +179,7 @@ interface FormBuilderWorkspaceProps extends FormBuilderProps {
 
 const FormBuilderWorkspace = ({
   onBack,
-  onSave: _onSave,
   initialData,
-  mode: _mode = 'form',
   resolvedInitialBlocks,
   resolvedCategory,
   resolvedTitle,
@@ -274,6 +272,7 @@ const FormBuilderWorkspace = ({
     status: autosaveStatus,
     isDirty,
     lastSavedAt,
+    saveNow: _autosaveSaveNow,
     markSaved,
   } = useAutosave<SavePayload>({
     data: currentPayload,
@@ -848,7 +847,6 @@ const FormBuilderWorkspace = ({
 
 function AutosaveIndicator({
   status,
-  isDirty: _isDirty,
   lastSavedAt,
   isNew,
   manualSaving,

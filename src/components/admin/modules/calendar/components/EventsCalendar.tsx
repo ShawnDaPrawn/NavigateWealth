@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import type { CalendarEvent, CalendarView } from '../types';
 import { CalendarHeader } from './views/CalendarHeader';
 import { MonthView } from './views/MonthView';

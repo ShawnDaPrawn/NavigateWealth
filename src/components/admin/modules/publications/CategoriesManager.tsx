@@ -5,7 +5,7 @@
  * Now uses the new hooks, services, and shared components.
  */
 
-import React, { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Button } from '../../../ui/button';
 import { Badge } from '../../../ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '../../../ui/card';

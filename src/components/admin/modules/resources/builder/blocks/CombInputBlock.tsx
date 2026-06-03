@@ -1,4 +1,3 @@
-import React from 'react';
 import { Columns } from 'lucide-react';
 import { BlockDefinition } from '../registry';
 import { CombInputData } from '../types';

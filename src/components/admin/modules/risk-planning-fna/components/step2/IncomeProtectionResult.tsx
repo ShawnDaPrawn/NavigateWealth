@@ -1,4 +1,3 @@
-import React from 'react';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '../../../../../ui/card';
 import { Separator } from '../../../../../ui/separator';
 import { Badge } from '../../../../../ui/badge';

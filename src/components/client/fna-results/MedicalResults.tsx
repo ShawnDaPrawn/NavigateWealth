@@ -7,7 +7,6 @@
  * Results use: hospitalCover, dayToDayCare, chronicCover, affordability
  */
 
-import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '../../ui/card';
 import { Badge } from '../../ui/badge';
 import { Separator } from '../../ui/separator';
@@ -34,7 +33,6 @@ export function MedicalResults({ fna }: MedicalResultsProps) {
   // Safely access nested input structures
   const currentPlan = inputs?.currentPlan;
   const healthNeeds = inputs?.healthNeeds;
-  const _preferences = inputs?.preferences;
 
   return (
     <div className="space-y-6">

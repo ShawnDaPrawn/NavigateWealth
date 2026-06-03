@@ -2,7 +2,6 @@
  * Step: Pain Management & Comfort Care (Living Will only)
  */
 
-import React from 'react';
 import { Textarea } from '../../../../../ui/textarea';
 import { Checkbox } from '../../../../../ui/checkbox';
 import { Label } from '../../../../../ui/label';

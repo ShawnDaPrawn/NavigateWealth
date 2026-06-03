@@ -1,4 +1,3 @@
-import React from 'react';
 import { BrandPageLoader } from './brand-loader';
 
 export function PageLoader() {

@@ -3,7 +3,6 @@ import { useLocation, useNavigate } from 'react-router';
 import { SEO, createContactPageSchema } from '../seo/SEO';
 import { getSEOData } from '../seo/seo-config';
 import { Button } from '../ui/button';
-
 import { Input } from '../ui/input';
 import { Textarea } from '../ui/textarea';
 import { Label } from '../ui/label';
@@ -320,7 +319,6 @@ export function ContactPage() {
             {/* Active Client Type Content */}
             <div className="max-w-4xl mx-auto">
               {Object.entries(clientTypes).map(([key, type]) => {
-                const _Icon = type.icon;
                 return (
                   <div
                     key={key}

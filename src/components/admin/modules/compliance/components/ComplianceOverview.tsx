@@ -1,4 +1,3 @@
-import React from 'react';
 import { ComplianceKPIs } from './ComplianceKPIs';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../../../../ui/card';
 import { Badge } from '../../../../ui/badge';

@@ -36,7 +36,6 @@ export function calculateLifeCover(input: InformationGatheringInput): LifeCoverC
     totalOutstandingDebts,
     totalEstateValue,
     dependants,
-    spouseFullName,
     spouseAverageMonthlyIncome,
     existingCover,
   } = input;
@@ -52,7 +51,6 @@ export function calculateLifeCover(input: InformationGatheringInput): LifeCoverC
 
   // Step 2: Income Replacement Capital
   const numDependants = dependants.length;
-  const _isMarried = !!spouseFullName && spouseFullName.trim().length > 0;
   const isSingleIncome = !spouseAverageMonthlyIncome || spouseAverageMonthlyIncome === 0;
 
   let incomeMultiple: number;

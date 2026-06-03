@@ -397,7 +397,11 @@ export function ClientOverviewTab({ client, mode = 'adviser' }: ClientOverviewTa
 
   // ── Phase 2 state ───────────────────────────────────────────────────
   // FNA statuses via React Query hook — replaces manual useState/useCallback/useEffect
-  const { data: batchFnaData, refetch: refetchFna } = useFnaBatchStatus(client.id);
+  const {
+    data: batchFnaData,
+    isLoading: _loadingFna,
+    refetch: refetchFna,
+  } = useFnaBatchStatus(client.id);
 
   /** Raw FNA result data keyed by module key — only populated for published FNAs */
   const fnaResultsMap = useMemo<Record<string, Record<string, unknown> | null>>(() => {
@@ -639,27 +643,12 @@ export function ClientOverviewTab({ client, mode = 'adviser' }: ClientOverviewTa
 
   const age = useMemo(() => calcAge(p?.dateOfBirth), [p?.dateOfBirth]);
 
-  const riskPolicies = useMemo(() => policiesByCategory.risk || [], [policiesByCategory.risk]);
-  const medicalPolicies = useMemo(
-    () => policiesByCategory.medical || [],
-    [policiesByCategory.medical],
-  );
-  const retirementPolicies = useMemo(
-    () => policiesByCategory.retirement || [],
-    [policiesByCategory.retirement],
-  );
-  const investmentPolicies = useMemo(
-    () => policiesByCategory.investment || [],
-    [policiesByCategory.investment],
-  );
-  const employeePolicies = useMemo(
-    () => policiesByCategory.employee || [],
-    [policiesByCategory.employee],
-  );
-  const estatePolicies = useMemo(
-    () => policiesByCategory.estate || [],
-    [policiesByCategory.estate],
-  );
+  const riskPolicies = policiesByCategory.risk || [];
+  const medicalPolicies = policiesByCategory.medical || [];
+  const retirementPolicies = policiesByCategory.retirement || [];
+  const investmentPolicies = policiesByCategory.investment || [];
+  const employeePolicies = policiesByCategory.employee || [];
+  const estatePolicies = policiesByCategory.estate || [];
 
   const grossMonthly = p?.grossMonthlyIncome || p?.grossIncome || 0;
   const grossAnnual = p?.grossAnnualIncome || grossMonthly * 12;

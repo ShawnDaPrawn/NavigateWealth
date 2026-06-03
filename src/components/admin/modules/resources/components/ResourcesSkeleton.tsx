@@ -1,4 +1,3 @@
-import React from 'react';
 import { Card, CardContent } from '../../../../ui/card';
 import { Skeleton } from '../../../../ui/skeleton';
 

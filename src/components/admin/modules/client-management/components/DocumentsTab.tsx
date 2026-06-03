@@ -1,5 +1,4 @@
-import React, { useState, useEffect } from 'react';
-import { logger } from '../../../../../utils/logger';
+import { useState, useEffect } from 'react';
 import { filterDocuments, groupDocumentsByPack, type DocumentItem } from './documentsUtils';
 import { DocumentStatsCards } from './DocumentStatsCards';
 import { DocumentFiltersBar } from './DocumentFiltersBar';

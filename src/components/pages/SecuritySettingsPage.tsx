@@ -9,7 +9,7 @@
  * §8.3 (stat cards, status indicators), §8.4 (AI builder / Figma Make)
  */
 
-import React, { useState, useMemo } from 'react';
+import { useState, useMemo } from 'react';
 import { useAuth } from '../auth/AuthContext';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';

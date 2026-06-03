@@ -4,7 +4,6 @@
  * Display article metadata (author, date, reading time, views).
  */
 
-import React from 'react';
 import { Calendar, Clock, User, Eye } from 'lucide-react';
 import { formatDate, formatDateTime, getRelativeTime } from '../utils';
 

@@ -1,4 +1,3 @@
-import React from 'react';
 import { ComplianceTable } from './ComplianceTable';
 import { ComplianceRecord } from '../types';
 import { useDebarmentRecords, useSupervisionRecords } from '../hooks';

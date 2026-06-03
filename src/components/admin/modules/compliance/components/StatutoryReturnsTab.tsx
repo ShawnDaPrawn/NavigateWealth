@@ -1,4 +1,3 @@
-import React from 'react';
 import { ComplianceTable } from './ComplianceTable';
 import { useStatutoryRecords } from '../hooks/useStatutoryRecords';
 import { ComplianceRecord, StatutoryRecord } from '../types';

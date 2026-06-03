@@ -3,7 +3,7 @@
  * Reusable dialog for publishing/unpublishing FNA analyses to clients
  */
 
-import React, { useState } from 'react';
+import { useState } from 'react';
 import {
   Dialog,
   DialogContent,

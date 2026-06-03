@@ -7,7 +7,7 @@
  *   - User confirms to apply the action (dryRun=false)
  */
 
-import React, { useState, useCallback } from 'react';
+import { useState, useCallback } from 'react';
 import {
   AlertDialog,
   AlertDialogContent,

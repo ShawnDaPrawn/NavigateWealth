@@ -3,7 +3,6 @@
  * Consolidated search and filter controls
  */
 
-import React from 'react';
 import { Search } from 'lucide-react';
 import { Input } from '../../../../../ui/input';
 import { Label } from '../../../../../ui/label';

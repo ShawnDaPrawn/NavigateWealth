@@ -4,7 +4,7 @@
  * Integrates: PDFViewer + FieldPalette + SignerManager for field placement
  */
 
-import React, { useState, useCallback } from 'react';
+import { useState, useCallback } from 'react';
 import { Button } from '../../../../ui/button';
 import { Badge } from '../../../../ui/badge';
 import { Card } from '../../../../ui/card';

@@ -53,7 +53,7 @@ export function useRecalculateClientKeys() {
 
   return useMutation({
     mutationFn: (clientId: string) => api.recalculateClientKeys(clientId),
-    onSuccess: (data, clientId) => {
+    onSuccess: (_data, clientId) => {
       queryClient.invalidateQueries({ queryKey: clientKeys.clientKeys.all(clientId) });
       toast.success('Keys recalculated successfully', {
         description: 'All client key totals have been updated',

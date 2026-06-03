@@ -98,7 +98,6 @@ export function PolicyOverviewTab({
   clientDisplayName,
   onRunFNA,
   onAddPolicy,
-  onViewDetails: _onViewDetails,
   variant = 'full',
 }: PolicyOverviewTabProps) {
   const isEmbedded = variant === 'embedded';

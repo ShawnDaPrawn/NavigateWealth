@@ -1,4 +1,3 @@
-import React from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../../../ui/tabs';
 import { AMLFICATab } from './AMLFICATab';
 import { FAISTab } from './FAISTab';

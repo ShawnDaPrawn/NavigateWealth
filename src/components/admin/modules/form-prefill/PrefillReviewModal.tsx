@@ -2,7 +2,7 @@
  * Prefill Review Modal — admin review before applying client data to a form.
  */
 
-import React, { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router';
 import {
   Dialog,

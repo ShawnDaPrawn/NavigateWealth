@@ -10,7 +10,7 @@
  * via the existing amendment flow.
  */
 
-import React, { useState, useMemo, useCallback } from 'react';
+import { useState, useMemo, useCallback } from 'react';
 import { Badge } from '../../../../ui/badge';
 import { Input } from '../../../../ui/input';
 import { Button } from '../../../../ui/button';

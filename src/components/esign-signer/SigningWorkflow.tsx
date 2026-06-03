@@ -38,7 +38,7 @@
  * decomposition list. Quarantined here so react-hooks/rules-of-hooks can be
  * promoted to "error" repo-wide; remove this directive when the file is fixed.
  */
-import React, { useState, useRef, useEffect, useMemo, useCallback } from 'react';
+import { useState, useRef, useEffect, useMemo, useCallback } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Card } from '../ui/card';
 import { Button } from '../ui/button';

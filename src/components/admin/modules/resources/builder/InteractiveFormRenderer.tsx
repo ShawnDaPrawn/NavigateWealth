@@ -1,4 +1,3 @@
-import React from 'react';
 import DOMPurify from 'dompurify';
 import {
   FormBlock,
@@ -157,7 +156,7 @@ export const InteractiveFormRenderer = ({
                   <TableRow key={rowIdx}>
                     <TableCell className="font-medium">{row}</TableCell>
                     {(block.data as CheckboxTableData).columns?.map(
-                      (col: string, colIdx: number) => {
+                      (_col: string, colIdx: number) => {
                         // Key strategy: table_blockId_rowIdx_colIdx or table_blockId_rowIdx (value = col)
                         // Let's use boolean for each cell: table_blockId_row_col
                         const cellKey = `chk_${block.id}_${rowIdx}_${colIdx}`;

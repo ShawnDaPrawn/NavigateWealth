@@ -8,7 +8,6 @@
  * - Navigation: Back to Step 1, Next to Step 3
  */
 
-import React from 'react';
 import { ArrowLeft, ArrowRight, Shield, Users, Wallet, Clock, Info } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../../../../ui/card';
 import { Button } from '../../../../ui/button';

@@ -8,7 +8,6 @@
 
 import { useQuery } from '@tanstack/react-query';
 import { adviceEngineApi } from '../api';
-
 import { adviceEngineKeys } from './queryKeys';
 
 export function usePersonnel() {

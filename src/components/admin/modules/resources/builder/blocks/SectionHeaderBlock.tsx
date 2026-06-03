@@ -1,4 +1,3 @@
-import React from 'react';
 import { Hash } from 'lucide-react';
 import { BlockDefinition } from '../registry';
 import { SectionHeaderData } from '../types';

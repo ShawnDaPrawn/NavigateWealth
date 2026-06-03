@@ -80,7 +80,7 @@ export function useUpdatePermissions() {
     mutationFn: async (input: UpdatePermissionsInput) => {
       return personnelApi.updatePermissions(input);
     },
-    onSuccess: (data, variables) => {
+    onSuccess: (_data, variables) => {
       // Invalidate specific permissions
       queryClient.invalidateQueries({ queryKey: permissionKeys.detail(variables.personnelId) });
       // Also invalidate "me" in case admin is editing their own permissions

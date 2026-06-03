@@ -1,4 +1,3 @@
-import React from 'react';
 import { BasePdfLayout } from '../templates/BasePdfLayout';
 
 export const ClientConsentForm = ({ data = {} }: { data?: Record<string, unknown> }) => {
