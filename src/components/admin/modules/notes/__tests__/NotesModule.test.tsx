@@ -11,7 +11,9 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { screen, waitFor, renderWithQueryClient } from '@/test/utils';
 
-const mutStub = () => ({ mutate: vi.fn(), mutateAsync: vi.fn(), isPending: false });
+const { mutStub } = vi.hoisted(() => ({
+  mutStub: () => ({ mutate: vi.fn(), mutateAsync: vi.fn(), isPending: false }),
+}));
 
 vi.mock('@/components/admin/modules/notes/hooks', () => ({
   useNotes: () => ({ data: [], isLoading: false }),

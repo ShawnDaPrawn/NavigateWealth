@@ -9,7 +9,7 @@
  * are mocked so no real HTTP calls or complex calculation services run.
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen } from '@/test/utils';
+import { render, screen, waitFor } from '@/test/utils';
 
 vi.mock('@/components/admin/modules/investment-ina/api', () => ({
   InvestmentINAApiService: {
@@ -49,15 +49,19 @@ beforeEach(() => {
 // ── Tests ─────────────────────────────────────────────────────────────────────
 
 describe('InvestmentINAWizard', () => {
-  it('shows the wizard dialog title when open', () => {
+  it('shows the wizard dialog title when open', async () => {
     render(<InvestmentINAWizard open={true} onClose={noop} clientId="c-1" />);
 
-    expect(screen.getByText(/Investment Needs Analysis/i)).toBeTruthy();
+    await waitFor(() => {
+      expect(screen.getByText(/Investment Needs Analysis/i)).toBeTruthy();
+    });
   });
 
-  it('shows the "Client Overview" step label when open', () => {
+  it('shows the "Client Overview" step label when open', async () => {
     render(<InvestmentINAWizard open={true} onClose={noop} clientId="c-1" />);
 
-    expect(screen.getAllByText('Client Overview').length).toBeGreaterThan(0);
+    await waitFor(() => {
+      expect(screen.getAllByText('Client Overview').length).toBeGreaterThan(0);
+    });
   });
 });

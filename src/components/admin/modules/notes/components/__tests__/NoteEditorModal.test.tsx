@@ -67,7 +67,15 @@ describe('NoteEditorModal', () => {
       <NoteEditorModal
         isOpen={true}
         onClose={noop}
-        note={{ id: 'n-1', title: 'My Note' } as never}
+        note={
+          {
+            id: 'n-1',
+            title: 'My Note',
+            content: 'Existing note',
+            color: 'default',
+            tags: [],
+          } as never
+        }
         personnelId="p-1"
         personnelName="Test User"
         onSave={noopSave}

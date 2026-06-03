@@ -8,7 +8,7 @@
  * api.get is mocked so no real HTTP calls are made on mount.
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen } from '@/test/utils';
+import { render, screen, waitFor } from '@/test/utils';
 
 const { mockApiGet } = vi.hoisted(() => ({ mockApiGet: vi.fn() }));
 vi.mock('@/utils/api', () => ({
@@ -31,25 +31,31 @@ const noop = vi.fn();
 beforeEach(() => {
   vi.clearAllMocks();
   // Never resolves — prevents real API traffic while still rendering chrome
-  mockApiGet.mockReturnValue(new Promise(() => {}));
+  mockApiGet.mockResolvedValue({ calculations: [] });
 });
 
 // ── Tests ─────────────────────────────────────────────────────────────────────
 
 describe('RetirementCalculator', () => {
-  it('renders without throwing and shows the heading', () => {
+  it('renders without throwing and shows the heading', async () => {
     render(<RetirementCalculator onBack={noop} />);
-    expect(screen.getByText('Retirement Planning Calculator')).toBeTruthy();
+    await waitFor(() => {
+      expect(screen.getByText('Retirement Planning Calculator')).toBeTruthy();
+    });
   });
 
-  it('shows the Back to Tools button', () => {
+  it('shows the Back to Tools button', async () => {
     render(<RetirementCalculator onBack={noop} />);
-    expect(screen.getByRole('button', { name: /back to tools/i })).toBeTruthy();
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: /back to tools/i })).toBeTruthy();
+    });
   });
 
-  it('shows the Recalculate and Export PDF buttons', () => {
+  it('shows the Recalculate and Export PDF buttons', async () => {
     render(<RetirementCalculator onBack={noop} />);
-    expect(screen.getByRole('button', { name: /recalculate/i })).toBeTruthy();
-    expect(screen.getByRole('button', { name: /export pdf/i })).toBeTruthy();
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: /recalculate/i })).toBeTruthy();
+      expect(screen.getByRole('button', { name: /export pdf/i })).toBeTruthy();
+    });
   });
 });

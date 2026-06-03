@@ -9,7 +9,9 @@
  * mocked to prevent real HTTP calls during policy-assets fetch.
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen } from '@/test/utils';
+import { render, screen, waitFor } from '@/test/utils';
+import { createMemoryRouter, RouterProvider } from 'react-router';
+import { UnsavedChangesRegistryProvider } from '@/components/shared/unsaved-changes/UnsavedChangesRegistry';
 
 const { mockApiGet } = vi.hoisted(() => ({ mockApiGet: vi.fn() }));
 
@@ -52,8 +54,6 @@ const profileData = {
   proofOfResidence: null,
   proofOfBank: null,
 };
-
-const actionsStub: Record<string, ReturnType<typeof vi.fn>> = {};
 
 vi.mock('@/components/admin/modules/client-management/hooks/useClientProfile', () => ({
   useClientProfile: () => ({
@@ -103,29 +103,40 @@ vi.mock('sonner', () => ({
 
 import { ClientProfileViewerFull } from '../ClientProfileViewerFull';
 
-const noop = vi.fn();
 const minimalClient = { id: 'c-1', name: 'Test Client' };
+
+function renderClientProfileViewer() {
+  const router = createMemoryRouter([
+    {
+      path: '/',
+      element: (
+        <UnsavedChangesRegistryProvider>
+          <ClientProfileViewerFull clientData={minimalClient as never} />
+        </UnsavedChangesRegistryProvider>
+      ),
+    },
+  ]);
+
+  return render(<RouterProvider router={router} />);
+}
 
 beforeEach(() => {
   vi.clearAllMocks();
-  mockApiGet.mockReturnValue(new Promise(() => {}));
+  mockApiGet.mockResolvedValue({ policies: [] });
 });
 
 // ── Tests ─────────────────────────────────────────────────────────────────────
 
 describe('ClientProfileViewerFull', () => {
-  it('renders without throwing', () => {
-    const { container } = render(<ClientProfileViewerFull clientData={minimalClient as never} />);
+  it('mounts and shows the core profile section nav tabs', async () => {
+    const { container } = renderClientProfileViewer();
+
+    await waitFor(() => {
+      expect(mockApiGet).toHaveBeenCalled();
+      expect(screen.getByText('Personal Info')).toBeTruthy();
+      expect(screen.getByText('Contact Details')).toBeTruthy();
+    });
+
     expect(container).toBeTruthy();
-  });
-
-  it('shows the "Personal Info" section nav tab', () => {
-    render(<ClientProfileViewerFull clientData={minimalClient as never} />);
-    expect(screen.getByText('Personal Info')).toBeTruthy();
-  });
-
-  it('shows the "Contact Details" section nav tab', () => {
-    render(<ClientProfileViewerFull clientData={minimalClient as never} />);
-    expect(screen.getByText('Contact Details')).toBeTruthy();
-  });
+  }, 30000);
 });

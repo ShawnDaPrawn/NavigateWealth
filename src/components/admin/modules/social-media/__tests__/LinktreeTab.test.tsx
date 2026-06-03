@@ -8,7 +8,7 @@
  * api is mocked so no real HTTP calls are made on mount.
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen } from '@/test/utils';
+import { render, screen, waitFor } from '@/test/utils';
 
 const { mockApiGet } = vi.hoisted(() => ({ mockApiGet: vi.fn() }));
 vi.mock('@/utils/api', () => ({
@@ -35,19 +35,26 @@ beforeEach(() => {
 // ── Tests ─────────────────────────────────────────────────────────────────────
 
 describe('LinktreeTab', () => {
-  it('renders without throwing', () => {
+  it('renders without throwing', async () => {
     const { container } = render(<LinktreeTab />);
+    await waitFor(() => {
+      expect(mockApiGet).toHaveBeenCalled();
+    });
     expect(container).toBeTruthy();
   });
 
-  it('shows the "Link in Bio" section heading', () => {
+  it('shows the "Link in Bio" section heading', async () => {
     render(<LinktreeTab />);
-    expect(screen.getByText('Link in Bio')).toBeTruthy();
+    await waitFor(() => {
+      expect(screen.getByText('Link in Bio')).toBeTruthy();
+    });
   });
 
-  it('shows the Add Link and Copy URL buttons', () => {
+  it('shows the Add Link and Copy URL buttons', async () => {
     render(<LinktreeTab />);
-    expect(screen.getByRole('button', { name: /add link/i })).toBeTruthy();
-    expect(screen.getByRole('button', { name: /copy url/i })).toBeTruthy();
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: /add link/i })).toBeTruthy();
+      expect(screen.getByRole('button', { name: /copy url/i })).toBeTruthy();
+    });
   });
 });

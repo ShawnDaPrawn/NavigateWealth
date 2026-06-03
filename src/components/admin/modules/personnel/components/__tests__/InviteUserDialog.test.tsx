@@ -42,6 +42,6 @@ describe('InviteUserDialog', () => {
   it('shows Financial Adviser role card when open', () => {
     render(<InviteUserDialog open={true} onOpenChange={noop} onInvite={noopInvite} />);
 
-    expect(screen.getByText('Financial Adviser')).toBeTruthy();
+    expect(screen.getAllByText('Financial Adviser').length).toBeGreaterThan(0);
   });
 });

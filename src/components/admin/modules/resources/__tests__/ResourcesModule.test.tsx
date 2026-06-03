@@ -42,6 +42,7 @@ vi.mock('@/components/admin/modules/resources/hooks/useResources', () => ({
 
 vi.mock('@/components/admin/modules/personnel/hooks/usePermissions', () => ({
   useCurrentUserPermissions: () => ({
+    canDo: vi.fn().mockReturnValue(true),
     data: { modules: [] },
     isLoading: false,
   }),

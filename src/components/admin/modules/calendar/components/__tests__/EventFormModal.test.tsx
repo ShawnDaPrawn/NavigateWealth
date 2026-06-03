@@ -50,11 +50,21 @@ describe('EventFormModal', () => {
   it('shows "Edit Event" title when open with an existing event', () => {
     const event = {
       id: 'ev-1',
+      user_id: 'u-1',
       title: 'My Meeting',
-      type: 'meeting',
-      startTime: '2026-01-01T10:00:00.000Z',
-      endTime: '2026-01-01T11:00:00.000Z',
-      locationType: 'in_person',
+      description: null,
+      event_type: 'meeting',
+      start_at: '2026-01-01T10:00:00.000Z',
+      end_at: '2026-01-01T11:00:00.000Z',
+      location_type: 'in_person',
+      location: null,
+      video_link: null,
+      status: 'scheduled',
+      client_id: null,
+      created_by: 'u-1',
+      created_at: '2026-01-01T09:00:00.000Z',
+      updated_at: '2026-01-01T09:00:00.000Z',
+      recurrence_rule: null,
     };
     render(
       <EventFormModal open={true} onClose={noop} onSubmit={noopSubmit} event={event as never} />,
@@ -63,9 +73,9 @@ describe('EventFormModal', () => {
     expect(screen.getByText('Edit Event')).toBeTruthy();
   });
 
-  it('shows a Save button when open', () => {
+  it('shows a Create Event submit button when open with no event', () => {
     render(<EventFormModal open={true} onClose={noop} onSubmit={noopSubmit} />);
 
-    expect(screen.getByRole('button', { name: /save/i })).toBeTruthy();
+    expect(screen.getByRole('button', { name: /create event/i })).toBeTruthy();
   });
 });

@@ -10,9 +10,11 @@
  * to prevent React Query context requirements and drag-drop DOM errors.
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen } from '@/test/utils';
+import { render, screen, waitFor } from '@/test/utils';
 
-const mutationStub = () => ({ mutate: vi.fn(), mutateAsync: vi.fn(), isPending: false });
+const { mutationStub } = vi.hoisted(() => ({
+  mutationStub: () => ({ mutate: vi.fn(), mutateAsync: vi.fn(), isPending: false }),
+}));
 
 vi.mock('@/components/admin/modules/tasks/hooks', () => ({
   useCreateTask: mutationStub,
@@ -70,16 +72,20 @@ describe('TaskFormModal', () => {
     expect(container.firstChild).toBeNull();
   });
 
-  it('shows "Create New Task" dialog title when open in create mode', () => {
+  it('shows "Create New Task" dialog title when open in create mode', async () => {
     render(<TaskFormModal isOpen={true} onClose={noop} mode="create" />);
 
-    expect(screen.getByText('Create New Task')).toBeTruthy();
+    await waitFor(() => {
+      expect(screen.getByText('Create New Task')).toBeTruthy();
+    });
   });
 
-  it('shows "Task Details" title when open in view mode with a task', () => {
+  it('shows "Task Details" title when open in view mode with a task', async () => {
     const task = { id: 't-1', title: 'Test Task', status: 'new', priority: 'medium' };
     render(<TaskFormModal isOpen={true} onClose={noop} mode="view" task={task as never} />);
 
-    expect(screen.getByText('Task Details')).toBeTruthy();
+    await waitFor(() => {
+      expect(screen.getByText('Task Details')).toBeTruthy();
+    });
   });
 });

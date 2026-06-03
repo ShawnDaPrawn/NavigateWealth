@@ -86,7 +86,14 @@ describe('ArticleEditor', () => {
   it('shows "Edit Article" heading when an article is provided', () => {
     render(
       <ArticleEditor
-        article={{ id: 'a-1', status: 'draft' } as never}
+        article={
+          {
+            id: 'a-1',
+            status: 'draft',
+            created_at: '2026-01-01T00:00:00.000Z',
+            updated_at: '2026-01-02T00:00:00.000Z',
+          } as never
+        }
         onBack={noop}
         onSaved={noop}
       />,

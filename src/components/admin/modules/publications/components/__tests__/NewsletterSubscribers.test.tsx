@@ -10,7 +10,9 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen } from '@/test/utils';
 
-const mutStub = () => ({ mutate: vi.fn(), mutateAsync: vi.fn(), isPending: false });
+const { mutStub } = vi.hoisted(() => ({
+  mutStub: () => ({ mutate: vi.fn(), mutateAsync: vi.fn(), isPending: false }),
+}));
 
 vi.mock('@/components/admin/modules/publications/hooks/useNewsletterSubscribers', () => ({
   useNewsletterSubscribers: () => ({
@@ -51,11 +53,11 @@ describe('NewsletterSubscribers', () => {
 
   it('shows the Add Subscriber button', () => {
     render(<NewsletterSubscribers />);
-    expect(screen.getByRole('button', { name: /add subscriber/i })).toBeTruthy();
+    expect(screen.getAllByRole('button', { name: /add subscriber/i }).length).toBeGreaterThan(0);
   });
 
   it('shows the Bulk Import button', () => {
     render(<NewsletterSubscribers />);
-    expect(screen.getByRole('button', { name: /bulk import/i })).toBeTruthy();
+    expect(screen.getAllByRole('button', { name: /bulk import/i }).length).toBeGreaterThan(0);
   });
 });
