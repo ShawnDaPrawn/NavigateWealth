@@ -23,7 +23,8 @@ import { requireIdempotency } from './idempotency.ts';
 import { formatZodError } from './shared-validation-utils.ts';
 import { SignerValidateSchema, OtpVerifySchema } from './esign-validation.ts';
 import { getRequestMetadata, audActor, ensureStorageBuckets } from './esign-route-helpers.ts';
-import type { SignerRecord } from './esign-route-helpers.ts';
+import type { SignerRecord, FieldRecord } from './esign-route-helpers.ts';
+import type { EsignField } from './esign-types.ts';
 import { checkRateLimit } from './rateLimiter.ts';
 import {
   getEnvelopeDetails,
@@ -1210,9 +1211,9 @@ signerRoutes.get('/envelopes/:envelopeId/attachments', async (c) => {
   } catch (err) {
     log.error('List attachments error:', err);
     const status = err instanceof AuthError ? err.statusCode : 500;
-    return c.json(
-      { error: err instanceof Error ? err.message : 'Failed to list attachments' },
-      status,
+    return new Response(
+      JSON.stringify({ error: err instanceof Error ? err.message : 'Failed to list attachments' }),
+      { status, headers: { 'Content-Type': 'application/json' } },
     );
   }
 });

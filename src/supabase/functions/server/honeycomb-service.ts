@@ -132,7 +132,7 @@ async function callHoneycomb(
   path: string,
   body?: unknown,
   maxRetries = 3,
-): Promise<{ ok: boolean; status: number; data: Record<string, unknown> | null; raw?: string }> {
+): Promise<{ ok: boolean; status: number; data: Record<string, unknown>; raw?: string }> {
   const url = `${HONEYCOMB_API_URL}${path.startsWith('/') ? path : `/${path}`}`;
   const headers = getHeaders();
 
@@ -163,11 +163,11 @@ async function callHoneycomb(
 
       // Parse response
       const rawText = await response.text();
-      let data: Record<string, unknown> | null;
+      let data: Record<string, unknown>;
       try {
-        data = JSON.parse(rawText);
+        data = JSON.parse(rawText) as Record<string, unknown>;
       } catch {
-        data = null;
+        data = {};
       }
 
       return { ok: response.ok, status: response.status, data, raw: rawText };
