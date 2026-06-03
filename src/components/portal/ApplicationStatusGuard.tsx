@@ -84,26 +84,25 @@ export function ApplicationStatusGuard({
         headers: { Authorization: `Bearer ${publicAnonKey}` },
       });
 
-      logger.debug('Application API Response Status:', appRes.status);
+      logger.debug(`Application API Response Status: ${appRes.status}`);
 
       if (appRes.ok) {
         const applicationResponse = await appRes.json();
         logger.debug(
-          'Application API Response Data:',
-          JSON.stringify(applicationResponse, null, 2),
+          `Application API Response Data: ${JSON.stringify(applicationResponse, null, 2)}`,
         );
 
         // The endpoint returns { success: true, data: application }
         const userApp = applicationResponse.data;
         if (userApp && userApp.status) {
           status = userApp.status;
-          logger.info('Application status loaded:', status);
+          logger.info(`Application status loaded: ${status}`);
         } else {
           logger.info('No application found for user, defaulting to in_progress');
         }
       } else {
         const errorText = await appRes.text();
-        logger.info('Failed to fetch application. Status:', appRes.status, 'Response:', errorText);
+        logger.info(`Failed to fetch application. Status: ${appRes.status} Response: ${errorText}`);
       }
 
       setApplicationStatus(status);

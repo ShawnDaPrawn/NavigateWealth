@@ -19,9 +19,9 @@ export default function AuthCallbackPage() {
         const hash = window.location.hash;
         const search = window.location.search;
 
-        logger.debug('AUTH CALLBACK - Full URL:', fullUrl);
-        logger.debug('AUTH CALLBACK - Hash:', hash);
-        logger.debug('AUTH CALLBACK - Search params:', search);
+        logger.debug(`AUTH CALLBACK - Full URL: ${fullUrl}`);
+        logger.debug(`AUTH CALLBACK - Hash: ${hash}`);
+        logger.debug(`AUTH CALLBACK - Search params: ${search}`);
 
         // Check for PKCE code in query params
         const searchParams = new URLSearchParams(search);
@@ -75,8 +75,8 @@ export default function AuthCallbackPage() {
 
           if (data.session) {
             logger.info('AUTH CALLBACK - Session created from code!');
-            logger.info('AUTH CALLBACK - User:', data.session.user.email);
-            logger.info('AUTH CALLBACK - Email confirmed:', data.session.user.email_confirmed_at);
+            logger.info(`AUTH CALLBACK - User: ${data.session.user.email}`);
+            logger.info(`AUTH CALLBACK - Email confirmed: ${data.session.user.email_confirmed_at}`);
 
             const redirectPath = getSuccessRedirect(data.session);
 
@@ -84,14 +84,14 @@ export default function AuthCallbackPage() {
               setStatus('success');
               setMessage('Welcome! Redirecting you to set up your account password...');
               setTimeout(() => {
-                logger.info('AUTH CALLBACK - Invited user, redirecting to', redirectPath);
+                logger.info(`AUTH CALLBACK - Invited user, redirecting to ${redirectPath}`);
                 navigate(redirectPath, { replace: true, state: { fromInvite: true } });
               }, 1500);
             } else {
               setStatus('success');
               setMessage('Email verified successfully! Redirecting to application...');
               setTimeout(() => {
-                logger.info('AUTH CALLBACK - Redirecting to', redirectPath);
+                logger.info(`AUTH CALLBACK - Redirecting to ${redirectPath}`);
                 window.location.href = redirectPath;
               }, 1500);
             }
@@ -114,7 +114,7 @@ export default function AuthCallbackPage() {
 
             if (data.session) {
               logger.info('AUTH CALLBACK - Session set from tokens!');
-              logger.info('AUTH CALLBACK - User:', data.session.user.email);
+              logger.info(`AUTH CALLBACK - User: ${data.session.user.email}`);
 
               const redirectPath = getSuccessRedirect(data.session);
 
@@ -122,14 +122,14 @@ export default function AuthCallbackPage() {
                 setStatus('success');
                 setMessage('Welcome! Redirecting you to set up your account password...');
                 setTimeout(() => {
-                  logger.info('AUTH CALLBACK - Invited user, redirecting to', redirectPath);
+                  logger.info(`AUTH CALLBACK - Invited user, redirecting to ${redirectPath}`);
                   navigate(redirectPath, { replace: true, state: { fromInvite: true } });
                 }, 1500);
               } else {
                 setStatus('success');
                 setMessage('Email verified successfully! Redirecting to application...');
                 setTimeout(() => {
-                  logger.info('AUTH CALLBACK - Redirecting to', redirectPath);
+                  logger.info(`AUTH CALLBACK - Redirecting to ${redirectPath}`);
                   window.location.href = redirectPath;
                 }, 1500);
               }

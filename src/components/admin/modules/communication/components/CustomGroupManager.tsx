@@ -226,9 +226,9 @@ export function CustomGroupManager({ onClose, onSelectGroup }: CustomGroupManage
     try {
       const debugData = await communicationApi.debugGroups();
       logger.debug('===== GROUP & CLIENT DEBUG DATA =====');
-      logger.debug('Groups:', debugData.groups);
-      logger.debug('Clients:', debugData.clients);
-      logger.debug('Summary:', debugData.summary);
+      logger.debug(`Groups: ${JSON.stringify(debugData.groups)}`);
+      logger.debug(`Clients: ${JSON.stringify(debugData.clients)}`);
+      logger.debug(`Summary: ${JSON.stringify(debugData.summary)}`);
       logger.debug('====================================');
       toast.success('Debug data logged to console');
     } catch (error) {
