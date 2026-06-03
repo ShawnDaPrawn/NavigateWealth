@@ -129,7 +129,7 @@ app.get(
 
     // Only parse if at least one filter is present
     const hasFilters = rawQuery.type || rawQuery.status;
-    let filters: { type?: string; status?: string } | undefined;
+    let filters: { type?: SubmissionType; status?: SubmissionStatus } | undefined;
 
     if (hasFilters) {
       const parsed = SubmissionListQuerySchema.safeParse(rawQuery);

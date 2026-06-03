@@ -13,6 +13,7 @@ import { requireAdmin } from './auth-mw.ts';
 import { asyncHandler } from './error.middleware.ts';
 import { createModuleLogger } from './stderr-logger.ts';
 import { SocialMarketingService } from './social-marketing-service.ts';
+import type { PostCreate, PostUpdate } from './social-marketing-types.ts';
 import { CreatePostSchema, UpdatePostSchema } from './social-marketing-validation.ts';
 import { formatZodError } from './shared-validation-utils.ts';
 
@@ -180,7 +181,7 @@ app.post(
 
     log.info('Creating social post', { adminUserId, platform: parsed.data.platform });
 
-    const post = await service.createPost(adminUserId, parsed.data);
+    const post = await service.createPost(adminUserId, parsed.data as unknown as PostCreate);
 
     log.success('Social post created', { postId: post.id });
 
@@ -203,7 +204,7 @@ app.put(
       return c.json({ error: 'Validation failed', ...formatZodError(parsed.error) }, 400);
     }
 
-    const post = await service.updatePost(postId, parsed.data);
+    const post = await service.updatePost(postId, parsed.data as unknown as PostUpdate);
 
     return c.json({ success: true, data: post });
   }),
