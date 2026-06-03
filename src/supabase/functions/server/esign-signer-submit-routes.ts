@@ -17,7 +17,11 @@ import {
 } from './esign-services.ts';
 import { createSigningInviteEmail } from './esign-email-templates.ts';
 import { sendEmail } from './email-service.ts';
-import { shouldDeliverSenderEvent, queueForDigest, SenderEvent } from './esign-notification-prefs.ts';
+import {
+  shouldDeliverSenderEvent,
+  queueForDigest,
+  SenderEvent,
+} from './esign-notification-prefs.ts';
 import { emitWebhookEvent } from './webhook-service.ts';
 import { enqueue as enqueueInAppNotification } from './esign-inapp-notifications.ts';
 import { enqueueCompletion } from './esign-completion-queue.ts';
