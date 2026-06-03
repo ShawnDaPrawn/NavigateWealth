@@ -153,7 +153,7 @@ export function DocumentsTab({ selectedClient }: DocumentsTabProps) {
     }
 
     try {
-      logger.info('Downloading document', { fileName: doc.fileName });
+      console.log(`⬇️ Downloading: ${doc.fileName}`);
 
       const data = await api.get<{ url: string }>(`/documents/${doc.userId}/${doc.id}/download`);
 
@@ -189,7 +189,7 @@ export function DocumentsTab({ selectedClient }: DocumentsTabProps) {
     if (!documentToDelete) return;
 
     try {
-      logger.info('Deleting document', { title: documentToDelete.title });
+      console.log(`🗑️ Deleting: ${documentToDelete.title}`);
 
       await api.delete(`/documents/${documentToDelete.userId}/${documentToDelete.id}`);
 
@@ -218,10 +218,7 @@ export function DocumentsTab({ selectedClient }: DocumentsTabProps) {
     const toastId = toast.loading('Deleting document pack...');
 
     try {
-      logger.info('Deleting document pack', {
-        packId: packToDelete.id,
-        documentCount: docsToDelete.length,
-      });
+      console.log(`🗑️ Deleting pack: ${packToDelete.id} (${docsToDelete.length} documents)`);
 
       // Delete all documents in parallel
       await Promise.all(

@@ -224,11 +224,11 @@ export function CustomGroupManager({ onClose, onSelectGroup }: CustomGroupManage
   const handleDebug = async () => {
     try {
       const debugData = await communicationApi.debugGroups();
-      logger.debug('GROUP & CLIENT DEBUG DATA', {
-        groups: debugData.groups,
-        clients: debugData.clients,
-        summary: debugData.summary,
-      });
+      console.log('===== GROUP & CLIENT DEBUG DATA =====');
+      console.log('Groups:', debugData.groups);
+      console.log('Clients:', debugData.clients);
+      console.log('Summary:', debugData.summary);
+      console.log('====================================');
       toast.success('Debug data logged to console');
     } catch (error) {
       console.error('Failed to fetch debug data:', error);

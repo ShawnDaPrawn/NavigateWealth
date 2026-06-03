@@ -119,12 +119,16 @@ export function SanctionsScreeningPanel({
   }, [clientId, firstName, lastName, idNumber]);
 
   const loadHistory = async () => {
+    setIsLoadingHistory(true);
     try {
-      await api.get<{ history?: SearchHistoryEntry[] }>(
+      const data = await api.get<{ history?: SearchHistoryEntry[] }>(
         `/integrations/honeycomb/checks/history/${clientId}/sanctions_search`,
       );
+      setHistory(data.history || []);
     } catch (err) {
       console.error('[Sanctions Panel] History load error:', err);
+    } finally {
+      setIsLoadingHistory(false);
     }
   };
 
