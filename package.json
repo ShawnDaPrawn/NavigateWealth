@@ -5,8 +5,6 @@
   "dependencies": {
     "@hello-pangea/dnd": "^18.0.1",
     "@hookform/resolvers": "^5.2.2",
-    "@jsr/std__encoding": "^1.0.10",
-    "@jsr/supabase__supabase-js": "^2.49.8",
     "@radix-ui/react-accordion": "^1.2.12",
     "@radix-ui/react-alert-dialog": "^1.1.15",
     "@radix-ui/react-aspect-ratio": "^1.1.8",
@@ -90,6 +88,10 @@
     "vitest": "^4.1.0",
     "xlsx": "npm:@e965/xlsx@^0.20.3",
     "zod": "^3.25.76"
+  },
+  "optionalDependencies": {
+    "@jsr/std__encoding": "^1.0.10",
+    "@jsr/supabase__supabase-js": "^2.49.8"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
