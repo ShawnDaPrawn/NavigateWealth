@@ -16,6 +16,7 @@
 import { useEffect, useRef, useCallback } from 'react';
 import { PublicationsAPI } from '../api';
 import { createClient } from '../../../../../utils/supabase/client';
+import { logger } from '../../../../../utils/logger';
 
 /** Interval in milliseconds — 5 minutes */
 const POLL_INTERVAL_MS = 5 * 60 * 1000;
@@ -58,9 +59,9 @@ export function useScheduledPublishProcessor(options?: {
 
       const result = await PublicationsAPI.Articles.processScheduled();
       if (result && result.processed > 0) {
-        console.log(
-          `[ScheduledPublishProcessor] Published ${result.processed} scheduled article(s)`,
-        );
+        logger.info('[ScheduledPublishProcessor] Published scheduled articles', {
+          processed: result.processed,
+        });
         onProcessed?.(result.processed);
       }
     } catch (err) {

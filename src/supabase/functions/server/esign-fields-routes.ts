@@ -124,7 +124,7 @@ fieldsRoutes.put('/envelopes/:envelopeId/fields', async (c) => {
 fieldsRoutes.get('/envelopes/:envelopeId/fields', async (c) => {
   try {
     // Authenticate
-    const ctx = await getAuthContext(c);
+    const _ctx = await getAuthContext(c);
     const envelopeId = c.req.param('envelopeId');
 
     // Get envelope details
@@ -156,7 +156,7 @@ fieldsRoutes.get('/envelopes/:envelopeId/fields', async (c) => {
 fieldsRoutes.patch('/envelopes/:envelopeId/fields/:fieldId', async (c) => {
   try {
     // Authenticate
-    const ctx = await getAuthContext(c);
+    const _ctx = await getAuthContext(c);
     const envelopeId = c.req.param('envelopeId');
     const fieldId = c.req.param('fieldId');
 

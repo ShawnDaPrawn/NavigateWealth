@@ -86,7 +86,6 @@ export const FIELD_MAP: FieldMapping[] = [
 
 // Pre-built lookup maps for O(1) access
 const PROFILE_TO_APP = new Map(FIELD_MAP.map((m) => [m.profileKey, m.appKey]));
-const APP_TO_PROFILE = new Map(FIELD_MAP.map((m) => [m.appKey, m.profileKey]));
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -269,7 +268,7 @@ export async function syncProfileToApplication(
 export async function syncApplicationToProfile(
   applicationId: string,
   updatedAppData: Record<string, unknown>,
-  adminUserId?: string,
+  _adminUserId?: string,
 ): Promise<{ synced: boolean; fieldsUpdated: string[] }> {
   try {
     const application = (await kv.get(`application:${applicationId}`)) as Record<

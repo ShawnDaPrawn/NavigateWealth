@@ -24,6 +24,7 @@
 import { useEffect, useRef, useCallback } from 'react';
 import { api } from '../../../../../utils/api/client';
 import { createClient } from '../../../../../utils/supabase/client';
+import { logger } from '../../../../../utils/logger';
 
 /** Re-check interval — 6 hours */
 const POLL_INTERVAL_MS = 6 * 60 * 60 * 1000;
@@ -90,9 +91,9 @@ export function useMaintenanceCronProcessor(options?: {
           }>('/clients/maintenance/cleanup', { dryRun: false });
 
           if (result.success) {
-            console.log(
-              `[MaintenanceCronProcessor] Client cleanup complete: ${result.totalProfilesScanned} profiles scanned`,
-            );
+            logger.info('[MaintenanceCronProcessor] Client cleanup complete', {
+              totalProfilesScanned: result.totalProfilesScanned,
+            });
             onClientCleanupRan?.();
           }
         }
@@ -113,9 +114,9 @@ export function useMaintenanceCronProcessor(options?: {
           }>('/kv-cleanup/run', { dryRun: false });
 
           if (result.success) {
-            console.log(
-              `[MaintenanceCronProcessor] KV cleanup complete: ${result.totalKeysDeleted} stale keys deleted`,
-            );
+            logger.info('[MaintenanceCronProcessor] KV cleanup complete', {
+              totalKeysDeleted: result.totalKeysDeleted,
+            });
             onKvCleanupRan?.();
           }
         }

@@ -11,12 +11,7 @@
 
 import * as kv from './kv_store.tsx';
 import { EsignKeys } from './esign-keys.ts';
-import {
-  getEnvelopeDetails,
-  getEnvelopeSigners,
-  updateEnvelopeStatus,
-  logAuditEvent,
-} from './esign-services.ts';
+import { getEnvelopeSigners, updateEnvelopeStatus, logAuditEvent } from './esign-services.ts';
 import { sendEmail } from './email-service.ts';
 import { shouldDeliverSenderEvent, queueForDigest } from './esign-notification-prefs.ts';
 import { emitWebhookEvent } from './webhook-service.ts';

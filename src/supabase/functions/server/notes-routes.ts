@@ -22,7 +22,7 @@
 import { Hono } from 'npm:hono';
 import { createModuleLogger } from './stderr-logger.ts';
 import { asyncHandler } from './error.middleware.ts';
-import { requireAdmin, getAuthContext } from './auth-mw.ts';
+import { requireAdmin } from './auth-mw.ts';
 import * as kv from './kv_store.tsx';
 
 const app = new Hono();

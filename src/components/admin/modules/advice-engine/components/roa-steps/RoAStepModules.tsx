@@ -11,7 +11,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from '../../../../../ui/select';
-import { RoADraft, RoAModule } from '../DraftRoAInterface';
+import { RoADraft } from '../DraftRoAInterface';
+import type { RoAModule } from '../DraftRoAInterface';
 import { getFallbackRuntimeModules, getModuleRuntimeStatus } from '../../roaModuleRuntime';
 import {
   Heart,

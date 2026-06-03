@@ -11,6 +11,7 @@ interface BrandedWorkbookOptions {
   generatedAt?: Date;
 }
 
+// eslint-disable-next-line no-control-regex -- intentionally strips XML-illegal control characters from cell values before writing to Excel
 const ILLEGAL_XML_CONTROL_CHARS = /[\u0000-\u0008\u000B\u000C\u000E-\u001F]/g;
 const REPORT_HEADER_ROW = 5;
 const REPORT_DATA_START_ROW = REPORT_HEADER_ROW + 1;

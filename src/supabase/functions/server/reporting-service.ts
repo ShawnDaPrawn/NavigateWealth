@@ -862,14 +862,12 @@ export class ReportingService {
       const isDeleted = security.deleted === true;
       const isSuspended = security.suspended === true;
 
-      let accountStatus = profileStatus;
-      if (isDeleted || profileStatus === 'closed') {
-        accountStatus = 'Closed';
-      } else if (isSuspended || profileStatus === 'suspended') {
-        accountStatus = 'Suspended';
-      } else {
-        accountStatus = 'Active';
-      }
+      const accountStatus =
+        isDeleted || profileStatus === 'closed'
+          ? 'Closed'
+          : isSuspended || profileStatus === 'suspended'
+            ? 'Suspended'
+            : 'Active';
 
       const firstName = (p.firstName || '') as string;
       const lastName = (p.lastName || '') as string;

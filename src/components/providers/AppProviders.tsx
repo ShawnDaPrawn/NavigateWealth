@@ -12,6 +12,7 @@ import { UnsavedChangesRegistryProvider } from '../shared/unsaved-changes';
 import { createClient } from '../../utils/supabase/client';
 import { createAppRouter } from '../../router/createAppRouter';
 import { AppRoutes } from '../../AppRoutes';
+import { logger } from '../../utils/logger';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -45,7 +46,7 @@ const queryClient = new QueryClient({
         const supabase = createClient();
         supabase.auth.refreshSession().then(({ data: { session }, error: refreshError }) => {
           if (session && !refreshError) {
-            console.log('Global session recovery succeeded — invalidating queries');
+            logger.info('Global session recovery succeeded — invalidating queries');
             queryClient.invalidateQueries();
           } else {
             // "Auth session missing!" is expected when no user is logged in —

@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { logger } from '../utils/logger';
 
 // Type definition for the BeforeInstallPromptEvent
 interface BeforeInstallPromptEvent extends Event {
@@ -19,7 +20,7 @@ export function usePWAInstall() {
   useEffect(() => {
     // Handler for beforeinstallprompt event
     const handleBeforeInstallPrompt = (e: Event) => {
-      console.log('PWA: beforeinstallprompt fired', e);
+      logger.info('PWA: beforeinstallprompt fired', { event: e });
       // Prevent the mini-infobar from appearing on mobile
       e.preventDefault();
       // Stash the event so it can be triggered later.

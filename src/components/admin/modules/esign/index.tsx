@@ -1,3 +1,4 @@
+/* eslint-disable react-refresh/only-export-components */
 /**
  * E-Signature Module - Standalone Admin Module
  * Allows admins to send documents for e-signature to any user (existing clients or new recipients)

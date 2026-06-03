@@ -42,6 +42,7 @@ import {
 } from '../../../../ui/dropdown-menu';
 
 import { ComplianceRecord, ComplianceColumn, ComplianceFilter, RAGStatus } from '../types';
+import { logger } from '../../../../../utils/logger';
 
 interface ComplianceTableProps {
   title: string;
@@ -385,7 +386,7 @@ export function ComplianceTable({
                           </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
-                          <DropdownMenuItem onClick={() => console.log('View', record.id)}>
+                          <DropdownMenuItem onClick={() => logger.info('View', { id: record.id })}>
                             <Eye className="h-4 w-4 mr-2" />
                             View Details
                           </DropdownMenuItem>
@@ -396,13 +397,15 @@ export function ComplianceTable({
                             </DropdownMenuItem>
                           )}
                           <DropdownMenuItem
-                            onClick={() => console.log('Download attachments', record.id)}
+                            onClick={() => logger.info('Download attachments', { id: record.id })}
                           >
                             <Download className="h-4 w-4 mr-2" />
                             Download Files
                           </DropdownMenuItem>
                           <DropdownMenuSeparator />
-                          <DropdownMenuItem onClick={() => console.log('Audit trail', record.id)}>
+                          <DropdownMenuItem
+                            onClick={() => logger.info('Audit trail', { id: record.id })}
+                          >
                             View Audit Trail
                           </DropdownMenuItem>
                         </DropdownMenuContent>

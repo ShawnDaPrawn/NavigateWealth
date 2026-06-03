@@ -467,7 +467,9 @@ export async function generatePostText(
       rawContent: rawContent.slice(0, 500),
       error: parseErr instanceof Error ? parseErr.message : String(parseErr),
     });
-    throw new Error('AI generated an invalid response format. Please try again.');
+    throw new Error('AI generated an invalid response format. Please try again.', {
+      cause: parseErr,
+    });
   }
 
   if (!parsed.posts || !Array.isArray(parsed.posts)) {

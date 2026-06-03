@@ -333,16 +333,17 @@ export function SigningWorkflow({
 
     load();
 
+    const renderTasks = renderTasksRef.current;
     return () => {
       cancelled = true;
-      renderTasksRef.current.forEach((task) => {
+      renderTasks.forEach((task) => {
         try {
           task.cancel();
         } catch {
           /* noop */
         }
       });
-      renderTasksRef.current.clear();
+      renderTasks.clear();
       if (pdfDocRef.current) {
         (pdfDocRef.current as { destroy: () => void }).destroy();
         pdfDocRef.current = null;

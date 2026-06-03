@@ -16,26 +16,14 @@ import {
   OptionalStringSchema,
   PositiveIntSchema,
   NonNegativeIntSchema,
-  PositiveNumberSchema,
   PercentageSchema,
-  DecimalPercentageSchema,
   DecimalCurrencySchema,
   IsoDateSchema,
-  IsoDateTimeSchema,
-  PastDateSchema,
-  EmailSchema,
-  OptionalEmailSchema,
-  SaPhoneSchema,
-  OptionalSaPhoneSchema,
 } from './common-schemas.ts';
 
 // Inlined validation utilities to avoid bundler import issues
 function stripHtml(text: string): string {
   return text.replace(/<[^>]*>?/gm, '');
-}
-
-function normalizeWhitespace(text: string): string {
-  return text.replace(/\s+/g, ' ').trim();
 }
 
 // ============================================================================

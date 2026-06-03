@@ -1,3 +1,4 @@
+/* eslint-disable react-refresh/only-export-components */
 /**
  * Dynamic Form Renderer
  * Renders forms dynamically from JSON block definitions

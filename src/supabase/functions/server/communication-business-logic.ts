@@ -1,6 +1,5 @@
 import {
   Group,
-  Campaign,
   CachedRecipient,
   CommunicationClient,
   SupabaseAdminClient,
@@ -40,9 +39,9 @@ export async function getAllClients(supabase: SupabaseAdminClient): Promise<Comm
   const policyKeys = users.map((u) => `policies:client:${u.id}`);
   const securityKeys = users.map((u) => `security:${u.id}`);
 
-  let profiles: Record<string, unknown>[] = [];
-  let allPoliciesArrays: unknown[] = [];
-  let securityEntries: Record<string, unknown>[] = [];
+  let profiles: Record<string, unknown>[];
+  let allPoliciesArrays: unknown[];
+  let securityEntries: Record<string, unknown>[];
 
   try {
     const [profilesResult, policiesResult, securityResult] = await Promise.all([

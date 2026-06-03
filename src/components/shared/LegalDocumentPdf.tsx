@@ -751,11 +751,12 @@ function PagedLegalDocumentPdfLayout({
 
     void renderPagedPreview();
 
+    const previewHost = previewHostRef.current;
     return () => {
       cancelled = true;
       onRenderStateChange?.({ ready: false, error: null, activeRenderer: 'paged' });
-      if (previewHostRef.current) {
-        previewHostRef.current.innerHTML = '';
+      if (previewHost) {
+        previewHost.innerHTML = '';
       }
     };
   }, [onRenderStateChange, pagedSource]);

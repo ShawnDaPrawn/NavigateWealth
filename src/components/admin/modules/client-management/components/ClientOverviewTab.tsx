@@ -936,7 +936,6 @@ export function ClientOverviewTab({ client, mode = 'adviser' }: ClientOverviewTa
       totalMonthlyDebt,
       totalRetirementPremium,
       totalInvestmentPremium,
-      gapAnalysis,
       riskFnaPublished,
       fnaResultsMap,
       retResultsForSubScore,
@@ -949,7 +948,7 @@ export function ClientOverviewTab({ client, mode = 'adviser' }: ClientOverviewTa
 
   const assetAllocationData = useMemo<AssetAllocationData>(
     () => deriveAssetAllocation({ profile: p, retirementCurrentValue, investmentCurrentValue }),
-    [p?.assets, retirementCurrentValue, investmentCurrentValue],
+    [p, retirementCurrentValue, investmentCurrentValue],
   );
 
   const insuranceCoverageItems = useMemo<InsuranceCoverageItem[]>(

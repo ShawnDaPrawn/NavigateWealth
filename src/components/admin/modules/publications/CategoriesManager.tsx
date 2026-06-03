@@ -275,15 +275,9 @@ export function CategoriesManager() {
       is_active: isActive,
     };
 
-    let success = false;
-
-    if (editingCategory) {
-      const result = await handleUpdate(editingCategory.id, formData);
-      success = result !== null;
-    } else {
-      const result = await handleCreate(formData);
-      success = result !== null;
-    }
+    const success = editingCategory
+      ? (await handleUpdate(editingCategory.id, formData)) !== null
+      : (await handleCreate(formData)) !== null;
 
     if (success) {
       handleCancelForm();

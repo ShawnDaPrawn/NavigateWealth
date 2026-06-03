@@ -28,6 +28,7 @@ import { SIGNER_COLORS } from '../constants';
 
 // ── pdf.js bootstrap (npm import — avoids CSP issues with CDN script injection) ──
 import * as pdfjsLib from 'pdfjs-dist';
+import { logger } from '../../../../../utils/logger';
 
 // Configure the web worker source via CDN, dynamically matching the installed library version
 // jsdelivr mirrors npm exactly, so every published version is guaranteed to be available
@@ -248,7 +249,10 @@ export function PDFViewer({
           // P2.5 2.3 — surface the page count to the parent so it can offer
           // "Apply to all pages" without re-parsing the PDF.
           onPageCount?.(pdf.numPages);
-          console.log(`PDF loaded: ${pdf.numPages} page(s) — ${documentUrl.slice(0, 80)}`);
+          logger.info('PDF loaded', {
+            numPages: pdf.numPages,
+            urlPrefix: documentUrl.slice(0, 80),
+          });
         }
       } catch (err: unknown) {
         console.error('Failed to load PDF:', err);
@@ -261,17 +265,18 @@ export function PDFViewer({
 
     load();
 
+    const renderTasks = renderTasksRef.current;
     return () => {
       cancelled = true;
       // Cancel any in-flight render tasks
-      renderTasksRef.current.forEach((task) => {
+      renderTasks.forEach((task) => {
         try {
           task.cancel();
         } catch {
           /* noop */
         }
       });
-      renderTasksRef.current.clear();
+      renderTasks.clear();
       // Destroy the PDF document
       if (pdfDocRef.current) {
         pdfDocRef.current.destroy();

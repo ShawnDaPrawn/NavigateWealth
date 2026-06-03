@@ -71,7 +71,7 @@ export function validatePassword(password: string): PasswordValidationResult {
   const hasUppercase = /[A-Z]/.test(password);
   const hasLowercase = /[a-z]/.test(password);
   const hasNumber = /[0-9]/.test(password);
-  const hasSpecial = /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(password);
+  const hasSpecial = /[!@#$%^&*()_+=[\]{};':"\\|,.<>/?-]/.test(password);
 
   const characterTypes = [hasUppercase, hasLowercase, hasNumber, hasSpecial].filter(Boolean).length;
 
@@ -161,14 +161,14 @@ export function validateEmail(email: string): { isValid: boolean; error?: string
  */
 export function validatePhoneNumber(
   phoneNumber: string,
-  countryCode: string,
+  _countryCode: string,
 ): { isValid: boolean; error?: string } {
   if (!phoneNumber || typeof phoneNumber !== 'string') {
     return { isValid: false, error: 'Phone number is required' };
   }
 
   // Remove spaces and dashes
-  const cleaned = phoneNumber.replace(/[\s\-]/g, '');
+  const cleaned = phoneNumber.replace(/[\s-]/g, '');
 
   // Check if it contains only digits
   if (!/^\d+$/.test(cleaned)) {

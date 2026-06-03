@@ -8,6 +8,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { toast } from 'sonner';
 import type { FNAConfig } from '../../../profile-sections/fna-config';
+import { logger } from '../../../../../utils/logger';
 
 interface UseFNAManagementOptions {
   config: FNAConfig | null;
@@ -62,7 +63,7 @@ export function useFNAManagement({ config, clientId, enabled = true }: UseFNAMan
   const handleFNAComplete = useCallback(
     (fnaId: string) => {
       if (!config) return;
-      console.log(`${config.name} completed:`, fnaId);
+      logger.info(`${config.name} completed`, { fnaId });
       loadFNA();
       toast.success(`${config.name} completed successfully`);
     },

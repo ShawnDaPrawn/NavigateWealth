@@ -228,7 +228,7 @@ export class CommunicationService {
                 phone: (pi.cellphoneNumber as string) || '',
               };
             }
-          } catch (kvErr) {
+          } catch (_kvErr) {
             log.warn('Failed to look up recipient profile for merge fields', { recipientId });
           }
         }
@@ -1082,10 +1082,12 @@ export class CommunicationService {
 
     const fileBuffer = await file.arrayBuffer();
 
-    const { data, error } = await supabase.storage.from(BUCKET_NAME).upload(path, fileBuffer, {
-      contentType: file.type,
-      upsert: false,
-    });
+    const { data: _data, error } = await supabase.storage
+      .from(BUCKET_NAME)
+      .upload(path, fileBuffer, {
+        contentType: file.type,
+        upsert: false,
+      });
 
     if (error) {
       throw new Error(`Upload failed: ${error.message}`);
@@ -1339,18 +1341,6 @@ interface CommHistoryEntry {
 interface CommLogEntry {
   id?: string;
   recipient_id?: string;
-  [key: string]: unknown;
-}
-
-interface KvUser {
-  id?: string;
-  role?: string;
-  name?: string;
-  first_name?: string;
-  last_name?: string;
-  email?: string;
-  account_type?: string;
-  status?: string;
   [key: string]: unknown;
 }
 

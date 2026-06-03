@@ -827,7 +827,7 @@ export function EnvelopeInspector({
                         onClick={async () => {
                           try {
                             await esignApi.downloadAuditTrailCsv(envelope.id);
-                          } catch (err) {
+                          } catch (_err) {
                             toast.error('Failed to export audit trail');
                           }
                         }}

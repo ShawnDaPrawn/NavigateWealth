@@ -635,6 +635,7 @@ function DraftEditor({ detail }: { detail: LegalDocumentDetailResponse }) {
     [
       detail.currentDraftVersion?.toc,
       detail.currentDraftVersion?.updatedAt,
+      detail.currentDraftVersion?.versionNumber,
       detail.currentPublishedVersion?.toc,
       detail.currentPublishedVersion?.updatedAt,
       detail.currentPublishedVersion?.versionNumber,

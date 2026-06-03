@@ -1,3 +1,4 @@
+/* eslint-disable react-refresh/only-export-components */
 import React, { Component, ErrorInfo, ReactNode } from 'react';
 import { AlertCircle, RefreshCw, Home, ShieldAlert } from 'lucide-react';
 import { Button } from '../ui/button';
@@ -94,7 +95,6 @@ export class ErrorBoundary extends Component<Props, State> {
   }
 
   private isDevelopment(): boolean {
-    // @ts-ignore
     return import.meta.env?.DEV || false;
   }
 

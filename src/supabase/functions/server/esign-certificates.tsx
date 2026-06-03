@@ -8,7 +8,6 @@ import * as kv from './kv_store.tsx';
 import { uploadCertificate, calculateHash } from './esign-storage.ts';
 import { getEnvelopeDetails, getAuditTrail } from './esign-services.ts';
 import { PDFDocument, rgb, StandardFonts } from 'npm:pdf-lib@1.17.1';
-import { EsignKeys } from './esign-keys.ts';
 import { createModuleLogger } from './stderr-logger.ts';
 import { getConsentByVersion } from './esign-consent-registry.ts';
 

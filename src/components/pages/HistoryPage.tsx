@@ -191,7 +191,7 @@ export function HistoryPage() {
           prev.map((item) => (item.id === id ? { ...item, isFavourite: !item.isFavourite } : item)),
         );
       }
-    } catch (error: unknown) {
+    } catch (_error: unknown) {
       // Silent fail for non-critical functionality
     }
   };
@@ -228,7 +228,7 @@ export function HistoryPage() {
 
       // Mark as viewed
       await markAsViewed(item);
-    } catch (error: unknown) {
+    } catch (_error: unknown) {
       toast.error('Failed to download document');
     }
   };
@@ -262,7 +262,7 @@ export function HistoryPage() {
           prev.map((i) => (i.id === item.id ? { ...i, status: 'viewed' as const } : i)),
         );
       }
-    } catch (error: unknown) {
+    } catch (_error: unknown) {
       // Silently fail - this is not critical functionality
     }
   };

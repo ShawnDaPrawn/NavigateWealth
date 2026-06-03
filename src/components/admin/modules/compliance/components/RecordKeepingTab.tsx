@@ -1,6 +1,7 @@
 import { ComplianceTable } from './ComplianceTable';
 import { ComplianceRecord } from '../types';
 import { useRecordKeeping } from '../hooks';
+import { logger } from '../../../../../utils/logger';
 
 const columns = [
   { key: 'title', label: 'Record Category', type: 'text' as const },
@@ -48,9 +49,9 @@ export function RecordKeepingTab() {
       columns={columns}
       filters={filters}
       loading={isLoading}
-      onAdd={() => console.log('Add record-keeping rule')}
-      onEdit={(record) => console.log('Edit retention rule:', record)}
-      onExport={() => console.log('Export retention schedule')}
+      onAdd={() => logger.info('Add record-keeping rule')}
+      onEdit={(record) => logger.info('Edit retention rule:', { record })}
+      onExport={() => logger.info('Export retention schedule')}
     />
   );
 }

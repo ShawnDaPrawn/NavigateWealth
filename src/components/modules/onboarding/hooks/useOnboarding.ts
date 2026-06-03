@@ -22,6 +22,7 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useAuth } from '../../../auth/AuthContext';
+import { logger } from '../../../../utils/logger';
 import {
   getApplication,
   saveApplicationProgress,
@@ -99,7 +100,7 @@ export function useOnboarding(options: UseOnboardingOptions = {}) {
     setSaveStatus('saving');
 
     try {
-      console.log('[useOnboarding] Saving progress, step:', stepRef.current);
+      logger.debug('[useOnboarding] Saving progress', { step: stepRef.current });
       const result = await saveApplicationProgress(userId, dataToSave);
       if (!result.success) {
         throw new Error(result.error || 'Save failed');
@@ -107,7 +108,7 @@ export function useOnboarding(options: UseOnboardingOptions = {}) {
       lastSavedSnapshotRef.current = serialised;
       setSaveStatus('saved');
       setLastSavedAt(new Date());
-      console.log('[useOnboarding] Save successful');
+      logger.debug('[useOnboarding] Save successful');
       return true;
     } catch (err) {
       console.error('[useOnboarding] Save FAILED:', err);
@@ -133,7 +134,7 @@ export function useOnboarding(options: UseOnboardingOptions = {}) {
 
     const loadData = async () => {
       setIsInitialLoad(true);
-      console.log('[useOnboarding] Loading application for user:', effectiveUserId);
+      logger.debug('[useOnboarding] Loading application for user', { userId: effectiveUserId });
 
       try {
         const existingApp = await getApplication(effectiveUserId);
@@ -159,25 +160,23 @@ export function useOnboarding(options: UseOnboardingOptions = {}) {
             }
 
             const merged = { ...INITIAL_DATA, ...serverData };
-            console.log(
-              '[useOnboarding] Restored data from server, resuming step:',
+            logger.debug('[useOnboarding] Restored data from server', {
               serverStep,
-              'fields with data:',
-              Object.entries(merged).filter(
+              fieldsWithData: Object.entries(merged).filter(
                 ([, v]) => v && v !== '' && !(Array.isArray(v) && v.length === 0),
               ).length,
-            );
+            });
 
             setData(merged);
             setCurrentStep(serverStep);
             // Seed snapshot to prevent immediate re-save
             lastSavedSnapshotRef.current = JSON.stringify({ ...merged, currentStep: serverStep });
           } else {
-            console.log('[useOnboarding] No application data on server, starting fresh');
+            logger.debug('[useOnboarding] No application data on server, starting fresh');
             prefillFromUser();
           }
         } else {
-          console.log('[useOnboarding] No application found on server, starting fresh');
+          logger.debug('[useOnboarding] No application found on server, starting fresh');
           prefillFromUser();
         }
       } catch (error) {

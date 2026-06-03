@@ -6,6 +6,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { api } from '../utils/api/client';
 import type { Client } from '../shared/types/calendar';
+import { logger } from '../utils/logger';
 
 // Query keys
 export const clientKeys = {
@@ -21,7 +22,7 @@ export function useClients(search?: string) {
   return useQuery({
     queryKey: clientKeys.list(search),
     queryFn: async (): Promise<Client[]> => {
-      console.log('🔍 Fetching clients from API (profile/all-users)...');
+      logger.debug('Fetching clients from API (profile/all-users)');
 
       try {
         /** Shape of a user record from the profile/all-users API */

@@ -123,7 +123,7 @@ const SelectWithCopy = ({
       setCopied(true);
       toast.success('Copied to clipboard');
       setTimeout(() => setCopied(false), 2000);
-    } catch (err) {
+    } catch (_err) {
       toast.error('Failed to copy');
     }
   };
@@ -230,7 +230,7 @@ export function ClientProfileViewerFull({ clientData, onSave }: ClientProfileVie
         if (!cancelled) {
           setPolicyRecords(Array.isArray(response.policies) ? response.policies : []);
         }
-      } catch (error) {
+      } catch (_error) {
         if (!cancelled) {
           setPolicyRecords([]);
           setPolicyAssetsError('Linked policy assets could not be loaded right now.');

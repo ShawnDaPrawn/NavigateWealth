@@ -72,7 +72,7 @@ export function useAutoSave(params: {
         setLastSavedAt(new Date());
         setHasUnsavedChanges(false);
         return true;
-      } catch (err) {
+      } catch (_err) {
         if (!opts?.silent) {
           toast.error('Auto-save failed — please click Save to retry.');
         }

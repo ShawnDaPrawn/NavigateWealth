@@ -22,7 +22,7 @@ export async function copyToClipboard(text: string): Promise<void> {
     if (success) {
       return;
     }
-  } catch (err) {
+  } catch (_err) {
     // Library failed, try fallback
   }
 
@@ -33,7 +33,7 @@ export async function copyToClipboard(text: string): Promise<void> {
       await navigator.clipboard.writeText(text);
       return;
     } catch (err) {
-      throw new Error('All clipboard methods failed');
+      throw new Error('All clipboard methods failed', { cause: err });
     }
   }
 

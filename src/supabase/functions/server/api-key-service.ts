@@ -22,7 +22,6 @@
 
 import * as kv from './kv_store.tsx';
 import { createModuleLogger } from './stderr-logger.ts';
-import { getErrMsg } from './shared-logger-utils.ts';
 
 const log = createModuleLogger('api-key-service');
 

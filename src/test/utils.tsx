@@ -1,3 +1,4 @@
+/* eslint-disable react-refresh/only-export-components */
 /**
  * Shared test utilities for the SPA suite (Phase 4).
  *

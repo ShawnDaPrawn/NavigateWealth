@@ -913,7 +913,7 @@ export const InitializationAPI = {
         has_categories: categories.length > 0,
         has_types: types.length > 0,
       };
-    } catch (error) {
+    } catch {
       return {
         is_initialized: false,
         has_categories: false,

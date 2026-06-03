@@ -31,6 +31,7 @@ import {
 import { toast } from 'sonner';
 import { api } from '../../../../../utils/api';
 import { getBlockDefinition } from './registry';
+import { logger } from '../../../../../utils/logger';
 import type { LetterMeta } from '../templates/LetterheadPdfLayout';
 
 // Phase 1/Phase 2 imports
@@ -77,7 +78,7 @@ async function saveToApi(
   payload: SavePayload,
   resourceId: string | undefined,
 ): Promise<Record<string, unknown>> {
-  console.log('[FormBuilder] Saving form:', {
+  logger.info('[FormBuilder] Saving form', {
     isUpdate: !!resourceId,
     formId: resourceId,
     title: payload.title,
@@ -88,7 +89,7 @@ async function saveToApi(
     ? await api.put<Record<string, unknown>>(`/resources/${resourceId}`, payload)
     : await api.post<Record<string, unknown>>('/resources', payload);
 
-  console.log('[FormBuilder] Save successful:', data);
+  logger.info('[FormBuilder] Save successful', { data });
   return data;
 }
 

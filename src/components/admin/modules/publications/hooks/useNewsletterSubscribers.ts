@@ -60,7 +60,7 @@ export function useNewsletterSubscribers(
     staleTime: 5 * 60 * 1000,
   });
 
-  const subscribers = data ?? [];
+  const subscribers = useMemo(() => data ?? [], [data]);
 
   // ── Stats (derived from full list) ──────────────────────────────────
   const stats = useMemo<SubscriberStats>(

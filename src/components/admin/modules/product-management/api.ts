@@ -92,7 +92,7 @@ async function getSupabaseAuthToken(): Promise<string> {
       data: { session },
     } = await supabase.auth.getSession();
     token = session?.access_token || publicAnonKey;
-  } catch (error) {
+  } catch (_error) {
     logger.warn('Failed to retrieve session, using anon key');
   }
   return token;

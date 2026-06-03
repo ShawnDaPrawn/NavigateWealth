@@ -80,7 +80,7 @@ export function useSocialProfiles(options: UseSocialProfilesOptions = {}): UseSo
     staleTime: PROFILES_STALE_TIME,
   });
 
-  const profiles: SocialProfile[] = profilesQuery.data ?? [];
+  const profiles: SocialProfile[] = useMemo(() => profilesQuery.data ?? [], [profilesQuery.data]);
 
   // ── Derived state ─────────────────────────────────────────────────────
   const connectedProfiles = useMemo(() => profiles.filter((p) => p.isConnected), [profiles]);

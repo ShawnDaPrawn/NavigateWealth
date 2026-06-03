@@ -141,9 +141,8 @@ app.post(
     log.info('Contact form submission stored', { submissionId });
 
     // --- Create Submissions Manager entry so it appears in the admin kanban board ---
-    let submissionEntryId: string | undefined;
     try {
-      const submissionEntry = await submissionsService.create({
+      await submissionsService.create({
         type: 'contact',
         sourceChannel: 'website_form',
         payload: {
@@ -156,7 +155,6 @@ app.post(
         submitterName: `${firstName} ${lastName}`.trim(),
         submitterEmail: email,
       });
-      submissionEntryId = submissionEntry.id;
     } catch (subError) {
       log.error('Failed to create submission entry for contact form (non-blocking)', subError);
     }

@@ -1,6 +1,7 @@
 import { ComplianceTable } from './ComplianceTable';
 import { ComplianceRecord } from '../types';
 import { useConflictRecords, useMarketingRecords } from '../hooks';
+import { logger } from '../../../../../utils/logger';
 
 const columns = [
   { key: 'title', label: 'Description', type: 'text' as const },
@@ -29,9 +30,9 @@ export function ConflictsMarketingTab() {
       records={records}
       columns={columns}
       loading={isLoading}
-      onAdd={() => console.log('Add conflict/marketing record')}
-      onEdit={(record) => console.log('Edit record:', record)}
-      onExport={() => console.log('Export records')}
+      onAdd={() => logger.info('Add conflict/marketing record')}
+      onEdit={(record) => logger.info('Edit record:', { record })}
+      onExport={() => logger.info('Export records')}
     />
   );
 }

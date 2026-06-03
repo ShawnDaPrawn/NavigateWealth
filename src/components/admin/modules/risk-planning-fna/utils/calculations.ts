@@ -53,14 +53,14 @@ export function calculateLifeCover(input: InformationGatheringInput): LifeCoverC
   const numDependants = dependants.length;
   const isSingleIncome = !spouseAverageMonthlyIncome || spouseAverageMonthlyIncome === 0;
 
-  let incomeMultiple = 0;
+  let incomeMultiple: number;
 
   if (numDependants === 0) {
     // Single, no dependants: 5×
     incomeMultiple = LIFE_COVER.MULTIPLES.SINGLE_NO_DEPENDANTS;
   } else {
     // Has dependants
-    let baseMultiple = 0;
+    let baseMultiple: number;
 
     if (isSingleIncome) {
       // Single-income household: Base 14× for 1 dependant
@@ -152,7 +152,7 @@ export function calculateDisabilityCover(
 
   // Step 1: Capitalised Income Loss
   const numDependants = dependants.length;
-  let disabilityMultiple = 0;
+  let disabilityMultiple: number;
 
   if (numDependants === 1) {
     disabilityMultiple = DISABILITY_COVER.MULTIPLES.ONE_DEPENDANT;

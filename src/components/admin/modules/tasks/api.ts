@@ -249,7 +249,7 @@ export const TaskStatsAPI = {
       const stats = await api.get<TaskStats>(ENDPOINTS.STATS);
       logger.debug('[TaskStatsAPI] Stats:', { stats });
       return stats;
-    } catch (error) {
+    } catch (_error) {
       logger.warn('[TaskStatsAPI] Failed to fetch stats, returning empty');
       return { total: 0, new: 0, in_progress: 0, completed: 0, archived: 0 };
     }

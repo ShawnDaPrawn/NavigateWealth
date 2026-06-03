@@ -3,7 +3,7 @@
  * Multi-step form for creating and editing Investment INA sessions
  */
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { FNAWizardLayout, FNAWizardStepConfig } from '../../fna/FNAWizardLayout';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../../../ui/card';
 import { Input } from '../../../../ui/input';
@@ -52,6 +52,7 @@ import { InvestmentINACalculationService } from '../services/investmentINACalcul
 import { toast } from 'sonner';
 import { useFormPrefill } from '../../form-prefill/useFormPrefill';
 import { isFormPrefillEnabled } from '../../../../../utils/formPrefillFeature';
+import { logger } from '../../../../../utils/logger';
 
 interface InvestmentINAWizardProps {
   open: boolean;
@@ -86,15 +87,18 @@ export function InvestmentINAWizard({
     },
   });
 
-  const stepsList: InvestmentINAWizardStep[] = [
-    'client-overview',
-    'discretionary-investments',
-    'risk-profile',
-    'economic-assumptions',
-    'goals-setup',
-    'review',
-    'results',
-  ];
+  const stepsList = useMemo<InvestmentINAWizardStep[]>(
+    () => [
+      'client-overview',
+      'discretionary-investments',
+      'risk-profile',
+      'economic-assumptions',
+      'goals-setup',
+      'review',
+      'results',
+    ],
+    [],
+  );
 
   const stepConfig: Record<InvestmentINAWizardStep, FNAWizardStepConfig> = {
     'client-overview': { id: 'client-overview', label: 'Client Overview', icon: Users },
@@ -125,7 +129,7 @@ export function InvestmentINAWizard({
       setInputs({});
       setResults(null);
     }
-  }, [open, clientId]);
+  }, [open, clientId, startAtStep, stepsList]);
 
   const loadInitialData = async () => {
     try {
@@ -138,8 +142,8 @@ export function InvestmentINAWizard({
       const autoPopulated = await InvestmentINAApiService.autoPopulateInputs(clientId);
       setInputs(intakePrefill ? { ...autoPopulated, ...intakePrefill } : autoPopulated);
       toast.success('Client data loaded successfully');
-    } catch (error: unknown) {
-      console.log('⚠️ Investment INA backend not available - working in client-side mode');
+    } catch (_error: unknown) {
+      logger.info('Investment INA backend not available - working in client-side mode');
       setInputs(intakePrefill ?? {});
     } finally {
       setLoading(false);
@@ -522,7 +526,7 @@ function EconomicAssumptionsStep({ inputs, updateInputs }: INAStepProps) {
         expectedRealReturns: defaults.expectedRealReturns,
       });
     }
-  }, []);
+  }, [defaults.expectedRealReturns, defaults.longTermInflationRate, inputs.longTermInflationRate]);
 
   return (
     <div className="space-y-4">

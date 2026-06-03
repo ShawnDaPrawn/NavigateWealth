@@ -83,4 +83,5 @@ export const FILE_CONSTRAINTS = {
   ],
 } as const;
 
-export const URL_REGEX = /^(https?:\/\/)?([\da-z\.-]+)\.([a-z\.]{2,6})([\/\w \.-]*)*\/?$/;
+// eslint-disable-next-line no-useless-escape
+export const URL_REGEX = /^(https?:\/\/)?([\da-z.-]+)\.([a-z.]{2,6})([\w\/ .-]*)*\/?$/;

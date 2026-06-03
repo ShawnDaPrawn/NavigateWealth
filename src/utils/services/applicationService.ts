@@ -4,6 +4,7 @@
  */
 
 import { projectId, publicAnonKey } from '../supabase/info';
+import { logger } from '../logger';
 
 const BASE_URL = `https://${projectId}.supabase.co/functions/v1/make-server-91ed8379`;
 
@@ -92,7 +93,7 @@ export async function submitApplication(
   submissionData: ApplicationSubmissionData,
 ): Promise<ApplicationResponse> {
   try {
-    console.log('📤 Submitting application for user:', submissionData.userId);
+    logger.info('Submitting application for user', { userId: submissionData.userId });
 
     const response = await fetch(`${BASE_URL}/applications/submit`, {
       method: 'POST',
@@ -110,7 +111,7 @@ export async function submitApplication(
     }
 
     const result = await response.json();
-    console.log('✅ Application submitted successfully:', result);
+    logger.info('Application submitted successfully', { result });
 
     return { success: true, data: result.data };
   } catch (error) {
@@ -127,7 +128,7 @@ export async function submitApplication(
  */
 export async function getApplication(userId: string): Promise<ApplicationResponse> {
   try {
-    console.log('📥 Fetching application for user:', userId);
+    logger.info('Fetching application for user', { userId });
 
     const response = await fetch(`${BASE_URL}/applications/${userId}`, {
       method: 'GET',
@@ -143,7 +144,7 @@ export async function getApplication(userId: string): Promise<ApplicationRespons
     }
 
     const result = await response.json();
-    console.log('✅ Application fetched successfully:', result.data ? 'Found' : 'Not found');
+    logger.info('Application fetched successfully', { found: result.data ? 'Found' : 'Not found' });
 
     return { success: true, data: result.data };
   } catch (error) {
@@ -163,7 +164,7 @@ export async function saveApplicationProgress(
   applicationData: Partial<ApplicationSubmissionData['applicationData']>,
 ): Promise<ApplicationResponse> {
   try {
-    console.log('💾 Saving application progress for user:', userId);
+    logger.info('Saving application progress for user', { userId });
 
     const response = await fetch(`${BASE_URL}/applications/save-progress`, {
       method: 'POST',
@@ -181,7 +182,7 @@ export async function saveApplicationProgress(
     }
 
     const result = await response.json();
-    console.log('✅ Progress saved successfully');
+    logger.info('Progress saved successfully');
 
     return { success: true, data: result.data };
   } catch (error) {

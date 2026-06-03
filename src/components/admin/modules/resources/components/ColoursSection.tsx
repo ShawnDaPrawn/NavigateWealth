@@ -97,7 +97,7 @@ export function ColoursSection({ onUpdate }: { onUpdate: () => void }) {
       setPalette(saved);
       onUpdate();
       toast.success('Colour removed');
-    } catch (err) {
+    } catch (_err) {
       toast.error('Failed to remove colour');
     }
   };

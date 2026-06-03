@@ -18,13 +18,11 @@ class Logger implements ILogger {
 
   private detectEnvironment(): boolean {
     try {
-      // @ts-ignore
       if (
         typeof import.meta !== 'undefined' &&
         import.meta.env &&
         typeof import.meta.env.DEV !== 'undefined'
       ) {
-        // @ts-ignore
         return !!import.meta.env.DEV;
       }
       if (typeof window !== 'undefined' && window.location) {

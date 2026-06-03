@@ -43,7 +43,7 @@ export function useSignerSession() {
       }
 
       return result;
-    } catch (err) {
+    } catch (_err) {
       const errorMsg = 'Failed to validate token';
       setError(errorMsg);
       return { success: false, error: errorMsg };
@@ -72,7 +72,7 @@ export function useSignerSession() {
       }
 
       return result;
-    } catch (err) {
+    } catch (_err) {
       const errorMsg = 'Failed to verify OTP';
       setError(errorMsg);
       return { success: false, error: errorMsg };
@@ -104,7 +104,7 @@ export function useSignerSession() {
       }
 
       return result;
-    } catch (err) {
+    } catch (_err) {
       const errorMsg = 'Failed to submit signature';
       setError(errorMsg);
       return { success: false, error: errorMsg };
@@ -136,7 +136,7 @@ export function useSignerSession() {
       }
 
       return result;
-    } catch (err) {
+    } catch (_err) {
       const errorMsg = 'Failed to reject document';
       setError(errorMsg);
       return { success: false, error: errorMsg };

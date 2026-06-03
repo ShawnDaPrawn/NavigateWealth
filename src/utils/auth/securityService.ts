@@ -2,6 +2,7 @@
 // Integrates with server-side security features
 
 import { projectId, publicAnonKey } from '../supabase/info';
+import { logger } from '../logger';
 import { api } from '../api/client';
 import { SECURITY_API_ENDPOINTS } from './securityConstants';
 import {
@@ -131,8 +132,8 @@ export async function validateLoginAttempt(email: string): Promise<{
       error instanceof Error &&
       (error.name === 'AbortError' || error.message.includes('fetch'))
     ) {
-      console.log(
-        'ℹ️ Login validation server unavailable (likely cold start or dev mode), proceeding with login.',
+      logger.info(
+        'Login validation server unavailable (likely cold start or dev mode), proceeding with login.',
       );
       return { allowed: true };
     }
@@ -159,7 +160,7 @@ export async function logLoginSuccess(email: string, userId: string): Promise<vo
   } catch (error) {
     // Don't throw - logging failure shouldn't break login
     if (error instanceof Error && import.meta.env.DEV) {
-      console.debug('Login success log skipped:', error.message);
+      logger.debug('Login success log skipped', { message: error.message });
     }
   }
 }

@@ -21,7 +21,6 @@
  */
 
 import * as kv from './kv_store.tsx';
-import { createClient } from 'jsr:@supabase/supabase-js@2.49.8';
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 

@@ -13,6 +13,8 @@
  * - Use `import.meta.env` directly for raw access (not recommended)
  */
 
+import { logger } from '../utils/logger';
+
 interface EnvConfig {
   // Supabase (optional - falls back to info.tsx)
   VITE_SUPABASE_URL?: string;
@@ -36,7 +38,7 @@ function getEnvVar(key: string): string | undefined {
     if (typeof import.meta !== 'undefined' && import.meta.env) {
       return import.meta.env[key];
     }
-  } catch (e) {
+  } catch (_e) {
     // Silently fail - import.meta.env not available
   }
   return undefined;
@@ -45,7 +47,7 @@ function getEnvVar(key: string): string | undefined {
 /**
  * Validates that required environment variables are present and valid
  *
- * @throws {EnvValidationError} If validation fails
+ * @throws {Error} If validation fails
  */
 export function validateEnv(): EnvConfig {
   // Return cached value if already validated
@@ -143,16 +145,11 @@ export function logEnvironmentInfo() {
 
   try {
     const env = getEnv();
-    console.log('🌍 Environment Configuration:');
-    console.log(`  Mode: ${env.MODE}`);
-    console.log(`  Environment: ${getEnvironment()}`);
-
-    // Note that Supabase credentials come from /utils/supabase/info.tsx
-    if (env.VITE_SUPABASE_URL) {
-      console.log(`  Supabase URL (from env): ${env.VITE_SUPABASE_URL}`);
-    } else {
-      console.log(`  Supabase URL: Using hardcoded value from /utils/supabase/info.tsx`);
-    }
+    logger.info('Environment Configuration', {
+      mode: env.MODE,
+      environment: getEnvironment(),
+      supabaseUrl: env.VITE_SUPABASE_URL || 'Using hardcoded value from /utils/supabase/info.tsx',
+    });
   } catch (error) {
     console.error('Failed to log environment info:', error);
   }

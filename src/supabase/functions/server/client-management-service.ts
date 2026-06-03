@@ -7,7 +7,7 @@
 import { createClient } from 'jsr:@supabase/supabase-js@2.49.8';
 import * as kv from './kv_store.tsx';
 import { createModuleLogger } from './stderr-logger.ts';
-import { ValidationError, NotFoundError } from './error.middleware.ts';
+import { NotFoundError } from './error.middleware.ts';
 import type {
   Client,
   ClientFilters,
@@ -114,7 +114,7 @@ export class ClientsService {
       usersRaw = await listAllAuthUsers(supabase);
     } catch (err) {
       log.error('Failed to fetch users', err as Error);
-      throw new Error('Failed to fetch clients');
+      throw new Error('Failed to fetch clients', { cause: err });
     }
 
     const users = usersRaw.filter(

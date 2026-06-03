@@ -1163,7 +1163,7 @@ function generateReportHtml(
   const raw = result.rawResponse;
 
   // Build a summary section based on activity type
-  let summaryHtml = '';
+  let summaryHtml: string;
   switch (activity.type) {
     case 'IDV Report':
     case 'IDV Report (Photo)':

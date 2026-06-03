@@ -51,19 +51,6 @@ function formatTime(isoStr: string): string {
   }
 }
 
-function formatDate(isoStr: string): string {
-  try {
-    return new Date(isoStr).toLocaleDateString('en-ZA', {
-      day: '2-digit',
-      month: 'short',
-      year: 'numeric',
-      timeZone: 'Africa/Johannesburg',
-    });
-  } catch {
-    return isoStr;
-  }
-}
-
 /** Map event_type to a human label. */
 const EVENT_TYPE_LABELS: Record<string, string> = {
   meeting: 'Meeting',

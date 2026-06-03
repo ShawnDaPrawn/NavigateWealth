@@ -25,23 +25,6 @@ interface FnaSession {
   status?: string;
   [key: string]: unknown;
 }
-interface FamilyMember {
-  fullName?: string;
-  dateOfBirth?: string;
-  relationship?: string;
-  isFinanciallyDependent?: boolean;
-  [key: string]: unknown;
-}
-interface AssetEntry {
-  type?: string;
-  value?: number;
-  [key: string]: unknown;
-}
-interface RiskPolicy {
-  name?: string;
-  coverAmount?: number;
-  [key: string]: unknown;
-}
 interface MedicalFNAInputs {
   currentPlan: { monthlyPremium: number };
   netMonthlyIncome: number;
@@ -85,21 +68,6 @@ async function autoPopulateFromProfile(clientId: string) {
     log.error('âŒ Error auto-populating Medical FNA:', error);
     return getDefaultMedicalFNAInputs();
   }
-}
-
-/**
- * Determine plan type from plan name
- */
-function determinePlanType(
-  planName: string,
-): 'hospital-only' | 'saver' | 'comprehensive' | 'network' {
-  const name = planName.toLowerCase();
-  if (name.includes('hospital') && !name.includes('saver')) return 'hospital-only';
-  if (name.includes('saver') || name.includes('smart')) return 'saver';
-  if (name.includes('comprehensive') || name.includes('executive') || name.includes('classic'))
-    return 'comprehensive';
-  if (name.includes('network')) return 'network';
-  return 'comprehensive'; // Default
 }
 
 /**
@@ -215,7 +183,7 @@ medicalFnaRoutes.get('/client/:clientId', async (c) => {
       return dateB - dateA;
     });
 
-    log.info(`âœ… Found ${fnas.length} Medical FNA sessions`);
+    log.info(`✅ Found ${fnas.length} Medical FNA sessions`);
     return c.json({ success: true, data: fnas });
   } catch (error: unknown) {
     log.error('âŒ Error fetching Medical FNAs:', error);
@@ -248,11 +216,11 @@ medicalFnaRoutes.get('/client/:clientId/latest-published', async (c) => {
 
         if (!isAdmin && !isOwnData) {
           log.warn(
-            `âš ï¸ User ${user.id} (role: ${user.role}) attempting to access Medical FNA for client ${clientId}`,
+            `⚠️ User ${user.id} (role: ${user.role}) attempting to access Medical FNA for client ${clientId}`,
           );
           return c.json({ success: false, error: 'Unauthorized access to client data' }, 403);
         }
-      } catch (authError) {
+      } catch (_authError) {
         // WORKAROUND: Auth bypass for backward compatibility with client portal
         // Problem: Client portal accesses published FNA data using the anon key without a user session.
         // Why chosen: Removing this would break client-facing FNA display until portal auth is refactored.
@@ -286,8 +254,8 @@ medicalFnaRoutes.get('/client/:clientId/latest-published', async (c) => {
 
     log.info(
       latestPublished
-        ? `âœ… Latest published Medical FNA found: ${latestPublished.id}`
-        : 'âš ï¸ No published Medical FNA',
+        ? `✅ Latest published Medical FNA found: ${latestPublished.id}`
+        : '⚠️ No published Medical FNA',
     );
     return c.json({ success: true, data: latestPublished });
   } catch (error: unknown) {
@@ -308,7 +276,7 @@ medicalFnaRoutes.get('/client/:clientId/auto-populate', async (c) => {
     const clientId = c.req.param('clientId');
     const inputs = await autoPopulateFromProfile(clientId);
 
-    log.info('âœ… Auto-population data generated');
+    log.info('✅ Auto-population data generated');
     return c.json({ success: true, data: inputs });
   } catch (error: unknown) {
     log.error('âŒ Error auto-populating:', error);
@@ -360,7 +328,7 @@ medicalFnaRoutes.post('/create', async (c) => {
     // Save to KV store
     await kv.set(`medical-fna:${fnaId}`, fna);
 
-    log.info('âœ… Medical FNA created:', { fnaId });
+    log.info('✅ Medical FNA created:', { fnaId });
     return c.json({ success: true, data: fna });
   } catch (error: unknown) {
     log.error('âŒ Error creating Medical FNA:', error);
@@ -396,7 +364,7 @@ medicalFnaRoutes.put('/inputs/:fnaId', async (c) => {
 
     await kv.set(`medical-fna:${fnaId}`, fna);
 
-    log.info('âœ… Medical FNA inputs updated');
+    log.info('✅ Medical FNA inputs updated');
     return c.json({ success: true, data: fna });
   } catch (error: unknown) {
     log.error('âŒ Error updating Medical FNA inputs:', error);
@@ -441,7 +409,7 @@ medicalFnaRoutes.put('/results/:fnaId', async (c) => {
 
     await kv.set(`medical-fna:${fnaId}`, fna);
 
-    log.info('âœ… Medical FNA results updated');
+    log.info('✅ Medical FNA results updated');
     return c.json({ success: true, data: fna });
   } catch (error: unknown) {
     log.error('âŒ Error updating Medical FNA results:', error);
@@ -477,7 +445,7 @@ medicalFnaRoutes.post('/calculate/:fnaId', async (c) => {
 
     await kv.set(`medical-fna:${fnaId}`, fna);
 
-    log.info('âœ… Medical FNA calculation complete');
+    log.info('✅ Medical FNA calculation complete');
     return c.json({ success: true, data: fna });
   } catch (error: unknown) {
     log.error('âŒ Error calculating Medical FNA:', error);
@@ -506,7 +474,7 @@ medicalFnaRoutes.put('/draft/:fnaId', async (c) => {
 
     await kv.set(`medical-fna:${fnaId}`, fna);
 
-    log.info('âœ… Medical FNA saved as draft');
+    log.info('✅ Medical FNA saved as draft');
     return c.json({ success: true, data: fna });
   } catch (error: unknown) {
     log.error('âŒ Error saving Medical FNA draft:', error);
@@ -528,7 +496,7 @@ medicalFnaRoutes.post('/publish/:fnaId', async (c) => {
     });
 
     const user = await authenticateUser(c.req.header('Authorization'));
-    log.info('âœ… User authenticated:', { userId: user.id });
+    log.info('✅ User authenticated:', { userId: user.id });
 
     const fnaId = c.req.param('fnaId');
     log.info('ðŸ“Œ FNA ID from params:', { fnaId });
@@ -552,7 +520,7 @@ medicalFnaRoutes.post('/publish/:fnaId', async (c) => {
 
     await kv.set(`medical-fna:${fnaId}`, fna);
 
-    log.info('âœ… Medical FNA published successfully:', {
+    log.info('✅ Medical FNA published successfully:', {
       fnaId,
       clientId: fna.clientId,
       publishedBy: user.id,
@@ -580,8 +548,8 @@ medicalFnaRoutes.post('/publish/:fnaId', async (c) => {
  */
 medicalFnaRoutes.post('/unpublish/:fnaId', async (c) => {
   try {
-    log.info('ðŸ“¥ POST /medical-fna/unpublish/:fnaId');
-    const user = await authenticateUser(c.req.header('Authorization'));
+    log.info('ðŸ”¥ POST /medical-fna/unpublish/:fnaId');
+    await authenticateUser(c.req.header('Authorization'));
 
     const fnaId = c.req.param('fnaId');
     const fna = await kv.get(`medical-fna:${fnaId}`);
@@ -595,7 +563,7 @@ medicalFnaRoutes.post('/unpublish/:fnaId', async (c) => {
 
     await kv.set(`medical-fna:${fnaId}`, fna);
 
-    log.info('âœ… Medical FNA unpublished');
+    log.info('✅ Medical FNA unpublished');
     return c.json({ success: true, data: fna });
   } catch (error: unknown) {
     log.error('âŒ Error unpublishing Medical FNA:', error);
@@ -624,7 +592,7 @@ medicalFnaRoutes.put('/archive/:fnaId', async (c) => {
 
     await kv.set(`medical-fna:${fnaId}`, fna);
 
-    log.info('âœ… Medical FNA archived');
+    log.info('✅ Medical FNA archived');
     return c.json({ success: true, data: fna });
   } catch (error: unknown) {
     log.error('âŒ Error archiving Medical FNA:', error);
@@ -645,7 +613,7 @@ medicalFnaRoutes.delete('/delete/:fnaId', async (c) => {
 
     await kv.del(`medical-fna:${fnaId}`);
 
-    log.info('âœ… Medical FNA deleted');
+    log.info('✅ Medical FNA deleted');
     return c.json({ success: true, data: null });
   } catch (error: unknown) {
     log.error('âŒ Error deleting Medical FNA:', error);
@@ -670,7 +638,7 @@ medicalFnaRoutes.get('/:fnaId', async (c) => {
       return c.json({ success: false, error: 'Medical FNA not found' }, 404);
     }
 
-    log.info('âœ… Medical FNA retrieved');
+    log.info('✅ Medical FNA retrieved');
     return c.json({ success: true, data: fna });
   } catch (error: unknown) {
     log.error('âŒ Error fetching Medical FNA:', error);

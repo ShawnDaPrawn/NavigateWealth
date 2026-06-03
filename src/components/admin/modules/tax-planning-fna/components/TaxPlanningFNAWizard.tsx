@@ -175,7 +175,7 @@ export function TaxPlanningFNAWizard({
             onBack={() => setCurrentStep(2)}
           />
         );
-      case 4:
+      case 4: {
         if (!adjustedInputs || !baselineInputs) return null;
         // We calculate final results on the fly or use a cached one.
         // Let's re-calculate to be safe, ensuring consistency.
@@ -190,6 +190,7 @@ export function TaxPlanningFNAWizard({
             onBack={() => setCurrentStep(3)}
           />
         );
+      }
       default:
         return null;
     }

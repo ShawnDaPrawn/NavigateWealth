@@ -267,7 +267,7 @@ function readSupabaseAnonKey() {
 
   try {
     const src = fs.readFileSync(path.resolve('src/utils/supabase/info.tsx'), 'utf8');
-    const match = src.match(/export\s+const\s+publicAnonKey\s*=\s*\"([^\"]+)\"/);
+    const match = src.match(/export\s+const\s+publicAnonKey\s*=\s*"([^"]+)"/);
     return match?.[1] ? match[1].trim() : null;
   } catch {
     return null;

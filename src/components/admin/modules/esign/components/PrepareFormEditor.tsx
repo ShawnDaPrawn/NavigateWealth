@@ -22,6 +22,7 @@ import { PDFViewer } from './PDFViewer';
 import { FieldPalette } from './FieldPalette';
 import type { EsignEnvelope, EsignField, SignerFormData } from '../types';
 import { projectId, publicAnonKey } from '../../../../../utils/supabase/info';
+import { logger } from '../../../../../utils/logger';
 
 interface PrepareFormEditorProps {
   envelope: EsignEnvelope;
@@ -112,7 +113,7 @@ export function PrepareFormEditor({
       lastSavedFieldsRef.current = JSON.stringify(fields);
       setHasUnsavedChanges(false);
 
-      console.log('✅ Auto-saved field positions');
+      logger.info('Auto-saved field positions');
     } catch (error) {
       console.error('❌ Auto-save failed:', error);
       // Don't show error to user for auto-save failures

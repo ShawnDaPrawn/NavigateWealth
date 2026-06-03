@@ -135,7 +135,9 @@ export function SignupPage() {
       try {
         result = JSON.parse(responseText);
       } catch (parseError: unknown) {
-        throw new Error(`Server returned non-JSON response: ${responseText.substring(0, 100)}...`);
+        throw new Error(`Server returned non-JSON response: ${responseText.substring(0, 100)}...`, {
+          cause: parseError,
+        });
       }
 
       if (!response.ok) {

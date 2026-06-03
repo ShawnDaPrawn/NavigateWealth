@@ -1274,7 +1274,7 @@ async function queueArticleNotificationJob(
   const jobId = crypto.randomUUID();
   const createdAt = nowIso();
 
-  let jobItems: ArticleNotificationJobItem[] = [];
+  let jobItems: ArticleNotificationJobItem[];
 
   if (options.kind === 'publish') {
     const recipients = items as ArticleNotificationRecipient[];
@@ -1576,7 +1576,7 @@ export async function sendArticlePublishedNotificationsBlastThenRetryQueue(
   const blast = await runArticleNotificationDelivery(article, { source: 'publish' });
 
   let retryJob: ArticleNotificationJobSnapshot | null = null;
-  let publishCampaign: ArticleNotificationCampaign | null = null;
+  let publishCampaign: ArticleNotificationCampaign | null;
 
   try {
     const blastFullyDelivered =

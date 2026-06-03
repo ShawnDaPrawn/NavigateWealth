@@ -194,7 +194,7 @@ export async function callOpenAIExtraction(
     return parseExtractionResponse(content);
   } catch (err) {
     log.error('Chat Completions extraction also failed:', getErrMsg(err));
-    throw new Error(`AI extraction failed: ${getErrMsg(err)}`);
+    throw new Error(`AI extraction failed: ${getErrMsg(err)}`, { cause: err });
   }
 }
 
@@ -264,7 +264,9 @@ function parseExtractionResponse(rawText: string): ExtractedPolicyData {
       error: getErrMsg(parseErr),
       rawText: cleaned.substring(0, 500),
     });
-    throw new Error(`Failed to parse AI extraction response: ${getErrMsg(parseErr)}`);
+    throw new Error(`Failed to parse AI extraction response: ${getErrMsg(parseErr)}`, {
+      cause: parseErr,
+    });
   }
 }
 

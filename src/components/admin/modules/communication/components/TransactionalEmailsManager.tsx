@@ -45,7 +45,7 @@ export function TransactionalEmailsManager({ onBack }: TransactionalEmailsManage
     try {
       await communicationApi.toggleTemplate(id, newEnabled);
       toast.success(`Email type ${newEnabled ? 'enabled' : 'disabled'}`);
-    } catch (error) {
+    } catch (_error) {
       // Revert on error
       setTemplates((prev) =>
         prev.map((t) => (t.id === id ? { ...t, enabled: currentEnabled } : t)),

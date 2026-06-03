@@ -30,6 +30,7 @@ import {
 import { WIZARD_STEPS } from '../constants';
 import { calculateMedicalNeeds } from '../utils/calculations';
 import { MedicalFNAApiService } from '../api';
+import { logger } from '../../../../../utils/logger';
 
 interface MedicalFNAWizardProps {
   clientId?: string;
@@ -159,7 +160,7 @@ export function MedicalFNAWizard({
       // 4. Publish
       await MedicalFNAApiService.publishMedicalFNA(session.id);
 
-      console.log('Publishing Medical FNA:', {
+      logger.info('Publishing Medical FNA', {
         id: session.id,
         clientId,
         inputs: state.inputs,

@@ -190,7 +190,7 @@ export function ContentTemplates() {
         toast.success('Template created successfully');
         setShowCreateForm(false);
         await loadTemplates();
-      } catch (err) {
+      } catch {
         toast.error('Failed to create template');
       } finally {
         setIsSaving(false);
@@ -211,7 +211,7 @@ export function ContentTemplates() {
         toast.success('Template updated successfully');
         setEditingTemplate(null);
         await loadTemplates();
-      } catch (err) {
+      } catch {
         toast.error('Failed to update template');
       } finally {
         setIsSaving(false);
@@ -227,7 +227,7 @@ export function ContentTemplates() {
         toast.success('Template deleted');
         setDeleteConfirm(null);
         await loadTemplates();
-      } catch (err) {
+      } catch {
         toast.error('Failed to delete template');
       }
     },
@@ -239,7 +239,7 @@ export function ContentTemplates() {
       await PublicationsAPI.Templates.seedDefaults();
       toast.success('Default templates created');
       await loadTemplates();
-    } catch (err) {
+    } catch {
       toast.error('Failed to seed default templates');
     }
   }, [loadTemplates]);

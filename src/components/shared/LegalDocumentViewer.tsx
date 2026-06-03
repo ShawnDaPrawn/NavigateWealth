@@ -1,3 +1,4 @@
+/* eslint-disable react-refresh/only-export-components */
 import React, { useCallback, useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router';
 import { ArrowUpRight, CalendarDays, Download, FileText, ShieldCheck } from 'lucide-react';

@@ -58,7 +58,7 @@ export function OtpVerificationStep({
     if (isComplete && !isVerifying) {
       handleVerify();
     }
-  }, [otp]);
+  }, [otp, isVerifying]);
 
   const handleOtpChange = (index: number, value: string) => {
     if (value && !/^\d$/.test(value)) return;
@@ -131,7 +131,7 @@ export function OtpVerificationStep({
       } else {
         setError(result.error || 'Failed to resend code');
       }
-    } catch (err) {
+    } catch (_err) {
       setError('An error occurred while resending the code');
     }
   };

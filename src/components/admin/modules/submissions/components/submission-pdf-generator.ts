@@ -191,7 +191,7 @@ function flattenPayload(
         if ('selected' in vObj && 'adviser_assist' in vObj) {
           if (vObj.selected) {
             const coverLabel = formatPayloadKey(key);
-            let coverValue = '';
+            let coverValue: string;
             if (vObj.adviser_assist) {
               coverValue = 'Adviser assistance requested';
             } else {

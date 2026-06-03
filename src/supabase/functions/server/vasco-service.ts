@@ -302,7 +302,7 @@ function buildRagContext(contexts: RetrievedContext[]): {
   const seen = new Set<string>();
   const citations: VascoCitation[] = [];
 
-  const contextParts = contexts.map((ctx, i) => {
+  const contextParts = contexts.map((ctx, _i) => {
     if (!seen.has(ctx.articleSlug)) {
       seen.add(ctx.articleSlug);
       citations.push({

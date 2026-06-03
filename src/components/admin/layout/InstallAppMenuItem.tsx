@@ -2,6 +2,7 @@ import React from 'react';
 import { Download } from 'lucide-react';
 import { DropdownMenuItem } from '../../ui/dropdown-menu';
 import { toast } from 'sonner';
+import { logger } from '../../../utils/logger';
 
 interface InstallAppMenuItemProps {
   isInstalling?: boolean;
@@ -31,7 +32,7 @@ export function InstallAppMenuItem({
       toast.dismiss(loadingToast);
 
       if (!outcome) {
-        console.log('PWA: Install prompt unavailable');
+        logger.info('PWA: Install prompt unavailable');
         onShowInstallHelp();
         return;
       }

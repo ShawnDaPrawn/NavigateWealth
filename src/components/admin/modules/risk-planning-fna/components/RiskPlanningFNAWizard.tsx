@@ -162,7 +162,7 @@ export function RiskPlanningFNAWizard({
 
       // Success - call onComplete callback if provided
       handleComplete();
-    } catch (error) {
+    } catch (_error) {
       setState((prev) => ({
         ...prev,
         isPublishing: false,

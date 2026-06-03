@@ -121,7 +121,6 @@ app.post(
     }
 
     // Extract creator from auth context header
-    const authHeader = c.req.header('Authorization') || '';
     const createdBy = body.createdBy || 'admin';
 
     const input: CreateSnapshotInput = {
