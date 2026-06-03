@@ -31,7 +31,7 @@ import type {
   InitializationStatus,
   InitializePublicationsInput,
   ReorderUpdate,
-  _ApiResponse,
+
   NewsItem,
 } from './types';
 import type { AIWritingRequest, AIWritingResponse } from './types';
