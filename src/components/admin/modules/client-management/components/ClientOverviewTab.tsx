@@ -128,6 +128,7 @@ import {
   deriveCashflowData,
   deriveActionDistribution,
   deriveEnrichedActivityEvents,
+  INITIAL_ACTIVITY_COUNT,
   type Policy,
   type ActionItem,
   type ActionPriority,
@@ -313,7 +314,8 @@ export function ClientOverviewTab({ client, mode = 'adviser' }: ClientOverviewTa
       // Now: 1 batch schema call (cached) + 1 policy call, both in parallel.
       const [schemaMap, rawPolicies] = await Promise.all([
         fetchAllSchemas(),
-        api.get<{ policies?: Policy[] }>(`/integrations/policies?clientId=${client.id}`)
+        api
+          .get<{ policies?: Policy[] }>(`/integrations/policies?clientId=${client.id}`)
           .then((data) => (data.policies || []) as Policy[])
           .catch(() => [] as Policy[]),
       ]);
@@ -353,8 +355,16 @@ export function ClientOverviewTab({ client, mode = 'adviser' }: ClientOverviewTa
   const fetchActivityLogs = useCallback(async () => {
     setLoadingActivity(true);
     try {
+      type ActivityLog = {
+        id?: string;
+        type: string;
+        timestamp?: string;
+        success?: boolean;
+        errorMessage?: string;
+        [key: string]: unknown;
+      };
       const actData = await api
-        .get<{ success: boolean; logs?: Array<{ id?: string; type: string; timestamp?: string; success?: boolean; errorMessage?: string; [key: string]: unknown }> }>(`/security/${client.id}/activity?limit=50`)
+        .get<{ success: boolean; logs?: ActivityLog[] }>(`/security/${client.id}/activity?limit=50`)
         .catch(() => null);
 
       const events: ActivityEvent[] = [];
@@ -370,32 +380,23 @@ export function ClientOverviewTab({ client, mode = 'adviser' }: ClientOverviewTa
       });
 
       if (actData?.success && Array.isArray(actData.logs)) {
-        actData.logs.forEach(
-            (log: {
-              id?: string;
-              type: string;
-              timestamp?: string;
-              success?: boolean;
-              errorMessage?: string;
-              [key: string]: unknown;
-            }) => {
-              const typeCfg = ACTIVITY_TYPE_MAP[log.type] || {
-                label: log.type?.replace(/_/g, ' ') || 'Unknown event',
-                icon: Activity,
-                color: 'text-gray-500',
-              };
-              events.push({
-                id: log.id || `evt-${events.length}`,
-                type: log.type,
-                label: typeCfg.label,
-                timestamp: log.timestamp || '',
-                icon: typeCfg.icon,
-                iconColor: typeCfg.color,
-                success: log.success,
-                detail: log.errorMessage || undefined,
-              });
-            },
-          );
+        actData.logs.forEach((log: ActivityLog) => {
+          const typeCfg = ACTIVITY_TYPE_MAP[log.type] || {
+            label: log.type?.replace(/_/g, ' ') || 'Unknown event',
+            icon: Activity,
+            color: 'text-gray-500',
+          };
+          events.push({
+            id: log.id || `evt-${events.length}`,
+            type: log.type,
+            label: typeCfg.label,
+            timestamp: log.timestamp || '',
+            icon: typeCfg.icon,
+            iconColor: typeCfg.color,
+            success: log.success,
+            detail: log.errorMessage || undefined,
+          });
+        });
       }
 
       events.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
@@ -1629,4 +1630,3 @@ export function ClientOverviewTab({ client, mode = 'adviser' }: ClientOverviewTa
     </div>
   );
 }
-

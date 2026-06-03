@@ -77,7 +77,13 @@ const CLIENT_CATEGORY_LABELS: Record<ActionItem['category'], string> = {
 
 // ── ActionItemRow component ──────────────────────────────────────────────
 
-export function ActionItemRow({ item, mode = 'adviser' }: { item: ActionItem; mode?: DashboardMode }) {
+export function ActionItemRow({
+  item,
+  mode = 'adviser',
+}: {
+  item: ActionItem;
+  mode?: DashboardMode;
+}) {
   const style = PRIORITY_STYLES[item.priority];
   const ItemIcon = item.icon;
   const categoryLabels = mode === 'client' ? CLIENT_CATEGORY_LABELS : CATEGORY_LABELS;

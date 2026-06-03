@@ -13,7 +13,11 @@ import type { Policy, ActionItem, GapItem } from '../clientOverviewUtils';
 import type { Client, ProfileData } from '../../types';
 import type { HealthSubScores } from '../../utils';
 import type { KPIValue } from './KPISummaryTable';
-import type { InsuranceCoverageItem, CashflowWaterfallData, AssetAllocationData } from './OverviewCharts';
+import type {
+  InsuranceCoverageItem,
+  CashflowWaterfallData,
+  AssetAllocationData,
+} from './OverviewCharts';
 import type { CategoryKPI } from './CategoryPolicyKPIs';
 import type { DocumentItem } from './DocumentsChecklist';
 import type { FNAStatusItem } from './FNAStatusCard';
@@ -181,8 +185,7 @@ export async function downloadClientOverviewPDF(params: {
           phone: p.phoneNumber,
           address: addressLine(p),
           employmentStatus: p.employmentStatus,
-          employer:
-            (p.employers || [])[0]?.employerName || p.selfEmployedCompanyName || undefined,
+          employer: (p.employers || [])[0]?.employerName || p.selfEmployedCompanyName || undefined,
           position: (p.employers || [])[0]?.jobTitle || undefined,
           industry: (p.employers || [])[0]?.industry || p.selfEmployedIndustry || undefined,
           riskProfile: p.riskAssessment?.riskCategory
@@ -311,16 +314,14 @@ export async function downloadClientOverviewPDF(params: {
   // but we need the blob directly. We build the URL from supabaseUrl (same source
   // as api client's private baseURL).
   const pdfApiBase = `${supabaseUrl}/functions/v1/make-server-91ed8379`;
-  const res = await fetch(`${pdfApiBase}/reporting/client-overview-pdf`,
-    {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${authToken}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(reportData),
+  const res = await fetch(`${pdfApiBase}/reporting/client-overview-pdf`, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${authToken}`,
+      'Content-Type': 'application/json',
     },
-  );
+    body: JSON.stringify(reportData),
+  });
 
   if (!res.ok) {
     const errData = await res.json().catch(() => null);
