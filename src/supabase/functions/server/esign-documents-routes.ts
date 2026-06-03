@@ -19,7 +19,7 @@ import { getErrMsg } from './shared-logger-utils.ts';
 import { rateLimit } from './esign-rate-limit.ts';
 import { requireIdempotency } from './idempotency.ts';
 import { getRequestMetadata, ensureStorageBuckets } from './esign-route-helpers.ts';
-import type { SignerRecord } from './esign-route-helpers.ts';
+import type { SignerRecord, FieldRecord } from './esign-route-helpers.ts';
 import {
   createDocument,
   getEnvelopeDetails,
@@ -66,9 +66,9 @@ documentsRoutes.get('/envelopes/:envelopeId/manifest', async (c) => {
   } catch (err) {
     log.error('Get manifest error:', err);
     const status = err instanceof AuthError ? err.statusCode : 500;
-    return c.json(
-      { error: err instanceof Error ? err.message : 'Failed to load manifest' },
-      status,
+    return new Response(
+      JSON.stringify({ error: err instanceof Error ? err.message : 'Failed to load manifest' }),
+      { status: status, headers: { 'Content-Type': 'application/json' } },
     );
   }
 });
@@ -119,9 +119,9 @@ documentsRoutes.put(
     } catch (err) {
       log.error('Save manifest error:', err);
       const status = err instanceof AuthError ? err.statusCode : 500;
-      return c.json(
-        { error: err instanceof Error ? err.message : 'Failed to save manifest' },
-        status,
+      return new Response(
+        JSON.stringify({ error: err instanceof Error ? err.message : 'Failed to save manifest' }),
+        { status: status, headers: { 'Content-Type': 'application/json' } },
       );
     }
   },
@@ -147,9 +147,9 @@ documentsRoutes.delete('/envelopes/:envelopeId/manifest', async (c) => {
   } catch (err) {
     log.error('Clear manifest error:', err);
     const status = err instanceof AuthError ? err.statusCode : 500;
-    return c.json(
-      { error: err instanceof Error ? err.message : 'Failed to clear manifest' },
-      status,
+    return new Response(
+      JSON.stringify({ error: err instanceof Error ? err.message : 'Failed to clear manifest' }),
+      { status: status, headers: { 'Content-Type': 'application/json' } },
     );
   }
 });
@@ -216,9 +216,9 @@ documentsRoutes.post(
     } catch (err) {
       log.error('Materialize preview error:', err);
       const status = err instanceof AuthError ? err.statusCode : 500;
-      return c.json(
-        { error: err instanceof Error ? err.message : 'Failed to materialise preview' },
-        status,
+      return new Response(
+        JSON.stringify({ error: err instanceof Error ? err.message : 'Failed to materialise preview' }),
+        { status: status, headers: { 'Content-Type': 'application/json' } },
       );
     }
   },
@@ -255,9 +255,9 @@ documentsRoutes.get('/envelopes/:envelopeId/documents', async (c) => {
   } catch (err) {
     log.error('List envelope documents error:', err);
     const status = err instanceof AuthError ? err.statusCode : 500;
-    return c.json(
-      { error: err instanceof Error ? err.message : 'Failed to list documents' },
-      status,
+    return new Response(
+      JSON.stringify({ error: err instanceof Error ? err.message : 'Failed to list documents' }),
+      { status: status, headers: { 'Content-Type': 'application/json' } },
     );
   }
 });
@@ -351,9 +351,9 @@ documentsRoutes.post(
     } catch (err) {
       log.error('Add envelope document error:', err);
       const status = err instanceof AuthError ? err.statusCode : 500;
-      return c.json(
-        { error: err instanceof Error ? err.message : 'Failed to add document' },
-        status,
+      return new Response(
+        JSON.stringify({ error: err instanceof Error ? err.message : 'Failed to add document' }),
+        { status: status, headers: { 'Content-Type': 'application/json' } },
       );
     }
   },
@@ -396,9 +396,9 @@ documentsRoutes.delete('/envelopes/:envelopeId/documents/:documentId', async (c)
         : err instanceof Error && /last document/i.test(err.message)
           ? 409
           : 500;
-    return c.json(
-      { error: err instanceof Error ? err.message : 'Failed to remove document' },
-      status,
+    return new Response(
+      JSON.stringify({ error: err instanceof Error ? err.message : 'Failed to remove document' }),
+      { status: status, headers: { 'Content-Type': 'application/json' } },
     );
   }
 });
@@ -438,9 +438,9 @@ documentsRoutes.put('/envelopes/:envelopeId/documents/order', async (c) => {
   } catch (err) {
     log.error('Reorder envelope documents error:', err);
     const status = err instanceof AuthError ? err.statusCode : 500;
-    return c.json(
-      { error: err instanceof Error ? err.message : 'Failed to reorder documents' },
-      status,
+    return new Response(
+      JSON.stringify({ error: err instanceof Error ? err.message : 'Failed to reorder documents' }),
+      { status: status, headers: { 'Content-Type': 'application/json' } },
     );
   }
 });
@@ -799,9 +799,9 @@ documentsRoutes.post(
     } catch (error: unknown) {
       log.error('❌ Send invites error:', error);
       const status = error instanceof AuthError ? error.statusCode : 500;
-      return c.json(
-        { error: error instanceof Error ? error.message : 'Failed to send invites' },
-        status,
+      return new Response(
+        JSON.stringify({ error: error instanceof Error ? error.message : 'Failed to send invites' }),
+        { status: status, headers: { 'Content-Type': 'application/json' } },
       );
     }
   },
