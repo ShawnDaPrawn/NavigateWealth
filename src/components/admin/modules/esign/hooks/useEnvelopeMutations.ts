@@ -56,7 +56,7 @@ export function useUploadDocument() {
       return esignApi.uploadDocument(request);
     },
     onSuccess: (_data, variables) => {
-      console.log('✅ [E-Sign Mutation] Document uploaded successfully');
+      logger.info('[E-Sign Mutation] Document uploaded successfully');
 
       queryClient.invalidateQueries({ queryKey: esignKeys.envelopes() });
 
@@ -102,7 +102,7 @@ export function useSaveFields() {
       return esignApi.saveFields(envelopeId, fields);
     },
     onSuccess: (_data, variables) => {
-      console.log('✅ [E-Sign Mutation] Fields saved successfully');
+      logger.info('[E-Sign Mutation] Fields saved successfully');
       queryClient.invalidateQueries({
         queryKey: esignKeys.envelope(variables.envelopeId),
       });
@@ -154,7 +154,7 @@ export function useSendInvites() {
       return esignApi.sendInvites(envelopeId, request);
     },
     onSuccess: (_data, variables) => {
-      console.log('✅ [E-Sign Mutation] Invitations sent successfully');
+      logger.info('[E-Sign Mutation] Invitations sent successfully');
       queryClient.invalidateQueries({ queryKey: esignKeys.envelopes() });
       queryClient.invalidateQueries({
         queryKey: esignKeys.envelope(variables.envelopeId),
@@ -192,7 +192,7 @@ export function useVoidEnvelope() {
       return esignApi.voidEnvelope(envelopeId);
     },
     onSuccess: (_data, envelopeId) => {
-      console.log('✅ [E-Sign Mutation] Envelope voided successfully');
+      logger.info('[E-Sign Mutation] Envelope voided successfully');
       queryClient.invalidateQueries({ queryKey: esignKeys.envelopes() });
       queryClient.invalidateQueries({ queryKey: esignKeys.envelope(envelopeId) });
       toast.success(SUCCESS_MESSAGES.ENVELOPE_VOIDED);
@@ -319,7 +319,7 @@ export function useSubmitSignature() {
       return esignApi.submitSignature(envelopeId, request);
     },
     onSuccess: (_data, variables) => {
-      console.log('✅ [E-Sign Mutation] Signature submitted successfully');
+      logger.info('[E-Sign Mutation] Signature submitted successfully');
 
       // Invalidate envelope lists and specific envelope
       queryClient.invalidateQueries({ queryKey: esignKeys.envelopes() });
@@ -369,7 +369,7 @@ export function useRejectSigning() {
       return esignApi.rejectSigning(envelopeId, request);
     },
     onSuccess: (_data, variables) => {
-      console.log('✅ [E-Sign Mutation] Signing rejected');
+      logger.info('[E-Sign Mutation] Signing rejected');
 
       // Invalidate envelope lists and specific envelope
       queryClient.invalidateQueries({ queryKey: esignKeys.envelopes() });

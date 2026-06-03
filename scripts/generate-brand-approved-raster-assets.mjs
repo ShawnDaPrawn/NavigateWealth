@@ -15,7 +15,7 @@ const sourcePaths = {
   iconOnly: path.join(sourceDir, '1_Icon_Only', 'Navigate_Wealth_Icon_Only@2x.png'),
 };
 
-const BRAND_PURPLE = { r: 106, g: 39, b: 216 };
+const _BRAND_PURPLE = { r: 106, g: 39, b: 216 };
 const WHITE = { r: 255, g: 255, b: 255 };
 const MONO = { r: 46, g: 17, b: 82 };
 const FULL_TEXT_MIN_X = 580;

@@ -44,6 +44,7 @@ import { communicationApi } from '../api';
 import { toast } from 'sonner';
 import { Provider } from '../../product-management/types';
 import { GroupEditor } from './groups/GroupEditor';
+import { logger } from '../../../../../utils/logger';
 
 interface CustomGroupManagerProps {
   onClose: () => void;
@@ -224,11 +225,11 @@ export function CustomGroupManager({ onClose, onSelectGroup }: CustomGroupManage
   const handleDebug = async () => {
     try {
       const debugData = await communicationApi.debugGroups();
-      console.log('===== GROUP & CLIENT DEBUG DATA =====');
-      console.log('Groups:', debugData.groups);
-      console.log('Clients:', debugData.clients);
-      console.log('Summary:', debugData.summary);
-      console.log('====================================');
+      logger.debug('===== GROUP & CLIENT DEBUG DATA =====');
+      logger.debug('Groups:', debugData.groups);
+      logger.debug('Clients:', debugData.clients);
+      logger.debug('Summary:', debugData.summary);
+      logger.debug('====================================');
       toast.success('Debug data logged to console');
     } catch (error) {
       console.error('Failed to fetch debug data:', error);

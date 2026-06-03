@@ -765,6 +765,7 @@ export const BASE_PDF_CSS = `
 export type PdfPageSize = 'A4' | 'A3';
 export type PdfOrientation = 'portrait' | 'landscape';
 
+// eslint-disable-next-line react-refresh/only-export-components
 export function getPdfDimensions(pageSize: PdfPageSize, orientation: PdfOrientation) {
   const portrait =
     pageSize === 'A3' ? { widthMm: 297, heightMm: 420 } : { widthMm: 210, heightMm: 297 };

@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router';
 import { Alert, AlertDescription } from '../ui/alert';
 import { CheckCircle2, XCircle, Loader2 } from 'lucide-react';
 import { getSupabaseClient } from '../../utils/supabase/client';
+import { logger } from '../../utils/logger';
 
 export default function AuthCallbackPage() {
   const navigate = useNavigate();
@@ -18,9 +19,9 @@ export default function AuthCallbackPage() {
         const hash = window.location.hash;
         const search = window.location.search;
 
-        console.log('🔍 AUTH CALLBACK - Full URL:', fullUrl);
-        console.log('🔍 AUTH CALLBACK - Hash:', hash);
-        console.log('🔍 AUTH CALLBACK - Search params:', search);
+        logger.debug('AUTH CALLBACK - Full URL:', fullUrl);
+        logger.debug('AUTH CALLBACK - Hash:', hash);
+        logger.debug('AUTH CALLBACK - Search params:', search);
 
         // Check for PKCE code in query params
         const searchParams = new URLSearchParams(search);
@@ -40,7 +41,7 @@ export default function AuthCallbackPage() {
           hashType === 'invite' ||
           hashType === 'recovery';
 
-        console.log('🔍 AUTH CALLBACK - Auth data:', {
+        logger.debug('AUTH CALLBACK - Auth data:', {
           hasCode: !!code,
           hasAccessToken: !!accessToken,
           hasTokenHash: !!tokenHash,
@@ -64,7 +65,7 @@ export default function AuthCallbackPage() {
 
         if (code) {
           // PKCE flow - exchange code for session
-          console.log('✅ AUTH CALLBACK - PKCE code found, exchanging for session...');
+          logger.info('AUTH CALLBACK - PKCE code found, exchanging for session...');
           const { data, error } = await supabase.auth.exchangeCodeForSession(code);
 
           if (error) {
@@ -73,12 +74,9 @@ export default function AuthCallbackPage() {
           }
 
           if (data.session) {
-            console.log('✅ AUTH CALLBACK - Session created from code!');
-            console.log('✅ AUTH CALLBACK - User:', data.session.user.email);
-            console.log(
-              '✅ AUTH CALLBACK - Email confirmed:',
-              data.session.user.email_confirmed_at,
-            );
+            logger.info('AUTH CALLBACK - Session created from code!');
+            logger.info('AUTH CALLBACK - User:', data.session.user.email);
+            logger.info('AUTH CALLBACK - Email confirmed:', data.session.user.email_confirmed_at);
 
             const redirectPath = getSuccessRedirect(data.session);
 
@@ -86,21 +84,21 @@ export default function AuthCallbackPage() {
               setStatus('success');
               setMessage('Welcome! Redirecting you to set up your account password...');
               setTimeout(() => {
-                console.log('➡️ AUTH CALLBACK - Invited user, redirecting to', redirectPath);
+                logger.info('AUTH CALLBACK - Invited user, redirecting to', redirectPath);
                 navigate(redirectPath, { replace: true, state: { fromInvite: true } });
               }, 1500);
             } else {
               setStatus('success');
               setMessage('Email verified successfully! Redirecting to application...');
               setTimeout(() => {
-                console.log('➡️ AUTH CALLBACK - Redirecting to', redirectPath);
+                logger.info('AUTH CALLBACK - Redirecting to', redirectPath);
                 window.location.href = redirectPath;
               }, 1500);
             }
           }
         } else if (accessToken) {
           // Implicit flow - tokens already in URL
-          console.log('✅ AUTH CALLBACK - Access token found in hash!');
+          logger.info('AUTH CALLBACK - Access token found in hash!');
           const refreshToken = hashParams.get('refresh_token');
 
           if (refreshToken) {
@@ -115,8 +113,8 @@ export default function AuthCallbackPage() {
             }
 
             if (data.session) {
-              console.log('✅ AUTH CALLBACK - Session set from tokens!');
-              console.log('✅ AUTH CALLBACK - User:', data.session.user.email);
+              logger.info('AUTH CALLBACK - Session set from tokens!');
+              logger.info('AUTH CALLBACK - User:', data.session.user.email);
 
               const redirectPath = getSuccessRedirect(data.session);
 
@@ -124,14 +122,14 @@ export default function AuthCallbackPage() {
                 setStatus('success');
                 setMessage('Welcome! Redirecting you to set up your account password...');
                 setTimeout(() => {
-                  console.log('➡️ AUTH CALLBACK - Invited user, redirecting to', redirectPath);
+                  logger.info('AUTH CALLBACK - Invited user, redirecting to', redirectPath);
                   navigate(redirectPath, { replace: true, state: { fromInvite: true } });
                 }, 1500);
               } else {
                 setStatus('success');
                 setMessage('Email verified successfully! Redirecting to application...');
                 setTimeout(() => {
-                  console.log('➡️ AUTH CALLBACK - Redirecting to', redirectPath);
+                  logger.info('AUTH CALLBACK - Redirecting to', redirectPath);
                   window.location.href = redirectPath;
                 }, 1500);
               }
@@ -139,7 +137,7 @@ export default function AuthCallbackPage() {
           }
         } else if (tokenHash) {
           // Email verification with token_hash (newer Supabase flow)
-          console.log('✅ AUTH CALLBACK - Token hash found, verifying...');
+          logger.info('AUTH CALLBACK - Token hash found, verifying...');
 
           const verifyType = hashType || type;
           if (verifyType === 'invite') {
@@ -148,14 +146,14 @@ export default function AuthCallbackPage() {
               data: { session },
             } = await supabase.auth.getSession();
             if (session) {
-              console.log('✅ AUTH CALLBACK - Invite session found via token_hash!');
+              logger.info('AUTH CALLBACK - Invite session found via token_hash!');
               setStatus('success');
               setMessage('Welcome! Redirecting you to set up your account password...');
               setTimeout(() => {
                 navigate('/reset-password', { replace: true, state: { fromInvite: true } });
               }, 1500);
             } else {
-              console.log('⚠️ AUTH CALLBACK - Invite token verified but no session');
+              logger.info('AUTH CALLBACK - Invite token verified but no session');
               setStatus('success');
               setMessage('Invitation verified! Please set your password to continue.');
               setTimeout(() => {
@@ -170,22 +168,22 @@ export default function AuthCallbackPage() {
             } = await supabase.auth.getSession();
 
             if (session) {
-              console.log('✅ AUTH CALLBACK - Session found after token verification!');
+              logger.info('AUTH CALLBACK - Session found after token verification!');
               setStatus('success');
               setMessage('Email verified successfully! Redirecting...');
 
               setTimeout(() => {
-                console.log('➡️ AUTH CALLBACK - Redirecting to /verification-success');
+                logger.info('AUTH CALLBACK - Redirecting to /verification-success');
                 window.location.href = '/verification-success';
               }, 1500);
             } else {
               // Email verified but no session - user needs to login
-              console.log('✅ AUTH CALLBACK - Email verified, no session. Redirecting to login...');
+              logger.info('AUTH CALLBACK - Email verified, no session. Redirecting to login...');
               setStatus('success');
               setMessage('Email verified successfully! Please sign in to continue.');
 
               setTimeout(() => {
-                console.log('➡️ AUTH CALLBACK - Redirecting to /login');
+                logger.info('AUTH CALLBACK - Redirecting to /login');
                 navigate('/login', {
                   replace: true,
                   state: {
@@ -198,7 +196,7 @@ export default function AuthCallbackPage() {
           }
         } else {
           // No auth data in URL - check for errors
-          console.log('⚠️ AUTH CALLBACK - No auth data in URL');
+          logger.info('AUTH CALLBACK - No auth data in URL');
 
           const errorInHash = hashParams.get('error');
           const errorInSearch = searchParams.get('error');
@@ -221,20 +219,20 @@ export default function AuthCallbackPage() {
             data: { session },
           } = await supabase.auth.getSession();
           if (session) {
-            console.log('✅ AUTH CALLBACK - Active session found!');
-            console.log('➡️ AUTH CALLBACK - Redirecting to /verification-success');
+            logger.info('AUTH CALLBACK - Active session found!');
+            logger.info('AUTH CALLBACK - Redirecting to /verification-success');
             window.location.href = '/verification-success';
           } else {
             // Email was verified but no session was created
             // This is normal for Supabase email verification flow
-            console.log('✅ AUTH CALLBACK - Email verification completed (no session needed)');
+            logger.info('AUTH CALLBACK - Email verification completed (no session needed)');
 
             setStatus('success');
             setMessage('Email verified successfully! Please sign in to continue.');
 
             // Redirect to login page
             setTimeout(() => {
-              console.log('➡️ AUTH CALLBACK - Redirecting to /login');
+              logger.info('AUTH CALLBACK - Redirecting to /login');
               navigate('/login', {
                 replace: true,
                 state: {
@@ -268,7 +266,7 @@ export default function AuthCallbackPage() {
 
         // Redirect to verify-email page after 5 seconds
         setTimeout(() => {
-          console.log('➡️ AUTH CALLBACK - Redirecting to /verify-email after error');
+          logger.info('AUTH CALLBACK - Redirecting to /verify-email after error');
           navigate('/verify-email', { replace: true });
         }, 5000);
       }
