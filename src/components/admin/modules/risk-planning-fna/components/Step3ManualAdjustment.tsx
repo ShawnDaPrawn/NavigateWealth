@@ -9,7 +9,7 @@
  * - Display warnings if override significantly differs from calculated need
  */
 
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { ArrowLeft, ArrowRight, Edit2, RotateCcw, AlertTriangle, Info } from 'lucide-react';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '../../../../ui/card';
 import { Button } from '../../../../ui/button';

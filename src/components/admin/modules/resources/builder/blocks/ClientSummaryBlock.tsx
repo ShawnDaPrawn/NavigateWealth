@@ -1,4 +1,3 @@
-import React from 'react';
 import { User } from 'lucide-react';
 import { BlockDefinition } from '../registry';
 import { ClientSummaryData } from '../types';

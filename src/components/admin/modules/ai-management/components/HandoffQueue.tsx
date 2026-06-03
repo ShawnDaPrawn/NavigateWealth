@@ -5,7 +5,7 @@
  * Guidelines: §7, §8.3
  */
 
-import React, { useState, useMemo } from 'react';
+import { useState, useMemo } from 'react';
 import {
   Search,
   Loader2,

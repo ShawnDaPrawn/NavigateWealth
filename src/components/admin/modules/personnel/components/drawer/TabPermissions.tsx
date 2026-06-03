@@ -10,7 +10,7 @@
  * @module personnel/drawer/TabPermissions
  */
 
-import React, { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../../../../ui/card';
 import { Switch } from '../../../../../ui/switch';
 import { Button } from '../../../../../ui/button';

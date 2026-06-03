@@ -9,7 +9,7 @@
  * @module publications/components/ArticlePreview
  */
 
-import React, { useEffect, useMemo } from 'react';
+import { useEffect, useMemo } from 'react';
 import { X, Calendar, Clock, User, AlertCircle } from 'lucide-react';
 import DOMPurify from 'dompurify';
 import { Button } from '../../../../ui/button';

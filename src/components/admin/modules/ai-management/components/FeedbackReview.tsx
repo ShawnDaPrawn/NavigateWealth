@@ -5,7 +5,7 @@
  * Guidelines: §7, §8.3
  */
 
-import React, { useState, useMemo } from 'react';
+import { useState, useMemo } from 'react';
 import { ThumbsUp, ThumbsDown, Search, Loader2, Clock, Filter, Inbox } from 'lucide-react';
 import { Input } from '../../../../ui/input';
 import { Badge } from '../../../../ui/badge';

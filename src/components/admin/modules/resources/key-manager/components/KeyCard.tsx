@@ -3,7 +3,6 @@
  * Displays an individual key with its metadata, usage, and dependencies
  */
 
-import React from 'react';
 import { Badge } from '../../../../../ui/badge';
 import { Workflow } from 'lucide-react';
 import {

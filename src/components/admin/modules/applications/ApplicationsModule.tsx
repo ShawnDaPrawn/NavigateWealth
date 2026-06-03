@@ -3,7 +3,7 @@
  * Refactored: Unified navigation via stats cards, cleaner header layout
  */
 
-import React, { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { Button } from '../../../ui/button';
 import { toast } from 'sonner';

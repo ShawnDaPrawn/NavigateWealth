@@ -18,7 +18,7 @@
  * §8.4 (AI builder — use react-router not react-router-dom)
  */
 
-import React, { useEffect, useRef, useState, useCallback } from 'react';
+import { useEffect, useRef, useState, useCallback } from 'react';
 import { useNavigate } from 'react-router';
 import { useAuth } from '../auth/AuthContext';
 import { Badge } from '../ui/badge';

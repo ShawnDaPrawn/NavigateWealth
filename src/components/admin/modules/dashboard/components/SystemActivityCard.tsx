@@ -1,4 +1,3 @@
-import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../../../../ui/card';
 import { Skeleton } from '../../../../ui/skeleton';
 import { Activity, ArrowRight, UserPlus, FileCheck, CheckSquare } from 'lucide-react';

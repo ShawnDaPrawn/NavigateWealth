@@ -3,7 +3,6 @@
  * Displays a form/template card with actions
  */
 
-import React from 'react';
 import { Card, CardContent } from '../../../../ui/card';
 import { Button } from '../../../../ui/button';
 import { Badge } from '../../../../ui/badge';

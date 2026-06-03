@@ -15,7 +15,7 @@
  * Guidelines §8.4 — Design System components for card containers.
  */
 
-import React, { useMemo } from 'react';
+import { useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '../../../../../ui/card';
 import { Badge } from '../../../../../ui/badge';
 import { SVGPieChart, SVGBarChart } from '../../../../../ui/svg-charts';

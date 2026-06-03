@@ -9,7 +9,6 @@
  * - Navigation: Back to Step 1, Next to Step 3
  */
 
-import React from 'react';
 import { ArrowLeft, ArrowRight, Info } from 'lucide-react';
 import { Button } from '../../../../ui/button';
 import { Alert, AlertDescription } from '../../../../ui/alert';

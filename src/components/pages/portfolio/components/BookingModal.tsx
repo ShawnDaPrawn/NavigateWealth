@@ -5,7 +5,7 @@
  * Guidelines §7 (presentation + local UI state), §8.3 (form patterns).
  */
 
-import React, { useState } from 'react';
+import { useState } from 'react';
 import {
   Dialog,
   DialogContent,

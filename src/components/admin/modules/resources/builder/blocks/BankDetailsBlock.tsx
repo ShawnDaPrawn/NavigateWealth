@@ -1,4 +1,3 @@
-import React from 'react';
 import { CreditCard } from 'lucide-react';
 import { BlockDefinition } from '../registry';
 import { BankDetailsData } from '../types';

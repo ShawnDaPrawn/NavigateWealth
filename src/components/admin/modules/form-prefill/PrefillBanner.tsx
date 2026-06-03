@@ -1,4 +1,3 @@
-import React from 'react';
 import { Link } from 'react-router';
 import { Alert, AlertDescription } from '../../../ui/alert';
 import { Button } from '../../../ui/button';

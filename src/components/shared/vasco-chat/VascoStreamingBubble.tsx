@@ -7,7 +7,6 @@
  * @module shared/vasco-chat/VascoStreamingBubble
  */
 
-import React from 'react';
 import { Loader2 } from 'lucide-react';
 import { MessageRenderer } from '../MessageRenderer';
 import { VascoAvatar } from './VascoAvatar';

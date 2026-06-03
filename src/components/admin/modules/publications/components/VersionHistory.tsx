@@ -8,7 +8,7 @@
  * @module publications/components/VersionHistory
  */
 
-import React, { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import {
   History,
   X,

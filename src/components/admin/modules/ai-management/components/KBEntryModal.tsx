@@ -7,7 +7,7 @@
  * Guidelines: §7, §8.3
  */
 
-import React, { useEffect } from 'react';
+import { useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import {
   Dialog,

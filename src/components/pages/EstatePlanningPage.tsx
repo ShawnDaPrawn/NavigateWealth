@@ -23,6 +23,8 @@ import { capitalLegacyLogo, ewSerfonteinLogo } from '../shared/assets/provider-l
 import estatePlanningHeroImage from 'figma:asset/5c0f670827aa0d401dd409a6c603459c23b5c4a3.png';
 import willsImage from 'figma:asset/8c5fa58881863a67095e8aa29afc660f5cecd4d5.png';
 import trustsImage from 'figma:asset/a5b12012f06f21058abb49ed8e43bf599d968395.png';
+import successionImage from 'figma:asset/3adf41eeb556dca874c10a95709eda0ec378bf9e.png';
+import businessSuccessionImage from 'figma:asset/dc7d1f92bcbe7857fe86f217588dc8719ba5a2f9.png';
 const buySellImage =
   'https://images.unsplash.com/photo-1710458868515-44426e7c565b?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxidXklMjBzZWxsJTIwYWdyZWVtZW50fGVufDF8fHx8MTc2MDU2MDIwOXww&ixlib=rb-4.1.0&q=80&w=1080';
 

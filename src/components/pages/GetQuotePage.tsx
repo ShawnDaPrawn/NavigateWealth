@@ -7,7 +7,7 @@
  * §7 — Presentation layer: layout, interaction, local UI state only.
  */
 
-import React, { useEffect } from 'react';
+import { useEffect } from 'react';
 import { useSearchParams, useNavigate } from 'react-router';
 import { SEO, createWebPageSchema } from '../seo/SEO';
 import { getSEOData } from '../seo/seo-config';

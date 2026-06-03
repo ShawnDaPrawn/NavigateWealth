@@ -6,7 +6,6 @@
  * @module advice-engine/components/ApiKeyWarning
  */
 
-import React from 'react';
 import { AlertCircle } from 'lucide-react';
 import { Alert, AlertDescription } from '../../../../ui/alert';
 import { Badge } from '../../../../ui/badge';

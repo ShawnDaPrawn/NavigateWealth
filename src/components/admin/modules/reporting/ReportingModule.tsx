@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { Button } from '../../../ui/button';
 import { Plus } from 'lucide-react';
 import { Badge } from '../../../ui/badge';

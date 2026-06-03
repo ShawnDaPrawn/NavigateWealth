@@ -1,4 +1,3 @@
-import React from 'react';
 import { FileText, Shield, TrendingUp, Package } from 'lucide-react';
 
 export function EmptyPolicyState() {

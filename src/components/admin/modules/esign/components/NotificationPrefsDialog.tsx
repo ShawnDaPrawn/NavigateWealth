@@ -12,7 +12,7 @@
  * pick without reading a doc.
  */
 
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
   Dialog,
   DialogContent,

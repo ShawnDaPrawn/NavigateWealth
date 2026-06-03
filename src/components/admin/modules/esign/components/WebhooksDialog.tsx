@@ -11,7 +11,7 @@
  * never expose the secret after the initial reveal, except on rotate.
  */
 
-import React, { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import {
   Dialog,
   DialogContent,

@@ -4,7 +4,6 @@
  * @module shared/vasco-chat/VascoTypingIndicator
  */
 
-import React from 'react';
 import { VascoAvatar } from './VascoAvatar';
 
 export function VascoTypingIndicator() {

@@ -4,7 +4,6 @@
  * Matches the visual layout of Step 4 (Finalise) for consistency.
  */
 
-import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../../../../ui/card';
 import { Badge } from '../../../../ui/badge';
 import { Separator } from '../../../../ui/separator';

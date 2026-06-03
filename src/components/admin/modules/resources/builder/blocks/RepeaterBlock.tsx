@@ -1,4 +1,3 @@
-import React from 'react';
 import { List, Plus, Trash2, UserPlus } from 'lucide-react';
 import { BlockDefinition } from '../registry';
 import { RepeaterData, RepeaterColumn } from '../types';

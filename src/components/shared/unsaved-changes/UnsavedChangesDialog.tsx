@@ -1,4 +1,3 @@
-import React from 'react';
 import { AlertTriangle, Save, Activity } from 'lucide-react';
 import {
   AlertDialog,

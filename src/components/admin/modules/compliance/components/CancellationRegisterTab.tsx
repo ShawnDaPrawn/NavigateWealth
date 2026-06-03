@@ -1,4 +1,3 @@
-import React from 'react';
 import { ComplianceTable } from './ComplianceTable';
 
 const columns = [

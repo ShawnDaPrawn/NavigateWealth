@@ -1,4 +1,4 @@
-import React, { useCallback, useRef } from 'react';
+import { useCallback, useRef } from 'react';
 import { ServiceFnaPanel } from './ServiceFnaPanel';
 import type { FnaIntakeDomain } from '@/services/fna-intake-api';
 

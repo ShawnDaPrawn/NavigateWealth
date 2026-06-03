@@ -2,7 +2,6 @@
  * Step: Life-Sustaining Treatment Preferences (Living Will only)
  */
 
-import React from 'react';
 import { Textarea } from '../../../../../ui/textarea';
 import { Card } from '../../../../../ui/card';
 import { Activity } from 'lucide-react';

@@ -1,7 +1,7 @@
 import { toast } from 'sonner';
 import { projectId, publicAnonKey } from '../../utils/supabase/info';
 import { getUserErrorMessage } from '../../utils/errorUtils';
-import React, { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useAuth } from '../auth/AuthContext';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 import { Badge } from '../ui/badge';
@@ -9,7 +9,23 @@ import { Button } from '../ui/button';
 import { BrandSectionLoader } from '../ui/brand-loader';
 import { Input } from '../ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
-import { History, Search, Eye, Download, Star, FileText } from 'lucide-react';
+import {
+  History,
+  Search,
+  Eye,
+  Download,
+  Star,
+  FileText,
+  Calendar,
+  Heart,
+  Shield,
+  TrendingUp,
+  Activity,
+  Briefcase,
+  Home,
+  Link as LinkIcon,
+  ExternalLink,
+} from 'lucide-react';
 import { PortalPageHeader } from '../portal/PortalPageHeader';
 import { ACTIVE_THEME } from '../portal/portal-theme';
 

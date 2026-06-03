@@ -1,4 +1,3 @@
-import React from 'react';
 import { toast } from 'sonner';
 import { ComplianceTable } from './ComplianceTable';
 import { useFAISRecords } from '../hooks/useFAISRecords';

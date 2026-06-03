@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback, useRef } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import { Link, useSearchParams, useLocation } from 'react-router';
 import DOMPurify from 'dompurify';
 import { SEO, createWebPageSchema } from '../seo/SEO';

@@ -9,7 +9,6 @@
  * §8.4 (AI builder constraints)
  */
 
-import React from 'react';
 import { Link } from 'react-router';
 import { ArrowRight, FileText, Clock } from 'lucide-react';
 import { Button } from '../ui/button';

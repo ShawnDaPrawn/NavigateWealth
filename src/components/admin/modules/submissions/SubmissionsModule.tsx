@@ -19,7 +19,7 @@
  * §8.3 - Status colours follow platform vocabulary.
  */
 
-import React, { useState, useMemo, useEffect, useCallback } from 'react';
+import { useState, useMemo, useEffect, useCallback } from 'react';
 import { useSearchParams } from 'react-router';
 import { DragDropContext, Droppable, type DropResult } from '@hello-pangea/dnd';
 import { Button } from '../../../ui/button';

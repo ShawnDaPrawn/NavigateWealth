@@ -2,7 +2,7 @@
  * Client portal — E‑signature envelope history (read-only).
  */
 
-import React, { useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { AlertCircle, FileText, PenLine, RefreshCw, Search } from 'lucide-react';
 import { useAuth } from '../../auth/AuthContext';
 import { PortalPageHeader } from '../../portal/PortalPageHeader';

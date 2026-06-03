@@ -1,4 +1,3 @@
-import React from 'react';
 import { FormBlock } from './types';
 import { Button } from '../../../../ui/button';
 import { Input } from '../../../../ui/input';

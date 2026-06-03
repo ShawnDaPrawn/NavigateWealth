@@ -3,7 +3,7 @@
  * Comprehensive policy management with 8 financial planning categories
  */
 
-import React, { useState } from 'react';
+import { useState } from 'react';
 import {
   Shield,
   Heart,

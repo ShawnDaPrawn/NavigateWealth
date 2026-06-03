@@ -15,7 +15,6 @@
  * ```
  */
 
-import React from 'react';
 import { Calendar, Clock, User, Eye, TrendingUp } from 'lucide-react';
 import { Badge } from '../../../../ui/badge';
 import { StatusBadge } from './StatusBadge';
