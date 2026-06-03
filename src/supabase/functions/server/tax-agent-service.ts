@@ -76,7 +76,10 @@ export async function createSession(
   const now = new Date().toISOString();
 
   // Load client profile for context injection
-  const profile = await kv.get<Record<string, unknown>>(`user_profile:${clientId}:personal_info`);
+  const profile = (await kv.get(`user_profile:${clientId}:personal_info`)) as Record<
+    string,
+    unknown
+  > | null;
   const profileSummary = buildProfileSummary(profile, clientName);
 
   const session: TaxAgentSession = {
@@ -196,7 +199,9 @@ export async function sendToAgent(
     const errBody = await res.text();
     log.warn(`Responses API failed (${res.status}): ${errBody.slice(0, 300)}`);
   } catch (err) {
-    log.warn('Responses API network error', err);
+    log.warn('Responses API network error', {
+      error: err instanceof Error ? err.message : String(err),
+    });
   }
 
   // ── Attempt 2: Chat Completions fallback ─────────────────────────

@@ -136,11 +136,12 @@ app.get(
 
     const tasksDueToday = allTasksRaw
       .map((item: Record<string, unknown>) => item.value)
-      .filter((task: Record<string, unknown>) => {
-        if (!task || !task.dueDate) return false;
-        const dueDate = new Date(task.dueDate as string);
+      .filter((task: unknown) => {
+        const t = task as Record<string, unknown>;
+        if (!t || !t.dueDate) return false;
+        const dueDate = new Date(t.dueDate as string);
         dueDate.setHours(0, 0, 0, 0);
-        return dueDate.getTime() === today.getTime() && task.status !== 'completed';
+        return dueDate.getTime() === today.getTime() && t.status !== 'completed';
       });
 
     log.info('Fetched tasks due today', { count: tasksDueToday.length });
@@ -163,9 +164,10 @@ app.get(
 
     const tasksByDate = allTasksRaw
       .map((item: Record<string, unknown>) => item.value)
-      .filter((task: Record<string, unknown>) => {
-        if (!task || !task.dueDate) return false;
-        const dueDate = new Date(task.dueDate as string);
+      .filter((task: unknown) => {
+        const t = task as Record<string, unknown>;
+        if (!t || !t.dueDate) return false;
+        const dueDate = new Date(t.dueDate as string);
         dueDate.setHours(0, 0, 0, 0);
         return dueDate.getTime() === targetDate.getTime();
       });

@@ -17,7 +17,7 @@
 
 import { Hono } from 'npm:hono';
 import * as kv from './kv_store.tsx';
-import { submissionsService } from './submissions-service.ts';
+import { submissionsService, SubmissionType, SubmissionStatus } from './submissions-service.ts';
 import { requireAuth } from './auth-mw.ts';
 import { asyncHandler } from './error.middleware.ts';
 import { sendEmail, createEmailTemplate, getFooterSettings } from './email-service.ts';
@@ -139,7 +139,7 @@ app.get(
           400,
         );
       }
-      filters = parsed.data;
+      filters = parsed.data as { type?: SubmissionType; status?: SubmissionStatus } | undefined;
     }
 
     const submissions = await submissionsService.list(filters);
