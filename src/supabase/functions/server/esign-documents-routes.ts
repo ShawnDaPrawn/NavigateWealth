@@ -217,7 +217,9 @@ documentsRoutes.post(
       log.error('Materialize preview error:', err);
       const status = err instanceof AuthError ? err.statusCode : 500;
       return new Response(
-        JSON.stringify({ error: err instanceof Error ? err.message : 'Failed to materialise preview' }),
+        JSON.stringify({
+          error: err instanceof Error ? err.message : 'Failed to materialise preview',
+        }),
         { status: status, headers: { 'Content-Type': 'application/json' } },
       );
     }
@@ -800,7 +802,9 @@ documentsRoutes.post(
       log.error('❌ Send invites error:', error);
       const status = error instanceof AuthError ? error.statusCode : 500;
       return new Response(
-        JSON.stringify({ error: error instanceof Error ? error.message : 'Failed to send invites' }),
+        JSON.stringify({
+          error: error instanceof Error ? error.message : 'Failed to send invites',
+        }),
         { status: status, headers: { 'Content-Type': 'application/json' } },
       );
     }

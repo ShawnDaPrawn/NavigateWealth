@@ -160,18 +160,18 @@ export function handleError(c: Context, error: unknown) {
   logger.error('Route error', error);
 
   if (error instanceof AuthError) {
-    return new Response(
-      JSON.stringify({ error: error.message, code: error.code }),
-      { status: error.statusCode, headers: { 'Content-Type': 'application/json' } },
-    );
+    return new Response(JSON.stringify({ error: error.message, code: error.code }), {
+      status: error.statusCode,
+      headers: { 'Content-Type': 'application/json' },
+    });
   }
 
   const message = error instanceof Error ? error.message : 'Internal Server Error';
   const status = (error as Error & { status?: number })?.status || 500;
-  return new Response(
-      JSON.stringify({ error: message }),
-      { status: status, headers: { 'Content-Type': 'application/json' } },
-    );
+  return new Response(JSON.stringify({ error: message }), {
+    status: status,
+    headers: { 'Content-Type': 'application/json' },
+  });
 }
 
 /**

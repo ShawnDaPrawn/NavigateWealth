@@ -335,9 +335,8 @@ export class ReportingService {
       // Flatten family members into spouse
       const spouse = (
         Array.isArray(p.familyMembers) && p.familyMembers.length > 0
-          ? p.familyMembers.find(
-              (f) => (f as Record<string, unknown>).relationship === 'Spouse',
-            ) || {}
+          ? p.familyMembers.find((f) => (f as Record<string, unknown>).relationship === 'Spouse') ||
+            {}
           : {}
       ) as Record<string, unknown>;
 
