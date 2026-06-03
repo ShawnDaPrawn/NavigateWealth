@@ -48,6 +48,9 @@ function normaliseTask(raw: RawKvTask): KvTask {
   if (!raw || typeof raw !== 'object') return raw as unknown as KvTask;
   return {
     ...raw,
+    // Required string fields — RawKvTask marks them optional, KvTask requires them
+    id: (raw.id ?? '') as string,
+    title: (raw.title ?? '') as string,
     // Ensure snake_case fields exist (handle legacy camelCase data)
     due_date: raw.due_date ?? raw.dueDate ?? null,
     is_template: (raw.is_template ?? raw.isTemplate ?? false) as boolean,

@@ -13,7 +13,7 @@
 import React from 'react';
 import { HEALTH_SUB_SCORE_CONFIG } from '../../constants';
 import type { HealthSubScores } from '../../utils';
-import type { DashboardMode } from '../ClientOverviewTab';
+import type { DashboardMode } from '../clientOverviewConstants';
 
 interface HealthScoreBreakdownProps {
   subScores: HealthSubScores;
