@@ -1,3 +1,4 @@
+/* eslint-disable react-refresh/only-export-components */
 /**
  * ServiceRequestModal
  * Reusable modal for sending structured service requests to the client's adviser.

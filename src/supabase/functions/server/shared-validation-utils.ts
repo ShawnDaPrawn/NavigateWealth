@@ -51,7 +51,7 @@ export function isValidSAIdNumber(idNumber: string): boolean {
   if (sum % 10 !== 0) return false;
 
   // Date validation
-  const year = parseInt(idNumber.substring(0, 2));
+  const _year = parseInt(idNumber.substring(0, 2));
   const month = parseInt(idNumber.substring(2, 4));
   const day = parseInt(idNumber.substring(4, 6));
 
@@ -132,7 +132,7 @@ export function sanitizeEmail(email: string): string {
  * Sanitize phone: remove spaces and dashes
  */
 export function sanitizePhone(phone: string): string {
-  return phone.replace(/[\s\-]/g, '');
+  return phone.replace(/[\s-]/g, '');
 }
 
 /**

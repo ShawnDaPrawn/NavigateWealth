@@ -8,13 +8,12 @@
  * @module publications/components/ContentCalendar
  */
 
-import React, { useState, useMemo, useCallback } from 'react';
+import { useState, useMemo, useCallback } from 'react';
 import {
   ChevronLeft,
   ChevronRight,
   Calendar as CalendarIcon,
   FileText,
-  Clock,
   Eye,
   Star,
   Edit2,
@@ -142,7 +141,7 @@ export function ContentCalendar({
   onEditArticle,
   onCreateNew,
 }: ContentCalendarProps) {
-  const today = new Date();
+  const today = useMemo(() => new Date(), []);
   const [currentYear, setCurrentYear] = useState(today.getFullYear());
   const [currentMonth, setCurrentMonth] = useState(today.getMonth());
   const [selectedDay, setSelectedDay] = useState<CalendarDay | null>(null);
@@ -193,7 +192,7 @@ export function ContentCalendar({
     setCurrentYear(today.getFullYear());
     setCurrentMonth(today.getMonth());
     setSelectedDay(null);
-  }, []);
+  }, [today]);
 
   // Stats for the month
   const monthStats = useMemo(() => {

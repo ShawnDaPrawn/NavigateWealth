@@ -11,7 +11,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from '../../../../../ui/select';
-import { RoADraft, RoAModule } from '../DraftRoAInterface';
+import { RoADraft } from '../DraftRoAInterface';
+import type { RoAModule } from '../DraftRoAInterface';
 import { getFallbackRuntimeModules, getModuleRuntimeStatus } from '../../roaModuleRuntime';
 import {
   Heart,
@@ -254,7 +255,6 @@ export function RoAStepModules({ draft, onUpdate, modules }: RoAStepModulesProps
                 if (!module) return null;
 
                 const isSelected = selectedModules.includes(moduleId);
-                const completionStatus = getModuleCompletionStatus(moduleId);
 
                 return (
                   <Card

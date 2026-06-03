@@ -1,4 +1,3 @@
-import React from 'react';
 import { BasePdfLayout } from '../modules/resources/templates/BasePdfLayout';
 import type { RiskAssessment } from '../modules/client-management/types';
 import {

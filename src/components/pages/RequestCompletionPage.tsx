@@ -69,7 +69,7 @@ export function RequestCompletionPage() {
       if (data.request.status === 'Pending' || data.request.status === 'Finalised') {
         setSubmitted(true);
       }
-    } catch (err) {
+    } catch (_err) {
       setError('Failed to load request. It may check have been deleted or does not exist.');
     } finally {
       setLoading(false);
@@ -126,7 +126,7 @@ export function RequestCompletionPage() {
 
       setSubmitted(true);
       toast.success('Form submitted successfully!');
-    } catch (err) {
+    } catch (_err) {
       toast.error('Failed to submit form. Please try again.');
     } finally {
       setSubmitting(false);

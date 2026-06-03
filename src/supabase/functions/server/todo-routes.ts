@@ -56,12 +56,10 @@ app.post(
     const cleanName = file.name.replace(/[^a-zA-Z0-9.-]/g, '_');
     const path = `${taskId}/${timestamp}-${cleanName}`;
 
-    const { data: uploadData, error: uploadError } = await supabase.storage
-      .from(bucketName)
-      .upload(path, file, {
-        contentType: file.type,
-        upsert: false,
-      });
+    const { error: uploadError } = await supabase.storage.from(bucketName).upload(path, file, {
+      contentType: file.type,
+      upsert: false,
+    });
 
     if (uploadError) {
       log.error('Upload error:', uploadError);

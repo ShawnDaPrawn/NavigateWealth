@@ -37,9 +37,8 @@
  * Data-fetching, derived calculations, and PDF generation are unchanged.
  */
 
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
-import { Card, CardContent, CardHeader, CardTitle } from '../../../../ui/card';
 import { Button } from '../../../../ui/button';
 import { Separator } from '../../../../ui/separator';
 import { Badge } from '../../../../ui/badge';
@@ -59,9 +58,7 @@ import {
   TableRow,
 } from '../../../../ui/table';
 import {
-  User,
   Phone,
-  Briefcase,
   Shield,
   Heart,
   PiggyBank,
@@ -70,9 +67,7 @@ import {
   FileText,
   RefreshCw,
   AlertCircle,
-  CheckCircle,
   AlertTriangle,
-  XCircle,
   Users,
   Calendar,
   DollarSign,
@@ -80,42 +75,25 @@ import {
   Activity,
   ClipboardCheck,
   Clock,
-  LogIn,
-  KeyRound,
-  ShieldAlert,
   UserPlus,
   FileCheck,
   ChevronDown,
   ChevronUp,
-  Zap,
-  ArrowRight,
-  Download,
-  Loader2,
   PlayCircle,
 } from 'lucide-react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../../../../ui/dialog';
 import { getClientProfileQueryOptions } from '../api';
 import { Client, ProfileData } from '../types';
 import {
   fmt,
-  pct,
-  fmtCompact,
   calcAge,
-  fmtDate,
-  fmtDateTime,
   fmtRelative,
   addMonths,
   isPast,
-  nextAnniversary,
-  daysBetween,
-  addressLine,
   numVal,
-  strVal,
   sumField,
   sumInvestmentPremiums,
   sumFirstNonZero,
   sumMultiField,
-  worstGapStatus,
   normalizePolicyData,
   extractRetirementResults,
   deriveGapAnalysis,
@@ -131,16 +109,12 @@ import {
   INITIAL_ACTIVITY_COUNT,
   type Policy,
   type ActionItem,
-  type ActionPriority,
   type ActivityEvent,
-  type GapStatus,
-  type PillarHealth,
   type GapItem,
   type PillarData,
 } from './clientOverviewUtils';
 import { PolicyOverviewTab } from '../../../../admin/profile-sections/PolicyOverviewTab';
 // Phase 1 KPI / Sub-Score imports
-import { HealthScoreBreakdown } from './overview/HealthScoreBreakdown';
 import { KPISummaryTable } from './overview/KPISummaryTable';
 import type { KPIValue } from './overview/KPISummaryTable';
 // Phase 2 Chart imports
@@ -148,7 +122,6 @@ import {
   AssetAllocationChart,
   InsuranceCoverageChart,
   CashflowWaterfallChart,
-  ActionPriorityBar,
 } from './overview/OverviewCharts';
 import type {
   AssetAllocationData,
@@ -168,13 +141,12 @@ import type { HealthSubScores } from '../utils';
 
 // FNA API — uses batch endpoint via React Query hook for cache control
 import { useFnaBatchStatus } from '../hooks/useFnaBatchStatus';
-import { getFnaStatusLabel } from '@/shared/fna-intake/fna-intake-labels';
 
 // Centralized API client
 import { api } from '../../../../../utils/api/client';
 
 // Constants + DashboardMode extracted to clientOverviewConstants
-import type { CategoryDef, DashboardMode } from './clientOverviewConstants';
+import type { DashboardMode } from './clientOverviewConstants';
 export type { DashboardMode };
 import {
   CATEGORIES,
@@ -217,11 +189,7 @@ export function ClientOverviewTab({ client, mode = 'adviser' }: ClientOverviewTa
 
   // ── Phase 2 state ───────────────────────────────────────────────────
   // FNA statuses via React Query hook — replaces manual useState/useCallback/useEffect
-  const {
-    data: batchFnaData,
-    isLoading: loadingFna,
-    refetch: refetchFna,
-  } = useFnaBatchStatus(client.id);
+  const { data: batchFnaData, refetch: refetchFna } = useFnaBatchStatus(client.id);
 
   /** Raw FNA result data keyed by module key — only populated for published FNAs */
   const fnaResultsMap = useMemo<Record<string, Record<string, unknown> | null>>(() => {
@@ -462,7 +430,6 @@ export function ClientOverviewTab({ client, mode = 'adviser' }: ClientOverviewTa
   const investmentPolicies = policiesByCategory.investment || [];
   const employeePolicies = policiesByCategory.employee || [];
   const estatePolicies = policiesByCategory.estate || [];
-  const taxPolicies = policiesByCategory.tax || [];
 
   const grossMonthly = p?.grossMonthlyIncome || p?.grossIncome || 0;
   const grossAnnual = p?.grossAnnualIncome || grossMonthly * 12;

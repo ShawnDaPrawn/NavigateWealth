@@ -3,15 +3,12 @@
  * Displays detailed INA results with goal breakdowns
  */
 
-import React from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../../../ui/card';
 import { Badge } from '../../../../ui/badge';
 import { Button } from '../../../../ui/button';
 import { Separator } from '../../../../ui/separator';
 import {
   Target,
-  TrendingUp,
-  DollarSign,
   Calendar,
   AlertCircle,
   CheckCircle,
@@ -54,22 +51,6 @@ export function InvestmentINAResultsView({
 
   const formatPercentage = (value: number) =>
     InvestmentINACalculationService.formatPercentage(value);
-
-  const getStatusBadgeVariant = (status: string) => {
-    switch (status) {
-      case 'on-track':
-      case 'overfunded':
-        return 'default';
-      case 'slight-shortfall':
-        return 'secondary';
-      case 'moderate-shortfall':
-        return 'outline';
-      case 'significant-shortfall':
-        return 'destructive';
-      default:
-        return 'outline';
-    }
-  };
 
   const getHealthBadgeColor = (health: string) => {
     switch (health) {

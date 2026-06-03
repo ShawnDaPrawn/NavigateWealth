@@ -2,7 +2,6 @@
  * Step: Funeral & End-of-Life Wishes (Living Will only)
  */
 
-import React from 'react';
 import { Textarea } from '../../../../../ui/textarea';
 import { StepSectionHeader, FormField } from '../WillDraftingUI';
 import type { StepLivingWillWishesProps } from './types';

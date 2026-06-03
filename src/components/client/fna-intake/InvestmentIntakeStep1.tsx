@@ -2,7 +2,7 @@
  * Client investment intake — goals and risk profile (no product selection).
  */
 
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -16,8 +16,8 @@ import {
 } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { Plus, Trash2 } from 'lucide-react';
-import { RISK_PROFILE_LABELS } from '@/components/admin/modules/investment-ina/constants';
-import type { RiskProfile } from '@/components/admin/modules/investment-ina/types';
+import { RISK_PROFILE_LABELS } from '@/components/admin/modules/investment-ina';
+import type { RiskProfile } from '@/components/admin/modules/investment-ina';
 
 interface GoalRow {
   id: string;

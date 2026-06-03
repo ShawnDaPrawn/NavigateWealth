@@ -442,7 +442,7 @@ export class PDFService {
       };
     } catch (error: unknown) {
       log.error('PDF Burn-in failed:', error);
-      throw new Error(`PDF Burn-in failed: ${getErrMsg(error)}`);
+      throw new Error(`PDF Burn-in failed: ${getErrMsg(error)}`, { cause: error });
     }
   }
 
@@ -468,7 +468,7 @@ export class PDFService {
       return await mergedPdf.save();
     } catch (error: unknown) {
       log.error('PDF Merge failed:', error);
-      throw new Error(`PDF Merge failed: ${getErrMsg(error)}`);
+      throw new Error(`PDF Merge failed: ${getErrMsg(error)}`, { cause: error });
     }
   }
 
@@ -505,7 +505,7 @@ export class PDFService {
       return await mergedPdf.save();
     } catch (error: unknown) {
       log.error('PDF Document Merge failed:', error);
-      throw new Error(`PDF Document Merge failed: ${getErrMsg(error)}`);
+      throw new Error(`PDF Document Merge failed: ${getErrMsg(error)}`, { cause: error });
     }
   }
 }

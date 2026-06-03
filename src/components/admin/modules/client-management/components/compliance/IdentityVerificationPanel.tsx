@@ -27,7 +27,6 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { api } from '../../../../../../utils/api';
-import { Input } from '../../../../../ui/input';
 
 interface IdentityVerificationPanelProps {
   clientId: string;

@@ -12,13 +12,12 @@
  * @module publications/api
  */
 
-import { projectId, publicAnonKey } from '../../../../utils/supabase/info';
+import { publicAnonKey } from '../../../../utils/supabase/info';
 import { getModuleUrl } from '../../../../utils/api/config';
 import { logger } from '../../../../utils/logger';
 import { createClient } from '../../../../utils/supabase/client';
 import type {
   Article,
-  ArticleSummary,
   Category,
   ContentType,
   CreateArticleInput,
@@ -32,7 +31,6 @@ import type {
   InitializationStatus,
   InitializePublicationsInput,
   ReorderUpdate,
-  ApiResponse,
   NewsItem,
 } from './types';
 import type { AIWritingRequest, AIWritingResponse } from './types';
@@ -915,7 +913,7 @@ export const InitializationAPI = {
         has_categories: categories.length > 0,
         has_types: types.length > 0,
       };
-    } catch (error) {
+    } catch {
       return {
         is_initialized: false,
         has_categories: false,

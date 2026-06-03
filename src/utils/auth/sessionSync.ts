@@ -5,6 +5,8 @@
  * Uses BroadcastChannel API with localStorage fallback for compatibility.
  */
 
+import { logger } from '../logger';
+
 // Session sync events
 export enum SessionSyncEvent {
   LOGOUT = 'session:logout',
@@ -35,14 +37,14 @@ export class SessionSync {
       try {
         this.channel = new BroadcastChannel('navigate_wealth_session');
         this.setupBroadcastChannel();
-        console.log('✅ SessionSync: Using BroadcastChannel API');
+        logger.info('SessionSync: Using BroadcastChannel API');
       } catch (error) {
         console.warn('⚠️ BroadcastChannel failed, falling back to localStorage:', error);
         this.useLocalStorage = true;
         this.setupLocalStorage();
       }
     } else {
-      console.log('ℹ️ SessionSync: BroadcastChannel not supported, using localStorage');
+      logger.info('SessionSync: BroadcastChannel not supported, using localStorage');
       this.useLocalStorage = true;
       this.setupLocalStorage();
     }
@@ -55,7 +57,7 @@ export class SessionSync {
     if (!this.channel) return;
 
     this.channel.onmessage = (event: MessageEvent<SessionMessage>) => {
-      console.log('📡 SessionSync received:', event.data);
+      logger.debug('SessionSync received', { data: event.data });
       this.notifyListeners(event.data.type);
     };
   }
@@ -68,7 +70,7 @@ export class SessionSync {
       if (event.key === STORAGE_KEY && event.newValue) {
         try {
           const message: SessionMessage = JSON.parse(event.newValue);
-          console.log('📡 SessionSync received (localStorage):', message);
+          logger.debug('SessionSync received (localStorage)', { message });
           this.notifyListeners(message.type);
         } catch (error) {
           console.error('Failed to parse session sync message:', error);
@@ -90,13 +92,13 @@ export class SessionSync {
     if (this.channel && !this.useLocalStorage) {
       // Use BroadcastChannel
       this.channel.postMessage(message);
-      console.log('📤 SessionSync broadcast:', message);
+      logger.debug('SessionSync broadcast', { message });
     } else {
       // Use localStorage
       // Note: localStorage events don't fire in the same tab that sets them,
       // which is perfect for cross-tab communication
       localStorage.setItem(STORAGE_KEY, JSON.stringify(message));
-      console.log('📤 SessionSync broadcast (localStorage):', message);
+      logger.debug('SessionSync broadcast (localStorage)', { message });
 
       // Clean up immediately (we only need the event, not persistent storage)
       setTimeout(() => {
@@ -114,14 +116,14 @@ export class SessionSync {
     }
 
     this.listeners.get(event)!.add(callback);
-    console.log(`👂 SessionSync listener added for: ${event}`);
+    logger.debug('SessionSync listener added', { event });
 
     // Return unsubscribe function
     return () => {
       const eventListeners = this.listeners.get(event);
       if (eventListeners) {
         eventListeners.delete(callback);
-        console.log(`🔇 SessionSync listener removed for: ${event}`);
+        logger.debug('SessionSync listener removed', { event });
       }
     };
   }
@@ -132,7 +134,7 @@ export class SessionSync {
   private notifyListeners(event: SessionSyncEvent): void {
     const eventListeners = this.listeners.get(event);
     if (eventListeners) {
-      console.log(`🔔 SessionSync notifying ${eventListeners.size} listeners for: ${event}`);
+      logger.debug('SessionSync notifying listeners', { event, count: eventListeners.size });
       eventListeners.forEach((callback) => {
         try {
           callback();
@@ -152,7 +154,7 @@ export class SessionSync {
       this.channel = null;
     }
     this.listeners.clear();
-    console.log('🧹 SessionSync destroyed');
+    logger.info('SessionSync destroyed');
   }
 }
 

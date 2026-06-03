@@ -4,7 +4,7 @@
  * Located in: Manage Client Drawer → Key Inspector Tab
  */
 
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../../../ui/card';
 import { Badge } from '../../../../ui/badge';
 import { Button } from '../../../../ui/button';
@@ -54,7 +54,7 @@ export function KeyInspectorTab({ selectedClient }: KeyInspectorTabProps) {
   const [expandedKeys, setExpandedKeys] = useState<Set<string>>(new Set());
 
   // Fetch client keys using the hook
-  const { data: clientKeysData, isLoading, error } = useClientKeys(selectedClient.id);
+  const { data: clientKeysData } = useClientKeys(selectedClient.id);
 
   // Recalculation mutation
   const { mutate: recalculate, isPending: isRecalculating } = useRecalculateClientKeys();
@@ -98,13 +98,6 @@ export function KeyInspectorTab({ selectedClient }: KeyInspectorTabProps) {
       default:
         return String(value);
     }
-  };
-
-  const getValueBadgeVariant = (value: number | string | boolean | null) => {
-    if (value === null || value === 0 || value === '') {
-      return 'secondary';
-    }
-    return 'default';
   };
 
   const groupedKeys = KEY_CATEGORIES.reduce(

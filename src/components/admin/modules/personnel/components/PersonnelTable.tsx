@@ -1,9 +1,9 @@
 import React, { useMemo } from 'react';
 import { DataTable, Column } from '../../../components/DataTable';
-import { Personnel, UserRole, PermissionSet } from '../types';
+import { Personnel, PermissionSet } from '../types';
 import { Avatar, AvatarFallback, AvatarImage } from '../../../../ui/avatar';
 import { Badge } from '../../../../ui/badge';
-import { CheckCircle, XCircle, Clock, Briefcase } from 'lucide-react';
+import { CheckCircle, XCircle, Clock } from 'lucide-react';
 import { cn } from '../../../../ui/utils';
 import { PermissionSummaryBadge } from './PermissionSummaryBadge';
 import { useAllPermissions } from '../hooks';

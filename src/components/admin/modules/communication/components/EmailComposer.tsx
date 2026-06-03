@@ -22,19 +22,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '../../../../ui/dialog';
-import { Separator } from '../../../../ui/separator';
-import {
-  Mail,
-  Paperclip,
-  FileText,
-  Send,
-  Eye,
-  Save,
-  X,
-  Plus,
-  Upload,
-  AlertCircle,
-} from 'lucide-react';
+import { Mail, Paperclip, FileText, Send, Eye, X, Upload, AlertCircle } from 'lucide-react';
 import { EmailTemplate, AttachmentFile } from '../types';
 import { communicationApi } from '../api';
 
@@ -81,12 +69,12 @@ export function EmailComposer({
 }: EmailComposerProps) {
   const [showTemplateDialog, setShowTemplateDialog] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
-  const [newTemplateName, setNewTemplateName] = useState('');
+  const [_newTemplateName, _setNewTemplateName] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Fetch templates from backend (replaces inline mockTemplates)
   const [templates, setTemplates] = useState<EmailTemplate[]>([]);
-  const [templatesLoading, setTemplatesLoading] = useState(false);
+  const [_templatesLoading, setTemplatesLoading] = useState(false);
   React.useEffect(() => {
     const fetchTemplates = async () => {
       setTemplatesLoading(true);

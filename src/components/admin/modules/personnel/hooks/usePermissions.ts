@@ -13,7 +13,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { personnelApi } from '../api';
-import { personnelKeys } from './usePersonnel';
 import type { PermissionSet, UpdatePermissionsInput, Capability } from '../types';
 import type { AdminModule } from '../../../layout/types';
 import { QUERY_STALE_TIME, QUERY_GC_TIME, ALWAYS_ACCESSIBLE_MODULES } from '../constants';
@@ -81,7 +80,7 @@ export function useUpdatePermissions() {
     mutationFn: async (input: UpdatePermissionsInput) => {
       return personnelApi.updatePermissions(input);
     },
-    onSuccess: (data, variables) => {
+    onSuccess: (_data, variables) => {
       // Invalidate specific permissions
       queryClient.invalidateQueries({ queryKey: permissionKeys.detail(variables.personnelId) });
       // Also invalidate "me" in case admin is editing their own permissions

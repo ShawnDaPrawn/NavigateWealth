@@ -255,7 +255,6 @@ export function PrepareFormStudio({
   const {
     candidates,
     showCandidatesPanel,
-    setShowCandidatesPanel,
     acceptCandidate,
     acceptAllCandidates,
     dismissCandidate,

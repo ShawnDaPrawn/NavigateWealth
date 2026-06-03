@@ -22,6 +22,4 @@ temp_pr*.diff
 playwright-report
 test-results
 coverage
-
-# Claude Code worktrees (ephemeral agent sandboxes — never committed)
-.claude/worktrees/
+.claude/

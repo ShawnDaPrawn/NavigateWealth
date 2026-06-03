@@ -6,6 +6,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { api } from '../utils/api/client';
 import type { Client } from '../shared/types/calendar';
+import { logger } from '../utils/logger';
 
 // Query keys
 export const clientKeys = {
@@ -21,7 +22,7 @@ export function useClients(search?: string) {
   return useQuery({
     queryKey: clientKeys.list(search),
     queryFn: async (): Promise<Client[]> => {
-      console.log('🔍 Fetching clients from API (profile/all-users)...');
+      logger.debug('Fetching clients from API (profile/all-users)');
 
       try {
         /** Shape of a user record from the profile/all-users API */
@@ -82,7 +83,7 @@ export function useClients(search?: string) {
 
         // Filter out admin users if possible (optional, but good for consistency)
         // Similar logic to ClientManagementModule
-        result = result.filter((client) => {
+        result = result.filter((_client) => {
           // We can't easily check role here without the raw user object or profile role
           // But assuming the API returns what we need.
           // For now, let's just return all users so we don't accidentally hide someone.

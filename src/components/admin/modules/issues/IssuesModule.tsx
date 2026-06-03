@@ -639,6 +639,7 @@ export function IssuesModule() {
     setDraftStatusNote(selectedIssue.statusNote || '');
     setDraftResolutionEvidence(selectedIssue.resolutionEvidence || '');
   }, [
+    selectedIssue,
     selectedIssue?.fingerprint,
     selectedIssue?.ownerName,
     selectedIssue?.resolutionEvidence,

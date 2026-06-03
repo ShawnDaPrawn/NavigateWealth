@@ -3,7 +3,6 @@
  * Testator identification, marital status, and address.
  */
 
-import React from 'react';
 import { Input } from '../../../../../ui/input';
 import { Textarea } from '../../../../../ui/textarea';
 import { Separator } from '../../../../../ui/separator';

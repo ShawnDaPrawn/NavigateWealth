@@ -3,7 +3,6 @@
  * Displays auto-populated data and assumptions before calculation
  */
 
-import React from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../../../ui/card';
 import { FileText } from 'lucide-react';
 import type { EstatePlanningInputs } from '../types';

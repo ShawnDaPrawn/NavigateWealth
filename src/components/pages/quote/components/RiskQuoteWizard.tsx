@@ -15,7 +15,7 @@
  */
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { Link, useNavigate } from 'react-router';
+import { useNavigate } from 'react-router';
 import { toast } from 'sonner';
 import { Button } from '../../../ui/button';
 import { Input } from '../../../ui/input';
@@ -28,9 +28,6 @@ import {
   ArrowLeft,
   CheckCircle,
   Shield,
-  Heart,
-  Brain,
-  DollarSign,
   AlertTriangle,
   HelpCircle,
   Loader2,

@@ -5,7 +5,6 @@
 
 import * as kv from './kv_store.tsx';
 import { createModuleLogger } from './stderr-logger.ts';
-import { ValidationError } from './error.middleware.ts';
 import type {
   FAISRecord,
   AMLCheck,

@@ -9,6 +9,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { esignApi } from '../api';
 import { esignKeys } from './useEnvelopesQuery';
+import { logger } from '../../../../../utils/logger';
 import { SUCCESS_MESSAGES, ERROR_MESSAGES } from '../constants';
 // P8.5 — All write paths route their failure toasts through `toastError`
 // so the user gets a "Retry" affordance for transient network blips
@@ -51,10 +52,10 @@ export function useUploadDocument() {
   const queryClient = useQueryClient();
   const mutation = useMutation({
     mutationFn: async (request: UploadDocumentRequest) => {
-      console.log('📤 [E-Sign Mutation] Uploading document...');
+      logger.debug('[E-Sign Mutation] Uploading document...');
       return esignApi.uploadDocument(request);
     },
-    onSuccess: (data, variables) => {
+    onSuccess: (_data, variables) => {
       console.log('✅ [E-Sign Mutation] Document uploaded successfully');
 
       queryClient.invalidateQueries({ queryKey: esignKeys.envelopes() });
@@ -97,10 +98,10 @@ export function useSaveFields() {
   const queryClient = useQueryClient();
   const mutation = useMutation({
     mutationFn: async ({ envelopeId, fields }: { envelopeId: string; fields: EsignField[] }) => {
-      console.log('💾 [E-Sign Mutation] Saving fields for envelope:', envelopeId);
+      logger.debug('[E-Sign Mutation] Saving fields for envelope', { envelopeId });
       return esignApi.saveFields(envelopeId, fields);
     },
-    onSuccess: (data, variables) => {
+    onSuccess: (_data, variables) => {
       console.log('✅ [E-Sign Mutation] Fields saved successfully');
       queryClient.invalidateQueries({
         queryKey: esignKeys.envelope(variables.envelopeId),
@@ -149,10 +150,10 @@ export function useSendInvites() {
       envelopeId: string;
       request: SendInvitesRequest;
     }) => {
-      console.log('📧 [E-Sign Mutation] Sending invitations for envelope:', envelopeId);
+      logger.debug('[E-Sign Mutation] Sending invitations for envelope', { envelopeId });
       return esignApi.sendInvites(envelopeId, request);
     },
-    onSuccess: (data, variables) => {
+    onSuccess: (_data, variables) => {
       console.log('✅ [E-Sign Mutation] Invitations sent successfully');
       queryClient.invalidateQueries({ queryKey: esignKeys.envelopes() });
       queryClient.invalidateQueries({
@@ -187,10 +188,10 @@ export function useVoidEnvelope() {
   const queryClient = useQueryClient();
   const mutation = useMutation({
     mutationFn: async (envelopeId: string) => {
-      console.log('🚫 [E-Sign Mutation] Voiding envelope:', envelopeId);
+      logger.debug('[E-Sign Mutation] Voiding envelope', { envelopeId });
       return esignApi.voidEnvelope(envelopeId);
     },
-    onSuccess: (data, envelopeId) => {
+    onSuccess: (_data, envelopeId) => {
       console.log('✅ [E-Sign Mutation] Envelope voided successfully');
       queryClient.invalidateQueries({ queryKey: esignKeys.envelopes() });
       queryClient.invalidateQueries({ queryKey: esignKeys.envelope(envelopeId) });
@@ -226,8 +227,6 @@ export function useVoidEnvelope() {
  * ```
  */
 export function useSaveAsTemplate() {
-  const queryClient = useQueryClient();
-
   return useMutation({
     mutationFn: async ({
       envelopeId,
@@ -236,11 +235,11 @@ export function useSaveAsTemplate() {
       envelopeId: string;
       request: SaveTemplateRequest;
     }) => {
-      console.log('💾 [E-Sign Mutation] Saving envelope as template:', envelopeId);
+      logger.debug('[E-Sign Mutation] Saving envelope as template', { envelopeId });
       return esignApi.saveAsTemplate(envelopeId, request);
     },
     onSuccess: () => {
-      console.log('✅ [E-Sign Mutation] Template saved successfully');
+      logger.info('[E-Sign Mutation] Template saved successfully');
       toast.success(SUCCESS_MESSAGES.TEMPLATE_SAVED);
     },
     onError: (error: Error) => {
@@ -272,11 +271,11 @@ export function useSaveAsTemplate() {
 export function useSendOTP() {
   return useMutation({
     mutationFn: async ({ envelopeId, signerId }: { envelopeId: string; signerId: string }) => {
-      console.log('📱 [E-Sign Mutation] Sending OTP to signer:', signerId);
+      logger.debug('[E-Sign Mutation] Sending OTP to signer', { signerId });
       return esignApi.sendOTP(envelopeId, signerId);
     },
     onSuccess: () => {
-      console.log('✅ [E-Sign Mutation] OTP sent successfully');
+      logger.info('[E-Sign Mutation] OTP sent successfully');
       toast.success(SUCCESS_MESSAGES.OTP_SENT);
     },
     onError: (error: Error) => {
@@ -316,10 +315,10 @@ export function useSubmitSignature() {
       envelopeId: string;
       request: SubmitSignatureRequest;
     }) => {
-      console.log('✍️ [E-Sign Mutation] Submitting signature for envelope:', envelopeId);
+      logger.debug('[E-Sign Mutation] Submitting signature for envelope', { envelopeId });
       return esignApi.submitSignature(envelopeId, request);
     },
-    onSuccess: (data, variables) => {
+    onSuccess: (_data, variables) => {
       console.log('✅ [E-Sign Mutation] Signature submitted successfully');
 
       // Invalidate envelope lists and specific envelope
@@ -366,10 +365,10 @@ export function useRejectSigning() {
       envelopeId: string;
       request: RejectSigningRequest;
     }) => {
-      console.log('❌ [E-Sign Mutation] Rejecting signing for envelope:', envelopeId);
+      logger.debug('[E-Sign Mutation] Rejecting signing for envelope', { envelopeId });
       return esignApi.rejectSigning(envelopeId, request);
     },
-    onSuccess: (data, variables) => {
+    onSuccess: (_data, variables) => {
       console.log('✅ [E-Sign Mutation] Signing rejected');
 
       // Invalidate envelope lists and specific envelope

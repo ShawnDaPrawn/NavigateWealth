@@ -22,7 +22,6 @@
 import React, { useState, useMemo, Suspense } from 'react';
 import { Card, CardContent } from '../../../../ui/card';
 import { Button } from '../../../../ui/button';
-import { Badge } from '../../../../ui/badge';
 import { Input } from '../../../../ui/input';
 import {
   Select,
@@ -39,7 +38,6 @@ import {
   TableHeader,
   TableRow,
 } from '../../../../ui/table';
-import { Tooltip, TooltipContent, TooltipTrigger } from '../../../../ui/tooltip';
 import {
   Dialog,
   DialogContent,

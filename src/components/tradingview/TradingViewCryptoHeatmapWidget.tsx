@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, memo, useState } from 'react';
+import { useEffect, useRef, memo, useState } from 'react';
 
 function TradingViewCryptoHeatmapWidget() {
   const container = useRef<HTMLDivElement>(null);

@@ -13,7 +13,7 @@ import { toast } from 'sonner';
 import { aiIntelligenceApi } from '../api';
 import { buildConversationHistory } from '../utils';
 import { adviceEngineKeys } from './queryKeys';
-import type { Message, UseAIChatOptions, UseAIChatReturn, ApiKeyStatus } from '../types';
+import type { Message, UseAIChatOptions, UseAIChatReturn } from '../types';
 
 /**
  * Welcome message displayed on initial load
@@ -56,7 +56,7 @@ export function useAIChat(options: UseAIChatOptions = {}): UseAIChatReturn {
   // State
   const [messages, setMessages] = useState<Message[]>([WELCOME_MESSAGE]);
   const [error, setError] = useState<string | null>(null);
-  const [shouldAutoScroll, setShouldAutoScroll] = useState(true);
+  const [_shouldAutoScroll, setShouldAutoScroll] = useState(true);
 
   // Refs
   const hasLoadedHistory = useRef(false);
@@ -67,7 +67,7 @@ export function useAIChat(options: UseAIChatOptions = {}): UseAIChatReturn {
     if (initialMessages.length > 0 && messages.length === 1) {
       setMessages([WELCOME_MESSAGE, ...initialMessages]);
     }
-  }, [initialMessages]);
+  }, [initialMessages, messages.length]);
 
   // ============================================================================
   // API Key Status
@@ -175,7 +175,7 @@ export function useAIChat(options: UseAIChatOptions = {}): UseAIChatReturn {
       // Don't invalidate history to prevent race conditions
       // History is only loaded on initial mount
     },
-    onError: (error: Error, variables, context) => {
+    onError: (error: Error, _variables, context) => {
       // Check if this is a rate limit error (429)
       const is429RateLimit =
         error.message.includes('rate limit') ||

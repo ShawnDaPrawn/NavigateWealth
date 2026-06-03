@@ -16,7 +16,7 @@
  * completes (see esign-packet-service.ts).
  */
 
-import React, { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
   Dialog,
   DialogContent,

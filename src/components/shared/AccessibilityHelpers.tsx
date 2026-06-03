@@ -1,3 +1,4 @@
+/* eslint-disable react-refresh/only-export-components */
 /**
  * AccessibilityHelpers — Shared utilities for WCAG 2.1 AA compliance
  *
@@ -8,7 +9,7 @@
  *
  * Guidelines §8.3 — Accessibility (WCAG 2.1 AA Minimum)
  */
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 
 // ─── Skip to Content ──────────────────────────────────────────
 // Renders an anchor that becomes visible on focus, allowing

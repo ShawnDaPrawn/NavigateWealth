@@ -2,6 +2,7 @@ import React from 'react';
 import { ComplianceTable } from './ComplianceTable';
 import { ComplianceRecord } from '../types';
 import { usePOPIAConsents, usePAIARequests } from '../hooks';
+import { logger } from '../../../../../utils/logger';
 
 const columns = [
   { key: 'title', label: 'Record Description', type: 'text' as const },
@@ -68,15 +69,15 @@ export function POPIAPAIATab() {
   const isLoading = consentsLoading || paiaLoading;
 
   const handleAdd = () => {
-    console.log('Add new POPIA/PAIA record');
+    logger.info('Add new POPIA/PAIA record');
   };
 
   const handleEdit = (record: ComplianceRecord) => {
-    console.log('Edit POPIA/PAIA record:', record);
+    logger.info('Edit POPIA/PAIA record:', { record });
   };
 
   const handleExport = () => {
-    console.log('Export POPIA/PAIA records');
+    logger.info('Export POPIA/PAIA records');
   };
 
   return (

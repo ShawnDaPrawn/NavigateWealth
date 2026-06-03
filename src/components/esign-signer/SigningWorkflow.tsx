@@ -38,7 +38,7 @@
  * decomposition list. Quarantined here so react-hooks/rules-of-hooks can be
  * promoted to "error" repo-wide; remove this directive when the file is fixed.
  */
-import React, { useState, useRef, useEffect, useMemo, useCallback } from 'react';
+import { useState, useRef, useEffect, useMemo, useCallback } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Card } from '../ui/card';
 import { Button } from '../ui/button';
@@ -268,8 +268,8 @@ export function SigningWorkflow({
 
   // P3.5 — hidden file input wired up to the active attachment field.
   const attachmentInputRef = useRef<HTMLInputElement>(null);
-  const [attachmentUploading, setAttachmentUploading] = useState<string | null>(null);
-  const [attachments, setAttachments] = useState<
+  const [_attachmentUploading, setAttachmentUploading] = useState<string | null>(null);
+  const [_attachments, setAttachments] = useState<
     Record<string, { id: string; filename: string; size: number }>
   >({});
   const [pdfLoading, setPdfLoading] = useState(true);
@@ -333,16 +333,17 @@ export function SigningWorkflow({
 
     load();
 
+    const renderTasks = renderTasksRef.current;
     return () => {
       cancelled = true;
-      renderTasksRef.current.forEach((task) => {
+      renderTasks.forEach((task) => {
         try {
           task.cancel();
         } catch {
           /* noop */
         }
       });
-      renderTasksRef.current.clear();
+      renderTasks.clear();
       if (pdfDocRef.current) {
         (pdfDocRef.current as { destroy: () => void }).destroy();
         pdfDocRef.current = null;

@@ -9,7 +9,6 @@ import { Hono } from 'npm:hono';
 import * as kv from './kv_store.tsx';
 import { createModuleLogger } from './stderr-logger.ts';
 import { authenticateUser, fnaErrorResponse } from './fna-auth.ts';
-import { getErrMsg } from './shared-logger-utils.ts';
 import { CreateSessionSchema, UpdateInputsSchema } from './fna-validation.ts';
 import { formatZodError } from './shared-validation-utils.ts';
 
@@ -55,21 +54,6 @@ function safeNumber(val: unknown, defaultVal: number): number {
   if (val === undefined || val === null || val === '') return defaultVal;
   const num = Number(val);
   return Number.isNaN(num) ? defaultVal : num;
-}
-
-/**
- * Calculate age from date of birth
- */
-function calculateAge(dob: string | Date | undefined): number {
-  if (!dob) return 30; // Default fallback
-  const birthDate = new Date(dob);
-  const today = new Date();
-  let age = today.getFullYear() - birthDate.getFullYear();
-  const monthDiff = today.getMonth() - birthDate.getMonth();
-  if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
-    age--;
-  }
-  return age;
 }
 
 /**
@@ -144,7 +128,7 @@ function performCalculations(inputs: RetirementCalcInputs, adjustments: Retireme
   const targetAnnualIncome = targetMonthlyIncome * 12;
 
   // 4. Required Capital (Future Value)
-  let requiredCapital = 0;
+  let requiredCapital: number;
   if (Math.abs(realPostReturn) < 0.000001) {
     requiredCapital = targetAnnualIncome * yearsInRetirement;
   } else {
@@ -185,7 +169,7 @@ function performCalculations(inputs: RetirementCalcInputs, adjustments: Retireme
   // 7. Solve for Additional Contribution (PMT)
   let requiredAdditionalContribution = 0;
   if (hasShortfall && months > 0) {
-    let annuityFactor = 0;
+    let annuityFactor: number;
     if (Math.abs(nominalMonthlyGrowth - nominalMonthlyEscalation) < 0.000001) {
       annuityFactor = months * Math.pow(1 + nominalMonthlyGrowth, months - 1);
     } else {
@@ -230,7 +214,7 @@ function performCalculations(inputs: RetirementCalcInputs, adjustments: Retireme
 retirementFnaRoutes.get('/client/:clientId', async (c) => {
   try {
     await authenticateUser(c.req.header('Authorization'));
-    const clientId = c.req.param('clientId')!;
+    const clientId = c.req.param('clientId');
 
     // Fetch all sessions (using list pattern or prefix scan)
     const listKey = `retirement_fna:${clientId}:list`;
@@ -256,7 +240,7 @@ retirementFnaRoutes.get('/client/:clientId', async (c) => {
 retirementFnaRoutes.get('/:fnaId', async (c) => {
   try {
     await authenticateUser(c.req.header('Authorization'));
-    const fnaId = c.req.param('fnaId')!;
+    const fnaId = c.req.param('fnaId');
     const session = await kv.get(`retirement_fna:${fnaId}`);
 
     if (!session) return c.json({ success: false, error: 'Session not found' }, 404);
@@ -318,8 +302,8 @@ retirementFnaRoutes.post('/create', async (c) => {
 // UPDATE Inputs
 retirementFnaRoutes.put('/:fnaId/inputs', async (c) => {
   try {
-    const user = await authenticateUser(c.req.header('Authorization'));
-    const fnaId = c.req.param('fnaId')!;
+    await authenticateUser(c.req.header('Authorization'));
+    const fnaId = c.req.param('fnaId');
     const body = await c.req.json();
     const parsed = UpdateInputsSchema.safeParse(body);
     if (!parsed.success) {
@@ -344,8 +328,8 @@ retirementFnaRoutes.put('/:fnaId/inputs', async (c) => {
 // CALCULATE Results
 retirementFnaRoutes.post('/:fnaId/calculate', async (c) => {
   try {
-    const user = await authenticateUser(c.req.header('Authorization'));
-    const fnaId = c.req.param('fnaId')!;
+    await authenticateUser(c.req.header('Authorization'));
+    const fnaId = c.req.param('fnaId');
 
     const session = await kv.get(`retirement_fna:${fnaId}`);
     if (!session) return c.json({ success: false, error: 'Session not found' }, 404);
@@ -372,7 +356,7 @@ retirementFnaRoutes.post('/:fnaId/calculate', async (c) => {
 retirementFnaRoutes.put('/:fnaId/publish', async (c) => {
   try {
     const user = await authenticateUser(c.req.header('Authorization'));
-    const fnaId = c.req.param('fnaId')!;
+    const fnaId = c.req.param('fnaId');
 
     const session = await kv.get(`retirement_fna:${fnaId}`);
     if (!session) return c.json({ success: false, error: 'Session not found' }, 404);
@@ -397,7 +381,7 @@ retirementFnaRoutes.put('/:fnaId/publish', async (c) => {
 retirementFnaRoutes.get('/client/:clientId/latest-published', async (c) => {
   try {
     await authenticateUser(c.req.header('Authorization'));
-    const clientId = c.req.param('clientId')!;
+    const clientId = c.req.param('clientId');
 
     const latest = await kv.get(`retirement_fna:${clientId}:latest`);
 
@@ -426,7 +410,7 @@ retirementFnaRoutes.get('/client/:clientId/latest-published', async (c) => {
 retirementFnaRoutes.get('/client/:clientId/auto-populate', async (c) => {
   try {
     await authenticateUser(c.req.header('Authorization'));
-    const clientId = c.req.param('clientId')!;
+    const clientId = c.req.param('clientId');
 
     const inputs = await autoPopulateFromProfile(clientId);
 
@@ -440,20 +424,6 @@ retirementFnaRoutes.get('/client/:clientId/auto-populate', async (c) => {
 export default retirementFnaRoutes;
 
 // ==================== INTERFACES ====================
-
-/** Loosely-typed investment record from KV policies data */
-interface InvestmentRecord {
-  name?: string;
-  productName?: string;
-  category?: string;
-  productCategory?: string;
-  type?: string;
-  currentValue?: string | number;
-  contribution?: string | number;
-  monthlyContribution?: string | number;
-  isDiscretionary?: boolean;
-  [key: string]: unknown;
-}
 
 /** Input shape for retirement FNA calculations */
 interface RetirementCalcInputs {

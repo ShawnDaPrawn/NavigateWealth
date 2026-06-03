@@ -130,7 +130,7 @@ export function TaskSetup() {
       await navigator.clipboard.writeText(TASKS_TABLE_SQL);
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
-    } catch (err) {
+    } catch (_err) {
       // Fallback for browsers that don't support clipboard API or have permissions issues
       try {
         // Create a temporary textarea

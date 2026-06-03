@@ -7,8 +7,8 @@
  * @module advice-engine/components/ChatHistory
  */
 
-import React, { useRef, useEffect } from 'react';
-import { Loader2, MessageSquare, Bot } from 'lucide-react';
+import { useRef, useEffect } from 'react';
+import { Bot } from 'lucide-react';
 import { ChatMessage } from './ChatMessage';
 import { WelcomeMessage } from './WelcomeMessage';
 import { Alert, AlertDescription } from '../../../../ui/alert';

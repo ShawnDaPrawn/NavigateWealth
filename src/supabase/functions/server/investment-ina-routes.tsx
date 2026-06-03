@@ -33,7 +33,7 @@ investmentInaRoutes.get('', (c) => c.json({ service: 'investment-ina', status: '
 investmentInaRoutes.get('/client/:clientId/auto-populate', async (c) => {
   try {
     await authenticateUser(c.req.header('Authorization'));
-    const clientId = c.req.param('clientId')!;
+    const clientId = c.req.param('clientId');
 
     const inputs = await autoPopulateFromProfile(clientId);
 
@@ -57,8 +57,8 @@ investmentInaRoutes.get('/client/:clientId/auto-populate', async (c) => {
  */
 investmentInaRoutes.post('/client/:clientId/calculate', async (c) => {
   try {
-    const user = await authenticateUser(c.req.header('Authorization'));
-    const clientId = c.req.param('clientId')!;
+    await authenticateUser(c.req.header('Authorization'));
+    const clientId = c.req.param('clientId');
     const inputs = await c.req.json();
 
     log.info('📊 Calculating Investment INA for client:', { clientId });
@@ -86,7 +86,7 @@ investmentInaRoutes.post('/client/:clientId/calculate', async (c) => {
 investmentInaRoutes.post('/client/:clientId/save', async (c) => {
   try {
     const user = await authenticateUser(c.req.header('Authorization'));
-    const clientId = c.req.param('clientId')!;
+    const clientId = c.req.param('clientId');
     const body = await c.req.json();
 
     // Validate input per §4.2 / fna-validation.ts
@@ -142,7 +142,7 @@ investmentInaRoutes.post('/client/:clientId/save', async (c) => {
 investmentInaRoutes.get('/client/:clientId/sessions', async (c) => {
   try {
     await authenticateUser(c.req.header('Authorization'));
-    const clientId = c.req.param('clientId')!;
+    const clientId = c.req.param('clientId');
 
     const sessions = await kv.getByPrefix(`investment-ina:client:${clientId}:`);
 
@@ -171,7 +171,7 @@ investmentInaRoutes.get('/client/:clientId/sessions', async (c) => {
  */
 investmentInaRoutes.get('/client/:clientId/latest-published', async (c) => {
   try {
-    const clientId = c.req.param('clientId')!;
+    const clientId = c.req.param('clientId');
 
     // Optional authentication - allow both authenticated clients and anon key access
     const authHeader = c.req.header('Authorization');
@@ -192,7 +192,7 @@ investmentInaRoutes.get('/client/:clientId/latest-published', async (c) => {
           );
           return c.json({ error: 'Unauthorized access to client data' }, 403);
         }
-      } catch (authError) {
+      } catch (_authError) {
         // WORKAROUND: Auth bypass for backward compatibility with client portal
         // Problem: Client portal accesses published INA data using the anon key without a user session.
         // Why chosen: Removing this would break client-facing INA display until portal auth is refactored.
@@ -232,7 +232,7 @@ investmentInaRoutes.get('/client/:clientId/latest-published', async (c) => {
 investmentInaRoutes.get('/session/:sessionId', async (c) => {
   try {
     await authenticateUser(c.req.header('Authorization'));
-    const sessionId = c.req.param('sessionId')!;
+    const sessionId = c.req.param('sessionId');
 
     // Extract clientId from sessionId (format: clientId-vN)
     const clientId = sessionId.split('-v')[0];
@@ -273,7 +273,7 @@ investmentInaRoutes.delete('/session/:sessionId', async (c) => {
     log.info('📥 DELETE /investment-ina/session/:sessionId');
     await authenticateUser(c.req.header('Authorization'));
 
-    const sessionId = c.req.param('sessionId')!;
+    const sessionId = c.req.param('sessionId');
 
     // Extract clientId from sessionId (format: clientId-vN)
     const clientId = sessionId.split('-v')[0];

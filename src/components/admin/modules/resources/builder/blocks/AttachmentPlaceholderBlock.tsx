@@ -1,4 +1,3 @@
-import React from 'react';
 import { Paperclip } from 'lucide-react';
 import { BlockDefinition } from '../registry';
 import { AttachmentPlaceholderData } from '../types';

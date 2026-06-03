@@ -390,7 +390,7 @@ export async function sendEmail(
   let finalSubject: string;
   let finalHtml: string;
   let finalText: string;
-  let finalAttachments: SendGridAttachment[] = [];
+  let finalAttachments: SendGridAttachment[];
 
   if (typeof paramsOrTo === 'object') {
     // New signature
@@ -511,7 +511,7 @@ export function createEmailTemplate(
     buttonLabel,
     unsubscribeLink,
     footerNote,
-    footerSettings = DEFAULT_FOOTER_SETTINGS,
+    footerSettings: _footerSettings = DEFAULT_FOOTER_SETTINGS,
   } = options;
 
   let template = BASE_EMAIL_TEMPLATE;

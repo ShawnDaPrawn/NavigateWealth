@@ -13,8 +13,8 @@
 
 // Override console methods immediately upon import
 (function () {
-  const originalLog = console.log;
-  const originalInfo = console.info;
+  const _originalLog = console.log;
+  const _originalInfo = console.info;
 
   // Redirect console.log to console.error (stderr)
   console.log = function (...args: any[]) {

@@ -4,7 +4,7 @@
  * Shown from the EnvelopeInspector's action menu.
  */
 
-import React, { useState } from 'react';
+import { useState } from 'react';
 import {
   Dialog,
   DialogContent,

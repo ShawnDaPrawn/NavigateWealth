@@ -2,11 +2,10 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { toast } from 'sonner';
 import { Button } from '../../../ui/button';
 import { Card, CardContent } from '../../../ui/card';
-import { Badge } from '../../../ui/badge';
 import { Skeleton } from '../../../ui/skeleton';
 import { Plus, Users, UserCheck, UserX, Clock, Shield, ChevronDown, ChevronUp } from 'lucide-react';
 import { cn } from '../../../ui/utils';
-import { Personnel, UserRole, type SuperAdminProfile } from './types';
+import { Personnel, type SuperAdminProfile } from './types';
 import type { InviteUserFormValues } from './schema';
 import type { AdminModule } from '../../layout/types';
 
@@ -47,7 +46,7 @@ interface StatCardProps {
   subtitle?: string;
 }
 
-function StatCard({ label, value, icon: Icon, iconColor, iconBg, subtitle }: StatCardProps) {
+function StatCard({ label, value, icon: Icon, iconColor, iconBg }: StatCardProps) {
   return (
     <Card className="border border-gray-200/80 shadow-none hover:shadow-sm transition-shadow">
       <CardContent className="p-4">

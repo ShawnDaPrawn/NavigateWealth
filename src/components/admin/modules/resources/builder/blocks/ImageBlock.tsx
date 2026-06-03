@@ -1,4 +1,3 @@
-import React from 'react';
 import { Image as ImageIcon } from 'lucide-react';
 import { BlockDefinition } from '../registry';
 import { ImageData } from '../types';

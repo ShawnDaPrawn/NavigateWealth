@@ -35,7 +35,6 @@ import {
   History,
 } from 'lucide-react';
 import { CATEGORIES, PRIORITIES } from './constants';
-import type { AttachmentFile } from '../../../communication/types';
 
 export interface ComposeFormProps {
   clientFirstName: string;
@@ -66,9 +65,6 @@ export interface ComposePayload {
 export function ComposeForm({
   clientFirstName,
   clientLastName,
-  clientId,
-  clientEmail,
-  clientIdNumber,
   onSend,
   isSending,
   onViewHistory,

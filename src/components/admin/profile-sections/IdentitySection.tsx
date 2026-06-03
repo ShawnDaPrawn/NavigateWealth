@@ -169,7 +169,6 @@ const KYC_UPLOAD_TYPES: IdentityDocumentType[] = [
 export function IdentitySection({
   profileData,
   identityDocsInEditMode,
-  hasDocumentType,
   addIdentityDocument,
   handleDocumentUpload,
   updateIdentityDocument,
@@ -178,11 +177,8 @@ export function IdentitySection({
   saveIdentityDocument,
   cancelEditIdentityDocument,
   editIdentityDocument,
-  getDocumentTypeLabel,
-  getDocumentTypeIcon,
   identityDocToDelete,
   setIdentityDocToDelete,
-  userId,
 }: IdentitySectionProps) {
   const [addMenuOpen, setAddMenuOpen] = useState(false);
 

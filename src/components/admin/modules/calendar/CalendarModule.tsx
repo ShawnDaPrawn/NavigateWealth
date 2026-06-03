@@ -190,7 +190,7 @@ export function CalendarModule() {
   const handleCreateEvent = async (data: CreateEventInput) => {
     try {
       // Remove create_reminder before sending to database (it's a frontend-only flag that we aren't using anymore)
-      const { create_reminder, ...eventData } = data;
+      const { create_reminder: _create_reminder, ...eventData } = data;
       await createEventMutation.mutateAsync(eventData);
       setShowEventModal(false);
       setSelectedEvent(null);
@@ -203,7 +203,7 @@ export function CalendarModule() {
     if (!selectedEvent) return;
 
     try {
-      const { create_reminder, ...updateData } = data;
+      const { create_reminder: _create_reminder, ...updateData } = data;
 
       await updateEventMutation.mutateAsync({
         id: selectedEvent.id,

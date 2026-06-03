@@ -4,21 +4,14 @@ import type {
   CreateTaskInput,
   TaskStatus,
   TaskPriority,
-  TaskCategory,
   TaskChecklistItem,
   ReminderFrequency,
 } from '../types';
 import { useCreateTask, useUpdateTask, useDeleteTask } from '../hooks';
-import { STATUS_LABELS, PRIORITY_LABELS, CATEGORY_OPTIONS } from '../constants';
+import { STATUS_LABELS, PRIORITY_LABELS } from '../constants';
 import { communicationApi } from '../../communication/api';
 import { api } from '../../../../../utils/api';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from '../../../../ui/dialog';
+import { Dialog, DialogContent, DialogTitle } from '../../../../ui/dialog';
 import { Button } from '../../../../ui/button';
 import { Input } from '../../../../ui/input';
 import { Textarea } from '../../../../ui/textarea';
@@ -31,7 +24,6 @@ import {
   SelectValue,
 } from '../../../../ui/select';
 import { Checkbox } from '../../../../ui/checkbox';
-import { Separator } from '../../../../ui/separator';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -47,27 +39,21 @@ import {
   X,
   File as FileIcon,
   Trash2,
-  Upload,
   Loader2,
   Plus,
   CheckSquare,
   GripVertical,
-  MessageSquare,
-  Send,
   User,
   Activity,
   AlignLeft,
-  Calendar,
-  Tag as TagIcon,
-  Layout,
-  Eye,
+  Tag as _TagIcon,
   CreditCard,
-  ChevronDown,
   Bell,
   Pencil,
 } from 'lucide-react';
 import { DragDropContext, Droppable, Draggable, DropResult } from '@hello-pangea/dnd';
 import { toast } from 'sonner';
+import { logger } from '../../../../../utils/logger';
 
 interface Attachment {
   id: string;
@@ -95,19 +81,19 @@ interface TaskFormModalProps {
   onModeChange?: (mode: 'create' | 'edit' | 'view') => void;
 }
 
-export function TaskFormModal({ isOpen, onClose, task, mode, onModeChange }: TaskFormModalProps) {
+export function TaskFormModal({ isOpen, onClose, task, mode }: TaskFormModalProps) {
   const createTask = useCreateTask();
   const updateTask = useUpdateTask();
   const deleteTask = useDeleteTask();
 
   const [attachments, setAttachments] = useState<Attachment[]>([]);
   const [isUploading, setIsUploading] = useState(false);
-  const [isLoadingAttachments, setIsLoadingAttachments] = useState(false);
+  const [_isLoadingAttachments, setIsLoadingAttachments] = useState(false);
 
   // Checklist state
   const [checklistItems, setChecklistItems] = useState<TaskChecklistItem[]>([]);
   const [newChecklistItem, setNewChecklistItem] = useState('');
-  const [isLoadingChecklist, setIsLoadingChecklist] = useState(false);
+  const [_isLoadingChecklist, setIsLoadingChecklist] = useState(false);
 
   // Comments state
   const [comments, setComments] = useState<TaskComment[]>([]);
@@ -137,7 +123,7 @@ export function TaskFormModal({ isOpen, onClose, task, mode, onModeChange }: Tas
   const [tempId, setTempId] = useState<string | null>(null);
 
   // Track if form has been modified
-  const [isModified, setIsModified] = useState(false);
+  const [_isModified, _setIsModified] = useState(false);
 
   // Title edit mode: in create mode always editable; in edit/view mode, starts as display text
   const [isTitleEditing, setIsTitleEditing] = useState(false);
@@ -390,7 +376,7 @@ export function TaskFormModal({ isOpen, onClose, task, mode, onModeChange }: Tas
           isSystem: true,
         });
         // We don't toast here to avoid spamming user, just log
-        console.log('Task Reminder email template created');
+        logger.info('Task Reminder email template created');
       }
     } catch (e) {
       console.error('Error checking/creating reminder template:', e);
@@ -474,16 +460,6 @@ export function TaskFormModal({ isOpen, onClose, task, mode, onModeChange }: Tas
     }, 100);
   };
 
-  const handleStatusChange = (newStatus: TaskStatus) => {
-    if (!task) return;
-
-    updateTask.mutate({
-      id: task.id,
-      status: newStatus,
-      completed_at: newStatus === 'completed' ? new Date().toISOString() : null,
-    });
-  };
-
   const handleArchive = () => {
     if (!task) return;
     setShowArchiveDialog(true);
@@ -499,8 +475,6 @@ export function TaskFormModal({ isOpen, onClose, task, mode, onModeChange }: Tas
     setShowArchiveDialog(false);
     onClose();
   };
-
-  const isViewMode = mode === 'view';
 
   // Don't render modal content if not open to avoid flash of content
   if (!isOpen) {

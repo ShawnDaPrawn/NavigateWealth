@@ -67,7 +67,7 @@ const verifyAdmin = async (c: Context, next: Next) => {
     c.set('userEmail', user.email);
 
     await next();
-  } catch (error) {
+  } catch (_error) {
     return c.json(
       { error: ERROR_MESSAGES.GENERIC.INTERNAL_ERROR },
       HTTP_STATUS.INTERNAL_SERVER_ERROR,

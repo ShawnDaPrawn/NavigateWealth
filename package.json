@@ -5,8 +5,6 @@
   "dependencies": {
     "@hello-pangea/dnd": "^18.0.1",
     "@hookform/resolvers": "^5.2.2",
-    "@jsr/std__encoding": "^1.0.10",
-    "@jsr/supabase__supabase-js": "^2.49.8",
     "@radix-ui/react-accordion": "^1.2.12",
     "@radix-ui/react-alert-dialog": "^1.1.15",
     "@radix-ui/react-aspect-ratio": "^1.1.8",
@@ -91,6 +89,10 @@
     "xlsx": "npm:@e965/xlsx@^0.20.3",
     "zod": "^3.25.76"
   },
+  "optionalDependencies": {
+    "@jsr/std__encoding": "^1.0.10",
+    "@jsr/supabase__supabase-js": "^2.49.8"
+  },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
     "@playwright/test": "^1.59.1",
@@ -120,7 +122,8 @@
     "vite": "^6.4.2"
   },
   "overrides": {
-    "quill": "2.0.2"
+    "quill": "2.0.2",
+    "uuid": ">=11.1.1"
   },
   "scripts": {
     "dev": "vite",
@@ -149,6 +152,7 @@
     "fna-intake:uat-report": "node ./scripts/fna-intake-uat-report.mjs",
     "form-prefill:smoke": "node ./scripts/form-prefill-api-smoke.mjs",
     "form-prefill:e2e": "playwright test e2e/form-prefill-smoke.spec.ts --project=desktop-chromium",
-    "form-prefill:migrate-templates": "node ./scripts/migrate-form-templates-to-storage.mjs"
+    "form-prefill:migrate-templates": "node ./scripts/migrate-form-templates-to-storage.mjs",
+    "depcruise": "npx dependency-cruiser@16 'src/**/*.{ts,tsx}' --config .dependency-cruiser.cjs"
   }
 }

@@ -7,7 +7,7 @@
  * Guidelines refs: §7 (presentation), §7.1 (derived display state)
  */
 
-import React, { useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useAuth } from '../auth/AuthContext';
 import { Briefcase, Calculator, FileText, Users } from 'lucide-react';
 import type { ServicePageAction, ServicePageInsight } from '../layout/ServicePageLayout';
@@ -15,6 +15,7 @@ import { DynamicServicePageWrapper } from '../layout/DynamicServicePageWrapper';
 import { usePortfolioSummary } from './portfolio/hooks';
 import { ServiceRequestModal, SERVICE_REQUEST_CONFIGS } from '../modals/ServiceRequestModal';
 import { PortalQuoteFlowModal } from '../portal/PortalQuoteFlowModal';
+import { logger } from '../../utils/logger';
 
 export function EmployeeBenefitsDashboardPage() {
   const { user } = useAuth();
@@ -70,7 +71,7 @@ export function EmployeeBenefitsDashboardPage() {
       label: 'Needs Analysis',
       description: 'Review your group benefits',
       icon: Calculator,
-      onClick: () => console.log('Needs Analysis'),
+      onClick: () => logger.debug('Needs Analysis'),
       primary: true,
     },
     {

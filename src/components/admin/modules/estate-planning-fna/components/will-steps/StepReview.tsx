@@ -3,7 +3,6 @@
  * Read-only summary cards for final review before saving.
  */
 
-import React from 'react';
 import { Badge } from '../../../../../ui/badge';
 import { Separator } from '../../../../../ui/separator';
 import {

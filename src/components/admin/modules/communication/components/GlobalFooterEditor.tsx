@@ -1,11 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { Button } from '../../../../ui/button';
 import { Input } from '../../../../ui/input';
 import { Label } from '../../../../ui/label';
 import { Textarea } from '../../../../ui/textarea';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../../../ui/card';
-import { Separator } from '../../../../ui/separator';
-import { Loader2, ArrowLeft, Save, Globe, Mail, Phone, MapPin, Building } from 'lucide-react';
+import { Loader2, ArrowLeft, Save, Globe, Mail, Phone, Building } from 'lucide-react';
 import { communicationApi } from '../api';
 import { EmailFooterSettings } from '../types';
 import { toast } from 'sonner';

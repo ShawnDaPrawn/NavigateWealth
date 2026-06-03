@@ -1,4 +1,3 @@
-import React from 'react';
 import { toast } from 'sonner';
 import { ComplianceTable } from './ComplianceTable';
 import { useFAISRecords } from '../hooks/useFAISRecords';
@@ -81,7 +80,7 @@ export function FAISTab() {
     toast.info('Add FAIS record functionality coming soon');
   };
 
-  const handleEdit = (record: ComplianceRecord) => {
+  const handleEdit = (_record: ComplianceRecord) => {
     toast.info('Edit FAIS record functionality coming soon');
   };
 

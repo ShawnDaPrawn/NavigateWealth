@@ -16,15 +16,12 @@ import {
   Eye,
   Loader2,
   Sparkles,
-  X,
   Save,
-  AlertTriangle,
   RotateCcw,
 } from 'lucide-react';
 import { Button } from '../../../../ui/button';
 import { Badge } from '../../../../ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '../../../../ui/card';
-import { cn } from '../../../../ui/utils';
 import { PublicationsAPI } from '../api';
 import type { ContentTemplate, CreateTemplateInput, UpdateTemplateInput } from '../types';
 import { toast } from 'sonner';
@@ -193,7 +190,7 @@ export function ContentTemplates() {
         toast.success('Template created successfully');
         setShowCreateForm(false);
         await loadTemplates();
-      } catch (err) {
+      } catch {
         toast.error('Failed to create template');
       } finally {
         setIsSaving(false);
@@ -214,7 +211,7 @@ export function ContentTemplates() {
         toast.success('Template updated successfully');
         setEditingTemplate(null);
         await loadTemplates();
-      } catch (err) {
+      } catch {
         toast.error('Failed to update template');
       } finally {
         setIsSaving(false);
@@ -230,7 +227,7 @@ export function ContentTemplates() {
         toast.success('Template deleted');
         setDeleteConfirm(null);
         await loadTemplates();
-      } catch (err) {
+      } catch {
         toast.error('Failed to delete template');
       }
     },
@@ -242,7 +239,7 @@ export function ContentTemplates() {
       await PublicationsAPI.Templates.seedDefaults();
       toast.success('Default templates created');
       await loadTemplates();
-    } catch (err) {
+    } catch {
       toast.error('Failed to seed default templates');
     }
   }, [loadTemplates]);

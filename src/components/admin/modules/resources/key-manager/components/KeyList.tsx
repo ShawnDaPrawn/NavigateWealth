@@ -3,7 +3,6 @@
  * Renders a list of keys with empty state handling
  */
 
-import React from 'react';
 import { Key } from 'lucide-react';
 import { ProductKey } from '../types';
 import { KeyCard } from './KeyCard';

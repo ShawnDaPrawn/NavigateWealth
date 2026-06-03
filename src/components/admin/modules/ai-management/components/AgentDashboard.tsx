@@ -9,7 +9,6 @@
 
 import React from 'react';
 import {
-  MessageSquare,
   Users,
   ThumbsUp,
   PhoneForwarded,
@@ -23,8 +22,6 @@ import {
   Power,
   PowerOff,
   Loader2,
-  Check,
-  X,
   Zap,
   BookOpen,
   AlertCircle,

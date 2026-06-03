@@ -117,11 +117,9 @@ export function PageManagerDialog({
     void (async () => {
       try {
         // Lazy-import pdfjs — heavy module, no need on first paint.
-        // @ts-ignore — pdfjs-dist's legacy build provides a worker-free entry.
         const pdfjs = await import('pdfjs-dist/legacy/build/pdf.mjs');
-        // @ts-ignore — disable the worker so we don't have to ship one.
         pdfjs.GlobalWorkerOptions.workerSrc = '';
-        const loadingTask = pdfjs.getDocument({ url: documentUrl, isEvalSupported: false });
+        const loadingTask = pdfjs.getDocument({ url: documentUrl });
         const doc = await loadingTask.promise;
         const out: Record<number, string> = {};
         for (let p = 1; p <= doc.numPages; p++) {

@@ -19,7 +19,7 @@
 import React, { useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '../../../../../ui/card';
 import { Badge } from '../../../../../ui/badge';
-import { FileCheck, FileX, FolderOpen, CheckCircle2, Circle, AlertCircle } from 'lucide-react';
+import { FolderOpen, CheckCircle2, Circle } from 'lucide-react';
 import type { DashboardMode } from '../clientOverviewConstants';
 
 // ── Types ───────────────────────────────────────────────────────────────

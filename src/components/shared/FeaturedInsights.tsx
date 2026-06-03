@@ -17,7 +17,7 @@
  *   §8.3 — white section background, consistent stat card/card patterns
  */
 
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { Link } from 'react-router';
 import { Badge } from '../ui/badge';
 import { Button } from '../ui/button';

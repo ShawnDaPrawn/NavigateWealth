@@ -1,4 +1,3 @@
-import React from 'react';
 import { KPICard } from './KPICard';
 import { Users } from 'lucide-react';
 import type { KPIGridProps } from '../types';

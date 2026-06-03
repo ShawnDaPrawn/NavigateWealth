@@ -2,7 +2,7 @@
  * External Form Templates - upload PDFs, map fields, fill from client data.
  */
 
-import React, { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { toast } from 'sonner';
 import { FileUp, Loader2, Sparkles } from 'lucide-react';
 import { Link } from 'react-router';

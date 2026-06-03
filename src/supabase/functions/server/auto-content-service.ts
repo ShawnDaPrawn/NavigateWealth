@@ -24,7 +24,6 @@
 import * as kv from './kv_store.tsx';
 import { generateFullArticle } from './publications-ai-service.ts';
 import type { GenerateArticleBrief, GenerateArticleResult } from './publications-ai-service.ts';
-import { searchUnsplashImage } from './publications-ai-service.ts';
 import { createModuleLogger } from './stderr-logger.ts';
 
 const log = createModuleLogger('auto-content');
@@ -665,7 +664,6 @@ async function runMarketCommentary(config: PipelineConfig): Promise<PipelineTrig
   const start = Date.now();
   const errors: string[] = [];
   const articleIds: string[] = [];
-  let tokensUsed = 0;
   let sources: ContentSource[] = [];
 
   try {
@@ -767,7 +765,6 @@ async function runMarketCommentary(config: PipelineConfig): Promise<PipelineTrig
     // Stale image prevention: load recently used image IDs
     const excludeImageIds = await getRecentlyUsedImageIds();
     const result = await generateFullArticle(brief, { excludeImageIds });
-    tokensUsed = result.tokensUsed;
 
     // Track used image
     if (result.unsplashPhotoId) await recordUsedImage(result.unsplashPhotoId);
@@ -870,7 +867,6 @@ async function runRegulatoryMonitor(config: PipelineConfig): Promise<PipelineTri
   const start = Date.now();
   const errors: string[] = [];
   const articleIds: string[] = [];
-  let tokensUsed = 0;
 
   try {
     // Resolve sources for this pipeline
@@ -949,7 +945,6 @@ async function runRegulatoryMonitor(config: PipelineConfig): Promise<PipelineTri
         };
 
         const result = await generateFullArticle(brief, { excludeImageIds });
-        tokensUsed += result.tokensUsed;
 
         if (result.unsplashPhotoId) {
           await recordUsedImage(result.unsplashPhotoId);
@@ -1024,7 +1019,6 @@ async function runNewsCommentary(config: PipelineConfig): Promise<PipelineTrigge
   const start = Date.now();
   const errors: string[] = [];
   const articleIds: string[] = [];
-  let tokensUsed = 0;
 
   try {
     // Resolve sources for this pipeline
@@ -1091,7 +1085,6 @@ async function runNewsCommentary(config: PipelineConfig): Promise<PipelineTrigge
       };
 
       const result = await generateFullArticle(brief, { excludeImageIds });
-      tokensUsed = result.tokensUsed;
 
       if (result.unsplashPhotoId) await recordUsedImage(result.unsplashPhotoId);
 
@@ -1195,7 +1188,6 @@ async function runNewsCommentary(config: PipelineConfig): Promise<PipelineTrigge
     };
 
     const result = await generateFullArticle(brief, { excludeImageIds });
-    tokensUsed = result.tokensUsed;
 
     if (result.unsplashPhotoId) await recordUsedImage(result.unsplashPhotoId);
 
@@ -1485,7 +1477,6 @@ async function runCalendarContent(config: PipelineConfig): Promise<PipelineTrigg
   const start = Date.now();
   const errors: string[] = [];
   const articleIds: string[] = [];
-  let tokensUsed = 0;
 
   try {
     // Ensure calendar events exist
@@ -1558,7 +1549,6 @@ async function runCalendarContent(config: PipelineConfig): Promise<PipelineTrigg
         };
 
         const result = await generateFullArticle(brief, { excludeImageIds });
-        tokensUsed += result.tokensUsed;
 
         if (result.unsplashPhotoId) {
           await recordUsedImage(result.unsplashPhotoId);

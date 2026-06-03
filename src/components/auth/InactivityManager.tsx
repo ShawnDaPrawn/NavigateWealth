@@ -7,8 +7,9 @@
  */
 
 import { useEffect, useState, useRef, useCallback } from 'react';
-import { useNavigate, useLocation } from 'react-router';
+import { useNavigate } from 'react-router';
 import { useAuth } from './AuthContext';
+import { logger } from '../../utils/logger';
 import { onLogoutBroadcast, onNavigateBroadcast } from '../../utils/auth/sessionSync';
 import {
   Dialog,
@@ -49,7 +50,7 @@ export function InactivityManager() {
   // Handle cross-tab logout navigation
   useEffect(() => {
     const unsubscribe = onLogoutBroadcast(() => {
-      console.log('🔀 Navigating to homepage due to logout in another tab');
+      logger.info('Navigating to homepage due to logout in another tab');
       // Navigate to homepage
       navigate('/', { replace: true });
     });
@@ -60,7 +61,7 @@ export function InactivityManager() {
   // Handle cross-tab navigation events
   useEffect(() => {
     const unsubscribe = onNavigateBroadcast(() => {
-      console.log('🔀 Navigation broadcast received');
+      logger.debug('Navigation broadcast received');
       // Could be used for future navigation sync features
     });
 
@@ -93,7 +94,7 @@ export function InactivityManager() {
       return;
     }
 
-    console.log('⏰ Inactivity manager started for client user (Timestamp approach)');
+    logger.info('Inactivity manager started for client user (Timestamp approach)');
     lastActivityRef.current = Date.now();
 
     // Add event listeners for activity
@@ -102,7 +103,7 @@ export function InactivityManager() {
     });
 
     const performLogout = async () => {
-      console.log('⏰ Auto-logout due to inactivity');
+      logger.info('Auto-logout due to inactivity');
       setShowWarning(false);
 
       try {
@@ -128,7 +129,7 @@ export function InactivityManager() {
         // Show warning if we are in the warning window and it's not already showing
         setShowWarning((prevShowing) => {
           if (!prevShowing) {
-            console.log('⚠️ Showing inactivity warning');
+            logger.info('Showing inactivity warning');
             const secondsLeft = Math.max(1, Math.floor((INACTIVITY_TIMEOUT - inactiveTime) / 1000));
             setCountdown(secondsLeft);
 
@@ -160,7 +161,7 @@ export function InactivityManager() {
 
   // Handle extend session
   const handleExtendSession = () => {
-    console.log('✅ Session extended by user');
+    logger.info('Session extended by user');
     handleActivity();
   };
 

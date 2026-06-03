@@ -1,3 +1,4 @@
+/* eslint-disable react-refresh/only-export-components */
 /**
  * ConditionalLogicEditor — Phase 2 block visibility rules.
  *
@@ -8,7 +9,6 @@
  * Guidelines §8.3 — Consistent form patterns.
  */
 
-import React from 'react';
 import { Label } from '../../../../../ui/label';
 import { Input } from '../../../../../ui/input';
 import { Button } from '../../../../../ui/button';

@@ -2,6 +2,7 @@ import React from 'react';
 import { ComplianceTable } from './ComplianceTable';
 import { ComplianceRecord } from '../types';
 import { useComplaints } from '../hooks';
+import { logger } from '../../../../../utils/logger';
 
 const columns = [
   { key: 'title', label: 'Complaint Description', type: 'text' as const },
@@ -81,9 +82,9 @@ export function ComplaintsTCFTab() {
       columns={columns as React.ComponentProps<typeof ComplianceTable>['columns']}
       filters={filters}
       loading={isLoading}
-      onAdd={() => console.log('Add complaint')}
-      onEdit={(record) => console.log('Edit complaint:', record)}
-      onExport={() => console.log('Export complaints')}
+      onAdd={() => logger.info('Add complaint')}
+      onEdit={(record) => logger.info('Edit complaint:', { record })}
+      onExport={() => logger.info('Export complaints')}
     />
   );
 }

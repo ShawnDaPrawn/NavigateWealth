@@ -6,6 +6,7 @@
 
 import { createClient as createSupabaseClient, SupabaseClient } from '@supabase/supabase-js';
 import { publicAnonKey, supabaseUrl } from './info';
+import { logger } from '../logger';
 
 // Create a singleton instance to avoid creating multiple clients
 let supabaseInstance: SupabaseClient | null = null;
@@ -16,7 +17,7 @@ let supabaseInstance: SupabaseClient | null = null;
  */
 export function createClient(): SupabaseClient {
   if (!supabaseInstance) {
-    console.log('Creating new Supabase client instance (Singleton)');
+    logger.info('Creating new Supabase client instance (Singleton)');
     supabaseInstance = createSupabaseClient(supabaseUrl, publicAnonKey, {
       auth: {
         autoRefreshToken: true,

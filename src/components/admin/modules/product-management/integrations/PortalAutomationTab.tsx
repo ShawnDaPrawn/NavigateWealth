@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Alert, AlertDescription, AlertTitle } from '../../../../ui/alert';
 import { Badge } from '../../../../ui/badge';
 import { Button } from '../../../../ui/button';
@@ -435,7 +435,7 @@ export function PortalAutomationTab({
 
   const buildFlowDraft = (): PortalProviderFlow | null => {
     if (!flow) return null;
-    let policyListSteps = flow.navigation.policyListSteps || [];
+    let policyListSteps;
     try {
       const parsed = JSON.parse(policyListStepsJson || '[]');
       policyListSteps = Array.isArray(parsed) ? parsed : [];

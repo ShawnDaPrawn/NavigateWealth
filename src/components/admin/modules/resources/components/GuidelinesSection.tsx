@@ -74,7 +74,7 @@ export function GuidelinesSection({ onUpdate }: { onUpdate: () => void }) {
       setNewRule({ title: '', description: '' });
       onUpdate();
       toast.success('Rule added');
-    } catch (err) {
+    } catch (_err) {
       toast.error('Failed to add rule');
     } finally {
       setSaving(false);
@@ -88,7 +88,7 @@ export function GuidelinesSection({ onUpdate }: { onUpdate: () => void }) {
       setGuidelines((prev) => (prev ? { ...prev, rules } : null));
       onUpdate();
       toast.success('Rule removed');
-    } catch (err) {
+    } catch (_err) {
       toast.error('Failed to remove rule');
     }
   };
@@ -101,7 +101,7 @@ export function GuidelinesSection({ onUpdate }: { onUpdate: () => void }) {
       setVoiceEditing(false);
       onUpdate();
       toast.success('Brand voice saved');
-    } catch (err) {
+    } catch (_err) {
       toast.error('Failed to save brand voice');
     } finally {
       setSaving(false);
@@ -117,7 +117,7 @@ export function GuidelinesSection({ onUpdate }: { onUpdate: () => void }) {
       await loadGuidelines();
       onUpdate();
       toast.success('Guidelines PDF uploaded');
-    } catch (err) {
+    } catch (_err) {
       toast.error('Failed to upload PDF');
     } finally {
       setPdfUploading(false);

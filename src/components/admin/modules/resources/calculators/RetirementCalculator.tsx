@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../../../../ui/card';
 import { Button } from '../../../../ui/button';
 import { Input } from '../../../../ui/input';
@@ -11,7 +11,6 @@ import {
   SelectValue,
 } from '../../../../ui/select';
 import { Switch } from '../../../../ui/switch';
-import { Separator } from '../../../../ui/separator';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../../../ui/tabs';
 import {
   Table,
@@ -146,7 +145,7 @@ export function RetirementCalculator({ onBack }: RetirementCalculatorProps) {
       await api.delete(`/resources/calculators/retirement/scenarios/${selectedClientId}/${id}`);
       toast.success('Scenario deleted');
       loadScenarios(selectedClientId);
-    } catch (error) {
+    } catch (_error) {
       toast.error('Failed to delete scenario');
     }
   };
@@ -170,8 +169,6 @@ export function RetirementCalculator({ onBack }: RetirementCalculatorProps) {
       nominalReturn,
       inflation,
       annualFee,
-      drawdownTargetMode,
-      drawdownTargetValue,
     } = inputs;
 
     // Basic validation
@@ -207,21 +204,18 @@ export function RetirementCalculator({ onBack }: RetirementCalculatorProps) {
     const fvCurrentSavings = currentSavings * Math.pow(1 + r, n);
 
     // 2. Future Value of Contributions (at Retirement)
-    let fvContributions = 0;
-    if (Math.abs(r - g_real) < 0.0001) {
-      // Special case r ~ g
-      fvContributions = annualContribution * n * Math.pow(1 + r, n - 1);
-    } else {
-      // Growing annuity formula (end of period payments)
-      fvContributions =
-        annualContribution * ((Math.pow(1 + r, n) - Math.pow(1 + g_real, n)) / (r - g_real));
-    }
+    const fvContributions =
+      Math.abs(r - g_real) < 0.0001
+        ? // Special case r ~ g
+          annualContribution * n * Math.pow(1 + r, n - 1)
+        : // Growing annuity formula (end of period payments)
+          annualContribution * ((Math.pow(1 + r, n) - Math.pow(1 + g_real, n)) / (r - g_real));
 
     const totalCapital = fvCurrentSavings + fvContributions;
 
     // 3. Sustainable Income
     // Income = PV * ( r / (1 - (1+r)^(-m)) )
-    let sustainableIncomeAnnual = 0;
+    let sustainableIncomeAnnual: number;
     if (Math.abs(r) < 0.0001) {
       sustainableIncomeAnnual = totalCapital / m;
     } else {
@@ -244,8 +238,7 @@ export function RetirementCalculator({ onBack }: RetirementCalculatorProps) {
       const age = currentAge + year;
       const isAccumulation = age <= retirementAge;
       const openingBalance = balance;
-      let flow = 0;
-      let growth = 0;
+      let flow: number;
 
       if (isAccumulation) {
         flow = currentAnnualContrib;
@@ -263,7 +256,7 @@ export function RetirementCalculator({ onBack }: RetirementCalculatorProps) {
       // For drawdown, typically we withdraw at start.
       // Let's assume End of Period for both for consistency with annuity formulas used.
 
-      growth = openingBalance * r;
+      const growth = openingBalance * r;
       balance = openingBalance + growth + flow;
 
       if (balance < 0) {

@@ -1,10 +1,10 @@
+/* eslint-disable react-refresh/only-export-components */
 import React, { Component, ErrorInfo, ReactNode } from 'react';
 import { AlertCircle, RefreshCw, Home, ShieldAlert } from 'lucide-react';
 import { Button } from '../ui/button';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '../ui/card';
 import { Alert, AlertDescription, AlertTitle } from '../ui/alert';
 import { logger } from '../../utils/logger';
-import { AppError } from '../../shared/types/logger';
 import { reportRuntimeClientIssue } from '../../utils/quality/runtimeIssueReporter';
 
 interface Props {
@@ -95,7 +95,6 @@ export class ErrorBoundary extends Component<Props, State> {
   }
 
   private isDevelopment(): boolean {
-    // @ts-ignore
     return import.meta.env?.DEV || false;
   }
 

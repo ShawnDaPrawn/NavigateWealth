@@ -5,7 +5,6 @@
  * Guidelines §7.1 — Uses config-driven status from constants.ts
  */
 
-import React from 'react';
 import { Badge } from '../../../../ui/badge';
 import { CheckCircle, FileEdit, Archive } from 'lucide-react';
 import { FNA_STATUS_CONFIG, FNA_BADGE_SIZE_CLASSES } from '../constants';

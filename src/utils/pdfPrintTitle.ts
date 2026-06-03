@@ -23,6 +23,7 @@ export function escapeHtmlText(s: string): string {
 export function sanitizeWindowsFileName(name: string): string {
   const cleaned = String(name)
     .replace(/[/\\:*?"<>|]+/g, '-')
+    // eslint-disable-next-line no-control-regex -- intentionally strips control characters from filenames to ensure filesystem compatibility
     .replace(/[\u0000-\u001f]/g, '')
     .replace(/^\.+/, '')
     .trim();

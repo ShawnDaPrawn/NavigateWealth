@@ -70,7 +70,7 @@ export async function getReminderConfig(envelopeId: string): Promise<ReminderCon
   try {
     const stored = await kv.get(KEYS.envelopeReminderConfig(envelopeId));
     if (stored) return { ...DEFAULT_REMINDER_CONFIG, ...stored };
-  } catch (e) {
+  } catch (_e) {
     // Fall back to defaults
   }
   return DEFAULT_REMINDER_CONFIG;

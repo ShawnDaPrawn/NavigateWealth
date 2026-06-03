@@ -22,7 +22,7 @@ export function useMedicalFNAMutations() {
 
   const createMutation = useMutation({
     mutationFn: (clientId: string) => MedicalFnaAPI.createMedicalFNA(clientId),
-    onSuccess: (data) => {
+    onSuccess: (_data) => {
       queryClient.invalidateQueries({ queryKey: QUERY_KEYS.all });
       toast.success('Medical FNA draft created successfully');
     },

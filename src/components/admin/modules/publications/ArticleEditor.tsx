@@ -36,7 +36,6 @@ import type {
   ArticleNotificationCampaign,
   ArticleNotificationJob,
   CreateArticleInput,
-  UpdateArticleInput,
 } from './types';
 import type { ContentTemplate, GenerateArticleResult } from './types';
 import { useArticleForm, useCategories, useTypes, useArticleActions } from './hooks';
@@ -82,47 +81,36 @@ export function ArticleEditor({
   const isEditMode = !!article;
 
   // Form management with auto-save
-  const {
-    formData,
-    errors,
-    isDirty,
-    isSaving,
-    updateField,
-    updateMultipleFields,
-    generateSlugFromTitle,
-    calculateReadingTimeFromBody,
-    save,
-    validate,
-    reset,
-  } = useArticleForm({
-    article: article || null,
-    autoSave: true,
-    onSuccess: (savedArticle) => {
-      // For published articles being updated: stay in the editor so the user
-      // can continue making changes without being navigated back to the list.
-      // The article remains published — the URL/slug is unchanged.
-      if (isEditMode && article?.status === 'published') {
-        toast.success('Article updated — changes are now live on the website');
-        setSuccessMessage('Article updated successfully. Changes are live.');
-        // Do NOT call onSaved() — we intentionally stay in the editor.
-      } else {
-        setSuccessMessage(
-          isEditMode ? 'Article updated successfully' : 'Article created successfully',
-        );
-        onSaved();
-      }
-    },
-    onError: (error) => {
-      setError(error);
-    },
-  });
+  const { formData, errors, isDirty, isSaving, updateField, updateMultipleFields, save, validate } =
+    useArticleForm({
+      article: article || null,
+      autoSave: true,
+      onSuccess: (_savedArticle) => {
+        // For published articles being updated: stay in the editor so the user
+        // can continue making changes without being navigated back to the list.
+        // The article remains published — the URL/slug is unchanged.
+        if (isEditMode && article?.status === 'published') {
+          toast.success('Article updated — changes are now live on the website');
+          setSuccessMessage('Article updated successfully. Changes are live.');
+          // Do NOT call onSaved() — we intentionally stay in the editor.
+        } else {
+          setSuccessMessage(
+            isEditMode ? 'Article updated successfully' : 'Article created successfully',
+          );
+          onSaved();
+        }
+      },
+      onError: (error) => {
+        setError(error);
+      },
+    });
 
   // Data fetching
   const { categories, isLoading: categoriesLoading } = useCategories({ activeOnly: true });
   const { types } = useTypes({ activeOnly: true });
 
   // Article actions
-  const { handleCreate, handleUpdate, handleSchedule, isProcessing } = useArticleActions({
+  const { handleSchedule, isProcessing } = useArticleActions({
     onSuccess: (message) => {
       setSuccessMessage(message);
       onSaved();

@@ -75,34 +75,30 @@ export function useZipEncryption(): UseZipEncryptionResult {
     const zipWriter = new ZipWriter(blobWriter, { bufferedWrite: true, useWebWorkers: false });
     const totalFiles = files.length;
 
-    try {
-      for (let i = 0; i < totalFiles; i++) {
-        const item = files[i];
-        setCurrentAction(`Compressing ${item.name}...`);
+    for (let i = 0; i < totalFiles; i++) {
+      const item = files[i];
+      setCurrentAction(`Compressing ${item.name}...`);
 
-        const folder = item.subcategory.trim();
-        const zipFilename = folder ? `${folder}/${item.name}` : item.name;
+      const folder = item.subcategory.trim();
+      const zipFilename = folder ? `${folder}/${item.name}` : item.name;
 
-        await zipWriter.add(zipFilename, new BlobReader(item.file), {
-          password: password,
-          level: 5,
-          zipCrypto: true,
-        });
+      await zipWriter.add(zipFilename, new BlobReader(item.file), {
+        password: password,
+        level: 5,
+        zipCrypto: true,
+      });
 
-        setProgress(Math.round(((i + 1) / totalFiles) * 90));
-      }
-
-      setCurrentAction('Finalizing archive...');
-      await zipWriter.close();
-      const blob = await blobWriter.getData();
-      const url = URL.createObjectURL(blob);
-      setZipUrl(url);
-      setProgress(100);
-      setCurrentAction('Done!');
-      toast.success('Encrypted Zip generated successfully');
-    } catch (error) {
-      throw error;
+      setProgress(Math.round(((i + 1) / totalFiles) * 90));
     }
+
+    setCurrentAction('Finalizing archive...');
+    await zipWriter.close();
+    const blob = await blobWriter.getData();
+    const url = URL.createObjectURL(blob);
+    setZipUrl(url);
+    setProgress(100);
+    setCurrentAction('Done!');
+    toast.success('Encrypted Zip generated successfully');
   };
 
   const generateFolderEncryptionZip = async (
@@ -110,62 +106,58 @@ export function useZipEncryption(): UseZipEncryptionResult {
     password: string,
     zipFilename: string,
   ) => {
-    try {
-      // Step 1: Create Inner Unencrypted Zip
-      setCurrentAction('Creating internal archive structure...');
-      const innerBlobWriter = new BlobWriter('application/zip');
-      const innerZipWriter = new ZipWriter(innerBlobWriter, {
-        bufferedWrite: true,
-        useWebWorkers: false,
+    // Step 1: Create Inner Unencrypted Zip
+    setCurrentAction('Creating internal archive structure...');
+    const innerBlobWriter = new BlobWriter('application/zip');
+    const innerZipWriter = new ZipWriter(innerBlobWriter, {
+      bufferedWrite: true,
+      useWebWorkers: false,
+    });
+
+    const totalFiles = files.length;
+
+    for (let i = 0; i < totalFiles; i++) {
+      const item = files[i];
+      const folder = item.subcategory.trim();
+      const filename = folder ? `${folder}/${item.name}` : item.name;
+
+      await innerZipWriter.add(filename, new BlobReader(item.file), {
+        level: 0, // No compression for inner zip to speed up, outer zip will compress
       });
 
-      const totalFiles = files.length;
-
-      for (let i = 0; i < totalFiles; i++) {
-        const item = files[i];
-        const folder = item.subcategory.trim();
-        const filename = folder ? `${folder}/${item.name}` : item.name;
-
-        await innerZipWriter.add(filename, new BlobReader(item.file), {
-          level: 0, // No compression for inner zip to speed up, outer zip will compress
-        });
-
-        setProgress(Math.round(((i + 1) / totalFiles) * 40));
-      }
-
-      await innerZipWriter.close();
-      const innerBlob = await innerBlobWriter.getData();
-
-      // Step 2: Create Outer Encrypted Zip containing the Inner Zip
-      setCurrentAction('Encrypting master archive...');
-      const outerBlobWriter = new BlobWriter('application/zip');
-      const outerZipWriter = new ZipWriter(outerBlobWriter, {
-        bufferedWrite: true,
-        useWebWorkers: false,
-      });
-
-      const innerFilename = `${zipFilename}_content.zip`;
-
-      await outerZipWriter.add(innerFilename, new BlobReader(innerBlob), {
-        password: password,
-        level: 5,
-        zipCrypto: true,
-      });
-
-      setProgress(90);
-      setCurrentAction('Finalizing secure package...');
-
-      await outerZipWriter.close();
-      const outerBlob = await outerBlobWriter.getData();
-      const url = URL.createObjectURL(outerBlob);
-
-      setZipUrl(url);
-      setProgress(100);
-      setCurrentAction('Done!');
-      toast.success('Secure Folder Archive generated successfully');
-    } catch (error) {
-      throw error;
+      setProgress(Math.round(((i + 1) / totalFiles) * 40));
     }
+
+    await innerZipWriter.close();
+    const innerBlob = await innerBlobWriter.getData();
+
+    // Step 2: Create Outer Encrypted Zip containing the Inner Zip
+    setCurrentAction('Encrypting master archive...');
+    const outerBlobWriter = new BlobWriter('application/zip');
+    const outerZipWriter = new ZipWriter(outerBlobWriter, {
+      bufferedWrite: true,
+      useWebWorkers: false,
+    });
+
+    const innerFilename = `${zipFilename}_content.zip`;
+
+    await outerZipWriter.add(innerFilename, new BlobReader(innerBlob), {
+      password: password,
+      level: 5,
+      zipCrypto: true,
+    });
+
+    setProgress(90);
+    setCurrentAction('Finalizing secure package...');
+
+    await outerZipWriter.close();
+    const outerBlob = await outerBlobWriter.getData();
+    const url = URL.createObjectURL(outerBlob);
+
+    setZipUrl(url);
+    setProgress(100);
+    setCurrentAction('Done!');
+    toast.success('Secure Folder Archive generated successfully');
   };
 
   const reset = () => {

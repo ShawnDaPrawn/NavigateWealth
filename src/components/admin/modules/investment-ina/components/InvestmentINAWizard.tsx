@@ -3,7 +3,7 @@
  * Multi-step form for creating and editing Investment INA sessions
  */
 
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { FNAWizardLayout, FNAWizardStepConfig } from '../../fna/FNAWizardLayout';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../../../ui/card';
 import { Input } from '../../../../ui/input';
@@ -19,10 +19,8 @@ import {
 import { Textarea } from '../../../../ui/textarea';
 import { Badge } from '../../../../ui/badge';
 import { Separator } from '../../../../ui/separator';
-import { Checkbox } from '../../../../ui/checkbox';
 import {
   ArrowRight,
-  ArrowLeft,
   Check,
   Loader2,
   Plus,
@@ -31,8 +29,6 @@ import {
   CheckCircle,
   Target,
   TrendingUp,
-  DollarSign,
-  Calendar,
   Settings,
   Users,
   PiggyBank,
@@ -43,7 +39,6 @@ import type {
   InvestmentINAInputs,
   InvestmentGoal,
   DiscretionaryInvestment,
-  LumpSumContribution,
   RiskProfile,
   GoalType,
   PriorityLevel,
@@ -57,6 +52,7 @@ import { InvestmentINACalculationService } from '../services/investmentINACalcul
 import { toast } from 'sonner';
 import { useFormPrefill } from '../../form-prefill/useFormPrefill';
 import { isFormPrefillEnabled } from '../../../../../utils/formPrefillFeature';
+import { logger } from '../../../../../utils/logger';
 
 interface InvestmentINAWizardProps {
   open: boolean;
@@ -91,15 +87,18 @@ export function InvestmentINAWizard({
     },
   });
 
-  const stepsList: InvestmentINAWizardStep[] = [
-    'client-overview',
-    'discretionary-investments',
-    'risk-profile',
-    'economic-assumptions',
-    'goals-setup',
-    'review',
-    'results',
-  ];
+  const stepsList = useMemo<InvestmentINAWizardStep[]>(
+    () => [
+      'client-overview',
+      'discretionary-investments',
+      'risk-profile',
+      'economic-assumptions',
+      'goals-setup',
+      'review',
+      'results',
+    ],
+    [],
+  );
 
   const stepConfig: Record<InvestmentINAWizardStep, FNAWizardStepConfig> = {
     'client-overview': { id: 'client-overview', label: 'Client Overview', icon: Users },
@@ -130,7 +129,7 @@ export function InvestmentINAWizard({
       setInputs({});
       setResults(null);
     }
-  }, [open, clientId]);
+  }, [open, clientId, startAtStep, stepsList]);
 
   const loadInitialData = async () => {
     try {
@@ -143,8 +142,8 @@ export function InvestmentINAWizard({
       const autoPopulated = await InvestmentINAApiService.autoPopulateInputs(clientId);
       setInputs(intakePrefill ? { ...autoPopulated, ...intakePrefill } : autoPopulated);
       toast.success('Client data loaded successfully');
-    } catch (error: unknown) {
-      console.log('⚠️ Investment INA backend not available - working in client-side mode');
+    } catch (_error: unknown) {
+      logger.info('Investment INA backend not available - working in client-side mode');
       setInputs(intakePrefill ?? {});
     } finally {
       setLoading(false);
@@ -418,7 +417,7 @@ function ClientOverviewStep({ inputs, updateInputs }: INAStepProps) {
   );
 }
 
-function DiscretionaryInvestmentsStep({ inputs, updateInputs }: INAStepProps) {
+function DiscretionaryInvestmentsStep({ inputs }: INAStepProps) {
   const discretionaryInvs = inputs.discretionaryInvestments || [];
 
   return (
@@ -439,7 +438,7 @@ function DiscretionaryInvestmentsStep({ inputs, updateInputs }: INAStepProps) {
             </div>
           ) : (
             <div className="space-y-3">
-              {discretionaryInvs.map((inv: DiscretionaryInvestment, index: number) => (
+              {discretionaryInvs.map((inv: DiscretionaryInvestment, _index: number) => (
                 <div
                   key={inv.id}
                   className="flex items-center justify-between p-3 border rounded-lg"
@@ -527,7 +526,7 @@ function EconomicAssumptionsStep({ inputs, updateInputs }: INAStepProps) {
         expectedRealReturns: defaults.expectedRealReturns,
       });
     }
-  }, []);
+  }, [defaults.expectedRealReturns, defaults.longTermInflationRate, inputs.longTermInflationRate]);
 
   return (
     <div className="space-y-4">
@@ -678,7 +677,6 @@ function GoalEditorCard({
   onCollapse,
   onUpdate,
   onDelete,
-  discretionaryInvestments,
 }: {
   goal: InvestmentGoal;
   index: number;

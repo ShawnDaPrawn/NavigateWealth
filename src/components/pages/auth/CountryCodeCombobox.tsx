@@ -3,7 +3,7 @@
  * Prioritises SADC/primary-market countries at the top with a visual separator.
  */
 
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { ChevronsUpDown, Check, Search } from 'lucide-react';
 import { Popover, PopoverContent, PopoverTrigger } from '../../ui/popover';
 import { Button } from '../../ui/button';

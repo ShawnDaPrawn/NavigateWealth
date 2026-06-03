@@ -9,7 +9,6 @@
  * and their directorship history.
  */
 
-import React from 'react';
 import { Building2, Users, FileSpreadsheet } from 'lucide-react';
 import { HoneycombActionCard } from './HoneycombActionCard';
 

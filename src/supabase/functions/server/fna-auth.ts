@@ -101,7 +101,7 @@ export async function authenticateUser(
       throw err;
     }
     log.error(`[${context}] Unexpected auth failure`, err);
-    throw new Error('Unauthorized');
+    throw new Error('Unauthorized', { cause: err });
   }
 }
 

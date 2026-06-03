@@ -2,8 +2,6 @@
  * Constants for Documents/History module
  */
 
-import { FileText, Shield, TrendingUp, Activity, Briefcase, Home, Link, File } from 'lucide-react';
-
 export const DOCUMENT_TYPES = {
   DOCUMENT: 'document',
   LINK: 'link',
@@ -85,4 +83,5 @@ export const FILE_CONSTRAINTS = {
   ],
 } as const;
 
-export const URL_REGEX = /^(https?:\/\/)?([\da-z\.-]+)\.([a-z\.]{2,6})([\/\w \.-]*)*\/?$/;
+// eslint-disable-next-line no-useless-escape
+export const URL_REGEX = /^(https?:\/\/)?([\da-z.-]+)\.([a-z.]{2,6})([\w\/ .-]*)*\/?$/;

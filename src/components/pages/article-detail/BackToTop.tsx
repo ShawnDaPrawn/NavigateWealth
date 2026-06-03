@@ -7,7 +7,7 @@
  * @module article-detail/BackToTop
  */
 
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { ArrowUp } from 'lucide-react';
 import { cn } from '../../ui/utils';
 

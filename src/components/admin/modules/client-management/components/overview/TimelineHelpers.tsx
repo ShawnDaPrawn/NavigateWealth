@@ -5,7 +5,6 @@
  * Extracted from ClientOverviewTab.tsx.
  */
 
-import React from 'react';
 import { Badge } from '../../../../../ui/badge';
 import { CheckCircle, XCircle } from 'lucide-react';
 import { fmtDate, fmtDateTime, fmtRelative } from '../clientOverviewUtils';

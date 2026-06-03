@@ -82,7 +82,6 @@ import {
   FIELD_MAP_BY_SECTION,
   SECTION_LABELS,
   EXTERNAL_PRODUCT_CATEGORIES,
-  SA_PROVIDER_MAP,
 } from '../constants';
 import { ExternalProvidersSection } from './ExternalProvidersSection';
 

@@ -3,7 +3,7 @@
  * Sends an email inviting a prospective client to create a Navigate Wealth account.
  */
 
-import React, { useState, useCallback } from 'react';
+import { useState, useCallback } from 'react';
 import {
   Dialog,
   DialogContent,

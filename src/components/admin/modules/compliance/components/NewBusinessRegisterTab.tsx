@@ -1,7 +1,7 @@
-import React from 'react';
 import { ComplianceTable } from './ComplianceTable';
 import { ComplianceRecord } from '../types';
 import { useNewBusinessRecords } from '../hooks';
+import { logger } from '../../../../../utils/logger';
 
 const columns = [
   { key: 'title', label: 'Client & Product', type: 'text' as const },
@@ -91,9 +91,9 @@ export function NewBusinessRegisterTab() {
       columns={columns}
       filters={filters}
       loading={isLoading}
-      onAdd={() => console.log('Add new business record')}
-      onEdit={(record) => console.log('Edit business record:', record)}
-      onExport={() => console.log('Export new business register')}
+      onAdd={() => logger.info('Add new business record')}
+      onEdit={(record) => logger.info('Edit business record:', { record })}
+      onExport={() => logger.info('Export new business register')}
     />
   );
 }

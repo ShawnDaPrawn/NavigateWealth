@@ -1,3 +1,4 @@
+/* eslint-disable react-refresh/only-export-components */
 /**
  * E-Signature Module - Standalone Admin Module
  * Allows admins to send documents for e-signature to any user (existing clients or new recipients)
@@ -47,9 +48,6 @@ const EnvelopeInspector = React.lazy(() =>
 );
 const TemplatePickerDialog = React.lazy(() =>
   import('./components/TemplatePickerDialog').then((m) => ({ default: m.TemplatePickerDialog })),
-);
-const SaveAsTemplateDialog = React.lazy(() =>
-  import('./components/SaveAsTemplateDialog').then((m) => ({ default: m.SaveAsTemplateDialog })),
 );
 const BulkSendDialog = React.lazy(() =>
   import('./components/BulkSendDialog').then((m) => ({ default: m.BulkSendDialog })),
@@ -154,7 +152,7 @@ export function EsignModule() {
   // Prepare State
   const [activeEnvelope, setActiveEnvelope] = useState<EsignEnvelope | null>(null);
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const [pendingEnvelopes, setPendingEnvelopes] = useState<EsignEnvelope[]>([]);
+  const [_pendingEnvelopes, setPendingEnvelopes] = useState<EsignEnvelope[]>([]);
   const [documentUrl, setDocumentUrl] = useState<string | null>(null);
   const [savingTemplate, setSavingTemplate] = useState(false);
 

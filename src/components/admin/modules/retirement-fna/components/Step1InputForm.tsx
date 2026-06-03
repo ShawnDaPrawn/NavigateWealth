@@ -94,7 +94,7 @@ export function Step1InputForm({
     ...initialAssumptions, // Spread any others
   });
 
-  const [loading, setLoading] = useState(false);
+  const [loading, _setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<string>('profile');
   const [prefillStarted, setPrefillStarted] = useState(false);

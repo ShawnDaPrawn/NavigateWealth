@@ -38,7 +38,7 @@ interface KvRow {
   key: string;
   value: unknown;
 }
-interface AdvisorMessageArtifact extends Record<string, unknown> {}
+type AdvisorMessageArtifact = Record<string, unknown>;
 interface AdvisorStoredMessage {
   role: 'user' | 'assistant';
   content: string;
@@ -119,7 +119,7 @@ function toTimestampKey(timestamp: string): string {
 
 function stripMarkdownArtifacts(content: string): string {
   return content
-    .replace(/[*_`#>\-]+/g, ' ')
+    .replace(/[*_`#>-]+/g, ' ')
     .replace(/\[(.*?)\]\((.*?)\)/g, '$1')
     .replace(/\s+/g, ' ')
     .trim();
@@ -463,24 +463,22 @@ function extractTimestamp(value: unknown): number {
 function uniqueItems(items: unknown[]): unknown[] {
   const seen = new Set<string>();
 
-  return items.filter((item, index) => {
-    let key = `idx:${index}`;
-
-    if (isRecord(item)) {
-      const explicitKey = [
-        item.id,
-        item.messageId,
-        item.documentId,
-        item.policyNumber,
-        item.filePath,
-        item.url,
-      ].find((value) => typeof value === 'string' && value.trim());
-
-      key =
-        typeof explicitKey === 'string' && explicitKey.trim() ? explicitKey : JSON.stringify(item);
-    } else {
-      key = JSON.stringify(item);
-    }
+  return items.filter((item, _index) => {
+    const key: string = isRecord(item)
+      ? (() => {
+          const explicitKey = [
+            item.id,
+            item.messageId,
+            item.documentId,
+            item.policyNumber,
+            item.filePath,
+            item.url,
+          ].find((value) => typeof value === 'string' && value.trim());
+          return typeof explicitKey === 'string' && explicitKey.trim()
+            ? explicitKey
+            : JSON.stringify(item);
+        })()
+      : JSON.stringify(item);
 
     if (seen.has(key)) return false;
     seen.add(key);
@@ -1387,7 +1385,7 @@ app.get('/history', requireAuth, async (c) => {
 
     const messages = await loadAdvisorSessionMessages(user.id, activeSession.id);
     return c.json({ messages, sessionId: activeSession.id, session: activeSession });
-  } catch (error) {
+  } catch (_error) {
     return c.json({ error: 'Failed to fetch history' }, 500);
   }
 });
@@ -1413,7 +1411,7 @@ app.delete('/history', requireAuth, async (c) => {
     await deleteLegacyAdvisorHistory(user.id);
 
     return c.json({ success: true });
-  } catch (error) {
+  } catch (_error) {
     return c.json({ error: 'Failed to clear history' }, 500);
   }
 });

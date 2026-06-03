@@ -2,7 +2,7 @@
  * Hook for unified form prefill with review-before-apply flow.
  */
 
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { toast } from 'sonner';
 import type { FormPrefillId, PrefillResolveResponse } from '../../../../shared/form-prefill/types';
 import { logPrefillAudit, resolveFormPrefill } from '../../../../services/form-prefill-api';

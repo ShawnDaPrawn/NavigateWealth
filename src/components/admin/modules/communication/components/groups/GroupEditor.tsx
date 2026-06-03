@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { ArrowLeft, Save, Loader2, Plus, Trash2 } from 'lucide-react';
 import { Button } from '../../../../../ui/button';
 import { Input } from '../../../../../ui/input';

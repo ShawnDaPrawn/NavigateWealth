@@ -1,7 +1,7 @@
-import React from 'react';
 import { ComplianceTable } from './ComplianceTable';
 import { useStatutoryRecords } from '../hooks/useStatutoryRecords';
 import { ComplianceRecord, StatutoryRecord } from '../types';
+import { logger } from '../../../../../utils/logger';
 
 const columns = [
   { key: 'title', label: 'Return Description', type: 'text' as const },
@@ -66,15 +66,15 @@ export function StatutoryReturnsTab() {
   const { records, loading } = useStatutoryRecords();
 
   const handleAdd = () => {
-    console.log('Add new statutory return');
+    logger.info('Add new statutory return');
   };
 
   const handleEdit = (record: ComplianceRecord) => {
-    console.log('Edit statutory return:', record);
+    logger.info('Edit statutory return:', { record });
   };
 
   const handleExport = () => {
-    console.log('Export statutory returns');
+    logger.info('Export statutory returns');
   };
 
   return (

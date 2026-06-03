@@ -3,7 +3,6 @@
  * Displays comprehensive estate planning analysis
  */
 
-import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '../../../../ui/card';
 import { Badge } from '../../../../ui/badge';
 import { Separator } from '../../../../ui/separator';
@@ -18,7 +17,7 @@ import {
   Shield,
 } from 'lucide-react';
 import type { EstatePlanningSession } from '../types';
-import { EstatePlanningCalculationService, formatCurrency as formatCurrencyValue } from '../utils';
+import { formatCurrency as formatCurrencyValue } from '../utils';
 
 interface EstatePlanningResultsViewProps {
   fna: EstatePlanningSession;

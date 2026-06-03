@@ -338,7 +338,7 @@ adminRoutes.post('/upload-image', async (c) => {
     const buffer = new Uint8Array(arrayBuffer);
 
     // Upload to Supabase Storage
-    const { data, error: uploadError } = await getSupabase()
+    const { error: uploadError } = await getSupabase()
       .storage.from(bucketName)
       .upload(filePath, buffer, {
         contentType: file.type,

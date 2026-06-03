@@ -14,7 +14,7 @@
  *   const { downloadSubmissionAsPdf } = await import('./submission-pdf-generator');
  */
 
-import type { Submission, SubmissionType, SubmissionStatus } from '../types';
+import type { Submission } from '../types';
 import {
   SUBMISSION_STATUS_CONFIG,
   SUBMISSION_TYPE_CONFIG,
@@ -191,7 +191,7 @@ function flattenPayload(
         if ('selected' in vObj && 'adviser_assist' in vObj) {
           if (vObj.selected) {
             const coverLabel = formatPayloadKey(key);
-            let coverValue = '';
+            let coverValue: string;
             if (vObj.adviser_assist) {
               coverValue = 'Adviser assistance requested';
             } else {

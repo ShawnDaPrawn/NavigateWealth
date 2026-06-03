@@ -33,7 +33,7 @@ import {
 } from './linkedin-validation.ts';
 
 const app = new Hono();
-const log = createModuleLogger('linkedin-routes');
+const _log = createModuleLogger('linkedin-routes');
 const service = new LinkedInService();
 
 // ============================================================================

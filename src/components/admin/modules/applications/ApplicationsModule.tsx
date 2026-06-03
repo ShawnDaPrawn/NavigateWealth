@@ -3,7 +3,7 @@
  * Refactored: Unified navigation via stats cards, cleaner header layout
  */
 
-import React, { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { Button } from '../../../ui/button';
 import { toast } from 'sonner';
@@ -79,7 +79,7 @@ export function ApplicationsModule() {
       setLoading(false);
       setRefreshing(false);
     }
-  }, [activeTab]);
+  }, [activeTab, applications.length]);
 
   const loadStats = useCallback(async () => {
     try {
@@ -104,7 +104,7 @@ export function ApplicationsModule() {
       const detail = await applicationsApi.getApplicationDetail(application.id);
       setSelectedApplication(detail);
       setReviewDialogOpen(true);
-    } catch (error) {
+    } catch (_error) {
       toast.error('Failed to load application details');
     }
   }, []);

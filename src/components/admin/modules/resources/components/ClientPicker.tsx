@@ -4,7 +4,7 @@
  * Fetches from the client management API.
  */
 
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { Input } from '../../../../ui/input';
 import { Button } from '../../../../ui/button';
 import { Badge } from '../../../../ui/badge';

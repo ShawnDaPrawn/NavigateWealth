@@ -32,7 +32,7 @@
 
 import * as kv from './kv_store.tsx';
 import { createModuleLogger } from './stderr-logger.ts';
-import type { Context, MiddlewareHandler } from 'npm:hono';
+import type { MiddlewareHandler } from 'npm:hono';
 
 const log = createModuleLogger('idempotency');
 
@@ -47,7 +47,7 @@ const MAX_CACHED_BODY_BYTES = 256 * 1024;
 
 /** Loose key shape — UUIDs, ULIDs, opaque tokens are all fine.
  *  Reject anything obviously malicious (CRLF injection / path traversal). */
-const KEY_PATTERN = /^[A-Za-z0-9_\-]{8,128}$/;
+const KEY_PATTERN = /^[A-Za-z0-9_-]{8,128}$/;
 
 interface CachedRecord {
   /** Stable hash of the request body — used for "same key, different body" detection. */
@@ -193,7 +193,7 @@ export function requireIdempotency(opts?: { required?: boolean }): MiddlewareHan
     if (!res) return;
 
     const contentType = res.headers.get('content-type') ?? 'application/json';
-    let body = '';
+    let body: string;
     try {
       body = await res.clone().text();
     } catch (err) {

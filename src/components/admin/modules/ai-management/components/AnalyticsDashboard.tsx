@@ -5,7 +5,6 @@
  * Guidelines: §7, §8.3
  */
 
-import React from 'react';
 import {
   BarChart,
   Bar,
@@ -15,14 +14,10 @@ import {
   Tooltip,
   ResponsiveContainer,
   Legend,
-  LineChart,
-  Line,
   Area,
   AreaChart,
 } from 'recharts';
 import { Loader2, TrendingUp, MessageSquare, Database, AlertTriangle } from 'lucide-react';
-import { Badge } from '../../../../ui/badge';
-import { cn } from '../../../../ui/utils';
 import { PlatformFeaturesCard } from '../../dashboard/components/PlatformFeaturesCard';
 import { VascoAnalyticsCard } from '../../dashboard/components/VascoAnalyticsCard';
 import { useAnalyticsSummary } from '../hooks';

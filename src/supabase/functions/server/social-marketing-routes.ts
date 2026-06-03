@@ -9,7 +9,7 @@
  */
 
 import { Hono } from 'npm:hono';
-import { requireAuth, requireAdmin } from './auth-mw.ts';
+import { requireAdmin } from './auth-mw.ts';
 import { asyncHandler } from './error.middleware.ts';
 import { createModuleLogger } from './stderr-logger.ts';
 import { SocialMarketingService } from './social-marketing-service.ts';

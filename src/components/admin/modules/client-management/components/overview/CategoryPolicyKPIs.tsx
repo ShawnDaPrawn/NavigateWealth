@@ -1,3 +1,4 @@
+/* eslint-disable react-refresh/only-export-components */
 /**
  * Per-Category Policy KPIs — Phase 3
  *
@@ -126,13 +127,7 @@ export function CategoryPolicyKPIs({ categories, mode = 'adviser' }: CategoryPol
 
 // ── Category KPI Card ───────────────────────────────────────────────────
 
-function CategoryKPICard({
-  category,
-  mode = 'adviser',
-}: {
-  category: CategoryKPI;
-  mode?: DashboardMode;
-}) {
+function CategoryKPICard({ category }: { category: CategoryKPI; mode?: DashboardMode }) {
   const iconCfg = CATEGORY_ICON_MAP[category.categoryId] || {
     icon: Briefcase,
     colorClass: 'text-gray-500',

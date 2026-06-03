@@ -99,7 +99,7 @@ export function TypographySection({ onUpdate }: { onUpdate: () => void }) {
       setEditFont({ role: 'heading', family: '', weights: '400,500,700', fallback: 'sans-serif' });
       onUpdate();
       toast.success('Font added');
-    } catch (err) {
+    } catch (_err) {
       toast.error('Failed to save font');
     } finally {
       setSaving(false);
@@ -119,7 +119,7 @@ export function TypographySection({ onUpdate }: { onUpdate: () => void }) {
       setConfig(saved);
       onUpdate();
       toast.success('Font removed');
-    } catch (err) {
+    } catch (_err) {
       toast.error('Failed to remove font');
     }
   };
@@ -131,7 +131,7 @@ export function TypographySection({ onUpdate }: { onUpdate: () => void }) {
       const saved = await brandApi.saveTypography(updated);
       setConfig(saved);
       toast.success('Notes saved');
-    } catch (err) {
+    } catch (_err) {
       toast.error('Failed to save notes');
     }
   };

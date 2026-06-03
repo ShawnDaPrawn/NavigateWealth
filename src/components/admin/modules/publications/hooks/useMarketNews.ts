@@ -38,7 +38,7 @@ export function useMarketNews(enabled: boolean = true) {
     enabled,
     staleTime: 1000 * 60 * 5, // 5 minutes
     refetchOnMount: false, // Already has refetchInterval — no need to re-fetch on every mount
-    refetchInterval: (query) => {
+    refetchInterval: (_query) => {
       // Auto refresh every 5 minutes if there are subscribers
       return enabled ? 1000 * 60 * 5 : false;
     },

@@ -1,7 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { clientApi } from '../../client-management/api';
 import { CalendarEvent } from '../types';
-import { addYears, setYear, parseISO, isValid, format } from 'date-fns';
+import { setYear, parseISO, isValid } from 'date-fns';
 import { calendarKeys } from './queryKeys';
 
 export function useClientBirthdays(currentDate: Date) {

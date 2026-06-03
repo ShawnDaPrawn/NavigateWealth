@@ -3,29 +3,25 @@
  * DocuSign-style audit trail, recipient routing, and document info
  */
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Sheet, SheetContent, SheetTitle, SheetDescription } from '../../../../ui/sheet';
 import { Button } from '../../../../ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '../../../../ui/card';
 import { Badge } from '../../../../ui/badge';
 import { ScrollArea } from '../../../../ui/scroll-area';
-import { Separator } from '../../../../ui/separator';
 import {
   Download,
   Send,
   Ban,
-  Eye,
   Users,
   FileText,
   Mail,
   History,
   CheckCircle2,
   Clock,
-  AlertCircle,
   Copy,
   MoreVertical,
   Shield,
-  ChevronRight,
   Trash2,
   FileCheck,
   PenTool,
@@ -39,7 +35,6 @@ import {
   RotateCcw,
   FileSignature,
   ArrowDownToLine,
-  ExternalLink,
   Loader2,
   RefreshCw,
   FileDown,
@@ -54,7 +49,7 @@ import {
 } from '../../../../ui/dropdown-menu';
 
 import { StatusBadge } from './StatusBadge';
-import type { EsignEnvelope, EsignSigner, EsignAuditEvent } from '../types';
+import type { EsignEnvelope, EsignAuditEvent } from '../types';
 import type { SigningMode } from '../types';
 import { esignApi } from '../api';
 import { format } from 'date-fns';
@@ -229,13 +224,6 @@ function getAuditDisplayInfo(action: string, metadata?: Record<string, unknown>)
         bgColor: 'bg-gray-50 border-gray-200',
       };
   }
-}
-
-function getActorLabel(event: EsignAuditEvent): string {
-  if (event.actor_type === 'system') return 'System';
-  if (event.actor_type === 'sender_user') return event.email || 'Admin';
-  if (event.actor_type === 'signer') return event.email || 'Signer';
-  return event.email || 'Unknown';
 }
 
 function formatAuditDateTime(dateString?: string): string {
@@ -839,7 +827,7 @@ export function EnvelopeInspector({
                         onClick={async () => {
                           try {
                             await esignApi.downloadAuditTrailCsv(envelope.id);
-                          } catch (err) {
+                          } catch (_err) {
                             toast.error('Failed to export audit trail');
                           }
                         }}

@@ -22,7 +22,6 @@ import {
   Loader2,
   Undo2,
   Redo2,
-  Check,
   AlertCircle,
   Cloud,
   CloudOff,
@@ -32,16 +31,12 @@ import {
 import { toast } from 'sonner';
 import { api } from '../../../../../utils/api';
 import { getBlockDefinition } from './registry';
+import { logger } from '../../../../../utils/logger';
 import type { LetterMeta } from '../templates/LetterheadPdfLayout';
 
 // Phase 1/Phase 2 imports
 import { TemplateGallery } from './components/TemplateGallery';
-import {
-  STARTER_TEMPLATES,
-  type StarterTemplate,
-  FORM_STATUS_CONFIG,
-  type FormStatus,
-} from './constants';
+import { type StarterTemplate } from './constants';
 
 // Simple ID generator
 const generateId = () => {
@@ -83,7 +78,7 @@ async function saveToApi(
   payload: SavePayload,
   resourceId: string | undefined,
 ): Promise<Record<string, unknown>> {
-  console.log('[FormBuilder] Saving form:', {
+  logger.info('[FormBuilder] Saving form', {
     isUpdate: !!resourceId,
     formId: resourceId,
     title: payload.title,
@@ -94,7 +89,7 @@ async function saveToApi(
     ? await api.put<Record<string, unknown>>(`/resources/${resourceId}`, payload)
     : await api.post<Record<string, unknown>>('/resources', payload);
 
-  console.log('[FormBuilder] Save successful:', data);
+  logger.info('[FormBuilder] Save successful', { data });
   return data;
 }
 
@@ -184,9 +179,7 @@ interface FormBuilderWorkspaceProps extends FormBuilderProps {
 
 const FormBuilderWorkspace = ({
   onBack,
-  onSave,
   initialData,
-  mode = 'form',
   resolvedInitialBlocks,
   resolvedCategory,
   resolvedTitle,
@@ -279,7 +272,7 @@ const FormBuilderWorkspace = ({
     status: autosaveStatus,
     isDirty,
     lastSavedAt,
-    saveNow: autosaveSaveNow,
+    saveNow: _autosaveSaveNow,
     markSaved,
   } = useAutosave<SavePayload>({
     data: currentPayload,
@@ -854,7 +847,6 @@ const FormBuilderWorkspace = ({
 
 function AutosaveIndicator({
   status,
-  isDirty,
   lastSavedAt,
   isNew,
   manualSaving,

@@ -76,7 +76,7 @@ export function useFNAMutations() {
   // Archive FNA
   const archiveMutation = useMutation({
     mutationFn: (fnaId: string) => RiskPlanningFnaAPI.archive(fnaId),
-    onSuccess: (_success, fnaId) => {
+    onSuccess: (_success, _fnaId) => {
       queryClient.invalidateQueries({ queryKey: riskFnaKeys.all });
       toast.success('FNA archived successfully');
     },

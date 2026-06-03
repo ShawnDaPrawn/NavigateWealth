@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -9,7 +9,6 @@ import {
 } from '../../../../ui/dialog';
 import { Button } from '../../../../ui/button';
 import { Label } from '../../../../ui/label';
-import { Input } from '../../../../ui/input';
 import { Textarea } from '../../../../ui/textarea';
 import { Ban, Loader2 } from 'lucide-react';
 

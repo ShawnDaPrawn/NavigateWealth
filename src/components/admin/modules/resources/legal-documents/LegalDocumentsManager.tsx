@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Badge } from '../../../../ui/badge';
 import { Button } from '../../../../ui/button';
@@ -635,6 +635,7 @@ function DraftEditor({ detail }: { detail: LegalDocumentDetailResponse }) {
     [
       detail.currentDraftVersion?.toc,
       detail.currentDraftVersion?.updatedAt,
+      detail.currentDraftVersion?.versionNumber,
       detail.currentPublishedVersion?.toc,
       detail.currentPublishedVersion?.updatedAt,
       detail.currentPublishedVersion?.versionNumber,

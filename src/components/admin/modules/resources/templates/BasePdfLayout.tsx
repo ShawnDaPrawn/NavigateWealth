@@ -1,4 +1,4 @@
-import React, { ReactNode } from 'react';
+import { ReactNode } from 'react';
 
 export const BASE_PDF_CSS = `
     :root {
@@ -868,8 +868,6 @@ export const BasePdfLayout = ({
   pages,
   docTitle = 'Document Title',
   issueDate,
-  formCode,
-  version,
   pageSize = 'A4',
   orientation = 'portrait',
 }: {

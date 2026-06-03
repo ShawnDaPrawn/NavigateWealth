@@ -196,7 +196,7 @@ export function LoginPage() {
               sessionStorage.setItem('nw_show_2fa_prompt', 'true');
             }
           }
-        } catch (twoFAError: unknown) {
+        } catch (_twoFAError: unknown) {
           // Continue with login if 2FA check fails (fail open)
           // This is intentional - 2FA check failing should not block login
         }

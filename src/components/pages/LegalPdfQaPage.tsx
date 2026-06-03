@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router';
 import { ArrowLeft, CheckCircle2, Clock3, Loader2, TriangleAlert, XCircle } from 'lucide-react';
 import { projectId, publicAnonKey } from '../../utils/supabase/info';

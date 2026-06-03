@@ -9,7 +9,6 @@
  * Results use: portfolioSummary, goalResults, recommendations, economicAssumptions
  */
 
-import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '../../ui/card';
 import { Badge } from '../../ui/badge';
 import { Separator } from '../../ui/separator';
@@ -23,7 +22,6 @@ import {
   Info,
   PieChart,
   BarChart3,
-  Calendar,
 } from 'lucide-react';
 import { InvestmentINA, formatCurrency } from '../../../services/fna-api';
 
@@ -59,17 +57,6 @@ interface GoalResult {
 
 export function InvestmentResults({ fna }: InvestmentResultsProps) {
   const { results, inputs } = fna;
-
-  const getRiskColor = (risk: string) => {
-    const colors: Record<string, string> = {
-      conservative: 'bg-green-600',
-      moderate: 'bg-yellow-600',
-      balanced: 'bg-blue-600',
-      growth: 'bg-orange-600',
-      aggressive: 'bg-red-600',
-    };
-    return colors[(risk || '').toLowerCase()] || 'bg-gray-600';
-  };
 
   const getHealthColor = (health: string) => {
     const colors: Record<string, string> = {

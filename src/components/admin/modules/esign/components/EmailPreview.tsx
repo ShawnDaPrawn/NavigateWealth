@@ -9,8 +9,6 @@
  * Extracted from PrepareFormStudio.tsx (Phase 6b god-file split).
  */
 
-import React from 'react';
-
 /** Narrow signer shape needed by this component (avoids EsignSigner dep). */
 export interface EsignSignerPreview {
   name: string;

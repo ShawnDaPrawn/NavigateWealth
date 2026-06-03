@@ -4,22 +4,21 @@
  * Includes auto-remind toggle, interval, max count, and expiry warning threshold.
  */
 
-import React, { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import {
   Bell,
   BellOff,
   Clock,
   RefreshCw,
   AlertTriangle,
-  CheckCircle2,
   Loader2,
   Settings,
   ListOrdered,
   Shuffle,
+  CheckCircle2,
 } from 'lucide-react';
 import { Button } from '../../../../ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '../../../../ui/card';
-import { Badge } from '../../../../ui/badge';
 import { Label } from '../../../../ui/label';
 import { Switch } from '../../../../ui/switch';
 import { Input } from '../../../../ui/input';

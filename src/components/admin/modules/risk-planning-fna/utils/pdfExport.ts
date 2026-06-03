@@ -59,7 +59,7 @@ export async function exportComponentToPdf(
           resolve();
         }, 500);
       }, 1500); // Increased from 1000ms to 1500ms for better rendering
-    } catch (error) {
+    } catch (_error) {
       reject(new Error('Failed to generate PDF'));
     }
   });

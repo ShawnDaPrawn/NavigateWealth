@@ -13,7 +13,7 @@
  *   §14.1 — Dry-run-first pattern for destructive admin operations
  */
 
-import React, { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../../../../ui/card';
 import { Badge } from '../../../../ui/badge';
 import { Button } from '../../../../ui/button';
@@ -77,7 +77,7 @@ const CATEGORY_LABELS: Record<string, string> = {
 
 type CleanupStage = 'idle' | 'previewing' | 'preview_done' | 'executing' | 'done' | 'error';
 
-export function SystemHealthCard({ onModuleChange }: SystemHealthCardProps) {
+export function SystemHealthCard(_props: SystemHealthCardProps) {
   const [lastRun, setLastRun] = useState<LastCleanupRun | null>(null);
   const [loading, setLoading] = useState(true);
 

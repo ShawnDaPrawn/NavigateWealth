@@ -1,3 +1,4 @@
+/* eslint-disable react-refresh/only-export-components */
 import React, { createContext, useCallback, useContext, useMemo, useRef } from 'react';
 import type { UnsavedChangesRegistryContextValue, UnsavedChangesRegistryEntry } from './types';
 

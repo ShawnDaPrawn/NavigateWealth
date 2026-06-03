@@ -1,4 +1,3 @@
-import React from 'react';
 import { PenLine } from 'lucide-react';
 import { BlockDefinition } from '../registry';
 import { SignatureData } from '../types';

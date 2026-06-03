@@ -17,7 +17,6 @@ import { createModuleLogger } from './stderr-logger.ts';
 import { formatZodError } from './shared-validation-utils.ts';
 import { UpdateFieldsSchema } from './esign-validation.ts';
 import { getRequestMetadata } from './esign-route-helpers.ts';
-import type { FieldRecord } from './esign-route-helpers.ts';
 import { getEnvelopeDetails, logAuditEvent } from './esign-services.ts';
 
 const log = createModuleLogger('esign-fields-routes');
@@ -29,7 +28,7 @@ fieldsRoutes.put('/envelopes/:envelopeId/fields', async (c) => {
     // Authenticate
     const ctx = await getAuthContext(c);
     const user = ctx.user;
-    const envelopeId = c.req.param('envelopeId')!;
+    const envelopeId = c.req.param('envelopeId');
 
     const body = await c.req.json();
     const parsed = UpdateFieldsSchema.safeParse(body);
@@ -125,8 +124,8 @@ fieldsRoutes.put('/envelopes/:envelopeId/fields', async (c) => {
 fieldsRoutes.get('/envelopes/:envelopeId/fields', async (c) => {
   try {
     // Authenticate
-    const ctx = await getAuthContext(c);
-    const envelopeId = c.req.param('envelopeId')!;
+    const _ctx = await getAuthContext(c);
+    const envelopeId = c.req.param('envelopeId');
 
     // Get envelope details
     const envelope = await getEnvelopeDetails(envelopeId);
@@ -157,9 +156,9 @@ fieldsRoutes.get('/envelopes/:envelopeId/fields', async (c) => {
 fieldsRoutes.patch('/envelopes/:envelopeId/fields/:fieldId', async (c) => {
   try {
     // Authenticate
-    const ctx = await getAuthContext(c);
-    const envelopeId = c.req.param('envelopeId')!;
-    const fieldId = c.req.param('fieldId')!;
+    const _ctx = await getAuthContext(c);
+    const envelopeId = c.req.param('envelopeId');
+    const fieldId = c.req.param('fieldId');
 
     const body = await c.req.json();
     const updates = body;
@@ -250,8 +249,8 @@ fieldsRoutes.delete('/envelopes/:envelopeId/fields/:fieldId', async (c) => {
     // Authenticate
     const ctx = await getAuthContext(c);
     const user = ctx.user;
-    const envelopeId = c.req.param('envelopeId')!;
-    const fieldId = c.req.param('fieldId')!;
+    const envelopeId = c.req.param('envelopeId');
+    const fieldId = c.req.param('fieldId');
 
     // Get envelope details
     const envelope = await getEnvelopeDetails(envelopeId);

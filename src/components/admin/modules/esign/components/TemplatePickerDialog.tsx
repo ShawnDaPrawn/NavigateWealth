@@ -4,7 +4,7 @@
  * of starting from scratch or choosing a saved template.
  */
 
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -24,14 +24,12 @@ import {
   Users,
   ListOrdered,
   Shuffle,
-  Clock,
   TrendingUp,
   Loader2,
   ArrowRight,
 } from 'lucide-react';
 import { esignApi } from '../api';
 import { cn } from '../../../../ui/utils';
-import { format } from 'date-fns';
 import type { EsignTemplateRecord } from '../types';
 
 interface TemplatePickerDialogProps {

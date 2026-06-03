@@ -6,7 +6,7 @@
  * via the `/ai-advisor/chat/stream` endpoint.
  */
 
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useAuth } from '../auth/AuthContext';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 import { Alert, AlertDescription } from '../ui/alert';
@@ -149,7 +149,10 @@ export function AIAdvisorPage() {
     staleTime: 60 * 1000,
   });
 
-  const sessions = sessionsQuery.data?.sessions ?? [];
+  const sessions = useMemo(
+    () => sessionsQuery.data?.sessions ?? [],
+    [sessionsQuery.data?.sessions],
+  );
   const activeSession = useMemo(
     () => sessions.find((session) => session.id === activeSessionId) || null,
     [sessions, activeSessionId],

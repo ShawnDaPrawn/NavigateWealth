@@ -9,7 +9,7 @@
  * - Generate RoA-ready output
  */
 
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { ArrowLeft, CheckCircle, Download, FileText } from 'lucide-react';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '../../../../ui/card';
 import { Button } from '../../../../ui/button';
@@ -180,7 +180,7 @@ export function Step4Finalise({
       });
       // Toast AFTER print dialog closes, not before
       toast.success('PDF export complete');
-    } catch (error) {
+    } catch (_error) {
       toast.error('Failed to export FNA. Please try again.');
     } finally {
       setIsExportingPdf(false);

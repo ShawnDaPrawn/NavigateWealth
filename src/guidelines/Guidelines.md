@@ -97,7 +97,7 @@ If a file does not clearly belong in the module's structure, the module is likel
 Every module must contain:
 
 module-name/
-├── index.tsx # Single presentation entry point (UI only)
+├── index.tsx # Single presentation entry point (UI only) — the public barrel
 ├── api.ts # Data boundary (Supabase, external services)
 ├── types.ts # Centralised type definitions
 ├── constants.ts # Labels, mappings, configuration
@@ -110,7 +110,22 @@ module-name/
 │ └── ModuleFilters.tsx
 ├── utils.ts # Pure utility functions (optional)
 └── README.md # Lightweight technical documentation
+
+Mandatory files: `index.tsx`, `api.ts`, `types.ts`.
+Optional but conventional: `constants.ts`, `hooks/`, `components/`, `utils.ts`.
+
 This structure exists for discoverability, ownership, and safe evolution.
+
+**Cross-module access rule (enforced by dependency-cruiser in CI):**
+
+Code outside a module may only import from that module's `index.tsx` barrel. Importing `api.ts`, `types.ts`, `hooks/`, `components/`, or any internal file from a _different_ feature module is forbidden — it creates hidden coupling that makes decomposition risky. This is blocked at PR time by the `no-cross-feature-internals` rule in `.dependency-cruiser.cjs`.
+
+```
+✅  import { ClientList }   from '@/components/admin/modules/client-management';        // index barrel
+❌  import { useClientList } from '@/components/admin/modules/client-management/hooks'; // internal
+```
+
+Shared types that genuinely need to cross module boundaries belong in `src/shared/` (for SPA-edge sharing) or in a shared utility module — not inline-exported from one feature module to another.
 
 4.2 Backend Module Structure
 
@@ -862,6 +877,7 @@ Pull Request Checklist:
 Structure and boundaries respected
 Types are stricter or equal (no regression)
 No new circular dependencies
+Feature-folder convention followed: new modules have index.tsx / api.ts / types.ts; cross-module imports go through the index barrel (dependency-cruiser enforces this automatically in CI)
 Errors and logs comply with standards
 Existing behaviour preserved
 Critical flows remain covered

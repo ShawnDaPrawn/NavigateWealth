@@ -11,7 +11,7 @@
  * Displays toggle state, last-updated timestamp, and who made the change.
  */
 
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '../../../../ui/card';
 import { Button } from '../../../../ui/button';
 import { Switch } from '../../../../ui/switch';
@@ -81,7 +81,7 @@ export function PlatformFeaturesCard() {
   });
 
   // Fetch article index status
-  const { data: indexStatus, isLoading: indexLoading } = useQuery({
+  const { data: indexStatus, isLoading: _indexLoading } = useQuery({
     queryKey: vascoKeys.indexStatus(),
     queryFn: () => api.get<ArticleIndexStatus>('/vasco/index'),
     staleTime: 2 * 60 * 1000,

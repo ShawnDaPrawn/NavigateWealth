@@ -61,7 +61,6 @@ import {
 } from '../constants';
 import {
   deriveSubscriberStatus,
-  deriveUnsubscribeReason,
   formatDateZA,
   exportUnsubscribedToExcel,
   downloadSubscriberExcelTemplate,
@@ -931,7 +930,7 @@ interface SubscriberRowProps {
   onResubscribe: (email: string) => void;
 }
 
-function SubscriberRow({ sub, statusFilter, onEdit, onRemove, onResubscribe }: SubscriberRowProps) {
+function SubscriberRow({ sub, onEdit, onRemove, onResubscribe }: SubscriberRowProps) {
   const status = deriveSubscriberStatus(sub);
   const cfg = SUBSCRIBER_STATUS_CONFIG[status];
   const isUnsub = status === 'unsubscribed';

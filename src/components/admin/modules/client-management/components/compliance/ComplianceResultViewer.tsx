@@ -44,7 +44,6 @@ import {
   Gavel,
   Scale,
   Camera,
-  X,
 } from 'lucide-react';
 import { api } from '../../../../../../utils/api';
 import { BASE_PDF_CSS } from '../../../resources/templates/BasePdfLayout';
@@ -1155,13 +1154,6 @@ function generateReportHtml(
   result: CheckResult,
   clientName: string,
 ): string {
-  const now = new Date().toLocaleString('en-ZA', {
-    day: '2-digit',
-    month: 'long',
-    year: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-  });
   const issueDate = new Date().toLocaleDateString('en-GB', {
     day: '2-digit',
     month: '2-digit',
@@ -1171,7 +1163,7 @@ function generateReportHtml(
   const raw = result.rawResponse;
 
   // Build a summary section based on activity type
-  let summaryHtml = '';
+  let summaryHtml: string;
   switch (activity.type) {
     case 'IDV Report':
     case 'IDV Report (Photo)':

@@ -21,13 +21,7 @@
 
 import React, { useState, useCallback } from 'react';
 import { useNavigate } from 'react-router';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-} from '../../../../ui/dialog';
+import { Dialog, DialogContent, DialogTitle, DialogDescription } from '../../../../ui/dialog';
 import { Badge } from '../../../../ui/badge';
 import { Button } from '../../../../ui/button';
 import { Textarea } from '../../../../ui/textarea';
@@ -192,7 +186,7 @@ function flattenPayload(
         if ('selected' in vObj && 'adviser_assist' in vObj) {
           if (vObj.selected) {
             const coverLabel = formatPayloadKey(key);
-            let coverValue = '';
+            let coverValue: string;
             if (vObj.adviser_assist) {
               coverValue = 'Adviser assistance requested';
             } else {

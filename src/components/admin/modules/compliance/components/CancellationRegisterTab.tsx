@@ -1,5 +1,5 @@
-import React from 'react';
 import { ComplianceTable } from './ComplianceTable';
+import { logger } from '../../../../../utils/logger';
 
 const columns = [
   { key: 'title', label: 'Client & Policy', type: 'text' as const },
@@ -19,9 +19,9 @@ export function CancellationRegisterTab() {
       description="Track policy cancellations, reasons, clawbacks, and potential replacements."
       records={[]} // No mock data
       columns={columns}
-      onAdd={() => console.log('Add cancellation record')}
-      onEdit={(record) => console.log('Edit cancellation record:', record)}
-      onExport={() => console.log('Export cancellation register')}
+      onAdd={() => logger.info('Add cancellation record')}
+      onEdit={(record) => logger.info('Edit cancellation record:', { record })}
+      onExport={() => logger.info('Export cancellation register')}
     />
   );
 }

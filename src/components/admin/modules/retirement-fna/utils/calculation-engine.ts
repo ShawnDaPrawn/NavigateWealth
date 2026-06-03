@@ -67,7 +67,6 @@ export function calculateRetirementFNA(
   // The Capital Required to fund an inflation-linked income stream starting at X is X * AnnuityFactor(RealRate).
   // So we still use Real Post-Retirement Return for the Annuity Factor calculation.
   const realPostReturn = (1 + postRetReturn) / (1 + inflation) - 1;
-  const realSalaryGrowth = (1 + salaryEscalation) / (1 + inflation) - 1;
 
   // 3. Target Income (Future Value)
   // Project current income to retirement using Salary Escalation (Nominal)
@@ -89,7 +88,7 @@ export function calculateRetirementFNA(
   // The formula for Capital Required to fund an inflation-linked stream is based on the Real Return.
   // PV = PMT * [ (1 - (1+r)^-n) / r ] where r is Real Return and PMT is the first payment (Future Value).
 
-  let requiredCapital = 0;
+  let requiredCapital: number;
   if (realPostReturn === 0) {
     requiredCapital = targetAnnualIncome * yearsInRetirement;
   } else {
@@ -138,7 +137,7 @@ export function calculateRetirementFNA(
 
   let requiredAdditionalContribution = 0;
   if (hasShortfall && months > 0) {
-    let annuityFactor = 0;
+    let annuityFactor: number;
 
     if (Math.abs(nominalMonthlyGrowth - nominalMonthlyEscalation) < 0.000001) {
       annuityFactor = months * Math.pow(1 + nominalMonthlyGrowth, months - 1);

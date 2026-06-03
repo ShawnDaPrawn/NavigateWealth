@@ -8,13 +8,11 @@
  * @module PolicyComparisonPanel
  */
 
-import React, { useState, useEffect, useCallback } from 'react';
-import { Card, CardContent } from '../../ui/card';
+import { useState, useEffect, useCallback } from 'react';
 import { Badge } from '../../ui/badge';
 import { Button } from '../../ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../ui/table';
 import {
-  ArrowLeftRight,
   Loader2,
   FileText,
   Lock,
@@ -24,6 +22,7 @@ import {
   ChevronUp,
   Building2,
   AlertCircle,
+  ArrowLeftRight,
 } from 'lucide-react';
 import { api } from '../../../utils/api';
 

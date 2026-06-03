@@ -2,7 +2,7 @@
  * ClientFNAHub — routes between intake, waiting, and published results
  */
 
-import React, { useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { Button } from '../../ui/button';
 import { Card, CardContent } from '../../ui/card';
 import { AlertCircle, CheckCircle, Clock, Eye, PlayCircle } from 'lucide-react';

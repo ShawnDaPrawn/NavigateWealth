@@ -1,4 +1,3 @@
-import React from 'react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../ui/table';
 import { SVGBarChart, SVGLineChart } from '../../ui/svg-charts';
 import type {

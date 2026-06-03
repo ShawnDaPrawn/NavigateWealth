@@ -25,7 +25,6 @@ import {
   MoveTaskSchema,
   ReorderTasksSchema,
   UnarchiveTaskSchema,
-  DateRangeQuerySchema,
 } from './tasks-validation.ts';
 import { formatZodError } from './shared-validation-utils.ts';
 

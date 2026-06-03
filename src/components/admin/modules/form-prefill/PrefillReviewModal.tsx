@@ -2,7 +2,7 @@
  * Prefill Review Modal — admin review before applying client data to a form.
  */
 
-import React, { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router';
 import {
   Dialog,
@@ -64,7 +64,7 @@ export function PrefillReviewModal({
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [overwriteConflicts, setOverwriteConflicts] = useState(false);
 
-  const safeMatches = result?.matches ?? [];
+  const safeMatches = useMemo(() => result?.matches ?? [], [result?.matches]);
   const conflictMatches = useMemo(() => safeMatches.filter((m) => m.conflict), [safeMatches]);
 
   const profileCompletenessHints = useMemo(() => {

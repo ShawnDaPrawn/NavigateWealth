@@ -1,4 +1,3 @@
-import React from 'react';
 import { getOptimizedFallbackUrl, getOptimizedSrcSet } from '../../utils/optimizedImages';
 
 type ResponsiveImageProps = {

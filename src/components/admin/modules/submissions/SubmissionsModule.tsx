@@ -19,7 +19,7 @@
  * §8.3 - Status colours follow platform vocabulary.
  */
 
-import React, { useState, useMemo, useEffect, useCallback } from 'react';
+import { useState, useMemo, useEffect, useCallback } from 'react';
 import { useSearchParams } from 'react-router';
 import { DragDropContext, Droppable, type DropResult } from '@hello-pangea/dnd';
 import { Button } from '../../../ui/button';
@@ -187,7 +187,7 @@ export function SubmissionsModule() {
   const [showArchived, setShowArchived] = useState(false);
   const [showInviteModal, setShowInviteModal] = useState(false);
 
-  const { submissions, isLoading, error, updateSubmission, deleteSubmission, refetch, isUpdating } =
+  const { submissions, isLoading, error, updateSubmission, deleteSubmission, refetch } =
     useSubmissions(filters.type ? { type: filters.type } : undefined);
 
   // ── Deep Link: auto-open detail drawer for ?id= param ──

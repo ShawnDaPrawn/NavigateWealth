@@ -10,7 +10,6 @@
  * Guidelines §8.3 — uses the status colour vocabulary.
  */
 
-import React from 'react';
 import { HEALTH_SUB_SCORE_CONFIG } from '../../constants';
 import type { HealthSubScores } from '../../utils';
 import type { DashboardMode } from '../clientOverviewConstants';

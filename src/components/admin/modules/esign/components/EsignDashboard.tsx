@@ -11,7 +11,6 @@ import {
   FileText,
   Plus,
   Clock,
-  CheckCircle2,
   List,
   Bookmark,
   TrendingUp,
@@ -20,6 +19,7 @@ import {
   Activity,
   Loader2,
   Settings2,
+  CheckCircle2,
 } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../../../ui/tabs';
 import { EnvelopesList } from './EnvelopesList';
@@ -82,7 +82,7 @@ export function EsignDashboard({
   onBranding,
   refreshTrigger,
 }: EsignDashboardProps) {
-  const { envelopes, refetch } = useEnvelopes({ autoLoad: true, refreshTrigger });
+  const { envelopes } = useEnvelopes({ autoLoad: true, refreshTrigger });
 
   // Calculate metrics
   const now = new Date();

@@ -1,12 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../../../../ui/card';
 import { Button } from '../../../../ui/button';
 import { Input } from '../../../../ui/input';
-import { Label } from '../../../../ui/label';
-import { Textarea } from '../../../../ui/textarea';
-import { Switch } from '../../../../ui/switch';
 import { TaxPlanningInputs, TaxCalculationResults, AdjustmentLog } from '../types';
-import { ArrowLeft, ArrowRight, RefreshCw, AlertCircle, ArrowRightLeft } from 'lucide-react';
+import { ArrowLeft, ArrowRight, RefreshCw, ArrowRightLeft } from 'lucide-react';
 import { Badge } from '../../../../ui/badge';
 
 interface Step3Props {
@@ -33,7 +30,7 @@ export function Step3ManualAdjustment({
   const [adjustments, setAdjustments] = useState<AdjustmentLog[]>([]);
 
   // Temp state for the "Reason" dialog or field
-  const [activeOverrideField, setActiveOverrideField] = useState<keyof TaxPlanningInputs | null>(
+  const [_activeOverrideField, _setActiveOverrideField] = useState<keyof TaxPlanningInputs | null>(
     null,
   );
 

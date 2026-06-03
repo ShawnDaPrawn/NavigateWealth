@@ -12,10 +12,9 @@
  * All prior data flows forward and is preserved for audit.
  */
 
-import React, { useState } from 'react';
-import { CheckCircle2, Circle, X } from 'lucide-react';
+import { useState } from 'react';
+import { CheckCircle2 } from 'lucide-react';
 import { Card } from '../../../../ui/card';
-import { Button } from '../../../../ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../../../../ui/dialog';
 import { calculateRiskAnalysis } from '../utils';
 import { WIZARD_STEPS } from '../constants';
@@ -163,7 +162,7 @@ export function RiskPlanningFNAWizard({
 
       // Success - call onComplete callback if provided
       handleComplete();
-    } catch (error) {
+    } catch (_error) {
       setState((prev) => ({
         ...prev,
         isPublishing: false,

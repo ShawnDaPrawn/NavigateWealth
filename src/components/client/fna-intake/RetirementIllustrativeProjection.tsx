@@ -2,10 +2,10 @@
  * Illustrative retirement projection — educational only, not advice.
  */
 
-import React, { useMemo } from 'react';
+import { useMemo } from 'react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Info } from 'lucide-react';
-import type { RetirementFNAInputs } from '@/components/admin/modules/retirement-fna/types';
+import type { RetirementFNAInputs } from '@/components/admin/modules/retirement-fna';
 
 interface RetirementIllustrativeProjectionProps {
   inputs: Partial<RetirementFNAInputs>;

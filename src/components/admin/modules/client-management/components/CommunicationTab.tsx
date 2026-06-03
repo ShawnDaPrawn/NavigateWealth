@@ -10,7 +10,7 @@
  *   - DeleteConfirmDialog — Destructive action confirmation
  */
 
-import React, { useState, useCallback } from 'react';
+import { useState, useCallback } from 'react';
 import { Alert, AlertDescription, AlertTitle } from '../../../../ui/alert';
 import { AlertCircle, CheckCircle2 } from 'lucide-react';
 import { Client } from '../types';

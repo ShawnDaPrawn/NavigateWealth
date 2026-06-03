@@ -243,7 +243,7 @@ app.post('/signup', async (c) => {
     try {
       log.info('📧 Sending signup notification email to admin...');
 
-      const cellphone = `${countryCode || '+27'}${phoneNumber || ''}`;
+      const _cellphone = `${countryCode || '+27'}${phoneNumber || ''}`;
 
       await sendAdminSignupNotification({
         userEmail: email,

@@ -1,5 +1,5 @@
-import React from 'react';
 import { ComplianceTable } from './ComplianceTable';
+import { logger } from '../../../../../utils/logger';
 
 const columns = [
   { key: 'title', label: 'Product Name', type: 'text' as const },
@@ -19,9 +19,9 @@ export function ProductTrainingRegisterTab() {
       description="Track product specific training completion and competency for representatives."
       records={[]}
       columns={columns}
-      onAdd={() => console.log('Add training record')}
-      onEdit={(record) => console.log('Edit training record:', record)}
-      onExport={() => console.log('Export training register')}
+      onAdd={() => logger.info('Add training record')}
+      onEdit={(record) => logger.info('Edit training record:', { record })}
+      onExport={() => logger.info('Export training register')}
     />
   );
 }

@@ -445,11 +445,11 @@ export class BrandService {
     };
   }
 
-  async saveGuidelineRules(rules: BrandRule[], updatedBy: string): Promise<void> {
+  async saveGuidelineRules(rules: BrandRule[], _updatedBy: string): Promise<void> {
     await Promise.all([kv.set(KEYS.guidelineRules, rules), this.touchLastUpdated()]);
   }
 
-  async saveGuidelineVoice(voice: BrandGuidelines['voice'], updatedBy: string): Promise<void> {
+  async saveGuidelineVoice(voice: BrandGuidelines['voice'], _updatedBy: string): Promise<void> {
     await Promise.all([kv.set(KEYS.guidelineVoice, voice), this.touchLastUpdated()]);
   }
 

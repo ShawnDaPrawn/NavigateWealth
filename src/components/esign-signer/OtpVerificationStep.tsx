@@ -11,13 +11,11 @@ import { Card } from '../ui/card';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
 import { Alert, AlertDescription } from '../ui/alert';
-import { Badge } from '../ui/badge';
 import {
   ShieldCheck,
   Loader2,
   AlertCircle,
   Mail,
-  ArrowLeft,
   CheckCircle2,
   Clock,
   FileText,
@@ -60,7 +58,7 @@ export function OtpVerificationStep({
     if (isComplete && !isVerifying) {
       handleVerify();
     }
-  }, [otp]);
+  }, [otp, isVerifying]);
 
   const handleOtpChange = (index: number, value: string) => {
     if (value && !/^\d$/.test(value)) return;
@@ -133,7 +131,7 @@ export function OtpVerificationStep({
       } else {
         setError(result.error || 'Failed to resend code');
       }
-    } catch (err) {
+    } catch (_err) {
       setError('An error occurred while resending the code');
     }
   };

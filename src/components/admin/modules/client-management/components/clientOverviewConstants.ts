@@ -22,7 +22,6 @@ import {
   AlertTriangle,
   Clock,
   UserPlus,
-  Activity,
 } from 'lucide-react';
 import { api } from '../../../../../utils/api/client';
 import type { SchemaField } from './clientOverviewUtils';

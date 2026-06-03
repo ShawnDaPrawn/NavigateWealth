@@ -25,7 +25,6 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from '../../../../ui/card';
 import { Button } from '../../../../ui/button';
 import { Input } from '../../../../ui/input';
-import { Label } from '../../../../ui/label';
 import { Switch } from '../../../../ui/switch';
 import { RadioGroup, RadioGroupItem } from '../../../../ui/radio-group';
 import {

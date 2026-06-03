@@ -11,7 +11,7 @@
 import { Hono } from 'npm:hono';
 import { requireAuth, requireAdmin } from './auth-mw.ts';
 import { asyncHandler } from './error.middleware.ts';
-import { createModuleLogger } from './stderr-logger.ts';
+
 import { BrandService } from './brand-service.ts';
 import { AdminAuditService } from './admin-audit-service.ts';
 import type {
@@ -23,7 +23,6 @@ import type {
 } from './brand-service.ts';
 
 const app = new Hono();
-const log = createModuleLogger('brand-routes');
 const service = new BrandService();
 
 const LOGO_FILE_FIELDS = [
@@ -361,7 +360,6 @@ app.post(
     }
 
     const buffer = new Uint8Array(await file.arrayBuffer());
-    const ext = file.name.split('.').pop() || 'bin';
     const storagePath = `collateral/${category}/${Date.now()}_${file.name}`;
 
     await service.uploadFile(buffer, storagePath, file.type);

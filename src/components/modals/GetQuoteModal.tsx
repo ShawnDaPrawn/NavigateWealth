@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '../ui/dialog';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
@@ -6,20 +6,8 @@ import { Label } from '../ui/label';
 import { Slider } from '../ui/slider';
 import { RadioGroup, RadioGroupItem } from '../ui/radio-group';
 import { Progress } from '../ui/progress';
-import { Badge } from '../ui/badge';
 import { ImageWithFallback } from '../figma/ImageWithFallback';
-import {
-  CheckCircle,
-  ArrowRight,
-  ArrowLeft,
-  X,
-  Info,
-  User,
-  Shield,
-  Phone,
-  Mail,
-  Loader2,
-} from 'lucide-react';
+import { CheckCircle, ArrowRight, ArrowLeft, X, Info, User, Shield, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { projectId, publicAnonKey } from '../../utils/supabase/info';
 

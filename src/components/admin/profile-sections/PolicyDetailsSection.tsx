@@ -3,10 +3,7 @@
  * Comprehensive policy management with 8 financial planning categories
  */
 
-import React, { useState, useEffect } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../ui/card';
-import { Button } from '../../ui/button';
-import { Badge } from '../../ui/badge';
+import { useState } from 'react';
 import {
   Shield,
   Heart,
@@ -15,42 +12,10 @@ import {
   FileText,
   Landmark,
   Target,
-  Plus,
-  Eye,
-  Edit,
-  Archive,
-  Download,
-  Zap,
   TrendingUp,
-  DollarSign,
-  Activity,
-  Users,
-  Calendar,
-  AlertCircle,
-  CheckCircle,
-  BarChart3,
-  LineChart,
-  Loader2,
-  Trash2,
 } from 'lucide-react';
-import { PolicyFormDialog } from './PolicyFormDialog';
 import { PolicyCategoryTab } from './PolicyCategoryTab';
 import { PolicyOverviewTab } from './PolicyOverviewTab';
-import { toast } from 'sonner';
-import { projectId, publicAnonKey } from '../../../utils/supabase/info';
-
-const API_BASE = `https://${projectId}.supabase.co/functions/v1/make-server-91ed8379/integrations`;
-
-// Map subtab IDs to category names
-const CATEGORY_NAMES: Record<string, string> = {
-  'risk-planning': 'Risk Planning',
-  'medical-aid': 'Medical Aid',
-  retirement: 'Retirement Planning',
-  investments: 'Investments',
-  'employee-benefits': 'Employee Benefits',
-  'tax-planning': 'Tax Planning',
-  'estate-planning': 'Estate Planning',
-};
 
 interface PolicyDetailsSectionProps {
   selectedClient: { id: string; firstName?: string; lastName?: string; [key: string]: unknown };

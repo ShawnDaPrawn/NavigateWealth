@@ -1,3 +1,4 @@
+/* eslint-disable react-refresh/only-export-components */
 /**
  * LetterheadPdfLayout.tsx
  *
@@ -13,7 +14,7 @@
  * Extends BASE_PDF_CSS with additional letter-specific styles.
  */
 
-import React, { ReactNode } from 'react';
+import { ReactNode } from 'react';
 import { BASE_PDF_CSS } from './BasePdfLayout';
 
 // ============================================================================

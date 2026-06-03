@@ -7,7 +7,6 @@
  * @module shared/vasco-chat/VascoAvatar
  */
 
-import React from 'react';
 import { Compass } from 'lucide-react';
 
 const SIZE_MAP = {

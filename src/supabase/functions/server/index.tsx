@@ -89,7 +89,7 @@ app.use(
 app.use('*', async (c, next) => {
   const incoming = c.req.header('x-request-id');
   const requestId =
-    incoming && /^[A-Za-z0-9_\-]{8,64}$/.test(incoming) ? incoming : crypto.randomUUID();
+    incoming && /^[A-Za-z0-9_-]{8,64}$/.test(incoming) ? incoming : crypto.randomUUID();
   c.set('requestId', requestId);
   await next();
   c.header('x-request-id', requestId);

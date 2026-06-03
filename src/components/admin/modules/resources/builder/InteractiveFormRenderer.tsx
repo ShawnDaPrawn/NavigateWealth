@@ -1,4 +1,3 @@
-import React from 'react';
 import DOMPurify from 'dompurify';
 import {
   FormBlock,
@@ -72,7 +71,7 @@ export const InteractiveFormRenderer = ({
           </div>
         );
 
-      case 'field_grid':
+      case 'field_grid': {
         const gridClass =
           (block.data as FieldGridData).columns === 3
             ? 'grid-cols-1 md:grid-cols-3'
@@ -103,8 +102,9 @@ export const InteractiveFormRenderer = ({
             })}
           </div>
         );
+      }
 
-      case 'radio_options':
+      case 'radio_options': {
         const radioKey = (block.data.key as string) || `radio_${block.id}`;
         return (
           <div className="mb-6 space-y-3">
@@ -133,6 +133,7 @@ export const InteractiveFormRenderer = ({
             </RadioGroup>
           </div>
         );
+      }
 
       case 'checkbox_table':
         // A table where columns are options and rows are items/questions
@@ -155,7 +156,7 @@ export const InteractiveFormRenderer = ({
                   <TableRow key={rowIdx}>
                     <TableCell className="font-medium">{row}</TableCell>
                     {(block.data as CheckboxTableData).columns?.map(
-                      (col: string, colIdx: number) => {
+                      (_col: string, colIdx: number) => {
                         // Key strategy: table_blockId_rowIdx_colIdx or table_blockId_rowIdx (value = col)
                         // Let's use boolean for each cell: table_blockId_row_col
                         const cellKey = `chk_${block.id}_${rowIdx}_${colIdx}`;
@@ -177,7 +178,7 @@ export const InteractiveFormRenderer = ({
           </div>
         );
 
-      case 'compliance_question':
+      case 'compliance_question': {
         const compKey = (block.data.key as string) || `comp_${block.id}`;
         const detailsKey = `${compKey}_details`;
 
@@ -223,6 +224,7 @@ export const InteractiveFormRenderer = ({
             </div>
           </div>
         );
+      }
 
       case 'signature':
         return (
@@ -270,7 +272,7 @@ export const InteractiveFormRenderer = ({
           </div>
         );
 
-      case 'instructional_callout':
+      case 'instructional_callout': {
         const colors = {
           info: 'bg-blue-50 border-blue-200 text-blue-800',
           warning: 'bg-amber-50 border-amber-200 text-amber-800',
@@ -296,6 +298,7 @@ export const InteractiveFormRenderer = ({
             </p>
           </div>
         );
+      }
 
       case 'spacer':
         return <div style={{ height: (block.data as SpacerData).height || '20px' }}></div>;
@@ -313,7 +316,7 @@ export const InteractiveFormRenderer = ({
 
         // Evaluate condition against current responses
         const actualValue = condVar ? responses[condVar] : undefined;
-        let conditionMet = false;
+        let conditionMet: boolean;
         switch (condOp) {
           case 'equals':
             conditionMet = String(actualValue) === String(condVal);

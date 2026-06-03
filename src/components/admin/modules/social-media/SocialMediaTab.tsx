@@ -11,7 +11,7 @@
  * @module social-media/SocialMediaTab
  */
 
-import React, { useState, useMemo, useCallback } from 'react';
+import { useState, useMemo, useCallback } from 'react';
 import { Button } from '../../../ui/button';
 import { Card, CardContent } from '../../../ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../../ui/tabs';
@@ -46,6 +46,7 @@ import { AIArticleRepurposer } from './components/AIArticleRepurposer';
 import { AIBrandTemplates } from './components/AIBrandTemplates';
 import { AIAnalyticsDashboard } from './components/AIAnalyticsDashboard';
 import { DraftPosts } from './components/DraftPosts';
+import { logger } from '../../../../utils/logger';
 
 // ============================================================================
 // Helpers
@@ -110,9 +111,9 @@ export function SocialMediaTab() {
     [connectedProfiles],
   );
 
-  const scheduledPosts = useMemo(() => getPostsByStatus('scheduled'), [posts, getPostsByStatus]);
+  const scheduledPosts = useMemo(() => getPostsByStatus('scheduled'), [getPostsByStatus]);
 
-  const publishedPosts = useMemo(() => getPostsByStatus('published'), [posts, getPostsByStatus]);
+  const publishedPosts = useMemo(() => getPostsByStatus('published'), [getPostsByStatus]);
 
   const totalEngagement = useMemo(
     () =>
@@ -127,7 +128,7 @@ export function SocialMediaTab() {
     [publishedPosts],
   );
 
-  const draftPosts = useMemo(() => getPostsByStatus('draft'), [posts, getPostsByStatus]);
+  const draftPosts = useMemo(() => getPostsByStatus('draft'), [getPostsByStatus]);
 
   /** Profile ID → { name, platform } lookup for DraftPosts display */
   const profileNameLookup = useMemo(() => {
@@ -178,7 +179,7 @@ export function SocialMediaTab() {
 
   const handlePostEdit = (post: SocialPost) => {
     // TODO: Implement edit functionality
-    console.log('Edit post:', post);
+    logger.info('Edit post', { post });
   };
 
   const handlePostDelete = async (postId: string) => {

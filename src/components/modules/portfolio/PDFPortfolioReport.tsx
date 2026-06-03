@@ -9,7 +9,6 @@
  * Used by PortfolioReportModal (screen preview + hidden print clone).
  */
 
-import React from 'react';
 import type { ClientPortfolioData } from '../../../utils/pdfGenerator';
 
 interface PDFPortfolioReportProps {

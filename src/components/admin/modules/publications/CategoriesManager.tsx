@@ -5,7 +5,7 @@
  * Now uses the new hooks, services, and shared components.
  */
 
-import React, { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Button } from '../../../ui/button';
 import { Badge } from '../../../ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '../../../ui/card';
@@ -175,12 +175,7 @@ function DraggableCategoryRow({
 
 export function CategoriesManager() {
   // Data fetching with hooks
-  const {
-    categories: initialCategories,
-    isLoading,
-    error,
-    refetch,
-  } = useCategories({ autoSort: true });
+  const { categories: initialCategories, isLoading, refetch } = useCategories({ autoSort: true });
 
   // Local state for drag reordering
   const [categories, setCategories] = useState<Category[]>([]);
@@ -198,7 +193,7 @@ export function CategoriesManager() {
     handleReorder,
     isProcessing,
   } = useCategoryActions({
-    onSuccess: (message) => {
+    onSuccess: (_message) => {
       refetch();
     },
     onError: (error) => {
@@ -280,15 +275,9 @@ export function CategoriesManager() {
       is_active: isActive,
     };
 
-    let success = false;
-
-    if (editingCategory) {
-      const result = await handleUpdate(editingCategory.id, formData);
-      success = result !== null;
-    } else {
-      const result = await handleCreate(formData);
-      success = result !== null;
-    }
+    const success = editingCategory
+      ? (await handleUpdate(editingCategory.id, formData)) !== null
+      : (await handleCreate(formData)) !== null;
 
     if (success) {
       handleCancelForm();

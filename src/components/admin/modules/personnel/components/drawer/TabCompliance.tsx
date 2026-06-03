@@ -1,4 +1,3 @@
-import React from 'react';
 import { Button } from '../../../../../ui/button';
 import { Checkbox } from '../../../../../ui/checkbox';
 import { Switch } from '../../../../../ui/switch';

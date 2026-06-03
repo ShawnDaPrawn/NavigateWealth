@@ -155,7 +155,7 @@ async function generateSitemapXml(): Promise<string> {
 /** GET /xml — returns the XML sitemap directly (requires auth) */
 app.get(
   '/xml',
-  asyncHandler(async (c) => {
+  asyncHandler(async (_c) => {
     const xml = await generateSitemapXml();
 
     return new Response(xml, {

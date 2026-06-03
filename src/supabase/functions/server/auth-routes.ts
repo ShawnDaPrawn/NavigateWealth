@@ -426,7 +426,7 @@ authRoutes.post('/login-failure', async (c) => {
 
     // Generic response (no account enumeration)
     return c.json({ error: 'Invalid credentials' }, 401);
-  } catch (error) {
+  } catch (_error) {
     return c.json({ error: 'Invalid credentials' }, 401);
   }
 });
@@ -537,7 +537,7 @@ authRoutes.post('/password-reset-request', async (c) => {
       },
       200,
     );
-  } catch (error) {
+  } catch (_error) {
     // Generic message even on error (no account enumeration)
     return c.json(
       {
@@ -566,7 +566,7 @@ authRoutes.post('/password-change', async (c) => {
     });
 
     return c.json({ success: true }, 200);
-  } catch (error) {
+  } catch (_error) {
     return c.json({ error: 'Failed to log password change' }, 500);
   }
 });
@@ -617,7 +617,7 @@ authRoutes.get('/security-status', async (c) => {
       },
       200,
     );
-  } catch (error) {
+  } catch (_error) {
     return c.json({ error: 'Failed to fetch security status' }, 500);
   }
 });

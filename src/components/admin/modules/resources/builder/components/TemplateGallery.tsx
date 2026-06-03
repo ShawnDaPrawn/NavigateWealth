@@ -8,12 +8,12 @@
  * Guidelines §7.1 — No inline business logic in JSX.
  */
 
-import React, { useState, useMemo } from 'react';
+import { useState, useMemo } from 'react';
 import { Card, CardContent } from '../../../../../ui/card';
 import { Badge } from '../../../../../ui/badge';
 import { Button } from '../../../../../ui/button';
 import { Input } from '../../../../../ui/input';
-import { Search, FileText, ArrowRight, Layers, Mail, CheckCircle2 } from 'lucide-react';
+import { Search, FileText, ArrowRight, Layers, CheckCircle2 } from 'lucide-react';
 import { STARTER_TEMPLATES, type StarterTemplate } from '../constants';
 
 interface TemplateGalleryProps {

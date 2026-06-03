@@ -10,12 +10,11 @@
 import { Hono } from 'npm:hono';
 import { requireAuth, requireAdmin } from './auth-mw.ts';
 import { asyncHandler } from './error.middleware.ts';
-import { createModuleLogger } from './stderr-logger.ts';
+
 import { AdminAuditService } from './admin-audit-service.ts';
 import type { AuditActionCategory, AuditSeverity } from './admin-audit-service.ts';
 
 const app = new Hono();
-const log = createModuleLogger('admin-audit');
 
 // Health check
 app.get('/', (c) => c.json({ service: 'admin-audit', status: 'active' }));

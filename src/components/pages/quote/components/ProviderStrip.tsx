@@ -3,7 +3,6 @@
  * Designed to build trust and entice the user to complete the quote form.
  */
 
-import React from 'react';
 import { OptimizedImage } from '../../../shared/OptimizedImage';
 import type { QuoteProvider } from '../types';
 

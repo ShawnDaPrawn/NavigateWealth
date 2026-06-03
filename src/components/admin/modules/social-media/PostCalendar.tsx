@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '../../../ui/card';
+import { useState } from 'react';
+import { Card, CardContent } from '../../../ui/card';
 import { Button } from '../../../ui/button';
 import { Badge } from '../../../ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../../ui/select';
@@ -303,7 +303,7 @@ export function PostCalendar({
                     {post.media.length > 0 && (
                       <div className="flex items-center gap-2 mb-3">
                         <div className="flex -space-x-2">
-                          {post.media.slice(0, 3).map((media, index) => (
+                          {post.media.slice(0, 3).map((media, _index) => (
                             <div
                               key={media.id}
                               className="h-8 w-8 rounded border-2 border-white bg-muted overflow-hidden"

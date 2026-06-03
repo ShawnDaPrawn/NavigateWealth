@@ -101,7 +101,7 @@ adminAuthRoutes.post('/create-superadmin', async (c) => {
       },
       201,
     );
-  } catch (error) {
+  } catch (_error) {
     return c.json({ error: 'Internal server error' }, 500);
   }
 });
@@ -142,7 +142,7 @@ adminAuthRoutes.post('/clear-rate-limit', async (c) => {
       },
       200,
     );
-  } catch (error) {
+  } catch (_error) {
     return c.json({ error: 'Internal server error' }, 500);
   }
 });
@@ -217,7 +217,7 @@ adminAuthRoutes.post('/ensure-dev-user', async (c) => {
 
       return c.json({ success: true, message: 'User created', userId: data.user?.id });
     }
-  } catch (error) {
+  } catch (_error) {
     return c.json({ error: 'Internal server error' }, 500);
   }
 });

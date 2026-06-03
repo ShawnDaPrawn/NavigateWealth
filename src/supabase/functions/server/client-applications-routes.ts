@@ -20,7 +20,7 @@
  */
 
 import { Hono } from 'npm:hono';
-import * as kv from './kv_store.tsx';
+
 import { clientApplicationsService } from './client-applications-service.ts';
 import { createModuleLogger } from './stderr-logger.ts';
 

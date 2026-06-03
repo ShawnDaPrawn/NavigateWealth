@@ -366,8 +366,8 @@ export class AdviceEngineService {
    */
   async aiChat(
     userId: string,
-    message: string,
-    context?: Record<string, unknown>,
+    _message: string,
+    _context?: Record<string, unknown>,
   ): Promise<AIChatResponse> {
     log.info('AI Advisor chat', { userId });
 
@@ -386,7 +386,7 @@ export class AdviceEngineService {
   async aiAnalyze(
     clientId: string,
     analysisType: string,
-    data: Record<string, unknown>,
+    _data: Record<string, unknown>,
   ): Promise<AIAnalysisResponse> {
     log.info('AI Intelligence analysis', { clientId, analysisType });
 

@@ -1,4 +1,3 @@
-import React from 'react';
 import { CircleDot, Plus, Trash2 } from 'lucide-react';
 import { BlockDefinition } from '../registry';
 import { RadioOptionsData } from '../types';

@@ -21,7 +21,6 @@ import {
   Eye,
   Edit,
   Send,
-  Calendar,
   Clock,
   CheckCircle2,
   Loader2,
@@ -39,7 +38,7 @@ import { cn } from '../../../../ui/utils';
 import { toast } from 'sonner';
 import { PublicationsAPI } from '../api';
 import { StatusBadge } from './StatusBadge';
-import { formatDate, getRelativeTime, truncateText } from '../utils';
+import { getRelativeTime, truncateText } from '../utils';
 import type { Article, Category } from '../types';
 
 // ---------------------------------------------------------------------------

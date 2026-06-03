@@ -2,6 +2,7 @@ import React from 'react';
 import { ComplianceTable } from './ComplianceTable';
 import { ComplianceRecord } from '../types';
 import { useAMLFICARecords } from '../hooks';
+import { logger } from '../../../../../utils/logger';
 
 const columns = [
   { key: 'title', label: 'Client/Description', type: 'text' as const },
@@ -69,15 +70,15 @@ export function AMLFICATab() {
   const { data: records = [], isLoading } = useAMLFICARecords();
 
   const handleAdd = () => {
-    console.log('Add new AML/FICA record');
+    logger.info('Add new AML/FICA record');
   };
 
   const handleEdit = (record: ComplianceRecord) => {
-    console.log('Edit AML/FICA record:', record);
+    logger.info('Edit AML/FICA record:', { record });
   };
 
   const handleExport = () => {
-    console.log('Export AML/FICA records');
+    logger.info('Export AML/FICA records');
   };
 
   return (

@@ -8,7 +8,7 @@
  * on hover. No external charting library dependencies.
  */
 
-import React, { useState, useRef, useEffect, useCallback, useId, useMemo } from 'react';
+import React, { useState, useRef, useEffect, useId, useMemo } from 'react';
 
 // ─── Shared utilities ────────────────────────────────────────────────
 
@@ -168,7 +168,7 @@ export function SVGBarChart({
       return;
     }
     const d = data[groupIdx];
-    const values = series.map((s, si) => ({
+    const values = series.map((s, _si) => ({
       key: s.key,
       seriesLabel: s.label,
       value: Number(d[s.key]) || 0,
@@ -569,7 +569,7 @@ export function SVGPieChart({
 
   // Build arc paths
   let startAngle = -Math.PI / 2;
-  const slices = data.map((d, i) => {
+  const slices = data.map((d, _i) => {
     const angle = total > 0 ? (d.value / total) * 2 * Math.PI : 0;
     const endAngle = startAngle + angle;
     const midAngle = startAngle + angle / 2;

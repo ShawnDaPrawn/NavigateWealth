@@ -1,6 +1,6 @@
 import React from 'react';
 import { BasePdfLayout } from '../templates/BasePdfLayout';
-import { RetirementInputs, RetirementResults, ProjectionYear } from './types';
+import { RetirementInputs, RetirementResults } from './types';
 
 interface RetirementReportTemplateProps {
   inputs: RetirementInputs;
@@ -14,7 +14,6 @@ export const RetirementReportTemplate = ({
   inputs,
   results,
   clientName,
-  adviserName = 'Navigate Wealth Adviser',
   scenarioName = 'Retirement Projection',
 }: RetirementReportTemplateProps) => {
   const formatCurrency = (val: number) => {

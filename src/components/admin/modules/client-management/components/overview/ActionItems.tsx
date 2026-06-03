@@ -5,7 +5,7 @@
  * Extracted from ClientOverviewTab.tsx.
  */
 
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '../../../../../ui/card';
 import { Badge } from '../../../../../ui/badge';
 import { Button } from '../../../../../ui/button';

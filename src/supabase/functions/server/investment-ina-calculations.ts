@@ -497,7 +497,7 @@ export function determineGoalStatus(fundingPercentage: number): string {
 /**
  * Generate status rationale
  */
-export function generateStatusRationale(fundingGap: FundingGap, status: string): string {
+export function generateStatusRationale(fundingGap: FundingGap, _status: string): string {
   if (!fundingGap.hasShortfall) {
     return `Goal is ${fundingGap.fundingPercentage > 100 ? 'overfunded' : 'fully funded'}. Current trajectory exceeds or meets requirements.`;
   }
