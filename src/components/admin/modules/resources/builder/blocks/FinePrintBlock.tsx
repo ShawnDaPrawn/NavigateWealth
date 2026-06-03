@@ -1,4 +1,3 @@
-import React from 'react';
 import DOMPurify from 'dompurify';
 import { Columns } from 'lucide-react';
 import { BlockDefinition } from '../registry';

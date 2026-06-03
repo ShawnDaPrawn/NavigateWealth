@@ -1,4 +1,3 @@
-import React from 'react';
 import { BasePdfLayout } from '../templates/BasePdfLayout';
 import { RetirementInputs, RetirementResults } from './types';
 

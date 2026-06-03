@@ -1,7 +1,5 @@
-import React from 'react';
 import { Link, useNavigate } from 'react-router';
 import { useAuth } from './AuthContext';
-import { SUPER_ADMIN_EMAIL } from '../../utils/auth/constants';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -13,7 +11,7 @@ import {
 import { Avatar, AvatarFallback } from '../ui/avatar';
 import { Button } from '../ui/button';
 import { toast } from 'sonner';
-import { User, Shield, LogOut, ChevronDown, Settings, ArrowLeftRight } from 'lucide-react';
+import { User, Shield, LogOut, ChevronDown, Settings } from 'lucide-react';
 
 export function UserProfileDropdown() {
   const { user, logout } = useAuth();
@@ -35,7 +33,6 @@ export function UserProfileDropdown() {
 
   const isApproved = user.accountStatus === 'approved' || user.applicationStatus === 'approved';
   const isAdmin = user.role === 'admin' || user.role === 'super_admin';
-  const isSuperAdmin = user.email?.toLowerCase() === SUPER_ADMIN_EMAIL.toLowerCase();
 
   const getInitials = () => {
     if (user.firstName && user.lastName) {

@@ -16,7 +16,6 @@ import {
   Briefcase,
   Heart,
   Mail,
-  FileSignature,
 } from 'lucide-react';
 
 // ============================================================================

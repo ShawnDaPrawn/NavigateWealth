@@ -3,7 +3,7 @@
  * Placeholder wizard for Estate Planning Financial Needs Analysis
  */
 
-import React, { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { FNAWizardLayout, FNAWizardStepConfig } from '../../fna/FNAWizardLayout';
 import { CheckCircle, FileText } from 'lucide-react';
 import { toast } from 'sonner';

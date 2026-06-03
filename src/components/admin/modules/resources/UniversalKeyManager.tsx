@@ -3,11 +3,10 @@
  * Centralized reference for all keys in the Navigate Wealth platform
  */
 
-import React, { useState, useMemo } from 'react';
+import { useState, useMemo } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../../ui/card';
 import { Badge } from '../../../ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../../ui/tabs';
-import { Label } from '../../../ui/label';
 import { Info, Key, Database, Workflow, Calculator, UserCircle, Target } from 'lucide-react';
 import { ProductKeyCategory } from '../product-management';
 import { KeyAPI, KeyList, CategoryFilter, SearchFilters, CATEGORY_ICONS } from './key-manager';
@@ -25,7 +24,6 @@ export function UniversalKeyManager() {
 
   // Check if keys are loaded
   const hasKeys = KeyAPI.getKeyCount() > 0;
-  const totalKeysCount = KeyAPI.getKeyCount();
 
   // Filter keys based on search and filters
   const filteredKeys = useMemo(() => {

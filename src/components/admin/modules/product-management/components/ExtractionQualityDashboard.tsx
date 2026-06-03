@@ -19,7 +19,6 @@ import {
   TrendingUp,
   AlertTriangle,
   CheckCircle2,
-  XCircle,
   FileText,
   Lock,
   Loader2,

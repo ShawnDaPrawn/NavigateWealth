@@ -104,14 +104,6 @@ const EMPTY_STATE_CONFIG: Record<
   },
 };
 
-const TAB_LABELS: Record<TabStatus, string> = {
-  incomplete: 'Incomplete',
-  pending: 'Pending Review',
-  invited: 'Invited',
-  approved: 'Approved',
-  rejected: 'Rejected',
-};
-
 export function ApplicationsTable({
   loading,
   refreshing,

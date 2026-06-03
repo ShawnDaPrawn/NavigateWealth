@@ -9,7 +9,7 @@
  *  - Sent/Viewed: "All recipients will be notified that this envelope has been discarded."
  */
 
-import React, { useState } from 'react';
+import { useState } from 'react';
 import {
   AlertDialog,
   AlertDialogAction,

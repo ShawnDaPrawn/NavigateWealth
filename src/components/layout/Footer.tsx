@@ -3,7 +3,7 @@ import { Link } from 'react-router';
 import { Button } from '../ui/button';
 import { Separator } from '../ui/separator';
 import { toast } from 'sonner';
-import { MapPin, Phone, Mail, Linkedin, ArrowRight, Code, Youtube, Instagram } from 'lucide-react';
+import { MapPin, Phone, Mail, Linkedin, ArrowRight, Youtube, Instagram } from 'lucide-react';
 import { Logo } from './Logo';
 import { projectId, publicAnonKey } from '../../utils/supabase/info';
 

@@ -5,7 +5,6 @@
  * SIGNER_STATUS_CONFIG — no inline switch statements.
  */
 
-import React from 'react';
 import { Badge } from '../../../../ui/badge';
 import type { EnvelopeStatus, SignerStatus } from '../types';
 import { ENVELOPE_STATUS_CONFIG, SIGNER_STATUS_CONFIG } from '../constants';

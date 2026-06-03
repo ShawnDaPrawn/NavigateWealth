@@ -1,4 +1,3 @@
-import React from 'react';
 import { ExternalLink, FileText, Info, Shield } from 'lucide-react';
 import { LegalDocumentDialog, useLegalDocumentViewer } from '../shared/LegalDocumentViewer';
 import { Separator } from '../ui/separator';

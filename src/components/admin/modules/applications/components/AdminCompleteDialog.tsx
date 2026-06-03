@@ -10,7 +10,7 @@
  * SS12.3 -- completedBy audit field for compliance
  */
 
-import React, { useCallback } from 'react';
+import { useCallback } from 'react';
 import { Dialog, DialogContent, DialogTitle, DialogDescription } from '../../../../ui/dialog';
 import { Button } from '../../../../ui/button';
 import { Badge } from '../../../../ui/badge';

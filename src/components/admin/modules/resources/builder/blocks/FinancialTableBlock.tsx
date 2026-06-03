@@ -1,4 +1,3 @@
-import React from 'react';
 import { Calculator, Plus, Trash2 } from 'lucide-react';
 import { BlockDefinition } from '../registry';
 import { FinancialTableData } from '../types';

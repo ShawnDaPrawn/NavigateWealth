@@ -1,11 +1,10 @@
-import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../../../../ui/card';
 import { Button } from '../../../../ui/button';
 import { Badge } from '../../../../ui/badge';
 import { Skeleton } from '../../../../ui/skeleton';
 import { CheckSquare, ArrowRight, Plus, Clock, AlertTriangle, CheckCircle } from 'lucide-react';
 import { useDashboardData } from '../hooks';
-import { getPriorityLabel, getPriorityVariant, isTaskOverdue, formatDate } from '../utils';
+import { getPriorityLabel, getPriorityVariant, isTaskOverdue } from '../utils';
 import type { TasksWidgetProps } from '../types';
 
 export function TasksWidget({

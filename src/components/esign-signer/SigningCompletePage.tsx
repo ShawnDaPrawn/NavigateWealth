@@ -4,7 +4,7 @@
  * Branded with Navigate Wealth identity, download option, and clear next-steps.
  */
 
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { motion } from 'motion/react';
 import { Card } from '../ui/card';
 import { Button } from '../ui/button';
@@ -21,7 +21,7 @@ interface SigningCompletePageProps {
 
 export function SigningCompletePage({ sessionData, onClose, token }: SigningCompletePageProps) {
   const [isDownloading, setIsDownloading] = useState(false);
-  const [showConfetti, setShowConfetti] = useState(true);
+  const [_showConfetti, setShowConfetti] = useState(true);
 
   useEffect(() => {
     // Hide confetti after animation completes

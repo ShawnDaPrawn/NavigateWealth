@@ -1,4 +1,3 @@
-import React from 'react';
 import { useAuth } from '../../../auth/AuthContext';
 import { AdminAuthNotice } from '../../AdminAuthNotice';
 import { KPIGrid } from './components/KPIGrid';

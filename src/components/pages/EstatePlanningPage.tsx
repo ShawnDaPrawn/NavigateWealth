@@ -13,8 +13,6 @@ import {
   Users,
   Building,
   Heart,
-  Scale,
-  Crown,
   Briefcase,
   Search,
   MessageSquare,

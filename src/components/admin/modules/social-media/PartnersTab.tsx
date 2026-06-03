@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { Button } from '../../../ui/button';
 import { Badge } from '../../../ui/badge';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../../ui/card';
@@ -8,7 +8,6 @@ import {
   Link2,
   TrendingUp,
   DollarSign,
-  Eye,
   UserPlus,
   MoreVertical,
   ExternalLink,

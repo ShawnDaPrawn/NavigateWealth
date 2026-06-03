@@ -1,11 +1,10 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { Link } from 'react-router';
 import { SEO, createWebPageSchema } from '../seo/SEO';
 import { getSEOData } from '../seo/seo-config';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 import { Button } from '../ui/button';
 import { Badge } from '../ui/badge';
-import { OptimizedImage } from '../shared/OptimizedImage';
 import { GetQuoteModal } from '../modals/GetQuoteModal';
 import { ConsultationModal } from '../modals/ConsultationModal';
 import { ProvidersModal } from '../modals/ProvidersModal';
@@ -14,25 +13,17 @@ import {
   Shield,
   Users,
   TrendingUp,
-  Heart,
   Globe,
-  Zap,
   CheckCircle,
   ArrowRight,
   Star,
-  Clock,
-  Target,
   Monitor,
   Handshake,
-  PieChart,
-  Phone,
   Lock,
   HeadphonesIcon,
   Lightbulb,
   BarChart3,
   FileCheck,
-  Sparkles,
-  ThumbsUp,
   UserCheck,
   Building2,
   Headset,

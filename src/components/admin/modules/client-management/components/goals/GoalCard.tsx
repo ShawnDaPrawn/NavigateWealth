@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import { useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../../../../../ui/card';
 import { Badge } from '../../../../../ui/badge';
 import { Progress } from '../../../../../ui/progress';

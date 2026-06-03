@@ -3,7 +3,7 @@
  * Displays published FNA results to clients in a read-only format
  */
 
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Card, CardContent } from '../ui/card';
 import { Badge } from '../ui/badge';
 import { Button } from '../ui/button';
@@ -11,7 +11,6 @@ import { BrandSectionLoader } from '../ui/brand-loader';
 import {
   Shield,
   Heart,
-  Users,
   Home,
   TrendingUp,
   DollarSign,
@@ -19,7 +18,6 @@ import {
   AlertCircle,
   CheckCircle,
   FileText,
-  Download,
   Phone,
 } from 'lucide-react';
 import {

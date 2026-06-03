@@ -9,8 +9,8 @@ import React from 'react';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '../../../../ui/card';
 import { Badge } from '../../../../ui/badge';
 import { Separator } from '../../../../ui/separator';
-import { Shield, DollarSign, HeartPulse, Briefcase } from 'lucide-react';
-import { formatCurrency, formatPercentage } from '../utils';
+import { Shield, HeartPulse, Briefcase } from 'lucide-react';
+import { formatCurrency } from '../utils';
 import type { PublishedFNA } from '../types';
 
 interface RiskPlanningFNAResultsViewProps {

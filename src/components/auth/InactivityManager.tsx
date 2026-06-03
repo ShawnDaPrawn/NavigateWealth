@@ -7,7 +7,7 @@
  */
 
 import { useEffect, useState, useRef, useCallback } from 'react';
-import { useNavigate, useLocation } from 'react-router';
+import { useNavigate } from 'react-router';
 import { useAuth } from './AuthContext';
 import { onLogoutBroadcast, onNavigateBroadcast } from '../../utils/auth/sessionSync';
 import {

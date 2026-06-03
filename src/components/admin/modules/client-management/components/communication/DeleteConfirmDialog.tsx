@@ -5,7 +5,6 @@
  * Per §14.1 — destructive operations require confirmation.
  */
 
-import React from 'react';
 import { Button } from '../../../../../ui/button';
 import { Alert, AlertDescription } from '../../../../../ui/alert';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../../../../../ui/dialog';

@@ -10,7 +10,6 @@
 import React from 'react';
 
 // API services are lightweight (no JSX, no component trees) — safe to import eagerly
-import { FNAAPI } from '../modules/fna/api';
 import { RiskPlanningFnaAPI } from '../modules/risk-planning-fna/api';
 import { MedicalFNAApiService } from '../modules/medical-fna/api';
 import { RetirementFnaAPI } from '../modules/retirement-fna/api';

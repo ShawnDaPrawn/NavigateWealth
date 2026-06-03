@@ -99,7 +99,7 @@ export function PublicationsModule() {
   } = useArticles();
   const {
     categories,
-    isLoading: categoriesLoading,
+    isLoading: _categoriesLoading,
     isRefreshing: categoriesRefreshing,
     refetch: refetchCategories,
   } = useCategories({ activeOnly: false });
@@ -110,8 +110,6 @@ export function PublicationsModule() {
   // They were previously here but only fired when the Publications tab was open.
 
   const canCreate = canDo('publications', 'create');
-  const canEdit = canDo('publications', 'edit');
-  const canDelete = canDo('publications', 'delete');
   const canPublish = canDo('publications', 'publish');
   const isRefreshing = articlesRefreshing || categoriesRefreshing;
 

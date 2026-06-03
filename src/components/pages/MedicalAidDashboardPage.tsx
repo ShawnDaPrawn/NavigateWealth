@@ -7,7 +7,7 @@
  * Guidelines refs: §7 (presentation), §7.1 (derived display state)
  */
 
-import React, { useState, useMemo } from 'react';
+import { useState, useMemo } from 'react';
 import { useAuth } from '../auth/AuthContext';
 import { Heart, Calculator, FileText, Users } from 'lucide-react';
 import type { ServicePageAction, ServicePageInsight } from '../layout/ServicePageLayout';

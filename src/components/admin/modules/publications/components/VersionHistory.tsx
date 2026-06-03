@@ -8,20 +8,15 @@
  * @module publications/components/VersionHistory
  */
 
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import {
   History,
   X,
   RotateCcw,
   Eye,
-  Clock,
-  FileText,
-  ChevronDown,
-  ChevronUp,
   Loader2,
   AlertTriangle,
   Check,
-  ArrowRight,
   User,
   Hash,
   Type,
@@ -80,21 +75,11 @@ function timeAgo(iso: string): string {
   return formatTimestamp(iso);
 }
 
-function stripHtml(html: string): string {
-  return html.replace(/<[^>]+>/g, '');
-}
-
 // ---------------------------------------------------------------------------
 // Component
 // ---------------------------------------------------------------------------
 
-export function VersionHistory({
-  articleId,
-  isOpen,
-  onClose,
-  onRestore,
-  currentBody,
-}: VersionHistoryProps) {
+export function VersionHistory({ articleId, isOpen, onClose, onRestore }: VersionHistoryProps) {
   const [versions, setVersions] = useState<ArticleVersion[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);

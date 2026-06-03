@@ -10,7 +10,7 @@
  * Guidelines refs: §7 (presentation), §7.1 (derived display state)
  */
 
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useAuth } from '../auth/AuthContext';
 import { Shield, Calculator, FileText, Upload } from 'lucide-react';
 import type { ServicePageAction, ServicePageInsight } from '../layout/ServicePageLayout';

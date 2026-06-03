@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   BasePdfLayout,
   getPdfDimensions,
@@ -592,7 +592,7 @@ function paginateChunks(chunks: PdfChunk[], config: LegalPdfConfig): PdfChunk[][
     currentUnits = 0;
   };
 
-  chunks.forEach((chunk, index) => {
+  chunks.forEach((chunk, _index) => {
     const capacity = getPageCapacity(config, pages.length === 0);
     const minimumFollowUnits = Math.max(1, Math.ceil((PDF_MIN_LINES_ABOVE_FOOTER * 3) / 2));
 

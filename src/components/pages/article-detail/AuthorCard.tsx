@@ -7,8 +7,7 @@
  * @module article-detail/AuthorCard
  */
 
-import React from 'react';
-import { User, Pen } from 'lucide-react';
+import { User } from 'lucide-react';
 
 interface AuthorCardProps {
   name: string;

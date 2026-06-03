@@ -24,7 +24,6 @@ import { toast } from 'sonner';
 import { Button } from '../../../ui/button';
 import { Input } from '../../../ui/input';
 import { Label } from '../../../ui/label';
-import { Badge } from '../../../ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../../ui/select';
 import {
   ArrowRight,
@@ -35,14 +34,11 @@ import {
   Stethoscope,
   ClipboardList,
   Users,
-  HelpCircle,
   Loader2,
   Info,
   Pencil,
   Plus,
   Minus,
-  MapPin,
-  DollarSign,
   FileText,
 } from 'lucide-react';
 import { projectId, publicAnonKey } from '../../../../utils/supabase/info';
@@ -269,13 +265,6 @@ function getMainMemberAge(main: MemberEntry): number | null {
 
 function hasMemberAge(m: MemberEntry): boolean {
   return Boolean(m.dob || m.age);
-}
-
-function displayAge(m: MemberEntry): string {
-  const fromDob = calcAge(m.dob);
-  if (fromDob !== null) return `${fromDob} years`;
-  if (m.age) return `${m.age} years`;
-  return 'Not provided';
 }
 
 function displayDob(m: MemberEntry): string {

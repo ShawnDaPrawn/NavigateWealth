@@ -2,7 +2,6 @@
  * Step: Funeral Wishes & Additional Clauses (Last Will only)
  */
 
-import React from 'react';
 import { Textarea } from '../../../../../ui/textarea';
 import { StepSectionHeader, FormField } from '../WillDraftingUI';
 import type { StepFuneralWishesProps } from './types';

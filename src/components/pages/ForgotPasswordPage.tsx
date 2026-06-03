@@ -3,156 +3,17 @@ import { Button } from '../ui/button';
 import { Input } from '../ui/input';
 import { Label } from '../ui/label';
 import { Alert, AlertDescription } from '../ui/alert';
-import {
-  Mail,
-  ArrowLeft,
-  CheckCircle2,
-  XCircle,
-  Shield,
-  CheckCircle,
-  Lock,
-  Key,
-  Clock,
-  AlertCircle,
-} from 'lucide-react';
+import { Mail, ArrowLeft, Shield, CheckCircle, Lock, Clock, AlertCircle } from 'lucide-react';
 import { getUserErrorMessage } from '../../utils/errorUtils';
 import { useNavigate, Link } from 'react-router';
 import { useState } from 'react';
-
-const carouselSlides = [
-  {
-    id: 1,
-    title: 'Secure password recovery',
-    subtitle:
-      'Our advanced security measures ensure your account remains protected during the reset process.',
-    content: (
-      <div className="bg-white/20 backdrop-blur-sm rounded-xl p-6 space-y-4">
-        <div className="flex items-center space-x-3 mb-4">
-          <div className="w-10 h-10 bg-white/30 rounded-full flex items-center justify-center">
-            <Shield className="h-5 w-5 text-white" />
-          </div>
-          <div>
-            <div className="text-white font-semibold">Bank-Level Security</div>
-            <div className="text-white/70 text-sm">Multi-layered protection</div>
-          </div>
-        </div>
-        <div className="space-y-3">
-          <div className="flex items-center space-x-3 p-3 bg-white/10 rounded-lg">
-            <CheckCircle className="h-4 w-4 text-white/80" />
-            <span className="text-white/90 text-sm">256-bit SSL encryption</span>
-          </div>
-          <div className="flex items-center space-x-3 p-3 bg-white/10 rounded-lg">
-            <CheckCircle className="h-4 w-4 text-white/80" />
-            <span className="text-white/90 text-sm">Encrypted reset tokens</span>
-          </div>
-          <div className="flex items-center space-x-3 p-3 bg-white/10 rounded-lg">
-            <CheckCircle className="h-4 w-4 text-white/80" />
-            <span className="text-white/90 text-sm">Secure email delivery</span>
-          </div>
-          <div className="flex items-center space-x-3 p-3 bg-white/10 rounded-lg">
-            <CheckCircle className="h-4 w-4 text-white/80" />
-            <span className="text-white/90 text-sm">Identity verification</span>
-          </div>
-        </div>
-      </div>
-    ),
-  },
-  {
-    id: 2,
-    title: 'Time-limited access tokens',
-    subtitle:
-      'Reset links expire automatically to prevent unauthorized access, keeping your account secure.',
-    content: (
-      <div className="bg-white/20 backdrop-blur-sm rounded-xl p-6 space-y-4">
-        <div className="flex items-center space-x-3 mb-4">
-          <div className="w-10 h-10 bg-white/30 rounded-full flex items-center justify-center">
-            <Clock className="h-5 w-5 text-white" />
-          </div>
-          <div>
-            <div className="text-white font-semibold">Smart Expiration</div>
-            <div className="text-white/70 text-sm">Automatic security timeout</div>
-          </div>
-        </div>
-        <div className="space-y-3">
-          <div className="bg-white/10 rounded-lg p-4">
-            <div className="flex justify-between items-center mb-2">
-              <span className="text-white/80 text-sm">Reset Token Validity</span>
-              <span className="text-white font-semibold">15 Minutes</span>
-            </div>
-            <div className="w-full bg-white/20 rounded-full h-2">
-              <div className="bg-white/60 h-2 rounded-full w-3/4"></div>
-            </div>
-          </div>
-          <div className="grid grid-cols-2 gap-3">
-            <div className="bg-white/10 rounded-lg p-3 text-center">
-              <div className="text-white font-semibold text-lg">✓</div>
-              <div className="text-white/70 text-xs">Single Use</div>
-            </div>
-            <div className="bg-white/10 rounded-lg p-3 text-center">
-              <div className="text-white font-semibold text-lg">🔒</div>
-              <div className="text-white/70 text-xs">Auto-Expire</div>
-            </div>
-          </div>
-        </div>
-      </div>
-    ),
-  },
-  {
-    id: 3,
-    title: 'Multi-layer security protection',
-    subtitle:
-      'Multiple security checkpoints ensure only you can access your account recovery options.',
-    content: (
-      <div className="bg-white/20 backdrop-blur-sm rounded-xl p-6 space-y-4">
-        <div className="flex items-center space-x-3 mb-4">
-          <div className="w-10 h-10 bg-white/30 rounded-full flex items-center justify-center">
-            <Lock className="h-5 w-5 text-white" />
-          </div>
-          <div>
-            <div className="text-white font-semibold">Verification Steps</div>
-            <div className="text-white/70 text-sm">Multiple security layers</div>
-          </div>
-        </div>
-        <div className="space-y-3">
-          <div className="flex items-start space-x-3">
-            <div className="w-6 h-6 bg-white/30 rounded-full flex items-center justify-center mt-0.5">
-              <span className="text-white font-semibold text-xs">1</span>
-            </div>
-            <div>
-              <div className="text-white/90 text-sm font-medium">Email Verification</div>
-              <div className="text-white/70 text-xs">Confirm account ownership</div>
-            </div>
-          </div>
-          <div className="flex items-start space-x-3">
-            <div className="w-6 h-6 bg-white/30 rounded-full flex items-center justify-center mt-0.5">
-              <span className="text-white font-semibold text-xs">2</span>
-            </div>
-            <div>
-              <div className="text-white/90 text-sm font-medium">Secure Token</div>
-              <div className="text-white/70 text-xs">Encrypted access key</div>
-            </div>
-          </div>
-          <div className="flex items-start space-x-3">
-            <div className="w-6 h-6 bg-white/30 rounded-full flex items-center justify-center mt-0.5">
-              <span className="text-white font-semibold text-xs">3</span>
-            </div>
-            <div>
-              <div className="text-white/90 text-sm font-medium">New Password</div>
-              <div className="text-white/70 text-xs">Create secure credentials</div>
-            </div>
-          </div>
-        </div>
-      </div>
-    ),
-  },
-];
 
 export function ForgotPasswordPage() {
   const [email, setEmail] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [error, setError] = useState('');
-  const [currentSlide, setCurrentSlide] = useState(0);
+  const [_currentSlide] = useState(0);
 
   const navigate = useNavigate();
 
@@ -186,14 +47,6 @@ export function ForgotPasswordPage() {
 
   const handleBackToLogin = () => {
     navigate('/login');
-  };
-
-  const nextSlide = () => {
-    setCurrentSlide((prev) => (prev + 1) % carouselSlides.length);
-  };
-
-  const prevSlide = () => {
-    setCurrentSlide((prev) => (prev - 1 + carouselSlides.length) % carouselSlides.length);
   };
 
   if (isSubmitted) {

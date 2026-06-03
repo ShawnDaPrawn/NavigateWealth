@@ -23,7 +23,6 @@ import { ArchivedTasksView } from './components/ArchivedTasksView';
 import { TasksSkeleton } from './components/TasksSkeleton';
 import { STATUS_LABELS } from './constants';
 import { Button } from '../../../ui/button';
-import { Input } from '../../../ui/input';
 import { useCurrentUserPermissions } from '../personnel/hooks/usePermissions';
 
 interface TaskManagementModuleProps {
@@ -44,7 +43,6 @@ export function TaskManagementModule({ initialTaskId }: TaskManagementModuleProp
     filters,
     setFilters,
     isModalOpen,
-    setIsModalOpen,
     selectedTask,
     modalMode,
     showArchived,

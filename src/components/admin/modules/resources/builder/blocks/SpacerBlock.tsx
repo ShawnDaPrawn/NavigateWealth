@@ -1,4 +1,3 @@
-import React from 'react';
 import { SeparatorHorizontal } from 'lucide-react';
 import { BlockDefinition } from '../registry';
 import { SpacerData } from '../types';

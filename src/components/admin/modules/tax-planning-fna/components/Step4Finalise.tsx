@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../../../../ui/card';
 import { Button } from '../../../../ui/button';
 import { Checkbox } from '../../../../ui/checkbox';
@@ -9,7 +9,7 @@ import {
   TaxRecommendation,
 } from '../types';
 import { TaxPlanningCalculationService } from '../services/taxPlanningCalculationService';
-import { ArrowLeft, CheckCircle, FileText, Printer, Lock, Save } from 'lucide-react';
+import { ArrowLeft, FileText, Printer, Lock, Save } from 'lucide-react';
 import { Badge } from '../../../../ui/badge';
 import { Textarea } from '../../../../ui/textarea';
 import { Label } from '../../../../ui/label';
@@ -23,13 +23,7 @@ interface Step4Props {
   onBack: () => void;
 }
 
-export function Step4Finalise({
-  finalInputs,
-  finalResults,
-  adjustments,
-  onPublish,
-  onBack,
-}: Step4Props) {
+export function Step4Finalise({ finalResults, adjustments, onPublish, onBack }: Step4Props) {
   const [recommendations, setRecommendations] = useState<TaxRecommendation[]>([]);
   const [selectedRecIds, setSelectedRecIds] = useState<string[]>([]);
   const [adviserNotes, setAdviserNotes] = useState('');

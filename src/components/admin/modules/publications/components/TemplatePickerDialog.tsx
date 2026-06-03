@@ -8,7 +8,7 @@
  * @module publications/components/TemplatePickerDialog
  */
 
-import React, { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { FileText, Loader2, Search, Sparkles, X, ChevronRight, Check, Zap } from 'lucide-react';
 import { Button } from '../../../../ui/button';
 import { Badge } from '../../../../ui/badge';

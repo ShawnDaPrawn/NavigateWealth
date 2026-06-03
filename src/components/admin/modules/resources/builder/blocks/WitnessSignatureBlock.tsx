@@ -1,4 +1,3 @@
-import React from 'react';
 import { PenTool } from 'lucide-react';
 import { BlockDefinition } from '../registry';
 import { WitnessSignatureData } from '../types';

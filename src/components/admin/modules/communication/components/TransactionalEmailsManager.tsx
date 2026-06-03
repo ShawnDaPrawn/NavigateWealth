@@ -1,18 +1,7 @@
-import React, { useState, useEffect } from 'react';
-import {
-  ArrowLeft,
-  Settings,
-  Mail,
-  ToggleLeft,
-  ToggleRight,
-  Edit,
-  Loader2,
-  Bell,
-  Megaphone,
-} from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { ArrowLeft, Settings, Mail, Edit, Loader2, Bell, Megaphone } from 'lucide-react';
 import { Button } from '../../../../ui/button';
 import { Switch } from '../../../../ui/switch';
-import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '../../../../ui/card';
 import { Badge } from '../../../../ui/badge';
 import { Separator } from '../../../../ui/separator';
 import { EmailTemplateEditor } from './EmailTemplateEditor';

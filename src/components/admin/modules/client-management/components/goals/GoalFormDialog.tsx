@@ -12,7 +12,7 @@ import { Input } from '../../../../../ui/input';
 import { Label } from '../../../../../ui/label';
 import { Goal, GoalType, AdHocContribution } from './types';
 import { Checkbox } from '../../../../../ui/checkbox';
-import { Trash2, Calculator, Info, Plus, X } from 'lucide-react';
+import { Trash2, Info, Plus, X } from 'lucide-react';
 import { formatCurrency } from '../../../../../../utils/currencyFormatter';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../../../../ui/tabs';
 import {
@@ -22,7 +22,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from '../../../../../ui/select';
-import { Card, CardContent } from '../../../../../ui/card';
 
 /** Loosely-typed policy record — shape varies by product category */
 type PolicyRecord = {

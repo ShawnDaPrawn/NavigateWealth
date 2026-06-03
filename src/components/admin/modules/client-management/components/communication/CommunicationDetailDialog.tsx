@@ -5,7 +5,6 @@
  * and provides a delete action.
  */
 
-import React from 'react';
 import DOMPurify from 'dompurify';
 import { Button } from '../../../../../ui/button';
 import { Badge } from '../../../../../ui/badge';

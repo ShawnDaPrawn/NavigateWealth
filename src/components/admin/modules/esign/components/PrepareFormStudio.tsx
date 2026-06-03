@@ -6,10 +6,8 @@
 
 import React, { useState, useCallback, useEffect, useRef, useMemo } from 'react';
 import { Button } from '../../../../ui/button';
-import { Badge } from '../../../../ui/badge';
 import {
   ArrowLeft,
-  Save,
   Send,
   Loader2,
   CheckCircle2,
@@ -68,7 +66,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from '../../../../ui/select';
-import { Switch } from '../../../../ui/switch';
 import { logger } from '../../../../../utils/logger';
 import { RecipientsManager } from './RecipientsManager';
 import { PageManagerDialog } from './PageManagerDialog';

@@ -5,7 +5,6 @@
  * JS chunk loads. Matches the established skeleton pattern (§8.1).
  */
 
-import React from 'react';
 import { Skeleton } from '../../../../ui/skeleton';
 
 export function AIManagementSkeleton() {

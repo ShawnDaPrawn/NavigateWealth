@@ -1,4 +1,3 @@
-import React from 'react';
 import { Badge } from '@/components/ui/badge';
 import type { BatchFNAStatusItem } from '../hooks/useFnaBatchStatus';
 import { getFnaStatusLabel } from '../fna-intake-labels';

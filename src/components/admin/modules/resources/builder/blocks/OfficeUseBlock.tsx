@@ -1,4 +1,3 @@
-import React from 'react';
 import { Archive, Plus, Trash2 } from 'lucide-react';
 import { BlockDefinition } from '../registry';
 import { OfficeUseData } from '../types';

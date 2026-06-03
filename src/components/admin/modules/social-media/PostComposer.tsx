@@ -21,11 +21,9 @@ import { toast } from 'sonner';
 import {
   Upload,
   X,
-  Image,
   Video,
   Link,
   Calendar as CalendarIcon,
-  Clock,
   Send,
   Save,
   Eye,
@@ -33,18 +31,9 @@ import {
   AtSign,
   Sparkles,
   Zap,
-  Globe,
-  Target,
   AlertCircle,
 } from 'lucide-react';
-import {
-  SocialProfile,
-  SocialPlatform,
-  MediaFile,
-  PostLink,
-  UTMParameters,
-  PLATFORM_LIMITS,
-} from './types';
+import { SocialProfile, MediaFile, PostLink, UTMParameters, PLATFORM_LIMITS } from './types';
 import { campaignsApi } from './api';
 
 /** Data shape for composing a new post */
@@ -262,14 +251,6 @@ export function PostComposer({
 
     onPublish(post);
     toast.success('Post published successfully');
-  };
-
-  const formatFileSize = (bytes: number): string => {
-    if (bytes === 0) return '0 Bytes';
-    const k = 1024;
-    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
-    const i = Math.floor(Math.log(bytes) / Math.log(k));
-    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
   };
 
   const getCharacterCount = () => postContent.length;

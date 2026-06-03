@@ -13,11 +13,11 @@
  *                    direct fetch pattern.
  */
 
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '../../../../../ui/card';
 import { Button } from '../../../../../ui/button';
 import { Badge } from '../../../../../ui/badge';
-import { TrendingUp, Camera, Loader2, History, Trash2, Info } from 'lucide-react';
+import { TrendingUp, Camera, Loader2, History, Info } from 'lucide-react';
 import { SVGLineChart } from '../../../../../ui/svg-charts';
 import { api } from '../../../../../../utils/api';
 import type { DashboardMode } from '../ClientOverviewTab';

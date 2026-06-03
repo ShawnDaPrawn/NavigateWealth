@@ -2,8 +2,6 @@
  * Constants for Documents/History module
  */
 
-import { FileText, Shield, TrendingUp, Activity, Briefcase, Home, Link, File } from 'lucide-react';
-
 export const DOCUMENT_TYPES = {
   DOCUMENT: 'document',
   LINK: 'link',

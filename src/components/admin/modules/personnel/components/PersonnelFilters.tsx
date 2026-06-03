@@ -1,4 +1,3 @@
-import React from 'react';
 import { Input } from '../../../../ui/input';
 import { Button } from '../../../../ui/button';
 import {
@@ -8,7 +7,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from '../../../../ui/select';
-import { Badge } from '../../../../ui/badge';
 import { Search, X } from 'lucide-react';
 import { cn } from '../../../../ui/utils';
 import type { PersonnelStatus } from '../types';

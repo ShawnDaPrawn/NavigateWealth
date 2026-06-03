@@ -17,7 +17,7 @@
 
 import React, { useState, useEffect, useMemo } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../../../../ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '../../../../ui/card';
 import { Badge } from '../../../../ui/badge';
 import { Button } from '../../../../ui/button';
 import {
@@ -128,12 +128,7 @@ const isValidIdNumber = (val: unknown): val is string =>
 
 // ─── Component ──────────────────────────────────────────────────────────────
 
-export function ComplianceTab({
-  selectedClient,
-  sanctionsScreeningRunning,
-  onRunSanctionsScreening,
-  lastSanctionsCheck,
-}: ComplianceTabProps) {
+export function ComplianceTab({ selectedClient }: ComplianceTabProps) {
   const queryClient = useQueryClient();
   const [registrationStatus, setRegistrationStatus] = useState<
     'loading' | 'registered' | 'unregistered'
@@ -519,7 +514,6 @@ function OverviewContent({
   resolvedPassport,
   hasIdentification,
   activities,
-  isLoadingActivity,
   onNavigate,
 }: {
   selectedClient: Client;

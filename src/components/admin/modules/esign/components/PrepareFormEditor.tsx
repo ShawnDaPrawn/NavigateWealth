@@ -4,7 +4,7 @@
  * This is the CRITICAL step between upload and sending
  */
 
-import React, { useState, useCallback, useEffect, useRef } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import { Button } from '../../../../ui/button';
 import { Badge } from '../../../../ui/badge';
 import { Card } from '../../../../ui/card';
@@ -17,11 +17,10 @@ import {
   AlertCircle,
   CheckCircle2,
   Loader2,
-  Plus,
 } from 'lucide-react';
 import { PDFViewer } from './PDFViewer';
 import { FieldPalette } from './FieldPalette';
-import type { EsignEnvelope, EsignField, SignerFormData, FieldType } from '../types';
+import type { EsignEnvelope, EsignField, SignerFormData } from '../types';
 import { projectId, publicAnonKey } from '../../../../../utils/supabase/info';
 
 interface PrepareFormEditorProps {

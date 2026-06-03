@@ -11,7 +11,7 @@
  */
 
 import React from 'react';
-import { ACTIVE_THEME, BRAND } from './portal-theme';
+import { ACTIVE_THEME } from './portal-theme';
 
 interface PortalPageHeaderProps {
   /** Greeting line, e.g. "Good morning, Chris" */

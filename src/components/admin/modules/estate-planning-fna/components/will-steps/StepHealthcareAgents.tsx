@@ -3,7 +3,6 @@
  * Appoint healthcare decision-makers.
  */
 
-import React from 'react';
 import { Input } from '../../../../../ui/input';
 import { Badge } from '../../../../../ui/badge';
 import { Button } from '../../../../../ui/button';

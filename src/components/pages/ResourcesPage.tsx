@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useMemo, useEffect } from 'react';
-import { useSearchParams, useNavigate, Link } from 'react-router';
+import { useSearchParams, Link } from 'react-router';
 import { SEO, createWebPageSchema } from '../seo/SEO';
 import { getSEOData } from '../seo/seo-config';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../ui/tabs';
@@ -77,7 +77,6 @@ interface SearchResult {
 
 export function ResourcesPage() {
   const [searchParams, setSearchParams] = useSearchParams();
-  const navigate = useNavigate();
   const seoData = getSEOData('resources');
 
   // Tab States
@@ -102,7 +101,7 @@ export function ResourcesPage() {
   const { categories: apiCategories = [], isLoading: categoriesLoading } = useCategories({
     activeOnly: true,
   });
-  const { articles: articlesList = [], isLoading: articlesLoading } = useArticles({
+  const { articles: articlesList = [], isLoading: _articlesLoading } = useArticles({
     status: 'published',
   });
   const {

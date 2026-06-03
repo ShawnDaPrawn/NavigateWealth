@@ -5,11 +5,11 @@
  * Guidelines §11.2 — Deterministic query keys from centralized registry.
  */
 
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useCallback } from 'react';
 import { toast } from 'sonner';
 import { productManagementApi } from '../api';
-import { Provider, SaveProviderRequest } from '../types';
+import { SaveProviderRequest } from '../types';
 import { productKeys } from './queryKeys';
 
 export function useProviders() {

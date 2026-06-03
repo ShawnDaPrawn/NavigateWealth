@@ -18,7 +18,6 @@ import {
   CheckCircle2,
   Inbox,
 } from 'lucide-react';
-import { Button } from '../../ui/button';
 import { BrandLoaderPanel } from '../../ui/brand-loader';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../ui/card';
 import { Alert, AlertDescription } from '../../ui/alert';

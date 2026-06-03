@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../../ui/tabs';
 import { FileText, Share2, Link as LinkIcon, ShieldAlert } from 'lucide-react';
 import { PublicationsTab } from './PublicationsTab';

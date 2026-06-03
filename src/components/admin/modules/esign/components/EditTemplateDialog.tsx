@@ -4,7 +4,7 @@
  * default message, default expiry). Recipients and fields are shown read-only.
  */
 
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import {
   Dialog,
   DialogContent,

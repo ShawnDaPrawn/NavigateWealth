@@ -15,12 +15,11 @@
  * ```
  */
 
-import React from 'react';
 import { Calendar, Clock, User, Eye, TrendingUp } from 'lucide-react';
 import { Badge } from '../../../../ui/badge';
 import { StatusBadge } from './StatusBadge';
 import { formatDate, getArticleImageUrl } from '../utils';
-import type { Article, ArticleStatus } from '../types';
+import type { Article } from '../types';
 import { ImageWithFallback } from '../../../../figma/ImageWithFallback';
 
 interface ArticleCardProps {

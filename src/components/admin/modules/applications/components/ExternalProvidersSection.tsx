@@ -10,13 +10,12 @@
  * via the existing amendment flow.
  */
 
-import React, { useState, useMemo, useCallback } from 'react';
+import { useState, useMemo, useCallback } from 'react';
 import { Badge } from '../../../../ui/badge';
 import { Input } from '../../../../ui/input';
 import { Button } from '../../../../ui/button';
 import { Label } from '../../../../ui/label';
 import { Checkbox } from '../../../../ui/checkbox';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '../../../../ui/tooltip';
 import { Building2, Plus, X, Search, Info } from 'lucide-react';
 import { SA_FINANCIAL_PROVIDERS, SA_PROVIDER_MAP } from '../constants';
 import type { FinancialServiceProvider } from '../constants';

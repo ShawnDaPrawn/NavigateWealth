@@ -30,7 +30,6 @@ import {
   ArrowLeft,
   ArrowRight,
   Send,
-  Eye,
   ListOrdered,
   Shuffle,
 } from 'lucide-react';

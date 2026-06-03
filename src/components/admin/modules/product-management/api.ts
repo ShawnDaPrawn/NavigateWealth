@@ -25,11 +25,6 @@ import {
   ProductField,
 } from './types';
 
-interface ProvidersResponse {
-  providers?: Provider[];
-  [key: string]: unknown;
-}
-
 interface SchemaResponse {
   fields: ProductField[];
   categoryId: string;

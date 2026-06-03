@@ -7,7 +7,6 @@
  * @module personnel/components/PermissionSummaryBadge
  */
 
-import React from 'react';
 import { Badge } from '../../../../ui/badge';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '../../../../ui/tooltip';
 import { Shield, ShieldCheck, ShieldAlert, ShieldOff } from 'lucide-react';

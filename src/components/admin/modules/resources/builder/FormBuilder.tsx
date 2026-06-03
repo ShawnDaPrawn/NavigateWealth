@@ -22,7 +22,6 @@ import {
   Loader2,
   Undo2,
   Redo2,
-  Check,
   AlertCircle,
   Cloud,
   CloudOff,
@@ -36,12 +35,7 @@ import type { LetterMeta } from '../templates/LetterheadPdfLayout';
 
 // Phase 1/Phase 2 imports
 import { TemplateGallery } from './components/TemplateGallery';
-import {
-  STARTER_TEMPLATES,
-  type StarterTemplate,
-  FORM_STATUS_CONFIG,
-  type FormStatus,
-} from './constants';
+import { type StarterTemplate } from './constants';
 
 // Simple ID generator
 const generateId = () => {
@@ -184,9 +178,7 @@ interface FormBuilderWorkspaceProps extends FormBuilderProps {
 
 const FormBuilderWorkspace = ({
   onBack,
-  onSave,
   initialData,
-  mode = 'form',
   resolvedInitialBlocks,
   resolvedCategory,
   resolvedTitle,
@@ -279,7 +271,7 @@ const FormBuilderWorkspace = ({
     status: autosaveStatus,
     isDirty,
     lastSavedAt,
-    saveNow: autosaveSaveNow,
+    saveNow: _autosaveSaveNow,
     markSaved,
   } = useAutosave<SavePayload>({
     data: currentPayload,
@@ -854,7 +846,6 @@ const FormBuilderWorkspace = ({
 
 function AutosaveIndicator({
   status,
-  isDirty,
   lastSavedAt,
   isNew,
   manualSaving,

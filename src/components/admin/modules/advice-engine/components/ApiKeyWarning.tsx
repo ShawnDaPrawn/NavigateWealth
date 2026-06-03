@@ -6,7 +6,6 @@
  * @module advice-engine/components/ApiKeyWarning
  */
 
-import React from 'react';
 import { AlertCircle } from 'lucide-react';
 import { Alert, AlertDescription } from '../../../../ui/alert';
 import { Badge } from '../../../../ui/badge';
@@ -21,7 +20,7 @@ import type { ApiKeyWarningProps } from '../types';
  *   onDismiss={() => console.log('Dismissed')}
  * />
  */
-export function ApiKeyWarning({ status, onDismiss }: ApiKeyWarningProps) {
+export function ApiKeyWarning({ status }: ApiKeyWarningProps) {
   // Don't show if API key is configured
   if (!status || status.configured) {
     return null;

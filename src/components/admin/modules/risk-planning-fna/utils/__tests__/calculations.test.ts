@@ -23,13 +23,7 @@ import type {
   ExistingCover,
   IncomeProtectionSettings,
 } from '../../types';
-import {
-  LIFE_COVER,
-  DISABILITY_COVER,
-  SEVERE_ILLNESS_COVER,
-  INCOME_PROTECTION,
-  SYSTEM_VERSION,
-} from '../../constants';
+import { LIFE_COVER, DISABILITY_COVER, INCOME_PROTECTION, SYSTEM_VERSION } from '../../constants';
 
 // ============================================================================
 // TEST FIXTURES

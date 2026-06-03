@@ -12,7 +12,7 @@
  * @module social-media/components/DraftPosts
  */
 
-import React, { useState, useCallback, useMemo } from 'react';
+import { useState, useCallback, useMemo } from 'react';
 import { Card, CardContent } from '../../../../ui/card';
 import { Button } from '../../../../ui/button';
 import { Badge } from '../../../../ui/badge';
@@ -37,10 +37,6 @@ import {
   Clock,
   Image as ImageIcon,
   Inbox,
-  Linkedin,
-  Instagram,
-  Facebook,
-  Twitter,
 } from 'lucide-react';
 import type { SocialPost, SocialPlatform } from '../types';
 import { BRAND, PLATFORM_DISPLAY, formatDateZA, formatTimeZA } from '../constants';

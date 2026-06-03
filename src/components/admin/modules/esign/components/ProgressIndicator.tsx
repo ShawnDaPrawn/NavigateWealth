@@ -3,7 +3,6 @@
  * Visual progress bar for envelope signing status
  */
 
-import React from 'react';
 import type { EsignEnvelope } from '../types';
 import { calculateSigningProgress, getProgressMessage } from '../utils/esignHelpers';
 

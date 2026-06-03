@@ -2,7 +2,7 @@
  * ServiceFnaPanel — inline Financial Needs Discovery for a single service domain
  */
 
-import React, { forwardRef } from 'react';
+import { forwardRef } from 'react';
 import { Calculator } from 'lucide-react';
 import { ClientFNAHub } from '../client/fna-intake/ClientFNAHub';
 import { ClientFNAView } from '../client/ClientFNAView';

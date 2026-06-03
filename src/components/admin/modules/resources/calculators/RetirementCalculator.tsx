@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../../../../ui/card';
 import { Button } from '../../../../ui/button';
 import { Input } from '../../../../ui/input';
@@ -11,7 +11,6 @@ import {
   SelectValue,
 } from '../../../../ui/select';
 import { Switch } from '../../../../ui/switch';
-import { Separator } from '../../../../ui/separator';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../../../ui/tabs';
 import {
   Table,
@@ -170,8 +169,6 @@ export function RetirementCalculator({ onBack }: RetirementCalculatorProps) {
       nominalReturn,
       inflation,
       annualFee,
-      drawdownTargetMode,
-      drawdownTargetValue,
     } = inputs;
 
     // Basic validation

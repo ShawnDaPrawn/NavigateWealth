@@ -7,7 +7,7 @@
 import { useState, useCallback } from 'react';
 import { PublicationsAPI } from '../api';
 import { SUCCESS_MESSAGES, ERROR_MESSAGES } from '../constants';
-import type { ContentType, CreateContentTypeInput, UpdateContentTypeInput } from '../types';
+import type { ContentType, CreateContentTypeInput } from '../types';
 
 interface UseTypeActionsOptions {
   onSuccess?: (message: string, type?: ContentType) => void;

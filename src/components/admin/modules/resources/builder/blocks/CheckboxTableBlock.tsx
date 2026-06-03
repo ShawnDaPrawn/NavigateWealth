@@ -1,4 +1,3 @@
-import React from 'react';
 import { Table as TableIcon, Plus, Trash2 } from 'lucide-react';
 import { BlockDefinition } from '../registry';
 import { CheckboxTableData } from '../types';

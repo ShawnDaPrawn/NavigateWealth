@@ -9,7 +9,6 @@
  * summary values from inputs directly.
  */
 
-import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '../../ui/card';
 import { Badge } from '../../ui/badge';
 import { Separator } from '../../ui/separator';

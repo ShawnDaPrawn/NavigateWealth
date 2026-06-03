@@ -9,7 +9,7 @@ import { Card, CardContent } from '../../../../ui/card';
 import { Input } from '../../../../ui/input';
 import { Label } from '../../../../ui/label';
 import { Button } from '../../../../ui/button';
-import { Upload, FileText, XCircle, ArrowRight, AlertCircle } from 'lucide-react';
+import { Upload, XCircle, ArrowRight, AlertCircle } from 'lucide-react';
 
 interface DocumentUploadStepProps {
   onNext: (files: File[], title: string, message: string, expiryDays: number) => void;

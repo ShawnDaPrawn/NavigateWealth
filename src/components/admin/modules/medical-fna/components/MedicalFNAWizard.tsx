@@ -12,7 +12,7 @@
  * All prior data flows forward and is preserved for audit.
  */
 
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { CheckCircle2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../../../../ui/dialog';
@@ -23,7 +23,6 @@ import { Step3ManualAdjustment } from './Step3ManualAdjustment';
 import { Step4Finalise } from './Step4Finalise';
 import {
   MedicalFNAInputs,
-  MedicalFNAResults,
   MedicalFNAAdjustments,
   MedicalFNAFinalNeeds,
   MedicalFNAWizardState,
