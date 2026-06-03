@@ -56,7 +56,7 @@ const NIL_UUID = '00000000-0000-0000-0000-000000000000';
 const routeError = (c: Context, e: unknown): Response => {
   const isZod = e instanceof Error && e.name === 'ZodError';
   if (isZod) {
-    return c.json({ error: (e as ZodError).errors }, 400);
+    return c.json({ error: (e as ZodError).issues }, 400);
   }
   return c.json({ error: getErrMsg(e) }, 500);
 };

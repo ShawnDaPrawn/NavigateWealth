@@ -90,7 +90,7 @@ const RequestSchema = z
     clientName: z.string().optional(),
 
     // Default to empty object if missing
-    requestDetails: z.record(z.unknown()).default({}),
+    requestDetails: z.record(z.string(), z.unknown()).default({}),
 
     // Default to empty array if missing
     assignees: z.array(RequestAssigneeSchema).default([]),
@@ -121,7 +121,7 @@ const RequestSchema = z
     complianceSignOff: z
       .object({
         required: z.boolean().default(false),
-        outcome: createEnumSchema(ApprovalOutcome, undefined).optional(),
+        outcome: z.nativeEnum(ApprovalOutcome).optional(),
         approvedBy: z.string().optional(),
         approvedAt: z.string().optional(),
         deficiencies: z.array(DeficiencySchema).default([]),

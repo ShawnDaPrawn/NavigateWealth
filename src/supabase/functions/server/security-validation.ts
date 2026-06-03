@@ -10,7 +10,7 @@ export const LogActivitySchema = z.object({
   type: z.string().min(1, 'Activity type is required').max(100),
   success: z.boolean().optional(),
   errorMessage: z.string().max(2000).optional(),
-  metadata: z.record(z.unknown()).optional(),
+  metadata: z.record(z.string(), z.unknown()).optional(),
 });
 
 export const ChangePasswordSchema = z.object({
