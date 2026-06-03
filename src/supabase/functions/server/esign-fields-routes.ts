@@ -110,9 +110,9 @@ fieldsRoutes.put('/envelopes/:envelopeId/fields', async (c) => {
   } catch (error: unknown) {
     log.error('❌ Update fields error:', error);
     const status = error instanceof AuthError ? error.statusCode : 500;
-    return c.json(
-      { error: error instanceof Error ? error.message : 'Failed to update fields' },
-      status,
+    return new Response(
+      JSON.stringify({ error: error instanceof Error ? error.message : 'Failed to update fields' }),
+      { status, headers: { 'Content-Type': 'application/json' } },
     );
   }
 });
@@ -142,9 +142,9 @@ fieldsRoutes.get('/envelopes/:envelopeId/fields', async (c) => {
   } catch (error: unknown) {
     log.error('❌ Get fields error:', error);
     const status = error instanceof AuthError ? error.statusCode : 500;
-    return c.json(
-      { error: error instanceof Error ? error.message : 'Failed to fetch fields' },
-      status,
+    return new Response(
+      JSON.stringify({ error: error instanceof Error ? error.message : 'Failed to fetch fields' }),
+      { status, headers: { 'Content-Type': 'application/json' } },
     );
   }
 });
@@ -233,9 +233,9 @@ fieldsRoutes.patch('/envelopes/:envelopeId/fields/:fieldId', async (c) => {
   } catch (error: unknown) {
     log.error('❌ Update field error:', error);
     const status = error instanceof AuthError ? error.statusCode : 500;
-    return c.json(
-      { error: error instanceof Error ? error.message : 'Failed to update field' },
-      status,
+    return new Response(
+      JSON.stringify({ error: error instanceof Error ? error.message : 'Failed to update field' }),
+      { status, headers: { 'Content-Type': 'application/json' } },
     );
   }
 });
@@ -314,9 +314,9 @@ fieldsRoutes.delete('/envelopes/:envelopeId/fields/:fieldId', async (c) => {
   } catch (error: unknown) {
     log.error('❌ Delete field error:', error);
     const status = error instanceof AuthError ? error.statusCode : 500;
-    return c.json(
-      { error: error instanceof Error ? error.message : 'Failed to delete field' },
-      status,
+    return new Response(
+      JSON.stringify({ error: error instanceof Error ? error.message : 'Failed to delete field' }),
+      { status, headers: { 'Content-Type': 'application/json' } },
     );
   }
 });

@@ -14,8 +14,8 @@
     "noUnusedLocals": true,
     "noUnusedParameters": true,
     "noFallthroughCasesInSwitch": true,
-    "baseUrl": "./src",
     "ignoreDeprecations": "5.0",
+    "baseUrl": "./src",
     "paths": {
       "@/*": ["./*"]
     }
