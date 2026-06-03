@@ -96,6 +96,13 @@ export default defineConfig({
       // interaction tests (Save disabled on mount, Send calls onSendForSignature).
       // Conservative floor bump +0.1.
       //
+      // 2026-06-02 (phase4 S6/S8): added render-contract tests for
+      // ComplianceResultViewer (1,494 lines), WillPdfView (1,396 lines), and
+      // IssuesModule (1,285 lines) — all previously at 0% coverage.
+      // S6/S8 render-contract tests cover the always-visible chrome of three
+      // large components. Floor stays at the confirmed S4/S5 measured baseline
+      // (10.0/8.05/8.65/10.0); re-ratchet after CI reports the measured delta.
+      //
       // CAVEAT — silent denominator: ~16 mostly-static .tsx files (HomePage +
       // the marketing/product pages, Logo, HeroSection, provider-logos,
       // EmailSignatureGenerator) fail @vitest/coverage-v8 parsing and are
