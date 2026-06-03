@@ -104,7 +104,7 @@ app.put(
   '/providers/:id',
   requireAdmin,
   asyncHandler(async (c) => {
-    const providerId = c.req.param('id');
+    const providerId = c.req.param('id')!;
     const body = await c.req.json();
     const parsed = UpdateProviderSchema.safeParse(body);
     if (!parsed.success) {
@@ -136,7 +136,7 @@ app.delete(
   '/providers/:id',
   requireAdmin,
   asyncHandler(async (c) => {
-    const providerId = c.req.param('id');
+    const providerId = c.req.param('id')!;
 
     await service.deleteProvider(providerId);
 
@@ -187,7 +187,7 @@ app.get(
   '/products/:id',
   requireAuth,
   asyncHandler(async (c) => {
-    const productId = c.req.param('id');
+    const productId = c.req.param('id')!;
 
     const product = await service.getProductById(productId);
 
@@ -239,7 +239,7 @@ app.put(
   '/products/:id',
   requireAdmin,
   asyncHandler(async (c) => {
-    const productId = c.req.param('id');
+    const productId = c.req.param('id')!;
     const body = await c.req.json();
     const parsed = UpdateProductSchema.safeParse(body);
     if (!parsed.success) {
@@ -271,7 +271,7 @@ app.delete(
   '/products/:id',
   requireAdmin,
   asyncHandler(async (c) => {
-    const productId = c.req.param('id');
+    const productId = c.req.param('id')!;
 
     await service.deleteProduct(productId);
 
@@ -342,7 +342,7 @@ app.post(
   requireAdmin,
   asyncHandler(async (c) => {
     const adminUserId = c.get('userId');
-    const integrationId = c.req.param('id');
+    const integrationId = c.req.param('id')!;
 
     log.info('Syncing integration', { adminUserId, integrationId });
 

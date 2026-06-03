@@ -150,7 +150,7 @@ app.post(
   requireAuth,
   asyncHandler(async (c) => {
     const userId = c.get('userId');
-    const messageId = c.req.param('id');
+    const messageId = c.req.param('id')!;
 
     await service.markAsRead(userId, messageId);
 
@@ -167,7 +167,7 @@ app.delete(
   requireAuth,
   asyncHandler(async (c) => {
     const userId = c.get('userId');
-    const messageId = c.req.param('id');
+    const messageId = c.req.param('id')!;
 
     await service.deleteMessage(userId, messageId);
 
@@ -261,7 +261,7 @@ app.put(
   requireAdmin,
   asyncHandler(async (c) => {
     const adminUserId = c.get('userId');
-    const groupId = c.req.param('id');
+    const groupId = c.req.param('id')!;
     const body = await c.req.json();
     const parsed = UpdateGroupSchema.safeParse(body);
     if (!parsed.success) {
@@ -297,7 +297,7 @@ app.delete(
   requireAdmin,
   asyncHandler(async (c) => {
     const adminUserId = c.get('userId');
-    const groupId = c.req.param('id');
+    const groupId = c.req.param('id')!;
 
     log.warn('Admin: Deleting group', { adminUserId, groupId });
 
@@ -459,7 +459,7 @@ app.get(
   requireAuth,
   requireAdmin,
   asyncHandler(async (c) => {
-    const templateId = c.req.param('id');
+    const templateId = c.req.param('id')!;
     const template = await service.getTemplateById(templateId);
 
     if (!template) {
@@ -480,7 +480,7 @@ app.put(
   requireAdmin,
   asyncHandler(async (c) => {
     const adminUserId = c.get('userId');
-    const templateId = c.req.param('id');
+    const templateId = c.req.param('id')!;
     const body = await c.req.json();
     const parsed = UpdateTemplateSchema.safeParse(body);
     if (!parsed.success) {
@@ -516,7 +516,7 @@ app.delete(
   requireAdmin,
   asyncHandler(async (c) => {
     const adminUserId = c.get('userId');
-    const templateId = c.req.param('id');
+    const templateId = c.req.param('id')!;
 
     log.warn('Admin: Deleting template', { adminUserId, templateId });
 
@@ -683,7 +683,7 @@ app.post(
   requireAdmin,
   asyncHandler(async (c) => {
     const adminUserId = c.get('userId');
-    const campaignId = c.req.param('id');
+    const campaignId = c.req.param('id')!;
 
     log.info('Admin: Sending campaign', { adminUserId, campaignId });
 
@@ -721,7 +721,7 @@ app.delete(
   requireAdmin,
   asyncHandler(async (c) => {
     const adminUserId = c.get('userId');
-    const messageId = c.req.param('id');
+    const messageId = c.req.param('id')!;
 
     log.warn('Admin: Deleting communication log', { adminUserId, messageId });
 

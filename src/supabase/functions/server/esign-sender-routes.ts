@@ -69,7 +69,7 @@ senderRoutes.get('/clients/:clientId/envelopes', async (c) => {
   try {
     // Authenticate
     const ctx = await getAuthContext(c);
-    const clientId = c.req.param('clientId');
+    const clientId = c.req.param('clientId')!;
     const clientEmail = c.req.query('email') || undefined;
 
     // Portal clients may only fetch their own CRM id (aligns with client-portal-routes.ts).
@@ -107,8 +107,8 @@ senderRoutes.post(
   rateLimit('OTP_SEND'),
   async (c) => {
     try {
-      const envelopeId = c.req.param('envelopeId');
-      const signerId = c.req.param('signerId');
+      const envelopeId = c.req.param('envelopeId')!;
+      const signerId = c.req.param('signerId')!;
 
       // Check if OTP is required
       const required = await isOTPRequired(signerId);
@@ -215,8 +215,8 @@ senderRoutes.post(
   rateLimit('OTP_VERIFY'),
   async (c) => {
     try {
-      const envelopeId = c.req.param('envelopeId');
-      const signerId = c.req.param('signerId');
+      const envelopeId = c.req.param('envelopeId')!;
+      const signerId = c.req.param('signerId')!;
 
       const body = await c.req.json();
       const { otp, accessCode } = body;
@@ -278,7 +278,7 @@ senderRoutes.post(
   rateLimit('SIGNER_SUBMIT'),
   async (c) => {
     try {
-      const envelopeId = c.req.param('envelopeId');
+      const envelopeId = c.req.param('envelopeId')!;
 
       const body = await c.req.json();
       const parsed = SignEnvelopeSchema.safeParse(body);
@@ -438,7 +438,7 @@ senderRoutes.post(
  */
 senderRoutes.post('/envelopes/:envelopeId/reject', async (c) => {
   try {
-    const envelopeId = c.req.param('envelopeId');
+    const envelopeId = c.req.param('envelopeId')!;
 
     const body = await c.req.json();
     const parsed = RejectEnvelopeSchema.safeParse(body);
@@ -492,7 +492,7 @@ senderRoutes.get('/envelopes/:envelopeId/audit', async (c) => {
   try {
     // Authenticate
     const ctx = await getAuthContext(c);
-    const envelopeId = c.req.param('envelopeId');
+    const envelopeId = c.req.param('envelopeId')!;
 
     const events = await getAuditTrail(envelopeId);
 
@@ -515,7 +515,7 @@ senderRoutes.get('/envelopes/:envelopeId/document', async (c) => {
   try {
     // Authenticate
     const ctx = await getAuthContext(c);
-    const envelopeId = c.req.param('envelopeId');
+    const envelopeId = c.req.param('envelopeId')!;
 
     const envelope = await getEnvelopeDetails(envelopeId);
 
@@ -544,7 +544,7 @@ senderRoutes.get('/envelopes/:envelopeId/certificate', async (c) => {
   try {
     // Authenticate
     const ctx = await getAuthContext(c);
-    const envelopeId = c.req.param('envelopeId');
+    const envelopeId = c.req.param('envelopeId')!;
 
     const certificate = await getCertificate(envelopeId);
 
@@ -584,7 +584,7 @@ senderRoutes.delete('/envelopes/:envelopeId', async (c) => {
     // Authenticate
     const ctx = await getAuthContext(c);
     const user = ctx.user;
-    const envelopeId = c.req.param('envelopeId');
+    const envelopeId = c.req.param('envelopeId')!;
 
     // Get envelope details
     const envelope = await getEnvelopeDetails(envelopeId);
@@ -750,7 +750,7 @@ senderRoutes.post(
       // Authenticate
       const ctx = await getAuthContext(c);
       const user = ctx.user;
-      const envelopeId = c.req.param('envelopeId');
+      const envelopeId = c.req.param('envelopeId')!;
       const body = await c.req.json();
       const { reason } = body;
 
@@ -894,7 +894,7 @@ senderRoutes.post(
       // Authenticate
       const ctx = await getAuthContext(c);
       const user = ctx.user;
-      const envelopeId = c.req.param('envelopeId');
+      const envelopeId = c.req.param('envelopeId')!;
 
       // Get envelope details
       const envelope = await getEnvelopeDetails(envelopeId);
@@ -995,7 +995,7 @@ senderRoutes.get('/envelopes/:envelopeId/download', async (c) => {
   try {
     // Authenticate
     const ctx = await getAuthContext(c);
-    const envelopeId = c.req.param('envelopeId');
+    const envelopeId = c.req.param('envelopeId')!;
 
     // Get envelope details
     const envelope = await getEnvelopeDetails(envelopeId);
@@ -1098,7 +1098,7 @@ senderRoutes.get('/envelopes/:envelopeId/download', async (c) => {
 senderRoutes.get('/envelopes/:envelopeId/evidence-pack', async (c) => {
   try {
     const ctx = await getAuthContext(c);
-    const envelopeId = c.req.param('envelopeId');
+    const envelopeId = c.req.param('envelopeId')!;
 
     // P6.9 — firm scoping. The current admin user must belong to the
     // same firm as the envelope (or the envelope must be 'standalone').
@@ -1149,7 +1149,7 @@ senderRoutes.get('/envelopes/:envelopeId/evidence-pack', async (c) => {
 senderRoutes.get('/envelopes/:envelopeId/reminder-config', async (c) => {
   try {
     const ctx = await getAuthContext(c);
-    const envelopeId = c.req.param('envelopeId');
+    const envelopeId = c.req.param('envelopeId')!;
     const config = await getReminderConfig(envelopeId);
     return c.json({ config });
   } catch (error: unknown) {
@@ -1170,7 +1170,7 @@ senderRoutes.put('/envelopes/:envelopeId/reminder-config', async (c) => {
   try {
     const ctx = await getAuthContext(c);
     const user = ctx.user;
-    const envelopeId = c.req.param('envelopeId');
+    const envelopeId = c.req.param('envelopeId')!;
 
     const body = await c.req.json();
     const {
@@ -1223,7 +1223,7 @@ senderRoutes.patch('/envelopes/:envelopeId/signing-mode', async (c) => {
   try {
     const ctx = await getAuthContext(c);
     const user = ctx.user;
-    const envelopeId = c.req.param('envelopeId');
+    const envelopeId = c.req.param('envelopeId')!;
 
     const body = await c.req.json();
     const { signing_mode } = body;
@@ -1279,7 +1279,7 @@ senderRoutes.patch('/envelopes/:envelopeId/signing-mode', async (c) => {
 senderRoutes.get('/envelopes/:envelopeId/audit/export', async (c) => {
   try {
     const ctx = await getAuthContext(c);
-    const envelopeId = c.req.param('envelopeId');
+    const envelopeId = c.req.param('envelopeId')!;
 
     const events = await getAuditTrail(envelopeId);
     if (!events || events.length === 0) {

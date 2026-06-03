@@ -118,7 +118,7 @@ webhooksRoutes.get('/webhooks', async (c) => {
 webhooksRoutes.patch('/webhooks/:id', rateLimit('SENDER_MUTATE'), async (c) => {
   try {
     const ctx = await getAuthContext(c);
-    const id = c.req.param('id');
+    const id = c.req.param('id')!;
     const existing = await getWebhookSub(id);
     if (!existing) return c.json({ error: 'Subscription not found' }, 404);
     if (existing.firm_id !== resolveFirmId(ctx.user)) {
@@ -165,7 +165,7 @@ webhooksRoutes.patch('/webhooks/:id', rateLimit('SENDER_MUTATE'), async (c) => {
 webhooksRoutes.post('/webhooks/:id/rotate-secret', rateLimit('SENDER_MUTATE'), async (c) => {
   try {
     const ctx = await getAuthContext(c);
-    const id = c.req.param('id');
+    const id = c.req.param('id')!;
     const existing = await getWebhookSub(id);
     if (!existing) return c.json({ error: 'Subscription not found' }, 404);
     if (existing.firm_id !== resolveFirmId(ctx.user)) {
@@ -194,7 +194,7 @@ webhooksRoutes.post('/webhooks/:id/rotate-secret', rateLimit('SENDER_MUTATE'), a
 webhooksRoutes.delete('/webhooks/:id', rateLimit('SENDER_MUTATE'), async (c) => {
   try {
     const ctx = await getAuthContext(c);
-    const id = c.req.param('id');
+    const id = c.req.param('id')!;
     const existing = await getWebhookSub(id);
     if (!existing) return c.json({ error: 'Subscription not found' }, 404);
     if (existing.firm_id !== resolveFirmId(ctx.user)) {
@@ -262,7 +262,7 @@ webhooksRoutes.get('/webhooks/dead-letters', async (c) => {
 webhooksRoutes.post('/webhooks/deliveries/:id/replay', rateLimit('SENDER_MUTATE'), async (c) => {
   try {
     const ctx = await getAuthContext(c);
-    const id = c.req.param('id');
+    const id = c.req.param('id')!;
     const delivery = await replayWebhookDelivery(id);
     if (!delivery) return c.json({ error: 'Delivery not found' }, 404);
     if (delivery.firm_id !== resolveFirmId(ctx.user)) {

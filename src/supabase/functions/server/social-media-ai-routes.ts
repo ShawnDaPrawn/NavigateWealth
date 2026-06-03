@@ -103,7 +103,7 @@ app.get(
   '/generation/:id',
   requireAdmin,
   asyncHandler(async (c) => {
-    const generationId = c.req.param('id');
+    const generationId = c.req.param('id')!;
 
     const record = await getGenerationById(generationId);
     if (!record) {
@@ -271,7 +271,7 @@ app.put(
   requireAdmin,
   asyncHandler(async (c) => {
     const userId = c.get('userId');
-    const templateId = c.req.param('id');
+    const templateId = c.req.param('id')!;
     const body = await c.req.json();
 
     const parsed = UpdateCustomTemplateSchema.safeParse(body);
@@ -296,7 +296,7 @@ app.delete(
   requireAdmin,
   asyncHandler(async (c) => {
     const userId = c.get('userId');
-    const templateId = c.req.param('id');
+    const templateId = c.req.param('id')!;
 
     const deleted = await deleteCustomTemplate(templateId, userId);
     if (!deleted) {

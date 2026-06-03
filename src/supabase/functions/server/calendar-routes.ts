@@ -80,7 +80,7 @@ app.put(
   '/events/:id',
   requireAuth,
   asyncHandler(async (c) => {
-    const id = c.req.param('id');
+    const id = c.req.param('id')!;
     const body = await c.req.json();
     const parsed = UpdateEventSchema.safeParse(body);
     if (!parsed.success) {
@@ -100,7 +100,7 @@ app.delete(
   '/events/:id',
   requireAuth,
   asyncHandler(async (c) => {
-    const id = c.req.param('id');
+    const id = c.req.param('id')!;
     const userId = c.get('userId');
     await service.deleteEvent(userId, id);
     return c.json({ success: true });
@@ -150,7 +150,7 @@ app.put(
   '/reminders/:id',
   requireAuth,
   asyncHandler(async (c) => {
-    const id = c.req.param('id');
+    const id = c.req.param('id')!;
     const body = await c.req.json();
     const parsed = UpdateReminderSchema.safeParse(body);
     if (!parsed.success) {
@@ -170,7 +170,7 @@ app.delete(
   '/reminders/:id',
   requireAuth,
   asyncHandler(async (c) => {
-    const id = c.req.param('id');
+    const id = c.req.param('id')!;
     const userId = c.get('userId');
     await service.deleteReminder(userId, id);
     return c.json({ success: true });

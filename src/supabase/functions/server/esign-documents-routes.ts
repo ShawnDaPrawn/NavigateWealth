@@ -59,7 +59,7 @@ const documentsRoutes = new Hono();
 documentsRoutes.get('/envelopes/:envelopeId/manifest', async (c) => {
   try {
     await getAuthContext(c);
-    const envelopeId = c.req.param('envelopeId');
+    const envelopeId = c.req.param('envelopeId')!;
     const manifest = await kv.get(EsignKeys.envelopeManifest(envelopeId));
     return c.json({ manifest: manifest ?? null });
   } catch (err) {
@@ -79,7 +79,7 @@ documentsRoutes.put(
   async (c) => {
     try {
       const ctx = await getAuthContext(c);
-      const envelopeId = c.req.param('envelopeId');
+      const envelopeId = c.req.param('envelopeId')!;
       const envelope = await kv.get(EsignKeys.envelope(envelopeId));
       if (!envelope) return c.json({ error: 'Envelope not found' }, 404);
       if (envelope.status !== 'draft') {
@@ -129,7 +129,7 @@ documentsRoutes.put(
 documentsRoutes.delete('/envelopes/:envelopeId/manifest', async (c) => {
   try {
     const ctx = await getAuthContext(c);
-    const envelopeId = c.req.param('envelopeId');
+    const envelopeId = c.req.param('envelopeId')!;
     await kv.del(EsignKeys.envelopeManifest(envelopeId));
     const { ip, userAgent } = getRequestMetadata(c);
     await logAuditEvent({
@@ -171,7 +171,7 @@ documentsRoutes.post(
   async (c) => {
     try {
       const ctx = await getAuthContext(c);
-      const envelopeId = c.req.param('envelopeId');
+      const envelopeId = c.req.param('envelopeId')!;
       const envelope = await kv.get(EsignKeys.envelope(envelopeId));
       if (!envelope) return c.json({ error: 'Envelope not found' }, 404);
 
@@ -238,7 +238,7 @@ documentsRoutes.post(
 documentsRoutes.get('/envelopes/:envelopeId/documents', async (c) => {
   try {
     await getAuthContext(c);
-    const envelopeId = c.req.param('envelopeId');
+    const envelopeId = c.req.param('envelopeId')!;
     const envelope = (await kv.get(EsignKeys.envelope(envelopeId))) as EsignEnvelope | null;
     if (!envelope) return c.json({ error: 'Envelope not found' }, 404);
     const documents = await getEnvelopeDocuments(envelope);
@@ -274,7 +274,7 @@ documentsRoutes.post(
   async (c) => {
     try {
       const ctx = await getAuthContext(c);
-      const envelopeId = c.req.param('envelopeId');
+      const envelopeId = c.req.param('envelopeId')!;
       const envelope = (await kv.get(EsignKeys.envelope(envelopeId))) as EsignEnvelope | null;
       if (!envelope) return c.json({ error: 'Envelope not found' }, 404);
       if (envelope.status !== 'draft') {
@@ -367,8 +367,8 @@ documentsRoutes.post(
 documentsRoutes.delete('/envelopes/:envelopeId/documents/:documentId', async (c) => {
   try {
     const ctx = await getAuthContext(c);
-    const envelopeId = c.req.param('envelopeId');
-    const documentId = c.req.param('documentId');
+    const envelopeId = c.req.param('envelopeId')!;
+    const documentId = c.req.param('documentId')!;
     const envelope = (await kv.get(EsignKeys.envelope(envelopeId))) as EsignEnvelope | null;
     if (!envelope) return c.json({ error: 'Envelope not found' }, 404);
     if (envelope.status !== 'draft') {
@@ -413,7 +413,7 @@ documentsRoutes.delete('/envelopes/:envelopeId/documents/:documentId', async (c)
 documentsRoutes.put('/envelopes/:envelopeId/documents/order', async (c) => {
   try {
     const ctx = await getAuthContext(c);
-    const envelopeId = c.req.param('envelopeId');
+    const envelopeId = c.req.param('envelopeId')!;
     const envelope = (await kv.get(EsignKeys.envelope(envelopeId))) as EsignEnvelope | null;
     if (!envelope) return c.json({ error: 'Envelope not found' }, 404);
     if (envelope.status !== 'draft') {
@@ -457,7 +457,7 @@ documentsRoutes.post(
       // Authenticate
       const ctx = await getAuthContext(c);
       const user = ctx.user;
-      const envelopeId = c.req.param('envelopeId');
+      const envelopeId = c.req.param('envelopeId')!;
 
       const body = await c.req.json();
       const { signers, fields, expiryDays, message, signingMode } = body;

@@ -65,7 +65,7 @@ consentRoutes.post('/consent/versions', rateLimit('SENDER_MUTATE'), async (c) =>
 consentRoutes.post('/consent/versions/:id/activate', rateLimit('SENDER_MUTATE'), async (c) => {
   try {
     await getAuthContext(c);
-    const id = c.req.param('id');
+    const id = c.req.param('id')!;
     const record = await setActiveConsent(id);
     return c.json({ success: true, version: record });
   } catch (error: unknown) {

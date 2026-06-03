@@ -224,7 +224,7 @@ app.delete(
   requireAuth,
   requireAdmin,
   asyncHandler(async (c) => {
-    const variant = c.req.param('variant');
+    const variant = c.req.param('variant')!;
     const logos = await service.deleteLogo(variant);
 
     // Audit trail
@@ -389,7 +389,7 @@ app.delete(
   requireAuth,
   requireAdmin,
   asyncHandler(async (c) => {
-    const id = c.req.param('id');
+    const id = c.req.param('id')!;
     const items = await service.deleteCollateral(id);
     return c.json({ success: true, items });
   }),

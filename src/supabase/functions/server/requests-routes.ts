@@ -131,7 +131,7 @@ app.get(
 app.get(
   '/templates/:id',
   asyncHandler(async (c) => {
-    const templateId = c.req.param('id');
+    const templateId = c.req.param('id')!;
 
     log.info('Fetching template', { templateId });
 
@@ -194,7 +194,7 @@ app.put(
   '/templates/:id',
   asyncHandler(async (c) => {
     const user = getUserFromContext(c);
-    const templateId = c.req.param('id');
+    const templateId = c.req.param('id')!;
     const body = await c.req.json();
     const parsed = UpdateRequestTemplateSchema.safeParse(body);
     if (!parsed.success) {
@@ -234,7 +234,7 @@ app.post(
   '/templates/:id/duplicate',
   asyncHandler(async (c) => {
     const user = getUserFromContext(c);
-    const templateId = c.req.param('id');
+    const templateId = c.req.param('id')!;
 
     log.info('Duplicating template', { userId: user.id, templateId });
 
@@ -259,7 +259,7 @@ app.delete(
   '/templates/:id',
   asyncHandler(async (c) => {
     const user = getUserFromContext(c);
-    const templateId = c.req.param('id');
+    const templateId = c.req.param('id')!;
 
     log.info('Archiving template', { userId: user.id, templateId });
 
@@ -361,7 +361,7 @@ app.post('/', createRequestHandler);
 app.get(
   '/:id',
   asyncHandler(async (c) => {
-    const requestId = c.req.param('id');
+    const requestId = c.req.param('id')!;
 
     // Skip if requestId matches specific known paths that might get here by mistake
     if (requestId === 'health' || requestId === 'templates' || requestId === 'recent') {
@@ -398,7 +398,7 @@ app.put(
   '/:id',
   asyncHandler(async (c) => {
     const user = getUserFromContext(c);
-    const requestId = c.req.param('id');
+    const requestId = c.req.param('id')!;
     const body = await c.req.json();
     const parsed = UpdateRequestSchema.safeParse(body);
     if (!parsed.success) {
@@ -428,7 +428,7 @@ app.delete(
   '/:id',
   asyncHandler(async (c) => {
     const user = getUserFromContext(c);
-    const requestId = c.req.param('id');
+    const requestId = c.req.param('id')!;
 
     log.info('Deleting request', { userId: user.id, requestId });
 
@@ -449,7 +449,7 @@ app.patch(
   '/:id/lifecycle',
   asyncHandler(async (c) => {
     const user = getUserFromContext(c);
-    const requestId = c.req.param('id');
+    const requestId = c.req.param('id')!;
     const body = await c.req.json();
     const parsed = MoveLifecycleSchema.safeParse(body);
     if (!parsed.success) {
@@ -489,7 +489,7 @@ app.patch(
   '/:id/compliance',
   asyncHandler(async (c) => {
     const user = getUserFromContext(c);
-    const requestId = c.req.param('id');
+    const requestId = c.req.param('id')!;
     const body = await c.req.json();
 
     log.info('Updating compliance approval', { userId: user.id, requestId });
@@ -517,7 +517,7 @@ app.patch(
   '/:id/sign-off',
   asyncHandler(async (c) => {
     const user = getUserFromContext(c);
-    const requestId = c.req.param('id');
+    const requestId = c.req.param('id')!;
     const body = await c.req.json();
     const parsed = ComplianceSignOffSchema.safeParse(body);
     if (!parsed.success) {
@@ -557,7 +557,7 @@ app.patch(
   '/:id/finalise',
   asyncHandler(async (c) => {
     const user = getUserFromContext(c);
-    const requestId = c.req.param('id');
+    const requestId = c.req.param('id')!;
 
     log.info('Finalising request', { userId: user.id, requestId });
 
@@ -578,7 +578,7 @@ app.patch(
 app.get(
   '/:id/audit-log',
   asyncHandler(async (c) => {
-    const requestId = c.req.param('id');
+    const requestId = c.req.param('id')!;
 
     log.info('Fetching audit log', { requestId });
 

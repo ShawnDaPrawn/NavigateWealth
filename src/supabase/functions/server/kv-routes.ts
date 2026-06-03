@@ -17,7 +17,7 @@ app.get('/', (c) => {
 // GET /:key - Get a value from the KV store
 app.get('/:key', async (c) => {
   try {
-    const key = c.req.param('key');
+    const key = c.req.param('key')!;
 
     if (!key) {
       return c.json({ error: 'Missing key' }, 400);

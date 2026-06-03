@@ -70,7 +70,7 @@ const signerRoutes = new Hono();
 
 signerRoutes.get('/sign-by-token/:token', async (c) => {
   try {
-    const token = c.req.param('token');
+    const token = c.req.param('token')!;
 
     // Get signer by token
     const signer = await getSignerByToken(token);
@@ -1015,7 +1015,7 @@ signerRoutes.post('/signer/reject', requireIdempotency(), rateLimit('SIGNER_SUBM
  */
 signerRoutes.get('/signer/download/:token', async (c) => {
   try {
-    const token = c.req.param('token');
+    const token = c.req.param('token')!;
 
     // Get signer by token
     const signer = await getSignerByToken(token);
@@ -1184,7 +1184,7 @@ signerRoutes.post('/signer/saved-signature', async (c) => {
 signerRoutes.get('/envelopes/:envelopeId/attachments', async (c) => {
   try {
     await getAuthContext(c);
-    const envelopeId = c.req.param('envelopeId');
+    const envelopeId = c.req.param('envelopeId')!;
     const records =
       ((await kv.get(EsignKeys.envelopeAttachments(envelopeId))) as Array<
         Record<string, unknown>

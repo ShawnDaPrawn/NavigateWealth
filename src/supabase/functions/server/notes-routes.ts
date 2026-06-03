@@ -111,7 +111,7 @@ app.get(
 app.get(
   '/client/:clientId',
   asyncHandler(async (c) => {
-    const clientId = c.req.param('clientId');
+    const clientId = c.req.param('clientId')!;
 
     log.info('Fetching notes for client', { clientId });
 
@@ -144,7 +144,7 @@ app.get(
 app.get(
   '/:id',
   asyncHandler(async (c) => {
-    const id = c.req.param('id');
+    const id = c.req.param('id')!;
     const note = (await kv.get(noteKey(id))) as KvNote | null;
 
     if (!note) {
@@ -221,7 +221,7 @@ app.post(
 app.put(
   '/:id',
   asyncHandler(async (c) => {
-    const id = c.req.param('id');
+    const id = c.req.param('id')!;
     const body = await c.req.json();
     const existing = (await kv.get(noteKey(id))) as KvNote | null;
 
@@ -281,7 +281,7 @@ app.put(
 app.delete(
   '/:id',
   asyncHandler(async (c) => {
-    const id = c.req.param('id');
+    const id = c.req.param('id')!;
     const existing = (await kv.get(noteKey(id))) as KvNote | null;
 
     if (!existing) {
@@ -317,7 +317,7 @@ app.delete(
 app.post(
   '/:id/summarise',
   asyncHandler(async (c) => {
-    const id = c.req.param('id');
+    const id = c.req.param('id')!;
     const existing = (await kv.get(noteKey(id))) as KvNote | null;
 
     if (!existing) {
@@ -431,7 +431,7 @@ Rules:
 app.post(
   '/:id/convert-to-task',
   asyncHandler(async (c) => {
-    const id = c.req.param('id');
+    const id = c.req.param('id')!;
     const existing = (await kv.get(noteKey(id))) as KvNote | null;
 
     if (!existing) {

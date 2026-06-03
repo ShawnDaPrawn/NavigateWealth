@@ -244,7 +244,7 @@ app.get(
 app.get(
   '/:id',
   asyncHandler(async (c) => {
-    const id = c.req.param('id');
+    const id = c.req.param('id')!;
     try {
       const task = await kv.get(taskKey(id));
       if (!task) {
@@ -333,7 +333,7 @@ app.post(
 app.patch(
   '/:id',
   asyncHandler(async (c) => {
-    const id = c.req.param('id');
+    const id = c.req.param('id')!;
     try {
       const existing = await kv.get(taskKey(id));
       if (!existing) {
@@ -372,7 +372,7 @@ app.patch(
 app.delete(
   '/:id',
   asyncHandler(async (c) => {
-    const id = c.req.param('id');
+    const id = c.req.param('id')!;
     try {
       await kv.del(taskKey(id));
       // Also clean up related data
@@ -403,7 +403,7 @@ app.delete(
 app.post(
   '/:id/move',
   asyncHandler(async (c) => {
-    const id = c.req.param('id');
+    const id = c.req.param('id')!;
     try {
       const existing = await kv.get(taskKey(id));
       if (!existing) {
@@ -485,7 +485,7 @@ app.post(
 app.post(
   '/:id/duplicate',
   asyncHandler(async (c) => {
-    const id = c.req.param('id');
+    const id = c.req.param('id')!;
     try {
       const original = await kv.get(taskKey(id));
       if (!original) {
@@ -541,7 +541,7 @@ app.post(
 app.post(
   '/:id/archive',
   asyncHandler(async (c) => {
-    const id = c.req.param('id');
+    const id = c.req.param('id')!;
     try {
       const existing = await kv.get(taskKey(id));
       if (!existing) {
@@ -571,7 +571,7 @@ app.post(
 app.post(
   '/:id/unarchive',
   asyncHandler(async (c) => {
-    const id = c.req.param('id');
+    const id = c.req.param('id')!;
     try {
       const existing = await kv.get(taskKey(id));
       if (!existing) {

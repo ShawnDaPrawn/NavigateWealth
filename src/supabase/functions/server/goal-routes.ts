@@ -20,7 +20,7 @@ app.use('*', requireAdmin);
 // GET /:clientId - Fetch all goals for a client
 app.get('/:clientId', async (c) => {
   try {
-    const clientId = c.req.param('clientId');
+    const clientId = c.req.param('clientId')!;
     if (!clientId) return c.json({ error: 'Client ID required' }, 400);
 
     const key = `client_goals:${clientId}`;
@@ -36,7 +36,7 @@ app.get('/:clientId', async (c) => {
 // POST /:clientId - Save all goals for a client (Atomic Replace)
 app.post('/:clientId', async (c) => {
   try {
-    const clientId = c.req.param('clientId');
+    const clientId = c.req.param('clientId')!;
     if (!clientId) return c.json({ error: 'Client ID required' }, 400);
 
     const body = await c.req.json();

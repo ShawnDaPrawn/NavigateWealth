@@ -140,7 +140,7 @@ routes.post('/', async (c) => {
 routes.put('/:id/mappings', async (c) => {
   try {
     requirePrefillUser(await authenticateUser(c.req.header('Authorization')));
-    const id = c.req.param('id');
+    const id = c.req.param('id')!;
     const body = await c.req.json();
     const { fields, status } = body ?? {};
 
@@ -175,7 +175,7 @@ routes.post('/:id/preview', async (c) => {
     requirePrefillUser(user);
     await assertPrefillResolveRateLimit(user.id);
 
-    const id = c.req.param('id');
+    const id = c.req.param('id')!;
     const body = await c.req.json();
     const { clientId } = body ?? {};
 
@@ -249,7 +249,7 @@ routes.post('/:id/fill', async (c) => {
     requirePrefillUser(user);
     await assertPrefillResolveRateLimit(user.id);
 
-    const id = c.req.param('id');
+    const id = c.req.param('id')!;
     const body = await c.req.json();
     const { clientId, attachToDocuments } = body ?? {};
 

@@ -156,7 +156,7 @@ articlesRoutes.post('/articles', async (c) => {
 
 articlesRoutes.put('/articles/:id', async (c) => {
   try {
-    const id = c.req.param('id');
+    const id = c.req.param('id')!;
     const body = await c.req.json();
     const existing = await kv.get(`article:${id}`);
 
@@ -336,7 +336,7 @@ articlesRoutes.put('/articles/:id', async (c) => {
 
 articlesRoutes.post('/articles/:id/publish', async (c) => {
   try {
-    const id = c.req.param('id');
+    const id = c.req.param('id')!;
     const body = await c.req.json().catch(() => ({}));
     const notifySubscribers = body.notify_subscribers !== false; // default true
 
@@ -465,7 +465,7 @@ articlesRoutes.post(
   requireAuth,
   requireAdmin,
   asyncHandler(async (c) => {
-    const id = c.req.param('id');
+    const id = c.req.param('id')!;
     const parsed = ArticleReshareSchema.safeParse(await c.req.json().catch(() => ({})));
     if (!parsed.success) {
       return c.json(

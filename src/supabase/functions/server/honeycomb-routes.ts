@@ -219,14 +219,14 @@ app.post('/register-client', async (c) => {
 // ============================================================================
 
 app.get('/status/:clientId', async (c) => {
-  const clientId = c.req.param('clientId');
+  const clientId = c.req.param('clientId')!;
   const honeycombId = await kv.get(`honeycomb_id:${clientId}`);
   const isRegistered = !!honeycombId && honeycombId !== NIL_UUID;
   return c.json({ registered: isRegistered, honeycombId: isRegistered ? honeycombId : null });
 });
 
 app.get('/activity/:clientId', async (c) => {
-  const clientId = c.req.param('clientId');
+  const clientId = c.req.param('clientId')!;
   const activity = (await kv.get(`honeycomb_activity:${clientId}`)) || [];
   return c.json({ activity });
 });
@@ -455,7 +455,7 @@ app.post('/sanctions/search', async (c) => {
  */
 app.get('/checks/history/:clientId', async (c) => {
   try {
-    const clientId = c.req.param('clientId');
+    const clientId = c.req.param('clientId')!;
     const history = await service.getAllCheckHistory(clientId);
     return c.json({ success: true, history });
   } catch (e: unknown) {
@@ -470,8 +470,8 @@ app.get('/checks/history/:clientId', async (c) => {
  */
 app.get('/checks/history/:clientId/:checkType', async (c) => {
   try {
-    const clientId = c.req.param('clientId');
-    const checkType = c.req.param('checkType');
+    const clientId = c.req.param('clientId')!;
+    const checkType = c.req.param('checkType')!;
     const history = await service.getCheckHistory(clientId, checkType);
     return c.json({ success: true, history });
   } catch (e: unknown) {
@@ -616,7 +616,7 @@ app.post('/assessments/run', async (c) => {
 
 app.get('/assessments/history/:clientId', async (c) => {
   try {
-    const clientId = c.req.param('clientId');
+    const clientId = c.req.param('clientId')!;
     const history = (await kv.get(`honeycomb_assessments:${clientId}`)) || [];
     return c.json({ success: true, assessments: history });
   } catch (e: unknown) {
@@ -668,7 +668,7 @@ app.post('/assessments/create', async (c) => {
 
 app.get('/assessments/list/:honeycombId', async (c) => {
   try {
-    const honeycombId = c.req.param('honeycombId');
+    const honeycombId = c.req.param('honeycombId')!;
     const url = `${HONEYCOMB_API_URL}/api/Assessment?naturalPersonId=${honeycombId}`;
     const res = await fetch(url, { headers: getHeaders() });
 
@@ -1021,7 +1021,7 @@ app.post('/corporate/tenders-blue', async (c) => {
  */
 app.get('/dashboard/:clientId', async (c) => {
   try {
-    const clientId = c.req.param('clientId');
+    const clientId = c.req.param('clientId')!;
     const dashboard = await service.getComplianceDashboard(clientId);
     return c.json({ success: true, dashboard });
   } catch (e: unknown) {

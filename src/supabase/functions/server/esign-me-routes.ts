@@ -82,7 +82,7 @@ meRoutes.get('/me/notifications', async (c) => {
 meRoutes.post('/me/notifications/:id/read', async (c) => {
   try {
     const ctx = await getAuthContext(c);
-    const id = c.req.param('id');
+    const id = c.req.param('id')!;
     const ok = await markInAppRead(ctx.user.id, id);
     return c.json({ success: ok });
   } catch (error: unknown) {

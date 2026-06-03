@@ -481,7 +481,7 @@ envelopesRoutes.get('/envelopes/:envelopeId', async (c) => {
   try {
     // Authenticate
     const ctx = await getAuthContext(c);
-    const envelopeId = c.req.param('envelopeId');
+    const envelopeId = c.req.param('envelopeId')!;
 
     // Get envelope details
     const envelope = await getEnvelopeDetails(envelopeId);
@@ -534,7 +534,7 @@ envelopesRoutes.get('/envelopes/:envelopeId', async (c) => {
 envelopesRoutes.put('/envelopes/:envelopeId/draft-signers', async (c) => {
   try {
     const ctx = await getAuthContext(c);
-    const envelopeId = c.req.param('envelopeId');
+    const envelopeId = c.req.param('envelopeId')!;
 
     const body = await c.req.json();
     const parsed = DraftSignersSchema.safeParse(body);
@@ -593,7 +593,7 @@ envelopesRoutes.patch('/envelopes/:envelopeId/draft-settings', async (c) => {
   try {
     const ctx = await getAuthContext(c);
     const user = ctx.user;
-    const envelopeId = c.req.param('envelopeId');
+    const envelopeId = c.req.param('envelopeId')!;
 
     const body = (await c.req.json().catch(() => ({}))) as Record<string, unknown>;
 

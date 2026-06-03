@@ -25,7 +25,7 @@ function getSupabase() {
 app.post(
   '/attachments/:taskId',
   asyncHandler(async (c) => {
-    const taskId = TaskIdParamSchema.parse(c.req.param('taskId'));
+    const taskId = TaskIdParamSchema.parse(c.req.param('taskId')!);
     const body = await c.req.parseBody();
     const file = body['file'];
 
@@ -98,7 +98,7 @@ app.post(
 app.get(
   '/attachments/:taskId',
   asyncHandler(async (c) => {
-    const taskId = TaskIdParamSchema.parse(c.req.param('taskId'));
+    const taskId = TaskIdParamSchema.parse(c.req.param('taskId')!);
     const key = `task_attachments:${taskId}`;
     const attachmentsRaw = await kv.get(key);
     const attachments = Array.isArray(attachmentsRaw) ? attachmentsRaw : [];

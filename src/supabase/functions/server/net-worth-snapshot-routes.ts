@@ -57,7 +57,7 @@ app.post(
   requireAuth,
   requireAdmin,
   asyncHandler(async (c) => {
-    const clientId = c.req.param('clientId');
+    const clientId = c.req.param('clientId')!;
     if (!clientId) {
       return c.json({ success: false, error: 'Missing clientId parameter' }, 400);
     }
@@ -83,7 +83,7 @@ app.get(
   requireAuth,
   requireAdmin,
   asyncHandler(async (c) => {
-    const clientId = c.req.param('clientId');
+    const clientId = c.req.param('clientId')!;
     if (!clientId) {
       return c.json({ success: false, error: 'Missing clientId parameter' }, 400);
     }
@@ -103,7 +103,7 @@ app.post(
   requireAuth,
   requireAdmin,
   asyncHandler(async (c) => {
-    const clientId = c.req.param('clientId');
+    const clientId = c.req.param('clientId')!;
     if (!clientId) {
       return c.json({ success: false, error: 'Missing clientId parameter' }, 400);
     }
@@ -152,8 +152,8 @@ app.delete(
   requireAuth,
   requireAdmin,
   asyncHandler(async (c) => {
-    const clientId = c.req.param('clientId');
-    const date = c.req.param('date');
+    const clientId = c.req.param('clientId')!;
+    const date = c.req.param('date')!;
 
     if (!clientId || !date) {
       return c.json({ success: false, error: 'Missing clientId or date parameter' }, 400);

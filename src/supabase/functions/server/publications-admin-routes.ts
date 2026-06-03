@@ -370,7 +370,7 @@ adminRoutes.post('/upload-image', async (c) => {
 // Send article notification to user groups
 adminRoutes.post('/articles/:id/send-notifications', async (c) => {
   try {
-    const articleId = c.req.param('id');
+    const articleId = c.req.param('id')!;
     const body = await c.req.json();
     const { groupIds } = body;
 

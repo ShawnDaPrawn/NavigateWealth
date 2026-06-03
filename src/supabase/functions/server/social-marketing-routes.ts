@@ -45,7 +45,7 @@ app.get(
   '/profiles/:id',
   requireAdmin,
   asyncHandler(async (c) => {
-    const profileId = c.req.param('id');
+    const profileId = c.req.param('id')!;
     const profile = await service.getProfileById(profileId);
     return c.json({ success: true, data: profile });
   }),
@@ -74,7 +74,7 @@ app.put(
   '/profiles/:id',
   requireAdmin,
   asyncHandler(async (c) => {
-    const profileId = c.req.param('id');
+    const profileId = c.req.param('id')!;
     const body = await c.req.json();
     const profile = await service.updateProfile(profileId, body);
     return c.json({ success: true, data: profile });
@@ -89,7 +89,7 @@ app.post(
   '/profiles/:id/disconnect',
   requireAdmin,
   asyncHandler(async (c) => {
-    const profileId = c.req.param('id');
+    const profileId = c.req.param('id')!;
     await service.disconnectProfile(profileId);
     return c.json({ success: true });
   }),
@@ -103,7 +103,7 @@ app.post(
   '/profiles/:id/sync',
   requireAdmin,
   asyncHandler(async (c) => {
-    const profileId = c.req.param('id');
+    const profileId = c.req.param('id')!;
     const profile = await service.getProfileById(profileId);
     // Sync is a no-op for now — returns current profile data
     return c.json({ success: true, data: profile });
@@ -118,7 +118,7 @@ app.delete(
   '/profiles/:id',
   requireAdmin,
   asyncHandler(async (c) => {
-    const profileId = c.req.param('id');
+    const profileId = c.req.param('id')!;
     await service.deleteProfile(profileId);
     return c.json({ success: true });
   }),
@@ -155,7 +155,7 @@ app.get(
   '/posts/:id',
   requireAdmin,
   asyncHandler(async (c) => {
-    const postId = c.req.param('id');
+    const postId = c.req.param('id')!;
 
     const post = await service.getPostById(postId);
 
@@ -196,7 +196,7 @@ app.put(
   '/posts/:id',
   requireAdmin,
   asyncHandler(async (c) => {
-    const postId = c.req.param('id');
+    const postId = c.req.param('id')!;
     const body = await c.req.json();
     const parsed = UpdatePostSchema.safeParse(body);
     if (!parsed.success) {
@@ -218,7 +218,7 @@ app.post(
   requireAdmin,
   asyncHandler(async (c) => {
     const adminUserId = c.get('userId');
-    const postId = c.req.param('id');
+    const postId = c.req.param('id')!;
 
     log.info('Publishing social post', { adminUserId, postId });
 
@@ -238,7 +238,7 @@ app.delete(
   '/posts/:id',
   requireAdmin,
   asyncHandler(async (c) => {
-    const postId = c.req.param('id');
+    const postId = c.req.param('id')!;
 
     await service.deletePost(postId);
 
@@ -276,7 +276,7 @@ app.post(
   requireAdmin,
   asyncHandler(async (c) => {
     const adminUserId = c.get('userId');
-    const postId = c.req.param('id');
+    const postId = c.req.param('id')!;
     const { scheduledFor } = await c.req.json();
 
     log.info('Scheduling social post', { adminUserId, postId, scheduledFor });
@@ -372,7 +372,7 @@ app.put(
   '/campaigns/:id',
   requireAdmin,
   asyncHandler(async (c) => {
-    const campaignId = c.req.param('id');
+    const campaignId = c.req.param('id')!;
     const updates = await c.req.json();
 
     const campaign = await service.updateCampaign(campaignId, updates);
@@ -389,7 +389,7 @@ app.delete(
   '/campaigns/:id',
   requireAdmin,
   asyncHandler(async (c) => {
-    const campaignId = c.req.param('id');
+    const campaignId = c.req.param('id')!;
 
     await service.deleteCampaign(campaignId);
 
