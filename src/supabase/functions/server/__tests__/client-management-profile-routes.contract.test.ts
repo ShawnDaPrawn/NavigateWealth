@@ -394,7 +394,11 @@ describe('client-management-profile-routes.ts route contracts', () => {
     it('returns 200 with { success, data } on valid new profile', async () => {
       const res = await profileRouter.request('/create-default', {
         method: 'POST',
-        body: JSON.stringify({ userId: TEST_UUID, email: 'test@test.co', displayName: 'Test User' }),
+        body: JSON.stringify({
+          userId: TEST_UUID,
+          email: 'test@test.co',
+          displayName: 'Test User',
+        }),
         headers: { 'Content-Type': 'application/json' },
       });
       expect(res.status).toBe(200);
@@ -467,7 +471,11 @@ describe('client-management-profile-routes.ts route contracts', () => {
       kvStore.set(PROFILE_KEY, { userId: TEST_UUID, accountStatus: 'no_application' });
       const res = await profileRouter.request('/update-status', {
         method: 'POST',
-        body: JSON.stringify({ userId: TEST_UUID, accountStatus: 'pending', accountType: 'personal' }),
+        body: JSON.stringify({
+          userId: TEST_UUID,
+          accountStatus: 'pending',
+          accountType: 'personal',
+        }),
         headers: { 'Content-Type': 'application/json' },
       });
       expect(res.status).toBe(200);

@@ -81,171 +81,163 @@ app.get('/clients/:clientId/envelopes', async (c) => {
  * POST /envelopes/:envelopeId/signers/:signerId/otp/send
  * Send OTP to signer
  */
-app.post(
-  '/envelopes/:envelopeId/signers/:signerId/otp/send',
-  rateLimit('OTP_SEND'),
-  async (c) => {
-    try {
-      const envelopeId = c.req.param('envelopeId');
-      const signerId = c.req.param('signerId');
+app.post('/envelopes/:envelopeId/signers/:signerId/otp/send', rateLimit('OTP_SEND'), async (c) => {
+  try {
+    const envelopeId = c.req.param('envelopeId');
+    const signerId = c.req.param('signerId');
 
-      // Check if OTP is required
-      const required = await isOTPRequired(signerId);
-      if (!required) {
-        return c.json({ error: 'OTP not required for this signer' }, 400);
-      }
+    // Check if OTP is required
+    const required = await isOTPRequired(signerId);
+    if (!required) {
+      return c.json({ error: 'OTP not required for this signer' }, 400);
+    }
 
-      // Generate and store OTP
-      const { otp, error } = await generateAndStoreOTP(signerId);
+    // Generate and store OTP
+    const { otp, error } = await generateAndStoreOTP(signerId);
 
-      if (error || !otp) {
-        return c.json({ error: error || 'Failed to generate OTP' }, 500);
-      }
+    if (error || !otp) {
+      return c.json({ error: error || 'Failed to generate OTP' }, 500);
+    }
 
-      // Get signer info
-      const signers = await getEnvelopeSigners(envelopeId);
-      const signer = signers.find((s) => s.id === signerId);
+    // Get signer info
+    const signers = await getEnvelopeSigners(envelopeId);
+    const signer = signers.find((s) => s.id === signerId);
 
-      if (!signer) {
-        return c.json({ error: 'Signer not found' }, 404);
-      }
+    if (!signer) {
+      return c.json({ error: 'Signer not found' }, 404);
+    }
 
-      // Send OTP via email
-      const emailSent = await sendEmail({
-        to: signer.email,
-        subject: `Your Verification Code for Navigate Wealth E-Signature`,
-        html: `
+    // Send OTP via email
+    const emailSent = await sendEmail({
+      to: signer.email,
+      subject: `Your Verification Code for Navigate Wealth E-Signature`,
+      html: `
         <h2>Your Verification Code</h2>
         <p>Hi ${signer.name},</p>
         <p>Your one-time verification code is: <strong>${otp}</strong></p>
         <p>This code will expire in 15 minutes.</p>
         <p>If you didn't request this code, please ignore this email.</p>
       `,
-      });
+    });
 
-      if (!emailSent) {
-        return c.json({ error: 'Failed to send OTP email' }, 500);
-      }
-
-      // Log audit event
-      const { ip, userAgent } = getRequestMetadata(c);
-      await logAuditEvent({
-        envelopeId,
-        actorType: 'system',
-        action: 'otp_sent',
-        email: signer.email,
-        ip,
-        userAgent,
-        metadata: { signerId, channel: 'email' },
-      });
-
-      // P5.1 — parallel OTP delivery via SMS (opt-in + phone required).
-      // Email remains the primary channel so the audit trail always shows
-      // an `otp_sent` event even when SMS is offline.
-      let smsChannel: { delivered: boolean; provider: string } | null = null;
-      if (signer.sms_opt_in && signer.phone) {
-        try {
-          const envelope = await getEnvelopeDetails(envelopeId);
-          const smsResult = await sendOtpSms({
-            to: signer.phone,
-            otp,
-            envelopeTitle: envelope?.title,
-          });
-          smsChannel = { delivered: smsResult.delivered, provider: smsResult.provider };
-          if (smsResult.delivered) {
-            await logAuditEvent({
-              envelopeId,
-              actorType: 'system',
-              action: 'otp_sent',
-              email: signer.email,
-              phone: signer.phone,
-              ip,
-              userAgent,
-              metadata: {
-                signerId,
-                channel: 'sms',
-                provider: smsResult.provider,
-                messageId: smsResult.messageId,
-              },
-            });
-          }
-        } catch (smsErr) {
-          log.warn(`SMS OTP failed for signer ${signerId}: ${getErrMsg(smsErr)}`);
-        }
-      }
-
-      return c.json({
-        success: true,
-        channels: { email: true, sms: smsChannel?.delivered ?? false },
-      });
-    } catch (error: unknown) {
-      log.error('❌ Send OTP error:', error);
-      return c.json({ error: error instanceof Error ? error.message : 'Failed to send OTP' }, 500);
+    if (!emailSent) {
+      return c.json({ error: 'Failed to send OTP email' }, 500);
     }
-  },
-);
+
+    // Log audit event
+    const { ip, userAgent } = getRequestMetadata(c);
+    await logAuditEvent({
+      envelopeId,
+      actorType: 'system',
+      action: 'otp_sent',
+      email: signer.email,
+      ip,
+      userAgent,
+      metadata: { signerId, channel: 'email' },
+    });
+
+    // P5.1 — parallel OTP delivery via SMS (opt-in + phone required).
+    // Email remains the primary channel so the audit trail always shows
+    // an `otp_sent` event even when SMS is offline.
+    let smsChannel: { delivered: boolean; provider: string } | null = null;
+    if (signer.sms_opt_in && signer.phone) {
+      try {
+        const envelope = await getEnvelopeDetails(envelopeId);
+        const smsResult = await sendOtpSms({
+          to: signer.phone,
+          otp,
+          envelopeTitle: envelope?.title,
+        });
+        smsChannel = { delivered: smsResult.delivered, provider: smsResult.provider };
+        if (smsResult.delivered) {
+          await logAuditEvent({
+            envelopeId,
+            actorType: 'system',
+            action: 'otp_sent',
+            email: signer.email,
+            phone: signer.phone,
+            ip,
+            userAgent,
+            metadata: {
+              signerId,
+              channel: 'sms',
+              provider: smsResult.provider,
+              messageId: smsResult.messageId,
+            },
+          });
+        }
+      } catch (smsErr) {
+        log.warn(`SMS OTP failed for signer ${signerId}: ${getErrMsg(smsErr)}`);
+      }
+    }
+
+    return c.json({
+      success: true,
+      channels: { email: true, sms: smsChannel?.delivered ?? false },
+    });
+  } catch (error: unknown) {
+    log.error('❌ Send OTP error:', error);
+    return c.json({ error: error instanceof Error ? error.message : 'Failed to send OTP' }, 500);
+  }
+});
 
 /**
  * POST /envelopes/:envelopeId/signers/:signerId/verify
  * Verify OTP and access code
  */
-app.post(
-  '/envelopes/:envelopeId/signers/:signerId/verify',
-  rateLimit('OTP_VERIFY'),
-  async (c) => {
-    try {
-      const envelopeId = c.req.param('envelopeId');
-      const signerId = c.req.param('signerId');
+app.post('/envelopes/:envelopeId/signers/:signerId/verify', rateLimit('OTP_VERIFY'), async (c) => {
+  try {
+    const envelopeId = c.req.param('envelopeId');
+    const signerId = c.req.param('signerId');
 
-      const body = await c.req.json();
-      const { otp, accessCode } = body;
+    const body = await c.req.json();
+    const { otp, accessCode } = body;
 
-      // Verify access code (if provided)
-      if (accessCode) {
-        const accessCodeResult = await verifyAccessCode(signerId, accessCode);
-        if (!accessCodeResult.valid) {
-          return c.json({ error: accessCodeResult.error || 'Invalid access code' }, 401);
-        }
+    // Verify access code (if provided)
+    if (accessCode) {
+      const accessCodeResult = await verifyAccessCode(signerId, accessCode);
+      if (!accessCodeResult.valid) {
+        return c.json({ error: accessCodeResult.error || 'Invalid access code' }, 401);
       }
-
-      // Verify OTP
-      const otpResult = await verifyOTP(signerId, otp);
-      if (!otpResult.valid) {
-        return c.json({ error: otpResult.error || 'Invalid OTP' }, 401);
-      }
-
-      // Mark as verified
-      await markOTPVerified(signerId);
-      await clearOTP(signerId);
-
-      // Update signer status
-      await updateSignerStatus(signerId, 'viewed', {
-        viewed_at: new Date().toISOString(),
-      });
-
-      // Log audit event
-      const signers = await getEnvelopeSigners(envelopeId);
-      const signer = signers.find((s) => s.id === signerId);
-      const { ip, userAgent } = getRequestMetadata(c);
-
-      await logAuditEvent({
-        envelopeId,
-        actorType: audActor(signer),
-        actorId: signerId,
-        action: 'otp_verified',
-        email: signer?.email,
-        ip,
-        userAgent,
-        metadata: { signerId },
-      });
-
-      return c.json({ success: true, verified: true });
-    } catch (error: unknown) {
-      log.error('❌ Verify OTP error:', error);
-      return c.json({ error: error instanceof Error ? error.message : 'Verification failed' }, 500);
     }
-  },
-);
+
+    // Verify OTP
+    const otpResult = await verifyOTP(signerId, otp);
+    if (!otpResult.valid) {
+      return c.json({ error: otpResult.error || 'Invalid OTP' }, 401);
+    }
+
+    // Mark as verified
+    await markOTPVerified(signerId);
+    await clearOTP(signerId);
+
+    // Update signer status
+    await updateSignerStatus(signerId, 'viewed', {
+      viewed_at: new Date().toISOString(),
+    });
+
+    // Log audit event
+    const signers = await getEnvelopeSigners(envelopeId);
+    const signer = signers.find((s) => s.id === signerId);
+    const { ip, userAgent } = getRequestMetadata(c);
+
+    await logAuditEvent({
+      envelopeId,
+      actorType: audActor(signer),
+      actorId: signerId,
+      action: 'otp_verified',
+      email: signer?.email,
+      ip,
+      userAgent,
+      metadata: { signerId },
+    });
+
+    return c.json({ success: true, verified: true });
+  } catch (error: unknown) {
+    log.error('❌ Verify OTP error:', error);
+    return c.json({ error: error instanceof Error ? error.message : 'Verification failed' }, 500);
+  }
+});
 
 /**
  * POST /envelopes/:envelopeId/sign

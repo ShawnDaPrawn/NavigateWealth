@@ -5,11 +5,7 @@ import { createModuleLogger } from './stderr-logger.ts';
 import { rateLimit } from './esign-rate-limit.ts';
 import { formatZodError } from './shared-validation-utils.ts';
 import { SignerValidateSchema } from './esign-validation.ts';
-import {
-  getRequestMetadata,
-  SignerRecord,
-  FieldRecord,
-} from './esign-route-helpers.ts';
+import { getRequestMetadata, SignerRecord, FieldRecord } from './esign-route-helpers.ts';
 import { checkRateLimit } from './rateLimiter.ts';
 import { getEnvelopeDetails, getSignerByToken, logAuditEvent } from './esign-services.ts';
 import { getDocumentUrl } from './esign-storage.ts';
