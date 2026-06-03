@@ -1115,7 +1115,10 @@ app.get('/admin/history', async (c) => {
     return c.json({ messages, sessionId: activeSession.id, session: activeSession });
   } catch (error) {
     if (error instanceof AuthError) {
-      return c.json({ error: error.message, code: error.code }, error.statusCode);
+      return new Response(
+      JSON.stringify({ error: error.message, code: error.code }),
+      { status: error.statusCode, headers: { 'Content-Type': 'application/json' } },
+    );
     }
     return c.json({ error: 'Failed to fetch history' }, 500);
   }
@@ -1138,7 +1141,10 @@ app.get('/admin/sessions', async (c) => {
     return c.json({ sessions });
   } catch (error) {
     if (error instanceof AuthError) {
-      return c.json({ error: error.message, code: error.code }, error.statusCode);
+      return new Response(
+      JSON.stringify({ error: error.message, code: error.code }),
+      { status: error.statusCode, headers: { 'Content-Type': 'application/json' } },
+    );
     }
     log.error('Failed to list admin advisor sessions', error);
     return c.json({ error: 'Failed to load chat sessions' }, 500);
@@ -1165,7 +1171,10 @@ app.post('/admin/sessions', async (c) => {
     return c.json({ session });
   } catch (error) {
     if (error instanceof AuthError) {
-      return c.json({ error: error.message, code: error.code }, error.statusCode);
+      return new Response(
+      JSON.stringify({ error: error.message, code: error.code }),
+      { status: error.statusCode, headers: { 'Content-Type': 'application/json' } },
+    );
     }
     log.error('Failed to create admin advisor session', error);
     return c.json({ error: 'Failed to create chat session' }, 500);
@@ -1195,7 +1204,10 @@ app.get('/admin/sessions/:sessionId', async (c) => {
     return c.json({ session, messages });
   } catch (error) {
     if (error instanceof AuthError) {
-      return c.json({ error: error.message, code: error.code }, error.statusCode);
+      return new Response(
+      JSON.stringify({ error: error.message, code: error.code }),
+      { status: error.statusCode, headers: { 'Content-Type': 'application/json' } },
+    );
     }
     log.error('Failed to load admin advisor session', error);
     return c.json({ error: 'Failed to load chat session' }, 500);
@@ -1220,7 +1232,10 @@ app.delete('/admin/sessions/:sessionId', async (c) => {
     return c.json({ success: true });
   } catch (error) {
     if (error instanceof AuthError) {
-      return c.json({ error: error.message, code: error.code }, error.statusCode);
+      return new Response(
+      JSON.stringify({ error: error.message, code: error.code }),
+      { status: error.statusCode, headers: { 'Content-Type': 'application/json' } },
+    );
     }
     log.error('Failed to delete admin advisor session', error);
     return c.json({ error: 'Failed to delete chat session' }, 500);
@@ -1245,7 +1260,10 @@ app.post('/admin/chat/stream', async (c) => {
   } catch (error: unknown) {
     if (error instanceof AuthError) {
       const ae = error as AuthError;
-      return c.json({ error: ae.message, code: ae.code }, ae.statusCode);
+      return new Response(
+      JSON.stringify({ error: ae.message, code: ae.code }),
+      { status: ae.statusCode, headers: { 'Content-Type': 'application/json' } },
+    );
     }
     log.error('Admin streaming chat error:', error);
     return c.json({ error: error instanceof Error ? error.message : 'Chat failed' }, 500);
@@ -1281,7 +1299,10 @@ app.delete('/admin/history', async (c) => {
     return c.json({ success: true });
   } catch (error) {
     if (error instanceof AuthError) {
-      return c.json({ error: error.message, code: error.code }, error.statusCode);
+      return new Response(
+      JSON.stringify({ error: error.message, code: error.code }),
+      { status: error.statusCode, headers: { 'Content-Type': 'application/json' } },
+    );
     }
     return c.json({ error: 'Failed to clear history' }, 500);
   }

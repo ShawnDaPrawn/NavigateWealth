@@ -43,7 +43,10 @@ function handleRouteError(
     return c.json({ success: false, error: 'Unauthorized' }, 401);
   }
   if (error instanceof FnaIntakeError) {
-    return c.json({ success: false, error: error.message }, error.status);
+    return new Response(
+      JSON.stringify({ success: false, error: error.message }),
+      { status: error.status, headers: { 'Content-Type': 'application/json' } },
+    );
   }
   log.error('Form template route error', error);
   return c.json(

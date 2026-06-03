@@ -38,7 +38,10 @@ meRoutes.get('/me/notification-prefs', async (c) => {
     return c.json({ success: true, preferences: prefs });
   } catch (error: unknown) {
     const status = error instanceof AuthError ? error.statusCode : 500;
-    return c.json({ error: error instanceof Error ? error.message : 'Failed' }, status);
+    return new Response(
+      JSON.stringify({ error: error instanceof Error ? error.message : 'Failed' }),
+      { status: status, headers: { 'Content-Type': 'application/json' } },
+    );
   }
 });
 
@@ -56,7 +59,10 @@ meRoutes.put('/me/notification-prefs', async (c) => {
     return c.json({ success: true, preferences: updated });
   } catch (error: unknown) {
     const status = error instanceof AuthError ? error.statusCode : 500;
-    return c.json({ error: error instanceof Error ? error.message : 'Failed' }, status);
+    return new Response(
+      JSON.stringify({ error: error instanceof Error ? error.message : 'Failed' }),
+      { status: status, headers: { 'Content-Type': 'application/json' } },
+    );
   }
 });
 
@@ -75,7 +81,10 @@ meRoutes.get('/me/notifications', async (c) => {
     return c.json({ success: true, ...result });
   } catch (error: unknown) {
     const status = error instanceof AuthError ? error.statusCode : 500;
-    return c.json({ error: error instanceof Error ? error.message : 'Failed' }, status);
+    return new Response(
+      JSON.stringify({ error: error instanceof Error ? error.message : 'Failed' }),
+      { status: status, headers: { 'Content-Type': 'application/json' } },
+    );
   }
 });
 
@@ -87,7 +96,10 @@ meRoutes.post('/me/notifications/:id/read', async (c) => {
     return c.json({ success: ok });
   } catch (error: unknown) {
     const status = error instanceof AuthError ? error.statusCode : 500;
-    return c.json({ error: error instanceof Error ? error.message : 'Failed' }, status);
+    return new Response(
+      JSON.stringify({ error: error instanceof Error ? error.message : 'Failed' }),
+      { status: status, headers: { 'Content-Type': 'application/json' } },
+    );
   }
 });
 
@@ -98,7 +110,10 @@ meRoutes.post('/me/notifications/read-all', async (c) => {
     return c.json({ success: true, updated });
   } catch (error: unknown) {
     const status = error instanceof AuthError ? error.statusCode : 500;
-    return c.json({ error: error instanceof Error ? error.message : 'Failed' }, status);
+    return new Response(
+      JSON.stringify({ error: error instanceof Error ? error.message : 'Failed' }),
+      { status: status, headers: { 'Content-Type': 'application/json' } },
+    );
   }
 });
 

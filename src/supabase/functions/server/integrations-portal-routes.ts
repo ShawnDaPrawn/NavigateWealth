@@ -703,7 +703,10 @@ portalRoutes.post('/portal-jobs/:jobId/live-view', requireAuth, async (c) => {
 
     const result = await persistPortalLiveViewUpdate(c.req.param('jobId')!, formData);
     if ('error' in result) {
-      return c.json({ error: result.error }, result.status);
+      return new Response(
+      JSON.stringify({ error: result.error }),
+      { status: result.status, headers: { 'Content-Type': 'application/json' } },
+    );
     }
     return c.json({ success: true, job: result.job });
   } catch (e) {
@@ -1713,7 +1716,10 @@ portalRoutes.post('/portal-worker/jobs/:jobId/live-view', async (c) => {
 
     const result = await persistPortalLiveViewUpdate(c.req.param('jobId')!, formData);
     if ('error' in result) {
-      return c.json({ error: result.error }, result.status);
+      return new Response(
+      JSON.stringify({ error: result.error }),
+      { status: result.status, headers: { 'Content-Type': 'application/json' } },
+    );
     }
     return c.json({ success: true, job: result.job });
   } catch (e) {
