@@ -1,6 +1,7 @@
 # Build output & dependencies
 dist
 build
+.next
 node_modules
 tmp
 coverage

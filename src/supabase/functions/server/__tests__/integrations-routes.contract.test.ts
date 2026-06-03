@@ -81,23 +81,85 @@ vi.mock('../auth-mw.ts', () => ({
   },
 }));
 
-// ── Supabase client stub (the module-level createClient + local getByPrefix) ─
+// ── Supabase client stub ─────────────────────────────────────────────────────
 vi.mock('jsr:@supabase/supabase-js@2.49.8', () => ({
   createClient: () => ({
     from: () => ({
       select: () => ({ like: () => ({ data: [], error: null }) }),
     }),
+    storage: {
+      from: () => ({
+        createSignedUrl: vi.fn(async () => ({
+          data: { signedUrl: 'https://test-signed-url/doc.pdf' },
+          error: null,
+        })),
+        remove: vi.fn(async () => ({ error: null })),
+      }),
+    },
   }),
 }));
 
-// ── Heavy service module not exercised by the read routes under test ─────────
+// ── Document storage stub ────────────────────────────────────────────────────
+vi.mock('../integrations-document-storage.ts', () => ({
+  POLICY_DOC_BUCKET: 'policy-documents',
+  POLICY_CATEGORY_LABELS: {
+    risk_planning: 'Risk Planning',
+    medical_aid: 'Medical Aid',
+    retirement_planning: 'Retirement Planning',
+    investments: 'Investments',
+    employee_benefits: 'Employee Benefits',
+    tax_planning: 'Tax Planning',
+    estate_planning: 'Estate Planning',
+  },
+  ensurePolicyDocBucket: vi.fn(async () => {}),
+  uploadEstateDocumentForClient: vi.fn(async () => ({
+    storageKey: 'test/estate-doc.pdf',
+    fileName: 'estate.pdf',
+    documentType: 'last_will_scanned',
+    uploadedAt: '2025-01-01T00:00:00.000Z',
+    uploadedBy: 'test@test.com',
+    mimeType: 'application/pdf',
+    sizeBytes: 100,
+  })),
+  replacePolicyDocumentForPolicy: vi.fn(async () => ({
+    storageKey: 'test/policy-doc.pdf',
+    fileName: 'uploaded.pdf',
+    documentType: 'policy_schedule',
+    uploadedAt: '2025-01-01T00:00:00.000Z',
+    uploadedBy: 'test@test.com',
+    mimeType: 'application/pdf',
+    sizeBytes: 100,
+  })),
+}));
+
+// ── Policy extraction service stub ───────────────────────────────────────────
 vi.mock('../policy-extraction-service.ts', () => ({
-  extractPolicyDocument: vi.fn(),
-  getProviderTerminology: vi.fn(),
-  saveProviderTerminology: vi.fn(),
+  extractPolicyDocument: vi.fn(async () => ({
+    extraction: {
+      status: 'completed',
+      extractedAt: '2025-01-01T00:00:00.000Z',
+      confidence: 0.9,
+      extractedData: { field1: 'value1' },
+      appliedFields: [],
+      validationWarnings: [],
+    },
+    fieldMappings: [],
+  })),
+  getProviderTerminology: vi.fn(async () => ({
+    providerId: 'p1',
+    providerName: 'Test Provider',
+    benefitMappings: {},
+    productMappings: {},
+  })),
+  saveProviderTerminology: vi.fn(async () => {}),
   getAllProviderTerminologies: vi.fn(async () => ({})),
   generateExtractionDiff: vi.fn(),
-  buildHistoryEntry: vi.fn(),
+  buildHistoryEntry: vi.fn(() => ({
+    id: 'hist-1',
+    extractedAt: '2025-01-01T00:00:00.000Z',
+    confidence: 0.8,
+    fieldMappingsSnapshot: [],
+  })),
 }));
 
 import integrationsApp from '../integrations.tsx';
@@ -402,6 +464,929 @@ describe('integrations.tsx route contracts', () => {
       });
       expect(res.status).toBe(401);
       expect(await res.json()).toMatchObject({ error: 'Unauthorized portal worker' });
+    });
+  });
+
+  // ── POST /policies/archive ───────────────────────────────────────────────
+  // Shape assertions before Slice D extraction.
+  describe('POST /policies/archive', () => {
+    it('returns 400 on invalid body', async () => {
+      const res = await integrationsApp.request('/policies/archive', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ bad: true }),
+      });
+      expect(res.status).toBe(400);
+      expect(await res.json()).toMatchObject({ error: 'Validation failed' });
+    });
+
+    it('returns 404 when the policy does not exist', async () => {
+      kvStore.set('policies:client:c1', []);
+      const res = await integrationsApp.request('/policies/archive', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: 'p-ghost', clientId: 'c1' }),
+      });
+      expect(res.status).toBe(404);
+      expect(await res.json()).toMatchObject({ error: 'Policy not found' });
+    });
+
+    it('archives an existing policy and returns { success, policy }', async () => {
+      kvStore.set('policies:client:c1', [
+        { id: 'p1', clientId: 'c1', categoryId: 'risk', archived: false },
+      ]);
+      const res = await integrationsApp.request('/policies/archive', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: 'p1', clientId: 'c1', reason: 'test' }),
+      });
+      expect(res.status).toBe(200);
+      const body = (await res.json()) as { success: boolean; policy: Record<string, unknown> };
+      expect(body.success).toBe(true);
+      expect(body.policy.archived).toBe(true);
+    });
+  });
+
+  // ── POST /policies/reinstate ──────────────────────────────────────────────
+  describe('POST /policies/reinstate', () => {
+    it('returns 400 on invalid body', async () => {
+      const res = await integrationsApp.request('/policies/reinstate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ bad: true }),
+      });
+      expect(res.status).toBe(400);
+    });
+
+    it('returns 404 when the policy does not exist', async () => {
+      kvStore.set('policies:client:c1', []);
+      const res = await integrationsApp.request('/policies/reinstate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: 'ghost', clientId: 'c1' }),
+      });
+      expect(res.status).toBe(404);
+    });
+  });
+
+  // ── PUT /policies (update) ────────────────────────────────────────────────
+  describe('PUT /policies', () => {
+    it('returns 400 on invalid body', async () => {
+      const res = await integrationsApp.request('/policies', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ bad: true }),
+      });
+      expect(res.status).toBe(400);
+      expect(await res.json()).toMatchObject({ error: 'Validation failed' });
+    });
+
+    it('returns 404 when the policy does not exist', async () => {
+      kvStore.set('policies:client:c1', []);
+      const res = await integrationsApp.request('/policies', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: 'ghost', clientId: 'c1' }),
+      });
+      expect(res.status).toBe(404);
+    });
+  });
+
+  // ── DELETE /policies ──────────────────────────────────────────────────────
+  describe('DELETE /policies', () => {
+    it('returns 400 when id or clientId is missing', async () => {
+      const res = await integrationsApp.request('/policies?clientId=c1', { method: 'DELETE' });
+      expect(res.status).toBe(400);
+    });
+
+    it('returns 404 when the policy does not exist', async () => {
+      kvStore.set('policies:client:c1', []);
+      const res = await integrationsApp.request('/policies?id=ghost&clientId=c1', {
+        method: 'DELETE',
+      });
+      expect(res.status).toBe(404);
+    });
+
+    it('deletes an existing policy and returns { success: true }', async () => {
+      kvStore.set('policies:client:c1', [{ id: 'p1', clientId: 'c1', categoryId: 'risk' }]);
+      const res = await integrationsApp.request('/policies?id=p1&clientId=c1', {
+        method: 'DELETE',
+      });
+      expect(res.status).toBe(200);
+      expect(await res.json()).toMatchObject({ success: true });
+    });
+  });
+
+  // ── POST /recalculate-totals ──────────────────────────────────────────────
+  describe('POST /recalculate-totals', () => {
+    it('returns 400 on invalid body', async () => {
+      const res = await integrationsApp.request('/recalculate-totals', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({}),
+      });
+      expect(res.status).toBe(400);
+    });
+
+    it('returns { success: true } for a valid clientId', async () => {
+      const res = await integrationsApp.request('/recalculate-totals', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ clientId: 'c1' }),
+      });
+      expect(res.status).toBe(200);
+      expect(await res.json()).toMatchObject({ success: true });
+    });
+  });
+
+  // ── GET /dashboard-stats ──────────────────────────────────────────────────
+  describe('GET /dashboard-stats', () => {
+    it('returns 200 with the expected numeric stat keys', async () => {
+      const res = await integrationsApp.request('/dashboard-stats');
+      expect(res.status).toBe(200);
+      const body = (await res.json()) as Record<string, unknown>;
+      expect(typeof body.activePolicies).toBe('number');
+      expect(typeof body.newPoliciesCount).toBe('number');
+      expect(typeof body.publishedFnas).toBe('number');
+    });
+  });
+
+  // ── GET /policy-renewals ──────────────────────────────────────────────────
+  describe('GET /policy-renewals', () => {
+    it('returns 401 without an Authorization header', async () => {
+      const res = await integrationsApp.request('/policy-renewals');
+      expect(res.status).toBe(401);
+    });
+
+    it('returns 200 with a renewals array when no policies are stored', async () => {
+      const res = await integrationsApp.request('/policy-renewals', { headers: AUTH });
+      expect(res.status).toBe(200);
+      const body = (await res.json()) as Record<string, unknown>;
+      expect(Array.isArray(body.renewals)).toBe(true);
+    });
+  });
+
+  // ── GET /schemas/batch ───────────────────────────────────────────────────
+  // Shape-assertion before Slice C extraction.
+  describe('GET /schemas/batch', () => {
+    it('returns a schemas map keyed by categoryId', async () => {
+      const res = await integrationsApp.request('/schemas/batch');
+      expect(res.status).toBe(200);
+      const body = (await res.json()) as { schemas: Record<string, unknown> };
+      expect(body).toHaveProperty('schemas');
+      expect(typeof body.schemas).toBe('object');
+    });
+
+    it('merges stored custom schemas over defaults', async () => {
+      kvStore.set('config:schema:risk', {
+        categoryId: 'risk',
+        fields: [{ id: 'f1', name: 'Custom' }],
+      });
+      const res = await integrationsApp.request('/schemas/batch');
+      expect(res.status).toBe(200);
+      const body = (await res.json()) as { schemas: Record<string, { fields: unknown[] }> };
+      expect(body.schemas.risk).toMatchObject({ fields: [{ id: 'f1' }] });
+    });
+  });
+
+  // ── POST /schemas ─────────────────────────────────────────────────────────
+  describe('POST /schemas', () => {
+    it('returns 400 on invalid body', async () => {
+      const res = await integrationsApp.request('/schemas', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ bad: true }),
+      });
+      expect(res.status).toBe(400);
+      expect(await res.json()).toMatchObject({ error: 'Validation failed' });
+    });
+
+    it('persists a valid schema and echoes it under { success, schema }', async () => {
+      const res = await integrationsApp.request('/schemas', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          categoryId: 'risk',
+          fields: [{ id: 'f1', name: 'Field One', type: 'text' }],
+        }),
+      });
+      expect(res.status).toBe(200);
+      const body = (await res.json()) as { success: boolean; schema: Record<string, unknown> };
+      expect(body.success).toBe(true);
+      expect(body.schema).toMatchObject({ categoryId: 'risk', fields: [{ id: 'f1' }] });
+    });
+  });
+
+  // ── POST /upload ──────────────────────────────────────────────────────────
+  // Locks auth and early-exit validation shapes before Slice B extraction.
+  describe('POST /upload', () => {
+    it('returns 401 without an Authorization header', async () => {
+      const res = await integrationsApp.request('/upload', { method: 'POST' });
+      expect(res.status).toBe(401);
+    });
+
+    it('returns 400 when the body cannot be parsed as form data', async () => {
+      const res = await integrationsApp.request('/upload', {
+        method: 'POST',
+        headers: { ...AUTH, 'Content-Type': 'application/json' },
+        body: JSON.stringify({}),
+      });
+      expect(res.status).toBe(400);
+    });
+
+    it('returns 400 when no file is provided', async () => {
+      const form = new FormData();
+      form.append('providerId', 'p1');
+      form.append('categoryId', 'risk');
+      const res = await integrationsApp.request('/upload', {
+        method: 'POST',
+        headers: AUTH,
+        body: form,
+      });
+      expect(res.status).toBe(400);
+      expect(await res.json()).toMatchObject({ error: 'No file uploaded' });
+    });
+
+    it('returns 400 when provider does not exist', async () => {
+      const file = new File(['col1\nval1'], 'data.csv', { type: 'text/csv' });
+      const form = new FormData();
+      form.append('file', file);
+      form.append('providerId', 'ghost');
+      form.append('categoryId', 'risk');
+      const res = await integrationsApp.request('/upload', {
+        method: 'POST',
+        headers: AUTH,
+        body: form,
+      });
+      expect(res.status).toBe(400);
+      expect(await res.json()).toMatchObject({ error: 'Invalid provider ID' });
+    });
+  });
+
+  // ── GET /sync-runs/:runId ─────────────────────────────────────────────────
+  describe('GET /sync-runs/:runId', () => {
+    it('returns 401 without an Authorization header', async () => {
+      const res = await integrationsApp.request('/sync-runs/run1');
+      expect(res.status).toBe(401);
+    });
+
+    it('returns 404 when the run does not exist', async () => {
+      const res = await integrationsApp.request('/sync-runs/missing-run', { headers: AUTH });
+      expect(res.status).toBe(404);
+      expect(await res.json()).toMatchObject({ error: 'Sync run not found' });
+    });
+
+    it('returns the run under { success, run } when it exists', async () => {
+      kvStore.set('sync-run:run1', { id: 'run1', status: 'staged', summary: {} });
+      const res = await integrationsApp.request('/sync-runs/run1', { headers: AUTH });
+      expect(res.status).toBe(200);
+      expect(await res.json()).toMatchObject({ success: true, run: { id: 'run1' } });
+    });
+  });
+
+  // ── POST /sync-runs/:runId/publish ────────────────────────────────────────
+  describe('POST /sync-runs/:runId/publish', () => {
+    it('returns 401 without an Authorization header', async () => {
+      const res = await integrationsApp.request('/sync-runs/run1/publish', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({}),
+      });
+      expect(res.status).toBe(401);
+    });
+
+    it('returns 404 when the run does not exist', async () => {
+      const res = await integrationsApp.request('/sync-runs/no-such-run/publish', {
+        method: 'POST',
+        headers: { ...AUTH, 'Content-Type': 'application/json' },
+        body: JSON.stringify({}),
+      });
+      expect(res.status).toBe(404);
+      expect(await res.json()).toMatchObject({ error: 'Sync run not found' });
+    });
+  });
+
+  // ── GET /template ─────────────────────────────────────────────────────────
+  // Locks the template download endpoint's auth and validation contracts before
+  // it is extracted into integrations-provider-routes.ts (Phase 5 Slice A).
+  describe('GET /template', () => {
+    it('returns 401 without an Authorization header', async () => {
+      const res = await integrationsApp.request('/template?providerId=p1&categoryId=risk');
+      expect(res.status).toBe(401);
+    });
+
+    it('returns 400 when providerId is missing', async () => {
+      const res = await integrationsApp.request('/template?categoryId=risk', { headers: AUTH });
+      expect(res.status).toBe(400);
+      expect(await res.json()).toMatchObject({ error: expect.stringContaining('Missing') });
+    });
+
+    it('returns 400 when categoryId is missing', async () => {
+      const res = await integrationsApp.request('/template?providerId=p1', { headers: AUTH });
+      expect(res.status).toBe(400);
+      expect(await res.json()).toMatchObject({ error: expect.stringContaining('Missing') });
+    });
+
+    it('returns 400 when the provider does not exist', async () => {
+      const res = await integrationsApp.request('/template?providerId=ghost&categoryId=risk', {
+        headers: AUTH,
+      });
+      expect(res.status).toBe(400);
+      expect(await res.json()).toMatchObject({ error: 'Invalid provider ID' });
+    });
+
+    it('returns 200 with xlsx Content-Type for a known provider', async () => {
+      kvStore.set('provider:p1', { id: 'p1', name: 'Provider One', categoryIds: ['risk'] });
+      const res = await integrationsApp.request('/template?providerId=p1&categoryId=risk', {
+        headers: AUTH,
+      });
+      expect(res.status).toBe(200);
+      expect(res.headers.get('Content-Type')).toMatch(
+        /application\/vnd\.openxmlformats-officedocument\.spreadsheetml\.sheet/,
+      );
+      expect(res.headers.get('Content-Disposition')).toMatch(/attachment/);
+    });
+  });
+
+  // ── POST /policy-documents/upload ─────────────────────────────────────────
+  describe('POST /policy-documents/upload', () => {
+    it('returns 401 without an Authorization header', async () => {
+      const res = await integrationsApp.request('/policy-documents/upload', { method: 'POST' });
+      expect(res.status).toBe(401);
+    });
+
+    it('returns 400 when no file is included in the form', async () => {
+      const form = new FormData();
+      form.append('policyId', 'p1');
+      form.append('clientId', 'c1');
+      const res = await integrationsApp.request('/policy-documents/upload', {
+        method: 'POST',
+        body: form,
+        headers: AUTH,
+      });
+      expect(res.status).toBe(400);
+      expect(await res.json()).toMatchObject({ error: 'No file provided' });
+    });
+
+    it('returns 400 when metadata validation fails (missing policyId)', async () => {
+      const form = new FormData();
+      form.append('file', new File(['pdf'], 'doc.pdf', { type: 'application/pdf' }));
+      form.append('clientId', 'c1');
+      const res = await integrationsApp.request('/policy-documents/upload', {
+        method: 'POST',
+        body: form,
+        headers: AUTH,
+      });
+      expect(res.status).toBe(400);
+      expect(await res.json()).toHaveProperty('error');
+    });
+
+    it('returns 200 with document metadata when upload succeeds', async () => {
+      const form = new FormData();
+      form.append('file', new File(['pdf'], 'doc.pdf', { type: 'application/pdf' }));
+      form.append('policyId', 'p1');
+      form.append('clientId', 'c1');
+      form.append('documentType', 'policy_schedule');
+      form.append('uploadedBy', 'test@test.com');
+      const res = await integrationsApp.request('/policy-documents/upload', {
+        method: 'POST',
+        body: form,
+        headers: AUTH,
+      });
+      expect(res.status).toBe(200);
+      const body = await res.json();
+      expect(body.success).toBe(true);
+      expect(body.document).toMatchObject({ storageKey: expect.any(String) });
+    });
+  });
+
+  // ── GET /policy-documents/download ────────────────────────────────────────
+  describe('GET /policy-documents/download', () => {
+    it('returns 401 without an Authorization header', async () => {
+      const res = await integrationsApp.request(
+        '/policy-documents/download?policyId=p1&clientId=c1',
+      );
+      expect(res.status).toBe(401);
+    });
+
+    it('returns 400 when policyId or clientId is missing', async () => {
+      const res = await integrationsApp.request('/policy-documents/download?policyId=p1', {
+        headers: AUTH,
+      });
+      expect(res.status).toBe(400);
+      expect(await res.json()).toHaveProperty('error');
+    });
+
+    it('returns 404 when policy is not found', async () => {
+      const res = await integrationsApp.request(
+        '/policy-documents/download?policyId=ghost&clientId=c1',
+        { headers: AUTH },
+      );
+      expect(res.status).toBe(404);
+    });
+
+    it('returns 404 when policy has no document attached', async () => {
+      kvStore.set('policies:client:c1', [{ id: 'p1', clientId: 'c1', data: {} }]);
+      const res = await integrationsApp.request(
+        '/policy-documents/download?policyId=p1&clientId=c1',
+        { headers: AUTH },
+      );
+      expect(res.status).toBe(404);
+      expect(await res.json()).toMatchObject({ error: 'No document attached to this policy' });
+    });
+
+    it('returns 200 with a signed URL when policy has a document', async () => {
+      kvStore.set('policies:client:c1', [
+        {
+          id: 'p1',
+          clientId: 'c1',
+          data: {},
+          document: { storageKey: 'test/doc.pdf', fileName: 'doc.pdf' },
+        },
+      ]);
+      const res = await integrationsApp.request(
+        '/policy-documents/download?policyId=p1&clientId=c1',
+        { headers: AUTH },
+      );
+      expect(res.status).toBe(200);
+      const body = await res.json();
+      expect(body.success).toBe(true);
+      expect(body.url).toMatch(/https?:\/\//);
+      expect(body.document).toBeDefined();
+    });
+  });
+
+  // ── DELETE /policy-documents ───────────────────────────────────────────────
+  describe('DELETE /policy-documents', () => {
+    it('returns 401 without an Authorization header', async () => {
+      const res = await integrationsApp.request('/policy-documents', {
+        method: 'DELETE',
+        body: JSON.stringify({ policyId: 'p1', clientId: 'c1' }),
+        headers: { 'Content-Type': 'application/json' },
+      });
+      expect(res.status).toBe(401);
+    });
+
+    it('returns 400 for validation failure (empty body)', async () => {
+      const res = await integrationsApp.request('/policy-documents', {
+        method: 'DELETE',
+        body: JSON.stringify({}),
+        headers: { ...AUTH, 'Content-Type': 'application/json' },
+      });
+      expect(res.status).toBe(400);
+      expect(await res.json()).toHaveProperty('error');
+    });
+
+    it('returns 404 when policy is not found', async () => {
+      const res = await integrationsApp.request('/policy-documents', {
+        method: 'DELETE',
+        body: JSON.stringify({ policyId: 'ghost', clientId: 'c1' }),
+        headers: { ...AUTH, 'Content-Type': 'application/json' },
+      });
+      expect(res.status).toBe(404);
+    });
+
+    it('returns 404 when policy has no document', async () => {
+      kvStore.set('policies:client:c1', [{ id: 'p1', clientId: 'c1', data: {} }]);
+      const res = await integrationsApp.request('/policy-documents', {
+        method: 'DELETE',
+        body: JSON.stringify({ policyId: 'p1', clientId: 'c1' }),
+        headers: { ...AUTH, 'Content-Type': 'application/json' },
+      });
+      expect(res.status).toBe(404);
+      expect(await res.json()).toMatchObject({ error: 'No document attached to this policy' });
+    });
+
+    it('returns 200 and removes the document metadata when valid', async () => {
+      kvStore.set('policies:client:c1', [
+        {
+          id: 'p1',
+          clientId: 'c1',
+          data: {},
+          document: { storageKey: 'test/doc.pdf', fileName: 'doc.pdf' },
+        },
+      ]);
+      const res = await integrationsApp.request('/policy-documents', {
+        method: 'DELETE',
+        body: JSON.stringify({ policyId: 'p1', clientId: 'c1' }),
+        headers: { ...AUTH, 'Content-Type': 'application/json' },
+      });
+      expect(res.status).toBe(200);
+      expect(await res.json()).toMatchObject({ success: true });
+    });
+  });
+
+  // ── POST /policy-extraction/extract ───────────────────────────────────────
+  describe('POST /policy-extraction/extract', () => {
+    it('returns 401 without an Authorization header', async () => {
+      const res = await integrationsApp.request('/policy-extraction/extract', {
+        method: 'POST',
+        body: JSON.stringify({ policyId: 'p1', clientId: 'c1' }),
+        headers: { 'Content-Type': 'application/json' },
+      });
+      expect(res.status).toBe(401);
+    });
+
+    it('returns 400 when policyId or clientId is missing', async () => {
+      const res = await integrationsApp.request('/policy-extraction/extract', {
+        method: 'POST',
+        body: JSON.stringify({ clientId: 'c1' }),
+        headers: { ...AUTH, 'Content-Type': 'application/json' },
+      });
+      expect(res.status).toBe(400);
+      expect(await res.json()).toMatchObject({ error: 'Missing policyId or clientId' });
+    });
+
+    it('returns 404 when policy is not found', async () => {
+      const res = await integrationsApp.request('/policy-extraction/extract', {
+        method: 'POST',
+        body: JSON.stringify({ policyId: 'ghost', clientId: 'c1' }),
+        headers: { ...AUTH, 'Content-Type': 'application/json' },
+      });
+      expect(res.status).toBe(404);
+    });
+
+    it('returns 400 when policy has no document', async () => {
+      kvStore.set('policies:client:c1', [{ id: 'p1', clientId: 'c1', data: {} }]);
+      const res = await integrationsApp.request('/policy-extraction/extract', {
+        method: 'POST',
+        body: JSON.stringify({ policyId: 'p1', clientId: 'c1' }),
+        headers: { ...AUTH, 'Content-Type': 'application/json' },
+      });
+      expect(res.status).toBe(400);
+      expect(await res.json()).toMatchObject({
+        error: expect.stringContaining('Upload a document'),
+      });
+    });
+
+    it('returns 200 with extraction result when policy has a document', async () => {
+      kvStore.set('policies:client:c1', [
+        {
+          id: 'p1',
+          clientId: 'c1',
+          data: {},
+          document: { storageKey: 'test/doc.pdf', fileName: 'doc.pdf' },
+        },
+      ]);
+      const res = await integrationsApp.request('/policy-extraction/extract', {
+        method: 'POST',
+        body: JSON.stringify({ policyId: 'p1', clientId: 'c1' }),
+        headers: { ...AUTH, 'Content-Type': 'application/json' },
+      });
+      expect(res.status).toBe(200);
+      const body = await res.json();
+      expect(body.success).toBe(true);
+      expect(body.extraction).toBeDefined();
+      expect(Array.isArray(body.fieldMappings)).toBe(true);
+      expect(Array.isArray(body.diff)).toBe(true);
+    });
+  });
+
+  // ── GET /policy-extraction/result ─────────────────────────────────────────
+  describe('GET /policy-extraction/result', () => {
+    it('returns 401 without an Authorization header', async () => {
+      const res = await integrationsApp.request(
+        '/policy-extraction/result?policyId=p1&clientId=c1',
+      );
+      expect(res.status).toBe(401);
+    });
+
+    it('returns 400 when policyId or clientId is missing', async () => {
+      const res = await integrationsApp.request('/policy-extraction/result?policyId=p1', {
+        headers: AUTH,
+      });
+      expect(res.status).toBe(400);
+    });
+
+    it('returns 404 when policy is not found', async () => {
+      const res = await integrationsApp.request(
+        '/policy-extraction/result?policyId=ghost&clientId=c1',
+        { headers: AUTH },
+      );
+      expect(res.status).toBe(404);
+    });
+
+    it('returns 404 when no extraction result exists', async () => {
+      kvStore.set('policies:client:c1', [{ id: 'p1', clientId: 'c1', data: {} }]);
+      const res = await integrationsApp.request(
+        '/policy-extraction/result?policyId=p1&clientId=c1',
+        { headers: AUTH },
+      );
+      expect(res.status).toBe(404);
+      expect(await res.json()).toMatchObject({ error: 'No extraction result available' });
+    });
+
+    it('returns 200 with extraction data', async () => {
+      kvStore.set('policies:client:c1', [
+        {
+          id: 'p1',
+          clientId: 'c1',
+          data: {},
+          extraction: {
+            status: 'completed',
+            extractedAt: '2025-01-01T00:00:00.000Z',
+            confidence: 0.9,
+          },
+        },
+      ]);
+      const res = await integrationsApp.request(
+        '/policy-extraction/result?policyId=p1&clientId=c1',
+        { headers: AUTH },
+      );
+      expect(res.status).toBe(200);
+      const body = await res.json();
+      expect(body.success).toBe(true);
+      expect(body.extraction).toMatchObject({ status: 'completed' });
+    });
+  });
+
+  // ── GET /policy-extraction/history ────────────────────────────────────────
+  describe('GET /policy-extraction/history', () => {
+    it('returns 401 without an Authorization header', async () => {
+      const res = await integrationsApp.request(
+        '/policy-extraction/history?policyId=p1&clientId=c1',
+      );
+      expect(res.status).toBe(401);
+    });
+
+    it('returns 400 when params are missing', async () => {
+      const res = await integrationsApp.request('/policy-extraction/history?policyId=p1', {
+        headers: AUTH,
+      });
+      expect(res.status).toBe(400);
+    });
+
+    it('returns 404 when policy not found', async () => {
+      const res = await integrationsApp.request(
+        '/policy-extraction/history?policyId=ghost&clientId=c1',
+        { headers: AUTH },
+      );
+      expect(res.status).toBe(404);
+    });
+
+    it('returns 200 with empty history array when policy has no history', async () => {
+      kvStore.set('policies:client:c1', [{ id: 'p1', clientId: 'c1', data: {} }]);
+      const res = await integrationsApp.request(
+        '/policy-extraction/history?policyId=p1&clientId=c1',
+        { headers: AUTH },
+      );
+      expect(res.status).toBe(200);
+      const body = await res.json();
+      expect(body.success).toBe(true);
+      expect(Array.isArray(body.history)).toBe(true);
+      expect(body.history).toHaveLength(0);
+      expect(body.currentExtraction).toBeNull();
+    });
+  });
+
+  // ── GET /policy-extraction/compare ────────────────────────────────────────
+  describe('GET /policy-extraction/compare', () => {
+    it('returns 401 without an Authorization header', async () => {
+      const res = await integrationsApp.request(
+        '/policy-extraction/compare?policyId=p1&clientId=c1&leftId=h1&rightId=h2',
+      );
+      expect(res.status).toBe(401);
+    });
+
+    it('returns 400 when required params are missing', async () => {
+      const res = await integrationsApp.request(
+        '/policy-extraction/compare?policyId=p1&clientId=c1&leftId=h1',
+        { headers: AUTH },
+      );
+      expect(res.status).toBe(400);
+    });
+
+    it('returns 404 when policy not found', async () => {
+      const res = await integrationsApp.request(
+        '/policy-extraction/compare?policyId=ghost&clientId=c1&leftId=h1&rightId=h2',
+        { headers: AUTH },
+      );
+      expect(res.status).toBe(404);
+    });
+
+    it('returns 404 when leftId is not in history', async () => {
+      kvStore.set('policies:client:c1', [
+        { id: 'p1', clientId: 'c1', data: {}, extractionHistory: [] },
+      ]);
+      const res = await integrationsApp.request(
+        '/policy-extraction/compare?policyId=p1&clientId=c1&leftId=no-such&rightId=current',
+        { headers: AUTH },
+      );
+      expect(res.status).toBe(404);
+    });
+  });
+
+  // ── POST /policy-extraction/apply ─────────────────────────────────────────
+  describe('POST /policy-extraction/apply', () => {
+    it('returns 401 without an Authorization header', async () => {
+      const res = await integrationsApp.request('/policy-extraction/apply', {
+        method: 'POST',
+        body: JSON.stringify({ policyId: 'p1', clientId: 'c1', fieldsToApply: {} }),
+        headers: { 'Content-Type': 'application/json' },
+      });
+      expect(res.status).toBe(401);
+    });
+
+    it('returns 400 when required params are missing', async () => {
+      const res = await integrationsApp.request('/policy-extraction/apply', {
+        method: 'POST',
+        body: JSON.stringify({ policyId: 'p1' }),
+        headers: { ...AUTH, 'Content-Type': 'application/json' },
+      });
+      expect(res.status).toBe(400);
+    });
+
+    it('returns 404 when policy not found', async () => {
+      const res = await integrationsApp.request('/policy-extraction/apply', {
+        method: 'POST',
+        body: JSON.stringify({ policyId: 'ghost', clientId: 'c1', fieldsToApply: {} }),
+        headers: { ...AUTH, 'Content-Type': 'application/json' },
+      });
+      expect(res.status).toBe(404);
+    });
+
+    it('returns 200 and reports applied fields', async () => {
+      kvStore.set('policies:client:c1', [{ id: 'p1', clientId: 'c1', data: {} }]);
+      const res = await integrationsApp.request('/policy-extraction/apply', {
+        method: 'POST',
+        body: JSON.stringify({
+          policyId: 'p1',
+          clientId: 'c1',
+          fieldsToApply: { field1: 'value1' },
+        }),
+        headers: { ...AUTH, 'Content-Type': 'application/json' },
+      });
+      expect(res.status).toBe(200);
+      const body = await res.json();
+      expect(body.success).toBe(true);
+      expect(Array.isArray(body.appliedFields)).toBe(true);
+    });
+  });
+
+  // ── POST /policy-extraction/lock-fields ───────────────────────────────────
+  describe('POST /policy-extraction/lock-fields', () => {
+    it('returns 401 without an Authorization header', async () => {
+      const res = await integrationsApp.request('/policy-extraction/lock-fields', {
+        method: 'POST',
+        body: JSON.stringify({ policyId: 'p1', clientId: 'c1', fieldIds: ['f1'], action: 'lock' }),
+        headers: { 'Content-Type': 'application/json' },
+      });
+      expect(res.status).toBe(401);
+    });
+
+    it('returns 400 when action is invalid', async () => {
+      const res = await integrationsApp.request('/policy-extraction/lock-fields', {
+        method: 'POST',
+        body: JSON.stringify({ policyId: 'p1', clientId: 'c1', fieldIds: ['f1'], action: 'bad' }),
+        headers: { ...AUTH, 'Content-Type': 'application/json' },
+      });
+      expect(res.status).toBe(400);
+    });
+
+    it('returns 404 when policy not found', async () => {
+      const res = await integrationsApp.request('/policy-extraction/lock-fields', {
+        method: 'POST',
+        body: JSON.stringify({
+          policyId: 'ghost',
+          clientId: 'c1',
+          fieldIds: ['f1'],
+          action: 'lock',
+        }),
+        headers: { ...AUTH, 'Content-Type': 'application/json' },
+      });
+      expect(res.status).toBe(404);
+    });
+
+    it('returns 200 with updated lockedFields array', async () => {
+      kvStore.set('policies:client:c1', [{ id: 'p1', clientId: 'c1', data: {} }]);
+      const res = await integrationsApp.request('/policy-extraction/lock-fields', {
+        method: 'POST',
+        body: JSON.stringify({
+          policyId: 'p1',
+          clientId: 'c1',
+          fieldIds: ['f1', 'f2'],
+          action: 'lock',
+        }),
+        headers: { ...AUTH, 'Content-Type': 'application/json' },
+      });
+      expect(res.status).toBe(200);
+      const body = await res.json();
+      expect(body.success).toBe(true);
+      expect(body.lockedFields).toContain('f1');
+      expect(body.lockedFields).toContain('f2');
+    });
+  });
+
+  // ── GET /policy-extraction/quality-stats ──────────────────────────────────
+  describe('GET /policy-extraction/quality-stats', () => {
+    it('returns 401 without an Authorization header', async () => {
+      const res = await integrationsApp.request('/policy-extraction/quality-stats');
+      expect(res.status).toBe(401);
+    });
+
+    it('returns 200 with numeric overview shape when no policies exist', async () => {
+      const res = await integrationsApp.request('/policy-extraction/quality-stats', {
+        headers: AUTH,
+      });
+      expect(res.status).toBe(200);
+      const body = await res.json();
+      expect(body.success).toBe(true);
+      expect(typeof body.overview.totalPolicies).toBe('number');
+      expect(typeof body.overview.totalExtractions).toBe('number');
+      expect(Array.isArray(body.providerStats)).toBe(true);
+      expect(Array.isArray(body.lowConfidenceFields)).toBe(true);
+      expect(Array.isArray(body.timeline)).toBe(true);
+    });
+  });
+
+  // ── POST /policy-extraction/bulk-reextract ────────────────────────────────
+  describe('POST /policy-extraction/bulk-reextract', () => {
+    it('returns 401 without an Authorization header', async () => {
+      const res = await integrationsApp.request('/policy-extraction/bulk-reextract', {
+        method: 'POST',
+        body: JSON.stringify({ providerId: 'p1' }),
+        headers: { 'Content-Type': 'application/json' },
+      });
+      expect(res.status).toBe(401);
+    });
+
+    it('returns 400 when providerId is missing', async () => {
+      const res = await integrationsApp.request('/policy-extraction/bulk-reextract', {
+        method: 'POST',
+        body: JSON.stringify({}),
+        headers: { ...AUTH, 'Content-Type': 'application/json' },
+      });
+      expect(res.status).toBe(400);
+      expect(await res.json()).toMatchObject({ error: 'Missing providerId' });
+    });
+
+    it('returns 200 streaming response for a valid dry-run request', async () => {
+      const res = await integrationsApp.request('/policy-extraction/bulk-reextract', {
+        method: 'POST',
+        body: JSON.stringify({ providerId: 'p1', dryRun: true }),
+        headers: { ...AUTH, 'Content-Type': 'application/json' },
+      });
+      expect(res.status).toBe(200);
+    });
+  });
+
+  // ── GET /provider-terminology ─────────────────────────────────────────────
+  describe('GET /provider-terminology', () => {
+    it('returns 401 without an Authorization header', async () => {
+      const res = await integrationsApp.request('/provider-terminology');
+      expect(res.status).toBe(401);
+    });
+
+    it('returns 200 with all terminologies when no providerId given', async () => {
+      const res = await integrationsApp.request('/provider-terminology', { headers: AUTH });
+      expect(res.status).toBe(200);
+      const body = await res.json();
+      expect(body.success).toBe(true);
+      expect(body.terminologies).toBeDefined();
+    });
+
+    it('returns 200 with specific terminology when providerId is given', async () => {
+      const res = await integrationsApp.request('/provider-terminology?providerId=p1', {
+        headers: AUTH,
+      });
+      expect(res.status).toBe(200);
+      const body = await res.json();
+      expect(body.success).toBe(true);
+      expect(body.terminology).toBeDefined();
+    });
+  });
+
+  // ── POST /provider-terminology ────────────────────────────────────────────
+  describe('POST /provider-terminology', () => {
+    it('returns 401 without an Authorization header', async () => {
+      const res = await integrationsApp.request('/provider-terminology', {
+        method: 'POST',
+        body: JSON.stringify({ providerId: 'p1', providerName: 'Test' }),
+        headers: { 'Content-Type': 'application/json' },
+      });
+      expect(res.status).toBe(401);
+    });
+
+    it('returns 400 when providerId or providerName is missing', async () => {
+      const res = await integrationsApp.request('/provider-terminology', {
+        method: 'POST',
+        body: JSON.stringify({ providerId: 'p1' }),
+        headers: { ...AUTH, 'Content-Type': 'application/json' },
+      });
+      expect(res.status).toBe(400);
+      expect(await res.json()).toMatchObject({ error: 'Missing providerId or providerName' });
+    });
+
+    it('returns 200 with saved terminology', async () => {
+      const res = await integrationsApp.request('/provider-terminology', {
+        method: 'POST',
+        body: JSON.stringify({ providerId: 'p1', providerName: 'Test Provider' }),
+        headers: { ...AUTH, 'Content-Type': 'application/json' },
+      });
+      expect(res.status).toBe(200);
+      const body = await res.json();
+      expect(body.success).toBe(true);
+      expect(body.terminology).toMatchObject({ providerId: 'p1', providerName: 'Test Provider' });
     });
   });
 });
