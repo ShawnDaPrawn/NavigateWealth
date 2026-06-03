@@ -6,7 +6,7 @@
  * Follows the collapsible card pattern used in other estate planning sections.
  */
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import {
   Upload,
   FileText,
@@ -162,13 +162,7 @@ export function EstateDocumentsSection({
   const [downloadingDocId, setDownloadingDocId] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  useEffect(() => {
-    if (clientId) {
-      loadDocuments();
-    }
-  }, [clientId]);
-
-  const loadDocuments = async () => {
+  const loadDocuments = useCallback(async () => {
     try {
       setIsLoading(true);
       const result = await api.get<{ success?: boolean; data?: EstateDocument[] }>(
@@ -183,7 +177,13 @@ export function EstateDocumentsSection({
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [clientId]);
+
+  useEffect(() => {
+    if (clientId) {
+      loadDocuments();
+    }
+  }, [clientId, loadDocuments]);
 
   const handleUpload = async () => {
     if (!selectedFile || !title || !documentType) {

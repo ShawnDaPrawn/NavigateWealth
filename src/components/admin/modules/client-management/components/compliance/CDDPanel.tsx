@@ -10,7 +10,7 @@
  * and appear in the Activity Log.
  */
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../../../../../ui/card';
 import { Badge } from '../../../../../ui/badge';
 import { Button } from '../../../../../ui/button';
@@ -79,11 +79,7 @@ export function CDDPanel({
   const [isLoadingHistory, setIsLoadingHistory] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
 
-  useEffect(() => {
-    loadHistory();
-  }, [clientId]);
-
-  const loadHistory = async () => {
+  const loadHistory = useCallback(async () => {
     setIsLoadingHistory(true);
     try {
       const data = await api.get<{ history?: CheckHistoryEntry[] }>(
@@ -95,7 +91,11 @@ export function CDDPanel({
     } finally {
       setIsLoadingHistory(false);
     }
-  };
+  }, [clientId]);
+
+  useEffect(() => {
+    loadHistory();
+  }, [clientId, loadHistory]);
 
   const handleRunCdd = async () => {
     setIsRunning(true);

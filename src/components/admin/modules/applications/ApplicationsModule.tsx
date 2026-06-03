@@ -57,13 +57,13 @@ export function ApplicationsModule() {
     if (isAdmin) {
       loadApplications();
     }
-  }, [activeTab, isAdmin]);
+  }, [activeTab, isAdmin, loadApplications]);
 
   useEffect(() => {
     if (isAdmin) {
       loadStats();
     }
-  }, [isAdmin]);
+  }, [isAdmin, loadStats]);
 
   const loadApplications = useCallback(async () => {
     try {

@@ -4,7 +4,7 @@
  * Similar UI pattern to the Templates screen in Requests module
  */
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { FileText, Eye, Download, Calendar, Loader2, ArrowLeft, Zap } from 'lucide-react';
 import { Button } from '../../../../ui/button';
 import { Card, CardContent } from '../../../../ui/card';
@@ -56,11 +56,7 @@ export function FNAManagementView({
   const [fnas, setFnas] = useState<FNASummary[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
-  useEffect(() => {
-    loadFNAs();
-  }, [clientId, apiUrl]);
-
-  const loadFNAs = async (): Promise<void> => {
+  const loadFNAs = useCallback(async (): Promise<void> => {
     try {
       setIsLoading(true);
       const endpoint = resolveApiEndpoint(apiUrl || `/risk-planning-fna/client/${clientId}/list`);
@@ -88,7 +84,11 @@ export function FNAManagementView({
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [clientId, apiUrl]);
+
+  useEffect(() => {
+    loadFNAs();
+  }, [clientId, apiUrl, loadFNAs]);
 
   const getStatusBadge = (status: string) => {
     const statusConfig: Record<

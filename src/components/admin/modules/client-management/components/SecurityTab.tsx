@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { Button } from '../../../../ui/button';
 import { Input } from '../../../../ui/input';
 import { Label } from '../../../../ui/label';
@@ -151,20 +151,7 @@ export function SecurityTab({ selectedClient }: SecurityTabProps) {
   const [newEmailCode, setNewEmailCode] = useState('');
   const hasPendingEmailChange = Boolean(securityStatus.pendingEmailChange);
 
-  useEffect(() => {
-    if (selectedClient?.id) {
-      void fetchSecurityStatus();
-      void fetchActivityLogs();
-    }
-  }, [selectedClient?.id]);
-
-  useEffect(() => {
-    setCurrentAuthEmail(selectedClient.email);
-    setNewEmail('');
-    setNewEmailCode('');
-  }, [selectedClient.email, selectedClient.id]);
-
-  const fetchSecurityStatus = async () => {
+  const fetchSecurityStatus = useCallback(async () => {
     if (!selectedClient?.id) return;
 
     try {
@@ -181,9 +168,9 @@ export function SecurityTab({ selectedClient }: SecurityTabProps) {
     } finally {
       setStatusLoading(false);
     }
-  };
+  }, [selectedClient?.id]);
 
-  const fetchActivityLogs = async () => {
+  const fetchActivityLogs = useCallback(async () => {
     if (!selectedClient?.id) return;
 
     try {
@@ -199,7 +186,20 @@ export function SecurityTab({ selectedClient }: SecurityTabProps) {
     } finally {
       setActivityLoading(false);
     }
-  };
+  }, [selectedClient?.id]);
+
+  useEffect(() => {
+    if (selectedClient?.id) {
+      void fetchSecurityStatus();
+      void fetchActivityLogs();
+    }
+  }, [selectedClient?.id, fetchSecurityStatus, fetchActivityLogs]);
+
+  useEffect(() => {
+    setCurrentAuthEmail(selectedClient.email);
+    setNewEmail('');
+    setNewEmailCode('');
+  }, [selectedClient.email, selectedClient.id]);
 
   const handleSuspendAccount = async () => {
     if (!selectedClient?.id || !user?.id) return;

@@ -9,7 +9,7 @@
  * a hardcoded value, ensuring all document pages are displayed.
  */
 
-import React, { useState, useRef, useCallback, useEffect } from 'react';
+import React, { useState, useRef, useCallback, useEffect, useMemo } from 'react';
 import { Card } from '../../../../ui/card';
 import { Button } from '../../../../ui/button';
 import {
@@ -179,24 +179,36 @@ export function PDFViewer({
    * Effective selection set used for highlighting. Falls back to a single-id
    * set if the parent only passed the legacy `selectedFieldId`.
    */
-  const effectiveSelection = selectedFieldIds ?? new Set(selectedFieldId ? [selectedFieldId] : []);
-  const isFieldSelected = (id: string) => effectiveSelection.has(id);
-  const isPrimarySelection = (id: string) => id === selectedFieldId;
+  const effectiveSelection = useMemo(
+    () => selectedFieldIds ?? new Set(selectedFieldId ? [selectedFieldId] : []),
+    [selectedFieldIds, selectedFieldId],
+  );
+  const isFieldSelected = useCallback(
+    (id: string) => effectiveSelection.has(id),
+    [effectiveSelection],
+  );
+  const isPrimarySelection = useCallback((id: string) => id === selectedFieldId, [selectedFieldId]);
 
   // ── Snap helpers ──────────────────────────────────────────────────
   // We snap in PERCENT space (the storage unit) by converting the grid
   // size from PDF points to a per-page percent step. The studio passes
   // `snapToGrid` so users can hold Alt to disable per-drag.
-  const snapPctX = (pct: number, pageWidthPts: number): number => {
-    if (!snapToGrid || pageWidthPts <= 0) return pct;
-    const stepPct = (gridSize / pageWidthPts) * 100;
-    return Math.round(pct / stepPct) * stepPct;
-  };
-  const snapPctY = (pct: number, pageHeightPts: number): number => {
-    if (!snapToGrid || pageHeightPts <= 0) return pct;
-    const stepPct = (gridSize / pageHeightPts) * 100;
-    return Math.round(pct / stepPct) * stepPct;
-  };
+  const snapPctX = useCallback(
+    (pct: number, pageWidthPts: number): number => {
+      if (!snapToGrid || pageWidthPts <= 0) return pct;
+      const stepPct = (gridSize / pageWidthPts) * 100;
+      return Math.round(pct / stepPct) * stepPct;
+    },
+    [snapToGrid, gridSize],
+  );
+  const snapPctY = useCallback(
+    (pct: number, pageHeightPts: number): number => {
+      if (!snapToGrid || pageHeightPts <= 0) return pct;
+      const stepPct = (gridSize / pageHeightPts) * 100;
+      return Math.round(pct / stepPct) * stepPct;
+    },
+    [snapToGrid, gridSize],
+  );
 
   // Fields that are visually rendered after applying the optional
   // visible-signer filter from the studio's legend. We always render the
@@ -283,6 +295,7 @@ export function PDFViewer({
         pdfDocRef.current = null;
       }
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [documentUrl]);
 
   // ── Render pages to canvases ──────────────────────────────────────
@@ -553,7 +566,7 @@ export function PDFViewer({
       document.addEventListener('mousemove', handleMouseMove);
       document.addEventListener('mouseup', handleMouseUp);
     },
-    [readOnly, onFieldUpdate, fields, pages, effectiveSelection, gridSize, snapToGrid],
+    [readOnly, onFieldUpdate, fields, pages, effectiveSelection, gridSize, snapPctX, snapPctY],
   );
 
   // ── Marquee selection ──────────────────────────────────────────────
@@ -780,8 +793,6 @@ export function PDFViewer({
       draggingField,
       resizingField,
       selectedSignerId,
-      selectedFieldId,
-      effectiveSelection,
       readOnly,
       onFieldDelete,
       onFieldClick,
@@ -790,6 +801,8 @@ export function PDFViewer({
       handleFieldResizeMouseDown,
       getSignerColor,
       getSignerName,
+      isFieldSelected,
+      isPrimarySelection,
     ],
   );
 

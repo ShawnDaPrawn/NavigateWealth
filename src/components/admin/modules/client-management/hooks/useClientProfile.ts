@@ -184,7 +184,7 @@ export function useClientProfile(clientData: Client, onSave?: (data: ProfileData
   const [incomeValidationError, setIncomeValidationError] = useState('');
 
   // Check if all 10 questions have been answered
-  const allQuestionsAnswered = () => {
+  const allQuestionsAnswered = useCallback(() => {
     const assessment = profileData.riskAssessment;
     return (
       assessment.question1 > 0 &&
@@ -198,14 +198,14 @@ export function useClientProfile(clientData: Client, onSave?: (data: ProfileData
       assessment.question9 > 0 &&
       assessment.question10 > 0
     );
-  };
+  }, [profileData.riskAssessment]);
 
   // Check if assessment has been completed (all questions answered)
   useEffect(() => {
     if (allQuestionsAnswered()) {
       setAssessmentStarted(true);
     }
-  }, [profileData.riskAssessment]);
+  }, [profileData.riskAssessment, allQuestionsAnswered]);
 
   // Load profile data from backend when client changes
   useEffect(() => {
@@ -284,7 +284,7 @@ export function useClientProfile(clientData: Client, onSave?: (data: ProfileData
     };
 
     loadClientProfile();
-  }, [clientData.id, queryClient]);
+  }, [clientData, queryClient]);
 
   // Capture snapshot of merged profileData after server data has been applied.
   // Runs once after load, and again after save. The snapshot represents the

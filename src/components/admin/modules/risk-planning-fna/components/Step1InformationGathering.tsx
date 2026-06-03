@@ -8,7 +8,7 @@
  * - All inputs validated before proceeding to Step 2
  */
 
-import React, { useEffect } from 'react';
+import React, { useEffect, useCallback } from 'react';
 import { useForm, type Resolver } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { ArrowRight, ArrowLeft, Info, AlertCircle } from 'lucide-react';
@@ -106,88 +106,91 @@ export function Step1InformationGathering({
     }
   }, [clientId, initialData, prefillStarted, startPrefill]);
 
+  const populateFromInitialData = useCallback(
+    (data: Partial<InformationGatheringInput>) => {
+      form.setValue('grossMonthlyIncome', formatOptionalNumber(data.grossMonthlyIncome, ''));
+      form.setValue('netMonthlyIncome', formatOptionalNumber(data.netMonthlyIncome, ''));
+      form.setValue(
+        'incomeEscalationAssumption',
+        formatOptionalNumber(data.incomeEscalationAssumption, '6'),
+      );
+      form.setValue('currentAge', formatOptionalNumber(data.currentAge, ''));
+      form.setValue('retirementAge', formatOptionalNumber(data.retirementAge, '65'));
+      form.setValue('employmentType', data.employmentType ?? DEFAULT_FORM_VALUES.employmentType);
+      form.setValue('totalOutstandingDebts', formatOptionalNumber(data.totalOutstandingDebts));
+      form.setValue('totalCurrentAssets', formatOptionalNumber(data.totalCurrentAssets));
+      form.setValue(
+        'totalHouseholdMonthlyExpenditure',
+        formatOptionalNumber(data.totalHouseholdMonthlyExpenditure),
+      );
+      form.setValue('spouseFullName', data.spouseFullName || '');
+      form.setValue(
+        'spouseAverageMonthlyIncome',
+        formatOptionalNumber(data.spouseAverageMonthlyIncome, ''),
+      );
+      form.setValue(
+        'dependants',
+        (data.dependants ?? []).map((dep) => ({
+          id: dep.id,
+          relationship: dep.relationship,
+          dependencyTerm: formatOptionalNumber(dep.dependencyTerm),
+          monthlyEducationCost: formatOptionalNumber(dep.monthlyEducationCost),
+        })),
+      );
+
+      const existing = data.existingCover;
+      form.setValue('existingCoverLifePersonal', formatOptionalNumber(existing?.life?.personal));
+      form.setValue('existingCoverLifeGroup', formatOptionalNumber(existing?.life?.group));
+      form.setValue(
+        'existingCoverDisabilityPersonal',
+        formatOptionalNumber(existing?.disability?.personal),
+      );
+      form.setValue(
+        'existingCoverDisabilityGroup',
+        formatOptionalNumber(existing?.disability?.group),
+      );
+      form.setValue(
+        'existingCoverSevereIllnessPersonal',
+        formatOptionalNumber(existing?.severeIllness?.personal),
+      );
+      form.setValue(
+        'existingCoverSevereIllnessGroup',
+        formatOptionalNumber(existing?.severeIllness?.group),
+      );
+      form.setValue(
+        'existingCoverIPTemporaryPersonal',
+        formatOptionalNumber(existing?.incomeProtection?.temporary?.personal),
+      );
+      form.setValue(
+        'existingCoverIPTemporaryGroup',
+        formatOptionalNumber(existing?.incomeProtection?.temporary?.group),
+      );
+      form.setValue(
+        'existingCoverIPPermanentPersonal',
+        formatOptionalNumber(existing?.incomeProtection?.permanent?.personal),
+      );
+      form.setValue(
+        'existingCoverIPPermanentGroup',
+        formatOptionalNumber(existing?.incomeProtection?.permanent?.group),
+      );
+
+      const ipSettings = data.incomeProtectionSettings;
+      if (ipSettings?.temporary?.benefitPeriod) {
+        form.setValue('ipTemporaryBenefitPeriod', ipSettings.temporary.benefitPeriod);
+      }
+      if (ipSettings?.permanent?.escalation) {
+        form.setValue('ipPermanentEscalation', ipSettings.permanent.escalation);
+      }
+    },
+    [form],
+  );
+
   // Auto-populate from saved intake / handoff data only
   useEffect(() => {
     if (hasPersistedRiskIntake(initialData)) {
       populateFromInitialData(initialData!);
     }
-  }, [initialData]);
-
-  const populateFromInitialData = (data: Partial<InformationGatheringInput>) => {
-    form.setValue('grossMonthlyIncome', formatOptionalNumber(data.grossMonthlyIncome, ''));
-    form.setValue('netMonthlyIncome', formatOptionalNumber(data.netMonthlyIncome, ''));
-    form.setValue(
-      'incomeEscalationAssumption',
-      formatOptionalNumber(data.incomeEscalationAssumption, '6'),
-    );
-    form.setValue('currentAge', formatOptionalNumber(data.currentAge, ''));
-    form.setValue('retirementAge', formatOptionalNumber(data.retirementAge, '65'));
-    form.setValue('employmentType', data.employmentType ?? DEFAULT_FORM_VALUES.employmentType);
-    form.setValue('totalOutstandingDebts', formatOptionalNumber(data.totalOutstandingDebts));
-    form.setValue('totalCurrentAssets', formatOptionalNumber(data.totalCurrentAssets));
-    form.setValue(
-      'totalHouseholdMonthlyExpenditure',
-      formatOptionalNumber(data.totalHouseholdMonthlyExpenditure),
-    );
-    form.setValue('spouseFullName', data.spouseFullName || '');
-    form.setValue(
-      'spouseAverageMonthlyIncome',
-      formatOptionalNumber(data.spouseAverageMonthlyIncome, ''),
-    );
-    form.setValue(
-      'dependants',
-      (data.dependants ?? []).map((dep) => ({
-        id: dep.id,
-        relationship: dep.relationship,
-        dependencyTerm: formatOptionalNumber(dep.dependencyTerm),
-        monthlyEducationCost: formatOptionalNumber(dep.monthlyEducationCost),
-      })),
-    );
-
-    const existing = data.existingCover;
-    form.setValue('existingCoverLifePersonal', formatOptionalNumber(existing?.life?.personal));
-    form.setValue('existingCoverLifeGroup', formatOptionalNumber(existing?.life?.group));
-    form.setValue(
-      'existingCoverDisabilityPersonal',
-      formatOptionalNumber(existing?.disability?.personal),
-    );
-    form.setValue(
-      'existingCoverDisabilityGroup',
-      formatOptionalNumber(existing?.disability?.group),
-    );
-    form.setValue(
-      'existingCoverSevereIllnessPersonal',
-      formatOptionalNumber(existing?.severeIllness?.personal),
-    );
-    form.setValue(
-      'existingCoverSevereIllnessGroup',
-      formatOptionalNumber(existing?.severeIllness?.group),
-    );
-    form.setValue(
-      'existingCoverIPTemporaryPersonal',
-      formatOptionalNumber(existing?.incomeProtection?.temporary?.personal),
-    );
-    form.setValue(
-      'existingCoverIPTemporaryGroup',
-      formatOptionalNumber(existing?.incomeProtection?.temporary?.group),
-    );
-    form.setValue(
-      'existingCoverIPPermanentPersonal',
-      formatOptionalNumber(existing?.incomeProtection?.permanent?.personal),
-    );
-    form.setValue(
-      'existingCoverIPPermanentGroup',
-      formatOptionalNumber(existing?.incomeProtection?.permanent?.group),
-    );
-
-    const ipSettings = data.incomeProtectionSettings;
-    if (ipSettings?.temporary?.benefitPeriod) {
-      form.setValue('ipTemporaryBenefitPeriod', ipSettings.temporary.benefitPeriod);
-    }
-    if (ipSettings?.permanent?.escalation) {
-      form.setValue('ipPermanentEscalation', ipSettings.permanent.escalation);
-    }
-  };
+  }, [initialData, populateFromInitialData]);
 
   const onSubmit = (formValues: InformationGatheringFormValues) => {
     const inputData = transformFormToInput(formValues);

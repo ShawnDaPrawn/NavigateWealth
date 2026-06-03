@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { useAuth } from '../auth/AuthContext';
 import { projectId, publicAnonKey } from '../../utils/supabase/info';
 import { SUPER_ADMIN_EMAIL } from '../../utils/auth/constants';
@@ -33,16 +33,7 @@ export function ApplicationStatusGuard({
   const [_hasPolicies, setHasPolicies] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    if (!user?.id) {
-      setLoading(false);
-      return;
-    }
-
-    fetchUserApplicationStatus();
-  }, [user?.id]);
-
-  const fetchUserApplicationStatus = async () => {
+  const fetchUserApplicationStatus = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
@@ -126,7 +117,16 @@ export function ApplicationStatusGuard({
     } finally {
       setLoading(false);
     }
-  };
+  }, [user]);
+
+  useEffect(() => {
+    if (!user?.id) {
+      setLoading(false);
+      return;
+    }
+
+    fetchUserApplicationStatus();
+  }, [user?.id, fetchUserApplicationStatus]);
 
   // Loading state
   if (loading) {

@@ -58,7 +58,7 @@ export function OtpVerificationStep({
     if (isComplete && !isVerifying) {
       handleVerify();
     }
-  }, [otp, isVerifying]);
+  }, [otp, isVerifying, handleVerify]);
 
   const handleOtpChange = (index: number, value: string) => {
     if (value && !/^\d$/.test(value)) return;

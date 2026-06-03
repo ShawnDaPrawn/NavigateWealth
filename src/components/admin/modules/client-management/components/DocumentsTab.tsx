@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { filterDocuments, groupDocumentsByPack, type DocumentItem } from './documentsUtils';
 import { DocumentStatsCards } from './DocumentStatsCards';
 import { DocumentFiltersBar } from './DocumentFiltersBar';
@@ -60,13 +60,7 @@ export function DocumentsTab({ selectedClient }: DocumentsTabProps) {
   const [filterDateStart, setFilterDateStart] = useState('');
   const [filterDateEnd, setFilterDateEnd] = useState('');
 
-  useEffect(() => {
-    if (selectedClient?.id) {
-      fetchDocuments();
-    }
-  }, [selectedClient?.id]);
-
-  const fetchDocuments = async () => {
+  const fetchDocuments = useCallback(async () => {
     if (!selectedClient?.id) return;
 
     const maxRetries = 2;
@@ -99,7 +93,13 @@ export function DocumentsTab({ selectedClient }: DocumentsTabProps) {
         setLoading(false);
       }
     }
-  };
+  }, [selectedClient?.id]);
+
+  useEffect(() => {
+    if (selectedClient?.id) {
+      fetchDocuments();
+    }
+  }, [selectedClient?.id, fetchDocuments]);
 
   const handleSendEmail = async () => {
     if (!selectedClient?.id || uploadedDocIds.length === 0) return;

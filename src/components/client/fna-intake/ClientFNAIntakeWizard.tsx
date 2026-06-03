@@ -171,7 +171,7 @@ export function ClientFNAIntakeWizard({
     } finally {
       setIsSaving(false);
     }
-  }, [session?.id, pendingInputs, persistDraft, invalidateStatus, onComplete, isReadOnly]);
+  }, [session, pendingInputs, persistDraft, invalidateStatus, onComplete, isReadOnly]);
 
   if (loading) {
     return (

@@ -9,7 +9,7 @@
  * Guidelines refs: §4.2 (thin dispatcher), §5.1 (API boundary), §8.4 (AI builder)
  */
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { useAuth } from '../auth/AuthContext';
 import {
   ServicePageLayout,
@@ -96,11 +96,7 @@ export function DynamicServicePageWrapper({
     return [categoryId];
   }, [categoryId, subCategories]);
 
-  useEffect(() => {
-    if (user?.id) fetchData();
-  }, [user?.id, categoryId]);
-
-  const fetchData = async () => {
+  const fetchData = useCallback(async () => {
     setLoading(true);
     try {
       // 1. Fetch schemas for all relevant category IDs in parallel
@@ -151,7 +147,11 @@ export function DynamicServicePageWrapper({
     } finally {
       setLoading(false);
     }
-  };
+  }, [allCategoryIds, user?.id, categoryId]);
+
+  useEffect(() => {
+    if (user?.id) fetchData();
+  }, [user?.id, categoryId, fetchData]);
 
   // ── Helpers ──────────────────────────────────────────────────────────
 

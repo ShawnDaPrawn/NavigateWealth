@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -81,28 +81,31 @@ export function GoalFormDialog({
   const [selectedPolicyIds, setSelectedPolicyIds] = useState<string[]>([]);
 
   // Helper to find value by field name in the relevant schema
-  const getValueByName = (policy: PolicyRecord, possibleNames: string[]) => {
-    if (!policy) return undefined;
+  const getValueByName = useCallback(
+    (policy: PolicyRecord, possibleNames: string[]) => {
+      if (!policy) return undefined;
 
-    // Determine which schema to use.
-    // Prioritize the specific sub-category schema if available
-    let schema = schemas[policy.categoryId ?? ''];
+      // Determine which schema to use.
+      // Prioritize the specific sub-category schema if available
+      let schema = schemas[policy.categoryId ?? ''];
 
-    // If not found, check if it's in the main schema (often the case for single-category views)
-    if (!schema || schema.length === 0) {
-      schema = mainSchema;
-    }
+      // If not found, check if it's in the main schema (often the case for single-category views)
+      if (!schema || schema.length === 0) {
+        schema = mainSchema;
+      }
 
-    if (!schema || schema.length === 0) return undefined;
+      if (!schema || schema.length === 0) return undefined;
 
-    // Find field definition by name (case insensitive)
-    const field = schema.find((f: SchemaField) =>
-      possibleNames.some((n) => n.toLowerCase() === f.name.toLowerCase()),
-    );
-    if (!field) return undefined;
+      // Find field definition by name (case insensitive)
+      const field = schema.find((f: SchemaField) =>
+        possibleNames.some((n) => n.toLowerCase() === f.name.toLowerCase()),
+      );
+      if (!field) return undefined;
 
-    return policy.data?.[field.id];
-  };
+      return policy.data?.[field.id];
+    },
+    [schemas, mainSchema],
+  );
 
   // Helper to safely extract policy number
   const getPolicyNumber = (policy: PolicyRecord): string => {
@@ -152,39 +155,49 @@ export function GoalFormDialog({
   };
 
   // Helper to get Value
-  const getPolicyValue = (policy: PolicyRecord) => {
-    // Try schema lookup first
-    const schemaValue = getValueByName(policy, [
-      'Current Value',
-      'Fund Value',
-      'Capital Value',
-      'Amount Due/Refundable',
-      'Cover Amount',
-    ]);
-    if (schemaValue !== undefined) return cleanNumber(schemaValue);
+  const getPolicyValue = useCallback(
+    (policy: PolicyRecord) => {
+      // Try schema lookup first
+      const schemaValue = getValueByName(policy, [
+        'Current Value',
+        'Fund Value',
+        'Capital Value',
+        'Amount Due/Refundable',
+        'Cover Amount',
+      ]);
+      if (schemaValue !== undefined) return cleanNumber(schemaValue);
 
-    return (
-      cleanNumber(policy.data?.invest_current_value) ||
-      cleanNumber(policy.data?.inv_3) ||
-      cleanNumber(policy.data?.inv_vol_3) ||
-      cleanNumber(policy.data?.inv_gua_3) ||
-      0
-    );
-  };
+      return (
+        cleanNumber(policy.data?.invest_current_value) ||
+        cleanNumber(policy.data?.inv_3) ||
+        cleanNumber(policy.data?.inv_vol_3) ||
+        cleanNumber(policy.data?.inv_gua_3) ||
+        0
+      );
+    },
+    [getValueByName],
+  );
 
   // Helper to get Premium
-  const getPolicyPremium = (policy: PolicyRecord) => {
-    // Try schema lookup first
-    const schemaValue = getValueByName(policy, ['Premium', 'Monthly Contribution', 'Contribution']);
-    if (schemaValue !== undefined) return cleanNumber(schemaValue);
+  const getPolicyPremium = useCallback(
+    (policy: PolicyRecord) => {
+      // Try schema lookup first
+      const schemaValue = getValueByName(policy, [
+        'Premium',
+        'Monthly Contribution',
+        'Contribution',
+      ]);
+      if (schemaValue !== undefined) return cleanNumber(schemaValue);
 
-    return (
-      cleanNumber(policy.data?.invest_monthly_contribution) ||
-      cleanNumber(policy.data?.inv_6) ||
-      cleanNumber(policy.data?.inv_vol_6) ||
-      0
-    );
-  };
+      return (
+        cleanNumber(policy.data?.invest_monthly_contribution) ||
+        cleanNumber(policy.data?.inv_6) ||
+        cleanNumber(policy.data?.inv_vol_6) ||
+        0
+      );
+    },
+    [getValueByName],
+  );
 
   // Linked Values Calculation
   const linkedSummary = React.useMemo(() => {
@@ -194,7 +207,7 @@ export function GoalFormDialog({
       lumpSum: linked.reduce((sum, p) => sum + getPolicyValue(p), 0),
       monthly: linked.reduce((sum, p) => sum + getPolicyPremium(p), 0),
     };
-  }, [selectedPolicyIds, policies]);
+  }, [selectedPolicyIds, policies, getPolicyValue, getPolicyPremium]);
 
   // AdHoc Input State
   const [newAdHocAmount, setNewAdHocAmount] = useState('');

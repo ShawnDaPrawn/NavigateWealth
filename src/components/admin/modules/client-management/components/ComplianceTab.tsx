@@ -15,7 +15,7 @@
  * white bg with purple borders for active state.
  */
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { Card, CardContent, CardHeader, CardTitle } from '../../../../ui/card';
 import { Badge } from '../../../../ui/badge';
@@ -199,17 +199,7 @@ export function ComplianceTab({ selectedClient }: ComplianceTabProps) {
 
   // ─── Registration ─────────────────────────────────────────────────────
 
-  useEffect(() => {
-    checkRegistration();
-  }, [selectedClient.id]);
-
-  useEffect(() => {
-    if (registrationStatus === 'registered') {
-      fetchActivityLog();
-    }
-  }, [registrationStatus, selectedClient.id]);
-
-  const checkRegistration = async () => {
+  const checkRegistration = useCallback(async () => {
     try {
       setRegistrationStatus('loading');
       const data = await api.get<{ registered?: boolean; honeycombId?: string }>(
@@ -225,9 +215,9 @@ export function ComplianceTab({ selectedClient }: ComplianceTabProps) {
       console.error('Error checking registration:', error);
       setRegistrationStatus('unregistered');
     }
-  };
+  }, [selectedClient.id]);
 
-  const fetchActivityLog = async () => {
+  const fetchActivityLog = useCallback(async () => {
     try {
       setIsLoadingActivity(true);
       const data = await api.get<{ activity?: ComplianceActivity[] }>(
@@ -239,7 +229,17 @@ export function ComplianceTab({ selectedClient }: ComplianceTabProps) {
     } finally {
       setIsLoadingActivity(false);
     }
-  };
+  }, [selectedClient.id]);
+
+  useEffect(() => {
+    checkRegistration();
+  }, [selectedClient.id, checkRegistration]);
+
+  useEffect(() => {
+    if (registrationStatus === 'registered') {
+      fetchActivityLog();
+    }
+  }, [registrationStatus, selectedClient.id, fetchActivityLog]);
 
   const handleRegister = async () => {
     setIsRegistering(true);

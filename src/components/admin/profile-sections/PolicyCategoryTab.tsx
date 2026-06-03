@@ -3,7 +3,7 @@
  * Displays and manages policies for a specific category with dynamic forms
  */
 
-import React, { useState, useEffect, Suspense } from 'react';
+import React, { useState, useEffect, Suspense, useCallback } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '../../ui/card';
 import { Button } from '../../ui/button';
 import { Plus, Loader2, FileBarChart, EyeOff, History, Target } from 'lucide-react';
@@ -202,39 +202,7 @@ export function PolicyCategoryTab({
   const fnaListApiUrl = getFnaListApiUrl();
   const fnaListTitle = `${categoryName} FNAs`;
 
-  useEffect(() => {
-    loadPolicies();
-    loadTableStructure();
-  }, [categoryId, clientId, showArchived]);
-
-  // Update Linked Goals Map when policies or goals change
-  useEffect(() => {
-    if (categorySubtabId === 'investments' && goals.length > 0 && policies.length > 0) {
-      const map: Record<string, LinkedGoalStatus> = {};
-
-      policies.forEach((policy) => {
-        // Find if policy is linked to any goal
-        const linkedGoal = goals.find((g) => g.linkedInvestmentIds?.includes(policy.id));
-
-        if (linkedGoal) {
-          const calc = calculateGoalStatus(linkedGoal, policies);
-          map[policy.id] = {
-            name: linkedGoal.name,
-            status: calc.status,
-            targetAmount: linkedGoal.targetAmount,
-            requiredMonthly: calc.requiredMonthlyContribution,
-            targetDate: linkedGoal.targetDate,
-          };
-        }
-      });
-
-      setLinkedGoalsMap(map);
-    } else {
-      setLinkedGoalsMap({});
-    }
-  }, [goals, policies, categorySubtabId]);
-
-  const loadTableStructure = async () => {
+  const loadTableStructure = useCallback(async () => {
     // Helper to fetch schema for a specific category with retry for cold-start resilience
     const fetchSchemaForCategory = async (catId: string, retries = 2): Promise<SchemaField[]> => {
       for (let attempt = 0; attempt <= retries; attempt++) {
@@ -293,9 +261,9 @@ export function PolicyCategoryTab({
     } else {
       setSubCategorySchemas({});
     }
-  };
+  }, [categoryId]);
 
-  const loadPolicies = async () => {
+  const loadPolicies = useCallback(async () => {
     setIsLoading(true);
     try {
       const data = await api.get<{ policies?: PolicyRecord[] }>(
@@ -308,7 +276,39 @@ export function PolicyCategoryTab({
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [clientId, categoryId, showArchived]);
+
+  useEffect(() => {
+    loadPolicies();
+    loadTableStructure();
+  }, [categoryId, clientId, showArchived, loadPolicies, loadTableStructure]);
+
+  // Update Linked Goals Map when policies or goals change
+  useEffect(() => {
+    if (categorySubtabId === 'investments' && goals.length > 0 && policies.length > 0) {
+      const map: Record<string, LinkedGoalStatus> = {};
+
+      policies.forEach((policy) => {
+        // Find if policy is linked to any goal
+        const linkedGoal = goals.find((g) => g.linkedInvestmentIds?.includes(policy.id));
+
+        if (linkedGoal) {
+          const calc = calculateGoalStatus(linkedGoal, policies);
+          map[policy.id] = {
+            name: linkedGoal.name,
+            status: calc.status,
+            targetAmount: linkedGoal.targetAmount,
+            requiredMonthly: calc.requiredMonthlyContribution,
+            targetDate: linkedGoal.targetDate,
+          };
+        }
+      });
+
+      setLinkedGoalsMap(map);
+    } else {
+      setLinkedGoalsMap({});
+    }
+  }, [goals, policies, categorySubtabId]);
 
   const handleAddPolicy = () => {
     setEditingPolicy(null);

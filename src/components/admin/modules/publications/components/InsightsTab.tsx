@@ -117,7 +117,7 @@ export const InsightsTab = memo(function InsightsTab({
     if (!(activeCategory in pageMap)) {
       setPageMap((prev) => ({ ...prev, [activeCategory]: 1 }));
     }
-  }, [activeCategory]);
+  }, [activeCategory, pageMap]);
 
   // Sort articles most-recent-first, then paginate
   const sortedArticles = useMemo(() => {
