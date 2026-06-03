@@ -29,10 +29,7 @@ import {
   sanitisePortalFlow,
 } from './integrations-portal-flow.ts';
 import type { KvProvider } from './integrations-types.ts';
-import type {
-  PortalCredentialRecord,
-  PortalProviderFlow,
-} from './integrations-portal-types.ts';
+import type { PortalCredentialRecord, PortalProviderFlow } from './integrations-portal-types.ts';
 
 const log = createModuleLogger('integrations-portal-flow-routes');
 

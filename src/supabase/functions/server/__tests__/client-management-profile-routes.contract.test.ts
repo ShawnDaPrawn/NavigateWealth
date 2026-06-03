@@ -91,9 +91,21 @@ vi.mock('../email-service.ts', () => ({
   sendEmail: vi.fn(async () => ({ success: true })),
 }));
 
-// ── asyncHandler pass-through ─────────────────────────────────────────────────
+// ── asyncHandler test double ──────────────────────────────────────────────────
 vi.mock('../error.middleware.ts', () => ({
-  asyncHandler: (fn: any) => fn,
+  asyncHandler: (fn: any) => async (c: any) => {
+    try {
+      return await fn(c);
+    } catch (error: any) {
+      if (error?.name === 'ZodError' || Array.isArray(error?.errors)) {
+        return c.json({ error: 'Validation failed', errors: error.errors || error.issues }, 400);
+      }
+      return c.json(
+        { error: error instanceof Error ? error.message : 'Internal server error' },
+        500,
+      );
+    }
+  },
 }));
 
 // ── Supabase client stub ──────────────────────────────────────────────────────
@@ -394,7 +406,11 @@ describe('client-management-profile-routes.ts route contracts', () => {
     it('returns 200 with { success, data } on valid new profile', async () => {
       const res = await profileRouter.request('/create-default', {
         method: 'POST',
-        body: JSON.stringify({ userId: TEST_UUID, email: 'test@test.co', displayName: 'Test User' }),
+        body: JSON.stringify({
+          userId: TEST_UUID,
+          email: 'test@test.co',
+          displayName: 'Test User',
+        }),
         headers: { 'Content-Type': 'application/json' },
       });
       expect(res.status).toBe(200);
@@ -467,7 +483,11 @@ describe('client-management-profile-routes.ts route contracts', () => {
       kvStore.set(PROFILE_KEY, { userId: TEST_UUID, accountStatus: 'no_application' });
       const res = await profileRouter.request('/update-status', {
         method: 'POST',
-        body: JSON.stringify({ userId: TEST_UUID, accountStatus: 'pending', accountType: 'personal' }),
+        body: JSON.stringify({
+          userId: TEST_UUID,
+          accountStatus: 'pending',
+          accountType: 'personal',
+        }),
         headers: { 'Content-Type': 'application/json' },
       });
       expect(res.status).toBe(200);

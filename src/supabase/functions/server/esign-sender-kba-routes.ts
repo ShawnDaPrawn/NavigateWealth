@@ -3,7 +3,12 @@ import { getAuthContext, AuthError } from './auth-mw.ts';
 import { createModuleLogger } from './stderr-logger.ts';
 import { getErrMsg } from './shared-logger-utils.ts';
 import { rateLimit } from './esign-rate-limit.ts';
-import { getSignerByToken, getEnvelopeDetails, updateSignerStatus, logAuditEvent } from './esign-services.ts';
+import {
+  getSignerByToken,
+  getEnvelopeDetails,
+  updateSignerStatus,
+  logAuditEvent,
+} from './esign-services.ts';
 import { runKbaCheck, getKbaStatus } from './kba-service.ts';
 
 const log = createModuleLogger('esign-sender-kba-routes');

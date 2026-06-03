@@ -6,8 +6,19 @@ import { formatZodError } from './shared-validation-utils.ts';
 import { OtpVerifySchema } from './esign-validation.ts';
 import { getRequestMetadata, audActor } from './esign-route-helpers.ts';
 import { checkRateLimit, RATE_LIMITS } from './rateLimiter.ts';
-import { getEnvelopeDetails, getSignerByToken, updateSignerStatus, logAuditEvent } from './esign-services.ts';
-import { verifyOTP, markOTPVerified, clearOTP, generateAndStoreOTP, verifyAccessCode } from './esign-otp.ts';
+import {
+  getEnvelopeDetails,
+  getSignerByToken,
+  updateSignerStatus,
+  logAuditEvent,
+} from './esign-services.ts';
+import {
+  verifyOTP,
+  markOTPVerified,
+  clearOTP,
+  generateAndStoreOTP,
+  verifyAccessCode,
+} from './esign-otp.ts';
 import { createOTPEmail } from './esign-email-templates.ts';
 import { sendEmail } from './email-service.ts';
 import { sendOtpSms } from './sms-service.ts';

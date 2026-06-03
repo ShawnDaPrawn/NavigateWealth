@@ -41,11 +41,17 @@ export const SaveSchemaInputSchema = z.object({
     .array(
       z
         .object({
-          key: z.string().min(1),
+          id: z.string().min(1).optional(),
+          key: z.string().min(1).optional(),
+          name: z.string().optional(),
           label: z.string().optional(),
           type: z.string().optional(),
         })
-        .passthrough(),
+        .passthrough()
+        .refine((field) => field.id || field.key, {
+          message: 'Field ID is required',
+          path: ['id'],
+        }),
     )
     .min(1, 'At least one field is required'),
 });
@@ -72,7 +78,7 @@ export const UpdatePolicySchema = z.object({
 export const ArchivePolicySchema = z.object({
   id: z.string().min(1, 'Policy ID is required'),
   clientId: z.string().min(1, 'Client ID is required'),
-  reason: z.string().min(1, 'Archive reason is required').max(2000),
+  reason: z.string().min(1, 'Archive reason is required').max(2000).optional(),
 });
 
 export const ReinstatePolicySchema = z.object({

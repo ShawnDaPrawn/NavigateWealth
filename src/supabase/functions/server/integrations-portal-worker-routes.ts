@@ -23,10 +23,7 @@ import {
 } from './integrations-portal-brain.ts';
 import { loadPortalCredentialRecord } from './integrations-portal-credentials.ts';
 import { requirePortalWorker } from './integrations-portal-guards.ts';
-import {
-  uploadPortalLiveView,
-  normaliseRunMode,
-} from './integrations-portal-runtime.ts';
+import { uploadPortalLiveView, normaliseRunMode } from './integrations-portal-runtime.ts';
 import {
   normalisePolicyScheduleConfig,
   normaliseDocumentArtifactConfigs,
@@ -58,10 +55,7 @@ import type {
   PortalProviderFlow,
   PortalFlowField,
 } from './integrations-portal-types.ts';
-import type {
-  IntegrationConfig,
-  IntegrationFieldBinding,
-} from './integrations-core-types.ts';
+import type { IntegrationConfig, IntegrationFieldBinding } from './integrations-core-types.ts';
 
 const log = createModuleLogger('integrations-portal-worker-routes');
 

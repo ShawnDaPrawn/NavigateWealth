@@ -1,6 +1,8 @@
 import { Hono } from 'npm:hono';
+import { ZodError } from 'npm:zod';
 import { createModuleLogger } from './stderr-logger.ts';
 import { getErrMsg } from './shared-logger-utils.ts';
+import { formatZodError } from './shared-validation-utils.ts';
 import * as kv from './kv_store.tsx';
 import * as service from './honeycomb-service.ts';
 import { RegisterClientSchema } from './honeycomb-validation.ts';
@@ -115,6 +117,9 @@ app.post('/register-client', async (c) => {
 
     return c.json({ success: true, honeycombId });
   } catch (e: unknown) {
+    if (e instanceof ZodError) {
+      return c.json({ error: 'Validation failed', ...formatZodError(e) }, 400);
+    }
     log.error('Register error:', e);
     return c.json({ error: getErrMsg(e) }, 500);
   }
