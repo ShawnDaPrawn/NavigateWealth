@@ -149,7 +149,10 @@ firmAdminRoutes.put('/branding', async (c) => {
     return c.json({ branding: saved });
   } catch (error: unknown) {
     if (error instanceof AuthError) {
-      return c.json({ error: error.message }, error.statusCode);
+      return new Response(JSON.stringify({ error: error.message }), {
+        status: error.statusCode,
+        headers: { 'Content-Type': 'application/json' },
+      });
     }
     const message = error instanceof Error ? error.message : 'Branding write failed';
     // Validation errors surface as 400; everything else is treated as 500.

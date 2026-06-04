@@ -169,7 +169,10 @@ export function handleError(c: Context, error: unknown) {
   logger.error('Route error', error);
 
   if (error instanceof AuthError) {
-    return c.json({ error: error.message, code: error.code }, error.statusCode);
+    return new Response(JSON.stringify({ error: error.message, code: error.code }), {
+      status: error.statusCode,
+      headers: { 'Content-Type': 'application/json' },
+    });
   }
 
   const message = error instanceof Error ? error.message : 'Internal Server Error';

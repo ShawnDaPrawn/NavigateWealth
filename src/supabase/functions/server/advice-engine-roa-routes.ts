@@ -56,7 +56,10 @@ app.get(
     }
 
     const { clientId } = ClientIdParamSchema.parse(c.req.param());
-    const context = await roaService.buildClientContext(clientId, c.get('user'));
+    const context = await roaService.buildClientContext(
+      clientId,
+      c.get('user') as { id: string; email?: string },
+    );
 
     return c.json({ context });
   }),
@@ -147,7 +150,10 @@ app.post(
     }
 
     const body = await c.req.json();
-    const contract = await roaContractService.saveContract(body, c.get('user'));
+    const contract = await roaContractService.saveContract(
+      body,
+      c.get('user') as { id: string; email?: string },
+    );
     return c.json({ contract });
   }),
 );
@@ -167,7 +173,7 @@ app.put(
     const body = await c.req.json();
     const contract = await roaContractService.saveContract(
       { ...body, id: c.req.param('moduleId')! },
-      c.get('user'),
+      c.get('user') as { id: string; email?: string },
     );
     return c.json({ contract });
   }),
@@ -187,7 +193,7 @@ app.post(
 
     const contract = await roaContractService.publishContract(
       c.req.param('moduleId')!,
-      c.get('user'),
+      c.get('user') as { id: string; email?: string },
     );
     return c.json({ contract });
   }),
@@ -207,7 +213,7 @@ app.post(
 
     const contract = await roaContractService.archiveContract(
       c.req.param('moduleId')!,
-      c.get('user'),
+      c.get('user') as { id: string; email?: string },
     );
     return c.json({ contract });
   }),
@@ -257,7 +263,10 @@ app.post(
 
     const userId = c.get('userId');
     const body = await c.req.json();
-    const draft = await roaService.saveDraft({ ...body, adviserId: userId }, c.get('user'));
+    const draft = await roaService.saveDraft(
+      { ...body, adviserId: userId },
+      c.get('user') as { id: string; email?: string },
+    );
 
     return c.json({ draft });
   }),
@@ -298,7 +307,7 @@ app.put(
     const body = await c.req.json();
     const draft = await roaService.saveDraft(
       { ...body, id: draftId, adviserId: existingDraft.adviserId },
-      c.get('user'),
+      c.get('user') as { id: string; email?: string },
     );
 
     return c.json({ draft });
@@ -320,7 +329,7 @@ app.delete(
       return forbiddenRoADraftResponse(c);
     }
 
-    await roaService.deleteDraft(draftId, c.get('user'));
+    await roaService.deleteDraft(draftId, c.get('user') as { id: string; email?: string });
     return c.body(null, 204);
   }),
 );
@@ -340,7 +349,10 @@ app.post(
       return forbiddenRoADraftResponse(c);
     }
 
-    const draft = await roaService.cloneDraftFromFinal(draftId, c.get('user'));
+    const draft = await roaService.cloneDraftFromFinal(
+      draftId,
+      c.get('user') as { id: string; email?: string },
+    );
     return c.json({ draft });
   }),
 );
@@ -360,7 +372,10 @@ app.post(
       return forbiddenRoADraftResponse(c);
     }
 
-    const draft = await roaService.submitDraft(draftId, c.get('user'));
+    const draft = await roaService.submitDraft(
+      draftId,
+      c.get('user') as { id: string; email?: string },
+    );
     return c.json({ draft });
   }),
 );
@@ -381,7 +396,11 @@ app.post(
     }
 
     const contracts = await roaContractService.listContracts({ status: 'active' });
-    const draft = await roaService.validateDraft(draftId, contracts, c.get('user'));
+    const draft = await roaService.validateDraft(
+      draftId,
+      contracts,
+      c.get('user') as { id: string; email?: string },
+    );
     return c.json({ draft, validation: draft.validationResults });
   }),
 );
@@ -403,7 +422,12 @@ app.post(
     }
 
     const contracts = await roaContractService.listContracts({ status: 'active' });
-    const draft = await roaService.uploadEvidence(draftId, body, contracts, c.get('user'));
+    const draft = await roaService.uploadEvidence(
+      draftId,
+      body,
+      contracts,
+      c.get('user') as { id: string; email?: string },
+    );
     const evidence = draft.moduleEvidence?.[body.moduleId]?.[body.requirementId];
     return c.json({ draft, evidence });
   }),
@@ -425,7 +449,11 @@ app.post(
     }
 
     const contracts = await roaContractService.listContracts({ status: 'active' });
-    const draft = await roaService.compileDraft(draftId, contracts, c.get('user'));
+    const draft = await roaService.compileDraft(
+      draftId,
+      contracts,
+      c.get('user') as { id: string; email?: string },
+    );
     return c.json({
       draft,
       compilation: draft.compiledOutput,
@@ -462,7 +490,7 @@ app.post(
       draftId,
       formats.length > 0 ? formats : ['pdf'],
       contracts,
-      c.get('user'),
+      c.get('user') as { id: string; email?: string },
     );
     const documents = (draft.generatedDocuments || []).filter(
       (document) => !existingDocumentIds.has(document.id),
@@ -490,7 +518,11 @@ app.post(
       (before.generatedDocuments || []).map((document) => document.id),
     );
     const contracts = await roaContractService.listContracts({ status: 'active' });
-    const draft = await roaService.finaliseDraft(draftId, contracts, c.get('user'));
+    const draft = await roaService.finaliseDraft(
+      draftId,
+      contracts,
+      c.get('user') as { id: string; email?: string },
+    );
     const documents = (draft.generatedDocuments || []).filter(
       (document) => !existingDocumentIds.has(document.id),
     );

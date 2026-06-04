@@ -87,7 +87,10 @@ onboardingApp.post('/add', async (c) => {
 
     if (!result.success) {
       const status = result.errorCode === 'EMAIL_EXISTS' ? 409 : HTTP_STATUS.BAD_REQUEST;
-      return c.json(result, status);
+      return new Response(JSON.stringify(result), {
+        status,
+        headers: { 'Content-Type': 'application/json' },
+      });
     }
 
     return c.json(result, HTTP_STATUS.CREATED);
