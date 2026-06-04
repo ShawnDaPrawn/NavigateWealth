@@ -224,7 +224,10 @@ export function EventFormModal({
       setRecurrenceEndDate('');
       setSendReminders(false);
     }
-  }, [event, open, clients]);
+    // `clients` excluded: adding it re-runs form-init on every refetch,
+    // wiping in-progress edits. The attendee mapping at open is sufficient.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [event, open]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
