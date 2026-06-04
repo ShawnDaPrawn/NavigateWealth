@@ -598,7 +598,11 @@ export function AskVascoPage() {
           compact
         />
 
-        <div className="relative z-10 mx-auto max-w-screen-2xl px-4 py-6 sm:px-6 lg:px-8 lg:py-8">
+        <div
+          className={`relative mx-auto max-w-screen-2xl px-4 py-6 sm:px-6 lg:px-8 lg:py-8 ${
+            isExpanded ? 'z-50' : 'z-10'
+          }`}
+        >
           <div className="grid grid-cols-1 gap-6 lg:grid-cols-4">
             <div className="order-2 space-y-6 lg:order-1 lg:col-span-1">
               <Card className="relative hidden overflow-hidden border-[#ddd6fe]/80 bg-gradient-to-br from-white via-[#f5f3ff] to-white shadow-sm lg:block">
