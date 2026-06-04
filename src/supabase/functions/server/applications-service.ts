@@ -142,7 +142,7 @@ function isValidUUID(uuid: string): boolean {
 
 // Helper for safe email sending
 async function sendEmailSafely(
-  emailFunction: () => Promise<void>,
+  emailFunction: () => Promise<boolean | void>,
   _emailType: string,
 ): Promise<void> {
   try {

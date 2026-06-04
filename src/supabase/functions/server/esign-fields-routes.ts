@@ -62,7 +62,9 @@ fieldsRoutes.put('/envelopes/:envelopeId/fields', async (c) => {
     const fieldsToReturn: FieldRecord[] = [];
 
     for (const field of fields) {
-      const fieldId = field.id || `field-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+      const fieldId =
+        (field.id as string | undefined) ||
+        `field-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
 
       const fieldData = {
         id: fieldId,
