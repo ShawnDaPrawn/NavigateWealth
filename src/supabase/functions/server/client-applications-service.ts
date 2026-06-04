@@ -388,7 +388,7 @@ export const clientApplicationsService = {
 
     // Send email notifications (non-blocking — submission should not fail if emails fail)
     const applicationNumber = (application.applicationNumber ||
-      updatedApplication.applicationNumber ||
+      (updatedApplication as Record<string, unknown>).applicationNumber ||
       '') as string;
     const clientName =
       [finalAppData.firstName, finalAppData.lastName].filter(Boolean).join(' ') || 'Client';

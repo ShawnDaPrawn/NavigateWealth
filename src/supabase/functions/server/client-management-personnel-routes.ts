@@ -8,6 +8,10 @@ import {
   CreatePersonnelSchema,
   UpdatePersonnelSchema,
 } from './client-management-personnel-validation-enhanced.ts';
+import type {
+  CreatePersonnelPayload,
+  PersonnelProfile,
+} from './client-management-personnel-types.ts';
 import { formatZodError } from './shared-validation-utils.ts';
 import { z } from 'npm:zod';
 
@@ -81,7 +85,11 @@ app.post('/invite', async (c) => {
     const siteUrl =
       c.req.header('origin') || c.req.header('referer')?.replace(/\/+$/, '') || undefined;
     log.info('Inviting personnel', { userId: ctx.userId, inviteRole: parsed.data.role, siteUrl });
-    const result = await PersonnelService.inviteUser(ctx.role, parsed.data, siteUrl);
+    const result = await PersonnelService.inviteUser(
+      ctx.role,
+      parsed.data as unknown as CreatePersonnelPayload,
+      siteUrl,
+    );
     return c.json({ data: result });
   } catch (e) {
     return handleError(c, e);
@@ -141,7 +149,11 @@ app.post('/create-account', async (c) => {
       accountRole: parsed.data.role,
       siteUrl,
     });
-    const result = await PersonnelService.createAccount(ctx.role, parsed.data, siteUrl);
+    const result = await PersonnelService.createAccount(
+      ctx.role,
+      parsed.data as unknown as CreatePersonnelPayload,
+      siteUrl,
+    );
     return c.json({ data: result });
   } catch (e) {
     return handleError(c, e);
@@ -200,7 +212,11 @@ app.put('/:id', async (c) => {
     }
 
     log.info('Updating personnel profile', { userId: ctx.userId, targetId, isSelfUpdate });
-    const result = await PersonnelService.updateProfile(ctx.role, targetId, parsed.data);
+    const result = await PersonnelService.updateProfile(
+      ctx.role,
+      targetId,
+      parsed.data as unknown as Partial<PersonnelProfile>,
+    );
     return c.json({ data: result });
   } catch (e) {
     return handleError(c, e);
@@ -356,21 +372,18 @@ app.put('/permissions/:personnelId', async (c) => {
 
     // Fetch current permissions for audit diff
     const currentPerms = await PermissionsService.getPermissions(personnelId);
-    const oldModules = currentPerms?.modules || {};
+    const oldModules = (currentPerms?.modules || {}) as Record<string, unknown>;
 
-    const result = await PermissionsService.setPermissions(
-      personnelId,
-      parsed.data.modules,
-      ctx.userId,
-    );
+    const modulesArg = parsed.data.modules as unknown as Record<
+      string,
+      { access: boolean; capabilities?: string[] }
+    >;
+    const result = await PermissionsService.setPermissions(personnelId, modulesArg, ctx.userId);
 
     // Record audit trail (fire-and-forget — don't block the response)
-    PermissionAuditService.recordDiff(
-      personnelId,
-      ctx.userId,
-      oldModules,
-      parsed.data.modules,
-    ).catch((err) => log.error('Failed to record permission audit', err));
+    PermissionAuditService.recordDiff(personnelId, ctx.userId, oldModules, modulesArg).catch(
+      (err) => log.error('Failed to record permission audit', err),
+    );
 
     return c.json({ data: result });
   } catch (e) {
