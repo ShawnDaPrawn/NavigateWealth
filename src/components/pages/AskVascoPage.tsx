@@ -81,7 +81,7 @@ I can help you explore financial concepts, retirement planning, risk management,
 - Rough financial illustrations and calculations
 - Learning about Navigate Wealth's services
 
-Pick a topic from the sidebar or ask me anything to get started!`,
+Tap a suggested topic or ask me anything to get started!`,
   timestamp: new Date(),
 };
 
@@ -522,8 +522,8 @@ export function AskVascoPage() {
 
         <div className="relative z-10 mx-auto max-w-screen-2xl px-4 py-6 sm:px-6 lg:px-8 lg:py-8">
           <div className="grid grid-cols-1 gap-6 lg:grid-cols-4">
-            <div className="space-y-6 lg:col-span-1">
-              <Card className="relative overflow-hidden border-[#ddd6fe]/80 bg-gradient-to-br from-white via-[#f5f3ff] to-white shadow-sm">
+            <div className="order-2 space-y-6 lg:order-1 lg:col-span-1">
+              <Card className="relative hidden overflow-hidden border-[#ddd6fe]/80 bg-gradient-to-br from-white via-[#f5f3ff] to-white shadow-sm lg:block">
                 <div
                   aria-hidden="true"
                   className="absolute -right-10 -top-10 h-28 w-28 rounded-full border border-[#c4b5fd]/40"
@@ -567,7 +567,7 @@ export function AskVascoPage() {
                 </CardContent>
               </Card>
 
-              <Card className="border-gray-200/80 bg-white/90 shadow-sm backdrop-blur">
+              <Card className="hidden border-gray-200/80 bg-white/90 shadow-sm backdrop-blur lg:block">
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2 text-base">
                     <Zap className="h-4 w-4 text-[#6d28d9]" />
@@ -594,7 +594,7 @@ export function AskVascoPage() {
                 </CardContent>
               </Card>
 
-              <Card className="border-gray-200/80 bg-white/90 shadow-sm backdrop-blur">
+              <Card className="hidden border-gray-200/80 bg-white/90 shadow-sm backdrop-blur lg:block">
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2 text-base">
                     <Briefcase className="h-4 w-4 text-blue-500" />
@@ -642,7 +642,7 @@ export function AskVascoPage() {
               </div>
             </div>
 
-            <div className="lg:col-span-3">
+            <div className="order-1 lg:order-2 lg:col-span-3">
               <VascoInlineChatCard
                 className="border-[#ddd6fe]/80 bg-white/95 shadow-[0_24px_70px_-48px_rgba(26,30,54,0.7)]"
                 headerClassName="border-[#ddd6fe]/80 bg-[linear-gradient(135deg,rgba(255,255,255,0.96),rgba(245,243,255,0.92))]"
@@ -664,18 +664,27 @@ export function AskVascoPage() {
                 isWelcomeMessage={isWelcomeMessage}
                 onFeedback={handleFeedback}
                 headerExtra={
-                  <span className="rounded-full bg-primary/10 px-2.5 py-1 text-xs font-medium text-primary">
-                    {limitReached
-                      ? 'Free questions used'
-                      : remaining !== null
-                        ? `${remaining} free questions left`
-                        : '10 free questions daily'}
+                  <span className="whitespace-nowrap rounded-full bg-primary/10 px-2.5 py-1 text-xs font-medium text-primary">
+                    <span className="sm:hidden">
+                      {limitReached
+                        ? '0 left'
+                        : remaining !== null
+                          ? `${remaining} left`
+                          : '10 free'}
+                    </span>
+                    <span className="hidden sm:inline">
+                      {limitReached
+                        ? 'Free questions used'
+                        : remaining !== null
+                          ? `${remaining} free questions left`
+                          : '10 free questions daily'}
+                    </span>
                   </span>
                 }
                 inputPlaceholder="Ask Vasco about financial planning, retirement, tax, or try a calculation..."
                 inputFooter={
-                  <div className="flex items-center justify-between gap-4">
-                    <p className="text-center text-[10px] text-gray-400">
+                  <div className="flex flex-col items-center gap-1 sm:flex-row sm:justify-between sm:gap-4">
+                    <p className="text-center text-[10px] text-gray-400 sm:text-left">
                       Vasco provides general financial information only — not personal financial
                       advice.
                     </p>
@@ -703,6 +712,22 @@ export function AskVascoPage() {
                       >
                         Get in Touch
                       </Button>
+                    </div>
+                  ) : userMessageCount === 0 ? (
+                    <div className="px-4 pb-1 lg:hidden">
+                      <p className="mb-2 px-1 text-[11px] font-medium text-gray-400">Try asking</p>
+                      <div className="flex gap-2 overflow-x-auto pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+                        {SUGGESTED_PROMPTS.map((prompt) => (
+                          <button
+                            key={prompt}
+                            onClick={() => void sendMessage(prompt)}
+                            disabled={isStreaming}
+                            className="flex-shrink-0 whitespace-nowrap rounded-full border border-[#ddd6fe] bg-[#f5f3ff] px-3 py-1.5 text-xs font-medium text-[#6d28d9] transition-colors hover:bg-[#ede9fe] disabled:opacity-50"
+                          >
+                            {prompt}
+                          </button>
+                        ))}
+                      </div>
                     </div>
                   ) : userMessageCount >= 4 && !showHandoff ? (
                     <div className="mx-6 mb-2 flex items-center justify-between gap-3 rounded-xl border border-[#ddd6fe]/80 bg-gradient-to-r from-[#f5f3ff] to-purple-50/70 p-3">
