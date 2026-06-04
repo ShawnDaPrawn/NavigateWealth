@@ -111,9 +111,10 @@ export function VascoInlineChatCard({
                 size="sm"
                 className="border-gray-300 text-gray-700 hover:bg-gray-50"
                 disabled={disableActions}
+                aria-label="New chat"
               >
-                <Plus className="mr-2 h-4 w-4" />
-                New chat
+                <Plus className="h-4 w-4 sm:mr-2" />
+                <span className="hidden sm:inline">New chat</span>
               </Button>
             )}
             {showClear && onClear && (
@@ -123,9 +124,10 @@ export function VascoInlineChatCard({
                 size="sm"
                 className="border-gray-300 text-gray-700 hover:bg-gray-50"
                 disabled={disableActions || disableClear}
+                aria-label="Clear"
               >
-                <Eraser className="mr-2 h-4 w-4" />
-                Clear
+                <Eraser className="h-4 w-4 sm:mr-2" />
+                <span className="hidden sm:inline">Clear</span>
               </Button>
             )}
             {showExpand && onExpand && (
