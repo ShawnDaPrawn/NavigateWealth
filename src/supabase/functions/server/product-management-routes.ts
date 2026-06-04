@@ -23,6 +23,7 @@ import {
   CreateIntegrationSchema,
 } from './product-management-validation.ts';
 import { formatZodError } from './shared-validation-utils.ts';
+import type { Provider, Product, Integration, ProductFilters } from './product-management-types.ts';
 
 const app = new Hono();
 const log = createModuleLogger('product-management');
@@ -63,7 +64,7 @@ app.post(
 
     log.info('Creating provider', { adminUserId, providerName: parsed.data.name });
 
-    const provider = await service.createProvider(parsed.data);
+    const provider = await service.createProvider(parsed.data as unknown as Partial<Provider>);
 
     log.success('Provider created', { providerId: provider.id });
 
@@ -111,7 +112,10 @@ app.put(
       return c.json({ error: 'Validation failed', ...formatZodError(parsed.error) }, 400);
     }
 
-    const provider = await service.updateProvider(providerId, parsed.data);
+    const provider = await service.updateProvider(
+      providerId,
+      parsed.data as unknown as Partial<Provider>,
+    );
 
     AdminAuditService.record({
       actorId: c.get('userId') || 'admin',
@@ -173,7 +177,7 @@ app.get(
       active: c.req.query('active') === 'true',
     };
 
-    const products = await service.getAllProducts(filters);
+    const products = await service.getAllProducts(filters as unknown as Partial<ProductFilters>);
 
     return c.json({ products });
   }),
@@ -212,7 +216,7 @@ app.post(
 
     log.info('Creating product', { adminUserId, productName: parsed.data.name });
 
-    const product = await service.createProduct(parsed.data);
+    const product = await service.createProduct(parsed.data as unknown as Partial<Product>);
 
     log.success('Product created', { productId: product.id });
 
@@ -246,7 +250,10 @@ app.put(
       return c.json({ error: 'Validation failed', ...formatZodError(parsed.error) }, 400);
     }
 
-    const product = await service.updateProduct(productId, parsed.data);
+    const product = await service.updateProduct(
+      productId,
+      parsed.data as unknown as Partial<Product>,
+    );
 
     AdminAuditService.record({
       actorId: c.get('userId') || 'admin',
@@ -325,7 +332,9 @@ app.post(
 
     log.info('Creating integration', { adminUserId });
 
-    const integration = await service.createIntegration(parsed.data);
+    const integration = await service.createIntegration(
+      parsed.data as unknown as Partial<Integration>,
+    );
 
     log.success('Integration created', { integrationId: integration.id });
 

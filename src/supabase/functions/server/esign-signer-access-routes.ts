@@ -43,7 +43,9 @@ app.get('/sign-by-token/:token', async (c) => {
       : null;
 
     // Filter fields for this signer
-    const allFields = Array.isArray(envelope.fields) ? (envelope.fields as FieldRecord[]) : [];
+    const allFields = Array.isArray(envelope.fields)
+      ? (envelope.fields as unknown as FieldRecord[])
+      : [];
     const signerFields = allFields.filter((f: FieldRecord) => f.signer_id === signer.id);
 
     // P6.4 — resolve the consent text the signer should see. Envelopes
@@ -143,14 +145,14 @@ app.post('/signer/validate', rateLimit('SIGNER_ACCESS'), async (c) => {
       : null;
 
     // Filter fields for this signer
-    const allFields2 = Array.isArray(envelope.fields) ? (envelope.fields as FieldRecord[]) : [];
+    const allFields2 = Array.isArray(envelope.fields)
+      ? (envelope.fields as unknown as FieldRecord[])
+      : [];
     const signerFields = allFields2.filter((f: FieldRecord) => f.signer_id === signer.id);
 
     // Determine if it's this signer's turn based on signing mode
     const allSigners = envelope.signers || [];
-    const sortedAllSigners = [...allSigners].sort(
-      (a: SignerRecord, b: SignerRecord) => (a.order || 0) - (b.order || 0),
-    );
+    const sortedAllSigners = [...allSigners].sort((a, b) => (a.order || 0) - (b.order || 0));
     const signerOrder = signer.order || 1;
     const signingMode = envelope.signing_mode || 'sequential';
 
@@ -160,11 +162,11 @@ app.post('/signer/validate', rateLimit('SIGNER_ACCESS'), async (c) => {
       signingMode === 'parallel'
         ? true
         : sortedAllSigners
-            .filter((s: SignerRecord) => (s.order || 0) < signerOrder)
-            .every((s: SignerRecord) => s.status === 'signed');
+            .filter((s) => (s.order || 0) < signerOrder)
+            .every((s) => s.status === 'signed');
 
     // Build a summary of all signers (non-sensitive) for the waiting UI
-    const signersSummary = sortedAllSigners.map((s: SignerRecord) => ({
+    const signersSummary = sortedAllSigners.map((s) => ({
       order: s.order,
       name: s.name,
       role: s.role,

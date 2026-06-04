@@ -99,8 +99,10 @@ export const PermissionAuditService = {
     ]);
 
     for (const mod of allModuleKeys) {
-      const oldAccess = oldModules?.[mod]?.access === true;
-      const newAccess = newModules?.[mod]?.access === true;
+      const oldMod = oldModules?.[mod] as Record<string, unknown> | undefined;
+      const newMod = newModules?.[mod] as Record<string, unknown> | undefined;
+      const oldAccess = oldMod?.access === true;
+      const newAccess = newMod?.access === true;
 
       // Access toggle
       if (!oldAccess && newAccess) {
@@ -111,8 +113,8 @@ export const PermissionAuditService = {
 
       // Capability diff (only if module remains accessible)
       if (newAccess) {
-        const oldCaps: string[] = oldModules?.[mod]?.capabilities || [];
-        const newCaps: string[] = newModules?.[mod]?.capabilities || [];
+        const oldCaps: string[] = (oldMod?.capabilities as string[]) || [];
+        const newCaps: string[] = (newMod?.capabilities as string[]) || [];
 
         const added = newCaps.filter((c) => !oldCaps.includes(c));
         const removed = oldCaps.filter((c) => !newCaps.includes(c));

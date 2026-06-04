@@ -247,7 +247,9 @@ export function calculateSingleGoal(goal: INAGoal, inputs: INAInputs, currentYea
   const applicableRiskProfile = goal.useClientRiskProfile
     ? inputs.clientRiskProfile
     : goal.goalSpecificRiskProfile;
-  const applicableRealReturn = inputs.expectedRealReturns[applicableRiskProfile];
+  const applicableRealReturn = applicableRiskProfile
+    ? (inputs.expectedRealReturns[applicableRiskProfile] ?? 0)
+    : 0;
 
   // Step 1: Calculate time horizon
   const timeHorizon = {
@@ -408,7 +410,7 @@ export function calculateLumpSums(
     const futureValue = ls.amount * Math.pow(1 + realReturn, Math.max(0, yearsFromLumpToGoal));
 
     return {
-      lumpSumId: ls.id,
+      lumpSumId: ls.id ?? '',
       lumpSumAmount: ls.amount,
       lumpSumDate: ls.expectedDate,
       yearsFromLumpToGoal,
@@ -429,6 +431,7 @@ export function calculateFundingGap(goalRequired: number, projectedCapital: numb
 
   return {
     goalRequiredReal: goalRequired,
+    totalProjectedCapital: projectedCapital,
     projectedCapitalAtGoal: projectedCapital,
     gapAmount,
     hasShortfall,

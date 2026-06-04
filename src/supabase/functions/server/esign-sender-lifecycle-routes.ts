@@ -332,7 +332,7 @@ app.post(
       });
     } catch (error: unknown) {
       log.error('❌ Recall envelope error:', error);
-      const status = error instanceof AuthError ? error.status : 500;
+      const status = error instanceof AuthError ? error.statusCode : 500;
       return new Response(
         JSON.stringify({
           error: error instanceof Error ? error.message : 'Failed to recall envelope',
@@ -440,7 +440,7 @@ app.post(
       });
     } catch (error: unknown) {
       log.error('❌ Send reminder error:', error);
-      const status = error instanceof AuthError ? error.status : 500;
+      const status = error instanceof AuthError ? error.statusCode : 500;
       return new Response(
         JSON.stringify({
           error: error instanceof Error ? error.message : 'Failed to send reminders',

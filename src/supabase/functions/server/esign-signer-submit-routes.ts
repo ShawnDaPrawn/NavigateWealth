@@ -328,7 +328,7 @@ app.post('/signer/submit', requireIdempotency(), rateLimit('SIGNER_SUBMIT'), asy
       signed: true,
       envelope_complete: isComplete,
       envelope_id: signer.envelope_id,
-      envelope_title: envelope.title,
+      envelope_title: envelope?.title,
     });
   } catch (error: unknown) {
     log.error('❌ Submit signature error:', error);

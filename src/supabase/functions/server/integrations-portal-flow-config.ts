@@ -241,8 +241,8 @@ export function normaliseDocumentArtifactConfigs(
         attachTo === 'estate_documents'
           ? PORTAL_ESTATE_DOCUMENT_TYPES
           : PORTAL_POLICY_DOCUMENT_TYPES;
-      const documentType = allowedDocumentTypes.includes(
-        String(entry.documentType) as (typeof allowedDocumentTypes)[number],
+      const documentType = (allowedDocumentTypes as readonly string[]).includes(
+        String(entry.documentType),
       )
         ? (entry.documentType as PortalDocumentArtifactConfig['documentType'])
         : attachTo === 'estate_documents'
@@ -392,5 +392,5 @@ export function normalisePortalCredentialProfiles(
             : undefined,
       };
     })
-    .filter((profile): profile is PortalCredentialProfile => Boolean(profile));
+    .filter((profile) => profile !== null) as PortalCredentialProfile[];
 }

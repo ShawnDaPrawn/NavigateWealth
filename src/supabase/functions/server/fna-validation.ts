@@ -74,7 +74,7 @@ export const SaveTaxPlanningSessionSchema = z.object({
  * Accepts any valid JSON object to merge into existing inputs.
  */
 export const UpdateInputsSchema = z
-  .record(z.unknown())
+  .record(z.string(), z.unknown())
   .refine((obj) => Object.keys(obj).length > 0, {
     message: 'Input update must contain at least one field',
   });
@@ -105,7 +105,7 @@ export const SaveInvestmentSessionSchema = z.object({
  * Accepts the full inputs object for calculation.
  */
 export const CalculateInputsSchema = z
-  .record(z.unknown())
+  .record(z.string(), z.unknown())
   .refine((obj) => Object.keys(obj).length > 0, {
     message: 'Calculation inputs must not be empty',
   });
@@ -166,7 +166,7 @@ function intakePayloadSizeOk(obj: Record<string, unknown>): boolean {
 /** PUT /fna-intake/:domain/draft/:clientId — mirrors src/shared/fna-intake/schemas/intake-payload.ts */
 export const FnaIntakeSaveDraftSchema = z.object({
   inputs: z
-    .record(z.unknown())
+    .record(z.string(), z.unknown())
     .refine((obj) => Object.keys(obj).length <= MAX_INTAKE_FIELDS, {
       message: `Intake may contain at most ${MAX_INTAKE_FIELDS} fields`,
     })

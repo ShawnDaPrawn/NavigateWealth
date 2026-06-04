@@ -674,7 +674,7 @@ app.post('/portal-worker/jobs/:jobId/items/:itemId/policy-document', async (c) =
           label: 'Policy schedule',
           status: 'attached',
           fileName: document.fileName,
-          documentId: document.id,
+          documentId: document.storageKey,
           updatedAt: document.uploadDate,
         },
       ]),
@@ -991,7 +991,7 @@ app.post('/portal-worker/jobs/:jobId/discovery-report', async (c) => {
           }))
         : [],
       warnings: Array.isArray(body?.warnings)
-        ? body.warnings.slice(0, 50).map((warning) => String(warning).slice(0, 300))
+        ? body.warnings.slice(0, 50).map((warning: unknown) => String(warning).slice(0, 300))
         : [],
     };
 

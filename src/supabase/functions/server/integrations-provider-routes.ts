@@ -90,7 +90,7 @@ app.get('/providers', requireAuth, async (c) => {
       categoryIds:
         (p.category_ids as string[] | undefined) || (p.categoryIds as string[] | undefined) || [],
       logoUrl: (p.logo_url as string | undefined) || (p.logoUrl as string | undefined) || undefined,
-    }));
+    })) as unknown as KvProvider[];
 
     normalised.sort((a: KvProvider, b: KvProvider) => (a.name || '').localeCompare(b.name || ''));
 

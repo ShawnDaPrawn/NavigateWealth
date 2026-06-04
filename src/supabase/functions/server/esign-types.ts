@@ -53,6 +53,7 @@ export interface EsignEnvelope {
   status:
     | 'draft'
     | 'sent'
+    | 'viewed'
     | 'in_progress'
     | 'partially_signed'
     | 'completing'
@@ -105,6 +106,7 @@ export interface EsignEnvelope {
   deleted_at?: string;
   deleted_by?: string;
   delete_reason?: string;
+  void_reason?: string;
 }
 
 /**

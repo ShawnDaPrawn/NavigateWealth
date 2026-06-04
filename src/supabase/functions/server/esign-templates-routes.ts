@@ -16,7 +16,8 @@ import { getAuthContext, AuthError } from './auth-mw.ts';
 import { rateLimit } from './esign-rate-limit.ts';
 import { requireIdempotency } from './idempotency.ts';
 import { resolveFirmId, ensureStorageBuckets } from './esign-route-helpers.ts';
-import { createEnvelope, getEnvelopeDetails, setEnvelopeDocuments } from './esign-services.ts';
+import { createEnvelope, getEnvelopeDetails } from './esign-services.ts';
+import { setEnvelopeDocuments } from './esign-documents.ts';
 import { getDocumentUrl } from './esign-storage.ts';
 import {
   createTemplate,

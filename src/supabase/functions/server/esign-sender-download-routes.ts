@@ -51,7 +51,7 @@ app.get('/envelopes/:envelopeId/download', async (c) => {
       const signedPdfBuffer = await downloadDocument(envelope.signed_document_path);
 
       if (signedPdfBuffer) {
-        return new Response(signedPdfBuffer, {
+        return new Response(signedPdfBuffer as unknown as ArrayBuffer, {
           headers: {
             'Content-Type': 'application/pdf',
             'Content-Disposition': `attachment; filename="${envelope.document?.original_filename?.replace('.pdf', '_signed.pdf') || 'signed_document.pdf'}"`,
@@ -102,7 +102,7 @@ app.get('/envelopes/:envelopeId/download', async (c) => {
         });
       }
 
-      return new Response(finalPdfBuffer, {
+      return new Response(finalPdfBuffer as unknown as ArrayBuffer, {
         headers: {
           'Content-Type': 'application/pdf',
           'Content-Disposition': `attachment; filename="${envelope.document?.original_filename?.replace('.pdf', '_signed.pdf') || 'signed_document.pdf'}"`,
@@ -114,7 +114,7 @@ app.get('/envelopes/:envelopeId/download', async (c) => {
     }
   } catch (error: unknown) {
     log.error('❌ Download envelope error:', error);
-    const status = error instanceof AuthError ? error.status : 500;
+    const status = error instanceof AuthError ? error.statusCode : 500;
     return new Response(
       JSON.stringify({
         error: error instanceof Error ? error.message : 'Failed to download envelope',
@@ -150,14 +150,14 @@ app.get('/envelopes/:envelopeId/evidence-pack', async (c) => {
 
     await logAuditEvent({
       envelopeId,
-      actorType: 'admin',
+      actorType: 'sender_user',
       actorId: ctx.user.id,
       action: 'evidence_pack_exported',
       email: ctx.user.email || 'admin@system',
       metadata: { bytes: pack.zip.length, filename: pack.filename },
     });
 
-    return new Response(pack.zip, {
+    return new Response(pack.zip as unknown as ArrayBuffer, {
       headers: {
         'Content-Type': 'application/zip',
         'Content-Disposition': `attachment; filename="${pack.filename}"`,
@@ -330,7 +330,7 @@ app.get('/envelopes/:envelopeId/audit/export', async (c) => {
 
     // Build CSV
     const headers = ['Timestamp', 'Action', 'Actor Type', 'Actor Email', 'IP Address', 'Details'];
-    const rows = events
+    const rows = (events as unknown as Record<string, unknown>[])
       .sort(
         (a: Record<string, unknown>, b: Record<string, unknown>) =>
           new Date(String(a.at || a.created_at || 0)).getTime() -

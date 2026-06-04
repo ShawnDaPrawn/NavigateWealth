@@ -472,7 +472,7 @@ app.post('/portal-jobs/:jobId/discovery-report', requireAuth, async (c) => {
           }))
         : [],
       warnings: Array.isArray(body?.warnings)
-        ? body.warnings.slice(0, 50).map((warning) => String(warning).slice(0, 300))
+        ? body.warnings.slice(0, 50).map((warning: unknown) => String(warning).slice(0, 300))
         : [],
     };
 

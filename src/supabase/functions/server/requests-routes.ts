@@ -13,7 +13,14 @@ import type { Context } from 'npm:hono';
 import { asyncHandler } from './error.middleware.ts';
 import { createModuleLogger } from './stderr-logger.ts';
 import { RequestsService } from './requests-service.ts';
-import type { RequestStatus } from './requests-types.ts';
+import type {
+  RequestStatus,
+  TemplateStatus,
+  RequestTemplate,
+  ApprovalOutcome,
+  RequestPriority,
+  Request,
+} from './requests-types.ts';
 import {
   CreateRequestTemplateSchema,
   UpdateRequestTemplateSchema,
@@ -108,8 +115,8 @@ app.get(
     const status = c.req.query('status');
     const category = c.req.query('category');
 
-    const filters: { status?: string[]; category?: string[] } = {};
-    if (status) filters.status = status.split(',');
+    const filters: { status?: TemplateStatus[]; category?: string[] } = {};
+    if (status) filters.status = status.split(',') as TemplateStatus[];
     if (category) filters.category = category.split(',');
 
     log.info('Fetching templates', { filters });
@@ -173,7 +180,11 @@ app.post(
 
     log.info('Creating template', { userId: user.id });
 
-    const template = await service.createTemplate(parsed.data, user.id, user.name);
+    const template = await service.createTemplate(
+      parsed.data as unknown as Partial<RequestTemplate>,
+      user.id,
+      user.name,
+    );
 
     return c.json(
       {
@@ -336,7 +347,7 @@ const createRequestHandler = asyncHandler(async (c) => {
       clientName: parsed.data.clientName,
       requestDetails: parsed.data.requestDetails || {},
       assignees: parsed.data.assignees,
-      priority: parsed.data.priority,
+      priority: parsed.data.priority as unknown as RequestPriority | undefined,
     },
     user.id,
     user.name,
@@ -410,7 +421,12 @@ app.put(
 
     log.info('Updating request', { userId: user.id, requestId });
 
-    const request = await service.updateRequest(requestId, parsed.data, user.id, user.name);
+    const request = await service.updateRequest(
+      requestId,
+      parsed.data as unknown as Partial<Request>,
+      user.id,
+      user.name,
+    );
 
     return c.json({
       success: true,
@@ -535,7 +551,7 @@ app.patch(
 
     const request = await service.updateComplianceSignOff(
       requestId,
-      parsed.data.outcome,
+      parsed.data.outcome as unknown as ApprovalOutcome,
       user.id,
       user.name,
       parsed.data.deficiencies as unknown as
