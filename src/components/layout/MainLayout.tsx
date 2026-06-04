@@ -8,6 +8,8 @@ import { Footer } from './Footer';
 import { DashboardFooter } from './DashboardFooter';
 import { AccountSuspendedPage } from '../pages/AccountSuspendedPage';
 import { ErrorBoundary } from '../shared/ErrorBoundary';
+import { InstallAppPrompt } from '../pwa/InstallAppPrompt';
+import { StandaloneRedirect } from '../pwa/StandaloneRedirect';
 
 interface MainLayoutProps {
   children: React.ReactNode;
@@ -123,6 +125,8 @@ export function MainLayout({
       {(!isFocusedExperience || isAccountTypeSelection) &&
         !isAdminDashboard &&
         (effectivelyAuthenticated ? <DashboardFooter /> : <Footer />)}
+      <StandaloneRedirect />
+      <InstallAppPrompt />
     </div>
   );
 }
