@@ -4,7 +4,7 @@
  * Logged-out Ask Vasco experience aligned with the client portal AI Advisor UI.
  */
 
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router';
 import { Button } from '../ui/button';
 import { SEO, createWebPageSchema } from '../seo/SEO';
@@ -87,6 +87,15 @@ Tap a suggested topic or ask me anything to get started!`,
 
 function isWelcomeMessage(message: Message) {
   return message.role === 'assistant' && message.content === VASCO_WELCOME.content;
+}
+
+/** Visible, focusable elements within a container — used to trap focus in the expanded chat dialog. */
+function getFocusableElements(container: HTMLElement): HTMLElement[] {
+  const selector =
+    'a[href], button:not([disabled]), textarea:not([disabled]), input:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])';
+  return Array.from(container.querySelectorAll<HTMLElement>(selector)).filter(
+    (el) => el.offsetParent !== null,
+  );
 }
 
 function HandoffModal({
@@ -271,7 +280,15 @@ export function AskVascoPage() {
   const [showClearConfirm, setShowClearConfirm] = useState(false);
   const [showHandoff, setShowHandoff] = useState(false);
   const [isExpanded, setIsExpanded] = useState(false);
+  const expandedChatRef = useRef<HTMLDivElement>(null);
   const [visitorId] = useState(getOrCreateVascoVisitorId);
+
+  // When a child modal (adviser handoff / clear-confirm) is open over the
+  // expanded chat, suspend the dialog focus trap and Escape-to-collapse so the
+  // modal can own keyboard focus. Mirrored to a ref for use inside listeners.
+  const childModalOpen = showHandoff || showClearConfirm;
+  const childModalOpenRef = useRef(childModalOpen);
+  childModalOpenRef.current = childModalOpen;
   const vascoExtraBody = useMemo(() => ({ visitorId }), [visitorId]);
 
   const { streamingContent, isStreaming, sendStream } = useVascoStream({
@@ -338,20 +355,65 @@ export function AskVascoPage() {
     window.scrollTo({ top: 0, behavior: 'auto' });
   }, []);
 
-  // Focused (expanded) mode: lock background scroll and allow Escape to collapse.
+  // Focused (expanded) mode: behave like a modal dialog — lock background
+  // scroll, move focus into the dialog, restore it on close, and allow Escape.
   useEffect(() => {
     if (!isExpanded) return;
+    const previouslyFocused = document.activeElement as HTMLElement | null;
     const previousOverflow = document.body.style.overflow;
     document.body.style.overflow = 'hidden';
+
+    // Move focus into the dialog (prefer the message input).
+    const raf = requestAnimationFrame(() => {
+      const container = expandedChatRef.current;
+      if (!container) return;
+      const target =
+        container.querySelector<HTMLElement>('textarea:not([disabled])') ??
+        getFocusableElements(container)[0] ??
+        container;
+      target.focus();
+    });
+
     const handleKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') setIsExpanded(false);
+      // Let an open child modal handle Escape itself rather than collapsing the chat.
+      if (e.key === 'Escape' && !childModalOpenRef.current) setIsExpanded(false);
     };
     window.addEventListener('keydown', handleKey);
+
     return () => {
+      cancelAnimationFrame(raf);
       document.body.style.overflow = previousOverflow;
       window.removeEventListener('keydown', handleKey);
+      // Return focus to the control that opened the dialog.
+      previouslyFocused?.focus?.();
     };
   }, [isExpanded]);
+
+  // Keep keyboard focus within the expanded chat dialog (Tab / Shift+Tab wrap).
+  const handleDialogKeyDown = useCallback((e: React.KeyboardEvent<HTMLDivElement>) => {
+    if (e.key !== 'Tab') return;
+    // A child modal is open over the chat — let it manage its own focus.
+    if (childModalOpenRef.current) return;
+    const container = expandedChatRef.current;
+    if (!container) return;
+    const focusables = getFocusableElements(container);
+    if (focusables.length === 0) {
+      e.preventDefault();
+      return;
+    }
+    const first = focusables[0];
+    const last = focusables[focusables.length - 1];
+    const active = document.activeElement;
+    if (e.shiftKey) {
+      if (active === first || !container.contains(active)) {
+        e.preventDefault();
+        last.focus();
+      }
+    } else if (active === last || !container.contains(active)) {
+      e.preventDefault();
+      first.focus();
+    }
+  }, []);
 
   const conversationSummary = messages
     .filter((m) => m.role === 'user')
@@ -666,118 +728,133 @@ export function AskVascoPage() {
                   aria-hidden="true"
                 />
               )}
-              <VascoInlineChatCard
+              <div
+                ref={expandedChatRef}
+                role={isExpanded ? 'dialog' : undefined}
+                aria-modal={isExpanded ? true : undefined}
+                aria-label={isExpanded ? 'Ask Vasco chat' : undefined}
+                onKeyDown={isExpanded ? handleDialogKeyDown : undefined}
                 className={
                   isExpanded
-                    ? 'fixed inset-0 z-50 m-0 rounded-none border-0 bg-white shadow-2xl sm:inset-6 sm:rounded-2xl sm:border lg:inset-x-24 xl:inset-x-44'
-                    : 'border-[#ddd6fe]/80 bg-white/95 shadow-[0_24px_70px_-48px_rgba(26,30,54,0.7)]'
+                    ? 'fixed inset-0 z-50 sm:inset-6 lg:inset-x-24 xl:inset-x-44'
+                    : undefined
                 }
-                shellClassName={isExpanded ? 'h-full' : undefined}
-                headerClassName="border-[#ddd6fe]/80 bg-[linear-gradient(135deg,rgba(255,255,255,0.96),rgba(245,243,255,0.92))]"
-                messagesClassName="bg-[#f8f9fb] [background-image:linear-gradient(rgba(26,30,54,0.035)_1px,transparent_1px),linear-gradient(90deg,rgba(109,40,217,0.055)_1px,transparent_1px)] [background-size:42px_42px]"
-                sessionTitle="Ask Vasco"
-                sessionSubtitle="AI Financial Navigator · No login required"
-                messages={messages}
-                input={input}
-                error={error}
-                isLoading={isStreaming}
-                streamingContent={streamingContent}
-                onInputChange={setInput}
-                onSendMessage={() => void sendMessage()}
-                onClear={() => setShowClearConfirm(true)}
-                showNewChat={false}
-                showExpand
-                isExpanded={isExpanded}
-                onExpand={() => setIsExpanded((v) => !v)}
-                disableActions={isStreaming}
-                inputDisabled={limitReached}
-                isWelcomeMessage={isWelcomeMessage}
-                onFeedback={handleFeedback}
-                headerExtra={
-                  <span className="whitespace-nowrap rounded-full bg-primary/10 px-2.5 py-1 text-xs font-medium text-primary">
-                    <span className="sm:hidden">
-                      {limitReached
-                        ? '0 left'
-                        : remaining !== null
-                          ? `${remaining} left`
-                          : '10 free'}
+              >
+                <VascoInlineChatCard
+                  className={
+                    isExpanded
+                      ? 'h-full w-full rounded-none border-0 bg-white shadow-2xl sm:rounded-2xl sm:border'
+                      : 'border-[#ddd6fe]/80 bg-white/95 shadow-[0_24px_70px_-48px_rgba(26,30,54,0.7)]'
+                  }
+                  shellClassName={isExpanded ? 'h-full' : undefined}
+                  headerClassName="border-[#ddd6fe]/80 bg-[linear-gradient(135deg,rgba(255,255,255,0.96),rgba(245,243,255,0.92))]"
+                  messagesClassName="bg-[#f8f9fb] [background-image:linear-gradient(rgba(26,30,54,0.035)_1px,transparent_1px),linear-gradient(90deg,rgba(109,40,217,0.055)_1px,transparent_1px)] [background-size:42px_42px]"
+                  sessionTitle="Ask Vasco"
+                  sessionSubtitle="AI Financial Navigator · No login required"
+                  messages={messages}
+                  input={input}
+                  error={error}
+                  isLoading={isStreaming}
+                  streamingContent={streamingContent}
+                  onInputChange={setInput}
+                  onSendMessage={() => void sendMessage()}
+                  onClear={() => setShowClearConfirm(true)}
+                  showNewChat={false}
+                  showExpand
+                  isExpanded={isExpanded}
+                  onExpand={() => setIsExpanded((v) => !v)}
+                  disableActions={isStreaming}
+                  inputDisabled={limitReached}
+                  isWelcomeMessage={isWelcomeMessage}
+                  onFeedback={handleFeedback}
+                  headerExtra={
+                    <span className="whitespace-nowrap rounded-full bg-primary/10 px-2.5 py-1 text-xs font-medium text-primary">
+                      <span className="sm:hidden">
+                        {limitReached
+                          ? '0 left'
+                          : remaining !== null
+                            ? `${remaining} left`
+                            : '10 free'}
+                      </span>
+                      <span className="hidden sm:inline">
+                        {limitReached
+                          ? 'Free questions used'
+                          : remaining !== null
+                            ? `${remaining} free questions left`
+                            : '10 free questions daily'}
+                      </span>
                     </span>
-                    <span className="hidden sm:inline">
-                      {limitReached
-                        ? 'Free questions used'
-                        : remaining !== null
-                          ? `${remaining} free questions left`
-                          : '10 free questions daily'}
-                    </span>
-                  </span>
-                }
-                inputPlaceholder="Ask Vasco about financial planning, retirement, tax, or try a calculation..."
-                inputFooter={
-                  <div className="flex flex-col items-center gap-1 sm:flex-row sm:justify-between sm:gap-4">
-                    <p className="text-center text-[10px] text-gray-400 sm:text-left">
-                      Vasco provides general financial information only — not personal financial
-                      advice.
-                    </p>
-                    <Link
-                      to="/signup"
-                      className="flex-shrink-0 text-[10px] font-medium text-primary hover:underline"
-                    >
-                      Sign up for personalised guidance →
-                    </Link>
-                  </div>
-                }
-                beforeInput={
-                  limitReached ? (
-                    <div className="mx-6 mb-2 flex items-center justify-between gap-3 rounded-xl border border-[#ddd6fe]/80 bg-gradient-to-r from-[#f5f3ff] to-purple-50/70 p-3">
-                      <p className="min-w-0 text-xs text-gray-700">
-                        You have used the free public questions for now.{' '}
-                        <span className="font-medium text-primary">
-                          A Navigate Wealth adviser can help from here.
-                        </span>
+                  }
+                  inputPlaceholder="Ask Vasco about financial planning, retirement, tax, or try a calculation..."
+                  inputFooter={
+                    <div className="flex flex-col items-center gap-1 sm:flex-row sm:justify-between sm:gap-4">
+                      <p className="text-center text-[10px] text-gray-400 sm:text-left">
+                        Vasco provides general financial information only — not personal financial
+                        advice.
                       </p>
-                      <Button
-                        onClick={() => setShowHandoff(true)}
-                        size="sm"
-                        className="h-7 flex-shrink-0 bg-primary px-3 text-xs text-primary-foreground hover:bg-primary/90"
+                      <Link
+                        to="/signup"
+                        className="flex-shrink-0 text-[10px] font-medium text-primary hover:underline"
                       >
-                        Get in Touch
-                      </Button>
+                        Sign up for personalised guidance →
+                      </Link>
                     </div>
-                  ) : userMessageCount === 0 ? (
-                    <div className="px-4 pb-1 lg:hidden">
-                      <p className="mb-2 px-1 text-[11px] font-medium text-gray-400">Try asking</p>
-                      <div className="flex gap-2 overflow-x-auto pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-                        {SUGGESTED_PROMPTS.map((prompt) => (
-                          <button
-                            key={prompt}
-                            onClick={() => void sendMessage(prompt)}
-                            disabled={isStreaming}
-                            className="flex-shrink-0 whitespace-nowrap rounded-full border border-[#ddd6fe] bg-[#f5f3ff] px-3 py-1.5 text-xs font-medium text-[#6d28d9] transition-colors hover:bg-[#ede9fe] disabled:opacity-50"
-                          >
-                            {prompt}
-                          </button>
-                        ))}
+                  }
+                  beforeInput={
+                    limitReached ? (
+                      <div className="mx-6 mb-2 flex items-center justify-between gap-3 rounded-xl border border-[#ddd6fe]/80 bg-gradient-to-r from-[#f5f3ff] to-purple-50/70 p-3">
+                        <p className="min-w-0 text-xs text-gray-700">
+                          You have used the free public questions for now.{' '}
+                          <span className="font-medium text-primary">
+                            A Navigate Wealth adviser can help from here.
+                          </span>
+                        </p>
+                        <Button
+                          onClick={() => setShowHandoff(true)}
+                          size="sm"
+                          className="h-7 flex-shrink-0 bg-primary px-3 text-xs text-primary-foreground hover:bg-primary/90"
+                        >
+                          Get in Touch
+                        </Button>
                       </div>
-                    </div>
-                  ) : userMessageCount >= 4 && !showHandoff ? (
-                    <div className="mx-6 mb-2 flex items-center justify-between gap-3 rounded-xl border border-[#ddd6fe]/80 bg-gradient-to-r from-[#f5f3ff] to-purple-50/70 p-3">
-                      <p className="min-w-0 truncate text-xs text-gray-700">
-                        Want personalised advice?{' '}
-                        <span className="font-medium text-primary">
-                          Talk to a qualified adviser.
-                        </span>
-                      </p>
-                      <Button
-                        onClick={() => setShowHandoff(true)}
-                        size="sm"
-                        className="h-7 flex-shrink-0 bg-primary px-3 text-xs text-primary-foreground hover:bg-primary/90"
-                      >
-                        Get in Touch
-                      </Button>
-                    </div>
-                  ) : undefined
-                }
-              />
+                    ) : userMessageCount === 0 ? (
+                      <div className="px-4 pb-1 lg:hidden">
+                        <p className="mb-2 px-1 text-[11px] font-medium text-gray-400">
+                          Try asking
+                        </p>
+                        <div className="flex gap-2 overflow-x-auto pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+                          {SUGGESTED_PROMPTS.map((prompt) => (
+                            <button
+                              key={prompt}
+                              onClick={() => void sendMessage(prompt)}
+                              disabled={isStreaming}
+                              className="flex-shrink-0 whitespace-nowrap rounded-full border border-[#ddd6fe] bg-[#f5f3ff] px-3 py-1.5 text-xs font-medium text-[#6d28d9] transition-colors hover:bg-[#ede9fe] disabled:opacity-50"
+                            >
+                              {prompt}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    ) : userMessageCount >= 4 && !showHandoff ? (
+                      <div className="mx-6 mb-2 flex items-center justify-between gap-3 rounded-xl border border-[#ddd6fe]/80 bg-gradient-to-r from-[#f5f3ff] to-purple-50/70 p-3">
+                        <p className="min-w-0 truncate text-xs text-gray-700">
+                          Want personalised advice?{' '}
+                          <span className="font-medium text-primary">
+                            Talk to a qualified adviser.
+                          </span>
+                        </p>
+                        <Button
+                          onClick={() => setShowHandoff(true)}
+                          size="sm"
+                          className="h-7 flex-shrink-0 bg-primary px-3 text-xs text-primary-foreground hover:bg-primary/90"
+                        >
+                          Get in Touch
+                        </Button>
+                      </div>
+                    ) : undefined
+                  }
+                />
+              </div>
             </div>
           </div>
         </div>
