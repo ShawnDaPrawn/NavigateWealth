@@ -716,10 +716,12 @@ export class ClientsService {
     action: 'delete' | 'close' | 'reinstate',
   ): Promise<void> {
     try {
+      const personalInfo = profile?.personalInformation as Record<string, unknown> | undefined;
+      const contactDetails = profile?.contactDetails as Record<string, unknown> | undefined;
       const email = (
-        profile?.email ||
-        profile?.personalInformation?.email ||
-        profile?.contactDetails?.email
+        (profile?.email as string | undefined) ||
+        (personalInfo?.email as string | undefined) ||
+        (contactDetails?.email as string | undefined)
       )
         ?.trim()
         .toLowerCase();
@@ -739,14 +741,14 @@ export class ClientsService {
         });
       } else if (action === 'reinstate') {
         const firstName = (
-          profile?.personalInformation?.firstName ||
-          profile?.firstName ||
+          (personalInfo?.firstName as string | undefined) ||
+          (profile?.firstName as string | undefined) ||
           ''
         ).trim();
         const surname = (
-          profile?.personalInformation?.lastName ||
-          profile?.lastName ||
-          profile?.surname ||
+          (personalInfo?.lastName as string | undefined) ||
+          (profile?.lastName as string | undefined) ||
+          (profile?.surname as string | undefined) ||
           ''
         ).trim();
         await autoSubscribeClient(email, firstName, surname);

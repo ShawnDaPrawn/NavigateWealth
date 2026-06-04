@@ -247,7 +247,7 @@ medicalFnaRoutes.get('/client/:clientId/latest-published', async (c) => {
         if (dateA !== dateB) {
           return dateB - dateA;
         }
-        return b.version - a.version;
+        return (b.version ?? 0) - (a.version ?? 0);
       });
 
     const latestPublished = publishedFnas[0] || null;
