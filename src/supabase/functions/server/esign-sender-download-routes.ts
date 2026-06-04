@@ -26,7 +26,7 @@ const app = new Hono();
 app.get('/envelopes/:envelopeId/download', async (c) => {
   try {
     // Authenticate
-    const ctx = await getAuthContext(c);
+    const _ctx = await getAuthContext(c);
     const envelopeId = c.req.param('envelopeId')!;
 
     // Get envelope details
@@ -184,7 +184,7 @@ app.get('/envelopes/:envelopeId/evidence-pack', async (c) => {
  */
 app.get('/envelopes/:envelopeId/reminder-config', async (c) => {
   try {
-    const ctx = await getAuthContext(c);
+    const _ctx = await getAuthContext(c);
     const envelopeId = c.req.param('envelopeId')!;
     const config = await getReminderConfig(envelopeId);
     return c.json({ config });
@@ -320,7 +320,7 @@ app.patch('/envelopes/:envelopeId/signing-mode', async (c) => {
  */
 app.get('/envelopes/:envelopeId/audit/export', async (c) => {
   try {
-    const ctx = await getAuthContext(c);
+    const _ctx = await getAuthContext(c);
     const envelopeId = c.req.param('envelopeId')!;
 
     const events = await getAuditTrail(envelopeId);

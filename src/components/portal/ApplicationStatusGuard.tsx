@@ -1,9 +1,10 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { useAuth } from '../auth/AuthContext';
 import { projectId, publicAnonKey } from '../../utils/supabase/info';
 import { SUPER_ADMIN_EMAIL } from '../../utils/auth/constants';
 import { AlertCircle, Clock } from 'lucide-react';
 import { BrandPageLoader } from '../ui/brand-loader';
+import { logger } from '../../utils/logger';
 
 const API_BASE = `https://${projectId}.supabase.co/functions/v1/make-server-91ed8379`;
 
@@ -32,16 +33,7 @@ export function ApplicationStatusGuard({
   const [_hasPolicies, setHasPolicies] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    if (!user?.id) {
-      setLoading(false);
-      return;
-    }
-
-    fetchUserApplicationStatus();
-  }, [user?.id]);
-
-  const fetchUserApplicationStatus = async () => {
+  const fetchUserApplicationStatus = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
@@ -83,31 +75,25 @@ export function ApplicationStatusGuard({
         headers: { Authorization: `Bearer ${publicAnonKey}` },
       });
 
-      console.log('🔍 Application API Response Status:', appRes.status);
+      logger.debug(`Application API Response Status: ${appRes.status}`);
 
       if (appRes.ok) {
         const applicationResponse = await appRes.json();
-        console.log(
-          '🔍 Application API Response Data:',
-          JSON.stringify(applicationResponse, null, 2),
+        logger.debug(
+          `Application API Response Data: ${JSON.stringify(applicationResponse, null, 2)}`,
         );
 
         // The endpoint returns { success: true, data: application }
         const userApp = applicationResponse.data;
         if (userApp && userApp.status) {
           status = userApp.status;
-          console.log('✅ Application status loaded:', status);
+          logger.info(`Application status loaded: ${status}`);
         } else {
-          console.log('ℹ️ No application found for user, defaulting to in_progress');
+          logger.info('No application found for user, defaulting to in_progress');
         }
       } else {
         const errorText = await appRes.text();
-        console.log(
-          '⚠️ Failed to fetch application. Status:',
-          appRes.status,
-          'Response:',
-          errorText,
-        );
+        logger.info(`Failed to fetch application. Status: ${appRes.status} Response: ${errorText}`);
       }
 
       setApplicationStatus(status);
@@ -131,7 +117,16 @@ export function ApplicationStatusGuard({
     } finally {
       setLoading(false);
     }
-  };
+  }, [user]);
+
+  useEffect(() => {
+    if (!user?.id) {
+      setLoading(false);
+      return;
+    }
+
+    fetchUserApplicationStatus();
+  }, [user?.id, fetchUserApplicationStatus]);
 
   // Loading state
   if (loading) {

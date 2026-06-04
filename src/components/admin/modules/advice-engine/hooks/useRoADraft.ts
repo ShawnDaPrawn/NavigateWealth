@@ -183,7 +183,7 @@ export function useRoADraft(options: UseRoADraftOptions = {}): UseRoADraftReturn
         clearTimeout(autoSaveTimerRef.current);
       }
     };
-  }, [localDraft, autoSave, autoSaveDelay]);
+  }, [localDraft, autoSave, autoSaveDelay, saveDraftMutation]);
 
   // ============================================================================
   // Public API

@@ -262,7 +262,7 @@ export function EnvelopeDetailsDialog({
       setAuditError(null);
       setCopiedId(false);
     }
-  }, [open, envelope?.id]);
+  }, [open, envelope?.id, envelope]);
 
   // Lazy-load audit events when Activity tab is selected
   const loadAuditEvents = useCallback(async () => {

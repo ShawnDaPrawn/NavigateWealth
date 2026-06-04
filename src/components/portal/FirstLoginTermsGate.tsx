@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import { useAuth } from '../auth/AuthContext';
 import { Button } from '../ui/button';
 import { Checkbox } from '../ui/checkbox';
@@ -32,12 +32,7 @@ export function FirstLoginTermsGate({ children }: FirstLoginTermsGateProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [mustAcceptTerms, setMustAcceptTerms] = useState<boolean | null>(null);
 
-  // Check metadata on mount
-  React.useEffect(() => {
-    checkTermsRequired();
-  }, [user?.id]);
-
-  const checkTermsRequired = async () => {
+  const checkTermsRequired = useCallback(async () => {
     if (!user?.id) {
       setMustAcceptTerms(false);
       return;
@@ -57,7 +52,12 @@ export function FirstLoginTermsGate({ children }: FirstLoginTermsGateProps) {
     } catch {
       setMustAcceptTerms(false);
     }
-  };
+  }, [user?.id]);
+
+  // Check metadata on mount
+  React.useEffect(() => {
+    checkTermsRequired();
+  }, [user?.id, checkTermsRequired]);
 
   const handleAcceptTerms = async () => {
     if (!termsAccepted || !popiaConsent || !faisAcknowledged || !disclosureAcknowledged) {

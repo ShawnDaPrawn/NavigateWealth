@@ -5,7 +5,7 @@
  * Similar UI pattern to FNA Management View.
  */
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import {
   FileText,
   Eye,
@@ -128,11 +128,7 @@ export function WillManagementView({
 
   const filteredWills = typeFilter === 'all' ? wills : wills.filter((w) => w.type === typeFilter);
 
-  useEffect(() => {
-    loadWills();
-  }, [clientId]);
-
-  const loadWills = async (): Promise<void> => {
+  const loadWills = useCallback(async (): Promise<void> => {
     try {
       setIsLoading(true);
       const result = await api.get<{ success?: boolean; data?: WillSummary[]; error?: string }>(
@@ -163,7 +159,11 @@ export function WillManagementView({
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [clientId]);
+
+  useEffect(() => {
+    loadWills();
+  }, [clientId, loadWills]);
 
   const handleDownload = async (willId: string): Promise<void> => {
     setDownloadingWillId(willId);

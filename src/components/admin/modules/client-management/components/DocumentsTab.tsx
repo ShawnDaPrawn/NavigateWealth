@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { filterDocuments, groupDocumentsByPack, type DocumentItem } from './documentsUtils';
 import { DocumentStatsCards } from './DocumentStatsCards';
 import { DocumentFiltersBar } from './DocumentFiltersBar';
@@ -16,6 +16,7 @@ import { Plus, RefreshCw } from 'lucide-react';
 import { api } from '../../../../../utils/api';
 import { toast } from 'sonner';
 import { useSearchInputAutofillGuard } from '@/shared/forms/useSearchInputAutofillGuard';
+import { logger } from '../../../../../utils/logger';
 
 interface DocumentsTabProps {
   selectedClient: {
@@ -59,13 +60,7 @@ export function DocumentsTab({ selectedClient }: DocumentsTabProps) {
   const [filterDateStart, setFilterDateStart] = useState('');
   const [filterDateEnd, setFilterDateEnd] = useState('');
 
-  useEffect(() => {
-    if (selectedClient?.id) {
-      fetchDocuments();
-    }
-  }, [selectedClient?.id]);
-
-  const fetchDocuments = async () => {
+  const fetchDocuments = useCallback(async () => {
     if (!selectedClient?.id) return;
 
     const maxRetries = 2;
@@ -98,7 +93,13 @@ export function DocumentsTab({ selectedClient }: DocumentsTabProps) {
         setLoading(false);
       }
     }
-  };
+  }, [selectedClient?.id]);
+
+  useEffect(() => {
+    if (selectedClient?.id) {
+      fetchDocuments();
+    }
+  }, [selectedClient?.id, fetchDocuments]);
 
   const handleSendEmail = async () => {
     if (!selectedClient?.id || uploadedDocIds.length === 0) return;
@@ -153,7 +154,7 @@ export function DocumentsTab({ selectedClient }: DocumentsTabProps) {
     }
 
     try {
-      console.log(`⬇️ Downloading: ${doc.fileName}`);
+      logger.info(`Downloading: ${doc.fileName}`);
 
       const data = await api.get<{ url: string }>(`/documents/${doc.userId}/${doc.id}/download`);
 
@@ -189,7 +190,7 @@ export function DocumentsTab({ selectedClient }: DocumentsTabProps) {
     if (!documentToDelete) return;
 
     try {
-      console.log(`🗑️ Deleting: ${documentToDelete.title}`);
+      logger.info(`Deleting: ${documentToDelete.title}`);
 
       await api.delete(`/documents/${documentToDelete.userId}/${documentToDelete.id}`);
 
@@ -218,7 +219,7 @@ export function DocumentsTab({ selectedClient }: DocumentsTabProps) {
     const toastId = toast.loading('Deleting document pack...');
 
     try {
-      console.log(`🗑️ Deleting pack: ${packToDelete.id} (${docsToDelete.length} documents)`);
+      logger.info(`Deleting pack: ${packToDelete.id} (${docsToDelete.length} documents)`);
 
       // Delete all documents in parallel
       await Promise.all(

@@ -886,12 +886,7 @@ export function WillPdfView({ open, onClose, willId, clientName }: WillPdfViewPr
   const [isLoading, setIsLoading] = useState(true);
   const contentRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => {
-    if (!open || !willId) return;
-    loadWill();
-  }, [open, willId]);
-
-  const loadWill = async () => {
+  const loadWill = useCallback(async () => {
     setIsLoading(true);
     try {
       const result = await api.get<{ success?: boolean; data?: WillRecord; error?: string }>(
@@ -909,7 +904,12 @@ export function WillPdfView({ open, onClose, willId, clientName }: WillPdfViewPr
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [willId]);
+
+  useEffect(() => {
+    if (!open || !willId) return;
+    loadWill();
+  }, [open, willId, loadWill]);
 
   const handlePrint = useCallback(() => {
     if (!will?.data) return;

@@ -1,11 +1,9 @@
 import { Hono } from 'npm:hono';
 import { requireAuth, requireAdmin } from './auth-mw.ts';
 import { asyncHandler } from './error.middleware.ts';
-import { createModuleLogger } from './stderr-logger.ts';
 import { ComplianceService } from './compliance-service.ts';
 
 const app = new Hono();
-const log = createModuleLogger('compliance-records');
 const service = new ComplianceService();
 
 // ============================================================================

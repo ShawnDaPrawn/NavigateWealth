@@ -23,7 +23,6 @@ import {
   ensureSelfOrAdmin,
   isAdminRole,
   verifyCurrentPassword,
-  emailChangeKey,
   getPendingEmailChange,
   getEmailChangeSummary,
   type UserSecurityStatus,
@@ -86,7 +85,7 @@ app.post('/:userId/password', requireAuth, async (c) => {
     }
 
     // Update password using admin API
-    const { data, error } = await getSupabase().auth.admin.updateUserById(userId, {
+    const { data: _data, error } = await getSupabase().auth.admin.updateUserById(userId, {
       password: newPassword,
     });
 

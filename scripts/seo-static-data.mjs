@@ -670,7 +670,7 @@ function breadcrumbItemsForRoute(route, siteUrl) {
   return items;
 }
 
-export function createArticleRoute(article, siteUrl) {
+export function createArticleRoute(article, _siteUrl) {
   const slug = typeof article?.slug === 'string' ? article.slug.trim() : '';
   if (!slug) return null;
 

@@ -9,7 +9,7 @@
  * sanctions list source (OFAC, UN, EU, etc.).
  */
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../../../../../ui/card';
 import { Badge } from '../../../../../ui/badge';
 import { Button } from '../../../../../ui/button';
@@ -109,16 +109,7 @@ export function SanctionsScreeningPanel({
   const [_showHistory, _setShowHistory] = useState(false);
   const [_isLoadingHistory, setIsLoadingHistory] = useState(false);
 
-  // Update search fields when client changes
-  useEffect(() => {
-    setSearchName(firstName);
-    setSearchSurname(lastName);
-    setSearchIdNumber(idNumber || '');
-    setResult(null);
-    loadHistory();
-  }, [clientId, firstName, lastName, idNumber]);
-
-  const loadHistory = async () => {
+  const loadHistory = useCallback(async () => {
     setIsLoadingHistory(true);
     try {
       const data = await api.get<{ history?: SearchHistoryEntry[] }>(
@@ -130,7 +121,16 @@ export function SanctionsScreeningPanel({
     } finally {
       setIsLoadingHistory(false);
     }
-  };
+  }, [clientId]);
+
+  // Update search fields when client changes
+  useEffect(() => {
+    setSearchName(firstName);
+    setSearchSurname(lastName);
+    setSearchIdNumber(idNumber || '');
+    setResult(null);
+    loadHistory();
+  }, [clientId, firstName, lastName, idNumber, loadHistory]);
 
   const handleSearch = async () => {
     if (!searchName && !searchSurname && !searchIdNumber) {

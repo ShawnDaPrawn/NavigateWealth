@@ -180,7 +180,7 @@ app.post('/:userId/2fa/send-code', requireAuth, async (c) => {
       if (body && body.email) {
         email = body.email;
       }
-    } catch (e) {
+    } catch (_e) {
       // Body might be empty, ignore
     }
 

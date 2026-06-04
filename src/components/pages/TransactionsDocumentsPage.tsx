@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card';
 import { Badge } from '../ui/badge';
 import { Button } from '../ui/button';
@@ -62,13 +62,7 @@ export function TransactionsDocumentsPage() {
   const [selectedFilter, setSelectedFilter] = useState('all');
   const [_currentPage, _setCurrentPage] = useState(1);
 
-  useEffect(() => {
-    if (user?.id && activeTab === 'documents') {
-      fetchDocuments();
-    }
-  }, [user?.id, activeTab]);
-
-  const fetchDocuments = async () => {
+  const fetchDocuments = useCallback(async () => {
     if (!user?.id) return;
 
     const maxRetries = 2;
@@ -104,7 +98,13 @@ export function TransactionsDocumentsPage() {
         setLoading(false);
       }
     }
-  };
+  }, [user?.id]);
+
+  useEffect(() => {
+    if (user?.id && activeTab === 'documents') {
+      fetchDocuments();
+    }
+  }, [user?.id, activeTab, fetchDocuments]);
 
   const handleDownload = async (doc: DocumentItem) => {
     if (doc.type === 'link') {

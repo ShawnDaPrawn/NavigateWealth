@@ -2,7 +2,6 @@ import { Hono } from 'npm:hono';
 import * as kv from './kv_store.tsx';
 import { createModuleLogger } from './stderr-logger.ts';
 import { authenticateUser, fnaErrorResponse } from './fna-auth.ts';
-import { getErrMsg } from './shared-logger-utils.ts';
 import { SaveSessionSchema } from './fna-validation.ts';
 import { formatZodError } from './shared-validation-utils.ts';
 
@@ -75,7 +74,7 @@ app.get('', (c) => c.json({ service: 'estate-planning-fna', status: 'active' }))
 app.get('/client/:clientId/auto-populate', async (c) => {
   try {
     log.info('📥 GET /estate-planning-fna/client/:clientId/auto-populate');
-    const user = await authenticateUser(c.req.header('Authorization'));
+    const _user = await authenticateUser(c.req.header('Authorization'));
 
     const clientId = c.req.param('clientId')!;
 
@@ -297,7 +296,7 @@ app.get('/client/:clientId/latest-published', async (c) => {
           );
           return c.json({ error: 'Unauthorized access to client data' }, 403);
         }
-      } catch (authError) {
+      } catch (_authError) {
         // WORKAROUND: Auth bypass for backward compatibility with client portal
         // Problem: Client portal accesses published FNA data using the anon key without a user session.
         // Why chosen: Removing this would break client-facing FNA display until portal auth is refactored.

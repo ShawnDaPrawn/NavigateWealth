@@ -3,7 +3,7 @@
  * Multi-step form for creating and editing Investment INA sessions
  */
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { FNAWizardLayout, FNAWizardStepConfig } from '../../fna/FNAWizardLayout';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../../../ui/card';
 import { Input } from '../../../../ui/input';
@@ -116,22 +116,7 @@ export function InvestmentINAWizard({
 
   const wizardSteps = stepsList.map((step) => stepConfig[step]);
 
-  useEffect(() => {
-    if (open) {
-      loadInitialData();
-      if (startAtStep && startAtStep > 1) {
-        const targetIndex = Math.min(startAtStep - 1, stepsList.length - 1);
-        setCurrentStep(stepsList[targetIndex]);
-      }
-    } else {
-      // Reset on close
-      setCurrentStep('client-overview');
-      setInputs({});
-      setResults(null);
-    }
-  }, [open, clientId, startAtStep, stepsList]);
-
-  const loadInitialData = async () => {
+  const loadInitialData = useCallback(async () => {
     try {
       setLoading(true);
       if (prefillEnabled && !intakePrefill) {
@@ -148,7 +133,22 @@ export function InvestmentINAWizard({
     } finally {
       setLoading(false);
     }
-  };
+  }, [prefillEnabled, intakePrefill, startPrefill, clientId]);
+
+  useEffect(() => {
+    if (open) {
+      loadInitialData();
+      if (startAtStep && startAtStep > 1) {
+        const targetIndex = Math.min(startAtStep - 1, stepsList.length - 1);
+        setCurrentStep(stepsList[targetIndex]);
+      }
+    } else {
+      // Reset on close
+      setCurrentStep('client-overview');
+      setInputs({});
+      setResults(null);
+    }
+  }, [open, clientId, startAtStep, stepsList, loadInitialData]);
 
   const currentStepIndex = stepsList.indexOf(currentStep);
 
@@ -290,9 +290,9 @@ export function InvestmentINAWizard({
     }
   };
 
-  const updateInputs = (updates: Partial<InvestmentINAInputs>) => {
+  const updateInputs = useCallback((updates: Partial<InvestmentINAInputs>) => {
     setInputs((prev) => ({ ...prev, ...updates }));
-  };
+  }, []);
 
   const isResultsStep = currentStep === 'results';
   const isReviewStep = currentStep === 'review';
@@ -526,7 +526,12 @@ function EconomicAssumptionsStep({ inputs, updateInputs }: INAStepProps) {
         expectedRealReturns: defaults.expectedRealReturns,
       });
     }
-  }, [defaults.expectedRealReturns, defaults.longTermInflationRate, inputs.longTermInflationRate]);
+  }, [
+    defaults.expectedRealReturns,
+    defaults.longTermInflationRate,
+    inputs.longTermInflationRate,
+    updateInputs,
+  ]);
 
   return (
     <div className="space-y-4">

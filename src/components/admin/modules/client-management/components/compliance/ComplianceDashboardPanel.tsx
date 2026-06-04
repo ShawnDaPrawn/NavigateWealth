@@ -11,7 +11,7 @@
  * score from KV-stored check history.
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../../../../../ui/card';
 import { Badge } from '../../../../../ui/badge';
 import { Button } from '../../../../../ui/button';
@@ -187,7 +187,7 @@ export function ComplianceDashboardPanel({ clientId }: ComplianceDashboardPanelP
   const [error, setError] = useState<string | null>(null);
   const [showCheckMatrix, setShowCheckMatrix] = useState(false);
 
-  const fetchDashboard = async () => {
+  const fetchDashboard = useCallback(async () => {
     setIsLoading(true);
     setError(null);
     try {
@@ -201,11 +201,11 @@ export function ComplianceDashboardPanel({ clientId }: ComplianceDashboardPanelP
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [clientId]);
 
   useEffect(() => {
     fetchDashboard();
-  }, [clientId]);
+  }, [clientId, fetchDashboard]);
 
   if (isLoading) {
     return (

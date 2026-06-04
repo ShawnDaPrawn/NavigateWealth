@@ -415,12 +415,39 @@ export function WillChatInterface({
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const [copied, setCopied] = useState<number | null>(null);
 
+  // ── API Calls ──────────────────────────────────────────────────
+
+  const checkStatus = async () => {
+    try {
+      const result = await api.get<{ configured: boolean }>(ENDPOINTS.STATUS);
+      setIsConfigured(result.configured);
+    } catch {
+      setIsConfigured(false);
+    }
+  };
+
+  const loadSessions = useCallback(async () => {
+    try {
+      setIsLoadingSessions(true);
+      const result = await api.get<{ success: boolean; data: SessionSummary[] }>(
+        ENDPOINTS.CLIENT_SESSIONS(clientId),
+      );
+      if (result.success) {
+        setSessions(result.data || []);
+      }
+    } catch (err) {
+      console.error('Failed to load will chat sessions:', err);
+    } finally {
+      setIsLoadingSessions(false);
+    }
+  }, [clientId]);
+
   // ── Effects ────────────────────────────────────────────────────
 
   useEffect(() => {
     checkStatus();
     loadSessions();
-  }, [clientId]);
+  }, [clientId, loadSessions]);
 
   useEffect(() => {
     if (chatContainerRef.current && messages.length > 0) {
@@ -438,33 +465,6 @@ export function WillChatInterface({
     }
   }, [input]);
 
-  // ── API Calls ──────────────────────────────────────────────────
-
-  const checkStatus = async () => {
-    try {
-      const result = await api.get<{ configured: boolean }>(ENDPOINTS.STATUS);
-      setIsConfigured(result.configured);
-    } catch {
-      setIsConfigured(false);
-    }
-  };
-
-  const loadSessions = async () => {
-    try {
-      setIsLoadingSessions(true);
-      const result = await api.get<{ success: boolean; data: SessionSummary[] }>(
-        ENDPOINTS.CLIENT_SESSIONS(clientId),
-      );
-      if (result.success) {
-        setSessions(result.data || []);
-      }
-    } catch (err) {
-      console.error('Failed to load will chat sessions:', err);
-    } finally {
-      setIsLoadingSessions(false);
-    }
-  };
-
   /**
    * Send a message to the agent via our server.
    * Server calls OpenAI, persists the exchange, and returns the reply.
@@ -474,59 +474,62 @@ export function WillChatInterface({
    * (handleSubmit does this; createSession intentionally does not, so the
    * initial hidden prompt never appears in the chat).
    */
-  const sendMessageViaServer = async (sid: string, messageText: string) => {
-    const result = await api.post<{
-      success: boolean;
-      data: {
-        assistantReply: string;
-        responseId: string | null;
-        strategy: string;
-        status: string;
-        willReady: boolean;
-        outputPack: OutputPack | null;
-      };
-      error?: string;
-    }>(ENDPOINTS.SEND(sid), {
-      message: messageText,
-      previousResponseId,
-    });
+  const sendMessageViaServer = useCallback(
+    async (sid: string, messageText: string) => {
+      const result = await api.post<{
+        success: boolean;
+        data: {
+          assistantReply: string;
+          responseId: string | null;
+          strategy: string;
+          status: string;
+          willReady: boolean;
+          outputPack: OutputPack | null;
+        };
+        error?: string;
+      }>(ENDPOINTS.SEND(sid), {
+        message: messageText,
+        previousResponseId,
+      });
 
-    if (!result.success) {
-      throw new Error(result.error || 'Failed to get agent response');
-    }
+      if (!result.success) {
+        throw new Error(result.error || 'Failed to get agent response');
+      }
 
-    const {
-      assistantReply,
-      responseId,
-      strategy,
-      willReady: isWillReady,
-      outputPack: pack,
-    } = result.data;
+      const {
+        assistantReply,
+        responseId,
+        strategy,
+        willReady: isWillReady,
+        outputPack: pack,
+      } = result.data;
 
-    // Track the response ID for conversation chaining
-    if (responseId) {
-      setPreviousResponseId(responseId);
-    }
+      // Track the response ID for conversation chaining
+      if (responseId) {
+        setPreviousResponseId(responseId);
+      }
 
-    setAgentConnected(true);
-    logger.info(`[WillChat] Agent responded via ${strategy}`, {
-      responseId,
-      replyLen: assistantReply.length,
-    });
+      setAgentConnected(true);
+      logger.info(`[WillChat] Agent responded via ${strategy}`, {
+        responseId,
+        replyLen: assistantReply.length,
+      });
 
-    // Add ONLY the assistant reply to the UI
-    setMessages((prev) => [
-      ...prev,
-      { role: 'assistant' as const, content: assistantReply, timestamp: new Date() },
-    ]);
+      // Add ONLY the assistant reply to the UI
+      setMessages((prev) => [
+        ...prev,
+        { role: 'assistant' as const, content: assistantReply, timestamp: new Date() },
+      ]);
 
-    // Check for will completion
-    if (isWillReady) {
-      setWillReady(true);
-      setOutputPack(pack);
-      toast.success('Will interview complete! The Last Will & Testament is ready for review.');
-    }
-  };
+      // Check for will completion
+      if (isWillReady) {
+        setWillReady(true);
+        setOutputPack(pack);
+        toast.success('Will interview complete! The Last Will & Testament is ready for review.');
+      }
+    },
+    [previousResponseId],
+  );
 
   /**
    * Create a new session:
@@ -711,7 +714,7 @@ export function WillChatInterface({
     } finally {
       setIsLoading(false);
     }
-  }, [input, isLoading, sessionId, previousResponseId]);
+  }, [input, isLoading, sessionId, sendMessageViaServer]);
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === 'Enter' && !e.shiftKey) {

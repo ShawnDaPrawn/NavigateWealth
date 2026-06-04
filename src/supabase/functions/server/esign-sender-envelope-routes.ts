@@ -1,6 +1,4 @@
 import { Hono } from 'npm:hono';
-import * as kv from './kv_store.tsx';
-import { EsignKeys } from './esign-keys.ts';
 import { getAuthContext, AuthError } from './auth-mw.ts';
 import { createModuleLogger } from './stderr-logger.ts';
 import { getErrMsg } from './shared-logger-utils.ts';
@@ -8,12 +6,16 @@ import { rateLimit } from './esign-rate-limit.ts';
 import { requireIdempotency } from './idempotency.ts';
 import { formatZodError } from './shared-validation-utils.ts';
 import { SignEnvelopeSchema, RejectEnvelopeSchema } from './esign-validation.ts';
-import { getRequestMetadata, audActor, resolveFirmId } from './esign-route-helpers.ts';
+import {
+  getRequestMetadata,
+  audActor,
+  resolveFirmId,
+  SignerRecord,
+} from './esign-route-helpers.ts';
 import { belongsToFirm } from './esign-firm-scope.ts';
 import {
   getEnvelopeDetails,
   getEnvelopeSigners,
-  getSignerByToken,
   getClientEnvelopes,
   updateEnvelopeStatus,
   updateSignerStatus,
@@ -32,7 +34,6 @@ import {
 import { createSigningInviteEmail } from './esign-email-templates.ts';
 import { sendEmail } from './email-service.ts';
 import { sendOtpSms } from './sms-service.ts';
-import { enqueue as enqueueInAppNotification } from './esign-inapp-notifications.ts';
 import { enqueueCompletion } from './esign-completion-queue.ts';
 
 const log = createModuleLogger('esign-sender-envelope-routes');

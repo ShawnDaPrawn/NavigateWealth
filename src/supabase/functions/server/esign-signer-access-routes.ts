@@ -1,6 +1,5 @@
 import { Hono } from 'npm:hono';
 import * as kv from './kv_store.tsx';
-import { getAuthContext, AuthError } from './auth-mw.ts';
 import { createModuleLogger } from './stderr-logger.ts';
 import { rateLimit } from './esign-rate-limit.ts';
 import { formatZodError } from './shared-validation-utils.ts';
@@ -9,7 +8,7 @@ import { getRequestMetadata, SignerRecord, FieldRecord } from './esign-route-hel
 import { checkRateLimit } from './rateLimiter.ts';
 import { getEnvelopeDetails, getSignerByToken, logAuditEvent } from './esign-services.ts';
 import { getDocumentUrl } from './esign-storage.ts';
-import { verifyAccessCode, generateAndStoreOTP } from './esign-otp.ts';
+import { generateAndStoreOTP } from './esign-otp.ts';
 import { createOTPEmail } from './esign-email-templates.ts';
 import { getConsentByVersion } from './esign-consent-registry.ts';
 import { getFirmBranding, toPublicBranding } from './esign-branding-service.ts';

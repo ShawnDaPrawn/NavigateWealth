@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../../../../ui/card';
 import { Button } from '../../../../ui/button';
 import { Input } from '../../../../ui/input';
@@ -123,11 +123,6 @@ export function RetirementCalculator({ onBack }: RetirementCalculatorProps) {
     }
   }, [selectedClientId]);
 
-  // Calculate on input change
-  useEffect(() => {
-    calculateResults();
-  }, [inputs]);
-
   const loadScenarios = async (clientId: string) => {
     try {
       const data = await api.get<{ scenarios?: RetirementScenario[] }>(
@@ -157,7 +152,7 @@ export function RetirementCalculator({ onBack }: RetirementCalculatorProps) {
   };
 
   // Calculation logic
-  const calculateResults = () => {
+  const calculateResults = useCallback(() => {
     const {
       currentAge,
       retirementAge,
@@ -350,7 +345,12 @@ export function RetirementCalculator({ onBack }: RetirementCalculatorProps) {
       fundsLastToAge: fundsRunOutAge,
       projectionData: finalProjectionData,
     });
-  };
+  }, [inputs]);
+
+  // Calculate on input change
+  useEffect(() => {
+    calculateResults();
+  }, [inputs, calculateResults]);
 
   const handleSaveScenario = async () => {
     if (!selectedClientId) {

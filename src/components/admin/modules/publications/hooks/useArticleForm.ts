@@ -243,7 +243,7 @@ export function useArticleForm(options: UseArticleFormOptions = {}): UseArticleF
     initialFormDataRef.current = JSON.stringify(formData);
     setIsDirty(false);
     setErrors([]);
-  }, [article]);
+  }, [article, formData]);
 
   return {
     formData,

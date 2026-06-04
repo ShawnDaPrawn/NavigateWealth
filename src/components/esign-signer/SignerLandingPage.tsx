@@ -81,7 +81,7 @@ export function SignerLandingPage() {
         setCurrentStep('expired');
       }
     });
-  }, [token]);
+  }, [token, validateToken]);
 
   const handleOtpVerified = () => {
     setCurrentStep('signing');

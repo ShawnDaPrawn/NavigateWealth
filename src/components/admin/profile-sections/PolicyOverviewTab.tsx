@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '../../ui/card';
 import { Button } from '../../ui/button';
 import { Badge } from '../../ui/badge';
@@ -182,38 +182,7 @@ function OverviewSection({
   const [goals, setGoals] = useState<Goal[]>([]);
   const [linkedGoalsMap, setLinkedGoalsMap] = useState<Record<string, LinkedGoalStatus>>({});
 
-  useEffect(() => {
-    loadData();
-  }, [clientId, section.categoryId]);
-
-  // Update Linked Goals Map when policies or goals change
-  useEffect(() => {
-    if (section.categoryId === 'investments' && goals.length > 0 && policies.length > 0) {
-      const map: Record<string, LinkedGoalStatus> = {};
-
-      policies.forEach((policy) => {
-        // Find if policy is linked to any goal
-        const linkedGoal = goals.find((g) => g.linkedInvestmentIds?.includes(policy.id));
-
-        if (linkedGoal) {
-          const calc = calculateGoalStatus(linkedGoal, policies);
-          map[policy.id] = {
-            name: linkedGoal.name,
-            status: calc.status,
-            targetAmount: linkedGoal.targetAmount,
-            requiredMonthly: calc.requiredMonthlyContribution,
-            targetDate: linkedGoal.targetDate,
-          };
-        }
-      });
-
-      setLinkedGoalsMap(map);
-    } else {
-      setLinkedGoalsMap({});
-    }
-  }, [goals, policies, section.categoryId]);
-
-  const loadData = async () => {
+  const loadData = useCallback(async () => {
     setLoading(true);
     try {
       // Helper to fetch schema with retry for cold-start resilience
@@ -320,7 +289,38 @@ function OverviewSection({
     } finally {
       setLoading(false);
     }
-  };
+  }, [clientId, section.categoryId, section.id, section.label]);
+
+  useEffect(() => {
+    loadData();
+  }, [clientId, section.categoryId, loadData]);
+
+  // Update Linked Goals Map when policies or goals change
+  useEffect(() => {
+    if (section.categoryId === 'investments' && goals.length > 0 && policies.length > 0) {
+      const map: Record<string, LinkedGoalStatus> = {};
+
+      policies.forEach((policy) => {
+        // Find if policy is linked to any goal
+        const linkedGoal = goals.find((g) => g.linkedInvestmentIds?.includes(policy.id));
+
+        if (linkedGoal) {
+          const calc = calculateGoalStatus(linkedGoal, policies);
+          map[policy.id] = {
+            name: linkedGoal.name,
+            status: calc.status,
+            targetAmount: linkedGoal.targetAmount,
+            requiredMonthly: calc.requiredMonthlyContribution,
+            targetDate: linkedGoal.targetDate,
+          };
+        }
+      });
+
+      setLinkedGoalsMap(map);
+    } else {
+      setLinkedGoalsMap({});
+    }
+  }, [goals, policies, section.categoryId]);
 
   const formatFieldValue = (field: SchemaField, value: unknown): React.ReactNode => {
     if (!value && value !== 0) return '-';

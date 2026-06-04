@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Button } from '../../../../../ui/button';
 import { Plus, Loader2 } from 'lucide-react';
 import { Goal } from './types';
@@ -26,11 +26,7 @@ export function GoalDashboard({
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingGoal, setEditingGoal] = useState<Goal | undefined>(undefined);
 
-  useEffect(() => {
-    fetchGoals();
-  }, [clientId]);
-
-  const fetchGoals = async () => {
+  const fetchGoals = useCallback(async () => {
     setLoading(true);
     try {
       const data = await api.get<{ goals?: Goal[] }>(`/goals/${clientId}`);
@@ -42,7 +38,11 @@ export function GoalDashboard({
     } finally {
       setLoading(false);
     }
-  };
+  }, [clientId, onGoalsUpdate]);
+
+  useEffect(() => {
+    fetchGoals();
+  }, [clientId, fetchGoals]);
 
   const handleSaveGoal = async (newGoal: Goal) => {
     // Optimistic update
