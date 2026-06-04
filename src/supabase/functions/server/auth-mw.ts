@@ -17,6 +17,8 @@ declare module 'npm:hono' {
     userRole: string;
     user: unknown;
     requestId: string;
+    userEmail: string | undefined;
+    profile: unknown;
   }
 }
 
