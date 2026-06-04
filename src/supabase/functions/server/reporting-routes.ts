@@ -151,7 +151,7 @@ app.post(
 
     const fileName = `Navigate_Wealth_Report_${body.client.lastName}_${body.client.firstName}_${new Date().toISOString().slice(0, 10)}.pdf`;
 
-    return new Response(pdfBytes, {
+    return new Response(pdfBytes as unknown as BodyInit, {
       status: 200,
       headers: {
         'Content-Type': 'application/pdf',

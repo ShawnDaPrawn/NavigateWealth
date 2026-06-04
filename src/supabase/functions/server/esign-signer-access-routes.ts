@@ -20,7 +20,7 @@ const app = new Hono();
 
 app.get('/sign-by-token/:token', async (c) => {
   try {
-    const token = c.req.param('token');
+    const token = c.req.param('token')!;
 
     // Get signer by token
     const signer = await getSignerByToken(token);
@@ -42,7 +42,10 @@ app.get('/sign-by-token/:token', async (c) => {
       : null;
 
     // Filter fields for this signer
-    const signerFields = envelope.fields.filter((f: FieldRecord) => f.signer_id === signer.id);
+    const allFields = Array.isArray(envelope.fields)
+      ? (envelope.fields as unknown as FieldRecord[])
+      : [];
+    const signerFields = allFields.filter((f: FieldRecord) => f.signer_id === signer.id);
 
     // P6.4 — resolve the consent text the signer should see. Envelopes
     // created after P6 have `consent_version` pinned at send-time; for
@@ -141,13 +144,14 @@ app.post('/signer/validate', rateLimit('SIGNER_ACCESS'), async (c) => {
       : null;
 
     // Filter fields for this signer
-    const signerFields = envelope.fields.filter((f: FieldRecord) => f.signer_id === signer.id);
+    const allFields2 = Array.isArray(envelope.fields)
+      ? (envelope.fields as unknown as FieldRecord[])
+      : [];
+    const signerFields = allFields2.filter((f: FieldRecord) => f.signer_id === signer.id);
 
     // Determine if it's this signer's turn based on signing mode
     const allSigners = envelope.signers || [];
-    const sortedAllSigners = [...allSigners].sort(
-      (a: SignerRecord, b: SignerRecord) => (a.order || 0) - (b.order || 0),
-    );
+    const sortedAllSigners = [...allSigners].sort((a, b) => (a.order || 0) - (b.order || 0));
     const signerOrder = signer.order || 1;
     const signingMode = envelope.signing_mode || 'sequential';
 
@@ -157,11 +161,11 @@ app.post('/signer/validate', rateLimit('SIGNER_ACCESS'), async (c) => {
       signingMode === 'parallel'
         ? true
         : sortedAllSigners
-            .filter((s: SignerRecord) => (s.order || 0) < signerOrder)
-            .every((s: SignerRecord) => s.status === 'signed');
+            .filter((s) => (s.order || 0) < signerOrder)
+            .every((s) => s.status === 'signed');
 
     // Build a summary of all signers (non-sensitive) for the waiting UI
-    const signersSummary = sortedAllSigners.map((s: SignerRecord) => ({
+    const signersSummary = sortedAllSigners.map((s) => ({
       order: s.order,
       name: s.name,
       role: s.role,
@@ -185,7 +189,7 @@ app.post('/signer/validate', rateLimit('SIGNER_ACCESS'), async (c) => {
         savedInitials = typeof profile.initials === 'string' ? profile.initials : null;
       }
     } catch (profileErr) {
-      log.warn('Failed to load signer profile (non-critical):', profileErr);
+      log.warn('Failed to load signer profile (non-critical):', { error: String(profileErr) });
     }
 
     // Auto-send OTP if required and not verified
@@ -225,7 +229,7 @@ app.post('/signer/validate', rateLimit('SIGNER_ACCESS'), async (c) => {
           log.info(`✅ Auto-sent OTP to ${signer.email} for signer ${signer.id}`);
         }
       } catch (err) {
-        log.warn('❌ Failed to auto-send OTP:', err);
+        log.warn('❌ Failed to auto-send OTP:', { error: String(err) });
         // We don't block the response, but we log the error
       }
     }
@@ -242,7 +246,9 @@ app.post('/signer/validate', rateLimit('SIGNER_ACCESS'), async (c) => {
         branding = toPublicBranding(record);
       }
     } catch (brandErr) {
-      log.warn('Failed to load firm branding for signer (non-critical):', brandErr);
+      log.warn('Failed to load firm branding for signer (non-critical):', {
+        error: String(brandErr),
+      });
     }
 
     // P8.7 — Surface the signer's preferred language so the UI can

@@ -31,6 +31,7 @@ import {
   purgeExpiredDeletedEnvelopes,
   RECOVERY_RETENTION_DAYS,
 } from './esign-recovery-bin.ts';
+import { AdminAuditService } from './admin-audit-service.ts';
 
 const log = createModuleLogger('esign-firm-admin-routes');
 
@@ -44,9 +45,9 @@ firmAdminRoutes.get('/retention', async (c) => {
     return c.json({ policy });
   } catch (error: unknown) {
     const status = error instanceof AuthError ? error.statusCode : 500;
-    return c.json(
-      { error: error instanceof Error ? error.message : 'Retention read failed' },
-      status,
+    return new Response(
+      JSON.stringify({ error: error instanceof Error ? error.message : 'Retention read failed' }),
+      { status, headers: { 'Content-Type': 'application/json' } },
     );
   }
 });
@@ -66,9 +67,9 @@ firmAdminRoutes.put('/retention', async (c) => {
     return c.json({ policy: saved });
   } catch (error: unknown) {
     const status = error instanceof AuthError ? error.statusCode : 500;
-    return c.json(
-      { error: error instanceof Error ? error.message : 'Retention write failed' },
-      status,
+    return new Response(
+      JSON.stringify({ error: error instanceof Error ? error.message : 'Retention write failed' }),
+      { status, headers: { 'Content-Type': 'application/json' } },
     );
   }
 });
@@ -82,9 +83,11 @@ firmAdminRoutes.delete('/retention', async (c) => {
     return c.json({ ok: true });
   } catch (error: unknown) {
     const status = error instanceof AuthError ? error.statusCode : 500;
-    return c.json(
-      { error: error instanceof Error ? error.message : 'Retention delete failed' },
-      status,
+    return new Response(
+      JSON.stringify({
+        error: error instanceof Error ? error.message : 'Retention delete failed',
+      }),
+      { status, headers: { 'Content-Type': 'application/json' } },
     );
   }
 });
@@ -97,9 +100,9 @@ firmAdminRoutes.post('/maintenance/retention-sweep', async (c) => {
     return c.json(result);
   } catch (error: unknown) {
     const status = error instanceof AuthError ? error.statusCode : 500;
-    return c.json(
-      { error: error instanceof Error ? error.message : 'Retention sweep failed' },
-      status,
+    return new Response(
+      JSON.stringify({ error: error instanceof Error ? error.message : 'Retention sweep failed' }),
+      { status, headers: { 'Content-Type': 'application/json' } },
     );
   }
 });
@@ -119,9 +122,9 @@ firmAdminRoutes.get('/branding', async (c) => {
     return c.json({ branding: record });
   } catch (error: unknown) {
     const status = error instanceof AuthError ? error.statusCode : 500;
-    return c.json(
-      { error: error instanceof Error ? error.message : 'Branding read failed' },
-      status,
+    return new Response(
+      JSON.stringify({ error: error instanceof Error ? error.message : 'Branding read failed' }),
+      { status, headers: { 'Content-Type': 'application/json' } },
     );
   }
 });
@@ -146,12 +149,18 @@ firmAdminRoutes.put('/branding', async (c) => {
     return c.json({ branding: saved });
   } catch (error: unknown) {
     if (error instanceof AuthError) {
-      return c.json({ error: error.message }, error.statusCode);
+      return new Response(JSON.stringify({ error: error.message }), {
+        status: error.statusCode,
+        headers: { 'Content-Type': 'application/json' },
+      });
     }
     const message = error instanceof Error ? error.message : 'Branding write failed';
     // Validation errors surface as 400; everything else is treated as 500.
     const status = /must be|required/i.test(message) ? 400 : 500;
-    return c.json({ error: message }, status);
+    return new Response(JSON.stringify({ error: message }), {
+      status,
+      headers: { 'Content-Type': 'application/json' },
+    });
   }
 });
 
@@ -164,9 +173,9 @@ firmAdminRoutes.delete('/branding', async (c) => {
     return c.json({ ok: true });
   } catch (error: unknown) {
     const status = error instanceof AuthError ? error.statusCode : 500;
-    return c.json(
-      { error: error instanceof Error ? error.message : 'Branding delete failed' },
-      status,
+    return new Response(
+      JSON.stringify({ error: error instanceof Error ? error.message : 'Branding delete failed' }),
+      { status, headers: { 'Content-Type': 'application/json' } },
     );
   }
 });
@@ -191,9 +200,11 @@ firmAdminRoutes.get('/metrics', async (c) => {
   } catch (error: unknown) {
     log.error('Metrics aggregation error:', error);
     const status = error instanceof AuthError ? error.statusCode : 500;
-    return c.json(
-      { error: error instanceof Error ? error.message : 'Failed to compute metrics' },
-      status,
+    return new Response(
+      JSON.stringify({
+        error: error instanceof Error ? error.message : 'Failed to compute metrics',
+      }),
+      { status, headers: { 'Content-Type': 'application/json' } },
     );
   }
 });
@@ -213,9 +224,11 @@ firmAdminRoutes.get('/recovery-bin', async (c) => {
   } catch (error: unknown) {
     log.error('Recovery bin list error:', error);
     const status = error instanceof AuthError ? error.statusCode : 500;
-    return c.json(
-      { error: error instanceof Error ? error.message : 'Failed to list recovery bin' },
-      status,
+    return new Response(
+      JSON.stringify({
+        error: error instanceof Error ? error.message : 'Failed to list recovery bin',
+      }),
+      { status, headers: { 'Content-Type': 'application/json' } },
     );
   }
 });
@@ -224,7 +237,7 @@ firmAdminRoutes.get('/recovery-bin', async (c) => {
 firmAdminRoutes.post('/recovery-bin/:envelopeId/restore', rateLimit('SENDER_MUTATE'), async (c) => {
   try {
     const ctx = await getAuthContext(c);
-    const envelopeId = c.req.param('envelopeId');
+    const envelopeId = c.req.param('envelopeId')!;
     const envelope = await getEnvelopeDetails(envelopeId);
     if (!envelope) return c.json({ error: 'Envelope not found' }, 404);
 
@@ -240,7 +253,7 @@ firmAdminRoutes.post('/recovery-bin/:envelopeId/restore', rateLimit('SENDER_MUTA
     const { ip, userAgent } = getRequestMetadata(c);
     await logAuditEvent({
       envelopeId,
-      actorType: 'admin',
+      actorType: 'sender_user',
       actorId: ctx.user.id,
       action: 'restored',
       email: ctx.user.email || 'admin@system',
@@ -264,9 +277,11 @@ firmAdminRoutes.post('/recovery-bin/:envelopeId/restore', rateLimit('SENDER_MUTA
   } catch (error: unknown) {
     log.error('Restore envelope error:', error);
     const status = error instanceof AuthError ? error.statusCode : 500;
-    return c.json(
-      { error: error instanceof Error ? error.message : 'Failed to restore envelope' },
-      status,
+    return new Response(
+      JSON.stringify({
+        error: error instanceof Error ? error.message : 'Failed to restore envelope',
+      }),
+      { status, headers: { 'Content-Type': 'application/json' } },
     );
   }
 });
@@ -275,7 +290,7 @@ firmAdminRoutes.post('/recovery-bin/:envelopeId/restore', rateLimit('SENDER_MUTA
 firmAdminRoutes.delete('/recovery-bin/:envelopeId', rateLimit('SENDER_MUTATE'), async (c) => {
   try {
     const ctx = await getAuthContext(c);
-    const envelopeId = c.req.param('envelopeId');
+    const envelopeId = c.req.param('envelopeId')!;
     const envelope = await getEnvelopeDetails(envelopeId);
     if (!envelope) return c.json({ success: true, purged: true, already: true });
 
@@ -306,9 +321,11 @@ firmAdminRoutes.delete('/recovery-bin/:envelopeId', rateLimit('SENDER_MUTATE'), 
   } catch (error: unknown) {
     log.error('Purge envelope error:', error);
     const status = error instanceof AuthError ? error.statusCode : 500;
-    return c.json(
-      { error: error instanceof Error ? error.message : 'Failed to purge envelope' },
-      status,
+    return new Response(
+      JSON.stringify({
+        error: error instanceof Error ? error.message : 'Failed to purge envelope',
+      }),
+      { status, headers: { 'Content-Type': 'application/json' } },
     );
   }
 });
@@ -322,9 +339,11 @@ firmAdminRoutes.post('/maintenance/recovery-sweep', async (c) => {
   } catch (error: unknown) {
     log.error('Recovery sweep error:', error);
     const status = error instanceof AuthError ? error.statusCode : 500;
-    return c.json(
-      { error: error instanceof Error ? error.message : 'Failed to run recovery sweep' },
-      status,
+    return new Response(
+      JSON.stringify({
+        error: error instanceof Error ? error.message : 'Failed to run recovery sweep',
+      }),
+      { status, headers: { 'Content-Type': 'application/json' } },
     );
   }
 });

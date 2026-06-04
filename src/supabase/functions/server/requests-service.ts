@@ -12,6 +12,7 @@ import { APIError } from './error.middleware.ts';
 import {
   RequestTemplate,
   Request,
+  RequestAssignee,
   AuditLogEntry,
   TemplateStatus,
   RequestStatus,
@@ -85,7 +86,7 @@ const RequestSchema = z
     clientName: z.string().optional(),
 
     // Default to empty object if missing
-    requestDetails: z.record(z.unknown()).default({}),
+    requestDetails: z.record(z.string(), z.unknown()).default({}),
 
     // Default to empty array if missing
     assignees: z.array(RequestAssigneeSchema).default([]),
@@ -116,7 +117,7 @@ const RequestSchema = z
     complianceSignOff: z
       .object({
         required: z.boolean().default(false),
-        outcome: createEnumSchema(ApprovalOutcome, undefined).optional(),
+        outcome: z.nativeEnum(ApprovalOutcome).optional(),
         approvedBy: z.string().optional(),
         approvedAt: z.string().optional(),
         deficiencies: z.array(DeficiencySchema).default([]),
@@ -423,8 +424,8 @@ export class RequestsService {
       return result.data as Request;
     } else {
       log.warn('Found malformed request, attempting to heal', {
-        requestId: data.id,
-        errors: result.error.errors,
+        requestId: data.id as string | undefined,
+        errors: result.error.issues,
       });
 
       // If Zod fails, we can either return null or try to force it.
@@ -435,33 +436,39 @@ export class RequestsService {
 
       // Attempt to salvage ID and TemplateID at minimum
       const salvaged: Request = {
-        id: data.id || 'unknown',
-        templateId: data.templateId || 'unknown',
-        templateVersion: data.templateVersion || 1,
-        status: data.status || RequestStatus.NEW,
-        priority: data.priority || RequestPriority.MEDIUM,
-        requestDetails: data.requestDetails || {},
-        assignees: Array.isArray(data.assignees) ? data.assignees : [],
+        id: (data.id as string) || 'unknown',
+        templateId: (data.templateId as string) || 'unknown',
+        templateVersion: (data.templateVersion as number) || 1,
+        status: (data.status as RequestStatus) || RequestStatus.NEW,
+        priority: (data.priority as RequestPriority) || RequestPriority.MEDIUM,
+        requestDetails: (data.requestDetails as Record<string, unknown>) || {},
+        assignees: Array.isArray(data.assignees) ? (data.assignees as RequestAssignee[]) : [],
         complianceApproval: {
           required: false,
           checklistStatus: [],
-          ...data.complianceApproval,
+          ...(data.complianceApproval && typeof data.complianceApproval === 'object'
+            ? (data.complianceApproval as Record<string, unknown>)
+            : {}),
         },
         lifecycle: {
           stageHistory: [],
-          ...data.lifecycle,
+          ...(data.lifecycle && typeof data.lifecycle === 'object'
+            ? (data.lifecycle as Record<string, unknown>)
+            : {}),
         },
         complianceSignOff: {
           required: false,
           deficiencies: [],
-          ...data.complianceSignOff,
+          ...(data.complianceSignOff && typeof data.complianceSignOff === 'object'
+            ? (data.complianceSignOff as Record<string, unknown>)
+            : {}),
         },
         finalised: !!data.finalised,
-        documentIds: Array.isArray(data.documentIds) ? data.documentIds : [],
-        createdBy: data.createdBy || 'system',
-        createdAt: data.createdAt || new Date().toISOString(),
-        updatedBy: data.updatedBy || 'system',
-        updatedAt: data.updatedAt || new Date().toISOString(),
+        documentIds: Array.isArray(data.documentIds) ? (data.documentIds as string[]) : [],
+        createdBy: (data.createdBy as string) || 'system',
+        createdAt: (data.createdAt as string) || new Date().toISOString(),
+        updatedBy: (data.updatedBy as string) || 'system',
+        updatedAt: (data.updatedAt as string) || new Date().toISOString(),
       };
 
       return salvaged;
@@ -894,7 +901,7 @@ export class RequestsService {
    */
   async getAuditLog(requestId: string): Promise<AuditLogEntry[]> {
     try {
-      const entries = await kv.getByPrefix<AuditLogEntry>(`requests:audit:${requestId}:`);
+      const entries = (await kv.getByPrefix(`requests:audit:${requestId}:`)) as AuditLogEntry[];
       return entries.sort((a, b) => b.performedAt.localeCompare(a.performedAt));
     } catch (error) {
       throw new Error(`Failed to retrieve audit log: ${error}`, { cause: error });

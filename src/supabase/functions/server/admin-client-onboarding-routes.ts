@@ -9,6 +9,7 @@ import { createClient } from 'jsr:@supabase/supabase-js@2.49.8';
 import {
   AdminClientOnboardingService,
   validateClientInput,
+  type AdminAddClientInput,
 } from './admin-client-onboarding-service.ts';
 import { SUPER_ADMIN_EMAIL, HTTP_STATUS, ERROR_MESSAGES } from './constants.ts';
 import { createModuleLogger } from './stderr-logger.ts';
@@ -72,7 +73,7 @@ onboardingApp.use('*', verifyAdmin);
 onboardingApp.post('/add', async (c) => {
   try {
     const body = await c.req.json();
-    const adminUserId = c.get('userId');
+    const adminUserId = c.get('userId') as string;
 
     // Validate
     const errors = validateClientInput(body);
@@ -87,7 +88,10 @@ onboardingApp.post('/add', async (c) => {
 
     if (!result.success) {
       const status = result.errorCode === 'EMAIL_EXISTS' ? 409 : HTTP_STATUS.BAD_REQUEST;
-      return c.json(result, status);
+      return new Response(JSON.stringify(result), {
+        status,
+        headers: { 'Content-Type': 'application/json' },
+      });
     }
 
     return c.json(result, HTTP_STATUS.CREATED);
@@ -111,7 +115,7 @@ onboardingApp.post('/add', async (c) => {
 onboardingApp.post('/bulk-add', async (c) => {
   try {
     const body = await c.req.json();
-    const adminUserId = c.get('userId');
+    const adminUserId = c.get('userId') as string;
 
     if (!body.clients || !Array.isArray(body.clients)) {
       return c.json(
@@ -152,7 +156,7 @@ onboardingApp.post('/validate', async (c) => {
     }
 
     const results = body.clients.map((client: Record<string, unknown>, idx: number) => {
-      const errors = validateClientInput(client);
+      const errors = validateClientInput(client as unknown as AdminAddClientInput);
       return {
         row: idx + 1,
         email: (client.emailAddress as string) || '',

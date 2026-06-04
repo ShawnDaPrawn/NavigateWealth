@@ -28,6 +28,7 @@ import {
   updateEnvelopeStatus,
   logAuditEvent,
 } from './esign-services.ts';
+import { AdminAuditService } from './admin-audit-service.ts';
 
 const log = createModuleLogger('esign-ops-routes');
 
@@ -40,7 +41,10 @@ opsRoutes.get('/diagnostics/sms', async (c) => {
     return c.json({ success: true, sms: getSmsProviderStatus() });
   } catch (error: unknown) {
     const status = error instanceof AuthError ? error.statusCode : 500;
-    return c.json({ error: error instanceof Error ? error.message : 'Failed' }, status);
+    return new Response(
+      JSON.stringify({ error: error instanceof Error ? error.message : 'Failed' }),
+      { status, headers: { 'Content-Type': 'application/json' } },
+    );
   }
 });
 
@@ -74,9 +78,9 @@ opsRoutes.post('/maintenance/expiry-sweep', async (c) => {
   } catch (error: unknown) {
     log.error('Expiry sweep error:', error);
     const status = error instanceof AuthError ? error.statusCode : 500;
-    return c.json(
-      { error: error instanceof Error ? error.message : 'Expiry sweep failed' },
-      status,
+    return new Response(
+      JSON.stringify({ error: error instanceof Error ? error.message : 'Expiry sweep failed' }),
+      { status, headers: { 'Content-Type': 'application/json' } },
     );
   }
 });
@@ -127,9 +131,11 @@ opsRoutes.post('/cron/expiry-sweep', async (c) => {
     return c.json({ success: true, ...result });
   } catch (error: unknown) {
     log.error('CRON expiry sweep error:', error);
-    return c.json(
-      { error: error instanceof Error ? error.message : 'CRON expiry sweep failed' },
-      500,
+    return new Response(
+      JSON.stringify({
+        error: error instanceof Error ? error.message : 'CRON expiry sweep failed',
+      }),
+      { status: 500, headers: { 'Content-Type': 'application/json' } },
     );
   }
 });
@@ -166,9 +172,9 @@ opsRoutes.post('/maintenance/reminder-sweep', async (c) => {
   } catch (error: unknown) {
     log.error('Reminder sweep error:', error);
     const status = error instanceof AuthError ? error.statusCode : 500;
-    return c.json(
-      { error: error instanceof Error ? error.message : 'Reminder sweep failed' },
-      status,
+    return new Response(
+      JSON.stringify({ error: error instanceof Error ? error.message : 'Reminder sweep failed' }),
+      { status, headers: { 'Content-Type': 'application/json' } },
     );
   }
 });
@@ -339,7 +345,10 @@ opsRoutes.post('/maintenance/bulk-remind', rateLimit('SENDER_BULK'), async (c) =
   } catch (error: unknown) {
     log.error('Bulk remind error:', error);
     const status = error instanceof AuthError ? error.statusCode : 500;
-    return c.json({ error: error instanceof Error ? error.message : 'Bulk remind failed' }, status);
+    return new Response(
+      JSON.stringify({ error: error instanceof Error ? error.message : 'Bulk remind failed' }),
+      { status, headers: { 'Content-Type': 'application/json' } },
+    );
   }
 });
 
@@ -452,7 +461,10 @@ opsRoutes.post('/maintenance/bulk-void', rateLimit('SENDER_BULK'), async (c) => 
   } catch (error: unknown) {
     log.error('Bulk void error:', error);
     const status = error instanceof AuthError ? error.statusCode : 500;
-    return c.json({ error: error instanceof Error ? error.message : 'Bulk void failed' }, status);
+    return new Response(
+      JSON.stringify({ error: error instanceof Error ? error.message : 'Bulk void failed' }),
+      { status, headers: { 'Content-Type': 'application/json' } },
+    );
   }
 });
 

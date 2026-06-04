@@ -115,7 +115,7 @@ export interface DocumentMetadata {
  */
 app.get('/:userId', async (c) => {
   try {
-    const userId = c.req.param('userId');
+    const userId = c.req.param('userId')!;
     log.info(`📄 Fetching documents for user: ${userId}`);
 
     // Get document metadata from KV store
@@ -148,7 +148,7 @@ app.get('/:userId', async (c) => {
  */
 app.post('/:userId/upload', async (c) => {
   try {
-    const userId = c.req.param('userId');
+    const userId = c.req.param('userId')!;
 
     // Wrap formData() in try/catch — the native parser uses forEach()
     // internally, which throws if the body is not valid multipart/form-data
@@ -215,7 +215,8 @@ app.post('/:userId/upload', async (c) => {
       fileSize: file.size,
       filePath,
       uploadDate: new Date().toISOString(),
-      productCategory: (productCategory as string) || 'General',
+      productCategory: ((productCategory as string) ||
+        'General') as DocumentMetadata['productCategory'],
       policyNumber: policyNumber || '',
       status: 'new',
       isFavourite: false,
@@ -253,7 +254,7 @@ app.post('/:userId/upload', async (c) => {
  */
 app.post('/:userId/link', async (c) => {
   try {
-    const userId = c.req.param('userId');
+    const userId = c.req.param('userId')!;
     const body = await c.req.json();
 
     const parsed = CreateDocumentLinkSchema.safeParse(body);
@@ -278,11 +279,11 @@ app.post('/:userId/link', async (c) => {
       url,
       description: description || '',
       uploadDate: new Date().toISOString(),
-      productCategory: productCategory || 'General',
+      productCategory: (productCategory || 'General') as DocumentMetadata['productCategory'],
       policyNumber: policyNumber || '',
       status: 'new',
       isFavourite: false,
-      uploadedBy,
+      uploadedBy: uploadedBy ?? '',
     };
 
     // Store metadata in KV
@@ -309,8 +310,8 @@ app.post('/:userId/link', async (c) => {
  */
 app.get('/:userId/:documentId/download', async (c) => {
   try {
-    const userId = c.req.param('userId');
-    const documentId = c.req.param('documentId');
+    const userId = c.req.param('userId')!;
+    const documentId = c.req.param('documentId')!;
 
     log.info(`⬇️ Generating download URL for: ${documentId}`);
 
@@ -420,8 +421,8 @@ app.get('/:userId/:documentId/download', async (c) => {
  */
 app.patch('/:userId/:documentId', async (c) => {
   try {
-    const userId = c.req.param('userId');
-    const documentId = c.req.param('documentId');
+    const userId = c.req.param('userId')!;
+    const documentId = c.req.param('documentId')!;
     const body = await c.req.json();
     const parsed = UpdateDocumentSchema.safeParse(body);
     if (!parsed.success) {
@@ -474,8 +475,8 @@ app.patch('/:userId/:documentId', async (c) => {
  */
 app.delete('/:userId/:documentId', async (c) => {
   try {
-    const userId = c.req.param('userId');
-    const documentId = c.req.param('documentId');
+    const userId = c.req.param('userId')!;
+    const documentId = c.req.param('documentId')!;
 
     log.info(`🗑️ Deleting document: ${documentId}`);
 
@@ -498,7 +499,7 @@ app.delete('/:userId/:documentId', async (c) => {
         .remove([docData.filePath]);
 
       if (deleteError) {
-        log.warn('⚠️ Error deleting file from storage:', deleteError);
+        log.warn('⚠️ Error deleting file from storage:', { error: String(deleteError) });
         // Continue anyway to delete metadata
       } else {
         log.info('✅ File deleted from storage');

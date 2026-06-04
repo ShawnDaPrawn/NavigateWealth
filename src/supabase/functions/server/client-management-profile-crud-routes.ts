@@ -141,7 +141,7 @@ app.post(
         }
 
         finalProfile = {
-          ...data,
+          ...(data as Record<string, unknown>),
           updatedAt: new Date().toISOString(),
         };
       } else {
@@ -149,7 +149,11 @@ app.post(
         log.info('Partial patch detected. Merging...');
         try {
           const existing = (await kv.get(key)) || {};
-          finalProfile = { ...existing, ...data, updatedAt: new Date().toISOString() };
+          finalProfile = {
+            ...existing,
+            ...(data as Record<string, unknown>),
+            updatedAt: new Date().toISOString(),
+          };
         } catch (readError) {
           log.error('Failed to read profile for PATCH.', readError);
           throw new Error('Database error. Please refresh the page.', { cause: readError });

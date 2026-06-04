@@ -53,7 +53,7 @@ app.get('/all-users', async (c) => {
 
     type AuthUserBrief = {
       id: string;
-      email?: string | null;
+      email?: string;
       created_at?: string;
       user_metadata?: Record<string, unknown>;
     };

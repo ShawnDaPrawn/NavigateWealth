@@ -35,7 +35,7 @@ app.post('/financial/consumer-trace', async (c) => {
     });
   } catch (e: unknown) {
     log.error('Consumer trace route error:', e);
-    return routeError(c, e);
+    return routeError(c, e) as Response;
   }
 });
 
@@ -58,7 +58,7 @@ app.post('/financial/debt-review', async (c) => {
     });
   } catch (e: unknown) {
     log.error('Debt review route error:', e);
-    return routeError(c, e);
+    return routeError(c, e) as Response;
   }
 });
 
@@ -85,7 +85,7 @@ app.post('/corporate/cipc', async (c) => {
     });
   } catch (e: unknown) {
     log.error('CIPC route error:', e);
-    return routeError(c, e);
+    return routeError(c, e) as Response;
   }
 });
 
@@ -108,7 +108,7 @@ app.post('/corporate/director-enquiry', async (c) => {
     });
   } catch (e: unknown) {
     log.error('Director enquiry route error:', e);
-    return routeError(c, e);
+    return routeError(c, e) as Response;
   }
 });
 
@@ -135,7 +135,7 @@ app.post('/address/best-known', async (c) => {
     });
   } catch (e: unknown) {
     log.error('Best known address route error:', e);
-    return routeError(c, e);
+    return routeError(c, e) as Response;
   }
 });
 
@@ -160,7 +160,7 @@ app.post('/screening/custom', async (c) => {
     });
   } catch (e: unknown) {
     log.error('Custom screening route error:', e);
-    return routeError(c, e);
+    return routeError(c, e) as Response;
   }
 });
 
@@ -178,7 +178,7 @@ app.post('/sanctions/enforcement-actions', async (c) => {
     return c.json({ success: true, data: result.data, checkType: result.checkType });
   } catch (e: unknown) {
     log.error('Enforcement actions route error:', e);
-    return routeError(c, e);
+    return routeError(c, e) as Response;
   }
 });
 
@@ -196,7 +196,7 @@ app.post('/sanctions/legal-a-listing', async (c) => {
     return c.json({ success: true, data: result.data, checkType: result.checkType });
   } catch (e: unknown) {
     log.error('Legal A listing route error:', e);
-    return routeError(c, e);
+    return routeError(c, e) as Response;
   }
 });
 
@@ -223,7 +223,7 @@ app.post('/financial/lifestyle-audit', async (c) => {
     });
   } catch (e: unknown) {
     log.error('Lifestyle audit route error:', e);
-    return routeError(c, e);
+    return routeError(c, e) as Response;
   }
 });
 
@@ -246,7 +246,7 @@ app.post('/financial/income-predictor', async (c) => {
     });
   } catch (e: unknown) {
     log.error('Income predictor route error:', e);
-    return routeError(c, e);
+    return routeError(c, e) as Response;
   }
 });
 
@@ -269,7 +269,7 @@ app.post('/corporate/tenders-blue', async (c) => {
     });
   } catch (e: unknown) {
     log.error('Tenders blue route error:', e);
-    return routeError(c, e);
+    return routeError(c, e) as Response;
   }
 });
 

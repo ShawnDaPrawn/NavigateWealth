@@ -471,7 +471,9 @@ export const PersonnelService = {
       if (!linkError && linkData?.properties?.action_link) {
         recoveryLink = linkData.properties.action_link;
       } else {
-        log.warn('Failed to generate recovery link for new personnel', linkError);
+        log.warn('Failed to generate recovery link for new personnel', {
+          error: String(linkError),
+        });
       }
     } catch (linkErr) {
       log.error('Exception generating recovery link', linkErr as Error);

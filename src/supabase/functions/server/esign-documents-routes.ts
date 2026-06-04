@@ -18,7 +18,12 @@ import { createModuleLogger } from './stderr-logger.ts';
 import { getErrMsg } from './shared-logger-utils.ts';
 import { rateLimit } from './esign-rate-limit.ts';
 import { requireIdempotency } from './idempotency.ts';
-import { getRequestMetadata, ensureStorageBuckets } from './esign-route-helpers.ts';
+import {
+  getRequestMetadata,
+  ensureStorageBuckets,
+  SignerRecord,
+  FieldRecord,
+} from './esign-route-helpers.ts';
 import {
   createDocument,
   getEnvelopeDetails,
@@ -51,6 +56,7 @@ import { createSigningInviteEmail } from './esign-email-templates.ts';
 import { getActiveConsent } from './esign-consent-registry.ts';
 import { sendEmail } from './email-service.ts';
 import { sendInviteSms } from './sms-service.ts';
+import { AdminAuditService } from './admin-audit-service.ts';
 
 const log = createModuleLogger('esign-documents-routes');
 
@@ -59,15 +65,15 @@ const documentsRoutes = new Hono();
 documentsRoutes.get('/envelopes/:envelopeId/manifest', async (c) => {
   try {
     await getAuthContext(c);
-    const envelopeId = c.req.param('envelopeId');
+    const envelopeId = c.req.param('envelopeId')!;
     const manifest = await kv.get(EsignKeys.envelopeManifest(envelopeId));
     return c.json({ manifest: manifest ?? null });
   } catch (err) {
     log.error('Get manifest error:', err);
     const status = err instanceof AuthError ? err.statusCode : 500;
-    return c.json(
-      { error: err instanceof Error ? err.message : 'Failed to load manifest' },
-      status,
+    return new Response(
+      JSON.stringify({ error: err instanceof Error ? err.message : 'Failed to load manifest' }),
+      { status, headers: { 'Content-Type': 'application/json' } },
     );
   }
 });
@@ -79,7 +85,7 @@ documentsRoutes.put(
   async (c) => {
     try {
       const ctx = await getAuthContext(c);
-      const envelopeId = c.req.param('envelopeId');
+      const envelopeId = c.req.param('envelopeId')!;
       const envelope = await kv.get(EsignKeys.envelope(envelopeId));
       if (!envelope) return c.json({ error: 'Envelope not found' }, 404);
       if (envelope.status !== 'draft') {
@@ -118,9 +124,9 @@ documentsRoutes.put(
     } catch (err) {
       log.error('Save manifest error:', err);
       const status = err instanceof AuthError ? err.statusCode : 500;
-      return c.json(
-        { error: err instanceof Error ? err.message : 'Failed to save manifest' },
-        status,
+      return new Response(
+        JSON.stringify({ error: err instanceof Error ? err.message : 'Failed to save manifest' }),
+        { status, headers: { 'Content-Type': 'application/json' } },
       );
     }
   },
@@ -129,7 +135,7 @@ documentsRoutes.put(
 documentsRoutes.delete('/envelopes/:envelopeId/manifest', async (c) => {
   try {
     const ctx = await getAuthContext(c);
-    const envelopeId = c.req.param('envelopeId');
+    const envelopeId = c.req.param('envelopeId')!;
     await kv.del(EsignKeys.envelopeManifest(envelopeId));
     const { ip, userAgent } = getRequestMetadata(c);
     await logAuditEvent({
@@ -146,9 +152,9 @@ documentsRoutes.delete('/envelopes/:envelopeId/manifest', async (c) => {
   } catch (err) {
     log.error('Clear manifest error:', err);
     const status = err instanceof AuthError ? err.statusCode : 500;
-    return c.json(
-      { error: err instanceof Error ? err.message : 'Failed to clear manifest' },
-      status,
+    return new Response(
+      JSON.stringify({ error: err instanceof Error ? err.message : 'Failed to clear manifest' }),
+      { status, headers: { 'Content-Type': 'application/json' } },
     );
   }
 });
@@ -171,7 +177,7 @@ documentsRoutes.post(
   async (c) => {
     try {
       const ctx = await getAuthContext(c);
-      const envelopeId = c.req.param('envelopeId');
+      const envelopeId = c.req.param('envelopeId')!;
       const envelope = await kv.get(EsignKeys.envelope(envelopeId));
       if (!envelope) return c.json({ error: 'Envelope not found' }, 404);
 
@@ -215,9 +221,11 @@ documentsRoutes.post(
     } catch (err) {
       log.error('Materialize preview error:', err);
       const status = err instanceof AuthError ? err.statusCode : 500;
-      return c.json(
-        { error: err instanceof Error ? err.message : 'Failed to materialise preview' },
-        status,
+      return new Response(
+        JSON.stringify({
+          error: err instanceof Error ? err.message : 'Failed to materialise preview',
+        }),
+        { status, headers: { 'Content-Type': 'application/json' } },
       );
     }
   },
@@ -238,7 +246,7 @@ documentsRoutes.post(
 documentsRoutes.get('/envelopes/:envelopeId/documents', async (c) => {
   try {
     await getAuthContext(c);
-    const envelopeId = c.req.param('envelopeId');
+    const envelopeId = c.req.param('envelopeId')!;
     const envelope = (await kv.get(EsignKeys.envelope(envelopeId))) as EsignEnvelope | null;
     if (!envelope) return c.json({ error: 'Envelope not found' }, 404);
     const documents = await getEnvelopeDocuments(envelope);
@@ -254,9 +262,9 @@ documentsRoutes.get('/envelopes/:envelopeId/documents', async (c) => {
   } catch (err) {
     log.error('List envelope documents error:', err);
     const status = err instanceof AuthError ? err.statusCode : 500;
-    return c.json(
-      { error: err instanceof Error ? err.message : 'Failed to list documents' },
-      status,
+    return new Response(
+      JSON.stringify({ error: err instanceof Error ? err.message : 'Failed to list documents' }),
+      { status, headers: { 'Content-Type': 'application/json' } },
     );
   }
 });
@@ -274,7 +282,7 @@ documentsRoutes.post(
   async (c) => {
     try {
       const ctx = await getAuthContext(c);
-      const envelopeId = c.req.param('envelopeId');
+      const envelopeId = c.req.param('envelopeId')!;
       const envelope = (await kv.get(EsignKeys.envelope(envelopeId))) as EsignEnvelope | null;
       if (!envelope) return c.json({ error: 'Envelope not found' }, 404);
       if (envelope.status !== 'draft') {
@@ -350,9 +358,9 @@ documentsRoutes.post(
     } catch (err) {
       log.error('Add envelope document error:', err);
       const status = err instanceof AuthError ? err.statusCode : 500;
-      return c.json(
-        { error: err instanceof Error ? err.message : 'Failed to add document' },
-        status,
+      return new Response(
+        JSON.stringify({ error: err instanceof Error ? err.message : 'Failed to add document' }),
+        { status, headers: { 'Content-Type': 'application/json' } },
       );
     }
   },
@@ -367,8 +375,8 @@ documentsRoutes.post(
 documentsRoutes.delete('/envelopes/:envelopeId/documents/:documentId', async (c) => {
   try {
     const ctx = await getAuthContext(c);
-    const envelopeId = c.req.param('envelopeId');
-    const documentId = c.req.param('documentId');
+    const envelopeId = c.req.param('envelopeId')!;
+    const documentId = c.req.param('documentId')!;
     const envelope = (await kv.get(EsignKeys.envelope(envelopeId))) as EsignEnvelope | null;
     if (!envelope) return c.json({ error: 'Envelope not found' }, 404);
     if (envelope.status !== 'draft') {
@@ -395,9 +403,9 @@ documentsRoutes.delete('/envelopes/:envelopeId/documents/:documentId', async (c)
         : err instanceof Error && /last document/i.test(err.message)
           ? 409
           : 500;
-    return c.json(
-      { error: err instanceof Error ? err.message : 'Failed to remove document' },
-      status,
+    return new Response(
+      JSON.stringify({ error: err instanceof Error ? err.message : 'Failed to remove document' }),
+      { status, headers: { 'Content-Type': 'application/json' } },
     );
   }
 });
@@ -413,7 +421,7 @@ documentsRoutes.delete('/envelopes/:envelopeId/documents/:documentId', async (c)
 documentsRoutes.put('/envelopes/:envelopeId/documents/order', async (c) => {
   try {
     const ctx = await getAuthContext(c);
-    const envelopeId = c.req.param('envelopeId');
+    const envelopeId = c.req.param('envelopeId')!;
     const envelope = (await kv.get(EsignKeys.envelope(envelopeId))) as EsignEnvelope | null;
     if (!envelope) return c.json({ error: 'Envelope not found' }, 404);
     if (envelope.status !== 'draft') {
@@ -437,9 +445,9 @@ documentsRoutes.put('/envelopes/:envelopeId/documents/order', async (c) => {
   } catch (err) {
     log.error('Reorder envelope documents error:', err);
     const status = err instanceof AuthError ? err.statusCode : 500;
-    return c.json(
-      { error: err instanceof Error ? err.message : 'Failed to reorder documents' },
-      status,
+    return new Response(
+      JSON.stringify({ error: err instanceof Error ? err.message : 'Failed to reorder documents' }),
+      { status, headers: { 'Content-Type': 'application/json' } },
     );
   }
 });
@@ -457,7 +465,7 @@ documentsRoutes.post(
       // Authenticate
       const ctx = await getAuthContext(c);
       const user = ctx.user;
-      const envelopeId = c.req.param('envelopeId');
+      const envelopeId = c.req.param('envelopeId')!;
 
       const body = await c.req.json();
       const { signers, fields, expiryDays: _expiryDays, message, signingMode } = body;
@@ -521,11 +529,11 @@ documentsRoutes.post(
         try {
           const result = await materialiseEnvelope(envelopeId);
           const { remapped, dropped } = remapFieldsForConcatenation(
-            materialisedFields as EsignField[],
+            materialisedFields as unknown as EsignField[],
             result.pageMap,
             envelope.document_id,
           );
-          materialisedFields = remapped as FieldRecord[];
+          materialisedFields = remapped as unknown as FieldRecord[];
           await logAuditEvent({
             envelopeId,
             actorType: 'system',
@@ -621,7 +629,10 @@ documentsRoutes.post(
           signerId: signerIds[field.signerIndex as number] || signerIds[0],
         }));
 
-        await addFieldsToEnvelope(envelopeId, fieldsWithSignerIds);
+        await addFieldsToEnvelope(
+          envelopeId,
+          fieldsWithSignerIds as unknown as Parameters<typeof addFieldsToEnvelope>[1],
+        );
 
         // ── P3.6 — Resolve CRM prefill bindings ──
         // For each signer, find their fields and stamp resolved values from
@@ -638,7 +649,7 @@ documentsRoutes.post(
             const ownFields = allFields.filter((f) => f.signer_id === s.id);
             if (ownFields.length === 0) continue;
             const resolved = await resolvePrefilledFields(ownFields, {
-              signer: s as EsignSigner,
+              signer: s as unknown as EsignSigner,
               envelope: {
                 advice_case_id: envelope.advice_case_id,
                 product_id: envelope.product_id,
@@ -685,7 +696,7 @@ documentsRoutes.post(
       // - sequential: only first signer (subsequent signers notified when previous completes)
       // - parallel: all signers at once
       const createdSigners = await getEnvelopeSigners(envelopeId);
-      const sortedSigners = [...createdSigners].sort(
+      const sortedSigners = [...(createdSigners as unknown as SignerRecord[])].sort(
         (a: SignerRecord, b: SignerRecord) => (a.order || 0) - (b.order || 0),
       );
       const invitesSent: Array<{ signerId: string; email: string; success: boolean }> = [];
@@ -716,7 +727,7 @@ documentsRoutes.post(
           await updateSignerStatus(targetSigner.id, 'sent', {
             invite_sent_at: new Date().toISOString(),
           });
-          invitesSent.push({ signerId: targetSigner.id, email: targetSigner.email });
+          invitesSent.push({ signerId: targetSigner.id, email: targetSigner.email, success: true });
         }
 
         await logAuditEvent({
@@ -798,9 +809,11 @@ documentsRoutes.post(
     } catch (error: unknown) {
       log.error('❌ Send invites error:', error);
       const status = error instanceof AuthError ? error.statusCode : 500;
-      return c.json(
-        { error: error instanceof Error ? error.message : 'Failed to send invites' },
-        status,
+      return new Response(
+        JSON.stringify({
+          error: error instanceof Error ? error.message : 'Failed to send invites',
+        }),
+        { status, headers: { 'Content-Type': 'application/json' } },
       );
     }
   },

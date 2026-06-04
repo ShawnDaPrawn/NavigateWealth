@@ -112,7 +112,7 @@ app.post(
   requireAuth,
   requireAdmin,
   asyncHandler(async (c) => {
-    const adminUserId = c.get('userId');
+    const adminUserId = c.get('userId') as string;
 
     let dryRun = false;
     try {
@@ -156,7 +156,7 @@ app.get(
   requireAuth,
   requireAdmin,
   asyncHandler(async (c) => {
-    const adminUserId = c.get('userId');
+    const adminUserId = c.get('userId') as string;
     const query = c.req.query();
 
     // Validate query parameters
@@ -206,7 +206,7 @@ app.put(
   requireAuth,
   requireAdmin,
   asyncHandler(async (c) => {
-    const adminUserId = c.get('userId');
+    const adminUserId = c.get('userId') as string;
     const { id: clientId } = ClientIdParamSchema.parse(c.req.param());
     const body = await c.req.json();
 
@@ -215,7 +215,10 @@ app.put(
 
     log.info('Admin: Updating client', { adminUserId, clientId });
 
-    const client = await service.updateClient(clientId, updates);
+    const client = await service.updateClient(
+      clientId,
+      updates as Partial<import('./client-management-types.ts').Client>,
+    );
 
     log.success('Client updated', { adminUserId, clientId });
 
@@ -232,7 +235,7 @@ app.delete(
   requireAuth,
   requireAdmin,
   asyncHandler(async (c) => {
-    const adminUserId = c.get('userId');
+    const adminUserId = c.get('userId') as string;
     const { id: clientId } = ClientIdParamSchema.parse(c.req.param());
 
     log.warn('Admin: Deleting client', { adminUserId, clientId });
@@ -240,7 +243,7 @@ app.delete(
     await service.deleteClient(clientId);
 
     // Record audit trail (non-blocking — §12.2)
-    const adminRole = c.get('userRole') || 'admin';
+    const adminRole = (c.get('userRole') as string | undefined) || 'admin';
     AdminAuditService.record({
       actorId: adminUserId,
       actorRole: adminRole,
@@ -286,7 +289,7 @@ app.put(
   requireAuth,
   requireAdmin,
   asyncHandler(async (c) => {
-    const adminUserId = c.get('userId');
+    const adminUserId = c.get('userId') as string;
     const { id: clientId } = ClientIdParamSchema.parse(c.req.param());
     const body = await c.req.json();
 
@@ -295,7 +298,10 @@ app.put(
 
     log.info('Admin: Updating client profile', { adminUserId, clientId });
 
-    const profile = await service.updateClientProfile(clientId, profileData);
+    const profile = await service.updateClientProfile(
+      clientId,
+      profileData as unknown as Partial<import('./client-management-types.ts').ClientProfile>,
+    );
 
     // Phase 4: Auto-snapshot net worth after profile save (fire-and-forget, §13)
     snapshotService.autoSnapshotFromKV(clientId, 'profile-save').catch(() => {});
@@ -376,7 +382,7 @@ app.post(
   requireAuth,
   requireAdmin,
   asyncHandler(async (c) => {
-    const adminUserId = c.get('userId');
+    const adminUserId = c.get('userId') as string;
     const { id: clientId } = ClientIdParamSchema.parse(c.req.param());
     const body = await c.req.json();
 
@@ -390,7 +396,7 @@ app.post(
     log.success('Client suspended', { adminUserId, clientId });
 
     // Record audit trail (non-blocking — §12.2)
-    const adminRole = c.get('userRole') || 'admin';
+    const adminRole = (c.get('userRole') as string | undefined) || 'admin';
     AdminAuditService.record({
       actorId: adminUserId,
       actorRole: adminRole,
@@ -416,7 +422,7 @@ app.post(
   requireAuth,
   requireAdmin,
   asyncHandler(async (c) => {
-    const adminUserId = c.get('userId');
+    const adminUserId = c.get('userId') as string;
     const { id: clientId } = ClientIdParamSchema.parse(c.req.param());
 
     log.info('Admin: Unsuspending client', { adminUserId, clientId });
@@ -426,7 +432,7 @@ app.post(
     log.success('Client unsuspended', { adminUserId, clientId });
 
     // Record audit trail (non-blocking — §12.2)
-    const adminRole2 = c.get('userRole') || 'admin';
+    const adminRole2 = (c.get('userRole') as string | undefined) || 'admin';
     AdminAuditService.record({
       actorId: adminUserId,
       actorRole: adminRole2,
@@ -459,7 +465,7 @@ app.post(
   requireAuth,
   requireAdmin,
   asyncHandler(async (c) => {
-    const adminUserId = c.get('userId');
+    const adminUserId = c.get('userId') as string;
     const { id: clientId } = ClientIdParamSchema.parse(c.req.param());
     const body = await c.req.json();
 
@@ -473,7 +479,7 @@ app.post(
       log.success('Client account closed', { adminUserId, clientId });
 
       // Record audit trail (non-blocking — §12.2)
-      const adminRole = c.get('userRole') || 'admin';
+      const adminRole = (c.get('userRole') as string | undefined) || 'admin';
       AdminAuditService.record({
         actorId: adminUserId,
         actorRole: adminRole,
@@ -503,7 +509,7 @@ app.post(
   requireAuth,
   requireAdmin,
   asyncHandler(async (c) => {
-    const adminUserId = c.get('userId');
+    const adminUserId = c.get('userId') as string;
     const { id: clientId } = ClientIdParamSchema.parse(c.req.param());
 
     let note: string | undefined;
@@ -523,7 +529,7 @@ app.post(
       log.success('Client account reinstated', { adminUserId, clientId });
 
       // Record audit trail (non-blocking — §12.2)
-      const adminRole = c.get('userRole') || 'admin';
+      const adminRole = (c.get('userRole') as string | undefined) || 'admin';
       AdminAuditService.record({
         actorId: adminUserId,
         actorRole: adminRole,

@@ -23,6 +23,7 @@ import {
   CreateIntegrationSchema,
 } from './product-management-validation.ts';
 import { formatZodError } from './shared-validation-utils.ts';
+import type { Provider, Product, Integration, ProductFilters } from './product-management-types.ts';
 
 const app = new Hono();
 const log = createModuleLogger('product-management');
@@ -54,7 +55,7 @@ app.post(
   '/providers',
   requireAdmin,
   asyncHandler(async (c) => {
-    const adminUserId = c.get('userId');
+    const adminUserId = c.get('userId') as string;
     const body = await c.req.json();
     const parsed = CreateProviderSchema.safeParse(body);
     if (!parsed.success) {
@@ -63,14 +64,14 @@ app.post(
 
     log.info('Creating provider', { adminUserId, providerName: parsed.data.name });
 
-    const provider = await service.createProvider(parsed.data);
+    const provider = await service.createProvider(parsed.data as unknown as Partial<Provider>);
 
     log.success('Provider created', { providerId: provider.id });
 
     // Audit trail (non-blocking — §12.2)
     AdminAuditService.record({
       actorId: adminUserId,
-      actorRole: c.get('userRole') || 'admin',
+      actorRole: (c.get('userRole') as string | undefined) || 'admin',
       category: 'configuration',
       action: 'provider_created',
       summary: `Provider created: ${parsed.data.name}`,
@@ -104,18 +105,21 @@ app.put(
   '/providers/:id',
   requireAdmin,
   asyncHandler(async (c) => {
-    const providerId = c.req.param('id');
+    const providerId = c.req.param('id')!;
     const body = await c.req.json();
     const parsed = UpdateProviderSchema.safeParse(body);
     if (!parsed.success) {
       return c.json({ error: 'Validation failed', ...formatZodError(parsed.error) }, 400);
     }
 
-    const provider = await service.updateProvider(providerId, parsed.data);
+    const provider = await service.updateProvider(
+      providerId,
+      parsed.data as unknown as Partial<Provider>,
+    );
 
     AdminAuditService.record({
-      actorId: c.get('userId') || 'admin',
-      actorRole: c.get('userRole') || 'admin',
+      actorId: (c.get('userId') as string | undefined) || 'admin',
+      actorRole: (c.get('userRole') as string | undefined) || 'admin',
       category: 'configuration',
       action: 'provider_updated',
       summary: `Provider updated`,
@@ -136,13 +140,13 @@ app.delete(
   '/providers/:id',
   requireAdmin,
   asyncHandler(async (c) => {
-    const providerId = c.req.param('id');
+    const providerId = c.req.param('id')!;
 
     await service.deleteProvider(providerId);
 
     AdminAuditService.record({
-      actorId: c.get('userId') || 'admin',
-      actorRole: c.get('userRole') || 'admin',
+      actorId: (c.get('userId') as string | undefined) || 'admin',
+      actorRole: (c.get('userRole') as string | undefined) || 'admin',
       category: 'configuration',
       action: 'provider_deleted',
       summary: `Provider deleted`,
@@ -173,7 +177,7 @@ app.get(
       active: c.req.query('active') === 'true',
     };
 
-    const products = await service.getAllProducts(filters);
+    const products = await service.getAllProducts(filters as unknown as Partial<ProductFilters>);
 
     return c.json({ products });
   }),
@@ -187,7 +191,7 @@ app.get(
   '/products/:id',
   requireAuth,
   asyncHandler(async (c) => {
-    const productId = c.req.param('id');
+    const productId = c.req.param('id')!;
 
     const product = await service.getProductById(productId);
 
@@ -203,7 +207,7 @@ app.post(
   '/products',
   requireAdmin,
   asyncHandler(async (c) => {
-    const adminUserId = c.get('userId');
+    const adminUserId = c.get('userId') as string;
     const body = await c.req.json();
     const parsed = CreateProductSchema.safeParse(body);
     if (!parsed.success) {
@@ -212,13 +216,13 @@ app.post(
 
     log.info('Creating product', { adminUserId, productName: parsed.data.name });
 
-    const product = await service.createProduct(parsed.data);
+    const product = await service.createProduct(parsed.data as unknown as Partial<Product>);
 
     log.success('Product created', { productId: product.id });
 
     AdminAuditService.record({
       actorId: adminUserId,
-      actorRole: c.get('userRole') || 'admin',
+      actorRole: (c.get('userRole') as string | undefined) || 'admin',
       category: 'configuration',
       action: 'product_created',
       summary: `Product created: ${parsed.data.name}`,
@@ -239,18 +243,21 @@ app.put(
   '/products/:id',
   requireAdmin,
   asyncHandler(async (c) => {
-    const productId = c.req.param('id');
+    const productId = c.req.param('id')!;
     const body = await c.req.json();
     const parsed = UpdateProductSchema.safeParse(body);
     if (!parsed.success) {
       return c.json({ error: 'Validation failed', ...formatZodError(parsed.error) }, 400);
     }
 
-    const product = await service.updateProduct(productId, parsed.data);
+    const product = await service.updateProduct(
+      productId,
+      parsed.data as unknown as Partial<Product>,
+    );
 
     AdminAuditService.record({
-      actorId: c.get('userId') || 'admin',
-      actorRole: c.get('userRole') || 'admin',
+      actorId: (c.get('userId') as string | undefined) || 'admin',
+      actorRole: (c.get('userRole') as string | undefined) || 'admin',
       category: 'configuration',
       action: 'product_updated',
       summary: `Product updated`,
@@ -271,13 +278,13 @@ app.delete(
   '/products/:id',
   requireAdmin,
   asyncHandler(async (c) => {
-    const productId = c.req.param('id');
+    const productId = c.req.param('id')!;
 
     await service.deleteProduct(productId);
 
     AdminAuditService.record({
-      actorId: c.get('userId') || 'admin',
-      actorRole: c.get('userRole') || 'admin',
+      actorId: (c.get('userId') as string | undefined) || 'admin',
+      actorRole: (c.get('userRole') as string | undefined) || 'admin',
       category: 'configuration',
       action: 'product_deleted',
       summary: `Product deleted`,
@@ -316,7 +323,7 @@ app.post(
   '/integrations',
   requireAdmin,
   asyncHandler(async (c) => {
-    const adminUserId = c.get('userId');
+    const adminUserId = c.get('userId') as string;
     const body = await c.req.json();
     const parsed = CreateIntegrationSchema.safeParse(body);
     if (!parsed.success) {
@@ -325,7 +332,9 @@ app.post(
 
     log.info('Creating integration', { adminUserId });
 
-    const integration = await service.createIntegration(parsed.data);
+    const integration = await service.createIntegration(
+      parsed.data as unknown as Partial<Integration>,
+    );
 
     log.success('Integration created', { integrationId: integration.id });
 
@@ -341,8 +350,8 @@ app.post(
   '/integrations/:id/sync',
   requireAdmin,
   asyncHandler(async (c) => {
-    const adminUserId = c.get('userId');
-    const integrationId = c.req.param('id');
+    const adminUserId = c.get('userId') as string;
+    const integrationId = c.req.param('id')!;
 
     log.info('Syncing integration', { adminUserId, integrationId });
 
@@ -366,7 +375,7 @@ app.post(
   '/upload',
   requireAdmin,
   asyncHandler(async (c) => {
-    const adminUserId = c.get('userId');
+    const adminUserId = c.get('userId') as string;
     const formData = await c.req.formData();
     const file = formData.get('file') as File;
 

@@ -38,7 +38,7 @@ const app = new Hono();
 // GET /portal-flows/:providerId
 app.get('/portal-flows/:providerId', requireAuth, async (c) => {
   try {
-    const providerId = c.req.param('providerId');
+    const providerId = c.req.param('providerId')!;
     const categoryId = String(c.req.query('categoryId') || '').trim();
     const provider = (await kv.get(`provider:${providerId}`)) as KvProvider | null;
     if (!provider) {
@@ -56,7 +56,7 @@ app.get('/portal-flows/:providerId', requireAuth, async (c) => {
 // PUT /portal-flows/:providerId
 app.put('/portal-flows/:providerId', requireAuth, async (c) => {
   try {
-    const providerId = c.req.param('providerId');
+    const providerId = c.req.param('providerId')!;
     const categoryId = String(c.req.query('categoryId') || '').trim();
     const provider = (await kv.get(`provider:${providerId}`)) as KvProvider | null;
     if (!provider) {
@@ -113,7 +113,7 @@ app.put('/portal-flows/:providerId', requireAuth, async (c) => {
 // DELETE /portal-flows/:providerId
 app.delete('/portal-flows/:providerId', requireAuth, async (c) => {
   try {
-    const providerId = c.req.param('providerId');
+    const providerId = c.req.param('providerId')!;
     const categoryId = String(c.req.query('categoryId') || '').trim();
     if (!categoryId) {
       return c.json({ error: 'Missing categoryId' }, 400);
@@ -146,7 +146,7 @@ app.delete('/portal-flows/:providerId', requireAuth, async (c) => {
 // GET /portal-flows/:providerId/brain-memory
 app.get('/portal-flows/:providerId/brain-memory', requireAuth, async (c) => {
   try {
-    const providerId = c.req.param('providerId');
+    const providerId = c.req.param('providerId')!;
     const categoryId = String(c.req.query('categoryId') || '').trim();
     if (!categoryId) {
       return c.json({ error: 'Missing categoryId' }, 400);
@@ -176,8 +176,8 @@ app.get('/portal-flows/:providerId/brain-memory', requireAuth, async (c) => {
 // GET /portal-flows/:providerId/credentials/:profileId
 app.get('/portal-flows/:providerId/credentials/:profileId', requireAuth, async (c) => {
   try {
-    const providerId = c.req.param('providerId');
-    const profileId = normalisePortalCredentialProfileId(c.req.param('profileId'));
+    const providerId = c.req.param('providerId')!;
+    const profileId = normalisePortalCredentialProfileId(c.req.param('profileId')!);
     const categoryId = String(c.req.query('categoryId') || '').trim();
     const provider = (await kv.get(`provider:${providerId}`)) as KvProvider | null;
     if (!provider) {
@@ -200,8 +200,8 @@ app.get('/portal-flows/:providerId/credentials/:profileId', requireAuth, async (
 // PUT /portal-flows/:providerId/credentials/:profileId
 app.put('/portal-flows/:providerId/credentials/:profileId', requireAuth, async (c) => {
   try {
-    const providerId = c.req.param('providerId');
-    const profileId = normalisePortalCredentialProfileId(c.req.param('profileId'));
+    const providerId = c.req.param('providerId')!;
+    const profileId = normalisePortalCredentialProfileId(c.req.param('profileId')!);
     const categoryId = String(c.req.query('categoryId') || '').trim();
     const provider = (await kv.get(`provider:${providerId}`)) as KvProvider | null;
     if (!provider) {
@@ -235,7 +235,7 @@ app.put('/portal-flows/:providerId/credentials/:profileId', requireAuth, async (
       username,
       password,
       updatedAt: new Date().toISOString(),
-      updatedBy: String(c.get('userId') || 'admin'),
+      updatedBy: String((c.get('userId') as string | undefined) || 'admin'),
     };
     await savePortalCredentialRecord(record);
 

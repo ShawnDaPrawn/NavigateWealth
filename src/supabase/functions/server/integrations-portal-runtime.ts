@@ -9,7 +9,11 @@
  */
 import { createClient } from 'jsr:@supabase/supabase-js@2.49.8';
 import { getErrMsg } from './shared-logger-utils.ts';
-import type { PortalSyncJob, PortalJobRunMode } from './integrations-portal-types.ts';
+import type {
+  PortalSyncJob,
+  PortalJobRunMode,
+  PortalJobLiveView,
+} from './integrations-portal-types.ts';
 
 const PORTAL_LIVE_VIEW_BUCKET = 'make-91ed8379-portal-live-view';
 let portalLiveViewBucketInitialized = false;

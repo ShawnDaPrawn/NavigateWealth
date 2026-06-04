@@ -8,6 +8,10 @@ import {
   CreatePersonnelSchema,
   UpdatePersonnelSchema,
 } from './client-management-personnel-validation-enhanced.ts';
+import type {
+  CreatePersonnelPayload,
+  PersonnelProfile,
+} from './client-management-personnel-types.ts';
 import { formatZodError } from './shared-validation-utils.ts';
 import { z } from 'npm:zod';
 
@@ -81,7 +85,11 @@ app.post('/invite', async (c) => {
     const siteUrl =
       c.req.header('origin') || c.req.header('referer')?.replace(/\/+$/, '') || undefined;
     log.info('Inviting personnel', { userId: ctx.userId, inviteRole: parsed.data.role, siteUrl });
-    const result = await PersonnelService.inviteUser(ctx.role, parsed.data, siteUrl);
+    const result = await PersonnelService.inviteUser(
+      ctx.role,
+      parsed.data as unknown as CreatePersonnelPayload,
+      siteUrl,
+    );
     return c.json({ data: result });
   } catch (e) {
     return handleError(c, e);
@@ -95,7 +103,7 @@ app.post('/resend-invite/:id', async (c) => {
     requireRole(ctx, ['super_admin', 'admin']);
     await requireCapability(ctx, 'personnel', 'create');
 
-    const personnelId = c.req.param('id');
+    const personnelId = c.req.param('id')!;
     const siteUrl =
       c.req.header('origin') || c.req.header('referer')?.replace(/\/+$/, '') || undefined;
     log.info('Resending invite', { userId: ctx.userId, personnelId, siteUrl });
@@ -113,7 +121,7 @@ app.delete('/invite/:id', async (c) => {
     requireRole(ctx, ['super_admin', 'admin']);
     await requireCapability(ctx, 'personnel', 'delete');
 
-    const personnelId = c.req.param('id');
+    const personnelId = c.req.param('id')!;
     log.info('Cancelling invite', { userId: ctx.userId, personnelId });
     const result = await PersonnelService.cancelInvite(ctx.role, personnelId);
     return c.json({ data: result });
@@ -141,7 +149,11 @@ app.post('/create-account', async (c) => {
       accountRole: parsed.data.role,
       siteUrl,
     });
-    const result = await PersonnelService.createAccount(ctx.role, parsed.data, siteUrl);
+    const result = await PersonnelService.createAccount(
+      ctx.role,
+      parsed.data as unknown as CreatePersonnelPayload,
+      siteUrl,
+    );
     return c.json({ data: result });
   } catch (e) {
     return handleError(c, e);
@@ -185,7 +197,7 @@ app.post('/maintenance/backfill-roles', async (c) => {
 app.put('/:id', async (c) => {
   try {
     const ctx = await getAuthContext(c);
-    const targetId = c.req.param('id');
+    const targetId = c.req.param('id')!;
     const body = await c.req.json();
     const parsed = UpdatePersonnelSchema.safeParse(body);
     if (!parsed.success) {
@@ -200,7 +212,11 @@ app.put('/:id', async (c) => {
     }
 
     log.info('Updating personnel profile', { userId: ctx.userId, targetId, isSelfUpdate });
-    const result = await PersonnelService.updateProfile(ctx.role, targetId, parsed.data);
+    const result = await PersonnelService.updateProfile(
+      ctx.role,
+      targetId,
+      parsed.data as unknown as Partial<PersonnelProfile>,
+    );
     return c.json({ data: result });
   } catch (e) {
     return handleError(c, e);
@@ -210,7 +226,7 @@ app.put('/:id', async (c) => {
 app.get('/:id/clients', async (c) => {
   try {
     const ctx = await getAuthContext(c);
-    const targetId = c.req.param('id');
+    const targetId = c.req.param('id')!;
 
     // Security: can only view own clients unless Admin/Compliance
     if (ctx.role === 'adviser' && ctx.userId !== targetId) {
@@ -232,7 +248,7 @@ app.post('/:id/documents', async (c) => {
     // Capability: editing personnel records
     await requireCapability(ctx, 'personnel', 'edit');
 
-    const targetId = c.req.param('id');
+    const targetId = c.req.param('id')!;
     const body = await c.req.json();
     log.info('Adding personnel document', { userId: ctx.userId, targetId });
 
@@ -316,7 +332,7 @@ app.get('/permissions/:personnelId', async (c) => {
     requireRole(ctx, ['super_admin', 'admin']);
     await requireCapability(ctx, 'personnel', 'manage_permissions');
 
-    const personnelId = c.req.param('personnelId');
+    const personnelId = c.req.param('personnelId')!;
     log.info('Fetching permissions', { userId: ctx.userId, personnelId });
 
     const permissions = await PermissionsService.getPermissions(personnelId);
@@ -342,7 +358,7 @@ app.put('/permissions/:personnelId', async (c) => {
     requireRole(ctx, ['super_admin', 'admin']);
     await requireCapability(ctx, 'personnel', 'manage_permissions');
 
-    const personnelId = c.req.param('personnelId');
+    const personnelId = c.req.param('personnelId')!;
     const body = await c.req.json();
     const parsed = PermissionUpdateSchema.safeParse(body);
     if (!parsed.success) {
@@ -356,21 +372,18 @@ app.put('/permissions/:personnelId', async (c) => {
 
     // Fetch current permissions for audit diff
     const currentPerms = await PermissionsService.getPermissions(personnelId);
-    const oldModules = currentPerms?.modules || {};
+    const oldModules = (currentPerms?.modules || {}) as Record<string, unknown>;
 
-    const result = await PermissionsService.setPermissions(
-      personnelId,
-      parsed.data.modules,
-      ctx.userId,
-    );
+    const modulesArg = parsed.data.modules as unknown as Record<
+      string,
+      { access: boolean; capabilities?: string[] }
+    >;
+    const result = await PermissionsService.setPermissions(personnelId, modulesArg, ctx.userId);
 
     // Record audit trail (fire-and-forget — don't block the response)
-    PermissionAuditService.recordDiff(
-      personnelId,
-      ctx.userId,
-      oldModules,
-      parsed.data.modules,
-    ).catch((err) => log.error('Failed to record permission audit', err));
+    PermissionAuditService.recordDiff(personnelId, ctx.userId, oldModules, modulesArg).catch(
+      (err) => log.error('Failed to record permission audit', err),
+    );
 
     return c.json({ data: result });
   } catch (e) {
@@ -392,7 +405,7 @@ app.get('/audit/permissions/:personnelId', async (c) => {
     requireRole(ctx, ['super_admin', 'admin']);
     await requireCapability(ctx, 'personnel', 'manage_permissions');
 
-    const personnelId = c.req.param('personnelId');
+    const personnelId = c.req.param('personnelId')!;
     const limitParam = c.req.query('limit');
     const limit = limitParam ? parseInt(limitParam, 10) : 50;
 

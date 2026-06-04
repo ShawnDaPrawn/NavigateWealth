@@ -42,11 +42,11 @@ app.get('/', async (c) => {
 
     if (!response.ok) {
       log.error(`RSS fetch failed: ${response.status} ${response.statusText}`);
-      return c.json(
-        {
+      return new Response(
+        JSON.stringify({
           error: `Failed to fetch RSS feed: ${response.status} ${response.statusText}`,
-        },
-        response.status,
+        }),
+        { status: response.status, headers: { 'Content-Type': 'application/json' } },
       );
     }
 

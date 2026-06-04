@@ -3,7 +3,7 @@ import { createClient } from 'jsr:@supabase/supabase-js@2.49.8';
 import { createModuleLogger } from './stderr-logger.ts';
 import { requireIdempotency } from './idempotency.ts';
 import { rateLimit } from './esign-rate-limit.ts';
-import { getRequestMetadata, audActor, SignerRecord } from './esign-route-helpers.ts';
+import { getRequestMetadata, audActor } from './esign-route-helpers.ts';
 import {
   getEnvelopeDetails,
   getEnvelopeSigners,
@@ -83,7 +83,7 @@ app.post('/signer/submit', requireIdempotency(), rateLimit('SIGNER_SUBMIT'), asy
         return c.json({ error: 'Identity verification (KBA) is required before signing' }, 403);
       }
     } catch (kbaErr) {
-      log.warn('KBA gate check failed; allowing submit:', kbaErr);
+      log.warn('KBA gate check failed; allowing submit:', { error: String(kbaErr) });
     }
 
     // Update field values
@@ -158,10 +158,8 @@ app.post('/signer/submit', requireIdempotency(), rateLimit('SIGNER_SUBMIT'), asy
       const envelopeForProgress = await getEnvelopeDetails(signer.envelope_id);
       const currentMode = envelopeForProgress?.signing_mode || 'sequential';
       const allSigners = await getEnvelopeSigners(signer.envelope_id);
-      const sorted = [...allSigners].sort(
-        (a: SignerRecord, b: SignerRecord) => (a.order || 0) - (b.order || 0),
-      );
-      const signedCount = sorted.filter((s: SignerRecord) => s.status === 'signed').length;
+      const sorted = [...allSigners].sort((a, b) => (a.order || 0) - (b.order || 0));
+      const signedCount = sorted.filter((s) => s.status === 'signed').length;
       const totalSigners = sorted.length;
 
       // Update envelope to partially_signed
@@ -169,7 +167,7 @@ app.post('/signer/submit', requireIdempotency(), rateLimit('SIGNER_SUBMIT'), asy
 
       // Sequential mode: notify next pending signer in order
       if (currentMode === 'sequential') {
-        const nextSigner = sorted.find((s: SignerRecord) => s.status === 'pending');
+        const nextSigner = sorted.find((s) => s.status === 'pending');
 
         if (nextSigner) {
           try {
@@ -328,7 +326,7 @@ app.post('/signer/submit', requireIdempotency(), rateLimit('SIGNER_SUBMIT'), asy
       signed: true,
       envelope_complete: isComplete,
       envelope_id: signer.envelope_id,
-      envelope_title: envelope.title,
+      envelope_title: envelope?.title,
     });
   } catch (error: unknown) {
     log.error('❌ Submit signature error:', error);

@@ -68,6 +68,7 @@ export interface Group {
   createdAt: string;
   updatedAt: string;
   createdBy: string;
+  [key: string]: unknown;
 }
 
 export interface GroupCreate {
@@ -217,6 +218,7 @@ export interface Template {
   buttonUrl?: string;
   footerNote?: string;
   category?: string;
+  isSystem?: boolean;
   createdAt: string;
 }
 

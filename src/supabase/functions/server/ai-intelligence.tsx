@@ -13,10 +13,37 @@
  */
 
 import { Hono } from 'npm:hono';
+import type { Context, Next } from 'npm:hono';
 import { createClient } from 'jsr:@supabase/supabase-js@2.49.8';
 import * as kv from './kv_store.tsx';
 import { createModuleLogger } from './stderr-logger.ts';
 import { getErrMsg } from './shared-logger-utils.ts';
+
+type KvEntry = { key: string; value?: unknown; [k: string]: unknown };
+type FnaEntry = {
+  version?: string | number;
+  status?: string;
+  createdAt?: string;
+  [k: string]: unknown;
+};
+type TaskEntry = {
+  title?: string;
+  status?: string;
+  priority?: string;
+  due_date?: string;
+  description?: string;
+  [k: string]: unknown;
+};
+type ReminderEntry = {
+  title?: string;
+  type?: string;
+  due_at?: string;
+  description?: string;
+  [k: string]: unknown;
+};
+type ChatMessage = { role: string; content: string };
+type ClientContext = Awaited<ReturnType<typeof getClientContext>>;
+type PlatformContext = Awaited<ReturnType<typeof getPlatformContext>>;
 
 const app = new Hono();
 const log = createModuleLogger('ai-intelligence');
@@ -675,7 +702,7 @@ app.get('/status', requireAdmin, async (c) => {
  */
 app.post('/chat', requireAdmin, async (c) => {
   try {
-    const user = c.get('user');
+    const user = c.get('user') as { id: string };
     const body = await c.req.json();
     const { message, clientId, conversationHistory } = body;
 
@@ -796,7 +823,7 @@ app.post('/chat', requireAdmin, async (c) => {
  */
 app.get('/history', requireAdmin, async (c) => {
   try {
-    const user = c.get('user');
+    const user = c.get('user') as { id: string };
 
     const { data, error } = await getSupabase()
       .from('kv_store_91ed8379')
@@ -826,7 +853,7 @@ app.get('/history', requireAdmin, async (c) => {
  */
 app.delete('/history', requireAdmin, async (c) => {
   try {
-    const user = c.get('user');
+    const user = c.get('user') as { id: string };
 
     // Delete all conversation history for this user
     const { error } = await getSupabase()

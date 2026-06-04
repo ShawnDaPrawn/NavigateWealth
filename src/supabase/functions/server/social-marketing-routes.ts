@@ -13,6 +13,12 @@ import { requireAdmin } from './auth-mw.ts';
 import { asyncHandler } from './error.middleware.ts';
 import { createModuleLogger } from './stderr-logger.ts';
 import { SocialMarketingService } from './social-marketing-service.ts';
+import type {
+  PostCreate,
+  PostUpdate,
+  SocialPlatform,
+  PostStatus,
+} from './social-marketing-types.ts';
 import { CreatePostSchema, UpdatePostSchema } from './social-marketing-validation.ts';
 import { formatZodError } from './shared-validation-utils.ts';
 
@@ -45,7 +51,7 @@ app.get(
   '/profiles/:id',
   requireAdmin,
   asyncHandler(async (c) => {
-    const profileId = c.req.param('id');
+    const profileId = c.req.param('id')!;
     const profile = await service.getProfileById(profileId);
     return c.json({ success: true, data: profile });
   }),
@@ -74,7 +80,7 @@ app.put(
   '/profiles/:id',
   requireAdmin,
   asyncHandler(async (c) => {
-    const profileId = c.req.param('id');
+    const profileId = c.req.param('id')!;
     const body = await c.req.json();
     const profile = await service.updateProfile(profileId, body);
     return c.json({ success: true, data: profile });
@@ -89,7 +95,7 @@ app.post(
   '/profiles/:id/disconnect',
   requireAdmin,
   asyncHandler(async (c) => {
-    const profileId = c.req.param('id');
+    const profileId = c.req.param('id')!;
     await service.disconnectProfile(profileId);
     return c.json({ success: true });
   }),
@@ -103,7 +109,7 @@ app.post(
   '/profiles/:id/sync',
   requireAdmin,
   asyncHandler(async (c) => {
-    const profileId = c.req.param('id');
+    const profileId = c.req.param('id')!;
     const profile = await service.getProfileById(profileId);
     // Sync is a no-op for now — returns current profile data
     return c.json({ success: true, data: profile });
@@ -118,7 +124,7 @@ app.delete(
   '/profiles/:id',
   requireAdmin,
   asyncHandler(async (c) => {
-    const profileId = c.req.param('id');
+    const profileId = c.req.param('id')!;
     await service.deleteProfile(profileId);
     return c.json({ success: true });
   }),
@@ -137,8 +143,8 @@ app.get(
   requireAdmin,
   asyncHandler(async (c) => {
     const filters = {
-      platform: c.req.query('platform'),
-      status: c.req.query('status'),
+      platform: c.req.query('platform') as SocialPlatform | undefined,
+      status: c.req.query('status') as PostStatus | undefined,
     };
 
     const posts = await service.getAllPosts(filters);
@@ -155,7 +161,7 @@ app.get(
   '/posts/:id',
   requireAdmin,
   asyncHandler(async (c) => {
-    const postId = c.req.param('id');
+    const postId = c.req.param('id')!;
 
     const post = await service.getPostById(postId);
 
@@ -171,7 +177,7 @@ app.post(
   '/posts',
   requireAdmin,
   asyncHandler(async (c) => {
-    const adminUserId = c.get('userId');
+    const adminUserId = c.get('userId') as string;
     const body = await c.req.json();
     const parsed = CreatePostSchema.safeParse(body);
     if (!parsed.success) {
@@ -180,7 +186,7 @@ app.post(
 
     log.info('Creating social post', { adminUserId, platform: parsed.data.platform });
 
-    const post = await service.createPost(adminUserId, parsed.data);
+    const post = await service.createPost(adminUserId, parsed.data as unknown as PostCreate);
 
     log.success('Social post created', { postId: post.id });
 
@@ -196,14 +202,14 @@ app.put(
   '/posts/:id',
   requireAdmin,
   asyncHandler(async (c) => {
-    const postId = c.req.param('id');
+    const postId = c.req.param('id')!;
     const body = await c.req.json();
     const parsed = UpdatePostSchema.safeParse(body);
     if (!parsed.success) {
       return c.json({ error: 'Validation failed', ...formatZodError(parsed.error) }, 400);
     }
 
-    const post = await service.updatePost(postId, parsed.data);
+    const post = await service.updatePost(postId, parsed.data as unknown as PostUpdate);
 
     return c.json({ success: true, data: post });
   }),
@@ -217,8 +223,8 @@ app.post(
   '/posts/:id/publish',
   requireAdmin,
   asyncHandler(async (c) => {
-    const adminUserId = c.get('userId');
-    const postId = c.req.param('id');
+    const adminUserId = c.get('userId') as string;
+    const postId = c.req.param('id')!;
 
     log.info('Publishing social post', { adminUserId, postId });
 
@@ -238,7 +244,7 @@ app.delete(
   '/posts/:id',
   requireAdmin,
   asyncHandler(async (c) => {
-    const postId = c.req.param('id');
+    const postId = c.req.param('id')!;
 
     await service.deletePost(postId);
 
@@ -275,8 +281,8 @@ app.post(
   '/posts/:id/schedule',
   requireAdmin,
   asyncHandler(async (c) => {
-    const adminUserId = c.get('userId');
-    const postId = c.req.param('id');
+    const adminUserId = c.get('userId') as string;
+    const postId = c.req.param('id')!;
     const { scheduledFor } = await c.req.json();
 
     log.info('Scheduling social post', { adminUserId, postId, scheduledFor });
@@ -351,7 +357,7 @@ app.post(
   '/campaigns',
   requireAdmin,
   asyncHandler(async (c) => {
-    const adminUserId = c.get('userId');
+    const adminUserId = c.get('userId') as string;
     const body = await c.req.json();
 
     log.info('Creating marketing campaign', { adminUserId, campaignName: body.name });
@@ -372,7 +378,7 @@ app.put(
   '/campaigns/:id',
   requireAdmin,
   asyncHandler(async (c) => {
-    const campaignId = c.req.param('id');
+    const campaignId = c.req.param('id')!;
     const updates = await c.req.json();
 
     const campaign = await service.updateCampaign(campaignId, updates);
@@ -389,7 +395,7 @@ app.delete(
   '/campaigns/:id',
   requireAdmin,
   asyncHandler(async (c) => {
-    const campaignId = c.req.param('id');
+    const campaignId = c.req.param('id')!;
 
     await service.deleteCampaign(campaignId);
 

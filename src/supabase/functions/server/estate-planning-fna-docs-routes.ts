@@ -56,7 +56,7 @@ app.post('/estate-docs/:clientId/upload', async (c) => {
     const user = await authenticateUser(c.req.header('Authorization'));
     await ensureLegalDocsBucket();
 
-    const clientId = c.req.param('clientId');
+    const clientId = c.req.param('clientId')!;
     const formData = await c.req.formData();
 
     const file = formData.get('file') as File | null;
@@ -143,7 +143,7 @@ app.get('/estate-docs/:clientId', async (c) => {
     log.info('GET /estate-planning-fna/estate-docs/:clientId');
     await authenticateUser(c.req.header('Authorization'));
 
-    const clientId = c.req.param('clientId');
+    const clientId = c.req.param('clientId')!;
     const docs = await kv.getByPrefix(`estate_doc:${clientId}:`);
 
     const sorted = (docs || []).sort(
@@ -166,8 +166,8 @@ app.get('/estate-docs/:clientId/:docId/download', async (c) => {
     log.info('GET /estate-planning-fna/estate-docs/:clientId/:docId/download');
     await authenticateUser(c.req.header('Authorization'));
 
-    const clientId = c.req.param('clientId');
-    const docId = c.req.param('docId');
+    const clientId = c.req.param('clientId')!;
+    const docId = c.req.param('docId')!;
 
     const kvKey = `estate_doc:${clientId}:${docId}`;
     const doc = await kv.get(kvKey);
@@ -203,8 +203,8 @@ app.delete('/estate-docs/:clientId/:docId', async (c) => {
     log.info('DELETE /estate-planning-fna/estate-docs/:clientId/:docId');
     await authenticateUser(c.req.header('Authorization'));
 
-    const clientId = c.req.param('clientId');
-    const docId = c.req.param('docId');
+    const clientId = c.req.param('clientId')!;
+    const docId = c.req.param('docId')!;
 
     const kvKey = `estate_doc:${clientId}:${docId}`;
     const doc = await kv.get(kvKey);
@@ -219,7 +219,9 @@ app.delete('/estate-docs/:clientId/:docId', async (c) => {
       .remove([doc.filePath]);
 
     if (deleteError) {
-      log.warn('Failed to delete estate document from storage (non-critical):', deleteError);
+      log.warn('Failed to delete estate document from storage (non-critical):', {
+        error: String(deleteError),
+      });
     }
 
     await kv.del(kvKey);

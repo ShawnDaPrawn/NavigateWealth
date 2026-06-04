@@ -17,7 +17,7 @@ app.get('/envelopes/:envelopeId/audit', async (c) => {
   try {
     // Authenticate
     const _ctx = await getAuthContext(c);
-    const envelopeId = c.req.param('envelopeId');
+    const envelopeId = c.req.param('envelopeId')!;
 
     const events = await getAuditTrail(envelopeId);
 
@@ -25,9 +25,11 @@ app.get('/envelopes/:envelopeId/audit', async (c) => {
   } catch (error: unknown) {
     log.error('❌ Get audit trail error:', error);
     const status = error instanceof AuthError ? error.statusCode : 500;
-    return c.json(
-      { error: error instanceof Error ? error.message : 'Failed to fetch audit trail' },
-      status,
+    return new Response(
+      JSON.stringify({
+        error: error instanceof Error ? error.message : 'Failed to fetch audit trail',
+      }),
+      { status, headers: { 'Content-Type': 'application/json' } },
     );
   }
 });
@@ -40,7 +42,7 @@ app.get('/envelopes/:envelopeId/document', async (c) => {
   try {
     // Authenticate
     const _ctx = await getAuthContext(c);
-    const envelopeId = c.req.param('envelopeId');
+    const envelopeId = c.req.param('envelopeId')!;
 
     const envelope = await getEnvelopeDetails(envelopeId);
 
@@ -54,9 +56,11 @@ app.get('/envelopes/:envelopeId/document', async (c) => {
   } catch (error: unknown) {
     log.error('❌ Get document URL error:', error);
     const status = error instanceof AuthError ? error.statusCode : 500;
-    return c.json(
-      { error: error instanceof Error ? error.message : 'Failed to get document URL' },
-      status,
+    return new Response(
+      JSON.stringify({
+        error: error instanceof Error ? error.message : 'Failed to get document URL',
+      }),
+      { status, headers: { 'Content-Type': 'application/json' } },
     );
   }
 });
@@ -69,7 +73,7 @@ app.get('/envelopes/:envelopeId/certificate', async (c) => {
   try {
     // Authenticate
     const _ctx = await getAuthContext(c);
-    const envelopeId = c.req.param('envelopeId');
+    const envelopeId = c.req.param('envelopeId')!;
 
     const certificate = await getCertificate(envelopeId);
 
@@ -83,9 +87,11 @@ app.get('/envelopes/:envelopeId/certificate', async (c) => {
   } catch (error: unknown) {
     log.error('❌ Get certificate URL error:', error);
     const status = error instanceof AuthError ? error.statusCode : 500;
-    return c.json(
-      { error: error instanceof Error ? error.message : 'Failed to get certificate URL' },
-      status,
+    return new Response(
+      JSON.stringify({
+        error: error instanceof Error ? error.message : 'Failed to get certificate URL',
+      }),
+      { status, headers: { 'Content-Type': 'application/json' } },
     );
   }
 });

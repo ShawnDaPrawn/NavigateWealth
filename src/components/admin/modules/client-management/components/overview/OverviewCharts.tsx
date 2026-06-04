@@ -28,7 +28,7 @@ import {
   TrendingDown,
   Minus,
 } from 'lucide-react';
-import type { DashboardMode } from '../ClientOverviewTab';
+import type { DashboardMode } from '../clientOverviewConstants';
 
 // ── Shared formatting ──────────────────────────────────────────────────
 

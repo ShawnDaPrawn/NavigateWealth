@@ -11,6 +11,7 @@ import {
   DocumentsInsuranceRecordSchema,
 } from './compliance-validation.ts';
 import { formatZodError } from './shared-validation-utils.ts';
+import type { FAISRecord, POPIAConsent, DocumentsInsuranceRecord } from './compliance-types.ts';
 
 const app = new Hono();
 const log = createModuleLogger('compliance-core');
@@ -124,7 +125,7 @@ app.post(
   requireAuth,
   requireAdmin,
   asyncHandler(async (c) => {
-    const adminUserId = c.get('userId');
+    const adminUserId = c.get('userId') as string;
     const body = await c.req.json();
     const parsed = CreateFAISRecordSchema.safeParse(body);
     if (!parsed.success) {
@@ -133,7 +134,7 @@ app.post(
 
     log.info('Creating FAIS record', { adminUserId });
 
-    const record = await service.createFAISRecord(parsed.data);
+    const record = await service.createFAISRecord(parsed.data as Partial<FAISRecord>);
 
     log.success('FAIS record created', { recordId: record.id });
 
@@ -161,7 +162,7 @@ app.post(
   requireAuth,
   requireAdmin,
   asyncHandler(async (c) => {
-    const adminUserId = c.get('userId');
+    const adminUserId = c.get('userId') as string;
     const body = await c.req.json();
     const parsed = AMLCheckSchema.safeParse(body);
     if (!parsed.success) {
@@ -197,7 +198,7 @@ app.post(
   '/popia/consent',
   requireAuth,
   asyncHandler(async (c) => {
-    const userId = c.get('userId');
+    const userId = c.get('userId') as string;
     const body = await c.req.json();
     const parsed = POPIAConsentSchema.safeParse(body);
     if (!parsed.success) {
@@ -206,7 +207,7 @@ app.post(
 
     log.info('Recording POPIA consent', { userId });
 
-    const consent = await service.recordPOPIAConsent(userId, parsed.data);
+    const consent = await service.recordPOPIAConsent(userId, parsed.data as Partial<POPIAConsent>);
 
     return c.json({ consent });
   }),
@@ -216,7 +217,7 @@ app.post(
   '/popia/withdraw',
   requireAuth,
   asyncHandler(async (c) => {
-    const userId = c.get('userId');
+    const userId = c.get('userId') as string;
 
     log.info('Withdrawing POPIA consent', { userId });
 
@@ -246,7 +247,7 @@ app.post(
   requireAuth,
   requireAdmin,
   asyncHandler(async (c) => {
-    const adminUserId = c.get('userId');
+    const adminUserId = c.get('userId') as string;
     const body = await c.req.json();
     const parsed = DebarmentCheckSchema.safeParse(body);
     if (!parsed.success) {
@@ -258,7 +259,7 @@ app.post(
     const check = await service.performDebarmentCheck(
       parsed.data.adviserId,
       parsed.data.name,
-      parsed.data.idNumber,
+      parsed.data.idNumber ?? '',
       adminUserId,
     );
 
@@ -289,7 +290,7 @@ app.post(
   requireAuth,
   requireAdmin,
   asyncHandler(async (c) => {
-    const adminUserId = c.get('userId');
+    const adminUserId = c.get('userId') as string;
     const body = await c.req.json();
     const parsed = DocumentsInsuranceRecordSchema.safeParse(body);
     if (!parsed.success) {
@@ -298,7 +299,9 @@ app.post(
 
     log.info('Creating documents & insurance record', { adminUserId });
 
-    const record = await service.createDocumentsInsuranceRecord(parsed.data);
+    const record = await service.createDocumentsInsuranceRecord(
+      parsed.data as Partial<DocumentsInsuranceRecord>,
+    );
 
     log.success('Documents & insurance record created', { recordId: record.id });
 

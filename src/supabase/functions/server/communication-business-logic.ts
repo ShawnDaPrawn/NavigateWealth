@@ -318,6 +318,7 @@ export async function resolveRecipients(
 
   if (selection.recipientType === 'group') {
     const groupSelection = selection.selectedGroup;
+    if (!groupSelection) return [];
 
     if (groupSelection.type === 'custom') {
       // 1. Try Cache First
@@ -326,7 +327,7 @@ export async function resolveRecipients(
         logger.info(`Using cached members for group ${groupSelection.id}`, {
           count: cachedMembers.length,
         });
-        return cachedMembers;
+        return cachedMembers as unknown as CommunicationClient[];
       }
 
       // 2. Fallback to fresh calculation
@@ -335,7 +336,7 @@ export async function resolveRecipients(
       const group = storedGroup || groupSelection;
 
       const allClients = await getAllClients(supabase);
-      const members = await resolveGroupMembership(group, allClients);
+      const members = await resolveGroupMembership(group as unknown as Group, allClients);
 
       // Update cache for next time
       const cached: CachedRecipient[] = members.map((m) => ({
@@ -384,7 +385,7 @@ export async function processAttachments(
   for (const att of attachments) {
     try {
       const { data, error } = await supabase.storage.from(att.bucket).download(att.path);
-      if (error) continue;
+      if (error || !data) continue;
       const arrayBuffer = await data.arrayBuffer();
       const base64 = btoa(String.fromCharCode(...new Uint8Array(arrayBuffer)));
       processed.push({
@@ -422,8 +423,14 @@ export async function processScheduledCampaigns() {
       campaign.status = 'sending';
       await repo.saveCampaign(campaign);
 
-      const recipients = await resolveRecipients(campaign, supabase);
-      const sendGridAttachments = await processAttachments(campaign.attachments, supabase);
+      const recipients = await resolveRecipients(
+        campaign,
+        supabase as unknown as SupabaseAdminClient,
+      );
+      const sendGridAttachments = await processAttachments(
+        campaign.attachments || [],
+        supabase as unknown as SupabaseAdminClient,
+      );
       let sentCount = 0;
 
       for (const recipient of recipients) {

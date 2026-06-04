@@ -166,7 +166,7 @@ export async function clearRateLimit(identifier: string, action: string): Promis
     await kv.del(key);
     await kv.del(blockKey);
   } catch (error) {
-    log.warn('Failed to clear rate limit', error);
+    log.warn('Failed to clear rate limit', { error: String(error) });
   }
 }
 

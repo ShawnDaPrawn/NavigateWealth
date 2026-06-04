@@ -33,7 +33,7 @@ const app = new Hono();
  */
 app.get('/signer/download/:token', async (c) => {
   try {
-    const token = c.req.param('token');
+    const token = c.req.param('token')!;
 
     // Get signer by token
     const signer = await getSignerByToken(token);
@@ -60,7 +60,7 @@ app.get('/signer/download/:token', async (c) => {
       const signedPdfBuffer = await downloadDocument(envelope.signed_document_path);
 
       if (signedPdfBuffer) {
-        return new Response(signedPdfBuffer, {
+        return new Response(signedPdfBuffer as unknown as ArrayBuffer, {
           headers: {
             'Content-Type': 'application/pdf',
             'Content-Disposition': `attachment; filename="${envelope.document?.original_filename?.replace('.pdf', '_signed.pdf') || 'signed_document.pdf'}"`,
@@ -88,7 +88,7 @@ app.get('/signer/download/:token', async (c) => {
     try {
       const { pdfBuffer: burnedPdfBuffer } = await PDFService.burnIn(
         pdfBuffer,
-        envelope.fields || [],
+        Array.isArray(envelope.fields) ? envelope.fields : [],
         signers,
       );
 
@@ -100,10 +100,10 @@ app.get('/signer/download/:token', async (c) => {
           finalPdfBuffer = await PDFService.mergeCertificate(burnedPdfBuffer, certBuffer);
         }
       } catch (certError) {
-        log.warn('Certificate merge failed during fallback download', certError);
+        log.warn('Certificate merge failed during fallback download', { error: String(certError) });
       }
 
-      return new Response(finalPdfBuffer, {
+      return new Response(finalPdfBuffer as unknown as ArrayBuffer, {
         headers: {
           'Content-Type': 'application/pdf',
           'Content-Disposition': `attachment; filename="${envelope.document?.original_filename?.replace('.pdf', '_signed.pdf') || 'signed_document.pdf'}"`,
@@ -202,7 +202,7 @@ app.post('/signer/saved-signature', async (c) => {
 app.get('/envelopes/:envelopeId/attachments', async (c) => {
   try {
     await getAuthContext(c);
-    const envelopeId = c.req.param('envelopeId');
+    const envelopeId = c.req.param('envelopeId')!;
     const records =
       ((await kv.get(EsignKeys.envelopeAttachments(envelopeId))) as Array<
         Record<string, unknown>
@@ -217,9 +217,9 @@ app.get('/envelopes/:envelopeId/attachments', async (c) => {
   } catch (err) {
     log.error('List attachments error:', err);
     const status = err instanceof AuthError ? err.statusCode : 500;
-    return c.json(
-      { error: err instanceof Error ? err.message : 'Failed to list attachments' },
-      status,
+    return new Response(
+      JSON.stringify({ error: err instanceof Error ? err.message : 'Failed to list attachments' }),
+      { status, headers: { 'Content-Type': 'application/json' } },
     );
   }
 });

@@ -37,7 +37,7 @@ const log = createModuleLogger('security');
  */
 app.post('/:userId/password', requireAuth, async (c) => {
   try {
-    const userId = c.req.param('userId');
+    const userId = c.req.param('userId')!;
     const authUserId = c.get('userId') as string | undefined;
     const userRole = c.get('userRole') as string | undefined;
     const denied = ensureSelfOrAdmin(c, userId);
@@ -208,7 +208,7 @@ Log In: ${buttonUrl}
  */
 app.get('/:userId/status', requireAuth, async (c) => {
   try {
-    const userId = c.req.param('userId');
+    const userId = c.req.param('userId')!;
     const denied = ensureSelfOrAdmin(c, userId);
     if (denied) return denied;
 

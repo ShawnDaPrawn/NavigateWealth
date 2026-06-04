@@ -25,7 +25,7 @@ app.get(
   '/complaints/:id',
   requireAuth,
   asyncHandler(async (c) => {
-    const id = c.req.param('id');
+    const id = c.req.param('id')!;
     const record = await service.getComplaintById(id);
     if (!record) return c.json({ error: 'Complaint not found' }, 404);
     return c.json(record);
@@ -46,7 +46,7 @@ app.put(
   '/compliance/complaints/:id',
   requireAuth,
   asyncHandler(async (c) => {
-    const id = c.req.param('id');
+    const id = c.req.param('id')!;
     const body = await c.req.json();
     const record = await service.updateComplaint(id, body);
     return c.json(record);
@@ -58,7 +58,7 @@ app.post(
   requireAuth,
   requireAdmin,
   asyncHandler(async (c) => {
-    const id = c.req.param('id');
+    const id = c.req.param('id')!;
     const { resolution, outcome } = await c.req.json();
     const record = await service.resolveComplaint(id, resolution, outcome);
     return c.json(record);
@@ -70,7 +70,7 @@ app.post(
   requireAuth,
   requireAdmin,
   asyncHandler(async (c) => {
-    const id = c.req.param('id');
+    const id = c.req.param('id')!;
     const { escalatedTo } = await c.req.json();
     const record = await service.escalateComplaint(id, escalatedTo);
     return c.json(record);
@@ -106,7 +106,7 @@ app.post(
   requireAuth,
   requireAdmin,
   asyncHandler(async (c) => {
-    const id = c.req.param('id');
+    const id = c.req.param('id')!;
     const { approvedBy } = await c.req.json();
     const record = await service.approveMarketingRecord(id, approvedBy);
     return c.json(record);
@@ -142,7 +142,7 @@ app.put(
   requireAuth,
   requireAdmin,
   asyncHandler(async (c) => {
-    const id = c.req.param('id');
+    const id = c.req.param('id')!;
     const body = await c.req.json();
     const record = await service.updateConflictRecord(id, body);
     return c.json(record);
@@ -178,7 +178,7 @@ app.put(
   requireAuth,
   requireAdmin,
   asyncHandler(async (c) => {
-    const id = c.req.param('id');
+    const id = c.req.param('id')!;
     const body = await c.req.json();
     const record = await service.updateTCFRecord(id, body);
     return c.json(record);
@@ -214,7 +214,7 @@ app.put(
   requireAuth,
   requireAdmin,
   asyncHandler(async (c) => {
-    const id = c.req.param('id');
+    const id = c.req.param('id')!;
     const body = await c.req.json();
     const record = await service.updateSupervisionRecord(id, body);
     return c.json(record);

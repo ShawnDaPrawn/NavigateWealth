@@ -105,9 +105,7 @@ export async function fetchMatcherClients(): Promise<MatcherClient[]> {
   const allClients = await service.getAllClients();
 
   // Exclude deleted/suspended — they should not be in communication groups (§12.3)
-  const activeClients = allClients.filter(
-    (c: Record<string, unknown>) => !c.deleted && !c.suspended,
-  );
+  const activeClients = allClients.filter((c) => !c.deleted && !c.suspended);
 
   log.info('Fetched matcher clients', {
     totalCount: allClients.length,
@@ -117,7 +115,7 @@ export async function fetchMatcherClients(): Promise<MatcherClient[]> {
   // Fetch policies to build product associations per client.
   // Policies are stored as arrays under `policies:client:{clientId}` (§5.4, integrations-types.ts).
   // The old code used `kv.getByPrefix('policy:')` which doesn't match `policies:client:*`.
-  const clientIds = activeClients.map((c: Record<string, unknown>) => c.id as string);
+  const clientIds = activeClients.map((c) => c.id);
   const policyKeys = clientIds.map((id) => `policies:client:${id}`);
 
   let policyResults: unknown[] = [];
@@ -176,8 +174,8 @@ export async function fetchMatcherClients(): Promise<MatcherClient[]> {
         : [],
   });
 
-  return activeClients.map((c: Record<string, unknown>) => {
-    const profile = (c.profile || {}) as Record<string, unknown>;
+  return activeClients.map((c) => {
+    const profile = (c.profile as Record<string, unknown>) || {};
 
     // Extract fields — try flat first, then nested (handles both profile shapes)
     const pi = (profile.personalInformation || {}) as Record<string, unknown>;
@@ -368,7 +366,7 @@ export async function createCampaign(
     channel: data.channel || 'email',
     recipientType: data.recipientType,
     selectedRecipients: data.selectedRecipients || [],
-    selectedGroup: data.selectedGroup,
+    selectedGroup: data.selectedGroup as Campaign['selectedGroup'],
     status: 'draft',
     attachments: [],
     scheduling: data.scheduling || { type: 'immediate' },
@@ -437,7 +435,7 @@ export async function recalculateAllGroupMemberships(clients?: MatcherClient[]):
       groupName: group.name,
       memberCount: group.clientCount,
     });
-    await saveGroup(group as Group);
+    await saveGroup(group as unknown as Group);
   }
 
   log.success('========== GROUP MEMBERSHIP RECALCULATION COMPLETE ==========');

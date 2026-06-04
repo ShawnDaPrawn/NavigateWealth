@@ -8,6 +8,7 @@ import { EsignKeys } from './esign-keys.ts';
 import type {
   EsignDocument,
   EsignEnvelope,
+  EsignEnvelopeDetails,
   EsignSigner,
   EsignField,
   EsignAuditEvent,
@@ -225,9 +226,7 @@ export async function createEnvelope(params: {
 /**
  * Get envelope with full details (signers, fields, document)
  */
-export async function getEnvelopeDetails(
-  envelopeId: string,
-): Promise<Record<string, unknown> | null> {
+export async function getEnvelopeDetails(envelopeId: string): Promise<EsignEnvelopeDetails | null> {
   try {
     // Fetch envelope
     const envelope = await kv.get(EsignKeys.envelope(envelopeId));
@@ -268,10 +267,10 @@ export async function getEnvelopeDetails(
 
     return {
       ...envelope,
-      document,
-      signers: signers.filter(Boolean),
+      document: document as EsignDocument | null,
+      signers: signers.filter(Boolean) as EsignSigner[],
       fields: allFields,
-    };
+    } as EsignEnvelopeDetails;
   } catch (error: unknown) {
     log.error('Failed to get envelope details:', error);
     throw error;
@@ -363,7 +362,7 @@ export async function getClientEnvelopes(
       .filter(Boolean)
       .sort(
         (a: EsignEnvelope, b: EsignEnvelope) =>
-          new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime(),
+          new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime(),
       );
   } catch (error: unknown) {
     log.error('Failed to get client envelopes:', error);
@@ -531,12 +530,12 @@ export async function addSignersToEnvelope(
         email: signerData.email,
         phone: signerData.phone,
         order: existingSignerIds.length + i + 1,
-        role: signerData.role,
+        role: signerData.role ?? '',
         kind: signerData.kind ?? 'signer',
         status: 'pending',
         access_code: signerData.accessCode,
         access_token: accessToken,
-        requires_otp: signerData.requiresOtp,
+        requires_otp: signerData.requiresOtp ?? false,
         otp_verified: false,
         sms_opt_in: signerData.smsOptIn === true && !!signerData.phone,
         created_at: new Date().toISOString(),

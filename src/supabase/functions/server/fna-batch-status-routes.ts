@@ -146,7 +146,7 @@ async function resolvePointerModule(
       intakeSessionId: resolved.intakeSessionId,
     };
   } catch (err) {
-    log.warn(`Error processing ${key} FNA status:`, err);
+    log.warn(`Error processing ${key} FNA status:`, { error: String(err) });
     return { key, status: 'error' as const, data: null };
   }
 }
@@ -190,7 +190,7 @@ async function resolvePrefixModule(
       intakeSessionId: resolved.intakeSessionId,
     };
   } catch (err) {
-    log.warn(`Error processing ${key} FNA status:`, err);
+    log.warn(`Error processing ${key} FNA status:`, { error: String(err) });
     return { key, status: 'error' as const, data: null };
   }
 }
@@ -201,7 +201,7 @@ async function resolvePrefixModule(
 fnaBatchStatusRoutes.get('/client/:clientId', async (c) => {
   try {
     log.info('📥 GET /fna/batch-status/client/:clientId');
-    const clientId = c.req.param('clientId');
+    const clientId = c.req.param('clientId')!;
 
     const user = await authenticateUser(c.req.header('Authorization'), 'fna-batch-status');
     const isAdmin = isFnaAdminRole(user.role) || user.id === 'admin';

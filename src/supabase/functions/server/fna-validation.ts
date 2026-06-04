@@ -49,8 +49,8 @@ export const CreateSessionSchema = z.object({
  */
 export const SaveSessionSchema = z.object({
   clientId: UuidSchema,
-  inputs: z.record(z.unknown()),
-  results: z.record(z.unknown()).nullable().optional(),
+  inputs: z.record(z.string(), z.unknown()),
+  results: z.record(z.string(), z.unknown()).nullable().optional(),
   status: FnaStatusSchema.optional(),
   adviserNotes: z.string().optional(),
 });
@@ -61,10 +61,10 @@ export const SaveSessionSchema = z.object({
  */
 export const SaveTaxPlanningSessionSchema = z.object({
   clientId: UuidSchema,
-  inputs: z.record(z.unknown()),
-  finalResults: z.record(z.unknown()),
-  adjustments: z.array(z.record(z.unknown())).optional(),
-  recommendations: z.array(z.record(z.unknown())).optional(),
+  inputs: z.record(z.string(), z.unknown()),
+  finalResults: z.record(z.string(), z.unknown()),
+  adjustments: z.array(z.record(z.string(), z.unknown())).optional(),
+  recommendations: z.array(z.record(z.string(), z.unknown())).optional(),
   adviserNotes: z.string().optional(),
   status: FnaStatusSchema.optional(),
 });
@@ -74,7 +74,7 @@ export const SaveTaxPlanningSessionSchema = z.object({
  * Accepts any valid JSON object to merge into existing inputs.
  */
 export const UpdateInputsSchema = z
-  .record(z.unknown())
+  .record(z.string(), z.unknown())
   .refine((obj) => Object.keys(obj).length > 0, {
     message: 'Input update must contain at least one field',
   });
@@ -84,8 +84,8 @@ export const UpdateInputsSchema = z
  */
 export const UpdateResultsSchema = z
   .object({
-    results: z.record(z.unknown()).optional(),
-    adjustments: z.record(z.unknown()).optional(),
+    results: z.record(z.string(), z.unknown()).optional(),
+    adjustments: z.record(z.string(), z.unknown()).optional(),
   })
   .refine((data) => data.results !== undefined || data.adjustments !== undefined, {
     message: 'At least one of results or adjustments must be provided',
@@ -95,8 +95,8 @@ export const UpdateResultsSchema = z
  * POST /client/:clientId/save — Save Investment INA session.
  */
 export const SaveInvestmentSessionSchema = z.object({
-  inputs: z.record(z.unknown()),
-  results: z.record(z.unknown()).nullable().optional(),
+  inputs: z.record(z.string(), z.unknown()),
+  results: z.record(z.string(), z.unknown()).nullable().optional(),
   status: FnaStatusSchema.optional(),
 });
 
@@ -105,7 +105,7 @@ export const SaveInvestmentSessionSchema = z.object({
  * Accepts the full inputs object for calculation.
  */
 export const CalculateInputsSchema = z
-  .record(z.unknown())
+  .record(z.string(), z.unknown())
   .refine((obj) => Object.keys(obj).length > 0, {
     message: 'Calculation inputs must not be empty',
   });
@@ -115,10 +115,10 @@ export const CalculateInputsSchema = z
  */
 export const CreateRiskPlanningFnaSchema = z.object({
   clientId: UuidSchema,
-  inputData: z.record(z.unknown()).optional(),
-  calculations: z.record(z.unknown()).nullable().optional(),
-  adjustments: z.record(z.unknown()).nullable().optional(),
-  finalNeeds: z.record(z.unknown()).nullable().optional(),
+  inputData: z.record(z.string(), z.unknown()).optional(),
+  calculations: z.record(z.string(), z.unknown()).nullable().optional(),
+  adjustments: z.record(z.string(), z.unknown()).nullable().optional(),
+  finalNeeds: z.record(z.string(), z.unknown()).nullable().optional(),
 });
 
 /**
@@ -126,10 +126,10 @@ export const CreateRiskPlanningFnaSchema = z.object({
  */
 export const UpdateRiskPlanningFnaSchema = z
   .object({
-    inputData: z.record(z.unknown()).optional(),
-    calculations: z.record(z.unknown()).nullable().optional(),
-    adjustments: z.record(z.unknown()).nullable().optional(),
-    finalNeeds: z.record(z.unknown()).nullable().optional(),
+    inputData: z.record(z.string(), z.unknown()).optional(),
+    calculations: z.record(z.string(), z.unknown()).nullable().optional(),
+    adjustments: z.record(z.string(), z.unknown()).nullable().optional(),
+    finalNeeds: z.record(z.string(), z.unknown()).nullable().optional(),
     status: FnaStatusSchema.optional(),
   })
   .refine((data) => Object.keys(data).length > 0, {
@@ -166,7 +166,7 @@ function intakePayloadSizeOk(obj: Record<string, unknown>): boolean {
 /** PUT /fna-intake/:domain/draft/:clientId — mirrors src/shared/fna-intake/schemas/intake-payload.ts */
 export const FnaIntakeSaveDraftSchema = z.object({
   inputs: z
-    .record(z.unknown())
+    .record(z.string(), z.unknown())
     .refine((obj) => Object.keys(obj).length <= MAX_INTAKE_FIELDS, {
       message: `Intake may contain at most ${MAX_INTAKE_FIELDS} fields`,
     })

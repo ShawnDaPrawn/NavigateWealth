@@ -59,9 +59,11 @@ apiKeysRoutes.post('/api-keys', rateLimit('SENDER_MUTATE'), async (c) => {
   } catch (error: unknown) {
     log.error('Create API key error:', error);
     const status = error instanceof AuthError ? error.statusCode : 500;
-    return c.json(
-      { error: error instanceof Error ? error.message : 'Failed to create API key' },
-      status,
+    return new Response(
+      JSON.stringify({
+        error: error instanceof Error ? error.message : 'Failed to create API key',
+      }),
+      { status, headers: { 'Content-Type': 'application/json' } },
     );
   }
 });
@@ -76,9 +78,9 @@ apiKeysRoutes.get('/api-keys', async (c) => {
   } catch (error: unknown) {
     log.error('List API keys error:', error);
     const status = error instanceof AuthError ? error.statusCode : 500;
-    return c.json(
-      { error: error instanceof Error ? error.message : 'Failed to list API keys' },
-      status,
+    return new Response(
+      JSON.stringify({ error: error instanceof Error ? error.message : 'Failed to list API keys' }),
+      { status, headers: { 'Content-Type': 'application/json' } },
     );
   }
 });
@@ -87,7 +89,7 @@ apiKeysRoutes.get('/api-keys', async (c) => {
 apiKeysRoutes.patch('/api-keys/:id', rateLimit('SENDER_MUTATE'), async (c) => {
   try {
     const ctx = await getAuthContext(c);
-    const id = c.req.param('id');
+    const id = c.req.param('id')!;
     const existing = await getApiKey(id);
     if (!existing) return c.json({ error: 'API key not found' }, 404);
     if (existing.firm_id !== resolveFirmId(ctx.user)) {
@@ -116,9 +118,11 @@ apiKeysRoutes.patch('/api-keys/:id', rateLimit('SENDER_MUTATE'), async (c) => {
   } catch (error: unknown) {
     log.error('Update API key error:', error);
     const status = error instanceof AuthError ? error.statusCode : 500;
-    return c.json(
-      { error: error instanceof Error ? error.message : 'Failed to update API key' },
-      status,
+    return new Response(
+      JSON.stringify({
+        error: error instanceof Error ? error.message : 'Failed to update API key',
+      }),
+      { status, headers: { 'Content-Type': 'application/json' } },
     );
   }
 });
@@ -127,7 +131,7 @@ apiKeysRoutes.patch('/api-keys/:id', rateLimit('SENDER_MUTATE'), async (c) => {
 apiKeysRoutes.post('/api-keys/:id/rotate', rateLimit('SENDER_MUTATE'), async (c) => {
   try {
     const ctx = await getAuthContext(c);
-    const id = c.req.param('id');
+    const id = c.req.param('id')!;
     const existing = await getApiKey(id);
     if (!existing) return c.json({ error: 'API key not found' }, 404);
     if (existing.firm_id !== resolveFirmId(ctx.user)) {
@@ -146,9 +150,11 @@ apiKeysRoutes.post('/api-keys/:id/rotate', rateLimit('SENDER_MUTATE'), async (c)
   } catch (error: unknown) {
     log.error('Rotate API key error:', error);
     const status = error instanceof AuthError ? error.statusCode : 500;
-    return c.json(
-      { error: error instanceof Error ? error.message : 'Failed to rotate API key' },
-      status,
+    return new Response(
+      JSON.stringify({
+        error: error instanceof Error ? error.message : 'Failed to rotate API key',
+      }),
+      { status, headers: { 'Content-Type': 'application/json' } },
     );
   }
 });
@@ -157,7 +163,7 @@ apiKeysRoutes.post('/api-keys/:id/rotate', rateLimit('SENDER_MUTATE'), async (c)
 apiKeysRoutes.delete('/api-keys/:id', rateLimit('SENDER_MUTATE'), async (c) => {
   try {
     const ctx = await getAuthContext(c);
-    const id = c.req.param('id');
+    const id = c.req.param('id')!;
     const existing = await getApiKey(id);
     if (!existing) return c.json({ error: 'API key not found' }, 404);
     if (existing.firm_id !== resolveFirmId(ctx.user)) {
@@ -175,9 +181,11 @@ apiKeysRoutes.delete('/api-keys/:id', rateLimit('SENDER_MUTATE'), async (c) => {
   } catch (error: unknown) {
     log.error('Delete API key error:', error);
     const status = error instanceof AuthError ? error.statusCode : 500;
-    return c.json(
-      { error: error instanceof Error ? error.message : 'Failed to delete API key' },
-      status,
+    return new Response(
+      JSON.stringify({
+        error: error instanceof Error ? error.message : 'Failed to delete API key',
+      }),
+      { status, headers: { 'Content-Type': 'application/json' } },
     );
   }
 });

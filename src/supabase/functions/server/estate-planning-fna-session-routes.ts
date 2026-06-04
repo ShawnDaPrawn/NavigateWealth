@@ -76,7 +76,7 @@ app.get('/client/:clientId/auto-populate', async (c) => {
     log.info('📥 GET /estate-planning-fna/client/:clientId/auto-populate');
     const _user = await authenticateUser(c.req.header('Authorization'));
 
-    const clientId = c.req.param('clientId');
+    const clientId = c.req.param('clientId')!;
 
     const { estateAutoPopulateFromResolver } = await import('./form-prefill-auto-populate.ts');
     const resolverInputs = await estateAutoPopulateFromResolver(clientId);
@@ -93,8 +93,8 @@ app.get('/client/:clientId/auto-populate', async (c) => {
     // Fetch assets
     const assetRecords = await kv.getByPrefix(`asset:${clientId}:`);
     const assets = (assetRecords || []).map((asset: EstateAsset) => {
-      const assetType = asset.assetType || 'personal';
-      const subType = asset.subType || 'other';
+      const assetType = String(asset.assetType || 'personal');
+      const subType = String(asset.subType || 'other');
 
       return {
         id: asset.id || `asset-${Math.random()}`,
@@ -138,7 +138,7 @@ app.get('/client/:clientId/auto-populate', async (c) => {
       .filter(
         (policy: EstatePolicy) =>
           policy.category === 'risk_planning' &&
-          ['life_cover', 'group_life', 'funeral'].includes(policy.policyType),
+          ['life_cover', 'group_life', 'funeral'].includes(String(policy.policyType)),
       )
       .map((policy: EstatePolicy) => {
         const beneficiaryType = policy.beneficiaryType || 'estate';
@@ -251,7 +251,7 @@ app.get('/client/:clientId/sessions', async (c) => {
     log.info('📥 GET /estate-planning-fna/client/:clientId/sessions');
     await authenticateUser(c.req.header('Authorization'));
 
-    const clientId = c.req.param('clientId');
+    const clientId = c.req.param('clientId')!;
 
     const sessions = await kv.getByPrefix(`estate-planning-fna:client:${clientId}:`);
     const sortedSessions = (sessions || []).sort(
@@ -275,7 +275,7 @@ app.get('/client/:clientId/sessions', async (c) => {
 app.get('/client/:clientId/latest-published', async (c) => {
   try {
     log.info('📥 GET /estate-planning-fna/client/:clientId/latest-published');
-    const clientId = c.req.param('clientId');
+    const clientId = c.req.param('clientId')!;
 
     // Optional authentication - allow both authenticated clients and anon key access
     const authHeader = c.req.header('Authorization');
@@ -333,7 +333,7 @@ app.get('/session/:sessionId', async (c) => {
     log.info('📥 GET /estate-planning-fna/session/:sessionId');
     await authenticateUser(c.req.header('Authorization'));
 
-    const sessionId = c.req.param('sessionId');
+    const sessionId = c.req.param('sessionId')!;
     const clientId = sessionId.split('-v')[0];
 
     const key = `estate-planning-fna:client:${clientId}:${sessionId}`;
@@ -366,7 +366,7 @@ app.delete('/session/:sessionId', async (c) => {
     log.info('📥 DELETE /estate-planning-fna/session/:sessionId');
     await authenticateUser(c.req.header('Authorization'));
 
-    const sessionId = c.req.param('sessionId');
+    const sessionId = c.req.param('sessionId')!;
     const clientId = sessionId.split('-v')[0];
 
     const key = `estate-planning-fna:client:${clientId}:${sessionId}`;

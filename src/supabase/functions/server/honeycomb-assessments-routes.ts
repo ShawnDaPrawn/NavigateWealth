@@ -1,4 +1,5 @@
 import { Hono } from 'npm:hono';
+import type { ContentfulStatusCode } from 'npm:hono/utils/http-status';
 import { createModuleLogger } from './stderr-logger.ts';
 import { getErrMsg } from './shared-logger-utils.ts';
 import * as kv from './kv_store.tsx';
@@ -27,7 +28,7 @@ app.get('/assessments/templates', async (c) => {
           error: `Honeycomb returned ${res.status} when fetching assessment templates`,
           details: errText.substring(0, 300),
         },
-        res.status as number,
+        (res.status >= 400 && res.status < 600 ? res.status : 500) as ContentfulStatusCode,
       );
     }
 
@@ -102,7 +103,7 @@ app.post('/assessments/run', async (c) => {
       log.error(`Assessment submission failed (${res.status}):`, { error: errDetail });
       return c.json(
         { error: `Assessment submission failed: ${errDetail}`, status: res.status },
-        (res.status >= 400 && res.status < 600 ? res.status : 500) as number,
+        (res.status >= 400 && res.status < 600 ? res.status : 500) as ContentfulStatusCode,
       );
     }
 
@@ -139,13 +140,13 @@ app.post('/assessments/run', async (c) => {
     return c.json({ success: true, data: resultEntry });
   } catch (e: unknown) {
     log.error('Error running assessment:', e);
-    return routeError(c, e);
+    return routeError(c, e) as Response;
   }
 });
 
 app.get('/assessments/history/:clientId', async (c) => {
   try {
-    const clientId = c.req.param('clientId');
+    const clientId = c.req.param('clientId')!;
     const history = (await kv.get(`honeycomb_assessments:${clientId}`)) || [];
     return c.json({ success: true, assessments: history });
   } catch (e: unknown) {
@@ -197,7 +198,7 @@ app.post('/assessments/create', async (c) => {
 
 app.get('/assessments/list/:honeycombId', async (c) => {
   try {
-    const honeycombId = c.req.param('honeycombId');
+    const honeycombId = c.req.param('honeycombId')!;
     const url = `${HONEYCOMB_API_URL}/api/Assessment?naturalPersonId=${honeycombId}`;
     const res = await fetch(url, { headers: getHeaders() });
 
@@ -263,7 +264,7 @@ app.post('/reports/cdd', async (c) => {
     });
   } catch (e: unknown) {
     log.error('CDD report route error:', e);
-    return routeError(c, e);
+    return routeError(c, e) as Response;
   }
 });
 

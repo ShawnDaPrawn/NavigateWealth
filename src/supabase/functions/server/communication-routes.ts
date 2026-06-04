@@ -25,6 +25,14 @@ import {
   CreateCampaignSchema,
 } from './communication-validation.ts';
 import { formatZodError } from './shared-validation-utils.ts';
+import type {
+  MessageCreate,
+  MessageCategory,
+  Group,
+  GroupCreate,
+  CampaignCreate,
+  HistoryFilters,
+} from './communication-types.ts';
 
 const app = new Hono();
 const log = createModuleLogger('communication');
@@ -43,7 +51,7 @@ app.post(
   requireAuth,
   requireAdmin,
   asyncHandler(async (c) => {
-    const adminUserId = c.get('userId');
+    const adminUserId = c.get('userId') as string;
     const body = await c.req.json();
     const parsed = SendMessageSchema.safeParse(body);
     if (!parsed.success) {
@@ -52,14 +60,14 @@ app.post(
 
     log.info('Admin: Sending message', { adminUserId });
 
-    const result = await service.sendMessage(adminUserId, parsed.data);
+    const result = await service.sendMessage(adminUserId, parsed.data as MessageCreate);
 
     log.success('Message sent', { adminUserId, recipients: parsed.data.recipients?.length });
 
     // Audit trail (non-blocking — §12.2)
     AdminAuditService.record({
       actorId: adminUserId,
-      actorRole: c.get('userRole') || 'admin',
+      actorRole: (c.get('userRole') as string | undefined) || 'admin',
       category: 'communication',
       action: 'message_sent',
       summary: `Message sent to ${parsed.data.recipients?.length || 0} recipient(s)`,
@@ -81,7 +89,7 @@ app.post(
   requireAuth,
   requireAdmin,
   asyncHandler(async (c) => {
-    const adminUserId = c.get('userId');
+    const adminUserId = c.get('userId') as string;
     const formData = await c.req.formData();
     const file = formData.get('file');
 
@@ -113,7 +121,10 @@ app.get(
       recipientId: c.req.query('recipientId'),
     };
 
-    const history = await service.getHistory(filters);
+    const history = await service.getHistory({
+      ...filters,
+      category: filters.category as MessageCategory | undefined,
+    } as HistoryFilters);
 
     return c.json({ history });
   }),
@@ -131,7 +142,7 @@ app.get(
   '/inbox',
   requireAuth,
   asyncHandler(async (c) => {
-    const userId = c.get('userId');
+    const userId = c.get('userId') as string;
 
     log.info('Fetching inbox', { userId });
 
@@ -149,8 +160,8 @@ app.post(
   '/read/:id',
   requireAuth,
   asyncHandler(async (c) => {
-    const userId = c.get('userId');
-    const messageId = c.req.param('id');
+    const userId = c.get('userId') as string;
+    const messageId = c.req.param('id')!;
 
     await service.markAsRead(userId, messageId);
 
@@ -166,8 +177,8 @@ app.delete(
   '/inbox/:id',
   requireAuth,
   asyncHandler(async (c) => {
-    const userId = c.get('userId');
-    const messageId = c.req.param('id');
+    const userId = c.get('userId') as string;
+    const messageId = c.req.param('id')!;
 
     await service.deleteMessage(userId, messageId);
 
@@ -223,7 +234,7 @@ app.post(
   requireAuth,
   requireAdmin,
   asyncHandler(async (c) => {
-    const adminUserId = c.get('userId');
+    const adminUserId = c.get('userId') as string;
     const body = await c.req.json();
     const parsed = CreateGroupSchema.safeParse(body);
     if (!parsed.success) {
@@ -232,13 +243,13 @@ app.post(
 
     log.info('Admin: Creating group', { adminUserId, groupName: parsed.data.name });
 
-    const group = await service.createGroup(parsed.data);
+    const group = await service.createGroup(parsed.data as GroupCreate);
 
     log.success('Group created', { adminUserId, groupId: group.id });
 
     AdminAuditService.record({
       actorId: adminUserId,
-      actorRole: c.get('userRole') || 'admin',
+      actorRole: (c.get('userRole') as string | undefined) || 'admin',
       category: 'communication',
       action: 'group_created',
       summary: `Communication group created: ${parsed.data.name}`,
@@ -260,8 +271,8 @@ app.put(
   requireAuth,
   requireAdmin,
   asyncHandler(async (c) => {
-    const adminUserId = c.get('userId');
-    const groupId = c.req.param('id');
+    const adminUserId = c.get('userId') as string;
+    const groupId = c.req.param('id')!;
     const body = await c.req.json();
     const parsed = UpdateGroupSchema.safeParse(body);
     if (!parsed.success) {
@@ -270,11 +281,11 @@ app.put(
 
     log.info('Admin: Updating group', { adminUserId, groupId });
 
-    const group = await service.updateGroup(groupId, parsed.data);
+    const group = await service.updateGroup(groupId, parsed.data as Partial<Group>);
 
     AdminAuditService.record({
       actorId: adminUserId,
-      actorRole: c.get('userRole') || 'admin',
+      actorRole: (c.get('userRole') as string | undefined) || 'admin',
       category: 'communication',
       action: 'group_updated',
       summary: `Communication group updated`,
@@ -296,8 +307,8 @@ app.delete(
   requireAuth,
   requireAdmin,
   asyncHandler(async (c) => {
-    const adminUserId = c.get('userId');
-    const groupId = c.req.param('id');
+    const adminUserId = c.get('userId') as string;
+    const groupId = c.req.param('id')!;
 
     log.warn('Admin: Deleting group', { adminUserId, groupId });
 
@@ -305,7 +316,7 @@ app.delete(
 
     AdminAuditService.record({
       actorId: adminUserId,
-      actorRole: c.get('userRole') || 'admin',
+      actorRole: (c.get('userRole') as string | undefined) || 'admin',
       category: 'communication',
       action: 'group_deleted',
       summary: `Communication group deleted`,
@@ -331,7 +342,7 @@ app.post(
   requireAuth,
   requireAdmin,
   asyncHandler(async (c) => {
-    const adminUserId = c.get('userId');
+    const adminUserId = c.get('userId') as string;
 
     log.info('Admin: Manually triggering group recalculation', { adminUserId });
 
@@ -422,7 +433,7 @@ app.post(
   requireAuth,
   requireAdmin,
   asyncHandler(async (c) => {
-    const adminUserId = c.get('userId');
+    const adminUserId = c.get('userId') as string;
     const body = await c.req.json();
     const parsed = CreateTemplateSchema.safeParse(body);
     if (!parsed.success) {
@@ -437,7 +448,7 @@ app.post(
 
     AdminAuditService.record({
       actorId: adminUserId,
-      actorRole: c.get('userRole') || 'admin',
+      actorRole: (c.get('userRole') as string | undefined) || 'admin',
       category: 'communication',
       action: 'template_created',
       summary: `Email template created: ${parsed.data.name}`,
@@ -459,7 +470,7 @@ app.get(
   requireAuth,
   requireAdmin,
   asyncHandler(async (c) => {
-    const templateId = c.req.param('id');
+    const templateId = c.req.param('id')!;
     const template = await service.getTemplateById(templateId);
 
     if (!template) {
@@ -479,8 +490,8 @@ app.put(
   requireAuth,
   requireAdmin,
   asyncHandler(async (c) => {
-    const adminUserId = c.get('userId');
-    const templateId = c.req.param('id');
+    const adminUserId = c.get('userId') as string;
+    const templateId = c.req.param('id')!;
     const body = await c.req.json();
     const parsed = UpdateTemplateSchema.safeParse(body);
     if (!parsed.success) {
@@ -493,7 +504,7 @@ app.put(
 
     AdminAuditService.record({
       actorId: adminUserId,
-      actorRole: c.get('userRole') || 'admin',
+      actorRole: (c.get('userRole') as string | undefined) || 'admin',
       category: 'communication',
       action: 'template_updated',
       summary: `Email template updated`,
@@ -515,8 +526,8 @@ app.delete(
   requireAuth,
   requireAdmin,
   asyncHandler(async (c) => {
-    const adminUserId = c.get('userId');
-    const templateId = c.req.param('id');
+    const adminUserId = c.get('userId') as string;
+    const templateId = c.req.param('id')!;
 
     log.warn('Admin: Deleting template', { adminUserId, templateId });
 
@@ -524,7 +535,7 @@ app.delete(
 
     AdminAuditService.record({
       actorId: adminUserId,
-      actorRole: c.get('userRole') || 'admin',
+      actorRole: (c.get('userRole') as string | undefined) || 'admin',
       category: 'communication',
       action: 'template_deleted',
       summary: `Email template deleted`,
@@ -565,7 +576,7 @@ app.post(
   requireAuth,
   requireAdmin,
   asyncHandler(async (c) => {
-    const adminUserId = c.get('userId');
+    const adminUserId = c.get('userId') as string;
     const body = await c.req.json();
     const parsed = EmailFooterSettingsSchema.safeParse(body);
     if (!parsed.success) {
@@ -580,7 +591,7 @@ app.post(
 
     AdminAuditService.record({
       actorId: adminUserId,
-      actorRole: c.get('userRole') || 'admin',
+      actorRole: (c.get('userRole') as string | undefined) || 'admin',
       category: 'configuration',
       action: 'email_footer_updated',
       summary: 'Email footer settings updated',
@@ -645,7 +656,7 @@ app.post(
   requireAuth,
   requireAdmin,
   asyncHandler(async (c) => {
-    const adminUserId = c.get('userId');
+    const adminUserId = c.get('userId') as string;
     const body = await c.req.json();
     const parsed = CreateCampaignSchema.safeParse(body);
     if (!parsed.success) {
@@ -654,13 +665,13 @@ app.post(
 
     log.info('Admin: Creating campaign', { adminUserId });
 
-    const campaign = await service.createCampaign(adminUserId, parsed.data);
+    const campaign = await service.createCampaign(adminUserId, parsed.data as CampaignCreate);
 
     log.success('Campaign created', { adminUserId, campaignId: campaign.id });
 
     AdminAuditService.record({
       actorId: adminUserId,
-      actorRole: c.get('userRole') || 'admin',
+      actorRole: (c.get('userRole') as string | undefined) || 'admin',
       category: 'communication',
       action: 'campaign_created',
       summary: `Campaign created`,
@@ -682,8 +693,8 @@ app.post(
   requireAuth,
   requireAdmin,
   asyncHandler(async (c) => {
-    const adminUserId = c.get('userId');
-    const campaignId = c.req.param('id');
+    const adminUserId = c.get('userId') as string;
+    const campaignId = c.req.param('id')!;
 
     log.info('Admin: Sending campaign', { adminUserId, campaignId });
 
@@ -693,7 +704,7 @@ app.post(
 
     AdminAuditService.record({
       actorId: adminUserId,
-      actorRole: c.get('userRole') || 'admin',
+      actorRole: (c.get('userRole') as string | undefined) || 'admin',
       category: 'communication',
       action: 'campaign_sent',
       summary: `Campaign sent`,
@@ -720,8 +731,8 @@ app.delete(
   requireAuth,
   requireAdmin,
   asyncHandler(async (c) => {
-    const adminUserId = c.get('userId');
-    const messageId = c.req.param('id');
+    const adminUserId = c.get('userId') as string;
+    const messageId = c.req.param('id')!;
 
     log.warn('Admin: Deleting communication log', { adminUserId, messageId });
 
@@ -729,7 +740,7 @@ app.delete(
 
     AdminAuditService.record({
       actorId: adminUserId,
-      actorRole: c.get('userRole') || 'admin',
+      actorRole: (c.get('userRole') as string | undefined) || 'admin',
       category: 'communication',
       action: 'communication_log_deleted',
       summary: `Communication log entry deleted`,

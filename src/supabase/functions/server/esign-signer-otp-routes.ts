@@ -68,7 +68,7 @@ app.post('/signer/verify-otp', rateLimit('OTP_VERIFY'), async (c) => {
 
     // Verify access code if required
     if (access_code) {
-      const accessCodeResult = await verifyAccessCode(signer.id, access_code);
+      const accessCodeResult = await verifyAccessCode(signer.id, access_code as string);
       if (!accessCodeResult.valid) {
         return c.json({ error: accessCodeResult.error || 'Invalid access code' }, 401);
       }

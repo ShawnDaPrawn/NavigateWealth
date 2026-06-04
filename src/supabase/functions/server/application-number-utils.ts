@@ -31,7 +31,7 @@ export async function generateApplicationNumber(): Promise<string> {
 
   const numbers = currentYearApps.map(
     (app: { application_number?: string; [key: string]: unknown }) => {
-      const match = app.application_number.match(/APP-\d{4}-(\d{4})/);
+      const match = app.application_number?.match(/APP-\d{4}-(\d{4})/);
       return match ? parseInt(match[1], 10) : 0;
     },
   );

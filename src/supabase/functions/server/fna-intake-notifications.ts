@@ -31,7 +31,7 @@ async function notifyInbox(recipientId: string, subject: string, content: string
       subject,
       content,
       recipients: [recipientId],
-      category: 'system',
+      category: 'System',
       priority: 'normal',
     });
   } catch (error) {

@@ -218,7 +218,9 @@ export async function updateTemplate(
       if (!idx.includes(priorVersion)) idx.push(priorVersion);
       await kv.set(idxKey, idx);
     } catch (err) {
-      log.warn(`Failed to snapshot template ${templateId} v${existing.version}:`, err);
+      log.warn(`Failed to snapshot template ${templateId} v${existing.version}:`, {
+        error: String(err),
+      });
     }
   }
 

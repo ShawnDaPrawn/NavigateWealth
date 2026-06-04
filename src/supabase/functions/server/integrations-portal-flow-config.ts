@@ -235,14 +235,14 @@ export function normaliseDocumentArtifactConfigs(
     .slice(0, 20)
     .map((artifact, index) => {
       const entry = (artifact || {}) as Record<string, unknown>;
-      const attachTo =
+      const attachTo: 'estate_documents' | 'matched_policy' =
         String(entry.attachTo || '') === 'estate_documents' ? 'estate_documents' : 'matched_policy';
       const allowedDocumentTypes =
         attachTo === 'estate_documents'
           ? PORTAL_ESTATE_DOCUMENT_TYPES
           : PORTAL_POLICY_DOCUMENT_TYPES;
-      const documentType = allowedDocumentTypes.includes(
-        String(entry.documentType) as (typeof allowedDocumentTypes)[number],
+      const documentType = (allowedDocumentTypes as readonly string[]).includes(
+        String(entry.documentType),
       )
         ? (entry.documentType as PortalDocumentArtifactConfig['documentType'])
         : attachTo === 'estate_documents'
@@ -262,7 +262,7 @@ export function normaliseDocumentArtifactConfigs(
         required: entry.required === true,
         attachTo,
         documentType,
-        fileType: 'pdf',
+        fileType: 'pdf' as const,
         steps: normaliseDocumentArtifactSteps(entry.steps, []),
       };
     })
@@ -392,5 +392,5 @@ export function normalisePortalCredentialProfiles(
             : undefined,
       };
     })
-    .filter((profile): profile is PortalCredentialProfile => Boolean(profile));
+    .filter((profile) => profile !== null) as PortalCredentialProfile[];
 }

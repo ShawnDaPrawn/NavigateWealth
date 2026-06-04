@@ -53,6 +53,7 @@ export interface EsignEnvelope {
   status:
     | 'draft'
     | 'sent'
+    | 'viewed'
     | 'in_progress'
     | 'partially_signed'
     | 'completing'
@@ -105,6 +106,19 @@ export interface EsignEnvelope {
   deleted_at?: string;
   deleted_by?: string;
   delete_reason?: string;
+  void_reason?: string;
+  expired_at?: string;
+}
+
+/**
+ * Hydrated envelope returned by getEnvelopeDetails — includes document,
+ * signers, and fields that are loaded from KV and merged at read time.
+ * Extends EsignEnvelope so callers get strong types instead of unknown.
+ */
+export interface EsignEnvelopeDetails extends EsignEnvelope {
+  document: EsignDocument | null;
+  signers: EsignSigner[];
+  fields: EsignField[];
 }
 
 export interface EsignSigner {

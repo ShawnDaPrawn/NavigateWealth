@@ -100,7 +100,7 @@ export async function runClientCleanup(dryRun = false): Promise<CleanupResult> {
 
   // ── Extract user IDs ─────────────────────────────────────────────────
 
-  const profilesByUserId = new Map<string, unknown>();
+  const profilesByUserId = new Map<string, Record<string, unknown>>();
   for (const row of profiles) {
     const match = row.key.match(/user_profile:([^:]+):personal_info/);
     if (match) {
@@ -177,7 +177,7 @@ export async function runClientCleanup(dryRun = false): Promise<CleanupResult> {
       affectedRecords.push({
         userId,
         action: 'orphan_closed',
-        previousAccountStatus: profile?.accountStatus,
+        previousAccountStatus: profile?.accountStatus as string | undefined,
         newAccountStatus: 'closed',
       });
       orphanedProfilesClosed++;
@@ -197,7 +197,7 @@ export async function runClientCleanup(dryRun = false): Promise<CleanupResult> {
       affectedRecords.push({
         userId,
         action: 'deleted_backfill',
-        previousAccountStatus: profile?.accountStatus,
+        previousAccountStatus: profile?.accountStatus as string | undefined,
         newAccountStatus: 'closed',
       });
       deletedStatusBackfilled++;
@@ -224,7 +224,7 @@ export async function runClientCleanup(dryRun = false): Promise<CleanupResult> {
       affectedRecords.push({
         userId,
         action: 'suspended_backfill',
-        previousAccountStatus: profile?.accountStatus,
+        previousAccountStatus: profile?.accountStatus as string | undefined,
         newAccountStatus: 'suspended',
       });
       suspendedStatusBackfilled++;

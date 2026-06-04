@@ -16,7 +16,7 @@ import { getAuthContext, AuthError } from './auth-mw.ts';
 import { createModuleLogger } from './stderr-logger.ts';
 import { formatZodError } from './shared-validation-utils.ts';
 import { UpdateFieldsSchema } from './esign-validation.ts';
-import { getRequestMetadata } from './esign-route-helpers.ts';
+import { getRequestMetadata, FieldRecord } from './esign-route-helpers.ts';
 import { getEnvelopeDetails, logAuditEvent } from './esign-services.ts';
 
 const log = createModuleLogger('esign-fields-routes');
@@ -28,7 +28,7 @@ fieldsRoutes.put('/envelopes/:envelopeId/fields', async (c) => {
     // Authenticate
     const ctx = await getAuthContext(c);
     const user = ctx.user;
-    const envelopeId = c.req.param('envelopeId');
+    const envelopeId = c.req.param('envelopeId')!;
 
     const body = await c.req.json();
     const parsed = UpdateFieldsSchema.safeParse(body);
@@ -62,7 +62,9 @@ fieldsRoutes.put('/envelopes/:envelopeId/fields', async (c) => {
     const fieldsToReturn: FieldRecord[] = [];
 
     for (const field of fields) {
-      const fieldId = field.id || `field-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+      const fieldId =
+        (field.id as string | undefined) ||
+        `field-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
 
       const fieldData = {
         id: fieldId,
@@ -74,7 +76,7 @@ fieldsRoutes.put('/envelopes/:envelopeId/fields', async (c) => {
         width: field.width,
         height: field.height,
         required: field.required !== undefined ? field.required : true,
-        signer_id: field.signer_id,
+        signer_id: field.signer_id as string | undefined,
         value: field.value || null,
         metadata: field.metadata || {},
         created_at: field.created_at || new Date().toISOString(),
@@ -110,9 +112,9 @@ fieldsRoutes.put('/envelopes/:envelopeId/fields', async (c) => {
   } catch (error: unknown) {
     log.error('❌ Update fields error:', error);
     const status = error instanceof AuthError ? error.statusCode : 500;
-    return c.json(
-      { error: error instanceof Error ? error.message : 'Failed to update fields' },
-      status,
+    return new Response(
+      JSON.stringify({ error: error instanceof Error ? error.message : 'Failed to update fields' }),
+      { status, headers: { 'Content-Type': 'application/json' } },
     );
   }
 });
@@ -125,7 +127,7 @@ fieldsRoutes.get('/envelopes/:envelopeId/fields', async (c) => {
   try {
     // Authenticate
     const _ctx = await getAuthContext(c);
-    const envelopeId = c.req.param('envelopeId');
+    const envelopeId = c.req.param('envelopeId')!;
 
     // Get envelope details
     const envelope = await getEnvelopeDetails(envelopeId);
@@ -135,16 +137,17 @@ fieldsRoutes.get('/envelopes/:envelopeId/fields', async (c) => {
     }
 
     // Return the hydrated fields from the envelope details
+    const fields = Array.isArray(envelope.fields) ? envelope.fields : [];
     return c.json({
-      fields: envelope.fields || [],
-      count: (envelope.fields || []).length,
+      fields,
+      count: fields.length,
     });
   } catch (error: unknown) {
     log.error('❌ Get fields error:', error);
     const status = error instanceof AuthError ? error.statusCode : 500;
-    return c.json(
-      { error: error instanceof Error ? error.message : 'Failed to fetch fields' },
-      status,
+    return new Response(
+      JSON.stringify({ error: error instanceof Error ? error.message : 'Failed to fetch fields' }),
+      { status, headers: { 'Content-Type': 'application/json' } },
     );
   }
 });
@@ -157,8 +160,8 @@ fieldsRoutes.patch('/envelopes/:envelopeId/fields/:fieldId', async (c) => {
   try {
     // Authenticate
     const _ctx = await getAuthContext(c);
-    const envelopeId = c.req.param('envelopeId');
-    const fieldId = c.req.param('fieldId');
+    const envelopeId = c.req.param('envelopeId')!;
+    const fieldId = c.req.param('fieldId')!;
 
     const body = await c.req.json();
     const updates = body;
@@ -233,9 +236,9 @@ fieldsRoutes.patch('/envelopes/:envelopeId/fields/:fieldId', async (c) => {
   } catch (error: unknown) {
     log.error('❌ Update field error:', error);
     const status = error instanceof AuthError ? error.statusCode : 500;
-    return c.json(
-      { error: error instanceof Error ? error.message : 'Failed to update field' },
-      status,
+    return new Response(
+      JSON.stringify({ error: error instanceof Error ? error.message : 'Failed to update field' }),
+      { status, headers: { 'Content-Type': 'application/json' } },
     );
   }
 });
@@ -249,8 +252,8 @@ fieldsRoutes.delete('/envelopes/:envelopeId/fields/:fieldId', async (c) => {
     // Authenticate
     const ctx = await getAuthContext(c);
     const user = ctx.user;
-    const envelopeId = c.req.param('envelopeId');
-    const fieldId = c.req.param('fieldId');
+    const envelopeId = c.req.param('envelopeId')!;
+    const fieldId = c.req.param('fieldId')!;
 
     // Get envelope details
     const envelope = await getEnvelopeDetails(envelopeId);
@@ -314,9 +317,9 @@ fieldsRoutes.delete('/envelopes/:envelopeId/fields/:fieldId', async (c) => {
   } catch (error: unknown) {
     log.error('❌ Delete field error:', error);
     const status = error instanceof AuthError ? error.statusCode : 500;
-    return c.json(
-      { error: error instanceof Error ? error.message : 'Failed to delete field' },
-      status,
+    return new Response(
+      JSON.stringify({ error: error instanceof Error ? error.message : 'Failed to delete field' }),
+      { status, headers: { 'Content-Type': 'application/json' } },
     );
   }
 });

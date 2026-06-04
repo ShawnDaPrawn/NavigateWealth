@@ -144,7 +144,7 @@ app.get('/sessions/client/:clientId', async (c) => {
     log.info('GET /sessions/client/:clientId');
     await authenticateUser(c.req.header('Authorization'), 'will-chat');
 
-    const clientId = c.req.param('clientId');
+    const clientId = c.req.param('clientId')!;
     const sessions = await service.getClientSessions(clientId);
 
     const summaries = sessions.map((s) => ({
@@ -173,7 +173,7 @@ app.get('/sessions/:sessionId', async (c) => {
     log.info('GET /sessions/:sessionId');
     await authenticateUser(c.req.header('Authorization'), 'will-chat');
 
-    const sessionId = c.req.param('sessionId');
+    const sessionId = c.req.param('sessionId')!;
     const clientId = sessionId.replace(/-wc-\d+$/, '');
 
     const session = await service.getSession(clientId, sessionId);
@@ -215,7 +215,7 @@ app.post('/sessions/:sessionId/send', async (c) => {
     log.info('POST /sessions/:sessionId/send');
     await authenticateUser(c.req.header('Authorization'), 'will-chat');
 
-    const sessionId = c.req.param('sessionId');
+    const sessionId = c.req.param('sessionId')!;
     const clientId = sessionId.replace(/-wc-\d+$/, '');
 
     const body = await c.req.json();
@@ -258,7 +258,7 @@ app.post('/sessions/:sessionId/persist', async (c) => {
     log.info('POST /sessions/:sessionId/persist');
     await authenticateUser(c.req.header('Authorization'), 'will-chat');
 
-    const sessionId = c.req.param('sessionId');
+    const sessionId = c.req.param('sessionId')!;
     const clientId = sessionId.replace(/-wc-\d+$/, '');
 
     const body = await c.req.json();
@@ -296,7 +296,7 @@ app.post('/sessions/:sessionId/save', async (c) => {
     log.info('POST /sessions/:sessionId/save');
     const user = await authenticateUser(c.req.header('Authorization'), 'will-chat');
 
-    const sessionId = c.req.param('sessionId');
+    const sessionId = c.req.param('sessionId')!;
     const clientId = sessionId.replace(/-wc-\d+$/, '');
 
     const result = await service.saveCompletedWill(clientId, sessionId, user.id);
@@ -316,7 +316,7 @@ app.delete('/sessions/:sessionId', async (c) => {
     log.info('DELETE /sessions/:sessionId');
     await authenticateUser(c.req.header('Authorization'), 'will-chat');
 
-    const sessionId = c.req.param('sessionId');
+    const sessionId = c.req.param('sessionId')!;
     const clientId = sessionId.replace(/-wc-\d+$/, '');
 
     await service.deleteSession(clientId, sessionId);

@@ -27,7 +27,7 @@ const log = createModuleLogger('security');
  */
 app.get('/:userId/activity', requireAuth, async (c) => {
   try {
-    const userId = c.req.param('userId');
+    const userId = c.req.param('userId')!;
     const limit = parseInt(c.req.query('limit') || '50');
     const denied = ensureSelfOrAdmin(c, userId);
     if (denied) return denied;
@@ -62,7 +62,7 @@ app.get('/:userId/activity', requireAuth, async (c) => {
  */
 app.post('/:userId/activity', requireAuth, async (c) => {
   try {
-    const userId = c.req.param('userId');
+    const userId = c.req.param('userId')!;
     const denied = ensureSelfOrAdmin(c, userId);
     if (denied) return denied;
     const body = await c.req.json();
@@ -92,7 +92,7 @@ app.post('/:userId/activity', requireAuth, async (c) => {
       timestamp,
       ip,
       userAgent,
-      success: activitySuccess,
+      success: activitySuccess ?? false,
       errorMessage,
       metadata,
     };

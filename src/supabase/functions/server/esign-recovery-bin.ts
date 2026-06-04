@@ -30,10 +30,11 @@ const log = createModuleLogger('esign-recovery-bin');
 /** Retention window: how long soft-deleted envelopes stay recoverable. */
 export const RECOVERY_RETENTION_DAYS = 90;
 
-function isSoftDeleted(
-  envelope: Record<string, unknown>,
-): envelope is EsignEnvelope & { deleted_at: string } {
-  return typeof envelope?.deleted_at === 'string' && envelope.deleted_at.length > 0;
+function isSoftDeleted(envelope: unknown): envelope is EsignEnvelope & { deleted_at: string } {
+  return (
+    typeof (envelope as Record<string, unknown>)?.deleted_at === 'string' &&
+    ((envelope as Record<string, unknown>).deleted_at as string).length > 0
+  );
 }
 
 /** List soft-deleted envelopes for a firm (most recently binned first). */
@@ -49,7 +50,7 @@ export async function listRecoveryBin(
       typeof item.id === 'string' &&
       typeof item.status === 'string' &&
       isSoftDeleted(item),
-  ) as Array<EsignEnvelope & { deleted_at: string }>;
+  ) as unknown as Array<EsignEnvelope & { deleted_at: string }>;
   const scoped = records.filter(
     (e) => (e.firm_id || 'standalone') === (firmId || 'standalone') || firmId === '__all__',
   );
@@ -77,7 +78,7 @@ export async function restoreEnvelope(
 
   await kv.set(EsignKeys.envelope(envelopeId), updated);
   log.info(`Restored envelope ${envelopeId} from recovery bin`);
-  return updated as EsignEnvelope;
+  return updated as unknown as EsignEnvelope;
 }
 
 /**
@@ -181,7 +182,7 @@ export async function hardDeleteEnvelope(envelopeId: string): Promise<void> {
     }
     log.info(`Hard-deleted envelope ${envelopeId}`);
   } catch (err) {
-    log.warn(`Failed to hard-delete envelope ${envelopeId}:`, err);
+    log.warn(`Failed to hard-delete envelope ${envelopeId}:`, { error: String(err) });
   }
 }
 

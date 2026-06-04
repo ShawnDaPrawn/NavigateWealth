@@ -20,7 +20,7 @@ import { Badge } from '../../../../../ui/badge';
 import { TrendingUp, Camera, Loader2, History, Info } from 'lucide-react';
 import { SVGLineChart } from '../../../../../ui/svg-charts';
 import { api } from '../../../../../../utils/api';
-import type { DashboardMode } from '../ClientOverviewTab';
+import type { DashboardMode } from '../clientOverviewConstants';
 
 // ── Types ───────────────────────────────────────────────────────────────
 

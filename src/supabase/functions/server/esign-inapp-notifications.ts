@@ -31,6 +31,7 @@ export type InAppNotificationType =
   | 'envelope.recalled'
   | 'signer.signed'
   | 'reminder.sent'
+  | 'envelope.stuck'
   | 'system';
 
 export interface InAppNotification {
@@ -127,7 +128,7 @@ export async function enqueue(params: {
 
     return record;
   } catch (error: unknown) {
-    log.warn('Failed to enqueue in-app notification', error);
+    log.warn('Failed to enqueue in-app notification', { error: String(error) });
     return null;
   }
 }
@@ -169,7 +170,7 @@ export async function markRead(userId: string, notificationId: string): Promise<
     await writeUnread(userId, unread - 1);
     return true;
   } catch (error: unknown) {
-    log.warn('Failed to mark notification read', error);
+    log.warn('Failed to mark notification read', { error: String(error) });
     return false;
   }
 }
@@ -189,7 +190,7 @@ export async function markAllRead(userId: string): Promise<number> {
     await writeUnread(userId, 0);
     return changed;
   } catch (error: unknown) {
-    log.warn('Failed to mark all notifications read', error);
+    log.warn('Failed to mark all notifications read', { error: String(error) });
     return 0;
   }
 }

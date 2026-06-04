@@ -73,7 +73,7 @@ app.get('/wills/client/:clientId/profile-prefill', async (c) => {
     log.info('📥 GET /estate-planning-fna/wills/client/:clientId/profile-prefill');
     await authenticateUser(c.req.header('Authorization'));
 
-    const clientId = c.req.param('clientId');
+    const clientId = c.req.param('clientId')!;
 
     const [profile, clientKeys] = await Promise.all([
       kv.get(`user_profile:${clientId}:personal_info`),
@@ -171,7 +171,7 @@ app.put('/wills/:willId', async (c) => {
     log.info('📥 PUT /estate-planning-fna/wills/:willId');
     await authenticateUser(c.req.header('Authorization'));
 
-    const willId = c.req.param('willId');
+    const willId = c.req.param('willId')!;
     const { clientId, type } = parseWillId(willId);
 
     const key = `will:${clientId}:${type}:${willId}`;
@@ -236,7 +236,7 @@ app.get('/wills/client/:clientId', async (c) => {
     log.info('📥 GET /estate-planning-fna/wills/client/:clientId');
     await authenticateUser(c.req.header('Authorization'));
 
-    const clientId = c.req.param('clientId');
+    const clientId = c.req.param('clientId')!;
 
     const wills = await kv.getByPrefix(`will:${clientId}:`);
     const sortedWills = (wills || []).sort(
@@ -262,7 +262,7 @@ app.get('/wills/:willId', async (c) => {
     log.info('📥 GET /estate-planning-fna/wills/:willId');
     await authenticateUser(c.req.header('Authorization'));
 
-    const willId = c.req.param('willId');
+    const willId = c.req.param('willId')!;
     const { clientId, type } = parseWillId(willId);
 
     const key = `will:${clientId}:${type}:${willId}`;
@@ -296,7 +296,7 @@ app.put('/wills/:willId/finalize', async (c) => {
     log.info('📥 PUT /estate-planning-fna/wills/:willId/finalize');
     const user = await authenticateUser(c.req.header('Authorization'));
 
-    const willId = c.req.param('willId');
+    const willId = c.req.param('willId')!;
     const { clientId, type } = parseWillId(willId);
 
     const key = `will:${clientId}:${type}:${willId}`;
@@ -360,7 +360,7 @@ app.delete('/wills/:willId', async (c) => {
     log.info('📥 DELETE /estate-planning-fna/wills/:willId');
     await authenticateUser(c.req.header('Authorization'));
 
-    const willId = c.req.param('willId');
+    const willId = c.req.param('willId')!;
     const { clientId, type } = parseWillId(willId);
 
     const key = `will:${clientId}:${type}:${willId}`;
@@ -407,7 +407,7 @@ app.post('/wills/:willId/attach-signed', async (c) => {
     const user = await authenticateUser(c.req.header('Authorization'));
     await ensureLegalDocsBucket();
 
-    const willId = c.req.param('willId');
+    const willId = c.req.param('willId')!;
     const { clientId, type } = parseWillId(willId);
 
     const kvKey = `will:${clientId}:${type}:${willId}`;
@@ -500,7 +500,7 @@ app.get('/wills/:willId/signed-document', async (c) => {
     log.info('GET /estate-planning-fna/wills/:willId/signed-document');
     await authenticateUser(c.req.header('Authorization'));
 
-    const willId = c.req.param('willId');
+    const willId = c.req.param('willId')!;
     const { clientId, type } = parseWillId(willId);
 
     const kvKey = `will:${clientId}:${type}:${willId}`;
@@ -541,7 +541,7 @@ app.delete('/wills/:willId/signed-document', async (c) => {
     log.info('DELETE /estate-planning-fna/wills/:willId/signed-document');
     await authenticateUser(c.req.header('Authorization'));
 
-    const willId = c.req.param('willId');
+    const willId = c.req.param('willId')!;
     const { clientId, type } = parseWillId(willId);
 
     const kvKey = `will:${clientId}:${type}:${willId}`;
@@ -561,7 +561,9 @@ app.delete('/wills/:willId/signed-document', async (c) => {
       .remove([will.signedDocumentPath]);
 
     if (deleteError) {
-      log.warn('Failed to delete signed document from storage (non-critical):', deleteError);
+      log.warn('Failed to delete signed document from storage (non-critical):', {
+        error: String(deleteError),
+      });
     }
 
     const updatedWill = {

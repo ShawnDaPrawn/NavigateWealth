@@ -29,6 +29,8 @@ import type {
   ApplicationListResponse,
   ApplicationDetailResponse,
   ApplicationData,
+  EnrichedApplication,
+  DetailedApplication,
 } from './types.ts';
 import { DATABASE_SCHEMA, ERROR_MESSAGES } from './constants.ts';
 
@@ -140,7 +142,7 @@ function isValidUUID(uuid: string): boolean {
 
 // Helper for safe email sending
 async function sendEmailSafely(
-  emailFunction: () => Promise<void>,
+  emailFunction: () => Promise<boolean | void>,
   _emailType: string,
 ): Promise<void> {
   try {
@@ -260,14 +262,13 @@ export class AdminApplicationsService {
         };
 
         try {
+          const pi = app.application_data?.personalInfo as Record<string, unknown> | undefined;
+          const piName = `${String(pi?.firstName ?? '')} ${String(pi?.lastName ?? '')}`.trim();
           if (!app.user_id || !isValidUUID(app.user_id)) {
             return {
               ...baseFields,
               user_email: null,
-              user_name:
-                app.application_data?.personalInfo?.firstName +
-                  ' ' +
-                  app.application_data?.personalInfo?.lastName || 'Unknown',
+              user_name: piName || 'Unknown',
             };
           }
 
@@ -277,10 +278,7 @@ export class AdminApplicationsService {
             return {
               ...baseFields,
               user_email: null,
-              user_name:
-                app.application_data?.personalInfo?.firstName +
-                  ' ' +
-                  app.application_data?.personalInfo?.lastName || 'Unknown',
+              user_name: piName || 'Unknown',
             };
           }
 
@@ -288,28 +286,22 @@ export class AdminApplicationsService {
           return {
             ...baseFields,
             user_email: user?.email || null,
-            user_name:
-              user?.user_metadata?.name ||
-              app.application_data?.personalInfo?.firstName +
-                ' ' +
-                app.application_data?.personalInfo?.lastName ||
-              null,
+            user_name: (user?.user_metadata?.name as string) || piName || null,
           };
         } catch (_error) {
+          const pi = app.application_data?.personalInfo as Record<string, unknown> | undefined;
+          const piName = `${String(pi?.firstName ?? '')} ${String(pi?.lastName ?? '')}`.trim();
           return {
             ...baseFields,
             user_email: null,
-            user_name:
-              app.application_data?.personalInfo?.firstName +
-                ' ' +
-                app.application_data?.personalInfo?.lastName || 'Unknown',
+            user_name: piName || 'Unknown',
           };
         }
       }),
     );
 
     return {
-      applications: enrichedApplications,
+      applications: enrichedApplications as unknown as EnrichedApplication[],
       total: enrichedApplications.length,
     };
   }
@@ -342,16 +334,17 @@ export class AdminApplicationsService {
         review_notes: application.review_notes || null,
         application_data: application.application_data || {},
         user_email: user?.email || null,
-        user_name:
-          user?.user_metadata?.name ||
-          application.application_data?.personalInfo?.firstName +
-            ' ' +
-            application.application_data?.personalInfo?.lastName ||
-          null,
+        user_name: (() => {
+          const pi = application.application_data?.personalInfo as
+            | Record<string, unknown>
+            | undefined;
+          const piName = `${String(pi?.firstName ?? '')} ${String(pi?.lastName ?? '')}`.trim();
+          return (user?.user_metadata?.name as string) || piName || null;
+        })(),
         user_metadata: user?.user_metadata || {},
       };
 
-      return { application: detailedApplication };
+      return { application: detailedApplication as unknown as DetailedApplication };
     } catch (_error) {
       return {
         application: {
@@ -359,7 +352,7 @@ export class AdminApplicationsService {
           user_email: null,
           user_name: null,
           user_metadata: {},
-        },
+        } as unknown as DetailedApplication,
       };
     }
   }
@@ -733,7 +726,7 @@ export class AdminApplicationsService {
     const applicationId = crypto.randomUUID();
     const now = new Date().toISOString();
 
-    const applicationData: ApplicationData = {
+    const applicationData = {
       firstName,
       lastName,
       emailAddress: email,
@@ -746,7 +739,7 @@ export class AdminApplicationsService {
       popiaConsent: false,
       disclosureAcknowledged: false,
       accountType: 'Personal Client',
-    };
+    } as unknown as ApplicationData;
 
     const application: KvApplication = {
       id: applicationId,

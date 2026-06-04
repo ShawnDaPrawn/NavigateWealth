@@ -58,9 +58,13 @@ app.post('/save-progress', async (c) => {
     // Previously this returned 404 if no application existed, which meant
     // every auto-save silently failed for self-service clients because
     // the AccountTypeSelectionPage never created the KV record.
-    const application = await clientApplicationsService.getOrCreate(userId);
+    const application = await clientApplicationsService.getOrCreate(userId as string);
     const applicationId = application.id as string;
-    await clientApplicationsService.saveProgress(applicationId, applicationData, userId);
+    await clientApplicationsService.saveProgress(
+      applicationId,
+      applicationData as Record<string, unknown>,
+      userId as string,
+    );
 
     return c.json({ success: true, data: { applicationId } });
   } catch (error: unknown) {
@@ -122,7 +126,7 @@ app.post('/submit', async (c) => {
 // Body: { applicationId, data, completedBy: { type, userId } }
 app.post('/step/:step', async (c) => {
   try {
-    const stepParam = c.req.param('step');
+    const stepParam = c.req.param('step')!;
     const step = parseInt(stepParam, 10);
     const body = await c.req.json();
     const { applicationId, data, completedBy } = body;
@@ -156,8 +160,8 @@ app.post('/step/:step', async (c) => {
 // Load a single step's saved data.
 app.get('/step/:applicationId/:step', async (c) => {
   try {
-    const applicationId = c.req.param('applicationId');
-    const step = parseInt(c.req.param('step'), 10);
+    const applicationId = c.req.param('applicationId')!;
+    const step = parseInt(c.req.param('step')!, 10);
 
     if (isNaN(step) || step < 1 || step > 5) {
       return c.json({ error: 'Step must be 1-5' }, 400);
@@ -180,7 +184,7 @@ app.get('/step/:applicationId/:step', async (c) => {
 // Load all steps for resume or admin review.
 app.get('/steps/:applicationId', async (c) => {
   try {
-    const applicationId = c.req.param('applicationId');
+    const applicationId = c.req.param('applicationId')!;
     const steps = await clientApplicationsService.getAllSteps(applicationId);
     return c.json({ success: true, data: steps });
   } catch (error: unknown) {
@@ -198,7 +202,7 @@ app.get('/steps/:applicationId', async (c) => {
 // Get application metadata by user ID (backward-compatible with applicationService.ts).
 app.get('/:userId', async (c) => {
   try {
-    const userId = c.req.param('userId');
+    const userId = c.req.param('userId')!;
     const application = await clientApplicationsService.getByUserId(userId);
 
     if (!application) {

@@ -40,18 +40,23 @@ export class ClientsService {
     const profile = client.profile || ({} as ClientProfile);
 
     // Extract fields - try flat first, then nested
-    const gender = profile.gender || profile.personalInformation?.gender;
-    const nationality = profile.nationality || profile.personalInformation?.nationality;
-    const maritalStatus = profile.maritalStatus || profile.personalInformation?.maritalStatus;
-    const dateOfBirth = profile.dateOfBirth || profile.personalInformation?.dateOfBirth;
-    const occupation = profile.occupation || profile.employmentInformation?.occupation;
-    const employmentStatus =
-      profile.employmentStatus || profile.employmentInformation?.employmentStatus;
-    const grossIncome = profile.grossIncome || profile.personalInformation?.grossIncome;
-    const netIncome = profile.netIncome || profile.personalInformation?.netIncome;
-    const netWorth = profile.netWorth || profile.financialInformation?.netWorth;
-    const dependants = profile.dependants || profile.additionalInformation?.dependants;
-    const retirementAge = profile.retirementAge || profile.additionalInformation?.retirementAge;
+    const pi = profile.personalInformation as Record<string, unknown> | undefined;
+    const ei = profile.employmentInformation as Record<string, unknown> | undefined;
+    const fi = profile.financialInformation as Record<string, unknown> | undefined;
+    const ai = (profile as Record<string, unknown>).additionalInformation as
+      | Record<string, unknown>
+      | undefined;
+    const gender = profile.gender || pi?.gender;
+    const nationality = profile.nationality || pi?.nationality;
+    const maritalStatus = profile.maritalStatus || pi?.maritalStatus;
+    const dateOfBirth = profile.dateOfBirth || pi?.dateOfBirth;
+    const occupation = profile.occupation || ei?.occupation;
+    const employmentStatus = profile.employmentStatus || ei?.status || ei?.employmentStatus;
+    const grossIncome = profile.grossIncome || pi?.grossIncome;
+    const netIncome = profile.netIncome || pi?.netIncome;
+    const netWorth = profile.netWorth || fi?.netWorth;
+    const dependants = profile.dependants || ai?.dependants;
+    const retirementAge = profile.retirementAge || ai?.retirementAge;
 
     return {
       id: client.id,
@@ -67,10 +72,11 @@ export class ClientsService {
       retirementAge,
       age: dateOfBirth
         ? Math.floor(
-            (Date.now() - new Date(dateOfBirth).getTime()) / (365.25 * 24 * 60 * 60 * 1000),
+            (Date.now() - new Date(dateOfBirth as string).getTime()) /
+              (365.25 * 24 * 60 * 60 * 1000),
           )
         : undefined,
-      productIds: profile.productIds || [],
+      productIds: (profile.productIds as unknown[] | undefined) || [],
     };
   }
 
@@ -122,7 +128,7 @@ export class ClientsService {
         u,
       ): u is {
         id: string;
-        email?: string | null;
+        email?: string;
         user_metadata?: Record<string, unknown>;
         created_at?: string;
       } => typeof u === 'object' && u !== null && 'id' in u,
@@ -166,7 +172,7 @@ export class ClientsService {
 
           return {
             id: user.id,
-            email: user.email,
+            email: user.email ?? '',
             firstName:
               user.user_metadata?.firstName || profile?.personalInformation?.firstName || '',
             lastName: user.user_metadata?.surname || profile?.personalInformation?.lastName || '',
@@ -185,7 +191,7 @@ export class ClientsService {
           log.error('Error fetching client data', err as Error, { userId: user.id });
           return {
             id: user.id,
-            email: user.email,
+            email: user.email ?? '',
             firstName: '',
             lastName: '',
             createdAt: user.created_at,
@@ -236,7 +242,7 @@ export class ClientsService {
       );
     }
 
-    return filteredClients;
+    return filteredClients as unknown as Client[];
   }
 
   /**
@@ -292,7 +298,7 @@ export class ClientsService {
 
     return {
       id: user.id,
-      email: user.email,
+      email: user.email ?? '',
       firstName: user.user_metadata?.firstName || profile?.personalInformation?.firstName || '',
       lastName: user.user_metadata?.surname || profile?.personalInformation?.lastName || '',
       createdAt: user.created_at,
@@ -716,10 +722,12 @@ export class ClientsService {
     action: 'delete' | 'close' | 'reinstate',
   ): Promise<void> {
     try {
+      const personalInfo = profile?.personalInformation as Record<string, unknown> | undefined;
+      const contactDetails = profile?.contactDetails as Record<string, unknown> | undefined;
       const email = (
-        profile?.email ||
-        profile?.personalInformation?.email ||
-        profile?.contactDetails?.email
+        (profile?.email as string | undefined) ||
+        (personalInfo?.email as string | undefined) ||
+        (contactDetails?.email as string | undefined)
       )
         ?.trim()
         .toLowerCase();
@@ -739,14 +747,14 @@ export class ClientsService {
         });
       } else if (action === 'reinstate') {
         const firstName = (
-          profile?.personalInformation?.firstName ||
-          profile?.firstName ||
+          (personalInfo?.firstName as string | undefined) ||
+          (profile?.firstName as string | undefined) ||
           ''
         ).trim();
         const surname = (
-          profile?.personalInformation?.lastName ||
-          profile?.lastName ||
-          profile?.surname ||
+          (personalInfo?.lastName as string | undefined) ||
+          (profile?.lastName as string | undefined) ||
+          (profile?.surname as string | undefined) ||
           ''
         ).trim();
         await autoSubscribeClient(email, firstName, surname);

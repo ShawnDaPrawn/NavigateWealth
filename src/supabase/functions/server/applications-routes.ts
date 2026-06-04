@@ -85,7 +85,7 @@ adminApp.use('*', verifyAdmin);
 // POST /applications/invite — Invite a prospective client
 adminApp.post('/applications/invite', async (c) => {
   try {
-    const adminUserId = c.get('userId');
+    const adminUserId = c.get('userId') as string;
     const body = await c.req.json();
     const parsed = InviteClientSchema.safeParse(body);
     if (!parsed.success) {
@@ -107,7 +107,10 @@ adminApp.post('/applications/invite', async (c) => {
 
     if (!result.success) {
       const status = result.errorCode === 'EMAIL_EXISTS' ? 409 : HTTP_STATUS.BAD_REQUEST;
-      return c.json(result, status);
+      return new Response(JSON.stringify(result), {
+        status,
+        headers: { 'Content-Type': 'application/json' },
+      });
     }
 
     return c.json(result, 201);
@@ -126,7 +129,7 @@ adminApp.post('/applications/invite', async (c) => {
 // POST /applications/invite/resend — Resend invite email for an existing invited application
 adminApp.post('/applications/invite/resend', async (c) => {
   try {
-    const adminUserId = c.get('userId');
+    const adminUserId = c.get('userId') as string;
     const body = await c.req.json();
     const parsed = ResendInviteSchema.safeParse(body);
     if (!parsed.success) {
@@ -182,7 +185,7 @@ adminApp.get('/applications', async (c) => {
 // GET /applications/:applicationId
 adminApp.get('/applications/:applicationId', async (c) => {
   try {
-    const applicationId = c.req.param('applicationId');
+    const applicationId = c.req.param('applicationId')!;
 
     const result = await AdminApplicationsService.getApplicationById(applicationId);
     return c.json(result);
@@ -205,8 +208,8 @@ adminApp.get('/applications/:applicationId', async (c) => {
 // PATCH /applications/:applicationId — Admin amend application data
 adminApp.patch('/applications/:applicationId', async (c) => {
   try {
-    const applicationId = c.req.param('applicationId');
-    const adminUserId = c.get('userId');
+    const applicationId = c.req.param('applicationId')!;
+    const adminUserId = c.get('userId') as string;
     const body = await c.req.json();
     const { application_data, amendment_notes } = body || {};
 
@@ -249,8 +252,8 @@ adminApp.patch('/applications/:applicationId', async (c) => {
 // POST /applications/:applicationId/approve
 adminApp.post('/applications/:applicationId/approve', async (c) => {
   try {
-    const applicationId = c.req.param('applicationId');
-    const adminUserId = c.get('userId');
+    const applicationId = c.req.param('applicationId')!;
+    const adminUserId = c.get('userId') as string;
 
     await AdminApplicationsService.approveApplication(applicationId, adminUserId);
 
@@ -285,8 +288,8 @@ adminApp.post('/applications/:applicationId/approve', async (c) => {
 // POST /applications/:applicationId/decline
 adminApp.post('/applications/:applicationId/decline', async (c) => {
   try {
-    const applicationId = c.req.param('applicationId');
-    const adminUserId = c.get('userId');
+    const applicationId = c.req.param('applicationId')!;
+    const adminUserId = c.get('userId') as string;
     const body = await c.req.json();
     const { reason } = body || {};
 

@@ -112,9 +112,9 @@ setupApp.post('/database', async (c) => {
 
     // Execute the SQL using Supabase's rpc method with a custom function
     // Since we can't execute raw DDL directly, we'll use the REST API
-    const { error: _error } = await supabase
-      .rpc('exec_sql', { sql: createTableSQL })
-      .catch(() => ({ error: null }));
+    const { error: _error } = await (
+      supabase.rpc('exec_sql', { sql: createTableSQL }) as unknown as Promise<{ error: unknown }>
+    ).catch(() => ({ error: null }));
 
     // Alternative: Try using the REST API directly
     const _response = await fetch(`${Deno.env.get('SUPABASE_URL')}/rest/v1/rpc/exec_sql`, {

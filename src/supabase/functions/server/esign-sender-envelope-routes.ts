@@ -6,7 +6,12 @@ import { rateLimit } from './esign-rate-limit.ts';
 import { requireIdempotency } from './idempotency.ts';
 import { formatZodError } from './shared-validation-utils.ts';
 import { SignEnvelopeSchema, RejectEnvelopeSchema } from './esign-validation.ts';
-import { getRequestMetadata, audActor, SignerRecord } from './esign-route-helpers.ts';
+import {
+  getRequestMetadata,
+  audActor,
+  resolveFirmId,
+  SignerRecord,
+} from './esign-route-helpers.ts';
 import { belongsToFirm } from './esign-firm-scope.ts';
 import {
   getEnvelopeDetails,
@@ -39,7 +44,7 @@ app.get('/clients/:clientId/envelopes', async (c) => {
   try {
     // Authenticate
     const ctx = await getAuthContext(c);
-    const clientId = c.req.param('clientId');
+    const clientId = c.req.param('clientId')!;
     const clientEmail = c.req.query('email') || undefined;
 
     // Portal clients may only fetch their own CRM id (aligns with client-portal-routes.ts).
@@ -53,7 +58,7 @@ app.get('/clients/:clientId/envelopes', async (c) => {
     // P6.9 — a client can legitimately span firms on a multi-tenant
     // install, but the caller should only ever see envelopes that
     // belong to their firm (or standalone envelopes).
-    const scoped = (envelopes as Array<Record<string, unknown>>).filter((e) =>
+    const scoped = (envelopes as unknown as Array<Record<string, unknown>>).filter((e) =>
       belongsToFirm(ctx.user, { firm_id: (e.firm_id as string | undefined) ?? null }),
     );
 
@@ -61,9 +66,11 @@ app.get('/clients/:clientId/envelopes', async (c) => {
   } catch (error: unknown) {
     log.error('❌ Get client envelopes error:', error);
     const status = error instanceof AuthError ? error.statusCode : 500;
-    return c.json(
-      { error: error instanceof Error ? error.message : 'Failed to fetch envelopes' },
-      status,
+    return new Response(
+      JSON.stringify({
+        error: error instanceof Error ? error.message : 'Failed to fetch envelopes',
+      }),
+      { status, headers: { 'Content-Type': 'application/json' } },
     );
   }
 });
@@ -74,8 +81,8 @@ app.get('/clients/:clientId/envelopes', async (c) => {
  */
 app.post('/envelopes/:envelopeId/signers/:signerId/otp/send', rateLimit('OTP_SEND'), async (c) => {
   try {
-    const envelopeId = c.req.param('envelopeId');
-    const signerId = c.req.param('signerId');
+    const envelopeId = c.req.param('envelopeId')!;
+    const signerId = c.req.param('signerId')!;
 
     // Check if OTP is required
     const required = await isOTPRequired(signerId);
@@ -178,8 +185,8 @@ app.post('/envelopes/:envelopeId/signers/:signerId/otp/send', rateLimit('OTP_SEN
  */
 app.post('/envelopes/:envelopeId/signers/:signerId/verify', rateLimit('OTP_VERIFY'), async (c) => {
   try {
-    const envelopeId = c.req.param('envelopeId');
-    const signerId = c.req.param('signerId');
+    const envelopeId = c.req.param('envelopeId')!;
+    const signerId = c.req.param('signerId')!;
 
     const body = await c.req.json();
     const { otp, accessCode } = body;
@@ -240,7 +247,7 @@ app.post(
   rateLimit('SIGNER_SUBMIT'),
   async (c) => {
     try {
-      const envelopeId = c.req.param('envelopeId');
+      const envelopeId = c.req.param('envelopeId')!;
 
       const body = await c.req.json();
       const parsed = SignEnvelopeSchema.safeParse(body);
@@ -325,10 +332,8 @@ app.post(
         // Sequential mode: notify next pending signer in order
         if (adminSignMode === 'sequential') {
           const allSigners = await getEnvelopeSigners(envelopeId);
-          const sorted = [...allSigners].sort(
-            (a: SignerRecord, b: SignerRecord) => (a.order || 0) - (b.order || 0),
-          );
-          const nextSigner = sorted.find((s: SignerRecord) => s.status === 'pending');
+          const sorted = [...allSigners].sort((a, b) => (a.order || 0) - (b.order || 0));
+          const nextSigner = sorted.find((s) => s.status === 'pending');
 
           if (nextSigner) {
             try {
@@ -400,7 +405,7 @@ app.post(
  */
 app.post('/envelopes/:envelopeId/reject', async (c) => {
   try {
-    const envelopeId = c.req.param('envelopeId');
+    const envelopeId = c.req.param('envelopeId')!;
 
     const body = await c.req.json();
     const parsed = RejectEnvelopeSchema.safeParse(body);

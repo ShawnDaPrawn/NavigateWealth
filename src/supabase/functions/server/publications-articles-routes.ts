@@ -130,7 +130,11 @@ articlesRoutes.post('/articles', async (c) => {
 
     // Create initial version snapshot (Phase 4)
     try {
-      await VersionService.createVersion(id, article, last_edited_by || 'system');
+      await VersionService.createVersion(
+        id,
+        article as unknown as Record<string, unknown>,
+        last_edited_by || 'system',
+      );
     } catch (vErr) {
       log.error('Failed to create initial version snapshot', vErr);
     }
@@ -156,7 +160,7 @@ articlesRoutes.post('/articles', async (c) => {
 
 articlesRoutes.put('/articles/:id', async (c) => {
   try {
-    const id = c.req.param('id');
+    const id = c.req.param('id')!;
     const body = await c.req.json();
     const existing = await kv.get(`article:${id}`);
 
@@ -221,7 +225,11 @@ articlesRoutes.put('/articles/:id', async (c) => {
     // Auto-create version snapshot on article update (Phase 4)
     try {
       const editedBy = body.last_edited_by || 'system';
-      await VersionService.createVersion(id, updated, editedBy);
+      await VersionService.createVersion(
+        id,
+        updated as unknown as Record<string, unknown>,
+        editedBy,
+      );
     } catch (vErr) {
       // Version creation failure is non-critical — log but don't fail the update
       log.error('Failed to create version snapshot on article update', vErr);
@@ -336,7 +344,7 @@ articlesRoutes.put('/articles/:id', async (c) => {
 
 articlesRoutes.post('/articles/:id/publish', async (c) => {
   try {
-    const id = c.req.param('id');
+    const id = c.req.param('id')!;
     const body = await c.req.json().catch(() => ({}));
     const notifySubscribers = body.notify_subscribers !== false; // default true
 
@@ -465,7 +473,7 @@ articlesRoutes.post(
   requireAuth,
   requireAdmin,
   asyncHandler(async (c) => {
-    const id = c.req.param('id');
+    const id = c.req.param('id')!;
     const parsed = ArticleReshareSchema.safeParse(await c.req.json().catch(() => ({})));
     if (!parsed.success) {
       return c.json(
@@ -510,10 +518,10 @@ articlesRoutes.post(
     );
 
     const action = parsed.data.dryRun ? 'article_reshare_preview' : 'article_reshared';
-    const adminUserId = c.get('userId') || 'system';
+    const adminUserId = (c.get('userId') as string) || 'system';
     AdminAuditService.record({
       actorId: adminUserId,
-      actorRole: c.get('userRole') || 'admin',
+      actorRole: (c.get('userRole') as string | undefined) || 'admin',
       category: 'communication',
       action,
       summary: `${parsed.data.dryRun ? 'Previewed' : 'Reshared'} article notifications: ${article.title}`,

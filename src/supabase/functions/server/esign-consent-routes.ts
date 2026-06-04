@@ -39,7 +39,10 @@ consentRoutes.get('/consent/versions', async (c) => {
     return c.json({ active_id: activeId, versions });
   } catch (error: unknown) {
     const status = error instanceof AuthError ? error.statusCode : 500;
-    return c.json({ error: getErrMsg(error) }, status);
+    return new Response(JSON.stringify({ error: getErrMsg(error) }), {
+      status,
+      headers: { 'Content-Type': 'application/json' },
+    });
   }
 });
 
@@ -57,7 +60,10 @@ consentRoutes.post('/consent/versions', rateLimit('SENDER_MUTATE'), async (c) =>
     return c.json({ success: true, version: record }, 201);
   } catch (error: unknown) {
     const status = error instanceof AuthError ? error.statusCode : 400;
-    return c.json({ error: getErrMsg(error) }, status);
+    return new Response(JSON.stringify({ error: getErrMsg(error) }), {
+      status,
+      headers: { 'Content-Type': 'application/json' },
+    });
   }
 });
 
@@ -65,12 +71,15 @@ consentRoutes.post('/consent/versions', rateLimit('SENDER_MUTATE'), async (c) =>
 consentRoutes.post('/consent/versions/:id/activate', rateLimit('SENDER_MUTATE'), async (c) => {
   try {
     await getAuthContext(c);
-    const id = c.req.param('id');
+    const id = c.req.param('id')!;
     const record = await setActiveConsent(id);
     return c.json({ success: true, version: record });
   } catch (error: unknown) {
     const status = error instanceof AuthError ? error.statusCode : 400;
-    return c.json({ error: getErrMsg(error) }, status);
+    return new Response(JSON.stringify({ error: getErrMsg(error) }), {
+      status,
+      headers: { 'Content-Type': 'application/json' },
+    });
   }
 });
 

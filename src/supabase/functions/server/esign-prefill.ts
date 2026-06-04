@@ -106,7 +106,7 @@ async function resolveToken(
 ): Promise<string> {
   if (token.startsWith('key:')) {
     const canonicalKey = token.replace('key:', '');
-    const resolved = await resolveCanonicalValueForClient(ctx.signer.client_id, canonicalKey);
+    const resolved = await resolveCanonicalValueForClient(ctx.signer.client_id ?? '', canonicalKey);
     return resolved?.value !== undefined && resolved?.value !== null ? String(resolved.value) : '';
   }
 
@@ -133,11 +133,8 @@ async function resolveToken(
       return ctx.envelope.product_id ?? '';
     case 'envelope.request_id':
       return ctx.envelope.request_id ?? '';
-    default: {
-      const _exhaustive: never = token;
-      void _exhaustive;
+    default:
       return '';
-    }
   }
 }
 

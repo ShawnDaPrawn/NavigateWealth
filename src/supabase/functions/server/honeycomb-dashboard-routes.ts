@@ -12,7 +12,7 @@ const log = createModuleLogger('honeycomb-dashboard');
 
 app.get('/dashboard/:clientId', async (c) => {
   try {
-    const clientId = c.req.param('clientId');
+    const clientId = c.req.param('clientId')!;
     const dashboard = await service.getComplianceDashboard(clientId);
     return c.json({ success: true, dashboard });
   } catch (e: unknown) {

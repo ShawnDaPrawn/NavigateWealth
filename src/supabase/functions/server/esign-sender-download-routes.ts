@@ -27,7 +27,7 @@ app.get('/envelopes/:envelopeId/download', async (c) => {
   try {
     // Authenticate
     const _ctx = await getAuthContext(c);
-    const envelopeId = c.req.param('envelopeId');
+    const envelopeId = c.req.param('envelopeId')!;
 
     // Get envelope details
     const envelope = await getEnvelopeDetails(envelopeId);
@@ -51,7 +51,7 @@ app.get('/envelopes/:envelopeId/download', async (c) => {
       const signedPdfBuffer = await downloadDocument(envelope.signed_document_path);
 
       if (signedPdfBuffer) {
-        return new Response(signedPdfBuffer, {
+        return new Response(signedPdfBuffer as unknown as ArrayBuffer, {
           headers: {
             'Content-Type': 'application/pdf',
             'Content-Disposition': `attachment; filename="${envelope.document?.original_filename?.replace('.pdf', '_signed.pdf') || 'signed_document.pdf'}"`,
@@ -82,7 +82,7 @@ app.get('/envelopes/:envelopeId/download', async (c) => {
     try {
       const { pdfBuffer: burnedPdfBuffer } = await PDFService.burnIn(
         pdfBuffer,
-        envelope.fields || [],
+        Array.isArray(envelope.fields) ? envelope.fields : [],
         signers,
       );
 
@@ -102,7 +102,7 @@ app.get('/envelopes/:envelopeId/download', async (c) => {
         });
       }
 
-      return new Response(finalPdfBuffer, {
+      return new Response(finalPdfBuffer as unknown as ArrayBuffer, {
         headers: {
           'Content-Type': 'application/pdf',
           'Content-Disposition': `attachment; filename="${envelope.document?.original_filename?.replace('.pdf', '_signed.pdf') || 'signed_document.pdf'}"`,
@@ -114,10 +114,12 @@ app.get('/envelopes/:envelopeId/download', async (c) => {
     }
   } catch (error: unknown) {
     log.error('❌ Download envelope error:', error);
-    const status = error instanceof AuthError ? error.status : 500;
-    return c.json(
-      { error: error instanceof Error ? error.message : 'Failed to download envelope' },
-      status,
+    const status = error instanceof AuthError ? error.statusCode : 500;
+    return new Response(
+      JSON.stringify({
+        error: error instanceof Error ? error.message : 'Failed to download envelope',
+      }),
+      { status, headers: { 'Content-Type': 'application/json' } },
     );
   }
 });
@@ -130,7 +132,7 @@ app.get('/envelopes/:envelopeId/download', async (c) => {
 app.get('/envelopes/:envelopeId/evidence-pack', async (c) => {
   try {
     const ctx = await getAuthContext(c);
-    const envelopeId = c.req.param('envelopeId');
+    const envelopeId = c.req.param('envelopeId')!;
 
     // P6.9 — firm scoping. The current admin user must belong to the
     // same firm as the envelope (or the envelope must be 'standalone').
@@ -148,14 +150,14 @@ app.get('/envelopes/:envelopeId/evidence-pack', async (c) => {
 
     await logAuditEvent({
       envelopeId,
-      actorType: 'admin',
+      actorType: 'sender_user',
       actorId: ctx.user.id,
       action: 'evidence_pack_exported',
       email: ctx.user.email || 'admin@system',
       metadata: { bytes: pack.zip.length, filename: pack.filename },
     });
 
-    return new Response(pack.zip, {
+    return new Response(pack.zip as unknown as ArrayBuffer, {
       headers: {
         'Content-Type': 'application/zip',
         'Content-Disposition': `attachment; filename="${pack.filename}"`,
@@ -165,9 +167,11 @@ app.get('/envelopes/:envelopeId/evidence-pack', async (c) => {
   } catch (error: unknown) {
     log.error('Evidence pack export error:', error);
     const status = error instanceof AuthError ? error.statusCode : 500;
-    return c.json(
-      { error: error instanceof Error ? error.message : 'Failed to build evidence pack' },
-      status,
+    return new Response(
+      JSON.stringify({
+        error: error instanceof Error ? error.message : 'Failed to build evidence pack',
+      }),
+      { status, headers: { 'Content-Type': 'application/json' } },
     );
   }
 });
@@ -181,15 +185,17 @@ app.get('/envelopes/:envelopeId/evidence-pack', async (c) => {
 app.get('/envelopes/:envelopeId/reminder-config', async (c) => {
   try {
     const _ctx = await getAuthContext(c);
-    const envelopeId = c.req.param('envelopeId');
+    const envelopeId = c.req.param('envelopeId')!;
     const config = await getReminderConfig(envelopeId);
     return c.json({ config });
   } catch (error: unknown) {
     log.error('Get reminder config error:', error);
     const status = error instanceof AuthError ? error.statusCode : 500;
-    return c.json(
-      { error: error instanceof Error ? error.message : 'Failed to get reminder config' },
-      status,
+    return new Response(
+      JSON.stringify({
+        error: error instanceof Error ? error.message : 'Failed to get reminder config',
+      }),
+      { status, headers: { 'Content-Type': 'application/json' } },
     );
   }
 });
@@ -202,7 +208,7 @@ app.put('/envelopes/:envelopeId/reminder-config', async (c) => {
   try {
     const ctx = await getAuthContext(c);
     const user = ctx.user;
-    const envelopeId = c.req.param('envelopeId');
+    const envelopeId = c.req.param('envelopeId')!;
 
     const body = await c.req.json();
     const {
@@ -240,9 +246,11 @@ app.put('/envelopes/:envelopeId/reminder-config', async (c) => {
   } catch (error: unknown) {
     log.error('Update reminder config error:', error);
     const status = error instanceof AuthError ? error.statusCode : 500;
-    return c.json(
-      { error: error instanceof Error ? error.message : 'Failed to update reminder config' },
-      status,
+    return new Response(
+      JSON.stringify({
+        error: error instanceof Error ? error.message : 'Failed to update reminder config',
+      }),
+      { status, headers: { 'Content-Type': 'application/json' } },
     );
   }
 });
@@ -255,7 +263,7 @@ app.patch('/envelopes/:envelopeId/signing-mode', async (c) => {
   try {
     const ctx = await getAuthContext(c);
     const user = ctx.user;
-    const envelopeId = c.req.param('envelopeId');
+    const envelopeId = c.req.param('envelopeId')!;
 
     const body = await c.req.json();
     const { signing_mode } = body;
@@ -295,9 +303,11 @@ app.patch('/envelopes/:envelopeId/signing-mode', async (c) => {
   } catch (error: unknown) {
     log.error('Update signing mode error:', error);
     const status = error instanceof AuthError ? error.statusCode : 500;
-    return c.json(
-      { error: error instanceof Error ? error.message : 'Failed to update signing mode' },
-      status,
+    return new Response(
+      JSON.stringify({
+        error: error instanceof Error ? error.message : 'Failed to update signing mode',
+      }),
+      { status, headers: { 'Content-Type': 'application/json' } },
     );
   }
 });
@@ -311,7 +321,7 @@ app.patch('/envelopes/:envelopeId/signing-mode', async (c) => {
 app.get('/envelopes/:envelopeId/audit/export', async (c) => {
   try {
     const _ctx = await getAuthContext(c);
-    const envelopeId = c.req.param('envelopeId');
+    const envelopeId = c.req.param('envelopeId')!;
 
     const events = await getAuditTrail(envelopeId);
     if (!events || events.length === 0) {
@@ -320,7 +330,7 @@ app.get('/envelopes/:envelopeId/audit/export', async (c) => {
 
     // Build CSV
     const headers = ['Timestamp', 'Action', 'Actor Type', 'Actor Email', 'IP Address', 'Details'];
-    const rows = events
+    const rows = (events as unknown as Record<string, unknown>[])
       .sort(
         (a: Record<string, unknown>, b: Record<string, unknown>) =>
           new Date(String(a.at || a.created_at || 0)).getTime() -
@@ -352,9 +362,11 @@ app.get('/envelopes/:envelopeId/audit/export', async (c) => {
   } catch (error: unknown) {
     log.error('Audit export error:', error);
     const status = error instanceof AuthError ? error.statusCode : 500;
-    return c.json(
-      { error: error instanceof Error ? error.message : 'Failed to export audit trail' },
-      status,
+    return new Response(
+      JSON.stringify({
+        error: error instanceof Error ? error.message : 'Failed to export audit trail',
+      }),
+      { status, headers: { 'Content-Type': 'application/json' } },
     );
   }
 });

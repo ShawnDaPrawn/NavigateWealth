@@ -29,6 +29,7 @@ import {
   InviteEmailSchema,
   SubmissionListQuerySchema,
 } from './submissions-validation.ts';
+import type { SubmissionType, SubmissionStatus } from './submissions-service.ts';
 import {
   getBlockedEmailDomain,
   getBlockedEmailDomainWarning,
@@ -129,7 +130,7 @@ app.get(
 
     // Only parse if at least one filter is present
     const hasFilters = rawQuery.type || rawQuery.status;
-    let filters: { type?: string; status?: string } | undefined;
+    let filters: { type?: SubmissionType; status?: SubmissionStatus } | undefined;
 
     if (hasFilters) {
       const parsed = SubmissionListQuerySchema.safeParse(rawQuery);
@@ -164,7 +165,8 @@ app.get(
   '/:id',
   requireAuth,
   asyncHandler(async (c) => {
-    const id = c.req.param('id');
+    const id = c.req.param('id')!;
+    if (!id) return c.json({ success: false, error: 'Missing id' }, 400);
     const submission = await submissionsService.getById(id);
     if (!submission) {
       return c.json({ success: false, error: 'Submission not found' }, 404);
@@ -292,7 +294,8 @@ app.patch(
   '/:id',
   requireAuth,
   asyncHandler(async (c) => {
-    const id = c.req.param('id');
+    const id = c.req.param('id')!;
+    if (!id) return c.json({ success: false, error: 'Missing id' }, 400);
     const body = await c.req.json();
 
     const parsed = UpdateSubmissionSchema.safeParse(body);
@@ -322,7 +325,8 @@ app.delete(
   '/:id',
   requireAuth,
   asyncHandler(async (c) => {
-    const id = c.req.param('id');
+    const id = c.req.param('id')!;
+    if (!id) return c.json({ success: false, error: 'Missing id' }, 400);
     await submissionsService.delete(id);
     log.info('Submission deleted', { id });
     return c.json({ success: true });

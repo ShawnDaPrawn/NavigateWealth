@@ -2,6 +2,7 @@ import { Hono } from 'npm:hono';
 import { createModuleLogger } from './stderr-logger.ts';
 import { getErrMsg } from './shared-logger-utils.ts';
 import * as service from './honeycomb-service.ts';
+import type { HoneycombCheckType } from './honeycomb-types.ts';
 import {
   IdvNoPhotoSchema,
   IdvWithPhotoSchema,
@@ -46,7 +47,7 @@ app.post('/idv/no-photo', async (c) => {
     });
   } catch (e: unknown) {
     log.error('IDV no-photo route error:', e);
-    return routeError(c, e);
+    return routeError(c, e) as Response;
   }
 });
 
@@ -78,7 +79,7 @@ app.post('/idv/with-photo', async (c) => {
     });
   } catch (e: unknown) {
     log.error('IDV with-photo route error:', e);
-    return routeError(c, e);
+    return routeError(c, e) as Response;
   }
 });
 
@@ -100,7 +101,7 @@ app.post('/idv/bulk', async (c) => {
     });
   } catch (e: unknown) {
     log.error('Bulk IDV route error:', e);
-    return routeError(c, e);
+    return routeError(c, e) as Response;
   }
 });
 
@@ -136,7 +137,7 @@ app.post('/financial/bank-verify', async (c) => {
     });
   } catch (e: unknown) {
     log.error('Bank verification route error:', e);
-    return routeError(c, e);
+    return routeError(c, e) as Response;
   }
 });
 
@@ -168,7 +169,7 @@ app.post('/financial/credit-check', async (c) => {
     });
   } catch (e: unknown) {
     log.error('Credit check route error:', e);
-    return routeError(c, e);
+    return routeError(c, e) as Response;
   }
 });
 
@@ -200,7 +201,7 @@ app.post('/sanctions/search', async (c) => {
     });
   } catch (e: unknown) {
     log.error('Sanctions search route error:', e);
-    return routeError(c, e);
+    return routeError(c, e) as Response;
   }
 });
 
@@ -210,7 +211,7 @@ app.post('/sanctions/search', async (c) => {
 
 app.get('/checks/history/:clientId', async (c) => {
   try {
-    const clientId = c.req.param('clientId');
+    const clientId = c.req.param('clientId')!;
     const history = await service.getAllCheckHistory(clientId);
     return c.json({ success: true, history });
   } catch (e: unknown) {
@@ -221,9 +222,9 @@ app.get('/checks/history/:clientId', async (c) => {
 
 app.get('/checks/history/:clientId/:checkType', async (c) => {
   try {
-    const clientId = c.req.param('clientId');
-    const checkType = c.req.param('checkType');
-    const history = await service.getCheckHistory(clientId, checkType);
+    const clientId = c.req.param('clientId')!;
+    const checkType = c.req.param('checkType')!;
+    const history = await service.getCheckHistory(clientId, checkType as HoneycombCheckType);
     return c.json({ success: true, history });
   } catch (e: unknown) {
     log.error('Check type history error:', e);

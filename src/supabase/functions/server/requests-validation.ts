@@ -52,7 +52,7 @@ export const CreateRequestSchema = z.object({
   templateId: z.string().min(1, 'Template ID is required'),
   clientId: z.string().min(1, 'Client ID is required'),
   clientName: z.string().max(200).optional(),
-  requestDetails: z.record(z.unknown()).optional().default({}),
+  requestDetails: z.record(z.string(), z.unknown()).optional().default({}),
   assignees: z.array(z.string()).optional(),
   priority: z.enum(['low', 'medium', 'high', 'urgent']).optional(),
 });
@@ -60,11 +60,11 @@ export const CreateRequestSchema = z.object({
 export const UpdateRequestSchema = z
   .object({
     status: z.string().max(50).optional(),
-    requestDetails: z.record(z.unknown()).optional(),
+    requestDetails: z.record(z.string(), z.unknown()).optional(),
     assignees: z.array(z.string()).optional(),
     priority: z.enum(['low', 'medium', 'high', 'urgent']).optional(),
     notes: z.string().max(5000).optional(),
-    complianceApproval: z.record(z.unknown()).optional(),
+    complianceApproval: z.record(z.string(), z.unknown()).optional(),
   })
   .passthrough();
 

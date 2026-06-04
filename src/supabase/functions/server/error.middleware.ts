@@ -69,25 +69,25 @@ export async function errorHandler(error: Error, c: Context) {
   }
 
   if (error instanceof ValidationError) {
-    return c.json(
-      {
+    return new Response(
+      JSON.stringify({
         error: error.message,
         code: error.code,
         field: error.field,
         timestamp: new Date().toISOString(),
-      },
-      error.statusCode,
+      }),
+      { status: error.statusCode, headers: { 'Content-Type': 'application/json' } },
     );
   }
 
   if (error instanceof APIError) {
-    return c.json(
-      {
+    return new Response(
+      JSON.stringify({
         error: error.message,
         code: error.code,
         timestamp: new Date().toISOString(),
-      },
-      error.statusCode,
+      }),
+      { status: error.statusCode, headers: { 'Content-Type': 'application/json' } },
     );
   }
 

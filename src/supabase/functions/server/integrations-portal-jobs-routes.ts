@@ -230,7 +230,7 @@ app.get('/portal-jobs/latest', requireAuth, async (c) => {
 // GET /portal-jobs/:jobId
 app.get('/portal-jobs/:jobId', requireAuth, async (c) => {
   try {
-    const jobId = c.req.param('jobId');
+    const jobId = c.req.param('jobId')!;
     const job = (await kv.get(`portal-job:${jobId}`)) as PortalSyncJob | null;
     if (!job) {
       return c.json({ error: 'Portal job not found' }, 404);
@@ -253,7 +253,7 @@ app.get('/portal-jobs/:jobId', requireAuth, async (c) => {
 // GET /portal-jobs/:jobId/items
 app.get('/portal-jobs/:jobId/items', requireAuth, async (c) => {
   try {
-    const jobId = c.req.param('jobId');
+    const jobId = c.req.param('jobId')!;
     const job = (await kv.get(`portal-job:${jobId}`)) as PortalSyncJob | null;
     if (!job) {
       return c.json({ error: 'Portal job not found' }, 404);
@@ -278,8 +278,8 @@ app.get('/portal-jobs/:jobId/items', requireAuth, async (c) => {
 // POST /portal-jobs/:jobId/items/:itemId/retry
 app.post('/portal-jobs/:jobId/items/:itemId/retry', requireAuth, async (c) => {
   try {
-    const jobId = c.req.param('jobId');
-    const itemId = c.req.param('itemId');
+    const jobId = c.req.param('jobId')!;
+    const itemId = c.req.param('itemId')!;
     const job = (await kv.get(`portal-job:${jobId}`)) as PortalSyncJob | null;
     if (!job) {
       return c.json({ error: 'Portal job not found' }, 404);
@@ -333,7 +333,7 @@ app.post('/portal-jobs/:jobId/items/:itemId/retry', requireAuth, async (c) => {
 // POST /portal-jobs/:jobId/status
 app.post('/portal-jobs/:jobId/status', requireAuth, async (c) => {
   try {
-    const jobId = c.req.param('jobId');
+    const jobId = c.req.param('jobId')!;
     const job = (await kv.get(`portal-job:${jobId}`)) as PortalSyncJob | null;
     if (!job) {
       return c.json({ error: 'Portal job not found' }, 404);
@@ -398,9 +398,12 @@ app.post('/portal-jobs/:jobId/live-view', requireAuth, async (c) => {
       );
     }
 
-    const result = await persistPortalLiveViewUpdate(c.req.param('jobId'), formData);
+    const result = await persistPortalLiveViewUpdate(c.req.param('jobId')!, formData);
     if ('error' in result) {
-      return c.json({ error: result.error }, result.status);
+      return new Response(JSON.stringify({ error: result.error }), {
+        status: result.status,
+        headers: { 'Content-Type': 'application/json' },
+      });
     }
     return c.json({ success: true, job: result.job });
   } catch (e) {
@@ -412,7 +415,7 @@ app.post('/portal-jobs/:jobId/live-view', requireAuth, async (c) => {
 // POST /portal-jobs/:jobId/discovery-report
 app.post('/portal-jobs/:jobId/discovery-report', requireAuth, async (c) => {
   try {
-    const jobId = c.req.param('jobId');
+    const jobId = c.req.param('jobId')!;
     const job = (await kv.get(`portal-job:${jobId}`)) as PortalSyncJob | null;
     if (!job) {
       return c.json({ error: 'Portal job not found' }, 404);
@@ -469,7 +472,7 @@ app.post('/portal-jobs/:jobId/discovery-report', requireAuth, async (c) => {
           }))
         : [],
       warnings: Array.isArray(body?.warnings)
-        ? body.warnings.slice(0, 50).map((warning) => String(warning).slice(0, 300))
+        ? body.warnings.slice(0, 50).map((warning: unknown) => String(warning).slice(0, 300))
         : [],
     };
 
@@ -504,7 +507,7 @@ app.post('/portal-jobs/:jobId/discovery-report', requireAuth, async (c) => {
 // GET /portal-jobs/:jobId/discovery-report
 app.get('/portal-jobs/:jobId/discovery-report', requireAuth, async (c) => {
   try {
-    const jobId = c.req.param('jobId');
+    const jobId = c.req.param('jobId')!;
     const job = (await kv.get(`portal-job:${jobId}`)) as PortalSyncJob | null;
     if (!job) {
       return c.json({ error: 'Portal job not found' }, 404);
@@ -538,7 +541,7 @@ app.get('/portal-jobs/:jobId/discovery-report', requireAuth, async (c) => {
 // POST /portal-jobs/:jobId/otp
 app.post('/portal-jobs/:jobId/otp', requireAuth, async (c) => {
   try {
-    const jobId = c.req.param('jobId');
+    const jobId = c.req.param('jobId')!;
     const job = (await kv.get(`portal-job:${jobId}`)) as PortalSyncJob | null;
     if (!job) {
       return c.json({ error: 'Portal job not found' }, 404);
@@ -577,7 +580,7 @@ app.post('/portal-jobs/:jobId/otp', requireAuth, async (c) => {
 // GET /portal-jobs/:jobId/otp
 app.get('/portal-jobs/:jobId/otp', requireAuth, async (c) => {
   try {
-    const jobId = c.req.param('jobId');
+    const jobId = c.req.param('jobId')!;
     const job = (await kv.get(`portal-job:${jobId}`)) as PortalSyncJob | null;
     if (!job) {
       return c.json({ error: 'Portal job not found' }, 404);
@@ -607,7 +610,7 @@ app.get('/portal-jobs/:jobId/otp', requireAuth, async (c) => {
 // POST /portal-jobs/:jobId/stage
 app.post('/portal-jobs/:jobId/stage', requireAuth, async (c) => {
   try {
-    const jobId = c.req.param('jobId');
+    const jobId = c.req.param('jobId')!;
     const job = (await kv.get(`portal-job:${jobId}`)) as PortalSyncJob | null;
     if (!job) {
       return c.json({ error: 'Portal job not found' }, 404);

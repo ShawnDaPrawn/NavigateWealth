@@ -157,6 +157,8 @@ interface FnaRecord extends KvRecord {
   updatedAt?: string;
   createdAt?: string;
   value?: unknown;
+  results?: Record<string, unknown>;
+  inputs?: Record<string, unknown>;
 }
 interface PolicyRecord extends KvRecord {
   id?: string;
@@ -169,6 +171,10 @@ interface PolicyRecord extends KvRecord {
   product_category?: string;
   productCategory?: string;
   status?: string;
+  providerName?: string;
+  categoryId?: string;
+  archived?: boolean;
+  data?: unknown;
 }
 
 /** Pick the most recent FNA from a list of KV entries */
@@ -255,20 +261,21 @@ function extractProductHoldings(policies: PolicyRecord[]): ProductHolding[] {
     })
     .map((p: PolicyRecord) => {
       const d = p.data;
-      const bucket = CATEGORY_BUCKET[p.categoryId] || 'other';
+      const catId = p.categoryId as string | undefined;
+      const bucket = (catId ? CATEGORY_BUCKET[catId] : undefined) || 'other';
       // Guard: data must be a non-null plain object
       if (!d || typeof d !== 'object' || Array.isArray(d)) {
         log.info('Policy entry has missing or non-object data — skipping field extraction', {
           policyId: p.id,
-          categoryId: p.categoryId,
+          categoryId: catId,
           dataType: d === null ? 'null' : typeof d,
         });
         // Still produce a holding with metadata-level info
         return {
-          id: p.id || `ph-${Math.random().toString(36).substring(2, 8)}`,
+          id: (p.id as string | undefined) || `ph-${Math.random().toString(36).substring(2, 8)}`,
           category: bucket,
-          provider: p.providerName || 'Provider',
-          product: p.categoryId?.replace(/_/g, ' ') || 'Product',
+          provider: (p.providerName as string | undefined) || 'Provider',
+          product: catId?.replace(/_/g, ' ') || 'Product',
           policyNumber: '-',
           value: 0,
           premium: 0,
@@ -276,7 +283,8 @@ function extractProductHoldings(policies: PolicyRecord[]): ProductHolding[] {
         } satisfies ProductHolding;
       }
 
-      const allEntries = Object.entries(d);
+      const data = d as Record<string, unknown>;
+      const allEntries = Object.entries(data);
 
       // Policy number: first string that looks like a policy/reference number
       let policyNumber = '';
@@ -286,15 +294,15 @@ function extractProductHoldings(policies: PolicyRecord[]): ProductHolding[] {
 
       if (bucket === 'retirement') {
         value = num(
-          d.retirement_fund_value ??
-            d.retirement_current_value ??
-            d.post_retirement_capital_value ??
-            d.ret_3 ??
-            d.ret_pre_3 ??
-            d.ret_post_3,
+          data.retirement_fund_value ??
+            data.retirement_current_value ??
+            data.post_retirement_capital_value ??
+            data.ret_3 ??
+            data.ret_pre_3 ??
+            data.ret_post_3,
         );
       } else if (bucket === 'investment') {
-        value = num(d.invest_current_value ?? d.inv_3 ?? d.inv_vol_3);
+        value = num(data.invest_current_value ?? data.inv_3 ?? data.inv_vol_3);
       }
 
       for (const [key, val] of allEntries) {
@@ -440,10 +448,10 @@ function extractProductHoldings(policies: PolicyRecord[]): ProductHolding[] {
       }
 
       return {
-        id: p.id || `ph-${Math.random().toString(36).substring(2, 8)}`,
+        id: (p.id as string | undefined) || `ph-${Math.random().toString(36).substring(2, 8)}`,
         category: bucket,
-        provider: p.providerName || 'Provider',
-        product: productName || p.categoryId?.replace(/_/g, ' ') || 'Product',
+        provider: (p.providerName as string | undefined) || 'Provider',
+        product: productName || catId?.replace(/_/g, ' ') || 'Product',
         policyNumber: policyNumber || '-',
         value,
         premium,
@@ -561,7 +569,7 @@ export async function getPortfolioSummary(clientId: string): Promise<PortfolioSu
   ]);
 
   // ── Client Data ──────────────────────────────────────
-  const pi = profile?.personalInformation || profile || {};
+  const pi = (profile?.personalInformation || profile || {}) as Record<string, unknown>;
   const ckRaw = (clientKeys || {}) as Record<string, unknown>;
 
   const firstName = String(pi.firstName || ckRaw.profile_first_name || 'Client');
@@ -626,9 +634,9 @@ export async function getPortfolioSummary(clientId: string): Promise<PortfolioSu
     latestTax,
     latestEstate,
   ].filter(Boolean);
-  const lastUpdated =
+  const lastUpdated: string =
     allFnas.length > 0
-      ? allFnas.reduce((latest: string, fna: FnaRecord) => {
+      ? (allFnas as FnaRecord[]).reduce((latest: string, fna: FnaRecord) => {
           const d = fna.updatedAt || fna.createdAt || '';
           return d > latest ? d : latest;
         }, '')
@@ -691,21 +699,24 @@ export async function getPortfolioSummary(clientId: string): Promise<PortfolioSu
         ckRaw.investment_monthly_contribution || latestInvestment?.inputs?.monthlyContribution,
       ),
       goalsLinked: num(latestInvestment?.inputs?.goalsLinked || 0),
-      performance: latestInvestment?.results?.performanceYtd || 'N/A',
+      performance: String(latestInvestment?.results?.performanceYtd || 'N/A'),
       ...investmentStatus,
       nextReview: nextReviewDate(latestInvestment),
     },
     estate: {
-      willStatus:
+      willStatus: String(
         latestEstate?.results?.willStatus || latestEstate?.inputs?.willStatus || 'not-drafted',
-      trustStatus:
+      ),
+      trustStatus: String(
         latestEstate?.results?.trustStatus ||
-        latestEstate?.inputs?.trustStatus ||
-        'not-established',
-      nominationStatus:
+          latestEstate?.inputs?.trustStatus ||
+          'not-established',
+      ),
+      nominationStatus: String(
         latestEstate?.results?.nominationStatus ||
-        latestEstate?.inputs?.nominationStatus ||
-        'incomplete',
+          latestEstate?.inputs?.nominationStatus ||
+          'incomplete',
+      ),
       lastUpdated: latestEstate?.updatedAt || latestEstate?.createdAt || '',
       ...estateStatus,
       nextReview: nextReviewDate(latestEstate),
@@ -724,7 +735,7 @@ export async function getPortfolioSummary(clientId: string): Promise<PortfolioSu
       ),
       estimatedRefund: num(latestTax?.results?.estimatedRefund),
       taxYear: num(latestTax?.inputs?.taxYear || new Date().getFullYear()),
-      filingDate: latestTax?.results?.filingDate || latestTax?.inputs?.filingDate || '',
+      filingDate: String(latestTax?.results?.filingDate || latestTax?.inputs?.filingDate || ''),
       ...taxStatus,
       nextReview: nextReviewDate(latestTax),
     },
@@ -794,26 +805,25 @@ export async function getPortfolioSummary(clientId: string): Promise<PortfolioSu
   }
 
   // ── Recent Documents ─────────────────────────────────
-  const recentDocuments: PortfolioDocument[] = (documents || [])
-    .map((entry: unknown) => {
-      const doc = (
-        typeof entry === 'object' && entry !== null ? ((entry as KvRecord).value ?? entry) : entry
-      ) as KvRecord | null;
-      if (!doc || typeof doc !== 'object') return null;
-      return {
-        id: String(doc.id || ''),
-        documentType: String(doc.title || doc.documentType || 'Document'),
-        category: String(doc.productCategory || doc.category || 'General'),
-        uploaded: true,
-        uploadDate: (doc.uploadDate || doc.createdAt || null) as string | null,
-        downloadUrl: null,
-      };
-    })
-    .filter(Boolean)
-    .sort(
-      (a: PortfolioDocument, b: PortfolioDocument) =>
-        new Date(b.uploadDate || 0).getTime() - new Date(a.uploadDate || 0).getTime(),
-    )
+  const recentDocuments: PortfolioDocument[] = (
+    (documents || [])
+      .map((entry: unknown) => {
+        const doc = (
+          typeof entry === 'object' && entry !== null ? ((entry as KvRecord).value ?? entry) : entry
+        ) as KvRecord | null;
+        if (!doc || typeof doc !== 'object') return null;
+        return {
+          id: String(doc.id || ''),
+          documentType: String(doc.title || doc.documentType || 'Document'),
+          category: String(doc.productCategory || doc.category || 'General'),
+          uploaded: true,
+          uploadDate: (doc.uploadDate || doc.createdAt || null) as string | null,
+          downloadUrl: null,
+        };
+      })
+      .filter((d) => d !== null) as PortfolioDocument[]
+  )
+    .sort((a, b) => new Date(b.uploadDate || 0).getTime() - new Date(a.uploadDate || 0).getTime())
     .slice(0, 5);
 
   // ── Upcoming Events ──────────────────────────────────
@@ -836,7 +846,7 @@ export async function getPortfolioSummary(clientId: string): Promise<PortfolioSu
         status: String(evt.status || 'pending'),
       };
     })
-    .filter(Boolean)
+    .filter((e): e is PortfolioEvent => e !== null)
     .filter((evt: PortfolioEvent) => new Date(evt.date) >= now)
     .sort(
       (a: PortfolioEvent, b: PortfolioEvent) =>

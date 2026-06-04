@@ -11,7 +11,7 @@ export type {
 import type { BaseClient } from '../../../../shared/types';
 
 /** Dashboard display mode for ClientOverviewTab — Phase C */
-export type { DashboardMode } from './components/ClientOverviewTab';
+export type { DashboardMode } from './components/clientOverviewConstants';
 
 export type KYCStatus = 'Verified' | 'Pending' | 'Rejected' | 'Expired' | string;
 

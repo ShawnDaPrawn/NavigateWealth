@@ -215,9 +215,7 @@ export type CustomScreeningInput = z.infer<typeof CustomScreeningSchema>;
 
 export const AssessmentRunSchema = z.object({
   clientId: clientIdField,
-  assessmentId: z.number({
-    required_error: 'assessmentId (dueDiligenceAssessmentsId) is required',
-  }),
+  assessmentId: z.number(),
   assessmentName: z.string().optional(),
   firstName: firstNameField,
   lastName: lastNameField,

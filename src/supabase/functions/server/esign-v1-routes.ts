@@ -69,7 +69,7 @@ v1Routes.get('/v1/envelopes/:id', async (c) => {
   const auth = await requireApiKey(c);
   if (!auth.ok) return auth.response;
   try {
-    const id = c.req.param('id');
+    const id = c.req.param('id')!;
     const envelope = await getEnvelopeDetails(id);
     if (!envelope) return c.json({ error: 'Envelope not found' }, 404);
     if (envelope.firm_id !== auth.firmId) return c.json({ error: 'Forbidden' }, 403);
@@ -85,7 +85,7 @@ v1Routes.get('/v1/envelopes/:id/audit', async (c) => {
   const auth = await requireApiKey(c);
   if (!auth.ok) return auth.response;
   try {
-    const id = c.req.param('id');
+    const id = c.req.param('id')!;
     const envelope = await getEnvelopeDetails(id);
     if (!envelope) return c.json({ error: 'Envelope not found' }, 404);
     if (envelope.firm_id !== auth.firmId) return c.json({ error: 'Forbidden' }, 403);
@@ -102,7 +102,7 @@ v1Routes.get('/v1/envelopes/:id/signed-pdf', async (c) => {
   const auth = await requireApiKey(c);
   if (!auth.ok) return auth.response;
   try {
-    const id = c.req.param('id');
+    const id = c.req.param('id')!;
     const envelope = await getEnvelopeDetails(id);
     if (!envelope) return c.json({ error: 'Envelope not found' }, 404);
     if (envelope.firm_id !== auth.firmId) return c.json({ error: 'Forbidden' }, 403);
@@ -113,7 +113,7 @@ v1Routes.get('/v1/envelopes/:id/signed-pdf', async (c) => {
     if (!path) return c.json({ error: 'Signed document not yet materialised' }, 404);
     const buf = await downloadDocument(path);
     if (!buf) return c.json({ error: 'Signed document missing in storage' }, 404);
-    return new Response(buf, {
+    return new Response(buf as unknown as ArrayBuffer, {
       headers: {
         'Content-Type': 'application/pdf',
         'Content-Disposition': `attachment; filename="envelope_${id}_signed.pdf"`,
@@ -131,7 +131,7 @@ v1Routes.get('/v1/templates', async (c) => {
   if (!auth.ok) return auth.response;
   try {
     const templates = await listTemplates();
-    const scoped = (templates as Array<Record<string, unknown>>).filter(
+    const scoped = (templates as unknown as Array<Record<string, unknown>>).filter(
       (t) => !t.firm_id || t.firm_id === auth.firmId,
     );
     return c.json({ templates: scoped });
@@ -146,7 +146,7 @@ v1Routes.get('/v1/templates/:id', async (c) => {
   const auth = await requireApiKey(c);
   if (!auth.ok) return auth.response;
   try {
-    const id = c.req.param('id');
+    const id = c.req.param('id')!;
     const template = await getTemplate(id);
     if (!template) return c.json({ error: 'Template not found' }, 404);
     const tFirm = (template as unknown as Record<string, unknown>).firm_id as string | undefined;

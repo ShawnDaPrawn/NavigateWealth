@@ -116,7 +116,7 @@ async function indexAdd(id: string): Promise<void> {
     const next = Array.from(new Set([...(list ?? []), id]));
     await kv.set(EsignKeys.campaignsList(), next);
   } catch (err) {
-    log.warn('Failed to update campaigns index', err);
+    log.warn('Failed to update campaigns index', { error: String(err) });
   }
 }
 
@@ -126,7 +126,7 @@ async function indexEnvelope(campaignId: string, envelopeId: string): Promise<vo
     const next = Array.from(new Set([...(list ?? []), envelopeId]));
     await kv.set(EsignKeys.campaignEnvelopes(campaignId), next);
   } catch (err) {
-    log.warn('Failed to update campaign envelopes index', err);
+    log.warn('Failed to update campaign envelopes index', { error: String(err) });
   }
 }
 

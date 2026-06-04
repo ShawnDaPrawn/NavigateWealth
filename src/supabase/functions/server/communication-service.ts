@@ -28,6 +28,7 @@ import type {
   CampaignCreate,
   Template,
   HistoryFilters,
+  CachedRecipient,
 } from './communication-types.ts';
 
 const log = createModuleLogger('communication-service');
@@ -235,10 +236,10 @@ export class CommunicationService {
 
         const hasMergeData = mergeRecipient.firstName || mergeRecipient.lastName;
         const resolvedSubject = hasMergeData
-          ? resolveMergeFields(data.subject, mergeRecipient)
+          ? resolveMergeFields(data.subject, mergeRecipient as unknown as CachedRecipient)
           : data.subject;
         const resolvedContent = hasMergeData
-          ? resolveMergeFields(data.content, mergeRecipient)
+          ? resolveMergeFields(data.content, mergeRecipient as unknown as CachedRecipient)
           : data.content;
 
         await kv.set(messageKey, {
@@ -267,7 +268,7 @@ export class CommunicationService {
             // If we successfully uploaded and replaced content with URL in storedAttachments,
             // we should still use the ORIGINAL data.attachments for the email sending.
             const emailAttachments = data.attachments?.map((att) => ({
-              content: att.content?.split(',')[1] || att.content, // Remove data URL prefix if present
+              content: att.content?.split(',')[1] || att.content || '', // Remove data URL prefix if present
               filename: att.name,
               type: att.type || 'application/octet-stream',
               disposition: 'attachment',
@@ -483,8 +484,8 @@ export class CommunicationService {
 
       // Filter out deleted/suspended clients and map to SimpleClient shape
       const activeClients: SimpleClient[] = allClients
-        .filter((c: Record<string, unknown>) => !c.deleted && !c.suspended)
-        .map((c: Record<string, unknown>) => ({
+        .filter((c) => !c.deleted && !c.suspended)
+        .map((c) => ({
           id: (c.id || '') as string,
           name: `${c.firstName || ''} ${c.lastName || ''}`.trim() || (c.email as string) || '',
           firstName: (c.firstName || '') as string,
@@ -1073,7 +1074,7 @@ export class CommunicationService {
         });
       }
     } catch (e) {
-      log.warn('Bucket check failed', e);
+      log.warn('Bucket check failed', { error: String(e) });
     }
 
     const timestamp = Date.now();

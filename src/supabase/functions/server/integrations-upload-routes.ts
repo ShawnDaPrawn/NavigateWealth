@@ -285,7 +285,7 @@ app.get('/history', async (c) => {
 // GET /sync-runs/:runId
 app.get('/sync-runs/:runId', requireAuth, async (c) => {
   try {
-    const runId = c.req.param('runId');
+    const runId = c.req.param('runId')!;
     const run = (await kv.get(`sync-run:${runId}`)) as IntegrationSyncRun | null;
     if (!run) {
       return c.json({ error: 'Sync run not found' }, 404);
@@ -300,7 +300,7 @@ app.get('/sync-runs/:runId', requireAuth, async (c) => {
 // POST /sync-runs/:runId/publish
 app.post('/sync-runs/:runId/publish', requireAuth, async (c) => {
   try {
-    const runId = c.req.param('runId');
+    const runId = c.req.param('runId')!;
     const body = await c.req.json().catch(() => ({}));
     const rowIds = Array.isArray(body?.rowIds)
       ? body.rowIds.filter((id: unknown) => typeof id === 'string')

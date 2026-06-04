@@ -38,7 +38,10 @@ function handleRouteError(
     return c.json({ success: false, error: 'Unauthorized' }, 401);
   }
   if (error instanceof FnaIntakeError) {
-    return c.json({ success: false, error: error.message }, error.status);
+    return new Response(JSON.stringify({ success: false, error: error.message }), {
+      status: error.status,
+      headers: { 'Content-Type': 'application/json' },
+    });
   }
   log.error('Form prefill route error', error);
   return c.json(
@@ -119,7 +122,7 @@ routes.get('/audit/:clientId', async (c) => {
     const user = await authenticateUser(c.req.header('Authorization'));
     requirePrefillUser(user);
 
-    const clientId = c.req.param('clientId');
+    const clientId = c.req.param('clientId')!;
     assertPrefillClientAccess(user, clientId);
 
     const limit = Math.min(Number(c.req.query('limit') || 50), 200);

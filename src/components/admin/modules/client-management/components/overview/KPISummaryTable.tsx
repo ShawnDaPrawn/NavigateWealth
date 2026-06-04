@@ -33,7 +33,7 @@ import {
 } from 'lucide-react';
 import { KPI_DEFINITIONS, KPI_STATUS_CONFIG } from '../../constants';
 import type { KPIStatus } from '../../constants';
-import type { DashboardMode } from '../ClientOverviewTab';
+import type { DashboardMode } from '../clientOverviewConstants';
 
 // ── Types ───────────────────────────────────────────────────────────────
 

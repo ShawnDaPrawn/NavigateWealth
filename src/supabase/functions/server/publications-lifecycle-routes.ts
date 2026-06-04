@@ -33,7 +33,7 @@ const lifecycleRoutes = new Hono();
 
 lifecycleRoutes.post('/articles/:id/archive', async (c) => {
   try {
-    const id = c.req.param('id');
+    const id = c.req.param('id')!;
     const article = await kv.get(`article:${id}`);
 
     if (!article) {
@@ -52,7 +52,7 @@ lifecycleRoutes.post('/articles/:id/archive', async (c) => {
 
     // Audit trail (non-blocking — §12.2)
     AdminAuditService.record({
-      actorId: c.get('userId') || 'system',
+      actorId: (c.get('userId') as string | undefined) || 'system',
       actorRole: 'admin',
       category: 'configuration',
       action: 'article_archived',
@@ -72,7 +72,7 @@ lifecycleRoutes.post('/articles/:id/archive', async (c) => {
 
 lifecycleRoutes.post('/articles/:id/unarchive', async (c) => {
   try {
-    const id = c.req.param('id');
+    const id = c.req.param('id')!;
     const article = await kv.get(`article:${id}`);
 
     if (!article) {
@@ -91,7 +91,7 @@ lifecycleRoutes.post('/articles/:id/unarchive', async (c) => {
 
     // Audit trail (non-blocking — §12.2)
     AdminAuditService.record({
-      actorId: c.get('userId') || 'system',
+      actorId: (c.get('userId') as string | undefined) || 'system',
       actorRole: 'admin',
       category: 'configuration',
       action: 'article_unarchived',
@@ -110,7 +110,7 @@ lifecycleRoutes.post('/articles/:id/unarchive', async (c) => {
 
 lifecycleRoutes.post('/articles/:id/unpublish', async (c) => {
   try {
-    const id = c.req.param('id');
+    const id = c.req.param('id')!;
     const article = await kv.get(`article:${id}`);
 
     if (!article) {
@@ -131,7 +131,7 @@ lifecycleRoutes.post('/articles/:id/unpublish', async (c) => {
 
     // Audit trail (non-blocking — §12.2)
     AdminAuditService.record({
-      actorId: c.get('userId') || 'system',
+      actorId: (c.get('userId') as string | undefined) || 'system',
       actorRole: 'admin',
       category: 'configuration',
       action: 'article_unpublished',
@@ -151,7 +151,7 @@ lifecycleRoutes.post('/articles/:id/unpublish', async (c) => {
 
 lifecycleRoutes.post('/articles/:id/schedule', async (c) => {
   try {
-    const id = c.req.param('id');
+    const id = c.req.param('id')!;
     const body = await c.req.json();
     const { scheduled_publish_at } = body;
 
@@ -185,7 +185,7 @@ lifecycleRoutes.post('/articles/:id/schedule', async (c) => {
 
 lifecycleRoutes.delete('/articles/:id', async (c) => {
   try {
-    const id = c.req.param('id');
+    const id = c.req.param('id')!;
     const article = (await kv.get(`article:${id}`)) as Article | null;
 
     if (!article) {
@@ -238,7 +238,7 @@ lifecycleRoutes.delete('/articles/:id', async (c) => {
 
 lifecycleRoutes.post('/articles/:id/duplicate', async (c) => {
   try {
-    const id = c.req.param('id');
+    const id = c.req.param('id')!;
     const existing = await kv.get(`article:${id}`);
 
     if (!existing) {
@@ -272,7 +272,7 @@ lifecycleRoutes.post('/articles/:id/duplicate', async (c) => {
 
 lifecycleRoutes.post('/articles/:id/increment-views', async (c) => {
   try {
-    const id = c.req.param('id');
+    const id = c.req.param('id')!;
     const article = await kv.get(`article:${id}`);
 
     if (!article) {
@@ -291,7 +291,7 @@ lifecycleRoutes.post('/articles/:id/increment-views', async (c) => {
 
 lifecycleRoutes.post('/articles/:id/view', async (c) => {
   try {
-    const id = c.req.param('id');
+    const id = c.req.param('id')!;
     const article = await kv.get(`article:${id}`);
 
     if (!article) {

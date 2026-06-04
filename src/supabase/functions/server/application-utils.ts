@@ -160,6 +160,7 @@ export function validateStatusTransition(
     submitted: ['approved', 'declined'],
     approved: [],
     declined: [],
+    invited: ['in_progress', 'submitted', 'approved', 'declined'],
   };
 
   const allowedTransitions = validTransitions[currentStatus] || [];

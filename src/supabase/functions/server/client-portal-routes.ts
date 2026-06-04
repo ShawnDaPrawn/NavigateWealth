@@ -35,7 +35,7 @@ app.get('/', (c) => c.json({ service: 'client-portal', status: 'active' }));
  */
 app.get('/portfolio/:clientId', requireAuth, async (c) => {
   try {
-    const clientId = c.req.param('clientId');
+    const clientId = c.req.param('clientId')!;
 
     if (!clientId) {
       return c.json({ success: false, error: 'Client ID is required' }, 400);

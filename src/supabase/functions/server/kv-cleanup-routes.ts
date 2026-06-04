@@ -56,8 +56,8 @@ app.post(
   requireAuth,
   requireAdmin,
   asyncHandler(async (c) => {
-    const adminUserId = c.get('userId');
-    const adminRole = c.get('userRole') || 'admin';
+    const adminUserId = c.get('userId') as string;
+    const adminRole = (c.get('userRole') as string | undefined) || 'admin';
 
     let dryRun = true;
     let retentionDays = 90;

@@ -110,7 +110,7 @@ export interface CalendarEvent {
 
 export interface PipelineTriggerResult {
   pipelineId: PipelineId;
-  status: 'success' | 'skipped' | 'error';
+  status: 'success' | 'partial' | 'skipped' | 'error';
   articlesGenerated: number;
   articleIds: string[];
   summary: string;

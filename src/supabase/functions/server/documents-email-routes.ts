@@ -35,7 +35,7 @@ const documentsEmailRoutes = new Hono();
  */
 documentsEmailRoutes.post('/:userId/email', async (c) => {
   try {
-    const userId = c.req.param('userId');
+    const userId = c.req.param('userId')!;
     const {
       documentIds,
       email: providedEmail,
@@ -43,11 +43,12 @@ documentsEmailRoutes.post('/:userId/email', async (c) => {
       emailType,
       customMessage,
       isHtml,
-      ccAdmin,
+      ccAdmin: ccAdminRaw,
       subject: providedSubject,
       source,
       cc: providedCc,
     } = await c.req.json();
+    let ccAdmin = ccAdminRaw;
 
     if (!documentIds || !Array.isArray(documentIds) || documentIds.length === 0) {
       return c.json({ success: false, error: 'No documents selected' }, 400);
@@ -82,7 +83,9 @@ documentsEmailRoutes.post('/:userId/email', async (c) => {
         firstName = profile.firstName || 'Client';
       }
     } catch (err) {
-      log.warn('⚠️ Failed to fetch latest profile, falling back to provided details', err);
+      log.warn('⚠️ Failed to fetch latest profile, falling back to provided details', {
+        error: String(err),
+      });
     }
 
     if (!email) {

@@ -1,4 +1,3 @@
-/* eslint-disable react-refresh/only-export-components */
 /**
  * Documents Checklist — Phase 3
  *
@@ -21,7 +20,7 @@ import React, { useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '../../../../../ui/card';
 import { Badge } from '../../../../../ui/badge';
 import { FolderOpen, CheckCircle2, Circle } from 'lucide-react';
-import type { DashboardMode } from '../ClientOverviewTab';
+import type { DashboardMode } from '../clientOverviewConstants';
 
 // ── Types ───────────────────────────────────────────────────────────────
 

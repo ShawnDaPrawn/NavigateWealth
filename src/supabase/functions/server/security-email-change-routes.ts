@@ -52,7 +52,7 @@ const log = createModuleLogger('security');
  */
 app.post('/:userId/email-change/request', requireAuth, async (c) => {
   try {
-    const userId = c.req.param('userId');
+    const userId = c.req.param('userId')!;
     const authUserId = c.get('userId') as string | undefined;
     const userRole = c.get('userRole') as string | undefined;
     const denied = ensureSelfOrAdmin(c, userId);
@@ -166,7 +166,7 @@ app.post('/:userId/email-change/request', requireAuth, async (c) => {
  */
 app.post('/:userId/email-change/resend', requireAuth, async (c) => {
   try {
-    const userId = c.req.param('userId');
+    const userId = c.req.param('userId')!;
     const denied = ensureSelfOrAdmin(c, userId);
     if (denied) return denied;
 
@@ -235,7 +235,7 @@ app.post('/:userId/email-change/resend', requireAuth, async (c) => {
  */
 app.post('/:userId/email-change/verify', requireAuth, async (c) => {
   try {
-    const userId = c.req.param('userId');
+    const userId = c.req.param('userId')!;
     const authUserId = c.get('userId') as string | undefined;
     const denied = ensureSelfOrAdmin(c, userId);
     if (denied) return denied;

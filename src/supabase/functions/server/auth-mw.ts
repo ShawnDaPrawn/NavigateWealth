@@ -11,6 +11,17 @@ import { createClient } from 'jsr:@supabase/supabase-js@2.49.8';
 import { logger } from './stderr-logger.ts';
 import { SUPER_ADMIN_EMAIL } from './constants.ts';
 
+declare module 'npm:hono' {
+  interface ContextVariableMap {
+    userId: string;
+    userRole: string;
+    user: unknown;
+    requestId: string;
+    userEmail: string | undefined;
+    profile: unknown;
+  }
+}
+
 // Lazy Supabase client — must NOT be top-level to avoid deployment crashes in edge functions.
 const getSupabase = () =>
   createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!);
@@ -160,12 +171,18 @@ export function handleError(c: Context, error: unknown) {
   logger.error('Route error', error);
 
   if (error instanceof AuthError) {
-    return c.json({ error: error.message, code: error.code }, error.statusCode);
+    return new Response(JSON.stringify({ error: error.message, code: error.code }), {
+      status: error.statusCode,
+      headers: { 'Content-Type': 'application/json' },
+    });
   }
 
   const message = error instanceof Error ? error.message : 'Internal Server Error';
   const status = (error as Error & { status?: number })?.status || 500;
-  return c.json({ error: message }, status);
+  return new Response(JSON.stringify({ error: message }), {
+    status,
+    headers: { 'Content-Type': 'application/json' },
+  });
 }
 
 /**
