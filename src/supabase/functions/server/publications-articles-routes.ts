@@ -518,10 +518,10 @@ articlesRoutes.post(
     );
 
     const action = parsed.data.dryRun ? 'article_reshare_preview' : 'article_reshared';
-    const adminUserId = c.get('userId') || 'system';
+    const adminUserId = (c.get('userId') as string) || 'system';
     AdminAuditService.record({
       actorId: adminUserId,
-      actorRole: c.get('userRole') || 'admin',
+      actorRole: (c.get('userRole') as string | undefined) || 'admin',
       category: 'communication',
       action,
       summary: `${parsed.data.dryRun ? 'Previewed' : 'Reshared'} article notifications: ${article.title}`,

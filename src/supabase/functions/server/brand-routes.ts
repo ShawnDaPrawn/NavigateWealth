@@ -227,10 +227,10 @@ app.delete(
     const logos = await service.deleteLogo(variant);
 
     // Audit trail
-    const adminUserId = c.get('userId') || 'admin';
+    const adminUserId = (c.get('userId') as string) || 'admin';
     AdminAuditService.record({
       actorId: adminUserId,
-      actorRole: c.get('userRole') || 'admin',
+      actorRole: (c.get('userRole') as string | undefined) || 'admin',
       category: 'configuration',
       action: 'brand_logo_deleted',
       summary: `Brand logo deleted: ${variant}`,
@@ -277,7 +277,7 @@ app.put(
 
     AdminAuditService.record({
       actorId: c.get('userId') || 'admin',
-      actorRole: c.get('userRole') || 'admin',
+      actorRole: (c.get('userRole') as string | undefined) || 'admin',
       category: 'configuration',
       action: 'brand_colours_updated',
       summary: 'Brand colour palette updated',
@@ -312,7 +312,7 @@ app.put(
 
     AdminAuditService.record({
       actorId: c.get('userId') || 'admin',
-      actorRole: c.get('userRole') || 'admin',
+      actorRole: (c.get('userRole') as string | undefined) || 'admin',
       category: 'configuration',
       action: 'brand_typography_updated',
       summary: 'Brand typography configuration updated',
@@ -421,7 +421,7 @@ app.put(
 
     AdminAuditService.record({
       actorId: updatedBy || c.get('userId') || 'admin',
-      actorRole: c.get('userRole') || 'admin',
+      actorRole: (c.get('userRole') as string | undefined) || 'admin',
       category: 'configuration',
       action: 'brand_guidelines_rules_updated',
       summary: `Brand guideline rules updated (${rules.length} rules)`,
@@ -447,7 +447,7 @@ app.put(
 
     AdminAuditService.record({
       actorId: updatedBy || c.get('userId') || 'admin',
-      actorRole: c.get('userRole') || 'admin',
+      actorRole: (c.get('userRole') as string | undefined) || 'admin',
       category: 'configuration',
       action: 'brand_guidelines_voice_updated',
       summary: 'Brand voice & terminology guidelines updated',

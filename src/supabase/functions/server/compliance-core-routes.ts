@@ -124,7 +124,7 @@ app.post(
   requireAuth,
   requireAdmin,
   asyncHandler(async (c) => {
-    const adminUserId = c.get('userId');
+    const adminUserId = c.get('userId') as string;
     const body = await c.req.json();
     const parsed = CreateFAISRecordSchema.safeParse(body);
     if (!parsed.success) {
@@ -161,7 +161,7 @@ app.post(
   requireAuth,
   requireAdmin,
   asyncHandler(async (c) => {
-    const adminUserId = c.get('userId');
+    const adminUserId = c.get('userId') as string;
     const body = await c.req.json();
     const parsed = AMLCheckSchema.safeParse(body);
     if (!parsed.success) {
@@ -197,7 +197,7 @@ app.post(
   '/popia/consent',
   requireAuth,
   asyncHandler(async (c) => {
-    const userId = c.get('userId');
+    const userId = c.get('userId') as string;
     const body = await c.req.json();
     const parsed = POPIAConsentSchema.safeParse(body);
     if (!parsed.success) {
@@ -216,7 +216,7 @@ app.post(
   '/popia/withdraw',
   requireAuth,
   asyncHandler(async (c) => {
-    const userId = c.get('userId');
+    const userId = c.get('userId') as string;
 
     log.info('Withdrawing POPIA consent', { userId });
 
@@ -246,7 +246,7 @@ app.post(
   requireAuth,
   requireAdmin,
   asyncHandler(async (c) => {
-    const adminUserId = c.get('userId');
+    const adminUserId = c.get('userId') as string;
     const body = await c.req.json();
     const parsed = DebarmentCheckSchema.safeParse(body);
     if (!parsed.success) {
@@ -289,7 +289,7 @@ app.post(
   requireAuth,
   requireAdmin,
   asyncHandler(async (c) => {
-    const adminUserId = c.get('userId');
+    const adminUserId = c.get('userId') as string;
     const body = await c.req.json();
     const parsed = DocumentsInsuranceRecordSchema.safeParse(body);
     if (!parsed.success) {

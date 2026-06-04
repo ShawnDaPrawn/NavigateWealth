@@ -2,6 +2,7 @@ import { Hono } from 'npm:hono';
 import { createModuleLogger } from './stderr-logger.ts';
 import { getErrMsg } from './shared-logger-utils.ts';
 import * as service from './honeycomb-service.ts';
+import type { HoneycombCheckType } from './honeycomb-types.ts';
 import {
   IdvNoPhotoSchema,
   IdvWithPhotoSchema,
@@ -223,7 +224,7 @@ app.get('/checks/history/:clientId/:checkType', async (c) => {
   try {
     const clientId = c.req.param('clientId')!;
     const checkType = c.req.param('checkType')!;
-    const history = await service.getCheckHistory(clientId, checkType);
+    const history = await service.getCheckHistory(clientId, checkType as HoneycombCheckType);
     return c.json({ success: true, history });
   } catch (e: unknown) {
     log.error('Check type history error:', e);

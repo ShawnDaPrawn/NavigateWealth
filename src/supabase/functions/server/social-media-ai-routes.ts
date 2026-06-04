@@ -50,7 +50,7 @@ app.post(
   '/generate-post',
   requireAdmin,
   asyncHandler(async (c) => {
-    const userId = c.get('userId');
+    const userId = c.get('userId') as string;
     const body = await c.req.json();
 
     const parsed = GeneratePostTextSchema.safeParse(body);
@@ -83,7 +83,7 @@ app.get(
   '/history',
   requireAdmin,
   asyncHandler(async (c) => {
-    const userId = c.get('userId');
+    const userId = c.get('userId') as string;
     const limitParam = c.req.query('limit');
 
     const parsed = GetHistorySchema.safeParse({ limit: limitParam || 20 });
@@ -139,7 +139,7 @@ app.post(
   '/generate-image',
   requireAdmin,
   asyncHandler(async (c) => {
-    const userId = c.get('userId');
+    const userId = c.get('userId') as string;
     const body = await c.req.json();
 
     const parsed = GenerateImageSchema.safeParse(body);
@@ -196,7 +196,7 @@ app.get(
   '/image-history',
   requireAdmin,
   asyncHandler(async (c) => {
-    const userId = c.get('userId');
+    const userId = c.get('userId') as string;
     const limitParam = c.req.query('limit');
     const parsed = GetHistorySchema.safeParse({ limit: limitParam || 20 });
     const limit = parsed.success ? parsed.data.limit : 20;
@@ -215,7 +215,7 @@ app.post(
   '/generate-bundle',
   requireAdmin,
   asyncHandler(async (c) => {
-    const userId = c.get('userId');
+    const userId = c.get('userId') as string;
     const body = await c.req.json();
 
     const parsed = GenerateBundleSchema.safeParse(body);
@@ -249,7 +249,7 @@ app.post(
   '/templates',
   requireAdmin,
   asyncHandler(async (c) => {
-    const userId = c.get('userId');
+    const userId = c.get('userId') as string;
     const body = await c.req.json();
 
     const parsed = CreateCustomTemplateSchema.safeParse(body);
@@ -271,7 +271,7 @@ app.put(
   '/templates/:id',
   requireAdmin,
   asyncHandler(async (c) => {
-    const userId = c.get('userId');
+    const userId = c.get('userId') as string;
     const templateId = c.req.param('id')!;
     if (!templateId) return c.json({ error: 'Missing id' }, 400);
     const body = await c.req.json();
@@ -297,7 +297,7 @@ app.delete(
   '/templates/:id',
   requireAdmin,
   asyncHandler(async (c) => {
-    const userId = c.get('userId');
+    const userId = c.get('userId') as string;
     const templateId = c.req.param('id')!;
     if (!templateId) return c.json({ error: 'Missing id' }, 400);
 
@@ -317,7 +317,7 @@ app.get(
   '/templates',
   requireAdmin,
   asyncHandler(async (c) => {
-    const userId = c.get('userId');
+    const userId = c.get('userId') as string;
     const templates = await listCustomTemplates(userId);
     return c.json({ success: true, data: templates });
   }),
@@ -331,7 +331,7 @@ app.get(
   '/analytics',
   requireAdmin,
   asyncHandler(async (c) => {
-    const userId = c.get('userId');
+    const userId = c.get('userId') as string;
     const analytics = await getAIAnalytics(userId);
     return c.json({ success: true, data: analytics });
   }),

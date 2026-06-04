@@ -36,8 +36,8 @@ function recordLegalAudit(
     metadata?: Record<string, unknown>;
   },
 ) {
-  const actorId = c.get('userId') || 'admin';
-  const actorRole = c.get('userRole') || 'admin';
+  const actorId = (c.get('userId') as string) || 'admin';
+  const actorRole = (c.get('userRole') as string | undefined) || 'admin';
 
   AdminAuditService.record({
     actorId,
@@ -129,7 +129,7 @@ app.post(
   requireAuth,
   requireAdmin,
   asyncHandler(async (c) => {
-    const userId = c.get('userId') || 'admin';
+    const userId = (c.get('userId') as string) || 'admin';
     const result = await service.migratePriorityLegacyLegalDocuments(userId);
 
     recordLegalAudit(c, {
@@ -220,7 +220,7 @@ app.post(
   requireAdmin,
   asyncHandler(async (c) => {
     const slug = c.req.param('slug')!;
-    const userId = c.get('userId') || 'admin';
+    const userId = (c.get('userId') as string) || 'admin';
     const result = await service.migrateLegacyLegalDocumentToDraft(slug, userId);
 
     recordLegalAudit(c, {
@@ -247,7 +247,7 @@ app.post(
   requireAdmin,
   asyncHandler(async (c) => {
     const slug = c.req.param('slug')!;
-    const userId = c.get('userId') || 'admin';
+    const userId = (c.get('userId') as string) || 'admin';
     const body = await c.req.json();
     const parsed = UpsertLegalDocumentDraftSchema.safeParse(body);
 
@@ -280,7 +280,7 @@ app.put(
   asyncHandler(async (c) => {
     const slug = c.req.param('slug')!;
     const versionId = c.req.param('versionId')!;
-    const userId = c.get('userId') || 'admin';
+    const userId = (c.get('userId') as string) || 'admin';
     const body = await c.req.json();
     const parsed = UpsertLegalDocumentDraftSchema.safeParse(body);
 
@@ -313,7 +313,7 @@ app.post(
   asyncHandler(async (c) => {
     const slug = c.req.param('slug')!;
     const versionId = c.req.param('versionId')!;
-    const userId = c.get('userId') || 'admin';
+    const userId = (c.get('userId') as string) || 'admin';
 
     const result = await service.publishLegalDocumentDraft(slug, versionId, userId);
 
@@ -364,7 +364,7 @@ app.post(
   asyncHandler(async (c) => {
     const slug = c.req.param('slug')!;
     const versionId = c.req.param('versionId')!;
-    const userId = c.get('userId') || 'admin';
+    const userId = (c.get('userId') as string) || 'admin';
 
     const result = await service.duplicateLegalDocumentVersionToDraft(slug, versionId, userId);
 
@@ -435,7 +435,7 @@ app.post(
   '/',
   requireAuth,
   asyncHandler(async (c) => {
-    const userId = c.get('userId');
+    const userId = c.get('userId') as string;
     const body = await c.req.json();
     const parsed = CreateResourceSchema.safeParse(body);
     if (!parsed.success) {
@@ -483,7 +483,7 @@ app.put(
     const resource = await service.updateResource(resourceId, parsed.data);
 
     // Audit trail (non-blocking — §12.2)
-    const userId = c.get('userId');
+    const userId = c.get('userId') as string;
     AdminAuditService.record({
       actorId: userId,
       actorRole: 'admin',
@@ -512,7 +512,7 @@ app.delete(
     await service.deleteResource(resourceId);
 
     // Audit trail (non-blocking — §12.2)
-    const userId = c.get('userId');
+    const userId = c.get('userId') as string;
     AdminAuditService.record({
       actorId: userId || 'super_admin',
       actorRole: 'super_admin',
@@ -541,7 +541,7 @@ app.post(
   requireAuth,
   asyncHandler(async (c) => {
     const resourceId = c.req.param('id')!;
-    const userId = c.get('userId');
+    const userId = c.get('userId') as string;
 
     log.info('Duplicating resource', { resourceId, userId });
 
@@ -574,7 +574,7 @@ app.patch(
   requireAuth,
   asyncHandler(async (c) => {
     const resourceId = c.req.param('id')!;
-    const userId = c.get('userId');
+    const userId = c.get('userId') as string;
     const body = await c.req.json();
     const { status } = body;
 

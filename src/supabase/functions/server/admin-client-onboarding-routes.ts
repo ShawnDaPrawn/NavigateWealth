@@ -73,7 +73,7 @@ onboardingApp.use('*', verifyAdmin);
 onboardingApp.post('/add', async (c) => {
   try {
     const body = await c.req.json();
-    const adminUserId = c.get('userId');
+    const adminUserId = c.get('userId') as string;
 
     // Validate
     const errors = validateClientInput(body);
@@ -115,7 +115,7 @@ onboardingApp.post('/add', async (c) => {
 onboardingApp.post('/bulk-add', async (c) => {
   try {
     const body = await c.req.json();
-    const adminUserId = c.get('userId');
+    const adminUserId = c.get('userId') as string;
 
     if (!body.clients || !Array.isArray(body.clients)) {
       return c.json(

@@ -34,7 +34,7 @@ app.post(
   '/fna/create',
   requireAuth,
   asyncHandler(async (c) => {
-    const userId = c.get('userId');
+    const userId = c.get('userId') as string;
     const body = await c.req.json();
     const validated = CreateRiskFNASchema.parse(body);
     log.info('Creating Risk FNA', { userId, clientId: validated.clientId });
@@ -48,7 +48,7 @@ app.put(
   '/fna/:id',
   requireAuth,
   asyncHandler(async (c) => {
-    const userId = c.get('userId');
+    const userId = c.get('userId') as string;
     const { id: fnaId } = FNAIdParamSchema.parse(c.req.param());
     const body = await c.req.json();
     const updates = UpdateRiskFNASchema.parse(body);
@@ -82,7 +82,7 @@ app.post(
   '/fna/:id/publish',
   requireAdmin,
   asyncHandler(async (c) => {
-    const adminUserId = c.get('userId');
+    const adminUserId = c.get('userId') as string;
     const { id: fnaId } = FNAIdParamSchema.parse(c.req.param());
     log.info('Publishing Risk FNA', { adminUserId, fnaId });
     const fna = await service.publishFNA('risk', fnaId, adminUserId);
@@ -99,7 +99,7 @@ app.post(
   '/medical-fna/create',
   requireAuth,
   asyncHandler(async (c) => {
-    const userId = c.get('userId');
+    const userId = c.get('userId') as string;
     const body = await c.req.json();
     const validated = CreateMedicalFNASchema.parse(body);
     log.info('Creating Medical FNA', { userId, clientId: validated.clientId });
@@ -113,7 +113,7 @@ app.put(
   '/medical-fna/:id',
   requireAuth,
   asyncHandler(async (c) => {
-    const userId = c.get('userId');
+    const userId = c.get('userId') as string;
     const { id: fnaId } = FNAIdParamSchema.parse(c.req.param());
     const body = await c.req.json();
     const updates = UpdateMedicalFNASchema.parse(body);
@@ -136,7 +136,7 @@ app.post(
   '/medical-fna/:id/publish',
   requireAdmin,
   asyncHandler(async (c) => {
-    const adminUserId = c.get('userId');
+    const adminUserId = c.get('userId') as string;
     const { id: fnaId } = FNAIdParamSchema.parse(c.req.param());
     const fna = await service.publishFNA('medical', fnaId, adminUserId);
     return c.json({ fna });
@@ -151,7 +151,7 @@ app.post(
   '/retirement-fna/create',
   requireAuth,
   asyncHandler(async (c) => {
-    const userId = c.get('userId');
+    const userId = c.get('userId') as string;
     const body = await c.req.json();
     const validated = CreateRetirementFNASchema.parse(body);
     log.info('Creating Retirement FNA', { userId, clientId: validated.clientId });
@@ -165,7 +165,7 @@ app.put(
   '/retirement-fna/:id',
   requireAuth,
   asyncHandler(async (c) => {
-    const userId = c.get('userId');
+    const userId = c.get('userId') as string;
     const { id: fnaId } = FNAIdParamSchema.parse(c.req.param());
     const body = await c.req.json();
     const updates = UpdateRetirementFNASchema.parse(body);
@@ -188,7 +188,7 @@ app.post(
   '/retirement-fna/:id/publish',
   requireAdmin,
   asyncHandler(async (c) => {
-    const adminUserId = c.get('userId');
+    const adminUserId = c.get('userId') as string;
     const { id: fnaId } = FNAIdParamSchema.parse(c.req.param());
     const fna = await service.publishFNA('retirement', fnaId, adminUserId);
     return c.json({ fna });
@@ -203,7 +203,7 @@ app.post(
   '/investment-ina/create',
   requireAuth,
   asyncHandler(async (c) => {
-    const userId = c.get('userId');
+    const userId = c.get('userId') as string;
     const body = await c.req.json();
     const validated = CreateInvestmentINASchema.parse(body);
     log.info('Creating Investment INA', { userId, clientId: validated.clientId });
@@ -217,7 +217,7 @@ app.put(
   '/investment-ina/:id',
   requireAuth,
   asyncHandler(async (c) => {
-    const userId = c.get('userId');
+    const userId = c.get('userId') as string;
     const { id: inaId } = FNAIdParamSchema.parse(c.req.param());
     const body = await c.req.json();
     const updates = UpdateInvestmentINASchema.parse(body);
@@ -240,7 +240,7 @@ app.post(
   '/investment-ina/:id/publish',
   requireAdmin,
   asyncHandler(async (c) => {
-    const adminUserId = c.get('userId');
+    const adminUserId = c.get('userId') as string;
     const { id: inaId } = FNAIdParamSchema.parse(c.req.param());
     const ina = await service.publishFNA('investment', inaId, adminUserId);
     return c.json({ ina });
@@ -255,7 +255,7 @@ app.post(
   '/tax-planning-fna/create',
   requireAuth,
   asyncHandler(async (c) => {
-    const userId = c.get('userId');
+    const userId = c.get('userId') as string;
     const body = await c.req.json();
     const validated = CreateTaxFNASchema.parse(body);
     log.info('Creating Tax Planning FNA', { userId, clientId: validated.clientId });
@@ -269,7 +269,7 @@ app.put(
   '/tax-planning-fna/:id',
   requireAuth,
   asyncHandler(async (c) => {
-    const userId = c.get('userId');
+    const userId = c.get('userId') as string;
     const { id: fnaId } = FNAIdParamSchema.parse(c.req.param());
     const body = await c.req.json();
     const updates = UpdateTaxFNASchema.parse(body);
@@ -292,7 +292,7 @@ app.post(
   '/tax-planning-fna/:id/publish',
   requireAdmin,
   asyncHandler(async (c) => {
-    const adminUserId = c.get('userId');
+    const adminUserId = c.get('userId') as string;
     const { id: fnaId } = FNAIdParamSchema.parse(c.req.param());
     const fna = await service.publishFNA('tax', fnaId, adminUserId);
     return c.json({ fna });
@@ -307,7 +307,7 @@ app.post(
   '/estate-planning-fna/create',
   requireAuth,
   asyncHandler(async (c) => {
-    const userId = c.get('userId');
+    const userId = c.get('userId') as string;
     const body = await c.req.json();
     const validated = CreateEstateFNASchema.parse(body);
     log.info('Creating Estate Planning FNA', { userId, clientId: validated.clientId });
@@ -321,7 +321,7 @@ app.put(
   '/estate-planning-fna/:id',
   requireAuth,
   asyncHandler(async (c) => {
-    const userId = c.get('userId');
+    const userId = c.get('userId') as string;
     const { id: fnaId } = FNAIdParamSchema.parse(c.req.param());
     const body = await c.req.json();
     const updates = UpdateEstateFNASchema.parse(body);
@@ -344,7 +344,7 @@ app.post(
   '/estate-planning-fna/:id/publish',
   requireAdmin,
   asyncHandler(async (c) => {
-    const adminUserId = c.get('userId');
+    const adminUserId = c.get('userId') as string;
     const { id: fnaId } = FNAIdParamSchema.parse(c.req.param());
     const fna = await service.publishFNA('estate', fnaId, adminUserId);
     return c.json({ fna });
@@ -359,7 +359,7 @@ app.post(
   '/ai/chat',
   requireAuth,
   asyncHandler(async (c) => {
-    const userId = c.get('userId');
+    const userId = c.get('userId') as string;
     const body = await c.req.json();
     const { message, context } = AIChatRequestSchema.parse(body);
     log.info('AI Advisor chat', { userId });
@@ -372,7 +372,7 @@ app.post(
   '/ai/analyze',
   requireAdmin,
   asyncHandler(async (c) => {
-    const adminUserId = c.get('userId');
+    const adminUserId = c.get('userId') as string;
     const body = await c.req.json();
     const { clientId, analysisType, data } = AIAnalysisRequestSchema.parse(body);
     log.info('AI Intelligence analysis', { adminUserId, clientId, analysisType });

@@ -39,7 +39,7 @@ app.post(
   requireAdmin,
   asyncHandler(async (c) => {
     const clientId = c.req.param('clientId')!;
-    const adminUserId = c.get('userId');
+    const adminUserId = c.get('userId') as string;
     const record = await service.createAMLFICARecord({
       clientId,
       checkedBy: adminUserId,

@@ -50,7 +50,7 @@ app.get(
   '/roa/client/:clientId/context',
   requireAuth,
   asyncHandler(async (c) => {
-    const role = c.get('userRole');
+    const role = c.get('userRole') as string | undefined;
     if (!canUseRoA(role)) {
       return c.json({ error: 'Forbidden: Advice access required', code: 'FORBIDDEN_ADVICE' }, 403);
     }
@@ -69,7 +69,7 @@ app.get(
   '/roa/modules',
   requireAuth,
   asyncHandler(async (c) => {
-    const role = c.get('userRole');
+    const role = c.get('userRole') as string | undefined;
     if (!canUseRoA(role)) {
       return c.json({ error: 'Forbidden: Advice access required', code: 'FORBIDDEN_ADVICE' }, 403);
     }
@@ -83,7 +83,7 @@ app.get(
   '/roa/module-contracts/schema',
   requireAuth,
   asyncHandler(async (c) => {
-    const role = c.get('userRole');
+    const role = c.get('userRole') as string | undefined;
     if (!canUseRoA(role)) {
       return c.json({ error: 'Forbidden: Advice access required', code: 'FORBIDDEN_ADVICE' }, 403);
     }
@@ -96,7 +96,7 @@ app.get(
   '/roa/module-contracts',
   requireAuth,
   asyncHandler(async (c) => {
-    const role = c.get('userRole');
+    const role = c.get('userRole') as string | undefined;
     if (!canUseRoA(role)) {
       return c.json({ error: 'Forbidden: Advice access required', code: 'FORBIDDEN_ADVICE' }, 403);
     }
@@ -120,7 +120,7 @@ app.get(
   '/roa/module-contracts/:moduleId',
   requireAuth,
   asyncHandler(async (c) => {
-    const role = c.get('userRole');
+    const role = c.get('userRole') as string | undefined;
     if (!canUseRoA(role)) {
       return c.json({ error: 'Forbidden: Advice access required', code: 'FORBIDDEN_ADVICE' }, 403);
     }
@@ -141,7 +141,7 @@ app.post(
   '/roa/module-contracts',
   requireAuth,
   asyncHandler(async (c) => {
-    const role = c.get('userRole');
+    const role = c.get('userRole') as string | undefined;
     if (!canManageRoAContracts(role)) {
       return c.json(
         { error: 'Forbidden: Super admin access required', code: 'FORBIDDEN_ROA_CONTRACT' },
@@ -162,7 +162,7 @@ app.put(
   '/roa/module-contracts/:moduleId',
   requireAuth,
   asyncHandler(async (c) => {
-    const role = c.get('userRole');
+    const role = c.get('userRole') as string | undefined;
     if (!canManageRoAContracts(role)) {
       return c.json(
         { error: 'Forbidden: Super admin access required', code: 'FORBIDDEN_ROA_CONTRACT' },
@@ -183,7 +183,7 @@ app.post(
   '/roa/module-contracts/:moduleId/publish',
   requireAuth,
   asyncHandler(async (c) => {
-    const role = c.get('userRole');
+    const role = c.get('userRole') as string | undefined;
     if (!canManageRoAContracts(role)) {
       return c.json(
         { error: 'Forbidden: Super admin access required', code: 'FORBIDDEN_ROA_CONTRACT' },
@@ -203,7 +203,7 @@ app.post(
   '/roa/module-contracts/:moduleId/archive',
   requireAuth,
   asyncHandler(async (c) => {
-    const role = c.get('userRole');
+    const role = c.get('userRole') as string | undefined;
     if (!canManageRoAContracts(role)) {
       return c.json(
         { error: 'Forbidden: Super admin access required', code: 'FORBIDDEN_ROA_CONTRACT' },
@@ -223,12 +223,12 @@ app.get(
   '/roa/drafts',
   requireAuth,
   asyncHandler(async (c) => {
-    const role = c.get('userRole');
+    const role = c.get('userRole') as string | undefined;
     if (!canUseRoA(role)) {
       return c.json({ error: 'Forbidden: Advice access required', code: 'FORBIDDEN_ADVICE' }, 403);
     }
 
-    const userId = c.get('userId');
+    const userId = c.get('userId') as string;
     const status = c.req.query('status');
     const clientId = c.req.query('clientId');
     const adviserId = canReviewAllRoADrafts(role) ? c.req.query('adviserId') : userId;
@@ -242,7 +242,7 @@ app.get(
   '/roa/client/:clientId/files',
   requireAuth,
   asyncHandler(async (c) => {
-    const role = c.get('userRole');
+    const role = c.get('userRole') as string | undefined;
     if (!canUseRoA(role)) {
       return c.json({ error: 'Forbidden: Advice access required', code: 'FORBIDDEN_ADVICE' }, 403);
     }
@@ -256,12 +256,12 @@ app.post(
   '/roa/drafts',
   requireAuth,
   asyncHandler(async (c) => {
-    const role = c.get('userRole');
+    const role = c.get('userRole') as string | undefined;
     if (!canUseRoA(role)) {
       return c.json({ error: 'Forbidden: Advice access required', code: 'FORBIDDEN_ADVICE' }, 403);
     }
 
-    const userId = c.get('userId');
+    const userId = c.get('userId') as string;
     const body = await c.req.json();
     const draft = await roaService.saveDraft(
       { ...body, adviserId: userId },
@@ -276,7 +276,7 @@ app.get(
   '/roa/drafts/:draftId',
   requireAuth,
   asyncHandler(async (c) => {
-    const role = c.get('userRole');
+    const role = c.get('userRole') as string | undefined;
     if (!canUseRoA(role)) {
       return c.json({ error: 'Forbidden: Advice access required', code: 'FORBIDDEN_ADVICE' }, 403);
     }
@@ -293,7 +293,7 @@ app.put(
   '/roa/drafts/:draftId',
   requireAuth,
   asyncHandler(async (c) => {
-    const role = c.get('userRole');
+    const role = c.get('userRole') as string | undefined;
     if (!canUseRoA(role)) {
       return c.json({ error: 'Forbidden: Advice access required', code: 'FORBIDDEN_ADVICE' }, 403);
     }
@@ -318,7 +318,7 @@ app.delete(
   '/roa/drafts/:draftId',
   requireAuth,
   asyncHandler(async (c) => {
-    const role = c.get('userRole');
+    const role = c.get('userRole') as string | undefined;
     if (!canUseRoA(role)) {
       return c.json({ error: 'Forbidden: Advice access required', code: 'FORBIDDEN_ADVICE' }, 403);
     }
@@ -338,7 +338,7 @@ app.post(
   '/roa/drafts/:draftId/clone-from-final',
   requireAuth,
   asyncHandler(async (c) => {
-    const role = c.get('userRole');
+    const role = c.get('userRole') as string | undefined;
     if (!canUseRoA(role)) {
       return c.json({ error: 'Forbidden: Advice access required', code: 'FORBIDDEN_ADVICE' }, 403);
     }
@@ -361,7 +361,7 @@ app.post(
   '/roa/drafts/:draftId/submit',
   requireAuth,
   asyncHandler(async (c) => {
-    const role = c.get('userRole');
+    const role = c.get('userRole') as string | undefined;
     if (!canUseRoA(role)) {
       return c.json({ error: 'Forbidden: Advice access required', code: 'FORBIDDEN_ADVICE' }, 403);
     }
@@ -384,7 +384,7 @@ app.post(
   '/roa/drafts/:draftId/validate',
   requireAuth,
   asyncHandler(async (c) => {
-    const role = c.get('userRole');
+    const role = c.get('userRole') as string | undefined;
     if (!canUseRoA(role)) {
       return c.json({ error: 'Forbidden: Advice access required', code: 'FORBIDDEN_ADVICE' }, 403);
     }
@@ -409,7 +409,7 @@ app.post(
   '/roa/drafts/:draftId/evidence',
   requireAuth,
   asyncHandler(async (c) => {
-    const role = c.get('userRole');
+    const role = c.get('userRole') as string | undefined;
     if (!canUseRoA(role)) {
       return c.json({ error: 'Forbidden: Advice access required', code: 'FORBIDDEN_ADVICE' }, 403);
     }
@@ -437,7 +437,7 @@ app.post(
   '/roa/drafts/:draftId/compile',
   requireAuth,
   asyncHandler(async (c) => {
-    const role = c.get('userRole');
+    const role = c.get('userRole') as string | undefined;
     if (!canUseRoA(role)) {
       return c.json({ error: 'Forbidden: Advice access required', code: 'FORBIDDEN_ADVICE' }, 403);
     }
@@ -466,7 +466,7 @@ app.post(
   '/roa/drafts/:draftId/generate',
   requireAuth,
   asyncHandler(async (c) => {
-    const role = c.get('userRole');
+    const role = c.get('userRole') as string | undefined;
     if (!canUseRoA(role)) {
       return c.json({ error: 'Forbidden: Advice access required', code: 'FORBIDDEN_ADVICE' }, 403);
     }
@@ -503,7 +503,7 @@ app.post(
   '/roa/drafts/:draftId/finalise',
   requireAuth,
   asyncHandler(async (c) => {
-    const role = c.get('userRole');
+    const role = c.get('userRole') as string | undefined;
     if (!canUseRoA(role)) {
       return c.json({ error: 'Forbidden: Advice access required', code: 'FORBIDDEN_ADVICE' }, 403);
     }
@@ -534,7 +534,7 @@ app.get(
   '/roa/documents/:documentId/download',
   requireAuth,
   asyncHandler(async (c) => {
-    const role = c.get('userRole');
+    const role = c.get('userRole') as string | undefined;
     if (!canUseRoA(role)) {
       return c.json({ error: 'Forbidden: Advice access required', code: 'FORBIDDEN_ADVICE' }, 403);
     }
