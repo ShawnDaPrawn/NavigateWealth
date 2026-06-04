@@ -42,7 +42,7 @@ const MARKETING_EXACT = new Set([
   '/medical-aid',
 ]);
 
-const MARKETING_PREFIXES = ['/resources', '/legal', '/get-quote', '/solutions/'];
+const MARKETING_PREFIXES = ['/resources', '/legal', '/get-quote', '/solutions'];
 
 function isMarketingRoute(pathname: string): boolean {
   if (MARKETING_EXACT.has(pathname)) return true;
