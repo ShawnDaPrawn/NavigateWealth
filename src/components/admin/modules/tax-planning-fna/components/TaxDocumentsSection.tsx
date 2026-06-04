@@ -6,7 +6,7 @@
  * Follows the collapsible card pattern established by EstateDocumentsSection (per Guidelines §8.1).
  */
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import {
   Upload,
   FileText,
@@ -168,13 +168,7 @@ export function TaxDocumentsSection({ clientId, clientName }: TaxDocumentsSectio
     return { value: `${year}`, label: `${year}/${year + 1}` };
   });
 
-  useEffect(() => {
-    if (clientId) {
-      loadDocuments();
-    }
-  }, [clientId]);
-
-  const loadDocuments = async () => {
+  const loadDocuments = useCallback(async () => {
     try {
       setIsLoading(true);
       const result = await api.get<{ success: boolean; data?: TaxDocument[] }>(
@@ -189,7 +183,13 @@ export function TaxDocumentsSection({ clientId, clientName }: TaxDocumentsSectio
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [clientId]);
+
+  useEffect(() => {
+    if (clientId) {
+      loadDocuments();
+    }
+  }, [clientId, loadDocuments]);
 
   const handleUpload = async () => {
     if (!selectedFile || !title || !documentType) {

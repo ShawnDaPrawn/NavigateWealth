@@ -52,19 +52,6 @@ export function ApplicationsModule() {
   const [resendingInviteId, setResendingInviteId] = useState<string | null>(null);
   const [completeOnBehalfApp, setCompleteOnBehalfApp] = useState<Application | null>(null);
 
-  // Load data
-  useEffect(() => {
-    if (isAdmin) {
-      loadApplications();
-    }
-  }, [activeTab, isAdmin]);
-
-  useEffect(() => {
-    if (isAdmin) {
-      loadStats();
-    }
-  }, [isAdmin]);
-
   const loadApplications = useCallback(async () => {
     try {
       setRefreshing(true);
@@ -89,6 +76,19 @@ export function ApplicationsModule() {
       console.error('Error loading stats:', error);
     }
   }, []);
+
+  // Load data
+  useEffect(() => {
+    if (isAdmin) {
+      loadApplications();
+    }
+  }, [activeTab, isAdmin, loadApplications]);
+
+  useEffect(() => {
+    if (isAdmin) {
+      loadStats();
+    }
+  }, [isAdmin, loadStats]);
 
   const handleRefresh = useCallback(async () => {
     await Promise.all([loadApplications(), loadStats()]);

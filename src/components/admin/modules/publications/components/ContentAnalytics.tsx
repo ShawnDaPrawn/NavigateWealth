@@ -502,7 +502,7 @@ function VelocityLineChart({ data }: VelocityLineChartProps) {
   const yTicks = Array.from({ length: 5 }, (_, i) => Math.round((niceMax / 4) * i));
 
   const xStep = data.length > 1 ? chartW / (data.length - 1) : chartW;
-  const toX = (i: number) => pad.left + i * xStep;
+  const toX = useCallback((i: number) => pad.left + i * xStep, [pad.left, xStep]);
   const toY = (v: number) => pad.top + chartH - (v / niceMax) * chartH;
 
   const buildPath = (key: 'published' | 'drafts') =>
@@ -526,7 +526,7 @@ function VelocityLineChart({ data }: VelocityLineChartProps) {
         setTooltip({ x: toX(idx), y: e.clientY - rect.top, idx });
       }
     },
-    [data.length, xStep, pad.left],
+    [data.length, xStep, pad.left, toX],
   );
 
   const handleMouseLeave = useCallback(() => setTooltip(null), []);

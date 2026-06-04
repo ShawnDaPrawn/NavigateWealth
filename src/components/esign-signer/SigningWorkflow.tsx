@@ -620,6 +620,19 @@ export function SigningWorkflow({
 
   // ==================== FIELD CLICK HANDLERS ====================
 
+  const handleCheckboxToggle = useCallback((field: SignerField) => {
+    setSignatures((prev) => {
+      const existing = prev.find((s) => s.field_id === field.id);
+      if (existing) {
+        if (existing.value === 'true') {
+          return prev.filter((s) => s.field_id !== field.id);
+        }
+        return prev.map((s) => (s.field_id === field.id ? { ...s, value: 'true' } : s));
+      }
+      return [...prev, { field_id: field.id, type: 'checkbox', value: 'true' }];
+    });
+  }, []);
+
   const handleFieldClick = useCallback(
     (field: SignerField) => {
       // Reading mode — fields are inert. The bottom-bar CTA is the only way in.
@@ -690,21 +703,8 @@ export function SigningWorkflow({
         }
       }
     },
-    [phase, signatures],
+    [phase, signatures, handleCheckboxToggle],
   );
-
-  const handleCheckboxToggle = useCallback((field: SignerField) => {
-    setSignatures((prev) => {
-      const existing = prev.find((s) => s.field_id === field.id);
-      if (existing) {
-        if (existing.value === 'true') {
-          return prev.filter((s) => s.field_id !== field.id);
-        }
-        return prev.map((s) => (s.field_id === field.id ? { ...s, value: 'true' } : s));
-      }
-      return [...prev, { field_id: field.id, type: 'checkbox', value: 'true' }];
-    });
-  }, []);
 
   /**
    * When a signer adopts a signature/initials in any field, we:

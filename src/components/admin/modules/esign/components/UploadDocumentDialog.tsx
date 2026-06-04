@@ -55,51 +55,60 @@ export function UploadDocumentDialog({
     }
   }, []);
 
-  const handleDrop = useCallback((e: React.DragEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setDragActive(false);
+  const validateAndSetFile = useCallback(
+    (selectedFile: File) => {
+      const newErrors: Record<string, string> = {};
 
-    const droppedFile = e.dataTransfer.files?.[0];
-    if (droppedFile) {
-      validateAndSetFile(droppedFile);
-    }
-  }, []);
+      // Validate file type
+      if (!selectedFile.type.includes('pdf')) {
+        newErrors.file = 'Only PDF files are supported';
+        setErrors(newErrors);
+        return;
+      }
 
-  const handleFileSelect = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    const selectedFile = e.target.files?.[0];
-    if (selectedFile) {
-      validateAndSetFile(selectedFile);
-    }
-  }, []);
+      // Validate file size (max 10MB)
+      const maxSize = 10 * 1024 * 1024;
+      if (selectedFile.size > maxSize) {
+        newErrors.file = 'File size must be less than 10MB';
+        setErrors(newErrors);
+        return;
+      }
 
-  const validateAndSetFile = (selectedFile: File) => {
-    const newErrors: Record<string, string> = {};
+      setFile(selectedFile);
+      setErrors({});
 
-    // Validate file type
-    if (!selectedFile.type.includes('pdf')) {
-      newErrors.file = 'Only PDF files are supported';
-      setErrors(newErrors);
-      return;
-    }
+      // Auto-populate title from filename if empty
+      if (!title) {
+        const fileName = selectedFile.name.replace('.pdf', '');
+        setTitle(fileName);
+      }
+    },
+    [title],
+  );
 
-    // Validate file size (max 10MB)
-    const maxSize = 10 * 1024 * 1024;
-    if (selectedFile.size > maxSize) {
-      newErrors.file = 'File size must be less than 10MB';
-      setErrors(newErrors);
-      return;
-    }
+  const handleDrop = useCallback(
+    (e: React.DragEvent) => {
+      e.preventDefault();
+      e.stopPropagation();
+      setDragActive(false);
 
-    setFile(selectedFile);
-    setErrors({});
+      const droppedFile = e.dataTransfer.files?.[0];
+      if (droppedFile) {
+        validateAndSetFile(droppedFile);
+      }
+    },
+    [validateAndSetFile],
+  );
 
-    // Auto-populate title from filename if empty
-    if (!title) {
-      const fileName = selectedFile.name.replace('.pdf', '');
-      setTitle(fileName);
-    }
-  };
+  const handleFileSelect = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      const selectedFile = e.target.files?.[0];
+      if (selectedFile) {
+        validateAndSetFile(selectedFile);
+      }
+    },
+    [validateAndSetFile],
+  );
 
   const removeFile = () => {
     setFile(null);

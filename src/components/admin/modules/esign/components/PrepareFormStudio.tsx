@@ -934,6 +934,8 @@ export function PrepareFormStudio({
     eligibleSigners,
     clearSelection,
     selectMany,
+    undo,
+    redo,
   ]);
 
   // ==================== RENDER ====================

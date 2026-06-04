@@ -53,40 +53,46 @@ export function DocumentUploadStep({
     }
   }, []);
 
-  const handleDrop = useCallback((e: React.DragEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setDragActive(false);
+  const processFiles = useCallback(
+    (newFiles: File[]) => {
+      const validFiles = newFiles.filter((file) => {
+        const isPdf = file.type === 'application/pdf';
+        return isPdf;
+      });
 
-    if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
-      processFiles(Array.from(e.dataTransfer.files));
-    }
-  }, []);
+      if (validFiles.length !== newFiles.length) {
+        setError('Only PDF files are currently supported.');
+      } else {
+        setError(null);
+      }
+
+      if (validFiles.length > 0) {
+        setFiles((prev) => [...prev, ...validFiles]);
+        // Auto-set title if empty
+        if (!title && validFiles[0]) {
+          setTitle(validFiles[0].name.replace(/\.pdf$/i, ''));
+        }
+      }
+    },
+    [title],
+  );
+
+  const handleDrop = useCallback(
+    (e: React.DragEvent) => {
+      e.preventDefault();
+      e.stopPropagation();
+      setDragActive(false);
+
+      if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+        processFiles(Array.from(e.dataTransfer.files));
+      }
+    },
+    [processFiles],
+  );
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0) {
       processFiles(Array.from(e.target.files));
-    }
-  };
-
-  const processFiles = (newFiles: File[]) => {
-    const validFiles = newFiles.filter((file) => {
-      const isPdf = file.type === 'application/pdf';
-      return isPdf;
-    });
-
-    if (validFiles.length !== newFiles.length) {
-      setError('Only PDF files are currently supported.');
-    } else {
-      setError(null);
-    }
-
-    if (validFiles.length > 0) {
-      setFiles((prev) => [...prev, ...validFiles]);
-      // Auto-set title if empty
-      if (!title && validFiles[0]) {
-        setTitle(validFiles[0].name.replace(/\.pdf$/i, ''));
-      }
     }
   };
 

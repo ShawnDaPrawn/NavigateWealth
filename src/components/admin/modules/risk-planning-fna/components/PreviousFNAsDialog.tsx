@@ -3,7 +3,7 @@
  * Shows historical published FNAs for a client
  */
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../../../../ui/dialog';
 import { Button } from '../../../../ui/button';
 import { Badge } from '../../../../ui/badge';
@@ -53,13 +53,7 @@ export function PreviousFNAsDialog({
   const [fnas, setFnas] = useState<FNASummary[]>([]);
   const [isLoading, setIsLoading] = useState(false);
 
-  useEffect(() => {
-    if (open && clientId) {
-      loadFNAs();
-    }
-  }, [open, clientId, apiUrl]);
-
-  const loadFNAs = async (): Promise<void> => {
+  const loadFNAs = useCallback(async (): Promise<void> => {
     setIsLoading(true);
     try {
       // Default to Risk Planning URL if no custom API URL is provided
@@ -84,7 +78,13 @@ export function PreviousFNAsDialog({
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [clientId, apiUrl]);
+
+  useEffect(() => {
+    if (open && clientId) {
+      loadFNAs();
+    }
+  }, [open, clientId, apiUrl, loadFNAs]);
 
   const getStatusBadge = (status: string) => {
     const statusConfig: Record<

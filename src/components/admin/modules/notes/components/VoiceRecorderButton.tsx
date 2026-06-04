@@ -117,7 +117,7 @@ export function VoiceRecorderButton({ onInsertText, disabled = false }: VoiceRec
         format: recorder.audioFormat,
       });
     }
-  }, [recorder.status, recorder.audioBlob, recorder.audioFormat]);
+  }, [recorder.status, recorder.audioBlob, recorder.audioFormat, transcriber]);
 
   // ── File upload handler ─────────────────────────────────────────────────
   const handleFileUpload = useCallback(
@@ -160,24 +160,19 @@ export function VoiceRecorderButton({ onInsertText, disabled = false }: VoiceRec
     transcriber.resetTranscription();
     recorder.reset();
     setUploadedFileName(null);
-  }, [
-    transcriber.transcriptionResult,
-    onInsertText,
-    transcriber.resetTranscription,
-    recorder.reset,
-  ]);
+  }, [transcriber, onInsertText, recorder]);
 
   const handleDiscard = useCallback(() => {
     transcriber.resetTranscription();
     recorder.reset();
     setUploadedFileName(null);
-  }, [transcriber.resetTranscription, recorder.reset]);
+  }, [transcriber, recorder]);
 
   const handleRetry = useCallback(() => {
     transcriber.resetTranscription();
     recorder.reset();
     setUploadedFileName(null);
-  }, [transcriber.resetTranscription, recorder.reset]);
+  }, [transcriber, recorder]);
 
   const handleStartRecording = useCallback(() => {
     setShowMenu(false);

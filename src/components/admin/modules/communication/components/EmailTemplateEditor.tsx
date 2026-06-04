@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import ReactQuill from 'react-quill-new';
 import 'react-quill-new/dist/quill.snow.css';
 import { Button } from '../../../../ui/button';
@@ -78,11 +78,7 @@ export function EmailTemplateEditor({ templateId, onBack }: EmailTemplateEditorP
   const [activeTab, setActiveTab] = useState('edit');
   const [scale, setScale] = useState(0.9);
 
-  useEffect(() => {
-    loadTemplate();
-  }, [templateId]);
-
-  const loadTemplate = async () => {
+  const loadTemplate = useCallback(async () => {
     setLoading(true);
     try {
       const [templateData, footerData] = await Promise.all([
@@ -97,7 +93,11 @@ export function EmailTemplateEditor({ templateId, onBack }: EmailTemplateEditorP
     } finally {
       setLoading(false);
     }
-  };
+  }, [templateId]);
+
+  useEffect(() => {
+    loadTemplate();
+  }, [templateId, loadTemplate]);
 
   const handleSave = async () => {
     if (!template) return;

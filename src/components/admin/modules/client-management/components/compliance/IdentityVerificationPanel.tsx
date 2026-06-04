@@ -7,7 +7,7 @@
  * Replaces the old broken /reports/idv endpoint that was guessing paths.
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../../../../../ui/card';
 import { Badge } from '../../../../../ui/badge';
 import { Button } from '../../../../../ui/button';
@@ -81,11 +81,7 @@ export function IdentityVerificationPanel({
   const [isLoadingHistory, setIsLoadingHistory] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
 
-  useEffect(() => {
-    loadHistory();
-  }, [clientId]);
-
-  const loadHistory = async () => {
+  const loadHistory = useCallback(async () => {
     setIsLoadingHistory(true);
     try {
       const data = await api.get<{ history?: CheckHistoryEntry[] }>(
@@ -97,7 +93,11 @@ export function IdentityVerificationPanel({
     } finally {
       setIsLoadingHistory(false);
     }
-  };
+  }, [clientId]);
+
+  useEffect(() => {
+    loadHistory();
+  }, [clientId, loadHistory]);
 
   const handleRunIdv = async () => {
     setIsRunning(true);

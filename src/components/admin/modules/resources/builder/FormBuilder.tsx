@@ -236,7 +236,7 @@ const FormBuilderWorkspace = ({
       setLetterMeta(resource.letterMeta || {});
       setResourceId(resource.id);
     }
-  }, [initialData, resetBlocks]);
+  }, [initialData, resource, resetBlocks]);
 
   // -- Memoised payload to track in autosave --
   const currentPayload: SavePayload = useMemo(

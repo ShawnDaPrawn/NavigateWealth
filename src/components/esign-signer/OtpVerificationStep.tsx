@@ -52,13 +52,37 @@ export function OtpVerificationStep({
     }
   }, [resendCooldown]);
 
+  const handleVerify = useCallback(async () => {
+    const otpValue = otp.join('');
+
+    if (otpValue.length !== 6) {
+      setError('Please enter the complete 6-digit code');
+      return;
+    }
+
+    setIsVerifying(true);
+    setError(null);
+
+    const result = await verifyOtp(token, otpValue);
+
+    if (result.success) {
+      onVerified();
+    } else {
+      setError(result.error || 'Invalid verification code. Please try again.');
+      setOtp(['', '', '', '', '', '']);
+      inputRefs.current[0]?.focus();
+    }
+
+    setIsVerifying(false);
+  }, [otp, token, verifyOtp, onVerified]);
+
   // Auto-submit when all digits are entered
   useEffect(() => {
     const isComplete = otp.every((digit) => digit !== '');
     if (isComplete && !isVerifying) {
       handleVerify();
     }
-  }, [otp, isVerifying]);
+  }, [otp, isVerifying, handleVerify]);
 
   const handleOtpChange = (index: number, value: string) => {
     if (value && !/^\d$/.test(value)) return;
@@ -91,30 +115,6 @@ export function OtpVerificationStep({
     const focusIndex = Math.min(pastedData.length, 5);
     inputRefs.current[focusIndex]?.focus();
   };
-
-  const handleVerify = useCallback(async () => {
-    const otpValue = otp.join('');
-
-    if (otpValue.length !== 6) {
-      setError('Please enter the complete 6-digit code');
-      return;
-    }
-
-    setIsVerifying(true);
-    setError(null);
-
-    const result = await verifyOtp(token, otpValue);
-
-    if (result.success) {
-      onVerified();
-    } else {
-      setError(result.error || 'Invalid verification code. Please try again.');
-      setOtp(['', '', '', '', '', '']);
-      inputRefs.current[0]?.focus();
-    }
-
-    setIsVerifying(false);
-  }, [otp, token, verifyOtp, onVerified]);
 
   const handleResendOtp = async () => {
     setError(null);

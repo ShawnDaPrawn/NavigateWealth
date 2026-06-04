@@ -207,7 +207,7 @@ export function ExtractionComparisonDialog({
       setFilterMode('all');
       setNoSnapshotData(false);
     }
-  }, [isOpen, fetchComparisonData]);
+  }, [isOpen, leftEntry, rightEntry, fetchComparisonData]);
 
   // Filter fields
   const filteredFields = comparisonFields.filter((field) => {

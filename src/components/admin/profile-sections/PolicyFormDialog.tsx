@@ -4,7 +4,7 @@
  * and Provider Configuration for provider selection
  */
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -200,27 +200,7 @@ export function PolicyFormDialog({
     }
   }, [isOpen, initialCategoryId, editingPolicy]);
 
-  // Load providers and structure whenever activeCategoryId changes (and we are past subcategory step)
-  useEffect(() => {
-    if (isOpen && activeCategoryId && step !== 'subcategory') {
-      loadProviders();
-      loadTableStructure();
-    }
-  }, [isOpen, activeCategoryId, step]);
-
-  useEffect(() => {
-    if (!isOpen || !editingPolicy || tableStructure.length === 0 || hasUnsavedEdits) return;
-
-    setFormData((prev) =>
-      normalizePolicyDataForStructure(
-        prev,
-        tableStructure,
-        (editingPolicy.data as Record<string, unknown> | undefined) || {},
-      ),
-    );
-  }, [isOpen, editingPolicy, tableStructure, hasUnsavedEdits]);
-
-  const loadProviders = async () => {
+  const loadProviders = useCallback(async () => {
     setIsLoading(true);
     try {
       const data = await api.get<{
@@ -282,9 +262,9 @@ export function PolicyFormDialog({
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [activeCategoryId]);
 
-  const loadTableStructure = async () => {
+  const loadTableStructure = useCallback(async () => {
     setIsLoading(true);
     try {
       const raw = await api.get<unknown>(`/integrations/schemas?categoryId=${activeCategoryId}`);
@@ -324,7 +304,27 @@ export function PolicyFormDialog({
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [activeCategoryId]);
+
+  // Load providers and structure whenever activeCategoryId changes (and we are past subcategory step)
+  useEffect(() => {
+    if (isOpen && activeCategoryId && step !== 'subcategory') {
+      loadProviders();
+      loadTableStructure();
+    }
+  }, [isOpen, activeCategoryId, step, loadProviders, loadTableStructure]);
+
+  useEffect(() => {
+    if (!isOpen || !editingPolicy || tableStructure.length === 0 || hasUnsavedEdits) return;
+
+    setFormData((prev) =>
+      normalizePolicyDataForStructure(
+        prev,
+        tableStructure,
+        (editingPolicy.data as Record<string, unknown> | undefined) || {},
+      ),
+    );
+  }, [isOpen, editingPolicy, tableStructure, hasUnsavedEdits]);
 
   const handleSubcategorySelect = (subId: string) => {
     setActiveCategoryId(subId);

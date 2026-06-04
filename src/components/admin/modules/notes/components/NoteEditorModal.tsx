@@ -276,7 +276,7 @@ export function NoteEditorModal({
     }
     setEditorMode('write');
     autoSave.reset();
-  }, [note, isOpen, defaultClientId, defaultClientName]);
+  }, [note, isOpen, defaultClientId, defaultClientName, autoSave]);
 
   // ── Summarise handler ──────────────────────────────────────────────────
   const handleSummarise = useCallback(async () => {

@@ -308,7 +308,7 @@ export function EnvelopeInspector({
           // Fallback to what we have
         });
     }
-  }, [open, envelope?.id]);
+  }, [open, envelope?.id, envelope]);
 
   // Fetch audit trail when audit tab is selected
   useEffect(() => {
