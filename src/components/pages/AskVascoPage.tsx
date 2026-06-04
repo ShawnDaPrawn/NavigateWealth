@@ -270,6 +270,7 @@ export function AskVascoPage() {
   const [limitReached, setLimitReached] = useState(false);
   const [showClearConfirm, setShowClearConfirm] = useState(false);
   const [showHandoff, setShowHandoff] = useState(false);
+  const [isExpanded, setIsExpanded] = useState(false);
   const [visitorId] = useState(getOrCreateVascoVisitorId);
   const vascoExtraBody = useMemo(() => ({ visitorId }), [visitorId]);
 
@@ -336,6 +337,21 @@ export function AskVascoPage() {
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: 'auto' });
   }, []);
+
+  // Focused (expanded) mode: lock background scroll and allow Escape to collapse.
+  useEffect(() => {
+    if (!isExpanded) return;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    const handleKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setIsExpanded(false);
+    };
+    window.addEventListener('keydown', handleKey);
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      window.removeEventListener('keydown', handleKey);
+    };
+  }, [isExpanded]);
 
   const conversationSummary = messages
     .filter((m) => m.role === 'user')
@@ -643,8 +659,20 @@ export function AskVascoPage() {
             </div>
 
             <div className="order-1 lg:order-2 lg:col-span-3">
+              {isExpanded && (
+                <div
+                  className="fixed inset-0 z-40 bg-[#1a1e36]/40 backdrop-blur-sm"
+                  onClick={() => setIsExpanded(false)}
+                  aria-hidden="true"
+                />
+              )}
               <VascoInlineChatCard
-                className="border-[#ddd6fe]/80 bg-white/95 shadow-[0_24px_70px_-48px_rgba(26,30,54,0.7)]"
+                className={
+                  isExpanded
+                    ? 'fixed inset-0 z-50 m-0 rounded-none border-0 bg-white shadow-2xl sm:inset-6 sm:rounded-2xl sm:border lg:inset-x-24 xl:inset-x-44'
+                    : 'border-[#ddd6fe]/80 bg-white/95 shadow-[0_24px_70px_-48px_rgba(26,30,54,0.7)]'
+                }
+                shellClassName={isExpanded ? 'h-full' : undefined}
                 headerClassName="border-[#ddd6fe]/80 bg-[linear-gradient(135deg,rgba(255,255,255,0.96),rgba(245,243,255,0.92))]"
                 messagesClassName="bg-[#f8f9fb] [background-image:linear-gradient(rgba(26,30,54,0.035)_1px,transparent_1px),linear-gradient(90deg,rgba(109,40,217,0.055)_1px,transparent_1px)] [background-size:42px_42px]"
                 sessionTitle="Ask Vasco"
@@ -658,7 +686,9 @@ export function AskVascoPage() {
                 onSendMessage={() => void sendMessage()}
                 onClear={() => setShowClearConfirm(true)}
                 showNewChat={false}
-                showExpand={false}
+                showExpand
+                isExpanded={isExpanded}
+                onExpand={() => setIsExpanded((v) => !v)}
                 disableActions={isStreaming}
                 inputDisabled={limitReached}
                 isWelcomeMessage={isWelcomeMessage}
