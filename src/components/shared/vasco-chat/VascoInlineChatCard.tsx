@@ -1,5 +1,5 @@
 import React, { useEffect, useRef } from 'react';
-import { Eraser, Maximize2, Plus } from 'lucide-react';
+import { Eraser, Maximize2, Minimize2, Plus } from 'lucide-react';
 import { Button } from '../../ui/button';
 import { Card } from '../../ui/card';
 import { cn } from '../../ui/utils';
@@ -27,6 +27,8 @@ export interface VascoInlineChatCardProps {
   showNewChat?: boolean;
   showClear?: boolean;
   showExpand?: boolean;
+  /** When true, the expand control shows a collapse icon/label instead. */
+  isExpanded?: boolean;
   disableActions?: boolean;
   disableClear?: boolean;
   inputDisabled?: boolean;
@@ -59,6 +61,7 @@ export function VascoInlineChatCard({
   showNewChat = true,
   showClear = true,
   showExpand = true,
+  isExpanded = false,
   disableActions = false,
   disableClear = false,
   inputDisabled = false,
@@ -136,9 +139,10 @@ export function VascoInlineChatCard({
                 variant="ghost"
                 size="sm"
                 className="h-9 w-9 p-0 text-gray-500 hover:bg-purple-50 hover:text-[#6d28d9]"
-                title="Expand"
+                title={isExpanded ? 'Collapse' : 'Expand'}
+                aria-label={isExpanded ? 'Collapse chat' : 'Expand chat'}
               >
-                <Maximize2 className="h-4 w-4" />
+                {isExpanded ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
               </Button>
             )}
           </div>

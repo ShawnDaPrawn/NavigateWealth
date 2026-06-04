@@ -69,7 +69,7 @@ export function VascoChatInput({
           onChange={(e) => onChange(e.target.value)}
           onKeyDown={handleKeyDown}
           placeholder={placeholder}
-          className="min-h-[55px] max-h-[120px] pr-14 resize-none py-3.5 px-4 rounded-xl border-gray-200 focus:border-primary focus:ring-1 focus:ring-primary bg-gray-50 text-sm"
+          className="min-h-[55px] max-h-[120px] pr-14 resize-none py-3.5 pl-4 rounded-xl border-gray-200 focus:border-primary focus:ring-1 focus:ring-primary bg-gray-50 text-sm"
           disabled={isLoading || disabled}
         />
         <Button
