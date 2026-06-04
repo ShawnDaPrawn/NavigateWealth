@@ -61,6 +61,14 @@ function writeInstalledFlag(): void {
   }
 }
 
+function clearInstalledFlag(): void {
+  try {
+    localStorage.removeItem(INSTALLED_KEY);
+  } catch {
+    /* non-fatal */
+  }
+}
+
 function isDismissedRecently(): boolean {
   try {
     const raw = localStorage.getItem(DISMISS_KEY);
@@ -94,11 +102,16 @@ export function InstallAppPrompt() {
   const isStandalone = isStandaloneDisplay();
   const iosSafari = isIosSafari();
 
-  // Persist the "installed" flag from every available signal so we never re-ask.
+  // Reconcile the persisted "installed" flag with reality so we never suppress
+  // the prompt for a user who has since uninstalled the app.
   useEffect(() => {
     const markInstalled = () => {
       writeInstalledFlag();
       setInstalledFlag(true);
+    };
+    const markUninstalled = () => {
+      clearInstalledFlag();
+      setInstalledFlag(false);
     };
 
     // Running inside the installed app (or already detected as installed).
@@ -110,18 +123,33 @@ export function InstallAppPrompt() {
     const handleAppInstalled = () => markInstalled();
     window.addEventListener('appinstalled', handleAppInstalled);
 
-    // Chromium-only: detect a previously installed PWA even from a browser tab.
-    (navigator as NavigatorWithRelatedApps)
-      .getInstalledRelatedApps?.()
-      .then((apps) => {
-        if (Array.isArray(apps) && apps.length > 0) markInstalled();
-      })
-      .catch(() => {
-        /* unsupported or rejected — ignore */
-      });
+    // Chromium-only: authoritative check of whether our PWA is currently
+    // installed. Set the flag if it is, and CLEAR it if it isn't (e.g. the user
+    // uninstalled) so the install prompt can return.
+    const nav = navigator as NavigatorWithRelatedApps;
+    if (typeof nav.getInstalledRelatedApps === 'function') {
+      nav
+        .getInstalledRelatedApps()
+        .then((apps) => {
+          if (Array.isArray(apps) && apps.length > 0) markInstalled();
+          else if (!isStandalone) markUninstalled();
+        })
+        .catch(() => {
+          /* unsupported or rejected — ignore */
+        });
+    }
 
     return () => window.removeEventListener('appinstalled', handleAppInstalled);
   }, [isAppInstalled, isStandalone]);
+
+  // `beforeinstallprompt` only fires when the app is installable, i.e. NOT
+  // currently installed. Treat it as proof and clear any stale installed flag.
+  useEffect(() => {
+    if (showInstallOption && !isStandalone) {
+      clearInstalledFlag();
+      setInstalledFlag(false);
+    }
+  }, [showInstallOption, isStandalone]);
 
   const handleDismiss = useCallback(() => {
     try {
@@ -159,7 +187,10 @@ export function InstallAppPrompt() {
   }, [iosSafari, installApp]);
 
   const onPromptRoute = PROMPT_ROUTES.includes(location.pathname);
-  const alreadyInstalled = installedFlag || isAppInstalled || isStandalone;
+  // On Android/desktop the live signals (standalone + beforeinstallprompt) are
+  // authoritative, so the persisted flag only suppresses on iOS — where Safari
+  // gives us no way to detect install state from the browser.
+  const alreadyInstalled = isAppInstalled || isStandalone || (iosSafari && installedFlag);
   // Android/desktop need a captured prompt; iOS Safari is always eligible.
   const canPrompt = iosSafari || showInstallOption;
   const visible = onPromptRoute && !alreadyInstalled && !dismissed && canPrompt;
