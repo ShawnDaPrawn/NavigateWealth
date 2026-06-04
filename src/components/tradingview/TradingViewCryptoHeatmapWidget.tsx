@@ -1,4 +1,5 @@
 import { useEffect, useRef, memo, useState } from 'react';
+import { logger } from '../../utils/logger';
 
 function TradingViewCryptoHeatmapWidget() {
   const container = useRef<HTMLDivElement>(null);
@@ -19,13 +20,13 @@ function TradingViewCryptoHeatmapWidget() {
 
       // Graceful fallback if external script fails to load
       script.onerror = () => {
-        console.debug('[TradingView] Crypto heatmap widget script failed to load.');
+        logger.debug('[TradingView] Crypto heatmap widget script failed to load.');
         setHasError(true);
       };
 
       // Calculate responsive dimensions
       const width = window.innerWidth;
-      let dimensions = { width: '100%', height: '600' };
+      let dimensions: { width: string; height: string };
 
       if (width >= 1536) {
         // 2xl

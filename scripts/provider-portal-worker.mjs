@@ -311,7 +311,7 @@ async function visibleLocator(pageOrLocator, selector, timeout = 30000) {
   return locator;
 }
 
-async function firstVisibleSelector(page, selectors, timeoutMs) {
+async function _firstVisibleSelector(page, selectors, timeoutMs) {
   const deadline = Date.now() + timeoutMs;
   while (Date.now() < deadline) {
     for (const selector of selectors) {
@@ -948,7 +948,7 @@ async function waitForAuthCheckpointToClear(page, flow, timeoutMs = 20000) {
 }
 
 async function fillManualOtp(page, flow, code, preferredSelector, existingTarget) {
-  const otp = flow?.otp || {};
+  const _otp = flow?.otp || {};
   const target = existingTarget || await findOtpEntryTarget(page, flow, preferredSelector, 90000);
   if (!target) {
     const snapshot = await capturePolicyConfirmationSnapshot(page).catch(() => ({ sample: '' }));
@@ -2791,7 +2791,7 @@ async function extractByLabels(page, fields) {
       const money = valueText.match(/R\s*[\d\s,]+(?:\.\d{1,2})?/i);
       return money ? money[0].trim() : '';
     };
-    const findCurrencyNearLabel = (labelElement, label) => {
+    const findCurrencyNearLabel = (labelElement, _label) => {
       const labelRect = labelElement.getBoundingClientRect();
       const moneyElements = elements
         .map((el) => ({ el, text: normalise(el.textContent), rect: el.getBoundingClientRect() }))
