@@ -8,12 +8,7 @@ import { rateLimit } from './esign-rate-limit.ts';
 import { requireIdempotency } from './idempotency.ts';
 import { formatZodError } from './shared-validation-utils.ts';
 import { SignEnvelopeSchema, RejectEnvelopeSchema } from './esign-validation.ts';
-import {
-  getRequestMetadata,
-  audActor,
-  resolveFirmId,
-  SignerRecord,
-} from './esign-route-helpers.ts';
+import { getRequestMetadata, audActor, resolveFirmId } from './esign-route-helpers.ts';
 import { belongsToFirm } from './esign-firm-scope.ts';
 import {
   getEnvelopeDetails,
@@ -336,10 +331,8 @@ app.post(
         // Sequential mode: notify next pending signer in order
         if (adminSignMode === 'sequential') {
           const allSigners = await getEnvelopeSigners(envelopeId);
-          const sorted = [...allSigners].sort(
-            (a: SignerRecord, b: SignerRecord) => (a.order || 0) - (b.order || 0),
-          );
-          const nextSigner = sorted.find((s: SignerRecord) => s.status === 'pending');
+          const sorted = [...allSigners].sort((a, b) => (a.order || 0) - (b.order || 0));
+          const nextSigner = sorted.find((s) => s.status === 'pending');
 
           if (nextSigner) {
             try {

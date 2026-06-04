@@ -92,7 +92,7 @@ app.post('/:userId/activity', requireAuth, async (c) => {
       timestamp,
       ip,
       userAgent,
-      success: activitySuccess,
+      success: activitySuccess ?? false,
       errorMessage,
       metadata,
     };

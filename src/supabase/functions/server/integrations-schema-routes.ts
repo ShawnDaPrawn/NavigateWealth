@@ -19,7 +19,7 @@ import { createModuleLogger } from './stderr-logger.ts';
 import { formatZodError } from './shared-validation-utils.ts';
 import { DEFAULT_SCHEMAS } from './default-schemas.ts';
 import { SaveSchemaInputSchema } from './integrations-validation.ts';
-import type { KvSchema } from './integrations-types.ts';
+import type { KvSchema, SchemaField } from './integrations-types.ts';
 import { autoGenerateCustomKeysForSchema } from './integrations-derive.ts';
 
 const app = new Hono();
@@ -120,7 +120,7 @@ app.post('/schemas', async (c) => {
 
     await kv.set(key, schema);
 
-    autoGenerateCustomKeysForSchema(categoryId, fields).catch((e) => {
+    autoGenerateCustomKeysForSchema(categoryId, fields as unknown as SchemaField[]).catch((e) => {
       log.error('Background error generating custom keys:', e);
     });
 

@@ -31,6 +31,7 @@ export type InAppNotificationType =
   | 'envelope.recalled'
   | 'signer.signed'
   | 'reminder.sent'
+  | 'envelope.stuck'
   | 'system';
 
 export interface InAppNotification {

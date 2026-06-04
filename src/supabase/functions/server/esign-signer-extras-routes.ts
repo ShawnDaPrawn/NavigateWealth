@@ -60,7 +60,7 @@ app.get('/signer/download/:token', async (c) => {
       const signedPdfBuffer = await downloadDocument(envelope.signed_document_path);
 
       if (signedPdfBuffer) {
-        return new Response(signedPdfBuffer, {
+        return new Response(signedPdfBuffer as unknown as ArrayBuffer, {
           headers: {
             'Content-Type': 'application/pdf',
             'Content-Disposition': `attachment; filename="${envelope.document?.original_filename?.replace('.pdf', '_signed.pdf') || 'signed_document.pdf'}"`,
@@ -103,7 +103,7 @@ app.get('/signer/download/:token', async (c) => {
         log.warn('Certificate merge failed during fallback download', { error: String(certError) });
       }
 
-      return new Response(finalPdfBuffer, {
+      return new Response(finalPdfBuffer as unknown as ArrayBuffer, {
         headers: {
           'Content-Type': 'application/pdf',
           'Content-Disposition': `attachment; filename="${envelope.document?.original_filename?.replace('.pdf', '_signed.pdf') || 'signed_document.pdf'}"`,

@@ -13,7 +13,7 @@ CREATE TABLE kv_store_91ed8379 (
 import { createClient } from 'jsr:@supabase/supabase-js@2.49.8';
 
 const client = () =>
-  createClient(Deno.env.get('SUPABASE_URL'), Deno.env.get('SUPABASE_SERVICE_ROLE_KEY'));
+  createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!);
 
 const prefixUpperBound = (prefix: string): string => `${prefix}\uffff`;
 

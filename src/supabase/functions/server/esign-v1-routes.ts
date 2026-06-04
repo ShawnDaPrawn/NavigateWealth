@@ -113,7 +113,7 @@ v1Routes.get('/v1/envelopes/:id/signed-pdf', async (c) => {
     if (!path) return c.json({ error: 'Signed document not yet materialised' }, 404);
     const buf = await downloadDocument(path);
     if (!buf) return c.json({ error: 'Signed document missing in storage' }, 404);
-    return new Response(buf, {
+    return new Response(buf as unknown as ArrayBuffer, {
       headers: {
         'Content-Type': 'application/pdf',
         'Content-Disposition': `attachment; filename="envelope_${id}_signed.pdf"`,

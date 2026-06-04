@@ -344,7 +344,7 @@ export async function syncApplicationToProfile(
         }
       }
 
-      updatedProfile.personalInformation = personalInfo;
+      (updatedProfile as Record<string, unknown>).personalInformation = personalInfo;
     }
 
     await kv.set(profileKey, updatedProfile);

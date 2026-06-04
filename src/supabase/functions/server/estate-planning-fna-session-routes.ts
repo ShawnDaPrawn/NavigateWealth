@@ -94,8 +94,8 @@ app.get('/client/:clientId/auto-populate', async (c) => {
     // Fetch assets
     const assetRecords = await kv.getByPrefix(`asset:${clientId}:`);
     const assets = (assetRecords || []).map((asset: EstateAsset) => {
-      const assetType = asset.assetType || 'personal';
-      const subType = asset.subType || 'other';
+      const assetType = String(asset.assetType || 'personal');
+      const subType = String(asset.subType || 'other');
 
       return {
         id: asset.id || `asset-${Math.random()}`,
@@ -139,7 +139,7 @@ app.get('/client/:clientId/auto-populate', async (c) => {
       .filter(
         (policy: EstatePolicy) =>
           policy.category === 'risk_planning' &&
-          ['life_cover', 'group_life', 'funeral'].includes(policy.policyType),
+          ['life_cover', 'group_life', 'funeral'].includes(String(policy.policyType)),
       )
       .map((policy: EstatePolicy) => {
         const beneficiaryType = policy.beneficiaryType || 'estate';

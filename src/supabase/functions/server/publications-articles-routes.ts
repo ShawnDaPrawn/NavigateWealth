@@ -130,7 +130,11 @@ articlesRoutes.post('/articles', async (c) => {
 
     // Create initial version snapshot (Phase 4)
     try {
-      await VersionService.createVersion(id, article, last_edited_by || 'system');
+      await VersionService.createVersion(
+        id,
+        article as unknown as Record<string, unknown>,
+        last_edited_by || 'system',
+      );
     } catch (vErr) {
       log.error('Failed to create initial version snapshot', vErr);
     }
@@ -221,7 +225,11 @@ articlesRoutes.put('/articles/:id', async (c) => {
     // Auto-create version snapshot on article update (Phase 4)
     try {
       const editedBy = body.last_edited_by || 'system';
-      await VersionService.createVersion(id, updated, editedBy);
+      await VersionService.createVersion(
+        id,
+        updated as unknown as Record<string, unknown>,
+        editedBy,
+      );
     } catch (vErr) {
       // Version creation failure is non-critical — log but don't fail the update
       log.error('Failed to create version snapshot on article update', vErr);

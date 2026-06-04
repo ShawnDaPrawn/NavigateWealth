@@ -4,7 +4,7 @@ import { EsignKeys } from './esign-keys.ts';
 import { getAuthContext, AuthError } from './auth-mw.ts';
 import { createModuleLogger } from './stderr-logger.ts';
 import { requireIdempotency } from './idempotency.ts';
-import { getRequestMetadata, resolveFirmId, SignerRecord } from './esign-route-helpers.ts';
+import { getRequestMetadata, resolveFirmId } from './esign-route-helpers.ts';
 import { AdminAuditService } from './admin-audit-service.ts';
 import {
   getEnvelopeDetails,
@@ -71,7 +71,7 @@ app.delete('/envelopes/:envelopeId', async (c) => {
     }
 
     const signers = await getEnvelopeSigners(envelopeId);
-    const anyoneSigned = signers.some((s: SignerRecord) => s.status === 'signed');
+    const anyoneSigned = signers.some((s) => s.status === 'signed');
 
     const discardableStatuses = ['draft', 'sent', 'viewed'];
     if (!discardableStatuses.includes(envelope.status)) {
@@ -147,7 +147,7 @@ app.delete('/envelopes/:envelopeId', async (c) => {
     const { ip, userAgent } = getRequestMetadata(c);
     await logAuditEvent({
       envelopeId,
-      actorType: 'admin',
+      actorType: 'sender_user',
       actorId: user.id,
       action: 'soft_deleted',
       email: user.email || 'admin@system',
@@ -259,7 +259,7 @@ app.post(
       const { ip, userAgent } = getRequestMetadata(c);
       await logAuditEvent({
         envelopeId,
-        actorType: 'admin',
+        actorType: 'sender_user',
         actorId: user.id,
         action: 'recalled',
         email: user.email || 'admin@system',
@@ -386,7 +386,12 @@ app.post(
 
       // Send reminder emails to pending signers
       log.info(`📧 Sending reminders to ${pendingSigners.length} pending signers`);
-      const remindersSent: Array<{ signerId: string; email: string; success: boolean }> = [];
+      const remindersSent: Array<{
+        signerId: string;
+        email: string;
+        name?: string;
+        success?: boolean;
+      }> = [];
 
       for (const signer of pendingSigners) {
         try {
@@ -415,7 +420,7 @@ app.post(
           const { ip, userAgent } = getRequestMetadata(c);
           await logAuditEvent({
             envelopeId,
-            actorType: 'admin',
+            actorType: 'sender_user',
             actorId: user.id,
             action: 'reminder_sent',
             email: signer.email,

@@ -14,6 +14,7 @@
 import * as kv from './kv_store.tsx';
 import * as repo from './communication-repo.ts';
 import { createModuleLogger } from './stderr-logger.ts';
+import type { LogContext } from './shared-logger-types.ts';
 import type { ExternalContact } from './communication-types.ts';
 import type { Group } from './communication-types.ts';
 
@@ -433,6 +434,6 @@ export async function backfillLegacyNewsletterSubscribersToGroup(): Promise<News
   };
 
   await kv.set(LEGACY_BACKFILL_STATE_KEY, state);
-  log.info('Legacy newsletter subscriber backfill completed', state);
+  log.info('Legacy newsletter subscriber backfill completed', state as LogContext);
   return state;
 }

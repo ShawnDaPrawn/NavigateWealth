@@ -402,28 +402,19 @@ adminRoutes.post('/articles/:id/send-notifications', async (c) => {
       string,
       { id: string; email: string; emailVerified: boolean; firstName: string; lastName: string }
     >();
-    users.forEach(
-      (user: {
-        id: string;
-        email: string;
-        email_confirmed_at: string | null;
-        user_metadata?: Record<string, unknown>;
-      }) => {
-        userMap.set(user.id, {
-          id: user.id,
-          email: user.email,
-          emailVerified: user.email_confirmed_at !== null,
-          firstName:
-            (user.user_metadata?.firstName as string) ||
-            (user.user_metadata?.first_name as string) ||
-            'Valued Client',
-          lastName:
-            (user.user_metadata?.surname as string) ||
-            (user.user_metadata?.lastName as string) ||
-            '',
-        });
-      },
-    );
+    users.forEach((user) => {
+      userMap.set(user.id, {
+        id: user.id,
+        email: user.email ?? '',
+        emailVerified: user.email_confirmed_at !== null,
+        firstName:
+          (user.user_metadata?.firstName as string) ||
+          (user.user_metadata?.first_name as string) ||
+          'Valued Client',
+        lastName:
+          (user.user_metadata?.surname as string) || (user.user_metadata?.lastName as string) || '',
+      });
+    });
 
     // Collect recipients from all groups
     const recipientMap = new Map();
