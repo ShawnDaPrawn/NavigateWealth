@@ -43,11 +43,12 @@ documentsEmailRoutes.post('/:userId/email', async (c) => {
       emailType,
       customMessage,
       isHtml,
-      ccAdmin,
+      ccAdmin: ccAdminRaw,
       subject: providedSubject,
       source,
       cc: providedCc,
     } = await c.req.json();
+    let ccAdmin = ccAdminRaw;
 
     if (!documentIds || !Array.isArray(documentIds) || documentIds.length === 0) {
       return c.json({ success: false, error: 'No documents selected' }, 400);

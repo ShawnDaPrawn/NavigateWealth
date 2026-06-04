@@ -316,7 +316,12 @@ export async function runIdvNoPhoto(
       verificationStatus: data?.verificationStatus || 'completed',
     });
 
-    return { success: true, data, matterId, checkType };
+    return {
+      success: true,
+      data,
+      matterId: matterId ?? undefined,
+      checkType: checkType ?? undefined,
+    };
   } catch (err) {
     log.error('IDV (no photo) error:', err);
     return { success: false, error: (err as Error).message };
@@ -366,7 +371,12 @@ export async function runIdvWithPhoto(
       photoMatch: data?.photoMatch,
     });
 
-    return { success: true, data, matterId, checkType };
+    return {
+      success: true,
+      data,
+      matterId: matterId ?? undefined,
+      checkType: checkType ?? undefined,
+    };
   } catch (err) {
     log.error('IDV (with photo) error:', err);
     return { success: false, error: (err as Error).message };
@@ -427,7 +437,7 @@ export async function runBankVerification(
       // Do NOT log account number (PII) — only bank name
     });
 
-    return { success: true, data, matterId, checkType: 'bank_verification' };
+    return { success: true, data, matterId: matterId ?? undefined, checkType: 'bank_verification' };
   } catch (err) {
     log.error('Bank verification error:', err);
     return { success: false, error: (err as Error).message };
@@ -470,7 +480,7 @@ export async function runConsumerCredit(
       // Do NOT log detailed financial data (PII)
     });
 
-    return { success: true, data, matterId, checkType: 'consumer_credit' };
+    return { success: true, data, matterId: matterId ?? undefined, checkType: 'consumer_credit' };
   } catch (err) {
     log.error('Consumer credit error:', err);
     return { success: false, error: (err as Error).message };
@@ -515,7 +525,7 @@ export async function runConsumerTrace(
       checkType: 'consumer_trace',
     });
 
-    return { success: true, data, matterId, checkType: 'consumer_trace' };
+    return { success: true, data, matterId: matterId ?? undefined, checkType: 'consumer_trace' };
   } catch (err) {
     log.error('Consumer trace error:', err);
     return { success: false, error: (err as Error).message };
@@ -567,7 +577,7 @@ export async function runDebtReviewEnquiry(
       debtReviewStatus: isUnderReview ? 'Under Review' : 'Clear',
     });
 
-    return { success: true, data, matterId, checkType: 'debt_enquiry' };
+    return { success: true, data, matterId: matterId ?? undefined, checkType: 'debt_enquiry' };
   } catch (err) {
     log.error('Debt review enquiry error:', err);
     return { success: false, error: (err as Error).message };
@@ -827,7 +837,7 @@ export async function runCipcSearch(
       companiesFound: companies.length,
     });
 
-    return { success: true, data, matterId, checkType: 'cipc' };
+    return { success: true, data, matterId: matterId ?? undefined, checkType: 'cipc' };
   } catch (err) {
     log.error('CIPC search error:', err);
     return { success: false, error: (err as Error).message };
@@ -879,7 +889,7 @@ export async function runDirectorEnquiry(
       directorshipsFound: directorships.length,
     });
 
-    return { success: true, data, matterId, checkType: 'director_enquiry' };
+    return { success: true, data, matterId: matterId ?? undefined, checkType: 'director_enquiry' };
   } catch (err) {
     log.error('Director enquiry error:', err);
     return { success: false, error: (err as Error).message };
@@ -929,7 +939,12 @@ export async function runBestKnownAddress(
       checkType: 'best_known_address',
     });
 
-    return { success: true, data, matterId, checkType: 'best_known_address' };
+    return {
+      success: true,
+      data,
+      matterId: matterId ?? undefined,
+      checkType: 'best_known_address',
+    };
   } catch (err) {
     log.error('Best known address error:', err);
     return { success: false, error: (err as Error).message };
@@ -985,7 +1000,7 @@ export async function runCustomScreening(
       packageId: packageId || 'default',
     });
 
-    return { success: true, data, matterId, checkType: 'custom_screening' };
+    return { success: true, data, matterId: matterId ?? undefined, checkType: 'custom_screening' };
   } catch (err) {
     log.error('Custom screening error:', err);
     return { success: false, error: (err as Error).message };
@@ -1038,7 +1053,7 @@ export async function runLifestyleAudit(
       estimatedIncome: data?.estimatedIncome,
     });
 
-    return { success: true, data, matterId, checkType: 'lifestyle_audit' };
+    return { success: true, data, matterId: matterId ?? undefined, checkType: 'lifestyle_audit' };
   } catch (err) {
     log.error('Lifestyle audit error:', err);
     return { success: false, error: (err as Error).message };
@@ -1087,7 +1102,7 @@ export async function runIncomePredictor(
       confidenceLevel: data?.confidenceLevel,
     });
 
-    return { success: true, data, matterId, checkType: 'income_predictor' };
+    return { success: true, data, matterId: matterId ?? undefined, checkType: 'income_predictor' };
   } catch (err) {
     log.error('Income predictor error:', err);
     return { success: false, error: (err as Error).message };
@@ -1136,7 +1151,7 @@ export async function runTendersBlue(
       tendersFound: tenders.length,
     });
 
-    return { success: true, data, matterId, checkType: 'tenders_blue' };
+    return { success: true, data, matterId: matterId ?? undefined, checkType: 'tenders_blue' };
   } catch (err) {
     log.error('Tenders blue error:', err);
     return { success: false, error: (err as Error).message };
@@ -1182,7 +1197,7 @@ export async function runCddReport(
       checkType: 'cdd_report',
     });
 
-    return { success: true, data, matterId, checkType: 'cdd_report' };
+    return { success: true, data, matterId: matterId ?? undefined, checkType: 'cdd_report' };
   } catch (err) {
     log.error('CDD report error:', err);
     return { success: false, error: (err as Error).message };
@@ -1306,7 +1321,7 @@ export async function runBulkIdv(
         totalMatched,
         totalFailed,
       },
-      matterId,
+      matterId: matterId ?? undefined,
       checkType: 'idv_bulk',
     };
   } catch (err) {

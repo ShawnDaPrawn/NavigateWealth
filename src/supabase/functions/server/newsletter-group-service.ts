@@ -434,6 +434,6 @@ export async function backfillLegacyNewsletterSubscribersToGroup(): Promise<News
   };
 
   await kv.set(LEGACY_BACKFILL_STATE_KEY, state);
-  log.info('Legacy newsletter subscriber backfill completed', state as LogContext);
+  log.info('Legacy newsletter subscriber backfill completed', state as unknown as LogContext);
   return state;
 }

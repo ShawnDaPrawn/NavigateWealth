@@ -57,7 +57,7 @@ app.get('/clients/:clientId/envelopes', async (c) => {
     // P6.9 — a client can legitimately span firms on a multi-tenant
     // install, but the caller should only ever see envelopes that
     // belong to their firm (or standalone envelopes).
-    const scoped = (envelopes as Array<Record<string, unknown>>).filter((e) =>
+    const scoped = (envelopes as unknown as Array<Record<string, unknown>>).filter((e) =>
       belongsToFirm(ctx.user, { firm_id: (e.firm_id as string | undefined) ?? null }),
     );
 

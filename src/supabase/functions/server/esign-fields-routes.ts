@@ -16,7 +16,7 @@ import { getAuthContext, AuthError } from './auth-mw.ts';
 import { createModuleLogger } from './stderr-logger.ts';
 import { formatZodError } from './shared-validation-utils.ts';
 import { UpdateFieldsSchema } from './esign-validation.ts';
-import { getRequestMetadata } from './esign-route-helpers.ts';
+import { getRequestMetadata, FieldRecord } from './esign-route-helpers.ts';
 import { getEnvelopeDetails, logAuditEvent } from './esign-services.ts';
 
 const log = createModuleLogger('esign-fields-routes');

@@ -18,7 +18,12 @@ import { createModuleLogger } from './stderr-logger.ts';
 import { getErrMsg } from './shared-logger-utils.ts';
 import { rateLimit } from './esign-rate-limit.ts';
 import { requireIdempotency } from './idempotency.ts';
-import { getRequestMetadata, ensureStorageBuckets } from './esign-route-helpers.ts';
+import {
+  getRequestMetadata,
+  ensureStorageBuckets,
+  SignerRecord,
+  FieldRecord,
+} from './esign-route-helpers.ts';
 import {
   createDocument,
   getEnvelopeDetails,

@@ -1,5 +1,5 @@
 import { Hono } from 'npm:hono';
-import type { StatusCode } from 'npm:hono';
+import type { StatusCode } from 'npm:hono/utils/http-status';
 import { ZodError } from 'npm:zod';
 import { createModuleLogger } from './stderr-logger.ts';
 import { getErrMsg } from './shared-logger-utils.ts';

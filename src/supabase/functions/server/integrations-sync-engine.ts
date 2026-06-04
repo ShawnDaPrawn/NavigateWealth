@@ -847,7 +847,7 @@ export function portalRowHasBusinessValue(rawData: Record<string, unknown>): boo
     const normalisedKey = String(key || '')
       .trim()
       .toLowerCase();
-    if (!normalisedKey || metadataColumns.has(key)) return false;
+    if (!normalisedKey || (metadataColumns as Set<string>).has(key)) return false;
     if (/^policy\s*(number|no)$/i.test(normalisedKey)) return false;
     return String(value ?? '').trim().length > 0;
   });
@@ -860,7 +860,7 @@ export function portalRowHasMappedCurrentValue(rawData: Record<string, unknown>)
       .trim()
       .toLowerCase();
     const rawValue = String(value ?? '').trim();
-    if (!normalisedKey || !rawValue || metadataColumns.has(key)) return false;
+    if (!normalisedKey || !rawValue || (metadataColumns as Set<string>).has(key)) return false;
     if (/(maturity|premium|contribution|inception|date|product\s*type)/i.test(normalisedKey))
       return false;
     if (

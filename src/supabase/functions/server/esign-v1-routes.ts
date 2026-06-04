@@ -131,7 +131,7 @@ v1Routes.get('/v1/templates', async (c) => {
   if (!auth.ok) return auth.response;
   try {
     const templates = await listTemplates();
-    const scoped = (templates as Array<Record<string, unknown>>).filter(
+    const scoped = (templates as unknown as Array<Record<string, unknown>>).filter(
       (t) => !t.firm_id || t.firm_id === auth.firmId,
     );
     return c.json({ templates: scoped });
