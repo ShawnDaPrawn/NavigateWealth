@@ -276,7 +276,7 @@ app.put(
     const saved = await service.saveColourPalette(body);
 
     AdminAuditService.record({
-      actorId: c.get('userId') || 'admin',
+      actorId: (c.get('userId') as string | undefined) || 'admin',
       actorRole: (c.get('userRole') as string | undefined) || 'admin',
       category: 'configuration',
       action: 'brand_colours_updated',
@@ -311,7 +311,7 @@ app.put(
     const saved = await service.saveTypography(body);
 
     AdminAuditService.record({
-      actorId: c.get('userId') || 'admin',
+      actorId: (c.get('userId') as string | undefined) || 'admin',
       actorRole: (c.get('userRole') as string | undefined) || 'admin',
       category: 'configuration',
       action: 'brand_typography_updated',
@@ -420,7 +420,7 @@ app.put(
     await service.saveGuidelineRules(rules, updatedBy);
 
     AdminAuditService.record({
-      actorId: updatedBy || c.get('userId') || 'admin',
+      actorId: updatedBy || (c.get('userId') as string | undefined) || 'admin',
       actorRole: (c.get('userRole') as string | undefined) || 'admin',
       category: 'configuration',
       action: 'brand_guidelines_rules_updated',
@@ -446,7 +446,7 @@ app.put(
     await service.saveGuidelineVoice(voice, updatedBy);
 
     AdminAuditService.record({
-      actorId: updatedBy || c.get('userId') || 'admin',
+      actorId: updatedBy || (c.get('userId') as string | undefined) || 'admin',
       actorRole: (c.get('userRole') as string | undefined) || 'admin',
       category: 'configuration',
       action: 'brand_guidelines_voice_updated',

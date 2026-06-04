@@ -118,7 +118,7 @@ app.put(
     );
 
     AdminAuditService.record({
-      actorId: c.get('userId') || 'admin',
+      actorId: (c.get('userId') as string | undefined) || 'admin',
       actorRole: (c.get('userRole') as string | undefined) || 'admin',
       category: 'configuration',
       action: 'provider_updated',
@@ -145,7 +145,7 @@ app.delete(
     await service.deleteProvider(providerId);
 
     AdminAuditService.record({
-      actorId: c.get('userId') || 'admin',
+      actorId: (c.get('userId') as string | undefined) || 'admin',
       actorRole: (c.get('userRole') as string | undefined) || 'admin',
       category: 'configuration',
       action: 'provider_deleted',
@@ -256,7 +256,7 @@ app.put(
     );
 
     AdminAuditService.record({
-      actorId: c.get('userId') || 'admin',
+      actorId: (c.get('userId') as string | undefined) || 'admin',
       actorRole: (c.get('userRole') as string | undefined) || 'admin',
       category: 'configuration',
       action: 'product_updated',
@@ -283,7 +283,7 @@ app.delete(
     await service.deleteProduct(productId);
 
     AdminAuditService.record({
-      actorId: c.get('userId') || 'admin',
+      actorId: (c.get('userId') as string | undefined) || 'admin',
       actorRole: (c.get('userRole') as string | undefined) || 'admin',
       category: 'configuration',
       action: 'product_deleted',

@@ -282,7 +282,7 @@ app.get(
     }
 
     const draft = await roaService.getDraft(c.req.param('draftId')!);
-    if (!canAccessRoADraft(role, c.get('userId'), draft)) {
+    if (!canAccessRoADraft(role, c.get('userId') as string, draft)) {
       return forbiddenRoADraftResponse(c);
     }
     return c.json({ draft });
@@ -300,7 +300,7 @@ app.put(
 
     const draftId = c.req.param('draftId')!;
     const existingDraft = await roaService.getDraft(draftId);
-    if (!canAccessRoADraft(role, c.get('userId'), existingDraft)) {
+    if (!canAccessRoADraft(role, c.get('userId') as string, existingDraft)) {
       return forbiddenRoADraftResponse(c);
     }
 
@@ -325,7 +325,7 @@ app.delete(
 
     const draftId = c.req.param('draftId')!;
     const existingDraft = await roaService.getDraft(draftId);
-    if (!canAccessRoADraft(role, c.get('userId'), existingDraft)) {
+    if (!canAccessRoADraft(role, c.get('userId') as string, existingDraft)) {
       return forbiddenRoADraftResponse(c);
     }
 
@@ -345,7 +345,7 @@ app.post(
 
     const draftId = c.req.param('draftId')!;
     const existingDraft = await roaService.getDraft(draftId);
-    if (!canAccessRoADraft(role, c.get('userId'), existingDraft)) {
+    if (!canAccessRoADraft(role, c.get('userId') as string, existingDraft)) {
       return forbiddenRoADraftResponse(c);
     }
 
@@ -368,7 +368,7 @@ app.post(
 
     const draftId = c.req.param('draftId')!;
     const existingDraft = await roaService.getDraft(draftId);
-    if (!canAccessRoADraft(role, c.get('userId'), existingDraft)) {
+    if (!canAccessRoADraft(role, c.get('userId') as string, existingDraft)) {
       return forbiddenRoADraftResponse(c);
     }
 
@@ -391,7 +391,7 @@ app.post(
 
     const draftId = c.req.param('draftId')!;
     const existingDraft = await roaService.getDraft(draftId);
-    if (!canAccessRoADraft(role, c.get('userId'), existingDraft)) {
+    if (!canAccessRoADraft(role, c.get('userId') as string, existingDraft)) {
       return forbiddenRoADraftResponse(c);
     }
 
@@ -417,7 +417,7 @@ app.post(
     const body = await c.req.json();
     const draftId = c.req.param('draftId')!;
     const existingDraft = await roaService.getDraft(draftId);
-    if (!canAccessRoADraft(role, c.get('userId'), existingDraft)) {
+    if (!canAccessRoADraft(role, c.get('userId') as string, existingDraft)) {
       return forbiddenRoADraftResponse(c);
     }
 
@@ -444,7 +444,7 @@ app.post(
 
     const draftId = c.req.param('draftId')!;
     const existingDraft = await roaService.getDraft(draftId);
-    if (!canAccessRoADraft(role, c.get('userId'), existingDraft)) {
+    if (!canAccessRoADraft(role, c.get('userId') as string, existingDraft)) {
       return forbiddenRoADraftResponse(c);
     }
 
@@ -478,7 +478,7 @@ app.post(
     );
     const draftId = c.req.param('draftId')!;
     const before = await roaService.getDraft(draftId);
-    if (!canAccessRoADraft(role, c.get('userId'), before)) {
+    if (!canAccessRoADraft(role, c.get('userId') as string, before)) {
       return forbiddenRoADraftResponse(c);
     }
 
@@ -510,7 +510,7 @@ app.post(
 
     const draftId = c.req.param('draftId')!;
     const before = await roaService.getDraft(draftId);
-    if (!canAccessRoADraft(role, c.get('userId'), before)) {
+    if (!canAccessRoADraft(role, c.get('userId') as string, before)) {
       return forbiddenRoADraftResponse(c);
     }
 
@@ -541,7 +541,7 @@ app.get(
 
     const document = await roaService.getGeneratedDocument(c.req.param('documentId')!);
     const draft = await roaService.getDraft(document.draftId);
-    if (!canAccessRoADraft(role, c.get('userId'), draft)) {
+    if (!canAccessRoADraft(role, c.get('userId') as string, draft)) {
       return forbiddenRoADraftResponse(c);
     }
 
