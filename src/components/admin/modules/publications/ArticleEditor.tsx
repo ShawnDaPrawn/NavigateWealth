@@ -187,7 +187,7 @@ export function ArticleEditor({
     if (autoSlug && formData.title) {
       updateField('slug', generateSlug(formData.title));
     }
-  }, [formData.title, autoSlug]);
+  }, [formData.title, autoSlug, updateField]);
 
   // Auto-clear success message
   useEffect(() => {
@@ -205,7 +205,7 @@ export function ArticleEditor({
         updateField('type_id', insightsType.id);
       }
     }
-  }, [isEditMode, types, formData.type_id]);
+  }, [isEditMode, types, formData.type_id, updateField]);
 
   // Apply initial template if provided
   useEffect(() => {

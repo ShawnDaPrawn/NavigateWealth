@@ -1,3 +1,4 @@
+/* eslint-disable max-lines */
 /**
  * CLIENT OVERVIEW TAB — Financial Health Dashboard
  *

@@ -159,12 +159,6 @@ export function SignatureCanvas({
     initCanvas(canvas);
   }, [signatureMode, inkColor, initCanvas]);
 
-  // Re-render typed text on canvas when font/text/color changes
-  useEffect(() => {
-    if (signatureMode !== 'type' || !fontsLoaded) return;
-    renderTypedSignature();
-  }, [typedText, selectedFont, inkColor, fontsLoaded, signatureMode]);
-
   const renderTypedSignature = useCallback(() => {
     const canvas = typeCanvasRef.current;
     if (!canvas) return;
@@ -200,6 +194,12 @@ export function SignatureCanvas({
       ctx.fillText(typedText, rect.width / 2, lineY - 4);
     }
   }, [typedText, selectedFont, inkColor, type]);
+
+  // Re-render typed text on canvas when font/text/color changes
+  useEffect(() => {
+    if (signatureMode !== 'type' || !fontsLoaded) return;
+    renderTypedSignature();
+  }, [typedText, selectedFont, inkColor, fontsLoaded, signatureMode, renderTypedSignature]);
 
   // ==================== DRAWING HANDLERS ====================
 

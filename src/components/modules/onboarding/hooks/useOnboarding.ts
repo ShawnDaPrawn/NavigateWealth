@@ -204,6 +204,7 @@ export function useOnboarding(options: UseOnboardingOptions = {}) {
     return () => {
       cancelled = true;
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [effectiveUserId]); // Only re-run if userId changes
 
   // ── Debounced save on data changes ────────────────────────────────────────

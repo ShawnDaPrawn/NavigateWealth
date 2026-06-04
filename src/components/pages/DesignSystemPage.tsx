@@ -1,3 +1,4 @@
+/* eslint-disable max-lines */
 import { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card';

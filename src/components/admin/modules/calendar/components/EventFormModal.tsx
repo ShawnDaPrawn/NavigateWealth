@@ -224,7 +224,7 @@ export function EventFormModal({
       setRecurrenceEndDate('');
       setSendReminders(false);
     }
-  }, [event, open]);
+  }, [event, open, clients]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
