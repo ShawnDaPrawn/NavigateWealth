@@ -27,7 +27,7 @@ app.get('/envelopes/:envelopeId/download', async (c) => {
   try {
     // Authenticate
     const ctx = await getAuthContext(c);
-    const envelopeId = c.req.param('envelopeId');
+    const envelopeId = c.req.param('envelopeId')!;
 
     // Get envelope details
     const envelope = await getEnvelopeDetails(envelopeId);
@@ -132,7 +132,7 @@ app.get('/envelopes/:envelopeId/download', async (c) => {
 app.get('/envelopes/:envelopeId/evidence-pack', async (c) => {
   try {
     const ctx = await getAuthContext(c);
-    const envelopeId = c.req.param('envelopeId');
+    const envelopeId = c.req.param('envelopeId')!;
 
     // P6.9 — firm scoping. The current admin user must belong to the
     // same firm as the envelope (or the envelope must be 'standalone').
@@ -185,7 +185,7 @@ app.get('/envelopes/:envelopeId/evidence-pack', async (c) => {
 app.get('/envelopes/:envelopeId/reminder-config', async (c) => {
   try {
     const ctx = await getAuthContext(c);
-    const envelopeId = c.req.param('envelopeId');
+    const envelopeId = c.req.param('envelopeId')!;
     const config = await getReminderConfig(envelopeId);
     return c.json({ config });
   } catch (error: unknown) {
@@ -208,7 +208,7 @@ app.put('/envelopes/:envelopeId/reminder-config', async (c) => {
   try {
     const ctx = await getAuthContext(c);
     const user = ctx.user;
-    const envelopeId = c.req.param('envelopeId');
+    const envelopeId = c.req.param('envelopeId')!;
 
     const body = await c.req.json();
     const {
@@ -263,7 +263,7 @@ app.patch('/envelopes/:envelopeId/signing-mode', async (c) => {
   try {
     const ctx = await getAuthContext(c);
     const user = ctx.user;
-    const envelopeId = c.req.param('envelopeId');
+    const envelopeId = c.req.param('envelopeId')!;
 
     const body = await c.req.json();
     const { signing_mode } = body;
@@ -321,7 +321,7 @@ app.patch('/envelopes/:envelopeId/signing-mode', async (c) => {
 app.get('/envelopes/:envelopeId/audit/export', async (c) => {
   try {
     const ctx = await getAuthContext(c);
-    const envelopeId = c.req.param('envelopeId');
+    const envelopeId = c.req.param('envelopeId')!;
 
     const events = await getAuditTrail(envelopeId);
     if (!events || events.length === 0) {

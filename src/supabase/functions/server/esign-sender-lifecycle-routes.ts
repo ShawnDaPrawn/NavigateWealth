@@ -42,7 +42,7 @@ app.delete('/envelopes/:envelopeId', async (c) => {
     // Authenticate
     const ctx = await getAuthContext(c);
     const user = ctx.user;
-    const envelopeId = c.req.param('envelopeId');
+    const envelopeId = c.req.param('envelopeId')!;
 
     // Get envelope details
     const envelope = await getEnvelopeDetails(envelopeId);
@@ -210,7 +210,7 @@ app.post(
       // Authenticate
       const ctx = await getAuthContext(c);
       const user = ctx.user;
-      const envelopeId = c.req.param('envelopeId');
+      const envelopeId = c.req.param('envelopeId')!;
       const body = await c.req.json();
       const { reason } = body;
 
@@ -356,7 +356,7 @@ app.post(
       // Authenticate
       const ctx = await getAuthContext(c);
       const user = ctx.user;
-      const envelopeId = c.req.param('envelopeId');
+      const envelopeId = c.req.param('envelopeId')!;
 
       // Get envelope details
       const envelope = await getEnvelopeDetails(envelopeId);

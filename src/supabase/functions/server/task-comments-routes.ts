@@ -25,7 +25,7 @@ app.use('*', requireAdmin);
 app.get(
   '/:taskId',
   asyncHandler(async (c) => {
-    const taskId = c.req.param('taskId');
+    const taskId = c.req.param('taskId')!;
 
     if (!taskId) {
       return c.json({ success: false, error: 'Task ID is required' }, 400);
@@ -53,7 +53,7 @@ app.get(
 app.post(
   '/:taskId',
   asyncHandler(async (c) => {
-    const taskId = c.req.param('taskId');
+    const taskId = c.req.param('taskId')!;
 
     if (!taskId) {
       return c.json({ success: false, error: 'Task ID is required' }, 400);
@@ -94,8 +94,8 @@ app.post(
 app.delete(
   '/:taskId/:commentId',
   asyncHandler(async (c) => {
-    const taskId = c.req.param('taskId');
-    const commentId = c.req.param('commentId');
+    const taskId = c.req.param('taskId')!;
+    const commentId = c.req.param('commentId')!;
 
     if (!taskId || !commentId) {
       return c.json({ success: false, error: 'Task ID and Comment ID are required' }, 400);

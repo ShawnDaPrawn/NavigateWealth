@@ -255,7 +255,7 @@ notificationsRoutes.get(
   requireAuth,
   requireAdmin,
   asyncHandler(async (c) => {
-    const id = c.req.param('id');
+    const id = c.req.param('id')!;
     const article = (await kv.get(`article:${id}`)) as Article | null;
     const deletedArticle = (await kv.get(`article_deleted:${id}`)) as DeletedArticleRecord | null;
     const records = await listArticleEmailTrackingRecords(id);
@@ -317,7 +317,7 @@ notificationsRoutes.post(
   requireAuth,
   requireAdmin,
   asyncHandler(async (c) => {
-    const id = c.req.param('id');
+    const id = c.req.param('id')!;
     const parsed = ArticleDeliveryRetrySchema.safeParse(await c.req.json().catch(() => ({})));
     if (!parsed.success) {
       return c.json(
@@ -425,7 +425,7 @@ notificationsRoutes.get(
   requireAuth,
   requireAdmin,
   asyncHandler(async (c) => {
-    const jobId = c.req.param('jobId');
+    const jobId = c.req.param('jobId')!;
     const job = await getArticleNotificationJob(jobId);
 
     if (!job) {
@@ -441,7 +441,7 @@ notificationsRoutes.get(
   requireAuth,
   requireAdmin,
   asyncHandler(async (c) => {
-    const campaignId = c.req.param('campaignId');
+    const campaignId = c.req.param('campaignId')!;
     const campaign = await getArticleNotificationCampaign(campaignId);
 
     if (!campaign) {

@@ -165,7 +165,7 @@ app.get(
   '/:id',
   requireAuth,
   asyncHandler(async (c) => {
-    const id = c.req.param('id');
+    const id = c.req.param('id')!;
     if (!id) return c.json({ success: false, error: 'Missing id' }, 400);
     const submission = await submissionsService.getById(id);
     if (!submission) {
@@ -294,7 +294,7 @@ app.patch(
   '/:id',
   requireAuth,
   asyncHandler(async (c) => {
-    const id = c.req.param('id');
+    const id = c.req.param('id')!;
     if (!id) return c.json({ success: false, error: 'Missing id' }, 400);
     const body = await c.req.json();
 
@@ -325,7 +325,7 @@ app.delete(
   '/:id',
   requireAuth,
   asyncHandler(async (c) => {
-    const id = c.req.param('id');
+    const id = c.req.param('id')!;
     if (!id) return c.json({ success: false, error: 'Missing id' }, 400);
     await submissionsService.delete(id);
     log.info('Submission deleted', { id });

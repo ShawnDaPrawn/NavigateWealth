@@ -174,12 +174,16 @@ export function formatZodError(error: ZodError): {
 } {
   const formattedErrors: Record<string, string[]> = {};
 
-  error.errors.forEach((err) => {
-    const path = err.path.join('.');
+  const issues: { message: string; path: (string | number)[] }[] =
+    (error as unknown as { issues?: { message: string; path: (string | number)[] }[] }).issues ??
+    (error as unknown as { errors?: { message: string; path: (string | number)[] }[] }).errors ??
+    [];
+  issues.forEach((issue) => {
+    const path = issue.path.join('.');
     if (!formattedErrors[path]) {
       formattedErrors[path] = [];
     }
-    formattedErrors[path].push(err.message);
+    formattedErrors[path].push(issue.message);
   });
 
   return {

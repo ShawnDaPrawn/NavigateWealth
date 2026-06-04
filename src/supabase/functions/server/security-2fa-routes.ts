@@ -41,7 +41,7 @@ const log = createModuleLogger('security');
  */
 app.post('/:userId/suspend', requireAuth, async (c) => {
   try {
-    const userId = c.req.param('userId');
+    const userId = c.req.param('userId')!;
     const denied = ensureAdmin(c);
     if (denied) return denied;
     const body = await c.req.json();
@@ -114,7 +114,7 @@ app.post('/:userId/suspend', requireAuth, async (c) => {
  */
 app.post('/:userId/2fa', requireAuth, async (c) => {
   try {
-    const userId = c.req.param('userId');
+    const userId = c.req.param('userId')!;
     const denied = ensureSelfOrAdmin(c, userId);
     if (denied) return denied;
     const body = await c.req.json();
@@ -169,7 +169,7 @@ app.post('/:userId/2fa', requireAuth, async (c) => {
  */
 app.post('/:userId/2fa/send-code', requireAuth, async (c) => {
   try {
-    const userId = c.req.param('userId');
+    const userId = c.req.param('userId')!;
     const denied = ensureSelfOrAdmin(c, userId);
     if (denied) return denied;
     let email = '';
@@ -257,7 +257,7 @@ app.post('/:userId/2fa/send-code', requireAuth, async (c) => {
  */
 app.post('/:userId/2fa/verify-code', requireAuth, async (c) => {
   try {
-    const userId = c.req.param('userId');
+    const userId = c.req.param('userId')!;
     const denied = ensureSelfOrAdmin(c, userId);
     if (denied) return denied;
     const body = await c.req.json();

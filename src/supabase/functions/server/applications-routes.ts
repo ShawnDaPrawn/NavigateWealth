@@ -182,7 +182,7 @@ adminApp.get('/applications', async (c) => {
 // GET /applications/:applicationId
 adminApp.get('/applications/:applicationId', async (c) => {
   try {
-    const applicationId = c.req.param('applicationId');
+    const applicationId = c.req.param('applicationId')!;
 
     const result = await AdminApplicationsService.getApplicationById(applicationId);
     return c.json(result);
@@ -205,7 +205,7 @@ adminApp.get('/applications/:applicationId', async (c) => {
 // PATCH /applications/:applicationId — Admin amend application data
 adminApp.patch('/applications/:applicationId', async (c) => {
   try {
-    const applicationId = c.req.param('applicationId');
+    const applicationId = c.req.param('applicationId')!;
     const adminUserId = c.get('userId');
     const body = await c.req.json();
     const { application_data, amendment_notes } = body || {};
@@ -249,7 +249,7 @@ adminApp.patch('/applications/:applicationId', async (c) => {
 // POST /applications/:applicationId/approve
 adminApp.post('/applications/:applicationId/approve', async (c) => {
   try {
-    const applicationId = c.req.param('applicationId');
+    const applicationId = c.req.param('applicationId')!;
     const adminUserId = c.get('userId');
 
     await AdminApplicationsService.approveApplication(applicationId, adminUserId);
@@ -285,7 +285,7 @@ adminApp.post('/applications/:applicationId/approve', async (c) => {
 // POST /applications/:applicationId/decline
 adminApp.post('/applications/:applicationId/decline', async (c) => {
   try {
-    const applicationId = c.req.param('applicationId');
+    const applicationId = c.req.param('applicationId')!;
     const adminUserId = c.get('userId');
     const body = await c.req.json();
     const { reason } = body || {};

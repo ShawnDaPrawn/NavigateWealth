@@ -119,7 +119,7 @@ routes.get('/audit/:clientId', async (c) => {
     const user = await authenticateUser(c.req.header('Authorization'));
     requirePrefillUser(user);
 
-    const clientId = c.req.param('clientId');
+    const clientId = c.req.param('clientId')!;
     assertPrefillClientAccess(user, clientId);
 
     const limit = Math.min(Number(c.req.query('limit') || 50), 200);

@@ -1051,7 +1051,7 @@ app.post('/sessions', requireAuth, async (c) => {
 app.get('/sessions/:sessionId', requireAuth, async (c) => {
   try {
     const user = c.get('user');
-    const sessionId = c.req.param('sessionId');
+    const sessionId = c.req.param('sessionId')!;
     const session = await getAdvisorSessionSummary(user.id, sessionId);
     if (!session) {
       return c.json({ error: 'Chat session not found' }, 404);
@@ -1071,7 +1071,7 @@ app.get('/sessions/:sessionId', requireAuth, async (c) => {
 app.delete('/sessions/:sessionId', requireAuth, async (c) => {
   try {
     const user = c.get('user');
-    const sessionId = c.req.param('sessionId');
+    const sessionId = c.req.param('sessionId')!;
     await deleteAdvisorSession(user.id, sessionId);
     return c.json({ success: true });
   } catch (error) {
@@ -1177,7 +1177,7 @@ app.get('/admin/sessions/:sessionId', async (c) => {
   try {
     const { userId, role } = await getAuthContext(c);
     const clientUserId = c.req.query('clientUserId')?.trim();
-    const sessionId = c.req.param('sessionId');
+    const sessionId = c.req.param('sessionId')!;
     if (!clientUserId) {
       return c.json({ error: 'clientUserId query parameter is required' }, 400);
     }
@@ -1207,7 +1207,7 @@ app.delete('/admin/sessions/:sessionId', async (c) => {
   try {
     const { userId, role } = await getAuthContext(c);
     const clientUserId = c.req.query('clientUserId')?.trim();
-    const sessionId = c.req.param('sessionId');
+    const sessionId = c.req.param('sessionId')!;
     if (!clientUserId) {
       return c.json({ error: 'clientUserId query parameter is required' }, 400);
     }

@@ -167,8 +167,8 @@ export const BeneficiarySchema = z
 export const BaseFNACreateSchema = z.object({
   clientId: UuidSchema,
   autoPopulate: z.boolean().optional(),
-  inputs: z.record(z.unknown()).optional(),
-  outputs: z.record(z.unknown()).optional(),
+  inputs: z.record(z.string(), z.unknown()).optional(),
+  outputs: z.record(z.string(), z.unknown()).optional(),
   recommendations: z.array(RecommendationSchema).optional(),
 });
 
@@ -176,8 +176,8 @@ export const BaseFNACreateSchema = z.object({
  * Base update FNA schema
  */
 export const BaseFNAUpdateSchema = z.object({
-  inputs: z.record(z.unknown()).optional(),
-  outputs: z.record(z.unknown()).optional(),
+  inputs: z.record(z.string(), z.unknown()).optional(),
+  outputs: z.record(z.string(), z.unknown()).optional(),
   recommendations: z.array(RecommendationSchema).optional(),
   status: FNAStatusSchema.optional(),
 });
@@ -568,7 +568,7 @@ export const AIChatRequestSchema = z.object({
     .min(1, 'Message cannot be empty')
     .max(2000, 'Message cannot exceed 2000 characters')
     .transform(stripHtml),
-  context: z.record(z.unknown()).optional(),
+  context: z.record(z.string(), z.unknown()).optional(),
 });
 
 /**
@@ -584,7 +584,7 @@ export const AIAnalysisRequestSchema = z.object({
     'estate_efficiency',
     'comprehensive',
   ]),
-  data: z.record(z.unknown()),
+  data: z.record(z.string(), z.unknown()),
 });
 
 // ============================================================================

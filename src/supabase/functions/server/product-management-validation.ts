@@ -29,7 +29,7 @@ export const CreateProductSchema = z
     type: z.string().max(100).optional(),
     status: z.enum(['active', 'inactive', 'draft']).default('active'),
     description: z.string().max(5000).optional(),
-    fees: z.record(z.unknown()).optional(),
+    fees: z.record(z.string(), z.unknown()).optional(),
   })
   .passthrough();
 
@@ -40,6 +40,6 @@ export const CreateIntegrationSchema = z
     providerId: z.string().min(1, 'Provider ID is required'),
     categoryId: z.string().optional(),
     type: z.string().max(100).optional(),
-    config: z.record(z.unknown()).optional(),
+    config: z.record(z.string(), z.unknown()).optional(),
   })
   .passthrough();

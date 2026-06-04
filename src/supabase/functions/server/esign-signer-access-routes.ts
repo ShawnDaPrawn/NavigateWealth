@@ -21,7 +21,7 @@ const app = new Hono();
 
 app.get('/sign-by-token/:token', async (c) => {
   try {
-    const token = c.req.param('token');
+    const token = c.req.param('token')!;
 
     // Get signer by token
     const signer = await getSignerByToken(token);

@@ -95,7 +95,7 @@ app.post('/resend-invite/:id', async (c) => {
     requireRole(ctx, ['super_admin', 'admin']);
     await requireCapability(ctx, 'personnel', 'create');
 
-    const personnelId = c.req.param('id');
+    const personnelId = c.req.param('id')!;
     const siteUrl =
       c.req.header('origin') || c.req.header('referer')?.replace(/\/+$/, '') || undefined;
     log.info('Resending invite', { userId: ctx.userId, personnelId, siteUrl });
@@ -113,7 +113,7 @@ app.delete('/invite/:id', async (c) => {
     requireRole(ctx, ['super_admin', 'admin']);
     await requireCapability(ctx, 'personnel', 'delete');
 
-    const personnelId = c.req.param('id');
+    const personnelId = c.req.param('id')!;
     log.info('Cancelling invite', { userId: ctx.userId, personnelId });
     const result = await PersonnelService.cancelInvite(ctx.role, personnelId);
     return c.json({ data: result });
@@ -185,7 +185,7 @@ app.post('/maintenance/backfill-roles', async (c) => {
 app.put('/:id', async (c) => {
   try {
     const ctx = await getAuthContext(c);
-    const targetId = c.req.param('id');
+    const targetId = c.req.param('id')!;
     const body = await c.req.json();
     const parsed = UpdatePersonnelSchema.safeParse(body);
     if (!parsed.success) {
@@ -210,7 +210,7 @@ app.put('/:id', async (c) => {
 app.get('/:id/clients', async (c) => {
   try {
     const ctx = await getAuthContext(c);
-    const targetId = c.req.param('id');
+    const targetId = c.req.param('id')!;
 
     // Security: can only view own clients unless Admin/Compliance
     if (ctx.role === 'adviser' && ctx.userId !== targetId) {
@@ -232,7 +232,7 @@ app.post('/:id/documents', async (c) => {
     // Capability: editing personnel records
     await requireCapability(ctx, 'personnel', 'edit');
 
-    const targetId = c.req.param('id');
+    const targetId = c.req.param('id')!;
     const body = await c.req.json();
     log.info('Adding personnel document', { userId: ctx.userId, targetId });
 
@@ -316,7 +316,7 @@ app.get('/permissions/:personnelId', async (c) => {
     requireRole(ctx, ['super_admin', 'admin']);
     await requireCapability(ctx, 'personnel', 'manage_permissions');
 
-    const personnelId = c.req.param('personnelId');
+    const personnelId = c.req.param('personnelId')!;
     log.info('Fetching permissions', { userId: ctx.userId, personnelId });
 
     const permissions = await PermissionsService.getPermissions(personnelId);
@@ -342,7 +342,7 @@ app.put('/permissions/:personnelId', async (c) => {
     requireRole(ctx, ['super_admin', 'admin']);
     await requireCapability(ctx, 'personnel', 'manage_permissions');
 
-    const personnelId = c.req.param('personnelId');
+    const personnelId = c.req.param('personnelId')!;
     const body = await c.req.json();
     const parsed = PermissionUpdateSchema.safeParse(body);
     if (!parsed.success) {
@@ -392,7 +392,7 @@ app.get('/audit/permissions/:personnelId', async (c) => {
     requireRole(ctx, ['super_admin', 'admin']);
     await requireCapability(ctx, 'personnel', 'manage_permissions');
 
-    const personnelId = c.req.param('personnelId');
+    const personnelId = c.req.param('personnelId')!;
     const limitParam = c.req.query('limit');
     const limit = limitParam ? parseInt(limitParam, 10) : 50;
 

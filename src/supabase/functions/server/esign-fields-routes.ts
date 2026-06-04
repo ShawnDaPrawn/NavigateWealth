@@ -28,7 +28,7 @@ fieldsRoutes.put('/envelopes/:envelopeId/fields', async (c) => {
     // Authenticate
     const ctx = await getAuthContext(c);
     const user = ctx.user;
-    const envelopeId = c.req.param('envelopeId');
+    const envelopeId = c.req.param('envelopeId')!;
 
     const body = await c.req.json();
     const parsed = UpdateFieldsSchema.safeParse(body);
@@ -125,7 +125,7 @@ fieldsRoutes.get('/envelopes/:envelopeId/fields', async (c) => {
   try {
     // Authenticate
     const _ctx = await getAuthContext(c);
-    const envelopeId = c.req.param('envelopeId');
+    const envelopeId = c.req.param('envelopeId')!;
 
     // Get envelope details
     const envelope = await getEnvelopeDetails(envelopeId);
@@ -158,8 +158,8 @@ fieldsRoutes.patch('/envelopes/:envelopeId/fields/:fieldId', async (c) => {
   try {
     // Authenticate
     const _ctx = await getAuthContext(c);
-    const envelopeId = c.req.param('envelopeId');
-    const fieldId = c.req.param('fieldId');
+    const envelopeId = c.req.param('envelopeId')!;
+    const fieldId = c.req.param('fieldId')!;
 
     const body = await c.req.json();
     const updates = body;
@@ -250,8 +250,8 @@ fieldsRoutes.delete('/envelopes/:envelopeId/fields/:fieldId', async (c) => {
     // Authenticate
     const ctx = await getAuthContext(c);
     const user = ctx.user;
-    const envelopeId = c.req.param('envelopeId');
-    const fieldId = c.req.param('fieldId');
+    const envelopeId = c.req.param('envelopeId')!;
+    const fieldId = c.req.param('fieldId')!;
 
     // Get envelope details
     const envelope = await getEnvelopeDetails(envelopeId);

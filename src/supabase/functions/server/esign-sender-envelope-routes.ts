@@ -48,7 +48,7 @@ app.get('/clients/:clientId/envelopes', async (c) => {
   try {
     // Authenticate
     const ctx = await getAuthContext(c);
-    const clientId = c.req.param('clientId');
+    const clientId = c.req.param('clientId')!;
     const clientEmail = c.req.query('email') || undefined;
 
     // Portal clients may only fetch their own CRM id (aligns with client-portal-routes.ts).
@@ -85,8 +85,8 @@ app.get('/clients/:clientId/envelopes', async (c) => {
  */
 app.post('/envelopes/:envelopeId/signers/:signerId/otp/send', rateLimit('OTP_SEND'), async (c) => {
   try {
-    const envelopeId = c.req.param('envelopeId');
-    const signerId = c.req.param('signerId');
+    const envelopeId = c.req.param('envelopeId')!;
+    const signerId = c.req.param('signerId')!;
 
     // Check if OTP is required
     const required = await isOTPRequired(signerId);
@@ -189,8 +189,8 @@ app.post('/envelopes/:envelopeId/signers/:signerId/otp/send', rateLimit('OTP_SEN
  */
 app.post('/envelopes/:envelopeId/signers/:signerId/verify', rateLimit('OTP_VERIFY'), async (c) => {
   try {
-    const envelopeId = c.req.param('envelopeId');
-    const signerId = c.req.param('signerId');
+    const envelopeId = c.req.param('envelopeId')!;
+    const signerId = c.req.param('signerId')!;
 
     const body = await c.req.json();
     const { otp, accessCode } = body;
@@ -251,7 +251,7 @@ app.post(
   rateLimit('SIGNER_SUBMIT'),
   async (c) => {
     try {
-      const envelopeId = c.req.param('envelopeId');
+      const envelopeId = c.req.param('envelopeId')!;
 
       const body = await c.req.json();
       const parsed = SignEnvelopeSchema.safeParse(body);
@@ -411,7 +411,7 @@ app.post(
  */
 app.post('/envelopes/:envelopeId/reject', async (c) => {
   try {
-    const envelopeId = c.req.param('envelopeId');
+    const envelopeId = c.req.param('envelopeId')!;
 
     const body = await c.req.json();
     const parsed = RejectEnvelopeSchema.safeParse(body);

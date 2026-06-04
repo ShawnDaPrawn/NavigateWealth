@@ -234,7 +234,7 @@ firmAdminRoutes.get('/recovery-bin', async (c) => {
 firmAdminRoutes.post('/recovery-bin/:envelopeId/restore', rateLimit('SENDER_MUTATE'), async (c) => {
   try {
     const ctx = await getAuthContext(c);
-    const envelopeId = c.req.param('envelopeId');
+    const envelopeId = c.req.param('envelopeId')!;
     const envelope = await getEnvelopeDetails(envelopeId);
     if (!envelope) return c.json({ error: 'Envelope not found' }, 404);
 
@@ -287,7 +287,7 @@ firmAdminRoutes.post('/recovery-bin/:envelopeId/restore', rateLimit('SENDER_MUTA
 firmAdminRoutes.delete('/recovery-bin/:envelopeId', rateLimit('SENDER_MUTATE'), async (c) => {
   try {
     const ctx = await getAuthContext(c);
-    const envelopeId = c.req.param('envelopeId');
+    const envelopeId = c.req.param('envelopeId')!;
     const envelope = await getEnvelopeDetails(envelopeId);
     if (!envelope) return c.json({ success: true, purged: true, already: true });
 

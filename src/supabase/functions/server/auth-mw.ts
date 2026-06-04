@@ -11,6 +11,15 @@ import { createClient } from 'jsr:@supabase/supabase-js@2.49.8';
 import { logger } from './stderr-logger.ts';
 import { SUPER_ADMIN_EMAIL } from './constants.ts';
 
+declare module 'npm:hono' {
+  interface ContextVariableMap {
+    userId: string;
+    userRole: string;
+    user: unknown;
+    requestId: string;
+  }
+}
+
 // Lazy Supabase client — must NOT be top-level to avoid deployment crashes in edge functions.
 const getSupabase = () =>
   createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!);

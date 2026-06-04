@@ -47,7 +47,7 @@ function normaliseTask(raw: RawKvTask): KvTask {
   if (!raw || typeof raw !== 'object') return raw as unknown as KvTask;
   const r = raw as Record<string, unknown>;
   return {
-    ...(raw as KvTask),
+    ...(raw as unknown as KvTask),
     // Ensure snake_case fields exist (handle legacy camelCase data)
     due_date: (r.due_date ?? r.dueDate ?? null) as string | null | undefined,
     is_template: (r.is_template ?? r.isTemplate ?? false) as boolean,
@@ -253,7 +253,7 @@ app.get(
 app.get(
   '/:id',
   asyncHandler(async (c) => {
-    const id = c.req.param('id');
+    const id = c.req.param('id')!;
     if (!id) return c.json({ error: 'Missing id' }, 400);
     try {
       const task = await kv.get(taskKey(id));
@@ -343,7 +343,7 @@ app.post(
 app.patch(
   '/:id',
   asyncHandler(async (c) => {
-    const id = c.req.param('id');
+    const id = c.req.param('id')!;
     if (!id) return c.json({ error: 'Missing id' }, 400);
     try {
       const existing = await kv.get(taskKey(id));
@@ -368,7 +368,7 @@ app.patch(
 
       await kv.set(taskKey(id), updated);
       log.info(`Updated task ${id}`);
-      return c.json(normaliseTask(updated));
+      return c.json(normaliseTask(updated as unknown as RawKvTask));
     } catch (error) {
       log.error(`Failed to update task ${id}`, error);
       return c.json({ error: 'Failed to update task' }, 500);
@@ -383,7 +383,7 @@ app.patch(
 app.delete(
   '/:id',
   asyncHandler(async (c) => {
-    const id = c.req.param('id');
+    const id = c.req.param('id')!;
     if (!id) return c.json({ error: 'Missing id' }, 400);
     try {
       await kv.del(taskKey(id));
@@ -415,7 +415,7 @@ app.delete(
 app.post(
   '/:id/move',
   asyncHandler(async (c) => {
-    const id = c.req.param('id');
+    const id = c.req.param('id')!;
     if (!id) return c.json({ error: 'Missing id' }, 400);
     try {
       const existing = await kv.get(taskKey(id));
@@ -447,7 +447,7 @@ app.post(
 
       await kv.set(taskKey(id), updates);
       log.info(`Moved task ${id} to ${status}`);
-      return c.json(normaliseTask(updates));
+      return c.json(normaliseTask(updates as unknown as RawKvTask));
     } catch (error) {
       log.error(`Failed to move task ${id}`, error);
       return c.json({ error: 'Failed to move task' }, 500);
@@ -498,7 +498,7 @@ app.post(
 app.post(
   '/:id/duplicate',
   asyncHandler(async (c) => {
-    const id = c.req.param('id');
+    const id = c.req.param('id')!;
     if (!id) return c.json({ error: 'Missing id' }, 400);
     try {
       const original = await kv.get(taskKey(id));
@@ -540,7 +540,7 @@ app.post(
 
       await kv.set(taskKey(newId), duplicate);
       log.info(`Duplicated task ${id} → ${newId}`);
-      return c.json(normaliseTask(duplicate), 201);
+      return c.json(normaliseTask(duplicate as unknown as RawKvTask), 201);
     } catch (error) {
       log.error(`Failed to duplicate task ${id}`, error);
       return c.json({ error: 'Failed to duplicate task' }, 500);
@@ -555,7 +555,7 @@ app.post(
 app.post(
   '/:id/archive',
   asyncHandler(async (c) => {
-    const id = c.req.param('id');
+    const id = c.req.param('id')!;
     if (!id) return c.json({ error: 'Missing id' }, 400);
     try {
       const existing = await kv.get(taskKey(id));
@@ -571,7 +571,7 @@ app.post(
 
       await kv.set(taskKey(id), updated);
       log.info(`Archived task ${id}`);
-      return c.json(normaliseTask(updated));
+      return c.json(normaliseTask(updated as unknown as RawKvTask));
     } catch (error) {
       log.error(`Failed to archive task ${id}`, error);
       return c.json({ error: 'Failed to archive task' }, 500);
@@ -586,7 +586,7 @@ app.post(
 app.post(
   '/:id/unarchive',
   asyncHandler(async (c) => {
-    const id = c.req.param('id');
+    const id = c.req.param('id')!;
     if (!id) return c.json({ error: 'Missing id' }, 400);
     try {
       const existing = await kv.get(taskKey(id));
@@ -625,7 +625,7 @@ app.post(
 
       await kv.set(taskKey(id), updated);
       log.info(`Unarchived task ${id} to ${newStatus}`);
-      return c.json(normaliseTask(updated));
+      return c.json(normaliseTask(updated as unknown as RawKvTask));
     } catch (error) {
       log.error(`Failed to unarchive task ${id}`, error);
       return c.json({ error: 'Failed to unarchive task' }, 500);

@@ -33,7 +33,7 @@ const app = new Hono();
  */
 app.get('/signer/download/:token', async (c) => {
   try {
-    const token = c.req.param('token');
+    const token = c.req.param('token')!;
 
     // Get signer by token
     const signer = await getSignerByToken(token);
@@ -202,7 +202,7 @@ app.post('/signer/saved-signature', async (c) => {
 app.get('/envelopes/:envelopeId/attachments', async (c) => {
   try {
     await getAuthContext(c);
-    const envelopeId = c.req.param('envelopeId');
+    const envelopeId = c.req.param('envelopeId')!;
     const records =
       ((await kv.get(EsignKeys.envelopeAttachments(envelopeId))) as Array<
         Record<string, unknown>

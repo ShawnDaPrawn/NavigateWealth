@@ -35,7 +35,7 @@ const documentsEmailRoutes = new Hono();
  */
 documentsEmailRoutes.post('/:userId/email', async (c) => {
   try {
-    const userId = c.req.param('userId');
+    const userId = c.req.param('userId')!;
     const {
       documentIds,
       email: providedEmail,

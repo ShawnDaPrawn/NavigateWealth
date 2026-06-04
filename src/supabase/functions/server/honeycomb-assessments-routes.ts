@@ -145,7 +145,7 @@ app.post('/assessments/run', async (c) => {
 
 app.get('/assessments/history/:clientId', async (c) => {
   try {
-    const clientId = c.req.param('clientId');
+    const clientId = c.req.param('clientId')!;
     const history = (await kv.get(`honeycomb_assessments:${clientId}`)) || [];
     return c.json({ success: true, assessments: history });
   } catch (e: unknown) {
@@ -197,7 +197,7 @@ app.post('/assessments/create', async (c) => {
 
 app.get('/assessments/list/:honeycombId', async (c) => {
   try {
-    const honeycombId = c.req.param('honeycombId');
+    const honeycombId = c.req.param('honeycombId')!;
     const url = `${HONEYCOMB_API_URL}/api/Assessment?naturalPersonId=${honeycombId}`;
     const res = await fetch(url, { headers: getHeaders() });
 

@@ -18,7 +18,7 @@ app.get('/envelopes/:envelopeId/audit', async (c) => {
   try {
     // Authenticate
     const ctx = await getAuthContext(c);
-    const envelopeId = c.req.param('envelopeId');
+    const envelopeId = c.req.param('envelopeId')!;
 
     const events = await getAuditTrail(envelopeId);
 
@@ -43,7 +43,7 @@ app.get('/envelopes/:envelopeId/document', async (c) => {
   try {
     // Authenticate
     const ctx = await getAuthContext(c);
-    const envelopeId = c.req.param('envelopeId');
+    const envelopeId = c.req.param('envelopeId')!;
 
     const envelope = await getEnvelopeDetails(envelopeId);
 
@@ -74,7 +74,7 @@ app.get('/envelopes/:envelopeId/certificate', async (c) => {
   try {
     // Authenticate
     const ctx = await getAuthContext(c);
-    const envelopeId = c.req.param('envelopeId');
+    const envelopeId = c.req.param('envelopeId')!;
 
     const certificate = await getCertificate(envelopeId);
 

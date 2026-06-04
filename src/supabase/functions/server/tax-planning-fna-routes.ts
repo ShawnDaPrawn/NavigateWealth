@@ -57,7 +57,7 @@ taxPlanningRoutes.post('/client/:clientId/auto-populate', async (c) => {
     log.info('POST /tax-planning-fna/client/:clientId/auto-populate');
     await authenticateUser(c.req.header('Authorization'));
 
-    const clientId = c.req.param('clientId');
+    const clientId = c.req.param('clientId')!;
     const { taxAutoPopulateFromResolver, enrichTaxFromDomainSessions } =
       await import('./form-prefill-auto-populate.ts');
     let inputs = await taxAutoPopulateFromResolver(clientId);
@@ -154,7 +154,7 @@ taxPlanningRoutes.get('/client/:clientId', async (c) => {
     log.info('ðŸ“¥ GET /tax-planning-fna/client/:clientId');
     await authenticateUser(c.req.header('Authorization'));
 
-    const clientId = c.req.param('clientId');
+    const clientId = c.req.param('clientId')!;
     const sessions = await kv.getByPrefix(`tax-planning-fna:client:${clientId}:`);
     const sortedSessions = (sessions || []).sort(
       (a: VersionedSession, b: VersionedSession) => b.version - a.version,
@@ -175,7 +175,7 @@ taxPlanningRoutes.get('/client/:clientId', async (c) => {
  */
 taxPlanningRoutes.get('/client/:clientId/latest-published', async (c) => {
   try {
-    const clientId = c.req.param('clientId');
+    const clientId = c.req.param('clientId')!;
     // Simplified auth check for read
     await authenticateUser(c.req.header('Authorization'));
 
@@ -204,7 +204,7 @@ taxPlanningRoutes.post('/tax-docs/:clientId/upload', async (c) => {
     const user = await authenticateUser(c.req.header('Authorization'));
     await ensureTaxDocsBucket();
 
-    const clientId = c.req.param('clientId');
+    const clientId = c.req.param('clientId')!;
     const formData = await c.req.formData();
 
     const file = formData.get('file') as File | null;
@@ -297,7 +297,7 @@ taxPlanningRoutes.get('/tax-docs/:clientId', async (c) => {
     log.info('GET /tax-planning-fna/tax-docs/:clientId');
     await authenticateUser(c.req.header('Authorization'));
 
-    const clientId = c.req.param('clientId');
+    const clientId = c.req.param('clientId')!;
     const docs = await kv.getByPrefix(`tax_doc:${clientId}:`);
 
     const sorted = (docs || []).sort(
@@ -324,8 +324,8 @@ taxPlanningRoutes.get('/tax-docs/:clientId/:docId/download', async (c) => {
     log.info('GET /tax-planning-fna/tax-docs/:clientId/:docId/download');
     await authenticateUser(c.req.header('Authorization'));
 
-    const clientId = c.req.param('clientId');
-    const docId = c.req.param('docId');
+    const clientId = c.req.param('clientId')!;
+    const docId = c.req.param('docId')!;
 
     const kvKey = `tax_doc:${clientId}:${docId}`;
     const doc = await kv.get(kvKey);
@@ -365,8 +365,8 @@ taxPlanningRoutes.delete('/tax-docs/:clientId/:docId', async (c) => {
     log.info('DELETE /tax-planning-fna/tax-docs/:clientId/:docId');
     await authenticateUser(c.req.header('Authorization'));
 
-    const clientId = c.req.param('clientId');
-    const docId = c.req.param('docId');
+    const clientId = c.req.param('clientId')!;
+    const docId = c.req.param('docId')!;
 
     const kvKey = `tax_doc:${clientId}:${docId}`;
     const doc = await kv.get(kvKey);
@@ -412,7 +412,7 @@ taxPlanningRoutes.get('/:fnaId', async (c) => {
     log.info('GET /tax-planning-fna/:fnaId');
     await authenticateUser(c.req.header('Authorization'));
 
-    const fnaId = c.req.param('fnaId');
+    const fnaId = c.req.param('fnaId')!;
 
     // fnaId format is "${clientId}-v${version}"
     const match = fnaId.match(/^(.+)-v(\d+)$/);

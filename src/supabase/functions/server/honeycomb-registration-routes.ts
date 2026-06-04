@@ -130,14 +130,14 @@ app.post('/register-client', async (c) => {
 // ============================================================================
 
 app.get('/status/:clientId', async (c) => {
-  const clientId = c.req.param('clientId');
+  const clientId = c.req.param('clientId')!;
   const honeycombId = await kv.get(`honeycomb_id:${clientId}`);
   const isRegistered = !!honeycombId && honeycombId !== NIL_UUID;
   return c.json({ registered: isRegistered, honeycombId: isRegistered ? honeycombId : null });
 });
 
 app.get('/activity/:clientId', async (c) => {
-  const clientId = c.req.param('clientId');
+  const clientId = c.req.param('clientId')!;
   const activity = (await kv.get(`honeycomb_activity:${clientId}`)) || [];
   return c.json({ activity });
 });

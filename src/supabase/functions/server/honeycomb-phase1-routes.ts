@@ -210,7 +210,7 @@ app.post('/sanctions/search', async (c) => {
 
 app.get('/checks/history/:clientId', async (c) => {
   try {
-    const clientId = c.req.param('clientId');
+    const clientId = c.req.param('clientId')!;
     const history = await service.getAllCheckHistory(clientId);
     return c.json({ success: true, history });
   } catch (e: unknown) {
@@ -221,8 +221,8 @@ app.get('/checks/history/:clientId', async (c) => {
 
 app.get('/checks/history/:clientId/:checkType', async (c) => {
   try {
-    const clientId = c.req.param('clientId');
-    const checkType = c.req.param('checkType');
+    const clientId = c.req.param('clientId')!;
+    const checkType = c.req.param('checkType')!;
     const history = await service.getCheckHistory(clientId, checkType);
     return c.json({ success: true, history });
   } catch (e: unknown) {

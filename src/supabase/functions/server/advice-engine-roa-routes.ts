@@ -122,7 +122,7 @@ app.get(
       return c.json({ error: 'Forbidden: Advice access required', code: 'FORBIDDEN_ADVICE' }, 403);
     }
 
-    const contract = await roaContractService.getContract(c.req.param('moduleId'));
+    const contract = await roaContractService.getContract(c.req.param('moduleId')!);
     if (contract.status !== 'active' && !canManageRoAContracts(role)) {
       return c.json(
         { error: 'Forbidden: Super admin access required', code: 'FORBIDDEN_ROA_CONTRACT' },
@@ -166,7 +166,7 @@ app.put(
 
     const body = await c.req.json();
     const contract = await roaContractService.saveContract(
-      { ...body, id: c.req.param('moduleId') },
+      { ...body, id: c.req.param('moduleId')! },
       c.get('user'),
     );
     return c.json({ contract });
@@ -186,7 +186,7 @@ app.post(
     }
 
     const contract = await roaContractService.publishContract(
-      c.req.param('moduleId'),
+      c.req.param('moduleId')!,
       c.get('user'),
     );
     return c.json({ contract });
@@ -206,7 +206,7 @@ app.post(
     }
 
     const contract = await roaContractService.archiveContract(
-      c.req.param('moduleId'),
+      c.req.param('moduleId')!,
       c.get('user'),
     );
     return c.json({ contract });
@@ -241,7 +241,7 @@ app.get(
       return c.json({ error: 'Forbidden: Advice access required', code: 'FORBIDDEN_ADVICE' }, 403);
     }
 
-    const files = await roaService.listClientFiles(c.req.param('clientId'));
+    const files = await roaService.listClientFiles(c.req.param('clientId')!);
     return c.json({ files });
   }),
 );
@@ -272,7 +272,7 @@ app.get(
       return c.json({ error: 'Forbidden: Advice access required', code: 'FORBIDDEN_ADVICE' }, 403);
     }
 
-    const draft = await roaService.getDraft(c.req.param('draftId'));
+    const draft = await roaService.getDraft(c.req.param('draftId')!);
     if (!canAccessRoADraft(role, c.get('userId'), draft)) {
       return forbiddenRoADraftResponse(c);
     }
@@ -289,7 +289,7 @@ app.put(
       return c.json({ error: 'Forbidden: Advice access required', code: 'FORBIDDEN_ADVICE' }, 403);
     }
 
-    const draftId = c.req.param('draftId');
+    const draftId = c.req.param('draftId')!;
     const existingDraft = await roaService.getDraft(draftId);
     if (!canAccessRoADraft(role, c.get('userId'), existingDraft)) {
       return forbiddenRoADraftResponse(c);
@@ -314,7 +314,7 @@ app.delete(
       return c.json({ error: 'Forbidden: Advice access required', code: 'FORBIDDEN_ADVICE' }, 403);
     }
 
-    const draftId = c.req.param('draftId');
+    const draftId = c.req.param('draftId')!;
     const existingDraft = await roaService.getDraft(draftId);
     if (!canAccessRoADraft(role, c.get('userId'), existingDraft)) {
       return forbiddenRoADraftResponse(c);
@@ -334,7 +334,7 @@ app.post(
       return c.json({ error: 'Forbidden: Advice access required', code: 'FORBIDDEN_ADVICE' }, 403);
     }
 
-    const draftId = c.req.param('draftId');
+    const draftId = c.req.param('draftId')!;
     const existingDraft = await roaService.getDraft(draftId);
     if (!canAccessRoADraft(role, c.get('userId'), existingDraft)) {
       return forbiddenRoADraftResponse(c);
@@ -354,7 +354,7 @@ app.post(
       return c.json({ error: 'Forbidden: Advice access required', code: 'FORBIDDEN_ADVICE' }, 403);
     }
 
-    const draftId = c.req.param('draftId');
+    const draftId = c.req.param('draftId')!;
     const existingDraft = await roaService.getDraft(draftId);
     if (!canAccessRoADraft(role, c.get('userId'), existingDraft)) {
       return forbiddenRoADraftResponse(c);
@@ -374,7 +374,7 @@ app.post(
       return c.json({ error: 'Forbidden: Advice access required', code: 'FORBIDDEN_ADVICE' }, 403);
     }
 
-    const draftId = c.req.param('draftId');
+    const draftId = c.req.param('draftId')!;
     const existingDraft = await roaService.getDraft(draftId);
     if (!canAccessRoADraft(role, c.get('userId'), existingDraft)) {
       return forbiddenRoADraftResponse(c);
@@ -396,7 +396,7 @@ app.post(
     }
 
     const body = await c.req.json();
-    const draftId = c.req.param('draftId');
+    const draftId = c.req.param('draftId')!;
     const existingDraft = await roaService.getDraft(draftId);
     if (!canAccessRoADraft(role, c.get('userId'), existingDraft)) {
       return forbiddenRoADraftResponse(c);
@@ -418,7 +418,7 @@ app.post(
       return c.json({ error: 'Forbidden: Advice access required', code: 'FORBIDDEN_ADVICE' }, 403);
     }
 
-    const draftId = c.req.param('draftId');
+    const draftId = c.req.param('draftId')!;
     const existingDraft = await roaService.getDraft(draftId);
     if (!canAccessRoADraft(role, c.get('userId'), existingDraft)) {
       return forbiddenRoADraftResponse(c);
@@ -448,7 +448,7 @@ app.post(
     const formats = requestedFormats.filter(
       (format: unknown): format is 'pdf' | 'docx' => format === 'pdf' || format === 'docx',
     );
-    const draftId = c.req.param('draftId');
+    const draftId = c.req.param('draftId')!;
     const before = await roaService.getDraft(draftId);
     if (!canAccessRoADraft(role, c.get('userId'), before)) {
       return forbiddenRoADraftResponse(c);
@@ -480,7 +480,7 @@ app.post(
       return c.json({ error: 'Forbidden: Advice access required', code: 'FORBIDDEN_ADVICE' }, 403);
     }
 
-    const draftId = c.req.param('draftId');
+    const draftId = c.req.param('draftId')!;
     const before = await roaService.getDraft(draftId);
     if (!canAccessRoADraft(role, c.get('userId'), before)) {
       return forbiddenRoADraftResponse(c);
@@ -507,7 +507,7 @@ app.get(
       return c.json({ error: 'Forbidden: Advice access required', code: 'FORBIDDEN_ADVICE' }, 403);
     }
 
-    const document = await roaService.getGeneratedDocument(c.req.param('documentId'));
+    const document = await roaService.getGeneratedDocument(c.req.param('documentId')!);
     const draft = await roaService.getDraft(document.draftId);
     if (!canAccessRoADraft(role, c.get('userId'), draft)) {
       return forbiddenRoADraftResponse(c);

@@ -103,7 +103,7 @@ app.get(
   '/generation/:id',
   requireAdmin,
   asyncHandler(async (c) => {
-    const generationId = c.req.param('id');
+    const generationId = c.req.param('id')!;
     if (!generationId) return c.json({ error: 'Missing id' }, 400);
 
     const record = await getGenerationById(generationId);
@@ -272,7 +272,7 @@ app.put(
   requireAdmin,
   asyncHandler(async (c) => {
     const userId = c.get('userId');
-    const templateId = c.req.param('id');
+    const templateId = c.req.param('id')!;
     if (!templateId) return c.json({ error: 'Missing id' }, 400);
     const body = await c.req.json();
 
@@ -298,7 +298,7 @@ app.delete(
   requireAdmin,
   asyncHandler(async (c) => {
     const userId = c.get('userId');
-    const templateId = c.req.param('id');
+    const templateId = c.req.param('id')!;
     if (!templateId) return c.json({ error: 'Missing id' }, 400);
 
     const deleted = await deleteCustomTemplate(templateId, userId);

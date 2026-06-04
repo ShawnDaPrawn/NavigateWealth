@@ -85,7 +85,7 @@ const RequestSchema = z
     clientName: z.string().optional(),
 
     // Default to empty object if missing
-    requestDetails: z.record(z.unknown()).default({}),
+    requestDetails: z.record(z.string(), z.unknown()).default({}),
 
     // Default to empty array if missing
     assignees: z.array(RequestAssigneeSchema).default([]),
