@@ -48,6 +48,7 @@ export async function logAuthEvent(
     ip?: string;
     userAgent?: string;
     errorMessage?: string;
+    method?: string;
     metadata?: Record<string, unknown>;
   } = {},
 ): Promise<void> {

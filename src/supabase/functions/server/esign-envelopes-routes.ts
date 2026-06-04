@@ -260,7 +260,7 @@ envelopesRoutes.post(
         return c.json(
           {
             error: 'Invalid form data. Ensure the request uses multipart/form-data encoding.',
-            details: parseErr?.message || String(parseErr),
+            details: parseErr instanceof Error ? parseErr.message : String(parseErr),
           },
           400,
         );

@@ -107,6 +107,7 @@ export interface EsignEnvelope {
   deleted_by?: string;
   delete_reason?: string;
   void_reason?: string;
+  expired_at?: string;
 }
 
 /**

@@ -9,6 +9,7 @@ import { createClient } from 'jsr:@supabase/supabase-js@2.49.8';
 import {
   AdminClientOnboardingService,
   validateClientInput,
+  type AdminAddClientInput,
 } from './admin-client-onboarding-service.ts';
 import { SUPER_ADMIN_EMAIL, HTTP_STATUS, ERROR_MESSAGES } from './constants.ts';
 import { createModuleLogger } from './stderr-logger.ts';
@@ -155,7 +156,7 @@ onboardingApp.post('/validate', async (c) => {
     }
 
     const results = body.clients.map((client: Record<string, unknown>, idx: number) => {
-      const errors = validateClientInput(client);
+      const errors = validateClientInput(client as unknown as AdminAddClientInput);
       return {
         row: idx + 1,
         email: (client.emailAddress as string) || '',

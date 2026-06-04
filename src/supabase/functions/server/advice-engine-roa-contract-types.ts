@@ -105,7 +105,7 @@ export interface RoAContractDocumentSection {
   purpose: string;
   order: number;
   required: boolean;
-  template: string;
+  template?: string;
 }
 
 export interface RoAModuleContract {

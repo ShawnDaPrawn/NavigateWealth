@@ -45,6 +45,7 @@ export const DATABASE_SCHEMA = 'public';
  * Frontend displays: no_application, application_in_progress, submitted_for_review, approved, declined
  */
 export const STATUS_MAP: Record<BackendApplicationStatus, FrontendApplicationStatus> = {
+  draft: 'no_application',
   in_progress: 'application_in_progress',
   pending: 'submitted_for_review', // Pending = waiting for admin review (auto-submitted from signup)
   submitted: 'submitted_for_review',
@@ -86,6 +87,7 @@ export const SUBMITTED_STATUSES: BackendApplicationStatus[] = [
  * Default completion percentage by status
  */
 export const COMPLETION_PERCENTAGE: Record<BackendApplicationStatus, number> = {
+  draft: 0,
   in_progress: 50,
   pending: 100, // Pending applications are auto-submitted from signup
   submitted: 100,
