@@ -190,7 +190,9 @@ app.get(
     const userId = c.req.param('userId')!;
     const records = await service.getPOPIAConsentRecords();
     const filtered = records.filter(
-      (r) => (r as Record<string, unknown>).userId === userId || r.user_id === userId,
+      (r) =>
+        (r as Record<string, unknown>).userId === userId ||
+        (r as Record<string, unknown>).user_id === userId,
     );
     return c.json({ success: true, data: filtered, total: filtered.length });
   }),

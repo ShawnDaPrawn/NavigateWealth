@@ -455,6 +455,10 @@ envelopesRoutes.post(
         log.warn('PDF analysis threw (non-fatal):', { error: String(analysisErr) });
       }
 
+      if (!envelope) {
+        return c.json({ error: 'Envelope not found after creation' }, 500);
+      }
+
       return c.json({
         envelope: {
           ...envelope,

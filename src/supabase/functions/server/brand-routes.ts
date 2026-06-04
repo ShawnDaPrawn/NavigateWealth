@@ -118,7 +118,7 @@ app.post(
       LOGO_FILE_FIELDS.map(async ({ field, format, mimeTypes }) => {
         const candidate = formData.get(field) as File | null;
         if (!candidate) return null;
-        if (!mimeTypes.includes(candidate.type)) {
+        if (!(mimeTypes as string[]).includes(candidate.type)) {
           return { error: `${field} must be one of: ${mimeTypes.join(', ')}` };
         }
 
@@ -148,7 +148,7 @@ app.post(
         candidate,
       ): candidate is NonNullable<typeof candidate> & {
         format: 'png' | 'jpeg' | 'svg' | 'pdf';
-      } => !('error' in candidate),
+      } => candidate !== null && !('error' in (candidate as object)),
     );
 
     if (assets.length === 0 && legacyFile) {

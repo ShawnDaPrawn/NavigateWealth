@@ -529,11 +529,11 @@ documentsRoutes.post(
         try {
           const result = await materialiseEnvelope(envelopeId);
           const { remapped, dropped } = remapFieldsForConcatenation(
-            materialisedFields as EsignField[],
+            materialisedFields as unknown as EsignField[],
             result.pageMap,
             envelope.document_id,
           );
-          materialisedFields = remapped as FieldRecord[];
+          materialisedFields = remapped as unknown as FieldRecord[];
           await logAuditEvent({
             envelopeId,
             actorType: 'system',
@@ -629,7 +629,7 @@ documentsRoutes.post(
           signerId: signerIds[field.signerIndex as number] || signerIds[0],
         }));
 
-        await addFieldsToEnvelope(envelopeId, fieldsWithSignerIds);
+        await addFieldsToEnvelope(envelopeId, fieldsWithSignerIds as unknown as EsignField[]);
 
         // ── P3.6 — Resolve CRM prefill bindings ──
         // For each signer, find their fields and stamp resolved values from
@@ -646,7 +646,7 @@ documentsRoutes.post(
             const ownFields = allFields.filter((f) => f.signer_id === s.id);
             if (ownFields.length === 0) continue;
             const resolved = await resolvePrefilledFields(ownFields, {
-              signer: s as EsignSigner,
+              signer: s as unknown as EsignSigner,
               envelope: {
                 advice_case_id: envelope.advice_case_id,
                 product_id: envelope.product_id,
@@ -724,7 +724,7 @@ documentsRoutes.post(
           await updateSignerStatus(targetSigner.id, 'sent', {
             invite_sent_at: new Date().toISOString(),
           });
-          invitesSent.push({ signerId: targetSigner.id, email: targetSigner.email });
+          invitesSent.push({ signerId: targetSigner.id, email: targetSigner.email, success: true });
         }
 
         await logAuditEvent({

@@ -58,9 +58,13 @@ app.post('/save-progress', async (c) => {
     // Previously this returned 404 if no application existed, which meant
     // every auto-save silently failed for self-service clients because
     // the AccountTypeSelectionPage never created the KV record.
-    const application = await clientApplicationsService.getOrCreate(userId);
+    const application = await clientApplicationsService.getOrCreate(userId as string);
     const applicationId = application.id as string;
-    await clientApplicationsService.saveProgress(applicationId, applicationData, userId);
+    await clientApplicationsService.saveProgress(
+      applicationId,
+      applicationData as Record<string, unknown>,
+      userId as string,
+    );
 
     return c.json({ success: true, data: { applicationId } });
   } catch (error: unknown) {

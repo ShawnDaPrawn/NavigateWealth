@@ -25,6 +25,14 @@ import {
   CreateCampaignSchema,
 } from './communication-validation.ts';
 import { formatZodError } from './shared-validation-utils.ts';
+import type {
+  MessageCreate,
+  MessageCategory,
+  Group,
+  GroupCreate,
+  CampaignCreate,
+  HistoryFilters,
+} from './communication-types.ts';
 
 const app = new Hono();
 const log = createModuleLogger('communication');
@@ -52,7 +60,7 @@ app.post(
 
     log.info('Admin: Sending message', { adminUserId });
 
-    const result = await service.sendMessage(adminUserId, parsed.data);
+    const result = await service.sendMessage(adminUserId, parsed.data as MessageCreate);
 
     log.success('Message sent', { adminUserId, recipients: parsed.data.recipients?.length });
 
@@ -113,7 +121,10 @@ app.get(
       recipientId: c.req.query('recipientId'),
     };
 
-    const history = await service.getHistory(filters);
+    const history = await service.getHistory({
+      ...filters,
+      category: filters.category as MessageCategory | undefined,
+    } as HistoryFilters);
 
     return c.json({ history });
   }),
@@ -232,7 +243,7 @@ app.post(
 
     log.info('Admin: Creating group', { adminUserId, groupName: parsed.data.name });
 
-    const group = await service.createGroup(parsed.data);
+    const group = await service.createGroup(parsed.data as GroupCreate);
 
     log.success('Group created', { adminUserId, groupId: group.id });
 
@@ -270,7 +281,7 @@ app.put(
 
     log.info('Admin: Updating group', { adminUserId, groupId });
 
-    const group = await service.updateGroup(groupId, parsed.data);
+    const group = await service.updateGroup(groupId, parsed.data as Partial<Group>);
 
     AdminAuditService.record({
       actorId: adminUserId,
@@ -654,7 +665,7 @@ app.post(
 
     log.info('Admin: Creating campaign', { adminUserId });
 
-    const campaign = await service.createCampaign(adminUserId, parsed.data);
+    const campaign = await service.createCampaign(adminUserId, parsed.data as CampaignCreate);
 
     log.success('Campaign created', { adminUserId, campaignId: campaign.id });
 

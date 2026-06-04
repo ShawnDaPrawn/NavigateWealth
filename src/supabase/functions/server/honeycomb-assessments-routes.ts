@@ -1,4 +1,5 @@
 import { Hono } from 'npm:hono';
+import type { ContentfulStatusCode } from 'npm:hono/utils/http-status';
 import { createModuleLogger } from './stderr-logger.ts';
 import { getErrMsg } from './shared-logger-utils.ts';
 import * as kv from './kv_store.tsx';
@@ -27,7 +28,7 @@ app.get('/assessments/templates', async (c) => {
           error: `Honeycomb returned ${res.status} when fetching assessment templates`,
           details: errText.substring(0, 300),
         },
-        res.status as number,
+        (res.status >= 400 && res.status < 600 ? res.status : 500) as ContentfulStatusCode,
       );
     }
 
@@ -102,7 +103,7 @@ app.post('/assessments/run', async (c) => {
       log.error(`Assessment submission failed (${res.status}):`, { error: errDetail });
       return c.json(
         { error: `Assessment submission failed: ${errDetail}`, status: res.status },
-        (res.status >= 400 && res.status < 600 ? res.status : 500) as number,
+        (res.status >= 400 && res.status < 600 ? res.status : 500) as ContentfulStatusCode,
       );
     }
 

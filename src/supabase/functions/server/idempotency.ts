@@ -33,7 +33,7 @@
 import * as kv from './kv_store.tsx';
 import { createModuleLogger } from './stderr-logger.ts';
 import type { MiddlewareHandler } from 'npm:hono';
-import type { StatusCode } from 'npm:hono/utils/http-status';
+import type { ContentfulStatusCode } from 'npm:hono/utils/http-status';
 
 const log = createModuleLogger('idempotency');
 
@@ -171,7 +171,7 @@ export function requireIdempotency(opts?: { required?: boolean }): MiddlewareHan
           // Replay the original response verbatim.
           c.header('Idempotency-Replayed', 'true');
           c.header('Content-Type', cached.contentType);
-          return c.body(cached.body, cached.status as StatusCode);
+          return c.body(cached.body, cached.status as ContentfulStatusCode);
         }
         // Expired — fall through and re-execute.
       }

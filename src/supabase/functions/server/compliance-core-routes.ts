@@ -11,6 +11,7 @@ import {
   DocumentsInsuranceRecordSchema,
 } from './compliance-validation.ts';
 import { formatZodError } from './shared-validation-utils.ts';
+import type { FAISRecord, POPIAConsent, DocumentsInsuranceRecord } from './compliance-types.ts';
 
 const app = new Hono();
 const log = createModuleLogger('compliance-core');
@@ -133,7 +134,7 @@ app.post(
 
     log.info('Creating FAIS record', { adminUserId });
 
-    const record = await service.createFAISRecord(parsed.data);
+    const record = await service.createFAISRecord(parsed.data as Partial<FAISRecord>);
 
     log.success('FAIS record created', { recordId: record.id });
 
@@ -206,7 +207,7 @@ app.post(
 
     log.info('Recording POPIA consent', { userId });
 
-    const consent = await service.recordPOPIAConsent(userId, parsed.data);
+    const consent = await service.recordPOPIAConsent(userId, parsed.data as Partial<POPIAConsent>);
 
     return c.json({ consent });
   }),
@@ -258,7 +259,7 @@ app.post(
     const check = await service.performDebarmentCheck(
       parsed.data.adviserId,
       parsed.data.name,
-      parsed.data.idNumber,
+      parsed.data.idNumber ?? '',
       adminUserId,
     );
 
@@ -298,7 +299,9 @@ app.post(
 
     log.info('Creating documents & insurance record', { adminUserId });
 
-    const record = await service.createDocumentsInsuranceRecord(parsed.data);
+    const record = await service.createDocumentsInsuranceRecord(
+      parsed.data as Partial<DocumentsInsuranceRecord>,
+    );
 
     log.success('Documents & insurance record created', { recordId: record.id });
 

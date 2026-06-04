@@ -15,6 +15,8 @@ import {
   UpdateReminderSchema,
 } from './shared-calendar-validation.ts';
 import { formatZodError } from './shared-validation-utils.ts';
+import type { EventType, EventStatus, ReminderStatus } from './shared-calendar-types.ts';
+import type { EventCreate, EventUpdate } from './calendar-types.ts';
 
 const app = new Hono();
 const service = new CalendarService();
@@ -34,8 +36,8 @@ app.get(
     const end = c.req.query('end');
     const search = c.req.query('search');
     const clientId = c.req.query('clientId');
-    const eventTypes = c.req.query('eventTypes')?.split(',') as string[] | undefined;
-    const eventStatuses = c.req.query('eventStatuses')?.split(',') as string[] | undefined;
+    const eventTypes = c.req.query('eventTypes')?.split(',') as EventType[] | undefined;
+    const eventStatuses = c.req.query('eventStatuses')?.split(',') as EventStatus[] | undefined;
 
     const userId = c.get('userId') as string;
 
@@ -66,7 +68,7 @@ app.post(
       return c.json({ error: 'Validation failed', ...formatZodError(parsed.error) }, 400);
     }
     const userId = c.get('userId') as string;
-    const event = await service.createEvent(userId, parsed.data);
+    const event = await service.createEvent(userId, parsed.data as EventCreate);
     return c.json(event);
   }),
 );
@@ -86,7 +88,7 @@ app.put(
       return c.json({ error: 'Validation failed', ...formatZodError(parsed.error) }, 400);
     }
     const userId = c.get('userId') as string;
-    const event = await service.updateEvent(userId, id, parsed.data);
+    const event = await service.updateEvent(userId, id, parsed.data as EventUpdate);
     return c.json(event);
   }),
 );
@@ -114,7 +116,7 @@ app.get(
   '/reminders',
   requireAuth,
   asyncHandler(async (c) => {
-    const status = c.req.query('status') as string | undefined;
+    const status = c.req.query('status') as ReminderStatus | undefined;
     const userId = c.get('userId') as string;
 
     const reminders = await service.getReminders(userId, { status });

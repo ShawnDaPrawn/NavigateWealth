@@ -117,7 +117,7 @@ const RequestSchema = z
     complianceSignOff: z
       .object({
         required: z.boolean().default(false),
-        outcome: createEnumSchema(ApprovalOutcome, undefined).optional(),
+        outcome: z.nativeEnum(ApprovalOutcome).optional(),
         approvedBy: z.string().optional(),
         approvedAt: z.string().optional(),
         deficiencies: z.array(DeficiencySchema).default([]),

@@ -235,7 +235,7 @@ export function normaliseDocumentArtifactConfigs(
     .slice(0, 20)
     .map((artifact, index) => {
       const entry = (artifact || {}) as Record<string, unknown>;
-      const attachTo =
+      const attachTo: 'estate_documents' | 'matched_policy' =
         String(entry.attachTo || '') === 'estate_documents' ? 'estate_documents' : 'matched_policy';
       const allowedDocumentTypes =
         attachTo === 'estate_documents'

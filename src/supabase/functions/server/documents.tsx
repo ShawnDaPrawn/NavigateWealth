@@ -215,7 +215,8 @@ app.post('/:userId/upload', async (c) => {
       fileSize: file.size,
       filePath,
       uploadDate: new Date().toISOString(),
-      productCategory: (productCategory as string) || 'General',
+      productCategory: ((productCategory as string) ||
+        'General') as DocumentMetadata['productCategory'],
       policyNumber: policyNumber || '',
       status: 'new',
       isFavourite: false,
@@ -278,11 +279,11 @@ app.post('/:userId/link', async (c) => {
       url,
       description: description || '',
       uploadDate: new Date().toISOString(),
-      productCategory: productCategory || 'General',
+      productCategory: (productCategory || 'General') as DocumentMetadata['productCategory'],
       policyNumber: policyNumber || '',
       status: 'new',
       isFavourite: false,
-      uploadedBy,
+      uploadedBy: uploadedBy ?? '',
     };
 
     // Store metadata in KV

@@ -206,14 +206,13 @@ export class BrandService {
         ? entry.assets
         : [
             {
-              format:
-                entry.mimeType === 'application/pdf'
-                  ? 'pdf'
-                  : entry.mimeType === 'image/svg+xml'
-                    ? 'svg'
-                    : entry.mimeType === 'image/jpeg'
-                      ? 'jpeg'
-                      : 'png',
+              format: (entry.mimeType === 'application/pdf'
+                ? 'pdf'
+                : entry.mimeType === 'image/svg+xml'
+                  ? 'svg'
+                  : entry.mimeType === 'image/jpeg'
+                    ? 'jpeg'
+                    : 'png') as 'png' | 'jpeg' | 'svg' | 'pdf',
               fileName: entry.fileName,
               storagePath: entry.storagePath,
               mimeType: entry.mimeType,

@@ -215,7 +215,10 @@ app.put(
 
     log.info('Admin: Updating client', { adminUserId, clientId });
 
-    const client = await service.updateClient(clientId, updates);
+    const client = await service.updateClient(
+      clientId,
+      updates as Partial<import('./client-management-types.ts').Client>,
+    );
 
     log.success('Client updated', { adminUserId, clientId });
 

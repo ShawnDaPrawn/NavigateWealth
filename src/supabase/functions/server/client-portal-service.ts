@@ -805,26 +805,25 @@ export async function getPortfolioSummary(clientId: string): Promise<PortfolioSu
   }
 
   // ── Recent Documents ─────────────────────────────────
-  const recentDocuments: PortfolioDocument[] = (documents || [])
-    .map((entry: unknown) => {
-      const doc = (
-        typeof entry === 'object' && entry !== null ? ((entry as KvRecord).value ?? entry) : entry
-      ) as KvRecord | null;
-      if (!doc || typeof doc !== 'object') return null;
-      return {
-        id: String(doc.id || ''),
-        documentType: String(doc.title || doc.documentType || 'Document'),
-        category: String(doc.productCategory || doc.category || 'General'),
-        uploaded: true,
-        uploadDate: (doc.uploadDate || doc.createdAt || null) as string | null,
-        downloadUrl: null,
-      };
-    })
-    .filter((d): d is PortfolioDocument => d !== null)
-    .sort(
-      (a: PortfolioDocument, b: PortfolioDocument) =>
-        new Date(b.uploadDate || 0).getTime() - new Date(a.uploadDate || 0).getTime(),
-    )
+  const recentDocuments: PortfolioDocument[] = (
+    (documents || [])
+      .map((entry: unknown) => {
+        const doc = (
+          typeof entry === 'object' && entry !== null ? ((entry as KvRecord).value ?? entry) : entry
+        ) as KvRecord | null;
+        if (!doc || typeof doc !== 'object') return null;
+        return {
+          id: String(doc.id || ''),
+          documentType: String(doc.title || doc.documentType || 'Document'),
+          category: String(doc.productCategory || doc.category || 'General'),
+          uploaded: true,
+          uploadDate: (doc.uploadDate || doc.createdAt || null) as string | null,
+          downloadUrl: null,
+        };
+      })
+      .filter((d) => d !== null) as PortfolioDocument[]
+  )
+    .sort((a, b) => new Date(b.uploadDate || 0).getTime() - new Date(a.uploadDate || 0).getTime())
     .slice(0, 5);
 
   // ── Upcoming Events ──────────────────────────────────

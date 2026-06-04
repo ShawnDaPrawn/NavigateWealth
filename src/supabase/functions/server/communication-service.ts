@@ -267,7 +267,7 @@ export class CommunicationService {
             // If we successfully uploaded and replaced content with URL in storedAttachments,
             // we should still use the ORIGINAL data.attachments for the email sending.
             const emailAttachments = data.attachments?.map((att) => ({
-              content: att.content?.split(',')[1] || att.content, // Remove data URL prefix if present
+              content: att.content?.split(',')[1] || att.content || '', // Remove data URL prefix if present
               filename: att.name,
               type: att.type || 'application/octet-stream',
               disposition: 'attachment',
@@ -483,8 +483,8 @@ export class CommunicationService {
 
       // Filter out deleted/suspended clients and map to SimpleClient shape
       const activeClients: SimpleClient[] = allClients
-        .filter((c: Record<string, unknown>) => !c.deleted && !c.suspended)
-        .map((c: Record<string, unknown>) => ({
+        .filter((c) => !c.deleted && !c.suspended)
+        .map((c) => ({
           id: (c.id || '') as string,
           name: `${c.firstName || ''} ${c.lastName || ''}`.trim() || (c.email as string) || '',
           firstName: (c.firstName || '') as string,
