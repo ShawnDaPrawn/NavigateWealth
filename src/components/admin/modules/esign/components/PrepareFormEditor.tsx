@@ -59,36 +59,7 @@ export function PrepareFormEditor({
 
   // ==================== AUTO-SAVE FUNCTIONALITY ====================
 
-  /**
-   * Debounced auto-save: saves fields to backend after 2 seconds of inactivity
-   */
-  useEffect(() => {
-    // Skip if no changes or already saving
-    if (!hasUnsavedChanges || saving || sending) return;
-
-    // Check if fields actually changed (compare stringified versions)
-    const currentFieldsStr = JSON.stringify(fields);
-    if (currentFieldsStr === lastSavedFieldsRef.current) return;
-
-    // Clear existing timer
-    if (autoSaveTimerRef.current) {
-      clearTimeout(autoSaveTimerRef.current);
-    }
-
-    // Set new timer for auto-save
-    autoSaveTimerRef.current = setTimeout(() => {
-      handleAutoSave();
-    }, 2000); // 2 second debounce
-
-    // Cleanup on unmount
-    return () => {
-      if (autoSaveTimerRef.current) {
-        clearTimeout(autoSaveTimerRef.current);
-      }
-    };
-  }, [fields, hasUnsavedChanges, saving, sending]);
-
-  const handleAutoSave = async () => {
+  const handleAutoSave = useCallback(async () => {
     try {
       setAutoSaving(true);
 
@@ -120,7 +91,36 @@ export function PrepareFormEditor({
     } finally {
       setAutoSaving(false);
     }
-  };
+  }, [envelope.id, fields]);
+
+  /**
+   * Debounced auto-save: saves fields to backend after 2 seconds of inactivity
+   */
+  useEffect(() => {
+    // Skip if no changes or already saving
+    if (!hasUnsavedChanges || saving || sending) return;
+
+    // Check if fields actually changed (compare stringified versions)
+    const currentFieldsStr = JSON.stringify(fields);
+    if (currentFieldsStr === lastSavedFieldsRef.current) return;
+
+    // Clear existing timer
+    if (autoSaveTimerRef.current) {
+      clearTimeout(autoSaveTimerRef.current);
+    }
+
+    // Set new timer for auto-save
+    autoSaveTimerRef.current = setTimeout(() => {
+      handleAutoSave();
+    }, 2000); // 2 second debounce
+
+    // Cleanup on unmount
+    return () => {
+      if (autoSaveTimerRef.current) {
+        clearTimeout(autoSaveTimerRef.current);
+      }
+    };
+  }, [fields, hasUnsavedChanges, saving, sending, handleAutoSave]);
 
   // ==================== VALIDATION ====================
 

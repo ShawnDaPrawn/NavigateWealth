@@ -434,14 +434,31 @@ export function useProfileManager({
     return () => {
       controller.abort();
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  const allQuestionsAnswered = useCallback(() => {
+    const a = profileData.riskAssessment;
+    return (
+      a.question1 > 0 &&
+      a.question2 > 0 &&
+      a.question3 > 0 &&
+      a.question4 > 0 &&
+      a.question5 > 0 &&
+      a.question6 > 0 &&
+      a.question7 > 0 &&
+      a.question8 > 0 &&
+      a.question9 > 0 &&
+      a.question10 > 0
+    );
+  }, [profileData.riskAssessment]);
 
   // ── Assessment completion check ─────────────────────────────────
   useEffect(() => {
     if (allQuestionsAnswered()) {
       setAssessmentStarted(true);
     }
-  }, [profileData.riskAssessment]);
+  }, [profileData.riskAssessment, allQuestionsAnswered]);
 
   // ── Auto-enable self-employed edit mode if empty ────────────────
   useEffect(() => {
@@ -672,22 +689,6 @@ export function useProfileManager({
     }));
     setAssessmentStarted(false);
   }, []);
-
-  const allQuestionsAnswered = useCallback(() => {
-    const a = profileData.riskAssessment;
-    return (
-      a.question1 > 0 &&
-      a.question2 > 0 &&
-      a.question3 > 0 &&
-      a.question4 > 0 &&
-      a.question5 > 0 &&
-      a.question6 > 0 &&
-      a.question7 > 0 &&
-      a.question8 > 0 &&
-      a.question9 > 0 &&
-      a.question10 > 0
-    );
-  }, [profileData.riskAssessment]);
 
   // ══════════════════════════════════════════════════════════════════
   // Identity Document Management

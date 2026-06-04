@@ -1,4 +1,3 @@
-/* eslint-disable max-lines -- large seeded data table, not logic */
 /**
  * advice-engine-roa-default-contracts.ts — seeded RoA module contract data +
  * its private builders (Phase 7 max-lines split). Extracted verbatim from

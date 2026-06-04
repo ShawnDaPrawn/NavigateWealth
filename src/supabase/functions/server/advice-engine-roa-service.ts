@@ -1,3 +1,4 @@
+/* eslint-disable max-lines */
 /**
  * Advice Engine - Record of Advice foundation service.
  *
