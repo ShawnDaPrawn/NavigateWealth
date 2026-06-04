@@ -282,6 +282,13 @@ export function AskVascoPage() {
   const [isExpanded, setIsExpanded] = useState(false);
   const expandedChatRef = useRef<HTMLDivElement>(null);
   const [visitorId] = useState(getOrCreateVascoVisitorId);
+
+  // When a child modal (adviser handoff / clear-confirm) is open over the
+  // expanded chat, suspend the dialog focus trap and Escape-to-collapse so the
+  // modal can own keyboard focus. Mirrored to a ref for use inside listeners.
+  const childModalOpen = showHandoff || showClearConfirm;
+  const childModalOpenRef = useRef(childModalOpen);
+  childModalOpenRef.current = childModalOpen;
   const vascoExtraBody = useMemo(() => ({ visitorId }), [visitorId]);
 
   const { streamingContent, isStreaming, sendStream } = useVascoStream({
@@ -368,7 +375,8 @@ export function AskVascoPage() {
     });
 
     const handleKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') setIsExpanded(false);
+      // Let an open child modal handle Escape itself rather than collapsing the chat.
+      if (e.key === 'Escape' && !childModalOpenRef.current) setIsExpanded(false);
     };
     window.addEventListener('keydown', handleKey);
 
@@ -384,6 +392,8 @@ export function AskVascoPage() {
   // Keep keyboard focus within the expanded chat dialog (Tab / Shift+Tab wrap).
   const handleDialogKeyDown = useCallback((e: React.KeyboardEvent<HTMLDivElement>) => {
     if (e.key !== 'Tab') return;
+    // A child modal is open over the chat — let it manage its own focus.
+    if (childModalOpenRef.current) return;
     const container = expandedChatRef.current;
     if (!container) return;
     const focusables = getFocusableElements(container);
