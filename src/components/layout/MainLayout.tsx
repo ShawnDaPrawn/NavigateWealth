@@ -10,6 +10,12 @@ import { AccountSuspendedPage } from '../pages/AccountSuspendedPage';
 import { ErrorBoundary } from '../shared/ErrorBoundary';
 import { InstallAppPrompt } from '../pwa/InstallAppPrompt';
 import { StandaloneRedirect } from '../pwa/StandaloneRedirect';
+import { useIsStandalone } from '../../hooks/useIsStandalone';
+
+// Auth screens that should render as a clean, full-screen app view (no marketing
+// TopBar / nav / footer) when running as an installed PWA. The website in a normal
+// browser is unaffected — this only applies in standalone display mode.
+const APP_AUTH_ROUTES = ['/login', '/signup', '/forgot-password'];
 
 interface MainLayoutProps {
   children: React.ReactNode;
@@ -30,6 +36,11 @@ export function MainLayout({
 }: MainLayoutProps) {
   const { isAuthenticated, user, logout } = useAuth();
   const [isScrolled, setIsScrolled] = useState(false);
+  const isStandalone = useIsStandalone();
+
+  // In the installed PWA, render the auth screens (login / signup / forgot
+  // password) as a focused, app-like view without the marketing chrome or footer.
+  const isAppAuthScreen = isStandalone && APP_AUTH_ROUTES.includes(window.location.pathname);
 
   // When forcePublicLayout is on, treat as unauthenticated for layout decisions
   const effectivelyAuthenticated = forcePublicLayout ? false : isAuthenticated;
@@ -93,6 +104,27 @@ export function MainLayout({
             {children}
           </ErrorBoundary>
         </main>
+      </div>
+    );
+  }
+
+  // Installed-PWA auth screens: full-screen, native-app feel. No marketing
+  // TopBar/nav and no footer; respects the device safe areas (notch / home bar).
+  if (isAppAuthScreen) {
+    return (
+      <div
+        className="flex min-h-[100dvh] flex-col bg-white"
+        style={{
+          paddingTop: 'env(safe-area-inset-top)',
+          paddingBottom: 'env(safe-area-inset-bottom)',
+        }}
+      >
+        <main id="main-content" className="flex flex-1 flex-col justify-center">
+          <ErrorBoundary inline fallbackTitle="Page Error">
+            {children}
+          </ErrorBoundary>
+        </main>
+        <StandaloneRedirect />
       </div>
     );
   }
