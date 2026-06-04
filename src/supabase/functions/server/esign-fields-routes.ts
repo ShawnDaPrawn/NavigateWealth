@@ -76,7 +76,7 @@ fieldsRoutes.put('/envelopes/:envelopeId/fields', async (c) => {
         width: field.width,
         height: field.height,
         required: field.required !== undefined ? field.required : true,
-        signer_id: field.signer_id,
+        signer_id: field.signer_id as string | undefined,
         value: field.value || null,
         metadata: field.metadata || {},
         created_at: field.created_at || new Date().toISOString(),
