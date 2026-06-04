@@ -38,14 +38,14 @@ export function MobileAuthLayout({
           {/* Brand */}
           <div className="mb-7 flex flex-col items-center text-center">
             <img
-              src="/maskable-icon-192x192.png"
+              src="/maskable-icon-192x192.png?v=20260605"
               alt="Navigate Wealth"
               width={64}
               height={64}
               className="h-16 w-16 rounded-2xl shadow-md ring-1 ring-black/5"
             />
             <p className="mt-3 text-xl font-semibold tracking-tight text-gray-900">
-              Navigate<span className="text-purple-700">Wealth</span>
+              Navigate <span className="text-purple-700">Wealth</span>
             </p>
             {caption && (
               <p className="mt-1 text-xs font-medium uppercase tracking-wide text-gray-400">
