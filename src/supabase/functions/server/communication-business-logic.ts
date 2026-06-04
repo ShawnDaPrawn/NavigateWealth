@@ -336,7 +336,7 @@ export async function resolveRecipients(
       const group = storedGroup || groupSelection;
 
       const allClients = await getAllClients(supabase);
-      const members = await resolveGroupMembership(group, allClients);
+      const members = await resolveGroupMembership(group as unknown as Group, allClients);
 
       // Update cache for next time
       const cached: CachedRecipient[] = members.map((m) => ({
@@ -423,8 +423,14 @@ export async function processScheduledCampaigns() {
       campaign.status = 'sending';
       await repo.saveCampaign(campaign);
 
-      const recipients = await resolveRecipients(campaign, supabase);
-      const sendGridAttachments = await processAttachments(campaign.attachments || [], supabase);
+      const recipients = await resolveRecipients(
+        campaign,
+        supabase as unknown as SupabaseAdminClient,
+      );
+      const sendGridAttachments = await processAttachments(
+        campaign.attachments || [],
+        supabase as unknown as SupabaseAdminClient,
+      );
       let sentCount = 0;
 
       for (const recipient of recipients) {

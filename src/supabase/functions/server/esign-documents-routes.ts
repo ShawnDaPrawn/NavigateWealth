@@ -629,7 +629,10 @@ documentsRoutes.post(
           signerId: signerIds[field.signerIndex as number] || signerIds[0],
         }));
 
-        await addFieldsToEnvelope(envelopeId, fieldsWithSignerIds as unknown as EsignField[]);
+        await addFieldsToEnvelope(
+          envelopeId,
+          fieldsWithSignerIds as unknown as Parameters<typeof addFieldsToEnvelope>[1],
+        );
 
         // ── P3.6 — Resolve CRM prefill bindings ──
         // For each signer, find their fields and stamp resolved values from
@@ -693,7 +696,7 @@ documentsRoutes.post(
       // - sequential: only first signer (subsequent signers notified when previous completes)
       // - parallel: all signers at once
       const createdSigners = await getEnvelopeSigners(envelopeId);
-      const sortedSigners = [...createdSigners].sort(
+      const sortedSigners = [...(createdSigners as unknown as SignerRecord[])].sort(
         (a: SignerRecord, b: SignerRecord) => (a.order || 0) - (b.order || 0),
       );
       const invitesSent: Array<{ signerId: string; email: string; success: boolean }> = [];

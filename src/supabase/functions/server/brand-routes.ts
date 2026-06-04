@@ -118,7 +118,7 @@ app.post(
       LOGO_FILE_FIELDS.map(async ({ field, format, mimeTypes }) => {
         const candidate = formData.get(field) as File | null;
         if (!candidate) return null;
-        if (!(mimeTypes as string[]).includes(candidate.type)) {
+        if (!(mimeTypes as unknown as string[]).includes(candidate.type)) {
           return { error: `${field} must be one of: ${mimeTypes.join(', ')}` };
         }
 

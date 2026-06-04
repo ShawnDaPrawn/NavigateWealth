@@ -28,6 +28,7 @@ import type {
   CampaignCreate,
   Template,
   HistoryFilters,
+  CachedRecipient,
 } from './communication-types.ts';
 
 const log = createModuleLogger('communication-service');
@@ -235,10 +236,10 @@ export class CommunicationService {
 
         const hasMergeData = mergeRecipient.firstName || mergeRecipient.lastName;
         const resolvedSubject = hasMergeData
-          ? resolveMergeFields(data.subject, mergeRecipient)
+          ? resolveMergeFields(data.subject, mergeRecipient as unknown as CachedRecipient)
           : data.subject;
         const resolvedContent = hasMergeData
-          ? resolveMergeFields(data.content, mergeRecipient)
+          ? resolveMergeFields(data.content, mergeRecipient as unknown as CachedRecipient)
           : data.content;
 
         await kv.set(messageKey, {

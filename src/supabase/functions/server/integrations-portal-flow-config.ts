@@ -262,7 +262,7 @@ export function normaliseDocumentArtifactConfigs(
         required: entry.required === true,
         attachTo,
         documentType,
-        fileType: 'pdf',
+        fileType: 'pdf' as const,
         steps: normaliseDocumentArtifactSteps(entry.steps, []),
       };
     })

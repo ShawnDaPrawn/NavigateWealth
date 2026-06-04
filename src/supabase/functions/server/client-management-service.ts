@@ -242,7 +242,7 @@ export class ClientsService {
       );
     }
 
-    return filteredClients;
+    return filteredClients as unknown as Client[];
   }
 
   /**

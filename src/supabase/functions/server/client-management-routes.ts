@@ -298,7 +298,10 @@ app.put(
 
     log.info('Admin: Updating client profile', { adminUserId, clientId });
 
-    const profile = await service.updateClientProfile(clientId, profileData);
+    const profile = await service.updateClientProfile(
+      clientId,
+      profileData as unknown as Partial<import('./client-management-types.ts').ClientProfile>,
+    );
 
     // Phase 4: Auto-snapshot net worth after profile save (fire-and-forget, §13)
     snapshotService.autoSnapshotFromKV(clientId, 'profile-save').catch(() => {});
