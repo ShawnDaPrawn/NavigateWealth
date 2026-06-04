@@ -253,7 +253,7 @@ firmAdminRoutes.post('/recovery-bin/:envelopeId/restore', rateLimit('SENDER_MUTA
     const { ip, userAgent } = getRequestMetadata(c);
     await logAuditEvent({
       envelopeId,
-      actorType: 'admin',
+      actorType: 'sender_user',
       actorId: ctx.user.id,
       action: 'restored',
       email: ctx.user.email || 'admin@system',

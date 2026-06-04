@@ -1,4 +1,5 @@
 import { Hono } from 'npm:hono';
+import type { StatusCode } from 'npm:hono';
 import { ZodError } from 'npm:zod';
 import { createModuleLogger } from './stderr-logger.ts';
 import { getErrMsg } from './shared-logger-utils.ts';
@@ -29,7 +30,7 @@ app.post('/proxy', async (c) => {
       log.error(`Honeycomb proxy error: ${response.status}`, { data });
       return c.json(
         { error: 'Honeycomb API Error', details: data, status: response.status },
-        response.status as number,
+        response.status as StatusCode,
       );
     }
 
