@@ -123,11 +123,6 @@ export function RetirementCalculator({ onBack }: RetirementCalculatorProps) {
     }
   }, [selectedClientId]);
 
-  // Calculate on input change
-  useEffect(() => {
-    calculateResults();
-  }, [inputs, calculateResults]);
-
   const loadScenarios = async (clientId: string) => {
     try {
       const data = await api.get<{ scenarios?: RetirementScenario[] }>(
@@ -351,6 +346,11 @@ export function RetirementCalculator({ onBack }: RetirementCalculatorProps) {
       projectionData: finalProjectionData,
     });
   }, [inputs]);
+
+  // Calculate on input change
+  useEffect(() => {
+    calculateResults();
+  }, [inputs, calculateResults]);
 
   const handleSaveScenario = async () => {
     if (!selectedClientId) {
