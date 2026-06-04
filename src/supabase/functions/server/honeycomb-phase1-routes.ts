@@ -46,7 +46,7 @@ app.post('/idv/no-photo', async (c) => {
     });
   } catch (e: unknown) {
     log.error('IDV no-photo route error:', e);
-    return routeError(c, e);
+    return routeError(c, e) as Response;
   }
 });
 
@@ -78,7 +78,7 @@ app.post('/idv/with-photo', async (c) => {
     });
   } catch (e: unknown) {
     log.error('IDV with-photo route error:', e);
-    return routeError(c, e);
+    return routeError(c, e) as Response;
   }
 });
 
@@ -100,7 +100,7 @@ app.post('/idv/bulk', async (c) => {
     });
   } catch (e: unknown) {
     log.error('Bulk IDV route error:', e);
-    return routeError(c, e);
+    return routeError(c, e) as Response;
   }
 });
 
@@ -136,7 +136,7 @@ app.post('/financial/bank-verify', async (c) => {
     });
   } catch (e: unknown) {
     log.error('Bank verification route error:', e);
-    return routeError(c, e);
+    return routeError(c, e) as Response;
   }
 });
 
@@ -168,7 +168,7 @@ app.post('/financial/credit-check', async (c) => {
     });
   } catch (e: unknown) {
     log.error('Credit check route error:', e);
-    return routeError(c, e);
+    return routeError(c, e) as Response;
   }
 });
 
@@ -200,7 +200,7 @@ app.post('/sanctions/search', async (c) => {
     });
   } catch (e: unknown) {
     log.error('Sanctions search route error:', e);
-    return routeError(c, e);
+    return routeError(c, e) as Response;
   }
 });
 

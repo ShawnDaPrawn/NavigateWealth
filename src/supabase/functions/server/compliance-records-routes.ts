@@ -28,7 +28,7 @@ app.get(
   asyncHandler(async (c) => {
     const clientId = c.req.param('clientId')!;
     const records = await service.getAMLFICARecords();
-    const filtered = records.filter((r: Record<string, unknown>) => r.clientId === clientId);
+    const filtered = records.filter((r) => (r as Record<string, unknown>).clientId === clientId);
     return c.json({ success: true, data: filtered, total: filtered.length });
   }),
 );
@@ -57,7 +57,7 @@ app.get(
   asyncHandler(async (c) => {
     const id = c.req.param('id')!;
     const records = await service.getAMLFICARecords();
-    const record = records.find((r: Record<string, unknown>) => r.id === id);
+    const record = records.find((r) => (r as Record<string, unknown>).id === id);
     if (!record) return c.json({ error: 'Record not found' }, 404);
     return c.json(record);
   }),
@@ -105,7 +105,7 @@ app.get(
   asyncHandler(async (c) => {
     const id = c.req.param('id')!;
     const records = await service.getStatutoryRecords();
-    const record = records.find((r: Record<string, unknown>) => r.id === id);
+    const record = records.find((r) => (r as Record<string, unknown>).id === id);
     if (!record) return c.json({ error: 'Record not found' }, 404);
     return c.json(record);
   }),
@@ -190,7 +190,7 @@ app.get(
     const userId = c.req.param('userId')!;
     const records = await service.getPOPIAConsentRecords();
     const filtered = records.filter(
-      (r: Record<string, unknown>) => r.userId === userId || r.user_id === userId,
+      (r) => (r as Record<string, unknown>).userId === userId || r.user_id === userId,
     );
     return c.json({ success: true, data: filtered, total: filtered.length });
   }),
@@ -307,7 +307,7 @@ app.get(
   asyncHandler(async (c) => {
     const clientId = c.req.param('clientId')!;
     const records = await service.getNewBusinessRecords();
-    const filtered = records.filter((r: Record<string, unknown>) => r.clientId === clientId);
+    const filtered = records.filter((r) => (r as Record<string, unknown>).clientId === clientId);
     return c.json({ success: true, data: filtered, total: filtered.length });
   }),
 );

@@ -12,6 +12,7 @@ import { APIError } from './error.middleware.ts';
 import {
   RequestTemplate,
   Request,
+  RequestAssignee,
   AuditLogEntry,
   TemplateStatus,
   RequestStatus,
@@ -435,33 +436,39 @@ export class RequestsService {
 
       // Attempt to salvage ID and TemplateID at minimum
       const salvaged: Request = {
-        id: data.id || 'unknown',
-        templateId: data.templateId || 'unknown',
-        templateVersion: data.templateVersion || 1,
-        status: data.status || RequestStatus.NEW,
-        priority: data.priority || RequestPriority.MEDIUM,
-        requestDetails: data.requestDetails || {},
-        assignees: Array.isArray(data.assignees) ? data.assignees : [],
+        id: (data.id as string) || 'unknown',
+        templateId: (data.templateId as string) || 'unknown',
+        templateVersion: (data.templateVersion as number) || 1,
+        status: (data.status as RequestStatus) || RequestStatus.NEW,
+        priority: (data.priority as RequestPriority) || RequestPriority.MEDIUM,
+        requestDetails: (data.requestDetails as Record<string, unknown>) || {},
+        assignees: Array.isArray(data.assignees) ? (data.assignees as RequestAssignee[]) : [],
         complianceApproval: {
           required: false,
           checklistStatus: [],
-          ...data.complianceApproval,
+          ...(data.complianceApproval && typeof data.complianceApproval === 'object'
+            ? (data.complianceApproval as Record<string, unknown>)
+            : {}),
         },
         lifecycle: {
           stageHistory: [],
-          ...data.lifecycle,
+          ...(data.lifecycle && typeof data.lifecycle === 'object'
+            ? (data.lifecycle as Record<string, unknown>)
+            : {}),
         },
         complianceSignOff: {
           required: false,
           deficiencies: [],
-          ...data.complianceSignOff,
+          ...(data.complianceSignOff && typeof data.complianceSignOff === 'object'
+            ? (data.complianceSignOff as Record<string, unknown>)
+            : {}),
         },
         finalised: !!data.finalised,
-        documentIds: Array.isArray(data.documentIds) ? data.documentIds : [],
-        createdBy: data.createdBy || 'system',
-        createdAt: data.createdAt || new Date().toISOString(),
-        updatedBy: data.updatedBy || 'system',
-        updatedAt: data.updatedAt || new Date().toISOString(),
+        documentIds: Array.isArray(data.documentIds) ? (data.documentIds as string[]) : [],
+        createdBy: (data.createdBy as string) || 'system',
+        createdAt: (data.createdAt as string) || new Date().toISOString(),
+        updatedBy: (data.updatedBy as string) || 'system',
+        updatedAt: (data.updatedAt as string) || new Date().toISOString(),
       };
 
       return salvaged;

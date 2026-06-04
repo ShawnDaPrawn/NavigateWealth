@@ -324,22 +324,26 @@ export class ReportingService {
       const p = row.value || {};
 
       // Application meta sub-object
-      const meta = p._applicationMeta || {};
+      const meta = (p._applicationMeta || {}) as Record<string, unknown>;
 
       // Flatten employers array into first employer
-      const employer = Array.isArray(p.employers) && p.employers.length > 0 ? p.employers[0] : {};
+      const employer = (
+        Array.isArray(p.employers) && p.employers.length > 0 ? p.employers[0] : {}
+      ) as Record<string, unknown>;
 
       // Flatten family members into spouse
-      const spouse =
+      const spouse = (
         Array.isArray(p.familyMembers) && p.familyMembers.length > 0
           ? p.familyMembers.find((f: Record<string, unknown>) => f.relationship === 'Spouse') || {}
-          : {};
+          : {}
+      ) as Record<string, unknown>;
 
       // Flatten identity documents into first doc
-      const idDoc =
+      const idDoc = (
         Array.isArray(p.identityDocuments) && p.identityDocuments.length > 0
           ? p.identityDocuments[0]
-          : {};
+          : {}
+      ) as Record<string, unknown>;
 
       return {
         'User ID': userId,

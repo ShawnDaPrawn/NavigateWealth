@@ -93,31 +93,32 @@ app.post('/events', async (c) => {
     return c.json({ success: false, error: result.error }, 400);
   }
 
+  const event = result.event!;
   const summary = {
-    id: result.event.id,
-    capability: result.event.capability,
-    source: result.event.source,
-    eventType: result.event.eventType,
-    correlationId: result.event.correlationId,
-    receivedAt: result.event.receivedAt,
-    status: result.event.status,
-    requiresReview: result.event.requiresReview,
+    id: event.id,
+    capability: event.capability,
+    source: event.source,
+    eventType: event.eventType,
+    correlationId: event.correlationId,
+    receivedAt: event.receivedAt,
+    status: event.status,
+    requiresReview: event.requiresReview,
   };
 
-  await kv.set(`${OPENCLAW_EVENT_KEY_PREFIX}${result.event.id}`, result.event);
+  await kv.set(`${OPENCLAW_EVENT_KEY_PREFIX}${event.id}`, event);
   await appendEventSummary(summary);
 
   log.info('OpenClaw event accepted', {
-    eventId: result.event.id,
-    capability: result.event.capability,
-    source: result.event.source,
-    requiresReview: result.event.requiresReview,
+    eventId: event.id,
+    capability: event.capability,
+    source: event.source,
+    requiresReview: event.requiresReview,
   });
 
   return c.json({
     success: true,
     event: summary,
-    action: result.event.requiresReview ? 'recorded_for_review' : 'acknowledged',
+    action: event.requiresReview ? 'recorded_for_review' : 'acknowledged',
   });
 });
 

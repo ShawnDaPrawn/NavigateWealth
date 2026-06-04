@@ -9,7 +9,9 @@
  */
 
 import { jsPDF } from 'npm:jspdf';
-import autoTable from 'npm:jspdf-autotable';
+import autoTableMod from 'npm:jspdf-autotable';
+// Cast to callable — npm type resolution exposes module type, not the function signature
+const autoTable = autoTableMod as unknown as (doc: jsPDF, options: Record<string, unknown>) => void;
 import { createModuleLogger } from './stderr-logger.ts';
 
 const log = createModuleLogger('pdf-service');

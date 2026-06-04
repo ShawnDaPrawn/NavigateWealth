@@ -321,7 +321,7 @@ export interface SanctionsSearchParams {
 /** Unified service result returned to routes */
 export interface ServiceResult<T = unknown> {
   success: boolean;
-  data?: T;
+  data?: T | null;
   error?: string;
   matterId?: string;
   checkType?: HoneycombCheckType;

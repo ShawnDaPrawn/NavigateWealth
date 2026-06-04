@@ -139,7 +139,7 @@ app.post('/assessments/run', async (c) => {
     return c.json({ success: true, data: resultEntry });
   } catch (e: unknown) {
     log.error('Error running assessment:', e);
-    return routeError(c, e);
+    return routeError(c, e) as Response;
   }
 });
 
@@ -263,7 +263,7 @@ app.post('/reports/cdd', async (c) => {
     });
   } catch (e: unknown) {
     log.error('CDD report route error:', e);
-    return routeError(c, e);
+    return routeError(c, e) as Response;
   }
 });
 

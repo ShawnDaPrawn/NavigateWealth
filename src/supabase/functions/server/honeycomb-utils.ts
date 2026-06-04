@@ -6,7 +6,10 @@ export const NIL_UUID = '00000000-0000-0000-0000-000000000000';
 
 export const routeError = (c: { json: (body: unknown, status: number) => unknown }, e: unknown) => {
   const isZod = e instanceof Error && e.name === 'ZodError';
-  return c.json({ error: isZod ? (e as ZodError).errors : getErrMsg(e) }, isZod ? 400 : 500);
+  return c.json(
+    { error: isZod ? (e as ZodError & { issues: unknown[] }).issues : getErrMsg(e) },
+    isZod ? 400 : 500,
+  );
 };
 
 export const getHeaders = () => {

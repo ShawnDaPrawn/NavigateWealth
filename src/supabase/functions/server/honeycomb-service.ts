@@ -23,6 +23,7 @@ import type {
   HoneycombBankVerificationResponse,
   HoneycombCreditResponse,
   HoneycombSanctionsResponse,
+  SanctionsMatch,
   HoneycombTraceResponse,
   HoneycombDebtReviewResponse,
   HoneycombCipcResponse,
@@ -35,6 +36,7 @@ import type {
   HoneycombIncomePredictorResponse,
   HoneycombTendersBlueResponse,
   HoneycombBulkIdvResponse,
+  BulkIdvEntry,
   ComplianceDashboardData,
   ComplianceCategory,
   CategoryStatus,
@@ -299,7 +301,7 @@ export async function runIdvNoPhoto(
       return { success: false, error: `IDV check failed: ${errMsg}` };
     }
 
-    const matterId = extractId(data) || null;
+    const matterId = data ? extractId(data) || null : null;
     const result = await storeCheckResult(
       clientId,
       checkType,
@@ -356,7 +358,7 @@ export async function runIdvWithPhoto(
       return { success: false, error: `IDV photo check failed: ${errMsg}` };
     }
 
-    const matterId = extractId(data) || null;
+    const matterId = data ? extractId(data) || null : null;
     await storeCheckResult(clientId, checkType, matterId, 'IDV photo check completed', data);
     await logActivity(clientId, 'IDV Report (Photo)', {
       matterId,
@@ -410,7 +412,7 @@ export async function runBankVerification(
       return { success: false, error: `Bank verification failed: ${errMsg}` };
     }
 
-    const matterId = extractId(data) || null;
+    const matterId = data ? extractId(data) || null : null;
     await storeCheckResult(
       clientId,
       'bank_verification',
@@ -460,7 +462,7 @@ export async function runConsumerCredit(
       return { success: false, error: `Credit check failed: ${errMsg}` };
     }
 
-    const matterId = extractId(data) || null;
+    const matterId = data ? extractId(data) || null : null;
     await storeCheckResult(clientId, 'consumer_credit', matterId, 'Credit check completed', data);
     await logActivity(clientId, 'Consumer Credit Check', {
       matterId,
@@ -506,7 +508,7 @@ export async function runConsumerTrace(
       return { success: false, error: `Consumer trace failed: ${errMsg}` };
     }
 
-    const matterId = extractId(data) || null;
+    const matterId = data ? extractId(data) || null : null;
     await storeCheckResult(clientId, 'consumer_trace', matterId, 'Consumer trace completed', data);
     await logActivity(clientId, 'Consumer Trace', {
       matterId,
@@ -551,7 +553,7 @@ export async function runDebtReviewEnquiry(
       return { success: false, error: `Debt review enquiry failed: ${errMsg}` };
     }
 
-    const matterId = extractId(data) || null;
+    const matterId = data ? extractId(data) || null : null;
     const isUnderReview = data?.debtReviewStatus === true || data?.isUnderReview === true;
     await storeCheckResult(
       clientId,
@@ -613,10 +615,12 @@ export async function searchSanctions(
     }
 
     // Normalise results
-    const results = Array.isArray(data) ? data : data?.results || data?.listings || [];
+    const results: unknown[] = Array.isArray(data)
+      ? data
+      : ((data?.results ?? data?.listings ?? []) as unknown[]);
     const totalMatches = results.length;
     const sanctionsData: HoneycombSanctionsResponse = {
-      results,
+      results: results as SanctionsMatch[],
       totalMatches,
       searchedLists: source ? [source] : ['all'],
       ...(typeof data === 'object' && data !== null ? data : {}),
@@ -683,7 +687,9 @@ export async function searchEnforcementActions(
       return { success: false, error: `Enforcement search failed: ${errMsg}` };
     }
 
-    const results = Array.isArray(data) ? data : data?.results || data?.listings || [];
+    const results: unknown[] = Array.isArray(data)
+      ? data
+      : ((data?.results ?? data?.listings ?? []) as unknown[]);
     const totalMatches = results.length;
 
     await storeCheckResult(
@@ -700,7 +706,7 @@ export async function searchEnforcementActions(
 
     return {
       success: true,
-      data: { results, totalMatches },
+      data: { results, totalMatches } as HoneycombEnforcementResponse,
       checkType: 'enforcement_actions',
     };
   } catch (err) {
@@ -744,7 +750,9 @@ export async function searchLegalAListing(
       return { success: false, error: `Legal A listing search failed: ${errMsg}` };
     }
 
-    const results = Array.isArray(data) ? data : data?.results || data?.listings || [];
+    const results: unknown[] = Array.isArray(data)
+      ? data
+      : ((data?.results ?? data?.listings ?? []) as unknown[]);
     const totalMatches = results.length;
 
     await storeCheckResult(
@@ -761,7 +769,7 @@ export async function searchLegalAListing(
 
     return {
       success: true,
-      data: { results, totalMatches },
+      data: { results, totalMatches } as HoneycombLegalAListingResponse,
       checkType: 'legal_a_listing',
     };
   } catch (err) {
@@ -801,7 +809,7 @@ export async function runCipcSearch(
       return { success: false, error: `CIPC search failed: ${errMsg}` };
     }
 
-    const matterId = extractId(data) || null;
+    const matterId = data ? extractId(data) || null : null;
     const companies = Array.isArray(data?.companies)
       ? data.companies
       : Array.isArray(data)
@@ -857,7 +865,7 @@ export async function runDirectorEnquiry(
       return { success: false, error: `Director enquiry failed: ${errMsg}` };
     }
 
-    const matterId = extractId(data) || null;
+    const matterId = data ? extractId(data) || null : null;
     const directorships = Array.isArray(data?.directorships) ? data.directorships : [];
     await storeCheckResult(
       clientId,
@@ -908,7 +916,7 @@ export async function runBestKnownAddress(
       return { success: false, error: `Address lookup failed: ${errMsg}` };
     }
 
-    const matterId = extractId(data) || null;
+    const matterId = data ? extractId(data) || null : null;
     await storeCheckResult(
       clientId,
       'best_known_address',
@@ -964,7 +972,7 @@ export async function runCustomScreening(
       return { success: false, error: `Custom screening failed: ${errMsg}` };
     }
 
-    const matterId = extractId(data) || null;
+    const matterId = data ? extractId(data) || null : null;
     await storeCheckResult(
       clientId,
       'custom_screening',
@@ -1016,7 +1024,7 @@ export async function runLifestyleAudit(
       return { success: false, error: `Lifestyle audit failed: ${errMsg}` };
     }
 
-    const matterId = extractId(data) || null;
+    const matterId = data ? extractId(data) || null : null;
     await storeCheckResult(
       clientId,
       'lifestyle_audit',
@@ -1065,7 +1073,7 @@ export async function runIncomePredictor(
       return { success: false, error: `Income predictor failed: ${errMsg}` };
     }
 
-    const matterId = extractId(data) || null;
+    const matterId = data ? extractId(data) || null : null;
     await storeCheckResult(
       clientId,
       'income_predictor',
@@ -1114,7 +1122,7 @@ export async function runTendersBlue(
       return { success: false, error: `Tenders blue search failed: ${errMsg}` };
     }
 
-    const matterId = extractId(data) || null;
+    const matterId = data ? extractId(data) || null : null;
     const tenders = Array.isArray(data?.tenders) ? data.tenders : Array.isArray(data) ? data : [];
     await storeCheckResult(
       clientId,
@@ -1167,7 +1175,7 @@ export async function runCddReport(
       return { success: false, error: `CDD report failed: ${errMsg}` };
     }
 
-    const matterId = extractId(data) || null;
+    const matterId = data ? extractId(data) || null : null;
     await storeCheckResult(clientId, 'cdd_report', matterId, 'CDD report completed', data);
     await logActivity(clientId, 'CDD Report', {
       matterId,
@@ -1257,16 +1265,24 @@ export async function runBulkIdv(
       return { success: false, error: `Bulk IDV failed: ${errMsg}` };
     }
 
-    const results = Array.isArray(data?.results) ? data.results : Array.isArray(data) ? data : [];
+    const results: unknown[] = Array.isArray(data?.results)
+      ? (data.results as unknown[])
+      : Array.isArray(data)
+        ? data
+        : [];
     const totalProcessed = results.length;
     const totalMatched = results.filter(
-      (r: Record<string, unknown>) => r?.status === 'matched' || r?.matchResult === 'matched',
+      (r) =>
+        (r as Record<string, unknown>)?.status === 'matched' ||
+        (r as Record<string, unknown>)?.matchResult === 'matched',
     ).length;
     const totalFailed = results.filter(
-      (r: Record<string, unknown>) => r?.status === 'failed' || r?.matchResult === 'failed',
+      (r) =>
+        (r as Record<string, unknown>)?.status === 'failed' ||
+        (r as Record<string, unknown>)?.matchResult === 'failed',
     ).length;
 
-    const matterId = extractId(data) || null;
+    const matterId = data ? extractId(data) || null : null;
     await storeCheckResult(
       clientId,
       'idv_bulk',
@@ -1283,7 +1299,13 @@ export async function runBulkIdv(
 
     return {
       success: true,
-      data: { ...data, results, totalProcessed, totalMatched, totalFailed },
+      data: {
+        ...(data ?? {}),
+        results: results as BulkIdvEntry[],
+        totalProcessed,
+        totalMatched,
+        totalFailed,
+      },
       matterId,
       checkType: 'idv_bulk',
     };
