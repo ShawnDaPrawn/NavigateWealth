@@ -16,12 +16,15 @@ import { projectId, publicAnonKey } from '../../utils/supabase/info';
 import { LOGIN_FEATURES } from './auth/authConstants';
 import { AuthShowcasePanel } from './auth/AuthShowcasePanel';
 import { AuthTrustBar } from './auth/AuthTrustBar';
+import { MobileAuthLayout } from './auth/MobileAuthLayout';
 import { PageLoader } from '../ui/page-loader';
+import { useIsStandalone } from '../../hooks/useIsStandalone';
 
 export function LoginPage() {
   const navigate = useNavigate();
   const location = useLocation();
   const { isAuthenticated, user } = useAuth();
+  const isStandalone = useIsStandalone();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -281,258 +284,268 @@ export function LoginPage() {
     setError('Login cancelled. Two-factor authentication is required.');
   };
 
+  const formContent = (
+    <>
+      {/* Header */}
+      <div className="mb-8">
+        <h2 className="text-gray-900 text-2xl font-bold">Welcome back</h2>
+        <p className="mt-2 text-gray-600 text-sm">
+          Don't have an account?{' '}
+          <Link to="/signup" className="text-purple-700 hover:text-purple-800 font-medium">
+            Sign up
+          </Link>
+        </p>
+      </div>
+
+      {successMessage && (
+        <Alert className="mb-6 border-green-200 bg-green-50">
+          <CheckCircle2 className="h-4 w-4 text-green-600" />
+          <AlertDescription className="text-green-800">{successMessage}</AlertDescription>
+        </Alert>
+      )}
+
+      {verificationEmailSent && (
+        <Alert className="mb-6 border-blue-200 bg-blue-50">
+          <Mail className="h-4 w-4 text-blue-600" />
+          <AlertDescription className="text-blue-800">
+            Verification email sent! Please check your inbox.
+          </AlertDescription>
+        </Alert>
+      )}
+
+      {error && (
+        <Alert className="mb-6 border-red-200 bg-red-50" role="alert" aria-live="assertive">
+          <XCircle className="h-4 w-4 text-red-600" />
+          <AlertDescription className="text-red-800" id="login-error">
+            {error}
+            {error.includes('verify your email') && (
+              <button
+                onClick={handleResendVerification}
+                className="ml-2 underline hover:no-underline"
+              >
+                Resend verification email
+              </button>
+            )}
+          </AlertDescription>
+        </Alert>
+      )}
+
+      <form
+        onSubmit={handleSubmit}
+        className="space-y-5"
+        aria-describedby={error ? 'login-error' : undefined}
+      >
+        <div>
+          <Label htmlFor="email">Email Address</Label>
+          <div className="relative mt-1">
+            <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
+            <Input
+              id="email"
+              name="email"
+              type="email"
+              autoComplete="email"
+              required
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              className="pl-10"
+              placeholder="you@example.com"
+              disabled={isSubmitting}
+            />
+          </div>
+        </div>
+
+        <div>
+          <div className="flex items-center justify-between">
+            <Label htmlFor="password">Password</Label>
+            <Link to="/forgot-password" className="text-sm text-purple-700 hover:text-purple-800">
+              Forgot password?
+            </Link>
+          </div>
+          <div className="relative mt-1">
+            <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
+            <Input
+              id="password"
+              name="password"
+              type={showPassword ? 'text' : 'password'}
+              autoComplete="current-password"
+              required
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              className="pl-10 pr-10"
+              placeholder="Enter your password"
+              disabled={isSubmitting}
+            />
+            <button
+              type="button"
+              onClick={() => setShowPassword(!showPassword)}
+              className="absolute inset-y-0 right-0 pr-3 flex items-center"
+              disabled={isSubmitting}
+              aria-label={showPassword ? 'Hide password' : 'Show password'}
+            >
+              {showPassword ? (
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  width="16"
+                  height="16"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  className="text-gray-400"
+                >
+                  <path d="M10.733 5.076a10.744 10.744 0 0 1 11.205 6.575 1 1 0 0 1 0 .696 10.747 10.747 0 0 1-1.444 2.49" />
+                  <path d="M14.084 14.158a3 3 0 0 1-4.242-4.242" />
+                  <path d="M17.479 17.499a10.75 10.75 0 0 1-15.417-5.151 1 1 0 0 1 0-.696 10.75 10.75 0 0 1 4.446-5.143" />
+                  <path d="m2 2 20 20" />
+                </svg>
+              ) : (
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  width="16"
+                  height="16"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  className="text-gray-400"
+                >
+                  <path d="M2.062 12.348a1 1 0 0 1 0-.696 10.75 10.75 0 0 1 19.876 0 1 1 0 0 1 0 .696 10.75 10.75 0 0 1-19.876 0" />
+                  <circle cx="12" cy="12" r="3" />
+                </svg>
+              )}
+            </button>
+          </div>
+        </div>
+
+        {/* Remember me */}
+        <div className="flex items-center gap-2">
+          <Checkbox
+            id="remember-me"
+            checked={rememberMe}
+            onCheckedChange={(checked) => setRememberMe(checked === true)}
+          />
+          <Label htmlFor="remember-me" className="text-sm text-gray-600 font-normal cursor-pointer">
+            Remember me
+          </Label>
+        </div>
+
+        <Button
+          type="submit"
+          className="w-full bg-purple-700 hover:bg-purple-800"
+          disabled={isSubmitting}
+        >
+          {isSubmitting ? (
+            <span className="flex items-center justify-center gap-2">
+              <span
+                className="animate-spin h-4 w-4 border-2 border-white border-t-transparent rounded-full"
+                aria-hidden="true"
+              ></span>
+              Signing in...
+            </span>
+          ) : (
+            'Sign in'
+          )}
+        </Button>
+
+        {/* Inline trust signal */}
+        <div className="flex items-center justify-center gap-1.5 text-xs text-gray-400">
+          <Lock className="h-3 w-3" />
+          <span>FSP 54606 | FSCA Regulated | 256-bit encryption</span>
+        </div>
+      </form>
+
+      {/* Help Link */}
+      <div className="mt-6 flex items-center justify-center gap-1.5">
+        <HelpCircle className="h-4 w-4 text-gray-400" />
+        <Link to="/contact" className="text-sm text-purple-700 hover:text-purple-800">
+          Need help? Contact our support team
+        </Link>
+      </div>
+
+      {/* Mobile trust bar */}
+      <AuthTrustBar />
+    </>
+  );
+
+  const twoFactorModal =
+    show2FAModal && tempUserId ? (
+      <TwoFactorModal
+        email={tempUserEmail}
+        onVerified={handle2FAVerified}
+        onCancel={handle2FACancel}
+        verifyCode={async (code: string) => {
+          const response = await fetch(
+            `https://${projectId}.supabase.co/functions/v1/make-server-91ed8379/security/${tempUserId}/2fa/verify-code`,
+            {
+              method: 'POST',
+              headers: {
+                Authorization: `Bearer ${publicAnonKey}`,
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({ code }),
+            },
+          );
+          const data = await response.json();
+          if (!response.ok || !data.success) {
+            // If the account was suspended due to too many failures,
+            // close the modal and show the suspension error on the login page.
+            if (data.suspended) {
+              setShow2FAModal(false);
+              setTempUserId(null);
+              setTempUserEmail('');
+              setTempPassword('');
+              setError(
+                data.error ||
+                  'Your account has been suspended. Please contact Navigate Wealth support.',
+              );
+              return { success: false, error: '' }; // Error shown on login page, not in modal
+            }
+            return { success: false, error: data.error || 'Verification failed' };
+          }
+          return { success: true };
+        }}
+        resendCode={async () => {
+          const response = await fetch(
+            `https://${projectId}.supabase.co/functions/v1/make-server-91ed8379/security/${tempUserId}/2fa/send-code`,
+            {
+              method: 'POST',
+              headers: {
+                Authorization: `Bearer ${publicAnonKey}`,
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({ email: tempUserEmail }),
+            },
+          );
+          const data = await response.json();
+          if (!response.ok || !data.success) {
+            return { success: false, error: data.error || 'Failed to resend code' };
+          }
+          return { success: true };
+        }}
+      />
+    ) : null;
+
+  // Installed PWA: branded, app-like shell around the same form.
+  if (isStandalone) {
+    return (
+      <>
+        {twoFactorModal}
+        <MobileAuthLayout maxWidthClass="max-w-md">{formContent}</MobileAuthLayout>
+      </>
+    );
+  }
+
   return (
     <div className="flex flex-col lg:flex-row lg:min-h-screen">
-      {/* 2FA Modal */}
-      {show2FAModal && tempUserId && (
-        <TwoFactorModal
-          email={tempUserEmail}
-          onVerified={handle2FAVerified}
-          onCancel={handle2FACancel}
-          verifyCode={async (code: string) => {
-            const response = await fetch(
-              `https://${projectId}.supabase.co/functions/v1/make-server-91ed8379/security/${tempUserId}/2fa/verify-code`,
-              {
-                method: 'POST',
-                headers: {
-                  Authorization: `Bearer ${publicAnonKey}`,
-                  'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({ code }),
-              },
-            );
-            const data = await response.json();
-            if (!response.ok || !data.success) {
-              // If the account was suspended due to too many failures,
-              // close the modal and show the suspension error on the login page.
-              if (data.suspended) {
-                setShow2FAModal(false);
-                setTempUserId(null);
-                setTempUserEmail('');
-                setTempPassword('');
-                setError(
-                  data.error ||
-                    'Your account has been suspended. Please contact Navigate Wealth support.',
-                );
-                return { success: false, error: '' }; // Error shown on login page, not in modal
-              }
-              return { success: false, error: data.error || 'Verification failed' };
-            }
-            return { success: true };
-          }}
-          resendCode={async () => {
-            const response = await fetch(
-              `https://${projectId}.supabase.co/functions/v1/make-server-91ed8379/security/${tempUserId}/2fa/send-code`,
-              {
-                method: 'POST',
-                headers: {
-                  Authorization: `Bearer ${publicAnonKey}`,
-                  'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({ email: tempUserEmail }),
-              },
-            );
-            const data = await response.json();
-            if (!response.ok || !data.success) {
-              return { success: false, error: data.error || 'Failed to resend code' };
-            }
-            return { success: true };
-          }}
-        />
-      )}
+      {twoFactorModal}
 
       {/* Left Column - Form */}
       <div className="flex-1 flex flex-col justify-start lg:justify-center px-4 sm:px-6 lg:px-20 xl:px-24 bg-white py-8">
-        <div className="mx-auto w-full max-w-md">
-          {/* Header */}
-          <div className="mb-8">
-            <h2 className="text-gray-900 text-2xl font-bold">Welcome back</h2>
-            <p className="mt-2 text-gray-600 text-sm">
-              Don't have an account?{' '}
-              <Link to="/signup" className="text-purple-700 hover:text-purple-800 font-medium">
-                Sign up
-              </Link>
-            </p>
-          </div>
-
-          {successMessage && (
-            <Alert className="mb-6 border-green-200 bg-green-50">
-              <CheckCircle2 className="h-4 w-4 text-green-600" />
-              <AlertDescription className="text-green-800">{successMessage}</AlertDescription>
-            </Alert>
-          )}
-
-          {verificationEmailSent && (
-            <Alert className="mb-6 border-blue-200 bg-blue-50">
-              <Mail className="h-4 w-4 text-blue-600" />
-              <AlertDescription className="text-blue-800">
-                Verification email sent! Please check your inbox.
-              </AlertDescription>
-            </Alert>
-          )}
-
-          {error && (
-            <Alert className="mb-6 border-red-200 bg-red-50" role="alert" aria-live="assertive">
-              <XCircle className="h-4 w-4 text-red-600" />
-              <AlertDescription className="text-red-800" id="login-error">
-                {error}
-                {error.includes('verify your email') && (
-                  <button
-                    onClick={handleResendVerification}
-                    className="ml-2 underline hover:no-underline"
-                  >
-                    Resend verification email
-                  </button>
-                )}
-              </AlertDescription>
-            </Alert>
-          )}
-
-          <form
-            onSubmit={handleSubmit}
-            className="space-y-5"
-            aria-describedby={error ? 'login-error' : undefined}
-          >
-            <div>
-              <Label htmlFor="email">Email Address</Label>
-              <div className="relative mt-1">
-                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
-                <Input
-                  id="email"
-                  name="email"
-                  type="email"
-                  autoComplete="email"
-                  required
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  className="pl-10"
-                  placeholder="you@example.com"
-                  disabled={isSubmitting}
-                />
-              </div>
-            </div>
-
-            <div>
-              <div className="flex items-center justify-between">
-                <Label htmlFor="password">Password</Label>
-                <Link
-                  to="/forgot-password"
-                  className="text-sm text-purple-700 hover:text-purple-800"
-                >
-                  Forgot password?
-                </Link>
-              </div>
-              <div className="relative mt-1">
-                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
-                <Input
-                  id="password"
-                  name="password"
-                  type={showPassword ? 'text' : 'password'}
-                  autoComplete="current-password"
-                  required
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  className="pl-10 pr-10"
-                  placeholder="Enter your password"
-                  disabled={isSubmitting}
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="absolute inset-y-0 right-0 pr-3 flex items-center"
-                  disabled={isSubmitting}
-                  aria-label={showPassword ? 'Hide password' : 'Show password'}
-                >
-                  {showPassword ? (
-                    <svg
-                      xmlns="http://www.w3.org/2000/svg"
-                      width="16"
-                      height="16"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="2"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      className="text-gray-400"
-                    >
-                      <path d="M10.733 5.076a10.744 10.744 0 0 1 11.205 6.575 1 1 0 0 1 0 .696 10.747 10.747 0 0 1-1.444 2.49" />
-                      <path d="M14.084 14.158a3 3 0 0 1-4.242-4.242" />
-                      <path d="M17.479 17.499a10.75 10.75 0 0 1-15.417-5.151 1 1 0 0 1 0-.696 10.75 10.75 0 0 1 4.446-5.143" />
-                      <path d="m2 2 20 20" />
-                    </svg>
-                  ) : (
-                    <svg
-                      xmlns="http://www.w3.org/2000/svg"
-                      width="16"
-                      height="16"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="2"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      className="text-gray-400"
-                    >
-                      <path d="M2.062 12.348a1 1 0 0 1 0-.696 10.75 10.75 0 0 1 19.876 0 1 1 0 0 1 0 .696 10.75 10.75 0 0 1-19.876 0" />
-                      <circle cx="12" cy="12" r="3" />
-                    </svg>
-                  )}
-                </button>
-              </div>
-            </div>
-
-            {/* Remember me */}
-            <div className="flex items-center gap-2">
-              <Checkbox
-                id="remember-me"
-                checked={rememberMe}
-                onCheckedChange={(checked) => setRememberMe(checked === true)}
-              />
-              <Label
-                htmlFor="remember-me"
-                className="text-sm text-gray-600 font-normal cursor-pointer"
-              >
-                Remember me
-              </Label>
-            </div>
-
-            <Button
-              type="submit"
-              className="w-full bg-purple-700 hover:bg-purple-800"
-              disabled={isSubmitting}
-            >
-              {isSubmitting ? (
-                <span className="flex items-center justify-center gap-2">
-                  <span
-                    className="animate-spin h-4 w-4 border-2 border-white border-t-transparent rounded-full"
-                    aria-hidden="true"
-                  ></span>
-                  Signing in...
-                </span>
-              ) : (
-                'Sign in'
-              )}
-            </Button>
-
-            {/* Inline trust signal */}
-            <div className="flex items-center justify-center gap-1.5 text-xs text-gray-400">
-              <Lock className="h-3 w-3" />
-              <span>FSP 54606 | FSCA Regulated | 256-bit encryption</span>
-            </div>
-          </form>
-
-          {/* Help Link */}
-          <div className="mt-6 flex items-center justify-center gap-1.5">
-            <HelpCircle className="h-4 w-4 text-gray-400" />
-            <Link to="/contact" className="text-sm text-purple-700 hover:text-purple-800">
-              Need help? Contact our support team
-            </Link>
-          </div>
-
-          {/* Mobile trust bar */}
-          <AuthTrustBar />
-        </div>
+        <div className="mx-auto w-full max-w-md">{formContent}</div>
       </div>
 
       {/* Right Column - Feature Showcase */}

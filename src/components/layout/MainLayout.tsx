@@ -108,18 +108,13 @@ export function MainLayout({
     );
   }
 
-  // Installed-PWA auth screens: full-screen, native-app feel. No marketing
-  // TopBar/nav and no footer; respects the device safe areas (notch / home bar).
+  // Installed-PWA auth screens: strip the marketing chrome (no TopBar/nav/footer)
+  // and let each auth page render its branded MobileAuthLayout shell, which owns
+  // the full-height centring and device safe areas.
   if (isAppAuthScreen) {
     return (
-      <div
-        className="flex min-h-[100dvh] flex-col bg-white"
-        style={{
-          paddingTop: 'env(safe-area-inset-top)',
-          paddingBottom: 'env(safe-area-inset-bottom)',
-        }}
-      >
-        <main id="main-content" className="flex flex-1 flex-col justify-center">
+      <div className="min-h-[100dvh] bg-white">
+        <main id="main-content">
           <ErrorBoundary inline fallbackTitle="Page Error">
             {children}
           </ErrorBoundary>
