@@ -146,7 +146,7 @@ async function resolvePointerModule(
       intakeSessionId: resolved.intakeSessionId,
     };
   } catch (err) {
-    log.warn(`Error processing ${key} FNA status:`, err);
+    log.warn(`Error processing ${key} FNA status:`, { error: String(err) });
     return { key, status: 'error' as const, data: null };
   }
 }
@@ -190,7 +190,7 @@ async function resolvePrefixModule(
       intakeSessionId: resolved.intakeSessionId,
     };
   } catch (err) {
-    log.warn(`Error processing ${key} FNA status:`, err);
+    log.warn(`Error processing ${key} FNA status:`, { error: String(err) });
     return { key, status: 'error' as const, data: null };
   }
 }

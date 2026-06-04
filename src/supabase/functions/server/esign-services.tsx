@@ -8,6 +8,7 @@ import { EsignKeys } from './esign-keys.ts';
 import type {
   EsignDocument,
   EsignEnvelope,
+  EsignEnvelopeDetails,
   EsignSigner,
   EsignField,
   EsignAuditEvent,
@@ -225,9 +226,7 @@ export async function createEnvelope(params: {
 /**
  * Get envelope with full details (signers, fields, document)
  */
-export async function getEnvelopeDetails(
-  envelopeId: string,
-): Promise<Record<string, unknown> | null> {
+export async function getEnvelopeDetails(envelopeId: string): Promise<EsignEnvelopeDetails | null> {
   try {
     // Fetch envelope
     const envelope = await kv.get(EsignKeys.envelope(envelopeId));
@@ -268,10 +267,10 @@ export async function getEnvelopeDetails(
 
     return {
       ...envelope,
-      document,
-      signers: signers.filter(Boolean),
+      document: document as EsignDocument | null,
+      signers: signers.filter(Boolean) as EsignSigner[],
       fields: allFields,
-    };
+    } as EsignEnvelopeDetails;
   } catch (error: unknown) {
     log.error('Failed to get envelope details:', error);
     throw error;

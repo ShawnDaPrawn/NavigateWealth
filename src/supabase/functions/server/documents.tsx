@@ -498,7 +498,7 @@ app.delete('/:userId/:documentId', async (c) => {
         .remove([docData.filePath]);
 
       if (deleteError) {
-        log.warn('⚠️ Error deleting file from storage:', deleteError);
+        log.warn('⚠️ Error deleting file from storage:', { error: String(deleteError) });
         // Continue anyway to delete metadata
       } else {
         log.info('✅ File deleted from storage');

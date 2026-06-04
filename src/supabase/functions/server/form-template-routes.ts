@@ -68,7 +68,7 @@ async function extractPdfFields(base64Content: string): Promise<FormTemplateFiel
 
     return autoMapTemplateFields(extractedFields).fields;
   } catch (error) {
-    log.warn('PDF field extraction failed', error);
+    log.warn('PDF field extraction failed', { error: String(error) });
     return [];
   }
 }

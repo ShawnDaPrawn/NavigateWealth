@@ -107,6 +107,17 @@ export interface EsignEnvelope {
   delete_reason?: string;
 }
 
+/**
+ * Hydrated envelope returned by getEnvelopeDetails — includes document,
+ * signers, and fields that are loaded from KV and merged at read time.
+ * Extends EsignEnvelope so callers get strong types instead of unknown.
+ */
+export interface EsignEnvelopeDetails extends EsignEnvelope {
+  document: EsignDocument | null;
+  signers: EsignSigner[];
+  fields: EsignField[];
+}
+
 export interface EsignSigner {
   id: string;
   envelope_id: string;

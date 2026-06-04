@@ -188,7 +188,7 @@ app.post('/signer/validate', rateLimit('SIGNER_ACCESS'), async (c) => {
         savedInitials = typeof profile.initials === 'string' ? profile.initials : null;
       }
     } catch (profileErr) {
-      log.warn('Failed to load signer profile (non-critical):', profileErr);
+      log.warn('Failed to load signer profile (non-critical):', { error: String(profileErr) });
     }
 
     // Auto-send OTP if required and not verified
@@ -228,7 +228,7 @@ app.post('/signer/validate', rateLimit('SIGNER_ACCESS'), async (c) => {
           log.info(`✅ Auto-sent OTP to ${signer.email} for signer ${signer.id}`);
         }
       } catch (err) {
-        log.warn('❌ Failed to auto-send OTP:', err);
+        log.warn('❌ Failed to auto-send OTP:', { error: String(err) });
         // We don't block the response, but we log the error
       }
     }
@@ -245,7 +245,9 @@ app.post('/signer/validate', rateLimit('SIGNER_ACCESS'), async (c) => {
         branding = toPublicBranding(record);
       }
     } catch (brandErr) {
-      log.warn('Failed to load firm branding for signer (non-critical):', brandErr);
+      log.warn('Failed to load firm branding for signer (non-critical):', {
+        error: String(brandErr),
+      });
     }
 
     // P8.7 — Surface the signer's preferred language so the UI can

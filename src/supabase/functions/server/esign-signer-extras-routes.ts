@@ -100,7 +100,7 @@ app.get('/signer/download/:token', async (c) => {
           finalPdfBuffer = await PDFService.mergeCertificate(burnedPdfBuffer, certBuffer);
         }
       } catch (certError) {
-        log.warn('Certificate merge failed during fallback download', certError);
+        log.warn('Certificate merge failed during fallback download', { error: String(certError) });
       }
 
       return new Response(finalPdfBuffer, {

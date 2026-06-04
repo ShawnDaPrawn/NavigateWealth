@@ -84,7 +84,7 @@ app.post('/signup', async (c) => {
           (userError as Error & { code?: string }).code === 'email_exists') ||
         userError?.message?.includes('already been registered')
       ) {
-        log.warn('⚠️ User already exists:', email);
+        log.warn('⚠️ User already exists:', { email });
         return c.json(
           {
             error: 'An account with this email already exists. Please sign in.',
@@ -119,14 +119,14 @@ app.post('/signup', async (c) => {
       });
 
       if (resendError) {
-        log.warn('⚠️ Failed to send verification email:', resendError);
+        log.warn('⚠️ Failed to send verification email:', { error: String(resendError) });
         // We don't fail the request here, as the user is created.
         // They can request a new verification email from the frontend.
       } else {
         log.info('✅ Verification email sent successfully');
       }
     } catch (emailErr) {
-      log.warn('⚠️ Exception sending verification email:', emailErr);
+      log.warn('⚠️ Exception sending verification email:', { error: String(emailErr) });
     }
 
     // Generate Application Number
@@ -207,7 +207,7 @@ app.post('/signup', async (c) => {
 
     // Auto-subscribe client to newsletter (fire-and-forget, §12.3)
     autoSubscribeClient(email, firstName, surname).catch((err) => {
-      log.warn('Auto-subscribe newsletter failed (non-blocking)', err);
+      log.warn('Auto-subscribe newsletter failed (non-blocking)', { error: String(err) });
     });
 
     // Create a submission to notify admin of the new signup (appears in Submissions inbox)

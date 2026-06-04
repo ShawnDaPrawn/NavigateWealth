@@ -1073,7 +1073,7 @@ export class CommunicationService {
         });
       }
     } catch (e) {
-      log.warn('Bucket check failed', e);
+      log.warn('Bucket check failed', { error: String(e) });
     }
 
     const timestamp = Date.now();

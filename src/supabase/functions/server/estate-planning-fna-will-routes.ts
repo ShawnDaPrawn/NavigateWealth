@@ -561,7 +561,9 @@ app.delete('/wills/:willId/signed-document', async (c) => {
       .remove([will.signedDocumentPath]);
 
     if (deleteError) {
-      log.warn('Failed to delete signed document from storage (non-critical):', deleteError);
+      log.warn('Failed to delete signed document from storage (non-critical):', {
+        error: String(deleteError),
+      });
     }
 
     const updatedWill = {

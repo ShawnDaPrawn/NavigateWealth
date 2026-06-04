@@ -45,25 +45,35 @@ function taskKey(id: string): string {
 /** Normalise a task coming out of KV so field names match the frontend contract (snake_case). */
 function normaliseTask(raw: RawKvTask): KvTask {
   if (!raw || typeof raw !== 'object') return raw as unknown as KvTask;
+  const r = raw as Record<string, unknown>;
   return {
-    ...raw,
+    ...(raw as KvTask),
     // Ensure snake_case fields exist (handle legacy camelCase data)
-    due_date: raw.due_date ?? raw.dueDate ?? null,
-    is_template: raw.is_template ?? raw.isTemplate ?? false,
-    assignee_initials: raw.assignee_initials ?? raw.assigneeInitials ?? null,
-    assignee_id: raw.assignee_id ?? raw.assigneeId ?? null,
-    created_by: raw.created_by ?? raw.createdBy ?? '',
-    created_at: raw.created_at ?? raw.createdAt ?? raw.created_at ?? new Date().toISOString(),
-    updated_at: raw.updated_at ?? raw.updatedAt ?? raw.updated_at ?? new Date().toISOString(),
-    completed_at: raw.completed_at ?? raw.completedAt ?? null,
-    sort_order: raw.sort_order ?? raw.sortOrder ?? 0,
-    reminder_frequency: raw.reminder_frequency ?? raw.reminderFrequency ?? null,
-    last_reminder_sent: raw.last_reminder_sent ?? raw.lastReminderSent ?? null,
-    tags: raw.tags ?? [],
-    category: raw.category ?? null,
-    priority: raw.priority ?? 'medium',
-    status: raw.status ?? 'new',
-    description: raw.description ?? null,
+    due_date: (r.due_date ?? r.dueDate ?? null) as string | null | undefined,
+    is_template: (r.is_template ?? r.isTemplate ?? false) as boolean,
+    assignee_initials: (r.assignee_initials ?? r.assigneeInitials ?? null) as
+      | string
+      | null
+      | undefined,
+    assignee_id: (r.assignee_id ?? r.assigneeId ?? null) as string | null | undefined,
+    created_by: (r.created_by ?? r.createdBy ?? '') as string,
+    created_at: (r.created_at ?? r.createdAt ?? new Date().toISOString()) as string,
+    updated_at: (r.updated_at ?? r.updatedAt ?? new Date().toISOString()) as string,
+    completed_at: (r.completed_at ?? r.completedAt ?? null) as string | null | undefined,
+    sort_order: (r.sort_order ?? r.sortOrder ?? 0) as number,
+    reminder_frequency: (r.reminder_frequency ?? r.reminderFrequency ?? null) as
+      | string
+      | null
+      | undefined,
+    last_reminder_sent: (r.last_reminder_sent ?? r.lastReminderSent ?? null) as
+      | string
+      | null
+      | undefined,
+    tags: (Array.isArray(r.tags) ? r.tags : []) as string[],
+    category: (r.category ?? null) as string | null | undefined,
+    priority: (r.priority ?? 'medium') as KvTask['priority'],
+    status: (r.status ?? 'new') as KvTask['status'],
+    description: (r.description ?? null) as string | null | undefined,
   };
 }
 
@@ -244,6 +254,7 @@ app.get(
   '/:id',
   asyncHandler(async (c) => {
     const id = c.req.param('id');
+    if (!id) return c.json({ error: 'Missing id' }, 400);
     try {
       const task = await kv.get(taskKey(id));
       if (!task) {
@@ -333,6 +344,7 @@ app.patch(
   '/:id',
   asyncHandler(async (c) => {
     const id = c.req.param('id');
+    if (!id) return c.json({ error: 'Missing id' }, 400);
     try {
       const existing = await kv.get(taskKey(id));
       if (!existing) {
@@ -372,6 +384,7 @@ app.delete(
   '/:id',
   asyncHandler(async (c) => {
     const id = c.req.param('id');
+    if (!id) return c.json({ error: 'Missing id' }, 400);
     try {
       await kv.del(taskKey(id));
       // Also clean up related data
@@ -403,6 +416,7 @@ app.post(
   '/:id/move',
   asyncHandler(async (c) => {
     const id = c.req.param('id');
+    if (!id) return c.json({ error: 'Missing id' }, 400);
     try {
       const existing = await kv.get(taskKey(id));
       if (!existing) {
@@ -485,6 +499,7 @@ app.post(
   '/:id/duplicate',
   asyncHandler(async (c) => {
     const id = c.req.param('id');
+    if (!id) return c.json({ error: 'Missing id' }, 400);
     try {
       const original = await kv.get(taskKey(id));
       if (!original) {
@@ -541,6 +556,7 @@ app.post(
   '/:id/archive',
   asyncHandler(async (c) => {
     const id = c.req.param('id');
+    if (!id) return c.json({ error: 'Missing id' }, 400);
     try {
       const existing = await kv.get(taskKey(id));
       if (!existing) {
@@ -571,6 +587,7 @@ app.post(
   '/:id/unarchive',
   asyncHandler(async (c) => {
     const id = c.req.param('id');
+    if (!id) return c.json({ error: 'Missing id' }, 400);
     try {
       const existing = await kv.get(taskKey(id));
       if (!existing) {

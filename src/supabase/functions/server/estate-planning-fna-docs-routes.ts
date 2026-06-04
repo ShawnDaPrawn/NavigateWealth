@@ -219,7 +219,9 @@ app.delete('/estate-docs/:clientId/:docId', async (c) => {
       .remove([doc.filePath]);
 
     if (deleteError) {
-      log.warn('Failed to delete estate document from storage (non-critical):', deleteError);
+      log.warn('Failed to delete estate document from storage (non-critical):', {
+        error: String(deleteError),
+      });
     }
 
     await kv.del(kvKey);

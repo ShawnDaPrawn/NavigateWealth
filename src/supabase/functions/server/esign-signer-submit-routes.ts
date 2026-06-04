@@ -83,7 +83,7 @@ app.post('/signer/submit', requireIdempotency(), rateLimit('SIGNER_SUBMIT'), asy
         return c.json({ error: 'Identity verification (KBA) is required before signing' }, 403);
       }
     } catch (kbaErr) {
-      log.warn('KBA gate check failed; allowing submit:', kbaErr);
+      log.warn('KBA gate check failed; allowing submit:', { error: String(kbaErr) });
     }
 
     // Update field values

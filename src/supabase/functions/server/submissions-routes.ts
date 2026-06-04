@@ -29,6 +29,7 @@ import {
   InviteEmailSchema,
   SubmissionListQuerySchema,
 } from './submissions-validation.ts';
+import type { SubmissionType, SubmissionStatus } from './submissions-service.ts';
 import {
   getBlockedEmailDomain,
   getBlockedEmailDomainWarning,
@@ -165,6 +166,7 @@ app.get(
   requireAuth,
   asyncHandler(async (c) => {
     const id = c.req.param('id');
+    if (!id) return c.json({ success: false, error: 'Missing id' }, 400);
     const submission = await submissionsService.getById(id);
     if (!submission) {
       return c.json({ success: false, error: 'Submission not found' }, 404);
@@ -293,6 +295,7 @@ app.patch(
   requireAuth,
   asyncHandler(async (c) => {
     const id = c.req.param('id');
+    if (!id) return c.json({ success: false, error: 'Missing id' }, 400);
     const body = await c.req.json();
 
     const parsed = UpdateSubmissionSchema.safeParse(body);
@@ -323,6 +326,7 @@ app.delete(
   requireAuth,
   asyncHandler(async (c) => {
     const id = c.req.param('id');
+    if (!id) return c.json({ success: false, error: 'Missing id' }, 400);
     await submissionsService.delete(id);
     log.info('Submission deleted', { id });
     return c.json({ success: true });
