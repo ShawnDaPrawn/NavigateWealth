@@ -154,7 +154,10 @@ firmAdminRoutes.put('/branding', async (c) => {
     const message = error instanceof Error ? error.message : 'Branding write failed';
     // Validation errors surface as 400; everything else is treated as 500.
     const status = /must be|required/i.test(message) ? 400 : 500;
-    return c.json({ error: message }, status);
+    return new Response(JSON.stringify({ error: message }), {
+      status,
+      headers: { 'Content-Type': 'application/json' },
+    });
   }
 });
 

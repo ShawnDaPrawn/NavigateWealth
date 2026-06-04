@@ -165,7 +165,10 @@ export function handleError(c: Context, error: unknown) {
 
   const message = error instanceof Error ? error.message : 'Internal Server Error';
   const status = (error as Error & { status?: number })?.status || 500;
-  return c.json({ error: message }, status);
+  return new Response(JSON.stringify({ error: message }), {
+    status,
+    headers: { 'Content-Type': 'application/json' },
+  });
 }
 
 /**

@@ -22,7 +22,7 @@ import {
   createSigningCompleteEmail,
 } from './esign-email-templates.ts';
 import { createClient } from 'jsr:@supabase/supabase-js@2.49.8';
-import { encodeBase64 } from 'jsr:@std/encoding/base64';
+
 import { createModuleLogger } from './stderr-logger.ts';
 import { getErrMsg } from './shared-logger-utils.ts';
 import { signAndProtectPdf } from './esign-pdf-protect.ts';
@@ -91,7 +91,7 @@ export async function completeEnvelope(
     // Burn-in signatures
     const { pdfBuffer: burnedPdfBuffer } = await PDFService.burnIn(
       originalPdfBuffer,
-      envelope.fields || [],
+      Array.isArray(envelope.fields) ? envelope.fields : [],
       signers,
     );
 
@@ -160,7 +160,9 @@ export async function completeEnvelope(
     try {
       log.info(`Sending completion emails for envelope ${envelopeId}...`);
 
-      const attachmentContent = encodeBase64(sealedPdfBuffer);
+      const attachmentContent = btoa(
+        Array.from(sealedPdfBuffer, (b) => String.fromCharCode(b)).join(''),
+      );
       const attachmentName =
         envelope.document?.original_filename?.replace('.pdf', '_signed.pdf') ||
         'signed_document.pdf';

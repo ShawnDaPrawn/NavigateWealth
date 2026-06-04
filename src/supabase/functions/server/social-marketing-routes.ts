@@ -13,7 +13,12 @@ import { requireAdmin } from './auth-mw.ts';
 import { asyncHandler } from './error.middleware.ts';
 import { createModuleLogger } from './stderr-logger.ts';
 import { SocialMarketingService } from './social-marketing-service.ts';
-import type { PostCreate, PostUpdate, SocialPlatform, PostStatus } from './social-marketing-types.ts';
+import type {
+  PostCreate,
+  PostUpdate,
+  SocialPlatform,
+  PostStatus,
+} from './social-marketing-types.ts';
 import { CreatePostSchema, UpdatePostSchema } from './social-marketing-validation.ts';
 import { formatZodError } from './shared-validation-utils.ts';
 

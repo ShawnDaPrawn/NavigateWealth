@@ -22,7 +22,10 @@ app.get('/diagnostics/kba', async (c) => {
     return c.json({ success: true, ...getKbaStatus() });
   } catch (error: unknown) {
     const status = error instanceof AuthError ? error.statusCode : 500;
-    return c.json({ error: getErrMsg(error) }, status);
+    return new Response(JSON.stringify({ error: getErrMsg(error) }), {
+      status,
+      headers: { 'Content-Type': 'application/json' },
+    });
   }
 });
 

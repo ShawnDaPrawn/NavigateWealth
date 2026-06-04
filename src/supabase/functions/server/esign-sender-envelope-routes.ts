@@ -70,9 +70,11 @@ app.get('/clients/:clientId/envelopes', async (c) => {
   } catch (error: unknown) {
     log.error('❌ Get client envelopes error:', error);
     const status = error instanceof AuthError ? error.statusCode : 500;
-    return c.json(
-      { error: error instanceof Error ? error.message : 'Failed to fetch envelopes' },
-      status,
+    return new Response(
+      JSON.stringify({
+        error: error instanceof Error ? error.message : 'Failed to fetch envelopes',
+      }),
+      { status, headers: { 'Content-Type': 'application/json' } },
     );
   }
 });

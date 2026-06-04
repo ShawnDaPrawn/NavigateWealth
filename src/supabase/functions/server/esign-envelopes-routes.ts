@@ -168,9 +168,11 @@ envelopesRoutes.get('/envelopes', async (c) => {
   } catch (error: unknown) {
     log.error('❌ Get all envelopes error:', error);
     const status = error instanceof AuthError ? error.statusCode : 500;
-    return c.json(
-      { error: error instanceof Error ? error.message : 'Failed to fetch envelopes' },
-      status,
+    return new Response(
+      JSON.stringify({
+        error: error instanceof Error ? error.message : 'Failed to fetch envelopes',
+      }),
+      { status, headers: { 'Content-Type': 'application/json' } },
     );
   }
 });
@@ -221,9 +223,9 @@ envelopesRoutes.delete('/envelopes', async (c) => {
   } catch (error: unknown) {
     log.error('❌ Clear all data error:', error);
     const status = error instanceof AuthError ? error.statusCode : 500;
-    return c.json(
-      { error: error instanceof Error ? error.message : 'Failed to clear data' },
-      status,
+    return new Response(
+      JSON.stringify({ error: error instanceof Error ? error.message : 'Failed to clear data' }),
+      { status, headers: { 'Content-Type': 'application/json' } },
     );
   }
 });
@@ -469,7 +471,10 @@ envelopesRoutes.post(
     } catch (error: unknown) {
       log.error('❌ Upload error:', error);
       const status = error instanceof AuthError ? error.statusCode : 500;
-      return c.json({ error: error instanceof Error ? error.message : 'Upload failed' }, status);
+      return new Response(
+        JSON.stringify({ error: error instanceof Error ? error.message : 'Upload failed' }),
+        { status, headers: { 'Content-Type': 'application/json' } },
+      );
     }
   },
 );
@@ -518,9 +523,11 @@ envelopesRoutes.get('/envelopes/:envelopeId', async (c) => {
   } catch (error: unknown) {
     log.error('❌ Get envelope error:', error);
     const status = error instanceof AuthError ? error.statusCode : 500;
-    return c.json(
-      { error: error instanceof Error ? error.message : 'Failed to fetch envelope' },
-      status,
+    return new Response(
+      JSON.stringify({
+        error: error instanceof Error ? error.message : 'Failed to fetch envelope',
+      }),
+      { status, headers: { 'Content-Type': 'application/json' } },
     );
   }
 });
@@ -570,9 +577,11 @@ envelopesRoutes.put('/envelopes/:envelopeId/draft-signers', async (c) => {
   } catch (error: unknown) {
     log.error('Save draft signers error:', error);
     const status = error instanceof AuthError ? error.statusCode : 500;
-    return c.json(
-      { error: error instanceof Error ? error.message : 'Failed to save draft signers' },
-      status,
+    return new Response(
+      JSON.stringify({
+        error: error instanceof Error ? error.message : 'Failed to save draft signers',
+      }),
+      { status, headers: { 'Content-Type': 'application/json' } },
     );
   }
 });
@@ -688,9 +697,11 @@ envelopesRoutes.patch('/envelopes/:envelopeId/draft-settings', async (c) => {
   } catch (error: unknown) {
     log.error('Update draft settings error:', error);
     const status = error instanceof AuthError ? error.statusCode : 500;
-    return c.json(
-      { error: error instanceof Error ? error.message : 'Failed to update draft settings' },
-      status,
+    return new Response(
+      JSON.stringify({
+        error: error instanceof Error ? error.message : 'Failed to update draft settings',
+      }),
+      { status, headers: { 'Content-Type': 'application/json' } },
     );
   }
 });

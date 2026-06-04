@@ -43,7 +43,8 @@ app.get('/sign-by-token/:token', async (c) => {
       : null;
 
     // Filter fields for this signer
-    const signerFields = envelope.fields.filter((f: FieldRecord) => f.signer_id === signer.id);
+    const allFields = Array.isArray(envelope.fields) ? (envelope.fields as FieldRecord[]) : [];
+    const signerFields = allFields.filter((f: FieldRecord) => f.signer_id === signer.id);
 
     // P6.4 — resolve the consent text the signer should see. Envelopes
     // created after P6 have `consent_version` pinned at send-time; for
@@ -142,7 +143,8 @@ app.post('/signer/validate', rateLimit('SIGNER_ACCESS'), async (c) => {
       : null;
 
     // Filter fields for this signer
-    const signerFields = envelope.fields.filter((f: FieldRecord) => f.signer_id === signer.id);
+    const allFields2 = Array.isArray(envelope.fields) ? (envelope.fields as FieldRecord[]) : [];
+    const signerFields = allFields2.filter((f: FieldRecord) => f.signer_id === signer.id);
 
     // Determine if it's this signer's turn based on signing mode
     const allSigners = envelope.signers || [];

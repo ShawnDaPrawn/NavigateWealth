@@ -165,7 +165,10 @@ app.post('/trigger-source/:sourceId', async (c) => {
     const msg = error instanceof Error ? error.message : 'Source trigger failed';
     log.error(`Source trigger failed: ${msg}`, error);
     const status = msg.includes('not found') ? 404 : 500;
-    return c.json({ success: false, error: msg }, status);
+    return new Response(JSON.stringify({ success: false, error: msg }), {
+      status,
+      headers: { 'Content-Type': 'application/json' },
+    });
   }
 });
 

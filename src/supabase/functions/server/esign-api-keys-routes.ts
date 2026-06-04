@@ -60,7 +60,9 @@ apiKeysRoutes.post('/api-keys', rateLimit('SENDER_MUTATE'), async (c) => {
     log.error('Create API key error:', error);
     const status = error instanceof AuthError ? error.statusCode : 500;
     return new Response(
-      JSON.stringify({ error: error instanceof Error ? error.message : 'Failed to create API key' }),
+      JSON.stringify({
+        error: error instanceof Error ? error.message : 'Failed to create API key',
+      }),
       { status, headers: { 'Content-Type': 'application/json' } },
     );
   }
@@ -117,7 +119,9 @@ apiKeysRoutes.patch('/api-keys/:id', rateLimit('SENDER_MUTATE'), async (c) => {
     log.error('Update API key error:', error);
     const status = error instanceof AuthError ? error.statusCode : 500;
     return new Response(
-      JSON.stringify({ error: error instanceof Error ? error.message : 'Failed to update API key' }),
+      JSON.stringify({
+        error: error instanceof Error ? error.message : 'Failed to update API key',
+      }),
       { status, headers: { 'Content-Type': 'application/json' } },
     );
   }
@@ -147,7 +151,9 @@ apiKeysRoutes.post('/api-keys/:id/rotate', rateLimit('SENDER_MUTATE'), async (c)
     log.error('Rotate API key error:', error);
     const status = error instanceof AuthError ? error.statusCode : 500;
     return new Response(
-      JSON.stringify({ error: error instanceof Error ? error.message : 'Failed to rotate API key' }),
+      JSON.stringify({
+        error: error instanceof Error ? error.message : 'Failed to rotate API key',
+      }),
       { status, headers: { 'Content-Type': 'application/json' } },
     );
   }
@@ -176,7 +182,9 @@ apiKeysRoutes.delete('/api-keys/:id', rateLimit('SENDER_MUTATE'), async (c) => {
     log.error('Delete API key error:', error);
     const status = error instanceof AuthError ? error.statusCode : 500;
     return new Response(
-      JSON.stringify({ error: error instanceof Error ? error.message : 'Failed to delete API key' }),
+      JSON.stringify({
+        error: error instanceof Error ? error.message : 'Failed to delete API key',
+      }),
       { status, headers: { 'Content-Type': 'application/json' } },
     );
   }

@@ -30,7 +30,10 @@ diagnosticsRoutes.post('/maintenance/stuck-alert-sweep', async (c) => {
   } catch (error: unknown) {
     log.error('Manual stuck-alert sweep failed:', error);
     const status = error instanceof AuthError ? error.statusCode : 500;
-    return c.json({ error: error instanceof Error ? error.message : 'Stuck sweep failed' }, status);
+    return new Response(
+      JSON.stringify({ error: error instanceof Error ? error.message : 'Stuck sweep failed' }),
+      { status, headers: { 'Content-Type': 'application/json' } },
+    );
   }
 });
 
@@ -98,7 +101,9 @@ diagnosticsRoutes.get('/diagnostics/synthetic', async (c) => {
   } catch (error: unknown) {
     const status = error instanceof AuthError ? error.statusCode : 500;
     return new Response(
-      JSON.stringify({ error: error instanceof Error ? error.message : 'Failed to read probe state' }),
+      JSON.stringify({
+        error: error instanceof Error ? error.message : 'Failed to read probe state',
+      }),
       { status, headers: { 'Content-Type': 'application/json' } },
     );
   }
@@ -116,7 +121,10 @@ diagnosticsRoutes.post('/diagnostics/synthetic/run', async (c) => {
     return c.json(result);
   } catch (error: unknown) {
     const status = error instanceof AuthError ? error.statusCode : 500;
-    return c.json({ error: error instanceof Error ? error.message : 'Probe failed' }, status);
+    return new Response(
+      JSON.stringify({ error: error instanceof Error ? error.message : 'Probe failed' }),
+      { status, headers: { 'Content-Type': 'application/json' } },
+    );
   }
 });
 

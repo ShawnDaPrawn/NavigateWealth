@@ -188,9 +188,11 @@ app.delete('/envelopes/:envelopeId', async (c) => {
   } catch (error: unknown) {
     log.error('Delete envelope error:', error);
     const status = error instanceof AuthError ? error.statusCode : 500;
-    return c.json(
-      { error: error instanceof Error ? error.message : 'Failed to delete envelope' },
-      status,
+    return new Response(
+      JSON.stringify({
+        error: error instanceof Error ? error.message : 'Failed to delete envelope',
+      }),
+      { status, headers: { 'Content-Type': 'application/json' } },
     );
   }
 });
@@ -331,9 +333,11 @@ app.post(
     } catch (error: unknown) {
       log.error('❌ Recall envelope error:', error);
       const status = error instanceof AuthError ? error.status : 500;
-      return c.json(
-        { error: error instanceof Error ? error.message : 'Failed to recall envelope' },
-        status,
+      return new Response(
+        JSON.stringify({
+          error: error instanceof Error ? error.message : 'Failed to recall envelope',
+        }),
+        { status, headers: { 'Content-Type': 'application/json' } },
       );
     }
   },
@@ -437,9 +441,11 @@ app.post(
     } catch (error: unknown) {
       log.error('❌ Send reminder error:', error);
       const status = error instanceof AuthError ? error.status : 500;
-      return c.json(
-        { error: error instanceof Error ? error.message : 'Failed to send reminders' },
-        status,
+      return new Response(
+        JSON.stringify({
+          error: error instanceof Error ? error.message : 'Failed to send reminders',
+        }),
+        { status, headers: { 'Content-Type': 'application/json' } },
       );
     }
   },

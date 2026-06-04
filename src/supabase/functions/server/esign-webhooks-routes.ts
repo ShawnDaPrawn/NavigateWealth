@@ -90,9 +90,11 @@ webhooksRoutes.post('/webhooks', rateLimit('SENDER_MUTATE'), async (c) => {
   } catch (error: unknown) {
     log.error('Create webhook error:', error);
     const status = error instanceof AuthError ? error.statusCode : 500;
-    return c.json(
-      { error: error instanceof Error ? error.message : 'Failed to create subscription' },
-      status,
+    return new Response(
+      JSON.stringify({
+        error: error instanceof Error ? error.message : 'Failed to create subscription',
+      }),
+      { status, headers: { 'Content-Type': 'application/json' } },
     );
   }
 });
@@ -107,9 +109,11 @@ webhooksRoutes.get('/webhooks', async (c) => {
   } catch (error: unknown) {
     log.error('List webhooks error:', error);
     const status = error instanceof AuthError ? error.statusCode : 500;
-    return c.json(
-      { error: error instanceof Error ? error.message : 'Failed to list subscriptions' },
-      status,
+    return new Response(
+      JSON.stringify({
+        error: error instanceof Error ? error.message : 'Failed to list subscriptions',
+      }),
+      { status, headers: { 'Content-Type': 'application/json' } },
     );
   }
 });
@@ -154,9 +158,11 @@ webhooksRoutes.patch('/webhooks/:id', rateLimit('SENDER_MUTATE'), async (c) => {
   } catch (error: unknown) {
     log.error('Update webhook error:', error);
     const status = error instanceof AuthError ? error.statusCode : 500;
-    return c.json(
-      { error: error instanceof Error ? error.message : 'Failed to update subscription' },
-      status,
+    return new Response(
+      JSON.stringify({
+        error: error instanceof Error ? error.message : 'Failed to update subscription',
+      }),
+      { status, headers: { 'Content-Type': 'application/json' } },
     );
   }
 });
@@ -183,9 +189,9 @@ webhooksRoutes.post('/webhooks/:id/rotate-secret', rateLimit('SENDER_MUTATE'), a
   } catch (error: unknown) {
     log.error('Rotate webhook secret error:', error);
     const status = error instanceof AuthError ? error.statusCode : 500;
-    return c.json(
-      { error: error instanceof Error ? error.message : 'Failed to rotate secret' },
-      status,
+    return new Response(
+      JSON.stringify({ error: error instanceof Error ? error.message : 'Failed to rotate secret' }),
+      { status, headers: { 'Content-Type': 'application/json' } },
     );
   }
 });
@@ -212,9 +218,11 @@ webhooksRoutes.delete('/webhooks/:id', rateLimit('SENDER_MUTATE'), async (c) => 
   } catch (error: unknown) {
     log.error('Delete webhook error:', error);
     const status = error instanceof AuthError ? error.statusCode : 500;
-    return c.json(
-      { error: error instanceof Error ? error.message : 'Failed to delete subscription' },
-      status,
+    return new Response(
+      JSON.stringify({
+        error: error instanceof Error ? error.message : 'Failed to delete subscription',
+      }),
+      { status, headers: { 'Content-Type': 'application/json' } },
     );
   }
 });
@@ -234,9 +242,11 @@ webhooksRoutes.get('/webhooks/deliveries', async (c) => {
   } catch (error: unknown) {
     log.error('List webhook deliveries error:', error);
     const status = error instanceof AuthError ? error.statusCode : 500;
-    return c.json(
-      { error: error instanceof Error ? error.message : 'Failed to list deliveries' },
-      status,
+    return new Response(
+      JSON.stringify({
+        error: error instanceof Error ? error.message : 'Failed to list deliveries',
+      }),
+      { status, headers: { 'Content-Type': 'application/json' } },
     );
   }
 });
@@ -251,9 +261,11 @@ webhooksRoutes.get('/webhooks/dead-letters', async (c) => {
   } catch (error: unknown) {
     log.error('List webhook dead-letters error:', error);
     const status = error instanceof AuthError ? error.statusCode : 500;
-    return c.json(
-      { error: error instanceof Error ? error.message : 'Failed to list dead-letters' },
-      status,
+    return new Response(
+      JSON.stringify({
+        error: error instanceof Error ? error.message : 'Failed to list dead-letters',
+      }),
+      { status, headers: { 'Content-Type': 'application/json' } },
     );
   }
 });
@@ -279,9 +291,11 @@ webhooksRoutes.post('/webhooks/deliveries/:id/replay', rateLimit('SENDER_MUTATE'
   } catch (error: unknown) {
     log.error('Replay webhook delivery error:', error);
     const status = error instanceof AuthError ? error.statusCode : 500;
-    return c.json(
-      { error: error instanceof Error ? error.message : 'Failed to replay delivery' },
-      status,
+    return new Response(
+      JSON.stringify({
+        error: error instanceof Error ? error.message : 'Failed to replay delivery',
+      }),
+      { status, headers: { 'Content-Type': 'application/json' } },
     );
   }
 });

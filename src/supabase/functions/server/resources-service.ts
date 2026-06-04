@@ -1970,10 +1970,9 @@ export class ResourcesService {
               }
             }
           } catch (e) {
-            log.warn(
-              `Failed to add ${file.name} to zip (Strategy: ${processingStrategy})`,
-              { error: String(e) },
-            );
+            log.warn(`Failed to add ${file.name} to zip (Strategy: ${processingStrategy})`, {
+              error: String(e),
+            });
           }
         } catch (e) {
           log.error(`Error processing file ${file.name}`, e as Error);

@@ -82,7 +82,7 @@ app.get('/envelopes/:envelopeId/download', async (c) => {
     try {
       const { pdfBuffer: burnedPdfBuffer } = await PDFService.burnIn(
         pdfBuffer,
-        envelope.fields || [],
+        Array.isArray(envelope.fields) ? envelope.fields : [],
         signers,
       );
 
@@ -115,9 +115,11 @@ app.get('/envelopes/:envelopeId/download', async (c) => {
   } catch (error: unknown) {
     log.error('❌ Download envelope error:', error);
     const status = error instanceof AuthError ? error.status : 500;
-    return c.json(
-      { error: error instanceof Error ? error.message : 'Failed to download envelope' },
-      status,
+    return new Response(
+      JSON.stringify({
+        error: error instanceof Error ? error.message : 'Failed to download envelope',
+      }),
+      { status, headers: { 'Content-Type': 'application/json' } },
     );
   }
 });
@@ -165,9 +167,11 @@ app.get('/envelopes/:envelopeId/evidence-pack', async (c) => {
   } catch (error: unknown) {
     log.error('Evidence pack export error:', error);
     const status = error instanceof AuthError ? error.statusCode : 500;
-    return c.json(
-      { error: error instanceof Error ? error.message : 'Failed to build evidence pack' },
-      status,
+    return new Response(
+      JSON.stringify({
+        error: error instanceof Error ? error.message : 'Failed to build evidence pack',
+      }),
+      { status, headers: { 'Content-Type': 'application/json' } },
     );
   }
 });
@@ -187,9 +191,11 @@ app.get('/envelopes/:envelopeId/reminder-config', async (c) => {
   } catch (error: unknown) {
     log.error('Get reminder config error:', error);
     const status = error instanceof AuthError ? error.statusCode : 500;
-    return c.json(
-      { error: error instanceof Error ? error.message : 'Failed to get reminder config' },
-      status,
+    return new Response(
+      JSON.stringify({
+        error: error instanceof Error ? error.message : 'Failed to get reminder config',
+      }),
+      { status, headers: { 'Content-Type': 'application/json' } },
     );
   }
 });
@@ -240,9 +246,11 @@ app.put('/envelopes/:envelopeId/reminder-config', async (c) => {
   } catch (error: unknown) {
     log.error('Update reminder config error:', error);
     const status = error instanceof AuthError ? error.statusCode : 500;
-    return c.json(
-      { error: error instanceof Error ? error.message : 'Failed to update reminder config' },
-      status,
+    return new Response(
+      JSON.stringify({
+        error: error instanceof Error ? error.message : 'Failed to update reminder config',
+      }),
+      { status, headers: { 'Content-Type': 'application/json' } },
     );
   }
 });
@@ -295,9 +303,11 @@ app.patch('/envelopes/:envelopeId/signing-mode', async (c) => {
   } catch (error: unknown) {
     log.error('Update signing mode error:', error);
     const status = error instanceof AuthError ? error.statusCode : 500;
-    return c.json(
-      { error: error instanceof Error ? error.message : 'Failed to update signing mode' },
-      status,
+    return new Response(
+      JSON.stringify({
+        error: error instanceof Error ? error.message : 'Failed to update signing mode',
+      }),
+      { status, headers: { 'Content-Type': 'application/json' } },
     );
   }
 });
@@ -352,9 +362,11 @@ app.get('/envelopes/:envelopeId/audit/export', async (c) => {
   } catch (error: unknown) {
     log.error('Audit export error:', error);
     const status = error instanceof AuthError ? error.statusCode : 500;
-    return c.json(
-      { error: error instanceof Error ? error.message : 'Failed to export audit trail' },
-      status,
+    return new Response(
+      JSON.stringify({
+        error: error instanceof Error ? error.message : 'Failed to export audit trail',
+      }),
+      { status, headers: { 'Content-Type': 'application/json' } },
     );
   }
 });

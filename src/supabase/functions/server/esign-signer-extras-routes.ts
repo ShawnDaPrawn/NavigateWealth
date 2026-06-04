@@ -88,7 +88,7 @@ app.get('/signer/download/:token', async (c) => {
     try {
       const { pdfBuffer: burnedPdfBuffer } = await PDFService.burnIn(
         pdfBuffer,
-        envelope.fields || [],
+        Array.isArray(envelope.fields) ? envelope.fields : [],
         signers,
       );
 
@@ -217,9 +217,9 @@ app.get('/envelopes/:envelopeId/attachments', async (c) => {
   } catch (err) {
     log.error('List attachments error:', err);
     const status = err instanceof AuthError ? err.statusCode : 500;
-    return c.json(
-      { error: err instanceof Error ? err.message : 'Failed to list attachments' },
-      status,
+    return new Response(
+      JSON.stringify({ error: err instanceof Error ? err.message : 'Failed to list attachments' }),
+      { status, headers: { 'Content-Type': 'application/json' } },
     );
   }
 });
