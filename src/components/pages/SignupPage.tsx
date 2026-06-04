@@ -31,6 +31,7 @@ import { SIGNUP_FEATURES } from './auth/authConstants';
 import { AuthShowcasePanel } from './auth/AuthShowcasePanel';
 import { AuthTrustBar } from './auth/AuthTrustBar';
 import { MobileAuthLayout } from './auth/MobileAuthLayout';
+import { AuthModeToggle } from './auth/AuthModeToggle';
 import { useIsStandalone } from '../../hooks/useIsStandalone';
 import { CountryCodeCombobox } from './auth/CountryCodeCombobox';
 
@@ -203,15 +204,20 @@ export function SignupPage() {
 
   const formContent = (
     <>
+      {/* Installed PWA: segmented Sign In / Sign Up switch */}
+      {isStandalone && <AuthModeToggle active="signup" />}
+
       {/* Header */}
       <div className="mb-6">
         <h2 className="text-gray-900 text-2xl font-bold">Create your account</h2>
-        <p className="mt-2 text-gray-600 text-sm">
-          Already have an account?{' '}
-          <Link to="/login" className="text-purple-700 hover:text-purple-800 font-medium">
-            Sign in
-          </Link>
-        </p>
+        {!isStandalone && (
+          <p className="mt-2 text-gray-600 text-sm">
+            Already have an account?{' '}
+            <Link to="/login" className="text-purple-700 hover:text-purple-800 font-medium">
+              Sign in
+            </Link>
+          </p>
+        )}
       </div>
 
       {showLocalhostWarning && (
@@ -564,12 +570,22 @@ export function SignupPage() {
         </div>
       </form>
 
-      {/* Help Link */}
+      {/* Help Link — in the installed PWA the marketing /contact page is out of
+          scope (StandaloneRedirect bounces it back), so use a mailto there. */}
       <div className="mt-6 flex items-center justify-center gap-1.5">
         <HelpCircle className="h-4 w-4 text-gray-400" />
-        <Link to="/contact" className="text-sm text-purple-700 hover:text-purple-800">
-          Need help? Contact our support team
-        </Link>
+        {isStandalone ? (
+          <a
+            href="mailto:enquiries@navigatewealth.co"
+            className="text-sm text-purple-700 hover:text-purple-800"
+          >
+            Need help? Contact our support team
+          </a>
+        ) : (
+          <Link to="/contact" className="text-sm text-purple-700 hover:text-purple-800">
+            Need help? Contact our support team
+          </Link>
+        )}
       </div>
 
       {/* Mobile trust bar */}
