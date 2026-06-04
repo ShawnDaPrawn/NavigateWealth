@@ -699,21 +699,24 @@ export async function getPortfolioSummary(clientId: string): Promise<PortfolioSu
         ckRaw.investment_monthly_contribution || latestInvestment?.inputs?.monthlyContribution,
       ),
       goalsLinked: num(latestInvestment?.inputs?.goalsLinked || 0),
-      performance: latestInvestment?.results?.performanceYtd || 'N/A',
+      performance: String(latestInvestment?.results?.performanceYtd || 'N/A'),
       ...investmentStatus,
       nextReview: nextReviewDate(latestInvestment),
     },
     estate: {
-      willStatus:
+      willStatus: String(
         latestEstate?.results?.willStatus || latestEstate?.inputs?.willStatus || 'not-drafted',
-      trustStatus:
+      ),
+      trustStatus: String(
         latestEstate?.results?.trustStatus ||
-        latestEstate?.inputs?.trustStatus ||
-        'not-established',
-      nominationStatus:
+          latestEstate?.inputs?.trustStatus ||
+          'not-established',
+      ),
+      nominationStatus: String(
         latestEstate?.results?.nominationStatus ||
-        latestEstate?.inputs?.nominationStatus ||
-        'incomplete',
+          latestEstate?.inputs?.nominationStatus ||
+          'incomplete',
+      ),
       lastUpdated: latestEstate?.updatedAt || latestEstate?.createdAt || '',
       ...estateStatus,
       nextReview: nextReviewDate(latestEstate),
@@ -732,7 +735,7 @@ export async function getPortfolioSummary(clientId: string): Promise<PortfolioSu
       ),
       estimatedRefund: num(latestTax?.results?.estimatedRefund),
       taxYear: num(latestTax?.inputs?.taxYear || new Date().getFullYear()),
-      filingDate: latestTax?.results?.filingDate || latestTax?.inputs?.filingDate || '',
+      filingDate: String(latestTax?.results?.filingDate || latestTax?.inputs?.filingDate || ''),
       ...taxStatus,
       nextReview: nextReviewDate(latestTax),
     },

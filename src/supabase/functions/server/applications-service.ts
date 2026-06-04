@@ -265,9 +265,11 @@ export class AdminApplicationsService {
               ...baseFields,
               user_email: null,
               user_name:
-                app.application_data?.personalInfo?.firstName +
+                (app.application_data?.personalInfo as Record<string, unknown> | undefined)
+                  ?.firstName +
                   ' ' +
-                  app.application_data?.personalInfo?.lastName || 'Unknown',
+                  (app.application_data?.personalInfo as Record<string, unknown> | undefined)
+                    ?.lastName || 'Unknown',
             };
           }
 
@@ -278,9 +280,11 @@ export class AdminApplicationsService {
               ...baseFields,
               user_email: null,
               user_name:
-                app.application_data?.personalInfo?.firstName +
+                (app.application_data?.personalInfo as Record<string, unknown> | undefined)
+                  ?.firstName +
                   ' ' +
-                  app.application_data?.personalInfo?.lastName || 'Unknown',
+                  (app.application_data?.personalInfo as Record<string, unknown> | undefined)
+                    ?.lastName || 'Unknown',
             };
           }
 
@@ -290,9 +294,11 @@ export class AdminApplicationsService {
             user_email: user?.email || null,
             user_name:
               user?.user_metadata?.name ||
-              app.application_data?.personalInfo?.firstName +
+              (app.application_data?.personalInfo as Record<string, unknown> | undefined)
+                ?.firstName +
                 ' ' +
-                app.application_data?.personalInfo?.lastName ||
+                (app.application_data?.personalInfo as Record<string, unknown> | undefined)
+                  ?.lastName ||
               null,
           };
         } catch (_error) {
@@ -300,9 +306,11 @@ export class AdminApplicationsService {
             ...baseFields,
             user_email: null,
             user_name:
-              app.application_data?.personalInfo?.firstName +
+              (app.application_data?.personalInfo as Record<string, unknown> | undefined)
+                ?.firstName +
                 ' ' +
-                app.application_data?.personalInfo?.lastName || 'Unknown',
+                (app.application_data?.personalInfo as Record<string, unknown> | undefined)
+                  ?.lastName || 'Unknown',
           };
         }
       }),
@@ -344,9 +352,11 @@ export class AdminApplicationsService {
         user_email: user?.email || null,
         user_name:
           user?.user_metadata?.name ||
-          application.application_data?.personalInfo?.firstName +
+          (application.application_data?.personalInfo as Record<string, unknown> | undefined)
+            ?.firstName +
             ' ' +
-            application.application_data?.personalInfo?.lastName ||
+            (application.application_data?.personalInfo as Record<string, unknown> | undefined)
+              ?.lastName ||
           null,
         user_metadata: user?.user_metadata || {},
       };

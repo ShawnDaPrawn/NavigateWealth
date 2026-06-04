@@ -423,7 +423,7 @@ export async function processScheduledCampaigns() {
       await repo.saveCampaign(campaign);
 
       const recipients = await resolveRecipients(campaign, supabase);
-      const sendGridAttachments = await processAttachments(campaign.attachments, supabase);
+      const sendGridAttachments = await processAttachments(campaign.attachments || [], supabase);
       let sentCount = 0;
 
       for (const recipient of recipients) {
