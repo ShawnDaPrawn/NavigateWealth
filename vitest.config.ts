@@ -13,26 +13,34 @@ import path from 'path';
 export default defineConfig({
   plugins: [react()],
   resolve: {
-    alias: {
+    alias: [
+      // figma:asset/... imports are design-tool build-plugin URLs that Vite
+      // resolves in production but cannot transform in the Node/Vitest environment.
+      // Stub them out to an empty string so test files can import modules that
+      // transitively depend on provider-logos.ts without a transform error.
+      {
+        find: /^figma:asset\/.+$/,
+        replacement: path.resolve(__dirname, './src/test/__mocks__/figma-asset-stub.ts'),
+      },
       // Deno edge-function specifiers, rewritten so Vitest (Node) can resolve
       // them; edge test files `vi.mock(...)` these so no real network calls run.
-      'pdf-lib@1.17.1': 'pdf-lib',
-      'npm:pdf-lib@1.17.1': 'pdf-lib',
-      'npm:docx': 'docx',
-      'npm:zod': 'zod',
-      'npm:hono': 'hono',
-      'npm:hono/cors': 'hono/cors',
-      'npm:@e965/xlsx@0.20.3': 'xlsx',
-      'npm:@zip.js/zip.js': '@zip.js/zip.js',
-      'jsr:@std/encoding/base64': '@jsr/std__encoding/base64',
-      'node-forge@1.3.1': 'node-forge',
-      '@jsr/supabase__supabase-js@2.49.8': '@jsr/supabase__supabase-js',
+      { find: 'pdf-lib@1.17.1', replacement: 'pdf-lib' },
+      { find: 'npm:pdf-lib@1.17.1', replacement: 'pdf-lib' },
+      { find: 'npm:docx', replacement: 'docx' },
+      { find: 'npm:zod', replacement: 'zod' },
+      { find: 'npm:hono', replacement: 'hono' },
+      { find: 'npm:hono/cors', replacement: 'hono/cors' },
+      { find: 'npm:@e965/xlsx@0.20.3', replacement: 'xlsx' },
+      { find: 'npm:@zip.js/zip.js', replacement: '@zip.js/zip.js' },
+      { find: 'jsr:@std/encoding/base64', replacement: '@jsr/std__encoding/base64' },
+      { find: 'node-forge@1.3.1', replacement: 'node-forge' },
+      { find: '@jsr/supabase__supabase-js@2.49.8', replacement: '@jsr/supabase__supabase-js' },
       // Edge functions import via the Deno `jsr:` specifier; rewrite to the
       // npm package so Vitest can resolve it. The test files separately
       // `vi.mock(...)` the same specifier so no real network calls happen.
-      'jsr:@supabase/supabase-js@2.49.8': '@supabase/supabase-js',
-      '@': path.resolve(__dirname, './src'),
-    },
+      { find: 'jsr:@supabase/supabase-js@2.49.8', replacement: '@supabase/supabase-js' },
+      { find: '@', replacement: path.resolve(__dirname, './src') },
+    ],
   },
   test: {
     environment: 'jsdom',
