@@ -29,7 +29,9 @@ export function NewsletterUnsubscribePage() {
     setStatus('loading');
 
     try {
-      const data = await api.get<{ notFound?: boolean }>(`/newsletter/unsubscribe?email=${encodeURIComponent(email)}`);
+      const data = await api.get<{ notFound?: boolean }>(
+        `/newsletter/unsubscribe?email=${encodeURIComponent(email)}`,
+      );
 
       if (data.notFound) {
         setStatus('error');

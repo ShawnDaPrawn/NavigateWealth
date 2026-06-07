@@ -31,7 +31,10 @@ export function Footer() {
 
     try {
       // Call the newsletter subscription endpoint
-      const data = await api.post<{ alreadySubscribed?: boolean; requiresConfirmation?: boolean }>('/newsletter/subscribe', { email });
+      const data = await api.post<{ alreadySubscribed?: boolean; requiresConfirmation?: boolean }>(
+        '/newsletter/subscribe',
+        { email },
+      );
 
       if (data.alreadySubscribed) {
         toast.info('Already subscribed', {

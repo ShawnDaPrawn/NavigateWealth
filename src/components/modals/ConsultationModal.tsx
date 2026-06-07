@@ -233,18 +233,18 @@ export function ConsultationModal({ isOpen, onClose, open, onOpenChange }: Consu
 
     try {
       await api.post('/consultation/request', {
-            name: formData.name,
-            email: formData.email,
-            phone: formData.phone,
-            meetingType: selectedMeetingType,
-            preferredDate1: format(selectedDate, 'yyyy-MM-dd'),
-            preferredTime1: selectedTime,
-            preferredDate2: '',
-            preferredTime2: '',
-            preferredDate3: '',
-            preferredTime3: '',
-            additionalNotes: formData.additionalNotes,
-          });
+        name: formData.name,
+        email: formData.email,
+        phone: formData.phone,
+        meetingType: selectedMeetingType,
+        preferredDate1: format(selectedDate, 'yyyy-MM-dd'),
+        preferredTime1: selectedTime,
+        preferredDate2: '',
+        preferredTime2: '',
+        preferredDate3: '',
+        preferredTime3: '',
+        additionalNotes: formData.additionalNotes,
+      });
 
       setIsSubmitting(false);
       setIsSuccess(true);

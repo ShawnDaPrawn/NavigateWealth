@@ -121,15 +121,15 @@ export function GetQuoteModal({
             formData.preferredProvider;
 
       await api.post('/quote-request/submit', {
-            firstName: formData.firstName.trim(),
-            lastName: formData.lastName.trim(),
-            email: formData.email.trim(),
-            phone: formData.phone.trim(),
-            productName,
-            coverage: formData.coverage,
-            preferredProvider: providerName,
-            website: honeypotWebsite,
-          });
+        firstName: formData.firstName.trim(),
+        lastName: formData.lastName.trim(),
+        email: formData.email.trim(),
+        phone: formData.phone.trim(),
+        productName,
+        coverage: formData.coverage,
+        preferredProvider: providerName,
+        website: honeypotWebsite,
+      });
 
       setCurrentStep(totalSteps);
     } catch (error) {
