@@ -134,7 +134,11 @@ export function GetQuoteModal({
       setCurrentStep(totalSteps);
     } catch (error) {
       console.error('Quote request network error:', error);
-      toast.error('Unable to submit your request. Please check your connection and try again.');
+      toast.error(
+        error instanceof Error && error.message
+          ? error.message
+          : 'Unable to submit your request. Please check your connection and try again.',
+      );
     } finally {
       setIsSubmitting(false);
     }
