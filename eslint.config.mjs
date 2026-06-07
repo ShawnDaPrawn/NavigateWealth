@@ -139,7 +139,7 @@ export default tseslint.config(
       // are exactly the ones those splits must decompose. Kept as "warn" (not
       // "error") so the existing backlog doesn't block CI; promote to "error"
       // once the backlog clears. The /scripts/** override (§7c) stays "off".
-      'max-lines': ['warn', { max: 1000 }],
+      'max-lines': ['warn', { max: 1000, skipBlankLines: true, skipComments: true }],
       '@typescript-eslint/no-explicit-any': 'off',
       '@typescript-eslint/no-unused-vars': [
         'warn',
