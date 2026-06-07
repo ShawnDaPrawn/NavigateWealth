@@ -34,6 +34,7 @@ export function Footer() {
       const data = await api.post<{ alreadySubscribed?: boolean; requiresConfirmation?: boolean }>(
         '/newsletter/subscribe',
         { email },
+        { retryTransientFailures: false },
       );
 
       if (data.alreadySubscribed) {

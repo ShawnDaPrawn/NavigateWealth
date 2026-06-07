@@ -120,16 +120,20 @@ export function GetQuoteModal({
           : providers.find((p) => p.id === formData.preferredProvider)?.name ||
             formData.preferredProvider;
 
-      await api.post('/quote-request/submit', {
-        firstName: formData.firstName.trim(),
-        lastName: formData.lastName.trim(),
-        email: formData.email.trim(),
-        phone: formData.phone.trim(),
-        productName,
-        coverage: formData.coverage,
-        preferredProvider: providerName,
-        website: honeypotWebsite,
-      });
+      await api.post(
+        '/quote-request/submit',
+        {
+          firstName: formData.firstName.trim(),
+          lastName: formData.lastName.trim(),
+          email: formData.email.trim(),
+          phone: formData.phone.trim(),
+          productName,
+          coverage: formData.coverage,
+          preferredProvider: providerName,
+          website: honeypotWebsite,
+        },
+        { retryTransientFailures: false },
+      );
 
       setCurrentStep(totalSteps);
     } catch (error) {
