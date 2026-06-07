@@ -15,9 +15,59 @@ import type { BackendApplicationStatus, FrontendApplicationStatus } from './type
 export const ADMIN_EMAIL = 'info@navigatewealth.co';
 
 /**
- * Super admin email address
+ * Super-admin email allowlist (durable, recovery-safe).
+ *
+ * Why an allowlist instead of a single string: a lone hardcoded super-admin is
+ * a single point of failure. If that one account is lost, compromised, or the
+ * owner leaves, the only fallback was editing source and redeploying. The
+ * allowlist provides a second, owner-controlled recovery identity, and
+ * `isSuperAdminEmail()` (below) additionally merges any emails supplied via the
+ * `SUPER_ADMIN_EMAILS` env var so a recovery admin can be added or rotated via
+ * Supabase secrets WITHOUT a code deploy.
+ *
+ * Invariant: entries MUST be stored lowercased — all comparisons are
+ * case-insensitive and go through `isSuperAdminEmail()`.
+ */
+export const SUPER_ADMIN_EMAILS: ReadonlySet<string> = new Set([
+  'shawn@navigatewealth.co',
+  'shawn.africantreasures@gmail.com', // Second recovery super-admin
+]);
+
+/**
+ * Primary super-admin email — retained as the canonical owner identity and for
+ * backward compatibility with call sites that still reference a single address.
+ * New code should authorise via `isSuperAdminEmail()` so the full allowlist
+ * (and the env-var override) is honoured.
+ *
+ * @deprecated Prefer `isSuperAdminEmail(email)` for authorization checks.
  */
 export const SUPER_ADMIN_EMAIL = 'shawn@navigatewealth.co';
+
+/**
+ * Returns true if `email` belongs to a super-admin.
+ *
+ * Compares case-insensitively against the hardcoded {@link SUPER_ADMIN_EMAILS}
+ * allowlist UNION any emails listed in the `SUPER_ADMIN_EMAILS` environment
+ * variable (comma/semicolon/whitespace-separated). The env var is the
+ * deploy-free recovery path. Returns false for empty/undefined input.
+ */
+export function isSuperAdminEmail(email: string | null | undefined): boolean {
+  if (!email) return false;
+  const normalized = email.trim().toLowerCase();
+  if (!normalized) return false;
+  if (SUPER_ADMIN_EMAILS.has(normalized)) return true;
+
+  // `typeof Deno` guard so this stays safe under the Node-based Vitest suite
+  // (where `Deno` is undefined) while still reading the env var at runtime in
+  // the Deno edge environment.
+  const fromEnv = typeof Deno !== 'undefined' ? Deno.env.get('SUPER_ADMIN_EMAILS') : undefined;
+  if (!fromEnv) return false;
+  return fromEnv
+    .split(/[,;\s]+/)
+    .map((e) => e.trim().toLowerCase())
+    .filter(Boolean)
+    .includes(normalized);
+}
 
 // ============================================================================
 // Database Configuration
