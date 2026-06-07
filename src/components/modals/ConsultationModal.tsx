@@ -41,7 +41,7 @@ import {
 import { toast } from 'sonner';
 import { format, startOfDay, addDays, isBefore } from 'date-fns';
 import { motion, AnimatePresence } from 'motion/react';
-import { projectId, publicAnonKey } from '../../utils/supabase/info';
+import { api } from '../../utils/api/client';
 import { cn } from '../ui/utils';
 import {
   getBlockedEmailDomain,
@@ -232,15 +232,7 @@ export function ConsultationModal({ isOpen, onClose, open, onOpenChange }: Consu
     setIsSubmitting(true);
 
     try {
-      const response = await fetch(
-        `https://${projectId}.supabase.co/functions/v1/make-server-91ed8379/consultation/request`,
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${publicAnonKey}`,
-          },
-          body: JSON.stringify({
+      await api.post('/consultation/request', {
             name: formData.name,
             email: formData.email,
             phone: formData.phone,
@@ -252,28 +244,16 @@ export function ConsultationModal({ isOpen, onClose, open, onOpenChange }: Consu
             preferredDate3: '',
             preferredTime3: '',
             additionalNotes: formData.additionalNotes,
-          }),
-        },
-      );
-
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        console.error('Consultation request error:', errorData);
-        toast.error(
-          typeof errorData?.error === 'string'
-            ? errorData.error
-            : 'Failed to book consultation. Please try again or contact us directly.',
-        );
-        setIsSubmitting(false);
-        return;
-      }
+          });
 
       setIsSubmitting(false);
       setIsSuccess(true);
     } catch (error) {
       console.error('Error booking consultation:', error);
       toast.error(
-        'Failed to book consultation. Please try again or contact us directly at (+27) 12-667-2505.',
+        error instanceof Error && error.message
+          ? error.message
+          : 'Failed to book consultation. Please try again or contact us directly at (+27) 12-667-2505.',
       );
       setIsSubmitting(false);
     }
