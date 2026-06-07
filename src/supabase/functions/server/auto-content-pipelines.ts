@@ -23,7 +23,6 @@ import {
   isTopicDuplicate,
   markSourceChecked,
   processedKey,
-  recordTopicHash,
   recordUsedImage,
   simpleHash,
 } from './auto-content-pipeline-helpers.ts';
