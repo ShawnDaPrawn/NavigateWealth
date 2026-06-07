@@ -5,7 +5,7 @@ import { Separator } from '../ui/separator';
 import { toast } from 'sonner';
 import { MapPin, Phone, Mail, Linkedin, ArrowRight, Youtube, Instagram } from 'lucide-react';
 import { Logo } from './Logo';
-import { projectId, publicAnonKey } from '../../utils/supabase/info';
+import { api } from '../../utils/api/client';
 
 export function Footer() {
   const currentYear = new Date().getFullYear();
@@ -31,23 +31,7 @@ export function Footer() {
 
     try {
       // Call the newsletter subscription endpoint
-      const response = await fetch(
-        `https://${projectId}.supabase.co/functions/v1/make-server-91ed8379/newsletter/subscribe`,
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${publicAnonKey}`,
-          },
-          body: JSON.stringify({ email }),
-        },
-      );
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.error || 'Subscription failed');
-      }
+      const data = await api.post<{ alreadySubscribed?: boolean; requiresConfirmation?: boolean }>('/newsletter/subscribe', { email });
 
       if (data.alreadySubscribed) {
         toast.info('Already subscribed', {
