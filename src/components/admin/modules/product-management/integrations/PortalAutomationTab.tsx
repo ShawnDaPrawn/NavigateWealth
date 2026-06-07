@@ -13,7 +13,7 @@ import {
   PortalSyncJob,
 } from '../types';
 import { buildPortalFieldsFromBindings } from '@/shared/integrations/binding-utils';
-import { getPortalFieldKey, getPortalFieldColumnName, getBindingKey } from './portal-automation/portalHelpers';
+import { getPortalFieldKey, getPortalFieldColumnName } from './portal-automation/portalHelpers';
 import { PortalConfigCard } from './portal-automation/PortalConfigCard';
 import { PortalJobCard } from './portal-automation/PortalJobCard';
 
