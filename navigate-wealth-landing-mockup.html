@@ -1,0 +1,700 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Navigate Wealth — Landing Page Concept</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+<script src="https://unpkg.com/lucide@latest"></script>
+<script>
+  tailwind.config = {
+    theme: {
+      extend: {
+        colors: {
+          primary: '#6d28d9',
+          'primary-light': '#7c3aed',
+          ink: '#111827',
+          'ink-2': '#161b33',
+          'ink-3': '#1a1e36',
+          'ink-4': '#1e2035',
+        },
+        fontFamily: {
+          sans: ['Inter', 'system-ui', 'sans-serif'],
+          display: ['"Plus Jakarta Sans"', 'system-ui', 'sans-serif'],
+        },
+      },
+    },
+  };
+</script>
+<style>
+  html { scroll-behavior: smooth; }
+  body { font-family: 'Inter', system-ui, sans-serif; }
+  h1, h2, h3, .font-display { font-family: 'Plus Jakarta Sans', system-ui, sans-serif; }
+
+  .gradient-text {
+    background: linear-gradient(120deg, #a78bfa 0%, #c4b5fd 45%, #818cf8 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+  .grid-pattern {
+    background-image:
+      linear-gradient(rgba(255,255,255,0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255,255,255,0.03) 1px, transparent 1px);
+    background-size: 56px 56px;
+  }
+  .dot-pattern {
+    background-image: radial-gradient(circle, rgba(255,255,255,0.6) 1px, transparent 1px);
+    background-size: 30px 30px;
+  }
+  .glass {
+    background: rgba(255,255,255,0.05);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border: 1px solid rgba(255,255,255,0.08);
+  }
+  @keyframes float { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-14px); } }
+  .animate-float { animation: float 6s ease-in-out infinite; }
+  @keyframes fadeUp { from { opacity: 0; transform: translateY(18px); } to { opacity: 1; transform: translateY(0); } }
+  .fade-up { animation: fadeUp 0.7s cubic-bezier(0.16,1,0.3,1) both; }
+  .reveal { opacity: 0; transform: translateY(28px); transition: opacity 0.7s cubic-bezier(0.16,1,0.3,1), transform 0.7s cubic-bezier(0.16,1,0.3,1); }
+  .reveal.in { opacity: 1; transform: translateY(0); }
+
+  /* Dropdown hover */
+  .nav-group:hover .nav-panel { opacity: 1; visibility: visible; transform: translateY(0); }
+  .nav-panel { opacity: 0; visibility: hidden; transform: translateY(8px); transition: all 0.18s ease; }
+
+  .marquee { display: flex; width: max-content; animation: scrollX 38s linear infinite; }
+  @keyframes scrollX { from { transform: translateX(0); } to { transform: translateX(-50%); } }
+  .marquee-wrap:hover .marquee { animation-play-state: paused; }
+
+  .btn-shine { position: relative; overflow: hidden; }
+  .btn-shine::after {
+    content: ''; position: absolute; top: 0; left: -120%; width: 60%; height: 100%;
+    background: linear-gradient(120deg, transparent, rgba(255,255,255,0.35), transparent);
+    transform: skewX(-20deg); transition: left 0.6s ease;
+  }
+  .btn-shine:hover::after { left: 140%; }
+
+  ::-webkit-scrollbar { width: 10px; }
+  ::-webkit-scrollbar-track { background: #0e1322; }
+  ::-webkit-scrollbar-thumb { background: #6d28d9; border-radius: 8px; }
+</style>
+</head>
+<body class="bg-white text-slate-900 antialiased">
+
+<!-- ════════════════════ ANNOUNCEMENT BAR ════════════════════ -->
+<div class="bg-gradient-to-r from-primary to-primary-light text-white text-center text-[13px] py-2 px-4 font-medium">
+  <span class="inline-flex items-center gap-2">
+    <i data-lucide="sparkles" class="w-3.5 h-3.5"></i>
+    Independent financial advice from 30+ trusted providers — <a href="#contact" class="underline underline-offset-2 hover:text-purple-200">Book a free consultation</a>
+  </span>
+</div>
+
+<!-- ════════════════════ NAVIGATION ════════════════════ -->
+<header id="nav" class="sticky top-0 z-50 transition-all duration-300 bg-white/90 backdrop-blur-xl border-b border-slate-200">
+  <nav class="max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8 xl:px-12">
+    <div class="flex justify-between items-center h-[68px]">
+      <!-- Logo -->
+      <a href="#" class="flex items-center gap-2.5 shrink-0">
+        <div class="w-9 h-9 rounded-xl bg-gradient-to-br from-primary to-primary-light flex items-center justify-center shadow-lg shadow-primary/25">
+          <i data-lucide="compass" class="w-5 h-5 text-white"></i>
+        </div>
+        <span class="font-display font-extrabold text-[19px] tracking-tight text-ink">Navigate<span class="text-primary">Wealth</span></span>
+      </a>
+
+      <!-- Desktop links -->
+      <div class="hidden lg:flex items-center gap-7 text-[15px] font-medium text-slate-700">
+        <a href="#" class="text-primary">Home</a>
+
+        <!-- Services dropdown -->
+        <div class="nav-group relative">
+          <button class="flex items-center gap-1 hover:text-primary transition-colors">Services <i data-lucide="chevron-down" class="w-4 h-4"></i></button>
+          <div class="nav-panel absolute left-1/2 -translate-x-1/2 top-full pt-3 w-[560px]">
+            <div class="bg-white rounded-2xl shadow-2xl ring-1 ring-slate-100 border border-slate-100 p-3 grid grid-cols-2 gap-1">
+              <a href="#" class="flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-primary hover:text-white group transition-colors"><i data-lucide="shield" class="w-5 h-5"></i><span>Risk Management</span></a>
+              <a href="#" class="flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-primary hover:text-white group transition-colors"><i data-lucide="heart" class="w-5 h-5"></i><span>Medical Aid</span></a>
+              <a href="#" class="flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-primary hover:text-white group transition-colors"><i data-lucide="target" class="w-5 h-5"></i><span>Retirement Planning</span></a>
+              <a href="#" class="flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-primary hover:text-white group transition-colors"><i data-lucide="trending-up" class="w-5 h-5"></i><span>Investment Management</span></a>
+              <a href="#" class="flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-primary hover:text-white group transition-colors"><i data-lucide="briefcase" class="w-5 h-5"></i><span>Employee Benefits</span></a>
+              <a href="#" class="flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-primary hover:text-white group transition-colors"><i data-lucide="calculator" class="w-5 h-5"></i><span>Tax Planning</span></a>
+              <a href="#" class="flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-primary hover:text-white group transition-colors"><i data-lucide="users" class="w-5 h-5"></i><span>Estate Planning</span></a>
+              <a href="#" class="flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-primary hover:text-white group transition-colors"><i data-lucide="compass" class="w-5 h-5"></i><span>Financial Planning</span></a>
+            </div>
+          </div>
+        </div>
+
+        <!-- Solutions dropdown -->
+        <div class="nav-group relative">
+          <button class="flex items-center gap-1 hover:text-primary transition-colors">Solutions <i data-lucide="chevron-down" class="w-4 h-4"></i></button>
+          <div class="nav-panel absolute left-1/2 -translate-x-1/2 top-full pt-3 w-60">
+            <div class="bg-white rounded-2xl shadow-2xl ring-1 ring-slate-100 border border-slate-100 p-3 space-y-1">
+              <a href="#" class="flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-primary hover:text-white transition-colors"><i data-lucide="user" class="w-5 h-5"></i><span>For Individuals</span></a>
+              <a href="#" class="flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-primary hover:text-white transition-colors"><i data-lucide="building" class="w-5 h-5"></i><span>For Businesses</span></a>
+              <a href="#" class="flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-primary hover:text-white transition-colors"><i data-lucide="briefcase" class="w-5 h-5"></i><span>For Advisers</span></a>
+            </div>
+          </div>
+        </div>
+
+        <!-- Company dropdown -->
+        <div class="nav-group relative">
+          <button class="flex items-center gap-1 hover:text-primary transition-colors">Company <i data-lucide="chevron-down" class="w-4 h-4"></i></button>
+          <div class="nav-panel absolute left-1/2 -translate-x-1/2 top-full pt-3 w-56">
+            <div class="bg-white rounded-2xl shadow-2xl ring-1 ring-slate-100 border border-slate-100 p-3 space-y-1">
+              <a href="#" class="flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-primary hover:text-white transition-colors"><i data-lucide="info" class="w-5 h-5"></i><span>About Us</span></a>
+              <a href="#" class="flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-primary hover:text-white transition-colors"><i data-lucide="award" class="w-5 h-5"></i><span>Why Us?</span></a>
+              <a href="#" class="flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-primary hover:text-white transition-colors"><i data-lucide="user-check" class="w-5 h-5"></i><span>Careers</span></a>
+              <a href="#" class="flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-primary hover:text-white transition-colors"><i data-lucide="newspaper" class="w-5 h-5"></i><span>Press</span></a>
+            </div>
+          </div>
+        </div>
+
+        <a href="#" class="flex items-center gap-1.5 hover:text-primary transition-colors"><i data-lucide="compass" class="w-4 h-4"></i>Ask Vasco</a>
+        <a href="#" class="hover:text-primary transition-colors">Resources</a>
+        <a href="#contact" class="hover:text-primary transition-colors">Contact</a>
+      </div>
+
+      <!-- Actions -->
+      <div class="hidden lg:flex items-center gap-2">
+        <a href="#" class="flex items-center gap-1.5 px-4 py-2 text-[15px] font-medium text-slate-700 hover:text-primary rounded-lg hover:bg-primary/5 transition-colors">
+          <i data-lucide="log-in" class="w-4 h-4"></i>Log In
+        </a>
+        <a href="#contact" class="btn-shine px-5 py-2.5 text-[15px] font-semibold text-white bg-gradient-to-r from-primary to-primary-light rounded-lg shadow-lg shadow-primary/25 hover:shadow-primary/40 hover:-translate-y-0.5 transition-all">Get Started</a>
+      </div>
+
+      <!-- Mobile button -->
+      <button id="mobileBtn" class="lg:hidden w-10 h-10 flex items-center justify-center rounded-lg text-slate-700 hover:bg-slate-100">
+        <i data-lucide="menu" class="w-6 h-6"></i>
+      </button>
+    </div>
+  </nav>
+
+  <!-- Mobile menu -->
+  <div id="mobileMenu" class="lg:hidden hidden border-t border-slate-200 bg-white px-4 py-4 space-y-1 text-slate-700 font-medium max-h-[80vh] overflow-y-auto">
+    <a href="#" class="block px-3 py-2 rounded-lg text-primary">Home</a>
+    <details class="group"><summary class="flex items-center justify-between px-3 py-2 rounded-lg cursor-pointer list-none">Services <i data-lucide="chevron-down" class="w-4 h-4 group-open:rotate-180 transition-transform"></i></summary>
+      <div class="pl-4 py-1 space-y-1 text-sm text-slate-600">
+        <a href="#" class="block py-1.5">Risk Management</a><a href="#" class="block py-1.5">Medical Aid</a><a href="#" class="block py-1.5">Retirement Planning</a><a href="#" class="block py-1.5">Investment Management</a><a href="#" class="block py-1.5">Employee Benefits</a><a href="#" class="block py-1.5">Tax Planning</a><a href="#" class="block py-1.5">Estate Planning</a><a href="#" class="block py-1.5">Financial Planning</a>
+      </div></details>
+    <details class="group"><summary class="flex items-center justify-between px-3 py-2 rounded-lg cursor-pointer list-none">Solutions <i data-lucide="chevron-down" class="w-4 h-4 group-open:rotate-180 transition-transform"></i></summary>
+      <div class="pl-4 py-1 space-y-1 text-sm text-slate-600"><a href="#" class="block py-1.5">For Individuals</a><a href="#" class="block py-1.5">For Businesses</a><a href="#" class="block py-1.5">For Advisers</a></div></details>
+    <details class="group"><summary class="flex items-center justify-between px-3 py-2 rounded-lg cursor-pointer list-none">Company <i data-lucide="chevron-down" class="w-4 h-4 group-open:rotate-180 transition-transform"></i></summary>
+      <div class="pl-4 py-1 space-y-1 text-sm text-slate-600"><a href="#" class="block py-1.5">About Us</a><a href="#" class="block py-1.5">Why Us?</a><a href="#" class="block py-1.5">Careers</a><a href="#" class="block py-1.5">Press</a></div></details>
+    <a href="#" class="block px-3 py-2 rounded-lg">Ask Vasco</a>
+    <a href="#" class="block px-3 py-2 rounded-lg">Resources</a>
+    <a href="#contact" class="block px-3 py-2 rounded-lg">Contact</a>
+    <div class="pt-3 mt-2 border-t border-slate-200 space-y-2">
+      <a href="#" class="block text-center px-4 py-2.5 rounded-lg border border-slate-300">Log In</a>
+      <a href="#contact" class="block text-center px-4 py-2.5 rounded-lg text-white bg-primary font-semibold">Get Started</a>
+    </div>
+  </div>
+</header>
+
+<!-- ════════════════════ HERO ════════════════════ -->
+<section class="relative overflow-hidden bg-ink">
+  <div class="absolute inset-0 bg-gradient-to-br from-ink via-ink-3 to-ink"></div>
+  <div class="absolute -top-40 -right-40 w-[700px] h-[700px] rounded-full bg-primary/20 blur-[130px]"></div>
+  <div class="absolute -bottom-60 -left-40 w-[560px] h-[560px] rounded-full bg-indigo-600/15 blur-[120px]"></div>
+  <div class="absolute inset-0 grid-pattern opacity-60"></div>
+
+  <div class="relative z-10 max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8 xl:px-12">
+    <div class="grid lg:grid-cols-[1.05fr_0.95fr] gap-10 lg:gap-16 items-center min-h-[640px] py-16 lg:py-24">
+      <!-- Left -->
+      <div class="text-center lg:text-left space-y-7 fade-up">
+        <div class="inline-flex items-center gap-2.5 px-3.5 py-1.5 rounded-full glass">
+          <span class="flex w-6 h-[15px] rounded-[2px] overflow-hidden border border-white/20">
+            <span class="w-1/3 bg-[#007749]"></span><span class="w-1/3 bg-white"></span><span class="w-1/3 bg-[#001489]"></span>
+          </span>
+          <span class="text-[12.5px] font-medium text-slate-300 tracking-wide">Proudly South African · Independent · FSP 54606</span>
+        </div>
+
+        <div>
+          <h1 class="font-display font-extrabold leading-[1.08] tracking-tight text-white text-[clamp(2.2rem,5vw,3.75rem)]">
+            <span id="heroTitle">Secure Your Financial</span>
+            <span id="heroAccent" class="gradient-text">Future.</span>
+          </h1>
+          <p id="heroDesc" class="mt-5 text-slate-400 text-base sm:text-lg max-w-xl mx-auto lg:mx-0 leading-relaxed">
+            Create a financial future that matches your ambition with personal, comprehensive solutions designed with you in mind.
+          </p>
+        </div>
+
+        <div class="flex flex-col sm:flex-row gap-3 justify-center lg:justify-start">
+          <a id="heroPrimary" href="#contact" class="btn-shine inline-flex items-center justify-center gap-2 h-13 px-8 py-3.5 bg-gradient-to-r from-primary to-primary-light text-white font-semibold rounded-xl shadow-lg shadow-primary/30 hover:-translate-y-0.5 transition-all">
+            Get Started <i data-lucide="arrow-right" class="w-5 h-5"></i>
+          </a>
+          <a id="heroSecondary" href="#services" class="inline-flex items-center justify-center gap-2 h-13 px-8 py-3.5 glass text-purple-200 font-medium rounded-xl hover:bg-white/10 transition-all">
+            <i data-lucide="play" class="w-4 h-4"></i> Our Services
+          </a>
+        </div>
+
+        <!-- Slide indicators -->
+        <div class="flex items-center gap-2 justify-center lg:justify-start pt-1">
+          <button data-slide="0" class="hero-dot h-1.5 rounded-full bg-white/20 overflow-hidden relative transition-all" style="width:48px"><span class="dot-fill absolute inset-y-0 left-0 bg-purple-400 rounded-full" style="width:0%"></span></button>
+          <button data-slide="1" class="hero-dot h-1.5 rounded-full bg-white/20 overflow-hidden relative transition-all" style="width:24px"><span class="dot-fill absolute inset-y-0 left-0 bg-purple-400 rounded-full" style="width:0%"></span></button>
+          <button data-slide="2" class="hero-dot h-1.5 rounded-full bg-white/20 overflow-hidden relative transition-all" style="width:24px"><span class="dot-fill absolute inset-y-0 left-0 bg-purple-400 rounded-full" style="width:0%"></span></button>
+          <button data-slide="3" class="hero-dot h-1.5 rounded-full bg-white/20 overflow-hidden relative transition-all" style="width:24px"><span class="dot-fill absolute inset-y-0 left-0 bg-purple-400 rounded-full" style="width:0%"></span></button>
+        </div>
+      </div>
+
+      <!-- Right: floating trust cards -->
+      <div class="hidden lg:flex items-center justify-center relative h-[460px]" aria-hidden="true">
+        <div class="absolute w-[440px] h-[440px] rounded-full border border-purple-500/10"></div>
+        <div class="absolute w-[330px] h-[330px] rounded-full border border-purple-500/[0.08]"></div>
+        <div class="absolute w-[220px] h-[220px] rounded-full border border-purple-500/[0.06]"></div>
+
+        <div class="absolute w-28 h-28 rounded-3xl bg-gradient-to-br from-primary/40 to-indigo-600/40 glass flex items-center justify-center shadow-2xl shadow-primary/20">
+          <i data-lucide="trending-up" class="w-11 h-11 text-purple-200"></i>
+        </div>
+
+        <div class="absolute animate-float" style="top:4%; right:2%;">
+          <div class="flex items-center gap-3 px-5 py-3.5 rounded-2xl glass shadow-xl">
+            <div class="w-10 h-10 rounded-xl bg-purple-500/20 flex items-center justify-center"><i data-lucide="shield" class="w-5 h-5 text-purple-200"></i></div>
+            <div><div class="text-sm font-semibold text-white">FSP 54606</div><div class="text-xs text-slate-400">FSCA Regulated</div></div>
+          </div>
+        </div>
+        <div class="absolute animate-float" style="top:54%; right:-2%; animation-delay:1.5s;">
+          <div class="flex items-center gap-3 px-5 py-3.5 rounded-2xl glass shadow-xl">
+            <div class="w-10 h-10 rounded-xl bg-emerald-500/20 flex items-center justify-center"><i data-lucide="check-circle" class="w-5 h-5 text-emerald-300"></i></div>
+            <div><div class="text-sm font-semibold text-white">Independent</div><div class="text-xs text-slate-400">30+ Providers</div></div>
+          </div>
+        </div>
+        <div class="absolute animate-float" style="top:30%; left:-4%; animation-delay:3s;">
+          <div class="flex items-center gap-3 px-5 py-3.5 rounded-2xl glass shadow-xl">
+            <div class="w-10 h-10 rounded-xl bg-amber-500/20 flex items-center justify-center"><i data-lucide="award" class="w-5 h-5 text-amber-300"></i></div>
+            <div><div class="text-sm font-semibold text-white">15+ Years</div><div class="text-xs text-slate-400">Trusted Expertise</div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Stats -->
+    <div class="border-t border-white/[0.07] py-9">
+      <div class="grid grid-cols-2 lg:grid-cols-4 gap-6 lg:gap-8">
+        <div class="flex items-center gap-3 justify-center lg:justify-start"><div class="w-11 h-11 rounded-xl bg-purple-500/10 flex items-center justify-center"><i data-lucide="award" class="w-5 h-5 text-purple-400"></i></div><div><div class="text-2xl font-bold text-white font-display" data-count="15" data-suffix="+">0</div><div class="text-xs text-slate-500 font-medium">Years Experience</div></div></div>
+        <div class="flex items-center gap-3 justify-center lg:justify-start"><div class="w-11 h-11 rounded-xl bg-purple-500/10 flex items-center justify-center"><i data-lucide="globe" class="w-5 h-5 text-purple-400"></i></div><div><div class="text-2xl font-bold text-white font-display" data-count="30" data-suffix="+">0</div><div class="text-xs text-slate-500 font-medium">Trusted Partners</div></div></div>
+        <div class="flex items-center gap-3 justify-center lg:justify-start"><div class="w-11 h-11 rounded-xl bg-purple-500/10 flex items-center justify-center"><i data-lucide="users" class="w-5 h-5 text-purple-400"></i></div><div><div class="text-2xl font-bold text-white font-display" data-count="1000" data-suffix="+">0</div><div class="text-xs text-slate-500 font-medium">Happy Clients</div></div></div>
+        <div class="flex items-center gap-3 justify-center lg:justify-start"><div class="w-11 h-11 rounded-xl bg-purple-500/10 flex items-center justify-center"><i data-lucide="trending-up" class="w-5 h-5 text-purple-400"></i></div><div><div class="text-2xl font-bold text-white font-display"><span data-count="2.5" data-prefix="R" data-suffix="B+">0</span></div><div class="text-xs text-slate-500 font-medium">Assets Managed</div></div></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ════════════════════ TRUST LOGOS MARQUEE ════════════════════ -->
+<section class="py-10 bg-slate-50 border-y border-slate-100">
+  <div class="max-w-screen-2xl mx-auto px-4">
+    <p class="text-center text-xs font-semibold tracking-[0.18em] uppercase text-slate-400 mb-6">Trusted partnerships with South Africa's leading providers</p>
+    <div class="marquee-wrap overflow-hidden relative" style="mask-image:linear-gradient(90deg,transparent,#000 8%,#000 92%,transparent)">
+      <div class="marquee gap-14 items-center text-slate-400 font-display font-bold text-xl">
+        <span class="whitespace-nowrap">Discovery</span><span>Old Mutual</span><span>Sanlam</span><span>Liberty</span><span>Momentum</span><span>Allan Gray</span><span>BrightRock</span><span>Hollard</span><span>Stanlib</span><span>Capital Legacy</span><span>Sygnia</span><span>JUST</span>
+        <span class="whitespace-nowrap">Discovery</span><span>Old Mutual</span><span>Sanlam</span><span>Liberty</span><span>Momentum</span><span>Allan Gray</span><span>BrightRock</span><span>Hollard</span><span>Stanlib</span><span>Capital Legacy</span><span>Sygnia</span><span>JUST</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ════════════════════ SERVICES ════════════════════ -->
+<section id="services" class="py-24 bg-white">
+  <div class="max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8 xl:px-12">
+    <div class="text-center max-w-3xl mx-auto mb-16 reveal">
+      <span class="inline-block text-xs font-semibold tracking-[0.18em] uppercase text-primary mb-4">What we do</span>
+      <h2 class="font-display font-extrabold text-4xl sm:text-5xl text-ink tracking-tight">Our Services</h2>
+      <p class="text-slate-500 text-lg mt-5">Comprehensive financial solutions designed to protect and grow your wealth at every stage of life.</p>
+    </div>
+
+    <div class="grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+      <!-- card -->
+      <article class="reveal group relative rounded-2xl border border-slate-200 bg-white p-7 hover:border-primary/30 hover:shadow-xl hover:shadow-primary/5 hover:-translate-y-1 transition-all duration-300">
+        <div class="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center mb-5 group-hover:bg-primary group-hover:scale-110 transition-all"><i data-lucide="shield" class="w-6 h-6 text-primary group-hover:text-white transition-colors"></i></div>
+        <h3 class="font-display font-bold text-lg text-ink mb-2">Risk Management</h3>
+        <p class="text-sm text-slate-500 leading-relaxed">Protect your family's financial future with comprehensive risk solutions tailored to your needs.</p>
+        <a href="#" class="inline-flex items-center gap-1.5 text-sm font-semibold text-primary mt-5 group-hover:gap-2.5 transition-all">Learn More <i data-lucide="arrow-right" class="w-4 h-4"></i></a>
+      </article>
+      <article class="reveal group relative rounded-2xl border border-slate-200 bg-white p-7 hover:border-primary/30 hover:shadow-xl hover:shadow-primary/5 hover:-translate-y-1 transition-all duration-300">
+        <div class="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center mb-5 group-hover:bg-primary group-hover:scale-110 transition-all"><i data-lucide="target" class="w-6 h-6 text-primary group-hover:text-white transition-colors"></i></div>
+        <h3 class="font-display font-bold text-lg text-ink mb-2">Retirement Planning</h3>
+        <p class="text-sm text-slate-500 leading-relaxed">Build wealth for retirement with strategies designed to maintain your lifestyle and independence.</p>
+        <a href="#" class="inline-flex items-center gap-1.5 text-sm font-semibold text-primary mt-5 group-hover:gap-2.5 transition-all">Learn More <i data-lucide="arrow-right" class="w-4 h-4"></i></a>
+      </article>
+      <article class="reveal group relative rounded-2xl border border-slate-200 bg-white p-7 hover:border-primary/30 hover:shadow-xl hover:shadow-primary/5 hover:-translate-y-1 transition-all duration-300">
+        <div class="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center mb-5 group-hover:bg-primary group-hover:scale-110 transition-all"><i data-lucide="trending-up" class="w-6 h-6 text-primary group-hover:text-white transition-colors"></i></div>
+        <h3 class="font-display font-bold text-lg text-ink mb-2">Investment Management</h3>
+        <p class="text-sm text-slate-500 leading-relaxed">Grow your wealth with carefully selected local and offshore investments tailored to your profile.</p>
+        <a href="#" class="inline-flex items-center gap-1.5 text-sm font-semibold text-primary mt-5 group-hover:gap-2.5 transition-all">Learn More <i data-lucide="arrow-right" class="w-4 h-4"></i></a>
+      </article>
+      <article class="reveal group relative rounded-2xl border border-slate-200 bg-white p-7 hover:border-primary/30 hover:shadow-xl hover:shadow-primary/5 hover:-translate-y-1 transition-all duration-300">
+        <div class="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center mb-5 group-hover:bg-primary group-hover:scale-110 transition-all"><i data-lucide="file-text" class="w-6 h-6 text-primary group-hover:text-white transition-colors"></i></div>
+        <h3 class="font-display font-bold text-lg text-ink mb-2">Estate Planning</h3>
+        <p class="text-sm text-slate-500 leading-relaxed">Preserve your legacy and minimise taxes with comprehensive wills, trusts and estate strategies.</p>
+        <a href="#" class="inline-flex items-center gap-1.5 text-sm font-semibold text-primary mt-5 group-hover:gap-2.5 transition-all">Learn More <i data-lucide="arrow-right" class="w-4 h-4"></i></a>
+      </article>
+      <article class="reveal group relative rounded-2xl border border-slate-200 bg-white p-7 hover:border-primary/30 hover:shadow-xl hover:shadow-primary/5 hover:-translate-y-1 transition-all duration-300">
+        <div class="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center mb-5 group-hover:bg-primary group-hover:scale-110 transition-all"><i data-lucide="calculator" class="w-6 h-6 text-primary group-hover:text-white transition-colors"></i></div>
+        <h3 class="font-display font-bold text-lg text-ink mb-2">Tax Planning</h3>
+        <p class="text-sm text-slate-500 leading-relaxed">Minimise tax liabilities and ensure compliance with expert strategies that optimise your position.</p>
+        <a href="#" class="inline-flex items-center gap-1.5 text-sm font-semibold text-primary mt-5 group-hover:gap-2.5 transition-all">Learn More <i data-lucide="arrow-right" class="w-4 h-4"></i></a>
+      </article>
+      <article class="reveal group relative rounded-2xl border border-slate-200 bg-white p-7 hover:border-primary/30 hover:shadow-xl hover:shadow-primary/5 hover:-translate-y-1 transition-all duration-300">
+        <div class="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center mb-5 group-hover:bg-primary group-hover:scale-110 transition-all"><i data-lucide="briefcase" class="w-6 h-6 text-primary group-hover:text-white transition-colors"></i></div>
+        <h3 class="font-display font-bold text-lg text-ink mb-2">Employee Benefits</h3>
+        <p class="text-sm text-slate-500 leading-relaxed">Attract and retain top talent with comprehensive benefit plans that enhance company culture.</p>
+        <a href="#" class="inline-flex items-center gap-1.5 text-sm font-semibold text-primary mt-5 group-hover:gap-2.5 transition-all">Learn More <i data-lucide="arrow-right" class="w-4 h-4"></i></a>
+      </article>
+      <article class="reveal group relative rounded-2xl border border-slate-200 bg-white p-7 hover:border-primary/30 hover:shadow-xl hover:shadow-primary/5 hover:-translate-y-1 transition-all duration-300">
+        <div class="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center mb-5 group-hover:bg-primary group-hover:scale-110 transition-all"><i data-lucide="gift" class="w-6 h-6 text-primary group-hover:text-white transition-colors"></i></div>
+        <h3 class="font-display font-bold text-lg text-ink mb-2">Cashback</h3>
+        <p class="text-sm text-slate-500 leading-relaxed">Earn monthly cashback rewards on all policies and get rewarded for smart financial decisions.</p>
+        <a href="#" class="inline-flex items-center gap-1.5 text-sm font-semibold text-primary mt-5 group-hover:gap-2.5 transition-all">Learn More <i data-lucide="arrow-right" class="w-4 h-4"></i></a>
+      </article>
+      <article class="reveal group relative rounded-2xl border border-slate-200 bg-white p-7 hover:border-primary/30 hover:shadow-xl hover:shadow-primary/5 hover:-translate-y-1 transition-all duration-300">
+        <div class="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center mb-5 group-hover:bg-primary group-hover:scale-110 transition-all"><i data-lucide="stethoscope" class="w-6 h-6 text-primary group-hover:text-white transition-colors"></i></div>
+        <h3 class="font-display font-bold text-lg text-ink mb-2">Medical Aid</h3>
+        <p class="text-sm text-slate-500 leading-relaxed">Access quality healthcare with comprehensive medical aid schemes tailored to your family.</p>
+        <a href="#" class="inline-flex items-center gap-1.5 text-sm font-semibold text-primary mt-5 group-hover:gap-2.5 transition-all">Learn More <i data-lucide="arrow-right" class="w-4 h-4"></i></a>
+      </article>
+    </div>
+  </div>
+</section>
+
+<!-- ════════════════════ WHY US ════════════════════ -->
+<section class="relative py-24 bg-ink overflow-hidden">
+  <div class="absolute inset-0 dot-pattern opacity-[0.04]"></div>
+  <div class="absolute top-0 left-1/2 -translate-x-1/2 w-[800px] h-[400px] bg-primary/15 blur-[140px] rounded-full"></div>
+  <div class="relative max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8 xl:px-12">
+    <div class="text-center mb-16 reveal">
+      <span class="inline-block text-xs font-semibold tracking-[0.18em] uppercase text-purple-400 mb-4">The Navigate difference</span>
+      <h2 class="font-display font-extrabold text-4xl sm:text-5xl text-white tracking-tight">Why Us?</h2>
+    </div>
+    <div class="grid md:grid-cols-3 gap-6 lg:gap-8">
+      <div class="reveal glass rounded-2xl p-8 text-center hover:bg-white/[0.07] transition-colors">
+        <div class="w-16 h-16 rounded-2xl bg-gradient-to-br from-primary/30 to-indigo-600/30 flex items-center justify-center mx-auto mb-6"><i data-lucide="globe" class="w-8 h-8 text-purple-300"></i></div>
+        <h3 class="font-display font-bold text-xl text-white mb-3">We're Independent</h3>
+        <p class="text-slate-400 leading-relaxed">Unbiased advice and access to top-tier products from multiple providers — never tied to one.</p>
+      </div>
+      <div class="reveal glass rounded-2xl p-8 text-center hover:bg-white/[0.07] transition-colors">
+        <div class="w-16 h-16 rounded-2xl bg-gradient-to-br from-primary/30 to-indigo-600/30 flex items-center justify-center mx-auto mb-6"><i data-lucide="heart" class="w-8 h-8 text-purple-300"></i></div>
+        <h3 class="font-display font-bold text-xl text-white mb-3">We're Customer-Centric</h3>
+        <p class="text-slate-400 leading-relaxed">We tailor all planning around each client's goals, values and timeline — your priorities first.</p>
+      </div>
+      <div class="reveal glass rounded-2xl p-8 text-center hover:bg-white/[0.07] transition-colors">
+        <div class="w-16 h-16 rounded-2xl bg-gradient-to-br from-primary/30 to-indigo-600/30 flex items-center justify-center mx-auto mb-6"><i data-lucide="zap" class="w-8 h-8 text-purple-300"></i></div>
+        <h3 class="font-display font-bold text-xl text-white mb-3">We're Technology-Enabled</h3>
+        <p class="text-slate-400 leading-relaxed">We integrate technology to streamline onboarding, analysis and portfolio monitoring.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ════════════════════ REVIEWS ════════════════════ -->
+<section class="py-24 bg-slate-50">
+  <div class="max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8 xl:px-12">
+    <div class="text-center max-w-3xl mx-auto mb-16 reveal">
+      <span class="inline-block text-xs font-semibold tracking-[0.18em] uppercase text-primary mb-4">Client stories</span>
+      <h2 class="font-display font-extrabold text-4xl sm:text-5xl text-ink tracking-tight">What Our Clients Say</h2>
+      <p class="text-slate-500 text-lg mt-5">Don't just take our word for it — here's what our valued clients say about Navigate Wealth.</p>
+    </div>
+    <div class="grid md:grid-cols-3 gap-6 lg:gap-8">
+      <figure class="reveal rounded-2xl bg-white border border-slate-200 p-8 shadow-sm hover:shadow-lg transition-shadow">
+        <div class="flex gap-0.5 mb-5 text-amber-400">★★★★★</div>
+        <blockquote class="text-slate-600 leading-relaxed mb-7">"Navigate Wealth transformed our financial planning approach. Their independent advice and personalised strategies helped us achieve our retirement goals faster than we thought possible."</blockquote>
+        <figcaption class="flex items-center gap-3">
+          <div class="w-11 h-11 rounded-full bg-primary/15 text-primary font-semibold flex items-center justify-center">SM</div>
+          <div><div class="font-semibold text-ink">Sarah Mitchell</div><div class="text-sm text-slate-400">Retired Teacher</div></div>
+        </figcaption>
+      </figure>
+      <figure class="reveal rounded-2xl bg-white border border-slate-200 p-8 shadow-sm hover:shadow-lg transition-shadow">
+        <div class="flex gap-0.5 mb-5 text-amber-400">★★★★★</div>
+        <blockquote class="text-slate-600 leading-relaxed mb-7">"The team's expertise in risk management saved our family from financial uncertainty. Their comprehensive approach covers all aspects of our financial well-being."</blockquote>
+        <figcaption class="flex items-center gap-3">
+          <div class="w-11 h-11 rounded-full bg-primary/15 text-primary font-semibold flex items-center justify-center">DT</div>
+          <div><div class="font-semibold text-ink">David Thompson</div><div class="text-sm text-slate-400">Business Owner</div></div>
+        </figcaption>
+      </figure>
+      <figure class="reveal rounded-2xl bg-white border border-slate-200 p-8 shadow-sm hover:shadow-lg transition-shadow">
+        <div class="flex gap-0.5 mb-5 text-amber-400">★★★★★</div>
+        <blockquote class="text-slate-600 leading-relaxed mb-7">"Professional, knowledgeable and truly independent. Navigate Wealth helped us navigate complex investment decisions with confidence and clarity."</blockquote>
+        <figcaption class="flex items-center gap-3">
+          <div class="w-11 h-11 rounded-full bg-primary/15 text-primary font-semibold flex items-center justify-center">LP</div>
+          <div><div class="font-semibold text-ink">Lisa Patel</div><div class="text-sm text-slate-400">Medical Professional</div></div>
+        </figcaption>
+      </figure>
+    </div>
+  </div>
+</section>
+
+<!-- ════════════════════ FEATURED INSIGHTS ════════════════════ -->
+<section class="py-24 bg-white">
+  <div class="max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8 xl:px-12">
+    <div class="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4 mb-12 reveal">
+      <div>
+        <span class="inline-block text-xs font-semibold tracking-[0.18em] uppercase text-primary mb-4">Resources</span>
+        <h2 class="font-display font-extrabold text-4xl sm:text-5xl text-ink tracking-tight">Featured Insights</h2>
+      </div>
+      <a href="#" class="inline-flex items-center gap-1.5 text-sm font-semibold text-primary hover:gap-2.5 transition-all">View all articles <i data-lucide="arrow-right" class="w-4 h-4"></i></a>
+    </div>
+    <div class="grid md:grid-cols-3 gap-6 lg:gap-8">
+      <a href="#" class="reveal group rounded-2xl overflow-hidden border border-slate-200 hover:shadow-xl hover:-translate-y-1 transition-all">
+        <div class="h-48 bg-gradient-to-br from-primary/80 to-indigo-600 relative"><div class="absolute inset-0 dot-pattern opacity-10"></div><span class="absolute bottom-4 left-4 text-xs font-semibold px-2.5 py-1 rounded-full bg-white/90 text-primary">Retirement</span></div>
+        <div class="p-6">
+          <div class="text-xs text-slate-400 mb-2">5 min read · June 2026</div>
+          <h3 class="font-display font-bold text-lg text-ink mb-2 group-hover:text-primary transition-colors">Maximising your retirement annuity before tax year-end</h3>
+          <p class="text-sm text-slate-500 leading-relaxed">Smart contribution strategies that can reduce your taxable income while building long-term wealth.</p>
+        </div>
+      </a>
+      <a href="#" class="reveal group rounded-2xl overflow-hidden border border-slate-200 hover:shadow-xl hover:-translate-y-1 transition-all">
+        <div class="h-48 bg-gradient-to-br from-indigo-600 to-primary relative"><div class="absolute inset-0 dot-pattern opacity-10"></div><span class="absolute bottom-4 left-4 text-xs font-semibold px-2.5 py-1 rounded-full bg-white/90 text-primary">Investing</span></div>
+        <div class="p-6">
+          <div class="text-xs text-slate-400 mb-2">7 min read · May 2026</div>
+          <h3 class="font-display font-bold text-lg text-ink mb-2 group-hover:text-primary transition-colors">Offshore vs local: building a balanced portfolio</h3>
+          <p class="text-sm text-slate-500 leading-relaxed">How to diversify across geographies to manage risk and capture global growth opportunities.</p>
+        </div>
+      </a>
+      <a href="#" class="reveal group rounded-2xl overflow-hidden border border-slate-200 hover:shadow-xl hover:-translate-y-1 transition-all">
+        <div class="h-48 bg-gradient-to-br from-violet-600 to-fuchsia-600 relative"><div class="absolute inset-0 dot-pattern opacity-10"></div><span class="absolute bottom-4 left-4 text-xs font-semibold px-2.5 py-1 rounded-full bg-white/90 text-primary">Estate</span></div>
+        <div class="p-6">
+          <div class="text-xs text-slate-400 mb-2">6 min read · May 2026</div>
+          <h3 class="font-display font-bold text-lg text-ink mb-2 group-hover:text-primary transition-colors">Why every South African adult needs an updated will</h3>
+          <p class="text-sm text-slate-500 leading-relaxed">Protecting your loved ones and your legacy with proper estate planning fundamentals.</p>
+        </div>
+      </a>
+    </div>
+  </div>
+</section>
+
+<!-- ════════════════════ GET STARTED CTA ════════════════════ -->
+<section id="contact" class="relative py-20 overflow-hidden bg-ink-4">
+  <div class="absolute top-0 right-0 w-[600px] h-[600px] rounded-full bg-primary/15 blur-[120px] -translate-y-1/3 translate-x-1/4"></div>
+  <div class="absolute bottom-0 left-0 w-[400px] h-[400px] rounded-full bg-primary/10 blur-[100px] translate-y-1/3 -translate-x-1/4"></div>
+
+  <div class="relative max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8 xl:px-12">
+    <div class="grid lg:grid-cols-2 gap-10 lg:gap-16 items-center">
+      <div class="space-y-8">
+        <div class="space-y-4">
+          <div class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-primary/20 border border-primary/30">
+            <span class="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse"></span>
+            <span class="text-xs font-medium text-purple-200">Free initial consultation</span>
+          </div>
+          <h2 class="font-display font-extrabold text-3xl sm:text-4xl leading-tight text-white">Take the First Step Toward<br class="hidden sm:block" /> Your Financial Future</h2>
+          <p class="text-slate-400 text-base max-w-lg leading-relaxed">Our independent advisers evaluate solutions from 30+ trusted partners to recommend what's truly best for your goals.</p>
+        </div>
+        <div class="grid sm:grid-cols-2 gap-3">
+          <div class="flex items-center gap-2.5"><div class="w-7 h-7 rounded-md bg-primary/20 flex items-center justify-center"><i data-lucide="target" class="w-3.5 h-3.5 text-purple-300"></i></div><span class="text-sm text-slate-300">Personalised financial advice</span></div>
+          <div class="flex items-center gap-2.5"><div class="w-7 h-7 rounded-md bg-primary/20 flex items-center justify-center"><i data-lucide="shield" class="w-3.5 h-3.5 text-purple-300"></i></div><span class="text-sm text-slate-300">Independent & unbiased</span></div>
+          <div class="flex items-center gap-2.5"><div class="w-7 h-7 rounded-md bg-primary/20 flex items-center justify-center"><i data-lucide="check-circle" class="w-3.5 h-3.5 text-purple-300"></i></div><span class="text-sm text-slate-300">No-obligation consultation</span></div>
+          <div class="flex items-center gap-2.5"><div class="w-7 h-7 rounded-md bg-primary/20 flex items-center justify-center"><i data-lucide="zap" class="w-3.5 h-3.5 text-purple-300"></i></div><span class="text-sm text-slate-300">Response within 24 hours</span></div>
+        </div>
+        <div class="flex flex-col sm:flex-row gap-4 sm:gap-6 pt-2">
+          <a href="tel:+27126672505" class="flex items-center gap-2.5 group"><div class="w-9 h-9 rounded-lg bg-white/10 flex items-center justify-center group-hover:bg-primary/30 transition-colors"><i data-lucide="phone" class="w-4 h-4 text-purple-300"></i></div><div><div class="text-[11px] text-slate-500 font-medium uppercase tracking-wider">Call us</div><div class="text-sm text-white font-medium">+27 12 667 2505</div></div></a>
+          <a href="mailto:info@navigatewealth.co" class="flex items-center gap-2.5 group"><div class="w-9 h-9 rounded-lg bg-white/10 flex items-center justify-center group-hover:bg-primary/30 transition-colors"><i data-lucide="mail" class="w-4 h-4 text-purple-300"></i></div><div><div class="text-[11px] text-slate-500 font-medium uppercase tracking-wider">Email</div><div class="text-sm text-white font-medium">info@navigatewealth.co</div></div></a>
+          <div class="flex items-center gap-2.5"><div class="w-9 h-9 rounded-lg bg-white/10 flex items-center justify-center"><i data-lucide="map-pin" class="w-4 h-4 text-purple-300"></i></div><div><div class="text-[11px] text-slate-500 font-medium uppercase tracking-wider">Office</div><div class="text-sm text-white font-medium">Irene, Centurion</div></div></div>
+        </div>
+      </div>
+
+      <!-- Form -->
+      <div class="bg-white rounded-3xl shadow-2xl shadow-black/30 p-7 sm:p-9">
+        <h3 class="font-display font-bold text-xl text-ink mb-1">Get Started</h3>
+        <p class="text-sm text-slate-500 mb-6">Fill in your details and we'll be in touch within 24 hours.</p>
+        <form class="space-y-4" onsubmit="return false">
+          <div class="grid sm:grid-cols-2 gap-4">
+            <div><label class="text-xs font-medium text-slate-700 block mb-1.5">First Name *</label><input placeholder="First Name" class="w-full h-11 px-3.5 rounded-lg bg-slate-50 border border-slate-200 text-sm focus:border-primary focus:ring-2 focus:ring-primary/15 outline-none transition" /></div>
+            <div><label class="text-xs font-medium text-slate-700 block mb-1.5">Last Name *</label><input placeholder="Last Name" class="w-full h-11 px-3.5 rounded-lg bg-slate-50 border border-slate-200 text-sm focus:border-primary focus:ring-2 focus:ring-primary/15 outline-none transition" /></div>
+          </div>
+          <div><label class="text-xs font-medium text-slate-700 block mb-1.5">Email Address *</label><input type="email" placeholder="your.email@example.com" class="w-full h-11 px-3.5 rounded-lg bg-slate-50 border border-slate-200 text-sm focus:border-primary focus:ring-2 focus:ring-primary/15 outline-none transition" /></div>
+          <div class="grid sm:grid-cols-2 gap-4">
+            <div><label class="text-xs font-medium text-slate-700 block mb-1.5">Phone Number</label><input type="tel" placeholder="+27 12 345 6789" class="w-full h-11 px-3.5 rounded-lg bg-slate-50 border border-slate-200 text-sm focus:border-primary focus:ring-2 focus:ring-primary/15 outline-none transition" /></div>
+            <div><label class="text-xs font-medium text-slate-700 block mb-1.5">Service of Interest</label>
+              <select class="w-full h-11 px-3 rounded-lg bg-slate-50 border border-slate-200 text-sm focus:border-primary focus:ring-2 focus:ring-primary/15 outline-none transition text-slate-600">
+                <option>General consultation</option><option>Risk Management</option><option>Medical Aid</option><option>Investment Management</option><option>Retirement Planning</option><option>Employee Benefits</option><option>Tax Planning</option><option>Estate Planning</option>
+              </select>
+            </div>
+          </div>
+          <button class="btn-shine w-full h-12 rounded-lg bg-gradient-to-r from-primary to-primary-light text-white font-semibold flex items-center justify-center gap-2 hover:-translate-y-0.5 transition-all shadow-lg shadow-primary/25">Get Started Today <i data-lucide="arrow-right" class="w-4 h-4"></i></button>
+          <p class="text-[11px] text-slate-400 text-center leading-relaxed">By submitting, you agree to be contacted by our team. Your data is secure and will never be shared with third parties.</p>
+        </form>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ════════════════════ FOOTER ════════════════════ -->
+<footer class="bg-black text-white">
+  <div class="max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8 xl:px-12 pt-16 pb-8">
+    <div class="grid lg:grid-cols-4 gap-12">
+      <div class="space-y-6">
+        <a href="#" class="flex items-center gap-2.5">
+          <div class="w-9 h-9 rounded-xl bg-gradient-to-br from-primary to-primary-light flex items-center justify-center"><i data-lucide="compass" class="w-5 h-5 text-white"></i></div>
+          <span class="font-display font-extrabold text-[19px]">Navigate<span class="text-primary-light">Wealth</span></span>
+        </a>
+        <div class="space-y-3 text-sm text-slate-300">
+          <div class="flex items-start gap-3"><i data-lucide="map-pin" class="w-5 h-5 text-primary-light shrink-0 mt-0.5"></i><span>Milestone Place Block A, 25 Sovereign Dr, Route 21 Business Park, Pretoria, 0178</span></div>
+          <div class="flex items-center gap-3"><i data-lucide="phone" class="w-5 h-5 text-primary-light shrink-0"></i><span>(+27) 12-667-2505</span></div>
+          <div class="flex items-center gap-3"><i data-lucide="mail" class="w-5 h-5 text-primary-light shrink-0"></i><span>info@navigatewealth.co</span></div>
+        </div>
+      </div>
+
+      <div class="lg:col-span-3 grid grid-cols-2 md:grid-cols-5 gap-8">
+        <div>
+          <h3 class="font-semibold mb-4">Company</h3>
+          <ul class="space-y-3 text-sm text-slate-300">
+            <li><a href="#" class="hover:text-primary-light transition-colors">About Us</a></li>
+            <li><a href="#" class="hover:text-primary-light transition-colors">Why Us?</a></li>
+            <li><a href="#" class="hover:text-primary-light transition-colors">Careers</a></li>
+            <li><a href="#" class="hover:text-primary-light transition-colors">Press</a></li>
+          </ul>
+        </div>
+        <div class="md:col-span-2 grid grid-cols-2">
+          <div>
+            <h3 class="font-semibold mb-4">Services</h3>
+            <ul class="space-y-3 text-sm text-slate-300">
+              <li><a href="#" class="hover:text-primary-light transition-colors">Risk Management</a></li>
+              <li><a href="#" class="hover:text-primary-light transition-colors">Medical Aid</a></li>
+              <li><a href="#" class="hover:text-primary-light transition-colors">Retirement Planning</a></li>
+              <li><a href="#" class="hover:text-primary-light transition-colors">Investment Management</a></li>
+            </ul>
+          </div>
+          <div>
+            <ul class="space-y-3 text-sm text-slate-300 md:mt-10">
+              <li><a href="#" class="hover:text-primary-light transition-colors">Employee Benefits</a></li>
+              <li><a href="#" class="hover:text-primary-light transition-colors">Tax Planning</a></li>
+              <li><a href="#" class="hover:text-primary-light transition-colors">Estate Planning</a></li>
+              <li><a href="#" class="hover:text-primary-light transition-colors">Financial Planning</a></li>
+            </ul>
+          </div>
+        </div>
+        <div>
+          <h3 class="font-semibold mb-4">Resources</h3>
+          <ul class="space-y-3 text-sm text-slate-300">
+            <li><a href="#" class="hover:text-primary-light transition-colors">Insights</a></li>
+            <li><a href="#" class="hover:text-primary-light transition-colors">Sitemap</a></li>
+            <li><a href="#" class="hover:text-primary-light transition-colors">Market Updates</a></li>
+            <li><a href="#" class="hover:text-primary-light transition-colors">Design System</a></li>
+          </ul>
+        </div>
+        <div>
+          <h3 class="font-semibold mb-4">Legal</h3>
+          <ul class="space-y-3 text-sm text-slate-300">
+            <li><a href="#" class="hover:text-primary-light transition-colors">Privacy and Data</a></li>
+            <li><a href="#" class="hover:text-primary-light transition-colors">Legal Notices</a></li>
+            <li><a href="#" class="hover:text-primary-light transition-colors">Regulatory</a></li>
+            <li><a href="#" class="hover:text-primary-light transition-colors">Other</a></li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <!-- Newsletter -->
+    <div class="mt-12 pt-8 border-t border-slate-800 grid md:grid-cols-2 gap-8 items-center">
+      <div>
+        <h3 class="text-xl font-semibold mb-2">Stay Connected</h3>
+        <p class="text-slate-300">Get the latest market insights and financial tips delivered to your inbox.</p>
+      </div>
+      <form class="flex flex-col sm:flex-row gap-3" onsubmit="return false">
+        <input type="email" placeholder="Enter your email" class="flex-1 px-4 py-2.5 bg-slate-800 border border-slate-700 rounded-lg text-white placeholder-slate-400 focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary" />
+        <button class="bg-gradient-to-r from-primary to-primary-light text-white px-6 py-2.5 rounded-lg font-medium flex items-center justify-center gap-2 hover:-translate-y-0.5 transition-all">Subscribe <i data-lucide="arrow-right" class="w-4 h-4"></i></button>
+      </form>
+    </div>
+
+    <div class="my-8 h-px bg-slate-800"></div>
+
+    <div class="flex flex-col md:flex-row justify-between items-center gap-4">
+      <p class="text-slate-400 text-sm">© 2026 Navigate Wealth. All rights reserved.</p>
+      <div class="flex gap-2">
+        <a href="#" class="w-9 h-9 rounded-lg flex items-center justify-center text-slate-400 hover:text-primary-light hover:bg-primary/10 transition-colors"><i data-lucide="linkedin" class="w-5 h-5"></i></a>
+        <a href="#" class="w-9 h-9 rounded-lg flex items-center justify-center text-slate-400 hover:text-primary-light hover:bg-primary/10 transition-colors"><i data-lucide="instagram" class="w-5 h-5"></i></a>
+        <a href="#" class="w-9 h-9 rounded-lg flex items-center justify-center text-slate-400 hover:text-primary-light hover:bg-primary/10 transition-colors"><i data-lucide="youtube" class="w-5 h-5"></i></a>
+      </div>
+    </div>
+
+    <div class="mt-8 pt-6 border-t border-slate-800">
+      <p class="text-xs text-slate-500 leading-relaxed">
+        <strong>Important Disclosure:</strong> Wealthfront (Pty) Ltd (Reg No. 2024/071953/07), trading as "Navigate Wealth," is a South African financial advisory firm and an authorised Financial Services Provider (FSP No. 54606). The information on this website is for general informational purposes only and does not constitute financial, investment, tax, legal, or other professional advice. While we strive to ensure that the information is accurate and up to date, we make no warranties of any kind regarding its completeness or reliability. Any reliance you place on such information is strictly at your own risk. Past performance is not necessarily indicative of future results. Before making any financial decision, you should consider your personal circumstances and, where appropriate, seek professional advice. Navigate Wealth will not be liable for any losses or damages arising from the use of this website or any reliance on the information provided herein. For tailored advice, please contact our qualified advisor/s directly. Full terms and conditions are available upon request.
+      </p>
+    </div>
+  </div>
+</footer>
+
+<script>
+  lucide.createIcons();
+
+  // ── Mobile menu ──
+  const mobileBtn = document.getElementById('mobileBtn');
+  const mobileMenu = document.getElementById('mobileMenu');
+  mobileBtn.addEventListener('click', () => mobileMenu.classList.toggle('hidden'));
+
+  // ── Nav shadow on scroll ──
+  const nav = document.getElementById('nav');
+  window.addEventListener('scroll', () => {
+    nav.classList.toggle('shadow-lg', window.scrollY > 10);
+    nav.classList.toggle('shadow-slate-200/60', window.scrollY > 10);
+  });
+
+  // ── Hero slider ──
+  const slides = [
+    { title: 'Secure Your Financial', accent: 'Future.', desc: 'Create a financial future that matches your ambition with personal, comprehensive solutions designed with you in mind.', primary: 'Get Started', secondary: 'Our Services' },
+    { title: 'Secure Your Retirement With', accent: 'Confidence.', desc: 'Build wealth systematically with retirement strategies designed to maintain your lifestyle and financial independence for years to come.', primary: 'Plan My Retirement', secondary: 'Get Quote' },
+    { title: 'Grow Your Wealth With', accent: 'Expert Guidance.', desc: 'Maximise returns with carefully selected local and offshore investments, tailored to your risk profile and financial goals.', primary: 'Explore Investments', secondary: 'Contact Adviser' },
+    { title: 'Protect What Matters', accent: 'Most.', desc: "Safeguard your family's financial future with comprehensive risk management solutions tailored to your unique needs and circumstances.", primary: 'Protect My Family', secondary: 'Learn More' },
+  ];
+  let current = 0;
+  const DURATION = 7000;
+  const titleEl = document.getElementById('heroTitle');
+  const accentEl = document.getElementById('heroAccent');
+  const descEl = document.getElementById('heroDesc');
+  const primaryEl = document.getElementById('heroPrimary');
+  const secondaryEl = document.getElementById('heroSecondary');
+  const dots = [...document.querySelectorAll('.hero-dot')];
+  let startTime = null, raf;
+
+  function render(i) {
+    const s = slides[i];
+    [titleEl, accentEl, descEl].forEach(el => { el.style.animation = 'none'; el.offsetHeight; el.style.animation = 'fadeUp 0.6s cubic-bezier(0.16,1,0.3,1) both'; });
+    titleEl.textContent = s.title + ' ';
+    accentEl.textContent = s.accent;
+    descEl.textContent = s.desc;
+    primaryEl.childNodes[0].nodeValue = s.primary + ' ';
+    secondaryEl.lastChild.nodeValue = ' ' + s.secondary;
+    dots.forEach((d, di) => {
+      d.style.width = di === i ? '48px' : '24px';
+      d.querySelector('.dot-fill').style.width = '0%';
+    });
+  }
+  function tick(ts) {
+    if (!startTime) startTime = ts;
+    const pct = Math.min(((ts - startTime) / DURATION) * 100, 100);
+    dots[current].querySelector('.dot-fill').style.width = pct + '%';
+    if (pct >= 100) { go((current + 1) % slides.length); }
+    else raf = requestAnimationFrame(tick);
+  }
+  function go(i) { cancelAnimationFrame(raf); current = i; startTime = null; render(i); raf = requestAnimationFrame(tick); }
+  dots.forEach((d, i) => d.addEventListener('click', () => go(i)));
+  render(0); raf = requestAnimationFrame(tick);
+
+  // ── Count up stats ──
+  function countUp(el) {
+    const target = parseFloat(el.dataset.count);
+    const prefix = el.dataset.prefix || '';
+    const suffix = el.dataset.suffix || '';
+    const decimal = target % 1 !== 0;
+    let cur = 0; const steps = 60; const inc = target / steps; let step = 0;
+    const iv = setInterval(() => {
+      step++; cur += inc;
+      if (step >= steps) { cur = target; clearInterval(iv); }
+      const val = decimal ? cur.toFixed(1) : Math.round(cur).toLocaleString();
+      el.textContent = prefix + val + suffix;
+    }, 28);
+  }
+  const statObserver = new IntersectionObserver((entries) => {
+    entries.forEach(e => { if (e.isIntersecting) { countUp(e.target); statObserver.unobserve(e.target); } });
+  }, { threshold: 0.5 });
+  document.querySelectorAll('[data-count]').forEach(el => statObserver.observe(el));
+
+  // ── Scroll reveal ──
+  const revealObserver = new IntersectionObserver((entries) => {
+    entries.forEach((e, i) => { if (e.isIntersecting) { setTimeout(() => e.target.classList.add('in'), (i % 4) * 80); revealObserver.unobserve(e.target); } });
+  }, { threshold: 0.12 });
+  document.querySelectorAll('.reveal').forEach(el => revealObserver.observe(el));
+</script>
+</body>
+</html>
