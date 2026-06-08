@@ -92,19 +92,23 @@ export function HomePage() {
 
   // ── Hero auto-advance ──────────────────────────────────────────
   const HERO_AUTO_ADVANCE_MS = 8_000;
-  const [heroProgress, setHeroProgress] = useState(0);
   const heroProgressRef = useRef<number | null>(null);
+  // Drive the hero progress bar imperatively via a DOM ref rather than React
+  // state. The previous `setHeroProgress` per animation frame re-rendered the
+  // whole homepage ~60×/sec continuously, which pinned a CPU core. Writing the
+  // width directly to the node is visually identical with zero re-renders.
+  const heroProgressBarRef = useRef<HTMLDivElement | null>(null);
 
   const nextSlideStable = useCallback(() => {
     setCurrentSlideIndex((prev) => (prev + 1) % 4); // 4 slides
   }, []);
 
   useEffect(() => {
-    setHeroProgress(0);
+    if (heroProgressBarRef.current) heroProgressBarRef.current.style.width = '0%';
     const start = Date.now();
     const tick = () => {
       const pct = Math.min(((Date.now() - start) / HERO_AUTO_ADVANCE_MS) * 100, 100);
-      setHeroProgress(pct);
+      if (heroProgressBarRef.current) heroProgressBarRef.current.style.width = `${pct}%`;
       if (pct >= 100) {
         nextSlideStable();
       } else {
@@ -119,7 +123,7 @@ export function HomePage() {
 
   const heroGoToSlide = useCallback((index: number) => {
     if (heroProgressRef.current) cancelAnimationFrame(heroProgressRef.current);
-    setHeroProgress(0);
+    if (heroProgressBarRef.current) heroProgressBarRef.current.style.width = '0%';
     setCurrentSlideIndex(index);
   }, []);
 
@@ -524,8 +528,9 @@ export function HomePage() {
                       <div className="absolute inset-0 bg-white/[0.12] rounded-full group-hover:bg-white/20 transition-colors" />
                       {isActive && (
                         <div
+                          ref={heroProgressBarRef}
                           className="absolute inset-y-0 left-0 rounded-full bg-purple-400"
-                          style={{ width: `${heroProgress}%`, transition: 'none' }}
+                          style={{ width: '0%', transition: 'none' }}
                         />
                       )}
                     </button>
