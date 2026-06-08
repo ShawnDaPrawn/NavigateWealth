@@ -5,7 +5,7 @@
  * close effect, error handling, skip-for-new-notes behaviour.
  */
 
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { renderHook, act } from '@testing-library/react';
 import { useAutoSave } from '../useAutoSave';
 

@@ -15,9 +15,6 @@ import { useVoiceRecorder } from '../useVoiceRecorder';
 
 const mockStop = vi.fn();
 const mockStart = vi.fn();
-let capturedOnStop: (() => void) | null = null;
-let capturedOnDataAvailable: ((e: { data: Blob }) => void) | null = null;
-let capturedOnError: (() => void) | null = null;
 let mockRecorderState: 'inactive' | 'recording' = 'inactive';
 
 class MockMediaRecorder {
@@ -38,10 +35,6 @@ class MockMediaRecorder {
   stop() {
     this.state = 'inactive';
     mockStop();
-    // Capture refs so tests can trigger events
-    capturedOnStop = this.onstop;
-    capturedOnDataAvailable = this.ondataavailable;
-    capturedOnError = this.onerror;
     if (this.onstop) this.onstop();
   }
 
@@ -67,9 +60,6 @@ function makeMockStream() {
 beforeEach(() => {
   vi.clearAllMocks();
   mediaRecorderInstances.length = 0;
-  capturedOnStop = null;
-  capturedOnDataAvailable = null;
-  capturedOnError = null;
 
   // Override MediaRecorder with our mock that stores instance
   const OrigMock = MockMediaRecorder;
@@ -79,9 +69,8 @@ beforeEach(() => {
       mediaRecorderInstances.push(this);
     }
   };
-  // @ts-expect-error - intentional mock override
+  // @ts-expect-error - mock class does not implement full MediaRecorder interface
   globalThis.MediaRecorder = CapturingMock;
-  // @ts-expect-error - static method
   globalThis.MediaRecorder.isTypeSupported = (_type: string) => true;
 
   mockGetUserMedia.mockResolvedValue(makeMockStream());

@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { render } from '@testing-library/react';
 import { Users } from 'lucide-react';
 import { KPIGrid } from '../KPIGrid';
-import type { DashboardKPI } from '../types';
+import type { DashboardKPI } from '../../types';
 
 const mockKPIs: DashboardKPI[] = [
   {

@@ -35,7 +35,7 @@ vi.mock('../../api', () => ({
 vi.mock('../../defaults', () => ({
   DEFAULT_SCHEMAS: [
     {
-      categoryId: 'life_insurance',
+      categoryId: 'life_insurance' as never,
       fields: [{ id: 'f1', label: 'Field 1' }],
     },
   ],
@@ -59,9 +59,9 @@ describe('useProductSchema — query', () => {
       return { data: undefined, isLoading: false };
     });
 
-    renderHook(() => useProductSchema('life_insurance'));
+    renderHook(() => useProductSchema('life_insurance' as never));
 
-    expect(captured.queryKey).toEqual(['product-management', 'schemas', 'life_insurance']);
+    expect(captured.queryKey).toEqual(['product-management', 'schemas', 'life_insurance' as never]);
   });
 
   it('sets enabled=true when selectedCategory is non-empty', () => {
@@ -71,7 +71,7 @@ describe('useProductSchema — query', () => {
       return { data: undefined, isLoading: false };
     });
 
-    renderHook(() => useProductSchema('life_insurance'));
+    renderHook(() => useProductSchema('life_insurance' as never));
 
     expect(captured.enabled).toBe(true);
   });
@@ -95,7 +95,7 @@ describe('useProductSchema — query', () => {
       return { data: undefined, isLoading: false };
     });
 
-    renderHook(() => useProductSchema('life_insurance'));
+    renderHook(() => useProductSchema('life_insurance' as never));
 
     expect(captured.staleTime).toBe(5 * 60 * 1000);
   });
@@ -107,14 +107,14 @@ describe('useProductSchema — query', () => {
       return { data: undefined, isLoading: false };
     });
 
-    renderHook(() => useProductSchema('life_insurance'));
+    renderHook(() => useProductSchema('life_insurance' as never));
 
     const mockSchema = { fields: [{ id: 'f1', label: 'Field 1' }] };
     mockFetchSchema.mockResolvedValue(mockSchema);
     const result = await (captured.queryFn as () => Promise<unknown>)();
 
     expect(result).toBe(mockSchema);
-    expect(mockFetchSchema).toHaveBeenCalledWith('life_insurance');
+    expect(mockFetchSchema).toHaveBeenCalledWith('life_insurance' as never);
   });
 
   it('queryFn returns null when selectedCategory is empty', async () => {
@@ -138,7 +138,7 @@ describe('useProductSchema — query', () => {
       return { data: undefined, isLoading: false };
     });
 
-    renderHook(() => useProductSchema('life_insurance'));
+    renderHook(() => useProductSchema('life_insurance' as never));
 
     mockFetchSchema.mockRejectedValue(new Error('network error'));
     const result = await (captured.queryFn as () => Promise<unknown>)();
@@ -180,7 +180,7 @@ describe('useProductSchema — local state', () => {
     const fields = [{ id: 'f1', label: 'Field 1' }];
     mockUseQuery.mockReturnValue({ data: { fields }, isLoading: false });
 
-    const { result } = renderHook(() => useProductSchema('life_insurance'));
+    const { result } = renderHook(() => useProductSchema('life_insurance' as never));
 
     expect(result.current.currentFields).toEqual(fields);
     expect(result.current.hasUnsavedChanges).toBe(false);
@@ -189,7 +189,7 @@ describe('useProductSchema — local state', () => {
   it('updateFields sets currentFields and marks unsaved changes', () => {
     mockUseQuery.mockReturnValue({ data: undefined, isLoading: false });
 
-    const { result } = renderHook(() => useProductSchema('life_insurance'));
+    const { result } = renderHook(() => useProductSchema('life_insurance' as never));
 
     const newFields = [{ id: 'f2', label: 'Field 2' }];
     act(() => {
@@ -225,7 +225,7 @@ describe('useProductSchema — saveSchema', () => {
     mockUseQuery.mockReturnValue({ data: { fields }, isLoading: false });
     mockSaveSchema.mockResolvedValue(undefined);
 
-    const { result } = renderHook(() => useProductSchema('life_insurance'));
+    const { result } = renderHook(() => useProductSchema('life_insurance' as never));
 
     let returnValue: unknown;
     await act(async () => {
@@ -233,7 +233,7 @@ describe('useProductSchema — saveSchema', () => {
     });
 
     expect(mockSaveSchema).toHaveBeenCalledWith({
-      categoryId: 'life_insurance',
+      categoryId: 'life_insurance' as never,
       fields,
     });
     expect(returnValue).toBe(true);
@@ -245,7 +245,7 @@ describe('useProductSchema — saveSchema', () => {
     mockUseQuery.mockReturnValue({ data: { fields: [] }, isLoading: false });
     mockSaveSchema.mockRejectedValue(new Error('save failed'));
 
-    const { result } = renderHook(() => useProductSchema('life_insurance'));
+    const { result } = renderHook(() => useProductSchema('life_insurance' as never));
 
     let returnValue: unknown;
     await act(async () => {
@@ -265,14 +265,14 @@ describe('useProductSchema — reloadSchema', () => {
   it('invalidates schema query when category is set', async () => {
     mockUseQuery.mockReturnValue({ data: undefined, isLoading: false });
 
-    const { result } = renderHook(() => useProductSchema('life_insurance'));
+    const { result } = renderHook(() => useProductSchema('life_insurance' as never));
 
     await act(async () => {
       await result.current.reloadSchema();
     });
 
     expect(mockInvalidateQueries).toHaveBeenCalledWith({
-      queryKey: ['product-management', 'schemas', 'life_insurance'],
+      queryKey: ['product-management', 'schemas', 'life_insurance' as never],
     });
   });
 

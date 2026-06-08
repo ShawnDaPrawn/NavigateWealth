@@ -54,7 +54,7 @@ describe('usePromptBundle', () => {
       return {};
     });
 
-    renderHook(() => usePromptBundle('agent-1', 'initial'));
+    renderHook(() => usePromptBundle('agent-1', 'initial' as never));
 
     expect(captured.queryKey).toEqual(['ai-management', 'prompt-bundle', 'agent-1', 'initial']);
   });
@@ -66,7 +66,7 @@ describe('usePromptBundle', () => {
       return {};
     });
 
-    renderHook(() => usePromptBundle('agent-1', 'initial'));
+    renderHook(() => usePromptBundle('agent-1', 'initial' as never));
 
     expect(captured.enabled).toBe(true);
   });
@@ -78,7 +78,7 @@ describe('usePromptBundle', () => {
       return {};
     });
 
-    renderHook(() => usePromptBundle('', 'initial'));
+    renderHook(() => usePromptBundle('', 'initial' as never));
 
     expect(captured.enabled).toBe(false);
   });
@@ -102,7 +102,7 @@ describe('usePromptBundle', () => {
       return {};
     });
 
-    renderHook(() => usePromptBundle('agent-1', 'initial'));
+    renderHook(() => usePromptBundle('agent-1', 'initial' as never));
 
     mockGetBundle.mockResolvedValue({ active: null, draft: null, versions: [] });
     await (captured.queryFn as () => Promise<unknown>)();

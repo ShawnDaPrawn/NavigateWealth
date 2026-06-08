@@ -3,7 +3,7 @@
  * Mocks window.matchMedia to control display-mode standalone detection.
  */
 
-import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
+import { describe, expect, it, vi, afterEach } from 'vitest';
 import { renderHook, act } from '@testing-library/react';
 import { useIsStandalone } from '../useIsStandalone';
 

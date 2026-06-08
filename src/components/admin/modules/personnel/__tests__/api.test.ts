@@ -340,7 +340,10 @@ describe('updatePermissions', () => {
       updatedBy: 'admin',
     };
     mockApiPut.mockResolvedValue({ data: perms });
-    const result = await updatePermissions({ personnelId: 'per-001', modules: { clients: true } });
+    const result = await updatePermissions({
+      personnelId: 'per-001',
+      modules: { clients: true as never },
+    });
     expect(result.personnelId).toBe('per-001');
     expect(mockApiPut).toHaveBeenCalledWith('personnel/permissions/per-001', {
       modules: { clients: true },

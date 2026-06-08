@@ -189,7 +189,7 @@ describe('resourcesApi', () => {
 
   it('migrateLegalDocument posts to migrate endpoint', async () => {
     mockApiPost.mockResolvedValue(MOCK_LEGAL_DOC);
-    const result = await resourcesApi.migrateLegalDocument('terms-of-service');
+    await resourcesApi.migrateLegalDocument('terms-of-service');
     expect(mockApiPost).toHaveBeenCalledWith(
       '/resources/admin/legal-documents/terms-of-service/migrate',
     );

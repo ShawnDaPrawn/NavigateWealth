@@ -23,7 +23,7 @@ const makeCandidate = (id: string): Candidate =>
     source: 'pdf',
     label: `Label ${id}`,
     metadata: {},
-  }) as Candidate;
+  }) as unknown as Candidate;
 
 const makeSigner = (email: string): SignerFormData =>
   ({ email, name: email }) as unknown as SignerFormData;

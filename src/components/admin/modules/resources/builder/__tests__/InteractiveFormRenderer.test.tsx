@@ -17,14 +17,24 @@ describe('InteractiveFormRenderer', () => {
   it('renders text block', () => {
     const blocks = [{ id: 'b1', type: 'text', data: { content: 'Hello form text' } }];
     const { container } = render(
-      <InteractiveFormRenderer blocks={blocks} responses={{}} onChange={() => {}} />,
+      <InteractiveFormRenderer
+        blocks={blocks as unknown as import('../types').FormBlock[]}
+        responses={{}}
+        onChange={() => {}}
+      />,
     );
     expect(container.innerHTML).toContain('Hello form text');
   });
 
   it('renders section_header block', () => {
     const blocks = [{ id: 'b2', type: 'section_header', data: { title: 'Section Title' } }];
-    render(<InteractiveFormRenderer blocks={blocks} responses={{}} onChange={() => {}} />);
+    render(
+      <InteractiveFormRenderer
+        blocks={blocks as unknown as import('../types').FormBlock[]}
+        responses={{}}
+        onChange={() => {}}
+      />,
+    );
     expect(screen.getByText('Section Title')).toBeDefined();
   });
 
@@ -39,14 +49,25 @@ describe('InteractiveFormRenderer', () => {
         },
       },
     ];
-    render(<InteractiveFormRenderer blocks={blocks} responses={{}} onChange={() => {}} />);
+    render(
+      <InteractiveFormRenderer
+        blocks={blocks as unknown as import('../types').FormBlock[]}
+        responses={{}}
+        onChange={() => {}}
+      />,
+    );
     expect(screen.getByText('Your Name')).toBeDefined();
   });
 
   it('renders in readOnly mode', () => {
     const blocks = [{ id: 'b1', type: 'text', data: { content: 'Read only content' } }];
     const { container } = render(
-      <InteractiveFormRenderer blocks={blocks} responses={{}} onChange={() => {}} readOnly />,
+      <InteractiveFormRenderer
+        blocks={blocks as unknown as import('../types').FormBlock[]}
+        responses={{}}
+        onChange={() => {}}
+        readOnly
+      />,
     );
     expect(container.firstChild).toBeDefined();
   });

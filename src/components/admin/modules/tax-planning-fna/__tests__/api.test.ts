@@ -107,7 +107,7 @@ describe('TaxPlanningFnaAPI', () => {
       const published = { ...MOCK_PLAN, status: 'published' };
       mockApiGet.mockResolvedValue({ success: true, data: published });
       const result = await TaxPlanningFnaAPI.getLatestPublished('client-001');
-      expect(result?.status).toBe('published');
+      expect((result as unknown as { status: string })?.status).toBe('published');
       expect(mockApiGet).toHaveBeenCalledWith(
         '/tax-planning-fna/client/client-001/latest-published',
       );

@@ -53,24 +53,6 @@ const MOCK_PROVIDER_DTO = {
   updated_at: '2025-01-02T00:00:00Z',
 };
 
-const MOCK_PROVIDER = {
-  id: 'prov-001',
-  name: 'Test Insurer',
-  code: 'test-insurer',
-  type: 'insurer',
-  description: 'A test insurer',
-  logo: 'https://example.com/logo.png',
-  website: 'https://example.com',
-  contactEmail: 'info@example.com',
-  contactPhone: '+27100000000',
-  active: true,
-  categoryIds: ['medical_aid', 'retirement_pre'],
-  brokerConsultants: [],
-  supportedProducts: [],
-  createdAt: '2025-01-01T00:00:00Z',
-  updatedAt: '2025-01-02T00:00:00Z',
-};
-
 beforeEach(() => {
   vi.clearAllMocks();
 });
@@ -348,7 +330,7 @@ describe('productManagementApi', () => {
         'prov-001',
         'medical_aid',
         'prof-001',
-        'full',
+        'run',
       );
       expect(result.job).toEqual(job);
       expect(result.flow).toEqual(flow);

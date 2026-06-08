@@ -129,7 +129,7 @@ describe('analyticsApi', () => {
     const summary = { totalChats: 100, avgRating: 4.5, handoffs: 5 };
     mockApiGet.mockResolvedValue(summary);
     const result = await analyticsApi.getSummary();
-    expect(result.totalChats).toBe(100);
+    expect((result as unknown as Record<string, unknown>).totalChats).toBe(100);
     expect(mockApiGet).toHaveBeenCalledWith('/vasco/analytics');
   });
 
@@ -224,7 +224,7 @@ describe('ragIndexApi', () => {
     const indexResult = { success: true, articlesIndexed: 25, chunksCreated: 100 };
     mockApiPost.mockResolvedValue(indexResult);
     const result = await ragIndexApi.triggerReindex();
-    expect(result.success).toBe(true);
+    expect((result as unknown as Record<string, unknown>).success).toBe(true);
     expect(mockApiPost).toHaveBeenCalledWith('/vasco/index', {});
   });
 

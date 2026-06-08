@@ -118,11 +118,11 @@ describe('updateTemplateMappings', () => {
   it('updates template field mappings', async () => {
     const updated = { id: 't-001', fields: [] };
     mockApiPut.mockResolvedValue({ success: true, data: updated });
-    const result = await updateTemplateMappings('t-001', [], 'active');
+    const result = await updateTemplateMappings('t-001', [], 'ready');
     expect(result).toEqual(updated);
     expect(mockApiPut).toHaveBeenCalledWith('/form-templates/t-001/mappings', {
       fields: [],
-      status: 'active',
+      status: 'ready',
     });
   });
 });

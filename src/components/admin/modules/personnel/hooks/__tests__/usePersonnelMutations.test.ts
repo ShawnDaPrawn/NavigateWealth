@@ -92,8 +92,8 @@ vi.mock('../usePersonnel', () => ({
 // ============================================================================
 
 /** Extract the useMutation options from a rendered hook result. */
-function getMutationOptions(result: { _options: unknown }) {
-  return result._options as {
+function getMutationOptions(result: unknown) {
+  return (result as { _options: unknown })._options as {
     mutationFn: (...args: unknown[]) => unknown;
     onSuccess?: (...args: unknown[]) => void;
     onError?: (...args: unknown[]) => void;

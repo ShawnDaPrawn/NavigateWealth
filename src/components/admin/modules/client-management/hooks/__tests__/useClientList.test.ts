@@ -225,21 +225,21 @@ describe('useClientList', () => {
       vi.mocked(resolvePersonName).mockReturnValueOnce({ firstName: 'Alice', lastName: 'Smith' });
       const user = buildApiUser();
       const [client] = await runQueryFn({ clients: [user] });
-      expect(client.firstName).toBe('Alice');
+      expect((client as Record<string, unknown>).firstName).toBe('Alice');
     });
 
     it('uses lastName returned by resolvePersonName', async () => {
       vi.mocked(resolvePersonName).mockReturnValueOnce({ firstName: 'Bob', lastName: 'Jones' });
       const user = buildApiUser();
       const [client] = await runQueryFn({ clients: [user] });
-      expect(client.lastName).toBe('Jones');
+      expect((client as Record<string, unknown>).lastName).toBe('Jones');
     });
 
     it('sets preferredName equal to firstName', async () => {
       vi.mocked(resolvePersonName).mockReturnValueOnce({ firstName: 'Carol', lastName: 'Doe' });
       const user = buildApiUser();
       const [client] = await runQueryFn({ clients: [user] });
-      expect(client.preferredName).toBe('Carol');
+      expect((client as Record<string, unknown>).preferredName).toBe('Carol');
     });
 
     it('reads users from response.clients array', async () => {
@@ -271,13 +271,13 @@ describe('useClientList', () => {
     it('maps applicationStatus to "unknown" when not provided', async () => {
       const user = buildApiUser({ application_status: undefined });
       const [client] = await runQueryFn({ clients: [user] });
-      expect(client.applicationStatus).toBe('unknown');
+      expect((client as Record<string, unknown>).applicationStatus).toBe('unknown');
     });
 
     it('maps applicationStatus from the raw user', async () => {
       const user = buildApiUser({ application_status: 'approved' });
       const [client] = await runQueryFn({ clients: [user] });
-      expect(client.applicationStatus).toBe('approved');
+      expect((client as Record<string, unknown>).applicationStatus).toBe('approved');
     });
   });
 });

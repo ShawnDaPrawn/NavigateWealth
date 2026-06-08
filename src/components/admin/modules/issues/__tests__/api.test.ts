@@ -11,6 +11,7 @@ import type {
   QualityIssueWorkflowState,
   QualityIssueWorkflowUpdate,
   QualityIssueAutomationRun,
+  QualityIssueSummary,
 } from '../types';
 
 // ── Mock api client ──────────────────────────────────────────────────────────
@@ -88,12 +89,12 @@ const makeIssue = (overrides: Partial<QualityIssue> = {}): QualityIssue => ({
   resolutionEvidence: undefined,
   firstSeenAt: '2025-01-01T00:00:00Z',
   lastSeenAt: '2025-01-01T00:00:00Z',
+  occurrences: 1,
   ...overrides,
 });
 
 const makeSnapshot = (overrides: Partial<QualityIssueSnapshot> = {}): QualityIssueSnapshot => ({
-  snapshotId: 'snap-1',
-  capturedAt: '2025-01-01T00:00:00Z',
+  generatedAt: '2025-01-01T00:00:00Z',
   issues: [makeIssue()],
   summary: {
     total: 1,
@@ -104,7 +105,7 @@ const makeSnapshot = (overrides: Partial<QualityIssueSnapshot> = {}): QualityIss
     high: 1,
     medium: 0,
     low: 0,
-  },
+  } as unknown as QualityIssueSummary,
   ...overrides,
 });
 

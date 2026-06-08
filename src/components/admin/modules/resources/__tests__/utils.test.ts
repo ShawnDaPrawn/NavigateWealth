@@ -247,7 +247,7 @@ describe('countFormFields', () => {
         data: { fields: [{ key: 'a' }, { key: 'b' }, { key: 'c' }] },
       },
     ];
-    expect(countFormFields(blocks)).toBe(3);
+    expect(countFormFields(blocks as unknown as import('../builder/types').FormBlock[])).toBe(3);
   });
 
   it('counts signatories in signature blocks', () => {
@@ -258,7 +258,7 @@ describe('countFormFields', () => {
         data: { signatories: [{ key: 'client' }, { key: 'adviser' }] },
       },
     ];
-    expect(countFormFields(blocks)).toBe(2);
+    expect(countFormFields(blocks as unknown as import('../builder/types').FormBlock[])).toBe(2);
   });
 });
 
@@ -276,8 +276,10 @@ describe('estimateCompletionTime', () => {
       },
     ];
     const fewFieldBlocks = [{ id: '1', type: 'field_grid', data: { fields: [{ key: 'a' }] } }];
-    expect(estimateCompletionTime(manyFieldBlocks)).toBeGreaterThan(
-      estimateCompletionTime(fewFieldBlocks),
+    expect(
+      estimateCompletionTime(manyFieldBlocks as unknown as import('../builder/types').FormBlock[]),
+    ).toBeGreaterThan(
+      estimateCompletionTime(fewFieldBlocks as unknown as import('../builder/types').FormBlock[]),
     );
   });
 });

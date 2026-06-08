@@ -148,12 +148,12 @@ describe('SVGAreaSparkline', () => {
   ];
 
   it('renders without crashing', () => {
-    const { container } = render(<SVGAreaSparkline data={data} />);
+    const { container } = render(<SVGAreaSparkline data={data} color="#6d28d9" />);
     expect(container.firstChild).toBeDefined();
   });
 
   it('renders with empty data', () => {
-    const { container } = render(<SVGAreaSparkline data={[]} />);
+    const { container } = render(<SVGAreaSparkline data={[]} color="#6d28d9" />);
     expect(container.firstChild).toBeDefined();
   });
 
@@ -163,7 +163,7 @@ describe('SVGAreaSparkline', () => {
   });
 
   it('renders with custom height', () => {
-    const { container } = render(<SVGAreaSparkline data={data} height={100} />);
+    const { container } = render(<SVGAreaSparkline data={data} height={100} color="#6d28d9" />);
     expect(container.firstChild).toBeDefined();
   });
 });

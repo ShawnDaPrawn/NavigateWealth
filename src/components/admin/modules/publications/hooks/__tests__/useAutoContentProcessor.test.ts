@@ -204,12 +204,12 @@ describe('useAutoContentProcessor — processing logic', () => {
     mockProcessDue.mockRejectedValue(new Error('network failure'));
 
     const { result } = renderHook(() => useAutoContentProcessor());
-    expect(result.error).toBeUndefined();
+    expect((result as { current: void; error?: unknown }).error).toBeUndefined();
 
     await act(async () => {
       await vi.advanceTimersByTimeAsync(INITIAL_DELAY_MS + 100);
     });
-    expect(result.error).toBeUndefined();
+    expect((result as { current: void; error?: unknown }).error).toBeUndefined();
   });
 
   it('does not start a concurrent run when already processing', async () => {

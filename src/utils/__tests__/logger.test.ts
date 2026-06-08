@@ -18,14 +18,13 @@ import { logger } from '../logger';
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
 let consoleGroupSpy: ReturnType<typeof vi.spyOn>;
-let consoleGroupEndSpy: ReturnType<typeof vi.spyOn>;
 let consoleLogSpy: ReturnType<typeof vi.spyOn>;
 let consoleWarnSpy: ReturnType<typeof vi.spyOn>;
 let consoleErrorSpy: ReturnType<typeof vi.spyOn>;
 
 beforeEach(() => {
   consoleGroupSpy = vi.spyOn(console, 'groupCollapsed').mockImplementation(() => {});
-  consoleGroupEndSpy = vi.spyOn(console, 'groupEnd').mockImplementation(() => {});
+  vi.spyOn(console, 'groupEnd').mockImplementation(() => {});
   consoleLogSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
   consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
   consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});

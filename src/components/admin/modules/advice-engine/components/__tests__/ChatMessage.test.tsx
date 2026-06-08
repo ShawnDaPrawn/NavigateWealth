@@ -1,4 +1,3 @@
-import React from 'react';
 import { describe, expect, it, vi } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 
@@ -10,7 +9,7 @@ vi.mock('../../../../shared/MessageRenderer', () => ({
 }));
 
 vi.mock('../utils', () => ({
-  formatTimestamp: (...args: unknown[]) => mockFormatTimestamp(...args),
+  formatTimestamp: () => mockFormatTimestamp(),
 }));
 
 import { ChatMessage } from '../ChatMessage';

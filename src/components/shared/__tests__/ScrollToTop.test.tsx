@@ -1,11 +1,10 @@
-import React from 'react';
 import { describe, expect, it, vi } from 'vitest';
 import { render } from '@testing-library/react';
 
 const mockUseLocation = vi.fn(() => ({ pathname: '/' }));
 
 vi.mock('react-router', () => ({
-  useLocation: (...args: unknown[]) => mockUseLocation(...args),
+  useLocation: () => mockUseLocation(),
 }));
 
 import { ScrollToTop } from '../ScrollToTop';

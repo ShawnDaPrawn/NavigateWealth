@@ -145,7 +145,7 @@ describe('TasksAPI.moveTask', () => {
 describe('TasksAPI.reorderTasks', () => {
   it('posts reorder updates', async () => {
     mockApiPost.mockResolvedValue({ success: true });
-    const updates = [{ id: 'task-001', sortOrder: 0, status: 'new' as const }];
+    const updates = [{ id: 'task-001', sort_order: 0, status: 'new' as const }];
     await TasksAPI.reorderTasks(updates);
     expect(mockApiPost).toHaveBeenCalledWith('/tasks/reorder', { updates });
   });
@@ -272,7 +272,7 @@ describe('TaskFilterAPI.getTasksByCategory', () => {
       MOCK_TASK,
       { ...MOCK_TASK, id: 't2', category: 'compliance', status: 'new' },
     ]);
-    const tasks = await TaskFilterAPI.getTasksByCategory('admin');
+    const tasks = await TaskFilterAPI.getTasksByCategory('admin' as never);
     expect(tasks.length).toBe(1);
     expect(tasks[0].category).toBe('admin');
   });
@@ -340,7 +340,7 @@ describe('TaskFilterAPI.searchTasks', () => {
 describe('TaskFilterAPI.getFilteredTasks', () => {
   it('returns tasks matching filter status', async () => {
     mockApiGet.mockResolvedValue([MOCK_TASK, { ...MOCK_TASK, id: 't2', status: 'completed' }]);
-    const tasks = await TaskFilterAPI.getFilteredTasks({ status: 'new' });
+    const tasks = await TaskFilterAPI.getFilteredTasks({ status: 'new', search: '' });
     expect(tasks.every((t) => t.status === 'new')).toBe(true);
   });
 });

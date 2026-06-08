@@ -1,11 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import type {
-  Article,
-  ArticleStatus,
-  CreateArticleInput,
-  CreateCategoryInput,
-  CreateContentTypeInput,
-} from '../types';
+import type { Article, CreateArticleInput } from '../types';
 import {
   generateSlug,
   isSlugAvailable,

@@ -21,9 +21,6 @@ type IOCallback = (entries: IntersectionObserverEntry[]) => void;
 let capturedCallback: IOCallback | null = null;
 let capturedOptions: IntersectionObserverInit | null = null;
 const observedEls: Element[] = [];
-let mockDisconnect: ReturnType<typeof vi.fn>;
-let mockUnobserve: ReturnType<typeof vi.fn>;
-
 class MockIntersectionObserver {
   constructor(cb: IOCallback, opts?: IntersectionObserverInit) {
     capturedCallback = cb;
@@ -32,8 +29,8 @@ class MockIntersectionObserver {
   observe = vi.fn((el: Element) => {
     observedEls.push(el);
   });
-  unobserve = (mockUnobserve = vi.fn());
-  disconnect = (mockDisconnect = vi.fn());
+  unobserve = vi.fn();
+  disconnect = vi.fn();
 }
 
 // ── Setup / Teardown ──────────────────────────────────────────────────────────
@@ -42,8 +39,6 @@ beforeEach(() => {
   capturedCallback = null;
   capturedOptions = null;
   observedEls.length = 0;
-  mockDisconnect = vi.fn();
-  mockUnobserve = vi.fn();
   vi.stubGlobal('IntersectionObserver', MockIntersectionObserver);
   // Default: return optimized URL by appending '?w=800'
   mockOptimizeUnsplashUrl.mockImplementation((src: string) => src + '?w=800');
@@ -290,7 +285,7 @@ describe('useLazyLoadImages', () => {
 
   it('disconnects observer on unmount', () => {
     const { unmount } = renderHook(() => useLazyLoadImages());
-    const observer = new MockIntersectionObserver(() => {});
+    new MockIntersectionObserver(() => {});
     unmount();
     // The hook's cleanup calls disconnect on the observer it created
     expect(capturedCallback).not.toBeNull();

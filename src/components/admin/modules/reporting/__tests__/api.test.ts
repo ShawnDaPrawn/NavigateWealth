@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { reportingApi } from '../api';
+import type { Report } from '../types';
 
 const mockApiGet = vi.fn();
 
@@ -31,32 +32,47 @@ describe('reportingApi', () => {
   describe('getReportData', () => {
     it('fetches personal-clients report and returns rows', async () => {
       mockApiGet.mockResolvedValue({ rows: MOCK_ROWS, count: 2, generatedAt: '2025-01-01' });
-      const result = await reportingApi.getReportData({ id: 'personal-clients', parameters: {} });
+      const result = await reportingApi.getReportData({
+        id: 'personal-clients',
+        parameters: {},
+      } as unknown as Report);
       expect(result).toEqual(MOCK_ROWS);
       expect(mockApiGet).toHaveBeenCalledWith('/reporting/clients/personal-list');
     });
 
     it('fetches applications-pipeline report', async () => {
       mockApiGet.mockResolvedValue({ rows: [], count: 0, generatedAt: '2025-01-01' });
-      await reportingApi.getReportData({ id: 'applications-pipeline', parameters: {} });
+      await reportingApi.getReportData({
+        id: 'applications-pipeline',
+        parameters: {},
+      } as unknown as Report);
       expect(mockApiGet).toHaveBeenCalledWith('/reporting/clients/applications-pipeline');
     });
 
     it('fetches fna-completion report', async () => {
       mockApiGet.mockResolvedValue({ rows: [], count: 0, generatedAt: '2025-01-01' });
-      await reportingApi.getReportData({ id: 'fna-completion', parameters: {} });
+      await reportingApi.getReportData({
+        id: 'fna-completion',
+        parameters: {},
+      } as unknown as Report);
       expect(mockApiGet).toHaveBeenCalledWith('/reporting/clients/fna-completion');
     });
 
     it('fetches compliance-audit report', async () => {
       mockApiGet.mockResolvedValue({ rows: [], count: 0, generatedAt: '2025-01-01' });
-      await reportingApi.getReportData({ id: 'compliance-audit', parameters: {} });
+      await reportingApi.getReportData({
+        id: 'compliance-audit',
+        parameters: {},
+      } as unknown as Report);
       expect(mockApiGet).toHaveBeenCalledWith('/reporting/clients/compliance-audit');
     });
 
     it('fetches lifecycle-audit report', async () => {
       mockApiGet.mockResolvedValue({ rows: [], count: 0, generatedAt: '2025-01-01' });
-      await reportingApi.getReportData({ id: 'lifecycle-audit', parameters: {} });
+      await reportingApi.getReportData({
+        id: 'lifecycle-audit',
+        parameters: {},
+      } as unknown as Report);
       expect(mockApiGet).toHaveBeenCalledWith('/reporting/clients/lifecycle-audit');
     });
 
@@ -65,7 +81,7 @@ describe('reportingApi', () => {
       await reportingApi.getReportData({
         id: 'personal-clients',
         parameters: { startDate: '2025-01-01' },
-      });
+      } as unknown as Report);
       expect(mockApiGet).toHaveBeenCalledWith(
         '/reporting/clients/personal-list?startDate=2025-01-01',
       );
@@ -76,7 +92,7 @@ describe('reportingApi', () => {
       await reportingApi.getReportData({
         id: 'personal-clients',
         parameters: { endDate: '2025-12-31' },
-      });
+      } as unknown as Report);
       expect(mockApiGet).toHaveBeenCalledWith(
         '/reporting/clients/personal-list?endDate=2025-12-31',
       );
@@ -87,7 +103,7 @@ describe('reportingApi', () => {
       await reportingApi.getReportData({
         id: 'personal-clients',
         parameters: { startDate: '2025-01-01', endDate: '2025-12-31' },
-      });
+      } as unknown as Report);
       expect(mockApiGet).toHaveBeenCalledWith(
         '/reporting/clients/personal-list?startDate=2025-01-01&endDate=2025-12-31',
       );
@@ -95,26 +111,32 @@ describe('reportingApi', () => {
 
     it('returns empty array and warns on unexpected response shape', async () => {
       mockApiGet.mockResolvedValue({ unexpected: 'shape' });
-      const result = await reportingApi.getReportData({ id: 'personal-clients', parameters: {} });
+      const result = await reportingApi.getReportData({
+        id: 'personal-clients',
+        parameters: {},
+      } as unknown as Report);
       expect(result).toEqual([]);
     });
 
     it('handles raw array response as fallback', async () => {
       mockApiGet.mockResolvedValue(MOCK_ROWS);
-      const result = await reportingApi.getReportData({ id: 'personal-clients', parameters: {} });
+      const result = await reportingApi.getReportData({
+        id: 'personal-clients',
+        parameters: {},
+      } as unknown as Report);
       expect(result).toEqual(MOCK_ROWS);
     });
 
     it('throws for unknown report ID', async () => {
       await expect(
-        reportingApi.getReportData({ id: 'unknown-report', parameters: {} }),
+        reportingApi.getReportData({ id: 'unknown-report', parameters: {} } as unknown as Report),
       ).rejects.toThrow("Report type 'unknown-report' is not yet implemented");
     });
 
     it('throws on API error', async () => {
       mockApiGet.mockRejectedValue(new Error('Server error'));
       await expect(
-        reportingApi.getReportData({ id: 'personal-clients', parameters: {} }),
+        reportingApi.getReportData({ id: 'personal-clients', parameters: {} } as unknown as Report),
       ).rejects.toThrow('Server error');
     });
   });

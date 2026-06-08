@@ -15,7 +15,7 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 import { renderHook, act } from '@testing-library/react';
 import { useColourLabels, getColourDisplayLabel, getColourTooltipLabel } from '../useColourLabels';
-import type { NoteColor, CustomColourLabels } from '../../types';
+import type { CustomColourLabels } from '../../types';
 
 // ── localStorage stub ─────────────────────────────────────────────────────────
 // jsdom provides a real localStorage; we just clear it between tests.

@@ -78,7 +78,7 @@ describe('fetchEvents', () => {
 
   it('applies eventTypes filter', async () => {
     mockApiGet.mockResolvedValue([]);
-    await fetchEvents({ eventTypes: ['meeting', 'reminder'] });
+    await fetchEvents({ eventTypes: ['meeting', 'reminder' as never] });
     expect(mockApiGet).toHaveBeenCalledWith(
       expect.stringContaining('eventTypes=meeting%2Creminder'),
     );

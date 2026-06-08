@@ -32,21 +32,21 @@ describe('loadGatewaySession', () => {
 
 describe('saveGatewaySession', () => {
   it('saves data to sessionStorage', () => {
-    saveGatewaySession({ name: 'Alice' });
+    saveGatewaySession({ firstName: 'Alice' });
     const raw = sessionStorage.getItem(QUOTE_GATEWAY_SESSION_KEY);
-    expect(JSON.parse(raw!)).toEqual({ name: 'Alice' });
+    expect(JSON.parse(raw!)).toEqual({ firstName: 'Alice' });
   });
 
   it('overwrites existing session data', () => {
-    saveGatewaySession({ name: 'Alice' });
-    saveGatewaySession({ name: 'Bob' });
-    expect(loadGatewaySession()).toEqual({ name: 'Bob' });
+    saveGatewaySession({ firstName: 'Alice' });
+    saveGatewaySession({ firstName: 'Bob' });
+    expect(loadGatewaySession()).toEqual({ firstName: 'Bob' });
   });
 });
 
 describe('clearGatewaySession', () => {
   it('removes the session key from storage', () => {
-    saveGatewaySession({ name: 'Alice' });
+    saveGatewaySession({ firstName: 'Alice' });
     clearGatewaySession();
     expect(sessionStorage.getItem(QUOTE_GATEWAY_SESSION_KEY)).toBeNull();
   });

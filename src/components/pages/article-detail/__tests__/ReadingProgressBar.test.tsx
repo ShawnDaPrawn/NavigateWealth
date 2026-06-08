@@ -12,12 +12,12 @@ describe('ReadingProgressBar', () => {
   });
 
   it('renders without crashing', () => {
-    const { container } = render(<ReadingProgressBar />);
+    const { container } = render(<ReadingProgressBar contentRef={{ current: null }} />);
     expect(container.firstChild).toBeDefined();
   });
 
   it('renders a progress bar element', () => {
-    const { container } = render(<ReadingProgressBar />);
+    const { container } = render(<ReadingProgressBar contentRef={{ current: null }} />);
     expect(container.innerHTML.length).toBeGreaterThan(0);
   });
 });

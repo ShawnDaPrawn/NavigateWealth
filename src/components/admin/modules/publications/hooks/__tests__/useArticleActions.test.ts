@@ -167,7 +167,7 @@ describe('useArticleActions', () => {
 
     let returned: Article | null = null;
     await act(async () => {
-      returned = await result.current.handleUpdate('art-1', { title: 'Updated' });
+      returned = await result.current.handleUpdate('art-1', { id: 'art-1', title: 'Updated' });
     });
 
     expect(returned).toEqual(article);
@@ -182,7 +182,7 @@ describe('useArticleActions', () => {
 
     let returned: Article | null | undefined;
     await act(async () => {
-      returned = await result.current.handleUpdate('art-1', { title: 'Updated' });
+      returned = await result.current.handleUpdate('art-1', { id: 'art-1', title: 'Updated' });
     });
 
     expect(returned).toBeNull();

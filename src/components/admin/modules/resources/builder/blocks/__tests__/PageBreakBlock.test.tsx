@@ -13,7 +13,7 @@ describe('PageBreakBlock', () => {
   });
 
   it('render returns null (handled structurally by FormCanvas)', () => {
-    expect(PageBreakBlock.render()).toBeNull();
+    expect((PageBreakBlock.render as () => null)()).toBeNull();
   });
 
   it('editor renders page-break description text', () => {

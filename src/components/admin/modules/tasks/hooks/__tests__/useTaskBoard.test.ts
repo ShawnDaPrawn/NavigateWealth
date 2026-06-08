@@ -315,7 +315,7 @@ describe('filteredTasks (via applyFilters)', () => {
     const tasks = [makeTask('t1')];
     mockApplyFilters.mockReturnValue(tasks);
 
-    const { result } = renderHook(() => useTaskBoard(tasks));
+    renderHook(() => useTaskBoard(tasks));
 
     expect(mockApplyFilters).toHaveBeenCalledWith(
       tasks,

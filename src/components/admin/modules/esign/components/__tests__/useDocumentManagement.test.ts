@@ -26,13 +26,14 @@ vi.mock('../../api', () => ({
 const makeDoc = (
   document_id: string,
   url = `https://example.com/${document_id}.pdf`,
-): EnvelopeDocumentRef => ({
-  document_id,
-  order: 0,
-  url,
-  display_name: `Doc ${document_id}`,
-  page_count: 1,
-});
+): EnvelopeDocumentRef =>
+  ({
+    document_id,
+    order: 0,
+    url,
+    display_name: `Doc ${document_id}`,
+    page_count: 1,
+  }) as unknown as EnvelopeDocumentRef;
 
 const f = (id: string, document_id?: string): EsignField =>
   ({ id, document_id }) as unknown as EsignField;

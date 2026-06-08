@@ -122,7 +122,7 @@ describe('useEntityCrud — add', () => {
     });
 
     const { result } = renderHook(() =>
-      useEntityCrud(items, setProfileData, makeBankAccountConfig()),
+      useEntityCrud(items, setProfileData as never, makeBankAccountConfig()),
     );
 
     act(() => {

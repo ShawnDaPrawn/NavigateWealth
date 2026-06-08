@@ -1,5 +1,5 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import type { Message, Client, RoADraft, RoAField } from '../types';
+import { describe, it, expect } from 'vitest';
+import type { Message, Client, RoADraft, RoAField, RoAFormData } from '../types';
 import {
   formatTimestamp,
   truncateMessage,
@@ -261,14 +261,14 @@ describe('validateRoAForm', () => {
   });
 
   it('returns valid=true with no errors when all required fields filled', () => {
-    const result = validateRoAForm({ name: 'Alice' }, [textField('name')]);
+    const result = validateRoAForm({ name: 'Alice' } as RoAFormData, [textField('name')]);
     expect(result.valid).toBe(true);
     expect(result.errors).toEqual({});
     expect(result.message).toBeUndefined();
   });
 
   it('returns error for missing required field', () => {
-    const result = validateRoAForm({}, [textField('name')]);
+    const result = validateRoAForm({} as RoAFormData, [textField('name')]);
     expect(result.valid).toBe(false);
     expect(result.errors.name).toContain('required');
     expect(result.message).toContain('1 validation error');
@@ -276,7 +276,7 @@ describe('validateRoAForm', () => {
 
   it('skips empty optional fields', () => {
     const field: RoAField = { key: 'bio', label: 'Bio', type: 'text', required: false };
-    const result = validateRoAForm({ bio: '' }, [field]);
+    const result = validateRoAForm({ bio: '' } as RoAFormData, [field]);
     expect(result.valid).toBe(true);
   });
 
@@ -288,7 +288,7 @@ describe('validateRoAForm', () => {
       required: true,
       validation: { minLength: 10 },
     };
-    const result = validateRoAForm({ desc: 'short' }, [field]);
+    const result = validateRoAForm({ desc: 'short' } as RoAFormData, [field]);
     expect(result.valid).toBe(false);
     expect(result.errors.desc).toContain('at least 10');
   });
@@ -301,7 +301,7 @@ describe('validateRoAForm', () => {
       required: true,
       validation: { maxLength: 5 },
     };
-    const result = validateRoAForm({ desc: 'toolongvalue' }, [field]);
+    const result = validateRoAForm({ desc: 'toolongvalue' } as RoAFormData, [field]);
     expect(result.errors.desc).toContain('at most 5');
   });
 
@@ -313,7 +313,7 @@ describe('validateRoAForm', () => {
       required: true,
       validation: { pattern: /^\d+$/ },
     };
-    const result = validateRoAForm({ code: 'abc' }, [field]);
+    const result = validateRoAForm({ code: 'abc' } as RoAFormData, [field]);
     expect(result.errors.code).toContain('invalid');
   });
 
@@ -325,14 +325,14 @@ describe('validateRoAForm', () => {
       required: true,
       validation: { min: 18, max: 120 },
     };
-    expect(validateRoAForm({ age: 17 }, [field]).valid).toBe(false);
-    expect(validateRoAForm({ age: 25 }, [field]).valid).toBe(true);
-    expect(validateRoAForm({ age: 121 }, [field]).valid).toBe(false);
+    expect(validateRoAForm({ age: 17 } as RoAFormData, [field]).valid).toBe(false);
+    expect(validateRoAForm({ age: 25 } as RoAFormData, [field]).valid).toBe(true);
+    expect(validateRoAForm({ age: 121 } as RoAFormData, [field]).valid).toBe(false);
   });
 
   it('catches NaN number values', () => {
     const field: RoAField = { key: 'n', label: 'N', type: 'number', required: true };
-    const result = validateRoAForm({ n: 'not-a-number' }, [field]);
+    const result = validateRoAForm({ n: 'not-a-number' } as RoAFormData, [field]);
     expect(result.errors.n).toContain('must be a number');
   });
 
@@ -344,13 +344,13 @@ describe('validateRoAForm', () => {
       required: true,
       options: ['red', 'blue'],
     };
-    expect(validateRoAForm({ color: 'green' }, [field]).valid).toBe(false);
-    expect(validateRoAForm({ color: 'red' }, [field]).valid).toBe(true);
+    expect(validateRoAForm({ color: 'green' } as RoAFormData, [field]).valid).toBe(false);
+    expect(validateRoAForm({ color: 'red' } as RoAFormData, [field]).valid).toBe(true);
   });
 
   it('reports multiple errors', () => {
     const fields = [textField('a'), textField('b')];
-    const result = validateRoAForm({}, fields);
+    const result = validateRoAForm({} as RoAFormData, fields);
     expect(result.message).toContain('2 validation error');
   });
 });
@@ -359,16 +359,20 @@ describe('validateRoAForm', () => {
 
 describe('calculateDraftCompletion', () => {
   it('returns 0 when totalFields is 0', () => {
-    expect(calculateDraftCompletion(makeDraft({ moduleData: { a: 'x' } }), 0)).toBe(0);
+    expect(
+      calculateDraftCompletion(makeDraft({ moduleData: { a: 'x' } as RoADraft['moduleData'] }), 0),
+    ).toBe(0);
   });
 
   it('calculates percentage of filled fields', () => {
-    const draft = makeDraft({ moduleData: { a: 'filled', b: '', c: null, d: 'also' } });
+    const draft = makeDraft({
+      moduleData: { a: 'filled', b: '', c: null, d: 'also' } as unknown as RoADraft['moduleData'],
+    });
     expect(calculateDraftCompletion(draft, 4)).toBe(50);
   });
 
   it('returns 100 when all fields filled', () => {
-    const draft = makeDraft({ moduleData: { a: '1', b: '2' } });
+    const draft = makeDraft({ moduleData: { a: '1', b: '2' } as RoADraft['moduleData'] });
     expect(calculateDraftCompletion(draft, 2)).toBe(100);
   });
 });
@@ -392,7 +396,7 @@ describe('canSubmitDraft', () => {
   });
 
   it('returns true when all conditions met', () => {
-    const draft = makeDraft({ moduleData: { field: 'value' } });
+    const draft = makeDraft({ moduleData: { field: 'value' } as RoADraft['moduleData'] });
     expect(canSubmitDraft(draft, ['field'])).toBe(true);
   });
 

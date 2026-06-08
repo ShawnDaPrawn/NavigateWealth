@@ -351,7 +351,11 @@ describe('adminAuditApi.getLog', () => {
 
   it('appends query params when filters are provided', async () => {
     mockApiGet.mockResolvedValue({ success: true, entries: [] });
-    await adminAuditApi.getLog({ category: 'auth', severity: 'warn', limit: 25 });
+    await adminAuditApi.getLog({
+      category: 'security' as const,
+      severity: 'warning' as const,
+      limit: 25,
+    });
     const calledUrl = mockApiGet.mock.calls[0][0] as string;
     expect(calledUrl).toContain('category=auth');
     expect(calledUrl).toContain('severity=warn');

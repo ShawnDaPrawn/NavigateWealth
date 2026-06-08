@@ -18,6 +18,10 @@ const mockCategory: Category = {
   name: 'General',
   slug: 'general',
   description: '',
+  sort_order: 0,
+  is_active: true,
+  created_at: '2025-01-01T00:00:00Z',
+  updated_at: '2025-01-01T00:00:00Z',
 };
 
 const mockArticle: Article = {

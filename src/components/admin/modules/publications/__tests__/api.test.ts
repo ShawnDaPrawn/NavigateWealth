@@ -395,7 +395,7 @@ describe('CategoriesAPI', () => {
   describe('reorderCategories', () => {
     it('posts reorder with POST', async () => {
       mockFetch.mockResolvedValue(makeOkResponse(null));
-      await CategoriesAPI.reorderCategories([{ id: 'cat-001', order: 1 }]);
+      await CategoriesAPI.reorderCategories([{ id: 'cat-001', sort_order: 1 }]);
       expect(mockFetch).toHaveBeenCalledWith(
         expect.stringContaining('/categories/reorder'),
         expect.objectContaining({ method: 'POST' }),

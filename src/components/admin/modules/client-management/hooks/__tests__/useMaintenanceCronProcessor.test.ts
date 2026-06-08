@@ -267,7 +267,7 @@ describe('useMaintenanceCronProcessor — maintenance logic', () => {
     await act(async () => {
       await vi.advanceTimersByTimeAsync(INITIAL_DELAY_MS + 100);
     });
-    expect(result.error).toBeUndefined();
+    expect((result as Record<string, unknown>).error).toBeUndefined();
   });
 
   it('does not call onClientCleanupRan when cleanup result.success is false', async () => {

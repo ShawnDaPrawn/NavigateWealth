@@ -76,7 +76,7 @@ describe('eventKeys', () => {
   });
 
   it('list(filters) returns key with filters', () => {
-    const key = eventKeys.list({ userId: 'u1' });
+    const key = eventKeys.list({ userId: 'u1' } as never);
     expect(key).toEqual(['events', 'list', { userId: 'u1' }]);
   });
 
@@ -102,7 +102,7 @@ describe('useEvents', () => {
   });
 
   it('passes correct queryKey with provided filters', () => {
-    renderHook(() => useEvents({ userId: 'u-1' }));
+    renderHook(() => useEvents({ userId: 'u-1' } as never));
     const config = mockUseQuery.mock.calls[0][0];
     expect(config.queryKey).toEqual(['events', 'list', { userId: 'u-1' }]);
   });
@@ -128,7 +128,7 @@ describe('useEvents', () => {
       capturedConfig(config);
       return makeQueryResult([]);
     });
-    renderHook(() => useEvents({ userId: 'u-1' }));
+    renderHook(() => useEvents({ userId: 'u-1' } as never));
     const config = capturedConfig.mock.calls[0][0];
     const result = await config.queryFn();
     expect(mockCalendarApiFetchEvents).toHaveBeenCalledWith({ userId: 'u-1' });

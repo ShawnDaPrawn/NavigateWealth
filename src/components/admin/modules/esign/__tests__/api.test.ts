@@ -84,7 +84,7 @@ describe('esignApi envelope operations', () => {
   it('sendInvites posts to invites endpoint', async () => {
     mockApiPost.mockResolvedValue({ success: true, invitesSent: 2 });
     const result = await esignApi.sendInvites('env-001', { message: 'Please sign' } as never);
-    expect(result.success).toBe(true);
+    expect((result as unknown as { success: boolean }).success).toBe(true);
     expect(mockApiPost).toHaveBeenCalledWith('/esign/envelopes/env-001/invites', {
       message: 'Please sign',
     });
@@ -163,7 +163,7 @@ describe('esignApi signer operations', () => {
   it('verifyOTP posts verification request', async () => {
     mockApiPost.mockResolvedValue({ success: true, token: 'jwt-token' });
     const result = await esignApi.verifyOTP('env-001', 'signer-001', { otp: '123456' } as never);
-    expect(result.success).toBe(true);
+    expect((result as unknown as { success: boolean }).success).toBe(true);
     expect(mockApiPost).toHaveBeenCalledWith('/esign/envelopes/env-001/signers/signer-001/verify', {
       otp: '123456',
     });
@@ -174,7 +174,7 @@ describe('esignApi signer operations', () => {
     const result = await esignApi.submitSignature('env-001', {
       signature: 'data:image/png',
     } as never);
-    expect(result.success).toBe(true);
+    expect((result as unknown as { success: boolean }).success).toBe(true);
     expect(mockApiPost).toHaveBeenCalledWith('/esign/envelopes/env-001/sign', {
       signature: 'data:image/png',
     });
@@ -185,7 +185,7 @@ describe('esignApi signer operations', () => {
     const result = await esignApi.rejectSigning('env-001', {
       reason: 'Incorrect document',
     } as never);
-    expect(result.success).toBe(true);
+    expect((result as unknown as { success: boolean }).success).toBe(true);
     expect(mockApiPost).toHaveBeenCalledWith('/esign/envelopes/env-001/reject', {
       reason: 'Incorrect document',
     });
@@ -438,7 +438,7 @@ describe('esignApi campaigns and packets', () => {
 
   it('cancelCampaign posts to cancel endpoint', async () => {
     mockApiPost.mockResolvedValue({ campaign: { id: 'camp-1', status: 'cancelled' } });
-    const result = await esignApi.cancelCampaign('camp-1');
+    await esignApi.cancelCampaign('camp-1');
     expect(mockApiPost).toHaveBeenCalledWith('/esign/campaigns/camp-1/cancel');
   });
 
@@ -579,7 +579,7 @@ describe('esignApi reminder and signing mode', () => {
   it('updateReminderConfig calls put on reminder-config endpoint', async () => {
     const config = { enabled: false };
     mockApiPut.mockResolvedValue({ config });
-    const result = await esignApi.updateReminderConfig('env-001', config as never);
+    await esignApi.updateReminderConfig('env-001', config as never);
     expect(mockApiPut).toHaveBeenCalledWith('/esign/envelopes/env-001/reminder-config', config);
   });
 
@@ -726,7 +726,7 @@ describe('esignApi uploadDocument and saveAsTemplate', () => {
     expect(mockApiPost).toHaveBeenCalledWith('/esign/envelopes/env-001/templates', {
       name: 'My Template',
     });
-    expect(result.templateId).toBe('tmpl-001');
+    expect((result as unknown as { templateId: string }).templateId).toBe('tmpl-001');
   });
 });
 

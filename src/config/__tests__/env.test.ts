@@ -2,7 +2,7 @@
  * Tests for env.ts — environment configuration utilities.
  */
 
-import { describe, expect, it, vi, beforeEach } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
 // ── Mocks ──────────────────────────────────────────────────────────────────────
 

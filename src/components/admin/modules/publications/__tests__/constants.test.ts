@@ -77,9 +77,7 @@ describe('publications message constants', () => {
 
 describe('publications status constants', () => {
   it('STATUS_LABELS has entries for draft and published', () => {
-    expect(
-      STATUS_LABELS.draft || STATUS_LABELS.Draft || (STATUS_LABELS as Record<string, string>).draft,
-    ).toBeTruthy();
+    expect(STATUS_LABELS.draft).toBeTruthy();
   });
 
   it('STATUS_COLORS is non-empty', () => {

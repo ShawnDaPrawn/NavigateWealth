@@ -106,7 +106,9 @@ describe('RiskPlanningFnaAPI', () => {
   describe('create', () => {
     it('creates new FNA and returns it', async () => {
       mockApiPost.mockResolvedValue({ success: true, data: MOCK_FNA });
-      const inputData = { coverAmount: 1000000 };
+      const inputData = {
+        coverAmount: 1000000,
+      } as unknown as import('../types').InformationGatheringInput;
       const result = await RiskPlanningFnaAPI.create('client-001', inputData);
       expect(result).toEqual(MOCK_FNA);
       expect(mockApiPost).toHaveBeenCalledWith('/risk-planning-fna/create', {

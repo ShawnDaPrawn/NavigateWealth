@@ -282,7 +282,10 @@ describe('useNewsletterSubscribers — filtering', () => {
     mockFilterByTimeRange.mockImplementation((s: unknown[]) => s);
     const { result } = renderHook(() => useNewsletterSubscribers({ statusFilter: 'active' }));
     expect(result.current.filtered).toHaveLength(2);
-    expect(result.current.filtered.map((s) => s.id)).toEqual(['s-1', 's-3']);
+    expect(result.current.filtered.map((s) => (s as unknown as { id: string }).id)).toEqual([
+      's-1',
+      's-3',
+    ]);
   });
 
   it('filters by search term against email (case-insensitive)', () => {

@@ -5,7 +5,7 @@
  * utils.ts and product-management constants, so we mock those and then
  * verify that every method on KeyAPI returns the expected shape.
  */
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import type { ProductKey, ProductKeyCategory } from '../types';
 
 // ---------------------------------------------------------------------------

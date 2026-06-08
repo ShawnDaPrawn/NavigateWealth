@@ -52,7 +52,7 @@ vi.mock('../queryKeys', () => ({
 
 const MOCK_PROFILE = {
   id: 'prof-001',
-  platform: 'twitter' as const,
+  platform: 'x' as const,
   isConnected: true,
   username: 'testuser',
 };
@@ -192,7 +192,7 @@ describe('useSocialProfiles', () => {
   describe('getProfilesByPlatform', () => {
     it('returns profiles matching the given platform', () => {
       const { result } = renderHook(() => useSocialProfiles());
-      const profiles = result.current.getProfilesByPlatform('twitter');
+      const profiles = result.current.getProfilesByPlatform('x');
       expect(profiles).toHaveLength(1);
       expect(profiles[0].id).toBe('prof-001');
     });
@@ -207,7 +207,7 @@ describe('useSocialProfiles', () => {
   describe('isConnected', () => {
     it('returns true when a connected profile exists for the platform', () => {
       const { result } = renderHook(() => useSocialProfiles());
-      expect(result.current.isConnected('twitter')).toBe(true);
+      expect(result.current.isConnected('x')).toBe(true);
     });
 
     it('returns false when a profile for the platform is not connected', () => {
@@ -218,7 +218,7 @@ describe('useSocialProfiles', () => {
     it('returns false when there are no profiles at all', () => {
       mockUseQuery.mockReturnValue(makeQueryResult([]));
       const { result } = renderHook(() => useSocialProfiles());
-      expect(result.current.isConnected('twitter')).toBe(false);
+      expect(result.current.isConnected('x')).toBe(false);
     });
   });
 
@@ -241,7 +241,7 @@ describe('useSocialProfiles', () => {
         .mockReturnValueOnce(makeMutationResult({ mutateAsync: mockMutateAsync })) // connectMutation
         .mockReturnValue(makeMutationResult());
       const { result } = renderHook(() => useSocialProfiles());
-      const data = { platform: 'twitter', accessToken: 'tok' };
+      const data = { platform: 'x', accessToken: 'tok' };
       const profile = await result.current.connectProfile(data as never);
       expect(mockMutateAsync).toHaveBeenCalledWith(data);
       expect(profile).toEqual(MOCK_PROFILE);
@@ -253,7 +253,7 @@ describe('useSocialProfiles', () => {
         .mockReturnValueOnce(makeMutationResult({ mutateAsync: mockMutateAsync }))
         .mockReturnValue(makeMutationResult());
       const { result } = renderHook(() => useSocialProfiles());
-      const profile = await result.current.connectProfile({ platform: 'twitter' } as never);
+      const profile = await result.current.connectProfile({ platform: 'x' } as never);
       expect(profile).toBeNull();
     });
   });
@@ -439,7 +439,7 @@ describe('useSocialProfiles', () => {
       const connectConfig = capturedMutations[0] as {
         mutationFn: (d: unknown) => Promise<unknown>;
       };
-      const profile = await connectConfig.mutationFn({ platform: 'twitter', accessToken: 'tok' });
+      const profile = await connectConfig.mutationFn({ platform: 'x', accessToken: 'tok' });
       expect(profile).toEqual(MOCK_PROFILE);
     });
 
@@ -454,9 +454,7 @@ describe('useSocialProfiles', () => {
       const connectConfig = capturedMutations[0] as {
         mutationFn: (d: unknown) => Promise<unknown>;
       };
-      await expect(connectConfig.mutationFn({ platform: 'twitter' })).rejects.toThrow(
-        'Connect error',
-      );
+      await expect(connectConfig.mutationFn({ platform: 'x' })).rejects.toThrow('Connect error');
     });
 
     it('disconnectMutation mutationFn calls profilesApi.disconnect', async () => {
@@ -547,7 +545,7 @@ describe('useSocialProfiles', () => {
       const connectConfig = capturedMutations[0] as {
         onSuccess: (data: unknown, variables: { platform: string }) => void;
       };
-      connectConfig.onSuccess(MOCK_PROFILE, { platform: 'twitter' });
+      connectConfig.onSuccess(MOCK_PROFILE, { platform: 'x' });
       expect(mockInvalidateQueries).toHaveBeenCalled();
       expect(toast.success).toHaveBeenCalledWith('twitter profile connected successfully');
     });

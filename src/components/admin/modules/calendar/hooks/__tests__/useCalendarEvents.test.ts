@@ -1,4 +1,4 @@
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect } from 'vitest';
 import { renderHook } from '@testing-library/react';
 import { useCalendarEvents } from '../useCalendarEvents';
 import type { CalendarEvent } from '../../types';
@@ -10,7 +10,7 @@ import type { CalendarEvent } from '../../types';
 function makeEvent(
   id: string,
   startAt: string,
-  status: CalendarEvent['status'] = 'confirmed',
+  status: CalendarEvent['status'] = 'scheduled' as CalendarEvent['status'],
 ): CalendarEvent {
   return {
     id,
@@ -27,7 +27,7 @@ function makeEvent(
     created_at: startAt,
     updated_at: startAt,
     metadata: null,
-  };
+  } as unknown as CalendarEvent;
 }
 
 // ============================================================================
@@ -58,7 +58,7 @@ describe('useCalendarEvents — eventsByDate', () => {
 
   it('excludes cancelled events', () => {
     const events = [
-      makeEvent('e-1', '2026-06-10T09:00:00Z', 'confirmed'),
+      makeEvent('e-1', '2026-06-10T09:00:00Z', 'scheduled' as CalendarEvent['status']),
       makeEvent('e-2', '2026-06-10T10:00:00Z', 'cancelled'),
     ];
 

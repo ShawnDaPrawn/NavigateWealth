@@ -4,7 +4,7 @@
  * Mocks fetch globally and stubs logger/supabase info so no real
  * network calls or environment dependencies are needed.
  */
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, vi, afterEach } from 'vitest';
 
 // ── Mock supabase info ───────────────────────────────────────────────────────
 vi.mock('../../supabase/info', () => ({
