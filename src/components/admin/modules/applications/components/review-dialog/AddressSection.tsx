@@ -1,7 +1,6 @@
 import { MapPin, Globe } from 'lucide-react';
 import {
   ReviewSection,
-  ViewField,
   EditField,
   EditSelect,
   SyncIndicator,

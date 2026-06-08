@@ -22,9 +22,7 @@ import {
 } from 'lucide-react';
 import { Application, ApplicationData } from '../types';
 import { formatDate, normalizeApplicationData, normalizeApplicationStringArray } from '../utils';
-import { StatusBadge } from './StatusBadge';
 import { applicationsApi } from '../api';
-import { EXTERNAL_PRODUCT_CATEGORIES } from '../constants';
 import { ReviewSection } from './review-dialog/shared';
 import { ReviewDialogHeader } from './review-dialog/ReviewDialogHeader';
 import { ExternalProductsSection } from './review-dialog/ExternalProductsSection';

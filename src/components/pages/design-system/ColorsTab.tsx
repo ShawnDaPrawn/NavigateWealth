@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import { Card, CardContent } from '../../ui/card';
 import { Badge } from '../../ui/badge';
-import { Button } from '../../ui/button';
 import { Alert, AlertDescription, AlertTitle } from '../../ui/alert';
 import { Palette, Shield, Copy, CheckCircle, AlertCircle, X } from 'lucide-react';
 import { copyToClipboard as copyToClipboardUtil } from '../../../utils/clipboard';
