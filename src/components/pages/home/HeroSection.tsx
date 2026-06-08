@@ -136,17 +136,22 @@ export function HeroSection({
 }: HeroSectionProps) {
   const currentSlide = slides[currentSlideIndex];
   const progressRef = useRef<number | null>(null);
-  const [progress, setProgress] = useState(0);
+  // The progress bar is updated imperatively via this ref instead of React state.
+  // Driving an `animationFrame` loop through `setState` re-rendered the entire
+  // (heavy, blur-laden) hero ~60×/sec for the whole time the page was open, which
+  // pinned a CPU core. Writing the width straight to the DOM node is visually
+  // identical but triggers zero React re-renders.
+  const progressBarRef = useRef<HTMLDivElement | null>(null);
 
   // Auto-advance slides
   useEffect(() => {
-    setProgress(0);
+    if (progressBarRef.current) progressBarRef.current.style.width = '0%';
     const start = Date.now();
 
     const tick = () => {
       const elapsed = Date.now() - start;
       const pct = Math.min((elapsed / AUTO_ADVANCE_MS) * 100, 100);
-      setProgress(pct);
+      if (progressBarRef.current) progressBarRef.current.style.width = `${pct}%`;
 
       if (pct >= 100) {
         onNextSlide();
@@ -165,7 +170,7 @@ export function HeroSection({
   const handleGoToSlide = useCallback(
     (index: number) => {
       if (progressRef.current) cancelAnimationFrame(progressRef.current);
-      setProgress(0);
+      if (progressBarRef.current) progressBarRef.current.style.width = '0%';
       onGoToSlide(index);
     },
     [onGoToSlide],
@@ -295,8 +300,9 @@ export function HeroSection({
                     <div className="absolute inset-0 bg-white/20 rounded-full group-hover:bg-white/30 transition-colors" />
                     {isActive && (
                       <div
+                        ref={progressBarRef}
                         className="absolute inset-y-0 left-0 bg-purple-400 rounded-full transition-none"
-                        style={{ width: `${progress}%` }}
+                        style={{ width: '0%' }}
                       />
                     )}
                   </button>
