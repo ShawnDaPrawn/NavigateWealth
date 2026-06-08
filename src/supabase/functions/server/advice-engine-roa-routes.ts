@@ -3,6 +3,7 @@ import { requireAuth } from './auth-mw.ts';
 import { asyncHandler } from './error.middleware.ts';
 import { AdviceEngineRoAService } from './advice-engine-roa-service.ts';
 import { AdviceEngineRoAContractService } from './advice-engine-roa-contract-service.ts';
+import { buildClientContext } from './advice-engine-roa-service-helpers.ts';
 import { ClientIdParamSchema } from './advice-engine-validation.ts';
 
 const app = new Hono();
@@ -54,7 +55,7 @@ app.get(
     }
 
     const { clientId } = ClientIdParamSchema.parse(c.req.param());
-    const context = await roaService.buildClientContext(
+    const context = await buildClientContext(
       clientId,
       c.get('user') as { id: string; email?: string },
     );

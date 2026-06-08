@@ -74,9 +74,19 @@ describe('provider portal golden flows', () => {
   const integrationHeaderSource = readRepoFile(
     'src/components/admin/modules/product-management/integrations/IntegrationHeader.tsx',
   );
-  const portalAutomationTabSource = readRepoFile(
-    'src/components/admin/modules/product-management/integrations/PortalAutomationTab.tsx',
-  );
+  // PortalAutomationTab was split into sub-components (Session D refactor);
+  // combine all three files so golden checks still pass.
+  const portalAutomationTabSource = [
+    readRepoFile(
+      'src/components/admin/modules/product-management/integrations/PortalAutomationTab.tsx',
+    ),
+    readRepoFile(
+      'src/components/admin/modules/product-management/integrations/portal-automation/PortalConfigCard.tsx',
+    ),
+    readRepoFile(
+      'src/components/admin/modules/product-management/integrations/portal-automation/PortalJobCard.tsx',
+    ),
+  ].join('\n');
   const goldenDocs = readRepoFile('docs/provider-automation-golden-flows.md');
   const packageJsonSource = readRepoFile('package.json');
 
@@ -419,7 +429,7 @@ describe('provider portal golden flows', () => {
     expect(portalAutomationTabSource).toContain(
       'Portal automation is only available for specific product categories',
     );
-    expect(portalAutomationTabSource).toContain('disabled={!automationCategorySelected');
+    expect(portalAutomationTabSource).toContain('!automationCategorySelected');
     expect(portalGuardsSource).toContain(
       'function getPortalAutomationCategoryError(categoryId: string): string | null',
     );
