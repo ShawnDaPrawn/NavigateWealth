@@ -357,8 +357,8 @@ describe('adminAuditApi.getLog', () => {
       limit: 25,
     });
     const calledUrl = mockApiGet.mock.calls[0][0] as string;
-    expect(calledUrl).toContain('category=auth');
-    expect(calledUrl).toContain('severity=warn');
+    expect(calledUrl).toContain('category=security');
+    expect(calledUrl).toContain('severity=warning');
     expect(calledUrl).toContain('limit=25');
   });
 

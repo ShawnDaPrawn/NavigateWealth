@@ -547,7 +547,7 @@ describe('useSocialProfiles', () => {
       };
       connectConfig.onSuccess(MOCK_PROFILE, { platform: 'x' });
       expect(mockInvalidateQueries).toHaveBeenCalled();
-      expect(toast.success).toHaveBeenCalledWith('twitter profile connected successfully');
+      expect(toast.success).toHaveBeenCalledWith('x profile connected successfully');
     });
 
     it('disconnectMutation onSuccess invalidates profiles and shows toast', async () => {
