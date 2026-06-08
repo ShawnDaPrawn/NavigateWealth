@@ -690,3 +690,120 @@ describe('esignApi in-app notifications', () => {
     expect(mockApiPost).toHaveBeenCalledWith('/esign/me/notifications/read-all');
   });
 });
+
+describe('esignApi uploadDocument and saveAsTemplate', () => {
+  it('uploadDocument posts FormData to upload endpoint', async () => {
+    const file = new File(['content'], 'test.pdf', { type: 'application/pdf' });
+    const mockResponse = { envelope: { id: 'env-001', title: 'Test', status: 'draft' } };
+    mockApiPost.mockResolvedValue(mockResponse);
+    const result = await esignApi.uploadDocument({
+      files: [file],
+      context: { title: 'Test Envelope' },
+    });
+    expect(result).toEqual(mockResponse);
+    expect(mockApiPost).toHaveBeenCalledWith('/esign/envelopes/upload', expect.any(FormData));
+  });
+
+  it('uploadDocument appends each file and context to FormData', async () => {
+    const file1 = new File(['a'], 'a.pdf', { type: 'application/pdf' });
+    const file2 = new File(['b'], 'b.pdf', { type: 'application/pdf' });
+    mockApiPost.mockResolvedValue({ envelope: { id: 'env-001' } });
+    await esignApi.uploadDocument({
+      files: [file1, file2],
+      context: { title: 'Multi-doc', clientId: 'client-001' },
+    });
+    const [, formData] = mockApiPost.mock.calls[0] as [string, FormData];
+    expect(formData.getAll('files').length).toBe(2);
+    expect(formData.get('context')).toContain('Multi-doc');
+  });
+
+  it('saveAsTemplate posts to envelope templates endpoint', async () => {
+    const mockTemplate = { id: 'tmpl-001', name: 'My Template', envelopeId: 'env-001' };
+    mockApiPost.mockResolvedValue({ template: mockTemplate, templateId: 'tmpl-001' });
+    const result = await esignApi.saveAsTemplate('env-001', {
+      name: 'My Template',
+    } as never);
+    expect(mockApiPost).toHaveBeenCalledWith('/esign/envelopes/env-001/templates', {
+      name: 'My Template',
+    });
+    expect(result.templateId).toBe('tmpl-001');
+  });
+});
+
+describe('esignApi syncTemplateFromEnvelope', () => {
+  it('posts to from-envelope endpoint with correct payload', async () => {
+    const mockTemplate = { id: 'tmpl-001', name: 'Synced Template' };
+    mockApiPost.mockResolvedValue({ template: mockTemplate });
+    const result = await esignApi.syncTemplateFromEnvelope({
+      templateId: 'tmpl-001',
+      envelopeId: 'env-001',
+      name: 'Synced Template',
+      description: 'Updated from envelope',
+      category: 'onboarding',
+    });
+    expect(result.template).toEqual(mockTemplate);
+    expect(mockApiPost).toHaveBeenCalledWith('/esign/templates/tmpl-001/from-envelope', {
+      envelopeId: 'env-001',
+      name: 'Synced Template',
+      description: 'Updated from envelope',
+      category: 'onboarding',
+    });
+  });
+
+  it('omits optional fields when not provided', async () => {
+    mockApiPost.mockResolvedValue({ template: { id: 'tmpl-001' } });
+    await esignApi.syncTemplateFromEnvelope({
+      templateId: 'tmpl-001',
+      envelopeId: 'env-002',
+    });
+    expect(mockApiPost).toHaveBeenCalledWith('/esign/templates/tmpl-001/from-envelope', {
+      envelopeId: 'env-002',
+      name: undefined,
+      description: undefined,
+      category: undefined,
+    });
+  });
+});
+
+describe('esignApi firm branding', () => {
+  it('getFirmBranding returns branding from API', async () => {
+    const branding = {
+      firm_id: 'firm-1',
+      display_name: 'Acme Wealth',
+      logo_url: 'https://cdn.example.com/logo.png',
+      accent_hex: '#4A90E2',
+      support_email: 'support@acme.com',
+      updated_at: '2025-01-01',
+    };
+    mockApiGet.mockResolvedValue({ branding });
+    const result = await esignApi.getFirmBranding();
+    expect(result.branding?.display_name).toBe('Acme Wealth');
+    expect(mockApiGet).toHaveBeenCalledWith('/esign/branding');
+  });
+
+  it('getFirmBranding returns null branding when not configured', async () => {
+    mockApiGet.mockResolvedValue({ branding: null });
+    const result = await esignApi.getFirmBranding();
+    expect(result.branding).toBeNull();
+  });
+
+  it('setFirmBranding calls put with branding payload', async () => {
+    mockApiPut.mockResolvedValue({ branding: { display_name: 'Acme', logo_url: null } });
+    const result = await esignApi.setFirmBranding({
+      display_name: 'Acme',
+      accent_hex: '#FF5733',
+    });
+    expect(result.branding).toBeDefined();
+    expect(mockApiPut).toHaveBeenCalledWith('/esign/branding', {
+      display_name: 'Acme',
+      accent_hex: '#FF5733',
+    });
+  });
+
+  it('deleteFirmBranding calls delete on branding endpoint', async () => {
+    mockApiDelete.mockResolvedValue({ ok: true });
+    const result = await esignApi.deleteFirmBranding();
+    expect(result.ok).toBe(true);
+    expect(mockApiDelete).toHaveBeenCalledWith('/esign/branding');
+  });
+});
