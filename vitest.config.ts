@@ -121,10 +121,10 @@ export default defineConfig({
       //
       // The 70/65/70/70 end-goal is long-horizon — floor only ratchets up.
       thresholds: {
-        lines: 10.0,
-        functions: 8.05,
-        branches: 8.65,
-        statements: 10.0,
+        lines: 30.0,
+        functions: 25.0,
+        branches: 20.0,
+        statements: 29.0,
       },
     },
   },
