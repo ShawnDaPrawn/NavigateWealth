@@ -3,7 +3,7 @@ import { useSearchParams, Link } from 'react-router';
 import { Button } from '../ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../ui/card';
 import { CheckCircle, XCircle, Loader2 } from 'lucide-react';
-import { projectId, publicAnonKey } from '../../utils/supabase/info';
+import { api } from '../../utils/api/client';
 import { SEO } from '../seo/SEO';
 
 export function NewsletterUnsubscribePage() {
@@ -29,23 +29,9 @@ export function NewsletterUnsubscribePage() {
     setStatus('loading');
 
     try {
-      const response = await fetch(
-        `https://${projectId}.supabase.co/functions/v1/make-server-91ed8379/newsletter/unsubscribe?email=${encodeURIComponent(email)}`,
-        {
-          method: 'GET',
-          headers: {
-            Authorization: `Bearer ${publicAnonKey}`,
-          },
-        },
+      const data = await api.get<{ notFound?: boolean }>(
+        `/newsletter/unsubscribe?email=${encodeURIComponent(email)}`,
       );
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        setStatus('error');
-        setMessage(data.error || 'Failed to unsubscribe. Please try again or contact support.');
-        return;
-      }
 
       if (data.notFound) {
         setStatus('error');

@@ -43,42 +43,20 @@ import { motion, AnimatePresence } from 'motion/react';
 import { Card } from '../ui/card';
 import { Button } from '../ui/button';
 import { Alert, AlertDescription } from '../ui/alert';
-import { Progress } from '../ui/progress';
-import { Checkbox as UICheckbox } from '../ui/checkbox';
-import { Input } from '../ui/input';
-import { Label } from '../ui/label';
-import {
-  FileText,
-  Check,
-  Loader2,
-  AlertCircle,
-  ZoomIn,
-  ZoomOut,
-  ChevronDown,
-  ArrowRight,
-  Lock,
-  Calendar,
-  Type,
-  Pen,
-  ShieldCheck,
-  Download,
-  PauseCircle,
-  XCircle,
-} from 'lucide-react';
-import { SignatureCanvas } from './SignatureCanvas';
+import { FileText, AlertCircle, ZoomIn, ZoomOut, Lock, Loader2 } from 'lucide-react';
 import { FieldHighlight } from './FieldHighlight';
 import type { SignerSessionData, SignatureData, SignerField } from './types';
 import { evaluateRuleState } from './services/ruleEngine';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '../ui/dialog';
-import { Textarea } from '../ui/textarea';
 import { esignSignerService, uploadAttachmentForSigner } from './services/esignSignerService';
+import { SigningHeader } from './steps/SigningHeader';
+import { BottomActionBar } from './steps/BottomActionBar';
+import { SignatureDialog } from './steps/SignatureDialog';
+import { TextInputDialog } from './steps/TextInputDialog';
+import { DateInputDialog } from './steps/DateInputDialog';
+import { DropdownDialog } from './steps/DropdownDialog';
+import { ConsentDialog } from './steps/ConsentDialog';
+import { RejectDialog } from './steps/RejectDialog';
+import { PauseDialog } from './steps/PauseDialog';
 
 // ── pdf.js bootstrap (canvas-based rendering — works on all browsers including mobile) ──
 import * as pdfjsLib from 'pdfjs-dist';
@@ -1043,47 +1021,16 @@ export function SigningWorkflow({
 
   return (
     <div className="flex flex-col h-screen bg-gray-100/50">
-      {/* ==================== TOP HEADER ==================== */}
-      <header className="bg-white border-b h-14 md:h-16 flex items-center justify-between px-3 md:px-6 flex-shrink-0 sticky top-0 z-50 shadow-sm">
-        <div className="flex items-center gap-2.5 min-w-0 flex-1">
-          <div className="h-8 w-8 hidden md:flex rounded-lg bg-indigo-600 text-white items-center justify-center shadow-sm flex-shrink-0">
-            <FileText className="h-4 w-4" />
-          </div>
-          <div className="min-w-0">
-            <h1 className="text-sm md:text-base font-semibold truncate max-w-[180px] md:max-w-md text-gray-900">
-              {envelope_title}
-            </h1>
-            <p className="text-[11px] text-gray-500 hidden md:block truncate">
-              {sessionData.signer_name} • {sessionData.signer_email}
-            </p>
-          </div>
-        </div>
-
-        <div className="flex items-center gap-2">
-          {/* Always-visible Download / Print to read */}
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={handleDownloadOriginal}
-            className="text-gray-600 hover:text-indigo-700 hover:bg-indigo-50 h-9 px-2 md:px-3"
-          >
-            <Download className="h-4 w-4 md:mr-1.5" />
-            <span className="hidden md:inline">Download to read</span>
-          </Button>
-
-          {/* Desktop progress meter (only after entering signing mode) */}
-          {!isReading && (
-            <div className="hidden md:flex items-center ml-1">
-              <div className="text-right mr-2">
-                <p className="text-xs font-medium text-gray-900">
-                  {completedFields.length}/{requiredFields.length} done
-                </p>
-                <Progress value={progress} className="h-1.5 w-24 mt-1" />
-              </div>
-            </div>
-          )}
-        </div>
-      </header>
+      <SigningHeader
+        envelopeTitle={envelope_title}
+        signerName={sessionData.signer_name}
+        signerEmail={sessionData.signer_email}
+        isReading={isReading}
+        completedCount={completedFields.length}
+        requiredCount={requiredFields.length}
+        progress={progress}
+        onDownloadOriginal={handleDownloadOriginal}
+      />
 
       {/* ==================== MAIN CONTENT ==================== */}
       <div className="flex-1 flex overflow-hidden relative">
@@ -1334,90 +1281,21 @@ export function SigningWorkflow({
         </div>
       </div>
 
-      {/* ==================== STICKY BOTTOM ACTION BAR ==================== */}
-      {/*
-        The single source of truth for "what should I do next?".
-        Mobile-first: full width, tall (56px), thumb-friendly. On desktop
-        it remains pinned to the bottom but is content-width centered.
-
-        Reading mode:
-          [Decline]   [Download]                            [I'm ready to sign →]
-        Signing mode (incomplete):
-          [Decline]   [Save & Finish later]                 [Complete N required →]
-        Signing mode (complete):
-          [Decline]   [Save & Finish later]                 [Submit signed document ✓]
-      */}
-      <div className="fixed bottom-0 left-0 right-0 z-40 bg-white border-t shadow-[0_-4px_12px_-4px_rgba(0,0,0,0.06)]">
-        <div className="max-w-5xl mx-auto px-3 md:px-6 py-3 flex items-center gap-2 md:gap-3">
-          {/* Secondary actions — left */}
-          <Button
-            variant="ghost"
-            onClick={() => setShowRejectDialog(true)}
-            disabled={isSubmitting}
-            className="text-red-600 hover:text-red-700 hover:bg-red-50 h-12 px-2 md:px-3"
-            aria-label="Decline to sign"
-          >
-            <XCircle className="h-4 w-4 md:mr-1.5" />
-            <span className="hidden md:inline">Decline</span>
-          </Button>
-
-          {!isReading && (
-            <Button
-              variant="ghost"
-              onClick={() => setShowPauseDialog(true)}
-              disabled={isSubmitting}
-              className="text-gray-600 hover:text-gray-900 hover:bg-gray-100 h-12 px-2 md:px-3"
-              aria-label="Save and finish later"
-            >
-              <PauseCircle className="h-4 w-4 md:mr-1.5" />
-              <span className="hidden md:inline">Save & Finish later</span>
-            </Button>
-          )}
-
-          {/* Mobile progress meter (compact) — only in signing mode */}
-          {!isReading && (
-            <div className="flex-1 min-w-0 md:hidden">
-              <div className="flex items-center gap-2">
-                <Progress value={progress} className="h-1.5 flex-1" />
-                <span className="text-[11px] font-medium text-gray-600 whitespace-nowrap">
-                  {completedFields.length}/{requiredFields.length}
-                </span>
-              </div>
-            </div>
-          )}
-
-          {/* Spacer (desktop only) — pushes the primary CTA to the right */}
-          <div className="hidden md:block flex-1" />
-
-          {/* PRIMARY CTA — always present, label & color reflect intent */}
-          <Button
-            onClick={handlePrimaryCta}
-            disabled={isFieldsLocked || isSubmitting}
-            className={`h-12 px-4 md:px-6 text-sm md:text-base font-semibold shadow-md flex-1 md:flex-none md:min-w-[260px] ${primaryCtaTone}`}
-          >
-            {isSubmitting ? (
-              <>
-                <Loader2 className="h-4 w-4 mr-1.5 animate-spin" />
-                Submitting…
-              </>
-            ) : isFieldsLocked ? (
-              <>
-                <Lock className="h-4 w-4 mr-1.5" />
-                Locked
-              </>
-            ) : (
-              <>
-                <span className="truncate">{primaryCtaLabel}</span>
-                {allRequiredFieldsCompleted && phase === 'signing' ? (
-                  <Check className="h-4 w-4 ml-1.5 flex-shrink-0" />
-                ) : (
-                  <ArrowRight className="h-4 w-4 ml-1.5 flex-shrink-0" />
-                )}
-              </>
-            )}
-          </Button>
-        </div>
-      </div>
+      <BottomActionBar
+        isReading={isReading}
+        isFieldsLocked={isFieldsLocked}
+        isSubmitting={isSubmitting}
+        allRequiredFieldsCompleted={allRequiredFieldsCompleted}
+        phase={phase}
+        progress={progress}
+        completedCount={completedFields.length}
+        requiredCount={requiredFields.length}
+        primaryCtaLabel={primaryCtaLabel}
+        primaryCtaTone={primaryCtaTone}
+        onPrimaryCta={handlePrimaryCta}
+        onDecline={() => setShowRejectDialog(true)}
+        onPause={() => setShowPauseDialog(true)}
+      />
 
       {/* ==================== READING-MODE OVERLAY HINT ==================== */}
       {/*
@@ -1487,46 +1365,22 @@ export function SigningWorkflow({
         }}
       />
 
-      {/* ==================== SIGNATURE DIALOG ==================== */}
-      <Dialog open={showSignatureDialog} onOpenChange={setShowSignatureDialog}>
-        <DialogContent className="max-w-xl">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <Pen className="h-5 w-5 text-indigo-600" />
-              {currentField?.type === 'signature'
-                ? 'Adopt your signature'
-                : currentField?.type === 'initials'
-                  ? 'Adopt your initials'
-                  : 'Sign Document'}
-            </DialogTitle>
-            <DialogDescription>
-              {currentField?.type === 'signature'
-                ? "We'll apply this to every signature spot on this document. You can change any one of them afterwards by tapping it."
-                : currentField?.type === 'initials'
-                  ? "We'll apply these initials to every initials spot on this document."
-                  : 'Draw, type, or upload your signature.'}
-            </DialogDescription>
-          </DialogHeader>
+      <SignatureDialog
+        open={showSignatureDialog}
+        onOpenChange={setShowSignatureDialog}
+        currentField={currentField}
+        onCancel={() => {
+          setShowSignatureDialog(false);
+          setCurrentField(null);
+        }}
+        onSave={handleSignatureSave}
+        signatures={signatures}
+        adoptedSignature={adoptedSignature}
+        adoptedInitials={adoptedInitials}
+        signerName={sessionData.signer_name}
+      />
 
-          <div className="mt-2">
-            <SignatureCanvas
-              onSave={handleSignatureSave}
-              onCancel={() => {
-                setShowSignatureDialog(false);
-                setCurrentField(null);
-              }}
-              type={currentField?.type === 'initials' ? 'initials' : 'signature'}
-              existingValue={signatures.find((s) => s.field_id === currentField?.id)?.value}
-              savedSignature={adoptedSignature}
-              savedInitials={adoptedInitials}
-              signerName={sessionData.signer_name}
-            />
-          </div>
-        </DialogContent>
-      </Dialog>
-
-      {/* ==================== TEXT INPUT DIALOG ==================== */}
-      <Dialog
+      <TextInputDialog
         open={showTextDialog}
         onOpenChange={(open) => {
           setShowTextDialog(open);
@@ -1535,436 +1389,82 @@ export function SigningWorkflow({
             setError(null);
           }
         }}
-      >
-        <DialogContent className="max-w-md">
-          {(() => {
-            // Pull validation hints from the field's metadata to drive the
-            // dialog's title, helper copy, input mode, and placeholder.
-            const meta = (currentField?.metadata ?? {}) as Record<string, unknown>;
-            const fmt = (meta.format as string | undefined) ?? 'free_text';
-            const customHelp = typeof meta.helpText === 'string' ? meta.helpText : '';
-            const maxLength = typeof meta.maxLength === 'number' ? meta.maxLength : undefined;
+        currentField={currentField}
+        textInput={textInput}
+        onTextInputChange={setTextInput}
+        error={error}
+        onSave={handleTextSave}
+        onCancel={() => {
+          setShowTextDialog(false);
+          setCurrentField(null);
+          setError(null);
+        }}
+      />
 
-            const titleByFormat: Record<string, string> = {
-              sa_id: 'Enter SA ID number',
-              number: 'Enter a number',
-              email: 'Enter your email address',
-              phone: 'Enter your phone number',
-              custom_regex: 'Enter required value',
-              free_text: 'Enter text',
-            };
-            const placeholderByFormat: Record<string, string> = {
-              sa_id: '000000 0000 0 00',
-              number: '0',
-              email: 'name@example.com',
-              phone: '+27 82 123 4567',
-              custom_regex: 'Enter value...',
-              free_text: 'Enter text...',
-            };
-            const inputModeByFormat: Record<string, 'text' | 'numeric' | 'email' | 'tel'> = {
-              sa_id: 'numeric',
-              number: 'numeric',
-              email: 'email',
-              phone: 'tel',
-              custom_regex: 'text',
-              free_text: 'text',
-            };
-
-            return (
-              <>
-                <DialogHeader>
-                  <DialogTitle className="flex items-center gap-2">
-                    <Type className="h-5 w-5 text-indigo-600" />
-                    {titleByFormat[fmt] ?? 'Enter text'}
-                  </DialogTitle>
-                  <DialogDescription>
-                    {customHelp ||
-                      (fmt === 'sa_id'
-                        ? 'Type your 13-digit South African ID number.'
-                        : 'Type the requested information for this field.')}
-                  </DialogDescription>
-                </DialogHeader>
-
-                <div className="space-y-4 mt-2">
-                  <div className="space-y-2">
-                    <Label htmlFor="text-field-input">Value</Label>
-                    <Input
-                      id="text-field-input"
-                      inputMode={inputModeByFormat[fmt] ?? 'text'}
-                      value={fmt === 'sa_id' ? maskSaId(textInput) : textInput}
-                      maxLength={maxLength}
-                      onChange={(e) => {
-                        if (fmt === 'sa_id') {
-                          setTextInput(e.target.value.replace(/\D/g, '').slice(0, 13));
-                        } else {
-                          setTextInput(e.target.value);
-                        }
-                      }}
-                      placeholder={placeholderByFormat[fmt] ?? 'Enter text...'}
-                      className="text-base h-12"
-                      autoFocus
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter' && textInput.trim()) handleTextSave();
-                      }}
-                    />
-                    {error && <p className="text-xs text-red-600 mt-1">{error}</p>}
-                  </div>
-                </div>
-              </>
-            );
-          })()}
-
-          <DialogFooter className="mt-4">
-            <Button
-              variant="outline"
-              className="h-11"
-              onClick={() => {
-                setShowTextDialog(false);
-                setCurrentField(null);
-                setError(null);
-              }}
-            >
-              Cancel
-            </Button>
-            <Button
-              onClick={handleTextSave}
-              disabled={!textInput.trim()}
-              className="bg-indigo-600 hover:bg-indigo-700 h-11"
-            >
-              <Check className="h-4 w-4 mr-1.5" />
-              Save
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* ==================== DATE INPUT DIALOG ==================== */}
-      <Dialog
+      <DateInputDialog
         open={showDateDialog}
         onOpenChange={(open) => {
           setShowDateDialog(open);
           if (!open) setCurrentField(null);
         }}
-      >
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <Calendar className="h-5 w-5 text-indigo-600" />
-              Select date
-            </DialogTitle>
-            <DialogDescription>Choose the date for this field.</DialogDescription>
-          </DialogHeader>
+        dateInput={dateInput}
+        onDateInputChange={setDateInput}
+        onSave={handleDateSave}
+        onCancel={() => {
+          setShowDateDialog(false);
+          setCurrentField(null);
+        }}
+      />
 
-          <div className="space-y-4 mt-2">
-            <div className="space-y-2">
-              <Label htmlFor="date-field-input">Date</Label>
-              <Input
-                id="date-field-input"
-                type="date"
-                value={dateInput}
-                onChange={(e) => setDateInput(e.target.value)}
-                className="text-base h-12"
-                autoFocus
-              />
-              <Button
-                variant="link"
-                size="sm"
-                className="text-indigo-600 p-0 h-auto"
-                onClick={() => setDateInput(new Date().toISOString().split('T')[0])}
-              >
-                Use today's date
-              </Button>
-            </div>
-          </div>
-
-          <DialogFooter className="mt-4">
-            <Button
-              variant="outline"
-              className="h-11"
-              onClick={() => {
-                setShowDateDialog(false);
-                setCurrentField(null);
-              }}
-            >
-              Cancel
-            </Button>
-            <Button
-              onClick={handleDateSave}
-              disabled={!dateInput}
-              className="bg-indigo-600 hover:bg-indigo-700 h-11"
-            >
-              <Check className="h-4 w-4 mr-1.5" />
-              Save
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* ==================== DROPDOWN SELECT DIALOG ==================== */}
-      <Dialog
+      <DropdownDialog
         open={showDropdownDialog}
         onOpenChange={(open) => {
           setShowDropdownDialog(open);
           if (!open) setCurrentField(null);
         }}
-      >
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <ChevronDown className="h-5 w-5 text-indigo-600" />
-              Select an option
-            </DialogTitle>
-            <DialogDescription>
-              {currentField?.metadata?.placeholder
-                ? String(currentField.metadata.placeholder)
-                : 'Choose one of the available options below.'}
-            </DialogDescription>
-          </DialogHeader>
+        currentField={currentField}
+        dropdownValue={dropdownValue}
+        onDropdownValueChange={setDropdownValue}
+        onSave={handleDropdownSave}
+        onCancel={() => {
+          setShowDropdownDialog(false);
+          setCurrentField(null);
+        }}
+      />
 
-          <div className="space-y-2 mt-2 max-h-60 overflow-y-auto">
-            {((currentField?.metadata?.options as string[]) || []).map(
-              (option: string, idx: number) => (
-                <button
-                  key={idx}
-                  type="button"
-                  onClick={() => setDropdownValue(option)}
-                  className={`w-full text-left p-3 rounded-lg border text-sm transition-all min-h-[44px] ${
-                    dropdownValue === option
-                      ? 'border-indigo-500 bg-indigo-50 text-indigo-900 font-medium'
-                      : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
-                  }`}
-                >
-                  {option}
-                </button>
-              ),
-            )}
-            {(!currentField?.metadata?.options ||
-              (currentField.metadata.options as string[]).length === 0) && (
-              <p className="text-sm text-gray-500 text-center py-4">
-                No options configured for this field.
-              </p>
-            )}
-          </div>
+      <ConsentDialog
+        open={showConsentDialog}
+        onOpenChange={setShowConsentDialog}
+        envelopeTitle={envelope_title}
+        signerName={sessionData.signer_name}
+        completedCount={completedFields.length}
+        requiredCount={requiredFields.length}
+        consentAccepted={consentAccepted}
+        onConsentChange={setConsentAccepted}
+        isSubmitting={isSubmitting}
+        onSubmit={handleFinalSubmit}
+        onCancel={() => {
+          setShowConsentDialog(false);
+          setConsentAccepted(false);
+        }}
+      />
 
-          <DialogFooter className="mt-4">
-            <Button
-              variant="outline"
-              className="h-11"
-              onClick={() => {
-                setShowDropdownDialog(false);
-                setCurrentField(null);
-              }}
-            >
-              Cancel
-            </Button>
-            <Button
-              onClick={handleDropdownSave}
-              disabled={!dropdownValue}
-              className="bg-indigo-600 hover:bg-indigo-700 h-11"
-            >
-              <Check className="h-4 w-4 mr-1.5" />
-              Confirm
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <RejectDialog
+        open={showRejectDialog}
+        onOpenChange={setShowRejectDialog}
+        rejectReason={rejectReason}
+        onRejectReasonChange={setRejectReason}
+        onSubmit={handleRejectSubmit}
+        onCancel={() => setShowRejectDialog(false)}
+      />
 
-      {/* ==================== ECTA CONSENT DIALOG ==================== */}
-      <Dialog open={showConsentDialog} onOpenChange={setShowConsentDialog}>
-        <DialogContent className="max-w-lg">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <ShieldCheck className="h-5 w-5 text-indigo-600" />
-              Confirm your signature
-            </DialogTitle>
-            <DialogDescription>
-              Please review the following before completing your signature.
-            </DialogDescription>
-          </DialogHeader>
-
-          <div className="space-y-5 mt-2">
-            <div className="bg-gray-50 rounded-lg p-4 space-y-2">
-              <div className="flex items-center justify-between text-sm">
-                <span className="text-gray-600">Document</span>
-                <span className="font-medium text-gray-900 truncate max-w-[60%] text-right">
-                  {envelope_title}
-                </span>
-              </div>
-              <div className="flex items-center justify-between text-sm">
-                <span className="text-gray-600">Signer</span>
-                <span className="font-medium text-gray-900">{sessionData.signer_name}</span>
-              </div>
-              <div className="flex items-center justify-between text-sm">
-                <span className="text-gray-600">Fields completed</span>
-                <span className="font-medium text-green-700">
-                  {completedFields.length} of {requiredFields.length}
-                </span>
-              </div>
-              <div className="flex items-center justify-between text-sm">
-                <span className="text-gray-600">Date</span>
-                <span className="font-medium text-gray-900">
-                  {new Date().toLocaleDateString('en-ZA', {
-                    day: '2-digit',
-                    month: 'long',
-                    year: 'numeric',
-                  })}
-                </span>
-              </div>
-            </div>
-
-            <div className="border rounded-lg p-4 bg-white">
-              <h4 className="text-sm font-semibold text-gray-900 mb-2">
-                Electronic Signature Consent
-              </h4>
-              <div className="text-xs text-gray-600 space-y-2 max-h-32 overflow-y-auto pr-2">
-                <p>
-                  By checking the box below and clicking "Submit Signature", I confirm and agree
-                  that:
-                </p>
-                <ol className="list-decimal pl-4 space-y-1">
-                  <li>I have reviewed the document in its entirety and understand its contents.</li>
-                  <li>
-                    I intend my electronic signature to have the same legal effect as a handwritten
-                    signature, in accordance with the Electronic Communications and Transactions Act
-                    25 of 2002 (ECTA) of South Africa.
-                  </li>
-                  <li>
-                    I consent to conducting this transaction electronically and acknowledge that my
-                    signature is legally binding.
-                  </li>
-                  <li>
-                    I understand that a record of this signing, including timestamp, IP address, and
-                    device information, will be maintained for audit purposes.
-                  </li>
-                </ol>
-              </div>
-            </div>
-
-            <div className="flex items-start gap-3 p-3 bg-indigo-50 border border-indigo-200 rounded-lg">
-              <UICheckbox
-                id="ecta-consent"
-                checked={consentAccepted}
-                onCheckedChange={(checked) => setConsentAccepted(checked === true)}
-                className="mt-0.5 h-5 w-5"
-              />
-              <Label
-                htmlFor="ecta-consent"
-                className="text-sm text-gray-800 cursor-pointer leading-snug"
-              >
-                I have read and agree to the above. I confirm this is my signature and I intend to
-                electronically sign this document.
-              </Label>
-            </div>
-          </div>
-
-          <DialogFooter className="mt-4 flex-col sm:flex-row gap-2">
-            <Button
-              variant="outline"
-              className="h-11"
-              onClick={() => {
-                setShowConsentDialog(false);
-                setConsentAccepted(false);
-              }}
-            >
-              Go back
-            </Button>
-            <Button
-              onClick={handleFinalSubmit}
-              disabled={!consentAccepted || isSubmitting}
-              className="bg-indigo-600 hover:bg-indigo-700 h-11"
-            >
-              {isSubmitting ? (
-                <>
-                  <Loader2 className="h-4 w-4 mr-1.5 animate-spin" />
-                  Submitting...
-                </>
-              ) : (
-                <>
-                  <ShieldCheck className="h-4 w-4 mr-1.5" />
-                  Submit signature
-                </>
-              )}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* ==================== REJECT DIALOG ==================== */}
-      <Dialog open={showRejectDialog} onOpenChange={setShowRejectDialog}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2 text-destructive">
-              <AlertCircle className="h-5 w-5" />
-              Decline to sign
-            </DialogTitle>
-            <DialogDescription>
-              Are you sure you want to decline this document? This action cannot be undone. The
-              sender will be notified of your reason.
-            </DialogDescription>
-          </DialogHeader>
-
-          <Textarea
-            value={rejectReason}
-            onChange={(e) => setRejectReason(e.target.value)}
-            placeholder="Please explain why you are declining..."
-            className="mt-4 min-h-[100px]"
-          />
-
-          <DialogFooter className="mt-6">
-            <Button onClick={() => setShowRejectDialog(false)} variant="outline" className="h-11">
-              Cancel
-            </Button>
-            <Button
-              onClick={handleRejectSubmit}
-              disabled={!rejectReason.trim()}
-              variant="destructive"
-              className="h-11"
-            >
-              Decline document
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* ==================== PAUSE / SAVE FOR LATER DIALOG ==================== */}
-      <Dialog open={showPauseDialog} onOpenChange={setShowPauseDialog}>
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <PauseCircle className="h-5 w-5 text-indigo-600" />
-              Save & Finish later
-            </DialogTitle>
-            <DialogDescription>
-              Your filled fields will be saved on this device. You can return to this signing link
-              any time before the document expires.
-            </DialogDescription>
-          </DialogHeader>
-
-          {sessionData.expires_at && (
-            <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 text-sm text-amber-900">
-              This document expires on{' '}
-              <strong>
-                {new Date(sessionData.expires_at).toLocaleDateString('en-ZA', {
-                  day: '2-digit',
-                  month: 'long',
-                  year: 'numeric',
-                })}
-              </strong>
-              .
-            </div>
-          )}
-
-          <DialogFooter className="mt-4">
-            <Button variant="outline" className="h-11" onClick={() => setShowPauseDialog(false)}>
-              Keep signing
-            </Button>
-            <Button onClick={handlePauseConfirm} className="bg-indigo-600 hover:bg-indigo-700 h-11">
-              <PauseCircle className="h-4 w-4 mr-1.5" />
-              Save & exit
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <PauseDialog
+        open={showPauseDialog}
+        onOpenChange={setShowPauseDialog}
+        expiresAt={sessionData.expires_at}
+        onConfirm={handlePauseConfirm}
+        onCancel={() => setShowPauseDialog(false)}
+      />
     </div>
   );
 }

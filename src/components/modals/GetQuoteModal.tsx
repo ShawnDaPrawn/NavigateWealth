@@ -9,7 +9,7 @@ import { Progress } from '../ui/progress';
 import { ImageWithFallback } from '../figma/ImageWithFallback';
 import { CheckCircle, ArrowRight, ArrowLeft, X, Info, User, Shield, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
-import { projectId, publicAnonKey } from '../../utils/supabase/info';
+import { api } from '../../utils/api/client';
 
 interface Provider {
   id: string;
@@ -120,39 +120,29 @@ export function GetQuoteModal({
           : providers.find((p) => p.id === formData.preferredProvider)?.name ||
             formData.preferredProvider;
 
-      const response = await fetch(
-        `https://${projectId}.supabase.co/functions/v1/make-server-91ed8379/quote-request/submit`,
+      await api.post(
+        '/quote-request/submit',
         {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${publicAnonKey}`,
-          },
-          body: JSON.stringify({
-            firstName: formData.firstName.trim(),
-            lastName: formData.lastName.trim(),
-            email: formData.email.trim(),
-            phone: formData.phone.trim(),
-            productName,
-            coverage: formData.coverage,
-            preferredProvider: providerName,
-            website: honeypotWebsite,
-          }),
+          firstName: formData.firstName.trim(),
+          lastName: formData.lastName.trim(),
+          email: formData.email.trim(),
+          phone: formData.phone.trim(),
+          productName,
+          coverage: formData.coverage,
+          preferredProvider: providerName,
+          website: honeypotWebsite,
         },
+        { retryTransientFailures: false },
       );
-
-      const result = await response.json();
-
-      if (!response.ok) {
-        console.error('Quote request submission error:', result);
-        toast.error(result.error || 'Something went wrong. Please try again.');
-        return;
-      }
 
       setCurrentStep(totalSteps);
     } catch (error) {
       console.error('Quote request network error:', error);
-      toast.error('Unable to submit your request. Please check your connection and try again.');
+      toast.error(
+        error instanceof Error && error.message
+          ? error.message
+          : 'Unable to submit your request. Please check your connection and try again.',
+      );
     } finally {
       setIsSubmitting(false);
     }
