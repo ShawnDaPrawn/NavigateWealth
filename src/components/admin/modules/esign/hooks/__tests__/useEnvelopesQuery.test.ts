@@ -45,7 +45,7 @@ vi.mock('../../api', () => ({
   },
 }));
 
-vi.mock('../constants', () => ({
+vi.mock('../../constants', () => ({
   QUERY_STALE_TIME: 30000,
   QUERY_GC_TIME: 300000,
 }));

@@ -80,7 +80,7 @@ vi.mock('../useEnvelopesQuery', () => ({
   },
 }));
 
-vi.mock('../../../../../utils/logger', () => ({
+vi.mock('../../../../../../utils/logger', () => ({
   logger: {
     debug: vi.fn(),
     info: vi.fn(),
@@ -93,7 +93,7 @@ vi.mock('../../utils/toastWithRetry', () => ({
   toastError: vi.fn(),
 }));
 
-vi.mock('../constants', () => ({
+vi.mock('../../constants', () => ({
   SUCCESS_MESSAGES: {
     ENVELOPE_CREATED: 'Envelope created successfully',
     ENVELOPE_SENT: 'Envelope sent to signers',

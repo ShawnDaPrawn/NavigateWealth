@@ -21,11 +21,11 @@ vi.mock('../article-detail/BackToTop', () => ({
 }));
 
 // ── External service stubs ────────────────────────────────────────────────────
-vi.mock('../../utils/supabase/info', () => ({
+vi.mock('../../../utils/supabase/info', () => ({
   publicAnonKey: 'test-anon-key',
 }));
 
-vi.mock('../../utils/api/config', () => ({
+vi.mock('../../../utils/api/config', () => ({
   API_CONFIG: { BASE_URL: 'https://api.test' },
 }));
 

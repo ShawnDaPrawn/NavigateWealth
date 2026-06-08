@@ -35,7 +35,7 @@ vi.mock('sonner', () => ({
 
 const mockInvalidateQueries = vi.fn();
 
-vi.mock('../../../../../utils/queryKeys', () => ({
+vi.mock('../queryKeys', () => ({
   noteKeys: {
     all: ['notes'] as const,
     lists: () => ['notes', 'list'] as const,

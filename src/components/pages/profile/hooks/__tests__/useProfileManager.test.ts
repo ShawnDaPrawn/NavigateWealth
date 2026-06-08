@@ -6,11 +6,11 @@ const mockGetSession = vi.fn();
 const mockApiGet = vi.fn();
 const mockApiPut = vi.fn();
 
-vi.mock('../../../../utils/auth/authService', () => ({
+vi.mock('../../../../../utils/auth/authService', () => ({
   getSession: (...args: unknown[]) => mockGetSession(...args),
 }));
 
-vi.mock('../../../../utils/api/client', () => ({
+vi.mock('../../../../../utils/api/client', () => ({
   api: {
     get: (...args: unknown[]) => mockApiGet(...args),
     put: (...args: unknown[]) => mockApiPut(...args),
@@ -25,11 +25,11 @@ vi.mock('sonner', () => ({
   },
 }));
 
-vi.mock('../../../../utils/supabase/info', () => ({
+vi.mock('../../../../../utils/supabase/info', () => ({
   projectId: 'test-project',
 }));
 
-vi.mock('../../../../utils/logger', () => ({
+vi.mock('../../../../../utils/logger', () => ({
   logger: {
     debug: vi.fn(),
     info: vi.fn(),
@@ -38,7 +38,7 @@ vi.mock('../../../../utils/logger', () => ({
   },
 }));
 
-vi.mock('../../../../utils/errorUtils', () => ({
+vi.mock('../../../../../utils/errorUtils', () => ({
   getUserErrorMessage: (err: unknown) => (err instanceof Error ? err.message : 'Unknown error'),
   isAbortError: (err: unknown) => err instanceof DOMException && err.name === 'AbortError',
 }));

@@ -49,7 +49,7 @@ vi.mock('../queryKeys', () => ({
   },
 }));
 
-vi.mock('../normalizeClientProfileKv', () => ({
+vi.mock('../../normalizeClientProfileKv', () => ({
   normalizeClientProfileKv: (p: unknown) => p,
 }));
 
