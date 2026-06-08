@@ -179,10 +179,7 @@ describe('fetchPreferences', () => {
   });
 
   it('returns null when response success is false', async () => {
-    vi.stubGlobal(
-      'fetch',
-      vi.fn().mockResolvedValue(makeFetchResponse({ success: false })),
-    );
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(makeFetchResponse({ success: false })));
 
     const result = await fetchPreferences();
     expect(result).toBeNull();
@@ -233,10 +230,7 @@ describe('updatePreferences', () => {
   };
 
   it('resolves without error on success', async () => {
-    vi.stubGlobal(
-      'fetch',
-      vi.fn().mockResolvedValue(makeFetchResponse({ success: true })),
-    );
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(makeFetchResponse({ success: true })));
 
     await expect(updatePreferences(preferences)).resolves.toBeUndefined();
   });
@@ -254,9 +248,7 @@ describe('updatePreferences', () => {
   it('throws when there is no session', async () => {
     mockGetSession.mockResolvedValue({ data: { session: null } });
 
-    await expect(updatePreferences(preferences)).rejects.toThrow(
-      'Not authenticated',
-    );
+    await expect(updatePreferences(preferences)).rejects.toThrow('Not authenticated');
   });
 
   it('throws when response is not ok', async () => {
@@ -269,10 +261,7 @@ describe('updatePreferences', () => {
   });
 
   it('throws generic message when error field is missing and response not ok', async () => {
-    vi.stubGlobal(
-      'fetch',
-      vi.fn().mockResolvedValue(makeFetchResponse({}, false, 500)),
-    );
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(makeFetchResponse({}, false, 500)));
 
     await expect(updatePreferences(preferences)).rejects.toThrow(
       'Failed to save communication preferences',

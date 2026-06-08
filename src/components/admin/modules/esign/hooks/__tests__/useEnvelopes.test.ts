@@ -155,9 +155,7 @@ describe('useEnvelopes — queryFn', () => {
       return { data: undefined, isLoading: false, error: null };
     });
 
-    renderHook(() =>
-      useEnvelopes({ clientId: 'client-123', clientEmail: 'client@test.com' }),
-    );
+    renderHook(() => useEnvelopes({ clientId: 'client-123', clientEmail: 'client@test.com' }));
 
     mockGetClientEnvelopes.mockResolvedValue({ envelopes: [{ id: 'e-2' }] });
     const result = await (captured.queryFn as () => Promise<unknown>)();
