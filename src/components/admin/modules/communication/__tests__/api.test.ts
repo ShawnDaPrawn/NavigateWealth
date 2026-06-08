@@ -20,12 +20,16 @@ vi.mock('../../../../../utils/supabase/info', () => ({
   publicAnonKey: 'test-anon-key',
 }));
 
+const mockCreateClient = vi.fn(() => ({
+  auth: {
+    getSession: async () => ({ data: { session: null } }),
+  },
+}));
+
 vi.mock('../../../../../utils/supabase/client', () => ({
-  createClient: () => ({
-    auth: {
-      getSession: async () => ({ data: { session: null } }),
-    },
-  }),
+  get createClient() {
+    return mockCreateClient;
+  },
 }));
 
 const MOCK_CLIENT = { id: 'client-001', name: 'Alice Smith', email: 'alice@test.com' };
@@ -402,5 +406,195 @@ describe('buildCampaignMessagePreview via getHistoryPage', () => {
     await communicationApi.getHistoryPage({ search: 'newsletter', channel: 'email' });
     expect(mockApiGet).toHaveBeenCalledWith(expect.stringContaining('search=newsletter'));
     expect(mockApiGet).toHaveBeenCalledWith(expect.stringContaining('channel=email'));
+  });
+});
+
+describe('communicationApi debugGroups', () => {
+  it('debugGroups calls GET groups/debug endpoint and returns debug data', async () => {
+    const debugData = { groups: [{ id: 'g1' }], clients: [{ id: 'c1' }], summary: { total: 1 } };
+    mockApiGet.mockResolvedValue(debugData);
+    const result = await communicationApi.debugGroups();
+    expect(mockApiGet).toHaveBeenCalledWith(expect.stringContaining('debug'));
+    expect(result).toEqual(debugData);
+  });
+});
+
+describe('communicationApi getHistory', () => {
+  it('getHistory returns activity log entries for given page and limit', async () => {
+    const backendCampaign = {
+      id: 'camp-hist-001',
+      channel: 'email',
+      recipientType: 'group',
+      createdAt: '2025-04-01T10:00:00Z',
+      createdBy: 'admin',
+      subject: 'History Test',
+      bodyHtml: '<p>Content</p>',
+      status: 'sent',
+    };
+    mockApiGet.mockResolvedValue({
+      campaigns: [backendCampaign],
+      total: 1,
+      page: 1,
+      limit: 20,
+    });
+    const result = await communicationApi.getHistory(1, 20);
+    expect(Array.isArray(result)).toBe(true);
+    expect(result.length).toBe(1);
+    expect(result[0].channel).toBe('email');
+  });
+
+  it('getHistory uses default page=1 and limit=50', async () => {
+    mockApiGet.mockResolvedValue({ campaigns: [], total: 0, page: 1, limit: 50 });
+    const result = await communicationApi.getHistory();
+    expect(Array.isArray(result)).toBe(true);
+    expect(mockApiGet).toHaveBeenCalledWith(expect.stringContaining('page=1'));
+    expect(mockApiGet).toHaveBeenCalledWith(expect.stringContaining('limit=50'));
+  });
+});
+
+describe('communicationApi uploadFile', () => {
+  it('uploadFile sends a POST with FormData via fetch and returns attachment data', async () => {
+    const mockAttachment = { id: 'att-001', filename: 'doc.pdf', url: 'https://cdn/doc.pdf' };
+    const mockFetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => mockAttachment,
+    });
+    vi.stubGlobal('fetch', mockFetch);
+
+    const file = new File(['content'], 'doc.pdf', { type: 'application/pdf' });
+    const result = await communicationApi.uploadFile(file);
+
+    expect(mockFetch).toHaveBeenCalledOnce();
+    const [url, options] = mockFetch.mock.calls[0];
+    expect(url).toContain('communication/upload');
+    expect(options.method).toBe('POST');
+    expect(options.headers.Authorization).toContain('Bearer');
+    expect(options.body).toBeInstanceOf(FormData);
+    expect(result).toEqual(mockAttachment);
+
+    vi.unstubAllGlobals();
+  });
+
+  it('uploadFile throws when the response is not ok', async () => {
+    const mockFetch = vi.fn().mockResolvedValue({
+      ok: false,
+      json: async () => ({ error: 'File too large' }),
+    });
+    vi.stubGlobal('fetch', mockFetch);
+
+    const file = new File(['data'], 'big.pdf', { type: 'application/pdf' });
+    await expect(communicationApi.uploadFile(file)).rejects.toThrow('File too large');
+
+    vi.unstubAllGlobals();
+  });
+});
+
+describe('communicationApi sendDirectMessage', () => {
+  it('sendDirectMessage posts payload via fetch and returns response data on success', async () => {
+    const mockResponse = { success: true, messageId: 'msg-xyz' };
+    const mockFetch = vi.fn().mockResolvedValue({
+      ok: true,
+      headers: { get: () => 'application/json' },
+      json: async () => mockResponse,
+    });
+    vi.stubGlobal('fetch', mockFetch);
+
+    const result = await communicationApi.sendDirectMessage({
+      clientId: 'client-001',
+      subject: 'Hello',
+      message: 'Test body',
+      category: 'general',
+      priority: 'normal',
+      sendEmail: true,
+      clientEmail: 'client@example.com',
+    });
+
+    expect(mockFetch).toHaveBeenCalledOnce();
+    const [url, options] = mockFetch.mock.calls[0];
+    expect(url).toContain('communication/send');
+    expect(options.method).toBe('POST');
+    expect(options.headers['Content-Type']).toBe('application/json');
+    const body = JSON.parse(options.body as string);
+    expect(body.recipients).toContain('client-001');
+    expect(body.subject).toBe('Hello');
+    expect(result).toEqual(mockResponse);
+
+    vi.unstubAllGlobals();
+  });
+
+  it('sendDirectMessage returns success:true with unknown messageId when response is not JSON', async () => {
+    const mockFetch = vi.fn().mockResolvedValue({
+      ok: true,
+      headers: { get: () => 'text/plain' },
+    });
+    vi.stubGlobal('fetch', mockFetch);
+
+    const result = await communicationApi.sendDirectMessage({
+      clientId: 'client-002',
+      subject: 'Plain response',
+      message: 'Body',
+      category: 'info',
+      priority: 'low',
+      sendEmail: false,
+    });
+
+    expect(result).toEqual({ success: true, messageId: 'unknown' });
+
+    vi.unstubAllGlobals();
+  });
+
+  it('sendDirectMessage throws when JSON response is not ok', async () => {
+    const mockFetch = vi.fn().mockResolvedValue({
+      ok: false,
+      statusText: 'Bad Request',
+      headers: { get: () => 'application/json' },
+      json: async () => ({ error: 'Invalid recipient' }),
+    });
+    vi.stubGlobal('fetch', mockFetch);
+
+    await expect(
+      communicationApi.sendDirectMessage({
+        clientId: 'bad-client',
+        subject: 'Fail',
+        message: 'Body',
+        category: 'general',
+        priority: 'normal',
+        sendEmail: true,
+      }),
+    ).rejects.toThrow('Invalid recipient');
+
+    vi.unstubAllGlobals();
+  });
+
+  it('sendDirectMessage uses session token when session is present', async () => {
+    // Override supabase mock to return an active session for this test only
+    mockCreateClient.mockReturnValueOnce({
+      auth: {
+        getSession: async () => ({
+          data: { session: { access_token: 'session-token-abc' } },
+        }),
+      },
+    } as never);
+
+    const mockFetch = vi.fn().mockResolvedValue({
+      ok: true,
+      headers: { get: () => 'application/json' },
+      json: async () => ({ success: true, messageId: 'msg-session' }),
+    });
+    vi.stubGlobal('fetch', mockFetch);
+
+    await communicationApi.sendDirectMessage({
+      clientId: 'client-003',
+      subject: 'With session',
+      message: 'Body',
+      category: 'general',
+      priority: 'normal',
+      sendEmail: false,
+    });
+
+    const [, options] = mockFetch.mock.calls[0];
+    expect(options.headers.Authorization).toBe('Bearer session-token-abc');
+
+    vi.unstubAllGlobals();
   });
 });
