@@ -49,6 +49,10 @@ export class APIError extends Error {
   }
 }
 
+export interface APIRequestOptions extends RequestInit {
+  retryTransientFailures?: boolean;
+}
+
 class APIClient {
   private baseURL = `${supabaseUrl}/functions/v1/make-server-91ed8379`;
 
@@ -170,24 +174,25 @@ class APIClient {
     method: string,
     endpoint: string,
     data?: unknown,
-    options?: RequestInit,
+    options?: APIRequestOptions,
     isRetry = false,
   ): Promise<T> {
     // Ensure endpoint starts with a slash
     const normalizedEndpoint = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
     const url = `${this.baseURL}${normalizedEndpoint}`;
     const token = await this.getAuthToken();
+    const { retryTransientFailures = true, ...fetchOptions } = options ?? {};
 
     const headers: HeadersInit = {
       'Content-Type': 'application/json',
       Authorization: `Bearer ${token}`,
-      ...options?.headers,
+      ...fetchOptions.headers,
     };
 
     const config: RequestInit = {
       method,
       headers,
-      ...options,
+      ...fetchOptions,
     };
 
     if (data && (method === 'POST' || method === 'PUT' || method === 'PATCH')) {
@@ -209,7 +214,7 @@ class APIClient {
     }
 
     // Retry logic for network errors
-    const maxRetries = 3;
+    const maxRetries = retryTransientFailures ? 3 : 0;
     const baseDelay = 1000;
 
     for (let attempt = 0; attempt <= maxRetries; attempt++) {
@@ -334,35 +339,35 @@ class APIClient {
   /**
    * GET request
    */
-  async get<T>(endpoint: string, options?: RequestInit): Promise<T> {
+  async get<T>(endpoint: string, options?: APIRequestOptions): Promise<T> {
     return this.request<T>('GET', endpoint, undefined, options);
   }
 
   /**
    * POST request
    */
-  async post<T>(endpoint: string, data?: unknown, options?: RequestInit): Promise<T> {
+  async post<T>(endpoint: string, data?: unknown, options?: APIRequestOptions): Promise<T> {
     return this.request<T>('POST', endpoint, data, options);
   }
 
   /**
    * PUT request
    */
-  async put<T>(endpoint: string, data?: unknown, options?: RequestInit): Promise<T> {
+  async put<T>(endpoint: string, data?: unknown, options?: APIRequestOptions): Promise<T> {
     return this.request<T>('PUT', endpoint, data, options);
   }
 
   /**
    * PATCH request
    */
-  async patch<T>(endpoint: string, data?: unknown, options?: RequestInit): Promise<T> {
+  async patch<T>(endpoint: string, data?: unknown, options?: APIRequestOptions): Promise<T> {
     return this.request<T>('PATCH', endpoint, data, options);
   }
 
   /**
    * DELETE request
    */
-  async delete<T>(endpoint: string, options?: RequestInit): Promise<T> {
+  async delete<T>(endpoint: string, options?: APIRequestOptions): Promise<T> {
     return this.request<T>('DELETE', endpoint, undefined, options);
   }
 }

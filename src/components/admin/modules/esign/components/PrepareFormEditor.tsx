@@ -21,8 +21,8 @@ import {
 import { PDFViewer } from './PDFViewer';
 import { FieldPalette } from './FieldPalette';
 import type { EsignEnvelope, EsignField, SignerFormData } from '../types';
-import { projectId, publicAnonKey } from '../../../../../utils/supabase/info';
 import { logger } from '../../../../../utils/logger';
+import { api } from '../../../../../utils/api/client';
 
 interface PrepareFormEditorProps {
   envelope: EsignEnvelope;
@@ -64,21 +64,7 @@ export function PrepareFormEditor({
       setAutoSaving(true);
 
       // Save to backend via API
-      const response = await fetch(
-        `https://${projectId}.supabase.co/functions/v1/make-server-91ed8379/esign/envelopes/${envelope.id}/fields`,
-        {
-          method: 'PUT',
-          headers: {
-            Authorization: `Bearer ${publicAnonKey}`,
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({ fields }),
-        },
-      );
-
-      if (!response.ok) {
-        throw new Error('Failed to auto-save fields');
-      }
+      await api.put(`/esign/envelopes/${envelope.id}/fields`, { fields });
 
       // Update last saved reference
       lastSavedFieldsRef.current = JSON.stringify(fields);
