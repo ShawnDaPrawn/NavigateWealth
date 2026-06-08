@@ -132,11 +132,14 @@ export default tseslint.config(
   //    as each warning bucket is burned down (mirrors the typecheck burn-down).
   {
     rules: {
-      // Phase 7 file-size guard — WARN. Raised from 600 → 2000 to match the
-      // codebase's actual scale; per-file suppressions cover the handful of
-      // legacy files that still exceed 2000 lines. Promote to "error" and lower
-      // the ceiling incrementally as those files are split.
-      'max-lines': ['warn', { max: 2000, skipBlankLines: true, skipComments: true }],
+      // Phase 7 file-size guard — WARN. Lowered 2000 → 1000 (Stage 1) to catch
+      // new god-files at PR time. The target ceiling is 600 (Stage 2), to be
+      // applied once the in-flight backend/frontend splits (Sessions B, D, E)
+      // land and no file exceeds 1000 lines. The files that warn at 1000 today
+      // are exactly the ones those splits must decompose. Kept as "warn" (not
+      // "error") so the existing backlog doesn't block CI; promote to "error"
+      // once the backlog clears. The /scripts/** override (§7c) stays "off".
+      'max-lines': ['warn', { max: 1000, skipBlankLines: true, skipComments: true }],
       '@typescript-eslint/no-explicit-any': 'off',
       '@typescript-eslint/no-unused-vars': [
         'warn',

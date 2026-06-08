@@ -1,6 +1,6 @@
 Navigate Wealth Admin Panel
 
-Production Engineering, Architecture & Design System Guidelines (v5)
+Production Engineering, Architecture & Design System Guidelines (v6)
 
 > **Companion document - read in tandem.**
 > `docs/PRODUCTION-READINESS.md` is the _status & roadmap_: what is
@@ -87,8 +87,16 @@ The frontend never accesses Supabase directly for data mutations — all writes 
 The server is the single authority for business logic, validation, and data integrity
 The KV store is the persistence layer; the server owns all read/write patterns
 Supabase Auth is used for identity; the server enforces authorisation
-Module Structure (Boundary Contract)
-4.1 Frontend Module Structure
+
+**Centralised API client (Non-Negotiable):**
+
+All frontend calls to the server (the Supabase Edge Function) MUST go through the centralised API client at `src/utils/api/client.ts` (the exported `api` instance). It owns token management, the base-URL/endpoint resolution (`src/utils/api/config.ts`, `resolveEndpoint.ts`), consistent error contracts (`APIError`), and dead-session handling.
+
+- Raw `fetch()` (or `axios`, `XMLHttpRequest`, etc.) to a Supabase Functions URL (`*.supabase.co/functions/v1/...`) from frontend code is forbidden. Constructing endpoint URLs by hand or hardcoding the project ref scatters auth/error logic and drifts from the server contract.
+- The only sanctioned place that knows the Supabase URL/anon key is `src/utils/supabase/info.tsx`, consumed by the API client and the Supabase Auth client — feature code consumes `api`, never these directly for data access.
+- New endpoints are added as typed methods on the API client, not as ad-hoc fetches in components or hooks.
+  Module Structure (Boundary Contract)
+  4.1 Frontend Module Structure
 
 Each module represents one domain responsibility and must follow a consistent internal structure.
 
@@ -918,6 +926,13 @@ When rules conflict with reality, document the exception and evolve the standard
 
 The goal is shared understanding and long-term safety, not blind compliance.
 
+Changelog: v5 → v6
+
+Section Change
+
+§3.2 Added the Centralised API client rule (Non-Negotiable): all frontend→server calls go through `src/utils/api/client.ts`; raw fetch to Supabase Functions URLs and hand-built endpoints are forbidden.
+§20 New. Code Quality Invariants (Enforced): consolidated, mechanically-checked rules — 20.1 maximum file size (600-line ceiling, component files included; staged 1000→600 ratchet), 20.2 test location and coverage floor, 20.3 banned patterns (raw Supabase fetch, runtime edge-function imports, wildcard/floating deps, hardcoded admin emails, cross-feature internals, server console.log, PII in logs), 20.4 PR checklist additions.
+
 Changelog: v4 → v5
 
 Section Change
@@ -1016,6 +1031,41 @@ Pull Request Checklist additions:
 [ ] No new query key arrays defined outside `/utils/queryKeys.ts`
 [ ] New financial data points registered in Universal Key Manager
 [ ] Module Client types extend BaseClient
+
+20 — Code Quality Invariants (Enforced)
+
+These invariants are mechanically enforced at PR time (ESLint, dependency-cruiser, Prettier, the Vitest coverage gate, and guardrail tests in CI). They consolidate rules stated elsewhere in this document into a single, checkable list. Treat them as Tier 1/Tier 2 depending on the item; a violation either fails CI or requires a documented, time-boxed exception.
+
+20.1 Maximum file size
+
+- **No file should exceed 600 lines.** This is the target ceiling and the value the `max-lines` ESLint rule warns at (`skipBlankLines`, `skipComments`). A file past 600 lines is almost always doing too much and must be split along the module structure in §4.1 (frontend) / §4.2 (backend): extract components into `components/`, hooks into `hooks/`, pure helpers into `utils.ts`, and types into `types.ts`.
+- **No component (`.tsx`) file should exceed 600 lines** specifically — presentation files hit this ceiling fastest and are split by lifting subviews, dialogs, and derived-state utilities (§7.1) out of the entry component.
+- The ceiling is being lowered in stages as legacy god-files are decomposed: the rule currently warns at **1000** lines and ratchets down to **600** once the in-flight splits land. New files must already meet 600 — do not add to the legacy backlog. `scripts/**` is exempt (build/maintenance automation is not bundled).
+- File-size limits are review triggers, not licences to mangle cohesive code: split for genuine responsibility boundaries, never to game the line count.
+
+  20.2 Test location and coverage floor
+
+- Tests are colocated with the code they cover in a `__tests__/` directory (e.g. `module/__tests__/useThing.test.ts`) and named `*.test.ts(x)` / `*.spec.ts(x)`. Vitest discovers `src/**/*.{test,spec}.{ts,tsx}`; Playwright e2e specs live under `e2e/` and run via `npm run test:e2e`, not Vitest.
+- Edge-function (Deno) tests live alongside server source under `src/supabase/functions/server/__tests__/` and `vi.mock()` the `npm:`/`jsr:`/`Deno.*` specifiers so they run under Node.
+- A coverage floor is enforced by the Vitest `--coverage` gate in CI (thresholds in `vitest.config.ts`). Coverage must not regress below the configured floor; the floors ratchet upward as characterisation tests grow and must never be lowered to make a change pass.
+- Priority is risk, not percentage (§15): business rules, validation, error handling, financial calculations, data transformations, and multi-entry KV consistency.
+
+  20.3 Banned patterns
+
+These are forbidden in application code and are caught by lint/dependency-cruiser/guardrail tests:
+
+- **Raw fetch to Supabase** — no `fetch()`/`axios`/`XMLHttpRequest` to a `*.supabase.co/functions/v1/...` URL, no hand-built endpoint URLs, and no hardcoded project ref. All server calls go through the centralised API client (`src/utils/api/client.ts`, the `api` instance) — see §3.2.
+- **Frontend importing edge-function source at runtime** — SPA code must not `import` from `**/supabase/functions/**` (type-only imports are allowed). It calls those routes over HTTP. Enforced by `@typescript-eslint/no-restricted-imports`.
+- **Wildcard / floating dependencies** — no `"*"`, `"latest"`, or unpinned version ranges in `package.json`, and no version-suffixed bare specifiers (e.g. `sonner@2.0.3`) in import paths. Dependencies are pinned for reproducible, audited builds (§8.4 platform constraints).
+- **Hardcoded admin/super-admin emails for authorisation** — authorisation must not branch on a string-literal email compared inline. Super-admin checks go through the durable allowlist + env override (`isSuperAdminEmail()` in `src/supabase/functions/server/constants.ts`); a single hardcoded address is a single point of failure with no deploy-free recovery path.
+- **Cross-feature internal imports** — importing another feature module's `api.ts`/`types.ts`/`hooks/`/`components/` instead of its `index.tsx` barrel (§4.1) — enforced by dependency-cruiser's `no-cross-feature-internals`.
+- **Raw `console.log` on the server** — stdout corruption breaks HTTP responses; use the module logger / `console.error` (§5.1, §13).
+- **PII in logs** — never log client names, account numbers, financial details, contact info, or ID numbers (§12.2).
+
+  20.4 Pull Request Checklist additions
+  [ ] No file exceeds the `max-lines` ceiling (no new files over 600 lines)
+  [ ] Tests colocated in `__tests__/`; coverage floor not regressed
+  [ ] No banned patterns (raw Supabase fetch, wildcard deps, hardcoded admin emails)
 
 Principles Added multi-entry consistency principle
 home
