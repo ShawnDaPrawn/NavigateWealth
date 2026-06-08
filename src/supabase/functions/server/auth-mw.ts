@@ -9,7 +9,7 @@
 import { Context, Next } from 'npm:hono';
 import { createClient } from 'jsr:@supabase/supabase-js@2.49.8';
 import { logger } from './stderr-logger.ts';
-import { SUPER_ADMIN_EMAIL } from './constants.ts';
+import { isSuperAdminEmail } from './constants.ts';
 
 declare module 'npm:hono' {
   interface ContextVariableMap {
@@ -62,9 +62,10 @@ export async function getAuthContext(c: Context) {
     throw new AuthError('Invalid or expired session', 401, 'AUTH_INVALID');
   }
 
-  // Resolve role: if the user's email matches the hardcoded super admin,
-  // always treat them as super_admin regardless of user_metadata.
-  const isSuperAdmin = user.email?.toLowerCase() === SUPER_ADMIN_EMAIL.toLowerCase();
+  // Resolve role: if the user's email is on the super-admin allowlist (or the
+  // SUPER_ADMIN_EMAILS env override), always treat them as super_admin
+  // regardless of user_metadata.
+  const isSuperAdmin = isSuperAdminEmail(user.email);
   const role = isSuperAdmin ? 'super_admin' : user.user_metadata?.role || 'client';
 
   return {
@@ -111,8 +112,8 @@ async function resolveAuthUser(c: Context): Promise<ResolvedAuthUser | Response>
     return c.json({ error: 'Invalid or expired session', code: 'AUTH_INVALID' }, 401);
   }
 
-  // Resolve role with super admin email override
-  const isSuperAdmin = user.email?.toLowerCase() === SUPER_ADMIN_EMAIL.toLowerCase();
+  // Resolve role with super-admin allowlist override (hardcoded set ∪ env var)
+  const isSuperAdmin = isSuperAdminEmail(user.email);
   const role = isSuperAdmin ? 'super_admin' : user.user_metadata?.role || 'client';
 
   // Set user context on the Hono context for downstream handlers

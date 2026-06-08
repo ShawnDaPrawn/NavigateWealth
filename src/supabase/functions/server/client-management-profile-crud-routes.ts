@@ -2,7 +2,7 @@ import { Hono } from 'npm:hono';
 import { createModuleLogger } from './stderr-logger.ts';
 import { getErrMsg } from './shared-logger-utils.ts';
 import * as kv from './kv_store.tsx';
-import { SUPER_ADMIN_EMAIL } from './constants.ts';
+import { isSuperAdminEmail } from './constants.ts';
 import { asyncHandler } from './error.middleware.ts';
 import {
   PersonalInfoQuerySchema,
@@ -36,8 +36,8 @@ app.get(
     // Get profile from KV store
     const profile = await kv.get(key);
 
-    // Check if super admin by email
-    const isSuperAdmin = email && email.toLowerCase() === SUPER_ADMIN_EMAIL.toLowerCase();
+    // Check if super admin by email (durable allowlist + env override)
+    const isSuperAdmin = isSuperAdminEmail(email);
 
     // If profile exists, ensure super admin has correct role
     if (profile) {
@@ -300,7 +300,7 @@ app.post(
     }
 
     // ── Personnel guard ──────────────────────────────────────────────────────
-    const isSuperAdmin = email.toLowerCase() === SUPER_ADMIN_EMAIL.toLowerCase();
+    const isSuperAdmin = isSuperAdminEmail(email);
     const personnelProfile = await kv.get(`personnel:profile:${userId}`);
     if (personnelProfile && !isSuperAdmin) {
       log.info('User is personnel — skipping client profile creation', { userId });
