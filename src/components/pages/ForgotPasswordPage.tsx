@@ -7,8 +7,6 @@ import { Mail, ArrowLeft, Shield, CheckCircle, Lock, Clock, AlertCircle } from '
 import { getUserErrorMessage } from '../../utils/errorUtils';
 import { useNavigate, Link } from 'react-router';
 import { useState } from 'react';
-import { MobileAuthLayout } from './auth/MobileAuthLayout';
-import { useIsStandalone } from '../../hooks/useIsStandalone';
 
 export function ForgotPasswordPage() {
   const [email, setEmail] = useState('');
@@ -18,7 +16,6 @@ export function ForgotPasswordPage() {
   const [_currentSlide] = useState(0);
 
   const navigate = useNavigate();
-  const isStandalone = useIsStandalone();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -94,10 +91,6 @@ export function ForgotPasswordPage() {
         </div>
       </>
     );
-
-    if (isStandalone) {
-      return <MobileAuthLayout maxWidthClass="max-w-md">{successContent}</MobileAuthLayout>;
-    }
 
     return (
       <div className="flex flex-col lg:flex-row lg:min-h-screen">
@@ -226,10 +219,6 @@ export function ForgotPasswordPage() {
       </div>
     </>
   );
-
-  if (isStandalone) {
-    return <MobileAuthLayout maxWidthClass="max-w-md">{formContent}</MobileAuthLayout>;
-  }
 
   return (
     <div className="flex flex-col lg:flex-row lg:min-h-screen">

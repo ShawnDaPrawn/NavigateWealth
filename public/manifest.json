@@ -1,8 +1,8 @@
 {
   "name": "Navigate Wealth",
   "short_name": "Navigate Wealth",
-  "id": "/login",
-  "start_url": "/login",
+  "id": "/",
+  "start_url": "/",
   "scope": "/",
   "display": "standalone",
   "handle_links": "not-preferred",

@@ -9,13 +9,6 @@ import { DashboardFooter } from './DashboardFooter';
 import { AccountSuspendedPage } from '../pages/AccountSuspendedPage';
 import { ErrorBoundary } from '../shared/ErrorBoundary';
 import { InstallAppPrompt } from '../pwa/InstallAppPrompt';
-import { StandaloneRedirect } from '../pwa/StandaloneRedirect';
-import { useIsStandalone } from '../../hooks/useIsStandalone';
-
-// Auth screens that should render as a clean, full-screen app view (no marketing
-// TopBar / nav / footer) when running as an installed PWA. The website in a normal
-// browser is unaffected — this only applies in standalone display mode.
-const APP_AUTH_ROUTES = ['/login', '/signup', '/forgot-password'];
 
 interface MainLayoutProps {
   children: React.ReactNode;
@@ -36,11 +29,6 @@ export function MainLayout({
 }: MainLayoutProps) {
   const { isAuthenticated, user, logout } = useAuth();
   const [isScrolled, setIsScrolled] = useState(false);
-  const isStandalone = useIsStandalone();
-
-  // In the installed PWA, render the auth screens (login / signup / forgot
-  // password) as a focused, app-like view without the marketing chrome or footer.
-  const isAppAuthScreen = isStandalone && APP_AUTH_ROUTES.includes(window.location.pathname);
 
   // When forcePublicLayout is on, treat as unauthenticated for layout decisions
   const effectivelyAuthenticated = forcePublicLayout ? false : isAuthenticated;
@@ -108,22 +96,6 @@ export function MainLayout({
     );
   }
 
-  // Installed-PWA auth screens: strip the marketing chrome (no TopBar/nav/footer)
-  // and let each auth page render its branded MobileAuthLayout shell, which owns
-  // the full-height centring and device safe areas.
-  if (isAppAuthScreen) {
-    return (
-      <div className="min-h-[100dvh] bg-white">
-        <main id="main-content">
-          <ErrorBoundary inline fallbackTitle="Page Error">
-            {children}
-          </ErrorBoundary>
-        </main>
-        <StandaloneRedirect />
-      </div>
-    );
-  }
-
   return (
     <div className="min-h-screen bg-white flex flex-col">
       {/* TopBar - only show for logged out users (or forcePublicLayout), smoothly collapses on scroll */}
@@ -152,7 +124,6 @@ export function MainLayout({
       {(!isFocusedExperience || isAccountTypeSelection) &&
         !isAdminDashboard &&
         (effectivelyAuthenticated ? <DashboardFooter /> : <Footer />)}
-      <StandaloneRedirect />
       <InstallAppPrompt />
     </div>
   );
