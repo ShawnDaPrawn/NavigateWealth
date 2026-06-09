@@ -25,20 +25,21 @@ control is:
 **This invariant is false.** Many sub-routers are mounted by a parent that applies **no**
 auth middleware, and the leaf route files don't apply it either. The KV store is accessed
 with the **service-role key** (`kv_store.tsx:14`), so it bypasses Row-Level Security
-entirely — the *only* thing standing between the internet and every record is the
+entirely — the _only_ thing standing between the internet and every record is the
 per-router `requireAuth` that, in these files, isn't there.
 
 Result: dozens of endpoints that read/write client PII, policies, profiles, and auth
 state are reachable **unauthenticated**.
 
 The fixes below are therefore two layers: (a) plug each hole, and (b) make the gateway /
-default fail *closed* so a missing `requireAuth` can never again silently expose data.
+default fail _closed_ so a missing `requireAuth` can never again silently expose data.
 
 ---
 
 ## 2. Critical findings (verified, unauthenticated, exploitable)
 
 ### C-1 — Unauthenticated arbitrary read of the entire datastore (`/kv-store/:key`)
+
 - **Where:** `kv-routes.ts:18-41`, mounted at `/kv-store` (`mount-core.ts:33`). No auth.
 - **Impact:** `GET /make-server-91ed8379/kv-store/<key>` returns any KV value. Namespaces
   include `user_profile:*`, `security:*`, `application:*` (full POPIA-protected financial
@@ -47,10 +48,11 @@ default fail *closed* so a missing `requireAuth` can never again silently expose
   `esign_config:platform_signing_cert` (`esign-pdf-protect.ts:47`) **with its passphrase**.
   `GET /kv-store/esign_config:platform_signing_cert` hands an attacker the private signing
   key → ability to forge platform signatures on any PDF.
-- **Fix:** delete the route, or gate it behind `requireSuperAdmin` *and* scope it. There is
+- **Fix:** delete the route, or gate it behind `requireSuperAdmin` _and_ scope it. There is
   no legitimate reason to expose a generic KV reader over HTTP.
 
 ### C-2 — Unauthenticated profile read **and write** + privilege escalation (`/profile/personal-info`)
+
 - **Where:** `client-management-profile-crud-routes.ts:26` (GET), `:74` (POST), `:228`
   (PUT). Parent `client-management-profile-routes.ts:15-19` mounts them with no auth.
 - **Read:** `GET /profile/personal-info?key=user_profile:<uuid>:personal_info` returns any
@@ -60,12 +62,13 @@ default fail *closed* so a missing `requireAuth` can never again silently expose
   `role: "super_admin"` on any profile.
 - **Bonus escalation:** the GET handler (lines 40-49) upgrades a profile to `super_admin`
   whenever the `email` query param matches a super-admin allowlist entry — so a crafted
-  request both reads *and* persists a privileged role.
+  request both reads _and_ persists a privileged role.
 - **Fix:** `requireAuth` on the router; derive the key from `c.get('userId')` server-side
   (never accept a caller-supplied `key`); whitelist writable fields (never `role`,
   `accountStatus`, `adviserAssigned`).
 
 ### C-3 — Unauthenticated super-admin account creation (`POST /auth/signup`)
+
 - **Where:** `auth-routes.ts:204-265`. No auth, only an IP blocklist.
 - **Impact:** the handler passes the client-supplied `metadata` straight into
   `user_metadata` (`:230-234`), and `auth-mw.ts:69` later trusts `user_metadata.role`. So
@@ -76,6 +79,7 @@ default fail *closed* so a missing `requireAuth` can never again silently expose
   server-side before `createUser`.
 
 ### C-4 — Unauthenticated account takeover (`POST /auth/ensure-dev-user`)
+
 - **Where:** `auth-admin-routes.ts:155-225`, mounted at `/auth` (`auth-routes.ts:29`). The
   secret check is **commented out** (`:162-163`).
 - **Impact:** `POST /auth/ensure-dev-user {"email":"shawn@navigatewealth.co","password":"…"}`
@@ -85,6 +89,7 @@ default fail *closed* so a missing `requireAuth` can never again silently expose
   server secret + `requireSuperAdmin`. It must never ship enabled.
 
 ### C-5 — Unauthenticated IDOR over insurance policies (`/integrations/policies`)
+
 - **Where:** `integrations-policy-routes.ts` (GET/POST/PUT/DELETE/archive/reinstate),
   mounted by `integrations.tsx:29` with no auth.
 - **Impact:** read, create, modify, **delete** any client's policies by passing their
@@ -95,6 +100,7 @@ default fail *closed* so a missing `requireAuth` can never again silently expose
   mutation.
 
 ### C-6 — Unauthenticated bulk user enumeration (`GET /profile/all-users`)
+
 - **Where:** `client-management-user-admin-routes.ts:21+`, mounted with no auth.
 - **Impact:** returns every user's UUID, email, phone, status — the directory an attacker
   needs to weaponise C-1/C-2 at scale (no UUID guessing required).
@@ -108,6 +114,7 @@ default fail *closed* so a missing `requireAuth` can never again silently expose
 ## 3. High findings
 
 ### H-1 — Unauthenticated SSRF via feed discovery (`POST /content/sources/discover-feeds`)
+
 - **Where:** `auto-content-routes.ts:262` → `auto-content-service.ts:715-848`. No auth, no
   URL validation.
 - **Impact:** server fetches any caller-supplied URL and probes derived paths — reach
@@ -117,6 +124,7 @@ default fail *closed* so a missing `requireAuth` can never again silently expose
   hosts.
 
 ### H-2 — SSRF allow-list bypass in RSS proxy (`/rss-proxy`)
+
 - **Where:** `rss-proxy.ts` (only `app.get('/')`, unauthenticated). Allow-list uses
   `hostname.endsWith('.'+domain)` (`:22-30`) → attacker-controlled subdomains and DNS
   rebinding bypass it.
@@ -124,6 +132,7 @@ default fail *closed* so a missing `requireAuth` can never again silently expose
   fetch; keep it unauthenticated only if strictly necessary.
 
 ### H-3 — Rate limiter fails **open** and is non-atomic
+
 - **Where:** `rateLimiter.ts:146-155` returns `allowed:true` on any KV error;
   `:74-117` is read-then-write (TOCTOU race) and keyed only on email/identifier (no IP
   dimension).
@@ -133,6 +142,7 @@ default fail *closed* so a missing `requireAuth` can never again silently expose
   increment / atomic upsert); add an IP dimension.
 
 ### H-4 — E-sign OTP brute-force is under-protected
+
 - **Where:** `esign-rate-limit.ts` (6 attempts / signer / 15 min), `esign-otp.ts:12-14`
   (6-digit numeric, 10-min window). Limit is per-`signer.id`, not per-IP; an attacker who
   can mint multiple envelopes to the same email multiplies the guess budget.
@@ -140,12 +150,14 @@ default fail *closed* so a missing `requireAuth` can never again silently expose
   consider 7–8 digits or TOTP for legal-signature OTPs.
 
 ### H-5 — E-sign signing key stored in the KV store
+
 - **Where:** `esign-pdf-protect.ts:176-188` — PKCS#12 archive **and** passphrase persisted
   in plaintext KV (the file's own comment flags this). Directly dumpable via C-1.
 - **Fix:** move the signing key + passphrase to a secrets manager / HSM; never store
   private-key material in the app KV.
 
 ### H-6 — E-sign download / attachment IDOR
+
 - **Where:** `esign-signer-extras-routes.ts:34-123` (download) and `:237-250` (attachment
   upload) authorize on a valid signer token but don't verify the token's signer is the
   party for the requested document/field.
@@ -155,16 +167,16 @@ default fail *closed* so a missing `requireAuth` can never again silently expose
 
 ## 4. Medium findings
 
-| ID | Finding | Where | Fix |
-|----|---------|-------|-----|
-| M-1 | Non-constant-time secret comparison (`===`) for `CRON_SECRET`, portal-worker secret, OpenClaw secret | `esign-diagnostics-routes.ts:45,134`; `integrations-portal-guards.ts:21-28`; `openclaw-routes.ts:26-37` | Use the existing `constantTimeEqual()` (`api-key-service.ts:262`) everywhere |
-| M-2 | Unauthenticated `POST /setup/database` runs DDL via service role | `setup.ts:22` | Gate behind `requireSuperAdmin` or remove; it's a one-time bootstrap |
-| M-3 | No security headers anywhere (no CSP, HSTS, X-Frame-Options, X-Content-Type-Options, Referrer-Policy, Permissions-Policy) | `vercel.json`, `index.html` | Add a `headers` block in `vercel.json`; ship a CSP (defense-in-depth for the XSS items below) |
-| M-4 | CORS fails **open** when `NW_ALLOWED_ORIGINS` unset (reflects any origin) | `index.tsx:57-71` | Fail closed in production; keep the env var set and asserted at boot |
-| M-5 | Email/SMS send helpers accept arbitrary recipients | `email-core.ts:356-393`, `sms-service.ts:34-48` | Validate recipient against allow-list; rate-limit per user; (contact-form already does this well — reuse it) |
-| M-6 | Stack traces leak unless `DENO_ENV === 'production'` (fails open) | `error.middleware.ts:94-127` | Require an explicit debug flag; default to no internals |
-| M-7 | Print/rich-text XSS sinks: `document.write()` + `dangerouslySetInnerHTML` of post-processed HTML; `style` attr allowed in legal-doc sanitizer | `ArticleDetailPage.tsx:732,1315`; `legalHtml.ts:1-20`; `RichTextEditor.tsx:92`; `ComposeForm.tsx` | Re-run DOMPurify after any DOM post-processing; drop `style` from allowed attrs; render print content via a sandboxed blob URL, not `document.write` |
-| M-8 | GitHub Actions API error returned to clients (potential info leak) | `integrations-portal-runtime.ts:177-190` | Return a sanitized message, never the raw upstream body |
+| ID  | Finding                                                                                                                                       | Where                                                                                                   | Fix                                                                                                                                                  |
+| --- | --------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
+| M-1 | Non-constant-time secret comparison (`===`) for `CRON_SECRET`, portal-worker secret, OpenClaw secret                                          | `esign-diagnostics-routes.ts:45,134`; `integrations-portal-guards.ts:21-28`; `openclaw-routes.ts:26-37` | Use the existing `constantTimeEqual()` (`api-key-service.ts:262`) everywhere                                                                         |
+| M-2 | Unauthenticated `POST /setup/database` runs DDL via service role                                                                              | `setup.ts:22`                                                                                           | Gate behind `requireSuperAdmin` or remove; it's a one-time bootstrap                                                                                 |
+| M-3 | No security headers anywhere (no CSP, HSTS, X-Frame-Options, X-Content-Type-Options, Referrer-Policy, Permissions-Policy)                     | `vercel.json`, `index.html`                                                                             | Add a `headers` block in `vercel.json`; ship a CSP (defense-in-depth for the XSS items below)                                                        |
+| M-4 | CORS fails **open** when `NW_ALLOWED_ORIGINS` unset (reflects any origin)                                                                     | `index.tsx:57-71`                                                                                       | Fail closed in production; keep the env var set and asserted at boot                                                                                 |
+| M-5 | Email/SMS send helpers accept arbitrary recipients                                                                                            | `email-core.ts:356-393`, `sms-service.ts:34-48`                                                         | Validate recipient against allow-list; rate-limit per user; (contact-form already does this well — reuse it)                                         |
+| M-6 | Stack traces leak unless `DENO_ENV === 'production'` (fails open)                                                                             | `error.middleware.ts:94-127`                                                                            | Require an explicit debug flag; default to no internals                                                                                              |
+| M-7 | Print/rich-text XSS sinks: `document.write()` + `dangerouslySetInnerHTML` of post-processed HTML; `style` attr allowed in legal-doc sanitizer | `ArticleDetailPage.tsx:732,1315`; `legalHtml.ts:1-20`; `RichTextEditor.tsx:92`; `ComposeForm.tsx`       | Re-run DOMPurify after any DOM post-processing; drop `style` from allowed attrs; render print content via a sandboxed blob URL, not `document.write` |
+| M-8 | GitHub Actions API error returned to clients (potential info leak)                                                                            | `integrations-portal-runtime.ts:177-190`                                                                | Return a sanitized message, never the raw upstream body                                                                                              |
 
 ---
 
@@ -195,6 +207,7 @@ blocklisting that should be reused elsewhere.
 ## 6. Remediation plan (phased)
 
 ### P0 — Emergency (deploy today; these are live)
+
 1. **Disable the dev/admin backdoors:** remove `POST /auth/ensure-dev-user` (C-4) and
    `POST /auth/signup` (C-3) from the deployed function, or hard-gate behind a server
    secret + `requireSuperAdmin`.
@@ -209,6 +222,7 @@ blocklisting that should be reused elsewhere.
 6. **Reset the super-admin password** and review auth logs for prior abuse of C-3/C-4.
 
 ### P1 — This week
+
 7. **Make the gateway fail closed:** split health checks into an unauthenticated sibling
    function and flip `verify_jwt = true` (the plan already noted in `config.toml`). This
    turns "forgot `requireAuth`" from "data breach" into "still need a token."
@@ -221,12 +235,14 @@ blocklisting that should be reused elsewhere.
 11. **Constant-time comparisons** everywhere (M-1, L-1, L-2) using the existing helper.
 
 ### P2 — This sprint
+
 12. Security headers + CSP (M-3); CORS fail-closed (M-4); error-detail fail-closed (M-6).
 13. XSS sink hardening (M-7): re-sanitize post-processed HTML, drop `style`, sandbox print.
 14. Recipient allow-listing / rate-limiting for email & SMS (M-5).
 15. Gate `POST /setup/database` (M-2); sanitize upstream error passthrough (M-8).
 
 ### P3 — Hardening & prevention (ongoing)
+
 16. **Add a CI guard** that fails the build if any sub-router is mounted without an auth
     middleware (a lint rule / dependency-cruiser rule / unit test enumerating routes). This
     is the durable fix for §1.
