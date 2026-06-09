@@ -281,3 +281,113 @@ POST /make-server-91ed8379/auth/ensure-dev-user {"email":"<known-admin>","passwo
 GET  /make-server-91ed8379/integrations/policies?clientId=<uuid>
 POST /make-server-91ed8379/auto-content/sources/discover-feeds {"url":"http://169.254.169.254/"}
 ```
+
+---
+
+## 8. Second pass — independent fresh re-audit (delta)
+
+A full second audit was run independently (five parallel domain agents, verifying from
+source without reference to §§2–5 above). **Outcome: every original finding (C-1…C-6,
+H-1…H-6, the Mediums and Lows) was re-confirmed.** The second pass also found additional
+issues the first pass missed. New items below were verified by reading the handler code.
+
+A few first-pass items were also **re-scoped** for accuracy: `POST /setup/database` (M-2)
+runs a **hard-coded** DDL string, not attacker-supplied SQL — it's an unauthenticated DDL
+_trigger_ (DoS / policy churn), not SQL injection; and the OTP-hash timing compare (L-2)
+stays Low (it compares SHA-256 hashes).
+
+### New Critical
+
+- **C-7 — FNA/estate/form modules accept the PUBLIC anon key as admin.**
+  `fna-auth.ts:72-76`: `if (token === anonKey) return ADMIN_USER`. The anon key ships in the
+  browser bundle (`src/utils/supabase/info.tsx`), so **anyone** can send
+  `Authorization: Bearer <anon-key>` and be treated as a full admin. `authenticateUser()` is
+  used by `fna-intake-routes`, `estate-planning-fna-*-routes`, `fna-batch-status-routes`,
+  `form-prefill-routes`, `form-template-routes`, `communication-service`. Impact:
+  unauthenticated admin read/write over highly sensitive financial-needs-analysis and estate
+  data, FNA queue listing, intake acceptance. **Fix:** delete the anon-key branch entirely;
+  admin endpoints must require a real privileged user token (or a server-only secret).
+
+- **C-8 — Unauthenticated IDOR over client applications (`/applications/*`).**
+  `client-applications-routes.ts`: `GET /:userId` (`:203`) returns any user's full financial
+  application; `POST /submit` (`:83`) submits one for an arbitrary `userId`; `POST /step/:step`
+  mutates step data — all with no auth. **Fix:** `requireAuth` + ownership check on `userId`.
+
+### New High
+
+- **H-7 — OTP generated with `Math.random()`** (`esign-otp.ts:28`). Not a CSPRNG; e-sign
+  signing OTPs are predictable. **Fix:** `crypto.getRandomValues()`.
+- **H-8 — Unauthenticated account-status change (`POST /profile/update-status`)**
+  (`client-management-status-routes.ts:14`). Sets any user's `accountStatus`/`accountType`
+  (self-approve an application, or suspend a competitor). **Fix:** `requireAdmin`.
+- **H-9 — E-sign signed-PDF download IDOR** (`esign-sender-download-routes.ts:26`).
+  Authenticates but discards the context (`_ctx`), no firm/owner check — any logged-in user
+  downloads any completed envelope by ID. A `belongsToFirm` helper already exists
+  (`esign-sender-envelope-routes.ts:62`) and should gate this.
+- **H-10 — Entire `/auto-content/*` router is unauthenticated** (not just feed discovery,
+  H-1): `configs`, `trigger`/`trigger-all`, and source CRUD all lack auth — content
+  injection + OpenAI quota burn. **Fix:** `requireAdmin` at the router.
+- **H-11 — File-upload validation gaps** (`esign-storage.ts`): no per-request size cap (only
+  a 50 MB bucket limit) and the stored extension is taken from the filename without an
+  allow-list (`:111`) → upload `.exe` under `Content-Type: application/pdf`. **Fix:** size
+  cap + extension allow-list.
+- **H-12 — FNA-intake RLS lets a client mutate a submitted session.**
+  `20260520000001_fna_intake_sessions.sql:66-74` — the UPDATE policy permits
+  `status IN ('client_draft','submitted')`, so a client can edit/resubmit after the adviser
+  has it. **Fix:** restrict the policy to `status = 'client_draft'` in USING and WITH CHECK.
+- **H-13 — More timing-unsafe secret comparisons** (extends M-1): the OpenClaw, portal-worker,
+  `CRON_SECRET` (`esign-diagnostics-routes.ts:48,134`), calendar-digest (`:92`), tasks-digest
+  (`:144`), quality-issues-ingest, and newsletter-confirm (`newsletter.tsx:282`) guards all
+  use `===`/`!==`. **Fix:** route every secret compare through `constantTimeEqual`.
+
+### New Medium
+
+- **M-9 — `POST /auth/confirm-email` is unauthenticated** (`auth-routes.ts:633`). Confirms any
+  existing unconfirmed email (anti-enumeration is present, so impact is limited to bypassing
+  email verification for legacy accounts). **Fix:** gate behind a secret or remove.
+- **M-10 — Validation schemas use `.passthrough()`** (e.g. `applications-validation.ts`,
+  `communication-validation.ts`) instead of `.strict()`, letting unknown/privileged fields
+  ride through to KV writes (the vehicle for the C-2/C-3 `role` injection). **Fix:** `.strict()`.
+- **M-11 — `kv_store_91ed8379` has no migration and (unverified) no RLS policy.** The backend
+  correctly uses the service-role key, but the table should have RLS enabled with an explicit
+  service-role-only / deny-anon policy so a PostgREST/grant misconfig can't expose it to the
+  anon key. **Action:** verify in the Supabase dashboard and add the policy.
+- **M-12 — Idempotency cache stores full response bodies (≤256 KB) in KV for 24 h**
+  (`idempotency.ts:221`) — sensitive responses (e.g. applications with PII) sit in KV and are
+  also reachable via the C-1 KV read. **Fix:** cache status + hash only, not bodies.
+- **M-13 — Application status state-machine defined but unused** (`_VALID_TRANSITIONS`,
+  `client-applications-service.ts:75`) — status is set without validating transitions; no
+  audit log on approvals. **Fix:** enforce the transition table; audit-log every change.
+- **M-14 — Sensitive SPA routes lack `Cache-Control: private, no-store`** (`vercel.json`) — on
+  top of M-3's missing headers, `/admin`,`/dashboard` HTML can be cached on shared devices.
+- **M-15 — No rate limit on `POST /applications/submit`** (`client-applications-routes.ts:83`)
+  — application/email-notification spam.
+- **M-16 — Incomplete log redaction** (`shared-logger-types.ts` `SENSITIVE_KEYS`) — missing
+  `passport`, `dob`/`dateOfBirth`, `phone`/`cellphone`. POPIA-relevant PII can hit logs.
+- **M-17 — `workflow_dispatch` open** on `deploy-supabase-function.yml` /
+  `provider-portal-worker.yml` — any push-access contributor can trigger prod deploys / portal
+  jobs with arbitrary inputs. **Fix:** restrict / require approvals.
+
+### New Low
+
+- **L-7 — Role-string inconsistency** (`auth-mw.ts`): `requireAdmin` accepts both `super_admin`
+  and `super-admin`, but the code only ever assigns `super_admin` — harmless today, brittle.
+- **L-8 — `returnUrl` open-redirect edge cases** (`LoginPage.tsx:46`): the `startsWith('/')
+&& !startsWith('//')` check can be skirted by backslash/encoding tricks; parse-and-compare
+  origin instead.
+- **L-9 — E-sign signer tokens never expire** (`esign-services.tsx:628`) — a leaked signing
+  link is valid indefinitely until the envelope is voided. Add a TTL.
+
+### Updated counts
+
+Original 26 + 19 new = **45 findings**: **8 Critical** (C-1…C-8), **13 High** (H-1…H-13),
+**17 Medium** (M-1…M-17), **7 Low** (L-1…L-9, minus merges). The systemic root cause (§1)
+remains the dominant theme: most Criticals/Highs are "a router mounted without `requireAuth`"
+or "trusting a client-supplied identity/credential."
+
+### P0 additions (deploy with the rest of P0)
+
+- Remove the anon-key-as-admin branch in `fna-auth.ts` (C-7).
+- Add `requireAuth` + ownership to `/applications/*` (C-8) and `requireAdmin` to
+  `/profile/update-status` (H-8) and `/auto-content/*` (H-10).
+- Swap OTP generation to `crypto.getRandomValues()` (H-7).
