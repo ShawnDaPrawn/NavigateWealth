@@ -113,10 +113,10 @@ default fail _closed_ so a missing `requireAuth` can never again silently expose
 
 ## 3. High findings
 
-### H-1 — Unauthenticated SSRF via feed discovery (`POST /content/sources/discover-feeds`)
+### H-1 — Unauthenticated SSRF via feed discovery (`POST /auto-content/sources/discover-feeds`)
 
-- **Where:** `auto-content-routes.ts:262` → `auto-content-service.ts:715-848`. No auth, no
-  URL validation.
+- **Where:** `auto-content-routes.ts:262` → `auto-content-service.ts:715-848`, mounted at
+  `/auto-content` (`mount-modules.ts:19`). No auth, no URL validation.
 - **Impact:** server fetches any caller-supplied URL and probes derived paths — reach
   internal services and cloud metadata (`169.254.169.254`), exfiltrate via blind SSRF.
 - **Fix:** require auth; reject non-public hosts (RFC-1918, loopback, link-local, `0.0.0.0`,
@@ -172,11 +172,19 @@ default fail _closed_ so a missing `requireAuth` can never again silently expose
 | M-1 | Non-constant-time secret comparison (`===`) for `CRON_SECRET`, portal-worker secret, OpenClaw secret                                          | `esign-diagnostics-routes.ts:45,134`; `integrations-portal-guards.ts:21-28`; `openclaw-routes.ts:26-37` | Use the existing `constantTimeEqual()` (`api-key-service.ts:262`) everywhere                                                                         |
 | M-2 | Unauthenticated `POST /setup/database` runs DDL via service role                                                                              | `setup.ts:22`                                                                                           | Gate behind `requireSuperAdmin` or remove; it's a one-time bootstrap                                                                                 |
 | M-3 | No security headers anywhere (no CSP, HSTS, X-Frame-Options, X-Content-Type-Options, Referrer-Policy, Permissions-Policy)                     | `vercel.json`, `index.html`                                                                             | Add a `headers` block in `vercel.json`; ship a CSP (defense-in-depth for the XSS items below)                                                        |
-| M-4 | CORS fails **open** when `NW_ALLOWED_ORIGINS` unset (reflects any origin)                                                                     | `index.tsx:57-71`                                                                                       | Fail closed in production; keep the env var set and asserted at boot                                                                                 |
+| M-4 | CORS fails **open** when `NW_ALLOWED_ORIGINS` unset (reflects any origin)                                                                     | `index.tsx:57-71`                                                                                       | **Keep the warning fail-open fallback** (it is required — see note below); assert the allowlist _is_ set in production at boot and alert if it isn't |
 | M-5 | Email/SMS send helpers accept arbitrary recipients                                                                                            | `email-core.ts:356-393`, `sms-service.ts:34-48`                                                         | Validate recipient against allow-list; rate-limit per user; (contact-form already does this well — reuse it)                                         |
 | M-6 | Stack traces leak unless `DENO_ENV === 'production'` (fails open)                                                                             | `error.middleware.ts:94-127`                                                                            | Require an explicit debug flag; default to no internals                                                                                              |
 | M-7 | Print/rich-text XSS sinks: `document.write()` + `dangerouslySetInnerHTML` of post-processed HTML; `style` attr allowed in legal-doc sanitizer | `ArticleDetailPage.tsx:732,1315`; `legalHtml.ts:1-20`; `RichTextEditor.tsx:92`; `ComposeForm.tsx`       | Re-run DOMPurify after any DOM post-processing; drop `style` from allowed attrs; render print content via a sandboxed blob URL, not `document.write` |
 | M-8 | GitHub Actions API error returned to clients (potential info leak)                                                                            | `integrations-portal-runtime.ts:177-190`                                                                | Return a sanitized message, never the raw upstream body                                                                                              |
+
+> **M-4 — do NOT "fail closed" on the CORS fallback.** `docs/PRODUCTION-READINESS.md`
+> (§4.1 and the 2026-04-18 post-mortem) explicitly requires preserving the warning
+> fail-open fallback: a restrictive fallback previously locked production out (admin
+> dashboard "Network error", super-admin lost module visibility) when `NW_ALLOWED_ORIGINS`
+> was unset. Because auth — not CORS — is the real boundary, fail-open CORS is low risk.
+> The correct remediation is to **keep** the fallback and instead **assert** the allowlist
+> is configured in production (boot-time check + alert), not to brick browser clients.
 
 ---
 
@@ -198,9 +206,16 @@ default fail _closed_ so a missing `requireAuth` can never again silently expose
   real table; confirm the `kv_store_91ed8379` table is **not** anon-readable via PostgREST.
 
 **Clean / good:** `npm audit` reports 0 vulnerabilities; no secrets committed to git;
-super-admin authority is an allowlist (`constants.ts`) not client-controllable metadata;
-bearer-token (not cookie) auth keeps CSRF risk low; contact-form has solid IP/domain
-blocklisting that should be reused elsewhere.
+**super-admin** authority specifically is an email allowlist (`constants.ts`) that
+overrides metadata, so it can't be claimed via `user_metadata`; bearer-token (not cookie)
+auth keeps CSRF risk low; contact-form has solid IP/domain blocklisting that should be
+reused elsewhere.
+
+> ⚠️ **Important caveat — this does _not_ extend to `admin`/`client` roles.** For any email
+> outside the super-admin allowlist, `auth-mw.ts:69` (and `:117`) derive the effective role
+> from `user.user_metadata?.role`, which **is** client-influenceable via the unauthenticated
+> signup handler (see C-3). Only the super-admin override is safe; the general role model is
+> not. The C-3 role-metadata remediation remains mandatory.
 
 ---
 
@@ -236,7 +251,8 @@ blocklisting that should be reused elsewhere.
 
 ### P2 — This sprint
 
-12. Security headers + CSP (M-3); CORS fail-closed (M-4); error-detail fail-closed (M-6).
+12. Security headers + CSP (M-3); assert the CORS allowlist is set in prod while keeping the
+    fail-open fallback (M-4); error-detail fail-closed (M-6).
 13. XSS sink hardening (M-7): re-sanitize post-processed HTML, drop `style`, sandbox print.
 14. Recipient allow-listing / rate-limiting for email & SMS (M-5).
 15. Gate `POST /setup/database` (M-2); sanitize upstream error passthrough (M-8).
@@ -263,5 +279,5 @@ GET  /make-server-91ed8379/profile/all-users
 POST /make-server-91ed8379/auth/signup        {"email","password","metadata":{"role":"super_admin"}}
 POST /make-server-91ed8379/auth/ensure-dev-user {"email":"<known-admin>","password":"x"}
 GET  /make-server-91ed8379/integrations/policies?clientId=<uuid>
-POST /make-server-91ed8379/content/sources/discover-feeds {"url":"http://169.254.169.254/"}
+POST /make-server-91ed8379/auto-content/sources/discover-feeds {"url":"http://169.254.169.254/"}
 ```
