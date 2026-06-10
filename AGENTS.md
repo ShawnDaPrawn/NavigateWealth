@@ -33,6 +33,59 @@ read `docs/PRODUCTION-READINESS.md` first and answer from it.
 
 ---
 
+## SHIPPING A CHANGE — non-negotiable finalization protocol
+
+Read this before you push anything.
+
+Past sessions caused real pain by pushing a branch and then **ending the turn
+"waiting for the Quality Check" — and never merging.** The user then had to ask
+3–5 times whether it had landed on `main`. That pattern is **forbidden**.
+
+Every gate the CI `Quality Check` workflow runs is **runnable locally** — the
+`SessionStart` hook installs `node_modules` for exactly this reason. So there is
+never a legitimate reason to defer verification to CI and then sit and wait.
+
+When a change is ready to ship, do **all** of the following **in the same turn**:
+
+1. **Verify locally and make it green _before_ committing** (mirror CI):
+
+   ```bash
+   npm run format            # prettier --write, then re-stage
+   npm run lint              # eslint  (baseline: 0 errors)
+   npm run typecheck         # SPA tsc (baseline: 0 errors)
+   npm run typecheck:middleware
+   npm run typecheck:deno    # must not exceed .deno-check-baseline
+   npm run depcruise         # boundary rules (blocking)
+   npm test -- --coverage    # vitest WITH coverage — CI enforces the thresholds
+                             # in vitest.config.ts, so plain `npm test` can pass
+                             # locally while CI fails on a coverage drop. Mirror it.
+   npm run build             # production build
+   ```
+
+   If a gate genuinely cannot run (e.g. a blocked `npm install`), **say so
+   explicitly with the error** — do not commit unverified code and "let CI catch
+   it."
+
+2. **Commit, push the branch, open/update the PR** (ready for review, not a
+   draft).
+
+3. **Arm auto-merge — do not poll.** Enable GitHub auto-merge (squash) on the PR
+   via the GitHub MCP `enable_pr_auto_merge` tool. GitHub then merges to `main`
+   **automatically** the moment `Quality Check` goes green. You never sit and
+   wait on CI.
+
+4. **Report the PR URL and that auto-merge is armed**, then end the turn.
+
+**NEVER end a turn with "waiting for the quality check" and an open loop.** The
+only two acceptable end states are:
+
+- ✅ verified locally + pushed + auto-merge armed (steps 1–4 done), or
+- ❌ a named gate failed / could not run — state which one and what is blocking.
+
+The user must never have to ask "did it merge yet?"
+
+---
+
 ## Cursor Cloud Specific Instructions
 
 **Product**: Navigate Wealth - a React SPA (Vite + TypeScript) for a South
@@ -68,14 +121,25 @@ Commands that exist on clean `main` as of 2026-04-20:
 | Provider sync          | `npm run provider:sync`                                                      |
 | Provider worker        | `npm run provider:worker`                                                    |
 
-Commands that do **not** exist on clean `main` unless later tooling work lands:
+Quality-gate commands that now exist on `main` (run these locally before
+committing — see the finalization protocol above):
 
-- `npm run lint`
-- `npm run typecheck`
-- `npm run test:coverage`
-- `npm run format`
+| Gate                 | Command                        |
+| -------------------- | ------------------------------ |
+| Format (write)       | `npm run format`               |
+| Format (check)       | `npm run format:check`         |
+| Lint                 | `npm run lint`                 |
+| SPA typecheck        | `npm run typecheck`            |
+| Middleware typecheck | `npm run typecheck:middleware` |
+| Deno edge typecheck  | `npm run typecheck:deno`       |
+| Module boundaries    | `npm run depcruise`            |
+| Build                | `npm run build`                |
+
+Commands referenced historically that still do **not** exist:
+
+- `npm run test:coverage` (CI runs coverage via its own Vitest invocation)
 - `npm run deps:audit`
-- `npm run deps:boundaries`
+- `npm run deps:boundaries` (use `npm run depcruise`)
 - `npm run check-env`
 
 ## Auth hydration (do not regress — 2026-05 incident)
