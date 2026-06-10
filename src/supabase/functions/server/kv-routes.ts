@@ -1,9 +1,15 @@
 import { Hono } from 'npm:hono';
 import * as kv from './kv_store.tsx';
 import { createModuleLogger } from './stderr-logger.ts';
+import { requireAdmin } from './auth-mw.ts';
 
 const app = new Hono();
 const log = createModuleLogger('kv');
+
+// SECURITY: a generic KV reader exposes the entire datastore (profiles, security
+// records, esign signing key, etc.). It must never be reachable unauthenticated.
+// Require an admin session for every route in this sub-router.
+app.use('*', requireAdmin);
 
 // Root route - helpful for debugging
 app.get('/', (c) => {

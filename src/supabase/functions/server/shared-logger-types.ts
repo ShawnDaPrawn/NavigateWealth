@@ -43,4 +43,16 @@ export const SENSITIVE_KEYS = [
   'ssn',
   'id_number',
   'account_number',
+  // POPIA-relevant PII / credentials that previously slipped through to logs
+  // (matched as case-insensitive substrings — see shared-logger-utils.ts):
+  'passport',
+  'dateofbirth',
+  'date_of_birth',
+  'birth_date',
+  'tax_number',
+  'taxnumber',
+  'apikey',
+  'api_key',
+  'passphrase',
+  'otp',
 ];

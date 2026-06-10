@@ -391,3 +391,73 @@ or "trusting a client-supplied identity/credential."
 - Add `requireAuth` + ownership to `/applications/*` (C-8) and `requireAdmin` to
   `/profile/update-status` (H-8) and `/auto-content/*` (H-10).
 - Swap OTP generation to `crypto.getRandomValues()` (H-7).
+
+---
+
+## 9. The blocker: the frontend authenticates with the PUBLIC anon key
+
+A re-audit finding that governs how much can be fixed server-side alone: the SPA sends the
+**public Supabase anon key** as its bearer token across many self-service flows — e.g.
+`applicationService.ts` (all calls), `profileService.ts` (several calls),
+`publications/api.ts`, `esign-signer/*`, `onboarding`, `wills`, `history`. The central
+`api` client (`utils/api/client.ts`) also **falls back to the anon key** whenever there is
+no session.
+
+Consequence: a blanket `requireAuth` on these routers returns 401 for legitimate traffic,
+because that traffic carries the anon key, not the user's session JWT. This is precisely
+why the routes were left open — and it means several fixes (full auth on `/profile`,
+`/applications`, removing the `fna-auth` anon-admin branch) are **blocked on a frontend
+auth-token migration**: every caller must send `session.access_token` (via the `api`
+client's `getAccessToken()`), after which the backend can enforce auth + ownership and the
+gateway can flip to `verify_jwt = true`.
+
+Admin-only areas that already use the `api` client with a real session (client-management,
+adviser dashboards) are safe to gate today — and were.
+
+> Also note the **Hono mounting gotcha** discovered while fixing this: a sub-router mounted
+> with `.route('/', sub)` that calls `sub.use('*', mw)` leaks that middleware onto its
+> sibling sub-routers (they share the `/` tree). Auth middleware on such routers must be
+> applied **per-route**, not via a wildcard, or it will gate (and break) unrelated siblings.
+
+---
+
+## 10. Fixes applied in this PR (code), and what's deferred
+
+**Applied (safe — no legitimate flow depends on the old behaviour; full test suite green):**
+
+- **C-1** `/kv-store/*` now requires admin (`requireAdmin`; standalone mount, no leak).
+- **C-3** `/auth/signup` strips privileged metadata (`role`/`accountStatus`/`adviserAssigned`/
+  `suspended`) before `createUser` — kills unauthenticated super-admin creation.
+- **C-4** `/auth/ensure-dev-user` re-gated behind the `SUPER_ADMIN_PASSWORD` secret
+  (constant-time), fail-closed if unset — kills the account-takeover backdoor.
+- **C-5** `/integrations/policies` CRUD now `requireAuth` **per-route** (admin/adviser
+  callers already send real tokens) — closes the policy IDOR for unauthenticated callers.
+- **C-6** `/profile/all-users` + user-admin metadata route now `requireAdmin` (per-route).
+- **C-2 (partial)** profile writes strip privileged fields for non-admins (defence-in-depth
+  against role escalation via profile update).
+- **H-7** OTP generation switched to a CSPRNG (`crypto.getRandomValues` via
+  `secureRandomDigits`) — no more predictable `Math.random()` codes.
+- **H-1** SSRF guard (`ssrf-guard.ts`) added to feed discovery — blocks loopback / RFC-1918 /
+  link-local / cloud-metadata targets.
+- **M-1 / H-13** constant-time comparison (`crypto-utils.constantTimeEqual`) applied to the
+  OTP/access-code, OpenClaw, cron (`esign-diagnostics`), calendar/tasks-digest, and
+  newsletter-confirm secret checks.
+- **M-3 / M-14** security headers (`X-Content-Type-Options`, `X-Frame-Options`,
+  `Referrer-Policy`, `HSTS`, `Permissions-Policy`) + `Cache-Control: private, no-store` on
+  authenticated SPA routes (`vercel.json`).
+- **M-16** expanded log redaction (`passport`, `dob`, `tax_number`, `otp`, `passphrase`, …).
+
+**Deferred (require the §9 frontend auth-token migration — would 401 live traffic if done
+server-side alone; documented in-code with `SECURITY-AUDIT` markers):**
+
+- **C-2 (full)** blanket auth on `/profile/*`; **C-7** removing the `fna-auth` anon-key-admin
+  branch; **C-8** auth + ownership on `/applications/*`; **H-8** admin on
+  `/profile/update-status`; **H-10** auth on `/auto-content/*`; and the eventual
+  `verify_jwt = true` flip. These need each caller migrated to `session.access_token` first.
+
+**Not yet addressed (follow-up):** H-2 (rss-proxy host allow-list hardening), H-3/H-4
+(rate-limiter fail-closed + atomic + OTP brute-force), H-5 (signing key → secrets manager),
+H-6/H-9 (e-sign download/attachment ownership), H-11/H-12 (upload limits, FNA-intake RLS),
+M-7 (XSS sink hardening), M-12 (idempotency body caching), and the per-router auth sweep of
+the remaining `*-routes.ts` files. The durable fix remains P3 #16: a CI guard that fails the
+build when a router is mounted without auth.

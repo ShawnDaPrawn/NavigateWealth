@@ -115,6 +115,22 @@ app.post(
       }
 
       const incomingData = data as Record<string, unknown>;
+
+      // SECURITY: privileged fields are server-controlled — role comes from the
+      // super-admin allowlist, accountStatus from the status endpoint. A client
+      // must not be able to escalate by writing them through a profile update.
+      // Strip them unless the caller is an admin. (incomingData is the same
+      // object reference spread into finalProfile below, so this is effective
+      // for both the full-replacement and partial-patch paths.)
+      const callerRole = c.get('userRole');
+      const callerIsAdmin =
+        callerRole === 'admin' || callerRole === 'super_admin' || callerRole === 'super-admin';
+      if (!callerIsAdmin) {
+        for (const privileged of ['role', 'accountStatus', 'adviserAssigned', 'suspended']) {
+          delete incomingData[privileged];
+        }
+      }
+
       const keys = Object.keys(incomingData);
 
       // Heuristic: Is this a full replacement?

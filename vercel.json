@@ -8,6 +8,24 @@
     }
   ],
   "outputDirectory": "dist",
+  "headers": [
+    {
+      "source": "/(.*)",
+      "headers": [
+        { "key": "X-Content-Type-Options", "value": "nosniff" },
+        { "key": "X-Frame-Options", "value": "SAMEORIGIN" },
+        { "key": "Referrer-Policy", "value": "strict-origin-when-cross-origin" },
+        {
+          "key": "Strict-Transport-Security",
+          "value": "max-age=31536000; includeSubDomains; preload"
+        },
+        {
+          "key": "Permissions-Policy",
+          "value": "geolocation=(), camera=(), microphone=(), payment=()"
+        }
+      ]
+    }
+  ],
   "routes": [
     {
       "src": "/assets/(.*)",
@@ -21,7 +39,8 @@
       "src": "/(admin|dashboard|products-services-dashboard|login|signup|forgot-password|reset-password|verify-email|auth|account-type|get-started|application|onboarding|profile|security|history|communication|transactions-documents|my-adviser|ai-advisor|requests|newsletter|sign|verify|verify-document|og-preview|links|migration-helper|design-system)(/.*)?",
       "dest": "/index.html",
       "headers": {
-        "X-Robots-Tag": "noindex, nofollow"
+        "X-Robots-Tag": "noindex, nofollow",
+        "Cache-Control": "private, no-store, must-revalidate"
       }
     },
     { "src": "/(.*)", "dest": "/index.html" }

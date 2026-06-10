@@ -160,6 +160,24 @@ vi.mock('../auth-mw.ts', () => ({
     c.set('userId', 'super-admin-id');
     await next();
   },
+  requireAuth: async (c: any, next: any) => {
+    if (!c.req.header('Authorization')) {
+      return c.json({ error: 'Unauthorized' }, 401);
+    }
+    c.set('user', { id: 'test-user', email: 'admin@test.co' });
+    c.set('userId', 'test-user');
+    c.set('userRole', 'admin');
+    await next();
+  },
+  requireAdmin: async (c: any, next: any) => {
+    if (!c.req.header('Authorization')) {
+      return c.json({ error: 'Unauthorized' }, 401);
+    }
+    c.set('user', { id: 'admin-id', email: 'admin@test.co' });
+    c.set('userId', 'admin-id');
+    c.set('userRole', 'admin');
+    await next();
+  },
 }));
 
 // ── Visibility helpers stub ───────────────────────────────────────────────────
@@ -282,7 +300,7 @@ describe('client-management-profile-routes.ts route contracts', () => {
   // ── GET /all-users ─────────────────────────────────────────────────────────
   describe('GET /all-users', () => {
     it('returns 200 with { success, users } array', async () => {
-      const res = await profileRouter.request('/all-users');
+      const res = await profileRouter.request('/all-users', { headers: AUTH });
       expect(res.status).toBe(200);
       const body = (await res.json()) as Record<string, unknown>;
       expect(body.success).toBe(true);
@@ -290,7 +308,7 @@ describe('client-management-profile-routes.ts route contracts', () => {
     });
 
     it('supports pagination query params', async () => {
-      const res = await profileRouter.request('/all-users?page=1&perPage=10');
+      const res = await profileRouter.request('/all-users?page=1&perPage=10', { headers: AUTH });
       expect(res.status).toBe(200);
       const body = (await res.json()) as Record<string, unknown>;
       expect(body.success).toBe(true);
@@ -305,7 +323,7 @@ describe('client-management-profile-routes.ts route contracts', () => {
       const res = await profileRouter.request(`/users/${TEST_UUID}/metadata`, {
         method: 'PUT',
         body: JSON.stringify({}),
-        headers: { 'Content-Type': 'application/json' },
+        headers: { ...AUTH, 'Content-Type': 'application/json' },
       });
       expect(res.status).toBe(400);
     });
@@ -314,7 +332,7 @@ describe('client-management-profile-routes.ts route contracts', () => {
       const res = await profileRouter.request(`/users/${TEST_UUID}/metadata`, {
         method: 'PUT',
         body: JSON.stringify({ metadata: { role: 'admin' } }),
-        headers: { 'Content-Type': 'application/json' },
+        headers: { ...AUTH, 'Content-Type': 'application/json' },
       });
       expect(res.status).toBe(200);
       const body = (await res.json()) as Record<string, unknown>;

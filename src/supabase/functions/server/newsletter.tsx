@@ -11,6 +11,7 @@
 
 import { Hono } from 'npm:hono';
 import * as kv from './kv_store.tsx';
+import { constantTimeEqual } from './crypto-utils.ts';
 import {
   createPlainTextEmail,
   createEmailTemplate,
@@ -279,7 +280,7 @@ app.get('/confirm', async (c) => {
       );
     }
 
-    if (subscription.confirmToken !== token) {
+    if (!constantTimeEqual(String(subscription.confirmToken ?? ''), String(token ?? ''))) {
       return c.json({ error: 'Invalid confirmation token' }, 400);
     }
 

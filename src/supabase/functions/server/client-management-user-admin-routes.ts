@@ -9,16 +9,23 @@ import {
 } from './client-management-visibility.ts';
 import { listAllAuthUsers } from './auth-admin-list-users.ts';
 import { createServiceClient } from './client-management-utils.ts';
+import { requireAdmin } from './auth-mw.ts';
 
 const app = new Hono();
 const log = createModuleLogger('client-management-user-admin');
+
+// SECURITY: these routes expose/administer the full user directory (every
+// user's id, email, phone, status). They are admin-only. NOTE: requireAdmin is
+// applied PER-ROUTE below — not via app.use('*'), because this router is mounted
+// with `.route('/', userAdmin)` alongside sibling profile routers, and a
+// wildcard middleware would leak onto those siblings (Hono merges them at '/').
 
 /**
  * GET /all-users
  * Get all users with their profiles (for admin use)
  * Includes deleted, suspended, and accountStatus fields for admin filtering.
  */
-app.get('/all-users', async (c) => {
+app.get('/all-users', requireAdmin, async (c) => {
   try {
     log.info('Fetching all users');
 
@@ -155,6 +162,7 @@ app.get('/all-users', async (c) => {
  */
 app.put(
   '/users/:userId/metadata',
+  requireAdmin,
   asyncHandler(async (c) => {
     const { userId } = c.req.param();
     if (!userId) {

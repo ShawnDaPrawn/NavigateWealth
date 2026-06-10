@@ -13,6 +13,7 @@
 import { Hono } from 'npm:hono';
 import { createModuleLogger } from './stderr-logger.ts';
 import { getAuthContext, AuthError } from './auth-mw.ts';
+import { constantTimeEqual } from './crypto-utils.ts';
 import { resolveFirmId } from './esign-route-helpers.ts';
 import { runStuckAlertSweep } from './esign-stuck-alert-service.ts';
 import { searchAuditEvents } from './esign-audit-search-service.ts';
@@ -45,7 +46,7 @@ diagnosticsRoutes.post('/maintenance/stuck-alert-sweep', async (c) => {
 diagnosticsRoutes.post('/cron/stuck-alert-sweep', async (c) => {
   const cronSecret = Deno.env.get('CRON_SECRET');
   const provided = c.req.header('x-cron-secret');
-  if (!cronSecret || provided !== cronSecret) {
+  if (!cronSecret || !constantTimeEqual(provided ?? '', cronSecret)) {
     return c.json({ error: 'Unauthorized' }, 401);
   }
   const result = await runStuckAlertSweep();
@@ -132,7 +133,7 @@ diagnosticsRoutes.post('/diagnostics/synthetic/run', async (c) => {
 diagnosticsRoutes.post('/cron/synthetic-probe', async (c) => {
   const cronSecret = Deno.env.get('CRON_SECRET');
   const provided = c.req.header('x-cron-secret');
-  if (!cronSecret || provided !== cronSecret) {
+  if (!cronSecret || !constantTimeEqual(provided ?? '', cronSecret)) {
     return c.json({ error: 'Unauthorized' }, 401);
   }
   const result = await runSyntheticProbe();

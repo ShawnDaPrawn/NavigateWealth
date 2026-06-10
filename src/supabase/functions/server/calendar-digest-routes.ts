@@ -21,6 +21,7 @@ import { Hono } from 'npm:hono';
 import { createClient } from 'jsr:@supabase/supabase-js@2.49.8';
 import { createModuleLogger } from './stderr-logger.ts';
 import { asyncHandler } from './error.middleware.ts';
+import { constantTimeEqual } from './crypto-utils.ts';
 import { sendEmail, createEmailTemplate, getFooterSettings } from './email-service.tsx';
 
 const app = new Hono();
@@ -89,7 +90,10 @@ async function requireCronAuth(
   const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || '';
   const superAdminPw = Deno.env.get('SUPER_ADMIN_PASSWORD') || '';
 
-  if ((serviceRoleKey && token === serviceRoleKey) || (superAdminPw && token === superAdminPw)) {
+  if (
+    (serviceRoleKey && constantTimeEqual(token, serviceRoleKey)) ||
+    (superAdminPw && constantTimeEqual(token, superAdminPw))
+  ) {
     return next();
   }
 
