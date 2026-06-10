@@ -478,12 +478,25 @@ describe('client-management-profile-routes.ts route contracts', () => {
   });
 
   // ── POST /update-status ────────────────────────────────────────────────────
+  // Requires auth since SECURITY-AUDIT H-8 (the mocked requireAuth resolves the
+  // caller as an admin, so the admin path covers arbitrary userId/status here;
+  // self-service whitelist behaviour is covered by
+  // applications-auth.contract.test.ts).
   describe('POST /update-status', () => {
+    it('returns 401 without Authorization header', async () => {
+      const res = await profileRouter.request('/update-status', {
+        method: 'POST',
+        body: JSON.stringify({ userId: TEST_UUID, accountStatus: 'pending' }),
+        headers: { 'Content-Type': 'application/json' },
+      });
+      expect(res.status).toBe(401);
+    });
+
     it('returns 400 when userId or accountStatus are missing', async () => {
       const res = await profileRouter.request('/update-status', {
         method: 'POST',
         body: JSON.stringify({}),
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...AUTH },
       });
       expect(res.status).toBe(400);
     });
@@ -492,7 +505,7 @@ describe('client-management-profile-routes.ts route contracts', () => {
       const res = await profileRouter.request('/update-status', {
         method: 'POST',
         body: JSON.stringify({ userId: TEST_UUID, accountStatus: 'pending' }),
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...AUTH },
       });
       expect(res.status).toBe(404);
     });
@@ -506,7 +519,7 @@ describe('client-management-profile-routes.ts route contracts', () => {
           accountStatus: 'pending',
           accountType: 'personal',
         }),
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...AUTH },
       });
       expect(res.status).toBe(200);
       const body = (await res.json()) as Record<string, unknown>;

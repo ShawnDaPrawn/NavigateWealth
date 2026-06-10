@@ -27,12 +27,19 @@
  */
 
 import { Hono } from 'npm:hono';
+import { requireAdmin } from './auth-mw.ts';
 import { createModuleLogger } from './stderr-logger.ts';
 import { AutoContentService } from './auto-content-service.ts';
 import type { PipelineId } from './auto-content-service.ts';
 
 const app = new Hono();
 const log = createModuleLogger('auto-content-routes');
+
+// SECURITY-AUDIT H-10: the entire pipeline (configs, triggers, sources,
+// feed discovery) is back-office tooling — admin only. The only callers are
+// the admin dashboard AutoContentPanel and its client-side poller, both of
+// which send an admin session JWT.
+app.use('*', requireAdmin);
 
 const VALID_PIPELINE_IDS: PipelineId[] = [
   'market_commentary',

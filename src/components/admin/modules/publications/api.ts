@@ -1107,19 +1107,23 @@ export const VersionsAPI = {
 
 export const AutoContentAPI = {
   async getConfigs(): Promise<PipelineConfig[]> {
-    const response = await fetch(`${AUTO_CONTENT_URL}/configs`, { headers });
+    const response = await fetch(`${AUTO_CONTENT_URL}/configs`, {
+      headers: await getAuthHeaders(),
+    });
     return handleResponse<PipelineConfig[]>(response);
   },
 
   async getConfig(id: PipelineId): Promise<PipelineConfig> {
-    const response = await fetch(`${AUTO_CONTENT_URL}/configs/${id}`, { headers });
+    const response = await fetch(`${AUTO_CONTENT_URL}/configs/${id}`, {
+      headers: await getAuthHeaders(),
+    });
     return handleResponse<PipelineConfig>(response);
   },
 
   async updateConfig(id: PipelineId, updates: Partial<PipelineConfig>): Promise<PipelineConfig> {
     const response = await fetch(`${AUTO_CONTENT_URL}/configs/${id}`, {
       method: 'PUT',
-      headers,
+      headers: await getAuthHeaders(),
       body: JSON.stringify(updates),
     });
     return handleResponse<PipelineConfig>(response);
@@ -1128,7 +1132,7 @@ export const AutoContentAPI = {
   async triggerPipeline(id: PipelineId): Promise<PipelineTriggerResult> {
     const response = await fetch(`${AUTO_CONTENT_URL}/trigger/${id}`, {
       method: 'POST',
-      headers,
+      headers: await getAuthHeaders(),
     });
     return handleResponse<PipelineTriggerResult>(response);
   },
@@ -1136,7 +1140,7 @@ export const AutoContentAPI = {
   async triggerAll(): Promise<PipelineTriggerResult[]> {
     const response = await fetch(`${AUTO_CONTENT_URL}/trigger-all`, {
       method: 'POST',
-      headers,
+      headers: await getAuthHeaders(),
     });
     return handleResponse<PipelineTriggerResult[]>(response);
   },
@@ -1152,7 +1156,7 @@ export const AutoContentAPI = {
   }> {
     const response = await fetch(`${AUTO_CONTENT_URL}/process-due`, {
       method: 'POST',
-      headers,
+      headers: await getAuthHeaders(),
     });
     return handleResponse<{
       processed: PipelineTriggerResult[];
@@ -1166,7 +1170,7 @@ export const AutoContentAPI = {
   ): Promise<{ results: PipelineTriggerResult[]; totalGenerated: number; sourceName: string }> {
     const response = await fetch(`${AUTO_CONTENT_URL}/trigger-source/${sourceId}`, {
       method: 'POST',
-      headers,
+      headers: await getAuthHeaders(),
     });
     return handleResponse<{
       results: PipelineTriggerResult[];
@@ -1177,19 +1181,23 @@ export const AutoContentAPI = {
 
   async getRunHistory(id: PipelineId, limit?: number): Promise<PipelineRunLog[]> {
     const params = limit ? `?limit=${limit}` : '';
-    const response = await fetch(`${AUTO_CONTENT_URL}/history/${id}${params}`, { headers });
+    const response = await fetch(`${AUTO_CONTENT_URL}/history/${id}${params}`, {
+      headers: await getAuthHeaders(),
+    });
     return handleResponse<PipelineRunLog[]>(response);
   },
 
   async getCalendarEvents(): Promise<CalendarEvent[]> {
-    const response = await fetch(`${AUTO_CONTENT_URL}/calendar-events`, { headers });
+    const response = await fetch(`${AUTO_CONTENT_URL}/calendar-events`, {
+      headers: await getAuthHeaders(),
+    });
     return handleResponse<CalendarEvent[]>(response);
   },
 
   async addCalendarEvent(event: Omit<CalendarEvent, 'id'>): Promise<CalendarEvent> {
     const response = await fetch(`${AUTO_CONTENT_URL}/calendar-events`, {
       method: 'POST',
-      headers,
+      headers: await getAuthHeaders(),
       body: JSON.stringify(event),
     });
     return handleResponse<CalendarEvent>(response);
@@ -1198,7 +1206,7 @@ export const AutoContentAPI = {
   async updateCalendarEvent(id: string, updates: Partial<CalendarEvent>): Promise<CalendarEvent> {
     const response = await fetch(`${AUTO_CONTENT_URL}/calendar-events/${id}`, {
       method: 'PUT',
-      headers,
+      headers: await getAuthHeaders(),
       body: JSON.stringify(updates),
     });
     return handleResponse<CalendarEvent>(response);
@@ -1207,7 +1215,7 @@ export const AutoContentAPI = {
   async deleteCalendarEvent(id: string): Promise<void> {
     const response = await fetch(`${AUTO_CONTENT_URL}/calendar-events/${id}`, {
       method: 'DELETE',
-      headers,
+      headers: await getAuthHeaders(),
     });
     await handleResponse<void>(response);
   },
@@ -1215,14 +1223,16 @@ export const AutoContentAPI = {
   // ── Content Sources ─────────────────────────────────────────────
 
   async getContentSources(): Promise<ContentSource[]> {
-    const response = await fetch(`${AUTO_CONTENT_URL}/sources`, { headers });
+    const response = await fetch(`${AUTO_CONTENT_URL}/sources`, {
+      headers: await getAuthHeaders(),
+    });
     return handleResponse<ContentSource[]>(response);
   },
 
   async addContentSource(input: CreateContentSourceInput): Promise<ContentSource> {
     const response = await fetch(`${AUTO_CONTENT_URL}/sources`, {
       method: 'POST',
-      headers,
+      headers: await getAuthHeaders(),
       body: JSON.stringify(input),
     });
     return handleResponse<ContentSource>(response);
@@ -1231,7 +1241,7 @@ export const AutoContentAPI = {
   async updateContentSource(id: string, updates: Partial<ContentSource>): Promise<ContentSource> {
     const response = await fetch(`${AUTO_CONTENT_URL}/sources/${id}`, {
       method: 'PUT',
-      headers,
+      headers: await getAuthHeaders(),
       body: JSON.stringify(updates),
     });
     return handleResponse<ContentSource>(response);
@@ -1240,7 +1250,7 @@ export const AutoContentAPI = {
   async deleteContentSource(id: string): Promise<void> {
     const response = await fetch(`${AUTO_CONTENT_URL}/sources/${id}`, {
       method: 'DELETE',
-      headers,
+      headers: await getAuthHeaders(),
     });
     await handleResponse<void>(response);
   },
@@ -1256,7 +1266,7 @@ export const AutoContentAPI = {
   async discoverFeeds(url: string): Promise<DiscoveredFeed[]> {
     const response = await fetch(`${AUTO_CONTENT_URL}/sources/discover-feeds`, {
       method: 'POST',
-      headers,
+      headers: await getAuthHeaders(),
       body: JSON.stringify({ url }),
     });
     return handleResponse<DiscoveredFeed[]>(response);
