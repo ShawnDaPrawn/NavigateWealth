@@ -8,8 +8,29 @@
  * - Request/response interceptors
  */
 
-import { publicAnonKey, supabaseUrl } from '../supabase/info';
+import { publicAnonKey, supabaseUrl, projectId } from '../supabase/info';
 import { createClient } from '../supabase/client';
+
+/**
+ * Whether a persisted Supabase session exists in localStorage.
+ *
+ * Supabase stores the session under `sb-<projectId>-auth-token`. If that key is
+ * present, a logged-in user is expected and `getSession()` returning null simply
+ * means the client is still hydrating/refreshing the session asynchronously — we
+ * should wait for it rather than firing a request with the anon key (which would
+ * 401 and flash a transient error on screen). If the key is absent, the user is
+ * genuinely anonymous and the anon key is the correct, immediate choice.
+ */
+function hasPersistedSession(): boolean {
+  if (typeof window === 'undefined') return false;
+  try {
+    return window.localStorage.getItem(`sb-${projectId}-auth-token`) !== null;
+  } catch {
+    return false;
+  }
+}
+
+const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
 /**
  * Custom event dispatched when the API client detects the auth session is
@@ -73,9 +94,24 @@ class APIClient {
   private async getAuthToken(): Promise<string> {
     try {
       const supabase = createClient();
-      const {
+      let {
         data: { session },
       } = await supabase.auth.getSession();
+
+      // Hydration race: on a cold load (or tab refocus) a logged-in user's
+      // session may not be ready the instant a query fires. If storage shows a
+      // session SHOULD exist but getSession() returned null, briefly wait for
+      // Supabase to finish hydrating instead of falling back to the anon key
+      // (which would 401 and flash a transient error). Bounded so genuinely
+      // anonymous users are never delayed.
+      if (!session && hasPersistedSession()) {
+        for (let attempt = 0; attempt < 10 && !session; attempt++) {
+          await sleep(100);
+          ({
+            data: { session },
+          } = await supabase.auth.getSession());
+        }
+      }
 
       if (!session) {
         // No session from getSession() — this can happen when:
