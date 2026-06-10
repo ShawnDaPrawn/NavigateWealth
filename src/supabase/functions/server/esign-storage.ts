@@ -12,12 +12,12 @@ const getSupabase = () =>
 
 const log = createModuleLogger('esign-storage');
 
-// Per-upload validation (defence-in-depth on top of the bucket's MIME limit).
-// The bucket has a 50MB cap, but we enforce a tighter per-request size and an
-// extension allow-list here so a caller can't store an executable by naming it
-// `x.exe` (the path extension was previously derived from the raw filename).
+// Per-UPLOAD size cap (defence-in-depth on top of the bucket's 50MB limit).
+// Enforced in validateDocument() at the untrusted request boundary — NOT in the
+// shared uploadDocument() helper, which is also used for internally-generated
+// PDFs (e.g. materialiseEnvelope concatenates documents) that legitimately need
+// no such limit and don't check the helper's return value.
 const MAX_DOCUMENT_BYTES = 25 * 1024 * 1024; // 25MB
-const ALLOWED_DOCUMENT_EXTENSIONS = new Set(['pdf', 'doc', 'docx']);
 
 // Storage bucket names
 const BUCKETS = {
@@ -114,27 +114,9 @@ export async function uploadDocument(
   mimeType: string = 'application/pdf',
 ): Promise<{ path: string; error: string | null }> {
   try {
-    if (fileBuffer.byteLength > MAX_DOCUMENT_BYTES) {
-      return {
-        path: '',
-        error: `File exceeds the ${Math.floor(MAX_DOCUMENT_BYTES / (1024 * 1024))}MB limit`,
-      };
-    }
-
     const supabase = getSupabase();
-    const rawExtension =
-      fileName
-        .split('.')
-        .pop()
-        ?.toLowerCase()
-        .replace(/[^a-z0-9]/g, '') || 'pdf';
-    if (!ALLOWED_DOCUMENT_EXTENSIONS.has(rawExtension)) {
-      return {
-        path: '',
-        error: `File type ".${rawExtension}" is not allowed`,
-      };
-    }
-    const path = `${firmId}/${documentId}.${rawExtension}`;
+    const extension = fileName.split('.').pop()?.toLowerCase() || 'pdf';
+    const path = `${firmId}/${documentId}.${extension}`;
 
     const { error } = await supabase.storage.from(BUCKETS.DOCUMENTS).upload(path, fileBuffer, {
       contentType: mimeType,
@@ -510,6 +492,14 @@ export function validateDocument(
     // Check minimum size (at least 1KB)
     if (buffer.length < 1024) {
       return { valid: false, error: 'Invalid file: File too small' };
+    }
+
+    // Check maximum size — untrusted-upload cap (defence-in-depth / DoS).
+    if (buffer.byteLength > MAX_DOCUMENT_BYTES) {
+      return {
+        valid: false,
+        error: `File exceeds the ${Math.floor(MAX_DOCUMENT_BYTES / (1024 * 1024))}MB limit`,
+      };
     }
 
     const ext = fileName.split('.').pop()?.toLowerCase();
