@@ -227,11 +227,20 @@ authRoutes.post('/signup', async (c) => {
   try {
     const { email, password, metadata } = await c.req.json();
 
+    // SECURITY: never let the client set privileged fields via signup metadata.
+    // The auth middleware derives role from user_metadata.role, so accepting a
+    // caller-supplied `role` (or status flags) here is a privilege-escalation
+    // vector (an attacker could self-provision a super_admin). Strip them.
+    const safeMetadata: Record<string, unknown> = { ...(metadata || {}) };
+    for (const privileged of ['role', 'accountStatus', 'adviserAssigned', 'suspended']) {
+      delete safeMetadata[privileged];
+    }
+
     // Create user with admin client (bypasses email verification if email_confirm is true)
     const { data, error } = await getSupabase().auth.admin.createUser({
       email,
       password,
-      user_metadata: metadata || {},
+      user_metadata: safeMetadata,
       email_confirm: true,
     });
 

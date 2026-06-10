@@ -22,6 +22,7 @@
  */
 
 import * as kv from './kv_store.tsx';
+import { assertPublicHttpUrl } from './ssrf-guard.ts';
 import { generateFullArticle } from './publications-ai-service.ts';
 import type { GenerateArticleBrief } from './publications-ai-service.ts';
 import { createModuleLogger } from './stderr-logger.ts';
@@ -714,6 +715,11 @@ export const AutoContentService = {
    */
   async discoverFeeds(url: string): Promise<DiscoveredFeed[]> {
     log.info('Discovering feeds for URL', { url });
+
+    // SECURITY (SSRF): only fetch publicly-routable http(s) URLs. Blocks
+    // loopback/private/link-local/cloud-metadata targets so this endpoint can't
+    // be used to probe internal services or steal instance credentials.
+    assertPublicHttpUrl(url);
 
     try {
       const response = await fetch(url, {

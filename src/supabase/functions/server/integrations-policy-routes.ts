@@ -47,6 +47,15 @@ import { POLICY_DOC_BUCKET } from './integrations-document-storage.ts';
 const app = new Hono();
 const log = createModuleLogger('integrations-policy');
 
+// SECURITY: policy CRUD reads/writes/deletes client insurance policies keyed by
+// clientId. The gateway runs with verify_jwt=false, so authentication MUST be
+// enforced — previously only /policy-renewals was guarded, leaving the rest
+// reachable unauthenticated (IDOR over any client's policies). requireAuth is
+// applied PER-ROUTE below rather than via app.use('*'), because this router is
+// mounted with `.route('/', policyRoutes)` alongside sibling integrations routers
+// (provider/schema/upload/portal-worker) and a wildcard middleware would leak
+// onto them — notably breaking the worker-secret-authenticated portal routes.
+
 const getByPrefix = async (prefix: string) => {
   const supabase = createClient(
     Deno.env.get('SUPABASE_URL')!,
@@ -62,7 +71,7 @@ const getByPrefix = async (prefix: string) => {
 };
 
 // GET /policies
-app.get('/policies', async (c) => {
+app.get('/policies', requireAuth, async (c) => {
   try {
     const clientId = c.req.query('clientId');
     const categoryId = c.req.query('categoryId');
@@ -112,7 +121,7 @@ app.get('/policies', async (c) => {
 });
 
 // POST /policies/archive
-app.post('/policies/archive', async (c) => {
+app.post('/policies/archive', requireAuth, async (c) => {
   try {
     const body = await c.req.json();
     const parsed = ArchivePolicySchema.safeParse(body);
@@ -149,7 +158,7 @@ app.post('/policies/archive', async (c) => {
 });
 
 // POST /policies/reinstate
-app.post('/policies/reinstate', async (c) => {
+app.post('/policies/reinstate', requireAuth, async (c) => {
   try {
     const body = await c.req.json();
     const parsed = ReinstatePolicySchema.safeParse(body);
@@ -186,7 +195,7 @@ app.post('/policies/reinstate', async (c) => {
 });
 
 // POST /policies
-app.post('/policies', async (c) => {
+app.post('/policies', requireAuth, async (c) => {
   try {
     const body = await c.req.json();
     const parsed = CreatePolicySchema.safeParse(body);
@@ -229,7 +238,7 @@ app.post('/policies', async (c) => {
 });
 
 // PUT /policies
-app.put('/policies', async (c) => {
+app.put('/policies', requireAuth, async (c) => {
   try {
     const body = await c.req.json();
     const parsed = UpdatePolicySchema.safeParse(body);
@@ -280,7 +289,7 @@ app.put('/policies', async (c) => {
 });
 
 // DELETE /policies
-app.delete('/policies', async (c) => {
+app.delete('/policies', requireAuth, async (c) => {
   try {
     const id = c.req.query('id');
     const clientId = c.req.query('clientId');
@@ -332,7 +341,7 @@ app.delete('/policies', async (c) => {
 // --- DASHBOARD STATS ENDPOINTS ---
 
 // POST /recalculate-totals
-app.post('/recalculate-totals', async (c) => {
+app.post('/recalculate-totals', requireAuth, async (c) => {
   try {
     const body = await c.req.json();
     const parsed = RecalculateTotalsSchema.safeParse(body);
@@ -351,7 +360,7 @@ app.post('/recalculate-totals', async (c) => {
 });
 
 // GET /dashboard-stats
-app.get('/dashboard-stats', async (c) => {
+app.get('/dashboard-stats', requireAuth, async (c) => {
   try {
     const allPoliciesKeys = await getByPrefix('policies:client:');
     let totalActivePolicies = 0;

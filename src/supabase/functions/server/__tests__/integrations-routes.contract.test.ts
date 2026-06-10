@@ -243,7 +243,7 @@ describe('integrations.tsx route contracts', () => {
 
   describe('GET /policies', () => {
     it('returns 400 when clientId is missing', async () => {
-      const res = await integrationsApp.request('/policies');
+      const res = await integrationsApp.request('/policies', { headers: AUTH });
       expect(res.status).toBe(400);
       expect(await res.json()).toMatchObject({ error: 'Missing clientId' });
     });
@@ -253,7 +253,7 @@ describe('integrations.tsx route contracts', () => {
         { id: 'p1', categoryId: 'risk', archived: false },
         { id: 'p2', categoryId: 'risk', archived: true },
       ]);
-      const res = await integrationsApp.request('/policies?clientId=c1');
+      const res = await integrationsApp.request('/policies?clientId=c1', { headers: AUTH });
       expect(res.status).toBe(200);
       const body = (await res.json()) as { policies: Array<{ id: string }> };
       expect(body.policies.map((p) => p.id)).toEqual(['p1']);
@@ -264,7 +264,9 @@ describe('integrations.tsx route contracts', () => {
         { id: 'p1', categoryId: 'risk', archived: false },
         { id: 'p2', categoryId: 'risk', archived: true },
       ]);
-      const res = await integrationsApp.request('/policies?clientId=c1&includeArchived=true');
+      const res = await integrationsApp.request('/policies?clientId=c1&includeArchived=true', {
+        headers: AUTH,
+      });
       expect(res.status).toBe(200);
       const body = (await res.json()) as { policies: Array<{ id: string }> };
       expect(body.policies.map((p) => p.id)).toEqual(['p2']);
@@ -369,7 +371,7 @@ describe('integrations.tsx route contracts', () => {
     it('rejects an invalid body with 400 Validation failed', async () => {
       const res = await integrationsApp.request('/policies', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { ...AUTH, 'Content-Type': 'application/json' },
         body: JSON.stringify({ clientId: 'c1' }), // missing categoryId/providerId/data
       });
       expect(res.status).toBe(400);
@@ -379,7 +381,7 @@ describe('integrations.tsx route contracts', () => {
     it('rejects a valid body referencing an unknown provider with 400', async () => {
       const res = await integrationsApp.request('/policies', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { ...AUTH, 'Content-Type': 'application/json' },
         body: JSON.stringify({ clientId: 'c1', categoryId: 'risk', providerId: 'ghost', data: {} }),
       });
       expect(res.status).toBe(400);
@@ -390,7 +392,7 @@ describe('integrations.tsx route contracts', () => {
       kvStore.set('provider:p1', { id: 'p1', name: 'Provider One' });
       const res = await integrationsApp.request('/policies', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { ...AUTH, 'Content-Type': 'application/json' },
         body: JSON.stringify({
           clientId: 'c1',
           categoryId: 'risk',
@@ -459,7 +461,7 @@ describe('integrations.tsx route contracts', () => {
     it('POST /portal-worker/jobs/claim rejects a request without the worker secret', async () => {
       const res = await integrationsApp.request('/portal-worker/jobs/claim', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { ...AUTH, 'Content-Type': 'application/json' },
         body: JSON.stringify({ workerId: 'w1' }),
       });
       expect(res.status).toBe(401);
@@ -473,7 +475,7 @@ describe('integrations.tsx route contracts', () => {
     it('returns 400 on invalid body', async () => {
       const res = await integrationsApp.request('/policies/archive', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { ...AUTH, 'Content-Type': 'application/json' },
         body: JSON.stringify({ bad: true }),
       });
       expect(res.status).toBe(400);
@@ -484,7 +486,7 @@ describe('integrations.tsx route contracts', () => {
       kvStore.set('policies:client:c1', []);
       const res = await integrationsApp.request('/policies/archive', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { ...AUTH, 'Content-Type': 'application/json' },
         body: JSON.stringify({ id: 'p-ghost', clientId: 'c1' }),
       });
       expect(res.status).toBe(404);
@@ -497,7 +499,7 @@ describe('integrations.tsx route contracts', () => {
       ]);
       const res = await integrationsApp.request('/policies/archive', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { ...AUTH, 'Content-Type': 'application/json' },
         body: JSON.stringify({ id: 'p1', clientId: 'c1', reason: 'test' }),
       });
       expect(res.status).toBe(200);
@@ -512,7 +514,7 @@ describe('integrations.tsx route contracts', () => {
     it('returns 400 on invalid body', async () => {
       const res = await integrationsApp.request('/policies/reinstate', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { ...AUTH, 'Content-Type': 'application/json' },
         body: JSON.stringify({ bad: true }),
       });
       expect(res.status).toBe(400);
@@ -522,7 +524,7 @@ describe('integrations.tsx route contracts', () => {
       kvStore.set('policies:client:c1', []);
       const res = await integrationsApp.request('/policies/reinstate', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { ...AUTH, 'Content-Type': 'application/json' },
         body: JSON.stringify({ id: 'ghost', clientId: 'c1' }),
       });
       expect(res.status).toBe(404);
@@ -534,7 +536,7 @@ describe('integrations.tsx route contracts', () => {
     it('returns 400 on invalid body', async () => {
       const res = await integrationsApp.request('/policies', {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { ...AUTH, 'Content-Type': 'application/json' },
         body: JSON.stringify({ bad: true }),
       });
       expect(res.status).toBe(400);
@@ -545,7 +547,7 @@ describe('integrations.tsx route contracts', () => {
       kvStore.set('policies:client:c1', []);
       const res = await integrationsApp.request('/policies', {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { ...AUTH, 'Content-Type': 'application/json' },
         body: JSON.stringify({ id: 'ghost', clientId: 'c1' }),
       });
       expect(res.status).toBe(404);
@@ -555,7 +557,10 @@ describe('integrations.tsx route contracts', () => {
   // ── DELETE /policies ──────────────────────────────────────────────────────
   describe('DELETE /policies', () => {
     it('returns 400 when id or clientId is missing', async () => {
-      const res = await integrationsApp.request('/policies?clientId=c1', { method: 'DELETE' });
+      const res = await integrationsApp.request('/policies?clientId=c1', {
+        method: 'DELETE',
+        headers: AUTH,
+      });
       expect(res.status).toBe(400);
     });
 
@@ -563,6 +568,7 @@ describe('integrations.tsx route contracts', () => {
       kvStore.set('policies:client:c1', []);
       const res = await integrationsApp.request('/policies?id=ghost&clientId=c1', {
         method: 'DELETE',
+        headers: AUTH,
       });
       expect(res.status).toBe(404);
     });
@@ -571,6 +577,7 @@ describe('integrations.tsx route contracts', () => {
       kvStore.set('policies:client:c1', [{ id: 'p1', clientId: 'c1', categoryId: 'risk' }]);
       const res = await integrationsApp.request('/policies?id=p1&clientId=c1', {
         method: 'DELETE',
+        headers: AUTH,
       });
       expect(res.status).toBe(200);
       expect(await res.json()).toMatchObject({ success: true });
@@ -582,7 +589,7 @@ describe('integrations.tsx route contracts', () => {
     it('returns 400 on invalid body', async () => {
       const res = await integrationsApp.request('/recalculate-totals', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { ...AUTH, 'Content-Type': 'application/json' },
         body: JSON.stringify({}),
       });
       expect(res.status).toBe(400);
@@ -591,7 +598,7 @@ describe('integrations.tsx route contracts', () => {
     it('returns { success: true } for a valid clientId', async () => {
       const res = await integrationsApp.request('/recalculate-totals', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { ...AUTH, 'Content-Type': 'application/json' },
         body: JSON.stringify({ clientId: 'c1' }),
       });
       expect(res.status).toBe(200);
@@ -602,7 +609,7 @@ describe('integrations.tsx route contracts', () => {
   // ── GET /dashboard-stats ──────────────────────────────────────────────────
   describe('GET /dashboard-stats', () => {
     it('returns 200 with the expected numeric stat keys', async () => {
-      const res = await integrationsApp.request('/dashboard-stats');
+      const res = await integrationsApp.request('/dashboard-stats', { headers: AUTH });
       expect(res.status).toBe(200);
       const body = (await res.json()) as Record<string, unknown>;
       expect(typeof body.activePolicies).toBe('number');
@@ -654,7 +661,7 @@ describe('integrations.tsx route contracts', () => {
     it('returns 400 on invalid body', async () => {
       const res = await integrationsApp.request('/schemas', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { ...AUTH, 'Content-Type': 'application/json' },
         body: JSON.stringify({ bad: true }),
       });
       expect(res.status).toBe(400);
@@ -664,7 +671,7 @@ describe('integrations.tsx route contracts', () => {
     it('persists a valid schema and echoes it under { success, schema }', async () => {
       const res = await integrationsApp.request('/schemas', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { ...AUTH, 'Content-Type': 'application/json' },
         body: JSON.stringify({
           categoryId: 'risk',
           fields: [{ id: 'f1', name: 'Field One', type: 'text' }],

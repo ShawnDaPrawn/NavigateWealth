@@ -13,6 +13,7 @@ import type { Context } from 'npm:hono';
 import * as kv from './kv_store.tsx';
 import { clearRateLimit } from './rateLimiter.ts';
 import { validatePassword, validateEmail } from './passwordValidator.ts';
+import { constantTimeEqual } from './crypto-utils.ts';
 import { extractClientIp } from '../../../shared/submissions/blockedIpAddresses.ts';
 
 const getSupabase = () =>
@@ -154,11 +155,16 @@ adminAuthRoutes.post('/clear-rate-limit', async (c) => {
  */
 adminAuthRoutes.post('/ensure-dev-user', async (c) => {
   try {
-    const { email, password } = await c.req.json();
+    const { email, password, secretKey } = await c.req.json();
 
-    // Only allow for specific domains or emails if needed, but for now allow all for dev fix
-    // Verify secret key matches environment variable to prevent abuse
-    // const expectedSecretKey = Deno.env.get('SUPER_ADMIN_PASSWORD');
+    // SECURITY: this endpoint can create-or-reset ANY account's password
+    // (including the super-admin's). It MUST be gated by the shared
+    // SUPER_ADMIN_PASSWORD secret — without it, the route is a one-request
+    // account-takeover backdoor. Fail closed if the secret is unset.
+    const expectedSecretKey = Deno.env.get('SUPER_ADMIN_PASSWORD');
+    if (!expectedSecretKey || !constantTimeEqual(String(secretKey || ''), expectedSecretKey)) {
+      return c.json({ error: 'Forbidden' }, 403);
+    }
 
     // Check if user exists
     const {

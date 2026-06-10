@@ -5,13 +5,13 @@
 
 import * as kv from './kv_store.tsx';
 import { createModuleLogger } from './stderr-logger.ts';
+import { constantTimeEqual, secureRandomDigits } from './crypto-utils.ts';
 
 const log = createModuleLogger('esign-otp');
 
 // OTP Configuration
 const OTP_LENGTH = 6;
 const OTP_EXPIRY_MINUTES = 10;
-const OTP_CHARSET = '0123456789';
 
 interface OTPData {
   otpHash: string;
@@ -20,15 +20,12 @@ interface OTPData {
 }
 
 /**
- * Generate a random 6-digit OTP
+ * Generate a cryptographically secure 6-digit OTP.
+ * Uses a CSPRNG (crypto.getRandomValues) — NOT Math.random(), whose output is
+ * predictable and unsuitable for security codes.
  */
 export function generateOTP(): string {
-  let otp = '';
-  for (let i = 0; i < OTP_LENGTH; i++) {
-    const randomIndex = Math.floor(Math.random() * OTP_CHARSET.length);
-    otp += OTP_CHARSET[randomIndex];
-  }
-  return otp;
+  return secureRandomDigits(OTP_LENGTH);
 }
 
 /**
@@ -103,7 +100,7 @@ export async function verifyOTP(
     // Verify OTP hash
     const otpHash = await hashOTP(otp);
 
-    if (otpHash !== otpData.otpHash) {
+    if (!constantTimeEqual(otpHash, otpData.otpHash)) {
       log.warn(`Invalid OTP for signer ${signerId}`);
       return { valid: false, error: 'Invalid OTP code' };
     }
@@ -136,7 +133,7 @@ export async function verifyAccessCode(
     }
 
     // Check if provided access code matches
-    if (accessCode !== signer.access_code) {
+    if (!constantTimeEqual(accessCode, signer.access_code)) {
       log.warn(`Invalid access code for signer ${signerId}`);
       return { valid: false, error: 'Invalid access code' };
     }

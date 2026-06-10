@@ -1,5 +1,6 @@
 import { Hono } from 'npm:hono';
 import { requireAdmin } from './auth-mw.ts';
+import { constantTimeEqual } from './crypto-utils.ts';
 import * as kv from './kv_store.tsx';
 import { logger as log } from './stderr-logger.ts';
 import {
@@ -33,7 +34,7 @@ function hasValidOpenClawSecret(c: {
   const authHeader = String(c.req.header('Authorization') || '');
   const bearer = authHeader.startsWith('Bearer ') ? authHeader.slice('Bearer '.length).trim() : '';
 
-  return explicit === expected || bearer === expected;
+  return constantTimeEqual(explicit, expected) || constantTimeEqual(bearer, expected);
 }
 
 async function appendEventSummary(summary: OpenClawEventSummary) {

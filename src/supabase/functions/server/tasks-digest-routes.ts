@@ -24,6 +24,7 @@ import { Hono } from 'npm:hono';
 import { createModuleLogger } from './stderr-logger.ts';
 import { asyncHandler } from './error.middleware.ts';
 import * as kv from './kv_store.tsx';
+import { constantTimeEqual } from './crypto-utils.ts';
 import type { RawKvTask, KvTask } from './tasks-types.ts';
 import { sendEmail, createEmailTemplate, getFooterSettings } from './email-service.tsx';
 
@@ -141,7 +142,10 @@ async function requireCronOrAdminAuth(
   const superAdminPw = Deno.env.get('SUPER_ADMIN_PASSWORD') || '';
 
   // 1. Service-role key or super-admin password (cron path)
-  if ((serviceRoleKey && token === serviceRoleKey) || (superAdminPw && token === superAdminPw)) {
+  if (
+    (serviceRoleKey && constantTimeEqual(token, serviceRoleKey)) ||
+    (superAdminPw && constantTimeEqual(token, superAdminPw))
+  ) {
     return next();
   }
 
