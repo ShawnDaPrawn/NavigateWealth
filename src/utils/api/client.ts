@@ -81,6 +81,12 @@ class APIClient {
   // racing each other when multiple queries fire simultaneously with an expired token.
   private refreshPromise: Promise<string | null> | null = null;
 
+  // Mutex for session-hydration polling: initial screens fire several queries at
+  // once, and each would otherwise poll getSession() independently — recreating the
+  // parallel auth-client contention AGENTS.md warns about. All concurrent callers
+  // share this single in-flight poll instead.
+  private hydrationPromise: Promise<void> | null = null;
+
   // Tracks whether the client has ever successfully obtained a real auth token.
   // Used to distinguish "user was never logged in" (don't dispatch session-expired)
   // from "user was logged in but session died" (dispatch session-expired).
@@ -105,12 +111,10 @@ class APIClient {
       // (which would 401 and flash a transient error). Bounded so genuinely
       // anonymous users are never delayed.
       if (!session && hasPersistedSession()) {
-        for (let attempt = 0; attempt < 10 && !session; attempt++) {
-          await sleep(100);
-          ({
-            data: { session },
-          } = await supabase.auth.getSession());
-        }
+        await this.waitForSessionHydration(supabase);
+        ({
+          data: { session },
+        } = await supabase.auth.getSession());
       }
 
       if (!session) {
@@ -157,6 +161,35 @@ class APIClient {
       // Fallback to anon key if session retrieval fails
       return publicAnonKey;
     }
+  }
+
+  /**
+   * Wait (bounded) for Supabase to finish hydrating a persisted session, polling
+   * getSession() until it returns one. Deduplicated: concurrent callers share a
+   * single in-flight poll so initial screens don't fan out N parallel getSession()
+   * loops against the auth client. Resolves as soon as a session appears or after
+   * the bounded attempts elapse.
+   */
+  private async waitForSessionHydration(supabase: ReturnType<typeof createClient>): Promise<void> {
+    if (this.hydrationPromise) {
+      return this.hydrationPromise;
+    }
+
+    this.hydrationPromise = (async () => {
+      try {
+        for (let attempt = 0; attempt < 10; attempt++) {
+          await sleep(100);
+          const {
+            data: { session },
+          } = await supabase.auth.getSession();
+          if (session) return;
+        }
+      } finally {
+        this.hydrationPromise = null;
+      }
+    })();
+
+    return this.hydrationPromise;
   }
 
   /**
