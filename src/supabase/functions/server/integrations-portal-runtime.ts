@@ -175,14 +175,18 @@ export async function dispatchPortalGitHubAction(
 
   const data = (await response.json().catch(() => ({}))) as Record<string, unknown>;
   if (!response.ok) {
-    const rawMessage =
-      typeof data.message === 'string'
-        ? data.message
-        : `GitHub dispatch failed with HTTP ${response.status}`;
+    // Do NOT echo the raw upstream GitHub error to clients — it can leak
+    // internal detail. Map the one actionable case to a safe hint, and return a
+    // generic message otherwise (full detail goes to the logs only).
+    const rawMessage = typeof data.message === 'string' ? data.message : '';
+    console.error('[portal] GitHub Actions dispatch failed', {
+      status: response.status,
+      upstreamMessage: rawMessage,
+    });
     const message =
       rawMessage === 'Bad credentials'
         ? 'GitHub rejected NW_GITHUB_ACTIONS_TOKEN. Replace the Supabase Edge Function secret with a valid fine-grained GitHub token for ShawnDaPrawn/NavigateWealth with Actions: Read and write.'
-        : rawMessage;
+        : `GitHub Actions dispatch failed (HTTP ${response.status}). See Edge Function logs for detail.`;
     return {
       automationHost: 'manual',
       actionsDispatchError: message.slice(0, 500),

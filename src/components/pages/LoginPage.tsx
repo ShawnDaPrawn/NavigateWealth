@@ -42,11 +42,20 @@ export function LoginPage() {
   const returnUrl = useMemo(() => {
     const params = new URLSearchParams(window.location.search);
     const url = params.get('returnUrl');
-    // Validate: only allow relative paths to prevent open redirect attacks
-    if (url && url.startsWith('/') && !url.startsWith('//')) {
-      return url;
+    if (!url) return null;
+    // Validate: only allow same-origin relative paths to prevent open-redirect.
+    // A bare `startsWith('/') && !startsWith('//')` check is bypassable with
+    // backslashes (`/\evil.com`) or whitespace/control chars that some browsers
+    // normalise into a protocol-relative URL. Reject those, then resolve
+    // against the origin and require the result to stay on this origin.
+    if (/[\\\s]/.test(url) || url.startsWith('//')) return null;
+    try {
+      const resolved = new URL(url, window.location.origin);
+      if (resolved.origin !== window.location.origin) return null;
+      return resolved.pathname + resolved.search + resolved.hash;
+    } catch {
+      return null;
     }
-    return null;
   }, []);
 
   // Handle redirect when user becomes authenticated

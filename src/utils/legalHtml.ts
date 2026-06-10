@@ -2,6 +2,11 @@ import DOMPurify from 'dompurify';
 
 const LEGAL_HTML_SANITIZE_CONFIG = {
   USE_PROFILES: { html: true },
+  // `style` is allowed (legal docs pasted from Word rely on inline margins for
+  // indentation) but every value passes through cleanInlineStyle(), which strips
+  // the dangerous primitives (url()/expression()/@import/behavior/javascript:).
+  // The `<style>` ELEMENT is forbidden, and unknown URL protocols (javascript:)
+  // are rejected.
   ADD_ATTR: [
     'style',
     'class',
@@ -16,7 +21,8 @@ const LEGAL_HTML_SANITIZE_CONFIG = {
     'align',
     'valign',
   ],
-  FORBID_TAGS: ['script', 'iframe', 'object', 'embed', 'meta', 'link'],
+  FORBID_TAGS: ['script', 'iframe', 'object', 'embed', 'meta', 'link', 'style'],
+  ALLOW_UNKNOWN_PROTOCOLS: false,
 };
 
 export const LEGAL_DOCUMENT_CONTENT_CLASS = [
@@ -136,6 +142,10 @@ function slugifyLegalHeading(value: string): string {
   );
 }
 
+// Patterns that make an inline-CSS rule dangerous: external/script resource
+// loads (data exfiltration), legacy IE script execution, and stylesheet imports.
+const DANGEROUS_STYLE_VALUE = /url\s*\(|expression\s*\(|@import|javascript:|behaviou?r\s*:/i;
+
 function cleanInlineStyle(styleValue: string): string {
   return styleValue
     .split(';')
@@ -143,13 +153,18 @@ function cleanInlineStyle(styleValue: string): string {
     .filter(Boolean)
     .filter((rule) => {
       const property = rule.split(':')[0]?.trim().toLowerCase() || '';
-      return (
-        property.length > 0 &&
-        !property.startsWith('mso-') &&
-        property !== 'tab-stops' &&
-        property !== 'layout-grid-mode' &&
-        property !== 'behavior'
-      );
+      if (
+        property.length === 0 ||
+        property.startsWith('mso-') ||
+        property === 'tab-stops' ||
+        property === 'layout-grid-mode' ||
+        property === 'behavior'
+      ) {
+        return false;
+      }
+      // Drop any rule whose value embeds a dangerous primitive (e.g.
+      // `background: url('//attacker/log')`).
+      return !DANGEROUS_STYLE_VALUE.test(rule);
     })
     .join('; ');
 }

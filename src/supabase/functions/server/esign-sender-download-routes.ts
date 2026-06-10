@@ -26,7 +26,7 @@ const app = new Hono();
 app.get('/envelopes/:envelopeId/download', async (c) => {
   try {
     // Authenticate
-    const _ctx = await getAuthContext(c);
+    const ctx = await getAuthContext(c);
     const envelopeId = c.req.param('envelopeId')!;
 
     // Get envelope details
@@ -34,6 +34,16 @@ app.get('/envelopes/:envelopeId/download', async (c) => {
 
     if (!envelope) {
       return c.json({ error: 'Envelope not found' }, 404);
+    }
+
+    // SECURITY (firm scoping): the signed PDF contains client PII. The caller
+    // must belong to the same firm as the envelope (or it must be 'standalone').
+    // Mirrors the /evidence-pack check below — previously this route discarded
+    // the auth context and served any completed envelope by id (IDOR).
+    const callerFirm = resolveFirmId(ctx.user);
+    const envelopeFirm = (envelope.firm_id as string | undefined) || 'standalone';
+    if (envelopeFirm !== 'standalone' && envelopeFirm !== callerFirm) {
+      return c.json({ error: 'Forbidden' }, 403);
     }
 
     // Only allow download of completed envelopes
@@ -320,8 +330,17 @@ app.patch('/envelopes/:envelopeId/signing-mode', async (c) => {
  */
 app.get('/envelopes/:envelopeId/audit/export', async (c) => {
   try {
-    const _ctx = await getAuthContext(c);
+    const ctx = await getAuthContext(c);
     const envelopeId = c.req.param('envelopeId')!;
+
+    // SECURITY (firm scoping): the audit trail contains signer emails and IPs.
+    const envelope = await getEnvelopeDetails(envelopeId);
+    if (!envelope) return c.json({ error: 'Envelope not found' }, 404);
+    const callerFirm = resolveFirmId(ctx.user);
+    const envelopeFirm = (envelope.firm_id as string | undefined) || 'standalone';
+    if (envelopeFirm !== 'standalone' && envelopeFirm !== callerFirm) {
+      return c.json({ error: 'Forbidden' }, 403);
+    }
 
     const events = await getAuditTrail(envelopeId);
     if (!events || events.length === 0) {

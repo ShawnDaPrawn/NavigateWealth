@@ -12,6 +12,13 @@ const getSupabase = () =>
 
 const log = createModuleLogger('esign-storage');
 
+// Per-upload validation (defence-in-depth on top of the bucket's MIME limit).
+// The bucket has a 50MB cap, but we enforce a tighter per-request size and an
+// extension allow-list here so a caller can't store an executable by naming it
+// `x.exe` (the path extension was previously derived from the raw filename).
+const MAX_DOCUMENT_BYTES = 25 * 1024 * 1024; // 25MB
+const ALLOWED_DOCUMENT_EXTENSIONS = new Set(['pdf', 'doc', 'docx']);
+
 // Storage bucket names
 const BUCKETS = {
   DOCUMENTS: 'make-91ed8379-esign-documents',
@@ -107,9 +114,27 @@ export async function uploadDocument(
   mimeType: string = 'application/pdf',
 ): Promise<{ path: string; error: string | null }> {
   try {
+    if (fileBuffer.byteLength > MAX_DOCUMENT_BYTES) {
+      return {
+        path: '',
+        error: `File exceeds the ${Math.floor(MAX_DOCUMENT_BYTES / (1024 * 1024))}MB limit`,
+      };
+    }
+
     const supabase = getSupabase();
-    const extension = fileName.split('.').pop()?.toLowerCase() || 'pdf';
-    const path = `${firmId}/${documentId}.${extension}`;
+    const rawExtension =
+      fileName
+        .split('.')
+        .pop()
+        ?.toLowerCase()
+        .replace(/[^a-z0-9]/g, '') || 'pdf';
+    if (!ALLOWED_DOCUMENT_EXTENSIONS.has(rawExtension)) {
+      return {
+        path: '',
+        error: `File type ".${rawExtension}" is not allowed`,
+      };
+    }
+    const path = `${firmId}/${documentId}.${rawExtension}`;
 
     const { error } = await supabase.storage.from(BUCKETS.DOCUMENTS).upload(path, fileBuffer, {
       contentType: mimeType,
