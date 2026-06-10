@@ -225,6 +225,17 @@ export function useOnboarding(options: UseOnboardingOptions = {}) {
   useEffect(() => {
     if (isInitialLoad || !effectiveUserId) return;
 
+    // Re-arm the unload-save token on every edit: getAccessToken() proactively
+    // refreshes near-expiry tokens, so even after a long idle period the
+    // cached JWT is fresh before the user can close the tab (covers the
+    // edit-then-close-within-2s window where the debounced save never fires).
+    api
+      .getAccessToken()
+      .then((token) => {
+        accessTokenRef.current = token;
+      })
+      .catch(() => {});
+
     // Clear any existing timer
     if (debounceTimerRef.current) {
       clearTimeout(debounceTimerRef.current);
