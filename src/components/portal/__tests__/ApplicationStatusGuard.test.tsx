@@ -16,6 +16,14 @@ vi.mock('../../auth/AuthContext', () => ({
   useAuth: vi.fn(() => ({ user: mockUser })),
 }));
 
+// The guard resolves the session JWT via the central API client
+// (SECURITY-AUDIT C-8) — stub it so no real Supabase client is constructed.
+vi.mock('../../../utils/api/client', () => ({
+  api: {
+    getAccessToken: vi.fn().mockResolvedValue('test-session-token'),
+  },
+}));
+
 describe('ApplicationStatusGuard', () => {
   beforeEach(() => {
     vi.stubGlobal(

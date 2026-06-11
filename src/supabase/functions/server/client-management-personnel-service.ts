@@ -421,6 +421,9 @@ export const PersonnelService = {
         mustSetPassword: true, // Frontend can prompt password change on first login
         createdByAdmin: true,
       },
+      // Authoritative role source — auth middleware only trusts app_metadata
+      // (user_metadata is client-editable). See resolveTrustedRole.
+      app_metadata: { role: payload.role },
     });
 
     if (authError) {
@@ -551,9 +554,14 @@ export const PersonnelService = {
         }
 
         const currentAuthRole = user.user_metadata?.role as string | undefined;
+        const currentAppRole = (user.app_metadata as Record<string, unknown> | undefined)?.role as
+          | string
+          | undefined;
 
-        // Already correct — skip
-        if (currentAuthRole === profile.role) {
+        // Already correct in BOTH metadata stores — skip. app_metadata is the
+        // authoritative source for authorization (resolveTrustedRole), so a
+        // user_metadata match alone is not sufficient.
+        if (currentAuthRole === profile.role && currentAppRole === profile.role) {
           details.push({
             id: profile.id,
             email: profile.email,
@@ -573,6 +581,11 @@ export const PersonnelService = {
               ...user.user_metadata,
               role: profile.role,
               invited: true, // Ensure the personnel guard flag is also set
+            },
+            // Authoritative role source for the auth middleware
+            app_metadata: {
+              ...(user.app_metadata as Record<string, unknown> | undefined),
+              role: profile.role,
             },
           });
 

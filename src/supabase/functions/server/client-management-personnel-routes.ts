@@ -11,12 +11,21 @@ import {
 import type {
   CreatePersonnelPayload,
   PersonnelProfile,
+  UserRole,
 } from './client-management-personnel-types.ts';
 import { formatZodError } from './shared-validation-utils.ts';
 import { z } from 'npm:zod';
 
 const app = new Hono();
 const log = createModuleLogger('personnel');
+
+/**
+ * Narrow the trusted role string from getAuthContext for PersonnelService's
+ * UserRole-typed parameters. Non-personnel roles (e.g. 'client') pass through
+ * unchanged and simply match no privileged branch inside the service — the
+ * same runtime behaviour as before the trusted-role hardening.
+ */
+const asPersonnelRole = (role: string): UserRole => role as UserRole;
 
 // ============================================================================
 // CAPABILITY ENFORCEMENT HELPER
@@ -61,7 +70,11 @@ app.get('/list', async (c) => {
   try {
     const ctx = await getAuthContext(c);
     log.info('Listing personnel', { userId: ctx.userId, role: ctx.role });
-    const list = await PersonnelService.listPersonnel(ctx.userId, ctx.role, ctx.user.email);
+    const list = await PersonnelService.listPersonnel(
+      ctx.userId,
+      asPersonnelRole(ctx.role),
+      ctx.user.email,
+    );
     return c.json({ data: list });
   } catch (e) {
     return handleError(c, e);
@@ -86,7 +99,7 @@ app.post('/invite', async (c) => {
       c.req.header('origin') || c.req.header('referer')?.replace(/\/+$/, '') || undefined;
     log.info('Inviting personnel', { userId: ctx.userId, inviteRole: parsed.data.role, siteUrl });
     const result = await PersonnelService.inviteUser(
-      ctx.role,
+      asPersonnelRole(ctx.role),
       parsed.data as unknown as CreatePersonnelPayload,
       siteUrl,
     );
@@ -107,7 +120,11 @@ app.post('/resend-invite/:id', async (c) => {
     const siteUrl =
       c.req.header('origin') || c.req.header('referer')?.replace(/\/+$/, '') || undefined;
     log.info('Resending invite', { userId: ctx.userId, personnelId, siteUrl });
-    const result = await PersonnelService.resendInvite(ctx.role, personnelId, siteUrl);
+    const result = await PersonnelService.resendInvite(
+      asPersonnelRole(ctx.role),
+      personnelId,
+      siteUrl,
+    );
     return c.json({ data: result });
   } catch (e) {
     return handleError(c, e);
@@ -123,7 +140,7 @@ app.delete('/invite/:id', async (c) => {
 
     const personnelId = c.req.param('id')!;
     log.info('Cancelling invite', { userId: ctx.userId, personnelId });
-    const result = await PersonnelService.cancelInvite(ctx.role, personnelId);
+    const result = await PersonnelService.cancelInvite(asPersonnelRole(ctx.role), personnelId);
     return c.json({ data: result });
   } catch (e) {
     return handleError(c, e);
@@ -150,7 +167,7 @@ app.post('/create-account', async (c) => {
       siteUrl,
     });
     const result = await PersonnelService.createAccount(
-      ctx.role,
+      asPersonnelRole(ctx.role),
       parsed.data as unknown as CreatePersonnelPayload,
       siteUrl,
     );
@@ -213,7 +230,7 @@ app.put('/:id', async (c) => {
 
     log.info('Updating personnel profile', { userId: ctx.userId, targetId, isSelfUpdate });
     const result = await PersonnelService.updateProfile(
-      ctx.role,
+      asPersonnelRole(ctx.role),
       targetId,
       parsed.data as unknown as Partial<PersonnelProfile>,
     );
@@ -234,7 +251,7 @@ app.get('/:id/clients', async (c) => {
     }
 
     log.info('Fetching assigned clients', { userId: ctx.userId, targetId });
-    const clients = await PersonnelService.getAssignedClients(ctx.role, targetId);
+    const clients = await PersonnelService.getAssignedClients(asPersonnelRole(ctx.role), targetId);
     return c.json({ data: clients });
   } catch (e) {
     return handleError(c, e);
@@ -252,7 +269,7 @@ app.post('/:id/documents', async (c) => {
     const body = await c.req.json();
     log.info('Adding personnel document', { userId: ctx.userId, targetId });
 
-    const result = await PersonnelService.addDocument(ctx.role, targetId, body);
+    const result = await PersonnelService.addDocument(asPersonnelRole(ctx.role), targetId, body);
     return c.json({ data: result });
   } catch (e) {
     return handleError(c, e);

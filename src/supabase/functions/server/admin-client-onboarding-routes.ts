@@ -11,7 +11,7 @@ import {
   validateClientInput,
   type AdminAddClientInput,
 } from './admin-client-onboarding-service.ts';
-import { SUPER_ADMIN_EMAIL, HTTP_STATUS, ERROR_MESSAGES } from './constants.ts';
+import { resolveTrustedRole, HTTP_STATUS, ERROR_MESSAGES } from './constants.ts';
 import { createModuleLogger } from './stderr-logger.ts';
 import { getErrMsg } from './shared-logger-utils.ts';
 
@@ -44,12 +44,11 @@ const verifyAdmin = async (c: Context, next: Next) => {
       return c.json({ error: ERROR_MESSAGES.AUTH.INVALID_TOKEN }, HTTP_STATUS.UNAUTHORIZED);
     }
 
-    const isSuperAdmin = user.email?.toLowerCase() === SUPER_ADMIN_EMAIL.toLowerCase();
-    if (!isSuperAdmin) {
-      const role = user.user_metadata?.role;
-      if (role !== 'admin' && role !== 'super_admin' && role !== 'super-admin') {
-        return c.json({ error: ERROR_MESSAGES.AUTH.NOT_ADMIN }, HTTP_STATUS.FORBIDDEN);
-      }
+    // Role from trusted sources only (super-admin allowlist, app_metadata,
+    // NW_ADMIN_EMAILS) — never from client-editable user_metadata.
+    const role = resolveTrustedRole(user);
+    if (role !== 'admin' && role !== 'super_admin' && role !== 'super-admin') {
+      return c.json({ error: ERROR_MESSAGES.AUTH.NOT_ADMIN }, HTTP_STATUS.FORBIDDEN);
     }
 
     c.set('userId', user.id);

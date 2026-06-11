@@ -23,6 +23,15 @@ vi.mock('../../logger', () => ({
   },
 }));
 
+// ── Mock central API client (session token source) ──────────────────────────
+// applicationService resolves the session JWT via api.getAccessToken() —
+// /applications routes require a real session (SECURITY-AUDIT C-8).
+vi.mock('../../api/client', () => ({
+  api: {
+    getAccessToken: vi.fn().mockResolvedValue('test-session-token'),
+  },
+}));
+
 // ── Import after mocks ───────────────────────────────────────────────────────
 import { submitApplication, getApplication, saveApplicationProgress } from '../applicationService';
 import type { ApplicationSubmissionData } from '../applicationService';
@@ -134,7 +143,7 @@ describe('submitApplication', () => {
     await submitApplication(submissionData);
     const [, options] = mockFetch.mock.calls[0];
     expect((options as RequestInit).headers).toMatchObject({
-      Authorization: 'Bearer test-anon-key',
+      Authorization: 'Bearer test-session-token',
     });
   });
 
@@ -204,7 +213,7 @@ describe('getApplication', () => {
     await getApplication('user-001');
     const [, options] = mockFetch.mock.calls[0];
     expect((options as RequestInit).headers).toMatchObject({
-      Authorization: 'Bearer test-anon-key',
+      Authorization: 'Bearer test-session-token',
     });
   });
 

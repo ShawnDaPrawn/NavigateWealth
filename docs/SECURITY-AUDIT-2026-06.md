@@ -155,6 +155,12 @@ default fail _closed_ so a missing `requireAuth` can never again silently expose
   in plaintext KV (the file's own comment flags this). Directly dumpable via C-1.
 - **Fix:** move the signing key + passphrase to a secrets manager / HSM; never store
   private-key material in the app KV.
+- **🟡 PARTIAL 2026-06-10:** `getOrCreatePlatformP12` now reads
+  `NW_ESIGN_PLATFORM_P12_BASE64` + `NW_ESIGN_PLATFORM_P12_PASSPHRASE` (Supabase secrets)
+  before falling back to KV. **Owner action still required:** generate a fresh P12, set the
+  two secrets on the Edge Function, then delete the KV entry
+  (`esign_config:platform_signing_cert`) — the old KV-resident key must be treated as
+  compromised and rotated.
 
 ### H-6 — E-sign download / attachment IDOR
 
@@ -312,6 +318,11 @@ stays Low (it compares SHA-256 hashes).
   `client-applications-routes.ts`: `GET /:userId` (`:203`) returns any user's full financial
   application; `POST /submit` (`:83`) submits one for an arbitrary `userId`; `POST /step/:step`
   mutates step data — all with no auth. **Fix:** `requireAuth` + ownership check on `userId`.
+  **✅ FIXED 2026-06-10:** router-wide `requireAuth` + per-route ownership (self-or-admin;
+  step routes resolve the application owner via `getById`). Frontend callers
+  (`applicationService.ts`, `useOnboarding.ts` keepalive save, `ApplicationStatusGuard.tsx`)
+  migrated from the anon key to the session JWT. Contract-tested in
+  `__tests__/applications-auth.contract.test.ts`.
 
 ### New High
 
@@ -320,6 +331,9 @@ stays Low (it compares SHA-256 hashes).
 - **H-8 — Unauthenticated account-status change (`POST /profile/update-status`)**
   (`client-management-status-routes.ts:14`). Sets any user's `accountStatus`/`accountType`
   (self-approve an application, or suspend a competitor). **Fix:** `requireAdmin`.
+  **✅ FIXED 2026-06-10:** `requireAuth` + self-or-admin ownership, with a self-service
+  status whitelist (`application_in_progress`, `submitted_for_review`) so non-admins cannot
+  self-approve. `AccountTypeSelectionPage` migrated to the central API client (session JWT).
 - **H-9 — E-sign signed-PDF download IDOR** (`esign-sender-download-routes.ts:26`).
   Authenticates but discards the context (`_ctx`), no firm/owner check — any logged-in user
   downloads any completed envelope by ID. A `belongsToFirm` helper already exists
@@ -327,6 +341,8 @@ stays Low (it compares SHA-256 hashes).
 - **H-10 — Entire `/auto-content/*` router is unauthenticated** (not just feed discovery,
   H-1): `configs`, `trigger`/`trigger-all`, and source CRUD all lack auth — content
   injection + OpenAI quota burn. **Fix:** `requireAdmin` at the router.
+  **✅ FIXED 2026-06-10:** router-wide `requireAdmin`; `AutoContentAPI` (publications
+  module) migrated from the static anon-key headers to `getAuthHeaders()` (session JWT).
 - **H-11 — File-upload validation gaps** (`esign-storage.ts`): no per-request size cap (only
   a 50 MB bucket limit) and the stored extension is taken from the filename without an
   allow-list (`:111`) → upload `.exe` under `Content-Type: application/pdf`. **Fix:** size
@@ -447,16 +463,39 @@ adviser dashboards) are safe to gate today — and were.
   authenticated SPA routes (`vercel.json`).
 - **M-16** expanded log redaction (`passport`, `dob`, `tax_number`, `otp`, `passphrase`, …).
 
+**Fixed 2026-06-11 — H-14 (PR #106 review): privileged roles trusted from client-editable
+user_metadata.** `resolveAuthUser`/`getAuthContext` (auth-mw), `fna-auth`, and the local
+admin guards in `applications-routes` / `admin-client-onboarding-routes` derived the
+effective role from `user_metadata.role`, which any authenticated user can set on
+themselves via `supabase.auth.updateUser({ data: { role: 'admin' } })` — full
+`requireAdmin` bypass. **Fix:** all role resolution now goes through
+`resolveTrustedRole()` (constants.ts): super-admin email allowlist → `app_metadata.role`
+(service-role-only writable) → `NW_ADMIN_EMAILS` env allowlist → user_metadata, with
+privileged values from user_metadata demoted to `client`. Provisioning paths
+(super-admin bootstrap, ensure-dev-user, personnel create/backfill, admin metadata
+updates) now write `app_metadata.role`. **Deploy step:** run
+`node ./scripts/backfill-trusted-roles.mjs` once (or set `NW_ADMIN_EMAILS`) so existing
+staff keep access. Tests: `__tests__/trusted-role-resolution.test.ts`.
+
+**Fixed 2026-06-10 (server gating + frontend JWT migration shipped together):**
+
+- **C-8** auth + ownership on `/applications/*`; **H-8** auth + self-or-admin (with a
+  self-service status whitelist) on `/profile/update-status`; **H-10** `requireAdmin` on
+  `/auto-content/*`. Each caller was migrated to `session.access_token` in the same change
+  (`applicationService.ts`, `useOnboarding.ts`, `ApplicationStatusGuard.tsx`,
+  `AccountTypeSelectionPage.tsx`, publications `AutoContentAPI`). Contract tests:
+  `__tests__/applications-auth.contract.test.ts`. **H-5 (partial):** env-secret-first
+  signing-cert loading landed; key rotation is still an owner action.
+
 **Deferred (require the §9 frontend auth-token migration — would 401 live traffic if done
 server-side alone; documented in-code with `SECURITY-AUDIT` markers):**
 
 - **C-2 (full)** blanket auth on `/profile/*`; **C-7** removing the `fna-auth` anon-key-admin
-  branch; **C-8** auth + ownership on `/applications/*`; **H-8** admin on
-  `/profile/update-status`; **H-10** auth on `/auto-content/*`; and the eventual
-  `verify_jwt = true` flip. These need each caller migrated to `session.access_token` first.
+  branch; and the eventual `verify_jwt = true` flip. These need each remaining caller
+  migrated to `session.access_token` first.
 
 **Not yet addressed (follow-up):** H-2 (rss-proxy host allow-list hardening), H-3/H-4
-(rate-limiter fail-closed + atomic + OTP brute-force), H-5 (signing key → secrets manager),
+(rate-limiter fail-closed + atomic + OTP brute-force), H-5 rotation (owner action — see §3),
 H-6/H-9 (e-sign download/attachment ownership), H-11/H-12 (upload limits, FNA-intake RLS),
 M-7 (XSS sink hardening), M-12 (idempotency body caching), and the per-router auth sweep of
 the remaining `*-routes.ts` files. The durable fix remains P3 #16: a CI guard that fails the

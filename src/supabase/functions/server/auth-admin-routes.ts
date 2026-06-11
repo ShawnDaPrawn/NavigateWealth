@@ -76,6 +76,9 @@ adminAuthRoutes.post('/create-superadmin', async (c) => {
         display_name: 'Shawn Admin',
         first_name: 'Shawn',
       },
+      // Authoritative role source — auth middleware only trusts app_metadata
+      // (user_metadata is client-editable). See resolveTrustedRole.
+      app_metadata: { role: 'super_admin' },
     });
 
     if (error) {
@@ -204,6 +207,9 @@ adminAuthRoutes.post('/ensure-dev-user', async (c) => {
           surname: 'User',
           role: 'admin', // Default to admin for dev
         },
+        // Authoritative role source — auth middleware only trusts app_metadata
+        // (user_metadata is client-editable). See resolveTrustedRole.
+        app_metadata: { role: 'admin' },
       });
 
       if (createError) {
