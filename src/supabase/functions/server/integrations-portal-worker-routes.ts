@@ -20,7 +20,12 @@ import {
   callPortalBrainModel,
   parsePortalBrainDecision,
   buildPortalBrainPrompt,
+  buildPortalPageExtractionPrompt,
+  callPortalExtractionModel,
+  parsePortalExtractionFields,
+  redactPortalPageTextForExtraction,
 } from './integrations-portal-brain.ts';
+import type { PortalPageExtractionFieldRequest } from './integrations-portal-brain.ts';
 import { loadPortalCredentialRecord } from './integrations-portal-credentials.ts';
 import { requirePortalWorker } from './integrations-portal-guards.ts';
 import { uploadPortalLiveView, normaliseRunMode } from './integrations-portal-runtime.ts';
@@ -54,6 +59,8 @@ import type {
   PortalDiscoveryReport,
   PortalProviderFlow,
   PortalFlowField,
+  PortalShadowExtractionComparison,
+  PortalShadowExtractionFieldComparison,
 } from './integrations-portal-types.ts';
 import type { IntegrationConfig, IntegrationFieldBinding } from './integrations-core-types.ts';
 
@@ -76,6 +83,65 @@ function buildPortalExtractionFieldsForBindings(
     required: field.required === true,
     transform: typeof field.transform === 'string' ? field.transform : 'trim',
   }));
+}
+
+const SHADOW_COMPARISON_STATUSES: PortalShadowExtractionFieldComparison['status'][] = [
+  'match',
+  'mismatch',
+  'shadow_only',
+  'worker_only',
+  'both_empty',
+];
+
+function sanitiseShadowExtraction(value: unknown): PortalShadowExtractionComparison | undefined {
+  if (!value || typeof value !== 'object') return undefined;
+  const entry = value as Record<string, unknown>;
+  const rawFields = Array.isArray(entry.fields) ? entry.fields : [];
+  const fields: PortalShadowExtractionFieldComparison[] = rawFields
+    .slice(0, 40)
+    .map((field) => {
+      const item = (field || {}) as Record<string, unknown>;
+      const status = SHADOW_COMPARISON_STATUSES.includes(
+        item.status as PortalShadowExtractionFieldComparison['status'],
+      )
+        ? (item.status as PortalShadowExtractionFieldComparison['status'])
+        : 'both_empty';
+      return {
+        columnName: String(item.columnName || '').slice(0, 120),
+        fieldName: typeof item.fieldName === 'string' ? item.fieldName.slice(0, 160) : undefined,
+        semantic: typeof item.semantic === 'string' ? item.semantic.slice(0, 60) : undefined,
+        workerValue:
+          typeof item.workerValue === 'string' ? item.workerValue.slice(0, 240) : undefined,
+        shadowValue:
+          typeof item.shadowValue === 'string' ? item.shadowValue.slice(0, 240) : undefined,
+        shadowConfidence: ['high', 'medium', 'low'].includes(String(item.shadowConfidence))
+          ? (item.shadowConfidence as 'high' | 'medium' | 'low')
+          : undefined,
+        shadowPlausible:
+          typeof item.shadowPlausible === 'boolean' ? item.shadowPlausible : undefined,
+        status,
+      };
+    })
+    .filter((field) => field.columnName);
+  if (fields.length === 0) return undefined;
+
+  const countByStatus = (status: PortalShadowExtractionFieldComparison['status']) =>
+    fields.filter((field) => field.status === status).length;
+
+  return {
+    model: typeof entry.model === 'string' ? entry.model.slice(0, 120) : undefined,
+    comparedAt: typeof entry.comparedAt === 'string' ? entry.comparedAt : new Date().toISOString(),
+    pageUrl: typeof entry.pageUrl === 'string' ? entry.pageUrl.slice(0, 1000) : undefined,
+    summary: {
+      total: fields.length,
+      match: countByStatus('match'),
+      mismatch: countByStatus('mismatch'),
+      shadowOnly: countByStatus('shadow_only'),
+      workerOnly: countByStatus('worker_only'),
+      bothEmpty: countByStatus('both_empty'),
+    },
+    fields,
+  };
 }
 
 async function persistPortalLiveViewUpdate(jobId: string, formData: Record<string, string | File>) {
@@ -429,6 +495,90 @@ app.post('/portal-worker/jobs/:jobId/brain/memory', async (c) => {
   }
 });
 
+// POST /portal-worker/jobs/:jobId/page-extract
+// Observe-only LLM page extraction (shadow mode): the worker sends the
+// confirmed policy page's visible text plus the configured field list and
+// gets one value per field back for comparison against the selector path.
+// Reuses the portal-brain Gemini configuration; never writes job/item state.
+app.post('/portal-worker/jobs/:jobId/page-extract', async (c) => {
+  const authError = requirePortalWorker(c);
+  if (authError) return authError;
+
+  try {
+    const jobId = c.req.param('jobId')!;
+    const job = (await kv.get(`portal-job:${jobId}`)) as PortalSyncJob | null;
+    if (!job) {
+      return c.json({ error: 'Portal job not found' }, 404);
+    }
+
+    const body = (await c.req.json().catch(() => ({}))) as Record<string, unknown>;
+    const policyNumber = String(body.policyNumber || '').trim();
+    const pageText = String(body.pageText || '')
+      .trim()
+      .slice(0, 16000);
+    const rawFields = Array.isArray(body.fields) ? body.fields : [];
+    const fields: PortalPageExtractionFieldRequest[] = rawFields
+      .slice(0, 30)
+      .map((field) => {
+        const entry = (field || {}) as Record<string, unknown>;
+        return {
+          columnName: String(entry.columnName || '').slice(0, 120),
+          fieldName:
+            typeof entry.fieldName === 'string' ? entry.fieldName.slice(0, 160) : undefined,
+          labels: Array.isArray(entry.labels)
+            ? entry.labels.slice(0, 8).map((label) => String(label).slice(0, 120))
+            : [],
+          semantic: typeof entry.semantic === 'string' ? entry.semantic.slice(0, 60) : undefined,
+          required: entry.required === true,
+        };
+      })
+      .filter((field) => field.columnName);
+    if (!policyNumber || !pageText || fields.length === 0) {
+      return c.json({ error: 'policyNumber, pageText, and fields are required' }, 400);
+    }
+
+    const brain = getPortalBrainConfig();
+    if (!brain.available) {
+      return c.json({
+        success: true,
+        available: false,
+        fields: [],
+        reason: 'Google-hosted brain API is not configured on the backend.',
+      });
+    }
+
+    const prompt = buildPortalPageExtractionPrompt({
+      providerName: job.providerName,
+      policyNumber,
+      pageUrl: typeof body.pageUrl === 'string' ? body.pageUrl.slice(0, 1000) : undefined,
+      pageTitle: typeof body.pageTitle === 'string' ? body.pageTitle.slice(0, 240) : undefined,
+      fields,
+      pageText: redactPortalPageTextForExtraction(pageText, [policyNumber]),
+    });
+
+    const result = await callPortalExtractionModel({
+      prompt,
+      model: brain.model,
+      apiBase: brain.apiBase,
+      apiKey: brain.apiKey,
+    });
+    const requestedColumns = new Set(fields.map((field) => field.columnName));
+    const extracted = parsePortalExtractionFields(result.text).filter((field) =>
+      requestedColumns.has(field.columnName),
+    );
+
+    return c.json({
+      success: true,
+      available: true,
+      model: brain.model,
+      fields: extracted,
+    });
+  } catch (e) {
+    log.error('Portal page extraction error:', e);
+    return c.json({ error: `Failed to run page extraction: ${getErrMsg(e)}` }, 500);
+  }
+});
+
 // POST /portal-worker/jobs/:jobId/items/claim
 app.post('/portal-worker/jobs/:jobId/items/claim', async (c) => {
   const authError = requirePortalWorker(c);
@@ -552,6 +702,8 @@ app.post('/portal-worker/jobs/:jobId/items/:itemId/status', async (c) => {
       matchConfidence: ['high', 'medium', 'low'].includes(String(body?.matchConfidence))
         ? body.matchConfidence
         : items[itemIndex].matchConfidence,
+      shadowExtraction:
+        sanitiseShadowExtraction(body?.shadowExtraction) ?? items[itemIndex].shadowExtraction,
       documentAttached:
         typeof body?.documentAttached === 'boolean'
           ? body.documentAttached

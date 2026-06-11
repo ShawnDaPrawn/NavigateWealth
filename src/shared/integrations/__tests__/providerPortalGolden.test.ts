@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { readFileSync } from 'node:fs';
+import { readdirSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 
 const root = process.cwd();
@@ -7,7 +7,18 @@ const root = process.cwd();
 const readRepoFile = (relativePath: string) => readFileSync(path.join(root, relativePath), 'utf8');
 
 describe('provider portal golden flows', () => {
-  const workerSource = readRepoFile('scripts/provider-portal-worker.mjs');
+  // The worker monolith was decomposed into stage modules under
+  // scripts/portal-worker/ (behaviour-preserving moves); combine the entry
+  // point with every module so the golden anchors keep guarding the same
+  // runtime behaviour wherever it now lives (same pattern as the
+  // portalRoutesSource / portalAutomationTabSource splits below).
+  const workerSource = [
+    readRepoFile('scripts/provider-portal-worker.mjs'),
+    ...readdirSync(path.join(root, 'scripts/portal-worker'))
+      .filter((file) => file.endsWith('.mjs'))
+      .sort()
+      .map((file) => readRepoFile(path.join('scripts/portal-worker', file))),
+  ].join('\n');
   const adapterRegistrySource = readRepoFile('scripts/provider-adapters/index.mjs');
   const allanGrayAdapterSource = readRepoFile('scripts/provider-adapters/allan-gray.mjs');
   const brightRockAdapterSource = readRepoFile('scripts/provider-adapters/brightrock.mjs');
@@ -196,7 +207,7 @@ describe('provider portal golden flows', () => {
 
   it('keeps the shared worker routed through the provider adapter registry', () => {
     expect(workerSource).toContain(
-      "import { getProviderAdapter } from './provider-adapters/index.mjs'",
+      "import { getProviderAdapter } from '../provider-adapters/index.mjs'",
     );
     expect(workerSource).toContain('const providerAdapter = getProviderAdapter({ job, flow });');
     expect(workerSource).toContain('providerAdapter?.extractSnapshot');
@@ -213,7 +224,7 @@ describe('provider portal golden flows', () => {
   });
 
   it('keeps shared field semantics outside the worker orchestration layer', () => {
-    expect(workerSource).toContain("from './provider-adapters/field-semantics.mjs'");
+    expect(workerSource).toContain("from '../provider-adapters/field-semantics.mjs'");
     expect(workerSource).not.toContain('function isLikelyProductTypeValue');
     expect(workerSource).not.toContain('function isPlausibleValueForField');
     expect(goldenDocs).toContain('Shared field semantics');

@@ -48,6 +48,64 @@ Do not add new `if provider X, do Y` branches to the shared worker unless the
 same behavior is valid for every provider. Provider-specific behavior should
 live behind an adapter boundary.
 
+## Worker module layout
+
+`scripts/provider-portal-worker.mjs` is a thin entry point. The runtime lives
+in stage modules under `scripts/portal-worker/` (split from the original
+3,600-line monolith as behavior-preserving moves):
+
+| Module                  | Owns                                                       |
+| ----------------------- | ---------------------------------------------------------- |
+| `config.mjs`            | CLI/env parsing, help text, startup validation             |
+| `state.mjs`             | Active job id, job/item warning buffers                    |
+| `api.mjs`               | Integrations API client (claim, runtime, status, staging)  |
+| `page-utils.mjs`        | Provider-neutral Playwright helpers                        |
+| `debug-artifacts.mjs`   | `NW_PORTAL_DEBUG_DIR` JSON snapshots + screenshots         |
+| `live-view.mjs`         | Throttled live screenshot feed                             |
+| `login.mjs`             | Login form, Cloudflare handling, configured navigation     |
+| `otp.mjs`               | OTP + auth checkpoints (incl. BrightRock quirks, see note) |
+| `search.mjs`            | Policy search + brain (smart assist) client                |
+| `extraction.mjs`        | Field extraction, semantics, fail-closed checks            |
+| `documents.mjs`         | Document artifact downloads/uploads                        |
+| `discovery.mjs`         | Discover-mode selector reports                             |
+| `shadow-extraction.mjs` | Observe-only LLM page-extraction comparison                |
+| `queue.mjs`             | Per-policy queue loop                                      |
+| `job-runner.mjs`        | Job lifecycle + poll loop                                  |
+
+Note: the BrightRock-specific OTP delivery choreography currently lives in
+`otp.mjs` (moved verbatim from the monolith). It is a known violation of the
+adapter boundary and should migrate behind the BrightRock adapter in a later
+behavior-preserving slice.
+
+These files are pinned by
+`src/shared/integrations/__tests__/providerPortalGolden.test.ts` (which
+concatenates the entry point and all modules) and are excluded from Prettier
+for the same reason as the original monolith.
+
+## Shadow LLM extraction (observe-only)
+
+The worker can run the confirmed policy page's visible text through a
+server-side LLM extraction (`POST /portal-worker/jobs/:jobId/page-extract`,
+reusing the portal-brain Gemini configuration) and compare the result
+field-by-field against the selector/adapter extraction.
+
+- Enable per run with `NW_PORTAL_SHADOW_EXTRACT=1` on the worker, or per
+  provider with `extraction.shadowLlm: true` on the portal flow.
+  `NW_PORTAL_SHADOW_EXTRACT=0` force-disables it.
+- The comparison is strictly observational: it is logged, written to the
+  `shadow-extraction-comparison` debug artifact, and stored on the job item as
+  `shadowExtraction`, but staged values and item success/failure never change.
+- Each field gets a status (`match`, `mismatch`, `shadow_only`, `worker_only`,
+  `both_empty`), the LLM's confidence, and whether the LLM value passes the
+  shared field-semantics plausibility rules.
+- Page text sent to the model is lightly redacted (emails, SA-ID-length digit
+  runs) while preserving the policy number, amounts, and dates the extraction
+  needs — the same privacy posture as the existing policy-document extraction.
+
+The goal: once shadow results consistently match or beat the adapter values on
+the golden flows, the LLM path can be promoted to the primary extraction
+engine and the pixel-math adapter logic retired.
+
 ## Current refactor phases
 
 Use this sequence when hardening the automation module:

@@ -40,6 +40,7 @@ src/supabase/functions/server/integrations-portal-routes.ts
 src/supabase/functions/server/integrations-sync-engine.ts
 src/supabase/functions/server/portal-default-flows.ts
 scripts/provider-portal-worker.mjs
+scripts/portal-worker/
 src/components/admin/modules/product-management/types.ts
 src/components/admin/modules/product-management/components/ProviderFormDialog.tsx
 src/components/admin/modules/product-management/components/ProviderList.tsx
