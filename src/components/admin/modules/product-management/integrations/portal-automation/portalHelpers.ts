@@ -40,6 +40,64 @@ export const artifactStatusClassNames: Record<string, string> = {
   not_requested: 'bg-gray-50 text-gray-600 border-gray-200',
 };
 
+export const terminalPortalJobStatuses: PortalSyncJob['status'][] = [
+  'staged',
+  'failed',
+  'cancelled',
+  'discovery_ready',
+  'dry_run_ready',
+];
+
+export const isActivePortalJob = (job?: PortalSyncJob | null) =>
+  Boolean(job && !terminalPortalJobStatuses.includes(job.status));
+
+export interface PortalSetupStep {
+  id: string;
+  label: string;
+  complete: boolean;
+  summary: string;
+}
+
+export const computePortalSetupSteps = (input: {
+  loginUrl: string;
+  credentialsSaved: boolean;
+  searchLabels: string[];
+  searchInputSelector: string;
+  mappingBindingCount: number;
+  fieldSelectorCount: number;
+}): PortalSetupStep[] => [
+  {
+    id: 'login-url',
+    label: 'Login URL',
+    complete: /^https?:\/\//i.test(input.loginUrl.trim()),
+    summary: input.loginUrl.trim() || 'Not set',
+  },
+  {
+    id: 'credentials',
+    label: 'Credentials',
+    complete: input.credentialsSaved,
+    summary: input.credentialsSaved ? 'Saved' : 'Not saved yet',
+  },
+  {
+    id: 'search',
+    label: 'Policy search',
+    complete: Boolean(input.searchInputSelector.trim() || input.searchLabels.length > 0),
+    summary:
+      input.searchLabels.length > 0
+        ? input.searchLabels.slice(0, 3).join(', ')
+        : 'No search words yet',
+  },
+  {
+    id: 'fields',
+    label: 'Values to extract',
+    complete: input.mappingBindingCount > 0,
+    summary:
+      input.mappingBindingCount > 0
+        ? `${input.fieldSelectorCount || input.mappingBindingCount} mapped field(s)`
+        : 'Mapping needed first',
+  },
+];
+
 export const splitPortalLines = (value: string) =>
   value
     .split(/\r?\n|,/)

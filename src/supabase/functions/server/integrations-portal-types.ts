@@ -254,6 +254,29 @@ export interface PortalJobQueueSummary {
   skipped: number;
 }
 
+/**
+ * Trimmed portal job record returned by GET /portal-jobs/history. Keeps the
+ * list payload small — the full PortalSyncJob (live view, artifact configs,
+ * policy schedule) is only needed for the latest job.
+ */
+export interface PortalJobHistoryEntry {
+  id: string;
+  status: PortalJobStatus;
+  runMode?: PortalJobRunMode;
+  createdAt: string;
+  updatedAt: string;
+  completedAt?: string;
+  currentStep?: string;
+  message?: string;
+  error?: string;
+  warning?: string;
+  queueSummary?: PortalJobQueueSummary;
+  stagedRunId?: string;
+  discoveryReportId?: string;
+  actionsRunUrl?: string;
+  actionsDispatchError?: string;
+}
+
 export interface PortalShadowExtractionFieldComparison {
   columnName: string;
   fieldName?: string;

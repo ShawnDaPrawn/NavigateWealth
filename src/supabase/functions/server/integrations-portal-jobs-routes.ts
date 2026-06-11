@@ -40,6 +40,7 @@ import type {
   PortalJobStatus,
   PortalAutomationHost,
   PortalSyncJob,
+  PortalJobHistoryEntry,
   PortalDiscoveryReport,
 } from './integrations-portal-types.ts';
 import type { IntegrationSyncRun } from './integrations-core-types.ts';
@@ -224,6 +225,62 @@ app.get('/portal-jobs/latest', requireAuth, async (c) => {
   } catch (e) {
     log.error('Latest portal job fetch error:', e);
     return c.json({ error: 'Failed to fetch latest portal job' }, 500);
+  }
+});
+
+// GET /portal-jobs/history
+// Registered before /portal-jobs/:jobId so "history" is not captured as a job ID.
+app.get('/portal-jobs/history', requireAuth, async (c) => {
+  try {
+    const providerId = c.req.query('providerId');
+    const categoryId = c.req.query('categoryId');
+
+    if (!providerId || !categoryId) {
+      return c.json({ error: 'Missing providerId or categoryId' }, 400);
+    }
+
+    const limit = Math.min(Math.max(Number(c.req.query('limit')) || 20, 1), 50);
+
+    // Prefix scan also returns portal-job:latest:* pointer records
+    // ({ jobId, updatedAt }); the shape filter below drops those.
+    const records = (await kv.getByPrefix('portal-job:')) as Array<Record<string, unknown> | null>;
+    const jobs = records
+      .filter(
+        (record): record is Record<string, unknown> =>
+          !!record &&
+          typeof record === 'object' &&
+          typeof record.id === 'string' &&
+          typeof record.status === 'string' &&
+          record.providerId === providerId &&
+          record.categoryId === categoryId,
+      )
+      .map((record) => record as unknown as PortalSyncJob)
+      .sort((a, b) => Date.parse(b.createdAt || '') - Date.parse(a.createdAt || ''))
+      .slice(0, limit)
+      .map(
+        (job): PortalJobHistoryEntry => ({
+          id: job.id,
+          status: job.status,
+          runMode: job.runMode,
+          createdAt: job.createdAt,
+          updatedAt: job.updatedAt,
+          completedAt: job.completedAt,
+          currentStep: job.currentStep,
+          message: job.message,
+          error: job.error,
+          warning: latestPortalWarning(job.warnings) || job.warning,
+          queueSummary: job.queueSummary,
+          stagedRunId: job.stagedRunId,
+          discoveryReportId: job.discoveryReportId,
+          actionsRunUrl: job.actionsRunUrl,
+          actionsDispatchError: job.actionsDispatchError,
+        }),
+      );
+
+    return c.json({ success: true, jobs });
+  } catch (e) {
+    log.error('Portal job history fetch error:', e);
+    return c.json({ error: 'Failed to fetch portal job history' }, 500);
   }
 });
 
