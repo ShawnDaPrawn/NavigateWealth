@@ -463,6 +463,20 @@ adviser dashboards) are safe to gate today — and were.
   authenticated SPA routes (`vercel.json`).
 - **M-16** expanded log redaction (`passport`, `dob`, `tax_number`, `otp`, `passphrase`, …).
 
+**Fixed 2026-06-11 — H-14 (PR #106 review): privileged roles trusted from client-editable
+user_metadata.** `resolveAuthUser`/`getAuthContext` (auth-mw), `fna-auth`, and the local
+admin guards in `applications-routes` / `admin-client-onboarding-routes` derived the
+effective role from `user_metadata.role`, which any authenticated user can set on
+themselves via `supabase.auth.updateUser({ data: { role: 'admin' } })` — full
+`requireAdmin` bypass. **Fix:** all role resolution now goes through
+`resolveTrustedRole()` (constants.ts): super-admin email allowlist → `app_metadata.role`
+(service-role-only writable) → `NW_ADMIN_EMAILS` env allowlist → user_metadata, with
+privileged values from user_metadata demoted to `client`. Provisioning paths
+(super-admin bootstrap, ensure-dev-user, personnel create/backfill, admin metadata
+updates) now write `app_metadata.role`. **Deploy step:** run
+`node ./scripts/backfill-trusted-roles.mjs` once (or set `NW_ADMIN_EMAILS`) so existing
+staff keep access. Tests: `__tests__/trusted-role-resolution.test.ts`.
+
 **Fixed 2026-06-10 (server gating + frontend JWT migration shipped together):**
 
 - **C-8** auth + ownership on `/applications/*`; **H-8** auth + self-or-admin (with a

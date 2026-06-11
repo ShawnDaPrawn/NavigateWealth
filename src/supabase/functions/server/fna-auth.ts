@@ -25,6 +25,7 @@ import { createClient } from 'jsr:@supabase/supabase-js@2.49.8';
 import { createModuleLogger } from './stderr-logger.ts';
 import { getErrMsg } from './shared-logger-utils.ts';
 import { constantTimeEqual } from './crypto-utils.ts';
+import { resolveTrustedRole } from './constants.ts';
 
 // Lazy Supabase client — must NOT be top-level to avoid deployment crashes in edge functions.
 const getSupabase = () =>
@@ -99,10 +100,13 @@ export async function authenticateUser(
       throw new Error('Unauthorized');
     }
 
+    // Role from trusted sources only — isFnaAdminRole grants admin powers to
+    // 'adviser' as well, so privileged values in client-editable user_metadata
+    // must not be honoured here either. See resolveTrustedRole in constants.ts.
     const authUser: FNAAuthUser = {
       id: user.id,
       email: user.email || '',
-      role: user.user_metadata?.role || 'client',
+      role: resolveTrustedRole(user),
     };
 
     log.info(`[${context}] User authenticated`, { userId: authUser.id });

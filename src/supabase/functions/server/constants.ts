@@ -69,6 +69,73 @@ export function isSuperAdminEmail(email: string | null | undefined): boolean {
     .includes(normalized);
 }
 
+/**
+ * Returns true if `email` is on the admin allowlist supplied via the
+ * `NW_ADMIN_EMAILS` env var (comma/semicolon/whitespace-separated,
+ * case-insensitive). This is the deploy-free recovery path for granting
+ * admin when `app_metadata.role` has not been backfilled yet.
+ */
+export function isAdminEmail(email: string | null | undefined): boolean {
+  if (!email) return false;
+  const normalized = email.trim().toLowerCase();
+  if (!normalized) return false;
+  const fromEnv = typeof Deno !== 'undefined' ? Deno.env.get('NW_ADMIN_EMAILS') : undefined;
+  if (!fromEnv) return false;
+  return fromEnv
+    .split(/[,;\s]+/)
+    .map((e) => e.trim().toLowerCase())
+    .filter(Boolean)
+    .includes(normalized);
+}
+
+/**
+ * Roles that grant elevated access somewhere in the backend (`requireAdmin`
+ * accepts admin/super_admin; `isFnaAdminRole` additionally accepts adviser).
+ * These must NEVER be honoured from client-editable `user_metadata`.
+ */
+const PRIVILEGED_ROLES: ReadonlySet<string> = new Set([
+  'admin',
+  'super_admin',
+  'super-admin',
+  'adviser',
+]);
+
+/** Minimal structural shape of a Supabase Auth user for role resolution. */
+interface RoleResolvableUser {
+  email?: string | null;
+  user_metadata?: Record<string, unknown> | null;
+  app_metadata?: Record<string, unknown> | null;
+}
+
+/**
+ * Resolve a user's effective role from TRUSTED sources only.
+ *
+ * Trust order (SECURITY-AUDIT: privileged-role hardening, PR #106 review):
+ *   1. Super-admin email allowlist  → 'super_admin'
+ *   2. `app_metadata.role`          → trusted verbatim (only the service role
+ *      can write app_metadata; users cannot)
+ *   3. `NW_ADMIN_EMAILS` allowlist  → 'admin'
+ *   4. `user_metadata.role`         → honoured ONLY for non-privileged values.
+ *      user_metadata is editable by the user themself via
+ *      `supabase.auth.updateUser({ data: { … } })`, so a privileged value
+ *      here is treated as 'client' — otherwise any authenticated user could
+ *      self-assign 'admin' and pass requireAdmin.
+ */
+export function resolveTrustedRole(user: RoleResolvableUser): string {
+  if (isSuperAdminEmail(user.email)) return 'super_admin';
+
+  const appRole = user.app_metadata?.role;
+  if (typeof appRole === 'string' && appRole) return appRole;
+
+  if (isAdminEmail(user.email)) return 'admin';
+
+  const metaRole = user.user_metadata?.role;
+  if (typeof metaRole === 'string' && metaRole && !PRIVILEGED_ROLES.has(metaRole)) {
+    return metaRole;
+  }
+  return 'client';
+}
+
 // ============================================================================
 // Database Configuration
 // ============================================================================

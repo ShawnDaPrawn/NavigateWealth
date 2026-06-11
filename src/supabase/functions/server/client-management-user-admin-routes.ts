@@ -181,6 +181,10 @@ app.put(
 
     const { data, error } = await supabase.auth.admin.updateUserById(userId, {
       user_metadata: metadata,
+      // If the admin is changing the role, mirror it into app_metadata — the
+      // auth middleware only trusts app_metadata for privileged roles
+      // (user_metadata is client-editable). See resolveTrustedRole.
+      ...(typeof metadata.role === 'string' ? { app_metadata: { role: metadata.role } } : {}),
     });
 
     if (error) {
