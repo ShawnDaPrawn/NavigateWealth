@@ -123,6 +123,108 @@ export function looksLikeOtpEntryPrompt(text) {
   return /enter\s+(the\s+)?(otp|code|pin|passcode)|verification\s+(otp|code|pin|passcode)/i.test(text || '');
 }
 
+export function looksLikePushApprovalCheckpoint(text) {
+  const value = String(text || '');
+  // PingID-style number matching shows a number on screen and asks the user
+  // to tap the same number in the authenticator app — there is no code input.
+  return /ping\s*id|ping\s*one/i.test(value)
+    || /(select|tap|press|choose)\s+(the\s+)?(matching\s+|same\s+)?number/i.test(value)
+    || /number\s+(shown|displayed)\s+(on\s+(the\s+)?screen|below|above)/i.test(value)
+    || /approve\s+(the\s+|this\s+)?(sign[-\s]*in|log[-\s]*in|login|authentication|request|notification)\s+(in|on|from)\s+(your\s+)?(phone|mobile|device|app)/i.test(value)
+    || /open\s+(the\s+|your\s+)?(pingid|authenticator|mobile)\s+app/i.test(value)
+    || /push\s+notification\s+(has\s+been\s+)?sent/i.test(value);
+}
+
+export async function extractPushApprovalNumber(page) {
+  return page.evaluate(() => {
+    const isVisible = (el) => {
+      if (!(el instanceof HTMLElement)) return false;
+      const style = window.getComputedStyle(el);
+      const rect = el.getBoundingClientRect();
+      return style.display !== 'none' && style.visibility !== 'hidden' && rect.width > 0 && rect.height > 0;
+    };
+    // The matching number is rendered as a prominent standalone 1-3 digit
+    // figure; pick the visible digit-only element with the largest font.
+    let best = { value: '', fontSize: 0 };
+    for (const el of document.querySelectorAll('body *')) {
+      if (!isVisible(el)) continue;
+      const ownText = Array.from(el.childNodes)
+        .filter((node) => node.nodeType === Node.TEXT_NODE)
+        .map((node) => node.textContent || '')
+        .join(' ')
+        .trim();
+      if (!/^\d{1,3}$/.test(ownText)) continue;
+      const fontSize = Number.parseFloat(window.getComputedStyle(el).fontSize) || 0;
+      if (fontSize > best.fontSize) best = { value: ownText, fontSize };
+    }
+    return best.fontSize >= 20 ? best.value : '';
+  }).catch(() => '');
+}
+
+const PUSH_APPROVAL_MIN_INACTIVITY_MS = 300000;
+
+export async function waitForPushApprovalToClear(page, flow, options = {}) {
+  const inactivityWindowMs = Math.max(
+    Number(options.inactivityWindowMs || flow?.otp?.pushApprovalInactivityMs || 0) || 0,
+    PUSH_APPROVAL_MIN_INACTIVITY_MS,
+  );
+  const hardDeadline = Date.now() + Math.max(Number(flow?.otp?.timeoutMs || 0) || 600000, inactivityWindowMs * 2);
+
+  let inactivityDeadline = Date.now() + inactivityWindowMs;
+  let lastActivitySignature = '';
+  let lastAnnouncedNumber = null;
+
+  while (Date.now() < inactivityDeadline && Date.now() < hardDeadline) {
+    await page.waitForLoadState('domcontentloaded', { timeout: 5000 }).catch(() => undefined);
+    await page.waitForLoadState('networkidle', { timeout: 2500 }).catch(() => undefined);
+
+    const checkpoint = await detectAuthCheckpoint(page, flow);
+    if (!checkpoint) {
+      await updateJob('running', {
+        currentStep: 'push_approval_completed',
+        message: 'Provider push verification approved. Continuing into the portal.',
+      });
+      await publishLiveView(page, {
+        force: true,
+        note: 'Provider push verification approved. Continuing into the portal.',
+      }).catch(() => undefined);
+      return true;
+    }
+
+    const approvalNumber = await extractPushApprovalNumber(page);
+    if (approvalNumber !== lastAnnouncedNumber) {
+      lastAnnouncedNumber = approvalNumber;
+      const message = approvalNumber
+        ? `Provider verification: open the PingID app on the registered phone and tap the number ${approvalNumber} shown on screen.`
+        : 'Provider verification: approve the sign-in in the PingID app on the registered phone to continue.';
+      await updateJob('waiting_for_otp', { currentStep: 'push_approval_pending', message });
+      await publishLiveView(page, { force: true, note: message }).catch(() => undefined);
+    }
+
+    // Any page change (new number, redirect, progress text) resets the
+    // inactivity window — the worker only gives up after the screen has been
+    // completely still for the full window.
+    const bodyText = await page.locator('body').innerText({ timeout: 1000 }).catch(() => '');
+    const activitySignature = [page.url(), sampleText(bodyText, 400)].join('|');
+    if (activitySignature !== lastActivitySignature) {
+      lastActivitySignature = activitySignature;
+      inactivityDeadline = Date.now() + inactivityWindowMs;
+    }
+
+    await page.waitForTimeout(1000);
+  }
+
+  await writeOtpDiagnostics(page, 'push-approval-timeout', {
+    inactivityWindowMs,
+    lastAnnouncedNumber,
+  });
+  throw new Error(
+    'Timed out waiting for the provider push verification (PingID) to be approved. '
+    + 'The provider showed a number-matching screen, but the sign-in was not approved on the registered phone before the inactivity window elapsed. '
+    + `The worker waited ${Math.round(inactivityWindowMs / 60000)} minutes after the last page activity.`,
+  );
+}
+
 export function looksLikePendingOtpSendAction(text) {
   const value = String(text || '').replace(/\s+/g, ' ').trim();
   if (!value || /\bresend\b/i.test(value)) return false;
@@ -723,7 +825,7 @@ export async function detectAuthCheckpoint(page, flow) {
     return '';
   }
 
-  const hasAuthCheckpoint = /login\s*verification|verify\s+(your\s+)?(identity|login|account)|verification\s+(code|step)|one[-\s]*time\s*(pin|password|code)|\botp\b|two[-\s]*factor|multi[-\s]*factor|authenticator|security\s+code|passcode|enter\s+(the\s+)?code|send\s+(code|otp|pin)/i.test(text);
+  const hasAuthCheckpoint = /login\s*verification|verify\s+(your\s+)?(identity|login|account)|verification\s+(code|step)|one[-\s]*time\s*(pin|password|code)|\botp\b|two[-\s]*factor|multi[-\s]*factor|authenticator|security\s+code|passcode|enter\s+(the\s+)?code|send\s+(code|otp|pin)|ping\s*id|ping\s*one|(select|tap|press|choose)\s+(the\s+)?(matching\s+|same\s+)?number/i.test(text);
   if (!hasAuthCheckpoint) return '';
 
   const sample = String(snapshot.bodyText || text).replace(/\s+/g, ' ').trim().slice(0, 260);
@@ -731,6 +833,16 @@ export async function detectAuthCheckpoint(page, flow) {
 }
 
 export async function handleManualOtpCheckpoint(page, flow) {
+  // PingID-style push approval (e.g. Allan Gray) has no code input: the user
+  // taps the on-screen number in the authenticator app and the page moves on
+  // by itself. Detect it before any SMS-OTP choreography so the worker waits
+  // instead of failing on a missing OTP input.
+  const checkpointBodyText = await page.locator('body').innerText({ timeout: 2500 }).catch(() => '');
+  if (looksLikePushApprovalCheckpoint(checkpointBodyText)) {
+    const cleared = await waitForPushApprovalToClear(page, flow);
+    return { handled: cleared === true, requiresCredentialResubmit: false };
+  }
+
   const requestedSmsOtp = await chooseSmsOtpDeliveryIfPresent(page, flow);
   if (requestedSmsOtp) {
     const result = await completeManualOtpAfterDelivery(page, flow);
