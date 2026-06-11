@@ -123,16 +123,19 @@ export function looksLikeOtpEntryPrompt(text) {
   return /enter\s+(the\s+)?(otp|code|pin|passcode)|verification\s+(otp|code|pin|passcode)/i.test(text || '');
 }
 
-export function looksLikePushApprovalCheckpoint(text) {
+export function looksLikePushApprovalInstruction(text) {
   const value = String(text || '');
   // PingID-style number matching shows a number on screen and asks the user
   // to tap the same number in the authenticator app — there is no code input.
-  return /ping\s*id|ping\s*one/i.test(value)
-    || /(select|tap|press|choose)\s+(the\s+)?(matching\s+|same\s+)?number/i.test(value)
+  return /(select|tap|press|choose)\s+(the\s+)?(matching\s+|same\s+)?number/i.test(value)
     || /number\s+(shown|displayed)\s+(on\s+(the\s+)?screen|below|above)/i.test(value)
     || /approve\s+(the\s+|this\s+)?(sign[-\s]*in|log[-\s]*in|login|authentication|request|notification)\s+(in|on|from)\s+(your\s+)?(phone|mobile|device|app)/i.test(value)
     || /open\s+(the\s+|your\s+)?(pingid|authenticator|mobile)\s+app/i.test(value)
     || /push\s+notification\s+(has\s+been\s+)?sent/i.test(value);
+}
+
+export function looksLikePushApprovalCheckpoint(text) {
+  return /ping\s*id|ping\s*one/i.test(String(text || '')) || looksLikePushApprovalInstruction(text);
 }
 
 export async function extractPushApprovalNumber(page) {
@@ -850,8 +853,16 @@ export async function handleManualOtpCheckpoint(page, flow) {
   // instead of failing on a missing OTP input.
   const checkpointBodyText = await page.locator('body').innerText({ timeout: 2500 }).catch(() => '');
   if (looksLikePushApprovalCheckpoint(checkpointBodyText)) {
-    const cleared = await waitForPushApprovalToClear(page, flow);
-    return { handled: cleared === true, requiresCredentialResubmit: false };
+    // Brand wording alone is not proof of push approval — a PingID-branded
+    // page can still ask for a conventional code. Wait for the approval only
+    // when push instructions are present, or when there is no OTP entry
+    // target to fall back to; otherwise continue into the regular OTP flow.
+    const treatAsPushApproval = looksLikePushApprovalInstruction(checkpointBodyText)
+      || !(await findOtpEntryTarget(page, flow, undefined, 3000));
+    if (treatAsPushApproval) {
+      const cleared = await waitForPushApprovalToClear(page, flow);
+      return { handled: cleared === true, requiresCredentialResubmit: false };
+    }
   }
 
   const requestedSmsOtp = await chooseSmsOtpDeliveryIfPresent(page, flow);

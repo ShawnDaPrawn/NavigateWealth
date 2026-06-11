@@ -56,6 +56,12 @@ export const isCloudflareVerificationStep = (job?: PortalSyncJob | null) =>
   /cloudflare human verification/i.test(String(job?.message || '')) ||
   /cloudflare human verification/i.test(String(job?.error || ''));
 
+// PingID-style push approval (number matching) — no OTP code is entered in
+// Navigate Wealth; the user approves the sign-in in the authenticator app.
+export const isPushApprovalStep = (job?: PortalSyncJob | null) =>
+  job?.currentStep === 'push_approval_pending' ||
+  /pingid|push\s+(verification|approval)|tap\s+the\s+number/i.test(String(job?.message || ''));
+
 export const isPortalMetadataColumn = (key: string) => key.trim().startsWith('_NW ');
 
 export const formatExtractedValue = (value: unknown) => {
