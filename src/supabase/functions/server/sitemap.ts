@@ -26,6 +26,7 @@
 
 import { Hono } from 'npm:hono';
 import { createClient } from 'jsr:@supabase/supabase-js@2.49.8';
+import { requireAdmin } from './auth-mw.ts';
 import { createModuleLogger } from './stderr-logger.ts';
 import { asyncHandler } from './error.middleware.ts';
 import * as kv from './kv_store.tsx';
@@ -178,6 +179,9 @@ app.get(
  */
 app.post(
   '/publish',
+  // Admin-only maintenance action (per-router auth sweep); the GET sitemap
+  // routes stay public for crawlers.
+  requireAdmin,
   asyncHandler(async (c) => {
     const supabase = getSupabase();
     const xml = await generateSitemapXml();

@@ -494,9 +494,40 @@ server-side alone; documented in-code with `SECURITY-AUDIT` markers):**
   branch; and the eventual `verify_jwt = true` flip. These need each remaining caller
   migrated to `session.access_token` first.
 
-**Not yet addressed (follow-up):** H-2 (rss-proxy host allow-list hardening), H-3/H-4
-(rate-limiter fail-closed + atomic + OTP brute-force), H-5 rotation (owner action — see §3),
-H-6/H-9 (e-sign download/attachment ownership), H-11/H-12 (upload limits, FNA-intake RLS),
-M-7 (XSS sink hardening), M-12 (idempotency body caching), and the per-router auth sweep of
-the remaining `*-routes.ts` files. The durable fix remains P3 #16: a CI guard that fails the
-build when a router is mounted without auth.
+**Fixed 2026-06-11 (quick-wins pass):**
+
+- **H-2** rss-proxy: exact-host allow-list (no subdomain wildcard) + `assertPublicHttpUrl`
+  SSRF guard on the target URL.
+- **H-12** FNA-intake RLS: clients can now UPDATE only `client_draft` sessions
+  (migration `20260611000001_fna_intake_rls_draft_only.sql`; submission goes through the
+  Edge Function with the service role).
+- **P3 #16 (the durable fix): router-auth CI guard landed** —
+  `__tests__/router-auth-guard.test.ts` parses every `lazy()` mount, recursively scans each
+  router's import tree (`import`/`export … from`) for auth markers, and fails the build for
+  any new router that is neither authed, explicitly allow-listed as public (with a reason),
+  nor in the tracked `KNOWN_UNAUTH_DEBT` list. `SERVICE_ROLE_KEY` is deliberately NOT a
+  marker (it is a DB credential reached via the KV store by nearly every router, not an
+  inbound-request guard — PR #115 review). The guard caught and led to fixing several live
+  gaps:
+  - `requests-routes.ts` — template/lifecycle/compliance CRUD had NO auth → `requireAdmin`
+    on all back-office routes (`GET /:id` stays public for emailed completion links).
+  - `publications-ai-routes.ts` — unauthenticated OpenAI generation → `requireAdmin`;
+    `AIWritingAPI` frontend callers migrated to session JWTs.
+  - `setup.ts` — **unauthenticated raw-DDL endpoints** (`/database`, `/tasks-table`,
+    `/check*` ran `CREATE TABLE/FUNCTION/TRIGGER` via the service role) → `requireSuperAdmin`.
+  - `sitemap.ts` `POST /publish` → `requireAdmin` (GET sitemap stays public for crawlers).
+  - `linktree-routes.ts` — `/links`, `/reorder`, `/settings` mutations → `requireAdmin`
+    (the admin LinktreeTab uses the session API client); `/public` + `/click` stay public.
+  - Intentionally public (allow-listed with reasons): `consultation`, `contact-form`,
+    `quote-request`, `auth-signup`, `rss-proxy`, `fna-routes`.
+  - Tracked debt (`KNOWN_UNAUTH_DEBT`): `documents.ts` — IDOR over client documents
+    (by `:userId`); fix is blocked on C-7/C-2 because client pages still send the anon key.
+- **Discovered while sweeping:** the public `POST /requests/:id/submit` the
+  RequestCompletionPage calls has never existed server-side — the client-facing request
+  completion flow 404s on submit today. Needs a product decision (response storage +
+  status transition) — tracked as follow-up, NOT fixed here.
+
+**Not yet addressed (follow-up):** H-3/H-4 (rate-limiter fail-closed + atomic + OTP
+brute-force), H-5 rotation (owner action — see §3), H-6/H-9 (e-sign download/attachment
+ownership), H-11 (upload limits), M-7 (XSS sink hardening), M-12 (idempotency body
+caching), and the missing `/requests/:id/submit` endpoint above.

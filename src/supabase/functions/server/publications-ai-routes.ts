@@ -9,6 +9,7 @@
  */
 
 import { Hono } from 'npm:hono';
+import { requireAdmin } from './auth-mw.ts';
 import { createModuleLogger } from './stderr-logger.ts';
 import {
   processAIWritingRequest,
@@ -19,6 +20,12 @@ import type { AIWritingRequest, GenerateArticleBrief } from './publications-ai-s
 
 const app = new Hono();
 const log = createModuleLogger('publications-ai');
+
+// Per-router auth sweep (SECURITY-AUDIT §"root cause"): these endpoints call
+// OpenAI/Unsplash on every request — unauthenticated access means anonymous
+// API-quota burn and prompt injection into generated content. Back-office
+// tooling, admin only; the AIWritingAPI frontend callers send admin JWTs.
+app.use('*', requireAdmin);
 
 // Root handler
 app.get('/', (c) => c.json({ service: 'publications-ai', status: 'active' }));

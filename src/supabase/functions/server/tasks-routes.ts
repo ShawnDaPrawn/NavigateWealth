@@ -301,8 +301,10 @@ app.post(
             );
           nextSort = maxSort + 1;
         }
-      } catch (_) {
-        /* ignore */
+      } catch (err) {
+        // Best-effort fallback to default sort order — log the KV failure
+        // instead of swallowing it silently.
+        log.warn('Failed to compute next sort_order; using default', { error: String(err) });
       }
 
       const task = {
@@ -390,13 +392,13 @@ app.delete(
       // Also clean up related data
       try {
         await kv.del(`task_checklist:${id}`);
-      } catch (_) {
-        /* ignore */
+      } catch (err) {
+        log.warn(`Best-effort cleanup of task_checklist:${id} failed`, { error: String(err) });
       }
       try {
         await kv.del(`task_comments:${id}`);
-      } catch (_) {
-        /* ignore */
+      } catch (err) {
+        log.warn(`Best-effort cleanup of task_comments:${id} failed`, { error: String(err) });
       }
 
       log.info(`Deleted task ${id}`);
@@ -524,8 +526,10 @@ app.post(
             );
           nextSort = maxSort + 1;
         }
-      } catch (_) {
-        /* ignore */
+      } catch (err) {
+        // Best-effort fallback to default sort order — log the KV failure
+        // instead of swallowing it silently.
+        log.warn('Failed to compute next sort_order; using default', { error: String(err) });
       }
 
       const duplicate = {
@@ -612,8 +616,10 @@ app.post(
             );
           nextSort = maxSort + 1;
         }
-      } catch (_) {
-        /* ignore */
+      } catch (err) {
+        // Best-effort fallback to default sort order — log the KV failure
+        // instead of swallowing it silently.
+        log.warn('Failed to compute next sort_order; using default', { error: String(err) });
       }
 
       const updated = {

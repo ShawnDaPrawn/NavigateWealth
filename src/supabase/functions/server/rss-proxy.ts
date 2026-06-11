@@ -1,8 +1,18 @@
 import { Hono } from 'npm:hono';
 import { createModuleLogger } from './stderr-logger.ts';
+import { assertPublicHttpUrl } from './ssrf-guard.ts';
 
 const app = new Hono();
 const log = createModuleLogger('rss-proxy');
+
+// SECURITY-AUDIT H-2: exact-host allow-list (no subdomain wildcard — a
+// wildcard would let any *.investing.com host, and combined with DNS
+// rebinding widen the proxy's reach). Add hosts here deliberately.
+const ALLOWED_HOSTS: ReadonlySet<string> = new Set([
+  'investing.com',
+  'za.investing.com',
+  'www.investing.com',
+]);
 
 // Root handler for the RSS proxy service
 // Mounted at /make-server-91ed8379/rss-proxy
@@ -18,14 +28,15 @@ app.get('/', async (c) => {
       });
     }
 
-    // Validate URL
-    const allowedDomains = ['investing.com', 'za.investing.com', 'www.investing.com'];
-    const parsedUrl = new URL(url);
-    const isAllowed = allowedDomains.some(
-      (domain) => parsedUrl.hostname === domain || parsedUrl.hostname.endsWith(`.${domain}`),
-    );
-
-    if (!isAllowed) {
+    // Validate URL: exact host match + SSRF guard (blocks private IPs,
+    // loopback, metadata endpoints and non-http(s) schemes).
+    let parsedUrl: URL;
+    try {
+      parsedUrl = assertPublicHttpUrl(url);
+    } catch {
+      return c.json({ error: 'URL not allowed' }, 403);
+    }
+    if (!ALLOWED_HOSTS.has(parsedUrl.hostname.toLowerCase())) {
       return c.json({ error: 'URL domain not allowed' }, 403);
     }
 
