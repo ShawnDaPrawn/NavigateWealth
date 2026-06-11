@@ -8,14 +8,26 @@
  */
 
 import { useEffect, useRef, useState } from 'react';
-import { Lock, ShieldCheck, Unlock } from 'lucide-react';
+import { Lock, ShieldCheck, ShieldX, Unlock } from 'lucide-react';
 import { Button } from '../../../ui/button';
 import { Input } from '../../../ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../../ui/card';
+import { useCurrentUserPermissions } from '../personnel/hooks/usePermissions';
+import { LockedSkeleton } from './components/LockedSkeleton';
 import { getLockoutRemaining, verifyAccessCode } from './access';
 
 export function LockedModule() {
+  const { isSuperAdmin, isLoading } = useCurrentUserPermissions();
   const [unlocked, setUnlocked] = useState(false);
+
+  // Sidebar filtering only hides the link — guard direct deep links
+  // (/admin?module=locked) here as well. Super admins only.
+  if (isLoading) {
+    return <LockedSkeleton />;
+  }
+  if (!isSuperAdmin) {
+    return <AccessDenied />;
+  }
 
   if (!unlocked) {
     return <AccessGate onUnlocked={() => setUnlocked(true)} />;
@@ -48,6 +60,22 @@ export function LockedModule() {
             <p className="text-sm">This area is reserved for future modules.</p>
           </div>
         </CardContent>
+      </Card>
+    </div>
+  );
+}
+
+function AccessDenied() {
+  return (
+    <div className="min-h-[70vh] flex items-center justify-center p-6">
+      <Card className="w-full max-w-sm">
+        <CardHeader className="text-center">
+          <div className="mx-auto w-12 h-12 rounded-full bg-destructive/10 flex items-center justify-center mb-2">
+            <ShieldX className="h-6 w-6 text-destructive" />
+          </div>
+          <CardTitle>Access Denied</CardTitle>
+          <CardDescription>You do not have permission to view this page.</CardDescription>
+        </CardHeader>
       </Card>
     </div>
   );

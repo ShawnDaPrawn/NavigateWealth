@@ -16,13 +16,51 @@
 const ACCESS_CODE_SHA256 = '1266f8ee2561d7b4e653ae40a4d217d56e9decc7d5cf9a48ac7eb243b7460a19';
 
 // Brute-force throttle: after MAX_ATTEMPTS consecutive failures the gate
-// refuses input for LOCKOUT_MS. Tracked at module scope so remounting the
-// component (navigating away and back) does not reset the counter.
+// refuses input for LOCKOUT_MS. State is persisted to localStorage so a
+// page reload does not reset the counter. This is best-effort only — a
+// client can always clear its own storage; throttling that cannot be
+// reset requires server-side verification.
 export const MAX_ATTEMPTS = 5;
 export const LOCKOUT_MS = 30_000;
 
-let failedAttempts = 0;
-let lockoutUntil = 0;
+const THROTTLE_STORAGE_KEY = 'nw.locked.gate';
+
+interface ThrottleState {
+  attempts: number;
+  lockoutUntil: number;
+}
+
+function loadThrottleState(): ThrottleState {
+  try {
+    const raw = localStorage.getItem(THROTTLE_STORAGE_KEY);
+    if (raw) {
+      const parsed = JSON.parse(raw) as Partial<ThrottleState>;
+      return {
+        attempts: Number(parsed.attempts) || 0,
+        lockoutUntil: Number(parsed.lockoutUntil) || 0,
+      };
+    }
+  } catch {
+    // Storage unavailable or corrupt — fall through to a clean state.
+  }
+  return { attempts: 0, lockoutUntil: 0 };
+}
+
+function saveThrottleState(state: ThrottleState): void {
+  try {
+    localStorage.setItem(THROTTLE_STORAGE_KEY, JSON.stringify(state));
+  } catch {
+    // Storage unavailable — throttle degrades to in-memory for this load.
+    memoryThrottleState = state;
+  }
+}
+
+// Fallback when localStorage is unavailable (e.g. blocked by the browser).
+let memoryThrottleState: ThrottleState | null = null;
+
+function getThrottleState(): ThrottleState {
+  return memoryThrottleState ?? loadThrottleState();
+}
 
 async function sha256Hex(value: string): Promise<string> {
   const data = new TextEncoder().encode(value);
@@ -44,7 +82,7 @@ function constantTimeEqual(a: string, b: string): boolean {
 
 /** Milliseconds remaining in the current lockout window (0 when not locked out). */
 export function getLockoutRemaining(): number {
-  return Math.max(0, lockoutUntil - Date.now());
+  return Math.max(0, getThrottleState().lockoutUntil - Date.now());
 }
 
 export type VerifyResult =
@@ -60,15 +98,15 @@ export async function verifyAccessCode(input: string): Promise<VerifyResult> {
 
   const hash = await sha256Hex(input);
   if (constantTimeEqual(hash, ACCESS_CODE_SHA256)) {
-    failedAttempts = 0;
+    saveThrottleState({ attempts: 0, lockoutUntil: 0 });
     return { ok: true };
   }
 
-  failedAttempts += 1;
-  if (failedAttempts >= MAX_ATTEMPTS) {
-    failedAttempts = 0;
-    lockoutUntil = Date.now() + LOCKOUT_MS;
+  const attempts = getThrottleState().attempts + 1;
+  if (attempts >= MAX_ATTEMPTS) {
+    saveThrottleState({ attempts: 0, lockoutUntil: Date.now() + LOCKOUT_MS });
     return { ok: false, reason: 'locked-out', remainingMs: LOCKOUT_MS };
   }
-  return { ok: false, reason: 'invalid', attemptsLeft: MAX_ATTEMPTS - failedAttempts };
+  saveThrottleState({ attempts, lockoutUntil: 0 });
+  return { ok: false, reason: 'invalid', attemptsLeft: MAX_ATTEMPTS - attempts };
 }
