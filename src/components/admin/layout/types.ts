@@ -19,7 +19,8 @@ export type AdminModule =
   | 'calendar'
   | 'esign'
   | 'issues'
-  | 'ai-management';
+  | 'ai-management'
+  | 'locked';
 
 export interface ModuleConfigItem {
   label: string;

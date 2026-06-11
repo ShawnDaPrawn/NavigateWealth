@@ -18,6 +18,7 @@ import {
   StickyNote,
   Bot,
   ShieldAlert,
+  Lock,
 } from 'lucide-react';
 import { AdminModule, ModuleConfigItem, ModuleGroup } from './types';
 
@@ -41,6 +42,7 @@ export const moduleConfig: Record<AdminModule, ModuleConfigItem> = {
   calendar: { label: 'Calendar & Reminders', icon: Calendar },
   issues: { label: 'Issue Manager', icon: ShieldAlert },
   'ai-management': { label: 'AI Management', icon: Bot },
+  locked: { label: 'Locked', icon: Lock },
 };
 
 export const moduleGroups: ModuleGroup[] = [
@@ -71,7 +73,7 @@ export const moduleGroups: ModuleGroup[] = [
   },
   {
     label: 'Growth',
-    modules: ['communication', 'marketing'],
+    modules: ['communication', 'marketing', 'locked'],
   },
 ];
 
