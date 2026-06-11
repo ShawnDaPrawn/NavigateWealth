@@ -15,10 +15,12 @@ import {
 import { getUserErrorMessage } from '../../utils/errorUtils';
 import { Logo } from '../layout/Logo';
 import { copyToClipboard } from '../../utils/clipboard';
+import { useIsStandalone } from '../../hooks/useIsStandalone';
 
 export function ResetPasswordPage() {
   const navigate = useNavigate();
   const location = useLocation();
+  const isStandalone = useIsStandalone();
   const locationState = location.state as { fromInvite?: boolean } | null;
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -332,6 +334,15 @@ export function ResetPasswordPage() {
     <div className="min-h-screen bg-gray-50 flex flex-col justify-center py-12 sm:px-6 lg:px-8">
       <div className="sm:mx-auto sm:w-full sm:max-w-md">
         <Link to="/" className="flex flex-col items-center justify-center gap-3">
+          {isStandalone && (
+            <img
+              src="/maskable-icon-512x512.png?v=20260605b"
+              alt="Navigate Wealth"
+              width={56}
+              height={56}
+              className="h-14 w-14 rounded-2xl shadow-md ring-1 ring-black/5"
+            />
+          )}
           <h1 className="text-3xl">
             Navigate<span className="text-purple-700">Wealth</span>
           </h1>
