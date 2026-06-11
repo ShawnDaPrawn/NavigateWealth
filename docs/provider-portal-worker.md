@@ -77,6 +77,15 @@ Note: the BrightRock-specific OTP delivery choreography currently lives in
 adapter boundary and should migrate behind the BrightRock adapter in a later
 behavior-preserving slice.
 
+`otp.mjs` also handles PingID-style push approval (used by Allan Gray):
+when the checkpoint page asks the user to tap a matching number in the
+authenticator app instead of entering a code, the worker extracts the
+on-screen number, publishes it via the job message and live view, and waits
+passively for the page to move on. The wait uses a 5-minute _inactivity_
+window — any page change (new number, redirect, progress text) resets the
+window — and succeeds the moment the auth checkpoint clears and the worker
+is inside the provider portal.
+
 These files are pinned by
 `src/shared/integrations/__tests__/providerPortalGolden.test.ts` (which
 concatenates the entry point and all modules) and are excluded from Prettier

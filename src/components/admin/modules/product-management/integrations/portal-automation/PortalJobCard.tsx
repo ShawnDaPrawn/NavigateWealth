@@ -28,6 +28,7 @@ import {
 import { cn } from '../../../../../ui/utils';
 import {
   isCloudflareVerificationStep,
+  isPushApprovalStep,
   formatExtractedValue,
   getExtractedValues,
   getPrimaryArtifactStatus,
@@ -142,6 +143,7 @@ export function PortalJobCard({
     ? new Date(job.liveView.capturedAt).toLocaleTimeString()
     : '';
   const cloudflareCheckpointActive = isCloudflareVerificationStep(job);
+  const pushApprovalActive = isPushApprovalStep(job);
   const otpSubmittedForCurrentJob = Boolean(
     job.id && submittedOtpForJobId === job.id && job.status === 'waiting_for_otp',
   );
@@ -432,7 +434,28 @@ export function PortalJobCard({
           </>
         )}
 
-        {job.status === 'waiting_for_otp' && (
+        {job.status === 'waiting_for_otp' && pushApprovalActive && (
+          <>
+            <Separator />
+            <Alert className="border-amber-200 bg-amber-50 text-amber-950">
+              <Clock className="h-4 w-4" />
+              <AlertTitle>Approve the sign-in in the PingID app</AlertTitle>
+              <AlertDescription className="space-y-2">
+                <p>
+                  {job.message ||
+                    'The provider is waiting for a PingID push approval on the registered phone.'}
+                </p>
+                <p className="text-xs text-amber-900">
+                  Open the PingID app on the registered phone and tap the number shown in the live
+                  portal view above. No OTP entry is needed here — the worker continues
+                  automatically as soon as the provider accepts the approval.
+                </p>
+              </AlertDescription>
+            </Alert>
+          </>
+        )}
+
+        {job.status === 'waiting_for_otp' && !pushApprovalActive && (
           <>
             <Separator />
             <div className="space-y-3">
