@@ -6,29 +6,20 @@ import { Button } from '../ui/button';
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '../ui/sheet';
 import { usePWAInstall } from '../../hooks/usePWAInstall';
 import { logger } from '../../utils/logger';
+import { isStandaloneDisplay } from '../../utils/pwa/displayMode';
 
-// localStorage keys
-const DISMISS_KEY = 'nw-pwa-install-dismissed';
+// Dismissal is scoped to the browser session (sessionStorage) so the prompt
+// re-appears at most once per session — never again after install.
+const DISMISS_KEY = 'nw-pwa-install-dismissed-session';
 const INSTALLED_KEY = 'nw-pwa-installed';
-
-// Re-surface the banner 30 days after a manual dismissal, but never once installed.
-const DISMISS_COOLDOWN_MS = 30 * 24 * 60 * 60 * 1000;
 
 // Per the product decision, the "Download our app" prompt only appears on the
 // homepage and the auth entry points — not on deep marketing pages.
 const PROMPT_ROUTES = ['/', '/login', '/signup'];
 
-type NavigatorWithStandalone = Navigator & { standalone?: boolean };
 type NavigatorWithRelatedApps = Navigator & {
   getInstalledRelatedApps?: () => Promise<unknown[]>;
 };
-
-function isStandaloneDisplay(): boolean {
-  if (typeof window === 'undefined') return false;
-  const standalone = window.matchMedia?.('(display-mode: standalone)').matches ?? false;
-  const iosStandalone = (window.navigator as NavigatorWithStandalone).standalone === true;
-  return standalone || iosStandalone;
-}
 
 // iOS Safari never fires `beforeinstallprompt`, so the only way to install is the
 // manual "Share -> Add to Home Screen" flow. Detect iOS Safari to show instructions
@@ -69,13 +60,9 @@ function clearInstalledFlag(): void {
   }
 }
 
-function isDismissedRecently(): boolean {
+function isDismissedThisSession(): boolean {
   try {
-    const raw = localStorage.getItem(DISMISS_KEY);
-    if (!raw) return false;
-    const ts = Number(raw);
-    if (!Number.isFinite(ts)) return false;
-    return Date.now() - ts < DISMISS_COOLDOWN_MS;
+    return sessionStorage.getItem(DISMISS_KEY) === 'true';
   } catch {
     return false;
   }
@@ -96,7 +83,7 @@ export function InstallAppPrompt() {
   const { showInstallOption, isAppInstalled, installApp } = usePWAInstall();
 
   const [installedFlag, setInstalledFlag] = useState(readInstalledFlag);
-  const [dismissed, setDismissed] = useState(isDismissedRecently);
+  const [dismissed, setDismissed] = useState(isDismissedThisSession);
   const [showIosSheet, setShowIosSheet] = useState(false);
 
   const isStandalone = isStandaloneDisplay();
@@ -153,7 +140,7 @@ export function InstallAppPrompt() {
 
   const handleDismiss = useCallback(() => {
     try {
-      localStorage.setItem(DISMISS_KEY, String(Date.now()));
+      sessionStorage.setItem(DISMISS_KEY, 'true');
     } catch {
       /* non-fatal */
     }

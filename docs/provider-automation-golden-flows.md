@@ -33,7 +33,7 @@ is refactored into a universal, adapter-based system.
 ### Expected pipeline
 
 ```text
-load job -> login -> manual SMS OTP -> search by Navigate Wealth policy number -> confirm matching policy page -> extract mapped fields -> validate current value -> stage completed row
+load job -> login -> PingID push approval (number matching) -> search by Navigate Wealth policy number -> confirm matching policy page -> extract mapped fields -> validate current value -> stage completed row
 ```
 
 The worker must start from the Navigate Wealth queued policy number. It must
@@ -51,7 +51,10 @@ The Allan Gray default flow must preserve:
 - Credential environment names:
   `NW_PROVIDER_ALLAN_GRAY_USERNAME`
   and `NW_PROVIDER_ALLAN_GRAY_PASSWORD`
-- Manual SMS OTP mode
+- Manual SMS OTP mode (config default; at runtime Allan Gray now presents a
+  PingID number-matching push approval — the worker detects it from the page,
+  surfaces the on-screen number, and waits for the approval instead of
+  looking for an OTP input)
 - Policy-number search mode
 - Smart assist enabled for search
 

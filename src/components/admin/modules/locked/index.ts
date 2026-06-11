@@ -1,0 +1,1 @@
+export { LockedModule } from './LockedModule';

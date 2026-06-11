@@ -2,15 +2,7 @@ import { useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router';
 import { useAuth } from '../auth/AuthContext';
 import { getAuthenticatedRedirectPath } from '../auth/RouteGuards';
-
-type NavigatorWithStandalone = Navigator & { standalone?: boolean };
-
-function isStandaloneDisplay(): boolean {
-  if (typeof window === 'undefined') return false;
-  const standalone = window.matchMedia?.('(display-mode: standalone)').matches ?? false;
-  const iosStandalone = (window.navigator as NavigatorWithStandalone).standalone === true;
-  return standalone || iosStandalone;
-}
+import { isStandaloneDisplay } from '../../utils/pwa/displayMode';
 
 // Public marketing routes. When the app runs as an installed PWA we want it to
 // behave as a portal-only app, so landing on any of these bounces the user back
@@ -24,6 +16,7 @@ const MARKETING_EXACT = new Set([
   '/services',
   '/contact',
   '/schedule-consultation',
+  '/contact/consultation',
   '/sitemap',
   '/design-system',
   '/ask-vasco',
