@@ -15,7 +15,8 @@ is refactored into a universal, adapter-based system.
 ### Runtime owner
 
 - Worker orchestration:
-  `scripts/provider-portal-worker.mjs`
+  `scripts/provider-portal-worker.mjs` (entry point; stage modules live in
+  `scripts/portal-worker/`)
 - Provider adapter:
   `scripts/provider-adapters/allan-gray.mjs`
 - Provider adapter registry:
@@ -32,7 +33,7 @@ is refactored into a universal, adapter-based system.
 ### Expected pipeline
 
 ```text
-load job -> login -> manual SMS OTP -> search by Navigate Wealth policy number -> confirm matching policy page -> extract mapped fields -> validate current value -> stage completed row
+load job -> login -> PingID push approval (number matching) -> search by Navigate Wealth policy number -> confirm matching policy page -> extract mapped fields -> validate current value -> stage completed row
 ```
 
 The worker must start from the Navigate Wealth queued policy number. It must
@@ -50,7 +51,10 @@ The Allan Gray default flow must preserve:
 - Credential environment names:
   `NW_PROVIDER_ALLAN_GRAY_USERNAME`
   and `NW_PROVIDER_ALLAN_GRAY_PASSWORD`
-- Manual SMS OTP mode
+- Manual SMS OTP mode (config default; at runtime Allan Gray now presents a
+  PingID number-matching push approval — the worker detects it from the page,
+  surfaces the on-screen number, and waits for the approval instead of
+  looking for an OTP input)
 - Policy-number search mode
 - Smart assist enabled for search
 
@@ -110,3 +114,22 @@ Phase 5 moved default provider flow construction out of `integrations.tsx` into
 `portal-default-flows.ts`. The route cluster still lives in `integrations.tsx`
 for now; split routes only in a later behavior-preserving slice with the golden
 tests passing.
+
+The worker decomposition split `scripts/provider-portal-worker.mjs` into stage
+modules under `scripts/portal-worker/` as behavior-preserving moves. The golden
+test concatenates the entry point with every module, so the anchors keep
+guarding the same runtime behavior wherever it now lives.
+
+### Shadow LLM extraction comparison
+
+The worker can run an observe-only LLM page extraction next to the
+selector/adapter path (`NW_PORTAL_SHADOW_EXTRACT=1`, or
+`extraction.shadowLlm: true` on a provider flow). It never changes staged
+values and never fails an item.
+
+When validating a golden flow run with shadow mode enabled, review the
+`shadow-extraction-comparison` debug artifact (and the `shadowExtraction`
+field on each job item) for per-field `match` / `mismatch` /
+`shadow_only` / `worker_only` statuses. The LLM path is a candidate
+replacement for the pixel-math adapter extraction; it earns promotion only by
+matching or beating the adapter values on these golden flows.

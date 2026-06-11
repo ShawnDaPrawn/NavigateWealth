@@ -1,28 +1,21 @@
 import { useEffect, useState } from 'react';
-
-type NavigatorWithStandalone = Navigator & { standalone?: boolean };
-
-function getStandalone(): boolean {
-  if (typeof window === 'undefined') return false;
-  const matchesStandalone = window.matchMedia?.('(display-mode: standalone)').matches ?? false;
-  const iosStandalone = (window.navigator as NavigatorWithStandalone).standalone === true;
-  return matchesStandalone || iosStandalone;
-}
+import { isStandaloneDisplay } from '../utils/pwa/displayMode';
 
 /**
- * Returns true when the app is running as an installed PWA (standalone display
- * mode, including iOS home-screen apps). Reactive to display-mode changes.
+ * Returns true when the app is running as the genuinely installed PWA (standalone
+ * display mode, including iOS home-screen apps). Reactive to display-mode changes.
  *
- * Use this to tailor the installed-app experience without affecting the website
- * rendered in a normal browser tab.
+ * In-app browsers / WebViews that fake standalone are treated as the website, so
+ * the full site renders normally inside them. Use this to tailor the installed-app
+ * experience without affecting the website rendered in any browser.
  */
 export function useIsStandalone(): boolean {
-  const [standalone, setStandalone] = useState(getStandalone);
+  const [standalone, setStandalone] = useState(isStandaloneDisplay);
 
   useEffect(() => {
     const mql = window.matchMedia?.('(display-mode: standalone)');
     if (!mql) return;
-    const handler = () => setStandalone(getStandalone());
+    const handler = () => setStandalone(isStandaloneDisplay());
     mql.addEventListener?.('change', handler);
     return () => mql.removeEventListener?.('change', handler);
   }, []);

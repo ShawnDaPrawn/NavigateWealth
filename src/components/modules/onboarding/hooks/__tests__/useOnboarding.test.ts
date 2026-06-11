@@ -45,6 +45,14 @@ vi.mock('../../../../../utils/supabase/info', () => ({
   publicAnonKey: 'test-anon-key',
 }));
 
+// The hook caches a session JWT for the beforeunload keepalive save
+// (SECURITY-AUDIT C-8) — stub the central API client's token source.
+vi.mock('../../../../../utils/api/client', () => ({
+  api: {
+    getAccessToken: vi.fn().mockResolvedValue('test-session-token'),
+  },
+}));
+
 vi.mock('../../../../../utils/logger', () => ({
   logger: {
     debug: vi.fn(),

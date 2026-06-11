@@ -310,6 +310,195 @@ export function parsePortalBrainDecision(text: string): Record<string, unknown> 
   }
 }
 
+/**
+ * Page extraction (shadow mode) — the worker sends the confirmed policy page's
+ * visible text plus the configured field list; the model returns one value per
+ * field with a confidence rating. Used observationally alongside the
+ * selector/adapter extraction path (never staged directly).
+ */
+export interface PortalPageExtractionFieldRequest {
+  columnName: string;
+  fieldName?: string;
+  labels?: string[];
+  semantic?: string;
+  required?: boolean;
+}
+
+export interface PortalPageExtractionField {
+  columnName: string;
+  value: string;
+  confidence: 'high' | 'medium' | 'low';
+  evidence?: string;
+}
+
+/**
+ * Lighter redaction than redactBrainText: page extraction needs the actual
+ * currency amounts, dates, and policy numbers, so only strip identifiers that
+ * the extraction never needs — email addresses and SA-ID-length digit runs.
+ * (Full policy document text already flows to the document-extraction LLM, so
+ * this keeps the portal page path at or above that privacy bar.)
+ */
+export function redactPortalPageTextForExtraction(value: string, preserve: string[] = []): string {
+  let text = String(value || '');
+  const placeholders = new Map<string, string>();
+  preserve.filter(Boolean).forEach((item, index) => {
+    const token = `__NW_PRESERVE_${index}__`;
+    placeholders.set(token, item);
+    text = text.split(item).join(token);
+  });
+
+  text = text
+    .replace(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/gi, '[REDACTED_EMAIL]')
+    .replace(/\b\d{13}\b/g, '[REDACTED_ID]');
+
+  for (const [token, original] of placeholders.entries()) {
+    text = text.split(token).join(original);
+  }
+  return text;
+}
+
+export function buildPortalPageExtractionPrompt(options: {
+  providerName: string;
+  policyNumber: string;
+  pageUrl?: string;
+  pageTitle?: string;
+  fields: PortalPageExtractionFieldRequest[];
+  pageText: string;
+}) {
+  const fieldList = options.fields.map((field) => ({
+    columnName: field.columnName,
+    fieldName: field.fieldName || field.columnName,
+    semantic: field.semantic || 'generic',
+    required: field.required === true,
+    knownLabels: Array.isArray(field.labels) ? field.labels.slice(0, 8) : [],
+  }));
+
+  return [
+    'You are a careful data-extraction model for a South African financial policy administration system.',
+    `Provider: ${options.providerName}`,
+    `Target policy number: ${options.policyNumber}`,
+    options.pageUrl ? `Page URL: ${options.pageUrl}` : '',
+    options.pageTitle ? `Page title: ${options.pageTitle}` : '',
+    'Task: extract one value per requested field from the provider portal page text below.',
+    'Rules:',
+    '- Copy values exactly as they appear on the page (keep currency symbols, spacing, and date formats).',
+    '- Use an empty string when the field is not visible on the page. Never guess or compute values.',
+    '- Currency fields must be a single amount (e.g. "R 123 456.78"), never a label, range, or period description.',
+    '- Date fields must be a single date as displayed on the page.',
+    '- Values must belong to the target policy number shown above, not to another policy on the page.',
+    '- confidence: high = value sits next to a matching label; medium = value inferred from context; low = uncertain.',
+    'Return JSON only, with this exact shape:',
+    '{"fields":[{"columnName":"...","value":"...","confidence":"high|medium|low","evidence":"short source phrase"}]}',
+    `Requested fields: ${JSON.stringify(fieldList)}`,
+    `Page text: ${options.pageText}`,
+  ]
+    .filter(Boolean)
+    .join('\n');
+}
+
+export async function callPortalExtractionModel(options: {
+  prompt: string;
+  model: string;
+  apiBase: string;
+  apiKey: string;
+}): Promise<{ text: string }> {
+  const response = await fetch(
+    `${options.apiBase}/models/${encodeURIComponent(options.model)}:generateContent`,
+    {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-goog-api-key': options.apiKey,
+      },
+      body: JSON.stringify({
+        contents: [
+          {
+            parts: [{ text: options.prompt }],
+          },
+        ],
+        generationConfig: {
+          temperature: 0,
+          topP: 0.1,
+          maxOutputTokens: 2000,
+          responseMimeType: 'application/json',
+          responseSchema: {
+            type: 'OBJECT',
+            properties: {
+              fields: {
+                type: 'ARRAY',
+                items: {
+                  type: 'OBJECT',
+                  properties: {
+                    columnName: { type: 'STRING' },
+                    value: { type: 'STRING' },
+                    confidence: { type: 'STRING', enum: ['high', 'medium', 'low'] },
+                    evidence: { type: 'STRING' },
+                  },
+                  required: ['columnName', 'value', 'confidence'],
+                },
+              },
+            },
+            required: ['fields'],
+          },
+        },
+      }),
+    },
+  );
+
+  const data = (await response.json().catch(() => ({}))) as Record<string, unknown>;
+  if (!response.ok) {
+    throw new Error(
+      typeof data.error === 'object' && data.error && 'message' in data.error
+        ? String(
+            (data.error as { message?: string }).message || 'Portal page extraction request failed',
+          )
+        : `Portal page extraction request failed with HTTP ${response.status}`,
+    );
+  }
+
+  const candidates = Array.isArray(data.candidates)
+    ? (data.candidates as Array<Record<string, unknown>>)
+    : [];
+  const text = candidates
+    .flatMap((candidate) => {
+      const content = candidate.content as { parts?: Array<{ text?: string }> } | undefined;
+      return Array.isArray(content?.parts) ? content.parts : [];
+    })
+    .map((part) => String(part.text || ''))
+    .join('\n')
+    .trim();
+
+  if (!text) {
+    throw new Error('The page extraction response did not contain usable text.');
+  }
+
+  return { text };
+}
+
+export function parsePortalExtractionFields(text: string): PortalPageExtractionField[] {
+  let parsed: Record<string, unknown>;
+  try {
+    parsed = JSON.parse(extractFirstJsonObject(text)) as Record<string, unknown>;
+  } catch {
+    return [];
+  }
+  if (!Array.isArray(parsed.fields)) return [];
+  return (parsed.fields as Array<Record<string, unknown>>)
+    .map((entry) => ({
+      columnName: String(entry.columnName || '')
+        .trim()
+        .slice(0, 120),
+      value: String(entry.value || '')
+        .trim()
+        .slice(0, 240),
+      confidence: (['high', 'medium', 'low'].includes(String(entry.confidence))
+        ? String(entry.confidence)
+        : 'low') as PortalPageExtractionField['confidence'],
+      evidence: typeof entry.evidence === 'string' ? entry.evidence.slice(0, 240) : undefined,
+    }))
+    .filter((entry) => entry.columnName);
+}
+
 export function buildPortalBrainPrompt(options: {
   providerName: string;
   goal: string;

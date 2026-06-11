@@ -148,6 +148,14 @@ export const PERMISSIONED_MODULES: AdminModule[] = [
 export const ALWAYS_ACCESSIBLE_MODULES: AdminModule[] = ['dashboard', 'notes'];
 
 /**
+ * Modules guarded by their own gate (e.g. a hard-coded access code) instead
+ * of the permission system. Deliberately excluded from PERMISSIONED_MODULES
+ * so they can never be granted to personnel via the permission editor —
+ * only super admins ever see them in the sidebar.
+ */
+export const SELF_GATED_MODULES: AdminModule[] = ['locked'];
+
+/**
  * Super admin email — imported from centralised auth constants.
  * This user bypasses all permission checks.
  * Re-exported for backward compatibility within the personnel module.
@@ -322,6 +330,9 @@ export const MODULE_CAPABILITIES: Record<AdminModule, CapabilityMeta[]> = {
     { key: 'create', label: 'Manage KB', description: 'Add and manage knowledge base content' },
     { key: 'export', label: 'Export', description: 'Export analytics and feedback data' },
   ],
+
+  // ── Locked (access-code gated — never assignable via permissions) ──
+  locked: [],
 };
 
 /**

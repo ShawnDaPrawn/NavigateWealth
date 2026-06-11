@@ -6,7 +6,10 @@
  * Estate Planning, Investment INA, and Medical FNA route files.
  *
  * Supports two authentication modes:
- * 1. Anon key (admin/development access) — returns a deterministic admin user
+ * 1. Anon key (admin access) — returns a deterministic admin user.
+ *    ⚠️ KNOWN VULN (SECURITY-AUDIT C-7): the anon key is PUBLIC; this branch
+ *    grants admin to anyone and must be removed during the frontend auth-token
+ *    migration. Left in place for now because frontend callers depend on it.
  * 2. Real user tokens — validated via Supabase Auth, returns the authenticated user
  *
  * Usage:
@@ -21,6 +24,8 @@ import type { Context } from 'npm:hono';
 import { createClient } from 'jsr:@supabase/supabase-js@2.49.8';
 import { createModuleLogger } from './stderr-logger.ts';
 import { getErrMsg } from './shared-logger-utils.ts';
+import { constantTimeEqual } from './crypto-utils.ts';
+import { resolveTrustedRole } from './constants.ts';
 
 // Lazy Supabase client — must NOT be top-level to avoid deployment crashes in edge functions.
 const getSupabase = () =>
@@ -39,7 +44,8 @@ export interface FNAAuthUser {
 }
 
 /**
- * Admin user constant — returned when the anon key is used for authentication.
+ * Admin user constant — returned when the anon key is used for authentication
+ * (see the security-debt note in authenticateUser).
  */
 const ADMIN_USER: FNAAuthUser = Object.freeze({
   id: 'admin',
@@ -68,10 +74,17 @@ export async function authenticateUser(
 
   const token = authHeader.split(' ')[1];
 
-  // Check if this is the anon key (for admin/development access)
+  // ⚠️ SECURITY DEBT (SECURITY-AUDIT §8 C-7): this accepts the PUBLIC anon key
+  // as full admin. The anon key ships in the browser bundle, so anyone can use
+  // it to gain admin access to FNA/estate/form/communication endpoints. The
+  // correct fix is a service-role-only check here — BUT several frontend
+  // callers (communication/api.ts, WillDraftingFlow.tsx, …) currently send the
+  // anon key as their bearer token, so removing this branch breaks them. This
+  // MUST be removed as part of the frontend auth-token migration (SECURITY-AUDIT
+  // §9); it is left in place only to avoid shipping a broken app in this pass.
   const anonKey = Deno.env.get('SUPABASE_ANON_KEY');
-  if (token === anonKey) {
-    log.info(`[${context}] Using anon key (admin access)`);
+  if (anonKey && constantTimeEqual(token, anonKey)) {
+    log.info(`[${context}] Using anon key (admin access — see SECURITY-AUDIT C-7)`);
     return ADMIN_USER;
   }
 
@@ -87,10 +100,13 @@ export async function authenticateUser(
       throw new Error('Unauthorized');
     }
 
+    // Role from trusted sources only — isFnaAdminRole grants admin powers to
+    // 'adviser' as well, so privileged values in client-editable user_metadata
+    // must not be honoured here either. See resolveTrustedRole in constants.ts.
     const authUser: FNAAuthUser = {
       id: user.id,
       email: user.email || '',
-      role: user.user_metadata?.role || 'client',
+      role: resolveTrustedRole(user),
     };
 
     log.info(`[${context}] User authenticated`, { userId: authUser.id });

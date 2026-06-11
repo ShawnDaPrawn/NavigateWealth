@@ -216,3 +216,23 @@ export interface AuditLogWidgetProps {
   onModuleChange?: (module: string) => void;
   maxEntries?: number;
 }
+
+// ── Dashboard Header & Modal Triggers ────────────────────────────────────────
+
+export interface DashboardHeaderProps {
+  /** Display name used in the greeting (falls back to a plain greeting) */
+  userName?: string;
+}
+
+export interface SystemHealthDialogProps {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+}
+
+// ── Publications Widget ──────────────────────────────────────────────────────
+
+export interface PublicationsCardProps {
+  onModuleChange?: (module: string) => void;
+  /** Maximum number of recent articles to list (default 5) */
+  maxArticles?: number;
+}

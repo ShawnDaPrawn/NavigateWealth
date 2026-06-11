@@ -8,7 +8,7 @@ import type { Context, Next } from 'npm:hono';
 import { createClient } from 'jsr:@supabase/supabase-js@2.49.8';
 import { AdminApplicationsService } from './applications-service.ts';
 import type { ErrorResponse, SuccessResponse } from './types.ts';
-import { SUPER_ADMIN_EMAIL, HTTP_STATUS, ERROR_MESSAGES, SUCCESS_MESSAGES } from './constants.ts';
+import { resolveTrustedRole, HTTP_STATUS, ERROR_MESSAGES, SUCCESS_MESSAGES } from './constants.ts';
 import { createModuleLogger } from './stderr-logger.ts';
 import { getErrMsg } from './shared-logger-utils.ts';
 import type { KvApplication } from './applications-types.ts';
@@ -50,16 +50,11 @@ const verifyAdmin = async (c: Context, next: Next) => {
       return c.json({ error: ERROR_MESSAGES.AUTH.INVALID_TOKEN }, HTTP_STATUS.UNAUTHORIZED);
     }
 
-    // Check if user is super admin by email
-    const isSuperAdmin = user.email?.toLowerCase() === SUPER_ADMIN_EMAIL.toLowerCase();
-
-    if (!isSuperAdmin) {
-      // Also check role from user metadata
-      const userRole = user.user_metadata?.role;
-
-      if (userRole !== 'admin' && userRole !== 'super_admin' && userRole !== 'super-admin') {
-        return c.json({ error: ERROR_MESSAGES.AUTH.NOT_ADMIN }, HTTP_STATUS.FORBIDDEN);
-      }
+    // Role from trusted sources only (super-admin allowlist, app_metadata,
+    // NW_ADMIN_EMAILS) — never from client-editable user_metadata.
+    const userRole = resolveTrustedRole(user);
+    if (userRole !== 'admin' && userRole !== 'super_admin' && userRole !== 'super-admin') {
+      return c.json({ error: ERROR_MESSAGES.AUTH.NOT_ADMIN }, HTTP_STATUS.FORBIDDEN);
     }
 
     // Store user info in context

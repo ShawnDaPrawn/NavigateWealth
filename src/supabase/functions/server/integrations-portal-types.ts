@@ -197,6 +197,11 @@ export interface PortalProviderFlow {
   extraction: {
     policyRowSelector?: string;
     fields: PortalFlowField[];
+    /**
+     * Opt this provider into the observe-only LLM page-extraction shadow
+     * comparison (also enabled worker-wide via NW_PORTAL_SHADOW_EXTRACT=1).
+     */
+    shadowLlm?: boolean;
   };
   policySchedule?: PortalPolicyScheduleConfig;
   documentArtifacts?: PortalDocumentArtifactConfig[];
@@ -249,6 +254,59 @@ export interface PortalJobQueueSummary {
   skipped: number;
 }
 
+/**
+ * Trimmed portal job record returned by GET /portal-jobs/history. Keeps the
+ * list payload small — the full PortalSyncJob (live view, artifact configs,
+ * policy schedule) is only needed for the latest job.
+ */
+export interface PortalJobHistoryEntry {
+  id: string;
+  status: PortalJobStatus;
+  runMode?: PortalJobRunMode;
+  createdAt: string;
+  updatedAt: string;
+  completedAt?: string;
+  currentStep?: string;
+  message?: string;
+  error?: string;
+  warning?: string;
+  queueSummary?: PortalJobQueueSummary;
+  stagedRunId?: string;
+  discoveryReportId?: string;
+  actionsRunUrl?: string;
+  actionsDispatchError?: string;
+}
+
+export interface PortalShadowExtractionFieldComparison {
+  columnName: string;
+  fieldName?: string;
+  semantic?: string;
+  workerValue?: string;
+  shadowValue?: string;
+  shadowConfidence?: 'high' | 'medium' | 'low';
+  shadowPlausible?: boolean;
+  status: 'match' | 'mismatch' | 'shadow_only' | 'worker_only' | 'both_empty';
+}
+
+/**
+ * Observe-only comparison between the selector/adapter extraction and the LLM
+ * page extraction for one policy item. Recorded for review; never staged.
+ */
+export interface PortalShadowExtractionComparison {
+  model?: string;
+  comparedAt: string;
+  pageUrl?: string;
+  summary: {
+    total: number;
+    match: number;
+    mismatch: number;
+    shadowOnly: number;
+    workerOnly: number;
+    bothEmpty: number;
+  };
+  fields: PortalShadowExtractionFieldComparison[];
+}
+
 export interface PortalJobPolicyItem {
   id: string;
   jobId: string;
@@ -270,6 +328,7 @@ export interface PortalJobPolicyItem {
   rawData?: Record<string, unknown>;
   extractedData?: Record<string, unknown>;
   matchConfidence?: 'high' | 'medium' | 'low';
+  shadowExtraction?: PortalShadowExtractionComparison;
   documentAttached?: boolean;
   documentFileName?: string;
   documentUpdatedAt?: string;

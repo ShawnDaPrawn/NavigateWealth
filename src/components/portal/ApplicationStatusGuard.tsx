@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { useAuth } from '../auth/AuthContext';
-import { projectId, publicAnonKey } from '../../utils/supabase/info';
+import { projectId } from '../../utils/supabase/info';
+import { api } from '../../utils/api/client';
 import { SUPER_ADMIN_EMAIL } from '../../utils/auth/constants';
 import { AlertCircle, Clock } from 'lucide-react';
 import { BrandPageLoader } from '../ui/brand-loader';
@@ -42,12 +43,16 @@ export function ApplicationStatusGuard({
         throw new Error('User information not available');
       }
 
+      // All portal-guard reads run as the signed-in user — /applications/*
+      // requires a real session JWT (SECURITY-AUDIT C-8).
+      const authHeaders = { Authorization: `Bearer ${await api.getAccessToken()}` };
+
       // Fetch user profile which contains application info
       const profileKey = `user_profile:${user.id}:personal_info`;
       const profileRes = await fetch(
         `${API_BASE}/profile/personal-info?key=${encodeURIComponent(profileKey)}&email=${encodeURIComponent(user.email)}`,
         {
-          headers: { Authorization: `Bearer ${publicAnonKey}` },
+          headers: authHeaders,
         },
       );
 
@@ -72,7 +77,7 @@ export function ApplicationStatusGuard({
 
       // Fetch application details - use correct endpoint format
       const appRes = await fetch(`${API_BASE}/applications/${userId}`, {
-        headers: { Authorization: `Bearer ${publicAnonKey}` },
+        headers: authHeaders,
       });
 
       logger.debug(`Application API Response Status: ${appRes.status}`);
@@ -101,7 +106,7 @@ export function ApplicationStatusGuard({
       // If approved, check if user has policies
       if (status === 'approved') {
         const policiesRes = await fetch(`${API_BASE}/integrations/policies?clientId=${userId}`, {
-          headers: { Authorization: `Bearer ${publicAnonKey}` },
+          headers: authHeaders,
         });
 
         if (policiesRes.ok) {

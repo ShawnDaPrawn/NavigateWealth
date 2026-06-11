@@ -3,10 +3,24 @@
  * Handles Personal Client application submission and management
  */
 
-import { projectId, publicAnonKey } from '../supabase/info';
+import { projectId } from '../supabase/info';
+import { api } from '../api/client';
 import { logger } from '../logger';
 
 const BASE_URL = `https://${projectId}.supabase.co/functions/v1/make-server-91ed8379`;
+
+/**
+ * Auth headers for the /applications endpoints. These routes require a real
+ * session JWT (SECURITY-AUDIT C-8) — the central API client resolves the
+ * current session token and refreshes it when close to expiry.
+ */
+async function getAuthHeaders(): Promise<Record<string, string>> {
+  const token = await api.getAccessToken();
+  return {
+    'Content-Type': 'application/json',
+    Authorization: `Bearer ${token}`,
+  };
+}
 
 export interface ApplicationSubmissionData {
   userId: string;
@@ -97,10 +111,7 @@ export async function submitApplication(
 
     const response = await fetch(`${BASE_URL}/applications/submit`, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${publicAnonKey}`,
-      },
+      headers: await getAuthHeaders(),
       body: JSON.stringify(submissionData),
     });
 
@@ -132,9 +143,7 @@ export async function getApplication(userId: string): Promise<ApplicationRespons
 
     const response = await fetch(`${BASE_URL}/applications/${userId}`, {
       method: 'GET',
-      headers: {
-        Authorization: `Bearer ${publicAnonKey}`,
-      },
+      headers: await getAuthHeaders(),
     });
 
     if (!response.ok) {
@@ -168,10 +177,7 @@ export async function saveApplicationProgress(
 
     const response = await fetch(`${BASE_URL}/applications/save-progress`, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${publicAnonKey}`,
-      },
+      headers: await getAuthHeaders(),
       body: JSON.stringify({ userId, applicationData }),
     });
 

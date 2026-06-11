@@ -155,6 +155,18 @@ function generateP12(passphrase: string): {
  * in a dedicated secrets manager or HSM rather than the KV store.
  */
 async function getOrCreatePlatformP12(): Promise<{ p12Buffer: Buffer; passphrase: string }> {
+  // SECURITY-AUDIT H-5: prefer signing material provisioned via Supabase
+  // secrets (env vars) over the KV store, so the private key never sits in
+  // application-readable storage. Set NW_ESIGN_PLATFORM_P12_BASE64 and
+  // NW_ESIGN_PLATFORM_P12_PASSPHRASE to activate; the KV path below remains
+  // as a fallback until rotation is complete.
+  const envP12 = Deno.env.get('NW_ESIGN_PLATFORM_P12_BASE64');
+  const envPassphrase = Deno.env.get('NW_ESIGN_PLATFORM_P12_PASSPHRASE');
+  if (envP12 && envPassphrase) {
+    log.info('Using platform signing certificate from environment secrets');
+    return { p12Buffer: Buffer.from(envP12, 'base64'), passphrase: envPassphrase };
+  }
+
   try {
     const cached = (await kv.get(PLATFORM_CERT_KV_KEY)) as CachedPlatformCert | null;
 

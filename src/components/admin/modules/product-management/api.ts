@@ -18,6 +18,7 @@ import {
   PortalProviderFlow,
   PortalBrainMemorySummary,
   PortalDiscoveryReport,
+  PortalJobHistoryEntry,
   PortalJobPolicyItem,
   PortalJobQueueSummary,
   PortalJobRunMode,
@@ -532,6 +533,16 @@ export const productManagementApi = {
       `integrations/portal-jobs/latest?providerId=${providerId}&categoryId=${categoryId}`,
     );
     return response.job;
+  },
+
+  fetchPortalJobHistory: async (
+    providerId: string,
+    categoryId: string,
+  ): Promise<PortalJobHistoryEntry[]> => {
+    const response = await api.get<{ success: boolean; jobs: PortalJobHistoryEntry[] }>(
+      `integrations/portal-jobs/history?providerId=${encodeURIComponent(providerId)}&categoryId=${encodeURIComponent(categoryId)}`,
+    );
+    return response.jobs || [];
   },
 
   fetchPortalDiscoveryReport: async (

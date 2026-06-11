@@ -28,7 +28,8 @@ import {
   saveApplicationProgress,
   submitApplication,
 } from '../../../../utils/services/applicationService';
-import { projectId, publicAnonKey } from '../../../../utils/supabase/info';
+import { api } from '../../../../utils/api/client';
+import { projectId } from '../../../../utils/supabase/info';
 import { ApplicationData } from '../types';
 import { INITIAL_DATA } from '../constants';
 import { validateStep } from '../validation';
@@ -73,6 +74,10 @@ export function useOnboarding(options: UseOnboardingOptions = {}) {
   const stableUserIdRef = useRef(effectiveUserId);
   const isInitialLoadRef = useRef(true);
   const hasMountedRef = useRef(false);
+  // Cached session JWT for the synchronous beforeunload keepalive save —
+  // /applications routes require a real session token (SECURITY-AUDIT C-8)
+  // and beforeunload cannot await a token fetch. Refreshed on every save.
+  const accessTokenRef = useRef<string | null>(null);
 
   // Keep refs in sync
   dataRef.current = data;
@@ -98,6 +103,15 @@ export function useOnboarding(options: UseOnboardingOptions = {}) {
 
     isSavingRef.current = true;
     setSaveStatus('saving');
+
+    // Keep the cached token fresh for the beforeunload keepalive save
+    // (fire-and-forget — the main save path resolves its own token).
+    api
+      .getAccessToken()
+      .then((token) => {
+        accessTokenRef.current = token;
+      })
+      .catch(() => {});
 
     try {
       logger.debug('[useOnboarding] Saving progress', { step: stepRef.current });
@@ -211,6 +225,17 @@ export function useOnboarding(options: UseOnboardingOptions = {}) {
   useEffect(() => {
     if (isInitialLoad || !effectiveUserId) return;
 
+    // Re-arm the unload-save token on every edit: getAccessToken() proactively
+    // refreshes near-expiry tokens, so even after a long idle period the
+    // cached JWT is fresh before the user can close the tab (covers the
+    // edit-then-close-within-2s window where the debounced save never fires).
+    api
+      .getAccessToken()
+      .then((token) => {
+        accessTokenRef.current = token;
+      })
+      .catch(() => {});
+
     // Clear any existing timer
     if (debounceTimerRef.current) {
       clearTimeout(debounceTimerRef.current);
@@ -231,9 +256,20 @@ export function useOnboarding(options: UseOnboardingOptions = {}) {
 
   // ── Save before unmount / page unload ─────────────────────────────────────
   useEffect(() => {
+    // Prime the cached token so the unload save can authenticate even if no
+    // debounced save has run yet this session.
+    api
+      .getAccessToken()
+      .then((token) => {
+        accessTokenRef.current = token;
+      })
+      .catch(() => {});
+
     const handleBeforeUnload = () => {
       const uid = stableUserIdRef.current;
       if (!uid || isInitialLoadRef.current) return;
+      const token = accessTokenRef.current;
+      if (!token) return; // can't authenticate — debounced saves have the data
       const dataToSave = { ...dataRef.current, currentStep: stepRef.current };
       const serialised = JSON.stringify(dataToSave);
       if (serialised === lastSavedSnapshotRef.current) return;
@@ -242,7 +278,7 @@ export function useOnboarding(options: UseOnboardingOptions = {}) {
       try {
         fetch(SAVE_URL, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${publicAnonKey}` },
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
           body: JSON.stringify({ userId: uid, applicationData: dataToSave }),
           keepalive: true,
         }).catch(() => {});

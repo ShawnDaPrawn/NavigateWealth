@@ -10,6 +10,10 @@
  * Per SS4.2: routes parse input, call service, return responses.
  * Per SS14.2: static paths registered before /:id.
  *
+ * Auth (SECURITY-AUDIT C-8): all routes require a real Supabase session
+ * (requireAuth). Clients may only access their own application; admins may
+ * act on behalf of any user.
+ *
  * Endpoints:
  *   POST  /save-progress       — Bulk save (backward compat with useOnboarding)
  *   POST  /submit              — Submit application for review
@@ -20,12 +24,52 @@
  */
 
 import { Hono } from 'npm:hono';
+import type { Context } from 'npm:hono';
 
+import { requireAuth } from './auth-mw.ts';
 import { clientApplicationsService } from './client-applications-service.ts';
 import { createModuleLogger } from './stderr-logger.ts';
 
 const app = new Hono();
 const log = createModuleLogger('client-applications-routes');
+
+// ── Authentication & ownership (SECURITY-AUDIT C-8) ───────────────────────────
+// Every route requires a real Supabase session. Ownership is then enforced per
+// route: clients may only touch their own application; admins (the
+// "on behalf of" onboarding flow) may act for any user.
+app.use('*', requireAuth);
+
+const ADMIN_ROLES = new Set(['admin', 'super_admin', 'super-admin']);
+
+function isAdminCaller(c: Context): boolean {
+  return ADMIN_ROLES.has(c.get('userRole'));
+}
+
+/** True when the authenticated caller is `targetUserId` or an admin. */
+function canActFor(c: Context, targetUserId: string): boolean {
+  return c.get('userId') === targetUserId || isAdminCaller(c);
+}
+
+const forbidden = (c: Context) =>
+  c.json({ error: 'Forbidden: you may only access your own application', code: 'FORBIDDEN' }, 403);
+
+/**
+ * Resolve an application by id and enforce ownership.
+ * Returns a Response (404/403) to short-circuit with, or null when access is allowed.
+ */
+async function assertApplicationAccess(
+  c: Context,
+  applicationId: string,
+): Promise<Response | null> {
+  const application = await clientApplicationsService.getById(applicationId);
+  if (!application) {
+    return c.json({ error: 'Application not found' }, 404);
+  }
+  const ownerId = application.user_id as string | undefined;
+  // Legacy records without user_id are only reachable by admins.
+  const allowed = ownerId ? canActFor(c, ownerId) : isAdminCaller(c);
+  return allowed ? null : forbidden(c);
+}
 
 // ── POST /applications/save-progress ──────────────────────────────────────────
 // Backward-compatible bulk save for the existing useOnboarding hook.
@@ -52,6 +96,10 @@ app.post('/save-progress', async (c) => {
 
     if (!userId || !applicationData) {
       return c.json({ error: 'userId and applicationData are required' }, 400);
+    }
+
+    if (!canActFor(c, userId as string)) {
+      return forbidden(c);
     }
 
     // Get or create the application for this user (upsert pattern).
@@ -87,6 +135,10 @@ app.post('/submit', async (c) => {
 
     if (!userId) {
       return c.json({ error: 'userId is required' }, 400);
+    }
+
+    if (!canActFor(c, userId as string)) {
+      return forbidden(c);
     }
 
     // Find the application for this user
@@ -139,6 +191,9 @@ app.post('/step/:step', async (c) => {
       return c.json({ error: 'Step must be 1-5' }, 400);
     }
 
+    const accessDenied = await assertApplicationAccess(c, applicationId as string);
+    if (accessDenied) return accessDenied;
+
     const result = await clientApplicationsService.saveStep(applicationId, step, data, {
       ...completedBy,
       timestamp: new Date().toISOString(),
@@ -167,6 +222,9 @@ app.get('/step/:applicationId/:step', async (c) => {
       return c.json({ error: 'Step must be 1-5' }, 400);
     }
 
+    const accessDenied = await assertApplicationAccess(c, applicationId);
+    if (accessDenied) return accessDenied;
+
     const stepData = await clientApplicationsService.getStep(applicationId, step);
     return c.json({ success: true, data: stepData });
   } catch (error: unknown) {
@@ -185,6 +243,10 @@ app.get('/step/:applicationId/:step', async (c) => {
 app.get('/steps/:applicationId', async (c) => {
   try {
     const applicationId = c.req.param('applicationId')!;
+
+    const accessDenied = await assertApplicationAccess(c, applicationId);
+    if (accessDenied) return accessDenied;
+
     const steps = await clientApplicationsService.getAllSteps(applicationId);
     return c.json({ success: true, data: steps });
   } catch (error: unknown) {
@@ -203,6 +265,11 @@ app.get('/steps/:applicationId', async (c) => {
 app.get('/:userId', async (c) => {
   try {
     const userId = c.req.param('userId')!;
+
+    if (!canActFor(c, userId)) {
+      return forbidden(c);
+    }
+
     const application = await clientApplicationsService.getByUserId(userId);
 
     if (!application) {

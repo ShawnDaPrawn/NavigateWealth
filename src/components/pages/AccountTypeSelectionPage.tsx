@@ -19,7 +19,7 @@ import { useAuth } from '../auth/AuthContext';
 import { Button } from '../ui/button';
 import { Card, CardContent } from '../ui/card';
 import { Badge } from '../ui/badge';
-import { projectId, publicAnonKey } from '../../utils/supabase/info';
+import { api } from '../../utils/api/client';
 import {
   User,
   Building,
@@ -115,21 +115,15 @@ export function AccountTypeSelectionPage() {
         accountStatus: 'application_in_progress',
       });
 
-      // Also sync KV profile to ensure consistency after page refresh (§5.4)
+      // Also sync KV profile to ensure consistency after page refresh (§5.4).
+      // Uses the central API client so the request carries the user's session
+      // JWT — /profile/update-status requires auth (SECURITY-AUDIT H-8).
       if (user?.id) {
         try {
-          const BASE_URL = `https://${projectId}.supabase.co/functions/v1/make-server-91ed8379`;
-          await fetch(`${BASE_URL}/profile/update-status`, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              Authorization: `Bearer ${publicAnonKey}`,
-            },
-            body: JSON.stringify({
-              userId: user.id,
-              accountStatus: 'application_in_progress',
-              accountType: accountType.id,
-            }),
+          await api.post('/profile/update-status', {
+            userId: user.id,
+            accountStatus: 'application_in_progress',
+            accountType: accountType.id,
           });
         } catch (syncErr) {
           // Non-blocking — auth metadata is the primary source; KV sync is belt-and-suspenders
