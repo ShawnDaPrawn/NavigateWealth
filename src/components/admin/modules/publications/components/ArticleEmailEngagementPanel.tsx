@@ -215,6 +215,9 @@ export function ArticleEmailEngagementPanel() {
 
   useEffect(() => {
     const intervalId = setInterval(() => {
+      // Skip the background refetch while the tab is hidden — there's no point
+      // hitting the network when nobody's looking, and it lets the machine idle.
+      if (document.visibilityState === 'hidden') return;
       void loadSummary({ silent: true });
     }, 30_000);
 

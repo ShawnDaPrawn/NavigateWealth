@@ -107,43 +107,36 @@ export function ArticlesListView({ onCreateNew, onEditArticle }: ArticlesListVie
     if (selectedStatus) list = list.filter((a) => a.status === selectedStatus);
     if (selectedCategory) list = list.filter((a) => a.category_id === selectedCategory);
 
-    // Sort
-    list = [...list].sort((a, b) => {
-      // Featured articles always sort to the top
-      if (a.is_featured && !b.is_featured) return -1;
-      if (!a.is_featured && b.is_featured) return 1;
-
-      let aVal: string | number;
-      let bVal: string | number;
-
+    // Sort. Precompute each article's comparable key once (a single pass)
+    // rather than re-parsing dates / lowercasing inside the comparator, which
+    // would repeat the work O(n log n) times.
+    const sortKey = (a: (typeof list)[number]): string | number => {
       switch (sortField) {
         case 'title':
-          aVal = a.title.toLowerCase();
-          bVal = b.title.toLowerCase();
-          break;
+          return a.title.toLowerCase();
         case 'view_count':
-          aVal = a.view_count || 0;
-          bVal = b.view_count || 0;
-          break;
+          return a.view_count || 0;
         case 'published_at':
-          aVal = a.published_at ? new Date(a.published_at).getTime() : 0;
-          bVal = b.published_at ? new Date(b.published_at).getTime() : 0;
-          break;
+          return a.published_at ? new Date(a.published_at).getTime() : 0;
         case 'created_at':
-          aVal = new Date(a.created_at).getTime();
-          bVal = new Date(b.created_at).getTime();
-          break;
+          return new Date(a.created_at).getTime();
         default:
-          aVal = new Date(a.updated_at).getTime();
-          bVal = new Date(b.updated_at).getTime();
+          return new Date(a.updated_at).getTime();
       }
+    };
 
-      if (aVal < bVal) return sortDir === 'asc' ? -1 : 1;
-      if (aVal > bVal) return sortDir === 'asc' ? 1 : -1;
+    const keyed = list.map((a) => ({ article: a, key: sortKey(a) }));
+    keyed.sort((a, b) => {
+      // Featured articles always sort to the top
+      if (a.article.is_featured && !b.article.is_featured) return -1;
+      if (!a.article.is_featured && b.article.is_featured) return 1;
+
+      if (a.key < b.key) return sortDir === 'asc' ? -1 : 1;
+      if (a.key > b.key) return sortDir === 'asc' ? 1 : -1;
       return 0;
     });
 
-    return list;
+    return keyed.map((entry) => entry.article);
   }, [articles, searchQuery, selectedStatus, selectedCategory, sortField, sortDir]);
 
   // ── Active filter count ──────────────────────────────────────────────
