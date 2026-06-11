@@ -39,13 +39,32 @@ export function isShadowExtractionEnabled(flow) {
   return shadowExtractEnabledByEnv || flow?.extraction?.shadowLlm === true;
 }
 
+/**
+ * Canonicalise a currency string to "units.cents" while preserving decimal
+ * scale: a trailing "." or "," followed by 1-2 digits is the decimal marker;
+ * every other separator is a thousands separator. This keeps
+ * "R 1,234.56" (1234.56) distinct from "R 123,456" (123456.00).
+ */
+function normaliseCurrencyAmount(text) {
+  const match = String(text).match(/-?\d[\d\s., ]*/);
+  if (!match) return '';
+  let raw = match[0].replace(/[\s ]+/g, '');
+  const decimal = raw.match(/[.,](\d{1,2})$/);
+  let cents = '00';
+  if (decimal) {
+    cents = decimal[1].padEnd(2, '0');
+    raw = raw.slice(0, raw.length - decimal[0].length);
+  }
+  const units = raw.replace(/[^\d]/g, '').replace(/^0+(?=\d)/, '');
+  if (!units) return '';
+  return `${raw.startsWith('-') ? '-' : ''}${units}.${cents}`;
+}
+
 function normaliseForComparison(value, semantic) {
   const text = String(value || '').trim().replace(/\s+/g, ' ');
   if (!text) return '';
   if (CURRENCY_SEMANTICS.has(semantic)) {
-    // "R 12 345.67" and "R12,345.67" are the same amount; compare digits only.
-    const digits = text.replace(/[^\d]/g, '');
-    return digits || text.toLowerCase();
+    return normaliseCurrencyAmount(text) || text.toLowerCase();
   }
   return text.toLowerCase().replace(/[^a-z0-9]/g, '');
 }
@@ -131,7 +150,10 @@ export async function runShadowExtractionComparison(page, flow, item, { fields, 
     .slice(0, MAX_SHADOW_PAGE_TEXT_LENGTH);
   if (!pageText.trim()) return null;
 
-  const requestFields = fields.slice(0, MAX_SHADOW_FIELDS).map((field) => ({
+  // Only the bounded field set is sent to the model; comparing anything more
+  // would mis-record unrequested fields as worker_only.
+  const boundedFields = fields.slice(0, MAX_SHADOW_FIELDS);
+  const requestFields = boundedFields.map((field) => ({
     columnName: getFieldColumnName(field),
     fieldName: getFieldDisplayName(field),
     labels: Array.isArray(field.labels) ? field.labels.filter(Boolean).slice(0, 8) : [],
@@ -153,7 +175,7 @@ export async function runShadowExtractionComparison(page, flow, item, { fields, 
 
   if (!response || response.available === false) return null;
 
-  return buildShadowComparison(fields, rawData, response.fields, {
+  return buildShadowComparison(boundedFields, rawData, response.fields, {
     item,
     model: response.model,
     pageUrl: snapshot.currentUrl,
