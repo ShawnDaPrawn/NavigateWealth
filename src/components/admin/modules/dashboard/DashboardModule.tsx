@@ -1,13 +1,13 @@
 import { useAuth } from '../../../auth/AuthContext';
 import { AdminAuthNotice } from '../../AdminAuthNotice';
+import { DashboardHeader } from './components/DashboardHeader';
 import { KPIGrid } from './components/KPIGrid';
 import { SystemActivityCard } from './components/SystemActivityCard';
 import { QuickActionsCard } from './components/QuickActionsCard';
 import { TasksWidget } from './components/TasksWidget';
 import { RecentNotesWidget } from './components/RecentNotesWidget';
 import { NewsletterKPICard } from './components/NewsletterKPICard';
-import { SystemHealthCard } from './components/SystemHealthCard';
-import { AuditLogWidget } from './components/AuditLogWidget';
+import { PublicationsCard } from './components/PublicationsCard';
 import { useDashboardData, useDashboardKPIs } from './hooks';
 import type { DashboardModuleProps } from './types';
 
@@ -37,6 +37,11 @@ export function DashboardModule({ onModuleChange, onViewTask }: DashboardModuleP
 
   return (
     <div className="space-y-8 p-8 max-w-[1600px] mx-auto">
+      {/* ========================================================================
+          PAGE HEADER — Greeting + Audit Trail / System Health modal triggers
+          ======================================================================== */}
+      <DashboardHeader userName={user?.firstName} />
+
       {/* Show error banner if dashboard data failed, but don't block the rest */}
       {error && !loading && (
         <div className="bg-destructive/10 border border-destructive rounded-xl p-4 text-center">
@@ -67,15 +72,14 @@ export function DashboardModule({ onModuleChange, onViewTask }: DashboardModuleP
       </div>
 
       {/* ========================================================================
-          BOTTOM SECTION — Newsletter + System Health (left) | Audit Trail (right)
+          BOTTOM SECTION — Publications (left) | Newsletter (right)
           ======================================================================== */}
       <div className="grid gap-6 lg:grid-cols-5">
-        <div className="lg:col-span-2 space-y-6">
-          <NewsletterKPICard />
-          <SystemHealthCard onModuleChange={onModuleChange} />
-        </div>
         <div className="lg:col-span-3">
-          <AuditLogWidget onModuleChange={onModuleChange} maxEntries={8} />
+          <PublicationsCard onModuleChange={onModuleChange} maxArticles={5} />
+        </div>
+        <div className="lg:col-span-2">
+          <NewsletterKPICard />
         </div>
       </div>
     </div>
