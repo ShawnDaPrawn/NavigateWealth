@@ -6,6 +6,9 @@ COPY package.json package-lock.json ./
 RUN npm ci
 
 COPY scripts/provider-portal-worker.mjs ./scripts/provider-portal-worker.mjs
+COPY scripts/provider-portal-runtime-validation.mjs ./scripts/provider-portal-runtime-validation.mjs
+COPY scripts/portal-worker ./scripts/portal-worker
+COPY scripts/provider-adapters ./scripts/provider-adapters
 
 ENV NW_PORTAL_POLL=1
 CMD ["npm", "run", "provider:sync", "--", "--poll"]

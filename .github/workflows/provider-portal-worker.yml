@@ -69,7 +69,12 @@ jobs:
           fi
 
       - name: Check worker syntax
-        run: node --check scripts/provider-portal-worker.mjs
+        run: |
+          node --check scripts/provider-portal-worker.mjs
+          node --check scripts/provider-portal-runtime-validation.mjs
+          for file in scripts/portal-worker/*.mjs scripts/provider-adapters/*.mjs; do
+            node --check "$file"
+          done
 
       - name: Run provider portal worker
         run: npm run provider:sync -- --job-id "$NW_PORTAL_JOB_ID" --mode "$NW_PORTAL_MODE"
