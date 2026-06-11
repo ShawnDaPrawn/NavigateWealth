@@ -43,6 +43,10 @@ import {
 
 interface PortalJobCardProps {
   job: PortalSyncJob;
+  // 'active' = job still running ("Current Job"); 'latest' = most recent
+  // terminal job ("Latest Run" with its outcome), kept visible because
+  // discovery/dry-run/staged results carry actionable review UI.
+  variant?: 'active' | 'latest';
   jobItems: PortalJobPolicyItem[];
   isLoadingJobItems: boolean;
   stagedRun?: IntegrationSyncRun | null;
@@ -63,6 +67,7 @@ interface PortalJobCardProps {
 
 export function PortalJobCard({
   job,
+  variant = 'active',
   jobItems,
   isLoadingJobItems,
   stagedRun,
@@ -152,14 +157,48 @@ export function PortalJobCard({
     discoveryReport?.selectorCandidates.filter((candidate) => candidate.purpose === 'policy_row') ||
     [];
 
+  const outcomeBadge: Record<string, { label: string; className: string }> = {
+    staged: { label: 'Completed', className: 'border-green-200 bg-green-50 text-green-700' },
+    failed: { label: 'Failed', className: 'border-red-200 bg-red-50 text-red-700' },
+    cancelled: { label: 'Cancelled', className: 'border-gray-200 bg-gray-50 text-gray-600' },
+    discovery_ready: {
+      label: 'Needs Review',
+      className: 'border-amber-200 bg-amber-50 text-amber-800',
+    },
+    dry_run_ready: {
+      label: 'Needs Review',
+      className: 'border-amber-200 bg-amber-50 text-amber-800',
+    },
+  };
+  const latestOutcome = outcomeBadge[job.status];
+  const finishedAtLabel = new Date(job.completedAt || job.updatedAt).toLocaleString();
+
   return (
     <Card>
       <CardHeader>
         <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
           <div>
-            <CardTitle className="text-lg">Current Job</CardTitle>
+            <CardTitle className="flex items-center gap-2 text-lg">
+              {variant === 'active' ? 'Current Job' : 'Latest Run'}
+              {variant === 'active' ? (
+                <Badge
+                  variant="outline"
+                  className="border-blue-200 bg-blue-50 text-blue-700 animate-pulse"
+                >
+                  In Progress
+                </Badge>
+              ) : (
+                latestOutcome && (
+                  <Badge variant="outline" className={latestOutcome.className}>
+                    {latestOutcome.label}
+                  </Badge>
+                )
+              )}
+            </CardTitle>
             <CardDescription>
-              GitHub Actions runs the Playwright worker and updates this status automatically.
+              {variant === 'active'
+                ? 'GitHub Actions runs the Playwright worker and updates this status automatically.'
+                : `This run finished on ${finishedAtLabel}. Start a new policy update above to run again.`}
             </CardDescription>
           </div>
           <Badge variant="outline" className="border-blue-200 bg-blue-50 text-blue-800">

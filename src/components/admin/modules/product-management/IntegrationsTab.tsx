@@ -20,7 +20,10 @@ import { ProviderList } from './integrations/ProviderList';
 import { IntegrationHeader } from './integrations/IntegrationHeader';
 import { UploadTab } from './integrations/UploadTab';
 import { MappingTab } from './integrations/MappingTab';
+import { ProviderSetupTab } from './integrations/ProviderSetupTab';
 import { PortalAutomationTab } from './integrations/PortalAutomationTab';
+import { isActivePortalJob } from './integrations/portal-automation/portalHelpers';
+import { usePortalFieldSelectors } from './integrations/portal-automation/usePortalFieldSelectors';
 import { toast } from 'sonner';
 import { Inbox, LayoutList } from 'lucide-react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -30,17 +33,6 @@ import {
   buildIntegrationBindingsForFields,
   buildLegacyFieldMappingFromBindings,
 } from '@/shared/integrations/binding-utils';
-
-const terminalPortalJobStatuses: PortalSyncJob['status'][] = [
-  'staged',
-  'failed',
-  'cancelled',
-  'discovery_ready',
-  'dry_run_ready',
-];
-
-const isActivePortalJob = (job: PortalSyncJob | null) =>
-  Boolean(job && !terminalPortalJobStatuses.includes(job.status));
 
 const normalisePortalCategoryProbe = (value: unknown) =>
   String(value ?? '')
@@ -194,6 +186,13 @@ export function IntegrationsTab() {
     queryFn: () => productManagementApi.fetchPortalFlow(selectedProviderId!, selectedCategoryId),
   });
 
+  const {
+    fieldSelectors: portalFieldSelectors,
+    updateFieldSelector: updatePortalFieldSelector,
+    updateFieldRequired: updatePortalFieldRequired,
+    buildProviderFallbackFields: buildPortalProviderFallbackFields,
+  } = usePortalFieldSelectors(mappingBindings, portalFlow);
+
   const { data: portalBrainMemory } = useQuery<PortalBrainMemorySummary>({
     queryKey: integrationsKeys.portalBrainMemory(selectedProviderId, selectedCategoryId),
     enabled: !!selectedProviderId && !!selectedCategoryId,
@@ -242,6 +241,15 @@ export function IntegrationsTab() {
     queryFn: () =>
       productManagementApi.fetchLatestPortalJob(selectedProviderId!, selectedCategoryId),
     refetchInterval: isActivePortalJob(portalJobForSelection) ? 3000 : false,
+    refetchIntervalInBackground: true,
+  });
+
+  const { data: portalJobHistory = [], isLoading: isLoadingPortalJobHistory } = useQuery({
+    queryKey: integrationsKeys.portalJobHistory(selectedProviderId, selectedCategoryId),
+    enabled: !!selectedProviderId && !!selectedCategoryId,
+    queryFn: () =>
+      productManagementApi.fetchPortalJobHistory(selectedProviderId!, selectedCategoryId),
+    refetchInterval: isActivePortalJob(portalJobForSelection) ? 5000 : false,
     refetchIntervalInBackground: true,
   });
 
@@ -535,6 +543,9 @@ export function IntegrationsTab() {
       queryClient.invalidateQueries({
         queryKey: integrationsKeys.latestPortalJob(selectedProviderId, selectedCategoryId),
       });
+      queryClient.invalidateQueries({
+        queryKey: integrationsKeys.portalJobHistory(selectedProviderId, selectedCategoryId),
+      });
     },
     onError: (err: Error) => {
       toast.error(err.message || 'Failed to create portal job');
@@ -559,6 +570,9 @@ export function IntegrationsTab() {
         queryClient.invalidateQueries({ queryKey: integrationsKeys.portalDiscoveryReport(job.id) });
       }
       queryClient.invalidateQueries({ queryKey: integrationsKeys.portalJobItems(job.id) });
+      queryClient.invalidateQueries({
+        queryKey: integrationsKeys.portalJobHistory(selectedProviderId, selectedCategoryId),
+      });
     },
     onError: (err: Error) => {
       toast.error(err.message || 'Failed to refresh portal job');
@@ -895,6 +909,37 @@ export function IntegrationsTab() {
               />
             </TabsContent>
 
+            {/* Tab: Provider Setup */}
+            <TabsContent value="setup" className="flex-1 overflow-y-auto p-6 bg-gray-50/30">
+              <div className="space-y-6 max-w-4xl mx-auto">
+                <ProviderSetupTab
+                  key={`${selectedProvider.id}:${selectedCategoryId}:setup`}
+                  provider={selectedProvider}
+                  selectedCategoryId={selectedCategoryId}
+                  flow={portalFlow}
+                  brainMemory={portalBrainMemory}
+                  isLoadingFlow={isLoadingPortalFlow}
+                  credentialStatus={portalCredentialStatus}
+                  mappingBindings={mappingBindings}
+                  selectedCredentialProfileId={selectedPortalCredentialProfileId}
+                  onCredentialProfileChange={setSelectedPortalCredentialProfileId}
+                  isSavingCredentials={savePortalCredentialsMutation.isPending}
+                  isSavingFlow={savePortalFlowMutation.isPending}
+                  isResettingFlow={resetPortalFlowMutation.isPending}
+                  onSaveCredentials={(profileId, credentials) =>
+                    savePortalCredentialsMutation.mutate({ profileId, ...credentials })
+                  }
+                  onSaveFlow={(flow) => savePortalFlowMutation.mutate(flow)}
+                  onResetFlow={() => resetPortalFlowMutation.mutate()}
+                  onOpenMappingTab={() => setActiveTab('mapping')}
+                  fieldSelectors={portalFieldSelectors}
+                  updateFieldSelector={updatePortalFieldSelector}
+                  updateFieldRequired={updatePortalFieldRequired}
+                  buildProviderFallbackFields={buildPortalProviderFallbackFields}
+                />
+              </div>
+            </TabsContent>
+
             {/* Tab: Mapping Configuration */}
             <TabsContent value="mapping" className="flex-1 overflow-y-auto p-6 bg-gray-50/30">
               <MappingTab
@@ -922,36 +967,31 @@ export function IntegrationsTab() {
                 job={visiblePortalJobForSelection}
                 stagedRun={visibleStagedRunForSelection}
                 jobItems={portalJobItemsData?.items || []}
+                jobHistory={portalJobHistory}
                 discoveryReport={portalDiscoveryReport}
                 isLoadingFlow={isLoadingPortalFlow}
                 isLoadingDiscoveryReport={isLoadingPortalDiscoveryReport}
                 isLoadingJobItems={isLoadingPortalJobItems}
+                isLoadingJobHistory={isLoadingPortalJobHistory}
                 isCreatingJob={createPortalJobMutation.isPending}
                 credentialStatus={portalCredentialStatus}
                 mappingBindings={mappingBindings}
-                brainMemory={portalBrainMemory}
                 selectedCredentialProfileId={selectedPortalCredentialProfileId}
-                onCredentialProfileChange={setSelectedPortalCredentialProfileId}
-                isSavingCredentials={savePortalCredentialsMutation.isPending}
-                isSavingFlow={savePortalFlowMutation.isPending}
-                isResettingFlow={resetPortalFlowMutation.isPending}
                 isSubmittingOtp={submitPortalOtpMutation.isPending}
                 isRefreshingJob={refreshPortalJobMutation.isPending}
                 onCreateJob={(credentialProfileId, runMode, options) =>
                   createPortalJobMutation.mutate({ credentialProfileId, runMode, ...options })
                 }
-                onSaveCredentials={(profileId, credentials) =>
-                  savePortalCredentialsMutation.mutate({ profileId, ...credentials })
-                }
-                onSaveFlow={(flow) => savePortalFlowMutation.mutate(flow)}
-                onResetFlow={() => resetPortalFlowMutation.mutate()}
                 onSubmitOtp={(otp) => submitPortalOtpMutation.mutate(otp)}
                 onRefreshJob={() => refreshPortalJobMutation.mutate()}
                 onRetryItem={(item) => retryPortalJobItemMutation.mutate(item)}
                 onApplyFlow={(patch) => applyPortalFlowMutation.mutate(patch)}
                 onOpenUploadTab={() => setActiveTab('upload')}
-                onOpenMappingTab={() => setActiveTab('mapping')}
+                onOpenSetupTab={() => setActiveTab('setup')}
                 isApplyingFlow={applyPortalFlowMutation.isPending}
+                fieldSelectors={portalFieldSelectors}
+                updateFieldSelector={updatePortalFieldSelector}
+                buildProviderFallbackFields={buildPortalProviderFallbackFields}
               />
             </TabsContent>
           </Tabs>

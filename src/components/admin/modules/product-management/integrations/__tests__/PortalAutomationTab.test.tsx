@@ -1,12 +1,12 @@
 /**
- * PortalAutomationTab — Render / Characterization Test (Phase 4)
- * ==============================================================
+ * PortalAutomationTab — Render / Characterization Test
+ * ====================================================
  *
  * Locks the mount contract, title, scope-badge, loading state, job-status
- * badge, and the OTP waiting screen for PortalAutomationTab — a 1,709-line
- * Phase 6 decomposition target. The component is pure-prop (all state is
- * injected), so this needs zero network mocking: every scenario is driven by
- * the props passed in.
+ * badge, the OTP waiting screen, and the Current Job / Latest Run /
+ * Previous Runs split for PortalAutomationTab. The component is pure-prop
+ * (all state is injected), so this needs zero network mocking: every
+ * scenario is driven by the props passed in.
  *
  * Run: npx vitest run src/.../PortalAutomationTab.test.tsx
  */
@@ -15,6 +15,7 @@ import { render, screen } from '@/test/utils';
 import { PortalAutomationTab } from '@/components/admin/modules/product-management/integrations/PortalAutomationTab';
 import type {
   IntegrationProvider,
+  PortalJobHistoryEntry,
   PortalProviderFlow,
   PortalSyncJob,
 } from '@/components/admin/modules/product-management/types';
@@ -35,32 +36,29 @@ function makeProps(
     job: undefined,
     stagedRun: null,
     jobItems: [],
+    jobHistory: [],
     discoveryReport: null,
-    brainMemory: undefined,
     isLoadingFlow: false,
     isLoadingDiscoveryReport: false,
     isLoadingJobItems: false,
+    isLoadingJobHistory: false,
     isCreatingJob: false,
     credentialStatus: undefined,
     mappingBindings: [],
     selectedCredentialProfileId: '',
-    onCredentialProfileChange: vi.fn(),
-    isSavingCredentials: false,
-    isSavingFlow: false,
-    isResettingFlow: false,
     isSubmittingOtp: false,
     isRefreshingJob: false,
     onCreateJob: vi.fn(),
-    onSaveCredentials: vi.fn(),
-    onSaveFlow: vi.fn(),
-    onResetFlow: vi.fn(),
     onSubmitOtp: vi.fn(),
     onRefreshJob: vi.fn(),
     onRetryItem: vi.fn(),
     onApplyFlow: vi.fn(),
     onOpenUploadTab: vi.fn(),
-    onOpenMappingTab: vi.fn(),
+    onOpenSetupTab: vi.fn(),
     isApplyingFlow: false,
+    fieldSelectors: [],
+    updateFieldSelector: vi.fn(),
+    buildProviderFallbackFields: vi.fn(() => []),
     ...over,
   };
 }
@@ -82,9 +80,6 @@ const minimalFlow = {
     instructions: '',
   },
   navigation: {},
-  // extraction and notes are required (non-optional) fields — the component's
-  // hydration useEffect accesses flow.extraction.policyRowSelector and renders
-  // flow.notes.length directly, so omitting them throws at runtime.
   extraction: { policyRowSelector: '', fields: [] },
   notes: [],
   updatedAt: '2026-01-01T00:00:00.000Z',
@@ -104,11 +99,22 @@ function makeJob(status: PortalSyncJob['status']): PortalSyncJob {
   } as PortalSyncJob;
 }
 
+function makeHistoryEntry(over: Partial<PortalJobHistoryEntry> = {}): PortalJobHistoryEntry {
+  return {
+    id: 'job-old-1',
+    status: 'staged',
+    runMode: 'run',
+    createdAt: '2026-01-01T00:00:00.000Z',
+    updatedAt: '2026-01-01T01:00:00.000Z',
+    ...over,
+  };
+}
+
 describe('PortalAutomationTab', () => {
   it('renders the "Portal Automation" title and provider/category scope badge', () => {
     render(<PortalAutomationTab {...makeProps()} />);
     expect(screen.getByText('Portal Automation')).toBeTruthy();
-    expect(screen.getByText('Old Mutual / Risk Planning')).toBeTruthy();
+    expect(screen.getAllByText('Old Mutual / Risk Planning').length).toBeGreaterThan(0);
   });
 
   it('shows a no-flow fallback message when no flow is configured and not loading', () => {
@@ -119,11 +125,6 @@ describe('PortalAutomationTab', () => {
   it('shows the loading spinner when isLoadingFlow is true', () => {
     render(<PortalAutomationTab {...makeProps({ isLoadingFlow: true })} />);
     expect(screen.getByText('Loading portal flow...')).toBeTruthy();
-  });
-
-  it('shows the flow isolation alert when a flow is configured', () => {
-    render(<PortalAutomationTab {...makeProps({ flow: minimalFlow })} />);
-    expect(screen.getByText(/Provider login is shared/i)).toBeTruthy();
   });
 
   it('shows the running status badge in the header when a job exists with status running', () => {
@@ -141,8 +142,56 @@ describe('PortalAutomationTab', () => {
     expect(screen.getByText(/Enter the SMS OTP from your phone/i)).toBeTruthy();
   });
 
-  it('shows the Current Job card when a job exists', () => {
+  it('shows the Current Job card with an In Progress badge while a job is active', () => {
     render(<PortalAutomationTab {...makeProps({ job: makeJob('queued') })} />);
     expect(screen.getByText('Current Job')).toBeTruthy();
+    expect(screen.getByText('In Progress')).toBeTruthy();
+  });
+
+  it('shows a terminal job as "Latest Run" with its outcome instead of "Current Job"', () => {
+    render(<PortalAutomationTab {...makeProps({ job: makeJob('failed') })} />);
+    expect(screen.getByText('Latest Run')).toBeTruthy();
+    expect(screen.queryByText('Current Job')).toBeNull();
+    expect(screen.getAllByText('Failed').length).toBeGreaterThan(0);
+  });
+
+  it('labels a staged job outcome as Completed on the Latest Run card', () => {
+    render(<PortalAutomationTab {...makeProps({ job: makeJob('staged') })} />);
+    expect(screen.getByText('Latest Run')).toBeTruthy();
+    expect(screen.getByText('Completed')).toBeTruthy();
+  });
+
+  it('renders previous runs in the Previous Runs card', () => {
+    render(
+      <PortalAutomationTab
+        {...makeProps({
+          jobHistory: [
+            makeHistoryEntry({ id: 'job-old-1', status: 'staged' }),
+            makeHistoryEntry({ id: 'job-old-2', status: 'failed', runMode: 'dry-run' }),
+          ],
+        })}
+      />,
+    );
+    expect(screen.getByText('Previous Runs')).toBeTruthy();
+    expect(screen.getByText('staged')).toBeTruthy();
+    expect(screen.getByText('failed')).toBeTruthy();
+    expect(screen.getByText('Dry run')).toBeTruthy();
+  });
+
+  it('excludes the job already shown above from the Previous Runs list', () => {
+    render(
+      <PortalAutomationTab
+        {...makeProps({
+          job: makeJob('failed'),
+          jobHistory: [makeHistoryEntry({ id: 'job-1', status: 'failed' })],
+        })}
+      />,
+    );
+    expect(screen.getByText(/No previous runs yet/i)).toBeTruthy();
+  });
+
+  it('shows the empty state when there is no run history', () => {
+    render(<PortalAutomationTab {...makeProps()} />);
+    expect(screen.getByText(/No previous runs yet/i)).toBeTruthy();
   });
 });

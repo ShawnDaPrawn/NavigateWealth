@@ -483,6 +483,27 @@ export interface PortalJobQueueSummary {
   skipped: number;
 }
 
+// Trimmed job record returned by GET /portal-jobs/history for the
+// "Previous Runs" list — the full PortalSyncJob is only loaded for the
+// latest job.
+export interface PortalJobHistoryEntry {
+  id: string;
+  status: PortalJobStatus;
+  runMode?: PortalJobRunMode;
+  createdAt: string;
+  updatedAt: string;
+  completedAt?: string;
+  currentStep?: string;
+  message?: string;
+  error?: string;
+  warning?: string;
+  queueSummary?: PortalJobQueueSummary;
+  stagedRunId?: string;
+  discoveryReportId?: string;
+  actionsRunUrl?: string;
+  actionsDispatchError?: string;
+}
+
 export interface PortalJobPolicyItem {
   id: string;
   jobId: string;
