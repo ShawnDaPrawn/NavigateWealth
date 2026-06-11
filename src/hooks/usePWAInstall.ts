@@ -1,15 +1,12 @@
 import { useState, useEffect } from 'react';
 import { logger } from '../utils/logger';
+import { isStandaloneDisplay } from '../utils/pwa/displayMode';
 
 // Type definition for the BeforeInstallPromptEvent
 interface BeforeInstallPromptEvent extends Event {
   prompt: () => Promise<void>;
   userChoice: Promise<{ outcome: 'accepted' | 'dismissed'; platform: string }>;
 }
-
-type NavigatorWithStandalone = Navigator & {
-  standalone?: boolean;
-};
 
 export function usePWAInstall() {
   const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null);
@@ -39,10 +36,9 @@ export function usePWAInstall() {
     const displayModeMediaQuery = window.matchMedia('(display-mode: standalone)');
 
     const syncInstalledState = () => {
-      const isStandalone = displayModeMediaQuery.matches;
-      const navigatorWithStandalone = window.navigator as NavigatorWithStandalone;
-      const isIosStandalone = navigatorWithStandalone.standalone === true;
-      const installed = isStandalone || isIosStandalone;
+      // In-app browsers fake standalone; isStandaloneDisplay() excludes them so we
+      // never wrongly mark the app as installed inside an embedded browser.
+      const installed = isStandaloneDisplay();
       setIsAppInstalled(installed);
 
       if (installed) {
