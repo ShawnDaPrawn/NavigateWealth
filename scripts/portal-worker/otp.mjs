@@ -178,8 +178,20 @@ export async function waitForPushApprovalToClear(page, flow, options = {}) {
     await page.waitForLoadState('domcontentloaded', { timeout: 5000 }).catch(() => undefined);
     await page.waitForLoadState('networkidle', { timeout: 2500 }).catch(() => undefined);
 
+    // Success requires both detectors to agree the approval screen is gone:
+    // detectAuthCheckpoint does not cover every push-specific phrase, so a
+    // checkpoint of '' alone could mean the push screen is simply worded in a
+    // way it does not recognise. Search-ready labels (we are demonstrably
+    // inside the portal) override a lingering push-ish phrase.
     const checkpoint = await detectAuthCheckpoint(page, flow);
-    if (!checkpoint) {
+    const bodyText = await page.locator('body').innerText({ timeout: 1000 }).catch(() => '');
+    const searchReady = textContainsConfiguredLabel(
+      [page.url(), bodyText].join(' '),
+      getSearchReadyLabels(flow),
+    );
+    const stillPending = !searchReady
+      && (Boolean(checkpoint) || looksLikePushApprovalCheckpoint(bodyText));
+    if (!stillPending) {
       await updateJob('running', {
         currentStep: 'push_approval_completed',
         message: 'Provider push verification approved. Continuing into the portal.',
@@ -204,7 +216,6 @@ export async function waitForPushApprovalToClear(page, flow, options = {}) {
     // Any page change (new number, redirect, progress text) resets the
     // inactivity window — the worker only gives up after the screen has been
     // completely still for the full window.
-    const bodyText = await page.locator('body').innerText({ timeout: 1000 }).catch(() => '');
     const activitySignature = [page.url(), sampleText(bodyText, 400)].join('|');
     if (activitySignature !== lastActivitySignature) {
       lastActivitySignature = activitySignature;
