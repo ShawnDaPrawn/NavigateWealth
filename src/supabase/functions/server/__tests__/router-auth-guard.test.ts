@@ -33,12 +33,17 @@ const SERVER_DIR = resolve(dirname(fileURLToPath(import.meta.url)), '..');
  * - Manual session checks: getAuthContext / authenticateUser / verifyAdmin
  * - Shared-secret guards: constantTimeEqual / CRON auth helpers
  * - Signer-token auth (e-sign): getSignerByToken / validateSignerToken
+ *
+ * Deliberately NOT a marker: SERVICE_ROLE_KEY. That is a server-side database
+ * credential, not an inbound-request guard — almost every router's import
+ * tree reaches kv_store.tsx (which reads it), so treating it as auth would
+ * let any KV-using router pass and defeat the ratchet (PR #115 review P1).
  */
 const AUTH_MARKERS =
-  /requireAuth|requireAdmin|requireSuperAdmin|getAuthContext|authenticateUser|verifyAdmin|constantTimeEqual|isAuthorizedPublicationsCron|CRON_SECRET|SERVICE_ROLE_KEY|getSignerByToken|validateSignerToken/;
+  /requireAuth|requireAdmin|requireSuperAdmin|getAuthContext|authenticateUser|verifyAdmin|constantTimeEqual|isAuthorizedPublicationsCron|CRON_SECRET|getSignerByToken|validateSignerToken/;
 
 /**
- * Routers that are allowed to have NO auth marker in their import tree.
+ * Routers that are INTENTIONALLY public (no auth on any route, by design).
  * Every entry needs a reason. Treat additions as security decisions.
  */
 const PUBLIC_ROUTERS: Record<string, string> = {
@@ -46,6 +51,24 @@ const PUBLIC_ROUTERS: Record<string, string> = {
     'Public RSS proxy for the marketing site; target hosts are exact-match allow-listed and SSRF-guarded (H-2).',
   'fna-routes.ts':
     'Static FNA directory/health listing only — registry metadata, no client data, no mutations.',
+  'consultation.ts': 'Public lead-gen — anonymous visitors book a consultation.',
+  'contact-form-routes.ts': 'Public lead-gen — anonymous visitors submit the contact form.',
+  'quote-request-routes.ts': 'Public lead-gen — anonymous visitors request a quote.',
+  'auth-signup.ts':
+    'Public account creation; signup metadata is sanitized server-side (privileged fields stripped).',
+};
+
+/**
+ * Routers with a KNOWN unauthenticated gap that is NOT yet fixable here because
+ * the fix is blocked on other work. These are tracked debt, not "public" — the
+ * distinction is deliberate so the gap stays visible. Each entry MUST reference
+ * the blocking work. New routers may NOT be added here to dodge auth.
+ */
+const KNOWN_UNAUTH_DEBT: Record<string, string> = {
+  'documents.ts':
+    'IDOR over client documents (GET/upload/download/delete by :userId). Fix blocked on C-7/C-2: ' +
+    'client pages (TransactionsDocumentsPage, HistoryPage) still send the anon key, so gating now ' +
+    'would 401 live traffic. Tracked in SECURITY-AUDIT-2026-06 §"Not yet addressed".',
 };
 
 function listMountedModules(): string[] {
@@ -63,7 +86,11 @@ function listMountedModules(): string[] {
   return [...modules].sort();
 }
 
-/** Depth-limited scan of a module + its local ./ imports for auth markers. */
+/**
+ * Depth-limited scan of a module + its local `./` imports AND `export … from`
+ * re-exports (proxy modules like documents.ts re-export documents.tsx) for
+ * auth markers.
+ */
 function hasAuthMarker(file: string, depth: number, seen: Set<string>): boolean {
   if (depth < 0 || seen.has(file)) return false;
   seen.add(file);
@@ -71,7 +98,8 @@ function hasAuthMarker(file: string, depth: number, seen: Set<string>): boolean 
   if (!existsSync(path)) return false;
   const src = readFileSync(path, 'utf8');
   if (AUTH_MARKERS.test(src)) return true;
-  for (const m of src.matchAll(/from '\.\/([^']+)'/g)) {
+  // Follow both `import … from './x'` and `export … from './x'` (re-export proxies).
+  for (const m of src.matchAll(/(?:import|export)[^'"]*from '\.\/([^']+)'/g)) {
     if (hasAuthMarker(m[1], depth - 1, seen)) return true;
   }
   return false;
@@ -85,25 +113,31 @@ describe('router auth guard (SECURITY-AUDIT P3 #16)', () => {
   });
 
   it.each(modules)('%s enforces auth or is explicitly public', (file) => {
-    const authed = hasAuthMarker(file, 3, new Set());
-    const allowlisted = file in PUBLIC_ROUTERS;
+    const authed = hasAuthMarker(file, 4, new Set());
+    const exempt = file in PUBLIC_ROUTERS || file in KNOWN_UNAUTH_DEBT;
 
-    if (!authed && !allowlisted) {
+    if (!authed && !exempt) {
       expect.fail(
-        `${file} is mounted but has no auth marker in its import tree (depth 3). ` +
+        `${file} is mounted but has no auth marker in its import tree (depth 4). ` +
           `Add requireAuth/requireAdmin (or another marker: ${AUTH_MARKERS.source.slice(0, 80)}…), ` +
-          `or — ONLY if this router is genuinely public — add it to PUBLIC_ROUTERS with a reason.`,
+          `or — ONLY if this router is genuinely public — add it to PUBLIC_ROUTERS with a reason. ` +
+          `Routers with a tracked, blocked gap go in KNOWN_UNAUTH_DEBT.`,
       );
     }
-    if (authed && allowlisted) {
+    if (authed && file in PUBLIC_ROUTERS) {
       expect.fail(
         `${file} is in PUBLIC_ROUTERS but now contains an auth marker — remove the stale allowlist entry.`,
       );
     }
+    if (authed && file in KNOWN_UNAUTH_DEBT) {
+      expect.fail(
+        `${file} is in KNOWN_UNAUTH_DEBT but now enforces auth — the debt is paid, remove the entry.`,
+      );
+    }
   });
 
-  it('every PUBLIC_ROUTERS entry refers to a mounted module', () => {
-    for (const file of Object.keys(PUBLIC_ROUTERS)) {
+  it('every PUBLIC_ROUTERS / KNOWN_UNAUTH_DEBT entry refers to a mounted module', () => {
+    for (const file of [...Object.keys(PUBLIC_ROUTERS), ...Object.keys(KNOWN_UNAUTH_DEBT)]) {
       expect(modules, `${file} is allowlisted but not mounted`).toContain(file);
     }
   });

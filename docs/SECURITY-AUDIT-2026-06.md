@@ -503,13 +503,25 @@ server-side alone; documented in-code with `SECURITY-AUDIT` markers):**
   Edge Function with the service role).
 - **P3 #16 (the durable fix): router-auth CI guard landed** —
   `__tests__/router-auth-guard.test.ts` parses every `lazy()` mount, recursively scans each
-  router's import tree for auth markers, and fails the build for any new router that is
-  neither authed nor explicitly allow-listed as public (with a reason). The guard's first
-  run immediately caught and led to fixing two live gaps: `requests-routes.ts` (template /
-  lifecycle / compliance CRUD had NO auth — now `requireAdmin` on all back-office routes;
-  `GET /:id` stays public for the emailed RequestCompletionPage links) and
-  `publications-ai-routes.ts` (unauthenticated OpenAI generation — now `requireAdmin`,
-  with the `AIWritingAPI` frontend callers migrated to session JWTs).
+  router's import tree (`import`/`export … from`) for auth markers, and fails the build for
+  any new router that is neither authed, explicitly allow-listed as public (with a reason),
+  nor in the tracked `KNOWN_UNAUTH_DEBT` list. `SERVICE_ROLE_KEY` is deliberately NOT a
+  marker (it is a DB credential reached via the KV store by nearly every router, not an
+  inbound-request guard — PR #115 review). The guard caught and led to fixing several live
+  gaps:
+  - `requests-routes.ts` — template/lifecycle/compliance CRUD had NO auth → `requireAdmin`
+    on all back-office routes (`GET /:id` stays public for emailed completion links).
+  - `publications-ai-routes.ts` — unauthenticated OpenAI generation → `requireAdmin`;
+    `AIWritingAPI` frontend callers migrated to session JWTs.
+  - `setup.ts` — **unauthenticated raw-DDL endpoints** (`/database`, `/tasks-table`,
+    `/check*` ran `CREATE TABLE/FUNCTION/TRIGGER` via the service role) → `requireSuperAdmin`.
+  - `sitemap.ts` `POST /publish` → `requireAdmin` (GET sitemap stays public for crawlers).
+  - `linktree-routes.ts` — `/links`, `/reorder`, `/settings` mutations → `requireAdmin`
+    (the admin LinktreeTab uses the session API client); `/public` + `/click` stay public.
+  - Intentionally public (allow-listed with reasons): `consultation`, `contact-form`,
+    `quote-request`, `auth-signup`, `rss-proxy`, `fna-routes`.
+  - Tracked debt (`KNOWN_UNAUTH_DEBT`): `documents.ts` — IDOR over client documents
+    (by `:userId`); fix is blocked on C-7/C-2 because client pages still send the anon key.
 - **Discovered while sweeping:** the public `POST /requests/:id/submit` the
   RequestCompletionPage calls has never existed server-side — the client-facing request
   completion flow 404s on submit today. Needs a product decision (response storage +

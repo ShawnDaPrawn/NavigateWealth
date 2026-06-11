@@ -6,11 +6,21 @@
 
 import { Hono } from 'npm:hono';
 import { createClient } from 'jsr:@supabase/supabase-js@2.49.8';
+import { requireSuperAdmin } from './auth-mw.ts';
 import { createModuleLogger } from './stderr-logger.ts';
 import { getErrMsg } from './shared-logger-utils.ts';
 
 const setupApp = new Hono();
 const log = createModuleLogger('setup');
+
+// SECURITY (per-router auth sweep): these endpoints run raw DDL
+// (CREATE TABLE / FUNCTION / TRIGGER) with the service role. They are
+// one-time bootstrap/maintenance tooling and must never be reachable
+// unauthenticated — super-admin only. The GET health roots stay open below.
+setupApp.use('/database', requireSuperAdmin);
+setupApp.use('/tasks-table', requireSuperAdmin);
+setupApp.use('/check', requireSuperAdmin);
+setupApp.use('/check-tasks-table', requireSuperAdmin);
 
 // Root handlers
 setupApp.get('/', (c) => c.json({ service: 'setup', status: 'active' }));

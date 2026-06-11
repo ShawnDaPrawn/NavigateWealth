@@ -12,9 +12,19 @@
  */
 
 import { Hono } from 'npm:hono';
+import { requireAdmin } from './auth-mw.ts';
 import * as kv from './kv_store.tsx';
 
 const app = new Hono();
+
+// SECURITY (per-router auth sweep): the public marketing link-in-bio page
+// reads /public and records /click anonymously; everything else is the admin
+// editor (LinktreeTab, which sends a session JWT) and must be admin-gated.
+// Registered before the routes so it applies to all matching methods.
+app.use('/links', requireAdmin);
+app.use('/links/*', requireAdmin);
+app.use('/reorder', requireAdmin);
+app.use('/settings', requireAdmin);
 
 // ============================================================================
 // Types
