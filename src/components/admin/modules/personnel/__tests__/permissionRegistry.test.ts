@@ -6,6 +6,7 @@ import {
   MODULE_CAPABILITIES,
   PERMISSIONED_MODULES,
   ROLE_MODULE_PRESETS,
+  SELF_GATED_MODULES,
 } from '../constants';
 
 const groupedModules = moduleGroups.flatMap((group) => group.modules);
@@ -15,6 +16,7 @@ describe('personnel permission registry', () => {
     const coveredModules = new Set<AdminModule>([
       ...PERMISSIONED_MODULES,
       ...ALWAYS_ACCESSIBLE_MODULES,
+      ...SELF_GATED_MODULES,
     ]);
 
     for (const module of groupedModules) {

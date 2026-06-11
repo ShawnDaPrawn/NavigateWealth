@@ -38,6 +38,7 @@ import { SubmissionsSkeleton } from '../admin/modules/submissions/components/Sub
 import { NotesSkeleton } from '../admin/modules/notes/components/NotesSkeleton';
 import { AIManagementSkeleton } from '../admin/modules/ai-management/components/AIManagementSkeleton';
 import { IssuesSkeleton } from '../admin/modules/issues/components/IssuesSkeleton';
+import { LockedSkeleton } from '../admin/modules/locked/components/LockedSkeleton';
 
 // ============================================================================
 // LAZY-LOADED MODULE CHUNKS
@@ -104,6 +105,9 @@ const AIManagementModule = React.lazy(() =>
   import('../admin/modules/ai-management').then((m) => ({ default: m.AIManagementModule })),
 );
 const IssuesModule = React.lazy(() => import('../admin/modules/issues/IssuesModule'));
+const LockedModule = React.lazy(() =>
+  import('../admin/modules/locked').then((m) => ({ default: m.LockedModule })),
+);
 
 export function AdminDashboardPage() {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -352,6 +356,14 @@ export function AdminDashboardPage() {
           <Suspense fallback={<CalendarSkeleton />}>
             <ErrorBoundary fallbackTitle="Calendar Module Error">
               <CalendarModule />
+            </ErrorBoundary>
+          </Suspense>
+        );
+      case 'locked':
+        return (
+          <Suspense fallback={<LockedSkeleton />}>
+            <ErrorBoundary fallbackTitle="Locked Module Error">
+              <LockedModule />
             </ErrorBoundary>
           </Suspense>
         );
