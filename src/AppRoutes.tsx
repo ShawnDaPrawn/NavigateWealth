@@ -3,9 +3,25 @@ import { Routes, Route, Navigate } from 'react-router';
 import { MainLayout as AppLayout } from './components/layout/MainLayout';
 import { ErrorBoundary } from './components/shared/ErrorBoundary';
 import { BrandPageLoader } from './components/ui/brand-loader';
+import { isStandaloneDisplay } from './utils/pwa/displayMode';
 
 // Shared loading fallback for lazy-loaded routes
 function RouteFallback() {
+  // In the installed PWA the entry screen is the login page. Rendering the
+  // animated brand loader between the native app-icon splash and the login
+  // screen produces a jarring third "flash". Instead, show a seamless screen
+  // that matches the auth background so the login form simply appears in place —
+  // splash → login, with no loader in between. (Normal browser tabs keep the
+  // branded loader.)
+  if (isStandaloneDisplay()) {
+    return (
+      <div
+        className="min-h-[100dvh] bg-gradient-to-b from-purple-50 via-white to-white"
+        aria-hidden="true"
+      />
+    );
+  }
+
   return (
     <>
       <BrandPageLoader
