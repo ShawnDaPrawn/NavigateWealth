@@ -164,6 +164,7 @@ export function PortalConfigCard({
   // null = follow the default (open while incomplete, collapsed once complete);
   // true/false = the user explicitly opened or closed the setup section.
   const [setupOpenOverride, setSetupOpenOverride] = useState<boolean | null>(null);
+  const [sawIncompleteSetup, setSawIncompleteSetup] = useState(false);
 
   const selectedCategoryName =
     PRODUCT_CATEGORIES.find((c) => c.id === selectedCategoryId)?.name || selectedCategoryId;
@@ -316,7 +317,13 @@ export function PortalConfigCard({
   ];
   const completedSteps = setupSteps.filter((step) => step.complete).length;
   const setupComplete = completedSteps === setupSteps.length;
-  const setupOpen = setupOpenOverride ?? !setupComplete;
+  // Latch open once the setup has been seen incomplete: typing the final
+  // character of the last step must not collapse the section mid-edit (and
+  // hide Save Setup). Only an explicit toggle click collapses it again.
+  useEffect(() => {
+    if (!setupComplete) setSawIncompleteSetup(true);
+  }, [setupComplete]);
+  const setupOpen = setupOpenOverride ?? (sawIncompleteSetup || !setupComplete);
 
   const getBindingForPortalField = (field: PortalFlowField) =>
     mappingBindings.find(
