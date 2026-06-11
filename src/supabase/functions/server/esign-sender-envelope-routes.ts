@@ -6,12 +6,7 @@ import { rateLimit } from './esign-rate-limit.ts';
 import { requireIdempotency } from './idempotency.ts';
 import { formatZodError } from './shared-validation-utils.ts';
 import { SignEnvelopeSchema, RejectEnvelopeSchema } from './esign-validation.ts';
-import {
-  getRequestMetadata,
-  audActor,
-  resolveFirmId,
-  SignerRecord,
-} from './esign-route-helpers.ts';
+import { getRequestMetadata, audActor } from './esign-route-helpers.ts';
 import { belongsToFirm } from './esign-firm-scope.ts';
 import {
   getEnvelopeDetails,

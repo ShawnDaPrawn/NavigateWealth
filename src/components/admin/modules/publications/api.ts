@@ -1004,7 +1004,7 @@ export const AIWritingAPI = {
   async generate(request: AIWritingRequest): Promise<AIWritingResponse> {
     const response = await fetch(`${AI_BASE_URL}/generate`, {
       method: 'POST',
-      headers,
+      headers: await getAuthHeaders(),
       body: JSON.stringify(request),
     });
     return handleResponse<AIWritingResponse>(response);
@@ -1016,7 +1016,7 @@ export const AIWritingAPI = {
   async generateArticle(brief: GenerateArticleBrief): Promise<GenerateArticleResult> {
     const response = await fetch(`${AI_BASE_URL}/generate-article`, {
       method: 'POST',
-      headers,
+      headers: await getAuthHeaders(),
       body: JSON.stringify(brief),
     });
     return handleResponse<GenerateArticleResult>(response);

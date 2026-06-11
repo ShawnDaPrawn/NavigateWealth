@@ -6,10 +6,21 @@
  * - Request lifecycle workflows
  * - Compliance approval processes
  * - Audit trail tracking
+ *
+ * Auth (per-router sweep, SECURITY-AUDIT §"root cause"): all back-office
+ * routes require admin. Intentionally PUBLIC:
+ *   - GET /health    — health probe
+ *   - GET /:id       — capability-URL read for the client-facing
+ *                      RequestCompletionPage (emailed completion links;
+ *                      recipients are not logged in).
+ * NOTE: the completion page also POSTs /:id/submit, but no such route has
+ * ever existed on the server — the public submit flow 404s today. Wiring it
+ * up needs a product decision (response storage + status transition).
  */
 
 import { Hono } from 'npm:hono';
 import type { Context } from 'npm:hono';
+import { requireAdmin } from './auth-mw.ts';
 import { asyncHandler } from './error.middleware.ts';
 import { createModuleLogger } from './stderr-logger.ts';
 import { RequestsService } from './requests-service.ts';
@@ -57,6 +68,7 @@ function getUserFromContext(c: Context): { id: string; name: string } {
  */
 app.get(
   '/recent',
+  requireAdmin,
   asyncHandler(async (c) => {
     const limitParam = c.req.query('limit');
     const limit = limitParam ? parseInt(limitParam, 10) : 10;
@@ -111,6 +123,7 @@ app.get('/health', (c) => {
  */
 app.get(
   '/templates',
+  requireAdmin,
   asyncHandler(async (c) => {
     const status = c.req.query('status');
     const category = c.req.query('category');
@@ -137,6 +150,7 @@ app.get(
  */
 app.get(
   '/templates/:id',
+  requireAdmin,
   asyncHandler(async (c) => {
     const templateId = c.req.param('id')!;
 
@@ -167,6 +181,7 @@ app.get(
  */
 app.post(
   '/templates',
+  requireAdmin,
   asyncHandler(async (c) => {
     const user = getUserFromContext(c);
     const body = await c.req.json();
@@ -203,6 +218,7 @@ app.post(
  */
 app.put(
   '/templates/:id',
+  requireAdmin,
   asyncHandler(async (c) => {
     const user = getUserFromContext(c);
     const templateId = c.req.param('id')!;
@@ -243,6 +259,7 @@ app.put(
  */
 app.post(
   '/templates/:id/duplicate',
+  requireAdmin,
   asyncHandler(async (c) => {
     const user = getUserFromContext(c);
     const templateId = c.req.param('id')!;
@@ -268,6 +285,7 @@ app.post(
  */
 app.delete(
   '/templates/:id',
+  requireAdmin,
   asyncHandler(async (c) => {
     const user = getUserFromContext(c);
     const templateId = c.req.param('id')!;
@@ -321,7 +339,7 @@ const listRequestsHandler = asyncHandler(async (c) => {
 });
 
 // Explicitly handle root path variations
-app.get('/', listRequestsHandler);
+app.get('/', requireAdmin, listRequestsHandler);
 
 /**
  * POST /requests
@@ -363,7 +381,7 @@ const createRequestHandler = asyncHandler(async (c) => {
   );
 });
 
-app.post('/', createRequestHandler);
+app.post('/', requireAdmin, createRequestHandler);
 
 /**
  * GET /requests/:id
@@ -407,6 +425,7 @@ app.get(
  */
 app.put(
   '/:id',
+  requireAdmin,
   asyncHandler(async (c) => {
     const user = getUserFromContext(c);
     const requestId = c.req.param('id')!;
@@ -442,6 +461,7 @@ app.put(
  */
 app.delete(
   '/:id',
+  requireAdmin,
   asyncHandler(async (c) => {
     const user = getUserFromContext(c);
     const requestId = c.req.param('id')!;
@@ -463,6 +483,7 @@ app.delete(
  */
 app.patch(
   '/:id/lifecycle',
+  requireAdmin,
   asyncHandler(async (c) => {
     const user = getUserFromContext(c);
     const requestId = c.req.param('id')!;
@@ -503,6 +524,7 @@ app.patch(
  */
 app.patch(
   '/:id/compliance',
+  requireAdmin,
   asyncHandler(async (c) => {
     const user = getUserFromContext(c);
     const requestId = c.req.param('id')!;
@@ -531,6 +553,7 @@ app.patch(
  */
 app.patch(
   '/:id/sign-off',
+  requireAdmin,
   asyncHandler(async (c) => {
     const user = getUserFromContext(c);
     const requestId = c.req.param('id')!;
@@ -577,6 +600,7 @@ app.patch(
  */
 app.patch(
   '/:id/finalise',
+  requireAdmin,
   asyncHandler(async (c) => {
     const user = getUserFromContext(c);
     const requestId = c.req.param('id')!;
@@ -599,6 +623,7 @@ app.patch(
  */
 app.get(
   '/:id/audit-log',
+  requireAdmin,
   asyncHandler(async (c) => {
     const requestId = c.req.param('id')!;
 

@@ -494,9 +494,28 @@ server-side alone; documented in-code with `SECURITY-AUDIT` markers):**
   branch; and the eventual `verify_jwt = true` flip. These need each remaining caller
   migrated to `session.access_token` first.
 
-**Not yet addressed (follow-up):** H-2 (rss-proxy host allow-list hardening), H-3/H-4
-(rate-limiter fail-closed + atomic + OTP brute-force), H-5 rotation (owner action — see §3),
-H-6/H-9 (e-sign download/attachment ownership), H-11/H-12 (upload limits, FNA-intake RLS),
-M-7 (XSS sink hardening), M-12 (idempotency body caching), and the per-router auth sweep of
-the remaining `*-routes.ts` files. The durable fix remains P3 #16: a CI guard that fails the
-build when a router is mounted without auth.
+**Fixed 2026-06-11 (quick-wins pass):**
+
+- **H-2** rss-proxy: exact-host allow-list (no subdomain wildcard) + `assertPublicHttpUrl`
+  SSRF guard on the target URL.
+- **H-12** FNA-intake RLS: clients can now UPDATE only `client_draft` sessions
+  (migration `20260611000001_fna_intake_rls_draft_only.sql`; submission goes through the
+  Edge Function with the service role).
+- **P3 #16 (the durable fix): router-auth CI guard landed** —
+  `__tests__/router-auth-guard.test.ts` parses every `lazy()` mount, recursively scans each
+  router's import tree for auth markers, and fails the build for any new router that is
+  neither authed nor explicitly allow-listed as public (with a reason). The guard's first
+  run immediately caught and led to fixing two live gaps: `requests-routes.ts` (template /
+  lifecycle / compliance CRUD had NO auth — now `requireAdmin` on all back-office routes;
+  `GET /:id` stays public for the emailed RequestCompletionPage links) and
+  `publications-ai-routes.ts` (unauthenticated OpenAI generation — now `requireAdmin`,
+  with the `AIWritingAPI` frontend callers migrated to session JWTs).
+- **Discovered while sweeping:** the public `POST /requests/:id/submit` the
+  RequestCompletionPage calls has never existed server-side — the client-facing request
+  completion flow 404s on submit today. Needs a product decision (response storage +
+  status transition) — tracked as follow-up, NOT fixed here.
+
+**Not yet addressed (follow-up):** H-3/H-4 (rate-limiter fail-closed + atomic + OTP
+brute-force), H-5 rotation (owner action — see §3), H-6/H-9 (e-sign download/attachment
+ownership), H-11 (upload limits), M-7 (XSS sink hardening), M-12 (idempotency body
+caching), and the missing `/requests/:id/submit` endpoint above.
