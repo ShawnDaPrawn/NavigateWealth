@@ -8,13 +8,23 @@
  */
 
 import { useEffect, useRef, useState } from 'react';
-import { Lock, ShieldCheck, ShieldX, Unlock } from 'lucide-react';
+import { Lock, ShieldX, Unlock } from 'lucide-react';
 import { Button } from '../../../ui/button';
 import { Input } from '../../../ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../../ui/card';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../../ui/tabs';
 import { useCurrentUserPermissions } from '../personnel/hooks/usePermissions';
 import { LockedSkeleton } from './components/LockedSkeleton';
 import { getLockoutRemaining, verifyAccessCode } from './access';
+
+/** Empty placeholder for a tab whose content is not built yet. */
+function TabPlaceholder({ title }: { title: string }) {
+  return (
+    <div className="border border-dashed rounded-lg p-12 flex items-center justify-center text-center text-sm text-muted-foreground">
+      {title} — coming soon.
+    </div>
+  );
+}
 
 export function LockedModule() {
   const { isSuperAdmin, isLoading } = useCurrentUserPermissions();
@@ -47,20 +57,47 @@ export function LockedModule() {
         </div>
       </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>No modules yet</CardTitle>
-          <CardDescription>
-            New modules will be built into this page. For now it is an empty, secured shell.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="border border-dashed rounded-lg p-12 flex flex-col items-center justify-center text-center gap-2 text-muted-foreground">
-            <ShieldCheck className="h-8 w-8" />
-            <p className="text-sm">This area is reserved for future modules.</p>
-          </div>
-        </CardContent>
-      </Card>
+      {/* Top-level tabs: Banking · Accounts · Trading */}
+      <Tabs defaultValue="banking" className="space-y-4">
+        <div className="w-full overflow-x-auto pb-2">
+          <TabsList className="w-full justify-start">
+            <TabsTrigger value="banking">Banking</TabsTrigger>
+            <TabsTrigger value="accounts">Accounts</TabsTrigger>
+            <TabsTrigger value="trading">Trading</TabsTrigger>
+          </TabsList>
+        </div>
+
+        <TabsContent value="banking">
+          <TabPlaceholder title="Banking" />
+        </TabsContent>
+
+        <TabsContent value="accounts">
+          {/* Accounts sub-tabs: Manager · Refund Clusters · Disbursement Clusters */}
+          <Tabs defaultValue="manager" className="space-y-4">
+            <div className="w-full overflow-x-auto pb-2">
+              <TabsList className="w-full justify-start">
+                <TabsTrigger value="manager">Manager</TabsTrigger>
+                <TabsTrigger value="refund-clusters">Refund Clusters</TabsTrigger>
+                <TabsTrigger value="disbursement-clusters">Disbursement Clusters</TabsTrigger>
+              </TabsList>
+            </div>
+
+            <TabsContent value="manager">
+              <TabPlaceholder title="Manager" />
+            </TabsContent>
+            <TabsContent value="refund-clusters">
+              <TabPlaceholder title="Refund Clusters" />
+            </TabsContent>
+            <TabsContent value="disbursement-clusters">
+              <TabPlaceholder title="Disbursement Clusters" />
+            </TabsContent>
+          </Tabs>
+        </TabsContent>
+
+        <TabsContent value="trading">
+          <TabPlaceholder title="Trading" />
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }
