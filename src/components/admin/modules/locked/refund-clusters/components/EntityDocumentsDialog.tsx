@@ -78,6 +78,28 @@ export function EntityDocumentsDialog({ open, onOpenChange, entity }: EntityDocu
     fileInputRef.current?.click();
   };
 
+  const handleView = (docId: string) => {
+    if (!entity) return;
+    // Open the tab synchronously inside the click gesture so popup blockers
+    // allow it, then navigate it once the signed URL resolves.
+    const win = window.open('about:blank', '_blank');
+    view.mutate(
+      { clusterId: entity.clusterId, entityId: entity.id, docId },
+      {
+        onSuccess: (url) => {
+          if (win) {
+            win.location.href = url;
+          } else {
+            window.open(url, '_blank', 'noopener,noreferrer');
+          }
+        },
+        onError: () => {
+          win?.close();
+        },
+      },
+    );
+  };
+
   const handleFileChosen = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     e.target.value = '';
@@ -160,13 +182,7 @@ export function EntityDocumentsDialog({ open, onOpenChange, entity }: EntityDocu
                           size="icon"
                           variant="ghost"
                           aria-label={`View ${doc.fileName}`}
-                          onClick={() =>
-                            view.mutate({
-                              clusterId: entity.clusterId,
-                              entityId: entity.id,
-                              docId: doc.id,
-                            })
-                          }
+                          onClick={() => handleView(doc.id)}
                           disabled={view.isPending}
                         >
                           <ExternalLink className="h-4 w-4" />

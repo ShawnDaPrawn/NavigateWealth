@@ -41,8 +41,9 @@ function audit(
     metadata?: Record<string, unknown>;
   } = {},
 ) {
-  // Fire-and-forget — AdminAuditService.record never throws.
-  void AdminAuditService.record({
+  // Awaited at every call site so the isolate cannot suspend before the
+  // audit entry is persisted. AdminAuditService.record never throws.
+  return AdminAuditService.record({
     actorId: c.get('userId') as string,
     actorRole: c.get('userRole') as string,
     category: 'security',
@@ -81,7 +82,7 @@ app.post(
       description: String(body?.description ?? ''),
       createdBy: c.get('userId') as string,
     });
-    audit(c, 'refund_cluster_created', 'Refund cluster created', { entityId: cluster.id });
+    await audit(c, 'refund_cluster_created', 'Refund cluster created', { entityId: cluster.id });
     return c.json({ success: true, cluster }, 201);
   }),
 );
@@ -103,7 +104,7 @@ app.put(
           : body?.archived === false
             ? 'refund_cluster_unarchived'
             : 'refund_cluster_updated';
-      audit(c, action, 'Refund cluster updated', { entityId: clusterId });
+      await audit(c, action, 'Refund cluster updated', { entityId: clusterId });
       return c.json({ success: true, cluster });
     } catch (error) {
       return c.json({ error: (error as Error).message }, errStatus(error) as 404 | 500);
@@ -116,8 +117,20 @@ app.delete(
   asyncHandler(async (c) => {
     const clusterId = c.req.param('clusterId') ?? '';
     try {
+      // Remove stored files BEFORE the metadata: if storage fails we keep the
+      // records (and their paths) so the deletion can be retried.
+      const docs = await RefundClustersService.listClusterDocuments(clusterId);
+      if (docs.length > 0) {
+        const { error } = await getSupabase()
+          .storage.from(BUCKET)
+          .remove(docs.map((d) => d.storagePath));
+        if (error) {
+          log.error('Failed to remove cluster files from storage', error);
+          return c.json({ error: 'Failed to remove stored documents — cluster not deleted' }, 500);
+        }
+      }
       const { entitiesDeleted } = await RefundClustersService.deleteCluster(clusterId);
-      audit(c, 'refund_cluster_deleted', 'Refund cluster deleted', {
+      await audit(c, 'refund_cluster_deleted', 'Refund cluster deleted', {
         severity: 'warning',
         entityId: clusterId,
         metadata: { entitiesDeleted },
@@ -138,7 +151,7 @@ app.get(
       return c.json({ error: 'Cluster not found' }, 404);
     }
     const entities = await RefundClustersService.listEntities(clusterId);
-    audit(c, 'refund_cluster_viewed', 'Refund cluster opened', {
+    await audit(c, 'refund_cluster_viewed', 'Refund cluster opened', {
       entityId: clusterId,
       metadata: { entityCount: entities.length },
     });
@@ -161,7 +174,7 @@ app.post(
         body,
         c.get('userId') as string,
       );
-      audit(c, 'refund_entity_created', `Refund entity created (${entity.entityType})`, {
+      await audit(c, 'refund_entity_created', `Refund entity created (${entity.entityType})`, {
         entityType: 'refund_entity',
         entityId: entity.id,
         metadata: { clusterId, hasPassword: entity.taxDetails.hasEfilingPassword },
@@ -181,7 +194,7 @@ app.put(
     const body = (await c.req.json()) as EntityInput;
     try {
       const entity = await RefundClustersService.updateEntity(clusterId, entityId, body);
-      audit(c, 'refund_entity_updated', 'Refund entity updated', {
+      await audit(c, 'refund_entity_updated', 'Refund entity updated', {
         entityType: 'refund_entity',
         entityId,
         metadata: {
@@ -201,17 +214,21 @@ app.delete(
   asyncHandler(async (c) => {
     const clusterId = c.req.param('clusterId') ?? '';
     const entityId = c.req.param('entityId') ?? '';
-    const docs = await RefundClustersService.deleteEntityRecords(clusterId, entityId);
-
-    // Best-effort removal of the underlying storage objects.
+    // Remove stored files BEFORE the metadata: if storage fails we keep the
+    // records (and their paths) so the deletion can be retried.
+    const docs = await RefundClustersService.listDocuments(entityId);
     if (docs.length > 0) {
       const { error } = await getSupabase()
         .storage.from(BUCKET)
         .remove(docs.map((d) => d.storagePath));
-      if (error) log.error('Failed to remove entity files from storage', error);
+      if (error) {
+        log.error('Failed to remove entity files from storage', error);
+        return c.json({ error: 'Failed to remove stored documents — entity not deleted' }, 500);
+      }
     }
+    await RefundClustersService.deleteEntityRecords(clusterId, entityId);
 
-    audit(c, 'refund_entity_deleted', 'Refund entity deleted', {
+    await audit(c, 'refund_entity_deleted', 'Refund entity deleted', {
       severity: 'warning',
       entityType: 'refund_entity',
       entityId,
@@ -234,7 +251,7 @@ app.post(
     const entityId = c.req.param('entityId') ?? '';
     try {
       const password = await RefundClustersService.revealEfilingPassword(clusterId, entityId);
-      audit(c, 'refund_entity_password_revealed', 'eFiling password revealed', {
+      await audit(c, 'refund_entity_password_revealed', 'eFiling password revealed', {
         severity: 'critical',
         entityType: 'refund_entity',
         entityId,
@@ -321,7 +338,7 @@ app.post(
       uploadedBy: c.get('userId') as string,
     });
 
-    audit(c, 'refund_entity_document_uploaded', `Document uploaded (${documentType})`, {
+    await audit(c, 'refund_entity_document_uploaded', `Document uploaded (${documentType})`, {
       entityType: 'refund_entity',
       entityId,
       metadata: { clusterId, documentId: document.id, documentType },
@@ -354,7 +371,7 @@ app.get(
       return c.json({ error: 'Failed to create document link' }, 500);
     }
 
-    audit(c, 'refund_entity_document_viewed', `Document viewed (${document.documentType})`, {
+    await audit(c, 'refund_entity_document_viewed', `Document viewed (${document.documentType})`, {
       entityType: 'refund_entity',
       entityId,
       metadata: { documentId: docId, documentType: document.documentType },
@@ -374,16 +391,26 @@ app.delete(
       return c.json({ error: 'Document not found' }, 404);
     }
 
+    // Only drop the metadata once storage confirms the file is gone — a
+    // failed storage delete must keep the record so it can be retried.
     const { error } = await getSupabase().storage.from(BUCKET).remove([document.storagePath]);
-    if (error) log.error('Failed to remove document from storage', error);
+    if (error) {
+      log.error('Failed to remove document from storage', error);
+      return c.json({ error: 'Failed to delete the stored file — please try again' }, 500);
+    }
 
     await RefundClustersService.deleteDocument(entityId, docId);
-    audit(c, 'refund_entity_document_deleted', `Document deleted (${document.documentType})`, {
-      severity: 'warning',
-      entityType: 'refund_entity',
-      entityId,
-      metadata: { documentId: docId, documentType: document.documentType },
-    });
+    await audit(
+      c,
+      'refund_entity_document_deleted',
+      `Document deleted (${document.documentType})`,
+      {
+        severity: 'warning',
+        entityType: 'refund_entity',
+        entityId,
+        metadata: { documentId: docId, documentType: document.documentType },
+      },
+    );
     return c.json({ success: true });
   }),
 );

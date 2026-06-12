@@ -199,13 +199,15 @@ export function useDeleteDocument() {
   });
 }
 
+/**
+ * Resolves a short-lived signed URL for a document. The caller must open the
+ * tab synchronously inside the click gesture (popup blockers reject windows
+ * opened after an async round-trip) and navigate it on success.
+ */
 export function useViewDocument() {
   return useMutation({
     mutationFn: (input: { clusterId: string; entityId: string; docId: string }) =>
       RefundClustersAPI.getDocumentUrl(input.clusterId, input.entityId, input.docId),
-    onSuccess: (url) => {
-      window.open(url, '_blank', 'noopener,noreferrer');
-    },
     onError: (error: Error) => {
       toast.error('Failed to open document', { description: error.message });
     },

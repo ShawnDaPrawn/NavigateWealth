@@ -532,6 +532,20 @@ export const RefundClustersService = {
       .sort((a, b) => b.uploadedAt.localeCompare(a.uploadedAt));
   },
 
+  /** All document records across every entity in a cluster. */
+  async listClusterDocuments(clusterId: string): Promise<RefundEntityDocument[]> {
+    const entities = (await kv.getByPrefix(
+      `${ENTITY_PREFIX}${clusterId}:`,
+    )) as RefundEntityRecord[];
+    const documents: RefundEntityDocument[] = [];
+    for (const entity of entities) {
+      if (entity?.id) {
+        documents.push(...(await this.listDocuments(entity.id)));
+      }
+    }
+    return documents;
+  },
+
   async getDocument(entityId: string, docId: string): Promise<RefundEntityDocument | null> {
     return ((await kv.get(docKey(entityId, docId))) as RefundEntityDocument | undefined) ?? null;
   },
