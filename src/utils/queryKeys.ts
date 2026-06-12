@@ -455,3 +455,15 @@ export const noteKeys = {
   detail: (id: string) => [...noteKeys.details(), id] as const,
   clientNotes: (clientId: string) => [...noteKeys.all, 'client', clientId] as const,
 } as const;
+
+// ============================================================================
+// REFUND CLUSTERS (Locked module)
+// ============================================================================
+
+export const refundClusterKeys = {
+  all: ['refund-clusters'] as const,
+  lists: () => [...refundClusterKeys.all, 'list'] as const,
+  details: () => [...refundClusterKeys.all, 'detail'] as const,
+  detail: (clusterId: string) => [...refundClusterKeys.details(), clusterId] as const,
+  documents: (entityId: string) => [...refundClusterKeys.all, 'documents', entityId] as const,
+} as const;
