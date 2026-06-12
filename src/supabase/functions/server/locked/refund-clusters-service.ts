@@ -22,8 +22,8 @@
  * @module server/refund-clusters-service
  */
 
-import * as kv from './kv_store.tsx';
-import { createModuleLogger } from './stderr-logger.ts';
+import * as kv from '../kv_store.tsx';
+import { createModuleLogger } from '../stderr-logger.ts';
 
 const log = createModuleLogger('refund-clusters');
 

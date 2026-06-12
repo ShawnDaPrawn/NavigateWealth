@@ -10,10 +10,10 @@
 
 import { Hono, type Context } from 'npm:hono';
 import { createClient } from 'jsr:@supabase/supabase-js@2.49.8';
-import { requireSuperAdmin } from './auth-mw.ts';
-import { asyncHandler } from './error.middleware.ts';
-import { createModuleLogger } from './stderr-logger.ts';
-import { AdminAuditService } from './admin-audit-service.ts';
+import { requireSuperAdmin } from '../auth-mw.ts';
+import { asyncHandler } from '../error.middleware.ts';
+import { createModuleLogger } from '../stderr-logger.ts';
+import { AdminAuditService } from '../admin-audit-service.ts';
 import { RefundClustersService, type EntityInput } from './refund-clusters-service.ts';
 
 const app = new Hono();

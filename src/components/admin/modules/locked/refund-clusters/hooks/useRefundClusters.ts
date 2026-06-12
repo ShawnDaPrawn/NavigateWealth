@@ -7,7 +7,7 @@
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
-import { refundClusterKeys } from '../../../../../../utils/queryKeys';
+import { refundClusterKeys } from '../queryKeys';
 import { RefundClustersAPI } from '../api';
 import type { RefundEntityInput } from '../types';
 

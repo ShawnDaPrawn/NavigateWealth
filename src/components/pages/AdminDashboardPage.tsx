@@ -38,7 +38,6 @@ import { SubmissionsSkeleton } from '../admin/modules/submissions/components/Sub
 import { NotesSkeleton } from '../admin/modules/notes/components/NotesSkeleton';
 import { AIManagementSkeleton } from '../admin/modules/ai-management/components/AIManagementSkeleton';
 import { IssuesSkeleton } from '../admin/modules/issues/components/IssuesSkeleton';
-import { LockedSkeleton } from '../admin/modules/locked/components/LockedSkeleton';
 
 // ============================================================================
 // LAZY-LOADED MODULE CHUNKS
@@ -361,7 +360,7 @@ export function AdminDashboardPage() {
         );
       case 'locked':
         return (
-          <Suspense fallback={<LockedSkeleton />}>
+          <Suspense fallback={<div className="p-6" />}>
             <ErrorBoundary fallbackTitle="Locked Module Error">
               <LockedModule />
             </ErrorBoundary>
