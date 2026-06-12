@@ -59,11 +59,13 @@ export function LockedModule() {
 
       {/* Top-level tabs: Banking · Accounts · Trading */}
       <Tabs defaultValue="banking" className="space-y-4">
-        <TabsList>
-          <TabsTrigger value="banking">Banking</TabsTrigger>
-          <TabsTrigger value="accounts">Accounts</TabsTrigger>
-          <TabsTrigger value="trading">Trading</TabsTrigger>
-        </TabsList>
+        <div className="w-full overflow-x-auto pb-2">
+          <TabsList className="w-full justify-start">
+            <TabsTrigger value="banking">Banking</TabsTrigger>
+            <TabsTrigger value="accounts">Accounts</TabsTrigger>
+            <TabsTrigger value="trading">Trading</TabsTrigger>
+          </TabsList>
+        </div>
 
         <TabsContent value="banking">
           <TabPlaceholder title="Banking" />
@@ -72,11 +74,13 @@ export function LockedModule() {
         <TabsContent value="accounts">
           {/* Accounts sub-tabs: Manager · Refund Clusters · Disbursement Clusters */}
           <Tabs defaultValue="manager" className="space-y-4">
-            <TabsList>
-              <TabsTrigger value="manager">Manager</TabsTrigger>
-              <TabsTrigger value="refund-clusters">Refund Clusters</TabsTrigger>
-              <TabsTrigger value="disbursement-clusters">Disbursement Clusters</TabsTrigger>
-            </TabsList>
+            <div className="w-full overflow-x-auto pb-2">
+              <TabsList className="w-full justify-start">
+                <TabsTrigger value="manager">Manager</TabsTrigger>
+                <TabsTrigger value="refund-clusters">Refund Clusters</TabsTrigger>
+                <TabsTrigger value="disbursement-clusters">Disbursement Clusters</TabsTrigger>
+              </TabsList>
+            </div>
 
             <TabsContent value="manager">
               <TabPlaceholder title="Manager" />
