@@ -297,12 +297,16 @@ const VAT_RATE = 0.15;
 
 const round2 = (value: number): number => Math.round(value * 100) / 100;
 
-function normalizeDirection(value: unknown): TransactionDirection {
-  return value === 'income' ? 'income' : 'expense';
+/** Strictly parse a direction — an unrecognized value is rejected, never silently defaulted. */
+function parseDirection(value: unknown): TransactionDirection {
+  if (value === 'income' || value === 'expense') return value;
+  throw Object.assign(new Error('Invalid transaction direction'), { status: 400 });
 }
 
-function normalizeTreatment(value: unknown): VatTreatment {
-  return value === 'zero_rated' || value === 'exempt' ? value : 'standard';
+/** Strictly parse a VAT treatment. `undefined` is allowed (caller decides the default). */
+function parseTreatment(value: unknown): VatTreatment {
+  if (value === 'standard' || value === 'zero_rated' || value === 'exempt') return value;
+  throw Object.assign(new Error('Invalid VAT treatment'), { status: 400 });
 }
 
 function toAmount(value: unknown): number {
@@ -337,7 +341,33 @@ export const RefundClustersService = {
   },
 
   async getCluster(clusterId: string): Promise<RefundClusterRecord | null> {
-    return ((await kv.get(clusterKey(clusterId))) as RefundClusterRecord | undefined) ?? null;
+    const cluster =
+      ((await kv.get(clusterKey(clusterId))) as RefundClusterRecord | undefined) ?? null;
+    if (cluster && !cluster.vatPeriod) {
+      // Back-compat: clusters created before the VAT category moved to the
+      // cluster have no vatPeriod. Derive it once from any entity's legacy
+      // taxDetails.vatPeriod and persist, so period-scoped summaries are
+      // correct without a manual edit.
+      const derived = await this.deriveLegacyVatPeriod(clusterId);
+      if (derived) {
+        cluster.vatPeriod = derived;
+        await kv.set(clusterKey(clusterId), cluster);
+      }
+    }
+    return cluster;
+  },
+
+  /** Reads the legacy per-entity VAT category (pre-migration records) for backfill. */
+  async deriveLegacyVatPeriod(clusterId: string): Promise<VatPeriodCategory | ''> {
+    const entities = (await kv.getByPrefix(
+      `${ENTITY_PREFIX}${clusterId}:`,
+    )) as RefundEntityRecord[];
+    for (const entity of entities) {
+      const legacy = (entity?.taxDetails as { vatPeriod?: unknown } | undefined)?.vatPeriod;
+      const normalized = this.normalizeVatPeriod(legacy);
+      if (normalized) return normalized;
+    }
+    return '';
   },
 
   async createCluster(input: {
@@ -708,7 +738,8 @@ export const RefundClustersService = {
       throw Object.assign(new Error('Amount must be greater than zero'), {
         status: 400,
       });
-    const treatment = normalizeTreatment(input.vatTreatment);
+    const direction = parseDirection(input.direction);
+    const treatment = parseTreatment(input.vatTreatment ?? 'standard');
     const { vatAmount, vatOverridden } = this.resolveVatAmount(amount, treatment, input.vatAmount);
 
     const now = new Date().toISOString();
@@ -718,7 +749,7 @@ export const RefundClustersService = {
       clusterId,
       date: str(input.date) || now.slice(0, 10),
       description: str(input.description),
-      direction: normalizeDirection(input.direction),
+      direction,
       vatTreatment: treatment,
       amount,
       vatAmount,
@@ -745,9 +776,7 @@ export const RefundClustersService = {
         status: 400,
       });
     const treatment =
-      input.vatTreatment !== undefined
-        ? normalizeTreatment(input.vatTreatment)
-        : existing.vatTreatment;
+      input.vatTreatment !== undefined ? parseTreatment(input.vatTreatment) : existing.vatTreatment;
     const { vatAmount, vatOverridden } = this.resolveVatAmount(amount, treatment, input.vatAmount);
 
     const next: RefundTransactionRecord = {
@@ -755,7 +784,7 @@ export const RefundClustersService = {
       date: input.date !== undefined ? str(input.date) || existing.date : existing.date,
       description: input.description !== undefined ? str(input.description) : existing.description,
       direction:
-        input.direction !== undefined ? normalizeDirection(input.direction) : existing.direction,
+        input.direction !== undefined ? parseDirection(input.direction) : existing.direction,
       vatTreatment: treatment,
       amount,
       vatAmount,

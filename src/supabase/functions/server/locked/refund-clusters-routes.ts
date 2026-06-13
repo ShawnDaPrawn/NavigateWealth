@@ -561,14 +561,10 @@ app.post(
     const supabase = getSupabase();
     await ensureBucket(supabase);
 
-    // Replace any existing invoice file.
-    if (existing.invoice) {
-      await supabase.storage
-        .from(BUCKET)
-        .remove([existing.invoice.storagePath])
-        .catch(() => {});
-    }
-
+    // Upload the replacement (always a unique path) and persist its metadata
+    // BEFORE removing any prior invoice, so a failed upload never loses the
+    // existing file. The old path is cleaned up only after the new one sticks.
+    const oldPath = existing.invoice?.storagePath;
     const safeName = file.name.replace(/[^a-zA-Z0-9.-]/g, '_');
     const storagePath = `${clusterId}/${entityId}/transactions/${txnId}/${Date.now()}_${safeName}`;
     const { error: uploadError } = await supabase.storage.from(BUCKET).upload(storagePath, file, {
@@ -588,6 +584,14 @@ app.post(
       uploadedAt: new Date().toISOString(),
       uploadedBy: c.get('userId') as string,
     });
+
+    if (oldPath && oldPath !== storagePath) {
+      const { error: removeError } = await supabase.storage.from(BUCKET).remove([oldPath]);
+      // Non-fatal: the new invoice is already saved; a leftover old file is an
+      // orphan, not data loss. Log it for later cleanup.
+      if (removeError) log.error('Failed to remove replaced invoice (orphaned)', removeError);
+    }
+
     await audit(c, 'refund_transaction_invoice_uploaded', 'Transaction invoice uploaded', {
       entityType: 'refund_entity',
       entityId,
