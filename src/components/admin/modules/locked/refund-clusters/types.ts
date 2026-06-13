@@ -9,11 +9,15 @@
 
 export type RefundEntityType = 'sole_proprietor' | 'company';
 export type VatPeriodCategory = 'A' | 'B' | 'C';
+export type TransactionDirection = 'income' | 'expense';
+export type VatTreatment = 'standard' | 'zero_rated' | 'exempt';
 
 export interface RefundCluster {
   id: string;
   name: string;
   description: string;
+  /** Shared VAT category for every entity in the cluster (drives the current period). */
+  vatPeriod: VatPeriodCategory | '';
   archived: boolean;
   createdAt: string;
   updatedAt: string;
@@ -49,9 +53,48 @@ export interface BusinessDetails {
 export interface TaxDetails {
   efilingUsername: string;
   hasEfilingPassword: boolean;
-  vatPeriod: VatPeriodCategory | '';
+  /** Manual accounting-record note. The live VAT figure comes from the transactions ledger. */
   currentPeriodVat: string;
   previousPeriodVat: string;
+}
+
+export interface RefundTransactionInvoice {
+  fileName: string;
+  storagePath: string;
+  contentType: string;
+  sizeBytes: number;
+  uploadedAt: string;
+  uploadedBy: string;
+}
+
+export interface RefundTransaction {
+  id: string;
+  entityId: string;
+  clusterId: string;
+  /** ISO yyyy-mm-dd. */
+  date: string;
+  description: string;
+  /** income → output VAT (payable); expense → input VAT (refundable). */
+  direction: TransactionDirection;
+  vatTreatment: VatTreatment;
+  /** Gross amount, VAT-inclusive. */
+  amount: number;
+  vatAmount: number;
+  vatOverridden: boolean;
+  invoice?: RefundTransactionInvoice;
+  createdAt: string;
+  updatedAt: string;
+  createdBy: string;
+}
+
+export interface RefundTransactionInput {
+  date: string;
+  description: string;
+  direction: TransactionDirection;
+  vatTreatment: VatTreatment;
+  amount: number;
+  /** Optional manual override of the auto-derived VAT. */
+  vatAmount?: number;
 }
 
 export interface RefundEntity {
@@ -96,7 +139,6 @@ export interface RefundEntityInput {
     efilingUsername: string;
     /** Write-only: encrypted server-side, never echoed back. */
     efilingPassword?: string;
-    vatPeriod: VatPeriodCategory | '';
     currentPeriodVat: string;
     previousPeriodVat: string;
   };

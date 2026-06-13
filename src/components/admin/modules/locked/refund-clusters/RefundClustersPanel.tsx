@@ -73,7 +73,11 @@ export function RefundClustersPanel() {
     return <ClusterDetailView clusterId={openClusterId} onBack={() => setOpenClusterId(null)} />;
   }
 
-  const handleSubmit = (values: { name: string; description: string }) => {
+  const handleSubmit = (values: {
+    name: string;
+    description: string;
+    vatPeriod: RefundCluster['vatPeriod'];
+  }) => {
     if (editingCluster) {
       updateCluster.mutate(
         { clusterId: editingCluster.id, patch: values },

@@ -38,7 +38,6 @@ function makeEntity(overrides: Partial<RefundEntity> = {}): RefundEntity {
     taxDetails: {
       efilingUsername: 'thabo123',
       hasEfilingPassword: true,
-      vatPeriod: 'A',
       currentPeriodVat: 'R100',
       previousPeriodVat: 'R90',
     },
@@ -71,7 +70,7 @@ describe('emptyEntityForm', () => {
     expect(form.businessDetails.companyName).toBe('');
     expect(form.primaryAccount.bankName).toBe('');
     expect(form.efilingPassword).toBe('');
-    expect(form.vatPeriod).toBe('');
+    expect(form.currentPeriodVat).toBe('');
   });
 });
 
@@ -80,7 +79,7 @@ describe('formFromEntity', () => {
     const form = formFromEntity(makeEntity());
     expect(form.personalDetails.name).toBe('Thabo');
     expect(form.primaryAccount.bankName).toBe('FNB');
-    expect(form.vatPeriod).toBe('A');
+    expect(form.currentPeriodVat).toBe('R100');
     expect(form.efilingPassword).toBe('');
   });
 });

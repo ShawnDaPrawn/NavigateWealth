@@ -9,7 +9,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { refundClusterKeys } from '../queryKeys';
 import { RefundClustersAPI } from '../api';
-import type { RefundEntityInput } from '../types';
+import type { RefundEntityInput, RefundTransactionInput, VatPeriodCategory } from '../types';
 
 const STALE_TIME = 60 * 1000;
 
@@ -50,7 +50,7 @@ export function useEntityDocuments(clusterId: string, entityId: string | null) {
 export function useCreateCluster() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (input: { name: string; description: string }) =>
+    mutationFn: (input: { name: string; description: string; vatPeriod: VatPeriodCategory | '' }) =>
       RefundClustersAPI.createCluster(input),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: refundClusterKeys.lists() });
@@ -67,7 +67,12 @@ export function useUpdateCluster() {
   return useMutation({
     mutationFn: (input: {
       clusterId: string;
-      patch: { name?: string; description?: string; archived?: boolean };
+      patch: {
+        name?: string;
+        description?: string;
+        vatPeriod?: VatPeriodCategory | '';
+        archived?: boolean;
+      };
     }) => RefundClustersAPI.updateCluster(input.clusterId, input.patch),
     onSuccess: (_data, variables) => {
       qc.invalidateQueries({ queryKey: refundClusterKeys.lists() });
@@ -210,6 +215,115 @@ export function useViewDocument() {
       RefundClustersAPI.getDocumentUrl(input.clusterId, input.entityId, input.docId),
     onError: (error: Error) => {
       toast.error('Failed to open document', { description: error.message });
+    },
+  });
+}
+
+// ============================================================================
+// Transactions
+// ============================================================================
+
+export function useEntityTransactions(clusterId: string, entityId: string | null) {
+  return useQuery({
+    queryKey: refundClusterKeys.transactions(entityId ?? ''),
+    queryFn: () => RefundClustersAPI.listTransactions(clusterId, entityId!),
+    enabled: !!entityId,
+    staleTime: STALE_TIME,
+  });
+}
+
+export function useCreateTransaction() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (input: { clusterId: string; entityId: string; txn: RefundTransactionInput }) =>
+      RefundClustersAPI.createTransaction(input.clusterId, input.entityId, input.txn),
+    onSuccess: (_data, variables) => {
+      qc.invalidateQueries({ queryKey: refundClusterKeys.transactions(variables.entityId) });
+      toast.success('Transaction added');
+    },
+    onError: (error: Error) => {
+      toast.error('Failed to add transaction', { description: error.message });
+    },
+  });
+}
+
+export function useUpdateTransaction() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (input: {
+      clusterId: string;
+      entityId: string;
+      txnId: string;
+      txn: RefundTransactionInput;
+    }) =>
+      RefundClustersAPI.updateTransaction(input.clusterId, input.entityId, input.txnId, input.txn),
+    onSuccess: (_data, variables) => {
+      qc.invalidateQueries({ queryKey: refundClusterKeys.transactions(variables.entityId) });
+      toast.success('Transaction updated');
+    },
+    onError: (error: Error) => {
+      toast.error('Failed to update transaction', { description: error.message });
+    },
+  });
+}
+
+export function useDeleteTransaction() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (input: { clusterId: string; entityId: string; txnId: string }) =>
+      RefundClustersAPI.deleteTransaction(input.clusterId, input.entityId, input.txnId),
+    onSuccess: (_data, variables) => {
+      qc.invalidateQueries({ queryKey: refundClusterKeys.transactions(variables.entityId) });
+      toast.success('Transaction deleted');
+    },
+    onError: (error: Error) => {
+      toast.error('Failed to delete transaction', { description: error.message });
+    },
+  });
+}
+
+export function useUploadTransactionInvoice() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (input: { clusterId: string; entityId: string; txnId: string; file: File }) =>
+      RefundClustersAPI.uploadTransactionInvoice(
+        input.clusterId,
+        input.entityId,
+        input.txnId,
+        input.file,
+      ),
+    onSuccess: (_data, variables) => {
+      qc.invalidateQueries({ queryKey: refundClusterKeys.transactions(variables.entityId) });
+      toast.success('Invoice uploaded');
+    },
+    onError: (error: Error) => {
+      toast.error('Upload failed', { description: error.message });
+    },
+  });
+}
+
+export function useDeleteTransactionInvoice() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (input: { clusterId: string; entityId: string; txnId: string }) =>
+      RefundClustersAPI.deleteTransactionInvoice(input.clusterId, input.entityId, input.txnId),
+    onSuccess: (_data, variables) => {
+      qc.invalidateQueries({ queryKey: refundClusterKeys.transactions(variables.entityId) });
+      toast.success('Invoice deleted');
+    },
+    onError: (error: Error) => {
+      toast.error('Failed to delete invoice', { description: error.message });
+    },
+  });
+}
+
+/** Resolves a signed URL for a transaction invoice (open the tab in the click gesture). */
+export function useViewTransactionInvoice() {
+  return useMutation({
+    mutationFn: (input: { clusterId: string; entityId: string; txnId: string }) =>
+      RefundClustersAPI.getTransactionInvoiceUrl(input.clusterId, input.entityId, input.txnId),
+    onError: (error: Error) => {
+      toast.error('Failed to open invoice', { description: error.message });
     },
   });
 }

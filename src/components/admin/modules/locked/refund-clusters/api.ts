@@ -14,6 +14,9 @@ import type {
   RefundEntity,
   RefundEntityDocument,
   RefundEntityInput,
+  RefundTransaction,
+  RefundTransactionInput,
+  VatPeriodCategory,
 } from './types';
 
 function rethrow(error: unknown, context: string): never {
@@ -31,7 +34,11 @@ export const RefundClustersAPI = {
     }
   },
 
-  async createCluster(input: { name: string; description: string }): Promise<RefundCluster> {
+  async createCluster(input: {
+    name: string;
+    description: string;
+    vatPeriod: VatPeriodCategory | '';
+  }): Promise<RefundCluster> {
     try {
       const data = await api.post<{ cluster: RefundCluster }>(ENDPOINTS.CLUSTERS, input);
       return data.cluster;
@@ -42,7 +49,12 @@ export const RefundClustersAPI = {
 
   async updateCluster(
     clusterId: string,
-    patch: { name?: string; description?: string; archived?: boolean },
+    patch: {
+      name?: string;
+      description?: string;
+      vatPeriod?: VatPeriodCategory | '';
+      archived?: boolean;
+    },
   ): Promise<RefundCluster> {
     try {
       const data = await api.put<{ cluster: RefundCluster }>(ENDPOINTS.CLUSTER(clusterId), patch);
@@ -161,6 +173,106 @@ export const RefundClustersAPI = {
       await api.delete(ENDPOINTS.DOCUMENT(clusterId, entityId, docId));
     } catch (error) {
       rethrow(error, 'deleteDocument');
+    }
+  },
+
+  // --- Transactions ----------------------------------------------------
+
+  async listTransactions(clusterId: string, entityId: string): Promise<RefundTransaction[]> {
+    try {
+      const data = await api.get<{ transactions: RefundTransaction[] }>(
+        ENDPOINTS.TRANSACTIONS(clusterId, entityId),
+      );
+      return data?.transactions ?? [];
+    } catch (error) {
+      rethrow(error, 'listTransactions');
+    }
+  },
+
+  async createTransaction(
+    clusterId: string,
+    entityId: string,
+    input: RefundTransactionInput,
+  ): Promise<RefundTransaction> {
+    try {
+      const data = await api.post<{ transaction: RefundTransaction }>(
+        ENDPOINTS.TRANSACTIONS(clusterId, entityId),
+        input,
+      );
+      return data.transaction;
+    } catch (error) {
+      rethrow(error, 'createTransaction');
+    }
+  },
+
+  async updateTransaction(
+    clusterId: string,
+    entityId: string,
+    txnId: string,
+    input: RefundTransactionInput,
+  ): Promise<RefundTransaction> {
+    try {
+      const data = await api.put<{ transaction: RefundTransaction }>(
+        ENDPOINTS.TRANSACTION(clusterId, entityId, txnId),
+        input,
+      );
+      return data.transaction;
+    } catch (error) {
+      rethrow(error, 'updateTransaction');
+    }
+  },
+
+  async deleteTransaction(clusterId: string, entityId: string, txnId: string): Promise<void> {
+    try {
+      await api.delete(ENDPOINTS.TRANSACTION(clusterId, entityId, txnId));
+    } catch (error) {
+      rethrow(error, 'deleteTransaction');
+    }
+  },
+
+  async uploadTransactionInvoice(
+    clusterId: string,
+    entityId: string,
+    txnId: string,
+    file: File,
+  ): Promise<RefundTransaction> {
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+      const data = await api.post<{ transaction: RefundTransaction }>(
+        ENDPOINTS.TRANSACTION_INVOICE(clusterId, entityId, txnId),
+        formData,
+      );
+      return data.transaction;
+    } catch (error) {
+      rethrow(error, 'uploadTransactionInvoice');
+    }
+  },
+
+  async getTransactionInvoiceUrl(
+    clusterId: string,
+    entityId: string,
+    txnId: string,
+  ): Promise<string> {
+    try {
+      const data = await api.get<{ url: string }>(
+        ENDPOINTS.TRANSACTION_INVOICE_URL(clusterId, entityId, txnId),
+      );
+      return data.url;
+    } catch (error) {
+      rethrow(error, 'getTransactionInvoiceUrl');
+    }
+  },
+
+  async deleteTransactionInvoice(
+    clusterId: string,
+    entityId: string,
+    txnId: string,
+  ): Promise<void> {
+    try {
+      await api.delete(ENDPOINTS.TRANSACTION_INVOICE(clusterId, entityId, txnId));
+    } catch (error) {
+      rethrow(error, 'deleteTransactionInvoice');
     }
   },
 };

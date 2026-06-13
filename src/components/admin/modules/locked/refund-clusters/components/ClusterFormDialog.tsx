@@ -1,5 +1,8 @@
 /**
- * Create / edit dialog for a refund cluster (name + description).
+ * Create / edit dialog for a refund cluster (name, description, VAT category).
+ *
+ * The VAT category is a cluster-level setting shared by every entity in the
+ * cluster — it drives each entity's "current period" VAT summary.
  */
 
 import { useEffect, useState } from 'react';
@@ -15,14 +18,26 @@ import {
 import { Input } from '../../../../../ui/input';
 import { Label } from '../../../../../ui/label';
 import { Textarea } from '../../../../../ui/textarea';
-import type { RefundCluster } from '../types';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '../../../../../ui/select';
+import { VAT_PERIOD_OPTIONS } from '../constants';
+import type { RefundCluster, VatPeriodCategory } from '../types';
 
 interface ClusterFormDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   /** When set the dialog edits this cluster; otherwise it creates a new one. */
   cluster?: RefundCluster | null;
-  onSubmit: (values: { name: string; description: string }) => void;
+  onSubmit: (values: {
+    name: string;
+    description: string;
+    vatPeriod: VatPeriodCategory | '';
+  }) => void;
   isSubmitting: boolean;
 }
 
@@ -35,18 +50,20 @@ export function ClusterFormDialog({
 }: ClusterFormDialogProps) {
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
+  const [vatPeriod, setVatPeriod] = useState<VatPeriodCategory | ''>('');
 
   useEffect(() => {
     if (open) {
       setName(cluster?.name ?? '');
       setDescription(cluster?.description ?? '');
+      setVatPeriod(cluster?.vatPeriod ?? '');
     }
   }, [open, cluster]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!name.trim() || isSubmitting) return;
-    onSubmit({ name: name.trim(), description: description.trim() });
+    onSubmit({ name: name.trim(), description: description.trim(), vatPeriod });
   };
 
   return (
@@ -56,7 +73,7 @@ export function ClusterFormDialog({
           <DialogTitle>{cluster ? 'Edit Refund Cluster' : 'Create New Cluster'}</DialogTitle>
           <DialogDescription>
             {cluster
-              ? 'Update the cluster name and description.'
+              ? 'Update the cluster name, description and VAT category.'
               : 'Group entities together for VAT refund processing.'}
           </DialogDescription>
         </DialogHeader>
@@ -81,6 +98,27 @@ export function ClusterFormDialog({
               placeholder="What this cluster is for…"
               rows={3}
             />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="cluster-vat-period">VAT Category</Label>
+            <Select
+              value={vatPeriod || undefined}
+              onValueChange={(value) => setVatPeriod(value as VatPeriodCategory)}
+            >
+              <SelectTrigger id="cluster-vat-period">
+                <SelectValue placeholder="Select VAT category" />
+              </SelectTrigger>
+              <SelectContent>
+                {VAT_PERIOD_OPTIONS.map((option) => (
+                  <SelectItem key={option.value} value={option.value}>
+                    {option.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <p className="text-xs text-muted-foreground">
+              Shared by all entities in this cluster — drives the current VAT period.
+            </p>
           </div>
           <DialogFooter>
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>

@@ -46,10 +46,57 @@ export interface RefundClusterRecord {
   id: string;
   name: string;
   description: string;
+  /** Shared VAT category for every entity in the cluster (drives the current period). */
+  vatPeriod: VatPeriodCategory | '';
   archived: boolean;
   createdAt: string;
   updatedAt: string;
   createdBy: string;
+}
+
+export type TransactionDirection = 'income' | 'expense';
+export type VatTreatment = 'standard' | 'zero_rated' | 'exempt';
+
+export interface RefundTransactionRecord {
+  id: string;
+  entityId: string;
+  clusterId: string;
+  /** Transaction date (ISO yyyy-mm-dd). */
+  date: string;
+  description: string;
+  /** income → output VAT (payable); expense → input VAT (refundable). */
+  direction: TransactionDirection;
+  vatTreatment: VatTreatment;
+  /** Gross amount, VAT-inclusive. */
+  amount: number;
+  /** VAT portion of the amount (0 for zero-rated/exempt unless overridden). */
+  vatAmount: number;
+  /** Whether vatAmount was set manually rather than auto-derived. */
+  vatOverridden: boolean;
+  /** Optional supporting tax invoice. */
+  invoice?: RefundTransactionInvoice;
+  createdAt: string;
+  updatedAt: string;
+  createdBy: string;
+}
+
+export interface RefundTransactionInvoice {
+  fileName: string;
+  storagePath: string;
+  contentType: string;
+  sizeBytes: number;
+  uploadedAt: string;
+  uploadedBy: string;
+}
+
+export interface TransactionInput {
+  date?: string;
+  description?: string;
+  direction?: TransactionDirection;
+  vatTreatment?: VatTreatment;
+  amount?: number;
+  /** When provided, overrides the auto-derived VAT for the row. */
+  vatAmount?: number;
 }
 
 export interface PersonalDetails {
@@ -146,11 +193,13 @@ export interface EntityInput {
 const CLUSTER_PREFIX = 'refund-clusters:cluster:';
 const ENTITY_PREFIX = 'refund-clusters:entity:';
 const DOC_PREFIX = 'refund-clusters:doc:';
+const TXN_PREFIX = 'refund-clusters:txn:';
 
 const clusterKey = (clusterId: string) => `${CLUSTER_PREFIX}${clusterId}`;
 const entityKey = (clusterId: string, entityId: string) =>
   `${ENTITY_PREFIX}${clusterId}:${entityId}`;
 const docKey = (entityId: string, docId: string) => `${DOC_PREFIX}${entityId}:${docId}`;
+const txnKey = (entityId: string, txnId: string) => `${TXN_PREFIX}${entityId}:${txnId}`;
 
 const newId = () => crypto.randomUUID();
 
@@ -244,6 +293,33 @@ function sanitizeEntity(entity: RefundEntityRecord): SanitizedEntity {
 
 const VAT_PERIODS: ReadonlyArray<string> = ['A', 'B', 'C', ''];
 
+const VAT_RATE = 0.15;
+
+const round2 = (value: number): number => Math.round(value * 100) / 100;
+
+/** Strictly parse a direction — an unrecognized value is rejected, never silently defaulted. */
+function parseDirection(value: unknown): TransactionDirection {
+  if (value === 'income' || value === 'expense') return value;
+  throw Object.assign(new Error('Invalid transaction direction'), { status: 400 });
+}
+
+/** Strictly parse a VAT treatment. `undefined` is allowed (caller decides the default). */
+function parseTreatment(value: unknown): VatTreatment {
+  if (value === 'standard' || value === 'zero_rated' || value === 'exempt') return value;
+  throw Object.assign(new Error('Invalid VAT treatment'), { status: 400 });
+}
+
+function toAmount(value: unknown): number {
+  const n = typeof value === 'number' ? value : Number(value);
+  return Number.isFinite(n) && n >= 0 ? round2(n) : 0;
+}
+
+/** VAT-inclusive VAT portion for a standard-rated amount; 0 for zero-rated/exempt. */
+function autoVat(amount: number, treatment: VatTreatment): number {
+  if (treatment !== 'standard') return 0;
+  return round2((amount * VAT_RATE) / (1 + VAT_RATE));
+}
+
 // ============================================================================
 // Service
 // ============================================================================
@@ -265,12 +341,39 @@ export const RefundClustersService = {
   },
 
   async getCluster(clusterId: string): Promise<RefundClusterRecord | null> {
-    return ((await kv.get(clusterKey(clusterId))) as RefundClusterRecord | undefined) ?? null;
+    const cluster =
+      ((await kv.get(clusterKey(clusterId))) as RefundClusterRecord | undefined) ?? null;
+    if (cluster && !cluster.vatPeriod) {
+      // Back-compat: clusters created before the VAT category moved to the
+      // cluster have no vatPeriod. Derive it once from any entity's legacy
+      // taxDetails.vatPeriod and persist, so period-scoped summaries are
+      // correct without a manual edit.
+      const derived = await this.deriveLegacyVatPeriod(clusterId);
+      if (derived) {
+        cluster.vatPeriod = derived;
+        await kv.set(clusterKey(clusterId), cluster);
+      }
+    }
+    return cluster;
+  },
+
+  /** Reads the legacy per-entity VAT category (pre-migration records) for backfill. */
+  async deriveLegacyVatPeriod(clusterId: string): Promise<VatPeriodCategory | ''> {
+    const entities = (await kv.getByPrefix(
+      `${ENTITY_PREFIX}${clusterId}:`,
+    )) as RefundEntityRecord[];
+    for (const entity of entities) {
+      const legacy = (entity?.taxDetails as { vatPeriod?: unknown } | undefined)?.vatPeriod;
+      const normalized = this.normalizeVatPeriod(legacy);
+      if (normalized) return normalized;
+    }
+    return '';
   },
 
   async createCluster(input: {
     name: string;
     description: string;
+    vatPeriod?: VatPeriodCategory | '';
     createdBy: string;
   }): Promise<RefundClusterRecord> {
     const name = str(input.name);
@@ -281,6 +384,7 @@ export const RefundClustersService = {
       id: newId(),
       name,
       description: str(input.description),
+      vatPeriod: this.normalizeVatPeriod(input.vatPeriod),
       archived: false,
       createdAt: now,
       updatedAt: now,
@@ -293,7 +397,12 @@ export const RefundClustersService = {
 
   async updateCluster(
     clusterId: string,
-    patch: { name?: string; description?: string; archived?: boolean },
+    patch: {
+      name?: string;
+      description?: string;
+      vatPeriod?: VatPeriodCategory | '';
+      archived?: boolean;
+    },
   ): Promise<RefundClusterRecord> {
     const existing = await this.getCluster(clusterId);
     if (!existing) throw Object.assign(new Error('Cluster not found'), { status: 404 });
@@ -302,6 +411,10 @@ export const RefundClustersService = {
       ...existing,
       name: patch.name !== undefined ? str(patch.name) || existing.name : existing.name,
       description: patch.description !== undefined ? str(patch.description) : existing.description,
+      vatPeriod:
+        patch.vatPeriod !== undefined
+          ? this.normalizeVatPeriod(patch.vatPeriod)
+          : (existing.vatPeriod ?? ''),
       archived: patch.archived !== undefined ? Boolean(patch.archived) : existing.archived,
       updatedAt: new Date().toISOString(),
     };
@@ -508,11 +621,18 @@ export const RefundClustersService = {
     return decryptSecret(entity.taxDetails.efilingPasswordEnc);
   },
 
-  /** Removes the entity record and its document metadata (not storage files). */
+  /**
+   * Removes the entity record plus its document and transaction metadata
+   * (not the underlying storage files — the route removes those first).
+   */
   async deleteEntityRecords(clusterId: string, entityId: string): Promise<RefundEntityDocument[]> {
     const docs = await this.listDocuments(entityId);
     for (const doc of docs) {
       await kv.del(docKey(entityId, doc.id));
+    }
+    const txns = await this.listTransactions(entityId);
+    for (const txn of txns) {
+      await kv.del(txnKey(entityId, txn.id));
     }
     await kv.del(entityKey(clusterId, entityId));
     return docs;
@@ -564,5 +684,148 @@ export const RefundClustersService = {
 
   async deleteDocument(entityId: string, docId: string): Promise<void> {
     await kv.del(docKey(entityId, docId));
+  },
+
+  // --- Transactions ----------------------------------------------------
+
+  async listTransactions(entityId: string): Promise<RefundTransactionRecord[]> {
+    const rows = (await kv.getByPrefix(`${TXN_PREFIX}${entityId}:`)) as RefundTransactionRecord[];
+    return rows
+      .filter((row) => row && row.id)
+      .sort((a, b) => b.date.localeCompare(a.date) || b.createdAt.localeCompare(a.createdAt));
+  },
+
+  /** All transaction records across every entity in a cluster. */
+  async listClusterTransactions(clusterId: string): Promise<RefundTransactionRecord[]> {
+    const entities = (await kv.getByPrefix(
+      `${ENTITY_PREFIX}${clusterId}:`,
+    )) as RefundEntityRecord[];
+    const txns: RefundTransactionRecord[] = [];
+    for (const entity of entities) {
+      if (entity?.id) txns.push(...(await this.listTransactions(entity.id)));
+    }
+    return txns;
+  },
+
+  async getTransaction(entityId: string, txnId: string): Promise<RefundTransactionRecord | null> {
+    return ((await kv.get(txnKey(entityId, txnId))) as RefundTransactionRecord | undefined) ?? null;
+  },
+
+  /** Resolve the stored VAT amount from the input (auto unless explicitly overridden). */
+  resolveVatAmount(
+    amount: number,
+    treatment: VatTreatment,
+    override: number | undefined,
+  ): { vatAmount: number; vatOverridden: boolean } {
+    if (override !== undefined && Number.isFinite(override)) {
+      const clamped = Math.min(Math.max(round2(override), 0), amount);
+      return { vatAmount: clamped, vatOverridden: clamped !== autoVat(amount, treatment) };
+    }
+    return { vatAmount: autoVat(amount, treatment), vatOverridden: false };
+  },
+
+  async createTransaction(
+    clusterId: string,
+    entityId: string,
+    input: TransactionInput,
+    createdBy: string,
+  ): Promise<RefundTransactionRecord> {
+    const entity = await this.getEntityRaw(clusterId, entityId);
+    if (!entity) throw Object.assign(new Error('Entity not found'), { status: 404 });
+
+    const amount = toAmount(input.amount);
+    if (amount <= 0)
+      throw Object.assign(new Error('Amount must be greater than zero'), {
+        status: 400,
+      });
+    const direction = parseDirection(input.direction);
+    const treatment = parseTreatment(input.vatTreatment ?? 'standard');
+    const { vatAmount, vatOverridden } = this.resolveVatAmount(amount, treatment, input.vatAmount);
+
+    const now = new Date().toISOString();
+    const record: RefundTransactionRecord = {
+      id: newId(),
+      entityId,
+      clusterId,
+      date: str(input.date) || now.slice(0, 10),
+      description: str(input.description),
+      direction,
+      vatTreatment: treatment,
+      amount,
+      vatAmount,
+      vatOverridden,
+      createdAt: now,
+      updatedAt: now,
+      createdBy,
+    };
+    await kv.set(txnKey(entityId, record.id), record);
+    return record;
+  },
+
+  async updateTransaction(
+    entityId: string,
+    txnId: string,
+    input: TransactionInput,
+  ): Promise<RefundTransactionRecord> {
+    const existing = await this.getTransaction(entityId, txnId);
+    if (!existing) throw Object.assign(new Error('Transaction not found'), { status: 404 });
+
+    const amount = input.amount !== undefined ? toAmount(input.amount) : existing.amount;
+    if (amount <= 0)
+      throw Object.assign(new Error('Amount must be greater than zero'), {
+        status: 400,
+      });
+    const treatment =
+      input.vatTreatment !== undefined ? parseTreatment(input.vatTreatment) : existing.vatTreatment;
+    const { vatAmount, vatOverridden } = this.resolveVatAmount(amount, treatment, input.vatAmount);
+
+    const next: RefundTransactionRecord = {
+      ...existing,
+      date: input.date !== undefined ? str(input.date) || existing.date : existing.date,
+      description: input.description !== undefined ? str(input.description) : existing.description,
+      direction:
+        input.direction !== undefined ? parseDirection(input.direction) : existing.direction,
+      vatTreatment: treatment,
+      amount,
+      vatAmount,
+      vatOverridden,
+      updatedAt: new Date().toISOString(),
+    };
+    await kv.set(txnKey(entityId, txnId), next);
+    return next;
+  },
+
+  /** Removes the transaction metadata (not the invoice storage file). */
+  async deleteTransaction(
+    entityId: string,
+    txnId: string,
+  ): Promise<RefundTransactionRecord | null> {
+    const existing = await this.getTransaction(entityId, txnId);
+    if (existing) await kv.del(txnKey(entityId, txnId));
+    return existing;
+  },
+
+  async attachTransactionInvoice(
+    entityId: string,
+    txnId: string,
+    invoice: RefundTransactionInvoice,
+  ): Promise<RefundTransactionRecord> {
+    const existing = await this.getTransaction(entityId, txnId);
+    if (!existing) throw Object.assign(new Error('Transaction not found'), { status: 404 });
+    const next = { ...existing, invoice, updatedAt: new Date().toISOString() };
+    await kv.set(txnKey(entityId, txnId), next);
+    return next;
+  },
+
+  async removeTransactionInvoice(
+    entityId: string,
+    txnId: string,
+  ): Promise<RefundTransactionRecord> {
+    const existing = await this.getTransaction(entityId, txnId);
+    if (!existing) throw Object.assign(new Error('Transaction not found'), { status: 404 });
+    const next = { ...existing, updatedAt: new Date().toISOString() };
+    delete next.invoice;
+    await kv.set(txnKey(entityId, txnId), next);
+    return next;
   },
 };

@@ -13,7 +13,6 @@ import type {
   RefundEntity,
   RefundEntityInput,
   RefundEntityType,
-  VatPeriodCategory,
 } from './types';
 
 export interface EntityFormState {
@@ -25,7 +24,6 @@ export interface EntityFormState {
   efilingUsername: string;
   /** Plaintext only while typing; sent once, never stored client-side. */
   efilingPassword: string;
-  vatPeriod: VatPeriodCategory | '';
   currentPeriodVat: string;
   previousPeriodVat: string;
 }
@@ -56,7 +54,6 @@ export function emptyEntityForm(entityType: RefundEntityType): EntityFormState {
     secondaryAccount: emptyBankAccount(),
     efilingUsername: '',
     efilingPassword: '',
-    vatPeriod: '',
     currentPeriodVat: '',
     previousPeriodVat: '',
   };
@@ -72,7 +69,6 @@ export function formFromEntity(entity: RefundEntity): EntityFormState {
     secondaryAccount: { ...base.secondaryAccount, ...entity.bankingDetails?.secondary },
     efilingUsername: entity.taxDetails?.efilingUsername ?? '',
     efilingPassword: '',
-    vatPeriod: entity.taxDetails?.vatPeriod ?? '',
     currentPeriodVat: entity.taxDetails?.currentPeriodVat ?? '',
     previousPeriodVat: entity.taxDetails?.previousPeriodVat ?? '',
   };
@@ -103,7 +99,6 @@ export function buildEntityPayload(form: EntityFormState): RefundEntityInput {
     },
     taxDetails: {
       efilingUsername: form.efilingUsername.trim(),
-      vatPeriod: form.vatPeriod,
       currentPeriodVat: form.currentPeriodVat.trim(),
       previousPeriodVat: form.previousPeriodVat.trim(),
     },

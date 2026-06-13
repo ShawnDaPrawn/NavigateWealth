@@ -22,6 +22,13 @@ vi.mock('../../hooks/useRefundClusters', () => ({
   useUploadDocument: () => ({ mutate: vi.fn(), isPending: false }),
   useDeleteDocument: () => ({ mutate: vi.fn(), isPending: false }),
   useViewDocument: () => ({ mutate: vi.fn(), isPending: false }),
+  useEntityTransactions: () => ({ data: [], isLoading: false }),
+  useCreateTransaction: () => ({ mutate: vi.fn(), isPending: false }),
+  useUpdateTransaction: () => ({ mutate: vi.fn(), isPending: false }),
+  useDeleteTransaction: () => ({ mutate: vi.fn(), isPending: false }),
+  useUploadTransactionInvoice: () => ({ mutate: vi.fn(), isPending: false }),
+  useDeleteTransactionInvoice: () => ({ mutate: vi.fn(), isPending: false }),
+  useViewTransactionInvoice: () => ({ mutate: vi.fn(), isPending: false }),
 }));
 
 import { ClusterDetailView } from '../ClusterDetailView';
@@ -30,6 +37,7 @@ const cluster = {
   id: 'c1',
   name: 'Q3 VAT Refunds',
   description: 'Third quarter refunds',
+  vatPeriod: 'A' as const,
   archived: false,
   createdAt: '2026-01-01T00:00:00.000Z',
   updatedAt: '2026-01-02T00:00:00.000Z',

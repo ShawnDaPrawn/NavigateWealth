@@ -15,6 +15,7 @@ import {
   FileText,
   Pencil,
   Plus,
+  Receipt,
   Search,
   Trash2,
   User,
@@ -48,14 +49,23 @@ import {
   useCreateEntity,
   useDeleteCluster,
   useDeleteEntity,
+  useEntityTransactions,
   useRefundClusterDetail,
   useUpdateCluster,
   useUpdateEntity,
 } from '../hooks/useRefundClusters';
+import {
+  currentVatPeriod,
+  formatZar,
+  netVatLabel,
+  summarizeTransactions,
+  type VatSummary,
+} from '../vat';
 import type { RefundCluster, RefundEntity, RefundEntityInput, RefundEntityType } from '../types';
 import { ClusterFormDialog } from './ClusterFormDialog';
 import { EntityFormDialog } from './EntityFormDialog';
 import { EntityDocumentsDialog } from './EntityDocumentsDialog';
+import { EntityTransactionsDialog } from './EntityTransactionsDialog';
 
 interface ClusterDetailViewProps {
   clusterId: string;
@@ -76,6 +86,8 @@ export function ClusterDetailView({ clusterId, onBack }: ClusterDetailViewProps)
   const [editingEntity, setEditingEntity] = useState<RefundEntity | null>(null);
   const [documentsEntity, setDocumentsEntity] = useState<RefundEntity | null>(null);
   const [documentsOpen, setDocumentsOpen] = useState(false);
+  const [transactionsEntity, setTransactionsEntity] = useState<RefundEntity | null>(null);
+  const [transactionsOpen, setTransactionsOpen] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<RefundEntity | null>(null);
 
   const entities = useMemo(() => {
@@ -191,9 +203,14 @@ export function ClusterDetailView({ clusterId, onBack }: ClusterDetailViewProps)
                 <EntityCard
                   key={entity.id}
                   entity={entity}
+                  cluster={cluster}
                   onEdit={() => {
                     setEditingEntity(entity);
                     setFormOpen(true);
+                  }}
+                  onTransactions={() => {
+                    setTransactionsEntity(entity);
+                    setTransactionsOpen(true);
                   }}
                   onDocuments={() => {
                     setDocumentsEntity(entity);
@@ -224,6 +241,13 @@ export function ClusterDetailView({ clusterId, onBack }: ClusterDetailViewProps)
         open={documentsOpen}
         onOpenChange={setDocumentsOpen}
         entity={documentsEntity}
+      />
+
+      <EntityTransactionsDialog
+        open={transactionsOpen}
+        onOpenChange={setTransactionsOpen}
+        entity={transactionsEntity}
+        vatPeriod={cluster.vatPeriod}
       />
 
       <AlertDialog open={!!deleteTarget} onOpenChange={(o) => !o && setDeleteTarget(null)}>
@@ -283,6 +307,12 @@ function ClusterDetailsTab({
               <Badge variant={cluster.archived ? 'outline' : 'secondary'}>
                 {cluster.archived ? 'Archived' : 'Active'}
               </Badge>
+            </dd>
+          </div>
+          <div>
+            <dt className="text-muted-foreground">VAT Category</dt>
+            <dd>
+              {VAT_PERIOD_OPTIONS.find((o) => o.value === cluster.vatPeriod)?.label ?? 'Not set'}
             </dd>
           </div>
           <div className="sm:col-span-2">
@@ -373,17 +403,26 @@ function ClusterDetailsTab({
 
 function EntityCard({
   entity,
+  cluster,
   onEdit,
+  onTransactions,
   onDocuments,
   onDelete,
 }: {
   entity: RefundEntity;
+  cluster: RefundCluster;
   onEdit: () => void;
+  onTransactions: () => void;
   onDocuments: () => void;
   onDelete: () => void;
 }) {
   const Icon = entity.entityType === 'company' ? Building2 : User;
-  const vatLabel = VAT_PERIOD_OPTIONS.find((o) => o.value === entity.taxDetails.vatPeriod)?.label;
+  const { data: transactions = [] } = useEntityTransactions(cluster.id, entity.id);
+  const period = useMemo(() => currentVatPeriod(cluster.vatPeriod), [cluster.vatPeriod]);
+  const summary = useMemo(
+    () => summarizeTransactions(transactions, period),
+    [transactions, period],
+  );
 
   return (
     <Card>
@@ -407,6 +446,14 @@ function EntityCard({
             <Button size="icon" variant="ghost" aria-label="Edit entity" onClick={onEdit}>
               <Pencil className="h-4 w-4" />
             </Button>
+            <Button
+              size="icon"
+              variant="ghost"
+              aria-label="Entity transactions"
+              onClick={onTransactions}
+            >
+              <Receipt className="h-4 w-4" />
+            </Button>
             <Button size="icon" variant="ghost" aria-label="Entity documents" onClick={onDocuments}>
               <FileText className="h-4 w-4" />
             </Button>
@@ -415,8 +462,8 @@ function EntityCard({
             </Button>
           </div>
         </div>
-        <div className="flex flex-wrap gap-1.5">
-          {vatLabel && <Badge variant="secondary">VAT {vatLabel}</Badge>}
+        <div className="flex flex-wrap items-center gap-1.5">
+          <NetVatBadge summary={summary} hasPeriod={!!period} />
           {entity.taxDetails.efilingUsername && <Badge variant="outline">eFiling linked</Badge>}
           {entity.taxDetails.hasEfilingPassword && <Badge variant="outline">Password stored</Badge>}
           {entity.bankingDetails.primary.bankName && (
@@ -425,5 +472,23 @@ function EntityCard({
         </div>
       </CardContent>
     </Card>
+  );
+}
+
+/** Current-period net VAT badge: green when refundable (input), amber when payable (output). */
+function NetVatBadge({ summary, hasPeriod }: { summary: VatSummary; hasPeriod: boolean }) {
+  if (summary.count === 0) {
+    return <Badge variant="outline">No transactions{hasPeriod ? ' this period' : ''}</Badge>;
+  }
+  const cls =
+    summary.status === 'refundable'
+      ? 'bg-green-100 text-green-800 hover:bg-green-100'
+      : summary.status === 'payable'
+        ? 'bg-amber-100 text-amber-800 hover:bg-amber-100'
+        : 'bg-muted text-muted-foreground hover:bg-muted';
+  return (
+    <Badge className={cls}>
+      VAT {formatZar(summary.netVat)} · {netVatLabel(summary.status)}
+    </Badge>
   );
 }
