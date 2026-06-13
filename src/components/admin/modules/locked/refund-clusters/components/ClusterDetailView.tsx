@@ -1,14 +1,29 @@
 /**
- * Detail view for an opened refund cluster: cluster info, entity list with
- * search + type filter, and add/edit/delete/document actions per entity.
+ * Detail view for an opened refund cluster.
+ *
+ * Uses the same pill-style tab row as the Locked page's main tab rows:
+ * Entities (search + type filter + entity cards) and Cluster Details
+ * (stored fields plus edit / archive / delete actions).
  */
 
 import { useMemo, useState } from 'react';
-import { ArrowLeft, Building2, FileText, Pencil, Plus, Search, Trash2, User } from 'lucide-react';
+import {
+  Archive,
+  ArchiveRestore,
+  ArrowLeft,
+  Building2,
+  FileText,
+  Pencil,
+  Plus,
+  Search,
+  Trash2,
+  User,
+} from 'lucide-react';
 import { Badge } from '../../../../../ui/badge';
 import { Button } from '../../../../../ui/button';
 import { Card, CardContent } from '../../../../../ui/card';
 import { Input } from '../../../../../ui/input';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../../../../ui/tabs';
 import {
   Select,
   SelectContent,
@@ -31,11 +46,14 @@ import { ENTITY_TYPE_LABELS, VAT_PERIOD_OPTIONS } from '../constants';
 import { entityDisplayName, entityMatchesSearch } from '../formState';
 import {
   useCreateEntity,
+  useDeleteCluster,
   useDeleteEntity,
   useRefundClusterDetail,
+  useUpdateCluster,
   useUpdateEntity,
 } from '../hooks/useRefundClusters';
-import type { RefundEntity, RefundEntityInput, RefundEntityType } from '../types';
+import type { RefundCluster, RefundEntity, RefundEntityInput, RefundEntityType } from '../types';
+import { ClusterFormDialog } from './ClusterFormDialog';
 import { EntityFormDialog } from './EntityFormDialog';
 import { EntityDocumentsDialog } from './EntityDocumentsDialog';
 
@@ -105,76 +123,93 @@ export function ClusterDetailView({ clusterId, onBack }: ClusterDetailViewProps)
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div className="space-y-1">
-          <Button variant="ghost" size="sm" onClick={onBack} className="-ml-2">
-            <ArrowLeft className="h-4 w-4 mr-1" /> Back to clusters
-          </Button>
-          <div className="flex items-center gap-2">
-            <h2 className="text-xl font-semibold">{cluster.name}</h2>
-            {cluster.archived && <Badge variant="outline">Archived</Badge>}
-          </div>
-          {cluster.description && (
-            <p className="text-sm text-muted-foreground">{cluster.description}</p>
-          )}
-        </div>
-        <Button
-          onClick={() => {
-            setEditingEntity(null);
-            setFormOpen(true);
-          }}
-        >
-          <Plus className="h-4 w-4 mr-1" /> Add Entity
+      <div className="space-y-1">
+        <Button variant="ghost" size="sm" onClick={onBack} className="-ml-2">
+          <ArrowLeft className="h-4 w-4 mr-1" /> Back to clusters
         </Button>
+        <div className="flex items-center gap-2">
+          <h2 className="text-xl font-semibold">{cluster.name}</h2>
+          {cluster.archived && <Badge variant="outline">Archived</Badge>}
+        </div>
+        {cluster.description && (
+          <p className="text-sm text-muted-foreground">{cluster.description}</p>
+        )}
       </div>
 
-      <div className="flex flex-wrap items-center gap-2">
-        <div className="relative flex-1 min-w-[220px]">
-          <Search className="h-4 w-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
-          <Input
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search by name, surname, company or registration number…"
-            className="pl-9"
-          />
+      {/* Same pill tab structure as the Locked page's main tab rows */}
+      <Tabs defaultValue="entities" className="space-y-4">
+        <div className="w-full overflow-x-auto pb-2">
+          <TabsList className="w-full justify-start">
+            <TabsTrigger value="entities">Entities</TabsTrigger>
+            <TabsTrigger value="details">Cluster Details</TabsTrigger>
+          </TabsList>
         </div>
-        <Select value={typeFilter} onValueChange={(value) => setTypeFilter(value as TypeFilter)}>
-          <SelectTrigger className="w-[200px]" aria-label="Filter by entity type">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All entity types</SelectItem>
-            <SelectItem value="sole_proprietor">Sole Proprietors</SelectItem>
-            <SelectItem value="company">Companies</SelectItem>
-          </SelectContent>
-        </Select>
-      </div>
 
-      {entities.length === 0 ? (
-        <div className="border border-dashed rounded-lg p-10 text-center text-sm text-muted-foreground">
-          {data.entities.length === 0
-            ? 'No entities in this cluster yet. Click "Add Entity" to get started.'
-            : 'No entities match your search.'}
-        </div>
-      ) : (
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
-          {entities.map((entity) => (
-            <EntityCard
-              key={entity.id}
-              entity={entity}
-              onEdit={() => {
-                setEditingEntity(entity);
+        <TabsContent value="entities" className="space-y-4">
+          <div className="flex flex-wrap items-center gap-2">
+            <div className="relative flex-1 min-w-[220px]">
+              <Search className="h-4 w-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="Search by name, surname, company or registration number…"
+                className="pl-9"
+              />
+            </div>
+            <Select
+              value={typeFilter}
+              onValueChange={(value) => setTypeFilter(value as TypeFilter)}
+            >
+              <SelectTrigger className="w-[200px]" aria-label="Filter by entity type">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All entity types</SelectItem>
+                <SelectItem value="sole_proprietor">Sole Proprietors</SelectItem>
+                <SelectItem value="company">Companies</SelectItem>
+              </SelectContent>
+            </Select>
+            <Button
+              onClick={() => {
+                setEditingEntity(null);
                 setFormOpen(true);
               }}
-              onDocuments={() => {
-                setDocumentsEntity(entity);
-                setDocumentsOpen(true);
-              }}
-              onDelete={() => setDeleteTarget(entity)}
-            />
-          ))}
-        </div>
-      )}
+            >
+              <Plus className="h-4 w-4 mr-1" /> Add Entity
+            </Button>
+          </div>
+
+          {entities.length === 0 ? (
+            <div className="border border-dashed rounded-lg p-10 text-center text-sm text-muted-foreground">
+              {data.entities.length === 0
+                ? 'No entities in this cluster yet. Click "Add Entity" to get started.'
+                : 'No entities match your search.'}
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+              {entities.map((entity) => (
+                <EntityCard
+                  key={entity.id}
+                  entity={entity}
+                  onEdit={() => {
+                    setEditingEntity(entity);
+                    setFormOpen(true);
+                  }}
+                  onDocuments={() => {
+                    setDocumentsEntity(entity);
+                    setDocumentsOpen(true);
+                  }}
+                  onDelete={() => setDeleteTarget(entity)}
+                />
+              ))}
+            </div>
+          )}
+        </TabsContent>
+
+        <TabsContent value="details">
+          <ClusterDetailsTab cluster={cluster} entityCount={data.entities.length} onBack={onBack} />
+        </TabsContent>
+      </Tabs>
 
       <EntityFormDialog
         open={formOpen}
@@ -216,6 +251,123 @@ export function ClusterDetailView({ clusterId, onBack }: ClusterDetailViewProps)
         </AlertDialogContent>
       </AlertDialog>
     </div>
+  );
+}
+
+/** Cluster Details tab — stored fields plus edit / archive / delete actions. */
+function ClusterDetailsTab({
+  cluster,
+  entityCount,
+  onBack,
+}: {
+  cluster: RefundCluster;
+  entityCount: number;
+  onBack: () => void;
+}) {
+  const updateCluster = useUpdateCluster();
+  const deleteCluster = useDeleteCluster();
+  const [editOpen, setEditOpen] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(false);
+
+  return (
+    <Card>
+      <CardContent className="p-6 space-y-6">
+        <dl className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-4 text-sm">
+          <div>
+            <dt className="text-muted-foreground">Cluster Name</dt>
+            <dd className="font-medium">{cluster.name}</dd>
+          </div>
+          <div>
+            <dt className="text-muted-foreground">Status</dt>
+            <dd>
+              <Badge variant={cluster.archived ? 'outline' : 'secondary'}>
+                {cluster.archived ? 'Archived' : 'Active'}
+              </Badge>
+            </dd>
+          </div>
+          <div className="sm:col-span-2">
+            <dt className="text-muted-foreground">Description</dt>
+            <dd>{cluster.description || '—'}</dd>
+          </div>
+          <div>
+            <dt className="text-muted-foreground">Entities</dt>
+            <dd>{entityCount}</dd>
+          </div>
+          <div>
+            <dt className="text-muted-foreground">Created</dt>
+            <dd>{new Date(cluster.createdAt).toLocaleString()}</dd>
+          </div>
+          <div>
+            <dt className="text-muted-foreground">Last Updated</dt>
+            <dd>{new Date(cluster.updatedAt).toLocaleString()}</dd>
+          </div>
+        </dl>
+
+        <div className="flex flex-wrap gap-2">
+          <Button variant="outline" onClick={() => setEditOpen(true)}>
+            <Pencil className="h-4 w-4 mr-1" /> Edit
+          </Button>
+          <Button
+            variant="outline"
+            onClick={() =>
+              updateCluster.mutate({
+                clusterId: cluster.id,
+                patch: { archived: !cluster.archived },
+              })
+            }
+            disabled={updateCluster.isPending}
+          >
+            {cluster.archived ? (
+              <>
+                <ArchiveRestore className="h-4 w-4 mr-1" /> Unarchive
+              </>
+            ) : (
+              <>
+                <Archive className="h-4 w-4 mr-1" /> Archive
+              </>
+            )}
+          </Button>
+          <Button variant="destructive" onClick={() => setConfirmDelete(true)}>
+            <Trash2 className="h-4 w-4 mr-1" /> Delete Cluster
+          </Button>
+        </div>
+      </CardContent>
+
+      <ClusterFormDialog
+        open={editOpen}
+        onOpenChange={setEditOpen}
+        cluster={cluster}
+        onSubmit={(values) =>
+          updateCluster.mutate(
+            { clusterId: cluster.id, patch: values },
+            { onSuccess: () => setEditOpen(false) },
+          )
+        }
+        isSubmitting={updateCluster.isPending}
+      />
+
+      <AlertDialog open={confirmDelete} onOpenChange={setConfirmDelete}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete cluster?</AlertDialogTitle>
+            <AlertDialogDescription>
+              {`"${cluster.name}" and every entity and document inside it will be permanently deleted. Consider archiving instead. This action is audit-logged and cannot be undone.`}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                setConfirmDelete(false);
+                deleteCluster.mutate(cluster.id, { onSuccess: onBack });
+              }}
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </Card>
   );
 }
 
