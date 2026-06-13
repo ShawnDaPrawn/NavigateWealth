@@ -33,6 +33,7 @@ const cluster = {
   id: 'c1',
   name: 'Q3 VAT Refunds',
   description: 'Third quarter refunds',
+  vatPeriod: 'A',
   archived: false,
   createdAt: '2026-01-01T00:00:00.000Z',
   updatedAt: '2026-01-01T00:00:00.000Z',
@@ -85,7 +86,7 @@ describe('RefundClustersPanel', () => {
     fireEvent.click(screen.getByRole('button', { name: /^save$/i }));
 
     expect(mockCreateMutate).toHaveBeenCalledWith(
-      { name: 'New Cluster', description: 'Desc' },
+      { name: 'New Cluster', description: 'Desc', vatPeriod: '' },
       expect.anything(),
     );
   });

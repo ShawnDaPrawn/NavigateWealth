@@ -2,22 +2,37 @@
  * Refund Clusters — Constants
  */
 
-import type { RefundEntityType, VatPeriodCategory } from './types';
+import type {
+  RefundEntityType,
+  TransactionDirection,
+  VatPeriodCategory,
+  VatTreatment,
+} from './types';
+
+const entityBase = (clusterId: string, entityId: string) =>
+  `/refund-clusters/${clusterId}/entities/${entityId}`;
 
 export const ENDPOINTS = {
   CLUSTERS: '/refund-clusters',
   CLUSTER: (clusterId: string) => `/refund-clusters/${clusterId}`,
   ENTITIES: (clusterId: string) => `/refund-clusters/${clusterId}/entities`,
-  ENTITY: (clusterId: string, entityId: string) =>
-    `/refund-clusters/${clusterId}/entities/${entityId}`,
+  ENTITY: entityBase,
   PASSWORD_REVEAL: (clusterId: string, entityId: string) =>
-    `/refund-clusters/${clusterId}/entities/${entityId}/efiling-password/reveal`,
+    `${entityBase(clusterId, entityId)}/efiling-password/reveal`,
   DOCUMENTS: (clusterId: string, entityId: string) =>
-    `/refund-clusters/${clusterId}/entities/${entityId}/documents`,
+    `${entityBase(clusterId, entityId)}/documents`,
   DOCUMENT_URL: (clusterId: string, entityId: string, docId: string) =>
-    `/refund-clusters/${clusterId}/entities/${entityId}/documents/${docId}/url`,
+    `${entityBase(clusterId, entityId)}/documents/${docId}/url`,
   DOCUMENT: (clusterId: string, entityId: string, docId: string) =>
-    `/refund-clusters/${clusterId}/entities/${entityId}/documents/${docId}`,
+    `${entityBase(clusterId, entityId)}/documents/${docId}`,
+  TRANSACTIONS: (clusterId: string, entityId: string) =>
+    `${entityBase(clusterId, entityId)}/transactions`,
+  TRANSACTION: (clusterId: string, entityId: string, txnId: string) =>
+    `${entityBase(clusterId, entityId)}/transactions/${txnId}`,
+  TRANSACTION_INVOICE: (clusterId: string, entityId: string, txnId: string) =>
+    `${entityBase(clusterId, entityId)}/transactions/${txnId}/invoice`,
+  TRANSACTION_INVOICE_URL: (clusterId: string, entityId: string, txnId: string) =>
+    `${entityBase(clusterId, entityId)}/transactions/${txnId}/invoice/url`,
 } as const;
 
 export const ENTITY_TYPE_LABELS: Record<RefundEntityType, string> = {
@@ -29,6 +44,19 @@ export const VAT_PERIOD_OPTIONS: Array<{ value: VatPeriodCategory; label: string
   { value: 'A', label: 'Category A' },
   { value: 'B', label: 'Category B' },
   { value: 'C', label: 'Category C' },
+];
+
+export const VAT_RATE = 0.15;
+
+export const DIRECTION_LABELS: Record<TransactionDirection, string> = {
+  income: 'Income',
+  expense: 'Expense',
+};
+
+export const VAT_TREATMENT_OPTIONS: Array<{ value: VatTreatment; label: string }> = [
+  { value: 'standard', label: 'Standard (15%)' },
+  { value: 'zero_rated', label: 'Zero-rated (0%)' },
+  { value: 'exempt', label: 'Exempt' },
 ];
 
 export const ACCOUNT_TYPE_OPTIONS = ['Cheque / Current', 'Savings', 'Transmission', 'Business'];

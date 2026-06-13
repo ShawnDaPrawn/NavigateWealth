@@ -46,8 +46,16 @@ describe('RefundClustersAPI clusters', () => {
 
   it('creates a cluster', async () => {
     mockPost.mockResolvedValue({ cluster: { id: 'c1', name: 'Q3' } });
-    const cluster = await RefundClustersAPI.createCluster({ name: 'Q3', description: 'd' });
-    expect(mockPost).toHaveBeenCalledWith('/refund-clusters', { name: 'Q3', description: 'd' });
+    const cluster = await RefundClustersAPI.createCluster({
+      name: 'Q3',
+      description: 'd',
+      vatPeriod: 'A',
+    });
+    expect(mockPost).toHaveBeenCalledWith('/refund-clusters', {
+      name: 'Q3',
+      description: 'd',
+      vatPeriod: 'A',
+    });
     expect(cluster.id).toBe('c1');
   });
 
@@ -143,5 +151,69 @@ describe('RefundClustersAPI documents', () => {
     mockDelete.mockResolvedValue({});
     await RefundClustersAPI.deleteDocument('c1', 'e1', 'd1');
     expect(mockDelete).toHaveBeenCalledWith('/refund-clusters/c1/entities/e1/documents/d1');
+  });
+});
+
+describe('RefundClustersAPI transactions', () => {
+  const txnInput = {
+    date: '2026-03-15',
+    description: 'Supplier',
+    direction: 'expense' as const,
+    vatTreatment: 'standard' as const,
+    amount: 1150,
+  };
+
+  it('lists transactions', async () => {
+    mockGet.mockResolvedValue({ transactions: [{ id: 't1' }] });
+    const txns = await RefundClustersAPI.listTransactions('c1', 'e1');
+    expect(mockGet).toHaveBeenCalledWith('/refund-clusters/c1/entities/e1/transactions');
+    expect(txns).toHaveLength(1);
+  });
+
+  it('creates a transaction', async () => {
+    mockPost.mockResolvedValue({ transaction: { id: 't1' } });
+    await RefundClustersAPI.createTransaction('c1', 'e1', txnInput);
+    expect(mockPost).toHaveBeenCalledWith('/refund-clusters/c1/entities/e1/transactions', txnInput);
+  });
+
+  it('updates a transaction', async () => {
+    mockPut.mockResolvedValue({ transaction: { id: 't1' } });
+    await RefundClustersAPI.updateTransaction('c1', 'e1', 't1', txnInput);
+    expect(mockPut).toHaveBeenCalledWith(
+      '/refund-clusters/c1/entities/e1/transactions/t1',
+      txnInput,
+    );
+  });
+
+  it('deletes a transaction', async () => {
+    mockDelete.mockResolvedValue({});
+    await RefundClustersAPI.deleteTransaction('c1', 'e1', 't1');
+    expect(mockDelete).toHaveBeenCalledWith('/refund-clusters/c1/entities/e1/transactions/t1');
+  });
+
+  it('uploads a transaction invoice as form data', async () => {
+    mockPost.mockResolvedValue({ transaction: { id: 't1' } });
+    const file = new File(['x'], 'inv.pdf', { type: 'application/pdf' });
+    await RefundClustersAPI.uploadTransactionInvoice('c1', 'e1', 't1', file);
+    const [endpoint, body] = mockPost.mock.calls[0] as [string, FormData];
+    expect(endpoint).toBe('/refund-clusters/c1/entities/e1/transactions/t1/invoice');
+    expect(body.get('file')).toBe(file);
+  });
+
+  it('fetches a signed invoice URL', async () => {
+    mockGet.mockResolvedValue({ url: 'https://signed' });
+    const url = await RefundClustersAPI.getTransactionInvoiceUrl('c1', 'e1', 't1');
+    expect(mockGet).toHaveBeenCalledWith(
+      '/refund-clusters/c1/entities/e1/transactions/t1/invoice/url',
+    );
+    expect(url).toBe('https://signed');
+  });
+
+  it('deletes a transaction invoice', async () => {
+    mockDelete.mockResolvedValue({});
+    await RefundClustersAPI.deleteTransactionInvoice('c1', 'e1', 't1');
+    expect(mockDelete).toHaveBeenCalledWith(
+      '/refund-clusters/c1/entities/e1/transactions/t1/invoice',
+    );
   });
 });

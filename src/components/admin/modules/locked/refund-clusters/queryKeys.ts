@@ -12,4 +12,5 @@ export const refundClusterKeys = {
   details: () => [...refundClusterKeys.all, 'detail'] as const,
   detail: (clusterId: string) => [...refundClusterKeys.details(), clusterId] as const,
   documents: (entityId: string) => [...refundClusterKeys.all, 'documents', entityId] as const,
+  transactions: (entityId: string) => [...refundClusterKeys.all, 'transactions', entityId] as const,
 } as const;

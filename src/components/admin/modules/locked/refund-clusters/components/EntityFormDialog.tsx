@@ -30,7 +30,7 @@ import {
   SelectValue,
 } from '../../../../../ui/select';
 import { Separator } from '../../../../../ui/separator';
-import { ACCOUNT_TYPE_OPTIONS, ENTITY_TYPE_LABELS, VAT_PERIOD_OPTIONS } from '../constants';
+import { ACCOUNT_TYPE_OPTIONS, ENTITY_TYPE_LABELS } from '../constants';
 import {
   buildEntityPayload,
   emptyEntityForm,
@@ -44,7 +44,6 @@ import type {
   RefundEntity,
   RefundEntityInput,
   RefundEntityType,
-  VatPeriodCategory,
 } from '../types';
 
 interface EntityFormDialogProps {
@@ -474,36 +473,25 @@ function TaxSection({
             </p>
           )}
         </div>
-        <div className="space-y-1.5">
-          <Label htmlFor="tax-vat-period">VAT Period</Label>
-          <Select
-            value={form.vatPeriod || undefined}
-            onValueChange={(value) => patch({ vatPeriod: value as VatPeriodCategory })}
-          >
-            <SelectTrigger id="tax-vat-period">
-              <SelectValue placeholder="Select VAT period category" />
-            </SelectTrigger>
-            <SelectContent>
-              {VAT_PERIOD_OPTIONS.map((option) => (
-                <SelectItem key={option.value} value={option.value}>
-                  {option.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
+      </div>
+      <div className="space-y-1.5">
+        <p className="text-xs text-muted-foreground">
+          The VAT category is set on the cluster (shared by all entities). The live VAT figure is
+          computed from the entity&apos;s Transactions ledger; the fields below are optional manual
+          accounting-record notes.
+        </p>
       </div>
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <Field
           id="tax-current-vat"
-          label="Current Period Accounting VAT"
+          label="Current Period Accounting VAT (note)"
           value={form.currentPeriodVat}
           onChange={(currentPeriodVat) => patch({ currentPeriodVat })}
           placeholder="e.g. R 125 000.00"
         />
         <Field
           id="tax-previous-vat"
-          label="Previous Period Accounting VAT"
+          label="Previous Period Accounting VAT (note)"
           value={form.previousPeriodVat}
           onChange={(previousPeriodVat) => patch({ previousPeriodVat })}
           placeholder="e.g. R 98 500.00"
