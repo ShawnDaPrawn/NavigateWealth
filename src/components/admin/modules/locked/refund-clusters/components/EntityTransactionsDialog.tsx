@@ -7,7 +7,7 @@
  * the cluster's VAT category (passed in as `vatPeriod`).
  */
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { ExternalLink, Pencil, Plus, Trash2, Upload, X } from 'lucide-react';
 import { toast } from 'sonner';
 import { Badge } from '../../../../../ui/badge';
@@ -96,7 +96,10 @@ interface TxnFormState {
   vatOverride: string;
 }
 
-const todayIso = () => new Date().toISOString().slice(0, 10);
+const todayIso = () => {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+};
 
 const emptyForm = (): TxnFormState => ({
   id: null,
@@ -143,6 +146,14 @@ export function EntityTransactionsDialog({
   const [form, setForm] = useState<TxnFormState>(emptyForm);
   const [formOpen, setFormOpen] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<RefundTransaction | null>(null);
+
+  useEffect(() => {
+    if (!open) {
+      setForm(emptyForm());
+      setFormOpen(false);
+      setDeleteTarget(null);
+    }
+  }, [open, entity?.id]);
 
   const period = useMemo(() => currentVatPeriod(vatPeriod), [vatPeriod]);
   const summary = useMemo(

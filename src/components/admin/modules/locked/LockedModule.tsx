@@ -75,11 +75,26 @@ export function LockedModule() {
         <TabsContent value="accounts">
           {/* Accounts sub-tabs: Manager · Refund Clusters · Disbursement Clusters */}
           <Tabs defaultValue="manager" className="space-y-4">
-            <div className="w-full overflow-x-auto pb-2">
-              <TabsList className="w-full justify-start">
-                <TabsTrigger value="manager">Manager</TabsTrigger>
-                <TabsTrigger value="refund-clusters">Refund Clusters</TabsTrigger>
-                <TabsTrigger value="disbursement-clusters">Disbursement Clusters</TabsTrigger>
+            <div className="w-full overflow-x-auto">
+              <TabsList className="w-full justify-start bg-transparent rounded-none p-0 h-auto border-b border-border gap-0">
+                <TabsTrigger
+                  value="manager"
+                  className="rounded-none border-b-2 border-transparent px-4 pb-2.5 pt-1 text-sm font-medium data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:text-primary data-[state=active]:border-primary"
+                >
+                  Manager
+                </TabsTrigger>
+                <TabsTrigger
+                  value="refund-clusters"
+                  className="rounded-none border-b-2 border-transparent px-4 pb-2.5 pt-1 text-sm font-medium data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:text-primary data-[state=active]:border-primary"
+                >
+                  Refund Clusters
+                </TabsTrigger>
+                <TabsTrigger
+                  value="disbursement-clusters"
+                  className="rounded-none border-b-2 border-transparent px-4 pb-2.5 pt-1 text-sm font-medium data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:text-primary data-[state=active]:border-primary"
+                >
+                  Disbursement Clusters
+                </TabsTrigger>
               </TabsList>
             </div>
 
