@@ -26,6 +26,8 @@ function makeEntity(overrides: Partial<RefundEntity> = {}): RefundEntity {
         accountNumber: '123',
         branchCode: '250655',
         accountType: 'Savings',
+        onlineUsername: 'tnkosi',
+        hasOnlinePassword: true,
       },
       secondary: {
         bankName: '',
@@ -33,6 +35,8 @@ function makeEntity(overrides: Partial<RefundEntity> = {}): RefundEntity {
         accountNumber: '',
         branchCode: '',
         accountType: '',
+        onlineUsername: '',
+        hasOnlinePassword: false,
       },
     },
     taxDetails: {
@@ -136,6 +140,31 @@ describe('buildEntityPayload', () => {
     const company = buildEntityPayload(formFromEntity(companyEntity));
     expect(company.businessDetails?.companyName).toBe('Acme (Pty) Ltd');
     expect(company.personalDetails).toBeUndefined();
+  });
+
+  it('carries the assigned manager id, or null when unassigned', () => {
+    const unassigned = buildEntityPayload(formFromEntity(makeEntity()));
+    expect(unassigned.managerId).toBeNull();
+
+    const assigned = buildEntityPayload(formFromEntity(makeEntity({ managerId: 'm1' })));
+    expect(assigned.managerId).toBe('m1');
+  });
+
+  it('sends the online-banking username but omits the password unless typed', () => {
+    const form = formFromEntity(makeEntity());
+    const payload = buildEntityPayload(form);
+    expect(payload.bankingDetails?.primary.onlineUsername).toBe('tnkosi');
+    expect(payload.bankingDetails?.primary.onlinePassword).toBeUndefined();
+
+    form.primaryAccount.onlinePassword = 'bank-pw';
+    expect(buildEntityPayload(form).bankingDetails?.primary.onlinePassword).toBe('bank-pw');
+  });
+
+  it('hydrates the stored-password flag without carrying the password', () => {
+    const form = formFromEntity(makeEntity());
+    expect(form.primaryAccount.hasOnlinePassword).toBe(true);
+    expect(form.primaryAccount.onlinePassword).toBe('');
+    expect(form.secondaryAccount.hasOnlinePassword).toBe(false);
   });
 });
 

@@ -43,9 +43,10 @@ import {
   AlertDialogTitle,
 } from '../../../../../ui/alert-dialog';
 import { Skeleton } from '../../../../../ui/skeleton';
-import { ENTITY_TYPE_LABELS, VAT_PERIOD_OPTIONS } from '../constants';
+import { ENTITY_TYPE_LABELS, VAT_PERIOD_OPTIONS, vatPeriodDescription } from '../constants';
 import { entityDisplayName, entityMatchesSearch } from '../formState';
 import {
+  useClusterManagers,
   useCreateEntity,
   useDeleteCluster,
   useDeleteEntity,
@@ -56,6 +57,7 @@ import {
 } from '../hooks/useRefundClusters';
 import {
   currentVatPeriod,
+  formatPeriodRange,
   formatZar,
   netVatLabel,
   summarizeTransactions,
@@ -66,6 +68,13 @@ import { ClusterFormDialog } from './ClusterFormDialog';
 import { EntityFormDialog } from './EntityFormDialog';
 import { EntityDocumentsDialog } from './EntityDocumentsDialog';
 import { EntityTransactionsDialog } from './EntityTransactionsDialog';
+import { ManagersTab } from './ManagersTab';
+
+/** Underline-style sub-tabs — visually distinct from the pill rows above. */
+const SUBTAB_LIST =
+  'w-full justify-start bg-transparent rounded-none p-0 h-auto border-b border-border gap-0';
+const SUBTAB_TRIGGER =
+  'rounded-none border-b-2 border-transparent px-4 pb-2.5 pt-1 text-sm font-medium data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:text-primary data-[state=active]:border-primary';
 
 interface ClusterDetailViewProps {
   clusterId: string;
@@ -76,9 +85,12 @@ type TypeFilter = 'all' | RefundEntityType;
 
 export function ClusterDetailView({ clusterId, onBack }: ClusterDetailViewProps) {
   const { data, isLoading } = useRefundClusterDetail(clusterId);
+  const { data: managers = [] } = useClusterManagers(clusterId);
   const createEntity = useCreateEntity();
   const updateEntity = useUpdateEntity();
   const deleteEntity = useDeleteEntity();
+
+  const managerNames = useMemo(() => new Map(managers.map((m) => [m.id, m.name])), [managers]);
 
   const [search, setSearch] = useState('');
   const [typeFilter, setTypeFilter] = useState<TypeFilter>('all');
@@ -148,12 +160,19 @@ export function ClusterDetailView({ clusterId, onBack }: ClusterDetailViewProps)
         )}
       </div>
 
-      {/* Same pill tab structure as the Locked page's main tab rows */}
+      {/* Underline-style sub-tabs — distinct from the pill rows on the Locked page */}
       <Tabs defaultValue="entities" className="space-y-4">
-        <div className="w-full overflow-x-auto pb-2">
-          <TabsList className="w-full justify-start">
-            <TabsTrigger value="entities">Entities</TabsTrigger>
-            <TabsTrigger value="details">Cluster Details</TabsTrigger>
+        <div className="w-full overflow-x-auto">
+          <TabsList className={SUBTAB_LIST}>
+            <TabsTrigger value="entities" className={SUBTAB_TRIGGER}>
+              Entities
+            </TabsTrigger>
+            <TabsTrigger value="managers" className={SUBTAB_TRIGGER}>
+              Managers
+            </TabsTrigger>
+            <TabsTrigger value="details" className={SUBTAB_TRIGGER}>
+              Cluster Details
+            </TabsTrigger>
           </TabsList>
         </div>
 
@@ -204,6 +223,7 @@ export function ClusterDetailView({ clusterId, onBack }: ClusterDetailViewProps)
                   key={entity.id}
                   entity={entity}
                   cluster={cluster}
+                  managerName={entity.managerId ? managerNames.get(entity.managerId) : undefined}
                   onEdit={() => {
                     setEditingEntity(entity);
                     setFormOpen(true);
@@ -221,6 +241,10 @@ export function ClusterDetailView({ clusterId, onBack }: ClusterDetailViewProps)
               ))}
             </div>
           )}
+        </TabsContent>
+
+        <TabsContent value="managers">
+          <ManagersTab clusterId={clusterId} />
         </TabsContent>
 
         <TabsContent value="details">
@@ -293,6 +317,9 @@ function ClusterDetailsTab({
   const [editOpen, setEditOpen] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
 
+  const clusterPeriod = useMemo(() => currentVatPeriod(cluster.vatPeriod), [cluster.vatPeriod]);
+  const clusterPeriodLabel = clusterPeriod ? formatPeriodRange(clusterPeriod) : '';
+
   return (
     <Card>
       <CardContent className="p-6 space-y-6">
@@ -309,11 +336,27 @@ function ClusterDetailsTab({
               </Badge>
             </dd>
           </div>
-          <div>
+          <div className="sm:col-span-2">
             <dt className="text-muted-foreground">VAT Category</dt>
             <dd>
               {VAT_PERIOD_OPTIONS.find((o) => o.value === cluster.vatPeriod)?.label ?? 'Not set'}
+              {clusterPeriod && (
+                <span className="text-muted-foreground">
+                  {' '}
+                  · Current period: {clusterPeriodLabel}
+                </span>
+              )}
             </dd>
+            {vatPeriodDescription(cluster.vatPeriod) ? (
+              <dd className="text-xs text-muted-foreground mt-1">
+                {vatPeriodDescription(cluster.vatPeriod)}
+              </dd>
+            ) : (
+              <dd className="text-xs text-muted-foreground mt-1">
+                No VAT category set — entity VAT summaries show all transactions. Use Edit to set
+                one.
+              </dd>
+            )}
           </div>
           <div className="sm:col-span-2">
             <dt className="text-muted-foreground">Description</dt>
@@ -404,6 +447,7 @@ function ClusterDetailsTab({
 function EntityCard({
   entity,
   cluster,
+  managerName,
   onEdit,
   onTransactions,
   onDocuments,
@@ -411,6 +455,7 @@ function EntityCard({
 }: {
   entity: RefundEntity;
   cluster: RefundCluster;
+  managerName?: string;
   onEdit: () => void;
   onTransactions: () => void;
   onDocuments: () => void;
@@ -464,8 +509,11 @@ function EntityCard({
         </div>
         <div className="flex flex-wrap items-center gap-1.5">
           <NetVatBadge summary={summary} hasPeriod={!!period} />
+          <Badge variant="secondary" className="gap-1">
+            <User className="h-3 w-3" />
+            {managerName ? managerName : 'No manager'}
+          </Badge>
           {entity.taxDetails.efilingUsername && <Badge variant="outline">eFiling linked</Badge>}
-          {entity.taxDetails.hasEfilingPassword && <Badge variant="outline">Password stored</Badge>}
           {entity.bankingDetails.primary.bankName && (
             <Badge variant="outline">{entity.bankingDetails.primary.bankName}</Badge>
           )}
@@ -478,7 +526,11 @@ function EntityCard({
 /** Current-period net VAT badge: green when refundable (input), amber when payable (output). */
 function NetVatBadge({ summary, hasPeriod }: { summary: VatSummary; hasPeriod: boolean }) {
   if (summary.count === 0) {
-    return <Badge variant="outline">No transactions{hasPeriod ? ' this period' : ''}</Badge>;
+    return (
+      <Badge className="bg-muted text-muted-foreground hover:bg-muted">
+        VAT {formatZar(0)} · No VAT{hasPeriod ? ' this period' : ' yet'}
+      </Badge>
+    );
   }
   const cls =
     summary.status === 'refundable'

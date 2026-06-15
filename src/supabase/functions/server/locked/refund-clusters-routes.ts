@@ -17,6 +17,7 @@ import { AdminAuditService } from '../admin-audit-service.ts';
 import {
   RefundClustersService,
   type EntityInput,
+  type ManagerInput,
   type TransactionInput,
 } from './refund-clusters-service.ts';
 
@@ -294,6 +295,34 @@ app.post(
       return c.json({ success: true, password });
     } catch (error) {
       return c.json({ error: (error as Error).message }, errStatus(error) as 404 | 500);
+    }
+  }),
+);
+
+/**
+ * POST /:clusterId/entities/:entityId/bank-password/reveal
+ *
+ * Decrypts and returns the stored online-banking password for the named
+ * account ('primary' | 'secondary'). Always audited at critical severity.
+ */
+app.post(
+  '/:clusterId/entities/:entityId/bank-password/reveal',
+  asyncHandler(async (c) => {
+    const clusterId = c.req.param('clusterId') ?? '';
+    const entityId = c.req.param('entityId') ?? '';
+    const body = await c.req.json().catch(() => ({}));
+    const account = body?.account === 'secondary' ? 'secondary' : 'primary';
+    try {
+      const password = await RefundClustersService.revealBankPassword(clusterId, entityId, account);
+      await audit(c, 'refund_entity_bank_password_revealed', 'Online banking password revealed', {
+        severity: 'critical',
+        entityType: 'refund_entity',
+        entityId,
+        metadata: { clusterId, account },
+      });
+      return c.json({ success: true, password });
+    } catch (error) {
+      return c.json({ error: (error as Error).message }, errStatus(error) as 400 | 404 | 500);
     }
   }),
 );
@@ -654,6 +683,82 @@ app.delete(
       metadata: { transactionId: txnId },
     });
     return c.json({ success: true, transaction: updated });
+  }),
+);
+
+// ============================================================================
+// Managers
+// ============================================================================
+
+app.get(
+  '/:clusterId/managers',
+  asyncHandler(async (c) => {
+    const clusterId = c.req.param('clusterId') ?? '';
+    const managers = await RefundClustersService.listManagers(clusterId);
+    return c.json({ success: true, managers });
+  }),
+);
+
+app.post(
+  '/:clusterId/managers',
+  asyncHandler(async (c) => {
+    const clusterId = c.req.param('clusterId') ?? '';
+    const body = (await c.req.json()) as ManagerInput;
+    try {
+      const manager = await RefundClustersService.createManager(
+        clusterId,
+        body,
+        c.get('userId') as string,
+      );
+      await audit(c, 'refund_manager_created', 'Refund manager created', {
+        entityType: 'refund_manager',
+        entityId: manager.id,
+        metadata: { clusterId },
+      });
+      return c.json({ success: true, manager }, 201);
+    } catch (error) {
+      return c.json({ error: (error as Error).message }, errStatus(error) as 400 | 404 | 500);
+    }
+  }),
+);
+
+app.put(
+  '/:clusterId/managers/:managerId',
+  asyncHandler(async (c) => {
+    const clusterId = c.req.param('clusterId') ?? '';
+    const managerId = c.req.param('managerId') ?? '';
+    const body = (await c.req.json()) as ManagerInput;
+    try {
+      const manager = await RefundClustersService.updateManager(clusterId, managerId, body);
+      await audit(c, 'refund_manager_updated', 'Refund manager updated', {
+        entityType: 'refund_manager',
+        entityId: managerId,
+        metadata: { clusterId },
+      });
+      return c.json({ success: true, manager });
+    } catch (error) {
+      return c.json({ error: (error as Error).message }, errStatus(error) as 400 | 404 | 500);
+    }
+  }),
+);
+
+app.delete(
+  '/:clusterId/managers/:managerId',
+  asyncHandler(async (c) => {
+    const clusterId = c.req.param('clusterId') ?? '';
+    const managerId = c.req.param('managerId') ?? '';
+    try {
+      await RefundClustersService.deleteManager(clusterId, managerId);
+      await audit(c, 'refund_manager_deleted', 'Refund manager deleted', {
+        severity: 'warning',
+        entityType: 'refund_manager',
+        entityId: managerId,
+        metadata: { clusterId },
+      });
+      return c.json({ success: true });
+    } catch (error) {
+      return c.json({ error: (error as Error).message }, errStatus(error) as 404 | 500);
+    }
   }),
 );
 

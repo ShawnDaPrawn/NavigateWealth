@@ -15,9 +15,11 @@
  *   - Every mutation and sensitive read is recorded via AdminAuditService.
  *
  * KV layout:
- *   refund-clusters:cluster:{clusterId}            → RefundClusterRecord
- *   refund-clusters:entity:{clusterId}:{entityId}  → RefundEntityRecord
- *   refund-clusters:doc:{entityId}:{docId}         → RefundEntityDocument
+ *   refund-clusters:cluster:{clusterId}              → RefundClusterRecord
+ *   refund-clusters:entity:{clusterId}:{entityId}    → RefundEntityRecord
+ *   refund-clusters:doc:{entityId}:{docId}           → RefundEntityDocument
+ *   refund-clusters:txn:{entityId}:{txnId}           → RefundTransactionRecord
+ *   refund-clusters:manager:{clusterId}:{managerId}  → RefundManagerRecord
  *
  * @module server/refund-clusters-service
  */
@@ -33,6 +35,7 @@ const log = createModuleLogger('refund-clusters');
 
 export type RefundEntityType = 'sole_proprietor' | 'company';
 export type VatPeriodCategory = 'A' | 'B' | 'C';
+export type BankAccountSlot = 'primary' | 'secondary';
 
 export interface BankAccountDetails {
   bankName: string;
@@ -40,6 +43,8 @@ export interface BankAccountDetails {
   accountNumber: string;
   branchCode: string;
   accountType: string;
+  /** Online-banking login name. The matching password is stored encrypted. */
+  onlineUsername: string;
 }
 
 export interface RefundClusterRecord {
@@ -123,6 +128,15 @@ interface EncryptedSecret {
   ct: string; // base64 (ciphertext + GCM tag)
 }
 
+/** Bank account as persisted — adds the encrypted online-banking password. */
+export interface StoredBankAccount extends BankAccountDetails {
+  /** Present only when an online-banking password has been captured. */
+  onlinePasswordEnc?: EncryptedSecret;
+}
+
+/** Client-safe bank account — ciphertext stripped, presence flag added. */
+export type SanitizedBankAccount = BankAccountDetails & { hasOnlinePassword: boolean };
+
 export interface TaxDetailsStored {
   efilingUsername: string;
   /** Present only when a password has been captured. Never sent to clients. */
@@ -136,11 +150,13 @@ export interface RefundEntityRecord {
   id: string;
   clusterId: string;
   entityType: RefundEntityType;
+  /** Optional cluster manager who runs this entity's banking + eFiling. */
+  managerId?: string;
   personalDetails?: PersonalDetails;
   businessDetails?: BusinessDetails;
   bankingDetails: {
-    primary: BankAccountDetails;
-    secondary: BankAccountDetails;
+    primary: StoredBankAccount;
+    secondary: StoredBankAccount;
   };
   taxDetails: TaxDetailsStored;
   createdAt: string;
@@ -148,12 +164,38 @@ export interface RefundEntityRecord {
   createdBy: string;
 }
 
-/** Client-safe projection — ciphertext stripped, presence flag added. */
-export type SanitizedEntity = Omit<RefundEntityRecord, 'taxDetails'> & {
+/** Client-safe projection — ciphertext stripped, presence flags added. */
+export type SanitizedEntity = Omit<RefundEntityRecord, 'taxDetails' | 'bankingDetails'> & {
+  bankingDetails: {
+    primary: SanitizedBankAccount;
+    secondary: SanitizedBankAccount;
+  };
   taxDetails: Omit<TaxDetailsStored, 'efilingPasswordEnc'> & {
     hasEfilingPassword: boolean;
   };
 };
+
+/** A person who manages banking + eFiling for entities in a cluster. */
+export interface RefundManagerRecord {
+  id: string;
+  clusterId: string;
+  name: string;
+  email: string;
+  phone: string;
+  role: string;
+  notes: string;
+  createdAt: string;
+  updatedAt: string;
+  createdBy: string;
+}
+
+export interface ManagerInput {
+  name?: string;
+  email?: string;
+  phone?: string;
+  role?: string;
+  notes?: string;
+}
 
 export interface RefundEntityDocument {
   id: string;
@@ -168,13 +210,18 @@ export interface RefundEntityDocument {
   uploadedBy: string;
 }
 
+/** Bank account fields from the form; `onlinePassword` is plaintext, encrypted on save. */
+export type BankAccountInput = Partial<BankAccountDetails> & { onlinePassword?: string };
+
 export interface EntityInput {
   entityType: RefundEntityType;
+  /** Assign (id) or clear (null/'') the entity's cluster manager. */
+  managerId?: string | null;
   personalDetails?: Partial<PersonalDetails>;
   businessDetails?: Partial<BusinessDetails>;
   bankingDetails?: {
-    primary?: Partial<BankAccountDetails>;
-    secondary?: Partial<BankAccountDetails>;
+    primary?: BankAccountInput;
+    secondary?: BankAccountInput;
   };
   taxDetails?: {
     efilingUsername?: string;
@@ -194,12 +241,15 @@ const CLUSTER_PREFIX = 'refund-clusters:cluster:';
 const ENTITY_PREFIX = 'refund-clusters:entity:';
 const DOC_PREFIX = 'refund-clusters:doc:';
 const TXN_PREFIX = 'refund-clusters:txn:';
+const MANAGER_PREFIX = 'refund-clusters:manager:';
 
 const clusterKey = (clusterId: string) => `${CLUSTER_PREFIX}${clusterId}`;
 const entityKey = (clusterId: string, entityId: string) =>
   `${ENTITY_PREFIX}${clusterId}:${entityId}`;
 const docKey = (entityId: string, docId: string) => `${DOC_PREFIX}${entityId}:${docId}`;
 const txnKey = (entityId: string, txnId: string) => `${TXN_PREFIX}${entityId}:${txnId}`;
+const managerKey = (clusterId: string, managerId: string) =>
+  `${MANAGER_PREFIX}${clusterId}:${managerId}`;
 
 const newId = () => crypto.randomUUID();
 
@@ -280,14 +330,49 @@ function normalizeBankAccount(input?: Partial<BankAccountDetails>): BankAccountD
     accountNumber: str(input?.accountNumber),
     branchCode: str(input?.branchCode),
     accountType: str(input?.accountType),
+    onlineUsername: str(input?.onlineUsername),
   };
+}
+
+/**
+ * Merge form input over an existing stored account, preserving the encrypted
+ * online-banking password unless a new plaintext one was supplied (mirrors the
+ * write-only eFiling-password handling).
+ */
+async function buildStoredBankAccount(
+  existing: StoredBankAccount | undefined,
+  input: BankAccountInput | undefined,
+): Promise<StoredBankAccount> {
+  const merged: StoredBankAccount = normalizeBankAccount({ ...existing, ...input });
+  if (existing?.onlinePasswordEnc) merged.onlinePasswordEnc = existing.onlinePasswordEnc;
+  if (input?.onlinePassword) merged.onlinePasswordEnc = await encryptSecret(input.onlinePassword);
+  return merged;
+}
+
+function sanitizeBankAccount(account: StoredBankAccount): SanitizedBankAccount {
+  const { onlinePasswordEnc, ...rest } = account;
+  return { ...rest, hasOnlinePassword: Boolean(onlinePasswordEnc) };
 }
 
 function sanitizeEntity(entity: RefundEntityRecord): SanitizedEntity {
   const { efilingPasswordEnc, ...taxRest } = entity.taxDetails;
   return {
     ...entity,
+    bankingDetails: {
+      primary: sanitizeBankAccount(entity.bankingDetails.primary),
+      secondary: sanitizeBankAccount(entity.bankingDetails.secondary),
+    },
     taxDetails: { ...taxRest, hasEfilingPassword: Boolean(efilingPasswordEnc) },
+  };
+}
+
+function normalizeManager(input: ManagerInput, base?: RefundManagerRecord) {
+  return {
+    name: input.name !== undefined ? str(input.name) : (base?.name ?? ''),
+    email: input.email !== undefined ? str(input.email) : (base?.email ?? ''),
+    phone: input.phone !== undefined ? str(input.phone) : (base?.phone ?? ''),
+    role: input.role !== undefined ? str(input.role) : (base?.role ?? ''),
+    notes: input.notes !== undefined ? str(input.notes) : (base?.notes ?? ''),
   };
 }
 
@@ -431,8 +516,16 @@ export const RefundClustersService = {
     for (const entity of entities) {
       await this.deleteEntityRecords(clusterId, entity.id);
     }
+    const managers = await this.listManagers(clusterId);
+    for (const manager of managers) {
+      await kv.del(managerKey(clusterId, manager.id));
+    }
     await kv.del(clusterKey(clusterId));
-    log.info('Cluster deleted', { clusterId, entitiesDeleted: entities.length });
+    log.info('Cluster deleted', {
+      clusterId,
+      entitiesDeleted: entities.length,
+      managersDeleted: managers.length,
+    });
     return { entitiesDeleted: entities.length };
   },
 
@@ -469,9 +562,10 @@ export const RefundClustersService = {
       id: newId(),
       clusterId,
       entityType: input.entityType,
+      managerId: await this.resolveManagerId(clusterId, input.managerId),
       bankingDetails: {
-        primary: normalizeBankAccount(input.bankingDetails?.primary),
-        secondary: normalizeBankAccount(input.bankingDetails?.secondary),
+        primary: await buildStoredBankAccount(undefined, input.bankingDetails?.primary),
+        secondary: await buildStoredBankAccount(undefined, input.bankingDetails?.secondary),
       },
       taxDetails: {
         efilingUsername: str(input.taxDetails?.efilingUsername),
@@ -532,6 +626,10 @@ export const RefundClustersService = {
       updatedAt: new Date().toISOString(),
     };
 
+    if (input.managerId !== undefined) {
+      next.managerId = await this.resolveManagerId(clusterId, input.managerId);
+    }
+
     if (existing.entityType === 'sole_proprietor' && input.personalDetails) {
       next.personalDetails = {
         name: str(input.personalDetails.name ?? existing.personalDetails?.name),
@@ -566,19 +664,19 @@ export const RefundClustersService = {
     if (input.bankingDetails?.primary) {
       next.bankingDetails = {
         ...next.bankingDetails,
-        primary: normalizeBankAccount({
-          ...existing.bankingDetails.primary,
-          ...input.bankingDetails.primary,
-        }),
+        primary: await buildStoredBankAccount(
+          existing.bankingDetails.primary,
+          input.bankingDetails.primary,
+        ),
       };
     }
     if (input.bankingDetails?.secondary) {
       next.bankingDetails = {
         ...next.bankingDetails,
-        secondary: normalizeBankAccount({
-          ...existing.bankingDetails.secondary,
-          ...input.bankingDetails.secondary,
-        }),
+        secondary: await buildStoredBankAccount(
+          existing.bankingDetails.secondary,
+          input.bankingDetails.secondary,
+        ),
       };
     }
 
@@ -621,6 +719,26 @@ export const RefundClustersService = {
     return decryptSecret(entity.taxDetails.efilingPasswordEnc);
   },
 
+  /** Decrypt a stored online-banking password. Caller MUST audit this access. */
+  async revealBankPassword(
+    clusterId: string,
+    entityId: string,
+    account: BankAccountSlot,
+  ): Promise<string> {
+    if (account !== 'primary' && account !== 'secondary') {
+      throw Object.assign(new Error('Invalid bank account'), { status: 400 });
+    }
+    const entity = await this.getEntityRaw(clusterId, entityId);
+    if (!entity) throw Object.assign(new Error('Entity not found'), { status: 404 });
+    const enc = entity.bankingDetails[account]?.onlinePasswordEnc;
+    if (!enc) {
+      throw Object.assign(new Error('No online banking password is stored for this account'), {
+        status: 404,
+      });
+    }
+    return decryptSecret(enc);
+  },
+
   /**
    * Removes the entity record plus its document and transaction metadata
    * (not the underlying storage files — the route removes those first).
@@ -641,6 +759,99 @@ export const RefundClustersService = {
   normalizeVatPeriod(value: unknown): VatPeriodCategory | '' {
     const v = typeof value === 'string' ? value.toUpperCase().trim() : '';
     return VAT_PERIODS.includes(v) ? (v as VatPeriodCategory | '') : '';
+  },
+
+  // --- Managers --------------------------------------------------------
+
+  async listManagers(clusterId: string): Promise<RefundManagerRecord[]> {
+    const rows = (await kv.getByPrefix(`${MANAGER_PREFIX}${clusterId}:`)) as RefundManagerRecord[];
+    return rows
+      .filter((row) => row && row.id)
+      .sort((a, b) => a.name.localeCompare(b.name) || a.createdAt.localeCompare(b.createdAt));
+  },
+
+  async getManager(clusterId: string, managerId: string): Promise<RefundManagerRecord | null> {
+    return (
+      ((await kv.get(managerKey(clusterId, managerId))) as RefundManagerRecord | undefined) ?? null
+    );
+  },
+
+  /** Returns the id only when it names a manager that exists in the cluster; else undefined. */
+  async resolveManagerId(
+    clusterId: string,
+    managerId: string | null | undefined,
+  ): Promise<string | undefined> {
+    const id = str(managerId);
+    if (!id) return undefined;
+    const manager = await this.getManager(clusterId, id);
+    return manager ? id : undefined;
+  },
+
+  async createManager(
+    clusterId: string,
+    input: ManagerInput,
+    createdBy: string,
+  ): Promise<RefundManagerRecord> {
+    const cluster = await this.getCluster(clusterId);
+    if (!cluster) throw Object.assign(new Error('Cluster not found'), { status: 404 });
+
+    const fields = normalizeManager(input);
+    if (!fields.name) throw Object.assign(new Error('Manager name is required'), { status: 400 });
+
+    const now = new Date().toISOString();
+    const record: RefundManagerRecord = {
+      id: newId(),
+      clusterId,
+      ...fields,
+      createdAt: now,
+      updatedAt: now,
+      createdBy,
+    };
+    await kv.set(managerKey(clusterId, record.id), record);
+    log.info('Manager created', { clusterId, managerId: record.id });
+    return record;
+  },
+
+  async updateManager(
+    clusterId: string,
+    managerId: string,
+    input: ManagerInput,
+  ): Promise<RefundManagerRecord> {
+    const existing = await this.getManager(clusterId, managerId);
+    if (!existing) throw Object.assign(new Error('Manager not found'), { status: 404 });
+
+    const fields = normalizeManager(input, existing);
+    if (!fields.name) throw Object.assign(new Error('Manager name is required'), { status: 400 });
+
+    const next: RefundManagerRecord = {
+      ...existing,
+      ...fields,
+      updatedAt: new Date().toISOString(),
+    };
+    await kv.set(managerKey(clusterId, managerId), next);
+    return next;
+  },
+
+  /** Deletes the manager and clears it from any entity that referenced it. */
+  async deleteManager(clusterId: string, managerId: string): Promise<void> {
+    const existing = await this.getManager(clusterId, managerId);
+    if (!existing) throw Object.assign(new Error('Manager not found'), { status: 404 });
+
+    const entities = (await kv.getByPrefix(
+      `${ENTITY_PREFIX}${clusterId}:`,
+    )) as RefundEntityRecord[];
+    const now = new Date().toISOString();
+    for (const entity of entities) {
+      if (entity?.id && entity.managerId === managerId) {
+        await kv.set(entityKey(clusterId, entity.id), {
+          ...entity,
+          managerId: undefined,
+          updatedAt: now,
+        });
+      }
+    }
+    await kv.del(managerKey(clusterId, managerId));
+    log.info('Manager deleted', { clusterId, managerId });
   },
 
   // --- Documents -------------------------------------------------------

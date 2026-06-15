@@ -25,7 +25,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '../../../../../ui/select';
-import { VAT_PERIOD_OPTIONS } from '../constants';
+import { VAT_PERIOD_OPTIONS, vatPeriodDescription } from '../constants';
 import type { RefundCluster, VatPeriodCategory } from '../types';
 
 interface ClusterFormDialogProps {
@@ -93,6 +93,7 @@ export function ClusterFormDialog({
             <Label htmlFor="cluster-description">Cluster Description</Label>
             <Textarea
               id="cluster-description"
+              className="bg-white border-border shadow-sm min-h-20"
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               placeholder="What this cluster is for…"
@@ -118,6 +119,7 @@ export function ClusterFormDialog({
             </Select>
             <p className="text-xs text-muted-foreground">
               Shared by all entities in this cluster — drives the current VAT period.
+              {vatPeriodDescription(vatPeriod) ? ` ${vatPeriodDescription(vatPeriod)}` : ''}
             </p>
           </div>
           <DialogFooter>

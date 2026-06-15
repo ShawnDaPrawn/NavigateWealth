@@ -42,6 +42,8 @@ const entity: RefundEntity = {
       accountNumber: '',
       branchCode: '',
       accountType: '',
+      onlineUsername: '',
+      hasOnlinePassword: false,
     },
     secondary: {
       bankName: '',
@@ -49,6 +51,8 @@ const entity: RefundEntity = {
       accountNumber: '',
       branchCode: '',
       accountType: '',
+      onlineUsername: '',
+      hasOnlinePassword: false,
     },
   },
   taxDetails: {
@@ -116,6 +120,6 @@ describe('EntityTransactionsDialog', () => {
 
   it('renders the current VAT period label from the cluster category', () => {
     render(<EntityTransactionsDialog open onOpenChange={() => {}} entity={entity} vatPeriod="C" />);
-    expect(screen.getByText(/Current VAT period:/i)).toBeDefined();
+    expect(screen.getByText(/VAT period:/i)).toBeDefined();
   });
 });

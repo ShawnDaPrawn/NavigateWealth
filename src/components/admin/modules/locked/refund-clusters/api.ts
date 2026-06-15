@@ -9,11 +9,14 @@ import { api } from '../../../../../utils/api/client';
 import { logger } from '../../../../../utils/logger';
 import { ENDPOINTS } from './constants';
 import type {
+  BankAccountSlot,
   ClusterDetailResponse,
   RefundCluster,
   RefundEntity,
   RefundEntityDocument,
   RefundEntityInput,
+  RefundManager,
+  RefundManagerInput,
   RefundTransaction,
   RefundTransactionInput,
   VatPeriodCategory,
@@ -123,6 +126,67 @@ export const RefundClustersAPI = {
       return data.password;
     } catch (error) {
       rethrow(error, 'revealEfilingPassword');
+    }
+  },
+
+  /** Reveal a stored online-banking password. Audited server-side at critical severity. */
+  async revealBankPassword(
+    clusterId: string,
+    entityId: string,
+    account: BankAccountSlot,
+  ): Promise<string> {
+    try {
+      const data = await api.post<{ password: string }>(
+        ENDPOINTS.BANK_PASSWORD_REVEAL(clusterId, entityId),
+        { account },
+      );
+      return data.password;
+    } catch (error) {
+      rethrow(error, 'revealBankPassword');
+    }
+  },
+
+  // --- Managers --------------------------------------------------------
+
+  async listManagers(clusterId: string): Promise<RefundManager[]> {
+    try {
+      const data = await api.get<{ managers: RefundManager[] }>(ENDPOINTS.MANAGERS(clusterId));
+      return data?.managers ?? [];
+    } catch (error) {
+      rethrow(error, 'listManagers');
+    }
+  },
+
+  async createManager(clusterId: string, input: RefundManagerInput): Promise<RefundManager> {
+    try {
+      const data = await api.post<{ manager: RefundManager }>(ENDPOINTS.MANAGERS(clusterId), input);
+      return data.manager;
+    } catch (error) {
+      rethrow(error, 'createManager');
+    }
+  },
+
+  async updateManager(
+    clusterId: string,
+    managerId: string,
+    input: RefundManagerInput,
+  ): Promise<RefundManager> {
+    try {
+      const data = await api.put<{ manager: RefundManager }>(
+        ENDPOINTS.MANAGER(clusterId, managerId),
+        input,
+      );
+      return data.manager;
+    } catch (error) {
+      rethrow(error, 'updateManager');
+    }
+  },
+
+  async deleteManager(clusterId: string, managerId: string): Promise<void> {
+    try {
+      await api.delete(ENDPOINTS.MANAGER(clusterId, managerId));
+    } catch (error) {
+      rethrow(error, 'deleteManager');
     }
   },
 

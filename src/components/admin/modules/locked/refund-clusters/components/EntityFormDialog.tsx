@@ -36,15 +36,15 @@ import {
   emptyEntityForm,
   formFromEntity,
   validateEntityForm,
+  type BankAccountFormState,
   type EntityFormState,
 } from '../formState';
-import { useRevealEfilingPassword } from '../hooks/useRefundClusters';
-import type {
-  BankAccountDetails,
-  RefundEntity,
-  RefundEntityInput,
-  RefundEntityType,
-} from '../types';
+import {
+  useClusterManagers,
+  useRevealBankPassword,
+  useRevealEfilingPassword,
+} from '../hooks/useRefundClusters';
+import type { BankAccountSlot, RefundEntity, RefundEntityInput, RefundEntityType } from '../types';
 
 interface EntityFormDialogProps {
   open: boolean;
@@ -151,12 +151,18 @@ export function EntityFormDialog({
             )}
 
             <Separator />
+            <ManagerSection form={form} patch={patch} clusterId={clusterId} />
+
+            <Separator />
             <BankingSection
               title="Primary Banking Account"
               hint="The bank account associated with eFiling."
               account={form.primaryAccount}
               onChange={(primaryAccount) => patch({ primaryAccount })}
               idPrefix="primary"
+              clusterId={clusterId}
+              entityId={entity?.id ?? null}
+              slot="primary"
             />
             <BankingSection
               title="Secondary Banking Account"
@@ -164,6 +170,9 @@ export function EntityFormDialog({
               account={form.secondaryAccount}
               onChange={(secondaryAccount) => patch({ secondaryAccount })}
               idPrefix="secondary"
+              clusterId={clusterId}
+              entityId={entity?.id ?? null}
+              slot="secondary"
             />
 
             <Separator />
@@ -262,6 +271,7 @@ function PersonalDetailsSection({ form, patch }: SectionProps) {
         <Label htmlFor="sp-address">Physical Address</Label>
         <Textarea
           id="sp-address"
+          className="bg-white border-border shadow-sm min-h-20"
           value={form.personalDetails.physicalAddress}
           onChange={(e) => update({ physicalAddress: e.target.value })}
           rows={2}
@@ -322,6 +332,7 @@ function BusinessDetailsSection({ form, patch }: SectionProps) {
         <Label htmlFor="co-registered-address">Registered Address</Label>
         <Textarea
           id="co-registered-address"
+          className="bg-white border-border shadow-sm min-h-20"
           value={form.businessDetails.registeredAddress}
           onChange={(e) => update({ registeredAddress: e.target.value })}
           rows={2}
@@ -331,6 +342,7 @@ function BusinessDetailsSection({ form, patch }: SectionProps) {
         <Label htmlFor="co-physical-address">Physical Business Address</Label>
         <Textarea
           id="co-physical-address"
+          className="bg-white border-border shadow-sm min-h-20"
           value={form.businessDetails.physicalBusinessAddress}
           onChange={(e) => update({ physicalBusinessAddress: e.target.value })}
           rows={2}
@@ -346,14 +358,30 @@ function BankingSection({
   account,
   onChange,
   idPrefix,
+  clusterId,
+  entityId,
+  slot,
 }: {
   title: string;
   hint: string;
-  account: BankAccountDetails;
-  onChange: (account: BankAccountDetails) => void;
+  account: BankAccountFormState;
+  onChange: (account: BankAccountFormState) => void;
   idPrefix: string;
+  clusterId: string;
+  entityId: string | null;
+  slot: BankAccountSlot;
 }) {
-  const update = (changes: Partial<BankAccountDetails>) => onChange({ ...account, ...changes });
+  const update = (changes: Partial<BankAccountFormState>) => onChange({ ...account, ...changes });
+  const [showPassword, setShowPassword] = useState(false);
+  const reveal = useRevealBankPassword();
+  const hasStoredPassword = account.hasOnlinePassword;
+
+  const handleReveal = async () => {
+    if (!entityId) return;
+    const password = await reveal.mutateAsync({ clusterId, entityId, account: slot });
+    update({ onlinePassword: password });
+    setShowPassword(true);
+  };
 
   return (
     <div className="space-y-4">
@@ -401,10 +429,87 @@ function BankingSection({
             </SelectContent>
           </Select>
         </div>
+        <Field
+          id={`${idPrefix}-online-username`}
+          label="Online Banking Username"
+          value={account.onlineUsername}
+          onChange={(onlineUsername) => update({ onlineUsername })}
+        />
+        <div className="space-y-1.5">
+          <Label htmlFor={`${idPrefix}-online-password`}>Online Banking Password</Label>
+          <div className="flex gap-2">
+            <Input
+              id={`${idPrefix}-online-password`}
+              type={showPassword ? 'text' : 'password'}
+              value={account.onlinePassword}
+              onChange={(e) => update({ onlinePassword: e.target.value })}
+              placeholder={hasStoredPassword ? '•••••••• (stored securely)' : 'Enter password'}
+              autoComplete="new-password"
+            />
+            <Button
+              type="button"
+              variant="outline"
+              size="icon"
+              aria-label={showPassword ? 'Hide password' : 'Show password'}
+              onClick={() => {
+                if (!showPassword && !account.onlinePassword && hasStoredPassword) {
+                  void handleReveal();
+                } else {
+                  setShowPassword((v) => !v);
+                }
+              }}
+              disabled={reveal.isPending}
+            >
+              {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+            </Button>
+          </div>
+          {hasStoredPassword && !account.onlinePassword && (
+            <p className="text-xs text-muted-foreground">
+              A password is stored. Leave blank to keep it, or type a new one to replace it.
+            </p>
+          )}
+        </div>
       </div>
       <p className="text-xs text-muted-foreground">
-        Proof of bank account can be uploaded under the entity&apos;s Documents once saved.
+        Proof of bank account can be uploaded under the entity&apos;s Documents once saved. The
+        online-banking password is encrypted at rest and only shown when explicitly revealed
+        (revealing is audit-logged).
       </p>
+    </div>
+  );
+}
+
+const UNASSIGNED = '__unassigned__';
+
+function ManagerSection({ form, patch, clusterId }: SectionProps & { clusterId: string }) {
+  const { data: managers = [] } = useClusterManagers(clusterId);
+
+  return (
+    <div className="space-y-4">
+      <SectionHeading
+        title="Entity Manager"
+        hint="The person who runs this entity's banking and eFiling. Add managers from the cluster's Managers tab."
+      />
+      <div className="space-y-1.5 sm:max-w-sm">
+        <Label htmlFor="entity-manager">Assigned Manager</Label>
+        <Select
+          value={form.managerId || UNASSIGNED}
+          onValueChange={(value) => patch({ managerId: value === UNASSIGNED ? '' : value })}
+        >
+          <SelectTrigger id="entity-manager">
+            <SelectValue placeholder="Unassigned" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value={UNASSIGNED}>Unassigned</SelectItem>
+            {managers.map((manager) => (
+              <SelectItem key={manager.id} value={manager.id}>
+                {manager.name}
+                {manager.role ? ` · ${manager.role}` : ''}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
     </div>
   );
 }
