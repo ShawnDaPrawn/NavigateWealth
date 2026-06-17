@@ -8,6 +8,7 @@
 
 import type {
   BankAccountDetails,
+  BankAccountInput,
   BusinessDetails,
   PersonalDetails,
   RefundEntity,
@@ -15,12 +16,28 @@ import type {
   RefundEntityType,
 } from './types';
 
+/** Editable bank-account form fields plus write-only online-banking password. */
+export interface BankAccountFormState {
+  bankName: string;
+  accountHolder: string;
+  accountNumber: string;
+  branchCode: string;
+  accountType: string;
+  onlineUsername: string;
+  /** Plaintext only while typing; sent once, never stored client-side. */
+  onlinePassword: string;
+  /** Server flag: an online-banking password is already stored. */
+  hasOnlinePassword: boolean;
+}
+
 export interface EntityFormState {
   entityType: RefundEntityType;
+  /** Assigned cluster manager id, or '' for unassigned. */
+  managerId: string;
   personalDetails: PersonalDetails;
   businessDetails: BusinessDetails;
-  primaryAccount: BankAccountDetails;
-  secondaryAccount: BankAccountDetails;
+  primaryAccount: BankAccountFormState;
+  secondaryAccount: BankAccountFormState;
   efilingUsername: string;
   /** Plaintext only while typing; sent once, never stored client-side. */
   efilingPassword: string;
@@ -28,17 +45,34 @@ export interface EntityFormState {
   previousPeriodVat: string;
 }
 
-const emptyBankAccount = (): BankAccountDetails => ({
+const emptyBankAccount = (): BankAccountFormState => ({
   bankName: '',
   accountHolder: '',
   accountNumber: '',
   branchCode: '',
   accountType: '',
+  onlineUsername: '',
+  onlinePassword: '',
+  hasOnlinePassword: false,
 });
+
+function bankFormFromEntity(account?: BankAccountDetails): BankAccountFormState {
+  return {
+    ...emptyBankAccount(),
+    bankName: account?.bankName ?? '',
+    accountHolder: account?.accountHolder ?? '',
+    accountNumber: account?.accountNumber ?? '',
+    branchCode: account?.branchCode ?? '',
+    accountType: account?.accountType ?? '',
+    onlineUsername: account?.onlineUsername ?? '',
+    hasOnlinePassword: account?.hasOnlinePassword ?? false,
+  };
+}
 
 export function emptyEntityForm(entityType: RefundEntityType): EntityFormState {
   return {
     entityType,
+    managerId: '',
     personalDetails: { name: '', surname: '', physicalAddress: '' },
     businessDetails: {
       companyName: '',
@@ -63,10 +97,11 @@ export function formFromEntity(entity: RefundEntity): EntityFormState {
   const base = emptyEntityForm(entity.entityType);
   return {
     ...base,
+    managerId: entity.managerId ?? '',
     personalDetails: { ...base.personalDetails, ...entity.personalDetails },
     businessDetails: { ...base.businessDetails, ...entity.businessDetails },
-    primaryAccount: { ...base.primaryAccount, ...entity.bankingDetails?.primary },
-    secondaryAccount: { ...base.secondaryAccount, ...entity.bankingDetails?.secondary },
+    primaryAccount: bankFormFromEntity(entity.bankingDetails?.primary),
+    secondaryAccount: bankFormFromEntity(entity.bankingDetails?.secondary),
     efilingUsername: entity.taxDetails?.efilingUsername ?? '',
     efilingPassword: '',
     currentPeriodVat: entity.taxDetails?.currentPeriodVat ?? '',
@@ -90,12 +125,31 @@ export function validateEntityForm(form: EntityFormState): string | null {
   return null;
 }
 
+/** Convert a bank form section into the API payload (drops flags; password only if typed). */
+function bankPayload(account: BankAccountFormState): BankAccountInput {
+  const input: BankAccountInput = {
+    bankName: account.bankName,
+    accountHolder: account.accountHolder,
+    accountNumber: account.accountNumber,
+    branchCode: account.branchCode,
+    accountType: account.accountType,
+    onlineUsername: account.onlineUsername.trim(),
+  };
+  // Only send the password when one was typed — an empty field on edit
+  // must not clear the stored secret.
+  if (account.onlinePassword) {
+    input.onlinePassword = account.onlinePassword;
+  }
+  return input;
+}
+
 export function buildEntityPayload(form: EntityFormState): RefundEntityInput {
   const payload: RefundEntityInput = {
     entityType: form.entityType,
+    managerId: form.managerId || null,
     bankingDetails: {
-      primary: { ...form.primaryAccount },
-      secondary: { ...form.secondaryAccount },
+      primary: bankPayload(form.primaryAccount),
+      secondary: bankPayload(form.secondaryAccount),
     },
     taxDetails: {
       efilingUsername: form.efilingUsername.trim(),

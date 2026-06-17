@@ -4,7 +4,15 @@
  */
 
 import { describe, expect, it } from 'vitest';
-import { currentVatPeriod, netVatLabel, summarizeTransactions, vatFromInclusive } from '../vat';
+import {
+  currentVatPeriod,
+  formatPeriodRange,
+  netVatLabel,
+  previousVatPeriod,
+  recentVatPeriods,
+  summarizeTransactions,
+  vatFromInclusive,
+} from '../vat';
 import type { RefundTransaction } from '../types';
 
 function txn(overrides: Partial<RefundTransaction>): RefundTransaction {
@@ -25,6 +33,59 @@ function txn(overrides: Partial<RefundTransaction>): RefundTransaction {
     ...overrides,
   };
 }
+
+describe('previousVatPeriod', () => {
+  it('returns null when no category is set', () => {
+    expect(previousVatPeriod('', new Date(2026, 2, 15))).toBeNull();
+  });
+
+  it('category C steps back one calendar month', () => {
+    const p = previousVatPeriod('C', new Date(2026, 2, 15)); // March → Feb
+    expect(p?.start).toBe('2026-02-01');
+    expect(p?.end).toBe('2026-02-28');
+  });
+
+  it('category C wraps to the prior year from January', () => {
+    const p = previousVatPeriod('C', new Date(2026, 0, 10)); // Jan 2026 → Dec 2025
+    expect(p?.start).toBe('2025-12-01');
+    expect(p?.end).toBe('2025-12-31');
+  });
+
+  it('category A steps back a two-month window', () => {
+    // Current for March is Feb–Mar; previous is Dec–Jan.
+    const p = previousVatPeriod('A', new Date(2026, 2, 15));
+    expect(p?.start).toBe('2025-12-01');
+    expect(p?.end).toBe('2026-01-31');
+  });
+
+  it('category B steps back a two-month window', () => {
+    // Current for March is Mar–Apr; previous is Jan–Feb.
+    const p = previousVatPeriod('B', new Date(2026, 2, 15));
+    expect(p?.start).toBe('2026-01-01');
+    expect(p?.end).toBe('2026-02-28');
+  });
+});
+
+describe('recentVatPeriods', () => {
+  it('returns an empty list when no category is set', () => {
+    expect(recentVatPeriods('', 6, new Date(2026, 2, 15))).toEqual([]);
+  });
+
+  it('returns the current period first, then prior periods, without gaps', () => {
+    const periods = recentVatPeriods('C', 3, new Date(2026, 2, 15)); // Mar, Feb, Jan 2026
+    expect(periods).toHaveLength(3);
+    expect(periods[0].start).toBe('2026-03-01');
+    expect(periods[1].start).toBe('2026-02-01');
+    expect(periods[2].start).toBe('2026-01-01');
+  });
+});
+
+describe('formatPeriodRange', () => {
+  it('renders the label plus the inclusive date range', () => {
+    const p = currentVatPeriod('C', new Date(2026, 1, 15))!; // Feb 2026
+    expect(formatPeriodRange(p)).toBe('Feb 2026 (1 Feb 2026 – 28 Feb 2026)');
+  });
+});
 
 describe('vatFromInclusive', () => {
   it('extracts 15/115 of a standard-rated amount', () => {

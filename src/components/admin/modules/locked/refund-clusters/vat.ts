@@ -102,6 +102,47 @@ export function currentVatPeriod(
   };
 }
 
+/** The submission period immediately before the one open at `refDate` (null if no category). */
+export function previousVatPeriod(
+  category: VatPeriodCategory | '',
+  refDate: Date = new Date(),
+): VatPeriod | null {
+  const current = currentVatPeriod(category, refDate);
+  if (!current) return null;
+  // Step to the day before this period starts; that date falls in the prior
+  // period, so currentVatPeriod resolves it — handling A/B/C + year-wrap for free.
+  const [y, m, d] = current.start.split('-').map(Number);
+  const dayBefore = new Date(y, m - 1, d - 1);
+  return currentVatPeriod(category, dayBefore);
+}
+
+/** The current period plus the `count - 1` periods before it, most recent first. */
+export function recentVatPeriods(
+  category: VatPeriodCategory | '',
+  count: number,
+  refDate: Date = new Date(),
+): VatPeriod[] {
+  const periods: VatPeriod[] = [];
+  let cursor = refDate;
+  for (let i = 0; i < count; i += 1) {
+    const period = currentVatPeriod(category, cursor);
+    if (!period) break;
+    periods.push(period);
+    const [y, m, d] = period.start.split('-').map(Number);
+    cursor = new Date(y, m - 1, d - 1);
+  }
+  return periods;
+}
+
+/** Human-readable date range, e.g. "Feb–Mar 2026 (1 Feb 2026 – 31 Mar 2026)". */
+export function formatPeriodRange(period: VatPeriod): string {
+  const fmt = (isoDate: string): string => {
+    const [y, m, d] = isoDate.split('-').map(Number);
+    return `${d} ${MONTH_NAMES[m - 1]} ${y}`;
+  };
+  return `${period.label} (${fmt(period.start)} – ${fmt(period.end)})`;
+}
+
 export type VatStatus = 'refundable' | 'payable' | 'nil';
 
 export interface VatSummary {

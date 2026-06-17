@@ -118,6 +118,49 @@ describe('RefundClustersAPI entities', () => {
     );
     expect(password).toBe('pw');
   });
+
+  it('reveals a bank password for the named account via the audited endpoint', async () => {
+    mockPost.mockResolvedValue({ password: 'bank-pw' });
+    const password = await RefundClustersAPI.revealBankPassword('c1', 'e1', 'secondary');
+    expect(mockPost).toHaveBeenCalledWith('/refund-clusters/c1/entities/e1/bank-password/reveal', {
+      account: 'secondary',
+    });
+    expect(password).toBe('bank-pw');
+  });
+});
+
+describe('RefundClustersAPI managers', () => {
+  it('lists managers', async () => {
+    mockGet.mockResolvedValue({ managers: [{ id: 'm1' }] });
+    const managers = await RefundClustersAPI.listManagers('c1');
+    expect(mockGet).toHaveBeenCalledWith('/refund-clusters/c1/managers');
+    expect(managers).toHaveLength(1);
+  });
+
+  it('creates a manager', async () => {
+    mockPost.mockResolvedValue({ manager: { id: 'm1' } });
+    const input = { name: 'Jane', email: '', phone: '', role: 'Bookkeeper', notes: '' };
+    await RefundClustersAPI.createManager('c1', input);
+    expect(mockPost).toHaveBeenCalledWith('/refund-clusters/c1/managers', input);
+  });
+
+  it('updates a manager', async () => {
+    mockPut.mockResolvedValue({ manager: { id: 'm1' } });
+    const input = { name: 'Jane B', email: '', phone: '', role: '', notes: '' };
+    await RefundClustersAPI.updateManager('c1', 'm1', input);
+    expect(mockPut).toHaveBeenCalledWith('/refund-clusters/c1/managers/m1', input);
+  });
+
+  it('deletes a manager', async () => {
+    mockDelete.mockResolvedValue({});
+    await RefundClustersAPI.deleteManager('c1', 'm1');
+    expect(mockDelete).toHaveBeenCalledWith('/refund-clusters/c1/managers/m1');
+  });
+
+  it('returns an empty list when the payload is missing', async () => {
+    mockGet.mockResolvedValue({});
+    expect(await RefundClustersAPI.listManagers('c1')).toEqual([]);
+  });
 });
 
 describe('RefundClustersAPI documents', () => {

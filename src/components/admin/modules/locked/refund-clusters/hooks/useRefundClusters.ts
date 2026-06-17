@@ -9,7 +9,13 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { refundClusterKeys } from '../queryKeys';
 import { RefundClustersAPI } from '../api';
-import type { RefundEntityInput, RefundTransactionInput, VatPeriodCategory } from '../types';
+import type {
+  BankAccountSlot,
+  RefundEntityInput,
+  RefundManagerInput,
+  RefundTransactionInput,
+  VatPeriodCategory,
+} from '../types';
 
 const STALE_TIME = 60 * 1000;
 
@@ -156,6 +162,76 @@ export function useRevealEfilingPassword() {
       RefundClustersAPI.revealEfilingPassword(input.clusterId, input.entityId),
     onError: (error: Error) => {
       toast.error('Failed to reveal password', { description: error.message });
+    },
+  });
+}
+
+export function useRevealBankPassword() {
+  return useMutation({
+    mutationFn: (input: { clusterId: string; entityId: string; account: BankAccountSlot }) =>
+      RefundClustersAPI.revealBankPassword(input.clusterId, input.entityId, input.account),
+    onError: (error: Error) => {
+      toast.error('Failed to reveal password', { description: error.message });
+    },
+  });
+}
+
+// ============================================================================
+// Manager queries & mutations
+// ============================================================================
+
+export function useClusterManagers(clusterId: string | null) {
+  return useQuery({
+    queryKey: refundClusterKeys.managers(clusterId ?? ''),
+    queryFn: () => RefundClustersAPI.listManagers(clusterId!),
+    enabled: !!clusterId,
+    staleTime: STALE_TIME,
+  });
+}
+
+export function useCreateManager() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (input: { clusterId: string; manager: RefundManagerInput }) =>
+      RefundClustersAPI.createManager(input.clusterId, input.manager),
+    onSuccess: (_data, variables) => {
+      qc.invalidateQueries({ queryKey: refundClusterKeys.managers(variables.clusterId) });
+      toast.success('Manager added');
+    },
+    onError: (error: Error) => {
+      toast.error('Failed to add manager', { description: error.message });
+    },
+  });
+}
+
+export function useUpdateManager() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (input: { clusterId: string; managerId: string; manager: RefundManagerInput }) =>
+      RefundClustersAPI.updateManager(input.clusterId, input.managerId, input.manager),
+    onSuccess: (_data, variables) => {
+      qc.invalidateQueries({ queryKey: refundClusterKeys.managers(variables.clusterId) });
+      toast.success('Manager updated');
+    },
+    onError: (error: Error) => {
+      toast.error('Failed to update manager', { description: error.message });
+    },
+  });
+}
+
+export function useDeleteManager() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (input: { clusterId: string; managerId: string }) =>
+      RefundClustersAPI.deleteManager(input.clusterId, input.managerId),
+    onSuccess: (_data, variables) => {
+      qc.invalidateQueries({ queryKey: refundClusterKeys.managers(variables.clusterId) });
+      // An assignment may have been cleared from entities on the server.
+      qc.invalidateQueries({ queryKey: refundClusterKeys.detail(variables.clusterId) });
+      toast.success('Manager deleted');
+    },
+    onError: (error: Error) => {
+      toast.error('Failed to delete manager', { description: error.message });
     },
   });
 }

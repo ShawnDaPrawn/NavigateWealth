@@ -19,6 +19,11 @@ export const ENDPOINTS = {
   ENTITY: entityBase,
   PASSWORD_REVEAL: (clusterId: string, entityId: string) =>
     `${entityBase(clusterId, entityId)}/efiling-password/reveal`,
+  BANK_PASSWORD_REVEAL: (clusterId: string, entityId: string) =>
+    `${entityBase(clusterId, entityId)}/bank-password/reveal`,
+  MANAGERS: (clusterId: string) => `/refund-clusters/${clusterId}/managers`,
+  MANAGER: (clusterId: string, managerId: string) =>
+    `/refund-clusters/${clusterId}/managers/${managerId}`,
   DOCUMENTS: (clusterId: string, entityId: string) =>
     `${entityBase(clusterId, entityId)}/documents`,
   DOCUMENT_URL: (clusterId: string, entityId: string, docId: string) =>
@@ -45,6 +50,17 @@ export const VAT_PERIOD_OPTIONS: Array<{ value: VatPeriodCategory; label: string
   { value: 'B', label: 'Category B' },
   { value: 'C', label: 'Category C' },
 ];
+
+/** Plain-language breakdown of what each SARS VAT category covers. */
+export const VAT_PERIOD_DESCRIPTIONS: Record<VatPeriodCategory, string> = {
+  A: 'Bi-monthly — periods end in odd months (Dec–Jan, Feb–Mar, Apr–May, Jun–Jul, Aug–Sep, Oct–Nov).',
+  B: 'Bi-monthly — periods end in even months (Jan–Feb, Mar–Apr, May–Jun, Jul–Aug, Sep–Oct, Nov–Dec).',
+  C: 'Monthly — one calendar month per period.',
+};
+
+export function vatPeriodDescription(category: VatPeriodCategory | ''): string | null {
+  return category ? VAT_PERIOD_DESCRIPTIONS[category] : null;
+}
 
 export const VAT_RATE = 0.15;
 

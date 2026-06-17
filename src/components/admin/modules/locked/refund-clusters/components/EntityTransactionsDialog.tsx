@@ -63,9 +63,10 @@ import {
   useViewTransactionInvoice,
 } from '../hooks/useRefundClusters';
 import {
-  currentVatPeriod,
+  formatPeriodRange,
   formatZar,
   netVatLabel,
+  recentVatPeriods,
   summarizeTransactions,
   vatFromInclusive,
 } from '../vat';
@@ -146,16 +147,25 @@ export function EntityTransactionsDialog({
   const [form, setForm] = useState<TxnFormState>(emptyForm);
   const [formOpen, setFormOpen] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<RefundTransaction | null>(null);
+  const [periodOffset, setPeriodOffset] = useState(0);
 
   useEffect(() => {
     if (!open) {
       setForm(emptyForm());
       setFormOpen(false);
       setDeleteTarget(null);
+      setPeriodOffset(0);
     }
   }, [open, entity?.id]);
 
-  const period = useMemo(() => currentVatPeriod(vatPeriod), [vatPeriod]);
+  // The current period plus several prior submission periods (empty when no
+  // cluster category is set, in which case all transactions are shown).
+  const periods = useMemo(() => recentVatPeriods(vatPeriod, 6), [vatPeriod]);
+  const period = periods[periodOffset] ?? periods[0] ?? null;
+  const visibleTransactions = useMemo(() => {
+    if (!period) return transactions;
+    return transactions.filter((t) => t.date >= period.start && t.date <= period.end);
+  }, [transactions, period]);
   const summary = useMemo(
     () => summarizeTransactions(transactions, period),
     [transactions, period],
@@ -238,15 +248,35 @@ export function EntityTransactionsDialog({
             <DialogTitle>Transactions — {entityDisplayName(entity)}</DialogTitle>
             <DialogDescription>
               {period
-                ? `Current VAT period: ${period.label} (category from the cluster).`
+                ? `VAT period: ${formatPeriodRange(period)} (category from the cluster).`
                 : 'Set the cluster VAT category to scope a period — showing all transactions.'}
             </DialogDescription>
           </DialogHeader>
 
           <VatSummaryPanel summary={summary} />
 
-          <div className="flex items-center justify-between">
-            <h3 className="text-sm font-semibold">Transactions</h3>
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <div className="flex items-center gap-2">
+              <h3 className="text-sm font-semibold">Transactions</h3>
+              {periods.length > 0 && (
+                <Select
+                  value={String(periodOffset)}
+                  onValueChange={(v) => setPeriodOffset(Number(v))}
+                >
+                  <SelectTrigger className="w-auto min-w-[200px]" aria-label="VAT period">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {periods.map((p, i) => (
+                      <SelectItem key={p.start} value={String(i)}>
+                        {i === 0 ? 'Current' : i === 1 ? 'Previous' : `${i} periods ago`} ·{' '}
+                        {p.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
+            </div>
             <Button size="sm" onClick={openCreate}>
               <Plus className="h-4 w-4 mr-1" /> Add Transaction
             </Button>
@@ -374,6 +404,10 @@ export function EntityTransactionsDialog({
             <div className="border border-dashed rounded-lg p-8 text-center text-sm text-muted-foreground">
               No transactions yet. Click &quot;Add Transaction&quot; to record income or expenses.
             </div>
+          ) : visibleTransactions.length === 0 ? (
+            <div className="border border-dashed rounded-lg p-8 text-center text-sm text-muted-foreground">
+              No transactions in this period. Choose another period above, or add one.
+            </div>
           ) : (
             <div className="overflow-x-auto">
               <Table>
@@ -389,7 +423,7 @@ export function EntityTransactionsDialog({
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {transactions.map((txn) => (
+                  {visibleTransactions.map((txn) => (
                     <TableRow key={txn.id}>
                       <TableCell className="whitespace-nowrap">{txn.date}</TableCell>
                       <TableCell className="max-w-[200px] truncate">

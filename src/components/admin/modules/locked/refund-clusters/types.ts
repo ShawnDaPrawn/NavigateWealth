@@ -25,12 +25,18 @@ export interface RefundCluster {
   entityCount?: number;
 }
 
+export type BankAccountSlot = 'primary' | 'secondary';
+
 export interface BankAccountDetails {
   bankName: string;
   accountHolder: string;
   accountNumber: string;
   branchCode: string;
   accountType: string;
+  /** Online-banking login name. */
+  onlineUsername: string;
+  /** Server-set flag: an online-banking password is stored (write-only). */
+  hasOnlinePassword: boolean;
 }
 
 export interface PersonalDetails {
@@ -101,6 +107,8 @@ export interface RefundEntity {
   id: string;
   clusterId: string;
   entityType: RefundEntityType;
+  /** Assigned cluster manager (runs banking + eFiling), when set. */
+  managerId?: string;
   personalDetails?: PersonalDetails;
   businessDetails?: BusinessDetails;
   bankingDetails: {
@@ -111,6 +119,29 @@ export interface RefundEntity {
   createdAt: string;
   updatedAt: string;
   createdBy: string;
+}
+
+/** A person who runs banking + eFiling for entities in a cluster. */
+export interface RefundManager {
+  id: string;
+  clusterId: string;
+  name: string;
+  email: string;
+  phone: string;
+  role: string;
+  notes: string;
+  createdAt: string;
+  updatedAt: string;
+  createdBy: string;
+}
+
+/** Manager create/update payload. */
+export interface RefundManagerInput {
+  name: string;
+  email: string;
+  phone: string;
+  role: string;
+  notes: string;
 }
 
 export interface RefundEntityDocument {
@@ -126,14 +157,28 @@ export interface RefundEntityDocument {
   uploadedBy: string;
 }
 
+/** Bank account fields sent on save; the password is write-only. */
+export interface BankAccountInput {
+  bankName: string;
+  accountHolder: string;
+  accountNumber: string;
+  branchCode: string;
+  accountType: string;
+  onlineUsername: string;
+  /** Write-only: encrypted server-side, never echoed back. */
+  onlinePassword?: string;
+}
+
 /** Payload sent when creating or updating an entity. */
 export interface RefundEntityInput {
   entityType: RefundEntityType;
+  /** Assign (id) or clear (null) the entity's cluster manager. */
+  managerId?: string | null;
   personalDetails?: PersonalDetails;
   businessDetails?: BusinessDetails;
   bankingDetails?: {
-    primary: BankAccountDetails;
-    secondary: BankAccountDetails;
+    primary: BankAccountInput;
+    secondary: BankAccountInput;
   };
   taxDetails?: {
     efilingUsername: string;
