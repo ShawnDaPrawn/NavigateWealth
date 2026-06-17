@@ -311,7 +311,10 @@ app.post(
     const clusterId = c.req.param('clusterId') ?? '';
     const entityId = c.req.param('entityId') ?? '';
     const body = await c.req.json().catch(() => ({}));
-    const account = body?.account === 'secondary' ? 'secondary' : 'primary';
+    const account = body?.account;
+    if (account !== 'primary' && account !== 'secondary') {
+      return c.json({ error: "account must be 'primary' or 'secondary'" }, 400);
+    }
     try {
       const password = await RefundClustersService.revealBankPassword(clusterId, entityId, account);
       await audit(c, 'refund_entity_bank_password_revealed', 'Online banking password revealed', {
