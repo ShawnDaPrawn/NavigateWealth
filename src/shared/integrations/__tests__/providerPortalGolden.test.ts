@@ -336,6 +336,10 @@ describe('provider portal golden flows', () => {
     // (e.g. Discovery, whose "Resend OTP" control trips the delivery-choice
     // heuristic) skip the SMS-selection choreography and enter the code directly.
     expect(workerSource).toContain('const deliveredTarget = await findOtpEntryTarget(page, flow');
+    // ...but still send first when the page pre-renders the input alongside an
+    // explicit "Send OTP" action (code not yet delivered).
+    expect(workerSource).toContain('!(await hasExplicitOtpSendAction(page, flow))');
+    expect(workerSource).toContain('function looksLikeExplicitOtpSendAction');
     expect(workerSource).toContain('Re-submitting provider credentials after ');
     expect(workerSource).toContain('registration redirect.');
     expect(workerSource).not.toContain('completeManualOtpIfPresent(page, flow, 45000)');

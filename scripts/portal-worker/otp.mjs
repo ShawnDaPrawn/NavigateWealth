@@ -359,6 +359,30 @@ export async function hasVisibleOtpSendAction(page) {
   return false;
 }
 
+// Wording that explicitly asks to *send* the code (e.g. "Send OTP", "Send
+// code") means the provider has not delivered it yet, so the worker must click
+// it before waiting for an operator-entered code. This is deliberately
+// narrower than looksLikePendingOtpSendAction: generic verbs (continue/submit/
+// go) and "Resend …" are excluded because they usually appear on a page where
+// the code was already delivered — treating them as "not yet sent" would
+// strand the worker on providers (e.g. Discovery) that auto-send and label the
+// submit button "Continue"/"Submit".
+export function looksLikeExplicitOtpSendAction(text) {
+  const value = String(text || '').replace(/\s+/g, ' ').trim();
+  if (!value || /\bresend\b/i.test(value)) return false;
+  return /\bsend\s+(otp|code|pin|passcode|sms)\b/i.test(value);
+}
+
+export async function hasExplicitOtpSendAction(page, flow) {
+  for (const candidate of getOtpSendActionCandidates(page, flow)) {
+    if (!(await candidate.isVisible({ timeout: 250 }).catch(() => false))) continue;
+    if (!(await candidate.isEnabled({ timeout: 250 }).catch(() => true))) continue;
+    const label = await getControlLabel(candidate);
+    if (looksLikeExplicitOtpSendAction(label)) return true;
+  }
+  return false;
+}
+
 export async function clickVisibleOtpSendAction(page, flow) {
   for (const candidate of getOtpSendActionCandidates(page, flow)) {
     if (!(await candidate.isVisible({ timeout: 500 }).catch(() => false))) continue;
@@ -894,8 +918,11 @@ export async function handleManualOtpCheckpoint(page, flow) {
   // (or is delivering) the code — Discovery and similar providers auto-send to
   // the registered phone. Enter it directly instead of clicking a generic
   // Send/Continue button, which could submit an empty field on these screens.
+  // The exception is a page that pre-renders the input but still exposes an
+  // explicit "Send OTP" action: there the code has not been sent, so fall
+  // through to clickVisibleOtpSendAction first.
   const deliveredTarget = await findOtpEntryTarget(page, flow, undefined, 3000);
-  if (deliveredTarget) {
+  if (deliveredTarget && !(await hasExplicitOtpSendAction(page, flow))) {
     const result = await promptForManualOtp(page, flow, undefined, deliveredTarget);
     return { handled: true, requiresCredentialResubmit: result?.requiresCredentialResubmit === true };
   }
