@@ -292,10 +292,13 @@ describe('provider portal golden flows', () => {
     expect(workerSource).toContain('async function clickVisibleOtpSendAction');
     expect(workerSource).toContain('async function waitForManualOtpCheckpointIfPresent');
     expect(workerSource).toContain('async function writeOtpDiagnostics');
-    expect(workerSource).toContain('BrightRock did not confirm that the SMS OTP was sent');
-    expect(workerSource).toContain(
-      'The worker will not wait for a phone code until BrightRock shows a sent confirmation',
-    );
+    // OTP/auth messages are provider-aware (getProviderLabel) rather than
+    // hard-coded to BrightRock, so non-BrightRock providers (e.g. Discovery)
+    // surface their own name in worker errors.
+    expect(workerSource).toContain('export function getProviderLabel(flow)');
+    expect(workerSource).toContain('did not confirm that the SMS OTP was sent');
+    expect(workerSource).toContain('The worker will not wait for a phone code until ');
+    expect(workerSource).toContain('shows a sent confirmation');
     expect(workerSource).toContain('manual-otp-timeout');
     expect(workerSource).toContain('brightrock-otp-send-action-missing');
     expect(workerSource).toContain('/\\bresend\\b/i.test(value)');
@@ -304,7 +307,7 @@ describe('provider portal golden flows', () => {
     expect(workerSource).toContain('an\\s+sms\\s+will\\s+be\\s+sent\\s+containing\\s+your\\s+otp');
     expect(workerSource).toContain('you\\s+have\\s+been\\s+successfully\\s+registered');
     expect(workerSource).toContain(
-      'BrightRock stayed on the verification screen instead of continuing into the portal',
+      'stayed on the verification screen instead of continuing into the portal',
     );
     expect(workerSource).toContain('async function selectBrightRockSmsOtpOption');
     expect(workerSource).toContain('forceSmsSelectionInDom');
@@ -329,16 +332,19 @@ describe('provider portal golden flows', () => {
     expect(workerSource).toContain('await clickVisibleOtpSendAction(page, flow)');
     expect(workerSource).toContain('await completeManualOtpAfterDelivery(page, flow)');
     expect(workerSource).toContain('await waitForManualOtpCheckpointIfPresent(page, flow, 12000)');
-    expect(workerSource).toContain(
-      'Re-submitting provider credentials after BrightRock registration redirect.',
-    );
+    // Providers that auto-send the OTP and show the entry field immediately
+    // (e.g. Discovery, whose "Resend OTP" control trips the delivery-choice
+    // heuristic) skip the SMS-selection choreography and enter the code directly.
+    expect(workerSource).toContain('const deliveredTarget = await findOtpEntryTarget(page, flow');
+    expect(workerSource).toContain('Re-submitting provider credentials after ');
+    expect(workerSource).toContain('registration redirect.');
     expect(workerSource).not.toContain('completeManualOtpIfPresent(page, flow, 45000)');
     expect(workerSource).toContain('async function waitForAuthCheckpointToClear');
     expect(workerSource).toContain('Send OTP');
     expect(workerSource).toContain('async function assertPastAuthCheckpoint');
     expect(workerSource).toContain('Provider is still on a login verification step before');
     expect(workerSource).toContain(
-      'BrightRock stayed on the verification screen instead of continuing into the portal',
+      'stayed on the verification screen instead of continuing into the portal',
     );
     expect(workerSource).toContain("await assertPastAuthCheckpoint(page, flow, 'policy search')");
   });

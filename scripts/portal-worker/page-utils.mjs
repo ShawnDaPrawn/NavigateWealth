@@ -76,6 +76,30 @@ export function sampleText(value, maxLength = 500) {
   return String(value || '').trim().replace(/\s+/g, ' ').slice(0, maxLength);
 }
 
+/**
+ * Human-readable provider name for status/error messages. The OTP and
+ * auth-checkpoint choreography is shared across every provider, so messages
+ * must reflect the provider actually being automated (Discovery, Allan Gray,
+ * BrightRock, …) rather than a hard-coded brand. Derived from the flow's
+ * display name (stripping the worker's "portal policy extraction" suffix) and
+ * falls back to the providerId, then to a neutral phrase.
+ */
+export function getProviderLabel(flow) {
+  const name = String(flow?.name || '').trim();
+  if (name) {
+    const cleaned = name.replace(/\s+portal\s+policy\s+extraction\s*$/i, '').trim();
+    if (cleaned) return cleaned;
+  }
+  const providerId = String(flow?.providerId || '').trim();
+  if (providerId) {
+    return providerId
+      .replace(/[-_]+/g, ' ')
+      .replace(/\b\w/g, (char) => char.toUpperCase())
+      .trim();
+  }
+  return 'the provider';
+}
+
 export async function capturePolicyConfirmationSnapshot(page) {
   const parts = [];
   const title = await page.title().catch(() => '');

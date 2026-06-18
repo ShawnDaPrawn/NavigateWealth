@@ -29,7 +29,7 @@ import { addJobWarning, itemWarnings, jobWarnings, setActiveJobId } from './stat
 import { apiFetch, jobPath, loadRuntime, updateJob } from './api.mjs';
 import { publishLiveView, resetLiveViewState } from './live-view.mjs';
 import { buildDebugAssetPath, ensureDir } from './debug-artifacts.mjs';
-import { sampleText } from './page-utils.mjs';
+import { getProviderLabel, sampleText } from './page-utils.mjs';
 import {
   attemptConfiguredNavigation,
   resolveProviderLoginUrl,
@@ -104,9 +104,10 @@ export async function runJob(jobId, requestedMode = mode) {
 
     const otpCheckpoint = await waitForManualOtpCheckpointIfPresent(page, flow, 12000);
     if (otpCheckpoint.requiresCredentialResubmit) {
+      const providerLabel = getProviderLabel(flow);
       await submitProviderCredentials(page, flow, username, password, {
-        message: 'Re-submitting provider credentials after BrightRock registration redirect.',
-        note: 'Provider credentials re-submitted after BrightRock registration redirect.',
+        message: `Re-submitting provider credentials after ${providerLabel} registration redirect.`,
+        note: `Provider credentials re-submitted after ${providerLabel} registration redirect.`,
       });
       await waitForManualOtpCheckpointIfPresent(page, flow, 12000);
     }

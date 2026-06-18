@@ -7,7 +7,11 @@
  * loop, auth-checkpoint detection, and the BrightRock-specific delivery
  * choreography (SMS option, info modal, registration redirect). The
  * BrightRock-named helpers are a known provider quirk that should migrate
- * behind the adapter boundary in a later phase. Behaviour-preserving move.
+ * behind the adapter boundary in a later phase.
+ *
+ * The choreography itself runs for every provider, so all user-facing status
+ * and error messages use getProviderLabel(flow) to name the provider actually
+ * being automated (Discovery, Allan Gray, …) instead of hard-coding a brand.
  */
 import { apiFetch, jobPath, updateJob } from './api.mjs';
 import { publishLiveView } from './live-view.mjs';
@@ -17,6 +21,7 @@ import {
   capturePolicyConfirmationSnapshot,
   clickWithOverlayFallback,
   getControlLabel,
+  getProviderLabel,
   getSearchScopes,
   isOtpishControl,
   sampleText,
@@ -335,7 +340,7 @@ export async function clickVisibleOtpSubmitAction(page, scope, flow) {
 
   if (disabledLabels.length > 0) {
     throw new Error(
-      `BrightRock OTP entry was visible, but the provider confirmation action stayed disabled after code entry. `
+      `${getProviderLabel(flow)} OTP entry was visible, but the provider confirmation action stayed disabled after code entry. `
       + `Visible actions: ${uniqueWarnings(disabledLabels).join(', ')}`,
     );
   }
@@ -504,7 +509,7 @@ export async function waitForBrightRockOtpDeliveryProgress(page, flow, timeoutMs
     if (dismissedInfoModal) {
       await publishLiveView(page, {
         force: true,
-        note: 'BrightRock confirmed SMS delivery in an information popup. Waiting for the OTP entry screen.',
+        note: `${getProviderLabel(flow)} confirmed SMS delivery in an information popup. Waiting for the OTP entry screen.`,
       }).catch(() => undefined);
     }
 
@@ -529,9 +534,10 @@ export async function waitForBrightRockOtpDeliveryProgress(page, flow, timeoutMs
 
   const snapshot = await capturePolicyConfirmationSnapshot(page).catch(() => ({ sample: '' }));
   await writeOtpDiagnostics(page, 'brightrock-otp-delivery-unconfirmed', { latest });
+  const providerLabel = getProviderLabel(flow);
   throw new Error(
-    'BrightRock did not confirm that the SMS OTP was sent. '
-    + 'The worker will not wait for a phone code until BrightRock shows a sent confirmation. '
+    `${providerLabel} did not confirm that the SMS OTP was sent. `
+    + `The worker will not wait for a phone code until ${providerLabel} shows a sent confirmation. `
     + `Visible page sample: ${snapshot.sample || 'none'}`,
   );
 }
@@ -558,7 +564,7 @@ export async function waitForAuthCheckpointToClear(page, flow, timeoutMs = 20000
       sawRegistrationSuccess = true;
       await publishLiveView(page, {
         force: true,
-        note: 'BrightRock completed registration and is returning to the login page.',
+        note: `${getProviderLabel(flow)} completed registration and is returning to the login page.`,
       }).catch(() => undefined);
     }
     if (await isLoginFormVisible(page, flow)) {
@@ -594,12 +600,13 @@ export async function fillManualOtp(page, flow, code, preferredSelector, existin
   await page.waitForTimeout(1500);
   const transition = await waitForAuthCheckpointToClear(page, flow, 15000);
   if (transition.checkpoint) {
+    const providerLabel = getProviderLabel(flow);
     await publishLiveView(page, {
       force: true,
-      note: 'OTP was submitted, but BrightRock stayed on the verification screen.',
+      note: `OTP was submitted, but ${providerLabel} stayed on the verification screen.`,
     }).catch(() => undefined);
     throw new Error(
-      'The SMS OTP was submitted, but BrightRock stayed on the verification screen instead of continuing into the portal. '
+      `The SMS OTP was submitted, but ${providerLabel} stayed on the verification screen instead of continuing into the portal. `
       + `Visible page sample: ${transition.checkpoint}`,
     );
   }
@@ -759,11 +766,23 @@ export async function chooseSmsOtpDeliveryIfPresent(page, flow) {
     return false;
   }
 
+  // Some providers (e.g. Discovery) auto-send the OTP to the registered
+  // cellphone and render the entry field immediately, often alongside a
+  // "Resend OTP" control that trips the delivery-choice heuristic. When the OTP
+  // input is already on screen there is no delivery method to pick — defer to
+  // the manual-entry path rather than failing to select a non-existent SMS
+  // option. The dedicated delivery-choice screen (e.g. BrightRock) shows no OTP
+  // input until after a method is chosen, so this never short-circuits it.
+  const alreadyDeliveredTarget = await findOtpEntryTarget(page, flow, undefined, 1500);
+  if (alreadyDeliveredTarget) {
+    return false;
+  }
+
   const selectedSms = await selectBrightRockSmsOtpOption(page);
   if (!selectedSms) {
     const snapshot = await capturePolicyConfirmationSnapshot(page).catch(() => ({ sample: '' }));
     throw new Error(
-      'BrightRock asked how to receive the OTP, but the worker could not positively select SMS. '
+      `${getProviderLabel(flow)} asked how to receive the OTP, but the worker could not positively select SMS. `
       + `Visible page sample: ${snapshot.sample || 'none'}`,
     );
   }
@@ -795,7 +814,7 @@ export async function chooseSmsOtpDeliveryIfPresent(page, flow) {
   await writeOtpDiagnostics(page, 'brightrock-otp-send-action-missing', {
     seenCandidates: uniqueWarnings(seenCandidates),
   });
-  throw new Error('BrightRock SMS OTP option was selected, but the Send OTP action was not visible or was still disabled.');
+  throw new Error(`${getProviderLabel(flow)} SMS OTP option was selected, but the Send OTP action was not visible or was still disabled.`);
 }
 
 export async function detectAuthCheckpoint(page, flow) {
@@ -871,6 +890,16 @@ export async function handleManualOtpCheckpoint(page, flow) {
     return { handled: true, requiresCredentialResubmit: result?.requiresCredentialResubmit === true };
   }
 
+  // When the OTP entry field is already on screen the provider has delivered
+  // (or is delivering) the code — Discovery and similar providers auto-send to
+  // the registered phone. Enter it directly instead of clicking a generic
+  // Send/Continue button, which could submit an empty field on these screens.
+  const deliveredTarget = await findOtpEntryTarget(page, flow, undefined, 3000);
+  if (deliveredTarget) {
+    const result = await promptForManualOtp(page, flow, undefined, deliveredTarget);
+    return { handled: true, requiresCredentialResubmit: result?.requiresCredentialResubmit === true };
+  }
+
   const sentVisibleOtp = await clickVisibleOtpSendAction(page, flow);
   if (sentVisibleOtp) {
     const result = await completeManualOtpAfterDelivery(page, flow);
@@ -919,7 +948,7 @@ export async function assertPastAuthCheckpoint(page, flow, stageLabel) {
 
   throw new Error(
     `Provider is still on a login verification step before ${stageLabel}. `
-    + `Complete the BrightRock verification/OTP step before policy search can continue. `
+    + `Complete the ${getProviderLabel(flow)} verification/OTP step before policy search can continue. `
     + `Visible page sample: ${checkpoint}`,
   );
 }
