@@ -54,7 +54,6 @@ function getStripe(): Stripe {
   _stripe = new Stripe(key, {
     apiVersion: '2024-06-20',
     httpClient: Stripe.createFetchHttpClient(),
-    // @ts-ignore — appInfo is accepted at runtime; helps Stripe support triage.
     appInfo: { name: 'NavigateWealth Treasury Manager' },
   });
   return _stripe;
