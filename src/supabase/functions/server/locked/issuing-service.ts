@@ -16,8 +16,10 @@
  *     the Stripe-Account header; otherwise it operates on the key's own account
  *     (here, Tokensoft).
  *   - Full PAN + CVC are only fetched on the explicit, audited reveal read.
- *   - When STRIPE_FINANCIAL_ACCOUNT_ID is set, new cards are backed by that
- *     Treasury financial account so spend draws from its balance.
+ *   - A financial account can only back a card in the connected-account model
+ *     (STRIPE_CONNECTED_ACCOUNT_ID set). On the platform's own account, cards
+ *     draw from its Issuing balance; STRIPE_FINANCIAL_ACCOUNT_ID is NOT sent
+ *     (a platform's own FA can't back a card — Stripe requires a connected one).
  *
  * @module server/locked/issuing-service
  */
@@ -282,9 +284,18 @@ export const IssuingService = {
     return res.data.map(mapCard);
   },
 
-  /** Create an active virtual card, optionally backed by the Treasury account. */
+  /** Create an active virtual card, optionally backed by a connected account's FA. */
   async createVirtualCard(input: CardInput): Promise<CardDTO> {
-    const financialAccount = Deno.env.get('STRIPE_FINANCIAL_ACCOUNT_ID');
+    // A financial account can only back an Issuing card when it belongs to a
+    // *connected* account (addressed via the Stripe-Account header). A platform's
+    // OWN financial account cannot back a card — Stripe rejects it with "you can
+    // only issue for connected accounts". So only pin financial_account in the
+    // connected-account model; on the platform's own account, omit it and the
+    // card draws from the account's Issuing balance.
+    const connectedAccount = Deno.env.get('STRIPE_CONNECTED_ACCOUNT_ID');
+    const financialAccount = connectedAccount
+      ? Deno.env.get('STRIPE_FINANCIAL_ACCOUNT_ID')
+      : undefined;
     const spendingControls =
       input.spendingLimitAmount && input.spendingLimitInterval
         ? {
