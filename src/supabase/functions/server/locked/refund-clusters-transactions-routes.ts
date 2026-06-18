@@ -8,7 +8,6 @@
  */
 
 import { Hono } from 'npm:hono';
-import { requireSuperAdmin } from '../auth-mw.ts';
 import { asyncHandler } from '../error.middleware.ts';
 import { createModuleLogger } from '../stderr-logger.ts';
 import { RefundClustersService, type TransactionInput } from './refund-clusters-service.ts';
@@ -24,8 +23,10 @@ import {
 const app = new Hono();
 const log = createModuleLogger('refund-clusters-transactions-routes');
 
-// Every route in this module is super-admin only.
-app.use('*', requireSuperAdmin);
+// Super-admin enforcement is applied once by the parent router
+// (refund-clusters-routes.ts registers `app.use('*', requireSuperAdmin)`
+// before mounting this sub-app), so it is intentionally NOT repeated here —
+// a second guard would run a redundant remote auth check on every request.
 
 app.get(
   '/:clusterId/entities/:entityId/transactions',
