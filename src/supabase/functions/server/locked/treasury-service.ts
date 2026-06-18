@@ -430,23 +430,34 @@ function mapV2Balance(fa: RawV2FinancialAccount, currency: string): BalanceDTO {
 }
 
 /**
- * Map a v2 FinancialAddress into our BankDetailsDTO. The exact credentials
- * nesting is not doc-verified, so probe the plausible paths and fall back
- * gracefully (an empty/partial entry is better than a thrown read).
+ * Sensitive credential fields requested via `include` on the audited reveal read.
+ * v2 exposes a full account number only when its exact dotted path is included;
+ * a bare `credentials` is not a valid include value. US nests under `aba`; the
+ * GB/EUR network keys are not fully doc-verified, so we request the plausible
+ * set and fall back to the masked read if Stripe rejects an unknown path.
+ */
+const REVEAL_INCLUDES = [
+  'credentials.aba.account_number',
+  'credentials.sort_code.account_number',
+  'credentials.iban.account_number',
+];
+
+/**
+ * Map a v2 FinancialAddress into our BankDetailsDTO.
+ *
+ * v2 puts the credential discriminator on `credentials.type` (e.g. "aba"), with
+ * a sibling hash of the same name holding the network's fields — NOT on the
+ * address object. We read `credentials.type` first, then fall back to probing
+ * the known network keys, so a partial entry is returned rather than a thrown
+ * read when a leaf shape differs.
  */
 function mapV2BankDetails(addr: RawV2FinancialAddress): BankDetailsDTO {
-  const type = String(addr.type ?? addr.currency ?? 'bank');
   const cred = isRecord(addr.credentials) ? addr.credentials : {};
-  // Credentials may be flat, or nested under a network key (aba / gb / iban / type).
-  const nestedCandidates = [
-    cred[type],
-    cred.aba,
-    cred.gb_bank_account,
-    cred.sort_code_account,
-    cred.iban_account,
-    cred.sepa,
-  ].find(isRecord);
-  const sub: Record<string, unknown> = nestedCandidates ?? cred;
+  const credType = typeof cred.type === 'string' ? cred.type : null;
+  const sub: Record<string, unknown> =
+    (credType && isRecord(cred[credType]) ? (cred[credType] as Record<string, unknown>) : null) ??
+    [cred.aba, cred.sort_code, cred.gb_bank_account, cred.iban, cred.sepa].find(isRecord) ??
+    cred;
 
   const pick = (...keys: string[]): string | null => {
     for (const k of keys) {
@@ -461,13 +472,43 @@ function mapV2BankDetails(addr: RawV2FinancialAddress): BankDetailsDTO {
     pick('account_number_last4', 'last4') ?? (accountNumber ? accountNumber.slice(-4) : null);
 
   return {
-    type,
+    type: credType ?? String(addr.type ?? addr.currency ?? 'bank'),
     bankName: pick('bank_name'),
-    routingNumber: pick('routing_number', 'sort_code', 'bic', 'swift'),
+    routingNumber: pick('routing_number', 'sort_code', 'bic', 'swift_code', 'swift'),
     accountNumber,
     accountNumberLast4: last4,
     supportedNetworks: Array.isArray(addr.supported_networks) ? addr.supported_networks : [],
   };
+}
+
+/**
+ * Fetch the financial addresses for an account. On the reveal read, request the
+ * sensitive account-number include paths, but fall back to the masked read if
+ * Stripe rejects an unknown include path so bank details still render.
+ */
+async function fetchFinancialAddresses(
+  faId: string,
+  reveal: boolean,
+): Promise<RawV2FinancialAddress[]> {
+  const baseQuery = { financial_account: faId, limit: 100 };
+  if (reveal) {
+    try {
+      const revealed = await stripeV2Request<RawV2List<RawV2FinancialAddress>>(
+        'GET',
+        '/money_management/financial_addresses',
+        { query: { ...baseQuery, include: REVEAL_INCLUDES } },
+      );
+      return revealed.data ?? [];
+    } catch (err) {
+      log.error('Financial address reveal include rejected; retrying masked (non-fatal)', err);
+    }
+  }
+  const masked = await stripeV2Request<RawV2List<RawV2FinancialAddress>>(
+    'GET',
+    '/money_management/financial_addresses',
+    { query: baseQuery },
+  );
+  return masked.data ?? [];
 }
 
 /** Read a minor-unit integer from a v2 Amount object (or a bare number). */
@@ -512,18 +553,8 @@ export const TreasuryService = {
     // Bank details — non-fatal: a failure here must not block the balance read.
     let bankDetails: BankDetailsDTO[] = [];
     try {
-      const addresses = await stripeV2Request<RawV2List<RawV2FinancialAddress>>(
-        'GET',
-        '/money_management/financial_addresses',
-        {
-          query: {
-            financial_account: faId,
-            limit: 100,
-            ...(revealAccountNumber ? { include: ['credentials'] } : {}),
-          },
-        },
-      );
-      bankDetails = (addresses.data ?? []).map(mapV2BankDetails);
+      const addresses = await fetchFinancialAddresses(faId, revealAccountNumber);
+      bankDetails = addresses.map(mapV2BankDetails);
     } catch (err) {
       log.error('Failed to resolve financial addresses (non-fatal)', err);
     }
@@ -582,6 +613,8 @@ export const TreasuryService = {
       '/money_management/transactions',
       {
         query: {
+          // Scope to the pinned account so multi-FA accounts don't leak unrelated activity.
+          financial_account: requireFinancialAccountId(),
           limit: Math.min(Math.max(opts.limit ?? 25, 1), 100),
           // v2 paginates with an opaque page token rather than starting_after.
           ...(opts.starting_after ? { page: opts.starting_after } : {}),
@@ -606,10 +639,11 @@ export const TreasuryService = {
       '/money_management/inbound_transfers',
       {
         idempotencyKey: input.idempotencyKey,
+        // v2 InboundTransfer uses from/to envelopes (the v1 Treasury shape was flat).
         body: {
-          financial_account: faId,
+          from: { payment_method: input.originPaymentMethod },
+          to: { financial_account: faId, currency: input.currency ?? DEFAULT_CURRENCY },
           amount: { value: input.amount, currency: input.currency ?? DEFAULT_CURRENCY },
-          payment_method: input.originPaymentMethod,
           ...(input.description ? { description: input.description } : {}),
         },
       },
@@ -630,11 +664,15 @@ export const TreasuryService = {
         idempotencyKey: input.idempotencyKey,
         // OutboundPayment to a recipient is scoped via Stripe-Context.
         ...(input.customer ? { stripeContext: input.customer } : {}),
+        // v2 OutboundPayment uses from/to envelopes; recipient lives inside `to`.
         body: {
-          financial_account: faId,
+          from: { financial_account: faId, currency: input.currency ?? DEFAULT_CURRENCY },
+          to: {
+            ...(input.customer ? { recipient: input.customer } : {}),
+            payout_method: input.destinationPaymentMethod,
+            currency: input.currency ?? DEFAULT_CURRENCY,
+          },
           amount: { value: input.amount, currency: input.currency ?? DEFAULT_CURRENCY },
-          ...(input.customer ? { recipient: input.customer } : {}),
-          to: { payout_method: input.destinationPaymentMethod },
           ...(input.description ? { description: input.description } : {}),
         },
       },
