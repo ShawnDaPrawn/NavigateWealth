@@ -16,6 +16,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../../ui/tabs';
 import { useCurrentUserPermissions } from '../personnel/hooks/usePermissions';
 import { LockedSkeleton } from './components/LockedSkeleton';
 import { RefundClustersPanel } from './refund-clusters/RefundClustersPanel';
+import { TreasuryManagerPanel } from './treasury/TreasuryManagerPanel';
 import { getLockoutRemaining, verifyAccessCode } from './access';
 
 /** Empty placeholder for a tab whose content is not built yet. */
@@ -99,7 +100,7 @@ export function LockedModule() {
             </div>
 
             <TabsContent value="manager">
-              <TabPlaceholder title="Manager" />
+              <TreasuryManagerPanel />
             </TabsContent>
             <TabsContent value="refund-clusters">
               <RefundClustersPanel />
