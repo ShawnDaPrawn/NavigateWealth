@@ -1,7 +1,7 @@
 {
   "imports": {
-    "hono": "npm:hono@4.6.14",
-    "hono/": "npm:hono@4.6.14/",
+    "hono": "npm:hono@4.12.26",
+    "hono/": "npm:hono@4.12.26/",
     "zod": "npm:zod@3.24.1",
     "@supabase/supabase-js": "jsr:@supabase/supabase-js@2.49.8",
     "pdf-lib": "npm:pdf-lib@1.17.1",
