@@ -37,6 +37,7 @@ export function SendDialog({
 }: SendDialogProps) {
   const [amount, setAmount] = useState('');
   const [destinationPaymentMethod, setDestinationPaymentMethod] = useState('');
+  const [customer, setCustomer] = useState('');
   const [description, setDescription] = useState('');
   const [confirming, setConfirming] = useState(false);
 
@@ -44,6 +45,7 @@ export function SendDialog({
     if (open) {
       setAmount('');
       setDestinationPaymentMethod('');
+      setCustomer('');
       setDescription('');
       setConfirming(false);
     }
@@ -64,6 +66,7 @@ export function SendDialog({
       amount: amountMinor,
       currency,
       destinationPaymentMethod: destinationPaymentMethod.trim(),
+      customer: customer.trim() || undefined,
       description: description.trim() || undefined,
     });
   };
@@ -109,6 +112,18 @@ export function SendDialog({
                 </p>
               </div>
               <div className="space-y-2">
+                <Label htmlFor="send-customer">Customer ID (for reusable pm_…)</Label>
+                <Input
+                  id="send-customer"
+                  value={customer}
+                  onChange={(e) => setCustomer(e.target.value)}
+                  placeholder="cus_…"
+                />
+                <p className="text-xs text-muted-foreground">
+                  Required when the destination is a reusable payment method attached to a customer.
+                </p>
+              </div>
+              <div className="space-y-2">
                 <Label htmlFor="send-description">Description (optional)</Label>
                 <Input
                   id="send-description"
@@ -149,6 +164,12 @@ export function SendDialog({
                 <span className="text-muted-foreground">To</span>
                 <span className="font-mono text-xs truncate">{destinationPaymentMethod}</span>
               </div>
+              {customer.trim() ? (
+                <div className="flex items-center justify-between gap-3">
+                  <span className="text-muted-foreground">Customer</span>
+                  <span className="font-mono text-xs truncate">{customer.trim()}</span>
+                </div>
+              ) : null}
               {description.trim() ? (
                 <div className="flex items-center justify-between gap-3">
                   <span className="text-muted-foreground">Description</span>

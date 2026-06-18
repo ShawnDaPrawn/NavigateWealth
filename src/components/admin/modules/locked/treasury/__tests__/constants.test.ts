@@ -22,10 +22,16 @@ describe('treasury constants', () => {
       expect(parseToMinor('$0.99')).toBe(99);
     });
 
-    it('rejects empty, zero and negative inputs', () => {
+    it('rejects empty, zero and malformed inputs', () => {
       expect(parseToMinor('')).toBeNull();
       expect(parseToMinor('0')).toBeNull();
       expect(parseToMinor('abc')).toBeNull();
+    });
+
+    it('rejects signed amounts instead of stripping the minus sign', () => {
+      expect(parseToMinor('-10')).toBeNull();
+      expect(parseToMinor('$-0.99')).toBeNull();
+      expect(parseToMinor('10-')).toBeNull();
     });
 
     it('rounds to the nearest cent', () => {

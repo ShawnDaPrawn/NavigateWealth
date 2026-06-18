@@ -66,6 +66,8 @@ export interface SendInput {
   amount: number;
   currency?: string;
   destinationPaymentMethod: string;
+  /** Customer that owns the destination PaymentMethod (required for reusable pm_…). */
+  customer?: string;
   description?: string;
 }
 

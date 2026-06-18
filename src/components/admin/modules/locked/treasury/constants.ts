@@ -28,8 +28,18 @@ export function formatMinor(amountMinor: number, currency = DEFAULT_CURRENCY): s
   }
 }
 
-/** Parse a user-entered major-unit amount ("1,234.56") into integer minor units. */
+/**
+ * Parse a user-entered major-unit amount ("1,234.56") into integer minor units.
+ * Returns null for anything that isn't a positive amount. A leading/embedded
+ * minus is rejected outright rather than silently stripped — this UI initiates
+ * real money movement, so a signed value must never be reinterpreted as
+ * positive.
+ */
 export function parseToMinor(value: string): number | null {
+  if (value.includes('-')) return null;
+  // Allow only digits, dots, commas, whitespace and a currency symbol; any
+  // other character means the input is malformed.
+  if (/[^0-9.,\s$€£]/.test(value)) return null;
   const cleaned = value.replace(/[^0-9.]/g, '');
   if (!cleaned) return null;
   const major = Number(cleaned);

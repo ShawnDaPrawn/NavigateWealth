@@ -75,6 +75,7 @@ function parseMovement(
         currency?: string;
         description?: string;
         paymentMethod: string;
+        customer?: string;
         idempotencyKey: string;
       };
     }
@@ -96,12 +97,15 @@ function parseMovement(
   }
   const currency = typeof body.currency === 'string' ? body.currency : undefined;
   const description = typeof body.description === 'string' ? body.description : undefined;
+  const customer =
+    typeof body.customer === 'string' && body.customer.trim() ? body.customer.trim() : undefined;
   return {
     input: {
       amount,
       currency,
       description,
       paymentMethod: paymentMethod.trim(),
+      customer,
       idempotencyKey: idempotencyKey.trim(),
     },
   };
@@ -229,6 +233,7 @@ app.post(
       currency: parsed.input.currency,
       description: parsed.input.description,
       destinationPaymentMethod: parsed.input.paymentMethod,
+      customer: parsed.input.customer,
       idempotencyKey: parsed.input.idempotencyKey,
     };
     try {
