@@ -100,7 +100,15 @@ async function stripeRequest<T>(
   const res = await fetch(url, { method, headers, body });
   const json = (await res.json().catch(() => ({}))) as { error?: { message?: string } };
   if (!res.ok) {
-    const message = json?.error?.message ?? `Stripe request failed (${res.status})`;
+    let message = json?.error?.message ?? `Stripe request failed (${res.status})`;
+    // Issuing-on-Connect platforms (the key's account can only issue for its
+    // connected accounts) reject calls made on the platform itself. Translate
+    // Stripe's terse message into the actionable fix instead of leaking it raw.
+    if (!connectedAccount && /only issue cards for your connected accounts/i.test(message)) {
+      message =
+        'Issuing must target a connected account: set STRIPE_CONNECTED_ACCOUNT_ID to the ' +
+        'connected account that has the card_issuing capability active.';
+    }
     const status = res.status >= 400 && res.status < 500 ? res.status : 502;
     throw new IssuingError(message, status);
   }
