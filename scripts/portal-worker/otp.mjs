@@ -106,7 +106,7 @@ export function looksLikeOtpDeliveryChoice(text) {
 }
 
 export function looksLikeOtpSentConfirmation(text) {
-  return /otp\s+(has\s+been\s+)?sent|code\s+(has\s+been\s+)?sent|sms\s+(has\s+been\s+)?sent|sent\s+(to|via)\s+(your\s+)?(mobile|cell|phone|sms)|message\s+(has\s+been\s+)?sent/i.test(text || '');
+  return /otp(?:\s+details?)?\s+(?:(?:has|have)\s+been\s+)?sent|code\s+(has\s+been\s+)?sent|sms\s+(has\s+been\s+)?sent|sent\s+(to|via)\s+(your\s+)?(mobile|cell|phone|sms)|message\s+(has\s+been\s+)?sent/i.test(text || '');
 }
 
 export function looksLikeBrightRockOtpInfoModal(text) {
@@ -757,6 +757,9 @@ export async function chooseSmsOtpDeliveryIfPresent(page, flow) {
   const bodyText = await page.locator('body').innerText({ timeout: 2500 }).catch(() => '');
   if (!looksLikeOtpDeliveryChoice(bodyText)) {
     return false;
+  }
+  if (looksLikeOtpSentConfirmation(bodyText)) {
+    return true;
   }
 
   const selectedSms = await selectBrightRockSmsOtpOption(page);
