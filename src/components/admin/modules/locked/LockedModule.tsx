@@ -71,7 +71,10 @@ export function LockedModule() {
         </div>
 
         <TabsContent value="banking">
-          <TabPlaceholder title="Banking" />
+          <div className="space-y-8">
+            <TreasuryManagerPanel />
+            <IssuingCardsPanel />
+          </div>
         </TabsContent>
 
         <TabsContent value="accounts">
@@ -101,10 +104,7 @@ export function LockedModule() {
             </div>
 
             <TabsContent value="manager">
-              <div className="space-y-8">
-                <TreasuryManagerPanel />
-                <IssuingCardsPanel />
-              </div>
+              <TabPlaceholder title="Manager" />
             </TabsContent>
             <TabsContent value="refund-clusters">
               <RefundClustersPanel />
