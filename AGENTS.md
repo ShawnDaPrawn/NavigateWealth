@@ -199,8 +199,9 @@ Session handling in `src/components/auth/AuthContext.tsx` and
 
 ## Notes
 
-- After changing Edge Function behavior, deploy:
-  `npx supabase functions deploy make-server-91ed8379 --project-ref vpjmdsltwrnpefzcgdmz --use-api --workdir .`
+- Edge Function changes deploy **automatically** when they land on `main` — see
+  the "DEPLOYMENT" section above. Do **not** run `supabase functions deploy` by
+  hand.
 - The Supabase function deploy entrypoint is
   `supabase/functions/make-server-91ed8379/index.ts`, which imports
   `src/supabase/functions/server/index.tsx`.
