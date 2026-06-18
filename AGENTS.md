@@ -86,6 +86,37 @@ The user must never have to ask "did it merge yet?"
 
 ---
 
+## DEPLOYMENT — already automated; never deploy by hand
+
+Deployment is fully wired up and has worked for months. Triggered by merging to
+`main`:
+
+- **Edge function** (`make-server-91ed8379`):
+  `.github/workflows/deploy-supabase-function.yml` auto-deploys on every push to
+  `main` that touches `src/supabase/functions/**`, using the long-standing
+  `SUPABASE_ACCESS_TOKEN` repo secret. Project ref `vpjmdsltwrnpefzcgdmz`.
+- **Frontend**: Vercel auto-deploys `main`.
+
+So when the user says **"deploy"**, the entire action is: finish the
+finalization protocol above so the PR **merges to `main`** — the Action + Vercel
+then deploy on their own. After the merge lands, confirm the
+`Deploy Supabase Edge Function` workflow run went green (GitHub MCP Actions /
+Actions tab) and report it.
+
+**Forbidden** — these only waste the user's time and have caused real grief:
+
+- Do **not** run `supabase functions deploy` (or any `supabase` CLI deploy)
+  manually.
+- Do **not** ask the user for, or generate, a Supabase access token. The token
+  already lives in the repo's Actions secret; the workflow uses it.
+- Do **not** try to deploy from the agent sandbox — its network egress blocks
+  `api.supabase.com`, so manual attempts fail regardless.
+
+The user's established flow is simply: _say "deploy" → it merges to `main` →
+it auto-deploys._ Honour that path; never reinvent it.
+
+---
+
 ## Cursor Cloud Specific Instructions
 
 **Product**: Navigate Wealth - a React SPA (Vite + TypeScript) for a South
@@ -168,8 +199,9 @@ Session handling in `src/components/auth/AuthContext.tsx` and
 
 ## Notes
 
-- After changing Edge Function behavior, deploy:
-  `npx supabase functions deploy make-server-91ed8379 --project-ref vpjmdsltwrnpefzcgdmz --use-api --workdir .`
+- Edge Function changes deploy **automatically** when they land on `main` — see
+  the "DEPLOYMENT" section above. Do **not** run `supabase functions deploy` by
+  hand.
 - The Supabase function deploy entrypoint is
   `supabase/functions/make-server-91ed8379/index.ts`, which imports
   `src/supabase/functions/server/index.tsx`.
