@@ -1,7 +1,7 @@
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import {
   getFnaStatusDescription,
-  isFnaIntakeFeatureEnabled,
+  getFnaStatusLabel,
   resolveFnaHubView,
 } from '@/shared/fna-intake/fna-intake-labels';
 
@@ -19,10 +19,9 @@ describe('fna-intake-labels', () => {
     expect(description).toContain('needs more information');
   });
 
-  it('requires explicit opt-in for intake feature flag', () => {
-    expect(isFnaIntakeFeatureEnabled()).toBe(false);
-    vi.stubEnv('VITE_FNA_INTAKE_ENABLED', 'true');
-    expect(isFnaIntakeFeatureEnabled()).toBe(true);
-    vi.unstubAllEnvs();
+  it('uses client and adviser friendly status labels', () => {
+    expect(getFnaStatusLabel('submitted', 'client')).toBe('With your adviser');
+    expect(getFnaStatusLabel('client_draft', 'client')).toBe('Continue');
+    expect(getFnaStatusLabel('submitted', 'adviser')).toBe('Review queue');
   });
 });
