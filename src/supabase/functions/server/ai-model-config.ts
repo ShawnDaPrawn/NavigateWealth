@@ -2,18 +2,22 @@
  * ai-model-config.ts — centralized OpenAI model configuration + a shared
  * Responses API helper used across the server AI services.
  *
- * Single source of truth for the OpenAI model id. The primary model is
- * env-overridable (OPENAI_MODEL) so the exact GPT-5 family identifier can be
- * corrected without a code change; gpt-4o is retained as a resilient fallback.
+ * Single source of truth for the OpenAI model id. The default is `gpt-4o`
+ * (the model every AI service used and verified in production before this
+ * config was centralised). The primary model is env-overridable (OPENAI_MODEL)
+ * so a GPT-5-family identifier can be adopted without a code change once it has
+ * been verified against the account's available models; gpt-4o is also the
+ * resilient fallback.
  *
  * GPT-5-family models are served through the Responses API: they use
  * `max_output_tokens` (not `max_tokens`) and do not accept a custom
  * `temperature`. This module encapsulates those differences and falls back to
  * the Chat Completions API on the fallback model when the Responses call fails.
  *
- * NOTE: the exact OpenAI model id ("gpt-5.4") should be verified against the
- * account's available models — override with the OPENAI_MODEL env var if the
- * published identifier differs.
+ * NOTE: do NOT default this to an unverified id (a previous default of
+ * "gpt-5.4" did not exist and silently broke every AI feature — the chat-
+ * completions callers have no model fallback). Point OPENAI_MODEL at a real
+ * GPT-5 id only after confirming the account can serve it.
  */
 import { createModuleLogger } from './stderr-logger.ts';
 import { getErrMsg } from './shared-logger-utils.ts';
@@ -30,8 +34,8 @@ function readEnv(name: string): string | undefined {
   return undefined;
 }
 
-/** Primary model used for new AI features (env-overridable). */
-export const OPENAI_PRIMARY_MODEL = readEnv('OPENAI_MODEL') || 'gpt-5.4';
+/** Primary model used for new AI features (env-overridable, verified default). */
+export const OPENAI_PRIMARY_MODEL = readEnv('OPENAI_MODEL') || 'gpt-4o';
 
 /** Resilient fallback model served through Chat Completions. */
 export const OPENAI_FALLBACK_MODEL = readEnv('OPENAI_FALLBACK_MODEL') || 'gpt-4o';
