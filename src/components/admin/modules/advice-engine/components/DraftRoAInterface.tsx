@@ -149,18 +149,32 @@ export function DraftRoAInterface() {
   };
 
   const createNewDraft = async () => {
-    const newDraft: RoADraft = {
-      id: `roa-${Date.now()}`,
-      selectedModules: [],
-      moduleData: {},
-      status: 'draft',
-      createdAt: new Date(),
-      updatedAt: new Date(),
-      version: 1,
-    };
-    setRoaDraft(newDraft);
-    setCurrentStep(1); // Move to client step
-    await autoSave(newDraft);
+    // Create the draft on the server up front (POST) so it owns a real id. The
+    // wizard then updates this record via PUT on every step, and the
+    // conversation endpoints (start/chat) require the draft to exist
+    // server-side — without this first create, those calls fail with
+    // "RoA draft not found".
+    setIsAutoSaving(true);
+    try {
+      const created = await roaApi.saveDraft(null, {
+        selectedModules: [],
+        moduleData: {},
+        status: 'draft',
+        version: 1,
+      });
+      setRoaDraft(created);
+      setCurrentStep(1); // Move to client step
+      queryClient.invalidateQueries({ queryKey: adviceEngineKeys.roa.drafts() });
+    } catch (error) {
+      console.error('Failed to create RoA draft:', error);
+      toast.error(
+        error instanceof Error
+          ? error.message
+          : 'Could not start a new RoA draft. Please try again.',
+      );
+    } finally {
+      setIsAutoSaving(false);
+    }
   };
 
   const resumeExistingDraft = (draft: RoADraft) => {
