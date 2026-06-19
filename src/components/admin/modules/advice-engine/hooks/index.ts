@@ -12,6 +12,8 @@ export { useChatHistory } from './useChatHistory';
 export { useRoADraft } from './useRoADraft';
 export { useRoAClientContext } from './useRoAClientContext';
 export { useRoAModuleContracts } from './useRoAModuleContracts';
+export { useRoAModuleChat } from './useRoAModuleChat';
+export type { UseRoAModuleChatParams, UseRoAModuleChatReturn } from './useRoAModuleChat';
 
 // Re-export types for convenience
 export type {

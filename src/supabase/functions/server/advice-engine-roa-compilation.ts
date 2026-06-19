@@ -251,6 +251,22 @@ function buildModuleSummary(
   return `${contract.title}: ${recordedValues.map((item) => `${item.label} - ${item.value}`).join('; ')}.`;
 }
 
+function buildNarrativeSummary(
+  contract: RoAModuleContract,
+  sections: Array<{ title: string; content: string }>,
+): string {
+  const firstWithContent = sections.find((section) => section.content && section.content.trim());
+  if (!firstWithContent) {
+    return `${contract.title} was completed through the conversational advice flow.`;
+  }
+  const plain = firstWithContent.content
+    .replace(/[#*_>`-]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+  const snippet = plain.length > 260 ? `${plain.slice(0, 257)}…` : plain;
+  return `${contract.title}: ${snippet}`;
+}
+
 function buildNeedsAndObjectives(draft: RoADraftRecord, modules: RoACompiledModule[]): string[] {
   const clientGoals = asRecord(draft.clientSnapshot?.financialInformation).goals;
   const goals = Array.isArray(clientGoals)
@@ -305,13 +321,10 @@ export function buildCanonicalRoACompilation(input: {
   const modules: RoACompiledModule[] = draft.selectedModules.map((moduleId) => {
     const contract = contractsById.get(moduleId);
     if (!contract) throw new ValidationError(`Module contract not found: ${moduleId}`);
-    const moduleData = asRecord(draft.moduleData[moduleId]);
     const moduleEvidence = asRecord(draft.moduleEvidence?.[moduleId]) as Record<
       string,
       RoAEvidenceItem
     >;
-    const moduleOutput = asRecord(draft.moduleOutputs?.[moduleId]);
-    const outputValues = buildModuleOutputValues(contract, moduleData, moduleOutput);
     const evidence = Object.values(moduleEvidence || {}).map((item) => ({
       id: item.id,
       label: item.label,
@@ -321,6 +334,32 @@ export function buildCanonicalRoACompilation(input: {
       sha256: item.sha256,
       uploadedAt: item.uploadedAt,
     }));
+
+    // Conversation modules: the narrative prose is authored by the AI.
+    if (contract.authoringMode === 'conversation') {
+      const narrative = draft.moduleNarratives?.[moduleId];
+      const sections = (narrative?.sections || [])
+        .filter((section) => section.markdown && section.markdown.trim())
+        .map((section) => ({ id: section.id, title: section.title, content: section.markdown }));
+      return {
+        moduleId,
+        title: contract.title,
+        category: contract.category,
+        contractVersion: contract.version,
+        contractSchemaVersion: contract.schemaVersion,
+        normalizedKey: contract.output.normalizedKey,
+        compilerHints: contract.compilerHints,
+        summary: buildNarrativeSummary(contract, sections),
+        outputValues: [],
+        evidence,
+        sections,
+        disclosures: contract.disclosures,
+      };
+    }
+
+    const moduleData = asRecord(draft.moduleData[moduleId]);
+    const moduleOutput = asRecord(draft.moduleOutputs?.[moduleId]);
+    const outputValues = buildModuleOutputValues(contract, moduleData, moduleOutput);
     const tokenContext: JsonRecord = {
       client: draft.clientSnapshot || {},
       adviser: draft.adviserSnapshot || {},

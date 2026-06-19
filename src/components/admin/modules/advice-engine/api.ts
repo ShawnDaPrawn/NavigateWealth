@@ -14,7 +14,7 @@
 import { api } from '../../../../utils/api/client';
 import { logger } from '../../../../utils/logger';
 import { getErrorMessage } from '../../../../utils/errorUtils';
-import { ENDPOINTS } from './constants';
+import { ENDPOINTS, ROA_CONVERSATION_ENDPOINTS } from './constants';
 import type {
   ChatRequest,
   ChatResponse,
@@ -31,6 +31,10 @@ import type {
   RoAModuleContract,
   RoAModuleContractSchemaFormat,
   RoAValidationResult,
+  RoAConversationProgress,
+  RoAConvUploadRef,
+  RoAModuleConversationRecord,
+  RoAModuleNarrative,
   Client,
   Personnel,
 } from './types';
@@ -637,6 +641,150 @@ export const roaApi = {
       {},
     );
     return { draft: normaliseDraft(response.draft) };
+  },
+
+  // ==========================================================================
+  // RoA Module Conversation (AI authoring) API
+  // ==========================================================================
+
+  /**
+   * Start (or resume) the conversation flow for a draft. Idempotent on the
+   * backend — safe to call when the adviser enters the conversation step.
+   */
+  async startConversation(draftId: string): Promise<{ progress: RoAConversationProgress }> {
+    try {
+      const response = await api.post<{ progress: RoAConversationProgress }>(
+        ROA_CONVERSATION_ENDPOINTS.start(draftId),
+        {},
+      );
+      return response;
+    } catch (error) {
+      logger.error('Failed to start RoA conversation', error, { draftId });
+      throw error;
+    }
+  },
+
+  /**
+   * Get the per-module conversation progress for a draft.
+   */
+  async getConversationProgress(draftId: string): Promise<{ progress: RoAConversationProgress }> {
+    try {
+      const response = await api.get<{ progress: RoAConversationProgress }>(
+        ROA_CONVERSATION_ENDPOINTS.progress(draftId),
+      );
+      return response;
+    } catch (error) {
+      logger.error('Failed to get RoA conversation progress', error, { draftId });
+      throw error;
+    }
+  },
+
+  /**
+   * Get the conversation record for a single module (or null if not started).
+   */
+  async getModuleConversation(
+    draftId: string,
+    moduleId: string,
+  ): Promise<{ conversation: RoAModuleConversationRecord | null }> {
+    try {
+      const response = await api.get<{ conversation: RoAModuleConversationRecord | null }>(
+        ROA_CONVERSATION_ENDPOINTS.moduleConversation(draftId, moduleId),
+      );
+      return response;
+    } catch (error) {
+      logger.error('Failed to get RoA module conversation', error, { draftId, moduleId });
+      throw error;
+    }
+  },
+
+  /**
+   * Send a chat message to a module conversation and receive the assistant reply.
+   */
+  async sendModuleMessage(
+    draftId: string,
+    moduleId: string,
+    message: string,
+  ): Promise<{
+    conversation: RoAModuleConversationRecord;
+    reply: string;
+    isComplete: boolean;
+  }> {
+    try {
+      const response = await api.post<{
+        conversation: RoAModuleConversationRecord;
+        reply: string;
+        isComplete: boolean;
+      }>(ROA_CONVERSATION_ENDPOINTS.moduleChat(draftId, moduleId), { message });
+      return response;
+    } catch (error) {
+      logger.error('Failed to send RoA module message', error, { draftId, moduleId });
+      throw error;
+    }
+  },
+
+  /**
+   * Manually mark a module conversation complete.
+   */
+  async completeModule(
+    draftId: string,
+    moduleId: string,
+  ): Promise<{ conversation: RoAModuleConversationRecord }> {
+    try {
+      const response = await api.post<{ conversation: RoAModuleConversationRecord }>(
+        ROA_CONVERSATION_ENDPOINTS.moduleComplete(draftId, moduleId),
+        {},
+      );
+      return response;
+    } catch (error) {
+      logger.error('Failed to complete RoA module conversation', error, { draftId, moduleId });
+      throw error;
+    }
+  },
+
+  /**
+   * Upload a supporting file into a module conversation.
+   */
+  async uploadModuleFile(
+    draftId: string,
+    moduleId: string,
+    upload: {
+      uploadId: string;
+      fileName: string;
+      mimeType?: string;
+      size?: number;
+      bytesBase64: string;
+    },
+  ): Promise<{ conversation: RoAModuleConversationRecord; upload: RoAConvUploadRef }> {
+    try {
+      const response = await api.post<{
+        conversation: RoAModuleConversationRecord;
+        upload: RoAConvUploadRef;
+      }>(ROA_CONVERSATION_ENDPOINTS.moduleUpload(draftId, moduleId), upload);
+      return response;
+    } catch (error) {
+      logger.error('Failed to upload RoA module file', error, { draftId, moduleId });
+      throw error;
+    }
+  },
+
+  /**
+   * Save edited narrative sections for a module.
+   */
+  async saveModuleNarrative(
+    draftId: string,
+    moduleId: string,
+    sections: { id: string; markdown: string }[],
+  ): Promise<{ conversation: RoAModuleConversationRecord; narrative: RoAModuleNarrative }> {
+    try {
+      const response = await api.put<{
+        conversation: RoAModuleConversationRecord;
+        narrative: RoAModuleNarrative;
+      }>(ROA_CONVERSATION_ENDPOINTS.moduleNarrative(draftId, moduleId), { sections });
+      return response;
+    } catch (error) {
+      logger.error('Failed to save RoA module narrative', error, { draftId, moduleId });
+      throw error;
+    }
   },
 };
 

@@ -3,12 +3,17 @@ import { requireAuth } from './auth-mw.ts';
 import { asyncHandler } from './error.middleware.ts';
 import { AdviceEngineRoAService } from './advice-engine-roa-service.ts';
 import { AdviceEngineRoAContractService } from './advice-engine-roa-contract-service.ts';
+import {
+  AdviceEngineRoAConversationService,
+  sanitiseConversationRecord,
+} from './advice-engine-roa-conversation.ts';
 import { buildClientContext } from './advice-engine-roa-service-helpers.ts';
 import { ClientIdParamSchema } from './advice-engine-validation.ts';
 
 const app = new Hono();
 const roaService = new AdviceEngineRoAService();
 const roaContractService = new AdviceEngineRoAContractService();
+const roaConversationService = new AdviceEngineRoAConversationService();
 
 function canUseRoA(role: string | undefined): boolean {
   return ['super_admin', 'super-admin', 'admin', 'adviser', 'paraplanner', 'compliance'].includes(
@@ -526,6 +531,167 @@ app.post(
       (document) => !existingDocumentIds.has(document.id),
     );
     return c.json({ draft, documents, compilation: draft.compiledOutput });
+  }),
+);
+
+// ============================================================================
+// CONVERSATIONAL MODULE FLOW
+// ============================================================================
+
+async function loadAccessibleDraft(
+  c: any,
+): Promise<{ error?: Response; draftId?: string; draft?: any }> {
+  const role = c.get('userRole') as string | undefined;
+  if (!canUseRoA(role)) {
+    return {
+      error: c.json({ error: 'Forbidden: Advice access required', code: 'FORBIDDEN_ADVICE' }, 403),
+    };
+  }
+  const draftId = c.req.param('draftId')!;
+  const draft = await roaService.getDraft(draftId);
+  if (!canAccessRoADraft(role, c.get('userId') as string, draft)) {
+    return { error: forbiddenRoADraftResponse(c) };
+  }
+  return { draftId, draft };
+}
+
+app.post(
+  '/roa/drafts/:draftId/conversation/start',
+  requireAuth,
+  asyncHandler(async (c) => {
+    const access = await loadAccessibleDraft(c);
+    if (access.error) return access.error;
+
+    const contracts = await roaContractService.listContracts({ status: 'active' });
+    const result = await roaConversationService.startConversations(
+      access.draftId!,
+      contracts,
+      c.get('user') as { id: string; email?: string },
+    );
+    return c.json(result);
+  }),
+);
+
+app.get(
+  '/roa/drafts/:draftId/conversation/progress',
+  requireAuth,
+  asyncHandler(async (c) => {
+    const access = await loadAccessibleDraft(c);
+    if (access.error) return access.error;
+
+    const contracts = await roaContractService.listContracts({ status: 'active' });
+    const progress = await roaConversationService.getProgress(access.draftId!, contracts);
+    return c.json({ progress });
+  }),
+);
+
+app.get(
+  '/roa/drafts/:draftId/modules/:moduleId/conversation',
+  requireAuth,
+  asyncHandler(async (c) => {
+    const access = await loadAccessibleDraft(c);
+    if (access.error) return access.error;
+
+    const record = await roaConversationService.getConversation(
+      access.draftId!,
+      c.req.param('moduleId')!,
+    );
+    return c.json({ conversation: record ? sanitiseConversationRecord(record) : null });
+  }),
+);
+
+app.post(
+  '/roa/drafts/:draftId/modules/:moduleId/chat',
+  requireAuth,
+  asyncHandler(async (c) => {
+    const access = await loadAccessibleDraft(c);
+    if (access.error) return access.error;
+
+    const body = await c.req.json();
+    const contracts = await roaContractService.listContracts({ status: 'active' });
+    const result = await roaConversationService.sendMessage(
+      access.draftId!,
+      c.req.param('moduleId')!,
+      body.message,
+      contracts,
+      c.get('user') as { id: string; email?: string },
+    );
+    return c.json({
+      conversation: sanitiseConversationRecord(result.record),
+      reply: result.reply,
+      isComplete: result.isComplete,
+    });
+  }),
+);
+
+app.post(
+  '/roa/drafts/:draftId/modules/:moduleId/complete',
+  requireAuth,
+  asyncHandler(async (c) => {
+    const access = await loadAccessibleDraft(c);
+    if (access.error) return access.error;
+
+    const contracts = await roaContractService.listContracts({ status: 'active' });
+    const result = await roaConversationService.complete(
+      access.draftId!,
+      c.req.param('moduleId')!,
+      contracts,
+      c.get('user') as { id: string; email?: string },
+    );
+    return c.json({ conversation: sanitiseConversationRecord(result.record) });
+  }),
+);
+
+app.post(
+  '/roa/drafts/:draftId/modules/:moduleId/upload',
+  requireAuth,
+  asyncHandler(async (c) => {
+    const access = await loadAccessibleDraft(c);
+    if (access.error) return access.error;
+
+    const body = await c.req.json();
+    const contracts = await roaContractService.listContracts({ status: 'active' });
+    const result = await roaConversationService.uploadFile(
+      access.draftId!,
+      c.req.param('moduleId')!,
+      {
+        uploadId: body.uploadId,
+        fileName: body.fileName,
+        mimeType: body.mimeType,
+        size: body.size,
+        bytesBase64: body.bytesBase64,
+      },
+      contracts,
+      c.get('user') as { id: string; email?: string },
+    );
+    return c.json({
+      conversation: sanitiseConversationRecord(result.record),
+      upload: result.upload,
+    });
+  }),
+);
+
+app.put(
+  '/roa/drafts/:draftId/modules/:moduleId/narrative',
+  requireAuth,
+  asyncHandler(async (c) => {
+    const access = await loadAccessibleDraft(c);
+    if (access.error) return access.error;
+
+    const body = await c.req.json();
+    const sections = Array.isArray(body.sections) ? body.sections : [];
+    const contracts = await roaContractService.listContracts({ status: 'active' });
+    const result = await roaConversationService.saveNarrative(
+      access.draftId!,
+      c.req.param('moduleId')!,
+      sections,
+      contracts,
+      c.get('user') as { id: string; email?: string },
+    );
+    return c.json({
+      conversation: sanitiseConversationRecord(result.record),
+      narrative: result.narrative,
+    });
   }),
 );
 

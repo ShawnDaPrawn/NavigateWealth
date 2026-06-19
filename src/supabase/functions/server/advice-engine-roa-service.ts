@@ -56,6 +56,11 @@ export type {
   RoAGeneratedDocument,
   RoAAuditEvent,
   RoAEvidenceUploadInput,
+  RoAModuleConversationStatus,
+  RoAConvUploadRef,
+  RoAConvMessage,
+  RoAModuleNarrative,
+  RoAModuleConversationRecord,
 } from './advice-engine-roa-draft-types.ts';
 export { buildCanonicalRoACompilation } from './advice-engine-roa-compilation.ts';
 export { createCanonicalRoAPdf, createCanonicalRoADocx } from './advice-engine-roa-document-gen.ts';
@@ -74,6 +79,8 @@ import type {
 const log = createModuleLogger('advice-engine-roa-service');
 
 const DRAFT_PREFIX = 'roa:draft:';
+/** Per-module conversation transcripts (distinct namespace so it never pollutes draft listings). */
+export const CONVERSATION_PREFIX = 'roa:conversation:';
 const CLIENT_DRAFT_PREFIX = (clientId: string) => `roa:client:${clientId}:draft:`;
 const ADVISER_DRAFT_PREFIX = (adviserId: string) => `roa:adviser:${adviserId}:draft:`;
 const EVIDENCE_PREFIX = 'roa:evidence:';
@@ -155,6 +162,10 @@ export class AdviceEngineRoAService {
       compiledOutput: input.compiledOutput || existing?.compiledOutput,
       generatedDocuments: input.generatedDocuments || existing?.generatedDocuments,
       status: (input.status || existing?.status || 'draft') as RoADraftStatus,
+      authoringMode: input.authoringMode ?? existing?.authoringMode ?? 'conversation',
+      moduleConversationStatus:
+        input.moduleConversationStatus ?? existing?.moduleConversationStatus,
+      moduleNarratives: input.moduleNarratives ?? existing?.moduleNarratives,
       createdAt: existing?.createdAt || now,
       updatedAt: now,
       version: readNumber(input.version, existing?.version || 1),
@@ -251,6 +262,11 @@ export class AdviceEngineRoAService {
       moduleData: cloneJson(source.moduleData || {}),
       moduleOutputs: source.moduleOutputs ? cloneJson(source.moduleOutputs) : undefined,
       moduleEvidence: source.moduleEvidence ? cloneJson(source.moduleEvidence) : undefined,
+      authoringMode: source.authoringMode ?? 'conversation',
+      moduleConversationStatus: source.moduleConversationStatus
+        ? cloneJson(source.moduleConversationStatus)
+        : undefined,
+      moduleNarratives: source.moduleNarratives ? cloneJson(source.moduleNarratives) : undefined,
       validationResults: undefined,
       compiledOutput: undefined,
       generatedDocuments: undefined,
@@ -535,6 +551,13 @@ export class AdviceEngineRoAService {
           keysToDelete.push(`${CLIENT_DOCUMENT_REGISTER_PREFIX(clientId)}${id}`);
         }
       }
+    }
+
+    // Per-module conversation transcripts live in a distinct namespace.
+    const conversationRecords = await kv.getByPrefix(`${CONVERSATION_PREFIX}${draftId}:`);
+    for (const record of conversationRecords) {
+      const moduleId = readString(asRecord(record).moduleId);
+      if (moduleId) keysToDelete.push(`${CONVERSATION_PREFIX}${draftId}:${moduleId}`);
     }
 
     const uniqueKeys = [...new Set(keysToDelete.filter(Boolean))];

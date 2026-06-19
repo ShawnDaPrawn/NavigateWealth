@@ -4,6 +4,7 @@ import { NotFoundError, ValidationError } from './error.middleware.ts';
 import type { RoAModuleContract } from './advice-engine-roa-contract-types.ts';
 import { uploadRoABlob, roaGeneratedBlobPath } from './advice-engine-roa-storage.ts';
 import { createCanonicalRoAPdf, createCanonicalRoADocx } from './advice-engine-roa-document-gen.ts';
+import { getRoABrandKit } from './advice-engine-roa-branding.ts';
 import type {
   AuthUserLike,
   RoAAdviserSnapshot,
@@ -98,12 +99,13 @@ export async function createDocumentArtifacts(
     compiledDraft.compiledOutput.documentControl.moduleContractVersions,
   ) as Record<string, number>;
   const generatedDocuments: RoAGeneratedDocument[] = [];
+  const brandKit = await getRoABrandKit();
 
   for (const format of formats) {
     const bytes =
       format === 'pdf'
-        ? await createCanonicalRoAPdf(compiledDraft.compiledOutput)
-        : await createCanonicalRoADocx(compiledDraft.compiledOutput);
+        ? await createCanonicalRoAPdf(compiledDraft.compiledOutput, brandKit)
+        : await createCanonicalRoADocx(compiledDraft.compiledOutput, brandKit);
     const sha256 = await sha256Base64(bytes);
     const id = crypto.randomUUID();
     const fileName = `RoA_${clientName}_${now.slice(0, 10)}_v${compiledDraft.version}${statusSuffix}.${format}`;
@@ -353,8 +355,54 @@ export function validateDraftWithContracts(
       continue;
     }
 
-    const moduleData = asRecord(draft.moduleData[moduleId]);
     const evidence = asRecord(draft.moduleEvidence?.[moduleId]);
+
+    // Conversation modules are validated against the AI-authored narrative and
+    // conversation status rather than typed form fields.
+    if (contract.authoringMode === 'conversation') {
+      const status = draft.moduleConversationStatus?.[moduleId];
+      const narrative = draft.moduleNarratives?.[moduleId];
+      if (status !== 'complete' || !narrative || narrative.sections.length === 0) {
+        blocking.push({
+          id: `${moduleId}:conversation_incomplete`,
+          moduleId,
+          moduleTitle: contract.title,
+          severity: 'blocking',
+          message: `${contract.title}: the module conversation must be completed before compiling.`,
+        });
+        continue;
+      }
+      const authoredSectionIds = new Set(
+        narrative.sections
+          .filter((section) => section.markdown && section.markdown.trim())
+          .map((section) => section.id),
+      );
+      for (const section of contract.conversation?.narrativeSections || []) {
+        if (section.required && !authoredSectionIds.has(section.id)) {
+          blocking.push({
+            id: `${moduleId}:narrative:${section.id}`,
+            moduleId,
+            moduleTitle: contract.title,
+            severity: 'blocking',
+            message: `${contract.title}: the "${section.title}" section has no narrative content.`,
+          });
+        }
+      }
+      for (const upload of contract.conversation?.uploads || []) {
+        if (upload.required && !hasValue(evidence[upload.id])) {
+          blocking.push({
+            id: `${moduleId}:upload:${upload.id}`,
+            moduleId,
+            moduleTitle: contract.title,
+            severity: 'blocking',
+            message: `${contract.title}: ${upload.label} must be uploaded.`,
+          });
+        }
+      }
+      continue;
+    }
+
+    const moduleData = asRecord(draft.moduleData[moduleId]);
     const requiredFields =
       contract.validation.requiredFields.length > 0
         ? contract.validation.requiredFields

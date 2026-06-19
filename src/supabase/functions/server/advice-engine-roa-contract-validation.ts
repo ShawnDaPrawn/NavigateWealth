@@ -9,6 +9,8 @@ import type {
   RoAContractField,
   RoAContractFormSection,
   RoAModuleContract,
+  RoAModuleConversation,
+  RoAAuthoringMode,
   LegacyRoAModule,
 } from './advice-engine-roa-contract-types.ts';
 import {
@@ -65,6 +67,84 @@ function extractTemplateTokens(
   return tokens;
 }
 
+/**
+ * Validate and normalise a conversational authoring block. Returns the
+ * sanitised block (or undefined when none is supplied / parseable).
+ */
+function validateConversationBlock(
+  raw: unknown,
+  requireBlock: boolean,
+  errors: string[],
+): RoAModuleConversation | undefined {
+  if (!isRecord(raw)) {
+    if (requireBlock) errors.push('conversation block is required for conversation modules');
+    return undefined;
+  }
+
+  const instructions =
+    typeof raw.instructions === 'string' && raw.instructions.trim() ? raw.instructions.trim() : '';
+  if (requireBlock && !instructions) errors.push('conversation.instructions is required');
+
+  const narrativeSectionsRaw = Array.isArray(raw.narrativeSections) ? raw.narrativeSections : [];
+  if (requireBlock && narrativeSectionsRaw.length === 0) {
+    errors.push('conversation.narrativeSections must include at least one section');
+  }
+  const seenSectionIds = new Set<string>();
+  const narrativeSections = narrativeSectionsRaw.filter(isRecord).map((section, index) => {
+    const sectionId = ensureString(
+      section.id,
+      `conversation.narrativeSections[${index}].id`,
+      errors,
+    );
+    if (sectionId) {
+      validateId(sectionId, `conversation.narrativeSections[${index}].id`, errors);
+      if (seenSectionIds.has(sectionId)) {
+        errors.push(`conversation.narrativeSections[${index}].id "${sectionId}" is duplicated`);
+      }
+      seenSectionIds.add(sectionId);
+    }
+    return {
+      id: sectionId,
+      title: ensureString(section.title, `conversation.narrativeSections[${index}].title`, errors),
+      description: typeof section.description === 'string' ? section.description : '',
+      required: section.required !== false,
+      order: typeof section.order === 'number' ? section.order : (index + 1) * 10,
+    };
+  });
+
+  const uploadsRaw = Array.isArray(raw.uploads) ? raw.uploads : [];
+  const uploads = uploadsRaw.filter(isRecord).map((upload, index) => ({
+    id: ensureString(upload.id, `conversation.uploads[${index}].id`, errors),
+    label: ensureString(upload.label, `conversation.uploads[${index}].label`, errors),
+    required: upload.required === true,
+    acceptedMimeTypes: Array.isArray(upload.acceptedMimeTypes)
+      ? upload.acceptedMimeTypes.filter((value): value is string => typeof value === 'string')
+      : undefined,
+    guidance: typeof upload.guidance === 'string' ? upload.guidance : undefined,
+    visionEligible: upload.visionEligible === true,
+  }));
+
+  const completionRaw = isRecord(raw.completion) ? raw.completion : {};
+  const completionMode = isAllowed(completionRaw.mode, ['ai-signal', 'manual'] as const)
+    ? completionRaw.mode
+    : 'ai-signal';
+
+  return {
+    instructions,
+    openingMessage: typeof raw.openingMessage === 'string' ? raw.openingMessage : undefined,
+    narrativeSections,
+    uploads,
+    completion: {
+      mode: completionMode,
+      minTurns:
+        typeof completionRaw.minTurns === 'number' && completionRaw.minTurns >= 0
+          ? Math.floor(completionRaw.minTurns)
+          : undefined,
+      requireAllUploads: completionRaw.requireAllUploads === true,
+    },
+  };
+}
+
 export function validateRoAModuleContract(input: unknown): RoAModuleContract {
   const errors: string[] = [];
   if (!isRecord(input)) {
@@ -87,9 +167,14 @@ export function validateRoAModuleContract(input: unknown): RoAModuleContract {
       ? input.schemaVersion.trim()
       : '1.0';
 
+  const authoringMode: RoAAuthoringMode =
+    input.authoringMode === 'conversation' ? 'conversation' : 'form';
+  const isConversation = authoringMode === 'conversation';
+  const conversation = validateConversationBlock(input.conversation, isConversation, errors);
+
   const formSchema = isRecord(input.formSchema) ? input.formSchema : {};
   const sectionsRaw = Array.isArray(formSchema.sections) ? formSchema.sections : [];
-  if (sectionsRaw.length === 0)
+  if (sectionsRaw.length === 0 && !isConversation)
     errors.push('formSchema.sections must include at least one section');
 
   const sections: RoAContractFormSection[] = sectionsRaw.map((sectionRaw, sectionIndex) => {
@@ -156,11 +241,25 @@ export function validateRoAModuleContract(input: unknown): RoAModuleContract {
     errors.push('output.normalizedKey is required');
   }
 
-  const documentSectionsRaw = Array.isArray(input.documentSections) ? input.documentSections : [];
+  let documentSectionsRaw = Array.isArray(input.documentSections) ? input.documentSections : [];
+  // In conversation mode the AI authors the narrative, so the canonical
+  // document sections can be derived from the narrative section definitions.
+  if (documentSectionsRaw.length === 0 && isConversation && conversation) {
+    documentSectionsRaw = conversation.narrativeSections.map((section) => ({
+      id: section.id,
+      title: section.title,
+      purpose: section.description,
+      order: section.order,
+      required: section.required,
+      template: '',
+    }));
+  }
   if (documentSectionsRaw.length === 0)
     errors.push('documentSections must include at least one section');
 
-  if (status === 'active') {
+  // Template token validation only applies to form modules; conversation
+  // modules carry no `{{ }}` templates because the AI writes the prose.
+  if (status === 'active' && !isConversation) {
     const moduleTokenPaths = new Set<string>();
     moduleTokenPaths.add('module.rationale');
     for (const section of sections) {
@@ -265,7 +364,7 @@ export function validateRoAModuleContract(input: unknown): RoAModuleContract {
     throw new Error(errors.join('; '));
   }
 
-  return {
+  const contract: RoAModuleContract = {
     id,
     title,
     description,
@@ -273,6 +372,8 @@ export function validateRoAModuleContract(input: unknown): RoAModuleContract {
     status,
     version,
     schemaVersion,
+    authoringMode,
+    conversation,
     input: {
       sources: sourcesRaw.filter(isRecord).map((source) => ({
         id: String(source.id || ''),
@@ -381,6 +482,26 @@ export function validateRoAModuleContract(input: unknown): RoAModuleContract {
     updatedBy: typeof input.updatedBy === 'string' ? input.updatedBy : SYSTEM_USER,
     publishedAt: typeof input.publishedAt === 'string' ? input.publishedAt : undefined,
   };
+
+  // Conversation uploads are stored through the evidence pipeline, so mirror any
+  // conversation.uploads that lack a matching evidence requirement into the
+  // evidence requirements list (keeps upload + appendix handling uniform).
+  if (isConversation && conversation) {
+    const existingIds = new Set(contract.evidence.requirements.map((req) => req.id));
+    for (const upload of conversation.uploads) {
+      if (!upload.id || existingIds.has(upload.id)) continue;
+      contract.evidence.requirements.push({
+        id: upload.id,
+        label: upload.label,
+        type: 'other',
+        required: upload.required,
+        acceptedMimeTypes: upload.acceptedMimeTypes,
+        guidance: upload.guidance,
+      });
+    }
+  }
+
+  return contract;
 }
 
 export function contractToLegacyModule(contract: RoAModuleContract): LegacyRoAModule {

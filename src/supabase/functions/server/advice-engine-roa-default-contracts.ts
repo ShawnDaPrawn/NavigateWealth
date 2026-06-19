@@ -7,6 +7,7 @@ import type {
   RoAContractInputSource,
   RoAModuleContract,
   RoAModuleContractSchemaFormat,
+  RoAModuleConversation,
 } from './advice-engine-roa-contract-types.ts';
 
 const SYSTEM_TIMESTAMP = '2026-05-04T00:00:00.000Z';
@@ -55,16 +56,15 @@ export const ROA_MODULE_CONTRACT_SCHEMA_FORMAT: RoAModuleContractSchemaFormat = 
     'other',
   ],
   allowedValidationSeverities: ['blocking', 'warning'],
+  allowedAuthoringModes: ['form', 'conversation'],
+  allowedCompletionModes: ['ai-signal', 'manual'],
   requiredContractKeys: [
     'id',
     'title',
     'description',
     'category',
     'input',
-    'formSchema',
     'output',
-    'validation',
-    'evidence',
     'documentSections',
   ],
   requiredFieldKeys: ['key', 'label', 'type', 'source'],
@@ -102,6 +102,73 @@ function defaultDocumentTemplate(
   ].join('\n');
 }
 
+/**
+ * Derive a conversational authoring block from the legacy contract data so the
+ * seeded modules run through the AI-driven flow without bespoke re-authoring.
+ * The document sections become the canonical narrative sections, evidence
+ * requirements become uploads, and the disclosures + section purposes seed the
+ * per-module system instructions.
+ */
+export function deriveConversationFromContract(
+  input: Pick<
+    RoAModuleContract,
+    'title' | 'description' | 'category' | 'documentSections' | 'evidence' | 'disclosures'
+  >,
+): RoAModuleConversation {
+  const sectionGuidance = input.documentSections
+    .slice()
+    .sort((a, b) => a.order - b.order)
+    .map((section) => `- ${section.title}: ${section.purpose}`)
+    .join('\n');
+  const disclosureGuidance = input.disclosures.map((line) => `- ${line}`).join('\n');
+
+  const instructions = [
+    `You are a South African financial adviser's assistant helping to compile the "${input.title}" section of a Record of Advice (${input.category}).`,
+    input.description,
+    '',
+    'Work conversationally with the adviser to gather everything needed for this module. Ask focused questions one or two at a time, request any documents or images listed below when relevant, and reference the client and policy information already provided in your context. Never invent facts — if something is missing, ask for it.',
+    '',
+    'You must ultimately produce a complete, client-ready narrative for each of these sections:',
+    sectionGuidance,
+    '',
+    'Mandatory disclosures to weave into the narrative where appropriate:',
+    disclosureGuidance,
+    '',
+    'Follow the FAIS Act and South African regulatory expectations. Use ZAR for currency. Write in a clear, professional, brand-aligned tone.',
+    'When you have gathered enough information and the adviser confirms, signal completion and return the final narrative for every required section.',
+  ].join('\n');
+
+  const narrativeSections = input.documentSections
+    .slice()
+    .sort((a, b) => a.order - b.order)
+    .map((section, index) => ({
+      id: section.id,
+      title: section.title,
+      description: section.purpose,
+      required: section.required !== false,
+      order: typeof section.order === 'number' ? section.order : (index + 1) * 10,
+    }));
+
+  const uploads = input.evidence.requirements.map((requirement) => ({
+    id: requirement.id,
+    label: requirement.label,
+    required: requirement.required === true,
+    acceptedMimeTypes: requirement.acceptedMimeTypes,
+    guidance: requirement.guidance,
+    visionEligible: (requirement.acceptedMimeTypes || []).some(
+      (mime) => mime.includes('image') || mime.includes('pdf'),
+    ),
+  }));
+
+  return {
+    instructions,
+    openingMessage: `Let's work through the "${input.title}" module together. I have the client's personal and policy information on hand. To start, tell me what you'd like to recommend or what prompted this advice — and upload any relevant quotes, schedules or documents when you're ready.`,
+    narrativeSections,
+    uploads,
+    completion: { mode: 'ai-signal', minTurns: 2, requireAllUploads: false },
+  };
+}
+
 function systemContract(
   input: Omit<
     RoAModuleContract,
@@ -115,6 +182,8 @@ function systemContract(
       template:
         section.template || defaultDocumentTemplate(input.title, section.title, section.purpose),
     })),
+    authoringMode: input.authoringMode ?? 'conversation',
+    conversation: input.conversation ?? deriveConversationFromContract(input),
     status: 'active',
     version: 1,
     schemaVersion: '1.0',
