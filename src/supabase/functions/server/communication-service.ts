@@ -521,7 +521,7 @@ export class CommunicationService {
   async getAllGroups(): Promise<Group[]> {
     const customGroups = await repo.getAllGroups();
 
-    // ── Auto-recalculate stale dynamic groups ──────────────────────────
+    // ── Auto-maintenance: recalc stale dynamic groups + sync provider groups ──
     const RECALC_STALE_MS = 5 * 60 * 1000; // 5 minutes
     const now = Date.now();
     const dynamicGroups = customGroups.filter((g) => {
@@ -531,22 +531,44 @@ export class CommunicationService {
       );
     });
 
-    const needsRecalc = dynamicGroups.some((g) => {
-      const updatedAt = g.updatedAt ? new Date(g.updatedAt).getTime() : 0;
-      return now - updatedAt > RECALC_STALE_MS;
-    });
+    const needsRecalc =
+      dynamicGroups.length > 0 &&
+      dynamicGroups.some((g) => {
+        const updatedAt = g.updatedAt ? new Date(g.updatedAt).getTime() : 0;
+        return now - updatedAt > RECALC_STALE_MS;
+      });
 
-    if (needsRecalc && dynamicGroups.length > 0) {
+    // Auto provider groups are seeded/refreshed on their own cadence so they
+    // appear even before any other dynamic group exists.
+    let providerSyncStale = false;
+    try {
+      const { isSyncStale } = await import('./provider-group-service.ts');
+      providerSyncStale = await isSyncStale(RECALC_STALE_MS);
+    } catch (err) {
+      log.warn('Failed to check provider-group sync staleness', { error: String(err) });
+    }
+
+    if (needsRecalc || providerSyncStale) {
       try {
-        log.info('Dynamic groups are stale — auto-recalculating membership', {
-          staleGroupCount: dynamicGroups.length,
+        log.info('Running communication group auto-maintenance', {
+          needsRecalc,
+          providerSyncStale,
+          dynamicGroupCount: dynamicGroups.length,
         });
-        await repo.recalculateAllGroupMemberships();
-        // Re-fetch after recalculation so counts are fresh
+        const { fetchMatcherClients, recalculateAllGroupMemberships } =
+          await import('./communication-repo.ts');
+        const { syncAutoProviderGroups } = await import('./provider-group-service.ts');
+
+        // Fetch the (expensive) client set once and reuse it for both passes.
+        const matcherClients = await fetchMatcherClients();
+        await syncAutoProviderGroups(matcherClients);
+        await recalculateAllGroupMemberships(matcherClients);
+
+        // Re-fetch after maintenance so counts and new groups are included.
         const refreshed = await repo.getAllGroups();
         return this._prependSystemGroup(refreshed);
       } catch (err) {
-        log.error('Auto-recalculation failed, returning stale data', err as Error);
+        log.error('Group auto-maintenance failed, returning current data', err as Error);
       }
     }
 
@@ -608,6 +630,9 @@ export class CommunicationService {
     if (groupId === 'sys_all') {
       throw new ValidationError('System groups cannot be modified');
     }
+    if (groupId.startsWith('sys_provider_')) {
+      throw new ValidationError('Auto-generated provider groups cannot be modified');
+    }
 
     log.info('Updating group', {
       groupId,
@@ -647,6 +672,9 @@ export class CommunicationService {
     // Prevent deletion of system groups
     if (groupId === 'sys_all') {
       throw new ValidationError('System groups cannot be deleted');
+    }
+    if (groupId.startsWith('sys_provider_')) {
+      throw new ValidationError('Auto-generated provider groups cannot be deleted');
     }
 
     await repo.deleteGroup(groupId);

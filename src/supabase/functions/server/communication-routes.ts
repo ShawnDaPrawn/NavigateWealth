@@ -346,12 +346,23 @@ app.post(
 
     log.info('Admin: Manually triggering group recalculation', { adminUserId });
 
-    const { recalculateAllGroupMemberships } = await import('./communication-repo.ts');
-    await recalculateAllGroupMemberships();
+    const { fetchMatcherClients, recalculateAllGroupMemberships } =
+      await import('./communication-repo.ts');
+    const { syncAutoProviderGroups } = await import('./provider-group-service.ts');
 
-    log.success('Group recalculation complete', { adminUserId });
+    // Reuse a single client fetch for both the provider-group sync and the
+    // full membership recalculation.
+    const matcherClients = await fetchMatcherClients();
+    const providerSync = await syncAutoProviderGroups(matcherClients);
+    await recalculateAllGroupMemberships(matcherClients);
 
-    return c.json({ success: true, message: 'Group memberships recalculated successfully' });
+    log.success('Group recalculation complete', { adminUserId, providerSync });
+
+    return c.json({
+      success: true,
+      message: 'Group memberships recalculated successfully',
+      providerGroups: providerSync,
+    });
   }),
 );
 

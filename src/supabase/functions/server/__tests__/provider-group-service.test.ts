@@ -1,0 +1,215 @@
+/**
+ * provider-group-service — Auto provider group derivation & sync tests
+ * =====================================================================
+ *
+ * Verifies that communication groups are auto-derived from the providers and
+ * provider+product-type combinations that clients actually hold, and that the
+ * sync reconciles (creates / updates / removes) persisted groups correctly.
+ *
+ * Run: npx vitest run src/supabase/functions/server/__tests__/provider-group-service.test.ts
+ */
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+
+// ── Deno runtime shim ────────────────────────────────────────────────────────
+vi.stubGlobal('Deno', { env: { get: () => 'test' } });
+
+// ── In-memory KV ─────────────────────────────────────────────────────────────
+const kvStore = new Map<string, unknown>();
+const clone = <T>(v: T): T => (v == null ? v : JSON.parse(JSON.stringify(v)));
+
+vi.mock('../kv_store.tsx', () => ({
+  get: vi.fn(async (key: string) => clone(kvStore.get(key) ?? null)),
+  set: vi.fn(async (key: string, value: unknown) => {
+    kvStore.set(key, clone(value));
+  }),
+  del: vi.fn(async (key: string) => {
+    kvStore.delete(key);
+  }),
+  getByPrefix: vi.fn(async (prefix: string) => {
+    const out: unknown[] = [];
+    kvStore.forEach((v, k) => {
+      if (k.startsWith(prefix)) out.push(clone(v));
+    });
+    return out;
+  }),
+}));
+
+// ── Quiet logger ─────────────────────────────────────────────────────────────
+vi.mock('../stderr-logger.ts', () => ({
+  createModuleLogger: () => ({
+    info: vi.fn(),
+    warn: vi.fn(),
+    error: vi.fn(),
+    success: vi.fn(),
+    debug: vi.fn(),
+  }),
+}));
+
+// ── Repo stub (only fetchMatcherClients is used) ─────────────────────────────
+const { fetchMatcherClients } = vi.hoisted(() => ({ fetchMatcherClients: vi.fn() }));
+vi.mock('../communication-repo.ts', () => ({
+  fetchMatcherClients,
+}));
+
+// ── integrations-document-storage: only the labels map is needed ─────────────
+vi.mock('../integrations-document-storage.ts', () => ({
+  POLICY_CATEGORY_LABELS: {
+    risk_planning: 'Risk Planning',
+    retirement_planning: 'Retirement Planning',
+  },
+}));
+
+import {
+  deriveAutoProviderGroups,
+  syncAutoProviderGroups,
+  isAutoProviderGroup,
+  AUTO_PROVIDER_GROUP_PREFIX,
+} from '../provider-group-service.ts';
+import type { MatcherClient } from '../group-matcher.ts';
+
+beforeEach(() => {
+  kvStore.clear();
+  vi.clearAllMocks();
+});
+
+const clients: MatcherClient[] = [
+  { id: 'c1', products: [{ provider: 'Allan Gray', type: 'retirement_planning' }] },
+  {
+    id: 'c2',
+    products: [
+      { provider: 'Allan Gray', type: 'risk_planning' },
+      { provider: 'Hollard', type: 'risk_planning' },
+    ],
+  },
+  // Different casing should fold into the same provider group.
+  { id: 'c3', products: [{ provider: 'allan gray', type: 'retirement_planning' }] },
+  // No products → contributes nothing.
+  { id: 'c4', products: [] },
+];
+
+describe('deriveAutoProviderGroups', () => {
+  it('creates one group per provider and one per provider+type', () => {
+    const specs = deriveAutoProviderGroups(clients);
+    const names = specs.map((s) => s.name);
+
+    // Provider-level groups
+    expect(names).toContain('All Allan Gray Clients');
+    expect(names).toContain('All Hollard Clients');
+
+    // Provider + product-type groups (label resolved from category map)
+    expect(names).toContain('Allan Gray Retirement Planning');
+    expect(names).toContain('Allan Gray Risk Planning');
+    expect(names).toContain('Hollard Risk Planning');
+
+    // 2 providers + 3 distinct provider/type combos = 5 groups
+    expect(specs).toHaveLength(5);
+  });
+
+  it('folds case-only provider variants into one group with a single rule', () => {
+    const specs = deriveAutoProviderGroups(clients);
+    const allanGray = specs.find((s) => s.name === 'All Allan Gray Clients');
+
+    expect(allanGray).toBeDefined();
+    expect(allanGray!.id).toBe(`${AUTO_PROVIDER_GROUP_PREFIX}allan_gray`);
+    // 'Allan Gray' and 'allan gray' differ only by case → one rule (matcher is
+    // case-insensitive), keeping the first-seen spelling.
+    expect(allanGray!.filterConfig.productFilters).toEqual([{ provider: 'Allan Gray' }]);
+  });
+
+  it('keeps one rule per genuinely distinct type representation (no dropped clients)', () => {
+    // Same provider + same logical type, but two spellings: a category id and
+    // its human label. They share a group ID but must each get a filter rule.
+    const mixed: MatcherClient[] = [
+      { id: 'a', products: [{ provider: 'Hollard', type: 'risk_planning' }] },
+      { id: 'b', products: [{ provider: 'Hollard', type: 'Risk Planning' }] },
+    ];
+    const specs = deriveAutoProviderGroups(mixed);
+
+    const combo = specs.filter((s) => s.id.includes('__'));
+    // Single combo group (no ID collision / overwrite)...
+    expect(combo).toHaveLength(1);
+    expect(combo[0].id).toBe(`${AUTO_PROVIDER_GROUP_PREFIX}hollard__risk_planning`);
+    // ...covering BOTH raw spellings so neither client is dropped.
+    expect(combo[0].filterConfig.productFilters).toEqual([
+      { provider: 'Hollard', type: 'risk_planning' },
+      { provider: 'Hollard', type: 'Risk Planning' },
+    ]);
+  });
+
+  it('ignores blank providers and returns nothing when no products exist', () => {
+    expect(deriveAutoProviderGroups([{ id: 'x', products: [{ provider: '   ' }] }])).toHaveLength(
+      0,
+    );
+    expect(deriveAutoProviderGroups([{ id: 'y' }])).toHaveLength(0);
+  });
+});
+
+describe('syncAutoProviderGroups', () => {
+  it('persists derived groups with resolved membership counts', async () => {
+    fetchMatcherClients.mockResolvedValue(clients);
+
+    const result = await syncAutoProviderGroups();
+    expect(result.created).toBe(5);
+    expect(result.removed).toBe(0);
+
+    // "All Allan Gray Clients" should include c1, c2 and c3 (case-folded).
+    const persisted = [...kvStore.entries()]
+      .filter(([k]) => k.startsWith('communication:groups:'))
+      .map(([, v]) => v as { name: string; clientIds: string[]; autoGenerated?: boolean });
+
+    const allanGray = persisted.find((g) => g.name === 'All Allan Gray Clients');
+    expect(allanGray).toBeDefined();
+    expect(allanGray!.autoGenerated).toBe(true);
+    expect(allanGray!.clientIds.sort()).toEqual(['c1', 'c2', 'c3']);
+
+    const hollardRisk = persisted.find((g) => g.name === 'Hollard Risk Planning');
+    expect(hollardRisk!.clientIds).toEqual(['c2']);
+  });
+
+  it('removes stale auto groups whose provider no longer has clients', async () => {
+    // Seed a pre-existing auto group for a provider that is gone now.
+    kvStore.set(`communication:groups:${AUTO_PROVIDER_GROUP_PREFIX}old_provider`, {
+      id: `${AUTO_PROVIDER_GROUP_PREFIX}old_provider`,
+      name: 'All Old Provider Clients',
+      type: 'system',
+      autoGenerated: true,
+      clientIds: ['zzz'],
+      clientCount: 1,
+      filterConfig: { productFilters: [{ provider: 'Old Provider' }] },
+    });
+
+    fetchMatcherClients.mockResolvedValue(clients);
+    const result = await syncAutoProviderGroups();
+
+    expect(result.removed).toBe(1);
+    expect(kvStore.has(`communication:groups:${AUTO_PROVIDER_GROUP_PREFIX}old_provider`)).toBe(
+      false,
+    );
+  });
+
+  it('updates (not duplicates) an existing auto group on re-sync', async () => {
+    fetchMatcherClients.mockResolvedValue(clients);
+
+    await syncAutoProviderGroups();
+    const countAfterFirst = [...kvStore.keys()].filter((k) =>
+      k.startsWith('communication:groups:'),
+    ).length;
+
+    const second = await syncAutoProviderGroups();
+    const countAfterSecond = [...kvStore.keys()].filter((k) =>
+      k.startsWith('communication:groups:'),
+    ).length;
+
+    expect(second.created).toBe(0);
+    expect(second.updated).toBe(5);
+    expect(countAfterSecond).toBe(countAfterFirst);
+  });
+});
+
+describe('isAutoProviderGroup', () => {
+  it('detects the auto provider group prefix', () => {
+    expect(isAutoProviderGroup(`${AUTO_PROVIDER_GROUP_PREFIX}allan_gray`)).toBe(true);
+    expect(isAutoProviderGroup('sys_all')).toBe(false);
+    expect(isAutoProviderGroup('some-custom-uuid')).toBe(false);
+  });
+});
