@@ -22,88 +22,136 @@ interface BrandInlineLoaderProps {
   className?: string;
 }
 
-function CompassCardinalMarks({ compact = false }: { compact?: boolean }) {
-  const tickClass = compact ? 'h-2 w-0.5' : 'h-2.5 w-0.5';
+const CARDINALS = [
+  { label: 'N', angle: 0 },
+  { label: 'E', angle: 90 },
+  { label: 'S', angle: 180 },
+  { label: 'W', angle: 270 },
+] as const;
 
-  return (
-    <>
-      <span
-        className={cn(
-          'absolute left-1/2 top-1 -translate-x-1/2 rounded-full bg-[#6d28d9]/70',
-          tickClass,
-        )}
-      />
-      <span
-        className={cn(
-          'absolute bottom-1 left-1/2 -translate-x-1/2 rounded-full bg-[#1a1e36]/25',
-          tickClass,
-        )}
-      />
-      <span
-        className={cn(
-          'absolute left-1 top-1/2 -translate-y-1/2 rounded-full bg-[#1a1e36]/25',
-          compact ? 'h-0.5 w-2' : 'h-0.5 w-2.5',
-        )}
-      />
-      <span
-        className={cn(
-          'absolute right-1 top-1/2 -translate-y-1/2 rounded-full bg-[#1a1e36]/25',
-          compact ? 'h-0.5 w-2' : 'h-0.5 w-2.5',
-        )}
-      />
-      <span className="absolute left-1/2 top-0.5 -translate-x-1/2 text-[8px] font-bold tracking-[0.08em] text-[#6d28d9]">
-        N
-      </span>
-    </>
-  );
+const TICKS = Array.from({ length: 24 }, (_, i) => i * 15);
+
+/** Polar to cartesian on the 100x100 viewBox, 0deg = North (up). */
+function polar(angleDeg: number, radius: number) {
+  const rad = (angleDeg * Math.PI) / 180;
+  return {
+    x: 50 + radius * Math.sin(rad),
+    y: 50 - radius * Math.cos(rad),
+  };
 }
 
 function NavigationCompassLoader({ compact = false }: { compact?: boolean }) {
-  const sizeClasses = compact ? 'h-14 w-14' : 'h-16 w-16';
-  const ringInset = compact ? 'inset-[4px]' : 'inset-[5px]';
-  const innerInset = compact ? 'inset-[10px]' : 'inset-[12px]';
-  const coreSize = compact ? 'h-8 w-8' : 'h-9 w-9';
-  const iconSize = compact ? 'h-4 w-4' : 'h-5 w-5';
+  const sizeClasses = compact ? 'h-16 w-16' : 'h-20 w-20';
 
   return (
     <div
       className={cn('relative flex items-center justify-center', sizeClasses)}
       aria-hidden="true"
     >
-      <div className="absolute inset-0 rounded-full bg-[#6d28d9]/12 blur-xl animate-pulse" />
+      <div className="absolute inset-0 rounded-full bg-[#6d28d9]/12 blur-2xl animate-pulse" />
 
-      <div
-        className={cn(
-          'absolute rounded-full border border-[#1a1e36]/10 bg-white/40 shadow-[inset_0_0_0_1px_rgba(255,255,255,0.65)]',
-          ringInset,
-        )}
-      />
-
-      <div
-        className={cn(
-          'absolute rounded-full border border-dashed border-[#6d28d9]/25 animate-spin [animation-duration:10s]',
-          ringInset,
-        )}
+      <svg
+        viewBox="0 0 100 100"
+        className="relative h-full w-full drop-shadow-[0_18px_30px_-18px_rgba(26,30,54,0.7)]"
       >
-        <CompassCardinalMarks compact={compact} />
-      </div>
+        <defs>
+          <radialGradient id="compass-dial-face" cx="50%" cy="38%" r="68%">
+            <stop offset="0%" stopColor="#ffffff" />
+            <stop offset="62%" stopColor="#f5f7fb" />
+            <stop offset="100%" stopColor="#e6ebf4" />
+          </radialGradient>
+          <linearGradient id="compass-needle-north" x1="50%" y1="0%" x2="50%" y2="100%">
+            <stop offset="0%" stopColor="#8b5cf6" />
+            <stop offset="100%" stopColor="#6d28d9" />
+          </linearGradient>
+          <linearGradient id="compass-needle-south" x1="50%" y1="0%" x2="50%" y2="100%">
+            <stop offset="0%" stopColor="#cbd5e1" />
+            <stop offset="100%" stopColor="#94a3b8" />
+          </linearGradient>
+        </defs>
 
-      <div
-        className={cn(
-          'absolute rounded-full border-[1.5px] border-[#1a1e36]/10 border-t-[#6d28d9] border-r-[#8b5cf6] animate-spin [animation-duration:1.4s]',
-          innerInset,
-        )}
-      />
+        {/* Bezel + dial face */}
+        <circle cx="50" cy="50" r="47" fill="url(#compass-dial-face)" />
+        <circle
+          cx="50"
+          cy="50"
+          r="47"
+          fill="none"
+          stroke="#1a1e36"
+          strokeOpacity="0.14"
+          strokeWidth="1.5"
+        />
+        <circle
+          cx="50"
+          cy="50"
+          r="40.5"
+          fill="none"
+          stroke="#1a1e36"
+          strokeOpacity="0.08"
+          strokeWidth="1"
+        />
 
-      <div
-        className={cn(
-          'relative flex items-center justify-center rounded-full bg-gradient-to-br from-[#1a1e36] via-[#252a47] to-[#6d28d9] shadow-[0_16px_32px_-14px_rgba(37,42,71,0.9)] ring-2 ring-white/10',
-          coreSize,
-        )}
-      >
-        <div className="absolute inset-[4px] rounded-full bg-white/10" />
-        <Compass className={cn(iconSize, 'relative text-white drop-shadow-sm')} strokeWidth={2.2} />
-      </div>
+        {/* Slowly rotating tick ring for depth */}
+        <g className="animate-compass-dial">
+          {TICKS.map((angle) => {
+            const major = angle % 90 === 0;
+            const outer = polar(angle, 39);
+            const inner = polar(angle, major ? 31.5 : 35.5);
+            return (
+              <line
+                key={angle}
+                x1={inner.x}
+                y1={inner.y}
+                x2={outer.x}
+                y2={outer.y}
+                stroke={major ? '#6d28d9' : '#94a3b8'}
+                strokeOpacity={major ? 0.6 : 0.4}
+                strokeWidth={major ? 1.8 : 1}
+                strokeLinecap="round"
+              />
+            );
+          })}
+        </g>
+
+        {/* Cardinal letters */}
+        {CARDINALS.map(({ label, angle }) => {
+          const pos = polar(angle, 27);
+          return (
+            <text
+              key={label}
+              x={pos.x}
+              y={pos.y}
+              textAnchor="middle"
+              dominantBaseline="central"
+              fontSize="9.5"
+              fontWeight="700"
+              fill={label === 'N' ? '#6d28d9' : '#1a1e36'}
+              fillOpacity={label === 'N' ? 1 : 0.45}
+            >
+              {label}
+            </text>
+          );
+        })}
+
+        {/* Seeking magnetic needle */}
+        <g className="animate-compass-seek">
+          <polygon points="50,15 46.4,50 53.6,50" fill="url(#compass-needle-north)" />
+          <polygon points="50,85 46.4,50 53.6,50" fill="url(#compass-needle-south)" />
+        </g>
+
+        {/* Center hub */}
+        <circle cx="50" cy="50" r="5.4" fill="#1a1e36" />
+        <circle
+          cx="50"
+          cy="50"
+          r="5.4"
+          fill="none"
+          stroke="#ffffff"
+          strokeOpacity="0.85"
+          strokeWidth="1.4"
+        />
+        <circle cx="50" cy="50" r="1.9" fill="#8b5cf6" />
+      </svg>
     </div>
   );
 }
