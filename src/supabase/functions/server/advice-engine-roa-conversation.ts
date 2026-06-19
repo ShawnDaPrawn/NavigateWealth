@@ -242,8 +242,8 @@ export class AdviceEngineRoAConversationService {
     };
     record.messages.push(assistantMessage);
 
-    await this.applyTurnOutcome(draft, contract, record, turn, user);
-    return { record, reply: turn.reply, isComplete: record.status === 'complete' };
+    const completed = await this.applyTurnOutcome(draft, contract, record, turn, user);
+    return { record, reply: turn.reply, isComplete: completed };
   }
 
   /** Force generation of the final narrative (manual completion / adviser override). */
@@ -343,6 +343,7 @@ export class AdviceEngineRoAConversationService {
 
     const uploadRef: RoAConvUploadRef = {
       id: crypto.randomUUID(),
+      uploadId: input.uploadId,
       evidenceId: evidenceItem.id,
       fileName: evidenceItem.fileName,
       mimeType: evidenceItem.mimeType,
@@ -634,21 +635,23 @@ export class AdviceEngineRoAConversationService {
       const requiredIds = (contract.conversation?.uploads || [])
         .filter((u) => u.required)
         .map((u) => u.id);
-      const uploadedEvidenceIds = new Set(record.uploads.map((u) => u.evidenceId));
-      // Required uploads are tracked through evidence; presence of an upload ref is sufficient.
-      if (requiredIds.length > 0 && record.uploads.length < requiredIds.length) return false;
-      void uploadedEvidenceIds;
+      const presentUploadIds = new Set(
+        record.uploads.map((u) => u.uploadId).filter((id): id is string => !!id),
+      );
+      // Every required upload id must be satisfied by an attached file.
+      if (!requiredIds.every((id) => presentUploadIds.has(id))) return false;
     }
     return true;
   }
 
+  /** Returns whether the module reached the `complete` state after this turn. */
   private async applyTurnOutcome(
     draft: RoADraftRecord,
     contract: RoAModuleContract,
     record: RoAModuleConversationRecord,
     turn: ModuleTurnResult,
     user: AuthUserLike,
-  ): Promise<void> {
+  ): Promise<boolean> {
     let narrative: RoAModuleNarrative | undefined = record.narrative;
 
     const shouldComplete = turn.isComplete && this.completionGuardsPass(contract, record);
@@ -663,8 +666,10 @@ export class AdviceEngineRoAConversationService {
       record.status = 'in_progress';
     }
 
+    const completed = record.status === 'complete';
     await this.saveConversation(record);
     await this.syncDraft(record.draftId, record.moduleId, record.status, narrative, user);
+    return completed;
   }
 
   private async syncDraft(

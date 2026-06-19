@@ -82,6 +82,8 @@ export interface RoADraftRecord {
 /** A document/image uploaded during a module conversation. */
 export interface RoAConvUploadRef {
   id: string;
+  /** The contract conversation upload id this file satisfies. */
+  uploadId?: string;
   fileName: string;
   mimeType?: string;
   size?: number;

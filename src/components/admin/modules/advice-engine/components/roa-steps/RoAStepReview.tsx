@@ -81,6 +81,11 @@ export function RoAStepReview({ draft, onUpdate, onDraftReplaced, modules }: RoA
     const module =
       modules?.find((item) => item.id === moduleId) || getFallbackRuntimeModule(moduleId);
     if (!module) return false;
+    // Conversation modules are complete when the backend marks the conversation
+    // complete (they carry no form moduleData to score).
+    if (isConversationModule(module)) {
+      return draft.moduleConversationStatus?.[moduleId] === 'complete';
+    }
     return getModuleRuntimeStatus(
       module,
       draft.moduleData[moduleId] || {},

@@ -518,6 +518,10 @@ export function RoAModuleContractManager() {
     try {
       const saved = await saveContract({
         ...draft,
+        // The UI treats a missing authoringMode as conversation; persist that
+        // explicitly so the backend (which defaults missing → 'form') doesn't
+        // silently downgrade a conversation module and break its chat endpoints.
+        authoringMode: draft.authoringMode ?? 'conversation',
         status: draft.status === 'active' ? 'draft' : draft.status,
       });
       setSelectedId(saved.id);
@@ -537,7 +541,11 @@ export function RoAModuleContractManager() {
       return;
     }
     try {
-      const saved = await saveContract({ ...draft, status: 'draft' });
+      const saved = await saveContract({
+        ...draft,
+        authoringMode: draft.authoringMode ?? 'conversation',
+        status: 'draft',
+      });
       const published = await publishContract(saved.id);
       setSelectedId(published.id);
       toast.success('RoA module contract published');
