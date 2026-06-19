@@ -34,6 +34,7 @@ import {
 } from './policy-extraction-service.ts';
 import type { ProviderTerminologyMap, FieldDiff } from './policy-extraction-types.ts';
 import { recalculateClientTotals } from './integrations-derive.ts';
+import { OPENAI_PRIMARY_MODEL } from './ai-model-config.ts';
 
 const app = new Hono();
 const log = createModuleLogger('integrations-policy-extraction');
@@ -116,7 +117,7 @@ app.post('/policy-extraction/extract', requireAuth, async (c) => {
         extractedAt: new Date().toISOString(),
         confidence: 0,
         status: 'pending',
-        model: 'gpt-4o',
+        model: OPENAI_PRIMARY_MODEL,
       },
       updatedAt: new Date().toISOString(),
     };

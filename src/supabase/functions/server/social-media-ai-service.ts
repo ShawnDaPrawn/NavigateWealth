@@ -13,6 +13,7 @@
 import * as kv from './kv_store.tsx';
 import { createModuleLogger } from './stderr-logger.ts';
 import { createClient } from 'jsr:@supabase/supabase-js@2.49.8';
+import { OPENAI_PRIMARY_MODEL, isResponsesOnlyModel } from './ai-model-config.ts';
 
 const log = createModuleLogger('social-media-ai');
 
@@ -347,21 +348,23 @@ async function callResponsesAPI(
   apiKey: string,
   userPrompt: string,
 ): Promise<{ content: string; tokensUsed: number }> {
+  const body: Record<string, unknown> = {
+    model: OPENAI_PRIMARY_MODEL,
+    input: userPrompt,
+    prompt: {
+      id: STORED_PROMPT_ID,
+      version: STORED_PROMPT_VERSION,
+    },
+  };
+  if (!isResponsesOnlyModel(OPENAI_PRIMARY_MODEL)) body.temperature = 0.7;
+
   const response = await fetch('https://api.openai.com/v1/responses', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
       Authorization: `Bearer ${apiKey}`,
     },
-    body: JSON.stringify({
-      model: 'gpt-4o',
-      input: userPrompt,
-      prompt: {
-        id: STORED_PROMPT_ID,
-        version: STORED_PROMPT_VERSION,
-      },
-      temperature: 0.7,
-    }),
+    body: JSON.stringify(body),
   });
 
   if (!response.ok) {
@@ -391,22 +394,24 @@ async function callChatCompletionsAPI(
   apiKey: string,
   userPrompt: string,
 ): Promise<{ content: string; tokensUsed: number }> {
+  const body: Record<string, unknown> = {
+    model: OPENAI_PRIMARY_MODEL,
+    messages: [
+      { role: 'system', content: buildSystemPrompt() },
+      { role: 'user', content: userPrompt },
+    ],
+    max_tokens: 2000,
+    response_format: { type: 'json_object' },
+  };
+  if (!isResponsesOnlyModel(OPENAI_PRIMARY_MODEL)) body.temperature = 0.7;
+
   const response = await fetch('https://api.openai.com/v1/chat/completions', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
       Authorization: `Bearer ${apiKey}`,
     },
-    body: JSON.stringify({
-      model: 'gpt-4o',
-      messages: [
-        { role: 'system', content: buildSystemPrompt() },
-        { role: 'user', content: userPrompt },
-      ],
-      temperature: 0.7,
-      max_tokens: 2000,
-      response_format: { type: 'json_object' },
-    }),
+    body: JSON.stringify(body),
   });
 
   if (!response.ok) {

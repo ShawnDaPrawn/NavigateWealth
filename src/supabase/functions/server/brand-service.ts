@@ -338,6 +338,22 @@ export class BrandService {
     return logos;
   }
 
+  /** Download raw bytes for a brand asset (e.g. a logo) for server-side embedding. */
+  async downloadBrandAsset(storagePath: string): Promise<Uint8Array | null> {
+    try {
+      const supabase = getSupabase();
+      const { data, error } = await supabase.storage.from(BUCKET_NAME).download(storagePath);
+      if (error || !data) {
+        log.warn('Failed to download brand asset', { storagePath, error: error?.message });
+        return null;
+      }
+      return new Uint8Array(await data.arrayBuffer());
+    } catch (error) {
+      log.warn('Brand asset download error', { storagePath, error: String(error) });
+      return null;
+    }
+  }
+
   async getLogoSignedUrl(storagePath: string): Promise<string | null> {
     const supabase = getSupabase();
     const { data, error } = await supabase.storage

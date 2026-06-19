@@ -68,6 +68,7 @@ describe('RoA module contract definitions', () => {
   it('requires editable output templates before publishing active contracts', () => {
     const contract = {
       ...DEFAULT_ROA_MODULE_CONTRACTS[0],
+      authoringMode: 'form' as const,
       documentSections: DEFAULT_ROA_MODULE_CONTRACTS[0].documentSections.map((section) => ({
         ...section,
         template: '',
@@ -80,6 +81,7 @@ describe('RoA module contract definitions', () => {
   it('rejects unknown output template tokens before publishing active contracts', () => {
     const contract = {
       ...DEFAULT_ROA_MODULE_CONTRACTS[0],
+      authoringMode: 'form' as const,
       documentSections: DEFAULT_ROA_MODULE_CONTRACTS[0].documentSections.map((section, index) => ({
         ...section,
         template: index === 0 ? '{{module.not_a_real_field}}' : section.template,
@@ -92,6 +94,7 @@ describe('RoA module contract definitions', () => {
   it('rejects compile order entries that do not map to document sections', () => {
     const contract = {
       ...DEFAULT_ROA_MODULE_CONTRACTS[0],
+      authoringMode: 'form' as const,
       compileOrder: ['recommendation', 'missing_section'],
     };
 
@@ -113,7 +116,7 @@ describe('RoA module contract definitions', () => {
     const baseline = DEFAULT_ROA_MODULE_CONTRACTS.find(
       (item) => item.id === 'life_insurance_comparison',
     )!;
-    const contract = { ...baseline, compilerHints: undefined };
+    const contract = { ...baseline, compilerHints: undefined, authoringMode: 'form' as const };
 
     const draft: RoADraftRecord = {
       id: 'draft-no-replacement-shell',
@@ -207,9 +210,10 @@ describe('RoA module contract definitions', () => {
 
   it('validates required fields and evidence without module-specific code', () => {
     const service = new AdviceEngineRoAService();
-    const contract = DEFAULT_ROA_MODULE_CONTRACTS.find(
-      (item) => item.id === 'life_insurance_comparison',
-    )!;
+    const contract = {
+      ...DEFAULT_ROA_MODULE_CONTRACTS.find((item) => item.id === 'life_insurance_comparison')!,
+      authoringMode: 'form' as const,
+    };
     const baseDraft: RoADraftRecord = {
       id: 'draft-1',
       clientId: 'client-1',
@@ -277,9 +281,10 @@ describe('RoA module contract definitions', () => {
 
   it('validates attached evidence metadata against contract requirements', () => {
     const service = new AdviceEngineRoAService();
-    const contract = DEFAULT_ROA_MODULE_CONTRACTS.find(
-      (item) => item.id === 'life_insurance_comparison',
-    )!;
+    const contract = {
+      ...DEFAULT_ROA_MODULE_CONTRACTS.find((item) => item.id === 'life_insurance_comparison')!,
+      authoringMode: 'form' as const,
+    };
     const draft: RoADraftRecord = {
       id: 'draft-bad-evidence',
       clientId: 'client-1',
@@ -336,9 +341,10 @@ describe('RoA module contract definitions', () => {
   });
 
   it('builds a regulatory RoA wrapper around contract-driven module sections', async () => {
-    const contract = DEFAULT_ROA_MODULE_CONTRACTS.find(
-      (item) => item.id === 'life_insurance_comparison',
-    )!;
+    const contract = {
+      ...DEFAULT_ROA_MODULE_CONTRACTS.find((item) => item.id === 'life_insurance_comparison')!,
+      authoringMode: 'form' as const,
+    };
     const draft: RoADraftRecord = {
       id: 'draft-compile-1',
       clientId: 'client-1',

@@ -17,6 +17,7 @@
 
 import * as kv from './kv_store.tsx';
 import { createModuleLogger } from './stderr-logger.ts';
+import { OPENAI_PRIMARY_MODEL } from './ai-model-config.ts';
 import type { WillChatSession, WillChatSessionStatus, WillOutputPack } from './will-chat-types.ts';
 
 const log = createModuleLogger('will-chat-service');
@@ -146,7 +147,7 @@ export async function sendToAgent(
         }));
 
     const responsesBody: Record<string, unknown> = {
-      model: 'gpt-4o',
+      model: OPENAI_PRIMARY_MODEL,
       input,
     };
     if (previousResponseId) {
@@ -189,7 +190,7 @@ export async function sendToAgent(
       Authorization: `Bearer ${OPENAI_API_KEY}`,
     },
     body: JSON.stringify({
-      model: 'gpt-4o',
+      model: OPENAI_PRIMARY_MODEL,
       messages: chatMessages,
       max_tokens: 4096,
     }),

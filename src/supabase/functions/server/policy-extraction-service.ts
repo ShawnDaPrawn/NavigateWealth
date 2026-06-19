@@ -17,6 +17,7 @@ import { createModuleLogger } from './stderr-logger.ts';
 import { getErrMsg } from './shared-logger-utils.ts';
 import { getExtractionPrompt, getPromptVersion } from './policy-extraction-prompts.ts';
 import { downloadPdfAsBase64, callOpenAIExtraction } from './policy-extraction-openai.ts';
+import { OPENAI_PRIMARY_MODEL } from './ai-model-config.ts';
 import { DEFAULT_SCHEMAS } from './default-schemas.ts';
 import type {
   ExtractedPolicyData,
@@ -528,7 +529,7 @@ export async function extractPolicyDocument(
       extractedAt: new Date().toISOString(),
       confidence: extractedData.overallConfidence,
       status: 'completed',
-      model: 'gpt-4o',
+      model: OPENAI_PRIMARY_MODEL,
       validationWarnings,
       promptVersion,
     };
@@ -548,7 +549,7 @@ export async function extractPolicyDocument(
       confidence: 0,
       status: 'failed',
       errorMessage: getErrMsg(err),
-      model: 'gpt-4o',
+      model: OPENAI_PRIMARY_MODEL,
       promptVersion: getPromptVersion(policy.providerName || ''),
     };
 

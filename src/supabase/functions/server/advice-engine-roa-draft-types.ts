@@ -1,8 +1,10 @@
-import type { RoAModuleContract } from './advice-engine-roa-contract-types.ts';
+import type { RoAAuthoringMode, RoAModuleContract } from './advice-engine-roa-contract-types.ts';
 
 export type JsonRecord = Record<string, unknown>;
 
 export type RoADraftStatus = 'draft' | 'complete' | 'submitted' | 'archived';
+
+export type RoAModuleConversationStatus = 'pending' | 'in_progress' | 'complete';
 
 export interface RoAClientSnapshot {
   clientId: string;
@@ -56,6 +58,12 @@ export interface RoADraftRecord {
   compiledOutput?: RoACompiledOutput;
   generatedDocuments?: RoAGeneratedDocument[];
   status: RoADraftStatus;
+  /** How modules are completed for this draft. Absent ⇒ legacy 'form' flow. */
+  authoringMode?: RoAAuthoringMode;
+  /** Lightweight per-module conversation progress index (transcripts live in side keys). */
+  moduleConversationStatus?: Record<string, RoAModuleConversationStatus>;
+  /** AI-authored narrative per module, consumed by the compiler. */
+  moduleNarratives?: Record<string, RoAModuleNarrative>;
   createdAt: string;
   updatedAt: string;
   version: number;
@@ -69,6 +77,49 @@ export interface RoADraftRecord {
   finalisedBy?: string;
   lockedAt?: string;
   auditEvents?: RoAAuditEvent[];
+}
+
+/** A document/image uploaded during a module conversation. */
+export interface RoAConvUploadRef {
+  id: string;
+  fileName: string;
+  mimeType?: string;
+  size?: number;
+  storagePath?: string;
+  sha256?: string;
+  visionEligible?: boolean;
+  /** Linked evidence id (uploads are also registered through the evidence pipeline). */
+  evidenceId?: string;
+  uploadedAt: string;
+}
+
+/** A single turn in a module conversation transcript. */
+export interface RoAConvMessage {
+  id: string;
+  role: 'user' | 'assistant';
+  content: string;
+  attachments?: RoAConvUploadRef[];
+  createdAt: string;
+}
+
+/** The AI-authored narrative for one module, as titled prose sections. */
+export interface RoAModuleNarrative {
+  moduleId: string;
+  sections: Array<{ id: string; title: string; markdown: string }>;
+  generatedAt: string;
+  editedAt?: string;
+  editedBy?: string;
+}
+
+/** Persisted conversation record for a single module (stored in a side KV key). */
+export interface RoAModuleConversationRecord {
+  draftId: string;
+  moduleId: string;
+  status: RoAModuleConversationStatus;
+  messages: RoAConvMessage[];
+  uploads: RoAConvUploadRef[];
+  narrative?: RoAModuleNarrative;
+  updatedAt: string;
 }
 
 export interface RoAEvidenceItem {

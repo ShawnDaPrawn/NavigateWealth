@@ -19,6 +19,7 @@
 
 import * as kv from './kv_store.tsx';
 import { createModuleLogger } from './stderr-logger.ts';
+import { OPENAI_PRIMARY_MODEL } from './ai-model-config.ts';
 import type {
   TaxAgentSession,
   TaxAgentSessionStatus,
@@ -216,7 +217,7 @@ export async function sendToAgent(
       Authorization: `Bearer ${OPENAI_API_KEY}`,
     },
     body: JSON.stringify({
-      model: 'gpt-4o',
+      model: OPENAI_PRIMARY_MODEL,
       messages: chatMessages,
       max_tokens: 4096,
     }),

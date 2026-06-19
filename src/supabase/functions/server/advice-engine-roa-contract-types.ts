@@ -108,6 +108,61 @@ export interface RoAContractDocumentSection {
   template?: string;
 }
 
+/**
+ * How a module gathers its data. `form` is the legacy programmatic flow
+ * (typed forms driven by `formSchema`); `conversation` is the AI-driven flow
+ * where the adviser converses with the model per the contract's instructions
+ * and the AI writes the narrative directly.
+ */
+export type RoAAuthoringMode = 'form' | 'conversation';
+
+/** A canonical narrative section the AI must author as prose for the RoA. */
+export interface RoANarrativeSection {
+  id: string;
+  title: string;
+  /** Instruction to the AI describing what this section must contain. */
+  description: string;
+  required: boolean;
+  order: number;
+}
+
+/** An upload the adviser may (or must) provide during a module conversation. */
+export interface RoAConversationUpload {
+  id: string;
+  label: string;
+  required: boolean;
+  acceptedMimeTypes?: string[];
+  guidance?: string;
+  /** When true, image/PDF content is passed to the model for analysis. */
+  visionEligible?: boolean;
+}
+
+/** How the system decides a module conversation is complete. */
+export interface RoAConversationCompletion {
+  mode: 'ai-signal' | 'manual';
+  /** Guardrail: minimum adviser turns before the AI may signal completion. */
+  minTurns?: number;
+  /** Block completion until all required uploads are attached. */
+  requireAllUploads?: boolean;
+}
+
+/**
+ * The conversational authoring configuration for a module. Authored by a
+ * super-admin in place of the form schema. Optional so legacy form contracts
+ * remain valid.
+ */
+export interface RoAModuleConversation {
+  /** Per-module system prompt / project instructions for the AI. */
+  instructions: string;
+  /** First assistant turn presented to the adviser. */
+  openingMessage?: string;
+  /** Canonical narrative sections the AI must produce as prose. */
+  narrativeSections: RoANarrativeSection[];
+  /** Documents/images the adviser may upload mid-conversation. */
+  uploads: RoAConversationUpload[];
+  completion: RoAConversationCompletion;
+}
+
 export interface RoAModuleContract {
   id: string;
   title: string;
@@ -116,6 +171,13 @@ export interface RoAModuleContract {
   status: RoAContractStatus;
   version: number;
   schemaVersion: string;
+  /**
+   * How this module is completed. Absent ⇒ 'form' (legacy programmatic flow).
+   * 'conversation' uses the `conversation` block and the AI-authored narrative.
+   */
+  authoringMode?: RoAAuthoringMode;
+  /** Conversational authoring config (required when authoringMode === 'conversation'). */
+  conversation?: RoAModuleConversation;
   input: {
     sources: RoAContractInputSource[];
     gatheringMethods: Array<
@@ -162,6 +224,8 @@ export interface RoAModuleContractSchemaFormat {
   allowedGatheringMethods: RoAModuleContract['input']['gatheringMethods'];
   allowedEvidenceTypes: RoAContractEvidenceRequirement['type'][];
   allowedValidationSeverities: RoAContractValidationRule['severity'][];
+  allowedAuthoringModes: RoAAuthoringMode[];
+  allowedCompletionModes: RoAConversationCompletion['mode'][];
   requiredContractKeys: string[];
   requiredFieldKeys: string[];
 }

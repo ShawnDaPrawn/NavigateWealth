@@ -18,6 +18,7 @@ import { createModuleLogger } from './stderr-logger.ts';
 import { retrieveContext, type RetrievedContext } from './vasco-rag-service.ts';
 import { ensureSeeded, getActivePrompt, type PromptContext } from './prompt-service.ts';
 import { VASCO_PUBLIC_LIMITS } from './vasco-guardrails.ts';
+import { OPENAI_PRIMARY_MODEL, isResponsesOnlyModel } from './ai-model-config.ts';
 
 const log = createModuleLogger('vasco');
 
@@ -373,21 +374,23 @@ export async function chat(request: VascoChatRequest): Promise<VascoChatResponse
   }
 
   // Call OpenAI
+  const body: Record<string, unknown> = {
+    model: OPENAI_PRIMARY_MODEL,
+    messages,
+    max_tokens: MAX_RESPONSE_TOKENS,
+    presence_penalty: 0.1,
+    frequency_penalty: 0.1,
+    safety_identifier: request.safetyIdentifier,
+  };
+  if (!isResponsesOnlyModel(OPENAI_PRIMARY_MODEL)) body.temperature = 0.7;
+
   const response = await fetch('https://api.openai.com/v1/chat/completions', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
       Authorization: `Bearer ${openaiKey}`,
     },
-    body: JSON.stringify({
-      model: 'gpt-4o',
-      messages,
-      max_tokens: MAX_RESPONSE_TOKENS,
-      temperature: 0.7,
-      presence_penalty: 0.1,
-      frequency_penalty: 0.1,
-      safety_identifier: request.safetyIdentifier,
-    }),
+    body: JSON.stringify(body),
   });
 
   if (!response.ok) {
@@ -465,22 +468,24 @@ export async function chatStream(
   const sessionId = request.sessionId || crypto.randomUUID();
 
   // Call OpenAI with streaming enabled
+  const body: Record<string, unknown> = {
+    model: OPENAI_PRIMARY_MODEL,
+    messages,
+    max_tokens: MAX_RESPONSE_TOKENS,
+    presence_penalty: 0.1,
+    frequency_penalty: 0.1,
+    safety_identifier: request.safetyIdentifier,
+    stream: true,
+  };
+  if (!isResponsesOnlyModel(OPENAI_PRIMARY_MODEL)) body.temperature = 0.7;
+
   const response = await fetch('https://api.openai.com/v1/chat/completions', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
       Authorization: `Bearer ${openaiKey}`,
     },
-    body: JSON.stringify({
-      model: 'gpt-4o',
-      messages,
-      max_tokens: MAX_RESPONSE_TOKENS,
-      temperature: 0.7,
-      presence_penalty: 0.1,
-      frequency_penalty: 0.1,
-      safety_identifier: request.safetyIdentifier,
-      stream: true,
-    }),
+    body: JSON.stringify(body),
   });
 
   if (!response.ok) {

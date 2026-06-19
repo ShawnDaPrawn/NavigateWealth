@@ -11,6 +11,7 @@ import { ensureSeeded, getActivePrompt } from './prompt-service.ts';
 import { getPortfolioSummary } from './client-portal-service.ts';
 import { getAuthContext, AuthError } from './auth-mw.ts';
 import { PERSONNEL_ROLES } from './constants.ts';
+import { OPENAI_PRIMARY_MODEL, isResponsesOnlyModel } from './ai-model-config.ts';
 
 const app = new Hono();
 const log = createModuleLogger('ai-advisor');
@@ -938,18 +939,20 @@ async function callOpenAI(messages: ChatMessage[], systemPrompt: string) {
   const OPENAI_API_KEY = getOpenAIKey();
   if (!OPENAI_API_KEY) throw new Error('OPENAI_API_KEY not configured');
 
+  const body: Record<string, unknown> = {
+    model: OPENAI_PRIMARY_MODEL,
+    messages: [{ role: 'system', content: systemPrompt }, ...messages],
+    max_tokens: 1000,
+  };
+  if (!isResponsesOnlyModel(OPENAI_PRIMARY_MODEL)) body.temperature = 0.7;
+
   const response = await fetch('https://api.openai.com/v1/chat/completions', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
       Authorization: `Bearer ${OPENAI_API_KEY}`,
     },
-    body: JSON.stringify({
-      model: 'gpt-4o',
-      messages: [{ role: 'system', content: systemPrompt }, ...messages],
-      temperature: 0.7,
-      max_tokens: 1000,
-    }),
+    body: JSON.stringify(body),
   });
 
   if (!response.ok) {
@@ -968,19 +971,21 @@ async function callOpenAIStream(messages: ChatMessage[], systemPrompt: string) {
   const OPENAI_API_KEY = getOpenAIKey();
   if (!OPENAI_API_KEY) throw new Error('OPENAI_API_KEY not configured');
 
+  const body: Record<string, unknown> = {
+    model: OPENAI_PRIMARY_MODEL,
+    messages: [{ role: 'system', content: systemPrompt }, ...messages],
+    max_tokens: 1000,
+    stream: true,
+  };
+  if (!isResponsesOnlyModel(OPENAI_PRIMARY_MODEL)) body.temperature = 0.7;
+
   const response = await fetch('https://api.openai.com/v1/chat/completions', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
       Authorization: `Bearer ${OPENAI_API_KEY}`,
     },
-    body: JSON.stringify({
-      model: 'gpt-4o',
-      messages: [{ role: 'system', content: systemPrompt }, ...messages],
-      temperature: 0.7,
-      max_tokens: 1000,
-      stream: true,
-    }),
+    body: JSON.stringify(body),
   });
 
   if (!response.ok) {

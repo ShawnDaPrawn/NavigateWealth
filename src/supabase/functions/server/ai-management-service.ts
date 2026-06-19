@@ -14,6 +14,7 @@
 
 import * as kv from './kv_store.tsx';
 import { createModuleLogger } from './stderr-logger.ts';
+import { OPENAI_PRIMARY_MODEL } from './ai-model-config.ts';
 
 const log = createModuleLogger('ai-management');
 
@@ -73,7 +74,7 @@ const DEFAULT_AGENTS: AIAgentConfig[] = [
       'Public-facing AI financial navigator on the Navigate Wealth website. Provides general financial education, product info, and lead qualification.',
     icon: 'Compass',
     status: 'active',
-    model: 'gpt-4o',
+    model: OPENAI_PRIMARY_MODEL,
     temperature: 0.7,
     maxTokens: 1000,
     maxContextMessages: 20,
@@ -98,7 +99,7 @@ const DEFAULT_AGENTS: AIAgentConfig[] = [
       'Authenticated AI advisor in the client portal. Has access to client profile information, policy data, portfolio overview, FNA/INA context, communication history, and document history for personalised guidance.',
     icon: 'Compass',
     status: 'active',
-    model: 'gpt-4o',
+    model: OPENAI_PRIMARY_MODEL,
     temperature: 0.7,
     maxTokens: 1500,
     maxContextMessages: 20,
@@ -122,7 +123,7 @@ const DEFAULT_AGENTS: AIAgentConfig[] = [
       'Admin-side AI assistant for the Advice Engine. Helps advisers draft Records of Advice and analyse client data.',
     icon: 'Brain',
     status: 'active',
-    model: 'gpt-4o',
+    model: OPENAI_PRIMARY_MODEL,
     temperature: 0.5,
     maxTokens: 2000,
     maxContextMessages: 30,
@@ -146,7 +147,7 @@ const DEFAULT_AGENTS: AIAgentConfig[] = [
       'Estate planning assistant that guides users through will creation and estate duty considerations.',
     icon: 'ScrollText',
     status: 'active',
-    model: 'gpt-4o',
+    model: OPENAI_PRIMARY_MODEL,
     temperature: 0.6,
     maxTokens: 1500,
     maxContextMessages: 20,
@@ -170,7 +171,7 @@ const DEFAULT_AGENTS: AIAgentConfig[] = [
       'Tax planning assistant specialising in South African tax legislation, deductions, and optimisation strategies.',
     icon: 'Calculator',
     status: 'active',
-    model: 'gpt-4o',
+    model: OPENAI_PRIMARY_MODEL,
     temperature: 0.5,
     maxTokens: 1500,
     maxContextMessages: 20,
