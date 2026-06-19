@@ -16,3 +16,22 @@ export const ENDPOINTS = {
   CLIENT_DETAILS: '/clients',
   PERSONNEL_LIST: '/personnel/list',
 } as const;
+
+/**
+ * Path builders for the RoA module-conversation (AI authoring) endpoints.
+ * These mirror the backend contract and live under the same RoA draft prefix.
+ */
+export const ROA_CONVERSATION_ENDPOINTS = {
+  start: (draftId: string) => `${ENDPOINTS.ROA_DRAFT}/${draftId}/conversation/start`,
+  progress: (draftId: string) => `${ENDPOINTS.ROA_DRAFT}/${draftId}/conversation/progress`,
+  moduleConversation: (draftId: string, moduleId: string) =>
+    `${ENDPOINTS.ROA_DRAFT}/${draftId}/modules/${moduleId}/conversation`,
+  moduleChat: (draftId: string, moduleId: string) =>
+    `${ENDPOINTS.ROA_DRAFT}/${draftId}/modules/${moduleId}/chat`,
+  moduleComplete: (draftId: string, moduleId: string) =>
+    `${ENDPOINTS.ROA_DRAFT}/${draftId}/modules/${moduleId}/complete`,
+  moduleUpload: (draftId: string, moduleId: string) =>
+    `${ENDPOINTS.ROA_DRAFT}/${draftId}/modules/${moduleId}/upload`,
+  moduleNarrative: (draftId: string, moduleId: string) =>
+    `${ENDPOINTS.ROA_DRAFT}/${draftId}/modules/${moduleId}/narrative`,
+} as const;

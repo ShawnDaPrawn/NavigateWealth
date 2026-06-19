@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { Card, CardContent, CardHeader, CardTitle } from '../../../../ui/card';
@@ -8,10 +8,11 @@ import { Progress } from '../../../../ui/progress';
 import { RoAStepStart } from './roa-steps/RoAStepStart';
 import { RoAStepClient } from './roa-steps/RoAStepClient';
 import { RoAStepModules } from './roa-steps/RoAStepModules';
-import { RoAStepModuleDetails } from './roa-steps/RoAStepModuleDetails';
+import { RoAStepModuleConversation } from './roa-steps/RoAStepModuleConversation';
 import { RoAStepReview } from './roa-steps/RoAStepReview';
 import { ChevronLeft, ChevronRight, FileText, Save } from 'lucide-react';
 import { RoADraft, RoAModule, RoAField, RoAEvidenceItem } from '../types';
+import type { RoAModuleConversationStatus } from '../types';
 import { roaApi } from '../api';
 import { adviceEngineKeys } from '../hooks/queryKeys';
 import {
@@ -22,11 +23,23 @@ import {
 
 export type { RoADraft, RoAModule, RoAField, RoAEvidenceItem };
 
+/**
+ * Conversation is the default authoring mode; only modules explicitly set to
+ * 'form' use the legacy form details flow.
+ */
+function isConversationModule(module: RoAModule | undefined): boolean {
+  return (module?.authoringMode ?? 'conversation') !== 'form';
+}
+
 const STEPS = [
   { id: 'start', title: 'Start', description: 'Begin RoA draft' },
   { id: 'client', title: 'Client', description: 'Select or create client' },
   { id: 'modules', title: 'Modules', description: 'Choose advice modules' },
-  { id: 'details', title: 'Details', description: 'Complete module forms' },
+  {
+    id: 'details',
+    title: 'Conversation',
+    description: 'Complete each module with the AI assistant',
+  },
   { id: 'review', title: 'Review', description: 'Compile and export' },
 ];
 
@@ -51,6 +64,41 @@ export function DraftRoAInterface() {
   const contractModules = activeContracts.map(moduleContractToRuntimeModule);
   const availableModules =
     contractModules.length > 0 ? contractModules : getFallbackRuntimeModules();
+
+  // Track which drafts have already had their conversation started so we only
+  // POST /conversation/start once per draft when entering the conversation step.
+  const startedConversationFor = useRef<Set<string>>(new Set());
+
+  useEffect(() => {
+    const draftId = roaDraft?.id;
+    if (currentStep !== 3 || !draftId) return;
+    if (startedConversationFor.current.has(draftId)) return;
+    // Only relevant when at least one selected module uses conversation mode.
+    const hasConversationModule = roaDraft.selectedModules.some((moduleId) =>
+      isConversationModule(availableModules.find((module) => module.id === moduleId)),
+    );
+    if (!hasConversationModule) return;
+
+    startedConversationFor.current.add(draftId);
+    roaApi
+      .startConversation(draftId)
+      .then(({ progress: convProgress }) => {
+        const statusMap: Record<string, RoAModuleConversationStatus> = {};
+        convProgress.modules.forEach((module) => {
+          statusMap[module.moduleId] = module.status;
+        });
+        updateDraft({ moduleConversationStatus: statusMap });
+        queryClient.invalidateQueries({ queryKey: adviceEngineKeys.roa.draft(draftId) });
+      })
+      .catch((error) => {
+        startedConversationFor.current.delete(draftId);
+        console.error('Failed to start RoA conversation:', error);
+        toast.error(
+          error instanceof Error ? error.message : 'Could not start the module conversation.',
+        );
+      });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentStep, roaDraft?.id]);
 
   const currentStepData = STEPS[currentStep];
   const progress = ((currentStep + 1) / STEPS.length) * 100;
@@ -167,11 +215,16 @@ export function DraftRoAInterface() {
         return roaDraft && (roaDraft.clientId || roaDraft.clientData);
       case 2: // Modules
         return roaDraft && roaDraft.selectedModules.length > 0;
-      case 3: // Details
+      case 3: // Conversation (form fallback per module)
         return (
           roaDraft &&
           roaDraft.selectedModules.every((moduleId) => {
             const module = availableModules.find((item) => item.id === moduleId);
+            if (isConversationModule(module)) {
+              // Conversation modules are complete when the backend marks them so.
+              return roaDraft.moduleConversationStatus?.[moduleId] === 'complete';
+            }
+            // Legacy form modules still use the runtime form status.
             const moduleData = roaDraft.moduleData[moduleId];
             if (!module || !moduleData) return false;
             return getModuleRuntimeStatus(
@@ -211,10 +264,13 @@ export function DraftRoAInterface() {
         );
       case 3:
         return (
-          <RoAStepModuleDetails
+          <RoAStepModuleConversation
             draft={roaDraft}
             onUpdate={updateDraft}
             modules={availableModules}
+            onAllComplete={() => {
+              if (canProceed()) handleNext();
+            }}
           />
         );
       case 4:

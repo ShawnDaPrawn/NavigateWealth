@@ -193,6 +193,8 @@ export function moduleContractToRuntimeModule(contract: RoAModuleContract): RoAM
     metadata: contract.metadata,
     title: contract.title,
     description: contract.description,
+    authoringMode: contract.authoringMode,
+    conversation: contract.conversation,
     fields,
     input: contract.input,
     formSchema: {
