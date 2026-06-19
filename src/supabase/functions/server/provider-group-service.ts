@@ -73,41 +73,73 @@ export interface AutoProviderGroupSpec {
   name: string;
   description: string;
   filterConfig: { productFilters: Array<{ provider?: string; type?: string }> };
-  /** Lower-cased provider key (for dedupe / diagnostics). */
+  /** Slug-based provider key — the basis of the group ID. */
   providerKey: string;
-  /** Lower-cased product-type key, present only for provider+type groups. */
+  /** Slug-based product-type key, present only for provider+type groups. */
   typeKey?: string;
 }
 
 /**
  * Pure derivation: given the active matcher clients, return the full set of
  * auto provider groups that SHOULD exist — one per distinct provider, plus one
- * per distinct provider+product-type combination. Providers/types are matched
- * case-insensitively; the first-seen spelling is used for display.
+ * per distinct provider+product-type combination.
+ *
+ * Grouping identity is slug-based (so "Risk Planning" and "risk_planning"
+ * resolve to the same group). Because the group-matcher compares the raw
+ * lowercased strings — which a slug does NOT preserve (underscores vs spaces) —
+ * each group's filterConfig keeps ONE productFilter rule per distinct raw
+ * representation seen. The matcher ORs the rules, so every client is captured
+ * regardless of which spelling their policy used.
  *
  * No KV access — kept pure so it is trivially unit-testable.
  */
 export function deriveAutoProviderGroups(clients: MatcherClient[]): AutoProviderGroupSpec[] {
-  // providerKey -> display spelling
-  const providerDisplay = new Map<string, string>();
-  // `${providerKey}__${typeKey}` -> { provider display, type display }
-  const comboDisplay = new Map<string, { provider: string; type: string }>();
+  interface ProviderAcc {
+    display: string;
+    rawProviders: Map<string, string>; // rawProvider -> rawProvider (dedup set)
+  }
+  interface ComboAcc {
+    providerDisplay: string;
+    typeDisplay: string;
+    rules: Map<string, { provider: string; type: string }>; // ruleKey -> raw rule
+  }
+
+  const providers = new Map<string, ProviderAcc>(); // providerKey -> acc
+  const combos = new Map<string, ComboAcc>(); // `${providerKey}__${typeKey}` -> acc
 
   for (const client of clients) {
     for (const product of client.products || []) {
       const providerRaw = (product.provider || '').trim();
       if (!providerRaw) continue;
 
-      const providerKey = providerRaw.toLowerCase();
-      if (!providerDisplay.has(providerKey)) {
-        providerDisplay.set(providerKey, providerRaw);
+      const providerKey = slug(providerRaw);
+      if (!providerKey) continue;
+
+      let pAcc = providers.get(providerKey);
+      if (!pAcc) {
+        pAcc = { display: providerRaw, rawProviders: new Map() };
+        providers.set(providerKey, pAcc);
+      }
+      // Dedup raw spellings case-insensitively — the matcher already compares
+      // lowercased, so only spellings that differ beyond case need their own rule.
+      if (!pAcc.rawProviders.has(providerRaw.toLowerCase())) {
+        pAcc.rawProviders.set(providerRaw.toLowerCase(), providerRaw);
       }
 
       const typeRaw = (product.type || '').trim();
       if (typeRaw) {
-        const comboKey = `${providerKey}__${typeRaw.toLowerCase()}`;
-        if (!comboDisplay.has(comboKey)) {
-          comboDisplay.set(comboKey, { provider: providerRaw, type: typeRaw });
+        const typeKey = slug(typeRaw);
+        if (!typeKey) continue;
+
+        const comboKey = `${providerKey}__${typeKey}`;
+        let cAcc = combos.get(comboKey);
+        if (!cAcc) {
+          cAcc = { providerDisplay: providerRaw, typeDisplay: typeRaw, rules: new Map() };
+          combos.set(comboKey, cAcc);
+        }
+        const ruleKey = `${providerRaw.toLowerCase()}||${typeRaw.toLowerCase()}`;
+        if (!cAcc.rules.has(ruleKey)) {
+          cAcc.rules.set(ruleKey, { provider: providerRaw, type: typeRaw });
         }
       }
     }
@@ -116,26 +148,28 @@ export function deriveAutoProviderGroups(clients: MatcherClient[]): AutoProvider
   const specs: AutoProviderGroupSpec[] = [];
 
   // One group per provider — "All <Provider> Clients"
-  for (const [providerKey, provider] of providerDisplay) {
+  for (const [providerKey, acc] of providers) {
     specs.push({
-      id: `${AUTO_PROVIDER_GROUP_PREFIX}${slug(provider)}`,
-      name: `All ${provider} Clients`,
-      description: `Clients with at least one ${provider} product. Automatically maintained.`,
-      filterConfig: { productFilters: [{ provider }] },
+      id: `${AUTO_PROVIDER_GROUP_PREFIX}${providerKey}`,
+      name: `All ${acc.display} Clients`,
+      description: `Clients with at least one ${acc.display} product. Automatically maintained.`,
+      filterConfig: {
+        productFilters: [...acc.rawProviders.values()].map((provider) => ({ provider })),
+      },
       providerKey,
     });
   }
 
   // One group per provider + product-type — e.g. "Allan Gray Retirement Planning"
-  for (const [comboKey, { provider, type }] of comboDisplay) {
-    const typeKey = comboKey.split('__')[1];
-    const label = categoryLabel(type);
+  for (const [comboKey, acc] of combos) {
+    const [providerKey, typeKey] = comboKey.split('__');
+    const label = categoryLabel(acc.typeDisplay);
     specs.push({
-      id: `${AUTO_PROVIDER_GROUP_PREFIX}${slug(provider)}__${slug(type)}`,
-      name: `${provider} ${label}`,
-      description: `Clients with a ${provider} ${label} product. Automatically maintained.`,
-      filterConfig: { productFilters: [{ provider, type }] },
-      providerKey: comboKey.split('__')[0],
+      id: `${AUTO_PROVIDER_GROUP_PREFIX}${comboKey}`,
+      name: `${acc.providerDisplay} ${label}`,
+      description: `Clients with a ${acc.providerDisplay} ${label} product. Automatically maintained.`,
+      filterConfig: { productFilters: [...acc.rules.values()] },
+      providerKey,
       typeKey,
     });
   }

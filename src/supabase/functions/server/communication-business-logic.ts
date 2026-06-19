@@ -190,10 +190,16 @@ export async function resolveGroupMembership(
       // 1. Product Filters
       if (productFilters && productFilters.length > 0) {
         const clientProducts = client.products || [];
+        // Case-insensitive comparison to stay consistent with group-matcher.ts
+        // (otherwise scheduled sends could drop clients whose provider/type
+        // differs only by case from the stored filter).
         const hasMatch = productFilters.some((filter) => {
+          const filterProvider = filter.provider?.toLowerCase();
+          const filterType = filter.type?.toLowerCase();
           return clientProducts.some((cp) => {
-            const providerMatch = !filter.provider || cp.provider === filter.provider;
-            const typeMatch = !filter.type || cp.type === filter.type;
+            const providerMatch =
+              !filterProvider || (cp.provider || '').toLowerCase() === filterProvider;
+            const typeMatch = !filterType || (cp.type || '').toLowerCase() === filterType;
             return providerMatch && typeMatch;
           });
         });
@@ -320,42 +326,45 @@ export async function resolveRecipients(
     const groupSelection = selection.selectedGroup;
     if (!groupSelection) return [];
 
-    if (groupSelection.type === 'custom') {
-      // 1. Try Cache First
-      const cachedMembers = await repo.getGroupMembersCache(groupSelection.id);
-      if (cachedMembers && Array.isArray(cachedMembers) && cachedMembers.length > 0) {
-        logger.info(`Using cached members for group ${groupSelection.id}`, {
-          count: cachedMembers.length,
-        });
-        return cachedMembers as unknown as CommunicationClient[];
-      }
-
-      // 2. Fallback to fresh calculation
-      logger.info(`Cache miss for group ${groupSelection.id}. Recalculating...`);
-      const storedGroup = await repo.getGroup(groupSelection.id);
-      const group = storedGroup || groupSelection;
-
-      const allClients = await getAllClients(supabase);
-      const members = await resolveGroupMembership(group as unknown as Group, allClients);
-
-      // Update cache for next time
-      const cached: CachedRecipient[] = members.map((m) => ({
-        id: m.id,
-        email: m.email,
-        firstName: m.firstName,
-        lastName: m.lastName,
-        phone: m.phone,
-      }));
-      await repo.setGroupMembersCache(group.id, cached);
-
-      return members;
+    // The "All Clients" system group is literally everyone.
+    if (groupSelection.id === 'sys_all') {
+      return await getAllClients(supabase);
     }
 
-    if (groupSelection.type === 'system') {
-      const allClients = await getAllClients(supabase);
-      if (groupSelection.id === 'sys_all') return allClients;
-      return allClients;
+    // Every other group — custom AND auto/system groups such as the provider
+    // groups (sys_provider_*) and the newsletter group — resolves through its
+    // stored membership / filter rules. This is critical: previously all
+    // non-sys_all *system* groups fell through to "return allClients", so a
+    // scheduled provider-group campaign would have emailed every client.
+
+    // 1. Try cache first
+    const cachedMembers = await repo.getGroupMembersCache(groupSelection.id);
+    if (cachedMembers && Array.isArray(cachedMembers) && cachedMembers.length > 0) {
+      logger.info(`Using cached members for group ${groupSelection.id}`, {
+        count: cachedMembers.length,
+      });
+      return cachedMembers as unknown as CommunicationClient[];
     }
+
+    // 2. Fallback to fresh calculation from the stored group
+    logger.info(`Cache miss for group ${groupSelection.id}. Recalculating...`);
+    const storedGroup = await repo.getGroup(groupSelection.id);
+    const group = storedGroup || groupSelection;
+
+    const allClients = await getAllClients(supabase);
+    const members = await resolveGroupMembership(group as unknown as Group, allClients);
+
+    // Update cache for next time
+    const cached: CachedRecipient[] = members.map((m) => ({
+      id: m.id,
+      email: m.email,
+      firstName: m.firstName,
+      lastName: m.lastName,
+      phone: m.phone,
+    }));
+    await repo.setGroupMembersCache(group.id, cached);
+
+    return members;
   }
 
   return [];

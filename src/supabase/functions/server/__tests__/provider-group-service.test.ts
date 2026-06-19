@@ -105,13 +105,35 @@ describe('deriveAutoProviderGroups', () => {
     expect(specs).toHaveLength(5);
   });
 
-  it('is case-insensitive on provider and uses productFilters in the config', () => {
+  it('folds case-only provider variants into one group with a single rule', () => {
     const specs = deriveAutoProviderGroups(clients);
     const allanGray = specs.find((s) => s.name === 'All Allan Gray Clients');
 
     expect(allanGray).toBeDefined();
-    expect(allanGray!.id.startsWith(AUTO_PROVIDER_GROUP_PREFIX)).toBe(true);
+    expect(allanGray!.id).toBe(`${AUTO_PROVIDER_GROUP_PREFIX}allan_gray`);
+    // 'Allan Gray' and 'allan gray' differ only by case → one rule (matcher is
+    // case-insensitive), keeping the first-seen spelling.
     expect(allanGray!.filterConfig.productFilters).toEqual([{ provider: 'Allan Gray' }]);
+  });
+
+  it('keeps one rule per genuinely distinct type representation (no dropped clients)', () => {
+    // Same provider + same logical type, but two spellings: a category id and
+    // its human label. They share a group ID but must each get a filter rule.
+    const mixed: MatcherClient[] = [
+      { id: 'a', products: [{ provider: 'Hollard', type: 'risk_planning' }] },
+      { id: 'b', products: [{ provider: 'Hollard', type: 'Risk Planning' }] },
+    ];
+    const specs = deriveAutoProviderGroups(mixed);
+
+    const combo = specs.filter((s) => s.id.includes('__'));
+    // Single combo group (no ID collision / overwrite)...
+    expect(combo).toHaveLength(1);
+    expect(combo[0].id).toBe(`${AUTO_PROVIDER_GROUP_PREFIX}hollard__risk_planning`);
+    // ...covering BOTH raw spellings so neither client is dropped.
+    expect(combo[0].filterConfig.productFilters).toEqual([
+      { provider: 'Hollard', type: 'risk_planning' },
+      { provider: 'Hollard', type: 'Risk Planning' },
+    ]);
   });
 
   it('ignores blank providers and returns nothing when no products exist', () => {
