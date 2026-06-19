@@ -14,6 +14,8 @@ interface RoAStepStartProps {
   existingDrafts?: RoADraft[];
   finalisedDrafts?: RoADraft[];
   isLoadingDrafts?: boolean;
+  /** True while a new draft is being created server-side (disables the button). */
+  isCreating?: boolean;
 }
 
 // Empty array is correct initial state when no drafts exist yet.
@@ -26,6 +28,7 @@ export function RoAStepStart({
   existingDrafts = [],
   finalisedDrafts = [],
   isLoadingDrafts = false,
+  isCreating = false,
 }: RoAStepStartProps) {
   const getClientName = (draft: RoADraft): string => {
     if (draft.clientData) {
@@ -79,9 +82,9 @@ export function RoAStepStart({
             Begin a new Record of Advice from scratch. Our guided process ensures compliance and
             completeness.
           </p>
-          <Button onClick={onCreateNew} size="lg" className="px-8">
+          <Button onClick={onCreateNew} size="lg" className="px-8" disabled={isCreating}>
             <Plus className="h-4 w-4 mr-2" />
-            Begin RoA Draft
+            {isCreating ? 'Creating…' : 'Begin RoA Draft'}
           </Button>
         </CardContent>
       </Card>
