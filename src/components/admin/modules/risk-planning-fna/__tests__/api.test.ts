@@ -109,7 +109,7 @@ describe('RiskPlanningFnaAPI', () => {
       const inputData = {
         coverAmount: 1000000,
       } as unknown as import('../types').InformationGatheringInput;
-      const result = await RiskPlanningFnaAPI.create('client-001', inputData);
+      const result = await RiskPlanningFnaAPI.create('client-001', { inputData });
       expect(result).toEqual(MOCK_FNA);
       expect(mockApiPost).toHaveBeenCalledWith('/risk-planning-fna/create', {
         clientId: 'client-001',
@@ -119,7 +119,9 @@ describe('RiskPlanningFnaAPI', () => {
 
     it('throws on API error', async () => {
       mockApiPost.mockRejectedValue(new Error('Create failed'));
-      await expect(RiskPlanningFnaAPI.create('client-001', {})).rejects.toThrow('Create failed');
+      await expect(RiskPlanningFnaAPI.create('client-001', { inputData: {} })).rejects.toThrow(
+        'Create failed',
+      );
     });
   });
 
