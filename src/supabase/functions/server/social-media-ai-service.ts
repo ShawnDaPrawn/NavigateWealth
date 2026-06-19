@@ -13,7 +13,11 @@
 import * as kv from './kv_store.tsx';
 import { createModuleLogger } from './stderr-logger.ts';
 import { createClient } from 'jsr:@supabase/supabase-js@2.49.8';
-import { OPENAI_PRIMARY_MODEL, isResponsesOnlyModel } from './ai-model-config.ts';
+import {
+  OPENAI_PRIMARY_MODEL,
+  applyChatTokenLimit,
+  isResponsesOnlyModel,
+} from './ai-model-config.ts';
 
 const log = createModuleLogger('social-media-ai');
 
@@ -400,10 +404,10 @@ async function callChatCompletionsAPI(
       { role: 'system', content: buildSystemPrompt() },
       { role: 'user', content: userPrompt },
     ],
-    max_tokens: 2000,
     response_format: { type: 'json_object' },
   };
   if (!isResponsesOnlyModel(OPENAI_PRIMARY_MODEL)) body.temperature = 0.7;
+  applyChatTokenLimit(body, OPENAI_PRIMARY_MODEL, 2000);
 
   const response = await fetch('https://api.openai.com/v1/chat/completions', {
     method: 'POST',

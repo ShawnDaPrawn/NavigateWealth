@@ -19,7 +19,7 @@
 
 import * as kv from './kv_store.tsx';
 import { createModuleLogger } from './stderr-logger.ts';
-import { OPENAI_PRIMARY_MODEL } from './ai-model-config.ts';
+import { OPENAI_PRIMARY_MODEL, applyChatTokenLimit } from './ai-model-config.ts';
 import type {
   TaxAgentSession,
   TaxAgentSessionStatus,
@@ -210,17 +210,18 @@ export async function sendToAgent(
     content: m.content,
   }));
 
+  const chatBody: Record<string, unknown> = {
+    model: OPENAI_PRIMARY_MODEL,
+    messages: chatMessages,
+  };
+  applyChatTokenLimit(chatBody, OPENAI_PRIMARY_MODEL, 4096);
   const chatRes = await fetch('https://api.openai.com/v1/chat/completions', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
       Authorization: `Bearer ${OPENAI_API_KEY}`,
     },
-    body: JSON.stringify({
-      model: OPENAI_PRIMARY_MODEL,
-      messages: chatMessages,
-      max_tokens: 4096,
-    }),
+    body: JSON.stringify(chatBody),
   });
 
   if (!chatRes.ok) {

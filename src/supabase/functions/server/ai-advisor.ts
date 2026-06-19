@@ -11,7 +11,11 @@ import { ensureSeeded, getActivePrompt } from './prompt-service.ts';
 import { getPortfolioSummary } from './client-portal-service.ts';
 import { getAuthContext, AuthError } from './auth-mw.ts';
 import { PERSONNEL_ROLES } from './constants.ts';
-import { OPENAI_PRIMARY_MODEL, isResponsesOnlyModel } from './ai-model-config.ts';
+import {
+  OPENAI_PRIMARY_MODEL,
+  applyChatTokenLimit,
+  isResponsesOnlyModel,
+} from './ai-model-config.ts';
 
 const app = new Hono();
 const log = createModuleLogger('ai-advisor');
@@ -942,9 +946,9 @@ async function callOpenAI(messages: ChatMessage[], systemPrompt: string) {
   const body: Record<string, unknown> = {
     model: OPENAI_PRIMARY_MODEL,
     messages: [{ role: 'system', content: systemPrompt }, ...messages],
-    max_tokens: 1000,
   };
   if (!isResponsesOnlyModel(OPENAI_PRIMARY_MODEL)) body.temperature = 0.7;
+  applyChatTokenLimit(body, OPENAI_PRIMARY_MODEL, 1000);
 
   const response = await fetch('https://api.openai.com/v1/chat/completions', {
     method: 'POST',
@@ -974,10 +978,10 @@ async function callOpenAIStream(messages: ChatMessage[], systemPrompt: string) {
   const body: Record<string, unknown> = {
     model: OPENAI_PRIMARY_MODEL,
     messages: [{ role: 'system', content: systemPrompt }, ...messages],
-    max_tokens: 1000,
     stream: true,
   };
   if (!isResponsesOnlyModel(OPENAI_PRIMARY_MODEL)) body.temperature = 0.7;
+  applyChatTokenLimit(body, OPENAI_PRIMARY_MODEL, 1000);
 
   const response = await fetch('https://api.openai.com/v1/chat/completions', {
     method: 'POST',

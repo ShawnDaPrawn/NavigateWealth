@@ -45,6 +45,20 @@ export function isResponsesOnlyModel(model: string): boolean {
   return /^(gpt-5|o\d|gpt-4\.1)/i.test(model);
 }
 
+/**
+ * Apply the correct output-token cap to a Chat Completions request body.
+ * GPT-5 / o-series models reject `max_tokens` on Chat Completions and require
+ * `max_completion_tokens`; older models still use `max_tokens`.
+ */
+export function applyChatTokenLimit(
+  body: Record<string, unknown>,
+  model: string,
+  maxTokens: number,
+): void {
+  if (isResponsesOnlyModel(model)) body.max_completion_tokens = maxTokens;
+  else body.max_tokens = maxTokens;
+}
+
 export function getOpenAIKey(): string {
   const key = readEnv('OPENAI_API_KEY');
   if (!key) throw new Error('OPENAI_API_KEY not configured on server');
@@ -221,9 +235,9 @@ export async function callResponses(options: CallResponsesOptions): Promise<Call
   const chatBody: Record<string, unknown> = {
     model: fallbackModel,
     messages: options.messages.map(toChatMessage),
-    max_tokens: options.maxOutputTokens ?? 2000,
     temperature: options.temperature ?? 0.7,
   };
+  applyChatTokenLimit(chatBody, fallbackModel, options.maxOutputTokens ?? 2000);
   if (options.jsonSchema) {
     chatBody.response_format = {
       type: 'json_schema',

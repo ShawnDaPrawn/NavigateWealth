@@ -9,7 +9,11 @@
 import { createClient } from 'jsr:@supabase/supabase-js@2.49.8';
 import { createModuleLogger } from './stderr-logger.ts';
 import { getErrMsg } from './shared-logger-utils.ts';
-import { OPENAI_PRIMARY_MODEL, isResponsesOnlyModel } from './ai-model-config.ts';
+import {
+  OPENAI_PRIMARY_MODEL,
+  applyChatTokenLimit,
+  isResponsesOnlyModel,
+} from './ai-model-config.ts';
 import type { ExtractedPolicyData } from './policy-extraction-types.ts';
 
 const log = createModuleLogger('policy-extraction-openai');
@@ -167,10 +171,10 @@ export async function callOpenAIExtraction(
           ],
         },
       ],
-      max_tokens: 4096,
     };
     // Low temperature for extraction accuracy (only for models that accept it)
     if (!isResponsesOnlyModel(OPENAI_PRIMARY_MODEL)) chatBody.temperature = 0.1;
+    applyChatTokenLimit(chatBody, OPENAI_PRIMARY_MODEL, 4096);
 
     const res = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',

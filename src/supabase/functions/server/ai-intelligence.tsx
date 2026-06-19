@@ -18,7 +18,11 @@ import { createClient } from 'jsr:@supabase/supabase-js@2.49.8';
 import * as kv from './kv_store.tsx';
 import { createModuleLogger } from './stderr-logger.ts';
 import { getErrMsg } from './shared-logger-utils.ts';
-import { OPENAI_PRIMARY_MODEL, isResponsesOnlyModel } from './ai-model-config.ts';
+import {
+  OPENAI_PRIMARY_MODEL,
+  applyChatTokenLimit,
+  isResponsesOnlyModel,
+} from './ai-model-config.ts';
 
 type KvEntry = { key: string; value?: unknown; [k: string]: unknown };
 type FnaEntry = {
@@ -637,9 +641,9 @@ async function callOpenAIWorkflow(messages: ChatMessage[], systemPrompt: string)
     const body: Record<string, unknown> = {
       model: OPENAI_PRIMARY_MODEL,
       messages: [{ role: 'system', content: systemPrompt }, ...messages],
-      max_tokens: 2000,
     };
     if (!isResponsesOnlyModel(OPENAI_PRIMARY_MODEL)) body.temperature = 0.7;
+    applyChatTokenLimit(body, OPENAI_PRIMARY_MODEL, 2000);
 
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
