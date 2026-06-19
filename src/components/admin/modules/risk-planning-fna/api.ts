@@ -7,7 +7,13 @@
 
 import { api, APIError } from '../../../../utils/api';
 import { logger } from '../../../../utils/logger';
-import type { PublishedFNA, InformationGatheringInput } from './types';
+import type {
+  PublishedFNA,
+  InformationGatheringInput,
+  RiskCalculations,
+  Adjustments,
+  FinalRiskNeed,
+} from './types';
 
 export const RiskPlanningFnaAPI = {
   /**
@@ -65,13 +71,18 @@ export const RiskPlanningFnaAPI = {
    */
   async create(
     clientId: string,
-    inputData: Partial<InformationGatheringInput>,
+    payload: {
+      inputData: Partial<InformationGatheringInput>;
+      calculations?: RiskCalculations;
+      adjustments?: Adjustments;
+      finalNeeds?: FinalRiskNeed[];
+    },
   ): Promise<PublishedFNA> {
     logger.debug('[RiskPlanningFnaAPI] Creating new FNA', { clientId });
     try {
       const response = await api.post<{ success: boolean; data: PublishedFNA }>(
         '/risk-planning-fna/create',
-        { clientId, inputData },
+        { clientId, ...payload },
       );
       return response.data;
     } catch (error) {

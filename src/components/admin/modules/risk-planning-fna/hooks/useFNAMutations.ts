@@ -21,7 +21,7 @@ export function useFNAMutations() {
     }: {
       clientId: string;
       inputData: Partial<InformationGatheringInput>;
-    }) => RiskPlanningFnaAPI.create(clientId, inputData),
+    }) => RiskPlanningFnaAPI.create(clientId, { inputData }),
     onSuccess: (data) => {
       if (data) {
         queryClient.invalidateQueries({ queryKey: riskFnaKeys.list(data.clientId) });

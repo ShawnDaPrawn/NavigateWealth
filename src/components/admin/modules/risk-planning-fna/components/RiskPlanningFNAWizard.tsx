@@ -13,6 +13,7 @@
  */
 
 import { useState } from 'react';
+import { toast } from 'sonner';
 import { CheckCircle2 } from 'lucide-react';
 import { Card } from '../../../../ui/card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../../../../ui/dialog';
@@ -153,7 +154,7 @@ export function RiskPlanningFNAWizard({
         calculations: state.calculations,
         adjustments: state.adjustments,
         finalNeeds,
-      } as unknown as Parameters<typeof RiskPlanningFnaAPI.create>[1]);
+      });
 
       const fnaId = created.id;
 
@@ -163,6 +164,7 @@ export function RiskPlanningFNAWizard({
       // Success - call onComplete callback if provided
       handleComplete();
     } catch (_error) {
+      toast.error('Failed to publish FNA. Please try again.');
       setState((prev) => ({
         ...prev,
         isPublishing: false,
