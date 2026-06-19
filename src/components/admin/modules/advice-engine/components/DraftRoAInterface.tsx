@@ -48,6 +48,9 @@ export function DraftRoAInterface() {
   const [roaDraft, setRoaDraft] = useState<RoADraft | null>(null);
   const [isAutoSaving, setIsAutoSaving] = useState(false);
   const [discardingDraftId, setDiscardingDraftId] = useState<string | null>(null);
+  // Synchronous re-entry guard so a double-click on "Begin RoA Draft" can't fire
+  // two concurrent creates (each POST would spawn a separate empty draft).
+  const creatingDraftRef = useRef(false);
   const queryClient = useQueryClient();
   const { data: activeContracts = [] } = useQuery({
     queryKey: adviceEngineKeys.roa.moduleContracts({ status: 'active' }),
@@ -154,6 +157,8 @@ export function DraftRoAInterface() {
     // conversation endpoints (start/chat) require the draft to exist
     // server-side — without this first create, those calls fail with
     // "RoA draft not found".
+    if (creatingDraftRef.current) return;
+    creatingDraftRef.current = true;
     setIsAutoSaving(true);
     try {
       const created = await roaApi.saveDraft(null, {
@@ -173,6 +178,7 @@ export function DraftRoAInterface() {
           : 'Could not start a new RoA draft. Please try again.',
       );
     } finally {
+      creatingDraftRef.current = false;
       setIsAutoSaving(false);
     }
   };
@@ -268,6 +274,7 @@ export function DraftRoAInterface() {
             existingDrafts={existingDrafts}
             finalisedDrafts={finalisedDrafts}
             isLoadingDrafts={isLoadingDrafts}
+            isCreating={isAutoSaving}
           />
         );
       case 1:

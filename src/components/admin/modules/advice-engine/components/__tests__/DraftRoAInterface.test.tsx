@@ -45,8 +45,19 @@ vi.mock('../../api', () => ({
 
 import { DraftRoAInterface } from '../DraftRoAInterface';
 import { roaApi } from '../../api';
+import type { RoADraft } from '../../types';
 
 const mockedSaveDraft = vi.mocked(roaApi.saveDraft);
+
+const serverDraft = {
+  id: 'server-draft-1',
+  selectedModules: [],
+  moduleData: {},
+  status: 'draft',
+  version: 1,
+  createdAt: new Date(),
+  updatedAt: new Date(),
+} as unknown as RoADraft;
 
 function renderInterface() {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
@@ -63,15 +74,7 @@ beforeEach(() => {
 
 describe('DraftRoAInterface — new draft creation', () => {
   it('creates the draft on the server via POST (null id) before advancing', async () => {
-    mockedSaveDraft.mockResolvedValue({
-      id: 'server-draft-1',
-      selectedModules: [],
-      moduleData: {},
-      status: 'draft',
-      version: 1,
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    } as never);
+    mockedSaveDraft.mockResolvedValue(serverDraft);
 
     renderInterface();
 
@@ -89,6 +92,29 @@ describe('DraftRoAInterface — new draft creation', () => {
     // id that the server has never seen.
     expect(mockedSaveDraft.mock.calls[0][0]).toBeNull();
     // Once created, the wizard advances to the (stubbed) client step.
+    expect(await screen.findByText('client-step')).toBeTruthy();
+  });
+
+  it('does not create duplicate drafts when the Begin button is double-clicked', async () => {
+    // Keep the create in flight so the second click lands before it resolves.
+    let resolveSave: (draft: RoADraft) => void = () => {};
+    mockedSaveDraft.mockImplementation(
+      () =>
+        new Promise<RoADraft>((resolve) => {
+          resolveSave = resolve;
+        }),
+    );
+
+    renderInterface();
+
+    const beginButton = await screen.findByRole('button', { name: /Begin RoA Draft/i });
+    fireEvent.click(beginButton);
+    fireEvent.click(beginButton); // second click while the first POST is in flight
+
+    // The re-entry guard (and disabled button) must collapse this to one create.
+    expect(mockedSaveDraft).toHaveBeenCalledTimes(1);
+
+    resolveSave(serverDraft);
     expect(await screen.findByText('client-step')).toBeTruthy();
   });
 });
