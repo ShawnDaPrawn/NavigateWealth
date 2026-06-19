@@ -120,7 +120,7 @@ describe('create mutation', () => {
       inputData,
     });
 
-    expect(mockCreate).toHaveBeenCalledWith('c-1', inputData);
+    expect(mockCreate).toHaveBeenCalledWith('c-1', { inputData });
   });
 
   it('onSuccess with data invalidates list query and shows toast.success', async () => {

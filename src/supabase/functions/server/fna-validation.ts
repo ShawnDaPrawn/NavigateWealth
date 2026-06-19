@@ -118,7 +118,7 @@ export const CreateRiskPlanningFnaSchema = z.object({
   inputData: z.record(z.string(), z.unknown()).optional(),
   calculations: z.record(z.string(), z.unknown()).nullable().optional(),
   adjustments: z.record(z.string(), z.unknown()).nullable().optional(),
-  finalNeeds: z.record(z.string(), z.unknown()).nullable().optional(),
+  finalNeeds: z.array(z.unknown()).nullable().optional(),
 });
 
 /**
@@ -129,7 +129,7 @@ export const UpdateRiskPlanningFnaSchema = z
     inputData: z.record(z.string(), z.unknown()).optional(),
     calculations: z.record(z.string(), z.unknown()).nullable().optional(),
     adjustments: z.record(z.string(), z.unknown()).nullable().optional(),
-    finalNeeds: z.record(z.string(), z.unknown()).nullable().optional(),
+    finalNeeds: z.array(z.unknown()).nullable().optional(),
     status: FnaStatusSchema.optional(),
   })
   .refine((data) => Object.keys(data).length > 0, {
