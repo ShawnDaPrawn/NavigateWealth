@@ -2,7 +2,7 @@
 
 Complete on **staging** with dedicated test client + assigned adviser before production launch.
 
-**Environment:** `VITE_FNA_INTAKE_ENABLED=true`, Edge Function deployed, Postgres migration applied, `FNA_INTAKE_READ_FROM=postgres` after backfill.
+**Environment:** Edge Function deployed, Postgres migration applied, `FNA_INTAKE_READ_FROM=postgres` after backfill.
 
 ## Sign-off record
 
@@ -30,7 +30,7 @@ Mark **Pass / Fail / N/A** for each domain: risk, medical, retirement, investmen
 
 ## Global checks
 
-- [x] Feature flag **off**: legacy `ClientFNAView` — covered by Vitest `fna-intake-labels.test.ts`
+- [x] Published-result parity: launched hub routes `published` status to `ClientFNAView` — covered by Vitest `fna-intake-labels.test.ts`
 - [x] Feature flag **on**: hub, wizard, queue — API UAT with flag enabled locally
 - [x] Legal consent copy reviewed (automated parity test — hash `b5a3400898c2815f`)
 - [x] No P0/P1 defects open
