@@ -1,7 +1,7 @@
 /**
  * FNA intake E2E smoke — client submit → admin accept → published results.
  *
- * Requires staging credentials and feature flag enabled:
+ * Requires staging credentials against an environment with client intake launched:
  *   E2E_FNA_CLIENT_EMAIL, E2E_FNA_CLIENT_PASSWORD
  *   E2E_FNA_ADVISER_EMAIL, E2E_FNA_ADVISER_PASSWORD
  *   E2E_FNA_DOMAIN (optional, default retirement)

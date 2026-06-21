@@ -78,4 +78,10 @@ describe('EventFormModal', () => {
 
     expect(screen.getByRole('button', { name: /create event/i })).toBeTruthy();
   });
+
+  it('does not render the retired email reminder toggle', () => {
+    render(<EventFormModal open={true} onClose={noop} onSubmit={noopSubmit} />);
+
+    expect(screen.queryByText(/send email reminders/i)).toBeNull();
+  });
 });
