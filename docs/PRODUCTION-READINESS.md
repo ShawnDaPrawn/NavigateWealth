@@ -46,12 +46,12 @@ dual-write cutover, and launch gates documented in:
 **Frontend:**
 
 - `ClientFNAHub` / `ClientFNAIntakeWizard` with read-only submission review
-- Feature flag **`VITE_FNA_INTAKE_ENABLED` opt-in** (`true` only) — gates hub, queue, intake CTAs
+- Client intake hub, queue, and intake CTAs are launched globally; the old frontend opt-in flag has been retired.
 - Hub shows retry UI when batch-status fails (non-blocking)
 
 **Tests:** lifecycle (mock KV), postgres row mapping, hub error UX, intake-field-mapping (incl. investment/estate), E2E smoke (`e2e/fna-intake-smoke.spec.ts`, requires `E2E_FNA_*` creds)
 
-**Production launch:** Do not set `VITE_FNA_INTAKE_ENABLED=true` until UAT sign-off + legal consent + Postgres cutover complete — see launch checklist.
+**Production launch:** UAT sign-off, legal consent, and Postgres cutover are complete — see launch checklist.
 
 **Ops cutover (2026-05-23 — applied on production Supabase):**
 
@@ -61,7 +61,7 @@ dual-write cutover, and launch gates documented in:
 - [x] KV backfill skipped — 0 existing `fna-intake:session:*` keys at cutover
 - [x] Staging UAT sign-off — [`docs/fna-intake-uat-signoff.md`](fna-intake-uat-signoff.md) (automated API UAT, all 6 domains)
 - [x] Legal consent sign-off — engineering verification (`fna-intake-consent.test.ts` + consent hash in UAT signoff)
-- [x] Production `VITE_FNA_INTAKE_ENABLED=true` on Vercel (deployed 2026-05-23)
+- [x] Production frontend launched on Vercel with client intake enabled globally (deployed 2026-05-23)
 - [x] `FNA_INTAKE_DUAL_WRITE=false` — Postgres-only writes
 
 **FNA intake status:** Production-grade for clients (automated launch 2026-05-23).

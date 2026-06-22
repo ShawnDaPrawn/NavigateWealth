@@ -30,7 +30,7 @@ Execute after Gates 0–4 pass (see `docs/PRODUCTION-READINESS.md` Section 0).
 ## Launch (T-0)
 
 1. [x] Deploy frontend from `main` to Vercel production
-2. [x] Set **`VITE_FNA_INTAKE_ENABLED=true`** on production (all-at-once rollout)
+2. [x] Launch client-led FNA intake UI for all production users (all-at-once rollout)
 3. [x] After 24h clean operation: set `FNA_INTAKE_DUAL_WRITE=false` (Postgres-only writes) — applied immediately after UAT (0 KV sessions)
 
 ## Post-deploy smoke (T+0)
@@ -43,9 +43,9 @@ Execute after Gates 0–4 pass (see `docs/PRODUCTION-READINESS.md` Section 0).
 
 ## Rollback
 
-1. Set `VITE_FNA_INTAKE_ENABLED=false` on Vercel production
-2. Redeploy frontend — clients fall back to `ClientFNAView` for published results
-3. Intake API remains available but UI hidden; no data loss if Postgres canonical
+1. Ship a frontend rollback that restores the pre-launch service panel or hides intake entry points.
+2. Redeploy frontend — published results still route through `ClientFNAView`.
+3. Intake API remains available; no data loss if Postgres remains canonical.
 
 ## Monitoring
 
