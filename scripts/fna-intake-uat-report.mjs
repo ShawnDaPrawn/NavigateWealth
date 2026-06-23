@@ -44,7 +44,7 @@ const md = `# FNA Intake — Staging UAT Sign-off
 
 Complete on **staging** with dedicated test client + assigned adviser before production launch.
 
-**Environment:** \`VITE_FNA_INTAKE_ENABLED=true\`, Edge Function deployed, Postgres migration applied, \`FNA_INTAKE_READ_FROM=postgres\` after backfill.
+**Environment:** Edge Function deployed, Postgres migration applied, \`FNA_INTAKE_READ_FROM=postgres\` after backfill.
 
 ## Sign-off record
 

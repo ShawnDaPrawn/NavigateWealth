@@ -8,7 +8,6 @@
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
-import { api } from '../../../../../utils/api';
 import { calendarApi } from '../api';
 import type { CalendarEvent, CreateEventInput, UpdateEventInput, CalendarFilters } from '../types';
 import { QUERY_STALE_TIME, QUERY_GC_TIME } from '../constants';
@@ -81,27 +80,7 @@ export function useCreateEvent() {
 
   return useMutation({
     mutationFn: async (input: CreateEventInput): Promise<CalendarEvent> => {
-      // Remove create_reminder before sending to database (frontend-only flag)
-      const { create_reminder, ...eventData } = input;
-
-      const event = await calendarApi.createEvent(eventData);
-
-      // Handle Reminders (if enabled)
-      if (create_reminder && input.client_id) {
-        try {
-          await api.post('/communication/calendar/reminder', {
-            eventId: event.id,
-            clientId: input.client_id,
-            eventData: event,
-          });
-        } catch (reminderError) {
-          console.error('Failed to schedule reminders:', reminderError);
-          // Don't block success of event creation, just warn
-          toast.warning('Event created but failed to schedule email reminders');
-        }
-      }
-
-      return event;
+      return calendarApi.createEvent(input);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: eventKeys.lists() });
