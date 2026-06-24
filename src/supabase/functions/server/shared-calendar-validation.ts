@@ -73,7 +73,6 @@ export const CreateEventSchema = z
     attendees: z
       .array(z.object({ name: z.string().optional(), email: z.string().optional() }).passthrough())
       .optional(),
-    create_reminder: z.boolean().optional(),
     recurrence_rule: z.string().nullable().optional(),
     notes: z.string().optional(),
   })
