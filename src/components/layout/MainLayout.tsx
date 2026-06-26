@@ -10,7 +10,9 @@ import { AccountSuspendedPage } from '../pages/AccountSuspendedPage';
 import { ErrorBoundary } from '../shared/ErrorBoundary';
 import { InstallAppPrompt } from '../pwa/InstallAppPrompt';
 import { StandaloneRedirect } from '../pwa/StandaloneRedirect';
+import { ArticleBrowserRedirect } from '../pwa/ArticleBrowserRedirect';
 import { useIsStandalone } from '../../hooks/useIsStandalone';
+import { useIsArticleBrowserEscape } from '../../hooks/useIsArticleBrowserEscape';
 
 // Auth screens that should render as a clean, full-screen app view (no marketing
 // TopBar / nav / footer) when running as an installed PWA. The website in a normal
@@ -37,6 +39,10 @@ export function MainLayout({
   const { isAuthenticated, user, logout } = useAuth();
   const [isScrolled, setIsScrolled] = useState(false);
   const isStandalone = useIsStandalone();
+  // When an emailed article link opens in the installed PWA, hand it off to the
+  // website rather than rendering the article (which would double-count views /
+  // email engagement). Render the interstitial in place of the page content.
+  const isArticleBrowserEscape = useIsArticleBrowserEscape();
 
   // In the installed PWA, render the auth screens (login / signup / forgot
   // password) as a focused, app-like view without the marketing chrome or footer.
@@ -146,7 +152,7 @@ export function MainLayout({
       {isApplicationInProgress && !isApplicationPage && <ResumeApplicationBanner />}
       <main id="main-content" className="flex-1">
         <ErrorBoundary inline fallbackTitle="Page Error">
-          {children}
+          {isArticleBrowserEscape ? <ArticleBrowserRedirect /> : children}
         </ErrorBoundary>
       </main>
       {(!isFocusedExperience || isAccountTypeSelection) &&
