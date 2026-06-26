@@ -1,6 +1,6 @@
 /**
  * AuthTrustBar — compact trust indicators shown below auth forms on mobile.
- * Hidden on desktop where the right-column showcase provides this context.
+ * Hidden on tablet and up, where the dark brand panel provides this context.
  */
 
 import { Shield, CheckCircle, Lock } from 'lucide-react';
@@ -13,7 +13,7 @@ const TRUST_ITEMS = [
 
 export function AuthTrustBar() {
   return (
-    <div className="mt-6 lg:hidden">
+    <div className="mt-6 md:hidden">
       <div className="flex flex-wrap items-center justify-center gap-x-5 gap-y-2 py-3 px-4 rounded-lg bg-gray-50 border border-gray-100">
         {TRUST_ITEMS.map((item) => {
           const Icon = item.icon;

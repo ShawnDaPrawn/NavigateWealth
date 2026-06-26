@@ -10,11 +10,11 @@ import { Input } from '../ui/input';
 import { Label } from '../ui/label';
 import { Checkbox } from '../ui/checkbox';
 import { Alert, AlertDescription } from '../ui/alert';
-import { Mail, CheckCircle2, XCircle, Lock, HelpCircle } from 'lucide-react';
+import { Mail, CheckCircle2, XCircle, ArrowRight } from 'lucide-react';
 import { TwoFactorModal } from '../auth/TwoFactorModal';
 import { projectId, publicAnonKey } from '../../utils/supabase/info';
-import { LOGIN_FEATURES } from './auth/authConstants';
-import { AuthShowcasePanel } from './auth/AuthShowcasePanel';
+import { LOGIN_BRAND_FEATURES } from './auth/authConstants';
+import { AuthBrandPanel } from './auth/AuthBrandPanel';
 import { AuthTrustBar } from './auth/AuthTrustBar';
 import { MobileAuthLayout } from './auth/MobileAuthLayout';
 import { AuthModeToggle } from './auth/AuthModeToggle';
@@ -292,15 +292,8 @@ export function LoginPage() {
 
       {/* Header */}
       <div className="mb-8">
-        <h2 className="text-gray-900 text-2xl font-bold">Welcome back</h2>
-        {!isStandalone && (
-          <p className="mt-2 text-gray-600 text-sm">
-            Don't have an account?{' '}
-            <Link to="/signup" className="text-purple-700 hover:text-purple-800 font-medium">
-              Sign up
-            </Link>
-          </p>
-        )}
+        <h2 className="text-gray-900 text-2xl font-bold">Log in</h2>
+        <p className="mt-1.5 text-gray-500 text-sm">Enter your details to access your account.</p>
       </div>
 
       {successMessage && (
@@ -342,9 +335,10 @@ export function LoginPage() {
         aria-describedby={error ? 'login-error' : undefined}
       >
         <div>
-          <Label htmlFor="email">Email Address</Label>
-          <div className="relative mt-1">
-            <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
+          <Label htmlFor="email">
+            Email Address <span className="text-purple-600">*</span>
+          </Label>
+          <div className="mt-1.5">
             <Input
               id="email"
               name="email"
@@ -353,8 +347,7 @@ export function LoginPage() {
               required
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="pl-10"
-              placeholder="you@example.com"
+              placeholder="your.email@example.com"
               disabled={isSubmitting}
             />
           </div>
@@ -362,13 +355,17 @@ export function LoginPage() {
 
         <div>
           <div className="flex items-center justify-between">
-            <Label htmlFor="password">Password</Label>
-            <Link to="/forgot-password" className="text-sm text-purple-700 hover:text-purple-800">
-              Forgot password?
+            <Label htmlFor="password">
+              Password <span className="text-purple-600">*</span>
+            </Label>
+            <Link
+              to="/forgot-password"
+              className="text-sm font-medium text-purple-700 hover:text-purple-800"
+            >
+              Forgot?
             </Link>
           </div>
-          <div className="relative mt-1">
-            <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
+          <div className="relative mt-1.5">
             <Input
               id="password"
               name="password"
@@ -377,8 +374,8 @@ export function LoginPage() {
               required
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="pl-10 pr-10"
-              placeholder="Enter your password"
+              className="pr-10"
+              placeholder="••••••••"
               disabled={isSubmitting}
             />
             <button
@@ -435,7 +432,7 @@ export function LoginPage() {
             onCheckedChange={(checked) => setRememberMe(checked === true)}
           />
           <Label htmlFor="remember-me" className="text-sm text-gray-600 font-normal cursor-pointer">
-            Remember me
+            Keep me signed in
           </Label>
         </div>
 
@@ -453,34 +450,23 @@ export function LoginPage() {
               Signing in...
             </span>
           ) : (
-            'Sign in'
+            <span className="flex items-center justify-center gap-2">
+              Log In
+              <ArrowRight className="h-4 w-4" />
+            </span>
           )}
         </Button>
-
-        {/* Inline trust signal */}
-        <div className="flex items-center justify-center gap-1.5 text-xs text-gray-400">
-          <Lock className="h-3 w-3" />
-          <span>FSP 54606 | FSCA Regulated | 256-bit encryption</span>
-        </div>
       </form>
 
-      {/* Help Link — in the installed PWA the marketing /contact page is out of
-          scope (StandaloneRedirect bounces it back), so use a mailto there. */}
-      <div className="mt-6 flex items-center justify-center gap-1.5">
-        <HelpCircle className="h-4 w-4 text-gray-400" />
-        {isStandalone ? (
-          <a
-            href="mailto:enquiries@navigatewealth.co"
-            className="text-sm text-purple-700 hover:text-purple-800"
-          >
-            Need help? Contact our support team
-          </a>
-        ) : (
-          <Link to="/contact" className="text-sm text-purple-700 hover:text-purple-800">
-            Need help? Contact our support team
+      {/* New account link */}
+      {!isStandalone && (
+        <p className="mt-6 text-center text-sm text-gray-500">
+          New to Navigate Wealth?{' '}
+          <Link to="/signup" className="font-medium text-purple-700 hover:text-purple-800">
+            Get started
           </Link>
-        )}
-      </div>
+        </p>
+      )}
 
       {/* Mobile trust bar */}
       <AuthTrustBar />
@@ -556,20 +542,22 @@ export function LoginPage() {
   }
 
   return (
-    <div className="flex flex-col lg:flex-row lg:min-h-screen">
+    <div className="bg-gray-50 px-4 py-8 sm:px-6 md:py-12">
       {twoFactorModal}
 
-      {/* Left Column - Form */}
-      <div className="flex-1 flex flex-col justify-start lg:justify-center px-4 sm:px-6 lg:px-20 xl:px-24 bg-white py-8">
-        <div className="mx-auto w-full max-w-md">{formContent}</div>
-      </div>
+      <div className="mx-auto grid w-full max-w-6xl overflow-hidden rounded-3xl bg-white shadow-xl ring-1 ring-gray-200/70 md:min-h-[640px] md:grid-cols-2">
+        {/* Left Column - Brand panel (tablet and up) */}
+        <AuthBrandPanel
+          headline="Welcome back to your wealth journey."
+          subheadline="Sign in to manage your financial plan, documents and adviser communication."
+          features={LOGIN_BRAND_FEATURES}
+        />
 
-      {/* Right Column - Feature Showcase */}
-      <AuthShowcasePanel
-        headline="Your wealth journey continues"
-        subheadline="Access your personalised financial dashboard and continue building your future."
-        features={LOGIN_FEATURES}
-      />
+        {/* Right Column - Form */}
+        <div className="flex flex-col justify-center bg-white px-6 py-10 sm:px-10 lg:px-14">
+          <div className="mx-auto w-full max-w-md">{formContent}</div>
+        </div>
+      </div>
     </div>
   );
 }

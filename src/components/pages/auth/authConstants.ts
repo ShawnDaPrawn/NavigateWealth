@@ -52,6 +52,44 @@ export const SIGNUP_FEATURES = [
   },
 ] as const;
 
+// ─── Brand Panel Features (dark split-screen left column) ──────────────────────
+// Concise value props shown alongside the Login / Signup forms on tablet and up.
+export const LOGIN_BRAND_FEATURES = [
+  {
+    iconSlug: 'Shield',
+    title: 'Bank-grade security',
+    description: 'Your financial data is encrypted and protected.',
+  },
+  {
+    iconSlug: 'TrendingUp',
+    title: 'Track your portfolio',
+    description: 'See applications, documents and progress in one place.',
+  },
+  {
+    iconSlug: 'Compass',
+    title: 'Ask Vasco',
+    description: 'Get answers from our AI financial guide, any time.',
+  },
+] as const;
+
+export const SIGNUP_BRAND_FEATURES = [
+  {
+    iconSlug: 'Target',
+    title: 'Tailored financial plans',
+    description: 'A strategy built around your income, goals and risk appetite.',
+  },
+  {
+    iconSlug: 'Shield',
+    title: 'Bank-grade security',
+    description: 'Your financial data is encrypted and protected.',
+  },
+  {
+    iconSlug: 'Compass',
+    title: 'Ask Vasco',
+    description: 'Get answers from our AI financial guide, any time.',
+  },
+] as const;
+
 // ─── Country Codes ─────────────────────────────────────────────────────────────
 export interface CountryCode {
   code: string;
