@@ -1,6 +1,10 @@
 /**
- * AuthTrustBar — compact trust indicators shown below auth forms on mobile.
- * Hidden on desktop where the right-column showcase provides this context.
+ * AuthTrustBar — compact trust indicators shown below auth forms.
+ *
+ * In the split browser layout the dark brand panel carries the compliance
+ * context from the `md` breakpoint up, so the bar is hidden there. In the
+ * installed PWA (which never renders the brand panel) it stays visible at all
+ * sizes — controlled via `hideWhenBrandPanelVisible`.
  */
 
 import { Shield, CheckCircle, Lock } from 'lucide-react';
@@ -11,9 +15,18 @@ const TRUST_ITEMS = [
   { label: 'POPIA Compliant', icon: Lock },
 ] as const;
 
-export function AuthTrustBar() {
+interface AuthTrustBarProps {
+  /**
+   * When true, hide the bar from the `md` breakpoint up — appropriate when the
+   * split brand panel is rendered alongside the form and provides the same
+   * trust context. When false (installed PWA), keep it visible on all sizes.
+   */
+  hideWhenBrandPanelVisible?: boolean;
+}
+
+export function AuthTrustBar({ hideWhenBrandPanelVisible = false }: AuthTrustBarProps) {
   return (
-    <div className="mt-6 lg:hidden">
+    <div className={`mt-6 ${hideWhenBrandPanelVisible ? 'md:hidden' : ''}`}>
       <div className="flex flex-wrap items-center justify-center gap-x-5 gap-y-2 py-3 px-4 rounded-lg bg-gray-50 border border-gray-100">
         {TRUST_ITEMS.map((item) => {
           const Icon = item.icon;

@@ -16,7 +16,7 @@ import {
   User,
   Phone,
   Lock,
-  HelpCircle,
+  ArrowRight,
 } from 'lucide-react';
 import {
   validatePassword,
@@ -27,8 +27,8 @@ import { projectId, publicAnonKey } from '../../utils/supabase/info';
 import { getUserErrorMessage, isError } from '../../utils/errorUtils';
 import { toast } from 'sonner';
 import { useLegalDocumentViewer, LegalDocumentDialog } from '../shared/LegalDocumentViewer';
-import { SIGNUP_FEATURES } from './auth/authConstants';
-import { AuthShowcasePanel } from './auth/AuthShowcasePanel';
+import { SIGNUP_BRAND_FEATURES } from './auth/authConstants';
+import { AuthBrandPanel } from './auth/AuthBrandPanel';
 import { AuthTrustBar } from './auth/AuthTrustBar';
 import { MobileAuthLayout } from './auth/MobileAuthLayout';
 import { AuthModeToggle } from './auth/AuthModeToggle';
@@ -210,14 +210,9 @@ export function SignupPage() {
       {/* Header */}
       <div className="mb-6">
         <h2 className="text-gray-900 text-2xl font-bold">Create your account</h2>
-        {!isStandalone && (
-          <p className="mt-2 text-gray-600 text-sm">
-            Already have an account?{' '}
-            <Link to="/login" className="text-purple-700 hover:text-purple-800 font-medium">
-              Sign in
-            </Link>
-          </p>
-        )}
+        <p className="mt-1.5 text-gray-500 text-sm">
+          Enter your details to start your wealth journey.
+        </p>
       </div>
 
       {showLocalhostWarning && (
@@ -559,37 +554,27 @@ export function SignupPage() {
               Creating account...
             </span>
           ) : (
-            'Create account'
+            <span className="flex items-center justify-center gap-2">
+              Create account
+              <ArrowRight className="h-4 w-4" />
+            </span>
           )}
         </Button>
-
-        {/* Inline trust signal */}
-        <div className="flex items-center justify-center gap-1.5 text-xs text-gray-400">
-          <Lock className="h-3 w-3" />
-          <span>FSP 54606 | FSCA Regulated | POPIA Compliant</span>
-        </div>
       </form>
 
-      {/* Help Link — in the installed PWA the marketing /contact page is out of
-          scope (StandaloneRedirect bounces it back), so use a mailto there. */}
-      <div className="mt-6 flex items-center justify-center gap-1.5">
-        <HelpCircle className="h-4 w-4 text-gray-400" />
-        {isStandalone ? (
-          <a
-            href="mailto:enquiries@navigatewealth.co"
-            className="text-sm text-purple-700 hover:text-purple-800"
-          >
-            Need help? Contact our support team
-          </a>
-        ) : (
-          <Link to="/contact" className="text-sm text-purple-700 hover:text-purple-800">
-            Need help? Contact our support team
+      {/* Existing account link */}
+      {!isStandalone && (
+        <p className="mt-6 text-center text-sm text-gray-500">
+          Already have an account?{' '}
+          <Link to="/login" className="font-medium text-purple-700 hover:text-purple-800">
+            Sign in
           </Link>
-        )}
-      </div>
+        </p>
+      )}
 
-      {/* Mobile trust bar */}
-      <AuthTrustBar />
+      {/* Mobile trust bar — in the browser layout the brand panel covers this
+          from md up; in the installed PWA there's no brand panel, so keep it. */}
+      <AuthTrustBar hideWhenBrandPanelVisible={!isStandalone} />
     </>
   );
 
@@ -613,18 +598,20 @@ export function SignupPage() {
   }
 
   return (
-    <div className="flex flex-col lg:flex-row lg:min-h-screen">
-      {/* Left Column - Form */}
-      <div className="flex-1 flex flex-col justify-start lg:justify-center px-4 sm:px-6 lg:px-20 xl:px-24 bg-white py-8">
-        <div className="mx-auto w-full max-w-xl">{formContent}</div>
-      </div>
+    <div className="bg-gray-50 px-4 py-8 sm:px-6 md:py-12">
+      <div className="mx-auto grid w-full max-w-6xl overflow-hidden rounded-3xl bg-white shadow-xl ring-1 ring-gray-200/70 md:min-h-[640px] md:grid-cols-2">
+        {/* Left Column - Brand panel (tablet and up) */}
+        <AuthBrandPanel
+          headline="Start your wealth journey today."
+          subheadline="Create your account to begin your personalised financial plan with Navigate Wealth."
+          features={SIGNUP_BRAND_FEATURES}
+        />
 
-      {/* Right Column - Feature Showcase */}
-      <AuthShowcasePanel
-        headline="Start your wealth journey today"
-        subheadline="Join thousands who trust Navigate Wealth to help them achieve their financial goals."
-        features={SIGNUP_FEATURES}
-      />
+        {/* Right Column - Form */}
+        <div className="flex flex-col justify-center bg-white px-6 py-10 sm:px-10 lg:px-14">
+          <div className="mx-auto w-full max-w-md">{formContent}</div>
+        </div>
+      </div>
 
       {legalDialog}
     </div>
