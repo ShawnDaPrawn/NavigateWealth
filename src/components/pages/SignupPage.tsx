@@ -598,18 +598,21 @@ export function SignupPage() {
   }
 
   return (
-    <div className="bg-gray-50 px-4 py-8 sm:px-6 md:py-12">
-      <div className="mx-auto grid w-full max-w-6xl overflow-hidden rounded-3xl bg-white shadow-xl ring-1 ring-gray-200/70 md:min-h-[640px] md:grid-cols-2">
-        {/* Left Column - Brand panel (tablet and up) */}
-        <AuthBrandPanel
-          headline="Start your wealth journey today."
-          subheadline="Create your account to begin your personalised financial plan with Navigate Wealth."
-          features={SIGNUP_BRAND_FEATURES}
-        />
+    <div className="bg-gray-50 py-8 md:py-12">
+      {/* Match the navigation bar's content width (logo → Get Started button) */}
+      <div className="mx-auto w-full max-w-screen-2xl px-4 sm:px-6 lg:px-8 xl:px-12">
+        <div className="grid w-full overflow-hidden rounded-3xl bg-white shadow-xl ring-1 ring-gray-200/70 md:min-h-[640px] md:grid-cols-2">
+          {/* Left Column - Brand panel (tablet and up) */}
+          <AuthBrandPanel
+            headline="Start your wealth journey today."
+            subheadline="Create your account to begin your personalised financial plan with Navigate Wealth."
+            features={SIGNUP_BRAND_FEATURES}
+          />
 
-        {/* Right Column - Form */}
-        <div className="flex flex-col justify-center bg-white px-6 py-10 sm:px-10 lg:px-14">
-          <div className="mx-auto w-full max-w-md">{formContent}</div>
+          {/* Right Column - Form */}
+          <div className="flex flex-col justify-center bg-white px-6 py-10 sm:px-10 lg:px-14">
+            <div className="mx-auto w-full max-w-md">{formContent}</div>
+          </div>
         </div>
       </div>
 
