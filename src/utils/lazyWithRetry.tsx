@@ -20,11 +20,19 @@ interface LazyRetryOptions {
  * loader) the whole time, so the user just sees a normal load, never an error.
  *
  * Recovery ladder:
- *   1. Retry the import a few times with a short linear backoff (transient blip).
- *   2. If every retry still fails with a chunk-load error, reload once to fetch
- *      the freshly deployed app shell (stale-deploy case). While the reload is
- *      in flight we keep the promise pending so Suspense holds the loader rather
- *      than flashing the error card.
+ *   1. Retry the import a few times with a short linear backoff. This recovers
+ *      the common case where the failure was a speculative module-PRELOAD link
+ *      (Vite emits <link rel=modulepreload> per chunk); the retry skips the
+ *      already-attempted preload and performs the real import. Backoff is kept
+ *      short on purpose — see step 2.
+ *   2. If every retry still fails, reload once to fetch the freshly deployed app
+ *      shell. This is the recovery for the case the retry CANNOT fix: once the
+ *      actual module fetch fails, the browser caches the failure in its module
+ *      map, so re-importing the same specifier replays the cached rejection
+ *      without a new request (see Vite's "Failed to fetch dynamically imported
+ *      module" troubleshooting note). A full reload clears that map. While the
+ *      reload is in flight we keep the promise pending so Suspense holds the
+ *      loader rather than flashing the error card.
  *   3. If even that is throttled (already reloaded recently), rethrow so the
  *      error boundary can show its "a new version is available" message as a
  *      genuine last resort.
@@ -34,7 +42,7 @@ interface LazyRetryOptions {
  */
 export function lazyWithRetry<T extends React.ComponentType<unknown>>(
   factory: () => Promise<{ default: T }>,
-  { retries = 3, baseDelayMs = 300 }: LazyRetryOptions = {},
+  { retries = 2, baseDelayMs = 150 }: LazyRetryOptions = {},
 ): React.LazyExoticComponent<T> {
   return React.lazy(async () => {
     let lastError: unknown;
