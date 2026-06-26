@@ -10,6 +10,7 @@ import { AccountSuspendedPage } from '../pages/AccountSuspendedPage';
 import { ErrorBoundary } from '../shared/ErrorBoundary';
 import { InstallAppPrompt } from '../pwa/InstallAppPrompt';
 import { StandaloneRedirect } from '../pwa/StandaloneRedirect';
+import { ArticleBrowserRedirect } from '../pwa/ArticleBrowserRedirect';
 import { useIsStandalone } from '../../hooks/useIsStandalone';
 
 // Auth screens that should render as a clean, full-screen app view (no marketing
@@ -153,6 +154,7 @@ export function MainLayout({
         !isAdminDashboard &&
         (effectivelyAuthenticated ? <DashboardFooter /> : <Footer />)}
       <StandaloneRedirect />
+      <ArticleBrowserRedirect />
       <InstallAppPrompt />
     </div>
   );

@@ -3,6 +3,7 @@ import { useLocation, useNavigate } from 'react-router';
 import { useAuth } from '../auth/AuthContext';
 import { getAuthenticatedRedirectPath } from '../auth/RouteGuards';
 import { isStandaloneDisplay } from '../../utils/pwa/displayMode';
+import { isArticleRoute } from '../../utils/pwa/articleRoute';
 
 // Public marketing routes. When the app runs as an installed PWA we want it to
 // behave as a portal-only app, so landing on any of these bounces the user back
@@ -38,6 +39,10 @@ const MARKETING_EXACT = new Set([
 const MARKETING_PREFIXES = ['/resources', '/legal', '/get-quote', '/solutions'];
 
 function isMarketingRoute(pathname: string): boolean {
+  // Article links are shared directly with clients and must open on the public
+  // website, so they are handled by ArticleBrowserRedirect rather than bounced
+  // into the portal here — even though they live under the /resources prefix.
+  if (isArticleRoute(pathname)) return false;
   if (MARKETING_EXACT.has(pathname)) return true;
   return MARKETING_PREFIXES.some(
     (prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`),
