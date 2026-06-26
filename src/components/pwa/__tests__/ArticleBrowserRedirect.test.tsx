@@ -24,11 +24,25 @@ vi.mock('../../auth/RouteGuards', () => ({
 }));
 
 import { ArticleBrowserRedirect } from '../ArticleBrowserRedirect';
+import { useIsArticleBrowserEscape } from '../../../hooks/useIsArticleBrowserEscape';
 
 function renderAt(path: string) {
   return render(
     <MemoryRouter initialEntries={[path]}>
       <ArticleBrowserRedirect />
+    </MemoryRouter>,
+  );
+}
+
+// Probe component so we can assert the hook's boolean without rendering MainLayout.
+function EscapeProbe() {
+  return <span data-testid="escape">{String(useIsArticleBrowserEscape())}</span>;
+}
+
+function renderProbeAt(path: string) {
+  return render(
+    <MemoryRouter initialEntries={[path]}>
+      <EscapeProbe />
     </MemoryRouter>,
   );
 }
@@ -78,5 +92,29 @@ describe('ArticleBrowserRedirect', () => {
 
     fireEvent.click(screen.getByRole('button', { name: /continue to the app/i }));
     expect(mockNavigate).toHaveBeenCalledWith('/dashboard', { replace: true });
+  });
+});
+
+describe('useIsArticleBrowserEscape', () => {
+  beforeEach(() => {
+    standalone = false;
+  });
+
+  it('is true only for an article route in standalone mode', () => {
+    standalone = true;
+    renderProbeAt('/resources/article/some-insight');
+    expect(screen.getByTestId('escape').textContent).toBe('true');
+  });
+
+  it('is false for an article route in a normal browser tab', () => {
+    standalone = false;
+    renderProbeAt('/resources/article/some-insight');
+    expect(screen.getByTestId('escape').textContent).toBe('false');
+  });
+
+  it('is false for a non-article route even in standalone mode', () => {
+    standalone = true;
+    renderProbeAt('/resources');
+    expect(screen.getByTestId('escape').textContent).toBe('false');
   });
 });

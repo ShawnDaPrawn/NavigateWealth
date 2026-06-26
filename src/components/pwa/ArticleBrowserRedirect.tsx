@@ -2,8 +2,7 @@ import { useEffect, useRef } from 'react';
 import { useLocation, useNavigate } from 'react-router';
 import { useAuth } from '../auth/AuthContext';
 import { getAuthenticatedRedirectPath } from '../auth/RouteGuards';
-import { useIsStandalone } from '../../hooks/useIsStandalone';
-import { isArticleRoute } from '../../utils/pwa/articleRoute';
+import { useIsArticleBrowserEscape } from '../../hooks/useIsArticleBrowserEscape';
 import { SITE_ORIGIN } from '../../utils/siteOrigin';
 
 /**
@@ -36,13 +35,12 @@ function buildWebsiteArticleUrl(pathname: string, search: string): string {
 export function ArticleBrowserRedirect() {
   const location = useLocation();
   const navigate = useNavigate();
-  const isStandalone = useIsStandalone();
   const { isAuthenticated, user } = useAuth();
   // Tracks the last article URL we auto-opened so a single article is only
   // launched once, while a second article opened later still gets its attempt.
   const lastAutoOpened = useRef<string | null>(null);
 
-  const active = isStandalone && isArticleRoute(location.pathname);
+  const active = useIsArticleBrowserEscape();
   const websiteUrl = buildWebsiteArticleUrl(location.pathname, location.search);
 
   useEffect(() => {
