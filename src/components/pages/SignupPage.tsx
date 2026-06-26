@@ -572,8 +572,9 @@ export function SignupPage() {
         </p>
       )}
 
-      {/* Mobile trust bar */}
-      <AuthTrustBar />
+      {/* Mobile trust bar — in the browser layout the brand panel covers this
+          from md up; in the installed PWA there's no brand panel, so keep it. */}
+      <AuthTrustBar hideWhenBrandPanelVisible={!isStandalone} />
     </>
   );
 
