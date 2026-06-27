@@ -99,7 +99,7 @@ async function fetchPressStats(): Promise<PressStats> {
     aum: 'R500 mil+',
     activeClients: 0,
     activeClientsLabel: '—',
-    yearsInBusiness: '15+',
+    yearsInBusiness: '2+',
     combinedExperience: '55+',
   };
 }
@@ -153,7 +153,7 @@ export function PressPage() {
     () => [
       { label: 'Assets Under Management', value: stats?.aum || 'R500 mil+', icon: TrendingUp },
       { label: 'Active Clients', value: stats?.activeClientsLabel || '—', icon: Users },
-      { label: 'Years in Business', value: stats?.yearsInBusiness || '15+', icon: Calendar },
+      { label: 'Years in Business', value: stats?.yearsInBusiness || '2+', icon: Calendar },
       {
         label: 'Combined Years Experience',
         value: stats?.combinedExperience || '55+',
@@ -551,7 +551,7 @@ export function PressPage() {
                 <CardContent className="p-6 pt-0 space-y-3">
                   <div className="flex justify-between">
                     <span className="text-gray-600">Founded</span>
-                    <span className="font-medium text-gray-900">2009</span>
+                    <span className="font-medium text-gray-900">2024</span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-gray-600">Headquarters</span>
