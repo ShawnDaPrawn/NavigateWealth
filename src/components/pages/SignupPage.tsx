@@ -29,6 +29,7 @@ import { toast } from 'sonner';
 import { useLegalDocumentViewer, LegalDocumentDialog } from '../shared/LegalDocumentViewer';
 import { SIGNUP_BRAND_FEATURES } from './auth/authConstants';
 import { AuthBrandPanel } from './auth/AuthBrandPanel';
+import { AuthPaperBackground } from './auth/AuthPaperBackground';
 import { AuthTrustBar } from './auth/AuthTrustBar';
 import { MobileAuthLayout } from './auth/MobileAuthLayout';
 import { AuthModeToggle } from './auth/AuthModeToggle';
@@ -598,9 +599,11 @@ export function SignupPage() {
   }
 
   return (
-    <div className="bg-gray-50 py-8 md:py-12">
+    <div className="relative overflow-hidden bg-[#f8f9fb] py-8 md:py-12">
+      {/* Ask Vasco-style chart-paper backdrop behind the card */}
+      <AuthPaperBackground />
       {/* Match the navigation bar's content width (logo → Get Started button) */}
-      <div className="mx-auto w-full max-w-screen-2xl px-4 sm:px-6 lg:px-8 xl:px-12">
+      <div className="relative z-10 mx-auto w-full max-w-screen-2xl px-4 sm:px-6 lg:px-8 xl:px-12">
         <div className="grid w-full overflow-hidden rounded-3xl bg-white shadow-xl ring-1 ring-gray-200/70 md:min-h-[640px] md:grid-cols-2">
           {/* Left Column - Brand panel (tablet and up) */}
           <AuthBrandPanel
