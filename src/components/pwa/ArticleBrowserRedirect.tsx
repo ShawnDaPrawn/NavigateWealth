@@ -74,7 +74,7 @@ export function ArticleBrowserRedirect() {
     >
       <div className="mx-auto flex min-h-[100dvh] w-full max-w-md flex-col items-center justify-center px-5 py-10 text-center">
         <img
-          src="/maskable-icon-512x512.png?v=20260605b"
+          src="/maskable-icon-512x512.png?v=20260627"
           alt="Navigate Wealth"
           width={64}
           height={64}
