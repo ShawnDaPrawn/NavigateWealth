@@ -30,7 +30,7 @@ export function PublicationsSettings() {
 
   // ── Press Stats Config ──────────────────────────────────────────────────
   const [pressAum, setPressAum] = useState('R500 mil+');
-  const [pressYears, setPressYears] = useState('15+');
+  const [pressYears, setPressYears] = useState('2+');
   const [pressExperience, setPressExperience] = useState('55+');
   const [pressLoading, setPressLoading] = useState(true);
   const [pressSaving, setPressSaving] = useState(false);
@@ -44,7 +44,7 @@ export function PublicationsSettings() {
       }>('/publications/press/config');
       if (json.success && json.data) {
         setPressAum(json.data.aum || 'R500 mil+');
-        setPressYears(json.data.yearsInBusiness || '15+');
+        setPressYears(json.data.yearsInBusiness || '2+');
         setPressExperience(json.data.combinedExperience || '55+');
       }
     } catch (err) {
