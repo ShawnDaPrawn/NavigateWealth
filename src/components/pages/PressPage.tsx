@@ -551,7 +551,7 @@ export function PressPage() {
                 <CardContent className="p-6 pt-0 space-y-3">
                   <div className="flex justify-between">
                     <span className="text-gray-600">Founded</span>
-                    <span className="font-medium text-gray-900">2009</span>
+                    <span className="font-medium text-gray-900">2024</span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-gray-600">Headquarters</span>
