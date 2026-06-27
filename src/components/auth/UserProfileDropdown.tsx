@@ -53,7 +53,7 @@ export function UserProfileDropdown() {
       <DropdownMenuTrigger asChild>
         <Button
           variant="ghost"
-          className="flex items-center space-x-3 h-auto px-3 py-2 hover:bg-purple-50/50 rounded-lg transition-colors border border-transparent hover:border-purple-200"
+          className="flex items-center space-x-3 h-auto px-3 py-2 rounded-lg transition-colors border border-transparent hover:bg-purple-50/50 hover:border-purple-200 focus-visible:ring-0 focus-visible:bg-purple-50/50 focus-visible:border-purple-200"
         >
           <Avatar className="h-10 w-10 ring-2 ring-purple-100">
             <AvatarFallback className="bg-gradient-to-br from-[#6d28d9] to-[#5b21b6] text-white font-semibold">
