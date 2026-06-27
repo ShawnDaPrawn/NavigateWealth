@@ -38,7 +38,7 @@ export function MobileAuthLayout({
           {/* Brand */}
           <div className="mb-7 flex flex-col items-center text-center">
             <img
-              src="/maskable-icon-512x512.png?v=20260605b"
+              src="/maskable-icon-512x512.png?v=20260627"
               alt="Navigate Wealth"
               width={64}
               height={64}

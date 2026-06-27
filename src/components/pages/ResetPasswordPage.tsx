@@ -336,7 +336,7 @@ export function ResetPasswordPage() {
         <Link to="/" className="flex flex-col items-center justify-center gap-3">
           {isStandalone && (
             <img
-              src="/maskable-icon-512x512.png?v=20260605b"
+              src="/maskable-icon-512x512.png?v=20260627"
               alt="Navigate Wealth"
               width={56}
               height={56}
