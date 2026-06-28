@@ -15,6 +15,7 @@ import * as kv from './kv_store.tsx';
 import { createModuleLogger } from './stderr-logger.ts';
 import { sendEmail } from './email-service.ts';
 import { createArticleNotificationEmail } from './article-notification-template.ts';
+import { SITE_ORIGIN_APEX } from '../../../utils/siteOrigin.ts';
 import {
   generateId,
   generateSlug,
@@ -384,8 +385,11 @@ adminRoutes.post('/articles/:id/send-notifications', async (c) => {
       return c.json({ success: false, error: 'Article not found' }, 404);
     }
 
-    // Build article URL
-    const articleUrl = `https://www.navigatewealth.co/resources/article/${article.slug}`;
+    // Build article URL on the apex origin (NOT www) so the link is outside the
+    // installed PWA's scope and always opens in the browser instead of being
+    // captured into the portal-only app. The apex 301-redirects to the canonical
+    // www URL in-browser. See SITE_ORIGIN_APEX.
+    const articleUrl = `${SITE_ORIGIN_APEX}/resources/article/${article.slug}`;
 
     // Get all users from Supabase Auth
     const {
