@@ -189,7 +189,7 @@ siteRoutes.get(
       success: true,
       data: {
         aum: (config as any)?.aum || 'R500 mil+',
-        yearsInBusiness: (config as any)?.yearsInBusiness || '15+',
+        yearsInBusiness: (config as any)?.yearsInBusiness || '2+',
         combinedExperience: (config as any)?.combinedExperience || '55+',
       },
     });
@@ -263,7 +263,7 @@ siteRoutes.get('/press/stats', async (c) => {
           activeClients >= 1000
             ? `${Math.floor(activeClients / 1000)},${String(activeClients % 1000).padStart(3, '0')}+`
             : `${activeClients}+`,
-        yearsInBusiness: (config.yearsInBusiness as string) || '15+',
+        yearsInBusiness: (config.yearsInBusiness as string) || '2+',
         combinedExperience: (config.combinedExperience as string) || '55+',
       },
     });
@@ -275,7 +275,7 @@ siteRoutes.get('/press/stats', async (c) => {
         aum: 'R500 mil+',
         activeClients: 0,
         activeClientsLabel: '—',
-        yearsInBusiness: '15+',
+        yearsInBusiness: '2+',
         combinedExperience: '55+',
       },
     });

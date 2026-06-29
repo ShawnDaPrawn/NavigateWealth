@@ -1,9 +1,20 @@
 import { describe, it, expect } from 'vitest';
-import { SITE_ORIGIN, siteAbsoluteUrl } from '../siteOrigin';
+import { SITE_ORIGIN, SITE_ORIGIN_APEX, siteAbsoluteUrl } from '../siteOrigin';
 
 describe('SITE_ORIGIN', () => {
   it('is the canonical www origin', () => {
     expect(SITE_ORIGIN).toBe('https://www.navigatewealth.co');
+  });
+});
+
+describe('SITE_ORIGIN_APEX', () => {
+  it('is the apex origin without www', () => {
+    expect(SITE_ORIGIN_APEX).toBe('https://navigatewealth.co');
+  });
+
+  it('is a different origin from SITE_ORIGIN (so it is outside the PWA scope)', () => {
+    expect(SITE_ORIGIN_APEX).not.toBe(SITE_ORIGIN);
+    expect(new URL(SITE_ORIGIN_APEX).host).not.toBe(new URL(SITE_ORIGIN).host);
   });
 });
 
