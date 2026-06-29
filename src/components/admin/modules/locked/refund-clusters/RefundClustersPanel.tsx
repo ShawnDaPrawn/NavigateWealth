@@ -18,6 +18,8 @@ import { Input } from '../../../../ui/input';
 import { Skeleton } from '../../../../ui/skeleton';
 import { ClusterFormDialog } from './components/ClusterFormDialog';
 import { ClusterDetailView } from './components/ClusterDetailView';
+import { ClusterBreadcrumb } from './components/ClusterBreadcrumb';
+import { SubPanelHeader } from './components/SubPanelHeader';
 import { useCreateCluster, useRefundClusters } from './hooks/useRefundClusters';
 import type { RefundCluster } from './types';
 
@@ -44,7 +46,13 @@ export function RefundClustersPanel() {
   const archivedCount = useMemo(() => clusters.filter((c) => c.archived).length, [clusters]);
 
   if (openClusterId) {
-    return <ClusterDetailView clusterId={openClusterId} onBack={() => setOpenClusterId(null)} />;
+    const openCluster = clusters.find((c) => c.id === openClusterId);
+    return (
+      <div className="space-y-4">
+        <ClusterBreadcrumb clusterName={openCluster?.name} onBack={() => setOpenClusterId(null)} />
+        <ClusterDetailView clusterId={openClusterId} onBack={() => setOpenClusterId(null)} />
+      </div>
+    );
   }
 
   const handleSubmit = (values: {
@@ -57,22 +65,16 @@ export function RefundClustersPanel() {
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="flex items-center gap-3">
-          <div className="w-9 h-9 rounded-lg bg-primary/10 flex items-center justify-center">
-            <Layers className="h-4 w-4 text-primary" />
-          </div>
-          <div>
-            <h2 className="text-lg font-semibold">Refund Clusters</h2>
-            <p className="text-sm text-muted-foreground">
-              Group entities and capture their tax, banking and identity details.
-            </p>
-          </div>
-        </div>
-        <Button onClick={() => setFormOpen(true)}>
-          <Plus className="h-4 w-4 mr-1" /> Create New Cluster
-        </Button>
-      </div>
+      <SubPanelHeader
+        icon={<Layers />}
+        title="Refund Clusters"
+        subtitle="Group entities and capture their tax, banking and identity details."
+        actions={
+          <Button onClick={() => setFormOpen(true)}>
+            <Plus className="h-4 w-4 mr-1" /> Create New Cluster
+          </Button>
+        }
+      />
 
       <div className="flex flex-wrap items-center gap-2">
         <div className="relative flex-1 min-w-[220px]">

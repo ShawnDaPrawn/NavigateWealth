@@ -1,6 +1,6 @@
 /**
  * Treasury Manager panel — entry point rendered inside the Locked module's
- * Accounts → Manager tab (already behind super-admin + access-code gating in
+ * Banking tab (already behind super-admin + access-code gating in
  * LockedModule).
  *
  * Surfaces the Stripe Treasury financial account: real balance, real bank

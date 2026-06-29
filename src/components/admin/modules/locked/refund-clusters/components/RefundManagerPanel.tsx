@@ -1,5 +1,5 @@
 /**
- * Refund Manager overview — the Accounts → Manager tab.
+ * Refund Manager overview — the Accounts → Overview tab.
  *
  * A cross-cluster dashboard: every (active) refund cluster's current-period VAT
  * position (payable or refund) in one table, filterable by when the VAT201
@@ -33,6 +33,7 @@ import {
   useManyEntityTransactions,
   useRefundClusters,
 } from '../hooks/useRefundClusters';
+import { SubPanelHeader } from './SubPanelHeader';
 import {
   currentVatPeriod,
   dueDateBucket,
@@ -175,34 +176,28 @@ export function RefundManagerPanel() {
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="flex items-center gap-3">
-          <div className="w-9 h-9 rounded-lg bg-primary/10 flex items-center justify-center">
-            <Layers className="h-4 w-4 text-primary" />
-          </div>
-          <div>
-            <h2 className="text-lg font-semibold">Manager Overview</h2>
-            <p className="text-sm text-muted-foreground">
-              Current-period VAT position for every active refund cluster.
-            </p>
-          </div>
-        </div>
-        <div className="flex items-center gap-2">
-          <CalendarClock className="h-4 w-4 text-muted-foreground" />
-          <Select value={filter} onValueChange={(value) => setFilter(value as DueFilter)}>
-            <SelectTrigger className="w-[190px]" aria-label="Filter by due date">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {DUE_FILTER_OPTIONS.map((option) => (
-                <SelectItem key={option.value} value={option.value}>
-                  {option.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-      </div>
+      <SubPanelHeader
+        icon={<Layers />}
+        title="VAT Overview"
+        subtitle="Current-period VAT position for every active refund cluster."
+        actions={
+          <>
+            <CalendarClock className="h-4 w-4 text-muted-foreground" />
+            <Select value={filter} onValueChange={(value) => setFilter(value as DueFilter)}>
+              <SelectTrigger className="w-[190px]" aria-label="Filter by due date">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {DUE_FILTER_OPTIONS.map((option) => (
+                  <SelectItem key={option.value} value={option.value}>
+                    {option.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </>
+        }
+      />
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
         <SummaryCard
