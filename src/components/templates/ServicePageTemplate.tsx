@@ -296,7 +296,7 @@ export function ServicePageTemplate({ config, seoData, children }: ServicePageTe
             }}
           />
 
-          <div className="relative z-10 max-w-screen-xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="relative z-10 max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8 xl:px-12">
             <div className="grid lg:grid-cols-2 gap-12 lg:gap-16 items-center py-20 lg:py-28">
               {/* Left — text content */}
               <div className="flex flex-col">
