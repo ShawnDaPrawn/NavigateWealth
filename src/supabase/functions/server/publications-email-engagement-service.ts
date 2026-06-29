@@ -1,6 +1,6 @@
 import * as kv from './kv_store.tsx';
 import { createModuleLogger } from './stderr-logger.ts';
-import { SITE_ORIGIN } from '../../../utils/siteOrigin.ts';
+import { SITE_ORIGIN_APEX } from '../../../utils/siteOrigin.ts';
 
 const log = createModuleLogger('publications-email-engagement');
 
@@ -8,7 +8,10 @@ const ARTICLE_EMAIL_TRACKING_PREFIX = 'article_email_tracking:';
 const ARTICLE_EMAIL_TOKEN_PREFIX = 'article_email_token:';
 const ARTICLE_EMAIL_PUBLISH_RECIPIENT_PREFIX = 'article_email_publish_recipient:';
 
-const WEBSITE_BASE_URL = SITE_ORIGIN;
+// Origin used for article links sent in notification emails. Deliberately the
+// apex (no www) so the link falls outside the installed PWA's scope and always
+// opens in the browser rather than being captured into the portal-only app.
+const ARTICLE_EMAIL_LINK_ORIGIN = SITE_ORIGIN_APEX;
 // Each publish recipient currently fans out to three KV entries
 // (article, token, and publish recipient lookup). Large bulk upserts were
 // timing out in production during article publish, so keep batches small.
@@ -245,7 +248,12 @@ export function isArticleEmailDeliveryRetryableStatus(
 }
 
 export function buildTrackedArticleUrl(articleSlug: string, token: string): string {
-  return `${WEBSITE_BASE_URL}/resources/article/${articleSlug}?nt=${encodeURIComponent(token)}`;
+  // Use the apex origin (NOT www) so this link is outside the installed PWA's
+  // scope. Clients who installed the portal PWA would otherwise have this link
+  // captured into the app on their phone, which bounced them away from the
+  // article. The apex 301-redirects to the canonical www URL in the browser, so
+  // the article opens on the public website for everyone. See SITE_ORIGIN_APEX.
+  return `${ARTICLE_EMAIL_LINK_ORIGIN}/resources/article/${articleSlug}?nt=${encodeURIComponent(token)}`;
 }
 
 export async function createArticleEmailTrackingRecord(
