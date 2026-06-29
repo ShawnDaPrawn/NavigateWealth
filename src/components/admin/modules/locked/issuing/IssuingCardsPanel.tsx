@@ -1,6 +1,6 @@
 /**
- * Issuing Cards panel — rendered inside the Locked module's Accounts → Manager
- * tab (already behind super-admin + access-code gating). Lists virtual company
+ * Issuing Cards panel — rendered inside the Locked module's Banking tab
+ * (already behind super-admin + access-code gating). Lists virtual company
  * cards, creates cardholders and cards, and reveals a card's PAN + CVC.
  */
 

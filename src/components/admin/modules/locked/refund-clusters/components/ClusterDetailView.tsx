@@ -83,12 +83,7 @@ import { EntityFormDialog } from './EntityFormDialog';
 import { EntityDocumentsDialog } from './EntityDocumentsDialog';
 import { EntityTransactionsDialog } from './EntityTransactionsDialog';
 import { ManagersTab } from './ManagersTab';
-
-/** Underline-style sub-tabs — visually distinct from the pill rows above. */
-const SUBTAB_LIST =
-  'w-full justify-start bg-transparent rounded-none p-0 h-auto border-b border-border gap-0';
-const SUBTAB_TRIGGER =
-  'rounded-none border-b-2 border-transparent px-4 pb-2.5 pt-1 text-sm font-medium data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:text-primary data-[state=active]:border-primary';
+import { SUBTAB_LIST, SUBTAB_TRIGGER } from './subTabs';
 
 interface ClusterDetailViewProps {
   clusterId: string;
@@ -162,9 +157,6 @@ export function ClusterDetailView({ clusterId, onBack }: ClusterDetailViewProps)
   return (
     <div className="space-y-4">
       <div className="space-y-1">
-        <Button variant="ghost" size="sm" onClick={onBack} className="-ml-2">
-          <ArrowLeft className="h-4 w-4 mr-1" /> Back to clusters
-        </Button>
         <div className="flex items-center gap-2">
           <h2 className="text-xl font-semibold">{cluster.name}</h2>
           {cluster.archived && <Badge variant="outline">Archived</Badge>}
@@ -474,90 +466,106 @@ function ClusterDetailsTab({
   const clusterPeriodLabel = clusterPeriod ? formatPeriodRange(clusterPeriod) : '';
 
   return (
-    <Card>
-      <CardContent className="p-6 space-y-6">
-        <dl className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-4 text-sm">
-          <div>
-            <dt className="text-muted-foreground">Cluster Name</dt>
-            <dd className="font-medium">{cluster.name}</dd>
+    <div className="space-y-4">
+      <Card>
+        <CardContent className="p-6 space-y-6">
+          <div className="flex items-start justify-between gap-3">
+            <h3 className="text-base font-semibold">Cluster Details</h3>
+            <Button variant="outline" size="sm" onClick={() => setEditOpen(true)}>
+              <Pencil className="h-4 w-4 mr-1" /> Edit
+            </Button>
           </div>
-          <div>
-            <dt className="text-muted-foreground">Status</dt>
-            <dd>
-              <Badge variant={cluster.archived ? 'outline' : 'secondary'}>
-                {cluster.archived ? 'Archived' : 'Active'}
-              </Badge>
-            </dd>
-          </div>
-          <div className="sm:col-span-2">
-            <dt className="text-muted-foreground">VAT Category</dt>
-            <dd>
-              {VAT_PERIOD_OPTIONS.find((o) => o.value === cluster.vatPeriod)?.label ?? 'Not set'}
-              {clusterPeriod && (
-                <span className="text-muted-foreground">
-                  {' '}
-                  · Current period: {clusterPeriodLabel}
-                </span>
+          <dl className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-4 text-sm">
+            <div>
+              <dt className="text-muted-foreground">Cluster Name</dt>
+              <dd className="font-medium">{cluster.name}</dd>
+            </div>
+            <div>
+              <dt className="text-muted-foreground">Status</dt>
+              <dd>
+                <Badge variant={cluster.archived ? 'outline' : 'secondary'}>
+                  {cluster.archived ? 'Archived' : 'Active'}
+                </Badge>
+              </dd>
+            </div>
+            <div className="sm:col-span-2">
+              <dt className="text-muted-foreground">VAT Category</dt>
+              <dd>
+                {VAT_PERIOD_OPTIONS.find((o) => o.value === cluster.vatPeriod)?.label ?? 'Not set'}
+                {clusterPeriod && (
+                  <span className="text-muted-foreground">
+                    {' '}
+                    · Current period: {clusterPeriodLabel}
+                  </span>
+                )}
+              </dd>
+              {vatPeriodDescription(cluster.vatPeriod) ? (
+                <dd className="text-xs text-muted-foreground mt-1">
+                  {vatPeriodDescription(cluster.vatPeriod)}
+                </dd>
+              ) : (
+                <dd className="text-xs text-muted-foreground mt-1">
+                  No VAT category set — entity VAT summaries show all transactions. Use Edit to set
+                  one.
+                </dd>
               )}
-            </dd>
-            {vatPeriodDescription(cluster.vatPeriod) ? (
-              <dd className="text-xs text-muted-foreground mt-1">
-                {vatPeriodDescription(cluster.vatPeriod)}
-              </dd>
-            ) : (
-              <dd className="text-xs text-muted-foreground mt-1">
-                No VAT category set — entity VAT summaries show all transactions. Use Edit to set
-                one.
-              </dd>
-            )}
-          </div>
-          <div className="sm:col-span-2">
-            <dt className="text-muted-foreground">Description</dt>
-            <dd>{cluster.description || '—'}</dd>
-          </div>
-          <div>
-            <dt className="text-muted-foreground">Entities</dt>
-            <dd>{entityCount}</dd>
-          </div>
-          <div>
-            <dt className="text-muted-foreground">Created</dt>
-            <dd>{new Date(cluster.createdAt).toLocaleString()}</dd>
-          </div>
-          <div>
-            <dt className="text-muted-foreground">Last Updated</dt>
-            <dd>{new Date(cluster.updatedAt).toLocaleString()}</dd>
-          </div>
-        </dl>
+            </div>
+            <div className="sm:col-span-2">
+              <dt className="text-muted-foreground">Description</dt>
+              <dd>{cluster.description || '—'}</dd>
+            </div>
+            <div>
+              <dt className="text-muted-foreground">Entities</dt>
+              <dd>{entityCount}</dd>
+            </div>
+            <div>
+              <dt className="text-muted-foreground">Created</dt>
+              <dd>{new Date(cluster.createdAt).toLocaleString()}</dd>
+            </div>
+            <div>
+              <dt className="text-muted-foreground">Last Updated</dt>
+              <dd>{new Date(cluster.updatedAt).toLocaleString()}</dd>
+            </div>
+          </dl>
+        </CardContent>
+      </Card>
 
-        <div className="flex flex-wrap gap-2">
-          <Button variant="outline" onClick={() => setEditOpen(true)}>
-            <Pencil className="h-4 w-4 mr-1" /> Edit
-          </Button>
-          <Button
-            variant="outline"
-            onClick={() =>
-              updateCluster.mutate({
-                clusterId: cluster.id,
-                patch: { archived: !cluster.archived },
-              })
-            }
-            disabled={updateCluster.isPending}
-          >
-            {cluster.archived ? (
-              <>
-                <ArchiveRestore className="h-4 w-4 mr-1" /> Unarchive
-              </>
-            ) : (
-              <>
-                <Archive className="h-4 w-4 mr-1" /> Archive
-              </>
-            )}
-          </Button>
-          <Button variant="destructive" onClick={() => setConfirmDelete(true)}>
-            <Trash2 className="h-4 w-4 mr-1" /> Delete Cluster
-          </Button>
-        </div>
-      </CardContent>
+      <Card className="border-destructive/30">
+        <CardContent className="p-6 space-y-4">
+          <div>
+            <h3 className="text-base font-semibold text-destructive">Danger zone</h3>
+            <p className="text-sm text-muted-foreground">
+              Archive to hide this cluster while keeping its data, or permanently delete it and
+              everything inside.
+            </p>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <Button
+              variant="outline"
+              onClick={() =>
+                updateCluster.mutate({
+                  clusterId: cluster.id,
+                  patch: { archived: !cluster.archived },
+                })
+              }
+              disabled={updateCluster.isPending}
+            >
+              {cluster.archived ? (
+                <>
+                  <ArchiveRestore className="h-4 w-4 mr-1" /> Unarchive
+                </>
+              ) : (
+                <>
+                  <Archive className="h-4 w-4 mr-1" /> Archive
+                </>
+              )}
+            </Button>
+            <Button variant="destructive" onClick={() => setConfirmDelete(true)}>
+              <Trash2 className="h-4 w-4 mr-1" /> Delete Cluster
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
 
       <ClusterFormDialog
         open={editOpen}
@@ -593,7 +601,7 @@ function ClusterDetailsTab({
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-    </Card>
+    </div>
   );
 }
 

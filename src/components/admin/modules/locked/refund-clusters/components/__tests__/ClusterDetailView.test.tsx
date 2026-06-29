@@ -129,9 +129,13 @@ describe('ClusterDetailView', () => {
     expect(screen.getByRole('button', { name: /delete cluster/i })).toBeDefined();
   });
 
-  it('calls onBack from the back button', () => {
+  it('calls onBack from the not-found back button', () => {
+    // The happy-path back action now lives in the breadcrumb (rendered by
+    // RefundClustersPanel); the detail view keeps a back button only on its
+    // not-found state.
+    mockUseRefundClusterDetail.mockReturnValue({ data: undefined, isLoading: false });
     const onBack = vi.fn();
-    render(<ClusterDetailView clusterId="c1" onBack={onBack} />);
+    render(<ClusterDetailView clusterId="missing" onBack={onBack} />);
     fireEvent.click(screen.getByRole('button', { name: /back to clusters/i }));
     expect(onBack).toHaveBeenCalled();
   });

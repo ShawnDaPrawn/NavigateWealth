@@ -9,6 +9,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { Lock, ShieldX, Unlock } from 'lucide-react';
+import { Badge } from '../../../ui/badge';
 import { Button } from '../../../ui/button';
 import { Input } from '../../../ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../../ui/card';
@@ -17,16 +18,17 @@ import { useCurrentUserPermissions } from '../personnel/hooks/usePermissions';
 import { LockedSkeleton } from './components/LockedSkeleton';
 import { RefundClustersPanel } from './refund-clusters/RefundClustersPanel';
 import { RefundManagerPanel } from './refund-clusters/components/RefundManagerPanel';
+import { SUBTAB_LIST, SUBTAB_TRIGGER } from './refund-clusters/components/subTabs';
 import { TreasuryManagerPanel } from './treasury/TreasuryManagerPanel';
 import { IssuingCardsPanel } from './issuing/IssuingCardsPanel';
 import { getLockoutRemaining, verifyAccessCode } from './access';
 
-/** Empty placeholder for a tab whose content is not built yet. */
-function TabPlaceholder({ title }: { title: string }) {
+/** "Soon" pill shown inside a disabled tab whose content is not built yet. */
+function ComingSoonBadge() {
   return (
-    <div className="border border-dashed rounded-lg p-12 flex items-center justify-center text-center text-sm text-muted-foreground">
-      {title} — coming soon.
-    </div>
+    <Badge variant="secondary" className="ml-2 px-1.5 py-0 text-[10px] font-normal">
+      Soon
+    </Badge>
   );
 }
 
@@ -67,7 +69,10 @@ export function LockedModule() {
           <TabsList className="w-full justify-start">
             <TabsTrigger value="banking">Banking</TabsTrigger>
             <TabsTrigger value="accounts">Accounts</TabsTrigger>
-            <TabsTrigger value="trading">Trading</TabsTrigger>
+            <TabsTrigger value="trading" disabled>
+              Trading
+              <ComingSoonBadge />
+            </TabsTrigger>
           </TabsList>
         </div>
 
@@ -79,45 +84,30 @@ export function LockedModule() {
         </TabsContent>
 
         <TabsContent value="accounts">
-          {/* Accounts sub-tabs: Manager · Refund Clusters · Disbursement Clusters */}
-          <Tabs defaultValue="manager" className="space-y-4">
+          {/* Accounts sub-tabs: Overview · Refund Clusters · Disbursement Clusters */}
+          <Tabs defaultValue="overview" className="space-y-4">
             <div className="w-full overflow-x-auto">
-              <TabsList className="w-full justify-start bg-transparent rounded-none p-0 h-auto border-b border-border gap-0">
-                <TabsTrigger
-                  value="manager"
-                  className="rounded-none border-b-2 border-transparent px-4 pb-2.5 pt-1 text-sm font-medium data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:text-primary data-[state=active]:border-primary"
-                >
-                  Manager
+              <TabsList className={SUBTAB_LIST}>
+                <TabsTrigger value="overview" className={SUBTAB_TRIGGER}>
+                  Overview
                 </TabsTrigger>
-                <TabsTrigger
-                  value="refund-clusters"
-                  className="rounded-none border-b-2 border-transparent px-4 pb-2.5 pt-1 text-sm font-medium data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:text-primary data-[state=active]:border-primary"
-                >
+                <TabsTrigger value="refund-clusters" className={SUBTAB_TRIGGER}>
                   Refund Clusters
                 </TabsTrigger>
-                <TabsTrigger
-                  value="disbursement-clusters"
-                  className="rounded-none border-b-2 border-transparent px-4 pb-2.5 pt-1 text-sm font-medium data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:text-primary data-[state=active]:border-primary"
-                >
+                <TabsTrigger value="disbursement-clusters" className={SUBTAB_TRIGGER} disabled>
                   Disbursement Clusters
+                  <ComingSoonBadge />
                 </TabsTrigger>
               </TabsList>
             </div>
 
-            <TabsContent value="manager">
+            <TabsContent value="overview">
               <RefundManagerPanel />
             </TabsContent>
             <TabsContent value="refund-clusters">
               <RefundClustersPanel />
             </TabsContent>
-            <TabsContent value="disbursement-clusters">
-              <TabPlaceholder title="Disbursement Clusters" />
-            </TabsContent>
           </Tabs>
-        </TabsContent>
-
-        <TabsContent value="trading">
-          <TabPlaceholder title="Trading" />
         </TabsContent>
       </Tabs>
     </div>

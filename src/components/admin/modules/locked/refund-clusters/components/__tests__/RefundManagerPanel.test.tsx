@@ -37,7 +37,7 @@ beforeEach(() => {
 describe('RefundManagerPanel', () => {
   it('renders the heading, the due-date filter and the summary cards', () => {
     render(<RefundManagerPanel />);
-    expect(screen.getByText('Manager Overview')).toBeDefined();
+    expect(screen.getByText('VAT Overview')).toBeDefined();
     expect(screen.getByLabelText('Filter by due date')).toBeDefined();
     expect(screen.getByText('Clusters shown')).toBeDefined();
     expect(screen.getByText('Overdue')).toBeDefined();
