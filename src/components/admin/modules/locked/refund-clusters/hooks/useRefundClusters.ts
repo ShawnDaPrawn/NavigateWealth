@@ -40,6 +40,23 @@ export function useRefundClusterDetail(clusterId: string | null) {
   });
 }
 
+/**
+ * Details (cluster + entities) for several clusters at once, aligned to
+ * `clusterIds` order. Shares the per-cluster detail cache keys with
+ * {@link useRefundClusterDetail} so the manager overview and a single opened
+ * cluster stay in sync.
+ */
+export function useClusterDetails(clusterIds: string[]) {
+  return useQueries({
+    queries: clusterIds.map((clusterId) => ({
+      queryKey: refundClusterKeys.detail(clusterId),
+      queryFn: () => RefundClustersAPI.getClusterDetail(clusterId),
+      enabled: !!clusterId,
+      staleTime: STALE_TIME,
+    })),
+  });
+}
+
 export function useEntityDocuments(clusterId: string, entityId: string | null) {
   return useQuery({
     queryKey: refundClusterKeys.documents(entityId ?? ''),
@@ -316,6 +333,23 @@ export function useEntityTransactions(clusterId: string, entityId: string | null
 export function useEntitiesTransactions(clusterId: string, entityIds: string[]) {
   return useQueries({
     queries: entityIds.map((entityId) => ({
+      queryKey: refundClusterKeys.transactions(entityId),
+      queryFn: () => RefundClustersAPI.listTransactions(clusterId, entityId),
+      enabled: !!clusterId && !!entityId,
+      staleTime: STALE_TIME,
+    })),
+  });
+}
+
+/**
+ * Transactions for entities across multiple clusters, aligned to `pairs` order.
+ * Each entity lives under its own cluster, so callers pass (clusterId, entityId)
+ * pairs. Shares the per-entity transaction cache keys with the single-cluster
+ * hooks above.
+ */
+export function useManyEntityTransactions(pairs: Array<{ clusterId: string; entityId: string }>) {
+  return useQueries({
+    queries: pairs.map(({ clusterId, entityId }) => ({
       queryKey: refundClusterKeys.transactions(entityId),
       queryFn: () => RefundClustersAPI.listTransactions(clusterId, entityId),
       enabled: !!clusterId && !!entityId,

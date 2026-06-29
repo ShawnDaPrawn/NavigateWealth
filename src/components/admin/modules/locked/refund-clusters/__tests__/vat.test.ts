@@ -6,6 +6,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   currentVatPeriod,
+  dueDateBucket,
   formatIsoDate,
   formatPeriodRange,
   netVatLabel,
@@ -109,6 +110,33 @@ describe('vatSubmissionDueDate', () => {
     const decJan = currentVatPeriod('A', new Date(2026, 11, 20))!; // Dec 2026 – Jan 2027
     // Following month is Feb 2027; 28 Feb 2027 is a Sunday → 26 Feb (Friday).
     expect(vatSubmissionDueDate(decJan)).toBe('2027-02-26');
+  });
+});
+
+describe('dueDateBucket', () => {
+  const ref = new Date(2026, 5, 15); // 15 Jun 2026
+
+  it('flags a date before today as overdue', () => {
+    expect(dueDateBucket('2026-06-14', ref)).toBe('overdue');
+    expect(dueDateBucket('2026-05-31', ref)).toBe('overdue');
+  });
+
+  it('flags a remaining date this calendar month as this-month', () => {
+    expect(dueDateBucket('2026-06-30', ref)).toBe('this-month');
+    expect(dueDateBucket('2026-06-15', ref)).toBe('this-month'); // today counts
+  });
+
+  it('flags the following calendar month as next-month', () => {
+    expect(dueDateBucket('2026-07-31', ref)).toBe('next-month');
+  });
+
+  it('flags anything further out as later', () => {
+    expect(dueDateBucket('2026-08-31', ref)).toBe('later');
+  });
+
+  it('wraps the year for a December reference', () => {
+    const dec = new Date(2026, 11, 10); // 10 Dec 2026
+    expect(dueDateBucket('2027-01-31', dec)).toBe('next-month');
   });
 });
 

@@ -16,6 +16,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../../ui/tabs';
 import { useCurrentUserPermissions } from '../personnel/hooks/usePermissions';
 import { LockedSkeleton } from './components/LockedSkeleton';
 import { RefundClustersPanel } from './refund-clusters/RefundClustersPanel';
+import { RefundManagerPanel } from './refund-clusters/components/RefundManagerPanel';
 import { TreasuryManagerPanel } from './treasury/TreasuryManagerPanel';
 import { IssuingCardsPanel } from './issuing/IssuingCardsPanel';
 import { getLockoutRemaining, verifyAccessCode } from './access';
@@ -104,7 +105,7 @@ export function LockedModule() {
             </div>
 
             <TabsContent value="manager">
-              <TabPlaceholder title="Manager" />
+              <RefundManagerPanel />
             </TabsContent>
             <TabsContent value="refund-clusters">
               <RefundClustersPanel />

@@ -169,6 +169,32 @@ export function vatSubmissionDueDate(period: VatPeriod): string {
   return iso(year, month, day);
 }
 
+export type DueDateBucket = 'overdue' | 'this-month' | 'next-month' | 'later';
+
+/**
+ * Bucket a VAT return due date (ISO yyyy-mm-dd) relative to `refDate`:
+ * overdue (before today), due in the current calendar month, due next month,
+ * or later. Powers the manager overview's due-date filter.
+ */
+export function dueDateBucket(dueDate: string, refDate: Date = new Date()): DueDateBucket {
+  const today = iso(refDate.getFullYear(), refDate.getMonth() + 1, refDate.getDate());
+  if (dueDate < today) return 'overdue';
+
+  const year = refDate.getFullYear();
+  const month = refDate.getMonth() + 1;
+  const monthPrefix = (y: number, m: number): string => `${y}-${m.toString().padStart(2, '0')}`;
+  let nextYear = year;
+  let nextMonth = month + 1;
+  if (nextMonth > 12) {
+    nextMonth = 1;
+    nextYear += 1;
+  }
+
+  if (dueDate.startsWith(monthPrefix(year, month))) return 'this-month';
+  if (dueDate.startsWith(monthPrefix(nextYear, nextMonth))) return 'next-month';
+  return 'later';
+}
+
 export type VatStatus = 'refundable' | 'payable' | 'nil';
 
 export interface VatSummary {
