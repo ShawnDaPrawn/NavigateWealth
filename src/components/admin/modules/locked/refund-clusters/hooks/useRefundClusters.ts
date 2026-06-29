@@ -5,7 +5,7 @@
  * §11.2 — React Query for all server state.
  */
 
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQueries, useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { refundClusterKeys } from '../queryKeys';
 import { RefundClustersAPI } from '../api';
@@ -305,6 +305,22 @@ export function useEntityTransactions(clusterId: string, entityId: string | null
     queryFn: () => RefundClustersAPI.listTransactions(clusterId, entityId!),
     enabled: !!entityId,
     staleTime: STALE_TIME,
+  });
+}
+
+/**
+ * Transactions for several entities at once, aligned to `entityIds` order.
+ * Shares the per-entity transaction cache keys with {@link useEntityTransactions},
+ * so a cluster-level VAT summary and an entity drawer stay in sync.
+ */
+export function useEntitiesTransactions(clusterId: string, entityIds: string[]) {
+  return useQueries({
+    queries: entityIds.map((entityId) => ({
+      queryKey: refundClusterKeys.transactions(entityId),
+      queryFn: () => RefundClustersAPI.listTransactions(clusterId, entityId),
+      enabled: !!clusterId && !!entityId,
+      staleTime: STALE_TIME,
+    })),
   });
 }
 

@@ -6,12 +6,14 @@
 import { describe, expect, it } from 'vitest';
 import {
   currentVatPeriod,
+  formatIsoDate,
   formatPeriodRange,
   netVatLabel,
   previousVatPeriod,
   recentVatPeriods,
   summarizeTransactions,
   vatFromInclusive,
+  vatSubmissionDueDate,
 } from '../vat';
 import type { RefundTransaction } from '../types';
 
@@ -84,6 +86,29 @@ describe('formatPeriodRange', () => {
   it('renders the label plus the inclusive date range', () => {
     const p = currentVatPeriod('C', new Date(2026, 1, 15))!; // Feb 2026
     expect(formatPeriodRange(p)).toBe('Feb 2026 (1 Feb 2026 – 28 Feb 2026)');
+  });
+});
+
+describe('formatIsoDate', () => {
+  it('renders an ISO date as day + short month + year', () => {
+    expect(formatIsoDate('2026-07-31')).toBe('31 Jul 2026');
+    expect(formatIsoDate('2026-01-01')).toBe('1 Jan 2026');
+  });
+});
+
+describe('vatSubmissionDueDate', () => {
+  it('is the last day of the month after the period end when that is a weekday', () => {
+    const feb = currentVatPeriod('C', new Date(2026, 1, 15))!; // Feb 2026
+    expect(vatSubmissionDueDate(feb)).toBe('2026-03-31'); // 31 Mar 2026 is a Tuesday
+
+    const febMar = currentVatPeriod('A', new Date(2026, 2, 15))!; // Feb–Mar 2026
+    expect(vatSubmissionDueDate(febMar)).toBe('2026-04-30'); // 30 Apr 2026 is a Thursday
+  });
+
+  it('rolls back off a weekend month-end to the prior weekday', () => {
+    const decJan = currentVatPeriod('A', new Date(2026, 11, 20))!; // Dec 2026 – Jan 2027
+    // Following month is Feb 2027; 28 Feb 2027 is a Sunday → 26 Feb (Friday).
+    expect(vatSubmissionDueDate(decJan)).toBe('2027-02-26');
   });
 });
 

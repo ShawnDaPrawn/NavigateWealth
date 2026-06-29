@@ -3,58 +3,32 @@
  * Accounts → Refund Clusters tab (already behind super-admin + access-code
  * gating in LockedModule).
  *
- * Lists clusters as cards with create / edit / archive / delete actions;
- * opening a cluster swaps to the ClusterDetailView.
+ * Lists clusters as cards. A card is a single click target that opens the
+ * ClusterDetailView — editing, archiving and deleting live inside that view's
+ * Cluster Details tab, never on this screen, so a stray click here can never
+ * archive or delete a cluster.
  */
 
 import { useMemo, useState } from 'react';
-import {
-  Archive,
-  ArchiveRestore,
-  FolderOpen,
-  Layers,
-  Pencil,
-  Plus,
-  Search,
-  Trash2,
-} from 'lucide-react';
+import { FolderOpen, Layers, Plus, Search } from 'lucide-react';
 import { Badge } from '../../../../ui/badge';
 import { Button } from '../../../../ui/button';
 import { Card, CardContent } from '../../../../ui/card';
 import { Input } from '../../../../ui/input';
 import { Skeleton } from '../../../../ui/skeleton';
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from '../../../../ui/alert-dialog';
 import { ClusterFormDialog } from './components/ClusterFormDialog';
 import { ClusterDetailView } from './components/ClusterDetailView';
-import {
-  useCreateCluster,
-  useDeleteCluster,
-  useRefundClusters,
-  useUpdateCluster,
-} from './hooks/useRefundClusters';
+import { useCreateCluster, useRefundClusters } from './hooks/useRefundClusters';
 import type { RefundCluster } from './types';
 
 export function RefundClustersPanel() {
   const { data: clusters = [], isLoading } = useRefundClusters();
   const createCluster = useCreateCluster();
-  const updateCluster = useUpdateCluster();
-  const deleteCluster = useDeleteCluster();
 
   const [openClusterId, setOpenClusterId] = useState<string | null>(null);
   const [search, setSearch] = useState('');
   const [showArchived, setShowArchived] = useState(false);
   const [formOpen, setFormOpen] = useState(false);
-  const [editingCluster, setEditingCluster] = useState<RefundCluster | null>(null);
-  const [deleteTarget, setDeleteTarget] = useState<RefundCluster | null>(null);
 
   const visibleClusters = useMemo(() => {
     const term = search.trim().toLowerCase();
@@ -78,14 +52,7 @@ export function RefundClustersPanel() {
     description: string;
     vatPeriod: RefundCluster['vatPeriod'];
   }) => {
-    if (editingCluster) {
-      updateCluster.mutate(
-        { clusterId: editingCluster.id, patch: values },
-        { onSuccess: () => setFormOpen(false) },
-      );
-    } else {
-      createCluster.mutate(values, { onSuccess: () => setFormOpen(false) });
-    }
+    createCluster.mutate(values, { onSuccess: () => setFormOpen(false) });
   };
 
   return (
@@ -102,12 +69,7 @@ export function RefundClustersPanel() {
             </p>
           </div>
         </div>
-        <Button
-          onClick={() => {
-            setEditingCluster(null);
-            setFormOpen(true);
-          }}
-        >
+        <Button onClick={() => setFormOpen(true)}>
           <Plus className="h-4 w-4 mr-1" /> Create New Cluster
         </Button>
       </div>
@@ -148,17 +110,6 @@ export function RefundClustersPanel() {
               key={cluster.id}
               cluster={cluster}
               onOpen={() => setOpenClusterId(cluster.id)}
-              onEdit={() => {
-                setEditingCluster(cluster);
-                setFormOpen(true);
-              }}
-              onToggleArchive={() =>
-                updateCluster.mutate({
-                  clusterId: cluster.id,
-                  patch: { archived: !cluster.archived },
-                })
-              }
-              onDelete={() => setDeleteTarget(cluster)}
             />
           ))}
         </div>
@@ -167,88 +118,44 @@ export function RefundClustersPanel() {
       <ClusterFormDialog
         open={formOpen}
         onOpenChange={setFormOpen}
-        cluster={editingCluster}
+        cluster={null}
         onSubmit={handleSubmit}
-        isSubmitting={createCluster.isPending || updateCluster.isPending}
+        isSubmitting={createCluster.isPending}
       />
-
-      <AlertDialog open={!!deleteTarget} onOpenChange={(o) => !o && setDeleteTarget(null)}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Delete cluster?</AlertDialogTitle>
-            <AlertDialogDescription>
-              {deleteTarget &&
-                `"${deleteTarget.name}" and every entity and document inside it will be permanently deleted. Consider archiving instead. This action is audit-logged and cannot be undone.`}
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={() => {
-                if (deleteTarget) deleteCluster.mutate(deleteTarget.id);
-                setDeleteTarget(null);
-              }}
-            >
-              Delete
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
     </div>
   );
 }
 
-function ClusterCard({
-  cluster,
-  onOpen,
-  onEdit,
-  onToggleArchive,
-  onDelete,
-}: {
-  cluster: RefundCluster;
-  onOpen: () => void;
-  onEdit: () => void;
-  onToggleArchive: () => void;
-  onDelete: () => void;
-}) {
+/**
+ * A cluster card is one big click target — the whole card opens the cluster.
+ * No edit/archive/delete buttons live here: those are in the cluster's own
+ * Cluster Details tab so they can't be triggered by a misplaced click.
+ */
+function ClusterCard({ cluster, onOpen }: { cluster: RefundCluster; onOpen: () => void }) {
   return (
-    <Card className="hover:border-primary/40 transition-colors">
-      <CardContent className="p-4 space-y-3">
-        <button type="button" onClick={onOpen} className="w-full text-left space-y-1">
+    <Card className="group p-0 transition-all duration-150 hover:border-primary/50 hover:shadow-md hover:-translate-y-0.5 focus-within:ring-2 focus-within:ring-primary/40">
+      <button
+        type="button"
+        onClick={onOpen}
+        aria-label={`Open ${cluster.name}`}
+        className="w-full text-left rounded-[inherit] focus:outline-none"
+      >
+        <CardContent className="p-4 space-y-3">
           <div className="flex items-center gap-2">
-            <FolderOpen className="h-4 w-4 text-primary shrink-0" />
+            <FolderOpen className="h-4 w-4 text-primary shrink-0 transition-transform duration-150 group-hover:scale-110" />
             <span className="font-medium truncate">{cluster.name}</span>
           </div>
           {cluster.description && (
             <p className="text-sm text-muted-foreground line-clamp-2">{cluster.description}</p>
           )}
-        </button>
-        <div className="flex items-center justify-between">
-          <Badge variant="secondary">
-            {cluster.entityCount ?? 0} entit{(cluster.entityCount ?? 0) === 1 ? 'y' : 'ies'}
-          </Badge>
-          <div className="flex items-center gap-1">
-            <Button size="icon" variant="ghost" aria-label="Edit cluster" onClick={onEdit}>
-              <Pencil className="h-4 w-4" />
-            </Button>
-            <Button
-              size="icon"
-              variant="ghost"
-              aria-label={cluster.archived ? 'Unarchive cluster' : 'Archive cluster'}
-              onClick={onToggleArchive}
-            >
-              {cluster.archived ? (
-                <ArchiveRestore className="h-4 w-4" />
-              ) : (
-                <Archive className="h-4 w-4" />
-              )}
-            </Button>
-            <Button size="icon" variant="ghost" aria-label="Delete cluster" onClick={onDelete}>
-              <Trash2 className="h-4 w-4 text-destructive" />
-            </Button>
+          <div className="flex items-center gap-2">
+            <Badge variant="secondary">
+              {cluster.entityCount ?? 0} entit{(cluster.entityCount ?? 0) === 1 ? 'y' : 'ies'}
+            </Badge>
+            {cluster.archived && <Badge variant="outline">Archived</Badge>}
           </div>
-        </div>
-      </CardContent>
+        </CardContent>
+      </button>
     </Card>
   );
 }

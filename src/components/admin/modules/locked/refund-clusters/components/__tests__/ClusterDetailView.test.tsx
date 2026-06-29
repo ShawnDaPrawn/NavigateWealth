@@ -28,6 +28,7 @@ vi.mock('../../hooks/useRefundClusters', () => ({
   useDeleteDocument: () => ({ mutate: vi.fn(), isPending: false }),
   useViewDocument: () => ({ mutate: vi.fn(), isPending: false }),
   useEntityTransactions: () => ({ data: [], isLoading: false }),
+  useEntitiesTransactions: () => [],
   useCreateTransaction: () => ({ mutate: vi.fn(), isPending: false }),
   useUpdateTransaction: () => ({ mutate: vi.fn(), isPending: false }),
   useDeleteTransaction: () => ({ mutate: vi.fn(), isPending: false }),
@@ -102,8 +103,17 @@ describe('ClusterDetailView', () => {
 
   it('shows the entity list on the default Entities tab', () => {
     render(<ClusterDetailView clusterId="c1" onBack={vi.fn()} />);
-    expect(screen.getByText('Thabo Nkosi')).toBeDefined();
+    // The name appears in both the cluster VAT overview table and the entity card.
+    expect(screen.getAllByText('Thabo Nkosi').length).toBeGreaterThan(0);
     expect(screen.getByRole('button', { name: /add entity/i })).toBeDefined();
+  });
+
+  it('renders the current-period VAT overview with a per-entity table', () => {
+    render(<ClusterDetailView clusterId="c1" onBack={vi.fn()} />);
+    expect(screen.getByText('Current submission period')).toBeDefined();
+    expect(screen.getByText('VAT Output')).toBeDefined();
+    expect(screen.getByText('VAT Input')).toBeDefined();
+    expect(screen.getByText(/return due by/i)).toBeDefined();
   });
 
   it('switches to the Cluster Details tab showing fields and actions', () => {
