@@ -89,19 +89,44 @@ export interface DocumentTypeOption {
 export const SOLE_PROPRIETOR_DOCUMENT_TYPES: DocumentTypeOption[] = [
   { value: 'id_copy', label: 'Copy of ID' },
   { value: 'selfie', label: 'Selfie' },
+  {
+    value: 'proof_of_residential_address',
+    label: 'Proof of Residential Address (within 3 months)',
+  },
+  { value: 'proof_of_business_address', label: 'Proof of Business Address (within 3 months)' },
   { value: 'primary_bank_proof', label: 'Proof of Primary Bank Account' },
   { value: 'secondary_bank_proof', label: 'Proof of Secondary Bank Account' },
+  {
+    value: 'taxable_supplies_threshold_proof',
+    label: 'Proof Taxable Supplies Exceeded R120 000 (Past 12 Months)',
+  },
+  {
+    value: 'taxable_supplies_monthly_proof',
+    label: 'Proof Taxable Supplies Averaged Over R10 000 per Month',
+  },
 ];
 
 export const COMPANY_DOCUMENT_TYPES: DocumentTypeOption[] = [
   { value: 'company_registration', label: 'Company Registration Documents' },
   { value: 'sars_vat_certificate', label: 'SARS VAT Registration Certificate' },
-  { value: 'proof_of_business_address', label: 'Proof of Business Address' },
+  { value: 'proof_of_business_address', label: 'Proof of Business Address (within 3 months)' },
   { value: 'director_id', label: 'Director/Representative ID Document' },
   { value: 'director_selfie', label: 'Director/Representative Selfie' },
+  {
+    value: 'representative_residential_address_proof',
+    label: 'Proof of Representative Residential Address (within 3 months)',
+  },
   { value: 'bank_confirmation_letter', label: 'Company Bank Confirmation Letter' },
   { value: 'primary_bank_proof', label: 'Proof of Primary Bank Account' },
   { value: 'secondary_bank_proof', label: 'Proof of Secondary Bank Account' },
+  {
+    value: 'taxable_supplies_threshold_proof',
+    label: 'Proof Taxable Supplies Exceeded R120 000 (Past 12 Months)',
+  },
+  {
+    value: 'taxable_supplies_monthly_proof',
+    label: 'Proof Taxable Supplies Averaged Over R10 000 per Month',
+  },
 ];
 
 export function documentTypesFor(entityType: RefundEntityType): DocumentTypeOption[] {
