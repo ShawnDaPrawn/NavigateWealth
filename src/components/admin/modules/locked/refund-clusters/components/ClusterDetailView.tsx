@@ -12,6 +12,7 @@ import {
   ArchiveRestore,
   ArrowLeft,
   Building2,
+  CalendarClock,
   FileText,
   Pencil,
   Plus,
@@ -24,6 +25,15 @@ import { Badge } from '../../../../../ui/badge';
 import { Button } from '../../../../../ui/button';
 import { Card, CardContent } from '../../../../../ui/card';
 import { Input } from '../../../../../ui/input';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableFooter,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '../../../../../ui/table';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../../../../ui/tabs';
 import {
   Select,
@@ -50,6 +60,7 @@ import {
   useCreateEntity,
   useDeleteCluster,
   useDeleteEntity,
+  useEntitiesTransactions,
   useEntityTransactions,
   useRefundClusterDetail,
   useUpdateCluster,
@@ -57,10 +68,13 @@ import {
 } from '../hooks/useRefundClusters';
 import {
   currentVatPeriod,
+  formatIsoDate,
   formatPeriodRange,
   formatZar,
   netVatLabel,
+  round2,
   summarizeTransactions,
+  vatSubmissionDueDate,
   type VatSummary,
 } from '../vat';
 import type { RefundCluster, RefundEntity, RefundEntityInput, RefundEntityType } from '../types';
@@ -159,6 +173,8 @@ export function ClusterDetailView({ clusterId, onBack }: ClusterDetailViewProps)
           <p className="text-sm text-muted-foreground">{cluster.description}</p>
         )}
       </div>
+
+      <ClusterVatOverview cluster={cluster} entities={data.entities} managerNames={managerNames} />
 
       {/* Underline-style sub-tabs — distinct from the pill rows on the Locked page */}
       <Tabs defaultValue="entities" className="space-y-4">
@@ -299,6 +315,143 @@ export function ClusterDetailView({ clusterId, onBack }: ClusterDetailViewProps)
         </AlertDialogContent>
       </AlertDialog>
     </div>
+  );
+}
+
+/**
+ * Top-of-page VAT overview: the submission period the cluster is currently on
+ * (period range + the date the VAT201 return is due) and a per-entity table of
+ * output vs input VAT, totalled into the cluster's net payable / refund position.
+ */
+function ClusterVatOverview({
+  cluster,
+  entities,
+  managerNames,
+}: {
+  cluster: RefundCluster;
+  entities: RefundEntity[];
+  managerNames: Map<string, string>;
+}) {
+  const period = useMemo(() => currentVatPeriod(cluster.vatPeriod), [cluster.vatPeriod]);
+  const dueDate = period ? vatSubmissionDueDate(period) : null;
+
+  const entityIds = useMemo(() => entities.map((e) => e.id), [entities]);
+  const results = useEntitiesTransactions(cluster.id, entityIds);
+
+  const rows = entities.map((entity, index) => ({
+    entity,
+    summary: summarizeTransactions(results[index]?.data ?? [], period),
+  }));
+  const isLoading = results.some((r) => r.isLoading);
+
+  const totalOutput = round2(rows.reduce((sum, r) => sum + r.summary.outputVat, 0));
+  const totalInput = round2(rows.reduce((sum, r) => sum + r.summary.inputVat, 0));
+  const netVat = round2(totalOutput - totalInput);
+  const netStatus = netVat < 0 ? 'refundable' : netVat > 0 ? 'payable' : 'nil';
+  const netLabel =
+    netStatus === 'payable'
+      ? 'Net VAT payable to SARS'
+      : netStatus === 'refundable'
+        ? 'Net VAT refund due'
+        : 'Net VAT — nil';
+  const netClass =
+    netStatus === 'refundable'
+      ? 'text-green-700'
+      : netStatus === 'payable'
+        ? 'text-amber-700'
+        : 'text-muted-foreground';
+
+  return (
+    <Card>
+      <CardContent className="p-4 sm:p-6 space-y-4">
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div className="flex items-start gap-3">
+            <div className="w-9 h-9 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
+              <CalendarClock className="h-4 w-4 text-primary" />
+            </div>
+            <div>
+              <p className="text-xs uppercase tracking-wide text-muted-foreground">
+                Current submission period
+              </p>
+              {period ? (
+                <>
+                  <p className="text-lg font-semibold leading-tight">{period.label}</p>
+                  <p className="text-sm text-muted-foreground">{formatPeriodRange(period)}</p>
+                </>
+              ) : (
+                <p className="text-sm text-muted-foreground">
+                  No VAT category set — set one in Cluster Details to track periods.
+                </p>
+              )}
+            </div>
+          </div>
+          {dueDate && (
+            <div className="text-right">
+              <p className="text-xs uppercase tracking-wide text-muted-foreground">Return due by</p>
+              <p className="text-lg font-semibold leading-tight">{formatIsoDate(dueDate)}</p>
+              <p className="text-xs text-muted-foreground">eFiling deadline</p>
+            </div>
+          )}
+        </div>
+
+        {entities.length === 0 ? (
+          <p className="text-sm text-muted-foreground">
+            Add entities to see their VAT output and input for this period.
+          </p>
+        ) : (
+          <div className="rounded-lg border overflow-x-auto">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Entity</TableHead>
+                  <TableHead>Manager</TableHead>
+                  <TableHead className="text-right">VAT Output</TableHead>
+                  <TableHead className="text-right">VAT Input</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {rows.map(({ entity, summary }) => (
+                  <TableRow key={entity.id}>
+                    <TableCell className="font-medium">{entityDisplayName(entity)}</TableCell>
+                    <TableCell className="text-muted-foreground">
+                      {entity.managerId
+                        ? (managerNames.get(entity.managerId) ?? 'Unassigned')
+                        : 'Unassigned'}
+                    </TableCell>
+                    <TableCell className="text-right tabular-nums">
+                      {formatZar(summary.outputVat)}
+                    </TableCell>
+                    <TableCell className="text-right tabular-nums">
+                      {formatZar(summary.inputVat)}
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+              <TableFooter>
+                <TableRow>
+                  <TableCell colSpan={2}>Totals{isLoading ? ' (loading…)' : ''}</TableCell>
+                  <TableCell className="text-right tabular-nums">
+                    {formatZar(totalOutput)}
+                  </TableCell>
+                  <TableCell className="text-right tabular-nums">{formatZar(totalInput)}</TableCell>
+                </TableRow>
+                <TableRow>
+                  <TableCell colSpan={2} className={`font-semibold ${netClass}`}>
+                    {netLabel}
+                  </TableCell>
+                  <TableCell
+                    colSpan={2}
+                    className={`text-right tabular-nums font-semibold ${netClass}`}
+                  >
+                    {formatZar(Math.abs(netVat))}
+                  </TableCell>
+                </TableRow>
+              </TableFooter>
+            </Table>
+          </div>
+        )}
+      </CardContent>
+    </Card>
   );
 }
 
