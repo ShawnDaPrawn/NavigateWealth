@@ -83,7 +83,7 @@ import { EntityFormDialog } from './EntityFormDialog';
 import { EntityDocumentsDialog } from './EntityDocumentsDialog';
 import { EntityTransactionsDialog } from './EntityTransactionsDialog';
 import { ManagersTab } from './ManagersTab';
-import { SUBTAB_LIST, SUBTAB_TRIGGER } from './subTabs';
+import { SEGMENT_LIST, SEGMENT_TRIGGER } from './subTabs';
 
 interface ClusterDetailViewProps {
   clusterId: string;
@@ -168,17 +168,19 @@ export function ClusterDetailView({ clusterId, onBack }: ClusterDetailViewProps)
 
       <ClusterVatOverview cluster={cluster} entities={data.entities} managerNames={managerNames} />
 
-      {/* Underline-style sub-tabs — distinct from the pill rows on the Locked page */}
+      {/* Segmented control — a compact, distinct look from the Accounts section
+          nav (underline) and the top-level pill tabs, so it reads clearly as the
+          switcher for sections *within this cluster*. */}
       <Tabs defaultValue="entities" className="space-y-4">
         <div className="w-full overflow-x-auto">
-          <TabsList className={SUBTAB_LIST}>
-            <TabsTrigger value="entities" className={SUBTAB_TRIGGER}>
+          <TabsList className={SEGMENT_LIST}>
+            <TabsTrigger value="entities" className={SEGMENT_TRIGGER}>
               Entities
             </TabsTrigger>
-            <TabsTrigger value="managers" className={SUBTAB_TRIGGER}>
+            <TabsTrigger value="managers" className={SEGMENT_TRIGGER}>
               Managers
             </TabsTrigger>
-            <TabsTrigger value="details" className={SUBTAB_TRIGGER}>
+            <TabsTrigger value="details" className={SEGMENT_TRIGGER}>
               Cluster Details
             </TabsTrigger>
           </TabsList>

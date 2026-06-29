@@ -1,12 +1,12 @@
 /**
- * Refund Clusters panel — entry point rendered inside the Locked module's
- * Accounts → Refund Clusters tab (already behind super-admin + access-code
- * gating in LockedModule).
+ * Refund Clusters panel — the list rendered inside the Locked module's
+ * Accounts → Refund Clusters section (behind super-admin + access-code gating).
  *
- * Lists clusters as cards. A card is a single click target that opens the
- * ClusterDetailView — editing, archiving and deleting live inside that view's
- * Cluster Details tab, never on this screen, so a stray click here can never
- * archive or delete a cluster.
+ * Lists clusters as cards. A card is a single click target that opens a
+ * cluster — `onOpenCluster` is handled by the parent `AccountsPanel`, which
+ * swaps to the detail screen. Editing, archiving and deleting live inside the
+ * cluster's own Cluster Details tab, never on this screen, so a stray click
+ * here can never archive or delete a cluster.
  */
 
 import { useMemo, useState } from 'react';
@@ -17,17 +17,18 @@ import { Card, CardContent } from '../../../../ui/card';
 import { Input } from '../../../../ui/input';
 import { Skeleton } from '../../../../ui/skeleton';
 import { ClusterFormDialog } from './components/ClusterFormDialog';
-import { ClusterDetailView } from './components/ClusterDetailView';
-import { ClusterBreadcrumb } from './components/ClusterBreadcrumb';
 import { SubPanelHeader } from './components/SubPanelHeader';
 import { useCreateCluster, useRefundClusters } from './hooks/useRefundClusters';
 import type { RefundCluster } from './types';
 
-export function RefundClustersPanel() {
+export function RefundClustersPanel({
+  onOpenCluster,
+}: {
+  onOpenCluster: (clusterId: string) => void;
+}) {
   const { data: clusters = [], isLoading } = useRefundClusters();
   const createCluster = useCreateCluster();
 
-  const [openClusterId, setOpenClusterId] = useState<string | null>(null);
   const [search, setSearch] = useState('');
   const [showArchived, setShowArchived] = useState(false);
   const [formOpen, setFormOpen] = useState(false);
@@ -44,16 +45,6 @@ export function RefundClustersPanel() {
   }, [clusters, search, showArchived]);
 
   const archivedCount = useMemo(() => clusters.filter((c) => c.archived).length, [clusters]);
-
-  if (openClusterId) {
-    const openCluster = clusters.find((c) => c.id === openClusterId);
-    return (
-      <div className="space-y-4">
-        <ClusterBreadcrumb clusterName={openCluster?.name} onBack={() => setOpenClusterId(null)} />
-        <ClusterDetailView clusterId={openClusterId} onBack={() => setOpenClusterId(null)} />
-      </div>
-    );
-  }
 
   const handleSubmit = (values: {
     name: string;
@@ -111,7 +102,7 @@ export function RefundClustersPanel() {
             <ClusterCard
               key={cluster.id}
               cluster={cluster}
-              onOpen={() => setOpenClusterId(cluster.id)}
+              onOpen={() => onOpenCluster(cluster.id)}
             />
           ))}
         </div>

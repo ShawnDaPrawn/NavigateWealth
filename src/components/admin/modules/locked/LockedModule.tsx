@@ -9,28 +9,17 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { Lock, ShieldX, Unlock } from 'lucide-react';
-import { Badge } from '../../../ui/badge';
 import { Button } from '../../../ui/button';
 import { Input } from '../../../ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../../ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../../ui/tabs';
 import { useCurrentUserPermissions } from '../personnel/hooks/usePermissions';
 import { LockedSkeleton } from './components/LockedSkeleton';
-import { RefundClustersPanel } from './refund-clusters/RefundClustersPanel';
-import { RefundManagerPanel } from './refund-clusters/components/RefundManagerPanel';
-import { SUBTAB_LIST, SUBTAB_TRIGGER } from './refund-clusters/components/subTabs';
+import { ComingSoonBadge } from './components/ComingSoonBadge';
+import { AccountsPanel } from './refund-clusters/AccountsPanel';
 import { TreasuryManagerPanel } from './treasury/TreasuryManagerPanel';
 import { IssuingCardsPanel } from './issuing/IssuingCardsPanel';
 import { getLockoutRemaining, verifyAccessCode } from './access';
-
-/** "Soon" pill shown inside a disabled tab whose content is not built yet. */
-function ComingSoonBadge() {
-  return (
-    <Badge variant="secondary" className="ml-2 px-1.5 py-0 text-[10px] font-normal">
-      Soon
-    </Badge>
-  );
-}
 
 export function LockedModule() {
   const { isSuperAdmin, isLoading } = useCurrentUserPermissions();
@@ -84,30 +73,7 @@ export function LockedModule() {
         </TabsContent>
 
         <TabsContent value="accounts">
-          {/* Accounts sub-tabs: Overview · Refund Clusters · Disbursement Clusters */}
-          <Tabs defaultValue="overview" className="space-y-4">
-            <div className="w-full overflow-x-auto">
-              <TabsList className={SUBTAB_LIST}>
-                <TabsTrigger value="overview" className={SUBTAB_TRIGGER}>
-                  Overview
-                </TabsTrigger>
-                <TabsTrigger value="refund-clusters" className={SUBTAB_TRIGGER}>
-                  Refund Clusters
-                </TabsTrigger>
-                <TabsTrigger value="disbursement-clusters" className={SUBTAB_TRIGGER} disabled>
-                  Disbursement Clusters
-                  <ComingSoonBadge />
-                </TabsTrigger>
-              </TabsList>
-            </div>
-
-            <TabsContent value="overview">
-              <RefundManagerPanel />
-            </TabsContent>
-            <TabsContent value="refund-clusters">
-              <RefundClustersPanel />
-            </TabsContent>
-          </Tabs>
+          <AccountsPanel />
         </TabsContent>
       </Tabs>
     </div>
