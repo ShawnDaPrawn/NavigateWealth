@@ -36,4 +36,11 @@ describe('AccountsPanel', () => {
     const disbursement = screen.getByRole('tab', { name: /disbursement clusters/i });
     expect(disbursement.hasAttribute('disabled')).toBe(true);
   });
+
+  it('offers an enabled Contractors section', () => {
+    render(<AccountsPanel />);
+    const contractors = screen.getByRole('tab', { name: 'Contractors' });
+    expect(contractors).toBeDefined();
+    expect(contractors.hasAttribute('disabled')).toBe(false);
+  });
 });

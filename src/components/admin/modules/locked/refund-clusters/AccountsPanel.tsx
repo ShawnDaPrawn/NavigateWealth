@@ -17,12 +17,13 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../../../ui/tabs';
 import { ComingSoonBadge } from '../components/ComingSoonBadge';
 import { RefundManagerPanel } from './components/RefundManagerPanel';
 import { RefundClustersPanel } from './RefundClustersPanel';
+import { ContractorsPanel } from './ContractorsPanel';
 import { ClusterDetailView } from './components/ClusterDetailView';
 import { ClusterBreadcrumb } from './components/ClusterBreadcrumb';
 import { SUBTAB_LIST, SUBTAB_TRIGGER } from './components/subTabs';
 import { useRefundClusters } from './hooks/useRefundClusters';
 
-type AccountsTab = 'overview' | 'refund-clusters';
+type AccountsTab = 'overview' | 'refund-clusters' | 'contractors';
 
 export function AccountsPanel() {
   const [tab, setTab] = useState<AccountsTab>('overview');
@@ -54,6 +55,9 @@ export function AccountsPanel() {
             Disbursement Clusters
             <ComingSoonBadge />
           </TabsTrigger>
+          <TabsTrigger value="contractors" className={SUBTAB_TRIGGER}>
+            Contractors
+          </TabsTrigger>
         </TabsList>
       </div>
 
@@ -62,6 +66,9 @@ export function AccountsPanel() {
       </TabsContent>
       <TabsContent value="refund-clusters">
         <RefundClustersPanel onOpenCluster={setOpenClusterId} />
+      </TabsContent>
+      <TabsContent value="contractors">
+        <ContractorsPanel />
       </TabsContent>
     </Tabs>
   );
